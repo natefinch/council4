@@ -1,12 +1,18 @@
 # Supported Cards
 
-Council4 currently supports **10,373 of 31,838 cards eligible for paper support (32.6%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **14,439 of 32,501 cards eligible for paper support (44.4%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
+- A Realm Reborn
+- A.I.M. Bot
+- A.I.M. Labs
+- A.I.M. Synthoids
 - Aang's Defense
 - Aang, Air Nomad
 - Aardvark Sloth
 - Abandon Attachments
+- Abandon Reason
+- Abandon the Post
 - Abandoned Air Temple
 - Abandoned Campground
 - Abandoned Outpost
@@ -16,6 +22,8 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Abbot of Keral Keep
 - Abhorrent Oculus
 - Abhorrent Overlord
+- Abjure
+- Abolish
 - Abomination of Gudul
 - Abrade
 - Abraded Bluffs
@@ -24,58 +32,85 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Absolute Law
 - Absorb
 - Absorb Vis
+- Abundant Countryside
+- Abundant Growth
 - Abyssal Gatekeeper
 - Abyssal Gorestalker
 - Abyssal Horror
+- Abyssal Nightstalker
+- Abyssal Nocturnus
+- Abyssal Specter
 - Abzan Ascendancy
 - Abzan Banner
+- Abzan Battle Priest
+- Abzan Beastmaster
 - Abzan Devotee
+- Abzan Falconer
 - Abzan Guide
 - Abzan Kin-Guard
 - Academy Manufactor
+- Academy Raider
 - Academy Ruins
 - Academy Wall
 - Accelerate
 - Accelerated Mutation
 - Access Tunnel
+- Accomplished Automaton
+- Accorder Paladin
 - Accorder's Shield
 - Accursed Centaur
 - Accursed Duneyard
+- Accursed Horde
+- Accursed Marauder
+- Accursed Spirit
 - Acid Rain
 - Acid Web Spider
 - Acidic Slime
 - Acolyte of Aclazotz
 - Acolyte of Affliction
 - Acolyte of Xathrid
+- Acorn Harvest
 - Acrobatic Leap
 - Acrobatic Maneuver
 - Act of Aggression
 - Act of Treason
+- Act on Impulse
 - Action News Crew
 - Active Volcano
 - Adamant Will
 - Adaptive Automaton
 - Adaptive Gemguard
 - Adaptive Shimmerer
+- Adaptive Snapjaw
 - Adarkar Sentinel
 - Adarkar Wastes
+- Adarkar Windform
+- Adeline, Resplendent Cathar
 - Adeliz, the Cinder Wind
 - Adept Watershaper
 - Adherent of Hope
 - Adorned Pouncer
+- Adorned Pouncer
+- Adrix and Nev, Twincasters
 - Adult Gold Dragon
 - Adun Oakenshield
 - Advance Scout
 - Advanced Hoverguard
 - Advanced Stitchwing
 - Advent of the Wurm
+- Adventurer's Airship
 - Adventurer's Inn
 - Adventurous Eater // Have a Bite
 - Advocate of the Beast
+- Aegis Angel
 - Aegis Automaton
 - Aegis of the Heavens
+- Aegis Sculptor
 - Aegis Turtle
 - Aeolipile
+- Aerathi Berserker
+- Aerial Boost
+- Aerial Caravan
 - Aerial Engineer
 - Aerial Guide
 - Aerial Maneuver
@@ -84,6 +119,10 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Aerie Mystics
 - Aerie Ouphes
 - Aerie Worshippers
+- Aerith Gainsborough
+- Aeromoeba
+- Aeromunculus
+- Aeronaut Admiral
 - Aeronaut Cavalry
 - Aeronaut Tinkerer
 - Aeronaut's Wings
@@ -93,50 +132,83 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Aether Charge
 - Aether Gale
 - Aether Helix
+- Aether Hub
+- Aether Meltdown
 - Aether Spellbomb
+- Aether Sting
+- Aether Syphon
+- Aether Theorist
 - Aether Tradewinds
 - Aether Tunnel
 - Aetherborn
+- Aetherflux Reservoir
+- Aethergeode Miner
 - Aetherize
 - Aetherjacket
+- Aethershield Artificer
+- Aethersnipe
+- Aethersphere Harvester
 - Affa Guard Hound
 - Affa Protector
+- Affectionate Indrik
 - Afflict
 - Afterlife
+- Aftermath Analyst
 - Aftershock
 - Against All Odds
 - Agate Instigator
+- Agate-Blade Assassin
+- Ageless Entity
 - Ageless Guardian
+- Agent 13, Sharon Carter
 - Agent Bishop, Man in Black
+- Agent of Atlas
 - Agent of Erebos
+- Agent of Horizons
 - Agent of Masks
 - Agent of Shauku
 - Agent of Stromgald
+- Agent of the Fates
+- Agent Phil Coulson
 - Agent Venom
+- Agents of HYDRA
+- Agents of S.H.I.E.L.D.
+- Aggravated Assault
 - Aggressive Instinct
 - Aggressive Mammoth
 - Aggressive Urge
 - Agna Qel'a
+- Agonizing Demise
 - Agonizing Syphon
+- Agoraphobia
 - Ahriman
 - Aid the Fallen
 - Aim High
+- Ainok Bond-Kin
 - Ainok Tracker
 - Air Elemental
+- Air Marshal
 - Air Nomad Legacy
+- Air Response Unit
 - Air Servant
 - Air-Cult Elemental
 - Airborne Aid
+- Airdrop Aeronauts
+- Airdrop Condor
+- Airship Crash
 - Airship Engine Room
+- Ajani Fells the Godsire
 - Ajani's Comrade
 - Ajani's Mantra
 - Ajani's Pridemate
 - Ajani's Pridemate
 - Ajani's Sunstriker
 - Ajani's Welcome
+- Ajani, Adversary of Tyrants
 - Ajani, Caller of the Pride
 - Ajani, Inspiring Leader
 - Ajani, Wise Counselor
+- Akiri, Line-Slinger
 - Akki Avalanchers
 - Akki Blizzard-Herder
 - Akki Coalflinger
@@ -146,20 +218,30 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Akki Ronin
 - Akki Scrapchomper
 - Akki Underling
+- Akki Underminer
 - Akoum Boulderfoot
 - Akoum Firebird
 - Akoum Hellhound
 - Akoum Refuge
 - Akoum Warrior // Akoum Teeth
 - Akrasan Squire
+- Akroan Conscriptor
+- Akroan Crusader
 - Akroan Jailer
+- Akroan Line Breaker
 - Akroan Mastiff
 - Akroan Phalanx
+- Akroan Sergeant
+- Akroan Skyguard
+- Akroma's Memorial
 - Akroma's Vengeance
 - Akroma's Will
 - Akroma, Angel of Fury
 - Akroma, Angel of Wrath
+- Aku Djinn
+- Akul the Unrepentant
 - Al Bhed Salvagers
+- Alabaster Host Intercessor
 - Alabaster Host Sanctifier
 - Alabaster Kirin
 - Alabaster Mage
@@ -167,24 +249,33 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Alaborn Grenadier
 - Alaborn Musketeer
 - Alaborn Trooper
+- Alacrian Jaguar
 - Aladdin
 - Aladdin's Ring
 - Alania's Pathmaker
 - Alchemax Slayer-Bots
 - Alchemist's Apprentice
+- Alchemist's Greeting
+- Alela, Artful Provocateur
 - Alert Shu Infantry
 - Alesha's Legacy
 - Alexi's Cloak
 - Algae Gharial
+- Alhammarret's Archive
 - Ali Baba
 - Aliban's Tower
 - Alien
 - Alien
 - Alien Insect
 - Alien Rhino
+- Alien Salamander
 - Alien Warrior
+- Alive // Well
+- All Is Dust
+- All That Glitters
 - Alley Assailant
 - Alley Evasion
+- Alley Grifters
 - Alley Strangler
 - Allied Reinforcements
 - Allied Teamwork
@@ -192,17 +283,25 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Ally
 - Almighty Brushwagg
 - Almost Perfect
+- Alms of the Vein
 - Alpha Authority
 - Alpha Kavu
 - Alpha Myr
+- Alpha Status
 - Alpha Tyrranax
+- Alphinaud Leveilleur
 - Alpine Grizzly
+- Alpine Guide
 - Alpine Meadow
 - Alpine Watchdog
 - Alquist Proft, Master Sleuth
+- Alseid of Life's Bounty
 - Altac Bloodseeker
 - Altanak, the Thrice-Called
+- Altar Golem
 - Altar of Bone
+- Altar of Dementia
+- Altar of Shadows
 - Altar of the Brood
 - Altar's Light
 - Altar's Reap
@@ -212,7 +311,10 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Ambassador Laquatus
 - Ambassador Oak
 - Ambition's Cost
+- Ambitious Aetherborn
+- Ambling Stormshell
 - Ambrosia Whiteheart
+- Ambulatory Edifice
 - Ambuscade
 - Ambush
 - Ambush Gigapede
@@ -222,6 +324,8 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Ambush Viper
 - Ambush Wolf
 - Amethyst Dragon // Explosive Crystal
+- Amonkhet Raceway
+- Amorphous Axe
 - Amphibian Downpour
 - Amphin Cutthroat
 - Amphin Pathmage
@@ -237,10 +341,14 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Anaba Ancestor
 - Anaba Bodyguard
 - Anaba Shaman
+- Anaconda
+- Anarchist
 - Anarchy
+- Anax and Cymede
 - Ancestor's Chosen
 - Ancestor's Prophet
 - Ancestors' Aid
+- Ancestral Mask
 - Ancestral Memories
 - Ancestral Recall
 - Ancestral Reminiscence
@@ -250,13 +358,19 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Ancient Amphitheater
 - Ancient Brontodon
 - Ancient Carp
+- Ancient Copper Dragon
 - Ancient Crab
 - Ancient Craving
 - Ancient Den
+- Ancient Gold Dragon
+- Ancient Greenwarden
 - Ancient Grudge
+- Ancient Silver Dragon
+- Ancient Silverback
 - Ancient Spider
 - Ancient Spring
 - Ancient Tomb
+- Ancient Ziggurat
 - Angel
 - Angel
 - Angel
@@ -265,12 +379,18 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Angel of Despair
 - Angel of Finality
 - Angel of Flight Alabaster
+- Angel of Glory's Rise
+- Angel of Invention
 - Angel of Light
 - Angel of Mercy
 - Angel of Renewal
 - Angel of Retribution
+- Angel of Sanctions
+- Angel of Sanctions
 - Angel of the Dawn
 - Angel of the God-Pharaoh
+- Angel of the Ruins
+- Angel of Vitality
 - Angel Warrior
 - Angel Warrior
 - Angel's Feather
@@ -278,6 +398,8 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Angelfire Crusader
 - Angelfire Ignition
 - Angelheart Protector
+- Angelheart Vial
+- Angelic Accord
 - Angelic Armaments
 - Angelic Ascension
 - Angelic Benediction
@@ -287,39 +409,62 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Angelic Edict
 - Angelic Exaltation
 - Angelic Gift
+- Angelic Observer
 - Angelic Overseer
 - Angelic Page
 - Angelic Protector
 - Angelic Purge
 - Angelic Quartermaster
+- Angelic Renewal
+- Angelic Sell-Sword
 - Angelic Shield
 - Angelic Sleuth
 - Angelic Wall
 - Angelo
+- Angelsong
+- Anger
 - Angler Drake
+- Angler Turtle
 - Angrath's Ambusher
 - Angrath's Marauders
+- Angrath, Captain of Chaos
 - Angry Rabble
 - Anguished Unmaking
+- Animal Boneyard
 - Animal Sanctuary
 - Anje's Ravager
+- Ankh of Mishra
 - Ankle Biter
 - Ankle Shanker
 - Annie Flash, the Veteran
+- Annie Joins Up
 - Annihilate
 - Annoyed Altisaur
+- Annul
 - Anodet Lurker
 - Anointed Chorister
+- Anointed Deacon
 - Anointed Procession
 - Anointer of Champions
 - Anointer Priest
+- Anointer Priest
 - Ant Queen
+- Ant-Man's Air Force
+- Ant-Man's Army
+- Ant-Man, Reformed Rogue
+- Ant-Man, Scott Lang
 - Antagonize
 - Anthem of Champions
+- Anticipate
 - Anurid Barkripper
+- Anurid Murkdiver
 - Anvilwrought Raptor
 - Ape
+- Ape Villain
+- Apex Altisaur
 - Apex Devastator
+- Apex Hawks
+- Aphemia, the Cacophony
 - Aphetto Alchemist
 - Aphetto Exterminator
 - Aphetto Grifter
@@ -334,48 +479,90 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Appendage Amalgam
 - Appetite for the Unnatural
 - Applied Biomancy
+- Apprentice Necromancer
+- Apprentice Sharpshooter
 - Apprentice Wizard
 - April O'Neil, Kunoichi Trainee
+- April, Reporter of the Weird
+- Aquamoeba
 - Aqueous Form
 - Aquus Steed
+- Araba Mothrider
 - Arabella, Abandoned Doll
+- Arachnoform
 - Arachnoid
 - Arachnoid Adaptation
+- Aradara Express
+- Aragorn and Arwen, Wed
 - Aragorn, the Uniter
 - Arahbo, the First Fang
 - Arashi, the Sky Asunder
 - Arashin Cleric
 - Arashin Foremost
 - Arasta of the Endless Web
+- Araña, Heart of the Spider
+- Arbalest Elite
 - Arbiter of Woe
+- Arbor Adherent
 - Arbor Armament
 - Arbor Elf
 - Arborback Stomper
 - Arborea Pegasus
+- Arboreal Grazer
 - Arboretum Elemental
 - Arc Lightning
 - Arc Mage
+- Arc Reactor
+- Arc Runner
+- Arc Trail
+- Arcade Cabinet
+- Arcane Adaptation
 - Arcane Denial
 - Arcane Encyclopedia
 - Arcane Flight
+- Arcane Laboratory
 - Arcane Sanctum
 - Arcane Signet
 - Arcane Spyglass
+- Arcane Teachings
+- Arcbound Bruiser
+- Arcbound Condor
+- Arcbound Crusher
+- Arcbound Hybrid
+- Arcbound Lancer
+- Arcbound Mouser
+- Arcbound Prototype
+- Arcbound Ravager
+- Arcbound Reclaimer
+- Arcbound Shikari
+- Arcbound Slasher
+- Arcbound Slith
+- Arcbound Stinger
+- Arcbound Whelp
+- Arcbound Worker
 - Archaeological Dig
 - Archaeomancer
+- Archaeomancer's Map
 - Archaeomender
 - Archangel
 - Archangel of Thune
+- Archangel's Light
+- Archenemy's Charm
 - Archers of Qarsi
 - Archers' Parapet
 - Archfiend of Ifnir
+- Archfiend of Sorrows
+- Archfiend's Vessel
 - Archive Dragon
 - Archivist
+- Archivist of Oghma
 - Archmage Emeritus
 - Archmage of Runes
 - Archmage's Charm
+- Archon of Absolution
 - Archon of Falling Stars
 - Archon of Justice
+- Archon of Redemption
 - Archon of Sun's Grace
 - Archway Angel
 - Archweaver
@@ -392,14 +579,20 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Ardent Recruit
 - Ardenvale Tactician // Dizzying Swoop
 - Ardoz, Cobbler of War
+- Arena Athlete
 - Arena of Glory
+- Arena Trickster
+- Ares, God of War
+- Argent Mutation
 - Argentum Armor
 - Argivian Archaeologist
 - Argivian Find
+- Argivian Phalanx
 - Argivian Restoration
 - Argoth, Sanctum of Nature
 - Argothian Elder
 - Argothian Enchantress
+- Argothian Opportunist
 - Argothian Sprite
 - Argothian Swine
 - Arid Mesa
@@ -410,11 +603,15 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Armageddon
 - Armaggon, Future Shark
 - Armasaur Guide
+- Armguard Familiar
 - Armillary Sphere
 - Armistice
+- Armor Wars
 - Armorcraft Judge
+- Armored Ascension
 - Armored Cancrix
 - Armored Griffin
+- Armored Guardian
 - Armored Pegasus
 - Armored Skaab
 - Armored Warhorse
@@ -423,17 +620,26 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Armorer Guildmage
 - Armory Guard
 - Armory of Iroas
+- Armory Paladin
 - Arms Dealer
 - Army Ants
 - Army of Allah
+- Army of the Damned
+- Arni Slays the Troll
+- Arnim Zola, Bio-Fanatic
 - Arnjlot's Ascent
 - Arno Dorian
 - Aron, Benalia's Ruin
+- Arrester's Admonition
 - Arrogant Outlaw
+- Arrogant Poet
 - Arrogant Vampire
 - Arrogant Wurm
+- Arrow Storm
 - Arrows of Justice
+- Arterial Flow
 - Artful Dodge
+- Artful Maneuver
 - Artful Takedown
 - Artifact Blast
 - Artifact Zombie
@@ -442,28 +648,40 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Artificer's Intuition
 - Artillerize
 - Artisan's Sorrow
+- Artistic Refusal
 - Arwen Undómiel
+- Arwen, Weaver of Hope
 - Ascendant Dustspeaker
 - Ascended Lawmage
 - Asceticism
+- Asgardian Citadel
 - Ash Barrens
 - Asha's Favor
 - Ashaya, the Awoken World
+- Ashcloud Phoenix
 - Ashcoat Bear
 - Ashen Firebeast
 - Ashen Monstrosity
 - Ashen Powder
+- Ashen Rider
 - Ashenmoor Cohort
 - Ashenmoor Gouger
 - Ashenmoor Liege
 - Ashes to Ashes
+- Ashiok's Adept
 - Ashiok's Reaper
+- Ashiok's Skulker
 - Ashnod's Altar
+- Ashnod's Harvester
+- Ashnod, Flesh Mechanist
 - Aspect of Gorgon
 - Aspect of Hydra
+- Aspect of Lamprey
 - Aspect of Mongoose
+- Asphodel Wanderer
 - Asphyxiate
 - Aspiring Aeronaut
+- Assassin
 - Assassin
 - Assassin
 - Assassin's Strike
@@ -476,32 +694,47 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Assault Zeppelid
 - Assembly-Worker
 - Assembly-Worker
+- Assert Authority
 - Assure // Assemble
 - Astartes Warrior
 - Astartes Warrior
+- Astral Cornucopia
+- Astral Steel
 - Astral Wingspan
+- Astrid Peth
 - Atalan Jackal
 - Atarka Beastbreaker
 - Atarka Pummeler
+- Atarka, World Render
+- Atlantean Cavalry
+- Atlas, Sizable Stooge
 - Atmosphere Surgeon
 - Atog
+- Atogatog
 - Atomize
 - Atraxa, Praetors' Voice
 - Atrocious Experiment
+- Attendant of Vraska
+- Attended Healer
 - Attended Knight
 - Attended Socialite
 - Attentive Sunscribe
 - Attrition
+- Attuma, Atlantean Warlord
+- Attune with Aether
 - Atzocan Seer
 - Audacious Infiltrator
 - Audacious Thief
 - Audacity
 - Auger Spree
 - Augmenting Automaton
+- Augur il-Vec
+- Augur of Skulls
 - Augury Owl
 - Auntie's Hovel
 - Aura Blast
 - Aura Fracture
+- Aura Gnarlid
 - Aura Shards
 - Auramancer
 - Auratog
@@ -517,18 +750,25 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Austere Command
 - Authority of the Consuls
 - Autochthon Wurm
+- Automated Assembly Line
 - Automatic Librarian
 - Avacyn
 - Avacyn's Collar
 - Avacyn's Pilgrim
+- Avacyn, Angel of Hope
+- Avarax
+- Avaricious Dragon
+- Avatar
 - Avatar
 - Avatar
 - Avatar Enthusiasts
+- Avatar of Slaughter
 - Aven Archer
 - Aven Battle Priest
 - Aven Brigadier
 - Aven Cloudchaser
 - Aven Envoy
+- Aven Eternal
 - Aven Farseer
 - Aven Fateshaper
 - Aven Fisher
@@ -536,6 +776,8 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Aven Flock
 - Aven Fogbringer
 - Aven Initiate
+- Aven Initiate
+- Aven Liberator
 - Aven of Enduring Hope
 - Aven Reedstalker
 - Aven Sentry
@@ -544,21 +786,34 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Aven Squire
 - Aven Trooper
 - Aven Wind Guide
+- Aven Wind Guide
 - Aven Wind Mage
 - Avenger en-Dal
 - Avenger of Zendikar
+- Avengers Disassembled
+- Avengers Hangar
+- Avengers: Under Siege
+- Avian Changeling
+- Avian Oddity
 - Aviary Mechanic
 - Aviation Pioneer
+- Avishkar Raceway
 - Awaken the Bear
+- Awaken the Honored Dead
 - Awakening
 - Axebane Beast
 - Axebane Stag
 - Axegrinder Giant
+- Axgard Braggart
 - Axgard Cavalry
 - Axiom Engraver
+- Ayara, First of Locthwain
+- Ayli, Eternal Pilgrim
 - Aysen Abbey
 - Aysen Bureaucrats
+- Aysen Highway
 - Ayula's Influence
+- Ayula, Queen Among Bears
 - Azami, Lady of Scrolls
 - Azimaet Drake
 - Azorius Aethermage
@@ -575,7 +830,9 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Azula Always Lies
 - Azure Drake
 - Azure Mage
+- Azusa's Many Journeys // Likeness of the Seeker
 - Azusa, Lost but Seeking
+- Back for More
 - Back to Nature
 - Backup Agent
 - Backwoods Survivalists
@@ -587,6 +844,7 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Badlands Revival
 - Baffling End
 - Bag End Porter
+- Baird, Steward of Argive
 - Bake into a Pie
 - Bala Ged Recovery // Bala Ged Sanctuary
 - Bala Ged Scorpion
@@ -594,10 +852,13 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Balduvian Barbarians
 - Balduvian Bears
 - Balduvian Rage
+- Balduvian War-Makers
 - Balefire Liege
 - Baleful Ammit
 - Baleful Force
 - Baleful Strix
+- Ball Lightning
+- Ballista Charger
 - Ballista Squad
 - Ballistic Boulder
 - Balloon
@@ -610,17 +871,23 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Balshan Collaborator
 - Balshan Griffin
 - Balthor the Stout
+- Balustrade Spy
 - Bamboo Grove Archer
 - Bane Alley Blackguard
 - Banehound
 - Baneslayer Angel
+- Banisher Priest
 - Banishing Betrayal
+- Banishing Light
 - Bankrupt in Blood
 - Banners Raised
+- Banquet Guests
 - Bant Battlemage
 - Bant Panorama
 - Bant Sureblade
 - Bar the Door
+- Baral's Expertise
+- Barbara Wright
 - Barbarian General
 - Barbarian Horde
 - Barbarian Lunatic
@@ -628,12 +895,16 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Barbarian Ring
 - Barbary Apes
 - Barbed Battlegear
+- Barbed Field
 - Barbtooth Wurm
 - Bargain
+- Barging Sergeant
 - Barkchannel Pathway // Tidechannel Pathway
+- Barkform Harvester
 - Barkhide Mauler
 - Barkhide Troll
 - Barktooth Warbeard
+- Barl's Cage
 - Baron Bertram Graywater
 - Baron, Airship Kingdom
 - Barony Vampire
@@ -645,6 +916,7 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Barricade Breaker
 - Barrier Breach
 - Barrier of Bones
+- Barrin's Codex
 - Barrin, Master Wizard
 - Barrow Naughty
 - Barrow Witches
@@ -657,61 +929,91 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Bash to Bits
 - Bashful Beastie
 - Basilica Bell-Haunt
+- Basilica Guards
+- Basilica Screecher
 - Basilica Skullbomb
 - Basilica Stalker
 - Basilisk Collar
 - Basilisk Gate
+- Basim Ibn Ishaq
+- Basking Broodscale
 - Basking Rootwalla
 - Basri's Acolyte
 - Basri's Solidarity
 - Bassara Tower Archer
+- Bast, Panther Goddess
 - Bastion Enforcer
 - Bastion Inventor
 - Bastion Mastodon
 - Bastion of Remembrance
+- Bastion Protector
 - Bat
 - Bat
 - Bat Whisperer
 - Bathe in Dragonfire
+- Baton of Morale
+- Batterbone
 - Batterhorn
 - Battering Craghorn
+- Battering Krasis
 - Battering Sliver
+- Battering Wurm
+- Battershield Warrior
+- Batterskull
+- Battle at the Bridge
+- Battle at the Helvault
 - Battle Brawler
 - Battle Hurda
 - Battle Hymn
 - Battle Mastery
+- Battle Menu
+- Battle of Wits
 - Battle Plan
 - Battle Rampart
 - Battle Sliver
+- Battle Squadron
+- Battle Strain
+- Battle-Mad Ronin
 - Battle-Rage Blessing
+- Battle-Rattle Shaman
 - Battlefield Forge
 - Battlefield Promotion
 - Battlefield Raptor
 - Battleflight Eagle
 - Battlefly Swarm
+- Battlegrace Angel
 - Battleground Geist
 - Battlegrowth
 - Battlesong Berserker
 - Battlewand Oak
+- Battlewing Mystic
 - Battlewise Aven
+- Battlewise Hoplite
 - Battlewise Valor
+- Baxter Stockman
 - Bay Falcon
 - Bayou
+- Bayou Dragonfly
 - Bazaar Krovod
 - Bazaar of Baghdad
 - Bazaar Trademage
 - Be'lakor, the Dark Master
 - Beacon Behemoth
 - Beacon Hawk
+- Beacon of Creation
+- Beacon of Destruction
+- Beacon of Unrest
 - Beaming Defiance
 - Beamsaw Prospector
 - Beamtown Beatstick
+- Beanstalk Giant // Fertile Footsteps
 - Beanstalk Wurm // Plant Beans
 - Bear
 - Bear
 - Bear Cub
 - Bear Trap
 - Bear's Companion
+- Bearer of Memory
 - Bearer of the Heavens
 - Bearscape
 - Beast
@@ -723,75 +1025,110 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Beast
 - Beast
 - Beast Attack
+- Beast of Burden
+- Beast Walkers
 - Beast Whisperer
 - Beast Within
 - Beast-Kin Ranger
+- Beastcaller Savant
+- Beastmaster Ascension
+- Beau
 - Bebop, Warthog Warrior
 - Beckon Apparition
+- Become Immense
 - Bedeck // Bedazzle
 - Bedevil
 - Bedhead Beastie
+- Bedlam
+- Bedlam Reveler
 - Bee Sting
 - Beeble
 - Beetle, Legacy Criminal
+- Beetle-Headed Merchants
 - Beetleback Chief
 - Beetleform Mage
+- Befriending the Moths // Imperial Moth
 - Befuddle
 - Behemoth Sledge
+- Behind the Scenes
 - Belbe's Armor
 - Belbe's Portal
+- Beledros Witherbloom
 - Belle of the Brawl
 - Belligerent Guest
+- Belligerent Hatchling
 - Belligerent Sliver
 - Belligerent Whiptail
 - Bellowing Aegisaur
+- Bellowing Bruiser // Beat a Path
 - Bellowing Crier
+- Bellowing Tanglewurm
 - Bellows Lizard
 - Beloved Chaplain
 - Beloved Princess
 - Beluna's Gatekeeper // Entry Denied
+- Ben-Ben, Akki Hermit
+- Benalish Cavalry
 - Benalish Emissary
 - Benalish Heralds
+- Benalish Hero
 - Benalish Honor Guard
+- Benalish Infantry
 - Benalish Knight
 - Benalish Marshal
 - Benalish Sleeper
 - Benalish Trapper
 - Benalish Veteran
+- Bender's Waterskin
 - Beneath the Sands
 - Benefactor's Draught
+- Benevolent Bodyguard
 - Bennie Bracks, Zoologist
+- Benthic Behemoth
+- Benthic Biomancer
 - Benthic Criminologists
+- Benthic Djinn
 - Benthic Giant
 - Bequeathal
+- Bereavement
 - Beregond of the Guard
 - Berserkers of Blood Ridge
 - Berserkers' Onslaught
 - Beskir Shieldmate
 - Bespoke Bō
+- Bessie, the Doctor's Roadster
 - Bestial Bloodline
+- Bestial Fury
 - Bestow Greatness
+- Betor, Ancestor's Voice
 - Bewilder
 - Bewildering Blizzard
 - Beyeen Veil // Beyeen Coast
 - Biblioplex Assistant
+- Biblioplex Kraken
+- Bident of Thassa
 - Big Apple, 3 a.m.
 - Big Play
 - Big Score
+- Big Wheel
 - Bigfin Bouncer
+- Bighorner Rancher
 - Bile Urchin
 - Bile-Vial Boggart
 - Bilious Skulldweller
 - Billiard Room
 - Billowing Shriekmass
 - Bind
+- Binding Grasp
 - Binding Mummy
 - Binding the Old Gods
 - Biogenic Ooze
+- Biomass Mutation
 - Biomathematician
 - Biomechan Engineer
 - Biosynthic Burst
 - Biotech Specialist
+- Biotransference
 - Birchlore Rangers
 - Bird
 - Bird
@@ -809,29 +1146,48 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Bird Maiden
 - Bird Soldier
 - Birds of Paradise
+- Birnin Zana Plaza
+- Birthday Escape
 - Birthing Boughs
 - Bishop of Rebirth
 - Bishop of the Bloodstained
 - Bishop of Wings
 - Bishop's Soldier
 - Bite Down
+- Bite of the Black Rose
+- Biting Rain
 - Biting Tether
 - Bitter Reunion
+- Bitter Triumph
 - Bitterbloom Bearer
 - Bitterblossom
 - Bitterbow Sharpshooters
+- Bitterthorn, Nissa's Animus
+- Bituminous Blast
 - Black Carriage
 - Black Dragon
 - Black Dragon Gate
 - Black Knight
+- Black Lotus
+- Black Market
 - Black Market Connections
+- Black Panther, Claws of Bast
+- Black Panther, Vanguard
 - Black Poplar Shaman
 - Black Scarab
+- Black Widow, Agile Avenger
+- Black Widow, Daring Operative
+- Black Widow, Double Agent
+- Black Widow, Natasha Romanoff
 - Blackblade Reforged
 - Blackcleave Cliffs
 - Blackcleave Goblin
+- Blacklance Paragon
 - Blade Banish
 - Blade Historian
+- Blade Instructor
+- Blade Juggler
+- Blade of the Oni
 - Blade of the Sixth Pride
 - Blade Sliver
 - Blade Splicer
@@ -842,11 +1198,13 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Bladed Pinions
 - Bladed Sentinel
 - Bladestitched Skaab
+- Bladetusk Boar
 - Bladewing's Thrall
 - Bladewing, Deathless Tyrant
 - Blanchwood Armor
 - Blanchwood Treefolk
 - Blanket of Night
+- Blaring Recruiter
 - Blasphemous Act
 - Blasted Landscape
 - Blaster Mage
@@ -857,17 +1215,24 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Blazing Firesinger // Seething Song
 - Blazing Hellhound
 - Blazing Rootwalla
+- Blazing Specter
+- Blazing Sunsteel
 - Blazing Volley
 - Bleachbone Verge
 - Bleak Coven Vampires
+- Blech, Loafing Pest
+- Bleed Dry
+- Bleeding Edge
 - Bleeding Woods
 - Blessed Hippogriff // Tyr's Blessing
 - Blessed Light
 - Blessed Orator
 - Blessed Spirits
 - Blessed Wine
+- Blessing of Leeches
 - Blight Grenade
 - Blight Keeper
+- Blight Mamba
 - Blight Rot
 - Blight Sickle
 - Blight-Breath Catoblepas
@@ -886,50 +1251,69 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Blightstep Pathway // Searstep Pathway
 - Blightwidow
 - Blind Creeper
+- Blind Obedience
 - Blind Phantasm
 - Blind with Anger
+- Blind-Spot Giant
 - Blinding Drone
 - Blinding Light
 - Blinding Mage
 - Blinding Souleater
 - Blinding Spray
+- Blink Dog
+- Blink of an Eye
 - Blinking Spirit
+- Blinkmoth Infusion
 - Blinkmoth Well
 - Blister Beetle
 - Blistercoil Weird
+- Blistergrub
 - Blistering Barrier
 - Blistering Dieflyn
+- Blistering Firecat
 - Blisterspit Gremlin
 - Blisterstick Shaman
+- Blitz of the Thunder-Raptor
 - Blitzball Shot
 - Blizzard Elemental
 - Bloated Contaminator
 - Bloated Toad
+- Blockade Runner
 - Blockbuster
 - Blood
 - Blood Artist
 - Blood Bairn
 - Blood Celebrant
 - Blood Crypt
+- Blood Curdle
 - Blood Divination
+- Blood Feud
 - Blood Fountain
 - Blood Glutton
 - Blood Host
+- Blood Hustler
+- Blood Hypnotist
 - Blood Knight
 - Blood Mist
+- Blood Ogre
 - Blood Pact
 - Blood Pet
 - Blood Researcher
 - Blood Rites
+- Blood Seeker
 - Blood Servitor
+- Blood Speaker
 - Blood Tithe
 - Blood Vassal
+- Blood-Chin Fanatic
 - Blood-Cursed Knight
 - Blood-Toll Harpy
 - Bloodbond Vampire
+- Bloodbraid Challenger
 - Bloodbraid Elf
 - Bloodbriar
 - Bloodcrazed Neonate
+- Bloodcrazed Socialite
 - Bloodcurdling Scream
 - Bloodfell Caves
 - Bloodfire Colossus
@@ -939,32 +1323,46 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Bloodfire Mentor
 - Bloodflow Connoisseur
 - Bloodforged Battle-Axe
+- Bloodfray Giant
 - Bloodgift Demon
 - Bloodhall Ooze
 - Bloodhall Priest
 - Bloodhaze Wolverine
 - Bloodhunter Bat
 - Bloodied Ghost
+- Bloodletter of Aclazotz
+- Bloodletter Quill
+- Bloodline Bidding
+- Bloodline Pretender
 - Bloodlust Inciter
 - Bloodmad Vampire
 - Bloodmark Mentor
+- Bloodmist Infiltrator
 - Bloodpyre Elemental
 - Bloodrage Brawler
+- Bloodrage Vampire
 - Bloodrite Invoker
 - Bloodrock Cyclops
+- Bloodscale Prowler
 - Bloodshed Fever
+- Bloodshot Cyclops
+- Bloodshot Trainee
 - Bloodsoaked Altar
 - Bloodstained Mire
 - Bloodstoke Howler
 - Bloodstone Cameo
+- Bloodsworn Steward
 - Bloodtallow Candle
 - Bloodthirsty Aerialist
+- Bloodthirsty Conqueror
 - Bloodthorn Taunter
 - Bloodthrone Vampire
 - Bloodtithe Collector
+- Bloodtracker
 - Bloodwater Entity
 - Bloody Betrayal
 - Bloom Hulk
+- Bloom Tender
 - Blooming Marsh
 - Blooming Stinger
 - Bloomvine Regent // Claim Territory
@@ -974,9 +1372,13 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Blossoming Wreath
 - Blue Elemental Blast
 - Blue Horror
+- Blue Marvel, Adam Brashear
 - Blue Scarab
+- Blue Sun's Zenith
+- Blunt the Assault
 - Blur
 - Blur of Blades
+- Blur of Heroism
 - Blur Sliver
 - Blurred Mongoose
 - Blustersquall
@@ -989,20 +1391,30 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Boarding Party
 - Boartusk Liege
 - Body Dropper
+- Body of Jukai
+- Body of Knowledge
 - Bog Glider
 - Bog Gnarr
 - Bog Imp
 - Bog Initiate
 - Bog Naughty
+- Bog Raiders
+- Bog Smugglers
+- Bog Tatters
 - Bog Witch
+- Bog Wraith
 - Bog Wreckage
 - Bogardan Firefiend
 - Bogardan Hellkite
+- Bogardan Lancer
 - Bogardan Rager
+- Bogbrew Witch
+- Boggart Arsonists
 - Boggart Birth Rite
 - Boggart Brute
 - Boggart Cursecrafter
 - Boggart Harbinger
+- Boggart Loggers
 - Boggart Prankster
 - Boggart Ram-Gang
 - Boggart Shenanigans
@@ -1011,28 +1423,39 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Bogstomper
 - Bogwater Lumaret
 - Boil
+- Boilerbilges Ripper
 - Boiling Rock Prison
 - Boiling Seas
 - Bojuka Bog
 - Bojuka Brigand
+- Bola Warrior
+- Bolas's Citadel
 - Bold Impaler
 - Boldwyr Aggressor
 - Bolrac-Clan Basher
+- Bolrac-Clan Crusher
 - Bolt Hound
 - Bolt of Keranos
 - Boltwave
 - Boltwing Marauder
+- Bomat Bazaar Barge
+- Bombadil's Song
 - Bombard
+- Bomber Corps
 - Bond Beetle
 - Bond of Discipline
 - Bonded Fetch
 - Bonders' Enclave
+- Bonds of Mortality
 - Bonds of Quicksilver
+- Bone Dragon
 - Bone Flute
+- Bone Harvest
 - Bone Miser
 - Bone Pit Brute
 - Bone Sabres
 - Bone Saw
+- Bone Shards
 - Bone Splinters
 - Bone to Ash
 - Bonebind Orator
@@ -1046,12 +1469,21 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Bonesplitter Sliver
 - Bonethorn Valesk
 - Boneyard Lurker
+- Boneyard Wurm
+- Bontu's Monument
 - Boo
+- Book of Mazarbul
 - Book of Rass
+- Boom // Bust
+- Boomer Scrapper
 - Boomerang
+- Boompile
 - Boon of Boseiju
 - Boon of Emrakul
+- Boon of Safety
 - Boon of the Wish-Giver
+- Boon Reflection
+- Boosted Sloop
 - Boots of Speed
 - Borborygmos
 - Border Guard
@@ -1061,38 +1493,61 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Borderland Ranger
 - Boreal Centaur
 - Boreal Druid
+- Boreal Elemental
 - Boreal Griffin
 - Boreal Shelf
 - Boris Devilboon
+- Borne Upon a Wind
+- Boros Challenger
 - Boros Charm
 - Boros Cluestone
+- Boros Elite
 - Boros Garrison
 - Boros Guildgate
 - Boros Guildmage
 - Boros Locket
+- Boros Mastiff
+- Boros Reckoner
 - Boros Recruit
 - Boros Signet
 - Boros Swiftblade
+- Borough Backup
+- Borrowed Grace
+- Borrowed Hostility
+- Borrowed Malevolence
+- Borrowed Time
+- Boseiju Reaches Skyward // Branch of Boseiju
 - Boseiju, Who Endures
+- Bot Bashing Time
 - Botanical Plaza
 - Botanical Sanctum
 - Bottle Gnomes
+- Bottle Golems
+- Bottomless Pool // Locker Room
+- Boulder Dash
 - Boulderborn Dragon
 - Boulderfall
 - Bound in Silence
 - Boundary Lands Ranger
+- Bounding Krasis
 - Bounding Wolf
 - Bountiful Harvest
 - Bountiful Landscape
 - Bountiful Promenade
 - Bovine Intervention
+- Brago, King Eternal
+- Braids, Cabal Minion
 - Braidwood Cup
 - Braidwood Sextant
+- Brain Freeze
+- Brain Weevil
+- Brainbite
 - Braingeyser
 - Brainiac
 - Brainstone
 - Brainstorm
 - Brainsurge
+- Brallin, Skyshark Rider
 - Bramble Armor
 - Bramble Creeper
 - Bramble Wurm
@@ -1100,29 +1555,41 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Brambleguard Captain
 - Bramblesnap
 - Brambleweft Behemoth
+- Bramblewood Paragon
 - Branchblight Stalker
 - Branching Bolt
 - Branching Evolution
 - Branchloft Pathway // Boulderloft Pathway
 - Branchsnap Lorian
+- Brash Taunter
 - Brass Gnat
 - Brass Man
 - Brass Secretary
 - Brass's Bounty
+- Braulios of Pheres Band
+- Bravado
 - Brave-Kin Duo
+- Brawl-Bash Ogre
 - Brawler's Plate
+- Brawn
 - Brazen Buccaneers
 - Brazen Freebooter
 - Brazen Scourge
 - Brazen Wolves
+- Breach
 - Breaching Hippocamp
 - Break Asunder
+- Break Down
 - Break Down the Door
+- Breaker of Armies
 - Breakneck Berserker
 - Breath of Fire
 - Breath of Life
 - Breath of Malfegor
+- Breath of the Sleepless
+- Breath Weapon
 - Breathstealer
+- Breeding Pit
 - Breeding Pool
 - Breya's Apprentice
 - Breya, Etherium Shaper
@@ -1130,49 +1597,78 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Briar Patch
 - Briarberry Cohort
 - Briarbridge Tracker
+- Briarhorn
 - Briarknit Kami
 - Briarpack Alpha
+- Bridgeworks Battle // Tanglespan Bridgeworks
+- Bridled Bighorn
 - Bright Reprisal
 - Brightblade Stoat
 - Brightclimb Pathway // Grimclimb Pathway
+- Brightfield Glider
 - Brightstone Ritual
 - Brigid's Command
+- Brigone, Soldier of Meletis
 - Brilliant Halo
 - Brilliant Plan
+- Brilliant Restoration
 - Brimstone Dragon
+- Brimstone Mage
 - Brimstone Trebuchet
+- Brimstone Volley
 - Brindle Boar
 - Brindle Shoat
+- Brine Giant
 - Brine Shaman
 - Brinebarrow Intruder
+- Brineborn Cutthroat
+- Brinelin, the Moon Kraken
 - Bring to Trial
+- Brink of Madness
+- Brion Stoutarm
 - Bristling Backwoods
 - Bristling Boar
 - Brittle Effigy
+- Broadcast Rambler
 - Broadside Barrage
 - Broken Bond
+- Broken Concentration
+- Broken Wings
 - Brokers Charm
+- Brokers Hideout
 - Brokers Veteran
 - Bronze Sable
 - Bronze Sword
 - Bronze Walrus
 - Bronzebeak Moa
+- Bronzeplate Boar
 - Brood Weaver
+- Broodhatch Nantuko
 - Broodhunter Wurm
 - Broodmate Dragon
+- Broodstar
 - Brotherhood Patriarch
+- Brotherhood Regalia
+- Brotherhood Spy
+- Brotherhood Vertibird
 - Brotherhood's End
 - Brothers of Fire
 - Brown Ouphe
+- Bruse Tarl, Boorish Herder
 - Brushfire Elemental
 - Brushland
 - Brushstrider
+- Brushwagg
+- Brutal Nightstalker
 - Brute Force
 - Brute Strength
+- Brute Suit
+- Buccaneer's Bravado
 - Bugenhagen, Wise Elder
 - Builder's Blessing
 - Bulette
 - Bull Cerodon
+- Bull Hippo
 - Bull Rush
 - Bull's Strength
 - Bulwark Giant
@@ -1185,42 +1681,62 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Buried Ruin
 - Burlfist Oak
 - Burn Bright
+- Burn the Accursed
+- Burner Rocket
+- Burning Anger
 - Burning Fields
 - Burning Oil
+- Burning Shield Askari
+- Burning Sun's Fury
 - Burning Vengeance
 - Burning-Fist Minotaur
 - Burning-Tree Emissary
+- Burning-Tree Vandal
+- Burning-Yard Trainer
 - Burnished Hart
+- Burnout
+- Burr Grafter
 - Burrenton Shield-Bearers
 - Burrog Banemaker
 - Burrog Befuddler
+- Burrowguard Mentor
+- Burrowing
 - Burrowing Razormaw
 - Burst of Energy
 - Burst of Speed
 - Burst of Strength
+- Bushmaster, Coiled Henchman
+- Bushmeat Poacher
 - Bushwhack
 - Butcher Ghoul
 - Butcher of Malakir
 - Butterfly
 - Buy Your Silence
 - Buzz Bots
+- Buzzard-Wasp Colony
+- Bygone Bishop
 - Byway Courier
 - Cabal Archon
 - Cabal Coffers
 - Cabal Evangel
+- Cabal Executioner
 - Cabal Initiate
 - Cabal Paladin
 - Cabal Patriarch
 - Cabal Pit
+- Cabal Ritual
+- Cabal Slaver
 - Cabal Stronghold
 - Cabal Surgeon
 - Cabal Torturer
 - Cabal Trainee
 - Cabaretti Charm
+- Cabaretti Courtyard
 - Cabaretti Initiate
 - Cache Raiders
 - Cackling Counterpart
 - Cackling Fiend
+- Cackling Flames
 - Cackling Imp
 - Cackling Prowler
 - Cackling Slasher
@@ -1228,28 +1744,38 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Cacophodon
 - Cacophony Scamp
 - Cadaver Imp
+- Cadaverous Knight
 - Cadira, Caller of the Small
 - Caelorna, Coral Tyrant
+- Cage of Hands
 - Caged Zombie
 - Cagemail
 - Calamitous Tide
+- Calamity of Cinders
+- Calamity's Wake
 - Calculating Lich
+- Caldera Hellion
 - Caldera Lake
 - Caldera Pyremaw
 - Caligo Skin-Witch
+- Call for Blood
 - Call of the Conclave
 - Call of the Herd
 - Call the Bloodline
 - Call the Cavalry
 - Call the Gatewatch
+- Call the Skybreaker
 - Call to Glory
 - Call to Heel
 - Call to Mind
 - Call to the Feast
+- Call to the Netherworld
 - Caller of Gales
+- Callous Dismissal
 - Callous Inspector
 - Calming Verse
 - Camaraderie
+- Campaign of Vengeance
 - Campus Composer // Aqueous Aria
 - Campus Guide
 - Canal Monitor
@@ -1257,10 +1783,13 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Candlegrove Witch
 - Candlelight Vigil
 - Candlelit Cavalry
+- Candlestick
 - Candy Trail
 - Cankerbloom
 - Canoptek Scarab Swarm
+- Canoptek Tomb Sentinel
 - Canopy Baloth
+- Canopy Claws
 - Canopy Gorger
 - Canopy Spider
 - Canopy Tactician
@@ -1270,6 +1799,7 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Canyon Lurkers
 - Canyon Minotaur
 - Canyon Slough
+- Canyon Wildcat
 - Cao Ren, Wei Commander
 - Capashen Knight
 - Capashen Standard
@@ -1277,31 +1807,47 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Capashen Unicorn
 - Capital City
 - Capital Guard
+- Caprichrome
+- Capricious Sliver
+- Captain America, Liberator
+- Captain America, Steve Rogers
+- Captain Howler, Sea Scourge
 - Captain Lannery Storm
+- Captain of the Mists
 - Captain of the Watch
 - Captain of Umbar
 - Captain Ripley Vance
 - Captain Storm, Cosmium Raider
 - Captain's Call
 - Captain's Claws
+- Captain's Defense
 - Captivating Cave
 - Captivating Crew
 - Captivating Gyre
 - Captivating Unicorn
 - Captive Flame
+- Captured Sunlight
+- Carapace
 - Carapace Forger
 - Caravan Hurda
+- Careening Mine Cart
 - Carefree Swinemaster
 - Careful Study
 - Careless Celebrant
+- Caretaker's Talent
+- Caribou Range
 - Carnage Altar
 - Carnage Tyrant
+- Carnage Wurm
+- Carnassid
 - Carnifex Demon
+- Carnival Hellsteed
 - Carnival of Souls
 - Carnivore
 - Carnivorous Moss-Beast
 - Carnivorous Plant
 - Carrier Pigeons
+- Carrion
 - Carrion Ants
 - Carrion Call
 - Carrion Crow
@@ -1309,13 +1855,22 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Carrion Howler
 - Carrion Imp
 - Carrion Screecher
+- Carrion Wall
+- Cartel Aristocrat
 - Cartographer
+- Cartographer's Companion
+- Cartouche of Ambition
+- Cartouche of Knowledge
+- Cartouche of Solidarity
+- Cartouche of Zeal
 - Carven Caryatid
 - Cascade Bluffs
+- Casey Jones, Back Alley Brute
 - Casey Jones, Vigilante
 - Cast Down
 - Cast into Darkness
 - Cast into the Fire
+- Cast Out
 - Castle
 - Castle Ardenvale
 - Castle Embereth
@@ -1337,6 +1892,8 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Cat Dragon
 - Cat Soldier
 - Cat Warrior
+- Cat Warrior
+- Cat Warriors
 - Cat-Gator
 - Cat-Owl
 - Catacomb Crocodile
@@ -1346,10 +1903,14 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Catapult Master
 - Catapult Squad
 - Cateran Brute
+- Cateran Enforcer
 - Cateran Kidnappers
+- Cateran Overlord
 - Cateran Persuader
+- Cateran Slaver
 - Cateran Summons
 - Cathar Commando
+- Cathar's Call
 - Cathar's Companion
 - Cathar's Shield
 - Cathars' Crusade
@@ -1360,19 +1921,25 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Cathodion
 - Cauldron Familiar
 - Cauldron of Essence
+- Caustic Bronco
 - Caustic Caterpillar
 - Caustic Hound
 - Caustic Rain
+- Caustic Tar
 - Cautious Survivor
+- Cavalier of Night
 - Cavalry Drillmaster
 - Cave of Temptation
+- Cave Sense
 - Cave Tiger
 - Cave-In
+- Cavern Crawler
 - Cavern Harpy
 - Cavern of Souls
 - Cavern Thoctar
 - Cavern Whisperer
 - Caves of Koilos
+- Cazur, Ruthless Stalker
 - Celebrity Fencer
 - Celestial Ancient
 - Celestial Crusader
@@ -1382,14 +1949,18 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Celestial Prism
 - Celestial Purge
 - Celestial Unicorn
+- Cement Shoes
 - Cemetery Gate
+- Cemetery Prowler
 - Cemetery Reaper
+- Cenn's Enlistment
 - Cenote Scout
 - Censor
 - Centaur
 - Centaur
 - Centaur
 - Centaur Archer
+- Centaur Battlemaster
 - Centaur Courser
 - Centaur Garden
 - Centaur Glade
@@ -1398,39 +1969,63 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Centaur Peacemaker
 - Centaur Rootcaster
 - Centaur Safeguard
+- Centaur Veteran
 - Centaur's Herald
+- Center Soul
 - Cephalid Aristocrat
 - Cephalid Broker
 - Cephalid Coliseum
+- Cephalid Inkshrouder
 - Cephalid Looter
 - Cephalid Pathmage
 - Cephalid Retainer
 - Cephalid Scout
+- Cephalopod Sentry
 - Ceremonial Groundbreaker
+- Ceremonial Knife
 - Ceremonious Rejection
 - Cerodon Yearling
 - Certain Death
 - Cerulean Wyvern
 - Cessation
 - Ceta Disciple
+- Chain Devil
 - Chain Reaction
 - Chain to Memory
+- Chainbreaker
 - Chained Brute
+- Chained to the Rocks
 - Chainer's Edict
 - Chainflinger
+- Chains of Custody
+- Chainwhip Cyclops
+- Chakram Retriever
+- Chakram Slinger
+- Chalk Outline
+- Chamber of Manipulation
 - Chambered Nautilus
+- Chameleon Colossus
 - Champion of Arashin
 - Champion of Dusk
+- Champion of Lambholt
 - Champion of the Parish
 - Champion of the Perished
+- Champion's Helm
 - Chance-Met Elves
+- Chancellor of Tales
+- Chandler
+- Chandra's Ignition
 - Chandra's Magmutt
 - Chandra's Outrage
 - Chandra's Pyrohelix
 - Chandra, Novice Pyromancer
+- Changeling Outcast
+- Changeling Sentinel
+- Changeling Wayfinder
 - Channel the Suns
 - Channeler Initiate
 - Chant of the Skifsang
+- Chaos Channeler
 - Chaos Charm
 - Chaos Maw
 - Chaos Terminator Lord
@@ -1452,52 +2047,75 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Charging Rhino
 - Charging Slateback
 - Charging Strifeknight
+- Charging Troll
 - Charging War Boar
 - Chariot of Victory
 - Charisma Bobblehead
 - Charismatic Vanguard
 - Charity Extractor
+- Charix, the Raging Isle
+- Charmed Stray
 - Charnelhoard Wurm
 - Chartooth Cougar
 - Chase Inspiration
+- Chase Stein, Runaway
 - Chasm Drake
 - Chasm Guide
+- Chasm Skulker
 - Chastise
 - Chatter of the Squirrel
+- Chatterstorm
 - Checkpoint Officer
 - Cheerful Osteomancer // Raise Dead
+- Chelonian Tackle
+- Chemister's Insight
 - Cherubael
 - Chief of the Edge
 - Chief of the Foundry
 - Chief of the Scale
 - Chieftain en-Dal
+- Child of Gaea
 - Child of Night
 - Child of Thorns
+- Children of Korlis
 - Chill Haunting
+- Chill of Foreboding
 - Chill to the Bone
 - Chillbringer
+- Chilling Apparition
+- Chilling Grasp
 - Chilling Shade
 - Chilling Trap
 - Chime of Night
 - Chimney Rabble
 - Chitinous Cloak
+- Chitinous Graspling
 - Chittering Harvester
 - Chittering Host
 - Chittering Witch
 - Chivalric Alliance
 - Cho-Arrim Bruiser
+- Chocobo Racetrack
 - Choked Estuary
 - Choking Fumes
+- Choking Tethers
+- Chomping Changeling
+- Chord of Calling
+- Chorus of the Tides
 - Chorus of Woe
 - Chosen by Heliod
 - Chromatic Lantern
 - Chromatic Star
 - Chrome Cat
+- Chrome Companion
 - Chrome Mox
 - Chrome Prowler
 - Chrome Steed
+- Chromium
+- Chronic Flooding
 - Chronicle of Victory
 - Chronomaton
+- Chub Toad
 - Chulane, Teller of Tales
 - Churning Eddy
 - Cinder Barrens
@@ -1505,23 +2123,35 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Cinder Giant
 - Cinder Glade
 - Cinder Hellion
+- Cinder Marsh
 - Cinder Shade
 - Cinder Storm
+- Cinderbones
 - Cinderhaze Wretch
 - Cindering Cutthroat
+- Cinderslash Ravager
+- Cindervines
 - Circle of Dreams Druid
 - Circle of Elders
+- Circle of Power
 - Circle of the Land Druid
 - Circuit Mender
+- Circular Logic
 - Cirith Ungol Patrol
+- Citadel Castellan
 - Citadel Gate
 - Citanul Druid
+- Citanul Flute
+- Citanul Hierophants
 - Citanul Stalwart
 - Citanul Woodreaders
 - Citizen
 - Citizen
 - Citizen
+- Citizen V, Helmut Zemo
+- Citizen's Arrest
 - City of Brass
+- City on Fire
 - City Pigeon
 - Citywatch Sphinx
 - Citywide Bust
@@ -1529,17 +2159,26 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Civic Stalwart
 - Civic Wayfinder
 - Clachan Festival
+- Claim of Erebos
 - Claim the Firstborn
+- Claim the Precious
+- Clairvoyance
 - Clammy Prowler
+- Clamor Shaman
+- Clamorous Ironclad
 - Clan Defiance
 - Clarion Cathars
 - Clarion Spirit
+- Clash of the Eikons
+- Clash of Titans
 - Clattering Augur
 - Claws of Gix
+- Claws of Valakut
 - Claws of Wirewood
+- Claws Out
 - Clay Revenant
+- Clay Statue
 - Cleanfall
-- Cleanse
 - Cleansing Nova
 - Cleansing Ray
 - Cleansing Screech
@@ -1551,11 +2190,14 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Clearwater Pathway // Murkwater Pathway
 - Cleaver Riot
 - Cleaving Sliver
+- Cleon, Merry Champion
 - Cleric
 - Cleric
 - Cleric of Life's Bond
+- Clever Impersonator
 - Clever Lumimancer
 - Clickslither
+- Cliff Threader
 - Cliffgate
 - Cliffhaven Kitesail
 - Cliffhaven Sell-Sword
@@ -1563,17 +2205,23 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Cliffrunner Behemoth
 - Cliffside Lookout
 - Clifftop Retreat
+- Clinging Anemones
 - Clinging Darkness
 - Clinquant Skymage
+- Clive's Hideaway
 - Cloak of Feathers
 - Cloak of Mists
 - Cloak of the Bat
+- Cloaked Cadet
 - Cloaked Siren
 - Cloakwood Swarmkeeper
 - Clock of Omens
 - Clockwork Drawbridge
 - Clockwork Fox
+- Clockwork Gnomes
+- Clockwork Hydra
 - Clockwork Percussionist
+- Clone
 - Close Quarters
 - Cloud Crusader
 - Cloud Manta
@@ -1581,7 +2229,9 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Cloudblazer
 - Cloudbound Moogle
 - Cloudchaser Eagle
+- Cloudcrest Lake
 - Cloudcrown Oak
+- Cloudfin Raptor
 - Cloudgoat Ranger
 - Cloudheath Drake
 - Cloudkin Seer
@@ -1592,9 +2242,11 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Cloudsculpt Technician
 - Cloudshift
 - Cloudshredder Sliver
+- Cloudthresher
 - Clown Robot
 - Clue
 - Coal Golem
+- Coalhauler Swine
 - Coast Watcher
 - Coastal Bulwark
 - Coastal Drake
@@ -1602,6 +2254,7 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Coastal Peak
 - Coastal Piracy
 - Coastal Tower
+- Coat of Arms
 - Coat with Venom
 - Cobalt Golem
 - Cobblebrute
@@ -1609,52 +2262,79 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Cobbled Wings
 - Codex Shredder
 - Coerced to Kill
+- Coercion
 - Coeurl
 - Coffin Purge
+- Cogwork Archivist
 - Cogwork Wrestler
 - Cogworker's Puzzleknot
 - Coiled Tinviper
 - Cold Case Cracker
+- Cold-Eyed Selkie
 - Cold-Water Snapper
 - Coldsteel Heart
 - Collar the Culprit
 - Collateral Damage
 - Collective Blessing
+- Collective Nightmare
+- Collective Resistance
+- Collective Restraint
 - Collective Unconscious
 - Collector's Vault
+- Colleen Wing, Street Samurai
 - Collision // Colossus
 - Colorful Feiyi Sparrow
+- Colos Yearling
 - Colossadactyl
+- Colossal Dreadmask
 - Colossal Dreadmaw
+- Colossal Grave-Reaver
 - Colossal Majesty
 - Colossal Might
 - Colossal Skyturtle
 - Colossapede
 - Colossodon Yearling
+- Colossus Hammer
 - Colossus of Sardia
+- Combat Courier
 - Combat Professor
 - Combat Tutorial
+- Combine Chrysalis
+- Comet Crawler
 - Coming In Hot
 - Command Beacon
 - Command the Storm
 - Command Tower
 - Commander Eesha
+- Commander Greven il-Vec
+- Commander's Authority
 - Commander's Sphere
+- Commanding Presence
 - Commercial District
 - Common Crook
+- Commune with Lava
 - Companion of the Trials
 - Company Commander
+- Compass Gnome
 - Compassionate Healer
+- Compelling Argument
+- Complete Disregard
 - Composite Golem
 - Compulsion
+- Compulsory Rest
 - Concealed Courtyard
 - Concealed Weapon
 - Concentrate
+- Concentrated Fire
+- Conciliator's Duelist
 - Conclave Cavalier
 - Conclave Equenaut
 - Conclave Guildmage
+- Conclave Mentor
 - Conclave Naturalists
 - Conclave Phalanx
+- Conclave Tribunal
+- Conclave's Blessing
 - Concordant Crossroads
 - Concordia Pegasus
 - Conductor of Cacophony
@@ -1665,16 +2345,22 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Confiscate
 - Confounding Riddle
 - Congregate
+- Congregation Gryff
 - Conifer Strider
 - Conifer Wurm
 - Conjurer's Bauble
 - Conjurer's Closet
+- Connive // Concoct
 - Conquering Manticore
 - Conscripted Infantry
+- Consecrated by Blood
 - Consecrated Sphinx
 - Conservatory
 - Consider
 - Consign to the Pit
+- Conspiracy Theorist
+- Constable of the Realm
+- Constricting Sliver
 - Constricting Tendrils
 - Construct
 - Construct
@@ -1685,27 +2371,39 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Construct
 - Construct
 - Construct
+- Consulate Dreadnought
 - Consulate Skygate
+- Consulate Turret
 - Consult the Necrosages
 - Consume Strength
+- Consume the Meek
 - Consuming Corruption
+- Consuming Fervor
 - Consumptive Goo
+- Contact Other Plane
 - Contagion Clasp
 - Contagious Nim
+- Containment Construct
 - Contaminated Aquifer
 - Contaminated Landscape
 - Contemplation
 - Contentious Plan
 - Contested Cliffs
 - Contingency Plan
+- Contortionist Troupe
 - Contraband Kingpin
 - Contract Killing
 - Contradict
 - Control Magic
 - Control of the Court
+- Convalescence
+- Convalescent Care
 - Conversion Chamber
+- Conviction
 - Convolute
+- Cooperation
 - Coordinated Assault
+- Coordinated Barrage
 - Coordinated Charge
 - Coordinated Maneuver
 - Copper Carapace
@@ -1713,11 +2411,19 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Copper Host Crusher
 - Copper Longlegs
 - Copper Myr
+- Copper Tablet
+- Copperhoof Vorrac
+- Copperhorn Scout
 - Copperline Gorge
+- Copy Artifact
 - Copy Catchers
+- Copy Enchantment
+- Copy Land
+- Coral Barrier
 - Coral Commando
 - Coral Eel
 - Coral Merfolk
+- Coral Trickster
 - Coralhelm Guide
 - Cordial Vampire
 - Cordyceps Infected
@@ -1725,8 +2431,11 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Coretapper
 - Cori Mountain Monastery
 - Cori Mountain Stalwart
+- Cornered by Black Mages
+- Cornered Crook
 - Corpse Blockade
 - Corpse Churn
+- Corpse Connoisseur
 - Corpse Hauler
 - Corpse Knight
 - Corpsejack Menace
@@ -1738,10 +2447,13 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Corrupt Eunuchs
 - Corrupted Conscience
 - Corrupted Conviction
+- Corrupted Harvester
 - Corsair Captain
 - Coruscation Mage
 - Cosi's Ravager
+- Cosmic Epiphany
 - Cosmium Blast
+- Cosmogrand Zenith
 - Cost of Brilliance
 - Costly Plunder
 - Council of Advisors
@@ -1751,15 +2463,19 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Countermand
 - Counterspell
 - Countersquall
+- Countervailing Winds
+- Countless Gears Renegade
 - Courier Bat
 - Courier Griffin
 - Courier Hawk
 - Courier's Briefcase
 - Courier's Capsule
+- Courser of Kruphix
 - Court Archers
 - Court Cleric
 - Court Homunculus
 - Court Street Denizen
+- Covenant of Blood
 - Covert Operative
 - Cower in Fear
 - Cowl Prowler
@@ -1768,15 +2484,19 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Crack Open
 - Crack the Earth
 - Crackdown Construct
+- Crackling Club
 - Crackling Cyclops
 - Crackling Perimeter
 - Crackling Triton
 - Cradle of the Accursed
 - Crafty Pathmage
+- Crag Puca
 - Cragcrown Pathway // Timbercrown Pathway
 - Cragflame
+- Crash and Burn
 - Crash of Rhino Beetles
 - Crash of Rhinos
+- Crash the Party
 - Crash the Ramparts
 - Crash Through
 - Crashing Centaur
@@ -1785,12 +2505,17 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Craterize
 - Craven Giant
 - Craven Knight
+- Craw Giant
 - Craw Wurm
+- Crawl from the Cellar
+- Crawling Filth
 - Crazed Goblin
 - Crazed Skirge
 - Creakwood Ghoul
 - Creakwood Liege
+- Creeping Chill
 - Creeping Corrosion
+- Creeping Crystal Coating
 - Creeping Mold
 - Creeping Trailblazer
 - Cremate
@@ -1799,13 +2524,22 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Crescent Island Temple
 - Crested Herdcaller
 - Crested Sunmare
+- Crib Swap
 - Crime Novelist
+- Criminal Enterprise
+- Crimson Acolyte
+- Crimson Caravaneer
+- Crimson Fleet Commodore
 - Crimson Kobolds
 - Crimson Mage
 - Crimson Manticore
+- Crimson Muckwader
+- Crimson Operative
 - Crimson Roc
 - Crippling Blight
 - Crippling Chill
+- Crippling Fatigue
+- Crocanura
 - Crocodile of the Crossing
 - Crook of Condemnation
 - Crookclaw Elder
@@ -1819,49 +2553,74 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Crossroads Consecrator
 - Crossroads Village
 - Crossroads Watcher
+- Crosstown Courier
+- Crossway Vampire
 - Crosswinds
+- Crow of Dark Tidings
 - Crowd Favorites
+- Crowd of Cinders
+- Crowd's Favor
+- Crown of Skemfar
+- Crowned Ceratok
 - Crucible of Fire
+- Crucible of Worlds
 - Crude Rampart
 - Cruel Celebrant
 - Cruel Edict
 - Cruel Finality
+- Cruel Grimnarch
+- Cruel Somnophage // Can't Wake Up
 - Cruel Truths
 - Cruel Tutor
 - Cruel Witness
 - Crumble
 - Crumbling Necropolis
 - Crumbling Vestige
-- Crusade
+- Crusader of Odric
 - Crush
 - Crush Contraband
+- Crush Dissent
 - Crush of Wurms
 - Crushing Canopy
 - Crushing Disappointment
 - Crushing Vines
 - Crustacean Commando
+- Crypt Cobra
 - Crypt Creeper
 - Crypt Feaster
+- Crypt Ghast
 - Crypt of the Eternals
 - Crypt Ripper
 - Cryptbreaker
 - Cryptic Annelid
 - Cryptic Caves
 - Cryptic Command
+- Cryptic Serpent
+- Cryptolith Rite
 - Cryptwailing
 - Crystacean
 - Crystal Ball
+- Crystal Carapace
+- Crystal Chimes
+- Crystal Golem
 - Crystal Grotto
 - Crystal Quarry
 - Crystal Seer
 - Crystal Slipper
 - Crystal Vein
+- Crystalline Armor
+- Crystalline Crawler
+- Crystallization
 - Cubwarden
+- Cudgel Troll
+- Culling Dais
+- Culling Sun
 - Culling the Weak
 - Cult Guildmage
 - Cultbrand Cinder
 - Cultist's Staff
 - Cultivate
+- Cultivator's Caravan
 - Cumber Stone
 - Cunning Breezedancer
 - Cunning Evasion
@@ -1870,6 +2629,7 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Cunning Maneuver
 - Cunning Sparkmage
 - Cunning Strike
+- Cunning Survivor
 - Curate
 - Curator of Mysteries
 - Curio Vendor
@@ -1878,21 +2638,34 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Curious Altisaur
 - Curious Cadaver
 - Curious Farm Animals
+- Curious Inquiry
 - Curious Pair // Treats to Share
+- Curse of the Swine
 - Cursebreak
+- Cursed Flesh
+- Cursed Land
 - Cursed Minotaur
+- Cursed Mirror
+- Cursed Ronin
+- Custodi Soulbinders
 - Custodian of the Trove
 - Cutthroat Centurion
 - Cutthroat Contender
+- Cutthroat il-Dal
 - Cutthroat Maneuver
+- Cyan, Vengeful Samurai
+- Cycle of Renewal
 - Cyclonic Rift
 - Cyclopean Mummy
+- Cyclops Electromancer
 - Cyclops of Eternal Fury
 - Cyclops of One-Eyed Pass
 - Cylian Elf
+- Cynette, Jelly Drover
 - Cystbearer
 - D'Avenant Archer
 - D'Avenant Trapper
+- Daemogoth Titan
 - Daemogoth Woe-Eater
 - Daggerback Basilisk
 - Daggerclaw Imp
@@ -1900,20 +2673,30 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Daggerfang Duo
 - Daggermaw Megalodon
 - Dai Li Censor
+- Daily Bugle Newspaper
 - Daily Regimen
+- Dakkon Blackblade
 - Dakmor Bat
 - Dakmor Ghoul
 - Dakmor Lancer
 - Dakmor Plague
+- Dakmor Salvage
 - Dakmor Scorpion
+- Dakmor Sorceress
 - Dalek
 - Damn
 - Damnable Pact
 - Damnation
+- Damning Verdict
 - Dampening Pulse
+- Dance of Shadows
 - Dancing Scimitar
 - Dangerous Wager
+- Danitha Capashen, Paragon
 - Daraja Griffin
+- Darba
+- Daredevil's Billy Club
+- Darien, King of Kjeldor
 - Darigaaz's Attendant
 - Darigaaz's Charm
 - Daring Apprentice
@@ -1922,19 +2705,30 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Daring Fiendbonder
 - Daring Leap
 - Daring Mechanic
+- Daring Saboteur
+- Daring Skyjek
 - Daring Thunder-Thief
 - Dark Banishing
 - Dark Betrayal
+- Dark Deed
 - Dark Favor
 - Dark Heart of the Wood
+- Dark Inquiry
 - Dark Nourishment
 - Dark Offering
+- Dark Privilege
 - Dark Prophecy
 - Dark Remedy
 - Dark Ritual
+- Dark Withering
+- Dark-Dweller Oracle
+- Darkblast
 - Darkbore Pathway // Slitherbore Pathway
+- Darkest Hour
+- Darkling Stalker
 - Darklit Gargoyle
 - Darkmoss Bridge
+- Darkness
 - Darkness Descends
 - Darkslick Drake
 - Darkslick Shores
@@ -1945,6 +2739,8 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Darksteel Forge
 - Darksteel Gargoyle
 - Darksteel Ingot
+- Darksteel Juggernaut
+- Darksteel Mutation
 - Darksteel Myr
 - Darksteel Pendant
 - Darksteel Plate
@@ -1956,11 +2752,13 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Darkwater Catacombs
 - Darling of the Masses
 - Darting Merfolk
+- Daru Cavalier
 - Daru Encampment
 - Daru Lancer
 - Daru Mender
 - Daru Sanctifier
 - Daru Spiritualist
+- Daru Warchief
 - Dauntless Aven
 - Dauntless Cathar
 - Dauntless Escort
@@ -1968,11 +2766,20 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Dauntless River Marshal
 - Dauntless Survivor
 - Dauntless Veteran
+- Dauthi Embrace
+- Dauthi Horror
+- Dauthi Jackal
+- Dauthi Marauder
+- Dauthi Mercenary
+- Dauthi Mindripper
+- Dauthi Slayer
+- Dauthi Trapper
 - Davriel's Shadowfugue
 - Dawn Gryff
 - Dawn of Hope
 - Dawn to Dusk
 - Dawn's Light Archer
+- Dawnbringer Charioteers
 - Dawnfeather Eagle
 - Dawnhart Disciple
 - Dawnhart Geist
@@ -1980,6 +2787,7 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Dawnhart Rejuvenator
 - Dawning Angel
 - Dawnray Archer
+- Dawnstrider
 - Dawnstrike Paladin
 - Dawntreader Elk
 - Dawnwing Marshal
@@ -1987,6 +2795,7 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Day of Judgment
 - Daybreak Chaplain
 - Daybreak Charger
+- Daybreak Chimera
 - Daybreak Combatants
 - Daydream
 - Daysquad Marshal
@@ -1994,17 +2803,24 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Dazzling Lights
 - Dazzling Ramparts
 - Dead // Gone
+- Dead Drop
+- Dead Reveler
+- Dead Revels
 - Dead Weight
 - Deadapult
+- Deadbridge Goliath
 - Deadbridge Shaman
 - Deadeye Duelist
+- Deadeye Harpooner
 - Deadeye Plunderers
 - Deadeye Quartermaster
 - Deadeye Rig-Hauler
 - Deadeye Tormentor
+- Deadeye Tracker
 - Deadly Derision
 - Deadly Dispute
 - Deadly Insect
+- Deadly Plot
 - Deadly Recluse
 - Deadly Riposte
 - Deadly Rollick
@@ -2015,9 +2831,11 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Deal Gone Bad
 - Death Bomb
 - Death Cultist
+- Death Denied
 - Death Frenzy
 - Death Grasp
 - Death in the Family
+- Death Rattle
 - Death Speakers
 - Death Stroke
 - Death Ward
@@ -2025,45 +2843,70 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Death's Duet
 - Death's-Head Buzzard
 - Death-Hood Cobra
+- Deathbellow Raider
 - Deathbloom Gardener
+- Deathbloom Ritualist
 - Deathbloom Thallid
 - Deathbringer Thoctar
 - Deathcap Cultivator
 - Deathcap Glade
 - Deathcap Marionette
+- Deathcoil Wurm
 - Deathcurse Ogre
 - Deathgaze Cockatrice
 - Deathgreeter
 - Deathgrip
+- Deathknell Kami
 - Deathless Ancient
 - Deathless Angel
 - Deathless Knight
 - Deathmark
+- Deathmask Nezumi
 - Deathreap Ritual
 - Deathrite Shaman
+- Deathsprout
 - Debilitating Injury
+- Debris Beetle
+- Debtor's Pulpit
 - Debtors' Knell
+- Debtors' Transport
 - Decanter of Endless Water
+- Decaying Time Loop
+- Deceive the Messenger
 - Deception
+- Deceptive Frostkite
 - Deceptive Landscape
+- Decimate
 - Decision Paralysis
 - Decisive Denial
+- Decoction Module
+- Decommission
 - Deconstruct
+- Decoy Ploy
+- Decree of Pain
+- Decree of Savagery
 - Dedicated Martyr
 - Deduce
+- Deem Worthy
+- Deep Analysis
 - Deep Reconnaissance
 - Deep-Slumber Titan
 - Deepchannel Duelist
+- Deepchannel Mentor
 - Deepfathom Skulker
+- Deepmuck Desperado
 - Deeproot Champion
 - Deeproot Elite
 - Deeproot Warrior
 - Deeproot Waters
+- Deeproot Wayfinder
 - Deepwater Hypnotist
 - Deepwood Drummer
+- Deepwood Ghoul
 - Deepwood Tantiv
 - Deepwood Wolverine
 - Deer-Dog
+- Defabricate
 - Deface
 - Defeat
 - Defend the Campus
@@ -2073,22 +2916,31 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Defenestrate
 - Defenestrated Phantom
 - Defensive Stance
+- Defiant Bloodlord
 - Defiant Elf
 - Defiant Falcon
+- Defiant Greatmaw
 - Defiant Khenra
 - Defiant Salvager
 - Defiant Strike
 - Defiant Survivor
 - Defibrillating Current
 - Defile
+- Defiled Crypt // Cadaver Lab
+- Defiling Daemogoth
+- Deflecting Swat
+- Deflection
 - Deft Duelist
 - Defy Gravity
 - Dega Disciple
+- Dehydration
+- Deity of Scars
 - Delete
 - Deliberate
 - Delighted Halfling
 - Delirium Skeins
 - Delusions of Mediocrity
+- Demand Answers
 - Dematerialize
 - Dementia Bat
 - Demogorgon's Clutches
@@ -2100,25 +2952,38 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Demon
 - Demon Berserker
 - Demon of Catastrophes
+- Demon of Loathing
+- Demon's Disciple
 - Demon's Due
 - Demon's Grasp
 - Demon's Horn
 - Demon's Jester
+- Demonic Appetite
+- Demonic Dread
 - Demonic Lore
 - Demonic Tutor
 - Demonic Vigor
 - Demystify
 - Deny Entry
 - Deny Existence
+- Deny Reality
+- Deny the Divine
+- Dependable Quinjet
 - Deploy to the Front
 - Depose // Deploy
 - Deprive
 - Depths of Desire
+- Deputized Protester
 - Deputy of Acquittals
 - Deranged Assistant
 - Deranged Outcast
 - Deranged Whelp
+- Derelict Attic // Widow's Walk
+- Descend upon the Sinful
+- Descent of the Dragons
 - Desecrated Earth
+- Desecrated Tomb
+- Desecration Elemental
 - Desecration Plague
 - Desert Cerodon
 - Desert Drake
@@ -2129,6 +2994,7 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Desert of the True
 - Desert Sandstorm
 - Desert Twister
+- Desert's Due
 - Deserted Beach
 - Deserted Temple
 - Deserter's Disciple
@@ -2146,20 +3012,30 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Destroy Evil
 - Destructive Digger
 - Destructive Revelry
+- Destructive Urge
 - Destructor Dragon
 - Detained by Legionnaires
 - Detective
+- Detention Chariot
 - Devastate
 - Devastation
+- Deviant Glee
 - Devil
+- Devil Dinosaur
 - Devilthorn Fox
 - Devkarin Dissident
 - Devoted Druid
 - Devoted Duelist
 - Devoted Hero
 - Devoted Paladin
+- Devoted Retainer
 - Devotee of Strength
 - Devour in Flames
+- Devour in Shadow
+- Devourer of Memory
+- Devouring Deep
+- Devouring Light
+- Devouring Strossus
 - Devouring Swarm
 - Devouring Tendrils
 - Devout Chaplain
@@ -2169,23 +3045,36 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Dhund Operative
 - Diabolic Edict
 - Diabolic Intent
+- Diabolic Machine
 - Diabolic Tutor
 - Diamond Kaleidoscope
+- Diamond Lion
+- Diamond Pick-Axe
+- Diamond Valley
 - Dictate of Erebos
 - Dictate of Heliod
+- Dictate of Kruphix
+- Dictate of the Twin Gods
 - Didgeridoo
 - Didn't Say Please
 - Dig Site Inventory
+- Dig Through Time
 - Diligent Excavator
 - Dimension X
+- Diminish
 - Dimir Aqueduct
 - Dimir Cluestone
+- Dimir Cutpurse
 - Dimir Guildgate
 - Dimir Guildmage
 - Dimir Informant
 - Dimir Locket
 - Dimir Signet
 - Dimir Spybug
+- Dina, Essence Brewer
+- Dina, Soul Steeper
+- Dingus Egg
+- Dingus Staff
 - Dining Room
 - Dinosaur
 - Dinosaur
@@ -2198,30 +3087,43 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Dinosaur Cat
 - Dinosaur Dragon
 - Dinosaur Egg
+- Dinosaur Hunter
 - Dinosaur Soldier
 - Dinotomaton
 - Diplomatic Immunity
 - Diplomatic Relations
 - Dire Fleet Hoarder
 - Dire Fleet Interloper
+- Dire Fleet Poisoner
+- Dire Fleet Warmonger
+- Dire Undercurrents
 - Dire Wolf Prowler
+- Dire Wolves
+- Direct Current
 - Diregraf Captain
+- Diregraf Colossus
 - Diregraf Ghoul
 - Diresight
 - Dirge Bat
 - Dirgur Island Dragon // Skimming Strike
+- Dirtwater Wraith
 - Disallow
 - Disappearing Act
 - Discerning Peddler
+- Disciple of Freyalise // Garden of Freyalise
 - Disciple of Grace
+- Disciple of Griselbrand
 - Disciple of Law
 - Disciple of Malice
 - Disciple of Tevesh Szat
 - Disciple of the Old Ways
 - Disciple of the Sun
+- Disciple of the Vault
 - Disciples of Gix
+- Disciplined Duelist
 - Discombobulate
 - Discordant Piper
+- Disdainful Stroke
 - Disease Carriers
 - Disenchant
 - Disentomb
@@ -2229,15 +3131,20 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Disinformation Campaign
 - Dismal Backwater
 - Dismal Failure
+- Dismantling Blow
 - Dismember
 - Dismiss
+- Dismissive Denial
 - Dismissive Pyromancer
 - Disorient
+- Disowned Ancestor
+- Dispatch
 - Dispel
 - Dispeller's Capsule
 - Dispersal Technician
 - Disperse
 - Dispersing Orb
+- Displace
 - Displacer Kitten
 - Disposal Mummy
 - Disrupt
@@ -2249,7 +3156,13 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Dissipate
 - Dissipation Field
 - Dissolve
+- Distant Melody
+- Distemper of the Blood
 - Distinguished Conjurer
+- Distress
+- District Guide
+- District Mascot
+- Disturbing Mirth
 - Dive Bomber
 - Dive Down
 - Divebomber Griffin
@@ -2261,30 +3174,40 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Divine Offering
 - Divine Transformation
 - Divine Verdict
+- Divine Visitation
 - Diving Griffin
 - Divinity of Pride
 - Djeru's Renunciation
 - Djinn Monk
 - Djinn of the Lamp
+- Djinni Windseer
 - Doc Ock, Sinister Scientist
 - Dockside Chef
+- Dockworker Drone
 - Dog
 - Dog
 - Dog Walker
 - Dogged Detective
+- Dogged Hunter
 - Dogged Pursuit
 - Dokuchi Shadow-Walker
 - Dominus of Fealty
+- Domri, City Smasher
+- Donatello, the Brains
 - Donatello, Turtle Techie
 - Donatello, Way with Machines
 - Doom Blade
 - Doom Whisperer
+- Doom's Servo-Guards
+- Doombot
 - Doomed Dissenter
 - Doomed Necromancer
 - Doomed Traveler
 - Doomwake Giant
+- Door to Nothingness
 - Dosan's Oldest Chant
 - Double Cleave
+- Double Trouble
 - Doubling Season
 - Dour Port-Mage
 - Douse
@@ -2292,11 +3215,17 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Douser of Lights
 - Dovin's Automaton
 - Dovin's Veto
+- Down // Dirty
+- Downdraft
 - Downpour
 - Dowsing Shaman
+- Dr. Madison Li
 - Draconic Disciple
 - Draconic Muralists
+- Dracosaur Auxiliary
 - Drag Down
+- Drag the Canal
+- Drag to the Underworld
 - Drag Under
 - Dragon
 - Dragon
@@ -2306,34 +3235,48 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Dragon Arch
 - Dragon Bell Monk
 - Dragon Blood
+- Dragon Egg
+- Dragon Egg
 - Dragon Elemental
 - Dragon Engine
 - Dragon Fodder
 - Dragon Hatchling
 - Dragon Illusion
+- Dragon Mage
+- Dragon Mantle
 - Dragon Mask
 - Dragon Moose
 - Dragon Roost
 - Dragon Sniper
 - Dragon Spirit
 - Dragon Spirit
+- Dragon Tempest
 - Dragon Trainer
+- Dragon Tyrant
 - Dragon Whisperer
 - Dragon's Claw
 - Dragon's Eye Sentry
 - Dragon's Presence
 - Dragon's Rage Channeler
+- Dragon-Scarred Bear
 - Dragon-Style Twins
 - Dragonback Assault
 - Dragonborn Looter
+- Dragonfly Suit
 - Dragonlair Spider
 - Dragonloft Idol
 - Dragonlord Dromoka
 - Dragonlord Silumgar
+- Dragonlord's Servant
 - Dragonmaster Outcast
 - Dragonscale Boon
+- Dragonsguard Elite
 - Dragonskull Summit
+- Dragonspeaker Shaman
 - Dragonstalker
+- Dragonstorm
+- Dragonstorm Forecaster
+- Dragonstorm Globe
 - Dragoon's Wyvern
 - Drain the Well
 - Drake
@@ -2349,16 +3292,23 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Drana's Emissary
 - Drana, Liberator of Malakir
 - Drannith Healer
+- Drannith Magistrate
 - Drannith Stinger
+- Draugr Recruiter
+- Drawn from Dreams
 - Dread Linnorm // Scale Deflection
 - Dread of Night
+- Dread Presence
 - Dread Reaper
+- Dread Return
 - Dread Rider
 - Dread Shade
 - Dread Slag
 - Dreadbore
+- Dreadbringer Lampads
 - Dreadhorde Butcher
 - Dreadmalkin
+- Dreadmobile
 - Dreadwaters
 - Dreadwing
 - Dreadwing Scavenger
@@ -2366,21 +3316,30 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Dream Beavers
 - Dream Eater
 - Dream Fracture
+- Dream Spoilers
 - Dream Stalker
 - Dream Trawler
 - Dream Twist
+- Dreamcatcher
 - Dreamroot Cascade
 - Dreams of Laguna
 - Dreamscape Artist
+- Dreamstalker Manticore
 - Dreamstone Hedron
 - Dreamtail Heron
+- Dredge
+- Dreg Mangler
 - Dreg Reaver
 - Dreg Recycler
+- Dregscape Zombie
 - Drelnoch
 - Drey Keeper
 - Drider
+- Drifter il-Dal
+- Drifting Djinn
 - Drifting Meadow
 - Drifting Shade
+- Drill Bit
 - Drill Too Deep
 - Drill-Skimmer
 - Drinker of Sorrow
@@ -2394,39 +3353,60 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Dromar's Charm
 - Dromoka Dunecaster
 - Dromoka Warrior
+- Dromosaur
 - Drone
 - Drooling Groodion
 - Dross Crocodile
+- Dross Golem
 - Dross Harvester
 - Dross Hopper
+- Dross Prowler
 - Dross Ripper
 - Dross Scorpion
 - Dross Skullbomb
+- Drossclaw
 - Drossforge Bridge
+- Drove of Elves
+- Drover Grizzly
 - Drover of the Mighty
 - Drown in Ichor
 - Drown in Shapelessness
 - Drown in Sorrow
+- Drowned
 - Drowned Catacomb
 - Drowned Rusalka
 - Drowned Secrets
 - Drowner of Secrets
+- Drownyard Amalgam
 - Drownyard Explorers
 - Drownyard Temple
+- Drudge Beetle
+- Drudge Reavers
+- Drudge Skeletons
 - Druid Lyrist
+- Druid of Horns
 - Druid of the Anima
 - Druid of the Cowl
 - Druid of the Spade
 - Druids' Repository
+- Drumbellower
 - Drumhunter
+- Drunau Corpse Trawler
 - Dry Spell
+- Dryad Militant
+- Dryad of the Ilysian Grove
+- Dryad Sophisticate
+- Dryad's Favor
 - Dryad's Revival
+- Dual Casting
 - Dual Shot
 - Dual-Sun Adepts
+- Dualcaster Mage
 - Dub
 - Dubious Delicacy
 - Duelcraft Trainer
 - Dueling Rapier
+- Duelist of the Mind
 - Duergar Assailant
 - Duergar Cave-Guard
 - Duergar Hedge-Mage
@@ -2441,18 +3421,28 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Dunes of the Dead
 - Dungeon Shade
 - Dungeoneer's Pack
+- Dungrove Elder
+- Dunland Crebain
 - Durable Coilbug
 - Durable Handicraft
+- Duress
 - Durkwood Boars
 - Dusk Imp
+- Dusk Legion Dreadnought
 - Dusk Legion Duelist
 - Dusk Legion Zealot
+- Dusk Mangler
+- Dusk Rose Reliquary
+- Dusk Urchins
 - Duskborne Skymarcher
 - Duskdale Wurm
+- Duskhunter Bat
 - Duskmantle Operative
 - Duskmantle Prowler
 - Duskmantle, House of Shadow
 - Duskrider Falcon
+- Duskshell Crawler
+- Duskwielder
 - Dust Bowl
 - Dust Corona
 - Dust Stalker
@@ -2461,14 +3451,18 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Dutiful Griffin
 - Dutiful Return
 - Dutiful Servants
+- Dutiful Thrull
 - Duty Beyond Death
+- Duty-Bound Dead
 - Dwarf
 - Dwarf Berserker
 - Dwarf Token
+- Dwarven Berserker
 - Dwarven Blastminer
 - Dwarven Bloodboiler
 - Dwarven Castle Guard
 - Dwarven Demolition Team
+- Dwarven Grunt
 - Dwarven Lieutenant
 - Dwarven Mine
 - Dwarven Miner
@@ -2482,6 +3476,8 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Dwynen's Elite
 - Dying to Serve
 - Dying Wail
+- Dynavolt Tower
+- Déjà Vu
 - Dúnedain Blade
 - Eager Cadet
 - Eager First-Year
@@ -2490,27 +3486,36 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Eagle of the Watch
 - Eagles of the North
 - Early Frost
+- Earsplitting Rats
 - Earth Elemental
 - Earth King's Lieutenant
+- Earth Kingdom Protectors
 - Earth Kingdom Soldier
 - Earth Rift
 - Earth Servant
 - Earth Tremor
+- Earth-Cult Elemental
 - Earth-Origin Yak
 - Earthblighter
 - Earthcraft
 - Earthquake
+- Earthquake Dragon
 - Earthshaker
 - Earthshaker Giant
 - Earthshaking Si
 - East Wind Avatar
+- East-Mark Cavalier
+- Easterling Vanguard
 - Eastern Paladin
 - Eastfarthing Farmer
 - Easy Prey
 - Eat to Extinction
 - Eaten by Piranhas
+- Eater of Hope
+- Ebon Dragon
 - Ebon Drake
 - Ebon Stronghold
+- Ebony Horse
 - Ebony Rhino
 - Ebony Treefolk
 - Eccentric Farmer
@@ -2518,7 +3523,10 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Eclipsed Steppe
 - Ecologist's Terrarium
 - Ecstatic Electromancer
+- Edea, Possessed Sorceress
 - Eel-Hounds
+- Eerie Gravestone
+- Eerie Interlude
 - Eerie Procession
 - Eerie Soultender
 - Efficient Construction
@@ -2526,34 +3534,48 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Eidolon of Blossoms
 - Eidolon of Inspiration
 - Eidolon of Philosophy
+- Eidolon of Rhetoric
+- Eidolon of the Great Revel
 - Eiganjo Exemplar
 - Eiganjo Free-Riders
 - Eiganjo, Seat of the Empire
+- Eivor, Wolf-Kissed
 - Eject
 - Ekundu Griffin
 - Elaborate Firecannon
 - Eladamri's Call
+- Eladamri's Vineyard
 - Elas il-Kor, Sadistic Pilgrim
 - Elder Auntie
+- Elder Druid
+- Elder Mastery
 - Elder of Laurels
+- Elder Owyn Lyons
 - Elderfang Disciple
 - Elderfang Ritualist
 - Elderleaf Mentor
+- Elderwood Scion
+- Eldrazi
 - Eldrazi
 - Eldrazi Aggressor
 - Eldrazi Angel
 - Eldrazi Devastator
 - Eldrazi Displacer
 - Eldrazi Horror
+- Eldrazi Ravager
 - Eldrazi Scion
 - Eldrazi Spawn
 - Electric Eel
 - Electric Revelation
+- Electric Seaweed
 - Electrify
 - Electrolyze
 - Electrostatic Field
 - Electrostatic Infantry
+- Electrostatic Pummeler
+- Elegant Edgecrafters
 - Elegant Parlor
+- Elemental
 - Elemental
 - Elemental
 - Elemental
@@ -2585,10 +3607,15 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Elemental // Centaur
 - Elemental Bird
 - Elemental Bond
+- Elemental Eruption
 - Elemental Masterpiece
+- Elemental Mastery
 - Elemental Shaman
+- Elemental Spectacle
 - Elemental Summoning
 - Elementalist Adept
+- Elenda's Hierophant
+- Elenda, the Dusk Rose
 - Elephant
 - Elephant
 - Elephant Ambush
@@ -2596,6 +3623,7 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Elephant Guide
 - Elephant-Rat
 - Elesh Norn, Grand Cenobite
+- Elesh Norn, Mother of Machines
 - Elf
 - Elf Druid
 - Elf Knight
@@ -2609,18 +3637,31 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Eliminate
 - Elite Archers
 - Elite Arrester
+- Elite Cat Warrior
 - Elite Guardmage
 - Elite Headhunter
 - Elite Inquisitor
 - Elite Instructor
+- Elite Interceptor // Rejoinder
 - Elite Javelineer
+- Elite Skirmisher
 - Elite Vanguard
 - Elixir of Vitality
 - Elk
+- Ellie, Vengeful Hunter
+- Elmar, Ulvenwald Informant
 - Eloise, Nephalia Sleuth
+- Elsha, Threefold Master
+- Elspeth Conquers Death
+- Elspeth's Smite
+- Elspeth, Sun's Champion
+- Elspeth, Sun's Nemesis
 - Elturgard Ranger
+- Elusive Krasis
+- Elusive Spellfist
 - Elven Ambush
 - Elven Cache
+- Elven Chorus
 - Elven Fortress
 - Elven Lyre
 - Elven Palisade
@@ -2629,6 +3670,9 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Elvish Archdruid
 - Elvish Archers
 - Elvish Archivist
+- Elvish Bard
+- Elvish Champion
+- Elvish Clancaller
 - Elvish Doomsayer
 - Elvish Eulogist
 - Elvish Guidance
@@ -2636,35 +3680,48 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Elvish Harbinger
 - Elvish Herder
 - Elvish Hexhunter
+- Elvish Hunter
 - Elvish Hydromancer
 - Elvish Lookout
 - Elvish Lyrist
 - Elvish Mystic
+- Elvish Pioneer
 - Elvish Piper
 - Elvish Promenade
 - Elvish Ranger
+- Elvish Reclaimer
 - Elvish Regrower
+- Elvish Scout
 - Elvish Scrapper
 - Elvish Skysweeper
+- Elvish Spirit Guide
 - Elvish Vanguard
 - Elvish Visionary
 - Elvish Warmaster
 - Elvish Warrior
 - Emancipation Angel
+- Embalmed Ascendant
 - Ember Hauler
 - Ember Shot
 - Ember Weaver
 - Ember-Eye Wolf
 - Embereth Shieldbreaker // Battle Display
+- Embermage Goblin
 - Embermaw Hellion
 - Emberstrike Duo
 - Emberwilde Augur
+- Emblem of the Warmind
 - Embodiment of Spring
 - Embraal Bruiser
 - Embraal Gear-Smasher
+- Embrace the Paradox
+- Embrace the Unknown
 - Emerald Dragonfly
 - Emerald Medallion
+- Emerald Oryx
 - Emerge from the Cocoon
+- Emerge Unscathed
+- Emergence Zone
 - Emergency Eject
 - Emergency Weld
 - Emeria Angel
@@ -2675,27 +3732,46 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Emmessi Tome
 - Emperor's Vanguard
 - Empress Galina
+- Empty the Pits
+- Empty the Warrens
 - Empyrean Eagle
 - Empyrial Armor
 - Empyrial Plate
+- Emrakul's Messenger
+- Emry, Lurker of the Loch
 - Enatu Golem
 - Encampment Keeper
+- Enchanted Carriage
 - Enchantress's Presence
+- Enclave Cryptologist
+- Enclave Elite
 - Encroaching Dragonstorm
+- Encroaching Mycosynth
 - Encroaching Wastes
 - End-Raze Forerunners
 - Endless Cockroaches
+- Endless Obedience
+- Endless One
+- Endrider Catalyzer
+- Endrider Spikespitter
+- Enduring Courage
+- Enduring Curiosity
+- Enduring Innocence
 - Enduring Scalelord
+- Enduring Tenacity
+- Enduring Vitality
 - Enemy of the Guildpact
 - Energizer
 - Energy Bolt
 - Energy Refractor
 - Enervate
+- Enfeeblement
 - Enforcer Griffin
 - Engine Rat
 - Engineered Might
 - Engulfing Eruption
 - Enhanced Awareness
+- Enigma Drake
 - Enigma Eidolon
 - Enlightened Ascetic
 - Enlightened Maniac
@@ -2706,28 +3782,45 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Enraged Ceratok
 - Enraged Flamecaster
 - Enraged Giant
+- Enraged Huorn
+- Enraged Revolutionary
 - Enslaved Dwarf
 - Enter the Enigma
+- Enter the Unknown
 - Enthralling Victor
 - Enthusiastic Mechanaut
+- Entish Restoration
 - Entomb
+- Entrails Feaster
 - Entropic Eidolon
 - Envelop
+- Environmental Sciences
 - Environmental Scientist
 - Envoy of Okinec Ahau
+- Envoy of the Ancestors
 - EPF Point Squad
+- Ephara's Enlightenment
+- Ephara's Radiance
 - Ephara's Warden
+- Ephemeral Shields
+- Ephemerate
 - Ephemeron
+- Epic Confrontation
 - Epic Downfall
 - Epic Proportions
+- Epic Struggle
 - Epicure of Blood
+- Epiphany Storm
 - Epitaph Golem
 - Equilibrium Adept
+- Era of Enlightenment // Hand of Enlightenment
 - Erase
 - Erdwal Ripper
 - Erebor Flamesmith
+- Erebos's Titan
 - Eriette's Lullaby
 - Eriette's Tempting Apple
+- Erinis, Gloom Stalker
 - Erkenbrand, Lord of Westfold
 - Erode
 - Eroded Canyon
@@ -2741,8 +3834,11 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Escape from Orthanc
 - Escape Routes
 - Escape Tunnel
+- Escape Velocity
 - Escaped Experiment
+- Escaped Null
 - Escarpment Fortress
+- Esika's Chariot
 - Esper Charm
 - Esper Cormorants
 - Esper Panorama
@@ -2756,50 +3852,68 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Essence Fracture
 - Essence Harvest
 - Essence Infusion
+- Essence Pulse
 - Essence Scatter
 - Essence Warden
 - Etched Champion
 - Etched Cornfield
 - Etched Familiar
 - Eternal Dragon
+- Eternal of Harsh Truths
 - Eternal Student
+- Eternal Thirst
 - Eternal Warrior
 - Eternal Witness
 - Eternity Snare
 - Ethercaste Knight
+- Ethereal Armor
 - Ethereal Guidance
+- Etherium Abomination
 - Etherium Astrolabe
 - Etherium Cell
 - Etherium Sculptor
 - Etherium Spinner
 - Etherium-Horn Sorcerer
 - Ethersworn Adjudicator
+- Ethersworn Sphinx
 - Ettercap // Web Shot
 - Eumidian Terrabotanist
 - Eureka Moment
 - Eutropia the Twice-Favored
 - Evacuation
+- Evanescent Intellect
 - Evangel of Heliod
+- Evasive Action
 - Everbark Shaman
+- Everflowing Chalice
 - Evernight Shade
+- Evil Presence
+- Evil Reawakened
 - Eviscerate
 - Eviscerator
 - Eviscerator's Insight
 - Evolution Charm
 - Evolution Sage
+- Evolution Witness
 - Evolving Wilds
+- Exava, Rakdos Blood Witch
 - Excavated Wall
 - Excavating Anurid
 - Excavation Elephant
+- Excavation Explosion
 - Excavation Mole
 - Exclude
 - Exclusion Mage
 - Excoriate
 - Execute
 - Executioner's Capsule
+- Executioner's Hood
+- Exemplar of Light
+- Exemplar of Strength
 - Exhilarating Elocution
 - Exiled Boggart
 - Exit Specialist
+- Exorcise
 - Exorcist
 - Exosuit Savior
 - Exotic Curse
@@ -2814,31 +3928,43 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Expedition Skulker
 - Expel
 - Expendable Troops
+- Experimental Armor
 - Experimental Aviator
+- Exploding Borders
 - Exploration
 - Explore
 - Explosive Apparatus
+- Explosive Derailment
 - Explosive Entry
 - Explosive Getaway
 - Explosive Impact
+- Explosive Prodigy
 - Explosive Shot
 - Explosive Vegetation
+- Explosive Welcome
 - Expose Evil
 - Expose to Daylight
+- Exquisite Blood
 - Exsanguinate
+- Exsanguinator Cavalry
 - Extinguish
 - Extinguish All Hope
 - Extra Arms
+- Extract from Darkness
+- Extractor Demon
+- Extravagant Replication
 - Exuberant Firestoker
 - Exultant Cultist
 - Exultant Skymarcher
 - Eye Collector
 - Eye of Nowhere
 - Eye of Ramos
+- Eye of Ugin
 - Eyeblight Assassin
 - Eyeblight Cullers
 - Eyes of the Beholder
 - Eyes of the Watcher
+- Eyes of the Wisent
 - Ezekiel Sims, Spider-Totem
 - Ezio, Blade of Vengeance
 - Ezuri's Archers
@@ -2847,13 +3973,18 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Fable of Wolf and Owl
 - Fabled Passage
 - Fabricate
+- Face of Fear
+- Faceless Butcher
 - Facet Reader
 - Facevaulter
+- Fact or Fiction
 - Fade from Memory
 - Fade into Antiquity
 - Faebloom Trick
+- Faeburrow Elder
 - Faerie
 - Faerie
+- Faerie Bladecrafter
 - Faerie Dragon
 - Faerie Dreamthief
 - Faerie Duelist
@@ -2868,15 +3999,24 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Faerie Seer
 - Faerie Snoop
 - Faerie Spy
+- Faerie Swarm
+- Faerie Tauntings
 - Faerie Vandal
 - Failed Conversion
 - Failed Fording
 - Failed Inspection
+- Fain, the Broker
 - Fairgrounds Patrol
+- Fairgrounds Warden
+- Faith of the Devoted
+- Faith Unbroken
 - Faithbearer Paladin
 - Faithful Mending
 - Faithful Watchdog
 - Faithless Looting
+- Faithless Salvaging
+- Falcon and Redwing
+- Falcon's Wing Harness
 - Falconer Adept
 - Falkenrath Celebrants
 - Falkenrath Forebear
@@ -2886,34 +4026,50 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Falkenrath Reaver
 - Fall of the Gavel
 - Fall of the Hammer
+- Fall to Earth
 - Fallaji Chaindancer
+- Fallaji Excavation
 - Fallaji Vanguard
 - Fallen Angel
+- Fallen Askari
 - Fallen Cleric
 - Fallen Ferromancer
+- Fallen Ideal
 - Fallowsage
 - False Defeat
+- False Demise
 - False Floor
+- False Memories
 - False Mourning
 - False Prophet
 - False Summoning
+- Falthis, Shadowcat Familiar
 - Familiar's Ruse
 - Family Reunion
 - Famine
 - Famished Paladin
 - Fan Bearer
+- Fanatic of Mogis
 - Fanatic of Rhonas
+- Fanatic of Rhonas
+- Fanatic of Xenagos
 - Fanatical Devotion
 - Fanatical Fever
 - Fanatical Firebrand
+- Fanatical Offering
 - Fanatical Strength
 - Fang Dragon // Forktail Sweep
 - Fang of Shigeki
+- Fang, Fearless l'Cie
 - Fangren Firstborn
 - Fangren Hunter
 - Fangren Marauder
 - Fangren Pathcutter
+- Fantastic Elasticity
+- Far // Away
 - Farbog Boneflinger
+- Farbog Explorer
+- Farbog Revenant
 - Farewell
 - Farfinder
 - Farhaven Elf
@@ -2924,51 +4080,76 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Fast // Furious
 - Fatal Fumes
 - Fate Forgotten
+- Fate Transfer
+- Fate Unraveler
 - Fateful End
+- Fatestitcher
 - Fathom Fleet Firebrand
+- Fathom Mage
 - Fault Line
 - Fault Riders
+- Faultgrinder
 - Fauna Shaman
 - Favor of the Woods
 - Favorable Winds
 - Favored of Iroas
 - Fear of Being Hunted
 - Fear of Exposure
+- Fear of Failed Tests
 - Fear of Isolation
 - Fear of Lost Teeth
 - Fear of Surveillance
 - Fearless Halberdier
+- Fearless Liberator
+- Fearless Pup
 - Feast of Sanity
+- Feast of Succession
 - Feast of the Unicorn
 - Feast on the Fallen
+- Feaster of Fools
+- Feasting Hobbit
+- Feat of Resistance
 - Feather
 - Feather of Flight
 - Featherbrained Filcher
 - Feebleness
+- Feed the Flames
+- Feed the Pack
 - Feed the Serpent
 - Feed the Swarm
+- Feedback
 - Feedback Bolt
 - Feeding Frenzy
 - Feeling of Dread
 - Feiyi Snake
+- Feldon's Cane
 - Felhide Minotaur
 - Felhide Petrifier
 - Felidar Cub
 - Felidar Guardian
+- Felidar Retreat
 - Felidar Savior
+- Felidar Sovereign
 - Fell
+- Fell Beast of Mordor
+- Fell Flagship
 - Fell Specter
 - Fell the Pheasant
 - Fell the Profane // Fell Mire
 - Fellwar Stone
+- Felothar, Dawn of the Abzan
 - Femeref Archers
 - Femeref Enchantress
+- Femeref Knight
 - Femeref Scouts
 - Fen Hauler
+- Fen Stalker
 - Fencer Clique
 - Fencing Ace
 - Feral Abomination
 - Feral Animist
+- Feral Ferocity
+- Feral Incarnation
 - Feral Instinct
 - Feral Invocation
 - Feral Krushok
@@ -2979,8 +4160,12 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Ferocious Charge
 - Ferocious Pup
 - Ferocious Zheng
+- Ferocity
+- Ferropede
 - Ferrous Lake
 - Ferrovore
+- Fertilid
+- Fervent Cathar
 - Fervent Charge
 - Fervent Denial
 - Fervent Paincaster
@@ -2997,6 +4182,7 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Festival Crasher
 - Festival of Trokin
 - Festive Funeral
+- Fetid Gargantua
 - Fetid Heath
 - Fetid Horror
 - Fetid Imp
@@ -3005,35 +4191,50 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Fevered Convulsions
 - Fevered Strength
 - Fey Steed
+- Fiddlehead Kami
 - Field Creeper
 - Field Marshal
+- Field of Ruin
 - Field of Souls
+- Field of the Dead
 - Fields of Strife
+- Fiend Artisan
+- Fiend Hunter
 - Fiendlash
 - Fierce Guardianship
 - Fierce Witchstalker
+- Fiery Cannonade
 - Fiery Conclusion
+- Fiery Emancipation
 - Fiery Fall
 - Fiery Finish
 - Fiery Hellhound
+- Fiery Inscription
 - Fiery Intervention
 - Fiery Islet
 - Fiery Justice
+- Fiery Temper
 - Fight On!
 - Fighting Drake
 - Filigree Angel
+- Filigree Attendant
 - Filigree Crawler
 - Filigree Familiar
 - Filigree Sages
 - Fill with Fright
+- Filth
+- Fin Fang Foom
 - Final Death
 - Final Flare
 - Final Judgment
 - Final Payment
 - Final Revels
 - Final Reward
+- Final Strike
 - Final Vengeance
+- Finale of Glory
 - Finch Formation
+- Finest Hour
 - Finishing Blow
 - Fire // Ice
 - Fire Ambush
@@ -3048,25 +4249,34 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Fire Nation Raider
 - Fire Nation Sentinels
 - Fire Nation Soldier
+- Fire Nation Warship
 - Fire Nation's Conquest
 - Fire Shrine Keeper
 - Fire Snake
 - Fire Sprites
 - Fire Tempest
 - Fire Urchin
+- Fire Whip
+- Fire-Field Ogre
 - Fire-Lit Thicket
 - Fire-Omen Crane
+- Fireblade Artist
 - Firebolt
 - Fireborn Knight
 - Firebrand Archer
 - Firebrand Ranger
+- Firecannon Blast
+- Firefiend Elemental
 - Firefist Adept
+- Firefist Striker
 - Firefly
 - Fireforger's Puzzleknot
 - Firehoof Cavalry
+- Firemane Avenger
 - Firemantle Mage
 - Firemind's Research
 - Fires of Undeath
+- Fires of Victory
 - Fires of Yavimaya
 - Firescreamer
 - Fireshrieker
@@ -3078,8 +4288,11 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - First Response
 - First Sliver's Chosen
 - First Volley
+- First-Sphere Gargantua
 - Fish
 - Fish
+- Fishliver Oil
+- Fisk Tower
 - Fissure
 - Fissure Vent
 - Fissure Wizard
@@ -3090,12 +4303,14 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Flagstones of Trokair
 - Flame Blitz
 - Flame Elemental
+- Flame Jab
 - Flame Javelin
 - Flame Jet
 - Flame Lash
 - Flame Rift
 - Flame Slash
 - Flame Spirit
+- Flame-Blessed Bolt
 - Flame-Chain Mauler
 - Flame-Kin Zealot
 - Flameblade Adept
@@ -3108,20 +4323,29 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Flamekin Spitfire
 - Flamekin Village
 - Flames of the Firebrand
+- Flameshot
 - Flamespeaker Adept
+- Flamespeaker's Will
 - Flametongue Kavu
+- Flametongue Yearling
+- Flamewake Phoenix
 - Flamewave Invoker
 - Flaming Fist Officer
 - Flaming Sword
+- Flaming Tyrannosaurus
 - Flanking Troops
 - Flare
+- Flaring Cinder
 - Flash Counter
 - Flash Flood
 - Flashfires
+- Flatline
 - Flatten
 - Flawless Maneuver
+- Flaxen Intruder // Welcome Home
 - Flayed One
 - Flayer Drone
+- Flayer Husk
 - Fledgling Djinn
 - Fledgling Griffin
 - Fledgling Imp
@@ -3133,6 +4357,7 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Fleeting Aven
 - Fleeting Distraction
 - Fleeting Effigy
+- Fleeting Flight
 - Fleeting Image
 - Fleeting Memories
 - Flensermite
@@ -3141,19 +4366,25 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Flesh to Dust
 - Flesh-Eater Imp
 - Fleshbag Marauder
+- Fleshformer
 - Fleshgrafter
 - Fleshless Gladiator
 - Fleshmad Steed
 - Fleshpulper Giant
 - Fleshtaker
+- Flicker
 - Flicker of Fate
+- Flickering Spirit
 - Flickerwisp
 - Flight
 - Flight of Equenauts
 - Flight of Fancy
 - Flight Spellbomb
 - Flight-Deck Coordinator
+- Fling
+- Flint Golem
 - Flinthoof Boar
+- Flock Impostor
 - Flood
 - Flood of Recollection
 - Flood Plain
@@ -3164,12 +4395,15 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Floodfarm Verge
 - Floodhound
 - Floodwaters
+- Flora Colossus
 - Floral Evoker
 - Flourishing Defenses
 - Flourishing Fox
+- Flourishing Hunter
 - Flow of Ideas
 - Flow of Knowledge
 - Flower // Flourish
+- Flowering of the White Tree
 - Flowstone Channeler
 - Flowstone Charger
 - Flowstone Crusher
@@ -3187,15 +4421,23 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Flowstone Wyvern
 - Flumph
 - Flurry of Horns
+- Flusterstorm
 - Flux Channeler
 - Flying Carpet
 - Flying Dolphin-Fish
 - Flying Men
 - Flying Octobot
+- Flywheel Racer
 - Fodder Cannon
 - Fodder Launch
 - Fodder Tosser
+- Fog
+- Fog of Gnats
 - Foggy Bottom Swamp
+- Foggy Nelson, On Retainer
+- Fogwalker
+- Fogwell's Gym
+- Foil
 - Folk Medicine
 - Folk of An-Havva
 - Folk of the Pines
@@ -3204,28 +4446,41 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Font of Fertility
 - Font of Fortunes
 - Font of Ire
+- Font of Mythos
 - Font of Return
 - Font of Vigor
 - Food
+- Food Coma
+- Fool's Demise
 - Fool's Tome
 - Foot Disciple
 - Foot Elite
 - Foot Enforcer
 - Foot Headquarters
+- Foot Mystic
 - Foot Skirmisher
 - Foot Soldiers
+- Footbottom Feast
+- Footfall Crater
 - Foothill Guide
 - Footlight Fiend
+- Footsteps of the Goryo
 - For the Emperor!
 - Foratog
 - Forbidden Alchemy
+- Forbidden Lore
+- Forbidden Orchard
 - Force of Negation
 - Force of Savagery
+- Force of Vigor
 - Force of Virtue
 - Force of Will
 - Force Spike
 - Force Void
 - Forced Adaptation
+- Forced Worship
+- Forceful Denial
+- Forcemage Advocate
 - Foreboding Landscape
 - Foreboding Ruins
 - Forecasting Fortune Teller
@@ -3237,33 +4492,50 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Foresee
 - Forest
 - Forest Bear
+- Forever Young
 - Forge Boss
 - Forge Devil
 - Forgeborn Oreads
+- Forging the Tyrite Sword
+- Forgotten Ancient
 - Forgotten Cave
+- Forgotten Harvest
 - Forgotten Sentinel
 - Forked Bolt
 - Forked Lightning
 - Forlorn Flats
+- Forlorn Pseudamma
+- Form a Posse
+- Formation
+- Formidable Speaker
 - Forsake the Worldly
 - Forsaken Drifters
+- Forsaken Miner
+- Forsaken Monument
 - Forsaken Sanctuary
+- Fortified Area
 - Fortified Rampart
 - Fortified Village
 - Fortify
+- Fortifying Draught
 - Fortifying Provisions
+- Fortitude
 - Fortress Crab
 - Fortress Cyclops
 - Fortuitous Find
 - Forum Familiar
+- Forum Necroscribe
 - Forum of Amity
 - Foul Familiar
 - Foul Imp
 - Foul Orchard
 - Foul Play
+- Foul Presence
 - Foul Spirit
 - Foul Watcher
 - Foulmire Knight // Profane Insight
+- Foundation Breaker
+- Founding of Omashu
 - Foundry Assembler
 - Foundry Champion
 - Foundry Inspector
@@ -3272,31 +4544,44 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Foundry Street Denizen
 - Fountain of Renewal
 - Fountain of Youth
+- Fountainport
 - Fountainport Bell
 - Fox
+- Foxfire
 - Foxfire Oak
 - Fractal
 - Fractal Mascot
 - Fracture
+- Fractured Sanity
+- Fracturing Gust
 - Fragmentize
+- Francisco, Fowl Marauder
 - Frantic Confrontation
+- Frantic Purification
+- Frantic Salvage
 - Frantic Search
 - Frantic Strength
 - Frazzle
 - Free from Flesh
+- Freedom Fighter Recruit
 - Freejam Regent
 - Freewind Falcon
+- Freeze in Place
+- Frenzied Arynx
 - Frenzied Devils
 - Frenzied Rage
 - Frenzied Raptor
+- Frenzied Tilling
 - Fresh Volunteers
 - Fretwork Colony
 - Friendly Ghost
+- Friendly Neighborhood
 - Friendly Teddy
 - Frilled Deathspitter
 - Frilled Mystic
 - Frilled Oculus
 - Frilled Sandwalla
+- Frilled Sea Serpent
 - Frilled Sparkshooter
 - Frog
 - Frog Butler
@@ -3304,15 +4589,19 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Frog Tongue
 - Frog-Squirrels
 - Frogify
+- Frogmite
 - Frolicking Familiar // Blow Off Steam
+- Frondland Felidar
 - Frontier Bivouac
 - Frontier Guide
 - Frontier Mastodon
+- Frontline Devastator
 - Frontline Rebel
 - Frontline Rush
 - Frontline Sage
 - Frontline War-Rager
 - Frost Breath
+- Frost Giant
 - Frost Lynx
 - Frost Marsh
 - Frost Ogre
@@ -3324,12 +4613,14 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Frostburn Weird
 - Frostfist Strider
 - Frostling
+- Frostpeak Yeti
 - Frostveil Ambush
 - Frostwalla
 - Frostwind Invoker
 - Frozen Aether
 - Frozen Shade
 - Frozen Solid
+- Fruit of Tizerus
 - Fruition
 - Fuel for the Cause
 - Fuel the Flames
@@ -3337,10 +4628,17 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Fugue
 - Fully Grown
 - Fulminator Mage
+- Fumarole
 - Fume Spitter
+- Fumigate
+- Fuming Effigy
+- Funeral Longboat
 - Funeral Rites
+- Funeral Room // Awakening Hall
+- Fungal Fortitude
 - Fungal Infection
 - Fungal Plots
+- Fungal Rebirth
 - Fungal Sprouting
 - Fungus
 - Fungus Beast
@@ -3351,19 +4649,28 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Furious Bellow
 - Furious Reprisal
 - Furious Resistance
+- Furious Strength
+- Furnace Hellkite
 - Furnace Host Charger
+- Furnace of Rath
+- Furnace Scamp
 - Furnace Skullbomb
 - Furnace Spirit
 - Furnace Strider
 - Furnace Whelp
 - Furor of the Bitten
 - Furtive Analyst
+- Furtive Homunculus
 - Fury Sliver
 - Furyblade Vampire
+- Furyborn Hellkite
 - Furycalm Snarl
 - Fusion Elemental
 - Fuss // Bother
 - Future Flight
+- Future Sight
+- Futurist Forge
+- Futurist Sentinel
 - Fyndhorn Bow
 - Fyndhorn Brownie
 - Fyndhorn Elder
@@ -3373,14 +4680,18 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Gadwick, the Wizened
 - Gaea's Anthem
 - Gaea's Bounty
+- Gaea's Courser
 - Gaea's Cradle
+- Gaea's Embrace
 - Gaea's Gift
 - Gaea's Might
 - Gaea's Protector
 - Gaea's Skyfolk
+- Gaea's Touch
 - Gaelicat
 - Gainsay
 - Galactic Wayfarer
+- Galactus
 - Galadhrim Guide
 - Gale Force
 - Gale Swooper
@@ -3398,28 +4709,43 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Gallows at Willow Hill
 - Gallows Warden
 - Galvanic Arc
+- Galvanic Blast
 - Galvanic Giant // Storm Reading
 - Galvanic Juggernaut
 - Galvanic Key
 - Gamble
 - Game Trail
+- Game-Trail Changeling
+- Ganax, Astral Hunter
 - Gang of Devils
+- Gangly Stompling
 - Gangrenous Goliath
 - Garenbrig Carver // Shield's Might
+- Gargos, Vicious Watcher
 - Gargoyle
 - Gargoyle Castle
 - Garrison Cat
+- Garrison Excavator
+- Garrison Griffin
 - Garrison Sergeant
 - Garruk Wildspeaker
 - Garruk's Companion
 - Garruk's Gorehorn
+- Garruk's Horde
 - Garruk's Packleader
 - Garruk's Uprising
+- Garruk, Cursed Huntsman
+- Garruk, Primal Hunter
+- Gate Colossus
 - Gatebreaker Ram
+- Gatecreeper Vine
+- Gatekeeper Gargoyle
 - Gatekeeper of Malakir
 - Gates Ablaze
 - Gates of Istfell
 - Gateway Shade
+- Gateway Sneak
+- Gather Courage
 - Gather the White Lotus
 - Gauntlet of Might
 - Gavi, Nest Warden
@@ -3427,18 +4753,25 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Gavony Township
 - Gavony Trapper
 - Gavony Unhallowed
+- Gearseeker Serpent
 - Gearsmith Guardian
 - Gearsmith Prodigy
 - Geier Reach Sanitarium
 - Geist of the Archives
 - Geist of the Moors
 - Geist-Fueled Scarecrow
+- Geist-Honored Monk
+- Geistblast
 - Geistcatcher's Rig
 - Geistflame
+- Gempalm Incinerator
 - Gemrazer
 - Gemstone Array
 - Gene Pollinator
 - General Kreat, the Boltbringer
+- General Kudro of Drannith
+- General Thunderbolt Ross
+- General Traag, Heart of Stone
 - Generator Servant
 - Generous Ent
 - Generous Gift
@@ -3447,22 +4780,28 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Generous Visitor
 - Genestealer Locus
 - Genghis Frog
+- Genji Glove
+- Geology Enthusiast
 - Geomancer's Gambit
 - Geothermal Bog
 - Geothermal Crevice
 - Geothermal Kami
 - Geralf's Masterpiece
 - Geralf's Messenger
+- Geralf's Mindcrusher
 - Germ
 - Gerrard's Battle Cry
 - Gerrard's Command
 - Gerrard's Irregulars
 - Gerrard's Wisdom
+- Gert and Old Lace, Runaways
+- Get Lost
 - Get the Point
 - Geth's Grimoire
 - Geyser Glider
 - Geyserfield Stalker
 - Ghalma's Warden
+- Ghalta, Primal Hunger
 - Ghen, Arcanum Weaver
 - Ghirapur Aether Grid
 - Ghirapur Gearcrafter
@@ -3473,26 +4812,39 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Ghitu Journeymage
 - Ghitu War Cry
 - Ghor-Clan Bloodscale
+- Ghor-Clan Rampager
+- Ghor-Clan Savage
+- Ghor-Clan Wrecker
 - Ghost Quarter
+- Ghost Ship
 - Ghost Tactician
 - Ghost Warden
 - Ghost-Lit Nourisher
 - Ghost-Lit Raider
 - Ghost-Lit Redeemer
 - Ghost-Lit Stalker
+- Ghostform
+- Ghostly Changeling
+- Ghostly Flicker
+- Ghostly Pilferer
 - Ghostly Prison
 - Ghostly Sentinel
+- Ghostly Touch
 - Ghostly Visit
 - Ghosts of the Damned
+- Ghostway
 - Ghoul's Feast
+- Ghoulcaller Gisa
 - Ghoulcaller's Accomplice
 - Ghoulcaller's Bell
 - Ghoulcaller's Chant
 - Ghoulflesh
 - Ghoulsteed
+- Ghoultree
 - Giant
 - Giant
 - Giant Adephage
+- Giant Ankheg
 - Giant Badger
 - Giant Caterpillar
 - Giant Cockroach
@@ -3504,6 +4856,7 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Giant Ladybug
 - Giant Mantis
 - Giant Octopus
+- Giant Opportunity
 - Giant Scorpion
 - Giant Solifuge
 - Giant Spectacle
@@ -3514,10 +4867,14 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Giant Warrior
 - Giant Warthog
 - Giant Wizard
+- Giant's Grasp
 - Giant's Ire
 - Giant's Skewer
+- Giant-Man, Gargantuan Genius
 - Giantfall
 - Gibbering Barricade
+- Gibbering Fiend
+- Gibbering Kami
 - Gideon's Avenger
 - Gideon's Company
 - Gideon's Lawkeeper
@@ -3526,26 +4883,43 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Gift of Orzhova
 - Gift of Strands
 - Gift of Strength
+- Gift of the Woods
+- Gift of Tusks
 - Gifted Aetherborn
+- Gigantiform
 - Gigantoad
+- Gigantomancer
 - Gigantosaurus
+- Gila Courser
 - Gilacorn
 - Gild
+- Gilded Assault Cart
+- Gilded Ghoda
 - Gilded Goose
+- Gilded Lotus
 - Gilded Pinions
 - Gilded Scuttler
 - Gilded Sentinel
+- Gilder Bairn
 - Gilt-Leaf Palace
 - Gilt-Leaf Seer
 - Giltgrove Stalker
+- Gimli of the Glittering Caves
+- Gimli's Axe
+- Gimli, Counter of Kills
 - Gingerbread Cabin
 - Gingerbread Hunter // Puny Snack
+- Giott, King of the Dwarves
 - Gird for Battle
+- Gisa's Bidding
+- Gitaxian Probe
 - Gitaxian Raptor
 - Githzerai Monk
 - Give In to Violence
+- Gix's Caress
 - Gixian Infiltrator
 - Gixian Puppeteer
+- Gixian Skullflayer
 - Glacial Floodplain
 - Glacial Fortress
 - Glacial Stalker
@@ -3554,36 +4928,58 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Glade Gnarr
 - Gladecover Scout
 - Gladiolus Amicitia
+- Glaive of the Guildpact
+- Glamorous Grapplers
 - Glare of Heresy
 - Glare of Subdual
+- Glarewielder
 - Glaring Aegis
+- Glaring Fleshraker
+- Glass Casket
 - Glass Golem
 - Glass of the Guildpact
+- Glassblower's Puzzleknot
+- Glassdust Hulk
+- Glasses of Urza
+- Glasspool Mimic // Glasspool Shore
 - Glasswing Grace // Age-Graced Chapel
 - Glaze Fiend
 - Gleam of Battle
 - Gleaming Barrier
 - Gleaming Geardrake
+- Gleeful Arsonist
 - Glen Elendra Archmage
 - Glen Elendra Liege
+- Glen Elendra Pranksters
 - Glidedive Duo
 - Glider Kids
 - Glimmer
+- Glimmer Bairn
+- Glimmer of Genius
 - Glimmerbell
 - Glimmerburst
 - Glimmering Angel
 - Glimmerlight
 - Glimmerpoint Stag
 - Glimmerpost
+- Glimmervoid
+- Glimpse of Freedom
 - Glimpse the Core
 - Glimpse the Future
+- Glimpse the Unthinkable
 - Glint
+- Glint-Eye Nephilim
+- Glint-Horn Buccaneer
+- Glint-Sleeve Artisan
 - Glintwing Invoker
+- Glissa's Courier
 - Glissa's Scorn
 - Glissa, the Traitor
 - Glistener Elf
 - Glistener Seer
 - Glistening Oil
+- Glistening Sphere
+- Glister Bairn
 - Glitterfang
 - Glittering Massif
 - Glittermonger
@@ -3592,17 +4988,24 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Gloomlake Verge
 - Gloomshrieker
 - Glorifier of Dusk
+- Glorifier of Suffering
 - Glorious Anthem
 - Glorious Charge
 - Glorious Decay
 - Glory Bearers
 - Glory Seeker
+- Gloryheath Lynx
 - Gloryscale Viashino
 - Glowing Anemone
 - Glowstone Recluse
 - Gluttonous Guest
+- Gluttonous Slime
+- Gluttonous Slug
+- Gluttonous Zombie
+- Gnarlback Rhino
 - Gnarled Effigy
 - Gnarled Mass
+- Gnarlid Pack
 - Gnarlroot Pallbearer
 - Gnarlwood Dryad
 - Gnat Alley Creeper
@@ -3627,20 +5030,26 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Goblin
 - Goblin
 - Goblin
+- Goblin
 - Goblin // Blood
 - Goblin // Soldier
+- Goblin Anarchomancer
 - Goblin Arsonist
 - Goblin Artillery
 - Goblin Assailant
 - Goblin Assault Team
 - Goblin Balloon Brigade
+- Goblin Banneret
+- Goblin Battle Jester
 - Goblin Berserker
 - Goblin Bird-Grabber
 - Goblin Boarders
 - Goblin Bombardment
+- Goblin Boom Keg
 - Goblin Brigand
 - Goblin Bully
 - Goblin Burrows
+- Goblin Cannon
 - Goblin Cavaliers
 - Goblin Champion
 - Goblin Chariot
@@ -3653,18 +5062,21 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Goblin Dirigible
 - Goblin Dynamo
 - Goblin Electromancer
+- Goblin Elite Infantry
 - Goblin Engineer
 - Goblin Fire Fiend
 - Goblin Firebomb
 - Goblin Firebug
 - Goblin Fireleaper
 - Goblin Fireslinger
+- Goblin Flectomancer
 - Goblin Gang Leader
 - Goblin Gardener
 - Goblin General
 - Goblin Glasswright // Craft with Pride
 - Goblin Glider
 - Goblin Grenade
+- Goblin Grenadiers
 - Goblin Hero
 - Goblin Instigator
 - Goblin Lackey
@@ -3673,6 +5085,7 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Goblin Matron
 - Goblin Medics
 - Goblin Motivator
+- Goblin Mountaineer
 - Goblin Offensive
 - Goblin Oriflamme
 - Goblin Outlander
@@ -3681,16 +5094,22 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Goblin Raider
 - Goblin Rally
 - Goblin Replica
+- Goblin Rimerunner
 - Goblin Rogue
 - Goblin Roughrider
 - Goblin Ruinblaster
+- Goblin Scouts
 - Goblin Settler
 - Goblin Shaman
 - Goblin Sharpshooter
+- Goblin Shortcutter
 - Goblin Sky Raider
+- Goblin Skycutter
 - Goblin Sledder
 - Goblin Smuggler
 - Goblin Soldier
+- Goblin Spelunkers
+- Goblin Spy
 - Goblin Striker
 - Goblin Surprise
 - Goblin Swine-Rider
@@ -3700,17 +5119,24 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Goblin Trashmaster
 - Goblin Trenches
 - Goblin Tunneler
+- Goblin Turncoat
 - Goblin War Drums
 - Goblin War Paint
 - Goblin War Strike
 - Goblin War Wagon
+- Goblin Warchief
+- Goblin Wardriver
 - Goblin Warrens
 - Goblin Warrior
+- Goblin Wizard
 - Goblin Wizard
 - Goblin Wizardry
 - Goblinslide
 - God-Favored General
+- God-Pharaoh's Faithful
 - Godless Shrine
+- Gods Willing
+- Gods' Eye, Gate to the Reikai
 - Godtracker of Jund
 - Goggles of Night
 - Gohn, Town of Ruin
@@ -3721,15 +5147,19 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Golden Bear
 - Golden Egg
 - Golden Hind
+- Golden Urn
 - Golden-Tail Disciple
 - Goldenglow Moth
 - Goldfury Strider
 - Goldhound
+- Goldmaw Champion
 - Goldmeadow Dodger
 - Goldmeadow Harrier
 - Goldmeadow Nomad
 - Goldmire Bridge
 - Goldnight Commander
+- Goldnight Redeemer
+- Goldspan Dragon
 - Goldvein Pick
 - Golem
 - Golem
@@ -3744,9 +5174,13 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Golem
 - Golem Foundry
 - Golem's Heart
+- Golgari Brownscale
+- Golgari Charm
 - Golgari Cluestone
+- Golgari Decoy
 - Golgari Findbroker
 - Golgari Germination
+- Golgari Grave-Troll
 - Golgari Guildgate
 - Golgari Guildmage
 - Golgari Locket
@@ -3754,35 +5188,55 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Golgari Rot Farm
 - Golgari Rotwurm
 - Golgari Signet
+- Golgari Thug
 - Goliath Beetle
 - Goliath Sphinx
 - Goliath Spider
+- Goliath Truck
+- Gollum's Bite
+- Gollum, Patient Plotter
 - Gongaga, Reactor Town
+- Gonti's Machinations
 - Goobbue Gardener
 - Good-Fortune Unicorn
 - Gore Swine
+- Gore-House Chainwalker
+- Gorehorn Minotaurs
 - Gorehorn Raider
 - Goremand
 - Goretusk Firebeast
+- Gorger Wurm
 - Gorgon Flail
 - Gorgon's Head
+- Gorilla Chieftain
 - Gorilla Warrior
 - Goring Ceratops
+- Gorion, Wise Mentor
 - Gossamer Phantasm
+- Gothmog, Morgul Lieutenant
 - Grabby Giant // That's Mine
 - Graceful Adept
 - Graceful Cat
+- Graceful Restoration
+- Graduation Day
 - Graf Harvest
 - Graf Mole
+- Grafdigger's Cage
 - Grafted Identity
+- Grafted Skullcap
+- Graham O'Brien
 - Grand Abolisher
 - Grand Coliseum
 - Grand Crescendo
+- Grand Entryway // Elegant Rotunda
 - Grandmother Sengir
 - Granger Guildmage
 - Granite Gargoyle
 - Granite Grip
+- Granite Witness
 - Granitic Titan
+- Granulate
+- Grapeshot
 - Grapeshot Catapult
 - Grapple with Death
 - Grapple with the Past
@@ -3795,64 +5249,89 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Grasping Thrull
 - Grasslands
 - Grateful Apparition
+- Gratuitous Violence
 - Gravblade Heavy
 - Grave Bramble
+- Grave Pact
+- Grave Peril
 - Grave Robbers
 - Grave Titan
+- Grave Upheaval
+- Grave-Shell Scarab
 - Graveborn
 - Graveborn Muse
+- Gravebreaker Lamia
+- Gravecrawler
 - Gravedigger
 - Gravel Slinger
 - Gravel-Hide Goblin
 - Gravelgill Axeshark
+- Gravelgill Duo
+- Gravelighter
 - Graven Cairns
+- Gravepurge
 - Graverobber Spider
+- Graveshifter
 - Gravespawn Sovereign
 - Gravestone Strider
 - Gravetiller Wurm
 - Gravewaker
 - Graveyard Marshal
 - Gravitational Shift
+- Gravitic Punch
 - Gravpack Monoist
 - Gray Merchant of Asphodel
 - Gray Ogre
+- Gray Slaad // Entropic Decay
 - Graypelt Hunter
 - Graypelt Refuge
+- Grayscaled Gharial
 - Grazilaxx, Illithid Scholar
 - Grazing Gladehart
+- Grazing Kelpie
 - Grazing Whiptail
 - Great Arashin City
+- Great Desert Prospector
 - Great Forest Druid
 - Great Furnace
 - Great Hart
 - Great Sable Stag
+- Great Teacher's Decree
 - Great Whale
 - Great-Horn Krushok
 - Greataxe
 - Greater Basilisk
 - Greater Forgeling
+- Greater Good
+- Greater Harvester
+- Greater Mossdog
 - Greater Sandwurm
+- Greater Tanuki
 - Greatsword
 - Greed
 - Greedy Freebooter
 - Greel's Caress
 - Green Goblin, Nemesis
 - Green Scarab
+- Green Sun's Zenith
 - Greenbelt Radical
 - Greenhilt Trainee
 - Greenseeker
 - Greenside Watcher
 - Greenwarden of Murasa
 - Greenweaver Druid
+- Greenwheel Liberator
 - Greenwood Sentinel
 - Gremlin
 - Gremlin
 - Gremlin
 - Grendel, Spawn of Knull
+- Grenzo's Cutthroat
 - Greta, Sweettooth Scourge
 - Gretchen Titchwillow
 - Grey Havens Navigator
 - Griffin
+- Griffin Aerie
 - Griffin Dreamfinder
 - Griffin Guide
 - Griffin Protector
@@ -3867,49 +5346,72 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Grim Flowering
 - Grim Guardian
 - Grim Haruspex
+- Grim Initiate
 - Grim Lavamancer
 - Grim Monolith
 - Grim Physician
 - Grim Poppet
+- Grim Roustabout
 - Grim Strider
+- Grim Tutor
 - Grimclaw Bats
 - Grinning Demon
+- Grip of Desolation
 - Grisly Ritual
 - Grisly Survivor
+- Grisly Transformation
 - Gristle Grinner
+- Gristleback
+- Grixis Battlemage
 - Grixis Charm
 - Grixis Grimblade
 - Grixis Panorama
+- Grixis Slavedriver
 - Grizzled Leotau
 - Grizzled Outrider
 - Grizzly Bears
 - Grotag Night-Runner
 - Grotag Siege-Runner
+- Grotag Thrasher
 - Grotesque Demise
 - Grotesque Mutation
 - Ground Assault
+- Ground Rift
+- Groundbreaker
+- Groundchuck & Dirtbag
 - Groundshaker Sliver
+- Groundskeeper
+- Group Project
 - Grove Rumbler
 - Grovetender Druids
+- Growth Cycle
 - Growth Spiral
+- Growth-Chamber Guardian
+- Gruesome Deformity
 - Gruesome Fate
 - Gruesome Realization
 - Gruesome Scourger
+- Grumgully, the Generous
+- Gruul Beastmaster
 - Gruul Cluestone
 - Gruul Guildgate
 - Gruul Guildmage
 - Gruul Locket
 - Gruul Nodorog
+- Gruul Ragebeast
 - Gruul Signet
 - Gruul Turf
 - Gruul War Chant
+- Gryff Rider
 - Gryff Vanguard
 - Guac & Marshmallow Pizza
 - Guadosalam, Farplane Gateway
 - Guan Yu's 1,000-Li March
 - Guard Duty
 - Guarded Heir
+- Guardian Augmenter
 - Guardian Automaton
+- Guardian Gladewalker
 - Guardian Kirin
 - Guardian Lions
 - Guardian of Cloverdell
@@ -3919,9 +5421,11 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Guardian of the Great Conduit
 - Guardian of the Guildpact
 - Guardian of Vitu-Ghazi
+- Guardian Project
 - Guardians of Akrasa
 - Guardians of Meletis
 - Guenhwyvar
+- Guerrilla Gorilla
 - Guided Strike
 - Guidelight Synergist
 - Guiding Bolt
@@ -3929,21 +5433,33 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Guildpact Informant
 - Guildscorn Ward
 - Guise of Fire
+- Gulping Scraptrap
 - Guma
 - Gurmag Angler
+- Gurmag Rakshasa
 - Gurmag Swiftwing
 - Gust-Skimmer
 - Gut Shot
 - Gutless Ghoul
 - Gutter Skulk
 - Guttersnipe
+- Guul Draz Assassin
 - Guul Draz Mucklord
+- Gwaihir, Greatest of the Eagles
+- Gwenom, Remorseless
 - Gwyllion Hedge-Mage
 - Gyre Engineer
+- Gyre Sage
+- H.E.R.B.I.E. Scout Unit
 - Haazda Exonerator
+- Haazda Marshal
 - Haazda Officer
 - Haazda Vigilante
+- Hackrobat
 - Hada Freeblade
+- Hag Hedge-Mage
+- Hagi Mob
+- Hagra Constrictor
 - Hagra Crocodile
 - Hagra Sharpshooter
 - Hailstorm Valkyrie
@@ -3953,38 +5469,61 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Halimar Depths
 - Halimar Excavator
 - Hall
+- Hall Monitor
 - Hall of Heliod's Generosity
+- Hall of Tagsin
+- Hall of Triumph
 - Hallowed Fountain
 - Hallowed Ground
 - Hallowed Spiritkeeper
 - Halo Hopper
+- Halo Hunter
 - Halo Scarab
 - Halt Order
 - Hamato Guardian Stance
 - Hamato Ninpō
+- Hamlet Captain
+- Hammer Dropper
 - Hammer of Bogardan
+- Hammer of Nazahn
 - Hammerfist Giant
+- Hammerhand
+- Hammerhead, Maggia Boss
 - Hampering Snare
 - Hamster
 - Hana Kami
+- Hand of Cruelty
 - Hand of Death
+- Hand of Honor
 - Hand of Silumgar
+- Hangarback Walker
 - Hanged Executioner
 - Hanna, Ship's Navigator
 - Hanweir Garrison
 - Hanweir, the Writhing Township
+- Hapatra, Vizier of Poisons
 - Hapless Researcher
+- Happy Hogan, Dauntless Driver
+- Harabaz Druid
 - Haradrim Spearmaster
 - Harbinger of Night
 - Harbinger of the Hunt
+- Harbor Bandit
+- Hard Cover
 - Hard Evidence
 - Hard-Hitting Question
 - Hard-Won Jitte
+- Hardbristle Bandit
+- Hardened Academic
 - Hardened Escort
 - Hardened Scales
+- Hardened Tactician
 - Hardened-Scale Armor
 - Harmattan Efreet
+- Harmonic Prodigy
+- Harmonious Grovestrider
 - Harmonize
+- Harmonized Crescendo
 - Harnessed Snubhorn
 - Harpy
 - Harrier Griffin
@@ -3999,16 +5538,20 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Harvest Pyre
 - Harvester Druid
 - Harvester of Souls
+- Harvester Troll
 - Hashep Oasis
 - Hatching Plans
 - Hate Weaver
 - Hateflayer
 - Hatred
+- Haughty Djinn
 - Haunt of the Dead Marshes
+- Haunted Cadaver
 - Haunted Cloak
 - Haunted Crossroads
 - Haunted Dead
 - Haunted Guardian
+- Haunted Hellride
 - Haunted Library
 - Haunted Mire
 - Haunted Ridge
@@ -4025,9 +5568,17 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Havoc Jester
 - Havoc Sower
 - Hawkeater Moth
+- Hawkeye's Bow
+- Hawkeye, Bowslinger
+- Hawkeye, Clint Barton
+- Hawkeye, Trick Shot
+- Haywire Mite
+- Haze of Pollen
 - Hazel's Nocturne
 - Hazerider Drake
+- Hazoret's Monument
 - Head of the Homestead
+- Headhunter
 - Headless Horseman
 - Headless Rider
 - Headless Skaab
@@ -4035,6 +5586,7 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Headstone
 - Headstrong Brute
 - Headwater Sentries
+- Heal the Scars
 - Healer of the Glade
 - Healer of the Pride
 - Healer's Flock
@@ -4045,19 +5597,29 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Heart of Ramos
 - Heart Sliver
 - Heart Warden
+- Heart-Piercer Manticore
+- Heart-Piercer Manticore
 - Heartfire
 - Heartfire Immolator
+- Hearth Charm
+- Hearthborn Battler
 - Hearthcage Giant
 - Hearthfire Hobgoblin
+- Heartless Pillage
 - Heartless Summoning
 - Heartstabber Mosquito
 - Heartwood Giant
+- Heartwood Treefolk
+- Heat of Battle
 - Heat Ray
 - Heavenly Qilin
+- Heavy Arbalest
 - Heavy Ballista
 - Heavy Infantry
 - Hecteyes
 - Hedge Maze
+- Hedge Shredder
+- Hedge Troll
 - Hedgewitch's Mask
 - Hedron Archive
 - Hedron Crab
@@ -4065,24 +5627,37 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Hedron Detonator
 - Hedron Rover
 - Hedron Scrabbler
+- Hei Bai, Spirit of Balance
 - Heidar, Rimewind Master
 - Heightened Reflexes
+- Heiko Yamazaki, the General
 - Heir of the Wilds
+- Heirloom Auntie
+- Heirs of Stromkirk
 - Hekma Sentinels
 - Heliod's Pilgrim
 - Helionaut
 - Hell Mongrel
 - Hell Swarm
 - Hell's Caretaker
+- Hell's Kitchen
+- Hell's Thunder
+- Hellhole Flailer
 - Hellion
 - Hellkite Igniter
+- Hellkite Overlord
 - Hellkite Punisher
+- Hellraiser Goblin
+- Hellspark Elemental
+- Helm of Chatzuk
 - Helm of the Gods
 - Helm of the Host
 - Helpful Hunter
 - Helping Hand
+- Helvault
 - Hematite Golem
 - Hemosymbic Mite
+- Henchbots
 - Henge Guardian
 - Henge of Ramos
 - Hengegate Pathway // Mistgate Pathway
@@ -4091,44 +5666,73 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Herald of Faith
 - Herald of Hoofbeats
 - Herald of Kozilek
+- Herald of Secret Streams
+- Herald of the Dreadhorde
 - Herald of the Fair
 - Herald of the Pantheon
 - Herald of the Sun
 - Herald's Horn
+- Heraldic Banner
 - Heralds of Tzeentch
 - Herbal Poultice
 - Herd Baloth
 - Herd Gnarr
+- Herd Migration
 - Heritage Druid
 - Heritage Reclamation
+- Hermetic Study
 - Hermitic Nautilus
 - Hero
+- Hero
+- Hero in Training
+- Hero of Bladehold
 - Hero of Goma Fada
+- Hero of Iroas
 - Hero of Precinct One
+- Hero of the Games
+- Hero of the Nyxborn
+- Hero of the Pride
+- Hero of the Winds
 - Hero's Demise
 - Hero's Downfall
+- Hero's Heirloom
 - Hero's Resolve
+- Heroes for Hire
+- Heroes' Bane
 - Heroes' Reunion
 - Heroic Intervention
+- Heron of Hope
 - Heron's Grace Champion
+- Heronblade Elite
 - Hex
 - Hexplate Golem
 - Hibernation
 - Hidden Grotto
+- Hidden Path
+- Hidden Stockpile
 - Hideous End
+- Hideous Visage
 - Hieroglyphic Illumination
+- Hieromancer's Cage
 - Hierophant's Chalice
+- High Fae Trickster
 - High Market
+- High Noon
 - High Priest of Penance
 - High Stride
 - High-Flying Ace
 - High-Rise Sawjack
+- High-Society Hunter
+- High-Speed Hoverbike
+- Highborn Ghoul
 - Highborn Vampire
 - Highland Forest
 - Highland Game
 - Highland Giant
 - Highland Lake
 - Highland Weald
+- Highspire Artisan
+- Highspire Infusion
 - Highspire Mantis
 - Highway Robber
 - Higure, the Still Wind
@@ -4137,36 +5741,49 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Hill Giant
 - Hill Giant Herdgorger
 - Hill Gigas
+- Hillcomber Giant
+- Hindering Touch
 - Hinterland Harbor
 - Hinterland Sanctifier
 - Hippo
 - Hippo-Cows
+- Hire a Crew
 - Hired Blade
 - Hired Poisoner
 - Hissing Iguanar
 - Historian of Zhalfir
 - History of Benalia
+- Hit-Monkey
 - Hitchclaw Recluse
 - Hithlain Knots
 - Hive Stirrings
+- Hivestone
 - Hoar Shade
 - Hoard Robber
+- Hoarding Ogre
 - Hobblefiend
 - Hobgoblin Dragoon
 - Hobgoblin, Mantled Marauder
+- Hold the Gates
 - Hold the Line
 - Holdout Settlement
 - Hollow Dogs
 - Hollow Scavenger // Bakery Raid
+- Hollowhead Sliver
 - Hollowhenge Beast
 - Hollowhenge Overlord
 - Hollowhenge Scavenger
+- Hollowhenge Spirit
+- Hollowsage
 - Holy Cow
+- Holy Day
 - Holy Mantle
 - Holy Strength
 - Homarid Explorer
 - Homarid Shaman
+- Homarid Spawning Bed
 - Homestead Courage
+- Homicide Investigator
 - Homunculus
 - Homunculus
 - Homunculus Horde
@@ -4180,35 +5797,54 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Honor
 - Honor Guard
 - Honor of the Pure
+- Honor the God-Pharaoh
+- Honor Troll
+- Honor-Worn Shaku
 - Honorbound Page // Forum's Favor
+- Honored Crop-Captain
 - Honored Heirloom
 - Honored Hydra
+- Honored Hydra
 - Honored Knight-Captain
+- Hooded Kavu
 - Hoodwink
 - Hoof Skulkin
 - Hooting Mandrills
 - Hop to It
 - Hope Charm
+- Hope Estheim
 - Hope Tender
+- Hopeful Initiate
+- Hopeful Vigil
+- Hopeless Nightmare
 - Hopping Automaton
+- Horde of Boggarts
 - Hordeling Outburst
 - Horizon Canopy
 - Horizon Chimera
 - Horizon Drake
+- Horizon of Progress
 - Horizon Scholar
 - Horizon Seed
+- Horizon Seeker
 - Horizon Spellbomb
 - Horn of Gondor
 - Horn of Ramos
 - Horn of Valhalla // Ysgard's Call
 - Horned Kavu
 - Horned Sliver
+- Horned Stoneseeker
+- Horned Troll
 - Horned Turtle
 - Hornet
 - Hornet Cobra
 - Hornet Harasser
+- Hornet Nest
 - Hornet Queen
 - Hornet Sting
+- Horobi, Death's Wail
+- Horrible Hordes
+- Horribly Awry
 - Horrid Vigor
 - Horrific Assault
 - Horrifying Revelation
@@ -4225,32 +5861,56 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Horror of the Dim
 - Horse
 - Horse
+- Horses of the Bruinen
 - Horseshoe Crab
+- Host of the Hereafter
 - Hostile Minotaur
+- Hostile Realm
 - Hot Dog Cart
 - Hot Soup
 - Hotfoot Gnome
 - Hound of Griselbrand
 - Hound of the Farbogs
+- Hour of Defeat
+- Hour of Devastation
+- Hour of Promise
+- House Guildmage
 - Hover Barrier
 - Hoverguard Sweepers
 - Hovermyr
+- Hoverstone Pilgrim
 - Howl from Beyond
+- Howl of the Night Pack
+- Howlgeist
 - Howling Banshee
 - Howling Fury
 - Howling Gale
 - Howling Giant
+- Howling Golem
+- Howling Mine
+- Howling Moon
+- Howling Wolf
+- Howlpack Resurgence
 - Huang Zhong, Shu General
 - Huatli's Final Strike
 - Huatli's Raptor
 - Huatli's Snubhorn
+- Hugs, Grisly Guardian
+- Hulk, Always Angry
+- Hulk, Bruce Banner
+- Hulk, Brutal Brawler
+- Hulkbuster Armor
 - Hulking Bugbear
 - Hulking Cyclops
 - Hulking Devil
 - Hulking Goblin
 - Hulking Ogre
 - Hulking Raptor
+- Hull Breach
+- Hullbreaker Horror
 - Hullcarver
+- Hulldrifter
+- Human
 - Human
 - Human
 - Human
@@ -4265,28 +5925,41 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Human Rogue
 - Human Rogue
 - Human Soldier
+- Human Soldier
 - Human Warrior
 - Human Warrior
 - Human Wizard
 - Humble Budoka
+- Humble Naturalist
 - Humble the Brute
 - Humbler of Mortals
 - Humbling Elder
 - Humongulus
+- Hunding Gjornersen
+- Hundred-Talon Kami
 - Hundroog
 - Hunger of the Nim
+- Hungering Hydra
 - Hungry Flames
 - Hungry Ghoul
 - Hungry Lynx
 - Hungry Megasloth
+- Hungry Mist
+- Hungry Ridgewolf
 - Hungry Spriggan
+- Hunt the Hunter
+- Hunt the Weak
 - Hunted Bonebrute
 - Hunted Dragon
 - Hunted Lammasu
 - Hunted Phantasm
+- Hunted Troll
 - Hunted Witness
+- Hunter's Talent
 - Hunting Cheetah
+- Hunting Pack
 - Hurler Cyclops
+- Hurloon Battle Hymn
 - Hurloon Minotaur
 - Hurloon Shaman
 - Hurly-Burly
@@ -4298,34 +5971,54 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Hydra
 - Hydra
 - Hydra
+- HYDRA Infiltration
+- HYDRA Troopers
+- Hydroblast
 - Hydrolash
 - Hydrosurge
 - Hyena Pack
 - Hymn of Rebirth
+- Hyperion Blacksmith
+- Hypersonic Dragon
+- Hypervolt Grasp
+- Hypnotic Grifter
+- Hypnotic Sprite // Mesmeric Glare
+- Hypothesizzle
 - Hyrax Tower Scout
 - Hysterical Blindness
 - Hystrodon
 - Icatian Crier
+- Icatian Infantry
 - Icatian Lieutenant
+- Icatian Phalanx
 - Icatian Priest
 - Icatian Scout
 - Icatian Town
 - Ice Flan
 - Ice Storm
 - Ice Tunnel
+- Iceberg Cancrix
 - Icebind Pillar
 - Icecave Crasher
 - Icefeather Aven
 - Icehide Troll
+- Iceman and Firestar
 - Iceridge Serpent
+- Icetill Explorer
 - Icewind Elemental
+- Ichor Explosion
+- Ichor Rats
+- Ichor Slick
+- Ichor Wellspring
 - Ichorclaw Myr
 - Ichorspit Basilisk
 - Ichthyomorphosis
+- Iconic Shield
 - Icy Manalith
 - Icy Manipulator
 - Ideas Unbound
 - Idol of Oblivion
+- Idolized
 - Idyllic Beachfront
 - Idyllic Grange
 - Idyllic Tutor
@@ -4334,6 +6027,7 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Igneous Golem
 - Ignite the Beacon
 - Ignoble Hierarch
+- Ignoble Soldier
 - Iguana Parrot
 - Ihsan's Shade
 - Il Mheg Pixie
@@ -4348,81 +6042,112 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Illusion
 - Illusion // Saproling
 - Illusion Villain
+- Illusionary Armor
 - Illusionary Forces
 - Illusionary Servant
 - Illusionary Wall
+- Illusionist's Stratagem
 - Illusions of Grandeur
+- Illusory Ambusher
 - Illusory Wrappings
 - Illustrious Historian
 - Illvoi Galeblade
 - Illvoi Operative
 - Immersturm Predator
 - Immersturm Raider
+- Immerwolf
+- Immobilizing Ink
 - Immolating Glare
 - Immolating Souleater
 - Immolation
 - Immortal Phoenix
 - Imodane's Recruiter // Train Troops
+- Imotekh the Stormlord
 - Imp
+- Imp's Mischief
 - Impact Tremors
 - Impale
 - Impaler Shrike
 - Impassioned Orator
 - Impeccable Timing
+- Impede Momentum
+- Impending Doom
 - Imperial Aerosaur
 - Imperial Ceratops
+- Imperial Cosmographer
 - Imperial Hellkite
 - Imperial Lancer
 - Imperial Oath
 - Imperial Outrider
+- Imperial Recruiter
 - Imperial Seal
 - Imperial Subduer
 - Imperious Inkmage
+- Imperious Oligarch
 - Imperious Perfect
 - Impervious Greatwurm
+- Impetuous Protege
 - Impetuous Sunchaser
 - Implement of Combustion
 - Implement of Examination
 - Implement of Ferocity
 - Implement of Improvement
 - Implement of Malice
+- Implements of Sacrifice
 - Implode
 - Impolite Entrance
 - Imposing Sovereign
 - Imposing Vantasaur
 - Imposing Visage
+- Impostor of the Sixth Pride
 - Impostor Syndrome
+- Imprisoned in the Moon
 - Improbable Alliance
 - Improvised Armor
 - Improvised Arsenal
 - Improvised Club
 - Improvised Weaponry
+- Impulse
 - In Oketra's Name
+- In the Web of War
+- Iname, Life Aspect
+- Incandescent Aria
 - Incendiary Sabotage
 - Incorrigible Youths
+- Incubation Druid
 - Incubation Sac
 - Incurable Ogre
+- Incursion Specialist
 - Indatha Crystal
 - Indatha Triome
+- Indebted Samurai
 - Independent Troops
 - Index
 - Indomitable Ancients
 - Indomitable Will
 - Indrik Stomphowler
 - Indulgent Aristocrat
+- Indulging Patrician
 - Inescapable Blaze
 - Inescapable Brute
 - Inevitable Defeat
+- Inevitable End
 - Inexorable Blob
 - Inexorable Tide
 - Infantry Veteran
 - Infected Vermin
+- Infectious Bite
+- Infectious Bloodlust
 - Infectious Horror
 - Infectious Host
+- Infectious Inquiry
 - Infernal Grasp
 - Infernal Idol
 - Infernal Plunge
+- Infernal Rebirth
+- Infernal Scarring
 - Inferno
+- Inferno Fist
 - Inferno Jet
 - Inferno Titan
 - Infest
@@ -4430,27 +6155,44 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Infested Roothold
 - Infiltrate
 - Infiltration Lens
+- Infinity Formula
 - Infirmary Healer // Stream of Life
+- Informed Inkwright
 - Infuriate
 - Infuse
 - Ingenious Infiltrator
+- Ingenious Prodigy
 - Ingenious Skaab
+- Ingenious Thief
 - Ingenuity Engine
+- Ingot Chewer
 - Inheritance
+- Inherited Envelope
 - Initiate's Companion
+- Ink Dissolver
+- Inkfathom Divers
+- Inkfathom Infiltrator
 - Inkling
 - Inkling
+- Inkling Mascot
 - Inkling Summoning
 - Inkrise Infiltrator
+- Inkshape Demonstrator
+- Inkwell Leviathan
 - Inner Calm, Outer Strength
 - Inner Demons Gangsters
 - Inner Struggle
+- Inner-Chamber Guard
+- Inner-Flame Acolyte
 - Innocence Kami
 - Innocent Blood
 - Innocuous Rat
 - Inordinate Rage
+- Inquisition of Kozilek
 - Inquisitive Puppet
 - Inquisitor's Ox
+- Insatiable Appetite
+- Insatiable Avarice
 - Insatiable Gorgers
 - Insatiable Harpy
 - Insatiable Souleater
@@ -4467,7 +6209,12 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Insect
 - Insect
 - Insect Warrior
+- Insectoid Exterminator
+- Inside Source
+- Insidious Fungus
 - Insight
+- Insight Engine
+- Insolence
 - Insolent Neonate
 - Insomnia, Crown City
 - Inspiration
@@ -4476,6 +6223,7 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Inspired Insurgent
 - Inspired Sphinx
 - Inspired Tinkering
+- Inspiring Call
 - Inspiring Captain
 - Inspiring Cleric
 - Inspiring Overseer
@@ -4490,10 +6238,17 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Intangible Virtue
 - Integrity // Intervention
 - Intelligence Bobblehead
+- Interdisciplinary Mascot
 - Interjection
+- Inti, Seneschal of the Sun
+- Intimidation
+- Intimidation Campaign
 - Into the Core
 - Into the Maw of Hell
+- Into the Roil
+- Into the Time Vortex
 - Into the Void
+- Into Thin Air
 - Intrepid Hero
 - Intrepid Provisioner
 - Intrepid Rabbit
@@ -4503,18 +6258,25 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Introduction to Prophecy
 - Intruding Soulrager
 - Inundate
+- Invading Manticore
 - Invasion of Belenon // Belenon War Anthem
 - Invasion of Dominaria // Serra Faithkeeper
+- Invasion of Kaladesh // Aetherwing, Golden-Scale Flagship
 - Invasion of Kamigawa // Rooftop Saboteurs
+- Invasion of Karsus // Refraction Elemental
 - Invasion of Moag // Bloomwielder Dryads
 - Invasion of Shandalar // Leyline Surge
+- Invasion of Xerex // Vertex Paladin
 - Invasion Reinforcements
 - Invasion Tactics
 - Invasive Species
 - Inventor's Apprentice
+- Inventors' Fair
 - Invigorated Rampage
 - Invigorating Boon
+- Invigorating Hot Spring
 - Invisible Stalker
+- Invisible Woman, Sue Storm
 - Invoke the Divine
 - Invoke the Firemind
 - Invoke the Winds
@@ -4522,18 +6284,25 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Iona's Judgment
 - Ionize
 - Ipnu Rivulet
+- Iraxxa, Empress of Mars
 - Ire of Kaminari
 - Irencrag Pyromancer
+- Irenicus's Vile Duplication
 - Iridescent Angel
 - Iridescent Blademaster
 - Iridescent Tiger
 - Iridescent Vinelasher
+- Iroas's Blessing
 - Iroas's Champion
 - Iroh's Demonstration
 - Iroh, Firebending Instructor
+- Iron Apprentice
 - Iron Bully
 - Iron Giant
 - Iron Lance
+- Iron League Steed
+- Iron Man, Modern Marvel
+- Iron Man, Tony Stark
 - Iron Myr
 - Iron Tusk Elephant
 - Iron Will
@@ -4546,22 +6315,34 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Ironhoof Ox
 - Ironpaw Aspirant
 - Ironroot Treefolk
+- Ironroot Warlord
 - Ironshell Beetle
+- Irontread Crusher
 - Ironwright's Cleansing
 - Irradiate
+- Irregular Cohort
+- Irreverent Gremlin
 - Irrigated Farmland
 - Irrigation Ditch
 - Isamaru, Hound of Konda
+- Isao, Enlightened Bushi
+- Ishai, Ojutai Dragonspeaker
+- Ishgard, the Holy See // Faith & Grief
+- Ishi-Ishi, Akki Crackshot
 - Ishkanah, Grafwidow
 - Island
 - Isolate
 - Isolated Chapel
+- Isolation Zone
 - Isperia, Supreme Judge
 - It'll Quench Ya!
+- It's Clobberin' Time!
 - Ithilien Kingfisher
+- Ivy Elemental
 - Ivy Lane Denizen
 - Ixalli's Diviner
 - Ixalli's Keeper
+- Ixidor's Will
 - Izoni, Thousand-Eyed
 - Izzet Boilerworks
 - Izzet Charm
@@ -4570,22 +6351,33 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Izzet Guildgate
 - Izzet Locket
 - Izzet Signet
+- Jace Beleren
+- Jace's Erasure
 - Jace's Ingenuity
 - Jace's Projection
 - Jace's Sanctum
 - Jace's Scrutiny
+- Jackdaw
 - Jackhammer
 - Jacques le Vert
 - Jaddi Offshoot
+- Jade Avenger
 - Jade Bearer
 - Jade Guardian
 - Jade Mage
+- Jade-Cast Sentinel
 - Jadecraft Artisan
 - Jagged Barrens
 - Jagged Lightning
+- Jagged-Scar Archers
 - Jagwasp Swarm
+- Jaheira, Friend of the Forest
 - Jalum Tome
+- Jamuraan Lion
 - Jandor's Saddlebags
+- Janjeet Sentry
+- Jareth, Leonine Titan
+- Jarvis, Earth's Mightiest Butler
 - Jasmine Boreal
 - Jaspera Sentinel
 - Jawbone Duelist
@@ -4595,9 +6387,13 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Jaya, Venerated Firemage
 - Jayemdae Tome
 - Jedit Ojanen
+- Jedit Ojanen of Efrava
+- Jedit Ojanen, Mercenary
 - Jedit's Dragoons
+- Jelenn Sphinx
 - Jenara, Asura of War
 - Jennika, Bad Apple Big Sister
+- Jenny Flint
 - Jenny, Generated Anomaly
 - Jeong Jeong's Deserters
 - Jerrard of the Closed Fist
@@ -4609,6 +6405,7 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Jeskai Devotee
 - Jeskai Elder
 - Jeskai Monument
+- Jeskai Revelation
 - Jeskai Sage
 - Jeskai Shrinekeeper
 - Jeskai Student
@@ -4620,20 +6417,29 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Jhessian Infiltrator
 - Jhessian Lookout
 - Jhessian Thief
+- Jhoira's Toolbox
 - Jhoira, Weatherlight Captain
 - Jhovall Queen
 - Jhovall Rider
+- Jiang Yanggu, Wildcrafter
 - Jibbirik Omnivore
 - Jiwari, the Earth Aflame
+- Joel, Resolute Survivor
 - Join the Dance
 - Join the Ranks
 - Joiner Adept
+- Joint Exploration
 - Jokulhaups
+- Jolrael's Centaur
+- Jolrael's Favor
+- Jolt
+- Joo Dee, One of Many
 - Jor Kadeen, the Prevailer
 - Joraga Visionary
 - Jori En, Ruin Diver
 - Jorubai Murk Lurker
 - Josu Vess, Lich Knight
+- Journey to Nowhere
 - Journeyer's Kite
 - Joust Through
 - Jousting Dummy
@@ -4642,8 +6448,10 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Judge Magister Gabranth
 - Judge of Currents
 - Judith, the Scourge Diva
+- Jukai Messenger
 - Jukai Naturalist
 - Jukai Preserver
+- Jukai Trainee
 - Jumbo Cactuar
 - Jump
 - Jund Battlemage
@@ -4656,22 +6464,31 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Jungle Hollow
 - Jungle Lion
 - Jungle Shrine
+- Jungle Troll
 - Jungle Weaver
 - Jungleborn Pioneer
 - Juniper Order Advocate
 - Juniper Order Druid
 - Juniper Order Rootweaver
 - Junk Diver
+- Junktown
+- Junktroller
+- Junún Efreet
 - Juri, Master of the Revue
+- Just the Wind
 - Justice Strike
 - Juvenile Gloomwidow
 - Juzám Djinn
 - Jwar Isle Refuge
 - Jwari Disruption // Jwari Ruins
 - Jwari Scuttler
+- Jwari Shapeshifter
+- K'rrik, Son of Yawgmoth
 - Kabira Crossroads
 - Kabira Takedown // Kabira Plateau
+- Kabira Vindicator
 - Kabuto Moth
+- Kagemaro, First to Suffer
 - Kalakscion, Hunger Tyrant
 - Kalastria Healer
 - Kalastria Nightwatch
@@ -4681,16 +6498,32 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Kamahl's Desire
 - Kamahl, Pit Fighter
 - Kambal, Consul of Allocation
+- Kamber, the Plunderer
 - Kami of Ancient Law
+- Kami of Empty Graves
+- Kami of False Hope
+- Kami of Fire's Roar
+- Kami of Industry
+- Kami of Lunacy
 - Kami of Old Stone
 - Kami of Tattered Shoji
+- Kami of the Crescent Moon
 - Kami of the Hunt
+- Kami of the Painted Road
+- Kami of the Palace Fields
+- Kami of the Tended Garden
+- Kami of the Waning Moon
 - Kami of Twisted Reflection
+- Kami of Whispered Hopes
+- Kapow!
 - Kapsho Kitefins
 - Karakas
+- Karametra's Acolyte
+- Karametra's Favor
 - Karfell Kennel-Master
 - Kargan Dragonrider
 - Kargan Warleader
+- Karlov of the Ghost Council
 - Karn's Bastion
 - Karok Wrangler
 - Karoo Meerkat
@@ -4701,19 +6534,28 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Kasimir the Lone Wolf
 - Kasmina's Transmutation
 - Katara, Heroic Healer
+- Katara, the Fearless
+- Kathari Bomber
+- Kathari Remnant
+- Kathari Screecher
 - Kavaron Turbodrone
 - Kavu
 - Kavu Climber
 - Kavu Glider
+- Kavu Predator
 - Kavu Scout
+- Kaya's Ghostform
 - Kaysa
 - Kazandu Blademaster
 - Kazandu Mammoth // Kazandu Valley
 - Kazandu Nectarpot
 - Kazandu Refuge
+- Kazandu Tuskcaller
 - Kazarov, Sengir Pureblood
 - Kazuul Warlord
+- Kazuul's Fury // Kazuul's Cliffs
 - Kederekt Creeper
+- Kederekt Parasite
 - Keen Glidemaster
 - Keen Sense
 - Keen-Eyed Archers
@@ -4722,8 +6564,13 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Keening Apparition
 - Keening Banshee
 - Keep Out
+- Keeper of Kookus
+- Keeper of the Accord
+- Keeper of the Cadence
 - Keeper of the Nine Gales
+- Keeper of Tresserhorn
 - Keepers of the Faith
+- Kefnet's Monument
 - Keiga, the Tide Star
 - Keimi
 - Keldon Arsonist
@@ -4741,6 +6588,9 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Kemba's Skyguard
 - Kemuri-Onna
 - Kenrith's Transformation
+- Keruga, the Macrosage
+- Keskit, the Flesh Sculptor
+- Kessig Cagebreakers
 - Kessig Dire Swine
 - Kessig Flamebreather
 - Kessig Malcontents
@@ -4750,32 +6600,43 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Kessig Wolfrider
 - Ketria Crystal
 - Ketria Triome
+- Key to the City
 - Keymaster Rogue
 - Kezzerdrix
 - Khalni Ambush // Khalni Territory
 - Khalni Garden
 - Khenra Charioteer
+- Khenra Eternal
 - Kheru Bloodsucker
+- Kheru Dreadmaw
 - Kiku's Shadow
 - Kiku, Night's Flower
 - Kill Shot
+- Kill-Zone Acrobat
 - Killer Bees
 - Killer Whale
 - Killian's Confidence
+- Killmonger, Scourge of Wakanda
 - Kiln Fiend
 - Kiln Walker
 - Kilo, Apogee Mind
 - Kin-Tree Severance
+- Kin-Tree Warden
 - Kindercatch
 - Kindled Fury
 - Kindled Heroism
 - Kindlespark Duo
 - Kindly Customer
+- Kindred Discovery
+- Kindred Dominance
 - King Cheetah
 - King Macar, the Gold-Cursed
 - King of the Pride
 - King Suleiman
 - Kingfisher
+- Kingpin's Enforcers
+- Kingpin's Pet
+- Kinjalli's Caller
 - Kinjalli's Dawnrunner
 - Kinjalli's Sunwing
 - Kinsbaile Cavalier
@@ -4786,6 +6647,8 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Kird Ape
 - Kird Chieftain
 - Kiri-Onna
+- Kirol, Attentive First-Year
+- Kishla Trawlers
 - Kishla Village
 - Kismet
 - Kiss of Death
@@ -4797,19 +6660,32 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Kitesail
 - Kitesail Cleric
 - Kitesail Scout
+- Kithkeeper
 - Kithkin
 - Kithkin Billyrider
 - Kithkin Daggerdare
 - Kithkin Greatheart
 - Kithkin Harbinger
 - Kithkin Mourncaller
+- Kithkin Rabble
 - Kithkin Shielddare
 - Kithkin Soldier
 - Kithkin Spellduster
+- Kitsa, Otterball Elite
+- Kitsune Blademaster
+- Kitsune Dawnblade
 - Kitsune Diviner
 - Kitsune Loreweaver
+- Kjeldoran Dead
+- Kjeldoran Escort
+- Kjeldoran Knight
 - Kjeldoran Outrider
+- Kjeldoran Phalanx
+- Kjeldoran Skycaptain
+- Kjeldoran Skyknight
+- Kjeldoran Warrior
 - Klothys's Design
+- Knight
 - Knight
 - Knight
 - Knight
@@ -4819,26 +6695,37 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Knight Ally
 - Knight Errant
 - Knight Exemplar
+- Knight of Dawn
+- Knight of Dawn's Light
 - Knight of Doves
 - Knight of Glory
 - Knight of Infamy
 - Knight of Meadowgrain
 - Knight of New Benalia
+- Knight of Obligation
 - Knight of Stromgald
 - Knight of the Keep
 - Knight of the New Coalition
+- Knight of the Pilgrim's Road
 - Knight of the Reliquary
 - Knight of the Skyward Eye
+- Knight of the Stampede
 - Knight of the Tusk
 - Knight of the White Orchid
+- Knight of Wundagore
+- Knight Paladin
 - Knight Watch
 - Knight's Pledge
+- Knight-Captain of Eos
 - Knightfisher
 - Knighthood
 - Knightly Valor
 - Knights of Dol Amroth
+- Knights of Thorn
+- Knights' Charge
 - Knockout Maneuver
 - Knotvine Mystic
+- Knotvine Paladin
 - Knowledge Seeker
 - Knucklebone Witch
 - Koala-Sheep
@@ -4848,12 +6735,17 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Kobolds of Kher Keep
 - Kobolds of Kher Keep
 - Kodama of the North Tree
+- Kodama of the West Tree
 - Kodama's Reach
+- Koilos Roc
 - Kokusho, the Evening Star
 - Kolaghan's Command
 - Koma's Coil
 - Koma's Faithful
+- Koma, World-Eater
 - Komodo Rhino
+- Konda's Hatamoto
+- Konda, Lord of Eiganjo
 - Kongming, "Sleeping Dragon"
 - Kor Aeronaut
 - Kor Ally
@@ -4870,7 +6762,11 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Kor Skyfisher
 - Kor Soldier
 - Kor Warrior
+- Korozda Gorgon
+- Korozda Monitor
+- Korvold, Fae-Cursed King
 - Koskun Keep
+- Koth's Courier
 - Kothophed, Soul Hoarder
 - Kozilek's Channeler
 - Kozilek's Sentinel
@@ -4884,11 +6780,13 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Kraken
 - Kraken Hatchling
 - Kraken's Eye
+- Krakilin
 - Krang, Utrom Warlord
 - Kranioceros
 - Krark-Clan Engineers
 - Krark-Clan Grunt
 - Krark-Clan Ironworks
+- Krark-Clan Ogre
 - Krark-Clan Shaman
 - Krark-Clan Stoker
 - Kraul Foragers
@@ -4896,48 +6794,74 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Kraul Stinger
 - Kraul Swarm
 - Kraul Warrior
+- Kraum, Ludevic's Opus
 - Kraum, Violent Cacophony
 - Kraven's Cats
+- Kree Commandos
+- Kree Sentinel
 - Krenko's Command
+- Krenko's Enforcer
 - Krenko, Mob Boss
+- Krenko, Tin Street Kingpin
 - Kris Mage
 - Kronch Wrangler
 - Krosan Archer
+- Krosan Avenger
 - Krosan Beast
+- Krosan Cloudscraper
 - Krosan Colossus
+- Krosan Constrictor
 - Krosan Druid
+- Krosan Grip
 - Krosan Groundshaker
 - Krosan Restorer
+- Krosan Verge
+- Krosan Warchief
 - Krosan Wayfarer
 - Krovikan Elementalist
 - Krovikan Fetish
 - Krovikan Scoundrel
 - Krovod Haunch
+- Kroxa and Kunoros
 - Kruin Striker
 - Krumar Bond-Kin
 - Kujar Seedsculptor
 - Kuldotha Flamefiend
 - Kuldotha Forgemaster
 - Kuldotha Rebirth
+- Kuldotha Ringleader
 - Kulrath Mystic
 - Kulrath Zealot
+- Kumena's Speaker
+- Kunoros, Hound of Athreos
+- Kurgadon
+- Kuro's Taken
+- Kuro, Pitlord
 - Kwende, Pride of Femeref
 - Kykar, Wind's Fury
+- Kykar, Zephyr Awakener
 - Kyoshi Village
 - Kyoshi Warrior Guard
 - Kyoshi Warriors
 - Kyren Glider
 - Kyren Negotiations
 - Kyren Sniper
+- Kytheon's Irregulars
 - Laboratory Brute
+- Laboratory Maniac
+- Labyrinth Champion
 - Labyrinth Guardian
+- Labyrinth Guardian
+- Labyrinth of Skophos
 - Lace with Moonglove
 - Lady Caleria
 - Lady Orca
+- Lady Spider, Maybelle Reilly
 - Lady Zhurong, Warrior Queen
 - Lagac Lizard
 - Lagonna-Band Elder
 - Lakeside Shack
+- Lambholt Harrier
 - Lampad of Death's Vigil
 - Lamplighter of Selhoff
 - Lance
@@ -4952,12 +6876,17 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Lantern Kami
 - Lantern Scout
 - Lantern Spirit
+- Lantern-Lit Graveyard
+- Laquatus's Champion
+- Larceny
 - Larder Zombie
 - Larger Than Life
 - Laserbeak
 - Lash of Malice
 - Lash of the Whip
 - Lash of Thorns
+- Lashwrithe
+- Lassoed by the Law
 - Last Breath
 - Last Caress
 - Last Gasp
@@ -4968,18 +6897,24 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Late to Dinner
 - Lathliss, Dragon Queen
 - Lathnu Sailback
+- Lathril, Blade of the Elves
+- Lattice-Blade Mantis
 - Latulla, Keldon Overseer
 - Laughing Mad
 - Launch
 - Launch Party
 - Lava Axe
+- Lava Coil
+- Lava Dart
 - Lava Flow
 - Lava Hounds
 - Lava Serpent
 - Lava Spike
 - Lava Zombie
+- Lavabelly Sliver
 - Lavafume Invoker
 - Lavakin Brawler
+- Lavaspur Boots
 - Lavastep Raider
 - Law-Rune Enforcer
 - Lawbringer
@@ -4987,13 +6922,19 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Lay Claim
 - Lay of the Land
 - Lay Waste
+- Layla Hassan
 - Lazotep Behemoth
+- Lazotep Chancellor
+- Lazotep Reaver
 - Lead Astray
 - Lead Pipe
 - Leaden Myr
 - Leaf Arrow
+- Leaf Dancer
 - Leaf Gilder
 - Leaf-Crowned Visionary
+- Leafdrake Roost
+- Leafkin Druid
 - Leap
 - Leaping Ambush
 - Leaping Lizard
@@ -5001,22 +6942,35 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Leatherback Baloth
 - Leatherhead, Iron Gator
 - Leave in the Dust
+- Lecturing Scornmage
 - Ledev Guardian
+- Ledger Shredder
+- Leech Bonder
+- Leech Gauntlet
 - Leeching Bite
+- Leeching Sliver
 - Leechridden Swamp
+- Leela, Sevateem Warrior
 - Leering Onlooker
+- Leery Fogbeast
 - Legacy Weapon
 - Legion Extruder
 - Legion Guildmage
 - Legion Lieutenant
+- Legion Vanguard
 - Legion's Judgment
 - Leinore, Autumn Sovereign
+- Lens Flare
+- Leonardo, the Balance
+- Leonardo, Worldly Warrior
 - Leonin Abunas
 - Leonin Armorguard
 - Leonin Bladetrap
 - Leonin Elder
+- Leonin Iconoclast
 - Leonin Lightscribe
 - Leonin of the Lost Pride
+- Leonin Relic-Warder
 - Leonin Scimitar
 - Leonin Skyhunter
 - Leonin Snarecaster
@@ -5025,13 +6979,27 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Leonin Vanguard
 - Leonin Warleader
 - Leopard-Spotted Jiao
+- Leshrac's Rite
+- Lesser Gargadon
 - Lesser Masticore
+- Lessons from Life
 - Lethal Protection
 - Letter of Acceptance
+- Leviathan
 - Levitation
 - Ley Druid
+- Ley Weaver
+- Leyline Axe
+- Leyline of Abundance
+- Leyline of Anticipation
+- Leyline of Hope
+- Leyline of the Meek
+- Leyline of the Void
+- Leyline of Transformation
+- Leyline of Vitality
 - Leyline Phantom
 - Leyline Prowler
+- Lhurgoyf
 - Liberate
 - Liberated Dwarf
 - Library
@@ -5040,9 +7008,17 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Lich Lord of Unx
 - Lich's Caress
 - Liege of the Axe
+- Liesa, Shroud of Dusk
 - Lieutenant Kirtar
+- Life Burst
+- Life Chisel
+- Life from the Loam
+- Life Insurance
+- Life's Legacy
 - Lifeblood
+- Lifecraft Cavalry
 - Lifecrafter's Bestiary
+- Lifecrafter's Gift
 - Lifecreed Duo
 - Lifeforce
 - Lifegift
@@ -5050,6 +7026,9 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Lifespring Druid
 - Lifetap
 - Light of Hope
+- Light of Promise
+- Light of the Legion
+- Light Up the Stage
 - Lightbringer
 - Lightfoot Technique
 - Lightless Evangel
@@ -5064,6 +7043,9 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Lightning Hounds
 - Lightning Javelin
 - Lightning Mare
+- Lightning Prowess
+- Lightning Rager
+- Lightning Skelemental
 - Lightning Spear
 - Lightning Stormkin
 - Lightning Strike
@@ -5074,30 +7056,56 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Lightning-Rig Crew
 - Lightshell Duo
 - Lightshield Parry
+- Lignify
+- Liliana Vess
 - Liliana's Caress
+- Liliana's Contract
+- Liliana's Devotee
 - Liliana's Elite
 - Liliana's Mastery
+- Liliana's Scrounger
 - Liliana's Shade
 - Liliana's Specter
 - Liliana's Steward
 - Lilysplash Mentor
+- Lim-Dûl's High Guard
 - Limestone Golem
+- Liminal Hold
 - Limits of Solidarity
+- Lin Sivvi, Defiant Hero
+- Lindblum, Industrial Regency // Mage Siege
 - Linden, the Steadfast Queen
+- Lingering Mirage
 - Lingering Phantom
 - Lingering Souls
+- Lingering Tormentor
 - Lion Heart
 - Lion Vulture
+- Lion's Eye Diamond
 - Lionheart Glimmer
 - Lionheart Maverick
+- Liquify
+- Liquimetal Coating
+- Liquimetal Torque
 - Lithatog
+- Lithobraking
+- Littjara Glade-Warden
 - Liturgy of Blood
+- Live Fast
 - Live or Die
+- Lively Dirge
+- Livewire Lash
+- Living Airship
+- Living Death
+- Living Hive
 - Living Lightning
+- Living Lightning, Charged Up
 - Living Tempest
 - Living Totem
+- Living Wall
 - Lizard
 - Lizard
+- Lizard Blades
 - Lizard Warrior
 - Llanowar Augur
 - Llanowar Behemoth
@@ -5108,45 +7116,66 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Llanowar Elves
 - Llanowar Envoy
 - Llanowar Knight
+- Llanowar Reborn
 - Llanowar Scout
+- Llanowar Sentinel
 - Llanowar Stalker
 - Llanowar Tribe
 - Llanowar Vanguard
 - Llanowar Visionary
 - Llanowar Wastes
 - Loam Dryad
+- Loam Dweller
 - Loam Larva
 - Loam Lion
 - Loamdragger Giant
 - Lobber Crew
 - Loch Dragon
 - Loch Korrigan
+- Lochmere Serpent
 - Locke Cole
+- Lockjaw Snapper
 - Locthwain Gargoyle
 - Locthwain Lancer
 - Locust Spray
+- Locust Swarm
 - Lodestone Myr
 - Lofty Dreams
+- Lokhust Heavy Destroyer
 - Lone Missionary
+- Lone Revenant
+- Lone Wolf
 - Lonely Arroyo
 - Lonely Sandbar
 - Lonesome Unicorn // Rider in Need
+- Long Road Home
+- Long-Forgotten Gohei
 - Longbow Archer
+- Longshot Squad
+- Longtusk Cub
 - Looming Altisaur
 - Looming Shade
 - Looming Spires
+- Looter il-Kor
 - Loporrit Scout
 - Loran of the Third Path
+- Loran's Escape
 - Loran, Disciple of History
+- Lord Dregg, Insect Invader
 - Lord of Change
+- Lord of Extinction
 - Lord of the Undead
 - Lord of the Unreal
+- Lord of Tresserhorn
 - Lore Broker
 - Lore Drakkis
+- Lore Weaver
 - Lorehold Campus
+- Lorehold Charm
 - Lorehold Command
 - Lorehold Pledgemage
 - Lorescale Coatl
+- Los Diablos Missile Base
 - Lose Calm
 - Lose Hope
 - Lossarnach Captain
@@ -5154,8 +7183,12 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Lost in the Mist
 - Lost Legion
 - Lost Leonin
+- Lost Soul
 - Lothlórien Lookout
+- Lotho, Corrupt Shirriff
+- Lotleth Troll
 - Lotus Cobra
+- Lotus Field
 - Lotus Guardian
 - Lotus Path Djinn
 - Lotus Petal
@@ -5168,58 +7201,85 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Loxodon Convert
 - Loxodon Eavesdropper
 - Loxodon Gatekeeper
+- Loxodon Hierarch
 - Loxodon Line Breaker
 - Loxodon Mender
 - Loxodon Mystic
+- Loxodon Partisan
 - Loxodon Restorer
 - Loxodon Sergeant
 - Loxodon Stalwart
 - Loxodon Warhammer
 - Loxodon Wayfarer
+- Loyal Apprentice
+- Loyal Drake
 - Loyal Gryff
+- Loyal Guardian
+- Loyal Subordinate
 - Loyal Warhound
 - Lu Bu, Master-at-Arms
 - Lu Meng, Wu General
 - Lu Xun, Scholar General
 - Lucent Liminid
 - Lucky Offering
+- Luke Cage, Hero for Hire
+- Lull
 - Lullmage's Familiar
+- Lumbering Satyr
 - Lumberknot
 - Lumengrid Drake
 - Lumengrid Gargoyle
 - Lumengrid Sentinel
 - Lumengrid Warden
 - Luminarch Aspirant
+- Luminescent Rain
+- Luminollusk
 - Luminous Angel
 - Luminous Bonds
+- Luminous Broodmoth
+- Luminous Wake
 - Lumithread Field
+- Lumra, Bellow of the Woods
 - Lunar Frenzy
 - Lunar Mystic
+- Lunarch Mantle
 - Lunatic Pandora
 - Lunge
+- Lunk Errant
 - Lurching Rotbeast
+- Lure
+- Lurking Crocodile
 - Lurking Lizards
 - Lurking Nightstalker
 - Lurking Roper
 - Lush Oasis
 - Lush Portico
+- Lust for War
+- Lutri, the Spellchaser
 - Lux Cannon
 - Luxurious Libation
 - Luxury Suite
 - Lyla, Holographic Assistant
+- Lynx
 - Lyra Dawnbringer
 - Lys Alana Bowmaster
 - Lys Alana Huntmaster
+- Lys Alana Informant
 - Lórien Revealed
+- M.O.D.O.K., Evil Intellect
 - Maalfeld Twins
 - Mabel's Mettle
 - Macabre Mockery
 - Macabre Waltz
 - Macetail Hystrodon
+- Machinesmith Automaton
 - Mad Auntie
 - Mad Prophet
 - Mad Ratter
+- Madame Hydra
+- Madame Hydra, Reanimated
 - Madcap Skills
+- Maddening Wind
 - Madrush Cyclops
 - Maelstrom Archangel
 - Maelstrom Artisan // Rocket Volley
@@ -5227,6 +7287,8 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Maelstrom Wanderer
 - Maestros Charm
 - Maestros Initiate
+- Maestros Theater
+- Magda, the Hoardmaster
 - Mage Tower Referee
 - Mage's Guile
 - Mage-Ring Bully
@@ -5237,29 +7299,44 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Magic Damper
 - Magic Missile
 - Magic Pot
+- Magitek Armor
+- Magitek Infantry
 - Magma Giant
 - Magma Jet
 - Magma Opus
 - Magma Phoenix
 - Magma Rift
+- Magma Spray
 - Magma Vein
+- Magmakin Artillerist
 - Magmaquake
+- Magmaroth
 - Magmatic Force
 - Magmatic Insight
+- Magmatic Sinkhole
+- Magmaw
+- Magnetic Mine
 - Magnify
 - Magnifying Glass
 - Magnigoth Sentry
 - Magus of the Bazaar
 - Magus of the Coffers
 - Magus of the Disk
+- Magus of the Future
 - Magus of the Library
+- Magus of the Vineyard
+- Magus of the Wheel
 - Mahamoti Djinn
 - Mai, Scornful Striker
 - Maja, Bretagard Protector
 - Majestic Auricorn
+- Majestic Heliopterus
 - Major Teroh
 - Make a Stand
 - Make Obsolete
+- Make Your Move
+- Makeshift Battalion
+- Makeshift Binding
 - Makeshift Mauler
 - Makeshift Munitions
 - Makindi Aeronaut
@@ -5269,6 +7346,7 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Makindi Shieldmate
 - Makindi Sliderunner
 - Makindi Stampede // Makindi Mesas
+- Malach of the Dawn
 - Malachite Golem
 - Malakir Bloodwitch
 - Malakir Cullblade
@@ -5279,45 +7357,68 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Malcator's Watcher
 - Malcolm, the Eyes
 - Malevolent Awakening
+- Malevolent Chandelier
+- Malicious Intent
 - Mammoth Spider
 - Man-o'-War
+- Mana Chains
 - Mana Confluence
 - Mana Cylix
 - Mana Drain
 - Mana Geode
+- Mana Geyser
 - Mana Leak
 - Mana Prism
+- Mana Reflection
 - Mana Tithe
 - Mana Vault
+- Manabarbs
 - Manaforce Mace
 - Managorger Hydra
 - Manakin
 - Manalith
+- Manaweft Sliver
 - Mandible Justiciar
+- Mandibular Kite
+- Mandroid Squadron
 - Maned Serval
+- Mangara, the Diplomat
 - Manglehorn
 - Manhole Cover
 - Maniacal Rage
+- Manic Scribe
 - Manic Vandal
 - Manifold Key
 - Manor Gate
+- Manor Skeleton
+- Manriki-Gusari
 - Manta Riders
+- Manticore Eternal
 - Manticore of the Gauntlet
 - Mantis Engine
 - Mantis Rider
 - Mantle of the Wolf
 - Mantle of Webs
+- Many Partings
+- Map
 - Maraleaf Pixie
+- Marang River Prowler
 - Marang River Regent // Coil and Catch
 - Marauder's Axe
 - Marauding Blight-Priest
 - Marauding Brinefang
 - Marauding Looter
+- Marauding Mako
+- Marauding Sphinx
 - Marble Chalice
 - Marble Diamond
 - Marble Gargoyle
+- March from the Black Gate
 - March of the Drowned
+- March of the Multitudes
 - March of the Returned
+- Marchesa's Emissary
+- Marchesa's Infiltrator
 - Mardu Ascendancy
 - Mardu Banner
 - Mardu Devotee
@@ -5325,40 +7426,67 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Mardu Heart-Piercer
 - Mardu Hordechief
 - Mardu Outrider
+- Mardu Roughrider
 - Mardu Skullhunter
 - Mardu Woe-Reaper
+- Marhault Elsdragon
+- Marionette Apprentice
+- Marionette Master
 - Marisi's Twinclaws
 - Marit Lage
+- Marit Lage's Slumber
 - Maritime Guard
+- Mark of Fury
 - Mark of Mutiny
+- Mark of the Oni
 - Mark of the Vampire
 - Marked by Honor
 - Marker Beetles
+- Marketback Walker
 - Marketwatch Phantom
 - Markov Baron
 - Markov Blademaster
 - Markov Crusader
 - Markov Dreadknight
 - Markov Patrician
+- Markov Purifier
 - Markov Waltzer
+- Markov Warlord
+- Maro
+- Marrow Bats
 - Marrow Shards
+- Marsh Boa
 - Marsh Crocodile
 - Marsh Flats
 - Marsh Gas
+- Marsh Goblins
+- Marsh Lurker
+- Marsh Threader
+- Marsh Viper
 - Marshal of Zhalfir
 - Marshaling Cry
+- Marshmist Titan
+- Martha Jones
+- Martial Coup
 - Martyr for the Cause
 - Martyr of Ashes
 - Martyr of Dusk
 - Martyr of Spores
 - Martyr's Soul
+- Marvelous Melee
+- Marwyn, the Nurturer
 - Mary Jane Watson
+- Mary Read and Anne Bonny
 - Mask of Avacyn
+- Mask of Griselbrand
 - Mask of Law and Grace
 - Mask of Memory
+- Mask of Riddles
 - Masked Admirers
 - Masked Blackguard
 - Masked Meower
+- Masked Vandal
+- Maskwood Nexus
 - Mass Appeal
 - Mass Calcify
 - Mass Hysteria
@@ -5368,10 +7496,13 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Massive Might
 - Massive Raid
 - Master Decoy
+- Master of Etherium
 - Master of Pearls
 - Master of the Feast
+- Master of the Pearl Trident
 - Master of Waves
 - Master Pakku
+- Master Skald
 - Master Splicer
 - Master the Way
 - Master Thief
@@ -5380,8 +7511,10 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Master's Rebuke
 - Masterful Flourish
 - Mastery of the Unseen
+- Matca Rioters
 - Maul of the Skyclaves
 - Maul Splicer
+- Maulfist Squad
 - Mausoleum Guard
 - Maverick Thopterist
 - Mavren Fein, Dusk Apostle
@@ -5389,11 +7522,15 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Maw of the Mire
 - Maw of the Obzedat
 - Mawcor
+- Maximize Altitude
+- Maximize Velocity
 - Maximum Overdrive
+- Mayael's Aria
 - Mayhem Devil
 - Maze Abomination
 - Maze Behemoth
 - Maze Glider
+- Maze of Ith
 - Maze Rusher
 - Maze Sentinel
 - Maze Skullbomb
@@ -5406,9 +7543,15 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Mechtitan
 - Meddling Youths
 - Medicine Bag
+- Medicine Runner
 - Meditation Pools
+- Meditation Puzzle
+- Medusa, Inhuman Queen
+- Meeting of Minds
 - Megantic Sliver
 - Megatog
+- Megrim
+- Melancholic Poet
 - Melded Moxite
 - Meldweb Curator
 - Melesse Spirit
@@ -5422,21 +7565,30 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Memorial to War
 - Memory Drain
 - Memory Erosion
+- Memory Guardian
+- Memory Worm
+- Menagerie Liberator
+- Mendicant Core, Guidelight
 - Mending Touch
 - Meng Huo's Horde
 - Meng Huo, Barbarian King
 - Mental Agony
 - Mental Discipline
 - Mental Journey
+- Mental Misstep
 - Mental Note
 - Mentor of the Meek
+- Mephitic Draught
 - Mephitic Vapors
+- Mer-Ek Nightblade
 - Mercenary
 - Merchant of Many Hats
 - Merchant of Secrets
 - Merchant of the Vale // Haggle
+- Merchant of Truth
 - Merchant of Venom
 - Merciless Enforcers
+- Merciless Eternal
 - Merciless Eviction
 - Merciless Executioner
 - Merciless Resolve
@@ -5454,56 +7606,79 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Merfolk of the Depths
 - Merfolk of the Pearl Trident
 - Merfolk Pupil
+- Merfolk Seastalkers
 - Merfolk Secretkeeper // Venture Deeper
 - Merfolk Seer
 - Merfolk Skydiver
+- Merfolk Skyscout
 - Merfolk Sovereign
 - Merfolk Traders
 - Merfolk Wizard
+- Meria's Outrider
 - Meriadoc Brandybuck
 - Merrow Grimeblotter
+- Merrow Harbinger
+- Merrow Reejerey
 - Merrow Skyswimmer
 - Merrow Wavebreakers
 - Merrow Witsniper
+- Merry, Warden of Isengard
 - Mesa Cavalier
 - Mesa Enchantress
 - Mesa Falcon
+- Mesa Pegasus
 - Mesa Unicorn
+- Mesmeric Orb
 - Mesmeric Trance
 - Messenger Drake
 - Messenger Falcons
 - Messenger's Speed
 - Metal Fatigue
 - Metallic Mastery
+- Metallic Mimic
+- Metallic Rebuke
 - Metallic Sliver
 - Metallic Sliver
 - Metallurgeon
 - Metalspinner's Puzzleknot
+- Metalwork Colossus
 - Metamorphic Wurm
 - Metastatic Evangel
 - Metathran Soldier
+- Metathran Zombie
 - Meteor Golem
 - Meteor Sword
 - Meteoric Mace
 - Meteorite
 - Meteorite
+- Methods of the Mighty
 - Meticulous Archive
 - Meticulous Artisan
 - Metropolis Sprite
+- Miara, Thorn of the Glade
 - Miasmic Mummy
+- Michelangelo, Game Master
+- Michelangelo, the Heart
 - Michelangelo, Weirdness to 11
+- Michiko's Reign of Truth // Portrait of Michiko
+- Midgar, City of Mako // Reactor Raid
 - Midnight Assassin
 - Midnight Charm
+- Midnight Covenant
 - Midnight Duelist
 - Midnight Entourage
 - Midnight Guard
 - Midnight Haunting
 - Midnight Reaper
 - Midnight Scavengers
+- Midnight Snack
+- Midsummer Revel
+- Midvast Protector
 - Might of Alara
 - Might of Oaks
 - Might of the Ancestors
 - Might of the Masses
+- Might of the Old Ways
 - Might Sliver
 - Might Weaver
 - Mightstone
@@ -5515,6 +7690,7 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Migratory Greathorn
 - Migratory Route
 - Miirym, Sentinel Wyrm
+- Mikaeus, the Lunarch
 - Mikokoro, Center of the Sea
 - Military Intelligence
 - Militia's Pride
@@ -5523,32 +7699,47 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Millstone
 - Mina and Denn, Wildborn
 - Minamo, School at Water's Edge
+- Minas Tirith
 - Mind Control
 - Mind Drain
 - Mind Drill Assailant
 - Mind Flayer
+- Mind Over Matter
 - Mind Ravel
 - Mind Rot
+- Mind Sculpt
 - Mind Spring
 - Mind Stone
+- Mind Unbound
 - Mind's Eye
+- Mindcrank
 - Mindculling
+- Mindeye Drake
 - Mindful Biomancer
 - Mindless Automaton
+- Mindless Conscription
 - Mindscour Dragon
 - Mindslicer
+- Mindstab Thrull
 - Mindstatic
 - Mindwarper
+- Mindwhisker
 - Mindwrack Harpy
 - Mindwrack Liege
 - Mine Bearer
 - Minecart Daredevil // Ride the Rails
 - Miner's Bane
+- Miner's Guidewing
 - Mines of Moria
 - Mineshaft Spider
 - Minion
+- Minion Missile
+- Minion's Return
 - Minions' Murmurs
 - Minister of Impediments
+- Minister of Inquiries
+- Ministrant of Obligation
+- Minor Misstep
 - Minotaur
 - Minotaur Abomination
 - Minotaur Aggressor
@@ -5559,28 +7750,48 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Minotaur Warrior
 - Mintstrosity
 - Minwu, White Mage
+- Miraculous Recovery
 - Mirage Mesa
+- Mirage Mirror
+- Mirari's Wake
 - Mire Blight
+- Mire Boa
+- Mire in Misery
 - Mire Kavu
 - Mire Shade
 - Mire Triton
 - Mire's Grasp
+- Miren, the Moaning Well
 - Mirkwood Bats
+- Mirkwood Elk
 - Mirkwood Spider
 - Mirozel
 - Mirran Banesplitter
 - Mirran Crusader
+- Mirran Mettle
 - Mirran Spy
+- Mirri, Cat Warrior
 - Mirrodin's Core
+- Mirror Entity
+- Mirror Image
 - Mirror of Galadriel
 - Mirror-Sigil Sergeant
+- Mirrormade
+- Mirrormere Guardian
+- Mirrorpool
 - Miscalculation
 - Miscast
 - Mischief and Mayhem
+- Mischievous Chimera
 - Mischievous Mystic
+- Mischievous Poltergeist
 - Mischievous Pup
+- Mischievous Sneakling
+- Misdirection
 - Misery Charm
+- Misery's Shadow
 - Misguided Rage
+- Mishra's Juggernaut
 - Mishra's Onslaught
 - Mishra's Self-Replicator
 - Mishra, Excavation Prodigy
@@ -5589,18 +7800,28 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Mist Raven
 - Mist-Cloaked Herald
 - Mist-Syndicate Naga
+- Mistcutter Hydra
+- Mister Fantastic, Reed Richards
+- Mister Gutsy
 - Mistfire Adept
 - Mistfire Weaver
+- Mistform Ultimus
 - Misthios's Fury
+- Misthollow Griffin
 - Mistmeadow Witch
 - Mistral Charger
 - Mistral Singer
+- Mistrise Village
+- Mists of Littjara
 - Mistvault Bridge
 - Mistveil Plains
+- Mistwalker
 - Misty Palms Oasis
 - Misty Rainforest
 - Mithril Coat
+- Mizzium Transreliquat
 - MJ, Rising Star
+- Mjölnir's Might
 - Mm'menon, Uthros Exile
 - Mnemonic Sphere
 - Mnemonic Wall
@@ -5608,22 +7829,40 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Moaning Spirit
 - Moaning Wall
 - Moat Piranhas
+- Mob
 - Mob Justice
 - Mobilize
 - Mocking Sprite
+- Mockingbird, Ace Agent
+- Moderation
+- Mogg Bombers
+- Mogg Cannon
 - Mogg Fanatic
+- Mogg Hollows
+- Mogg Maniac
 - Mogg Mob
 - Mogg Raider
 - Mogg Sentry
+- Mogg Squad
 - Moggcatcher
+- Mogis's Favor
+- Mold Adder
 - Mold Shambler
 - Molder Beast
+- Molder Slug
+- Moldering Gym // Weight Room
 - Moldering Karok
+- Moldervine Cloak
 - Moldervine Reclamation
 - Moldgraf Scavenger
+- Mole Module
 - Molecular Modifier
+- Molimo, Maro-Sorcerer
+- Moloid
 - Molt Tender
 - Molten Blast
+- Molten Frame
+- Molten Gatekeeper
 - Molten Man, Inferno Incarnate
 - Molten Monstrosity
 - Molten Nursery
@@ -5632,15 +7871,20 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Molten Tributary
 - Molten Vortex
 - Moltensteel Dragon
+- Molting Harpy
+- Molting Snakeskin
 - Moment of Craving
 - Moment of Defiance
 - Moment of Heroism
 - Moment of Triumph
 - Moment of Valor
+- Moment's Peace
 - Momentary Blink
+- Mona Lisa, Science Geek
 - Monastery Flock
 - Monastery Mentor
 - Monastery Swiftspear
+- Mondrak, Glory Dominus
 - Mongoose Lizard
 - Monk
 - Monk
@@ -5651,6 +7895,7 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Monoskelion
 - Mons's Goblin Raiders
 - Monster Mashup
+- Monstrify
 - Monstrous Carabid
 - Monstrous Growth
 - Moogle
@@ -5661,15 +7906,19 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Moonblade Shinobi
 - Moonfolk
 - Moonfolk Puzzlemaker
+- Moonglove Changeling
 - Moonglove Extract
 - Moonglove Extractor
 - Moonglove Winnower
+- Moonlight Geist
+- Moonlit Strider
 - Moonlit Wake
 - Moonrise Cleric
 - Moonshaker Cavalry
 - Moonsilver Spear
 - Moonsnare Specialist
 - Moonwing Moth
+- Moor Fiend
 - Moorish Cavalry
 - Moorland Drifter
 - Moorland Haunt
@@ -5678,8 +7927,10 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Morbid Hunger
 - Morbid Opportunist
 - Morbid Plunder
+- Morbius the Living Vampire
 - Morcant's Eyes
 - Morcant's Loyalist
+- Mordor Muster
 - Morgue Theft
 - Morgue Thrull
 - Morgue Toad
@@ -5688,18 +7939,23 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Moriok Replica
 - Moriok Rigger
 - Morkrut Banshee
+- Morkrut Necropod
 - Morningtide
 - Moroii
 - Morphic Pool
 - Morphling
 - Morselhoarder
 - Morska, Undersea Sleuth
+- Mortal Combat
+- Mortal Obstinacy
 - Mortal Wound
 - Mortal's Ardor
 - Mortal's Resolve
+- Mortarpod
 - Mortician Beetle
 - Mortify
 - Mortiphobia
+- Mortivore
 - Mortuary Mire
 - Mortus Strider
 - Moss Diamond
@@ -5707,24 +7963,35 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Moss Monster
 - Moss Viper
 - Mossbeard Ancient
+- Mossborn Hydra
 - Mosscoat Goriak
 - Mossdog
 - Mossfire Valley
 - Mosstodon
 - Mosswood Dreadknight // Dread Whispers
+- Mosswort Bridge
 - Most Valuable Slayer
 - Most Wanted
+- Mothdust Changeling
 - Mother Bear
+- Mother of Runes
 - Mothrider Patrol
+- Mothrider Samurai
 - Mountain
 - Mountain Bandit
+- Mountain Goat
 - Mountain Valley
+- Mountain Yeti
 - Mounted Dreadknight
+- Mourner's Surprise
 - Mournful Zombie
+- Mourning
+- Mournwhelk
 - Mouse
 - Mouser Attack!
 - Mouth of Ronom
 - Mowu // Mowu
+- Mowu, Loyal Companion
 - Mox Amber
 - Mox Diamond
 - Mox Emerald
@@ -5735,20 +8002,32 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Mox Ruby
 - Mox Sapphire
 - Mtenda Griffin
+- Mtenda Herder
 - Muck Rats
 - Mudbrawler Cohort
 - Mudbrawler Raiders
+- Mudbutton Clanger
 - Mudbutton Torchrunner
 - Mukotai Ambusher
+- Mulldrifter
+- Multani's Decree
+- Multani's Harmony
+- Multani, Maro-Sorcerer
+- Multiversal Incursion
+- Multiversal Recruitment
 - Mummy Paramount
 - Munitions
 - Munitions Expert
+- Muraganda Raceway
 - Murasa Brute
 - Murasa Pyromancer
 - Murasa Ranger
 - Murasa Rootgrazer
 - Murder
+- Murder Investigation
 - Murder of Crows
+- Murderous Compulsion
+- Murderous Cut
 - Murderous Redcap
 - Murky Sewer
 - Murmuring Bosk
@@ -5758,21 +8037,29 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Muse Drake
 - Muse's Encouragement
 - Museum Nightwatch
+- Mutable Explorer
 - Mutagen
 - Mutagenic Growth
 - Mutant
 - Mutant
+- Mutant Chain Reaction
 - Mutant Town
 - Mutant Town Musicians
 - Mutilate
+- Mwonvuli Acid-Moss
 - Mycoid Shepherd
+- Mycoloth
 - Myconid Spore Tender
+- Mycosynth Wellspring
 - Myr
 - Myr
 - Myr Convert
+- Myr Enforcer
 - Myr Kinsmith
+- Myr Landshaper
 - Myr Moonvessel
 - Myr Propagator
+- Myr Quadropod
 - Myr Retriever
 - Myr Scrapling
 - Myr Sire
@@ -5780,14 +8067,19 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Myrel, Shield of Argive
 - Myriad Landscape
 - Myrsmith
+- Mysidian Elder
 - Mysterio's Phantasm
 - Mysterious Egg
+- Mystery Key
 - Mystic Archaeologist
 - Mystic Crusader
+- Mystic Denial
 - Mystic Enforcer
 - Mystic Familiar
+- Mystic Forge
 - Mystic Gate
 - Mystic Melting
+- Mystic Might
 - Mystic Monastery
 - Mystic of the Hidden Way
 - Mystic Penitent
@@ -5800,33 +8092,50 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Mystic Visionary
 - Mystic Zealot
 - Mystical Tutor
+- Mystifying Maze
 - Mythic Proportions
 - Nacatl Outlander
 - Nacatl Savage
 - Nadier's Nightblade
+- Nadier, Agent of the Duskenel
 - Naga Eternal
 - Naga Oracle
 - Naga Vitalist
+- Nagao, Bound by Honor
+- Nagging Thoughts
 - Nahiri's Machinations
 - Nahiri's Stoneblades
+- Nalaar Aetherjet
+- Namazu Trader
 - Nanoform Sentinel
 - Nantuko Calmer
 - Nantuko Disciple
 - Nantuko Elder
 - Nantuko Husk
+- Nantuko Mentor
 - Nantuko Shade
+- Nantuko Tracer
 - Nantuko Vigilante
 - Narcissism
+- Narcomoeba
 - Narnam Cobra
+- Narnam Renegade
 - Narrow Escape
+- Narset's Rebuke
+- Narset, Jeskai Waymaster
 - Narstad Scrapper
+- Naru Meha, Master Wizard
 - Narwhal
+- Nath of the Gilt-Leaf
 - Nath's Buffoon
 - Natural Connection
 - Natural End
+- Natural Order
+- Natural Reclamation
 - Natural Spring
 - Natural State
 - Naturalize
+- Nature's Blessing
 - Nature's Chant
 - Nature's Claim
 - Nature's Lore
@@ -5834,10 +8143,12 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Nature's Spiral
 - Nature's Way
 - Nausea
+- Nav Squad Commandos
 - Navigator's Ruin
 - Naya Battlemage
 - Naya Hushblade
 - Naya Panorama
+- Near-Death Experience
 - Nearheath Chaplain
 - Nearheath Stalker
 - Nebelgast Beguiler
@@ -5846,19 +8157,27 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Nebula Dragon
 - Neck Snap
 - Necroblossom Snarl
+- Necroduality
 - Necrogen Censer
+- Necrogen Mists
 - Necrogen Scudder
 - Necrogen Spellbomb
 - Necrogenesis
+- Necrogoyf
 - Necromancer's Assistant
 - Necromancer's Familiar
 - Necromantic Thirst
 - Necron Deathmark
+- Necron Monolith
 - Necron Warrior
 - Necropanther
 - Necropede
 - Necropolis Fiend
+- Necropolis Regent
+- Necropouncer
 - Necrosavant
+- Necrotic Wound
+- Nectar Faerie
 - Need for Speed
 - Needle Storm
 - Needlebug
@@ -5869,24 +8188,35 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Needletooth Raptor
 - Needleverge Pathway // Pillarverge Pathway
 - Nefarious Imp
+- Nefarox, Overlord of Grixis
 - Nefashu
 - Negate
 - Neglected Manor
 - Neighborhood Guardian
+- Nekusar, the Mindrazer
 - Nema Siltlurker
+- Nemesis Mask
+- Nemesis of Reason
 - Nephalia Drownyard
 - Nephalia Moondrakes
 - Nephalia Seakite
 - Nephalia Smuggler
 - Nervous Gardener
 - Nessian Courser
+- Nessian Demolok
 - Nessian Hornbeetle
+- Nessian Wilds Ravager
 - Nest Robber
 - Nested Ghoul
+- Nested Shambler
+- Nesting Grounds
+- Nesting Wurm
 - Netcaster Spider
 - Nether Horror
+- Nether Traitor
 - Nettle Drone
 - Nettle Swine
+- Nettlecyst
 - Nettletooth Djinn
 - Network Disruptor
 - Neurok Commando
@@ -5905,29 +8235,48 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Nexus Wardens
 - Nezumi Bladeblesser
 - Nezumi Bone-Reader
+- Nezumi Cutthroat
 - Nezumi Informant
+- Nezumi Linkbreaker
 - Nezumi Prowler
+- Nezumi Ronin
 - Nezumi Shadow-Watcher
 - Niall Silvain
+- Nibelheim Aflame
 - Niblis of Dusk
 - Niblis of Frost
+- Niblis of the Breath
 - Niblis of the Mist
 - Niblis of the Urn
+- Night Incarnate
 - Night Market
+- Night Market Aeronaut
 - Night Market Lookout
 - Night of Souls' Betrayal
+- Night of the Sweets' Revenge
 - Night Revelers
+- Night Scythe
 - Night's Whisper
+- Nightbird's Clutches
 - Nightdrinker Moroii
 - Nightfire Giant
 - Nightguard Patrol
+- Nighthawk, Dark Defender
+- Nightmare
 - Nightmare Horror
+- Nightmare Sower
+- Nightmare Void
+- Nightmare's Thirst
 - Nightmarish End
+- Nightscape Familiar
 - Nightscape Master
 - Nightshade Dryad
 - Nightshade Harvester
+- Nightshade Schemers
 - Nightshade Stinger
+- Nightsoil Kami
 - Nightsquad Commando
+- Nightstalker Engine
 - Nightveil Predator
 - Nightveil Sprite
 - Nightwind Glider
@@ -5940,6 +8289,7 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Nim Grotesque
 - Nim Lasher
 - Nim Replica
+- Nim Shambler
 - Nim Shrieker
 - Nimana Sell-Sword
 - Nimana Skydancer
@@ -5948,28 +8298,39 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Nimble Mongoose
 - Nimble Thopterist
 - Nimble-Blade Khenra
+- Nimblewright Schematic
 - Nimbus Maze
 - Nimbus of the Isles
+- Nimbus Swimmer
 - Nimbus Wings
 - Nimraiser Paladin
+- Nimrodel Watcher
 - Nine-Tail White Fox
 - Ninja
 - Ninja
 - Ninja
 - Ninja of the Deep Hours
 - Ninja of the New Moon
+- Ninja Pizza
 - Ninja Turtle Spirit
 - Ninth Bridge Patrol
 - Nip Gwyllion
 - Nirkana Assassin
+- Nirkana Revenant
+- Nishoba Brawler
+- Nissa's Expedition
+- Nissa's Renewal
 - Nissa, Voice of Zendikar
 - Niv-Mizzet, Dracogenius
 - Niv-Mizzet, Parun
 - Niv-Mizzet, the Firemind
 - Nivix Barrier
+- Nivix Guildmage
+- No Escape
 - No Mercy
 - No-Dachi
 - Nobilis of War
+- Noble Elephant
 - Noble Hierarch
 - Noble Panther
 - Noble Stand
@@ -5978,11 +8339,16 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Nobody
 - Nocturnal Feeder
 - Noggle Bridgebreaker
+- Noggle Robber
+- Noggle the Mind
+- Noise Marine
 - Nomad Decoy
 - Nomad Outpost
 - Nomad Stadium
 - Nomadic Elf
+- Nomads' Assembly
 - Noose Constrictor
+- Norika Yamazaki, the Poet
 - Norn's Wellspring
 - North Pole Gates
 - Northern Air Temple
@@ -5995,29 +8361,45 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Notion Rain
 - Nourish
 - Nova Cleric
+- Nova Flame
 - Novablast Wurm
 - Novice Dissector
 - Novice Inspector
 - Novice Occultist
+- Novijen Sages
+- Novijen, Heart of Progress
 - Noxious Dragon
+- Noxious Field
+- Noxious Gearhulk
 - Noxious Groodion
+- Noxious Hatchling
 - Noxious Newt
+- Noxious Revival
 - Noxious Toad
+- Nucklavee
 - Nuisance Engine
 - Nuka-Cola Vending Machine
+- Null Brooch
 - Null Caller
+- Null Champion
 - Nullmage Shepherd
 - Nullpriest of Oblivion
+- Numai Outcast
 - Nurturing Bristleback
 - Nurturing Peatland
+- Nurturing Presence
 - Nutrient Block
 - Nykthos, Shrine to Nyx
 - Nylea's Disciple
 - Nylea's Forerunner
 - Nylea's Huntmaster
+- Nylea's Presence
+- Nymris, Oona's Trickster
 - Nyx Lotus
 - Nyx Weaver
 - Nyx-Fleece Ram
+- Nyxbloom Ancient
+- Nyxborn Behemoth
 - Nyxborn Brute
 - Nyxborn Colossus
 - Nyxborn Courser
@@ -6029,8 +8411,14 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Oakheart Dryads
 - Oashra Cultivator
 - Oasis Gardener
+- Oasis Ritualist
+- Oath of Eorl
+- Oath of Gideon
 - Oath of the Ancient Wood
 - Oathsworn Giant
+- Ob Nixilis's Cruelty
+- Ob Nixilis, the Hate-Twisted
+- Ob Nixilis, Unshackled
 - Obelisk of Alara
 - Obelisk of Bant
 - Obelisk of Esper
@@ -6038,31 +8426,46 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Obelisk of Jund
 - Obelisk of Naya
 - Obelisk of Urd
+- Obelisk Spider
 - Obliterate
+- Obliterating Bolt
+- Oblivion Crown
+- Oblivion Ring
+- Oblivion Strike
 - Oboro Breezecaller
 - Oboro Envoy
 - Oboro, Palace in the Clouds
+- Obscura Charm
 - Obscura Initiate
+- Obscura Storefront
+- Obsessive Search
 - Obsessive Skinner
 - Obsessive Stitcher
 - Obsianus Golem
+- Obsidian Acolyte
 - Obsidian Giant
 - Obyra's Attendants // Desperate Parry
 - Obyra, Dreaming Duelist
 - Obzedat's Aid
+- Ochran Assassin
 - Octoprophet
 - Octopus
 - Octopus Form
 - Oculus
+- Odious Trow
 - Odric's Outrider
+- Odylic Wraith
 - Of Herbs and Stewed Rabbit
+- Offalsnout
 - Offer Immortality
 - Oggyar Battle-Seer
 - Ognis, the Dragon's Lash
 - Ogre
 - Ogre
 - Ogre Arsonist
+- Ogre Battledriver
 - Ogre Berserker
+- Ogre Errant
 - Ogre Gatecrasher
 - Ogre Menial
 - Ogre Recluse
@@ -6076,18 +8479,30 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Ohran Frostfang
 - Ohran Yeti
 - Oji, the Exquisite Blade
+- Ojutai Exemplars
+- Ojutai's Breath
 - Ojutai's Command
+- Ojutai's Summons
 - Ojutai, Soul of Winter
 - Oketra's Attendant
+- Oketra's Attendant
+- Oketra's Monument
+- Okiba Reckoner Raid // Nezumi Road Captain
+- Okiba-Gang Shinobi
 - Okina, Temple to the Grandfathers
 - Oko's Accomplices
 - Old Flitterfang
 - Old Ghastbark
+- Old Gnawbone
 - Old One Eye
+- Old-Growth Educator
 - Oliphaunt
+- Olivia's Attendants
+- Olivia's Bloodsworn
 - Olivia's Dragoon
 - Olivia, Opulent Outlaw
 - Oltec Cloud Guard
+- Oltec Matterweaver
 - Omashu City
 - Omega Myr
 - Omen
@@ -6104,12 +8519,14 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Omnath, Locus of the Roil
 - Omni-Cheese Pizza
 - On the Job
+- On the Trail
 - Onakke Ogre
 - Ondu Champion
 - Ondu Cleric
 - Ondu Giant
 - Ondu Greathorn
 - Ondu Inversion // Ondu Skyruins
+- Ondu Spiritdancer
 - One with Nature
 - One with Nothing
 - One with the Machine
@@ -6119,11 +8536,14 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Oneirophage
 - Ongoing Investigation
 - Oni of Wild Places
+- Oni Possession
 - Onslaught
 - Onulet
 - Onyx Goblet
 - Onyx Mage
 - Oona's Gatewarden
+- Oona's Grace
+- Ooze
 - Ooze
 - Ooze
 - Ooze
@@ -6133,19 +8553,26 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Opaline Unicorn
 - Open Fire
 - Open the Armory
+- Open the Gates
 - Open the Graves
+- Open the Vaults
 - Ophidian Eye
 - Ophiomancer
 - Opportunity
 - Opposition
 - Oppression
+- Oppressive Will
 - Opt
 - Opulent Palace
+- Oracle of Mul Daya
 - Oracle of Nectars
+- Oracle's Insight
 - Oracle's Restoration
 - Oran-Rief Invoker
+- Oran-Rief Ooze
 - Oran-Rief Recluse
 - Oran-Rief Survivalist
+- Oran-Rief, the Vastwood
 - Oraxid
 - Orazca Frillback
 - Orazca Puzzle-Door
@@ -6156,6 +8583,7 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Orchard Strider
 - Orcish Artillery
 - Orcish Bloodpainter
+- Orcish Bowmasters
 - Orcish Cannonade
 - Orcish Cannoneers
 - Orcish Mechanics
@@ -6169,43 +8597,62 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Order of the Sacred Torch
 - Order of the White Shield
 - Order of Whiteclay
+- Order of Yawgmoth
 - Ordered Migration
+- Ordruun Veteran
 - Ore Gorger
+- Ore-Scale Guardian
 - Oread of Mountain's Blaze
 - Oreplate Pangolin
 - Oreskos Sun Guide
 - Oreskos Swiftclaw
 - Organ Grinder
+- Organic Extinction
 - Origin of Metalbending
+- Origin of the Hidden Ones
+- Origin of the Hulk
 - Origin Spellbomb
 - Ornamental Courage
 - Ornery Dilophosaur
 - Ornery Kudu
+- Ornery Tumblewagg
+- Ornitharch
 - Ornithopter
 - Ornithopter
 - Ornithopter of Paradise
+- Orochi Hatchery
 - Orochi Leafcaller
 - Orochi Sustainer
 - Orthodoxy Enforcer
 - Orzhov Basilica
 - Orzhov Cluestone
+- Orzhov Enforcer
 - Orzhov Guildgate
 - Orzhov Guildmage
 - Orzhov Locket
+- Orzhov Racketeers
 - Orzhov Signet
 - Orzhova, the Church of Deals
 - Oscorp Research Team
 - Ossuary Rats
 - Ostiary Thrull
 - Otawara, Soaring City
+- Otepec Huntmaster
 - Otherworldly Gaze
+- Otherworldly Journey
 - Otter
+- Otter-Penguin
+- Ouroboroid
+- Outcaster Greenblade
 - Outflank
 - Outland Boar
+- Outland Colossus
 - Outlaw Medic
 - Outnumber
 - Outrider of Jhess
 - Ovalchase Daredevil
+- Ovalchase Dragster
+- Overbeing of Myth
 - Overcome
 - Overeager Apprentice
 - Overflowing Basin
@@ -6216,23 +8663,34 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Overgrowth
 - Overkill
 - Overprotect
+- Override
 - Overrun
 - Overseer of the Damned
 - Oversoul of Dusk
 - Overtaker
+- Overwhelm
 - Overwhelming Instinct
+- Overwhelming Remorse
+- Overwhelming Stampede
 - Overwhelming Surge
 - Owl Familiar
 - Owlbear
+- Owlin Historian
 - Ox
 - Ox
 - Ox
 - Oxidda Daredevil
+- Oxidda Golem
 - Oxidda Scrapmelter
 - Oxidize
 - Oyobi, Who Split the Heavens
+- Ozolith, the Shattered Spire
 - Pacification Array
 - Pacifism
+- Pack Guardian
+- Pack Rat
+- Pack's Favor
+- Packsong Pup
 - Pact of Negation
 - Pact of the Titan
 - Pactdoll Terror
@@ -6241,16 +8699,26 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Painful Lesson
 - Painted Bluffs
 - Palace Familiar
+- Palace Sentinels
 - Paladin en-Vec
 - Paladin of Predation
 - Paladin of the Bloodstained
 - Paladin's Shield
+- Palani's Hatcher
+- Pale Bears
+- Pale Rider of Trostad
 - Paleoloth
 - Palinchron
+- Palladia-Mors
 - Palladium Myr
+- Panharmonicon
+- Panic Attack
+- Panic Spellbomb
 - Panicked Altisaur
+- Panther Robot
 - Panther Warriors
 - Papercraft Decoy
+- Paradise Mantle
 - Paradox Engine
 - Paradox Gardens
 - Paragon of Eternal Wilds
@@ -6260,13 +8728,19 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Paragon of Open Graves
 - Parallel Lives
 - Paralyzing Grasp
+- Paramecia Coloniex
 - Paranoid Parish-Blade
 - Parapet Watchers
+- Paraselene
+- Parasitic Bond
 - Parasitic Strix
 - Parcel Myr
 - Parch
 - Pardic Collaborator
 - Pardic Wanderer
+- Parhelion II
+- Parhelion Patrol
+- Parish-Blade Trainee
 - Part the Veil
 - Pashalik Mons
 - Passwall Adept
@@ -6274,19 +8748,27 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Patagia Tiger
 - Patchwork Automaton
 - Patchwork Banner
+- Patchwork Gnomes
 - Path of Ancestry
 - Path of Anger's Flame
+- Path of Annihilation
 - Path of Discovery
 - Path to Exile
 - Pathbreaker Ibex
 - Pathfinding Axejaw
 - Pathmaker Initiate
 - Patriar's Seal
+- Patrician Geist
+- Patriot, Shield Wielder
 - Patrol Hound
 - Patrol Signaler
+- Patrolling Peacemaker
+- Patron of the Arts
+- Patron of the Valiant
 - Patron of the Vein
 - Patron of the Wild
 - Pattern of Rebirth
+- Pause for Reflection
 - Pavel Maliki
 - Pawpatch Formation
 - Peace and Quiet
@@ -6299,12 +8781,17 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Pearled Unicorn
 - Peculiar Lighthouse
 - Pedal to the Metal
+- Pedantic Learning
+- Peek
 - Peel from Reality
+- Peema Outrider
+- Peerless Ropemaster
 - Pegasus
 - Pegasus
 - Pegasus Charger
 - Pegasus Courser
 - Pegasus Refuge
+- Peggy Carter, Secret Agent
 - Pelakka Wurm
 - Pendrell Drake
 - Pendulum of Patterns
@@ -6317,9 +8804,12 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Penumbra Spider
 - Penumbra Wurm
 - Peppersmoke
+- Peregrin Took
 - Peregrine Drake
 - Peregrine Griffin
 - Peregrine Mask
+- Perennial Behemoth
+- Perforating Artist
 - Perilous Forays
 - Perilous Landscape
 - Perilous Myr
@@ -6327,51 +8817,73 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Perilous Shadow
 - Perilous Vault
 - Perimeter Captain
+- Perimeter Enforcer
 - Perimeter Patrol
 - Perimeter Sergeant
 - Perish
+- Permission Denied
+- Persist
 - Persistent Specimen
 - Personal Tutor
 - Personify
+- Persuasion
+- Persuasive Interrogators
 - Pest
 - Pest
 - Pest Control
 - Pest Mascot
+- Pest Summoning
+- Pestbrood Sloth
 - Pestered Wellguard
+- Pestermite
 - Pestilence Demon
 - Pestilent Kathari
 - Pestilent Syphoner
 - Pestilent Wolf
 - Petrahydrox
+- Petravark
 - Petrified Field
+- Pewter Golem
+- Phalanx Leader
 - Phalanx Vanguard
 - Phantasmal Abomination
 - Phantasmal Bear
 - Phantasmal Dragon
 - Phantasmal Dreadmaw
+- Phantasmal Fiend
+- Phantasmal Forces
 - Phantasmal Shieldback
 - Phantatog
 - Phantom Beast
 - Phantom General
+- Phantom Interference
 - Phantom Monster
 - Phantom Ninja
 - Phantom Warrior
+- Pharagax Giant
+- Pharaoh Rama-Tut
 - Pharika's Chosen
 - Pharika's Cure
+- Pharika's Disciple
 - Pharika's Libation
 - Pharika's Mender
 - Phase Dolphin
+- Pheres-Band Brawler
 - Pheres-Band Centaurs
 - Pheres-Band Raiders
+- Pheres-Band Thunderhoof
 - Pheres-Band Tromper
 - Pheres-Band Warchief
+- Phobian Phantasm
 - Phobos
 - Phoenix Down
+- Photon, Lady of Light
 - Phylath, World Sculptor
 - Phyresis
 - Phyrexia's Core
 - Phyrexian
 - Phyrexian Altar
+- Phyrexian Archivist
 - Phyrexian Arena
 - Phyrexian Beast
 - Phyrexian Beast
@@ -6379,8 +8891,11 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Phyrexian Crusader
 - Phyrexian Debaser
 - Phyrexian Defiler
+- Phyrexian Delver
 - Phyrexian Denouncer
 - Phyrexian Digester
+- Phyrexian Dragon Engine
+- Phyrexian Espionage
 - Phyrexian Gargantua
 - Phyrexian Germ
 - Phyrexian Ghoul
@@ -6394,10 +8909,13 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Phyrexian Hydra
 - Phyrexian Insect
 - Phyrexian Ironfoot
+- Phyrexian Ironworks
 - Phyrexian Juggernaut
 - Phyrexian Lens
+- Phyrexian Metamorph
 - Phyrexian Missionary
 - Phyrexian Mite
+- Phyrexian Monitor
 - Phyrexian Myr
 - Phyrexian Myr
 - Phyrexian Pegasus
@@ -6408,6 +8926,7 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Phyrexian Snowcrusher
 - Phyrexian Tower
 - Phyrexian Tribute
+- Phyrexian Vatmother
 - Phyrexian Vault
 - Phyrexian Vivisector
 - Phyrexian Walker
@@ -6417,13 +8936,18 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Phyrexian Wurm
 - Phyrexian Wurm
 - Phytoburst
+- Phytotitan
+- Pia and Kiran Nalaar
 - Pianna, Nomad Captain
 - Pierce Strider
 - Pierce the Sky
 - Piercing Light
 - Piety
 - Piggy Bank
+- Pikemen
+- Pile On
 - Pileated Provisioner
+- Pilfer
 - Pilfered Plans
 - Pilfering Hawk
 - Pilgrim of the Ages
@@ -6437,23 +8961,34 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Pillardrop Rescuer
 - Pillardrop Warden
 - Pillarfield Ox
+- Pillory of the Sleepless
 - Pin to the Earth
 - Pincher Beetles
 - Pine Barrens
+- Pinecrest Ridge
 - Pinnacle Monk // Mystic Peak
 - Pinnacle of Rage
 - Pious Interdiction
 - Pious Wayfarer
 - Piper of the Swarm
+- Pippin's Bravery
+- Pippin, Warden of Isengard
 - Piranha Fly
 - Piranha Marsh
 - Pirate
 - Pirate
+- Pirate
 - Pirate // Treasure
+- Pirate Hat
 - Pirate Peddlers
 - Pirate's Cutlass
 - Pirate's Pillage
 - Pirate's Prize
+- Pistus Strike
+- Pit Fight
+- Pit Raptor
+- Pit Scorpion
+- Pit Spawn
 - Pitchburn Devils
 - Pith Driller
 - Pitiless Gorgon
@@ -6462,24 +8997,30 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Pitiless Vizier
 - Pixie Queen
 - Placid Rottentail
+- Plague Beetle
 - Plague Belcher
 - Plague Dogs
 - Plague Mare
 - Plague Myr
 - Plague Spitter
+- Plague Spores
 - Plague Stinger
 - Plague Wind
 - Plague Witch
 - Plaguebearer of Nurgle
+- Plaguecrafter
 - Plagued Rusalka
 - Plaguemaw Beast
 - Plains
+- Planar Birth
 - Planar Bridge
 - Planar Cleansing
 - Planar Despair
 - Planar Gate
+- Planar Guide
 - Planar Incision
 - Planar Portal
+- Planar Void
 - Plant
 - Plant
 - Plant
@@ -6489,12 +9030,14 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Plateau
 - Plated Crusher
 - Plated Geopede
+- Plated Onslaught
 - Plated Rootwalla
 - Plated Seastrider
 - Plated Slagwurm
 - Plated Sliver
 - Plated Spider
 - Plated Wurm
+- Platoon Dispenser
 - Playful Shove
 - Plaza of Heroes
 - Plea for Guidance
@@ -6514,7 +9057,11 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Poison Dart Frog
 - Poison the Blade
 - Poison the Well
+- Poison-Blade Mentor
 - Poison-Tip Archer
+- Poisoner's Apprentice
+- Pol Jamaar, Illusionist
+- Pollenbright Wings
 - Polluted Bonds
 - Polluted Dead
 - Polluted Delta
@@ -6527,24 +9074,36 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Popular Egotist
 - Porcelain Legionnaire
 - Pore Over the Pages
+- Port of Karfell
 - Port Town
+- Portable Hole
 - Portent of Betrayal
+- Possessed Skaab
 - Pothole Mole
 - Potion of Healing
 - Pounce
 - Pouncing Cheetah
 - Pouncing Shoreshark
 - Power Armor
+- Power Boost
+- Power Conduit
+- Power Fist
 - Power Matrix
+- Power of Fire
+- Powerstone Engineer
 - Powerstone Fracture
-- Pradesh Gypsies
+- Poxwalkers
+- Praetor's Counsel
 - Prairie Stream
 - Prakhata Club Security
 - Prakhata Pillar-Bug
+- Prayer of Binding
 - Precinct Captain
 - Precise Strike
 - Precision Bolt
+- Precognition Field
 - Predation Steward
+- Predator Dragon
 - Predator's Strike
 - Predator, Flagship
 - Predatory Hunger
@@ -6555,18 +9114,26 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Preordain
 - Preposterous Proportions
 - Prescient Chimera
+- Presence of Gond
 - Presence of the Wise
 - Press for Answers
 - Press the Advantage
 - Pressure Point
 - Pretending Poxbearers
 - Prey Upon
+- Prey's Vengeance
 - Price of Freedom
+- Prickly Boggart
 - Prickly Marmoset
+- Prickly Pair
 - Pride Guardian
+- Pride of Lions
 - Pride of the Perfect
+- Prideful Feastling
 - Prideful Parent
+- Pridemalkin
 - Priest of Ancient Lore
+- Priest of Fell Rites
 - Priest of Gix
 - Priest of Iroas
 - Priest of the Blood Rite
@@ -6574,18 +9141,25 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Priest of Titania
 - Priest of Urabrask
 - Priests of Norn
+- Primal Adversary
 - Primal Bellow
+- Primal Boost
+- Primal Cocoon
 - Primal Druid
 - Primal Forcemage
 - Primal Frenzy
 - Primal Huntbeast
+- Primal Might
 - Primal Rage
+- Primal Vigor
 - Primal Visitation
+- Primaris Chaplain
 - Primeval Bounty
 - Primeval Herald
 - Primeval Protector
 - Primeval Shambler
 - Primeval Titan
+- Primevals' Glorious Rebirth
 - Primo, the Indivisible
 - Primoc Escapee
 - Primordial Pachyderm
@@ -6596,37 +9170,69 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Prismari Campus
 - Prismari Command
 - Prismatic Lens
+- Prismatic Omen
 - Prismatic Vista
 - Prismite
+- Prison Realm
+- Pristine Talisman
+- Private Research
+- Privileged Position
+- Prized Amalgam
 - Prized Elephant
 - Prized Griffin
+- Prized Statue
+- Prized Unicorn
 - Prizefight
 - Prizefighter Construct
+- Probe
 - Prodigal Pyromancer
 - Prodigal Sorcerer
 - Prodigious Growth
+- Profane Memento
 - Profane Prayers
 - Professional Face-Breaker
 - Professional Wrestler
+- Professor Dellian Fel
+- Professor Hulk
+- Professor of Zoomancy
 - Professor Zei, Anthropologist
 - Professor's Warning
+- Profit // Loss
+- Profound Journey
 - Progenitus
 - Prognostic Sphinx
+- Project Deathlok Soldier
+- Projektor Inspector
+- Prologue to Phyresis
+- Promise of Bunrei
+- Promised Kannushi
 - Promising Vein
 - Propaganda
+- Propagator Drone
+- Propeller Pioneer
 - Prophet of Distortion
 - Prophet of the Peak
 - Prophetic Flamespeaker
 - Prophetic Prism
+- Prophetic Ravings
 - Prosperity
+- Prosperity Tycoon
+- Prosperous Bandit
 - Prosperous Innkeeper
 - Prosperous Partnership
 - Prosperous Pirates
+- Protect // Serve
+- Protection Magic
+- Protective Bubble
+- Protective Response
 - Protector of Gondor
 - Protocol Knight
 - Protomatter Powder
+- Proud Mentor
+- Proven Combatant
 - Proven Combatant
 - Prowess of the Fair
+- Prowler, Clawed Thief
 - Prowler, Misguided Mentor
 - Prowling Caracal
 - Prowling Felidar
@@ -6635,6 +9241,7 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Prying Eyes
 - Pseudodragon Familiar
 - Psionic Blast
+- Psionic Gift
 - Psychatog
 - Psychic Barrier
 - Psychic Corrosion
@@ -6643,7 +9250,11 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Psychic Membrane
 - Psychic Strike
 - Psychic Symbiont
+- Psychic Venom
 - Psychic Whorl
+- Psychosis Crawler
+- Psychotic Haze
+- Pterafractyl
 - Pterodon Knight
 - Pteron Ghost
 - Puffer Extract
@@ -6651,15 +9262,24 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Pull from Tomorrow
 - Pull Under
 - Pulsating Illusion
+- Pulse of Murasa
 - Pulse of the Tangle
 - Pulse Tracker
 - Pummeler for Hire
+- Puncture Blast
 - Puncture Bolt
+- Puncturing Blow
 - Puncturing Light
 - Punish Ignorance
 - Punish the Enemy
 - Punishing Fire
 - Punk Frogs
+- Puppet Conjurer
+- Puppet Strings
+- Puppet's Verdict
+- Puppeteer
+- Puppeteer Clique
+- Puresteel Paladin
 - Purge the Profane
 - Purify
 - Purify the Grave
@@ -6667,13 +9287,20 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Purple-Crystal Crab
 - Pursue Glory
 - Pursue the Past
+- Pursuit of Flight
+- Pus Kami
+- Putrefaction
+- Putrefax
 - Putrefy
 - Putrid Goblin
 - Putrid Leech
+- Pygmy Allosaurus
 - Pygmy Kavu
 - Pygmy Pyrosaur
 - Pygmy Razorback
+- Pygmy Troll
 - Pyknite
+- Pym Technologies
 - Pyre Charger
 - Pyre Hound
 - Pyre Spawn
@@ -6681,14 +9308,19 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Pyretic Ritual
 - Pyric Salamander
 - Pyrite Spellbomb
+- Pyroblast
 - Pyroceratops
 - Pyroclasm
+- Pyroclast Consul
 - Pyroclastic Elemental
+- Pyroclastic Hellion
 - Pyroconvergence
 - Pyrokinesis
 - Pyromancer's Assault
 - Pyromantic Pilgrim
+- Pyrostatic Pillar
 - Pyrotechnics
+- Pyrrhic Blast
 - Python
 - Qarsi High Priest
 - Qasali Pridemage
@@ -6696,39 +9328,57 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Qilin's Blessing
 - Qiqirn Merchant
 - Quag Sickness
+- Quag Vampires
 - Quagmire Druid
 - Quagmire Lamprey
+- Quake, Agent of S.H.I.E.L.D.
+- Quakefoot Cyclops
 - Quakestrider Ceratops
 - Quaketusk Boar
 - Quandrix Campus
+- Quandrix Charm
 - Quandrix Cultivator
 - Quandrix Pledgemage
+- Quantum Misalignment
 - Quarrel's End
 - Quarry Beetle
+- Quasiduplicate
+- Queen Allenal of Ruadach
+- Queen Brahne
 - Queen's Agent
 - Queen's Bay Soldier
 - Queen's Commission
 - Quench
+- Quest for the Goblin Lord
 - Queza, Augur of Agonies
 - Quick Study
 - Quickbeam, Upstart Ent
 - Quicksand
 - Quicksilver Amulet
+- Quicksilver Dagger
 - Quicksilver Fisher
 - Quicksilver Geyser
+- Quicksilver, Pietro Maximoff
 - Quicksmith Genius
 - Quiet Purity
 - Quill-Blade Laureate // Twofold Intent
+- Quill-Slinger Boggart
+- Quilled Charger
 - Quilled Slagwurm
 - Quilled Wolf
+- Quillspike
+- Quina, Qu Gourmet
+- Quintorius, Field Historian
 - Quirion Elves
 - Quirion Explorer
 - Quirion Ranger
 - Quirion Sentinel
 - Quirion Trailblazer
+- Qumulox
 - Rabanastre, Royal City
 - Rabaroo Troop
 - Rabbit
+- Rabbit Battery
 - Rabbit Response
 - Rabid Bite
 - Rabid Bloodsucker
@@ -6737,6 +9387,7 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Rabid Wolverines
 - Raccoon
 - Raccoon Rallier
+- Racecourse Fury
 - Racers' Ring
 - Rack and Ruin
 - Radha, Coalition Warlord
@@ -6746,7 +9397,11 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Radiant Grove
 - Radiant Summit
 - Radiant's Judgment
+- Radical Idea
+- Radjan Spirit
+- Radstorm
 - Raffine's Tower
+- Rafiq of the Many
 - Ragamuffyn
 - Ragavan
 - Rage Reflection
@@ -6755,10 +9410,12 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Rage-Scarred Berserker
 - Rageblood Shaman
 - Ragefire
+- Ragefire Hellkite
 - Ragged Playmate
 - Raging Bull
 - Raging Cougar
 - Raging Goblin
+- Raging Gorilla
 - Raging Kavu
 - Raging Minotaur
 - Raging Poltergeist
@@ -6766,7 +9423,9 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Raging Regisaur
 - Raging Swordtooth
 - Ragnar
+- Raiders' Spoils
 - Raiders' Wake
+- Raiding Nightstalker
 - Rain of Blades
 - Rain of Embers
 - Rain of Revelation
@@ -6774,12 +9433,20 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Rain of Tears
 - Rain of Thorns
 - Rain-Slicked Copse
+- Rainbow Efreet
+- Rainveil Rejuvenator
 - Raise Dead
 - Raise the Alarm
+- Raise the Past
 - Raised by Wolves
+- Raiyuu, Storm's Edge
+- Rakdos Cackler
 - Rakdos Carnarium
+- Rakdos Charm
 - Rakdos Cluestone
+- Rakdos Drake
 - Rakdos Guildgate
+- Rakdos Joins Up
 - Rakdos Locket
 - Rakdos Pit Dragon
 - Rakdos Ragemutt
@@ -6788,13 +9455,17 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Rakdos Trumpeter
 - Rakeclaw Gargantuan
 - Raking Claws
+- Rakish Crew
 - Rakish Heir
 - Rakka Mar
+- Rakshasa Deathdealer
 - Rakshasa's Bargain
+- Rakshasa's Disdain
 - Rakshasa's Secret
 - Ral's Reinforcements
 - Ral's Staticaster
 - Rally
+- Rally Maneuver
 - Rally of Wings
 - Rally the Forces
 - Rally the Peasants
@@ -6807,20 +9478,28 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Ramosian Lieutenant
 - Ramosian Sergeant
 - Ramosian Sky Marshal
+- Rampage of the Valkyries
 - Rampaging Baloths
 - Rampaging Brontodon
 - Rampaging Hippo
 - Rampaging Monument
+- Rampaging Rendhorn
 - Rampaging Spiketail
 - Rampant Growth
 - Rampart Architect
 - Ramroller
+- Ramunap Excavator
 - Ramunap Ruins
+- Rancid Rats
 - Rancor
+- Rancorous Archaic
+- Ranger en-Vec
 - Ranger of Eos
+- Ranger's Firebrand
 - Ranger's Guile
 - Ranger's Longbow
 - Ranger's Path
+- Ranger-Captain of Eos
 - Ranging Raptors
 - Rank Officer
 - Rankle's Prank
@@ -6828,19 +9507,27 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Rapacious Dragon
 - Raphael, Tough Turtle
 - Rapid Hybridization
+- Rappelling Scouts
 - Raptor Companion
 - Raptor Hatchling
 - Rapturous Moment
+- Rashel, Fist of Torm
 - Rat
 - Rat
 - Rat
+- Rat King, Pale Piper
 - Rat Rogue
+- Ratcatcher
 - Rath's Edge
 - Rathi Fiend
+- Rathi Intimidator
 - Rathi Trapper
 - Rats of Rath
+- Rattlechains
 - Rattleclaw Mystic
+- Raucous Audience
 - Raucous Carnival
+- Raucous Entertainer
 - Raucous Theater
 - Raugrin Crystal
 - Raugrin Triome
@@ -6848,7 +9535,9 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Ravaged Highlands
 - Ravages of War
 - Ravaging Horde
+- Raven of Fell Omens
 - Raven Wings
+- Raven's Crime
 - Raven's Run Dragoon
 - Ravenous Baboons
 - Ravenous Baloth
@@ -6861,9 +9550,14 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Ravenous Lindwurm
 - Ravenous Rats
 - Ravenous Skirge
+- Ravenous Slime
 - Ravenous Squirrel
+- Ravenous Vampire
 - Ravine Raider
 - Raving Visionary
+- Ravos, Soultender
+- Ray Fillet, Man Ray
+- Ray Fillet, Wave Warrior
 - Ray of Dissolution
 - Ray of Distortion
 - Ray of Erasure
@@ -6873,6 +9567,7 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Raze
 - Raze the Effigy
 - Razing Snidd
+- Razor Golem
 - Razor Swine
 - Razorclaw Bear
 - Razorfield Rhino
@@ -6883,6 +9578,7 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Razorkin Hordecaller
 - Razortide Bridge
 - Razortip Whip
+- Razortooth Rats
 - Razortrap Gorge
 - Razorverge Thicket
 - Reach for the Sky
@@ -6890,13 +9586,20 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Reach Through Mists
 - Read the Bones
 - Read the Tides
+- Ready // Willing
 - Ready to Rumble
+- Reality Anchor
+- Reality Hemorrhage
+- Reality Shift
+- Realmwalker
 - Reanimate
 - Reap the Seagraf
 - Reap What Is Sown
 - Reaper King
 - Reaper of Flight Moonsilver
 - Reaper of the Wilds
+- Reaper's Talisman
+- Reaping the Graves
 - Rearing Embermare
 - Reassembling Skeleton
 - Reave Soul
@@ -6927,30 +9630,44 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Reclaiming Vines
 - Reclamation Sage
 - Reclusive Artificer
+- Reclusive Taxidermist
 - Recollect
+- Reconnaissance
 - Reconnaissance Mission
+- Reconstructed Thopter
 - Reconstruction
 - Recover
+- Recruiter of the Guard
+- Recruitment Drive
 - Recumbent Bliss
 - Red Dragon
 - Red Elemental Blast
+- Red Ghost, Intangible Genius
 - Red Herring
 - Red Scarab
 - Redcap Thief
 - Redemption Choir
+- Redirect
+- Rediscover the Way
 - Redrock Sentinel
 - Redtooth Vanguard
 - Reduce in Stature
+- Reduce to Ashes
 - Reduce to Dreams
 - Reduce to Memory
+- Redwing
 - Redwood Treefolk
+- Reef Pirates
 - Referee Squad
 - Reflecting Pool
 - Reflection
+- Reflections of Littjara
 - Reflex Sliver
+- Reflexes
 - Refocus
 - Refresh
 - Refurbish
+- Refurbished Familiar
 - Refuse to Yield
 - Refute
 - Regal Bloodlord
@@ -6960,21 +9677,30 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Regal Leosaur
 - Regal Unicorn
 - Regathan Firecat
+- Regeneration
 - Regenesis
 - Regisaur Alpha
 - Regress
 - Regrowth
+- Rehearsed Debater
+- Reign of Chaos
 - Reinforced Ronin
 - Reinforcements
+- Reito Lantern
+- Reito Sentinel
 - Rejuvenate
 - Rejuvenating Springs
 - Reknit
 - Relearn
 - Release the Dogs
 - Release to Memory
+- Relentless Advance
 - Relentless Hunter
+- Relentless Rohirrim
 - Relentless Skaabs
 - Relic Barrier
+- Relic of Legends
+- Relic Putrescence
 - Relic Sloth
 - Reliquary Dragon
 - Reliquary Monk
@@ -6990,20 +9716,34 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Rending Volley
 - Renegade Demon
 - Renegade Firebrand
+- Renegade Freighter
 - Renegade Map
+- Renegade Rallier
+- Renegade Tactics
 - Renegade Troops
+- Renegade Warlord
+- Renegade Wheelsmith
 - Renegade's Getaway
 - Renewal
+- Renewed Faith
 - Renowned Weaver
+- Repair and Recharge
 - Repel the Darkness
 - Repel the Vile
 - Repentance
 - Repentant Blacksmith
+- Replenish
 - Replicated Ring
+- Reprieve
 - Reprisal
 - Reprobation
 - Repudiate // Replicate
 - Repulse
+- Repulsor Bots
+- Repulsor Rays
+- Reputable Merchant
+- Reroute
+- Reroute Systems
 - Rescind
 - Rescue
 - Rescue Leopard
@@ -7012,21 +9752,39 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Research Assistant
 - Research Thief
 - Resentful Revelation
+- Reservoir Walker
+- Reshape
 - Reshape the Earth
+- Resilient Wanderer
 - Resistance Skywarden
 - Resistance Squad
 - Resolute Blademaster
 - Resolute Reinforcements
 - Resolute Rider
 - Resolute Watchdog
+- Resounding Roar
+- Resounding Thunder
+- Resounding Wave
 - Resourceful Return
+- Resplendent Mentor
+- Response // Resurgence
+- Rest in Peace
 - Restless Apparition
+- Restless Dead
 - Restock
 - Restoration Gearsmith
 - Restore
+- Restricted Office // Lecture Hall
 - Resupply
 - Resurrection
+- Retaliation
 - Retract
+- Retreat to Coralhelm
+- Retreat to Emeria
+- Retreat to Hagra
+- Retreat to Kazandu
+- Retreat to Valakut
+- Retribution of the Ancients
 - Retribution of the Meek
 - Retributive Wand
 - Retrieval Agent
@@ -7035,14 +9793,23 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Return from the Wilds
 - Return of the Wildspeaker
 - Return to Battle
+- Return to Dust
 - Return to Nature
+- Return to the Earth
+- Return to the Ranks
 - Returned Centaur
 - Returned Reveler
+- Reveillark
 - Reveille Squad
+- Revel in Riches
 - Revel of the Fallen God
 - Revelsong Horn
+- Revenant
 - Revenge of the Rats
+- Reverberate
+- Revered Dead
 - Reverent Hoplite
+- Reverse Engineer
 - Revitalize
 - Revitalizing Repast // Old-Growth Grove
 - Revive
@@ -7057,16 +9824,26 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Rhet-Tomb Mystic
 - Rhino
 - Rhino Warrior
+- Rhino's Rampage
+- Rhonas the Indomitable
+- Rhonas's Monument
+- Rhox
 - Rhox Bodyguard
 - Rhox Brute
 - Rhox Charger
+- Rhox Faithmender
+- Rhox Maulers
 - Rhox Meditant
 - Rhox Oracle
 - Rhox Pikemaster
+- Rhox Veteran
 - Rhox War Monk
 - Rhystic Study
+- Rhythm of the Wild
 - Rib Cage Spider
 - Ribbons of the Reikai
+- Ribskiff
+- Riddlekeeper
 - Riddlemaster Sphinx
 - Riddlesmith
 - Ridge Rannet
@@ -7074,26 +9851,33 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Ridgeline Rager
 - Ridgescale Tusker
 - Ridgetop Raptor
+- Rielle, the Everwise
 - Riftburst Hellion
 - Rig for War
 - Rigging Runner
+- Righteous Avengers
 - Righteous Blow
 - Righteous Cause
 - Righteous Charge
+- Righteous Fury
 - Righteous War
 - Righteousness
 - Rile
 - Riling Dawnbreaker // Signaling Roar
 - Rime Tender
+- Rimebound Dead
 - Rimefur Reindeer
 - Rimekin Recluse
 - Rimeshield Frost Giant
 - Rimewind Cryomancer
+- Rimewind Taskmage
 - Rimewood Falls
 - Rimrock Knight // Boulder Rush
+- Rin and Seri, Inseparable
 - Ring of Renewal
 - Ring of the Lucii
 - Ringwarden Owl
+- Rinoa Heartilly
 - Riot Devils
 - Riot Gear
 - Riot Piker
@@ -7102,7 +9886,9 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Rip Apart
 - Rip-Clan Crasher
 - Ripchain Razorkin
+- Ripclaw Wrangler
 - Ripjaw Raptor
+- Ripples of Undeath
 - Ripscale Predator
 - Riptide
 - Riptide Biologist
@@ -7110,22 +9896,31 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Riptide Crab
 - Riptide Director
 - Riptide Laboratory
+- Riptide Pilferer
 - Riptide Survivor
 - Riptide Turtle
 - Rise Again
+- Rise from the Tides
 - Rise of Eagles
 - Rise of the Ants
+- Rise of the Dark Realms
 - Rise to Glory
 - Rise to the Challenge
+- Risen Necroregent
 - Risen Sanctuary
+- Rishadan Dockhand
 - Rishadan Port
 - Rishkar's Expertise
+- Rishkar, Peema Renegade
 - Rising of the Day
 - Rising Populace
 - Risky Research
 - Risky Shortcut
+- Rite of Flame
+- Rite of Oblivion
 - Rite of Passage
 - Rite of the Dragoncaller
+- Rite of Undoing
 - Rites of Reaping
 - Rith's Attendant
 - Ritual Guardian
@@ -7135,6 +9930,8 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Ritual of Steel
 - Riven Turnbull
 - Rivendell
+- River Bear
+- River Boa
 - River Herald Guide
 - River Herald Scout
 - River Hoopoe
@@ -7146,23 +9943,33 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Riverwheel Aerialists
 - Riverwise Augur
 - Riveteers Initiate
+- Riveteers Overlook
 - Rix Maadi, Dungeon Palace
+- RMS Titanic
 - Roaming Throne
+- Roar of Endless Song
+- Roar of the Crowd
 - Roar of the Wurm
 - Roaring Primadox
 - Roaring Slagwurm
 - Roast
+- Robe of Mirrors
+- Robe of the Archmagi
 - Robot
 - Robot
 - Robot
 - Robot
 - Robot
+- Robot Hero
+- Robot Villain
 - Robot Warrior
 - Robotics Mastery
 - Roc Charger
 - Roc Egg
 - Roc Hunter
 - Roc of Kher Ridges
+- Rocco, Cabaretti Caterer
+- Rock Badger
 - Rock Soldiers
 - Rockcaster Platoon
 - Rockfall Vale
@@ -7170,37 +9977,52 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Rockslide Ambush
 - Rockslide Elemental
 - Rockslide Sorcerer
+- Rocksteady, Mutant Marauder
 - Rocky Rebuke
 - Rocky Tar Pit
 - Rod of Ruin
 - Rodeo Pyromancers
 - Rofellos, Llanowar Emissary
+- Rograkh, Son of Rohgahh
 - Rogue
 - Rogue
 - Rogue Kavu
+- Rogue Refiner
 - Rogue's Gloves
 - Rogue's Passage
 - Rohgahh, Kher Keep Overlord
+- Rohirrim Lancer
 - Roil Elemental
 - Roiling Dragonstorm
+- Roiling Regrowth
+- Roku's Mastery
 - Rollick of Abandon
+- Rolling Hamsphere
 - Rolling Temblor
 - Romantic Rendezvous
+- Ronin Cavekeeper
+- Ronin Houndmaster
 - Ronom Unicorn
 - Roofstalker Wight
 - Rooftop Bypass
 - Rook Turret
+- Rookie Mistake
 - Roon of the Hidden Realm
 - Roost of Drakes
 - Root Elemental
 - Root Maze
 - Root Out
+- Root Snare
+- Root Spider
 - Root-Kin Ally
 - Rootbound Crag
 - Rootbreaker Wurm
 - Rootgrapple
 - Rootrider Faun
 - Rootwalla
+- Rootwater Alligator
+- Rootwater Commando
+- Rootwater Depths
 - Rootwater Diver
 - Rootwater Hunter
 - Rootwater Matriarch
@@ -7208,8 +10030,12 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Rorix Bladewing
 - Rosa, Resolute White Mage
 - Rosemane Centaur
+- Rosie Cotton of South Lane
+- Rosnakht, Heir of Rohgahh
+- Rot Farm Mortipede
 - Rot Farm Skeleton
 - Rot Shambler
+- Rotcrown Ghoul
 - Rotlung Reanimator
 - Rotted Hulk
 - Rotted Hystrix
@@ -7217,25 +10043,32 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Rotting Fensnake
 - Rotting Legion
 - Rotting Mastodon
+- Rotting Rats
 - Rotting Regisaur
 - Rotwidow Pack
 - Rough // Tumble
 - Roughshod Mentor
 - Rousing Read
+- Rover Blades
 - Roving Harper
 - Rowan Treefolk
 - Rowan's Battleguard
 - Rowdy Snowballers
+- Roxxon Brutes
 - Royal Assassin
 - Royal Falcon
+- Royal Talon Fighter Jet
 - Royal Trooper
+- Royal Warden
 - Rubble Reading
 - Rubble Slinger
 - Rubbleback Rhino
 - Rubblebelt Boar
+- Rubblebelt Maaka
 - Rubblebelt Maverick
 - Rubblebelt Recluse
 - Rubblebelt Rioters
+- Rubblehulk
 - Ruby Medallion
 - Rugged Highlands
 - Rugged Prairie
@@ -7253,7 +10086,9 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Ruins Recluse
 - Rukh
 - Rukh Egg
+- Rule of Law
 - Rumble Arena
+- Rumbleweed
 - Rumbling Baloth
 - Rumbling Rockslide
 - Rumbling Sentry
@@ -7268,12 +10103,18 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Runeboggle
 - Runeclaw Bear
 - Runed Servitor
+- Runed Stalactite
+- Runehorn Hellkite
 - Runewing
 - Runic Armasaur
+- Runic Shot
+- Rural Recruit
+- Ruric Thar, the Unbowed
 - Rush of Adrenaline
 - Rush of Blood
 - Rush of Knowledge
 - Rush of Vitality
+- Rushwood Dryad
 - Rushwood Elemental
 - Rushwood Herbalist
 - Russet Wolves
@@ -7282,6 +10123,7 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Rust Monster
 - Rust-Shield Rampager
 - Rusted Sentinel
+- Rusted Slasher
 - Rustrazor Butcher
 - Rustspore Ram
 - Rustvale Bridge
@@ -7289,8 +10131,15 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Rustwing Falcon
 - Ruthless Deathfang
 - Ruthless Knave
+- Ruthless Lawbringer
+- Ruthless Predation
 - Rydia's Return
 - Ryusei, the Falling Star
+- S.H.I.E.L.D. Deployment Drone
+- S.H.I.E.L.D. Flying Car
+- S.H.I.E.L.D. Helicarrier
+- S.H.I.E.L.D. Spy Kit
+- Saber Ants
 - Saber-Tooth Moose-Lion
 - Saberclaw Golem
 - Sabertooth Mauler
@@ -7302,6 +10151,7 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Sacellum Archers
 - Sacred Armory
 - Sacred Cat
+- Sacred Cat
 - Sacred Excavation
 - Sacred Fire
 - Sacred Foundry
@@ -7310,9 +10160,11 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Sacred Prey
 - Sacred White Deer
 - Sacred Wolf
+- Sacrifice
 - Saddle of the Cavalier
 - Sadistic Glee
 - Sadistic Hypnotist
+- Sadistic Obsession
 - Safehold Duo
 - Safehold Elite
 - Safehold Sentry
@@ -7320,10 +10172,13 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Safewright Quest
 - Sage Aven
 - Sage of Epityr
+- Sage of Fables
 - Sage of Lat-Nam
 - Sage of Mysteries
+- Sage of Shaila's Claim
 - Sage of the Inward Eye
 - Sage Owl
+- Sage's Knowledge
 - Sage's Row Denizen
 - Sage's Row Savant
 - Sage-Eye Harrier
@@ -7337,8 +10192,11 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Sakura-Tribe Scout
 - Salamander Warrior
 - Salivating Gremlins
+- Sally Sparrow
 - Salt Flats
 - Salt Marsh
+- Salt Road Packbeast
+- Salt Road Patrol
 - Salt Road Quartermasters
 - Saltblast
 - Saltfield Recluse
@@ -7349,24 +10207,35 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Salvage Slasher
 - Salvaged Manaworker
 - Salvager of Secrets
+- Salvation Engine
+- Salvation Swan
+- Sam's Desperate Rescue
 - Sami's Curiosity
 - Sami, Ship's Engineer
 - Samite Herbalist
 - Samurai
 - Samurai
+- Samurai Enforcers
+- Samurai of the Pale Curtain
 - Samut's Sprint
 - Samut, Tyrant Smasher
 - Samut, Voice of Dissent
+- Samwise Gamgee
 - Sanctifier of Souls
 - Sanctify
+- Sanctimony
 - Sanctuary Cat
 - Sanctuary Lockdown
 - Sanctuary Raptor
+- Sanctuary Smasher
 - Sanctum Gargoyle
 - Sanctum of Calm Waters
+- Sanctum of Fruitful Harvest
 - Sanctum of Stone Fangs
 - Sanctum of Tranquil Light
+- Sanctum of Ugin
 - Sanctum Seeker
+- Sanctum Weaver
 - Sand Warrior
 - Sandbar Merfolk
 - Sandbar Serpent
@@ -7377,6 +10246,8 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Sandstone Bridge
 - Sandstone Warrior
 - Sandstorm
+- Sandstorm Eidolon
+- Sandstorm Verge
 - Sandworm
 - Sangrite Backlash
 - Sangrite Surge
@@ -7384,19 +10255,27 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Sanguimancy
 - Sanguinary Mage
 - Sanguinary Priest
+- Sanguine Bond
+- Sanguine Evangelist
 - Sanguine Glorifier
+- Sanguine Guard
 - Sanguine Savior
 - Sanguine Syphoner
 - Sanitarium Skeleton
 - Sanitation Automaton
+- Sapphire Dragon // Psionic Pulse
+- Sapphire Drake
 - Sapphire Medallion
 - Saprazzan Heir
 - Saproling
 - Saproling // Elf Knight
 - Saproling // Insect
 - Sapseep Forest
+- Sarah Jane Smith
 - Sarcatog
 - Sarcomite Myr
+- Sarinth Greatwurm
+- Sarinth Steelseeker
 - Sarkhan Vol
 - Sarkhan's Catharsis
 - Sarkhan's Rage
@@ -7405,23 +10284,32 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Sarpadian Simulacrum
 - Saruli Caretaker
 - Saruli Gatekeepers
+- Saruman the White
+- Saruman's Trickery
 - Satyr
 - Satyr
 - Satyr
 - Satyr Enchanter
 - Satyr Grovedancer
 - Satyr Hedonist
+- Satyr Hoplite
 - Satyr Nyx-Smith
 - Satyr Rambler
+- Sauroform Hybrid
 - Sauron, the Lidless Eye
+- Savage Conception
 - Savage Gorger
 - Savage Gorilla
 - Savage Hunger
 - Savage Knuckleblade
+- Savage Land Dinosaur
 - Savage Lands
 - Savage Mansion
+- Savage Silhouette
+- Savage Smash
 - Savage Surge
 - Savage Twister
+- Savageborn Hydra
 - Savai Crystal
 - Savai Sabertooth
 - Savai Triome
@@ -7431,20 +10319,31 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Savior of the Sleeping
 - Savior of the Small
 - Savor
+- Savra, Queen of the Golgari
+- Savvy Hunter
 - Sawblade Scamp
 - Sawtusk Demolisher
 - Sazh's Chocobo
+- Scab-Clan Charger
+- Scab-Clan Mauler
 - Scabland
+- Scald
 - Scalding Cauldron
 - Scalding Devil
 - Scalding Tarn
+- Scalding Viper // Steam Clean
 - Scaldkin
+- Scale Blessing
+- Scale of Chiss-Goria
 - Scale the Heights
 - Scalebane's Elite
 - Scaled Behemoth
 - Scaled Herbalist
 - Scaled Hulk
 - Scaled Wurm
+- Scales of Shale
+- Scalestorm Summoner
+- Scampering Surveyor
 - Scar
 - Scarblade Elite
 - Scarblade Scout
@@ -7453,14 +10352,17 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Scarecrow
 - Scarecrow Guide
 - Scarland Thrinax
+- Scarlet Witch, Wanda Maximoff
 - Scarred Vinebreeder
 - Scarwood Goblins
 - Scarwood Treefolk
 - Scathe Zombies
 - Scatter Arc
 - Scatter Ray
+- Scatter the Seeds
 - Scattered Groves
 - Scattered Thoughts
+- Scattershot
 - Scattershot Archer
 - Scavenged Blade
 - Scavenged Weaponry
@@ -7470,27 +10372,38 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Scavenging Harpy
 - Scavenging Scarab
 - Scene of the Crime
+- Scepter of Celebration
 - Scepter of Dominance
 - Scepter of Fugue
 - Scepter of Insight
 - Schismotivate
 - Scholar of Athreos
+- Scholar of New Horizons
 - Scholar of Stars
+- Scholar of the Ages
+- School Daze
+- School of Piranha
 - School of the Unseen
 - Scion of Glaciers
 - Scion of Oona
 - Scion of Opulence
 - Scion of the Deep
 - Scion of the Swarm
+- Scion of the Wild
 - Scion of Ugin
+- Scolding Administrator
 - Scorch the Fields
 - Scorched Geyser
 - Scorched Rusalka
+- Scorching Dragonfire
 - Scorching Missile
 - Scorching Shot
 - Scorching Spear
+- Scorchmark
+- Scorchwalker
 - Scoria Cat
 - Scoria Elemental
+- Scornful Aether-Lich
 - Scornful Egotist
 - Scorpion Dragon
 - Scorpion Sentinel
@@ -7499,6 +10412,7 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Scour for Scrap
 - Scour from Existence
 - Scoured Barrens
+- Scourge Devil
 - Scourge of Geier Reach
 - Scourge of Kher Ridges
 - Scourge of the Undercity
@@ -7507,38 +10421,57 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Scourge Wolf
 - Scourgemark
 - Scouring Sands
+- Scouring Swarm
+- Scout the Wilderness
 - Scouting Hawk
 - Scragnoth
 - Scrap
 - Scrap
+- Scrap Mastery
 - Scrapheap
+- Scrapwork Cohort
+- Scrapwork Mutt
+- Scrapwork Rager
 - Scrapyard Mongrel
+- Scrapyard Recombiner
 - Scrapyard Salvo
 - Scrapyard Steelbreaker
 - Scrawling Crawler
 - Scream Puff
+- Screamer-Killer
 - Screaming Fury
 - Screaming Phantom
+- Screaming Seahawk
+- Screaming Shield
 - Screams from Within
 - Screams of the Damned
 - Screeching Buzzard
 - Screeching Drake
+- Screeching Harpy
 - Screeching Phoenix
+- Screeching Silcaw
 - Screeching Skaab
 - Scribe of the Mindful
+- Scrivener
 - Scroll Thief
 - Scrollshift
 - Scrounger of Souls
+- Scrounging Skyray
 - Scrubland
 - Scryb Ranger
 - Scryb Sprites
+- Sculpting Steel
 - Sculptor of Winter
+- Sculpture
 - Scurrid Colony
+- Scurry Oak
 - Scute Mob
 - Scute Swarm
 - Scuttletide
 - Scuttling Butler
+- Scuttling Death
 - Scuttling Doom Engine
+- Scuttling Sliver
 - Scuzzback Marauders
 - Scuzzback Scrapper
 - Scythe Leopard
@@ -7546,11 +10479,15 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Sea Gate
 - Sea Gate Banneret
 - Sea Gate Loremaster
+- Sea Gate Oracle
+- Sea Gate Restoration // Sea Gate, Reborn
 - Sea Gate Wreckage
+- Sea God's Scorn
 - Sea of Clouds
 - Sea Scryer
 - Sea Spirit
 - Sea Sprite
+- Sea's Claim
 - Sea-Dasher Octopus
 - Seachrome Coast
 - Seacoast Drake
@@ -7558,23 +10495,29 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Seafloor Oracle
 - Seagraf Skaab
 - Seahunter
+- Seal Away
+- Seal from Existence
 - Seal of Cleansing
 - Seal of Fire
 - Seal of Primordium
 - Seal of Removal
 - Seal of Strength
+- Seam Rip
 - Sear
 - Search the Premises
 - Searchlight Companion
 - Searchlight Geist
+- Searing Blood
 - Searing Flesh
 - Searing Light
 - Searing Spear
+- Searing Spear Askari
 - Searing Wind
 - Searslicer Goblin
 - Seashell Cameo
 - Seaside Citadel
 - Seaside Haven
+- Season of Growth
 - Season of Renewal
 - Seasoned Consultant
 - Seasoned Marshal
@@ -7584,6 +10527,7 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Secluded Glen
 - Secluded Steppe
 - Second Breakfast
+- Second Harvest
 - Second Thoughts
 - Secret Passage
 - Secret Rendezvous
@@ -7591,13 +10535,17 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Secure the Scene
 - Secure the Wastes
 - Sedge Scorpion
+- Sedge Troll
 - Sedraxis Alchemist
+- Sedraxis Specter
+- Seedborn Muse
 - Seedcradle Witch
 - Seedguide Ash
 - Seedpod Squire
 - Seedship Agrarian
 - Seek the Horizon
 - Seeker of Skybreak
+- Seeker of Sunlight
 - Seeker of the Way
 - Seeker's Folly
 - Seekers' Squire
@@ -7610,6 +10558,7 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Seething Song
 - Segmented Wurm
 - Segovian Angel
+- Segovian Leviathan
 - Seismic Assault
 - Seismic Mage
 - Seismic Monstrosaur
@@ -7617,11 +10566,15 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Seismic Shudder
 - Seismic Spike
 - Seismic Strike
+- Seizan, Perverter of Truth
 - Seize Opportunity
+- Seize the Day
 - Seize the Initiative
 - Seize the Spoils
 - Sejiri Merfolk
 - Sejiri Refuge
+- Sejiri Shelter // Sejiri Glacier
+- Sejiri Steppe
 - Sek'Kuar, Deathkeeper
 - Select for Inspection
 - Selenia, Dark Angel
@@ -7632,11 +10585,14 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Selesnya Guildmage
 - Selesnya Locket
 - Selesnya Sanctuary
+- Selesnya Sentry
 - Selesnya Signet
 - Self-Assembler
 - Self-Reflection
+- Selfcraft Mechan
 - Selfless Cathar
 - Selfless Glyphweaver // Deadly Vanity
+- Selfless Samurai
 - Selfless Savior
 - Selfless Spirit
 - Selhoff Entomber
@@ -7652,23 +10608,30 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Senseless Rage
 - Sensor Splicer
 - Sensory Deprivation
+- Sentinel of the Nameless City
 - Sentinel Sliver
 - Sentinel Spider
 - Sentinel Totem
+- Sentinel's Eyes
 - Sentinels of Glen Elendra
+- Sentry of the Underworld
 - Separatist Voidmage
 - Sephiroth's Intervention
 - Sephiroth, Planet's Heir
 - Sepulcher Ghoul
 - Seraph of Dawn
+- Seraph of the Masses
+- Seraph of the Scales
 - Seraph of the Suns
 - Seraph Sanctuary
+- Seraphic Steed
 - Serendib Efreet
 - Serene Heart
 - Serene Offering
 - Serf
 - Sergeant-at-Arms
 - Serpent Assassin
+- Serpent Skin
 - Serpent Warrior
 - Serpent's Gift
 - Serpent's Pass
@@ -7692,49 +10655,85 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Serum Visionary
 - Serum Visions
 - Servant of Nefarox
+- Servant of the Conduit
+- Servant of Tymaret
 - Servant of Volrath
 - Servo
 - Servo // Thopter
 - Servo Exhibition
+- Servo Schematic
 - Seshiro the Anointed
+- Setessan Battle Priest
 - Setessan Champion
 - Setessan Griffin
+- Setessan Oathsworn
 - Setessan Petitioner
 - Setessan Skirmisher
 - Setessan Starbreaker
+- Setessan Training
 - Sethron, Hurloon General
 - Seton's Scout
 - Seton, Krosan Protector
 - Settle Beyond Reality
+- Settle the Score
+- Settlement
 - Settlement Blacksmith
 - Sever Soul
+- Severed Legion
+- Severed Strands
+- Sevinne's Reclamation
+- Sewer Shambler
+- Sewerdreg
 - Sewn-Eye Drake
+- Seymour Flux
+- Shabraz, the Skyshark
+- Shackles
+- Shade's Form
 - Shadewing Laureate
+- Shadow Alley Denizen
 - Shadow Glider
+- Shadow Rider
+- Shadow Rift
+- Shadow Sliver
 - Shadow Summoning
+- Shadow-Rite Priest
 - Shadowbeast Sighting
 - Shadowblood Ridge
 - Shadowcloak Vampire
 - Shadowfeed
+- Shadowmage Infiltrator
+- Shadows of the Past
+- Shadowspear
 - Shadowstorm Vizier
 - Shadowy Backstreet
 - Shady Informant
 - Shake the Foundations
+- Shalai and Hallar
 - Shaleskin Plower
 - Shaman of Spring
 - Shaman of the Great Hunt
 - Shaman of the Pack
 - Shamanic Revelation
 - Shamble Back
+- Shambleshark
 - Shambling Attendants
 - Shambling Cie'th
 - Shambling Ghoul
 - Shambling Goblin
+- Shambling Remains
+- Shambling Shell
 - Shambling Strider
+- Shanodin Dryads
 - Shape the Sands
 - Shaper Apprentice
 - Shaper Guildmage
+- Shapers of Nature
 - Shapers' Sanctuary
+- Shapeshifter
+- Shapeshifter
+- Shapeshifter
+- Shapeshifter
+- Shapeshifter
 - Shard
 - Shard of Broken Glass
 - Shard Phoenix
@@ -7742,22 +10741,31 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Sharding Sphinx
 - Shardless Agent
 - Shardless Outlander
+- Shared Animosity
 - Shared Discovery
 - Shared Roots
 - Shark
 - Shark
+- Sharktocrab
 - Sharlayan, Nation of Scholars
 - Sharuum the Hegemon
 - Shatter
+- Shatter the Source
 - Shattered Acolyte
 - Shattered Angel
+- Shattered Crypt
 - Shattered Landscape
+- Shattered Perception
 - Shattered Sanctum
+- Shattered Wings
+- Shattergang Brothers
 - Shattering Blow
 - Shatterskull Giant
 - Shatterskull Recruit
 - Shatterstorm
 - Shauku's Minion
+- She-Hulk, Jennifer Walters
+- Shed Weakness
 - Sheep
 - Sheep
 - Sheep
@@ -7765,30 +10773,47 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Shefet Dunes
 - Shell Skulkin
 - Shelob's Ambush
+- Shelter
+- Sheltered by Ghosts
 - Sheltered Thicket
 - Sheltering Boughs
 - Sheltering Landscape
 - Sheltering Light
+- Sheltering Word
+- Shenanigans
 - Sheoldred's Headcleaver
+- Sheoldred's Restoration
 - Sheoldred, the Apocalypse
+- Sheoldred, Whispering One
 - Shepherd of Rot
 - Shepherd of the Flock // Usher to Safety
 - Shepherd of the Lost
 - Shepherding Spirits
+- Shi'ar Soldier
+- Shield Bearer
 - Shield Mate
 - Shield of Duty and Reason
 - Shield Wall
+- Shielded Aether Thief
+- Shifting Wall
+- Shifting Woodland
 - Shimmer Dragon
+- Shimmer Myr
+- Shimmer of Possibility
+- Shimmercreep
 - Shimmerdrift Vale
 - Shimmering Barrier
 - Shimmering Grotto
+- Shimmering Wings
 - Shimmerscale Drake
 - Shimmerwing Chimera
 - Shinechaser
+- Shinen of Fear's Chill
 - Shinen of Flight's Wings
 - Shinen of Fury's Fire
 - Shinen of Stars' Light
 - Shineshadow Snarl
+- Shinestriker
 - Shinewend
 - Shining Aerosaur
 - Shining Armor
@@ -7797,9 +10822,13 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Shipwreck Dowser
 - Shipwreck Looter
 - Shipwreck Marsh
+- Shipwreck Moray
+- Shipwreck Patrol
 - Shire Scarecrow
+- Shire Shirriff
 - Shire Terrace
 - Shivan Branch-Burner
+- Shivan Devastator
 - Shivan Dragon
 - Shivan Gorge
 - Shivan Harvest
@@ -7809,11 +10838,13 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Shivan Reef
 - Shivan Wurm
 - Shivan Zombie
+- Shizo, Death's Storehouse
 - Shoal Kraken
 - Shock
 - Shock Troops
 - Shocking Grasp
 - Shocking Sharpshooter
+- Shoot Down
 - Shopkeeper's Bane
 - Shore Keeper
 - Shore Lurker
@@ -7825,22 +10856,30 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Short Bow
 - Short Sword
 - Show of Valor
+- Showdown of the Skalds
+- Shower of Arrows
 - Shower of Sparks
 - Shrapnel Blast
+- Shrapnel Slinger
 - Shredded Sails
 - Shredder's Revenge
 - Shredding Winds
 - Shrewd Storyteller
+- Shriek of Dread
 - Shriek Raptor
 - Shriekdiver
+- Shriekgeist
 - Shriekhorn
 - Shrieking Drake
 - Shrieking Mogg
+- Shrieking Specter
 - Shrike Force
+- Shrike Harpy
 - Shrine
 - Shrine Steward
 - Shrink
 - Shrivel
+- Shroofus Sproutsire
 - Shrouded Shepherd // Cleave Shadows
 - Shroudstomper
 - Shu Cavalry
@@ -7852,6 +10891,8 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Shu Grain Caravan
 - Shu Soldier-Farmers
 - Shuko
+- Shunt
+- Sibling Rivalry
 - Sibsig Appraiser
 - Sibsig Host
 - Sibsig Icebreakers
@@ -7860,20 +10901,32 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Sick and Tired
 - Sicken
 - Sickle Ripper
+- Sickleslicer
 - Sidisi's Pet
+- Sidisi, Brood Tyrant
 - Siege Mastodon
 - Siege Rhino
+- Siege Smash
 - Siege Veteran
 - Siege Wurm
 - Siege Zombie
 - Siege-Gang Commander
+- Siegebreaker Giant
 - Siegecraft
 - Siegehorn Ceratops
+- Sif's Spearmaster
 - Sift
+- Sigarda's Aid
+- Sigarda's Summons
+- Sigardian Savior
+- Sight Beyond Sight
 - Sighted-Caste Sorcerer
 - Sightless Ghoul
+- Sigil Blessing
 - Sigil of the Empty Throne
 - Sigil of the Nayan Gods
+- Sigil of Valor
+- Sigil Tracer
 - Sigiled Behemoth
 - Sigiled Paladin
 - Sigiled Skink
@@ -7881,6 +10934,8 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Sigiled Sword of Valeron
 - Sign in Blood
 - Signpost Scarecrow
+- Sigurd, Jarl of Ravensthorpe
+- Silence
 - Silent Artisan
 - Silent Attendant
 - Silent Clearing
@@ -7888,15 +10943,20 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Silent Departure
 - Silent Observer
 - Silent Sentinel
+- Silent Skimmer
+- Silent Specter
+- Silent Submersible
 - Silhana Starfletcher
 - Silk Net
 - Silkbind Faerie
 - Silkenfist Fighter
 - Silkenfist Order
 - Silklash Spider
+- Silkweaver Elite
 - Silkwing Scout
 - Silt Crawler
 - Silumgar's Command
+- Silver Deputy
 - Silver Drake
 - Silver Erne
 - Silver Knight
@@ -7920,12 +10980,20 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Silverquill Charm
 - Silverquill Command
 - Silverskin Armor
+- Silverstorm Samurai
 - Silverstrike
+- Silverwing Squadron
+- Silvos, Rogue Elemental
+- Sima Yi, Wei Field Marshal
 - Simian Brawler
+- Simian Simulacrum
+- Simian Spirit Guide
 - Simic Charm
 - Simic Cluestone
+- Simic Fluxmage
 - Simic Growth Chamber
 - Simic Guildgate
+- Simic Initiate
 - Simic Locket
 - Simic Ragworm
 - Simic Signet
@@ -7933,40 +11001,69 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Simplify
 - Sinew Dancer
 - Sinew Sliver
+- Singer of Swift Rivers
 - Sinister Concoction
 - Sinister Hideout
 - Sinister Monolith
 - Sinister Sabotage
 - Sinister Starfish
 - Sinister Strength
+- Sink into Stupor // Soporific Springs
 - Sinkhole
+- Sinking Feeling
+- Sinstriker's Will
 - Sinuous Striker
 - Sip of Hemlock
 - Sir Shandlar of Eberyn
 - Sire of Insanity
+- Sire of Seven Deaths
 - Sire of the Storm
 - Siren Lookout
+- Siren of the Fanged Coast
 - Siren of the Silent Song
+- Siren Song Lyre
 - Sisay's Ring
+- Sister Hospitaller
+- Sisterhood of Karn
 - Sisters of the Flame
 - Sivitri Scarzam
+- Six
+- Sixth Sense
 - Sizzle
+- Sizzling Changeling
 - Skaab Goliath
+- Skaab Ruinator
 - Skaab Wrangler
+- Skarrg Goliath
 - Skarrg, the Rage Pits
+- Skarrgan Pit-Skulk
+- Skarrgan Skybreaker
 - Skateboard
+- Skatewing Spy
+- Skeletal Changeling
 - Skeletal Crocodile
+- Skeletal Grimace
+- Skeletal Kathari
 - Skeletal Scrying
 - Skeletal Snake
+- Skeletal Vampire
+- Skeletal Wurm
+- Skeleton
 - Skeleton
 - Skeleton
 - Skeleton
 - Skeleton Archer
+- Skeleton Crew
+- Skeleton Key
 - Skeleton Pirate
+- Skeletonize
 - Skemfar Avenger
 - Skemfar Elderhall
+- Skewer the Critics
 - Skillful Lunge
+- Skinbrand Goblin
 - Skinrender
+- Skinwing
 - Skirge Familiar
 - Skirk Fire Marshal
 - Skirk Marauder
@@ -7977,48 +11074,65 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Skirsdag Flayer
 - Skirsdag High Priest
 - Skirsdag Supplicant
+- Skithiryx, the Blight Dragon
+- Skitter Eel
+- Skitter of Lizards
 - Skittering Heartstopper
+- Skittering Precursor
 - Skittering Surveyor
+- Skitterskin
+- Skola Grovedancer
 - Skophos Warleader
 - Skorpekh Destroyer
 - Skred
+- Skulduggery
 - Skulking Fugitive
 - Skulking Ghost
+- Skulking Knight
 - Skull Catapult
+- Skull Collector
 - Skull Fracture
 - Skull of Orm
 - Skull of Ramos
 - Skull Prophet
 - Skullclamp
 - Skullmead Cauldron
+- Skullslither Worm
 - Skulltap
 - Sky Crier
 - Sky Diamond
 - Sky Ruin Drake
 - Sky Scourer
+- Sky Skiff
 - Sky Spirit
 - Sky Terror
 - Sky Theater Strix
 - Sky Weaver
+- Sky-Blessed Samurai
 - Sky-Eel School
 - Skybeast Tracker
 - Skybind
 - Skyblade of the Legion
 - Skyblinder Staff
+- Skybox Ferry
 - Skybridge Towers
 - Skyclave Cleric // Skyclave Basilica
 - Skyclave Geopede
+- Skyclave Relic
 - Skycloud Expanse
 - Skycrash
+- Skygames
 - Skyhunter Patrol
 - Skyhunter Prowler
 - Skyhunter Skirmisher
 - Skyknight Legionnaire
 - Skyknight Vanguard
 - Skylasher
+- Skyline Cascade
 - Skyline Predator
 - Skymarch Bloodletter
 - Skyraker Giant
+- Skyrider Elf
 - Skyscanner
 - Skyscythe Engulfer
 - Skyshaper
@@ -8032,83 +11146,119 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Skyshroud Forest
 - Skyshroud Poacher
 - Skyshroud Ranger
+- Skyshroud Sentinel
+- Skyshroud Troll
 - Skyshroud Troopers
 - Skyshroud Vampire
 - Skyskipper Duo
 - Skysnare Spider
+- Skysovereign, Consul Flagship
 - Skyspear Cavalry
 - Skystinger
 - Skystrike Officer
 - Skyswimmer Koi
 - Skyswirl Harrier
+- Skywarp Skaab
 - Skyway Sniper
 - Skywhaler's Shot
 - Skywing Aven
 - Skywise Teachings
+- Slag Strider
 - Slagdrill Scrapper
 - Slagstorm
 - Slagwoods Bridge
+- Slagwurm Armor
 - Slash of Talons
 - Slash Panther
 - Slash, Reptile Rampager
 - Slashing Tiger
+- Slate of Ancestry
+- Slate Street Ruffian
 - Slaughter Cry
 - Slaughter Drone
 - Slaughter Pact
 - Slaughter-Priest of Mogis
+- Slaughterhorn
 - Slaughterhouse Bouncer
 - Slavering Branchsnapper
+- Slavering Nulls
 - Slay
 - Slayer of the Wicked
 - Slayer's Plate
 - Slayers' Stronghold
 - Sledding Otter-Penguin
+- Sleek Schooner
+- Sleep of the Dead
+- Sleep-Cursed Faerie
+- Sleeper Dart
+- Sleeper's Guile
+- Sleeper's Robe
+- Sleight of Hand
+- Slice and Dice
 - Slice in Twain
 - Slimebind
 - Slimefoot, the Stowaway
 - Slimy Dualleech
 - Sling-Gang Lieutenant
 - Slingshot Goblin
+- Slinking Giant
+- Slinking Serpent
 - Slinking Skirge
+- Slip Through Space
 - Slippery Bogle
 - Slippery Karst
 - Sliptide Serpent
 - Slith Ascendant
+- Slith Bloodletter
 - Slith Firewalker
 - Slith Predator
 - Slith Strider
 - Slither Blade
+- Slitherhead
 - Slithering Cryptid
+- Slithery Stalker
 - Sliver
 - Sliver Army
 - Sliver Construct
 - Sliver Overlord
 - Sliver Queen
 - Sliversmith
+- Slobad, Goblin Tinkerer
+- Slogurk, the Overslime
+- Sludge Titan
 - Slug
 - Sluggishness
+- Sluiceway Scorpion
 - Slum Reaper
 - Slumbering Keepguard
+- Slumbering Walker
 - Sly Requisitioner
 - Smash
 - Smash to Dust
 - Smash to Smithereens
+- Smashing Spree
+- Smaug
 - Smelt
 - Smelt-Ward Gatekeepers
 - Smelt-Ward Ignus
+- Smelt-Ward Minotaur
+- Smite the Deathless
 - Smite the Monstrous
 - Smiting Helix
 - Smitten Swordmaster // Curry Favor
 - Smog Elemental
+- Smogsteed Rider
 - Smokespew Invoker
 - Smoldering Butcher
 - Smoldering Crater
 - Smoldering Efreet
 - Smoldering Marsh
+- Smoldering Spires
 - Smoldering Tar
 - Smother
 - Smothering Abomination
 - Smothering Tithe
+- Smuggler's Copter
 - Snail
 - Snake
 - Snake
@@ -8118,6 +11268,9 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Snake
 - Snake // Zombie
 - Snake Basket
+- Snake of the Golden Grove
+- Snake Pit
+- Snakeform
 - Snakeskin Veil
 - Snap
 - Snapback
@@ -8134,11 +11287,14 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Snarespinner
 - Snarling Gorehound
 - Snarling Undorak
+- Snarling Warg
 - Snarling Wolf
 - Sneaking Guide
 - Sneering Shadewriter
+- Snooping Page
 - Snorting Gahr
 - Snow Day
+- Snow Villiers
 - Snow-Covered Forest
 - Snow-Covered Island
 - Snow-Covered Mountain
@@ -8148,17 +11304,26 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Snowfield Sinkhole
 - Snowhorn Rider
 - Soaring Drake
+- Soaring Hope
 - Soaring Sandwing
 - Soaring Seacliff
 - Soaring Show-Off
 - Social Climber
 - Sodden Verdure
+- Sokenzan Bruiser
+- Sokenzan Smelter
+- Sokenzan Spellblade
 - Sokka's Sword Training
 - Sokka, Wolf Cove's Protector
 - Sol Grail
 - Sol Ring
+- Sol'kanar the Swamp King
+- Solar Blast
+- Solar Blaze
+- Solar Transformer
 - Soldevi Golem
 - Soldevi Simulacrum
+- Soldevi Steam Beast
 - Soldier
 - Soldier
 - Soldier
@@ -8176,24 +11341,44 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Soldier Ally
 - Soldier of the Grey Host
 - Soldier of the Pantheon
+- Soldier On
 - Soldier Replica
 - Solemn Offering
+- Solemn Recruit
 - Solemn Simulacrum
 - Solidarity
 - Soliton
+- Solphim, Mayhem Dominus
+- Solstice Zealot
+- Soltari Champion
+- Soltari Crusader
+- Soltari Emissary
+- Soltari Foot Soldier
+- Soltari Monk
+- Soltari Priest
+- Soltari Trooper
 - Solve the Equation
+- Somber Hoverguard
 - Somberwald Alpha
+- Somberwald Dryad
 - Somberwald Spider
+- Somberwald Stag
 - Somnomancer
 - Song of Creation
+- Song of the Dryads
 - Song-Mad Treachery // Song-Mad Ruins
+- Songbird, Sonic Screamer
+- Sonic Assault
 - Sonic Screwdriver
 - Sootfeather Flock
 - Soothing Balm
+- Soothing of Sméagol
 - Soothsayer Adept
 - Sootstoke Kindler
 - Sootwalkers
+- Sophia, Dogged Detective
 - Sophic Centaur
+- Soramaro, First to Dream
 - Soratami Cloudskater
 - Soratami Mindsweeper
 - Soratami Mirror-Guard
@@ -8201,22 +11386,30 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Soratami Rainshaper
 - Sorcerer of the Fang
 - Sorcerer's Broom
+- Sorcerous Sight
 - Sorin's Thirst
 - Sorin's Vengeance
 - Sosuke's Summons
 - Soul Bleed
+- Soul Channeling
+- Soul Enervation
 - Soul Feast
 - Soul Manipulation
 - Soul of Innistrad
 - Soul of Magma
+- Soul of Migration
 - Soul of New Phyrexia
+- Soul of Ravnica
 - Soul of the Harvest
 - Soul of the Rapids
 - Soul of Theros
+- Soul of Windgrace
 - Soul of Zendikar
 - Soul Read
+- Soul Rend
 - Soul Salvage
 - Soul Scourge
+- Soul Sear
 - Soul Shepherd
 - Soul Shred
 - Soul Snuffers
@@ -8239,19 +11432,29 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Soulreaper of Mogis
 - Soulscour
 - Soulshriek
+- Soulsurge Elemental
 - Soulsworn Jury
 - Soured Springs
+- Southern Air Temple
 - Southern Elephant
 - Southern Paladin
 - Souvenir Snatcher
 - Sovereign's Bite
+- Sower of Chaos
+- Sower of Temptation
+- SP//dr, Piloted by Peni
 - Space Marine Devastator
 - Space Marine Scout
+- Spaceshift
 - Spara's Headquarters
 - Spare Supplies
+- Spark Double
+- Spark Elemental
+- Spark Elemental
 - Spark Jolt
 - Spark Reaper
 - Spark Spray
+- Spark Trooper
 - Sparkcaster
 - Sparkhunter Masticore
 - Sparkmage Apprentice
@@ -8259,40 +11462,65 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Sparring Mummy
 - Spatial Contortion
 - Spawn
+- Spawn of Mayhem
+- Spawn of Rix Maadi
 - Spawn of Thraxes
+- Spawnbed Protector
+- Spawning Grounds
 - Spawning Pit
 - Spawnwrithe
+- Speakeasy Server
 - Spear Spewer
 - Spearbreaker Behemoth
 - Species Gorger
+- Species Specialist
 - Spectacle Summit
 - Spectacular Spider-Man
 - Spectacular Tactics
 - Spectator Seating
 - Specter of the Fens
+- Specter's Shroud
 - Spectral Flight
 - Spectral Hunt-Caller
 - Spectral Interference
+- Spectral Lynx
+- Spectral Prison
 - Spectral Procession
 - Spectral Reserves
+- Spectral Rider
 - Spectral Sailor
 - Spectral Shepherd
 - Spell Pierce
+- Spell Snare
 - Spell Snip
+- Spell Syphon
 - Spellbook
 - Spellbook Seeker // Careful Study
 - Spellgorger Barbarian
 - Spellgorger Weird
 - Spellgorger Weird
 - Spellgyre
+- Spellheart Chimera
 - Spellkeeper Weird
+- Spellscorn Coven // Take It Back
 - Spellseeker
+- Spellshock
+- Spellweaver Eternal
+- Spellwild Ouphe
+- Sphere Grid
+- Sphere of Safety
 - Sphinx
 - Sphinx
+- Sphinx Mindbreaker
 - Sphinx of Enlightenment
+- Sphinx of Jwar Isle
 - Sphinx of Magosi
+- Sphinx of New Prahv
 - Sphinx of the Steel Wind
+- Sphinx of Uthuun
+- Sphinx Sovereign
 - Sphinx's Disciple
+- Sphinx's Insight
 - Sphinx's Revelation
 - Spicy Oatmeal Pizza
 - Spider
@@ -8302,43 +11530,62 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Spider
 - Spider
 - Spider
+- Spider Food
 - Spider Manifestation
+- Spider Spawning
 - Spider-Bot
 - Spider-Byte, Web Warden
 - Spider-Gwen, Free Spirit
 - Spider-Man 2099, Miguel O'Hara
+- Spider-Man, Hometown Hero
+- Spider-Man, Miles Morales
+- Spider-Man, New Champion
 - Spider-Man, Peter Parker
+- Spider-Man, Web-Spinner
+- Spider-Mobile
 - Spider-Rex, Daring Dino
+- Spider-Slayer, Hatred Honed
 - Spider-Suit
 - Spidersilk Armor
 - Spidersilk Net
+- Spiderwig Boggart
 - Spidery Grasp
 - Spike Breeder
 - Spike Colony
 - Spike Drone
 - Spike Feeder
 - Spike Jester
+- Spike Rogue
 - Spike Soldier
+- Spike Weaver
 - Spike Worker
 - Spiked Baloth
+- Spiked Ripsaw
 - Spikeshot Elder
 - Spikeshot Goblin
+- Spikewheel Acrobat
 - Spinal Centipede
 - Spinal Villain
+- Spincrusher
+- Spindrift Drake
 - Spine of Ish Sah
+- Spinebiter
 - Spined Basher
+- Spined Fluke
 - Spined Karok
 - Spined Megalodon
 - Spined Thopter
 - Spined Wurm
 - Spineless Thug
 - Spineseeker Centipede
+- Spinewoods Armadillo
 - Spinneret Sliver
 - Spinning Wheel
 - Spiraling Duelist
 - Spiraling Embers
 - Spire Barrage
 - Spire Garden
+- Spire Golem
 - Spire Mangler
 - Spire Monitor
 - Spire of Industry
@@ -8368,8 +11615,13 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Spirit
 - Spirit Away
 - Spirit Cairn
+- Spirit Cleric
+- Spirit Flare
 - Spirit Mantle
+- Spirit Mascot
 - Spirit of Malevolence
+- Spirit of the Hunt
+- Spirit of the Labyrinth
 - Spirit of the Spires
 - Spirit Summoning
 - Spirit Warrior
@@ -8378,58 +11630,93 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Spiritual Guardian
 - Spit Flame
 - Spite // Malice
+- Spite of Mogis
+- Spitebellows
 - Spiteflame Witch
+- Spiteful Blow
 - Spiteful Bully
 - Spiteful Motives
+- Spiteful Sliver
+- Spiteful Squad
+- Spiteful Visions
+- Spitemare
 - Spitfire Lagac
 - Spitting Drake
 - Spitting Earth
 - Spitting Gourna
 - Spitting Hydra
+- Spitting Image
 - Spitting Sliver
 - Spitting Spider
 - Splatter Goblin
+- Splatter Thug
+- Splendid Reclamation
+- Splendor Mare
+- Splinter Twin
+- Splinter, the Mentor
+- Splinterfright
 - Split Up
+- Spontaneous Artist
 - Spontaneous Combustion
 - Spontaneous Flight
 - Spontaneous Generation
 - Spore Burst
 - Spore Crawler
+- Spore Frog
 - Spore Swarm
 - Sporecap Spider
+- Sporecrown Thallid
 - Sporemound
+- Spotcycle Scouter
 - Spotted Griffin
 - Spread the Sickness
 - Spreading Flames
+- Spreading Insurrection
 - Spreading Rot
+- Spreading Seas
 - Spring of Eternal Peace
 - Spring-Leaf Avenger
+- Springbloom Druid
 - Springing Tiger
 - Springjaw Trap
 - Springleaf Drum
 - Springmane Cervin
+- Springmantle Cleric
 - Springsage Ritual
 - Sprite Dragon
 - Sprite Noble
 - Sprout
 - Sprouting Goblin
 - Sprouting Phytohydra
+- Sprouting Renewal
 - Sprouting Thrinax
+- Sprouting Vines
 - Spur Grappler
 - Spurred Wolverine
+- Spyglass Siren
+- Squad Captain
+- Squadron Hawk
 - Squall
 - Squall Drifter
 - Squall Line
+- Squall, SeeD Mercenary
+- Square Up
+- Squeaking Pie Grubfellows
 - Squee's Embrace
 - Squee, Goblin Nabob
 - Squelch
+- Squelching Leeches
+- Squid
 - Squire
 - Squire's Devotion
+- Squirming Mass
 - Squirrel
+- Squirrel Nest
 - Squirrel Sanctuary
 - Squirrel Sovereign
 - Squirrelanoids
 - Sram's Expertise
+- Sram, Senior Edificer
 - Stab
 - Stab Wound
 - Stabbing Pain
@@ -8437,14 +11724,21 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Staff of Domination
 - Staff of Nin
 - Staff of Zegon
+- Stag Beetle
+- Staggering Insight
 - Staggering Size
+- Staggershock
+- Stalker Hag
 - Stalking Assassin
 - Stalking Bloodsucker
 - Stalking Drone
 - Stalking Tiger
 - Stalking Vengeance
 - Stallion of Ashmouth
+- Stalwart Aven
 - Stalwart Shield-Bearers
+- Stalwarts of Osgiliath
+- Stamina
 - Stampede
 - Stampede Driver
 - Stampede Rider
@@ -8459,23 +11753,36 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Standing Troops
 - Stangg Twin
 - Star of Extinction
+- Star Pupil
 - Starfield Mystic
 - Starfighter Pilot
+- Stark Industries
+- Stark Industries Executive
 - Starlight Invoker
 - Starling, Aerial Ally
 - Starlit Angel
+- Starlit Sanctum
+- Starnheim Aspirant
 - Starnheim Memento
 - Starscape Cleric
 - Starstorm
 - Start from Scratch
+- Starting Column
 - Startled Relic Sloth
 - Starved Rusalka
+- Stasis Snare
+- Static Net
 - Status // Statue
+- Statute of Denial
 - Staunch Defenders
 - Staunch Shieldmate
+- Staunch Throneguard
+- Staunch-Hearted Warrior
+- Stave Off
 - Steadfast Cathar
 - Steadfast Guard
 - Steadfast Paladin
+- Steadfast Sentinel
 - Steadfast Sentinel
 - Steadfast Sentry
 - Steadfast Unicorn
@@ -8484,6 +11791,7 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Steady Progress
 - Steal Strength
 - Stealer of Secrets
+- Steam Augury
 - Steam Blast
 - Steam Spitter
 - Steam Vents
@@ -8491,16 +11799,20 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Steampath Charger
 - Steel Leaf Champion
 - Steel Leaf Paladin
+- Steel Overseer
 - Steel Sabotage
 - Steel Wall
 - Steel Wrecking Ball
+- Steelbane Hydra
 - Steelburr Champion
 - Steelclaw Lance
+- Steelfin Whale
 - Steelform Sliver
 - Steelgaze Griffin
 - Steelshaper's Gift
 - Steeple Creeper
 - Steeple Roc
+- Stenchskipper
 - Stensia Banquet
 - Stensia Bloodhall
 - Stensia Innkeeper
@@ -8510,27 +11822,39 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Sterling Supplier
 - Stern Constable
 - Stern Dismissal
+- Stern Lesson
 - Stern Proctor
 - Stew the Coneys
 - Steward of Solidarity
 - Steward of Valeron
+- Sticky Fingers
 - Stickytongue Sentinel
 - Stifle
 - Stillmoon Cavalier
 - Stimulus Package
 - Stingerfling Spider
 - Stinging Barrier
+- Stinging Lionfish
 - Stinging Shot
 - Stingmoggie
+- Stinkdrinker Daredevil
+- Stinkweed Imp
+- Stir the Sands
+- Stirring Hopesinger
 - Stitched Drake
 - Stitched Mangler
 - Stitcher's Apprentice
+- Stitcher's Supplier
 - Stitchwing Skaab
+- Stock Up
 - Stockman, Mad Fly-entist
+- Stockpiling Celebrant
 - Stoic Builder
 - Stoic Champion
 - Stoic Grove-Guide
+- Stoke the Flames
 - Stolen Grain
+- Stomp and Howl
 - Stomper Cub
 - Stomping Ground
 - Stone Calendar
@@ -8538,22 +11862,29 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Stone Golem
 - Stone Haven Medic
 - Stone Kavu
+- Stone of Erech
 - Stone Quarry
 - Stone Rain
+- Stone Retrieval Unit
 - Stone Spirit
 - Stone-Seeder Hierophant
-- Stone-Throwing Devils
+- Stonebound Mentor
 - Stonecloaker
+- Stonecoil Serpent
 - Stonefare Crocodile
+- Stoneforge Masterwork
 - Stoneforge Mystic
 - Stoneforged Blade
 - Stonefury
+- Stonehoof Chieftain
 - Stonehorn Chanter
 - Stonerise Spirit
 - Stoneskin
+- Stonewood Invocation
 - Stonewood Invoker
 - Stonework Puma
 - Stony Strength
+- Stonybrook Angler
 - Stonybrook Schoolmaster
 - Storm Caller
 - Storm Crow
@@ -8572,28 +11903,37 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Storm Spirit
 - Storm Strike
 - Storm's Wrath
+- Storm, Shaker of Skies
 - Storm-Kiln Artist
+- Stormblood Berserker
 - Stormcaller of Keranos
 - Stormcaller's Boon
 - Stormcarved Coast
 - Stormcatch Mentor
 - Stormchaser Drake
 - Stormchaser Mage
+- Stormchaser's Talent
 - Stormclaw Rager
 - Stormcloud Spirit
 - Stormfist Crusader
 - Stormfront Pegasus
 - Stormkeld Prowler
 - Stormkeld Vanguard // Bear Down
+- Stormplain Detainment
 - Stormrider Spirit
 - Stormscale Scion
 - Stormscape Apprentice
+- Stormscape Familiar
+- Stormscape Master
+- Stormshriek Feral // Flush Out
 - Stormsplitter
 - Stormwatch Eagle
 - Story Seeker
 - Storyteller Pixie
 - Strafe
 - Strands of Night
+- Strands of Undeath
+- Strandwalker
 - Strangle
 - Strangled Cemetery
 - Strangleroot Geist
@@ -8612,16 +11952,21 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Strength of Cedars
 - Strength of Isolation
 - Strength of Lunacy
+- Strength of the Harvest // Haven of the Harvest
 - Strength of the Pack
 - Strength of Unity
+- Stridehangar Automaton
 - Strider Harness
+- Strife Scholar // Awaken the Ages
 - Strike It Rich
 - Striking Sliver
+- Strionic Resonator
 - Strip Mine
 - Striped Bears
 - Striped Riverwinder
 - Strix Lookout
 - Strix Serenade
+- Strixhaven Skycoach
 - Stroke of Genius
 - Stroke of Midnight
 - Stromgald Cabal
@@ -8637,29 +11982,42 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Stronghold Assassin
 - Stronghold Biologist
 - Stronghold Machinist
+- Stronghold Overseer
+- Stronghold Rats
 - Stronghold Taskmaster
 - Student of Ojutai
 - Studious First-Year // Rampant Growth
 - Study
 - Stump Stomp // Burnwillow Clearing
+- Stun
 - Stun Sniper
+- Stunt Double
+- Sturdy Hatchling
+- Sturdy Shield
+- Sturmgeist
 - Su-Chi
 - Subjugator Angel
 - Sublime Archangel
 - Sublime Epiphany
 - Submerged Boneyard
+- Subterranean Cavern
 - Subterranean Scout
 - Subterranean Spirit
 - Subtle Strike
 - Suburban Sanctuary
 - Subversion
+- Subway Train
 - Succumb to Temptation
 - Sudden Breakthrough
+- Sudden Death
+- Sudden Edict
+- Sudden Shock
 - Sudden Spinnerets
 - Sudden Strength
 - Sudden Strike
 - Suffocating Fumes
 - Sugar Rush
+- Suki, Kyoshi Warrior
 - Sulfur Elemental
 - Sulfur Falls
 - Sulfur Vent
@@ -8674,13 +12032,31 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Sultai Scavenger
 - Sultai Skullkeeper
 - Sultai Soothsayer
+- Summary Judgment
 - Summer Bloom
 - Summit Apes
+- Summit Intimidator
 - Summit Prowler
 - Summit Sentinel
 - Summon the School
+- Summon: Anima
+- Summon: Bahamut
+- Summon: Choco/Mog
+- Summon: Fat Chocobo
+- Summon: Fenrir
+- Summon: G.F. Ifrit
+- Summon: Ixion
+- Summon: Knights of Round
+- Summon: Kujata
+- Summon: Magus Sisters
+- Summon: Primal Garuda
+- Summon: Primal Odin
+- Summon: Shiva
+- Summon: Yojimbo
 - Summoned Dromedary
+- Summoner's Pact
 - Sun Ce, Young Conquerer
+- Sun Droplet
 - Sun Quan, Lord of Wu
 - Sun Sentinel
 - Sun Titan
@@ -8696,15 +12072,19 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Sunblade Angel
 - Sunblade Elf
 - Sunblast Angel
+- Sunbond
 - Sunder
 - Sunder from Within
+- Sundering Vitae
 - Sundial, Dawn Tyrant
 - Sundown Pass
 - Sungold Barrage
 - Sungrace Pegasus
 - Sungrass Prairie
 - Sunhome Guildmage
+- Sunhome Stalwart
 - Sunhome, Fortress of the Legion
+- Sunken City
 - Sunken Hollow
 - Sunken Ruins
 - Sunlance
@@ -8713,23 +12093,31 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Sunpetal Grove
 - Sunrise Seeker
 - Sunrise Sovereign
+- Sunscape Familiar
 - Sunscape Master
 - Sunscorch Regent
 - Sunscorched Desert
 - Sunscorched Divide
 - Sunscour
+- Sunscourge Champion
 - Sunseed Nurturer
 - Sunset Pyramid
+- Sunset Saboteur
 - Sunset Strikemaster
 - Sunshot Militia
 - Sunshower Druid
 - Sunspire Gatekeepers
 - Sunspire Griffin
+- Sunstar Chaplain
 - Sunstar Expansionist
 - Sunstar Lightsmith
 - Sunstrike Legionnaire
 - Suntail Hawk
+- Super Intelligence
 - Super Shredder
+- Super Strength
+- Super Villain Lockup
+- Super-Skrull
 - Supply Caravan
 - Supply Drop
 - Supply Runners
@@ -8737,17 +12125,27 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Supportive Parents
 - Supreme Phantom
 - Supreme Verdict
+- Supreme Will
+- Suq'Ata Assassin
+- Suq'Ata Lancer
 - Sure Strike
 - Surge Conductor
 - Surge Mare
 - Surge of Thoughtweft
+- Surgehacker Mech
 - Surgical Skullbomb
+- Surgical Suite // Hospital Room
+- Surly Badgersaur
 - Surly Farrier
+- Surrak and Goreclaw
 - Surrak Dragonclaw
 - Surrak, the Hunt Caller
 - Surrakar Banisher
+- Surrakar Marauder
+- Surrakar Spellblade
 - Surtland Frostpyre
 - Surtr, Fiery Jötun
+- Surveillance Room
 - Surveilling Sprite
 - Survey the Wreckage
 - Survival of the Fittest
@@ -8755,10 +12153,13 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Survivor
 - Survivor of Korlis
 - Survivors' Encampment
+- Suspension Field
 - Suspicious Bookcase
 - Suspicious Shambler
 - Sustainer of the Realm
 - Sustenance
+- Sutina, Speaker of the Tajuru
+- Suture Priest
 - Suture Spirit
 - Svyelunite Priest
 - Svyelunite Temple
@@ -8766,25 +12167,39 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Swaggering Corsair
 - Swallowing Plague
 - Swamp
+- Swamp Mosquito
 - Swan Song
+- Swarm Culler
 - Swarm Guildmage
+- Swarm Intelligence
 - Swarm of Bloodflies
+- Swarm of Rats
+- Swarming of Moria
 - Swarmyard
 - Swashbuckling
 - Swat
 - Sweatworks Brawler
+- Sweet Oblivion
 - Sweettooth Witch
 - Swell of Growth
 - Swelter
 - Sweltering Suns
+- Swerve
+- Swift Kick
 - Swift Response
 - Swift Spinner
+- Swift Warden
 - Swiftblade Vindicator
 - Swiftfoot Boots
+- Swiftgear Drake
 - Swiftwater Cliffs
+- Swirling Sandstorm
 - Swooping Lookout
+- Swooping Protector
 - Sword Dancer
+- Sword of Feast and Famine
 - Sword of Fire and Ice
+- Sword of Kaldra
 - Sword of Light and Shadow
 - Sword of the Animist
 - Sword of the Chosen
@@ -8793,16 +12208,21 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Swordwise Centaur
 - Sworn Companions
 - Sworn Guardian
+- Sygg, River Guide
 - Sylvan Anthem
+- Sylvan Basilisk
 - Sylvan Bounty
 - Sylvan Brushstrider
 - Sylvan Caryatid
 - Sylvan Hierophant
 - Sylvan Might
 - Sylvan Ranger
+- Sylvan Reclamation
 - Sylvan Safekeeper
 - Sylvan Scrying
+- Sylvan Shepherd
 - Sylvan Tutor
+- Sylvan Yeti
 - Sylvok Explorer
 - Sylvok Lifestaff
 - Sylvok Replica
@@ -8813,28 +12233,44 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Symbiotic Wurm
 - Symbol of Unsummoning
 - Synchronous Sliver
+- Syndic of Tithes
+- Syndicate Enforcer
 - Syndicate Guildmage
+- Syndicate Heavy
+- Syndicate Messenger
+- Synth Infiltrator
 - Syphon Fuel
+- Syphon Life
 - Syphon Sliver
 - Syr Alin, the Lion's Claw
+- Syr Elenora, the Discerning
 - Syr Faren, the Hengehammer
+- Syr Ginger, the Meal Ender
+- Syr Konrad, the Grim
 - Syr Vondam, the Lucent
 - Sythis, Harvest's Hand
+- Tablet of Compleation
+- Tah-Crop Skirmisher
 - Tah-Crop Skirmisher
 - Taiga
 - Taigam's Scheming
 - Tail Slash
 - Tainted Field
 - Tainted Isle
+- Tainted Observer
 - Tainted Peak
+- Tainted Well
 - Tainted Wood
+- Tajic, Blade of the Legion
 - Tajuru Archer
 - Tajuru Beastmaster
 - Tajuru Blightblade
 - Tajuru Pathwarden
 - Tajuru Snarecaster
+- Tajuru Stalwart
 - Tajuru Warcaller
 - Take Down
+- Take Flight
 - Take into Custody
 - Take Out the Trash
 - Take Possession
@@ -8844,10 +12280,12 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Taken by Nightmares
 - Takenuma, Abandoned Mire
 - Talas Air Ship
+- Talas Explorer
 - Talas Lookout
 - Talas Merchant
 - Talas Scout
 - Talas Warrior
+- Tale of Tinúviel
 - Tale's End
 - Talisman of Conviction
 - Talisman of Creativity
@@ -8863,6 +12301,7 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Talon Sliver
 - Talon Trooper
 - Talonrend
+- Talons of Falkenrath
 - Talons of Wildwood
 - Talrand's Invocation
 - Talrand, Sky Summoner
@@ -8870,15 +12309,20 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Tamiyo's Epiphany
 - Tamiyo's Immobilizer
 - Tamiyo's Journal
+- Tamiyo's Logbook
 - Tamiyo's Notebook
 - Tamiyo's Safekeeping
+- Tana, the Bloodsower
 - Tandem Tactics
+- Tangle Golem
+- Tangle Hulk
 - Tangle Mantis
 - Tangle Spider
 - Tanglebloom
 - Tangled Florahedron // Tangled Vale
 - Tangled Islet
 - Tanglepool Bridge
+- Tangleroot
 - Tanglespan Lookout
 - Tangletrap
 - Tanufel Rimespeaker
@@ -8887,23 +12331,33 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Tar Pitcher
 - Tar Snare
 - Tarfire
+- Tarmogoyf
+- Tarmogoyf
 - Tarnished Citadel
 - Tarpan
+- Tasigur's Cruelty
 - Task Force
 - Tasseled Dromedary
 - Taste of Blood
 - Tattered Apparition
+- Tattered Drake
 - Tattered Mummy
 - Tattered Ratter
 - Tattermunge Maniac
 - Tatyova, Benthic Druid
+- Taunting Elf
+- Taurean Mauler
+- Tavern Swindler
 - Tawnos's Wand
 - Taxi Driver
+- Tayam, Luminous Enigma
 - Tazeem Raptor
 - Tazeem Roilmage
 - TCRI Building
 - Teacher's Pest
 - Team Avatar
+- Team Transmitter
+- Teardrop Kami
 - Tears of Valakut
 - Tectonic Edge
 - Tectonic Reformation
@@ -8911,6 +12365,8 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Teeming Dragonstorm
 - Teetering Peaks
 - Teeterpeak Ambusher
+- Teferi's Ageless Insight
+- Teferi's Honor Guard
 - Teferi's Protection
 - Teferi's Protege
 - Teferi's Sentinel
@@ -8918,22 +12374,29 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Tegwyll, Duke of Splendor
 - Tel-Jilad Archers
 - Tel-Jilad Chosen
+- Tel-Jilad Exile
 - Tel-Jilad Fallen
 - Tel-Jilad Justice
 - Tel-Jilad Lifebreather
 - Tel-Jilad Outrider
+- Telepathic Spies
 - Teleportation Circle
 - Telethopter
 - Telim'Tor's Darts
+- Teller of Tales
 - Temmet, Naktamun's Will
+- Temperamental Oozewagg
 - Tempered in Solitude
+- Tempered Sliver
 - Tempered Steel
 - Tempest Angler
 - Tempest Djinn
 - Tempest Drake
 - Tempest Hart // Scan the Clouds
+- Tempest Harvester
 - Tempest of Light
 - Tempest Owl
+- Tempest Technique
 - Temple Acolyte
 - Temple Bell
 - Temple Garden
@@ -8949,6 +12412,7 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Temple of the False God
 - Temple of Triumph
 - Temporal Adept
+- Temporal Fissure
 - Temporal Machinations
 - Tempting Witch
 - Temur Ascendancy
@@ -8956,76 +12420,150 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Temur Devotee
 - Temur Monument
 - Temur Tawnyback
+- Temur War Shaman
 - Tender Wildguide
 - Tenderize
 - Tendo Ice Bridge
+- Tendrils of Agony
 - Tendrils of Corruption
 - Tendrils of Despair
 - Tenement Crasher
 - Tentacle
 - Tenth District Guard
+- Tenth District Legionnaire
 - Tenth District Veteran
+- Teo, Spirited Glider
 - Terashi's Cry
 - Terashi's Grasp
 - Terashi's Verdict
+- Teremko Griffin
+- Terminal Agony
 - Terminal Moraine
 - Terminate
 - Teroh's Faithful
 - Terra Stomper
 - Terrain Elemental
+- Terrain Generator
+- Terramorph
 - Terramorphic Expanse
+- Terrasymbiosis
 - Terrian, World Tyrant
 - Territorial Baloth
 - Territorial Boar
 - Territorial Hammerskull
 - Territorial Roc
 - Territorial Scythecat
+- Territory Culler
+- Terror Ballista
 - Terror of Mount Velus
 - Terror of the Fairgrounds
+- Terrus Wurm
 - Teshar, Ancestor's Apostle
+- Test of Endurance
 - Testament Bearer
 - Tethered Skirge
+- Tethmos High Priest
+- Tetsuko Umezawa, Fugitive
+- Teval, the Balanced Scale
 - Teyo's Lightshield
+- Teysa, Envoy of Ghosts
+- Teysa, Orzhov Scion
 - Tezzeret's Ambition
 - Tezzeret's Gambit
 - Tezzeret's Strider
+- Thalakos Deceiver
+- Thalakos Drifters
+- Thalakos Lowlands
+- Thalakos Mistfolk
+- Thalakos Scout
+- Thalakos Seer
+- Thalakos Sentry
 - Thalia's Geistcaller
 - Thalia's Lieutenant
 - Thallid Soothsayer
+- Thanos, Death's Consort
+- Thantis, the Warweaver
 - Thassa's Bounty
 - Thassa's Devourer
+- Thassa's Ire
 - Thaumatog
 - Thaumaturge's Familiar
+- Thawbringer
+- The Aesir Escape Valhalla
+- The Akroan War
 - The Art of Tea
 - The Atropal
 - The Autonomous Furnace
 - The Birth of Meletis
+- The Black Breath
+- The Brothers' War
+- The Brute
+- The Cabbage Merchant
+- The Capitoline Triad
 - The Chase Is On
 - The Crystal's Chosen
+- The Curse of Fenric
 - The Dross Pits
+- The Eldest Reborn
+- The Fabulous Frog-Man
 - The Fair Basilica
+- The Falcon, Airship Restored
+- The Falcon, Sam Wilson
+- The First Eruption
+- The First Iroan Games
+- The Flux
+- The Gaffer
+- The Gold Saucer
+- The Great Henge
+- The Haunt of Hightower
 - The Hive
 - The Hollow Sentinel
 - The Hunter Maze
+- The Huntsman's Redemption
+- The Immortal Weapons
+- The Irencrag
 - The Lady of the Mountain
 - The Locust God
+- The Meathook Massacre
+- The Mending of Dominaria
+- The Modern Age // Vector Glider
 - The Monumental Facade
+- The Odd Acorn Gang
 - The One Ring
+- The Ozolith
+- The Princess Takes Flight
+- The Reaver Cleaver
+- The Restoration of Eiganjo // Architect of Restoration
 - The Royal Scions
+- The Shattered States Era // Nameless Conqueror
 - The Shire
+- The Speed Demon
 - The Spirit Oasis
 - The Stasis Coffin
 - The Surgical Bay
 - The Terror of Serpent's Pass
+- The Thing, Ben Grimm
+- The Tiger God
+- The Torment of Gollum
 - The Underworld Cookbook
 - The Unspeakable
+- The Vision and Scarlet Witch
+- The Void
+- The Walls of Ba Sing Se
 - The Wandering Rescuer
+- The Weatherseed Treaty
+- The Whizzer, Classic Speedster
+- The Wind Crystal
 - Their Name Is Death
+- Thermal Blast
 - Thermal Glider
 - Thermal Navigator
 - Thermo-Alchemist
 - Thermopod
+- Thespian's Stage
+- They Went This Way
 - Thicket Crasher
+- Thief of Hope
 - Thieving Magpie
 - Thieving Otter
 - Think Tank
@@ -9043,18 +12581,30 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Thopter
 - Thopter
 - Thopter Architect
+- Thopter Arrest
 - Thopter Engineer
+- Thopter Fabricator
 - Thopter Mechanic
 - Thopter Shop
 - Thopter Spy Network
 - Thopter Squadron
+- Thor Odinson
+- Thor, Asgard's Avenger
+- Thorn Elemental
 - Thorn Lieutenant
+- Thorn Mammoth
+- Thorn of the Black Rose
+- Thorn-Thrash Viashino
 - Thornado
+- Thorncaster Sliver
 - Thornglint Bridge
 - Thornhide Wolves
 - Thornling
 - Thornscape Apprentice
+- Thornscape Familiar
+- Thornscape Master
 - Thornspire Verge
+- Thorntooth Witch
 - Thornwatch Scarecrow
 - Thornweald Archer
 - Thornwind Faeries
@@ -9062,13 +12612,21 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Those Who Serve
 - Thought Collapse
 - Thought Courier
+- Thought Erasure
+- Thought Monitor
+- Thought Reflection
 - Thought Scour
 - Thought Vessel
+- Thoughtbind
+- Thoughtcast
 - Thoughtflare
 - Thoughtleech
 - Thoughtrender Lamia
+- Thoughtseize
 - Thoughtweft Gambit
 - Thoughtweft Lieutenant
+- Thousand Moons Infantry
+- Thousand-legged Kami
 - Thraben Foulbloods
 - Thraben Heretic
 - Thraben Inspector
@@ -9078,24 +12636,33 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Thraben Watcher
 - Thragtusk
 - Thran Dynamo
+- Thran Quarry
 - Thran Temporal Gateway
 - Thrash // Threat
 - Thrash of Raptors
 - Thrashing Brontodon
 - Thrashing Frontliner
+- Thrashing Mossdog
 - Thrashing Wumpus
+- Thraximundar
 - Thraxodemon
 - Threadbind Clique // Rip the Seams
 - Threaten
 - Threats Around Every Corner
+- Three Blind Mice
+- Three Steps Ahead
 - Three Tragedies
 - Three Tree City
+- Three Tree Mascot
 - Three Tree Rootweaver
 - Three Tree Scribe
 - Three Visits
+- Threefold Thunderhulk
 - Threnody Singer
+- Thresher Beast
 - Thrill of Possibility
 - Thrill of the Hunt
+- Thrill-Kill Assassin
 - Thrilling Discovery
 - Thriss, Nantuko Primus
 - Thriving Bluff
@@ -9103,20 +12670,37 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Thriving Heath
 - Thriving Isle
 - Thriving Moor
+- Throes of Chaos
 - Throne of Geth
+- Throne of the God-Pharaoh
+- Throne of the High City
 - Throttle
+- Throwing Knife
 - Thrull
 - Thrull
+- Thrull Parasite
+- Thrull Retainer
+- Thrumming Hivepool
 - Thrummingbird
+- Thrun, the Last Troll
+- Thud
+- Thunder Brute
 - Thunder Dragon
 - Thunder Drake
 - Thunder Spirit
 - Thunder Strike
 - Thunder Wall
+- Thunder-Thrash Elder
 - Thunderbolt
 - Thunderclap Wyvern
+- Thundercloud Elemental
+- Thundercloud Shaman
+- Thunderhead Gunner
 - Thunderhead Squadron
+- Thundering Broodwagon
 - Thundering Ceratok
+- Thundering Chariot
+- Thundering Djinn
 - Thundering Falls
 - Thundering Giant
 - Thundering Rebuke
@@ -9126,11 +12710,16 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Thunderous Might
 - Thunderous Snapper
 - Thunderscape Apprentice
+- Thunderscape Familiar
 - Thunderscape Master
+- Thundersteel Colossus
 - Thunderwolf Cavalry
 - Théoden, King of Rohan
 - Tibalt's Rager
+- Tibor and Lumia
 - Ticked Off
+- Ticket Booth // Tunnel of Hate
+- Tidal Force
 - Tidal Kraken
 - Tide Drifter
 - Tidecaller Mentor
@@ -9141,11 +12730,15 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Tidus, Blitzball Star
 - Tidy Conclusion
 - Tiger Claws
+- Tiger-Dillo
 - Tiger-Seal
 - Tigereye Cameo
+- Tightening Coils
+- Tigra, Feline Fury
 - Tilling Treefolk
 - Tilonalli's Knight
 - Timber Gorge
+- Timber Wolves
 - Timberland Ancient
 - Timberland Guide
 - Timberland Ruins
@@ -9154,21 +12747,27 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Time of Need
 - Time Wipe
 - Timeless Dragon
+- Timeless Dragon
 - Timeless Lotus
+- Timeless Witness
 - Timeless Witness
 - Timely Hordemate
 - Timid Drake
 - Timid Shieldbearer
+- Timin, Youthful Geist
+- Tin Street Market
 - Tinder Farm
 - Tine Shrike
 - Tinker
 - Tinker's Tote
 - Tiny
+- Tippy-Toe, Terrific Partner
 - Tireless Missionaries
 - Tireless Provisioner
 - Tireless Tracker
 - Tireless Tribe
 - Tishana's Wayfinder
+- Tishana, Voice of Thunder
 - Titan Forge
 - Titan's Grave
 - Titan's Strength
@@ -9178,45 +12777,72 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Titanic Bulvox
 - Titanic Growth
 - Titanium Golem
+- Titanoth Rex
+- Tithe Drinker
 - Tithebearer Giant
 - Tivadar of Thorn
 - Tivadar's Crusade
+- Tivash, Gloom Summoner
 - To Arms!
 - Toadstool Admirer
 - Tobias Andrion
 - Tobias, Doomed Conqueror
 - Tocasia's Dig Site
+- Tocasia's Onulet
 - Tocasia's Welcome
+- Tokka & Rahzar, Unsupervised
 - Tolarian Academy
 - Tolarian Emissary
+- Tolarian Geyser
 - Tolarian Scholar
 - Tolarian Sentinel
+- Tolarian Serpent
+- Tolarian Terror
+- Tolarian Winds
+- Toll of the Invasion
+- Tolsimir Wolfblood
 - Tomakul Honor Guard
+- Tomb Fortress
 - Tomb of the Spirit Dragon
+- Tomb Robber
 - Tomb Trawler
 - Tombstalker
+- Tombstone, Career Criminal
 - Tome Blast
 - Tome of the Guildpact
 - Tome Raider
+- Tome Scour
 - Tonic Peddler
+- Took Reaper
 - Tooth and Claw
+- Tooth of Chiss-Goria
 - Tooth of Ramos
+- Toothy, Imaginary Friend
 - Topan Ascetic
+- Topan Freeblade
 - Topaz Dragon // Entropic Cloud
 - Topiary Panther
+- Topiary Stomper
 - Tor Giant
 - Tor Wauki
+- Torbran, Thane of Red Fell
 - Torch Courier
 - Torch Drake
 - Torch Fiend
 - Torch Gauntlet
 - Torch Slinger
+- Torii Watchward
 - Torment
+- Torment of Hailfire
 - Tormented Angel
+- Tormented Hero
+- Tormented Soul
 - Tormenting Voice
 - Tormentor's Trident
 - Tormod's Crypt
 - Tormod's Cryptkeeper
+- Tormod, the Desecrator
+- Tornado Elemental
 - Torpor Dust
 - Torrent of Fire
 - Torsten Von Ursus
@@ -9230,6 +12856,7 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Touch of Brilliance
 - Touch of Death
 - Touch of Invisibility
+- Touch the Spirit Realm
 - Touchstone
 - Towashi Songshaper
 - Tower Defense
@@ -9240,40 +12867,53 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Tower of Champions
 - Tower of Eons
 - Tower of Fortunes
+- Tower of Murmurs
 - Towering Baloth
 - Towering Indrik
 - Towering Thunderfist
+- Towering-Wave Mystic
 - Town Sentry
 - Toxic Abomination
 - Toxic Deluge
 - Toxic Iguanar
+- Toxic Nim
 - Toxic Scorpion
 - Toxin Analysis
 - Toy
 - Trade Routes
 - Tradewind Rider
 - Trading Post
+- Tragic Fall
 - Tragic Poet
+- Tragic Slip
 - Trail of Evidence
 - Trail of Mystery
 - Trailblazer
+- Trailblazer's Boots
 - Trailblazing Historian
 - Trained Armodon
+- Trained Arynx
 - Trained Caracal
 - Trained Cheetah
 - Trained Condor
 - Trained Jackal
 - Trained Orgg
 - Training Center
+- Training Regimen
 - Traitorous Blood
 - Tramway Station
 - Tranquil Cove
 - Tranquil Expanse
+- Tranquil Garden
 - Tranquil Grove
 - Tranquil Landscape
 - Tranquil Path
 - Tranquil Thicket
 - Tranquility
+- Tranquilize
+- Transcendent Envoy
+- Transcendent Message
+- Transdimensional Bovine
 - Transguild Courier
 - Transluminant
 - Transmogrant Altar
@@ -9281,28 +12921,41 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Transplant Theorist
 - Trap Essence
 - Trapjaw Kelpie
+- Trapjaw Tyrant
 - Trapmaker's Snare
+- Trapped in the Screen
 - Trash for Treasure
 - Traumatic Critique
 - Traumatic Visions
 - Travel Preparations
+- Travel the Overworld
 - Traveler's Amulet
+- Traveling Botanist
 - Traveling Minister
 - Traveling Philosopher
 - Treacherous Blessing
 - Treachery
 - Tread Upon
+- Treason of Isengard
+- Treasonous Ogre
 - Treasure
+- Treasure Cruise
 - Treasure Dredger
+- Treasure Hunt
 - Treasure Hunter
 - Treasure Trove
+- Treasure Vault
 - Treasured Find
+- Treasury Thrull
 - Tree Monkey
 - Tree of Tales
 - Treefolk
 - Treefolk
+- Treefolk
 - Treefolk Harbinger
 - Treefolk Shaman
+- Treefolk Warrior
+- Treeshaker Chimera
 - Treespring Lorian
 - Treetop Freedom Fighters
 - Treetop Sentinel
@@ -9314,20 +12967,28 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Trenching Steed
 - Trenchpost
 - Treno, Dark City
+- Trespasser il-Vec
+- Trespassing Souleater
 - Tresserhorn Sinks
+- Trestle Troll
 - Treva's Attendant
 - Treva's Charm
+- Trial of a Time Lord
 - Trial of Ambition
 - Trial of Knowledge
 - Trial of Solidarity
 - Trial of Strength
 - Trial of Zeal
 - Triangle of War
+- Triarch Praetorian
 - Tribal Flames
 - Tribune of Rot
 - Tributary Vaulter
+- Tribute to the Wild
+- Tribute to the World Tree
 - Triceraton Regenta
 - Tricks of the Trade
+- Trickster Mage
 - Trigon of Corruption
 - Trigon of Infestation
 - Trigon of Mending
@@ -9335,42 +12996,61 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Trigon of Thought
 - Trinket Mage
 - Trip Noose
+- Triplicate Spirits
+- Triskaidekaphile
 - Triskelavite
 - Triskelion
+- Triton Cavalry
+- Triton Fortune Hunter
 - Triton Shorestalker
 - Triton Shorethief
 - Triton Waverider
+- Triumph of Cruelty
+- Triumph of Ferocity
+- Triumphant Reckoning
 - Triumphant Surge
 - Trokin High Guard
+- Troll Ascetic
 - Troll Warrior
 - Troll-Horn Cameo
+- Trollbred Guardian
+- Trollhide
 - Trolls of Tel-Jilad
+- Tromp the Domains
 - Tropical Island
 - Trostani, Three Whispers
 - Troublesome Spirit
+- Trove Warden
 - Trudge Garden
 - True Ancestry
 - True Conviction
 - True Love's Kiss
+- Truefire Captain
 - Truefire Paladin
 - Trumpet Blast
 - Trumpeting Gnarr
+- Trumpeting Herd
 - Trusted Pegasus
+- Trustworthy Scout
 - Trusty Machete
 - Trusty Packbeast
+- Trynn, Champion of Freedom
 - Tsunami
 - Tuinvale Treefolk // Oaken Boon
 - Tukatongue Thallid
 - Tuknir Deathlock
 - Tuktuk Grunts
 - Tuktuk Rubblefort
+- Tuktuk the Explorer
 - Tumble Magnet
 - Tundra
 - Tundra Wall
 - Tundra Wolves
+- Tune the Narrative
 - Tunnel
 - Tunnel Rats
 - Tunnel Surveyor
+- Tunneler Wurm
 - Tunneling Geopede
 - Tura Kennerüd, Skyknight
 - Turbulent Fen
@@ -9378,18 +13058,29 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Turbulent Springs
 - Turbulent Steppe
 - Turbulent Wilderness
+- Turn Against
 - Turn the Tide
 - Turn to Dust
+- Turn to Frog
 - Turn to Mist
 - Turntimber Ascetic
 - Turntimber Grove
 - Turntimber Ranger
+- Turntimber Sower
 - Turret Ogre
+- Turtle Blimp
 - Turtle Power!
 - Turtle-Seals
+- Turtleshell Changeling
 - Tusked Colossodon
+- Tuskeri Firewalker
+- Tuskguard Captain
+- Tuya Bearclaw
+- TVA Bureaucrat
 - Tweeze
+- Twiddle
 - Twigwalker
+- Twilight Diviner
 - Twilight Drover
 - Twilight Mire
 - Twilight Panther
@@ -9399,13 +13090,20 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Twinblade Blessing
 - Twinblade Paladin
 - Twinblade Slasher
+- Twincast
+- Twinflame Travelers
+- Twinflame Tyrant
+- Twining Twins // Swift Spiral
 - Twinmaw Stormbrood // Charring Bite
 - Twins of Maurer Estate
 - Twinscroll Shaman
 - Twinshot Sniper
 - Twist Reality
+- Twisted Abomination
 - Twisted Experiment
 - Twisted Landscape
+- Twisted Spider-Clone
+- Twitch
 - Two-Headed Cerberus
 - Two-Headed Hellkite
 - Two-Headed Hunter // Twice the Rage
@@ -9419,6 +13117,7 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Tyranid Invasion
 - Tyranid Warrior
 - Tyrant of Kher Ridges
+- Tyrant's Choice
 - Tyrant's Machine
 - Tyrant's Scorn
 - Tyrox, Saurid Tyrant
@@ -9430,24 +13129,36 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Uktabi Efreet
 - Uktabi Faerie
 - Uktabi Orangutan
+- Uktabi Wildcats
 - Ukud Cobra
+- Ulamog's Crusher
 - Ulcerate
+- Ulrich's Kindred
 - Ultima Weapon
+- Ultimate Alliance
 - Ultimecia, Temporal Threat
+- Ultimo, Civilization's End
 - Ultramarines Honour Guard
 - Ulvenwald Bear
+- Ulvenwald Hydra
 - Ulvenwald Mysteries
 - Ulvenwald Observer
+- Ulvenwald Tracker
 - Umara Entangler
 - Umara Mystic
 - Umara Raptor
 - Umara Wizard // Umara Skyfalls
 - Umbral Collar Zealot
 - Umbral Expanse
+- Umbral Juke
+- Umbral Mantle
 - Umezawa's Charm
 - Unagi's Spray
 - Unauthorized Exit
 - Unbender Tine
+- Unbreakable Bond
+- Unbreakable Formation
+- Unbridled Growth
 - Unburden
 - Unburial Rites
 - Unburied Earthcarver
@@ -9458,14 +13169,25 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Uncomfortable Chill
 - Uncontrollable Anger
 - Unconventional Tactics
+- Unctus, Grand Metatect
 - Undead Augur
+- Undead Butler
 - Undead Gladiator
+- Undead Hand Ninja
+- Undead Leotau
 - Undead Minotaur
 - Undead Slayer
+- Undead Warchief
 - Under the Skin
+- Undercellar Myconid
 - Undercity Dire Rat
+- Undercity Eliminator
+- Undercity Informer
+- Undercity Scavenger
 - Undercity Scrounger
 - Undercity Sewers
+- Undercity Shade
+- Undercity Troll
 - Undercity Uprising
 - Undercover Crocodelf
 - Underdark Basilisk
@@ -9476,58 +13198,88 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Undergrowth Leopard
 - Undergrowth Recon
 - Undergrowth Stadium
+- Underhanded Designs
 - Undermine
+- Underrealm Lich
 - Undersea Invader
 - Undertaker
+- Underwater Tunnel // Slimy Aquarium
 - Underworld Coinsmith
+- Underworld Connections
+- Underworld Dreams
 - Underworld Hermit
+- Underworld Sentinel
 - Undo
 - Undying Rage
 - Unearth
+- Unearthly Blizzard
+- Unesh, Criosphinx Sovereign
+- Unexpected Assistance
 - Unexpected Windfall
 - Unexplained Disappearance
+- Unfathomable Truths
 - Unflinching Courage
 - Unforgiving Aim
 - Unfriendly Fire
 - Unfulfilled Desires
+- Unhallowed Pact
 - Unhallowed Phalanx
 - Unhinge
+- Unholy Annex // Ritual Chamber
 - Unholy Grotto
+- Unholy Heat
+- Unholy Indenture
 - Unholy Officiant
 - Unholy Strength
 - Union of the Third Path
 - United Front
+- Universal Automaton
 - Universal Solvent
+- Universal Surveillance
 - University Campus
 - Unknown Shores
 - Unleash Shell
 - Unlicensed Disintegration
 - Unlikely Aid
 - Unmake
+- Unmake the Graves
+- Unmask
+- Unnatural Growth
 - Unnatural Predation
 - Unnatural Restoration
 - Unnatural Speed
 - Unnerve
 - Unnerving Grasp
 - Unquestioned Authority
+- Unraveling Mummy
 - Unrooted Ancestor
 - Unruly Catapult
 - Unruly Mob
 - Unsettling Twins
 - Unspeakable Symbol
 - Unstable Obelisk
+- Unstoppable Ogre
 - Unstoppable Plan
+- Unsubstantiate
 - Unsubtle Mockery
 - Unsummon
+- Unswerving Sloth
 - Untamed Hunger
 - Untamed Might
 - Untamed Wilds
+- Untethered Express
+- Unwanted Remake
 - Unwavering Initiate
+- Unwavering Initiate
+- Unwelcome Sprite
 - Unwilling Ingredient
 - Unwind
+- Unwinding Clock
+- Unworthy Dead
 - Unyaro Bee Sting
 - Unyaro Bees
 - Unyielding Krumar
+- Up the Beanstalk
 - Updraft
 - Updraft Elemental
 - Upheaval
@@ -9535,35 +13287,58 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Urabrask the Hidden
 - Urban Daggertooth
 - Urban Evolution
+- Urban Utopia
 - Urbis Protector
 - Urborg Drake
 - Urborg Elf
 - Urborg Emissary
+- Urborg Phantom
+- Urborg Repossession
 - Urborg Shambler
 - Urborg Uprising
 - Urborg Volcano
 - Urborg, Tomb of Yawgmoth
 - Urn of Godfire
 - Ursapine
+- Uruk-hai Berserker
 - Urza's Cave
 - Urza's Factory
 - Urza's Guilt
+- Urza's Incubator
+- Urza's Mine
+- Urza's Power Plant
 - Urza's Rebuff
+- Urza's Tower
+- Urza, Powerstone Prodigy
 - Urzan Automaton
+- Usher of the Fallen
+- Uthden Troll
 - Utility Knife
+- Utopia Sprawl
 - Utopia Tree
+- Utopia Vow
+- Utrom Monitor
 - Utter End
 - Utvara Hellkite
 - Utvara Scalper
+- Uurg, Spawn of Turg
+- Uyo, Silent Prophet
+- Vaevictis Asmadi
 - Vagrant Plowbeasts
+- Valakut Awakening // Valakut Stoneforge
 - Valakut Invoker
 - Valakut Predator
 - Valeron Outlander
 - Valgavoth's Faithful
 - Valgavoth's Lair
 - Valiant Guard
+- Valiant Rescuer
 - Valiant Veteran
+- Valkyrie Aerial Unit
+- Valkyrie Harbinger
+- Valkyrior Skyrider
 - Valley Dasher
+- Valor
 - Valor in Akros
 - Valor of the Worthy
 - Valor Singer
@@ -9580,8 +13355,10 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Vampire // Treasure
 - Vampire Aristocrat
 - Vampire Champion
+- Vampire Cutthroat
 - Vampire Demon
 - Vampire Envoy
+- Vampire Gourmand
 - Vampire Hounds
 - Vampire Interloper
 - Vampire Knight
@@ -9590,20 +13367,26 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Vampire Noble
 - Vampire of the Dire Moon
 - Vampire Opportunist
+- Vampire Outcasts
 - Vampire Revenant
 - Vampire Rogue
+- Vampire Slayer
 - Vampire Soulcaller
 - Vampire Sovereign
 - Vampire Spawn
+- Vampire Warlord
 - Vampire's Kiss
+- Vampires' Vengeance
 - Vampiric Feast
 - Vampiric Fury
 - Vampiric Rites
 - Vampiric Spirit
 - Vampiric Touch
 - Vampiric Tutor
+- Vampirism
 - Vandalblast
 - Vandalize
+- Vanguard of Brimaz
 - Vanguard of the Rose
 - Vanguard Seraph
 - Vanguard Suppressor
@@ -9615,11 +13398,16 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Vanquisher's Banner
 - Vapor Snag
 - Varmint
+- Varragoth, Bloodsky Sire
+- Vashta Nerada
 - Vassal Soul
+- Vastlands Scavenger // Bind to Life
 - Vastwood Fortification // Vastwood Thicket
 - Vastwood Gorger
 - Vat of Rebirth
+- Vault 13: Dweller's Journey
 - Vault 75: Middle School
+- Vault Guardsman
 - Vault of Champions
 - Vault of the Archangel
 - Vault of Whispers
@@ -9627,25 +13415,38 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Vault Robber
 - Vault Skirge
 - Vault Skyward
+- Vaultguard Trooper
+- Vec Townships
 - Vecna
+- Vectis Agents
 - Vectis Silencers
 - Vector, Imperial Capital
 - Vedalken Archmage
 - Vedalken Blademaster
 - Vedalken Certarch
 - Vedalken Entrancer
+- Vedalken Ghoul
 - Vedalken Heretic
 - Vedalken Infiltrator
 - Vedalken Infuser
 - Vedalken Mastermind
 - Vedalken Mesmerist
+- Vedalken Orrery
 - Vedalken Outlander
+- Vega, the Watcher
+- Vehicle
 - Veil of Assimilation
 - Veilborn Ghoul
 - Veiled Shade
+- Vein Ripper
+- Vela the Night-Clad
+- Veloheart Bike
+- Vendetta
 - Venerable Knight
+- Venerable Kumo
 - Venerable Lammasu
 - Venerable Monk
+- Venerated Rotpriest
 - Vengeance
 - Vengeant Vampire
 - Vengeful Bloodwitch
@@ -9653,6 +13454,7 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Vengeful Dead
 - Vengeful Devil
 - Vengeful Possession
+- Vengeful Rebel
 - Vengeful Townsfolk
 - Vengeful Vampire
 - Vengeful Warchief
@@ -9660,28 +13462,43 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Venom, Evil Unleashed
 - Venomcrawler
 - Venomized Cat
+- Venomous Brutalizer
+- Venomous Changeling
 - Venomous Hierophant
+- Venomsac Lagac
 - Venomspout Brackus
 - Venomthrope
 - Venser's Journal
 - Venser's Sliver
+- Venser, Shaper Savant
 - Verdant Automaton
 - Verdant Catacombs
+- Verdant Eidolon
+- Verdant Embrace
+- Verdant Field
 - Verdant Force
 - Verdigris
 - Verduran Enchantress
+- Verix Bladewing
 - Vermiculos
 - Vermin Gorger
 - Vernadi Shieldmate
 - Vernal Bloom
 - Vernal Fen
+- Veronica, Dissident Scribe
+- Vertigo
 - Vesper Ghoul
+- Vesperlark
+- Vessel of Endless Rest
 - Vessel of Ephemera
 - Vessel of Paramnesia
 - Vessel of Volatility
 - Vestige of Emrakul
+- Vesuva
 - Veteran Armorer
 - Veteran Armorsmith
+- Veteran Beastrider
+- Veteran Cathar
 - Veteran Cavalier
 - Veteran of the Depths
 - Veteran Swordsmith
@@ -9704,12 +13521,16 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Viashino Sandscout
 - Viashino Sandsprinter
 - Viashino Sandstalker
+- Viashino Shanktail
+- Viashino Skeleton
 - Viashino Slasher
 - Viashino Slaughtermaster
 - Viashino Spearhunter
 - Viashino Warrior
 - Viashino Weaponsmith
 - Viashivan Dragon
+- Vibranium Energy Daggers
+- Vibranium Strike Gauntlets
 - Vibrant Cityscape
 - Vibrant Outburst
 - Vicious Clown
@@ -9729,21 +13550,28 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Vile Manifestation
 - Vile Rebirth
 - Vilespawn Spider
+- Vilis, Broker of Blood
 - Village Bell-Ringer
 - Village Cannibals
 - Village Elder
 - Village Rites
+- Villain
 - Vindicate
 - Vindictive Vampire
+- Vine Dryad
+- Vine Kami
 - Vine Mare
 - Vine Trellis
 - Vinebred Brawler
 - Vineglimmer Snarl
 - Vinelasher Kudzu
+- Vinereap Mentor
 - Vines of the Recluse
 - Vineweft
 - Vintara Snapper
+- Violent Eruption
 - Violent Impact
+- Violent Outburst
 - Violent Ultimatum
 - Violet Pall
 - Viral Drake
@@ -9753,6 +13581,8 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Viridian Corrupter
 - Viridian Emissary
 - Viridian Harvest
+- Viridian Joiner
+- Viridian Longbow
 - Viridian Lorebearers
 - Viridian Revel
 - Viridian Scout
@@ -9761,17 +13591,25 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Virtue of Persistence // Locthwain Scorn
 - Virtue's Ruin
 - Virtuous Charge
+- Virtuous Variant
 - Virulent Emissary
 - Virulent Plague
+- Virulent Silencer
+- Virulent Swipe
 - Virus Beetle
+- Viscera Dragger
 - Viscera Seer
+- Viscerid Armor
 - Vision Skeins
+- Visionary Augmenter
 - Visionary's Dance
 - Vital Splicer
 - Vitality Charm
 - Vitalize
 - Vitalizing Wind
 - Vithian Renegades
+- Vithian Stinger
+- Vito, Thorn of the Dusk Rose
 - Vitu-Ghazi, the City-Tree
 - Vivid Crag
 - Vivid Creek
@@ -9785,23 +13623,31 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Vivisection
 - Vivisection Evangelist
 - Vivisurgeon's Insight
+- Vizier of Tumbling Sands
 - Vizkopa Vampire
 - Vizzerdrix
+- Vnwxt, Verbose Host
 - Vodalian Hypnotist
 - Vodalian Merchant
 - Vodalian Soldiers
+- Vodalian Wave-Knight
 - Vodalian Zombie
 - Voice of Duty
 - Voice of Grace
 - Voice of Law
 - Voice of Reason
 - Voice of the Provinces
+- Voice of the Vermin
 - Voice of the Woods
 - Voice of Truth
 - Voiceless Spirit
+- Void Beckoner
 - Void Grafter
+- Void Helix
 - Void Rend
+- Void Shatter
 - Void Snare
+- Void Squall
 - Voidmage Apprentice
 - Voidmage Husher
 - Voidmage Prodigy
@@ -9811,8 +13657,10 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Voja // Saproling
 - Voja Fenstalker
 - Voja, Friend to Elves
+- Voja, Jaws of the Conclave
 - Volatile Fjord
 - Volatile Wanderglyph
+- Volcanic Awakening
 - Volcanic Dragon
 - Volcanic Fallout
 - Volcanic Geyser
@@ -9820,37 +13668,54 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Volcanic Island
 - Volcanic Rambler
 - Volcanic Rush
+- Volcanic Salvo
 - Volcanic Spray
+- Volcanic Strength
 - Volcanic Submersion
 - Volcanic Upheaval
 - Volcano Imp
+- Voldaren Duelist
 - Voldaren Epicure
 - Volley of Boulders
 - Volley Veteran
 - Volrath's Gardens
 - Volrath's Stronghold
 - Volt Charge
+- Voltaic Construct
 - Voltaic Key
 - Voltaic Servant
+- Voltaic Whip
 - Volunteer Militia
+- Volunteer Reserves
 - Vona, Butcher of Magan
+- Voracious Cobra
+- Voracious Greatshark
+- Voracious Hatchling
 - Voracious Null
+- Voracious Tome-Skimmer
+- Voracious Vampire
 - Voracious Varmint
 - Vorapede
+- Vorel of the Hull Clade
 - Vorosh, the Hunter
 - Vorrac Battlehorns
 - Vorstclaw
+- Votary of the Conclave
+- Vote Out
 - Vow of Duty
 - Vow of Flight
 - Vow of Lightning
+- Vow of Malice
 - Vow of Torment
 - Vow of Wildness
+- Voyage Home
 - Voyage's End
 - Voyager Quickwelder
 - Voyager Staff
 - Voyaging Satyr
 - Vraan, Executioner Thane
 - Vraska Joins Up
+- Vraska's Conquistador
 - Vraska's Contempt
 - Vulpikeet
 - Vulpine Goliath
@@ -9861,14 +13726,23 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Vulshok Refugee
 - Vulshok Replica
 - Vulshok Sorcerer
+- Vulturous Zombie
 - Wailing Ghoul
+- Wakandan Drone Flock
+- Wakandan Shield Guard
+- Wakandan Tusker
+- Wake of Vultures
 - Wake Thrasher
 - Wakedancer
 - Waker of Waves
 - Waking Nightmare
 - Walker
+- Walker of the Grove
 - Walking Atlas
+- Walking Ballista
 - Walking Corpse
+- Walking Dead
+- Wall
 - Wall
 - Wall
 - Wall
@@ -9879,6 +13753,8 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Wall of Air
 - Wall of Blood
 - Wall of Blossoms
+- Wall of Bone
+- Wall of Brambles
 - Wall of Denial
 - Wall of Distortion
 - Wall of Earth
@@ -9890,13 +13766,17 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Wall of Kelp
 - Wall of Lava
 - Wall of Light
+- Wall of Limbs
 - Wall of Lost Thoughts
 - Wall of Mist
 - Wall of Mulch
 - Wall of Omens
 - Wall of Opposition
+- Wall of Pine Needles
 - Wall of Razors
 - Wall of Runes
+- Wall of Shields
+- Wall of Souls
 - Wall of Spears
 - Wall of Stone
 - Wall of Swords
@@ -9905,6 +13785,7 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Wall of Vines
 - Wall of Water
 - Wall of Wood
+- Wall Off
 - Wallop
 - Wand of the Elements
 - Wander in Death
@@ -9914,35 +13795,56 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Wanderer's Intervention
 - Wanderer's Strike
 - Wanderer's Twig
+- Wanderguard Sentry
 - Wandering Champion
 - Wandering Goblins
+- Wandering Graybeard
 - Wandering Musicians
 - Wandering Ones
 - Wandering Stream
 - Wandering Tombshell
+- Wandering Wolf
+- Wanderlust
 - Wanderwine Distracter
 - Wanderwine Hub
+- Wanted Griffin
 - Wanted Scoundrels
 - War Behemoth
 - War Chariot
+- War Elephant
 - War Horn
+- War Machine, James Rhodes
+- War Machine, Legacy of Iron
 - War Mammoth
+- War of the Last Alliance
+- War Oracle
 - War Priest of Thune
 - War Room
 - War Screecher
+- War Squeak
 - War-Name Aspirant
+- War-Spike Changeling
 - War-Torch Goblin
+- War-Wing Siren
+- Warbeast of Gorgoroth
+- Warchanter of Mogis
 - Warclamp Mastiff
 - Warded Battlements
 - Warden of Geometries
 - Warden of the Woods
 - Wardscale Crocodile
 - Warehouse Thief
+- Warfire Javelineer
+- Wargate
+- Warhost's Frenzy
 - Warleader's Call
 - Warleader's Helix
 - Warlord's Axe
 - Warlord's Fury
+- Warmind Infantry
+- Warmonger Hellkite
 - Warmth
+- Warp Artifact
 - Warpath Ghoul
 - Warped Landscape
 - Warped Physique
@@ -9957,22 +13859,29 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Warrior
 - Warrior's Charge
 - Warrior's Honor
+- Warriors of Wakanda
 - Warship Scout
 - Warstorm Surge
 - Warteye Witch
+- Warthog
+- Wartime Protestors
 - Wary Okapi
+- Wary Thespian
+- Wary Watchdog
 - Wasp
 - Wasp Lancer
 - Waste Away
 - Waste Not
 - Wasteland
 - Wasteland Scorpion
+- Wasteland Viper
 - Wastes
 - Wastewood Verge
 - Watcher in the Mist
 - Watcher of the Wayside
 - Watcher Sliver
 - Watchful Automaton
+- Watchful Blisterzoa
 - Watchful Giant
 - Watchwing Scarecrow
 - Watchwolf
@@ -9988,11 +13897,19 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Waterkin Shaman
 - Waterlogged Grove
 - Watertrap Weaver
+- Waterveil Cavern
 - Waterwhirl
+- Waterwind Scout
 - Watery Grave
+- Wave Goodbye
+- Wave of Reckoning
 - Wave-Wing Elemental
+- Wavebreak Hippocamp
+- Wavecrash Triton
+- Wavesifter
 - Waveskimmer Aven
 - Wax // Wane
+- Waxen Shapethief
 - Wayfarer's Bauble
 - Wayfaring Giant
 - Waylaying Pirates
@@ -10002,21 +13919,33 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Wayward Soul
 - Weakness
 - Weakstone
+- Weapon Rack
+- Weaponcraft Enthusiast
 - Weaponize the Monsters
 - Weapons Trainer
+- Wear // Tear
 - Weaselback Redcap
 - Weather Maker
+- Weather the Storm
+- Weathered Runestone
 - Weathered Wayfarer
 - Weatherseed Faeries
 - Weatherseed Treefolk
 - Weave Fate
 - Weaver of Currents
 - Weaver of Lightning
+- Web
+- Web Up
+- Web-Shooters
 - Web-Warriors
+- Webspinner Cuff
+- Webweaver Changeling
+- Wedding Security
 - Wee Dragonauts
 - Wei Ambush Force
 - Wei Elite Companions
 - Wei Infantry
+- Wei Night Raiders
 - Wei Scout
 - Wei Strike Force
 - Weigh Down
@@ -10032,8 +13961,10 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Weldfast Wingsmith
 - Welding Jar
 - Welkin Guide
+- Welkin Hawk
 - Well of Discovery
 - Well of Life
+- Well Rested
 - Wellwisher
 - Werebear
 - Western Paladin
@@ -10041,17 +13972,24 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Wetland Sambar
 - Whale
 - Whalebone Glider
+- Wharf Infiltrator
+- Wheel of Fortune
 - Where Ancients Tread
 - Whetstone
 - Whetwheel
+- Whip of Erebos
 - Whip Sergeant
+- Whip Silk
 - Whip-Spine Drake
 - Whipcorder
 - Whipflare
+- Whipstitched Zombie
 - Whiptail Moloch
 - Whiptail Wurm
 - Whiptongue Frog
+- Whir of Invention
 - Whirler Rogue
+- Whirler Virtuoso
 - Whirlermaker
 - Whirling Strike
 - Whirlwind
@@ -10059,22 +13997,31 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Whirlwind of Thought
 - Whisper Agent
 - Whisper of the Dross
+- Whisper Squad
 - Whisper, Blood Liturgist
 - Whisperer of the Wilds
+- Whispering Shade
 - Whispering Snitch
 - Whispering Wizard
+- Whispersilk Cloak
+- White Auracite
 - White Dragon
 - White Knight
 - White Lotus Reinforcements
 - White Scarab
 - White Shield Crusader
+- White Sun's Zenith
+- White Tiger, Amulet Keeper
 - Whitemane Lion
 - Whitesun's Passage
 - Whitewater Naiads
+- Whoosh!
+- Wiccan, Young Avenger
 - Wicked Reward
 - Wicked Visitor
 - Wicker Witch
 - Wickerbough Elder
+- Wickersmith's Tools
 - Wielding the Green Dragon
 - Wight of the Reliquary
 - Wild Aesthir
@@ -10087,12 +14034,18 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Wild Growth
 - Wild Guess
 - Wild Hunger
+- Wild Instincts
 - Wild Jhovall
+- Wild Leotau
 - Wild Nacatl
+- Wild Ox
+- Wild Pack Squad
 - Wild Wanderer
 - Wild-Field Scarecrow
 - Wilderness Hypnotist
 - Wilderness Reclamation
+- Wildest Dreams
+- Wildfire Awakener
 - Wildfire Emissary
 - Wildfire Wickerfolk
 - Wildheart Invoker
@@ -10102,11 +14055,20 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Wildwood Mentor
 - Wildwood Patrol
 - Wildwood Rebirth
+- Will of the Naga
+- Will of the Sultai
 - Will-Forged Golem
+- Will-o'-the-Wisp
+- Willbender
+- Willow Dryad
 - Willow Elf
 - Willow Faerie
+- Willow Geist
+- Willow Priestess
 - Willow-Wind
+- Willowdusk, Essence Seer
 - Willowrush Verge
+- Wilson, Refined Grizzly
 - Wilt
 - Wilt-Leaf Cavaliers
 - Wily Bandar
@@ -10119,11 +14081,14 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Wind-Scarred Crag
 - Windborn Muse
 - Windborne Charge
+- Windbrisk Heights
 - Windbrisk Raptor
+- Windcaller Aven
 - Windfall
 - Windgrace Acolyte
 - Windreader Sphinx
 - Windreaper Falcon
+- Windreaver
 - Windrider Eel
 - Windrider Patrol
 - Windrider Wizard
@@ -10141,18 +14106,27 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Wing Splicer
 - Wingbeat Warrior
 - Wingblade Disciple
+- Winged Boots
 - Winged Coatl
 - Winged Shepherd
 - Winged Sliver
 - Wings of Aesthir
 - Wings of Hope
 - Wings of the Cosmos
+- Wings of the Guard
+- Wingshield Agent
+- Wingspan Stride
+- Wingsteed Rider
+- Winnower Patrol
 - Winter Eladrin
+- Winter Soldier, Bucky Barnes
 - Winter's Grasp
 - Winter's Intervention
 - Winterflame
 - Wintermoon Mesa
+- Wipe Away
 - Wipe Clean
+- Wirewood Channeler
 - Wirewood Elf
 - Wirewood Guardian
 - Wirewood Herald
@@ -10161,7 +14135,9 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Wirewood Pride
 - Wirewood Savage
 - Wirewood Symbiote
+- Wisdom of Ages
 - Wishcoin Crab
+- Wispmare
 - Wispweaver Angel
 - Wistful Selkie
 - Wistful Thinking
@@ -10172,7 +14148,10 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Witch's Cottage
 - Witch's Familiar
 - Witch's Web
+- Witch-Maw Nephilim
+- Witches' Eye
 - Witching Well
+- Witchstalker
 - Wither and Bloom
 - Witherbloom Apprentice
 - Witherbloom Campus
@@ -10188,15 +14167,25 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Witty Roastmaster
 - Wizard
 - Wizard
+- Wizard Class
 - Wizards' School
 - Wizened Cenn
+- Woebearer
+- Wojek Halberdiers
 - Wolf
 - Wolf
 - Wolf
 - Wolf
 - Wolf Cove Villager
+- Wolf Pack
+- Wolf-Skull Shaman
+- Wolfir Avenger
 - Wolfkin Bond
+- Wolfsbane, Highland Hero
 - Wolfwillow Haven
+- Wolverine Pack
+- Wonder
+- Wondrous Revival
 - Wood Elves
 - Woodborn Behemoth
 - Woodcloaker
@@ -10207,45 +14196,68 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Woodfall Primus
 - Woodland Acolyte // Mend the Wilds
 - Woodland Cemetery
+- Woodland Changeling
 - Woodland Chasm
 - Woodland Druid
 - Woodland Liege
 - Woodland Mystic
 - Woodland Patrol
 - Woodland Stream
+- Woodland Wanderer
+- Woodlot Crawler
+- Woodweaver's Puzzleknot
+- Woodwraith Strangler
 - Woolly Loxodon
 - Woolly Mammoths
 - Woolly Spider
 - Woolly Thoctar
+- Word of Seizing
+- Words of Wisdom
 - Workhorse
 - Workshop Assistant
 - World Map
+- World Shaper
 - World-Weary
 - Worldly Tutor
+- Worldsoul Colossus
+- Worldwalker Helm
 - Worm
+- Worm Harvest
+- Wormfang Behemoth
 - Wormhole Serpent
 - Worn Powerstone
+- Worry Beads
+- Wort, Boggart Auntie
 - Worthy Cost
 - Worthy Knight
 - Wose Pathfinder
 - Wrack with Madness
 - Wraith
 - Wrangle
+- Wrap in Vigor
 - Wrath of God
 - Wreak Havoc
 - Wreck Remover
 - Wreckage Wickerfolk
 - Wrecking Ball
+- Wrecking Ball Arm
+- Wrecking Beast
 - Wrecking Crew
+- Wrecking Ogre
+- Wrench
+- Wrenn and Six
 - Wrenn's Resolve
 - Wretched Anurid
 - Wretched Doll
+- Wretched Throng
 - Wriggling Grub
 - Wring Flesh
+- Writhing Necromass
 - Wu Admiral
 - Wu Elite Cavalry
 - Wu Infantry
 - Wu Light Cavalry
+- Wu Scout
 - Wurm
 - Wurm
 - Wurm
@@ -10260,19 +14272,26 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Wyluli Wolf
 - Xander's Lounge
 - Xathrid Necromancer
+- Xenograft
 - Xira Arien
+- Xorn
 - Yahenni's Expertise
 - Yahenni, Undying Partisan
 - Yargle and Multani
 - Yargle, Glutton of Urborg
 - Yarok's Wavecrasher
+- Yarok, the Desecrated
+- Yasmin Khan
 - Yathan Roadwatcher
+- Yathan Tombguard
 - Yavimaya Ancients
 - Yavimaya Ants
 - Yavimaya Barbarian
 - Yavimaya Coast
+- Yavimaya Dryad
 - Yavimaya Elder
 - Yavimaya Enchantress
+- Yavimaya Gnats
 - Yavimaya Hollow
 - Yavimaya Sapherd
 - Yavimaya Scion
@@ -10286,38 +14305,63 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Yellow Scarves Cavalry
 - Yellow Scarves General
 - Yellow Scarves Troops
+- Yellowjacket, Heartless Marauder
+- Yenna, Redtooth Regent
 - Yeva's Forcemage
 - Yew Spirit
 - Yoked Ox
 - Yoked Plowbeast
 - Yomiji, Who Bars the Way
+- Yoshimaru, Ever Faithful
 - Yotian Dissident
+- Yotian Frontliner
 - Yotian Medic
 - Yotian Soldier
 - Yotian Tactician
+- You Come to the Gnoll Camp
+- You Find the Villains' Lair
+- You Happen On a Glade
+- You Hear Something on Watch
+- You See a Guard Approach
+- You See a Pair of Goblins
+- You're Ambushed on the Road
+- You're Confronted by Robbers
 - Young Blue Dragon // Sand Augury
+- Young Necromancer
 - Young Pyromancer
 - Young Red Dragon // Bathe in Gold
 - Young Wei Recruits
 - Young Wolf
+- Your Temple Is Under Attack
 - Youthful Knight
 - Youthful Scholar
 - Youthful Valkyrie
 - Yuki-Onna
+- Yuma, Proud Protector
+- Yuna's Decision
 - Yuyan Archers
+- Zabu
 - Zacama, Primal Calamity
 - Zagoth Crystal
 - Zagoth Mamba
 - Zagoth Triome
+- Zahur, Glory's Past
+- Zanikev Locust
 - Zap
+- Zarda, the Power Princess
 - Zarichi Tiger
 - Zealot of the God-Pharaoh
 - Zealous Conscripts
 - Zealous Guardian
 - Zealous Lorecaster
+- Zealous Persecution
 - Zealous Strike
 - Zell Dincht
+- Zendikar Farguide
+- Zendikar Incarnate
+- Zendikar Resurgent
 - Zendikar's Roil
+- Zenith Chronicler
 - Zenith Flare
 - Zenith Seeker
 - Zephid
@@ -10332,15 +14376,34 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Zephyrim
 - Zeriam, Golden Wind
 - Zetalpa, Primal Dawn
+- Zhalfirin Commander
+- Zhalfirin Knight
 - Zhalfirin Lancer
+- Zhalfirin Shapecraft
 - Zhalfirin Void
 - Zhang Fei, Fierce Warrior
 - Zhao Zilong, Tiger General
 - Zhao, the Seething Flame
+- Zhentarim Bandit
+- Zhur-Taa Druid
+- Zhur-Taa Goblin
+- Zhur-Taa Swine
 - Ziatora's Proving Ground
+- Zodiac Dog
+- Zodiac Goat
+- Zodiac Horse
+- Zodiac Monkey
+- Zodiac Ox
+- Zodiac Pig
+- Zodiac Rabbit
+- Zodiac Rat
+- Zodiac Rooster
+- Zodiac Snake
+- Zodiac Tiger
 - Zoetic Cavern
 - Zof Consumption // Zof Bloodbog
 - Zof Shade
+- Zog, Triceraton Castaway
 - Zombie
 - Zombie
 - Zombie
@@ -10349,6 +14412,7 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Zombie
 - Zombie
 - Zombie // Zombie
+- Zombie Apocalypse
 - Zombie Army
 - Zombie Berserker
 - Zombie Druid
@@ -10366,6 +14430,7 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Zombify
 - Zoo Escapees
 - Zookeeper Mechan
+- Zopandrel, Hunger Dominus
 - Zuberi, Golden Feather
 - Zuko's Exile
 - Zuko's Offense
@@ -10375,3 +14440,4 @@ Council4 currently supports **10,373 of 31,838 cards eligible for paper support 
 - Zuran Enchanter
 - Zuran Orb
 - Zuran Spellcaster
+- Zuri, Warrior of Wakanda
