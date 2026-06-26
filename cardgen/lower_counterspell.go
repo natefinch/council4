@@ -526,6 +526,22 @@ func lowerChooseNewTargetsSpell(ctx contentCtx) (game.AbilityContent, *shared.Di
 	}.Ability(), nil
 }
 
+// lowerOptionalChooseNewTargets routes a one-effect optional retarget body
+// ("You may change the targets of target instant or sorcery spell.", Goblin
+// Flectomancer) to lowerChooseNewTargetsSpell, which already rides the optional
+// "you may" through the instruction's Optional flag. The optional dispatcher
+// reaches it because hasOptionalResolvingEffect diverts optional bodies away from
+// the mandatory single-effect path. It reports ok=false for any non-retarget
+// body so the optional dispatcher keeps trying other shapes.
+func lowerOptionalChooseNewTargets(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 1 ||
+		ctx.content.Effects[0].Kind != compiler.EffectChooseNewTargets {
+		return game.AbilityContent{}, false
+	}
+	content, diagnostic := lowerChooseNewTargetsSpell(ctx)
+	return content, diagnostic == nil
+}
+
 // lowerChooseCreatureTypeSpell lowers the resolution-time effect "Choose a
 // creature type." to a single Choose primitive that publishes the chosen
 // subtype under game.SpellChosenTypeChoiceKey. Later effects in the same

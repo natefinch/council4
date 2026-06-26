@@ -414,6 +414,9 @@ func lowerOptionalContent(
 	if content, ok := lowerConditionalDestinationPlace(ctx); ok {
 		return content, nil
 	}
+	if content, ok := lowerOptionalChooseNewTargets(ctx); ok {
+		return content, nil
+	}
 	if content, ok := lowerExileForPlay(ctx); ok {
 		return content, nil
 	}
