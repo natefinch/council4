@@ -1078,6 +1078,14 @@ const (
 	// the subject group in EachSourceDamageGroup; lowering deals each member its
 	// own power.
 	DamageRecipientReferenceItself
+	// DamageRecipientReferenceThatCreature marks the triggering event's related
+	// combat permanent as the damage recipient, the "that creature" recipient of
+	// "Whenever this creature blocks or becomes blocked by a creature, ~ deals N
+	// damage to that creature." (Inferno Elemental, Brawl). The "that creature"
+	// reference binds to the event's related permanent
+	// (ReferenceBindingEventRelatedPermanent); lowering resolves it to
+	// EventRelatedPermanentReference, the other creature in the combat.
+	DamageRecipientReferenceThatCreature
 )
 
 // DamageRiderRecipientKind identifies the recipient of a follow-on "... and N

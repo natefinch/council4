@@ -3053,6 +3053,14 @@ const (
 	// Regent: "If the token is an Aura, ..."). At runtime the lowering resolves
 	// this through the linked object the creating effect published.
 	ReferenceBindingCreatedToken
+	// ReferenceBindingEventRelatedPermanent binds the object demonstrative "that
+	// creature" in a combat block trigger body to the triggering event's related
+	// permanent, the other creature in the combat ("Whenever this creature blocks
+	// or becomes blocked by a creature, ~ deals N damage to that creature.",
+	// Inferno Elemental). At runtime EventRelatedPermanentReference() resolves
+	// this through the event's RelatedPermanentID, which the block and
+	// became-blocked events populate with the opposing combatant.
+	ReferenceBindingEventRelatedPermanent
 )
 
 // CompiledReference records a source-spanned reference and its bound referent.

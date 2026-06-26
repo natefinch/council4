@@ -16,6 +16,7 @@ var Cards = []*game.CardDef{
 	KhalniAmbush,
 	KodamaOfTheSouthTree,
 	KolaghanWarmonger,
+	KolaghanAspirant,
 	KrosanDrover,
 	KusariGama,
 }

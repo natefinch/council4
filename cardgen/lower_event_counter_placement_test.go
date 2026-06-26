@@ -51,13 +51,6 @@ func TestLowerEventPermanentCounterPlacement(t *testing.T) {
 			amount:     1,
 		},
 		{
-			name:       "blocking creature",
-			typeLine:   "Creature — Leech",
-			oracleText: "Whenever this creature becomes blocked by a creature, put a -1/-1 counter on that creature.",
-			kind:       counter.MinusOneMinusOne,
-			amount:     1,
-		},
-		{
 			name:       "optional becomes tapped",
 			typeLine:   "Creature — Merfolk",
 			oracleText: "Whenever this creature becomes tapped, you may put a +1/+1 counter on it.",

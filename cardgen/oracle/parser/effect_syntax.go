@@ -4495,6 +4495,15 @@ func damageRecipientReference(effect *EffectSyntax) DamageRecipientReferenceKind
 	if len(recipient) == 2 && equalWord(recipient[0], "that") && equalWord(recipient[1], "player") {
 		return DamageRecipientReferenceThatPlayer
 	}
+	// "deals N damage to that creature" names the triggering event's related
+	// combat permanent, the recipient of "Whenever this creature blocks or
+	// becomes blocked by a creature, ~ deals N damage to that creature."
+	// (Inferno Elemental). The "that creature" reference binds to the event's
+	// related permanent downstream; lowering resolves it accordingly, and the
+	// binding fails closed unless the trigger supplies a related combat permanent.
+	if len(recipient) == 2 && equalWord(recipient[0], "that") && equalWord(recipient[1], "creature") {
+		return DamageRecipientReferenceThatCreature
+	}
 	if len(recipient) < 2 {
 		return DamageRecipientReferenceNone
 	}

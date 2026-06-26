@@ -29,6 +29,7 @@ var Cards = []*game.CardDef{
 	SilundiVision,
 	SkallaWolf,
 	Skeletonize,
+	SkewerSlinger,
 	SkitteringPrecursor,
 	SkycoachConductor,
 	SkylineDespot,
@@ -37,6 +38,7 @@ var Cards = []*game.CardDef{
 	SludgeTitan,
 	SmiteTheDeathless,
 	SolemnRecruit,
+	SomberwaldVigilante,
 	SorayaTheFalconer,
 	SpawnbedProtector,
 	SpawnbinderMage,
@@ -58,4 +60,5 @@ var Cards = []*game.CardDef{
 	SumalaWoodshaper,
 	SunDroplet,
 	SwiftKick,
+	SylvanBasilisk,
 }

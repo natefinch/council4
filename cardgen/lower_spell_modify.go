@@ -928,6 +928,85 @@ func damageReferencesEventPlayer(references []compiler.CompiledReference) bool {
 	return false
 }
 
+// lowerEventRelatedPermanentDamageSpell lowers a "deals N damage to that
+// creature" effect whose recipient is the triggering event's related combat
+// permanent, as in "Whenever this creature blocks or becomes blocked by a
+// creature, this creature deals 3 damage to that creature." (Inferno Elemental).
+// The "that creature" reference binds to the event's related permanent
+// (ReferenceBindingEventRelatedPermanent), the opposing combatant the runtime
+// resolves through EventRelatedPermanentReference. The amount is a fixed value,
+// X, or a resolvable dynamic amount. It emits one Damage instruction with the
+// related-permanent recipient and no target spec, failing closed for any shape
+// outside that template (a recipient that is not the event-bound "that creature",
+// an unresolvable amount, any target, recipient selector, condition, keyword, or
+// mode).
+func lowerEventRelatedPermanentDamageSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported damage spell",
+			"the executable source backend supports only exact fixed, X, or source-power damage to that creature",
+		)
+	}
+	if len(ctx.content.Effects) != 1 ||
+		effect.Kind != compiler.EffectDealDamage ||
+		effect.DamageRecipient.Reference != parser.DamageRecipientReferenceThatCreature ||
+		!effect.Exact ||
+		effect.Negated ||
+		effect.Divided ||
+		len(ctx.content.Targets) != 0 ||
+		len(effect.DamageRecipient.GroupSelectors) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(abilityKeywordsExcludingSelectorPredicates(ctx.content)) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return unsupported()
+	}
+	// The related-permanent recipient ("that creature") contributes its own
+	// reference; exclude it so the damage-source and amount exactness checks see
+	// only the source clause's references (the damage subject and amount referent).
+	sourceReferences := make([]compiler.CompiledReference, 0, len(ctx.content.References))
+	for _, reference := range ctx.content.References {
+		if reference.Kind == compiler.ReferenceThatObject &&
+			reference.Binding == compiler.ReferenceBindingEventRelatedPermanent {
+			continue
+		}
+		sourceReferences = append(sourceReferences, reference)
+	}
+	if !damageReferencesEventRelatedPermanent(ctx.content.References) ||
+		len(sourceReferences) == 0 ||
+		!exactDamageSourceSyntax(sourceReferences[:1]) {
+		return unsupported()
+	}
+	amount, ok := eventPlayerDamageAmount(effect, sourceReferences)
+	if !ok {
+		return unsupported()
+	}
+	damage := game.Damage{
+		Amount:       amount,
+		Recipient:    game.ObjectDamageRecipient(game.EventRelatedPermanentReference()),
+		DamageSource: primaryDamageSource(sourceReferences[:1]),
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{{Primitive: damage}},
+	}.Ability(), nil
+}
+
+// damageReferencesEventRelatedPermanent reports whether the references carry the
+// event-bound "that creature" recipient reference that backs "deals N damage to
+// that creature." The recipient reference is a ReferenceThatObject whose binding
+// resolves to the triggering event's related combat permanent
+// (ReferenceBindingEventRelatedPermanent).
+func damageReferencesEventRelatedPermanent(references []compiler.CompiledReference) bool {
+	for _, reference := range references {
+		if reference.Kind == compiler.ReferenceThatObject &&
+			reference.Binding == compiler.ReferenceBindingEventRelatedPermanent {
+			return true
+		}
+	}
+	return false
+}
+
 // returned spec is discarded (the removal clause already contributes it); the
 // damage Mode only needs a valid, non-empty target spec so the sequence machinery
 // rebases the recipient reference. A spell target yields the stack-spell spec;

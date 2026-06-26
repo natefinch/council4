@@ -37,6 +37,21 @@ func bindReferences(
 			continue
 		}
 
+		// "that creature" in a combat block trigger body names the other creature
+		// in the combat, the event's related permanent ("Whenever this creature
+		// blocks or becomes blocked by a creature, ~ deals N damage to that
+		// creature.", Inferno Elemental). It binds ahead of the event-permanent
+		// fallback so the demonstrative points at the opposing combatant the
+		// runtime resolves through EventRelatedPermanentReference, not the source
+		// permanent the event names as its primary subject.
+		if trigger != nil &&
+			reference.Kind == ReferenceThatObject &&
+			reference.Order.Start >= trigger.Order.Start &&
+			triggerPatternBindsThatCreature(&trigger.Pattern) {
+			reference.Binding = ReferenceBindingEventRelatedPermanent
+			continue
+		}
+
 		if trigger != nil &&
 			(reference.Kind != ReferenceThatPlayer || !triggerPatternBindsThatPlayer(&trigger.Pattern)) &&
 			!thatObjectPrefersEventPermanent(*reference, trigger) &&
@@ -477,4 +492,32 @@ func triggerPatternBindsThatPlayer(pattern *TriggerPattern) bool {
 	}
 	return pattern.Event == TriggerEventDamageDealt &&
 		pattern.DamageRecipient == TriggerDamageRecipientPlayer
+}
+
+// triggerPatternBindsThatCreature reports whether a trigger pattern has an
+// authoritative related-creature subject that the object demonstrative "that
+// creature" binds to. It requires a self-source combat block trigger: "this
+// creature blocks a creature" (blocker-declared), "this creature becomes blocked
+// by a creature" (attacker-became-blocked), or the union of the two. For these
+// the source permanent is the event's primary subject and the opposing
+// combatant is the event's related permanent, so "that creature" in the body
+// names that other creature. It fails closed for a non-self source ("Whenever a
+// creature blocks, ... that creature" names the blocking creature itself, the
+// event permanent) and for every other event, leaving "that creature" to the
+// existing event-permanent and target bindings.
+func triggerPatternBindsThatCreature(pattern *TriggerPattern) bool {
+	if pattern.Source != TriggerSourceSelf {
+		return false
+	}
+	return triggerEventIsCombatBlock(pattern.Event) ||
+		triggerEventIsCombatBlock(pattern.UnionEvent)
+}
+
+// triggerEventIsCombatBlock reports whether a trigger event is one of the two
+// combat block events whose related permanent is the opposing combatant: the
+// blocker-declared event ("blocks a creature") and the attacker-became-blocked
+// event ("becomes blocked by a creature").
+func triggerEventIsCombatBlock(event TriggerEvent) bool {
+	return event == TriggerEventBlockerDeclared ||
+		event == TriggerEventAttackerBecameBlocked
 }
