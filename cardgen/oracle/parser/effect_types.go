@@ -2087,10 +2087,42 @@ type EffectSyntax struct {
 	// until predicate on the match-Reveal's Selection, and the destination on
 	// the Put's ToZone. Lowering reads these typed fields to emit a single
 	// RevealUntil primitive; the marker is false for every other effect.
-	RevealUntilThenPut      bool   `json:",omitempty"`
-	RequiresOrderedLowering bool   `json:",omitempty"`
-	HasUnrecognizedSibling  bool   `json:",omitempty"`
-	UnsupportedDetail       string `json:",omitempty"`
+	RevealUntilThenPut bool `json:",omitempty"`
+	// PileSplitSequence marks each effect of the recognized closed pile-split
+	// sequence "reveal the top N cards of your library[ and separate them into
+	// two piles]. An opponent {separates those cards into|chooses one of} two
+	// piles. Put {one|that} pile into your hand and the other into your
+	// graveyard." (Fact or Fiction, Steam Augury, Sphinx of Uthuun). The parser
+	// keeps the two-effect shape [Reveal, Put] with a zero-effect middle
+	// sentence, sets this marker on both effects, and records the roles,
+	// destination, amount, and middle-sentence span on the Put effect. Lowering
+	// reads these typed fields to emit a single PileSplit primitive; the marker
+	// is false for every other effect.
+	PileSplitSequence bool `json:",omitempty"`
+	// PileSplitSeparatorOpponent reports that an opponent (not the controller)
+	// separates the revealed cards into two piles. It is set only on the Put
+	// effect of a recognized pile-split sequence.
+	PileSplitSeparatorOpponent bool `json:",omitempty"`
+	// PileSplitChooserOpponent reports that an opponent (not the controller)
+	// chooses which pile the controller keeps. It is set only on the Put effect
+	// of a recognized pile-split sequence.
+	PileSplitChooserOpponent bool `json:",omitempty"`
+	// PileSplitOtherZone is the destination of the pile the controller does not
+	// keep (the kept pile always goes to the controller's hand). It is set only
+	// on the Put effect of a recognized pile-split sequence.
+	PileSplitOtherZone zone.Type `json:",omitempty"`
+	// PileSplitAmount is the number of cards revealed at the top of the
+	// controller's library. It is set only on the Put effect of a recognized
+	// pile-split sequence, copied from the Reveal effect's typed amount.
+	PileSplitAmount int `json:",omitempty"`
+	// PileSplitMiddleSpan covers the zero-effect middle sentence ("An opponent
+	// separates those cards into two piles." / "An opponent chooses one of those
+	// piles.") so the lowerer can credit its tokens toward source coverage. It is
+	// set only on the Put effect of a recognized pile-split sequence.
+	PileSplitMiddleSpan     shared.Span `json:"-"`
+	RequiresOrderedLowering bool        `json:",omitempty"`
+	HasUnrecognizedSibling  bool        `json:",omitempty"`
+	UnsupportedDetail       string      `json:",omitempty"`
 	// Order is the effect's dense source-order rank (of Span); VerbOrder is the
 	// rank of VerbSpan. Downstream stages compare these ranks to order effects
 	// and bind references to effect verbs without inspecting byte offsets.

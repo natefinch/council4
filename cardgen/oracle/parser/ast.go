@@ -1075,6 +1075,12 @@ type Sentence struct {
 	// Reference and coverage scans treat its tokens as belonging to that grant
 	// rather than as an unrecognized sibling.
 	PlayFromTopPayLifeRider bool `json:",omitempty"`
+	// PileSplitRider reports that this sentence is the credited zero-effect
+	// middle sentence of a recognized pile-split sequence ("An opponent separates
+	// those cards into two piles." / "An opponent chooses one of those piles.").
+	// Reference and coverage scans treat its tokens as belonging to the folded
+	// pile-split rather than as an unrecognized sibling.
+	PileSplitRider bool `json:",omitempty"`
 }
 
 // StaticRuleSubjectKind identifies the source object constrained by a simple

@@ -17,6 +17,25 @@ func appendConstructRecognizedSpans(spans []shared.Span, a *Ability) []shared.Sp
 	spans = appendLeadingClauseSpans(spans, a.Sentences)
 	spans = appendCoinFlipSpans(spans, a)
 	spans = appendVoteSpans(spans, a)
+	spans = appendPileSplitSpans(spans, a)
+	return spans
+}
+
+// appendPileSplitSpans credits the zero-effect middle sentence of a recognized
+// pile-split sequence ("An opponent separates those cards into two piles." / "An
+// opponent chooses one of those piles."). The recognizer typed the reveal and
+// put effects and recorded the middle sentence's span on the put effect; that
+// sentence produces no effect, so without crediting it the coverage union would
+// leave its tokens uncovered.
+func appendPileSplitSpans(spans []shared.Span, a *Ability) []shared.Span {
+	for i := range a.Sentences {
+		for j := range a.Sentences[i].Effects {
+			effect := &a.Sentences[i].Effects[j]
+			if effect.PileSplitSequence && effect.PileSplitMiddleSpan != (shared.Span{}) {
+				spans = append(spans, effect.PileSplitMiddleSpan)
+			}
+		}
+	}
 	return spans
 }
 
