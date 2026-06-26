@@ -570,6 +570,29 @@ func TestDoubleToughnessIncludesEarlierMinusCounterInLayer7c(t *testing.T) {
 	}
 }
 
+// TestOrderContinuousEffectsLoopMemberAppliesBeforeLaterIndependentEffect covers
+// CR 613.8b together with timestamp order: a loop member's mutual dependency is
+// ignored, so it is applied in timestamp order even relative to an independent
+// effect. A(ts10) and B(ts30) form a loop; C(ts20) is independent. The loop's
+// dependency is ignored, so the order is pure timestamp A, C, B — the early loop
+// member A is not deferred behind the later C.
+func TestOrderContinuousEffectsLoopMemberAppliesBeforeLaterIndependentEffect(t *testing.T) {
+	a := game.ContinuousEffect{ID: 1, Timestamp: 10, DependsOn: []id.ID{2}}
+	c := game.ContinuousEffect{ID: 3, Timestamp: 20}
+	b := game.ContinuousEffect{ID: 2, Timestamp: 30, DependsOn: []id.ID{1}}
+
+	ordered := orderContinuousEffects([]game.ContinuousEffect{a, c, b})
+
+	gotIDs := make([]id.ID, len(ordered))
+	for i := range ordered {
+		gotIDs[i] = ordered[i].ID
+	}
+	want := []id.ID{1, 3, 2}
+	if !slices.Equal(gotIDs, want) {
+		t.Fatalf("ordered effect IDs = %v, want %v (loop member A before later independent C)", gotIDs, want)
+	}
+}
+
 // TestOrderContinuousEffectsAppliesLoopMembersBeforeExternalDependents covers
 // CR 613.8b: when a dependency loop exists, only the effects in the loop ignore
 // their dependencies and are applied in timestamp order; an effect that merely
