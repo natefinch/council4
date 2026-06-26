@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **14,521 of 32,501 cards eligible for paper support (44.7%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **14,541 of 32,501 cards eligible for paper support (44.7%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -235,6 +235,7 @@ Council4 currently supports **14,521 of 32,501 cards eligible for paper support 
 - Akroan Phalanx
 - Akroan Sergeant
 - Akroan Skyguard
+- Akroma's Devoted
 - Akroma's Memorial
 - Akroma's Vengeance
 - Akroma's Will
@@ -345,6 +346,7 @@ Council4 currently supports **14,521 of 32,501 cards eligible for paper support 
 - Anaba Ancestor
 - Anaba Bodyguard
 - Anaba Shaman
+- Anaba Spirit Crafter
 - Anaconda
 - Anarchist
 - Anarchy
@@ -3980,6 +3982,7 @@ Council4 currently supports **14,521 of 32,501 cards eligible for paper support 
 - Eye of Ugin
 - Eyeblight Assassin
 - Eyeblight Cullers
+- Eyeblight Massacre
 - Eyes of the Beholder
 - Eyes of the Watcher
 - Eyes of the Wisent
@@ -4785,7 +4788,9 @@ Council4 currently supports **14,521 of 32,501 cards eligible for paper support 
 - Geistblast
 - Geistcatcher's Rig
 - Geistflame
+- Gempalm Avenger
 - Gempalm Incinerator
+- Gempalm Strider
 - Gemrazer
 - Gemstone Array
 - Gene Pollinator
@@ -5103,6 +5108,7 @@ Council4 currently supports **14,521 of 32,501 cards eligible for paper support 
 - Goblin Hero
 - Goblin Instigator
 - Goblin Lackey
+- Goblin Lookout
 - Goblin Lore
 - Goblin Masons
 - Goblin Matron
@@ -5114,6 +5120,7 @@ Council4 currently supports **14,521 of 32,501 cards eligible for paper support 
 - Goblin Outlander
 - Goblin Picker
 - Goblin Piker
+- Goblin Pyromancer
 - Goblin Raider
 - Goblin Rally
 - Goblin Replica
@@ -5545,6 +5552,7 @@ Council4 currently supports **14,521 of 32,501 cards eligible for paper support 
 - Hardened-Scale Armor
 - Harmattan Efreet
 - Harmonic Prodigy
+- Harmonious Archon
 - Harmonious Grovestrider
 - Harmonize
 - Harmonized Crescendo
@@ -6208,6 +6216,7 @@ Council4 currently supports **14,521 of 32,501 cards eligible for paper support 
 - Inkshape Demonstrator
 - Inkwell Leviathan
 - Inner Calm, Outer Strength
+- Inner Demon
 - Inner Demons Gangsters
 - Inner Struggle
 - Inner-Chamber Guard
@@ -6766,6 +6775,7 @@ Council4 currently supports **14,521 of 32,501 cards eligible for paper support 
 - Kobolds of Kher Keep
 - Kobolds of Kher Keep
 - Kodama of the North Tree
+- Kodama of the South Tree
 - Kodama of the West Tree
 - Kodama's Reach
 - Koilos Roc
@@ -7871,6 +7881,7 @@ Council4 currently supports **14,521 of 32,501 cards eligible for paper support 
 - Moat Piranhas
 - Mob
 - Mob Justice
+- Mobilization
 - Mobilize
 - Mocking Sprite
 - Mockingbird, Ace Agent
@@ -7957,6 +7968,7 @@ Council4 currently supports **14,521 of 32,501 cards eligible for paper support 
 - Moonshaker Cavalry
 - Moonsilver Spear
 - Moonsnare Specialist
+- Moonveil Dragon
 - Moonwing Moth
 - Moor Fiend
 - Moorish Cavalry
@@ -8235,6 +8247,7 @@ Council4 currently supports **14,521 of 32,501 cards eligible for paper support 
 - Neighborhood Guardian
 - Nekusar, the Mindrazer
 - Nema Siltlurker
+- Nemata, Grove Guardian
 - Nemesis Mask
 - Nemesis of Reason
 - Nephalia Drownyard
@@ -8413,6 +8426,7 @@ Council4 currently supports **14,521 of 32,501 cards eligible for paper support 
 - Noxious Dragon
 - Noxious Field
 - Noxious Gearhulk
+- Noxious Ghoul
 - Noxious Groodion
 - Noxious Hatchling
 - Noxious Newt
@@ -8622,6 +8636,7 @@ Council4 currently supports **14,521 of 32,501 cards eligible for paper support 
 - Orazca Raptor
 - Orb of Dreams
 - Orc Army
+- Orc General
 - Orc Sureshot
 - Orchard Strider
 - Orcish Artillery
@@ -8891,6 +8906,7 @@ Council4 currently supports **14,521 of 32,501 cards eligible for paper support 
 - Petrified Field
 - Pewter Golem
 - Phalanx Leader
+- Phalanx Tactics
 - Phalanx Vanguard
 - Phantasmal Abomination
 - Phantasmal Bear
@@ -8941,6 +8957,7 @@ Council4 currently supports **14,521 of 32,501 cards eligible for paper support 
 - Phyrexian Denouncer
 - Phyrexian Digester
 - Phyrexian Dragon Engine
+- Phyrexian Driver
 - Phyrexian Espionage
 - Phyrexian Gargantua
 - Phyrexian Germ
@@ -11446,6 +11463,7 @@ Council4 currently supports **14,521 of 32,501 cards eligible for paper support 
 - Soratami Mirror-Guard
 - Soratami Mirror-Mage
 - Soratami Rainshaper
+- Soraya the Falconer
 - Sorcerer of the Fang
 - Sorcerer's Broom
 - Sorcerous Sight
@@ -11778,6 +11796,7 @@ Council4 currently supports **14,521 of 32,501 cards eligible for paper support 
 - Squirrel Nest
 - Squirrel Sanctuary
 - Squirrel Sovereign
+- Squirrel Wrangler
 - Squirrelanoids
 - Sram's Expertise
 - Sram, Senior Edificer
@@ -14464,6 +14483,7 @@ Council4 currently supports **14,521 of 32,501 cards eligible for paper support 
 - Zhalfirin Shapecraft
 - Zhalfirin Void
 - Zhang Fei, Fierce Warrior
+- Zhang He, Wei General
 - Zhao Zilong, Tiger General
 - Zhao, the Seething Flame
 - Zhentarim Bandit

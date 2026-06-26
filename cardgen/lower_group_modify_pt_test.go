@@ -138,6 +138,87 @@ func TestLowerGroupModifyPTControlledCreatureSubtype(t *testing.T) {
 	}
 }
 
+func TestLowerGroupModifyPTBattlefieldCreatureSubtype(t *testing.T) {
+	t.Parallel()
+	// "Goblin creatures get ..." names every Goblin on the battlefield, the
+	// unprefixed sibling of "All Goblin creatures get ...".
+	effect := groupModifyPTContinuous(t, "Goblin creatures get +1/+1 until end of turn.")
+	if effect.PowerDelta != 1 || effect.ToughnessDelta != 1 {
+		t.Fatalf("delta = %d/%d, want +1/+1", effect.PowerDelta, effect.ToughnessDelta)
+	}
+	selection := effect.Group.Selection()
+	if effect.Group.Domain() != game.GroupDomainBattlefield ||
+		selection.Controller != game.ControllerAny ||
+		len(selection.SubtypesAny) != 1 ||
+		selection.SubtypesAny[0] != types.Goblin {
+		t.Fatalf("selection = %+v, want every Goblin on the battlefield", selection)
+	}
+	if _, excludes := effect.Group.Exclusion(); excludes {
+		t.Fatal("battlefield Goblins must not exclude the source")
+	}
+}
+
+func TestLowerGroupModifyPTBattlefieldNonSubtype(t *testing.T) {
+	t.Parallel()
+	// "Non-Elf creatures get ..." names every creature on the battlefield that
+	// does not carry the Elf subtype.
+	effect := groupModifyPTContinuous(t, "Non-Elf creatures get -2/-2 until end of turn.")
+	if effect.PowerDelta != -2 || effect.ToughnessDelta != -2 {
+		t.Fatalf("delta = %d/%d, want -2/-2", effect.PowerDelta, effect.ToughnessDelta)
+	}
+	selection := effect.Group.Selection()
+	if effect.Group.Domain() != game.GroupDomainBattlefield ||
+		selection.Controller != game.ControllerAny ||
+		len(selection.RequiredTypes) != 1 ||
+		selection.RequiredTypes[0] != types.Creature ||
+		selection.ExcludedSubtype != types.Elf {
+		t.Fatalf("selection = %+v, want every non-Elf creature on the battlefield", selection)
+	}
+	if _, excludes := effect.Group.Exclusion(); excludes {
+		t.Fatal("non-Elf creatures must not exclude the source")
+	}
+}
+
+func TestLowerGroupModifyPTEachControlledCreature(t *testing.T) {
+	t.Parallel()
+	// "Each creature you control gets ..." is the singular distributive wording
+	// for the same group as "Creatures you control get ...".
+	effect := groupModifyPTContinuous(t, "Each creature you control gets +1/+0 until end of turn.")
+	if effect.PowerDelta != 1 || effect.ToughnessDelta != 0 {
+		t.Fatalf("delta = %d/%d, want +1/+0", effect.PowerDelta, effect.ToughnessDelta)
+	}
+	selection := effect.Group.Selection()
+	if selection.Controller != game.ControllerYou ||
+		len(selection.RequiredTypes) != 1 ||
+		selection.RequiredTypes[0] != types.Creature {
+		t.Fatalf("selection = %+v, want creatures you control", selection)
+	}
+	if _, excludes := effect.Group.Exclusion(); excludes {
+		t.Fatal("each creature you control must not exclude the source")
+	}
+}
+
+func TestLowerGroupModifyPTEachOtherControlledCreature(t *testing.T) {
+	t.Parallel()
+	// "Each other creature you control gets ..." is the singular distributive
+	// wording for the same source-excluding group as "Other creatures you
+	// control get ...".
+	effect := groupModifyPTContinuous(t, "Each other creature you control gets +1/+0 until end of turn.")
+	if effect.PowerDelta != 1 || effect.ToughnessDelta != 0 {
+		t.Fatalf("delta = %d/%d, want +1/+0", effect.PowerDelta, effect.ToughnessDelta)
+	}
+	selection := effect.Group.Selection()
+	if selection.Controller != game.ControllerYou ||
+		len(selection.RequiredTypes) != 1 ||
+		selection.RequiredTypes[0] != types.Creature {
+		t.Fatalf("selection = %+v, want creatures you control", selection)
+	}
+	exclude, excludes := effect.Group.Exclusion()
+	if !excludes || exclude != game.SourcePermanentReference() {
+		t.Fatalf("exclusion = %v/%v, want source permanent excluded", exclude, excludes)
+	}
+}
+
 func TestLowerGroupModifyPTAttackingCreatures(t *testing.T) {
 	t.Parallel()
 	effect := groupModifyPTContinuous(t, "Attacking creatures get +2/+0 until end of turn.")

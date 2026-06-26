@@ -8,8 +8,10 @@ import "github.com/natefinch/council4/mtg/game"
 var Cards = []*game.CardDef{
 	AbyssalNightstalker,
 	AirdropAeronauts,
+	AkromaSDevoted,
 	AllIsDust,
 	AlleyGrifters,
+	AnabaSpiritCrafter,
 	AngelicSellSword,
 	Anger,
 	AnkhOfMishra,

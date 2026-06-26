@@ -8,6 +8,7 @@ import "github.com/natefinch/council4/mtg/game"
 var Cards = []*game.CardDef{
 	HalanaAndAlenaPartners,
 	HarmonicProdigy,
+	HarmoniousArchon,
 	HauntedRidge,
 	HazoretGodseeker,
 	HeatOfBattle,

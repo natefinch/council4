@@ -1585,6 +1585,30 @@ func resolvingStaticSubjectGroup(effect *compiler.CompiledEffect) (game.GroupRef
 			selection.SubtypesAny = []types.Sub{effect.StaticSubjectSub()}
 		}
 		return game.BattlefieldGroupExcluding(selection, game.SourcePermanentReference()), true
+	case compiler.StaticSubjectAllCreatureSubtype:
+		if !effect.StaticSubjectSubKnown() {
+			return game.GroupReference{}, false
+		}
+		battlefield := game.Selection{}
+		if effect.StaticSubjectSubExcluded() {
+			battlefield.RequiredTypes = []types.Card{types.Creature}
+			battlefield.ExcludedSubtype = effect.StaticSubjectSub()
+		} else {
+			battlefield.SubtypesAny = []types.Sub{effect.StaticSubjectSub()}
+		}
+		return game.BattlefieldGroup(battlefield), true
+	case compiler.StaticSubjectOtherCreatureSubtype:
+		if !effect.StaticSubjectSubKnown() {
+			return game.GroupReference{}, false
+		}
+		battlefield := game.Selection{}
+		if effect.StaticSubjectSubExcluded() {
+			battlefield.RequiredTypes = []types.Card{types.Creature}
+			battlefield.ExcludedSubtype = effect.StaticSubjectSub()
+		} else {
+			battlefield.SubtypesAny = []types.Sub{effect.StaticSubjectSub()}
+		}
+		return game.BattlefieldGroupExcluding(battlefield, game.SourcePermanentReference()), true
 	default:
 		return game.GroupReference{}, false
 	}

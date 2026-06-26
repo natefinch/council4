@@ -23,6 +23,8 @@ var Cards = []*game.CardDef{
 	Mindcrank,
 	MindeyeDrake,
 	MindstabThrull,
+	Mobilization,
+	MoonveilDragon,
 	MorbidOpportunist,
 	MortalObstinacy,
 	MossfireValley,
