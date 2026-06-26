@@ -112,6 +112,77 @@ func TestParseChangeTargetRetarget(t *testing.T) {
 	}
 }
 
+// TestParseChangeTargetRetargetGeneralizedForms verifies the redirect recognizer
+// covers its full grammatical domain: an activated-ability selection (Reroute),
+// an optional leading "You may" that rides the effect's Optional flag and a
+// no-qualifier form without the trailing "with a single target" (Goblin
+// Flectomancer). It also confirms the redirect-to-a-named-object form
+// ("... to this creature", Muck Drubb) fails closed instead of producing a
+// spurious EffectChooseNewTargets.
+func TestParseChangeTargetRetargetGeneralizedForms(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name         string
+		source       string
+		wantKind     SelectionKind
+		wantOptional bool
+	}{
+		{
+			name:     "activated ability with qualifier",
+			source:   "Change the target of target activated ability with a single target.",
+			wantKind: SelectionActivatedAbility,
+		},
+		{
+			name:         "optional no qualifier spell",
+			source:       "You may change the targets of target instant or sorcery spell.",
+			wantKind:     SelectionSpell,
+			wantOptional: true,
+		},
+	}
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(test.source, Context{InstantOrSorcery: true})
+			if len(diagnostics) != 0 {
+				t.Fatalf("Parse(%q) diagnostics = %#v", test.source, diagnostics)
+			}
+			sentences := document.Abilities[0].Sentences
+			if len(sentences) != 1 || len(sentences[0].Effects) != 1 {
+				t.Fatalf("Parse(%q) shape = %#v", test.source, sentences)
+			}
+			effect := sentences[0].Effects[0]
+			if effect.Kind != EffectChooseNewTargets || !effect.Exact {
+				t.Fatalf("Parse(%q) effect = %#v", test.source, effect)
+			}
+			if effect.Optional != test.wantOptional {
+				t.Fatalf("Parse(%q) optional = %v, want %v", test.source, effect.Optional, test.wantOptional)
+			}
+			if len(effect.Targets) != 1 || effect.Targets[0].Selection.Kind != test.wantKind {
+				t.Fatalf("Parse(%q) effect targets = %#v, want kind %v", test.source, effect.Targets, test.wantKind)
+			}
+		})
+	}
+}
+
+// TestParseChangeTargetRedirectToObjectRejected verifies the redirect-to-a-named
+// object wording ("... to this creature", Muck Drubb) is not recognized as a
+// free retarget, so it fails closed rather than lowering as EffectChooseNewTargets.
+func TestParseChangeTargetRedirectToObjectRejected(t *testing.T) {
+	t.Parallel()
+	source := "Change the target of target spell that targets only a single creature to this creature."
+	document, diagnostics := Parse(source, Context{InstantOrSorcery: true})
+	if len(diagnostics) != 0 {
+		t.Fatalf("Parse(%q) diagnostics = %#v", source, diagnostics)
+	}
+	for _, sentence := range document.Abilities[0].Sentences {
+		for _, effect := range sentence.Effects {
+			if effect.Kind == EffectChooseNewTargets {
+				t.Fatalf("Parse(%q) wrongly recognized redirect-to-object as EffectChooseNewTargets", source)
+			}
+		}
+	}
+}
+
 // TestParseCopyTokenOneOfThem verifies the "create a token that's a copy of one
 // of them." copy source (Twilight Diviner) is recognized as an exact
 // copy-of-triggering-set create whose "them" pronoun names the triggering set.

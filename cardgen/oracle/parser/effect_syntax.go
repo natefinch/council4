@@ -3767,22 +3767,25 @@ func reconcileRetargetSentenceTargets(sentence *Sentence) {
 	sentence.Targets = append([]TargetSyntax(nil), sentence.Effects[0].Targets...)
 }
 
-// parseChangeTargetRetargetEffect recognizes the redirect wording "Change the
-// target[s] of target spell with a single target." (Deflection, Swerve,
-// Misdirection, Imp's Mischief) and lowers it through the same
-// EffectChooseNewTargets primitive that powers "You may choose new targets for
-// target spell." (Redirect). The generic effect parser cannot handle this
-// sentence because parseTargets manufactures a spurious target for every
-// "target" noun ("the target of", "a single target") and blanks the real spell
-// selection, so this dedicated recognizer extracts the single clean target
-// selection itself. The selection between the fixed "Change the target[s] of"
-// lead-in and the trailing "with a single target" qualifier may be either
-// "target spell" or "target spell or ability" (Bolt Bend, Redirect Lightning),
-// both of which the EffectChooseNewTargets lowering retargets. The "with a
-// single target" qualifier is not modeled at resolution, so the lowered effect
-// retargets any one targeted spell or ability, which is broader than the printed
-// restriction but safe for this family. Any other wording fails closed and flows
-// through the generic effect parser.
+// parseChangeTargetRetargetEffect recognizes the redirect wording "[You may]
+// Change the target[s] of <selection>[ with a single target]." (Deflection,
+// Swerve, Misdirection, Imp's Mischief, Bolt Bend, Reroute, Goblin Flectomancer)
+// and lowers it through the same EffectChooseNewTargets primitive that powers
+// "You may choose new targets for target spell." (Redirect). The generic effect
+// parser cannot handle this sentence because parseTargets manufactures a spurious
+// target for every "target" noun ("the target of", "a single target") and blanks
+// the real spell selection, so this dedicated recognizer extracts the single
+// clean target selection itself. An optional leading "You may" rides on the
+// effect's Optional flag (Goblin Flectomancer's "You may change the targets of
+// target instant or sorcery spell"). The selection that follows the fixed
+// "Change the target[s] of" lead-in may be a spell, an activated/triggered
+// ability, or a mixed spell-or-ability (retargetSelectionKind), each of which the
+// EffectChooseNewTargets lowering retargets. The optional trailing "with a single
+// target" qualifier is not modeled at resolution, so the lowered effect retargets
+// any one targeted object of the selection, which is broader than the printed
+// restriction but safe for this family. A "to <object>" redirect-to-a-named
+// object (Muck Drubb) is rejected so it stays unsupported, and any other wording
+// fails closed through the generic effect parser.
 func parseChangeTargetRetargetEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
 	words := make([]shared.Token, 0, len(tokens))
 	origin := make([]int, 0, len(tokens))
@@ -3793,68 +3796,90 @@ func parseChangeTargetRetargetEffect(sentence Sentence, tokens []shared.Token, a
 		words = append(words, token)
 		origin = append(origin, index)
 	}
-	// The fixed lead-in is four words ("change the target[s] of"), the trailing
-	// qualifier is four words ("with a single target[s]"), and at least two words
-	// of selection ("target spell") sit between them.
-	if len(words) < 10 {
+	// An optional leading "you may" makes the retarget optional (Goblin
+	// Flectomancer); it is stripped before the fixed lead-in is matched.
+	optional := false
+	lead := 0
+	if len(words) >= 2 && equalWord(words[0], "you") && equalWord(words[1], "may") {
+		optional = true
+		lead = 2
+	}
+	// The fixed lead-in is four words ("change the target[s] of") and at least two
+	// words of selection ("target spell") must follow it.
+	if len(words)-lead < 6 {
 		return nil, false
 	}
-	end := len(words)
-	lead := []struct {
-		index int
-		want  string
-	}{{0, "change"}, {1, "the"}, {3, "of"}}
-	for _, check := range lead {
-		if !equalWord(words[check.index], check.want) {
+	if !equalWord(words[lead], "change") || !equalWord(words[lead+1], "the") ||
+		!equalWord(words[lead+3], "of") {
+		return nil, false
+	}
+	if !equalWord(words[lead+2], "target") && !equalWord(words[lead+2], "targets") {
+		return nil, false
+	}
+	selStart := lead + 4
+	selEnd := len(words)
+	// An optional trailing "with a single target[s]" qualifier ends the selection
+	// four words early. Without it the selection runs to the final word.
+	if equalWord(words[selEnd-4], "with") && equalWord(words[selEnd-3], "a") &&
+		equalWord(words[selEnd-2], "single") &&
+		(equalWord(words[selEnd-1], "target") || equalWord(words[selEnd-1], "targets")) {
+		selEnd -= 4
+	}
+	if selEnd-selStart < 2 {
+		return nil, false
+	}
+	// A trailing "to <object>" redirects to a specific named object rather than
+	// freely re-choosing targets, which EffectChooseNewTargets does not model, so
+	// reject any "to" inside the selection span.
+	for i := selStart; i < selEnd; i++ {
+		if equalWord(words[i], "to") {
 			return nil, false
 		}
 	}
-	if !equalWord(words[2], "target") && !equalWord(words[2], "targets") {
-		return nil, false
-	}
-	tail := []struct {
-		offset int
-		want   string
-	}{{4, "with"}, {3, "a"}, {2, "single"}}
-	for _, check := range tail {
-		if !equalWord(words[end-check.offset], check.want) {
+	// The selection words must be contiguous in the original tokens (no
+	// intervening period) so the slice is exactly the selection phrase.
+	for i := selStart; i < selEnd; i++ {
+		if origin[i] != origin[selStart]+(i-selStart) {
 			return nil, false
 		}
 	}
-	if !equalWord(words[end-1], "target") && !equalWord(words[end-1], "targets") {
-		return nil, false
-	}
-	// Parse the real target selection from the original token stream so the
-	// target carries a correct selection and span; the surrounding "the target
-	// of … a single target" nouns are discarded by the recognizer. The selection
-	// words span words[4 : end-4] and must be contiguous in the original tokens
-	// (no intervening period) so the slice is exactly the selection phrase.
-	selEnd := end - 5
-	if selEnd < 5 {
-		return nil, false
-	}
-	for i := 4; i <= selEnd; i++ {
-		if origin[i] != origin[4]+(i-4) {
-			return nil, false
-		}
-	}
-	spellTargets := parseTargets(tokens[origin[4]:origin[selEnd]+1], atoms)
-	if len(spellTargets) != 1 ||
-		(spellTargets[0].Selection.Kind != SelectionSpell &&
-			spellTargets[0].Selection.Kind != SelectionSpellActivatedOrTriggeredAbility) {
+	spellTargets := parseTargets(tokens[origin[selStart]:origin[selEnd-1]+1], atoms)
+	if len(spellTargets) != 1 || !retargetSelectionKind(spellTargets[0].Selection.Kind) {
 		return nil, false
 	}
 	return []EffectSyntax{{
 		Kind:       EffectChooseNewTargets,
 		Span:       sentence.Span,
 		ClauseSpan: sentence.Span,
-		VerbSpan:   words[0].Span,
+		VerbSpan:   words[lead].Span,
 		Text:       sentence.Text,
 		Tokens:     append([]shared.Token(nil), tokens...),
 		Context:    EffectContextController,
 		Targets:    spellTargets,
+		Optional:   optional,
 		Exact:      true,
 	}}, true
+}
+
+// retargetSelectionKind reports whether a selection between the "Change the
+// target[s] of" lead-in and the "with a single target" tail names a stack object
+// the EffectChooseNewTargets lowering can retarget. It admits the spell and
+// spell-or-ability forms (Deflection, Bolt Bend) plus the activated/triggered
+// ability forms (Reroute targets an activated ability), all of which the
+// downstream counterTargetSpec resolver already accepts. Any other selection
+// fails closed through the generic effect parser.
+func retargetSelectionKind(kind SelectionKind) bool {
+	switch kind {
+	case SelectionSpell,
+		SelectionActivatedAbility,
+		SelectionTriggeredAbility,
+		SelectionActivatedOrTriggeredAbility,
+		SelectionSpellActivatedOrTriggeredAbility,
+		SelectionTriggeredAbilityOrSpell:
+		return true
+	default:
+		return false
+	}
 }
 
 // spellsCantBeCounteredTail accepts the two interchangeable orderings of the
