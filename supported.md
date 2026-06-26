@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **14,782 of 32,501 cards eligible for paper support (45.5%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **14,788 of 32,501 cards eligible for paper support (45.5%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -3064,6 +3064,7 @@ Council4 currently supports **14,782 of 32,501 cards eligible for paper support 
 - Desperate Lunge
 - Desperate Ravings
 - Desperate Sentry
+- Despise
 - Despoil
 - Despondency
 - Destroy Evil
@@ -3227,6 +3228,7 @@ Council4 currently supports **14,782 of 32,501 cards eligible for paper support 
 - Divebomber Griffin
 - Diversion Specialist
 - Diversionary Tactics
+- Divest
 - Divination
 - Divine Arrow
 - Divine Favor
@@ -3827,6 +3829,7 @@ Council4 currently supports **14,782 of 32,501 cards eligible for paper support 
 - Enchantress's Presence
 - Enclave Cryptologist
 - Enclave Elite
+- Encroach
 - Encroaching Dragonstorm
 - Encroaching Mycosynth
 - Encroaching Wastes
@@ -7077,6 +7080,7 @@ Council4 currently supports **14,782 of 32,501 cards eligible for paper support 
 - Law-Rune Enforcer
 - Lawbringer
 - Lawless Broker
+- Lay Bare the Heart
 - Lay Claim
 - Lay of the Land
 - Lay Waste
@@ -8837,6 +8841,7 @@ Council4 currently supports **14,782 of 32,501 cards eligible for paper support 
 - Oscorp Research Team
 - Ossuary Rats
 - Ostiary Thrull
+- Ostracize
 - Otawara, Soaring City
 - Otepec Huntmaster
 - Otherworldly Gaze
@@ -11001,6 +11006,7 @@ Council4 currently supports **14,782 of 32,501 cards eligible for paper support 
 - Shattered Acolyte
 - Shattered Angel
 - Shattered Crypt
+- Shattered Dreams
 - Shattered Landscape
 - Shattered Perception
 - Shattered Sanctum
