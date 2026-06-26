@@ -148,7 +148,8 @@ func (e *Engine) runBeginningPhase(g *game.Game, agents [game.NumPlayers]PlayerA
 		return
 	}
 
-	if !consumeSkipStep(g, g.Turn.ActivePlayer, game.StepDraw) {
+	if !playerSkipsDrawStep(g, g.Turn.ActivePlayer) &&
+		!consumeSkipStep(g, g.Turn.ActivePlayer, game.StepDraw) {
 		g.Turn.Step = game.StepDraw
 		emitBeginningOfStepEvent(g, game.StepDraw)
 		e.drawCardWithReplacements(g, g.Turn.ActivePlayer, agents, log, true)

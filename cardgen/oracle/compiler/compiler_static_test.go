@@ -1004,6 +1004,28 @@ func TestCompileStaticNoMaximumHandSizeDeclaration(t *testing.T) {
 	}
 }
 
+func TestCompileStaticSkipDrawStepDeclaration(t *testing.T) {
+	t.Parallel()
+	source := "Skip your draw step."
+	compilation, diagnostics := compileSource(source, pipelineContext{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	ability := compilation.Abilities[0]
+	if ability.Static == nil || len(ability.Static.Declarations) != 1 {
+		t.Fatalf("static semantics = %#v, want one declaration", ability.Static)
+	}
+	declaration := ability.Static.Declarations[0]
+	if declaration.Kind != StaticDeclarationPlayerRule ||
+		declaration.Player == nil ||
+		declaration.Player.Kind != StaticPlayerRuleSkipDrawStep {
+		t.Fatalf("declaration = %#v, want skip-draw-step player rule", declaration)
+	}
+	if declaration.Continuous != nil || declaration.Rule != nil || declaration.Cost != nil || declaration.CardGrant != nil {
+		t.Fatalf("declaration carries an unexpected payload: %#v", declaration)
+	}
+}
+
 func TestCompileStaticAttackTaxDeclaration(t *testing.T) {
 	t.Parallel()
 	source := "Creatures can't attack you unless their controller pays {2} for each creature they control that's attacking you."

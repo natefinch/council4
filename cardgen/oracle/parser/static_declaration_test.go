@@ -44,6 +44,65 @@ func TestParseStaticNoMaximumHandSizeDeclarationMeaning(t *testing.T) {
 	}
 }
 
+func TestParseStaticSkipDrawStepDeclarationMeaning(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(t, "Skip your draw step.", Context{})
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	declaration := declarations[0]
+	if declaration.Kind != StaticDeclarationPlayerRule {
+		t.Fatalf("kind = %v, want player rule", declaration.Kind)
+	}
+	if declaration.Subject.Kind != StaticDeclarationSubjectController {
+		t.Fatalf("subject = %#v, want controller", declaration.Subject)
+	}
+	if declaration.PlayerRule != StaticDeclarationPlayerRuleSkipDrawStep {
+		t.Fatalf("player rule = %v, want skip draw step", declaration.PlayerRule)
+	}
+	if declaration.Span == (shared.Span{}) || declaration.OperationSpan == (shared.Span{}) {
+		t.Fatalf("spans = declaration %#v operation %#v, want source spans", declaration.Span, declaration.OperationSpan)
+	}
+}
+
+func TestParseStaticSkipDrawStepClearsSentenceEffect(t *testing.T) {
+	t.Parallel()
+	document, diagnostics := Parse("Skip your draw step.", Context{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if len(document.Abilities) != 1 {
+		t.Fatalf("abilities = %#v, want exactly one", document.Abilities)
+	}
+	ability := document.Abilities[0]
+	for i := range ability.Sentences {
+		if len(ability.Sentences[i].Effects) != 0 || ability.Sentences[i].LegacyEffects {
+			t.Fatalf("sentence %d retained effects %#v legacy %v, want recognized static to clear them",
+				i, ability.Sentences[i].Effects, ability.Sentences[i].LegacyEffects)
+		}
+	}
+}
+
+func TestParseStaticSkipDrawStepRejectsVariants(t *testing.T) {
+	t.Parallel()
+	for _, source := range []string{
+		"Skip your untap step.",
+		"Skip your upkeep step.",
+		"Each player skips their draw step.",
+		"Skip your first draw step.",
+	} {
+		document, diagnostics := Parse(source, Context{})
+		if len(diagnostics) != 0 || len(document.Abilities) != 1 {
+			continue
+		}
+		for _, declaration := range document.Abilities[0].StaticDeclarations {
+			if declaration.PlayerRule == StaticDeclarationPlayerRuleSkipDrawStep {
+				t.Fatalf("source %q unexpectedly produced a skip-draw-step declaration", source)
+			}
+		}
+	}
+}
+
 func TestParseStaticCastThisFromExileDeclarationMeaning(t *testing.T) {
 	t.Parallel()
 	declarations := parseStaticDeclarationSyntax(t, "You may cast this card from exile.", Context{})
