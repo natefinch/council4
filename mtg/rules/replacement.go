@@ -108,7 +108,8 @@ func replacementDamageAmount(g *game.Game, event damageEvent) int {
 // prevention effects). CR 616.1 calls for the affected player or controller to
 // choose the order, but prevention shields reduce damage commutatively, so the
 // engine applies them all in a deterministic order; the choice point is still
-// recorded for the turn log.
+// recorded for the turn log. Interleaving prevention with damage replacement
+// effects in one CR 616.1 selection loop is tracked in #1915.
 func orderedPreventionShieldIndices(g *game.Game, event damageEvent) []int {
 	var indices []int
 	var options []string
@@ -1660,10 +1661,11 @@ func replacementSourceIsActive(g *game.Game, replacement *game.ReplacementEffect
 // replacementEventPlayer returns the player who chooses among several applicable
 // replacement effects for an event (CR 616.1): the affected object's controller,
 // or the affected player when there is no controlled object. A permanent leaving
-// the battlefield carries its controller in event.Controller; a card in another
-// zone has only its owner (event.Player).
+// the battlefield and a spell or ability leaving the stack both carry their
+// controller in event.Controller; a card in another zone has only its owner
+// (event.Player).
 func replacementEventPlayer(event game.Event) game.PlayerID {
-	if event.PermanentID != 0 && event.Controller >= 0 && event.Controller < game.NumPlayers {
+	if (event.PermanentID != 0 || event.StackObjectID != 0) && event.Controller >= 0 && event.Controller < game.NumPlayers {
 		return event.Controller
 	}
 	if event.Player >= 0 && event.Player < game.NumPlayers {

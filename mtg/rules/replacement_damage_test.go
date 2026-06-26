@@ -354,6 +354,37 @@ func TestDamageReplacementSelectionHonorsPlayerChoice(t *testing.T) {
 	}
 }
 
+// TestDamageReplacementFallbackRecordedWhenChooserHasNoChoiceAgent covers the
+// UsedFallback metadata: when a choice context is present but the chooser's agent
+// can't answer a CR 616.1 selection (it doesn't implement ChoiceAgent), the engine
+// falls back to the first effect and records the decision as a fallback.
+func TestDamageReplacementFallbackRecordedWhenChooserHasNoChoiceAgent(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addReplacementPermanent(t, g, game.Player1, damageAddendReplacementCardDef())
+	addReplacementPermanent(t, g, game.Player1, damageMultiplierReplacementCardDef())
+	sourceID := addColoredSourceCard(g, game.Player1, color.Red)
+
+	engine := NewEngine(nil)
+	// firstLegalAgent implements ChooseAction but not ChoiceAgent, so the CR 616.1
+	// selection falls back to the first match.
+	agents := [game.NumPlayers]PlayerAgent{game.Player2: firstLegalAgent{}}
+	engine.setReplacementChoiceContext(g, agents, &TurnLog{})
+	defer g.ClearChoiceContext()
+
+	dealt := dealPlayerDamage(g, sourceID, 0, game.Player1, game.Player2, 2, false)
+
+	if dealt != 6 {
+		t.Fatalf("damage dealt = %d, want fallback add-then-double 6", dealt)
+	}
+	if len(g.ReplacementDecisions) != 1 {
+		t.Fatalf("replacement decisions = %d, want 1", len(g.ReplacementDecisions))
+	}
+	decision := g.ReplacementDecisions[0]
+	if !decision.UsedFallback || len(decision.Selected) != 1 || decision.Selected[0] != 0 {
+		t.Fatalf("replacement decision = %+v, want fallback first-effect", decision)
+	}
+}
+
 func TestShieldAndRegenerationReplacementOrderIsRecorded(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	creature := addCombatCreaturePermanentWithPower(g, game.Player1, 2)

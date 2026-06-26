@@ -32,14 +32,14 @@ func replacementChoiceContextFor(g *game.Game) (*replacementChoiceContext, bool)
 }
 
 // chooseReplacement asks the chooser which applicable replacement or prevention
-// effect to apply (CR 616.1), returning the chosen option index. It falls back to
-// the first option when no agent answers.
-func (ctx *replacementChoiceContext) chooseReplacement(g *game.Game, chooser game.PlayerID, options []string) int {
+// effect to apply (CR 616.1), returning the chosen option index and whether the
+// engine fell back to a deterministic default (no agent answered).
+func (ctx *replacementChoiceContext) chooseReplacement(g *game.Game, chooser game.PlayerID, options []string) (int, bool) {
 	reqOptions := make([]game.ChoiceOption, len(options))
 	for i, label := range options {
 		reqOptions[i] = game.ChoiceOption{Index: i, Label: label}
 	}
-	selected := ctx.engine.chooseChoice(g, ctx.agents, game.ChoiceRequest{
+	selected, usedFallback := ctx.engine.chooseChoiceWithFallback(g, ctx.agents, game.ChoiceRequest{
 		Kind:             game.ChoiceReplacement,
 		Player:           chooser,
 		Prompt:           "Choose which replacement or prevention effect to apply.",
@@ -49,9 +49,9 @@ func (ctx *replacementChoiceContext) chooseReplacement(g *game.Game, chooser gam
 		DefaultSelection: []int{0},
 	}, ctx.log)
 	if len(selected) > 0 && selected[0] >= 0 && selected[0] < len(options) {
-		return selected[0]
+		return selected[0], usedFallback
 	}
-	return 0
+	return 0, true
 }
 
 // chooseReplacementDecision selects which of several applicable replacement or
@@ -59,13 +59,12 @@ func (ctx *replacementChoiceContext) chooseReplacement(g *game.Game, chooser gam
 // is in progress and more than one effect applies, it prompts the chooser (the
 // affected object's controller or the affected player); otherwise it falls back
 // to the first option deterministically. The decision is recorded for the turn
-// log either way.
+// log either way, including whether a deterministic fallback was used.
 func chooseReplacementDecision(g *game.Game, chooser game.PlayerID, options []string) game.ReplacementDecision {
 	chosen := 0
 	usedFallback := true
 	if ctx, ok := replacementChoiceContextFor(g); ok && len(options) > 1 {
-		chosen = ctx.chooseReplacement(g, chooser, options)
-		usedFallback = false
+		chosen, usedFallback = ctx.chooseReplacement(g, chooser, options)
 	}
 	decision := game.ReplacementDecision{
 		Player:       chooser,
