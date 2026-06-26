@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **14,459 of 32,501 cards eligible for paper support (44.5%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **14,474 of 32,501 cards eligible for paper support (44.5%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -265,6 +265,7 @@ Council4 currently supports **14,459 of 32,501 cards eligible for paper support 
 - Alhammarret's Archive
 - Ali Baba
 - Aliban's Tower
+- Alien
 - Alien
 - Alien
 - Alien Insect
@@ -3063,6 +3064,7 @@ Council4 currently supports **14,459 of 32,501 cards eligible for paper support 
 - Didn't Say Please
 - Dig Site Inventory
 - Dig Through Time
+- Digsite Engineer
 - Diligent Excavator
 - Dimension X
 - Diminish
@@ -3530,6 +3532,7 @@ Council4 currently supports **14,459 of 32,501 cards eligible for paper support 
 - Ecologist's Terrarium
 - Ecstatic Electromancer
 - Edea, Possessed Sorceress
+- Edgewall Pack
 - Eel-Hounds
 - Eerie Gravestone
 - Eerie Interlude
@@ -3936,6 +3939,7 @@ Council4 currently supports **14,459 of 32,501 cards eligible for paper support 
 - Expendable Troops
 - Experimental Armor
 - Experimental Aviator
+- Experimental Confectioner
 - Exploding Borders
 - Exploration
 - Explore
@@ -5018,6 +5022,7 @@ Council4 currently supports **14,459 of 32,501 cards eligible for paper support 
 - Gnat Alley Creeper
 - Gnathosaur
 - Gnaw to the Bone
+- Gnawing Crescendo
 - Gnawing Vermin
 - Gnawing Zombie
 - Gnome
@@ -5533,6 +5538,7 @@ Council4 currently supports **14,459 of 32,501 cards eligible for paper support 
 - Harmonized Crescendo
 - Harnessed Snubhorn
 - Harpy
+- Harried Spearguard
 - Harrier Griffin
 - Harrier Naga
 - Harrier Strix
@@ -5706,6 +5712,7 @@ Council4 currently supports **14,459 of 32,501 cards eligible for paper support 
 - Hero's Heirloom
 - Hero's Resolve
 - Heroes for Hire
+- Heroes of the Revel
 - Heroes' Bane
 - Heroes' Reunion
 - Heroic Intervention
@@ -7177,6 +7184,7 @@ Council4 currently supports **14,459 of 32,501 cards eligible for paper support 
 - Lord of the Undead
 - Lord of the Unreal
 - Lord of Tresserhorn
+- Lord Skitter, Sewer King
 - Lore Broker
 - Lore Drakkis
 - Lore Weaver
@@ -9531,6 +9539,7 @@ Council4 currently supports **14,459 of 32,501 cards eligible for paper support 
 - Rat
 - Rat
 - Rat
+- Rat
 - Rat King, Pale Piper
 - Rat Rogue
 - Ratcatcher
@@ -10311,6 +10320,7 @@ Council4 currently supports **14,459 of 32,501 cards eligible for paper support 
 - Satyr Hoplite
 - Satyr Nyx-Smith
 - Satyr Rambler
+- Satyr's Cunning
 - Sauroform Hybrid
 - Sauron, the Lidless Eye
 - Savage Conception
@@ -11015,6 +11025,7 @@ Council4 currently supports **14,459 of 32,501 cards eligible for paper support 
 - Simic Signet
 - Simic Sky Swallower
 - Simplify
+- Simulacrum Synthesizer
 - Sinew Dancer
 - Sinew Sliver
 - Singer of Swift Rivers
@@ -12252,6 +12263,7 @@ Council4 currently supports **14,459 of 32,501 cards eligible for paper support 
 - Symbiotic Elf
 - Symbiotic Wurm
 - Symbol of Unsummoning
+- Synapse Necromage
 - Synchronous Sliver
 - Syndic of Tithes
 - Syndicate Enforcer
@@ -12872,6 +12884,7 @@ Council4 currently supports **14,459 of 32,501 cards eligible for paper support 
 - Toski, Bearer of Secrets
 - Totem Speaker
 - Totem-Guide Hartebeest
+- Totentanz, Swarm Piper
 - Toucan-Puffin
 - Touch of Brilliance
 - Touch of Death
@@ -13715,6 +13728,7 @@ Council4 currently supports **14,459 of 32,501 cards eligible for paper support 
 - Voracious Tome-Skimmer
 - Voracious Vampire
 - Voracious Varmint
+- Voracious Vermin
 - Vorapede
 - Vorel of the Hull Clade
 - Vorosh, the Hunter
@@ -13853,6 +13867,7 @@ Council4 currently supports **14,459 of 32,501 cards eligible for paper support 
 - Warden of Geometries
 - Warden of the Woods
 - Wardscale Crocodile
+- Warehouse Tabby
 - Warehouse Thief
 - Warfire Javelineer
 - Wargate
