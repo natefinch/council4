@@ -278,6 +278,9 @@ func lowerContent(
 		if content, ok := lowerDestroyForEachPlayerTokenChainContent(ctx); ok {
 			return content, nil
 		}
+		if content, ok := lowerRemovalVariableTargetsForEachTokenContent(ctx); ok {
+			return content, nil
+		}
 		if content, ok := lowerRetargetThenLoseLifeContent(ctx); ok {
 			return content, nil
 		}

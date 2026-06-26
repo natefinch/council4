@@ -111,6 +111,7 @@ const (
 	PrimitiveReturnLinkedExiledCardsToBattlefield
 	PrimitiveDestroyForEachPlayer
 	PrimitiveCreateTokenForEachDestroyed
+	PrimitiveRemoveTargetsForToken
 	PrimitiveAdapt
 	PrimitiveConnive
 	PrimitivePayRepeatedly
@@ -783,6 +784,24 @@ type DestroyForEachPlayer struct {
 type CreateTokenForEachDestroyed struct {
 	Source    TokenSource
 	LinkedKey LinkedKey
+}
+
+// RemoveTargetsForToken destroys (or, when Exile is set, exiles) every permanent
+// chosen for the spell's single variable-count target spec, remembering each
+// removed permanent under LinkedKey keyed by the source so a paired
+// CreateTokenForEachDestroyed clause mints one token for each under that
+// permanent's last-known controller. It models the variable-target removal-token
+// family "Destroy any number of target creatures. For each creature destroyed
+// this way, its controller creates a <token>." (Descent of the Dragons) and
+// "Exile X target creatures. For each creature exiled this way, its controller
+// creates a <token>." (Curse of the Swine). All chosen targets leave together as
+// one simultaneous event; PreventRegeneration applies to the destroy form.
+// LinkedKey must be set; the removed permanents are otherwise unrecoverable for
+// the token payoff.
+type RemoveTargetsForToken struct {
+	Exile               bool
+	PreventRegeneration bool
+	LinkedKey           LinkedKey
 }
 
 // CastForFree has Player cast one card matching Selection from Zone without

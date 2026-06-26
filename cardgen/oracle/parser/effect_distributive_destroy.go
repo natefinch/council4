@@ -104,6 +104,46 @@ func exactCreateTokenForEachDestroyedThisWayEffectSyntax(effect *EffectSyntax) b
 	return true
 }
 
+// exactCreateTokenForEachExiledThisWayEffectSyntax recognizes the per-controller
+// payoff clause "For each creature exiled this way, its controller creates a
+// <token>." (Curse of the Swine). It mirrors the destroyed-this-way recognizer
+// exactly except for the "exiled" distribution prefix: the "exiled this way" set
+// is the creatures a sibling variable-target exile removed, and each one's
+// controller creates a single token. Any other create shape leaves the clause
+// non-exact so lowering fails closed.
+func exactCreateTokenForEachExiledThisWayEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Kind != EffectCreate || effect.Negated || effect.Optional {
+		return false
+	}
+	if effect.Context != EffectContextReferencedObjectController {
+		return false
+	}
+	if len(effect.Targets) != 0 || !effect.TokenPTKnown {
+		return false
+	}
+	if effect.Amount.DynamicForm != EffectDynamicAmountFormNone ||
+		!effect.Amount.Known || effect.Amount.Value != 1 {
+		return false
+	}
+	specBody, ok := creatureTokenSpecBody(effect)
+	if !ok {
+		return false
+	}
+	if !strings.HasPrefix(strings.ToLower(strings.TrimSpace(fullEffectClauseText(effect))),
+		"for each creature exiled this way, ") {
+		return false
+	}
+	subject := referencedControllerSubject(effect)
+	if subject == "" {
+		return false
+	}
+	if !strings.EqualFold(exactEffectClauseText(effect), subject+" creates "+specBody("a", "token")+".") {
+		return false
+	}
+	effect.CreateTokenForEachExiledThisWay = true
+	return true
+}
+
 // referencedControllerSubject returns the clause subject between the last
 // clause-internal boundary and the verb ("its controller"), the creating player
 // of a referenced-object-controller create. It mirrors how exactEffectClauseText

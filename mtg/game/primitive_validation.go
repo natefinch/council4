@@ -1355,6 +1355,13 @@ func (p CreateTokenForEachDestroyed) validatePrimitive([]TargetSpec, bool) error
 	return nil
 }
 
+func (p RemoveTargetsForToken) validatePrimitive([]TargetSpec, bool) error {
+	if p.LinkedKey == "" {
+		return errors.New("remove targets for token requires a linked key")
+	}
+	return nil
+}
+
 func (p CastForFree) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if p.Zone == zone.None {
 		return errors.New("cast for free requires a source zone")

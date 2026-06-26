@@ -104,6 +104,7 @@ func newPrimitiveRegistry() *primitiveRegistry {
 	registerPrimitiveHandler(reg, handleReturnLinkedExiledCardsToBattlefield)
 	registerPrimitiveHandler(reg, handleDestroyForEachPlayer)
 	registerPrimitiveHandler(reg, handleCreateTokenForEachDestroyed)
+	registerPrimitiveHandler(reg, handleRemoveTargetsForToken)
 	registerPrimitiveHandler(reg, handleCastForFree)
 	registerPrimitiveHandler(reg, handleChooseFromZone)
 	registerPrimitiveHandler(reg, handleMassReturnFromGraveyard)

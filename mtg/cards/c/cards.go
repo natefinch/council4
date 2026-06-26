@@ -22,4 +22,5 @@ var Cards = []*game.CardDef{
 	CosmicHunger,
 	CountlessGearsRenegade,
 	CrystallineCrawler,
+	CurseOfTheSwine,
 }

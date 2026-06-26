@@ -13,7 +13,7 @@ import (
 // guard fails because a primitive was added or removed, review the new
 // primitive in appendPrimitiveAtoms (give it a value atom or confirm neutral)
 // and update this constant.
-const knownPrimitiveCount = 104
+const knownPrimitiveCount = 105
 
 // TestPrimitiveCountIsReconciled keeps a newly added resolution primitive from
 // silently falling through the translator: adding one trips this guard so its

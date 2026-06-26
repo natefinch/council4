@@ -1407,6 +1407,14 @@ type TargetSpec struct {
 	// meaningful only for specs after the first; the default false preserves the
 	// ordinary rule that distinct target specs may otherwise overlap.
 	DistinctFromPriorTargets bool
+
+	// CountEqualsX requires the number of targets chosen for this spec to equal
+	// the spell's chosen X ("Exile X target creatures"). The spec carries a 0..N
+	// range so announcement enumerates every count, and casting is legal only at
+	// the combination whose size matches X, binding the variable cost to the
+	// number of targets. The default false leaves the count governed solely by
+	// MinTargets/MaxTargets.
+	CountEqualsX bool
 }
 
 // TargetChooser identifies who chooses a target slot during announcement.

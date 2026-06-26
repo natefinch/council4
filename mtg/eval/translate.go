@@ -118,6 +118,8 @@ func appendPrimitiveAtoms(atoms []EffectAtom, primitive game.Primitive) []Effect
 		return append(atoms, EffectAtom{Kind: EffectPermanentRemoved, Affected: AffectedTarget})
 	case game.Bounce:
 		return append(atoms, EffectAtom{Kind: EffectPermanentRemoved, Affected: AffectedTarget})
+	case game.RemoveTargetsForToken:
+		return append(atoms, EffectAtom{Kind: EffectPermanentRemoved, Affected: AffectedTarget})
 	case game.Tap:
 		return append(atoms, EffectAtom{Kind: EffectPermanentTapped, Affected: AffectedTarget})
 	case game.AddMana:
