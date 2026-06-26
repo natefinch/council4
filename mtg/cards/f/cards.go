@@ -7,6 +7,7 @@ import "github.com/natefinch/council4/mtg/game"
 // Cards lists all card definitions in this package.
 var Cards = []*game.CardDef{
 	FactOrFiction,
+	FaerieMechanist,
 	FaithUnbroken,
 	FalseMemories,
 	FanaticOfRhonas,
@@ -22,12 +23,15 @@ var Cards = []*game.CardDef{
 	FlameBlessedBolt,
 	FlamespeakerSWill,
 	FlintGolem,
+	FloriferousVinewall,
 	FootMystic,
 	FootbottomFeast,
 	Forest,
 	ForeverYoung,
+	ForgingTheAnchor,
 	FormAPosse,
 	FracturedSanity,
 	FranticSalvage,
 	FrillscareMentor,
+	FrontierSeeker,
 }

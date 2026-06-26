@@ -1196,6 +1196,20 @@ func (r Renderer) renderDigPrimitive(ctx *renderCtx, value game.Dig) (string, er
 	if value.Remainder == game.DigRemainderLibraryBottom {
 		fields = append(fields, "Remainder: game.DigRemainderLibraryBottom,")
 	}
+	if value.Filter.Exists {
+		selection, selErr := r.renderSelection(ctx, value.Filter.Val)
+		if selErr != nil {
+			return "", selErr
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("Filter: opt.Val(%s),", selection))
+	}
+	if value.TakeUpTo {
+		fields = append(fields, "TakeUpTo: true,")
+	}
+	if value.Reveal {
+		fields = append(fields, "Reveal: true,")
+	}
 	return structLit("game.Dig", fields), nil
 }
 

@@ -8,6 +8,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
 
 func millCards(g *game.Game, playerID game.PlayerID, amount int) []id.ID {
@@ -204,11 +205,25 @@ func (e *Engine) surveilCards(g *game.Game, agents [game.NumPlayers]PlayerAgent,
 	})
 }
 
+// digFilter carries the optional typed-reveal parameters of a Dig: an optional
+// Selection restricting which looked-at cards may be taken into hand, whether the
+// take count is an upper bound (the controller may take fewer, including none),
+// and whether each taken card is revealed as it is put into hand. Its zero value
+// reproduces the plain impulse dig: no filter, an exact take, no reveal.
+type digFilter struct {
+	selection opt.V[game.Selection]
+	takeUpTo  bool
+	reveal    bool
+}
+
 // digCards resolves a Dig effect: the player looks at the top look cards of
-// their library, chooses take of them (bounded by the cards actually seen) to
-// put into their hand, and the remaining cards go to the destination identified
-// by remainder (graveyard or the bottom of the library, in seen order).
-func (e *Engine) digCards(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID, look, take int, remainder game.DigRemainder) bool {
+// their library, chooses take of them (bounded by the cards actually seen and,
+// when filter.selection is present, by the cards matching it) to put into their
+// hand, and the remaining cards go to the destination identified by remainder
+// (graveyard or the bottom of the library, in seen order). When filter.takeUpTo
+// is set the controller may take fewer than take cards (down to none); when
+// filter.reveal is set each taken card is revealed as it is put into hand.
+func (e *Engine) digCards(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, obj *game.StackObject, playerID game.PlayerID, look, take int, remainder game.DigRemainder, filter digFilter) bool {
 	player, ok := playerByID(g, playerID)
 	if !ok || look <= 0 {
 		return false
@@ -217,16 +232,33 @@ func (e *Engine) digCards(g *game.Game, agents [game.NumPlayers]PlayerAgent, log
 	if len(seen) == 0 {
 		return false
 	}
-	if take > len(seen) {
-		take = len(seen)
+	eligible := seen
+	if filter.selection.Exists {
+		eligible = make([]id.ID, 0, len(seen))
+		for _, cardID := range seen {
+			card, cardOK := g.GetCardInstance(cardID)
+			if cardOK && cardMatchesSelection(g, obj, card, filter.selection.Val) {
+				eligible = append(eligible, cardID)
+			}
+		}
+	}
+	if take > len(eligible) {
+		take = len(eligible)
+	}
+	minTake := take
+	if filter.takeUpTo {
+		minTake = 0
 	}
 	var taken []id.ID
 	if take > 0 {
-		taken = e.chooseDigCards(g, agents, log, playerID, seen, take)
+		taken = e.chooseDigCards(g, agents, log, playerID, eligible, minTake, take)
 	}
 	for _, cardID := range taken {
 		if !player.Library.Remove(cardID) {
 			continue
+		}
+		if filter.reveal {
+			emitCardRevealEvent(g, obj, playerID, cardID, zone.Library)
 		}
 		player.Hand.Add(cardID)
 		emitZoneChangeEvent(g, game.Event{
@@ -276,15 +308,18 @@ func (e *Engine) digCards(g *game.Game, agents [game.NumPlayers]PlayerAgent, log
 	return true
 }
 
-// chooseDigCards asks the digging player which take of the seen cards to put
-// into their hand. Agents that do not answer fall back to the deterministic
-// first-take selection, preserving prior engine behavior.
-func (e *Engine) chooseDigCards(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID, seen []id.ID, take int) []id.ID {
-	options := make([]game.ChoiceOption, 0, len(seen))
-	defaults := make([]int, 0, take)
-	for i, cardID := range seen {
+// chooseDigCards asks the digging player which of the eligible cards (already
+// filtered to those that may be taken) to put into their hand. minTake and
+// maxTake bound the selection: an exact dig passes minTake == maxTake, while a
+// typed "you may reveal up to N" dig passes minTake 0 so the player may decline.
+// Agents that do not answer fall back to the deterministic first-take selection,
+// preserving prior engine behavior.
+func (e *Engine) chooseDigCards(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID, eligible []id.ID, minTake, maxTake int) []id.ID {
+	options := make([]game.ChoiceOption, 0, len(eligible))
+	defaults := make([]int, 0, minTake)
+	for i, cardID := range eligible {
 		options = append(options, game.ChoiceOption{Index: i, Label: cardChoiceLabel(g, cardID), Card: cardChoiceInfo(g, cardID)})
-		if i < take {
+		if i < minTake {
 			defaults = append(defaults, i)
 		}
 	}
@@ -293,15 +328,15 @@ func (e *Engine) chooseDigCards(g *game.Game, agents [game.NumPlayers]PlayerAgen
 		Player:           playerID,
 		Prompt:           "Dig: choose cards to put into your hand.",
 		Options:          options,
-		MinChoices:       take,
-		MaxChoices:       take,
+		MinChoices:       minTake,
+		MaxChoices:       maxTake,
 		DefaultSelection: defaults,
 	}
 	selected := e.chooseChoice(g, agents, request, log)
 	taken := make([]id.ID, 0, len(selected))
 	for _, index := range selected {
-		if index >= 0 && index < len(seen) {
-			taken = append(taken, seen[index])
+		if index >= 0 && index < len(eligible) {
+			taken = append(taken, eligible[index])
 		}
 	}
 	return taken

@@ -12,4 +12,5 @@ var Cards = []*game.CardDef{
 	OnduWarCleric,
 	OrcGeneral,
 	OtherworldlyJourney,
+	OvergrownPest,
 }

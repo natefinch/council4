@@ -1193,6 +1193,22 @@ type Dig struct {
 	Look      Quantity
 	Take      Quantity
 	Remainder DigRemainder
+	// Filter, when present, restricts which of the looked-at cards the player may
+	// put into their hand to those matching the Selection. It models the typed
+	// optional dig "look at the top N cards. You may reveal a [filter] card from
+	// among them and put it into your hand. Put the rest <remainder>." The zero
+	// value imposes no filter, allowing any of the looked-at cards to be taken.
+	Filter opt.V[Selection]
+	// TakeUpTo makes Take an upper bound rather than an exact count: the player
+	// puts from zero up to Take of the eligible cards into their hand, modeling
+	// the optional "you may reveal" dig where taking nothing is allowed. The zero
+	// value keeps Take an exact count.
+	TakeUpTo bool
+	// Reveal reports that each card put into the player's hand is revealed as it
+	// is taken, modeling the "you may reveal ... and put it into your hand"
+	// wording. The zero value puts the taken cards into hand without revealing
+	// them.
+	Reveal bool
 }
 
 // PileSplit reveals the top Amount cards of the referenced player's library,

@@ -4,7 +4,9 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
 
 // TestDigTakesChosenCardAndGraveyardsRest verifies a Dig effect lets the player
@@ -129,5 +131,89 @@ func TestDigFallsBackToTopCards(t *testing.T) {
 	}
 	if player.Hand.Contains(c1) {
 		t.Fatal("dig fallback took more cards than requested")
+	}
+}
+
+// TestDigFilterRevealTakesOnlyMatchingCard verifies the typed optional-reveal
+// dig: with a creature-only filter, only the matching looked-at cards are
+// offered, the chosen card is revealed as it enters the hand, and every other
+// looked-at card (matching or not) goes to the bottom of the library.
+func TestDigFilterRevealTakesOnlyMatchingCard(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	// Add bottom-to-top: c1 deepest, c3 on top. Seen order is [c3, c2, c1].
+	c1 := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Bear", Types: []types.Card{types.Creature}}})
+	c2 := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Bolt", Types: []types.Card{types.Instant}}})
+	c3 := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Elk", Types: []types.Card{types.Creature}}})
+	addEffectSpellToStack(g, game.Player1, game.Dig{
+		Player:    game.ControllerReference(),
+		Look:      game.Fixed(3),
+		Take:      game.Fixed(1),
+		Remainder: game.DigRemainderLibraryBottom,
+		Filter:    opt.Val(game.Selection{RequiredTypes: []types.Card{types.Creature}}),
+		TakeUpTo:  true,
+		Reveal:    true,
+	}, nil)
+	log := TurnLog{}
+	// Eligible creatures in seen order are [c3, c1]; choosing index 0 takes c3.
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: &choiceOnlyAgent{choices: [][]int{{0}}}}
+
+	engine.resolveTopOfStackWithChoices(g, agents, &log)
+
+	player := g.Players[game.Player1]
+	if !player.Hand.Contains(c3) {
+		t.Fatal("dig did not put the chosen creature into hand")
+	}
+	if player.Hand.Contains(c1) || player.Hand.Contains(c2) {
+		t.Fatal("dig put an unchosen card into hand")
+	}
+	if !player.Library.Contains(c1) || !player.Library.Contains(c2) {
+		t.Fatal("dig did not bottom the unchosen looked-at cards")
+	}
+	if player.Graveyard.Contains(c1) || player.Graveyard.Contains(c2) {
+		t.Fatal("dig sent a remainder card to the graveyard instead of the library bottom")
+	}
+	assertEvent(t, g.Events, game.EventCardRevealed, func(event game.Event) bool {
+		return event.CardID == c3
+	})
+	assertEvent(t, g.Events, game.EventZoneChanged, func(event game.Event) bool {
+		return event.CardID == c3 && event.FromZone == zone.Library && event.ToZone == zone.Hand
+	})
+}
+
+// TestDigFilterRevealMayTakeNone verifies the "you may" semantics: when the
+// digging player declines (an empty choice), no card is revealed or taken and
+// every looked-at card returns to the bottom of the library.
+func TestDigFilterRevealMayTakeNone(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	c1 := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Bear", Types: []types.Card{types.Creature}}})
+	c2 := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Elk", Types: []types.Card{types.Creature}}})
+	addEffectSpellToStack(g, game.Player1, game.Dig{
+		Player:    game.ControllerReference(),
+		Look:      game.Fixed(2),
+		Take:      game.Fixed(1),
+		Remainder: game.DigRemainderLibraryBottom,
+		Filter:    opt.Val(game.Selection{RequiredTypes: []types.Card{types.Creature}}),
+		TakeUpTo:  true,
+		Reveal:    true,
+	}, nil)
+	log := TurnLog{}
+	// An empty choice declines the optional reveal.
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: &choiceOnlyAgent{choices: [][]int{{}}}}
+
+	engine.resolveTopOfStackWithChoices(g, agents, &log)
+
+	player := g.Players[game.Player1]
+	if player.Hand.Contains(c1) || player.Hand.Contains(c2) {
+		t.Fatal("declined dig still put a card into hand")
+	}
+	if !player.Library.Contains(c1) || !player.Library.Contains(c2) {
+		t.Fatal("declined dig did not return the looked-at cards to the library")
+	}
+	for _, event := range g.Events {
+		if event.Kind == game.EventCardRevealed {
+			t.Fatal("declined dig revealed a card")
+		}
 	}
 }
