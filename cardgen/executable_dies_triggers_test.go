@@ -399,6 +399,37 @@ func TestGenerateExecutableCardSourceRejectsAmbiguousDynamicPowerReference(t *te
 	}
 }
 
+func TestGenerateExecutableCardSourceDiesOptionalPaySubjectLedGainLife(t *testing.T) {
+	t.Parallel()
+	// "you may pay {1}. If you do, you gain 1 life." is a subject-led consequence
+	// (the clause leads with "you" before the verb "gain"). The optional payment
+	// must fold onto it so the death trigger lowers a gated controller gain-life.
+	card := &ScryfallCard{
+		Name:       "Soul Net",
+		Layout:     "normal",
+		ManaCost:   "{1}",
+		TypeLine:   "Artifact",
+		OracleText: "Whenever a creature dies, you may pay {1}. If you do, you gain 1 life.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "s")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"TriggeredAbilities: []game.TriggeredAbility",
+		"game.EventPermanentDied",
+		"Primitive: game.GainLife",
+		"game.Fixed(1)",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceDiesMultipleEffectTrigger(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

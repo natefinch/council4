@@ -12,4 +12,5 @@ var Cards = []*game.CardDef{
 	UnfathomableTruths,
 	UntimelyMalfunction,
 	UtopiaMycon,
+	UrzaSChalice,
 }

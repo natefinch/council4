@@ -14,6 +14,7 @@ var Cards = []*game.CardDef{
 	LegolasMasterArcher,
 	LifeBurst,
 	LifecraftCavalry,
+	Lifesmith,
 	LightningBolt,
 	LightningSerpent,
 	LilianaSSpoils,

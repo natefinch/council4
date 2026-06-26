@@ -192,8 +192,17 @@ func recognizeControllerOptionalPaymentSequence(ability *Ability) {
 	}
 
 	effect := consequenceSentence.Effects[0]
-	if effect.Context != EffectContextController ||
-		effect.VerbSpan.Start != firstEffectTokens[0].Span.Start {
+	if effect.Context != EffectContextController {
+		return
+	}
+	// The folded effect must begin exactly at the isolated consequence tokens so
+	// it parses standalone. A verb-first controller clause ("draw a card") starts
+	// at its verb, while a subject-led controller clause ("you gain 1 life")
+	// starts at the "You" subject with the verb following; both begin at
+	// firstEffectTokens[0], so the verb sits at or after that token. A verb
+	// preceding the isolated tokens would mean the clause start was mis-located,
+	// so reject it. exactEffectSyntax below validates the recomposed clause.
+	if effect.VerbSpan.Start.Offset < firstEffectTokens[0].Span.Start.Offset {
 		return
 	}
 	effect.Tokens = cloneTokens(firstEffectTokens)

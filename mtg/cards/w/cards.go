@@ -14,5 +14,6 @@ var Cards = []*game.CardDef{
 	WildestDreams,
 	WindbriskHeights,
 	WingspanMentor,
+	WoodenSphere,
 	WoodlandWanderer,
 }

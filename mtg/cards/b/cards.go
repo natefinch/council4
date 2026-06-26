@@ -24,6 +24,7 @@ var Cards = []*game.CardDef{
 	BlitzOfTheThunderRaptor,
 	BloodletterQuill,
 	BoardTheWeatherlight,
+	BogStriderAsh,
 	BolasSCitadel,
 	BoneHarvest,
 	BoromirGondorSHope,

@@ -42,6 +42,7 @@ var Cards = []*game.CardDef{
 	CrosstownCourier,
 	CruelRevival,
 	CruxOfFate,
+	CrystalRod,
 	CrystallineCrawler,
 	CurseOfTheSwine,
 }

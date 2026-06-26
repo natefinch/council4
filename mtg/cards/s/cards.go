@@ -41,6 +41,7 @@ var Cards = []*game.CardDef{
 	SolemnRecruit,
 	SomberwaldVigilante,
 	SorayaTheFalconer,
+	SoulNet,
 	SpawnbedProtector,
 	SpawnbinderMage,
 	SpectacleMage,
