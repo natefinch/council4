@@ -9,6 +9,7 @@ var Cards = []*game.CardDef{
 	AirdropAeronauts,
 	AllIsDust,
 	Anger,
+	AnkhOfMishra,
 	Arena,
 	AspectOfLamprey,
 }

@@ -1355,6 +1355,9 @@ func lowerDealDamageSpell(cardName string, ctx contentCtx) (game.AbilityContent,
 	if _, ok := parser.SecondTargetDamageRider(ctx.content.Effects[0].DamageRiders); ok {
 		return lowerTwoTargetDamageSpell(cardName, ctx)
 	}
+	if content, ok := lowerEventPermanentControllerDamageSpell(ctx); ok {
+		return content, nil
+	}
 	if len(ctx.content.Targets) == 0 {
 		return lowerGroupDamageSpell(cardName, ctx)
 	}

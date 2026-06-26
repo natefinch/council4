@@ -11,6 +11,8 @@ var Cards = []*game.CardDef{
 	Decommission,
 	DemonicAppetite,
 	DesertSDue,
+	DingusEgg,
+	DingusStaff,
 	DomriAnarchOfBolas,
 	DonatelloMutantMechanic,
 	DragonskullSummit,

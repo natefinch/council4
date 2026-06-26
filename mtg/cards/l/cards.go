@@ -13,4 +13,5 @@ var Cards = []*game.CardDef{
 	LlanowarWastes,
 	LordDreggInsectInvader,
 	LoxodonWarhammer,
+	LustForWar,
 }
