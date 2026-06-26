@@ -141,6 +141,9 @@ func handleAddMana(r *effectResolver, prim game.AddMana) effectResolved {
 	if !ok || player.Eliminated {
 		return res
 	}
+	if multiplier := tappedForManaProductionMultiplier(r.game, r.obj, recipientID); multiplier > 1 {
+		res.amount *= multiplier
+	}
 	if prim.EachControlledColor != nil {
 		snow := stackObjectSourceIsSnow(r.game, r.obj)
 		for _, c := range controlledPermanentColors(r.game, recipientID, prim.EachControlledColor) {
@@ -195,6 +198,45 @@ func handleAddMana(r *effectResolver, prim game.AddMana) effectResolved {
 	}
 	res.succeeded = true
 	return res
+}
+
+// tappedForManaProductionMultiplier returns the factor by which an activated
+// mana ability's produced mana is scaled by a RuleEffectManaProductionMultiplier
+// (Mana Reflection, Nyxbloom Ancient). It applies only when obj is an activated
+// ability whose source permanent recipientID controls was tapped to pay for the
+// mana, matching the "if you tap a permanent for mana" replacement; otherwise it
+// returns 1. The payment path scales basic-land and planner-driven taps in the
+// payment package, so this covers the standalone (floating) mana-ability path.
+func tappedForManaProductionMultiplier(g *game.Game, obj *game.StackObject, recipientID game.PlayerID) int {
+	if obj == nil || obj.Kind != game.StackActivatedAbility {
+		return 1
+	}
+	multiplier := manaProductionMultiplierFor(g, recipientID)
+	if multiplier <= 1 {
+		return 1
+	}
+	permanent, ok := permanentByObjectID(g, obj.SourceID)
+	if !ok || !permanent.Tapped || effectiveController(g, permanent) != recipientID {
+		return 1
+	}
+	if !permanentTappedForManaIsCurrent(g, obj.SourceID) {
+		return 1
+	}
+	return multiplier
+}
+
+// permanentTappedForManaIsCurrent reports whether the most recent tap event for
+// permanentID recorded a tap that paid a mana ability (CR 106), i.e. the
+// permanent's current tapped state was reached by tapping it for mana.
+func permanentTappedForManaIsCurrent(g *game.Game, permanentID id.ID) bool {
+	for i := len(g.Events) - 1; i >= 0; i-- {
+		event := &g.Events[i]
+		if event.Kind != game.EventPermanentTapped || event.PermanentID != permanentID {
+			continue
+		}
+		return event.TappedForMana
+	}
+	return false
 }
 
 func handleAddCounter(r *effectResolver, prim game.AddCounter) effectResolved {

@@ -135,3 +135,56 @@ func parseStaticOpponentEnteringTriggerSuppressionDeclaration(tokens []shared.To
 		OperationSpan: shared.SpanOf(tokens),
 	}, true
 }
+
+// parseStaticManaProductionMultiplierDeclaration recognizes the mana-production
+// replacement "If you tap a permanent for mana, it produces twice as much of
+// that mana instead." (Mana Reflection, factor 2) and "If you tap a permanent
+// for mana, it produces three times as much of that mana instead." (Nyxbloom
+// Ancient, factor 3). The multiplier phrase is "twice"/"thrice" or "N times";
+// only factors of at least two are recognized. Any deviation from the exact
+// wording leaves the clause unconsumed and fails closed.
+func parseStaticManaProductionMultiplierDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if len(tokens) < 17 || tokens[7].Kind != shared.Comma {
+		return StaticDeclarationSyntax{}, false
+	}
+	if !staticWordsAt(tokens, 0, "if", "you", "tap", "a", "permanent", "for", "mana") ||
+		!staticWordsAt(tokens, 8, "it", "produces") {
+		return StaticDeclarationSyntax{}, false
+	}
+	factor, next, ok := staticManaMultiplierFactor(tokens, 10)
+	if !ok {
+		return StaticDeclarationSyntax{}, false
+	}
+	if len(tokens) != next+7 ||
+		tokens[next+6].Kind != shared.Period ||
+		!staticWordsAt(tokens, next, "as", "much", "of", "that", "mana", "instead") {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:           StaticDeclarationManaProductionMultiplier,
+		Span:           shared.SpanOf(tokens),
+		OperationSpan:  shared.SpanOf(tokens),
+		ManaMultiplier: factor,
+	}, true
+}
+
+// staticManaMultiplierFactor reads the multiplier phrase of a mana-production
+// replacement starting at start, returning the factor and the index just past
+// the phrase. It accepts "twice" (2), "thrice" (3), and the "<cardinal> times"
+// form ("three times", 3). Factors below two fail closed.
+func staticManaMultiplierFactor(tokens []shared.Token, start int) (factor int, next int, ok bool) {
+	if start >= len(tokens) {
+		return 0, 0, false
+	}
+	if staticWordsAt(tokens, start, "twice") {
+		return 2, start + 1, true
+	}
+	if staticWordsAt(tokens, start, "thrice") {
+		return 3, start + 1, true
+	}
+	if value, valid := CardinalWordValue(tokens[start].Text); valid &&
+		value >= 2 && staticWordsAt(tokens, start+1, "times") {
+		return value, start + 2, true
+	}
+	return 0, 0, false
+}

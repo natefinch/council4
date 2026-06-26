@@ -1143,6 +1143,16 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		if !reflect.DeepEqual(payload, RuleEffect{}) {
 			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "opponent entering-trigger suppression does not accept additional payload")
 		}
+	case RuleEffectManaProductionMultiplier:
+		payload := *effect
+		payload.Kind = RuleEffectNone
+		payload.ManaProductionMultiplier = 0
+		if !reflect.DeepEqual(payload, RuleEffect{}) {
+			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "mana-production multiplier accepts only a multiplier factor")
+		}
+		if effect.ManaProductionMultiplier < 2 {
+			v.add(faceName, appendPath(path, "ManaProductionMultiplier"), CardDefIssueInvalidRuleEffect, "mana-production multiplier requires a factor of at least two")
+		}
 	default:
 	}
 }

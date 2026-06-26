@@ -669,6 +669,12 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 		}
 		fields = append(fields, fmt.Sprintf("AdditionalLandPlays: %d,", effect.AdditionalLandPlays))
 	}
+	if effect.Kind == game.RuleEffectManaProductionMultiplier {
+		if effect.ManaProductionMultiplier < 2 {
+			return "", errors.New("render: mana production multiplier requires a factor of at least two")
+		}
+		fields = append(fields, fmt.Sprintf("ManaProductionMultiplier: %d,", effect.ManaProductionMultiplier))
+	}
 	if effect.Kind == game.RuleEffectDrawLimitPerTurn {
 		if effect.DrawLimitPerTurn < 1 {
 			return "", errors.New("render: draw limit requires a positive per-turn count")
@@ -897,6 +903,8 @@ func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
 		return "game.RuleEffectSuppressOpponentEnteringTriggers", nil
 	case game.RuleEffectAttackTaxPerCreature:
 		return "game.RuleEffectAttackTaxPerCreature", nil
+	case game.RuleEffectManaProductionMultiplier:
+		return "game.RuleEffectManaProductionMultiplier", nil
 	case game.RuleEffectUntapDuringOtherPlayersUntapStep:
 		return "game.RuleEffectUntapDuringOtherPlayersUntapStep", nil
 	case game.RuleEffectCastSpellsAsThoughFlash:

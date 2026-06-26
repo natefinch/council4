@@ -34,6 +34,10 @@ func (s *rulesPaymentState) PayLifeForManaColor(playerID game.PlayerID, c mana.C
 	return payLifeForManaColorActive(s.g, playerID, c)
 }
 
+func (s *rulesPaymentState) ManaProductionMultiplier(playerID game.PlayerID) int {
+	return manaProductionMultiplierFor(s.g, playerID)
+}
+
 func (s *rulesPaymentState) ActivePlayer() game.PlayerID {
 	return s.g.Turn.ActivePlayer
 }

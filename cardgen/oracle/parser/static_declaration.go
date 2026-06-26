@@ -47,6 +47,7 @@ const (
 	StaticDeclarationOpeningHandPlay                      StaticDeclarationKind = "StaticDeclarationOpeningHandPlay"
 	StaticDeclarationOpponentEnteringTriggerSuppression   StaticDeclarationKind = "StaticDeclarationOpponentEnteringTriggerSuppression"
 	StaticDeclarationCreatureAttackTax                    StaticDeclarationKind = "StaticDeclarationCreatureAttackTax"
+	StaticDeclarationManaProductionMultiplier             StaticDeclarationKind = "StaticDeclarationManaProductionMultiplier"
 )
 
 // StaticAttackTaxAmountKind identifies how a per-creature attack-tax declaration
@@ -508,6 +509,13 @@ type StaticDeclarationSyntax struct {
 	AttackTaxAmountKind            StaticAttackTaxAmountKind `json:",omitempty"`
 	AttackTaxIncludesPlaneswalkers bool                      `json:",omitempty"`
 
+	// ManaMultiplier carries the factor of a
+	// StaticDeclarationManaProductionMultiplier declaration ("If you tap a
+	// permanent for mana, it produces twice as much of that mana instead.", Mana
+	// Reflection, 2; "... three times as much ...", Nyxbloom Ancient, 3). It is at
+	// least 2 for that kind and zero for every other declaration kind.
+	ManaMultiplier int `json:",omitempty"`
+
 	// ManaColor carries the colored mana symbol of a
 	// StaticDeclarationPlayerRuleLifeForColoredMana declaration ("For each {B} in
 	// a cost, ..."). It is empty for every other player rule.
@@ -790,6 +798,9 @@ func parseStaticDeclarations(tokens []shared.Token, quoted []Delimited, atoms At
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseStaticCreatureAttackTaxDeclaration(tokens); ok {
+		return []StaticDeclarationSyntax{declaration}
+	}
+	if declaration, ok := parseStaticManaProductionMultiplierDeclaration(tokens); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseChosenCreatureTypeTriggerMultiplierDeclaration(tokens); ok {

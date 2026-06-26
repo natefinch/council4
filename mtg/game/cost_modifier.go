@@ -385,6 +385,16 @@ const (
 	// evaluated from the battlefield as attackers are declared. AffectedPlayer
 	// scopes the protected defending player to the controller.
 	RuleEffectAttackTaxPerCreature
+	// RuleEffectManaProductionMultiplier multiplies the mana produced whenever the
+	// effect's controller taps a permanent for mana, scaling each such production
+	// by ManaProductionMultiplier ("If you tap a permanent for mana, it produces
+	// twice as much of that mana instead.", Mana Reflection, factor 2; "... three
+	// times as much ...", Nyxbloom Ancient, factor 3). It is a controller-scoped
+	// mana-production replacement (CR 605 / 106): it applies only when a permanent
+	// the controller controls is tapped to produce that mana, so untap-cost and
+	// other non-tap mana sources are unaffected. Multiple such effects compound
+	// multiplicatively. It carries no filters beyond the factor.
+	RuleEffectManaProductionMultiplier
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -431,7 +441,8 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectAssignCombatDamageAsThoughUnblocked,
 		RuleEffectCantTransform,
 		RuleEffectSuppressOpponentEnteringTriggers,
-		RuleEffectAttackTaxPerCreature:
+		RuleEffectAttackTaxPerCreature,
+		RuleEffectManaProductionMultiplier:
 		return true
 	default:
 		return false
@@ -672,4 +683,11 @@ type RuleEffect struct {
 	// amount is the fixed AttackTaxGeneric or the CardSelection permanent count,
 	// and is unused for every other kind.
 	AttackTaxScaledAmount AggregateKind
+
+	// ManaProductionMultiplier scales the mana produced when a
+	// RuleEffectManaProductionMultiplier effect's controller taps a permanent for
+	// mana ("If you tap a permanent for mana, it produces twice as much of that
+	// mana instead.", Mana Reflection, 2; Nyxbloom Ancient, 3). It is at least 2
+	// for that kind and unused (zero) for every other kind.
+	ManaProductionMultiplier int
 }

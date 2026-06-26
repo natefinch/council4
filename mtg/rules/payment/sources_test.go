@@ -247,3 +247,24 @@ func TestSacrificeManaChoiceOutputRejectsInstructionGating(t *testing.T) {
 		})
 	}
 }
+
+func TestMultiplyTappedManaAmount(t *testing.T) {
+	for name, tc := range map[string]struct {
+		amount     int
+		untap      bool
+		multiplier int
+		want       int
+	}{
+		"no multiplier leaves amount":     {amount: 1, multiplier: 1, want: 1},
+		"doubler scales tapped output":    {amount: 1, multiplier: 2, want: 2},
+		"tripler scales tapped output":    {amount: 2, multiplier: 3, want: 6},
+		"untap ability is left unscaled":  {amount: 1, untap: true, multiplier: 3, want: 1},
+		"zero multiplier leaves unscaled": {amount: 1, multiplier: 0, want: 1},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if got := multiplyTappedManaAmount(tc.amount, tc.untap, tc.multiplier); got != tc.want {
+				t.Fatalf("multiplyTappedManaAmount(%d, %v, %d) = %d, want %d", tc.amount, tc.untap, tc.multiplier, got, tc.want)
+			}
+		})
+	}
+}

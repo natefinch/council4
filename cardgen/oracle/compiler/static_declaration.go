@@ -38,6 +38,7 @@ const (
 	StaticDeclarationOpeningHandPlay
 	StaticDeclarationOpponentEnteringTriggerSuppression
 	StaticDeclarationCreatureAttackTax
+	StaticDeclarationManaProductionMultiplier
 )
 
 // StaticDeclarationBlocker identifies exact static wording whose declaration
@@ -711,6 +712,7 @@ type StaticDeclaration struct {
 	OpeningHandPlay             *StaticOpeningHandPlayDeclaration
 	OpponentEnteringSuppression *StaticOpponentEnteringTriggerSuppressionDeclaration
 	CreatureAttackTax           *StaticCreatureAttackTaxDeclaration
+	ManaProductionMultiplier    *StaticManaProductionMultiplierDeclaration
 }
 
 // StaticCreatureAttackTaxAmountKind identifies how a per-creature attack-tax
@@ -759,6 +761,14 @@ type StaticOpeningHandPlayDeclaration struct{}
 // entering-caused triggered abilities of permanents the controller's opponents
 // control. The semantics are fixed, so the declaration carries no payload.
 type StaticOpponentEnteringTriggerSuppressionDeclaration struct{}
+
+// StaticManaProductionMultiplierDeclaration marks the mana-production replacement
+// "If you tap a permanent for mana, it produces N times as much of that mana
+// instead." (Mana Reflection, Factor 2; Nyxbloom Ancient, Factor 3). Factor is
+// the multiplier applied whenever the controller taps a permanent for mana.
+type StaticManaProductionMultiplierDeclaration struct {
+	Factor int
+}
 
 // StaticCharacteristicPowerToughnessDeclaration carries the rules-derived count
 // a characteristic-defining ability sets the source object's power and toughness
@@ -853,6 +863,10 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Abili
 		return
 	}
 	if declaration, ok := recognizeStaticCreatureAttackTaxDeclaration(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
+		return
+	}
+	if declaration, ok := recognizeStaticManaProductionMultiplierDeclaration(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
 		return
 	}
