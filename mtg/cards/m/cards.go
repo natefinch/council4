@@ -23,6 +23,7 @@ var Cards = []*game.CardDef{
 	MasterPiandao,
 	MasterSRebuke,
 	Masticore,
+	MayaelTheAnima,
 	MeletisAstronomer,
 	MemorialToUnity,
 	MemoryPlunder,

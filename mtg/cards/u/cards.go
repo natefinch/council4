@@ -11,6 +11,7 @@ var Cards = []*game.CardDef{
 	UneshCriosphinxSovereign,
 	UnfathomableTruths,
 	UntimelyMalfunction,
+	UreniOfTheUnwritten,
 	UrsineFylgja,
 	UtopiaMycon,
 	UrzaSChalice,

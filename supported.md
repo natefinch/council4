@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,099 of 32,501 cards eligible for paper support (46.5%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,106 of 32,501 cards eligible for paper support (46.5%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -3853,6 +3853,7 @@ Council4 currently supports **15,099 of 32,501 cards eligible for paper support 
 - Elvish Ranger
 - Elvish Reclaimer
 - Elvish Regrower
+- Elvish Rejuvenator
 - Elvish Scout
 - Elvish Scrapper
 - Elvish Skysweeper
@@ -4761,6 +4762,7 @@ Council4 currently supports **15,099 of 32,501 cards eligible for paper support 
 - Free from Flesh
 - Freedom Fighter Recruit
 - Freejam Regent
+- Freestrider Lookout
 - Freewind Falcon
 - Freeze in Place
 - Frenetic Ogre
@@ -7864,6 +7866,7 @@ Council4 currently supports **15,099 of 32,501 cards eligible for paper support 
 - Maximize Altitude
 - Maximize Velocity
 - Maximum Overdrive
+- Mayael the Anima
 - Mayael's Aria
 - Mayhem Devil
 - Maze Abomination
@@ -11454,6 +11457,7 @@ Council4 currently supports **15,099 of 32,501 cards eligible for paper support 
 - Silver Seraph
 - Silver Shroud Costume
 - Silverback Ape
+- Silverback Elder
 - Silverback Shaman
 - Silverbeak Griffin
 - Silverbluff Bridge
@@ -12445,6 +12449,7 @@ Council4 currently supports **15,099 of 32,501 cards eligible for paper support 
 - Storm Skreelix
 - Storm Spirit
 - Storm Strike
+- Storm the Festival
 - Storm's Wrath
 - Storm, Shaker of Skies
 - Storm-Kiln Artist
@@ -13905,6 +13910,7 @@ Council4 currently supports **15,099 of 32,501 cards eligible for paper support 
 - Urborg Uprising
 - Urborg Volcano
 - Urborg, Tomb of Yawgmoth
+- Ureni of the Unwritten
 - Urn of Godfire
 - Ursapine
 - Ursine Fylgja
@@ -14572,6 +14578,7 @@ Council4 currently supports **15,099 of 32,501 cards eligible for paper support 
 - Weaver of Currents
 - Weaver of Lightning
 - Web
+- Web of Life and Destiny
 - Web Up
 - Web-Shooters
 - Web-Warriors

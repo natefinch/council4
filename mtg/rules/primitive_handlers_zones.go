@@ -1934,9 +1934,11 @@ func handleDig(r *effectResolver, prim game.Dig) effectResolved {
 	playerID, ok := r.resolvePlayer(prim.Player)
 	if ok {
 		res.succeeded = r.engine.digCards(r.game, r.agents, r.log, r.obj, playerID, look, r.quantity(prim.Take), prim.Remainder, digFilter{
-			selection: prim.Filter,
-			takeUpTo:  prim.TakeUpTo,
-			reveal:    prim.Reveal,
+			selection:    prim.Filter,
+			takeUpTo:     prim.TakeUpTo,
+			reveal:       prim.Reveal,
+			destination:  prim.Destination,
+			entersTapped: prim.EntersTapped,
 		})
 	}
 	return res

@@ -1209,6 +1209,19 @@ type Dig struct {
 	// wording. The zero value puts the taken cards into hand without revealing
 	// them.
 	Reveal bool
+	// Destination is the zone the taken cards move to. The zero value
+	// (zone.None) puts them into the player's hand, the reveal-to-hand dig.
+	// zone.Battlefield instead puts each taken card onto the battlefield under
+	// the player's control, modeling "look at the top N cards of your library.
+	// You may put a [filter] card from among them onto the battlefield. Put the
+	// rest <remainder>." (Web of Life and Destiny, Elvish Rejuvenator). No other
+	// destination is supported.
+	Destination zone.Type
+	// EntersTapped makes each card put onto the battlefield by a battlefield
+	// Destination enter tapped, modeling the "... onto the battlefield tapped"
+	// wording (Elvish Rejuvenator, Freestrider Lookout). It is meaningful only
+	// when Destination is zone.Battlefield; the zero value enters untapped.
+	EntersTapped bool
 }
 
 // PileSplit reveals the top Amount cards of the referenced player's library,

@@ -41,6 +41,7 @@ var Cards = []*game.CardDef{
 	FormAPosse,
 	FracturedSanity,
 	FranticSalvage,
+	FreestriderLookout,
 	FreyaliseSCharm,
 	FrillscareMentor,
 	FrontierSeeker,

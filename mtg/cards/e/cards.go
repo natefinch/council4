@@ -16,6 +16,7 @@ var Cards = []*game.CardDef{
 	EiganjoCastle,
 	ElspethSSmite,
 	ElvishFarmer,
+	ElvishRejuvenator,
 	EmberethPaladin,
 	EmblemOfTheWarmind,
 	EmeraldCharm,
