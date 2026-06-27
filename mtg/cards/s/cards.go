@@ -37,6 +37,7 @@ var Cards = []*game.CardDef{
 	SerraPaladin,
 	ServoSchematic,
 	SetessanTraining,
+	SewerVeillanceCam,
 	Shacklegeist,
 	SharpenedPitchfork,
 	ShatteredCrypt,

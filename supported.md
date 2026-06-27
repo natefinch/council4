@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,402 of 32,501 cards eligible for paper support (47.4%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,408 of 32,501 cards eligible for paper support (47.4%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1184,6 +1184,7 @@ Council4 currently supports **15,402 of 32,501 cards eligible for paper support 
 - Big Wheel
 - Bigfin Bouncer
 - Bighorner Rancher
+- Bilbo, Retired Burglar
 - Bile Urchin
 - Bile-Vial Boggart
 - Bilious Skulldweller
@@ -1655,6 +1656,7 @@ Council4 currently supports **15,402 of 32,501 cards eligible for paper support 
 - Branching Evolution
 - Branchloft Pathway // Boulderloft Pathway
 - Branchsnap Lorian
+- Brandywine Farmer
 - Brash Taunter
 - Brass Gnat
 - Brass Man
@@ -2751,6 +2753,7 @@ Council4 currently supports **15,402 of 32,501 cards eligible for paper support 
 - Crushing Vines
 - Crustacean Commando
 - Crux of Fate
+- Cryogen Relic
 - Crypt Cobra
 - Crypt Creeper
 - Crypt Feaster
@@ -4180,6 +4183,7 @@ Council4 currently supports **15,402 of 32,501 cards eligible for paper support 
 - Experimental Armor
 - Experimental Aviator
 - Experimental Confectioner
+- Experimental Synthesizer
 - Exploding Borders
 - Exploration
 - Explore
@@ -8515,6 +8519,7 @@ Council4 currently supports **15,402 of 32,501 cards eligible for paper support 
 - Mouse
 - Mouse Trapper
 - Mouser Attack!
+- Mouser Foundry
 - Mouth of Ronom
 - Mowu // Mowu
 - Mowu, Loyal Companion
@@ -11383,6 +11388,7 @@ Council4 currently supports **15,402 of 32,501 cards eligible for paper support 
 - Severed Strands
 - Sevinne's Reclamation
 - Sewer Shambler
+- Sewer-veillance Cam
 - Sewerdreg
 - Sewn-Eye Drake
 - Seymour Flux
