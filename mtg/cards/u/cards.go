@@ -11,6 +11,7 @@ var Cards = []*game.CardDef{
 	UneshCriosphinxSovereign,
 	UnexplainedVision,
 	UnfathomableTruths,
+	UnshakableTail,
 	UnsparingBoltcaster,
 	UnstableMutation,
 	UntamedKavu,

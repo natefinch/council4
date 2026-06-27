@@ -32,6 +32,8 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	source = expandDisjunctiveTrigger(source)
 	source = expandDiesOrExileTrigger(source)
 	source = expandEntersOrLeavesBattlefieldTrigger(source)
+	source = expandEntersOrTurnedFaceUpTrigger(source)
+	source = expandEntersAndSecondTrigger(source)
 	tokens, diagnostics := lexAll(source)
 	lines := splitLines(tokens)
 	document := Document{

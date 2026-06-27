@@ -30,6 +30,7 @@ var Cards = []*game.CardDef{
 	PlanarGuide,
 	PlantElemental,
 	PointTheWay,
+	PonybackBrigade,
 	PotionerSTrove,
 	PredatorOoze,
 	PricklyPair,

@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,668 of 32,501 cards eligible for paper support (48.2%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,674 of 32,501 cards eligible for paper support (48.2%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -3825,6 +3825,7 @@ Council4 currently supports **15,668 of 32,501 cards eligible for paper support 
 - Eerie Soultender
 - Efficient Construction
 - Efreet Flamepainter
+- Efreet Weaponmaster
 - Egg
 - Eidolon of Blossoms
 - Eidolon of Inspiration
@@ -5068,6 +5069,7 @@ Council4 currently supports **15,668 of 32,501 cards eligible for paper support 
 - Fyndhorn Elves
 - Fyndhorn Pollen
 - G'raha Tia
+- Gadget Technician
 - Gadwick, the Wizened
 - Gaea's Anthem
 - Gaea's Bounty
@@ -9160,6 +9162,7 @@ Council4 currently supports **15,668 of 32,501 cards eligible for paper support 
 - Odylic Wraith
 - Of Herbs and Stewed Rabbit
 - Offalsnout
+- Offender at Large
 - Offer Immortality
 - Oggyar Battle-Seer
 - Ognis, the Dragon's Lash
@@ -9824,6 +9827,7 @@ Council4 currently supports **15,668 of 32,501 cards eligible for paper support 
 - Ponder
 - Pondering Mage
 - Pongify
+- Ponyback Brigade
 - Popular Egotist
 - Porcelain Legionnaire
 - Pore Over the Pages
@@ -10245,6 +10249,7 @@ Council4 currently supports **15,668 of 32,501 cards eligible for paper support 
 - Raking Claws
 - Rakish Crew
 - Rakish Heir
+- Rakish Scoundrel
 - Rakka Mar
 - Rakshasa Deathdealer
 - Rakshasa's Bargain
@@ -14374,6 +14379,7 @@ Council4 currently supports **15,668 of 32,501 cards eligible for paper support 
 - Unscrupulous Agent
 - Unseen Walker
 - Unsettling Twins
+- Unshakable Tail
 - Unsparing Boltcaster
 - Unspeakable Symbol
 - Unstable Mutation
