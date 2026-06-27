@@ -260,9 +260,58 @@ func parseCost(phrase Phrase, abilityKind AbilityKind, atoms Atoms) Cost {
 		if len(part) == 0 {
 			continue
 		}
+		if head, sacrifice, ok := splitTrailingSelfSacrifice(part, abilityKind, atoms); ok {
+			cost.Components = append(cost.Components, buildCostComponent(head, abilityKind, phrase, atoms))
+			cost.Components = append(cost.Components, buildSelfSacrificeComponent(sacrifice, phrase))
+			continue
+		}
 		cost.Components = append(cost.Components, buildCostComponent(part, abilityKind, phrase, atoms))
 	}
 	return cost
+}
+
+// splitTrailingSelfSacrifice recognizes a single cost component that ends in the
+// combined "<cost> and sacrifice it" idiom, where a permanent pays a cost and is
+// then sacrificed as one comma-delimited cost phrase. This is the
+// Quest/Expedition family's "Remove N <kind> counters from this <permanent> and
+// sacrifice it" cost, and the equivalent "... from <self name> and sacrifice
+// it". It returns the head tokens preceding the joining "and" and the trailing
+// "sacrifice <self>" tokens, reporting whether the split applies. The head is
+// recognized as its own cost component and the tail becomes a separate
+// self-sacrifice cost so both halves lower independently. Loyalty costs carry a
+// single signed amount and never split.
+func splitTrailingSelfSacrifice(part []shared.Token, abilityKind AbilityKind, atoms Atoms) (head, sacrifice []shared.Token, ok bool) {
+	if abilityKind == AbilityLoyalty {
+		return nil, nil, false
+	}
+	segments := splitTopLevelWord(part, "and")
+	if len(segments) != 2 {
+		return nil, nil, false
+	}
+	tail := segments[1]
+	if len(tail) < 2 || !equalWord(tail[0], "sacrifice") {
+		return nil, nil, false
+	}
+	if !costSelfReference(tail[1:], atoms, true) {
+		return nil, nil, false
+	}
+	if len(segments[0]) == 0 {
+		return nil, nil, false
+	}
+	return segments[0], tail, true
+}
+
+// buildSelfSacrificeComponent builds the typed self-sacrifice cost component for
+// the trailing "sacrifice it" half of a combined "<cost> and sacrifice it" cost.
+// The sacrificed permanent is always the ability's own source, so the component
+// is marked SourceSelf and carries no object selector.
+func buildSelfSacrificeComponent(part []shared.Token, phrase Phrase) CostComponent {
+	return CostComponent{
+		Kind:       CostComponentSacrifice,
+		Span:       shared.SpanOf(part),
+		Text:       shared.SliceSpan(phrase.Text, costRelativeSpan(shared.SpanOf(part), phrase.Span.Start.Offset)),
+		SourceSelf: true,
+	}
 }
 
 // buildCostComponent recognizes one cost operation's verb and typed object from

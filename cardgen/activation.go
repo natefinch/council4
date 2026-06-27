@@ -337,6 +337,9 @@ func activationCostReferencesSupported(references []compiler.CompiledReference, 
 			reference.Binding == compiler.ReferenceBindingSource {
 			continue
 		}
+		if costReferenceDenotesSource(reference, compiled) {
+			continue
+		}
 		if !slices.ContainsFunc(compiled.Components, func(component compiler.CostComponent) bool {
 			return component.Kind == compiler.CostReturn &&
 				spanCovered(reference.Span, []shared.Span{component.Span}) &&
@@ -346,6 +349,25 @@ func activationCostReferencesSupported(references []compiler.CompiledReference, 
 		}
 	}
 	return true
+}
+
+// costReferenceDenotesSource reports that a reference falls inside a self-sacrifice
+// cost component, whose sacrificed object is the ability's own source by
+// construction. The "it" of the trailing "sacrifice it" in a combined "Remove N
+// counters from this and sacrifice it" cost is such a reference: it denotes the
+// source regardless of how the reference binder otherwise classified the bare
+// pronoun. The check is restricted to the sacrifice verb, where a self-sacrifice
+// can only target the source, so a counter-removal "from it" that denotes a prior
+// cost object stays unsupported.
+func costReferenceDenotesSource(reference compiler.CompiledReference, compiled *compiler.CompiledCost) bool {
+	for _, component := range compiled.Components {
+		if component.Kind == compiler.CostSacrifice &&
+			component.SourceSelf &&
+			spanCovered(reference.Span, []shared.Span{component.Span}) {
+			return true
+		}
+	}
+	return false
 }
 
 func activationDiagnostic(ability compiler.CompiledAbility, summary, detail string) *shared.Diagnostic {
