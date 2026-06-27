@@ -2418,6 +2418,61 @@ func TestParseControllerUnlessYouPayPayment(t *testing.T) {
 	}
 }
 
+// TestParseControllerUnlessYouNonManaCostPayment covers the non-mana "unless you
+// <cost>" controller-payment wording. The trailing cost ("discard a card",
+// "sacrifice another creature", "return two Forests you control to their owner's
+// hand") is folded onto the gated effect's Payment as an AdditionalCost rather
+// than parsed as a spurious second effect, so the sentence stays a single
+// payment-bearing sacrifice.
+func TestParseControllerUnlessYouNonManaCostPayment(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name     string
+		text     string
+		wantKind CostComponentKind
+	}{
+		{
+			name:     "discard",
+			text:     "At the beginning of your upkeep, sacrifice this creature unless you discard a card.",
+			wantKind: CostComponentDiscard,
+		},
+		{
+			name:     "sacrifice another",
+			text:     "When this creature enters, sacrifice it unless you sacrifice another creature.",
+			wantKind: CostComponentSacrifice,
+		},
+		{
+			name:     "return to hand",
+			text:     "When this creature enters, sacrifice it unless you return two Forests you control to their owner's hand.",
+			wantKind: CostComponentReturn,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(tc.text, Context{CardName: "Probe"})
+			sentence := document.Abilities[0].Sentences[0]
+			if len(sentence.Effects) != 1 {
+				t.Fatalf("effects = %d, want 1 (%#v)", len(sentence.Effects), sentence.Effects)
+			}
+			payment := sentence.Effects[0].Payment
+			if payment.Payer != EffectPaymentPayerController ||
+				payment.Form != EffectPaymentFormUnless {
+				t.Fatalf("payment = %#v", payment)
+			}
+			if len(payment.ManaCost) != 0 {
+				t.Errorf("payment has mana cost %#v, want none", payment.ManaCost)
+			}
+			if payment.AdditionalCost == nil || len(payment.AdditionalCost.Components) != 1 {
+				t.Fatalf("payment additional cost = %#v, want one component", payment.AdditionalCost)
+			}
+			if got := payment.AdditionalCost.Components[0].Kind; got != tc.wantKind {
+				t.Errorf("cost component kind = %v, want %v", got, tc.wantKind)
+			}
+		})
+	}
+}
+
 func TestParseResolvingCreateForEachIterator(t *testing.T) {
 	t.Parallel()
 	document, diagnostics := Parse(

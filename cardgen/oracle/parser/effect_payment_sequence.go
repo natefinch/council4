@@ -7,6 +7,88 @@ import (
 	"github.com/natefinch/council4/mtg/game/cost"
 )
 
+// recognizedUnlessCost carries an "<effect> unless you <non-mana cost>"
+// controller resolution payment folded out of a single sentence. unlessIndex is
+// the token index of the "unless" introducer; the cost verbs that follow it are
+// excluded from effect segmentation so the gated effect (e.g. the source
+// sacrifice) parses as a single payment-bearing effect rather than a spurious
+// two-effect sequence.
+type recognizedUnlessCost struct {
+	ok          bool
+	payment     EffectPaymentSyntax
+	unlessIndex int
+}
+
+// recognizeUnlessControllerAdditionalCost recognizes the trailing "unless you
+// <cost>" controller payment of a single sentence whose cost is a non-mana
+// additional cost ("discard a card", "sacrifice another creature", "exile a card
+// from your graveyard"). The mana and life "unless you pay ..." forms stay with
+// parseEffectPayment, so this fails closed when the clause begins with "pay". The
+// recognized cost is folded onto the gated effect's Payment as an AdditionalCost
+// and its verbs are dropped from segmentation by the caller.
+func recognizeUnlessControllerAdditionalCost(sentence Sentence, tokens []shared.Token, atoms Atoms) recognizedUnlessCost {
+	for i := 0; i+2 < len(tokens); i++ {
+		if !equalWord(tokens[i], "unless") || !equalWord(tokens[i+1], "you") {
+			continue
+		}
+		// The mana/life "unless you pay ..." forms are owned by
+		// parseEffectPayment; leave them untouched.
+		if equalWord(tokens[i+2], "pay") {
+			return recognizedUnlessCost{}
+		}
+		end := len(tokens)
+		if tokens[end-1].Kind == shared.Period {
+			end--
+		}
+		costTokens := tokens[i+2 : end]
+		if len(costTokens) == 0 {
+			return recognizedUnlessCost{}
+		}
+		span := shared.SpanOf(costTokens)
+		phrase := Phrase{
+			Span:   span,
+			Text:   shared.SliceSpan(sentence.Text, costRelativeSpan(span, sentence.Span.Start.Offset)),
+			Tokens: cloneTokens(costTokens),
+		}
+		parsed := parseCost(phrase, AbilityActivated, atoms)
+		if !controllerAdditionalCostComponents(parsed) {
+			return recognizedUnlessCost{}
+		}
+		return recognizedUnlessCost{
+			ok:          true,
+			unlessIndex: i,
+			payment: EffectPaymentSyntax{
+				Span:           shared.SpanOf(tokens[i:end]),
+				Form:           EffectPaymentFormUnless,
+				Payer:          EffectPaymentPayerController,
+				AdditionalCost: &parsed,
+			},
+		}
+	}
+	return recognizedUnlessCost{}
+}
+
+// controllerAdditionalCostComponents reports whether a parsed cost is a usable
+// non-mana resolution payment: it has at least one component and every component
+// is a non-mana, non-loyalty, non-tap payment the downstream layers can lower.
+func controllerAdditionalCostComponents(parsed Cost) bool {
+	if len(parsed.Components) == 0 {
+		return false
+	}
+	for i := range parsed.Components {
+		switch parsed.Components[i].Kind {
+		case CostComponentUnknown,
+			CostComponentMana,
+			CostComponentLoyalty,
+			CostComponentTap,
+			CostComponentUntap:
+			return false
+		default:
+		}
+	}
+	return true
+}
+
 // recognizeControllerMandatoryPaymentSequence folds the exact two-sentence
 // "pay {N}. If you don't, you lose the game." Pact form onto its consequence
 // effect. Unlike the optional "you may pay" recognizers the payment is
