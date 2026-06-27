@@ -1298,19 +1298,18 @@ func applySourceState(stateTokens []shared.Token, atoms Atoms, selection *Condit
 }
 
 // recognizeAttachedCreatureStateCondition matches the conditional-grant gate
-// "equipped creature is <state>" / "enchanted creature is <state>" used by
+// "equipped <subject> is <state>" / "enchanted <subject> is <state>" used by
 // Equipment and Auras ("As long as equipped creature is legendary, it has
-// hexproof."). The subject names the permanent the source is attached to; the
-// state is a supertype (e.g. "legendary"), a card type, or a tap/combat state.
-// It binds the attached object so a static keyword grant can gate on the
-// equipped or enchanted creature's own characteristics.
+// hexproof."; "As long as enchanted permanent is a creature, it gets +1/+1.").
+// The subject noun ("creature", "permanent", or "land") names the permanent the
+// source is attached to; the state is a supertype (e.g. "legendary"), the
+// attached object's color(s), card type(s), or subtype(s), or a tap/combat
+// state. It binds the attached object so a static grant can gate on the
+// equipped or enchanted permanent's own characteristics.
 func recognizeAttachedCreatureStateCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
-	rest, ok := cutTokenPrefix(body, "equipped", "creature", "is")
+	rest, ok := cutAttachedSubjectPrefix(body)
 	if !ok {
-		rest, ok = cutTokenPrefix(body, "enchanted", "creature", "is")
-		if !ok {
-			return ConditionClause{}, false
-		}
+		return ConditionClause{}, false
 	}
 	var selection ConditionSelection
 	if !applyAttachedCreatureState(rest, atoms, &selection) {
@@ -1323,16 +1322,105 @@ func recognizeAttachedCreatureStateCondition(body []shared.Token, atoms Atoms) (
 	}, true
 }
 
+// cutAttachedSubjectPrefix strips the "equipped/enchanted <subject> is" lead-in
+// naming the permanent the source is attached to. The subject noun varies with
+// the source: Equipment prints "equipped creature", an Aura that enchants any
+// permanent prints "enchanted permanent", and an Aura that enchants a land
+// prints "enchanted land". All bind the same attached object.
+func cutAttachedSubjectPrefix(body []shared.Token) ([]shared.Token, bool) {
+	for _, attachment := range []string{"equipped", "enchanted"} {
+		for _, subject := range []string{"creature", "permanent", "land"} {
+			if rest, ok := cutTokenPrefix(body, attachment, subject, "is"); ok {
+				return rest, true
+			}
+		}
+	}
+	return nil, false
+}
+
 // applyAttachedCreatureState fills the selection from the state words following
-// "equipped/enchanted creature is ...". A bare supertype ("legendary") sets the
-// supertype filter; other states fall through to the shared source-state vocab
-// ("a <type>", tapped/untapped, attacking/blocking).
+// "equipped/enchanted <subject> is ...". A bare supertype ("legendary") sets the
+// supertype filter; a characteristic predicate names the attached object's
+// color(s), card type(s), or subtype(s) ("a creature", "black", "a Human",
+// "red or green"); otherwise the state falls through to the shared source-state
+// vocab (tapped/untapped, attacking/blocking).
 func applyAttachedCreatureState(stateTokens []shared.Token, atoms Atoms, selection *ConditionSelection) bool {
 	if supertypes, ok := conditionStateSupertypes(stateTokens, atoms); ok {
 		selection.Supertypes = append(selection.Supertypes, supertypes...)
 		return true
 	}
+	if applyAttachedCharacteristicState(stateTokens, atoms, selection) {
+		return true
+	}
 	return applySourceState(stateTokens, atoms, selection)
+}
+
+// applyAttachedCharacteristicState recognizes the attached object's printed
+// characteristics as a condition state: a bare color or color disjunction
+// ("black", "red or green") or an article-led card-type or subtype predicate
+// ("a creature", "a Human", "a Human or an Angel"). It fills the selection's
+// color, type, subtype, and supertype filters and reports whether the state was
+// a recognized characteristic. A bare color carries no article, so it is tried
+// before the article is stripped.
+func applyAttachedCharacteristicState(stateTokens []shared.Token, atoms Atoms, selection *ConditionSelection) bool {
+	if colors, ok := bareColorList(stateTokens, atoms); ok {
+		selection.ColorsAny = append(selection.ColorsAny, colors...)
+		return true
+	}
+	rest := stateTokens
+	if trimmed, ok := cutTokenPrefix(rest, "a"); ok {
+		rest = trimmed
+	} else if trimmed, ok := cutTokenPrefix(rest, "an"); ok {
+		rest = trimmed
+	} else {
+		return false
+	}
+	parsed, ok := parseConditionSelection(rest, atoms)
+	if !ok || conditionSelectionCharacteristicEmpty(parsed) {
+		return false
+	}
+	selection.RequiredTypes = append(selection.RequiredTypes, parsed.RequiredTypes...)
+	selection.SubtypesAny = append(selection.SubtypesAny, parsed.SubtypesAny...)
+	selection.ColorsAny = append(selection.ColorsAny, parsed.ColorsAny...)
+	selection.Supertypes = append(selection.Supertypes, parsed.Supertypes...)
+	return true
+}
+
+// bareColorList reads one or more color atoms joined by "or" with no trailing
+// noun ("black", "red or green"), the form the attached-object color predicate
+// "enchanted creature is <color>" prints. It reports false for any token that is
+// not a color or the "or" conjunction so non-color states fall through.
+func bareColorList(tokens []shared.Token, atoms Atoms) ([]TriggerColor, bool) {
+	if len(tokens) == 0 {
+		return nil, false
+	}
+	colors := make([]TriggerColor, 0, len(tokens))
+	for _, token := range tokens {
+		if equalWord(token, "or") {
+			continue
+		}
+		color, ok := atoms.ColorAt(token.Span)
+		if !ok {
+			return nil, false
+		}
+		colors = append(colors, triggerColorFromAtom(color))
+	}
+	if len(colors) == 0 {
+		return nil, false
+	}
+	return colors, true
+}
+
+// conditionSelectionCharacteristicEmpty reports whether a parsed selection
+// carries none of the printed characteristic filters (color, card type,
+// subtype, supertype) the attached-object state predicate constrains. It rejects
+// selections that matched only structural facets so the recognizer falls through
+// to the shared tap/combat source-state vocabulary.
+func conditionSelectionCharacteristicEmpty(selection ConditionSelection) bool {
+	return len(selection.RequiredTypes) == 0 &&
+		len(selection.SubtypesAny) == 0 &&
+		len(selection.ColorsAny) == 0 &&
+		len(selection.Supertypes) == 0
 }
 
 // conditionStateSupertypes reads one or more bare supertype words ("legendary",

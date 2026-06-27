@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"reflect"
 	"slices"
 	"testing"
 
@@ -458,12 +459,18 @@ func TestParseSelfNamePossessivePowerCondition(t *testing.T) {
 func TestParseAttachedCreatureStateCondition(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name       string
-		condition  string
-		supertypes []ConditionSupertype
+		name      string
+		condition string
+		selection ConditionSelection
 	}{
-		{"equipped legendary", "equipped creature is legendary", []ConditionSupertype{ConditionSupertypeLegendary}},
-		{"enchanted legendary", "enchanted creature is legendary", []ConditionSupertype{ConditionSupertypeLegendary}},
+		{"equipped legendary", "equipped creature is legendary", ConditionSelection{Supertypes: []ConditionSupertype{ConditionSupertypeLegendary}}},
+		{"enchanted legendary", "enchanted creature is legendary", ConditionSelection{Supertypes: []ConditionSupertype{ConditionSupertypeLegendary}}},
+		{"enchanted permanent is creature", "enchanted permanent is a creature", ConditionSelection{RequiredTypes: []TriggerCardType{TriggerCardTypeCreature}}},
+		{"enchanted land is creature", "enchanted land is a creature", ConditionSelection{RequiredTypes: []TriggerCardType{TriggerCardTypeCreature}}},
+		{"equipped subtype", "equipped creature is a Human", ConditionSelection{SubtypesAny: []types.Sub{types.Sub("Human")}}},
+		{"equipped subtype disjunction", "equipped creature is a Human or an Angel", ConditionSelection{SubtypesAny: []types.Sub{types.Sub("Human"), types.Sub("Angel")}}},
+		{"enchanted color red", "enchanted creature is red", ConditionSelection{ColorsAny: []TriggerColor{TriggerColorRed}}},
+		{"enchanted color blue", "enchanted creature is blue", ConditionSelection{ColorsAny: []TriggerColor{TriggerColorBlue}}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -471,7 +478,7 @@ func TestParseAttachedCreatureStateCondition(t *testing.T) {
 			clause := parseSingleConditionClause(t, test.condition)
 			if clause.Predicate != ConditionPredicateObjectMatches ||
 				clause.ObjectBinding != ConditionObjectBindingSourceAttached ||
-				!slices.Equal(clause.Selection.Supertypes, test.supertypes) {
+				!reflect.DeepEqual(clause.Selection, test.selection) {
 				t.Fatalf("clause = %#v", clause)
 			}
 		})

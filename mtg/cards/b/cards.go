@@ -7,8 +7,8 @@ import "github.com/natefinch/council4/mtg/game"
 // Cards lists all card definitions in this package.
 var Cards = []*game.CardDef{
 	BackForMore,
-	BalmOfRestoration,
 	BalduvianHorde,
+	BalmOfRestoration,
 	BalustradeSpy,
 	Bandage,
 	BanditSHaul,
@@ -30,6 +30,7 @@ var Cards = []*game.CardDef{
 	BiteDown,
 	BlackWard,
 	BladedBattleFan,
+	BladedBracers,
 	BlazemireVerge,
 	BlazingSunsteel,
 	BleedDry,
@@ -60,4 +61,5 @@ var Cards = []*game.CardDef{
 	BullElephant,
 	BurnTheAccursed,
 	Bushwhack,
+	ButcherSCleaver,
 }

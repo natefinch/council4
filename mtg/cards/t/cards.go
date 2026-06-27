@@ -10,8 +10,8 @@ var Cards = []*game.CardDef{
 	TajuruStalwart,
 	TapestryOfTheAges,
 	TappingAtTheWindow,
-	TatteredHaunter,
 	TarrianSSoulcleaver,
+	TatteredHaunter,
 	TattooWard,
 	TeferiSProtection,
 	TempestTechnique,
@@ -47,4 +47,5 @@ var Cards = []*game.CardDef{
 	TroubledHealer,
 	TwinBlades,
 	TwinflameTravelers,
+	TwistedEmbrace,
 }
