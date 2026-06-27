@@ -1419,7 +1419,7 @@ func staticRuleGroupDomain(kind parser.StaticRuleSubjectKind) (StaticGroupDomain
 		return StaticGroupAttachedObject, true
 	case parser.StaticRuleSubjectControlledCreatures:
 		return StaticGroupSourceControllerPermanents, true
-	case parser.StaticRuleSubjectBattlefieldCreatures:
+	case parser.StaticRuleSubjectBattlefieldCreatures, parser.StaticRuleSubjectBattlefieldPermanents:
 		return StaticGroupBattlefield, true
 	default:
 		return StaticGroupUnknown, false
@@ -1444,7 +1444,8 @@ func isCreatureRuleSubject(kind parser.StaticRuleSubjectKind) bool {
 func isUntapRuleSubject(kind parser.StaticRuleSubjectKind) bool {
 	return isCreatureRuleSubject(kind) ||
 		kind == parser.StaticRuleSubjectSourcePermanent ||
-		kind == parser.StaticRuleSubjectAttachedPermanent
+		kind == parser.StaticRuleSubjectAttachedPermanent ||
+		kind == parser.StaticRuleSubjectBattlefieldPermanents
 }
 
 func semanticStaticRuleForSyntax(rule parser.StaticRuleSyntax) (StaticRuleKind, StaticZone, bool) {
@@ -2336,7 +2337,8 @@ func recognizeStaticGroupDoesntUntapDeclarations(ability CompiledAbility, static
 		return nil, false
 	}
 	ruleNode := &statics[0]
-	if ruleNode.Rule.Subject.Kind != parser.StaticRuleSubjectBattlefieldCreatures {
+	if ruleNode.Rule.Subject.Kind != parser.StaticRuleSubjectBattlefieldCreatures &&
+		ruleNode.Rule.Subject.Kind != parser.StaticRuleSubjectBattlefieldPermanents {
 		return nil, false
 	}
 	rule, zone, ok := semanticStaticRuleForSyntax(ruleNode.Rule)
@@ -3303,7 +3305,7 @@ func staticGroupForSubject(subject StaticSubjectKind, span shared.Span, subtype 
 		group.Domain = StaticGroupSourceControllerPermanents
 		group.Selection.SubtypesAny = staticGroupSubtypes(subtype, subsAny)
 		group.ExcludeSource = true
-	case StaticSubjectAllCreatureSubtype:
+	case StaticSubjectAllCreatureSubtype, StaticSubjectAllPermanentSubtype:
 		if !subtypeKnown {
 			return StaticGroupReference{}, false
 		}
@@ -3375,6 +3377,16 @@ func staticGroupForSubject(subject StaticSubjectKind, span shared.Span, subtype 
 	case StaticSubjectAllLands:
 		group.Domain = StaticGroupBattlefield
 		group.Selection.RequiredTypes = []types.Card{types.Land}
+	case StaticSubjectNonbasicLands:
+		group.Domain = StaticGroupBattlefield
+		group.Selection.RequiredTypes = []types.Card{types.Land}
+		group.Selection.ExcludedSupertypes = []types.Super{types.Basic}
+	case StaticSubjectNonlandPermanents:
+		group.Domain = StaticGroupBattlefield
+		group.Selection.ExcludedTypes = []types.Card{types.Land}
+	case StaticSubjectSnowPermanents:
+		group.Domain = StaticGroupBattlefield
+		group.Selection.Supertypes = []types.Super{types.Snow}
 	case StaticSubjectControlledLands:
 		group.Domain = StaticGroupSourceControllerPermanents
 		group.Selection.RequiredTypes = []types.Card{types.Land}

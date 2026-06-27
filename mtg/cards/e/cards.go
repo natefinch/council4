@@ -19,6 +19,7 @@ var Cards = []*game.CardDef{
 	ElspethSSmite,
 	ElvishFarmer,
 	ElvishRejuvenator,
+	Embargo,
 	EmberBeast,
 	EmberIslandProduction,
 	EmberethPaladin,

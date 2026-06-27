@@ -1155,6 +1155,16 @@ const (
 	// battlefield affected group whose affected-permanent Selection scopes the
 	// controller to the opponent relation.
 	StaticRuleSubjectOpponentControlledCreatures StaticRuleSubjectKind = "StaticRuleSubjectOpponentControlledCreatures"
+	// StaticRuleSubjectBattlefieldPermanents scopes a static rule to every
+	// matching permanent on the battlefield regardless of card type ("Nonbasic
+	// lands don't untap ...", Back to Basics; "Islands don't untap ...", Choke;
+	// "Nonland permanents don't untap ...", Embargo; "Snow permanents don't
+	// untap ...", Freyalise's Radiance). Unlike StaticRuleSubjectBattlefieldCreatures
+	// the affected group is not limited to creatures; the concrete card-type,
+	// supertype, and subtype filter rides the rich StaticDeclarationSubject group
+	// the compiler reads. It backs the mass don't-untap restriction for land and
+	// permanent groups.
+	StaticRuleSubjectBattlefieldPermanents StaticRuleSubjectKind = "StaticRuleSubjectBattlefieldPermanents"
 )
 
 // StaticRuleBlockedObjectKind identifies the protected object an active "can't

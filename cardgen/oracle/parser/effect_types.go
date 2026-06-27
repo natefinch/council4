@@ -2747,6 +2747,30 @@ const (
 	// Yavimaya, Cradle of Growth and Urborg, Tomb of Yawgmoth.
 	EffectStaticSubjectAllLands EffectStaticSubjectKind = "EffectStaticSubjectAllLands"
 
+	// EffectStaticSubjectNonbasicLands names every nonbasic land on the
+	// battlefield regardless of controller ("Nonbasic lands don't untap ...",
+	// Back to Basics). The compiler maps it to a battlefield group requiring the
+	// Land card type and excluding the Basic supertype.
+	EffectStaticSubjectNonbasicLands EffectStaticSubjectKind = "EffectStaticSubjectNonbasicLands"
+
+	// EffectStaticSubjectNonlandPermanents names every nonland permanent on the
+	// battlefield regardless of controller ("Nonland permanents don't untap ...",
+	// Embargo). The compiler maps it to a battlefield group excluding the Land
+	// card type.
+	EffectStaticSubjectNonlandPermanents EffectStaticSubjectKind = "EffectStaticSubjectNonlandPermanents"
+
+	// EffectStaticSubjectSnowPermanents names every snow permanent on the
+	// battlefield regardless of controller ("Snow permanents don't untap ...",
+	// Freyalise's Radiance). The compiler maps it to a battlefield group
+	// requiring the Snow supertype.
+	EffectStaticSubjectSnowPermanents EffectStaticSubjectKind = "EffectStaticSubjectSnowPermanents"
+
+	// EffectStaticSubjectAllPermanentSubtype names every permanent on the
+	// battlefield carrying a named subtype regardless of card type or controller
+	// ("Islands don't untap ...", Choke). The subtype rides the group's Subtype /
+	// SubtypesAny slot; the compiler maps it to a battlefield group filtered by
+	// that subtype alone.
+	EffectStaticSubjectAllPermanentSubtype EffectStaticSubjectKind = "EffectStaticSubjectAllPermanentSubtype"
 	// EffectStaticSubjectControlledCreaturesChosenType and its "other" sibling
 	// name the controlled creatures whose creature type matches the source
 	// permanent's entry-time creature-type choice ("creatures you control of the

@@ -300,7 +300,8 @@ func abilityHasGroupDoesntUntapDeclaration(ability *Ability) bool {
 	for i := range ability.StaticDeclarations {
 		declaration := &ability.StaticDeclarations[i]
 		if declaration.Kind == StaticDeclarationRule &&
-			declaration.Rule.Subject.Kind == StaticRuleSubjectBattlefieldCreatures &&
+			(declaration.Rule.Subject.Kind == StaticRuleSubjectBattlefieldCreatures ||
+				declaration.Rule.Subject.Kind == StaticRuleSubjectBattlefieldPermanents) &&
 			declaration.Rule.Operation.Kind == StaticRuleOperationUntap {
 			return true
 		}

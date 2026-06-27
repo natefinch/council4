@@ -599,7 +599,7 @@ func validStaticRuleSyntax(rule StaticRuleSyntax) bool {
 	switch rule.Subject.Kind {
 	case StaticRuleSubjectSourceCreature, StaticRuleSubjectAttachedObject:
 		return validCreatureStaticRuleOperation(rule)
-	case StaticRuleSubjectSourcePermanent, StaticRuleSubjectAttachedPermanent:
+	case StaticRuleSubjectSourcePermanent, StaticRuleSubjectAttachedPermanent, StaticRuleSubjectBattlefieldPermanents:
 		return rule.Constraint.Kind == StaticRuleConstraintProhibition &&
 			rule.Operation.Kind == StaticRuleOperationUntap &&
 			rule.Operation.Voice == StaticRuleVoiceActive &&
