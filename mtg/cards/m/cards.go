@@ -46,4 +46,5 @@ var Cards = []*game.CardDef{
 	Mycologist,
 	MycosynthWellspring,
 	MysticMight,
+	MentorSGuidance,
 }

@@ -825,6 +825,13 @@ type TriggerEventClause struct {
 	// level N" clause (TriggerEventKindClassBecameLevel). It is zero for clauses
 	// of any other kind.
 	ClassBecameLevel int `json:",omitempty"`
+
+	// SelfCast marks a spell-cast clause whose triggering spell is the ability's
+	// own source ("When you cast this spell", CR 601.3i). The trigger fires once
+	// as the source spell is put on the stack, rather than on every matching
+	// spell the controller casts. It is set only on TriggerEventKindSpellCast
+	// clauses introduced by "When".
+	SelfCast bool `json:",omitempty"`
 }
 
 // EventHistoryWindowKind identifies the turn window for an event-history

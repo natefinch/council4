@@ -39,4 +39,5 @@ var Cards = []*game.CardDef{
 	AugurOfBolas,
 	AuspiciousAncestor,
 	AvacynianPriest,
+	ArtisanOfKozilek,
 }

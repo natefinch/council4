@@ -881,8 +881,27 @@ func lowerCastTrigger(
 	ability compiler.CompiledAbility,
 	syntax *parser.Ability,
 ) (game.TriggeredAbility, *shared.Diagnostic) {
-	if ability.Trigger == nil ||
-		ability.Trigger.Pattern.Kind != compiler.TriggerWhenever {
+	if ability.Trigger == nil {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability",
+			"the executable source backend requires a semantic whenever spell-cast trigger")
+	}
+	selfCast := ability.Trigger.Pattern.SelfWasCast
+	triggerType := game.TriggerWhenever
+	switch ability.Trigger.Pattern.Kind {
+	case compiler.TriggerWhenever:
+		if selfCast {
+			return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability",
+				"the executable source backend requires a when self-cast spell trigger")
+		}
+	case compiler.TriggerWhen:
+		// "When you cast this spell" is the only spell-cast trigger introduced by
+		// "When"; every other spell-cast trigger uses "Whenever".
+		if !selfCast {
+			return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability",
+				"the executable source backend requires a semantic whenever spell-cast trigger")
+		}
+		triggerType = game.TriggerWhen
+	default:
 		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability",
 			"the executable source backend requires a semantic whenever spell-cast trigger")
 	}
@@ -905,7 +924,7 @@ func lowerCastTrigger(
 		return game.TriggeredAbility{
 			Text: ability.Text,
 			Trigger: game.TriggerCondition{
-				Type:                 game.TriggerWhenever,
+				Type:                 triggerType,
 				Pattern:              pattern,
 				InterveningIf:        interveningIfText(ability.Trigger),
 				InterveningCondition: intervening,
@@ -939,7 +958,7 @@ func lowerCastTrigger(
 	return game.TriggeredAbility{
 		Text: ability.Text,
 		Trigger: game.TriggerCondition{
-			Type:                 game.TriggerWhenever,
+			Type:                 triggerType,
 			Pattern:              pattern,
 			InterveningIf:        interveningIfText(ability.Trigger),
 			InterveningCondition: intervening,

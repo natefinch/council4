@@ -200,6 +200,16 @@ func compileSpellCastEvent(clause *parser.TriggerEventClause, pattern *TriggerPa
 	if clause.Actor.Kind == parser.TriggerEventActorUnknown {
 		return false
 	}
+	if clause.SelfCast {
+		// "When you cast this spell": the trigger fires once for the source spell
+		// itself. It carries no spell selection, copy, target, ordinal, or zone
+		// qualifiers; the self-source relation is the entire filter.
+		pattern.Event = TriggerEventSpellCast
+		pattern.Controller = ControllerYou
+		pattern.Source = TriggerSourceSelf
+		pattern.SelfWasCast = true
+		return true
+	}
 	controller, ok := compileTriggerActorController(clause.Actor.Kind)
 	if !ok {
 		return false

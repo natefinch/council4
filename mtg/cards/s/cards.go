@@ -81,4 +81,5 @@ var Cards = []*game.CardDef{
 	SunDroplet,
 	SwiftKick,
 	SylvanBasilisk,
+	SpawnGangCommander,
 }

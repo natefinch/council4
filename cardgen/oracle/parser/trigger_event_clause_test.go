@@ -486,6 +486,16 @@ func spellAndAbilityTriggerEventClauseTests() []triggerEventClauseTest {
 			},
 		},
 		{
+			name:   "self cast this spell",
+			source: "When you cast this spell, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.Kind != TriggerEventKindSpellCast || clause.Actor.Kind != TriggerEventActorYou || !clause.SelfCast {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+		{
 			name:   "spell cast or copy",
 			source: "Whenever you cast or copy an instant or sorcery spell, draw a card.",
 			check: func(t *testing.T, clause *TriggerEventClause) {

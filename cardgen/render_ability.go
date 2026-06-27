@@ -637,6 +637,7 @@ func (r Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatt
 		(pattern.RequireKickerPaid && pattern.Event != game.EventSpellCast) ||
 		(pattern.RequireHistoric && pattern.Event != game.EventSpellCast) ||
 		(pattern.MatchSpellCopy && pattern.Event != game.EventSpellCast) ||
+		(pattern.SelfWasCast && pattern.Event != game.EventSpellCast) ||
 		(pattern.RequireTappedForMana && pattern.Event != game.EventPermanentTapped) ||
 		(pattern.ExcludeManaAbility && pattern.Event != game.EventAbilityActivated) ||
 		(pattern.Event == game.EventAbilityActivated && !pattern.ExcludeManaAbility) ||
@@ -767,6 +768,9 @@ func renderTriggerPatternFlagFields(ctx *renderCtx, pattern *game.TriggerPattern
 	}
 	if pattern.MatchSpellCopy {
 		fields = append(fields, "MatchSpellCopy: true,")
+	}
+	if pattern.SelfWasCast {
+		fields = append(fields, "SelfWasCast: true,")
 	}
 	if pattern.SpellTargetsSource {
 		fields = append(fields, "SpellTargetsSource: true,")

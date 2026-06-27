@@ -797,6 +797,13 @@ type TriggerPattern struct {
 	// only valid with Event == EventSpellCast and never affects cast counts.
 	MatchSpellCopy bool
 
+	// SelfWasCast restricts an EventSpellCast pattern to the casting of the
+	// ability's own source spell ("When you cast this spell", CR 601.3i). The
+	// trigger fires once as the source spell is put on the stack, detected from
+	// the cast spell's own card definition rather than from a battlefield
+	// permanent. It is only valid with Event == EventSpellCast.
+	SelfWasCast bool
+
 	MatchFromZone bool
 	FromZone      zone.Type
 	MatchToZone   bool

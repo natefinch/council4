@@ -317,6 +317,12 @@ type TriggerPattern struct {
 	// events ("Whenever you cast or copy ...", magecraft).
 	MatchSpellCopy bool
 
+	// SelfWasCast restricts a spell-cast pattern to the casting of the ability's
+	// own source spell ("When you cast this spell", CR 601.3i). It is only valid
+	// with Event == TriggerEventSpellCast and fires once as the source is put on
+	// the stack.
+	SelfWasCast bool
+
 	// SpellTargetsSource restricts a spell-cast pattern to spells that target
 	// the source permanent ("Whenever you cast a spell that targets this
 	// creature", the Heroic ability word).

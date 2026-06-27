@@ -28,4 +28,5 @@ var Cards = []*game.CardDef{
 	LoxodonWarhammer,
 	LupinflowerVillage,
 	LustForWar,
+	LumaretSFavor,
 }
