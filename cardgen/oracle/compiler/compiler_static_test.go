@@ -2021,6 +2021,76 @@ func TestCompileConditionalSelfStaticFailClosed(t *testing.T) {
 	}
 }
 
+// TestCompileConditionalSourcePowerToughnessRuleDeclarations verifies that a
+// single leading "as long as" condition on a source-scoped compound
+// power/toughness and rule wording threads a typed condition onto every
+// declaration ("Threshold — As long as there are seven or more cards in your
+// graveyard, this creature gets +2/+2 and can't block.", Childhood Horror). The
+// runtime gates the whole static ability, including its rule effect, on the
+// condition.
+func TestCompileConditionalSourcePowerToughnessRuleDeclarations(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		source    string
+		rule      StaticRuleKind
+		predicate ConditionPredicate
+		threshold int
+	}{
+		"graveyard threshold can't block": {
+			source:    "As long as there are seven or more cards in your graveyard, this creature gets +2/+2 and can't block.",
+			rule:      StaticRuleCantBlock,
+			predicate: ConditionPredicateControllerGraveyardCardCountAtLeast,
+			threshold: 7,
+		},
+		"control lands can't be blocked": {
+			source:    "This creature gets +1/+0 and can't be blocked as long as you control eight or more lands.",
+			rule:      StaticRuleCantBeBlocked,
+			predicate: ConditionPredicateControllerControls,
+			threshold: 8,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := compileSource(test.source, pipelineContext{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			ability := compilation.Abilities[0]
+			if ability.Static == nil || ability.Static.Blocker != StaticDeclarationBlockerNone {
+				t.Fatalf("static = %#v, want recognized declarations", ability.Static)
+			}
+			var continuous, rule *StaticDeclaration
+			for i := range ability.Static.Declarations {
+				declaration := &ability.Static.Declarations[i]
+				switch declaration.Kind {
+				case StaticDeclarationContinuous:
+					continuous = declaration
+				case StaticDeclarationRule:
+					rule = declaration
+				default:
+				}
+			}
+			if continuous == nil || rule == nil || rule.Rule == nil {
+				t.Fatalf("declarations = %#v, want continuous and rule", ability.Static.Declarations)
+			}
+			if rule.Rule.Kind != test.rule {
+				t.Fatalf("rule kind = %v, want %v", rule.Rule.Kind, test.rule)
+			}
+			if continuous.Group.Domain != StaticGroupSource || rule.Group.Domain != StaticGroupSource {
+				t.Fatalf("groups = %v/%v, want source", continuous.Group.Domain, rule.Group.Domain)
+			}
+			for _, declaration := range []*StaticDeclaration{continuous, rule} {
+				if declaration.Condition == nil ||
+					declaration.Condition.Predicate != test.predicate ||
+					declaration.Condition.Threshold != test.threshold {
+					t.Fatalf("condition = %#v, want predicate %v threshold %d", declaration.Condition, test.predicate, test.threshold)
+				}
+			}
+		})
+	}
+}
+
 func TestCompileStaticLoseAbilitiesBecomeDeclaration(t *testing.T) {
 	t.Parallel()
 	compilation, diagnostics := compileSource(

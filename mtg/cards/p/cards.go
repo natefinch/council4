@@ -35,4 +35,5 @@ var Cards = []*game.CardDef{
 	PublicThoroughfare,
 	PuncturingBlow,
 	PurgingStormbrood,
+	PutridImp,
 }

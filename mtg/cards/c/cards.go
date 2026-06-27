@@ -23,6 +23,7 @@ var Cards = []*game.CardDef{
 	ChaosWarp,
 	ChelonianTackle,
 	ChildOfTheVolcano,
+	ChildhoodHorror,
 	Chill,
 	ChillOfForeboding,
 	ChiseiHeartOfOceans,
