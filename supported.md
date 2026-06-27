@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,454 of 32,501 cards eligible for paper support (47.5%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,469 of 32,501 cards eligible for paper support (47.6%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -909,6 +909,7 @@ Council4 currently supports **15,454 of 32,501 cards eligible for paper support 
 - Bala Ged Recovery // Bala Ged Sanctuary
 - Bala Ged Scorpion
 - Balamb T-Rexaur
+- Baldur's Gate
 - Balduvian Barbarians
 - Balduvian Bears
 - Balduvian Horde
@@ -948,6 +949,7 @@ Council4 currently supports **15,454 of 32,501 cards eligible for paper support 
 - Bankrupt in Blood
 - Banners Raised
 - Banquet Guests
+- Banshee's Blade
 - Bant Battlemage
 - Bant Panorama
 - Bant Sureblade
@@ -1561,6 +1563,7 @@ Council4 currently supports **15,454 of 32,501 cards eligible for paper support 
 - Bonebreaker Giant
 - Bonecaller Cleric
 - Boneclad Necromancer
+- Boneclub Berserker
 - Boneknitter
 - Bonepicker Skirge
 - Bonescythe Sliver
@@ -1587,6 +1590,7 @@ Council4 currently supports **15,454 of 32,501 cards eligible for paper support 
 - Borborygmos
 - Border Guard
 - Border Patrol
+- Borderland Behemoth
 - Borderland Marauder
 - Borderland Minotaur
 - Borderland Ranger
@@ -3416,6 +3420,7 @@ Council4 currently supports **15,454 of 32,501 cards eligible for paper support 
 - Doomed Necromancer
 - Doomed Traveler
 - Doomwake Giant
+- Door of Destinies
 - Door to Nothingness
 - Dosan's Oldest Chant
 - Double Cleave
@@ -3734,6 +3739,7 @@ Council4 currently supports **15,454 of 32,501 cards eligible for paper support 
 - Earthquake
 - Earthquake Dragon
 - Earthshaker
+- Earthshaker Dreadmaw
 - Earthshaker Giant
 - Earthshaking Si
 - East Wind Avatar
@@ -4162,6 +4168,7 @@ Council4 currently supports **15,454 of 32,501 cards eligible for paper support 
 - Evolving Wilds
 - Exalted Angel
 - Exava, Rakdos Blood Witch
+- Excalibur II
 - Excavated Wall
 - Excavating Anurid
 - Excavation Elephant
@@ -5270,6 +5277,7 @@ Council4 currently supports **15,454 of 32,501 cards eligible for paper support 
 - Gixian Skullflayer
 - Glacial Floodplain
 - Glacial Fortress
+- Glacial Plating
 - Glacial Revelation
 - Glacial Stalker
 - Glacial Wall
@@ -6884,6 +6892,7 @@ Council4 currently supports **15,454 of 32,501 cards eligible for paper support 
 - Joo Dee, One of Many
 - Jor Kadeen, the Prevailer
 - Joraga Visionary
+- Joraga Warcaller
 - Jori En, Ruin Diver
 - Jorubai Murk Lurker
 - Josu Vess, Lich Knight
@@ -7586,6 +7595,7 @@ Council4 currently supports **15,454 of 32,501 cards eligible for paper support 
 - Living Airship
 - Living Death
 - Living Hive
+- Living Lies of Loki
 - Living Lightning
 - Living Lightning, Charged Up
 - Living Phone
@@ -7775,6 +7785,7 @@ Council4 currently supports **15,454 of 32,501 cards eligible for paper support 
 - Mabel's Mettle
 - Macabre Mockery
 - Macabre Waltz
+- Mace of the Valiant
 - Macetail Hystrodon
 - Machine Over Matter
 - Machinesmith Automaton
@@ -8280,6 +8291,7 @@ Council4 currently supports **15,454 of 32,501 cards eligible for paper support 
 - Minister of Impediments
 - Minister of Inquiries
 - Ministrant of Obligation
+- Minn, Wily Illusionist
 - Minor Misstep
 - Minotaur
 - Minotaur Abomination
@@ -9764,6 +9776,7 @@ Council4 currently supports **15,454 of 32,501 cards eligible for paper support 
 - Pride Guardian
 - Pride of Lions
 - Pride of the Perfect
+- Pride Sovereign
 - Prideful Feastling
 - Prideful Parent
 - Pridemalkin
@@ -11992,6 +12005,7 @@ Council4 currently supports **15,454 of 32,501 cards eligible for paper support 
 - Sliver
 - Sliver Army
 - Sliver Construct
+- Sliver Legion
 - Sliver Overlord
 - Sliver Queen
 - Sliversmith
@@ -12529,6 +12543,7 @@ Council4 currently supports **15,454 of 32,501 cards eligible for paper support 
 - Squire's Lightblade
 - Squirming Mass
 - Squirrel
+- Squirrel Mob
 - Squirrel Nest
 - Squirrel Sanctuary
 - Squirrel Sovereign
