@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **14,900 of 32,501 cards eligible for paper support (45.8%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **14,913 of 32,501 cards eligible for paper support (45.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1273,6 +1273,7 @@ Council4 currently supports **14,900 of 32,501 cards eligible for paper support 
 - Blight Sickle
 - Blight-Breath Catoblepas
 - Blightbelly Rat
+- Blightcaster
 - Blighted Agent
 - Blighted Bat
 - Blighted Cataract
@@ -1972,6 +1973,7 @@ Council4 currently supports **14,900 of 32,501 cards eligible for paper support 
 - Cauldron of Essence
 - Caustic Bronco
 - Caustic Caterpillar
+- Caustic Crawler
 - Caustic Hound
 - Caustic Rain
 - Caustic Tar
@@ -2916,6 +2918,7 @@ Council4 currently supports **14,900 of 32,501 cards eligible for paper support 
 - Death Frenzy
 - Death Grasp
 - Death in the Family
+- Death Pulse
 - Death Rattle
 - Death Speakers
 - Death Stroke
@@ -3192,6 +3195,7 @@ Council4 currently supports **14,900 of 32,501 cards eligible for paper support 
 - Diregraf Ghoul
 - Diresight
 - Dirge Bat
+- Dirge of Dread
 - Dirgur Island Dragon // Skimming Strike
 - Dirtwater Wraith
 - Disallow
@@ -3421,6 +3425,7 @@ Council4 currently supports **14,900 of 32,501 cards eligible for paper support 
 - Dreamroot Cascade
 - Dreams of Laguna
 - Dreamscape Artist
+- Dreamspoiler Witches
 - Dreamstalker Manticore
 - Dreamstone Hedron
 - Dreamtail Heron
@@ -3507,6 +3512,7 @@ Council4 currently supports **14,900 of 32,501 cards eligible for paper support 
 - Dueling Rapier
 - Duelist of Deep Faith
 - Duelist of the Mind
+- Duelist's Heritage
 - Duergar Assailant
 - Duergar Cave-Guard
 - Duergar Hedge-Mage
@@ -4681,6 +4687,7 @@ Council4 currently supports **14,900 of 32,501 cards eligible for paper support 
 - Fountain of Youth
 - Fountainport
 - Fountainport Bell
+- Fourth Bridge Prowler
 - Fox
 - Foxfire
 - Foxfire Oak
@@ -4911,6 +4918,7 @@ Council4 currently supports **14,900 of 32,501 cards eligible for paper support 
 - Geistflame
 - Gempalm Avenger
 - Gempalm Incinerator
+- Gempalm Polluter
 - Gempalm Strider
 - Gemrazer
 - Gemstone Array
@@ -5629,6 +5637,7 @@ Council4 currently supports **14,900 of 32,501 cards eligible for paper support 
 - Hagi Mob
 - Hagra Constrictor
 - Hagra Crocodile
+- Hagra Diabolist
 - Hagra Sharpshooter
 - Hailstorm Valkyrie
 - Hair-Strung Koto
@@ -6842,6 +6851,7 @@ Council4 currently supports **14,900 of 32,501 cards eligible for paper support 
 - Kinjalli's Caller
 - Kinjalli's Dawnrunner
 - Kinjalli's Sunwing
+- Kinsbaile Balloonist
 - Kinsbaile Cavalier
 - Kinsbaile Skirmisher
 - Kiora's Dambreaker
@@ -10055,6 +10065,8 @@ Council4 currently supports **14,900 of 32,501 cards eligible for paper support 
 - Reservoir Walker
 - Reshape
 - Reshape the Earth
+- Resilient Khenra
+- Resilient Khenra
 - Resilient Wanderer
 - Resistance Skywarden
 - Resistance Squad
@@ -13590,6 +13602,7 @@ Council4 currently supports **14,900 of 32,501 cards eligible for paper support 
 - Unctus, Grand Metatect
 - Undead Augur
 - Undead Butler
+- Undead Executioner
 - Undead Gladiator
 - Undead Hand Ninja
 - Undead Leotau
