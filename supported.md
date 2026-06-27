@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,400 of 32,501 cards eligible for paper support (47.4%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,402 of 32,501 cards eligible for paper support (47.4%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -4095,6 +4095,7 @@ Council4 currently supports **15,400 of 32,501 cards eligible for paper support 
 - Essence Depleter
 - Essence Drain
 - Essence Extraction
+- Essence Flare
 - Essence Fracture
 - Essence Harvest
 - Essence Infusion
@@ -14132,6 +14133,7 @@ Council4 currently supports **15,400 of 32,501 cards eligible for paper support 
 - Unsettling Twins
 - Unsparing Boltcaster
 - Unspeakable Symbol
+- Unstable Mutation
 - Unstable Obelisk
 - Unstoppable Ogre
 - Unstoppable Plan
