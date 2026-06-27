@@ -274,6 +274,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				TokenCopyGrantKeywords:         append([]parser.KeywordKind(nil), syntax.TokenCopyGrantKeywords...),
 				TokenCopyGrantRiderSpan:        syntax.TokenCopyGrantRiderSpan,
 				TokenChoice:                    syntax.TokenChoice,
+				AdditionalTokens:               compileEffects([]parser.Sentence{{Effects: syntax.AdditionalTokens}}),
 				StaticSubject:                  compileStaticSubjectKind(syntax.StaticSubject.Kind),
 				StaticSubjectSpan:              syntax.StaticSubject.Span,
 				Details: compiledEffectDetails(

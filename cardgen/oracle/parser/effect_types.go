@@ -1835,10 +1835,18 @@ type EffectSyntax struct {
 	// The alternatives are the Selection.SubtypesAny entries in source order; the
 	// effect creates exactly one of them, not a single multi-subtype token. It is
 	// false for a single-token create and for any multi-subtype creature token.
-	TokenChoice   bool                      `json:",omitempty"`
-	StaticSubject EffectStaticSubjectSyntax `json:",omitzero"`
-	CounterKind   counter.Kind              `json:",omitempty"`
-	CounterKnown  bool                      `json:",omitempty"`
+	TokenChoice bool `json:",omitempty"`
+	// AdditionalTokens carries the second and later token specs of a multi-token
+	// create clause that creates several distinct tokens at once ("Create a 1/1
+	// green Snake creature token, a 2/2 green Wolf creature token, and a 3/3 green
+	// Elephant creature token."). The primary effect's own token fields describe
+	// the first token; each entry here is a fully parsed creature-token spec for
+	// one of the remaining tokens, in source order. It is empty for every
+	// single-token create, so existing single-token cards are unaffected.
+	AdditionalTokens []EffectSyntax            `json:"-"`
+	StaticSubject    EffectStaticSubjectSyntax `json:",omitzero"`
+	CounterKind      counter.Kind              `json:",omitempty"`
+	CounterKnown     bool                      `json:",omitempty"`
 	// CounterKindChoices lists the counter kinds a placement effect lets the
 	// resolving controller choose between ("a +1/+1 counter or a loyalty counter
 	// on it.", Elspeth Conquers Death chapter III). It holds two or more distinct
