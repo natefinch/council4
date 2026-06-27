@@ -6,7 +6,7 @@ func emitEventHistoryConditions(abilities []Ability) {
 	for i := range abilities {
 		ability := &abilities[i]
 		tokens := eventHistorySemanticTokens(ability.Tokens, ability.Reminders, ability.Quoted)
-		if conditions := parseEventHistoryConditions(tokens); len(conditions) > 0 {
+		if conditions := parseEventHistoryConditions(tokens, ability.Atoms); len(conditions) > 0 {
 			ability.EventHistoryConditions = conditions
 		}
 		if ability.Modal == nil {
@@ -15,7 +15,7 @@ func emitEventHistoryConditions(abilities []Ability) {
 		for j := range ability.Modal.Options {
 			mode := &ability.Modal.Options[j]
 			tokens := eventHistorySemanticTokens(mode.Tokens, mode.Reminders, mode.Quoted)
-			if conditions := parseEventHistoryConditions(tokens); len(conditions) > 0 {
+			if conditions := parseEventHistoryConditions(tokens, mode.Atoms); len(conditions) > 0 {
 				mode.EventHistoryConditions = conditions
 			}
 		}
@@ -37,7 +37,7 @@ func eventHistorySemanticTokens(
 	return result
 }
 
-func parseEventHistoryConditions(tokens []shared.Token) []EventHistoryCondition {
+func parseEventHistoryConditions(tokens []shared.Token, atoms Atoms) []EventHistoryCondition {
 	var conditions []EventHistoryCondition
 	for i := 0; i < len(tokens); i++ {
 		intro, width := conditionIntroAt(tokens, i)
@@ -45,7 +45,7 @@ func parseEventHistoryConditions(tokens []shared.Token) []EventHistoryCondition 
 			continue
 		}
 		end := eventHistoryConditionEnd(tokens, i)
-		if condition, ok := parseEventHistoryCondition(tokens[i:end], width); ok {
+		if condition, ok := parseEventHistoryCondition(tokens[i:end], width, atoms); ok {
 			conditions = append(conditions, condition)
 		}
 		i = end - 1
@@ -67,7 +67,7 @@ func eventHistoryConditionEnd(tokens []shared.Token, start int) int {
 // two-word "only if" that opens an "Activate only if ..." restriction). The
 // retained span covers the whole clause including the introducer so it matches
 // the parser's condition segment for that boundary.
-func parseEventHistoryCondition(tokens []shared.Token, introWidth int) (EventHistoryCondition, bool) {
+func parseEventHistoryCondition(tokens []shared.Token, introWidth int, atoms Atoms) (EventHistoryCondition, bool) {
 	if introWidth >= len(tokens) {
 		return EventHistoryCondition{}, false
 	}
@@ -87,6 +87,12 @@ func parseEventHistoryCondition(tokens []shared.Token, introWidth int) (EventHis
 	}
 	event, condition.MinCount = stripAttackedCreatureCount(event)
 	condition.TriggerEvent = parseEventHistoryTriggerEvent(event)
+	if condition.TriggerEvent == nil {
+		if clause, minCount, ok := parseEventHistoryEnteredBattlefield(event, atoms); ok {
+			condition.TriggerEvent = clause
+			condition.MinCount = minCount
+		}
+	}
 	if condition.TriggerEvent == nil {
 		if clause, minCount, ok := parseEventHistoryYouCastSpell(event); ok {
 			condition.TriggerEvent = clause
@@ -398,6 +404,83 @@ func parseEventHistoryLeftBattlefield(tokens []shared.Token, span shared.Span) *
 			FromZone:      triggerEventZone(TriggerEventZoneBattlefield, shared.Span{}),
 		},
 	}
+}
+
+// enteredBattlefieldUnderYourControlWords is the trailing verb phrase of an
+// "entered the battlefield under your control" event-history clause. The subject
+// before it carries the permanent selection and any count qualifier; the
+// controller relation is fixed to the ability's controller by the phrase.
+var enteredBattlefieldUnderYourControlWords = []string{
+	"entered", "the", "battlefield", "under", "your", "control",
+}
+
+// parseEventHistoryEnteredBattlefield recognizes the enters-the-battlefield
+// event-history clause "<count> <Selection> entered the battlefield under your
+// control", reduced from its "this turn" form after the window suffix is
+// stripped. It mirrors the live enters-the-battlefield trigger "Whenever
+// <Selection> enters the battlefield under your control": the clause compiles to
+// a current-turn zone-change matching any permanent of the selection entering
+// the battlefield under the ability's controller. An optional "<cardinal> or
+// more" prefix sets the minimum number of matching entries the window must
+// contain ("two or more nonland permanents entered ..."); the singular "a"/"an"/
+// "another" form treats a single matching entry as sufficient. The full subject
+// grammar is shared with the live trigger through parseZoneChangeSubject, so
+// selections, the self-excluding "another" qualifier, and the face-down
+// restriction all carry over. Anything other than the controller-scoped phrase
+// fails closed.
+func parseEventHistoryEnteredBattlefield(tokens []shared.Token, atoms Atoms) (*TriggerEventClause, int, bool) {
+	subjectTokens, ok := stripTokenSuffix(tokens, enteredBattlefieldUnderYourControlWords...)
+	if !ok || len(subjectTokens) == 0 {
+		return nil, 0, false
+	}
+	minCount := 0
+	plural := false
+	if rest, count, ok := cutEventHistoryCountPrefix(subjectTokens); ok {
+		subjectTokens = rest
+		minCount = count
+		plural = true
+	}
+	subject := parseZoneChangeSubject(subjectTokens, plural, atoms, "")
+	if !subject.ok || subject.controller != ControllerAny || subject.selfOrAnother ||
+		subject.dealtDamageBySrc || subject.oneOrMore ||
+		subject.player.Kind != TriggerPlayerSelectorUnknown {
+		return nil, 0, false
+	}
+	span := shared.SpanOf(tokens)
+	return &TriggerEventClause{
+		Kind:        TriggerEventKindZoneChange,
+		Span:        span,
+		Controller:  ControllerYou,
+		Subject:     subject.subject,
+		ExcludeSelf: subject.excludeSelf,
+		FaceDown:    subject.faceDown,
+		ZoneChange: TriggerEventZoneChange{
+			Kind: TriggerEventZoneChangeEnteredBattlefield,
+			Span: span,
+		},
+		Zone: TriggerEventZoneContext{
+			Span:        span,
+			MatchToZone: true,
+			ToZone:      triggerEventZone(TriggerEventZoneBattlefield, shared.Span{}),
+		},
+	}, minCount, true
+}
+
+// cutEventHistoryCountPrefix recognizes a leading "<cardinal> or more" count
+// qualifier on a plural event-history subject ("two or more nonland permanents",
+// "three or more artifacts") and returns the reduced subject tokens together with
+// the cardinal minimum. The minimum must be at least two so the counted form
+// never overlaps the singular "a <Selection>" subject, which treats a single
+// matching event as sufficient.
+func cutEventHistoryCountPrefix(tokens []shared.Token) ([]shared.Token, int, bool) {
+	if len(tokens) < 4 || !equalWord(tokens[1], "or") || !equalWord(tokens[2], "more") {
+		return nil, 0, false
+	}
+	count, ok := CardinalWordValue(tokens[0].Text)
+	if !ok || count < 2 {
+		return nil, 0, false
+	}
+	return tokens[3:], count, true
 }
 
 func parseEventHistoryPlayerEvent(tokens []shared.Token) *PlayerEventTriggerClause {

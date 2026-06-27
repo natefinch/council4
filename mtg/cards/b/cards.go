@@ -25,6 +25,7 @@ var Cards = []*game.CardDef{
 	BeastriderVanguard,
 	BelbeSPercher,
 	BelligerentHatchling,
+	BelligerentOfTheBall,
 	BenevolentAncestor,
 	BenevolentBlessing,
 	BenevolentHydra,

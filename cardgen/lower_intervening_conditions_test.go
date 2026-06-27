@@ -167,6 +167,85 @@ func TestLowerDescendInterveningCondition(t *testing.T) {
 	}
 }
 
+// TestLowerEnteredBattlefieldInterveningCondition verifies the
+// enters-the-battlefield event-history intervening-if "if <count> <Selection>
+// entered the battlefield under your control this turn" lowers to a current-turn
+// zone-change condition matching permanents of the selection entering the
+// battlefield under the ability's controller, carrying the counted minimum and
+// the self-excluding "another" qualifier.
+func TestLowerEnteredBattlefieldInterveningCondition(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name         string
+		oracle       string
+		wantMinCount int
+		wantPattern  game.TriggerPattern
+	}{
+		{
+			name:         "two or more nonland permanents",
+			oracle:       "At the beginning of your end step, if two or more nonland permanents entered the battlefield under your control this turn, draw a card.",
+			wantMinCount: 2,
+			wantPattern: game.TriggerPattern{
+				Event:            game.EventPermanentEnteredBattlefield,
+				Controller:       game.TriggerControllerYou,
+				SubjectSelection: game.Selection{ExcludedTypes: []types.Card{types.Land}},
+			},
+		},
+		{
+			name:   "another creature excludes self",
+			oracle: "At the beginning of your end step, if another creature entered the battlefield under your control this turn, draw a card.",
+			wantPattern: game.TriggerPattern{
+				Event:            game.EventPermanentEnteredBattlefield,
+				Controller:       game.TriggerControllerYou,
+				ExcludeSelf:      true,
+				SubjectSelection: game.Selection{RequiredTypes: []types.Card{types.Creature}},
+			},
+		},
+		{
+			name:   "a planeswalker",
+			oracle: "At the beginning of each end step, if a planeswalker entered the battlefield under your control this turn, draw a card.",
+			wantPattern: game.TriggerPattern{
+				Event:            game.EventPermanentEnteredBattlefield,
+				Controller:       game.TriggerControllerYou,
+				SubjectSelection: game.Selection{RequiredTypes: []types.Card{types.Planeswalker}},
+			},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Bear",
+				Layout:     "normal",
+				TypeLine:   "Creature — Bear",
+				OracleText: tc.oracle,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			})
+			if len(face.TriggeredAbilities) != 1 {
+				t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+			}
+			cond := face.TriggeredAbilities[0].Trigger.InterveningCondition
+			if !cond.Exists || !cond.Val.EventHistory.Exists {
+				t.Fatalf("condition = %+v, want EventHistory", cond)
+			}
+			hist := cond.Val.EventHistory.Val
+			if hist.Window != game.EventHistoryCurrentTurn {
+				t.Errorf("Window = %v, want EventHistoryCurrentTurn", hist.Window)
+			}
+			if cond.Val.Negate {
+				t.Error("Negate = true, want false")
+			}
+			if hist.MinCount != tc.wantMinCount {
+				t.Errorf("MinCount = %d, want %d", hist.MinCount, tc.wantMinCount)
+			}
+			if !reflect.DeepEqual(hist.Pattern, tc.wantPattern) {
+				t.Errorf("EventHistory.Pattern = %+v, want %+v", hist.Pattern, tc.wantPattern)
+			}
+		})
+	}
+}
+
 // TestLowerLandfallDistinctNamesCondition verifies Field of the Dead's landfall
 // trigger with the "if you control seven or more lands with different names"
 // intervening-if lowers to a ControlsMatching condition carrying the
