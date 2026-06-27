@@ -1933,7 +1933,7 @@ func recognizeStaticPowerToughnessDeclarations(ability CompiledAbility, statics 
 		return nil, false
 	}
 	effect := &ability.Content.Effects[0]
-	group, ok := staticDeclarationEffectGroup(ability, effect)
+	group, ok := staticConditionalGrantGroup(ability, effect, condition)
 	if !ok {
 		return nil, false
 	}
@@ -2961,39 +2961,34 @@ func recognizeStaticKeywordGrantDeclarations(ability CompiledAbility, statics []
 		return nil, false
 	}
 	effect := &ability.Content.Effects[0]
-	// "As long as equipped/enchanted creature is <state>, it has <keyword>": the
-	// pronoun "it" co-refers with the attached creature named by the gating
-	// condition, so the grant applies to the attached object. The pronoun has no
-	// antecedent reference of its own and binds Ambiguous, so the attached group
-	// is taken from the condition's binding rather than from the effect group.
-	if condition != nil && condition.ObjectBinding == ReferenceBindingSourceAttached {
-		if !staticKeywordGrantBindsAttachedPronoun(ability, effect) {
-			return nil, false
-		}
-		group := StaticGroupReference{Span: ability.Content.References[0].Span, Domain: StaticGroupAttachedObject}
-		return []StaticDeclaration{staticKeywordGrantDeclaration(ability.Span, group, condition, ability.Content.Keywords)}, true
-	}
-	group, ok := staticDeclarationEffectGroup(ability, effect)
+	group, ok := staticConditionalGrantGroup(ability, effect, condition)
 	if !ok {
 		return nil, false
 	}
-	if group.AffectedSource {
-		if condition == nil && !staticGrantKeywordsAllKnownProtection(ability.Content.Keywords) {
-			// An unconditional self keyword grant ("This creature has <keyword>")
-			// normally fails closed because a printed self keyword belongs on the
-			// face rather than in a static grant. Protection is the exception: a
-			// self protection grant carries a parameter the printed face cannot
-			// (most importantly "protection from the chosen color", resolved from
-			// the source's entry-time color choice), so it must travel as a static
-			// grant. Order of the Stars and Voice of All rely on this path.
+	// "As long as equipped/enchanted creature is <state>, it has <keyword>": the
+	// pronoun "it" co-refers with the attached creature named by the gating
+	// condition, so the grant applies to the attached object and the
+	// source-attached pronoun group already resolved above; the AffectedSource
+	// and group-anthem restrictions below apply only to non-attached grants.
+	if condition == nil || condition.ObjectBinding != ReferenceBindingSourceAttached {
+		if group.AffectedSource {
+			if condition == nil && !staticGrantKeywordsAllKnownProtection(ability.Content.Keywords) {
+				// An unconditional self keyword grant ("This creature has <keyword>")
+				// normally fails closed because a printed self keyword belongs on the
+				// face rather than in a static grant. Protection is the exception: a
+				// self protection grant carries a parameter the printed face cannot
+				// (most importantly "protection from the chosen color", resolved from
+				// the source's entry-time color choice), so it must travel as a static
+				// grant. Order of the Stars and Voice of All rely on this path.
+				return nil, false
+			}
+		} else if condition != nil && !condition.SourceInGraveyard {
+			// A group anthem ("creatures you control have ...") may carry a condition
+			// only when the static ability functions from the graveyard, as on the
+			// Incarnation cycle ("As long as this card is in your graveyard and you
+			// control a <land>, ..."). Other conditioned group anthems fail closed.
 			return nil, false
 		}
-	} else if condition != nil && !condition.SourceInGraveyard {
-		// A group anthem ("creatures you control have ...") may carry a condition
-		// only when the static ability functions from the graveyard, as on the
-		// Incarnation cycle ("As long as this card is in your graveyard and you
-		// control a <land>, ..."). Other conditioned group anthems fail closed.
-		return nil, false
 	}
 	return []StaticDeclaration{staticKeywordGrantDeclaration(ability.Span, group.Group, condition, ability.Content.Keywords)}, true
 }
@@ -3015,12 +3010,33 @@ func staticGrantKeywordsAllKnownProtection(keywords []CompiledKeyword) bool {
 	return true
 }
 
-// staticKeywordGrantBindsAttachedPronoun reports whether a conditional keyword
-// grant is the attached-creature pronoun form "..., it has <keyword>": the
-// effect recipient is a referenced object filled by exactly one "it"/"them"
-// pronoun reference whose own antecedent is unresolved (Ambiguous). The pronoun
-// co-refers with the attached creature named by the gating condition.
-func staticKeywordGrantBindsAttachedPronoun(ability CompiledAbility, effect *CompiledEffect) bool {
+// staticConditionalGrantGroup resolves the affected group for a conditional
+// static grant (power/toughness or keyword). When the gating condition binds the
+// source-attached object ("As long as equipped/enchanted <subject> is <state>,
+// it gets +1/+1." / "..., it has flying."), the recipient must be the bare
+// "it"/"them" pronoun that co-refers with the attached creature, and the group
+// is the attached object; any other recipient fails closed. Otherwise the group
+// derives from the effect's own affected subject, identical to the unconditional
+// path, so non-attached grants keep their existing lowering.
+func staticConditionalGrantGroup(ability CompiledAbility, effect *CompiledEffect, condition *CompiledCondition) (staticDeclarationEffectGroupResult, bool) {
+	if condition != nil && condition.ObjectBinding == ReferenceBindingSourceAttached {
+		if !staticGrantBindsAttachedPronoun(ability, effect) {
+			return staticDeclarationEffectGroupResult{}, false
+		}
+		return staticDeclarationEffectGroupResult{
+			Group: StaticGroupReference{Span: ability.Content.References[0].Span, Domain: StaticGroupAttachedObject},
+		}, true
+	}
+	return staticDeclarationEffectGroup(ability, effect)
+}
+
+// staticGrantBindsAttachedPronoun reports whether a conditional static grant is
+// the attached-creature pronoun form "..., it gets +1/+1." / "..., it has
+// <keyword>": the effect recipient is a referenced object filled by exactly one
+// "it"/"them" pronoun reference whose own antecedent is unresolved (Ambiguous).
+// The pronoun co-refers with the attached creature named by the gating
+// condition.
+func staticGrantBindsAttachedPronoun(ability CompiledAbility, effect *CompiledEffect) bool {
 	if effect.StaticSubject != StaticSubjectNone ||
 		effect.Context != parser.EffectContextReferencedObject ||
 		len(ability.Content.References) != 1 {

@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,202 of 32,501 cards eligible for paper support (46.8%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,221 of 32,501 cards eligible for paper support (46.8%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -229,6 +229,7 @@ Council4 currently supports **15,202 of 32,501 cards eligible for paper support 
 - Akki Scrapchomper
 - Akki Underling
 - Akki Underminer
+- Akki War Paint
 - Akoum Boulderfoot
 - Akoum Firebird
 - Akoum Hellhound
@@ -1254,6 +1255,7 @@ Council4 currently supports **15,202 of 32,501 cards eligible for paper support 
 - Bladebrand
 - Bladed Ambassador
 - Bladed Battle-Fan
+- Bladed Bracers
 - Bladed Pinions
 - Bladed Sentinel
 - Bladestitched Skaab
@@ -1790,6 +1792,7 @@ Council4 currently supports **15,202 of 32,501 cards eligible for paper support 
 - Bushwhack
 - Butcher Ghoul
 - Butcher of Malakir
+- Butcher's Cleaver
 - Butterfly
 - Buy Your Silence
 - Buzz Bots
@@ -2344,6 +2347,7 @@ Council4 currently supports **15,202 of 32,501 cards eligible for paper support 
 - Cloudshift
 - Cloudshredder Sliver
 - Cloudthresher
+- Clout of the Dominus
 - Clown Robot
 - Clue
 - Coal Golem
@@ -2402,6 +2406,7 @@ Council4 currently supports **15,202 of 32,501 cards eligible for paper support 
 - Combat Courier
 - Combat Medic
 - Combat Professor
+- Combat Research
 - Combat Tutorial
 - Combine Chrysalis
 - Comet Crawler
@@ -3697,6 +3702,7 @@ Council4 currently supports **15,202 of 32,501 cards eligible for paper support 
 - Ecologist's Terrarium
 - Ecstatic Electromancer
 - Edea, Possessed Sorceress
+- Edge of the Divinity
 - Edgewall Pack
 - Eel-Hounds
 - Eerie Gravestone
@@ -3998,6 +4004,7 @@ Council4 currently supports **15,202 of 32,501 cards eligible for paper support 
 - Epicure of Blood
 - Epiphany Storm
 - Epitaph Golem
+- Equestrian Skill
 - Equilibrium Adept
 - Era of Enlightenment // Hand of Enlightenment
 - Erase
@@ -4293,6 +4300,8 @@ Council4 currently supports **15,202 of 32,501 cards eligible for paper support 
 - Fault Riders
 - Faultgrinder
 - Fauna Shaman
+- Favor of Jukai
+- Favor of the Overbeing
 - Favor of the Woods
 - Favorable Winds
 - Favored of Iroas
@@ -4510,6 +4519,7 @@ Council4 currently supports **15,202 of 32,501 cards eligible for paper support 
 - Fissure Wizard
 - Fists of Ironwood
 - Fists of the Anvil
+- Fists of the Demigod
 - Fit of Rage
 - Five Hundred Year Diary
 - Five-Alarm Fire
@@ -5134,6 +5144,7 @@ Council4 currently supports **15,202 of 32,501 cards eligible for paper support 
 - Gift of the Gargantuan
 - Gift of the Woods
 - Gift of Tusks
+- Gift of Wrath
 - Gifted Aetherborn
 - Gigantiform
 - Gigantoad
@@ -5818,6 +5829,7 @@ Council4 currently supports **15,202 of 32,501 cards eligible for paper support 
 - Harsh Sustenance
 - Haru-Onna
 - Harvest Gwyllion
+- Harvest Hand // Scrounged Scythe
 - Harvest Pyre
 - Harvester Druid
 - Harvester of Souls
@@ -6108,6 +6120,7 @@ Council4 currently supports **15,202 of 32,501 cards eligible for paper support 
 - Hookblade Veteran
 - Hooting Mandrills
 - Hop to It
+- Hope Against Hope
 - Hope Charm
 - Hope Estheim
 - Hope Tender
@@ -6181,6 +6194,7 @@ Council4 currently supports **15,202 of 32,501 cards eligible for paper support 
 - Hovermyr
 - Hoverstone Pilgrim
 - Howl from Beyond
+- Howl of the Hunt
 - Howl of the Night Pack
 - Howlgeist
 - Howling Banshee
@@ -10636,6 +10650,7 @@ Council4 currently supports **15,202 of 32,501 cards eligible for paper support 
 - Runed Servitor
 - Runed Stalactite
 - Runehorn Hellkite
+- Runes of the Deus
 - Runewing
 - Runic Armasaur
 - Runic Shot
@@ -11303,6 +11318,7 @@ Council4 currently supports **15,202 of 32,501 cards eligible for paper support 
 - Shark
 - Sharktocrab
 - Sharlayan, Nation of Scholars
+- Sharpened Pitchfork
 - Sharuum the Hegemon
 - Shatter
 - Shatter the Source
@@ -11350,6 +11366,7 @@ Council4 currently supports **15,202 of 32,501 cards eligible for paper support 
 - Shield Mate
 - Shield of Duty and Reason
 - Shield of the Ages
+- Shield of the Oversoul
 - Shield Sphere
 - Shield Wall
 - Shielded Aether Thief
@@ -13791,6 +13808,7 @@ Council4 currently supports **15,202 of 32,501 cards eligible for paper support 
 - Twinshot Sniper
 - Twist Reality
 - Twisted Abomination
+- Twisted Embrace
 - Twisted Experiment
 - Twisted Landscape
 - Twisted Spider-Clone
@@ -14398,6 +14416,7 @@ Council4 currently supports **15,202 of 32,501 cards eligible for paper support 
 - Voldaren Duelist
 - Voldaren Epicure
 - Voldaren Stinger
+- Volition Reins
 - Volley of Boulders
 - Volley Veteran
 - Volrath's Gardens

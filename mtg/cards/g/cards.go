@@ -23,6 +23,7 @@ var Cards = []*game.CardDef{
 	Ghostway,
 	GiantSGrasp,
 	GiftOfTheGargantuan,
+	GiftOfWrath,
 	GigglingSkitterspike,
 	GimliCounterOfKills,
 	GimliSRecklessMight,
