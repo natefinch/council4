@@ -9,6 +9,7 @@ var Cards = []*game.CardDef{
 	HaazdaShieldMate,
 	HaazdaSnareSquad,
 	HalanaAndAlenaPartners,
+	HaliyaAscendantCadet,
 	HallowedHealer,
 	HaraldKingOfSkemfar,
 	HarmonicProdigy,

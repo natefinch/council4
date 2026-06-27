@@ -12,6 +12,7 @@ var Cards = []*game.CardDef{
 	NarsetSRebuke,
 	NatureSLore,
 	NecraDisciple,
+	Necroskitter,
 	NecroticWound,
 	NemataGroveGuardian,
 	NemesisOfReason,

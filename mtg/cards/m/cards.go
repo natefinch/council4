@@ -36,6 +36,7 @@ var Cards = []*game.CardDef{
 	MayaelTheAnima,
 	MeatLocker,
 	MeletisAstronomer,
+	MeltstriderEulogist,
 	MemorialToUnity,
 	MemoryPlunder,
 	MendingHands,

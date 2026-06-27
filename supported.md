@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,600 of 32,501 cards eligible for paper support (48.0%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,614 of 32,501 cards eligible for paper support (48.0%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -289,6 +289,7 @@ Council4 currently supports **15,600 of 32,501 cards eligible for paper support 
 - Alexi's Cloak
 - Algae Gharial
 - Alhammarret's Archive
+- Alharu, Solemn Ritualist
 - Ali Baba
 - Aliban's Tower
 - Alien
@@ -1713,6 +1714,7 @@ Council4 currently supports **15,600 of 32,501 cards eligible for paper support 
 - Breath of the Sleepless
 - Breath Weapon
 - Breathstealer
+- Bred for the Hunt
 - Breeding Pit
 - Breeding Pool
 - Breya's Apprentice
@@ -4237,6 +4239,7 @@ Council4 currently supports **15,600 of 32,501 cards eligible for paper support 
 - Exploding Borders
 - Exploration
 - Explore
+- Explorer's Cache
 - Explosive Apparatus
 - Explosive Derailment
 - Explosive Entry
@@ -5895,6 +5898,7 @@ Council4 currently supports **15,600 of 32,501 cards eligible for paper support 
 - Halfling
 - Halimar Depths
 - Halimar Excavator
+- Haliya, Ascendant Cadet
 - Hall
 - Hall Monitor
 - Hall of Heliod's Generosity
@@ -7400,6 +7404,7 @@ Council4 currently supports **15,600 of 32,501 cards eligible for paper support 
 - Lady Zhurong, Warrior Queen
 - Lagac Lizard
 - Lagonna-Band Elder
+- Laid to Rest
 - Lakeside Shack
 - Lambholt Harrier
 - Lampad of Death's Vigil
@@ -8160,6 +8165,7 @@ Council4 currently supports **15,600 of 32,501 cards eligible for paper support 
 - Meletis Astronomer
 - Meloku the Clouded Mirror
 - Melt Terrain
+- Meltstrider Eulogist
 - Meltstrider's Gear
 - Memnite
 - Memorial to Folly
@@ -8819,6 +8825,7 @@ Council4 currently supports **15,600 of 32,501 cards eligible for paper support 
 - Necropolis Regent
 - Necropouncer
 - Necrosavant
+- Necroskitter
 - Necrotic Wound
 - Nectar Faerie
 - Need for Speed
@@ -9213,6 +9220,7 @@ Council4 currently supports **15,600 of 32,501 cards eligible for paper support 
 - Onyx Goblet
 - Onyx Mage
 - Onyx Talisman
+- Oona's Blackguard
 - Oona's Gatewarden
 - Oona's Grace
 - Ooze
@@ -11988,6 +11996,7 @@ Council4 currently supports **15,600 of 32,501 cards eligible for paper support 
 - Skyclave Cleric // Skyclave Basilica
 - Skyclave Geopede
 - Skyclave Relic
+- Skyclave Shadowcat
 - Skyclave Squid
 - Skycloud Expanse
 - Skycoach Conductor // All Aboard
@@ -12315,6 +12324,7 @@ Council4 currently supports **15,600 of 32,501 cards eligible for paper support 
 - Soul's Fire
 - Soul-Guide Gryff
 - Soul-Strike Technique
+- Soulblade Corrupter
 - Soulblade Djinn
 - Soulbound Guardians
 - Soulcage Fiend
@@ -13420,6 +13430,7 @@ Council4 currently supports **15,600 of 32,501 cards eligible for paper support 
 - Tenth District Guard
 - Tenth District Legionnaire
 - Tenth District Veteran
+- Tenured Inkcaster
 - Teo, Spirited Glider
 - Terashi's Cry
 - Terashi's Grasp
@@ -13530,9 +13541,11 @@ Council4 currently supports **15,600 of 32,501 cards eligible for paper support 
 - The One Ring
 - The Ozolith
 - The Princess Takes Flight
+- The Reaper, King No More
 - The Reaver Cleaver
 - The Restoration of Eiganjo // Architect of Restoration
 - The Royal Scions
+- The Scorpion God
 - The Shattered States Era // Nameless Conqueror
 - The Shire
 - The Speed Demon
@@ -14020,6 +14033,7 @@ Council4 currently supports **15,600 of 32,501 cards eligible for paper support 
 - Triarch Praetorian
 - Tribal Flames
 - Tribune of Rot
+- Tributary Instructor
 - Tributary Vaulter
 - Tribute Mage
 - Tribute to the Wild

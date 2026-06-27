@@ -5,6 +5,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/compare"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 )
@@ -233,6 +234,13 @@ type TriggerSelection struct {
 	// MatchAnyCounter records a kind-agnostic "with a counter on it" subject
 	// qualifier. It lowers to the matching CompiledSelector counter dimension.
 	MatchAnyCounter bool
+	// MatchCounter and RequiredCounter record a kind-specific "with a <kind>
+	// counter on it" subject qualifier. The matched permanent must carry a
+	// counter of RequiredCounter's kind; a dying subject is matched against its
+	// last-known counters. They lower to Selection.MatchCounter and
+	// Selection.RequiredCounter.
+	MatchCounter    bool
+	RequiredCounter counter.Kind
 	// SubtypeFromEntryChoice requires the matched object to share the creature
 	// subtype the predicate's source permanent chose as it entered ("of the
 	// chosen type"). It lowers to Selection.SubtypeFromSourceEntryChoice.

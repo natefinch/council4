@@ -1590,6 +1590,14 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 		unsupported.NonToken = false
 		unsupported.TokenOnly = false
 		unsupported.SubtypeChoice = SubtypeChoiceWithoutEntry(unsupported.SubtypeChoice)
+		if eventExposesSubjectCounters(pattern.Event) {
+			// The subject is a battlefield permanent (or, for a death, its
+			// last-known snapshot), so the runtime can read its counters to
+			// honor a "with a [<kind>] counter on it" subject filter.
+			unsupported.MatchCounter = false
+			unsupported.RequiredCounter = 0
+			unsupported.MatchAnyCounter = false
+		}
 		if !unsupported.Empty() {
 			v.add(faceName, appendPath(path, "SubjectSelection"), CardDefIssueInvalidSelection, "trigger subject Selection uses predicates unavailable from event data")
 		}
@@ -1742,6 +1750,36 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 func eventCarriesMovedCardCharacteristics(event EventKind) bool {
 	switch event {
 	case EventCardDrawn, EventCardDiscarded, EventCycled:
+		return true
+	default:
+		return false
+	}
+}
+
+// eventExposesSubjectCounters reports whether a trigger's subject permanent has
+// its counters available to a "with a [<kind>] counter on it" SubjectSelection
+// filter. The subject is a battlefield permanent for these events, or — for a
+// death — the last-known snapshot the runtime preserves at the moment the
+// permanent left the battlefield (CR 603.10), the same snapshot undying and
+// persist read. Events whose subject is a card, spell, or player expose no
+// per-permanent counters and are excluded so those filters fail closed.
+func eventExposesSubjectCounters(event EventKind) bool {
+	switch event {
+	case EventPermanentDied,
+		EventPermanentEnteredBattlefield,
+		EventPermanentSacrificed,
+		EventPermanentTapped,
+		EventPermanentUntapped,
+		EventPermanentTurnedFaceUp,
+		EventPermanentMutated,
+		EventPermanentPhasedOut,
+		EventPermanentPhasedIn,
+		EventAttackerDeclared,
+		EventBlockerDeclared,
+		EventAttackerBecameBlocked,
+		EventAttackerBecameUnblocked,
+		EventCountersAdded,
+		EventFight:
 		return true
 	default:
 		return false

@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -122,10 +123,18 @@ type TriggerSelection struct {
 
 	// MatchAnyCounter records a kind-agnostic "with a counter on it" subject
 	// qualifier. It compiles to the matching CompiledSelector counter dimension.
-	// A kind-specific "with a <kind> counter on it" wording is intentionally not
-	// recognized here: the runtime trigger event data exposes no per-kind counter
-	// information for a subject, so that form must stay unsupported (fail closed).
+	// A kind-specific "with a <kind> counter on it" wording instead rides
+	// MatchCounter and RequiredCounter below.
 	MatchAnyCounter bool `json:",omitempty"`
+
+	// MatchCounter and RequiredCounter record a kind-specific "with a <kind>
+	// counter on it" subject qualifier ("a creature you control with a +1/+1
+	// counter on it dies"). The matched permanent must carry a counter of
+	// RequiredCounter's kind. A dying subject is matched against its last-known
+	// counters (CR 603.10), the same snapshot undying and persist read, so the
+	// runtime exposes the per-kind counter information this qualifier needs.
+	MatchCounter    bool         `json:",omitempty"`
+	RequiredCounter counter.Kind `json:",omitempty"`
 
 	// Modified records a "modified" subject qualifier ("a modified creature you
 	// control"): the matched permanent must carry a counter or have an Aura or
@@ -140,11 +149,16 @@ type TriggerSelection struct {
 }
 
 func parseTriggerSelection(tokens []shared.Token) (TriggerSelection, bool) {
+	selection := TriggerSelection{}
+	if rest, kind, ok := stripTriggerCounterKindQualifier(tokens); ok {
+		selection.MatchCounter = true
+		selection.RequiredCounter = kind
+		tokens = rest
+	}
 	words, ok := triggerSelectionWords(tokens)
 	if !ok || len(words) == 0 {
 		return TriggerSelection{}, false
 	}
-	selection := TriggerSelection{}
 	words, ok = prepareTriggerSelection(words, tokens, &selection)
 	if !ok {
 		return TriggerSelection{}, false
@@ -154,6 +168,54 @@ func parseTriggerSelection(tokens []shared.Token) (TriggerSelection, bool) {
 	}
 	words = consumeTriggerSelectionModifiers(words, &selection)
 	return parseTriggerSelectionNoun(words, selection)
+}
+
+// stripTriggerCounterKindQualifier removes a trailing "with [a/an] <kind>
+// counter(s) on it/them" qualifier from a trigger subject's tokens, returning
+// the remaining base tokens and the named counter kind. It matches only the
+// kind-specific form ("with a +1/+1 counter on it"); the kind-agnostic "with a
+// counter on it" wording carries no counter name and is left for the word-based
+// qualifier path (MatchAnyCounter). Any other shape fails closed so unrelated
+// "with" qualifiers (keyword, power, toughness, mana value) keep their existing
+// handling.
+func stripTriggerCounterKindQualifier(tokens []shared.Token) ([]shared.Token, counter.Kind, bool) {
+	n := len(tokens)
+	if n < 5 {
+		return tokens, 0, false
+	}
+	if !equalWord(tokens[n-2], "on") ||
+		(!equalWord(tokens[n-1], "it") && !equalWord(tokens[n-1], "them")) {
+		return tokens, 0, false
+	}
+	counterIndex := n - 3
+	if !equalWord(tokens[counterIndex], "counter") && !equalWord(tokens[counterIndex], "counters") {
+		return tokens, 0, false
+	}
+	withIndex := -1
+	for i := counterIndex - 1; i >= 0; i-- {
+		if equalWord(tokens[i], "with") {
+			withIndex = i
+			break
+		}
+	}
+	if withIndex < 0 {
+		return tokens, 0, false
+	}
+	kind, span, ok := counterNameBefore(tokens, counterIndex)
+	if !ok {
+		return tokens, 0, false
+	}
+	nameStart := withIndex + 1
+	if nameStart < counterIndex && (equalWord(tokens[nameStart], "a") || equalWord(tokens[nameStart], "an")) {
+		nameStart++
+	}
+	// The named counter-kind tokens must fill the gap exactly between the
+	// optional article and the "counter" noun, so a stray modifier ("with a big
+	// +1/+1 counter on it") fails closed rather than silently dropping it.
+	if nameStart >= counterIndex || span.Start.Offset != tokens[nameStart].Span.Start.Offset {
+		return tokens, 0, false
+	}
+	return tokens[:withIndex], kind, true
 }
 
 func triggerSelectionWords(tokens []shared.Token) ([]string, bool) {

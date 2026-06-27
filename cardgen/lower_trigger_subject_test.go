@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game/compare"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -51,26 +52,26 @@ func TestLowerTriggerSubjectAnyCounter(t *testing.T) {
 	}
 }
 
-// TestLowerTriggerSubjectKindCounterFailsClosed proves a kind-specific
-// "with a +1/+1 counter on it" subject qualifier stays unsupported (fails
-// closed): the runtime trigger event data exposes no per-kind counter
-// information for a subject, so the wording must not silently lower to a
-// kind-agnostic counter match.
-func TestLowerTriggerSubjectKindCounterFailsClosed(t *testing.T) {
+// TestLowerTriggerSubjectKindCounter proves a kind-specific "with a +1/+1
+// counter on it" subject qualifier lowers onto Selection.MatchCounter with the
+// named RequiredCounter kind. The subject is a battlefield permanent for an
+// enters event, so the runtime can read its counters to honor the filter.
+func TestLowerTriggerSubjectKindCounter(t *testing.T) {
 	t.Parallel()
-	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+	face := lowerSingleFace(t, &ScryfallCard{
 		Name:       "Test Counter Warden",
 		Layout:     "normal",
 		TypeLine:   "Creature — Human Soldier",
 		OracleText: "Whenever another creature you control with a +1/+1 counter on it enters, draw a card.",
 		Power:      new("2"),
 		Toughness:  new("2"),
-	}, "testCounterWarden")
-	if err != nil {
-		t.Fatalf("GenerateExecutableCardSource error = %v", err)
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
 	}
-	if len(diagnostics) == 0 {
-		t.Fatal("diagnostics = 0, want the kind-specific counter qualifier to fail closed")
+	selection := face.TriggeredAbilities[0].Trigger.Pattern.SubjectSelection
+	if !selection.MatchCounter || selection.MatchAnyCounter || selection.RequiredCounter != counter.PlusOnePlusOne {
+		t.Fatalf("subject selection = %#v, want MatchCounter with +1/+1 RequiredCounter", selection)
 	}
 }
 

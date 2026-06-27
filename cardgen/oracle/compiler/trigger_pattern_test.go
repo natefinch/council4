@@ -9,6 +9,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/compare"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -784,6 +785,19 @@ func TestPermanentZoneChangeTriggerPatternsBindExtendedSlots(t *testing.T) {
 			},
 		},
 		{
+			name:  "kind-specific counter on subject dies",
+			event: "a creature you control with a +1/+1 counter on it dies",
+			want: TriggerPattern{
+				Event:      TriggerEventPermanentDied,
+				Controller: ControllerYou,
+				SubjectSelection: TriggerSelection{
+					RequiredTypes:   []types.Card{types.Creature},
+					MatchCounter:    true,
+					RequiredCounter: counter.PlusOnePlusOne,
+				},
+			},
+		},
+		{
 			name:  "attacking creature dies",
 			event: "an attacking creature dies",
 			want: TriggerPattern{
@@ -911,7 +925,6 @@ func TestPermanentZoneChangeTriggerPatternsBindExtendedSlots(t *testing.T) {
 func TestPermanentZoneChangeTriggerPatternsRejectMissingRuntimeSlots(t *testing.T) {
 	t.Parallel()
 	for _, event := range []string{
-		"a creature you control with a +1/+1 counter on it dies",
 		"a non-Human creature dies",
 		"a creature dies during your turn",
 	} {

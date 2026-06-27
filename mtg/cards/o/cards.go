@@ -17,6 +17,7 @@ var Cards = []*game.CardDef{
 	OminousRoost,
 	OnduWarCleric,
 	OnyxTalisman,
+	OonaSBlackguard,
 	OperaLoveSong,
 	Opportunist,
 	OrcGeneral,

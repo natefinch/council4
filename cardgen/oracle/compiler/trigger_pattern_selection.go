@@ -89,6 +89,8 @@ func compileTriggerSelection(syntax parser.TriggerSelection) (TriggerSelection, 
 	}
 	selection.SubtypeFromEntryChoice = syntax.SubtypeFromEntryChoice
 	selection.MatchAnyCounter = syntax.MatchAnyCounter
+	selection.MatchCounter = syntax.MatchCounter
+	selection.RequiredCounter = syntax.RequiredCounter
 	selection.Modified = syntax.Modified
 	return selection, true
 }
