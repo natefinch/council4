@@ -224,6 +224,10 @@ func TestExactGraveyardCardTargetAccepts(t *testing.T) {
 		"Return target creature card from your graveyard to its owner's hand.",
 		"Return up to two target creature cards from your graveyard to their hand.",
 		"Return up to three target creature cards from your graveyard to their owners' hands.",
+		// An excluded card type ("nonland permanent") renders as a "non<type>"
+		// prefix on the card noun and round-trips through ExcludedTypes.
+		"Return target nonland permanent card from your graveyard to the battlefield.",
+		"Return target noncreature, nonland card from your graveyard to your hand.",
 	}
 	for _, source := range accepted {
 		if !graveyardReturnExact(t, source) {
@@ -238,8 +242,6 @@ func TestExactGraveyardCardTargetFailsClosed(t *testing.T) {
 	// cannot faithfully reconstruct, so the round-trip must fail closed and the
 	// card must keep failing rather than lower to a wrong predicate.
 	rejected := []string{
-		// An excluded card type ("nonland permanent") is unrendered.
-		"Return target nonland permanent card from your graveyard to the battlefield.",
 		// A subtype-qualified type noun is exact, but a supertype exclusion on
 		// that noun ("nonlegendary creature card") is still unrendered, so it must
 		// keep failing closed rather than dropping the exclusion.

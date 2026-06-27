@@ -112,7 +112,7 @@ func exactVariableXGraveyardTargetText(target *TargetSyntax) (string, bool) {
 	}
 	if sel.All || sel.Attacking || sel.Blocking || sel.Tapped || sel.Untapped ||
 		sel.Keyword != KeywordUnknown ||
-		len(sel.ExcludedTypes) != 0 || len(sel.SourceTypes) != 0 ||
+		len(sel.SourceTypes) != 0 ||
 		len(sel.ExcludedSupertypes) != 0 || len(sel.ExcludedColors) != 0 {
 		return "", false
 	}
@@ -169,7 +169,7 @@ func exactChosenGraveyardReturnEffectSyntax(effect *EffectSyntax, text string) b
 	if sel.All || sel.Another || sel.Other || sel.Attacking || sel.Blocking ||
 		(sel.Tapped && !entryTapped) || sel.Untapped ||
 		sel.Keyword != KeywordUnknown || sel.ExcludedKeyword != KeywordUnknown ||
-		len(sel.ExcludedTypes) != 0 || len(sel.SourceTypes) != 0 ||
+		len(sel.SourceTypes) != 0 ||
 		len(sel.ExcludedSupertypes) != 0 ||
 		len(sel.ExcludedColors) != 0 || len(sel.Alternatives) != 0 {
 		return false
@@ -832,7 +832,7 @@ func exactGraveyardCardTargetSyntax(target *TargetSyntax) bool {
 	}
 	if sel.All || sel.Attacking || sel.Blocking || sel.Tapped || sel.Untapped ||
 		sel.Keyword != KeywordUnknown ||
-		len(sel.ExcludedTypes) != 0 || len(sel.SourceTypes) != 0 ||
+		len(sel.SourceTypes) != 0 ||
 		len(sel.ExcludedSupertypes) != 0 || len(sel.ExcludedColors) != 0 {
 		return false
 	}
@@ -934,6 +934,10 @@ func graveyardCardNoun(sel SelectionSyntax, plural bool) (string, bool) {
 	if !ok {
 		return "", false
 	}
+	excludedPrefix, hasExcluded, ok := graveyardExcludedTypePrefix(sel)
+	if !ok {
+		return "", false
+	}
 
 	hasTypes := len(sel.RequiredTypesAny) > 0
 	hasSubtype := len(sel.SubtypesAny) > 0
@@ -999,7 +1003,41 @@ func graveyardCardNoun(sel SelectionSyntax, plural bool) (string, bool) {
 	if hasSupertype && (hasColor || sel.Historic) {
 		return "", false
 	}
-	return supertypePrefix + colorPrefix + historicPrefix + core, true
+	// An excluded-card-type prefix ("nonland permanent card", "noncreature
+	// artifact card", "noncreature, nonland card") leads the noun. No printed
+	// card combines an excluded card type with a color, supertype, historic, or
+	// subtype qualifier, so those have no canonical combined order and fail
+	// closed rather than guessing one.
+	if hasExcluded && (hasColor || hasSupertype || sel.Historic || hasSubtype) {
+		return "", false
+	}
+	return excludedPrefix + supertypePrefix + colorPrefix + historicPrefix + core, true
+}
+
+// graveyardExcludedTypePrefix renders the optional leading excluded-card-type
+// qualifier of a graveyard-card noun: a single excluded type ("nonland ",
+// "noncreature ") or a comma-joined pair ("noncreature, nonland ") rendered in
+// the selection's stored order, each "non"-prefixed and followed by a trailing
+// space so the caller appends the core noun directly. The runtime Selection
+// matches it through the order-independent ExcludedTypes filter. It reports
+// whether any excluded card type was present and fails closed for more than two
+// excluded types or an unknown card type, which have no canonical Oracle wording.
+func graveyardExcludedTypePrefix(sel SelectionSyntax) (prefix string, hasExcluded, ok bool) {
+	if len(sel.ExcludedTypes) == 0 {
+		return "", false, true
+	}
+	if len(sel.ExcludedTypes) > 2 {
+		return "", false, false
+	}
+	words := make([]string, 0, len(sel.ExcludedTypes))
+	for _, cardType := range sel.ExcludedTypes {
+		word, ok := cardTypeWord(cardType)
+		if !ok {
+			return "", false, false
+		}
+		words = append(words, "non"+word)
+	}
+	return strings.Join(words, ", ") + " ", true, true
 }
 
 // graveyardSupertypePrefix renders the optional leading supertype qualifier of a

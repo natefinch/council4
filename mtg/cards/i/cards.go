@@ -33,6 +33,7 @@ var Cards = []*game.CardDef{
 	IntoTheFaeCourt,
 	IntoTheWilds,
 	InvasionOfIxalan,
+	InvasionOfTolvada,
 	InvasiveManeuvers,
 	IorRuinExpedition,
 	IroasSBlessing,
