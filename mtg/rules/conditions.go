@@ -176,6 +176,9 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	if cond.SpellWasKicked {
 		matches = matches && ctx.obj != nil && !ctx.obj.Copy && ctx.obj.KickerPaid
 	}
+	if cond.EventPermanentWasKicked {
+		matches = matches && ctx.event != nil && ctx.event.KickerPaid
+	}
 	if cond.SpellColorManaSpent.Count > 0 {
 		matches = matches && ctx.obj != nil && !ctx.obj.Copy &&
 			ctx.obj.ManaSpentByColorToCast[cond.SpellColorManaSpent.Color] >= cond.SpellColorManaSpent.Count

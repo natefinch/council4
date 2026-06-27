@@ -73,6 +73,7 @@ var Cards = []*game.CardDef{
 	CountlessGearsRenegade,
 	CourageousOutrider,
 	Cowabunga,
+	CragplateBaloth,
 	CrashTheParty,
 	CravenHulk,
 	CrazedArmodon,

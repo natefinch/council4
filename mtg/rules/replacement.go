@@ -23,6 +23,7 @@ type enterBattlefieldContext struct {
 	log               *TurnLog
 	xValue            int
 	kickCount         int
+	kickerPaid        bool
 	colorsOfManaSpent int
 	manaSpentByColor  map[color.Color]int
 }
@@ -472,6 +473,7 @@ func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *gam
 		PermanentID: permanent.ObjectID,
 		TokenName:   permanentTokenName(permanent),
 		TokenDef:    permanent.TokenDef,
+		KickerPaid:  ctx.kickerPaid,
 		FromZone:    fromZone,
 		ToZone:      zone.Battlefield,
 	}

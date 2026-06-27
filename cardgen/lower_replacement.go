@@ -1288,7 +1288,29 @@ func selfEntersWithCountersReferences(references []compiler.CompiledReference, e
 	// spell", the Throne of Eldraine Paladin cycle) adds a third self reference
 	// for the "this spell" inside its gate, so a three-reference self replacement
 	// is accepted when that condition is present.
-	return len(references) == 3 && hasManaSpentToCastCondition(conditions)
+	if len(references) == 3 && hasManaSpentToCastCondition(conditions) {
+		return true
+	}
+	// A kicker gate that names the source by "this <type>" ("If this creature was
+	// kicked, it enters with N +1/+1 counters on it." — the Invasion kicker
+	// cycle) adds a third self reference for that named subject inside the gate.
+	// Only the bare "enters with N counters on it" form (effect.EntersWithCounters)
+	// is accepted; a combined "... and with <keyword>" clause is not represented
+	// here and must stay unsupported.
+	return len(references) == 3 && effect.EntersWithCounters && hasEventSubjectKickedCondition(conditions)
+}
+
+// hasEventSubjectKickedCondition reports whether any condition is the
+// event-subject "was kicked" gate, whose source-naming subject ("this creature")
+// binds the source and so adds a self reference to an enters-with-counters
+// replacement.
+func hasEventSubjectKickedCondition(conditions []compiler.CompiledCondition) bool {
+	for i := range conditions {
+		if conditions[i].Predicate == compiler.ConditionPredicateEventSubjectWasKicked {
+			return true
+		}
+	}
+	return false
 }
 
 // hasManaSpentToCastCondition reports whether any condition is an Adamant
