@@ -313,6 +313,6 @@ func searchGroupInstructions(group searchGroup) ([]game.Instruction, bool) {
 	return []game.Instruction{{Primitive: game.Search{
 		Player: game.ControllerReference(),
 		Spec:   group.Spec,
-		Amount: game.Fixed(group.Amount),
+		Amount: group.Quantity,
 	}}}, true
 }

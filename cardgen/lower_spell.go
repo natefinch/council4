@@ -627,7 +627,7 @@ func lowerSearchSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) 
 		Player:      searcher,
 		PlayerGroup: searcherGroup,
 		Spec:        group.Spec,
-		Amount:      game.Fixed(group.Amount),
+		Amount:      group.Quantity,
 		Controller:  controller,
 	}}}
 	if group.RiderIndex != 0 {
@@ -782,7 +782,8 @@ func controllerPlayerTargetSpec(opponent bool) game.TargetSpec {
 // ok=false (fail closed) for any group it cannot model exactly.
 type searchGroup struct {
 	Spec       game.SearchSpec
-	Amount     int
+	Amount     int           // fixed count; 0 when the search count is dynamic
+	Quantity   game.Quantity // resolved search count (fixed or dynamic)
 	Length     int
 	RiderIndex int // index of an optional rider effect lowered after the search; 0 when absent
 }
@@ -793,14 +794,25 @@ func searchGroupSpec(effects []compiler.CompiledEffect) (searchGroup, bool) {
 		return searchGroup{}, false
 	}
 	search := effects[0]
-	if !search.Amount.Known || search.Amount.Value < 1 {
+	quantity, ok := searchAmountQuantity(search)
+	if !ok {
 		return searchGroup{}, false
 	}
+	dynamic := quantity.IsDynamic()
 	for i := range shape.length {
-		if effects[i].Span != search.Span ||
-			effects[i].DelayedTiming != 0 ||
+		// The search group resolves as one unit. Every effect in it must carry no
+		// delay, duration, or negation. A single-sentence group shares one span; a
+		// two-sentence group ("Search ... . Put those cards ...") spans the search
+		// sentence and the following put sentence, so the spans differ — the
+		// structural sequence (search, [reveal,] put, [rider,] shuffle) in
+		// exactSearchEffectSequence keeps the group contiguous without the span
+		// equality the single-sentence form relies on.
+		if effects[i].DelayedTiming != 0 ||
 			effects[i].Duration != compiler.DurationNone ||
 			effects[i].Negated {
+			return searchGroup{}, false
+		}
+		if !dynamic && effects[i].Span != search.Span {
 			return searchGroup{}, false
 		}
 	}
@@ -812,7 +824,7 @@ func searchGroupSpec(effects []compiler.CompiledEffect) (searchGroup, bool) {
 		return searchGroup{}, false
 	}
 	spec.SourceZone = zone.Library
-	if search.Amount.Value == 1 && spec.IsUnrestricted() {
+	if !dynamic && search.Amount.Value == 1 && spec.IsUnrestricted() {
 		spec.FailToFindPolicy = game.SearchMustFindIfAvailable
 	}
 
@@ -836,7 +848,7 @@ func searchGroupSpec(effects []compiler.CompiledEffect) (searchGroup, bool) {
 		}
 		spec.Destination = zone.Library
 		spec.DestinationPosition = game.SearchPositionTop
-		return searchGroup{Spec: spec, Amount: 1, Length: shape.length}, true
+		return searchGroup{Spec: spec, Amount: 1, Quantity: game.Fixed(1), Length: shape.length}, true
 	}
 	if split := put.SearchSplit; split.Present {
 		// A split-destination put distributes the found cards across two
@@ -853,14 +865,33 @@ func searchGroupSpec(effects []compiler.CompiledEffect) (searchGroup, bool) {
 			Zone:         split.Second.ToZone,
 			EntersTapped: split.Second.EntersTapped,
 		})
-		return searchGroup{Spec: spec, Amount: search.Amount.Value, Length: shape.length, RiderIndex: shape.riderIndex}, true
+		return searchGroup{Spec: spec, Amount: search.Amount.Value, Quantity: quantity, Length: shape.length, RiderIndex: shape.riderIndex}, true
 	}
 	if put.ToZone != zone.Hand && put.ToZone != zone.Battlefield && put.ToZone != zone.Graveyard {
 		return searchGroup{}, false
 	}
 	spec.Destination = put.ToZone
 	spec.EntersTapped = put.EntersTapped
-	return searchGroup{Spec: spec, Amount: search.Amount.Value, Length: shape.length, RiderIndex: shape.riderIndex}, true
+	return searchGroup{Spec: spec, Amount: search.Amount.Value, Quantity: quantity, Length: shape.length, RiderIndex: shape.riderIndex}, true
+}
+
+// searchAmountQuantity resolves a library-search count into a runtime Quantity.
+// A fixed positive count lowers to game.Fixed; a dynamic "up to X, where X is
+// ..." count lowers its recognized rules-derived amount to game.Dynamic. It
+// returns ok=false for a non-positive fixed count or a dynamic amount lowering
+// cannot model, so the search fails closed.
+func searchAmountQuantity(search compiler.CompiledEffect) (game.Quantity, bool) {
+	if search.Amount.Known {
+		if search.Amount.Value < 1 {
+			return game.Quantity{}, false
+		}
+		return game.Fixed(search.Amount.Value), true
+	}
+	dynamic, ok := lowerDynamicAmount(search.Amount, game.ObjectReference{})
+	if !ok {
+		return game.Quantity{}, false
+	}
+	return game.Dynamic(dynamic), true
 }
 
 // searchSplitSlotSupported reports whether a split-search destination slot names

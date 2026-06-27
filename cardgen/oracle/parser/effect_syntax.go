@@ -1279,6 +1279,14 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			// count subject's subtype or referent ("Shrines", "this creature's
 			// power") does not fold into the recipient group's type line.
 			selectionClause = tokensBeforeOffset(clause, amount.Span.Start.Offset)
+		case kind == EffectSearch && amount.DynamicForm == EffectDynamicAmountFormWhereX:
+			// "Search your library for up to X basic land cards, where X is the
+			// number of lands you control" trails the count phrase after the
+			// searched filter. Like the deal-damage and put WhereX cases above,
+			// scope the searched-card Selection to the tokens before the count
+			// phrase so the count subject's noun ("lands", "creatures") does not
+			// fold into the searched card's filter.
+			selectionClause = tokensBeforeOffset(clause, amount.Span.Start.Offset)
 		default:
 		}
 		eachSourceDamageGroup, eachSourceDamageRecipient := eachSourceDamageSyntax(kind, tokens[ownershipStart:tokenIndex], clause, amount, atoms)

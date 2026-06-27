@@ -13,6 +13,7 @@ var Cards = []*game.CardDef{
 	HarmoniousArchon,
 	HarperRecruiter,
 	HarvestHand,
+	HarvestSeason,
 	HauntedRidge,
 	HazoretGodseeker,
 	Heal,

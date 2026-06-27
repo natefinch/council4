@@ -103,6 +103,6 @@ func searchGroupInstructionsWithSearcher(
 		Player:      player,
 		PlayerGroup: searcherGroup,
 		Spec:        group.Spec,
-		Amount:      game.Fixed(group.Amount),
+		Amount:      group.Quantity,
 	}}}, true
 }
