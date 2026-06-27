@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,579 of 32,501 cards eligible for paper support (47.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,587 of 32,501 cards eligible for paper support (48.0%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -93,6 +93,7 @@ Council4 currently supports **15,579 of 32,501 cards eligible for paper support 
 - Adarkar Sentinel
 - Adarkar Wastes
 - Adarkar Windform
+- Additive Evolution
 - Adeline, Resplendent Cathar
 - Adeliz, the Cinder Wind
 - Adept Watershaper
@@ -4902,6 +4903,7 @@ Council4 currently supports **15,579 of 32,501 cards eligible for paper support 
 - Foxfire Oak
 - Fractal
 - Fractal Mascot
+- Fractal Summoning
 - Fracture
 - Fractured Sanity
 - Fracturing Gust
@@ -7531,6 +7533,7 @@ Council4 currently supports **15,579 of 32,501 cards eligible for paper support 
 - Ley Druid
 - Ley Weaver
 - Leyline Axe
+- Leyline Invocation
 - Leyline of Abundance
 - Leyline of Anticipation
 - Leyline of Hope
@@ -7961,6 +7964,7 @@ Council4 currently supports **15,579 of 32,501 cards eligible for paper support 
 - Maniacal Rage
 - Manic Scribe
 - Manic Vandal
+- Manifestation Sage
 - Manifold Key
 - Manifold Mouse
 - Manor Gate
@@ -8099,6 +8103,7 @@ Council4 currently supports **15,579 of 32,501 cards eligible for paper support 
 - Mastery of the Unseen
 - Masticore
 - Matca Rioters
+- Match the Odds
 - Maul of the Skyclaves
 - Maul Splicer
 - Maulfist Squad
@@ -10380,6 +10385,7 @@ Council4 currently supports **15,579 of 32,501 cards eligible for paper support 
 - Reclusive Artificer
 - Reclusive Taxidermist
 - Recollect
+- Recon Craft Theta
 - Reconnaissance
 - Reconnaissance Mission
 - Reconstructed Thopter
@@ -15141,6 +15147,7 @@ Council4 currently supports **15,579 of 32,501 cards eligible for paper support 
 - Wild Growth
 - Wild Guess
 - Wild Hunger
+- Wild Hypothesis
 - Wild Instincts
 - Wild Jhovall
 - Wild Leotau
@@ -15480,6 +15487,7 @@ Council4 currently supports **15,579 of 32,501 cards eligible for paper support 
 - Zagoth Mamba
 - Zagoth Triome
 - Zahur, Glory's Past
+- Zanarkand, Ancient Metropolis // Lasting Fayth
 - Zanikev Locust
 - Zap
 - Zarda, the Power Princess
