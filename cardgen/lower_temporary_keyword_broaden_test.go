@@ -207,3 +207,107 @@ func TestLowerTemporaryKeywordLossBroadTargets(t *testing.T) {
 		})
 	}
 }
+
+// TestLowerTemporaryLandwalkGrant covers the broadened temporary keyword grant
+// for the landwalk evasion family (CR 702.14). Landwalk is parameterized by a
+// land subtype, so it lowers to a granted LandwalkKeyword static-ability body via
+// AddAbilities — exactly like the permanent forestwalk grant — carried for the
+// until-end-of-turn duration, rather than a simple AddKeywords enum value.
+func TestLowerTemporaryLandwalkGrant(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		oracle  string
+		subtype types.Sub
+	}{
+		{"forestwalk", "Target creature gains forestwalk until end of turn.", types.Forest},
+		{"islandwalk", "Target creature gains islandwalk until end of turn.", types.Island},
+		{"swampwalk", "Target creature gains swampwalk until end of turn.", types.Swamp},
+		{"mountainwalk", "Target creature gains mountainwalk until end of turn.", types.Mountain},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Landwalk Grant",
+				Layout:     "normal",
+				TypeLine:   "Instant",
+				OracleText: tc.oracle,
+			})
+			mode := face.SpellAbility.Val.Modes[0]
+			apply, ok := mode.Sequence[0].Primitive.(game.ApplyContinuous)
+			if !ok {
+				t.Fatalf("primitive = %T, want game.ApplyContinuous", mode.Sequence[0].Primitive)
+			}
+			if apply.Object != opt.Val(game.TargetPermanentReference(0)) {
+				t.Fatalf("object = %#v, want target permanent 0", apply.Object)
+			}
+			if apply.Duration != game.DurationUntilEndOfTurn {
+				t.Fatalf("duration = %v, want until end of turn", apply.Duration)
+			}
+			effect := apply.ContinuousEffects[0]
+			if effect.Layer != game.LayerAbility {
+				t.Fatalf("layer = %v, want ability", effect.Layer)
+			}
+			if len(effect.AddKeywords) != 0 {
+				t.Fatalf("keywords = %v, want none (landwalk is ability-backed)", effect.AddKeywords)
+			}
+			if len(effect.AddAbilities) != 1 {
+				t.Fatalf("abilities = %d, want 1 granted landwalk ability", len(effect.AddAbilities))
+			}
+			static, ok := effect.AddAbilities[0].(*game.StaticAbility)
+			if !ok {
+				t.Fatalf("ability = %T, want *game.StaticAbility", effect.AddAbilities[0])
+			}
+			landwalk, ok := game.StaticBodyLandwalkKeyword(static)
+			if !ok || landwalk.Subtype != tc.subtype {
+				t.Fatalf("landwalk = %+v ok=%v, want subtype %v", landwalk, ok, tc.subtype)
+			}
+		})
+	}
+}
+
+// TestLowerTemporarySimpleCombatKeywordGrant covers the broadened temporary
+// keyword grant for the combat keywords the runtime already models as simple
+// continuous keywords but the parser previously refused (infect, wither,
+// horsemanship, skulk). Each lowers to a single AddKeywords enum value granted
+// until end of turn, like the established trample/flying grants.
+func TestLowerTemporarySimpleCombatKeywordGrant(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		oracle  string
+		keyword game.Keyword
+	}{
+		{"infect", "Target creature gains infect until end of turn.", game.Infect},
+		{"wither", "Target creature gains wither until end of turn.", game.Wither},
+		{"horsemanship", "Target creature gains horsemanship until end of turn.", game.Horsemanship},
+		{"skulk", "Target creature gains skulk until end of turn.", game.Skulk},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Combat Keyword Grant",
+				Layout:     "normal",
+				TypeLine:   "Instant",
+				OracleText: tc.oracle,
+			})
+			mode := face.SpellAbility.Val.Modes[0]
+			apply, ok := mode.Sequence[0].Primitive.(game.ApplyContinuous)
+			if !ok {
+				t.Fatalf("primitive = %T, want game.ApplyContinuous", mode.Sequence[0].Primitive)
+			}
+			if apply.Duration != game.DurationUntilEndOfTurn {
+				t.Fatalf("duration = %v, want until end of turn", apply.Duration)
+			}
+			effect := apply.ContinuousEffects[0]
+			if len(effect.AddAbilities) != 0 {
+				t.Fatalf("abilities = %v, want none", effect.AddAbilities)
+			}
+			if !reflect.DeepEqual(effect.AddKeywords, []game.Keyword{tc.keyword}) {
+				t.Fatalf("keywords = %v, want [%v]", effect.AddKeywords, tc.keyword)
+			}
+		})
+	}
+}

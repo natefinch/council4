@@ -1805,7 +1805,7 @@ func exactTemporaryKeywordChangeSyntax(effect *EffectSyntax, pluralVerb, singula
 		if !ok {
 			return false
 		}
-		middle, ok = strings.CutSuffix(middle, " until end of turn.")
+		middle, ok = cutTemporaryKeywordDurationSuffix(effect, middle)
 		return ok && exactTemporaryKeywordList(middle)
 	}
 	if effect.Context == EffectContextSource {
@@ -1817,7 +1817,7 @@ func exactTemporaryKeywordChangeSyntax(effect *EffectSyntax, pluralVerb, singula
 		if !ok {
 			return false
 		}
-		middle, ok = strings.CutSuffix(middle, " until end of turn.")
+		middle, ok = cutTemporaryKeywordDurationSuffix(effect, middle)
 		return ok && exactTemporaryKeywordList(middle)
 	}
 	// "Those creatures gain <keyword> until end of turn." grants a keyword to a
@@ -1834,7 +1834,7 @@ func exactTemporaryKeywordChangeSyntax(effect *EffectSyntax, pluralVerb, singula
 		if !ok || noun == "" {
 			return false
 		}
-		keywords, ok = strings.CutSuffix(keywords, " until end of turn.")
+		keywords, ok = cutTemporaryKeywordDurationSuffix(effect, keywords)
 		return ok && exactTemporaryKeywordList(keywords)
 	}
 	if len(effect.Targets) != 1 || !effect.Targets[0].Exact {
@@ -1849,19 +1849,19 @@ func exactTemporaryKeywordChangeSyntax(effect *EffectSyntax, pluralVerb, singula
 	if effect.Targets[0].Cardinality.Max >= 2 {
 		if prefix, suffix, ok := strings.Cut(text, " and "+pluralVerb+" "); ok &&
 			strings.HasPrefix(prefix, strings.ToLower(effect.Targets[0].Text)+" each get ") {
-			middle, suffixOK := strings.CutSuffix(suffix, " until end of turn.")
+			middle, suffixOK := cutTemporaryKeywordDurationSuffix(effect, suffix)
 			return suffixOK && exactTemporaryKeywordList(middle)
 		}
 		eachMiddle, ok := strings.CutPrefix(text, strings.ToLower(effect.Targets[0].Text)+" each "+pluralVerb+" ")
 		if !ok {
 			return false
 		}
-		body, suffixOK := strings.CutSuffix(eachMiddle, " until end of turn.")
+		body, suffixOK := cutTemporaryKeywordDurationSuffix(effect, eachMiddle)
 		return suffixOK && body != "" && exactTemporaryKeywordList(body)
 	}
 	if prefix, suffix, ok := strings.Cut(text, " and "+singularVerb+" "); ok &&
 		strings.HasPrefix(prefix, strings.ToLower(effect.Targets[0].Text)+" gets ") {
-		middle, suffixOK := strings.CutSuffix(suffix, " until end of turn.")
+		middle, suffixOK := cutTemporaryKeywordDurationSuffix(effect, suffix)
 		return suffixOK && exactTemporaryKeywordList(middle)
 	}
 	prefix := strings.ToLower(effect.Targets[0].Text) + " " + singularVerb + " "
@@ -1869,7 +1869,7 @@ func exactTemporaryKeywordChangeSyntax(effect *EffectSyntax, pluralVerb, singula
 	if !ok {
 		return false
 	}
-	middle, ok = strings.CutSuffix(middle, " until end of turn.")
+	middle, ok = cutTemporaryKeywordDurationSuffix(effect, middle)
 	if !ok || middle == "" {
 		return false
 	}
@@ -1884,6 +1884,15 @@ func exactTemporaryKeywordChangeSyntax(effect *EffectSyntax, pluralVerb, singula
 // land types …"), so the suffix becomes "… until end of turn, <amount>.". The
 // combined +N/+N-and-gain lowering reads that shared amount to resolve the pump's
 // X; here it is consumed so the clause reconstructs byte-exactly.
+//
+// A sentence-leading "Until end of turn," supplies the duration before the
+// subject ("Until end of turn, target creature gains trample."), so the clause
+// body itself carries no trailing suffix and ends with a bare period. The leading
+// duration is consumed by the effect's recorded Duration, so accept the bare
+// "<body>." form only when that duration is until end of turn, mirroring the
+// power/toughness reconstruction in exactGroupModifyPTBody. A static no-duration
+// grant (Duration "") never reaches this bare branch, so an indefinite anthem is
+// still rejected here.
 func cutTemporaryKeywordDurationSuffix(effect *EffectSyntax, body string) (string, bool) {
 	if effect.Amount.DynamicForm == EffectDynamicAmountFormWhereX && effect.Amount.Text != "" {
 		suffix := " until end of turn, " + strings.ToLower(effect.Amount.Text) + "."
@@ -1891,7 +1900,13 @@ func cutTemporaryKeywordDurationSuffix(effect *EffectSyntax, body string) (strin
 			return middle, true
 		}
 	}
-	return strings.CutSuffix(body, " until end of turn.")
+	if middle, ok := strings.CutSuffix(body, " until end of turn."); ok {
+		return middle, true
+	}
+	if effect.Duration == EffectDurationUntilEndOfTurn {
+		return strings.CutSuffix(body, ".")
+	}
+	return "", false
 }
 
 // exactGroupTemporaryKeywordEffectSyntax recognizes a resolving keyword grant to
@@ -2044,6 +2059,8 @@ func grantableKeywordWord(keyword string) bool {
 	switch keyword {
 	case "deathtouch", "double strike", "fear", "first strike", "flying", "haste",
 		"banding", "hexproof", "indestructible", "intimidate", "lifelink", "menace", "reach", "shadow", "shroud", "trample", "vigilance",
+		"horsemanship", "infect", "skulk", "wither",
+		"landwalk", "plainswalk", "islandwalk", "swampwalk", "mountainwalk", "forestwalk", "desertwalk", "nonbasic landwalk",
 		"protection from each color", "protection from everything",
 		"protection from monocolored", "protection from multicolored",
 		"protection from white", "protection from blue", "protection from black",
