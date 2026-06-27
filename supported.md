@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,028 of 32,501 cards eligible for paper support (46.2%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,038 of 32,501 cards eligible for paper support (46.3%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2375,6 +2375,7 @@ Council4 currently supports **15,028 of 32,501 cards eligible for paper support 
 - Colossus Hammer
 - Colossus of Sardia
 - Colossus, Steel Stalwart
+- Coma Veil
 - Combat Courier
 - Combat Medic
 - Combat Professor
@@ -4684,6 +4685,7 @@ Council4 currently supports **15,028 of 32,501 cards eligible for paper support 
 - Formation
 - Formidable Speaker
 - Forsake the Worldly
+- Forsaken City
 - Forsaken Drifters
 - Forsaken Miner
 - Forsaken Monument
@@ -6233,6 +6235,7 @@ Council4 currently supports **15,028 of 32,501 cards eligible for paper support 
 - Icatian Scout
 - Icatian Town
 - Ice Flan
+- Ice Over
 - Ice Storm
 - Ice Tunnel
 - Iceberg
@@ -6371,6 +6374,7 @@ Council4 currently supports **15,028 of 32,501 cards eligible for paper support 
 - Indrik Stomphowler
 - Indulgent Aristocrat
 - Indulging Patrician
+- Inertia Bubble
 - Inescapable Blaze
 - Inescapable Brute
 - Inevitable Defeat
@@ -6504,6 +6508,7 @@ Council4 currently supports **15,028 of 32,501 cards eligible for paper support 
 - Intrepid Trufflesnout // Go Hog Wild
 - Introduction to Annihilation
 - Introduction to Prophecy
+- Intruder Alarm
 - Intruding Soulrager
 - Inundate
 - Invading Manticore
@@ -6732,6 +6737,7 @@ Council4 currently supports **15,028 of 32,501 cards eligible for paper support 
 - Junktown
 - Junktroller
 - Junkyard Genius
+- Juntu Stakes
 - Junún Efreet
 - Juri, Master of the Revue
 - Just the Wind
@@ -7708,6 +7714,7 @@ Council4 currently supports **15,028 of 32,501 cards eligible for paper support 
 - Marble Chalice
 - Marble Diamond
 - Marble Gargoyle
+- Marble Titan
 - March from the Black Gate
 - March of the Drowned
 - March of the Multitudes
@@ -7850,6 +7857,7 @@ Council4 currently supports **15,028 of 32,501 cards eligible for paper support 
 - Meditation Pools
 - Meditation Puzzle
 - Medusa, Inhuman Queen
+- Meekstone
 - Meeting of Minds
 - Megantic Sliver
 - Megatog
@@ -10418,6 +10426,7 @@ Council4 currently supports **15,028 of 32,501 cards eligible for paper support 
 - Rookie Mistake
 - Roon of the Hidden Realm
 - Roost of Drakes
+- Root Cage
 - Root Elemental
 - Root Maze
 - Root Out
@@ -14816,6 +14825,7 @@ Council4 currently supports **15,028 of 32,501 cards eligible for paper support 
 - Wrangle
 - Wrap in Vigor
 - Wrath of God
+- Wrath of Marit Lage
 - Wreak Havoc
 - Wreck Remover
 - Wreckage Wickerfolk
