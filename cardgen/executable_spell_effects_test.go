@@ -112,6 +112,21 @@ func TestLowerMassBounceSpellToGroup(t *testing.T) {
 			oracleText: "Return each permanent to its owner's hand.",
 			wantGroup:  "Group: game.BattlefieldGroup(game.Selection{}),",
 		},
+		{
+			name:       "all noncreature, nonland permanents",
+			oracleText: "Return all noncreature, nonland permanents to their owners' hands.",
+			wantGroup:  "Group: game.BattlefieldGroup(game.Selection{ExcludedTypes: []types.Card{types.Creature, types.Land}}),",
+		},
+		{
+			name:       "all nonland permanents",
+			oracleText: "Return all nonland permanents to their owners' hands.",
+			wantGroup:  "Group: game.BattlefieldGroup(game.Selection{ExcludedTypes: []types.Card{types.Land}}),",
+		},
+		{
+			name:       "all non-Elemental creatures",
+			oracleText: "Return all non-Elemental creatures to their owners' hands.",
+			wantGroup:  "Group: game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, ExcludedSubtype: types.Sub(\"Elemental\")}),",
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -131,6 +146,62 @@ func TestLowerMassBounceSpellToGroup(t *testing.T) {
 			}
 			if !strings.Contains(source, "Primitive: game.Bounce{") || !strings.Contains(source, test.wantGroup) {
 				t.Fatalf("mass bounce %q did not lower to the expected group Bounce:\n%s", test.oracleText, source)
+			}
+		})
+	}
+}
+
+// TestLowerTriggeredMassBounceToGroup covers mass returns that resolve from a
+// triggered ability rather than a spell. The trigger binds the destination
+// possessive to the entering or face-up permanent, so these exercise the
+// reference-binding relaxation in massBounceReferencesOnly alongside the compound
+// "other"/state group prefixes that the parser recognizes.
+func TestLowerTriggeredMassBounceToGroup(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		wantGroup  string
+	}{
+		{
+			name:       "other nonland permanents",
+			oracleText: "When this creature enters, return all other nonland permanents to their owners' hands.",
+			wantGroup:  "Group: game.BattlefieldGroup(game.Selection{ExcludedTypes: []types.Card{types.Land}, ExcludeSource: true}),",
+		},
+		{
+			name:       "other tapped creatures",
+			oracleText: "When this creature enters, return all other tapped creatures to their owners' hands.",
+			wantGroup:  "Group: game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, Tapped: game.TriTrue, ExcludeSource: true}),",
+		},
+		{
+			name:       "non-Elemental creatures",
+			oracleText: "When this creature enters, return all non-Elemental creatures to their owners' hands.",
+			wantGroup:  "Group: game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, ExcludedSubtype: types.Sub(\"Elemental\")}),",
+		},
+		{
+			name:       "each other creature you control",
+			oracleText: "When this creature enters, return each other creature you control to its owner's hand.",
+			wantGroup:  "Group: game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, Controller: game.ControllerYou, ExcludeSource: true}),",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+				Name:       "Test Trigger",
+				Layout:     "normal",
+				TypeLine:   "Creature — Elemental",
+				ManaCost:   "{6}{U}{U}",
+				OracleText: test.oracleText,
+			}, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("triggered mass bounce %q unexpectedly failed: %v", test.oracleText, diagnostics)
+			}
+			if !strings.Contains(source, "Primitive: game.Bounce{") || !strings.Contains(source, test.wantGroup) {
+				t.Fatalf("triggered mass bounce %q did not lower to the expected group Bounce:\n%s", test.oracleText, source)
 			}
 		})
 	}

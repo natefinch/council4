@@ -1815,13 +1815,24 @@ func exactMassEffectSyntax(effect *EffectSyntax, prefix string) bool {
 		return false
 	}
 	phrase := text[len(prefix) : len(text)-1]
-	if base, ok := massChosenTypeBasePhrase(&effect.Selection, phrase); ok {
-		return exactMassGroupPhrase(&effect.Selection, base)
+	return exactMassPluralGroupPhrase(&effect.Selection, phrase)
+}
+
+// exactMassPluralGroupPhrase validates a plural "all <group>" mass phrase against
+// the typed selection, accepting every group shape the mass-effect machinery
+// models: the bare group noun, a single qualifying or excluded creature subtype,
+// and the chosen-type or counter qualifiers stripped to a base group first. It is
+// the shared validator for every plural mass form (destroy, exile, regenerate,
+// tap, untap, and the mass return below) so each verb recognizes the same set of
+// group wordings rather than maintaining its own narrower subset.
+func exactMassPluralGroupPhrase(selection *SelectionSyntax, phrase string) bool {
+	if base, ok := massChosenTypeBasePhrase(selection, phrase); ok {
+		return exactMassGroupPhrase(selection, base)
 	}
-	if base, ok := massCounterBasePhrase(&effect.Selection, phrase); ok {
-		return exactMassGroupPhrase(&effect.Selection, base) || exactMassSubtypePhrase(&effect.Selection, base) || exactMassExcludedSubtypePhrase(&effect.Selection, base)
+	if base, ok := massCounterBasePhrase(selection, phrase); ok {
+		return exactMassGroupPhrase(selection, base) || exactMassSubtypePhrase(selection, base) || exactMassExcludedSubtypePhrase(selection, base)
 	}
-	return exactMassGroupPhrase(&effect.Selection, phrase) || exactMassSubtypePhrase(&effect.Selection, phrase) || exactMassExcludedSubtypePhrase(&effect.Selection, phrase)
+	return exactMassGroupPhrase(selection, phrase) || exactMassSubtypePhrase(selection, phrase) || exactMassExcludedSubtypePhrase(selection, phrase)
 }
 
 // massChosenTypeBasePhrase strips a trailing chosen-type qualifier ("of the
@@ -1969,6 +1980,20 @@ func exactMassEachGroupPhrase(selection *SelectionSyntax, phrase string) bool {
 		return false
 	}
 	return selectionPhraseVerifiesMassGroup(selection, phrase, numberSingular)
+}
+
+// selectionPhraseVerifiesMassGroup confirms the typed selection renders to the
+// validated mass group phrase through the canonical selectionPhrase renderer.
+// When selectionPhrase reports it cannot represent the selection's noun-phrase
+// shape (ok=false) — for the subtype-noun and keyword group forms still owned by
+// their dedicated validators — it returns true so callers fall back to the
+// text-shape recognizer; otherwise the rendered phrase must match the source.
+func selectionPhraseVerifiesMassGroup(selection *SelectionSyntax, phrase string, number grammaticalNumber) bool {
+	rendered, ok := selectionPhrase(*selection, selectionPhraseOptions{Number: number})
+	if !ok {
+		return true
+	}
+	return strings.EqualFold(rendered, phrase)
 }
 
 // massEachGroupPhraseTextShape validates the singular group phrase that follows
@@ -2124,8 +2149,10 @@ func exactMassExcludedSubtypePhrase(selection *SelectionSyntax, phrase string) b
 // wording differs from destroy/exile only by its "to their owners' hands"
 // destination suffix; that possessive is reconstructed canonically here so the
 // group phrase between "Return all " and the suffix can be validated by the
-// shared exactMassGroupPhrase. It fails closed for every other return wording so
-// the single- and multi-target bounce paths are untouched.
+// shared exactMassPluralGroupPhrase, which recognizes the same group, subtype,
+// excluded-subtype, counter, and chosen-type wordings as the mass destroy/exile
+// forms. It fails closed for every other return wording so the single- and
+// multi-target bounce paths are untouched.
 func exactMassBounceEffectSyntax(effect *EffectSyntax) bool {
 	if effect.ToZone != zone.Hand {
 		return false
@@ -2137,7 +2164,7 @@ func exactMassBounceEffectSyntax(effect *EffectSyntax) bool {
 	}
 	for _, suffix := range []string{" " + bounceHandDestPlural, " " + bounceHandDestTheirOwner} {
 		if remainder, ok := strings.CutSuffix(text, suffix); ok {
-			return exactMassGroupPhrase(&effect.Selection, remainder[len(prefix):])
+			return exactMassPluralGroupPhrase(&effect.Selection, remainder[len(prefix):])
 		}
 	}
 	return false
@@ -2186,21 +2213,6 @@ func exactMassGroupPhrase(selection *SelectionSyntax, phrase string) bool {
 	return selectionPhraseVerifiesMassGroup(selection, phrase, numberPlural)
 }
 
-// selectionPhraseVerifiesMassGroup confirms the typed selection renders to the
-// validated mass group phrase through the canonical selectionPhrase renderer.
-// When selectionPhrase reports it cannot represent the selection's noun-phrase
-// shape (ok=false) — for the subtype-noun and keyword group forms still owned by
-// their dedicated validators — the text-shape validation stands alone, so this
-// verification narrows nothing it does not yet model while making every shape it
-// does model fail closed on a selection that disagrees with the source text.
-func selectionPhraseVerifiesMassGroup(selection *SelectionSyntax, phrase string, number grammaticalNumber) bool {
-	rendered, ok := selectionPhrase(*selection, selectionPhraseOptions{Number: number})
-	if !ok {
-		return true
-	}
-	return strings.EqualFold(rendered, phrase)
-}
-
 func massGroupPhraseTextShape(phrase string) bool {
 	if phrase == "" || strings.TrimSpace(phrase) != phrase {
 		return false
@@ -2227,13 +2239,9 @@ func massGroupPhraseTextShape(phrase string) bool {
 	if exactMassBaseNoun(phrase) {
 		return true
 	}
-	for _, prefix := range []string{
-		"other ", "tapped ", "untapped ", "nonland ", "nonartifact ", "noncreature ", "nonenchantment ",
-		"white ", "blue ", "black ", "red ", "green ", "nonwhite ", "nonblue ", "nonblack ", "nonred ", "nongreen ",
-		"attacking ", "blocking ", "attacking or blocking ",
-	} {
-		if remainder, ok := strings.CutPrefix(phrase, prefix); ok {
-			return exactMassBaseNoun(remainder)
+	if remainder, ok := massGroupStripAdjectivePrefixes(phrase); ok {
+		if exactMassBaseNoun(remainder) {
+			return true
 		}
 	}
 	// "nonbasic" is a supertype exclusion meaningful only for lands ("Destroy all
@@ -2242,6 +2250,70 @@ func massGroupPhraseTextShape(phrase string) bool {
 		return remainder == "lands"
 	}
 	return false
+}
+
+// massGroupStripAdjectivePrefixes strips the canonical adjective prefixes that
+// precede a mass group base noun, in the order selectionPhrase renders them: a
+// leading "other", a combat/tapped state, a single color or excluded color, and
+// one or more comma-joined excluded card types ("noncreature, nonland"). It
+// strips each recognized prefix once (or, for excluded types, repeatedly) so
+// compound wordings such as "other tapped creatures", "other nonland permanents",
+// and "noncreature, nonland permanents" reduce to their bare base noun. The typed
+// selection verification in exactMassGroupPhrase confirms the stripped phrase
+// still describes the source selection, so widening the recognized text shape
+// here never accepts a phrase the typed selection contradicts. It reports the
+// remaining base-noun phrase and whether any prefix was stripped.
+func massGroupStripAdjectivePrefixes(phrase string) (string, bool) {
+	stripped := false
+	if remainder, ok := strings.CutPrefix(phrase, "other "); ok {
+		phrase = remainder
+		stripped = true
+	}
+	for _, prefix := range []string{
+		"tapped ", "untapped ", "attacking or blocking ", "attacking ", "blocking ",
+	} {
+		if remainder, ok := strings.CutPrefix(phrase, prefix); ok {
+			phrase = remainder
+			stripped = true
+			break
+		}
+	}
+	for _, prefix := range []string{
+		"white ", "blue ", "black ", "red ", "green ",
+		"nonwhite ", "nonblue ", "nonblack ", "nonred ", "nongreen ",
+	} {
+		if remainder, ok := strings.CutPrefix(phrase, prefix); ok {
+			phrase = remainder
+			stripped = true
+			break
+		}
+	}
+	for {
+		remainder, ok := massGroupStripExcludedTypePrefix(phrase)
+		if !ok {
+			break
+		}
+		phrase = remainder
+		stripped = true
+	}
+	return phrase, stripped
+}
+
+// massGroupStripExcludedTypePrefix strips one leading "non<type>" excluded card
+// type prefix from a mass group phrase, consuming a comma separator when more
+// excluded types follow ("noncreature, nonland ...") and a plain space when the
+// excluded type is the last prefix before the base noun ("nonland permanents").
+// It reports the remaining phrase and whether a prefix was stripped.
+func massGroupStripExcludedTypePrefix(phrase string) (string, bool) {
+	for _, excluded := range []string{"nonland", "nonartifact", "noncreature", "nonenchantment"} {
+		if remainder, ok := strings.CutPrefix(phrase, excluded+", "); ok {
+			return remainder, true
+		}
+		if remainder, ok := strings.CutPrefix(phrase, excluded+" "); ok {
+			return remainder, true
+		}
+	}
+	return phrase, false
 }
 
 // exactSacrificeMassEffectSyntax recognizes the mass sacrifice wording

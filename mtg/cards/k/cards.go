@@ -13,6 +13,7 @@ var Cards = []*game.CardDef{
 	KavuAggressor,
 	KavuPrimarch,
 	KayaSGhostform,
+	KederektLeviathan,
 	KeensightMentor,
 	KeiTakahashi,
 	KessigCagebreakers,

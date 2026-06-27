@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,484 of 32,501 cards eligible for paper support (47.6%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,490 of 32,501 cards eligible for paper support (47.7%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1464,6 +1464,7 @@ Council4 currently supports **15,484 of 32,501 cards eligible for paper support 
 - Blossoming Defense
 - Blossoming Sands
 - Blossoming Wreath
+- Blot Out the Sky
 - Blue Elemental Blast
 - Blue Horror
 - Blue Marvel, Adam Brashear
@@ -3168,6 +3169,7 @@ Council4 currently supports **15,484 of 32,501 cards eligible for paper support 
 - Demonic Tutor
 - Demonic Vigor
 - Demystify
+- Denizen of the Deep
 - Deny Entry
 - Deny Existence
 - Deny Reality
@@ -4524,6 +4526,7 @@ Council4 currently supports **15,484 of 32,501 cards eligible for paper support 
 - Filigree Familiar
 - Filigree Sages
 - Fill with Fright
+- Filter Out
 - Filth
 - Filthy Cur
 - Fin Fang Foom
@@ -7023,6 +7026,7 @@ Council4 currently supports **15,484 of 32,501 cards eligible for paper support 
 - Kazuul Warlord
 - Kazuul's Fury // Kazuul's Cliffs
 - Kederekt Creeper
+- Kederekt Leviathan
 - Kederekt Parasite
 - Keen Glidemaster
 - Keen Sense
@@ -12948,6 +12952,7 @@ Council4 currently supports **15,484 of 32,501 cards eligible for paper support 
 - Sunbond
 - Sunder
 - Sunder from Within
+- Sunderflock
 - Sundering Vitae
 - Sundial, Dawn Tyrant
 - Sundown Pass
@@ -13536,6 +13541,7 @@ Council4 currently supports **15,484 of 32,501 cards eligible for paper support 
 - Thoughtweft Gambit
 - Thoughtweft Lieutenant
 - Thousand Moons Infantry
+- Thousand Winds
 - Thousand-legged Kami
 - Thraben Doomsayer
 - Thraben Foulbloods
