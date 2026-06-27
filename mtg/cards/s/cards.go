@@ -91,6 +91,7 @@ var Cards = []*game.CardDef{
 	SlumberingDragon,
 	SmiteTheDeathless,
 	Soilshaper,
+	SokkaTenaciousTactician,
 	SolemnRecruit,
 	SomberwaldVigilante,
 	SoratamiSavant,

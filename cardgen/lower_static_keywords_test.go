@@ -254,6 +254,19 @@ func TestLowerStaticDeclarationGroupAnthems(t *testing.T) {
 			combatState: game.CombatStateAttacking,
 			keywords:    []game.Keyword{game.DoubleStrike},
 		},
+		"controlled creatures prowess": {
+			oracleText:  "Creatures you control have prowess.",
+			domain:      game.GroupDomainObjectControlled,
+			requireType: []types.Card{types.Creature},
+			keywords:    []game.Keyword{game.Prowess},
+		},
+		"other controlled creatures prowess": {
+			oracleText:  "Other creatures you control have prowess.",
+			domain:      game.GroupDomainObjectControlled,
+			excluded:    true,
+			requireType: []types.Card{types.Creature},
+			keywords:    []game.Keyword{game.Prowess},
+		},
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {

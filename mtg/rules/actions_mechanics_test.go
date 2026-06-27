@@ -611,6 +611,45 @@ func TestProwessTriggersOnNoncreatureSpellCast(t *testing.T) {
 	}
 }
 
+func TestGrantedProwessTriggersOnOtherControlledCreature(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	// Source grants prowess to other creatures its controller controls.
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Prowess Anthem",
+		Types: []types.Card{types.Creature},
+		StaticAbilities: []game.StaticAbility{{
+			ContinuousEffects: []game.ContinuousEffect{{
+				Layer: game.LayerAbility,
+				Group: game.ObjectControlledGroupExcluding(
+					game.SourcePermanentReference(),
+					game.Selection{RequiredTypes: []types.Card{types.Creature}},
+					game.SourcePermanentReference(),
+				),
+				AddKeywords: []game.Keyword{game.Prowess},
+			}},
+		}},
+	}})
+	beneficiary := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	spellID := addCardToHand(g, game.Player1, greenInstant())
+	addBasicLandPermanent(g, game.Player1, types.Forest)
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	g.Turn.PriorityPlayer = game.Player1
+
+	if !engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 0, nil)) {
+		t.Fatal("cast instant failed")
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("granted prowess trigger was not put on stack")
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if got := effectivePower(g, beneficiary); got != 3 {
+		t.Fatalf("granted prowess power = %d, want 3", got)
+	}
+}
+
 func TestFightEffectDealsMutualCreatureDamage(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	first := addCombatCreaturePermanentWithPower(g, game.Player1, 3)
