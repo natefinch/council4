@@ -1077,6 +1077,21 @@ func TapManaChoiceWithSpendRiderAbility(text string, rider ManaSpendRider, color
 	return ability
 }
 
+// TapManaChoiceCountWithSpendRiderAbility builds a tap mana-choice ability that
+// produces count mana of one chosen color, each unit carrying the supplied spend
+// restriction or rider (Vedalken Engineer: "Add two mana of any one color. Spend
+// this mana only to cast artifact spells or activate abilities of artifacts.").
+func TapManaChoiceCountWithSpendRiderAbility(text string, rider ManaSpendRider, count int, colors ...mana.Color) ManaAbility {
+	ability := TapManaChoiceCountAbility(text, count, colors...)
+	add, ok := ability.Content.Modes[0].Sequence[1].Primitive.(AddMana)
+	if !ok {
+		panic("game: tap mana choice count template has no add-mana instruction")
+	}
+	add.SpendRider = opt.Val(rider)
+	ability.Content.Modes[0].Sequence[1].Primitive = add
+	return ability
+}
+
 // TapChosenColorManaAbility builds the complete tap ability for "{T}: Add one
 // mana of the chosen color." The color is read from the entry-time choice stored
 // on the source permanent under EntryColorChoiceKey, so this ability prompts no

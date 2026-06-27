@@ -754,6 +754,25 @@ func restrictedManaCanPay(s State, rider game.ManaRiderInstance, ctx spendContex
 		// Powerstone: usable for anything except a nonartifact spell cast. A
 		// non-spell payment (ability cost; ctx.spell is nil) is always allowed.
 		return ctx.spell == nil || ctx.spell.HasType(types.Artifact)
+	case game.ManaSpendCastArtifactSpellOnly:
+		// Castle Doom, Mishra's Workshop: spendable only to cast an artifact
+		// spell. A non-spell payment (ability cost; ctx.spell is nil) is not an
+		// artifact spell, so the tagged mana cannot pay for it.
+		return ctx.spell != nil && ctx.spell.HasType(types.Artifact)
+	case game.ManaSpendCastOrActivateArtifact:
+		// Power Depot, Cargo Ship: spendable to cast an artifact spell or to
+		// activate an ability of an artifact permanent.
+		return (ctx.spell != nil && ctx.spell.HasType(types.Artifact)) ||
+			abilitySourceIsArtifact(s, ctx.abilitySource)
+	case game.ManaSpendActivateArtifactAbility:
+		// Soldevi Machinist: spendable only to activate an ability of an artifact
+		// permanent, never to cast a spell.
+		return ctx.spell == nil && abilitySourceIsArtifact(s, ctx.abilitySource)
+	case game.ManaSpendCastArtifactOrActivateAbility:
+		// Guidelight Optimizer, Automated Artificer: spendable to cast an artifact
+		// spell or to activate any activated ability.
+		return (ctx.spell != nil && ctx.spell.HasType(types.Artifact)) ||
+			(ctx.spell == nil && ctx.abilitySource != nil)
 	case game.ManaSpendCastCreatureSpell:
 		// Beastcaller Savant: spendable only to cast a creature spell. A
 		// non-spell payment (ability cost; ctx.spell is nil) is not a creature
@@ -772,6 +791,13 @@ func abilitySourceIsChosenCreatureType(s State, rider game.ManaRiderInstance, so
 		types.KnownSubtypeForType(types.Creature, rider.ChosenSubtype) &&
 		s.PermanentHasType(source, types.Creature) &&
 		s.PermanentHasSubtype(source, rider.ChosenSubtype)
+}
+
+// abilitySourceIsArtifact reports whether source is an artifact permanent, so an
+// artifact-restricted rider's tagged mana may pay to activate that source's
+// ability (Power Depot, Soldevi Machinist).
+func abilitySourceIsArtifact(s State, source *game.Permanent) bool {
+	return source != nil && s.PermanentHasType(source, types.Artifact)
 }
 
 // hasTapCostOf reports whether the cost list has a tap additional cost.

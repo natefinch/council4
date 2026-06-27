@@ -64,6 +64,7 @@ var Cards = []*game.CardDef{
 	MinotaurExplorer,
 	MirrodinAvenged,
 	MirrorWall,
+	MishraSWorkshop,
 	MistmeadowCouncil,
 	MobileFort,
 	MobileHomestead,

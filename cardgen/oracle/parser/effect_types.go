@@ -2649,6 +2649,28 @@ const (
 	// Generator Servant). It is an unrestricted bonus rider that grants the spell
 	// a keyword until end of turn.
 	ManaSpendCastCreatureSpell ManaSpendConditionKind = "ManaSpendCastCreatureSpell"
+	// ManaSpendCastArtifactSpell is the restricted "spend this mana only to cast
+	// an artifact spell" / "to cast artifact spells" condition (Castle Doom,
+	// Mishra's Workshop). The tagged mana may pay only to cast an artifact spell;
+	// it cannot pay activated-ability costs or other payments.
+	ManaSpendCastArtifactSpell ManaSpendConditionKind = "ManaSpendCastArtifactSpell"
+	// ManaSpendCastOrActivateArtifact is the restricted "spend this mana only to
+	// cast artifact spells or activate abilities of artifacts" condition (Power
+	// Depot, Renowned Weaponsmith, Cargo Ship), including the singular "an
+	// artifact spell or activate an ability of an artifact [source]" phrasings.
+	// The tagged mana may pay to cast an artifact spell or to activate an ability
+	// of an artifact permanent.
+	ManaSpendCastOrActivateArtifact ManaSpendConditionKind = "ManaSpendCastOrActivateArtifact"
+	// ManaSpendActivateArtifactAbility is the restricted "spend this mana only to
+	// activate abilities of artifacts" / "of artifact sources" condition (Soldevi
+	// Machinist, Steelswarm Operator). The tagged mana may pay only to activate an
+	// ability of an artifact permanent; it cannot pay to cast a spell.
+	ManaSpendActivateArtifactAbility ManaSpendConditionKind = "ManaSpendActivateArtifactAbility"
+	// ManaSpendCastArtifactOrActivateAbility is the restricted "spend this mana
+	// only to cast an artifact spell or activate an ability" condition (Guidelight
+	// Optimizer, Automated Artificer, Purple Dragon Punks). The tagged mana may
+	// pay to cast an artifact spell or to activate any activated ability.
+	ManaSpendCastArtifactOrActivateAbility ManaSpendConditionKind = "ManaSpendCastArtifactOrActivateAbility"
 )
 
 // ManaSpendRiderEffectKind identifies the exact resolving effect of a mana-spend

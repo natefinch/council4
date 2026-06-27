@@ -235,9 +235,14 @@ func manaSpendConditionSatisfied(g *game.Game, rider game.ManaRiderInstance, spe
 		return spellDef != nil && spellDef.HasSupertype(types.Legendary)
 	case game.ManaSpendCastCreatureSpell:
 		return spellDef != nil && spellDef.HasType(types.Creature)
-	case game.ManaSpendCastArtifactSpell:
+	case game.ManaSpendCastArtifactSpell,
+		game.ManaSpendCastArtifactSpellOnly,
+		game.ManaSpendCastOrActivateArtifact,
+		game.ManaSpendCastArtifactOrActivateAbility:
 		return spellDef != nil && spellDef.HasType(types.Artifact)
 	default:
+		// ManaSpendActivateArtifactAbility and other activation-only conditions
+		// are never satisfied by a spell cast.
 		return false
 	}
 }
@@ -272,11 +277,14 @@ func applyManaSpendSpellRuleEffect(obj *game.StackObject, rider game.ManaRiderIn
 // rider's condition, so no rider fires; consuming the units keeps rider
 // provenance exact so later same-color mana cannot inherit a stale rider.
 //
-// The exception is the cast-or-activate chosen-type restriction (Secluded
-// Courtyard): its tagged mana may pay to activate an ability of a creature
-// source of the chosen type, so when source is such a permanent the rider's
-// condition is satisfied and its (effectless) unit is consumed as a qualifying
-// spend. It is a no-op when the player holds no riders.
+// The exceptions are the activation-admitting restrictions: the cast-or-activate
+// chosen-type restriction (Secluded Courtyard), whose tagged mana may pay to
+// activate an ability of a creature source of the chosen type, and the artifact
+// restrictions (Power Depot, Soldevi Machinist, Guidelight Optimizer), whose
+// tagged mana may pay to activate an ability of an artifact source or, for the
+// any-ability form, any activated ability. When source satisfies the rider's
+// condition its (effectless) unit is consumed as a qualifying spend. It is a
+// no-op when the player holds no riders.
 func consumeManaSpendRidersForPayment(
 	g *game.Game,
 	playerID game.PlayerID,
@@ -303,13 +311,19 @@ func consumeManaSpendRidersForPayment(
 // chosen-type restriction is satisfied by an activation, and only when source is
 // a creature permanent of the rider's captured chosen subtype.
 func abilityActivationSatisfiesManaSpendRider(g *game.Game, source *game.Permanent, rider game.ManaRiderInstance) bool {
-	if rider.Rider.Condition != game.ManaSpendCastOrActivateChosenCreatureType {
+	switch rider.Rider.Condition {
+	case game.ManaSpendCastOrActivateChosenCreatureType:
+		return source != nil &&
+			types.KnownSubtypeForType(types.Creature, rider.ChosenSubtype) &&
+			permanentHasType(g, source, types.Creature) &&
+			permanentHasSubtype(g, source, rider.ChosenSubtype)
+	case game.ManaSpendCastOrActivateArtifact, game.ManaSpendActivateArtifactAbility:
+		return source != nil && permanentHasType(g, source, types.Artifact)
+	case game.ManaSpendCastArtifactOrActivateAbility:
+		return source != nil
+	default:
 		return false
 	}
-	return source != nil &&
-		types.KnownSubtypeForType(types.Creature, rider.ChosenSubtype) &&
-		permanentHasType(g, source, types.Creature) &&
-		permanentHasSubtype(g, source, rider.ChosenSubtype)
 }
 
 // drainFiredManaSpendRiders converts mana-spend riders that fired since the last

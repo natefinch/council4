@@ -264,7 +264,8 @@ func isManaSpendRider(effect *compiler.CompiledEffect) bool {
 		isChosenTypeCastOrActivateManaSpendRider(effect.ManaSpendRider) ||
 		isLegendarySpellManaSpendRider(effect.ManaSpendRider) ||
 		isCreatureSpellRestrictedManaSpendRider(effect.ManaSpendRider) ||
-		isCreatureSpellHasteManaSpendRider(effect.ManaSpendRider)
+		isCreatureSpellHasteManaSpendRider(effect.ManaSpendRider) ||
+		isArtifactManaSpendRider(effect.ManaSpendRider)
 }
 
 func isCommanderScryManaSpendRider(rider *compiler.CompiledManaSpendRider) bool {
@@ -329,6 +330,37 @@ func isCreatureSpellHasteManaSpendRider(rider *compiler.CompiledManaSpendRider) 
 		rider.Effect == parser.ManaSpendRiderEffectGainsHasteUntilEndOfTurn &&
 		!rider.Restricted &&
 		rider.ScryAmount == 0
+}
+
+// isArtifactManaSpendRider reports whether rider is one of the restriction-only
+// artifact mana-spend riders (Castle Doom, Power Depot, Soldevi Machinist,
+// Guidelight Optimizer). Each restricts the tagged mana to artifact-related
+// spending with no further qualifier or rider effect.
+func isArtifactManaSpendRider(rider *compiler.CompiledManaSpendRider) bool {
+	if rider.Effect != parser.ManaSpendRiderEffectUnknown ||
+		!rider.Restricted ||
+		rider.ScryAmount != 0 {
+		return false
+	}
+	_, ok := artifactManaSpendCondition(rider.Condition)
+	return ok
+}
+
+// artifactManaSpendCondition maps a parser artifact mana-spend condition to its
+// runtime counterpart, failing closed on any non-artifact condition.
+func artifactManaSpendCondition(condition parser.ManaSpendConditionKind) (game.ManaSpendConditionKind, bool) {
+	switch condition {
+	case parser.ManaSpendCastArtifactSpell:
+		return game.ManaSpendCastArtifactSpellOnly, true
+	case parser.ManaSpendCastOrActivateArtifact:
+		return game.ManaSpendCastOrActivateArtifact, true
+	case parser.ManaSpendActivateArtifactAbility:
+		return game.ManaSpendActivateArtifactAbility, true
+	case parser.ManaSpendCastArtifactOrActivateAbility:
+		return game.ManaSpendCastArtifactOrActivateAbility, true
+	default:
+		return 0, false
+	}
 }
 
 // lowerManaSpendRiderContent lowers a typed add-mana effect and its exact
@@ -477,6 +509,51 @@ func lowerManaSpendRiderContent(ctx contentCtx) (game.AbilityContent, *shared.Di
 				ctx,
 				"unsupported mana effect",
 				"the creature-spell haste rider requires an exact add-mana instruction to tag",
+			)
+		}
+		return content, nil
+	}
+	if isArtifactManaSpendRider(riderEffect) {
+		condition, ok := artifactManaSpendCondition(riderEffect.Condition)
+		if !ok {
+			return game.AbilityContent{}, contentDiagnostic(
+				ctx,
+				"unsupported mana effect",
+				"the artifact rider requires a recognized artifact spend condition",
+			)
+		}
+		rider := game.ManaSpendRider{
+			Condition:   condition,
+			Restriction: game.ManaSpendRestrictedToCondition,
+		}
+		if manaEffect.Mana.AnyColor && manaEffect.Mana.AnyColorCount < 2 {
+			return game.TapManaChoiceWithSpendRiderAbility(
+				ctx.text,
+				rider,
+				mana.W, mana.U, mana.B, mana.R, mana.G,
+			).Content, nil
+		}
+		if manaEffect.Mana.AnyColor && manaEffect.Mana.AnyColorCount >= 2 {
+			return game.TapManaChoiceCountWithSpendRiderAbility(
+				ctx.text,
+				rider,
+				manaEffect.Mana.AnyColorCount,
+				mana.W, mana.U, mana.B, mana.R, mana.G,
+			).Content, nil
+		}
+		content, ok := typedManaEffectContent(manaEffect.Mana)
+		if !ok {
+			return game.AbilityContent{}, contentDiagnostic(
+				ctx,
+				"unsupported mana effect",
+				"the restricted artifact rider requires an exact modeled add-mana effect",
+			)
+		}
+		if !attachManaSpendRider(&content, rider) {
+			return game.AbilityContent{}, contentDiagnostic(
+				ctx,
+				"unsupported mana effect",
+				"the restricted artifact rider requires an exact add-mana instruction to tag",
 			)
 		}
 		return content, nil

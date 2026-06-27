@@ -6,6 +6,7 @@ import "github.com/natefinch/council4/mtg/game"
 
 // Cards lists all card definitions in this package.
 var Cards = []*game.CardDef{
+	OakenSiren,
 	OakhameAdversary,
 	Oasis,
 	OathOfChandra,
@@ -29,6 +30,7 @@ var Cards = []*game.CardDef{
 	OrneryGoblin,
 	OrochiRanger,
 	OsaiVultures,
+	OsgoodOperationDouble,
 	OtherworldlyJourney,
 	OvergrownPest,
 	OverwhelmedApprentice,

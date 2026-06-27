@@ -46,6 +46,27 @@ const (
 	// pay for artifact spells and any non-spell payment (ability costs), but never
 	// for a nonartifact spell cast.
 	ManaSpendCastArtifactSpell
+	// ManaSpendCastArtifactSpellOnly is "spent only to cast an artifact spell"
+	// (Castle Doom, Mishra's Workshop). It is a restriction-only rider: the tagged
+	// mana may pay only to cast an artifact spell, never an ability cost or other
+	// payment. It is narrower than ManaSpendCastArtifactSpell (Powerstone), which
+	// additionally admits non-spell payments.
+	ManaSpendCastArtifactSpellOnly
+	// ManaSpendCastOrActivateArtifact is "spent only to cast artifact spells or
+	// activate abilities of artifacts" (Power Depot, Cargo Ship). It is a
+	// restriction-only rider: the tagged mana may pay to cast an artifact spell or
+	// to activate an ability of an artifact permanent.
+	ManaSpendCastOrActivateArtifact
+	// ManaSpendActivateArtifactAbility is "spent only to activate abilities of
+	// artifacts" (Soldevi Machinist, Steelswarm Operator). It is a restriction-
+	// only rider: the tagged mana may pay only to activate an ability of an
+	// artifact permanent, never to cast a spell.
+	ManaSpendActivateArtifactAbility
+	// ManaSpendCastArtifactOrActivateAbility is "spent only to cast an artifact
+	// spell or activate an ability" (Guidelight Optimizer, Automated Artificer).
+	// It is a restriction-only rider: the tagged mana may pay to cast an artifact
+	// spell or to activate any activated ability.
+	ManaSpendCastArtifactOrActivateAbility
 )
 
 // ManaSpendRestrictionKind identifies whether a tagged mana unit may be spent

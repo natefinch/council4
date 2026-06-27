@@ -17,6 +17,7 @@ var Cards = []*game.CardDef{
 	VastlandsScavenger,
 	VatEmergence,
 	Vebulid,
+	VedalkenEngineer,
 	VeinwitchCoven,
 	VengefulRebel,
 	VenomSHunger,

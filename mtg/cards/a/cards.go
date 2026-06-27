@@ -85,6 +85,7 @@ var Cards = []*game.CardDef{
 	AuriokGlaivemaster,
 	AuroraEidolon,
 	AuspiciousAncestor,
+	AutomatedArtificer,
 	AvacynianPriest,
 	AvatarOfDiscord,
 	AvenRedeemer,
