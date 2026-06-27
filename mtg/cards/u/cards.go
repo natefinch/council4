@@ -12,6 +12,7 @@ var Cards = []*game.CardDef{
 	UnexplainedVision,
 	UnfathomableTruths,
 	UnsparingBoltcaster,
+	UnstableMutation,
 	UntimelyMalfunction,
 	UreniOfTheUnwritten,
 	UrsineFylgja,

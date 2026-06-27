@@ -593,6 +593,7 @@ func lowerCounterPlacementSpell(
 	if len(ctx.content.Targets) == 0 &&
 		len(ctx.content.References) == 1 &&
 		(ctx.content.References[0].Binding == compiler.ReferenceBindingSource ||
+			ctx.content.References[0].Binding == compiler.ReferenceBindingSourceAttached ||
 			ctx.content.References[0].Binding == compiler.ReferenceBindingTarget ||
 			ctx.content.References[0].Binding == compiler.ReferenceBindingEventPermanent ||
 			ctx.content.References[0].Binding == compiler.ReferenceBindingEventRelatedPermanent) {

@@ -150,6 +150,21 @@ func bindReferences(
 			reference.Binding = ReferenceBindingEventStackObject
 			continue
 		}
+		// In a phase or step trigger whose step belongs to the controller of the
+		// permanent the source is attached to ("At the beginning of the upkeep of
+		// enchanted creature's controller, put a -1/-1 counter on that creature.",
+		// Unstable Mutation), the demonstrative "that creature" names that attached
+		// permanent. It binds after every explicit antecedent so a combat, prior
+		// instruction, or target referent still wins; only an otherwise-unbound
+		// demonstrative falls to the attached permanent the runtime resolves
+		// through SourceAttachedPermanentReference.
+		if trigger != nil &&
+			reference.Kind == ReferenceThatObject &&
+			reference.Order.Start >= trigger.Order.Start &&
+			!phaseStepAttachedSelectionEmpty(trigger.Pattern.StepPlayerSourceAttachedSelection) {
+			reference.Binding = ReferenceBindingSourceAttached
+			continue
+		}
 		if reference.Kind == ReferencePronoun {
 			reference.Binding = ReferenceBindingAmbiguous
 		} else {
