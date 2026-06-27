@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,345 of 32,501 cards eligible for paper support (47.2%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,351 of 32,501 cards eligible for paper support (47.2%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -881,6 +881,7 @@ Council4 currently supports **15,345 of 32,501 cards eligible for paper support 
 - Azusa's Many Journeys // Likeness of the Seeker
 - Azusa, Lost but Seeking
 - Back for More
+- Back to Basics
 - Back to Nature
 - Backup Agent
 - Backwoods Survivalists
@@ -2209,6 +2210,7 @@ Council4 currently supports **15,345 of 32,501 cards eligible for paper support 
 - Cho-Arrim Bruiser
 - Cho-Manno's Blessing
 - Chocobo Racetrack
+- Choke
 - Choked Estuary
 - Choking Fumes
 - Choking Tethers
@@ -2795,6 +2797,7 @@ Council4 currently supports **15,345 of 32,501 cards eligible for paper support 
 - Curious Farm Animals
 - Curious Inquiry
 - Curious Pair // Treats to Share
+- Curse of Marit Lage
 - Curse of the Swine
 - Cursebreak
 - Cursecatcher
@@ -3916,6 +3919,7 @@ Council4 currently supports **15,345 of 32,501 cards eligible for paper support 
 - Elvish Warrior
 - Emancipation Angel
 - Embalmed Ascendant
+- Embargo
 - Ember Beast
 - Ember Hauler
 - Ember Island Production
@@ -4856,6 +4860,7 @@ Council4 currently supports **15,345 of 32,501 cards eligible for paper support 
 - Fresh-Faced Recruit
 - Fretwork Colony
 - Freyalise's Charm
+- Freyalise's Radiance
 - Friendly Ghost
 - Friendly Neighborhood
 - Friendly Teddy
@@ -10485,6 +10490,7 @@ Council4 currently supports **15,345 of 32,501 cards eligible for paper support 
 - Rimebound Dead
 - Rimefur Reindeer
 - Rimekin Recluse
+- Rimescale Dragon
 - Rimeshield Frost Giant
 - Rimewind Cryomancer
 - Rimewind Taskmage
