@@ -1754,6 +1754,9 @@ func lowerFixedModifyPTSpell(
 			return content, nil
 		}
 	}
+	if content, ok := lowerReferencedAmountModifyPTTargetSpell(ctx); ok {
+		return content, nil
+	}
 	if len(ctx.content.Targets) != 1 ||
 		ctx.content.Targets[0].Cardinality.Min != 1 ||
 		ctx.content.Targets[0].Cardinality.Max != 1 ||
