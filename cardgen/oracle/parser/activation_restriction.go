@@ -67,7 +67,7 @@ func parseActivationRestriction(tokens []shared.Token) ([]ActivationRestriction,
 		return []ActivationRestriction{{Kind: ActivationRestrictionUnsupported, Span: fullSpan}}, true
 	}
 	if equalWord(tokens[2], "if") {
-		return nil, false
+		return parseConditionalActivationRestriction(tokens, fullSpan)
 	}
 	clauses := splitActivationRestrictionConjunction(tokens[2:])
 	restrictions := make([]ActivationRestriction, 0, len(clauses))
@@ -77,6 +77,45 @@ func parseActivationRestriction(tokens []shared.Token) ([]ActivationRestriction,
 		restrictions = append(restrictions, restriction)
 	}
 	return restrictions, true
+}
+
+// parseConditionalActivationRestriction handles an "Activate only if
+// <condition> and only <timing>" sentence by peeling a trailing "and only
+// <timing>" restriction tail off the condition. It returns the typed timing
+// restriction(s) for the tail, each spanning only the tail (from the "and"
+// through the sentence's end), while leaving the "Activate only if <condition>"
+// prefix in the body for the condition parser, which removes the tail's
+// activation-timing span before recognizing the gate. tokens excludes the
+// trailing period; fullSpan covers the whole sentence including it. It returns
+// ok=false when no recognized timing tail is present, so a bare "Activate only
+// if <condition>" stays a pure activation condition.
+func parseConditionalActivationRestriction(tokens []shared.Token, fullSpan shared.Span) ([]ActivationRestriction, bool) {
+	for i := 3; i+1 < len(tokens); i++ {
+		if !equalWord(tokens[i], "and") || !equalWord(tokens[i+1], "only") {
+			continue
+		}
+		clauses := splitActivationRestrictionConjunction(tokens[i+2:])
+		restrictions := make([]ActivationRestriction, 0, len(clauses))
+		recognized := true
+		for _, clause := range clauses {
+			restriction := ActivationRestriction{Kind: ActivationRestrictionUnsupported}
+			matchActivationRestrictionBody(clause, &restriction)
+			if restriction.Kind == ActivationRestrictionUnsupported {
+				recognized = false
+				break
+			}
+			restrictions = append(restrictions, restriction)
+		}
+		if !recognized || len(restrictions) == 0 {
+			continue
+		}
+		tailSpan := shared.Span{Start: tokens[i].Span.Start, End: fullSpan.End}
+		for j := range restrictions {
+			restrictions[j].Span = tailSpan
+		}
+		return restrictions, true
+	}
+	return nil, false
 }
 
 // splitActivationRestrictionConjunction splits the body of an "Activate only …"

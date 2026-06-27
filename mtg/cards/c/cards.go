@@ -33,6 +33,7 @@ var Cards = []*game.CardDef{
 	ChillOfForeboding,
 	ChillOfTheGrave,
 	ChiseiHeartOfOceans,
+	ChitteringSkitterling,
 	ChoMannoSBlessing,
 	Choke,
 	ChronicFlooding,

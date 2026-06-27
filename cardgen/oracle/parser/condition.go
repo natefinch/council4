@@ -396,6 +396,13 @@ func emitConditionClauses(abilities []Ability) {
 	for i := range abilities {
 		ability := &abilities[i]
 		tokens := eventHistorySemanticTokens(ability.Tokens, ability.Reminders, ability.Quoted)
+		// Remove a trailing "Activate only …" timing span, including the "and only
+		// <timing>" tail peeled off an "Activate only if <condition> and only
+		// <timing>" gate, so the condition clause recognizer sees only the
+		// "only if <condition>" prefix rather than the conjoined timing wording.
+		if span, ok := ability.activationTimingSpan(); ok {
+			tokens = tokensOutsideParserSpan(tokens, span)
+		}
 		if clauses := parseConditionClauses(tokens, ability.Atoms); len(clauses) > 0 {
 			ability.ConditionClauses = clauses
 		}
