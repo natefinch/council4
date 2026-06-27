@@ -4657,6 +4657,16 @@ func damageRecipientReference(effect *EffectSyntax) DamageRecipientReferenceKind
 	if len(recipient) == 2 && equalWord(recipient[0], "that") && equalWord(recipient[1], "creature") {
 		return DamageRecipientReferenceThatCreature
 	}
+	// "deals N damage to the player or planeswalker it's attacking" (or "... that
+	// creature is attacking") names the defending player or planeswalker of the
+	// triggering attack, the recipient of "Whenever this creature attacks, ~
+	// deals N damage to the player or planeswalker it's attacking." (Scorch
+	// Spitter, Cavalcade of Calamity). The recipient binds to the defending
+	// player of the triggering attack event; lowering resolves it accordingly,
+	// and the binding fails closed unless the trigger is an attack event.
+	if attackedDefenderRecipient(recipient) {
+		return DamageRecipientReferenceAttackedDefender
+	}
 	if len(recipient) < 2 {
 		return DamageRecipientReferenceNone
 	}
@@ -4665,6 +4675,35 @@ func damageRecipientReference(effect *EffectSyntax) DamageRecipientReferenceKind
 		return DamageRecipientReferenceNone
 	}
 	return role
+}
+
+// attackedDefenderRecipient reports whether the recipient run names the player
+// or planeswalker the triggering attacker is attacking, in either Oracle
+// wording: "the player or planeswalker it's attacking" or "the player or
+// planeswalker that creature is attacking". It fails closed for every other run
+// so only these two exact defending-player recipients are recognized.
+func attackedDefenderRecipient(recipient []shared.Token) bool {
+	if len(recipient) < 5 {
+		return false
+	}
+	if !equalWord(recipient[0], "the") ||
+		!equalWord(recipient[1], "player") ||
+		!equalWord(recipient[2], "or") ||
+		!equalWord(recipient[3], "planeswalker") {
+		return false
+	}
+	tail := recipient[4:]
+	if len(tail) == 2 && equalWord(tail[0], "it's") && equalWord(tail[1], "attacking") {
+		return true
+	}
+	if len(tail) == 4 &&
+		equalWord(tail[0], "that") &&
+		equalWord(tail[1], "creature") &&
+		equalWord(tail[2], "is") &&
+		equalWord(tail[3], "attacking") {
+		return true
+	}
+	return false
 }
 
 // parseDamageRiders assembles the ordered follow-on damage riders of a

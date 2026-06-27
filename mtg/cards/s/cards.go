@@ -20,6 +20,7 @@ var Cards = []*game.CardDef{
 	SavageThallid,
 	SavedByTheShell,
 	ScarabFeast,
+	ScorchSpitter,
 	ScorchingDragonfire,
 	Scorchmark,
 	ScourTheLaboratory,

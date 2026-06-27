@@ -1110,6 +1110,14 @@ const (
 	// (ReferenceBindingEventRelatedPermanent); lowering resolves it to
 	// EventRelatedPermanentReference, the other creature in the combat.
 	DamageRecipientReferenceThatCreature
+	// DamageRecipientReferenceAttackedDefender marks the player or planeswalker
+	// being attacked by the triggering attacker as the damage recipient, the
+	// "the player or planeswalker it's attacking" recipient of "Whenever this
+	// creature attacks, ~ deals N damage to the player or planeswalker it's
+	// attacking." (Scorch Spitter, Cavalcade of Calamity). The recipient binds
+	// to the defending player of the triggering attack event; lowering resolves
+	// it to DefendingPlayerReference.
+	DamageRecipientReferenceAttackedDefender
 )
 
 // PreventDamageRecipientKind identifies the shielded recipient of an

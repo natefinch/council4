@@ -17,6 +17,7 @@ var Cards = []*game.CardDef{
 	CartoucheOfSolidarity,
 	CartoucheOfZeal,
 	CaseyJonesJuryRigJusticiar,
+	CavalcadeOfCalamity,
 	Cease,
 	CelestialArmor,
 	CeremonialGuard,
