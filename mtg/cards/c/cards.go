@@ -21,6 +21,7 @@ var Cards = []*game.CardDef{
 	ChandraSIgnition,
 	ChaosWarp,
 	ChelonianTackle,
+	Chill,
 	ChillOfForeboding,
 	ChiseiHeartOfOceans,
 	ChoMannoSBlessing,

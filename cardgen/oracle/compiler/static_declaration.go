@@ -470,6 +470,13 @@ type StaticCostModifierDeclaration struct {
 	// color filter and is mutually exclusive with SpellTypes and SpellColors.
 	SpellSubtypes []types.Sub
 
+	// ExcludedSpellTypes exempts spells carrying any of these card types from a
+	// spell cost modifier ("Noncreature spells cost {1} more to cast.", Thalia,
+	// Guardian of Thraben). A spell matches only when it carries none of these
+	// types. It is mutually exclusive with SpellTypes, SpellSubtypes, SpellColor,
+	// and SpellColors.
+	ExcludedSpellTypes []types.Card
+
 	// SourceZone constrains a spell cost modifier to spells being cast from a
 	// single zone ("Spells you cast from your graveyard cost {N} less to cast.").
 	// The empty kind applies no zone filter, so the modifier affects spells cast
@@ -3476,6 +3483,15 @@ func recognizeStaticSpellCostModifierDeclaration(ability CompiledAbility, static
 	if !ok {
 		return StaticDeclaration{}, false
 	}
+	excludedSpellTypes, ok := staticCardTypesFromParser(node.SpellExcludedTypes)
+	if !ok {
+		return StaticDeclaration{}, false
+	}
+	if len(excludedSpellTypes) != 0 &&
+		(len(spellTypes) != 0 || len(node.SpellSubtypes) != 0 || len(spellColors) != 0 ||
+			matchColor || node.ChosenCreatureType) {
+		return StaticDeclaration{}, false
+	}
 	if len(node.SpellSubtypes) != 0 &&
 		(len(spellTypes) != 0 || len(spellColors) != 0 || node.ChosenCreatureType) {
 		return StaticDeclaration{}, false
@@ -3515,6 +3531,7 @@ func recognizeStaticSpellCostModifierDeclaration(ability CompiledAbility, static
 		SpellColor:                   spellColor,
 		SpellColors:                  spellColors,
 		SpellSubtypes:                node.SpellSubtypes,
+		ExcludedSpellTypes:           excludedSpellTypes,
 		ChosenSubtypeFromEntryChoice: node.ChosenCreatureType,
 		SourceZone:                   node.SpellCastZone,
 		MinPower:                     node.SpellPowerAtLeast,

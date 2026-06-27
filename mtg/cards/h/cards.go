@@ -21,6 +21,7 @@ var Cards = []*game.CardDef{
 	HeatOfBattle,
 	Hecatomb,
 	HeirloomAuntie,
+	HelmOfAwakening,
 	HengeWalker,
 	HerdMigration,
 	HiddenFootblade,

@@ -19,6 +19,7 @@ var Cards = []*game.CardDef{
 	FeedTheFlames,
 	FemerefHealer,
 	FeralThallid,
+	FerozSBan,
 	FieldSurgeon,
 	Fiendlash,
 	FightAsOne,

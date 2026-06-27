@@ -19,5 +19,6 @@ var Cards = []*game.CardDef{
 	VivienReid,
 	VoiceOfAll,
 	VoraciousHatchling,
+	VrynWingmare,
 	VulshokWarBoar,
 }
