@@ -497,6 +497,13 @@ func parseStaticDeclarationSubject(tokens []shared.Token, atoms Atoms) (StaticDe
 			Group: group,
 		}, verbStart, true
 	}
+	if group, verbStart, ok := staticGroupDoesntUntapSubject(tokens, atoms); ok {
+		return StaticDeclarationSubject{
+			Kind:  StaticDeclarationSubjectGroup,
+			Span:  group.Span,
+			Group: group,
+		}, verbStart, true
+	}
 	group := parseEffectStaticSubject(tokens, atoms)
 	if group.Kind == EffectStaticSubjectNone {
 		return StaticDeclarationSubject{}, 0, false
@@ -1912,6 +1919,9 @@ func parseStaticRuleOperation(
 	if rule, next, ok := parseStaticRequiredBlockRuleOperation(tokens, index, end, subject); ok {
 		return rule, next, true
 	}
+	if rule, next, ok := parseStaticGroupDoesntUntapRuleOperation(tokens, index, end, subject); ok {
+		return rule, next, true
+	}
 	return StaticDeclarationSyntax{}, 0, false
 }
 
@@ -2113,7 +2123,8 @@ func staticRuleSubjectKindAllowed(subject StaticDeclarationSubject) bool {
 			subject.Group.Kind == EffectStaticSubjectControlledCreatures ||
 			subject.Group.Kind == EffectStaticSubjectControlledCreatureSubtype ||
 			subject.Group.Kind == EffectStaticSubjectOpponentControlledCreatures ||
-			subject.Group.Kind == EffectStaticSubjectAllCreatures
+			subject.Group.Kind == EffectStaticSubjectAllCreatures ||
+			subject.Group.Kind == EffectStaticSubjectAllCreatureSubtype
 	default:
 		return false
 	}
@@ -2163,6 +2174,13 @@ func staticRuleSubjectForDeclaration(subject StaticDeclarationSubject, operation
 				return StaticRuleSubject{Kind: StaticRuleSubjectBattlefieldCreatures, Span: subject.Span}, true
 			}
 			if operation.Kind == StaticRuleOperationAttack && operation.Voice == StaticRuleVoiceActive {
+				return StaticRuleSubject{Kind: StaticRuleSubjectBattlefieldCreatures, Span: subject.Span}, true
+			}
+			if operation.Kind == StaticRuleOperationUntap && operation.Voice == StaticRuleVoiceActive {
+				return StaticRuleSubject{Kind: StaticRuleSubjectBattlefieldCreatures, Span: subject.Span}, true
+			}
+		case EffectStaticSubjectAllCreatureSubtype:
+			if operation.Kind == StaticRuleOperationUntap && operation.Voice == StaticRuleVoiceActive {
 				return StaticRuleSubject{Kind: StaticRuleSubjectBattlefieldCreatures, Span: subject.Span}, true
 			}
 		default:

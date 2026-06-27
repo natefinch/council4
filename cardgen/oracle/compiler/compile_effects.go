@@ -565,7 +565,7 @@ func compileStaticRuleEffect(sentence parser.Sentence) (CompiledEffect, bool) {
 	switch sentence.StaticRule.Subject.Kind {
 	case parser.StaticRuleSubjectSourceCreature, parser.StaticRuleSubjectAttachedObject:
 		selector.Kind = SelectorCreature
-	case parser.StaticRuleSubjectSourcePermanent:
+	case parser.StaticRuleSubjectSourcePermanent, parser.StaticRuleSubjectAttachedPermanent:
 		selector.Kind = SelectorPermanent
 	default:
 	}

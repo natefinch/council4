@@ -247,10 +247,22 @@ func parseStaticRuleOperationsForSubject(tokens []shared.Token, subject StaticRu
 
 func parseStaticRuleSubject(tokens []shared.Token) (StaticRuleSubject, int, bool) {
 	if !staticRuleWordsAt(tokens, 0, "this") {
+		// "Enchanted permanent"/"enchanted artifact" name the object an Aura is
+		// attached to, the same attached-object source "enchanted creature"
+		// names. Auras that freeze a noncreature permanent ("Enchanted permanent
+		// doesn't untap during its controller's untap step.", Ice Over) use these
+		// wider nouns, so they thread the attached-object subject too.
 		if staticRuleWordsAt(tokens, 0, "enchanted", "creature") ||
 			staticRuleWordsAt(tokens, 0, "equipped", "creature") {
 			return StaticRuleSubject{
 				Kind: StaticRuleSubjectAttachedObject,
+				Span: shared.SpanOf(tokens[:2]),
+			}, 2, true
+		}
+		if staticRuleWordsAt(tokens, 0, "enchanted", "permanent") ||
+			staticRuleWordsAt(tokens, 0, "enchanted", "artifact") {
+			return StaticRuleSubject{
+				Kind: StaticRuleSubjectAttachedPermanent,
 				Span: shared.SpanOf(tokens[:2]),
 			}, 2, true
 		}
@@ -270,7 +282,8 @@ func parseStaticRuleSubject(tokens []shared.Token) (StaticRuleSubject, int, bool
 	case staticRuleWordsAt(tokens, 1, "token"):
 		subject.Kind = StaticRuleSubjectSourceCreature
 	case staticRuleWordsAt(tokens, 1, "artifact"),
-		staticRuleWordsAt(tokens, 1, "permanent"):
+		staticRuleWordsAt(tokens, 1, "permanent"),
+		staticRuleWordsAt(tokens, 1, "land"):
 		subject.Kind = StaticRuleSubjectSourcePermanent
 	case staticRuleWordsAt(tokens, 1, "spell"):
 		subject.Kind = StaticRuleSubjectSourceSpell
@@ -568,7 +581,7 @@ func validStaticRuleSyntax(rule StaticRuleSyntax) bool {
 	switch rule.Subject.Kind {
 	case StaticRuleSubjectSourceCreature, StaticRuleSubjectAttachedObject:
 		return validCreatureStaticRuleOperation(rule)
-	case StaticRuleSubjectSourcePermanent:
+	case StaticRuleSubjectSourcePermanent, StaticRuleSubjectAttachedPermanent:
 		return rule.Constraint.Kind == StaticRuleConstraintProhibition &&
 			rule.Operation.Kind == StaticRuleOperationUntap &&
 			rule.Operation.Voice == StaticRuleVoiceActive &&
@@ -593,6 +606,10 @@ func validStaticRuleSyntax(rule StaticRuleSyntax) bool {
 			rule.Operation.Kind == StaticRuleOperationBlock &&
 			rule.Operation.Voice == StaticRuleVoiceActive &&
 			len(rule.Qualifiers) == 0) ||
+			(rule.Constraint.Kind == StaticRuleConstraintProhibition &&
+				rule.Operation.Kind == StaticRuleOperationUntap &&
+				rule.Operation.Voice == StaticRuleVoiceActive &&
+				len(rule.Qualifiers) == 0) ||
 			validGroupMustAttackRule(rule)
 	case StaticRuleSubjectOpponentControlledCreatures:
 		return validGroupMustAttackRule(rule)
