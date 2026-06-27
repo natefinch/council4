@@ -23,6 +23,7 @@
           ToughnessDelta: 
             Value: 1
             Known: true
+          TokenCopyOverrideColors: 
           StaticSubject: 7
           BecomeTypeAddColors: 
           PolymorphColors: 

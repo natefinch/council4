@@ -66,6 +66,7 @@ var Cards = []*game.CardDef{
 	Cowabunga,
 	CrashTheParty,
 	CrazedArmodon,
+	CroakingCounterpart,
 	CrosstownCourier,
 	CruelRevival,
 	CrumblingColossus,

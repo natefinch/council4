@@ -19,6 +19,7 @@ var Cards = []*game.CardDef{
 	Wight,
 	WildInstincts,
 	WildestDreams,
+	WillOfTheTemur,
 	WindbriskHeights,
 	Windscouter,
 	WingspanMentor,

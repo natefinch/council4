@@ -2646,7 +2646,6 @@ func fullEffectClauseText(effect *EffectSyntax) string {
 // sources).
 func exactCreateCopyTokenEffectSyntax(effect *EffectSyntax) bool {
 	if effect.Context != EffectContextController ||
-		effect.TokenPTKnown ||
 		effect.Negated ||
 		!createCopyTokenCountKnown(effect) ||
 		len(effect.Targets) != 1 ||
@@ -2664,6 +2663,9 @@ func exactCreateCopyTokenEffectSyntax(effect *EffectSyntax) bool {
 	effect.TokenCopyDropLegendary = rider.dropLegendary
 	effect.TokenCopyGrantKeywords = rider.grantKeywords
 	effect.TokenCopyEntersTapped = entersTapped
+	if rider.override != nil {
+		applyCopyTokenOverride(effect, *rider.override)
+	}
 	return true
 }
 
@@ -2722,7 +2724,6 @@ func createCopyTokenClauseMatches(effect *EffectSyntax, base, source string) (ta
 // single token, and the controller recipient.
 func exactCreateCopyTokenReferenceEffectSyntax(effect *EffectSyntax) bool {
 	if effect.Context != EffectContextController ||
-		effect.TokenPTKnown ||
 		effect.Negated ||
 		!createCopyTokenCountKnown(effect) ||
 		len(effect.Targets) != 0 ||
@@ -2762,6 +2763,9 @@ func exactCreateCopyTokenReferenceEffectSyntax(effect *EffectSyntax) bool {
 	effect.TokenCopyDropLegendary = rider.dropLegendary
 	effect.TokenCopyGrantKeywords = rider.grantKeywords
 	effect.TokenCopyEntersTapped = entersTapped
+	if rider.override != nil {
+		applyCopyTokenOverride(effect, *rider.override)
+	}
 	return true
 }
 
@@ -2823,7 +2827,6 @@ func referencesIncludeThemPronoun(references []Reference) bool {
 // TokenCopyDropLegendary. Any references must be the modifier's pronoun.
 func exactCreateCopyTokenAttachedEffectSyntax(effect *EffectSyntax) bool {
 	if effect.Context != EffectContextController ||
-		effect.TokenPTKnown ||
 		effect.Negated ||
 		!createCopyTokenCountKnown(effect) ||
 		len(effect.Targets) != 0 {
@@ -2846,6 +2849,9 @@ func exactCreateCopyTokenAttachedEffectSyntax(effect *EffectSyntax) bool {
 	effect.TokenCopyDropLegendary = rider.dropLegendary
 	effect.TokenCopyGrantKeywords = rider.grantKeywords
 	effect.TokenCopyEntersTapped = equippedTapped || enchantedTapped
+	if rider.override != nil {
+		applyCopyTokenOverride(effect, *rider.override)
+	}
 	return true
 }
 
@@ -2954,6 +2960,7 @@ func copyForEachSourcePhrase(base string) (tapped, ok bool) {
 type copyTokenExceptRider struct {
 	dropLegendary bool
 	grantKeywords []KeywordKind
+	override      *copyTokenOverride
 }
 
 // copyTokenExceptModifier splits a copy-token clause into its base "Create a
@@ -2978,6 +2985,9 @@ func copyTokenExceptModifier(effect *EffectSyntax, clause string) (base string, 
 	case "it isn't legendary", "it is not legendary", "it's not legendary",
 		"the token isn't legendary", "the token is not legendary":
 		return head + ".", copyTokenExceptRider{dropLegendary: true}, true
+	}
+	if override, ok := copyTokenExceptOverride(effect); ok {
+		return head + ".", copyTokenExceptRider{dropLegendary: override.dropLegendary, override: &override}, true
 	}
 	drop, keywords, riderOK := copyTokenExceptRiderTokens(effect)
 	if !riderOK {

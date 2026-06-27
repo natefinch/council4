@@ -47,6 +47,7 @@ var Cards = []*game.CardDef{
 	MoldDemon,
 	Molderhulk,
 	MoldgrafMillipede,
+	MoltenDuplication,
 	MoltenTailMasticore,
 	MonumentalHenge,
 	MoonveilDragon,

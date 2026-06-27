@@ -30,6 +30,7 @@
           Amount: 
             Value: 1
             Known: true
+          TokenCopyOverrideColors: 
           Details: 
             Symbol: {G}
           BecomeTypeAddColors: 

@@ -1856,6 +1856,23 @@ type CompiledEffect struct {
 	// TokenCopyGrantRiderSpan covers the folded gain-keyword rider sentence so
 	// lowering credits its tokens toward source coverage.
 	TokenCopyGrantRiderSpan shared.Span
+	// TokenCopyOverride and the TokenCopyOverride* fields carry a copy-token
+	// characteristic-overriding "except" exception ("except it's a 1/1 green
+	// Frog", "except it's an artifact in addition to its other types"). The
+	// created token copies its source and then applies these power/toughness,
+	// color, card-type, subtype, and keyword overrides. Colors and subtypes are
+	// additive when TokenCopyOverrideAdditiveColors/AdditiveTypes is set and
+	// replace the copied values otherwise; card types are always additive.
+	TokenCopyOverride               bool
+	TokenCopyOverridePTKnown        bool
+	TokenCopyOverridePower          int
+	TokenCopyOverrideToughness      int
+	TokenCopyOverrideColors         []color.Color
+	TokenCopyOverrideSubtypes       []types.Sub
+	TokenCopyOverrideTypes          []types.Card
+	TokenCopyOverrideKeywords       []parser.KeywordKind
+	TokenCopyOverrideAdditiveTypes  bool
+	TokenCopyOverrideAdditiveColors bool
 	// TokenChoice reports a create-token effect offering a choice among two or
 	// more complete named-token specs ("create a Food token or a Treasure token",
 	// "create your choice of a Clue token, a Food token, or a Treasure token").
