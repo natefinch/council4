@@ -15,6 +15,7 @@ var Cards = []*game.CardDef{
 	KessigCagebreakers,
 	KessigWolfRun,
 	KhalniAmbush,
+	KhalniHeartExpedition,
 	KithkinHealer,
 	KodamaOfTheSouthTree,
 	KolaghanWarmonger,

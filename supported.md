@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,260 of 32,501 cards eligible for paper support (47.0%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,268 of 32,501 cards eligible for paper support (47.0%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -5966,6 +5966,7 @@ Council4 currently supports **15,260 of 32,501 cards eligible for paper support 
 - Hell-Bent Raider
 - Hellhole Flailer
 - Hellion
+- Hellion Crucible
 - Hellkite Igniter
 - Hellkite Overlord
 - Hellkite Punisher
@@ -6638,6 +6639,7 @@ Council4 currently supports **15,260 of 32,501 cards eligible for paper support 
 - Involuntary Employment
 - Iona's Judgment
 - Ionize
+- Ior Ruin Expedition
 - Ipnu Rivulet
 - Iraxxa, Empress of Mars
 - Ire of Kaminari
@@ -6980,6 +6982,7 @@ Council4 currently supports **15,260 of 32,501 cards eligible for paper support 
 - Kezzerdrix
 - Khalni Ambush // Khalni Territory
 - Khalni Garden
+- Khalni Heart Expedition
 - Khenra Charioteer
 - Khenra Eternal
 - Kheru Bloodsucker
@@ -9875,7 +9878,9 @@ Council4 currently supports **15,260 of 32,501 cards eligible for paper support 
 - Queen's Bay Soldier
 - Queen's Commission
 - Quench
+- Quest for the Gemblades
 - Quest for the Goblin Lord
+- Quest for the Gravelord
 - Queza, Augur of Agonies
 - Quick Study
 - Quick-Draw Dagger
@@ -12049,6 +12054,7 @@ Council4 currently supports **15,260 of 32,501 cards eligible for paper support 
 - Soul Shred
 - Soul Snuffers
 - Soul Spike
+- Soul Stair Expedition
 - Soul Summons
 - Soul Swallower
 - Soul Warden
@@ -12799,6 +12805,7 @@ Council4 currently supports **15,260 of 32,501 cards eligible for paper support 
 - Sunshower Druid
 - Sunspire Gatekeepers
 - Sunspire Griffin
+- Sunspring Expedition
 - Sunstar Chaplain
 - Sunstar Expansionist
 - Sunstar Lightsmith
@@ -15174,6 +15181,7 @@ Council4 currently supports **15,260 of 32,501 cards eligible for paper support 
 - Zealous Lorecaster
 - Zealous Persecution
 - Zealous Strike
+- Zektar Shrine Expedition
 - Zell Dincht
 - Zendikar Farguide
 - Zendikar Incarnate
