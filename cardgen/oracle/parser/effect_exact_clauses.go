@@ -2825,48 +2825,98 @@ func dividedCardinalityPhrase(cardinality TargetCardinalitySyntax) (string, bool
 }
 
 // dividedTargetNoun reconstructs the target noun phrase for divided damage. It
-// supports "targets" (any target) and "target creatures" with no further
-// qualifiers, failing closed for every other selector.
+// supports "targets" (any target) and the creature-noun forms the divided
+// lowering can represent: a plain "target creatures", a "creatures and/or
+// planeswalkers" card-type union, an attacking/blocking combat state, and a
+// single "with"/"without" keyword qualifier. It fails closed for every other
+// selector, leaving the byte-exact round-trip to reject the wording.
 func dividedTargetNoun(selection SelectionSyntax) (string, bool) {
 	switch selection.Kind {
 	case SelectionAny:
 		return "targets", true
 	case SelectionCreature:
-		if dividedPlainCreatureSelection(selection) {
-			return "target creatures", true
+		words, ok := dividedCreatureNounWords(selection)
+		if !ok {
+			return "", false
 		}
+		return strings.Join(append([]string{"target"}, words...), " "), true
 	default:
+		return "", false
 	}
-	return "", false
 }
 
-// dividedPlainCreatureSelection reports that a creature selection carries no
-// qualifier beyond its card type, so it reconstructs as a bare "target
-// creatures" phrase.
-func dividedPlainCreatureSelection(selection SelectionSyntax) bool {
+// dividedCreatureNounWords reconstructs the words that follow the "target"
+// determiner of a divided-damage creature noun: an optional attacking/blocking
+// combat prefix, the plural creature noun or "creature and/or planeswalker"
+// union, and a single "with"/"without" keyword clause. It fails closed for every
+// controller, color, subtype, supertype, tapped, numeric, or determiner
+// qualifier the divided lowering does not yet represent.
+func dividedCreatureNounWords(selection SelectionSyntax) ([]string, bool) {
 	if selection.All || selection.Another || selection.Other ||
-		selection.Attacking || selection.Blocking ||
 		selection.Tapped || selection.Untapped ||
 		selection.Colorless || selection.Multicolored ||
 		selection.MatchManaValue || selection.MatchPower || selection.MatchToughness ||
-		selection.Keyword != KeywordUnknown ||
-		selection.Zone != zone.None ||
+		selection.PowerLessThanSource || selection.PowerGreaterThanSource ||
+		selection.TokenOnly || selection.NonToken ||
 		selection.Controller != SelectionControllerAny ||
+		selection.Zone != zone.None ||
 		len(selection.ExcludedTypes) != 0 ||
 		len(selection.ExcludedColors) != 0 ||
 		len(selection.ColorsAny) != 0 ||
 		len(selection.SubtypesAny) != 0 ||
-		len(selection.Supertypes) != 0 {
-		return false
+		len(selection.Supertypes) != 0 ||
+		len(selection.ExcludedSupertypes) != 0 ||
+		len(selection.ExcludedSubtypes) != 0 {
+		return nil, false
 	}
-	switch len(selection.RequiredTypesAny) {
-	case 0:
-		return true
-	case 1:
-		return selection.RequiredTypesAny[0] == CardTypeCreature
+	var words []string
+	switch {
+	case selection.Attacking && selection.Blocking:
+		words = append(words, "attacking", "or", "blocking")
+	case selection.Attacking:
+		words = append(words, "attacking")
+	case selection.Blocking:
+		words = append(words, "blocking")
 	default:
-		return false
 	}
+	nouns, ok := dividedCreatureNouns(selection.RequiredTypesAny)
+	if !ok {
+		return nil, false
+	}
+	words = append(words, nouns...)
+	keywordWords, ok := permanentKeywordQualifierWords(selection)
+	if !ok {
+		return nil, false
+	}
+	words = append(words, keywordWords...)
+	return words, true
+}
+
+// dividedCreatureNouns reconstructs the plural card-type noun(s) of a divided
+// creature target. A bare or single creature type renders as "creatures"; a
+// card-type union renders each member pluralized and joined with "and/or"
+// ("creatures and/or planeswalkers"). The first listed type must be creature so
+// the noun matches the SelectionCreature kind, and every member must name a
+// permanent card type the round-trip can spell.
+func dividedCreatureNouns(required []CardType) ([]string, bool) {
+	if len(required) == 0 {
+		return []string{"creatures"}, true
+	}
+	if required[0] != CardTypeCreature {
+		return nil, false
+	}
+	nouns := make([]string, 0, len(required)*2)
+	for i, cardType := range required {
+		noun, ok := permanentCardTypeNoun(cardType)
+		if !ok {
+			return nil, false
+		}
+		if i > 0 {
+			nouns = append(nouns, "and/or")
+		}
+		nouns = append(nouns, noun+"s")
+	}
+	return nouns, true
 }
 
 // exactGroupDamageAmountText reconstructs the canonical amount token for a group
