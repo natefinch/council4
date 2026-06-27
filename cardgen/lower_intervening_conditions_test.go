@@ -1,6 +1,7 @@
 package cardgen
 
 import (
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -11,6 +12,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -72,6 +74,12 @@ func TestLowerEventHistoryInterveningConditions(t *testing.T) {
 			wantNegate: true,
 			wantWindow: game.EventHistoryPreviousTurn,
 		},
+		{
+			name:       "you descended this turn",
+			oracle:     "At the beginning of your end step, if you descended this turn, draw a card.",
+			wantEvent:  game.EventZoneChanged,
+			wantWindow: game.EventHistoryCurrentTurn,
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -106,6 +114,56 @@ func TestLowerEventHistoryInterveningConditions(t *testing.T) {
 				t.Errorf("Condition.Negate = %v, want %v", cond.Negate, tc.wantNegate)
 			}
 		})
+	}
+}
+
+// TestLowerDescendInterveningCondition verifies the descend event-history
+// intervening-if "if you descended this turn" lowers to a current-turn
+// zone-change condition matching any nontoken permanent card put into the
+// controller's graveyard from anywhere (CR 701.51).
+func TestLowerDescendInterveningCondition(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Descender",
+		Layout:     "normal",
+		TypeLine:   "Creature — Bear",
+		OracleText: "At the beginning of your end step, if you descended this turn, draw a card.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+	}
+	cond := face.TriggeredAbilities[0].Trigger.InterveningCondition
+	if !cond.Exists || !cond.Val.EventHistory.Exists {
+		t.Fatalf("condition = %+v, want EventHistory", cond)
+	}
+	hist := cond.Val.EventHistory.Val
+	if hist.Window != game.EventHistoryCurrentTurn {
+		t.Errorf("Window = %v, want EventHistoryCurrentTurn", hist.Window)
+	}
+	if cond.Val.Negate {
+		t.Error("Negate = true, want false")
+	}
+	want := game.TriggerPattern{
+		Event:       game.EventZoneChanged,
+		Player:      game.TriggerPlayerYou,
+		MatchToZone: true,
+		ToZone:      zone.Graveyard,
+		SubjectSelection: game.Selection{
+			RequiredTypesAny: []types.Card{
+				types.Artifact,
+				types.Battle,
+				types.Creature,
+				types.Enchantment,
+				types.Land,
+				types.Planeswalker,
+			},
+			NonToken: true,
+		},
+	}
+	if !reflect.DeepEqual(hist.Pattern, want) {
+		t.Errorf("EventHistory.Pattern = %+v, want %+v", hist.Pattern, want)
 	}
 }
 

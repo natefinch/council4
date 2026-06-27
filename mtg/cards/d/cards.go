@@ -16,6 +16,7 @@ var Cards = []*game.CardDef{
 	DeathcapGlade,
 	DeathsporeThallid,
 	Decommission,
+	DeepGoblinSkulltaker,
 	DemonicAppetite,
 	DescentOfTheDragons,
 	DesertSDue,

@@ -91,6 +91,7 @@ var Cards = []*game.CardDef{
 	SquireSLightblade,
 	SquirrelWrangler,
 	StaffOfTheStoryteller,
+	StalactiteStalker,
 	Stand,
 	StationMonitor,
 	StaunchCrewmate,

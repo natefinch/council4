@@ -24,6 +24,7 @@ var Cards = []*game.CardDef{
 	EmrakulSMessenger,
 	EndlessWurm,
 	EnduringCourage,
+	EnterprisingScallywag,
 	EpicConfrontation,
 	EquestrianSkill,
 	EsperBattlemage,

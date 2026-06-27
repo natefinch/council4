@@ -294,3 +294,131 @@ func TestEventHistoryConditionRevoltLeftBattlefield(t *testing.T) {
 		t.Fatal("condition not satisfied after the controller's permanent left the battlefield")
 	}
 }
+
+// descendCond is the descend intervening-if condition "if you descended this
+// turn": a current-turn zone change moving a nontoken permanent card into the
+// controller-owned graveyard from anywhere (CR 701.51).
+func descendCond() opt.V[game.Condition] {
+	return opt.Val(game.Condition{
+		EventHistory: opt.Val(game.EventHistoryCondition{
+			Pattern: game.TriggerPattern{
+				Event:       game.EventZoneChanged,
+				Player:      game.TriggerPlayerYou,
+				MatchToZone: true,
+				ToZone:      zone.Graveyard,
+				SubjectSelection: game.Selection{
+					RequiredTypesAny: []types.Card{
+						types.Artifact,
+						types.Battle,
+						types.Creature,
+						types.Enchantment,
+						types.Land,
+						types.Planeswalker,
+					},
+					NonToken: true,
+				},
+			},
+			Window: game.EventHistoryCurrentTurn,
+		}),
+	})
+}
+
+func TestEventHistoryDescendPermanentCard(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Test Source",
+		Types: []types.Card{types.Creature},
+	}})
+	source2 := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Opponent Source",
+		Types: []types.Card{types.Creature},
+	}})
+	ctx1 := conditionContext{controller: game.Player1, source: source}
+	ctx2 := conditionContext{controller: game.Player2, source: source2}
+	cond := descendCond()
+
+	if conditionSatisfied(g, ctx1, cond) {
+		t.Fatal("descend satisfied before any permanent card entered the graveyard")
+	}
+
+	// A permanent card Player1 owns put into their graveyard from the library
+	// (a mill) satisfies descend for Player1 but not Player2.
+	creatureID := g.IDGen.Next()
+	g.CardInstances[creatureID] = &game.CardInstance{
+		ID:    creatureID,
+		Owner: game.Player1,
+		Def: &game.CardDef{CardFace: game.CardFace{
+			Name:  "Milled Bear",
+			Types: []types.Card{types.Creature},
+		}},
+	}
+	emitEvent(g, game.Event{
+		Kind:     game.EventZoneChanged,
+		Player:   game.Player1,
+		CardID:   creatureID,
+		FromZone: zone.Library,
+		ToZone:   zone.Graveyard,
+	})
+	if !conditionSatisfied(g, ctx1, cond) {
+		t.Fatal("descend not satisfied after a permanent card entered Player1's graveyard")
+	}
+	if conditionSatisfied(g, ctx2, cond) {
+		t.Fatal("descend satisfied for Player2 when only Player1's graveyard received a permanent card")
+	}
+}
+
+func TestEventHistoryDescendIgnoresNonpermanentCard(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Test Source",
+		Types: []types.Card{types.Creature},
+	}})
+	ctx := conditionContext{controller: game.Player1, source: source}
+	cond := descendCond()
+
+	// An instant card going to the graveyard is not a permanent card, so it
+	// must not satisfy descend.
+	instantID := g.IDGen.Next()
+	g.CardInstances[instantID] = &game.CardInstance{
+		ID:    instantID,
+		Owner: game.Player1,
+		Def: &game.CardDef{CardFace: game.CardFace{
+			Name:  "Discarded Bolt",
+			Types: []types.Card{types.Instant},
+		}},
+	}
+	emitEvent(g, game.Event{
+		Kind:     game.EventZoneChanged,
+		Player:   game.Player1,
+		CardID:   instantID,
+		FromZone: zone.Hand,
+		ToZone:   zone.Graveyard,
+	})
+	if conditionSatisfied(g, ctx, cond) {
+		t.Fatal("descend satisfied after a nonpermanent card entered the graveyard")
+	}
+
+	// A permanent card moving somewhere other than the graveyard also does not
+	// satisfy descend.
+	landID := g.IDGen.Next()
+	g.CardInstances[landID] = &game.CardInstance{
+		ID:    landID,
+		Owner: game.Player1,
+		Def: &game.CardDef{CardFace: game.CardFace{
+			Name:  "Exiled Island",
+			Types: []types.Card{types.Land},
+		}},
+	}
+	emitEvent(g, game.Event{
+		Kind:     game.EventZoneChanged,
+		Player:   game.Player1,
+		CardID:   landID,
+		FromZone: zone.Hand,
+		ToZone:   zone.Exile,
+	})
+	if conditionSatisfied(g, ctx, cond) {
+		t.Fatal("descend satisfied after a permanent card moved to a zone other than the graveyard")
+	}
+}

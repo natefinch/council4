@@ -55,6 +55,7 @@ var Cards = []*game.CardDef{
 	BridgeworksBattle,
 	BrightwoodTracker,
 	BrokersHideout,
+	BroodrageMycoid,
 	BrunaTheFadingLight,
 	BuckyBarnesEagerAlly,
 	BugenhagenWiseElder,

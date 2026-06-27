@@ -7,6 +7,7 @@ import "github.com/natefinch/council4/mtg/game"
 // Cards lists all card definitions in this package.
 var Cards = []*game.CardDef{
 	CabarettiCourtyard,
+	CanonizedInBlood,
 	Caregiver,
 	CaribouRange,
 	CartoucheOfAmbition,
@@ -21,6 +22,7 @@ var Cards = []*game.CardDef{
 	ChandraSIgnition,
 	ChaosWarp,
 	ChelonianTackle,
+	ChildOfTheVolcano,
 	Chill,
 	ChillOfForeboding,
 	ChiseiHeartOfOceans,
@@ -53,6 +55,7 @@ var Cards = []*game.CardDef{
 	ConsumingBonfire,
 	ContestOfClaws,
 	CoralSword,
+	CorpsesOfTheLost,
 	CosmicHunger,
 	CosmicLarva,
 	Counterintelligence,
