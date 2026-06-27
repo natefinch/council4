@@ -222,6 +222,36 @@ func TestLowerSearchSpellSpecs(t *testing.T) {
 			},
 		},
 		{
+			name:       "typed card tutor with exact mana-value bound to hand",
+			typeLine:   "Sorcery",
+			oracleText: "Search your library for an artifact card with mana value 3, reveal it, put it into your hand, then shuffle.",
+			amount:     1,
+			spec: game.SearchSpec{
+				SourceZone:  zone.Library,
+				Destination: zone.Hand,
+				Reveal:      true,
+				Filter: game.Selection{
+					RequiredTypes: []types.Card{types.Artifact},
+					ManaValue:     opt.Val(compare.Int{Op: compare.Equal, Value: 3}),
+				},
+			},
+		},
+		{
+			name:       "typed card tutor with lower-bound mana-value to hand",
+			typeLine:   "Sorcery",
+			oracleText: "Search your library for a creature card with mana value 6 or greater, reveal it, put it into your hand, then shuffle.",
+			amount:     1,
+			spec: game.SearchSpec{
+				SourceZone:  zone.Library,
+				Destination: zone.Hand,
+				Reveal:      true,
+				Filter: game.Selection{
+					RequiredTypes: []types.Card{types.Creature},
+					ManaValue:     opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 6}),
+				},
+			},
+		},
+		{
 			name:       "split-destination land tutor: one to battlefield tapped, the other to hand",
 			typeLine:   "Sorcery",
 			oracleText: "Search your library for up to two basic land cards, reveal those cards, put one onto the battlefield tapped and the other into your hand, then shuffle.",

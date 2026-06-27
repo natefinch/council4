@@ -630,7 +630,8 @@ type searchClauseAnalysis struct {
 // search of your own library for a plain card-type, a basic land, a union of
 // basic land subtypes (optionally "basic"), a permanent card (optionally with a
 // subtype, e.g. "Rebel permanent"), optionally a "legendary" supertype, and
-// optionally a "with mana value N or less" rider, optionally a "with power/
+// optionally a "with mana value N", "with mana value N or less", or "with mana
+// value N or greater" rider, optionally a "with power/
 // toughness N or less/greater" rider, optionally a "that share a
 // land type" correlation rider on a multi-card land search, moved to hand or the
 // battlefield (optionally tapped, optionally revealed first), ending with "then
@@ -1089,19 +1090,28 @@ func unsupportedSearchFilterDetail(rest string) string {
 	return fmt.Sprintf("unsupported library-search filter %q", filter)
 }
 
-// searchManaValueRider reconstructs the "with mana value N or less" or "with
-// mana value X or less" filter rider from the parsed selection. A fixed upper
-// bound (LessOrEqual) mirrors SearchSpec.MaxManaValue; an X-derived bound
-// mirrors SearchSpec.MaxManaValueFromX (Green Sun's Zenith, Wargate). Every
-// other comparison (exact or "or greater") fails closed.
+// searchManaValueRider reconstructs the "with mana value N", "with mana value N
+// or less", "with mana value N or greater", or "with mana value X or less"
+// filter rider from the parsed selection. A fixed exact, upper, or lower bound
+// mirrors the concrete Selection.ManaValue comparison the SearchSpec carries; an
+// X-derived bound mirrors SearchSpec.MaxManaValueFromX (Green Sun's Zenith,
+// Wargate). The runtime evaluates the bound with compare.Int.Matches for any of
+// these operators, exactly as the power/toughness riders do. Every other
+// comparison fails closed.
 func searchManaValueRider(sel SelectionSyntax) (string, bool) {
 	if sel.ManaValueX {
 		return " with mana value X or less", true
 	}
-	if sel.ManaValue.Op != compare.LessOrEqual {
+	switch sel.ManaValue.Op {
+	case compare.Equal:
+		return fmt.Sprintf(" with mana value %d", sel.ManaValue.Value), true
+	case compare.LessOrEqual:
+		return fmt.Sprintf(" with mana value %d or less", sel.ManaValue.Value), true
+	case compare.GreaterOrEqual:
+		return fmt.Sprintf(" with mana value %d or greater", sel.ManaValue.Value), true
+	default:
 		return "", false
 	}
-	return fmt.Sprintf(" with mana value %d or less", sel.ManaValue.Value), true
 }
 
 // searchCharacteristicRider reconstructs a "with <characteristic> N or less" or

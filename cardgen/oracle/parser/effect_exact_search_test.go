@@ -67,6 +67,13 @@ func TestExactLibrarySearchAccepts(t *testing.T) {
 		"Search your library for a Rebel permanent card with mana value 5 or less, put it onto the battlefield, then shuffle.",
 		"Search your library for an artifact card with mana value 1 or less, reveal it, put it into your hand, then shuffle.",
 		"Search your library for up to two creature cards with mana value 1 or less, reveal them, put them into your hand, then shuffle.",
+		// An exact "with mana value N" rider (Trophy Mage, Tribute Mage) and a
+		// lower-bound "with mana value N or greater" rider (Treasure Mage, Fierce
+		// Empath) bound the search the same way; the runtime evaluates the
+		// concrete comparison with compare.Int.Matches, exactly as "or less" does.
+		"Search your library for an artifact card with mana value 3, reveal it, put it into your hand, then shuffle.",
+		"Search your library for an artifact card with mana value 6 or greater, reveal it, put it into your hand, then shuffle.",
+		"Search your library for a creature card with mana value 6 or greater, reveal it, put it into your hand, then shuffle.",
 		// A "with mana value X or less" rider bounds the search by the spell's
 		// chosen {X} (Green Sun's Zenith / Chord of Calling family), resolved at
 		// runtime; the round-trip stays exact.
@@ -145,8 +152,9 @@ func TestExactLibrarySearchFailsClosed(t *testing.T) {
 		"Search your library and graveyard for a creature card, put it into your hand, then shuffle.",
 		// A multi-type union exceeds the single-type SearchSpec.
 		"Search your library for an artifact creature card, put it onto the battlefield, then shuffle.",
-		// Mana-value riders other than an "or less" bound are not modeled.
-		"Search your library for a creature card with mana value 3 or greater, put it into your hand, then shuffle.",
+		// Mana-value riders that aren't a single exact, "or less", or "or greater"
+		// bound are not modeled: a two-value disjunction has no SearchSpec form.
+		"Search your library for an artifact card with mana value 4 or 5, reveal it, put it into your hand, then shuffle.",
 		// Power/toughness exact-equality bounds are not modeled (only "or less"
 		// and "or greater").
 		"Search your library for a creature card with power 2, put it into your hand, then shuffle.",
