@@ -34,6 +34,7 @@ var Cards = []*game.CardDef{
 	EpicConfrontation,
 	EquestrianSkill,
 	EsperBattlemage,
+	EssenceFlare,
 	EtherealChampion,
 	ExaltedAngel,
 	ExemplarOfStrength,

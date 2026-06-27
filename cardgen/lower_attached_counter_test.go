@@ -84,6 +84,23 @@ func TestLowerAttachedCounterPlacementPluralMinusOne(t *testing.T) {
 	}
 }
 
+func TestLowerAttachedCounterPlacementThatCreatureUpkeep(t *testing.T) {
+	t.Parallel()
+	// "that creature" in an upkeep trigger scoped to the enchanted creature's
+	// controller names the enchanted creature (Unstable Mutation, Essence Flare),
+	// resolved through the source attached-permanent reference.
+	add := auraCounterTrigger(t, "Enchanted creature gets +3/+3.\nAt the beginning of the upkeep of enchanted creature's controller, put a -1/-1 counter on that creature.")
+	if add.Object != game.SourceAttachedPermanentReference() {
+		t.Fatalf("object = %#v, want source attached permanent", add.Object)
+	}
+	if add.CounterKind != counter.MinusOneMinusOne {
+		t.Fatalf("counter = %v, want -1/-1", add.CounterKind)
+	}
+	if add.Amount != game.Fixed(1) {
+		t.Fatalf("amount = %#v, want fixed 1", add.Amount)
+	}
+}
+
 func TestLowerAttachedCounterPlacementFailsClosed(t *testing.T) {
 	t.Parallel()
 	// A trailing selector qualifier leaves the recipient unrecognized.
