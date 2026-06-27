@@ -872,11 +872,11 @@ func TestLowerSacrificeSpellRejectsQualifiedPermanentChoice(t *testing.T) {
 func TestLowerSacrificeSpellRejectsOrderedEffectSequence(t *testing.T) {
 	t.Parallel()
 	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
-		Name:       "Wildfire",
+		Name:       "Reprocess",
 		Layout:     "normal",
 		TypeLine:   "Sorcery",
-		OracleText: "Each player sacrifices four lands of their choice. Wildfire deals 4 damage to each creature.",
-	}, "w")
+		OracleText: "Sacrifice any number of artifacts, creatures, and/or lands. Draw a card for each permanent sacrificed this way.",
+	}, "r")
 	if err != nil {
 		t.Fatal(err)
 	}

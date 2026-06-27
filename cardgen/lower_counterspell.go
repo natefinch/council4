@@ -1052,6 +1052,12 @@ func sacrificeChoiceSelection(selector compiler.CompiledSelector) (game.Selectio
 	// A single excluded card type ("nonland permanent", "noncreature artifact")
 	// drops permanents carrying that type from the eligible set.
 	selection.ExcludedTypes = selector.ExcludedTypes()
+	// A single excluded creature subtype ("non-Zombie creature", "non-Demon
+	// creature") drops permanents carrying that subtype from the eligible set.
+	// The parser round-trip rejects more than one, so at most one is present.
+	if excludedSubtypes := selector.ExcludedSubtypes(); len(excludedSubtypes) == 1 {
+		selection.ExcludedSubtype = excludedSubtypes[0]
+	}
 	switch {
 	case selector.NonToken:
 		selection.NonToken = true
