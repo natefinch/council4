@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,423 of 32,501 cards eligible for paper support (47.5%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,429 of 32,501 cards eligible for paper support (47.5%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2221,6 +2221,7 @@ Council4 currently supports **15,423 of 32,501 cards eligible for paper support 
 - Chitinous Graspling
 - Chittering Harvester
 - Chittering Host
+- Chittering Skitterling
 - Chittering Witch
 - Chivalric Alliance
 - Cho-Arrim Bruiser
@@ -3103,6 +3104,7 @@ Council4 currently supports **15,423 of 32,501 cards eligible for paper support 
 - Defender of Chaos
 - Defender of Law
 - Defender of the Order
+- Defenders of Humanity
 - Defenestrate
 - Defenestrated Phantom
 - Defensive Stance
@@ -6090,6 +6092,7 @@ Council4 currently supports **15,423 of 32,501 cards eligible for paper support 
 - Heroic Intervention
 - Heron of Hope
 - Heron's Grace Champion
+- Heron-Blessed Geist
 - Heronblade Elite
 - Hex
 - Hexplate Golem
@@ -11021,6 +11024,7 @@ Council4 currently supports **15,423 of 32,501 cards eligible for paper support 
 - Savor
 - Savra, Queen of the Golgari
 - Savvy Hunter
+- Sawback Manticore
 - Sawblade Scamp
 - Sawtusk Demolisher
 - Sazh's Chocobo
@@ -11242,6 +11246,7 @@ Council4 currently supports **15,423 of 32,501 cards eligible for paper support 
 - Secure the Scene
 - Secure the Wastes
 - Security Blockade
+- Security Detail
 - Sedge Scorpion
 - Sedge Troll
 - Sedraxis Alchemist
@@ -12232,6 +12237,7 @@ Council4 currently supports **15,423 of 32,501 cards eligible for paper support 
 - Spawning Pit
 - Spawnwrithe
 - Speakeasy Server
+- Speaker of the Heavens
 - Spear Spewer
 - Spearbreaker Behemoth
 - Species Gorger
