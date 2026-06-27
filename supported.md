@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,395 of 32,501 cards eligible for paper support (47.4%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,400 of 32,501 cards eligible for paper support (47.4%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2038,6 +2038,7 @@ Council4 currently supports **15,395 of 32,501 cards eligible for paper support 
 - Caustic Rain
 - Caustic Tar
 - Cautious Survivor
+- Cavalcade of Calamity
 - Cavalier of Night
 - Cavalry Drillmaster
 - Cave of Temptation
@@ -6020,6 +6021,7 @@ Council4 currently supports **15,395 of 32,501 cards eligible for paper support 
 - Hellkite Overlord
 - Hellkite Punisher
 - Hellraiser Goblin
+- Hellrider
 - Hellspark Elemental
 - Helm of Awakening
 - Helm of Chatzuk
@@ -10037,6 +10039,7 @@ Council4 currently supports **15,395 of 32,501 cards eligible for paper support 
 - Raging Regisaur
 - Raging Swordtooth
 - Ragnar
+- Raid Bombardment
 - Raiders' Spoils
 - Raiders' Wake
 - Raiding Nightstalker
@@ -10067,6 +10070,7 @@ Council4 currently supports **15,395 of 32,501 cards eligible for paper support 
 - Rakdos Locket
 - Rakdos Pit Dragon
 - Rakdos Ragemutt
+- Rakdos Roustabout
 - Rakdos Shred-Freak
 - Rakdos Signet
 - Rakdos Trumpeter
@@ -11072,6 +11076,7 @@ Council4 currently supports **15,395 of 32,501 cards eligible for paper support 
 - Scion of the Wild
 - Scion of Ugin
 - Scolding Administrator
+- Scorch Spitter
 - Scorch the Fields
 - Scorched Geyser
 - Scorched Rusalka
