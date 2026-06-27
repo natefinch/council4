@@ -48,6 +48,7 @@ var Cards = []*game.CardDef{
 	HoverguardObserver,
 	HowlOfTheNightPack,
 	HuatliRadiantChampion,
+	HuatliTheSunSHeart,
 	HuntTheHunter,
 	HuntTheWeak,
 	HunterSTalent,

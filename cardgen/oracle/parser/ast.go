@@ -1228,6 +1228,13 @@ const (
 	// prohibition constraint and passive voice and carries one blocker qualifier
 	// (flying, color, artifact, defender, or legendary).
 	StaticRuleOperationBlockedExcept StaticRuleOperationKind = "StaticRuleOperationBlockedExcept"
+	// StaticRuleOperationAssignDamageByToughness is the static combat-damage
+	// replacement printed as "<subject> assigns combat damage equal to its
+	// toughness rather than its power." (Doran, the Siege Tower; Assault
+	// Formation; Belligerent Brontodon): the affected creatures assign combat
+	// damage equal to their toughness instead of their power. It always pairs with
+	// a requirement constraint and active voice and carries no qualifier.
+	StaticRuleOperationAssignDamageByToughness StaticRuleOperationKind = "StaticRuleOperationAssignDamageByToughness"
 )
 
 // StaticRuleVoice identifies the grammatical role the subject has in an

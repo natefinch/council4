@@ -384,6 +384,83 @@ func TestParseStaticControlledCreaturesCantBeBlockedDeclarationMeaning(t *testin
 	}
 }
 
+// TestParseStaticAssignsCombatDamageByToughnessDeclarationMeaning confirms the
+// three subject scopes of the combat-damage replacement "<subject> assigns
+// combat damage equal to its toughness rather than its power." each parse to a
+// requirement-constrained, active-voice assign-by-toughness rule with the
+// expected subject scope and no qualifiers.
+func TestParseStaticAssignsCombatDamageByToughnessDeclarationMeaning(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		source  string
+		subject StaticRuleSubjectKind
+	}{
+		"this creature": {
+			source:  "This creature assigns combat damage equal to its toughness rather than its power.",
+			subject: StaticRuleSubjectSourceCreature,
+		},
+		"each creature you control": {
+			source:  "Each creature you control assigns combat damage equal to its toughness rather than its power.",
+			subject: StaticRuleSubjectControlledCreatures,
+		},
+		"creatures you control": {
+			source:  "Creatures you control assign combat damage equal to its toughness rather than its power.",
+			subject: StaticRuleSubjectControlledCreatures,
+		},
+		"each creature": {
+			source:  "Each creature assigns combat damage equal to its toughness rather than its power.",
+			subject: StaticRuleSubjectBattlefieldCreatures,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			declarations := parseStaticDeclarationSyntax(t, test.source, Context{})
+			if len(declarations) != 1 {
+				t.Fatalf("declarations = %#v, want one", declarations)
+			}
+			declaration := declarations[0]
+			if declaration.Kind != StaticDeclarationRule {
+				t.Fatalf("kind = %v, want rule", declaration.Kind)
+			}
+			rule := declaration.Rule
+			if rule.Subject.Kind != test.subject ||
+				rule.Constraint.Kind != StaticRuleConstraintRequirement ||
+				rule.Operation.Kind != StaticRuleOperationAssignDamageByToughness ||
+				rule.Operation.Voice != StaticRuleVoiceActive ||
+				len(rule.Qualifiers) != 0 {
+				t.Fatalf("rule = %#v, want %v assigns-combat-damage-by-toughness requirement", rule, test.subject)
+			}
+		})
+	}
+}
+
+// TestParseStaticAssignsCombatDamageByToughnessRejectsDeferredForms confirms the
+// parser fails closed on the conditional ("with toughness greater than its
+// power", Bedrock Tortoise) and opponent-controlled forms that are intentionally
+// not yet supported, so those cards stay unsupported rather than misparsing as
+// the unconditional replacement.
+func TestParseStaticAssignsCombatDamageByToughnessRejectsDeferredForms(t *testing.T) {
+	t.Parallel()
+	sources := []string{
+		"Each creature you control with toughness greater than its power assigns combat damage equal to its toughness, rather than its power.",
+		"Each creature you don't control assigns combat damage equal to its toughness rather than its power.",
+	}
+	for _, source := range sources {
+		t.Run(source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(source, Context{})
+			for _, ability := range document.Abilities {
+				for _, declaration := range ability.StaticDeclarations {
+					if declaration.Rule.Operation.Kind == StaticRuleOperationAssignDamageByToughness {
+						t.Fatalf("source %q unexpectedly parsed as an assigns-by-toughness rule: %#v", source, declaration.Rule)
+					}
+				}
+			}
+		})
+	}
+}
+
 // TestParseStaticEveryCreatureTypeDropsNonBattlefieldScopeRider confirms the
 // parser drops the trailing "The same is true for creature spells you control
 // and creature cards you own that aren't on the battlefield." rider (Maskwood

@@ -522,6 +522,13 @@ func parseStaticDeclarationSubject(tokens []shared.Token, atoms Atoms) (StaticDe
 			Group: group,
 		}, verbStart, true
 	}
+	if group, verbStart, ok := staticGroupAssignsCombatDamageSubject(tokens); ok {
+		return StaticDeclarationSubject{
+			Kind:  StaticDeclarationSubjectGroup,
+			Span:  group.Span,
+			Group: group,
+		}, verbStart, true
+	}
 	if group, verbStart, ok := staticGroupDoesntUntapSubject(tokens, atoms); ok {
 		return StaticDeclarationSubject{
 			Kind:  StaticDeclarationSubjectGroup,
@@ -1944,6 +1951,9 @@ func parseStaticRuleOperation(
 	if rule, next, ok := parseStaticRequiredBlockRuleOperation(tokens, index, end, subject); ok {
 		return rule, next, true
 	}
+	if rule, next, ok := parseStaticAssignsCombatDamageRuleOperation(tokens, index, end, subject); ok {
+		return rule, next, true
+	}
 	if rule, next, ok := parseStaticGroupDoesntUntapRuleOperation(tokens, index, end, subject); ok {
 		return rule, next, true
 	}
@@ -2201,6 +2211,9 @@ func staticRuleSubjectForDeclaration(subject StaticDeclarationSubject, operation
 			if operation.Kind == StaticRuleOperationTransform && operation.Voice == StaticRuleVoiceActive {
 				return StaticRuleSubject{Kind: StaticRuleSubjectControlledCreatures, Span: subject.Span}, true
 			}
+			if operation.Kind == StaticRuleOperationAssignDamageByToughness && operation.Voice == StaticRuleVoiceActive {
+				return StaticRuleSubject{Kind: StaticRuleSubjectControlledCreatures, Span: subject.Span}, true
+			}
 		case EffectStaticSubjectControlledCreatureSubtype:
 			if operation.Kind == StaticRuleOperationTransform && operation.Voice == StaticRuleVoiceActive {
 				return StaticRuleSubject{Kind: StaticRuleSubjectControlledCreatures, Span: subject.Span}, true
@@ -2217,6 +2230,9 @@ func staticRuleSubjectForDeclaration(subject StaticDeclarationSubject, operation
 				return StaticRuleSubject{Kind: StaticRuleSubjectBattlefieldCreatures, Span: subject.Span}, true
 			}
 			if operation.Kind == StaticRuleOperationUntap && operation.Voice == StaticRuleVoiceActive {
+				return StaticRuleSubject{Kind: StaticRuleSubjectBattlefieldCreatures, Span: subject.Span}, true
+			}
+			if operation.Kind == StaticRuleOperationAssignDamageByToughness && operation.Voice == StaticRuleVoiceActive {
 				return StaticRuleSubject{Kind: StaticRuleSubjectBattlefieldCreatures, Span: subject.Span}, true
 			}
 		case EffectStaticSubjectAllCreatureSubtype:

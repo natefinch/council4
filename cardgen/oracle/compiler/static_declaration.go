@@ -114,6 +114,9 @@ const (
 	// StaticRuleDomainTransform constrains transforming a permanent ("... can't
 	// transform").
 	StaticRuleDomainTransform
+	// StaticRuleDomainCombatDamage governs how the subject assigns combat damage
+	// ("... assigns combat damage equal to its toughness rather than its power").
+	StaticRuleDomainCombatDamage
 )
 
 // Static rule declarations currently recognized by Card Generation.
@@ -183,6 +186,13 @@ const (
 	// block alone", Loyal Pegasus, Mogg Flunkies); it lowers to both alone rule
 	// effects.
 	StaticRuleCantAttackOrBlockAlone
+	// StaticRuleAssignsCombatDamageByToughness is the combat-damage replacement
+	// "<subject> assigns combat damage equal to its toughness rather than its
+	// power." (Doran, the Siege Tower; Assault Formation; Belligerent Brontodon):
+	// the affected creatures assign combat damage equal to their toughness instead
+	// of their power. It lowers to the assign-combat-damage-using-toughness
+	// runtime rule effect.
+	StaticRuleAssignsCombatDamageByToughness
 )
 
 // StaticBlockerRestrictionKind identifies the blocker characteristic bounding a
@@ -910,6 +920,10 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Abili
 		compiled.Static = &CompiledStaticSemantics{Declarations: declarations}
 		return
 	}
+	if declarations, ok := recognizeStaticAssignCombatDamageByToughnessDeclarations(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: declarations}
+		return
+	}
 	if declaration, ok := recognizeStaticEntryChoiceSubtypeDeclaration(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
 		return
@@ -1504,6 +1518,13 @@ func semanticStaticRuleForSyntax(rule parser.StaticRuleSyntax) (StaticRuleKind, 
 		return StaticRuleCantBeBlockedExceptBy, StaticZoneBattlefield, true
 	}
 	if isCreatureRuleSubject(rule.Subject.Kind) &&
+		rule.Constraint.Kind == parser.StaticRuleConstraintRequirement &&
+		rule.Operation.Kind == parser.StaticRuleOperationAssignDamageByToughness &&
+		rule.Operation.Voice == parser.StaticRuleVoiceActive &&
+		len(rule.Qualifiers) == 0 {
+		return StaticRuleAssignsCombatDamageByToughness, StaticZoneBattlefield, true
+	}
+	if isCreatureRuleSubject(rule.Subject.Kind) &&
 		rule.Constraint.Kind == parser.StaticRuleConstraintProhibition &&
 		rule.Operation.Kind == parser.StaticRuleOperationAttack &&
 		rule.Operation.Voice == parser.StaticRuleVoiceActive &&
@@ -1666,6 +1687,8 @@ func staticRuleForEffect(kind EffectKind) StaticRuleKind {
 		return StaticRuleCantBeBlockedByCreaturesWith
 	case EffectCantBeBlockedExceptBy:
 		return StaticRuleCantBeBlockedExceptBy
+	case EffectAssignsCombatDamageByToughness:
+		return StaticRuleAssignsCombatDamageByToughness
 	case EffectCantBeBlockedByMoreThanOne:
 		return StaticRuleCantBeBlockedByMoreThanOne
 	case EffectCantAttackOrBlock:
@@ -1724,6 +1747,8 @@ func staticRuleDomain(rule StaticRuleKind) StaticRuleDomain {
 		return StaticRuleDomainBlock
 	case StaticRuleCantBeCountered:
 		return StaticRuleDomainCountering
+	case StaticRuleAssignsCombatDamageByToughness:
+		return StaticRuleDomainCombatDamage
 	case StaticRuleCantAttackOrBlock, StaticRuleCantAttackOrBlockAlone:
 		return StaticRuleDomainAttackBlock
 	case StaticRuleDoesntUntap:

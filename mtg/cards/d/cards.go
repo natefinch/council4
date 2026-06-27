@@ -43,6 +43,7 @@ var Cards = []*game.CardDef{
 	DomriAnarchOfBolas,
 	DonatelloMutantMechanic,
 	DoorOfDestinies,
+	DoranTheSiegeTower,
 	DraconicLore,
 	DragonEgg,
 	DragonSHoard,
