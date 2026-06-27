@@ -43,6 +43,7 @@ var Cards = []*game.CardDef{
 	ExcaliburII,
 	ExemplarOfStrength,
 	ExperimentalSynthesizer,
+	ExplorerSCache,
 	EyeblightMassacre,
 	EyeblightSEnding,
 	EzrimAgencyChief,

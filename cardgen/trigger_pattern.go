@@ -572,6 +572,8 @@ func triggerSelectionSelector(selection compiler.TriggerSelection) (compiler.Com
 		ExcludedKeyword:        selection.ExcludedKeyword,
 		SubtypeFromEntryChoice: selection.SubtypeFromEntryChoice,
 		MatchAnyCounter:        selection.MatchAnyCounter,
+		MatchCounter:           selection.MatchCounter,
+		RequiredCounter:        selection.RequiredCounter,
 	}
 
 	switch tapped {

@@ -32,6 +32,7 @@ var Cards = []*game.CardDef{
 	AkkiWarPaint,
 	AkromaSDevoted,
 	AlabasterWall,
+	AlharuSolemnRitualist,
 	AllIsDust,
 	AlleyGrifters,
 	AmazingAcrobatics,

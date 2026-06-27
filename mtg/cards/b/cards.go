@@ -69,6 +69,7 @@ var Cards = []*game.CardDef{
 	BrassTalonChimera,
 	BrazenBorrower,
 	BrazenUpstart,
+	BredForTheHunt,
 	BridgeworksBattle,
 	BrightwoodTracker,
 	BrokersHideout,
