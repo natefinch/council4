@@ -79,6 +79,7 @@ var Cards = []*game.CardDef{
 	CorpsesOfTheLost,
 	CosmicHunger,
 	CosmicLarva,
+	CosmicSpiderMan,
 	Counterintelligence,
 	CountlessGearsRenegade,
 	CourageInCrisis,

@@ -101,6 +101,48 @@ func TestLowerGroupKeywordGrantOtherControlledCreatures(t *testing.T) {
 	}
 }
 
+// TestLowerGroupKeywordGrantControlledCreatureSubtype verifies a resolving
+// keyword grant to a controlled creature-subtype group named directly by its
+// subtype noun ("Knights you control gain double strike until end of turn.")
+// lowers to a battlefield group filtered to that subtype, mirroring the
+// "Creatures you control gain ..." anthem but scoped to the subtype.
+func TestLowerGroupKeywordGrantControlledCreatureSubtype(t *testing.T) {
+	t.Parallel()
+	effect := groupKeywordGrant(t, "Knights you control gain double strike until end of turn.")
+	if len(effect.AddKeywords) != 1 || effect.AddKeywords[0] != game.DoubleStrike {
+		t.Fatalf("keywords = %v, want [DoubleStrike]", effect.AddKeywords)
+	}
+	selection := effect.Group.Selection()
+	if effect.Group.Domain() != game.GroupDomainBattlefield ||
+		selection.Controller != game.ControllerYou ||
+		len(selection.SubtypesAny) != 1 ||
+		selection.SubtypesAny[0] != types.Sub("Knight") {
+		t.Fatalf("selection = %+v, want Knights you control", selection)
+	}
+	if _, excludes := effect.Group.Exclusion(); excludes {
+		t.Fatal("Knights you control must not exclude the source")
+	}
+}
+
+// TestLowerGroupKeywordGrantOtherControlledCreatureSubtype verifies the
+// source-excluding subtype group grant ("Other Spiders you control gain flying
+// until end of turn.") excludes the source permanent from the affected group.
+func TestLowerGroupKeywordGrantOtherControlledCreatureSubtype(t *testing.T) {
+	t.Parallel()
+	effect := groupKeywordGrant(t, "Other Spiders you control gain flying until end of turn.")
+	if len(effect.AddKeywords) != 1 || effect.AddKeywords[0] != game.Flying {
+		t.Fatalf("keywords = %v, want [Flying]", effect.AddKeywords)
+	}
+	selection := effect.Group.Selection()
+	if len(selection.SubtypesAny) != 1 || selection.SubtypesAny[0] != types.Sub("Spider") {
+		t.Fatalf("selection = %+v, want Spiders", selection)
+	}
+	exclude, excludes := effect.Group.Exclusion()
+	if !excludes || exclude != game.SourcePermanentReference() {
+		t.Fatalf("exclusion = %v/%v, want source permanent excluded", exclude, excludes)
+	}
+}
+
 // TestLowerGroupKeywordGrantColorFilteredRejected verifies a color-filtered
 // group keyword grant fails closed: the executable backend does not model the
 // color constraint on a one-shot affected group.

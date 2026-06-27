@@ -3071,28 +3071,28 @@ func parseControlledCreatureSubtypeSubject(tokens []shared.Token, atoms Atoms) E
 	switch {
 	case len(tokens) >= 6 && equalWord(tokens[0], "other") && equalWord(tokens[2], "creatures") &&
 		effectWordsAt(tokens, 3, "you", "control") &&
-		(equalWord(tokens[5], "have") || equalWord(tokens[5], "get")) &&
+		staticGroupVerb(tokens[5]) &&
 		subtypeKnown(1):
 		value, _ := subtype(1)
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectOtherControlledCreatureSubtype, Span: shared.SpanOf(tokens[:5]), Subtype: value, SubtypeText: tokens[1].Text, SubtypeKnown: true}
 	case len(tokens) >= 5 && equalWord(tokens[1], "creatures") &&
 		effectWordsAt(tokens, 2, "you", "control") &&
-		(equalWord(tokens[4], "have") || equalWord(tokens[4], "get")) &&
+		staticGroupVerb(tokens[4]) &&
 		subtypeKnown(0):
 		value, _ := subtype(0)
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledCreatureSubtype, Span: shared.SpanOf(tokens[:4]), Subtype: value, SubtypeText: tokens[0].Text, SubtypeKnown: true}
 	case len(tokens) >= 5 && equalWord(tokens[1], "creatures") &&
 		effectWordsAt(tokens, 2, "you", "control") &&
-		(equalWord(tokens[4], "have") || equalWord(tokens[4], "get")) &&
+		staticGroupVerb(tokens[4]) &&
 		excludedSubtypeKnown(0):
 		value, _ := excludedSubtype(0)
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledCreatureSubtype, Span: shared.SpanOf(tokens[:4]), Subtype: value, SubtypeText: tokens[0].Text, SubtypeKnown: true, ExcludedSubtype: true}
 	case len(tokens) >= 5 && equalWord(tokens[0], "other") && effectWordsAt(tokens, 2, "you", "control") &&
-		(equalWord(tokens[4], "have") || equalWord(tokens[4], "get")):
+		staticGroupVerb(tokens[4]):
 		value, ok := subtype(1)
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectOtherControlledCreatureSubtype, Span: shared.SpanOf(tokens[:4]), Subtype: value, SubtypeText: tokens[1].Text, SubtypeKnown: ok}
 	case len(tokens) >= 4 && effectWordsAt(tokens, 1, "you", "control") &&
-		(equalWord(tokens[3], "have") || equalWord(tokens[3], "get")):
+		staticGroupVerb(tokens[3]):
 		value, ok := subtype(0)
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledCreatureSubtype, Span: shared.SpanOf(tokens[:3]), Subtype: value, SubtypeText: tokens[0].Text, SubtypeKnown: ok}
 	default:

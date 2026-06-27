@@ -11,6 +11,7 @@ var Cards = []*game.CardDef{
 	JackalFamiliar,
 	JadeLeech,
 	JhessianBalmgiver,
+	JirinaDauntlessGeneral,
 	JoragaWarcaller,
 	JudgeSFamiliar,
 	JunkGolem,

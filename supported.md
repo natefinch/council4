@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,654 of 32,501 cards eligible for paper support (48.2%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,668 of 32,501 cards eligible for paper support (48.2%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1031,6 +1031,7 @@ Council4 currently supports **15,654 of 32,501 cards eligible for paper support 
 - Basking Rootwalla
 - Basri's Acolyte
 - Basri's Solidarity
+- Basri, Tomorrow's Champion
 - Bassara Tower Archer
 - Bast, Panther Goddess
 - Bastion Enforcer
@@ -1419,6 +1420,7 @@ Council4 currently supports **15,654 of 32,501 cards eligible for paper support 
 - Blood Tithe
 - Blood Vassal
 - Blood-Chin Fanatic
+- Blood-Chin Rager
 - Blood-Cursed Knight
 - Blood-Toll Harpy
 - Bloodbond Vampire
@@ -2657,6 +2659,7 @@ Council4 currently supports **15,654 of 32,501 cards eligible for paper support 
 - Cosi's Ravager
 - Cosmic Epiphany
 - Cosmic Larva
+- Cosmic Spider-Man
 - Cosmium Blast
 - Cosmogrand Zenith
 - Cost of Brilliance
@@ -3336,6 +3339,7 @@ Council4 currently supports **15,654 of 32,501 cards eligible for paper support 
 - Dinosaur Egg
 - Dinosaur Hunter
 - Dinosaur Soldier
+- Dinosaur Stampede
 - Dinotomaton
 - Diplomatic Immunity
 - Diplomatic Relations
@@ -5648,6 +5652,7 @@ Council4 currently supports **15,654 of 32,501 cards eligible for paper support 
 - Graf Harvest
 - Graf Mole
 - Grafdigger's Cage
+- Grafted Butcher
 - Grafted Identity
 - Grafted Skullcap
 - Graham O'Brien
@@ -6525,6 +6530,7 @@ Council4 currently supports **15,654 of 32,501 cards eligible for paper support 
 - Ignoble Soldier
 - Iguana Parrot
 - Ihsan's Shade
+- Iizuka the Ruthless
 - Ikra Shidiqi, the Usurper
 - Il Mheg Pixie
 - Ill-Gotten Inheritance
@@ -6950,6 +6956,7 @@ Council4 currently supports **15,654 of 32,501 cards eligible for paper support 
 - Jhovall Rider
 - Jiang Yanggu, Wildcrafter
 - Jibbirik Omnivore
+- Jirina, Dauntless General
 - Jiwari, the Earth Aflame
 - Joel, Resolute Survivor
 - Join the Dance
@@ -8307,6 +8314,7 @@ Council4 currently supports **15,654 of 32,501 cards eligible for paper support 
 - Midnight Entourage
 - Midnight Guard
 - Midnight Haunting
+- Midnight Mayhem
 - Midnight Reaper
 - Midnight Scavengers
 - Midnight Snack
@@ -10246,6 +10254,7 @@ Council4 currently supports **15,654 of 32,501 cards eligible for paper support 
 - Ral's Staticaster
 - Ral, Caller of Storms
 - Rally
+- Rally at the Hornburg
 - Rally for the Throne
 - Rally Maneuver
 - Rally of Wings
@@ -10954,6 +10963,7 @@ Council4 currently supports **15,654 of 32,501 cards eligible for paper support 
 - Rural Recruit
 - Ruric Thar, the Unbowed
 - Rush of Adrenaline
+- Rush of Battle
 - Rush of Blood
 - Rush of Knowledge
 - Rush of Vitality
@@ -11203,6 +11213,7 @@ Council4 currently supports **15,654 of 32,501 cards eligible for paper support 
 - Scaled Wurm
 - Scales of Shale
 - Scalestorm Summoner
+- Scampering Scorcher
 - Scampering Surveyor
 - Scar
 - Scarab Feast
@@ -13562,6 +13573,7 @@ Council4 currently supports **15,654 of 32,501 cards eligible for paper support 
 - The Haunt of Hightower
 - The Hive
 - The Hollow Sentinel
+- The Howling Commandos
 - The Hunter Maze
 - The Huntsman's Redemption
 - The Immortal Weapons
@@ -14452,6 +14464,7 @@ Council4 currently supports **15,654 of 32,501 cards eligible for paper support 
 - Valgavoth's Faithful
 - Valgavoth's Lair
 - Valiant Guard
+- Valiant Knight
 - Valiant Rescuer
 - Valiant Veteran
 - Valkyrie Aerial Unit
@@ -14881,6 +14894,7 @@ Council4 currently supports **15,654 of 32,501 cards eligible for paper support 
 - Vulshok Replica
 - Vulshok Sorcerer
 - Vulshok War Boar
+- Vulture, Scheming Scavenger
 - Vulturous Zombie
 - Wailing Ghoul
 - Wakandan Drone Flock

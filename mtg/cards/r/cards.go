@@ -13,6 +13,7 @@ var Cards = []*game.CardDef{
 	RakaDisciple,
 	RakdosRoustabout,
 	RakishCrew,
+	RallyAtTheHornburg,
 	RallyForTheThrone,
 	RampantGrowth,
 	RancorousArchaic,
@@ -73,6 +74,7 @@ var Cards = []*game.CardDef{
 	RuneOfProtectionWhite,
 	RunesOfTheDeus,
 	RuptureSpire,
+	RushOfBattle,
 	RuthlessPredation,
 	RuthlessSniper,
 }
