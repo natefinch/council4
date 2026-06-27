@@ -275,6 +275,10 @@ func TestParseStaticGroupAnthemSubjectKinds(t *testing.T) {
 			source: "Commander creatures you control get +2/+2.",
 			kind:   EffectStaticSubjectControlledCommanderCreatures,
 		},
+		"owned commander creatures": {
+			source: "Commander creatures you own get +2/+2.",
+			kind:   EffectStaticSubjectControlledCommanderCreatures,
+		},
 		"controlled commanders": {
 			source: "Commanders you control have hexproof.",
 			kind:   EffectStaticSubjectControlledCommanders,

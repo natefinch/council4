@@ -104,3 +104,34 @@ func TestLowerControlledArtifactGroupQuotedAbilityGrant(t *testing.T) {
 		t.Fatalf("added abilities = %#v, want exactly one granted ability", effect.AddAbilities)
 	}
 }
+
+// TestLowerCommanderGroupQuotedAbilityGrant verifies that a Background's quoted
+// ability granted to "Commander creatures you own" lowers to an ability-layer
+// continuous effect whose controller-anchored group matches commander creatures.
+func TestLowerCommanderGroupQuotedAbilityGrant(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Background",
+		Layout:     "normal",
+		TypeLine:   "Legendary Enchantment — Background",
+		ManaCost:   "{2}{W}",
+		OracleText: `Commander creatures you own have "Whenever this creature attacks, it gains double strike until end of turn."`,
+	})
+	effect := staticGrantContinuousEffect(t, face)
+	if effect.Layer != game.LayerAbility {
+		t.Fatalf("layer = %v, want LayerAbility", effect.Layer)
+	}
+	if !effect.Group.Selection().MatchCommander {
+		t.Fatalf("group selection = %#v, want MatchCommander", effect.Group.Selection())
+	}
+	required := effect.Group.Selection().RequiredTypes
+	if len(required) != 1 || required[0] != types.Creature {
+		t.Fatalf("group required types = %#v, want [Creature]", required)
+	}
+	if len(effect.AddAbilities) != 1 {
+		t.Fatalf("added abilities = %#v, want exactly one granted ability", effect.AddAbilities)
+	}
+	if _, ok := effect.AddAbilities[0].(*game.TriggeredAbility); !ok {
+		t.Fatalf("granted ability = %#v, want a triggered ability", effect.AddAbilities[0])
+	}
+}
