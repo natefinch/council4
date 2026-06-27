@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,274 of 32,501 cards eligible for paper support (47.0%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,279 of 32,501 cards eligible for paper support (47.0%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1426,6 +1426,7 @@ Council4 currently supports **15,274 of 32,501 cards eligible for paper support 
 - Bloodtallow Candle
 - Bloodthirsty Aerialist
 - Bloodthirsty Conqueror
+- Bloodthirsty Ogre
 - Bloodthorn Taunter
 - Bloodthrone Vampire
 - Bloodtithe Collector
@@ -5592,6 +5593,7 @@ Council4 currently supports **15,274 of 32,501 cards eligible for paper support 
 - Grazing Kelpie
 - Grazing Whiptail
 - Great Arashin City
+- Great Defender
 - Great Desert Prospector
 - Great Forest Druid
 - Great Furnace
@@ -11052,6 +11054,7 @@ Council4 currently supports **15,274 of 32,501 cards eligible for paper support 
 - Screeching Skaab
 - Scribe of the Mindful
 - Scrivener
+- Scroll of the Masters
 - Scroll Thief
 - Scrollshift
 - Scrounger of Souls
@@ -11531,6 +11534,7 @@ Council4 currently supports **15,274 of 32,501 cards eligible for paper support 
 - Siegebreaker Giant
 - Siegecraft
 - Siegehorn Ceratops
+- Sierra, Nuka's Biggest Fan
 - Sif's Spearmaster
 - Sift
 - Sigarda's Aid
@@ -14610,6 +14614,7 @@ Council4 currently supports **15,274 of 32,501 cards eligible for paper support 
 - Wanted Scoundrels
 - War Behemoth
 - War Chariot
+- War Dance
 - War Elephant
 - War Horn
 - War Machine, James Rhodes
