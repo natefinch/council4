@@ -2202,14 +2202,23 @@ type EffectSyntax struct {
 	// per-object SourceSpellCostReductionAmount is unused for this form. It is set
 	// only when the ability matches that exact shape and the dynamic amount is one
 	// lowering can evaluate at cost time.
-	SourceSpellCostReductionDynamic bool                    `json:",omitempty"`
-	Replacement                     EffectReplacementSyntax `json:",omitzero"`
-	References                      []Reference             `json:",omitempty"`
-	SubjectReferences               []Reference             `json:",omitempty"`
-	Targets                         []TargetSyntax          `json:",omitempty"`
-	SubjectTargets                  []TargetSyntax          `json:",omitempty"`
-	Payment                         EffectPaymentSyntax     `json:",omitzero"`
-	Exact                           bool                    `json:",omitempty"`
+	SourceSpellCostReductionDynamic bool `json:",omitempty"`
+	// SourceSpellCostReductionConditional marks the EffectCast effect of the
+	// exact single-clause ability "This spell costs {N} less to cast if
+	// <condition>." (Wizard's Lightning, Squash, Draconic Lore). It is a typed
+	// cast cost modifier rather than a resolving effect: lowering reads
+	// SourceSpellCostReductionAmount (the flat generic reduction N) and gates it
+	// on the ability's single typed condition clause, never inspecting the source
+	// text. It is set only when the ability matches that exact shape and carries a
+	// recognized condition clause.
+	SourceSpellCostReductionConditional bool                    `json:",omitempty"`
+	Replacement                         EffectReplacementSyntax `json:",omitzero"`
+	References                          []Reference             `json:",omitempty"`
+	SubjectReferences                   []Reference             `json:",omitempty"`
+	Targets                             []TargetSyntax          `json:",omitempty"`
+	SubjectTargets                      []TargetSyntax          `json:",omitempty"`
+	Payment                             EffectPaymentSyntax     `json:",omitzero"`
+	Exact                               bool                    `json:",omitempty"`
 	// KeywordGrantChoice marks an EffectGain keyword grant whose keyword list is a
 	// disjunction ("gains banding, first strike, or trample") rather than a
 	// conjunction. The disjunction means the controller chooses exactly one of the

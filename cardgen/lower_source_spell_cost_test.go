@@ -264,3 +264,38 @@ func TestLowerBlasphemousActEndToEnd(t *testing.T) {
 		t.Fatalf("damage amount = %#v, want fixed 13", damage.Amount)
 	}
 }
+
+// TestLowerSourceSpellCostReductionConditional proves the conditional form
+// ("This spell costs {N} less to cast if you control a Wizard") lowers to a flat
+// GenericReduction cost modifier gated by a ReductionCondition, rather than a
+// per-object or dynamic reduction.
+func TestLowerSourceSpellCostReductionConditional(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Reducer",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "This spell costs {2} less to cast if you control a Wizard.",
+		ManaCost:   "{2}{R}",
+	})
+	modifier := sourceSpellCostReductionModifier(t, face)
+	if modifier.Kind != game.CostModifierSpell {
+		t.Fatalf("modifier kind = %v, want spell", modifier.Kind)
+	}
+	if modifier.GenericReduction != 2 {
+		t.Fatalf("generic reduction = %d, want 2", modifier.GenericReduction)
+	}
+	if modifier.PerObjectReduction != 0 {
+		t.Fatalf("per-object reduction = %d, want 0 for the conditional form", modifier.PerObjectReduction)
+	}
+	if modifier.DynamicReduction != nil {
+		t.Fatal("dynamic reduction must be nil for the conditional form")
+	}
+	if !modifier.ReductionCondition.Exists {
+		t.Fatal("reduction condition missing; the conditional form must carry a ReductionCondition")
+	}
+	cond := modifier.ReductionCondition.Val
+	if !cond.ControlsMatching.Exists {
+		t.Fatal("reduction condition must gate on a ControlsMatching board-state predicate")
+	}
+}

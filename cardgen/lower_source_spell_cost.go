@@ -30,15 +30,22 @@ func lowerSourceSpellCostReduction(
 		return abilityLowering{}, false, nil
 	}
 	effect := ability.Content.Effects[0]
-	if !effect.SourceSpellCostReduction && !effect.SourceSpellCostReductionDynamic {
+	if !effect.SourceSpellCostReduction &&
+		!effect.SourceSpellCostReductionDynamic &&
+		!effect.SourceSpellCostReductionConditional {
 		return abilityLowering{}, false, nil
+	}
+	conditional := effect.SourceSpellCostReductionConditional
+	allowedConditions := 0
+	if conditional {
+		allowedConditions = 1
 	}
 	if ability.Cost != nil ||
 		ability.Trigger != nil ||
 		ability.Optional ||
 		len(ability.Content.Modes) != 0 ||
 		len(ability.Content.Targets) != 0 ||
-		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Conditions) != allowedConditions ||
 		len(ability.Content.Keywords) != 0 ||
 		!rulesFreeAbilityWordLabel(ability.AbilityWord) {
 		return abilityLowering{}, true, executableDiagnostic(
@@ -67,6 +74,7 @@ func lowerSourceSpellCostReduction(
 	return abilityLowering{
 		staticAbilities: []loweredStaticAbility{{Body: body}},
 		consumed: semanticConsumption{
+			conditions: len(ability.Content.Conditions),
 			effects:    len(ability.Content.Effects),
 			references: len(ability.Content.References),
 		},
@@ -84,6 +92,35 @@ func lowerSourceSpellCostReduction(
 // runtime evaluates at cost time. All fail closed when the counted/measured
 // objects are not battlefield permanents the runtime represents.
 func sourceSpellCostModifier(ability compiler.CompiledAbility, effect *compiler.CompiledEffect) (game.CostModifier, *shared.Diagnostic) {
+	if effect.SourceSpellCostReductionConditional {
+		if effect.SourceSpellCostReductionAmount <= 0 {
+			return game.CostModifier{}, executableDiagnostic(
+				ability,
+				"unsupported source-spell cost reduction",
+				"the flat generic reduction must be positive",
+			)
+		}
+		if len(ability.Content.Conditions) != 1 {
+			return game.CostModifier{}, executableDiagnostic(
+				ability,
+				"unsupported source-spell cost reduction",
+				"a conditional cast cost reduction requires exactly one condition",
+			)
+		}
+		condition, ok := lowerCondition(ability.Content.Conditions[0], conditionContextSpellCostReduction)
+		if !ok {
+			return game.CostModifier{}, executableDiagnostic(
+				ability,
+				"unsupported source-spell cost reduction",
+				"the reduction condition is not representable by the runtime",
+			)
+		}
+		return game.CostModifier{
+			Kind:               game.CostModifierSpell,
+			GenericReduction:   effect.SourceSpellCostReductionAmount,
+			ReductionCondition: opt.Val(condition),
+		}, nil
+	}
 	if effect.SourceSpellCostReductionDynamic {
 		dynamic, ok := lowerDynamicAmount(effect.Amount, game.SourcePermanentReference())
 		if !ok {

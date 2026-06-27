@@ -7,6 +7,7 @@ import "github.com/natefinch/council4/mtg/game"
 // Cards lists all card definitions in this package.
 var Cards = []*game.CardDef{
 	CabarettiCourtyard,
+	Cactarantula,
 	CanonizedInBlood,
 	Caregiver,
 	CaribouRange,
@@ -28,6 +29,7 @@ var Cards = []*game.CardDef{
 	ChildhoodHorror,
 	Chill,
 	ChillOfForeboding,
+	ChillOfTheGrave,
 	ChiseiHeartOfOceans,
 	ChoMannoSBlessing,
 	Choke,
