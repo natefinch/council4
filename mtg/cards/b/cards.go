@@ -51,6 +51,7 @@ var Cards = []*game.CardDef{
 	BoneHarvest,
 	BoromirGondorSHope,
 	BotBashingTime,
+	BoundlessRealms,
 	BrackwaterElemental,
 	BragoKingEternal,
 	BrassTalonChimera,

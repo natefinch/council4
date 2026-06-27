@@ -41,6 +41,7 @@ var Cards = []*game.CardDef{
 	ToweringWaveMystic,
 	TranquilDomain,
 	TransguildPromenade,
+	TraverseTheOutlands,
 	TreasureHunt,
 	TreasureMage,
 	TreefolkHealer,

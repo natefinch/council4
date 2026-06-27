@@ -648,8 +648,21 @@ func analyzeSearchClause(effect *EffectSyntax) searchClauseAnalysis {
 	rest := strings.TrimPrefix(text, prefix)
 
 	consumed, amount, plural := searchCountPrefix(rest)
-	if consumed == "" || !effect.Amount.Known || effect.Amount.Value != amount {
+	dynamic := consumed == "up to X "
+	switch {
+	case consumed == "":
 		return searchClauseAnalysis{detail: "the executable source backend supports only exact singular-card search wording", sharedSubtype: false, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
+	case dynamic:
+		// The "up to X" count defers its bound to a resolving "where X is ..."
+		// rules-derived amount the parser recognized on this effect. Require that
+		// typed dynamic amount so an unrecognized "X" fails closed.
+		if effect.Amount.DynamicForm != EffectDynamicAmountFormWhereX ||
+			effect.Amount.DynamicKind == EffectDynamicAmountNone {
+			return searchClauseAnalysis{detail: "the executable source backend supports only exact singular-card search wording", sharedSubtype: false, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
+		}
+	case !effect.Amount.Known || effect.Amount.Value != amount:
+		return searchClauseAnalysis{detail: "the executable source backend supports only exact singular-card search wording", sharedSubtype: false, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
+	default:
 	}
 	rest = rest[len(consumed):]
 
@@ -727,6 +740,26 @@ func analyzeSearchClause(effect *EffectSyntax) searchClauseAnalysis {
 	afterNoun, ok := strings.CutPrefix(rest, noun+riderText)
 	if !ok {
 		return searchClauseAnalysis{detail: unsupportedSearchFilterDetail(rest), sharedSubtype: false, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
+	}
+	if dynamic {
+		// The "up to X" count's resolving bound is printed inline as a trailing
+		// "where X is ..." clause the parser captured as the effect amount. Strip
+		// its verbatim text from the reconstruction so the destination match
+		// resumes at the put phrase; a clause whose amount text does not round-trip
+		// fails closed.
+		stripped, ok := strings.CutPrefix(afterNoun, ", "+effect.Amount.Text)
+		if !ok {
+			return searchClauseAnalysis{detail: unsupportedSearchFilterDetail(rest), sharedSubtype: false, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
+		}
+		afterNoun = stripped
+	}
+	if afterNoun == "." {
+		// A two-sentence search ("Search your library for <filter>[, where X is
+		// ...]. Put those cards onto the battlefield, then shuffle.") ends the
+		// search sentence after the filter and any count phrase; its destination
+		// is a separate following put effect that lowering validates and lowers as
+		// the search destination. The search clause itself is exact.
+		return searchClauseAnalysis{detail: "", sharedSubtype: false, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
 	}
 	if remainder, ok := strings.CutPrefix(afterNoun, searchSharedSubtypeRiderText); ok {
 		// "that share a land type" correlates the found cards: each must share a
@@ -1056,8 +1089,10 @@ func stripMandatoryReflexiveConnector(text string) string {
 
 // searchCountPrefix consumes the count phrase that follows "for ". It accepts the
 // singular articles "a "/"an " (amount 1) and the bounded "up to <word> " form
-// (amount 2..10, plural). It returns the consumed literal (empty when the phrase
-// is unrecognized) so the caller can keep reconstructing the clause
+// (amount 2..10, plural). The dynamic "up to X " form (amount 0, plural) defers
+// its bound to the effect's resolving "where X is ..." count, validated by the
+// caller against the typed amount. It returns the consumed literal (empty when
+// the phrase is unrecognized) so the caller can keep reconstructing the clause
 // byte-for-byte.
 func searchCountPrefix(rest string) (consumed string, amount int, plural bool) {
 	switch {
@@ -1065,6 +1100,8 @@ func searchCountPrefix(rest string) (consumed string, amount int, plural bool) {
 		return "a ", 1, false
 	case strings.HasPrefix(rest, "an "):
 		return "an ", 1, false
+	case strings.HasPrefix(rest, "up to X "):
+		return "up to X ", 0, true
 	case strings.HasPrefix(rest, "up to "):
 		after := rest[len("up to "):]
 		for n := 2; n <= 10; n++ {

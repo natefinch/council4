@@ -23,4 +23,5 @@ var Cards = []*game.CardDef{
 	KoskunFalls,
 	KrosanDrover,
 	KusariGama,
+	KyoshiIslandPlaza,
 }

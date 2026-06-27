@@ -597,7 +597,7 @@ func lowerOptionalReferencedControllerSearch(ctx contentCtx) (game.AbilityConten
 		Primitive: game.Search{
 			Player: searcher,
 			Spec:   group.Spec,
-			Amount: game.Fixed(group.Amount),
+			Amount: group.Quantity,
 		},
 		Optional:      true,
 		OptionalActor: opt.Val(searcher),
@@ -742,7 +742,7 @@ func lowerRemovalThenControllerSearch(
 		Primitive: game.Search{
 			Player: searcher,
 			Spec:   group.Spec,
-			Amount: game.Fixed(group.Amount),
+			Amount: group.Quantity,
 		},
 		Optional:      true,
 		OptionalActor: opt.Val(searcher),
@@ -752,7 +752,7 @@ func lowerRemovalThenControllerSearch(
 			Primitive: game.Search{
 				Player: game.ControllerReference(),
 				Spec:   youGroup.Spec,
-				Amount: game.Fixed(youGroup.Amount),
+				Amount: youGroup.Quantity,
 			},
 			Optional: true,
 		})
