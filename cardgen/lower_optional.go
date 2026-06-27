@@ -1535,12 +1535,20 @@ func lowerOptionalHaveEffect(
 ) (game.AbilityContent, bool) {
 	if ctx.optional ||
 		len(ctx.content.Modes) != 0 ||
-		len(ctx.content.Effects) != 2 ||
-		len(ctx.content.Keywords) != 0 {
+		len(ctx.content.Effects) != 2 {
 		return game.AbilityContent{}, false
 	}
 	have := ctx.content.Effects[0]
 	action := ctx.content.Effects[1]
+	// The structural "have"/"has" grants no keyword of its own, so any compiled
+	// keyword belongs to the causative action's clause ("you may have <subject>
+	// gain flying until end of turn"). Requiring every keyword to lie within the
+	// action's clause span keeps a stray keyword from some other clause from
+	// being silently carried into the action's lowering; a keyword outside that
+	// span leaves the body unsupported rather than lowered to a wrong shape.
+	if len(keywordsWithinSpan(ctx.content.Keywords, action.ClauseSpan)) != len(ctx.content.Keywords) {
+		return game.AbilityContent{}, false
+	}
 	// The causative "have"/"has" compiles to an EffectGrantKeyword that grants no
 	// keyword of its own: it is purely structural, so the ability content carries
 	// no compiled keyword (checked above) and the real action rides as a second
@@ -1577,7 +1585,7 @@ func lowerOptionalHaveEffect(
 	// second effect (the structural "have"); as the now-sole effect it lowers
 	// through the standard single-effect path.
 	strippedAction.RequiresOrderedLowering = false
-	if !strippedAction.Exact && causativeActionForcibleExact(&strippedAction) {
+	if !strippedAction.Exact && causativeActionForcibleExact(&strippedAction, ctx.content.Keywords) {
 		// The causative action's clause uses the base-verb form ("each player
 		// draw a card", "target player mill two cards") because it is governed by
 		// "have". The parser's exact reconstruction only matches the finite-verb
@@ -1609,24 +1617,53 @@ func lowerOptionalHaveEffect(
 // causativeActionForcibleExact reports whether a non-exact causative "have"
 // action may have its exactness artifact cleared (see lowerOptionalHaveEffect).
 // It is restricted to action kinds whose runtime effect is fully determined by
-// the parser's structured fields (effect kind, fixed amount, subject context,
-// and target) so that clearing the base-verb-only non-exactness cannot admit an
-// unhandled clause: the corresponding single-effect lowerer re-validates every
-// one of those fields and fails closed otherwise. A genuinely unrecognized
-// sibling (HasUnrecognizedSibling) is never forcible, and only fixed amounts are
-// admitted so a dynamic or variable count cannot slip past as exact.
-func causativeActionForcibleExact(action *compiler.CompiledEffect) bool {
-	if action.HasUnrecognizedSibling || !action.Amount.Known {
+// the parser's structured fields (effect kind, amount or power/toughness deltas,
+// granted keyword, subject context, and target) so that clearing the base-verb-
+// only non-exactness cannot admit an unhandled clause: the corresponding single-
+// effect lowerer re-validates every one of those fields and fails closed
+// otherwise. A genuinely unrecognized sibling (HasUnrecognizedSibling) is never
+// forcible.
+//
+// Each admitted kind requires the magnitude-bearing field the runtime needs to
+// be fully parsed: a known fixed amount or a recognized dynamic amount for the
+// count effects, known power and toughness deltas (or a recognized dynamic
+// amount) for the "+X/+X / -X/-X" change, and either a known amount ("gain N
+// life") or a keyword within the action clause ("gain flying until end of turn")
+// for the grant. Dynamic amounts are admitted rather than excluded because the
+// single-effect lowerer re-validates the dynamic form and fails closed for any it
+// cannot model, exactly as it does for the standalone finite-verb clause; a
+// genuinely unrecognized amount still leaves the body unsupported.
+func causativeActionForcibleExact(
+	action *compiler.CompiledEffect,
+	keywords []compiler.CompiledKeyword,
+) bool {
+	if action.HasUnrecognizedSibling {
 		return false
 	}
+	// A count amount is fully parsed when it is a known fixed value or a
+	// recognized dynamic quantity ("equal to the number of ..."); the downstream
+	// lowerer validates the dynamic form and fails closed otherwise.
+	countAmountParsed := action.Amount.Known ||
+		action.Amount.DynamicKind != compiler.DynamicAmountNone
 	switch action.Kind {
 	case compiler.EffectDraw,
 		compiler.EffectMill,
 		compiler.EffectDiscard,
-		compiler.EffectGain,
-		compiler.EffectLose,
-		compiler.EffectModifyPT:
-		return true
+		compiler.EffectLose:
+		return countAmountParsed
+	case compiler.EffectGain:
+		// "gain N life" carries its magnitude in Amount; "gain <keyword> until
+		// end of turn" carries the granted keyword within the action clause and
+		// leaves Amount unset.
+		return countAmountParsed ||
+			len(keywordsWithinSpan(keywords, action.ClauseSpan)) > 0
+	case compiler.EffectModifyPT:
+		// A causative "get +X/+X / -X/-X until end of turn" change carries its
+		// magnitude in the power/toughness deltas (fixed) or in a recognized
+		// dynamic amount, never in Amount: a positive fixed pump populates Amount
+		// as an artifact, but the shrink and dynamic forms do not.
+		return (action.PowerDelta.Known && action.ToughnessDelta.Known) ||
+			action.Amount.DynamicKind != compiler.DynamicAmountNone
 	default:
 		return false
 	}
