@@ -34,6 +34,7 @@ func emitResolvingSyntax(abilities []Ability) {
 			abilities[i].TriggerFrequency,
 			abilities[i].SourceAbilityCostReduction,
 		)
+		fuseDiscardThenDrawSentences(abilities[i].Sentences)
 		attachTokenGrantedAbilities(&abilities[i])
 		attachGainGrantedAbilities(&abilities[i])
 		attachEmblemEffects(&abilities[i])
@@ -48,6 +49,7 @@ func emitResolvingSyntax(abilities []Ability) {
 			for k := range abilities[i].DiceTable.Rows {
 				row := &abilities[i].DiceTable.Rows[k]
 				emitSentenceResolvingSyntax(row.Sentences, row.Atoms, nil, nil, nil)
+				fuseDiscardThenDrawSentences(row.Sentences)
 			}
 		}
 		if abilities[i].Modal == nil {
@@ -56,6 +58,7 @@ func emitResolvingSyntax(abilities []Ability) {
 		for j := range abilities[i].Modal.Options {
 			mode := &abilities[i].Modal.Options[j]
 			emitSentenceResolvingSyntax(mode.Sentences, mode.Atoms, nil, nil, nil)
+			fuseDiscardThenDrawSentences(mode.Sentences)
 			if sentencesHaveImpulseExile(mode.Sentences) {
 				mode.SemanticReferences = nil
 				mode.ConditionBoundaries = nil

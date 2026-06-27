@@ -106,6 +106,11 @@ func appendPrimitiveAtoms(atoms []EffectAtom, primitive game.Primitive) []Effect
 		return append(atoms, atom)
 	case game.Mill:
 		return append(atoms, quantityAtom(EffectCardsLost, p.Amount, affectedFromPlayer(p.Player)))
+	case game.DiscardThenDraw:
+		if p.DrawOffset == 0 {
+			return atoms
+		}
+		return append(atoms, EffectAtom{Kind: EffectCardsDrawn, Amount: p.DrawOffset, Affected: affectedFromPlayer(p.Player)})
 	case game.GainLife:
 		return append(atoms, quantityAtom(EffectLifeGained, p.Amount, affectedFromPlayer(p.Player)))
 	case game.LoseLife:

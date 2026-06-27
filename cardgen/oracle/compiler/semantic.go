@@ -2227,6 +2227,13 @@ type CompiledEffect struct {
 	// middle "You choose..." sentence. It is set only on the discard half
 	// (HandChoiceDiscard.Present true).
 	HandChoiceDiscard parser.HandChoiceDiscardSyntax
+	// DiscardThenDraw marks a discard clause fused with a following "then draw
+	// that many cards[ plus K]" clause into a single variable looter. The
+	// controller discards a chosen number of cards (at most DiscardThenDrawMax,
+	// or any number when zero), then draws that many plus DiscardThenDrawOffset.
+	DiscardThenDraw       bool
+	DiscardThenDrawMax    int
+	DiscardThenDrawOffset int
 	// SearchSplit carries the split-destination put clause's structured fields
 	// from the parser so the search lowerer can build a SearchSpec.SplitDestination
 	// from typed slots rather than re-reading the put text.

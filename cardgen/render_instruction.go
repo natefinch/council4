@@ -376,6 +376,8 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 		return r.renderChooseFromZone(ctx, value)
 	case game.PrimitivePutHandOnLibraryThenDraw:
 		return r.renderPutHandOnLibraryThenDraw(primitive)
+	case game.PrimitiveDiscardThenDraw:
+		return r.renderDiscardThenDraw(primitive)
 	case game.PrimitiveCastForFree:
 		value, err := assertPrimitive[game.CastForFree](primitive)
 		if err != nil {
@@ -1001,6 +1003,27 @@ func (r Renderer) renderPutHandOnLibraryThenDraw(primitive game.Primitive) (stri
 		fields = append(fields, fmt.Sprintf("DrawOffset: %d,", value.DrawOffset))
 	}
 	return structLit("game.PutHandOnLibraryThenDraw", fields), nil
+}
+
+func (r Renderer) renderDiscardThenDraw(primitive game.Primitive) (string, error) {
+	value, err := assertPrimitive[game.DiscardThenDraw](primitive)
+	if err != nil {
+		return "", err
+	}
+	player, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{
+		fmt.Sprintf("Player: %s,", player),
+	}
+	if value.Max != 0 {
+		fields = append(fields, fmt.Sprintf("Max: %d,", value.Max))
+	}
+	if value.DrawOffset != 0 {
+		fields = append(fields, fmt.Sprintf("DrawOffset: %d,", value.DrawOffset))
+	}
+	return structLit("game.DiscardThenDraw", fields), nil
 }
 
 func (r Renderer) renderCastForFree(ctx *renderCtx, value game.CastForFree) (string, error) {
