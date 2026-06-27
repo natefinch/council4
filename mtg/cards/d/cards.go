@@ -18,6 +18,7 @@ var Cards = []*game.CardDef{
 	Decommission,
 	Decompose,
 	DeepGoblinSkulltaker,
+	DefendersOfHumanity,
 	DemonicAppetite,
 	DescentOfTheDragons,
 	DesertSDue,

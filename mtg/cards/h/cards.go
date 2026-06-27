@@ -29,6 +29,7 @@ var Cards = []*game.CardDef{
 	HelmOfAwakening,
 	HengeWalker,
 	HerdMigration,
+	HeronBlessedGeist,
 	HiddenFootblade,
 	HiddenHorror,
 	HiddenStockpile,
