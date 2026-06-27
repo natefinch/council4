@@ -780,6 +780,39 @@ func DamageReplacementFiltered(text string, spec *DamageReplacementSpec) Replace
 	}
 }
 
+// DamagePreventionSpec parameterizes a continuous static damage prevention: the
+// fixed amount capped from each matching event, the source's color and card-type
+// filters, and whether the source must be controlled by an opponent. The
+// prevented damage is always dealt to the replacement's controller ("you").
+type DamagePreventionSpec struct {
+	Amount                   int
+	SourceColors             []color.Color
+	SourceTypes              []types.Card
+	SourceControllerOpponent bool
+}
+
+// DamagePreventionReplacement creates a persistent prevention replacement
+// (CR 615) that caps each qualifying damage event dealt to the controller by up
+// to Amount, backing the continuous static "If a <source> would deal damage to
+// you, prevent N of that damage." statics (Sphere of Law, Urza's Armor,
+// Protection of the Hekma).
+func DamagePreventionReplacement(text string, spec *DamagePreventionSpec) ReplacementAbility {
+	return ReplacementAbility{
+		Text: text,
+		Replacement: ReplacementEffect{
+			Description:                    text,
+			MatchEvent:                     EventDamageDealt,
+			ControllerFilter:               TriggerControllerAny,
+			DamagePreventAmount:            spec.Amount,
+			DamageRecipientController:      true,
+			DamageSourceColors:             append([]color.Color(nil), spec.SourceColors...),
+			DamageSourceTypes:              append([]types.Card(nil), spec.SourceTypes...),
+			DamageSourceControllerOpponent: spec.SourceControllerOpponent,
+			Duration:                       DurationPermanent,
+		},
+	}
+}
+
 // LifeGainReplacement creates a persistent replacement that modifies life the
 // controller would gain by multiplying it and then adding a fixed amount (CR
 // 614), backing wordings such as "you gain twice that much life instead" and

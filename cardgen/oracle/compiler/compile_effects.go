@@ -486,6 +486,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				PreventDamageBy:                        syntax.PreventDamageBy,
 				PreventDamageGlobal:                    syntax.PreventDamageGlobal,
 				PreventDamageNextRecipient:             syntax.PreventDamageNextRecipient,
+				PreventDamageThatAmount:                syntax.PreventDamageThatAmount,
 				SpellsCantBeCounteredNextOnly:          syntax.SpellsCantBeCounteredNextOnly,
 				DoublePower:                            syntax.DoublePower,
 				DoubleToughness:                        syntax.DoubleToughness,

@@ -912,6 +912,13 @@ type ConditionSelection struct {
 	DamageRecipientOpponent   bool
 	DamageNoncombatOnly       bool
 	DamageSourceAnyController bool
+	// DamageRecipientController restricts a damage-by-source clause to damage
+	// dealt to the source permanent's controller alone ("would deal damage to
+	// you"). DamageSourceControllerOpponent restricts it to a source controlled
+	// by an opponent ("a source an opponent controls"). They back the continuous
+	// static damage-prevention statics.
+	DamageRecipientController      bool
+	DamageSourceControllerOpponent bool
 	// AnyCounter requires the matched permanent to carry at least one counter of
 	// any kind ("if this permanent has counters on it").
 	AnyCounter bool
@@ -2368,6 +2375,10 @@ type CompiledEffect struct {
 	// shield, naming the shielded recipient. The prevented amount N rides on the
 	// effect's Amount. It is None for the combat prevention forms.
 	PreventDamageNextRecipient parser.PreventDamageRecipientKind
+	// PreventDamageThatAmount mirrors the parser amount for the continuous static
+	// "prevent N of that damage" replacement (Sphere of Law). It is zero for
+	// every one-shot or combat prevention form.
+	PreventDamageThatAmount int
 	// SpellsCantBeCounteredNextOnly mirrors the parser flag for an
 	// EffectSpellsCantBeCountered clause that limits the buff to the single next
 	// spell the controller casts rather than every spell cast this turn.

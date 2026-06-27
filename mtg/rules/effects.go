@@ -363,6 +363,7 @@ func registerPermanentReplacementEffects(g *game.Game, permanent *game.Permanent
 			replacement.CounterAddend == 0 &&
 			replacement.DamageMultiplier <= 1 &&
 			replacement.DamageAddend == 0 &&
+			replacement.DamagePreventAmount == 0 &&
 			replacement.LifeGainMultiplier <= 1 &&
 			replacement.LifeGainAddend == 0 &&
 			replacement.LifeLossMultiplier <= 1 &&

@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,530 of 32,501 cards eligible for paper support (47.8%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,539 of 32,501 cards eligible for paper support (47.8%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -5822,6 +5822,7 @@ Council4 currently supports **15,530 of 32,501 cards eligible for paper support 
 - Guardian of the Guildpact
 - Guardian of Vitu-Ghazi
 - Guardian Project
+- Guardian Seraph
 - Guardians of Akrasa
 - Guardians of Meletis
 - Guenhwyvar
@@ -9911,6 +9912,7 @@ Council4 currently supports **15,530 of 32,501 cards eligible for paper support 
 - Prosperous Pirates
 - Protect // Serve
 - Protection Magic
+- Protection of the Hekma
 - Protective Bubble
 - Protective Response
 - Protector of Gondor
@@ -12361,8 +12363,14 @@ Council4 currently supports **15,530 of 32,501 cards eligible for paper support 
 - Spellweaver Eternal
 - Spellwild Ouphe
 - Sphere Grid
+- Sphere of Duty
+- Sphere of Grace
+- Sphere of Law
+- Sphere of Purity
+- Sphere of Reason
 - Sphere of Resistance
 - Sphere of Safety
+- Sphere of Truth
 - Sphinx
 - Sphinx
 - Sphinx Mindbreaker
@@ -14301,6 +14309,7 @@ Council4 currently supports **15,530 of 32,501 cards eligible for paper support 
 - Ursapine
 - Ursine Fylgja
 - Uruk-hai Berserker
+- Urza's Armor
 - Urza's Cave
 - Urza's Chalice
 - Urza's Factory

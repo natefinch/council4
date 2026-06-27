@@ -41,6 +41,7 @@ var Cards = []*game.CardDef{
 	PrizedStatue,
 	PropagatorDrone,
 	ProsperityTycoon,
+	ProtectionOfTheHekma,
 	PsychicVenom,
 	PsychotropeThallid,
 	PublicThoroughfare,

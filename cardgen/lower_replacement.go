@@ -29,6 +29,9 @@ func lowerReplacementAbility(ability compiler.CompiledAbility) (abilityLowering,
 			"the executable source backend does not yet lower optional replacement effects",
 		)
 	}
+	if replacementAbility, handled, diagnostic := lowerDamagePreventionReplacement(ability); handled || diagnostic != nil {
+		return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
+	}
 	if replacementAbility, handled, diagnostic := lowerDamageReplacement(ability); handled || diagnostic != nil {
 		return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
 	}
@@ -718,6 +721,91 @@ func lowerCounterPlacementReplacement(
 	default:
 		return unsupported("the executable source backend supports only controlled-creature +1/+1, controlled-permanent, or broad permanent/player counter-doubling or additive replacements")
 	}
+}
+
+// lowerDamagePreventionReplacement lowers a continuous static "If a [qualifier]
+// source would deal damage to you, prevent N of that damage." replacement
+// (the Sphere of Law/Duty/Reason/Grace/Truth, Sphere of Purity, Urza's Armor,
+// Protection of the Hekma, and Guardian Seraph family) into a filtered damage
+// prevention replacement. It reports handled=false when the ability is not a
+// prevention candidate so the additive/multiplicative path keeps flowing to
+// lowerDamageReplacement.
+func lowerDamagePreventionReplacement(
+	ability compiler.CompiledAbility,
+) (game.ReplacementAbility, bool, *shared.Diagnostic) {
+	if !damagePreventionReplacementCandidate(ability) {
+		return game.ReplacementAbility{}, false, nil
+	}
+	unsupported := func(detail string) (game.ReplacementAbility, bool, *shared.Diagnostic) {
+		return game.ReplacementAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported damage prevention replacement",
+			detail,
+		)
+	}
+	if len(ability.Content.Conditions) != 1 ||
+		ability.Content.Conditions[0].Kind != compiler.ConditionIf ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Keywords) != 0 ||
+		len(ability.Content.Modes) != 0 ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		ability.Optional {
+		return unsupported("the executable source backend supports only exact static damage prevention replacements")
+	}
+	effect := damagePreventionReplacementEffect(ability.Content.Effects)
+	if effect.PreventDamageThatAmount <= 0 {
+		return unsupported("the executable source backend supports only fixed-amount damage prevention replacements")
+	}
+	condition := ability.Content.Conditions[0]
+	if !condition.Selection.DamageRecipientController {
+		return unsupported("the executable source backend supports only damage prevention that protects you")
+	}
+	if condition.Selection.ExcludeSource ||
+		condition.Selection.DamageRecipientOpponent ||
+		condition.Selection.DamageNoncombatOnly {
+		return unsupported("the executable source backend supports only unqualified static damage prevention replacements")
+	}
+	sourceColors, ok := conditionColors(condition.Selection.ColorsAny)
+	if !ok {
+		return unsupported("the executable source backend supports only known source colors in damage prevention replacements")
+	}
+	sourceTypes, ok := conditionCardTypes(condition.Selection.RequiredTypes)
+	if !ok {
+		return unsupported("the executable source backend supports only known source card types in damage prevention replacements")
+	}
+	return game.DamagePreventionReplacement(ability.Text, &game.DamagePreventionSpec{
+		Amount:                   effect.PreventDamageThatAmount,
+		SourceColors:             sourceColors,
+		SourceTypes:              sourceTypes,
+		SourceControllerOpponent: condition.Selection.DamageSourceControllerOpponent,
+	}), true, nil
+}
+
+// damagePreventionReplacementCandidate reports whether the ability is a
+// controlled-source damage replacement whose sole damage effect is a fixed-amount
+// "prevent N of that damage" static.
+func damagePreventionReplacementCandidate(ability compiler.CompiledAbility) bool {
+	if ability.Kind != compiler.AbilityReplacement || len(ability.Content.Conditions) == 0 {
+		return false
+	}
+	if ability.Content.Conditions[0].Predicate != compiler.ConditionPredicateDamageByControlledSource {
+		return false
+	}
+	return damagePreventionReplacementEffect(ability.Content.Effects).PreventDamageThatAmount > 0
+}
+
+// damagePreventionReplacementEffect returns the fixed-amount prevention effect
+// from a static damage-prevention replacement, or the zero value when none is
+// present.
+func damagePreventionReplacementEffect(effects []compiler.CompiledEffect) compiler.CompiledEffect {
+	for i := range effects {
+		if effects[i].Kind == compiler.EffectPreventDamage &&
+			effects[i].PreventDamageThatAmount > 0 {
+			return effects[i]
+		}
+	}
+	return compiler.CompiledEffect{}
 }
 
 func lowerDamageReplacement(

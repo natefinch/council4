@@ -997,7 +997,30 @@ func replacementWording(tokens []shared.Token) bool {
 	if groupEntersTappedWording(words) {
 		return true
 	}
+	if damagePreventionStaticWording(words) {
+		return true
+	}
 	return slices.Contains(words, "would") && slices.Contains(words, "instead")
+}
+
+// damagePreventionStaticWording reports whether the tokens read as a continuous
+// static damage-prevention replacement ("If a red source would deal damage to
+// you, prevent 2 of that damage." — Sphere of Law). The leading "if", a
+// contiguous "would deal damage" event phrase, and a "prevent" verb distinguish
+// it from one-shot prevention spells (which begin with "prevent") and from
+// other "if ... would" replacements. The clause is lowered to a prevention
+// replacement only when the condition and effect fully parse; otherwise it
+// remains an unsupported replacement.
+func damagePreventionStaticWording(words []string) bool {
+	if len(words) == 0 || words[0] != "if" || !slices.Contains(words, "prevent") {
+		return false
+	}
+	for i := 0; i+2 < len(words); i++ {
+		if words[i] == "would" && words[i+1] == "deal" && words[i+2] == "damage" {
+			return true
+		}
+	}
+	return false
 }
 
 // groupEntersTappedWording reports whether the tokens read as a static group
