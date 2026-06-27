@@ -15,6 +15,7 @@ var Cards = []*game.CardDef{
 	NemataGroveGuardian,
 	NemesisOfReason,
 	NessianWanderer,
+	NettleGuard,
 	NeyithOfTheDireHunt,
 	NezumiLinkbreaker,
 	NibelheimAflame,

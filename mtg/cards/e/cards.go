@@ -20,6 +20,7 @@ var Cards = []*game.CardDef{
 	ElvishRejuvenator,
 	EmberIslandProduction,
 	EmberethPaladin,
+	EmberheartChallenger,
 	EmblemOfTheWarmind,
 	EmeraldCharm,
 	EmrakulSMessenger,

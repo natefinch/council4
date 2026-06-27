@@ -15,6 +15,7 @@ var Cards = []*game.CardDef{
 	Vebulid,
 	VengefulRebel,
 	Vesperlark,
+	VeteranGuardmouse,
 	VictorTimelyWilyTycoon,
 	VitasporeThallid,
 	VivienReid,

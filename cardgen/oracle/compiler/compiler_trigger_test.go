@@ -535,7 +535,6 @@ func TestCompileEnterOrDiesUnionTriggerPattern(t *testing.T) {
 func TestCompileSemanticTriggerPatternsFailClosed(t *testing.T) {
 	t.Parallel()
 	for _, source := range []string{
-		"Whenever this creature becomes the target of a spell or ability for the first time each turn, draw a card.",
 		"Whenever creature you control becomes tapped, draw a card.",
 		"At the beginning of your declare attackers step, draw a card.",
 		"At the beginning of the upkeep of enchanted permanent's controller, draw a card.",
@@ -548,6 +547,47 @@ func TestCompileSemanticTriggerPatternsFailClosed(t *testing.T) {
 			}
 			if pattern := compilation.Abilities[0].Trigger.Pattern; pattern.Event != TriggerEventUnknown {
 				t.Fatalf("near-miss pattern = %#v, want unknown event", pattern)
+			}
+		})
+	}
+}
+
+// TestCompileBecameTargetFirstTimeEachTurn covers the Valiant ability word and
+// the Glasskite spirits: the inline "for the first time each turn" ordinal on a
+// became-target trigger compiles to the object-became-target event with a
+// once-per-turn cap (MaxTriggersPerTurn == 1).
+func TestCompileBecameTargetFirstTimeEachTurn(t *testing.T) {
+	t.Parallel()
+	for _, test := range []struct {
+		name      string
+		source    string
+		wantCause ControllerKind
+	}{
+		{
+			name:      "valiant you control",
+			source:    "Valiant — Whenever this creature becomes the target of a spell or ability you control for the first time each turn, draw a card.",
+			wantCause: ControllerYou,
+		},
+		{
+			name:      "glasskite any controller",
+			source:    "Whenever this creature becomes the target of a spell or ability for the first time each turn, draw a card.",
+			wantCause: ControllerAny,
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := compileSource(test.source, pipelineContext{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			trigger := compilation.Abilities[0].Trigger
+			if trigger.Pattern.Event != TriggerEventObjectBecameTarget ||
+				trigger.Pattern.Source != TriggerSourceSelf ||
+				trigger.Pattern.CauseController != test.wantCause {
+				t.Fatalf("pattern = %#v", trigger.Pattern)
+			}
+			if trigger.MaxTriggersPerTurn != 1 {
+				t.Fatalf("MaxTriggersPerTurn = %d, want 1", trigger.MaxTriggersPerTurn)
 			}
 		})
 	}

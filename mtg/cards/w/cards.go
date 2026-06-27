@@ -15,6 +15,7 @@ var Cards = []*game.CardDef{
 	Weatherlight,
 	WebOfLifeAndDestiny,
 	WelkinTern,
+	WhiskerquillScribe,
 	WhiteWard,
 	Wight,
 	WildInstincts,

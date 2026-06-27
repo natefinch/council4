@@ -841,6 +841,17 @@ type TriggerEventClause struct {
 	// any matching creature. It is set only on TriggerEventKindZoneChange clauses
 	// whose ZoneChange.Kind is TriggerEventZoneChangeDied.
 	DealtDamageBySourceThisTurn bool `json:",omitempty"`
+
+	// FirstTimeEachTurn marks a became-target clause restricted to the first such
+	// targeting each turn ("...for the first time each turn", the Valiant ability
+	// word of Bloomburrow and the Glasskite spirits). It caps the ability to one
+	// trigger per turn, modeled downstream as a once-per-turn trigger frequency.
+	// It is set only on TriggerEventKindBecameTarget clauses.
+	FirstTimeEachTurn bool `json:",omitempty"`
+	// FirstTimeEachTurnSpan is the source span of the recognized "for the first
+	// time each turn" ordinal qualifier. It is zero when FirstTimeEachTurn is
+	// false.
+	FirstTimeEachTurnSpan shared.Span `json:"-"`
 }
 
 // EventHistoryWindowKind identifies the turn window for an event-history

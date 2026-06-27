@@ -15,6 +15,7 @@ var Cards = []*game.CardDef{
 	FirstMateRagavanTokenee4b3162e2b44c10acd675ff9ec1d44e,
 	FishToken5bef2c1c72154b018bb3426e1c3dd2e0,
 	FishTokenbdb03306355c41e596bcf60483e59b2a,
+	FlowerfootSwordmasterToken62428d4abeaa412495ada7228e4450cc,
 	FootDiscipleTokencbf0b7c6c79c43bcba8ab3c6b12a4433,
 	FootSkirmisherToken8426fe4b763241229a6c70f469e1d092,
 	FoxTokene84b278c58444245a4ce0766e971a3e3,
