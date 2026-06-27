@@ -1142,6 +1142,9 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 	if effects, ok := parsePreventAmountDamageEffect(sentence, tokens, atoms); ok {
 		return effects
 	}
+	if effects, ok := parsePreventThatDamageEffect(sentence, tokens, atoms); ok {
+		return effects
+	}
 	indices := effectIndices(tokens, atoms)
 	requiresOrderedLowering := orderedEffectCount(tokens, atoms) > 1
 	// Fold a trailing "<effect> unless you <non-mana cost>" controller payment:
@@ -4253,6 +4256,61 @@ func parsePreventAmountDamageEffect(sentence Sentence, tokens []shared.Token, at
 		References:                 refs,
 		Targets:                    recipientTargets,
 		Exact:                      true,
+	}}, true
+}
+
+// parsePreventThatDamageEffect recognizes the continuous static damage
+// prevention "If <source> would deal damage to you, prevent N of that damage."
+// (Sphere of Law, Urza's Armor). The leading "if" damage-source condition is
+// recognized separately; this recognizer claims the trailing "prevent N of that
+// damage" effect clause after the condition comma and records its fixed amount.
+// A clause without the leading "if", without a top-level comma, or whose effect
+// run is not exactly "prevent <integer> of that damage" fails closed.
+func parsePreventThatDamageEffect(sentence Sentence, tokens []shared.Token, _ Atoms) ([]EffectSyntax, bool) {
+	words := make([]shared.Token, 0, len(tokens))
+	for _, token := range tokens {
+		if token.Kind == shared.Period {
+			continue
+		}
+		words = append(words, token)
+	}
+	if len(words) == 0 || !equalWord(words[0], "if") {
+		return nil, false
+	}
+	comma := -1
+	for i := range words {
+		if words[i].Kind == shared.Comma {
+			comma = i
+			break
+		}
+	}
+	if comma < 0 {
+		return nil, false
+	}
+	effect := words[comma+1:]
+	if len(effect) != 5 ||
+		!equalWord(effect[0], "prevent") ||
+		effect[1].Kind != shared.Integer ||
+		!equalWord(effect[2], "of") ||
+		!equalWord(effect[3], "that") ||
+		!equalWord(effect[4], "damage") {
+		return nil, false
+	}
+	amount, err := strconv.Atoi(effect[1].Text)
+	if err != nil || amount < 1 {
+		return nil, false
+	}
+	effectSpan := shared.SpanOf(effect)
+	return []EffectSyntax{{
+		Kind:                    EffectPreventDamage,
+		Span:                    sentence.Span,
+		ClauseSpan:              effectSpan,
+		VerbSpan:                effect[0].Span,
+		Text:                    sentence.Text,
+		Tokens:                  append([]shared.Token(nil), tokens...),
+		Context:                 EffectContextController,
+		PreventDamageThatAmount: amount,
+		Exact:                   true,
 	}}, true
 }
 

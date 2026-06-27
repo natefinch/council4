@@ -320,6 +320,20 @@ type ReplacementEffect struct {
 	DamageRecipientOpponent bool
 	DamageNoncombatOnly     bool
 
+	// DamagePreventAmount is the fixed amount a continuous static damage
+	// prevention caps from each matching damage event ("prevent N of that
+	// damage.", Sphere of Law, Urza's Armor). When positive the replacement is a
+	// prevention rather than a multiplier/addend replacement: it reduces each
+	// matching event by up to this many and emits a damage-prevented event.
+	// DamageRecipientController restricts the prevention to damage dealt to the
+	// replacement's controller (the player "you"); DamageSourceControllerOpponent
+	// further restricts it to a source controlled by an opponent of that
+	// controller ("a source an opponent controls"). Both are false/zero on every
+	// multiplicative or additive damage replacement.
+	DamagePreventAmount            int
+	DamageRecipientController      bool
+	DamageSourceControllerOpponent bool
+
 	// LifeGainMultiplier multiplies a single "you would gain life" event by the
 	// replacement's controller before the life is gained (CR 614), backing "If
 	// you would gain life, you gain twice that much life instead." (Boon

@@ -130,6 +130,13 @@ func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.Replace
 		}
 		return replacement, nil
 	}
+	if ability.Replacement.DamagePreventAmount > 0 {
+		replacement, err := renderDamagePreventionReplacement(ctx, ability)
+		if err != nil {
+			return "", err
+		}
+		return replacement, nil
+	}
 	if ability.Replacement.DamageMultiplier > 0 || ability.Replacement.DamageAddend != 0 {
 		replacement, err := renderDamageReplacement(ctx, ability)
 		if err != nil {
@@ -382,6 +389,46 @@ func renderFilteredDamageReplacement(ctx *renderCtx, ability *game.ReplacementAb
 		replacement.DamageRecipientOpponent,
 		replacement.DamageNoncombatOnly,
 		controller,
+	), nil
+}
+
+// renderDamagePreventionReplacement renders a continuous static damage
+// prevention replacement (Sphere of Law, Urza's Armor, Protection of the Hekma)
+// into a game.DamagePreventionReplacement call carrying the fixed amount, the
+// source color and card-type filters, and the opponent-source restriction.
+func renderDamagePreventionReplacement(ctx *renderCtx, ability *game.ReplacementAbility) (string, error) {
+	replacement := ability.Replacement
+	if replacement.EntersTapped ||
+		len(replacement.EntersWithCounters) != 0 ||
+		ability.UnlessPaid.Exists ||
+		replacement.Condition.Exists ||
+		replacement.MatchEvent != game.EventDamageDealt ||
+		!replacement.DamageRecipientController ||
+		replacement.DamagePreventAmount <= 0 {
+		return "", errors.New("render: unsupported damage prevention replacement shape")
+	}
+	colors := "nil"
+	if len(replacement.DamageSourceColors) > 0 {
+		var err error
+		colors, err = renderColorSlice(ctx, replacement.DamageSourceColors)
+		if err != nil {
+			return "", err
+		}
+	}
+	cardTypes := "nil"
+	if len(replacement.DamageSourceTypes) > 0 {
+		var err error
+		cardTypes, err = renderTypesCardSlice(ctx, replacement.DamageSourceTypes)
+		if err != nil {
+			return "", err
+		}
+	}
+	return fmt.Sprintf("game.DamagePreventionReplacement(%q, &game.DamagePreventionSpec{Amount: %d, SourceColors: %s, SourceTypes: %s, SourceControllerOpponent: %t})",
+		ability.Text,
+		replacement.DamagePreventAmount,
+		colors,
+		cardTypes,
+		replacement.DamageSourceControllerOpponent,
 	), nil
 }
 

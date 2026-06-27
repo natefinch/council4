@@ -19,6 +19,7 @@ var Cards = []*game.CardDef{
 	UreniOfTheUnwritten,
 	UrsineFylgja,
 	UrzaPrinceOfKroog,
+	UrzaSArmor,
 	UtopiaMycon,
 	UrzaSChalice,
 	UtopiaMycon,

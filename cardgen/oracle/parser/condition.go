@@ -271,6 +271,17 @@ type ConditionSelection struct {
 	DamageNoncombatOnly       bool `json:",omitempty"`
 	DamageSourceAnyController bool `json:",omitempty"`
 
+	// DamageRecipientController qualifies a damage-source clause whose recipient
+	// is the source permanent's controller alone ("would deal damage to you",
+	// Sphere of Law, Urza's Armor). It backs the continuous static
+	// damage-prevention statics and is mutually exclusive with
+	// DamageRecipientOpponent. DamageSourceControllerOpponent marks a source the
+	// clause restricts to one controlled by an opponent ("a source an opponent
+	// controls", Protection of the Hekma); its zero value with
+	// DamageSourceAnyController matches a source under any player's control.
+	DamageRecipientController      bool `json:",omitempty"`
+	DamageSourceControllerOpponent bool `json:",omitempty"`
+
 	// AnyCounter requires the matched permanent to carry at least one counter of
 	// any kind ("if this permanent has counters on it"). It is the kind-agnostic
 	// companion to a named-counter requirement.
@@ -1947,6 +1958,8 @@ func recognizeDamageSourceCondition(body []shared.Token, atoms Atoms) (Condition
 		rest = trimmed
 	} else if trimmed, ok := cutTokenPrefix(rest, "a"); ok {
 		rest = trimmed
+	} else if trimmed, ok := cutTokenPrefix(rest, "an"); ok {
+		rest = trimmed
 	} else {
 		return ConditionClause{}, false
 	}
@@ -1960,13 +1973,24 @@ func recognizeDamageSourceCondition(body []shared.Token, atoms Atoms) (Condition
 	}
 	if trimmed, ok := cutTokenPrefix(rest, "source"); ok {
 		rest = trimmed
-	} else if trimmed, ok := cutTokenPrefix(rest, "creature"); ok {
-		selection.RequiredTypes = append(selection.RequiredTypes, TriggerCardTypeCreature)
-		rest = trimmed
+	} else if len(rest) > 0 {
+		cardType, ok := atoms.CardTypeAt(rest[0].Span)
+		if !ok {
+			return ConditionClause{}, false
+		}
+		mapped := triggerCardTypeFromAtom(cardType)
+		if mapped == TriggerCardTypeUnknown {
+			return ConditionClause{}, false
+		}
+		selection.RequiredTypes = append(selection.RequiredTypes, mapped)
+		rest = rest[1:]
 	} else {
 		return ConditionClause{}, false
 	}
 	if trimmed, ok := cutTokenPrefix(rest, "you", "control"); ok {
+		rest = trimmed
+	} else if trimmed, ok := cutTokenPrefix(rest, "an", "opponent", "controls"); ok {
+		selection.DamageSourceControllerOpponent = true
 		rest = trimmed
 	} else {
 		selection.DamageSourceAnyController = true
@@ -1990,6 +2014,8 @@ func recognizeDamageSourceCondition(body []shared.Token, atoms Atoms) (Condition
 	case tokenWordsEqual(rest, "an", "opponent", "or", "a", "permanent", "an", "opponent", "controls"),
 		tokenWordsEqual(rest, "an", "opponent", "or", "a", "permanent", "or", "planeswalker", "an", "opponent", "controls"):
 		selection.DamageRecipientOpponent = true
+	case tokenWordsEqual(rest, "you"):
+		selection.DamageRecipientController = true
 	default:
 		return ConditionClause{}, false
 	}

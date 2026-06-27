@@ -1700,6 +1700,13 @@ type EffectSyntax struct {
 	// (PreventDamageTo/By/Global), which prevent every combat damage event rather
 	// than a fixed amount.
 	PreventDamageNextRecipient PreventDamageRecipientKind `json:",omitempty"`
+	// PreventDamageThatAmount marks an EffectPreventDamage clause as the
+	// continuous static "prevent N of that damage" replacement that caps each
+	// matching damage event from a source described by a leading damage-source
+	// condition ("If a red source would deal damage to you, prevent 2 of that
+	// damage." — Sphere of Law). The prevented amount N is a fixed positive
+	// integer; the value is zero for every one-shot or combat prevention form.
+	PreventDamageThatAmount int `json:",omitempty"`
 	// SpellsCantBeCounteredNextOnly reports that an EffectSpellsCantBeCountered
 	// clause limits the buff to the single next spell the controller casts ("The
 	// next spell you cast this turn can't be countered.") rather than every spell

@@ -115,6 +115,14 @@ func applyDamageModifications(g *game.Game, event damageEvent) int {
 		default:
 			replacement := replacements[chosen-replacementsStart]
 			appliedReplacements[replacement.ID] = true
+			if replacement.DamagePreventAmount > 0 {
+				prevented := min(amount, replacement.DamagePreventAmount)
+				amount -= prevented
+				if prevented > 0 {
+					emitDamagePreventedEvent(g, event, prevented)
+				}
+				continue
+			}
 			if replacement.DamageMultiplier > 1 {
 				amount *= replacement.DamageMultiplier
 			}
@@ -1328,7 +1336,7 @@ func matchingDamageReplacementEffects(g *game.Game, event damageEvent, applied m
 	var matches []game.ReplacementEffect
 	for i := range g.ReplacementEffects {
 		replacement := &g.ReplacementEffects[i]
-		if replacement.DamageMultiplier <= 1 && replacement.DamageAddend == 0 {
+		if replacement.DamageMultiplier <= 1 && replacement.DamageAddend == 0 && replacement.DamagePreventAmount == 0 {
 			continue
 		}
 		if len(replacement.DamageSourceColors) > 0 && !damageSourceHasAnyColor(g, event, replacement.DamageSourceColors) {
@@ -1341,6 +1349,12 @@ func matchingDamageReplacementEffects(g *game.Game, event damageEvent, applied m
 			continue
 		}
 		if replacement.DamageRecipientOpponent && !damageRecipientIsOpponent(g, event, replacement) {
+			continue
+		}
+		if replacement.DamageRecipientController && !damageRecipientIsController(g, event, replacement) {
+			continue
+		}
+		if replacement.DamageSourceControllerOpponent && !damageSourceControlledByOpponent(g, event, replacement) {
 			continue
 		}
 		if replacement.DamageExcludeSource && damageSourceIsReplacementSource(event, replacement) {
@@ -1363,6 +1377,29 @@ func damageRecipientIsOpponent(g *game.Game, event damageEvent, replacement *gam
 		recipient = event.player
 	}
 	return recipient != controller
+}
+
+// damageRecipientIsController reports whether the damage event is dealt to the
+// replacement's controller as a player ("would deal damage to you"). Damage to a
+// permanent that controller owns or controls does not match the player-only
+// recipient.
+func damageRecipientIsController(g *game.Game, event damageEvent, replacement *game.ReplacementEffect) bool {
+	if event.permanent != nil {
+		return false
+	}
+	return event.player == replacementCurrentController(g, replacement)
+}
+
+// damageSourceControlledByOpponent reports whether the damage source is
+// controlled by an opponent of the replacement's controller ("a source an
+// opponent controls"). A source with no current controller does not match.
+func damageSourceControlledByOpponent(g *game.Game, event damageEvent, replacement *game.ReplacementEffect) bool {
+	controller := replacementCurrentController(g, replacement)
+	sourceController := event.controller
+	if int(sourceController) < 0 || int(sourceController) >= len(g.Players) {
+		return false
+	}
+	return sourceController != controller
 }
 
 func damageSourceHasAllTypes(g *game.Game, event damageEvent, requiredTypes []types.Card) bool {

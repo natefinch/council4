@@ -60,6 +60,7 @@ var Cards = []*game.CardDef{
 	Groundskeeper,
 	GrowthCycle,
 	GuardianProject,
+	GuardianSeraph,
 	GuruPathik,
 	GustOfWind,
 	GwaihirGreatestOfTheEagles,
