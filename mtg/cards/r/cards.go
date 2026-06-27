@@ -44,6 +44,7 @@ var Cards = []*game.CardDef{
 	RotWolf,
 	RotcrownGhoul,
 	RottingGiant,
+	RuinLurkerBat,
 	RunawayCarriage,
 	RunesOfTheDeus,
 	RuptureSpire,

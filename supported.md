@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,221 of 32,501 cards eligible for paper support (46.8%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,229 of 32,501 cards eligible for paper support (46.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1725,6 +1725,7 @@ Council4 currently supports **15,221 of 32,501 cards eligible for paper support 
 - Broodhatch Nantuko
 - Broodhunter Wurm
 - Broodmate Dragon
+- Broodrage Mycoid
 - Broodstar
 - Brotherhood Patriarch
 - Brotherhood Regalia
@@ -1869,6 +1870,7 @@ Council4 currently supports **15,221 of 32,501 cards eligible for paper support 
 - Candlestick
 - Candy Trail
 - Cankerbloom
+- Canonized in Blood
 - Canoptek Scarab Swarm
 - Canoptek Tomb Sentinel
 - Canopy Baloth
@@ -2166,6 +2168,7 @@ Council4 currently supports **15,221 of 32,501 cards eligible for paper support 
 - Chieftain en-Dal
 - Child of Gaea
 - Child of Night
+- Child of the Volcano
 - Child of Thorns
 - Children of Korlis
 - Chill
@@ -2560,6 +2563,7 @@ Council4 currently supports **15,221 of 32,501 cards eligible for paper support 
 - Corpse Hauler
 - Corpse Knight
 - Corpsejack Menace
+- Corpses of the Lost
 - Corridor Monitor
 - Corroding Dragonstorm
 - Corrosive Gale
@@ -3033,6 +3037,7 @@ Council4 currently supports **15,221 of 32,501 cards eligible for paper support 
 - Deduce
 - Deem Worthy
 - Deep Analysis
+- Deep Goblin Skulltaker
 - Deep Reconnaissance
 - Deep-Slumber Titan
 - Deepchannel Duelist
@@ -3979,6 +3984,7 @@ Council4 currently supports **15,221 of 32,501 cards eligible for paper support 
 - Ensouled Scimitar
 - Enter the Enigma
 - Enter the Unknown
+- Enterprising Scallywag
 - Enthralling Victor
 - Enthusiastic Mechanaut
 - Entish Restoration
@@ -10619,6 +10625,7 @@ Council4 currently supports **15,221 of 32,501 cards eligible for paper support 
 - Ruin Crab
 - Ruin Ghost
 - Ruin Rat
+- Ruin-Lurker Bat
 - Ruination
 - Ruination Rioter
 - Ruination Wurm
@@ -12361,6 +12368,7 @@ Council4 currently supports **15,221 of 32,501 cards eligible for paper support 
 - Staggering Insight
 - Staggering Size
 - Staggershock
+- Stalactite Stalker
 - Stalker Hag
 - Stalking Assassin
 - Stalking Bloodsucker

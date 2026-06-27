@@ -223,7 +223,61 @@ func parseEventHistoryTriggerEvent(tokens []shared.Token) *TriggerEventClause {
 			},
 		}
 	}
+	if clause := parseEventHistoryDescended(tokens, span); clause != nil {
+		return clause
+	}
 	return parseEventHistoryLeftBattlefield(tokens, span)
+}
+
+// eventHistoryPermanentCardTypes lists the card types whose presence makes a
+// card a permanent card (CR 110.4a). A descend event-history clause matches a
+// card carrying any one of them, expressed as a disjunctive RequiredTypesAny
+// union.
+func eventHistoryPermanentCardTypes() []TriggerCardType {
+	return []TriggerCardType{
+		TriggerCardTypeArtifact,
+		TriggerCardTypeBattle,
+		TriggerCardTypeCreature,
+		TriggerCardTypeEnchantment,
+		TriggerCardTypeLand,
+		TriggerCardTypePlaneswalker,
+	}
+}
+
+// parseEventHistoryDescended recognizes the descend event-history clause "you
+// descended", reduced from "you descended this turn" after the window suffix is
+// stripped (CR 701.51). A controller descended this turn if a permanent card was
+// put into their graveyard from anywhere during the turn, so the clause compiles
+// to a current-turn zone-change matching any nontoken permanent card moving into
+// a graveyard owned by the ability's controller (Event.Player carries the moved
+// card's owner). Anything other than the exact two-word controller phrase fails
+// closed.
+func parseEventHistoryDescended(tokens []shared.Token, span shared.Span) *TriggerEventClause {
+	if !tokenWordsEqual(tokens, "you", "descended") {
+		return nil
+	}
+	return &TriggerEventClause{
+		Kind:   TriggerEventKindZoneChange,
+		Span:   span,
+		Player: playerSelectorFromKind(TriggerPlayerSelectorYou, tokens[0].Span),
+		Subject: TriggerEventSubject{
+			Kind: TriggerEventSubjectSelection,
+			Span: shared.SpanOf(tokens[:1]),
+			Selection: TriggerSelection{
+				RequiredTypesAny: eventHistoryPermanentCardTypes(),
+				NonToken:         true,
+			},
+		},
+		ZoneChange: TriggerEventZoneChange{
+			Kind: TriggerEventZoneChangeMoved,
+			Span: tokens[1].Span,
+		},
+		Zone: TriggerEventZoneContext{
+			Span:        span,
+			MatchToZone: true,
+			ToZone:      triggerEventZone(TriggerEventZoneGraveyard, shared.Span{}),
+		},
+	}
 }
 
 // parseEventHistoryYouCastSpell recognizes a controller-scoped past-tense
