@@ -48,5 +48,6 @@ var Cards = []*game.CardDef{
 	HuntTheHunter,
 	HuntTheWeak,
 	HunterSTalent,
+	Hydroform,
 	Hypochondria,
 }

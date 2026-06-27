@@ -41,6 +41,7 @@ var Cards = []*game.CardDef{
 	CinderGlade,
 	CinderWall,
 	ClanCrafter,
+	ClanGuildmage,
 	ClergyEnVec,
 	CliveSHideaway,
 	ClockworkHydra,

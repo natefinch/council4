@@ -24,6 +24,7 @@ var Cards = []*game.CardDef{
 	VisionsOfVillainy,
 	VitasporeThallid,
 	VivienReid,
+	Vivify,
 	VodalianHexcatcher,
 	VodalianMage,
 	VoiceOfAll,

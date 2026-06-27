@@ -473,6 +473,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectPayRepeatedlyAnimate
 	case parser.EffectAnimateSelf:
 		return EffectAnimateSelf
+	case parser.EffectAnimateTarget:
+		return EffectAnimateTarget
 	case parser.EffectAmass:
 		return EffectAmass
 	case parser.EffectRenown:
