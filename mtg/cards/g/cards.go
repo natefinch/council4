@@ -31,6 +31,7 @@ var Cards = []*game.CardDef{
 	GimliCounterOfKills,
 	GimliSRecklessMight,
 	GlacialPlating,
+	GladeWatcher,
 	GlaringFleshraker,
 	GlimpseTheUnthinkable,
 	GlintHawk,

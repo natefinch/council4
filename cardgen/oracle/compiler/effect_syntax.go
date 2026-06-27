@@ -385,6 +385,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectAddMana
 	case parser.EffectAttach:
 		return EffectAttach
+	case parser.EffectCanAttackAsThoughDefender:
+		return EffectCanAttackAsThoughDefender
 	case parser.EffectCantBeBlocked:
 		return EffectCantBeBlocked
 	case parser.EffectCantBlock:

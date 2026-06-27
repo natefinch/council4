@@ -36,6 +36,7 @@ var Cards = []*game.CardDef{
 	PrimevalForce,
 	PrimordialHydra,
 	PrismariCharm,
+	PrismariPledgemage,
 	PrismaticUndercurrents,
 	PrizedStatue,
 	PropagatorDrone,

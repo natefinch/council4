@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,469 of 32,501 cards eligible for paper support (47.6%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,484 of 32,501 cards eligible for paper support (47.6%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2907,6 +2907,7 @@ Council4 currently supports **15,469 of 32,501 cards eligible for paper support 
 - Dark Favor
 - Dark Heart of the Wood
 - Dark Inquiry
+- Dark Maze
 - Dark Nourishment
 - Dark Offering
 - Dark Privilege
@@ -5283,6 +5284,7 @@ Council4 currently supports **15,469 of 32,501 cards eligible for paper support 
 - Glacial Wall
 - Glacier Godmaw
 - Glade Gnarr
+- Glade Watcher
 - Gladecover Scout
 - Gladiolus Amicitia
 - Glaive of the Guildpact
@@ -6145,6 +6147,7 @@ Council4 currently supports **15,469 of 32,501 cards eligible for paper support 
 - Highspire Artisan
 - Highspire Infusion
 - Highspire Mantis
+- Hightide Hermit
 - Highway Robber
 - Higure, the Still Wind
 - Hijack
@@ -7301,6 +7304,7 @@ Council4 currently supports **15,469 of 32,501 cards eligible for paper support 
 - Krosan Verge
 - Krosan Warchief
 - Krosan Wayfarer
+- Krotiq Nestguard
 - Krovikan Elementalist
 - Krovikan Fetish
 - Krovikan Scoundrel
@@ -8330,6 +8334,7 @@ Council4 currently supports **15,469 of 32,501 cards eligible for paper support 
 - Mirror Entity
 - Mirror Image
 - Mirror of Galadriel
+- Mirror Wall
 - Mirror-Sigil Sergeant
 - Mirrormade
 - Mirrormere Guardian
@@ -8389,6 +8394,7 @@ Council4 currently supports **15,469 of 32,501 cards eligible for paper support 
 - Moat Piranhas
 - Mob
 - Mob Justice
+- Mobile Fort
 - Mobilization
 - Mobilize
 - Mocking Sprite
@@ -8909,6 +8915,7 @@ Council4 currently supports **15,469 of 32,501 cards eligible for paper support 
 - Niv-Mizzet, Parun
 - Niv-Mizzet, the Firemind
 - Nivix Barrier
+- Nivix Cyclops
 - Nivix Guildmage
 - No Escape
 - No Mercy
@@ -9820,6 +9827,7 @@ Council4 currently supports **15,469 of 32,501 cards eligible for paper support 
 - Prismari Campus
 - Prismari Charm
 - Prismari Command
+- Prismari Pledgemage
 - Prismatic Lens
 - Prismatic Omen
 - Prismatic Undercurrents
@@ -10498,6 +10506,7 @@ Council4 currently supports **15,469 of 32,501 cards eligible for paper support 
 - Return to the Earth
 - Return to the Ranks
 - Returned Centaur
+- Returned Phalanx
 - Returned Reveler
 - Reveillark
 - Reveille Squad
@@ -11898,6 +11907,7 @@ Council4 currently supports **15,469 of 32,501 cards eligible for paper support 
 - Skyclave Cleric // Skyclave Basilica
 - Skyclave Geopede
 - Skyclave Relic
+- Skyclave Squid
 - Skycloud Expanse
 - Skycoach Conductor // All Aboard
 - Skycrash
@@ -12644,6 +12654,7 @@ Council4 currently supports **15,469 of 32,501 cards eligible for paper support 
 - Steel Wrecking Ball
 - Steelbane Hydra
 - Steelburr Champion
+- Steelclad Spirit
 - Steelclaw Lance
 - Steelfin Whale
 - Steelform Sliver
@@ -13335,6 +13346,7 @@ Council4 currently supports **15,469 of 32,501 cards eligible for paper support 
 - Territorial Hammerskull
 - Territorial Roc
 - Territorial Scythecat
+- Territorial Witchstalker
 - Territory Culler
 - Terror Ballista
 - Terror of Mount Velus
@@ -14721,6 +14733,7 @@ Council4 currently supports **15,469 of 32,501 cards eligible for paper support 
 - Walking Ballista
 - Walking Corpse
 - Walking Dead
+- Walking Wall
 - Wall
 - Wall
 - Wall
@@ -14753,6 +14766,7 @@ Council4 currently supports **15,469 of 32,501 cards eligible for paper support 
 - Wall of Mist
 - Wall of Mulch
 - Wall of Omens
+- Wall of One Thousand Cuts
 - Wall of Opposition
 - Wall of Pine Needles
 - Wall of Razors
@@ -14766,6 +14780,7 @@ Council4 currently supports **15,469 of 32,501 cards eligible for paper support 
 - Wall of Torches
 - Wall of Vines
 - Wall of Water
+- Wall of Wonder
 - Wall of Wood
 - Wall Off
 - Wallop

@@ -9,6 +9,7 @@ var Cards = []*game.CardDef{
 	DAvenantHealer,
 	DanceOfTheTumbleweeds,
 	DaringWaverider,
+	DarkMaze,
 	DaruHealer,
 	DauthiMindripper,
 	Dawnfluke,

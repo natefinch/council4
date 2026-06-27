@@ -619,6 +619,21 @@ func ruleEffectRequiresAttack(g *game.Game, attacker *game.Permanent) bool {
 	return false
 }
 
+// ruleEffectPermitsAttackDespiteDefender reports whether attacker carries a
+// "can attack ... as though it didn't have defender" permission
+// (RuleEffectCanAttackAsThoughDefender): a defender creature with this active
+// permission may be declared as an attacker (CR 508.1a).
+func ruleEffectPermitsAttackDespiteDefender(g *game.Game, attacker *game.Permanent) bool {
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind == game.RuleEffectCanAttackAsThoughDefender && ruleEffectMatchesPermanent(g, effect, attacker) {
+			return true
+		}
+	}
+	return false
+}
+
 // ruleEffectProhibitsAttackingAlone reports whether attacker carries a
 // "can't attack alone" restriction (RuleEffectCantAttackAlone): it may not be
 // declared as an attacker unless at least one other creature also attacks.

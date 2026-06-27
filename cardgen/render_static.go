@@ -863,6 +863,8 @@ func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
 		return "game.RuleEffectCantBeBlockedByMoreThanOne", nil
 	case game.RuleEffectMustAttack:
 		return "game.RuleEffectMustAttack", nil
+	case game.RuleEffectCanAttackAsThoughDefender:
+		return "game.RuleEffectCanAttackAsThoughDefender", nil
 	case game.RuleEffectMustBeBlocked:
 		return "game.RuleEffectMustBeBlocked", nil
 	case game.RuleEffectMustBeBlockedByAllAble:

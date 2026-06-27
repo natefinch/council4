@@ -27,6 +27,7 @@ var Cards = []*game.CardDef{
 	KolaghanWarmonger,
 	KoskunFalls,
 	KrosanDrover,
+	KrotiqNestguard,
 	KusariGama,
 	KyoshiIslandPlaza,
 }

@@ -33,6 +33,7 @@ var Cards = []*game.CardDef{
 	HiddenFootblade,
 	HiddenHorror,
 	HiddenStockpile,
+	HightideHermit,
 	HoldAtBay,
 	HoofprintsOfTheStag,
 	HopeAgainstHope,

@@ -435,6 +435,14 @@ const (
 	// creature as the only blocker is illegal; blocking alongside another blocker
 	// satisfies the restriction (CR 509.1a).
 	RuleEffectCantBlockAlone
+	// RuleEffectCanAttackAsThoughDefender permits the affected creature to attack
+	// even though it has defender ("This creature can attack this turn as though
+	// it didn't have defender.", Krotiq Nestguard, Skyclave Squid, Returned
+	// Phalanx). It is a combat permission scoped to the source creature
+	// (AffectedSource); while it applies, the defender keyword no longer prevents
+	// that creature from being declared as an attacker (CR 508.1a). It grants no
+	// other ability and never makes a non-defender creature unable to attack.
+	RuleEffectCanAttackAsThoughDefender
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -486,7 +494,8 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectSkipDrawStep,
 		RuleEffectCanBlockOnlyCreaturesWith,
 		RuleEffectCantAttackAlone,
-		RuleEffectCantBlockAlone:
+		RuleEffectCantBlockAlone,
+		RuleEffectCanAttackAsThoughDefender:
 		return true
 	default:
 		return false

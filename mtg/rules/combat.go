@@ -898,7 +898,10 @@ func canAttackWith(g *game.Game, permanent *game.Permanent, playerID game.Player
 	if effectiveController(g, permanent) != playerID || permanent.Tapped || permanent.PhasedOut {
 		return false
 	}
-	if !permanentHasType(g, permanent, types.Creature) || hasKeyword(g, permanent, game.Defender) {
+	if !permanentHasType(g, permanent, types.Creature) {
+		return false
+	}
+	if hasKeyword(g, permanent, game.Defender) && !ruleEffectPermitsAttackDespiteDefender(g, permanent) {
 		return false
 	}
 	if ruleEffectProhibitsAttack(g, permanent, nil) {

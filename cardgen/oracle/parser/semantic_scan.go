@@ -30,6 +30,13 @@ func (a *Ability) computeSemanticReferences() []Reference {
 			if effect.AttackDefender != AttackDefenderNone {
 				tokens = tokensOutsideParserSpan(tokens, effect.AttackDefenderSpan)
 			}
+			// "<source> can attack this turn as though it didn't have defender."
+			// owns the anaphoric "it" in its reminder tail; the runtime ignores
+			// it, so remove the tail before reference scanning to keep that
+			// pronoun from surfacing as a dangling semantic reference.
+			if effect.Kind == EffectCanAttackAsThoughDefender {
+				tokens = tokensOutsideParserSpan(tokens, effect.CanAttackDefenderSpan)
+			}
 		}
 	}
 	return a.Atoms.ReferencesWithin(tokens)
@@ -66,6 +73,13 @@ func (a *Ability) computeSemanticKeywords() []Keyword {
 			effect := &a.Sentences[i].Effects[j]
 			if effect.Replacement.Kind == EffectReplacementThatManyIdentity {
 				body = tokensOutsideParserSpan(body, effect.Span)
+			}
+			// The "as though it didn't have defender" reminder of the attack
+			// permission names "defender" only to describe the keyword the
+			// permission bypasses, not a keyword the ability grants; remove its
+			// span so that noun is not read as a granted keyword.
+			if effect.Kind == EffectCanAttackAsThoughDefender {
+				body = tokensOutsideParserSpan(body, effect.CanAttackDefenderSpan)
 			}
 		}
 	}

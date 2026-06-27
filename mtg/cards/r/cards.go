@@ -33,6 +33,7 @@ var Cards = []*game.CardDef{
 	RenegadeRallier,
 	RestorationAngel,
 	ReturnToTheRanks,
+	ReturnedPhalanx,
 	Reveillark,
 	ReveredElder,
 	RhinoSRampage,

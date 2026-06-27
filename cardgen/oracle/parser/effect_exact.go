@@ -18,6 +18,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return effect.Mana.ChosenColorDevotion || exactDynamicColorlessManaEffectSyntax(effect)
 	case EffectDealDamage:
 		return exactDamageEffectSyntax(effect) || exactSourcePowerDamageEffectSyntax(effect)
+	case EffectCanAttackAsThoughDefender:
+		return exactCanAttackAsThoughDefenderEffectSyntax(effect)
 	case EffectCantBeBlocked:
 		return exactCantBeBlockedEffectSyntax(effect)
 	case EffectCantBlock:
@@ -2005,6 +2007,30 @@ func exactGroupTemporaryKeywordEffectSyntax(effect *EffectSyntax, text, pluralVe
 		}
 	}
 	return false
+}
+
+// exactCanAttackAsThoughDefenderEffectSyntax recognizes the temporary combat
+// permission "<source> can attack this turn as though it didn't have defender."
+// that lets the source creature attack despite its defender keyword until end of
+// turn. Only the source subject is recognized ("This creature ..." or the card's
+// own name), an activated or triggered self grant (Krotiq Nestguard, Skyclave
+// Squid, Returned Phalanx). The clause is reconstructed byte-exactly from the
+// source subject text so every deviation fails closed: a different subject, a
+// different duration (the trailing "this turn" is fixed), or any added rider
+// leaves the clause non-exact.
+func exactCanAttackAsThoughDefenderEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Duration != EffectDurationThisTurn {
+		return false
+	}
+	if effect.Context != EffectContextSource && effect.Context != EffectContextPriorSubject {
+		return false
+	}
+	clause := exactEffectClauseText(effect)
+	if effect.Context == EffectContextPriorSubject {
+		return strings.EqualFold(clause, "can attack this turn as though it didn't have defender.")
+	}
+	subject, ok := exactSelfSubjectReferenceText(effect.SubjectReferences)
+	return ok && strings.EqualFold(clause, subject+" can attack this turn as though it didn't have defender.")
 }
 
 // exactCantBeBlockedEffectSyntax recognizes the temporary combat-evasion
