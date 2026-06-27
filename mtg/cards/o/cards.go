@@ -16,6 +16,7 @@ var Cards = []*game.CardDef{
 	OgreSiegebreaker,
 	OminousRoost,
 	OnduWarCleric,
+	OnyxTalisman,
 	OperaLoveSong,
 	Opportunist,
 	OrcGeneral,

@@ -12,6 +12,7 @@ var Cards = []*game.CardDef{
 	Caregiver,
 	CaribouRange,
 	CarrionBeetles,
+	CarrionThrash,
 	CartoucheOfAmbition,
 	CartoucheOfKnowledge,
 	CartoucheOfSolidarity,

@@ -6,6 +6,7 @@ import "github.com/natefinch/council4/mtg/game"
 
 // Cards lists all card definitions in this package.
 var Cards = []*game.CardDef{
+	HaazdaSnareSquad,
 	HalanaAndAlenaPartners,
 	HallowedHealer,
 	HaraldKingOfSkemfar,
@@ -27,6 +28,7 @@ var Cards = []*game.CardDef{
 	HellionCrucible,
 	Hellrider,
 	HelmOfAwakening,
+	HematiteTalisman,
 	HengeWalker,
 	HerdMigration,
 	HeronBlessedGeist,

@@ -15,6 +15,7 @@ var Cards = []*game.CardDef{
 	TattooWard,
 	TeferiSProtection,
 	TempestTechnique,
+	TenebTheHarvester,
 	TentativeConnection,
 	TerritorialWitchstalker,
 	TestOfFaith,
