@@ -19,6 +19,7 @@ var Cards = []*game.CardDef{
 	NezumiLinkbreaker,
 	NibelheimAflame,
 	NightMarketAeronaut,
+	NightwhorlHermit,
 	NimblewrightSchematic,
 	NobleVestige,
 	NoxiousGhoul,

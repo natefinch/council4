@@ -2019,8 +2019,14 @@ func recognizeStaticPowerToughnessKeywordLossDeclarations(ability CompiledAbilit
 // "Enchanted creature gets +2/+2 and can't block." The resolving content carries
 // only the power/toughness effect, so the rule operation derives from the typed
 // parser node; the affected group derives from the resolving effect, keeping the
-// mapping text-blind. Conditional compounds fail closed because static rule
-// effects are recognized only without a condition.
+// mapping text-blind. A single leading "as long as" condition is threaded onto
+// every declaration so the whole compound is guarded together ("Threshold — As
+// long as there are seven or more cards in your graveyard, this creature gets
+// +2/+2 and can't block.", Childhood Horror); the runtime evaluates the static
+// ability's condition before contributing its rule effect. Conditional compounds
+// are accepted only when the affected subject is the source, keeping conditional
+// rules within the single-subject runtime model; battlefield-group subjects with
+// a condition fail closed.
 func recognizeStaticPowerToughnessRuleDeclarations(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) ([]StaticDeclaration, bool) {
 	plain := staticSyntaxKindsAre(statics,
 		parser.StaticDeclarationContinuousPowerToughness,
@@ -2041,10 +2047,14 @@ func recognizeStaticPowerToughnessRuleDeclarations(ability CompiledAbility, stat
 		ability.Trigger != nil ||
 		len(ability.Content.Modes) != 0 ||
 		len(ability.Content.Targets) != 0 ||
-		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Conditions) > 1 ||
 		len(ability.Content.Effects) != 1 ||
 		ability.Content.Effects[0].Kind != EffectModifyPT ||
 		ability.Content.Effects[0].Duration != DurationNone {
+		return nil, false
+	}
+	condition, ok := staticDeclarationCondition(ability.Content.Conditions)
+	if !ok {
 		return nil, false
 	}
 	effect := &ability.Content.Effects[0]
@@ -2062,15 +2072,18 @@ func recognizeStaticPowerToughnessRuleDeclarations(ability CompiledAbility, stat
 	if !ok {
 		return nil, false
 	}
+	if condition != nil && group.Group.Domain != StaticGroupSource {
+		return nil, false
+	}
 	ruleGroup, ok := staticRuleGroupDomain(ruleNode.Rule.Subject.Kind)
 	if !ok || ruleGroup != group.Group.Domain {
 		return nil, false
 	}
-	declarations := []StaticDeclaration{staticPTDeclaration(ability.Span, group.Group, nil, effect)}
+	declarations := []StaticDeclaration{staticPTDeclaration(ability.Span, group.Group, condition, effect)}
 	if withKeywords {
-		declarations = append(declarations, staticKeywordGrantDeclaration(ability.Span, group.Group, nil, keywords))
+		declarations = append(declarations, staticKeywordGrantDeclaration(ability.Span, group.Group, condition, keywords))
 	}
-	declarations = append(declarations, staticRuleDeclaration(ability.Span, group.Group.Span, ruleNode.OperationSpan, rule, zone, group.Group.Domain, staticBlockerRestrictionForSyntax(ruleNode.Rule), nil))
+	declarations = append(declarations, staticRuleDeclaration(ability.Span, group.Group.Span, ruleNode.OperationSpan, rule, zone, group.Group.Domain, staticBlockerRestrictionForSyntax(ruleNode.Rule), condition))
 	return declarations, true
 }
 

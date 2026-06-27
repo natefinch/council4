@@ -23,6 +23,7 @@ var Cards = []*game.CardDef{
 	VoiceOfAll,
 	VoraciousHatchling,
 	VraskaSFinisher,
+	VortexRunner,
 	VrynWingmare,
 	VulshokWarBoar,
 }

@@ -26,6 +26,7 @@ var Cards = []*game.CardDef{
 	DisruptivePitmage,
 	DisruptiveStudent,
 	DiversionUnit,
+	DirtyWererat,
 	DivineVisitation,
 	DomriAnarchOfBolas,
 	DonatelloMutantMechanic,
