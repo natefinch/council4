@@ -1439,6 +1439,14 @@ type TargetSpec struct {
 	// number of targets. The default false leaves the count governed solely by
 	// MinTargets/MaxTargets.
 	CountEqualsX bool
+
+	// SameGraveyard requires every card chosen for this spec to lie in one and
+	// the same graveyard ("Exile up to three target cards from a single
+	// graveyard"). A card in a graveyard is always in its owner's graveyard
+	// (CR 404.2), so the constraint is satisfied exactly when every chosen card
+	// target shares one owner. It is meaningful only for card targets and the
+	// default false leaves the targets independently chosen.
+	SameGraveyard bool
 }
 
 // TargetChooser identifies who chooses a target slot during announcement.

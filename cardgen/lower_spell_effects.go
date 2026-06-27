@@ -438,12 +438,13 @@ func cardInZoneTargetSpec(target compiler.CompiledTarget, targetZone zone.Type) 
 		return game.TargetSpec{}, false
 	}
 	return game.TargetSpec{
-		MinTargets: target.Cardinality.Min,
-		MaxTargets: target.Cardinality.Max,
-		Constraint: lowerFirst(target.Text),
-		Allow:      game.TargetAllowCard,
-		TargetZone: targetZone,
-		Selection:  opt.Val(selection),
+		MinTargets:    target.Cardinality.Min,
+		MaxTargets:    target.Cardinality.Max,
+		Constraint:    lowerFirst(target.Text),
+		Allow:         game.TargetAllowCard,
+		TargetZone:    targetZone,
+		Selection:     opt.Val(selection),
+		SameGraveyard: target.Selector.SingleGraveyard,
 	}, true
 }
 

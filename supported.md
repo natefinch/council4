@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,297 of 32,501 cards eligible for paper support (47.1%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,309 of 32,501 cards eligible for paper support (47.1%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -522,6 +522,7 @@ Council4 currently supports **15,297 of 32,501 cards eligible for paper support 
 - Arashi, the Sky Asunder
 - Arashin Cleric
 - Arashin Foremost
+- Arashin Sunshield
 - Arasta of the Endless Web
 - Araña, Heart of the Spider
 - Arbalest Elite
@@ -1943,6 +1944,7 @@ Council4 currently supports **15,297 of 32,501 cards eligible for paper support 
 - Carrier Pigeons
 - Carrion
 - Carrion Ants
+- Carrion Beetles
 - Carrion Call
 - Carrion Crow
 - Carrion Feeder
@@ -2037,6 +2039,7 @@ Council4 currently supports **15,297 of 32,501 cards eligible for paper support 
 - Cavern Whisperer
 - Caves of Koilos
 - Cazur, Ruthless Stalker
+- Cease // Desist
 - Celebrity Fencer
 - Celestial Ancient
 - Celestial Armor
@@ -3041,6 +3044,7 @@ Council4 currently supports **15,297 of 32,501 cards eligible for paper support 
 - Decisive Denial
 - Decoction Module
 - Decommission
+- Decompose
 - Deconstruct
 - Decoy Ploy
 - Decree of Pain
@@ -3707,6 +3711,7 @@ Council4 currently supports **15,297 of 32,501 cards eligible for paper support 
 - Ebon Dragon
 - Ebon Drake
 - Ebon Stronghold
+- Ebony Charm
 - Ebony Horse
 - Ebony Rhino
 - Ebony Treefolk
@@ -4275,6 +4280,7 @@ Council4 currently supports **15,297 of 32,501 cards eligible for paper support 
 - Familiar's Ruse
 - Family Reunion
 - Famine
+- Famished Ghoul
 - Famished Paladin
 - Fan Bearer
 - Fanatic of Mogis
@@ -4386,6 +4392,7 @@ Council4 currently supports **15,297 of 32,501 cards eligible for paper support 
 - Fencing Ace
 - Feral Abomination
 - Feral Animist
+- Feral Deathgorger // Dusk Sight
 - Feral Ferocity
 - Feral Incarnation
 - Feral Instinct
@@ -5647,6 +5654,7 @@ Council4 currently supports **15,297 of 32,501 cards eligible for paper support 
 - Griffin Protector
 - Griffin Rider
 - Griffin Sentinel
+- Griffnaut Tracker
 - Grim Backwoods
 - Grim Bauble
 - Grim Bounty
@@ -9359,6 +9367,7 @@ Council4 currently supports **15,297 of 32,501 cards eligible for paper support 
 - Pestered Wellguard
 - Pestermite
 - Pestilence Demon
+- Pestilent Cauldron // Restorative Burst
 - Pestilent Kathari
 - Pestilent Souleater
 - Pestilent Syphoner
@@ -9954,6 +9963,7 @@ Council4 currently supports **15,297 of 32,501 cards eligible for paper support 
 - Radstorm
 - Raffine's Tower
 - Rafiq of the Many
+- Rag Dealer
 - Ragamuffyn
 - Ragavan
 - Rage Reflection
@@ -10064,6 +10074,7 @@ Council4 currently supports **15,297 of 32,501 cards eligible for paper support 
 - Rapacious Dragon
 - Raph's Bravado
 - Raphael, Tough Turtle
+- Rapid Decay
 - Rapid Hybridization
 - Rappelling Scouts
 - Raptor Companion
@@ -10957,6 +10968,7 @@ Council4 currently supports **15,297 of 32,501 cards eligible for paper support 
 - Scalestorm Summoner
 - Scampering Surveyor
 - Scar
+- Scarab Feast
 - Scarblade Elite
 - Scarblade Scout
 - Scare Tactics

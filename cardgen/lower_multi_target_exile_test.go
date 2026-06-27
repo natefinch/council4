@@ -119,7 +119,6 @@ func TestLowerMultiTargetExileFailClosed(t *testing.T) {
 		name       string
 		oracleText string
 	}{
-		{name: "graveyard zone", oracleText: "Exile up to two target cards from a single graveyard."},
 		{name: "subtype qualifier", oracleText: "Exile up to two target Goblin creatures."},
 		{name: "tapped qualifier", oracleText: "Exile two target tapped creatures."},
 		{name: "unbounded any number", oracleText: "Exile any number of target creatures."},
