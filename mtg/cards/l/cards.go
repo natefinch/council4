@@ -15,6 +15,8 @@ var Cards = []*game.CardDef{
 	LeadBellyChimera,
 	LeadTheStampede,
 	LegolasMasterArcher,
+	LeoninDenGuard,
+	LeoninLightbringer,
 	LifeBurst,
 	LifecraftCavalry,
 	Lifesmith,

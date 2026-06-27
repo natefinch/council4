@@ -9,6 +9,7 @@ var Cards = []*game.CardDef{
 	IcatianJavelineers,
 	Iceberg,
 	IcewindStalwart,
+	IchorSynthesizer,
 	IchorWellspring,
 	IconOfAncestry,
 	IgnitionTeam,

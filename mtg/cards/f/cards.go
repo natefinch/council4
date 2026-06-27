@@ -36,6 +36,7 @@ var Cards = []*game.CardDef{
 	FinalStingFaerie,
 	FireLitThicket,
 	FireWhip,
+	FirebladeCharger,
 	FiresOfYavimaya,
 	FistsOfTheDemigod,
 	FiveAlarmFire,
