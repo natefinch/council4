@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,067 of 32,501 cards eligible for paper support (46.4%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,080 of 32,501 cards eligible for paper support (46.4%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -937,6 +937,7 @@ Council4 currently supports **15,067 of 32,501 cards eligible for paper support 
 - Barbarian Ring
 - Barbary Apes
 - Barbed Battlegear
+- Barbed Bloodletter
 - Barbed Field
 - Barbtooth Wurm
 - Bargain
@@ -1247,6 +1248,7 @@ Council4 currently supports **15,067 of 32,501 cards eligible for paper support 
 - Blade-Tribe Berserkers
 - Bladebrand
 - Bladed Ambassador
+- Bladed Battle-Fan
 - Bladed Pinions
 - Bladed Sentinel
 - Bladestitched Skaab
@@ -2014,6 +2016,7 @@ Council4 currently supports **15,067 of 32,501 cards eligible for paper support 
 - Cazur, Ruthless Stalker
 - Celebrity Fencer
 - Celestial Ancient
+- Celestial Armor
 - Celestial Crusader
 - Celestial Enforcer
 - Celestial Force
@@ -2521,6 +2524,7 @@ Council4 currently supports **15,067 of 32,501 cards eligible for paper support 
 - Coral Eel
 - Coral Helm
 - Coral Merfolk
+- Coral Sword
 - Coral Trickster
 - Coralhelm Guide
 - Cordial Vampire
@@ -4886,6 +4890,7 @@ Council4 currently supports **15,067 of 32,501 cards eligible for paper support 
 - Gainsay
 - Galactic Wayfarer
 - Galactus
+- Galadhrim Bow
 - Galadhrim Guide
 - Gale Force
 - Gale Swooper
@@ -5948,6 +5953,7 @@ Council4 currently supports **15,067 of 32,501 cards eligible for paper support 
 - Hex
 - Hexplate Golem
 - Hibernation
+- Hidden Footblade
 - Hidden Grotto
 - Hidden Horror
 - Hidden Path
@@ -6307,6 +6313,7 @@ Council4 currently supports **15,067 of 32,501 cards eligible for paper support 
 - Illusory Wrappings
 - Illustrious Historian
 - Illvoi Galeblade
+- Illvoi Light Jammer
 - Illvoi Operative
 - Immersturm Predator
 - Immersturm Raider
@@ -9754,6 +9761,7 @@ Council4 currently supports **15,067 of 32,501 cards eligible for paper support 
 - Quest for the Goblin Lord
 - Queza, Augur of Agonies
 - Quick Study
+- Quick-Draw Dagger
 - Quick-Draw Katana
 - Quickbeam, Upstart Ent
 - Quicksand
@@ -11431,6 +11439,7 @@ Council4 currently supports **15,067 of 32,501 cards eligible for paper support 
 - Silver Myr
 - Silver Raven
 - Silver Seraph
+- Silver Shroud Costume
 - Silverback Ape
 - Silverback Shaman
 - Silverbeak Griffin
@@ -12215,6 +12224,7 @@ Council4 currently supports **15,067 of 32,501 cards eligible for paper support 
 - Squid
 - Squire
 - Squire's Devotion
+- Squire's Lightblade
 - Squirming Mass
 - Squirrel
 - Squirrel Nest
@@ -12369,6 +12379,7 @@ Council4 currently supports **15,067 of 32,501 cards eligible for paper support 
 - Stoic Grove-Guide
 - Stoke the Flames
 - Stolen Grain
+- Stolen Stark Tech
 - Stomp and Howl
 - Stomper Cub
 - Stomping Ground
@@ -12643,6 +12654,7 @@ Council4 currently supports **15,067 of 32,501 cards eligible for paper support 
 - Super Intelligence
 - Super Shredder
 - Super Strength
+- Super Suit
 - Super Villain Lockup
 - Super-Skrull
 - Supply Caravan
@@ -13654,6 +13666,7 @@ Council4 currently supports **15,067 of 32,501 cards eligible for paper support 
 - Twilight Drover
 - Twilight Mire
 - Twilight Panther
+- Twin Blades
 - Twin Bolt
 - Twin-Silk Spider
 - Twinblade Assassins
