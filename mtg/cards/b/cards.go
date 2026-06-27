@@ -25,6 +25,7 @@ var Cards = []*game.CardDef{
 	BelligerentHatchling,
 	BenevolentAncestor,
 	BenevolentBlessing,
+	BenevolentHydra,
 	Bereavement,
 	BirdsOfParadise,
 	BiteDown,

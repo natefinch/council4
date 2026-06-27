@@ -1021,6 +1021,12 @@ type CompiledCondition struct {
 	// empty for the unrestricted "a permanent you control" form.
 	CounterRecipientTypesAny []types.Card
 
+	// CounterRecipientExcludesSource drops the source permanent from a
+	// ConditionPredicateCounterPlacementOnControlledPermanent clause's recipient
+	// match ("another creature you control", Benevolent Hydra). It is false for
+	// recipient forms that include the source.
+	CounterRecipientExcludesSource bool
+
 	// GraveyardCountCardType carries the single card type counted by a
 	// ConditionPredicateControllerGraveyardCardOfTypeCountAtLeast clause ("if
 	// twenty or more creature cards are in your graveyard", Mortal Combat).

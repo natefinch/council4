@@ -691,6 +691,30 @@ func ControlledPermanentTypesCounterKindPlacementReplacement(text string, multip
 	return replacement
 }
 
+// ControlledPermanentSelectionCounterPlacementReplacement creates a persistent
+// replacement that modifies placement of any counter kind on a permanent the
+// controller controls that matches recipient, a characteristic filter carrying
+// the recipient's subtype-union ("an Army, Goblin, or Orc you control", Mauhúr,
+// Uruk-hai Captain) or source-exclusion ("another creature you control",
+// Benevolent Hydra) qualifiers (CR 614).
+func ControlledPermanentSelectionCounterPlacementReplacement(text string, multiplier, addend int, recipient Selection, filter TriggerControllerFilter) ReplacementAbility {
+	replacement := AnyCounterPlacementReplacement(text, multiplier, addend, filter)
+	replacement.Replacement.CounterUseRecipientController = true
+	replacement.Replacement.CounterRecipientSelection = &recipient
+	return replacement
+}
+
+// ControlledPermanentSelectionCounterKindPlacementReplacement creates a
+// persistent replacement that modifies placement of one specific counter kind on
+// a permanent the controller controls that matches recipient ("another creature
+// you control", Benevolent Hydra, CR 614).
+func ControlledPermanentSelectionCounterKindPlacementReplacement(text string, multiplier, addend int, kindFilter counter.Kind, recipient Selection, filter TriggerControllerFilter) ReplacementAbility {
+	replacement := ControlledPermanentSelectionCounterPlacementReplacement(text, multiplier, addend, recipient, filter)
+	replacement.Replacement.MatchCounterKind = true
+	replacement.Replacement.CounterKindFilter = kindFilter
+	return replacement
+}
+
 // DamageReplacement creates a persistent replacement that modifies damage from
 // matching sources before it is dealt.
 func DamageReplacement(text string, multiplier, addend int, sourceColors []color.Color, filter TriggerControllerFilter) ReplacementAbility {

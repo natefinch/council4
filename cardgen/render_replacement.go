@@ -415,6 +415,34 @@ func renderCounterPlacementReplacement(ctx *renderCtx, ability *game.Replacement
 			kind,
 		), nil
 	}
+	if sel := replacement.CounterRecipientSelection; sel != nil && sel.ExcludeSource {
+		selLit, err := (Renderer{}).renderSelection(ctx, *sel)
+		if err != nil {
+			return "", err
+		}
+		if replacement.MatchCounterKind {
+			kind, err := renderCounterKind(replacement.CounterKindFilter)
+			if err != nil {
+				return "", err
+			}
+			ctx.need(importCounter)
+			return fmt.Sprintf("game.ControlledPermanentSelectionCounterKindPlacementReplacement(%q, %d, %d, %s, %s, %s)",
+				ability.Text,
+				replacement.CounterMultiplier,
+				replacement.CounterAddend,
+				kind,
+				selLit,
+				controller,
+			), nil
+		}
+		return fmt.Sprintf("game.ControlledPermanentSelectionCounterPlacementReplacement(%q, %d, %d, %s, %s)",
+			ability.Text,
+			replacement.CounterMultiplier,
+			replacement.CounterAddend,
+			selLit,
+			controller,
+		), nil
+	}
 	if sel := replacement.CounterRecipientSelection; sel != nil && len(sel.RequiredTypesAny) > 0 {
 		ctx.need(importTypes)
 		typeLiterals := make([]string, 0, len(sel.RequiredTypesAny))

@@ -893,6 +893,110 @@ func TestLowerCounterPlacementReplacement(t *testing.T) {
 	}
 }
 
+// TestLowerCounterPlacementRecipientBroadening covers the each-kind
+// controlled-permanent generalization (Doc Samson, Super Psychiatrist) and the
+// source-excluding controlled-creature recipient (Benevolent Hydra).
+func TestLowerCounterPlacementRecipientBroadening(t *testing.T) {
+	t.Parallel()
+	t.Run("each-kind controlled permanent additive", func(t *testing.T) {
+		t.Parallel()
+		face := lowerSingleFace(t, &ScryfallCard{
+			Name:       "Doc Samson, Super Psychiatrist",
+			Layout:     "normal",
+			TypeLine:   "Legendary Creature — Hero",
+			OracleText: "If you would put one or more counters on a permanent you control, put that many plus one of each of those kinds of counters on that permanent instead.",
+		})
+		if len(face.ReplacementAbilities) != 1 {
+			t.Fatalf("got %d replacement abilities, want 1", len(face.ReplacementAbilities))
+		}
+		replacement := face.ReplacementAbilities[0].Replacement
+		if replacement.MatchEvent != game.EventCountersAdded ||
+			replacement.ControllerFilter != game.TriggerControllerYou ||
+			replacement.CounterAddend != 1 ||
+			replacement.MatchCounterKind ||
+			!replacement.CounterRecipientAnyPermanent ||
+			replacement.CounterRecipientSelection != nil {
+			t.Fatalf("replacement = %+v, want kind-agnostic controlled-permanent additive modifier", replacement)
+		}
+	})
+	t.Run("source-excluded controlled creature", func(t *testing.T) {
+		t.Parallel()
+		face := lowerSingleFace(t, &ScryfallCard{
+			Name:       "Benevolent Hydra",
+			Layout:     "normal",
+			TypeLine:   "Creature — Hydra",
+			OracleText: "If one or more +1/+1 counters would be put on another creature you control, that many plus one +1/+1 counters are put on it instead.",
+		})
+		if len(face.ReplacementAbilities) != 1 {
+			t.Fatalf("got %d replacement abilities, want 1", len(face.ReplacementAbilities))
+		}
+		replacement := face.ReplacementAbilities[0].Replacement
+		sel := replacement.CounterRecipientSelection
+		if sel == nil {
+			t.Fatal("CounterRecipientSelection = nil, want creature exclude-source selection")
+		}
+		if !sel.ExcludeSource ||
+			len(sel.RequiredTypesAny) != 1 ||
+			sel.RequiredTypesAny[0] != types.Creature {
+			t.Fatalf("recipient selection = %+v, want {RequiredTypesAny:[Creature] ExcludeSource:true}", sel)
+		}
+		if replacement.CounterAddend != 1 ||
+			!replacement.MatchCounterKind ||
+			replacement.CounterKindFilter != counter.PlusOnePlusOne ||
+			replacement.CounterRecipientAnyPermanent {
+			t.Fatalf("replacement = %+v, want +1/+1 additive exclude-source modifier", replacement)
+		}
+	})
+}
+
+func TestGenerateCounterPlacementRecipientBroadeningSource(t *testing.T) {
+	t.Parallel()
+	t.Run("each-kind controlled permanent additive", func(t *testing.T) {
+		t.Parallel()
+		source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+			Name:       "Doc Samson, Super Psychiatrist",
+			Layout:     "normal",
+			TypeLine:   "Legendary Creature — Hero",
+			OracleText: "If you would put one or more counters on a permanent you control, put that many plus one of each of those kinds of counters on that permanent instead.",
+		}, "d")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(diagnostics) != 0 {
+			t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+		}
+		want := `game.ControlledPermanentCounterPlacementReplacement("If you would put one or more counters on a permanent you control, put that many plus one of each of those kinds of counters on that permanent instead.", 0, 1, game.TriggerControllerYou)`
+		if !strings.Contains(source, want) {
+			t.Fatalf("source does not contain %q\nsource:\n%s", want, source)
+		}
+		if _, err := goparser.ParseFile(token.NewFileSet(), "generated.go", source, goparser.AllErrors); err != nil {
+			t.Fatalf("generated source does not parse: %v\n%s", err, source)
+		}
+	})
+	t.Run("source-excluded controlled creature", func(t *testing.T) {
+		t.Parallel()
+		source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+			Name:       "Benevolent Hydra",
+			Layout:     "normal",
+			TypeLine:   "Creature — Hydra",
+			OracleText: "If one or more +1/+1 counters would be put on another creature you control, that many plus one +1/+1 counters are put on it instead.",
+		}, "b")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(diagnostics) != 0 {
+			t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+		}
+		want := `game.ControlledPermanentSelectionCounterKindPlacementReplacement("If one or more +1/+1 counters would be put on another creature you control, that many plus one +1/+1 counters are put on it instead.", 0, 1, counter.PlusOnePlusOne, game.Selection{RequiredTypesAny: []types.Card{types.Creature}, ExcludeSource: true}, game.TriggerControllerYou)`
+		if !strings.Contains(source, want) {
+			t.Fatalf("source does not contain %q\nsource:\n%s", want, source)
+		}
+		if _, err := goparser.ParseFile(token.NewFileSet(), "generated.go", source, goparser.AllErrors); err != nil {
+			t.Fatalf("generated source does not parse: %v\n%s", err, source)
+		}
+	})
+}
+
 func TestGenerateTokenCreationReplacementSource(t *testing.T) {
 	t.Parallel()
 	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
