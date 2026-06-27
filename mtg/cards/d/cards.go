@@ -32,6 +32,7 @@ var Cards = []*game.CardDef{
 	DiamondCity,
 	DingusEgg,
 	DingusStaff,
+	DinosaurStampede,
 	DirectorNickFury,
 	DirtyWererat,
 	DisruptivePitmage,

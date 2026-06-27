@@ -30,6 +30,7 @@ var Cards = []*game.CardDef{
 	TheElderDragonWar,
 	TheGitrogMonster,
 	TheHauntOfHightower,
+	TheHowlingCommandos,
 	TheIrencrag,
 	TheReaperKingNoMore,
 	TheScorpionGod,

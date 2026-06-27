@@ -7,6 +7,7 @@ import "github.com/natefinch/council4/mtg/game"
 // Cards lists all card definitions in this package.
 var Cards = []*game.CardDef{
 	VadmirNewBlood,
+	ValiantKnight,
 	VampireHexmage,
 	VampiricDragon,
 	VampiricLink,
@@ -37,4 +38,5 @@ var Cards = []*game.CardDef{
 	VraskaSFinisher,
 	VrynWingmare,
 	VulshokWarBoar,
+	VultureSchemingScavenger,
 }

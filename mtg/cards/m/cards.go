@@ -47,6 +47,7 @@ var Cards = []*game.CardDef{
 	MesmericOrb,
 	MichelangeloGameMaster,
 	Micromancer,
+	MidnightMayhem,
 	MilitantMonk,
 	MilitiaBugler,
 	MilitiaRallier,

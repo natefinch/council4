@@ -14,6 +14,7 @@ var Cards = []*game.CardDef{
 	IconOfAncestry,
 	IgnitionTeam,
 	IgnobleHierarch,
+	IizukaTheRuthless,
 	IkraShidiqiTheUsurper,
 	IlluminateHistory,
 	IllvoiLightJammer,
