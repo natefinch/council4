@@ -2,6 +2,7 @@ package cardgen
 
 import (
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -110,6 +111,29 @@ func TestLowerTargetedGraveyardExileSingleGraveyard(t *testing.T) {
 	if !ok || move.Card.Kind != game.CardReferenceTarget ||
 		move.FromZone != zone.Graveyard || move.Destination != zone.Exile {
 		t.Fatalf("move = %#v", mode.Sequence[0].Primitive)
+	}
+}
+
+// TestGenerateSingleGraveyardExileSource proves the SameGraveyard restriction
+// survives rendering into the generated card source (not just the in-memory
+// lowering), so the executable card actually enforces one shared graveyard.
+func TestGenerateSingleGraveyardExileSource(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Decay",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		ManaCost:   "{B}",
+		OracleText: "Exile up to three target cards from a single graveyard.",
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(spaceCollapsed(source), spaceCollapsed("SameGraveyard: true,")) {
+		t.Fatalf("source missing SameGraveyard: true:\n%s", source)
 	}
 }
 

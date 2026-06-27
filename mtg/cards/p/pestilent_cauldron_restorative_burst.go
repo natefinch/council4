@@ -85,12 +85,13 @@ func newPestilentCauldron() *game.CardDef {
 					Content: game.Mode{
 						Targets: []game.TargetSpec{
 							game.TargetSpec{
-								MinTargets: 4,
-								MaxTargets: 4,
-								Constraint: "four target cards from a single graveyard",
-								Allow:      game.TargetAllowCard,
-								TargetZone: zone.Graveyard,
-								Selection:  opt.Val(game.Selection{}),
+								MinTargets:    4,
+								MaxTargets:    4,
+								Constraint:    "four target cards from a single graveyard",
+								Allow:         game.TargetAllowCard,
+								TargetZone:    zone.Graveyard,
+								Selection:     opt.Val(game.Selection{}),
+								SameGraveyard: true,
 							},
 						},
 						Sequence: []game.Instruction{

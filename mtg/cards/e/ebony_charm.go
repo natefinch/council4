@@ -64,12 +64,13 @@ func newEbonyCharm() *game.CardDef {
 						Text: "Exile up to three target cards from a single graveyard.",
 						Targets: []game.TargetSpec{
 							game.TargetSpec{
-								MinTargets: 0,
-								MaxTargets: 3,
-								Constraint: "up to three target cards from a single graveyard",
-								Allow:      game.TargetAllowCard,
-								TargetZone: zone.Graveyard,
-								Selection:  opt.Val(game.Selection{}),
+								MinTargets:    0,
+								MaxTargets:    3,
+								Constraint:    "up to three target cards from a single graveyard",
+								Allow:         game.TargetAllowCard,
+								TargetZone:    zone.Graveyard,
+								Selection:     opt.Val(game.Selection{}),
+								SameGraveyard: true,
 							},
 						},
 						Sequence: []game.Instruction{
