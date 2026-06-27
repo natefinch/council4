@@ -1614,6 +1614,16 @@ const (
 	// turn despite having defender. It lowers to a this-turn ApplyRule over the
 	// source. Added last so existing kinds keep their wire values.
 	EffectCanAttackAsThoughDefender
+	// EffectAnimateTarget is the targeted broadening of EffectAnimateSelf
+	// ("[Until end of turn,] target land becomes a N/N [<color>...] <subtype>...
+	// creature [with <keyword>...] [until end of turn] [that's still a land].",
+	// Animate Land, Vivify, Hydroform, Kamahl, Soilshaper, Lifespark Spellbomb):
+	// the single targeted land gains the creature card type, the named subtypes,
+	// the stated colors, the granted keywords, and the literal base
+	// power/toughness until end of turn while keeping its land type. It lowers to
+	// an ApplyContinuous over the target for the turn. Added last so existing
+	// kinds keep their wire values.
+	EffectAnimateTarget
 )
 
 // DurationKind identifies common continuous-effect durations.
@@ -1831,6 +1841,11 @@ type CompiledEffect struct {
 	// creature subtype(s) or every-creature-type rider, and the granted
 	// keyword(s). It is nil for every other effect.
 	AnimateSelf *parser.AnimateSelfSyntax
+	// AnimateTarget is the typed payload of an EffectAnimateTarget effect (Animate
+	// Land, Vivify, Hydroform): the targeted land's set base power/toughness, the
+	// stated colors, the added creature subtype(s), and the granted keyword(s). It
+	// reuses the AnimateSelfSyntax shape. It is nil for every other effect.
+	AnimateTarget *parser.AnimateSelfSyntax
 	// DelayedTriggerOneShot records that an EffectDelayedTrigger fires only on
 	// the first matching event ("the next time you cast ..."). It is meaningful
 	// only when Kind is EffectDelayedTrigger.

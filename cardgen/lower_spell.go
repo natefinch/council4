@@ -358,6 +358,8 @@ func lowerContent(
 			return lowerPayRepeatedlyAnimateContent(ctx)
 		case compiler.EffectAnimateSelf:
 			return lowerAnimateSelfContent(ctx)
+		case compiler.EffectAnimateTarget:
+			return lowerAnimateTargetContent(ctx)
 		case compiler.EffectCreateEmblem:
 			return lowerCreateEmblemContent(ctx)
 		default:

@@ -11,6 +11,7 @@ var Cards = []*game.CardDef{
 	IcewindStalwart,
 	IchorWellspring,
 	IconOfAncestry,
+	IgnitionTeam,
 	IgnobleHierarch,
 	IllvoiLightJammer,
 	ImpendingDoom,

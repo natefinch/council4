@@ -400,6 +400,22 @@ const (
 	// X/X or "base power and toughness N/N" amount, a target, a quoted granted
 	// ability, a permanent duration, or an unsupported keyword — fails closed.
 	EffectAnimateSelf EffectKind = "EffectAnimateSelf"
+	// EffectAnimateTarget models the one-shot continuous target-animation
+	// "[Until end of turn,] target land becomes a N/N [<color>...] <subtype>...
+	// creature [with <keyword>...] [until end of turn] [that's still a land]."
+	// (Animate Land, Vivify, Hydroform, Llanowar manlands' targeted cousins). It
+	// is the targeted broadening of EffectAnimateSelf: the targeted land gains
+	// the creature card type, the named subtypes, the stated colors, the granted
+	// keywords, and the literal base power/toughness until end of turn while
+	// keeping its land type (the type layer adds rather than sets). The "still a
+	// land" confirmation may be an inline relative clause ("...creature that's
+	// still a land.") or a following reminder sentence ("It's still a land.").
+	// The typed payload is carried by AnimateTarget. It lowers to an
+	// ApplyContinuous over the single targeted permanent for the turn. Any richer
+	// shape — an X/X amount, a non-land subject, a permanent ("lasts
+	// indefinitely") duration, a quoted granted ability, or an unsupported
+	// keyword — fails closed.
+	EffectAnimateTarget EffectKind = "EffectAnimateTarget"
 )
 
 // DigSourceKind identifies how an impulse "Put N <source> into your hand ..."
@@ -1765,6 +1781,13 @@ type EffectSyntax struct {
 	// creature subtype(s) or every-creature-type rider, and the granted
 	// keyword(s). It is nil for every other effect.
 	AnimateSelf *AnimateSelfSyntax `json:"-"`
+	// AnimateTarget is the typed payload of an EffectAnimateTarget effect (Animate
+	// Land, Vivify, Hydroform): the targeted land's set base power/toughness, the
+	// stated colors, the added creature subtype(s), and the granted keyword(s). It
+	// reuses the AnimateSelfSyntax shape because the animated characteristics are
+	// identical; only the affected object (a target rather than the source)
+	// differs. It is nil for every other effect.
+	AnimateTarget *AnimateSelfSyntax `json:"-"`
 	// DelayedTriggerOneShot records that an EffectDelayedTrigger fires only on
 	// the first matching event ("When you next cast a creature spell this turn,
 	// ...", "The next time you cast ..."), as opposed to repeating on every

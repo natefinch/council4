@@ -38,6 +38,7 @@ var Cards = []*game.CardDef{
 	AncientStirrings,
 	AngelicSellSword,
 	Anger,
+	AnimateLand,
 	AnkhOfMishra,
 	ApothecaryInitiate,
 	AppealToEirdu,
