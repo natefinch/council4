@@ -78,4 +78,5 @@ var Cards = []*game.CardDef{
 	RushOfBattle,
 	RuthlessPredation,
 	RuthlessSniper,
+	RuthlessWinnower,
 }

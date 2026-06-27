@@ -31,6 +31,7 @@ var Cards = []*game.CardDef{
 	WildHypothesis,
 	WildInstincts,
 	WildestDreams,
+	Wildfire,
 	WillOfTheTemur,
 	WindbriskHeights,
 	Windscouter,

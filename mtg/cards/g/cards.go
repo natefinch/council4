@@ -55,6 +55,7 @@ var Cards = []*game.CardDef{
 	Gravepurge,
 	GreatDefender,
 	GreaterTanuki,
+	GreedSGambit,
 	GreenWard,
 	GreenwheelLiberator,
 	GriffnautTracker,

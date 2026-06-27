@@ -371,14 +371,10 @@ func exactSelfSacrificeEffectSyntax(effect *EffectSyntax) bool {
 }
 
 func exactSacrificeChoiceEffectSyntax(effect *EffectSyntax) bool {
-	// The defending-player form (Annihilator) spells amounts up to four; the
-	// other subjects stay capped at the smaller historical range they were
-	// validated against.
-	maxAmount := 2
-	if effect.Context == EffectContextDefendingPlayer {
-		maxAmount = 10
-	}
-	if !effect.Amount.Known || effect.Amount.Value < 1 || effect.Amount.Value > maxAmount {
+	// Spelled cardinal amounts run from "one" through "ten"; the runtime
+	// SacrificePermanents primitive carries a fixed count, so every amount in
+	// that range reconstructs and lowers uniformly across subjects.
+	if !effect.Amount.Known || effect.Amount.Value < 1 || effect.Amount.Value > 10 {
 		return false
 	}
 	noun, ok := sacrificeChoiceNoun(&effect.Selection, effect.Amount.Value > 1)
@@ -457,7 +453,13 @@ func sacrificeTokenSuffixForm(selection *SelectionSyntax) bool {
 // "creature or planeswalker") to its printed noun, rejecting selectors carrying
 // qualifiers the sacrifice reconstruction does not model.
 func sacrificeChoiceBaseNoun(selection *SelectionSyntax, plural bool) (string, bool) {
+	if len(selection.ExcludedSubtypes) > 1 {
+		return "", false
+	}
 	if len(selection.RequiredTypesAny) > 1 {
+		if len(selection.ExcludedSubtypes) != 0 {
+			return "", false
+		}
 		words := make([]string, 0, len(selection.RequiredTypesAny))
 		for _, cardType := range selection.RequiredTypesAny {
 			word, ok := searchFilterCardTypeWord(cardType)
@@ -474,7 +476,7 @@ func sacrificeChoiceBaseNoun(selection *SelectionSyntax, plural bool) (string, b
 	// A token named by no type at all ("a token") or by a subtype ("a Blood
 	// token") renders the "token" word last. The bare form matches any token; the
 	// subtype form matches that token subtype through the SubtypesAny filter.
-	if sacrificeTokenSuffixForm(selection) {
+	if sacrificeTokenSuffixForm(selection) && len(selection.ExcludedSubtypes) == 0 {
 		noun := "token"
 		if len(selection.SubtypesAny) == 1 {
 			noun = string(selection.SubtypesAny[0]) + " token"
@@ -493,6 +495,7 @@ func sacrificeChoiceBaseNoun(selection *SelectionSyntax, plural bool) (string, b
 	if selection.Kind == SelectionUnknown &&
 		len(selection.RequiredTypesAny) == 0 &&
 		len(selection.ExcludedTypes) == 0 &&
+		len(selection.ExcludedSubtypes) == 0 &&
 		len(selection.SubtypesAny) == 1 {
 		noun := string(selection.SubtypesAny[0])
 		if plural {
@@ -525,6 +528,9 @@ func sacrificeChoiceBaseNoun(selection *SelectionSyntax, plural bool) (string, b
 	switch len(selection.ExcludedTypes) {
 	case 0:
 	case 1:
+		if len(selection.ExcludedSubtypes) != 0 {
+			return "", false
+		}
 		word, ok := searchFilterCardTypeWord(selection.ExcludedTypes[0])
 		if !ok {
 			return "", false
@@ -532,6 +538,14 @@ func sacrificeChoiceBaseNoun(selection *SelectionSyntax, plural bool) (string, b
 		noun = "non" + word + " " + noun
 	default:
 		return "", false
+	}
+	// A single excluded creature subtype renders as a hyphenated "non-<Subtype>"
+	// prefix ("non-Zombie creature", "non-Demon creature"). The runtime sacrifice
+	// selection matches it through the ExcludedSubtype filter. It never combines
+	// with an excluded card type (rejected above), and more than one excluded
+	// subtype has no canonical sacrifice wording (rejected at entry).
+	if len(selection.ExcludedSubtypes) == 1 {
+		noun = "non-" + string(selection.ExcludedSubtypes[0]) + " " + noun
 	}
 	return noun, true
 }
