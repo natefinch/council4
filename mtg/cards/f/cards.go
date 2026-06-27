@@ -28,6 +28,7 @@ var Cards = []*game.CardDef{
 	FiveAlarmFire,
 	FlameBlessedBolt,
 	FlamespeakerSWill,
+	FlickeringWard,
 	FlintGolem,
 	FloriferousVinewall,
 	FloweringField,

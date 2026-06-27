@@ -11,6 +11,7 @@ var Cards = []*game.CardDef{
 	ParadoxSurveyor,
 	PathOfAnnihilation,
 	PeerThroughDepths,
+	PentarchWard,
 	PhalanxTactics,
 	PhantomWhelp,
 	PhyrexianDriver,

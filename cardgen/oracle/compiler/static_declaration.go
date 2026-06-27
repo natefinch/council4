@@ -2971,7 +2971,14 @@ func recognizeStaticKeywordGrantDeclarations(ability CompiledAbility, statics []
 		return nil, false
 	}
 	if group.AffectedSource {
-		if condition == nil {
+		if condition == nil && !staticGrantKeywordsAllKnownProtection(ability.Content.Keywords) {
+			// An unconditional self keyword grant ("This creature has <keyword>")
+			// normally fails closed because a printed self keyword belongs on the
+			// face rather than in a static grant. Protection is the exception: a
+			// self protection grant carries a parameter the printed face cannot
+			// (most importantly "protection from the chosen color", resolved from
+			// the source's entry-time color choice), so it must travel as a static
+			// grant. Order of the Stars and Voice of All rely on this path.
 			return nil, false
 		}
 	} else if condition != nil && !condition.SourceInGraveyard {
@@ -2982,6 +2989,23 @@ func recognizeStaticKeywordGrantDeclarations(ability CompiledAbility, statics []
 		return nil, false
 	}
 	return []StaticDeclaration{staticKeywordGrantDeclaration(ability.Span, group.Group, condition, ability.Content.Keywords)}, true
+}
+
+// staticGrantKeywordsAllKnownProtection reports whether keywords is a non-empty
+// list whose every entry is a fully recognized protection keyword. It gates the
+// one exception that lets an unconditional self keyword grant lower: a self
+// protection grant whose parameter (a color set, a chosen color, etc.) the
+// printed face cannot express.
+func staticGrantKeywordsAllKnownProtection(keywords []CompiledKeyword) bool {
+	if len(keywords) == 0 {
+		return false
+	}
+	for i := range keywords {
+		if keywords[i].Kind != parser.KeywordProtection || !keywords[i].ProtectionKnown {
+			return false
+		}
+	}
+	return true
 }
 
 // staticKeywordGrantBindsAttachedPronoun reports whether a conditional keyword

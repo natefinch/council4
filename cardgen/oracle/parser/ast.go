@@ -1088,6 +1088,13 @@ type Sentence struct {
 	// Reference and coverage scans treat its tokens as belonging to the folded
 	// pile-split rather than as an unrecognized sibling.
 	PileSplitRider bool `json:",omitempty"`
+	// RemoveAuraRider reports that this sentence is the credited inert "This
+	// effect doesn't remove this Aura." clarification folded onto a preceding
+	// protection (or other continuous) keyword grant on an Aura. The clause only
+	// overrides paper Magic's state-based Aura falloff, which this engine never
+	// performs, so reference and coverage scans treat its tokens as belonging to
+	// the grant rather than as an unrecognized sibling.
+	RemoveAuraRider bool `json:",omitempty"`
 }
 
 // StaticRuleSubjectKind identifies the source object constrained by a simple

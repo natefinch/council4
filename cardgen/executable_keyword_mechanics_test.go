@@ -758,23 +758,81 @@ func TestGenerateExecutableCardSourceProtectionGrantWithSourcePTBuff(t *testing.
 	}
 }
 
-func TestGenerateExecutableCardSourceChosenColorProtectionFails(t *testing.T) {
+func TestGenerateExecutableCardSourceChosenColorProtection(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
 		Name:       "Test Shield",
 		Layout:     "normal",
 		TypeLine:   "Enchantment — Aura",
-		OracleText: "Enchant creature\nEnchanted creature has protection from the chosen color.",
+		OracleText: "Enchant creature\nAs this Aura enters, choose a color.\nEnchanted creature has protection from the chosen color.",
 	}
 	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if source != "" {
-		t.Fatalf("unexpected source for chosen-color protection:\n%s", source)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
-	if len(diagnostics) == 0 {
-		t.Fatal("expected unsupported diagnostic for chosen-color protection")
+	for _, wanted := range []string{
+		"new(game.ProtectionFromChosenColorStaticAbility())",
+		"game.EntryColorChoiceReplacement(",
+		"Group: game.AttachedObjectGroup(game.SourcePermanentReference())",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceChosenColorProtectionSelf(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Voice",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human Cleric",
+		OracleText: "As Test Voice enters, choose a color.\nTest Voice has protection from the chosen color.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"new(game.ProtectionFromChosenColorStaticAbility())",
+		"game.EntryColorChoiceReplacement(",
+		"AffectedSource: true",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceChosenColorProtectionGroup(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Ward",
+		Layout:     "normal",
+		TypeLine:   "Creature — Sliver",
+		OracleText: "As Test Ward enters, choose a color.\nAll Slivers have protection from the chosen color.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"new(game.ProtectionFromChosenColorStaticAbility())",
+		"game.EntryColorChoiceReplacement(",
+		"game.BattlefieldGroup(",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
 	}
 }
 

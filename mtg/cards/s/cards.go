@@ -58,6 +58,7 @@ var Cards = []*game.CardDef{
 	SpawnbedProtector,
 	SpawnbinderMage,
 	SpectacleMage,
+	SpectraWard,
 	SpellSatchel,
 	SpellSnuff,
 	SphinxMindbreaker,
