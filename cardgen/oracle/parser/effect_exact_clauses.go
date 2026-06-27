@@ -928,12 +928,13 @@ func graveyardCardNoun(sel SelectionSyntax, plural bool) (string, bool) {
 	hasTypes := len(sel.RequiredTypesAny) > 0
 	hasSubtype := len(sel.SubtypesAny) > 0
 	isPermanent := sel.Kind == SelectionPermanent
-	// A single subtype adjective may qualify a card-type noun ("Zombie creature
-	// card", "Hero creature cards", "Ally creature cards"); it precedes the type
-	// noun in canonical Oracle order and counts as one combined core with that
-	// type rather than as a second independent core. The permanent noun has no
-	// subtype-qualified Oracle phrasing, so a subtype never combines with it.
-	subtypeQualifiesType := hasTypes && hasSubtype && !isPermanent && len(sel.SubtypesAny) == 1
+	// One or more subtype adjectives may qualify a card-type noun ("Zombie
+	// creature card", "Angel or Human creature card", "Vampire or Wizard creature
+	// cards"); they precede the type noun in canonical Oracle order and count as
+	// one combined core with that type rather than as a second independent core.
+	// The permanent noun has no subtype-qualified Oracle phrasing, so a subtype
+	// never combines with it.
+	subtypeQualifiesType := hasTypes && hasSubtype && !isPermanent
 	cores := 0
 	for _, present := range []bool{hasTypes, hasSubtype, isPermanent} {
 		if present {
@@ -951,7 +952,7 @@ func graveyardCardNoun(sel SelectionSyntax, plural bool) (string, bool) {
 		if !ok {
 			return "", false
 		}
-		core = string(sel.SubtypesAny[0]) + " " + typeNoun
+		core = graveyardSubtypeAdjective(sel, plural) + " " + typeNoun
 	case hasTypes:
 		core, ok = graveyardCardTypeNoun(sel, plural)
 		if !ok {
@@ -960,10 +961,7 @@ func graveyardCardNoun(sel SelectionSyntax, plural bool) (string, bool) {
 	case isPermanent:
 		core = "permanent card"
 	case hasSubtype:
-		if len(sel.SubtypesAny) != 1 {
-			return "", false
-		}
-		core = string(sel.SubtypesAny[0]) + " card"
+		core = graveyardSubtypeAdjective(sel, plural) + " card"
 	default:
 		// The plain "card" noun requires the generic card kind, unless a color
 		// qualifier or the "historic" qualifier already restricts it ("green
@@ -1097,7 +1095,26 @@ func graveyardCardTypeNoun(sel SelectionSyntax, plural bool) (string, bool) {
 	return serialList(words, conjunction) + " card", true
 }
 
-// serialList renders a list of words with the canonical Oracle conjunction: two
+// graveyardSubtypeAdjective renders the one-or-more subtype adjectives a
+// graveyard-card noun may carry ("Zombie", "Aura or Equipment", "Bat, Lizard,
+// Rat, or Squirrel"). A single subtype renders its bare name; a disjunction of
+// two or more joins each name with the canonical Oracle conjunction (" or " for
+// a singular target, " and/or " for a plural multi-target count) and the
+// serial comma for three or more. The matched card carries any one of the named
+// subtypes, mirroring the runtime Selection.SubtypesAny union the lowering
+// builds, so the disjunction reads "or" rather than the conjunctive "and".
+func graveyardSubtypeAdjective(sel SelectionSyntax, plural bool) string {
+	words := make([]string, 0, len(sel.SubtypesAny))
+	for _, subtype := range sel.SubtypesAny {
+		words = append(words, string(subtype))
+	}
+	conjunction := "or"
+	if plural {
+		conjunction = "and/or"
+	}
+	return serialList(words, conjunction)
+}
+
 // words join as "A <conj> B", and three or more use the serial-comma form
 // "A, B, <conj> C". The conjunction is "or" for a singular target or "and/or"
 // for a plural multi-target count.

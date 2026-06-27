@@ -30,6 +30,7 @@ var Cards = []*game.CardDef{
 	IroasSBlessing,
 	IronHeartChimera,
 	IronStar,
+	IroncladSlayer,
 	ItThatHeraldsTheEnd,
 	IvoryCharm,
 	IvoryCup,

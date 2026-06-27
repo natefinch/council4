@@ -52,6 +52,7 @@ var Cards = []*game.CardDef{
 	Mountain,
 	MournerSSurprise,
 	MrOrfeoTheBoulder,
+	MudflatVillage,
 	MundaSVanguard,
 	MurderInvestigation,
 	Mycologist,
