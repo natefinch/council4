@@ -175,5 +175,6 @@ var Cards = []*game.CardDef{
 	Surgespanner,
 	SwiftKick,
 	SwiftManeuver,
+	SwordOfTruthAndJustice,
 	SylvanBasilisk,
 }

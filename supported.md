@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,650 of 32,501 cards eligible for paper support (48.2%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,654 of 32,501 cards eligible for paper support (48.2%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2671,6 +2671,7 @@ Council4 currently supports **15,650 of 32,501 cards eligible for paper support 
 - Countersquall
 - Countervailing Winds
 - Countless Gears Renegade
+- Courage in Crisis
 - Courageous Outrider
 - Courier Bat
 - Courier Griffin
@@ -5769,6 +5770,7 @@ Council4 currently supports **15,650 of 32,501 cards eligible for paper support 
 - Griffin Rider
 - Griffin Sentinel
 - Griffnaut Tracker
+- Grim Affliction
 - Grim Backwoods
 - Grim Bauble
 - Grim Bounty
@@ -13219,6 +13221,7 @@ Council4 currently supports **15,650 of 32,501 cards eligible for paper support 
 - Sword of Light and Shadow
 - Sword of the Animist
 - Sword of the Chosen
+- Sword of Truth and Justice
 - Sword of Vengeance
 - Swords to Plowshares
 - Swordwise Centaur
@@ -14527,6 +14530,7 @@ Council4 currently supports **15,650 of 32,501 cards eligible for paper support 
 - Vastlands Scavenger // Bind to Life
 - Vastwood Fortification // Vastwood Thicket
 - Vastwood Gorger
+- Vat Emergence
 - Vat of Rebirth
 - Vault 13: Dweller's Journey
 - Vault 75: Middle School

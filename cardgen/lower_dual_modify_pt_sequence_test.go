@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/counter"
 )
 
 // dualModifyPTSequence lowers an instant whose body is two power/toughness
@@ -85,19 +86,39 @@ func TestLowerDualModifyPTAnotherTarget(t *testing.T) {
 	}
 }
 
-// TestLowerProliferatePairStillFailsClosed pins that relaxing the dual
-// power/toughness reject did not open the unrelated "put a counter, then
-// proliferate" pair, which the generic lowerer still cannot sequence faithfully.
-func TestLowerProliferatePairStillFailsClosed(t *testing.T) {
+// TestLowerCounterThenProliferatePair covers the "put a counter on target
+// creature, then proliferate" sequence (Grim Affliction, Courage in Crisis):
+// the generic ordered-sequence lowerer now sequences it faithfully into an
+// AddCounter on the lone target followed by a standalone Proliferate.
+func TestLowerCounterThenProliferatePair(t *testing.T) {
 	t.Parallel()
-	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+	face := lowerSingleFace(t, &ScryfallCard{
 		Name:       "Test Counter Proliferate",
 		Layout:     "normal",
 		ManaCost:   "{1}{B}",
 		TypeLine:   "Instant",
 		OracleText: "Put a -1/-1 counter on target creature, then proliferate.",
 	})
-	if len(diagnostics) == 0 {
-		t.Fatal("expected the counter-then-proliferate pair to fail closed, got none")
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not lowered")
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 1 {
+		t.Fatalf("targets = %d, want 1 (the counter recipient only)", len(mode.Targets))
+	}
+	if len(mode.Sequence) != 2 {
+		t.Fatalf("sequence = %d, want 2", len(mode.Sequence))
+	}
+	add, addOK := mode.Sequence[0].Primitive.(game.AddCounter)
+	_, prolifOK := mode.Sequence[1].Primitive.(game.Proliferate)
+	if !addOK || !prolifOK {
+		t.Fatalf("primitives = %T, %T; want game.AddCounter, game.Proliferate",
+			mode.Sequence[0].Primitive, mode.Sequence[1].Primitive)
+	}
+	if add.Object != game.TargetPermanentReference(0) {
+		t.Fatalf("add.Object = %+v, want target 0", add.Object)
+	}
+	if add.CounterKind != counter.MinusOneMinusOne {
+		t.Fatalf("add.CounterKind = %v, want -1/-1", add.CounterKind)
 	}
 }

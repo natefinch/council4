@@ -14,6 +14,7 @@ var Cards = []*game.CardDef{
 	VaporSnare,
 	Vaporkin,
 	VastlandsScavenger,
+	VatEmergence,
 	Vebulid,
 	VeinwitchCoven,
 	VengefulRebel,
