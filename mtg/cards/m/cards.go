@@ -6,6 +6,7 @@ import "github.com/natefinch/council4/mtg/game"
 
 // Cards lists all card definitions in this package.
 var Cards = []*game.CardDef{
+	MaceOfTheValiant,
 	MachineOverMatter,
 	MaestrosTheater,
 	MageSAttendant,
@@ -49,6 +50,7 @@ var Cards = []*game.CardDef{
 	Mindcrank,
 	MindeyeDrake,
 	MindstabThrull,
+	MinnWilyIllusionist,
 	MinotaurExplorer,
 	MirrodinAvenged,
 	MistmeadowCouncil,

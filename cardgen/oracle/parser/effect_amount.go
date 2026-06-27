@@ -1922,11 +1922,18 @@ func thatTypeQualifierEnd(tokens []shared.Token, start int) (int, bool) {
 // parseDynamicSelectionCountSubject recognizes "for each <selection> ..." count
 // subjects led by a subtype, color, supertype, or color qualifier rather than a
 // bare card-type noun (for example "Shrine you control", "colorless creature you
-// control", "Elf card in your graveyard", or "card in your hand"). The leading
-// run of tokens must all be recognized selection atoms; anything else fails
-// closed so unsupported wordings stay rejected.
+// control", "Elf card in your graveyard", or "card in your hand"). An optional
+// leading "other" self-exclusion qualifier ("for each other Elf you control") is
+// skipped while scanning the selection atoms but kept in the span handed to
+// buildDynamicCountSelection so parseSelection records the Other flag. The
+// leading run of tokens must all be recognized selection atoms; anything else
+// fails closed so unsupported wordings stay rejected.
 func parseDynamicSelectionCountSubject(tokens []shared.Token, start int, atoms Atoms) (dynamicAmountSubject, bool) {
-	end, ok := scanDynamicCountSelectionTokens(tokens, start, atoms)
+	scanStart := start
+	if equalWord(tokens[start], "other") {
+		scanStart = start + 1
+	}
+	end, ok := scanDynamicCountSelectionTokens(tokens, scanStart, atoms)
 	if !ok {
 		return dynamicAmountSubject{}, false
 	}

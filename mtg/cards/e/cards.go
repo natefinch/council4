@@ -6,6 +6,7 @@ import "github.com/natefinch/council4/mtg/game"
 
 // Cards lists all card definitions in this package.
 var Cards = []*game.CardDef{
+	EarthshakerDreadmaw,
 	EbonyCharm,
 	EclipsedBoggart,
 	EclipsedElf,
@@ -37,6 +38,7 @@ var Cards = []*game.CardDef{
 	EssenceFlare,
 	EtherealChampion,
 	ExaltedAngel,
+	ExcaliburII,
 	ExemplarOfStrength,
 	ExperimentalSynthesizer,
 	EyeblightMassacre,
