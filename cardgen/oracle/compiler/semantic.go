@@ -786,6 +786,26 @@ const (
 	// Walker). It compares the largest single-color tally of the captured
 	// per-color mana spend against Threshold.
 	ConditionPredicateSameColorManaSpentToCastAtLeast
+	// ConditionPredicateControllerGraveyardPermanentCardCountAtLeast is satisfied
+	// when at least Threshold permanent cards are in the context controller's
+	// graveyard ("as long as there are four or more permanent cards in your
+	// graveyard"; the Descend ability word on Basking Capybara, Frilled
+	// Cave-Wurm, Didact Echo). It gates a continuous self-static against the
+	// count of permanent-type cards in the controller's graveyard.
+	ConditionPredicateControllerGraveyardPermanentCardCountAtLeast
+	// ConditionPredicateControllerGraveyardManaValueCountAtLeast is satisfied when
+	// there are at least Threshold distinct mana values among cards in the context
+	// controller's graveyard ("as long as there are five or more mana values among
+	// cards in your graveyard"; Syndicate Infiltrator, Aven Heartstabber). It
+	// gates a continuous self-static against the number of distinct mana values in
+	// the controller's graveyard.
+	ConditionPredicateControllerGraveyardManaValueCountAtLeast
+	// ConditionPredicateAnyOpponentGraveyardCardCountAtLeast is satisfied when at
+	// least one opponent has at least Threshold cards in their graveyard ("as long
+	// as an opponent has eight or more cards in their graveyard"; Nimana
+	// Skitter-Sneak, Jace's Phantasm, Thieves' Guild Enforcer). It gates a
+	// continuous self-static against the largest opponent graveyard size.
+	ConditionPredicateAnyOpponentGraveyardCardCountAtLeast
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard

@@ -67,6 +67,7 @@ var Cards = []*game.CardDef{
 	FreyaliseSCharm,
 	FreyaliseSRadiance,
 	Frightcrawler,
+	FrilledCaveWurm,
 	FrillscareMentor,
 	FrontierSeeker,
 	FrostBite,

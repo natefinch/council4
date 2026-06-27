@@ -61,6 +61,20 @@ const (
 
 	// AggregateSpellX is the resolving spell's chosen value of {X}.
 	AggregateSpellX
+
+	// AggregateControllerGraveyardPermanentCardCount is the number of permanent
+	// cards in the context controller's graveyard (descend).
+	AggregateControllerGraveyardPermanentCardCount
+
+	// AggregateControllerGraveyardManaValueCount is the number of distinct mana
+	// values among cards in the context controller's graveyard.
+	AggregateControllerGraveyardManaValueCount
+
+	// AggregateAnyOpponentGraveyardCardCount is the largest number of cards in a
+	// single opponent's graveyard among the context controller's opponents. A
+	// "an opponent has N or more cards in their graveyard" existential gate is
+	// satisfied exactly when this maximum is at least N.
+	AggregateAnyOpponentGraveyardCardCount
 )
 
 // AggregateComparison compares a player- or board-derived quantity against a

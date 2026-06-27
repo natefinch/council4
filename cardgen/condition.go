@@ -109,6 +109,12 @@ func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringC
 		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateControllerGraveyardCardCount, Op: compare.GreaterOrEqual, Value: condition.Threshold})
 	case compiler.ConditionPredicateControllerGraveyardCardTypeCountAtLeast:
 		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateControllerGraveyardCardTypeCount, Op: compare.GreaterOrEqual, Value: condition.Threshold})
+	case compiler.ConditionPredicateControllerGraveyardPermanentCardCountAtLeast:
+		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateControllerGraveyardPermanentCardCount, Op: compare.GreaterOrEqual, Value: condition.Threshold})
+	case compiler.ConditionPredicateControllerGraveyardManaValueCountAtLeast:
+		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateControllerGraveyardManaValueCount, Op: compare.GreaterOrEqual, Value: condition.Threshold})
+	case compiler.ConditionPredicateAnyOpponentGraveyardCardCountAtLeast:
+		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateAnyOpponentGraveyardCardCount, Op: compare.GreaterOrEqual, Value: condition.Threshold})
 	case compiler.ConditionPredicateControllerGraveyardCardOfTypeCountAtLeast:
 		if condition.GraveyardCountCardType == "" {
 			return game.Condition{}, false
@@ -300,6 +306,9 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 			compiler.ConditionPredicateControllerGraveyardCardCountAtLeast,
 			compiler.ConditionPredicateControllerGraveyardCardTypeCountAtLeast,
 			compiler.ConditionPredicateControllerGraveyardCardOfTypeCountAtLeast,
+			compiler.ConditionPredicateControllerGraveyardPermanentCardCountAtLeast,
+			compiler.ConditionPredicateControllerGraveyardManaValueCountAtLeast,
+			compiler.ConditionPredicateAnyOpponentGraveyardCardCountAtLeast,
 			compiler.ConditionPredicateControllerCreaturePowerDiversityAtLeast,
 			compiler.ConditionPredicateAnyOpponentPoisonAtLeast,
 			compiler.ConditionPredicateControllerLibrarySizeAtLeast,

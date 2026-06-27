@@ -440,6 +440,21 @@ func emitAtoms(abilities []Ability, cardName string, legendary bool) {
 	}
 }
 
+// normalizeAbilityWordLabel canonicalizes parameterized ability-word labels to
+// their base word so the downstream typed stages recognize them by a stable
+// label. The Descend ability word prints with its numeric parameter ("Descend
+// 4 —", "Descend 8 —"; CR 701.51), which is reminder flavor: the actual
+// threshold is carried by the gating "<n> or more permanent cards in your
+// graveyard" condition, so the count is dropped here.
+func normalizeAbilityWordLabel(label string) string {
+	if rest, ok := strings.CutPrefix(label, "Descend "); ok {
+		if _, err := strconv.Atoi(strings.TrimSpace(rest)); err == nil {
+			return "Descend"
+		}
+	}
+	return label
+}
+
 func parseAbility(
 	source string,
 	tokens []shared.Token,
@@ -466,7 +481,7 @@ func parseAbility(
 		} else {
 			phrase := phraseFromTokens(source, tokens[:dash])
 			ability.AbilityWord = &AbilityWordClause{
-				Label:         phrase.Text,
+				Label:         normalizeAbilityWordLabel(phrase.Text),
 				Span:          phrase.Span,
 				SeparatorSpan: tokens[dash].Span,
 			}

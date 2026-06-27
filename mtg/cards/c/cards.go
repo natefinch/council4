@@ -64,6 +64,7 @@ var Cards = []*game.CardDef{
 	CloudSpirit,
 	CloudSprite,
 	CloutOfTheDominus,
+	CoatiScavenger,
 	CollectorSCase,
 	ColossusOfTheBloodAge,
 	CombatMedic,

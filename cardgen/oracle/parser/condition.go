@@ -104,6 +104,9 @@ const (
 	ConditionPredicateControllerTurn                                   ConditionPredicateKind = "ConditionPredicateControllerTurn"
 	ConditionPredicateColoredManaSpentToCastAtLeast                    ConditionPredicateKind = "ConditionPredicateColoredManaSpentToCastAtLeast"
 	ConditionPredicateSameColorManaSpentToCastAtLeast                  ConditionPredicateKind = "ConditionPredicateSameColorManaSpentToCastAtLeast"
+	ConditionPredicateGraveyardPermanentCardCountAtLeast               ConditionPredicateKind = "ConditionPredicateGraveyardPermanentCardCountAtLeast"
+	ConditionPredicateGraveyardManaValueCountAtLeast                   ConditionPredicateKind = "ConditionPredicateGraveyardManaValueCountAtLeast"
+	ConditionPredicateAnyOpponentGraveyardCardCountAtLeast             ConditionPredicateKind = "ConditionPredicateAnyOpponentGraveyardCardCountAtLeast"
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard
@@ -1751,6 +1754,14 @@ func recognizeControllerDesignationCondition(body []shared.Token, _ Atoms) (Cond
 }
 
 func recognizeGraveyardCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
+	if rest, ok := cutTokenPrefix(body, "an", "opponent", "has"); ok {
+		if count, tail, ok := parseLeadingCount(rest); ok &&
+			count.Comparison == ConditionComparisonAtLeast &&
+			tokenWordsEqual(tail, "cards", "in", "their", "graveyard") {
+			return ConditionClause{Predicate: ConditionPredicateAnyOpponentGraveyardCardCountAtLeast, Threshold: count.Value}, true
+		}
+		return ConditionClause{}, false
+	}
 	rest := body
 	if trimmed, ok := cutTokenPrefix(body, "there", "are"); ok {
 		rest = trimmed
@@ -1763,6 +1774,11 @@ func recognizeGraveyardCondition(body []shared.Token, atoms Atoms) (ConditionCla
 	case tokenWordsEqual(tail, "cards", "in", "your", "graveyard"),
 		tokenWordsEqual(tail, "cards", "are", "in", "your", "graveyard"):
 		return ConditionClause{Predicate: ConditionPredicateGraveyardCardCountAtLeast, Threshold: count.Value}, true
+	case tokenWordsEqual(tail, "permanent", "cards", "in", "your", "graveyard"),
+		tokenWordsEqual(tail, "permanent", "cards", "are", "in", "your", "graveyard"):
+		return ConditionClause{Predicate: ConditionPredicateGraveyardPermanentCardCountAtLeast, Threshold: count.Value}, true
+	case tokenWordsEqual(tail, "mana", "values", "among", "cards", "in", "your", "graveyard"):
+		return ConditionClause{Predicate: ConditionPredicateGraveyardManaValueCountAtLeast, Threshold: count.Value}, true
 	case tokenWordsEqual(tail, "card", "types", "among", "cards", "in", "your", "graveyard"):
 		return ConditionClause{Predicate: ConditionPredicateGraveyardCardTypeCountAtLeast, Threshold: count.Value}, true
 	}

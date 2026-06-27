@@ -7,11 +7,13 @@ import "github.com/natefinch/council4/mtg/game"
 // Cards lists all card definitions in this package.
 var Cards = []*game.CardDef{
 	JaceBeleren,
+	JaceSPhantasm,
 	JaceSSentinel,
 	JackalFamiliar,
 	JadeLeech,
 	JhessianBalmgiver,
 	JirinaDauntlessGeneral,
+	JoinTheDead,
 	JoragaWarcaller,
 	JudgeSFamiliar,
 	JunkGolem,

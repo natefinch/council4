@@ -34,6 +34,7 @@ var Cards = []*game.CardDef{
 	RedWard,
 	ReduceToAshes,
 	ReinforcedBulwark,
+	RelicGolem,
 	RendFlesh,
 	RenegadeRallier,
 	RenownedWeaponsmith,
