@@ -42,6 +42,7 @@ var Cards = []*game.CardDef{
 	CloudSpirit,
 	CloudSprite,
 	CloutOfTheDominus,
+	CollectorSCase,
 	CombatMedic,
 	CombatResearch,
 	CommandBridge,

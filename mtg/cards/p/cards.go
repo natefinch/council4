@@ -14,6 +14,7 @@ var Cards = []*game.CardDef{
 	PeerThroughDepths,
 	PentarchWard,
 	PerfectIntimidation,
+	PetrifyingMeddler,
 	PhalanxTactics,
 	PhantomWhelp,
 	PhyrexianDriver,

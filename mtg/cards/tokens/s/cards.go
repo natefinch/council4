@@ -70,6 +70,7 @@ var Cards = []*game.CardDef{
 	SpiderTokenbd38639969f0465396a1fd05b8fd148c,
 	SpiderTokenc16b3a1e0e6041f2899ed22bcf1144ae,
 	SpiderTokenece36273935a49648efb040da758d6d9,
+	SplashLasherToken1ba443873576428a8211ee083a064ad2,
 	SpiritToken18ef473df9584bff8045154f6adc6b04,
 	SpiritToken19b91a3fd8864df0906927cc3e1e9bf5,
 	SpiritToken35a0a62aa5994c03abb5c37a70ead77e,
