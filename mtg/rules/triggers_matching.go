@@ -192,6 +192,9 @@ func triggerMatchesEventForController(g *game.Game, source *game.Permanent, sour
 	if pattern.SpellTargetsSource && !spellTargetsSource(g, source, event) {
 		return false
 	}
+	if pattern.DyingDamagedBySource && !dyingPermanentDamagedBySource(g, source, event) {
+		return false
+	}
 	if pattern.SpellTargetPattern.Exists && !spellTargetsPattern(g, sourceController, pattern.SpellTargetAllow, pattern.SpellTargetPattern.Val, event) {
 		return false
 	}
@@ -689,6 +692,28 @@ func spellTargetsPattern(g *game.Game, controller game.PlayerID, allow game.Targ
 	}
 	for _, target := range obj.Targets {
 		if targetMatchesSpec(g, controller, 0, &spec, target) {
+			return true
+		}
+	}
+	return false
+}
+
+// dyingPermanentDamagedBySource reports whether the permanent that died in the
+// event was dealt damage by the ability's own source earlier this turn
+// (CR 603.2). It scans the current turn's damage events for one whose damage
+// source is this ability's source permanent and whose damaged permanent is the
+// dying permanent, identified by the stable battlefield object ID both events
+// share.
+func dyingPermanentDamagedBySource(g *game.Game, source *game.Permanent, event game.Event) bool {
+	if source == nil || source.ObjectID == 0 || event.PermanentID == 0 {
+		return false
+	}
+	for _, prior := range g.EventsThisTurn() {
+		if prior.Kind != game.EventDamageDealt ||
+			prior.DamageRecipient != game.DamageRecipientPermanent {
+			continue
+		}
+		if prior.SourceObjectID == source.ObjectID && prior.PermanentID == event.PermanentID {
 			return true
 		}
 	}

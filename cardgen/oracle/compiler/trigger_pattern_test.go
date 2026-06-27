@@ -872,6 +872,30 @@ func TestPermanentZoneChangeTriggerPatternsBindExtendedSlots(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:     "creature dealt damage by self this turn dies",
+			cardName: "Blood Cultist",
+			event:    "a creature dealt damage by this creature this turn dies",
+			want: TriggerPattern{
+				Event:                TriggerEventPermanentDied,
+				DyingDamagedBySource: true,
+				SubjectSelection: TriggerSelection{
+					RequiredTypes: []types.Card{types.Creature},
+				},
+			},
+		},
+		{
+			name:     "named-self dealt damage variant binds the same restriction",
+			cardName: "Blood Cultist",
+			event:    "a creature dealt damage by Blood Cultist this turn dies",
+			want: TriggerPattern{
+				Event:                TriggerEventPermanentDied,
+				DyingDamagedBySource: true,
+				SubjectSelection: TriggerSelection{
+					RequiredTypes: []types.Card{types.Creature},
+				},
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

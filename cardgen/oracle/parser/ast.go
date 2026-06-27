@@ -832,6 +832,15 @@ type TriggerEventClause struct {
 	// spell the controller casts. It is set only on TriggerEventKindSpellCast
 	// clauses introduced by "When".
 	SelfCast bool `json:",omitempty"`
+
+	// DealtDamageBySourceThisTurn marks a dies clause whose subject is restricted
+	// to a permanent that was dealt damage by the ability's own source earlier in
+	// the current turn ("Whenever a creature dealt damage by this creature this
+	// turn dies", CR 603.2). The relative clause names the ability source via
+	// "this creature" or the card's own name; the dying subject itself remains
+	// any matching creature. It is set only on TriggerEventKindZoneChange clauses
+	// whose ZoneChange.Kind is TriggerEventZoneChangeDied.
+	DealtDamageBySourceThisTurn bool `json:",omitempty"`
 }
 
 // EventHistoryWindowKind identifies the turn window for an event-history

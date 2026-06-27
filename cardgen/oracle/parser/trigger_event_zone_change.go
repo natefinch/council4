@@ -38,6 +38,15 @@ func parseZoneChangeTriggerEventClause(
 			clause.SelfOrAnother = true
 			clause.ExcludeSelf = false
 		}
+		if subject.dealtDamageBySrc {
+			// The damaged-by-source relative clause is only meaningful for the
+			// dies zone change; reject it on any other zone change so the
+			// wording never silently loses its restriction.
+			if parsed.change.kind.Kind != TriggerEventZoneChangeDied {
+				return nil
+			}
+			clause.DealtDamageBySourceThisTurn = true
+		}
 		if !mergeTriggerController(&clause.Controller, parsed.change.controller) {
 			return nil
 		}
@@ -530,6 +539,10 @@ func parseZoneChangeSubject(
 		remaining = remaining[1:]
 		result.faceDown = true
 	}
+	if rest, ok := stripDealtDamageBySourceThisTurn(remaining, atoms); ok {
+		remaining = rest
+		result.dealtDamageBySrc = true
+	}
 	if len(remaining) == 0 {
 		return zoneSubjectResult{}
 	}
@@ -568,6 +581,30 @@ func parseZoneChangeSubject(
 	}
 	result.ok = true
 	return result
+}
+
+// stripDealtDamageBySourceThisTurn removes a trailing "dealt damage by <source>
+// this turn" relative clause from a dies-subject's tokens, returning the
+// remaining base-noun tokens and whether the clause was present. The relative
+// clause names the ability's own source through "this creature" or the card's
+// own name (parseSelfSubject), modeling "a creature dealt damage by this
+// creature this turn dies" (CR 603.2). It does not strip the clause when the
+// named source is anything other than the ability source, so equipped- or
+// enchanted-creature variants fail closed for now.
+func stripDealtDamageBySourceThisTurn(tokens []shared.Token, atoms Atoms) ([]shared.Token, bool) {
+	if !endsWithSyntaxWords(tokens, "this", "turn") {
+		return tokens, false
+	}
+	body := tokens[:len(tokens)-2]
+	idx := syntaxWordsIndex(body, "dealt", "damage", "by")
+	if idx <= 0 {
+		return tokens, false
+	}
+	sourceTokens := body[idx+3:]
+	if _, count, ok := parseSelfSubject(sourceTokens, atoms); !ok || count != len(sourceTokens) {
+		return tokens, false
+	}
+	return body[:idx], true
 }
 
 type zoneSubjectRelations struct {

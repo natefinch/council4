@@ -46,4 +46,5 @@ var Cards = []*game.CardDef{
 	ArtisanOfKozilek,
 	AvenRedeemer,
 	AvatarOfDiscord,
+	AxelrodGunnarson,
 }

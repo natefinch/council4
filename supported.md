@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,080 of 32,501 cards eligible for paper support (46.4%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,093 of 32,501 cards eligible for paper support (46.4%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -842,6 +842,7 @@ Council4 currently supports **15,080 of 32,501 cards eligible for paper support 
 - Axebane Beast
 - Axebane Stag
 - Axegrinder Giant
+- Axelrod Gunnarson
 - Axgard Braggart
 - Axgard Cavalry
 - Axiom Engraver
@@ -949,6 +950,7 @@ Council4 currently supports **15,080 of 32,501 cards eligible for paper support 
 - Barktooth Warbeard
 - Barl's Cage
 - Baron Bertram Graywater
+- Baron Sengir
 - Baron, Airship Kingdom
 - Barony Vampire
 - Barrage of Expendables
@@ -1341,6 +1343,7 @@ Council4 currently supports **15,080 of 32,501 cards eligible for paper support 
 - Blood Burglar
 - Blood Celebrant
 - Blood Crypt
+- Blood Cultist
 - Blood Curdle
 - Blood Divination
 - Blood Feud
@@ -4937,6 +4940,7 @@ Council4 currently supports **15,080 of 32,501 cards eligible for paper support 
 - Garruk, Cursed Huntsman
 - Garruk, Primal Hunter
 - Garrulous Sycophant
+- Garza Zol, Plague Queen
 - Gate Colossus
 - Gatebreaker Ram
 - Gatecreeper Vine
@@ -7771,6 +7775,7 @@ Council4 currently supports **15,080 of 32,501 cards eligible for paper support 
 - Markov Blademaster
 - Markov Crusader
 - Markov Dreadknight
+- Markov Enforcer
 - Markov Patrician
 - Markov Purifier
 - Markov Waltzer
@@ -9504,6 +9509,7 @@ Council4 currently supports **15,080 of 32,501 cards eligible for paper support 
 - Precognition Field
 - Predation Steward
 - Predator Dragon
+- Predator Ooze
 - Predator's Strike
 - Predator, Flagship
 - Predatory Hunger
@@ -10480,6 +10486,7 @@ Council4 currently supports **15,080 of 32,501 cards eligible for paper support 
 - Rot Farm Mortipede
 - Rot Farm Skeleton
 - Rot Shambler
+- Rot Wolf
 - Rotcrown Ghoul
 - Rotlung Reanimator
 - Rotted Hulk
@@ -11069,7 +11076,9 @@ Council4 currently supports **15,080 of 32,501 cards eligible for paper support 
 - Senate Courier
 - Senate Griffin
 - Senate Guildmage
+- Sengir Bats
 - Sengir Connoisseur
+- Sengir Vampire
 - Sensei's Divining Top
 - Senseless Rage
 - Sensor Splicer
@@ -11885,6 +11894,7 @@ Council4 currently supports **15,080 of 32,501 cards eligible for paper support 
 - Sosuke's Summons
 - Soul Bleed
 - Soul Channeling
+- Soul Collector
 - Soul Enervation
 - Soul Feast
 - Soul Manipulation
@@ -13597,6 +13607,7 @@ Council4 currently supports **15,080 of 32,501 cards eligible for paper support 
 - Trollhide
 - Trolls of Tel-Jilad
 - Tromp the Domains
+- Trophy Hunter
 - Tropical Island
 - Trostani's Summoner
 - Trostani, Three Whispers
@@ -13970,6 +13981,7 @@ Council4 currently supports **15,080 of 32,501 cards eligible for paper support 
 - Vampire Warlord
 - Vampire's Kiss
 - Vampires' Vengeance
+- Vampiric Dragon
 - Vampiric Feast
 - Vampiric Fury
 - Vampiric Rites
@@ -14644,6 +14656,7 @@ Council4 currently supports **15,080 of 32,501 cards eligible for paper support 
 - Wickerbough Elder
 - Wickersmith's Tools
 - Wielding the Green Dragon
+- Wight
 - Wight of the Reliquary
 - Wild Aesthir
 - Wild Cantor

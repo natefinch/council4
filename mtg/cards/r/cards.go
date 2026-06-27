@@ -40,6 +40,7 @@ var Cards = []*game.CardDef{
 	RoamingGhostlight,
 	RogueElephant,
 	RosethornHalberd,
+	RotWolf,
 	RotcrownGhoul,
 	RottingGiant,
 	RunawayCarriage,

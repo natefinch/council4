@@ -147,6 +147,19 @@ func compileZoneChangeEvent(clause *parser.TriggerEventClause, pattern *TriggerP
 	default:
 		return false
 	}
+	if clause.DealtDamageBySourceThisTurn {
+		// The damaged-by-source restriction only applies to the dies event and
+		// requires the any-creature subject selection produced by the parser; it
+		// must not co-occur with a self/attached subject or the self-or-another
+		// union.
+		if pattern.Event != TriggerEventPermanentDied ||
+			clause.Subject.Kind != parser.TriggerEventSubjectSelection ||
+			pattern.Source != TriggerSourceAny ||
+			pattern.SubjectSelectionOrSelf {
+			return false
+		}
+		pattern.DyingDamagedBySource = true
+	}
 	if !compileZoneChangeZones(clause, pattern) {
 		return false
 	}

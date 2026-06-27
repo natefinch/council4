@@ -142,6 +142,10 @@ func lowerTriggerPattern(pattern *compiler.TriggerPattern) (game.TriggerPattern,
 		RequireTappedForMana:              pattern.TappedForMana,
 		RequireProducedManaColor:          pattern.TappedForManaColor,
 		ClassBecameLevel:                  pattern.ClassBecameLevel,
+		DyingDamagedBySource:              pattern.DyingDamagedBySource,
+	}
+	if pattern.DyingDamagedBySource && event != game.EventPermanentDied {
+		return game.TriggerPattern{}, false
 	}
 	if pattern.ClassBecameLevel > 0 && event != game.EventClassLevelGained {
 		return game.TriggerPattern{}, false

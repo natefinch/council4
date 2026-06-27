@@ -10,6 +10,7 @@ var Cards = []*game.CardDef{
 	GarenbrigPaladin,
 	GarrukPrimalHunter,
 	GarrulousSycophant,
+	GarzaZolPlagueQueen,
 	GatewayPlaza,
 	GavonyIronwright,
 	GempalmAvenger,

@@ -274,6 +274,12 @@ type TriggerPattern struct {
 	// <Selection> you control" zone-change triggers.
 	SubjectSelectionOrSelf bool
 
+	// DyingDamagedBySource restricts a permanent-died pattern to a permanent that
+	// was dealt damage by the ability's own source earlier this turn ("Whenever a
+	// creature dealt damage by this creature this turn dies", CR 603.2). It is
+	// only valid with Event == TriggerEventPermanentDied.
+	DyingDamagedBySource bool
+
 	MatchFromZone bool
 	FromZone      TriggerZone
 	MatchToZone   bool
