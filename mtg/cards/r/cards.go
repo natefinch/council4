@@ -14,6 +14,7 @@ var Cards = []*game.CardDef{
 	RakdosRoustabout,
 	RakishCrew,
 	RallyAtTheHornburg,
+	RakishScoundrel,
 	RallyForTheThrone,
 	RampantGrowth,
 	RancorousArchaic,

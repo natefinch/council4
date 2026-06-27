@@ -16,6 +16,7 @@ var Cards = []*game.CardDef{
 	EdgeOfTheDivinity,
 	EerieInterlude,
 	EfreetFlamepainter,
+	EfreetWeaponmaster,
 	EiganjoCastle,
 	ElspethSSmite,
 	ElvishFarmer,
