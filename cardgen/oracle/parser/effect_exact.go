@@ -2115,14 +2115,13 @@ func exactCantBlockEffectSyntax(effect *EffectSyntax) bool {
 }
 
 func exactTemporaryKeywordList(text string) bool {
-	text = strings.ReplaceAll(strings.ToLower(text), ", and ", ", ")
-	text = strings.ReplaceAll(text, " and ", ", ")
-	for keyword := range strings.SplitSeq(text, ", ") {
+	items := splitGrantKeywordItems(text)
+	for _, keyword := range items {
 		if !grantableKeywordWord(keyword) {
 			return false
 		}
 	}
-	return true
+	return len(items) > 0
 }
 
 // exactKeywordChoiceList recognizes a disjunctive list of two or more grantable
@@ -2154,21 +2153,20 @@ func exactKeywordChoiceList(text string) bool {
 
 // grantableKeywordWord reports whether a lowercase Oracle phrase names a
 // non-parameterized keyword (or a fully-specified protection variant) the
-// executable backend can grant.
+// executable backend can grant. Protection phrases are validated structurally by
+// grantableProtectionPhrase so every protected predicate the keyword parser can
+// recognize and the lowering can reduce to a static mechanic — a color list, the
+// each-color/everything/monocolored/multicolored/chosen-color quantifiers, a
+// card-type list, or a creature/land subtype list — is grantable.
 func grantableKeywordWord(keyword string) bool {
 	switch keyword {
 	case "deathtouch", "double strike", "fear", "first strike", "flying", "haste",
 		"banding", "hexproof", "indestructible", "intimidate", "lifelink", "menace", "reach", "shadow", "shroud", "trample", "vigilance",
 		"horsemanship", "infect", "skulk", "wither",
-		"landwalk", "plainswalk", "islandwalk", "swampwalk", "mountainwalk", "forestwalk", "desertwalk", "nonbasic landwalk",
-		"protection from each color", "protection from everything",
-		"protection from monocolored", "protection from multicolored",
-		"protection from white", "protection from blue", "protection from black",
-		"protection from red", "protection from green",
-		"protection from the color of your choice", "protection from a color of your choice":
+		"landwalk", "plainswalk", "islandwalk", "swampwalk", "mountainwalk", "forestwalk", "desertwalk", "nonbasic landwalk":
 		return true
 	default:
-		return false
+		return grantableProtectionPhrase(keyword)
 	}
 }
 

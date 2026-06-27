@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,686 of 32,501 cards eligible for paper support (48.3%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,689 of 32,501 cards eligible for paper support (48.3%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -4756,6 +4756,7 @@ Council4 currently supports **15,686 of 32,501 cards eligible for paper support 
 - Fling
 - Flint Golem
 - Flinthoof Boar
+- Floating Shield
 - Flock Impostor
 - Flood
 - Flood of Recollection
@@ -13431,6 +13432,7 @@ Council4 currently supports **15,686 of 32,501 cards eligible for paper support 
 - Tegwyll, Duke of Splendor
 - Tel-Jilad Archers
 - Tel-Jilad Chosen
+- Tel-Jilad Defiance
 - Tel-Jilad Exile
 - Tel-Jilad Fallen
 - Tel-Jilad Justice
@@ -13972,6 +13974,7 @@ Council4 currently supports **15,686 of 32,501 cards eligible for paper support 
 - Tower of Eons
 - Tower of Fortunes
 - Tower of Murmurs
+- Tower of the Magistrate
 - Towering Baloth
 - Towering Indrik
 - Towering Thunderfist

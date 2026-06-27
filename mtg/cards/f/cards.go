@@ -48,6 +48,7 @@ var Cards = []*game.CardDef{
 	FleshCarver,
 	FlickeringWard,
 	FlintGolem,
+	FloatingShield,
 	FloriferousVinewall,
 	FloweringField,
 	FogElemental,
