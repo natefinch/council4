@@ -71,6 +71,50 @@ func TestGenerateExecutableCardSourceDividedDamage(t *testing.T) {
 				"Divided:   true",
 			},
 		},
+		{
+			name:       "keyword filtered creatures",
+			oracleText: "Test Bolt deals 4 damage divided as you choose among any number of target creatures with flying.",
+			wantedSnips: []string{
+				"MinTargets: 1",
+				"MaxTargets: 4",
+				"RequiredTypesAny: []types.Card{types.Creature}",
+				"Keyword: game.Flying",
+				"Divided:   true",
+			},
+		},
+		{
+			name:       "combat state filtered creatures",
+			oracleText: "Test Bolt deals 5 damage divided as you choose among any number of target attacking creatures.",
+			wantedSnips: []string{
+				"MinTargets: 1",
+				"MaxTargets: 5",
+				"RequiredTypesAny: []types.Card{types.Creature}",
+				"CombatState: game.CombatStateAttacking",
+				"Divided:   true",
+			},
+		},
+		{
+			name:       "combat state without keyword",
+			oracleText: "Test Bolt deals X damage divided as you choose among any number of target attacking or blocking creatures without flying.",
+			wantedSnips: []string{
+				"MinTargets: 1",
+				"MaxTargets: 99",
+				"RequiredTypesAny: []types.Card{types.Creature}",
+				"CombatState: game.CombatStateAttackingOrBlocking",
+				"ExcludedKeyword: game.Flying",
+				"Divided:   true",
+			},
+		},
+		{
+			name:       "type union",
+			oracleText: "Test Bolt deals 5 damage divided as you choose among any number of target creatures and/or planeswalkers.",
+			wantedSnips: []string{
+				"MinTargets: 1",
+				"MaxTargets: 5",
+				"RequiredTypesAny: []types.Card{types.Creature, types.Planeswalker}",
+				"Divided:   true",
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -111,18 +155,6 @@ func TestGenerateExecutableCardSourceDividedDamageFailsClosed(t *testing.T) {
 		{
 			name:       "variable total with plus rider",
 			oracleText: "Test Bolt deals X plus 1 damage divided as you choose among any number of targets.",
-		},
-		{
-			name:       "keyword filtered creatures",
-			oracleText: "Test Bolt deals 4 damage divided as you choose among any number of target creatures with flying.",
-		},
-		{
-			name:       "combat state filtered creatures",
-			oracleText: "Test Bolt deals 5 damage divided as you choose among any number of target attacking creatures.",
-		},
-		{
-			name:       "type union",
-			oracleText: "Test Bolt deals 5 damage divided as you choose among any number of target creatures and/or planeswalkers.",
 		},
 	}
 	for _, test := range tests {

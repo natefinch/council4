@@ -113,29 +113,93 @@ func dividedDamageTargetSpec(target compiler.CompiledTarget, capTotal int) (game
 	if maxTargets < 1 {
 		return game.TargetSpec{}, false
 	}
+	// "Any target" admits both permanents and players, a combination the
+	// permanent selection does not model, so build it directly.
+	if target.Selector.Kind == compiler.SelectorAny {
+		return game.TargetSpec{
+			MinTargets: 1,
+			MaxTargets: maxTargets,
+			Allow:      game.TargetAllowPermanent | game.TargetAllowPlayer,
+			Constraint: target.Text,
+		}, true
+	}
+	selection, ok := dividedDamagePermanentSelection(target.Selector)
+	if !ok {
+		return game.TargetSpec{}, false
+	}
 	spec := game.TargetSpec{
 		MinTargets: 1,
 		MaxTargets: maxTargets,
+		Allow:      game.TargetAllowPermanent,
 		Constraint: target.Text,
 	}
-	switch target.Selector.Kind {
-	case compiler.SelectorAny:
-		spec.Allow = game.TargetAllowPermanent | game.TargetAllowPlayer
-	case compiler.SelectorCreature:
-		if selectorHasUnsupportedPermanentFilters(target.Selector) ||
-			len(target.Selector.SubtypesAny()) != 0 ||
-			len(target.Selector.ColorsAny()) != 0 ||
-			len(target.Selector.ExcludedTypes()) != 0 ||
-			len(target.Selector.ExcludedColors()) != 0 ||
-			len(target.Selector.Supertypes()) != 0 ||
-			target.Selector.Attacking || target.Selector.Blocking ||
-			target.Selector.Tapped || target.Selector.Untapped {
-			return game.TargetSpec{}, false
-		}
-		spec.Allow = game.TargetAllowPermanent
-		spec.Selection = opt.Val(game.Selection{RequiredTypesAny: []types.Card{types.Creature}})
-	default:
-		return game.TargetSpec{}, false
+	if !selection.Empty() {
+		spec.Selection = opt.Val(selection)
 	}
 	return spec, true
+}
+
+// dividedDamagePermanentSelection builds the runtime permanent filter a
+// divided-damage spell chooses among. It supports the plain "creature" noun, the
+// "creature and/or planeswalker" card-type union, an attacking/blocking combat
+// state, and a single "with"/"without" keyword qualifier — the selectors the
+// divided round-trip reconstructs. It fails closed for every controller, color,
+// subtype, supertype, tapped, counter, or numeric qualifier it does not model.
+func dividedDamagePermanentSelection(selector compiler.CompiledSelector) (game.Selection, bool) {
+	if selector.Kind != compiler.SelectorCreature {
+		return game.Selection{}, false
+	}
+	if selectorHasUnsupportedPermanentFilters(selector) ||
+		selector.Tapped || selector.Untapped ||
+		selector.Another || selector.Other ||
+		selector.Controller != compiler.ControllerAny ||
+		selector.MatchManaValue || selector.MatchPower || selector.MatchToughness ||
+		selector.PowerLessThanSource || selector.PowerGreaterThanSource ||
+		selector.TokenOnly || selector.NonToken ||
+		len(selector.SubtypesAny()) != 0 ||
+		len(selector.ColorsAny()) != 0 ||
+		len(selector.ExcludedTypes()) != 0 ||
+		len(selector.ExcludedColors()) != 0 ||
+		len(selector.Supertypes()) != 0 ||
+		len(selector.ExcludedSupertypes()) != 0 ||
+		len(selector.ExcludedSubtypes()) != 0 {
+		return game.Selection{}, false
+	}
+	required := []types.Card{types.Creature}
+	if union := selector.RequiredTypesAny(); len(union) != 0 {
+		if union[0] != types.Creature {
+			return game.Selection{}, false
+		}
+		for _, cardType := range union {
+			if cardType != types.Creature && cardType != types.Planeswalker {
+				return game.Selection{}, false
+			}
+		}
+		required = append([]types.Card(nil), union...)
+	}
+	selection := game.Selection{RequiredTypesAny: required}
+	switch {
+	case selector.Attacking && selector.Blocking:
+		selection.CombatState = game.CombatStateAttackingOrBlocking
+	case selector.Attacking:
+		selection.CombatState = game.CombatStateAttacking
+	case selector.Blocking:
+		selection.CombatState = game.CombatStateBlocking
+	default:
+	}
+	if selector.Keyword != parser.KeywordUnknown {
+		keyword, ok := runtimeKeyword(selector.Keyword)
+		if !ok {
+			return game.Selection{}, false
+		}
+		selection.Keyword = keyword
+	}
+	if selector.ExcludedKeyword != parser.KeywordUnknown {
+		keyword, ok := runtimeKeyword(selector.ExcludedKeyword)
+		if !ok {
+			return game.Selection{}, false
+		}
+		selection.ExcludedKeyword = keyword
+	}
+	return selection, true
 }

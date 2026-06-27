@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,633 of 32,501 cards eligible for paper support (48.1%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,639 of 32,501 cards eligible for paper support (48.1%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -127,6 +127,7 @@ Council4 currently supports **15,633 of 32,501 cards eligible for paper support 
 - Aerial Maneuver
 - Aerial Predation
 - Aerial Responder
+- Aerial Volley
 - Aerie Mystics
 - Aerie Ouphes
 - Aerie Worshippers
@@ -3165,6 +3166,7 @@ Council4 currently supports **15,633 of 32,501 cards eligible for paper support 
 - Defiling Daemogoth
 - Deflecting Swat
 - Deflection
+- Deft Dismissal
 - Deft Duelist
 - Defy Gravity
 - Dega Disciple
@@ -4583,6 +4585,7 @@ Council4 currently supports **15,633 of 32,501 cards eligible for paper support 
 - Fire // Ice
 - Fire Ambush
 - Fire Ants
+- Fire at Will
 - Fire Covenant
 - Fire Diamond
 - Fire Dragon
@@ -5899,6 +5902,7 @@ Council4 currently supports **15,633 of 32,501 cards eligible for paper support 
 - Hagra Crocodile
 - Hagra Diabolist
 - Hagra Sharpshooter
+- Hail of Arrows
 - Hailstorm Valkyrie
 - Hair-Strung Koto
 - Halberdier
@@ -10779,6 +10783,7 @@ Council4 currently supports **15,633 of 32,501 cards eligible for paper support 
 - Roc of Kher Ridges
 - Rocco, Cabaretti Caterer
 - Rock Badger
+- Rock Slide
 - Rock Soldiers
 - Rockcaster Platoon
 - Rockfall Vale
@@ -10804,6 +10809,7 @@ Council4 currently supports **15,633 of 32,501 cards eligible for paper support 
 - Rohirrim Lancer
 - Roil Elemental
 - Roil Eruption
+- Roil's Retribution
 - Roiling Dragonstorm
 - Roiling Regrowth
 - Roku's Mastery
