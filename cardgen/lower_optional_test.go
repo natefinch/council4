@@ -534,6 +534,87 @@ func TestLowerOptionalPayLifeIfYouDoDraw(t *testing.T) {
 	}
 }
 
+// TestLowerControllerPaidIfYouDoTargetedConsequence verifies that a "you may pay
+// {mana}. If you do, <targeted controller effect>." resolution threads the
+// consequence's target onto the ability mode: the target is chosen when the
+// ability goes on the stack, the resolution Pay publishes its result, and the
+// targeted effect is gated on the payment having succeeded.
+func TestLowerControllerPaidIfYouDoTargetedConsequence(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Paid Striker",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human",
+		OracleText: "When this creature enters, you may pay {2}. If you do, destroy target creature.",
+	})
+	if len(face.TriggeredAbilities) != 1 || len(face.TriggeredAbilities[0].Content.Modes) != 1 {
+		t.Fatalf("triggered ability not a single mode: %#v", face.TriggeredAbilities)
+	}
+	mode := face.TriggeredAbilities[0].Content.Modes[0]
+	if len(mode.Targets) != 1 {
+		t.Fatalf("mode targets = %#v, want one promoted from the consequence", mode.Targets)
+	}
+	if len(mode.Sequence) != 2 {
+		t.Fatalf("sequence = %#v, want pay + gated destroy", mode.Sequence)
+	}
+	pay, ok := mode.Sequence[0].Primitive.(game.Pay)
+	if !ok {
+		t.Fatalf("instruction[0] = %T, want game.Pay", mode.Sequence[0].Primitive)
+	}
+	if !pay.Payment.ManaCost.Exists || mode.Sequence[0].PublishResult != controllerPaidResultKey {
+		t.Fatalf("pay instruction = %#v, want mana cost publishing %q", mode.Sequence[0], controllerPaidResultKey)
+	}
+	if _, ok := mode.Sequence[1].Primitive.(game.Destroy); !ok {
+		t.Fatalf("instruction[1] = %T, want game.Destroy", mode.Sequence[1].Primitive)
+	}
+	gate := mode.Sequence[1].ResultGate
+	if !gate.Exists || gate.Val.Key != controllerPaidResultKey || gate.Val.Succeeded != game.TriTrue {
+		t.Fatalf("destroy ResultGate = %#v, want succeeded gate on %q", gate, controllerPaidResultKey)
+	}
+	if err := game.ValidateInstructionSequence(mode.Sequence, mode.Targets); err != nil {
+		t.Fatalf("invalid instruction sequence: %v", err)
+	}
+}
+
+// TestLowerOptionalPaidBenefitTargetedConsequence verifies the non-controller
+// leading benefit path ("you may pay {mana}. If you do, target player loses N
+// life and you gain N life.") also promotes the consequence target onto the mode
+// and gates every benefit instruction on the resolution payment.
+func TestLowerOptionalPaidBenefitTargetedConsequence(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Paid Drainer",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human",
+		OracleText: "When this creature enters, you may pay {1}. If you do, target player loses 1 life and you gain 1 life.",
+	})
+	if len(face.TriggeredAbilities) != 1 || len(face.TriggeredAbilities[0].Content.Modes) != 1 {
+		t.Fatalf("triggered ability not a single mode: %#v", face.TriggeredAbilities)
+	}
+	mode := face.TriggeredAbilities[0].Content.Modes[0]
+	if len(mode.Targets) != 1 {
+		t.Fatalf("mode targets = %#v, want one promoted from the consequence", mode.Targets)
+	}
+	if len(mode.Sequence) != 3 {
+		t.Fatalf("sequence = %#v, want pay + gated lose-life + gated gain-life", mode.Sequence)
+	}
+	if _, ok := mode.Sequence[0].Primitive.(game.Pay); !ok {
+		t.Fatalf("instruction[0] = %T, want game.Pay", mode.Sequence[0].Primitive)
+	}
+	if mode.Sequence[0].PublishResult != controllerPaidResultKey {
+		t.Fatalf("pay publish = %q, want %q", mode.Sequence[0].PublishResult, controllerPaidResultKey)
+	}
+	for i := 1; i < len(mode.Sequence); i++ {
+		gate := mode.Sequence[i].ResultGate
+		if !gate.Exists || gate.Val.Key != controllerPaidResultKey || gate.Val.Succeeded != game.TriTrue {
+			t.Fatalf("instruction[%d] ResultGate = %#v, want succeeded gate on %q", i, gate, controllerPaidResultKey)
+		}
+	}
+	if err := game.ValidateInstructionSequence(mode.Sequence, mode.Targets); err != nil {
+		t.Fatalf("invalid instruction sequence: %v", err)
+	}
+}
+
 // TestLowerOptionalIfYouDoDiscardHandDraw verifies that the optional "You may
 // discard your hand. If you do, <Y>." form lowers the entire-hand discard as an
 // optional result-publishing instruction with the benefit gated on it. The

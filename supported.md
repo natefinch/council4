@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,490 of 32,501 cards eligible for paper support (47.7%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,507 of 32,501 cards eligible for paper support (47.7%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1979,6 +1979,7 @@ Council4 currently supports **15,490 of 32,501 cards eligible for paper support 
 - Carrion Howler
 - Carrion Imp
 - Carrion Screecher
+- Carrion Thrash
 - Carrion Wall
 - Cartel Aristocrat
 - Cartographer
@@ -4082,6 +4083,7 @@ Council4 currently supports **15,490 of 32,501 cards eligible for paper support 
 - Epiphany Storm
 - Epitaph Golem
 - Equestrian Skill
+- Equilibrium
 - Equilibrium Adept
 - Era of Enlightenment // Hand of Enlightenment
 - Erase
@@ -4133,6 +4135,7 @@ Council4 currently supports **15,490 of 32,501 cards eligible for paper support 
 - Eternal Dragon
 - Eternal of Harsh Truths
 - Eternal Student
+- Eternal Taskmaster
 - Eternal Thirst
 - Eternal Warrior
 - Eternal Witness
@@ -5846,6 +5849,7 @@ Council4 currently supports **15,490 of 32,501 cards eligible for paper support 
 - Haazda Exonerator
 - Haazda Marshal
 - Haazda Officer
+- Haazda Snare Squad
 - Haazda Vigilante
 - Hackrobat
 - Hada Freeblade
@@ -6067,6 +6071,7 @@ Council4 currently supports **15,490 of 32,501 cards eligible for paper support 
 - Helping Hand
 - Helvault
 - Hematite Golem
+- Hematite Talisman
 - Hemosymbic Mite
 - Henchbots
 - Henge Guardian
@@ -6959,6 +6964,7 @@ Council4 currently supports **15,490 of 32,501 cards eligible for paper support 
 - Kagemaro, First to Suffer
 - Kalakscion, Hunger Tyrant
 - Kalastria Healer
+- Kalastria Highborn
 - Kalastria Nightwatch
 - Kaleidostone
 - Kalonian Behemoth
@@ -7371,6 +7377,7 @@ Council4 currently supports **15,490 of 32,501 cards eligible for paper support 
 - Lantern Scout
 - Lantern Spirit
 - Lantern-Lit Graveyard
+- Lapis Lazuli Talisman
 - Laquatus's Champion
 - Larceny
 - Larder Zombie
@@ -7875,6 +7882,7 @@ Council4 currently supports **15,490 of 32,501 cards eligible for paper support 
 - Makindi Stampede // Makindi Mesas
 - Malach of the Dawn
 - Malachite Golem
+- Malachite Talisman
 - Malakir Bloodwitch
 - Malakir Cullblade
 - Malakir Familiar
@@ -8681,6 +8689,7 @@ Council4 currently supports **15,490 of 32,501 cards eligible for paper support 
 - Mythic Proportions
 - Nacatl Outlander
 - Nacatl Savage
+- Nacre Talisman
 - Nadier's Nightblade
 - Nadier, Agent of the Duskenel
 - Naga Eternal
@@ -8986,6 +8995,7 @@ Council4 currently supports **15,490 of 32,501 cards eligible for paper support 
 - Nullmage Shepherd
 - Nullpriest of Oblivion
 - Numai Outcast
+- Numot, the Devastator
 - Nurturing Bristleback
 - Nurturing Peatland
 - Nurturing Presence
@@ -9153,6 +9163,7 @@ Council4 currently supports **15,490 of 32,501 cards eligible for paper support 
 - Onulet
 - Onyx Goblet
 - Onyx Mage
+- Onyx Talisman
 - Oona's Gatewarden
 - Oona's Grace
 - Ooze
@@ -10867,6 +10878,7 @@ Council4 currently supports **15,490 of 32,501 cards eligible for paper support 
 - Ruthless Knave
 - Ruthless Lawbringer
 - Ruthless Predation
+- Ruthless Sniper
 - Rydia's Return
 - Ryusei, the Falling Star
 - S.H.I.E.L.D. Deployment Drone
@@ -11393,6 +11405,7 @@ Council4 currently supports **15,490 of 32,501 cards eligible for paper support 
 - Serendib Efreet
 - Serene Heart
 - Serene Offering
+- Serene Steward
 - Serf
 - Sergeant-at-Arms
 - Serpent Assassin
@@ -12025,6 +12038,7 @@ Council4 currently supports **15,490 of 32,501 cards eligible for paper support 
 - Sliversmith
 - Slobad, Goblin Tinkerer
 - Slogurk, the Overslime
+- Sludge Strider
 - Sludge Titan
 - Slug
 - Sluggishness
@@ -13017,6 +13031,7 @@ Council4 currently supports **15,490 of 32,501 cards eligible for paper support 
 - Surge Mare
 - Surge of Thoughtweft
 - Surgehacker Mech
+- Surgespanner
 - Surgical Skullbomb
 - Surgical Suite // Hospital Room
 - Surly Badgersaur
@@ -13324,6 +13339,7 @@ Council4 currently supports **15,490 of 32,501 cards eligible for paper support 
 - Tendrils of Agony
 - Tendrils of Corruption
 - Tendrils of Despair
+- Teneb, the Harvester
 - Tenement Crasher
 - Tentacle
 - Tentative Connection
@@ -14413,6 +14429,7 @@ Council4 currently supports **15,490 of 32,501 cards eligible for paper support 
 - Veilborn Ghoul
 - Veiled Shade
 - Vein Ripper
+- Veinwitch Coven
 - Vela the Night-Clad
 - Veldrane of Sengir
 - Veloheart Bike

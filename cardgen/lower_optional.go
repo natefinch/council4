@@ -16,6 +16,14 @@ import (
 const unlessPaidResultKey = game.ResultKey("unless-paid")
 const controllerPaidResultKey = game.ResultKey("controller-paid")
 
+// lowerControllerPaidEffect lowers a "you may pay <cost>. If you do, <body>."
+// resolution whose consequence begins with a controller verb (destroy, draw, put
+// a counter, ...). The optional payment becomes a resolution Pay instruction
+// publishing its result, and every consequence instruction is gated on that
+// payment having succeeded. A consequence that targets a single object (such as
+// "destroy target creature") is supported: its mode target is promoted onto the
+// resulting ability mode, so the target is chosen when the ability goes on the
+// stack and the gated effect applies to it only if the controller pays.
 func lowerControllerPaidEffect(
 	cardName string,
 	ctx contentCtx,
@@ -24,7 +32,6 @@ func lowerControllerPaidEffect(
 	if ctx.optional ||
 		len(ctx.content.Effects) == 0 ||
 		len(ctx.content.Conditions) != 1 ||
-		len(ctx.content.Targets) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 {
 		return game.AbilityContent{}, false
@@ -113,10 +120,10 @@ func lowerControllerPaidEffect(
 		content.IsModal() ||
 		len(content.SharedTargets) != 0 ||
 		len(content.Modes) != 1 ||
-		len(content.Modes[0].Targets) != 0 ||
 		len(content.Modes[0].Sequence) == 0 {
 		return game.AbilityContent{}, false
 	}
+	consequenceTargets := content.Modes[0].Targets
 	consequence := content.Modes[0].Sequence
 	for i := range consequence {
 		if consequence[i].Optional ||
@@ -135,7 +142,7 @@ func lowerControllerPaidEffect(
 		PublishResult: controllerPaidResultKey,
 	})
 	sequence = append(sequence, consequence...)
-	return game.Mode{Sequence: sequence}.Ability(), true
+	return game.Mode{Targets: consequenceTargets, Sequence: sequence}.Ability(), true
 }
 
 // lowerOptionalPaidBenefit lowers a "you may pay {mana}. If you do, <body>."
@@ -146,7 +153,11 @@ func lowerControllerPaidEffect(
 // shared content path and then gates every resulting instruction on the optional
 // payment. The controller, verb-initial family is handled by
 // lowerControllerPaidEffect, so this path keys on a non-controller leading
-// effect to keep the two disjoint.
+// effect to keep the two disjoint. A consequence that targets a single object
+// (such as "target player loses 1 life and you gain 1 life") is supported: its
+// mode target is promoted onto the resulting ability mode, so the target is
+// chosen when the ability goes on the stack and the gated benefit applies only if
+// the controller pays.
 func lowerOptionalPaidBenefit(
 	cardName string,
 	ctx contentCtx,
@@ -155,7 +166,6 @@ func lowerOptionalPaidBenefit(
 	if ctx.optional ||
 		len(ctx.content.Effects) < 2 ||
 		len(ctx.content.Conditions) != 1 ||
-		len(ctx.content.Targets) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 {
 		return game.AbilityContent{}, false
@@ -201,10 +211,10 @@ func lowerOptionalPaidBenefit(
 		content.IsModal() ||
 		len(content.SharedTargets) != 0 ||
 		len(content.Modes) != 1 ||
-		len(content.Modes[0].Targets) != 0 ||
 		len(content.Modes[0].Sequence) == 0 {
 		return game.AbilityContent{}, false
 	}
+	consequenceTargets := content.Modes[0].Targets
 	consequence := content.Modes[0].Sequence
 	for i := range consequence {
 		if consequence[i].Optional ||
@@ -222,7 +232,7 @@ func lowerOptionalPaidBenefit(
 		PublishResult: controllerPaidResultKey,
 	})
 	sequence = append(sequence, consequence...)
-	return game.Mode{Sequence: sequence}.Ability(), true
+	return game.Mode{Targets: consequenceTargets, Sequence: sequence}.Ability(), true
 }
 
 // controllerPaidResolutionPayment builds the runtime resolution payment for a
