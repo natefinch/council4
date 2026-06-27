@@ -663,6 +663,14 @@ func parseBecameTargetTriggerEventClause(
 		return nil
 	}
 	cause := tokens[index+4:]
+	firstTimeEachTurn := false
+	var firstTimeSpan shared.Span
+	if endsWithSyntaxWords(cause, "for", "the", "first", "time", "each", "turn") {
+		ordinal := cause[len(cause)-6:]
+		firstTimeSpan = shared.SpanOf(ordinal)
+		cause = cause[:len(cause)-6]
+		firstTimeEachTurn = true
+	}
 	causeController := TriggerEventActorUnknown
 	switch {
 	case endsWithSyntaxWords(cause, "you", "control"):
@@ -683,11 +691,13 @@ func parseBecameTargetTriggerEventClause(
 		return nil
 	}
 	return &TriggerEventClause{
-		Kind:            TriggerEventKindBecameTarget,
-		Subject:         subject.subject,
-		Controller:      subject.controller,
-		ExcludeSelf:     subject.excludeSelf,
-		StackObject:     stackObject,
-		CauseController: causeController,
+		Kind:                  TriggerEventKindBecameTarget,
+		Subject:               subject.subject,
+		Controller:            subject.controller,
+		ExcludeSelf:           subject.excludeSelf,
+		StackObject:           stackObject,
+		CauseController:       causeController,
+		FirstTimeEachTurn:     firstTimeEachTurn,
+		FirstTimeEachTurnSpan: firstTimeSpan,
 	}
 }

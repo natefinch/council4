@@ -301,7 +301,6 @@ func TestTypedTriggerEventsFailClosedOnUnsupportedSlots(t *testing.T) {
 		{event: "you turn a permanent face up", kind: TriggerWhenever},
 		{event: "you scry or surveil", kind: TriggerWhenever},
 		{event: "this creature becomes the target of an ability", kind: TriggerWhenever},
-		{event: "this creature becomes the target of a spell or ability for the first time each turn", kind: TriggerWhenever},
 		{event: "the beginning of a player's upkeep", kind: TriggerAt},
 		{event: "the beginning of your next upkeep", kind: TriggerAt, condition: condition},
 		{event: "you cast a spell", kind: TriggerWhen},

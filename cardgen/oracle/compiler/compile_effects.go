@@ -32,6 +32,10 @@ func compileTrigger(ability *parser.Ability, _ Context) CompiledTrigger {
 		default:
 		}
 	}
+	if event := ability.Trigger.TriggerEvent; event != nil && event.FirstTimeEachTurn {
+		trigger.MaxTriggersPerTurn = 1
+		trigger.MaxTriggersPerTurnSpan = event.FirstTimeEachTurnSpan
+	}
 	switch ability.Trigger.Introduction.Kind {
 	case parser.TriggerIntroductionWhen:
 		trigger.Kind = TriggerWhen

@@ -23,6 +23,7 @@ var Cards = []*game.CardDef{
 	ScrapskinDrake,
 	ScytheTiger,
 	SecurityBlockade,
+	SeedglaiveMentor,
 	SeekTheWilds,
 	SeekerOfInsight,
 	SeiferAlmasy,

@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,252 of 32,501 cards eligible for paper support (46.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,260 of 32,501 cards eligible for paper support (47.0%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -3907,6 +3907,7 @@ Council4 currently supports **15,252 of 32,501 cards eligible for paper support 
 - Ember-Eye Wolf
 - Embereth Paladin
 - Embereth Shieldbreaker // Battle Display
+- Emberheart Challenger
 - Embermage Goblin
 - Embermaw Hellion
 - Emberstrike Duo
@@ -4646,6 +4647,7 @@ Council4 currently supports **15,252 of 32,501 cards eligible for paper support 
 - Flow of Ideas
 - Flow of Knowledge
 - Flower // Flourish
+- Flowerfoot Swordmaster
 - Flowering Field
 - Flowering of the White Tree
 - Flowstone Channeler
@@ -5916,6 +5918,7 @@ Council4 currently supports **15,252 of 32,501 cards eligible for paper support 
 - Heart-Piercer Manticore
 - Heart-Piercer Manticore
 - Heartfire
+- Heartfire Hero
 - Heartfire Immolator
 - Hearth Charm
 - Hearthborn Battler
@@ -8437,6 +8440,7 @@ Council4 currently supports **15,252 of 32,501 cards eligible for paper support 
 - Mourning
 - Mournwhelk
 - Mouse
+- Mouse Trapper
 - Mouser Attack!
 - Mouth of Ronom
 - Mowu // Mowu
@@ -8673,6 +8677,7 @@ Council4 currently supports **15,252 of 32,501 cards eligible for paper support 
 - Nether Horror
 - Nether Traitor
 - Nettle Drone
+- Nettle Guard
 - Nettle Swine
 - Nettlecyst
 - Nettletooth Djinn
@@ -11128,6 +11133,7 @@ Council4 currently supports **15,252 of 32,501 cards eligible for paper support 
 - Sedraxis Specter
 - Seedborn Muse
 - Seedcradle Witch
+- Seedglaive Mentor
 - Seedguide Ash
 - Seedpod Squire
 - Seedship Agrarian
@@ -14260,6 +14266,7 @@ Council4 currently supports **15,252 of 32,501 cards eligible for paper support 
 - Veteran Beastrider
 - Veteran Cathar
 - Veteran Cavalier
+- Veteran Guardmouse
 - Veteran of the Depths
 - Veteran Swordsmith
 - Veteran's Powerblade
@@ -14781,6 +14788,7 @@ Council4 currently supports **15,252 of 32,501 cards eligible for paper support 
 - Whirlwind
 - Whirlwind Adept
 - Whirlwind of Thought
+- Whiskerquill Scribe
 - Whisper Agent
 - Whisper of the Dross
 - Whisper Squad

@@ -57,6 +57,7 @@ var Cards = []*game.CardDef{
 	MosswortBridge,
 	Mountain,
 	MournerSSurprise,
+	MouseTrapper,
 	MrOrfeoTheBoulder,
 	MudflatVillage,
 	MundaSVanguard,
