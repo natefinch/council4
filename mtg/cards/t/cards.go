@@ -48,6 +48,7 @@ var Cards = []*game.CardDef{
 	TrophyHunter,
 	TrophyMage,
 	TroubledHealer,
+	TrustyCompanion,
 	TwinBlades,
 	TwinflameTravelers,
 	TwistedEmbrace,

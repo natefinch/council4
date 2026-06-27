@@ -162,6 +162,19 @@ const (
 	// It lowers to the can-block-only runtime rule effect bounded by the flying
 	// blocker restriction.
 	StaticRuleCanBlockOnlyCreaturesWithFlying
+	// StaticRuleCantAttackAlone is the active attack restriction "can't attack
+	// alone" (Mogg Flunkies, Trusty Companion): the subject creature can't be
+	// declared as an attacker unless at least one other creature also attacks.
+	StaticRuleCantAttackAlone
+	// StaticRuleCantBlockAlone is the active block restriction "can't block alone"
+	// (Craven Hulk): the subject creature can't be declared as a blocker unless at
+	// least one other creature also blocks.
+	StaticRuleCantBlockAlone
+	// StaticRuleCantAttackOrBlockAlone combines the "can't attack alone" and
+	// "can't block alone" restrictions printed as one sentence ("can't attack or
+	// block alone", Loyal Pegasus, Mogg Flunkies); it lowers to both alone rule
+	// effects.
+	StaticRuleCantAttackOrBlockAlone
 )
 
 // StaticBlockerRestrictionKind identifies the blocker characteristic bounding a
@@ -1485,6 +1498,27 @@ func semanticStaticRuleForSyntax(rule parser.StaticRuleSyntax) (StaticRuleKind, 
 	}
 	if isCreatureRuleSubject(rule.Subject.Kind) &&
 		rule.Constraint.Kind == parser.StaticRuleConstraintProhibition &&
+		rule.Operation.Kind == parser.StaticRuleOperationAttack &&
+		rule.Operation.Voice == parser.StaticRuleVoiceActive &&
+		staticRuleQualifiersAre(rule.Qualifiers, parser.StaticRuleQualifierAlone) {
+		return StaticRuleCantAttackAlone, StaticZoneBattlefield, true
+	}
+	if isCreatureRuleSubject(rule.Subject.Kind) &&
+		rule.Constraint.Kind == parser.StaticRuleConstraintProhibition &&
+		rule.Operation.Kind == parser.StaticRuleOperationBlock &&
+		rule.Operation.Voice == parser.StaticRuleVoiceActive &&
+		staticRuleQualifiersAre(rule.Qualifiers, parser.StaticRuleQualifierAlone) {
+		return StaticRuleCantBlockAlone, StaticZoneBattlefield, true
+	}
+	if isCreatureRuleSubject(rule.Subject.Kind) &&
+		rule.Constraint.Kind == parser.StaticRuleConstraintProhibition &&
+		rule.Operation.Kind == parser.StaticRuleOperationAttackOrBlock &&
+		rule.Operation.Voice == parser.StaticRuleVoiceActive &&
+		staticRuleQualifiersAre(rule.Qualifiers, parser.StaticRuleQualifierAlone) {
+		return StaticRuleCantAttackOrBlockAlone, StaticZoneBattlefield, true
+	}
+	if isCreatureRuleSubject(rule.Subject.Kind) &&
+		rule.Constraint.Kind == parser.StaticRuleConstraintProhibition &&
 		rule.Operation.Kind == parser.StaticRuleOperationBlockAndBeBlocked &&
 		rule.Operation.Voice == parser.StaticRuleVoiceActive &&
 		len(rule.Qualifiers) == 0 {
@@ -1602,6 +1636,12 @@ func staticRuleForEffect(kind EffectKind) StaticRuleKind {
 		return StaticRuleCantBeBlockedByMoreThanOne
 	case EffectCantAttackOrBlock:
 		return StaticRuleCantAttackOrBlock
+	case EffectCantAttackAlone:
+		return StaticRuleCantAttackAlone
+	case EffectCantBlockAlone:
+		return StaticRuleCantBlockAlone
+	case EffectCantAttackOrBlockAlone:
+		return StaticRuleCantAttackOrBlockAlone
 	case EffectCantBlockAndCantBeBlocked:
 		return StaticRuleCantBlockAndCantBeBlocked
 	case EffectDoesntUntap:
@@ -1641,16 +1681,16 @@ func staticRuleDeclaration(
 
 func staticRuleDomain(rule StaticRuleKind) StaticRuleDomain {
 	switch rule {
-	case StaticRuleCantAttack, StaticRuleMustAttack, StaticRuleCantAttackYou:
+	case StaticRuleCantAttack, StaticRuleMustAttack, StaticRuleCantAttackYou, StaticRuleCantAttackAlone:
 		return StaticRuleDomainAttack
 	case StaticRuleCantBlock, StaticRuleCantBeBlocked, StaticRuleMustBeBlocked, StaticRuleCantBeBlockedByMoreThanOne,
 		StaticRuleCantBeBlockedByCreaturesWith, StaticRuleCantBlockAndCantBeBlocked,
 		StaticRuleMustBeBlockedByAllAble, StaticRuleAssignDamageAsUnblocked,
-		StaticRuleCanBlockOnlyCreaturesWithFlying:
+		StaticRuleCanBlockOnlyCreaturesWithFlying, StaticRuleCantBlockAlone:
 		return StaticRuleDomainBlock
 	case StaticRuleCantBeCountered:
 		return StaticRuleDomainCountering
-	case StaticRuleCantAttackOrBlock:
+	case StaticRuleCantAttackOrBlock, StaticRuleCantAttackOrBlockAlone:
 		return StaticRuleDomainAttackBlock
 	case StaticRuleDoesntUntap:
 		return StaticRuleDomainUntap

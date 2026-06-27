@@ -194,6 +194,9 @@ func parseStaticRuleOperationsForSubject(tokens []shared.Token, subject StaticRu
 		} else if qualifier, qualifierNext, ok := parseStaticByMoreThanOneQualifier(tokens, opNext, len(tokens)-1); ok {
 			rule.Qualifiers = append(rule.Qualifiers, qualifier)
 			opNext = qualifierNext
+		} else if qualifier, qualifierNext, ok := parseStaticAloneQualifier(tokens, opNext); ok {
+			rule.Qualifiers = append(rule.Qualifiers, qualifier)
+			opNext = qualifierNext
 		}
 		if staticRuleHasGuardClause(tokens, opNext) {
 			rule.Guarded = true
@@ -347,6 +350,21 @@ func parseProhibitedStaticRuleOperation(tokens []shared.Token, start int) (Stati
 		}, start + 2, true
 	}
 	return StaticRuleOperation{}, start, false
+}
+
+// parseStaticAloneQualifier recognizes the "alone" word that bounds an active
+// "can't attack"/"can't block"/"can't attack or block" prohibition to the
+// exceptional case where the subject is the only creature attacking or blocking
+// ("can't attack alone"). It matches the single "alone" token immediately
+// following the operation.
+func parseStaticAloneQualifier(tokens []shared.Token, start int) (StaticRuleQualifier, int, bool) {
+	if !staticRuleWordsAt(tokens, start, "alone") {
+		return StaticRuleQualifier{}, start, false
+	}
+	return StaticRuleQualifier{
+		Kind: StaticRuleQualifierAlone,
+		Span: tokens[start].Span,
+	}, start + 1, true
 }
 
 type requiredAttackRuleSyntax struct {
@@ -649,11 +667,17 @@ func validCreatureStaticRuleOperation(rule StaticRuleSyntax) bool {
 			rule.Operation.Kind == StaticRuleOperationAttack &&
 			rule.Operation.Voice == StaticRuleVoiceActive &&
 			(len(rule.Qualifiers) == 0 ||
-				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierDefenderYou))) ||
+				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierDefenderYou) ||
+				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierAlone))) ||
 		(rule.Constraint.Kind == StaticRuleConstraintProhibition &&
 			rule.Operation.Kind == StaticRuleOperationAttackOrBlock &&
 			rule.Operation.Voice == StaticRuleVoiceActive &&
-			len(rule.Qualifiers) == 0) ||
+			(len(rule.Qualifiers) == 0 ||
+				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierAlone))) ||
+		(rule.Constraint.Kind == StaticRuleConstraintProhibition &&
+			rule.Operation.Kind == StaticRuleOperationBlock &&
+			rule.Operation.Voice == StaticRuleVoiceActive &&
+			staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierAlone)) ||
 		(rule.Constraint.Kind == StaticRuleConstraintProhibition &&
 			rule.Operation.Kind == StaticRuleOperationBlockAndBeBlocked &&
 			rule.Operation.Voice == StaticRuleVoiceActive &&

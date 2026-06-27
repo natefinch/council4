@@ -254,7 +254,8 @@ func (ce combatEngine) legalAttackers(g *game.Game, playerID game.PlayerID) []ac
 				if !canAttackTarget(g, attacker, target) {
 					continue
 				}
-				if len(attackers) > 1 && ce.declareAttackersSatisfiesRequirements(g, playerID, single, eligibleByID) {
+				if len(attackers) > 1 && ce.declareAttackersSatisfiesRequirements(g, playerID, single, eligibleByID) &&
+					attackDeclarationsSatisfyAloneRestriction(g, single, eligibleByID) {
 					act := actionBuild.declareAttackers(single)
 					if !containsAction(actions, act) && ce.canPayAttackTax(g, playerID, single) {
 						actions = append(actions, act)
@@ -262,7 +263,8 @@ func (ce combatEngine) legalAttackers(g *game.Game, playerID game.PlayerID) []ac
 				}
 				declarations = append(declarations, single[0])
 			}
-			if ce.declareAttackersSatisfiesRequirements(g, playerID, declarations, eligibleByID) {
+			if ce.declareAttackersSatisfiesRequirements(g, playerID, declarations, eligibleByID) &&
+				attackDeclarationsSatisfyAloneRestriction(g, declarations, eligibleByID) {
 				act := actionBuild.declareAttackers(declarations)
 				if !containsAction(actions, act) && ce.canPayAttackTax(g, playerID, declarations) {
 					actions = append(actions, act)
@@ -273,7 +275,8 @@ func (ce combatEngine) legalAttackers(g *game.Game, playerID game.PlayerID) []ac
 	if ce.declareAttackersSatisfiesRequirements(g, playerID, nil, eligibleByID) {
 		actions = append(actions, actionBuild.declareAttackers(nil))
 	} else if len(actions) == 0 {
-		if declarations := preferredRequiredAttackDeclarations(g, playerID, attackers); len(declarations) > 0 {
+		if declarations := preferredRequiredAttackDeclarations(g, playerID, attackers); len(declarations) > 0 &&
+			attackDeclarationsSatisfyAloneRestriction(g, declarations, eligibleByID) {
 			if ce.canPayAttackTax(g, playerID, declarations) {
 				actions = append(actions, actionBuild.declareAttackers(declarations))
 			}
@@ -313,14 +316,16 @@ func (combatEngine) legalBlockers(g *game.Game, playerID game.PlayerID) []action
 			if !attackerRequiresMultipleBlockers(g, attackingPermanent) {
 				declaration := []game.BlockDeclaration{block}
 				if blockDeclarationsSatisfyMustBlockRequirements(required, declaration) &&
-					blockDeclarationsSatisfyLures(g, lures, blockers, declaration) {
+					blockDeclarationsSatisfyLures(g, lures, blockers, declaration) &&
+					blockDeclarationsSatisfyAloneRestriction(g, appendCombatBlockers(g, declaration)) {
 					actions = append(actions, actionBuild.declareBlockers(declaration))
 				}
 			}
 		}
 		if len(allBlockers) > 1 && !ruleEffectLimitsBlockersToOne(g, attackingPermanent) {
 			if blockDeclarationsSatisfyMustBlockRequirements(required, allBlockers) &&
-				blockDeclarationsSatisfyLures(g, lures, blockers, allBlockers) {
+				blockDeclarationsSatisfyLures(g, lures, blockers, allBlockers) &&
+				blockDeclarationsSatisfyAloneRestriction(g, appendCombatBlockers(g, allBlockers)) {
 				actions = append(actions, actionBuild.declareBlockers(allBlockers))
 			}
 		}
@@ -499,6 +504,9 @@ func (ce combatEngine) applyAttackers(g *game.Game, playerID game.PlayerID, decl
 	if !ce.declareAttackersSatisfiesRequirements(g, playerID, declare.Attackers, eligibleByID) {
 		return false
 	}
+	if !attackDeclarationsSatisfyAloneRestriction(g, declare.Attackers, eligibleByID) {
+		return false
+	}
 	if tax, ok := ce.attackTaxCost(g, declare.Attackers); ok {
 		if !ce.payAttackTax(g, playerID, declare.Attackers, tax) {
 			return false
@@ -591,6 +599,9 @@ func (combatEngine) applyBlockers(g *game.Game, playerID game.PlayerID, declare 
 	allBlockers = append(allBlockers, declare.Blockers...)
 	attackers := attacksAgainstPlayer(g, playerID)
 	eligible := eligibleBlockers(g, playerID)
+	if !blockDeclarationsSatisfyAloneRestriction(g, allBlockers) {
+		return false
+	}
 	if !blockDeclarationsSatisfyMustBlockRequirements(satisfiableMustBlockAttackers(g, playerID, attackers, eligible), allBlockers) {
 		return false
 	}

@@ -411,6 +411,18 @@ const (
 	// describes the attacker being blocked rather than the affected creature's own
 	// blockers.
 	RuleEffectCanBlockOnlyCreaturesWith
+	// RuleEffectCantAttackAlone prohibits the affected creature from attacking
+	// unless at least one other creature also attacks that combat ("This creature
+	// can't attack alone.", Mogg Flunkies, Trusty Companion). A lone attack that
+	// would declare only this creature is illegal; declaring it alongside another
+	// attacker satisfies the restriction (CR 508.1a).
+	RuleEffectCantAttackAlone
+	// RuleEffectCantBlockAlone prohibits the affected creature from blocking
+	// unless at least one other creature also blocks that combat ("This creature
+	// can't block alone.", Craven Hulk). A block declaration that would leave this
+	// creature as the only blocker is illegal; blocking alongside another blocker
+	// satisfies the restriction (CR 509.1a).
+	RuleEffectCantBlockAlone
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -460,7 +472,9 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectAttackTaxPerCreature,
 		RuleEffectManaProductionMultiplier,
 		RuleEffectSkipDrawStep,
-		RuleEffectCanBlockOnlyCreaturesWith:
+		RuleEffectCanBlockOnlyCreaturesWith,
+		RuleEffectCantAttackAlone,
+		RuleEffectCantBlockAlone:
 		return true
 	default:
 		return false

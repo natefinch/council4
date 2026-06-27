@@ -28,6 +28,7 @@ var Cards = []*game.CardDef{
 	WitchSMist,
 	Withstand,
 	WizardReplica,
+	WojekBodyguard,
 	WoodenSphere,
 	WoodlandWanderer,
 	WorldBreaker,

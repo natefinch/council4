@@ -757,6 +757,66 @@ func attackerRequiresMultipleBlockers(g *game.Game, attacker *game.Permanent) bo
 	return hasKeyword(g, attacker, game.Menace)
 }
 
+// appendCombatBlockers returns the existing declared blockers concatenated with
+// the candidate declarations, so "can't block alone" enforcement counts every
+// blocker in the combat rather than only the new declaration batch.
+func appendCombatBlockers(g *game.Game, declarations []game.BlockDeclaration) []game.BlockDeclaration {
+	combined := make([]game.BlockDeclaration, 0, len(g.Combat.Blockers)+len(declarations))
+	combined = append(combined, g.Combat.Blockers...)
+	combined = append(combined, declarations...)
+	return combined
+}
+
+// attackDeclarationsSatisfyAloneRestriction reports whether the attacker
+// declaration set respects every "can't attack alone" restriction: a creature
+// that can't attack alone may be declared only when at least two creatures
+// attack (CR 508.1a). With two or more attackers the restriction is satisfied
+// for all of them.
+func attackDeclarationsSatisfyAloneRestriction(
+	g *game.Game,
+	declarations []game.AttackDeclaration,
+	eligibleByID map[id.ID]*game.Permanent,
+) bool {
+	if len(declarations) >= 2 {
+		return true
+	}
+	for _, declaration := range declarations {
+		attacker := eligibleByID[declaration.Attacker]
+		if attacker == nil {
+			if permanent, ok := permanentByObjectID(g, declaration.Attacker); ok {
+				attacker = permanent
+			}
+		}
+		if attacker == nil {
+			continue
+		}
+		if ruleEffectProhibitsAttackingAlone(g, attacker) {
+			return false
+		}
+	}
+	return true
+}
+
+// blockDeclarationsSatisfyAloneRestriction reports whether the block declaration
+// set respects every "can't block alone" restriction: a creature that can't
+// block alone may be declared only when at least two creatures block (CR
+// 509.1a). With two or more blockers the restriction is satisfied for all.
+func blockDeclarationsSatisfyAloneRestriction(g *game.Game, declarations []game.BlockDeclaration) bool {
+	if len(declarations) >= 2 {
+		return true
+	}
+	for _, declaration := range declarations {
+		blocker, ok := permanentByObjectID(g, declaration.Blocker)
+		if !ok {
+			continue
+		}
+		if ruleEffectProhibitsBlockingAlone(g, blocker) {
+			return false
+		}
+	}
+	return true
+}
+
 // sharesColor reports whether the two color sets have at least one color in
 // common. Colorless creatures (empty color sets) share no color.
 func sharesColor(a, b []color.Color) bool {
