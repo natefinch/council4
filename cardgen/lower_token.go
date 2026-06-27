@@ -135,18 +135,9 @@ func lowerCreateTokenSpellLinked(ctx contentCtx, publishLinked game.LinkedKey) (
 	if !ok {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
-	amount, ok := createTokenAmount(ctx, &effect, amountObject)
+	amount, dynamicSize, ok := createTokenAmountAndSize(ctx, &effect, amountObject)
 	if !ok {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
-	}
-	var dynamicPower, dynamicToughness opt.V[game.Quantity]
-	if effect.TokenPTVariableX {
-		quantity, ok := tokenPTDynamicQuantity(effect.TokenPTDynamic)
-		if !ok {
-			return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
-		}
-		dynamicPower = opt.Val(quantity)
-		dynamicToughness = opt.Val(quantity)
 	}
 	return game.Mode{
 		Targets: targets,
@@ -157,8 +148,8 @@ func lowerCreateTokenSpellLinked(ctx contentCtx, publishLinked game.LinkedKey) (
 				Recipient:      recipient,
 				EntryTapped:    effect.Selector.Tapped,
 				EntryAttacking: effect.Selector.Attacking,
-				Power:          dynamicPower,
-				Toughness:      dynamicToughness,
+				Power:          dynamicSize,
+				Toughness:      dynamicSize,
 				PublishLinked:  publishLinked,
 			},
 		}},
@@ -230,6 +221,68 @@ func tokenPTDynamicQuantity(kind parser.EffectDynamicAmountKind) (game.Quantity,
 	default:
 		return game.Quantity{}, false
 	}
+}
+
+// createTokenAmountAndSize resolves a recognized create-token effect's token
+// count together with the optional dynamic power/toughness of a variable "X/X"
+// token. A fixed-power/toughness token carries no dynamic size, so its count
+// comes straight from createTokenAmount and the size quantity stays empty. A
+// variable "X/X" token threads through variableTokenSize, which separates the
+// printed-X size from the number of tokens created. A single printed X drives
+// both the token's power and toughness, so the one returned size is shared by
+// both.
+func createTokenAmountAndSize(ctx contentCtx, effect *compiler.CompiledEffect, amountObject game.ObjectReference) (game.Quantity, opt.V[game.Quantity], bool) {
+	if !effect.TokenPTVariableX {
+		amount, ok := createTokenAmount(ctx, effect, amountObject)
+		return amount, opt.V[game.Quantity]{}, ok
+	}
+	size, count, ok := variableTokenSize(ctx, effect, amountObject)
+	if !ok {
+		return game.Quantity{}, opt.V[game.Quantity]{}, false
+	}
+	return count, opt.Val(size), true
+}
+
+// variableTokenSize resolves a variable "X/X" token's printed size and the
+// number of such tokens created. A single printed X drives both the token's
+// power and toughness, so the returned size is shared by both.
+//
+// Three shapes are recognized. A clause that binds X to a cost amount ("...
+// where X is the life paid as this entered") carries that binding in
+// TokenPTDynamic, and its count is the ordinary article/number amount. A "create
+// an X/X ... where X is <dynamic>" clause routes the size dynamic onto the
+// effect's amount during parsing (the trailing "where X is" clause overrides the
+// singular article), so the amount is the size and exactly one token is created.
+// A fixed-count clause ("create two X/X ... tokens") whose X has no separate
+// definition takes its size from the spell's own X. Every other shape, including
+// a variable-count clause with no size binding, fails closed.
+func variableTokenSize(ctx contentCtx, effect *compiler.CompiledEffect, amountObject game.ObjectReference) (size game.Quantity, count game.Quantity, ok bool) {
+	if effect.TokenPTDynamic != parser.EffectDynamicAmountNone {
+		quantity, ok := tokenPTDynamicQuantity(effect.TokenPTDynamic)
+		if !ok {
+			return game.Quantity{}, game.Quantity{}, false
+		}
+		amount, ok := createTokenAmount(ctx, effect, amountObject)
+		if !ok {
+			return game.Quantity{}, game.Quantity{}, false
+		}
+		return quantity, amount, true
+	}
+	if effect.Amount.DynamicForm == compiler.DynamicAmountWhereX &&
+		effect.Amount.DynamicKind != compiler.DynamicAmountNone {
+		quantity, ok := createTokenAmount(ctx, effect, amountObject)
+		if !ok {
+			return game.Quantity{}, game.Quantity{}, false
+		}
+		return quantity, game.Fixed(1), true
+	}
+	if effect.Amount.Known {
+		if effect.Amount.Value < 1 {
+			return game.Quantity{}, game.Quantity{}, false
+		}
+		return game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX}), game.Fixed(effect.Amount.Value), true
+	}
+	return game.Quantity{}, game.Quantity{}, false
 }
 
 // lowerCreateNamedTokenChoiceSpell lowers an N-way (N >= 2) choice among

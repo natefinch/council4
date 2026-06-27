@@ -195,3 +195,68 @@ func TestLowerDynamicSizedTokenWithPayLifeCost(t *testing.T) {
 		t.Fatalf("token subtypes = %v, want [Demon]", def.Subtypes)
 	}
 }
+
+// TestLowerVariableTokenSizeWhereXDynamic verifies that a singular "X/X" token
+// whose size is bound by a trailing "where X is <dynamic>" clause ("Create an
+// X/X green Elemental creature token, where X is the number of lands you
+// control.", Dance of the Tumbleweeds) lowers to one CreateToken: a single token
+// whose dynamic power and toughness read the rules-derived count, with the
+// printed P/T left unset on the token definition.
+func TestLowerVariableTokenSizeWhereXDynamic(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Where X Token",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		Colors:     []string{"G"},
+		OracleText: "Create an X/X green Elemental creature token, where X is the number of lands you control.",
+	})
+	create := createTokenPrimitive(t, face)
+	if create.Amount.Value() != 1 {
+		t.Fatalf("token count = %+v, want fixed 1", create.Amount)
+	}
+	if !create.Power.Exists || !create.Toughness.Exists {
+		t.Fatalf("create P/T size = %+v/%+v, want both set", create.Power, create.Toughness)
+	}
+	if got := create.Power.Val.DynamicAmount(); !got.Exists || got.Val.Kind != game.DynamicAmountCountSelector {
+		t.Fatalf("create power dynamic = %+v, want DynamicAmountCountSelector", got)
+	}
+	if got := create.Toughness.Val.DynamicAmount(); !got.Exists || got.Val.Kind != game.DynamicAmountCountSelector {
+		t.Fatalf("create toughness dynamic = %+v, want DynamicAmountCountSelector", got)
+	}
+	def, ok := create.Source.TokenDefRef()
+	if !ok {
+		t.Fatal("token source is not a token definition")
+	}
+	if def.Power.Exists || def.Toughness.Exists {
+		t.Fatalf("variable-size token def should leave printed P/T unset, got %+v/%+v", def.Power, def.Toughness)
+	}
+	if len(def.Subtypes) != 1 || def.Subtypes[0] != types.Elemental {
+		t.Fatalf("token subtypes = %v, want [Elemental]", def.Subtypes)
+	}
+}
+
+// TestLowerVariableTokenSizeSpellX verifies that a fixed-count "X/X" token whose
+// size is the spell's own X ("Create two X/X red Elemental creature tokens.",
+// Devastating Summons) lowers to one CreateToken creating two tokens, each sized
+// by the spell's variable X.
+func TestLowerVariableTokenSizeSpellX(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Spell X Token",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		Colors:     []string{"R"},
+		OracleText: "Create two X/X red Elemental creature tokens.",
+	})
+	create := createTokenPrimitive(t, face)
+	if create.Amount.Value() != 2 {
+		t.Fatalf("token count = %+v, want fixed 2", create.Amount)
+	}
+	if got := create.Power.Val.DynamicAmount(); !got.Exists || got.Val.Kind != game.DynamicAmountX {
+		t.Fatalf("create power dynamic = %+v, want DynamicAmountX", got)
+	}
+	if got := create.Toughness.Val.DynamicAmount(); !got.Exists || got.Val.Kind != game.DynamicAmountX {
+		t.Fatalf("create toughness dynamic = %+v, want DynamicAmountX", got)
+	}
+}

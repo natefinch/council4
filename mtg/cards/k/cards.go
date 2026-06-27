@@ -17,6 +17,7 @@ var Cards = []*game.CardDef{
 	KessigWolfRun,
 	KhalniAmbush,
 	KhalniHeartExpedition,
+	KinTreeInvocation,
 	KithkinHealer,
 	KjeldoranGargoyle,
 	KodamaOfTheSouthTree,

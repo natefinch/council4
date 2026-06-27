@@ -2458,6 +2458,14 @@ func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
 		if effect.Amount.DynamicKind == EffectDynamicAmountNone && !effect.Amount.VariableX {
 			return false
 		}
+		if effect.TokenPTVariableX {
+			// "Create an X/X ... token, where X is <dynamic>": the variable X sizes
+			// the token's printed power and toughness rather than counting tokens, so
+			// the count is the singular article and the trailing "where X is" clause
+			// binds the size. One such token is created.
+			return strings.EqualFold(exactEffectClauseText(effect),
+				"Create "+specBody("an", "token")+", "+effect.Amount.Text+".")
+		}
 		return strings.EqualFold(exactEffectClauseText(effect),
 			"Create "+specBody("X", "tokens")+", "+effect.Amount.Text+".")
 	default:
