@@ -838,6 +838,7 @@ func classifyEffectVerbs(tokens []shared.Token, atoms Atoms) []classifiedVerb {
 		if kind == EffectUnknown ||
 			atoms.SelfNameAt(tokens[i].Span) ||
 			tapOrUntapInnerUntapAt(tokens, i) ||
+			withinAsThoughDidntHaveDefenderTail(tokens, i) ||
 			copyTokenExceptRiderBoundaryAt(tokens, i) {
 			continue
 		}
@@ -956,6 +957,54 @@ func cantBeBlockedThisTurnVerbAt(tokens []shared.Token, index int) bool {
 		equalWord(tokens[index+2], "blocked") &&
 		equalWord(tokens[index+3], "this") &&
 		equalWord(tokens[index+4], "turn")
+}
+
+// canAttackAsThoughDefenderVerbAt reports whether the temporary combat
+// permission "can attack this turn as though it didn't have defender" begins at
+// index. It anchors the resolving EffectCanAttackAsThoughDefender effect ("This
+// creature can attack this turn as though it didn't have defender.", Krotiq
+// Nestguard, Skyclave Squid) on the "can" so the subject is the source creature
+// scanned before it. The exactness recognizer reconstructs the full clause, so
+// any other wording (a different subject, a missing "this turn" duration, an
+// added rider) still fails closed.
+func canAttackAsThoughDefenderVerbAt(tokens []shared.Token, index int) bool {
+	return index+9 < len(tokens) &&
+		equalWord(tokens[index], "can") &&
+		equalWord(tokens[index+1], "attack") &&
+		equalWord(tokens[index+2], "this") &&
+		equalWord(tokens[index+3], "turn") &&
+		equalWord(tokens[index+4], "as") &&
+		equalWord(tokens[index+5], "though") &&
+		equalWord(tokens[index+6], "it") &&
+		equalWord(tokens[index+7], "didn't") &&
+		equalWord(tokens[index+8], "have") &&
+		equalWord(tokens[index+9], "defender")
+}
+
+// asThoughDidntHaveDefenderTailAt reports whether the "as though it didn't have
+// defender" reminder tail of the attack permission begins at index. It anchors
+// the span removed from semantic reference and keyword scanning and the
+// suppression of the "have" keyword-grant verb inside that tail.
+func asThoughDidntHaveDefenderTailAt(tokens []shared.Token, index int) bool {
+	return index+5 < len(tokens) &&
+		equalWord(tokens[index], "as") &&
+		equalWord(tokens[index+1], "though") &&
+		equalWord(tokens[index+2], "it") &&
+		equalWord(tokens[index+3], "didn't") &&
+		equalWord(tokens[index+4], "have") &&
+		equalWord(tokens[index+5], "defender")
+}
+
+// withinAsThoughDidntHaveDefenderTail reports whether the token at index lies
+// inside an "as though it didn't have defender" tail, so the "have" within it is
+// not segmented as a separate keyword-grant verb of the attack permission.
+func withinAsThoughDidntHaveDefenderTail(tokens []shared.Token, index int) bool {
+	for start := 0; start <= index; start++ {
+		if asThoughDidntHaveDefenderTailAt(tokens, start) && index <= start+5 {
+			return true
+		}
+	}
+	return false
 }
 
 // cantBlockThisTurnVerbAt reports whether the temporary prohibition "can't block
@@ -1288,6 +1337,8 @@ func effectKindAt(tokens []shared.Token, index int) EffectKind {
 		return EffectUnknown
 	case payLifeVerbAt(tokens, index):
 		return EffectLose
+	case canAttackAsThoughDefenderVerbAt(tokens, index):
+		return EffectCanAttackAsThoughDefender
 	case cantBeBlockedThisTurnVerbAt(tokens, index):
 		return EffectCantBeBlocked
 	case cantBlockThisTurnVerbAt(tokens, index):

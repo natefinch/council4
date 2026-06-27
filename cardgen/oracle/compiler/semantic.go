@@ -1608,6 +1608,12 @@ const (
 	EffectCantAttackAlone
 	EffectCantBlockAlone
 	EffectCantAttackOrBlockAlone
+	// EffectCanAttackAsThoughDefender is the self-permission "This creature can
+	// attack this turn as though it didn't have defender." (Glade Watcher, Mirror
+	// Wall, Walking Wall): the source creature may be declared as an attacker this
+	// turn despite having defender. It lowers to a this-turn ApplyRule over the
+	// source. Added last so existing kinds keep their wire values.
+	EffectCanAttackAsThoughDefender
 )
 
 // DurationKind identifies common continuous-effect durations.

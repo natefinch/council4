@@ -16,6 +16,7 @@ var Cards = []*game.CardDef{
 	TeferiSProtection,
 	TempestTechnique,
 	TentativeConnection,
+	TerritorialWitchstalker,
 	TestOfFaith,
 	ThaliaGuardianOfThraben,
 	Thallid,

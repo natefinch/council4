@@ -965,6 +965,23 @@ func tokenAttackDefenderClause(kind EffectKind, clause []shared.Token) (AttackDe
 	return AttackDefenderNone, shared.Span{}, false
 }
 
+// canAttackDefenderTailSpan returns the span of the trailing "as though it
+// didn't have defender" reminder of a "<source> can attack this turn as though
+// it didn't have defender." permission. The build loop stores it so the
+// semantic scans remove the anaphoric "it" and the trailing "defender" noun
+// from reference and keyword scanning. It is the zero span for any other effect.
+func canAttackDefenderTailSpan(kind EffectKind, clause []shared.Token) shared.Span {
+	if kind != EffectCanAttackAsThoughDefender {
+		return shared.Span{}
+	}
+	for i := range clause {
+		if asThoughDidntHaveDefenderTailAt(clause, i) {
+			return shared.SpanOf(clause[i : i+6])
+		}
+	}
+	return shared.Span{}
+}
+
 // referencesOutsideAttackDefender drops anaphoric references (e.g. the
 // "that player" ReferenceThatPlayer in "... attacking that player or a
 // planeswalker they control") that fall inside a created attacking token's
@@ -1243,6 +1260,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		// subject's filters do not fold into the token's type line.
 		selectionClause := clause
 		tokenAttackDefender, tokenAttackDefenderSpan, hasAttackDefender := tokenAttackDefenderClause(kind, clause)
+		canAttackDefenderSpan := canAttackDefenderTailSpan(kind, clause)
 		switch {
 		case kind == EffectDealDamage && amount.DynamicForm == EffectDynamicAmountFormWhereX:
 			selectionClause = tokensBeforeOffset(clause, amount.Span.Start.Offset)
@@ -1387,6 +1405,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			AdditionalTokens:         additionalTokens,
 			AttackDefender:           tokenAttackDefender,
 			AttackDefenderSpan:       tokenAttackDefenderSpan,
+			CanAttackDefenderSpan:    canAttackDefenderSpan,
 			TokenChoice:              parseTokenChoice(kind, clause),
 			StaticSubject:            staticSubject,
 			DoublePower:              doublePower,
@@ -1425,7 +1444,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			Symbol:                  firstEffectSymbol(clause),
 			Mana:                    parseEffectMana(kind, clause, nextConnection != EffectConnectionNone),
 			Replacement:             parseEffectReplacement(ownership, atoms),
-			References:              referencesOutsideAttackDefender(referencesInSpan(atoms, ownershipSpan), hasAttackDefender, tokenAttackDefenderSpan),
+			References:              referencesOutsideSpan(referencesOutsideAttackDefender(referencesInSpan(atoms, ownershipSpan), hasAttackDefender, tokenAttackDefenderSpan), canAttackDefenderSpan),
 			SubjectReferences:       referencesInSpan(atoms, shared.SpanOf(tokens[ownershipStart:tokenIndex])),
 			Targets:                 targetsInSpan(sentence.Targets, ownershipSpan),
 			SubjectTargets:          targetsInSpan(sentence.Targets, shared.SpanOf(tokens[ownershipStart:tokenIndex])),

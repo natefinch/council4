@@ -23,6 +23,7 @@ var Cards = []*game.CardDef{
 	NightMarketAeronaut,
 	NightwhorlHermit,
 	NimblewrightSchematic,
+	NivixCyclops,
 	NoblePurpose,
 	NobleVestige,
 	NoxiousGhoul,
