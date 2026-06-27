@@ -22,6 +22,7 @@ var Cards = []*game.CardDef{
 	UrzaSArmor,
 	UtopiaMycon,
 	UrzaSChalice,
+	UrzaSRage,
 	UtopiaMycon,
 	UtromScientists,
 }

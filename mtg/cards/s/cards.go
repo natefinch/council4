@@ -54,6 +54,7 @@ var Cards = []*game.CardDef{
 	ShieldSphere,
 	ShieldmateSBlessing,
 	ShiftingCeratops,
+	ShivanFire,
 	ShriekingSpecter,
 	SierraNukaSBiggestFan,
 	SigardaChampionOfLight,
