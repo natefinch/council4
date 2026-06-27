@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,620 of 32,501 cards eligible for paper support (48.1%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,633 of 32,501 cards eligible for paper support (48.1%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -16,6 +16,7 @@ Council4 currently supports **15,620 of 32,501 cards eligible for paper support 
 - Abandoned Air Temple
 - Abandoned Campground
 - Abandoned Outpost
+- Abattoir Ghoul
 - Abbey Gargoyles
 - Abbey Griffin
 - Abbey Matron
@@ -438,6 +439,7 @@ Council4 currently supports **15,620 of 32,501 cards eligible for paper support 
 - Angelic Ascension
 - Angelic Benediction
 - Angelic Blessing
+- Angelic Chorus
 - Angelic Cub
 - Angelic Curator
 - Angelic Destiny
@@ -2902,6 +2904,7 @@ Council4 currently supports **15,620 of 32,501 cards eligible for paper support 
 - Dakmor Scorpion
 - Dakmor Sorceress
 - Dalek
+- Dalek Drone
 - Damn
 - Damnable Pact
 - Damnation
@@ -4065,6 +4068,7 @@ Council4 currently supports **15,620 of 32,501 cards eligible for paper support 
 - Engine Rat
 - Engineered Might
 - Engulfing Eruption
+- Engulfing Slagwurm
 - Enhanced Awareness
 - Enigma Drake
 - Enigma Eidolon
@@ -5762,6 +5766,7 @@ Council4 currently supports **15,620 of 32,501 cards eligible for paper support 
 - Grim Bounty
 - Grim Discovery
 - Grim Draugr
+- Grim Feast
 - Grim Flayer
 - Grim Flowering
 - Grim Guardian
@@ -6508,6 +6513,7 @@ Council4 currently supports **15,620 of 32,501 cards eligible for paper support 
 - Ignoble Soldier
 - Iguana Parrot
 - Ihsan's Shade
+- Ikra Shidiqi, the Usurper
 - Il Mheg Pixie
 - Ill-Gotten Inheritance
 - Illegitimate Business
@@ -9268,6 +9274,7 @@ Council4 currently supports **15,620 of 32,501 cards eligible for paper support 
 - Orc General
 - Orc Sureshot
 - Orchard Strider
+- Orchard Warden
 - Orcish Artillery
 - Orcish Bloodpainter
 - Orcish Bowmasters
@@ -9399,6 +9406,7 @@ Council4 currently supports **15,620 of 32,501 cards eligible for paper support 
 - Palace Familiar
 - Palace Sentinels
 - Paladin en-Vec
+- Paladin of Atonement
 - Paladin of Predation
 - Paladin of the Bloodstained
 - Paladin's Shield
@@ -9946,6 +9954,7 @@ Council4 currently supports **15,620 of 32,501 cards eligible for paper support 
 - Propaganda
 - Propagator Drone
 - Propeller Pioneer
+- Proper Burial
 - Prophet of Distortion
 - Prophet of the Peak
 - Prophetic Flamespeaker
@@ -10653,6 +10662,7 @@ Council4 currently supports **15,620 of 32,501 cards eligible for paper support 
 - Righteous Cause
 - Righteous Charge
 - Righteous Fury
+- Righteous Valkyrie
 - Righteous War
 - Righteousness
 - Rile
@@ -12343,6 +12353,7 @@ Council4 currently supports **15,620 of 32,501 cards eligible for paper support 
 - Soulsurge Elemental
 - Soulsworn Jury
 - Soured Springs
+- South Wind Avatar
 - Southern Air Temple
 - Southern Elephant
 - Southern Paladin
@@ -14578,6 +14589,7 @@ Council4 currently supports **15,620 of 32,501 cards eligible for paper support 
 - Verdant Embrace
 - Verdant Field
 - Verdant Force
+- Verdant Sun's Avatar
 - Verdigris
 - Verduran Enchantress
 - Verix Bladewing
@@ -15345,6 +15357,7 @@ Council4 currently supports **15,620 of 32,501 cards eligible for paper support 
 - Wolfsbane, Highland Hero
 - Wolfwillow Haven
 - Wolverine Pack
+- Wolverine Riders
 - Wonder
 - Wondrous Revival
 - Wood Elves
