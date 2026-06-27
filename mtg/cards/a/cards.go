@@ -12,6 +12,7 @@ var Cards = []*game.CardDef{
 	AdaptiveOmnitool,
 	AdventurousImpulse,
 	AetherShockwave,
+	AgentOfTheIronThrone,
 	AirBladder,
 	AirdropAeronauts,
 	AjaniSInfluence,

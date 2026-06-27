@@ -256,8 +256,9 @@ func parseStaticQuotedAbilityGrantDeclarations(
 
 // staticQuotedGrantSubjectSupported reports whether subject is one the quoted
 // ability grant supports: the attached object of an Equipment/Aura ("Equipped
-// creature", "Enchanted creature"), a controlled-permanent group, a
-// controlled-creatures group narrowed to a single creature subtype ("Wizards
+// creature", "Enchanted creature"), a controlled-permanent group, a controlled
+// commander group ("Commander creatures you own have ...", the Background buff),
+// a controlled-creatures group narrowed to a single creature subtype ("Wizards
 // you control have ...", "Other Goblins you control have ..."), or a controlled
 // artifact or token group ("Artifacts you control have ...", "Tokens you control
 // have ...").
@@ -269,6 +270,7 @@ func staticQuotedGrantSubjectSupported(subject StaticDeclarationSubject) bool {
 	case EffectStaticSubjectAttachedObject,
 		EffectStaticSubjectControlledCreatures,
 		EffectStaticSubjectOtherControlledCreatures,
+		EffectStaticSubjectControlledCommanderCreatures,
 		EffectStaticSubjectControlledCreatureSubtype,
 		EffectStaticSubjectOtherControlledCreatureSubtype,
 		EffectStaticSubjectControlledArtifacts,

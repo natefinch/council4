@@ -3465,6 +3465,13 @@ func parseFilteredControlledCreatureGroupSubject(tokens []shared.Token) (EffectS
 	case len(tokens) >= 5 && effectWordsAt(tokens, 0, "commander", "creatures", "you", "control") &&
 		(equalWord(tokens[4], "get") || equalWord(tokens[4], "have")):
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledCommanderCreatures, Span: shared.SpanOf(tokens[:4])}, true
+	case len(tokens) >= 5 && effectWordsAt(tokens, 0, "commander", "creatures", "you", "own") &&
+		(equalWord(tokens[4], "get") || equalWord(tokens[4], "have")):
+		// "Commander creatures you own ..." is the Background buff group (Folk
+		// Hero, Raised by Giants). A Background grants its abilities to a
+		// commander its controller owns and controls, so this owned-commander
+		// wording maps to the same controlled-commander affected group.
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledCommanderCreatures, Span: shared.SpanOf(tokens[:4])}, true
 	case len(tokens) >= 5 && effectWordsAt(tokens, 0, "untapped", "creatures", "you", "control") &&
 		(equalWord(tokens[4], "get") || equalWord(tokens[4], "have")):
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledUntappedCreatures, Span: shared.SpanOf(tokens[:4])}, true

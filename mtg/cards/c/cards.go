@@ -30,6 +30,7 @@ var Cards = []*game.CardDef{
 	ChronicFlooding,
 	CinderGlade,
 	CinderWall,
+	ClanCrafter,
 	ClergyEnVec,
 	CliveSHideaway,
 	ClockworkHydra,

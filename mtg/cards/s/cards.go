@@ -108,6 +108,7 @@ var Cards = []*game.CardDef{
 	StormcloudDjinn,
 	Stratozeppelid,
 	StratusWalk,
+	StreetUrchin,
 	StrongholdZeppelin,
 	SturdyHatchling,
 	SumalaWoodshaper,
