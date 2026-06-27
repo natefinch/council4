@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,187 of 32,501 cards eligible for paper support (46.7%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,202 of 32,501 cards eligible for paper support (46.8%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2706,6 +2706,7 @@ Council4 currently supports **15,187 of 32,501 cards eligible for paper support 
 - Crush of Wurms
 - Crushing Canopy
 - Crushing Disappointment
+- Crushing Pain
 - Crushing Vines
 - Crustacean Commando
 - Crux of Fate
@@ -4278,12 +4279,14 @@ Council4 currently supports **15,187 of 32,501 cards eligible for paper support 
 - Farsight Adept
 - Fascination
 - Fast // Furious
+- Fatal Blow
 - Fatal Fumes
 - Fate Forgotten
 - Fate Transfer
 - Fate Unraveler
 - Fateful End
 - Fatestitcher
+- Fathom Fleet Cutthroat
 - Fathom Fleet Firebrand
 - Fathom Mage
 - Fault Line
@@ -4438,6 +4441,7 @@ Council4 currently supports **15,187 of 32,501 cards eligible for paper support 
 - Final Reward
 - Final Strike
 - Final Vengeance
+- Final-Sting Faerie
 - Finale of Glory
 - Finch Formation
 - Finest Hour
@@ -7620,6 +7624,7 @@ Council4 currently supports **15,187 of 32,501 cards eligible for paper support 
 - Lurching Rotbeast
 - Lure
 - Lurking Crocodile
+- Lurking Deadeye
 - Lurking Lizards
 - Lurking Nightstalker
 - Lurking Roper
@@ -7768,6 +7773,7 @@ Council4 currently supports **15,187 of 32,501 cards eligible for paper support 
 - Manor Skeleton
 - Manriki-Gusari
 - Manta Riders
+- Manticore
 - Manticore Eternal
 - Manticore of the Gauntlet
 - Mantis Engine
@@ -8170,6 +8176,7 @@ Council4 currently supports **15,187 of 32,501 cards eligible for paper support 
 - Mirran Mettle
 - Mirran Spy
 - Mirri, Cat Warrior
+- Mirrodin Avenged
 - Mirrodin's Core
 - Mirror Entity
 - Mirror Image
@@ -8899,6 +8906,7 @@ Council4 currently supports **15,187 of 32,501 cards eligible for paper support 
 - Ogre Resister
 - Ogre Sentry
 - Ogre Shaman
+- Ogre Siegebreaker
 - Ogre Slumlord
 - Ogre Taskmaster
 - Ogre Warrior
@@ -8990,6 +8998,7 @@ Council4 currently supports **15,187 of 32,501 cards eligible for paper support 
 - Opera Love Song
 - Ophidian Eye
 - Ophiomancer
+- Opportunist
 - Opportunity
 - Opposition
 - Oppression
@@ -10520,6 +10529,7 @@ Council4 currently supports **15,187 of 32,501 cards eligible for paper support 
 - Ronin Houndmaster
 - Ronom Unicorn
 - Roofstalker Wight
+- Rooftop Assassin
 - Rooftop Bypass
 - Rook Turret
 - Rookie Mistake
@@ -12443,6 +12453,7 @@ Council4 currently supports **15,187 of 32,501 cards eligible for paper support 
 - Stifle
 - Stillmoon Cavalier
 - Stimulus Package
+- Stingblade Assassin
 - Stingerfling Spider
 - Stinging Barrier
 - Stinging Lionfish
@@ -13942,6 +13953,7 @@ Council4 currently supports **15,187 of 32,501 cards eligible for paper support 
 - Unscrupulous Agent
 - Unseen Walker
 - Unsettling Twins
+- Unsparing Boltcaster
 - Unspeakable Symbol
 - Unstable Obelisk
 - Unstoppable Ogre
@@ -14428,6 +14440,7 @@ Council4 currently supports **15,187 of 32,501 cards eligible for paper support 
 - Vraska Joins Up
 - Vraska's Conquistador
 - Vraska's Contempt
+- Vraska's Finisher
 - Vryn Wingmare
 - Vulpikeet
 - Vulpine Goliath
@@ -14877,6 +14890,7 @@ Council4 currently supports **15,187 of 32,501 cards eligible for paper support 
 - Witch's Cauldron
 - Witch's Cottage
 - Witch's Familiar
+- Witch's Mist
 - Witch's Web
 - Witch-Maw Nephilim
 - Witches' Eye
@@ -15061,6 +15075,7 @@ Council4 currently supports **15,187 of 32,501 cards eligible for paper support 
 - Yotian Medic
 - Yotian Soldier
 - Yotian Tactician
+- You Are Already Dead
 - You Come to the Gnoll Camp
 - You Find the Villains' Lair
 - You Happen On a Glade
