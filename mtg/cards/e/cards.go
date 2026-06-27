@@ -38,6 +38,7 @@ var Cards = []*game.CardDef{
 	EtherealChampion,
 	ExaltedAngel,
 	ExemplarOfStrength,
+	ExperimentalSynthesizer,
 	EyeblightMassacre,
 	EyeblightSEnding,
 	EzrimAgencyChief,

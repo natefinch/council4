@@ -66,6 +66,7 @@ var Cards = []*game.CardDef{
 	MournerSSurprise,
 	MourningThrull,
 	MouseTrapper,
+	MouserFoundry,
 	MrOrfeoTheBoulder,
 	MudflatVillage,
 	MundaSVanguard,
