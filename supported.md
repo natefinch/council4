@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,059 of 32,501 cards eligible for paper support (46.3%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,067 of 32,501 cards eligible for paper support (46.4%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -619,6 +619,7 @@ Council4 currently supports **15,059 of 32,501 cards eligible for paper support 
 - Argothian Opportunist
 - Argothian Sprite
 - Argothian Swine
+- Aria of Flame
 - Arid Mesa
 - Arisen Gorgon
 - Ark of Blight
@@ -4183,6 +4184,7 @@ Council4 currently supports **15,059 of 32,501 cards eligible for paper support 
 - Falcon's Wing Harness
 - Falconer Adept
 - Falkenrath Celebrants
+- Falkenrath Exterminator
 - Falkenrath Forebear
 - Falkenrath Marauders
 - Falkenrath Noble
@@ -5308,6 +5310,7 @@ Council4 currently supports **15,059 of 32,501 cards eligible for paper support 
 - Goblin Pyromancer
 - Goblin Raider
 - Goblin Rally
+- Goblin Razerunners
 - Goblin Replica
 - Goblin Rimerunner
 - Goblin Rogue
@@ -6957,6 +6960,7 @@ Council4 currently supports **15,059 of 32,501 cards eligible for paper support 
 - Kitsune Loreweaver
 - Kjeldoran Dead
 - Kjeldoran Escort
+- Kjeldoran Javelineer
 - Kjeldoran Knight
 - Kjeldoran Outrider
 - Kjeldoran Phalanx
@@ -7611,6 +7615,7 @@ Council4 currently supports **15,059 of 32,501 cards eligible for paper support 
 - Magitek Infantry
 - Magma Giant
 - Magma Jet
+- Magma Mine
 - Magma Opus
 - Magma Phoenix
 - Magma Rift
@@ -9510,6 +9515,7 @@ Council4 currently supports **15,059 of 32,501 cards eligible for paper support 
 - Pretending Poxbearers
 - Prey Upon
 - Prey's Vengeance
+- Preyseizer Dragon
 - Price of Freedom
 - Prickleboar
 - Prickly Boggart
@@ -12009,6 +12015,7 @@ Council4 currently supports **15,059 of 32,501 cards eligible for paper support 
 - Sphinx's Disciple
 - Sphinx's Insight
 - Sphinx's Revelation
+- Sphinx-Bone Wand
 - Spicy Oatmeal Pizza
 - Spider
 - Spider
@@ -13384,6 +13391,7 @@ Council4 currently supports **15,059 of 32,501 cards eligible for paper support 
 - Torch Fiend
 - Torch Gauntlet
 - Torch Slinger
+- Torch Song
 - Torii Watchward
 - Torment
 - Torment of Hailfire
