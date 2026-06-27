@@ -88,3 +88,27 @@ func TestParseCopyTokenOverrideNamedFailsClosed(t *testing.T) {
 		}
 	}
 }
+
+// TestParseCopyTokenOverrideMixedAdditivityFailsClosed verifies that a
+// multi-clause exception combining a replace-mode characteristic with a
+// separate additive clause that turns on the shared additive flag fails closed
+// rather than silently lowering the replace-mode subtype as additive. Here the
+// first clause replaces the subtype ("a 1/1 green Frog") while the second turns
+// on the additive-types flag ("an artifact in addition to its other types")
+// without carrying a subtype of its own, so the committed replace mode for the
+// Frog subtype disagrees with the global additive flag the lowering consults.
+func TestParseCopyTokenOverrideMixedAdditivityFailsClosed(t *testing.T) {
+	t.Parallel()
+	document, _ := Parse(
+		"Create a token that's a copy of target creature, except it's a 1/1 green Frog "+
+			"and it's an artifact in addition to its other types.",
+		Context{InstantOrSorcery: true, CardName: "Mixed Maker"})
+	for _, sentence := range document.Abilities[0].Sentences {
+		for _, effect := range sentence.Effects {
+			if effect.TokenCopyOverride {
+				t.Fatalf("mixed-additivity exception must fail closed, got override subtypes=%v additiveTypes=%v",
+					effect.TokenCopyOverrideSubtypes, effect.TokenCopyOverrideAdditiveTypes)
+			}
+		}
+	}
+}

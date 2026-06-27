@@ -67,6 +67,18 @@ func copyTokenExceptOverride(effect *EffectSyntax) (copyTokenOverride, bool) {
 	if !override.hasCharacteristic() {
 		return copyTokenOverride{}, false
 	}
+	// The lowering keys the replace-versus-additive decision for all colors and
+	// subtypes off the global additive flags, so an emitted characteristic whose
+	// committed per-clause mode disagrees with the final global flag (a replace
+	// clause for one characteristic combined with an additive clause that turns
+	// on the shared flag) would be silently lowered with the wrong semantics.
+	// Fail closed instead.
+	if len(override.colors) > 0 && (override.colorMode == 1) != override.additiveColors {
+		return copyTokenOverride{}, false
+	}
+	if len(override.subtypes) > 0 && (override.subtypeMode == 1) != override.additiveTypes {
+		return copyTokenOverride{}, false
+	}
 	return override, true
 }
 
