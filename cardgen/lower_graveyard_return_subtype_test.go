@@ -99,3 +99,70 @@ func TestLowerGraveyardReturnSupertypeExclusionStillFailsClosed(t *testing.T) {
 		OracleText: "Return target nonlegendary creature card from your graveyard to the battlefield.",
 	})
 }
+
+// TestLowerGraveyardReturnSubtypeDisjunctionCardToHand proves a subtype
+// disjunction noun with no card type ("Aura or Equipment card") round-trips
+// through the parser's exact-effect reconstruction so the targeted graveyard
+// return lowers, capturing both subtypes as an OR set (Ironclad Slayer).
+func TestLowerGraveyardReturnSubtypeDisjunctionCardToHand(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Subtype Disjunction To Hand",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Return target Aura or Equipment card from your graveyard to your hand.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	target := mode.Targets[0]
+	if target.Allow != game.TargetAllowCard || target.TargetZone != zone.Graveyard ||
+		len(target.Selection.Val.RequiredTypes) != 0 ||
+		!slices.Equal(target.Selection.Val.SubtypesAny, []types.Sub{types.Sub("Aura"), types.Sub("Equipment")}) {
+		t.Fatalf("target = %#v", target)
+	}
+	move, ok := mode.Sequence[0].Primitive.(game.MoveCard)
+	if !ok || move.FromZone != zone.Graveyard || move.Destination != zone.Hand {
+		t.Fatalf("primitive = %#v, want MoveCard graveyard -> hand", mode.Sequence[0].Primitive)
+	}
+}
+
+// TestLowerGraveyardReturnSubtypeDisjunctionSerialList proves a longer serial
+// subtype disjunction ("Bat, Lizard, Rat, or Squirrel card") round-trips, the
+// wording on Mudflat Village.
+func TestLowerGraveyardReturnSubtypeDisjunctionSerialList(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Subtype Serial List",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Return target Bat, Lizard, Rat, or Squirrel card from your graveyard to your hand.",
+	})
+	target := face.SpellAbility.Val.Modes[0].Targets[0]
+	if !slices.Equal(target.Selection.Val.SubtypesAny,
+		[]types.Sub{types.Sub("Bat"), types.Sub("Lizard"), types.Sub("Rat"), types.Sub("Squirrel")}) {
+		t.Fatalf("target = %#v, want Bat/Lizard/Rat/Squirrel OR set", target)
+	}
+}
+
+// TestLowerGraveyardReturnSubtypeDisjunctionQualifiedToBattlefield proves a
+// subtype disjunction that qualifies a card type ("Angel or Human creature
+// card") lowers to the battlefield with RequiredTypes carrying the type (AND)
+// and SubtypesAny carrying the subtypes (OR), the wording on Bruna, the Fading
+// Light.
+func TestLowerGraveyardReturnSubtypeDisjunctionQualifiedToBattlefield(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Subtype Disjunction Qualified",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Return target Angel or Human creature card from your graveyard to the battlefield.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	target := mode.Targets[0]
+	if !slices.Equal(target.Selection.Val.RequiredTypes, []types.Card{types.Creature}) ||
+		!slices.Equal(target.Selection.Val.SubtypesAny, []types.Sub{types.Sub("Angel"), types.Sub("Human")}) {
+		t.Fatalf("target = %#v, want creature type with Angel/Human OR set", target)
+	}
+	if _, ok := mode.Sequence[0].Primitive.(game.PutOnBattlefield); !ok {
+		t.Fatalf("primitive = %#v, want PutOnBattlefield", mode.Sequence[0].Primitive)
+	}
+}

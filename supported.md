@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,093 of 32,501 cards eligible for paper support (46.4%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,099 of 32,501 cards eligible for paper support (46.5%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1393,6 +1393,7 @@ Council4 currently supports **15,093 of 32,501 cards eligible for paper support 
 - Bloodletter of Aclazotz
 - Bloodletter Quill
 - Bloodline Bidding
+- Bloodline Necromancer
 - Bloodline Pretender
 - Bloodlust Inciter
 - Bloodmad Vampire
@@ -1724,6 +1725,7 @@ Council4 currently supports **15,093 of 32,501 cards eligible for paper support 
 - Brotherhood's End
 - Brothers of Fire
 - Brown Ouphe
+- Bruna, the Fading Light
 - Bruse Tarl, Boorish Herder
 - Brushfire Elemental
 - Brushland
@@ -6589,6 +6591,7 @@ Council4 currently supports **15,093 of 32,501 cards eligible for paper support 
 - Iron-Shield Elf
 - Ironclad Krovod
 - Ironclad Revolutionary
+- Ironclad Slayer
 - Ironhoof Boar
 - Ironhoof Ox
 - Ironpaw Aspirant
@@ -8363,6 +8366,7 @@ Council4 currently supports **15,093 of 32,501 cards eligible for paper support 
 - Mudbrawler Raiders
 - Mudbutton Clanger
 - Mudbutton Torchrunner
+- Mudflat Village
 - Mukotai Ambusher
 - Mulldrifter
 - Multani's Decree
@@ -12000,6 +12004,7 @@ Council4 currently supports **15,093 of 32,501 cards eligible for paper support 
 - Spectral Rider
 - Spectral Sailor
 - Spectral Shepherd
+- Spectral Steel
 - Spell Pierce
 - Spell Satchel
 - Spell Snare
@@ -12662,6 +12667,7 @@ Council4 currently supports **15,093 of 32,501 cards eligible for paper support 
 - Sunstrike Legionnaire
 - Suntail Hawk
 - Super Intelligence
+- Super Mutant Scavenger
 - Super Shredder
 - Super Strength
 - Super Suit
