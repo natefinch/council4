@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,645 of 32,501 cards eligible for paper support (48.1%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,650 of 32,501 cards eligible for paper support (48.2%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1151,6 +1151,7 @@ Council4 currently supports **15,645 of 32,501 cards eligible for paper support 
 - Belbe's Portal
 - Beledros Witherbloom
 - Belle of the Brawl
+- Belligerent Brontodon
 - Belligerent Guest
 - Belligerent Hatchling
 - Belligerent of the Ball
@@ -3460,6 +3461,7 @@ Council4 currently supports **15,645 of 32,501 cards eligible for paper support 
 - Doomwake Giant
 - Door of Destinies
 - Door to Nothingness
+- Doran, the Siege Tower
 - Dosan's Oldest Chant
 - Double Cleave
 - Double Trouble
@@ -6376,6 +6378,7 @@ Council4 currently supports **15,645 of 32,501 cards eligible for paper support 
 - Huatli's Raptor
 - Huatli's Snubhorn
 - Huatli, Radiant Champion
+- Huatli, the Sun's Heart
 - Hugs, Grisly Guardian
 - Hulk, Always Angry
 - Hulk, Bruce Banner
@@ -10290,6 +10293,7 @@ Council4 currently supports **15,645 of 32,501 cards eligible for paper support 
 - Raptor Companion
 - Raptor Hatchling
 - Rapturous Moment
+- Rasaad yn Bashir
 - Rashel, Fist of Torm
 - Rat
 - Rat
@@ -15115,6 +15119,7 @@ Council4 currently supports **15,645 of 32,501 cards eligible for paper support 
 - Wei Scout
 - Wei Strike Force
 - Weigh Down
+- Weight Advantage
 - Weight of Memory
 - Weight of the Underworld
 - Weird
