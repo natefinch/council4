@@ -22,6 +22,7 @@ var Cards = []*game.CardDef{
 	DescentOfTheDragons,
 	DesertSDue,
 	DesolationTwin,
+	DiamondCity,
 	DingusEgg,
 	DingusStaff,
 	DirectorNickFury,

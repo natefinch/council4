@@ -15,6 +15,7 @@ var Cards = []*game.CardDef{
 	MagneticMine,
 	MalakirSoothsayer,
 	MalametBattleGlyph,
+	MalcatorPurityOverseer,
 	ManaReflection,
 	Manticore,
 	MarduBlazebringer,

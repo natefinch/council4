@@ -181,6 +181,165 @@ func TestEventHistoryLeftBattlefieldRevolt(t *testing.T) {
 	}
 }
 
+func TestEventHistoryEnteredBattlefield(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name          string
+		condition     string
+		minCount      int
+		excludeSelf   bool
+		faceDown      bool
+		requiredTypes []TriggerCardType
+		excludedTypes []TriggerCardType
+		subtypesAny   []TriggerSubtype
+	}{
+		{
+			name:      "any permanent",
+			condition: "a permanent entered the battlefield under your control",
+		},
+		{
+			name:          "creature only",
+			condition:     "a creature entered the battlefield under your control",
+			requiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+		},
+		{
+			name:          "artifact only",
+			condition:     "an artifact entered the battlefield under your control",
+			requiredTypes: []TriggerCardType{TriggerCardTypeArtifact},
+		},
+		{
+			name:          "planeswalker only",
+			condition:     "a planeswalker entered the battlefield under your control",
+			requiredTypes: []TriggerCardType{TriggerCardTypePlaneswalker},
+		},
+		{
+			name:          "two or more nonland permanents",
+			condition:     "two or more nonland permanents entered the battlefield under your control",
+			minCount:      2,
+			excludedTypes: []TriggerCardType{TriggerCardTypeLand},
+		},
+		{
+			name:          "three or more artifacts",
+			condition:     "three or more artifacts entered the battlefield under your control",
+			minCount:      3,
+			requiredTypes: []TriggerCardType{TriggerCardTypeArtifact},
+		},
+		{
+			name:          "another creature excludes self",
+			condition:     "another creature entered the battlefield under your control",
+			excludeSelf:   true,
+			requiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+		},
+		{
+			name:        "another subtype excludes self",
+			condition:   "another Elf entered the battlefield under your control",
+			excludeSelf: true,
+			subtypesAny: []TriggerSubtype{"Elf"},
+		},
+		{
+			name:          "face-down creature",
+			condition:     "a face-down creature entered the battlefield under your control",
+			faceDown:      true,
+			requiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+		},
+	}
+	for i := range tests {
+		test := &tests[i]
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(
+				"When this creature enters, if "+test.condition+" this turn, draw a card.",
+				Context{},
+			)
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			if len(document.Abilities) != 1 || len(document.Abilities[0].EventHistoryConditions) != 1 {
+				t.Fatalf("event history conditions = %#v", document.Abilities)
+			}
+			condition := &document.Abilities[0].EventHistoryConditions[0]
+			if condition.Window.Kind != EventHistoryWindowCurrentTurn || condition.Negated {
+				t.Fatalf("condition = %#v", condition)
+			}
+			if condition.MinCount != test.minCount {
+				t.Fatalf("MinCount = %d, want %d", condition.MinCount, test.minCount)
+			}
+			event := condition.TriggerEvent
+			if event == nil || condition.PlayerEvent != nil {
+				t.Fatalf("condition = %#v", condition)
+			}
+			if event.Kind != TriggerEventKindZoneChange {
+				t.Fatalf("event kind = %q, want %q", event.Kind, TriggerEventKindZoneChange)
+			}
+			if event.Controller != ControllerYou {
+				t.Fatalf("event controller = %q, want %q", event.Controller, ControllerYou)
+			}
+			if event.ZoneChange.Kind != TriggerEventZoneChangeEnteredBattlefield {
+				t.Fatalf("zone change kind = %q, want %q", event.ZoneChange.Kind, TriggerEventZoneChangeEnteredBattlefield)
+			}
+			if !event.Zone.MatchToZone || event.Zone.ToZone.Kind != TriggerEventZoneBattlefield {
+				t.Fatalf("zone context = %#v", event.Zone)
+			}
+			if event.Zone.MatchFromZone {
+				t.Fatalf("zone context should not match an origin: %#v", event.Zone)
+			}
+			if event.ExcludeSelf != test.excludeSelf {
+				t.Fatalf("ExcludeSelf = %v, want %v", event.ExcludeSelf, test.excludeSelf)
+			}
+			if event.FaceDown != test.faceDown {
+				t.Fatalf("FaceDown = %v, want %v", event.FaceDown, test.faceDown)
+			}
+			assertTriggerCardTypes(t, "required types", event.Subject.Selection.RequiredTypes, test.requiredTypes)
+			assertTriggerCardTypes(t, "excluded types", event.Subject.Selection.ExcludedTypes, test.excludedTypes)
+			gotSubs := event.Subject.Selection.SubtypesAny
+			if len(gotSubs) != len(test.subtypesAny) {
+				t.Fatalf("subtypes = %#v, want %#v", gotSubs, test.subtypesAny)
+			}
+			for j := range gotSubs {
+				if gotSubs[j] != test.subtypesAny[j] {
+					t.Fatalf("subtypes = %#v, want %#v", gotSubs, test.subtypesAny)
+				}
+			}
+		})
+	}
+}
+
+func assertTriggerCardTypes(t *testing.T, label string, got, want []TriggerCardType) {
+	t.Helper()
+	if len(got) != len(want) {
+		t.Fatalf("%s = %#v, want %#v", label, got, want)
+	}
+	for j := range got {
+		if got[j] != want[j] {
+			t.Fatalf("%s = %#v, want %#v", label, got, want)
+		}
+	}
+}
+
+func TestEventHistoryEnteredBattlefieldFailClosed(t *testing.T) {
+	t.Parallel()
+	for _, condition := range []string{
+		"a permanent entered the battlefield under an opponent's control",
+		"a permanent entered the battlefield",
+		"you had a land enter the battlefield under your control",
+		"a permanent entered the battlefield under your control or another zone",
+	} {
+		t.Run(condition, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(
+				"When this creature enters, if "+condition+" this turn, draw a card.",
+				Context{},
+			)
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			if got := document.Abilities[0].EventHistoryConditions; len(got) != 0 {
+				t.Fatalf("event history conditions = %#v, want none", got)
+			}
+		})
+	}
+}
+
 func TestEventHistoryConditionActivationOnlyIfSpan(t *testing.T) {
 	t.Parallel()
 	const activationSource = "{1}: Draw a card. Activate only if you attacked this turn."

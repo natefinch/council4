@@ -8,6 +8,8 @@ import "github.com/natefinch/council4/mtg/game"
 var Cards = []*game.CardDef{
 	OakhameAdversary,
 	Oasis,
+	OathOfChandra,
+	OathOfLiliana,
 	ObNixilisSCruelty,
 	ObliteratingBolt,
 	ObscuraStorefront,

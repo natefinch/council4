@@ -16,6 +16,8 @@ var Cards = []*game.CardDef{
 	WarDance,
 	WardSliver,
 	WarriorAngel,
+	WaryFarmer,
+	WaterspoutWarden,
 	Weatherlight,
 	WebOfLifeAndDestiny,
 	WelkinTern,
