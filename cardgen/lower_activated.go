@@ -653,6 +653,14 @@ func prepareActivationCondition(ability *compiler.CompiledAbility, syntax *parse
 		*syntax = syntaxWithoutAbilityWord(syntax)
 		return opt.V[game.Condition]{}, true
 	}
+	if activationConditionOwnedByBody(ability.Content) {
+		// A resolution-time "unless its controller pays" tax ("Counter target
+		// spell unless its controller pays {1}.") is part of the body effect, not
+		// an activation gate. Leave it in the body so the counter-unless-pays
+		// content lowerer reads it, instead of extracting and rejecting it as an
+		// unsupported activation condition.
+		return opt.V[game.Condition]{}, true
+	}
 	if slices.ContainsFunc(ability.Content.Conditions, func(condition compiler.CompiledCondition) bool {
 		return condition.Resolving
 	}) {
@@ -707,6 +715,23 @@ func prepareActivationCondition(ability *compiler.CompiledAbility, syntax *parse
 		return token.Span.Start.Offset >= lastEffectEnd
 	})
 	return opt.Val(condition), true
+}
+
+// activationConditionOwnedByBody reports whether an activated ability's single
+// condition is a resolution-time "unless its controller pays" tax that the body
+// content lowerer consumes directly, rather than an activation gate. The
+// counter-unless-pays lowerer ("Counter target spell unless its controller pays
+// {1}.") reads this condition from the body, so it must stay in the body instead
+// of being extracted and rejected as an unsupported activation condition.
+func activationConditionOwnedByBody(content compiler.AbilityContent) bool {
+	if len(content.Conditions) != 1 {
+		return false
+	}
+	condition := content.Conditions[0]
+	return condition.Kind == compiler.ConditionUnless &&
+		!condition.Intervening &&
+		!condition.Resolving &&
+		condition.Predicate == compiler.ConditionPredicateTargetControllerDoesNotPay
 }
 
 func appendModeEffects(effects []compiler.CompiledEffect, modes []compiler.CompiledMode) []compiler.CompiledEffect {

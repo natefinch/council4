@@ -10,6 +10,7 @@ var Cards = []*game.CardDef{
 	PallidMycoderm,
 	ParadoxSurveyor,
 	PathOfAnnihilation,
+	PatronWizard,
 	PeerThroughDepths,
 	PentarchWard,
 	PerfectIntimidation,

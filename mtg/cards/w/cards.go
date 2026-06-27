@@ -23,6 +23,7 @@ var Cards = []*game.CardDef{
 	Windscouter,
 	WingspanMentor,
 	Withstand,
+	WizardReplica,
 	WoodenSphere,
 	WoodlandWanderer,
 	WorldBreaker,

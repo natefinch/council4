@@ -21,6 +21,7 @@ var Cards = []*game.CardDef{
 	WeirdToken9c56763e460342909e9f25f5eea8f4a5,
 	WeirdTokena00aa3a1d93d4e069a756f8efe48c6ef,
 	WizardToken3e211a1b7115422bbcb53d6c005afd7f,
+	WizardToken7fb12be3b0e84c5b8258076ed8c2aa77,
 	WolfToken04139d9267d34e3ca97f158f24115044,
 	WolfToken1aca703e70834baba8accb024a8404a1,
 	WolfTokenb222484382744872a7ca2adf69cc066b,
