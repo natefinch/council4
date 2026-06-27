@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,309 of 32,501 cards eligible for paper support (47.1%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,315 of 32,501 cards eligible for paper support (47.1%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1613,6 +1613,7 @@ Council4 currently supports **15,309 of 32,501 cards eligible for paper support 
 - Boundary Lands Ranger
 - Bounding Krasis
 - Bounding Wolf
+- Boundless Realms
 - Bountiful Harvest
 - Bountiful Landscape
 - Bountiful Promenade
@@ -5868,6 +5869,7 @@ Council4 currently supports **15,309 of 32,501 cards eligible for paper support 
 - Harvest Gwyllion
 - Harvest Hand // Scrounged Scythe
 - Harvest Pyre
+- Harvest Season
 - Harvester Druid
 - Harvester of Souls
 - Harvester Troll
@@ -7250,6 +7252,7 @@ Council4 currently supports **15,309 of 32,501 cards eligible for paper support 
 - Kykar, Wind's Fury
 - Kykar, Zephyr Awakener
 - Kyoki, Sanity's Eclipse
+- Kyoshi Island Plaza
 - Kyoshi Village
 - Kyoshi Warrior Guard
 - Kyoshi Warriors
@@ -9591,6 +9594,7 @@ Council4 currently supports **15,309 of 32,501 cards eligible for paper support 
 - Plundering Pirate
 - Plundering Predator
 - Plunge into Winter
+- Point the Way
 - Pointed Discussion
 - Poised Practitioner
 - Poison Arrow
@@ -9719,6 +9723,7 @@ Council4 currently supports **15,309 of 32,501 cards eligible for paper support 
 - Prismari Command
 - Prismatic Lens
 - Prismatic Omen
+- Prismatic Undercurrents
 - Prismatic Vista
 - Prismite
 - Prison Realm
@@ -13709,6 +13714,7 @@ Council4 currently supports **15,309 of 32,501 cards eligible for paper support 
 - Traveling Botanist
 - Traveling Minister
 - Traveling Philosopher
+- Traverse the Outlands
 - Treacherous Blessing
 - Treachery
 - Tread Upon
