@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,045 of 32,501 cards eligible for paper support (46.3%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,059 of 32,501 cards eligible for paper support (46.3%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1129,6 +1129,7 @@ Council4 currently supports **15,045 of 32,501 cards eligible for paper support 
 - Beneath the Sands
 - Benefactor's Draught
 - Benevolent Ancestor
+- Benevolent Blessing
 - Benevolent Bodyguard
 - Bennie Bracks, Zoologist
 - Benthic Behemoth
@@ -1224,6 +1225,7 @@ Council4 currently supports **15,045 of 32,501 cards eligible for paper support 
 - Black Panther, Vanguard
 - Black Poplar Shaman
 - Black Scarab
+- Black Ward
 - Black Widow, Agile Avenger
 - Black Widow, Daring Operative
 - Black Widow, Double Agent
@@ -1427,6 +1429,7 @@ Council4 currently supports **15,045 of 32,501 cards eligible for paper support 
 - Blue Marvel, Adam Brashear
 - Blue Scarab
 - Blue Sun's Zenith
+- Blue Ward
 - Blunt the Assault
 - Blur
 - Blur of Blades
@@ -2165,6 +2168,7 @@ Council4 currently supports **15,045 of 32,501 cards eligible for paper support 
 - Chittering Witch
 - Chivalric Alliance
 - Cho-Arrim Bruiser
+- Cho-Manno's Blessing
 - Chocobo Racetrack
 - Choked Estuary
 - Choking Fumes
@@ -4547,6 +4551,7 @@ Council4 currently supports **15,045 of 32,501 cards eligible for paper support 
 - Flicker
 - Flicker of Fate
 - Flickering Spirit
+- Flickering Ward
 - Flickerwisp
 - Flight
 - Flight of Equenauts
@@ -5528,6 +5533,7 @@ Council4 currently supports **15,045 of 32,501 cards eligible for paper support 
 - Green Goblin, Nemesis
 - Green Scarab
 - Green Sun's Zenith
+- Green Ward
 - Greenbelt Radical
 - Greenhilt Trainee
 - Greenseeker
@@ -8950,6 +8956,7 @@ Council4 currently supports **15,045 of 32,501 cards eligible for paper support 
 - Order of the Ebon Hand
 - Order of the Sacred Bell
 - Order of the Sacred Torch
+- Order of the Stars
 - Order of the White Shield
 - Order of Whiteclay
 - Order of Yawgmoth
@@ -9167,6 +9174,7 @@ Council4 currently supports **15,045 of 32,501 cards eligible for paper support 
 - Pennon Blade
 - Penregon Strongbull
 - Pensive Minotaur
+- Pentarch Ward
 - Pentavite
 - Penumbra Bobcat
 - Penumbra Kavu
@@ -10048,6 +10056,7 @@ Council4 currently supports **15,045 of 32,501 cards eligible for paper support 
 - Red Ghost, Intangible Genius
 - Red Herring
 - Red Scarab
+- Red Ward
 - Redcap Thief
 - Redemption Choir
 - Redirect
@@ -11955,6 +11964,7 @@ Council4 currently supports **15,045 of 32,501 cards eligible for paper support 
 - Spectator Seating
 - Specter of the Fens
 - Specter's Shroud
+- Spectra Ward
 - Spectral Flight
 - Spectral Hunt-Caller
 - Spectral Interference
@@ -12866,6 +12876,7 @@ Council4 currently supports **15,045 of 32,501 cards eligible for paper support 
 - Tattered Ratter
 - Tattermunge Duo
 - Tattermunge Maniac
+- Tattoo Ward
 - Tatyova, Benthic Druid
 - Taunting Elf
 - Taurean Mauler
@@ -14206,6 +14217,7 @@ Council4 currently supports **15,045 of 32,501 cards eligible for paper support 
 - Vodalian Soldiers
 - Vodalian Wave-Knight
 - Vodalian Zombie
+- Voice of All
 - Voice of Duty
 - Voice of Grace
 - Voice of Law
@@ -14410,6 +14422,7 @@ Council4 currently supports **15,045 of 32,501 cards eligible for paper support 
 - Warbeast of Gorgoroth
 - Warchanter of Mogis
 - Warclamp Mastiff
+- Ward Sliver
 - Warded Battlements
 - Warden of Geometries
 - Warden of the Woods
@@ -14598,6 +14611,7 @@ Council4 currently supports **15,045 of 32,501 cards eligible for paper support 
 - White Shield Crusader
 - White Sun's Zenith
 - White Tiger, Amulet Keeper
+- White Ward
 - Whitemane Lion
 - Whitesun's Passage
 - Whitewater Naiads
