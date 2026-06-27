@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,558 of 32,501 cards eligible for paper support (47.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,565 of 32,501 cards eligible for paper support (47.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1830,6 +1830,7 @@ Council4 currently supports **15,558 of 32,501 cards eligible for paper support 
 - Burrowguard Mentor
 - Burrowing
 - Burrowing Razormaw
+- Burst Lightning
 - Burst of Energy
 - Burst of Speed
 - Burst of Strength
@@ -4586,6 +4587,7 @@ Council4 currently supports **15,558 of 32,501 cards eligible for paper support 
 - Fire-Field Ogre
 - Fire-Lit Thicket
 - Fire-Omen Crane
+- Firebending Lesson
 - Fireblade Artist
 - Fireblade Charger
 - Firebolt
@@ -4954,6 +4956,7 @@ Council4 currently supports **15,558 of 32,501 cards eligible for paper support 
 - Frontline Rush
 - Frontline Sage
 - Frontline War-Rager
+- Frost Bite
 - Frost Breath
 - Frost Giant
 - Frost Lynx
@@ -6739,6 +6742,7 @@ Council4 currently supports **15,558 of 32,501 cards eligible for paper support 
 - Invasion of Xerex // Vertex Paladin
 - Invasion Reinforcements
 - Invasion Tactics
+- Invasive Maneuvers
 - Invasive Species
 - Inventor's Apprentice
 - Inventors' Fair
@@ -10756,6 +10760,7 @@ Council4 currently supports **15,558 of 32,501 cards eligible for paper support 
 - Rohgahh, Kher Keep Overlord
 - Rohirrim Lancer
 - Roil Elemental
+- Roil Eruption
 - Roiling Dragonstorm
 - Roiling Regrowth
 - Roku's Mastery
@@ -11648,6 +11653,7 @@ Council4 currently supports **15,558 of 32,501 cards eligible for paper support 
 - Shivan Branch-Burner
 - Shivan Devastator
 - Shivan Dragon
+- Shivan Fire
 - Shivan Gorge
 - Shivan Harvest
 - Shivan Hellkite
@@ -14334,6 +14340,7 @@ Council4 currently supports **15,558 of 32,501 cards eligible for paper support 
 - Urza's Incubator
 - Urza's Mine
 - Urza's Power Plant
+- Urza's Rage
 - Urza's Rebuff
 - Urza's Tower
 - Urza, Powerstone Prodigy
