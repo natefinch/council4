@@ -84,20 +84,32 @@ func TestLowerTargetedGraveyardExileUpToOne(t *testing.T) {
 	}
 }
 
-// TestLowerTargetedGraveyardExileFailsClosedSingleGraveyard documents that the
-// "from a single graveyard" constraint (all targets share one graveyard) is a
-// distinct targeting restriction the canonical owner-suffix reconstruction does
-// not render, so it stays unsupported rather than lowering to a wrong predicate.
-func TestLowerTargetedGraveyardExileFailsClosedSingleGraveyard(t *testing.T) {
+// TestLowerTargetedGraveyardExileSingleGraveyard lowers the "from a single
+// graveyard" variant, which restricts every chosen card to one shared graveyard.
+// The constraint lowers to TargetSpec.SameGraveyard on the card target so the
+// runtime enumerates only target sets drawn from a single graveyard.
+func TestLowerTargetedGraveyardExileSingleGraveyard(t *testing.T) {
 	t.Parallel()
-	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+	face := lowerSingleFace(t, &ScryfallCard{
 		Name:       "Test Decay",
 		Layout:     "normal",
 		TypeLine:   "Instant",
 		OracleText: "Exile up to three target cards from a single graveyard.",
 	})
-	if len(diagnostics) == 0 {
-		t.Fatal("expected unsupported diagnostic for single-graveyard exile")
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 1 {
+		t.Fatalf("targets = %#v, want one", mode.Targets)
+	}
+	target := mode.Targets[0]
+	if target.MinTargets != 0 || target.MaxTargets != 3 ||
+		target.Allow != game.TargetAllowCard || target.TargetZone != zone.Graveyard ||
+		!target.SameGraveyard || !target.Selection.Val.Empty() {
+		t.Fatalf("target = %#v", target)
+	}
+	move, ok := mode.Sequence[0].Primitive.(game.MoveCard)
+	if !ok || move.Card.Kind != game.CardReferenceTarget ||
+		move.FromZone != zone.Graveyard || move.Destination != zone.Exile {
+		t.Fatalf("move = %#v", mode.Sequence[0].Primitive)
 	}
 }
 

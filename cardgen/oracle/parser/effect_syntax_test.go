@@ -3141,7 +3141,8 @@ func TestParseMultiTargetExileExactness(t *testing.T) {
 		{"Exile two target creatures an opponent controls.", true, 2, 2},
 		// Single-target wording keeps its existing exact cardinality.
 		{"Exile target creature.", true, 1, 1},
-		// Fail-closed: a graveyard zone is not a permanent target.
+		// Fail-closed for the permanent multi-target path: a graveyard card target
+		// is made exact through the graveyard-card reconstruction, not here.
 		{"Exile up to two target cards from a single graveyard.", false, 0, 2},
 		// Fail-closed: subtype and tapped qualifiers are not reconstructed here.
 		{"Exile up to two target Goblin creatures.", false, 0, 2},

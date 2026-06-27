@@ -1643,7 +1643,7 @@ func selectionGrammarWord(token shared.Token) bool {
 		"opponent", "opponent's", "opponents", "activated", "triggered", "source",
 		"mana", "value", "power", "toughness", "equal", "less", "greater", "lesser",
 		"battlefield", "graveyard", "hand", "library", "exile", "command",
-		"historic",
+		"historic", "single",
 	} {
 		if equalWord(token, word) {
 			return true
@@ -2343,6 +2343,13 @@ func parseSelection(tokens []shared.Token, atoms Atoms) SelectionSyntax {
 	case effectContainsWords(words, "opponent's", "graveyard"):
 		selection.Controller = SelectionControllerOpponent
 	default:
+	}
+	// "from a single graveyard" restricts every chosen card to one and the same
+	// graveyard. The "single" qualifier keeps the any-graveyard owner relation;
+	// it is recorded as its own flag so the byte-exact reconstruction can rebuild
+	// the verbatim wording and lowering can carry the same-graveyard restriction.
+	if selection.Zone == zone.Graveyard && effectContainsWords(words, "single", "graveyard") {
+		selection.SingleGraveyard = true
 	}
 	selection.All = slices.Contains(words, "all")
 	selection.Colored = effectContainsWords(words, "one", "or", "more", "colors") ||

@@ -1236,8 +1236,13 @@ type CompiledSelector struct {
 	// SubtypesAny carry the named types; the lowering realizes one independent
 	// optional pick per named type for the put-from-among-onto-battlefield shape.
 	InclusiveOneOfEach bool
-	Alternatives       []CompiledSelector
-	atoms              *CompiledSelectorAtoms
+	// SingleGraveyard records a "from a single graveyard" qualifier on a
+	// graveyard-card target ("Exile up to three target cards from a single
+	// graveyard"), requiring every chosen card to lie in one and the same
+	// graveyard. It lowers to TargetSpec.SameGraveyard.
+	SingleGraveyard bool
+	Alternatives    []CompiledSelector
+	atoms           *CompiledSelectorAtoms
 }
 
 // CompiledSelectorAtoms holds parser-owned atom-derived selector filters that

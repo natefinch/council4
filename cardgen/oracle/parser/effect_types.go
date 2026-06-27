@@ -1518,6 +1518,12 @@ type SelectionSyntax struct {
 	// other permanent its controller controls. It lowers to
 	// Selection.NameUniqueAmongControlled.
 	NameUniqueAmongControlled bool `json:",omitempty"`
+	// SingleGraveyard records a "from a single graveyard" qualifier on a
+	// graveyard-card target ("Exile up to three target cards from a single
+	// graveyard"), requiring every chosen card to lie in one and the same
+	// graveyard. It is meaningful only with the any-graveyard ("from a
+	// graveyard") owner relation and lowers to TargetSpec.SameGraveyard.
+	SingleGraveyard bool `json:",omitempty"`
 }
 
 // TargetCardinalitySyntax is an inclusive target-count range.

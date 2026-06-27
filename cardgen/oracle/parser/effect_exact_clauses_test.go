@@ -616,7 +616,10 @@ func TestExactGraveyardExileAccepts(t *testing.T) {
 		// A power or toughness numeric qualifier renders in canonical order and
 		// lowering restricts the graveyard-card selection on the bound, the same
 		// as the graveyard return and put paths.
-		"Exile target creature card with power 4 or greater from a graveyard.",
+		// "from a single graveyard" restricts every chosen card to one shared
+		// graveyard; it round-trips on the any-graveyard owner relation.
+		"Exile up to three target cards from a single graveyard.",
+		"Exile up to two target cards from a single graveyard.",
 	}
 	for _, source := range accepted {
 		if !exileEffectExact(t, source) {
@@ -626,13 +629,13 @@ func TestExactGraveyardExileAccepts(t *testing.T) {
 }
 
 // TestExactGraveyardExileFailsClosed keeps graveyard-exile wordings the canonical
-// owner-suffix reconstruction cannot render outside the exact envelope: the "from
-// a single graveyard" shared-graveyard constraint that no canonical owner suffix
-// expresses.
+// owner-suffix reconstruction cannot render outside the exact envelope: a "single"
+// qualifier on an owner-named graveyard ("your single graveyard"), which names one
+// graveyard already and has no canonical "from a single graveyard" rendering.
 func TestExactGraveyardExileFailsClosed(t *testing.T) {
 	t.Parallel()
 	rejected := []string{
-		"Exile up to three target cards from a single graveyard.",
+		"Exile target card from your single graveyard.",
 	}
 	for _, source := range rejected {
 		if exileEffectExact(t, source) {
@@ -641,8 +644,31 @@ func TestExactGraveyardExileFailsClosed(t *testing.T) {
 	}
 }
 
-// shuffleSelfIntoLibraryExact parses a single shuffle sentence with the given
-// card name and reports whether the resulting effect is exact.
+// TestParseSingleGraveyardSelectionFlag proves the parser captures the "from a
+// single graveyard" qualifier as the typed SingleGraveyard flag on an
+// any-controller graveyard card selection, so the compiler and lowering can carry
+// the same-graveyard restriction without inspecting wording.
+func TestParseSingleGraveyardSelectionFlag(t *testing.T) {
+	t.Parallel()
+	document, diagnostics := Parse("Exile up to three target cards from a single graveyard.", Context{InstantOrSorcery: true})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	targets := document.Abilities[0].Sentences[0].Targets
+	if len(targets) != 1 {
+		t.Fatalf("targets = %#v, want one", targets)
+	}
+	selection := targets[0].Selection
+	if selection.Zone != zone.Graveyard {
+		t.Fatalf("zone = %v, want Graveyard", selection.Zone)
+	}
+	if selection.Controller != SelectionControllerAny {
+		t.Fatalf("controller = %v, want any", selection.Controller)
+	}
+	if !selection.SingleGraveyard {
+		t.Fatal("SingleGraveyard = false, want true")
+	}
+}
 func shuffleSelfIntoLibraryExact(t *testing.T, cardName, source string) bool {
 	t.Helper()
 	document, diagnostics := Parse(source, Context{InstantOrSorcery: true, CardName: cardName})

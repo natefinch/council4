@@ -169,6 +169,7 @@ func compileTypedSelection(syntax parser.SelectionSyntax) CompiledSelector {
 		PowerGreaterThanSource:        syntax.PowerGreaterThanSource,
 		NameUniqueAmongControlled:     syntax.NameUniqueAmongControlled,
 		InclusiveOneOfEach:            syntax.InclusiveOneOfEach,
+		SingleGraveyard:               syntax.SingleGraveyard,
 	}
 	// A required card-type union is always kept. A single required card type is
 	// kept for a spell selection ("counter target instant or sorcery spell") and

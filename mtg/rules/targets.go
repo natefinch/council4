@@ -135,11 +135,42 @@ func appendTargetChoicesForSpec(g *game.Game, controller game.PlayerID, source *
 	maxTargets := min(spec.MaxTargets, len(candidates))
 	for _, count := range targetCountsForChoices(spec.MinTargets, maxTargets) {
 		for _, combination := range targetCombinations(candidates, count) {
+			if !targetsSatisfySameGraveyard(g, &spec, combination) {
+				continue
+			}
 			next := append(append([]game.Target(nil), prefix...), combination...)
 			nextCounts := append(append([]int(nil), countPrefix...), count)
 			appendTargetChoicesForSpec(g, controller, source, sourceObjectID, specs, specIndex+1, next, nextCounts, result, targetCounts)
 		}
 	}
+}
+
+// targetsSatisfySameGraveyard reports whether targets meet a SameGraveyard spec's
+// one-graveyard restriction. A card in a graveyard is in its owner's graveyard
+// (CR 404.2), so the restriction holds exactly when every card target shares one
+// owner. Non-card targets and specs without the restriction always pass.
+func targetsSatisfySameGraveyard(g *game.Game, spec *game.TargetSpec, targets []game.Target) bool {
+	if !spec.SameGraveyard {
+		return true
+	}
+	owner := game.PlayerID(-1)
+	for _, target := range targets {
+		if target.Kind != game.TargetCard {
+			continue
+		}
+		card, ok := g.GetCardInstance(target.CardID)
+		if !ok {
+			return false
+		}
+		if owner == game.PlayerID(-1) {
+			owner = card.Owner
+			continue
+		}
+		if card.Owner != owner {
+			return false
+		}
+	}
+	return true
 }
 
 // filterTargetsDistinctFrom drops any candidate that points at the same game

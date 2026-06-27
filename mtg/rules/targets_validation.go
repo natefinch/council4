@@ -232,7 +232,7 @@ func targetsMatchSpecSlice(g *game.Game, controller game.PlayerID, source *game.
 		}
 		seen[target] = true
 	}
-	return true
+	return targetsSatisfySameGraveyard(g, spec, targets)
 }
 
 func spellHasAnyLegalTargets(g *game.Game, card *game.CardDef, obj *game.StackObject) bool {

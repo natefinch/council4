@@ -840,6 +840,16 @@ func exactGraveyardCardTargetSyntax(target *TargetSyntax) bool {
 	if !ok {
 		return false
 	}
+	// "from a single graveyard" restricts every chosen card to one graveyard. It
+	// only attaches to the any-graveyard owner relation; "your"/"an opponent's"
+	// graveyard already names one graveyard, so a "single" flag there has no
+	// canonical wording and fails closed.
+	if sel.SingleGraveyard {
+		if sel.Controller != SelectionControllerAny {
+			return false
+		}
+		owner = "from a single graveyard"
+	}
 	prefix, plural, ok := graveyardCardCardinalityPrefix(target.Cardinality, sel.Another)
 	if !ok {
 		return false

@@ -49,6 +49,7 @@ var Cards = []*game.CardDef{
 	GreaterTanuki,
 	GreenWard,
 	GreenwheelLiberator,
+	GriffnautTracker,
 	Groundskeeper,
 	GrowthCycle,
 	GuardianProject,
