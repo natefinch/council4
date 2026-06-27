@@ -589,6 +589,64 @@ func TestParseStaticBattlefieldCreaturesCantBlockControlledDeclarationMeaning(t 
 	}
 }
 
+func TestParseStaticGroupDoesntUntapDeclarationMeaning(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		source      string
+		subjectKind EffectStaticSubjectKind
+		subtype     types.Sub
+		colors      []Color
+		matchPower  bool
+	}{
+		"all creatures": {
+			source:      "Creatures don't untap during their controllers' untap steps.",
+			subjectKind: EffectStaticSubjectAllCreatures,
+		},
+		"color creatures": {
+			source:      "Red creatures don't untap during their controllers' untap steps.",
+			subjectKind: EffectStaticSubjectAllCreatures,
+			colors:      []Color{ColorRed},
+		},
+		"subtype creatures": {
+			source:      "Mercenaries don't untap during their controllers' untap steps.",
+			subjectKind: EffectStaticSubjectAllCreatureSubtype,
+			subtype:     types.Mercenary,
+		},
+		"power-filtered creatures": {
+			source:      "Creatures with power 3 or greater don't untap during their controllers' untap steps.",
+			subjectKind: EffectStaticSubjectAllCreatures,
+			matchPower:  true,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			declarations := parseStaticDeclarationSyntax(t, test.source, Context{})
+			if len(declarations) != 1 {
+				t.Fatalf("declarations = %#v, want one", declarations)
+			}
+			declaration := declarations[0]
+			if declaration.Kind != StaticDeclarationRule {
+				t.Fatalf("kind = %v, want rule", declaration.Kind)
+			}
+			rule := declaration.Rule
+			if rule.Subject.Kind != StaticRuleSubjectBattlefieldCreatures ||
+				rule.Constraint.Kind != StaticRuleConstraintProhibition ||
+				rule.Operation.Kind != StaticRuleOperationUntap ||
+				rule.Operation.Voice != StaticRuleVoiceActive {
+				t.Fatalf("rule = %#v, want battlefield-creatures doesn't-untap restriction", rule)
+			}
+			group := declaration.Subject.Group
+			if group.Kind != test.subjectKind ||
+				group.Subtype != test.subtype ||
+				group.MatchPower != test.matchPower ||
+				!slices.Equal(group.Colors, test.colors) {
+				t.Fatalf("group = %#v, want kind %v subtype %v", group, test.subjectKind, test.subtype)
+			}
+		})
+	}
+}
+
 func TestParseStaticBattlefieldCreaturesCantBlockUnconditionalDeclarationMeaning(t *testing.T) {
 	t.Parallel()
 	declarations := parseStaticDeclarationSyntax(t, "Creatures can't block.", Context{})

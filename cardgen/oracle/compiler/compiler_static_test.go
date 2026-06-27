@@ -244,6 +244,24 @@ func TestCompileAttachedAndUntapStaticRules(t *testing.T) {
 			group:  StaticGroupAttachedObject,
 			zone:   StaticZoneBattlefield,
 		},
+		"this land doesn't untap": {
+			source: "This land doesn't untap during your untap step.",
+			rule:   StaticRuleDoesntUntap,
+			group:  StaticGroupSource,
+			zone:   StaticZoneBattlefield,
+		},
+		"enchanted permanent doesn't untap": {
+			source: "Enchanted permanent doesn't untap during its controller's untap step.",
+			rule:   StaticRuleDoesntUntap,
+			group:  StaticGroupAttachedObject,
+			zone:   StaticZoneBattlefield,
+		},
+		"enchanted artifact doesn't untap": {
+			source: "Enchanted artifact doesn't untap during its controller's untap step.",
+			rule:   StaticRuleDoesntUntap,
+			group:  StaticGroupAttachedObject,
+			zone:   StaticZoneBattlefield,
+		},
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -273,7 +291,7 @@ func TestCompileAttachedAndUntapStaticRuleNearMissesFailClosed(t *testing.T) {
 	for _, source := range []string{
 		"Enchanted creature can't attack and block.",
 		"Enchanted creature doesn't untap.",
-		"Enchanted permanent doesn't untap during your untap step.",
+		"Enchanted permanent can't attack or block.",
 		"Enchanted creature can't attack or block this turn.",
 	} {
 		t.Run(source, func(t *testing.T) {
@@ -284,6 +302,84 @@ func TestCompileAttachedAndUntapStaticRuleNearMissesFailClosed(t *testing.T) {
 				for _, declaration := range static.Declarations {
 					if declaration.Rule != nil {
 						t.Fatalf("declaration = %#v, want no static rule declaration (fail closed); diagnostics = %#v", declaration, diagnostics)
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestCompileGroupDoesntUntapStaticRules(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		source      string
+		requireType []types.Card
+		subtypesAny []types.Sub
+		colorsAny   []color.Color
+		matchPower  bool
+	}{
+		"all creatures": {
+			source:      "Creatures don't untap during their controllers' untap steps.",
+			requireType: []types.Card{types.Creature},
+		},
+		"color creatures": {
+			source:      "Red creatures don't untap during their controllers' untap steps.",
+			requireType: []types.Card{types.Creature},
+			colorsAny:   []color.Color{color.Red},
+		},
+		"subtype creatures": {
+			source:      "Mercenaries don't untap during their controllers' untap steps.",
+			subtypesAny: []types.Sub{types.Mercenary},
+		},
+		"power-filtered creatures": {
+			source:      "Creatures with power 3 or greater don't untap during their controllers' untap steps.",
+			requireType: []types.Card{types.Creature},
+			matchPower:  true,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := compileSource(test.source, pipelineContext{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			ability := compilation.Abilities[0]
+			if ability.Static == nil || len(ability.Static.Declarations) != 1 {
+				t.Fatalf("static semantics = %#v, want one declaration", ability.Static)
+			}
+			declaration := ability.Static.Declarations[0]
+			if declaration.Rule == nil ||
+				declaration.Rule.Kind != StaticRuleDoesntUntap ||
+				declaration.Rule.Zone != StaticZoneBattlefield ||
+				declaration.Group.Domain != StaticGroupBattlefield {
+				t.Fatalf("declaration = %#v, want group doesn't untap", declaration)
+			}
+			selection := declaration.Group.Selection
+			if !slices.Equal(selection.RequiredTypes, test.requireType) ||
+				!slices.Equal(selection.SubtypesAny, test.subtypesAny) ||
+				!slices.Equal(selection.ColorsAny, test.colorsAny) ||
+				selection.MatchPower != test.matchPower {
+				t.Fatalf("selection = %#v", selection)
+			}
+		})
+	}
+}
+
+func TestCompileGroupDoesntUntapNearMissesFailClosed(t *testing.T) {
+	t.Parallel()
+	for _, source := range []string{
+		"Lands don't untap during their controllers' untap steps.",
+		"Creatures don't untap.",
+	} {
+		t.Run(source, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := compileSource(source, pipelineContext{})
+			static := compilation.Abilities[0].Static
+			if static != nil {
+				for _, declaration := range static.Declarations {
+					if declaration.Rule != nil && declaration.Rule.Kind == StaticRuleDoesntUntap {
+						t.Fatalf("declaration = %#v, want no untap rule (fail closed); diagnostics = %#v", declaration, diagnostics)
 					}
 				}
 			}

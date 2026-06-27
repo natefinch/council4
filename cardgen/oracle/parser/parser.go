@@ -157,6 +157,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	stripCastThisFromExileEffectSemantics(document.Abilities)
 	stripLifeForColoredManaEffectSemantics(document.Abilities)
 	stripLifeForCommanderTaxEffectSemantics(document.Abilities)
+	stripGroupDoesntUntapEffectSemantics(document.Abilities)
 	emitCompanionAbility(document.Abilities)
 	emitPartnerWithAbility(document.Abilities)
 	emitPartnerAbility(document.Abilities)
@@ -263,6 +264,43 @@ func stripLifeForCommanderTaxEffectSemantics(abilities []Ability) {
 func abilityHasLifeForCommanderTaxDeclaration(ability *Ability) bool {
 	for i := range ability.StaticDeclarations {
 		if ability.StaticDeclarations[i].PlayerRule == StaticDeclarationPlayerRuleLifeForCommanderTax {
+			return true
+		}
+	}
+	return false
+}
+
+// stripGroupDoesntUntapEffectSemantics suppresses the resolving-effect reading of
+// a mass untap-prohibition static rule ("Creatures don't untap during their
+// controllers' untap steps.", Intruder Alarm). The "untap" verb in both "don't
+// untap" and the trailing "untap steps" otherwise compiles to spurious untap
+// effects that block the text-blind compiler's empty-content recognition of the
+// group rule declaration, so when the static idiom is recognized the static
+// declaration owns the whole sentence and its competing effect and target syntax
+// is cleared. Only the battlefield-wide group untap rule is affected; the
+// self/aura untap forms carry their effect through the Sentence.StaticRule path
+// and are not declaration-shaped, so they are untouched.
+func stripGroupDoesntUntapEffectSemantics(abilities []Ability) {
+	for i := range abilities {
+		ability := &abilities[i]
+		if !abilityHasGroupDoesntUntapDeclaration(ability) {
+			continue
+		}
+		for j := range ability.Sentences {
+			sentence := &ability.Sentences[j]
+			sentence.Effects = nil
+			sentence.Targets = nil
+			sentence.LegacyEffects = false
+		}
+	}
+}
+
+func abilityHasGroupDoesntUntapDeclaration(ability *Ability) bool {
+	for i := range ability.StaticDeclarations {
+		declaration := &ability.StaticDeclarations[i]
+		if declaration.Kind == StaticDeclarationRule &&
+			declaration.Rule.Subject.Kind == StaticRuleSubjectBattlefieldCreatures &&
+			declaration.Rule.Operation.Kind == StaticRuleOperationUntap {
 			return true
 		}
 	}

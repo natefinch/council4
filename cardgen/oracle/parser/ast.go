@@ -1101,6 +1101,15 @@ const (
 	StaticRuleSubjectSourcePermanent StaticRuleSubjectKind = "StaticRuleSubjectSourcePermanent"
 	StaticRuleSubjectSourceSpell     StaticRuleSubjectKind = "StaticRuleSubjectSourceSpell"
 	StaticRuleSubjectAttachedObject  StaticRuleSubjectKind = "StaticRuleSubjectAttachedObject"
+	// StaticRuleSubjectAttachedPermanent scopes a static rule to the noncreature
+	// permanent an Aura is attached to ("Enchanted permanent doesn't untap during
+	// its controller's untap step.", Ice Over; "Enchanted artifact doesn't untap
+	// ...", Inertia Bubble). Unlike StaticRuleSubjectAttachedObject (the attached
+	// creature, which also carries combat restrictions) this subject is valid only
+	// for the untap prohibition, keeping the wider "enchanted permanent/artifact"
+	// nouns from admitting combat rules that name no real card. The compiler maps
+	// it to the same attached-object affected group.
+	StaticRuleSubjectAttachedPermanent StaticRuleSubjectKind = "StaticRuleSubjectAttachedPermanent"
 	// StaticRuleSubjectControlledCreatures scopes a static rule to the creatures
 	// the source's controller controls ("Creatures you control can't be
 	// blocked."). It is the only group-scoped rule subject; the compiler maps it

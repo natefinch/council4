@@ -866,6 +866,10 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Abili
 		compiled.Static = &CompiledStaticSemantics{Declarations: declarations}
 		return
 	}
+	if declarations, ok := recognizeStaticGroupDoesntUntapDeclarations(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: declarations}
+		return
+	}
 	if declaration, ok := recognizeStaticEntryChoiceSubtypeDeclaration(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
 		return
@@ -1391,7 +1395,7 @@ func staticRuleGroupDomain(kind parser.StaticRuleSubjectKind) (StaticGroupDomain
 	switch kind {
 	case parser.StaticRuleSubjectSourceCreature, parser.StaticRuleSubjectSourcePermanent, parser.StaticRuleSubjectSourceSpell:
 		return StaticGroupSource, true
-	case parser.StaticRuleSubjectAttachedObject:
+	case parser.StaticRuleSubjectAttachedObject, parser.StaticRuleSubjectAttachedPermanent:
 		return StaticGroupAttachedObject, true
 	case parser.StaticRuleSubjectControlledCreatures:
 		return StaticGroupSourceControllerPermanents, true
@@ -1418,7 +1422,9 @@ func isCreatureRuleSubject(kind parser.StaticRuleSubjectKind) bool {
 }
 
 func isUntapRuleSubject(kind parser.StaticRuleSubjectKind) bool {
-	return isCreatureRuleSubject(kind) || kind == parser.StaticRuleSubjectSourcePermanent
+	return isCreatureRuleSubject(kind) ||
+		kind == parser.StaticRuleSubjectSourcePermanent ||
+		kind == parser.StaticRuleSubjectAttachedPermanent
 }
 
 func semanticStaticRuleForSyntax(rule parser.StaticRuleSyntax) (StaticRuleKind, StaticZone, bool) {
@@ -2255,7 +2261,45 @@ func recognizeStaticGroupMustAttackDeclarations(ability CompiledAbility, statics
 	return []StaticDeclaration{declaration}, true
 }
 
-// compileStaticBlockedObject maps the parser's typed "can't block" protected
+// recognizeStaticGroupDoesntUntapDeclarations maps a standalone
+// battlefield-scoped mass untap prohibition onto a closed semantic declaration,
+// e.g. "Creatures don't untap during their controllers' untap steps."
+// (Intruder Alarm), "Red creatures don't untap ..." (Wrath of Marit Lage),
+// "Mercenaries don't untap ..." (Root Cage), or "Creatures with power 3 or
+// greater don't untap ..." (Meekstone). The affected group derives entirely from
+// the typed parser subject: the all-creatures or creature-subtype subject yields
+// an every-creature battlefield group narrowed by its color, subtype, and
+// power/toughness filters. Costs, triggers, conditions, or any resolving content
+// fail closed because a continuous group rule carries none.
+func recognizeStaticGroupDoesntUntapDeclarations(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) ([]StaticDeclaration, bool) {
+	if !staticSyntaxKindsAre(statics, parser.StaticDeclarationRule) {
+		return nil, false
+	}
+	ruleNode := &statics[0]
+	if ruleNode.Rule.Subject.Kind != parser.StaticRuleSubjectBattlefieldCreatures {
+		return nil, false
+	}
+	rule, zone, ok := semanticStaticRuleForSyntax(ruleNode.Rule)
+	if !ok || rule != StaticRuleDoesntUntap {
+		return nil, false
+	}
+	group, ok := staticGroupForParserSubject(ruleNode.Subject)
+	if !ok || group.Domain != StaticGroupBattlefield {
+		return nil, false
+	}
+	if ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 {
+		return nil, false
+	}
+	declaration := staticRuleDeclaration(ability.Span, group.Span, ruleNode.OperationSpan, rule, zone, group.Domain, staticBlockerRestrictionForSyntax(ruleNode.Rule), nil)
+	declaration.Group = group
+	return []StaticDeclaration{declaration}, true
+}
+
 // object onto its compiler scope. It fails closed for an unrepresentable scope.
 func compileStaticBlockedObject(kind parser.StaticRuleBlockedObjectKind) (StaticBlockedObjectKind, bool) {
 	switch kind {

@@ -77,6 +77,27 @@ func TestParseAttachedAndUntapStaticRuleSentences(t *testing.T) {
 			operation:  StaticRuleOperationUntap,
 			voice:      StaticRuleVoiceActive,
 		},
+		"this land doesn't untap your step": {
+			source:     "This land doesn't untap during your untap step.",
+			subject:    StaticRuleSubjectSourcePermanent,
+			constraint: StaticRuleConstraintProhibition,
+			operation:  StaticRuleOperationUntap,
+			voice:      StaticRuleVoiceActive,
+		},
+		"enchanted permanent doesn't untap controller step": {
+			source:     "Enchanted permanent doesn't untap during its controller's untap step.",
+			subject:    StaticRuleSubjectAttachedPermanent,
+			constraint: StaticRuleConstraintProhibition,
+			operation:  StaticRuleOperationUntap,
+			voice:      StaticRuleVoiceActive,
+		},
+		"enchanted artifact doesn't untap controller step": {
+			source:     "Enchanted artifact doesn't untap during its controller's untap step.",
+			subject:    StaticRuleSubjectAttachedPermanent,
+			constraint: StaticRuleConstraintProhibition,
+			operation:  StaticRuleOperationUntap,
+			voice:      StaticRuleVoiceActive,
+		},
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -197,12 +218,12 @@ func TestParseSelfCantBeBlockedByMoreThanOneStaticRuleSentence(t *testing.T) {
 func TestParseAttachedAndUntapStaticRuleSentencesFailClosed(t *testing.T) {
 	t.Parallel()
 	for name, source := range map[string]string{
-		"attack and block":         "Enchanted creature can't attack and block.",
-		"attack or block extra":    "Enchanted creature can't attack or block this turn.",
-		"untap missing during":     "Enchanted creature doesn't untap.",
-		"untap wrong step":         "Enchanted creature doesn't untap during your upkeep step.",
-		"untap non creature":       "Enchanted permanent doesn't untap during your untap step.",
-		"attack or block artifact": "Enchanted artifact can't attack or block.",
+		"attack and block":          "Enchanted creature can't attack and block.",
+		"attack or block extra":     "Enchanted creature can't attack or block this turn.",
+		"untap missing during":      "Enchanted creature doesn't untap.",
+		"untap wrong step":          "Enchanted creature doesn't untap during your upkeep step.",
+		"attack or block artifact":  "Enchanted artifact can't attack or block.",
+		"attack or block permanent": "Enchanted permanent can't attack or block.",
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
