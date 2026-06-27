@@ -649,6 +649,7 @@ func spellTargetSelection(selection game.Selection) (game.Selection, bool) {
 		selection.MatchModified ||
 		selection.RequiredCounterCount.Exists ||
 		selection.EnteredThisTurn ||
+		selection.DealtDamageThisTurn ||
 		selection.SubtypeChoice != game.SubtypeChoiceNone ||
 		selection.ColorChoice != game.ColorChoiceNone {
 		return game.Selection{}, false

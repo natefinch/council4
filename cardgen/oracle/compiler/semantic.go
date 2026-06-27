@@ -1205,6 +1205,10 @@ type CompiledSelector struct {
 	// battlefield this turn ("each green creature that entered this turn"). It
 	// lowers to Selection.EnteredThisTurn.
 	EnteredThisTurn bool
+	// DealtDamageThisTurn requires each matched permanent to have been dealt
+	// damage this turn ("target creature that was dealt damage this turn", Fatal
+	// Blow). It lowers to Selection.DealtDamageThisTurn.
+	DealtDamageThisTurn bool
 	// PowerLessThanSource requires each matched permanent's power to be strictly
 	// less than the ability's source permanent's power ("target attacking
 	// creature with lesser power", Mentor); PowerGreaterThanSource is the

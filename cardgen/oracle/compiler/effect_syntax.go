@@ -164,6 +164,7 @@ func compileTypedSelection(syntax parser.SelectionSyntax) CompiledSelector {
 		ConjunctiveTypes:              syntax.ConjunctiveTypes,
 		RequiredName:                  syntax.RequiredName,
 		EnteredThisTurn:               syntax.EnteredThisTurn,
+		DealtDamageThisTurn:           syntax.DealtDamageThisTurn,
 		PowerLessThanSource:           syntax.PowerLessThanSource,
 		PowerGreaterThanSource:        syntax.PowerGreaterThanSource,
 		NameUniqueAmongControlled:     syntax.NameUniqueAmongControlled,

@@ -291,6 +291,14 @@ type Selection struct {
 	// a source with no creature types never matches. Placed at the end so the
 	// bool joins no existing cluster's packing.
 	SharesCreatureTypeWithSource bool
+
+	// DealtDamageThisTurn requires the matched permanent to have been dealt
+	// damage during the current turn ("target creature that was dealt damage this
+	// turn", Fatal Blow). The rules layer scans the current turn's damage events
+	// for one whose damaged permanent is this object (CR 120). A non-battlefield
+	// subject, which receives no damage, never matches. Placed at the end so the
+	// bool joins no existing cluster's packing.
+	DealtDamageThisTurn bool
 }
 
 // ManaValueDynamicBound bounds a card's mana value by a controller-relative
@@ -351,7 +359,8 @@ func (s Selection) Empty() bool {
 		s.ChosenSubtypeFrom == "" &&
 		!s.RequirePermanentCard &&
 		!s.NameUniqueAmongControlled &&
-		!s.SharesCreatureTypeWithSource
+		!s.SharesCreatureTypeWithSource &&
+		!s.DealtDamageThisTurn
 }
 
 // Validate reports structural contradictions in the Selection that represent

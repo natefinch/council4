@@ -96,6 +96,11 @@ func parseTargets(tokens []shared.Token, atoms Atoms) []TargetSyntax {
 			selectionTokens = head
 			nameUnique = true
 		}
+		dealtDamage := false
+		if head, ok := splitSelectionDealtDamageThisTurnTail(selectionTokens); ok {
+			selectionTokens = head
+			dealtDamage = true
+		}
 		otherThanSource := false
 		if head, ok := splitSelectionOtherThanSelfTail(selectionTokens, atoms); ok {
 			selectionTokens = head
@@ -118,6 +123,7 @@ func parseTargets(tokens []shared.Token, atoms Atoms) []TargetSyntax {
 			selection = SelectionSyntax{Span: selection.Span, Text: selection.Text}
 		}
 		selection.NameUniqueAmongControlled = nameUnique
+		selection.DealtDamageThisTurn = dealtDamage
 		if plural {
 			// "targets" with no following noun means "any target" — a permanent
 			// or a player (CR 115.4).
@@ -300,6 +306,13 @@ func exactSinglePermanentTargetSyntax(text string, selection SelectionSyntax) bo
 	}
 	if selection.NameUniqueAmongControlled {
 		trimmed, had := strings.CutSuffix(text, " "+nameUniqueAmongControlledClauseText)
+		if !had {
+			return false
+		}
+		text = trimmed
+	}
+	if selection.DealtDamageThisTurn {
+		trimmed, had := strings.CutSuffix(text, " "+dealtDamageThisTurnClauseText)
 		if !had {
 			return false
 		}
@@ -1763,6 +1776,15 @@ func targetSyntaxEnd(tokens []shared.Token, atoms Atoms, start int) int {
 			end += len(nameUniqueAmongControlledClause)
 			continue
 		}
+		// The "that was dealt damage this turn" clause embeds "this turn", which
+		// the trailing-duration check below would otherwise treat as the target's
+		// boundary, splitting the clause off the noun phrase. Skip the whole
+		// clause so the target keeps it; parseTargets strips it before
+		// parseSelection and records the typed flag.
+		if end > start && dealtDamageThisTurnClauseStartsAt(tokens, end) {
+			end += len(dealtDamageThisTurnClause)
+			continue
+		}
 		// A comma joining two negated card-type or subtype qualifiers ("non-Saga,
 		// nonland permanent") is internal to the target's noun phrase, not a clause
 		// boundary, so scanning continues past it to keep the whole filter on the
@@ -2184,6 +2206,46 @@ func nameUniqueClauseStartsAt(tokens []shared.Token, i int) bool {
 	return true
 }
 
+// dealtDamageThisTurnClause is the relative clause that restricts a target to a
+// permanent that was dealt damage during the current turn (Fatal Blow: "target
+// creature that was dealt damage this turn").
+var dealtDamageThisTurnClause = []string{
+	"that", "was", "dealt", "damage", "this", "turn",
+}
+
+// dealtDamageThisTurnClauseText is the canonical spelling of the dealt-damage
+// clause, used to reconstruct the exact target phrase.
+const dealtDamageThisTurnClauseText = "that was dealt damage this turn"
+
+// dealtDamageThisTurnClauseStartsAt reports whether dealtDamageThisTurnClause
+// begins at index i in tokens.
+func dealtDamageThisTurnClauseStartsAt(tokens []shared.Token, i int) bool {
+	if i < 0 || i+len(dealtDamageThisTurnClause) > len(tokens) {
+		return false
+	}
+	for j, word := range dealtDamageThisTurnClause {
+		if !equalWord(tokens[i+j], word) {
+			return false
+		}
+	}
+	return true
+}
+
+// splitSelectionDealtDamageThisTurnTail strips a trailing "that was dealt damage
+// this turn" clause from a target's selection tokens, returning the head tokens
+// that name the permanent. It fails closed unless the clause runs to the end of
+// the selection.
+func splitSelectionDealtDamageThisTurnTail(tokens []shared.Token) (head []shared.Token, ok bool) {
+	if len(tokens) <= len(dealtDamageThisTurnClause) {
+		return nil, false
+	}
+	offset := len(tokens) - len(dealtDamageThisTurnClause)
+	if !dealtDamageThisTurnClauseStartsAt(tokens, offset) {
+		return nil, false
+	}
+	return tokens[:offset], true
+}
+
 func parseSelection(tokens []shared.Token, atoms Atoms) SelectionSyntax {
 	if recognized, ok := counterAbilitySelectionSyntax(tokens, shared.SpanOf(tokens), joinedEffectText(tokens)); ok {
 		return recognized
@@ -2296,6 +2358,7 @@ func parseSelection(tokens []shared.Token, atoms Atoms) SelectionSyntax {
 	selection.TokenOnly = atoms.SelectionFlagIn(span, SelectionFlagToken)
 	selection.EnteredThisTurn = effectContainsWords(words, "that", "entered", "this", "turn") ||
 		effectContainsWords(words, "that", "entered", "the", "battlefield", "this", "turn")
+	selection.DealtDamageThisTurn = effectContainsWords(words, "that", "was", "dealt", "damage", "this", "turn")
 	if slices.Contains(words, "any") && selection.Kind == SelectionUnknown {
 		selection.Kind = SelectionAny
 	}

@@ -791,6 +791,17 @@ func permanentEnteredThisTurn(g *game.Game, permanentID id.ID) bool {
 	})
 }
 
+// permanentDealtDamageThisTurn reports whether the permanent identified by id was
+// dealt damage during the current turn, scanning this turn's events for a
+// damage-dealt event whose recipient permanent is it (CR 120).
+func permanentDealtDamageThisTurn(g *game.Game, permanentID id.ID) bool {
+	return eventsThisTurnWindow(g).any(func(event game.Event) bool {
+		return event.Kind == game.EventDamageDealt &&
+			event.DamageRecipient == game.DamageRecipientPermanent &&
+			event.PermanentID == permanentID
+	})
+}
+
 func eventPermanentNameUniqueAmongControlledAndGraveyardCreatures(g *game.Game, ctx conditionContext) bool {
 	if ctx.event == nil || ctx.event.PermanentID == 0 {
 		return false

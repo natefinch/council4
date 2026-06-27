@@ -31,7 +31,8 @@ var Cards = []*game.CardDef{
 	LostJitte,
 	LoxodonAnchorite,
 	LoxodonWarhammer,
-	LupinflowerVillage,
-	LustForWar,
 	LumaretSFavor,
+	LupinflowerVillage,
+	LurkingDeadeye,
+	LustForWar,
 }
