@@ -193,6 +193,30 @@ func TestGenerateExecutableCardSourceOptionalHavePlayerSubject(t *testing.T) {
 				"Optional: true",
 			},
 		},
+		{
+			name:       "target creature shrink",
+			typeLine:   "Creature — Bear",
+			oracleText: "When this creature enters, you may have target creature get -2/-2 until end of turn.",
+			power:      new("2"),
+			wantParts: []string{
+				"Primitive: game.ModifyPT",
+				"PowerDelta:     game.Fixed(-2)",
+				"ToughnessDelta: game.Fixed(-2)",
+				"game.DurationUntilEndOfTurn",
+				"Optional: true",
+			},
+		},
+		{
+			name:       "that player lose life dynamic",
+			typeLine:   "Creature — Ally",
+			oracleText: "When this creature enters, you may have target player lose life equal to the number of Allies you control.",
+			power:      new("2"),
+			wantParts: []string{
+				"Primitive: game.LoseLife",
+				"Amount: game.Dynamic(",
+				"Optional: true",
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -206,6 +230,77 @@ func TestGenerateExecutableCardSourceOptionalHavePlayerSubject(t *testing.T) {
 				Toughness:  test.power,
 			}
 			source, diagnostics, err := GenerateExecutableCardSource(card, "p")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			for _, want := range test.wantParts {
+				if !strings.Contains(source, want) {
+					t.Fatalf("source missing %q:\n%s", want, source)
+				}
+			}
+		})
+	}
+}
+
+// TestGenerateExecutableCardSourceOptionalHaveKeywordGrant covers controller
+// "you may have target creature gain <keyword> until end of turn" causatives. The
+// granted keyword rides the action clause rather than the structural "have", so
+// the body lowers to a single Optional ApplyContinuous that adds the keyword to
+// the chosen target until end of turn.
+func TestGenerateExecutableCardSourceOptionalHaveKeywordGrant(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		wantParts  []string
+	}{
+		{
+			name:       "gain flying",
+			oracleText: "When this creature enters, you may have target creature gain flying until end of turn.",
+			wantParts: []string{
+				"Primitive: game.ApplyContinuous",
+				"AddKeywords: []game.Keyword{",
+				"game.Flying,",
+				"Duration: game.DurationUntilEndOfTurn",
+				"Optional: true",
+			},
+		},
+		{
+			name:       "gain double strike",
+			oracleText: "When this creature enters, you may have target creature gain double strike until end of turn.",
+			wantParts: []string{
+				"Primitive: game.ApplyContinuous",
+				"game.DoubleStrike,",
+				"Optional: true",
+			},
+		},
+		{
+			name:       "gain two keywords",
+			oracleText: "When this creature enters, you may have target creature gain flying and vigilance until end of turn.",
+			wantParts: []string{
+				"Primitive: game.ApplyContinuous",
+				"game.Flying,",
+				"game.Vigilance,",
+				"Optional: true",
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			power := new("2")
+			card := &ScryfallCard{
+				Name:       "Keyword Grant Have",
+				Layout:     "normal",
+				TypeLine:   "Creature — Bear",
+				OracleText: test.oracleText,
+				Power:      power,
+				Toughness:  power,
+			}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "k")
 			if err != nil {
 				t.Fatal(err)
 			}
