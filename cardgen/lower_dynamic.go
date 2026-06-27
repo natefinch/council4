@@ -393,9 +393,10 @@ func selectorCharacteristics(selector compiler.CompiledSelector) (game.Selection
 		return game.Selection{}, false
 	}
 	selection := game.Selection{
-		Colorless:       selector.Colorless,
-		Multicolored:    selector.Multicolored,
-		EnteredThisTurn: selector.EnteredThisTurn,
+		Colorless:           selector.Colorless,
+		Multicolored:        selector.Multicolored,
+		EnteredThisTurn:     selector.EnteredThisTurn,
+		DealtDamageThisTurn: selector.DealtDamageThisTurn,
 	}
 	if selector.Keyword != parser.KeywordUnknown {
 		keyword, ok := runtimeKeyword(selector.Keyword)
@@ -457,6 +458,7 @@ func selectorHasCountCharacteristic(selector compiler.CompiledSelector) bool {
 		selector.SubtypeFromEntryChoice ||
 		selector.SubtypeFromChosenType ||
 		selector.EnteredThisTurn ||
+		selector.DealtDamageThisTurn ||
 		len(selector.SubtypesAny()) > 0 ||
 		len(selector.ExcludedSubtypes()) > 0 ||
 		len(selector.Supertypes()) > 0 ||
@@ -1078,6 +1080,9 @@ func permanentTargetSpecAllowingUnbounded(target compiler.CompiledTarget, allowU
 	}
 	if target.Selector.NameUniqueAmongControlled {
 		selection.NameUniqueAmongControlled = true
+	}
+	if target.Selector.DealtDamageThisTurn {
+		selection.DealtDamageThisTurn = true
 	}
 
 	switch {

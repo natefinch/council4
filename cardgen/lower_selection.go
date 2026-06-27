@@ -173,15 +173,16 @@ func SelectionForSelectorMasked(selector compiler.CompiledSelector, mask Selecti
 	}
 
 	selection := game.Selection{
-		RequiredTypesAny: slices.Clone(selector.RequiredTypesAny()),
-		ExcludedTypes:    slices.Clone(selector.ExcludedTypes()),
-		Supertypes:       slices.Clone(selector.Supertypes()),
-		SubtypesAny:      slices.Clone(selector.SubtypesAny()),
-		ColorsAny:        slices.Clone(selector.ColorsAny()),
-		ExcludedColors:   slices.Clone(selector.ExcludedColors()),
-		Colorless:        selector.Colorless,
-		Multicolored:     selector.Multicolored,
-		EnteredThisTurn:  selector.EnteredThisTurn,
+		RequiredTypesAny:    slices.Clone(selector.RequiredTypesAny()),
+		ExcludedTypes:       slices.Clone(selector.ExcludedTypes()),
+		Supertypes:          slices.Clone(selector.Supertypes()),
+		SubtypesAny:         slices.Clone(selector.SubtypesAny()),
+		ColorsAny:           slices.Clone(selector.ColorsAny()),
+		ExcludedColors:      slices.Clone(selector.ExcludedColors()),
+		Colorless:           selector.Colorless,
+		Multicolored:        selector.Multicolored,
+		EnteredThisTurn:     selector.EnteredThisTurn,
+		DealtDamageThisTurn: selector.DealtDamageThisTurn,
 	}
 
 	if honor, ok := mask.dimension(selector.Another || selector.Other, DimExcludeSource); !ok {

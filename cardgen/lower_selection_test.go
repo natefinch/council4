@@ -131,6 +131,11 @@ func TestSelectionForSelectorDimensions(t *testing.T) {
 			want: game.Selection{EnteredThisTurn: true},
 		},
 		{
+			name: "dealt damage this turn",
+			sel:  compiler.CompiledSelector{Kind: compiler.SelectorPermanent, DealtDamageThisTurn: true},
+			want: game.Selection{DealtDamageThisTurn: true},
+		},
+		{
 			name: "controller you",
 			sel:  compiler.CompiledSelector{Kind: compiler.SelectorPermanent, Controller: compiler.ControllerYou},
 			want: game.Selection{Controller: game.ControllerYou},

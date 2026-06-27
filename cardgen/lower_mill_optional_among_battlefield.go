@@ -258,6 +258,7 @@ func oneOfEachCardSelections(selector compiler.CompiledSelector) ([]game.Selecti
 		selector.SubtypeFromEntryChoice || selector.SubtypeFromChosenType ||
 		selector.SubtypeFromChosenTypeExcluded ||
 		selector.EnteredThisTurn ||
+		selector.DealtDamageThisTurn ||
 		selector.PowerLessThanSource || selector.PowerGreaterThanSource ||
 		selector.Keyword != parser.KeywordUnknown ||
 		selector.ExcludedKeyword != parser.KeywordUnknown ||

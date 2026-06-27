@@ -10,9 +10,10 @@ var Cards = []*game.CardDef{
 	UndercityInformer,
 	UneshCriosphinxSovereign,
 	UnfathomableTruths,
+	UnsparingBoltcaster,
 	UntimelyMalfunction,
 	UreniOfTheUnwritten,
 	UrsineFylgja,
-	UtopiaMycon,
 	UrzaSChalice,
+	UtopiaMycon,
 }

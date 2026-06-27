@@ -269,6 +269,9 @@ func matchSelection(s *selectionSubject, sel *game.Selection) bool {
 	if sel.SharesCreatureTypeWithSource && !s.sharesCreatureTypeWithSource() {
 		return false
 	}
+	if sel.DealtDamageThisTurn && !s.dealtDamageThisTurn() {
+		return false
+	}
 	return true
 }
 
@@ -647,6 +650,20 @@ func (s *selectionSubject) enteredThisTurn() bool {
 	}
 	if s.kind == subjectEventPermanent && s.event.PermanentID != 0 {
 		return permanentEnteredThisTurn(s.g, s.event.PermanentID)
+	}
+	return false
+}
+
+// dealtDamageThisTurn reports whether the subject permanent was dealt damage
+// during the current turn ("target creature that was dealt damage this turn",
+// Fatal Blow). Only battlefield and event permanents can receive damage; other
+// subjects never match.
+func (s *selectionSubject) dealtDamageThisTurn() bool {
+	if s.kind == subjectPermanent {
+		return s.permanent != nil && permanentDealtDamageThisTurn(s.g, s.permanent.ObjectID)
+	}
+	if s.kind == subjectEventPermanent && s.event.PermanentID != 0 {
+		return permanentDealtDamageThisTurn(s.g, s.event.PermanentID)
 	}
 	return false
 }

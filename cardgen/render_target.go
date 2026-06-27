@@ -424,6 +424,9 @@ func (Renderer) renderSelection(ctx *renderCtx, selection game.Selection) (strin
 	if selection.EnteredThisTurn {
 		fields = append(fields, "EnteredThisTurn: true,")
 	}
+	if selection.DealtDamageThisTurn {
+		fields = append(fields, "DealtDamageThisTurn: true,")
+	}
 	if selection.RequirePermanentCard {
 		fields = append(fields, "RequirePermanentCard: true,")
 	}

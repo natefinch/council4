@@ -1498,6 +1498,11 @@ type SelectionSyntax struct {
 	// permanents that entered the battlefield during the current turn. It lowers
 	// to Selection.EnteredThisTurn.
 	EnteredThisTurn bool `json:",omitempty"`
+	// DealtDamageThisTurn records a trailing "that was dealt damage this turn"
+	// relative clause ("target creature that was dealt damage this turn", Fatal
+	// Blow), restricting the match to a permanent that was dealt damage during
+	// the current turn. It lowers to Selection.DealtDamageThisTurn.
+	DealtDamageThisTurn bool `json:",omitempty"`
 	// PowerLessThanSource records a trailing "with lesser power" relative clause
 	// ("target attacking creature with lesser power", Mentor), restricting the
 	// match to permanents whose power is strictly less than the ability's source
