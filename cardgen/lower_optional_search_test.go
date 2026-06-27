@@ -92,6 +92,76 @@ func TestLowerOptionalSearchToHand(t *testing.T) {
 	}
 }
 
+// TestLowerOptionalManaValueTutorToHand verifies the optional "you may search ...
+// reveal it, put it into your hand, then shuffle" tutor lowers with a concrete
+// mana-value bound for the exact ("mana value N") and lower-bound ("mana value N
+// or greater") riders, the forms the Treasure Mage / Trophy Mage family carries
+// alongside the previously supported "or less" bound.
+func TestLowerOptionalManaValueTutorToHand(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name       string
+		oracleText string
+		want       compare.Int
+		cardType   types.Card
+	}{
+		{
+			name:       "exact mana value (Trophy Mage)",
+			oracleText: "When this creature enters, you may search your library for an artifact card with mana value 3, reveal it, put it into your hand, then shuffle.",
+			want:       compare.Int{Op: compare.Equal, Value: 3},
+			cardType:   types.Artifact,
+		},
+		{
+			name:       "lower-bound mana value (Treasure Mage)",
+			oracleText: "When this creature enters, you may search your library for an artifact card with mana value 6 or greater, reveal it, put it into your hand, then shuffle.",
+			want:       compare.Int{Op: compare.GreaterOrEqual, Value: 6},
+			cardType:   types.Artifact,
+		},
+		{
+			name:       "lower-bound creature mana value (Fierce Empath)",
+			oracleText: "When this creature enters, you may search your library for a creature card with mana value 6 or greater, reveal it, put it into your hand, then shuffle.",
+			want:       compare.Int{Op: compare.GreaterOrEqual, Value: 6},
+			cardType:   types.Creature,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			faces, diagnostics := lowerExecutableFaces(&ScryfallCard{
+				Name:       "Mana Value Tutor",
+				Layout:     "normal",
+				TypeLine:   "Creature — Human Wizard",
+				OracleText: tc.oracleText,
+				Power:      new("1"),
+				Toughness:  new("1"),
+			})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			seq := faces[0].TriggeredAbilities[0].Content.Modes[0].Sequence
+			if len(seq) != 1 || !seq[0].Optional {
+				t.Fatalf("sequence = %#v, want one Optional instruction", seq)
+			}
+			search, ok := seq[0].Primitive.(game.Search)
+			if !ok {
+				t.Fatalf("primitive = %#v, want game.Search", seq[0].Primitive)
+			}
+			want := game.SearchSpec{
+				SourceZone:  zone.Library,
+				Destination: zone.Hand,
+				Reveal:      true,
+				Filter: game.Selection{
+					RequiredTypes: []types.Card{tc.cardType},
+					ManaValue:     opt.Val(tc.want),
+				},
+			}
+			if !searchSpecEqual(search.Spec, want) {
+				t.Errorf("spec = %+v, want %+v", search.Spec, want)
+			}
+		})
+	}
+}
+
 // TestLowerOptionalSearchSubtypeToHand verifies a now-supported subtype tutor
 // ("a Goblin card") lowers optionally to a subtype-filtered hand search.
 func TestLowerOptionalSearchSubtypeToHand(t *testing.T) {

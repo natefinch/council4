@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,279 of 32,501 cards eligible for paper support (47.0%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,285 of 32,501 cards eligible for paper support (47.0%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -4437,6 +4437,7 @@ Council4 currently supports **15,279 of 32,501 cards eligible for paper support 
 - Fiend Artisan
 - Fiend Hunter
 - Fiendlash
+- Fierce Empath
 - Fierce Guardianship
 - Fierce Witchstalker
 - Fiery Cannonade
@@ -7959,6 +7960,7 @@ Council4 currently supports **15,279 of 32,501 cards eligible for paper support 
 - Maximize Altitude
 - Maximize Velocity
 - Maximum Overdrive
+- Maximus, Knight Apparent
 - Mayael the Anima
 - Mayael's Aria
 - Mayhem Devil
@@ -8105,6 +8107,7 @@ Council4 currently supports **15,279 of 32,501 cards eligible for paper support 
 - Michelangelo, the Heart
 - Michelangelo, Weirdness to 11
 - Michiko's Reign of Truth // Portrait of Michiko
+- Micromancer
 - Midgar, City of Mako // Reactor Raid
 - Midnight Assassin
 - Midnight Charm
@@ -13694,6 +13697,7 @@ Council4 currently supports **15,279 of 32,501 cards eligible for paper support 
 - Treasure Dredger
 - Treasure Hunt
 - Treasure Hunter
+- Treasure Mage
 - Treasure Trove
 - Treasure Vault
 - Treasured Find
@@ -13737,6 +13741,7 @@ Council4 currently supports **15,279 of 32,501 cards eligible for paper support 
 - Tribal Flames
 - Tribune of Rot
 - Tributary Vaulter
+- Tribute Mage
 - Tribute to the Wild
 - Tribute to the World Tree
 - Triceraton Regenta
@@ -13772,6 +13777,7 @@ Council4 currently supports **15,279 of 32,501 cards eligible for paper support 
 - Trolls of Tel-Jilad
 - Tromp the Domains
 - Trophy Hunter
+- Trophy Mage
 - Tropical Island
 - Trostani's Summoner
 - Trostani, Three Whispers

@@ -1058,14 +1058,18 @@ func searchSpecForSelector(selector compiler.CompiledSelector) (game.SearchSpec,
 		}
 	}
 	if selector.MatchManaValue {
-		// "with mana value N or less" is a fixed upper bound; "with mana value X
-		// or less" binds the upper bound to the spell's chosen {X}, resolved as
-		// the search runs. Every other comparison (exact, "or greater") fails
-		// closed.
+		// "with mana value X or less" binds the upper bound to the spell's chosen
+		// {X}, resolved as the search runs. A fixed comparison ("mana value N or
+		// less", "mana value N or greater", "mana value N") lowers to a concrete
+		// Selection.ManaValue bound, which the runtime evaluates generically with
+		// compare.Int.Matches. The parser only ever emits Equal, LessOrEqual, or
+		// GreaterOrEqual here, so accepting every operator except the empty Any
+		// (which carries no comparison) keeps lowering in lock-step with the
+		// parser gate without re-enumerating the supported operators.
 		if selector.ManaValueX {
 			spec.MaxManaValueFromX = true
 		} else {
-			if selector.ManaValue.Op != compare.LessOrEqual {
+			if selector.ManaValue.Op == compare.Any {
 				return game.SearchSpec{}, false
 			}
 			filter.ManaValue = opt.Val(selector.ManaValue)

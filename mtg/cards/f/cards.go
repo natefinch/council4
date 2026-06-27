@@ -27,6 +27,7 @@ var Cards = []*game.CardDef{
 	FerozSBan,
 	FieldSurgeon,
 	Fiendlash,
+	FierceEmpath,
 	FightAsOne,
 	FinalStingFaerie,
 	FireLitThicket,
