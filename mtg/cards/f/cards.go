@@ -31,6 +31,7 @@ var Cards = []*game.CardDef{
 	Fiendlash,
 	FierceEmpath,
 	FightAsOne,
+	FilthyCur,
 	FinalStingFaerie,
 	FireLitThicket,
 	FireWhip,

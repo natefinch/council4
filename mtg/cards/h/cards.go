@@ -35,6 +35,7 @@ var Cards = []*game.CardDef{
 	HoofprintsOfTheStag,
 	HopeAgainstHope,
 	HornbashMentor,
+	HornedCheetah,
 	HotSprings,
 	HoverguardObserver,
 	HowlOfTheNightPack,

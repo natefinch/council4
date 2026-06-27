@@ -33,8 +33,15 @@ func lowerFixedLifeSpell(
 	switch {
 	case effect.Amount.Known:
 		amount = game.Fixed(effect.Amount.Value)
-	case effect.Amount.DynamicKind == compiler.DynamicAmountTriggeringLifeChange:
-		dynamic, ok := lowerEventLifeChangeAmount(ctx, effect.Amount)
+	case triggeringEventQuantityKind(effect.Amount.DynamicKind):
+		// "you gain/lose that much life" reads its anaphor from the enclosing
+		// trigger. The parser pins every "that much life" phrase to one
+		// life-change kind without knowing which event fired, so the lowering
+		// resolves it on whichever event actually fired — the damage dealt in a
+		// damage trigger ("Whenever this creature deals damage, you gain that
+		// much life."), the life gained or lost in a life-change trigger, and so
+		// on — keeping the parser text-blind.
+		dynamic, ok := lowerTriggeringEventQuantityAmount(ctx, effect.Amount)
 		if !ok {
 			return game.AbilityContent{}, contentDiagnostic(
 				ctx,

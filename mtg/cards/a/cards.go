@@ -38,6 +38,7 @@ var Cards = []*game.CardDef{
 	ArchwayCommons,
 	ArdenvalePaladin,
 	Arena,
+	ArmadilloCloak,
 	ArmorThrull,
 	ArrogantBloodlord,
 	ArtisanOfKozilek,

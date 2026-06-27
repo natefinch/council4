@@ -7,6 +7,7 @@ import "github.com/natefinch/council4/mtg/game"
 // Cards lists all card definitions in this package.
 var Cards = []*game.CardDef{
 	KaaliaZenithSeeker,
+	KamiOfTheHonoredDead,
 	Kapow,
 	KarplusanForest,
 	KayaSGhostform,
@@ -17,9 +18,10 @@ var Cards = []*game.CardDef{
 	KhalniAmbush,
 	KhalniHeartExpedition,
 	KithkinHealer,
+	KjeldoranGargoyle,
 	KodamaOfTheSouthTree,
-	KolaghanWarmonger,
 	KolaghanAspirant,
+	KolaghanWarmonger,
 	KoskunFalls,
 	KrosanDrover,
 	KusariGama,
