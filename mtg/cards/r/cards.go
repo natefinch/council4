@@ -24,6 +24,7 @@ var Cards = []*game.CardDef{
 	RealityHeist,
 	RealmCloakedGiant,
 	ReaperFromTheAbyss,
+	ReconCraftTheta,
 	RecruitmentOfficer,
 	Recuperate,
 	RedWard,

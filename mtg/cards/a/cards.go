@@ -14,6 +14,7 @@ var Cards = []*game.CardDef{
 	AcolyteOfTheInferno,
 	AdantoVanguard,
 	AdaptiveOmnitool,
+	AdditiveEvolution,
 	AdventurousImpulse,
 	AetherChaser,
 	AetherFigment,
