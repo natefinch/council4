@@ -45,6 +45,9 @@ func objectIndex(p game.Primitive) (int, bool) {
 	if v, ok := p.(game.Tap); ok {
 		return v.Object.TargetIndex(), true
 	}
+	if v, ok := p.(game.SkipNextUntap); ok {
+		return v.Object.TargetIndex(), true
+	}
 	if v, ok := p.(game.Untap); ok {
 		return v.Object.TargetIndex(), true
 	}
@@ -122,6 +125,7 @@ func targetBearingPrimitives() []targetBearingPrimitive {
 		objectPrimitive("ModifyPT", func() game.Primitive { return game.ModifyPT{Object: obj()} }),
 		objectPrimitive("Fight", func() game.Primitive { return game.Fight{Object: obj(), RelatedObject: obj()} }),
 		objectPrimitive("Tap", func() game.Primitive { return game.Tap{Object: obj()} }),
+		objectPrimitive("SkipNextUntap", func() game.Primitive { return game.SkipNextUntap{Object: obj()} }),
 		objectPrimitive("Untap", func() game.Primitive { return game.Untap{Object: obj()} }),
 		objectPrimitive("RemoveFromCombat", func() game.Primitive { return game.RemoveFromCombat{Object: obj()} }),
 		objectPrimitive("Exile", func() game.Primitive { return game.Exile{Object: obj()} }),

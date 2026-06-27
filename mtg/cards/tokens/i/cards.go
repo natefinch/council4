@@ -7,6 +7,7 @@ import "github.com/natefinch/council4/mtg/game"
 // Cards lists all card definitions in this package.
 var Cards = []*game.CardDef{
 	IcyManalithToken2944167b0ffe4582b14db6f80d936d65,
+	IllusionToken349852d6169748cf86a4c20a2aabf0fc,
 	IllusionTokenbd0289dcf40641579776401b662df719,
 	IllusionTokeneafd610da32e4d92b1f4134f80720d16,
 	IllusionTokenec406831a1d04e41bd09f76d0ba206ae,

@@ -6,6 +6,7 @@ import "github.com/natefinch/council4/mtg/game"
 
 // Cards lists all card definitions in this package.
 var Cards = []*game.CardDef{
+	LabyrinthMinotaur,
 	LadyOfLaughter,
 	LaidToRest,
 	LapisLazuliTalisman,
@@ -14,6 +15,7 @@ var Cards = []*game.CardDef{
 	LatticeBladeMantis,
 	LavaCoil,
 	LeadBellyChimera,
+	LeadGolem,
 	LeadTheStampede,
 	LegolasMasterArcher,
 	LeoninDenGuard,

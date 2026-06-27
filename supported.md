@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,691 of 32,501 cards eligible for paper support (48.3%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,710 of 32,501 cards eligible for paper support (48.3%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -505,6 +505,7 @@ Council4 currently supports **15,691 of 32,501 cards eligible for paper support 
 - Anvilwrought Raptor
 - Ape
 - Ape Villain
+- Apes of Rath
 - Apex Altisaur
 - Apex Devastator
 - Apex Hawks
@@ -2180,6 +2181,7 @@ Council4 currently supports **15,691 of 32,501 cards eligible for paper support 
 - Chandra's Magmutt
 - Chandra's Outrage
 - Chandra's Pyrohelix
+- Chandra's Revolution
 - Chandra, Novice Pyromancer
 - Changeling Outcast
 - Changeling Sentinel
@@ -2375,6 +2377,7 @@ Council4 currently supports **15,691 of 32,501 cards eligible for paper support 
 - Clergy en-Vec
 - Cleric
 - Cleric
+- Cleric of Chill Depths
 - Cleric of Life's Bond
 - Clever Impersonator
 - Clever Lumimancer
@@ -5343,6 +5346,7 @@ Council4 currently supports **15,691 of 32,501 cards eligible for paper support 
 - Gixian Skullflayer
 - Glacial Floodplain
 - Glacial Fortress
+- Glacial Grasp
 - Glacial Plating
 - Glacial Revelation
 - Glacial Stalker
@@ -6553,6 +6557,7 @@ Council4 currently supports **15,691 of 32,501 cards eligible for paper support 
 - Illusion
 - Illusion
 - Illusion
+- Illusion
 - Illusion // Saproling
 - Illusion Villain
 - Illusionary Armor
@@ -7086,6 +7091,8 @@ Council4 currently supports **15,691 of 32,501 cards eligible for paper support 
 - Karplusan Forest
 - Karplusan Hound
 - Karplusan Wolverine
+- Kashi-Tribe Reaver
+- Kashi-Tribe Warriors
 - Kasimir the Lone Wolf
 - Kasmina's Transmutation
 - Katara, Heroic Healer
@@ -7434,6 +7441,7 @@ Council4 currently supports **15,691 of 32,501 cards eligible for paper support 
 - Labyrinth Champion
 - Labyrinth Guardian
 - Labyrinth Guardian
+- Labyrinth Minotaur
 - Labyrinth of Skophos
 - Lace with Moonglove
 - Lady Caleria
@@ -7514,6 +7522,7 @@ Council4 currently supports **15,691 of 32,501 cards eligible for paper support 
 - Lazotep Chancellor
 - Lazotep Reaver
 - Lead Astray
+- Lead Golem
 - Lead Pipe
 - Lead the Stampede
 - Lead-Belly Chimera
@@ -8154,6 +8163,8 @@ Council4 currently supports **15,691 of 32,501 cards eligible for paper support 
 - Masticore
 - Matca Rioters
 - Match the Odds
+- Matsu-Tribe Birdstalker
+- Matsu-Tribe Sniper
 - Matt Murdock, Justice Seeker
 - Maul of the Skyclaves
 - Maul Splicer
@@ -8247,6 +8258,7 @@ Council4 currently supports **15,691 of 32,501 cards eligible for paper support 
 - Merciless Executioner
 - Merciless Resolve
 - Mercurial Geists
+- Mercurial Kite
 - Merfolk
 - Merfolk
 - Merfolk
@@ -8284,6 +8296,7 @@ Council4 currently supports **15,691 of 32,501 cards eligible for paper support 
 - Mesa Unicorn
 - Mesmeric Orb
 - Mesmeric Trance
+- Mesmerizing Benthid
 - Messenger Drake
 - Messenger Falcons
 - Messenger's Speed
@@ -9355,6 +9368,7 @@ Council4 currently supports **15,691 of 32,501 cards eligible for paper support 
 - Ornithopter of Paradise
 - Orochi Hatchery
 - Orochi Leafcaller
+- Orochi Ranger
 - Orochi Sustainer
 - Orthodoxy Enforcer
 - Orzhov Basilica
@@ -10134,6 +10148,7 @@ Council4 currently supports **15,691 of 32,501 cards eligible for paper support 
 - Quasiduplicate
 - Queen Allenal of Ruadach
 - Queen Brahne
+- Queen of Ice // Rage of Winter
 - Queen's Agent
 - Queen's Bay Soldier
 - Queen's Commission
@@ -11709,6 +11724,7 @@ Council4 currently supports **15,691 of 32,501 cards eligible for paper support 
 - Shield of Duty and Reason
 - Shield of the Ages
 - Shield of the Oversoul
+- Shield of the Righteous
 - Shield Sphere
 - Shield Wall
 - Shielded Aether Thief
@@ -14655,6 +14671,7 @@ Council4 currently supports **15,691 of 32,501 cards eligible for paper support 
 - Vernal Fen
 - Veronica, Dissident Scribe
 - Vertigo
+- Vertigo Spawn
 - Vesper Ghoul
 - Vesperlark
 - Vessel of Endless Rest
@@ -14883,6 +14900,7 @@ Council4 currently supports **15,691 of 32,501 cards eligible for paper support 
 - Voracious Vermin
 - Vorapede
 - Vorel of the Hull Clade
+- Vorinclex, Voice of Hunger
 - Vorosh, the Hunter
 - Vorrac Battlehorns
 - Vorstclaw
@@ -14954,6 +14972,7 @@ Council4 currently supports **15,691 of 32,501 cards eligible for paper support 
 - Wall of Essence
 - Wall of Faith
 - Wall of Fire
+- Wall of Frost
 - Wall of Granite
 - Wall of Heat
 - Wall of Hope

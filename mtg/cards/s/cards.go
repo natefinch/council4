@@ -54,6 +54,7 @@ var Cards = []*game.CardDef{
 	ShelteredByGhosts,
 	ShieldOfTheAges,
 	ShieldOfTheOversoul,
+	ShieldOfTheRighteous,
 	ShieldSphere,
 	ShieldmateSBlessing,
 	ShiftingCeratops,

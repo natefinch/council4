@@ -27,6 +27,7 @@ var Cards = []*game.CardDef{
 	OrdruunCommando,
 	OrimSamiteHealer,
 	OrneryGoblin,
+	OrochiRanger,
 	OsaiVultures,
 	OtherworldlyJourney,
 	OvergrownPest,

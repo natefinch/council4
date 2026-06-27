@@ -13,6 +13,8 @@ var Cards = []*game.CardDef{
 	KamiOfTheHonoredDead,
 	Kapow,
 	KarplusanForest,
+	KashiTribeReaver,
+	KashiTribeWarriors,
 	KavuAggressor,
 	KavuPrimarch,
 	KayaSGhostform,
