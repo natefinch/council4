@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,439 of 32,501 cards eligible for paper support (47.5%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,454 of 32,501 cards eligible for paper support (47.5%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -49,6 +49,7 @@ Council4 currently supports **15,439 of 32,501 cards eligible for paper support 
 - Abzan Guide
 - Abzan Kin-Guard
 - Abzan Monument
+- Academy Drake
 - Academy Journeymage
 - Academy Manufactor
 - Academy Raider
@@ -137,6 +138,7 @@ Council4 currently supports **15,439 of 32,501 cards eligible for paper support 
 - Aesthir Glider
 - Aether Adept
 - Aether Charge
+- Aether Figment
 - Aether Gale
 - Aether Helix
 - Aether Hub
@@ -610,6 +612,7 @@ Council4 currently supports **15,439 of 32,501 cards eligible for paper support 
 - Ardent Militia
 - Ardent Plea
 - Ardent Recruit
+- Ardent Soldier
 - Ardenvale Paladin
 - Ardenvale Tactician // Dizzying Swoop
 - Ardoz, Cobbler of War
@@ -925,6 +928,7 @@ Council4 currently supports **15,439 of 32,501 cards eligible for paper support 
 - Ballynock Cohort
 - Balm of Restoration
 - Balmor, Battlemage Captain
+- Baloth Gorger
 - Baloth Null
 - Baloth Pup
 - Baloth Woodcrasher
@@ -2659,6 +2663,7 @@ Council4 currently supports **15,439 of 32,501 cards eligible for paper support 
 - Crag Puca
 - Cragcrown Pathway // Timbercrown Pathway
 - Cragflame
+- Cragplate Baloth
 - Crash and Burn
 - Crash of Rhino Beetles
 - Crash of Rhinos
@@ -5135,6 +5140,7 @@ Council4 currently supports **15,439 of 32,501 cards eligible for paper support 
 - Geyserfield Stalker
 - Ghalma's Warden
 - Ghalta, Primal Hunger
+- Ghastly Gloomhunter
 - Ghen, Arcanum Weaver
 - Ghirapur Aether Grid
 - Ghirapur Gearcrafter
@@ -5352,6 +5358,7 @@ Council4 currently supports **15,439 of 32,501 cards eligible for paper support 
 - Gnarlback Rhino
 - Gnarled Effigy
 - Gnarled Mass
+- Gnarlid Colony
 - Gnarlid Pack
 - Gnarlroot Pallbearer
 - Gnarlwood Dryad
@@ -6987,9 +6994,11 @@ Council4 currently supports **15,439 of 32,501 cards eligible for paper support 
 - Kathari Screecher
 - Kavaron Turbodrone
 - Kavu
+- Kavu Aggressor
 - Kavu Climber
 - Kavu Glider
 - Kavu Predator
+- Kavu Primarch
 - Kavu Scout
 - Kaya's Ghostform
 - Kaysa
@@ -9578,6 +9587,7 @@ Council4 currently supports **15,439 of 32,501 cards eligible for paper support 
 - Pillarfield Ox
 - Pillory of the Sleepless
 - Pin to the Earth
+- Pincer Spider
 - Pincher Beetles
 - Pine Barrens
 - Pinecrest Ridge
@@ -11441,6 +11451,7 @@ Council4 currently supports **15,439 of 32,501 cards eligible for paper support 
 - Shady Informant
 - Shake the Foundations
 - Shalai and Hallar
+- Shalai's Acolyte
 - Shaleskin Plower
 - Shaman of Spring
 - Shaman of the Great Hunt
@@ -12811,6 +12822,7 @@ Council4 currently supports **15,439 of 32,501 cards eligible for paper support 
 - Strongarm Thug
 - Stronghold Assassin
 - Stronghold Biologist
+- Stronghold Confessor
 - Stronghold Machinist
 - Stronghold Overseer
 - Stronghold Rats
@@ -14177,6 +14189,7 @@ Council4 currently supports **15,439 of 32,501 cards eligible for paper support 
 - Unsummon
 - Unswerving Sloth
 - Untamed Hunger
+- Untamed Kavu
 - Untamed Might
 - Untamed Wilds
 - Untethered Express
@@ -14208,6 +14221,7 @@ Council4 currently supports **15,439 of 32,501 cards eligible for paper support 
 - Urborg Phantom
 - Urborg Repossession
 - Urborg Shambler
+- Urborg Skeleton
 - Urborg Uprising
 - Urborg Volcano
 - Urborg, Tomb of Yawgmoth
@@ -14442,6 +14456,7 @@ Council4 currently supports **15,439 of 32,501 cards eligible for paper support 
 - Vial of Poison
 - Vial Smasher, Gleeful Grenadier
 - Viashino Bladescout
+- Viashino Branchrider
 - Viashino Cutthroat
 - Viashino Fangtail
 - Viashino Firstblade
