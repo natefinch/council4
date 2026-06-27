@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,507 of 32,501 cards eligible for paper support (47.7%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,519 of 32,501 cards eligible for paper support (47.7%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -138,14 +138,19 @@ Council4 currently supports **15,507 of 32,501 cards eligible for paper support 
 - Aesthir Glider
 - Aether Adept
 - Aether Charge
+- Aether Chaser
 - Aether Figment
 - Aether Gale
 - Aether Helix
+- Aether Herder
 - Aether Hub
+- Aether Inspector
 - Aether Meltdown
+- Aether Poisoner
 - Aether Shockwave
 - Aether Spellbomb
 - Aether Sting
+- Aether Swooper
 - Aether Syphon
 - Aether Theorist
 - Aether Tradewinds
@@ -11193,6 +11198,7 @@ Council4 currently supports **15,507 of 32,501 cards eligible for paper support 
 - Scrap
 - Scrap Mastery
 - Scrapheap
+- Scrapper Champion
 - Scrapskin Drake
 - Scrapwork Cohort
 - Scrapwork Mutt
@@ -13601,9 +13607,15 @@ Council4 currently supports **15,507 of 32,501 cards eligible for paper support 
 - Thriss, Nantuko Primus
 - Thriving Bluff
 - Thriving Grove
+- Thriving Grubs
 - Thriving Heath
+- Thriving Ibex
 - Thriving Isle
 - Thriving Moor
+- Thriving Rats
+- Thriving Rhino
+- Thriving Skyclaw
+- Thriving Turtle
 - Throes of Chaos
 - Throne of Bone
 - Throne of Geth
