@@ -313,7 +313,17 @@ func targetAntecedent(reference CompiledReference, targets []CompiledTarget) (oc
 		return 0, false, false
 	}
 	target := targets[closest]
-	if target.Cardinality.Min != 1 || target.Cardinality.Max != 1 {
+	// A definite single antecedent ("target creature") binds any reference form.
+	// An "up to one target" (Max one, optionally zero) still has a single
+	// referent slot, so the singular object pronoun "it" unambiguously names that
+	// one optional target; the runtime no-ops the dependent effect when no target
+	// was chosen. Possessive ("its"), plural, and demonstrative forms keep the
+	// conservative ambiguous binding because their referent or count is not a
+	// single object index.
+	definiteSingle := target.Cardinality.Min == 1 && target.Cardinality.Max == 1
+	optionalSingleIt := target.Cardinality.Min == 0 && target.Cardinality.Max == 1 &&
+		reference.Kind == ReferencePronoun && reference.Pronoun == ReferencePronounIt
+	if !definiteSingle && !optionalSingleIt {
 		return 0, false, true
 	}
 	for i := closest + 1; i < len(targets); i++ {

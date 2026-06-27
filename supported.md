@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,268 of 32,501 cards eligible for paper support (47.0%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,274 of 32,501 cards eligible for paper support (47.0%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2393,6 +2393,7 @@ Council4 currently supports **15,268 of 32,501 cards eligible for paper support 
 - Collective Resistance
 - Collective Restraint
 - Collective Unconscious
+- Collector's Case
 - Collector's Vault
 - Colleen Wing, Street Samurai
 - Collision // Colossus
@@ -7968,6 +7969,7 @@ Council4 currently supports **15,268 of 32,501 cards eligible for paper support 
 - Maze Skullbomb
 - Mazirek, Kraul Death Priest
 - Meandering River
+- Meat Locker // Drowned Diner
 - Mechan Assembler
 - Mechan Navigator
 - Mechanical Glider
@@ -9350,6 +9352,7 @@ Council4 currently supports **15,268 of 32,501 cards eligible for paper support 
 - Petrahydrox
 - Petravark
 - Petrified Field
+- Petrifying Meddler
 - Pewter Golem
 - Phalanx Leader
 - Phalanx Tactics
@@ -12308,6 +12311,7 @@ Council4 currently supports **15,268 of 32,501 cards eligible for paper support 
 - Spitting Image
 - Spitting Sliver
 - Spitting Spider
+- Splash Lasher
 - Splatter Goblin
 - Splatter Thug
 - Splendid Reclamation
@@ -12684,6 +12688,7 @@ Council4 currently supports **15,268 of 32,501 cards eligible for paper support 
 - Stump Stomp // Burnwillow Clearing
 - Stun
 - Stun Sniper
+- Stunning Shot
 - Stunt Double
 - Sturdy Hatchling
 - Sturdy Shield
@@ -14081,6 +14086,7 @@ Council4 currently supports **15,268 of 32,501 cards eligible for paper support 
 - Utopia Tree
 - Utopia Vow
 - Utrom Monitor
+- Utrom Scientists
 - Utter End
 - Utvara Hellkite
 - Utvara Scalper

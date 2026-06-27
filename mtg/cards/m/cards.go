@@ -26,6 +26,7 @@ var Cards = []*game.CardDef{
 	MasterSRebuke,
 	Masticore,
 	MayaelTheAnima,
+	MeatLocker,
 	MeletisAstronomer,
 	MemorialToUnity,
 	MemoryPlunder,

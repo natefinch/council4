@@ -113,6 +113,7 @@ var Cards = []*game.CardDef{
 	StratusWalk,
 	StreetUrchin,
 	StrongholdZeppelin,
+	StunningShot,
 	SturdyHatchling,
 	SumalaWoodshaper,
 	SunDroplet,
