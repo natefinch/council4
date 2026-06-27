@@ -42,5 +42,6 @@ var Cards = []*game.CardDef{
 	TreasureHunt,
 	TreefolkHealer,
 	TroubledHealer,
+	TwinBlades,
 	TwinflameTravelers,
 }

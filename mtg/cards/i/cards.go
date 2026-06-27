@@ -12,6 +12,7 @@ var Cards = []*game.CardDef{
 	IchorWellspring,
 	IconOfAncestry,
 	IgnobleHierarch,
+	IllvoiLightJammer,
 	ImpendingDoom,
 	InameLifeAspect,
 	IncreasingDevotion,

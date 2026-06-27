@@ -23,6 +23,7 @@ var Cards = []*game.CardDef{
 	HeirloomAuntie,
 	HengeWalker,
 	HerdMigration,
+	HiddenFootblade,
 	HiddenHorror,
 	HiddenStockpile,
 	HoldAtBay,

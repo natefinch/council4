@@ -63,6 +63,9 @@ func objectIndex(p game.Primitive) (int, bool) {
 	if v, ok := p.(game.Regenerate); ok {
 		return v.Object.TargetIndex(), true
 	}
+	if v, ok := p.(game.Attach); ok {
+		return v.Target.TargetIndex(), true
+	}
 	if v, ok := p.(game.PreventDamage); ok {
 		return v.Object.TargetIndex(), true
 	}
@@ -125,6 +128,9 @@ func targetBearingPrimitives() []targetBearingPrimitive {
 		objectPrimitive("Bounce", func() game.Primitive { return game.Bounce{Object: obj()} }),
 		objectPrimitive("CounterObject", func() game.Primitive { return game.CounterObject{Object: obj()} }),
 		objectPrimitive("Regenerate", func() game.Primitive { return game.Regenerate{Object: obj()} }),
+		objectPrimitive("Attach", func() game.Primitive {
+			return game.Attach{Attachment: game.SourcePermanentReference(), Target: obj()}
+		}),
 		objectPrimitive("PreventDamage", func() game.Primitive { return game.PreventDamage{Object: obj()} }),
 		playerPrimitive("AddPlayerCounter", func() game.Primitive { return game.AddPlayerCounter{Player: plr()} }),
 		playerPrimitive("Draw", func() game.Primitive { return game.Draw{Player: plr()} }),

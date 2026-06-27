@@ -125,3 +125,48 @@ func TestLowerAttachToPluralTargetsFailsClosed(t *testing.T) {
 		t.Fatalf("triggered abilities = %d, want 0 (fail closed)", len(face.TriggeredAbilities))
 	}
 }
+
+// TestLowerAttachThenGrantKeywordSequence verifies the "Flash equipment" cycle
+// (Squire's Lightblade, Twin Blades, Coral Sword, ...) whose enters trigger both
+// auto-attaches the Equipment and grants the attached creature a temporary
+// keyword: "When this Equipment enters, attach it to target creature you control.
+// That creature gains first strike until end of turn." The ordered two-effect
+// trigger lowers to an Attach followed by an ApplyContinuous, both bound to the
+// single shared target creature. This exercises the Attach primitive's
+// participation in the sequence target-index transform.
+func TestLowerAttachThenGrantKeywordSequence(t *testing.T) {
+	card := &ScryfallCard{
+		Name:       "Squire's Lightblade",
+		Layout:     "normal",
+		TypeLine:   "Artifact — Equipment",
+		OracleText: "Flash\nWhen this Equipment enters, attach it to target creature you control. That creature gains first strike until end of turn.\nEquipped creature gets +1/+1.\nEquip {2} ({2}: Attach to target creature you control. Equip only as a sorcery.)",
+	}
+	face := lowerSingleFace(t, card)
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
+	}
+	content := face.TriggeredAbilities[0].Content
+	if len(content.Modes) != 1 || len(content.Modes[0].Targets) != 1 {
+		t.Fatalf("content modes/targets = %+v, want one mode with one target", content.Modes)
+	}
+	sequence := content.Modes[0].Sequence
+	if len(sequence) != 2 {
+		t.Fatalf("sequence length = %d, want 2", len(sequence))
+	}
+	attach, ok := sequence[0].Primitive.(game.Attach)
+	if !ok {
+		t.Fatalf("sequence[0] type = %T, want game.Attach", sequence[0].Primitive)
+	}
+	if attach.Target.Kind() != game.ObjectReferenceTargetPermanent || attach.Target.TargetIndex() != 0 {
+		t.Fatalf("attach target = %v idx %d, want target permanent 0", attach.Target.Kind(), attach.Target.TargetIndex())
+	}
+	apply, ok := sequence[1].Primitive.(game.ApplyContinuous)
+	if !ok {
+		t.Fatalf("sequence[1] type = %T, want game.ApplyContinuous", sequence[1].Primitive)
+	}
+	if !apply.Object.Exists ||
+		apply.Object.Val.Kind() != game.ObjectReferenceTargetPermanent ||
+		apply.Object.Val.TargetIndex() != 0 {
+		t.Fatalf("grant object = %+v, want target permanent 0", apply.Object)
+	}
+}

@@ -189,6 +189,20 @@ func transformPrimitiveTargetIndices(primitive game.Primitive, transform targetI
 		value.Object, ok = transformObjectReference(value.Object, transform)
 		return value, ok
 	}
+	if value, ok := primitive.(game.Attach); ok {
+		// Attachment names the entering or source Equipment (a source/event
+		// reference) and passes through unchanged; Target carries the chosen
+		// permanent's clause-local target index, which is rewritten here so an
+		// auto-attach clause can appear in an ordered sequence ("attach it to
+		// target creature you control. That creature gains <keyword> ...").
+		attachment, ok := transformObjectReference(value.Attachment, transform)
+		if !ok {
+			return nil, false
+		}
+		value.Attachment = attachment
+		value.Target, ok = transformObjectReference(value.Target, transform)
+		return value, ok
+	}
 	if value, ok := primitive.(game.Draw); ok {
 		value.Player, ok = transformPlayerReference(value.Player, transform)
 		return value, ok
