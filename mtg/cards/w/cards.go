@@ -9,6 +9,7 @@ var Cards = []*game.CardDef{
 	WalkThePlank,
 	WalkingWall,
 	WallOfEssence,
+	WallOfFrost,
 	WallOfHope,
 	WallOfJunk,
 	WallOfOneThousandCuts,

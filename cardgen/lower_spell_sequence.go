@@ -1770,6 +1770,128 @@ func lowerStandaloneStunEffect(ctx contentCtx) (game.AbilityContent, bool) {
 	}.Ability(), true
 }
 
+// lowerInheritedSubjectStunEffect lowers a prior-subject "doesn't untap during
+// its controller's next untap step" clause that an ordered sequence feeds in as
+// a standalone sub-clause whose permanent is an inherited target rather than the
+// clause's own ("Tap target creature. Its controller mills two cards. That
+// creature doesn't untap during its controller's next untap step." — Glacial
+// Grasp; "Tap up to two target creatures. Those creatures don't untap during
+// their controller's next untap step. Scry 1." — Sudden Storm). The dedicated
+// two-effect lowerTapDownSequence/lowerTapStunSequence shapes only fire when the
+// tap and stun are the body's only effects, so any added clause (a mill, a scry,
+// or a prevent) diverts the body to the generic ordered-sequence path, which
+// rebases the just-tapped subject onto this clause's content targets and lowers
+// it here as one SkipNextUntap per inherited target slot. It accepts only the
+// parser-exact negated-untap clause that owns no target of its own (every
+// permanent is the inherited subject) and whose references all resolve to that
+// inherited target; every other shape (an own target, a multi-step window, a
+// duration, or a stray reference) fails closed so lowerStandaloneStunEffect and
+// the general paths are untouched.
+func lowerInheritedSubjectStunEffect(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 1 || ctx.optional ||
+		len(ctx.content.Targets) != 1 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.Conditions) != 0 {
+		return game.AbilityContent{}, false
+	}
+	stun := ctx.content.Effects[0]
+	if stun.Kind != compiler.EffectUntap || !stun.Negated || stun.Optional || !stun.Exact ||
+		(stun.Context != parser.EffectContextReferencedObject &&
+			stun.Context != parser.EffectContextUnknown) ||
+		stun.Duration != compiler.DurationNone || stun.DelayedTiming != 0 ||
+		len(stun.Targets) != 0 {
+		return game.AbilityContent{}, false
+	}
+	// Every content reference is the stun clause's anaphor back to the inherited
+	// subject — the demonstrative subject ("That creature"/"Those creatures") and
+	// the possessive controller pronoun ("its"/"their") — and must resolve to the
+	// inherited target (target 0); reject anything else so no reference is
+	// silently dropped.
+	if len(ctx.content.References) == 0 {
+		return game.AbilityContent{}, false
+	}
+	for _, ref := range ctx.content.References {
+		if (ref.Binding != compiler.ReferenceBindingTarget &&
+			ref.Binding != compiler.ReferenceBindingAmbiguous) ||
+			ref.Occurrence != 0 {
+			return game.AbilityContent{}, false
+		}
+	}
+	targetSpec, ok := permanentTargetSpecWithCardinality(ctx.content.Targets[0])
+	if !ok || targetSpec.MaxTargets < 1 {
+		return game.AbilityContent{}, false
+	}
+	sequence := make([]game.Instruction, 0, targetSpec.MaxTargets)
+	for i := range targetSpec.MaxTargets {
+		sequence = append(sequence, game.Instruction{
+			Primitive: game.SkipNextUntap{Object: game.TargetPermanentReference(i)},
+		})
+	}
+	return game.Mode{
+		Targets:  []game.TargetSpec{targetSpec},
+		Sequence: sequence,
+	}.Ability(), true
+}
+
+// lowerEventSubjectStunEffect lowers a prior-subject "doesn't untap during its
+// controller's next untap step" clause whose stunned permanent is a triggering
+// combat event's creature rather than a chosen target ("Whenever this creature
+// blocks a creature, that creature doesn't untap during its controller's next
+// untap step." — Labyrinth Minotaur; "Whenever this creature attacks, it doesn't
+// untap during its controller's next untap step." — Apes of Rath). It also
+// lowers the stun half of the combat-damage "tap that creature and it doesn't
+// untap during its controller's next untap step." cycle (Kashi-Tribe Warriors,
+// Mercurial Kite), which reaches this lowerer as the second clause of the
+// ordered tap-then-stun sequence. The stunned creature is named by the clause's
+// single subject reference, an event permanent (the creature this one dealt
+// combat damage to / blocked / the attacking source); SkipNextUntap addresses
+// that creature directly and the runtime denies its controller's next untap, so
+// the clause's possessive "its controller" reference is consumed without its own
+// instruction. It accepts only the parser-exact negated-untap clause that owns
+// no target and whose every reference binds to an event or source permanent;
+// every other shape (an own target, a multi-step window, a duration, or a
+// reference needing its own instruction) fails closed so the target and inherited
+// stun paths are untouched.
+func lowerEventSubjectStunEffect(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 1 || ctx.optional ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.Conditions) != 0 {
+		return game.AbilityContent{}, false
+	}
+	stun := ctx.content.Effects[0]
+	if stun.Kind != compiler.EffectUntap || !stun.Negated || stun.Optional || !stun.Exact ||
+		stun.Context != parser.EffectContextReferencedObject ||
+		stun.Duration != compiler.DurationNone || stun.DelayedTiming != 0 ||
+		len(stun.Targets) != 0 ||
+		len(stun.SubjectReferences) != 1 {
+		return game.AbilityContent{}, false
+	}
+	referenceCtx := referenceLoweringContext{AllowEvent: true, AllowSource: true}
+	object, ok := lowerObjectReference(stun.SubjectReferences[0], referenceCtx)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	// Every clause reference is the subject anaphor or the possessive "its
+	// controller" pronoun; require each to resolve as an event or source object
+	// so no reference that would need its own instruction is silently dropped.
+	if len(ctx.content.References) == 0 {
+		return game.AbilityContent{}, false
+	}
+	for _, ref := range ctx.content.References {
+		if _, ok := lowerObjectReference(ref, referenceCtx); !ok {
+			return game.AbilityContent{}, false
+		}
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{
+			{Primitive: game.SkipNextUntap{Object: object}},
+		},
+	}.Ability(), true
+}
+
 // lowerStandaloneSourceStunEffect lowers the self-source stun "This <permanent>
 // doesn't untap during your next untap step." (the dual lands Mogg Hollows /
 // Rootwater Depths and Arbalest Elite) into a single SkipNextUntap on the

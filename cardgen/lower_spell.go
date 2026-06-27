@@ -331,7 +331,13 @@ func lowerContent(
 		if content, ok := lowerStandaloneStunEffect(ctx); ok {
 			return content, nil
 		}
+		if content, ok := lowerInheritedSubjectStunEffect(ctx); ok {
+			return content, nil
+		}
 		if content, ok := lowerStandaloneSourceStunEffect(ctx); ok {
+			return content, nil
+		}
+		if content, ok := lowerEventSubjectStunEffect(ctx); ok {
 			return content, nil
 		}
 		if ctx.content.Effects[0].RequiresOrderedLowering {

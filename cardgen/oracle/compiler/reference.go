@@ -526,12 +526,16 @@ func triggerPatternBindsThatPlayer(pattern *TriggerPattern) bool {
 // by a creature" (attacker-became-blocked), or the union of the two. For these
 // the source permanent is the event's primary subject and the opposing
 // combatant is the event's related permanent, so "that creature" in the body
-// names that other creature. It fails closed for a non-self source ("Whenever a
-// creature blocks, ... that creature" names the blocking creature itself, the
+// names that other creature. An attached-permanent source ("Whenever equipped
+// creature blocks a creature, that creature doesn't untap ...", Shield of the
+// Righteous) behaves the same way: the equipped or enchanted creature is the
+// named blocker the event permanent points at, so "that creature" still names
+// the opposing combatant. It fails closed for an any-creature source ("Whenever
+// a creature blocks, ... that creature" names the blocking creature itself, the
 // event permanent) and for every other event, leaving "that creature" to the
 // existing event-permanent and target bindings.
 func triggerPatternBindsThatCreature(pattern *TriggerPattern) bool {
-	if pattern.Source != TriggerSourceSelf {
+	if pattern.Source != TriggerSourceSelf && pattern.Source != TriggerSourceAttachedPermanent {
 		return false
 	}
 	return triggerEventIsCombatBlock(pattern.Event) ||

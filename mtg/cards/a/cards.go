@@ -52,6 +52,7 @@ var Cards = []*game.CardDef{
 	AnointerOfValor,
 	AnowonTheRuinSage,
 	AntManColonyCommander,
+	ApesOfRath,
 	ApothecaryInitiate,
 	AppealToEirdu,
 	AppliedGeometry,
