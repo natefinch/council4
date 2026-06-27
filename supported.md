@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,674 of 32,501 cards eligible for paper support (48.2%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,681 of 32,501 cards eligible for paper support (48.2%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -490,6 +490,7 @@ Council4 currently supports **15,674 of 32,501 cards eligible for paper support 
 - Anointer of Valor
 - Anointer Priest
 - Anointer Priest
+- Anowon, the Ruin Sage
 - Ant Queen
 - Ant-Man's Air Force
 - Ant-Man's Army
@@ -598,6 +599,7 @@ Council4 currently supports **15,674 of 32,501 cards eligible for paper support 
 - Archangel
 - Archangel of Thune
 - Archangel's Light
+- Archdemon of Unx
 - Archenemy's Charm
 - Archers of Qarsi
 - Archers' Parapet
@@ -3259,6 +3261,7 @@ Council4 currently supports **15,674 of 32,501 cards eligible for paper support 
 - Despondency
 - Destroy Evil
 - Destructive Digger
+- Destructive Force
 - Destructive Revelry
 - Destructive Urge
 - Destructor Dragon
@@ -3578,6 +3581,7 @@ Council4 currently supports **15,674 of 32,501 cards eligible for paper support 
 - Dread Warlock
 - Dreadbore
 - Dreadbringer Lampads
+- Dreadfeast Demon
 - Dreadhorde Butcher
 - Dreadmalkin
 - Dreadmobile
@@ -5747,6 +5751,7 @@ Council4 currently supports **15,674 of 32,501 cards eligible for paper support 
 - Greater Tanuki
 - Greatsword
 - Greed
+- Greed's Gambit
 - Greedy Freebooter
 - Greel's Caress
 - Green Goblin, Nemesis
@@ -10992,6 +10997,7 @@ Council4 currently supports **15,674 of 32,501 cards eligible for paper support 
 - Ruthless Lawbringer
 - Ruthless Predation
 - Ruthless Sniper
+- Ruthless Winnower
 - Rydia's Return
 - Ryusei, the Falling Star
 - S.H.I.E.L.D. Deployment Drone
@@ -15246,6 +15252,7 @@ Council4 currently supports **15,674 of 32,501 cards eligible for paper support 
 - Wilderness Hypnotist
 - Wilderness Reclamation
 - Wildest Dreams
+- Wildfire
 - Wildfire Awakener
 - Wildfire Emissary
 - Wildfire Wickerfolk
