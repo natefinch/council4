@@ -8,6 +8,7 @@ import "github.com/natefinch/council4/mtg/game"
 var Cards = []*game.CardDef{
 	VampireHexmage,
 	VampiricDragon,
+	VampiricLink,
 	VantressPaladin,
 	VaporSnare,
 	Vaporkin,
@@ -23,8 +24,8 @@ var Cards = []*game.CardDef{
 	VodalianMage,
 	VoiceOfAll,
 	VoraciousHatchling,
-	VraskaSFinisher,
 	VortexRunner,
+	VraskaSFinisher,
 	VrynWingmare,
 	VulshokWarBoar,
 }

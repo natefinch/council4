@@ -30,6 +30,7 @@ var Cards = []*game.CardDef{
 	ThornThallid,
 	ThoughtGorger,
 	ThrabenDoomsayer,
+	ThrashingMudspawn,
 	ThroneOfBone,
 	ThroneWarden,
 	ThunderingWurm,
