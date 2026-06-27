@@ -32,6 +32,7 @@ var Cards = []*game.CardDef{
 	MasterSRebuke,
 	Masticore,
 	MatchTheOdds,
+	MattMurdockJusticeSeeker,
 	MaximusKnightApparent,
 	MayaelTheAnima,
 	MeatLocker,

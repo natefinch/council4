@@ -18,6 +18,7 @@ var Cards = []*game.CardDef{
 	SarkhanSDragonfire,
 	SavageSmash,
 	SavageThallid,
+	SavaiThundermane,
 	SavedByTheShell,
 	SawbackManticore,
 	ScarabFeast,

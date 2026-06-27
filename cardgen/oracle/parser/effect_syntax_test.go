@@ -2283,6 +2283,39 @@ func TestParseControllerMayPaySuccessConsequenceSubjectLed(t *testing.T) {
 	}
 }
 
+func TestParseControllerMayPaySuccessConsequenceReflexiveWhenYouDo(t *testing.T) {
+	t.Parallel()
+	// The reflexive "When you do," triggered wording gates the trailing effect on
+	// a preceding "you may pay" offer having been accepted, exactly like the
+	// inline "If you do," rider. Both must fold onto the offer as the same
+	// MayPayThenIfDo prior-instruction-accepted form.
+	document, diagnostics := Parse(
+		"At the beginning of your upkeep, you may pay {4}. When you do, untap this artifact.",
+		Context{CardName: "Reflexive Mana Vault"},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	ability := document.Abilities[0]
+	if ability.Optional || len(ability.Sentences) != 2 ||
+		ability.Sentences[0].PaymentPrelude == nil {
+		t.Fatalf("payment sequence = %#v", ability)
+	}
+	effect := ability.Sentences[1].Effects[0]
+	if effect.Payment.Form != EffectPaymentFormMayPayThenIfDo ||
+		effect.Payment.Payer != EffectPaymentPayerController ||
+		!slices.Equal(effect.Payment.ManaCost, cost.Mana{cost.O(4)}) ||
+		effect.Optional || effect.Negated || !effect.Exact {
+		t.Fatalf("consequence = %#v", effect)
+	}
+	if len(ability.ConditionClauses) != 1 ||
+		ability.ConditionClauses[0].Predicate != ConditionPredicatePriorInstructionAccepted ||
+		len(ability.ConditionBoundaries) != 1 ||
+		ability.ConditionBoundaries[0].NodeID != effect.Payment.SuccessConditionNodeID {
+		t.Fatalf("conditions = %#v", ability.ConditionClauses)
+	}
+}
+
 func TestParseControllerMandatoryPayOrLoseGame(t *testing.T) {
 	t.Parallel()
 	document, diagnostics := Parse(

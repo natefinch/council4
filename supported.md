@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,614 of 32,501 cards eligible for paper support (48.0%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,620 of 32,501 cards eligible for paper support (48.1%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -482,11 +482,13 @@ Council4 currently supports **15,614 of 32,501 cards eligible for paper support 
 - Anointed Deacon
 - Anointed Procession
 - Anointer of Champions
+- Anointer of Valor
 - Anointer Priest
 - Anointer Priest
 - Ant Queen
 - Ant-Man's Air Force
 - Ant-Man's Army
+- Ant-Man, Colony Commander
 - Ant-Man, Reformed Rogue
 - Ant-Man, Scott Lang
 - Antagonize
@@ -8115,6 +8117,7 @@ Council4 currently supports **15,614 of 32,501 cards eligible for paper support 
 - Masticore
 - Matca Rioters
 - Match the Odds
+- Matt Murdock, Justice Seeker
 - Maul of the Skyclaves
 - Maul Splicer
 - Maulfist Squad
@@ -11138,6 +11141,7 @@ Council4 currently supports **15,614 of 32,501 cards eligible for paper support 
 - Savageborn Hydra
 - Savai Crystal
 - Savai Sabertooth
+- Savai Thundermane
 - Savai Triome
 - Savannah
 - Savannah Lions
@@ -13441,6 +13445,7 @@ Council4 currently supports **15,614 of 32,501 cards eligible for paper support 
 - Terminate
 - Teroh's Faithful
 - Terra Stomper
+- Terra, Herald of Hope
 - Terrain Elemental
 - Terrain Generator
 - Terramorph
@@ -13644,6 +13649,7 @@ Council4 currently supports **15,614 of 32,501 cards eligible for paper support 
 - Thoughtweft Charge
 - Thoughtweft Gambit
 - Thoughtweft Lieutenant
+- Thousand Moons Crackshot
 - Thousand Moons Infantry
 - Thousand Winds
 - Thousand-legged Kami

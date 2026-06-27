@@ -154,6 +154,18 @@ func recognizeControllerMandatoryPaymentSequence(ability *Ability) {
 	consequenceSentence.Effects[0] = effect
 }
 
+// resolvingDoConsequenceAt reports whether the consequence sentence of an
+// optional-payment ability opens with a resolving "the prior optional action
+// happened" gate. Two wordings express it: the inline "If you do," rider and the
+// reflexive "When you do," triggered preamble. Both gate the trailing effect on
+// a preceding "you may pay" offer having been accepted, and the parser records
+// each as the same ConditionIntroIf boundary (see conditionIntroAt's reflexive
+// case), so the payment recognizers fold either form onto the offer identically.
+func resolvingDoConsequenceAt(tokens []shared.Token) bool {
+	return effectWordsAt(tokens, 0, "if", "you", "do") ||
+		effectWordsAt(tokens, 0, "when", "you", "do")
+}
+
 func recognizeControllerOptionalPaymentSequence(ability *Ability) {
 	if ability.Kind != AbilityTriggered || len(ability.Sentences) < 2 {
 		return
@@ -192,7 +204,7 @@ func recognizeControllerOptionalPaymentSequence(ability *Ability) {
 
 	consequenceTokens := semanticEffectTokens(consequenceSentence.Tokens)
 	if len(consequenceTokens) < 5 ||
-		!effectWordsAt(consequenceTokens, 0, "if", "you", "do") ||
+		!resolvingDoConsequenceAt(consequenceTokens) ||
 		consequenceTokens[3].Kind != shared.Comma ||
 		len(consequenceSentence.Effects) == 0 {
 		return
@@ -559,7 +571,7 @@ func recognizeOptionalManaPaymentBenefitSequence(ability *Ability) {
 
 	consequenceTokens := semanticEffectTokens(consequenceSentence.Tokens)
 	if len(consequenceTokens) < 5 ||
-		!effectWordsAt(consequenceTokens, 0, "if", "you", "do") ||
+		!resolvingDoConsequenceAt(consequenceTokens) ||
 		consequenceTokens[3].Kind != shared.Comma ||
 		len(consequenceSentence.Effects) == 0 {
 		return
