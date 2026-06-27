@@ -1757,6 +1757,27 @@ func createPreventionShield(g *game.Game, obj *game.StackObject, amount int, pri
 		g.PreventionShields = append(g.PreventionShields, shield)
 		return true
 	}
+	if _, anyTarget := prim.AnyTarget.AnyTargetObjectReference(); anyTarget {
+		// An any-target shield names one target slot the controller chose as
+		// either a player or a permanent. Resolve the player half first (it
+		// succeeds only when the slot holds a player), then fall back to the
+		// permanent half, mirroring any-target damage resolution.
+		if playerRef, ok := prim.AnyTarget.AnyTargetPlayerReference(); ok {
+			if playerID, ok := resolvePlayerReference(g, obj, playerRef); ok {
+				shield.Player = playerID
+				g.PreventionShields = append(g.PreventionShields, shield)
+				return true
+			}
+		}
+		objectRef, _ := prim.AnyTarget.AnyTargetObjectReference()
+		resolved, ok := resolveObjectReference(g, obj, objectRef)
+		if !ok || resolved.permanent == nil {
+			return false
+		}
+		shield.PermanentID = resolved.permanent.ObjectID
+		g.PreventionShields = append(g.PreventionShields, shield)
+		return true
+	}
 	if prim.Player.Kind() != game.PlayerReferenceNone {
 		playerID, ok := resolvePlayerReference(g, obj, prim.Player)
 		if !ok {

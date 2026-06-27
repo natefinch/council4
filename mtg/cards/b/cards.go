@@ -7,8 +7,11 @@ import "github.com/natefinch/council4/mtg/game"
 // Cards lists all card definitions in this package.
 var Cards = []*game.CardDef{
 	BackForMore,
+	BalmOfRestoration,
 	BalustradeSpy,
+	Bandage,
 	BanditSHaul,
+	BarrentonMedic,
 	BasiliskCollar,
 	BaskingBroodscale,
 	BattleStrain,
@@ -17,6 +20,7 @@ var Cards = []*game.CardDef{
 	BeastriderVanguard,
 	BelbeSPercher,
 	BelligerentHatchling,
+	BenevolentAncestor,
 	Bereavement,
 	BirdsOfParadise,
 	BiteDown,

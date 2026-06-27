@@ -302,6 +302,10 @@ func transformPreventDamage(value game.PreventDamage, transform targetIndexTrans
 		return value, true
 	}
 	var ok bool
+	if _, anyTarget := value.AnyTarget.AnyTargetObjectReference(); anyTarget {
+		value.AnyTarget, ok = transformDamageRecipient(value.AnyTarget, transform)
+		return value, ok
+	}
 	if value.Player.Kind() != game.PlayerReferenceNone {
 		value.Player, ok = transformPlayerReference(value.Player, transform)
 		return value, ok

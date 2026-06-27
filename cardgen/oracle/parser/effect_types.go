@@ -1099,6 +1099,30 @@ const (
 	DamageRecipientReferenceThatCreature
 )
 
+// PreventDamageRecipientKind identifies the shielded recipient of an
+// amount-based "Prevent the next N damage that would be dealt to <recipient>
+// this turn." clause. It is None for the combat-prevention forms.
+type PreventDamageRecipientKind uint8
+
+// Amount-based prevent-damage recipient kinds.
+const (
+	// PreventDamageRecipientNone marks a clause that is not an amount-based
+	// next-damage shield.
+	PreventDamageRecipientNone PreventDamageRecipientKind = iota
+	// PreventDamageRecipientTarget marks a recipient named by the clause's lone
+	// target slot ("any target", "target creature", "target player", "target
+	// player or planeswalker", and the like). The target is captured by the
+	// ordinary target machinery; lowering reads it as an any-target recipient.
+	PreventDamageRecipientTarget
+	// PreventDamageRecipientYou marks the controller as the recipient ("dealt to
+	// you"). No target or reference is captured.
+	PreventDamageRecipientYou
+	// PreventDamageRecipientSource marks a self/back-reference recipient ("this
+	// creature", "that creature", "it"). The recipient is captured as the
+	// clause's lone reference.
+	PreventDamageRecipientSource
+)
+
 // DamageRiderRecipientKind identifies the recipient of a follow-on "... and N
 // damage to <recipient>" damage instruction appended to a deal-damage clause.
 // Each value names one supported rider wording so the parser, exactness,
@@ -1619,6 +1643,14 @@ type EffectSyntax struct {
 	// Weaver, Holy Day). It is mutually exclusive with PreventDamageTo and
 	// PreventDamageBy.
 	PreventDamageGlobal bool `json:",omitempty"`
+	// PreventDamageNextRecipient marks an EffectPreventDamage clause as the
+	// amount-based "Prevent the next N damage that would be dealt to <recipient>
+	// this turn." shield (Heal, Recuperate, Master Apothecary) and names its
+	// shielded recipient. The prevented amount N rides on the effect's ordinary
+	// Amount. It is None for the combat prevention forms
+	// (PreventDamageTo/By/Global), which prevent every combat damage event rather
+	// than a fixed amount.
+	PreventDamageNextRecipient PreventDamageRecipientKind `json:",omitempty"`
 	// SpellsCantBeCounteredNextOnly reports that an EffectSpellsCantBeCountered
 	// clause limits the buff to the single next spell the controller casts ("The
 	// next spell you cast this turn can't be countered.") rather than every spell

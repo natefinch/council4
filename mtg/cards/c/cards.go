@@ -7,6 +7,7 @@ import "github.com/natefinch/council4/mtg/game"
 // Cards lists all card definitions in this package.
 var Cards = []*game.CardDef{
 	CabarettiCourtyard,
+	Caregiver,
 	CaribouRange,
 	CartoucheOfAmbition,
 	CartoucheOfKnowledge,
@@ -23,6 +24,7 @@ var Cards = []*game.CardDef{
 	ChronicFlooding,
 	CinderGlade,
 	CinderWall,
+	ClergyEnVec,
 	CliveSHideaway,
 	ClockworkHydra,
 	CloudDjinn,
@@ -31,6 +33,7 @@ var Cards = []*game.CardDef{
 	CloudPirates,
 	CloudSpirit,
 	CloudSprite,
+	CombatMedic,
 	CommandTower,
 	CommuneWithBeavers,
 	CommuneWithDinosaurs,
@@ -39,6 +42,7 @@ var Cards = []*game.CardDef{
 	CompellingArgument,
 	ConjurerSMantle,
 	ConquerorSPledge,
+	Conservator,
 	ConsumingBonfire,
 	ContestOfClaws,
 	CosmicHunger,

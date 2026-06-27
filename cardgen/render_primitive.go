@@ -1923,6 +1923,13 @@ func (r Renderer) renderPreventDamage(ctx *renderCtx, value game.PreventDamage) 
 		}
 		fields = append(fields, fmt.Sprintf("Player: %s,", player))
 	}
+	if _, ok := value.AnyTarget.AnyTargetObjectReference(); ok {
+		recipient, err := r.renderDamageRecipient(ctx, value.AnyTarget)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("AnyTarget: %s,", recipient))
+	}
 	if !value.All {
 		amount, err := r.renderQuantity(ctx, value.Amount)
 		if err != nil {

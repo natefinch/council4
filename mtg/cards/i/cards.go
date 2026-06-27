@@ -30,5 +30,6 @@ var Cards = []*game.CardDef{
 	IronHeartChimera,
 	IronStar,
 	ItThatHeraldsTheEnd,
+	IvoryCharm,
 	IvoryCup,
 }
