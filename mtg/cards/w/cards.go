@@ -13,6 +13,7 @@ var Cards = []*game.CardDef{
 	WantedGriffin,
 	WardSliver,
 	Weatherlight,
+	WebOfLifeAndDestiny,
 	WelkinTern,
 	WhiteWard,
 	Wight,

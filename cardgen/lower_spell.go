@@ -454,6 +454,9 @@ func lowerOptionalContent(
 	if content, ok := lowerOptionalDigReveal(ctx); ok {
 		return content, nil
 	}
+	if content, ok := lowerOptionalDigToBattlefield(ctx); ok {
+		return content, nil
+	}
 	if content, ok := lowerOptionalRevealTakeToGraveyard(ctx); ok {
 		return content, nil
 	}

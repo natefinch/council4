@@ -205,24 +205,31 @@ func (e *Engine) surveilCards(g *game.Game, agents [game.NumPlayers]PlayerAgent,
 	})
 }
 
-// digFilter carries the optional typed-reveal parameters of a Dig: an optional
-// Selection restricting which looked-at cards may be taken into hand, whether the
-// take count is an upper bound (the controller may take fewer, including none),
-// and whether each taken card is revealed as it is put into hand. Its zero value
-// reproduces the plain impulse dig: no filter, an exact take, no reveal.
+// digFilter carries the optional typed parameters of a Dig: an optional
+// Selection restricting which looked-at cards may be taken, whether the take
+// count is an upper bound (the controller may take fewer, including none),
+// whether each taken card is revealed as it is taken, the zone the taken cards
+// move to (the player's hand by default, or the battlefield), and whether
+// battlefield-bound taken cards enter tapped. Its zero value reproduces the
+// plain impulse dig: no filter, an exact take, no reveal, into hand.
 type digFilter struct {
-	selection opt.V[game.Selection]
-	takeUpTo  bool
-	reveal    bool
+	selection    opt.V[game.Selection]
+	takeUpTo     bool
+	reveal       bool
+	destination  zone.Type
+	entersTapped bool
 }
 
 // digCards resolves a Dig effect: the player looks at the top look cards of
 // their library, chooses take of them (bounded by the cards actually seen and,
-// when filter.selection is present, by the cards matching it) to put into their
-// hand, and the remaining cards go to the destination identified by remainder
-// (graveyard or the bottom of the library, in seen order). When filter.takeUpTo
-// is set the controller may take fewer than take cards (down to none); when
-// filter.reveal is set each taken card is revealed as it is put into hand.
+// when filter.selection is present, by the cards matching it) to take to the
+// filter.destination (their hand by default, or the battlefield), and the
+// remaining cards go to the destination identified by remainder (graveyard or
+// the bottom of the library, in seen order). When filter.takeUpTo is set the
+// controller may take fewer than take cards (down to none); when filter.reveal
+// is set each taken card is revealed as it is taken; when filter.destination is
+// the battlefield each taken card is put onto the battlefield under the player's
+// control, tapped when filter.entersTapped is set.
 func (e *Engine) digCards(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, obj *game.StackObject, playerID game.PlayerID, look, take int, remainder game.DigRemainder, filter digFilter) bool {
 	player, ok := playerByID(g, playerID)
 	if !ok || look <= 0 {
@@ -259,6 +266,14 @@ func (e *Engine) digCards(g *game.Game, agents [game.NumPlayers]PlayerAgent, log
 		}
 		if filter.reveal {
 			emitCardRevealEvent(g, obj, playerID, cardID, zone.Library)
+		}
+		if filter.destination == zone.Battlefield {
+			card, cardOK := g.GetCardInstance(cardID)
+			if !cardOK {
+				continue
+			}
+			_, _ = createCardPermanentFaceWithOptions(e, g, card, playerID, zone.Library, game.FaceFront, nil, permanentCreationOptions{ForceTapped: filter.entersTapped}, agents, log)
+			continue
 		}
 		player.Hand.Add(cardID)
 		emitZoneChangeEvent(g, game.Event{

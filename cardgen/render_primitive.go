@@ -1210,6 +1210,17 @@ func (r Renderer) renderDigPrimitive(ctx *renderCtx, value game.Dig) (string, er
 	if value.Reveal {
 		fields = append(fields, "Reveal: true,")
 	}
+	if value.Destination != zone.None {
+		destination, zoneErr := renderZone(value.Destination)
+		if zoneErr != nil {
+			return "", zoneErr
+		}
+		ctx.need(importZone)
+		fields = append(fields, fmt.Sprintf("Destination: %s,", destination))
+	}
+	if value.EntersTapped {
+		fields = append(fields, "EntersTapped: true,")
+	}
 	return structLit("game.Dig", fields), nil
 }
 

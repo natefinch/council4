@@ -2063,6 +2063,14 @@ func (p Dig) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	default:
 		return errors.New("Dig has an unknown remainder destination")
 	}
+	switch p.Destination {
+	case zone.None, zone.Battlefield:
+	default:
+		return errors.New("Dig supports only a hand (zero) or battlefield destination")
+	}
+	if p.EntersTapped && p.Destination != zone.Battlefield {
+		return errors.New("Dig EntersTapped requires a battlefield destination")
+	}
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 
