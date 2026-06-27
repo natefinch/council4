@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,565 of 32,501 cards eligible for paper support (47.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,570 of 32,501 cards eligible for paper support (47.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2054,6 +2054,7 @@ Council4 currently supports **15,565 of 32,501 cards eligible for paper support 
 - Cathar's Shield
 - Cathars' Crusade
 - Cathartic Adept
+- Cathartic Pyre
 - Cathartic Reunion
 - Cathedral of War
 - Cathedral Sanctifier
@@ -2465,6 +2466,7 @@ Council4 currently supports **15,565 of 32,501 cards eligible for paper support 
 - Colossodon Yearling
 - Colossus Hammer
 - Colossus of Sardia
+- Colossus of the Blood Age
 - Colossus, Steel Stalwart
 - Coma Veil
 - Combat Courier
@@ -6495,6 +6497,7 @@ Council4 currently supports **15,565 of 32,501 cards eligible for paper support 
 - Ill-Gotten Inheritance
 - Illegitimate Business
 - Illness in the Ranks
+- Illuminate History
 - Illuminated Folio
 - Illuminated Wings
 - Illusion
@@ -7136,6 +7139,7 @@ Council4 currently supports **15,565 of 32,501 cards eligible for paper support 
 - Kindly Customer
 - Kindred Discovery
 - Kindred Dominance
+- Kinetic Augur
 - King Cheetah
 - King Macar, the Gold-Cursed
 - King of the Pride
@@ -13472,6 +13476,7 @@ Council4 currently supports **15,565 of 32,501 cards eligible for paper support 
 - The Curse of Fenric
 - The Dawning Archaic
 - The Dross Pits
+- The Elder Dragon War
 - The Eldest Reborn
 - The Fabulous Frog-Man
 - The Fair Basilica

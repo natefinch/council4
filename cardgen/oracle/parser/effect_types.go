@@ -2600,6 +2600,17 @@ type EffectSyntax struct {
 	// discard sequence's middle "You choose a [filter] card from it." sentence.
 	// It is set only on the EffectDiscard half (HandChoiceDiscard.Present true).
 	HandChoiceDiscard HandChoiceDiscardSyntax `json:",omitzero"`
+	// DiscardThenDraw marks an EffectDiscard clause fused with an immediately
+	// following "then draw that many cards[ plus K]" clause into a single
+	// variable looter ("discard {up to N|any number of} cards, then draw that
+	// many cards"). The controller chooses how many cards to discard, then draws
+	// that many plus DiscardThenDrawOffset. DiscardThenDrawMax bounds the discard
+	// count: a positive value means "up to N cards" while zero means "any number
+	// of cards". The follow-on draw clause is consumed into this single effect,
+	// whose Span covers both clauses. It is false for every other effect.
+	DiscardThenDraw       bool `json:",omitempty"`
+	DiscardThenDrawMax    int  `json:",omitempty"`
+	DiscardThenDrawOffset int  `json:",omitempty"`
 }
 
 // ManaSpendConditionKind identifies the exact spend condition of a mana-spend

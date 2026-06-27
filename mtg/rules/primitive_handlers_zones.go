@@ -1908,6 +1908,56 @@ func handlePutHandOnLibraryThenDraw(r *effectResolver, prim game.PutHandOnLibrar
 	return res
 }
 
+func handleDiscardThenDraw(r *effectResolver, prim game.DiscardThenDraw) effectResolved {
+	res := effectResolved{accepted: true}
+	playerID, ok := r.resolvePlayer(prim.Player)
+	if !ok {
+		return res
+	}
+	player, ok := playerByID(r.game, playerID)
+	if !ok {
+		return res
+	}
+	candidates := append([]id.ID(nil), player.Hand.All()...)
+	maxChoices := len(candidates)
+	if prim.Max > 0 && prim.Max < maxChoices {
+		maxChoices = prim.Max
+	}
+	discarded := 0
+	if maxChoices > 0 {
+		options := make([]game.ChoiceOption, len(candidates))
+		for i, cardID := range candidates {
+			options[i] = game.ChoiceOption{
+				Index: i,
+				Label: cardChoiceLabel(r.game, cardID),
+				Card:  cardChoiceInfo(r.game, cardID),
+			}
+		}
+		selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
+			Kind:       game.ChoiceResolution,
+			Player:     playerID,
+			Prompt:     "Choose any number of cards to discard",
+			Options:    options,
+			MinChoices: 0,
+			MaxChoices: maxChoices,
+		}, r.log)
+		simultaneousID := r.game.IDGen.Next()
+		for _, idx := range selected {
+			if idx < 0 || idx >= len(candidates) {
+				continue
+			}
+			if discardCardFromHandInBatch(r.game, playerID, candidates[idx], simultaneousID) {
+				discarded++
+			}
+		}
+	}
+	res.amount = discarded + prim.DrawOffset
+	if res.amount > 0 {
+		res.succeeded = r.engine.drawCards(r.game, playerID, res.amount, r.agents, r.log)
+	}
+	return res
+}
+
 func handleScry(r *effectResolver, prim game.Scry) effectResolved {
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
 	playerID, ok := r.resolvePlayer(prim.Player)

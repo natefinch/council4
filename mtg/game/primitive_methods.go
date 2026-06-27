@@ -186,6 +186,9 @@ func (ExileTopOfLibrary) Kind() PrimitiveKind { return PrimitiveExileTopOfLibrar
 // Kind implements Primitive for PutHandOnLibraryThenDraw.
 func (PutHandOnLibraryThenDraw) Kind() PrimitiveKind { return PrimitivePutHandOnLibraryThenDraw }
 
+// Kind implements Primitive for DiscardThenDraw.
+func (DiscardThenDraw) Kind() PrimitiveKind { return PrimitiveDiscardThenDraw }
+
 // Kind implements Primitive for RevealUntil.
 func (RevealUntil) Kind() PrimitiveKind { return PrimitiveRevealUntil }
 
@@ -377,6 +380,7 @@ func (CounterObject) isPrimitive()                        {}
 func (Mill) isPrimitive()                                 {}
 func (ExileTopOfLibrary) isPrimitive()                    {}
 func (PutHandOnLibraryThenDraw) isPrimitive()             {}
+func (DiscardThenDraw) isPrimitive()                      {}
 func (RevealUntil) isPrimitive()                          {}
 func (Scry) isPrimitive()                                 {}
 func (Surveil) isPrimitive()                              {}
@@ -591,6 +595,7 @@ func (p ExileTopOfLibrary) instructionRefs() primitiveRefs {
 	return quantityRefs(p.Amount)
 }
 func (PutHandOnLibraryThenDraw) instructionRefs() primitiveRefs { return primitiveRefs{} }
+func (DiscardThenDraw) instructionRefs() primitiveRefs          { return primitiveRefs{} }
 func (RevealUntil) instructionRefs() primitiveRefs              { return primitiveRefs{} }
 func (p Scry) instructionRefs() primitiveRefs                   { return quantityRefs(p.Amount) }
 func (p Surveil) instructionRefs() primitiveRefs                { return quantityRefs(p.Amount) }

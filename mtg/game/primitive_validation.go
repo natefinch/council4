@@ -406,6 +406,10 @@ func (p PutHandOnLibraryThenDraw) validateCapturedTargetControllerReferences(tar
 	return validateCapturedTargetControllerReference(p.Player, targets, checkTargets)
 }
 
+func (p DiscardThenDraw) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	return validateCapturedTargetControllerReference(p.Player, targets, checkTargets)
+}
+
 func (p RevealUntil) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
 	return validateCapturedTargetControllerReference(p.Player, targets, checkTargets)
 }
@@ -2007,6 +2011,16 @@ func (p ExileTopOfLibrary) validatePrimitive(targets []TargetSpec, checkTargets 
 func (p PutHandOnLibraryThenDraw) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if p.DrawOffset < 0 {
 		return errors.New("PutHandOnLibraryThenDraw requires a non-negative DrawOffset")
+	}
+	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
+func (p DiscardThenDraw) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.Max < 0 {
+		return errors.New("DiscardThenDraw requires a non-negative Max")
+	}
+	if p.DrawOffset < 0 {
+		return errors.New("DiscardThenDraw requires a non-negative DrawOffset")
 	}
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }

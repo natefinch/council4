@@ -1629,6 +1629,9 @@ func lowerImmediateSingleEffectSpell(
 	case compiler.EffectLookAtHand:
 		return lowerLookAtHandSpell(ctx)
 	case compiler.EffectDiscard:
+		if ctx.content.Effects[0].DiscardThenDraw {
+			return lowerDiscardThenDrawSpell(ctx)
+		}
 		if ctx.content.Effects[0].DiscardEntireHand {
 			return lowerDiscardEntireHandSpell(ctx)
 		}

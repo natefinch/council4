@@ -14,6 +14,7 @@ var Cards = []*game.CardDef{
 	IconOfAncestry,
 	IgnitionTeam,
 	IgnobleHierarch,
+	IlluminateHistory,
 	IllvoiLightJammer,
 	ImpendingDoom,
 	InameLifeAspect,

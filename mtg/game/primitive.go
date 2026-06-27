@@ -91,6 +91,7 @@ const (
 	PrimitiveShuffleSpellIntoLibrary
 	PrimitiveExileTopOfLibrary
 	PrimitivePutHandOnLibraryThenDraw
+	PrimitiveDiscardThenDraw
 	PrimitiveRevealUntil
 	PrimitiveBecomeSaddled
 	PrimitiveAddExtraPhases
@@ -1155,6 +1156,19 @@ type RevealUntil struct {
 type PutHandOnLibraryThenDraw struct {
 	Player     PlayerReference
 	Bottom     bool
+	DrawOffset int
+}
+
+// DiscardThenDraw has Player discard a player-chosen number of cards, then draw a
+// number of cards equal to the number discarded plus DrawOffset. Max bounds the
+// number that may be discarded: a positive Max means "up to Max cards" while a
+// zero Max means "any number of cards". It models "discard {up to N|any number
+// of} cards, then draw that many cards[ plus K]." The player-chosen count and the
+// "that many" back-reference are not expressible through separate instructions,
+// so the whole sequence resolves as one primitive.
+type DiscardThenDraw struct {
+	Player     PlayerReference
+	Max        int
 	DrawOffset int
 }
 

@@ -25,6 +25,7 @@ var Cards = []*game.CardDef{
 	KhalniHeartExpedition,
 	KinTreeInvocation,
 	KitesailApprentice,
+	KineticAugur,
 	KithkinHealer,
 	KjeldoranGargoyle,
 	KodamaOfTheSouthTree,
