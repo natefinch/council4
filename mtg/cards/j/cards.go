@@ -10,6 +10,7 @@ var Cards = []*game.CardDef{
 	JaceSSentinel,
 	JackalFamiliar,
 	JhessianBalmgiver,
+	JoragaWarcaller,
 	JudgeSFamiliar,
 	JunkGolem,
 }

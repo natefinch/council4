@@ -22,6 +22,7 @@ var Cards = []*game.CardDef{
 	Lightwalker,
 	LilianaSSpoils,
 	Lithophage,
+	LivingLiesOfLoki,
 	LivingPhone,
 	LivingTsunami,
 	LlanowarWastes,

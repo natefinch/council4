@@ -3143,21 +3143,28 @@ func staticParserSubjectReferencesTolerated(references []CompiledReference, subj
 // staticSubjectGroupReferencesTolerated reports whether the ability's free
 // references are compatible with a static-subject affected group. A static
 // subject names its own affected group, so a free reference normally signals a
-// referent-bound group and disqualifies it. Two exceptions tolerate a reference
-// that names the affected creature itself with the pronoun "it"/"them" rather
-// than a separate antecedent: the shared-creature-type bonus, whose amount reads
-// "for each other creature ... that shares a creature type with it", and the
-// counter-matters group filter, whose subject reads "creature you control with a
-// +1/+1 counter on it/them".
+// referent-bound group and disqualifies it. Three exceptions tolerate a
+// reference that belongs to the bonus amount rather than to a separate
+// antecedent: the shared-creature-type bonus, whose amount reads "for each
+// other creature ... that shares a creature type with it"; the counter-matters
+// group filter, whose subject reads "creature you control with a +1/+1 counter
+// on it/them"; and the source-counter bonus, whose amount reads "for each
+// <kind> counter on this <source>" and so names the source permanent that
+// carries the counted counters ("Equipped creature gets +1/+1 for each charge
+// counter on this Equipment.", Banshee's Blade).
 func staticSubjectGroupReferencesTolerated(references []CompiledReference, effect *CompiledEffect) bool {
 	if len(references) == 0 {
 		return true
 	}
 	_, _, counterFilter := effect.StaticSubjectCounter()
-	if effect.Amount.DynamicKind != DynamicAmountSharedCreatureTypeCount && !counterFilter {
+	sourceCounterAmount := effect.Amount.DynamicKind == DynamicAmountSourceCounterCount
+	if effect.Amount.DynamicKind != DynamicAmountSharedCreatureTypeCount && !counterFilter && !sourceCounterAmount {
 		return false
 	}
 	for i := range references {
+		if sourceCounterAmount && references[i].Binding == ReferenceBindingSource {
+			continue
+		}
 		if references[i].Pronoun != ReferencePronounIt && references[i].Pronoun != ReferencePronounThem {
 			return false
 		}

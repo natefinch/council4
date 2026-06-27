@@ -31,6 +31,7 @@ var Cards = []*game.CardDef{
 	PotionerSTrove,
 	PredatorOoze,
 	PricklyPair,
+	PrideSovereign,
 	PrimalMight,
 	PrimevalForce,
 	PrimordialHydra,

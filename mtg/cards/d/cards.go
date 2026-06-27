@@ -37,6 +37,7 @@ var Cards = []*game.CardDef{
 	DocSamsonSuperPsychiatrist,
 	DomriAnarchOfBolas,
 	DonatelloMutantMechanic,
+	DoorOfDestinies,
 	DraconicLore,
 	DragonEgg,
 	DragonSHoard,
