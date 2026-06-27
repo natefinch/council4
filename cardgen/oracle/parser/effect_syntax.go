@@ -42,6 +42,7 @@ func emitResolvingSyntax(abilities []Ability) {
 		recognizeEventPlayerOptionalPaymentSequence(&abilities[i])
 		recognizeControllerMandatoryPaymentSequence(&abilities[i])
 		recognizePayRepeatedlyAnimateSequence(&abilities[i])
+		foldAnimateSelfStillSentence(&abilities[i])
 		if abilities[i].DiceTable != nil {
 			for k := range abilities[i].DiceTable.Rows {
 				row := &abilities[i].DiceTable.Rows[k]
@@ -1065,6 +1066,7 @@ func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) 
 		func() ([]EffectSyntax, bool) { return parseBecomeCopyEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parsePolymorphEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseSetBasePowerToughnessEffect(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parseAnimateSelfEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseSwitchPowerToughnessEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseNamedBecomePolymorphEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseBecomeTypeEffect(sentence, tokens, atoms) },
