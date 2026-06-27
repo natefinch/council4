@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,429 of 32,501 cards eligible for paper support (47.5%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,439 of 32,501 cards eligible for paper support (47.5%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -48,6 +48,7 @@ Council4 currently supports **15,429 of 32,501 cards eligible for paper support 
 - Abzan Falconer
 - Abzan Guide
 - Abzan Kin-Guard
+- Abzan Monument
 - Academy Journeymage
 - Academy Manufactor
 - Academy Raider
@@ -2870,6 +2871,7 @@ Council4 currently supports **15,429 of 32,501 cards eligible for paper support 
 - Damning Verdict
 - Dampening Pulse
 - Dance of Shadows
+- Dance of the Tumbleweeds
 - Dancing Scimitar
 - Dangerous Wager
 - Danitha Capashen, Paragon
@@ -4658,6 +4660,7 @@ Council4 currently supports **15,429 of 32,501 cards eligible for paper support 
 - Flensermite
 - Flensing Raptor
 - Flesh Burrower
+- Flesh Carver
 - Flesh to Dust
 - Flesh-Eater Imp
 - Fleshbag Marauder
@@ -4813,6 +4816,7 @@ Council4 currently supports **15,429 of 32,501 cards eligible for paper support 
 - Form a Posse
 - Formation
 - Formidable Speaker
+- Formless Genesis
 - Forsake the Worldly
 - Forsaken City
 - Forsaken Drifters
@@ -7066,6 +7070,7 @@ Council4 currently supports **15,429 of 32,501 cards eligible for paper support 
 - Kiln Fiend
 - Kiln Walker
 - Kilo, Apogee Mind
+- Kin-Tree Invocation
 - Kin-Tree Severance
 - Kin-Tree Warden
 - Kindercatch
@@ -7986,6 +7991,7 @@ Council4 currently supports **15,429 of 32,501 cards eligible for paper support 
 - Mask of Law and Grace
 - Mask of Memory
 - Mask of Riddles
+- Mask of the Jadecrafter
 - Masked Admirers
 - Masked Blackguard
 - Masked Meower
@@ -8221,6 +8227,7 @@ Council4 currently supports **15,429 of 32,501 cards eligible for paper support 
 - Millennial Gargoyle
 - Millikin
 - Millstone
+- Miming Slime
 - Mina and Denn, Wildborn
 - Minamo, School at Water's Edge
 - Minas Tirith
@@ -9260,6 +9267,7 @@ Council4 currently supports **15,429 of 32,501 cards eligible for paper support 
 - Overwhelming Remorse
 - Overwhelming Stampede
 - Overwhelming Surge
+- Oviya Pashiri, Sage Lifecrafter
 - Owl Familiar
 - Owlbear
 - Owlin Historian
@@ -11251,6 +11259,7 @@ Council4 currently supports **15,429 of 32,501 cards eligible for paper support 
 - Sedge Troll
 - Sedraxis Alchemist
 - Sedraxis Specter
+- Seed Guardian
 - Seedborn Muse
 - Seedcradle Witch
 - Seedglaive Mentor
@@ -11947,6 +11956,7 @@ Council4 currently supports **15,429 of 32,501 cards eligible for paper support 
 - Sleight of Hand
 - Slice and Dice
 - Slice in Twain
+- Slime Molding
 - Slimebind
 - Slimefoot, the Stowaway
 - Slimy Dualleech
