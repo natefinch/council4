@@ -1222,6 +1222,12 @@ const (
 	// than to its blockers. It always pairs with a requirement constraint and
 	// passive voice.
 	StaticRuleOperationAssignDamageAsUnblocked StaticRuleOperationKind = "StaticRuleOperationAssignDamageAsUnblocked"
+	// StaticRuleOperationBlockedExcept is the passive restricted block prohibition
+	// printed as "can't be blocked except by ...": only blockers matching the
+	// trailing blocker qualifier may block the subject. It always pairs with a
+	// prohibition constraint and passive voice and carries one blocker qualifier
+	// (flying, color, artifact, defender, or legendary).
+	StaticRuleOperationBlockedExcept StaticRuleOperationKind = "StaticRuleOperationBlockedExcept"
 )
 
 // StaticRuleVoice identifies the grammatical role the subject has in an
@@ -1269,6 +1275,12 @@ const (
 	// prohibition to artifact-creature blockers ("can't be blocked by artifact
 	// creatures").
 	StaticRuleQualifierBlockerArtifact StaticRuleQualifierKind = "StaticRuleQualifierBlockerArtifact"
+	// StaticRuleQualifierBlockerDefender restricts a block prohibition to blockers
+	// with defender ("... except by creatures with defender").
+	StaticRuleQualifierBlockerDefender StaticRuleQualifierKind = "StaticRuleQualifierBlockerDefender"
+	// StaticRuleQualifierBlockerLegendary restricts a block prohibition to
+	// legendary-creature blockers ("... except by legendary creatures").
+	StaticRuleQualifierBlockerLegendary StaticRuleQualifierKind = "StaticRuleQualifierBlockerLegendary"
 	// StaticRuleQualifierBlockedAttackerFlying restricts a "can block only"
 	// permission to attackers with flying ("This creature can block only
 	// creatures with flying."): the subject blocker may block only attackers that

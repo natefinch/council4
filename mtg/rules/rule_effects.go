@@ -826,9 +826,34 @@ func blockerMatchesRestriction(g *game.Game, blocker *game.Permanent, restrictio
 		return slices.Contains(permanentEffectiveColors(g, blocker), restriction.Color)
 	case game.BlockerRestrictionArtifact:
 		return permanentHasType(g, blocker, types.Artifact)
+	case game.BlockerRestrictionDefender:
+		return hasKeyword(g, blocker, game.Defender)
+	case game.BlockerRestrictionLegendary:
+		return permanentHasSupertype(g, blocker, types.Legendary)
 	default:
 		return false
 	}
+}
+
+// ruleEffectRestrictsBlockerExcept reports whether a "can't be blocked except by
+// ..." prohibition on attacker stops the given blocker because the blocker does
+// not match the prohibition's BlockerRestriction. The restriction names the only
+// blockers allowed to block the attacker; every other blocker is prohibited.
+func ruleEffectRestrictsBlockerExcept(g *game.Game, attacker, blocker *game.Permanent) bool {
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind != game.RuleEffectCantBeBlockedExceptBy {
+			continue
+		}
+		if !ruleEffectMatchesPermanent(g, effect, attacker) {
+			continue
+		}
+		if !blockerMatchesRestriction(g, blocker, effect.BlockerRestriction) {
+			return true
+		}
+	}
+	return false
 }
 
 // ruleEffectLimitsBlockerToCreaturesWith reports whether a blocker-side "can

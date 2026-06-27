@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,570 of 32,501 cards eligible for paper support (47.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,579 of 32,501 cards eligible for paper support (47.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -3550,6 +3550,7 @@ Council4 currently supports **15,570 of 32,501 cards eligible for paper support 
 - Dread Shade
 - Dread Slag
 - Dread Statuary
+- Dread Warlock
 - Dreadbore
 - Dreadbringer Lampads
 - Dreadhorde Butcher
@@ -8883,6 +8884,7 @@ Council4 currently supports **15,570 of 32,501 cards eligible for paper support 
 - Niblis of the Breath
 - Niblis of the Mist
 - Niblis of the Urn
+- Nick Valentine, Private Eye
 - Nicol Bolas, the Deceiver
 - Night Incarnate
 - Night Market
@@ -8979,6 +8981,7 @@ Council4 currently supports **15,570 of 32,501 cards eligible for paper support 
 - Noble Vestige
 - Nobody
 - Nocturnal Feeder
+- Noggle Bandit
 - Noggle Bridgebreaker
 - Noggle Robber
 - Noggle the Mind
@@ -9947,6 +9950,7 @@ Council4 currently supports **15,570 of 32,501 cards eligible for paper support 
 - Prowler, Misguided Mentor
 - Prowling Caracal
 - Prowling Felidar
+- Prowling Nightstalker
 - Prowling Serpopard
 - Prying Blade
 - Prying Eyes
@@ -11779,6 +11783,7 @@ Council4 currently supports **15,570 of 32,501 cards eligible for paper support 
 - Silent Skimmer
 - Silent Specter
 - Silent Submersible
+- Silhana Ledgewalker
 - Silhana Starfletcher
 - Silk Net
 - Silkbind Faerie
@@ -13966,7 +13971,10 @@ Council4 currently supports **15,570 of 32,501 cards eligible for paper support 
 - Treefolk Warrior
 - Treeshaker Chimera
 - Treespring Lorian
+- Treetop Bracers
 - Treetop Freedom Fighters
+- Treetop Rangers
+- Treetop Scout
 - Treetop Sentinel
 - Treetop Snarespinner
 - Treetop Village
@@ -15567,6 +15575,7 @@ Council4 currently supports **15,570 of 32,501 cards eligible for paper support 
 - Zuko, Avatar Hunter
 - Zulaport Chainmage
 - Zulaport Cutthroat
+- Zulaport Enforcer
 - Zur the Enchanter
 - Zuran Enchanter
 - Zuran Orb

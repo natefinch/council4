@@ -613,7 +613,9 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 		}
 		fields = append(fields, fmt.Sprintf("GrantedKeyword: %s,", keyword))
 	}
-	if effect.Kind == game.RuleEffectCantBeBlockedByCreaturesWith || effect.Kind == game.RuleEffectCanBlockOnlyCreaturesWith {
+	if effect.Kind == game.RuleEffectCantBeBlockedByCreaturesWith ||
+		effect.Kind == game.RuleEffectCantBeBlockedExceptBy ||
+		effect.Kind == game.RuleEffectCanBlockOnlyCreaturesWith {
 		restriction, err := renderBlockerRestriction(effect.BlockerRestriction)
 		if err != nil {
 			return "", err
@@ -857,6 +859,8 @@ func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
 		return "game.RuleEffectCantBeBlocked", nil
 	case game.RuleEffectCantBeBlockedByCreaturesWith:
 		return "game.RuleEffectCantBeBlockedByCreaturesWith", nil
+	case game.RuleEffectCantBeBlockedExceptBy:
+		return "game.RuleEffectCantBeBlockedExceptBy", nil
 	case game.RuleEffectCanBlockOnlyCreaturesWith:
 		return "game.RuleEffectCanBlockOnlyCreaturesWith", nil
 	case game.RuleEffectCantBeBlockedByMoreThanOne:
@@ -953,6 +957,10 @@ func renderBlockerRestriction(restriction game.BlockerRestriction) (string, erro
 		kind = "game.BlockerRestrictionColor"
 	case game.BlockerRestrictionArtifact:
 		kind = "game.BlockerRestrictionArtifact"
+	case game.BlockerRestrictionDefender:
+		kind = "game.BlockerRestrictionDefender"
+	case game.BlockerRestrictionLegendary:
+		kind = "game.BlockerRestrictionLegendary"
 	default:
 		return "", fmt.Errorf("render: unsupported blocker restriction kind %d", restriction.Kind)
 	}

@@ -12,4 +12,5 @@ var Cards = []*game.CardDef{
 	ZephyrSpirit,
 	ZhangHeWeiGeneral,
 	ZulaportChainmage,
+	ZulaportEnforcer,
 }

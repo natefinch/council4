@@ -46,6 +46,7 @@ var Cards = []*game.CardDef{
 	DragonskullSummit,
 	DrakeHatcher,
 	DranaSChosen,
+	DreadWarlock,
 	DreamcallerSiren,
 	DuchessWaywardTavernkeep,
 	DuskFeaster,

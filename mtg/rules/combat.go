@@ -704,6 +704,9 @@ func canBlockAttacker(g *game.Game, blocker, attacker *game.Permanent) bool {
 	if ruleEffectRestrictsBlocker(g, attacker, blocker) {
 		return false
 	}
+	if ruleEffectRestrictsBlockerExcept(g, attacker, blocker) {
+		return false
+	}
 	if ruleEffectLimitsBlockerToCreaturesWith(g, blocker, attacker) {
 		return false
 	}
