@@ -22,4 +22,5 @@ var Cards = []*game.CardDef{
 	NoxiousGhoul,
 	NoxiousHatchling,
 	NyxbloomAncient,
+	Nulldrifter,
 }

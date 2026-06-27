@@ -30,4 +30,5 @@ var Cards = []*game.CardDef{
 	DuchessWaywardTavernkeep,
 	DreamcallerSiren,
 	DuskfangMentor,
+	DesolationTwin,
 }

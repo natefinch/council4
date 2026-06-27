@@ -92,6 +92,18 @@ func TestTypedTriggerEventsBindClosedSlots(t *testing.T) {
 			},
 		},
 		{
+			name:  "self-cast spell binds self source and flag",
+			event: "you cast this spell",
+			kind:  TriggerWhen,
+			want: TriggerPattern{
+				Kind:        TriggerWhen,
+				Event:       TriggerEventSpellCast,
+				Controller:  ControllerYou,
+				Source:      TriggerSourceSelf,
+				SelfWasCast: true,
+			},
+		},
+		{
 			name:  "spell event binds per-turn ordinal",
 			event: "you cast your second spell each turn",
 			kind:  TriggerWhenever,

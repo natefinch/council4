@@ -454,7 +454,7 @@ func TestLowerCastTriggerRejectsUnsupportedForms(t *testing.T) {
 		name   string
 		oracle string
 	}{
-		{"self-cast TriggerWhen", "When you cast this spell, draw a card."},
+		{"self-cast Whenever", "Whenever you cast this spell, draw a card."},
 		{"general TriggerWhen", "When you cast a spell, draw a card."},
 		{"unrecognized player", "Whenever each player casts a spell, draw a card."},
 		{"copy without cast", "Whenever you copy an instant or sorcery spell, draw a card."},
@@ -488,6 +488,38 @@ func TestLowerCastTriggerRejectsUnsupportedForms(t *testing.T) {
 				t.Fatalf("unexpected triggered ability for unsupported form %q", tc.oracle)
 			}
 		})
+	}
+}
+
+func TestLowerCastTriggerAcceptsSelfCastSpell(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Bear",
+		Layout:     "normal",
+		TypeLine:   "Creature — Bear",
+		OracleText: "When you cast this spell, draw a card.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+	}
+	ta := face.TriggeredAbilities[0]
+	if ta.Trigger.Type != game.TriggerWhen {
+		t.Errorf("type = %v, want TriggerWhen", ta.Trigger.Type)
+	}
+	pattern := ta.Trigger.Pattern
+	if pattern.Event != game.EventSpellCast {
+		t.Errorf("event = %v, want EventSpellCast", pattern.Event)
+	}
+	if pattern.Source != game.TriggerSourceSelf {
+		t.Errorf("source = %v, want TriggerSourceSelf", pattern.Source)
+	}
+	if pattern.Controller != game.TriggerControllerYou {
+		t.Errorf("controller = %v, want TriggerControllerYou", pattern.Controller)
+	}
+	if !pattern.SelfWasCast {
+		t.Error("SelfWasCast = false, want true")
 	}
 }
 

@@ -20,4 +20,6 @@ var Cards = []*game.CardDef{
 	WingspanMentor,
 	WoodenSphere,
 	WoodlandWanderer,
+	WorldBreaker,
+	WrithingChrysalis,
 }

@@ -611,6 +611,7 @@ func (*Engine) detectTriggeredAbilities(g *game.Game, events []game.Event) []pen
 			pending = append(pending, detectTriggeredAbilitiesFromPermanent(g, source, event)...)
 		}
 		pending = append(pending, cycledCardSelfTriggers(g, event)...)
+		pending = append(pending, castSpellSelfTriggers(g, event)...)
 		for _, source := range simultaneousLeftBattlefieldTriggerSources(g, event, events) {
 			pending = append(pending, detectTriggeredAbilitiesFromPermanent(g, source, event)...)
 		}
@@ -1087,6 +1088,55 @@ func cycledCardSelfTriggers(g *game.Game, event game.Event) []pendingTriggeredAb
 			sourceID:        event.SourceID,
 			sourceCardID:    card.ID,
 			face:            game.FaceFront,
+			abilityIndex:    i,
+			inline:          triggered,
+			event:           event,
+			hasEvent:        true,
+			ordinaryTrigger: true,
+		})
+	}
+	return pending
+}
+
+// castSpellSelfTriggers detects a spell's own "When you cast this spell"
+// triggered abilities (CR 603.3). These abilities trigger from the spell on the
+// stack as it becomes cast, so the ordinary battlefield scan in
+// detectTriggeredAbilities never sees them. Only the cast spell's self-source
+// spell-cast triggers are considered.
+func castSpellSelfTriggers(g *game.Game, event game.Event) []pendingTriggeredAbility {
+	if event.Kind != game.EventSpellCast || event.CardID == 0 {
+		return nil
+	}
+	card, ok := g.GetCardInstance(event.CardID)
+	if !ok {
+		return nil
+	}
+	def, ok := cardFaceDef(card, event.Face)
+	if !ok {
+		return nil
+	}
+	source := &game.Permanent{
+		ObjectID:       event.SourceID,
+		CardInstanceID: card.ID,
+		Owner:          card.Owner,
+		Controller:     event.Controller,
+		Face:           event.Face,
+	}
+	var pending []pendingTriggeredAbility
+	for i := range def.TriggeredAbilities {
+		triggered := &def.TriggeredAbilities[i]
+		pattern := &triggered.Trigger.Pattern
+		if pattern.Event != game.EventSpellCast || pattern.Source != game.TriggerSourceSelf || !pattern.SelfWasCast {
+			continue
+		}
+		if !triggerInterveningIf(g, source, event.Controller, &triggered.Trigger, &event) {
+			continue
+		}
+		pending = append(pending, pendingTriggeredAbility{
+			controller:      event.Controller,
+			sourceID:        event.SourceID,
+			sourceCardID:    card.ID,
+			face:            event.Face,
 			abilityIndex:    i,
 			inline:          triggered,
 			event:           event,

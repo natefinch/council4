@@ -13,6 +13,20 @@ func parseSpellCastTriggerEventClause(
 	atoms Atoms,
 	_ string,
 ) *TriggerEventClause {
+	if intro == TriggerIntroductionWhen {
+		// "When you cast this spell, <effect>" is the self-cast trigger that fires
+		// once as the source spell is put on the stack (CR 601.3i). It is the only
+		// spell-cast clause introduced by "When"; every other spell-cast trigger
+		// uses "Whenever".
+		if syntaxWordsEqual(tokens, "you", "cast", "this", "spell") {
+			return &TriggerEventClause{
+				Kind:     TriggerEventKindSpellCast,
+				Actor:    TriggerEventActor{Kind: TriggerEventActorYou, Span: shared.SpanOf(tokens[:2])},
+				SelfCast: true,
+			}
+		}
+		return nil
+	}
 	if intro != TriggerIntroductionWhenever {
 		return nil
 	}
