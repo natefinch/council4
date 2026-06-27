@@ -2146,6 +2146,12 @@ func (p Goad) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 }
 
 func (p RemoveCounter) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.AllKinds {
+		if p.Amount != (Quantity{}) {
+			return errors.New("remove all counters must not set an amount")
+		}
+		return validateMassObjectOrGroup(p.Object, p.Group, targets, checkTargets)
+	}
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err
 	}

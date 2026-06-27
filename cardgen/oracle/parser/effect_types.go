@@ -1882,6 +1882,13 @@ type EffectSyntax struct {
 	// target creature."). It is false for a specific-kind move ("Move a +1/+1
 	// counter ..."), whose kind is carried in CounterKind / CounterKnown.
 	MoveCountersAll bool `json:",omitempty"`
+	// RemoveCountersAll reports the kind-agnostic "remove all counters" form of an
+	// EffectRemoveCounter effect, where every counter on the object is removed
+	// regardless of kind ("Remove all counters from target permanent.", Vampire
+	// Hexmage). It is false for a fixed-count removal ("Remove a counter ...",
+	// "Remove two +1/+1 counters ..."), whose count is carried in Amount and kind
+	// in CounterKind / CounterKnown.
+	RemoveCountersAll bool `json:",omitempty"`
 	// MoveCountersDistribute reports the "move any number of <kind> counters from
 	// <source> onto other creatures" form of an EffectMoveCounters effect, where
 	// the controller distributes the source's counters among a group of other

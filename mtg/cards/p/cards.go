@@ -12,6 +12,7 @@ var Cards = []*game.CardDef{
 	PathOfAnnihilation,
 	PeerThroughDepths,
 	PentarchWard,
+	PerfectIntimidation,
 	PhalanxTactics,
 	PhantomWhelp,
 	PhyrexianDriver,
@@ -32,4 +33,5 @@ var Cards = []*game.CardDef{
 	PsychotropeThallid,
 	PublicThoroughfare,
 	PuncturingBlow,
+	PurgingStormbrood,
 }

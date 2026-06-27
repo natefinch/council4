@@ -1246,6 +1246,9 @@ func lowerMoveCountersSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagno
 // modal content.
 func lowerRemoveCounterSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
+	if effect.RemoveCountersAll {
+		return lowerRemoveAllCountersSpell(ctx)
+	}
 	if !effect.Exact ||
 		effect.Negated ||
 		effect.Context != parser.EffectContextController ||
@@ -1283,6 +1286,34 @@ func lowerRemoveCounterSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagn
 		Targets: targets,
 		Sequence: []game.Instruction{{
 			Primitive: remove,
+		}},
+	}.Ability(), nil
+}
+
+// lowerRemoveAllCountersSpell lowers the kind-agnostic mass form "Remove all
+// counters from <permanent>." (Vampire Hexmage). It accepts the same object
+// shapes as removeCounterObjectAndTargets — one exact single-cardinality target
+// permanent or a lone source/self reference — and emits a RemoveCounter with
+// AllKinds set, which clears every counter regardless of kind. Any conditional,
+// modal, or negated wrapping fails closed.
+func lowerRemoveAllCountersSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	if !effect.Exact ||
+		effect.Negated ||
+		effect.Context != parser.EffectContextController ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		effect.CounterKindKnown {
+		return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
+	}
+	object, targets, ok := removeCounterObjectAndTargets(ctx)
+	if !ok {
+		return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
+	}
+	return game.Mode{
+		Targets: targets,
+		Sequence: []game.Instruction{{
+			Primitive: game.RemoveCounter{Object: object, AllKinds: true},
 		}},
 	}.Ability(), nil
 }

@@ -1315,6 +1315,10 @@ type RemoveCounter struct {
 	// "remove a counter from <permanent>" wording (Ferropede). When false the
 	// fixed CounterKind is removed. It is ignored for Group removals.
 	ChooseKind bool
+	// AllKinds removes every counter of every kind from the object, modeling the
+	// kind-agnostic mass form "remove all counters from <permanent>" (Vampire
+	// Hexmage). When set, Amount, CounterKind, and ChooseKind are ignored.
+	AllKinds bool
 }
 
 // Transform transforms the referenced permanent.

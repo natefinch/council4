@@ -1099,6 +1099,9 @@ func handleGoad(r *effectResolver, prim game.Goad) effectResolved {
 }
 
 func handleRemoveCounter(r *effectResolver, prim game.RemoveCounter) effectResolved {
+	if prim.AllKinds {
+		return handleRemoveAllCounters(r, prim)
+	}
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
 	if res.amount <= 0 {
 		return res
@@ -1120,6 +1123,25 @@ func handleRemoveCounter(r *effectResolver, prim game.RemoveCounter) effectResol
 			kind = chosen
 		}
 		permanent.Counters.Remove(kind, res.amount)
+		res.succeeded = true
+	}
+	return res
+}
+
+// handleRemoveAllCounters resolves the kind-agnostic mass form "remove all
+// counters from <permanent>" (Vampire Hexmage), clearing every counter of every
+// kind from the referenced permanent or group regardless of count.
+func handleRemoveAllCounters(r *effectResolver, prim game.RemoveCounter) effectResolved {
+	res := effectResolved{accepted: true}
+	if prim.Group.Valid() {
+		for _, permanent := range r.groupPermanents(prim.Group) {
+			res.amount += permanent.Counters.RemoveAll()
+			res.succeeded = true
+		}
+		return res
+	}
+	if permanent, ok := r.resolveObject(prim.Object); ok {
+		res.amount = permanent.Counters.RemoveAll()
 		res.succeeded = true
 	}
 	return res
