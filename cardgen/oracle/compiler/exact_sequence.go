@@ -29,6 +29,14 @@ const (
 	// graveyard" sequence. The recorded card types travel on the compiled
 	// ability so lowering filters the reveal without reading Oracle words.
 	ExactSequenceConditionalLookAtTopReveal
+	// ExactSequenceConditionalLookAtTopBattlefield is the triggered "look at the
+	// top card of your library; if it's a card of one of the recorded types, you
+	// may put it onto the battlefield[ tapped]" sequence, optionally followed by
+	// a mandatory "if you don't, put it into your hand" fallback. The recorded
+	// card types, the tapped entry rider, and the fallback disposition travel on
+	// the compiled ability so lowering routes the card without reading Oracle
+	// words.
+	ExactSequenceConditionalLookAtTopBattlefield
 )
 
 func compileExactSequenceKind(kind parser.ExactSequenceKind) ExactSequenceKind {
@@ -41,6 +49,8 @@ func compileExactSequenceKind(kind parser.ExactSequenceKind) ExactSequenceKind {
 		return ExactSequenceDiscardHandThenDraw
 	case parser.ExactSequenceConditionalLookAtTopReveal:
 		return ExactSequenceConditionalLookAtTopReveal
+	case parser.ExactSequenceConditionalLookAtTopBattlefield:
+		return ExactSequenceConditionalLookAtTopBattlefield
 	default:
 		return ExactSequenceUnknown
 	}

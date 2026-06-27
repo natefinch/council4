@@ -17,7 +17,10 @@ import (
 // destination — the battlefield (tapped when EntryTapped) by default, or the Then
 // zone when set, revealed first when ThenReveal; otherwise it moves to Else (the
 // bottom of Else when ElseBottom), a move the controller may decline when
-// ElseOptional, leaving the card in FromZone.
+// ElseOptional, leaving the card in FromZone. A zone.None Else means there is no
+// fallback at all: when the put is not made the card is simply left in FromZone
+// (the "look at the top card; if it's a land card, you may put it onto the
+// battlefield" family with no trailing else clause).
 //
 // The single primitive exists because the gated put and its fallback cannot be
 // composed from a gated optional instruction plus a result-gated move: a skipped
@@ -61,8 +64,8 @@ func (p ConditionalDestinationPlace) validatePrimitive(_ []TargetSpec, _ bool) e
 	if p.FromZone == zone.None || p.FromZone == zone.Battlefield || p.FromZone == zone.Stack {
 		return errors.New("conditional destination place requires a non-battlefield source zone")
 	}
-	if p.Else == zone.None || p.Else == zone.Battlefield || p.Else == zone.Stack {
-		return errors.New("conditional destination place requires a non-battlefield else zone")
+	if p.Else == zone.Battlefield || p.Else == zone.Stack {
+		return errors.New("conditional destination place else zone must be no fallback (zone.None) or a non-battlefield destination")
 	}
 	if p.Then == zone.Battlefield || p.Then == zone.Stack {
 		return errors.New("conditional destination place then zone must be the implicit battlefield (zone.None) or a non-battlefield destination")

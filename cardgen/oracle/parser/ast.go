@@ -267,6 +267,22 @@ const (
 	ExactSequenceBottomHandThenDraw
 	ExactSequenceDiscardHandThenDraw
 	ExactSequenceConditionalLookAtTopReveal
+	// ExactSequenceConditionalLookAtTopBattlefield is the triggered "look at the
+	// top card of your library. If it's a <type> card, you may put it onto the
+	// battlefield[ tapped]." family, with an optional trailing "if you don't put
+	// it onto the battlefield, put it into your hand" fallback.
+	ExactSequenceConditionalLookAtTopBattlefield
+)
+
+// LookAtTopBattlefieldElse identifies the trailing fallback disposition of an
+// ExactSequenceConditionalLookAtTopBattlefield body: nothing (the card stays on
+// top of the library) or a mandatory move into the controller's hand.
+type LookAtTopBattlefieldElse uint8
+
+// Look-at-top battlefield fallback dispositions.
+const (
+	LookAtTopBattlefieldElseNone LookAtTopBattlefieldElse = iota
+	LookAtTopBattlefieldElseHand
 )
 
 // ExactSequenceSyntax records an exact sequence and its resolving-body span.
@@ -274,14 +290,20 @@ const (
 // Bottom selects the library end the hand cards move to, and DrawOffset is the
 // fixed number added to the "draw that many cards" count ("plus one" => 1).
 // LookAtTopCardTypes is only meaningful for
-// ExactSequenceConditionalLookAtTopReveal: it lists the card types whose
-// disjunction satisfies the "If it's a <type> card" gate before revealing.
+// ExactSequenceConditionalLookAtTopReveal and
+// ExactSequenceConditionalLookAtTopBattlefield: it lists the card types whose
+// disjunction satisfies the "If it's a <type> card" gate. LookAtTopEntersTapped
+// and LookAtTopBattlefieldElse are only meaningful for
+// ExactSequenceConditionalLookAtTopBattlefield: the former records the "tapped"
+// entry rider, the latter the trailing fallback disposition.
 type ExactSequenceSyntax struct {
-	Kind               ExactSequenceKind
-	Span               shared.Span
-	Bottom             bool
-	DrawOffset         int
-	LookAtTopCardTypes []CardType
+	Kind                  ExactSequenceKind
+	Span                  shared.Span
+	Bottom                bool
+	DrawOffset            int
+	LookAtTopCardTypes    []CardType
+	LookAtTopEntersTapped bool
+	LookAtTopBattlefield  LookAtTopBattlefieldElse
 }
 
 // SourceAbilityCostReductionSyntax is the typed syntax for a source-local

@@ -16,10 +16,6 @@ func (r Renderer) renderConditionalDestinationPlace(ctx *renderCtx, value game.C
 	if err != nil {
 		return "", err
 	}
-	elseZone, err := renderZone(value.Else)
-	if err != nil {
-		return "", err
-	}
 	ctx.need(importZone)
 	fields := []string{
 		fmt.Sprintf("Card: %s,", card),
@@ -54,7 +50,13 @@ func (r Renderer) renderConditionalDestinationPlace(ctx *renderCtx, value game.C
 	if value.ThenReveal {
 		fields = append(fields, "ThenReveal: true,")
 	}
-	fields = append(fields, fmt.Sprintf("Else: %s,", elseZone))
+	if value.Else != zone.None {
+		elseZone, elseErr := renderZone(value.Else)
+		if elseErr != nil {
+			return "", elseErr
+		}
+		fields = append(fields, fmt.Sprintf("Else: %s,", elseZone))
+	}
 	if value.ElseBottom {
 		fields = append(fields, "ElseBottom: true,")
 	}

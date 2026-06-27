@@ -62,6 +62,7 @@ var Cards = []*game.CardDef{
 	MirrorWall,
 	MistmeadowCouncil,
 	MobileFort,
+	MobileHomestead,
 	Mobilization,
 	MoggFlunkies,
 	MoldDemon,

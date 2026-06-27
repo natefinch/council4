@@ -12,6 +12,89 @@ import (
 // local to a single resolution and never observed across abilities.
 const lookAtTopLookedKey = game.LinkedKey("look-at-top-card")
 
+// lookAtTopBattlefieldLookedKey links the looked-at top card to the
+// ConditionalDestinationPlace that routes it onto the battlefield. It is local
+// to a single resolution and never observed across abilities.
+const lookAtTopBattlefieldLookedKey = game.LinkedKey("look-at-top-battlefield-card")
+
+// lowerConditionalLookAtTopBattlefieldTrigger lowers the parser-recognized
+// sequence "look at the top card of your library; if it's a card of one of the
+// recorded types, you may put it onto the battlefield[ tapped]; [if you don't,
+// put it into your hand]" into its fixed instruction template. The compiler
+// marks the body with a text-blind exact-sequence kind and carries the
+// disjunctive card types, the tapped entry rider, and the hand fallback flag;
+// this lowering switches on that kind and consumes only those typed values, so
+// it never inspects Oracle words. It fails closed unless the trigger carries no
+// other content and the compiler recorded at least one card type.
+func lowerConditionalLookAtTopBattlefieldTrigger(
+	ability compiler.CompiledAbility,
+) (game.TriggeredAbility, *shared.Diagnostic) {
+	const summary = "unsupported triggered ability effect"
+	if ability.Trigger == nil {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability",
+			"the executable source backend requires a semantic trigger pattern")
+	}
+	if ability.Optional || ability.Content.Unconsumed() || len(ability.ExactSequenceLookAtTopTypes) == 0 {
+		return game.TriggeredAbility{}, executableDiagnostic(
+			ability,
+			summary,
+			"the conditional look-at-top battlefield sequence requires a non-optional trigger with no other content and at least one recorded card type",
+		)
+	}
+	pattern, ok := lowerTriggerPattern(&ability.Trigger.Pattern)
+	if !ok {
+		summary, detail := triggerPatternCapabilityDiagnostic(ability.Trigger)
+		return game.TriggeredAbility{}, executableDiagnostic(ability, summary, detail)
+	}
+	triggerType, ok := lowerTriggerKind(ability.Trigger.Pattern.Kind)
+	if !ok {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability",
+			"the executable source backend does not support this semantic trigger kind")
+	}
+	intervening, ok := lowerAtInterveningCondition(ability.Trigger)
+	if !ok {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability",
+			"the executable source backend does not support this semantic trigger condition")
+	}
+	lookedCard := game.CardReference{Kind: game.CardReferenceLinked, LinkID: string(lookAtTopBattlefieldLookedKey)}
+	elseZone := zone.None
+	if ability.ExactSequenceLookAtTopElseHand {
+		elseZone = zone.Hand
+	}
+	sequence := []game.Instruction{
+		{
+			Primitive: game.LookAtLibraryTop{
+				Player:        game.ControllerReference(),
+				PublishLinked: lookAtTopBattlefieldLookedKey,
+			},
+		},
+		{
+			Primitive: game.ConditionalDestinationPlace{
+				Card:     lookedCard,
+				FromZone: zone.Library,
+				CardCondition: opt.Val(game.CardSelection{
+					Card: lookedCard,
+					Selection: game.Selection{
+						RequiredTypesAny: ability.ExactSequenceLookAtTopTypes,
+					},
+				}),
+				EntryTapped: ability.ExactSequenceLookAtTopEntersTapped,
+				Else:        elseZone,
+			},
+		},
+	}
+	return game.TriggeredAbility{
+		Text: ability.Text,
+		Trigger: game.TriggerCondition{
+			Type:                 triggerType,
+			Pattern:              pattern,
+			InterveningIf:        interveningIfText(ability.Trigger),
+			InterveningCondition: intervening,
+		},
+		Content: game.Mode{Text: ability.Text, Sequence: sequence}.Ability(),
+	}, nil
+}
+
 // lowerConditionalLookAtTopTrigger lowers the parser-recognized sequence "look
 // at the top card of your library; if it's a card of one of the recorded types,
 // you may reveal it and put it into your hand; if you don't, you may put it into

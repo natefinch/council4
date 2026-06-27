@@ -21,6 +21,9 @@ func emitResolvingSyntax(abilities []Ability) {
 		if recognizeConditionalLookAtTopSequence(&abilities[i]) {
 			continue
 		}
+		if recognizeConditionalLookAtTopBattlefieldSequence(&abilities[i]) {
+			continue
+		}
 		if recognizeBottomHandThenDrawSequence(&abilities[i]) {
 			continue
 		}
