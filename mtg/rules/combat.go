@@ -87,7 +87,7 @@ func resolveUnblockedCombatDamage(g *game.Game, attacker *game.Permanent, target
 	if !dealsCombatDamageInPass(g, attacker, pass) {
 		return
 	}
-	damage := effectivePower(g, attacker)
+	damage := combatDamageAssignedBy(g, attacker)
 	if damage <= 0 {
 		return
 	}
@@ -113,7 +113,7 @@ func resolveBlockedCombatDamage(g *game.Game, attacker *game.Permanent, blockers
 	blockerDamage := make([]int, len(blockers))
 	for i, blocker := range blockers {
 		if dealsCombatDamageInPass(g, blocker, pass) {
-			blockerDamage[i] = effectivePower(g, blocker)
+			blockerDamage[i] = combatDamageAssignedBy(g, blocker)
 		}
 	}
 	if dealsCombatDamageInPass(g, attacker, pass) {
@@ -139,13 +139,13 @@ func resolveBlockedCombatDamage(g *game.Game, attacker *game.Permanent, blockers
 // combat-damage step has no agent decision point.
 func resolveCombatDamageAsThoughUnblocked(g *game.Game, attacker *game.Permanent, blockers []*game.Permanent, target game.AttackTarget, pass combatDamagePass, log *TurnLog) {
 	if dealsCombatDamageInPass(g, attacker, pass) {
-		if damage := effectivePower(g, attacker); damage > 0 && isLegalAttackTarget(g, effectiveController(g, attacker), target) {
+		if damage := combatDamageAssignedBy(g, attacker); damage > 0 && isLegalAttackTarget(g, effectiveController(g, attacker), target) {
 			markAttackTargetCombatDamage(g, attacker, target, damage, log)
 		}
 	}
 	for _, blocker := range blockers {
 		if dealsCombatDamageInPass(g, blocker, pass) {
-			if damage := effectivePower(g, blocker); damage > 0 {
+			if damage := combatDamageAssignedBy(g, blocker); damage > 0 {
 				markCreatureCombatDamage(g, blocker, attacker, damage, log)
 			}
 		}
@@ -515,7 +515,7 @@ type creatureDamageAssignment struct {
 // excess tramples through to the attack target (CR 702.19b); that excess is
 // returned as tramplingDamage.
 func assignAttackerCombatDamage(g *game.Game, attacker *game.Permanent, blockers []*game.Permanent) (assignments []creatureDamageAssignment, tramplingDamage int) {
-	damageRemaining := effectivePower(g, attacker)
+	damageRemaining := combatDamageAssignedBy(g, attacker)
 	if damageRemaining <= 0 {
 		return nil, 0
 	}

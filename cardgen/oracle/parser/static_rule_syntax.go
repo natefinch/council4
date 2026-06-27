@@ -670,6 +670,7 @@ func validStaticRuleSyntax(rule StaticRuleSyntax) bool {
 				rule.Operation.Kind == StaticRuleOperationTransform &&
 				rule.Operation.Voice == StaticRuleVoiceActive &&
 				len(rule.Qualifiers) == 0) ||
+			validAssignDamageByToughnessRule(rule) ||
 			validGroupMustAttackRule(rule)
 	case StaticRuleSubjectBattlefieldCreatures:
 		return (rule.Constraint.Kind == StaticRuleConstraintProhibition &&
@@ -680,6 +681,7 @@ func validStaticRuleSyntax(rule StaticRuleSyntax) bool {
 				rule.Operation.Kind == StaticRuleOperationUntap &&
 				rule.Operation.Voice == StaticRuleVoiceActive &&
 				len(rule.Qualifiers) == 0) ||
+			validAssignDamageByToughnessRule(rule) ||
 			validGroupMustAttackRule(rule)
 	case StaticRuleSubjectOpponentControlledCreatures:
 		return validGroupMustAttackRule(rule)
@@ -695,6 +697,16 @@ func validGroupMustAttackRule(rule StaticRuleSyntax) bool {
 		rule.Operation.Kind == StaticRuleOperationAttack &&
 		rule.Operation.Voice == StaticRuleVoiceActive &&
 		staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierEachCombat, StaticRuleQualifierIfAble)
+}
+
+// validAssignDamageByToughnessRule reports whether a static rule is the
+// combat-damage replacement "<subject> assigns combat damage equal to its
+// toughness rather than its power."
+func validAssignDamageByToughnessRule(rule StaticRuleSyntax) bool {
+	return rule.Constraint.Kind == StaticRuleConstraintRequirement &&
+		rule.Operation.Kind == StaticRuleOperationAssignDamageByToughness &&
+		rule.Operation.Voice == StaticRuleVoiceActive &&
+		len(rule.Qualifiers) == 0
 }
 
 // validCreatureStaticRuleOperation reports whether a creature-scoped static rule
@@ -769,7 +781,8 @@ func validCreatureStaticRuleOperation(rule StaticRuleSyntax) bool {
 		(rule.Constraint.Kind == StaticRuleConstraintRequirement &&
 			rule.Operation.Kind == StaticRuleOperationAssignDamageAsUnblocked &&
 			rule.Operation.Voice == StaticRuleVoicePassive &&
-			len(rule.Qualifiers) == 0)
+			len(rule.Qualifiers) == 0) ||
+		validAssignDamageByToughnessRule(rule)
 }
 
 func staticRuleQualifiersAre(qualifiers []StaticRuleQualifier, kinds ...StaticRuleQualifierKind) bool {

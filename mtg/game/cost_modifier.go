@@ -463,6 +463,18 @@ const (
 	// that creature from being declared as an attacker (CR 508.1a). It grants no
 	// other ability and never makes a non-defender creature unable to attack.
 	RuleEffectCanAttackAsThoughDefender
+	// RuleEffectAssignCombatDamageUsingToughness makes the affected creatures
+	// assign combat damage equal to their toughness rather than their power
+	// ("<subject> assigns combat damage equal to its toughness rather than its
+	// power.", Doran, the Siege Tower; Assault Formation; Belligerent Brontodon).
+	// While it applies, each matching creature uses its toughness in place of its
+	// power when assigning combat damage in any combat damage step (CR 510.1a /
+	// the combat-damage replacement), affecting both blocked and unblocked
+	// assignments. AffectedSource scopes it to the source creature; an
+	// AffectedController plus PermanentTypes/AffectedSelection scopes it to a
+	// creature group ("each creature you control", "each creature"). Added last so
+	// existing kinds keep their wire values.
+	RuleEffectAssignCombatDamageUsingToughness
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -516,7 +528,8 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectCanBlockOnlyCreaturesWith,
 		RuleEffectCantAttackAlone,
 		RuleEffectCantBlockAlone,
-		RuleEffectCanAttackAsThoughDefender:
+		RuleEffectCanAttackAsThoughDefender,
+		RuleEffectAssignCombatDamageUsingToughness:
 		return true
 	default:
 		return false

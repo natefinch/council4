@@ -23,6 +23,7 @@ var Cards = []*game.CardDef{
 	WaterspoutWarden,
 	Weatherlight,
 	WebOfLifeAndDestiny,
+	WeightAdvantage,
 	WelkinTern,
 	WhiskerquillScribe,
 	WhiteWard,

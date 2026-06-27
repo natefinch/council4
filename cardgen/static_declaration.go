@@ -884,6 +884,8 @@ func staticRuleDomain(kind compiler.StaticRuleKind) compiler.StaticRuleDomain {
 		return compiler.StaticRuleDomainUntap
 	case compiler.StaticRuleCantTransform:
 		return compiler.StaticRuleDomainTransform
+	case compiler.StaticRuleAssignsCombatDamageByToughness:
+		return compiler.StaticRuleDomainCombatDamage
 	case compiler.StaticRuleAdditionalTriggerForChosenCreatureType:
 		return compiler.StaticRuleDomainTrigger
 	default:
@@ -1459,6 +1461,8 @@ func lowerStaticRuleKind(kind compiler.StaticRuleKind) (game.RuleEffectKind, boo
 		return game.RuleEffectCantBeBlockedByCreaturesWith, true
 	case compiler.StaticRuleCantBeBlockedExceptBy:
 		return game.RuleEffectCantBeBlockedExceptBy, true
+	case compiler.StaticRuleAssignsCombatDamageByToughness:
+		return game.RuleEffectAssignCombatDamageUsingToughness, true
 	case compiler.StaticRuleCanBlockOnlyCreaturesWithFlying:
 		return game.RuleEffectCanBlockOnlyCreaturesWith, true
 	case compiler.StaticRuleCantAttackAlone:

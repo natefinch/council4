@@ -1630,6 +1630,13 @@ const (
 	// declaration carrying the allowed BlockerRestriction. Added last so existing
 	// kinds keep their wire values.
 	EffectCantBeBlockedExceptBy
+	// EffectAssignsCombatDamageByToughness is the static combat-damage replacement
+	// "<subject> assigns combat damage equal to its toughness rather than its
+	// power." (Doran, the Siege Tower; Assault Formation; Belligerent Brontodon):
+	// the affected creatures assign combat damage equal to their toughness instead
+	// of their power. It pairs only with a static rule declaration. Added last so
+	// existing kinds keep their wire values.
+	EffectAssignsCombatDamageByToughness
 )
 
 // DurationKind identifies common continuous-effect durations.

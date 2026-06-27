@@ -783,6 +783,35 @@ func ruleEffectAssignsCombatDamageAsThoughUnblocked(g *game.Game, attacker *game
 	return false
 }
 
+// ruleEffectAssignsCombatDamageByToughness reports whether a static combat-damage
+// replacement ("<subject> assigns combat damage equal to its toughness rather
+// than its power.") applies to permanent, making it assign combat damage equal to
+// its toughness instead of its power (Doran, the Siege Tower; Assault Formation).
+func ruleEffectAssignsCombatDamageByToughness(g *game.Game, permanent *game.Permanent) bool {
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind == game.RuleEffectAssignCombatDamageUsingToughness && ruleEffectMatchesPermanent(g, effect, permanent) {
+			return true
+		}
+	}
+	return false
+}
+
+// combatDamageAssignedBy returns the amount of combat damage permanent assigns:
+// its toughness when a static combat-damage replacement applies to it ("assigns
+// combat damage equal to its toughness rather than its power.", Doran, the Siege
+// Tower), and otherwise its power (CR 510.1a). Negative toughness contributes no
+// damage, matching the power floor.
+func combatDamageAssignedBy(g *game.Game, permanent *game.Permanent) int {
+	if ruleEffectAssignsCombatDamageByToughness(g, permanent) {
+		if toughness, ok := effectiveToughness(g, permanent); ok {
+			return max(0, toughness)
+		}
+	}
+	return effectivePower(g, permanent)
+}
+
 func ruleEffectLimitsBlockersToOne(g *game.Game, attacker *game.Permanent) bool {
 	effects := activeRuleEffects(g)
 	for i := range effects {

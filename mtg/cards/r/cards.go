@@ -17,6 +17,7 @@ var Cards = []*game.CardDef{
 	RampantGrowth,
 	RancorousArchaic,
 	RapidDecay,
+	RasaadYnBashir,
 	RatadrabikOfUrborg,
 	RathiDragon,
 	RattlebackApothecary,
