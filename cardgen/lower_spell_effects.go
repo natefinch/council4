@@ -2343,6 +2343,9 @@ func lowerPreventDamageSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagn
 		len(ctx.content.Modes) != 0 {
 		return unsupported()
 	}
+	if effect.PreventDamageNextRecipient != parser.PreventDamageRecipientNone {
+		return lowerPreventAmountDamage(ctx, effect)
+	}
 	if effect.PreventDamageGlobal {
 		if effect.PreventDamageTo ||
 			effect.PreventDamageBy ||
@@ -2414,6 +2417,76 @@ func preventDamageObject(ctx contentCtx) (game.ObjectReference, *game.TargetSpec
 		return object, nil, true
 	default:
 		return game.ObjectReference{}, nil, false
+	}
+}
+
+// lowerPreventAmountDamage lowers the amount-based "Prevent the next N damage
+// that would be dealt to <recipient> this turn." shield (Heal, Recuperate,
+// Master Apothecary). The prevented amount N rides on the effect's Amount; the
+// recipient kind selects the shielded player, permanent, or any-target slot.
+func lowerPreventAmountDamage(ctx contentCtx, effect compiler.CompiledEffect) (game.AbilityContent, *shared.Diagnostic) {
+	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported prevent-damage effect",
+			"the executable source backend supports the amount-based next-damage shield only with a fixed amount and a player, self-reference, or single any-target recipient",
+		)
+	}
+	if effect.PreventDamageTo ||
+		effect.PreventDamageBy ||
+		effect.PreventDamageGlobal ||
+		!effect.Amount.Known ||
+		effect.Amount.RangeKnown ||
+		effect.Amount.VariableX ||
+		effect.Amount.DynamicKind != compiler.DynamicAmountNone ||
+		effect.Amount.Value < 1 {
+		return unsupported()
+	}
+	switch effect.PreventDamageNextRecipient {
+	case parser.PreventDamageRecipientYou:
+		if len(ctx.content.Targets) != 0 || len(ctx.content.References) != 0 {
+			return unsupported()
+		}
+		mode := game.Mode{Sequence: []game.Instruction{{Primitive: game.PreventDamage{
+			Amount: game.Fixed(effect.Amount.Value),
+			Player: game.ControllerReference(),
+		}}}}
+		return mode.Ability(), nil
+	case parser.PreventDamageRecipientSource:
+		if len(ctx.content.Targets) != 0 || len(ctx.content.References) != 1 {
+			return unsupported()
+		}
+		object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
+			AllowEvent:  true,
+			AllowSource: true,
+			AllowTarget: true,
+		})
+		if !ok {
+			return unsupported()
+		}
+		mode := game.Mode{Sequence: []game.Instruction{{Primitive: game.PreventDamage{
+			Amount: game.Fixed(effect.Amount.Value),
+			Object: object,
+		}}}}
+		return mode.Ability(), nil
+	case parser.PreventDamageRecipientTarget:
+		if len(ctx.content.Targets) != 1 || len(ctx.content.References) != 0 {
+			return unsupported()
+		}
+		targetSpec, ok := damageTargetSpec(ctx.content.Targets[0])
+		if !ok {
+			return unsupported()
+		}
+		mode := game.Mode{
+			Targets: []game.TargetSpec{targetSpec},
+			Sequence: []game.Instruction{{Primitive: game.PreventDamage{
+				Amount:    game.Fixed(effect.Amount.Value),
+				AnyTarget: game.AnyTargetDamageRecipient(0),
+			}}},
+		}
+		return mode.Ability(), nil
+	default:
+		return unsupported()
 	}
 }
 

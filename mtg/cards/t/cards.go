@@ -14,6 +14,7 @@ var Cards = []*game.CardDef{
 	TarrianSSoulcleaver,
 	TeferiSProtection,
 	TempestTechnique,
+	TestOfFaith,
 	Thallid,
 	ThallidDevourer,
 	ThallidGerminator,
@@ -34,5 +35,7 @@ var Cards = []*game.CardDef{
 	ToweringWaveMystic,
 	TranquilDomain,
 	TreasureHunt,
+	TreefolkHealer,
+	TroubledHealer,
 	TwinflameTravelers,
 }

@@ -6,6 +6,7 @@ import "github.com/natefinch/council4/mtg/game"
 
 // Cards lists all card definitions in this package.
 var Cards = []*game.CardDef{
+	Oasis,
 	ObNixilisSCruelty,
 	ObliteratingBolt,
 	ObscuraStorefront,
@@ -13,6 +14,8 @@ var Cards = []*game.CardDef{
 	OnduWarCleric,
 	OperaLoveSong,
 	OrcGeneral,
+	OrdruunCommando,
+	OrimSamiteHealer,
 	OrneryGoblin,
 	OsaiVultures,
 	OtherworldlyJourney,

@@ -18,6 +18,7 @@ var Cards = []*game.CardDef{
 	WindbriskHeights,
 	Windscouter,
 	WingspanMentor,
+	Withstand,
 	WoodenSphere,
 	WoodlandWanderer,
 	WorldBreaker,

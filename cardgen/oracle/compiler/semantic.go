@@ -2258,6 +2258,11 @@ type CompiledEffect struct {
 	// clause that prevents every combat damage event this turn with no recipient
 	// or source object.
 	PreventDamageGlobal bool
+	// PreventDamageNextRecipient mirrors the parser kind for the amount-based
+	// "Prevent the next N damage that would be dealt to <recipient> this turn."
+	// shield, naming the shielded recipient. The prevented amount N rides on the
+	// effect's Amount. It is None for the combat prevention forms.
+	PreventDamageNextRecipient parser.PreventDamageRecipientKind
 	// SpellsCantBeCounteredNextOnly mirrors the parser flag for an
 	// EffectSpellsCantBeCountered clause that limits the buff to the single next
 	// spell the controller casts rather than every spell cast this turn.

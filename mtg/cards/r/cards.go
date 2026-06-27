@@ -6,6 +6,7 @@ import "github.com/natefinch/council4/mtg/game"
 
 // Cards lists all card definitions in this package.
 var Cards = []*game.CardDef{
+	RakaDisciple,
 	RakishCrew,
 	RampantGrowth,
 	RancorousArchaic,
@@ -13,12 +14,15 @@ var Cards = []*game.CardDef{
 	RealmCloakedGiant,
 	ReaperFromTheAbyss,
 	RecruitmentOfficer,
+	Recuperate,
 	ReduceToAshes,
+	ReinforcedBulwark,
 	RendFlesh,
 	RenegadeRallier,
 	RestorationAngel,
 	ReturnToTheRanks,
 	Reveillark,
+	ReveredElder,
 	RhinoSRampage,
 	RhizomeLurcher,
 	RhonasTheIndomitable,

@@ -1118,6 +1118,9 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 	if effects, ok := parsePreventCombatDamageEffect(sentence, tokens, atoms); ok {
 		return effects
 	}
+	if effects, ok := parsePreventAmountDamageEffect(sentence, tokens, atoms); ok {
+		return effects
+	}
 	indices := effectIndices(tokens, atoms)
 	requiresOrderedLowering := orderedEffectCount(tokens, atoms) > 1
 	effects := make([]EffectSyntax, 0, len(indices))
@@ -4079,6 +4082,94 @@ func parsePreventCombatDamageEffect(sentence Sentence, tokens []shared.Token, at
 		PreventDamageBy: preventBy,
 		References:      references,
 		Exact:           true,
+	}}, true
+}
+
+func parsePreventAmountDamageEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	words := make([]shared.Token, 0, len(tokens))
+	for _, token := range tokens {
+		if token.Kind == shared.Period {
+			continue
+		}
+		words = append(words, token)
+	}
+	prefix := []string{"prevent", "the", "next"}
+	if len(words) < len(prefix)+1 {
+		return nil, false
+	}
+	for i, want := range prefix {
+		if !equalWord(words[i], want) {
+			return nil, false
+		}
+	}
+	amountToken := words[len(prefix)]
+	if amountToken.Kind != shared.Integer {
+		return nil, false
+	}
+	amount, err := strconv.Atoi(amountToken.Text)
+	if err != nil || amount < 1 {
+		return nil, false
+	}
+	middle := []string{"damage", "that", "would", "be", "dealt", "to"}
+	idx := len(prefix) + 1
+	if idx+len(middle) > len(words) {
+		return nil, false
+	}
+	for i, want := range middle {
+		if !equalWord(words[idx+i], want) {
+			return nil, false
+		}
+	}
+	idx += len(middle)
+	// The recipient run ends at the trailing "this turn".
+	if idx+2 > len(words) || !equalWord(words[len(words)-2], "this") || !equalWord(words[len(words)-1], "turn") {
+		return nil, false
+	}
+	recipientStart := idx
+	recipientEnd := len(words) - 2
+	if recipientStart >= recipientEnd {
+		return nil, false
+	}
+	recipient := words[recipientStart:recipientEnd]
+	recipientSpan := shared.SpanOf(recipient)
+
+	var kind PreventDamageRecipientKind
+	var refs []Reference
+	var recipientTargets []TargetSyntax
+	switch {
+	case equalWord(recipient[0], "you") && len(recipient) == 1:
+		kind = PreventDamageRecipientYou
+	case equalWord(recipient[0], "it") && len(recipient) == 1,
+		len(recipient) == 2 && (equalWord(recipient[0], "this") || equalWord(recipient[0], "that")) && equalWord(recipient[1], "creature"):
+		refs = referencesInSpan(atoms, recipientSpan)
+		if len(refs) != 1 {
+			return nil, false
+		}
+		kind = PreventDamageRecipientSource
+	case equalWord(recipient[0], "any") || equalWord(recipient[0], "target"):
+		recipientTargets = targetsInSpan(sentence.Targets, recipientSpan)
+		if len(recipientTargets) != 1 {
+			return nil, false
+		}
+		kind = PreventDamageRecipientTarget
+	default:
+		return nil, false
+	}
+
+	return []EffectSyntax{{
+		Kind:                       EffectPreventDamage,
+		Span:                       sentence.Span,
+		ClauseSpan:                 sentence.Span,
+		VerbSpan:                   words[0].Span,
+		Text:                       sentence.Text,
+		Tokens:                     append([]shared.Token(nil), tokens...),
+		Context:                    EffectContextController,
+		Duration:                   EffectDurationThisTurn,
+		Amount:                     EffectAmountSyntax{Span: amountToken.Span, Text: amountToken.Text, Value: amount, Known: true},
+		PreventDamageNextRecipient: kind,
+		References:                 refs,
+		Targets:                    recipientTargets,
+		Exact:                      true,
 	}}, true
 }
 

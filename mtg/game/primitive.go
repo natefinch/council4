@@ -1390,10 +1390,18 @@ type CreateReplacement struct {
 // every qualifying damage event regardless of who would deal or receive it
 // ("Prevent all combat damage that would be dealt this turn."); Global is
 // mutually exclusive with Object, Player, and BySource.
+//
+// AnyTarget names a single shield recipient through an any-target target slot
+// that may be chosen as either a player or a permanent ("Prevent the next N
+// damage that would be dealt to any target this turn."). It resolves to whichever
+// the controller chose: a player recipient sets the shield's player, a permanent
+// recipient sets its permanent. AnyTarget is mutually exclusive with Object,
+// Player, Global, and BySource.
 type PreventDamage struct {
 	Amount     Quantity
 	Object     ObjectReference
 	Player     PlayerReference
+	AnyTarget  DamageRecipient
 	All        bool
 	CombatOnly bool
 	BySource   bool

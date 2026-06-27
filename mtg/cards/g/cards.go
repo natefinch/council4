@@ -27,6 +27,7 @@ var Cards = []*game.CardDef{
 	GlintNestCrane,
 	Gloomwidow,
 	GoblinDarkDwellers,
+	GoblinLegionnaire,
 	GoblinLookout,
 	GoblinPyromancer,
 	GolgariRaiders,
