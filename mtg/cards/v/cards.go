@@ -18,6 +18,7 @@ var Cards = []*game.CardDef{
 	VenomSHunger,
 	Vesperlark,
 	VeteranGuardmouse,
+	ViashinoBranchrider,
 	VictorTimelyWilyTycoon,
 	VisionsOfVillainy,
 	VitasporeThallid,

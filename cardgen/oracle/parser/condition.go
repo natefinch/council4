@@ -941,6 +941,9 @@ func recognizeEventSubjectCondition(body []shared.Token, atoms Atoms) (Condition
 	if tokenWordsEqual(body, "it", "was", "kicked") {
 		return ConditionClause{Predicate: ConditionPredicateEventSubjectWasKicked}, true
 	}
+	if clause, ok := recognizeSourceNamedWasKickedCondition(body, atoms); ok {
+		return clause, true
+	}
 	if tokenWordsEqual(body, "it", "was", "cast") {
 		return ConditionClause{Predicate: ConditionPredicateEventSubjectWasCast}, true
 	}
@@ -966,6 +969,60 @@ func recognizeEventSubjectCondition(body []shared.Token, atoms Atoms) (Condition
 		return clause, true
 	}
 	return recognizeEventSubjectMatchCondition(body, atoms)
+}
+
+// recognizeSourceNamedWasKickedCondition recognizes a kicker gate whose subject
+// names the source permanent by its own card name or by a "this <type>" phrase
+// rather than the bare event pronoun ("If this creature was kicked, it enters
+// with N +1/+1 counters on it." — the Invasion/Zendikar kicker creature cycle).
+// The bare-pronoun "it was kicked" form is recognized by its caller; this
+// recognizer covers the leading replacement-clause subject that names the
+// source. The subject before "was kicked" must be only the card name or a
+// permanent-type noun phrase; any other subject fails closed.
+func recognizeSourceNamedWasKickedCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
+	rest, ok := cutSourceNamedSubjectTokens(body, atoms)
+	if !ok {
+		return ConditionClause{}, false
+	}
+	if !tokenWordsEqual(rest, "was", "kicked") {
+		return ConditionClause{}, false
+	}
+	return ConditionClause{Predicate: ConditionPredicateEventSubjectWasKicked}, true
+}
+
+// cutSourceNamedSubjectTokens consumes a leading source self-subject that names
+// the source either by its own card name or by a "this <type>" phrase, and
+// returns the remaining tokens. Unlike cutSourceSubjectTokens it does not consume
+// the bare pronoun "it" (handled by the event-subject recognizers) and does not
+// require a following "has"; the subject after "this" must be only a
+// permanent-type noun phrase. It fails closed on any other shape.
+func cutSourceNamedSubjectTokens(body []shared.Token, atoms Atoms) ([]shared.Token, bool) {
+	if len(body) == 0 {
+		return nil, false
+	}
+	if span, ok := atoms.SelfNameSpanStartingAt(body[0].Span); ok {
+		i := 0
+		for i < len(body) && spanCovers(span, body[i].Span) {
+			i++
+		}
+		if i == 0 {
+			return nil, false
+		}
+		return body[i:], true
+	}
+	rest, ok := cutTokenPrefix(body, "this")
+	if !ok {
+		return nil, false
+	}
+	wasIndex := tokenWordIndex(rest, "was")
+	if wasIndex < 1 {
+		return nil, false
+	}
+	selection, ok := parseConditionSelection(rest[:wasIndex], atoms)
+	if !ok || !conditionSelectionEmptyExceptType(selection) {
+		return nil, false
+	}
+	return rest[wasIndex:], true
 }
 
 // recognizeCreatedTokenMatchCondition handles the resolving gate "the token is a

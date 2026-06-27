@@ -111,6 +111,14 @@ type Condition struct {
 	// stack object's captured kicker-paid state and is false for copies.
 	SpellWasKicked bool
 
+	// EventPermanentWasKicked is satisfied when the permanent named by the
+	// triggering or entering event was kicked ("If this creature was kicked, it
+	// enters with N +1/+1 counters on it." — the kicker enters-with-counters
+	// cycle). It is evaluated against the event's captured kicker-paid state,
+	// which the entering-permanent event preserves from the spell that became the
+	// permanent, and is false when no such event is in context.
+	EventPermanentWasKicked bool
+
 	// ControllerGraveyardCardOfTypeCountAtLeast requires the context controller's
 	// graveyard to hold at least this many cards of ControllerGraveyardCountCardType
 	// ("if twenty or more creature cards are in your graveyard", Mortal Combat).
@@ -259,6 +267,7 @@ func (c *Condition) Empty() bool {
 		!c.EventHistory.Exists &&
 		!c.ControllerControlsCommander &&
 		!c.SpellWasKicked &&
+		!c.EventPermanentWasKicked &&
 		c.ControllerGraveyardCardOfTypeCountAtLeast == 0 &&
 		len(c.ControllerControlsNamed) == 0 &&
 		!c.FirstCombatPhaseOfTurn &&

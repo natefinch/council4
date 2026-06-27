@@ -23,6 +23,7 @@ var Cards = []*game.CardDef{
 	PhyrexianDriver,
 	PicturesOfSpiderMan,
 	PillagingHorde,
+	PincerSpider,
 	PiousWarrior,
 	PlanarGuide,
 	PlantElemental,

@@ -99,6 +99,7 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 		log:               log,
 		xValue:            options.XValue,
 		kickCount:         options.KickCount,
+		kickerPaid:        options.KickerPaid,
 		colorsOfManaSpent: options.ColorsOfManaSpentToCast,
 		manaSpentByColor:  options.ManaSpentByColorToCast,
 	}, g, permanent, fromZone)
@@ -180,6 +181,7 @@ func prepareCardPermanentFaceForSimultaneousEntry(
 		log:               log,
 		xValue:            options.XValue,
 		kickCount:         options.KickCount,
+		kickerPaid:        options.KickerPaid,
 		colorsOfManaSpent: options.ColorsOfManaSpentToCast,
 		manaSpentByColor:  options.ManaSpentByColorToCast,
 	}, g, permanent, fromZone)
