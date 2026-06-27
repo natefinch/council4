@@ -78,6 +78,7 @@ var Cards = []*game.CardDef{
 	BugenhagenWiseElder,
 	BullElephant,
 	BurnTheAccursed,
+	BurstLightning,
 	Bushwhack,
 	ButcherOfTheHorde,
 	ButcherSCleaver,

@@ -113,6 +113,9 @@ func lowerOrderedSequenceSpecialCase(
 	if content, ok := lowerInsteadOfThoseTokensSequence(ctx); ok {
 		return content, nil, true
 	}
+	if content, ok := lowerConditionalDamageAmountReplacementSequence(ctx); ok {
+		return content, nil, true
+	}
 	for _, target := range ctx.content.Targets {
 		if _, ok := counterAbilityTargetSpec(target); ok {
 			return game.AbilityContent{},

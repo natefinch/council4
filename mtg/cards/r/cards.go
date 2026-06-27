@@ -51,6 +51,7 @@ var Cards = []*game.CardDef{
 	RiveteersOverlook,
 	RoamingGhostlight,
 	RogueElephant,
+	RoilEruption,
 	RooftopAssassin,
 	RosethornHalberd,
 	RotWolf,

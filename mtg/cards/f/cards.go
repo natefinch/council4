@@ -37,6 +37,7 @@ var Cards = []*game.CardDef{
 	FireLitThicket,
 	FireWhip,
 	FirebladeCharger,
+	FirebendingLesson,
 	FiresOfYavimaya,
 	FistsOfTheDemigod,
 	FiveAlarmFire,
@@ -65,5 +66,6 @@ var Cards = []*game.CardDef{
 	Frightcrawler,
 	FrillscareMentor,
 	FrontierSeeker,
+	FrostBite,
 	FungalBloom,
 }

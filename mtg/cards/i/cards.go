@@ -29,6 +29,7 @@ var Cards = []*game.CardDef{
 	Insolence,
 	IntoTheFaeCourt,
 	InvasionOfIxalan,
+	InvasiveManeuvers,
 	IorRuinExpedition,
 	IroasSBlessing,
 	IronHeartChimera,
