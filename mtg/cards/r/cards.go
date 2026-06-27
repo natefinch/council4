@@ -35,6 +35,7 @@ var Cards = []*game.CardDef{
 	RhinoSRampage,
 	RhizomeLurcher,
 	RhonasTheIndomitable,
+	RhoxPummeler,
 	Riddlekeeper,
 	RimescaleDragon,
 	RingOfThreeWishes,

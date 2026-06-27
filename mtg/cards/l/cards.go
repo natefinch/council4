@@ -18,6 +18,7 @@ var Cards = []*game.CardDef{
 	Lifesmith,
 	LightningBolt,
 	LightningSerpent,
+	Lightwalker,
 	LilianaSSpoils,
 	Lithophage,
 	LivingPhone,
