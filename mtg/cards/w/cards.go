@@ -11,6 +11,7 @@ var Cards = []*game.CardDef{
 	WanderingMind,
 	WanderlightSpirit,
 	WantedGriffin,
+	WarDance,
 	WardSliver,
 	Weatherlight,
 	WebOfLifeAndDestiny,
