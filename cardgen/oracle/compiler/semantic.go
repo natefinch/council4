@@ -1595,6 +1595,14 @@ const (
 	// keeping its existing types. It lowers to a single ApplyContinuous over the
 	// source for the turn. Added last so existing kinds keep their wire values.
 	EffectAnimateSelf
+	// EffectCantAttackAlone, EffectCantBlockAlone, and EffectCantAttackOrBlockAlone
+	// are the static-only combat "alone" restrictions ("can't attack alone",
+	// "can't block alone", "can't attack or block alone"); they never appear as a
+	// resolving spell effect and pair only with a static rule declaration. Added
+	// last so existing kinds keep their wire values.
+	EffectCantAttackAlone
+	EffectCantBlockAlone
+	EffectCantAttackOrBlockAlone
 )
 
 // DurationKind identifies common continuous-effect durations.

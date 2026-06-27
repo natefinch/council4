@@ -21,6 +21,7 @@ var Cards = []*game.CardDef{
 	BeastToken7ea2b82a0ceb4e9aaaaaeb1dde95ca35,
 	BeastToken9dba1bc2a76d412cbc0ef7b8eac800f4,
 	BeastTokencaf35bcc02af4cefa1ae2d4d235e4a79,
+	BeastTokend2f35b1a1eba40078f27737d26b7a6a2,
 	BeebleToken2de03d671b554abc9a644f59658b9e97,
 	BirdIllusionToken6c29dcc1d7b64ef6b6630cc0e4be0529,
 	BirdSoldierTokenf1df6a8f251e4fcc92ce42eafdbae40b,

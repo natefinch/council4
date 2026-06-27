@@ -124,6 +124,36 @@ var CantAttackOrBlockStaticBody = StaticAbility{
 	},
 }
 
+// CantAttackAloneStaticBody is the complete static ability for a creature that
+// can't attack unless another creature also attacks.
+var CantAttackAloneStaticBody = StaticAbility{
+	Text: "This creature can't attack alone.",
+	RuleEffects: []RuleEffect{{
+		Kind:           RuleEffectCantAttackAlone,
+		AffectedSource: true,
+	}},
+}
+
+// CantBlockAloneStaticBody is the complete static ability for a creature that
+// can't block unless another creature also blocks.
+var CantBlockAloneStaticBody = StaticAbility{
+	Text: "This creature can't block alone.",
+	RuleEffects: []RuleEffect{{
+		Kind:           RuleEffectCantBlockAlone,
+		AffectedSource: true,
+	}},
+}
+
+// CantAttackOrBlockAloneStaticBody is the complete static ability for a creature
+// that can neither attack nor block alone.
+var CantAttackOrBlockAloneStaticBody = StaticAbility{
+	Text: "This creature can't attack or block alone.",
+	RuleEffects: []RuleEffect{
+		{Kind: RuleEffectCantAttackAlone, AffectedSource: true},
+		{Kind: RuleEffectCantBlockAlone, AffectedSource: true},
+	},
+}
+
 // NoMaximumHandSizeStaticBody is the complete static ability for "You have no
 // maximum hand size." The controller never discards down to a hand-size limit.
 var NoMaximumHandSizeStaticBody = StaticAbility{

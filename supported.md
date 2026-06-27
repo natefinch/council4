@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,285 of 32,501 cards eligible for paper support (47.0%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,297 of 32,501 cards eligible for paper support (47.1%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1078,6 +1078,7 @@ Council4 currently supports **15,285 of 32,501 cards eligible for paper support 
 - Beast
 - Beast
 - Beast
+- Beast
 - Beast Attack
 - Beast of Burden
 - Beast Walkers
@@ -1520,7 +1521,9 @@ Council4 currently supports **15,285 of 32,501 cards eligible for paper support 
 - Bomber Corps
 - Bond Beetle
 - Bond of Discipline
+- Bonded Construct
 - Bonded Fetch
+- Bonded Horncrest
 - Bonders' Enclave
 - Bonds of Mortality
 - Bonds of Quicksilver
@@ -2640,6 +2643,7 @@ Council4 currently supports **15,285 of 32,501 cards eligible for paper support 
 - Craterhoof Behemoth
 - Craterize
 - Craven Giant
+- Craven Hulk
 - Craven Knight
 - Craw Giant
 - Craw Wurm
@@ -3902,6 +3906,7 @@ Council4 currently supports **15,285 of 32,501 cards eligible for paper support 
 - Elvish Warrior
 - Emancipation Angel
 - Embalmed Ascendant
+- Ember Beast
 - Ember Hauler
 - Ember Island Production
 - Ember Shot
@@ -6728,6 +6733,7 @@ Council4 currently supports **15,285 of 32,501 cards eligible for paper support 
 - Jace's Sanctum
 - Jace's Scrutiny
 - Jace's Sentinel
+- Jackal Familiar
 - Jackdaw
 - Jackhammer
 - Jacques le Vert
@@ -7631,6 +7637,7 @@ Council4 currently supports **15,285 of 32,501 cards eligible for paper support 
 - Loyal Drake
 - Loyal Gryff
 - Loyal Guardian
+- Loyal Pegasus
 - Loyal Subordinate
 - Loyal Warhound
 - Lu Bu, Master-at-Arms
@@ -8142,6 +8149,7 @@ Council4 currently supports **15,285 of 32,501 cards eligible for paper support 
 - Militant Monk
 - Military Intelligence
 - Militia Bugler
+- Militia Rallier
 - Militia's Pride
 - Millennial Gargoyle
 - Millikin
@@ -8293,6 +8301,7 @@ Council4 currently supports **15,285 of 32,501 cards eligible for paper support 
 - Mogg Bombers
 - Mogg Cannon
 - Mogg Fanatic
+- Mogg Flunkies
 - Mogg Hollows
 - Mogg Maniac
 - Mogg Mob
@@ -9960,6 +9969,7 @@ Council4 currently supports **15,285 of 32,501 cards eligible for paper support 
 - Raging Goblin
 - Raging Gorilla
 - Raging Kavu
+- Raging Kronch
 - Raging Minotaur
 - Raging Poltergeist
 - Raging Redcap
@@ -13795,6 +13805,7 @@ Council4 currently supports **15,285 of 32,501 cards eligible for paper support 
 - Trumpeting Herd
 - Trusted Pegasus
 - Trustworthy Scout
+- Trusty Companion
 - Trusty Machete
 - Trusty Packbeast
 - Trynn, Champion of Freedom
@@ -15000,6 +15011,7 @@ Council4 currently supports **15,285 of 32,501 cards eligible for paper support 
 - Wizards' School
 - Wizened Cenn
 - Woebearer
+- Wojek Bodyguard
 - Wojek Halberdiers
 - Wolf
 - Wolf

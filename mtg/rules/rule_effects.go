@@ -619,6 +619,34 @@ func ruleEffectRequiresAttack(g *game.Game, attacker *game.Permanent) bool {
 	return false
 }
 
+// ruleEffectProhibitsAttackingAlone reports whether attacker carries a
+// "can't attack alone" restriction (RuleEffectCantAttackAlone): it may not be
+// declared as an attacker unless at least one other creature also attacks.
+func ruleEffectProhibitsAttackingAlone(g *game.Game, attacker *game.Permanent) bool {
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind == game.RuleEffectCantAttackAlone && ruleEffectMatchesPermanent(g, effect, attacker) {
+			return true
+		}
+	}
+	return false
+}
+
+// ruleEffectProhibitsBlockingAlone reports whether blocker carries a
+// "can't block alone" restriction (RuleEffectCantBlockAlone): it may not be
+// declared as a blocker unless at least one other creature also blocks.
+func ruleEffectProhibitsBlockingAlone(g *game.Game, blocker *game.Permanent) bool {
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind == game.RuleEffectCantBlockAlone && ruleEffectMatchesPermanent(g, effect, blocker) {
+			return true
+		}
+	}
+	return false
+}
+
 func ruleEffectProhibitsBlock(g *game.Game, blocker *game.Permanent) bool {
 	effects := activeRuleEffects(g)
 	for i := range effects {

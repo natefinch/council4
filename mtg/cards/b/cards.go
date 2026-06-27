@@ -46,6 +46,8 @@ var Cards = []*game.CardDef{
 	BogElemental,
 	BogStriderAsh,
 	BolasSCitadel,
+	BondedConstruct,
+	BondedHorncrest,
 	BoneHarvest,
 	BoromirGondorSHope,
 	BotBashingTime,

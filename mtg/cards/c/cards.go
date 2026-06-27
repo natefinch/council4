@@ -66,6 +66,7 @@ var Cards = []*game.CardDef{
 	CourageousOutrider,
 	Cowabunga,
 	CrashTheParty,
+	CravenHulk,
 	CrazedArmodon,
 	CroakingCounterpart,
 	CrosstownCourier,

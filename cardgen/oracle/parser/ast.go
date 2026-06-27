@@ -1266,6 +1266,11 @@ const (
 	// characteristic describes the attacker the subject blocks, not the subject's
 	// own blockers.
 	StaticRuleQualifierBlockedAttackerFlying StaticRuleQualifierKind = "StaticRuleQualifierBlockedAttackerFlying"
+	// StaticRuleQualifierAlone restricts an active attack, block, or attack-or-
+	// block prohibition to the "alone" case ("can't attack alone", "can't block
+	// alone", "can't attack or block alone"): the subject can't be the only
+	// creature attacking or blocking.
+	StaticRuleQualifierAlone StaticRuleQualifierKind = "StaticRuleQualifierAlone"
 )
 
 // StaticRuleSubject is a source-spanned simple static-rule subject.

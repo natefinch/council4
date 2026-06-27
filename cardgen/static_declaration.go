@@ -864,17 +864,19 @@ func lowerControlledGroupRuleSelection(group compiler.StaticGroupReference) ([]t
 
 func staticRuleDomain(kind compiler.StaticRuleKind) compiler.StaticRuleDomain {
 	switch kind {
-	case compiler.StaticRuleCantAttack, compiler.StaticRuleMustAttack, compiler.StaticRuleCantAttackYou:
+	case compiler.StaticRuleCantAttack, compiler.StaticRuleMustAttack, compiler.StaticRuleCantAttackYou,
+		compiler.StaticRuleCantAttackAlone:
 		return compiler.StaticRuleDomainAttack
 	case compiler.StaticRuleCantBlock, compiler.StaticRuleCantBeBlocked, compiler.StaticRuleMustBeBlocked,
 		compiler.StaticRuleCantBeBlockedByMoreThanOne, compiler.StaticRuleCantBeBlockedByCreaturesWith,
 		compiler.StaticRuleCanBlockOnlyCreaturesWithFlying,
 		compiler.StaticRuleCantBlockAndCantBeBlocked,
-		compiler.StaticRuleMustBeBlockedByAllAble, compiler.StaticRuleAssignDamageAsUnblocked:
+		compiler.StaticRuleMustBeBlockedByAllAble, compiler.StaticRuleAssignDamageAsUnblocked,
+		compiler.StaticRuleCantBlockAlone:
 		return compiler.StaticRuleDomainBlock
 	case compiler.StaticRuleCantBeCountered:
 		return compiler.StaticRuleDomainCountering
-	case compiler.StaticRuleCantAttackOrBlock:
+	case compiler.StaticRuleCantAttackOrBlock, compiler.StaticRuleCantAttackOrBlockAlone:
 		return compiler.StaticRuleDomainAttackBlock
 	case compiler.StaticRuleDoesntUntap:
 		return compiler.StaticRuleDomainUntap
@@ -1420,6 +1422,11 @@ func lowerStaticRuleEffects(kind compiler.StaticRuleKind) ([]game.RuleEffect, bo
 			{Kind: game.RuleEffectCantAttack},
 			{Kind: game.RuleEffectCantBlock},
 		}, true
+	case compiler.StaticRuleCantAttackOrBlockAlone:
+		return []game.RuleEffect{
+			{Kind: game.RuleEffectCantAttackAlone},
+			{Kind: game.RuleEffectCantBlockAlone},
+		}, true
 	case compiler.StaticRuleCantBlockAndCantBeBlocked:
 		return []game.RuleEffect{
 			{Kind: game.RuleEffectCantBlock},
@@ -1450,6 +1457,10 @@ func lowerStaticRuleKind(kind compiler.StaticRuleKind) (game.RuleEffectKind, boo
 		return game.RuleEffectCantBeBlockedByCreaturesWith, true
 	case compiler.StaticRuleCanBlockOnlyCreaturesWithFlying:
 		return game.RuleEffectCanBlockOnlyCreaturesWith, true
+	case compiler.StaticRuleCantAttackAlone:
+		return game.RuleEffectCantAttackAlone, true
+	case compiler.StaticRuleCantBlockAlone:
+		return game.RuleEffectCantBlockAlone, true
 	case compiler.StaticRuleCantAttack:
 		return game.RuleEffectCantAttack, true
 	case compiler.StaticRuleMustAttack:
@@ -1863,6 +1874,12 @@ func canonicalStaticDeclarationVarName(declaration compiler.StaticDeclaration) s
 		return "game.CantBeCounteredStaticBody"
 	case compiler.StaticRuleCantAttackOrBlock:
 		return "game.CantAttackOrBlockStaticBody"
+	case compiler.StaticRuleCantAttackAlone:
+		return "game.CantAttackAloneStaticBody"
+	case compiler.StaticRuleCantBlockAlone:
+		return "game.CantBlockAloneStaticBody"
+	case compiler.StaticRuleCantAttackOrBlockAlone:
+		return "game.CantAttackOrBlockAloneStaticBody"
 	default:
 		return ""
 	}
