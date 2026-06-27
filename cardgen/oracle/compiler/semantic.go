@@ -2385,6 +2385,13 @@ type CompiledEffect struct {
 	// "prevent N of that damage" replacement (Sphere of Law). It is zero for
 	// every one-shot or combat prevention form.
 	PreventDamageThatAmount int
+	// PreventDamageNextFromSource mirrors the parser flag for the one-shot "The
+	// next time a [color] source of your choice would deal damage to you this
+	// turn, prevent that damage." shield (Circle of Protection, Rune of
+	// Protection). PreventDamageSourceColors carries its optional source color
+	// filter; an empty slice matches a source of any color.
+	PreventDamageNextFromSource bool
+	PreventDamageSourceColors   []color.Color
 	// SpellsCantBeCounteredNextOnly mirrors the parser flag for an
 	// EffectSpellsCantBeCountered clause that limits the buff to the single next
 	// spell the controller casts rather than every spell cast this turn.

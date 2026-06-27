@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,587 of 32,501 cards eligible for paper support (48.0%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,600 of 32,501 cards eligible for paper support (48.0%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2293,6 +2293,11 @@ Council4 currently supports **15,587 of 32,501 cards eligible for paper support 
 - Circle of Dreams Druid
 - Circle of Elders
 - Circle of Power
+- Circle of Protection: Black
+- Circle of Protection: Blue
+- Circle of Protection: Green
+- Circle of Protection: Red
+- Circle of Protection: White
 - Circle of the Land Druid
 - Circuit Mender
 - Circular Logic
@@ -5873,6 +5878,7 @@ Council4 currently supports **15,587 of 32,501 cards eligible for paper support 
 - Haazda Exonerator
 - Haazda Marshal
 - Haazda Officer
+- Haazda Shield Mate
 - Haazda Snare Squad
 - Haazda Vigilante
 - Hackrobat
@@ -9488,6 +9494,7 @@ Council4 currently supports **15,587 of 32,501 cards eligible for paper support 
 - Pennon Blade
 - Penregon Strongbull
 - Pensive Minotaur
+- Pentagram of the Ages
 - Pentarch Ward
 - Pentavite
 - Penumbra Bobcat
@@ -10629,6 +10636,7 @@ Council4 currently supports **15,587 of 32,501 cards eligible for paper support 
 - Riftburst Hellion
 - Rig for War
 - Rigging Runner
+- Righteous Aura
 - Righteous Avengers
 - Righteous Blow
 - Righteous Cause
@@ -10887,6 +10895,11 @@ Council4 currently supports **15,587 of 32,501 cards eligible for paper support 
 - Run Amok
 - Runaway Boulder
 - Runaway Carriage
+- Rune of Protection: Black
+- Rune of Protection: Blue
+- Rune of Protection: Green
+- Rune of Protection: Red
+- Rune of Protection: White
 - Rune-Cervin Rider
 - Rune-Scarred Demon
 - Rune-Sealed Wall

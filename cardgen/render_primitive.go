@@ -2032,6 +2032,16 @@ func (r Renderer) renderPreventDamage(ctx *renderCtx, value game.PreventDamage) 
 	if value.Global {
 		fields = append(fields, "Global: true,")
 	}
+	if value.OneShot {
+		fields = append(fields, "OneShot: true,")
+	}
+	if len(value.SourceColors) > 0 {
+		colors, err := renderColorSlice(ctx, value.SourceColors)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("SourceColors: %s,", colors))
+	}
 	return structLit("game.PreventDamage", fields), nil
 }
 

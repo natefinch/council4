@@ -46,17 +46,22 @@ type ConditionalCounterPlacement struct {
 // permanent. When All is set the shield has no fixed capacity and prevents
 // every qualifying event for its duration; when CombatOnly is set it prevents
 // only combat damage. SourcePermanentID, when non-zero, prevents damage dealt
-// BY that permanent rather than damage dealt TO PermanentID/Player.
+// BY that permanent rather than damage dealt TO PermanentID/Player. When OneShot
+// is set the shield prevents a single qualifying event and then expires (the
+// "next time ... prevent that damage" shields). SourceColors, when non-empty,
+// restricts the shield to damage from a source of one of the listed colors.
 type PreventionShield struct {
 	ID                id.ID
 	Controller        PlayerID
 	Player            PlayerID
 	PermanentID       id.ID
 	SourcePermanentID id.ID
+	SourceColors      []color.Color
 	Amount            int
 	All               bool
 	CombatOnly        bool
 	Global            bool
+	OneShot           bool
 	Duration          EffectDuration
 	CreatedTurn       int
 }

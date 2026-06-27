@@ -1142,6 +1142,9 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 	if effects, ok := parsePreventCombatDamageEffect(sentence, tokens, atoms); ok {
 		return effects
 	}
+	if effects, ok := parsePreventNextDamageFromSourceEffect(sentence, tokens, atoms); ok {
+		return effects
+	}
 	if effects, ok := parsePreventAmountDamageEffect(sentence, tokens, atoms); ok {
 		return effects
 	}
@@ -4171,6 +4174,81 @@ func parsePreventCombatDamageEffect(sentence Sentence, tokens []shared.Token, at
 		PreventDamageBy: preventBy,
 		References:      references,
 		Exact:           true,
+	}}, true
+}
+
+// parsePreventNextDamageFromSourceEffect recognizes the one-shot "The next time
+// a [color] source of your choice would deal damage to you this turn, prevent
+// that damage." shield (Circle of Protection, Rune of Protection, Pentagram of
+// the Ages). It prevents all of the next damage the controller would take this
+// turn from a chosen source matching an optional single-color filter, then
+// expires. The color is recorded text-blind as a typed Color; an absent filter
+// ("a source of your choice") records no color. Any other recipient ("to any
+// target", "to enchanted creature"), amount ("prevent half that damage"),
+// source qualifier ("an artifact source", "of the chosen color"), or trailing
+// rider fails closed and flows through the generic effect parser.
+func parsePreventNextDamageFromSourceEffect(sentence Sentence, tokens []shared.Token, _ Atoms) ([]EffectSyntax, bool) {
+	words := make([]shared.Token, 0, len(tokens))
+	for _, token := range tokens {
+		if token.Kind == shared.Period {
+			continue
+		}
+		words = append(words, token)
+	}
+	head := []string{"the", "next", "time"}
+	if len(words) < len(head)+1 {
+		return nil, false
+	}
+	for i, want := range head {
+		if !equalWord(words[i], want) {
+			return nil, false
+		}
+	}
+	idx := len(head)
+	if !equalWord(words[idx], "a") && !equalWord(words[idx], "an") {
+		return nil, false
+	}
+	idx++
+	if idx >= len(words) {
+		return nil, false
+	}
+	var colors []Color
+	if colorValue, ok := recognizeColorWord(words[idx].Text); ok {
+		colors = []Color{colorValue}
+		idx++
+	}
+	tail := []string{"source", "of", "your", "choice", "would", "deal", "damage", "to", "you", "this", "turn"}
+	if idx+len(tail) > len(words) {
+		return nil, false
+	}
+	for i, want := range tail {
+		if !equalWord(words[idx+i], want) {
+			return nil, false
+		}
+	}
+	idx += len(tail)
+	closing := []string{"prevent", "that", "damage"}
+	if idx+1+len(closing) != len(words) || words[idx].Kind != shared.Comma {
+		return nil, false
+	}
+	idx++
+	for i, want := range closing {
+		if !equalWord(words[idx+i], want) {
+			return nil, false
+		}
+	}
+	return []EffectSyntax{{
+		Kind:                        EffectPreventDamage,
+		Span:                        sentence.Span,
+		ClauseSpan:                  sentence.Span,
+		VerbSpan:                    words[idx].Span,
+		Text:                        sentence.Text,
+		Tokens:                      append([]shared.Token(nil), tokens...),
+		Context:                     EffectContextController,
+		Duration:                    EffectDurationThisTurn,
+		PreventDamageNextFromSource: true,
+		PreventDamageSourceColors:   colors,
+		Exact:                       true,
 	}}, true
 }
 

@@ -1,6 +1,7 @@
 package game
 
 import (
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -1428,15 +1429,25 @@ type CreateReplacement struct {
 // the controller chose: a player recipient sets the shield's player, a permanent
 // recipient sets its permanent. AnyTarget is mutually exclusive with Object,
 // Player, Global, and BySource.
+//
+// OneShot marks a shield that prevents one qualifying damage event and then
+// expires, modeling the "The next time a source would deal damage ... this turn,
+// prevent that damage." replacement (Circle of Protection, Rune of Protection).
+// It is combined with All so the single event is prevented in full. SourceColors,
+// when non-empty, restricts the shield to damage from a source of one of the
+// listed colors ("a white source of your choice"); an empty slice matches a
+// source of any color.
 type PreventDamage struct {
-	Amount     Quantity
-	Object     ObjectReference
-	Player     PlayerReference
-	AnyTarget  DamageRecipient
-	All        bool
-	CombatOnly bool
-	BySource   bool
-	Global     bool
+	Amount       Quantity
+	Object       ObjectReference
+	Player       PlayerReference
+	AnyTarget    DamageRecipient
+	SourceColors []color.Color
+	All          bool
+	CombatOnly   bool
+	BySource     bool
+	Global       bool
+	OneShot      bool
 }
 
 // AddExtraPhases inserts additional phases into the current turn (CR 505.5,

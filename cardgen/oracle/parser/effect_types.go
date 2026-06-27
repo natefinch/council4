@@ -1707,6 +1707,19 @@ type EffectSyntax struct {
 	// damage." — Sphere of Law). The prevented amount N is a fixed positive
 	// integer; the value is zero for every one-shot or combat prevention form.
 	PreventDamageThatAmount int `json:",omitempty"`
+	// PreventDamageNextFromSource marks an EffectPreventDamage clause as the
+	// one-shot "The next time a [color] source of your choice would deal damage
+	// to you this turn, prevent that damage." shield (Circle of Protection, Rune
+	// of Protection, Pentagram of the Ages). It prevents all of the next damage
+	// the controller would take this turn from a source matching
+	// PreventDamageSourceColors, then expires. It is mutually exclusive with the
+	// combat, amount-based, and continuous prevention forms.
+	PreventDamageNextFromSource bool `json:",omitempty"`
+	// PreventDamageSourceColors carries the optional color filter on the chosen
+	// source for a PreventDamageNextFromSource clause. An empty slice matches a
+	// source of any color ("a source of your choice"); a single color restricts
+	// the shield to that color ("a white source of your choice").
+	PreventDamageSourceColors []Color `json:",omitempty"`
 	// SpellsCantBeCounteredNextOnly reports that an EffectSpellsCantBeCountered
 	// clause limits the buff to the single next spell the controller casts ("The
 	// next spell you cast this turn can't be countered.") rather than every spell
