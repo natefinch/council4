@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,235 of 32,501 cards eligible for paper support (46.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,242 of 32,501 cards eligible for paper support (46.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2171,6 +2171,7 @@ Council4 currently supports **15,235 of 32,501 cards eligible for paper support 
 - Child of Night
 - Child of the Volcano
 - Child of Thorns
+- Childhood Horror
 - Children of Korlis
 - Chill
 - Chill Haunting
@@ -3264,6 +3265,7 @@ Council4 currently supports **15,235 of 32,501 cards eligible for paper support 
 - Dirge of Dread
 - Dirgur Island Dragon // Skimming Strike
 - Dirtwater Wraith
+- Dirty Wererat
 - Disallow
 - Disappearing Act
 - Discerning Peddler
@@ -4826,6 +4828,7 @@ Council4 currently supports **15,235 of 32,501 cards eligible for paper support 
 - Friendly Ghost
 - Friendly Neighborhood
 - Friendly Teddy
+- Frightcrawler
 - Frilled Deathspitter
 - Frilled Mystic
 - Frilled Oculus
@@ -6710,6 +6713,7 @@ Council4 currently supports **15,235 of 32,501 cards eligible for paper support 
 - Jace's Projection
 - Jace's Sanctum
 - Jace's Scrutiny
+- Jace's Sentinel
 - Jackdaw
 - Jackhammer
 - Jacques le Vert
@@ -8729,6 +8733,7 @@ Council4 currently supports **15,235 of 32,501 cards eligible for paper support 
 - Nightstalker Engine
 - Nightveil Predator
 - Nightveil Sprite
+- Nightwhorl Hermit
 - Nightwind Glider
 - Nightwing Shade
 - Nihil Spellbomb
@@ -9800,6 +9805,7 @@ Council4 currently supports **15,235 of 32,501 cards eligible for paper support 
 - Putrefax
 - Putrefy
 - Putrid Goblin
+- Putrid Imp
 - Putrid Leech
 - Pygmy Allosaurus
 - Pygmy Kavu
@@ -14456,6 +14462,7 @@ Council4 currently supports **15,235 of 32,501 cards eligible for paper support 
 - Vorosh, the Hunter
 - Vorrac Battlehorns
 - Vorstclaw
+- Vortex Runner
 - Votary of the Conclave
 - Vote Out
 - Vow of Duty
