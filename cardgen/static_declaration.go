@@ -1657,6 +1657,12 @@ func appendStaticSpellCostModifierDeclaration(body *game.StaticAbility, declarat
 			base.CardSelection.ColorsAny = []color.Color{cost.SpellColor}
 		}
 	}
+	if len(cost.ExcludedSpellTypes) != 0 {
+		if len(cost.SpellTypes) != 0 || len(cost.SpellSubtypes) != 0 {
+			return false
+		}
+		base.CardSelection.ExcludedTypes = slices.Clone(cost.ExcludedSpellTypes)
+	}
 	if len(cost.SpellTypes) == 0 {
 		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
 			Kind:           game.RuleEffectCostModifier,

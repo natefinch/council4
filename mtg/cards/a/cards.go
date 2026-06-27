@@ -29,6 +29,7 @@ var Cards = []*game.CardDef{
 	ApothecaryInitiate,
 	AppealToEirdu,
 	ArcaneInfusion,
+	ArcaneMelee,
 	ArcanistSOwl,
 	ArchwayCommons,
 	ArdenvalePaladin,

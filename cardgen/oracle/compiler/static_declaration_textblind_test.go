@@ -567,6 +567,91 @@ func TestRecognizeStaticSpellCostModifierFromTypedNodes(t *testing.T) {
 	}
 }
 
+func TestRecognizeStaticSpellCostModifierCasterAndExcludedTypeFromTypedNodes(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		node          parser.StaticDeclarationSyntax
+		caster        StaticSpellCasterKind
+		domain        StaticGroupDomain
+		excludedTypes []types.Card
+		increase      int
+		reduction     int
+	}{
+		"all players bare": {
+			node: parser.StaticDeclarationSyntax{
+				Kind:                parser.StaticDeclarationCostModifier,
+				CostModifier:        parser.StaticDeclarationCostModifierSpellIncrease,
+				CostReductionAmount: 1,
+				SpellType:           parser.StaticDeclarationSpellTypeAll,
+				SpellCaster:         parser.StaticDeclarationSpellCasterAny,
+			},
+			caster:   StaticSpellCasterAny,
+			domain:   StaticGroupControllerSpells,
+			increase: 1,
+		},
+		"opponents bare": {
+			node: parser.StaticDeclarationSyntax{
+				Kind:                parser.StaticDeclarationCostModifier,
+				CostModifier:        parser.StaticDeclarationCostModifierSpellIncrease,
+				CostReductionAmount: 1,
+				SpellType:           parser.StaticDeclarationSpellTypeAll,
+				SpellCaster:         parser.StaticDeclarationSpellCasterOpponents,
+			},
+			caster:   StaticSpellCasterOpponents,
+			domain:   StaticGroupControllerSpells,
+			increase: 1,
+		},
+		"noncreature all players": {
+			node: parser.StaticDeclarationSyntax{
+				Kind:                parser.StaticDeclarationCostModifier,
+				CostModifier:        parser.StaticDeclarationCostModifierSpellIncrease,
+				CostReductionAmount: 1,
+				SpellType:           parser.StaticDeclarationSpellTypeAll,
+				SpellCaster:         parser.StaticDeclarationSpellCasterAny,
+				SpellExcludedTypes:  []parser.CardType{parser.CardTypeCreature},
+			},
+			caster:        StaticSpellCasterAny,
+			domain:        StaticGroupControllerSpells,
+			excludedTypes: []types.Card{types.Creature},
+			increase:      1,
+		},
+		"noncreature controller": {
+			node: parser.StaticDeclarationSyntax{
+				Kind:                parser.StaticDeclarationCostModifier,
+				CostModifier:        parser.StaticDeclarationCostModifierSpellReduction,
+				CostReductionAmount: 1,
+				SpellType:           parser.StaticDeclarationSpellTypeAll,
+				SpellCaster:         parser.StaticDeclarationSpellCasterController,
+				SpellExcludedTypes:  []parser.CardType{parser.CardTypeCreature},
+			},
+			caster:        StaticSpellCasterController,
+			domain:        StaticGroupControllerSpells,
+			excludedTypes: []types.Card{types.Creature},
+			reduction:     1,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			ability := CompiledAbility{Kind: AbilityStatic}
+			declaration, ok := recognizeStaticSpellCostModifierDeclaration(ability, []parser.StaticDeclarationSyntax{test.node})
+			if !ok {
+				t.Fatal("did not recognize typed spell cost modifier")
+			}
+			if declaration.Cost == nil ||
+				declaration.Cost.Kind != StaticCostModifierSpell ||
+				declaration.Cost.Caster != test.caster ||
+				declaration.Group.Domain != test.domain ||
+				declaration.Cost.GenericIncrease != test.increase ||
+				declaration.Cost.GenericReduction != test.reduction ||
+				len(declaration.Cost.SpellTypes) != 0 ||
+				!slices.Equal(declaration.Cost.ExcludedSpellTypes, test.excludedTypes) {
+				t.Fatalf("declaration = %#v", declaration)
+			}
+		})
+	}
+}
+
 func TestRecognizeStaticChosenTypeSpellCostModifierFromTypedNode(t *testing.T) {
 	node := parser.StaticDeclarationSyntax{
 		Kind:                parser.StaticDeclarationCostModifier,

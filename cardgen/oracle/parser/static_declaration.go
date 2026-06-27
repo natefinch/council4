@@ -507,6 +507,14 @@ type StaticDeclarationSyntax struct {
 	// and the SpellColors color disjunction.
 	SpellSubtypes []types.Sub `json:"-"`
 
+	// SpellExcludedTypes lists card types a cast-cost modifier exempts, set by a
+	// "non"-prefixed card-type filter word ("Noncreature spells cost {1} more to
+	// cast.", Thalia, Guardian of Thraben; "Nonartifact spells cost {1} more to
+	// cast.", Lodestone Golem): a spell matches only when it carries none of
+	// these card types. It is mutually exclusive with the SpellType single-type
+	// filter, the SpellSubtypes subtype filter, and the color filters.
+	SpellExcludedTypes []CardType `json:"-"`
+
 	// Player-rule payload: the closed player-scoped rule this declaration grants
 	// to the static ability's controller.
 	PlayerRule          StaticDeclarationPlayerRuleKind `json:",omitempty"`
@@ -2734,8 +2742,12 @@ func parseStaticSpellCostModifierDeclaration(tokens []shared.Token, atoms Atoms)
 	}
 	spellType := StaticDeclarationSpellTypeAll
 	var subtypes []types.Sub
+	var excludedTypes []CardType
 	if subs, next, ok := staticSpellSubtypeFilter(rest, atoms); ok {
 		subtypes = subs
+		rest = next
+	} else if excluded, next, ok := staticSpellExcludedTypeFilter(rest); ok {
+		excludedTypes = excluded
 		rest = next
 	} else {
 		var ok bool
@@ -2744,10 +2756,21 @@ func parseStaticSpellCostModifierDeclaration(tokens []shared.Token, atoms Atoms)
 			return StaticDeclarationSyntax{}, false
 		}
 	}
-	if !staticWordsAt(rest, 0, "spells", "you", "cast") {
+	if !staticWordsAt(rest, 0, "spells") {
 		return StaticDeclarationSyntax{}, false
 	}
-	rest = rest[3:]
+	rest = rest[1:]
+	var caster StaticDeclarationSpellCasterKind
+	switch {
+	case staticWordsAt(rest, 0, "you", "cast"):
+		caster = StaticDeclarationSpellCasterController
+		rest = rest[2:]
+	case staticWordsAt(rest, 0, "your", "opponents", "cast"):
+		caster = StaticDeclarationSpellCasterOpponents
+		rest = rest[3:]
+	default:
+		caster = StaticDeclarationSpellCasterAny
+	}
 	var castZone StaticDeclarationCastZoneKind
 	if staticWordsAt(rest, 0, "from", "your", "graveyard") {
 		castZone = StaticDeclarationCastZoneGraveyard
@@ -2779,6 +2802,8 @@ func parseStaticSpellCostModifierDeclaration(tokens []shared.Token, atoms Atoms)
 		SpellType:                  spellType,
 		SpellColor:                 spellColor,
 		SpellSubtypes:              subtypes,
+		SpellExcludedTypes:         excludedTypes,
+		SpellCaster:                caster,
 		SpellCastZone:              castZone,
 		SpellPowerAtLeast:          powerAtLeast,
 		MatchSpellPowerAtLeast:     powerAtLeast > 0,
@@ -3324,6 +3349,23 @@ func staticSpellTypeFilter(tokens []shared.Token) (StaticDeclarationSpellTypeKin
 	default:
 		return StaticDeclarationSpellTypeAll, nil, false
 	}
+}
+
+// staticSpellExcludedTypeFilter strips a leading "non<type> spells" exclusion
+// filter ("Noncreature spells ...", "Nonartifact spells ...") from a cast-cost
+// modifier declaration, returning the excluded card types and the remaining
+// tokens beginning at the "spells" noun. It recognizes a single "non"-prefixed
+// card-type word immediately followed by "spells"; any other leading word fails
+// closed so the bare and single-type filters keep their meaning.
+func staticSpellExcludedTypeFilter(tokens []shared.Token) ([]CardType, []shared.Token, bool) {
+	if len(tokens) < 2 || !equalWord(tokens[1], "spells") {
+		return nil, nil, false
+	}
+	cardType, ok := recognizeExcludedCardTypeWord(tokens[0].Text)
+	if !ok {
+		return nil, nil, false
+	}
+	return []CardType{cardType}, tokens[1:], true
 }
 
 // parseStaticAbilityReduction recognizes "Cycling abilities you activate cost up

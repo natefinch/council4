@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,106 of 32,501 cards eligible for paper support (46.5%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,121 of 32,501 cards eligible for paper support (46.5%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -542,6 +542,7 @@ Council4 currently supports **15,106 of 32,501 cards eligible for paper support 
 - Arcane Flight
 - Arcane Infusion
 - Arcane Laboratory
+- Arcane Melee
 - Arcane Sanctum
 - Arcane Signet
 - Arcane Spyglass
@@ -2159,6 +2160,7 @@ Council4 currently supports **15,106 of 32,501 cards eligible for paper support 
 - Child of Night
 - Child of Thorns
 - Children of Korlis
+- Chill
 - Chill Haunting
 - Chill of Foreboding
 - Chill to the Bone
@@ -4344,6 +4346,7 @@ Council4 currently supports **15,106 of 32,501 cards eligible for paper support 
 - Ferocious Pup
 - Ferocious Zheng
 - Ferocity
+- Feroz's Ban
 - Ferropede
 - Ferrous Lake
 - Ferrovore
@@ -5221,6 +5224,7 @@ Council4 currently supports **15,106 of 32,501 cards eligible for paper support 
 - Gloryheath Lynx
 - Gloryscale Viashino
 - Glowing Anemone
+- Glowrider
 - Glowstone Recluse
 - Gluttonous Guest
 - Gluttonous Slime
@@ -5365,6 +5369,7 @@ Council4 currently supports **15,106 of 32,501 cards eligible for paper support 
 - Goblinslide
 - God-Favored General
 - God-Pharaoh's Faithful
+- God-Pharaoh's Statue
 - Godless Shrine
 - Gods Willing
 - Gods' Eye, Gate to the Reikai
@@ -5458,6 +5463,7 @@ Council4 currently supports **15,106 of 32,501 cards eligible for paper support 
 - Grafted Skullcap
 - Graham O'Brien
 - Grand Abolisher
+- Grand Arbiter Augustin IV
 - Grand Coliseum
 - Grand Crescendo
 - Grand Entryway // Elegant Rotunda
@@ -5901,6 +5907,7 @@ Council4 currently supports **15,106 of 32,501 cards eligible for paper support 
 - Hellkite Punisher
 - Hellraiser Goblin
 - Hellspark Elemental
+- Helm of Awakening
 - Helm of Chatzuk
 - Helm of the Gods
 - Helm of the Host
@@ -6579,6 +6586,7 @@ Council4 currently supports **15,106 of 32,501 cards eligible for paper support 
 - Iron Apprentice
 - Iron Bully
 - Iron Giant
+- Iron Lad, Young Avenger
 - Iron Lance
 - Iron League Steed
 - Iron Man, Modern Marvel
@@ -7458,6 +7466,7 @@ Council4 currently supports **15,106 of 32,501 cards eligible for paper support 
 - Locthwain Paladin
 - Locust Spray
 - Locust Swarm
+- Lodestone Golem
 - Lodestone Myr
 - Lofty Dreams
 - Lokhust Heavy Destroyer
@@ -7472,6 +7481,7 @@ Council4 currently supports **15,106 of 32,501 cards eligible for paper support 
 - Long-Forgotten Gohei
 - Longbow Archer
 - Longshot Squad
+- Longshot, Rebel Bowman
 - Longtusk Cub
 - Looming Altisaur
 - Looming Shade
@@ -12029,6 +12039,7 @@ Council4 currently supports **15,106 of 32,501 cards eligible for paper support 
 - Spellweaver Eternal
 - Spellwild Ouphe
 - Sphere Grid
+- Sphere of Resistance
 - Sphere of Safety
 - Sphinx
 - Sphinx
@@ -12238,6 +12249,7 @@ Council4 currently supports **15,106 of 32,501 cards eligible for paper support 
 - Squee's Embrace
 - Squee's Toy
 - Squee, Goblin Nabob
+- Squeeze
 - Squelch
 - Squelching Leeches
 - Squid
@@ -13054,6 +13066,7 @@ Council4 currently supports **15,106 of 32,501 cards eligible for paper support 
 - Thalakos Sentry
 - Thalia's Geistcaller
 - Thalia's Lieutenant
+- Thalia, Guardian of Thraben
 - Thallid
 - Thallid Devourer
 - Thallid Germinator
@@ -13176,6 +13189,7 @@ Council4 currently supports **15,106 of 32,501 cards eligible for paper support 
 - Thorn Elemental
 - Thorn Lieutenant
 - Thorn Mammoth
+- Thorn of Amethyst
 - Thorn of the Black Rose
 - Thorn Thallid
 - Thorn-Thrash Viashino
@@ -14350,6 +14364,7 @@ Council4 currently supports **15,106 of 32,501 cards eligible for paper support 
 - Vraska Joins Up
 - Vraska's Conquistador
 - Vraska's Contempt
+- Vryn Wingmare
 - Vulpikeet
 - Vulpine Goliath
 - Vulshok Battlegear

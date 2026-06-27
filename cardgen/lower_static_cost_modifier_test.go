@@ -294,3 +294,74 @@ func TestLowerStaticSpellCostModifierRejectsUnsupported(t *testing.T) {
 		})
 	}
 }
+
+// TestLowerStaticSpellCostModifierCasterAndExcludedType covers the broadened
+// shapes: cast-cost modifiers scoped to all players or opponents (not just the
+// controller) and modifiers filtered by an excluded card type ("Noncreature
+// spells ...").
+func TestLowerStaticSpellCostModifierCasterAndExcludedType(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		oracleText     string
+		affectedPlayer game.PlayerRelation
+		modifier       game.CostModifier
+	}{
+		"all players bare": {
+			oracleText:     "Spells cost {1} more to cast.",
+			affectedPlayer: game.PlayerAny,
+			modifier:       game.CostModifier{Kind: game.CostModifierSpell, GenericIncrease: 1},
+		},
+		"opponents bare": {
+			oracleText:     "Spells your opponents cast cost {1} more to cast.",
+			affectedPlayer: game.PlayerOpponent,
+			modifier:       game.CostModifier{Kind: game.CostModifierSpell, GenericIncrease: 1},
+		},
+		"noncreature all players": {
+			oracleText:     "Noncreature spells cost {1} more to cast.",
+			affectedPlayer: game.PlayerAny,
+			modifier:       game.CostModifier{Kind: game.CostModifierSpell, CardSelection: game.Selection{ExcludedTypes: []types.Card{types.Creature}}, GenericIncrease: 1},
+		},
+		"noncreature controller": {
+			oracleText:     "Noncreature spells you cast cost {1} less to cast.",
+			affectedPlayer: game.PlayerYou,
+			modifier:       game.CostModifier{Kind: game.CostModifierSpell, CardSelection: game.Selection{ExcludedTypes: []types.Card{types.Creature}}, GenericReduction: 1},
+		},
+		"nonartifact opponents": {
+			oracleText:     "Nonartifact spells your opponents cast cost {2} more to cast.",
+			affectedPlayer: game.PlayerOpponent,
+			modifier:       game.CostModifier{Kind: game.CostModifierSpell, CardSelection: game.Selection{ExcludedTypes: []types.Card{types.Artifact}}, GenericIncrease: 2},
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Taxer",
+				Layout:     "normal",
+				TypeLine:   "Artifact",
+				OracleText: test.oracleText,
+			})
+			if len(face.StaticAbilities) != 1 {
+				t.Fatalf("static abilities = %d, want 1", len(face.StaticAbilities))
+			}
+			effects := face.StaticAbilities[0].Body.RuleEffects
+			if len(effects) != 1 {
+				t.Fatalf("rule effects = %#v, want 1", effects)
+			}
+			effect := effects[0]
+			if effect.Kind != game.RuleEffectCostModifier {
+				t.Fatalf("rule effect kind = %v, want cost modifier", effect.Kind)
+			}
+			if effect.AffectedPlayer != test.affectedPlayer {
+				t.Fatalf("affected player = %v, want %v", effect.AffectedPlayer, test.affectedPlayer)
+			}
+			got := effect.CostModifier
+			if got.Kind != test.modifier.Kind ||
+				!reflect.DeepEqual(got.CardSelection, test.modifier.CardSelection) ||
+				got.GenericReduction != test.modifier.GenericReduction ||
+				got.GenericIncrease != test.modifier.GenericIncrease {
+				t.Fatalf("cost modifier = %#v, want %#v", got, test.modifier)
+			}
+		})
+	}
+}

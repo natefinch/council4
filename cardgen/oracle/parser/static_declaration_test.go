@@ -1807,10 +1807,8 @@ func TestParseStaticSpellCostModifierDeclarationRejections(t *testing.T) {
 	t.Parallel()
 	sources := map[string]string{
 		"multicolored filter":  "Multicolored spells you cast cost {1} less to cast.",
-		"noncreature filter":   "Noncreature spells you cast cost {1} more to cast.",
 		"leading condition":    "During turns other than yours, spells you cast cost {1} less to cast.",
 		"trailing condition":   "Creature spells you cast cost {1} less to cast if you control a Wizard.",
-		"opponents cast":       "Spells your opponents cast cost {1} more to cast.",
 		"zero amount":          "Spells you cast cost {0} less to cast.",
 		"compound enchantment": "Instant and enchantment spells you cast cost {2} less to cast.",
 	}
@@ -1823,6 +1821,68 @@ func TestParseStaticSpellCostModifierDeclarationRejections(t *testing.T) {
 						declaration.CostModifier == StaticDeclarationCostModifierSpellIncrease) {
 					t.Fatalf("source %q unexpectedly produced a spell cost modifier: %#v", source, declaration)
 				}
+			}
+		})
+	}
+}
+
+func TestParseStaticSpellCostModifierCasterAndExcludedType(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		source        string
+		modifier      StaticDeclarationCostModifierKind
+		caster        StaticDeclarationSpellCasterKind
+		excludedTypes []CardType
+		amount        int
+	}{
+		"all players bare": {
+			source:   "Spells cost {1} more to cast.",
+			modifier: StaticDeclarationCostModifierSpellIncrease,
+			caster:   StaticDeclarationSpellCasterAny,
+			amount:   1,
+		},
+		"opponents cast": {
+			source:   "Spells your opponents cast cost {1} more to cast.",
+			modifier: StaticDeclarationCostModifierSpellIncrease,
+			caster:   StaticDeclarationSpellCasterOpponents,
+			amount:   1,
+		},
+		"noncreature all players": {
+			source:        "Noncreature spells cost {1} more to cast.",
+			modifier:      StaticDeclarationCostModifierSpellIncrease,
+			caster:        StaticDeclarationSpellCasterAny,
+			excludedTypes: []CardType{CardTypeCreature},
+			amount:        1,
+		},
+		"noncreature controller": {
+			source:        "Noncreature spells you cast cost {1} less to cast.",
+			modifier:      StaticDeclarationCostModifierSpellReduction,
+			caster:        StaticDeclarationSpellCasterController,
+			excludedTypes: []CardType{CardTypeCreature},
+			amount:        1,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			var found *StaticDeclarationSyntax
+			for _, declaration := range parseStaticDeclarationSyntax(t, test.source, Context{}) {
+				if declaration.Kind == StaticDeclarationCostModifier && declaration.CostModifier == test.modifier {
+					declaration := declaration
+					found = &declaration
+				}
+			}
+			if found == nil {
+				t.Fatalf("source %q produced no %v declaration", test.source, test.modifier)
+			}
+			if found.SpellCaster != test.caster {
+				t.Fatalf("caster = %q, want %q", found.SpellCaster, test.caster)
+			}
+			if !slices.Equal(found.SpellExcludedTypes, test.excludedTypes) {
+				t.Fatalf("excluded types = %v, want %v", found.SpellExcludedTypes, test.excludedTypes)
+			}
+			if found.CostReductionAmount != test.amount {
+				t.Fatalf("amount = %d, want %d", found.CostReductionAmount, test.amount)
 			}
 		})
 	}
