@@ -1505,11 +1505,14 @@ func exactMassBounceGroup(ctx contentCtx) (game.GroupReference, bool) {
 // massBounceReferencesOnly reports whether every reference of a mass return is
 // one the group bounce addresses directly rather than through the reference. The
 // destination possessive ("their owners' hands", "its owner's hand") is always
-// tolerated because the compiler cannot bind a possessive to a group. When the
-// group selector carries a counter qualifier ("without a +1/+1 counter on it"),
-// the qualifier's trailing "it"/"them" pronoun is part of the selected group and
-// is tolerated too. Every other reference fails closed. A reference-free group
-// always passes.
+// tolerated because a group bounce sends every permanent to its own owner's hand
+// regardless of how the compiler bound that possessive: an "Each player" mass
+// return leaves it ambiguous, while a triggered "When ~ enters, return all ..."
+// binds it to the entering permanent, and neither binding changes the per-owner
+// resolution. When the group selector carries a counter qualifier ("without a
+// +1/+1 counter on it"), the qualifier's trailing "it"/"them" pronoun is part of
+// the selected group and is tolerated too. Every other reference fails closed. A
+// reference-free group always passes.
 func massBounceReferencesOnly(
 	references []compiler.CompiledReference,
 	selector compiler.CompiledSelector,
@@ -1517,8 +1520,7 @@ func massBounceReferencesOnly(
 	hasCounterQualifier := selector.MatchCounter || selector.MatchNoCounters ||
 		selector.MatchAnyCounter || selector.MatchExcludedCounter
 	for _, reference := range references {
-		if reference.Kind != compiler.ReferencePronoun ||
-			reference.Binding != compiler.ReferenceBindingAmbiguous {
+		if reference.Kind != compiler.ReferencePronoun {
 			return false
 		}
 		switch reference.Pronoun {

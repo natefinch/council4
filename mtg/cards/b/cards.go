@@ -48,6 +48,7 @@ var Cards = []*game.CardDef{
 	BloodletterQuill,
 	BloodlineNecromancer,
 	BloodthirstyOgre,
+	BlotOutTheSky,
 	BlueWard,
 	BoardTheWeatherlight,
 	BogElemental,

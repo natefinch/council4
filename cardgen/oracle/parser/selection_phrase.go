@@ -178,15 +178,8 @@ func selectionPhrasePrefixWords(selection SelectionSyntax) ([]string, bool) {
 		}
 		words = append(words, "non"+color)
 	}
-	if len(selection.ExcludedTypes) > 1 {
+	if ok := appendExcludedTypePrefixWords(&words, selection.ExcludedTypes); !ok {
 		return nil, false
-	}
-	if len(selection.ExcludedTypes) == 1 {
-		excludedNoun, ok := permanentCardTypeNoun(selection.ExcludedTypes[0])
-		if !ok {
-			return nil, false
-		}
-		words = append(words, "non"+excludedNoun)
 	}
 	if len(selection.ExcludedSupertypes) != 0 {
 		if len(selection.ExcludedSupertypes) != 1 || selection.ExcludedSupertypes[0] != SupertypeBasic {
@@ -195,6 +188,27 @@ func selectionPhrasePrefixWords(selection SelectionSyntax) ([]string, bool) {
 		words = append(words, "nonbasic")
 	}
 	return words, true
+}
+
+// appendExcludedTypePrefixWords renders one or more excluded card types as the
+// canonical "non<type>" adjective prefixes, comma-separating consecutive
+// exclusions in source order ("noncreature, nonland permanents"). A single
+// exclusion renders without a comma ("nonland permanents"). It preserves the
+// stored order so the rendered phrase round-trips byte-exactly against the
+// source; an unrenderable card type fails closed.
+func appendExcludedTypePrefixWords(words *[]string, excluded []CardType) bool {
+	for i, excludedType := range excluded {
+		excludedNoun, ok := permanentCardTypeNoun(excludedType)
+		if !ok {
+			return false
+		}
+		word := "non" + excludedNoun
+		if i < len(excluded)-1 {
+			word += ","
+		}
+		*words = append(*words, word)
+	}
+	return true
 }
 
 // selectionPhraseNoun reconstructs the permanent-group base noun from the typed

@@ -22,6 +22,7 @@ var Cards = []*game.CardDef{
 	DeepGoblinSkulltaker,
 	DefendersOfHumanity,
 	DemonicAppetite,
+	DenizenOfTheDeep,
 	DescentOfTheDragons,
 	DesertSDue,
 	DesolationTwin,

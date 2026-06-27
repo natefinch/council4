@@ -145,6 +145,7 @@ var Cards = []*game.CardDef{
 	SturdyHatchling,
 	SumalaWoodshaper,
 	SunDroplet,
+	Sunderflock,
 	SunhomeEnforcer,
 	SunkenField,
 	SunspringExpedition,

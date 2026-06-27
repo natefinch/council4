@@ -99,6 +99,18 @@ func TestSelectionPhraseMassRoundTrip(t *testing.T) {
 			want:      "permanents with mana value 2 or greater",
 		},
 		{
+			name:      "two excluded types",
+			selection: SelectionSyntax{Kind: SelectionPermanent, All: true, ExcludedTypes: []CardType{CardTypeCreature, CardTypeLand}},
+			number:    numberPlural,
+			want:      "noncreature, nonland permanents",
+		},
+		{
+			name:      "other nonland permanents",
+			selection: SelectionSyntax{Kind: SelectionPermanent, All: true, Other: true, ExcludedTypes: []CardType{CardTypeLand}},
+			number:    numberPlural,
+			want:      "other nonland permanents",
+		},
+		{
 			name:      "each singular creature",
 			selection: SelectionSyntax{Kind: SelectionCreature, All: true, RequiredTypesAny: []CardType{CardTypeCreature}},
 			number:    numberSingular,
@@ -150,9 +162,6 @@ func TestSelectionPhraseRejectsUnrepresentable(t *testing.T) {
 		{"another", func(s *SelectionSyntax) { s.Another = true }},
 		{"power less than source", func(s *SelectionSyntax) { s.PowerLessThanSource = true }},
 		{"two colors", func(s *SelectionSyntax) { s.ColorsAny = []Color{ColorWhite, ColorBlue} }},
-		{"two excluded types", func(s *SelectionSyntax) {
-			s.ExcludedTypes = []CardType{CardTypeLand, CardTypeArtifact}
-		}},
 		{"non-permanent kind", func(s *SelectionSyntax) {
 			s.Kind = SelectionUnknown
 			s.RequiredTypesAny = nil
