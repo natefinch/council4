@@ -8,6 +8,7 @@ import "github.com/natefinch/council4/mtg/game"
 var Cards = []*game.CardDef{
 	BackForMore,
 	BalmOfRestoration,
+	BalduvianHorde,
 	BalustradeSpy,
 	Bandage,
 	BanditSHaul,
@@ -30,6 +31,7 @@ var Cards = []*game.CardDef{
 	BlitzOfTheThunderRaptor,
 	BloodletterQuill,
 	BoardTheWeatherlight,
+	BogElemental,
 	BogStriderAsh,
 	BolasSCitadel,
 	BoneHarvest,
@@ -45,6 +47,7 @@ var Cards = []*game.CardDef{
 	BrokersHideout,
 	BuckyBarnesEagerAlly,
 	BugenhagenWiseElder,
+	BullElephant,
 	BurnTheAccursed,
 	Bushwhack,
 }

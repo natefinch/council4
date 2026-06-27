@@ -7,6 +7,7 @@ import "github.com/natefinch/council4/mtg/game"
 // Cards lists all card definitions in this package.
 var Cards = []*game.CardDef{
 	VantressPaladin,
+	VaporSnare,
 	Vaporkin,
 	VastlandsScavenger,
 	Vebulid,
@@ -16,4 +17,5 @@ var Cards = []*game.CardDef{
 	VitasporeThallid,
 	VivienReid,
 	VoraciousHatchling,
+	VulshokWarBoar,
 }

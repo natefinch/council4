@@ -826,18 +826,21 @@ func lowerSacrificeSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnosti
 }
 
 // lowerSacrificeSourceUnlessPaySpell lowers "sacrifice <this permanent> unless
-// you pay {cost}." (Phantasmal Forces, Krosan Cloudscraper, Sunken City, and the
-// upkeep "pay or sacrifice" cycle). The controller is offered the fixed mana
-// payment as the ability resolves; declining (or being unable to pay) sacrifices
-// the source permanent. It is restricted to a single source-bound sacrifice with
-// a fixed, non-variable controller payment and no targets, modes, or keywords.
+// you pay <cost>." (Phantasmal Forces, Krosan Cloudscraper, Sunken City, and the
+// upkeep "pay or sacrifice" cycle, plus the non-mana cost forms "unless you
+// discard a card", "unless you sacrifice another creature", "unless you exile a
+// card from your graveyard"). The controller is offered the payment as the
+// ability resolves; declining (or being unable to pay) sacrifices the source
+// permanent. It is restricted to a single source-bound sacrifice with a fixed,
+// non-variable controller payment and no targets, modes, or keywords. The
+// payment is either a fixed mana cost or a non-mana additional cost, but not
+// both.
 func lowerSacrificeSourceUnlessPaySpell(ctx contentCtx) (game.AbilityContent, bool) {
 	if len(ctx.content.Effects) != 1 ||
 		len(ctx.content.Targets) != 0 ||
 		len(ctx.content.Modes) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
-		len(ctx.content.Conditions) != 1 ||
-		len(ctx.content.References) != 1 {
+		len(ctx.content.Conditions) != 1 {
 		return game.AbilityContent{}, false
 	}
 	effect := ctx.content.Effects[0]
@@ -847,25 +850,48 @@ func lowerSacrificeSourceUnlessPaySpell(ctx contentCtx) (game.AbilityContent, bo
 		effect.Context != parser.EffectContextController ||
 		payment.Form != parser.EffectPaymentFormUnless ||
 		payment.Payer != parser.EffectPaymentPayerController ||
-		len(payment.ManaCost) == 0 ||
-		manaCostHasVariableSymbol(payment.ManaCost) ||
-		payment.GenericManaAmount.DynamicKind != compiler.DynamicAmountNone ||
-		ctx.content.Conditions[0].Predicate != compiler.ConditionPredicateControllerDoesNotPay ||
-		ctx.content.References[0].Binding != compiler.ReferenceBindingSource {
+		ctx.content.Conditions[0].Predicate != compiler.ConditionPredicateControllerDoesNotPay {
+		return game.AbilityContent{}, false
+	}
+	// The only reference outside the payment cost is the permanent being
+	// sacrificed: the direct pronoun "it" (an enters/attacks trigger's event
+	// permanent) or the source named explicitly as "this creature"/the card's
+	// own name. Any reference that falls inside the payment span (such as "its
+	// owner" in a return cost) belongs to the cost, not the sacrifice, and is
+	// realized by the additional-cost lowering.
+	var sacrificeObject game.ObjectReference
+	sacrificeReferences := 0
+	for i := range ctx.content.References {
+		reference := ctx.content.References[i]
+		if payment.Order.Contains(reference.Order) {
+			continue
+		}
+		object, ok := lowerObjectReference(reference, referenceLoweringContext{
+			AllowSource: true,
+			AllowEvent:  true,
+		})
+		if !ok {
+			return game.AbilityContent{}, false
+		}
+		sacrificeObject = object
+		sacrificeReferences++
+	}
+	if sacrificeReferences != 1 {
+		return game.AbilityContent{}, false
+	}
+	resolution, ok := sacrificeUnlessResolutionPayment(payment)
+	if !ok {
 		return game.AbilityContent{}, false
 	}
 	const resultKey = game.ResultKey("sacrifice-unless-paid")
 	return game.Mode{
 		Sequence: []game.Instruction{
 			{
-				Primitive: game.Pay{Payment: game.ResolutionPayment{
-					Prompt:   "Pay " + payment.ManaCost.String() + "?",
-					ManaCost: opt.Val(payment.ManaCost),
-				}},
+				Primitive:     game.Pay{Payment: resolution},
 				PublishResult: resultKey,
 			},
 			{
-				Primitive: game.Sacrifice{Object: game.SourcePermanentReference()},
+				Primitive: game.Sacrifice{Object: sacrificeObject},
 				ResultGate: opt.Val(game.InstructionResultGate{
 					Key:       resultKey,
 					Succeeded: game.TriFalse,
@@ -873,6 +899,29 @@ func lowerSacrificeSourceUnlessPaySpell(ctx contentCtx) (game.AbilityContent, bo
 			},
 		},
 	}.Ability(), true
+}
+
+// sacrificeUnlessResolutionPayment builds the runtime resolution payment for a
+// "sacrifice <source> unless you <cost>" gate. The cost is either a fixed,
+// non-variable mana cost or a single non-mana additional cost, never both.
+func sacrificeUnlessResolutionPayment(payment compiler.CompiledEffectPayment) (game.ResolutionPayment, bool) {
+	hasMana := len(payment.ManaCost) != 0
+	hasAdditional := payment.AdditionalCost != nil
+	switch {
+	case hasMana && !hasAdditional:
+		if manaCostHasVariableSymbol(payment.ManaCost) ||
+			payment.GenericManaAmount.DynamicKind != compiler.DynamicAmountNone {
+			return game.ResolutionPayment{}, false
+		}
+		return game.ResolutionPayment{
+			Prompt:   "Pay " + payment.ManaCost.String() + "?",
+			ManaCost: opt.Val(payment.ManaCost),
+		}, true
+	case hasAdditional && !hasMana:
+		return controllerPaidResolutionPayment("", payment)
+	default:
+		return game.ResolutionPayment{}, false
+	}
 }
 
 func sacrificeChoiceReferences(references []compiler.CompiledReference) bool {

@@ -1123,6 +1123,27 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 	}
 	indices := effectIndices(tokens, atoms)
 	requiresOrderedLowering := orderedEffectCount(tokens, atoms) > 1
+	// Fold a trailing "<effect> unless you <non-mana cost>" controller payment:
+	// drop the cost verbs from segmentation so the gated effect parses as a
+	// single payment-bearing effect rather than a spurious two-effect sequence,
+	// and carry the recognized AdditionalCost forward onto that effect's Payment.
+	unlessCost := recognizeUnlessControllerAdditionalCost(sentence, tokens, atoms)
+	if unlessCost.ok {
+		filtered := indices[:0:0]
+		for _, idx := range indices {
+			if idx < unlessCost.unlessIndex {
+				filtered = append(filtered, idx)
+			}
+		}
+		if len(filtered) == len(indices) || len(filtered) == 0 {
+			// No effect precedes the payment, or the payment consumed no effect
+			// verb; leave the sentence to its ordinary segmentation.
+			unlessCost = recognizedUnlessCost{}
+		} else {
+			indices = filtered
+			requiresOrderedLowering = orderedEffectCount(tokens, atoms) > 1
+		}
+	}
 	effects := make([]EffectSyntax, 0, len(indices))
 	_, leadingDuration := stripLeadingDurationClause(tokens, atoms)
 	for effectIndex, tokenIndex := range indices {
@@ -1145,6 +1166,9 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		subjectTokens, _ = stripLeadingDurationClause(subjectTokens, atoms)
 		staticSubject := parseEffectStaticSubject(subjectTokens, atoms)
 		payment := parseEffectPayment(tokens, atoms)
+		if payment.Form == EffectPaymentFormUnknown && unlessCost.ok {
+			payment = unlessCost.payment
+		}
 		connection, connectionSpan := effectConnection(tokens, indices, effectIndex)
 		optional, optionalSpan := effectOptional(tokens, tokenIndex)
 		context := effectContextAt(tokens, tokenIndex, atoms)

@@ -19,6 +19,7 @@ var Cards = []*game.CardDef{
 	KodamaOfTheSouthTree,
 	KolaghanWarmonger,
 	KolaghanAspirant,
+	KoskunFalls,
 	KrosanDrover,
 	KusariGama,
 }

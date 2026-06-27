@@ -9,6 +9,7 @@ var Cards = []*game.CardDef{
 	FactOrFiction,
 	FaerieMechanist,
 	FaithUnbroken,
+	FallowWurm,
 	FalseMemories,
 	FanaticOfRhonas,
 	FaramirStewardOfGondor,

@@ -29,7 +29,7 @@ func compileEffectPayment(payment parser.EffectPaymentSyntax) CompiledEffectPaym
 func applyEffectPaymentsToConditions(effects []CompiledEffect, conditions []CompiledCondition) {
 	for i := range effects {
 		effect := &effects[i]
-		if len(effect.Payment.ManaCost) == 0 {
+		if len(effect.Payment.ManaCost) == 0 && effect.Payment.AdditionalCost == nil {
 			continue
 		}
 		var predicate ConditionPredicate

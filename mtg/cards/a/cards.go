@@ -30,6 +30,7 @@ var Cards = []*game.CardDef{
 	AppealToEirdu,
 	ArcaneInfusion,
 	ArcanistSOwl,
+	ArchwayCommons,
 	ArdenvalePaladin,
 	Arena,
 	ArmorThrull,
@@ -44,4 +45,5 @@ var Cards = []*game.CardDef{
 	AvacynianPriest,
 	ArtisanOfKozilek,
 	AvenRedeemer,
+	AvatarOfDiscord,
 }
