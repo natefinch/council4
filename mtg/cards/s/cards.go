@@ -65,6 +65,7 @@ var Cards = []*game.CardDef{
 	SkyriderElf,
 	SkywinderDrake,
 	SlateStreetRuffian,
+	SlayingFire,
 	SludgeTitan,
 	SlumberingDragon,
 	SmiteTheDeathless,

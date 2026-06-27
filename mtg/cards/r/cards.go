@@ -11,6 +11,7 @@ var Cards = []*game.CardDef{
 	RaisedByGiants,
 	RakaDisciple,
 	RakishCrew,
+	RallyForTheThrone,
 	RampantGrowth,
 	RancorousArchaic,
 	RapidDecay,

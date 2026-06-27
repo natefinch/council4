@@ -48,6 +48,7 @@ var Cards = []*game.CardDef{
 	FogElemental,
 	FootMystic,
 	FootbottomFeast,
+	ForebodingFruit,
 	Forest,
 	ForeverYoung,
 	ForgingTheAnchor,

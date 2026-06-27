@@ -28,6 +28,9 @@ func lowerSpellFaceCombiner(cardName string, compilation compiler.Compilation) (
 	if spell, ok := lowerInsteadDamageSpellAbilities(cardName, compilation); ok {
 		return spell, true
 	}
+	if spell, ok := lowerAbilityWordConditionalRiderSpell(cardName, compilation); ok {
+		return spell, true
+	}
 	if spell, ok := lowerDamageDieToExileSpellAbilities(cardName, compilation); ok {
 		return spell, true
 	}

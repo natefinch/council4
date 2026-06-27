@@ -54,6 +54,7 @@ var Cards = []*game.CardDef{
 	TroubledHealer,
 	TruckToss,
 	TrustyCompanion,
+	TurnIntoAPumpkin,
 	TwinBlades,
 	TwinflameTravelers,
 	TwistedEmbrace,

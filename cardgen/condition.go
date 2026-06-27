@@ -313,6 +313,8 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 			compiler.ConditionPredicateSpellWasKicked,
 			compiler.ConditionPredicateSpellWasCastFromGraveyard,
 			compiler.ConditionPredicateSpellXAtLeast,
+			compiler.ConditionPredicateColoredManaSpentToCastAtLeast,
+			compiler.ConditionPredicateSameColorManaSpentToCastAtLeast,
 			compiler.ConditionPredicateSourceSaddled,
 			compiler.ConditionPredicateSourceNotSaddled,
 			compiler.ConditionPredicateControlsGreatestPowerCreature,
