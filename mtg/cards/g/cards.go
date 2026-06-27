@@ -56,6 +56,7 @@ var Cards = []*game.CardDef{
 	GreenWard,
 	GreenwheelLiberator,
 	GriffnautTracker,
+	GrimFeast,
 	Grollub,
 	Groundskeeper,
 	GrowthCycle,

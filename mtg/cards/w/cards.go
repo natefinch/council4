@@ -42,6 +42,7 @@ var Cards = []*game.CardDef{
 	WizardSLightning,
 	WizardSRetort,
 	WojekBodyguard,
+	WolverineRiders,
 	WoodenSphere,
 	WoodlandWanderer,
 	WorldBreaker,

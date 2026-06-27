@@ -51,7 +51,8 @@ func lowerFixedLifeSpell(
 		}
 		amount = game.Dynamic(dynamic)
 	case effect.Amount.DynamicKind != compiler.DynamicAmountNone:
-		if effect.Amount.DynamicKind == compiler.DynamicAmountSourcePower {
+		if effect.Amount.DynamicKind == compiler.DynamicAmountSourcePower ||
+			effect.Amount.DynamicKind == compiler.DynamicAmountSourceToughness {
 			dynamic, ok := lifeSourcePowerAmount(ctx, effect)
 			if !ok {
 				return game.AbilityContent{}, contentDiagnostic(
@@ -136,6 +137,18 @@ func lowerFixedLifeSpell(
 		}
 		playerRef = ref
 	case len(ctx.content.Targets) == 1 &&
+		effect.Context == parser.EffectContextReferencedPlayer &&
+		hasThatPlayerTargetReference(ctx.content.References):
+		ref, ok := referencedThatPlayerRef(ctx.content.Targets[0])
+		if !ok {
+			return game.AbilityContent{}, contentDiagnostic(
+				ctx,
+				"unsupported life spell",
+				"the executable source backend supports only exact fixed life changes",
+			)
+		}
+		playerRef = ref
+	case len(ctx.content.Targets) == 1 &&
 		(effect.Context == parser.EffectContextTarget || effect.Context == parser.EffectContextPriorSubject):
 		targetSpec, ok := playerTargetSpec(ctx.content.Targets[0])
 		if !ok {
@@ -163,13 +176,14 @@ func lowerFixedLifeSpell(
 	}.Ability(), nil
 }
 
-// lifeSourcePowerAmount lowers "gain/lose life equal to its power" by binding the
-// amount to the power of the object its referent names — the source permanent in
-// a static or non-trigger context, or the triggering permanent's last-known
-// power in a leaves/dies trigger where "its" binds to the event ("When this
-// creature dies, you gain life equal to its power.", Conclave Mentor). Every
-// reference in the ability must bind to a source or event object so the form
-// stays exact and fails closed on any foreign referent.
+// lifeSourcePowerAmount lowers "gain/lose life equal to its power/toughness" by
+// binding the amount to the power or toughness of the object its referent names —
+// the source permanent in a static or non-trigger context, or the triggering
+// permanent's last-known characteristic in a leaves/dies trigger where "its"
+// binds to the event ("When this creature dies, you gain life equal to its
+// toughness.", Angelic Chorus). Every reference in the ability must bind to a
+// source or event object so the form stays exact and fails closed on any foreign
+// referent.
 func lifeSourcePowerAmount(ctx contentCtx, effect compiler.CompiledEffect) (game.DynamicAmount, bool) {
 	object, ok := referencedSourceOrEventPowerObject(effect.Amount, ctx.content.References)
 	if !ok {
@@ -178,10 +192,11 @@ func lifeSourcePowerAmount(ctx contentCtx, effect compiler.CompiledEffect) (game
 	return lowerDynamicAmount(effect.Amount, object)
 }
 
-// referencedSourceOrEventPowerObject returns the object whose power feeds a
-// source-power amount, found by matching the amount's referent span. It requires
-// every reference to lower as a source or event object so trigger subjects
-// ("this creature") and the amount referent ("its") are both accounted for.
+// referencedSourceOrEventPowerObject returns the object whose power or toughness
+// feeds a source-power amount, found by matching the amount's referent span. It
+// requires every reference to lower as a source or event object so trigger
+// subjects ("this creature") and the amount referent ("its") are both accounted
+// for.
 func referencedSourceOrEventPowerObject(amount compiler.CompiledAmount, references []compiler.CompiledReference) (game.ObjectReference, bool) {
 	var object game.ObjectReference
 	found := false
@@ -1822,6 +1837,40 @@ func referencedControllerPlayerRef(ctx contentCtx) (game.PlayerReference, bool) 
 		return game.ObjectControllerReference(game.TargetPermanentReference(occ)), true
 	case compiler.SelectorSpell:
 		return game.ObjectControllerReference(game.TargetStackObjectReference(occ)), true
+	default:
+		return game.PlayerReference{}, false
+	}
+}
+
+// hasThatPlayerTargetReference reports whether the clause carries a "that
+// player" reference bound to an inherited antecedent target, the typed shape an
+// ordered-sequence life clause takes when its subject ("That player loses N
+// life.") is the player established by the preceding clause's target.
+func hasThatPlayerTargetReference(references []compiler.CompiledReference) bool {
+	for _, reference := range references {
+		if reference.Kind == compiler.ReferenceThatPlayer &&
+			reference.Binding == compiler.ReferenceBindingTarget {
+			return true
+		}
+	}
+	return false
+}
+
+// referencedThatPlayerRef resolves the recipient player for a "That player
+// <gains/loses> N life" body whose subject is the inherited antecedent target of
+// an ordered sequence. A player target ("Target opponent ... That player loses N
+// life.") denotes that player directly; a permanent target ("Destroy target
+// creature an opponent controls. That player loses N life.") denotes its
+// controller. It returns false (fail closed) for any other antecedent kind. The
+// single inherited target sits at clause-local index 0.
+func referencedThatPlayerRef(target compiler.CompiledTarget) (game.PlayerReference, bool) {
+	switch target.Selector.Kind {
+	case compiler.SelectorPlayer, compiler.SelectorOpponent:
+		return game.TargetPlayerReference(0), true
+	case compiler.SelectorArtifact, compiler.SelectorCreature, compiler.SelectorEnchantment,
+		compiler.SelectorLand, compiler.SelectorPermanent, compiler.SelectorPlaneswalker,
+		compiler.SelectorBattle:
+		return game.ObjectControllerReference(game.TargetPermanentReference(0)), true
 	default:
 		return game.PlayerReference{}, false
 	}
