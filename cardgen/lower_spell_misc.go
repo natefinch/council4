@@ -1815,11 +1815,12 @@ func lowerFixedDrawSpell(
 // referencedControllerPlayerRef resolves the recipient player for an "Its
 // controller <effect>" body whose subject is the controller of the inherited
 // antecedent target in an ordered sequence. The antecedent target's selector
-// kind drives the object reference kind: a permanent target yields a permanent
-// reference, a spell on the stack yields a stack-object reference (so a
-// counterspell's "its controller" resolves the countered spell's controller). It
-// returns false (fail closed) for any other shape or antecedent kind. The
-// embedded clause-local target index is rebased by the sequence machinery.
+// drives the object reference kind: a permanent target (including bare subtype
+// and compound type leads) yields a permanent reference, a spell on the stack
+// yields a stack-object reference (so a counterspell's "its controller" resolves
+// the countered spell's controller). It returns false (fail closed) for any
+// other shape or antecedent kind. The embedded clause-local target index is
+// rebased by the sequence machinery.
 func referencedControllerPlayerRef(ctx contentCtx) (game.PlayerReference, bool) {
 	if len(ctx.content.Effects) == 0 ||
 		ctx.content.Effects[0].Context != parser.EffectContextReferencedObjectController ||
@@ -1830,16 +1831,11 @@ func referencedControllerPlayerRef(ctx contentCtx) (game.PlayerReference, bool) 
 		return game.PlayerReference{}, false
 	}
 	occ := ctx.content.References[0].Occurrence
-	switch ctx.content.Targets[0].Selector.Kind {
-	case compiler.SelectorArtifact, compiler.SelectorCreature, compiler.SelectorEnchantment,
-		compiler.SelectorLand, compiler.SelectorPermanent, compiler.SelectorPlaneswalker,
-		compiler.SelectorBattle:
-		return game.ObjectControllerReference(game.TargetPermanentReference(occ)), true
-	case compiler.SelectorSpell:
-		return game.ObjectControllerReference(game.TargetStackObjectReference(occ)), true
-	default:
+	object, ok := inheritedRemovalTargetObjectRef(ctx.content.Targets[0], occ)
+	if !ok {
 		return game.PlayerReference{}, false
 	}
+	return game.ObjectControllerReference(object), true
 }
 
 // hasThatPlayerTargetReference reports whether the clause carries a "that
@@ -1860,18 +1856,18 @@ func hasThatPlayerTargetReference(references []compiler.CompiledReference) bool 
 // <gains/loses> N life" body whose subject is the inherited antecedent target of
 // an ordered sequence. A player target ("Target opponent ... That player loses N
 // life.") denotes that player directly; a permanent target ("Destroy target
-// creature an opponent controls. That player loses N life.") denotes its
-// controller. It returns false (fail closed) for any other antecedent kind. The
-// single inherited target sits at clause-local index 0.
+// creature an opponent controls. That player loses N life.", including bare
+// subtype and compound type leads) denotes its controller. It returns false
+// (fail closed) for any other antecedent kind. The single inherited target sits
+// at clause-local index 0.
 func referencedThatPlayerRef(target compiler.CompiledTarget) (game.PlayerReference, bool) {
 	switch target.Selector.Kind {
 	case compiler.SelectorPlayer, compiler.SelectorOpponent:
 		return game.TargetPlayerReference(0), true
-	case compiler.SelectorArtifact, compiler.SelectorCreature, compiler.SelectorEnchantment,
-		compiler.SelectorLand, compiler.SelectorPermanent, compiler.SelectorPlaneswalker,
-		compiler.SelectorBattle:
-		return game.ObjectControllerReference(game.TargetPermanentReference(0)), true
-	default:
+	}
+	object, ok := inheritedRemovalTargetObjectRef(target, 0)
+	if !ok {
 		return game.PlayerReference{}, false
 	}
+	return game.ObjectControllerReference(object), true
 }
