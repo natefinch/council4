@@ -18,6 +18,7 @@ var Cards = []*game.CardDef{
 	VeinwitchCoven,
 	VengefulRebel,
 	VenomSHunger,
+	VerdantSunSAvatar,
 	Vesperlark,
 	VeteranGuardmouse,
 	ViashinoBranchrider,

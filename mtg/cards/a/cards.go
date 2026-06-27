@@ -6,6 +6,7 @@ import "github.com/natefinch/council4/mtg/game"
 
 // Cards lists all card definitions in this package.
 var Cards = []*game.CardDef{
+	AbattoirGhoul,
 	AbyssalNightstalker,
 	AbzanMonument,
 	AcademyDrake,
@@ -39,6 +40,7 @@ var Cards = []*game.CardDef{
 	AmuletOfKroog,
 	AnabaSpiritCrafter,
 	AncientStirrings,
+	AngelicChorus,
 	AngelicCub,
 	AngelicSellSword,
 	Anger,

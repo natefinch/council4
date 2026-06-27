@@ -43,6 +43,7 @@ var Cards = []*game.CardDef{
 	RhoxPummeler,
 	Riddlekeeper,
 	RighteousAura,
+	RighteousValkyrie,
 	RimescaleDragon,
 	RingOfThreeWishes,
 	RiseFromTheTides,

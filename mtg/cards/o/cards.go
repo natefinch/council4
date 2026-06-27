@@ -21,6 +21,7 @@ var Cards = []*game.CardDef{
 	OperaLoveSong,
 	Opportunist,
 	OrcGeneral,
+	OrchardWarden,
 	OrderOfTheStars,
 	OrdruunCommando,
 	OrimSamiteHealer,
