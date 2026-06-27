@@ -650,8 +650,26 @@ func lowerTriggeringEventQuantityAmount(ctx contentCtx, amount compiler.Compiled
 	}
 }
 
+// damageAmountReadsObjectReferent reports whether a dynamic damage amount reads a
+// characteristic of a specific object named by amount.ReferenceSpan, rather than
+// a controller- or group-wide value. These amounts ("equal to its power",
+// "equal to its toughness", "equal to the number of +1/+1 counters on it")
+// carry a second, amount-bound reference alongside the damage source, so the
+// exactness gate and amount-object resolver treat them uniformly. Every kind
+// here is resolved against an object reference by lowerDynamicAmount.
+func damageAmountReadsObjectReferent(kind compiler.DynamicAmountKind) bool {
+	switch kind {
+	case compiler.DynamicAmountSourcePower,
+		compiler.DynamicAmountSourceToughness,
+		compiler.DynamicAmountSourceCounterCount:
+		return true
+	default:
+		return false
+	}
+}
+
 func exactDamageAmountReferences(amount compiler.CompiledAmount, references []compiler.CompiledReference) bool {
-	if amount.DynamicKind != compiler.DynamicAmountSourcePower {
+	if !damageAmountReadsObjectReferent(amount.DynamicKind) {
 		_, ok := lowerDamageSourceReference(references)
 		return ok
 	}
@@ -660,20 +678,22 @@ func exactDamageAmountReferences(amount compiler.CompiledAmount, references []co
 		return false
 	}
 	// The damage source (references[0], "this creature") and the amount referent
-	// (references[1], "its"/"that creature's") may bind different objects: the
-	// source deals the damage while the amount reads the entering creature's
-	// power. Each must lower independently, but they need not share a binding.
+	// (references[1], "its"/"that creature's"/"on it") may bind different
+	// objects: the source deals the damage while the amount reads the referent's
+	// power, toughness, or counter count. Each must lower independently, but they
+	// need not share a binding.
 	_, sourceOK := lowerDamageSourceReference(references[:1])
 	_, amountOK := lowerDamageSourceReference(references[1:])
 	return sourceOK && amountOK
 }
 
-// lowerDamageAmountObject resolves the object whose power feeds a dynamic damage
-// amount. It binds to the amount's own referent ("its" for the source,
-// "that creature's" for the triggering permanent) so "deals damage equal to that
-// creature's power" reads the entering creature rather than the damage source.
+// lowerDamageAmountObject resolves the object whose characteristic feeds a
+// dynamic damage amount. It binds to the amount's own referent ("its" for the
+// source, "that creature's" for the triggering permanent, "on it" for a counter
+// count) so "deals damage equal to that creature's power" reads the entering
+// creature rather than the damage source.
 func lowerDamageAmountObject(amount compiler.CompiledAmount, references []compiler.CompiledReference) (game.ObjectReference, bool) {
-	if amount.DynamicKind != compiler.DynamicAmountSourcePower {
+	if !damageAmountReadsObjectReferent(amount.DynamicKind) {
 		return game.ObjectReference{}, false
 	}
 	for i := range references {
