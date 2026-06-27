@@ -26,4 +26,5 @@ var Cards = []*game.CardDef{
 	OsaiVultures,
 	OtherworldlyJourney,
 	OvergrownPest,
+	OviyaPashiriSageLifecrafter,
 }
