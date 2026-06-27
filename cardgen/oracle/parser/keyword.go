@@ -1790,6 +1790,15 @@ func parseProtectionKeywordParameter(
 			ProtectionParameter{ChosenColor: true},
 		), start + 6
 	}
+	if start+2 < len(tokens) && equalWord(tokens[start+1], "the") &&
+		equalWord(tokens[start+2], "chosen") && start+3 < len(tokens) &&
+		equalWord(tokens[start+3], "color") {
+		return NewProtectionKeywordParameter(
+			shared.SpanOf(tokens[start:start+4]),
+			"the chosen color",
+			ProtectionParameter{ChosenColor: true},
+		), start + 4
+	}
 	if qualifier, ok := atoms.ColorQualifierAt(tokens[start+1].Span); ok {
 		switch qualifier {
 		case ColorQualifierMulticolored:

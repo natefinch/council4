@@ -687,6 +687,7 @@ func emitStaticDeclarations(abilities []Ability) {
 			dropControllerTurnConditionsNativelyConsumed(ability, declarations)
 			foldStaticCastFromTopPayLifeRider(ability, declarations)
 			foldStaticSkipDrawStep(ability, declarations)
+			foldStaticRemoveAuraRider(ability, declarations)
 		}
 	}
 }
@@ -789,6 +790,41 @@ func foldStaticCastFromTopPayLifeRider(ability *Ability, declarations []StaticDe
 	}
 }
 
+// foldStaticRemoveAuraRider credits the inert "This effect doesn't remove this
+// Aura." sentence that the protection-Aura cycle appends to its "Enchanted
+// creature has protection from <color>" keyword grant. The grant's declaration
+// already covers the protection; the rider only overrides paper Magic's
+// state-based Aura falloff, which this engine never performs, so marking the
+// sentence keeps it from surfacing as an unrecognized sibling that would block
+// the keyword grant from lowering. The sentence's own effects, targets, and
+// references are cleared so the static ability lowers through the typed
+// keyword-grant path with a clean otherwise-empty shell.
+func foldStaticRemoveAuraRider(ability *Ability, declarations []StaticDeclarationSyntax) {
+	credited := false
+	for i := range declarations {
+		if declarations[i].Kind == StaticDeclarationKeywordGrant {
+			credited = true
+			break
+		}
+	}
+	if !credited {
+		return
+	}
+	for i := range ability.Sentences {
+		sentence := &ability.Sentences[i]
+		if sentence.RemoveAuraRider {
+			continue
+		}
+		if !isRemoveAuraRider(semanticEffectTokens(sentence.Tokens)) {
+			continue
+		}
+		sentence.RemoveAuraRider = true
+		sentence.Effects = nil
+		sentence.Targets = nil
+		sentence.LegacyEffects = false
+	}
+}
+
 // foldStaticSkipDrawStep clears the legacy effect that the imperative "Skip your
 // draw step." sentence produces once the ability has recognized that text as the
 // controller-scoped skip-draw-step turn-structure rule (Necropotence, Yawgmoth's
@@ -845,6 +881,7 @@ func emitSelfNameStaticRules(abilities []Ability) {
 func staticDeclarationBodyTokens(ability *Ability) []shared.Token {
 	tokens := eventHistorySemanticTokens(ability.Tokens, ability.Reminders, ability.Quoted)
 	tokens = stripNonBattlefieldScopeRider(tokens)
+	tokens = stripRemoveAuraRider(tokens)
 	if ability.AbilityWord == nil {
 		return tokens
 	}
@@ -898,6 +935,66 @@ func isNonBattlefieldScopeRider(sentence []shared.Token) bool {
 	}
 	return staticWordsAt(sentence, 0, "the", "same", "is", "true", "for") &&
 		staticWordsAt(sentence, len(sentence)-3, "on", "the", "battlefield")
+}
+
+// stripRemoveAuraRider removes a trailing "This effect doesn't remove this Aura."
+// reminder sentence from a static ability's body. The Ward cycle of protection
+// Auras (Cho-Manno's Blessing, Flickering Ward, Pentarch Ward, the
+// White/Blue/Black/Red/Green Ward fixed cycle) and several chosen-color Auras
+// append this clarification to their "Enchanted creature has protection from
+// <color>" grant. Protection from a color makes an Aura attached to that
+// creature an illegal attachment in paper Magic, which would normally put the
+// Aura into the graveyard as a state-based action; the rider overrides that so
+// the Aura stays attached. This engine never falls Auras off for color
+// protection, so the rider has no representable effect and dropping it lets the
+// leading protection grant lower while leaving simulation outcomes unchanged.
+func stripRemoveAuraRider(tokens []shared.Token) []shared.Token {
+	end := len(tokens)
+	if end == 0 || tokens[end-1].Kind != shared.Period {
+		return tokens
+	}
+	sentenceStart := 0
+	for i := end - 2; i >= 0; i-- {
+		if tokens[i].Kind == shared.Period {
+			sentenceStart = i + 1
+			break
+		}
+	}
+	if sentenceStart == 0 {
+		return tokens
+	}
+	if !isRemoveAuraRider(tokens[sentenceStart : end-1]) {
+		return tokens
+	}
+	return tokens[:sentenceStart]
+}
+
+// isRemoveAuraRider reports whether sentence (the tokens of one sentence,
+// excluding its terminating period) is an inert "This effect doesn't remove
+// <attachments>." clarification. The recognized variants are "this effect
+// doesn't remove this Aura", "this effect doesn't remove Auras", and "this
+// effect doesn't remove Auras and Equipment you control that are already
+// attached to it".
+func isRemoveAuraRider(sentence []shared.Token) bool {
+	if len(sentence) > 0 && sentence[len(sentence)-1].Kind == shared.Period {
+		sentence = sentence[:len(sentence)-1]
+	}
+	if len(sentence) < 5 {
+		return false
+	}
+	if !staticWordsAt(sentence, 0, "this", "effect", "doesn't", "remove") {
+		return false
+	}
+	rest := sentence[4:]
+	switch len(rest) {
+	case 2:
+		return staticWordsAt(rest, 0, "this", "aura")
+	case 1:
+		return equalWord(rest[0], "auras")
+	default:
+		return staticWordsAt(rest, 0, "auras", "and", "equipment") &&
+			staticWordsAt(rest, len(rest)-3, "attached", "to", "it")
+	}
 }
 
 func parseStaticDeclarations(tokens []shared.Token, quoted []Delimited, atoms Atoms, conditions []ConditionClause) []StaticDeclarationSyntax {

@@ -22,6 +22,7 @@ var Cards = []*game.CardDef{
 	ChelonianTackle,
 	ChillOfForeboding,
 	ChiseiHeartOfOceans,
+	ChoMannoSBlessing,
 	ChronicFlooding,
 	CinderGlade,
 	CinderWall,

@@ -755,6 +755,7 @@ func staticAbilitySourceContinuousEffects(g *game.Game, source staticAbilitySour
 			staticEffect.SourceCardID = source.cardID
 			staticEffect.Controller = source.controller
 			staticEffect.Timestamp = source.timestamp
+			rewriteChosenColorProtectionEffect(&staticEffect, source.permanent)
 			if staticEffect.Layer == game.LayerControl && staticEffect.NewController.Exists {
 				staticEffect.NewController = opt.Val(source.controller)
 			}
@@ -770,6 +771,44 @@ func staticAbilitySourceContinuousEffects(g *game.Game, source staticAbilitySour
 		}
 	}
 	return effects
+}
+
+// rewriteChosenColorProtectionEffect resolves a granted "protection from the
+// chosen color" ability on a continuous ability-layer effect to protection from
+// the concrete color the granting source chose as it entered the battlefield
+// (stored under EntryColorChoiceKey). The granted body is freshly built where a
+// rewrite happens so the shared card-definition template is left untouched. When
+// the source has made no recorded color choice the marker is left in place; the
+// unresolved ChosenColor marker matches no source, so the grant fails closed.
+func rewriteChosenColorProtectionEffect(effect *game.ContinuousEffect, source *game.Permanent) {
+	if effect.Layer != game.LayerAbility || source == nil {
+		return
+	}
+	choice, ok := source.EntryChoices[game.EntryColorChoiceKey]
+	if !ok || choice.Kind != game.ResolutionChoiceMana {
+		return
+	}
+	chosen, ok := manaColor(choice.Color)
+	if !ok {
+		return
+	}
+	cloned := false
+	for j, ability := range effect.AddAbilities {
+		static, ok := ability.(*game.StaticAbility)
+		if !ok {
+			continue
+		}
+		prot, ok := game.StaticBodyProtectionKeyword(static)
+		if !ok || !prot.ChosenColor {
+			continue
+		}
+		resolved := game.ProtectionFromColorsStaticAbility(chosen)
+		if !cloned {
+			effect.AddAbilities = append([]game.Ability(nil), effect.AddAbilities...)
+			cloned = true
+		}
+		effect.AddAbilities[j] = &resolved
+	}
 }
 
 func staticAbilityPermanentComponent(g *game.Game, permanent *game.Permanent) (permanentAbilityComponent, bool) {

@@ -12,6 +12,7 @@ var Cards = []*game.CardDef{
 	TappingAtTheWindow,
 	TatteredHaunter,
 	TarrianSSoulcleaver,
+	TattooWard,
 	TeferiSProtection,
 	TempestTechnique,
 	TestOfFaith,

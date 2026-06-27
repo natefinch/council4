@@ -16,6 +16,7 @@ var Cards = []*game.CardDef{
 	OrcGeneral,
 	OrdruunCommando,
 	OrimSamiteHealer,
+	OrderOfTheStars,
 	OrneryGoblin,
 	OsaiVultures,
 	OtherworldlyJourney,

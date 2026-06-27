@@ -17,6 +17,7 @@ var Cards = []*game.CardDef{
 	ReaperFromTheAbyss,
 	RecruitmentOfficer,
 	Recuperate,
+	RedWard,
 	ReduceToAshes,
 	ReinforcedBulwark,
 	RendFlesh,
