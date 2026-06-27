@@ -152,6 +152,16 @@ func polymorphColors(colors []parser.Color) []color.Color {
 	return result
 }
 
+// compilePreventDamageSourceColors maps the optional source color filter on a
+// "next time a [color] source ... prevent that damage" clause, returning nil
+// when the clause carries no color so unrelated effects keep an absent field.
+func compilePreventDamageSourceColors(colors []parser.Color) []color.Color {
+	if len(colors) == 0 {
+		return nil
+	}
+	return compileParserColors(colors)
+}
+
 // compileParserColors converts a parser color list to runtime colors, dropping
 // any unrecognized color. The parser only yields the five basic colors, so a
 // well-formed effect never drops a color here.
@@ -490,6 +500,8 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				PreventDamageGlobal:                    syntax.PreventDamageGlobal,
 				PreventDamageNextRecipient:             syntax.PreventDamageNextRecipient,
 				PreventDamageThatAmount:                syntax.PreventDamageThatAmount,
+				PreventDamageNextFromSource:            syntax.PreventDamageNextFromSource,
+				PreventDamageSourceColors:              compilePreventDamageSourceColors(syntax.PreventDamageSourceColors),
 				SpellsCantBeCounteredNextOnly:          syntax.SpellsCantBeCounteredNextOnly,
 				DoublePower:                            syntax.DoublePower,
 				DoubleToughness:                        syntax.DoubleToughness,

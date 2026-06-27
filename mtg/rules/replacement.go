@@ -100,6 +100,11 @@ func applyDamageModifications(g *game.Game, event damageEvent) int {
 			if !shield.All {
 				prevented = min(amount, shield.Amount)
 				shield.Amount -= prevented
+			} else if shield.OneShot {
+				// A one-shot shield prevents this single event in full and then
+				// expires (CR 615.6): drop its capacity so compaction removes it.
+				shield.All = false
+				shield.Amount = 0
 			}
 			amount -= prevented
 			g.PreventionShields = compactPreventionShields(g.PreventionShields)
@@ -152,6 +157,9 @@ func applicablePreventionShieldIndices(g *game.Game, event damageEvent) []int {
 	for i := range g.PreventionShields {
 		shield := g.PreventionShields[i]
 		if !preventionShieldApplies(shield, event) || (!shield.All && shield.Amount <= 0) {
+			continue
+		}
+		if len(shield.SourceColors) > 0 && !damageSourceHasAnyColor(g, event, shield.SourceColors) {
 			continue
 		}
 		indices = append(indices, i)
@@ -1792,14 +1800,16 @@ func createPreventionShield(g *game.Game, obj *game.StackObject, amount int, pri
 		return false
 	}
 	shield := game.PreventionShield{
-		ID:          g.IDGen.Next(),
-		Controller:  obj.Controller,
-		Amount:      amount,
-		All:         prim.All,
-		CombatOnly:  prim.CombatOnly,
-		Global:      prim.Global,
-		Duration:    effectDurationOrDefault(duration, game.DurationUntilEndOfTurn),
-		CreatedTurn: g.Turn.TurnNumber,
+		ID:           g.IDGen.Next(),
+		Controller:   obj.Controller,
+		Amount:       amount,
+		All:          prim.All,
+		CombatOnly:   prim.CombatOnly,
+		Global:       prim.Global,
+		OneShot:      prim.OneShot,
+		SourceColors: append([]color.Color(nil), prim.SourceColors...),
+		Duration:     effectDurationOrDefault(duration, game.DurationUntilEndOfTurn),
+		CreatedTurn:  g.Turn.TurnNumber,
 	}
 	if prim.Global {
 		g.PreventionShields = append(g.PreventionShields, shield)

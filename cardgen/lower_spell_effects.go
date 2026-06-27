@@ -8,6 +8,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -2378,6 +2379,22 @@ func lowerPreventDamageSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagn
 	}
 	if effect.PreventDamageNextRecipient != parser.PreventDamageRecipientNone {
 		return lowerPreventAmountDamage(ctx, effect)
+	}
+	if effect.PreventDamageNextFromSource {
+		if effect.PreventDamageTo ||
+			effect.PreventDamageBy ||
+			effect.PreventDamageGlobal ||
+			len(ctx.content.Targets) != 0 ||
+			len(ctx.content.References) != 0 {
+			return unsupported()
+		}
+		mode := game.Mode{Sequence: []game.Instruction{{Primitive: game.PreventDamage{
+			Player:       game.ControllerReference(),
+			SourceColors: append([]color.Color(nil), effect.PreventDamageSourceColors...),
+			All:          true,
+			OneShot:      true,
+		}}}}
+		return mode.Ability(), nil
 	}
 	if effect.PreventDamageGlobal {
 		if effect.PreventDamageTo ||

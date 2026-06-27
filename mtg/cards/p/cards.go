@@ -13,6 +13,7 @@ var Cards = []*game.CardDef{
 	PatronWizard,
 	PearlOfWisdom,
 	PeerThroughDepths,
+	PentagramOfTheAges,
 	PentarchWard,
 	PerfectIntimidation,
 	PestilentCauldron,
