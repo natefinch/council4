@@ -686,7 +686,21 @@ func lowerCounterPlacementReplacement(
 			return unsupported("the executable source backend supports only controlled-permanent counter-doubling or additive replacement amounts")
 		}
 		condition := ability.Content.Conditions[0]
-		plusOnePlusOne := condition.Counter == compiler.ConditionCounterPlusOnePlusOne
+		// "of each of those kinds of counters" modifies every counter kind being
+		// placed, so it always maps to the kind-agnostic all-counter constructors
+		// regardless of any specific counter named in the condition.
+		eachKind := ability.Content.Effects[1].Replacement.EachCounterKind
+		plusOnePlusOne := condition.Counter == compiler.ConditionCounterPlusOnePlusOne && !eachKind
+		if condition.CounterRecipientExcludesSource {
+			recipient, ok := controlledPermanentRecipientSelection(condition)
+			if !ok {
+				return unsupported("the executable source backend does not support this counter-recipient filter")
+			}
+			if plusOnePlusOne {
+				return game.ControlledPermanentSelectionCounterKindPlacementReplacement(ability.Text, multiplier, addend, counter.PlusOnePlusOne, recipient, game.TriggerControllerYou), true, nil
+			}
+			return game.ControlledPermanentSelectionCounterPlacementReplacement(ability.Text, multiplier, addend, recipient, game.TriggerControllerYou), true, nil
+		}
 		if len(condition.CounterRecipientTypesAny) > 0 {
 			if !triggerCardTypesValid(condition.CounterRecipientTypesAny) {
 				return unsupported("the executable source backend does not support this counter-recipient card-type filter")
@@ -835,11 +849,30 @@ func anyCounterReplacementAmount(effects []compiler.CompiledEffect) (multiplier,
 
 func controlledPermanentCounterReplacementAmount(effects []compiler.CompiledEffect) (multiplier, addend int, ok bool) {
 	second := effects[1]
-	if second.Replacement.EachCounterKind ||
-		replacementSelectorHasUnsupportedQualifier(second.Selector) {
+	if replacementSelectorHasUnsupportedQualifier(second.Selector) {
 		return 0, 0, false
 	}
 	return counterReplacementAmount(second.Replacement)
+}
+
+// controlledPermanentRecipientSelection builds the recipient characteristic
+// filter of a controlled-permanent counter-placement replacement that excludes
+// the source permanent ("another creature you control", Benevolent Hydra). The
+// controller scope ("you control") lives outside the selection on the runtime
+// constructor, so it is not encoded here. It fails closed on any card type
+// outside the permanent-selection vocabulary.
+func controlledPermanentRecipientSelection(condition compiler.CompiledCondition) (game.Selection, bool) {
+	if len(condition.CounterRecipientTypesAny) > 0 && !triggerCardTypesValid(condition.CounterRecipientTypesAny) {
+		return game.Selection{}, false
+	}
+	selection := game.Selection{
+		RequiredTypesAny: append([]types.Card(nil), condition.CounterRecipientTypesAny...),
+		ExcludeSource:    condition.CounterRecipientExcludesSource,
+	}
+	if len(selection.RequiredTypesAny) == 0 && !selection.ExcludeSource {
+		return game.Selection{}, false
+	}
+	return selection, true
 }
 
 // counterReplacementAmount derives the multiplier and additive bonus a

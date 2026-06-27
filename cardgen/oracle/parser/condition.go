@@ -352,6 +352,12 @@ type ConditionClause struct {
 	// empty for the unrestricted "a permanent you control" form.
 	CounterRecipientTypesAny []TriggerCardType `json:",omitempty"`
 
+	// CounterRecipientExcludesSource drops the source permanent from a
+	// ConditionPredicateCounterPlacementOnControlledPermanent clause's recipient
+	// match ("another creature you control", Benevolent Hydra). It is false for
+	// recipient forms that include the source.
+	CounterRecipientExcludesSource bool `json:",omitempty"`
+
 	// GraveyardCountCardType carries the single card type counted by a
 	// ConditionPredicateGraveyardCardOfTypeCountAtLeast clause ("if twenty or
 	// more creature cards are in your graveyard", Mortal Combat). Threshold
@@ -1720,6 +1726,9 @@ func recognizeCounterPlacementCondition(body []shared.Token, atoms Atoms) (Condi
 	if tokenWordsEqual(body, "an", "effect", "would", "put", "one", "or", "more", "counters", "on", "a", "permanent", "you", "control") {
 		return ConditionClause{Predicate: ConditionPredicateCounterPlacementOnControlledPermanent}, true
 	}
+	if tokenWordsEqual(body, "you", "would", "put", "one", "or", "more", "counters", "on", "a", "permanent", "you", "control") {
+		return ConditionClause{Predicate: ConditionPredicateCounterPlacementOnControlledPermanent}, true
+	}
 	rest, ok := cutTokenPrefix(body, "one", "or", "more")
 	if !ok {
 		return ConditionClause{}, false
@@ -1748,6 +1757,9 @@ func recognizeCounterPlacementCondition(body []shared.Token, atoms Atoms) (Condi
 		}, true
 	}
 	if clause, ok := recognizeControlledTypeUnionCounterPlacement(rest, body, atoms); ok {
+		return clause, true
+	}
+	if clause, ok := recognizeControlledRecipientCounterPlacement(rest, body, atoms); ok {
 		return clause, true
 	}
 	tail, ok := stripTokenSuffix(rest, "counters", "would", "be", "put", "on", "a", "creature")
@@ -1820,6 +1832,41 @@ func recognizeControlledTypeUnionCounterPlacement(rest, body []shared.Token, ato
 		Predicate:                ConditionPredicateCounterPlacementOnControlledPermanent,
 		Counter:                  counterKind,
 		CounterRecipientTypesAny: cardTypes,
+	}, true
+}
+
+// recognizeControlledRecipientCounterPlacement recognizes a counter-placement
+// replacement whose controlled-permanent recipient excludes the source
+// permanent ("another creature you control", Benevolent Hydra). The plain "a
+// permanent you control", "a creature you control", and card-type union
+// recipients are handled by their own branches.
+func recognizeControlledRecipientCounterPlacement(rest, body []shared.Token, atoms Atoms) (ConditionClause, bool) {
+	split := tokenSubsequenceIndex(rest, "counters", "would", "be", "put", "on")
+	if split < 1 {
+		return ConditionClause{}, false
+	}
+	recipient := rest[split+5:]
+	inner, ok := stripTokenSuffix(recipient, "you", "control")
+	if !ok || len(inner) < 2 {
+		return ConditionClause{}, false
+	}
+	if !equalWord(inner[0], "another") {
+		return ConditionClause{}, false
+	}
+	noun := inner[1:]
+	counterKind, ok := conditionCounterAtom(shared.SpanOf(body), atoms)
+	if !ok {
+		return ConditionClause{}, false
+	}
+	cardTypes, ok := parseGraveyardRedirectSubjectTypes(noun, atoms)
+	if !ok || len(cardTypes) == 0 {
+		return ConditionClause{}, false
+	}
+	return ConditionClause{
+		Predicate:                      ConditionPredicateCounterPlacementOnControlledPermanent,
+		Counter:                        counterKind,
+		CounterRecipientTypesAny:       cardTypes,
+		CounterRecipientExcludesSource: true,
 	}, true
 }
 

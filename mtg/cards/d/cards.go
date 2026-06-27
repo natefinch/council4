@@ -28,6 +28,7 @@ var Cards = []*game.CardDef{
 	DiversionUnit,
 	DirtyWererat,
 	DivineVisitation,
+	DocSamsonSuperPsychiatrist,
 	DomriAnarchOfBolas,
 	DonatelloMutantMechanic,
 	DragonEgg,

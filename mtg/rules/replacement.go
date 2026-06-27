@@ -1306,10 +1306,10 @@ func matchingCounterPlacementReplacementEffects(g *game.Game, event game.Event, 
 		if replacement.MatchCounterKind && replacement.CounterKindFilter != event.CounterKind {
 			continue
 		}
-		if replacement.CounterRecipientSelection != nil && !counterRecipientMatchesSelection(g, event.PermanentID, recipient, replacement.CounterRecipientSelection) {
+		if replacement.CounterRecipientSelection != nil && !counterRecipientMatchesSelection(g, event.PermanentID, recipient, replacement.CounterRecipientSelection, replacement.SourceObjectID) {
 			continue
 		}
-		if replacement.CounterRecipientAnyPermanent && !counterRecipientMatchesSelection(g, event.PermanentID, recipient, &game.Selection{}) {
+		if replacement.CounterRecipientAnyPermanent && !counterRecipientMatchesSelection(g, event.PermanentID, recipient, &game.Selection{}, replacement.SourceObjectID) {
 			continue
 		}
 		matchEvent := counterPlacementMatchEvent(g, replacement, event, recipient)
@@ -1454,12 +1454,12 @@ func counterRecipientPermanent(g *game.Game, permanentID id.ID, permanent *game.
 // permanent satisfies sel, matched through the canonical matchSelection. It
 // reads the recipient's effective characteristics, the same values the legacy
 // per-type checks read through permanentHasType.
-func counterRecipientMatchesSelection(g *game.Game, permanentID id.ID, permanent *game.Permanent, sel *game.Selection) bool {
+func counterRecipientMatchesSelection(g *game.Game, permanentID id.ID, permanent *game.Permanent, sel *game.Selection, sourceObjectID id.ID) bool {
 	recipient, ok := counterRecipientPermanent(g, permanentID, permanent)
 	if !ok {
 		return false
 	}
-	return permanentMatchesReplacementSelection(g, recipient, sel)
+	return permanentMatchesReplacementSelectionFromSource(g, recipient, sel, sourceObjectID)
 }
 
 // permanentMatchesReplacementSelection matches a replacement's object-characteristic
@@ -1468,12 +1468,21 @@ func counterRecipientMatchesSelection(g *game.Game, permanentID id.ID, permanent
 // controller relativity (controller scope lives outside the Selection), so the
 // subject's viewer is irrelevant.
 func permanentMatchesReplacementSelection(g *game.Game, permanent *game.Permanent, sel *game.Selection) bool {
+	return permanentMatchesReplacementSelectionFromSource(g, permanent, sel, 0)
+}
+
+// permanentMatchesReplacementSelectionFromSource matches as
+// permanentMatchesReplacementSelection but supplies the replacement's own source
+// object so an ExcludeSource recipient filter ("another creature you control",
+// Benevolent Hydra) drops the source permanent from the match.
+func permanentMatchesReplacementSelectionFromSource(g *game.Game, permanent *game.Permanent, sel *game.Selection, sourceObjectID id.ID) bool {
 	values := effectivePermanentValues(g, permanent)
 	subject := selectionSubject{
-		kind:      subjectPermanent,
-		g:         g,
-		permanent: permanent,
-		values:    &values,
+		kind:           subjectPermanent,
+		g:              g,
+		permanent:      permanent,
+		values:         &values,
+		sourceObjectID: sourceObjectID,
 	}
 	return matchSelection(&subject, sel)
 }
