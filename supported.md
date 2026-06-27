@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,408 of 32,501 cards eligible for paper support (47.4%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,423 of 32,501 cards eligible for paper support (47.5%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -221,6 +221,7 @@ Council4 currently supports **15,408 of 32,501 cards eligible for paper support 
 - Ajani, Caller of the Pride
 - Ajani, Inspiring Leader
 - Ajani, Wise Counselor
+- Akal Pakal, First Among Equals
 - Akiri, Line-Slinger
 - Akki Avalanchers
 - Akki Blizzard-Herder
@@ -697,6 +698,7 @@ Council4 currently supports **15,408 of 32,501 cards eligible for paper support 
 - Asceticism
 - Asgardian Citadel
 - Ash Barrens
+- Ash, Party Crasher
 - Asha's Favor
 - Ashaya, the Awoken World
 - Ashcloud Phoenix
@@ -1124,6 +1126,7 @@ Council4 currently supports **15,408 of 32,501 cards eligible for paper support 
 - Belle of the Brawl
 - Belligerent Guest
 - Belligerent Hatchling
+- Belligerent of the Ball
 - Belligerent Sliver
 - Belligerent Whiptail
 - Bellowing Aegisaur
@@ -3236,6 +3239,7 @@ Council4 currently supports **15,408 of 32,501 cards eligible for paper support 
 - Diabolic Intent
 - Diabolic Machine
 - Diabolic Tutor
+- Diamond City
 - Diamond Kaleidoscope
 - Diamond Lion
 - Diamond Pick-Axe
@@ -5038,6 +5042,7 @@ Council4 currently supports **15,408 of 32,501 cards eligible for paper support 
 - Gargos, Vicious Watcher
 - Gargoyle
 - Gargoyle Castle
+- Gargoyle Flock
 - Garrison Cat
 - Garrison Excavator
 - Garrison Griffin
@@ -6716,6 +6721,7 @@ Council4 currently supports **15,408 of 32,501 cards eligible for paper support 
 - Iron Lad, Young Avenger
 - Iron Lance
 - Iron League Steed
+- Iron Man, Master of Machines
 - Iron Man, Modern Marvel
 - Iron Man, Tony Stark
 - Iron Myr
@@ -7308,6 +7314,7 @@ Council4 currently supports **15,408 of 32,501 cards eligible for paper support 
 - Labyrinth of Skophos
 - Lace with Moonglove
 - Lady Caleria
+- Lady of Laughter
 - Lady Orca
 - Lady Spider, Maybelle Reilly
 - Lady Zhurong, Warrior Queen
@@ -7840,6 +7847,7 @@ Council4 currently supports **15,408 of 32,501 cards eligible for paper support 
 - Malamet Scythe
 - Malamet War Scribe
 - Malcator's Watcher
+- Malcator, Purity Overseer
 - Malcolm, the Eyes
 - Malevolent Awakening
 - Malevolent Chandelier
@@ -8966,8 +8974,10 @@ Council4 currently supports **15,408 of 32,501 cards eligible for paper support 
 - Oasis
 - Oasis Gardener
 - Oasis Ritualist
+- Oath of Chandra
 - Oath of Eorl
 - Oath of Gideon
+- Oath of Liliana
 - Oath of Lim-Dûl
 - Oath of the Ancient Wood
 - Oathsworn Giant
@@ -9427,6 +9437,7 @@ Council4 currently supports **15,408 of 32,501 cards eligible for paper support 
 - Pestilent Souleater
 - Pestilent Syphoner
 - Pestilent Wolf
+- Pests of Honor
 - Petrahydrox
 - Petravark
 - Petrified Field
@@ -13466,6 +13477,7 @@ Council4 currently supports **15,408 of 32,501 cards eligible for paper support 
 - Thoughtleech
 - Thoughtrender Lamia
 - Thoughtseize
+- Thoughtweft Charge
 - Thoughtweft Gambit
 - Thoughtweft Lieutenant
 - Thousand Moons Infantry
@@ -13921,6 +13933,7 @@ Council4 currently supports **15,408 of 32,501 cards eligible for paper support 
 - Tunnel
 - Tunnel Rats
 - Tunnel Surveyor
+- Tunnel Tipster
 - Tunneler Wurm
 - Tunneling Geopede
 - Tura Kennerüd, Skyknight
@@ -14795,6 +14808,7 @@ Council4 currently supports **15,408 of 32,501 cards eligible for paper support 
 - Warteye Witch
 - Warthog
 - Wartime Protestors
+- Wary Farmer
 - Wary Okapi
 - Wary Thespian
 - Wary Watchdog
@@ -14826,6 +14840,7 @@ Council4 currently supports **15,408 of 32,501 cards eligible for paper support 
 - Waterfront District
 - Waterkin Shaman
 - Waterlogged Grove
+- Waterspout Warden
 - Watertrap Weaver
 - Waterveil Cavern
 - Waterwhirl
