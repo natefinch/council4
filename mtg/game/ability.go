@@ -1080,6 +1080,15 @@ type TokenCopySpec struct {
 	// token isn't legendary"), so a copy of a legendary permanent does not force
 	// the legend rule on its original.
 	SetNotLegendary bool
+	// AddColors, AddTypes, and AddSubtypes grant additional colors, card types,
+	// and subtypes on top of the copied characteristics, modeling the
+	// characteristic-overriding copy exception "except it's a <N/N> <color>
+	// <subtype> <type> in addition to its other [colors and] types" (Saheeli's
+	// Artistry, Urza, Prince of Kroog, Ratadrabik of Urborg). They append to the
+	// copied values rather than replacing them, in contrast to the Set* fields.
+	AddColors   []color.Color
+	AddTypes    []types.Card
+	AddSubtypes []types.Sub
 	// AddKeywords grants additional keyword abilities to the created token on top
 	// of the copied characteristics ("That token gains haste").
 	AddKeywords []Keyword

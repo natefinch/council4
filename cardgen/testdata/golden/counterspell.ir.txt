@@ -36,6 +36,7 @@
             Kind: 10
           DamageRecipient: 
             EachSourceGroup: 
+          TokenCopyOverrideColors: 
           BecomeTypeAddColors: 
           PolymorphColors: 
           PolymorphSupertypes: 

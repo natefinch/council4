@@ -649,6 +649,9 @@ func tokenCopyModifiers(effect *compiler.CompiledEffect, object game.ObjectRefer
 		}
 		spec.AddKeywords = append(spec.AddKeywords, keyword)
 	}
+	if !applyCopyTokenOverride(&spec, effect) {
+		return game.TokenCopySpec{}, false
+	}
 	return spec, true
 }
 

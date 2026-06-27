@@ -14,6 +14,8 @@ var Cards = []*game.CardDef{
 	UntimelyMalfunction,
 	UreniOfTheUnwritten,
 	UrsineFylgja,
+	UrzaPrinceOfKroog,
+	UtopiaMycon,
 	UrzaSChalice,
 	UtopiaMycon,
 }

@@ -148,6 +148,21 @@ func polymorphColors(colors []parser.Color) []color.Color {
 	return result
 }
 
+// compileParserColors converts a parser color list to runtime colors, dropping
+// any unrecognized color. The parser only yields the five basic colors, so a
+// well-formed effect never drops a color here.
+func compileParserColors(colors []parser.Color) []color.Color {
+	result := make([]color.Color, 0, len(colors))
+	for _, parserColor := range colors {
+		runtimeColor, ok := runtimeColorFromParser(parserColor)
+		if !ok {
+			continue
+		}
+		result = append(result, runtimeColor)
+	}
+	return result
+}
+
 // polymorphSupertypes converts the parser's added polymorph supertypes
 // ("legendary") to runtime supertypes, dropping any unrecognized supertype. The
 // parser only yields supertypes recognized from atoms, so a well-formed
@@ -245,39 +260,49 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 					EachSourceGroup: compileTypedSelection(syntax.DamageRecipient.EachSourceGroup),
 					EachSourceRole:  syntax.DamageRecipient.EachSourceRole,
 				},
-				DamageRiders:                   syntax.DamageRiders,
-				Amount:                         compileTypedAmount(syntax.Amount),
-				PowerDelta:                     compileSignedAmount(syntax.PowerDelta),
-				ToughnessDelta:                 compileSignedAmount(syntax.ToughnessDelta),
-				TokenPower:                     syntax.TokenPower,
-				TokenToughness:                 syntax.TokenToughness,
-				TokenPTKnown:                   syntax.TokenPTKnown,
-				TokenPTVariableX:               syntax.TokenPTVariableX,
-				TokenPTDynamic:                 syntax.TokenPTDynamic,
-				TokenKeywords:                  append([]parser.KeywordKind(nil), syntax.TokenKeywords...),
-				TokenGrantedAbility:            syntax.TokenGrantedAbility,
-				GainGrantedAbility:             syntax.GainGrantedAbility,
-				EmblemAbilities:                syntax.EmblemAbilities,
-				DelayedTriggerAbility:          syntax.DelayedTriggerAbility,
-				PayRepeatedlyAnimate:           syntax.PayRepeatedlyAnimate,
-				AnimateSelf:                    syntax.AnimateSelf,
-				DelayedTriggerOneShot:          syntax.DelayedTriggerOneShot,
-				DelayedTriggerBindDamageSource: syntax.DelayedTriggerBindDamageSource,
-				TokenName:                      syntax.TokenName,
-				TokenPredefinedName:            syntax.TokenPredefinedName,
-				AmassSubtype:                   syntax.AmassSubtype,
-				TokenCopyOfTarget:              syntax.TokenCopyOfTarget,
-				TokenCopyOfReference:           syntax.TokenCopyOfReference,
-				TokenCopyOfAttached:            syntax.TokenCopyOfAttached,
-				TokenCopyOfTriggeringSet:       syntax.TokenCopyOfTriggeringSet,
-				TokenCopyDropLegendary:         syntax.TokenCopyDropLegendary,
-				TokenCopyEntersTapped:          syntax.TokenCopyEntersTapped,
-				TokenCopyGrantKeywords:         append([]parser.KeywordKind(nil), syntax.TokenCopyGrantKeywords...),
-				TokenCopyGrantRiderSpan:        syntax.TokenCopyGrantRiderSpan,
-				TokenChoice:                    syntax.TokenChoice,
-				AdditionalTokens:               compileEffects([]parser.Sentence{{Effects: syntax.AdditionalTokens}}),
-				StaticSubject:                  compileStaticSubjectKind(syntax.StaticSubject.Kind),
-				StaticSubjectSpan:              syntax.StaticSubject.Span,
+				DamageRiders:                    syntax.DamageRiders,
+				Amount:                          compileTypedAmount(syntax.Amount),
+				PowerDelta:                      compileSignedAmount(syntax.PowerDelta),
+				ToughnessDelta:                  compileSignedAmount(syntax.ToughnessDelta),
+				TokenPower:                      syntax.TokenPower,
+				TokenToughness:                  syntax.TokenToughness,
+				TokenPTKnown:                    syntax.TokenPTKnown,
+				TokenPTVariableX:                syntax.TokenPTVariableX,
+				TokenPTDynamic:                  syntax.TokenPTDynamic,
+				TokenKeywords:                   append([]parser.KeywordKind(nil), syntax.TokenKeywords...),
+				TokenGrantedAbility:             syntax.TokenGrantedAbility,
+				GainGrantedAbility:              syntax.GainGrantedAbility,
+				EmblemAbilities:                 syntax.EmblemAbilities,
+				DelayedTriggerAbility:           syntax.DelayedTriggerAbility,
+				PayRepeatedlyAnimate:            syntax.PayRepeatedlyAnimate,
+				AnimateSelf:                     syntax.AnimateSelf,
+				DelayedTriggerOneShot:           syntax.DelayedTriggerOneShot,
+				DelayedTriggerBindDamageSource:  syntax.DelayedTriggerBindDamageSource,
+				TokenName:                       syntax.TokenName,
+				TokenPredefinedName:             syntax.TokenPredefinedName,
+				AmassSubtype:                    syntax.AmassSubtype,
+				TokenCopyOfTarget:               syntax.TokenCopyOfTarget,
+				TokenCopyOfReference:            syntax.TokenCopyOfReference,
+				TokenCopyOfAttached:             syntax.TokenCopyOfAttached,
+				TokenCopyOfTriggeringSet:        syntax.TokenCopyOfTriggeringSet,
+				TokenCopyDropLegendary:          syntax.TokenCopyDropLegendary,
+				TokenCopyEntersTapped:           syntax.TokenCopyEntersTapped,
+				TokenCopyGrantKeywords:          append([]parser.KeywordKind(nil), syntax.TokenCopyGrantKeywords...),
+				TokenCopyGrantRiderSpan:         syntax.TokenCopyGrantRiderSpan,
+				TokenCopyOverride:               syntax.TokenCopyOverride,
+				TokenCopyOverridePTKnown:        syntax.TokenCopyOverridePTKnown,
+				TokenCopyOverridePower:          syntax.TokenCopyOverridePower,
+				TokenCopyOverrideToughness:      syntax.TokenCopyOverrideToughness,
+				TokenCopyOverrideColors:         compileParserColors(syntax.TokenCopyOverrideColors),
+				TokenCopyOverrideSubtypes:       append([]types.Sub(nil), syntax.TokenCopyOverrideSubtypes...),
+				TokenCopyOverrideTypes:          append([]types.Card(nil), syntax.TokenCopyOverrideTypes...),
+				TokenCopyOverrideKeywords:       append([]parser.KeywordKind(nil), syntax.TokenCopyOverrideKeywords...),
+				TokenCopyOverrideAdditiveTypes:  syntax.TokenCopyOverrideAdditiveTypes,
+				TokenCopyOverrideAdditiveColors: syntax.TokenCopyOverrideAdditiveColors,
+				TokenChoice:                     syntax.TokenChoice,
+				AdditionalTokens:                compileEffects([]parser.Sentence{{Effects: syntax.AdditionalTokens}}),
+				StaticSubject:                   compileStaticSubjectKind(syntax.StaticSubject.Kind),
+				StaticSubjectSpan:               syntax.StaticSubject.Span,
 				Details: compiledEffectDetails(
 					staticSubjectType(syntax.StaticSubject.SubtypeText, syntax.StaticSubject.Subtype, syntax.StaticSubject.SubtypesAny, syntax.StaticSubject.SubtypeKnown, syntax.StaticSubject.ExcludedSubtype),
 					staticSubjectColors(syntax.StaticSubject.Colors, syntax.StaticSubject.Colorless, syntax.StaticSubject.Multicolored, syntax.StaticSubject.ChosenColorFromEntry),

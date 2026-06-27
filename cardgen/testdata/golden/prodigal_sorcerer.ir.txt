@@ -65,6 +65,7 @@
           Amount: 
             Value: 1
             Known: true
+          TokenCopyOverrideColors: 
           BecomeTypeAddColors: 
           PolymorphColors: 
           PolymorphSupertypes: 

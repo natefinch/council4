@@ -165,6 +165,15 @@ func applyTokenCopyOverrides(source *game.CardDef, spec game.TokenCopySpec) (*ga
 	if len(spec.SetSubtypes) > 0 {
 		token.Subtypes = append([]types.Sub(nil), spec.SetSubtypes...)
 	}
+	if len(spec.AddColors) > 0 {
+		token.Colors = appendUniqueColors(token.Colors, spec.AddColors...)
+	}
+	if len(spec.AddTypes) > 0 {
+		token.Types = appendUniqueTypes(token.Types, spec.AddTypes...)
+	}
+	if len(spec.AddSubtypes) > 0 {
+		token.Subtypes = appendUniqueSubtypes(token.Subtypes, spec.AddSubtypes...)
+	}
 	if spec.SetPower.Exists {
 		token.Power = spec.SetPower
 		token.DynamicPower = opt.V[game.DynamicValue]{}

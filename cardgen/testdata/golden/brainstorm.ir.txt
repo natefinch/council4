@@ -19,6 +19,7 @@
           Amount: 
             Value: 3
             Known: true
+          TokenCopyOverrideColors: 
           BecomeTypeAddColors: 
           PolymorphColors: 
           PolymorphSupertypes: 
@@ -45,6 +46,7 @@
           Amount: 
             Value: 2
             Known: true
+          TokenCopyOverrideColors: 
           FromZone: Hand
           ToZone: Library
           Destination: EffectDestinationTop

@@ -30,6 +30,7 @@ var Cards = []*game.CardDef{
 	AnkhOfMishra,
 	ApothecaryInitiate,
 	AppealToEirdu,
+	AppliedGeometry,
 	ArcaneInfusion,
 	ArcaneMelee,
 	ArcanistSOwl,

@@ -1853,6 +1853,47 @@ type EffectSyntax struct {
 	// <keyword>." rider sentence so lowering credits its tokens toward source
 	// coverage. It is set only when TokenCopyGrantKeywords is non-empty.
 	TokenCopyGrantRiderSpan shared.Span `json:"-"`
+	// TokenCopyOverride reports a copy-token characteristic-overriding "except"
+	// exception ("except it's a 1/1 green Frog", "except it's an artifact in
+	// addition to its other types"). When set, the created token copies its
+	// source and then applies the recorded power/toughness, color, type, and
+	// subtype overrides below. The overridden characteristics are carried in the
+	// TokenCopyOverride* fields rather than the plain token-spec fields so the
+	// copy lowering can distinguish a copy exception from a freestanding token.
+	TokenCopyOverride bool `json:",omitempty"`
+	// TokenCopyOverridePTKnown reports that the copy override sets a fixed
+	// power/toughness ("except it's a 4/4 ..."), carried in TokenCopyOverridePower
+	// and TokenCopyOverrideToughness. The override always replaces the copied
+	// power/toughness when present.
+	TokenCopyOverridePTKnown   bool `json:",omitempty"`
+	TokenCopyOverridePower     int  `json:",omitempty"`
+	TokenCopyOverrideToughness int  `json:",omitempty"`
+	// TokenCopyOverrideColors lists the colors the copy override applies. They
+	// replace the copied colors for the replacement form ("except it's a 1/1
+	// green Frog") and add to them for the "in addition to its other colors and
+	// types" form, as indicated by TokenCopyOverrideAdditiveColors.
+	TokenCopyOverrideColors []Color `json:",omitempty"`
+	// TokenCopyOverrideSubtypes lists the subtypes the copy override applies. They
+	// replace the copied subtypes for the replacement form and add to them for the
+	// "in addition to its other types" form, as indicated by
+	// TokenCopyOverrideAdditiveTypes.
+	TokenCopyOverrideSubtypes []types.Sub `json:",omitempty"`
+	// TokenCopyOverrideTypes lists the card types the copy override adds ("an
+	// artifact in addition to its other types"). Card types are always additive in
+	// the recognized override forms.
+	TokenCopyOverrideTypes []types.Card `json:",omitempty"`
+	// TokenCopyOverrideAdditiveTypes reports the additive "in addition to its
+	// other types" override form, where subtypes and card types add to the copied
+	// values rather than replacing them. TokenCopyOverrideAdditiveColors reports
+	// the "... colors and types" variant where colors are also additive.
+	TokenCopyOverrideAdditiveTypes  bool `json:",omitempty"`
+	TokenCopyOverrideAdditiveColors bool `json:",omitempty"`
+	// TokenCopyOverrideKeywords lists keyword abilities the copy override grants
+	// inline ("except it's a 4/4 Dragon creature with flying ...", Will of the
+	// Temur). They are distinct from TokenCopyGrantKeywords, which come from a
+	// folded "[That token/It] gains <keyword>." rider sentence; the override
+	// keywords consume no separate sentence and add to the copy's keywords.
+	TokenCopyOverrideKeywords []KeywordKind `json:",omitempty"`
 	// TokenChoice reports a create-token effect that offers a choice among two or
 	// more complete named-token specs ("create a Food token or a Treasure token",
 	// "create your choice of a Clue token, a Food token, or a Treasure token").

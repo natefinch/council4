@@ -11,6 +11,7 @@ var Cards = []*game.CardDef{
 	RakishCrew,
 	RampantGrowth,
 	RancorousArchaic,
+	RatadrabikOfUrborg,
 	RathiDragon,
 	RazormaneMasticore,
 	RealityHeist,
