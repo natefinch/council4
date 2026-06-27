@@ -459,6 +459,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectDelayedTrigger
 	case parser.EffectPayRepeatedlyAnimate:
 		return EffectPayRepeatedlyAnimate
+	case parser.EffectAnimateSelf:
+		return EffectAnimateSelf
 	case parser.EffectAmass:
 		return EffectAmass
 	case parser.EffectRenown:

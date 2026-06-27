@@ -1575,6 +1575,16 @@ const (
 	// It lowers to the can-block-only runtime rule effect bounded by the flying
 	// blocker restriction. Added last so existing kinds keep their wire values.
 	EffectCanBlockOnlyCreaturesWithFlying
+	// EffectAnimateSelf is the one-shot continuous self-animation "This
+	// <land|artifact|creature|permanent> becomes a N/N [<color>...] [artifact]
+	// <subtype>... creature [with <keyword>...|all creature types] until end of
+	// turn." (Faerie Conclave, the Keyrune mana rocks, Mutavault): the source
+	// gains the creature card type (plus the artifact type when stated), the
+	// named subtypes (or every creature type), the stated colors, the granted
+	// keywords, and the literal base power/toughness until end of turn while
+	// keeping its existing types. It lowers to a single ApplyContinuous over the
+	// source for the turn. Added last so existing kinds keep their wire values.
+	EffectAnimateSelf
 )
 
 // DurationKind identifies common continuous-effect durations.
@@ -1777,6 +1787,12 @@ type CompiledEffect struct {
 	// added creature subtype(s), and the granted keyword(s). It is nil for every
 	// other effect.
 	PayRepeatedlyAnimate *parser.PayRepeatedlyAnimateSyntax
+	// AnimateSelf is the typed payload of an EffectAnimateSelf effect (Faerie
+	// Conclave, the Keyrune mana rocks, Mutavault): the source's set base
+	// power/toughness, the stated colors, the added artifact card type, the added
+	// creature subtype(s) or every-creature-type rider, and the granted
+	// keyword(s). It is nil for every other effect.
+	AnimateSelf *parser.AnimateSelfSyntax
 	// DelayedTriggerOneShot records that an EffectDelayedTrigger fires only on
 	// the first matching event ("the next time you cast ..."). It is meaningful
 	// only when Kind is EffectDelayedTrigger.

@@ -386,6 +386,19 @@ const (
 	// they remain lands. The number paid drives both the counter amount and the
 	// land-selection maximum.
 	EffectPayRepeatedlyAnimate EffectKind = "EffectPayRepeatedlyAnimate"
+	// EffectAnimateSelf models the one-shot continuous self-animation "This
+	// <land|artifact|creature|permanent> becomes a N/N [<color>...] [artifact]
+	// <subtype>... creature [with <keyword>...|all creature types] until end of
+	// turn." (Faerie Conclave, Mishra's Factory, the Keyrune and Monument mana
+	// rocks, Mutavault). The source permanent gains the creature card type
+	// (plus the artifact card type when stated), the named subtypes (or every
+	// creature type), the stated colors, the granted keywords, and the literal
+	// base power/toughness until end of turn, while keeping its existing land or
+	// artifact types. The typed payload is carried by AnimateSelf. It lowers to a
+	// single ApplyContinuous over the source for the turn. Any richer shape — an
+	// X/X or "base power and toughness N/N" amount, a target, a quoted granted
+	// ability, a permanent duration, or an unsupported keyword — fails closed.
+	EffectAnimateSelf EffectKind = "EffectAnimateSelf"
 )
 
 // DigSourceKind identifies how an impulse "Put N <source> into your hand ..."
@@ -1726,6 +1739,12 @@ type EffectSyntax struct {
 	// added creature subtype(s), and the granted keyword(s). It is nil for every
 	// other effect.
 	PayRepeatedlyAnimate *PayRepeatedlyAnimateSyntax `json:"-"`
+	// AnimateSelf is the typed payload of an EffectAnimateSelf effect (Faerie
+	// Conclave, the Keyrune mana rocks, Mutavault): the source's set base
+	// power/toughness, the stated colors, the added artifact card type, the added
+	// creature subtype(s) or every-creature-type rider, and the granted
+	// keyword(s). It is nil for every other effect.
+	AnimateSelf *AnimateSelfSyntax `json:"-"`
 	// DelayedTriggerOneShot records that an EffectDelayedTrigger fires only on
 	// the first matching event ("When you next cast a creature spell this turn,
 	// ...", "The next time you cast ..."), as opposed to repeating on every
