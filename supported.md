@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,315 of 32,501 cards eligible for paper support (47.1%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,337 of 32,501 cards eligible for paper support (47.2%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -630,6 +630,7 @@ Council4 currently supports **15,315 of 32,501 cards eligible for paper support 
 - Ark of Blight
 - Arlinn's Wolf
 - Armada Wurm
+- Armadillo Cloak
 - Armageddon
 - Armaggon, Future Shark
 - Armasaur Guide
@@ -3749,6 +3750,7 @@ Council4 currently supports **15,315 of 32,501 cards eligible for paper support 
 - Eivor, Wolf-Kissed
 - Eject
 - Ekundu Griffin
+- El-Hajjâj
 - Elaborate Firecannon
 - Eladamri's Call
 - Eladamri's Vineyard
@@ -3925,6 +3927,7 @@ Council4 currently supports **15,315 of 32,501 cards eligible for paper support 
 - Embermaw Hellion
 - Emberstrike Duo
 - Emberwilde Augur
+- Emberwilde Caliph
 - Emblem of the Warmind
 - Embodiment of Spring
 - Embraal Bruiser
@@ -4120,6 +4123,7 @@ Council4 currently supports **15,315 of 32,501 cards eligible for paper support 
 - Evolution Sage
 - Evolution Witness
 - Evolving Wilds
+- Exalted Angel
 - Exava, Rakdos Blood Witch
 - Excavated Wall
 - Excavating Anurid
@@ -4474,6 +4478,7 @@ Council4 currently supports **15,315 of 32,501 cards eligible for paper support 
 - Filigree Sages
 - Fill with Fright
 - Filth
+- Filthy Cur
 - Fin Fang Foom
 - Final Death
 - Final Flare
@@ -5691,6 +5696,7 @@ Council4 currently supports **15,315 of 32,501 cards eligible for paper support 
 - Grizzled Leotau
 - Grizzled Outrider
 - Grizzly Bears
+- Grollub
 - Grotag Night-Runner
 - Grotag Siege-Runner
 - Grotag Thrasher
@@ -6183,6 +6189,7 @@ Council4 currently supports **15,315 of 32,501 cards eligible for paper support 
 - Horn of Ramos
 - Horn of Valhalla // Ysgard's Call
 - Hornbash Mentor
+- Horned Cheetah
 - Horned Kavu
 - Horned Sliver
 - Horned Stoneseeker
@@ -6903,6 +6910,7 @@ Council4 currently supports **15,315 of 32,501 cards eligible for paper support 
 - Kami of Old Stone
 - Kami of Tattered Shoji
 - Kami of the Crescent Moon
+- Kami of the Honored Dead
 - Kami of the Hunt
 - Kami of the Painted Road
 - Kami of the Palace Fields
@@ -7079,6 +7087,7 @@ Council4 currently supports **15,315 of 32,501 cards eligible for paper support 
 - Kitsune Loreweaver
 - Kjeldoran Dead
 - Kjeldoran Escort
+- Kjeldoran Gargoyle
 - Kjeldoran Javelineer
 - Kjeldoran Knight
 - Kjeldoran Outrider
@@ -8468,6 +8477,7 @@ Council4 currently supports **15,315 of 32,501 cards eligible for paper support 
 - Mourner's Surprise
 - Mournful Zombie
 - Mourning
+- Mourning Thrull
 - Mournwhelk
 - Mouse
 - Mouse Trapper
@@ -8829,6 +8839,7 @@ Council4 currently supports **15,315 of 32,501 cards eligible for paper support 
 - Noble Elephant
 - Noble Hierarch
 - Noble Panther
+- Noble Purpose
 - Noble Stand
 - Noble Steeds
 - Noble Templar
@@ -9510,6 +9521,7 @@ Council4 currently supports **15,315 of 32,501 cards eligible for paper support 
 - Pinnacle Monk // Mystic Peak
 - Pinnacle of Rage
 - Pious Interdiction
+- Pious Warrior
 - Pious Wayfarer
 - Piper of the Swarm
 - Pippin's Bravery
@@ -12070,6 +12082,7 @@ Council4 currently supports **15,315 of 32,501 cards eligible for paper support 
 - Soul Collector
 - Soul Enervation
 - Soul Feast
+- Soul Link
 - Soul Manipulation
 - Soul Net
 - Soul of Innistrad
@@ -12311,6 +12324,8 @@ Council4 currently supports **15,315 of 32,501 cards eligible for paper support 
 - Spirit Cairn
 - Spirit Cleric
 - Spirit Flare
+- Spirit Link
+- Spirit Loop
 - Spirit Mantle
 - Spirit Mascot
 - Spirit of Malevolence
@@ -12815,6 +12830,7 @@ Council4 currently supports **15,315 of 32,501 cards eligible for paper support 
 - Sungold Barrage
 - Sungrace Pegasus
 - Sungrass Prairie
+- Sunhome Enforcer
 - Sunhome Guildmage
 - Sunhome Stalwart
 - Sunhome, Fortress of the Legion
@@ -13411,6 +13427,7 @@ Council4 currently supports **15,315 of 32,501 cards eligible for paper support 
 - Thrashing Brontodon
 - Thrashing Frontliner
 - Thrashing Mossdog
+- Thrashing Mudspawn
 - Thrashing Wumpus
 - Thraximundar
 - Thraxodemon
@@ -14189,6 +14206,7 @@ Council4 currently supports **15,315 of 32,501 cards eligible for paper support 
 - Vampiric Dragon
 - Vampiric Feast
 - Vampiric Fury
+- Vampiric Link
 - Vampiric Rites
 - Vampiric Spirit
 - Vampiric Touch
@@ -14593,10 +14611,12 @@ Council4 currently supports **15,315 of 32,501 cards eligible for paper support 
 - Wall of Denial
 - Wall of Distortion
 - Wall of Earth
+- Wall of Essence
 - Wall of Faith
 - Wall of Fire
 - Wall of Granite
 - Wall of Heat
+- Wall of Hope
 - Wall of Ice
 - Wall of Junk
 - Wall of Kelp
@@ -14699,6 +14719,7 @@ Council4 currently supports **15,315 of 32,501 cards eligible for paper support 
 - Warrior
 - Warrior
 - Warrior
+- Warrior Angel
 - Warrior's Charge
 - Warrior's Honor
 - Warriors of Wakanda
@@ -15228,6 +15249,7 @@ Council4 currently supports **15,315 of 32,501 cards eligible for paper support 
 - Zealous Lorecaster
 - Zealous Persecution
 - Zealous Strike
+- Zebra Unicorn
 - Zektar Shrine Expedition
 - Zell Dincht
 - Zendikar Farguide
