@@ -1401,8 +1401,9 @@ func mixedStaticKeywords(keywords []compiler.CompiledKeyword) ([]game.Keyword, b
 
 // partitionTemporaryKeywords splits keyword grants into simple keyword enum
 // values and granted ability bodies. Protection keywords lower to static ability
-// bodies so the grant carries their full characteristics; every other keyword
-// must reduce to a simple keyword. It fails closed for anything else.
+// bodies so the grant carries their full characteristics, and the landwalk
+// evasion family (CR 702.14) lowers to its parameterized typed body; every other
+// keyword must reduce to a simple keyword. It fails closed for anything else.
 func partitionTemporaryKeywords(keywords []compiler.CompiledKeyword) ([]game.Keyword, []game.Ability, bool) {
 	simpleKeywords := make([]game.Keyword, 0, len(keywords))
 	var abilities []game.Ability
@@ -1417,7 +1418,13 @@ func partitionTemporaryKeywords(keywords []compiler.CompiledKeyword) ([]game.Key
 		}
 		simple, ok := simpleStaticKeyword(keyword)
 		if !ok {
-			return nil, nil, false
+			ability, landwalk := grantedLandwalkStaticBody(keyword)
+			if !landwalk {
+				return nil, nil, false
+			}
+			grant := ability
+			abilities = append(abilities, &grant)
+			continue
 		}
 		simpleKeywords = append(simpleKeywords, simple)
 	}
