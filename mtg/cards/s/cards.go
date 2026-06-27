@@ -25,6 +25,7 @@ var Cards = []*game.CardDef{
 	ScorchingDragonfire,
 	Scorchmark,
 	ScourTheLaboratory,
+	ScrapperChampion,
 	ScrapskinDrake,
 	ScrollOfTheMasters,
 	ScytheTiger,
