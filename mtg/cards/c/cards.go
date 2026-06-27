@@ -66,5 +66,6 @@ var Cards = []*game.CardDef{
 	CrystalRod,
 	CrystallineCrawler,
 	CurseOfTheSwine,
+	Cursecatcher,
 	CursedMonstrosity,
 }

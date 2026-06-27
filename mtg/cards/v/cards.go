@@ -18,6 +18,8 @@ var Cards = []*game.CardDef{
 	VictorTimelyWilyTycoon,
 	VitasporeThallid,
 	VivienReid,
+	VodalianHexcatcher,
+	VodalianMage,
 	VoiceOfAll,
 	VoraciousHatchling,
 	VrynWingmare,

@@ -19,6 +19,7 @@ var Cards = []*game.CardDef{
 	GeralfSMindcrusher,
 	GhostHounds,
 	GhostLantern,
+	GhostLitWarder,
 	Ghostway,
 	GiantSGrasp,
 	GiftOfTheGargantuan,
