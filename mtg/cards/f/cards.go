@@ -58,6 +58,7 @@ var Cards = []*game.CardDef{
 	ForgingTheAnchor,
 	FormAPosse,
 	FormlessGenesis,
+	FractalSummoning,
 	FracturedSanity,
 	FranticSalvage,
 	FreestriderLookout,

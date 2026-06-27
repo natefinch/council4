@@ -96,26 +96,41 @@ func TestLowerEventPermanentCounterPlacement(t *testing.T) {
 	}
 }
 
-// TestLowerEventPermanentCounterPlacementFailsClosedInSequence proves that an
-// "it" counter placement that follows an object-producing instruction in the
-// same ordered sequence fails closed. There the compiler binds the pronoun whose
-// antecedent is the created token to the triggering event permanent, so
-// accepting it would place the counters on the wrong object. Only standalone
-// effects keep the EventPermanent binding.
-func TestLowerEventPermanentCounterPlacementFailsClosedInSequence(t *testing.T) {
+// TestLowerCreateTokenThenCounterPlacementTargetsToken proves that an "it"
+// counter placement following a token creation in the same ordered sequence
+// places the counters on the just-created token, not the triggering event
+// permanent. The compiler leaves the pronoun whose antecedent is the created
+// token bound to the event permanent, so the sequence lowerer reconstructs the
+// link structurally and addresses the published token; placing the counters on
+// the event permanent would be the wrong object.
+func TestLowerCreateTokenThenCounterPlacementTargetsToken(t *testing.T) {
 	t.Parallel()
 	for _, oracleText := range []string{
 		"When this enchantment enters, create a 0/0 green and blue Fractal creature token. Put three +1/+1 counters on it.",
 		"When this creature enters, create a 1/1 white Soldier creature token. Put a +1/+1 counter on it.",
 	} {
-		_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+		faces, diagnostics := lowerExecutableFaces(&ScryfallCard{
 			Name:       "Test Sequence Counter",
 			Layout:     "normal",
 			TypeLine:   "Enchantment",
 			OracleText: oracleText,
 		})
-		if len(diagnostics) == 0 {
-			t.Fatalf("%q lowered without diagnostics; expected fail-closed", oracleText)
+		if len(diagnostics) != 0 {
+			t.Fatalf("%q lowered with diagnostics: %#v", oracleText, diagnostics)
+		}
+		mode := faces[0].TriggeredAbilities[0].Content.Modes[0]
+		if len(mode.Sequence) != 2 {
+			t.Fatalf("%q sequence = %#v, want create then counter placement", oracleText, mode.Sequence)
+		}
+		create, ok := mode.Sequence[0].Primitive.(game.CreateToken)
+		if !ok || create.PublishLinked == "" {
+			t.Fatalf("%q create = %#v, want a token creation publishing a link", oracleText, mode.Sequence[0].Primitive)
+		}
+		add, ok := mode.Sequence[1].Primitive.(game.AddCounter)
+		if !ok ||
+			add.Object.Kind() != game.ObjectReferenceLinkedObject ||
+			add.Object.LinkID() != string(create.PublishLinked) {
+			t.Fatalf("%q add = %#v, want a counter placement on the linked token", oracleText, mode.Sequence[1].Primitive)
 		}
 	}
 }

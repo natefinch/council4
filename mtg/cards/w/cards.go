@@ -27,6 +27,7 @@ var Cards = []*game.CardDef{
 	WhiskerquillScribe,
 	WhiteWard,
 	Wight,
+	WildHypothesis,
 	WildInstincts,
 	WildestDreams,
 	WillOfTheTemur,
