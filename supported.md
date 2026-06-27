@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,519 of 32,501 cards eligible for paper support (47.7%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,530 of 32,501 cards eligible for paper support (47.8%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -463,6 +463,7 @@ Council4 currently supports **15,519 of 32,501 cards eligible for paper support 
 - Anguished Unmaking
 - Animal Boneyard
 - Animal Sanctuary
+- Animate Land
 - Anje's Ravager
 - Ankh of Mishra
 - Ankle Biter
@@ -2317,6 +2318,7 @@ Council4 currently supports **15,519 of 32,501 cards eligible for paper support 
 - Clamorous Ironclad
 - Clan Crafter
 - Clan Defiance
+- Clan Guildmage
 - Clarion Cathars
 - Clarion Spirit
 - Clash of the Eikons
@@ -6412,6 +6414,7 @@ Council4 currently supports **15,519 of 32,501 cards eligible for paper support 
 - HYDRA Infiltration
 - HYDRA Troopers
 - Hydroblast
+- Hydroform
 - Hydrolash
 - Hydrosurge
 - Hyena Pack
@@ -6470,6 +6473,7 @@ Council4 currently supports **15,519 of 32,501 cards eligible for paper support 
 - Igneous Cur
 - Igneous Golem
 - Ignite the Beacon
+- Ignition Team
 - Ignoble Hierarch
 - Ignoble Soldier
 - Iguana Parrot
@@ -6975,6 +6979,8 @@ Council4 currently supports **15,519 of 32,501 cards eligible for paper support 
 - Kalonian Behemoth
 - Kalonian Tusker
 - Kamahl's Desire
+- Kamahl, Fist of Krosa
+- Kamahl, Heart of Krosa
 - Kamahl, Pit Fighter
 - Kambal, Consul of Allocation
 - Kamber, the Plunderer
@@ -7535,6 +7541,7 @@ Council4 currently supports **15,519 of 32,501 cards eligible for paper support 
 - Lifeforce
 - Lifegift
 - Lifesmith
+- Lifespark Spellbomb
 - Lifespinner
 - Lifespring Druid
 - Lifetap
@@ -7636,6 +7643,7 @@ Council4 currently supports **15,519 of 32,501 cards eligible for paper support 
 - Llanowar Elves
 - Llanowar Envoy
 - Llanowar Knight
+- Llanowar Loamspeaker
 - Llanowar Reborn
 - Llanowar Scout
 - Llanowar Sentinel
@@ -11843,6 +11851,7 @@ Council4 currently supports **15,519 of 32,501 cards eligible for paper support 
 - Skaab Wrangler
 - Skalla Wolf
 - Skarrg Goliath
+- Skarrg Guildmage
 - Skarrg, the Rage Pits
 - Skarrgan Pit-Skulk
 - Skarrgan Skybreaker
@@ -12132,6 +12141,7 @@ Council4 currently supports **15,519 of 32,501 cards eligible for paper support 
 - Soaring Show-Off
 - Social Climber
 - Sodden Verdure
+- Soilshaper
 - Sokenzan Bruiser
 - Sokenzan Smelter
 - Sokenzan Spellblade
@@ -14635,6 +14645,7 @@ Council4 currently supports **15,519 of 32,501 cards eligible for paper support 
 - Vivien Reid
 - Vivien's Crocodile
 - Vivien's Jaguar
+- Vivify
 - Vivisection
 - Vivisection Evangelist
 - Vivisurgeon's Insight
