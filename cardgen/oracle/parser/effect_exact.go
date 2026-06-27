@@ -1649,7 +1649,7 @@ func exactTemporaryKeywordEffectSyntax(effect *EffectSyntax) bool {
 			"You gain protection from everything until your next turn.",
 		)
 	}
-	return exactTemporaryKeywordChangeSyntax(effect, "gain", "gains") ||
+	return exactTemporaryKeywordChangeSyntax(effect, "gain", "gains", true) ||
 		exactPermanentKeywordGrantEffectSyntax(effect)
 }
 
@@ -1699,9 +1699,9 @@ func keywordGrantIsChoice(effect *EffectSyntax) bool {
 			return false
 		}
 	}
-	body, ok := strings.CutSuffix(after, ".")
+	body, ok := strings.CutSuffix(after, " until end of turn.")
 	if !ok {
-		body, ok = strings.CutSuffix(after, " until end of turn.")
+		body, ok = strings.CutSuffix(after, ".")
 		if !ok {
 			return false
 		}
@@ -1812,7 +1812,7 @@ func exactKeywordControlledSourceDurationBody(middle string) bool {
 // verbs, so a removal reconstructs byte-exactly for the same subject shapes a
 // keyword grant supports.
 func exactTemporaryKeywordLossEffectSyntax(effect *EffectSyntax) bool {
-	return exactTemporaryKeywordChangeSyntax(effect, "lose", "loses")
+	return exactTemporaryKeywordChangeSyntax(effect, "lose", "loses", false)
 }
 
 // exactTemporaryKeywordChangeSyntax reconstructs the byte-exact form of a
@@ -1822,7 +1822,15 @@ func exactTemporaryKeywordLossEffectSyntax(effect *EffectSyntax) bool {
 // ("it"/"creatures you control"), a referenced object, the source permanent, and
 // a single exact target (including the combined "<target> gets +N/+N and
 // gains/loses ..." pump form).
-func exactTemporaryKeywordChangeSyntax(effect *EffectSyntax, pluralVerb, singularVerb string) bool {
+//
+// allowChoice permits a disjunctive "your choice of <list>" keyword body on the
+// single-subject shapes (source, referenced object, and one exact target) the
+// lowering can realize as a one-of-N modal grant. The grant verb passes true; the
+// loss verb passes false, since a keyword-loss choice is not lowered.
+func exactTemporaryKeywordChangeSyntax(effect *EffectSyntax, pluralVerb, singularVerb string, allowChoice bool) bool {
+	validBody := func(body string) bool {
+		return exactTemporaryKeywordList(body) || (allowChoice && exactKeywordChoiceList(body))
+	}
 	if effect.Duration != EffectDurationUntilEndOfTurn {
 		return false
 	}
@@ -1854,7 +1862,7 @@ func exactTemporaryKeywordChangeSyntax(effect *EffectSyntax, pluralVerb, singula
 			return false
 		}
 		middle, ok = cutTemporaryKeywordDurationSuffix(effect, middle)
-		return ok && exactTemporaryKeywordList(middle)
+		return ok && validBody(middle)
 	}
 	if effect.Context == EffectContextSource {
 		subject, ok := exactSelfSubjectReferenceText(effect.SubjectReferences)
@@ -1866,7 +1874,7 @@ func exactTemporaryKeywordChangeSyntax(effect *EffectSyntax, pluralVerb, singula
 			return false
 		}
 		middle, ok = cutTemporaryKeywordDurationSuffix(effect, middle)
-		return ok && exactTemporaryKeywordList(middle)
+		return ok && validBody(middle)
 	}
 	// "Those creatures gain <keyword> until end of turn." grants a keyword to a
 	// group named by the demonstrative back-reference "those" (Inspiring Call).
@@ -1921,7 +1929,7 @@ func exactTemporaryKeywordChangeSyntax(effect *EffectSyntax, pluralVerb, singula
 	if !ok || middle == "" {
 		return false
 	}
-	return exactTemporaryKeywordList(middle)
+	return validBody(middle)
 }
 
 // cutTemporaryKeywordDurationSuffix strips the until-end-of-turn duration suffix
@@ -2079,12 +2087,16 @@ func exactTemporaryKeywordList(text string) bool {
 
 // exactKeywordChoiceList recognizes a disjunctive list of two or more grantable
 // keywords joined by "or" ("first strike or trample", "banding, first strike, or
-// trample"). The disjunction means the controller chooses exactly one of the
-// listed keywords at resolution, distinct from the conjunctive list recognized by
-// exactTemporaryKeywordList where every keyword is granted. It requires at least
-// one "or" connective so a single keyword or an "and" list never matches here.
+// trample"). It also accepts the explicit "your choice of <list>" header that
+// modern templating prefixes to the same disjunction ("your choice of vigilance,
+// lifelink, or haste"). The disjunction means the controller chooses exactly one
+// of the listed keywords at resolution, distinct from the conjunctive list
+// recognized by exactTemporaryKeywordList where every keyword is granted. It
+// requires at least one "or" connective so a single keyword or an "and" list
+// never matches here.
 func exactKeywordChoiceList(text string) bool {
 	text = strings.ToLower(text)
+	text = strings.TrimPrefix(text, "your choice of ")
 	if !strings.Contains(text, " or ") {
 		return false
 	}

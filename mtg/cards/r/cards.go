@@ -16,6 +16,7 @@ var Cards = []*game.CardDef{
 	RapidDecay,
 	RatadrabikOfUrborg,
 	RathiDragon,
+	RattlebackApothecary,
 	RazormaneMasticore,
 	RealityHeist,
 	RealmCloakedGiant,

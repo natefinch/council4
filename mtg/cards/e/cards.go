@@ -38,4 +38,5 @@ var Cards = []*game.CardDef{
 	ExemplarOfStrength,
 	EyeblightMassacre,
 	EyeblightSEnding,
+	EzrimAgencyChief,
 }

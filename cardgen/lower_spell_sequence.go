@@ -765,6 +765,7 @@ func lowerDynamicCountDrawThenGroupKeywordSequence(ctx contentCtx) (game.Ability
 		drawEffect.Amount.DynamicKind != compiler.DynamicAmountCount ||
 		keywordEffect.Duration != compiler.DurationUntilEndOfTurn ||
 		keywordEffect.StaticSubject != compiler.StaticSubjectNone ||
+		keywordEffect.KeywordGrantChoice ||
 		!groupBackReferenceThose(keywordEffect.SubjectReferences) {
 		return game.AbilityContent{}, false
 	}
@@ -830,6 +831,7 @@ func lowerGroupCounterThenGroupKeywordSequence(ctx contentCtx) (game.AbilityCont
 		counterEffect.Amount.Value < 1 ||
 		keywordEffect.Duration != compiler.DurationUntilEndOfTurn ||
 		keywordEffect.StaticSubject != compiler.StaticSubjectNone ||
+		keywordEffect.KeywordGrantChoice ||
 		!groupBackReferenceThose(keywordEffect.SubjectReferences) {
 		return game.AbilityContent{}, false
 	}
@@ -979,6 +981,7 @@ func lowerCreateTokenThenGrantKeywordSequence(ctx contentCtx) (game.AbilityConte
 		keywordEffect.Context != parser.EffectContextReferencedObject ||
 		keywordEffect.Duration != compiler.DurationUntilEndOfTurn ||
 		keywordEffect.StaticSubject != compiler.StaticSubjectNone ||
+		keywordEffect.KeywordGrantChoice ||
 		createEffect.TokenCopyOfTarget ||
 		createEffect.TokenCopyOfReference ||
 		createEffect.TokenCopyOfAttached ||
@@ -3115,6 +3118,7 @@ func isSequentialReferencedKeywordGrantEffect(effect *compiler.CompiledEffect) b
 	return effect.Kind == compiler.EffectGain &&
 		effect.Exact &&
 		!effect.Negated &&
+		!effect.KeywordGrantChoice &&
 		effect.Context == parser.EffectContextReferencedObject &&
 		effect.Duration == compiler.DurationNone &&
 		effect.StaticSubject == compiler.StaticSubjectNone &&

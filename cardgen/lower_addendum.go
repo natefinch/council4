@@ -200,6 +200,7 @@ func addendumGroupKeywordEffect(effect *compiler.CompiledEffect) bool {
 	return effect.Kind == compiler.EffectGain &&
 		!effect.Negated &&
 		!effect.Optional &&
+		!effect.KeywordGrantChoice &&
 		effect.Duration == compiler.DurationUntilEndOfTurn &&
 		effect.StaticSubject == compiler.StaticSubjectNone &&
 		groupBackReferencePronoun(effect.SubjectReferences)
