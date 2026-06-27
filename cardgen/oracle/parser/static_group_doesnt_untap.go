@@ -2,6 +2,7 @@ package parser
 
 import (
 	"github.com/natefinch/council4/cardgen/oracle/shared"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -20,7 +21,83 @@ func staticGroupDoesntUntapSubject(tokens []shared.Token, atoms Atoms) (EffectSt
 	if subject, verb, ok := staticAllCreaturesDoesntUntapSubject(tokens, atoms); ok {
 		return subject, verb, true
 	}
-	return staticSubtypeDoesntUntapSubject(tokens, atoms)
+	if subject, verb, ok := staticNonbasicLandsDoesntUntapSubject(tokens); ok {
+		return subject, verb, true
+	}
+	if subject, verb, ok := staticNonlandPermanentsDoesntUntapSubject(tokens); ok {
+		return subject, verb, true
+	}
+	if subject, verb, ok := staticSnowPermanentsDoesntUntapSubject(tokens); ok {
+		return subject, verb, true
+	}
+	if subject, verb, ok := staticSubtypeDoesntUntapSubject(tokens, atoms); ok {
+		return subject, verb, true
+	}
+	return staticLandSubtypeDoesntUntapSubject(tokens, atoms)
+}
+
+// staticNonbasicLandsDoesntUntapSubject recognizes the "Nonbasic lands don't"
+// head (Back to Basics), mapping it onto the battlefield-wide nonbasic-land
+// group. The leading word must be the single "nonbasic" supertype-exclusion glyph
+// followed by the "lands" plural and the untap verb "don't".
+func staticNonbasicLandsDoesntUntapSubject(tokens []shared.Token) (EffectStaticSubjectSyntax, int, bool) {
+	if !staticWordsAt(tokens, 0, "nonbasic", "lands", "don't") {
+		return EffectStaticSubjectSyntax{}, 0, false
+	}
+	return EffectStaticSubjectSyntax{
+		Kind: EffectStaticSubjectNonbasicLands,
+		Span: shared.SpanOf(tokens[:2]),
+	}, 2, true
+}
+
+// staticNonlandPermanentsDoesntUntapSubject recognizes the "Nonland permanents
+// don't" head (Embargo), mapping it onto the battlefield-wide nonland-permanent
+// group.
+func staticNonlandPermanentsDoesntUntapSubject(tokens []shared.Token) (EffectStaticSubjectSyntax, int, bool) {
+	if !staticWordsAt(tokens, 0, "nonland", "permanents", "don't") {
+		return EffectStaticSubjectSyntax{}, 0, false
+	}
+	return EffectStaticSubjectSyntax{
+		Kind: EffectStaticSubjectNonlandPermanents,
+		Span: shared.SpanOf(tokens[:2]),
+	}, 2, true
+}
+
+// staticSnowPermanentsDoesntUntapSubject recognizes the "Snow permanents don't"
+// head (Freyalise's Radiance), mapping it onto the battlefield-wide
+// snow-permanent group.
+func staticSnowPermanentsDoesntUntapSubject(tokens []shared.Token) (EffectStaticSubjectSyntax, int, bool) {
+	if !staticWordsAt(tokens, 0, "snow", "permanents", "don't") {
+		return EffectStaticSubjectSyntax{}, 0, false
+	}
+	return EffectStaticSubjectSyntax{
+		Kind: EffectStaticSubjectSnowPermanents,
+		Span: shared.SpanOf(tokens[:2]),
+	}, 2, true
+}
+
+// staticLandSubtypeDoesntUntapSubject recognizes the "<land subtype plural>
+// don't" head ("Islands don't ...", Choke), mapping it onto the battlefield-wide
+// permanent-subtype group. Only land subtypes are accepted here; creature
+// subtypes are owned by staticSubtypeDoesntUntapSubject, which is tried first.
+func staticLandSubtypeDoesntUntapSubject(tokens []shared.Token, atoms Atoms) (EffectStaticSubjectSyntax, int, bool) {
+	if len(tokens) == 0 {
+		return EffectStaticSubjectSyntax{}, 0, false
+	}
+	subtype, ok := atoms.SubtypeAt(tokens[0].Span)
+	if !ok || !SubtypeMatchesAnyRuntimeCardType(subtype, []types.Card{types.Land}) {
+		return EffectStaticSubjectSyntax{}, 0, false
+	}
+	if !staticWordsAt(tokens, 1, "don't") {
+		return EffectStaticSubjectSyntax{}, 0, false
+	}
+	return EffectStaticSubjectSyntax{
+		Kind:         EffectStaticSubjectAllPermanentSubtype,
+		Span:         shared.SpanOf(tokens[:1]),
+		Subtype:      subtype,
+		SubtypeText:  tokens[0].Text,
+		SubtypeKnown: true,
+	}, 1, true
 }
 
 // staticAllCreaturesDoesntUntapSubject recognizes the "[<color>] creatures
@@ -49,12 +126,52 @@ func staticAllCreaturesDoesntUntapSubject(tokens []shared.Token, atoms Atoms) (E
 		subject.PowerLessThanSource = match.powerLessThanSource
 		subject.PowerGreaterThanSource = match.powerGreaterThanSource
 		idx = match.end
+	} else if kind, counterEnd, ok := staticDoesntUntapCounterQualifier(tokens, idx, atoms); ok {
+		subject.CounterRequired = true
+		subject.CounterKind = kind
+		idx = counterEnd
 	}
 	if !staticWordsAt(tokens, idx, "don't") {
 		return EffectStaticSubjectSyntax{}, 0, false
 	}
 	subject.Span = shared.SpanOf(tokens[:idx])
 	return subject, idx, true
+}
+
+// staticDoesntUntapCounterQualifier recognizes a "with [a] <kind> counter[s] on
+// it/them" qualifier on a battlefield creature untap group ("Creatures with ice
+// counters on them don't untap ...", Rimescale Dragon), beginning at index start
+// (the "with" word). It returns the named counter kind and the index one past
+// the qualifier. The kind name is recognized through the lexer's counter atom so
+// the parser owns no counter vocabulary here.
+func staticDoesntUntapCounterQualifier(tokens []shared.Token, start int, atoms Atoms) (counter.Kind, int, bool) {
+	if !staticWordsAt(tokens, start, "with") {
+		return 0, 0, false
+	}
+	idx := start + 1
+	if staticWordsAt(tokens, idx, "a") || staticWordsAt(tokens, idx, "an") {
+		idx++
+	}
+	if idx >= len(tokens) {
+		return 0, 0, false
+	}
+	kind, span, ok := atoms.CounterIn(tokens[idx].Span)
+	if !ok || !spanEquals(span, tokens[idx].Span) {
+		return 0, 0, false
+	}
+	idx++
+	if !staticWordsAt(tokens, idx, "counters") && !staticWordsAt(tokens, idx, "counter") {
+		return 0, 0, false
+	}
+	idx++
+	if !staticWordsAt(tokens, idx, "on") {
+		return 0, 0, false
+	}
+	idx++
+	if !staticWordsAt(tokens, idx, "them") && !staticWordsAt(tokens, idx, "it") {
+		return 0, 0, false
+	}
+	return kind, idx + 1, true
 }
 
 // staticSubtypeDoesntUntapSubject recognizes the "<creature subtype plural>
@@ -125,7 +242,9 @@ func staticGroupDoesntUntapSubjectKind(subject StaticDeclarationSubject) bool {
 		return false
 	}
 	switch subject.Group.Kind {
-	case EffectStaticSubjectAllCreatures, EffectStaticSubjectAllCreatureSubtype:
+	case EffectStaticSubjectAllCreatures, EffectStaticSubjectAllCreatureSubtype,
+		EffectStaticSubjectNonbasicLands, EffectStaticSubjectNonlandPermanents,
+		EffectStaticSubjectSnowPermanents, EffectStaticSubjectAllPermanentSubtype:
 		return true
 	default:
 		return false

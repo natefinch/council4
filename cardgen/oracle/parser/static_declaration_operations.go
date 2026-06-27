@@ -2126,7 +2126,11 @@ func staticRuleSubjectKindAllowed(subject StaticDeclarationSubject) bool {
 			subject.Group.Kind == EffectStaticSubjectControlledCreatureSubtype ||
 			subject.Group.Kind == EffectStaticSubjectOpponentControlledCreatures ||
 			subject.Group.Kind == EffectStaticSubjectAllCreatures ||
-			subject.Group.Kind == EffectStaticSubjectAllCreatureSubtype
+			subject.Group.Kind == EffectStaticSubjectAllCreatureSubtype ||
+			subject.Group.Kind == EffectStaticSubjectNonbasicLands ||
+			subject.Group.Kind == EffectStaticSubjectNonlandPermanents ||
+			subject.Group.Kind == EffectStaticSubjectSnowPermanents ||
+			subject.Group.Kind == EffectStaticSubjectAllPermanentSubtype
 	default:
 		return false
 	}
@@ -2184,6 +2188,11 @@ func staticRuleSubjectForDeclaration(subject StaticDeclarationSubject, operation
 		case EffectStaticSubjectAllCreatureSubtype:
 			if operation.Kind == StaticRuleOperationUntap && operation.Voice == StaticRuleVoiceActive {
 				return StaticRuleSubject{Kind: StaticRuleSubjectBattlefieldCreatures, Span: subject.Span}, true
+			}
+		case EffectStaticSubjectNonbasicLands, EffectStaticSubjectNonlandPermanents,
+			EffectStaticSubjectSnowPermanents, EffectStaticSubjectAllPermanentSubtype:
+			if operation.Kind == StaticRuleOperationUntap && operation.Voice == StaticRuleVoiceActive {
+				return StaticRuleSubject{Kind: StaticRuleSubjectBattlefieldPermanents, Span: subject.Span}, true
 			}
 		default:
 		}

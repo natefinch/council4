@@ -1692,6 +1692,15 @@ const (
 	StaticSubjectControlledCommanders
 	StaticSubjectControlledPermanentSubtype
 	StaticSubjectOtherControlledPermanentSubtype
+	// StaticSubjectNonbasicLands, StaticSubjectNonlandPermanents,
+	// StaticSubjectSnowPermanents, and StaticSubjectAllPermanentSubtype name
+	// battlefield-wide land and permanent groups for the mass don't-untap
+	// restriction ("Nonbasic lands ...", Back to Basics; "Nonland permanents ...",
+	// Embargo; "Snow permanents ...", Freyalise's Radiance; "Islands ...", Choke).
+	StaticSubjectNonbasicLands
+	StaticSubjectNonlandPermanents
+	StaticSubjectSnowPermanents
+	StaticSubjectAllPermanentSubtype
 )
 
 // CompiledDamageRecipient bundles the primary-recipient descriptors of a

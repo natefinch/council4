@@ -56,6 +56,7 @@ var Cards = []*game.CardDef{
 	FranticSalvage,
 	FreestriderLookout,
 	FreyaliseSCharm,
+	FreyaliseSRadiance,
 	Frightcrawler,
 	FrillscareMentor,
 	FrontierSeeker,

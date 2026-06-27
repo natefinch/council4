@@ -651,6 +651,74 @@ func TestParseStaticGroupDoesntUntapDeclarationMeaning(t *testing.T) {
 	}
 }
 
+func TestParseStaticGroupDoesntUntapPermanentDeclarationMeaning(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		source          string
+		subjectKind     EffectStaticSubjectKind
+		subtype         types.Sub
+		counterRequired bool
+		counterKind     counter.Kind
+		creatureSubject bool
+	}{
+		"land subtype": {
+			source:      "Islands don't untap during their controllers' untap steps.",
+			subjectKind: EffectStaticSubjectAllPermanentSubtype,
+			subtype:     types.Sub("Island"),
+		},
+		"nonbasic lands": {
+			source:      "Nonbasic lands don't untap during their controllers' untap steps.",
+			subjectKind: EffectStaticSubjectNonbasicLands,
+		},
+		"nonland permanents": {
+			source:      "Nonland permanents don't untap during their controllers' untap steps.",
+			subjectKind: EffectStaticSubjectNonlandPermanents,
+		},
+		"snow permanents": {
+			source:      "Snow permanents don't untap during their controllers' untap steps.",
+			subjectKind: EffectStaticSubjectSnowPermanents,
+		},
+		"counter-filtered creatures": {
+			source:          "Creatures with ice counters on them don't untap during their controllers' untap steps.",
+			subjectKind:     EffectStaticSubjectAllCreatures,
+			counterRequired: true,
+			counterKind:     counter.Ice,
+			creatureSubject: true,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			declarations := parseStaticDeclarationSyntax(t, test.source, Context{})
+			if len(declarations) != 1 {
+				t.Fatalf("declarations = %#v, want one", declarations)
+			}
+			declaration := declarations[0]
+			if declaration.Kind != StaticDeclarationRule {
+				t.Fatalf("kind = %v, want rule", declaration.Kind)
+			}
+			rule := declaration.Rule
+			wantSubject := StaticRuleSubjectBattlefieldPermanents
+			if test.creatureSubject {
+				wantSubject = StaticRuleSubjectBattlefieldCreatures
+			}
+			if rule.Subject.Kind != wantSubject ||
+				rule.Constraint.Kind != StaticRuleConstraintProhibition ||
+				rule.Operation.Kind != StaticRuleOperationUntap ||
+				rule.Operation.Voice != StaticRuleVoiceActive {
+				t.Fatalf("rule = %#v, want %v doesn't-untap restriction", rule, wantSubject)
+			}
+			group := declaration.Subject.Group
+			if group.Kind != test.subjectKind ||
+				group.Subtype != test.subtype ||
+				group.CounterRequired != test.counterRequired ||
+				group.CounterKind != test.counterKind {
+				t.Fatalf("group = %#v, want kind %v subtype %v counter %v", group, test.subjectKind, test.subtype, test.counterKind)
+			}
+		})
+	}
+}
+
 func TestParseStaticBattlefieldCreaturesCantBlockUnconditionalDeclarationMeaning(t *testing.T) {
 	t.Parallel()
 	declarations := parseStaticDeclarationSyntax(t, "Creatures can't block.", Context{})

@@ -366,6 +366,74 @@ func TestCompileGroupDoesntUntapStaticRules(t *testing.T) {
 	}
 }
 
+func TestCompileGroupDoesntUntapPermanentStaticRules(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		source             string
+		requireType        []types.Card
+		excludedTypes      []types.Card
+		subtypesAny        []types.Sub
+		supertypes         []types.Super
+		excludedSupertypes []types.Super
+		matchCounter       bool
+		requiredCounter    counter.Kind
+	}{
+		"land subtype": {
+			source:      "Islands don't untap during their controllers' untap steps.",
+			subtypesAny: []types.Sub{types.Sub("Island")},
+		},
+		"nonbasic lands": {
+			source:             "Nonbasic lands don't untap during their controllers' untap steps.",
+			requireType:        []types.Card{types.Land},
+			excludedSupertypes: []types.Super{types.Basic},
+		},
+		"nonland permanents": {
+			source:        "Nonland permanents don't untap during their controllers' untap steps.",
+			excludedTypes: []types.Card{types.Land},
+		},
+		"snow permanents": {
+			source:     "Snow permanents don't untap during their controllers' untap steps.",
+			supertypes: []types.Super{types.Snow},
+		},
+		"counter-filtered creatures": {
+			source:          "Creatures with ice counters on them don't untap during their controllers' untap steps.",
+			requireType:     []types.Card{types.Creature},
+			matchCounter:    true,
+			requiredCounter: counter.Ice,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := compileSource(test.source, pipelineContext{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			ability := compilation.Abilities[0]
+			if ability.Static == nil || len(ability.Static.Declarations) != 1 {
+				t.Fatalf("static semantics = %#v, want one declaration", ability.Static)
+			}
+			declaration := ability.Static.Declarations[0]
+			if declaration.Rule == nil ||
+				declaration.Rule.Kind != StaticRuleDoesntUntap ||
+				declaration.Rule.Zone != StaticZoneBattlefield ||
+				declaration.Group.Domain != StaticGroupBattlefield {
+				t.Fatalf("declaration = %#v, want group doesn't untap", declaration)
+			}
+			selection := declaration.Group.Selection
+			if !slices.Equal(selection.RequiredTypes, test.requireType) ||
+				!slices.Equal(selection.ExcludedTypes, test.excludedTypes) ||
+				!slices.Equal(selection.SubtypesAny, test.subtypesAny) ||
+				!slices.Equal(selection.Supertypes, test.supertypes) ||
+				!slices.Equal(selection.ExcludedSupertypes, test.excludedSupertypes) ||
+				selection.MatchCounter != test.matchCounter ||
+				selection.RequiredCounter != test.requiredCounter {
+				t.Fatalf("selection = %#v", selection)
+			}
+		})
+	}
+}
+
 func TestCompileGroupDoesntUntapNearMissesFailClosed(t *testing.T) {
 	t.Parallel()
 	for _, source := range []string{

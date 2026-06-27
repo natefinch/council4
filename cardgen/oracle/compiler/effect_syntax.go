@@ -310,6 +310,14 @@ func compileStaticSubjectKind(kind parser.EffectStaticSubjectKind) StaticSubject
 		return StaticSubjectControlledPermanentSubtype
 	case parser.EffectStaticSubjectOtherControlledPermanentSubtype:
 		return StaticSubjectOtherControlledPermanentSubtype
+	case parser.EffectStaticSubjectNonbasicLands:
+		return StaticSubjectNonbasicLands
+	case parser.EffectStaticSubjectNonlandPermanents:
+		return StaticSubjectNonlandPermanents
+	case parser.EffectStaticSubjectSnowPermanents:
+		return StaticSubjectSnowPermanents
+	case parser.EffectStaticSubjectAllPermanentSubtype:
+		return StaticSubjectAllPermanentSubtype
 	default:
 		return StaticSubjectNone
 	}
