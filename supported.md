@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,229 of 32,501 cards eligible for paper support (46.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,235 of 32,501 cards eligible for paper support (46.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -175,6 +175,7 @@ Council4 currently supports **15,229 of 32,501 cards eligible for paper support 
 - Agent of Shauku
 - Agent of Stromgald
 - Agent of the Fates
+- Agent of the Iron Throne
 - Agent Phil Coulson
 - Agent Venom
 - Agents of HYDRA
@@ -2265,6 +2266,7 @@ Council4 currently supports **15,229 of 32,501 cards eligible for paper support 
 - Clammy Prowler
 - Clamor Shaman
 - Clamorous Ironclad
+- Clan Crafter
 - Clan Defiance
 - Clarion Cathars
 - Clarion Spirit
@@ -4279,6 +4281,7 @@ Council4 currently supports **15,229 of 32,501 cards eligible for paper support 
 - Fangren Pathcutter
 - Fantastic Elasticity
 - Far // Away
+- Far Traveler
 - Faramir, Steward of Gondor
 - Farbog Boneflinger
 - Farbog Explorer
@@ -4559,6 +4562,7 @@ Council4 currently supports **15,229 of 32,501 cards eligible for paper support 
 - Flametongue Yearling
 - Flamewake Phoenix
 - Flamewave Invoker
+- Flaming Fist
 - Flaming Fist Officer
 - Flaming Sword
 - Flaming Tyrannosaurus
@@ -9947,6 +9951,7 @@ Council4 currently supports **15,229 of 32,501 cards eligible for paper support 
 - Raise Dead
 - Raise the Alarm
 - Raise the Past
+- Raised by Giants
 - Raised by Wolves
 - Raiyuu, Storm's Edge
 - Raka Disciple
@@ -12604,6 +12609,7 @@ Council4 currently supports **15,229 of 32,501 cards eligible for paper support 
 - Stream of Life
 - Stream of Unconsciousness
 - Street Riot
+- Street Urchin
 - Streetbreaker Wurm
 - Strength Bobblehead
 - Strength from the Fallen
