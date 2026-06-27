@@ -178,9 +178,12 @@ func parseStaticSubjectDeclarations(
 	subject, verbStart, ok := parseStaticDeclarationSubject(opTokens, atoms)
 	if !ok {
 		subject, verbStart, ok = staticAttachedPronounSubject(opTokens, hasCondition, condition)
-		if !ok {
-			return nil, false
-		}
+	}
+	if !ok {
+		subject, verbStart, ok = staticSourcePronounSubject(opTokens, hasCondition, condition)
+	}
+	if !ok {
+		return nil, false
 	}
 	operations, ok := parseStaticOperations(opTokens, verbStart, subject, atoms)
 	if !ok {
@@ -417,6 +420,26 @@ func staticAttachedPronounSubject(tokens []shared.Token, hasCondition bool, cond
 		Kind:  StaticDeclarationSubjectGroup,
 		Span:  span,
 		Group: EffectStaticSubjectSyntax{Kind: EffectStaticSubjectAttachedObject, Span: span},
+	}, 1, true
+}
+
+// staticSourcePronounSubject recognizes the pronoun subject "it" that co-refers
+// with the source permanent named by a leading "As long as this creature is
+// equipped/enchanted" or "As long as this creature has N +1/+1 counters on it"
+// condition ("..., it has flying."). It applies only when the stripped condition
+// binds the source object, so the pronoun resolves to the source creature, the
+// same self reference the trailing "This creature has flying as long as it's
+// equipped" form names through its "this creature" subject.
+func staticSourcePronounSubject(tokens []shared.Token, hasCondition bool, condition ConditionClause) (StaticDeclarationSubject, int, bool) {
+	if !hasCondition || condition.ObjectBinding != ConditionObjectBindingSource {
+		return StaticDeclarationSubject{}, 0, false
+	}
+	if !staticWordsAt(tokens, 0, "it") {
+		return StaticDeclarationSubject{}, 0, false
+	}
+	return StaticDeclarationSubject{
+		Kind: StaticDeclarationSubjectSourceCreature,
+		Span: shared.SpanOf(tokens[:1]),
 	}, 1, true
 }
 

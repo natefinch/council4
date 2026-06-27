@@ -50,4 +50,5 @@ var Cards = []*game.CardDef{
 	DuchessWaywardTavernkeep,
 	DuskFeaster,
 	DuskfangMentor,
+	DwarfholdChampion,
 }

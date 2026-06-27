@@ -35,6 +35,7 @@ var Cards = []*game.CardDef{
 	ThoughtweftCharge,
 	ThousandWinds,
 	ThrabenDoomsayer,
+	ThranGolem,
 	ThrashingMudspawn,
 	ThrivingGrubs,
 	ThrivingIbex,
