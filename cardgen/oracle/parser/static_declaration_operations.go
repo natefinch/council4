@@ -1991,6 +1991,17 @@ func parseStaticProhibitionRuleOperation(
 	}
 	if staticWordsAt(tokens, verb, "be", "blocked") {
 		next := verb + 2
+		if staticWordsAt(tokens, next, "except") {
+			qualifier, qualifierNext, ok := parseStaticExceptByQualifier(tokens, next+1, end)
+			if !ok {
+				return StaticDeclarationSyntax{}, 0, false
+			}
+			return staticRuleOperation(tokens, index, qualifierNext, subject, constraint, StaticRuleOperation{
+				Kind:  StaticRuleOperationBlockedExcept,
+				Voice: StaticRuleVoicePassive,
+				Span:  shared.SpanOf(tokens[verb : next+1]),
+			}, []StaticRuleQualifier{qualifier})
+		}
 		var qualifiers []StaticRuleQualifier
 		if qualifier, qualifierNext, ok := parseStaticByMoreThanOneQualifier(tokens, next, end); ok {
 			qualifiers = append(qualifiers, qualifier)

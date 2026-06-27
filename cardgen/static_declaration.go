@@ -789,7 +789,8 @@ func appendStaticRuleDeclaration(body *game.StaticAbility, declaration compiler.
 	if !ok {
 		return false
 	}
-	if declaration.Rule.Kind == compiler.StaticRuleCantBeBlockedByCreaturesWith {
+	if declaration.Rule.Kind == compiler.StaticRuleCantBeBlockedByCreaturesWith ||
+		declaration.Rule.Kind == compiler.StaticRuleCantBeBlockedExceptBy {
 		restriction, ok := lowerStaticBlockerRestriction(declaration.Rule.Blocker)
 		if !ok {
 			return false
@@ -869,6 +870,7 @@ func staticRuleDomain(kind compiler.StaticRuleKind) compiler.StaticRuleDomain {
 		return compiler.StaticRuleDomainAttack
 	case compiler.StaticRuleCantBlock, compiler.StaticRuleCantBeBlocked, compiler.StaticRuleMustBeBlocked,
 		compiler.StaticRuleCantBeBlockedByMoreThanOne, compiler.StaticRuleCantBeBlockedByCreaturesWith,
+		compiler.StaticRuleCantBeBlockedExceptBy,
 		compiler.StaticRuleCanBlockOnlyCreaturesWithFlying,
 		compiler.StaticRuleCantBlockAndCantBeBlocked,
 		compiler.StaticRuleMustBeBlockedByAllAble, compiler.StaticRuleAssignDamageAsUnblocked,
@@ -1455,6 +1457,8 @@ func lowerStaticRuleKind(kind compiler.StaticRuleKind) (game.RuleEffectKind, boo
 		return game.RuleEffectCantBeBlockedByMoreThanOne, true
 	case compiler.StaticRuleCantBeBlockedByCreaturesWith:
 		return game.RuleEffectCantBeBlockedByCreaturesWith, true
+	case compiler.StaticRuleCantBeBlockedExceptBy:
+		return game.RuleEffectCantBeBlockedExceptBy, true
 	case compiler.StaticRuleCanBlockOnlyCreaturesWithFlying:
 		return game.RuleEffectCanBlockOnlyCreaturesWith, true
 	case compiler.StaticRuleCantAttackAlone:
@@ -1499,6 +1503,10 @@ func lowerStaticBlockerRestriction(restriction compiler.StaticBlockerRestriction
 		return game.BlockerRestriction{Kind: game.BlockerRestrictionColor, Color: restriction.Color}, true
 	case compiler.StaticBlockerRestrictionArtifact:
 		return game.BlockerRestriction{Kind: game.BlockerRestrictionArtifact}, true
+	case compiler.StaticBlockerRestrictionDefender:
+		return game.BlockerRestriction{Kind: game.BlockerRestrictionDefender}, true
+	case compiler.StaticBlockerRestrictionLegendary:
+		return game.BlockerRestriction{Kind: game.BlockerRestrictionLegendary}, true
 	default:
 		return game.BlockerRestriction{}, false
 	}

@@ -1621,16 +1621,15 @@ const (
 	// turn despite having defender. It lowers to a this-turn ApplyRule over the
 	// source. Added last so existing kinds keep their wire values.
 	EffectCanAttackAsThoughDefender
-	// EffectAnimateTarget is the targeted broadening of EffectAnimateSelf
-	// ("[Until end of turn,] target land becomes a N/N [<color>...] <subtype>...
-	// creature [with <keyword>...] [until end of turn] [that's still a land].",
-	// Animate Land, Vivify, Hydroform, Kamahl, Soilshaper, Lifespark Spellbomb):
-	// the single targeted land gains the creature card type, the named subtypes,
-	// the stated colors, the granted keywords, and the literal base
-	// power/toughness until end of turn while keeping its land type. It lowers to
-	// an ApplyContinuous over the target for the turn. Added last so existing
-	// kinds keep their wire values.
 	EffectAnimateTarget
+	// EffectCantBeBlockedExceptBy is the static combat-evasion restriction "can't
+	// be blocked except by <quality>" (Dread Warlock, Silhana Ledgewalker, Noggle
+	// Bandit): every blocker that does not match the named characteristic is
+	// prohibited from blocking the source. It is the complement of
+	// EffectCantBeBlockedByCreaturesWith and pairs only with a static rule
+	// declaration carrying the allowed BlockerRestriction. Added last so existing
+	// kinds keep their wire values.
+	EffectCantBeBlockedExceptBy
 )
 
 // DurationKind identifies common continuous-effect durations.

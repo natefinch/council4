@@ -138,6 +138,14 @@ const (
 	// flying", "... power N or less", "... power N or greater"); the bounding
 	// characteristic travels in StaticRuleDeclaration.Blocker.
 	StaticRuleCantBeBlockedByCreaturesWith
+	// StaticRuleCantBeBlockedExceptBy is the complementary restricted block
+	// prohibition "can't be blocked except by ..." bounded by a blocker
+	// characteristic ("can't be blocked except by creatures with flying", "...
+	// except by black creatures", "... except by artifact creatures", "... except
+	// by creatures with defender", "... except by legendary creatures"). Only
+	// blockers matching the characteristic may block the subject; the bounding
+	// characteristic travels in StaticRuleDeclaration.Blocker.
+	StaticRuleCantBeBlockedExceptBy
 	StaticRuleAdditionalTriggerForChosenCreatureType
 	// StaticRuleCantBlockAndCantBeBlocked combines the active "can't block" and
 	// passive "can't be blocked" prohibitions printed as one sentence; it lowers
@@ -193,6 +201,12 @@ const (
 	// StaticBlockerRestrictionArtifact bounds the prohibition to artifact-creature
 	// blockers ("can't be blocked by artifact creatures").
 	StaticBlockerRestrictionArtifact
+	// StaticBlockerRestrictionDefender bounds the prohibition to blockers with
+	// defender ("can't be blocked except by creatures with defender").
+	StaticBlockerRestrictionDefender
+	// StaticBlockerRestrictionLegendary bounds the prohibition to legendary-creature
+	// blockers ("can't be blocked except by legendary creatures").
+	StaticBlockerRestrictionLegendary
 )
 
 // StaticBlockerRestriction is the closed blocker characteristic bounding a
@@ -1478,6 +1492,13 @@ func semanticStaticRuleForSyntax(rule parser.StaticRuleSyntax) (StaticRuleKind, 
 	}
 	if isCreatureRuleSubject(rule.Subject.Kind) &&
 		rule.Constraint.Kind == parser.StaticRuleConstraintProhibition &&
+		rule.Operation.Kind == parser.StaticRuleOperationBlockedExcept &&
+		rule.Operation.Voice == parser.StaticRuleVoicePassive &&
+		staticBlockerRestrictionForSyntax(rule).Kind != StaticBlockerRestrictionNone {
+		return StaticRuleCantBeBlockedExceptBy, StaticZoneBattlefield, true
+	}
+	if isCreatureRuleSubject(rule.Subject.Kind) &&
+		rule.Constraint.Kind == parser.StaticRuleConstraintProhibition &&
 		rule.Operation.Kind == parser.StaticRuleOperationAttack &&
 		rule.Operation.Voice == parser.StaticRuleVoiceActive &&
 		len(rule.Qualifiers) == 0 {
@@ -1608,6 +1629,10 @@ func staticBlockerRestrictionForSyntax(rule parser.StaticRuleSyntax) StaticBlock
 		return StaticBlockerRestriction{Kind: StaticBlockerRestrictionColor, Color: runtimeColor}
 	case parser.StaticRuleQualifierBlockerArtifact:
 		return StaticBlockerRestriction{Kind: StaticBlockerRestrictionArtifact}
+	case parser.StaticRuleQualifierBlockerDefender:
+		return StaticBlockerRestriction{Kind: StaticBlockerRestrictionDefender}
+	case parser.StaticRuleQualifierBlockerLegendary:
+		return StaticBlockerRestriction{Kind: StaticBlockerRestrictionLegendary}
 	default:
 		return StaticBlockerRestriction{}
 	}
@@ -1633,6 +1658,8 @@ func staticRuleForEffect(kind EffectKind) StaticRuleKind {
 		return StaticRuleCantBeCountered
 	case EffectCantBeBlockedByCreaturesWith:
 		return StaticRuleCantBeBlockedByCreaturesWith
+	case EffectCantBeBlockedExceptBy:
+		return StaticRuleCantBeBlockedExceptBy
 	case EffectCantBeBlockedByMoreThanOne:
 		return StaticRuleCantBeBlockedByMoreThanOne
 	case EffectCantAttackOrBlock:
@@ -1685,7 +1712,7 @@ func staticRuleDomain(rule StaticRuleKind) StaticRuleDomain {
 	case StaticRuleCantAttack, StaticRuleMustAttack, StaticRuleCantAttackYou, StaticRuleCantAttackAlone:
 		return StaticRuleDomainAttack
 	case StaticRuleCantBlock, StaticRuleCantBeBlocked, StaticRuleMustBeBlocked, StaticRuleCantBeBlockedByMoreThanOne,
-		StaticRuleCantBeBlockedByCreaturesWith, StaticRuleCantBlockAndCantBeBlocked,
+		StaticRuleCantBeBlockedByCreaturesWith, StaticRuleCantBeBlockedExceptBy, StaticRuleCantBlockAndCantBeBlocked,
 		StaticRuleMustBeBlockedByAllAble, StaticRuleAssignDamageAsUnblocked,
 		StaticRuleCanBlockOnlyCreaturesWithFlying, StaticRuleCantBlockAlone:
 		return StaticRuleDomainBlock

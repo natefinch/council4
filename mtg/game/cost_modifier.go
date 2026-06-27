@@ -178,6 +178,16 @@ const (
 	// power N or less", "... with power N or greater"). Unlike
 	// RuleEffectCantBeBlocked it does not prohibit all blockers.
 	RuleEffectCantBeBlockedByCreaturesWith
+	// RuleEffectCantBeBlockedExceptBy is the complementary restricted block
+	// prohibition "can't be blocked except by ...": the affected attacker can be
+	// blocked only by creatures matching the carried BlockerRestriction ("can't
+	// be blocked except by creatures with flying", "... except by black
+	// creatures", "... except by artifact creatures", "... except by creatures
+	// with defender", "... except by legendary creatures"). Every blocker that
+	// does not match the restriction is prohibited; matching blockers are
+	// allowed. Unlike RuleEffectCantBeBlockedByCreaturesWith, which stops only
+	// matching blockers, this stops all non-matching ones.
+	RuleEffectCantBeBlockedExceptBy
 	// RuleEffectPlayerProtection grants the affected player protection from
 	// sources matching Protection.
 	RuleEffectPlayerProtection
@@ -463,6 +473,7 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectCantBeBlockedByMoreThanOne,
 		RuleEffectNoMaximumHandSize,
 		RuleEffectCantBeBlockedByCreaturesWith,
+		RuleEffectCantBeBlockedExceptBy,
 		RuleEffectPlayerProtection,
 		RuleEffectAttackTax,
 		RuleEffectLifeTotalCantChange,
@@ -529,6 +540,12 @@ const (
 	// BlockerRestrictionArtifact stops artifact-creature blockers ("can't be
 	// blocked by artifact creatures").
 	BlockerRestrictionArtifact
+	// BlockerRestrictionDefender stops blockers with defender ("can't be blocked
+	// except by creatures with defender").
+	BlockerRestrictionDefender
+	// BlockerRestrictionLegendary stops legendary-creature blockers ("can't be
+	// blocked except by legendary creatures").
+	BlockerRestrictionLegendary
 )
 
 // BlockerRestriction bounds which blockers a restricted block prohibition stops.

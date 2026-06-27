@@ -188,7 +188,10 @@ func parseStaticRuleOperationsForSubject(tokens []shared.Token, subject StaticRu
 			return nil, false
 		}
 		rule.Operation = operation
-		if qualifier, qualifierNext, ok := parseStaticBlockerRestrictionQualifier(tokens, opNext, len(tokens)-1); ok {
+		if qualifier, qualifierNext, ok := parseStaticBlockedExceptClause(tokens, &rule.Operation, opNext, len(tokens)-1); ok {
+			rule.Qualifiers = append(rule.Qualifiers, qualifier)
+			opNext = qualifierNext
+		} else if qualifier, qualifierNext, ok := parseStaticBlockerRestrictionQualifier(tokens, opNext, len(tokens)-1); ok {
 			rule.Qualifiers = append(rule.Qualifiers, qualifier)
 			opNext = qualifierNext
 		} else if qualifier, qualifierNext, ok := parseStaticByMoreThanOneQualifier(tokens, opNext, len(tokens)-1); ok {
@@ -539,6 +542,55 @@ func parseStaticBlockerTypeQualifier(tokens []shared.Token, start, end int) (Sta
 	}, start + 3, true
 }
 
+// parseStaticBlockedExceptClause recognizes the "except by ..." tail that turns a
+// passive "can't be blocked" prohibition into the restricted "can't be blocked
+// except by ..." prohibition, where only blockers matching the trailing blocker
+// characteristic may block the subject. It matches only after a passive block
+// operation; on a match it retargets the operation to
+// StaticRuleOperationBlockedExcept and returns the bounding blocker qualifier.
+// Any "except by ..." wording whose characteristic is not recognized fails closed
+// so the sentence stays unsupported rather than misparsing.
+func parseStaticBlockedExceptClause(tokens []shared.Token, operation *StaticRuleOperation, start, end int) (StaticRuleQualifier, int, bool) {
+	if operation.Kind != StaticRuleOperationBlock || operation.Voice != StaticRuleVoicePassive {
+		return StaticRuleQualifier{}, 0, false
+	}
+	if !staticRuleWordsAt(tokens, start, "except") {
+		return StaticRuleQualifier{}, 0, false
+	}
+	qualifier, next, ok := parseStaticExceptByQualifier(tokens, start+1, end)
+	if !ok {
+		return StaticRuleQualifier{}, 0, false
+	}
+	operation.Kind = StaticRuleOperationBlockedExcept
+	operation.Span = shared.SpanOf(tokens[start-2 : start+1])
+	return qualifier, next, true
+}
+
+// parseStaticExceptByQualifier consumes the blocker characteristic following
+// "except by": "by creatures with flying", "by <color> creatures", "by artifact
+// creatures", "by creatures with defender", or "by legendary creatures". The
+// flying, color, and artifact forms reuse the shared blocker-restriction
+// recognizer; defender and legendary add the keyword and supertype forms unique
+// to the "except by" family. end is the exclusive bound (the period index).
+func parseStaticExceptByQualifier(tokens []shared.Token, start, end int) (StaticRuleQualifier, int, bool) {
+	if qualifier, next, ok := parseStaticBlockerRestrictionQualifier(tokens, start, end); ok {
+		return qualifier, next, true
+	}
+	if staticRuleWordsAt(tokens, start, "by", "creatures", "with", "defender") {
+		return StaticRuleQualifier{
+			Kind: StaticRuleQualifierBlockerDefender,
+			Span: shared.SpanOf(tokens[start : start+4]),
+		}, start + 4, true
+	}
+	if staticRuleWordsAt(tokens, start, "by", "legendary", "creatures") {
+		return StaticRuleQualifier{
+			Kind: StaticRuleQualifierBlockerLegendary,
+			Span: shared.SpanOf(tokens[start : start+3]),
+		}, start + 3, true
+	}
+	return StaticRuleQualifier{}, 0, false
+}
+
 func parseStaticBlockerRestrictionQualifier(tokens []shared.Token, start, end int) (StaticRuleQualifier, int, bool) {
 	if qualifier, next, ok := parseStaticBlockerTypeQualifier(tokens, start, end); ok {
 		return qualifier, next, true
@@ -663,6 +715,14 @@ func validCreatureStaticRuleOperation(rule StaticRuleSyntax) bool {
 				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierBlockerPowerOrGreater) ||
 				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierBlockerColor) ||
 				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierBlockerArtifact))) ||
+		(rule.Constraint.Kind == StaticRuleConstraintProhibition &&
+			rule.Operation.Kind == StaticRuleOperationBlockedExcept &&
+			rule.Operation.Voice == StaticRuleVoicePassive &&
+			(staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierBlockerFlying) ||
+				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierBlockerColor) ||
+				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierBlockerArtifact) ||
+				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierBlockerDefender) ||
+				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierBlockerLegendary))) ||
 		(rule.Constraint.Kind == StaticRuleConstraintProhibition &&
 			rule.Operation.Kind == StaticRuleOperationAttack &&
 			rule.Operation.Voice == StaticRuleVoiceActive &&

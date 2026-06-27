@@ -60,6 +60,7 @@ var Cards = []*game.CardDef{
 	SigardaChampionOfLight,
 	SigardianPriest,
 	SigiledContender,
+	SilhanaLedgewalker,
 	SilkweaverElite,
 	SilundiVision,
 	SilverShroudCostume,

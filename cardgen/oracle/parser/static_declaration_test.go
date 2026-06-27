@@ -1238,6 +1238,42 @@ func TestParseStaticRuleDeclarationMeaning(t *testing.T) {
 			voice:     StaticRuleVoicePassive,
 			qualifier: StaticRuleQualifierBlockerArtifact,
 		},
+		"cannot be blocked except by flying": {
+			source:    "This creature can't be blocked except by creatures with flying.",
+			subject:   StaticDeclarationSubjectSourceCreature,
+			operation: StaticRuleOperationBlockedExcept,
+			voice:     StaticRuleVoicePassive,
+			qualifier: StaticRuleQualifierBlockerFlying,
+		},
+		"cannot be blocked except by color": {
+			source:    "This creature can't be blocked except by black creatures.",
+			subject:   StaticDeclarationSubjectSourceCreature,
+			operation: StaticRuleOperationBlockedExcept,
+			voice:     StaticRuleVoicePassive,
+			qualifier: StaticRuleQualifierBlockerColor,
+			color:     ColorBlack,
+		},
+		"cannot be blocked except by artifact": {
+			source:    "This creature can't be blocked except by artifact creatures.",
+			subject:   StaticDeclarationSubjectSourceCreature,
+			operation: StaticRuleOperationBlockedExcept,
+			voice:     StaticRuleVoicePassive,
+			qualifier: StaticRuleQualifierBlockerArtifact,
+		},
+		"cannot be blocked except by defender": {
+			source:    "This creature can't be blocked except by creatures with defender.",
+			subject:   StaticDeclarationSubjectSourceCreature,
+			operation: StaticRuleOperationBlockedExcept,
+			voice:     StaticRuleVoicePassive,
+			qualifier: StaticRuleQualifierBlockerDefender,
+		},
+		"cannot be blocked except by legendary": {
+			source:    "This creature can't be blocked except by legendary creatures.",
+			subject:   StaticDeclarationSubjectSourceCreature,
+			operation: StaticRuleOperationBlockedExcept,
+			voice:     StaticRuleVoicePassive,
+			qualifier: StaticRuleQualifierBlockerLegendary,
+		},
 		"cannot attack": {
 			source:    "This creature can't attack.",
 			subject:   StaticDeclarationSubjectSourceCreature,
@@ -2265,6 +2301,34 @@ func TestParseStaticEveryBasicLandTypeRejectsBadTail(t *testing.T) {
 				for _, declaration := range ability.StaticDeclarations {
 					if declaration.EveryBasicLandType {
 						t.Fatalf("source %q unexpectedly produced an every-basic-land-type declaration", source)
+					}
+				}
+			}
+		})
+	}
+}
+
+// TestParseStaticCantBeBlockedExceptByRejectsDeferredForms confirms the
+// "can't be blocked except by ..." parser fails closed on the multi-quality,
+// counted, and subtype-bounded forms that are intentionally not yet supported,
+// so those cards stay unsupported rather than misparsing.
+func TestParseStaticCantBeBlockedExceptByRejectsDeferredForms(t *testing.T) {
+	t.Parallel()
+	sources := []string{
+		"This creature can't be blocked except by three or more creatures.",
+		"This creature can't be blocked except by Walls.",
+		"This creature can't be blocked except by artifact creatures and/or white creatures.",
+		"This creature can't be blocked except by creatures with flying or reach.",
+	}
+	for _, source := range sources {
+		t.Run(source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(source, Context{})
+			for _, ability := range document.Abilities {
+				for _, sentence := range ability.Sentences {
+					if sentence.StaticRule != nil &&
+						sentence.StaticRule.Operation.Kind == StaticRuleOperationBlockedExcept {
+						t.Fatalf("source %q unexpectedly parsed as a blocked-except rule: %#v", source, sentence.StaticRule)
 					}
 				}
 			}
