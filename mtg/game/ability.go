@@ -948,6 +948,14 @@ type TriggerPattern struct {
 	// restriction; a positive value is only valid with
 	// Event == EventClassLevelGained and Source == TriggerSourceSelf.
 	ClassBecameLevel int
+
+	// DyingDamagedBySource restricts an EventPermanentDied trigger to a permanent
+	// that was dealt damage by the ability's own source earlier this turn
+	// ("Whenever a creature dealt damage by this creature this turn dies",
+	// CR 603.2). The rules layer scans the current turn's damage events for one
+	// whose source is this ability's source and whose damaged permanent is the
+	// dying permanent. It is only valid with Event == EventPermanentDied.
+	DyingDamagedBySource bool
 }
 
 // TriggerTurnRelation restricts a trigger by whose turn the triggering event

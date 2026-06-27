@@ -41,6 +41,7 @@ var Cards = []*game.CardDef{
 	TransguildPromenade,
 	TreasureHunt,
 	TreefolkHealer,
+	TrophyHunter,
 	TroubledHealer,
 	TwinBlades,
 	TwinflameTravelers,

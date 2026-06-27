@@ -15,6 +15,7 @@ var Cards = []*game.CardDef{
 	MalametBattleGlyph,
 	ManaReflection,
 	MarduBlazebringer,
+	MarkovEnforcer,
 	MarthaJones,
 	MartyrsTomb,
 	MasterApothecary,

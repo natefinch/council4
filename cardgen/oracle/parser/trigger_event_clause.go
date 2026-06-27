@@ -68,14 +68,15 @@ func parseTriggerEventClause(
 }
 
 type zoneSubjectResult struct {
-	subject       TriggerEventSubject
-	controller    TriggerController
-	player        TriggerPlayerSelector
-	excludeSelf   bool
-	faceDown      bool
-	oneOrMore     bool
-	selfOrAnother bool
-	ok            bool
+	subject          TriggerEventSubject
+	controller       TriggerController
+	player           TriggerPlayerSelector
+	excludeSelf      bool
+	faceDown         bool
+	oneOrMore        bool
+	selfOrAnother    bool
+	dealtDamageBySrc bool
+	ok               bool
 }
 
 type permanentSubjectResult struct {

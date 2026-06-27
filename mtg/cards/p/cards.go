@@ -20,6 +20,7 @@ var Cards = []*game.CardDef{
 	PlanarGuide,
 	PlantElemental,
 	PotionerSTrove,
+	PredatorOoze,
 	PricklyPair,
 	PrimalMight,
 	PrimevalForce,

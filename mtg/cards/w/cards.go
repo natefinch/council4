@@ -15,6 +15,7 @@ var Cards = []*game.CardDef{
 	Weatherlight,
 	WelkinTern,
 	WhiteWard,
+	Wight,
 	WildInstincts,
 	WildestDreams,
 	WindbriskHeights,
