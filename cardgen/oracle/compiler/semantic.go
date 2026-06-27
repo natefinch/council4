@@ -87,21 +87,29 @@ type CompiledAbility struct {
 	// looked-at card matches one of these types. It is nil for all other exact
 	// sequences. The parser owns the wording; this holds only the typed values.
 	ExactSequenceLookAtTopTypes []types.Card
-	Span                        shared.Span
-	Text                        string
-	ActivationTiming            ActivationTimingKind
-	ActivationTimingSpan        shared.Span
-	ActivationZone              zone.Type
-	AbilityWord                 string
-	Chapters                    []int
-	ChapterSpan                 shared.Span
-	OptionalSpan                shared.Span
-	Cost                        *CompiledCost
-	SourceAbilityCostReduction  *CompiledSourceAbilityCostReduction
-	AlternativeCost             *CompiledAlternativeCost
-	Trigger                     *CompiledTrigger
-	Content                     AbilityContent
-	Static                      *CompiledStaticSemantics
+	// ExactSequenceLookAtTopEntersTapped and ExactSequenceLookAtTopElseHand carry
+	// the typed parameters of ExactSequenceConditionalLookAtTopBattlefield: the
+	// former records the "tapped" battlefield entry rider, the latter that the
+	// card moves into the controller's hand when it is not put onto the
+	// battlefield (false leaves the card on top of the library). Both are false
+	// for every other exact sequence.
+	ExactSequenceLookAtTopEntersTapped bool
+	ExactSequenceLookAtTopElseHand     bool
+	Span                               shared.Span
+	Text                               string
+	ActivationTiming                   ActivationTimingKind
+	ActivationTimingSpan               shared.Span
+	ActivationZone                     zone.Type
+	AbilityWord                        string
+	Chapters                           []int
+	ChapterSpan                        shared.Span
+	OptionalSpan                       shared.Span
+	Cost                               *CompiledCost
+	SourceAbilityCostReduction         *CompiledSourceAbilityCostReduction
+	AlternativeCost                    *CompiledAlternativeCost
+	Trigger                            *CompiledTrigger
+	Content                            AbilityContent
+	Static                             *CompiledStaticSemantics
 	// ClassLevelGain is the target level of a Class enchantment's level-up
 	// activated ability ("{cost}: Level N"), or 0 when this ability is not a
 	// level-up. The compiler copies the parser's typed level so lowering emits

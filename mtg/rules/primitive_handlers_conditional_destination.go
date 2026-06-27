@@ -41,6 +41,9 @@ func handleConditionalDestinationPlace(r *effectResolver, prim game.ConditionalD
 			}
 		}
 	}
+	if prim.Else == zone.None {
+		return res
+	}
 	if prim.ElseOptional && !r.engine.chooseMay(r.game, r.agents, r.obj.Controller, conditionalDestinationElsePrompt(prim), r.log) {
 		return res
 	}

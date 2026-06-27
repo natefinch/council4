@@ -188,6 +188,9 @@ func lowerTriggeredAbility(
 	if ability.ExactSequence == compiler.ExactSequenceConditionalLookAtTopReveal {
 		return lowerConditionalLookAtTopTrigger(ability)
 	}
+	if ability.ExactSequence == compiler.ExactSequenceConditionalLookAtTopBattlefield {
+		return lowerConditionalLookAtTopBattlefieldTrigger(ability)
+	}
 	if pattern.Kind == compiler.TriggerAt {
 		return lowerAtTrigger(cardName, ability, syntax)
 	}

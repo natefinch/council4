@@ -31,6 +31,7 @@ var Cards = []*game.CardDef{
 	InsectoidExterminator,
 	Insolence,
 	IntoTheFaeCourt,
+	IntoTheWilds,
 	InvasionOfIxalan,
 	InvasiveManeuvers,
 	IorRuinExpedition,

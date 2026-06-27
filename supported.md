@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,681 of 32,501 cards eligible for paper support (48.2%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,686 of 32,501 cards eligible for paper support (48.3%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -4263,6 +4263,7 @@ Council4 currently supports **15,681 of 32,501 cards eligible for paper support 
 - Exploration
 - Explore
 - Explorer's Cache
+- Explorer's Scope
 - Explosive Apparatus
 - Explosive Derailment
 - Explosive Entry
@@ -6768,6 +6769,7 @@ Council4 currently supports **15,681 of 32,501 cards eligible for paper support 
 - Into the Roil
 - Into the Time Vortex
 - Into the Void
+- Into the Wilds
 - Into Thin Air
 - Intrepid Hero
 - Intrepid Provisioner
@@ -8497,6 +8499,7 @@ Council4 currently supports **15,681 of 32,501 cards eligible for paper support 
 - Mob
 - Mob Justice
 - Mobile Fort
+- Mobile Homestead
 - Mobilization
 - Mobilize
 - Mocking Sprite
@@ -10216,6 +10219,7 @@ Council4 currently supports **15,681 of 32,501 cards eligible for paper support 
 - Raging Swordtooth
 - Ragnar
 - Raid Bombardment
+- Raiders' Karve
 - Raiders' Spoils
 - Raiders' Wake
 - Raiding Nightstalker
@@ -10745,6 +10749,7 @@ Council4 currently supports **15,681 of 32,501 cards eligible for paper support 
 - Rise to Glory
 - Rise to the Challenge
 - Risen Necroregent
+- Risen Reef
 - Risen Sanctuary
 - Rishadan Airship
 - Rishadan Dockhand

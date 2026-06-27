@@ -70,6 +70,8 @@ func compileAbility(
 			compiled.ExactSequenceDrawOffset = uint8(offset)
 		}
 		compiled.ExactSequenceLookAtTopTypes = compilerCardTypes(ability.ExactSequence.LookAtTopCardTypes)
+		compiled.ExactSequenceLookAtTopEntersTapped = ability.ExactSequence.LookAtTopEntersTapped
+		compiled.ExactSequenceLookAtTopElseHand = ability.ExactSequence.LookAtTopBattlefield == parser.LookAtTopBattlefieldElseHand
 	}
 	compiled.ClassLevelGain = ability.ClassLevelGain
 	compiled.LevelUpRecognized = ability.LevelUpRecognized
