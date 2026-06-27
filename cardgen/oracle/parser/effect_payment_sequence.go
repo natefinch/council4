@@ -236,6 +236,18 @@ func recognizeControllerOptionalPaymentSequence(ability *Ability) {
 		// token created by the consequence, so carry the binding through.
 		payment.AdditionalCost = lifeCost
 		tokenPTBinding = lifeBinding
+	case controllerPayEnergyOK(paymentTokens):
+		// "you may pay {E}{E}." pays a pure energy resolution cost (the Kaladesh
+		// energy cycle's attack and enter riders, such as Thriving Rats' "you
+		// may pay {E}{E}. If you do, put a +1/+1 counter on it."). Unlike the
+		// "sacrifice"/"discard" optional costs, "pay {E}" is not an effect verb,
+		// so the ordered optional path cannot fold it; capture it directly as the
+		// AdditionalCost for both single- and multi-effect consequences.
+		energyCost, ok := parseControllerPaymentAdditionalCost(paymentSentence, paymentTokens[2:len(paymentTokens)-1], ability)
+		if !ok {
+			return
+		}
+		payment.AdditionalCost = energyCost
 	case len(consequenceSentence.Effects) > 1:
 		// A non-mana optional cost ("you may sacrifice a land", "you may discard
 		// a card") leaves its own cost effect in the payment sentence, so a
@@ -356,6 +368,20 @@ func stripLeadingInterveningIfPayment(tokens []shared.Token) []shared.Token {
 		return tokens
 	}
 	return rest
+}
+
+// controllerPayEnergyOK reports whether an optional-payment offer's tokens form
+// the pure energy cost "you may pay {E}{E}." paymentTokens are the offer's
+// semantic tokens beginning at "you may", so "pay" is at index 2 and the energy
+// symbols run up to the trailing period. A missing "pay", an empty symbol run, or
+// any non-energy token before the period fails closed so the mana, combined, and
+// life payment forms keep their own "pay" offers.
+func controllerPayEnergyOK(paymentTokens []shared.Token) bool {
+	if !effectWordsAt(paymentTokens, 2, "pay") || len(paymentTokens) < 5 {
+		return false
+	}
+	symbols := paymentTokens[3 : len(paymentTokens)-1]
+	return len(symbols) > 0 && allEnergySymbols(symbols)
 }
 
 // payKeywordManaCostOK reports whether an optional-payment sentence's tokens form
