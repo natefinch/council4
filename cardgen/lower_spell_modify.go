@@ -3623,7 +3623,7 @@ func lowerFixedControllerSpell(
 	if (effect.Amount.Known && effect.Amount.Value < 1) ||
 		!effect.Exact ||
 		effect.Negated ||
-		effect.Context != parser.EffectContextController ||
+		!controllerActionContext(effect.Context) ||
 		ctx.content.Unconsumed() ||
 		len(ctx.content.References) != 0 {
 		return game.AbilityContent{}, contentDiagnostic(
@@ -3682,6 +3682,15 @@ func cardCountQuantity(amount compiler.CompiledAmount, allowDynamic bool) (game.
 		return game.Quantity{}, false
 	}
 	return game.Dynamic(dynamic), true
+}
+
+func controllerActionContext(context parser.EffectContextKind) bool {
+	switch context {
+	case parser.EffectContextController, parser.EffectContextPriorSubject:
+		return true
+	default:
+		return false
+	}
 }
 
 func controllerActionQuantity(amount compiler.CompiledAmount, allowDynamic bool) (game.Quantity, bool) {

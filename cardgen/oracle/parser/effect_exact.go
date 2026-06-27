@@ -3511,13 +3511,54 @@ func exactGainControlBattlefieldSourceDuration(text, prefix string) bool {
 	return rest == "remains on the battlefield." || rest == "is on the battlefield."
 }
 
+// exactControllerAmountEffectSyntax reconstructs a controller scry/surveil
+// clause ("Scry 2.", "Surveil 1.") and its dynamic and prior-subject variants,
+// comparing the result byte-for-byte against the printed clause. Beyond the
+// fixed literal count it now also restores:
+//   - a "where X is <count>" dynamic amount ("Scry X, where X is the number of
+//     Zombies you control.");
+//   - an explicit "You " subject ("Then you scry 2.") and a prior-subject
+//     continuation joined by "then"/"and" ("…, then scry 1."), both of which
+//     denote the same controller action.
+//
+// The dynamic count and prior-subject recipient are carried as typed fields
+// (Amount and Context), so the lowering re-resolves them without reading the
+// wording. A ranged "up to" amount has no scry/surveil form and stays inexact.
 func exactControllerAmountEffectSyntax(effect *EffectSyntax, verb string) bool {
-	return effect.Context == EffectContextController &&
-		effect.Amount.Known &&
-		strings.EqualFold(
-			exactEffectClauseText(effect),
-			fmt.Sprintf("%s %s.", verb, effectAmountSourceText(effect)),
-		)
+	switch effect.Context {
+	case EffectContextController, EffectContextPriorSubject:
+	default:
+		return false
+	}
+	if effect.Amount.RangeKnown {
+		return false
+	}
+	text := exactEffectClauseText(effect)
+	for _, prefix := range []string{verb, "You " + verb} {
+		if exactControllerAmountClauseText(text, prefix, effect.Amount, effectAmountSourceText(effect)) {
+			return true
+		}
+	}
+	return false
+}
+
+// exactControllerAmountClauseText reports whether the printed scry/surveil clause
+// text matches the reconstruction for the given subject prefix and amount form.
+// Comparisons are case-insensitive so the mid-sentence lowercase verb of a
+// then-joined continuation ("scry 1.") matches the same reconstruction as the
+// sentence-initial form ("Scry 1.").
+func exactControllerAmountClauseText(text, prefix string, amount EffectAmountSyntax, amountText string) bool {
+	switch amount.DynamicForm {
+	case EffectDynamicAmountFormNone:
+		if !amount.Known {
+			return false
+		}
+		return strings.EqualFold(text, fmt.Sprintf("%s %s.", prefix, amountText))
+	case EffectDynamicAmountFormWhereX:
+		return strings.EqualFold(text, fmt.Sprintf("%s X, %s.", prefix, amount.Text))
+	default:
+		return false
+	}
 }
 
 // exactDigLookEffectSyntax reconstructs the impulse look clause "Look at the top

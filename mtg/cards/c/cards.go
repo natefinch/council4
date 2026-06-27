@@ -23,6 +23,7 @@ var Cards = []*game.CardDef{
 	CavalcadeOfCalamity,
 	Cease,
 	CelestialArmor,
+	CerebralDownload,
 	CeremonialGuard,
 	ChainedToTheRocks,
 	ChainsOfCustody,

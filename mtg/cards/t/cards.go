@@ -83,4 +83,5 @@ var Cards = []*game.CardDef{
 	TwinBlades,
 	TwinflameTravelers,
 	TwistedEmbrace,
+	TymaretCallsTheDead,
 }
