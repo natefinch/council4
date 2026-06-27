@@ -67,5 +67,6 @@ var Cards = []*game.CardDef{
 	BullElephant,
 	BurnTheAccursed,
 	Bushwhack,
+	ButcherOfTheHorde,
 	ButcherSCleaver,
 }

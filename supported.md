@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,337 of 32,501 cards eligible for paper support (47.2%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,345 of 32,501 cards eligible for paper support (47.2%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -722,6 +722,7 @@ Council4 currently supports **15,337 of 32,501 cards eligible for paper support 
 - Assassin
 - Assassin
 - Assassin
+- Assassin Initiate
 - Assassin's Strike
 - Assassin's Trophy
 - Assassinate
@@ -1803,6 +1804,7 @@ Council4 currently supports **15,337 of 32,501 cards eligible for paper support 
 - Bushwhack
 - Butcher Ghoul
 - Butcher of Malakir
+- Butcher of the Horde
 - Butcher's Cleaver
 - Butterfly
 - Buy Your Silence
@@ -4199,6 +4201,7 @@ Council4 currently supports **15,337 of 32,501 cards eligible for paper support 
 - Eyes of the Wisent
 - Ezekiel Sims, Spider-Totem
 - Ezio, Blade of Vengeance
+- Ezrim, Agency Chief
 - Ezuri's Archers
 - Ezuri's Brigade
 - Ezuri, Renegade Leader
@@ -7839,6 +7842,7 @@ Council4 currently supports **15,337 of 32,501 cards eligible for paper support 
 - Manic Scribe
 - Manic Vandal
 - Manifold Key
+- Manifold Mouse
 - Manor Gate
 - Manor Skeleton
 - Manriki-Gusari
@@ -10113,6 +10117,7 @@ Council4 currently supports **15,337 of 32,501 cards eligible for paper support 
 - Rathi Intimidator
 - Rathi Trapper
 - Rats of Rath
+- Rattleback Apothecary
 - Rattlechains
 - Rattleclaw Mystic
 - Raucous Audience
@@ -11456,6 +11461,7 @@ Council4 currently supports **15,337 of 32,501 cards eligible for paper support 
 - Shield Wall
 - Shielded Aether Thief
 - Shieldmate's Blessing
+- Shifting Ceratops
 - Shifting Wall
 - Shifting Woodland
 - Shimmer Dragon
@@ -11648,6 +11654,7 @@ Council4 currently supports **15,337 of 32,501 cards eligible for paper support 
 - Silverquill Campus
 - Silverquill Charm
 - Silverquill Command
+- Silverquill Pledgemage
 - Silverskin Armor
 - Silverstorm Samurai
 - Silverstrike
@@ -14984,6 +14991,7 @@ Council4 currently supports **15,337 of 32,501 cards eligible for paper support 
 - Winged Coatl
 - Winged Shepherd
 - Winged Sliver
+- Wingnut, Bat on the Belfry
 - Wings of Aesthir
 - Wings of Hope
 - Wings of the Cosmos

@@ -46,6 +46,7 @@ var Cards = []*game.CardDef{
 	AshePrincessOfDalmasca,
 	AshmouthHound,
 	AspectOfLamprey,
+	AssassinInitiate,
 	AugurOfBolas,
 	AuroraEidolon,
 	AuspiciousAncestor,
