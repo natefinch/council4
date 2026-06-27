@@ -25,6 +25,7 @@ var Cards = []*game.CardDef{
 	DeftDismissal,
 	DemonicAppetite,
 	DenizenOfTheDeep,
+	Derelor,
 	DescentOfTheDragons,
 	DesertSDue,
 	DesolationTwin,

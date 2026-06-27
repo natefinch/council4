@@ -29,6 +29,7 @@ func applyGenericCostModifiers(manaCost *cost.Mana, modifiers []game.CostModifie
 	generic := genericCostAmount(manaCost)
 	minimum := 0
 	taxInstances := 0
+	var coloredIncrease []cost.Symbol
 	set := (*int)(nil)
 	for _, modifier := range modifiers {
 		if modifier.SetGeneric.Exists {
@@ -37,6 +38,9 @@ func applyGenericCostModifiers(manaCost *cost.Mana, modifiers []game.CostModifie
 		generic += modifier.GenericIncrease
 		generic -= modifier.GenericReduction
 		taxInstances += modifier.LifePayableTaxInstances
+		for _, c := range modifier.ColoredIncrease {
+			coloredIncrease = append(coloredIncrease, cost.Symbol{Kind: cost.ColoredSymbol, Color: c})
+		}
 		if modifier.MinimumGeneric > minimum {
 			minimum = modifier.MinimumGeneric
 		}
@@ -50,7 +54,7 @@ func applyGenericCostModifiers(manaCost *cost.Mana, modifiers []game.CostModifie
 	if generic < 0 {
 		generic = 0
 	}
-	return costWithGenericAmount(manaCost, generic, taxInstances)
+	return costWithGenericAmount(manaCost, generic, taxInstances, coloredIncrease)
 }
 
 func genericCostAmount(manaCost *cost.Mana) int {
@@ -66,7 +70,7 @@ func genericCostAmount(manaCost *cost.Mana) int {
 	return total
 }
 
-func costWithGenericAmount(manaCost *cost.Mana, generic, taxInstances int) *cost.Mana {
+func costWithGenericAmount(manaCost *cost.Mana, generic, taxInstances int, coloredIncrease []cost.Symbol) *cost.Mana {
 	var modified cost.Mana
 	if generic > 0 {
 		modified = append(modified, cost.O(generic))
@@ -74,6 +78,7 @@ func costWithGenericAmount(manaCost *cost.Mana, generic, taxInstances int) *cost
 	for range taxInstances {
 		modified = append(modified, cost.PhyrexianGeneric(2))
 	}
+	modified = append(modified, coloredIncrease...)
 	if manaCost != nil {
 		for _, symbol := range *manaCost {
 			if symbol.Kind != cost.GenericSymbol {

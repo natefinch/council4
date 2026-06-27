@@ -483,9 +483,15 @@ type StaticCostModifierDeclaration struct {
 	ChosenSubtypeFromEntryChoice bool
 	GenericReduction             int
 	GenericIncrease              int
-	SetManaCost                  string
-	ReplaceManaCost              bool
-	FirstCycleEachTurn           bool
+	// ColoredIncrease lists the colored mana symbols a cast-cost tax adds on top
+	// of any GenericIncrease ("Black spells you cast cost {B} more to cast.",
+	// Derelor and the mono-color Leech cycle). Each entry is one basic colored
+	// mana symbol. It is set only when GenericIncrease is zero and the modifier
+	// raises rather than lowers the cost; an empty slice adds no colored mana.
+	ColoredIncrease    []mana.Color
+	SetManaCost        string
+	ReplaceManaCost    bool
+	FirstCycleEachTurn bool
 
 	// SpellColors constrains a spell cost modifier to spells carrying any one of
 	// these colors ("... that's red or green ..."). It holds two or more real
@@ -3620,7 +3626,11 @@ func recognizeStaticSpellCostModifierDeclaration(ability CompiledAbility, static
 			matchColor) {
 		return StaticDeclaration{}, false
 	}
-	if node.CostReductionAmount <= 0 {
+	coloredIncrease, ok := staticSpellCostIncreaseColors(node)
+	if !ok {
+		return StaticDeclaration{}, false
+	}
+	if node.CostReductionAmount <= 0 && len(coloredIncrease) == 0 {
 		return StaticDeclaration{}, false
 	}
 	if node.SpellCastZone != "" && node.ChosenCreatureType {
@@ -3659,6 +3669,7 @@ func recognizeStaticSpellCostModifierDeclaration(ability CompiledAbility, static
 	switch node.CostModifier {
 	case parser.StaticDeclarationCostModifierSpellIncrease:
 		cost.GenericIncrease = node.CostReductionAmount
+		cost.ColoredIncrease = coloredIncrease
 	case parser.StaticDeclarationCostModifierSpellSharedExiledTypeReduction:
 		cost.SharedExiledCardTypeReduction = node.CostReductionAmount
 	default:
@@ -3674,6 +3685,30 @@ func recognizeStaticSpellCostModifierDeclaration(ability CompiledAbility, static
 		},
 		Cost: &cost,
 	}, true
+}
+
+// staticSpellCostIncreaseColors validates the parser's colored cast-cost
+// increase symbols and returns them as a fresh slice. Colored symbols are
+// meaningful only as a tax, so they require the increase operation; any colored
+// symbol on a reduction, or any color outside the five basic mana colors, fails
+// closed. A modifier with no colored symbols returns an empty slice and true.
+func staticSpellCostIncreaseColors(node parser.StaticDeclarationSyntax) ([]mana.Color, bool) {
+	if len(node.CostIncreaseColors) == 0 {
+		return nil, true
+	}
+	if node.CostModifier != parser.StaticDeclarationCostModifierSpellIncrease {
+		return nil, false
+	}
+	colors := make([]mana.Color, 0, len(node.CostIncreaseColors))
+	for _, c := range node.CostIncreaseColors {
+		switch c {
+		case mana.W, mana.U, mana.B, mana.R, mana.G:
+			colors = append(colors, c)
+		default:
+			return nil, false
+		}
+	}
+	return colors, true
 }
 
 // staticSpellCasterKind maps the parser's closed caster filter onto the

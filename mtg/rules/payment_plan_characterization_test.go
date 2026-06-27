@@ -12,6 +12,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/rules/payment"
 	"github.com/natefinch/council4/opt"
@@ -86,6 +87,27 @@ func TestSpellPaymentPlanCharacterization(t *testing.T) {
 				g.CostModifiers = append(g.CostModifiers, game.CostModifier{
 					Kind:            game.CostModifierSpell,
 					GenericIncrease: 1,
+				})
+				addBasicLandPermanent(g, game.Player1, types.Forest)
+				addBasicLandPermanent(g, game.Player1, types.Island)
+				return g, genericCostSpell(1), 0, 0
+			},
+			want: []string{
+				"option=0:Normal cost",
+				"tapped=[Forest, Island]",
+				"exile=[]",
+				"graveyard=[]",
+				"additional=[]",
+				"life=0",
+			},
+		},
+		{
+			name: "cost modifier adds colored payment requirement",
+			setup: func() (*game.Game, *game.CardDef, id.ID, int) {
+				g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+				g.CostModifiers = append(g.CostModifiers, game.CostModifier{
+					Kind:            game.CostModifierSpell,
+					ColoredIncrease: []mana.Color{mana.G},
 				})
 				addBasicLandPermanent(g, game.Player1, types.Forest)
 				addBasicLandPermanent(g, game.Player1, types.Island)

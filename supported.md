@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,639 of 32,501 cards eligible for paper support (48.1%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,645 of 32,501 cards eligible for paper support (48.1%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -272,6 +272,7 @@ Council4 currently supports **15,639 of 32,501 cards eligible for paper support 
 - Alabaster Host Intercessor
 - Alabaster Host Sanctifier
 - Alabaster Kirin
+- Alabaster Leech
 - Alabaster Mage
 - Alabaster Wall
 - Alaborn Cavalier
@@ -407,6 +408,7 @@ Council4 currently supports **15,639 of 32,501 cards eligible for paper support 
 - Ancient Stirrings
 - Ancient Tomb
 - Ancient Ziggurat
+- Andradite Leech
 - Angel
 - Angel
 - Angel
@@ -3217,6 +3219,7 @@ Council4 currently supports **15,639 of 32,501 cards eligible for paper support 
 - Deranged Outcast
 - Deranged Whelp
 - Derelict Attic // Widow's Walk
+- Derelor
 - Descend upon the Sinful
 - Descent of the Dragons
 - Desecrated Earth
@@ -6880,6 +6883,7 @@ Council4 currently supports **15,639 of 32,501 cards eligible for paper support 
 - Jade Bearer
 - Jade Guardian
 - Jade Idol
+- Jade Leech
 - Jade Mage
 - Jade-Cast Sentinel
 - Jadecraft Artisan
@@ -10892,6 +10896,7 @@ Council4 currently supports **15,639 of 32,501 cards eligible for paper support 
 - Rubblebelt Recluse
 - Rubblebelt Rioters
 - Rubblehulk
+- Ruby Leech
 - Ruby Medallion
 - Rugged Highlands
 - Rugged Prairie
@@ -11104,6 +11109,7 @@ Council4 currently supports **15,639 of 32,501 cards eligible for paper support 
 - Sanitation Automaton
 - Sapphire Dragon // Psionic Pulse
 - Sapphire Drake
+- Sapphire Leech
 - Sapphire Medallion
 - Saprazzan Heir
 - Saprazzan Outrigger

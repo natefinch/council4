@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -1673,6 +1674,80 @@ func TestParseStaticSpellCostModifierDeclarationMeaning(t *testing.T) {
 			if declaration.SpellManaValueAtLeast != test.manaValueAtLeast ||
 				declaration.MatchSpellManaValueAtLeast != (test.manaValueAtLeast > 0) {
 				t.Fatalf("declaration mana value threshold = %d (match %t), want %d", declaration.SpellManaValueAtLeast, declaration.MatchSpellManaValueAtLeast, test.manaValueAtLeast)
+			}
+		})
+	}
+}
+
+// TestParseStaticSpellCostModifierColoredIncrease checks that a mono-color cast
+// tax whose increase is a single basic colored mana symbol ("Black spells you
+// cast cost {B} more to cast.", the Leech cycle and Derelor) records the colored
+// increase rather than a generic amount, and that a colored "less" reduction or
+// a colorless {C} increase fails closed.
+func TestParseStaticSpellCostModifierColoredIncrease(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		source     string
+		spellColor StaticDeclarationSpellColorKind
+		colors     []mana.Color
+	}{
+		"black": {
+			source:     "Black spells you cast cost {B} more to cast.",
+			spellColor: StaticDeclarationSpellColorBlack,
+			colors:     []mana.Color{mana.B},
+		},
+		"green": {
+			source:     "Green spells you cast cost {G} more to cast.",
+			spellColor: StaticDeclarationSpellColorGreen,
+			colors:     []mana.Color{mana.G},
+		},
+		"white": {
+			source:     "White spells you cast cost {W} more to cast.",
+			spellColor: StaticDeclarationSpellColorWhite,
+			colors:     []mana.Color{mana.W},
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			declarations := parseStaticDeclarationSyntax(t, test.source, Context{})
+			if len(declarations) != 1 || declarations[0].Kind != StaticDeclarationCostModifier {
+				t.Fatalf("declarations = %#v, want one cost modifier", declarations)
+			}
+			declaration := declarations[0]
+			if declaration.CostModifier != StaticDeclarationCostModifierSpellIncrease {
+				t.Fatalf("modifier = %s, want increase", declaration.CostModifier)
+			}
+			if declaration.SpellColor != test.spellColor {
+				t.Fatalf("spell color = %s, want %s", declaration.SpellColor, test.spellColor)
+			}
+			if declaration.CostReductionAmount != 0 {
+				t.Fatalf("amount = %d, want 0 for a colored increase", declaration.CostReductionAmount)
+			}
+			if !slices.Equal(declaration.CostIncreaseColors, test.colors) {
+				t.Fatalf("colors = %#v, want %#v", declaration.CostIncreaseColors, test.colors)
+			}
+		})
+	}
+}
+
+// TestParseStaticSpellCostModifierColoredFailsClosed checks that a colored mana
+// symbol on a cost reduction, or a colorless {C} increase, is not recognized as
+// a cast-cost modifier, since only colored "more" taxes are supported.
+func TestParseStaticSpellCostModifierColoredFailsClosed(t *testing.T) {
+	t.Parallel()
+	sources := []string{
+		"Black spells you cast cost {B} less to cast.",
+		"Colorless spells you cast cost {C} more to cast.",
+	}
+	for _, source := range sources {
+		t.Run(source, func(t *testing.T) {
+			t.Parallel()
+			declarations := parseStaticDeclarationSyntax(t, source, Context{})
+			for _, declaration := range declarations {
+				if declaration.Kind == StaticDeclarationCostModifier && len(declaration.CostIncreaseColors) != 0 {
+					t.Fatalf("source %q produced colored cost modifier %#v, want fail closed", source, declaration)
+				}
 			}
 		})
 	}
