@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,170 of 32,501 cards eligible for paper support (46.7%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,187 of 32,501 cards eligible for paper support (46.7%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2768,6 +2768,7 @@ Council4 currently supports **15,170 of 32,501 cards eligible for paper support 
 - Curious Pair // Treats to Share
 - Curse of the Swine
 - Cursebreak
+- Cursecatcher
 - Cursed Flesh
 - Cursed Land
 - Cursed Minotaur
@@ -3292,7 +3293,9 @@ Council4 currently supports **15,170 of 32,501 cards eligible for paper support 
 - Disposal Mummy
 - Disrupt
 - Disrupting Scepter
+- Disruptive Pitmage
 - Disruptive Stormbrood // Petty Revenge
+- Disruptive Student
 - Disruptor of Currents
 - Disruptor Wanderglyph
 - Dissenter's Deliverance
@@ -3310,6 +3313,7 @@ Council4 currently supports **15,170 of 32,501 cards eligible for paper support 
 - Dive Down
 - Divebomber Griffin
 - Diversion Specialist
+- Diversion Unit
 - Diversionary Tactics
 - Divest
 - Divination
@@ -5061,6 +5065,7 @@ Council4 currently supports **15,170 of 32,501 cards eligible for paper support 
 - Ghost-Lit Raider
 - Ghost-Lit Redeemer
 - Ghost-Lit Stalker
+- Ghost-Lit Warder
 - Ghostform
 - Ghostly Changeling
 - Ghostly Flicker
@@ -6770,6 +6775,7 @@ Council4 currently supports **15,170 of 32,501 cards eligible for paper support 
 - Joyous Respite
 - Judge Magister Gabranth
 - Judge of Currents
+- Judge's Familiar
 - Judith, the Scourge Diva
 - Jukai Messenger
 - Jukai Naturalist
@@ -7656,6 +7662,7 @@ Council4 currently supports **15,170 of 32,501 cards eligible for paper support 
 - Magda, the Hoardmaster
 - Mage il-Vec
 - Mage Tower Referee
+- Mage's Attendant
 - Mage's Guile
 - Mage-Ring Bully
 - Magefire Wings
@@ -9210,6 +9217,7 @@ Council4 currently supports **15,170 of 32,501 cards eligible for paper support 
 - Patron of the Valiant
 - Patron of the Vein
 - Patron of the Wild
+- Patron Wizard
 - Pattern of Rebirth
 - Pause for Reflection
 - Pavel Maliki
@@ -11948,6 +11956,7 @@ Council4 currently supports **15,170 of 32,501 cards eligible for paper support 
 - Soratami Mirror-Guard
 - Soratami Mirror-Mage
 - Soratami Rainshaper
+- Soratami Savant
 - Soraya the Falconer
 - Sorcerer of the Fang
 - Sorcerer's Broom
@@ -12142,6 +12151,9 @@ Council4 currently supports **15,170 of 32,501 cards eligible for paper support 
 - Spiked Ripsaw
 - Spikeshot Elder
 - Spikeshot Goblin
+- Spiketail Drake
+- Spiketail Drakeling
+- Spiketail Hatchling
 - Spikewheel Acrobat
 - Spinal Centipede
 - Spinal Villain
@@ -12700,6 +12712,7 @@ Council4 currently supports **15,170 of 32,501 cards eligible for paper support 
 - Sunhome Stalwart
 - Sunhome, Fortress of the Legion
 - Sunken City
+- Sunken Field
 - Sunken Hollow
 - Sunken Ruins
 - Sunlance
@@ -14320,7 +14333,9 @@ Council4 currently supports **15,170 of 32,501 cards eligible for paper support 
 - Vizkopa Vampire
 - Vizzerdrix
 - Vnwxt, Verbose Host
+- Vodalian Hexcatcher
 - Vodalian Hypnotist
+- Vodalian Mage
 - Vodalian Merchant
 - Vodalian Soldiers
 - Vodalian Wave-Knight
@@ -14883,7 +14898,9 @@ Council4 currently supports **15,170 of 32,501 cards eligible for paper support 
 - Witty Roastmaster
 - Wizard
 - Wizard
+- Wizard
 - Wizard Class
+- Wizard Replica
 - Wizards' School
 - Wizened Cenn
 - Woebearer
