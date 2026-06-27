@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **14,913 of 32,501 cards eligible for paper support (45.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **14,921 of 32,501 cards eligible for paper support (45.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -671,6 +671,7 @@ Council4 currently supports **14,913 of 32,501 cards eligible for paper support 
 - Artificer's Epiphany
 - Artificer's Intuition
 - Artillerize
+- Artisan of Kozilek
 - Artisan's Sorrow
 - Artistic Refusal
 - Arwen Undómiel
@@ -3088,6 +3089,7 @@ Council4 currently supports **14,913 of 32,501 cards eligible for paper support 
 - Desiccated Naga
 - Desolate Lighthouse
 - Desolate Mire
+- Desolation Twin
 - Despark
 - Desperate Bloodseeker
 - Desperate Charge
@@ -7461,6 +7463,7 @@ Council4 currently supports **14,913 of 32,501 cards eligible for paper support 
 - Luke Cage, Hero for Hire
 - Lull
 - Lullmage's Familiar
+- Lumaret's Favor
 - Lumbering Satyr
 - Lumberknot
 - Lumengrid Drake
@@ -7824,6 +7827,7 @@ Council4 currently supports **14,913 of 32,501 cards eligible for paper support 
 - Mental Misstep
 - Mental Note
 - Mentor of the Meek
+- Mentor's Guidance
 - Mephitic Draught
 - Mephitic Vapors
 - Mer-Ek Nightblade
@@ -8646,6 +8650,7 @@ Council4 currently supports **14,913 of 32,501 cards eligible for paper support 
 - Null Caller
 - Null Champion
 - Null Group Biological Assets
+- Nulldrifter
 - Nullmage Shepherd
 - Nullpriest of Oblivion
 - Numai Outcast
@@ -11826,6 +11831,7 @@ Council4 currently supports **14,913 of 32,501 cards eligible for paper support 
 - Spawn of Mayhem
 - Spawn of Rix Maadi
 - Spawn of Thraxes
+- Spawn-Gang Commander
 - Spawnbed Protector
 - Spawnbinder Mage
 - Spawning Grounds
@@ -14679,6 +14685,7 @@ Council4 currently supports **14,913 of 32,501 cards eligible for paper support 
 - Words of Wisdom
 - Workhorse
 - Workshop Assistant
+- World Breaker
 - World Map
 - World Shaper
 - World-Weary
@@ -14718,6 +14725,7 @@ Council4 currently supports **14,913 of 32,501 cards eligible for paper support 
 - Wretched Throng
 - Wriggling Grub
 - Wring Flesh
+- Writhing Chrysalis
 - Writhing Necromass
 - Wu Admiral
 - Wu Elite Cavalry
