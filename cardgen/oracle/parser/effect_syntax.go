@@ -1318,6 +1318,32 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			tokenName = leading
 			tokenNameLeading = true
 		}
+		tokenKeywords := parseTokenKeywords(kind, clause, atoms)
+		tokenPredefinedName := parsePredefinedTokenName(kind, clause)
+		// A multi-token create clause ("Create a 1/1 green Snake creature token, a
+		// 2/2 green Wolf creature token, and a 3/3 green Elephant creature token.")
+		// merges every named token's subtypes and characteristics into one
+		// selection when scanned as a single spec. Split it into one spec per
+		// created token: the first spec replaces this effect's own merged token
+		// fields, and the rest ride on AdditionalTokens for the lowering to emit
+		// as a sequence of CreateToken instructions. Only the controller-creates
+		// form is split; every other clause keeps its single-token fields.
+		var additionalTokens []EffectSyntax
+		if context == EffectContextController {
+			if specs, ok := multiTokenCreateSpecs(kind, clause, atoms); ok {
+				first := specs[0]
+				effectSelection = first.Selection
+				tokenPower = first.TokenPower
+				tokenToughness = first.TokenToughness
+				tokenPTKnown = first.TokenPTKnown
+				tokenPTVariableX = false
+				tokenKeywords = first.TokenKeywords
+				tokenName = first.TokenName
+				tokenNameLeading = false
+				tokenPredefinedName = first.TokenPredefinedName
+				additionalTokens = specs[1:]
+			}
+		}
 		effects = append(effects, EffectSyntax{
 			Kind:           kind,
 			Context:        context,
@@ -1344,10 +1370,11 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			TokenToughness:           tokenToughness,
 			TokenPTKnown:             tokenPTKnown,
 			TokenPTVariableX:         tokenPTVariableX,
-			TokenKeywords:            parseTokenKeywords(kind, clause, atoms),
+			TokenKeywords:            tokenKeywords,
 			TokenName:                tokenName,
-			TokenPredefinedName:      parsePredefinedTokenName(kind, clause),
+			TokenPredefinedName:      tokenPredefinedName,
 			TokenNameLeading:         tokenNameLeading,
+			AdditionalTokens:         additionalTokens,
 			AttackDefender:           tokenAttackDefender,
 			AttackDefenderSpan:       tokenAttackDefenderSpan,
 			TokenChoice:              parseTokenChoice(kind, clause),

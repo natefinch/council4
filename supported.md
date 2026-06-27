@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,038 of 32,501 cards eligible for paper support (46.3%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,045 of 32,501 cards eligible for paper support (46.3%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1146,6 +1146,7 @@ Council4 currently supports **15,038 of 32,501 cards eligible for paper support 
 - Bessie, the Doctor's Roadster
 - Bestial Bloodline
 - Bestial Fury
+- Bestial Menace
 - Bestow Greatness
 - Betor, Ancestor's Voice
 - Bewilder
@@ -4642,6 +4643,7 @@ Council4 currently supports **15,038 of 32,501 cards eligible for paper support 
 - For the Emperor!
 - Foratog
 - Forbidden Alchemy
+- Forbidden Friendship
 - Forbidden Lore
 - Forbidden Orchard
 - Force of Negation
@@ -7782,6 +7784,7 @@ Council4 currently supports **15,038 of 32,501 cards eligible for paper support 
 - Marwyn, the Nurturer
 - Mary Jane Watson
 - Mary Read and Anne Bonny
+- Mascot Exhibition
 - Mask of Avacyn
 - Mask of Griselbrand
 - Mask of Law and Grace
@@ -11821,6 +11824,7 @@ Council4 currently supports **15,038 of 32,501 cards eligible for paper support 
 - Solve the Equation
 - Somber Hoverguard
 - Somberwald Alpha
+- Somberwald Beastmaster
 - Somberwald Dryad
 - Somberwald Spider
 - Somberwald Stag
@@ -11943,6 +11947,7 @@ Council4 currently supports **15,038 of 32,501 cards eligible for paper support 
 - Spearbreaker Behemoth
 - Species Gorger
 - Species Specialist
+- Specimen Collector
 - Spectacle Mage
 - Spectacle Summit
 - Spectacular Spider-Man
@@ -13562,6 +13567,7 @@ Council4 currently supports **15,038 of 32,501 cards eligible for paper support 
 - Trolls of Tel-Jilad
 - Tromp the Domains
 - Tropical Island
+- Trostani's Summoner
 - Trostani, Three Whispers
 - Troubled Healer
 - Troublesome Spirit
@@ -14858,6 +14864,7 @@ Council4 currently supports **15,038 of 32,501 cards eligible for paper support 
 - Wurm
 - Wurm // Saproling
 - Wurm's Tooth
+- Wurmcoil Larva
 - Wydwen, the Biting Gale
 - Wylie Duke, Atiin Hero
 - Wyluli Wolf

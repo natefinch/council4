@@ -1835,7 +1835,15 @@ type CompiledEffect struct {
 	// "create your choice of a Clue token, a Food token, or a Treasure token").
 	// The alternatives are the selector's SubtypesAny entries in source order;
 	// lowering emits a choose-one modal ability creating exactly one of them.
-	TokenChoice       bool
+	TokenChoice bool
+	// AdditionalTokens carries the second and later token specs of a multi-token
+	// create effect ("Create a 1/1 green Snake creature token, a 2/2 green Wolf
+	// creature token, and a 3/3 green Elephant creature token."). The effect's own
+	// token fields describe the first token; each entry here is a compiled
+	// creature-token spec for one of the remaining tokens, in source order.
+	// Lowering emits one CreateToken instruction per token. It is empty for every
+	// single-token create.
+	AdditionalTokens  []CompiledEffect
 	StaticSubject     StaticSubjectKind
 	StaticSubjectSpan shared.Span
 	Details           *CompiledEffectDetails

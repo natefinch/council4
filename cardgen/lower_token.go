@@ -1,6 +1,7 @@
 package cardgen
 
 import (
+	"reflect"
 	"slices"
 	"strings"
 
@@ -121,6 +122,9 @@ func lowerCreateTokenSpellLinked(ctx contentCtx, publishLinked game.LinkedKey) (
 	if effect.TokenChoice {
 		return lowerCreateNamedTokenChoiceSpell(ctx, &effect, recipient, targets)
 	}
+	if len(effect.AdditionalTokens) > 0 {
+		return lowerMultiTokenCreate(ctx, &effect, recipient, controllerRecipient, publishLinked, extraKeywords)
+	}
 	def, ok := synthesizeCreatureTokenDef(&effect, extraKeywords)
 	if !ok && len(extraKeywords) == 0 {
 		def, ok = synthesizeNamedArtifactTokenDef(&effect)
@@ -159,6 +163,61 @@ func lowerCreateTokenSpellLinked(ctx contentCtx, publishLinked game.LinkedKey) (
 			},
 		}},
 	}.Ability(), nil
+}
+
+// lowerMultiTokenCreate lowers a multi-token create effect ("Create a 1/1 green
+// Snake creature token, a 2/2 green Wolf creature token, and a 3/3 green
+// Elephant creature token.") to one Mode whose sequence creates each token in
+// source order. The effect's own token fields describe the first token; each
+// AdditionalTokens entry describes one of the rest. Every token must be a fixed
+// power/toughness creature token the single-token path already synthesizes, the
+// recipient must be the controller, and the clause must not be a linked or
+// keyword-content create; any other shape fails closed. Each token enters once
+// (the per-token "a"/"an" article), so every instruction creates a single token.
+func lowerMultiTokenCreate(ctx contentCtx, effect *compiler.CompiledEffect, recipient opt.V[game.PlayerReference], controllerRecipient bool, publishLinked game.LinkedKey, extraKeywords []parser.KeywordKind) (game.AbilityContent, *shared.Diagnostic) {
+	if !controllerRecipient ||
+		publishLinked != "" ||
+		len(extraKeywords) != 0 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.References) != 0 {
+		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+	}
+	specs := make([]*compiler.CompiledEffect, 0, 1+len(effect.AdditionalTokens))
+	specs = append(specs, effect)
+	for i := range effect.AdditionalTokens {
+		specs = append(specs, &effect.AdditionalTokens[i])
+	}
+	sequence := make([]game.Instruction, 0, len(specs))
+	seen := make(map[string]*game.CardDef, len(specs))
+	for _, spec := range specs {
+		if spec.TokenPTVariableX || spec.TokenChoice || spec.TokenGrantedAbility != nil {
+			return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+		}
+		def, ok := synthesizeCreatureTokenDef(spec, spec.TokenKeywords)
+		if !ok {
+			return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+		}
+		// The renderer keys synthesized token vars on name, types, subtypes,
+		// colors, and power/toughness only (tokenDefKey); two tokens that share
+		// that key but differ in their abilities would collapse onto one emitted
+		// var, dropping the second token's distinct abilities. Fail closed on such
+		// a collision so a multi-token card never renders a wrong token. Tokens
+		// that share a key and are fully identical reuse one var correctly.
+		if prior, ok := seen[tokenDefKey(def)]; ok && !reflect.DeepEqual(prior, def) {
+			return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+		}
+		seen[tokenDefKey(def)] = def
+		sequence = append(sequence, game.Instruction{
+			Primitive: game.CreateToken{
+				Amount:         game.Fixed(1),
+				Source:         game.TokenDef(def),
+				Recipient:      recipient,
+				EntryTapped:    spec.Selector.Tapped,
+				EntryAttacking: spec.Selector.Attacking,
+			},
+		})
+	}
+	return game.Mode{Sequence: sequence}.Ability(), nil
 }
 
 // tokenPTDynamicQuantity maps a variable "X/X" token's bound dynamic-amount kind
