@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,244 of 32,501 cards eligible for paper support (46.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,252 of 32,501 cards eligible for paper support (46.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -501,6 +501,7 @@ Council4 currently supports **15,244 of 32,501 cards eligible for paper support 
 - Appendage Amalgam
 - Appetite for the Unnatural
 - Applied Biomancy
+- Applied Geometry
 - Apprentice Necromancer
 - Apprentice Sharpshooter
 - Apprentice Wizard
@@ -2673,6 +2674,7 @@ Council4 currently supports **15,244 of 32,501 cards eligible for paper support 
 - Crippling Blight
 - Crippling Chill
 - Crippling Fatigue
+- Croaking Counterpart
 - Crocanura
 - Crocodile of the Crossing
 - Crook of Condemnation
@@ -3899,6 +3901,7 @@ Council4 currently supports **15,244 of 32,501 cards eligible for paper support 
 - Emancipation Angel
 - Embalmed Ascendant
 - Ember Hauler
+- Ember Island Production
 - Ember Shot
 - Ember Weaver
 - Ember-Eye Wolf
@@ -8303,6 +8306,7 @@ Council4 currently supports **15,244 of 32,501 cards eligible for paper support 
 - Moloid
 - Molt Tender
 - Molten Blast
+- Molten Duplication
 - Molten Frame
 - Molten Gatekeeper
 - Molten Man, Inferno Incarnate
@@ -10044,6 +10048,7 @@ Council4 currently supports **15,244 of 32,501 cards eligible for paper support 
 - Rat
 - Rat King, Pale Piper
 - Rat Rogue
+- Ratadrabik of Urborg
 - Ratcatcher
 - Ratcatcher Trainee // Pest Problem
 - Rath's Edge
@@ -10753,6 +10758,7 @@ Council4 currently supports **15,244 of 32,501 cards eligible for paper support 
 - Sagu Archer
 - Sagu Mauler
 - Sagu Wildling // Roost Seek
+- Saheeli's Artistry
 - Sai, Master Thopterist
 - Said // Done
 - Sailor of Means
@@ -14052,6 +14058,7 @@ Council4 currently supports **15,244 of 32,501 cards eligible for paper support 
 - Urza's Rebuff
 - Urza's Tower
 - Urza, Powerstone Prodigy
+- Urza, Prince of Kroog
 - Urzan Automaton
 - Usher of the Fallen
 - Uthden Troll
@@ -14840,6 +14847,7 @@ Council4 currently supports **15,244 of 32,501 cards eligible for paper support 
 - Wildwood Rebirth
 - Will of the Naga
 - Will of the Sultai
+- Will of the Temur
 - Will-Forged Golem
 - Will-o'-the-Wisp
 - Willbender
