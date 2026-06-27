@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,390 of 32,501 cards eligible for paper support (47.4%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,395 of 32,501 cards eligible for paper support (47.4%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -4772,6 +4772,7 @@ Council4 currently supports **15,390 of 32,501 cards eligible for paper support 
 - Forced Worship
 - Forceful Denial
 - Forcemage Advocate
+- Foreboding Fruit
 - Foreboding Landscape
 - Foreboding Ruins
 - Forecasting Fortune Teller
@@ -10082,6 +10083,7 @@ Council4 currently supports **15,390 of 32,501 cards eligible for paper support 
 - Ral's Staticaster
 - Ral, Caller of Storms
 - Rally
+- Rally for the Throne
 - Rally Maneuver
 - Rally of Wings
 - Rally the Forces
@@ -11906,6 +11908,7 @@ Council4 currently supports **15,390 of 32,501 cards eligible for paper support 
 - Slayer of the Wicked
 - Slayer's Plate
 - Slayers' Stronghold
+- Slaying Fire
 - Sledding Otter-Penguin
 - Sleek Schooner
 - Sleep of the Dead
@@ -13915,6 +13918,7 @@ Council4 currently supports **15,390 of 32,501 cards eligible for paper support 
 - Turbulent Steppe
 - Turbulent Wilderness
 - Turn Against
+- Turn into a Pumpkin
 - Turn the Tide
 - Turn to Dust
 - Turn to Frog
@@ -14079,6 +14083,7 @@ Council4 currently supports **15,390 of 32,501 cards eligible for paper support 
 - Unexpected Assistance
 - Unexpected Windfall
 - Unexplained Disappearance
+- Unexplained Vision
 - Unfathomable Truths
 - Unflinching Courage
 - Unforgiving Aim
