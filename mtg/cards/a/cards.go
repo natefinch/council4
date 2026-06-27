@@ -44,6 +44,8 @@ var Cards = []*game.CardDef{
 	Anger,
 	AnimateLand,
 	AnkhOfMishra,
+	AnointerOfValor,
+	AntManColonyCommander,
 	ApothecaryInitiate,
 	AppealToEirdu,
 	AppliedGeometry,
