@@ -9,6 +9,7 @@ var Cards = []*game.CardDef{
 	UncoveredClues,
 	UndercityInformer,
 	UneshCriosphinxSovereign,
+	UnexplainedVision,
 	UnfathomableTruths,
 	UnsparingBoltcaster,
 	UntimelyMalfunction,
