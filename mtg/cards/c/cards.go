@@ -23,6 +23,7 @@ var Cards = []*game.CardDef{
 	ChainedToTheRocks,
 	ChainsOfCustody,
 	ChandraSIgnition,
+	ChaosImps,
 	ChaosWarp,
 	ChelonianTackle,
 	ChildOfTheVolcano,

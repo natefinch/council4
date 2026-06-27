@@ -53,6 +53,36 @@ func TestCompileSelfCannotBeBlockedStaticAbility(t *testing.T) {
 	}
 }
 
+func TestCompileSelfKeywordGrantGatedOnSelfCounterStaticAbility(t *testing.T) {
+	t.Parallel()
+	source := "This creature has trample as long as it has a +1/+1 counter on it."
+	compilation, diagnostics := compileSource(source, pipelineContext{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+
+	ability := compilation.Abilities[0]
+	// The gating "it has a +1/+1 counter on it" clause carries a second "has"
+	// possession verb; it must not be classified as a duplicate keyword-grant
+	// effect, which would leave the keyword grant unrecognized as a static
+	// declaration and fall through to a mixed-keyword diagnostic.
+	if ability.Kind != AbilityStatic || len(ability.Content.Effects) != 1 {
+		t.Fatalf("ability = %#v", ability)
+	}
+	if ability.Static == nil || len(ability.Static.Declarations) != 1 {
+		t.Fatalf("static = %#v", ability.Static)
+	}
+	declaration := ability.Static.Declarations[0]
+	if declaration.Kind != StaticDeclarationContinuous ||
+		declaration.Condition == nil ||
+		declaration.Continuous == nil ||
+		declaration.Continuous.Operation != StaticContinuousGrantKeywords ||
+		len(declaration.Continuous.Keywords) != 1 ||
+		declaration.Continuous.Keywords[0].Kind != parser.KeywordTrample {
+		t.Fatalf("declaration = %#v", declaration)
+	}
+}
+
 func TestCompileSelfMustAttackStaticAbility(t *testing.T) {
 	t.Parallel()
 	source := "This creature attacks each combat if able."

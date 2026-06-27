@@ -31,6 +31,7 @@ var Cards = []*game.CardDef{
 	PricklyPair,
 	PrimalMight,
 	PrimevalForce,
+	PrimordialHydra,
 	PrismariCharm,
 	PrismaticUndercurrents,
 	PrizedStatue,

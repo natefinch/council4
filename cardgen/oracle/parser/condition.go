@@ -1528,11 +1528,16 @@ func sourceCounterThreshold(after []shared.Token) (int, bool) {
 }
 
 // cutSourceSubjectTokens consumes a leading source self-subject — the card's own
-// name or a "this <type>" phrase — and returns the remaining state tokens. It
-// fails closed when the body does not begin with a recognized source subject.
+// name, a "this <type>" phrase, or the bare pronoun "it" that refers back to the
+// source in a self gate ("This creature has trample as long as it has a +1/+1
+// counter on it.") — and returns the remaining state tokens. It fails closed
+// when the body does not begin with a recognized source subject.
 func cutSourceSubjectTokens(body []shared.Token, atoms Atoms) ([]shared.Token, bool) {
 	if len(body) == 0 {
 		return nil, false
+	}
+	if rest, ok := cutTokenPrefix(body, "it"); ok {
+		return rest, true
 	}
 	if span, ok := atoms.SelfNameSpanStartingAt(body[0].Span); ok {
 		i := 0

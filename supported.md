@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,380 of 32,501 cards eligible for paper support (47.3%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,390 of 32,501 cards eligible for paper support (47.4%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -194,6 +194,7 @@ Council4 currently supports **15,380 of 32,501 cards eligible for paper support 
 - Aid the Fallen
 - Aim for the Head
 - Aim High
+- Ainok Artillerist
 - Ainok Bond-Kin
 - Ainok Tracker
 - Air Bladder
@@ -648,6 +649,7 @@ Council4 currently supports **15,380 of 32,501 cards eligible for paper support 
 - Armored Griffin
 - Armored Guardian
 - Armored Pegasus
+- Armored Scrapgorger
 - Armored Skaab
 - Armored Warhorse
 - Armored Whirl Turtle
@@ -921,6 +923,7 @@ Council4 currently supports **15,380 of 32,501 cards eligible for paper support 
 - Balm of Restoration
 - Balmor, Battlemage Captain
 - Baloth Null
+- Baloth Pup
 - Baloth Woodcrasher
 - Balshan Collaborator
 - Balshan Griffin
@@ -2139,6 +2142,7 @@ Council4 currently supports **15,380 of 32,501 cards eligible for paper support 
 - Chant of the Skifsang
 - Chaos Channeler
 - Chaos Charm
+- Chaos Imps
 - Chaos Maw
 - Chaos Terminator Lord
 - Chaos Warp
@@ -7505,6 +7509,7 @@ Council4 currently supports **15,380 of 32,501 cards eligible for paper support 
 - Lightning-Rig Crew
 - Lightshell Duo
 - Lightshield Parry
+- Lightwalker
 - Lignify
 - Liliana Vess
 - Liliana's Caress
@@ -9752,6 +9757,7 @@ Council4 currently supports **15,380 of 32,501 cards eligible for paper support 
 - Primevals' Glorious Rebirth
 - Primo, the Indivisible
 - Primoc Escapee
+- Primordial Hydra
 - Primordial Pachyderm
 - Primordial Sage
 - Primordial Wurm
@@ -10475,6 +10481,7 @@ Council4 currently supports **15,380 of 32,501 cards eligible for paper support 
 - Rhox Meditant
 - Rhox Oracle
 - Rhox Pikemaster
+- Rhox Pummeler
 - Rhox Veteran
 - Rhox War Monk
 - Rhystic Study
@@ -11625,6 +11632,7 @@ Council4 currently supports **15,380 of 32,501 cards eligible for paper support 
 - Sigil of Valor
 - Sigil Tracer
 - Sigiled Behemoth
+- Sigiled Contender
 - Sigiled Paladin
 - Sigiled Skink
 - Sigiled Starfish
@@ -11942,6 +11950,7 @@ Council4 currently supports **15,380 of 32,501 cards eligible for paper support 
 - Sluggishness
 - Sluiceway Scorpion
 - Slum Reaper
+- Slumbering Dragon
 - Slumbering Keepguard
 - Slumbering Walker
 - Sly Requisitioner
@@ -13515,6 +13524,7 @@ Council4 currently supports **15,380 of 32,501 cards eligible for paper support 
 - Thunder Totem
 - Thunder Wall
 - Thunder-Thrash Elder
+- Thunderblust
 - Thunderbolt
 - Thunderclap Wyvern
 - Thundercloud Elemental

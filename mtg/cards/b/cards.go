@@ -10,6 +10,7 @@ var Cards = []*game.CardDef{
 	BackToBasics,
 	BalduvianHorde,
 	BalmOfRestoration,
+	BalothPup,
 	BalustradeSpy,
 	Bandage,
 	BanditSHaul,

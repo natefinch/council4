@@ -1298,6 +1298,8 @@ func effectKindAt(tokens []shared.Token, index int) EffectKind {
 		return EffectUnknown
 	case kind == EffectGrantKeyword && playerPossessionVerb(tokens, index):
 		return EffectUnknown
+	case kind == EffectGrantKeyword && counterPossessionVerbAt(tokens, index):
+		return EffectUnknown
 	case kind == EffectEnterTapped && index+1 < len(tokens) && equalWord(tokens[index+1], "prepared"):
 		return EffectEnterPrepared
 	case kind == EffectCast && index > 0 && (equalWord(tokens[index-1], "was") || equalWord(tokens[index-1], "were")):
@@ -1751,6 +1753,40 @@ func playerPossessionVerb(tokens []shared.Token, index int) bool {
 	return equalWord(previous, "you") || equalWord(previous, "player") ||
 		equalWord(previous, "players") || equalWord(previous, "opponent") ||
 		equalWord(previous, "opponents")
+}
+
+// counterPossessionVerbAt reports whether the possession verb "has"/"have" at
+// index introduces a counter-possession state ("has a +1/+1 counter on it",
+// "has ten or more +1/+1 counters on it") rather than a keyword grant. A keyword
+// grant's object ("has trample", "has protection from red") never opens with the
+// determiner "a"/"an" or a count word, so requiring that opener and a
+// "counter"/"counters" head before the next clause boundary reclassifies the
+// counter-possession gate that appears inside an "as long as it has ... counter
+// on it" condition as a non-effect, while leaving real keyword grants intact.
+func counterPossessionVerbAt(tokens []shared.Token, index int) bool {
+	if index+1 >= len(tokens) || !counterPossessionOpener(tokens[index+1]) {
+		return false
+	}
+	for i := index + 1; i < len(tokens); i++ {
+		if tokens[i].Kind == shared.Comma || tokens[i].Kind == shared.Period || tokens[i].Kind == shared.Semicolon {
+			return false
+		}
+		if equalWord(tokens[i], "counter") || equalWord(tokens[i], "counters") {
+			return true
+		}
+	}
+	return false
+}
+
+// counterPossessionOpener reports whether token opens a counter-possession object
+// phrase: the determiner "a"/"an" of the single-counter form or a leading count
+// word of the threshold form ("ten or more ... counters").
+func counterPossessionOpener(token shared.Token) bool {
+	if equalWord(token, "a") || equalWord(token, "an") {
+		return true
+	}
+	_, ok := CardinalWordValue(token.Text)
+	return ok
 }
 
 func priorPTChange(tokens []shared.Token, index int) bool {

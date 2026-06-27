@@ -34,6 +34,7 @@ var Cards = []*game.CardDef{
 	ThrashingMudspawn,
 	ThroneOfBone,
 	ThroneWarden,
+	Thunderblust,
 	ThunderingWurm,
 	TinWingChimera,
 	TolarianSerpent,
