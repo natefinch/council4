@@ -83,6 +83,18 @@ type CostModifier struct {
 	// reduction; it is a pointer so CostModifier stays cheap to copy.
 	DynamicReduction *DynamicAmount
 
+	// ReductionCondition gates a flat GenericReduction scoped to the spell that
+	// carries it ("This spell costs {N} less to cast if <condition>.", Wizard's
+	// Lightning, Squash, Draconic Lore): the spell costs GenericReduction generic
+	// mana less only while the condition holds. It is set only on an
+	// AffectedSource CostModifierSpell; the rules layer evaluates the board- and
+	// player-state condition against the caster as the spell is cast and applies
+	// the reduction, which never touches colored requirements and never drops a
+	// cost below zero, only when it is satisfied. It is mutually exclusive with
+	// PerObjectReduction and DynamicReduction. An absent option leaves the
+	// reduction ungated.
+	ReductionCondition opt.V[Condition]
+
 	// SourceZone constrains a spell cost modifier to spells being cast from a
 	// single zone ("Spells you cast from your graveyard cost {N} less to cast.",
 	// Gravebreaker Lamia, Patrician Geist): the modifier applies only when the

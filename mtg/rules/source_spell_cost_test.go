@@ -337,3 +337,77 @@ func TestSourceSpellCostReductionAffinityForArtifacts(t *testing.T) {
 		t.Fatalf("Affinity reduction with three controlled artifacts = %d, want 3", got)
 	}
 }
+
+// sourceSpellConditionalReductionCard models a spell that costs GenericReduction
+// generic less to cast when the caster satisfies condition, encoded as the
+// AffectedSource spell cost modifier the cardgen backend emits for the
+// "This spell costs {N} less to cast if <condition>" ability (Wizard's Lightning,
+// Squash, Draconic Lore).
+func sourceSpellConditionalReductionCard(name string, manaCost cost.Mana, condition game.Condition, generic int) *game.CardDef {
+	return &game.CardDef{CardFace: game.CardFace{
+		Name:     name,
+		Types:    []types.Card{types.Instant},
+		ManaCost: opt.Val(manaCost),
+		StaticAbilities: []game.StaticAbility{{
+			RuleEffects: []game.RuleEffect{{
+				Kind:           game.RuleEffectCostModifier,
+				AffectedSource: true,
+				CostModifier: game.CostModifier{
+					Kind:               game.CostModifierSpell,
+					GenericReduction:   generic,
+					ReductionCondition: opt.Val(condition),
+				},
+			}},
+		}},
+	}}
+}
+
+func controlsWizardCondition() game.Condition {
+	return game.Condition{
+		ControlsMatching: opt.Val(game.SelectionCount{
+			Selection: game.Selection{SubtypesAny: []types.Sub{types.Wizard}},
+		}),
+	}
+}
+
+func addWizardPermanent(g *game.Game, controller game.PlayerID) *game.Permanent {
+	cardID := g.IDGen.Next()
+	g.CardInstances[cardID] = &game.CardInstance{
+		ID: cardID,
+		Def: &game.CardDef{CardFace: game.CardFace{
+			Name:     "Test Wizard",
+			Types:    []types.Card{types.Creature},
+			Subtypes: []types.Sub{types.Wizard},
+		}},
+		Owner: controller,
+	}
+	permanent := &game.Permanent{
+		ObjectID:       g.IDGen.Next(),
+		CardInstanceID: cardID,
+		Owner:          controller,
+		Controller:     controller,
+	}
+	g.Battlefield = append(g.Battlefield, permanent)
+	return permanent
+}
+
+func TestSourceSpellCostReductionConditionalAppliesWhenSatisfied(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addWizardPermanent(g, game.Player1)
+	card := sourceSpellConditionalReductionCard("Wizard's Lightning", cost.Mana{cost.O(2), cost.R}, controlsWizardCondition(), 2)
+
+	if got := sourceSpellGenericReduction(g, game.Player1, card); got != 2 {
+		t.Fatalf("reduction while controlling a Wizard = %d, want 2", got)
+	}
+}
+
+func TestSourceSpellCostReductionConditionalNoReductionWhenUnsatisfied(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	// A Wizard controlled by an opponent must not satisfy "you control a Wizard".
+	addWizardPermanent(g, game.Player2)
+	card := sourceSpellConditionalReductionCard("Wizard's Lightning", cost.Mana{cost.O(2), cost.R}, controlsWizardCondition(), 2)
+
+	if got := sourceSpellGenericReduction(g, game.Player1, card); got != 0 {
+		t.Fatalf("reduction without controlling a Wizard = %d, want 0", got)
+	}
+}

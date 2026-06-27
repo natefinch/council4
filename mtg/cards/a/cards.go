@@ -7,6 +7,7 @@ import "github.com/natefinch/council4/mtg/game"
 // Cards lists all card definitions in this package.
 var Cards = []*game.CardDef{
 	AbyssalNightstalker,
+	AcademyJourneymage,
 	AcclaimedContender,
 	AcolyteOfTheInferno,
 	AdaptiveOmnitool,
@@ -32,6 +33,7 @@ var Cards = []*game.CardDef{
 	AppealToEirdu,
 	AppliedGeometry,
 	ArashinSunshield,
+	ArcaneEpiphany,
 	ArcaneInfusion,
 	ArcaneMelee,
 	ArcanistSOwl,
@@ -42,6 +44,7 @@ var Cards = []*game.CardDef{
 	ArmorThrull,
 	ArrogantBloodlord,
 	ArtisanOfKozilek,
+	ArwenSGift,
 	AscendingAven,
 	AshePrincessOfDalmasca,
 	AshmouthHound,

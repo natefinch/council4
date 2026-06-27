@@ -153,6 +153,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitResolvingSyntax(document.Abilities)
 	emitSourceSpellCostReduction(document.Abilities)
 	emitSourceSpellCostReductionDynamic(document.Abilities)
+	emitSourceSpellCostReductionConditional(document.Abilities)
 	emitStaticDeclarations(document.Abilities)
 	stripCastThisFromExileEffectSemantics(document.Abilities)
 	stripLifeForColoredManaEffectSemantics(document.Abilities)

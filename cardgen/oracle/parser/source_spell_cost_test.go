@@ -282,3 +282,108 @@ func TestParseSourceSpellCostReductionHistoric(t *testing.T) {
 		})
 	}
 }
+
+// sourceSpellReductionConditionalEffect returns the first effect across an
+// ability's sentences that is marked as a conditional source-spell cost
+// reduction ("This spell costs {N} less to cast if <condition>.").
+func sourceSpellReductionConditionalEffect(t *testing.T, source string, context Context) *EffectSyntax {
+	t.Helper()
+	document, _ := Parse(source, context)
+	for ai := range document.Abilities {
+		ability := &document.Abilities[ai]
+		for si := range ability.Sentences {
+			sentence := &ability.Sentences[si]
+			for ei := range sentence.Effects {
+				if sentence.Effects[ei].SourceSpellCostReductionConditional {
+					return &sentence.Effects[ei]
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func TestParseSourceSpellCostReductionConditionalExactness(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		source  string
+		context Context
+		amount  int
+	}{
+		{
+			name:    "control a wizard",
+			source:  "This spell costs {2} less to cast if you control a Wizard.",
+			context: Context{InstantOrSorcery: true},
+			amount:  2,
+		},
+		{
+			name:    "control a giant",
+			source:  "This spell costs {3} less to cast if you control a Giant.",
+			context: Context{InstantOrSorcery: true},
+			amount:  3,
+		},
+		{
+			name:    "self name subject",
+			source:  "Squash costs {3} less to cast if you control a Giant.",
+			context: Context{InstantOrSorcery: true, CardName: "Squash"},
+			amount:  3,
+		},
+		{
+			name:    "opponent controls a permanent",
+			source:  "This spell costs {1} less to cast if an opponent controls a green permanent.",
+			context: Context{InstantOrSorcery: true},
+			amount:  1,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			effect := sourceSpellReductionConditionalEffect(t, test.source, test.context)
+			if effect == nil {
+				t.Fatalf("source %q did not yield a conditional source-spell cost reduction", test.source)
+			}
+			if effect.SourceSpellCostReductionAmount != test.amount {
+				t.Fatalf("reduction amount = %d, want %d", effect.SourceSpellCostReductionAmount, test.amount)
+			}
+		})
+	}
+}
+
+func TestParseSourceSpellCostReductionConditionalFailsClosed(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		source  string
+		context Context
+	}{
+		{
+			name:    "increase wording",
+			source:  "This spell costs {2} more to cast if you control a Wizard.",
+			context: Context{InstantOrSorcery: true},
+		},
+		{
+			name:    "no condition unconditional flat",
+			source:  "This spell costs {2} less to cast.",
+			context: Context{InstantOrSorcery: true},
+		},
+		{
+			name:    "for each count form",
+			source:  "This spell costs {1} less to cast for each creature you control.",
+			context: Context{InstantOrSorcery: true},
+		},
+		{
+			name:    "extra resolving clause",
+			source:  "This spell costs {2} less to cast if you control a Wizard. Draw a card.",
+			context: Context{InstantOrSorcery: true},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			if effect := sourceSpellReductionConditionalEffect(t, test.source, test.context); effect != nil {
+				t.Fatalf("source %q was recognized as a conditional source-spell cost reduction", test.source)
+			}
+		})
+	}
+}

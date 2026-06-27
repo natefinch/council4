@@ -169,17 +169,19 @@ func (s *rulesPaymentState) CostModifiersForSpell(playerID game.PlayerID, card *
 
 // sourceSpellSelfCostModifiers resolves a spell's own dynamic cost reductions
 // ("This spell costs {N} less to cast for each <object>", "This spell costs {X}
-// less to cast, where X is <dynamic amount>"). Such a modifier lives on the
-// casting card's own static abilities as an AffectedSource spell cost modifier
-// carrying a PerObjectReduction with a CountSelection, or a DynamicReduction. It
-// applies only while this exact spell is being cast, so it is read straight from
-// the card being cast rather than from the global active rule effects, and is
-// resolved into a plain generic reduction by counting the matching battlefield
-// permanents (or, when the modifier carries a CountZone, the matching cards in
-// the caster's own graveyard or hand) or evaluating the dynamic amount now.
-// Generic mana may fall to zero but colored requirements are never touched,
-// because the resolved reduction flows through the shared generic cost modifier
-// path.
+// less to cast, where X is <dynamic amount>", "This spell costs {N} less to cast
+// if <condition>"). Such a modifier lives on the casting card's own static
+// abilities as an AffectedSource spell cost modifier carrying a PerObjectReduction
+// with a CountSelection, a DynamicReduction, or a flat GenericReduction gated by a
+// ReductionCondition. It applies only while this exact spell is being cast, so it
+// is read straight from the card being cast rather than from the global active
+// rule effects, and is resolved into a plain generic reduction by counting the
+// matching battlefield permanents (or, when the modifier carries a CountZone, the
+// matching cards in the caster's own graveyard or hand), evaluating the dynamic
+// amount now, or evaluating the board- and player-state condition against the
+// caster now. Generic mana may fall to zero but colored requirements are never
+// touched, because the resolved reduction flows through the shared generic cost
+// modifier path.
 func sourceSpellSelfCostModifiers(g *game.Game, playerID game.PlayerID, card *game.CardDef) []game.CostModifier {
 	if card == nil {
 		return nil
@@ -208,6 +210,10 @@ func sourceSpellSelfCostModifiers(g *game.Game, playerID game.PlayerID, card *ga
 				reduction = count * modifier.PerObjectReduction
 			case modifier.DynamicReduction != nil:
 				reduction = dynamicAmountValue(g, nil, playerID, *modifier.DynamicReduction)
+			case modifier.ReductionCondition.Exists:
+				if conditionSatisfied(g, conditionContext{controller: playerID}, modifier.ReductionCondition) {
+					reduction = modifier.GenericReduction
+				}
 			default:
 				continue
 			}

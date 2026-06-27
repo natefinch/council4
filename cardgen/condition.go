@@ -31,6 +31,13 @@ const (
 	// the guard permits the "unless" form, which the runtime evaluates via the
 	// condition's Negate flag.
 	conditionContextStaticRuleGuard
+	// conditionContextSpellCostReduction gates the "if ..." condition of a
+	// source-spell flat cast cost reduction ("This spell costs {N} less to cast
+	// if you control a Wizard."). The runtime evaluates the condition against the
+	// caster's board and player state as the spell is cast, with no resolving
+	// stack object or source permanent available, so only controller- and
+	// board-scoped predicates are permitted.
+	conditionContextSpellCostReduction
 )
 
 // lowerCondition is the single semantic Condition to game.Condition adapter.
@@ -218,7 +225,7 @@ func conditionKindAllowedInContext(condition compiler.CompiledCondition, ctx con
 		return condition.Kind == compiler.ConditionIf && condition.Intervening
 	case conditionContextReplacement:
 		return condition.Kind == compiler.ConditionUnless && !condition.Intervening
-	case conditionContextEntryCounters, conditionContextEffectGate:
+	case conditionContextEntryCounters, conditionContextEffectGate, conditionContextSpellCostReduction:
 		return condition.Kind == compiler.ConditionIf && !condition.Intervening
 	default:
 		return false
@@ -226,6 +233,36 @@ func conditionKindAllowedInContext(condition compiler.CompiledCondition, ctx con
 }
 
 func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, ctx conditionLoweringContext) bool {
+	if ctx == conditionContextSpellCostReduction {
+		// A source-spell cost reduction is evaluated as the spell is cast, with
+		// only the caster known: no resolving stack object, source permanent, or
+		// triggering event is available. Permit only board- and player-state
+		// predicates that resolve from the controller alone.
+		switch predicate {
+		case compiler.ConditionPredicateControllerControls,
+			compiler.ConditionPredicateAnyOpponentControls,
+			compiler.ConditionPredicateOpponentsControl,
+			compiler.ConditionPredicateControlComparison,
+			compiler.ConditionPredicateControllerLifeAtLeast,
+			compiler.ConditionPredicateControllerLifeAtMost,
+			compiler.ConditionPredicateControllerLifeExactly,
+			compiler.ConditionPredicateControllerLifeAtLeastAboveStarting,
+			compiler.ConditionPredicateAnyPlayerLifeAtMost,
+			compiler.ConditionPredicateOpponentCountAtLeast,
+			compiler.ConditionPredicateControllerHandSizeAtLeast,
+			compiler.ConditionPredicateControllerHandSizeExactly,
+			compiler.ConditionPredicateControllerHandEmpty,
+			compiler.ConditionPredicateControllerLibrarySizeAtLeast,
+			compiler.ConditionPredicateControllerGraveyardCardCountAtLeast,
+			compiler.ConditionPredicateControllerGraveyardCardTypeCountAtLeast,
+			compiler.ConditionPredicateControllerGraveyardCardOfTypeCountAtLeast,
+			compiler.ConditionPredicateControllerCreaturePowerDiversityAtLeast,
+			compiler.ConditionPredicateAnyOpponentPoisonAtLeast:
+			return true
+		default:
+			return false
+		}
+	}
 	if ctx == conditionContextEntryCounters {
 		switch predicate {
 		case compiler.ConditionPredicateControllerLifeAtLeast,

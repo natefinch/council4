@@ -78,6 +78,83 @@ func emitSourceSpellCostReductionDynamic(abilities []Ability) {
 	}
 }
 
+// emitSourceSpellCostReductionConditional marks the EffectCast effect of the
+// exact single-clause ability "This spell costs {N} less to cast if
+// <condition>." as a typed source-scoped flat cast cost reduction gated by the
+// ability's condition clause (Wizard's Lightning: "if you control a Wizard";
+// Squash: "if you control a Giant"; Draconic Lore: "if you control a Dragon").
+// The resolving-syntax pass classifies the clause as a source-context EffectCast
+// with no typed Amount; the condition-clause pass already captured the trailing
+// "if ..." predicate on the ability. This pass confirms the exact "This spell
+// costs {N} less to cast" framing, captures the flat generic reduction N, and
+// records the marker so lowering can build a source-scoped conditional cost
+// modifier without re-reading source text. Any wording that does not match the
+// exact framing, that carries a dynamic Amount (the per-object or "where X is"
+// forms own that wording), or that has no recognized condition clause is left
+// untouched so it stays unsupported and fails closed.
+func emitSourceSpellCostReductionConditional(abilities []Ability) {
+	for i := range abilities {
+		ability := &abilities[i]
+		if ability.Modal != nil || len(ability.ConditionClauses) == 0 {
+			continue
+		}
+		effect := singleResolvingEffect(ability)
+		if effect == nil {
+			continue
+		}
+		if effect.Kind != EffectCast || effect.Context != EffectContextSource {
+			continue
+		}
+		if effect.SourceSpellCostReduction || effect.SourceSpellCostReductionDynamic {
+			continue
+		}
+		if effect.Amount.DynamicKind != "" || effect.Amount.DynamicForm != "" {
+			continue
+		}
+		amount, ok := sourceSpellCostReductionFlatAmount(sourceSpellCostBodyTokens(ability), ability.Atoms)
+		if !ok {
+			continue
+		}
+		effect.SourceSpellCostReductionConditional = true
+		effect.SourceSpellCostReductionAmount = amount
+	}
+}
+
+// sourceSpellCostReductionFlatAmount validates the exact "This spell costs {N}
+// less to cast" framing of a conditional source-spell cost reduction and returns
+// the flat generic reduction N. The subject must be the spell itself ("This
+// spell" or the card's own name), the cost symbol must be a fixed generic {N},
+// and a condition introducer ("if", "as long as", "only if", "unless") must
+// follow the "cast" verb so the trailing predicate is owned by the ability's
+// condition clause. Any other shape fails closed by returning false.
+func sourceSpellCostReductionFlatAmount(tokens []shared.Token, atoms Atoms) (int, bool) {
+	idx, ok := sourceSpellSubjectEnd(tokens, atoms)
+	if !ok {
+		return 0, false
+	}
+	if !effectWordsAt(tokens, idx, "costs") {
+		return 0, false
+	}
+	idx++
+	if idx >= len(tokens) || tokens[idx].Kind != shared.Symbol {
+		return 0, false
+	}
+	amount, ok := staticGenericSymbolValue(tokens[idx].Text)
+	if !ok || amount <= 0 {
+		return 0, false
+	}
+	idx++
+	if !effectWordsAt(tokens, idx, "less", "to", "cast") {
+		return 0, false
+	}
+	idx += 3
+	if idx >= len(tokens) {
+		return 0, false
+	}
+	intro, _ := conditionIntroAt(tokens, idx)
+	return amount, intro != ConditionIntroUnknown
+}
+
 // singleResolvingEffect returns the ability's only resolving effect when exactly
 // one sentence carries effects, that sentence carries exactly one effect, and
 // every other sentence is reminder-only (no effects, static rule, targets, or

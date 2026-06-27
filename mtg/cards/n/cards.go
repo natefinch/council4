@@ -14,6 +14,7 @@ var Cards = []*game.CardDef{
 	NecroticWound,
 	NemataGroveGuardian,
 	NemesisOfReason,
+	NeonateSRush,
 	NessianWanderer,
 	NettleGuard,
 	NeyithOfTheDireHunt,

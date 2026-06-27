@@ -20,6 +20,7 @@ var Cards = []*game.CardDef{
 	GhostHounds,
 	GhostLantern,
 	GhostLitWarder,
+	GhostfireSlice,
 	Ghostway,
 	GiantSGrasp,
 	GiftOfTheGargantuan,
@@ -55,5 +56,6 @@ var Cards = []*game.CardDef{
 	GrowthCycle,
 	GuardianProject,
 	GuruPathik,
+	GustOfWind,
 	GwaihirGreatestOfTheEagles,
 }

@@ -1053,6 +1053,15 @@ func (r Renderer) renderCostModifier(ctx *renderCtx, modifier game.CostModifier)
 		}
 		fields = append(fields, fmt.Sprintf("DynamicReduction: &%s,", dynamic))
 	}
+	if modifier.ReductionCondition.Exists {
+		cond := modifier.ReductionCondition.Val
+		rendered, err := r.renderControllerControlsCondition(ctx, &cond, "spell cost reduction")
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("ReductionCondition: opt.Val(%s),", rendered))
+	}
 	if modifier.SharedExiledCardTypeReduction != 0 {
 		fields = append(fields, fmt.Sprintf("SharedExiledCardTypeReduction: %d,", modifier.SharedExiledCardTypeReduction))
 	}
