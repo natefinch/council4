@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,539 of 32,501 cards eligible for paper support (47.8%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,558 of 32,501 cards eligible for paper support (47.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -84,6 +84,7 @@ Council4 currently supports **15,539 of 32,501 cards eligible for paper support 
 - Action News Crew
 - Active Volcano
 - Adamant Will
+- Adanto Vanguard
 - Adaptive Automaton
 - Adaptive Gemguard
 - Adaptive Omnitool
@@ -435,6 +436,7 @@ Council4 currently supports **15,539 of 32,501 cards eligible for paper support 
 - Angelic Ascension
 - Angelic Benediction
 - Angelic Blessing
+- Angelic Cub
 - Angelic Curator
 - Angelic Destiny
 - Angelic Edict
@@ -648,6 +650,7 @@ Council4 currently supports **15,539 of 32,501 cards eligible for paper support 
 - Armageddon
 - Armaggon, Future Shark
 - Armasaur Guide
+- Armed Assailant
 - Armguard Familiar
 - Armillary Sphere
 - Armistice
@@ -669,6 +672,7 @@ Council4 currently supports **15,539 of 32,501 cards eligible for paper support 
 - Armory Guard
 - Armory of Iroas
 - Armory Paladin
+- Armory Veteran
 - Arms Dealer
 - Army Ants
 - Army of Allah
@@ -799,6 +803,7 @@ Council4 currently supports **15,539 of 32,501 cards eligible for paper support 
 - Auriok Bladewarden
 - Auriok Champion
 - Auriok Edgewright
+- Auriok Glaivemaster
 - Auriok Salvagers
 - Auriok Sunchaser
 - Auriok Transfixer
@@ -2007,6 +2012,7 @@ Council4 currently supports **15,539 of 32,501 cards eligible for paper support 
 - Castle Ardenvale
 - Castle Embereth
 - Castle Locthwain
+- Castle Raptors
 - Castle Sengir
 - Castle Vantress
 - Casualties of War
@@ -3704,6 +3710,7 @@ Council4 currently supports **15,539 of 32,501 cards eligible for paper support 
 - Dwarf
 - Dwarf Berserker
 - Dwarf Token
+- Dwarfhold Champion
 - Dwarven Berserker
 - Dwarven Blastminer
 - Dwarven Bloodboiler
@@ -4580,6 +4587,7 @@ Council4 currently supports **15,539 of 32,501 cards eligible for paper support 
 - Fire-Lit Thicket
 - Fire-Omen Crane
 - Fireblade Artist
+- Fireblade Charger
 - Firebolt
 - Fireborn Knight
 - Firebrand Archer
@@ -6456,6 +6464,7 @@ Council4 currently supports **15,539 of 32,501 cards eligible for paper support 
 - Ichor Explosion
 - Ichor Rats
 - Ichor Slick
+- Ichor Synthesizer
 - Ichor Wellspring
 - Ichorclaw Myr
 - Ichorspit Basilisk
@@ -7153,6 +7162,7 @@ Council4 currently supports **15,539 of 32,501 cards eligible for paper support 
 - Kitchen Imp
 - Kite Shield
 - Kitesail
+- Kitesail Apprentice
 - Kitesail Cleric
 - Kitesail Corsair
 - Kitesail Scout
@@ -7256,6 +7266,7 @@ Council4 currently supports **15,539 of 32,501 cards eligible for paper support 
 - Kor Bladewhirl
 - Kor Cartographer
 - Kor Celebrant
+- Kor Duelist
 - Kor Entanglers
 - Kor Firewalker
 - Kor Halberd
@@ -7484,8 +7495,10 @@ Council4 currently supports **15,539 of 32,501 cards eligible for paper support 
 - Leonin Abunas
 - Leonin Armorguard
 - Leonin Bladetrap
+- Leonin Den-Guard
 - Leonin Elder
 - Leonin Iconoclast
+- Leonin Lightbringer
 - Leonin Lightscribe
 - Leonin of the Lost Pride
 - Leonin Relic-Warder
@@ -11946,10 +11959,12 @@ Council4 currently supports **15,539 of 32,501 cards eligible for paper support 
 - Skycoach Conductor // All Aboard
 - Skycrash
 - Skygames
+- Skyhunter Cub
 - Skyhunter Patrol
 - Skyhunter Prowler
 - Skyhunter Skirmisher
 - Skyknight Legionnaire
+- Skyknight Squire
 - Skyknight Vanguard
 - Skylasher
 - Skyline Cascade
@@ -13025,6 +13040,7 @@ Council4 currently supports **15,539 of 32,501 cards eligible for paper support 
 - Sunset Strikemaster
 - Sunshot Militia
 - Sunshower Druid
+- Sunspear Shikari
 - Sunspire Gatekeepers
 - Sunspire Griffin
 - Sunspring Expedition
@@ -13593,6 +13609,7 @@ Council4 currently supports **15,539 of 32,501 cards eligible for paper support 
 - Thraben Watcher
 - Thragtusk
 - Thran Dynamo
+- Thran Golem
 - Thran Quarry
 - Thran Temporal Gateway
 - Thrash // Threat
@@ -14336,6 +14353,7 @@ Council4 currently supports **15,539 of 32,501 cards eligible for paper support 
 - Utvara Scalper
 - Uurg, Spawn of Turg
 - Uyo, Silent Prophet
+- Vadmir, New Blood
 - Vaevictis Asmadi
 - Vagrant Plowbeasts
 - Valakut Awakening // Valakut Stoneforge
@@ -14674,6 +14692,7 @@ Council4 currently supports **15,539 of 32,501 cards eligible for paper support 
 - Voice of Grace
 - Voice of Law
 - Voice of Reason
+- Voice of the Blessed
 - Voice of the Provinces
 - Voice of the Vermin
 - Voice of the Woods
