@@ -1278,6 +1278,14 @@ func (v *cardDefValidator) validateCostModifier(faceName, path string, modifier 
 	if modifier.GenericReduction < 0 {
 		v.add(faceName, appendPath(path, "GenericReduction"), CardDefIssueInvalidRuleEffect, "generic cost reduction cannot be negative")
 	}
+	for _, c := range modifier.ColoredIncrease {
+		if modifier.Kind != CostModifierSpell {
+			v.add(faceName, appendPath(path, "ColoredIncrease"), CardDefIssueInvalidRuleEffect, "colored cost increases must be spell modifiers")
+		}
+		if !manaColorValid(c) {
+			v.add(faceName, appendPath(path, "ColoredIncrease"), CardDefIssueInvalidRuleEffect, "colored cost increase must be a basic colored mana symbol")
+		}
+	}
 	if modifier.SetGeneric.Exists && modifier.SetGeneric.Val < 0 {
 		v.add(faceName, appendPath(path, "SetGeneric"), CardDefIssueInvalidRuleEffect, "generic cost replacement cannot be negative")
 	}

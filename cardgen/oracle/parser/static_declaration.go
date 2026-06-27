@@ -449,7 +449,14 @@ type StaticDeclarationSyntax struct {
 	// Cost-modifier payload.
 	CostModifier        StaticDeclarationCostModifierKind `json:",omitempty"`
 	CostReductionAmount int                               `json:",omitempty"`
-	CostReplacement     string                            `json:",omitempty"`
+	// CostIncreaseColors lists the colored mana symbols a cast-cost increase
+	// adds on top of any generic amount ("Black spells you cast cost {B} more to
+	// cast.", Derelor and the mono-color Leech cycle). Each entry is one basic
+	// colored mana symbol the parser read from the "cost {C} more to cast"
+	// clause; it is set only with StaticDeclarationCostModifierSpellIncrease. An
+	// empty slice means the increase adds no colored mana.
+	CostIncreaseColors []mana.Color `json:",omitempty"`
+	CostReplacement    string       `json:",omitempty"`
 	// AbilityCostKeyword names the activated-ability keyword whose cost a
 	// StaticDeclarationAbilityCostSet declaration sets ("Equipment you control
 	// have equip {0}." sets the Equip ability cost). CostReplacement carries the
@@ -2799,6 +2806,7 @@ func parseStaticSpellCostModifierDeclaration(tokens []shared.Token, atoms Atoms)
 		OperationSpan:              tail.OperationSpan,
 		CostModifier:               tail.Kind,
 		CostReductionAmount:        tail.Amount,
+		CostIncreaseColors:         tail.IncreaseColors,
 		SpellType:                  spellType,
 		SpellColor:                 spellColor,
 		SpellSubtypes:              subtypes,
@@ -2856,6 +2864,7 @@ func parseStaticSpellTargetsSourceCostModifier(tokens []shared.Token, atoms Atom
 		OperationSpan:       tail.OperationSpan,
 		CostModifier:        tail.Kind,
 		CostReductionAmount: tail.Amount,
+		CostIncreaseColors:  tail.IncreaseColors,
 		SpellType:           StaticDeclarationSpellTypeAll,
 		SpellCaster:         caster,
 		SpellTargetsSource:  true,
@@ -3006,6 +3015,7 @@ func parseStaticSpellColorDisjunctionCostModifier(tokens []shared.Token) (Static
 		OperationSpan:       tail.OperationSpan,
 		CostModifier:        tail.Kind,
 		CostReductionAmount: tail.Amount,
+		CostIncreaseColors:  tail.IncreaseColors,
 		SpellType:           StaticDeclarationSpellTypeAll,
 		SpellColors:         colors,
 	}, true
@@ -3046,6 +3056,7 @@ func parseStaticSpellColorPairCostModifier(tokens []shared.Token) (StaticDeclara
 		OperationSpan:       tail.OperationSpan,
 		CostModifier:        tail.Kind,
 		CostReductionAmount: tail.Amount,
+		CostIncreaseColors:  tail.IncreaseColors,
 		SpellType:           StaticDeclarationSpellTypeAll,
 		SpellColors:         []StaticDeclarationSpellColorKind{first, second},
 	}, true
@@ -3084,25 +3095,26 @@ func staticSpellColorDisjunction(tokens []shared.Token) ([]StaticDeclarationSpel
 // modifier: the modifier kind, the generic amount, and the span covering
 // "cost {N} less to cast".
 type staticSpellCostTail struct {
-	Kind          StaticDeclarationCostModifierKind
-	Amount        int
-	OperationSpan shared.Span
+	Kind           StaticDeclarationCostModifierKind
+	Amount         int
+	IncreaseColors []mana.Color
+	OperationSpan  shared.Span
 }
 
 // staticSpellCostModifierTail parses the trailing "cost(s) {N} less/more to
 // cast." of a spell cast-cost modifier. The cost verb is "cost" or "costs" so
 // both the "<color> spells ... cost" and the singular "Each spell ... costs"
-// subjects fit.
+// subjects fit. The cost symbol is a generic {N}, or a single basic colored
+// mana symbol ({W}, {U}, {B}, {R}, or {G}) when the operation is "more"
+// ("Black spells you cast cost {B} more to cast.", Derelor): a colored symbol
+// names a colored mana increase, which only makes sense as a tax, so a colored
+// "less" reduction fails closed.
 func staticSpellCostModifierTail(tokens []shared.Token) (staticSpellCostTail, bool) {
 	if len(tokens) != 6 ||
 		(!equalWord(tokens[0], "cost") && !equalWord(tokens[0], "costs")) ||
 		tokens[1].Kind != shared.Symbol ||
 		!staticWordsAt(tokens, 3, "to", "cast") ||
 		tokens[5].Kind != shared.Period {
-		return staticSpellCostTail{}, false
-	}
-	amount, ok := staticGenericSymbolValue(tokens[1].Text)
-	if !ok || amount <= 0 {
 		return staticSpellCostTail{}, false
 	}
 	var kind StaticDeclarationCostModifierKind
@@ -3114,7 +3126,16 @@ func staticSpellCostModifierTail(tokens []shared.Token) (staticSpellCostTail, bo
 	default:
 		return staticSpellCostTail{}, false
 	}
-	return staticSpellCostTail{Kind: kind, Amount: amount, OperationSpan: shared.SpanOf(tokens[0:5])}, true
+	span := shared.SpanOf(tokens[0:5])
+	if amount, ok := staticGenericSymbolValue(tokens[1].Text); ok && amount > 0 {
+		return staticSpellCostTail{Kind: kind, Amount: amount, OperationSpan: span}, true
+	}
+	if kind == StaticDeclarationCostModifierSpellIncrease {
+		if color, ok := staticBasicColoredSymbol(tokens[1].Text); ok {
+			return staticSpellCostTail{Kind: kind, IncreaseColors: []mana.Color{color}, OperationSpan: span}, true
+		}
+	}
+	return staticSpellCostTail{}, false
 }
 
 // parseStaticCastAsThoughFlashDeclaration recognizes the static timing
@@ -3504,4 +3525,29 @@ func staticTrimSymbol(text string) (string, bool) {
 		return "", false
 	}
 	return strings.CutSuffix(symbol, "}")
+}
+
+// staticBasicColoredSymbol returns the basic colored mana symbol named by a
+// single mana-symbol token ("{B}" -> mana.B). It accepts only the five basic
+// colored symbols W, U, B, R, and G; generic, colorless, hybrid, and every
+// other symbol shape fail closed by returning false.
+func staticBasicColoredSymbol(text string) (mana.Color, bool) {
+	symbol, ok := staticTrimSymbol(text)
+	if !ok {
+		return "", false
+	}
+	switch symbol {
+	case "W":
+		return mana.W, true
+	case "U":
+		return mana.U, true
+	case "B":
+		return mana.B, true
+	case "R":
+		return mana.R, true
+	case "G":
+		return mana.G, true
+	default:
+		return "", false
+	}
 }

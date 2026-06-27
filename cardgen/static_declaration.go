@@ -1621,7 +1621,12 @@ func appendStaticSpellCostModifierDeclaration(body *game.StaticAbility, declarat
 	if cost.SharedExiledCardTypeReduction > 0 {
 		return appendStaticSpellSharedExiledTypeCostModifier(body, declaration)
 	}
-	if (cost.GenericReduction == 0) == (cost.GenericIncrease == 0) {
+	reduces := cost.GenericReduction != 0
+	increases := cost.GenericIncrease != 0 || len(cost.ColoredIncrease) != 0
+	if reduces == increases {
+		return false
+	}
+	if cost.GenericIncrease != 0 && len(cost.ColoredIncrease) != 0 {
 		return false
 	}
 	affectedPlayer, ok := lowerSpellCaster(cost.Caster)
@@ -1632,6 +1637,7 @@ func appendStaticSpellCostModifierDeclaration(body *game.StaticAbility, declarat
 		Kind:             game.CostModifierSpell,
 		GenericReduction: cost.GenericReduction,
 		GenericIncrease:  cost.GenericIncrease,
+		ColoredIncrease:  slices.Clone(cost.ColoredIncrease),
 		TargetsSource:    cost.TargetsSource,
 	}
 	if cost.SourceZone != "" {

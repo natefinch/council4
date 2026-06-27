@@ -13,6 +13,7 @@ var Cards = []*game.CardDef{
 	SamiteHealer,
 	SanarUnfinishedGenius,
 	SanctumCustodian,
+	SapphireLeech,
 	SaprazzanOutrigger,
 	SaprolingMigration,
 	SarkhanSDragonfire,

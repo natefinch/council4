@@ -33,9 +33,19 @@ type CostModifier struct {
 	AbilityKeyword   Keyword
 	GenericIncrease  int
 	GenericReduction int
-	SetGeneric       opt.V[int]
-	SetManaCost      opt.V[cost.Mana]
-	MinimumGeneric   int
+
+	// ColoredIncrease lists colored mana symbols added to the affected cost on
+	// top of any GenericIncrease ("Black spells you cast cost {B} more to
+	// cast.", Derelor; the mono-color Leech cycle). Each entry is one basic
+	// colored mana symbol (W, U, B, R, or G); the rules layer appends one such
+	// symbol to the cost for each entry, raising a colored requirement the
+	// caster must satisfy. It is meaningful only on a CostModifierSpell. An
+	// empty slice adds no colored mana. It is a slice so CostModifier stays a
+	// plain value; nil and empty are equivalent.
+	ColoredIncrease []mana.Color
+	SetGeneric      opt.V[int]
+	SetManaCost     opt.V[cost.Mana]
+	MinimumGeneric  int
 
 	// LifePayableTaxInstances, when positive on a CostModifierSpell, adds that
 	// many "{2} or 2 life" generic Phyrexian symbols to the spell's cost instead

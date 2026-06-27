@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -564,6 +565,43 @@ func TestRecognizeStaticSpellCostModifierFromTypedNodes(t *testing.T) {
 				t.Fatalf("declaration = %#v", declaration)
 			}
 		})
+	}
+}
+
+// TestRecognizeStaticSpellCostModifierColoredIncreaseFromTypedNodes checks that
+// a typed cost-increase node carrying a colored mana symbol ("Black spells you
+// cast cost {B} more to cast.", the Leech cycle and Derelor) compiles to a spell
+// cost modifier whose ColoredIncrease carries the symbol, with no generic
+// amount, while a colored symbol on a reduction node fails closed.
+func TestRecognizeStaticSpellCostModifierColoredIncreaseFromTypedNodes(t *testing.T) {
+	t.Parallel()
+	ability := CompiledAbility{Kind: AbilityStatic}
+	node := parser.StaticDeclarationSyntax{
+		Kind:               parser.StaticDeclarationCostModifier,
+		CostModifier:       parser.StaticDeclarationCostModifierSpellIncrease,
+		CostIncreaseColors: []mana.Color{mana.B},
+		SpellColor:         parser.StaticDeclarationSpellColorBlack,
+	}
+	declaration, ok := recognizeStaticSpellCostModifierDeclaration(ability, []parser.StaticDeclarationSyntax{node})
+	if !ok {
+		t.Fatal("did not recognize typed colored cost increase")
+	}
+	if declaration.Cost == nil ||
+		declaration.Cost.Kind != StaticCostModifierSpell ||
+		declaration.Cost.GenericIncrease != 0 ||
+		declaration.Cost.GenericReduction != 0 ||
+		!slices.Equal(declaration.Cost.ColoredIncrease, []mana.Color{mana.B}) {
+		t.Fatalf("declaration = %#v", declaration)
+	}
+
+	reductionNode := parser.StaticDeclarationSyntax{
+		Kind:               parser.StaticDeclarationCostModifier,
+		CostModifier:       parser.StaticDeclarationCostModifierSpellReduction,
+		CostIncreaseColors: []mana.Color{mana.B},
+		SpellColor:         parser.StaticDeclarationSpellColorBlack,
+	}
+	if _, ok := recognizeStaticSpellCostModifierDeclaration(ability, []parser.StaticDeclarationSyntax{reductionNode}); ok {
+		t.Fatal("recognized a colored reduction, want fail closed")
 	}
 }
 

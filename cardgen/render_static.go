@@ -1019,6 +1019,13 @@ func (r Renderer) renderCostModifier(ctx *renderCtx, modifier game.CostModifier)
 	if modifier.GenericReduction != 0 {
 		fields = append(fields, fmt.Sprintf("GenericReduction: %d,", modifier.GenericReduction))
 	}
+	if len(modifier.ColoredIncrease) != 0 {
+		colors, err := renderManaColorSlice(ctx, modifier.ColoredIncrease)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("ColoredIncrease: %s,", colors))
+	}
 	if modifier.SetGeneric.Exists {
 		ctx.need(importOpt)
 		fields = append(fields, fmt.Sprintf("SetGeneric: opt.Val(%d),", modifier.SetGeneric.Val))

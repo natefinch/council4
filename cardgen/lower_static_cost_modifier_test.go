@@ -8,6 +8,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/compare"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
@@ -275,9 +276,10 @@ func TestLowerStaticSpellCostModifierManaValueThreshold(t *testing.T) {
 func TestLowerStaticSpellCostModifierRejectsUnsupported(t *testing.T) {
 	t.Parallel()
 	sources := map[string]string{
-		"leading condition": "During turns other than yours, spells you cast cost {1} less to cast.",
-		"colored mana cost": "Black spells you cast cost {B} more to cast.",
-		"unsupported zone":  "Spells you cast from anywhere other than your hand cost {2} less to cast.",
+		"leading condition":      "During turns other than yours, spells you cast cost {1} less to cast.",
+		"colorless mana cost":    "Black spells you cast cost {C} more to cast.",
+		"colored cost reduction": "Black spells you cast cost {B} less to cast.",
+		"unsupported zone":       "Spells you cast from anywhere other than your hand cost {2} less to cast.",
 	}
 	for name, source := range sources {
 		t.Run(name, func(t *testing.T) {
@@ -331,6 +333,11 @@ func TestLowerStaticSpellCostModifierCasterAndExcludedType(t *testing.T) {
 			affectedPlayer: game.PlayerOpponent,
 			modifier:       game.CostModifier{Kind: game.CostModifierSpell, CardSelection: game.Selection{ExcludedTypes: []types.Card{types.Artifact}}, GenericIncrease: 2},
 		},
+		"colored controller": {
+			oracleText:     "Black spells you cast cost {B} more to cast.",
+			affectedPlayer: game.PlayerYou,
+			modifier:       game.CostModifier{Kind: game.CostModifierSpell, CardSelection: game.Selection{ColorsAny: []color.Color{color.Black}}, ColoredIncrease: []mana.Color{mana.B}},
+		},
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -359,7 +366,8 @@ func TestLowerStaticSpellCostModifierCasterAndExcludedType(t *testing.T) {
 			if got.Kind != test.modifier.Kind ||
 				!reflect.DeepEqual(got.CardSelection, test.modifier.CardSelection) ||
 				got.GenericReduction != test.modifier.GenericReduction ||
-				got.GenericIncrease != test.modifier.GenericIncrease {
+				got.GenericIncrease != test.modifier.GenericIncrease ||
+				!reflect.DeepEqual(got.ColoredIncrease, test.modifier.ColoredIncrease) {
 				t.Fatalf("cost modifier = %#v, want %#v", got, test.modifier)
 			}
 		})
