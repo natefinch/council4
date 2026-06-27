@@ -81,6 +81,7 @@ var Cards = []*game.CardDef{
 	CosmicLarva,
 	Counterintelligence,
 	CountlessGearsRenegade,
+	CourageInCrisis,
 	CourageousOutrider,
 	Cowabunga,
 	CragplateBaloth,
