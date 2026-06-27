@@ -103,3 +103,19 @@ func TestPowerToughnessDeltaSymmetric(t *testing.T) {
 		t.Fatalf("PowerToughnessDelta() = (%d, %d); want (2, 2)", power, toughness)
 	}
 }
+
+func TestRemoveAll(t *testing.T) {
+	var s Set
+	s.Add(PlusOnePlusOne, 3)
+	s.Add(Charge, 2)
+	s.Add(MinusOneMinusOne, 1)
+	if got := s.RemoveAll(); got != 6 {
+		t.Fatalf("RemoveAll = %d, want 6", got)
+	}
+	if !s.IsEmpty() {
+		t.Fatalf("set not empty after RemoveAll: %v", s.All())
+	}
+	if got := s.RemoveAll(); got != 0 {
+		t.Fatalf("RemoveAll on empty = %d, want 0", got)
+	}
+}

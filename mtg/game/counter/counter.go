@@ -357,6 +357,18 @@ func (s *Set) Remove(k Kind, n int) int {
 	return n
 }
 
+// RemoveAll removes every counter of every kind and returns the total number
+// removed, modeling the kind-agnostic "remove all counters from <permanent>"
+// wording (Vampire Hexmage).
+func (s *Set) RemoveAll() int {
+	total := 0
+	for _, n := range s.counts {
+		total += n
+	}
+	s.counts = nil
+	return total
+}
+
 // Get returns the number of counters of the given kind.
 func (s *Set) Get(k Kind) int {
 	if s.counts == nil {

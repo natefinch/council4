@@ -68,3 +68,32 @@ func TestRemoveCounterNamedKindRemovesThatKind(t *testing.T) {
 		t.Fatalf("charge counters = %d, want 1 (named-kind removal leaves other kinds)", got)
 	}
 }
+
+// TestRemoveCounterAllKindsClearsEveryKind covers the kind-agnostic mass form
+// ("Remove all counters from target permanent.", Vampire Hexmage): every counter
+// of every kind is removed regardless of count.
+func TestRemoveCounterAllKindsClearsEveryKind(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	target := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Counter Vault",
+		Types: []types.Card{types.Artifact}},
+	})
+	target.Counters.Add(counter.PlusOnePlusOne, 3)
+	target.Counters.Add(counter.Charge, 2)
+	target.Counters.Add(counter.MinusOneMinusOne, 1)
+	obj := &game.StackObject{
+		ID:         g.IDGen.Next(),
+		Kind:       game.StackActivatedAbility,
+		SourceID:   target.ObjectID,
+		Controller: game.Player1,
+		Targets:    []game.Target{game.PermanentTarget(target.ObjectID)},
+	}
+	resolveInstruction(engine, g, obj, game.RemoveCounter{
+		Object:   game.TargetPermanentReference(0),
+		AllKinds: true,
+	}, &TurnLog{})
+
+	if !target.Counters.IsEmpty() {
+		t.Fatalf("counters = %v, want empty after remove-all", target.Counters.All())
+	}
+}

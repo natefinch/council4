@@ -291,6 +291,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				CounterRecipientSingleChoice: syntax.CounterRecipientSingleChoice,
 				RegenerateAttached:           syntax.RegenerateAttached,
 				MoveCountersAll:              syntax.MoveCountersAll,
+				RemoveCountersAll:            syntax.RemoveCountersAll,
 				MoveCountersDistribute:       syntax.MoveCountersDistribute,
 				MoveThoseCounters:            syntax.MoveThoseCounters,
 				MoveCountersFromTarget:       syntax.MoveCountersFromTarget,

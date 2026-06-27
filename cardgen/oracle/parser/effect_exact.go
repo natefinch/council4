@@ -133,7 +133,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 	case EffectProliferate:
 		return exactStandaloneActionEffectSyntax(effect, "Proliferate")
 	case EffectRemoveCounter:
-		return exactRemoveCounterEffectSyntax(effect)
+		return exactRemoveCounterEffectSyntax(effect) || exactRemoveAllCountersEffectSyntax(effect)
 	case EffectRegenerate:
 		return exactDirectTargetEffectSyntax(effect, "Regenerate") ||
 			exactRegenerateSelfEffectSyntax(effect) ||
@@ -3922,6 +3922,27 @@ func exactRemoveCounterEffectSyntax(effect *EffectSyntax) bool {
 		text,
 		fmt.Sprintf("Remove %s %s from %s.",
 			effectAmountSourceText(effect), noun, object),
+	)
+}
+
+// exactRemoveAllCountersEffectSyntax recognizes the kind-agnostic mass removal
+// "Remove all counters from <object>." (Vampire Hexmage, "Remove all counters
+// from target permanent."). The object is a single recognized target permanent
+// or a lone source/self reference, reusing exactRemoveCounterObjectText. The
+// clause is reconstructed and matched byte-exact, so the fixed-count, dynamic,
+// and kind-specific removals stay out of this path and lower through their own
+// recognizers.
+func exactRemoveAllCountersEffectSyntax(effect *EffectSyntax) bool {
+	if !effect.RemoveCountersAll || effect.CounterKnown {
+		return false
+	}
+	object, ok := exactRemoveCounterObjectText(effect)
+	if !ok {
+		return false
+	}
+	return strings.EqualFold(
+		exactEffectClauseText(effect),
+		fmt.Sprintf("Remove all counters from %s.", object),
 	)
 }
 

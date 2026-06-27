@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,121 of 32,501 cards eligible for paper support (46.5%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,125 of 32,501 cards eligible for paper support (46.5%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1331,6 +1331,7 @@ Council4 currently supports **15,121 of 32,501 cards eligible for paper support 
 - Blistering Firecat
 - Blisterspit Gremlin
 - Blisterstick Shaman
+- Blitz Leech
 - Blitz of the Thunder-Raptor
 - Blitzball Shot
 - Blizzard Elemental
@@ -9220,6 +9221,7 @@ Council4 currently supports **15,121 of 32,501 cards eligible for paper support 
 - Peregrine Griffin
 - Peregrine Mask
 - Perennial Behemoth
+- Perfect Intimidation
 - Perforating Artist
 - Perilous Forays
 - Perilous Landscape
@@ -9710,6 +9712,7 @@ Council4 currently supports **15,121 of 32,501 cards eligible for paper support 
 - Puppeteer Clique
 - Puresteel Paladin
 - Purge the Profane
+- Purging Stormbrood // Absorb Essence
 - Purify
 - Purify the Grave
 - Purple Pentapus
@@ -13989,6 +13992,7 @@ Council4 currently supports **15,121 of 32,501 cards eligible for paper support 
 - Vampire Demon
 - Vampire Envoy
 - Vampire Gourmand
+- Vampire Hexmage
 - Vampire Hounds
 - Vampire Interloper
 - Vampire Knight

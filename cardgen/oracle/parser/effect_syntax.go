@@ -1390,6 +1390,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			CounterKindChoices:       counterKindChoices,
 			CounterRecipientAttached: counterRecipientAttached(kind, counterKnown, clause),
 			MoveCountersAll:          kind == EffectMoveCounters && moveAllCountersClause(clause),
+			RemoveCountersAll:        kind == EffectRemoveCounter && removeAllCountersClause(clause),
 			MoveCountersDistribute:   kind == EffectMoveCounters && moveCountersDistributeClause(clause),
 			MoveThoseCounters:        kind == EffectPut && moveThoseCountersClause(clause),
 			FromZone:                 effectFromZone(kind, clause, atoms, span, toZone),
@@ -6328,6 +6329,16 @@ func moveAllCountersClause(clause []shared.Token) bool {
 // keep MoveCountersDistribute false.
 func moveCountersDistributeClause(clause []shared.Token) bool {
 	return effectHasTokenWords(clause, "any", "number", "of")
+}
+
+// removeAllCountersClause reports the kind-agnostic "remove all counters" form,
+// where every counter on the object is removed regardless of kind ("Remove all
+// counters from target permanent."). It anchors on the literal "all counters"
+// run so the specific-kind form ("a +1/+1 counter") and the kind-specific "all
+// +1/+1 counters" form (whose words are non-adjacent) keep RemoveCountersAll
+// false and lower through their fixed-count paths.
+func removeAllCountersClause(clause []shared.Token) bool {
+	return effectHasTokenWords(clause, "all", "counters")
 }
 
 // moveThoseCountersClause reports the counter-salvage form "put those counters

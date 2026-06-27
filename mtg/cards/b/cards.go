@@ -33,6 +33,7 @@ var Cards = []*game.CardDef{
 	BlazemireVerge,
 	BlazingSunsteel,
 	BleedDry,
+	BlitzLeech,
 	BlitzOfTheThunderRaptor,
 	BloodCultist,
 	BloodletterQuill,

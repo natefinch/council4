@@ -129,14 +129,16 @@ func TestLowerRemoveCounterUnsupportedPluralChosenKind(t *testing.T) {
 }
 
 // TestLowerRemoveCounterUnsupportedDynamicAmount proves a non-fixed removal
-// amount ("remove X counters") fails closed rather than lowering.
+// amount ("remove X counters") fails closed rather than lowering. The
+// kind-agnostic "remove all counters" mass form is handled separately by
+// TestLowerRemoveAllCountersTargetSpell and is intentionally not exercised here.
 func TestLowerRemoveCounterUnsupportedDynamicAmount(t *testing.T) {
 	t.Parallel()
 	lowerSingleFaceExpectingUnsupported(t, &ScryfallCard{
 		Name:       "Test Counter Eater",
 		Layout:     "normal",
 		TypeLine:   "Creature — Horror",
-		OracleText: "{T}: Remove all counters from target permanent.",
+		OracleText: "{X}, {T}: Remove X counters from target permanent.",
 	})
 }
 
@@ -216,4 +218,47 @@ func TestLowerRemoveCounterSelfUnsupportedAll(t *testing.T) {
 		TypeLine:   "Creature — Elemental Dog",
 		OracleText: "{2}{R}: Remove all +1/+1 counters from this creature.",
 	})
+}
+
+// TestLowerRemoveAllCountersTargetSpell proves the kind-agnostic mass form
+// "Remove all counters from target permanent." (Vampire Hexmage's ability body,
+// here as a sorcery) lowers to a RemoveCounter with AllKinds set and no amount
+// or named kind, so the runtime clears every counter regardless of kind.
+func TestLowerRemoveAllCountersTargetSpell(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Hexmage Sorcery",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Remove all counters from target permanent.",
+	})
+	remove := removeCounterFromMode(t, face.SpellAbility.Val)
+	if !remove.AllKinds || remove.ChooseKind ||
+		remove.Amount != (game.Quantity{}) || remove.CounterKind != 0 {
+		t.Fatalf("remove = %#v", remove)
+	}
+}
+
+// TestLowerRemoveAllCountersSelfActivated proves the self/source mass form
+// "Remove all counters from this permanent." lowers onto the ability's own
+// source with AllKinds set.
+func TestLowerRemoveAllCountersSelfActivated(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Hexmage Self",
+		Layout:     "normal",
+		TypeLine:   "Artifact",
+		OracleText: "{2}, {T}: Remove all counters from this permanent.",
+	})
+	if len(face.ActivatedAbilities) != 1 {
+		t.Fatalf("activated abilities = %#v", face.ActivatedAbilities)
+	}
+	content := face.ActivatedAbilities[0].Content
+	if len(content.Modes) != 1 || len(content.Modes[0].Sequence) != 1 {
+		t.Fatalf("content = %#v", content)
+	}
+	remove, ok := content.Modes[0].Sequence[0].Primitive.(game.RemoveCounter)
+	if !ok || !remove.AllKinds || remove.Object != game.SourcePermanentReference() {
+		t.Fatalf("primitive = %#v", content.Modes[0].Sequence[0].Primitive)
+	}
 }

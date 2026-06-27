@@ -1876,6 +1876,11 @@ type CompiledEffect struct {
 	// counter on the source regardless of kind. It is false for a specific-kind
 	// move, whose kind is in CounterKind / CounterKindKnown.
 	MoveCountersAll bool
+	// RemoveCountersAll carries the parser's kind-agnostic "remove all counters"
+	// form of an EffectRemoveCounter effect through to lowering, which removes
+	// every counter on the object regardless of kind. It is false for a fixed or
+	// kind-specific removal, whose count is in Amount and kind in CounterKind.
+	RemoveCountersAll bool
 	// MoveCountersDistribute carries the parser's "move any number of <kind>
 	// counters from <source> onto other creatures" form through to lowering,
 	// which distributes the source's counters among a group of other creatures

@@ -717,11 +717,19 @@ func (r Renderer) renderMoveCounters(ctx *renderCtx, value *game.MoveCounters) (
 // renderRemoveCounter renders a RemoveCounter primitive: a fixed amount removed
 // from one referenced object, of either a named CounterKind or a controller-
 // chosen kind (ChooseKind), modeling the "remove a counter from target
-// permanent" family (Ferropede).
+// permanent" family (Ferropede). The kind-agnostic mass form (AllKinds) removes
+// every counter regardless of kind ("Remove all counters from target
+// permanent.", Vampire Hexmage) and carries neither an amount nor a kind.
 func (r Renderer) renderRemoveCounter(ctx *renderCtx, value *game.RemoveCounter) (string, error) {
 	object, err := r.renderObjectReference(value.Object)
 	if err != nil {
 		return "", err
+	}
+	if value.AllKinds {
+		return structLit("game.RemoveCounter", []string{
+			fmt.Sprintf("Object: %s,", object),
+			"AllKinds: true,",
+		}), nil
 	}
 	amount, err := r.renderQuantity(ctx, value.Amount)
 	if err != nil {
