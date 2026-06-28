@@ -132,6 +132,9 @@ func lowerOrderedSequenceSpecialCase(
 	if content, ok := lowerCombinedSequenceShapes(cardName, ctx, syntax); ok {
 		return content, nil, true
 	}
+	if content, ok := lowerLeadingSequenceThenSearch(cardName, ctx, syntax); ok {
+		return content, nil, true
+	}
 	if !legacyOrderedEffectSequenceExact(ctx.content.Effects) {
 		return game.AbilityContent{},
 			unsupportedEffectSequenceDiagnostic(ctx, "structural — non-exact legacy effect pair"),
