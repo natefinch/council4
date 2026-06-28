@@ -80,11 +80,18 @@ func handleDamage(r *effectResolver, prim game.Damage) effectResolved {
 		return r.damageSelectedPermanents(res, source, group)
 	}
 	if group, ok := prim.Recipient.PlayerGroupReference(); ok {
+		perRecipient := res.amount
+		total := 0
 		for _, playerID := range r.playerGroupMembers(group) {
-			dealt := dealPlayerDamage(r.game, source.sourceID, source.sourceObjectID, source.controller, playerID, res.amount, false)
+			dealt := dealPlayerDamage(r.game, source.sourceID, source.sourceObjectID, source.controller, playerID, perRecipient, false)
 			applyDamageSourceLifelink(r.game, source, dealt)
+			total += dealt
 			res.succeeded = dealt > 0 || res.succeeded
 		}
+		// Publish the total damage dealt across the whole group so a follow-on
+		// "...equal to the damage dealt this way." life gain (Creeping
+		// Bloodsucker) reads the sum, not just one recipient's share.
+		res.amount = total
 	}
 	return res
 }

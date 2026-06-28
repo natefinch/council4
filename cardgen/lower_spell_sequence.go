@@ -388,6 +388,9 @@ func lowerOrderedEffectSequence(
 	if !publishCreatedTokenLink(sequence, gateConditions) {
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — created-token gate not linkable")
 	}
+	if !linkDamageDealtThisWay(sequence) {
+		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — damage-dealt-this-way drain not linkable")
+	}
 	return game.Mode{Targets: targets, Sequence: sequence}.Ability(), nil
 }
 
@@ -430,6 +433,64 @@ func publishCreatedTokenLink(sequence []game.Instruction, conditions []compiler.
 	create.PublishLinked = createdTokenLinkKey
 	sequence[createIndex].Primitive = create
 	return true
+}
+
+// linkDamageDealtThisWay wires a "...equal to the (excess) damage dealt this
+// way." life gain (Corrupt, Razor Rings) to the damage it scales from. The
+// consuming GainLife/LoseLife instruction reads the amount published under
+// damageDealtThisWayKey, so the Damage instruction that immediately precedes it
+// must publish that amount. It sets PublishResult on that preceding Damage
+// instruction. It returns false (fail closed) when a consumer has no preceding
+// Damage instruction, or that Damage already publishes a different key.
+func linkDamageDealtThisWay(sequence []game.Instruction) bool {
+	for i := range sequence {
+		if !instructionConsumesDamageDealtThisWay(sequence[i]) {
+			continue
+		}
+		damageIndex := -1
+		for j := i - 1; j >= 0; j-- {
+			if sequence[j].Primitive.Kind() == game.PrimitiveDamage {
+				damageIndex = j
+				break
+			}
+		}
+		if damageIndex < 0 {
+			return false
+		}
+		if sequence[damageIndex].PublishResult != "" && sequence[damageIndex].PublishResult != damageDealtThisWayKey {
+			return false
+		}
+		sequence[damageIndex].PublishResult = damageDealtThisWayKey
+	}
+	return true
+}
+
+// instructionConsumesDamageDealtThisWay reports whether instr is a life-gain or
+// life-loss whose amount reads the damage published under damageDealtThisWayKey.
+func instructionConsumesDamageDealtThisWay(instr game.Instruction) bool {
+	var amount game.Quantity
+	switch instr.Primitive.Kind() {
+	case game.PrimitiveGainLife:
+		gain, ok := instr.Primitive.(game.GainLife)
+		if !ok {
+			return false
+		}
+		amount = gain.Amount
+	case game.PrimitiveLoseLife:
+		lose, ok := instr.Primitive.(game.LoseLife)
+		if !ok {
+			return false
+		}
+		amount = lose.Amount
+	default:
+		return false
+	}
+	dynamic := amount.DynamicAmount()
+	if !dynamic.Exists || dynamic.Val.ResultKey != damageDealtThisWayKey {
+		return false
+	}
+	return dynamic.Val.Kind == game.DynamicAmountPreviousEffectResult ||
+		dynamic.Val.Kind == game.DynamicAmountPreviousEffectExcessDamage
 }
 
 // conditionReferenceCount counts the references whose span falls within one of
