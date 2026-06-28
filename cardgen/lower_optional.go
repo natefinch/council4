@@ -153,18 +153,20 @@ func lowerControllerPaidEffect(
 // shared content path and then gates every resulting instruction on the optional
 // payment. The controller, verb-initial family is handled by
 // lowerControllerPaidEffect, so this path keys on a non-controller leading
-// effect to keep the two disjoint. A consequence that targets a single object
-// (such as "target player loses 1 life and you gain 1 life") is supported: its
-// mode target is promoted onto the resulting ability mode, so the target is
-// chosen when the ability goes on the stack and the gated benefit applies only if
-// the controller pays.
+// effect to keep the two disjoint. The consequence may be a single targeted
+// rider ("target player loses 1 life", "this enchantment deals 1 damage to any
+// target") or a multi-effect body ("target player loses 1 life and you gain that
+// much life"). When the consequence targets a single object, its mode target is
+// promoted onto the resulting ability mode, so the target is chosen when the
+// ability goes on the stack and the gated benefit applies only if the controller
+// pays.
 func lowerOptionalPaidBenefit(
 	cardName string,
 	ctx contentCtx,
 	syntax *parser.Ability,
 ) (game.AbilityContent, bool) {
 	if ctx.optional ||
-		len(ctx.content.Effects) < 2 ||
+		len(ctx.content.Effects) == 0 ||
 		len(ctx.content.Conditions) != 1 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 {

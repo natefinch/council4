@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,026 of 32,501 cards eligible for paper support (49.3%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,049 of 32,501 cards eligible for paper support (49.4%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1136,6 +1136,7 @@ Council4 currently supports **16,026 of 32,501 cards eligible for paper support 
 - Bear's Companion
 - Bearer of Glory
 - Bearer of Memory
+- Bearer of Silence
 - Bearer of the Heavens
 - Bearscape
 - Beast
@@ -3647,6 +3648,7 @@ Council4 currently supports **16,026 of 32,501 cards eligible for paper support 
 - Dragonstorm Globe
 - Dragoon's Wyvern
 - Drain the Well
+- Drainpipe Vermin
 - Drake
 - Drake
 - Drake Hatcher
@@ -3758,6 +3760,7 @@ Council4 currently supports **16,026 of 32,501 cards eligible for paper support 
 - Drowned Catacomb
 - Drowned Rusalka
 - Drowned Secrets
+- Drowner Initiate
 - Drowner of Secrets
 - Drownyard Amalgam
 - Drownyard Explorers
@@ -4125,6 +4128,7 @@ Council4 currently supports **16,026 of 32,501 cards eligible for paper support 
 - Emberheart Challenger
 - Embermage Goblin
 - Embermaw Hellion
+- Embersmith
 - Emberstrike Duo
 - Emberwilde Augur
 - Emberwilde Caliph
@@ -5078,6 +5082,7 @@ Council4 currently supports **16,026 of 32,501 cards eligible for paper support 
 - Frenetic Ogre
 - Frenzied Arynx
 - Frenzied Devils
+- Frenzied Goblin
 - Frenzied Rage
 - Frenzied Raptor
 - Frenzied Tilling
@@ -5170,6 +5175,7 @@ Council4 currently supports **16,026 of 32,501 cards eligible for paper support 
 - Furious Reprisal
 - Furious Resistance
 - Furious Strength
+- Furnace Celebration
 - Furnace Dragon
 - Furnace Hellkite
 - Furnace Host Charger
@@ -5581,7 +5587,9 @@ Council4 currently supports **16,026 of 32,501 cards eligible for paper support 
 - Go for the Throat
 - Go Forth
 - Go Ninja Go
+- Go-Shintai of Ancient Wars
 - Go-Shintai of Life's Origin
+- Go-Shintai of Lost Wisdom
 - Go-Shintai of Shared Purpose
 - Goat
 - Goatnapper
@@ -6889,6 +6897,7 @@ Council4 currently supports **16,026 of 32,501 cards eligible for paper support 
 - Insect Warrior
 - Insectoid Exterminator
 - Inside Source
+- Insidious Bookworms
 - Insidious Fungus
 - Insight
 - Insight Engine
@@ -6923,6 +6932,7 @@ Council4 currently supports **16,026 of 32,501 cards eligible for paper support 
 - Inti, Seneschal of the Sun
 - Intimidation
 - Intimidation Campaign
+- Intimidator Initiate
 - Into the Core
 - Into the Fae Court
 - Into the Maw of Hell
@@ -7470,6 +7480,7 @@ Council4 currently supports **16,026 of 32,501 cards eligible for paper support 
 - Knockout Maneuver
 - Knotvine Mystic
 - Knotvine Paladin
+- Knowledge and Power
 - Knowledge Seeker
 - Knucklebone Witch
 - Koala-Sheep
@@ -7579,6 +7590,7 @@ Council4 currently supports **16,026 of 32,501 cards eligible for paper support 
 - Kroxa and Kunoros
 - Kruin Striker
 - Krumar Bond-Kin
+- Krydle of Baldur's Gate
 - Kujar Seedsculptor
 - Kuldotha Flamefiend
 - Kuldotha Forgemaster
@@ -7606,6 +7618,7 @@ Council4 currently supports **16,026 of 32,501 cards eligible for paper support 
 - Kytheon's Irregulars
 - Laboratory Brute
 - Laboratory Maniac
+- Labyrinth Adversary
 - Labyrinth Champion
 - Labyrinth Guardian
 - Labyrinth Guardian
@@ -7766,6 +7779,7 @@ Council4 currently supports **16,026 of 32,501 cards eligible for paper support 
 - Leyline of Abundance
 - Leyline of Anticipation
 - Leyline of Hope
+- Leyline of Lightning
 - Leyline of the Meek
 - Leyline of the Void
 - Leyline of Transformation
@@ -7811,6 +7825,7 @@ Council4 currently supports **16,026 of 32,501 cards eligible for paper support 
 - Lightning Blast
 - Lightning Blow
 - Lightning Bolt
+- Lightning Cloud
 - Lightning Diadem
 - Lightning Elemental
 - Lightning Greaves
@@ -7820,6 +7835,7 @@ Council4 currently supports **16,026 of 32,501 cards eligible for paper support 
 - Lightning Mare
 - Lightning Prowess
 - Lightning Rager
+- Lightning Rift
 - Lightning Serpent
 - Lightning Skelemental
 - Lightning Spear
@@ -9307,6 +9323,7 @@ Council4 currently supports **16,026 of 32,501 cards eligible for paper support 
 - Nullpriest of Oblivion
 - Numai Outcast
 - Numot, the Devastator
+- Nurturer Initiate
 - Nurturing Bristleback
 - Nurturing Peatland
 - Nurturing Presence
@@ -9712,6 +9729,7 @@ Council4 currently supports **16,026 of 32,501 cards eligible for paper support 
 - Parish-Blade Trainee
 - Part the Veil
 - Pashalik Mons
+- Passenger Ferry
 - Passwall Adept
 - Patagia Golem
 - Patagia Tiger
@@ -11665,6 +11683,7 @@ Council4 currently supports **16,026 of 32,501 cards eligible for paper support 
 - Searing Blood
 - Searing Flesh
 - Searing Light
+- Searing Meditation
 - Searing Spear
 - Searing Spear Askari
 - Searing Wind
@@ -12417,6 +12436,7 @@ Council4 currently supports **16,026 of 32,501 cards eligible for paper support 
 - Slinking Giant
 - Slinking Serpent
 - Slinking Skirge
+- Slinza, the Spiked Stampede
 - Slip Through Space
 - Slippery Bogle
 - Slippery Karst
@@ -12466,6 +12486,7 @@ Council4 currently supports **16,026 of 32,501 cards eligible for paper support 
 - Smog Elemental
 - Smogsteed Rider
 - Smokespew Invoker
+- Smolder Initiate
 - Smoldering Butcher
 - Smoldering Crater
 - Smoldering Efreet
@@ -12695,6 +12716,7 @@ Council4 currently supports **16,026 of 32,501 cards eligible for paper support 
 - Sparkcaster
 - Sparkhunter Masticore
 - Sparkmage Apprentice
+- Sparktongue Dragon
 - Sparring Construct
 - Sparring Mummy
 - Spartan Veteran
@@ -14541,6 +14563,7 @@ Council4 currently supports **16,026 of 32,501 cards eligible for paper support 
 - Two-Headed Hunter // Twice the Rage
 - Two-Headed Sliver
 - Two-Headed Zombie
+- Ty Lee, Artful Acrobat
 - Tymaret Calls the Dead
 - Tymaret, the Murder King
 - Typhoid Rats

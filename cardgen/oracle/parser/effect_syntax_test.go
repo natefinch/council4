@@ -2283,6 +2283,35 @@ func TestParseControllerMayPaySuccessConsequenceSubjectLed(t *testing.T) {
 	}
 }
 
+func TestParseOptionalPaidBenefitSingleTargetedConsequenceIsExact(t *testing.T) {
+	t.Parallel()
+	// A non-controller targeted rider ("target player loses 1 life") is the lone
+	// consequence effect, so the unrecognized "you may pay" offer demotes it to
+	// non-exact during effect classification. Folding the offer into the payment
+	// recognizes it, so the consequence is no longer accompanied by an
+	// unrecognized sibling and its exact syntax is restored.
+	document, diagnostics := Parse(
+		"Whenever a player casts a black spell, you may pay {1}. If you do, target player loses 1 life.",
+		Context{CardName: "Smolder Initiate"},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	ability := document.Abilities[0]
+	if ability.Optional || len(ability.Sentences) != 2 ||
+		ability.Sentences[0].PaymentPrelude == nil {
+		t.Fatalf("payment sequence = %#v", ability)
+	}
+	effect := ability.Sentences[1].Effects[0]
+	if effect.Payment.Form != EffectPaymentFormMayPayThenIfDo ||
+		effect.Payment.Payer != EffectPaymentPayerController ||
+		!slices.Equal(effect.Payment.ManaCost, cost.Mana{cost.O(1)}) ||
+		effect.Context != EffectContextTarget ||
+		effect.HasUnrecognizedSibling || !effect.Exact {
+		t.Fatalf("consequence = %#v", effect)
+	}
+}
+
 func TestParseControllerMayPaySuccessConsequenceReflexiveWhenYouDo(t *testing.T) {
 	t.Parallel()
 	// The reflexive "When you do," triggered wording gates the trailing effect on
