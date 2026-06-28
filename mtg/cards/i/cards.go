@@ -18,6 +18,7 @@ var Cards = []*game.CardDef{
 	IkraShidiqiTheUsurper,
 	IlluminateHistory,
 	IllvoiLightJammer,
+	ImmersturmSkullcairn,
 	ImpendingDoom,
 	InameLifeAspect,
 	IncisorGlider,

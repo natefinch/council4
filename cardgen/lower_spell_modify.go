@@ -3370,6 +3370,16 @@ func lowerFixedCardCountPlayerSpell(
 	// content carries no reference; the defending player is named by context.
 	hasDefendingPlayerContext := len(ctx.content.References) == 0 &&
 		effect.Context == parser.EffectContextDefendingPlayer
+	// "That player discards/mills N." after an ordered-sequence clause that
+	// targeted a player or permanent inherits its subject from that antecedent
+	// target: a player target denotes that player directly, a permanent target
+	// denotes its controller. This mirrors the life-then "That player loses N
+	// life." shape (Ozai's Cruelty, Immersturm Skullcairn, Recoil, Dinrova
+	// Horror). The single "that player" reference is bound to the inherited
+	// target.
+	hasThatPlayerRef := len(ctx.content.References) == 1 &&
+		effect.Context == parser.EffectContextReferencedPlayer &&
+		hasThatPlayerTargetReference(ctx.content.References)
 	if (effect.Amount.Known && effect.Amount.Value < 1) ||
 		!effect.Amount.Known && !effect.Amount.VariableX && effect.Amount.DynamicKind == compiler.DynamicAmountNone ||
 		!effect.Exact ||
@@ -3381,7 +3391,7 @@ func lowerFixedCardCountPlayerSpell(
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||
 		(len(ctx.content.References) != 0 && !hasEventPlayerRef && !hasReferencedControllerRef &&
-			!hasEventPermanentControllerRef) {
+			!hasEventPermanentControllerRef && !hasThatPlayerRef) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported "+controllerVerb+" spell",
@@ -3433,6 +3443,16 @@ func lowerFixedCardCountPlayerSpell(
 		playerRef = ref
 	case hasEventPermanentControllerRef && len(ctx.content.Targets) == 0:
 		playerRef = game.ObjectControllerReference(game.EventPermanentReference())
+	case hasThatPlayerRef && len(ctx.content.Targets) == 1:
+		ref, ok := referencedThatPlayerRef(ctx.content.Targets[0])
+		if !ok {
+			return game.AbilityContent{}, contentDiagnostic(
+				ctx,
+				"unsupported "+controllerVerb+" spell",
+				"the executable source backend supports only exact fixed "+controllerVerb+" by one player",
+			)
+		}
+		playerRef = ref
 	case hasDefendingPlayerContext && len(ctx.content.Targets) == 0:
 		playerRef = game.DefendingPlayerReference()
 	case len(ctx.content.Targets) == 1 &&

@@ -36,4 +36,5 @@ var Cards = []*game.CardDef{
 	OverwhelmedApprentice,
 	OviyaPashiriSageLifecrafter,
 	OwlbearShepherd,
+	OzaiSCruelty,
 }
