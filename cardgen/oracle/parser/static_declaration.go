@@ -522,6 +522,17 @@ type StaticDeclarationSyntax struct {
 	// filter, the SpellSubtypes subtype filter, and the color filters.
 	SpellExcludedTypes []CardType `json:"-"`
 
+	// SpellRequiredTypes lists the card types of a cast-cost modifier whose
+	// card-type filter is a coordinated list of two or more types joined by
+	// "and" ("Artifact and enchantment spells your opponents cast cost {2} more
+	// to cast.", Aura of Silence; "Artifact, instant, and sorcery spells your
+	// opponents cast cost {1} more to cast.", Dovin, Hand of Control): a spell
+	// matches when it carries any one of the listed types. It carries two or more
+	// real card types and is mutually exclusive with the SpellType single-type
+	// filter, the SpellSubtypes subtype filter, the SpellExcludedTypes exclusion,
+	// and the color filters.
+	SpellRequiredTypes []CardType `json:"-"`
+
 	// Player-rule payload: the closed player-scoped rule this declaration grants
 	// to the static ability's controller.
 	PlayerRule          StaticDeclarationPlayerRuleKind `json:",omitempty"`
@@ -2739,6 +2750,9 @@ func parseStaticSpellCostModifierDeclaration(tokens []shared.Token, atoms Atoms)
 	if declaration, ok := parseStaticSpellColorPairCostModifier(tokens); ok {
 		return declaration, true
 	}
+	if declaration, ok := parseStaticSpellColorTypePairCostModifier(tokens); ok {
+		return declaration, true
+	}
 	if declaration, ok := parseStaticSpellTargetsSourceCostModifier(tokens, atoms); ok {
 		return declaration, true
 	}
@@ -2750,18 +2764,21 @@ func parseStaticSpellCostModifierDeclaration(tokens []shared.Token, atoms Atoms)
 	spellType := StaticDeclarationSpellTypeAll
 	var subtypes []types.Sub
 	var excludedTypes []CardType
+	var requiredTypes []CardType
 	if subs, next, ok := staticSpellSubtypeFilter(rest, atoms); ok {
 		subtypes = subs
 		rest = next
 	} else if excluded, next, ok := staticSpellExcludedTypeFilter(rest); ok {
 		excludedTypes = excluded
 		rest = next
+	} else if filterType, next, ok := staticSpellTypeFilter(rest); ok {
+		spellType = filterType
+		rest = next
+	} else if list, next, ok := staticSpellCardTypeList(rest); ok && spellColor == StaticDeclarationSpellColorNone {
+		requiredTypes = list
+		rest = next
 	} else {
-		var ok bool
-		spellType, rest, ok = staticSpellTypeFilter(rest)
-		if !ok {
-			return StaticDeclarationSyntax{}, false
-		}
+		return StaticDeclarationSyntax{}, false
 	}
 	if !staticWordsAt(rest, 0, "spells") {
 		return StaticDeclarationSyntax{}, false
@@ -2811,6 +2828,7 @@ func parseStaticSpellCostModifierDeclaration(tokens []shared.Token, atoms Atoms)
 		SpellColor:                 spellColor,
 		SpellSubtypes:              subtypes,
 		SpellExcludedTypes:         excludedTypes,
+		SpellRequiredTypes:         requiredTypes,
 		SpellCaster:                caster,
 		SpellCastZone:              castZone,
 		SpellPowerAtLeast:          powerAtLeast,
@@ -3060,6 +3078,154 @@ func parseStaticSpellColorPairCostModifier(tokens []shared.Token) (StaticDeclara
 		SpellType:           StaticDeclarationSpellTypeAll,
 		SpellColors:         []StaticDeclarationSpellColorKind{first, second},
 	}, true
+}
+
+// parseStaticSpellColorTypePairCostModifier recognizes the static cast-cost
+// modifier whose filter is a disjunction of two or more "<color> <type> spells"
+// phrases that share one card type, joined by "and":
+//
+//	"Red creature spells and green creature spells cost {1} more to cast." (High Seas)
+//	"Green enchantment spells and white enchantment spells cost {2} more to cast." (Irini Sengir)
+//
+// A spell matches when it carries any one of the listed colors and the shared
+// card type. The caster phrase ("you cast", "your opponents cast", or absent)
+// scopes the affected players. A disjunction whose elements name different card
+// types, or fewer than two colors, fails closed.
+func parseStaticSpellColorTypePairCostModifier(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	match, ok := staticSpellColorTypeDisjunction(tokens)
+	if !ok {
+		return StaticDeclarationSyntax{}, false
+	}
+	caster, rest := staticSpellCasterPhrase(match.rest)
+	tail, ok := staticSpellCostModifierTail(rest)
+	if !ok {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:                StaticDeclarationCostModifier,
+		Span:                shared.SpanOf(tokens),
+		OperationSpan:       tail.OperationSpan,
+		CostModifier:        tail.Kind,
+		CostReductionAmount: tail.Amount,
+		CostIncreaseColors:  tail.IncreaseColors,
+		SpellType:           match.sharedType,
+		SpellColors:         match.colors,
+		SpellCaster:         caster,
+	}, true
+}
+
+// staticColorTypeDisjunctionMatch is the parsed result of a "<color> <type>
+// spells and <color> <type> spells" disjunction: the colors in source order, the
+// single card type all phrases share, and the tokens remaining past the final
+// "spells" noun.
+type staticColorTypeDisjunctionMatch struct {
+	colors     []StaticDeclarationSpellColorKind
+	sharedType StaticDeclarationSpellTypeKind
+	rest       []shared.Token
+}
+
+// staticSpellColorTypeDisjunction reads a run of "<color> <type> spells" phrases
+// joined by "and" ("Red creature spells and green creature spells"), returning
+// the colors in source order, the single card type the phrases share, and the
+// remaining tokens beginning just past the final "spells" noun. Each phrase must
+// open with a real color word (colorless is not admitted) followed by the same
+// single card-type word; a phrase naming a different type, or a list shorter
+// than two colors, fails closed by returning false.
+func staticSpellColorTypeDisjunction(tokens []shared.Token) (staticColorTypeDisjunctionMatch, bool) {
+	var colors []StaticDeclarationSpellColorKind
+	sharedType := StaticDeclarationSpellTypeAll
+	rest := tokens
+	for {
+		if len(rest) == 0 {
+			return staticColorTypeDisjunctionMatch{}, false
+		}
+		color := staticSpellColorWord(rest[0])
+		if color == StaticDeclarationSpellColorNone || color == StaticDeclarationSpellColorColorless {
+			return staticColorTypeDisjunctionMatch{}, false
+		}
+		spellType, next, ok := staticSpellTypeFilter(rest[1:])
+		if !ok || spellType == StaticDeclarationSpellTypeAll {
+			return staticColorTypeDisjunctionMatch{}, false
+		}
+		if len(colors) == 0 {
+			sharedType = spellType
+		} else if spellType != sharedType {
+			return staticColorTypeDisjunctionMatch{}, false
+		}
+		colors = append(colors, color)
+		if !staticWordsAt(next, 0, "spells") {
+			return staticColorTypeDisjunctionMatch{}, false
+		}
+		rest = next[1:]
+		// Continue only when "and" introduces another colored phrase; a trailing
+		// "and" before the cost clause or caster phrase ends the disjunction.
+		if len(rest) >= 2 && equalWord(rest[0], "and") {
+			nextColor := staticSpellColorWord(rest[1])
+			if nextColor != StaticDeclarationSpellColorNone && nextColor != StaticDeclarationSpellColorColorless {
+				rest = rest[1:]
+				continue
+			}
+		}
+		break
+	}
+	if len(colors) < 2 {
+		return staticColorTypeDisjunctionMatch{}, false
+	}
+	return staticColorTypeDisjunctionMatch{colors: colors, sharedType: sharedType, rest: rest}, true
+}
+
+// staticSpellCardTypeList reads a coordinated list of two or more card-type
+// words joined by "and" with optional Oxford commas ("Artifact and enchantment",
+// "Artifact, instant, and sorcery"), returning the card types in source order
+// and the remaining tokens beginning at the following "spells" noun. A list of
+// fewer than two recognized card types, or a word that is not a card type, fails
+// closed by returning false so the single-type and instant-and-sorcery filters
+// keep their meaning.
+func staticSpellCardTypeList(tokens []shared.Token) ([]CardType, []shared.Token, bool) {
+	var list []CardType
+	rest := tokens
+	for {
+		if len(rest) == 0 {
+			return nil, nil, false
+		}
+		cardType, ok := recognizeCardTypeWord(rest[0].Text)
+		if !ok {
+			return nil, nil, false
+		}
+		list = append(list, cardType)
+		rest = rest[1:]
+		if len(rest) > 0 && rest[0].Kind == shared.Comma {
+			rest = rest[1:]
+			if len(rest) > 0 && equalWord(rest[0], "and") {
+				rest = rest[1:]
+			}
+			continue
+		}
+		if len(rest) > 0 && equalWord(rest[0], "and") {
+			rest = rest[1:]
+			continue
+		}
+		break
+	}
+	if len(list) < 2 {
+		return nil, nil, false
+	}
+	return list, rest, true
+}
+
+// staticSpellCasterPhrase consumes an optional cast-cost modifier caster phrase
+// ("you cast" for the controller, "your opponents cast" for opponents), returning
+// the caster filter and the remaining tokens. An absent phrase yields the
+// any-player filter with the tokens unchanged.
+func staticSpellCasterPhrase(tokens []shared.Token) (StaticDeclarationSpellCasterKind, []shared.Token) {
+	switch {
+	case staticWordsAt(tokens, 0, "you", "cast"):
+		return StaticDeclarationSpellCasterController, tokens[2:]
+	case staticWordsAt(tokens, 0, "your", "opponents", "cast"):
+		return StaticDeclarationSpellCasterOpponents, tokens[3:]
+	default:
+		return StaticDeclarationSpellCasterAny, tokens
+	}
 }
 
 // staticSpellColorDisjunction reads a run of color words joined by "or"

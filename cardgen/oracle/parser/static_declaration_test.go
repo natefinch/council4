@@ -2078,11 +2078,11 @@ func TestParseStaticChosenTypeSpellCostModifierDeclarationMeaning(t *testing.T) 
 func TestParseStaticSpellCostModifierDeclarationRejections(t *testing.T) {
 	t.Parallel()
 	sources := map[string]string{
-		"multicolored filter":  "Multicolored spells you cast cost {1} less to cast.",
-		"leading condition":    "During turns other than yours, spells you cast cost {1} less to cast.",
-		"trailing condition":   "Creature spells you cast cost {1} less to cast if you control a Wizard.",
-		"zero amount":          "Spells you cast cost {0} less to cast.",
-		"compound enchantment": "Instant and enchantment spells you cast cost {2} less to cast.",
+		"multicolored filter": "Multicolored spells you cast cost {1} less to cast.",
+		"leading condition":   "During turns other than yours, spells you cast cost {1} less to cast.",
+		"trailing condition":  "Creature spells you cast cost {1} less to cast if you control a Wizard.",
+		"zero amount":         "Spells you cast cost {0} less to cast.",
+		"single type list":    "Artifact and spells you cast cost {1} less to cast.",
 	}
 	for name, source := range sources {
 		t.Run(name, func(t *testing.T) {
@@ -2152,6 +2152,87 @@ func TestParseStaticSpellCostModifierCasterAndExcludedType(t *testing.T) {
 			}
 			if !slices.Equal(found.SpellExcludedTypes, test.excludedTypes) {
 				t.Fatalf("excluded types = %v, want %v", found.SpellExcludedTypes, test.excludedTypes)
+			}
+			if found.CostReductionAmount != test.amount {
+				t.Fatalf("amount = %d, want %d", found.CostReductionAmount, test.amount)
+			}
+		})
+	}
+}
+
+func TestParseStaticSpellCostModifierTypeListAndColorTypePair(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		source        string
+		modifier      StaticDeclarationCostModifierKind
+		caster        StaticDeclarationSpellCasterKind
+		requiredTypes []CardType
+		colors        []StaticDeclarationSpellColorKind
+		spellType     StaticDeclarationSpellTypeKind
+		amount        int
+	}{
+		"type pair opponents increase": {
+			source:        "Artifact and enchantment spells your opponents cast cost {2} more to cast.",
+			modifier:      StaticDeclarationCostModifierSpellIncrease,
+			caster:        StaticDeclarationSpellCasterOpponents,
+			requiredTypes: []CardType{CardTypeArtifact, CardTypeEnchantment},
+			amount:        2,
+		},
+		"type triple opponents increase": {
+			source:        "Artifact, instant, and sorcery spells your opponents cast cost {1} more to cast.",
+			modifier:      StaticDeclarationCostModifierSpellIncrease,
+			caster:        StaticDeclarationSpellCasterOpponents,
+			requiredTypes: []CardType{CardTypeArtifact, CardTypeInstant, CardTypeSorcery},
+			amount:        1,
+		},
+		"type pair controller reduction": {
+			source:        "Artifact and enchantment spells you cast cost {1} less to cast.",
+			modifier:      StaticDeclarationCostModifierSpellReduction,
+			caster:        StaticDeclarationSpellCasterController,
+			requiredTypes: []CardType{CardTypeArtifact, CardTypeEnchantment},
+			amount:        1,
+		},
+		"color type pair any increase": {
+			source:    "Red creature spells and green creature spells cost {1} more to cast.",
+			modifier:  StaticDeclarationCostModifierSpellIncrease,
+			caster:    StaticDeclarationSpellCasterAny,
+			colors:    []StaticDeclarationSpellColorKind{StaticDeclarationSpellColorRed, StaticDeclarationSpellColorGreen},
+			spellType: StaticDeclarationSpellTypeCreature,
+			amount:    1,
+		},
+		"color type pair any enchantment increase": {
+			source:    "Green enchantment spells and white enchantment spells cost {2} more to cast.",
+			modifier:  StaticDeclarationCostModifierSpellIncrease,
+			caster:    StaticDeclarationSpellCasterAny,
+			colors:    []StaticDeclarationSpellColorKind{StaticDeclarationSpellColorGreen, StaticDeclarationSpellColorWhite},
+			spellType: StaticDeclarationSpellTypeEnchantment,
+			amount:    2,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			var found *StaticDeclarationSyntax
+			for _, declaration := range parseStaticDeclarationSyntax(t, test.source, Context{}) {
+				if declaration.Kind == StaticDeclarationCostModifier && declaration.CostModifier == test.modifier {
+					declaration := declaration
+					found = &declaration
+				}
+			}
+			if found == nil {
+				t.Fatalf("source %q produced no %v declaration", test.source, test.modifier)
+			}
+			if found.SpellCaster != test.caster {
+				t.Fatalf("caster = %q, want %q", found.SpellCaster, test.caster)
+			}
+			if !slices.Equal(found.SpellRequiredTypes, test.requiredTypes) {
+				t.Fatalf("required types = %v, want %v", found.SpellRequiredTypes, test.requiredTypes)
+			}
+			if !slices.Equal(found.SpellColors, test.colors) {
+				t.Fatalf("colors = %v, want %v", found.SpellColors, test.colors)
+			}
+			if found.SpellType != test.spellType {
+				t.Fatalf("spell type = %q, want %q", found.SpellType, test.spellType)
 			}
 			if found.CostReductionAmount != test.amount {
 				t.Fatalf("amount = %d, want %d", found.CostReductionAmount, test.amount)

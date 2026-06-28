@@ -3631,6 +3631,15 @@ func recognizeStaticSpellCostModifierDeclaration(ability CompiledAbility, static
 	if !ok {
 		return StaticDeclaration{}, false
 	}
+	if len(node.SpellRequiredTypes) != 0 {
+		if len(spellTypes) != 0 {
+			return StaticDeclaration{}, false
+		}
+		spellTypes, ok = staticCardTypesFromParser(node.SpellRequiredTypes)
+		if !ok {
+			return StaticDeclaration{}, false
+		}
+	}
 	spellColor, matchColor, ok := staticSpellColorMatch(node.SpellColor)
 	if !ok {
 		return StaticDeclaration{}, false
@@ -3652,7 +3661,7 @@ func recognizeStaticSpellCostModifierDeclaration(ability CompiledAbility, static
 		(len(spellTypes) != 0 || len(spellColors) != 0 || node.ChosenCreatureType) {
 		return StaticDeclaration{}, false
 	}
-	if len(spellColors) != 0 && (matchColor || len(spellTypes) != 0 || node.ChosenCreatureType) {
+	if len(spellColors) != 0 && (matchColor || len(spellTypes) > 1 || node.ChosenCreatureType) {
 		return StaticDeclaration{}, false
 	}
 	if node.ChosenCreatureType &&

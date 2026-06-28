@@ -1661,11 +1661,14 @@ func appendStaticSpellCostModifierDeclaration(body *game.StaticAbility, declarat
 		base.CardSelection.ManaValue = opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: cost.MinManaValue})
 	}
 	if len(cost.SpellColors) != 0 {
-		if cost.MatchSpellColor || len(cost.SpellTypes) != 0 || len(cost.SpellSubtypes) != 0 {
+		if cost.MatchSpellColor || len(cost.SpellTypes) > 1 || len(cost.SpellSubtypes) != 0 {
 			return false
 		}
 		modifier := base
 		modifier.CardSelection.ColorsAny = slices.Clone(cost.SpellColors)
+		if len(cost.SpellTypes) == 1 {
+			modifier.CardSelection.RequiredTypes = slices.Clone(cost.SpellTypes)
+		}
 		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
 			Kind:           game.RuleEffectCostModifier,
 			AffectedPlayer: affectedPlayer,

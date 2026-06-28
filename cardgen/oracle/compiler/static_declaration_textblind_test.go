@@ -940,11 +940,14 @@ func TestRecognizeStaticSpellColorDisjunctionFailsClosed(t *testing.T) {
 				parser.StaticDeclarationSpellColorColorless,
 			},
 		},
-		"disjunction with type filter": {
+		"disjunction with two types": {
 			Kind:                parser.StaticDeclarationCostModifier,
 			CostModifier:        parser.StaticDeclarationCostModifierSpellReduction,
 			CostReductionAmount: 1,
-			SpellType:           parser.StaticDeclarationSpellTypeCreature,
+			SpellRequiredTypes: []parser.CardType{
+				parser.CardTypeArtifact,
+				parser.CardTypeEnchantment,
+			},
 			SpellColors: []parser.StaticDeclarationSpellColorKind{
 				parser.StaticDeclarationSpellColorRed,
 				parser.StaticDeclarationSpellColorGreen,

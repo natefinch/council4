@@ -68,6 +68,26 @@ func TestLowerStaticSpellCostModifier(t *testing.T) {
 				{Kind: game.CostModifierSpell, CardSelection: game.Selection{ColorsAny: []color.Color{color.Black}, RequiredTypes: []types.Card{types.Creature}}, GenericReduction: 1},
 			},
 		},
+		"card type list increase": {
+			oracleText: "Artifact and enchantment spells you cast cost {1} more to cast.",
+			modifiers: []game.CostModifier{
+				{Kind: game.CostModifierSpell, CardSelection: game.Selection{RequiredTypes: []types.Card{types.Artifact}}, GenericIncrease: 1},
+				{Kind: game.CostModifierSpell, CardSelection: game.Selection{RequiredTypes: []types.Card{types.Enchantment}}, GenericIncrease: 1},
+			},
+		},
+		"card type list reduction": {
+			oracleText: "Instant and enchantment spells you cast cost {2} less to cast.",
+			modifiers: []game.CostModifier{
+				{Kind: game.CostModifierSpell, CardSelection: game.Selection{RequiredTypes: []types.Card{types.Instant}}, GenericReduction: 2},
+				{Kind: game.CostModifierSpell, CardSelection: game.Selection{RequiredTypes: []types.Card{types.Enchantment}}, GenericReduction: 2},
+			},
+		},
+		"color type pair increase": {
+			oracleText: "Red creature spells and green creature spells you cast cost {1} more to cast.",
+			modifiers: []game.CostModifier{
+				{Kind: game.CostModifierSpell, CardSelection: game.Selection{RequiredTypes: []types.Card{types.Creature}, ColorsAny: []color.Color{color.Red, color.Green}}, GenericIncrease: 1},
+			},
+		},
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -369,6 +389,66 @@ func TestLowerStaticSpellCostModifierCasterAndExcludedType(t *testing.T) {
 				got.GenericIncrease != test.modifier.GenericIncrease ||
 				!reflect.DeepEqual(got.ColoredIncrease, test.modifier.ColoredIncrease) {
 				t.Fatalf("cost modifier = %#v, want %#v", got, test.modifier)
+			}
+		})
+	}
+}
+
+func TestLowerStaticSpellCardTypeListOpponentCostModifier(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		oracleText     string
+		affectedPlayer game.PlayerRelation
+		modifiers      []game.CostModifier
+	}{
+		"type pair opponents": {
+			oracleText:     "Artifact and enchantment spells your opponents cast cost {2} more to cast.",
+			affectedPlayer: game.PlayerOpponent,
+			modifiers: []game.CostModifier{
+				{Kind: game.CostModifierSpell, CardSelection: game.Selection{RequiredTypes: []types.Card{types.Artifact}}, GenericIncrease: 2},
+				{Kind: game.CostModifierSpell, CardSelection: game.Selection{RequiredTypes: []types.Card{types.Enchantment}}, GenericIncrease: 2},
+			},
+		},
+		"type triple opponents": {
+			oracleText:     "Artifact, instant, and sorcery spells your opponents cast cost {1} more to cast.",
+			affectedPlayer: game.PlayerOpponent,
+			modifiers: []game.CostModifier{
+				{Kind: game.CostModifierSpell, CardSelection: game.Selection{RequiredTypes: []types.Card{types.Artifact}}, GenericIncrease: 1},
+				{Kind: game.CostModifierSpell, CardSelection: game.Selection{RequiredTypes: []types.Card{types.Instant}}, GenericIncrease: 1},
+				{Kind: game.CostModifierSpell, CardSelection: game.Selection{RequiredTypes: []types.Card{types.Sorcery}}, GenericIncrease: 1},
+			},
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Taxer",
+				Layout:     "normal",
+				TypeLine:   "Artifact",
+				OracleText: test.oracleText,
+			})
+			if len(face.StaticAbilities) != 1 {
+				t.Fatalf("static abilities = %d, want 1", len(face.StaticAbilities))
+			}
+			effects := face.StaticAbilities[0].Body.RuleEffects
+			if len(effects) != len(test.modifiers) {
+				t.Fatalf("rule effects = %#v, want %d", effects, len(test.modifiers))
+			}
+			for i, effect := range effects {
+				if effect.Kind != game.RuleEffectCostModifier {
+					t.Fatalf("rule effect %d kind = %v, want cost modifier", i, effect.Kind)
+				}
+				if effect.AffectedPlayer != test.affectedPlayer {
+					t.Fatalf("rule effect %d affected player = %v, want %v", i, effect.AffectedPlayer, test.affectedPlayer)
+				}
+				got := effect.CostModifier
+				want := test.modifiers[i]
+				if got.Kind != want.Kind ||
+					!reflect.DeepEqual(got.CardSelection, want.CardSelection) ||
+					got.GenericIncrease != want.GenericIncrease {
+					t.Fatalf("rule effect %d cost modifier = %#v, want %#v", i, got, want)
+				}
 			}
 		})
 	}
