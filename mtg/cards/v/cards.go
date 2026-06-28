@@ -28,6 +28,7 @@ var Cards = []*game.CardDef{
 	ViashinoBranchrider,
 	VictorTimelyWilyTycoon,
 	VisageOfBolas,
+	VineshaperProdigy,
 	VisionsOfVillainy,
 	VitasporeThallid,
 	VivienReid,

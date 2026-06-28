@@ -806,6 +806,19 @@ const (
 	// Skitter-Sneak, Jace's Phantasm, Thieves' Guild Enforcer). It gates a
 	// continuous self-static against the largest opponent graveyard size.
 	ConditionPredicateAnyOpponentGraveyardCardCountAtLeast
+	// ConditionPredicateEventSpellManaSpentToCastAtLeast is satisfied when at
+	// least Threshold total mana was spent to cast a spell-cast trigger's
+	// triggering spell ("if at least four mana was spent to cast it"; Blazing
+	// Bomb, Sahagin, Prompto Argentum, Raggadragga). It reads the mana spent
+	// recorded on the triggering event, so it resolves only in a spell-cast
+	// trigger's intervening-if context.
+	ConditionPredicateEventSpellManaSpentToCastAtLeast
+	// ConditionPredicateEventSpellManaSpentToCastAtMost is satisfied when at most
+	// Threshold total mana was spent to cast a spell-cast trigger's triggering
+	// spell. With Threshold zero it backs "if no mana was spent to cast it"
+	// (Boromir, Lavinia, Roiling Vortex), the free-spell punisher gate. It reads
+	// the mana spent recorded on the triggering event.
+	ConditionPredicateEventSpellManaSpentToCastAtMost
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard

@@ -107,6 +107,8 @@ const (
 	ConditionPredicateGraveyardPermanentCardCountAtLeast               ConditionPredicateKind = "ConditionPredicateGraveyardPermanentCardCountAtLeast"
 	ConditionPredicateGraveyardManaValueCountAtLeast                   ConditionPredicateKind = "ConditionPredicateGraveyardManaValueCountAtLeast"
 	ConditionPredicateAnyOpponentGraveyardCardCountAtLeast             ConditionPredicateKind = "ConditionPredicateAnyOpponentGraveyardCardCountAtLeast"
+	ConditionPredicateEventSpellManaSpentToCastAtLeast                 ConditionPredicateKind = "ConditionPredicateEventSpellManaSpentToCastAtLeast"
+	ConditionPredicateEventSpellNoManaSpentToCast                      ConditionPredicateKind = "ConditionPredicateEventSpellNoManaSpentToCast"
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard
@@ -708,6 +710,7 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		recognizeAttackersAttackingControllerCondition,
 		recognizeSpellXCondition,
 		recognizeAdamantManaSpentCondition,
+		recognizeEventSpellManaSpentCondition,
 		recognizeCreatedTokenMatchCondition,
 		recognizeSharesCreatureTypeCondition,
 		recognizeControllerDesignationCondition,
@@ -756,6 +759,44 @@ func recognizeAdamantManaSpentCondition(body []shared.Token, _ Atoms) (Condition
 		}, true
 	}
 	return ConditionClause{}, false
+}
+
+// recognizeEventSpellManaSpentCondition matches a spell-cast trigger's
+// intervening-if gate on the total mana spent to cast the triggering spell,
+// referenced as "it" or "that spell": "no mana was spent to cast it" / "...that
+// spell" (Boromir, Lavinia, Roiling Vortex) and "at least <n> mana was spent to
+// cast it" / "...that spell" (Blazing Bomb, Sahagin, Prompto Argentum,
+// Raggadragga). It reads the mana actually paid (CR 601.2f-h), so a free cast
+// records no mana spent. It fails closed on any other wording.
+func recognizeEventSpellManaSpentCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
+	if rest, ok := cutTokenPrefix(body, "no", "mana", "was", "spent", "to", "cast"); ok {
+		if eventSpellManaSpentSubject(rest) {
+			return ConditionClause{Predicate: ConditionPredicateEventSpellNoManaSpentToCast}, true
+		}
+		return ConditionClause{}, false
+	}
+	rest, ok := cutTokenPrefix(body, "at", "least")
+	if !ok || len(rest) < 1 {
+		return ConditionClause{}, false
+	}
+	value, ok := conditionNumberValue(rest[0])
+	if !ok || value <= 0 {
+		return ConditionClause{}, false
+	}
+	rest, ok = cutTokenPrefix(rest[1:], "mana", "was", "spent", "to", "cast")
+	if !ok || !eventSpellManaSpentSubject(rest) {
+		return ConditionClause{}, false
+	}
+	return ConditionClause{
+		Predicate: ConditionPredicateEventSpellManaSpentToCastAtLeast,
+		Threshold: value,
+	}, true
+}
+
+// eventSpellManaSpentSubject reports whether the trailing tokens name the
+// triggering spell of a spell-cast trigger, spelled "it" or "that spell".
+func eventSpellManaSpentSubject(tokens []shared.Token) bool {
+	return tokenWordsEqual(tokens, "it") || tokenWordsEqual(tokens, "that", "spell")
 }
 
 // recognizeSpellXCondition matches the resolving-spell value-of-X gate "X is

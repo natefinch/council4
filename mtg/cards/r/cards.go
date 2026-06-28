@@ -44,6 +44,7 @@ var Cards = []*game.CardDef{
 	ReturnedPhalanx,
 	Reveillark,
 	ReveredElder,
+	RhinoBarrelingBrute,
 	RhinoSRampage,
 	RhizomeLurcher,
 	RhonasTheIndomitable,

@@ -223,6 +223,14 @@ type Event struct {
 	// mana-value-filtered cast triggers.
 	ManaValue opt.V[int]
 
+	// ManaSpentToCast records the total amount of mana spent to cast the spell
+	// for spell-cast triggers whose intervening-if reads the mana actually paid
+	// ("if no mana was spent to cast it", "if at least four mana was spent to
+	// cast it"). It is set at every EventSpellCast emission site, including free
+	// casts (where it is zero), so the condition reads the same value as the
+	// event triggers and as the ability resolves (CR 603.4).
+	ManaSpentToCast opt.V[int]
+
 	// PermanentID identifies the permanent that entered, left, was damaged, attacked, or blocked.
 	PermanentID id.ID
 

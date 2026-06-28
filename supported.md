@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,777 of 32,501 cards eligible for paper support (48.5%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,801 of 32,501 cards eligible for paper support (48.6%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -937,6 +937,7 @@ Council4 currently supports **15,777 of 32,501 cards eligible for paper support 
 - Bala Ged Scorpion
 - Balamb T-Rexaur
 - Baldur's Gate
+- Balduvian Atrocity
 - Balduvian Barbarians
 - Balduvian Bears
 - Balduvian Horde
@@ -1522,6 +1523,7 @@ Council4 currently supports **15,777 of 32,501 cards eligible for paper support 
 - Body Dropper
 - Body of Jukai
 - Body of Knowledge
+- Bog Badger
 - Bog Elemental
 - Bog Glider
 - Bog Gnarr
@@ -2538,6 +2540,7 @@ Council4 currently supports **15,777 of 32,501 cards eligible for paper support 
 - Composite Golem
 - Compulsion
 - Compulsory Rest
+- Compy Swarm
 - Concealed Courtyard
 - Concealed Weapon
 - Concentrate
@@ -3039,6 +3042,7 @@ Council4 currently supports **15,777 of 32,501 cards eligible for paper support 
 - Dawnhart Geist
 - Dawnhart Mentor
 - Dawnhart Rejuvenator
+- Dawnhart Wardens
 - Dawning Angel
 - Dawnray Archer
 - Dawnstrider
@@ -3207,6 +3211,7 @@ Council4 currently supports **15,777 of 32,501 cards eligible for paper support 
 - Dementia Bat
 - Demogorgon's Clutches
 - Demolish
+- Demolisher Spawn
 - Demolition Field
 - Demon
 - Demon
@@ -3464,6 +3469,7 @@ Council4 currently supports **15,777 of 32,501 cards eligible for paper support 
 - Doc Samson, Super Psychiatrist
 - Dockside Chef
 - Dockworker Drone
+- Doctor Strange, Surgeon
 - Dog
 - Dog
 - Dog Walker
@@ -4409,6 +4415,7 @@ Council4 currently supports **15,777 of 32,501 cards eligible for paper support 
 - Familiar's Ruse
 - Family Reunion
 - Famine
+- Famished Foragers
 - Famished Ghoul
 - Famished Paladin
 - Fan Bearer
@@ -4705,6 +4712,7 @@ Council4 currently supports **15,777 of 32,501 cards eligible for paper support 
 - Flameblade Adept
 - Flameborn Hellion
 - Flameborn Viron
+- Flamecache Gecko
 - Flamecast Wheel
 - Flamekin Brawler
 - Flamekin Gildweaver
@@ -5503,6 +5511,7 @@ Council4 currently supports **15,777 of 32,501 cards eligible for paper support 
 - Goblin Brigand
 - Goblin Bully
 - Goblin Burrows
+- Goblin Bushwhacker
 - Goblin Cannon
 - Goblin Cavaliers
 - Goblin Champion
@@ -6223,6 +6232,7 @@ Council4 currently supports **15,777 of 32,501 cards eligible for paper support 
 - Hibernation
 - Hidden Footblade
 - Hidden Grotto
+- Hidden Herbalists
 - Hidden Horror
 - Hidden Path
 - Hidden Stockpile
@@ -6656,6 +6666,7 @@ Council4 currently supports **15,777 of 32,501 cards eligible for paper support 
 - Iname, Life Aspect
 - Incandescent Aria
 - Incendiary Sabotage
+- Incisor Glider
 - Incorrigible Youths
 - Increasing Devotion
 - Incubation // Incongruity
@@ -7457,6 +7468,7 @@ Council4 currently supports **15,777 of 32,501 cards eligible for paper support 
 - Kyoki, Sanity's Eclipse
 - Kyoshi Island Plaza
 - Kyoshi Village
+- Kyoshi Warrior Exemplars
 - Kyoshi Warrior Guard
 - Kyoshi Warriors
 - Kyren Glider
@@ -8097,6 +8109,7 @@ Council4 currently supports **15,777 of 32,501 cards eligible for paper support 
 - Mardu Outrider
 - Mardu Roughrider
 - Mardu Skullhunter
+- Mardu Warshrieker
 - Mardu Woe-Reaper
 - Marhault Elsdragon
 - Marionette Apprentice
@@ -9467,6 +9480,7 @@ Council4 currently supports **15,777 of 32,501 cards eligible for paper support 
 - Oviya Pashiri, Sage Lifecrafter
 - Owl Familiar
 - Owlbear
+- Owlbear Shepherd
 - Owlin Historian
 - Ox
 - Ox
@@ -10041,6 +10055,7 @@ Council4 currently supports **15,777 of 32,501 cards eligible for paper support 
 - Promise of Bunrei
 - Promised Kannushi
 - Promising Vein
+- Prompto Argentum
 - Propaganda
 - Propagator Drone
 - Propeller Pioneer
@@ -10723,6 +10738,7 @@ Council4 currently supports **15,777 of 32,501 cards eligible for paper support 
 - Rhino
 - Rhino Warrior
 - Rhino's Rampage
+- Rhino, Barreling Brute
 - Rhizome Lurcher
 - Rhonas the Indomitable
 - Rhonas's Monument
@@ -11345,6 +11361,7 @@ Council4 currently supports **15,777 of 32,501 cards eligible for paper support 
 - Scion of the Wild
 - Scion of Ugin
 - Scolding Administrator
+- Scorch Rider
 - Scorch Spitter
 - Scorch the Fields
 - Scorched Geyser
@@ -11975,6 +11992,7 @@ Council4 currently supports **15,777 of 32,501 cards eligible for paper support 
 - Silverquill Command
 - Silverquill Pledgemage
 - Silverskin Armor
+- Silversmote Ghoul
 - Silverstorm Samurai
 - Silverstrike
 - Silverwing Squadron
@@ -12244,6 +12262,7 @@ Council4 currently supports **15,777 of 32,501 cards eligible for paper support 
 - Sluggishness
 - Sluiceway Scorpion
 - Slum Reaper
+- Slumbering Cerberus
 - Slumbering Dragon
 - Slumbering Keepguard
 - Slumbering Walker
@@ -12814,6 +12833,7 @@ Council4 currently supports **15,777 of 32,501 cards eligible for paper support 
 - Stalking Vengeance
 - Stallion of Ashmouth
 - Stalwart Aven
+- Stalwart Pathlighter
 - Stalwart Shield-Bearers
 - Stalwarts of Osgiliath
 - Stamina
@@ -14350,6 +14370,7 @@ Council4 currently supports **15,777 of 32,501 cards eligible for paper support 
 - Ultimo, Civilization's End
 - Ultramarines Honour Guard
 - Ultron, Machine Overlord
+- Ultros, Obnoxious Octopus
 - Ulvenwald Bear
 - Ulvenwald Hydra
 - Ulvenwald Mysteries
@@ -14820,6 +14841,7 @@ Council4 currently supports **15,777 of 32,501 cards eligible for paper support 
 - Vinelasher Kudzu
 - Vinereap Mentor
 - Vines of the Recluse
+- Vineshaper Prodigy
 - Vineweft
 - Vintara Snapper
 - Violent Eruption
@@ -15224,6 +15246,7 @@ Council4 currently supports **15,777 of 32,501 cards eligible for paper support 
 - Weatherlight
 - Weatherseed Elf
 - Weatherseed Faeries
+- Weatherseed Totem
 - Weatherseed Treefolk
 - Weave Fate
 - Weaver of Currents
@@ -15620,6 +15643,7 @@ Council4 currently supports **15,777 of 32,501 cards eligible for paper support 
 - Yavimaya Enchantress
 - Yavimaya Gnats
 - Yavimaya Hollow
+- Yavimaya Iconoclast
 - Yavimaya Sapherd
 - Yavimaya Scion
 - Yavimaya Wurm

@@ -52,7 +52,21 @@ func manaSpentByColor(poolSpend map[mana.Unit]int) map[color.Color]int {
 	return byColor
 }
 
-// poolUnitsSnapshot records a player's per-unit mana pool counts. The rules
+// totalManaSpent sums a payment's per-unit pool spend into the total amount of
+// mana spent, backing the spell-cast trigger intervening-if predicates "if no
+// mana was spent to cast it" (total zero) and "if at least N mana was spent to
+// cast it" (CR 601.2). Colorless and colored pool mana both count, so a generic
+// cost paid with any mana contributes. It returns zero for an empty spend.
+func totalManaSpent(poolSpend map[mana.Unit]int) int {
+	total := 0
+	for _, count := range poolSpend {
+		if count > 0 {
+			total += count
+		}
+	}
+	return total
+}
+
 // engine captures it immediately before paying a cost so it can measure, after
 // the payment, how much pre-existing mana of each exact unit (color and snow
 // provenance) was spent and thereby which tagged mana-spend rider units (Path of

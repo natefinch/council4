@@ -43,6 +43,7 @@ var Cards = []*game.CardDef{
 	Gloomwidow,
 	Glowrider,
 	GnarlidColony,
+	GoblinBushwhacker,
 	GoblinDarkDwellers,
 	GoblinLegionnaire,
 	GoblinLookout,

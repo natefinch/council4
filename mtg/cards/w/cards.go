@@ -25,6 +25,7 @@ var Cards = []*game.CardDef{
 	WaterspoutWarden,
 	WayspeakerBodyguard,
 	Weatherlight,
+	WeatherseedTotem,
 	WebOfLifeAndDestiny,
 	WeightAdvantage,
 	WelkinTern,

@@ -117,6 +117,12 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 	case parser.ConditionPredicateSameColorManaSpentToCastAtLeast:
 		condition.Predicate = ConditionPredicateSameColorManaSpentToCastAtLeast
 		condition.Threshold = clause.Threshold
+	case parser.ConditionPredicateEventSpellManaSpentToCastAtLeast:
+		condition.Predicate = ConditionPredicateEventSpellManaSpentToCastAtLeast
+		condition.Threshold = clause.Threshold
+	case parser.ConditionPredicateEventSpellNoManaSpentToCast:
+		condition.Predicate = ConditionPredicateEventSpellManaSpentToCastAtMost
+		condition.Threshold = 0
 	case parser.ConditionPredicateAnyOpponentPoisonAtLeast:
 		condition.Predicate = ConditionPredicateAnyOpponentPoisonAtLeast
 		condition.Threshold = clause.Threshold

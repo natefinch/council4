@@ -23,6 +23,7 @@ var Cards = []*game.CardDef{
 	ManifestationSage,
 	Manticore,
 	MarduBlazebringer,
+	MarduWarshrieker,
 	MarkovEnforcer,
 	MarthaJones,
 	MartyrsTomb,

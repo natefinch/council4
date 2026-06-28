@@ -20,6 +20,7 @@ var Cards = []*game.CardDef{
 	IllvoiLightJammer,
 	ImpendingDoom,
 	InameLifeAspect,
+	IncisorGlider,
 	IncreasingDevotion,
 	Incubation,
 	InfernoElemental,

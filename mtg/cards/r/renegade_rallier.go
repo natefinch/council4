@@ -64,8 +64,7 @@ var RenegadeRallier = &game.CardDef{
 					Sequence: []game.Instruction{
 						{
 							Primitive: game.PutOnBattlefield{
-								Source:    game.CardBattlefieldSource(game.CardReference{Kind: game.CardReferenceTarget}),
-								Recipient: opt.Val(game.ControllerReference()),
+								Source: game.CardBattlefieldSource(game.CardReference{Kind: game.CardReferenceTarget}),
 							},
 						},
 					},
