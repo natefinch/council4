@@ -85,6 +85,33 @@ func TestExactCardCountControllerAndTargetFailsClosed(t *testing.T) {
 	}
 }
 
+func TestExactCardCountControllerAndReferencedPlayerAccepts(t *testing.T) {
+	t.Parallel()
+	// "You and that player each draw ...": the controller and a player named by
+	// a trigger reference ("that player") both draw. The split-on-"and" subject
+	// classifies as the controller-and-referenced-player recipient.
+	cases := []string{
+		"You and that player each draw two cards.",
+		"You and that player each draw that many cards.",
+	}
+	for _, source := range cases {
+		document, diagnostics := Parse(source, Context{InstantOrSorcery: true})
+		if len(diagnostics) != 0 {
+			t.Fatalf("Parse(%q) diagnostics = %#v", source, diagnostics)
+		}
+		if len(document.Abilities) != 1 || len(document.Abilities[0].Sentences) != 1 {
+			t.Fatalf("Parse(%q) shape = %#v", source, document.Abilities)
+		}
+		effects := document.Abilities[0].Sentences[0].Effects
+		if len(effects) != 1 || effects[0].Kind != EffectDraw {
+			t.Fatalf("Parse(%q) effects = %#v", source, effects)
+		}
+		if got := effects[0].Context; got != EffectContextControllerAndReferencedPlayer {
+			t.Errorf("Parse(%q) context = %v, want %v", source, got, EffectContextControllerAndReferencedPlayer)
+		}
+	}
+}
+
 func TestExactCardCountFailsClosed(t *testing.T) {
 	t.Parallel()
 	// Each of these carries a recipient or qualifier the canonical

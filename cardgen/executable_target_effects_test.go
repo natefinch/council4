@@ -107,6 +107,79 @@ func TestGenerateExecutableCardSourceControllerAndTargetDraw(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceControllerAndReferencedPlayerDrawFixed(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Shared Combat Draw",
+		Layout:     "normal",
+		ManaCost:   "{2}{W}",
+		TypeLine:   "Creature",
+		OracleText: "Whenever Test Shared Combat Draw deals combat damage to an opponent, you and that player each draw two cards.",
+		Power:      new("3"),
+		Toughness:  new("3"),
+		Colors:     []string{"W"},
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	// The controller and the damaged player each draw a fixed two cards: two
+	// parallel draw instructions, one for the controller and one for the event
+	// player named by "that player".
+	for _, wanted := range []string{
+		"Primitive: game.Draw",
+		"game.Fixed(2)",
+		"Player: game.ControllerReference()",
+		"Player: game.EventPlayerReference()",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+	if got := strings.Count(source, "Primitive: game.Draw"); got != 2 {
+		t.Fatalf("draw instruction count = %d, want 2:\n%s", got, source)
+	}
+}
+
+func TestGenerateExecutableCardSourceControllerAndReferencedPlayerDrawThatMany(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Shared Damage Draw",
+		Layout:     "normal",
+		ManaCost:   "{4}{U}",
+		TypeLine:   "Creature",
+		OracleText: "Whenever Test Shared Damage Draw deals combat damage to a player, you and that player each draw that many cards.",
+		Power:      new("2"),
+		Toughness:  new("4"),
+		Colors:     []string{"U"},
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	// "that many cards" draws an amount equal to the combat damage dealt: both
+	// the controller and the damaged player draw that dynamic amount.
+	for _, wanted := range []string{
+		"Primitive: game.Draw",
+		"game.DynamicAmountEventDamage",
+		"Player: game.ControllerReference()",
+		"Player: game.EventPlayerReference()",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+	if got := strings.Count(source, "Primitive: game.Draw"); got != 2 {
+		t.Fatalf("draw instruction count = %d, want 2:\n%s", got, source)
+	}
+}
+
 func TestGenerateExecutableCardSourceDestroyCreature(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

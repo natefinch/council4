@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,054 of 32,501 cards eligible for paper support (49.4%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,058 of 32,501 cards eligible for paper support (49.4%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1317,6 +1317,7 @@ Council4 currently supports **16,054 of 32,501 cards eligible for paper support 
 - Black Widow, Daring Operative
 - Black Widow, Deadly Hunter
 - Black Widow, Double Agent
+- Black Widow, Intel Expert
 - Black Widow, Natasha Romanoff
 - Blackblade Reforged
 - Blackbloom Rogue // Blackbloom Bog
@@ -3530,6 +3531,7 @@ Council4 currently supports **16,054 of 32,501 cards eligible for paper support 
 - Divine Transformation
 - Divine Verdict
 - Divine Visitation
+- Diviner Spirit
 - Diving Griffin
 - Divinity of Pride
 - Djeru's Renunciation
@@ -11818,6 +11820,7 @@ Council4 currently supports **16,054 of 32,501 cards eligible for paper support 
 - Serene Offering
 - Serene Steward
 - Serf
+- Sergeant John Benton
 - Sergeant-at-Arms
 - Serpent Assassin
 - Serpent Skin
@@ -15876,6 +15879,7 @@ Council4 currently supports **16,054 of 32,501 cards eligible for paper support 
 - Xira Arien
 - Xorn
 - Xun Yu, Wei Advisor
+- Xyris, the Writhing Storm
 - Yahenni's Expertise
 - Yahenni, Undying Partisan
 - Yanling's Harbinger
