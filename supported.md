@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,942 of 32,501 cards eligible for paper support (49.1%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,956 of 32,501 cards eligible for paper support (49.1%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -45,6 +45,7 @@ Council4 currently supports **15,942 of 32,501 cards eligible for paper support 
 - Abzan Banner
 - Abzan Battle Priest
 - Abzan Beastmaster
+- Abzan Charm
 - Abzan Devotee
 - Abzan Falconer
 - Abzan Guide
@@ -233,6 +234,7 @@ Council4 currently supports **15,942 of 32,501 cards eligible for paper support 
 - Ajani, Adversary of Tyrants
 - Ajani, Caller of the Pride
 - Ajani, Inspiring Leader
+- Ajani, Mentor of Heroes
 - Ajani, Wise Counselor
 - Akal Pakal, First Among Equals
 - Akiri, Line-Slinger
@@ -670,6 +672,8 @@ Council4 currently supports **15,942 of 32,501 cards eligible for paper support 
 - Armadillo Cloak
 - Armageddon
 - Armaggon, Future Shark
+- Armament Corps
+- Armament Dragon
 - Armasaur Guide
 - Armed Assailant
 - Armguard Familiar
@@ -2637,6 +2641,7 @@ Council4 currently supports **15,942 of 32,501 cards eligible for paper support 
 - Consuming Fervor
 - Consumptive Goo
 - Contact Other Plane
+- Contagion
 - Contagion Clasp
 - Contagious Nim
 - Containment Construct
@@ -3213,6 +3218,7 @@ Council4 currently supports **15,942 of 32,501 cards eligible for paper support 
 - Deface
 - Defeat
 - Defend the Campus
+- Defend the Celestus
 - Defender of Chaos
 - Defender of Law
 - Defender of the Order
@@ -4034,6 +4040,7 @@ Council4 currently supports **15,942 of 32,501 cards eligible for paper support 
 - Elspeth, Sun's Nemesis
 - Elturgard Ranger
 - Elusive Krasis
+- Elusive Otter // Grove's Bounty
 - Elusive Spellfist
 - Elven Ambush
 - Elven Cache
@@ -4041,6 +4048,7 @@ Council4 currently supports **15,942 of 32,501 cards eligible for paper support 
 - Elven Fortress
 - Elven Lyre
 - Elven Palisade
+- Elven Rite
 - Elves of Deep Shadow
 - Elvish Aberration
 - Elvish Archdruid
@@ -5486,6 +5494,7 @@ Council4 currently supports **15,942 of 32,501 cards eligible for paper support 
 - Glimpse the Unthinkable
 - Glint
 - Glint Hawk
+- Glint Weaver
 - Glint-Eye Nephilim
 - Glint-Horn Buccaneer
 - Glint-Nest Crane
@@ -10832,6 +10841,7 @@ Council4 currently supports **15,942 of 32,501 cards eligible for paper support 
 - Reverse Engineer
 - Revitalize
 - Revitalizing Repast // Old-Growth Grove
+- Revival of the Ancestors
 - Revive
 - Revive the Shire
 - Reviving Dose
@@ -12847,6 +12857,7 @@ Council4 currently supports **15,942 of 32,501 cards eligible for paper support 
 - Splash Lasher
 - Splatter Goblin
 - Splatter Thug
+- Splendid Agony
 - Splendid Reclamation
 - Splendor Mare
 - Splinter Twin
@@ -13794,6 +13805,7 @@ Council4 currently supports **15,942 of 32,501 cards eligible for paper support 
 - The Curse of Fenric
 - The Dawning Archaic
 - The Dross Pits
+- The Earth Crystal
 - The Elder Dragon War
 - The Eldest Reborn
 - The Fabulous Frog-Man
@@ -14878,6 +14890,7 @@ Council4 currently supports **15,942 of 32,501 cards eligible for paper support 
 - Verdant Sun's Avatar
 - Verdigris
 - Verduran Enchantress
+- Verdurous Gearhulk
 - Verix Bladewing
 - Vermiculos
 - Vermin Gorger
@@ -15752,6 +15765,7 @@ Council4 currently supports **15,942 of 32,501 cards eligible for paper support 
 - Wurm // Saproling
 - Wurm's Tooth
 - Wurmcoil Larva
+- Wurmskin Forger
 - Wydwen, the Biting Gale
 - Wylie Duke, Atiin Hero
 - Wyluli Wolf
