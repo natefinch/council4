@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,835 of 32,501 cards eligible for paper support (48.7%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,857 of 32,501 cards eligible for paper support (48.8%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -279,6 +279,7 @@ Council4 currently supports **15,835 of 32,501 cards eligible for paper support 
 - Alaborn Grenadier
 - Alaborn Musketeer
 - Alaborn Trooper
+- Alaborn Veteran
 - Alacrian Jaguar
 - Aladdin
 - Aladdin's Ring
@@ -530,6 +531,7 @@ Council4 currently supports **15,835 of 32,501 cards eligible for paper support 
 - Applied Geometry
 - Apprentice Necromancer
 - Apprentice Sharpshooter
+- Apprentice Sorcerer
 - Apprentice Wizard
 - April O'Neil, Kunoichi Trainee
 - April, Reporter of the Weird
@@ -1963,6 +1965,7 @@ Council4 currently supports **15,835 of 32,501 cards eligible for paper support 
 - Canyon Minotaur
 - Canyon Slough
 - Canyon Wildcat
+- Cao Cao, Lord of Wei
 - Cao Ren, Wei Commander
 - Capashen Knight
 - Capashen Standard
@@ -1972,6 +1975,7 @@ Council4 currently supports **15,835 of 32,501 cards eligible for paper support 
 - Capital Guard
 - Caprichrome
 - Capricious Sliver
+- Capricious Sorcerer
 - Captain America, Liberator
 - Captain America, Steve Rogers
 - Captain Howler, Sea Scourge
@@ -2874,6 +2878,7 @@ Council4 currently supports **15,835 of 32,501 cards eligible for paper support 
 - Cultivate
 - Cultivator's Caravan
 - Cumber Stone
+- Cunning Advisor
 - Cunning Breezedancer
 - Cunning Evasion
 - Cunning Geysermage
@@ -4643,6 +4648,7 @@ Council4 currently supports **15,835 of 32,501 cards eligible for paper support 
 - Fire Ambush
 - Fire Ants
 - Fire at Will
+- Fire Bowman
 - Fire Covenant
 - Fire Diamond
 - Fire Dragon
@@ -5548,6 +5554,7 @@ Council4 currently supports **15,835 of 32,501 cards eligible for paper support 
 - Goblin Firebug
 - Goblin Fireleaper
 - Goblin Fireslinger
+- Goblin Firestarter
 - Goblin Flectomancer
 - Goblin Gang Leader
 - Goblin Gardener
@@ -6444,6 +6451,7 @@ Council4 currently supports **15,835 of 32,501 cards eligible for paper support 
 - Howling Moon
 - Howling Wolf
 - Howlpack Resurgence
+- Hua Tuo, Honored Physician
 - Huang Zhong, Shu General
 - Huatli's Final Strike
 - Huatli's Raptor
@@ -7262,6 +7270,7 @@ Council4 currently supports **15,835 of 32,501 cards eligible for paper support 
 - King Macar, the Gold-Cursed
 - King of the Pride
 - King Suleiman
+- King's Assassin
 - Kingfisher
 - Kingpin's Enforcers
 - Kingpin's Pet
@@ -7899,10 +7908,12 @@ Council4 currently supports **15,835 of 32,501 cards eligible for paper support 
 - Loyal Gryff
 - Loyal Guardian
 - Loyal Pegasus
+- Loyal Retainers
 - Loyal Subordinate
 - Loyal Warhound
 - Lu Bu, Master-at-Arms
 - Lu Meng, Wu General
+- Lu Su, Wu Advisor
 - Lu Xun, Scholar General
 - Lucent Liminid
 - Lucky Offering
@@ -9143,6 +9154,7 @@ Council4 currently supports **15,835 of 32,501 cards eligible for paper support 
 - Northern Air Temple
 - Northern Paladin
 - Norwood Archers
+- Norwood Priestess
 - Norwood Ranger
 - Norwood Riders
 - Norwood Warrior
@@ -9546,6 +9558,7 @@ Council4 currently supports **15,835 of 32,501 cards eligible for paper support 
 - Palladium Myr
 - Palliation Accord
 - Pallid Mycoderm
+- Pang Tong, "Young Phoenix"
 - Panharmonicon
 - Panic Attack
 - Panic Spellbomb
@@ -11916,6 +11929,7 @@ Council4 currently supports **15,835 of 32,501 cards eligible for paper support 
 - Shu Defender
 - Shu Elite Companions
 - Shu Elite Infantry
+- Shu Farmer
 - Shu Foot Soldiers
 - Shu General
 - Shu Grain Caravan
@@ -12922,6 +12936,7 @@ Council4 currently supports **15,835 of 32,501 cards eligible for paper support 
 - Stealer of Secrets
 - Steam Augury
 - Steam Blast
+- Steam Catapult
 - Steam Spitter
 - Steam Vents
 - Steamclaw
@@ -12956,6 +12971,7 @@ Council4 currently supports **15,835 of 32,501 cards eligible for paper support 
 - Stern Constable
 - Stern Dismissal
 - Stern Lesson
+- Stern Marshal
 - Stern Proctor
 - Stew the Coneys
 - Steward of Solidarity
@@ -13458,6 +13474,7 @@ Council4 currently supports **15,835 of 32,501 cards eligible for paper support 
 - Talas Explorer
 - Talas Lookout
 - Talas Merchant
+- Talas Researcher
 - Talas Scout
 - Talas Warrior
 - Tale of Tinúviel
@@ -13582,6 +13599,7 @@ Council4 currently supports **15,835 of 32,501 cards eligible for paper support 
 - Tempest Technique
 - Temple Acolyte
 - Temple Bell
+- Temple Elder
 - Temple Garden
 - Temple of Abandon
 - Temple of Deceit
@@ -15637,6 +15655,7 @@ Council4 currently supports **15,835 of 32,501 cards eligible for paper support 
 - Wu Elite Cavalry
 - Wu Infantry
 - Wu Light Cavalry
+- Wu Longbowman
 - Wu Scout
 - Wurm
 - Wurm
@@ -15656,8 +15675,10 @@ Council4 currently supports **15,835 of 32,501 cards eligible for paper support 
 - Xathrid Slyblade
 - Xenograft
 - Xerex Strobe-Knight
+- Xiahou Dun, the One-Eyed
 - Xira Arien
 - Xorn
+- Xun Yu, Wei Advisor
 - Yahenni's Expertise
 - Yahenni, Undying Partisan
 - Yanling's Harbinger
@@ -15779,6 +15800,7 @@ Council4 currently supports **15,835 of 32,501 cards eligible for paper support 
 - Zhao Zilong, Tiger General
 - Zhao, the Seething Flame
 - Zhentarim Bandit
+- Zhuge Jin, Wu Strategist
 - Zhur-Taa Druid
 - Zhur-Taa Goblin
 - Zhur-Taa Swine
