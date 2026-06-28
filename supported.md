@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,916 of 32,501 cards eligible for paper support (49.0%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,922 of 32,501 cards eligible for paper support (49.0%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -431,6 +431,7 @@ Council4 currently supports **15,916 of 32,501 cards eligible for paper support 
 - Angel of Sanctions
 - Angel of Sanctions
 - Angel of the Dawn
+- Angel of the Dire Hour
 - Angel of the God-Pharaoh
 - Angel of the Ruins
 - Angel of Vitality
@@ -2475,6 +2476,7 @@ Council4 currently supports **15,916 of 32,501 cards eligible for paper support 
 - Clown Robot
 - Clue
 - Coal Golem
+- Coal Stoker
 - Coalhauler Swine
 - Coast Watcher
 - Coastal Bulwark
@@ -3629,6 +3631,7 @@ Council4 currently supports **15,916 of 32,501 cards eligible for paper support 
 - Drastic Revelation
 - Draugr Recruiter
 - Drawn from Dreams
+- Dread Cacodemon
 - Dread Linnorm // Scale Deflection
 - Dread of Night
 - Dread Presence
@@ -4526,6 +4529,7 @@ Council4 currently supports **15,916 of 32,501 cards eligible for paper support 
 - Feast on the Fallen
 - Feaster of Fools
 - Feasting Hobbit
+- Feasting Troll King
 - Feat of Resistance
 - Feather
 - Feather of Flight
@@ -5122,6 +5126,7 @@ Council4 currently supports **15,916 of 32,501 cards eligible for paper support 
 - Furious Reprisal
 - Furious Resistance
 - Furious Strength
+- Furnace Dragon
 - Furnace Hellkite
 - Furnace Host Charger
 - Furnace of Rath
@@ -15136,6 +15141,7 @@ Council4 currently supports **15,916 of 32,501 cards eligible for paper support 
 - Wake of Vultures
 - Wake Thrasher
 - Wakedancer
+- Wakening Sun's Avatar
 - Waker of Waves
 - Waking Nightmare
 - Walk the Plank
