@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,089 of 32,501 cards eligible for paper support (49.5%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,091 of 32,501 cards eligible for paper support (49.5%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -9288,6 +9288,7 @@ Council4 currently supports **16,089 of 32,501 cards eligible for paper support 
 - Noble Steeds
 - Noble Templar
 - Noble Vestige
+- Noble's Purse
 - Nobody
 - Nocturnal Feeder
 - Noggle Bandit
@@ -12817,6 +12818,7 @@ Council4 currently supports **16,089 of 32,501 cards eligible for paper support 
 - Sphere of Reason
 - Sphere of Resistance
 - Sphere of Safety
+- Sphere of the Suns
 - Sphere of Truth
 - Sphinx
 - Sphinx

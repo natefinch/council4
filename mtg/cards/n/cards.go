@@ -32,6 +32,7 @@ var Cards = []*game.CardDef{
 	NimblewrightSchematic,
 	NivixCyclops,
 	NoblePurpose,
+	NobleSPurse,
 	NobleVestige,
 	NoggleBandit,
 	NoggleRansacker,

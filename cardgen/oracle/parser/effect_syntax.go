@@ -526,6 +526,25 @@ func parseCounterPlacementScopedToCount(clause []shared.Token, amount EffectAmou
 	return parseCounterPlacement(counterClause, atoms)
 }
 
+// entersTappedCounterClause strips the leading "tapped and" connector from a
+// combined self enters-tapped-with-counters clause ("enters tapped and with N
+// <kind> counters on it.", Sphere of the Suns, Noble's Purse) so the
+// with-counters portion is detected as a single counter placement rather than
+// failing closed on the "and" that joins the tapped qualifier to it. The bare
+// "enters tapped with N counters on it." form (the Vivid land cycle) carries no
+// "and" and is unaffected. Only EffectEnterTapped clauses are rewritten; every
+// other effect kind keeps its clause so genuine compound placements ("a +1/+1
+// counter and a shield counter") still fail closed.
+func entersTappedCounterClause(kind EffectKind, clause []shared.Token) []shared.Token {
+	if kind != EffectEnterTapped {
+		return clause
+	}
+	if len(clause) >= 2 && equalWord(clause[0], "tapped") && equalWord(clause[1], "and") {
+		return clause[2:]
+	}
+	return clause
+}
+
 // parseCounterPlacementChoices recognizes a placed-counter noun phrase that lets
 // the resolving controller choose between two or more counter kinds ("a +1/+1
 // counter or a loyalty counter", Elspeth Conquers Death chapter III). It returns
@@ -1296,7 +1315,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		if forEach, ok := parseCreateForEachAmount(kind, context, tokenPTKnown, tokens[ownershipStart:tokenIndex], amount, atoms); ok {
 			amount = forEach
 		}
-		counterKind, counterKnown := parseCounterPlacementScopedToCount(clause, amount, atoms)
+		counterKind, counterKnown := parseCounterPlacementScopedToCount(entersTappedCounterClause(kind, clause), amount, atoms)
 		var counterKindChoices []counter.Kind
 		if kind == EffectPut && !counterKnown {
 			counterKindChoices = parseCounterPlacementChoices(clause, atoms)
