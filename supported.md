@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,165 of 32,501 cards eligible for paper support (49.7%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,169 of 32,501 cards eligible for paper support (49.7%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -3660,6 +3660,7 @@ Council4 currently supports **16,165 of 32,501 cards eligible for paper support 
 - Dragonfly Suit
 - Dragonlair Spider
 - Dragonloft Idol
+- Dragonlord Atarka
 - Dragonlord Dromoka
 - Dragonlord Ojutai
 - Dragonlord Silumgar
@@ -6743,6 +6744,7 @@ Council4 currently supports **16,165 of 32,501 cards eligible for paper support 
 - Ifnir Deadlands
 - Igneous Cur
 - Igneous Golem
+- Ignite Disorder
 - Ignite the Beacon
 - Ignition Team
 - Ignoble Hierarch
@@ -8190,6 +8192,7 @@ Council4 currently supports **16,165 of 32,501 cards eligible for paper support 
 - Magmakin Artillerist
 - Magmaquake
 - Magmaroth
+- Magmatic Core
 - Magmatic Force
 - Magmatic Insight
 - Magmatic Sinkhole
@@ -14878,6 +14881,7 @@ Council4 currently supports **16,165 of 32,501 cards eligible for paper support 
 - Urborg Volcano
 - Urborg, Tomb of Yawgmoth
 - Ureni of the Unwritten
+- Ureni, the Song Unending
 - Urn of Godfire
 - Ursapine
 - Ursine Fylgja

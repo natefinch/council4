@@ -5,6 +5,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -17,7 +18,7 @@ import (
 // for any shape the executable backend cannot represent exactly.
 func lowerDividedDamageSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
-	amount, capTotal, amountOK := dividedDamageAmount(effect.Amount)
+	amount, capTotal, amountOK := dividedDamageTotal(effect.Amount, ctx)
 	if len(ctx.content.Effects) != 1 ||
 		effect.Kind != compiler.EffectDealDamage ||
 		!effect.Exact ||
@@ -63,29 +64,69 @@ func lowerDividedDamageSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagn
 	}.Ability(), nil
 }
 
-// dividedDamageAmount resolves the total a divided-damage effect splits among its
+// dividedDamageTotal resolves the total a divided-damage effect splits among its
 // targets onto a runtime Quantity. It supports an exact fixed total of at least
-// one and the spell's bare variable X ("X damage divided as you choose among
-// ..."), rejecting every dynamic or modified amount form the divided path cannot
-// represent. The returned capTotal is the fixed total used to bound the chosen
-// target count (each target receives at least one); it is zero for a variable X,
-// whose runtime total is unknown at lowering and so imposes no static target cap.
-func dividedDamageAmount(amount compiler.CompiledAmount) (game.Quantity, int, bool) {
-	if amount.DynamicKind != compiler.DynamicAmountNone ||
-		amount.DynamicForm != compiler.DynamicAmountFormNone ||
-		amount.Addend != 0 || amount.Multiplier != 0 {
-		return game.Quantity{}, 0, false
-	}
-	switch {
-	case amount.Known:
-		if amount.Value < 1 {
+// one ("5 damage divided ..."), the spell's bare variable X ("X damage divided
+// ..."), and a dynamic scalar total whose value the runtime computes once at
+// resolution ("X damage divided ..., where X is the number of lands you control",
+// Ureni; "X damage divided ..., where X is the number of age counters on it",
+// Magmatic Core). It rejects every modified amount form (an addend or multiplier
+// the divided path cannot represent). The returned capTotal is the fixed total
+// used to bound the chosen target count (each target receives at least one); it
+// is zero for any non-fixed total, whose runtime value is unknown at lowering and
+// so imposes no static target cap.
+func dividedDamageTotal(amount compiler.CompiledAmount, ctx contentCtx) (game.Quantity, int, bool) {
+	if amount.DynamicKind == compiler.DynamicAmountNone &&
+		amount.DynamicForm == compiler.DynamicAmountFormNone {
+		if amount.Addend != 0 || amount.Multiplier != 0 {
 			return game.Quantity{}, 0, false
 		}
-		return game.Fixed(amount.Value), amount.Value, true
-	case amount.VariableX:
-		return game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX}), 0, true
-	default:
+		switch {
+		case amount.Known:
+			if amount.Value < 1 {
+				return game.Quantity{}, 0, false
+			}
+			return game.Fixed(amount.Value), amount.Value, true
+		case amount.VariableX:
+			return game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX}), 0, true
+		default:
+			return game.Quantity{}, 0, false
+		}
+	}
+	if !dividedDynamicTotalKind(amount.DynamicKind) {
 		return game.Quantity{}, 0, false
+	}
+	object := game.SourcePermanentReference()
+	if referent, ok := lowerDamageAmountObject(amount, ctx.content.References); ok {
+		object = referent
+	}
+	dynamic, ok := lowerDynamicAmount(amount, object)
+	if !ok {
+		return game.Quantity{}, 0, false
+	}
+	return game.Dynamic(dynamic), 0, true
+}
+
+// dividedDynamicTotalKind reports whether a dynamic amount kind resolves to a
+// single scalar the divided path can use as the whole-spell total computed once
+// at resolution. It admits the group-wide kinds shared by a damage group (count
+// selectors, devotion, domain, controller life, opponent count, greatest- and
+// total-in-group) plus the per-object source characteristics (power, toughness,
+// mana value, and counter count), each of which is a single value read from the
+// spell's own source. Per-recipient or otherwise multi-valued forms have no
+// single divided total, so they stay rejected and the divided path fails closed.
+func dividedDynamicTotalKind(kind compiler.DynamicAmountKind) bool {
+	if groupWideDynamicAmountKind(kind) {
+		return true
+	}
+	switch kind {
+	case compiler.DynamicAmountSourcePower,
+		compiler.DynamicAmountSourceToughness,
+		compiler.DynamicAmountSourceManaValue,
+		compiler.DynamicAmountSourceCounterCount:
+		return true
+	default:
+		return false
 	}
 }
 
@@ -141,10 +182,12 @@ func dividedDamageTargetSpec(target compiler.CompiledTarget, capTotal int) (game
 
 // dividedDamagePermanentSelection builds the runtime permanent filter a
 // divided-damage spell chooses among. It supports the plain "creature" noun, the
-// "creature and/or planeswalker" card-type union, an attacking/blocking combat
-// state, and a single "with"/"without" keyword qualifier — the selectors the
-// divided round-trip reconstructs. It fails closed for every controller, color,
-// subtype, supertype, tapped, counter, or numeric qualifier it does not model.
+// "creature and/or planeswalker" card-type union, a controller filter ("your
+// opponents control"), color adjectives ("white and/or blue"), an
+// attacking/blocking combat state, and a single "with"/"without" keyword
+// qualifier — the selectors the divided round-trip reconstructs. It fails closed
+// for every subtype, supertype, tapped, counter, or numeric qualifier it does
+// not model.
 func dividedDamagePermanentSelection(selector compiler.CompiledSelector) (game.Selection, bool) {
 	if selector.Kind != compiler.SelectorCreature {
 		return game.Selection{}, false
@@ -152,12 +195,10 @@ func dividedDamagePermanentSelection(selector compiler.CompiledSelector) (game.S
 	if selectorHasUnsupportedPermanentFilters(selector) ||
 		selector.Tapped || selector.Untapped ||
 		selector.Another || selector.Other ||
-		selector.Controller != compiler.ControllerAny ||
 		selector.MatchManaValue || selector.MatchPower || selector.MatchToughness ||
 		selector.PowerLessThanSource || selector.PowerGreaterThanSource ||
 		selector.TokenOnly || selector.NonToken ||
 		len(selector.SubtypesAny()) != 0 ||
-		len(selector.ColorsAny()) != 0 ||
 		len(selector.ExcludedTypes()) != 0 ||
 		len(selector.ExcludedColors()) != 0 ||
 		len(selector.Supertypes()) != 0 ||
@@ -200,6 +241,20 @@ func dividedDamagePermanentSelection(selector compiler.CompiledSelector) (game.S
 			return game.Selection{}, false
 		}
 		selection.ExcludedKeyword = keyword
+	}
+	if colors := selector.ColorsAny(); len(colors) != 0 {
+		selection.ColorsAny = append([]color.Color(nil), colors...)
+	}
+	switch selector.Controller {
+	case compiler.ControllerAny:
+	case compiler.ControllerYou:
+		selection.Controller = game.ControllerYou
+	case compiler.ControllerOpponent:
+		selection.Controller = game.ControllerOpponent
+	case compiler.ControllerNotYou:
+		selection.Controller = game.ControllerNotYou
+	default:
+		return game.Selection{}, false
 	}
 	return selection, true
 }
