@@ -364,7 +364,15 @@ func createTokenAmount(ctx contentCtx, effect *compiler.CompiledEffect, amountOb
 	case effect.Amount.VariableX:
 		return game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX}), true
 	case effect.Amount.DynamicKind == compiler.DynamicAmountTriggeringCombatDamage:
-		dynamic, ok := lowerEventCombatDamageAmount(ctx, effect.Amount)
+		// The parser pins a created "that many" count to the combat-damage
+		// triggering-event kind without seeing which event actually fired. The
+		// generic resolver reads the enclosing trigger's measured quantity —
+		// combat damage dealt, life gained or lost, counters added, or cards
+		// drawn or discarded — so "Whenever you put one or more -1/-1 counters on
+		// a creature, create that many ... tokens." and the discard- and
+		// damage-triggered forms all resolve to their own event's count, while a
+		// trigger that publishes no such quantity stays closed.
+		dynamic, ok := lowerTriggeringEventQuantity(ctx, effect.Amount)
 		if !ok {
 			return game.Quantity{}, false
 		}

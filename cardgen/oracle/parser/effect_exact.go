@@ -2553,15 +2553,21 @@ func exactCreateNamedTokenEffectSyntax(effect *EffectSyntax) bool {
 		effect.Amount.DynamicForm == EffectDynamicAmountFormNone && controllerForm
 	dynamicCombatDamageCount := effect.Amount.DynamicKind == EffectDynamicAmountTriggeringCombatDamage &&
 		effect.Amount.DynamicForm == EffectDynamicAmountFormNone && controllerForm
-	dynamicDieRollResultCount := effect.Amount.DynamicKind == EffectDynamicAmountDieRollResult &&
-		effect.Amount.DynamicForm == EffectDynamicAmountFormEqual && controllerForm
+	// A "number of <Named> tokens equal to <dynamic>" count ("Create a number of
+	// Food tokens equal to the number of opponents you have.", "Create a number
+	// of tapped Treasure tokens equal to its power.") mirrors the creature-token
+	// path's FormEqual handling: any non-None dynamic kind the count lowerer
+	// already represents drives the token count. The die-roll-result count
+	// ("equal to the result") is one such FormEqual dynamic.
+	equalDynamicCount := effect.Amount.DynamicForm == EffectDynamicAmountFormEqual &&
+		effect.Amount.DynamicKind != EffectDynamicAmountNone && controllerForm
 	forEachCount := effect.Amount.DynamicForm == EffectDynamicAmountFormForEach &&
 		effect.Amount.DynamicKind != EffectDynamicAmountNone &&
 		effect.Amount.Multiplier == 1 && controllerForm
 	whereXDynamicCount := effect.Amount.DynamicForm == EffectDynamicAmountFormWhereX &&
 		(effect.Amount.DynamicKind != EffectDynamicAmountNone || effect.Amount.VariableX) &&
 		effect.Amount.Multiplier == 1 && controllerForm
-	if !variableCount && !dynamicCombatDamageCount && !dynamicDieRollResultCount && !forEachCount &&
+	if !variableCount && !dynamicCombatDamageCount && !equalDynamicCount && !forEachCount &&
 		!whereXDynamicCount && (!effect.Amount.Known || effect.Amount.Value < 1) {
 		return false
 	}
@@ -2583,7 +2589,7 @@ func exactCreateNamedTokenEffectSyntax(effect *EffectSyntax) bool {
 	if sel.Tapped {
 		tappedPart = "tapped "
 	}
-	if dynamicDieRollResultCount {
+	if equalDynamicCount {
 		spec := fmt.Sprintf("a number of %s%s tokens", tappedPart, string(sel.SubtypesAny[0]))
 		clause := exactEffectClauseText(effect)
 		return strings.EqualFold(clause, "Create "+spec+" "+effect.Amount.Text+".") ||
