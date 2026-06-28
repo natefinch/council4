@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,929 of 32,501 cards eligible for paper support (49.0%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,935 of 32,501 cards eligible for paper support (49.0%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1723,6 +1723,7 @@ Council4 currently supports **15,929 of 32,501 cards eligible for paper support 
 - Brandywine Farmer
 - Brash Taunter
 - Brass Gnat
+- Brass Herald
 - Brass Man
 - Brass Secretary
 - Brass's Bounty
@@ -2740,6 +2741,7 @@ Council4 currently supports **15,929 of 32,501 cards eligible for paper support 
 - Court Homunculus
 - Court Street Denizen
 - Covenant of Blood
+- Cover of Darkness
 - Covert Operative
 - Cowabunga!
 - Cower in Fear
@@ -4155,6 +4157,7 @@ Council4 currently supports **15,929 of 32,501 cards eligible for paper support 
 - Enforcer Griffin
 - Engine Rat
 - Engineered Might
+- Engineered Plague
 - Engulfing Eruption
 - Engulfing Slagwurm
 - Enhanced Awareness
@@ -9926,6 +9929,7 @@ Council4 currently supports **15,929 of 32,501 cards eligible for paper support 
 - Plague Beetle
 - Plague Belcher
 - Plague Dogs
+- Plague Engineer
 - Plague Mare
 - Plague Myr
 - Plague Spitter
@@ -11836,6 +11840,7 @@ Council4 currently supports **15,929 of 32,501 cards eligible for paper support 
 - Shared Animosity
 - Shared Discovery
 - Shared Roots
+- Shared Triumph
 - Shark
 - Shark
 - Sharktocrab
@@ -13018,6 +13023,7 @@ Council4 currently supports **15,929 of 32,501 cards eligible for paper support 
 - Steelgaze Griffin
 - Steelshaper's Gift
 - Steelswarm Operator
+- Steely Resolve
 - Steeple Creeper
 - Steeple Roc
 - Stella Lee, Wild Card
