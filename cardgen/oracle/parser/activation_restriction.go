@@ -167,6 +167,11 @@ func matchActivationRestrictionBody(remainder []shared.Token, restriction *Activ
 		restriction.PhaseStep = phaseStep
 		return
 	}
+	if playerTurn, ok := parseActivationTurnBeforeAttackersRestriction(remainder); ok {
+		restriction.Kind = ActivationRestrictionTurnBeforeAttackers
+		restriction.PlayerTurn = playerTurn
+		return
+	}
 	if playerTurn, ok := parseActivationPlayerTurnRestriction(remainder); ok {
 		restriction.Kind = ActivationRestrictionPlayerTurn
 		restriction.PlayerTurn = playerTurn
@@ -300,6 +305,40 @@ func parseActivationPlayerTurnRestriction(tokens []shared.Token) (ActivationPlay
 		return ActivationPlayerTurnRestriction{}, false
 	}
 	if len(parsed.remainder) != 1 || !equalWord(parsed.remainder[0], "turn") {
+		return ActivationPlayerTurnRestriction{}, false
+	}
+	return ActivationPlayerTurnRestriction{
+		Span:   shared.SpanOf(tokens),
+		Player: parsed.player,
+	}, true
+}
+
+// parseActivationTurnBeforeAttackersRestriction reconstructs the combined
+// "during <player>'s turn, before attackers are declared" window, e.g. "Activate
+// only during your turn, before attackers are declared." (the Portal precombat
+// cycle: Stern Marshal, King's Assassin, Talas Researcher, ...). The clause's
+// internal comma is dropped before matching the "before attackers are declared"
+// suffix. The possessive player selector is captured so the compiler can fail
+// closed on selectors it does not yet model; only "your turn" is reduced to a
+// typed timing restriction today.
+func parseActivationTurnBeforeAttackersRestriction(tokens []shared.Token) (ActivationPlayerTurnRestriction, bool) {
+	remainder, ok := cutSyntaxWords(tokens, "during")
+	if !ok || len(remainder) == 0 {
+		return ActivationPlayerTurnRestriction{}, false
+	}
+	parsed := parseTriggerPlayerSelector(remainder)
+	if !parsed.ok || parsed.form != triggerPlayerSelectorPossessive {
+		return ActivationPlayerTurnRestriction{}, false
+	}
+	rest := parsed.remainder
+	if len(rest) == 0 || !equalWord(rest[0], "turn") {
+		return ActivationPlayerTurnRestriction{}, false
+	}
+	rest = rest[1:]
+	if len(rest) > 0 && rest[0].Kind == shared.Comma {
+		rest = rest[1:]
+	}
+	if !syntaxWordsEqual(rest, "before", "attackers", "are", "declared") {
 		return ActivationPlayerTurnRestriction{}, false
 	}
 	return ActivationPlayerTurnRestriction{

@@ -57,4 +57,5 @@ var Cards = []*game.CardDef{
 	WorldBreaker,
 	WrithingChrysalis,
 	WrongTurn,
+	WuLongbowman,
 }

@@ -769,6 +769,8 @@ func lowerActivationTiming(timing compiler.ActivationTimingKind) (game.TimingRes
 		return game.DuringUpkeep, true
 	case compiler.ActivationTimingDuringYourTurn:
 		return game.DuringYourTurn, true
+	case compiler.ActivationTimingDuringYourTurnBeforeAttackers:
+		return game.DuringYourTurnBeforeAttackers, true
 	default:
 		return game.NoTimingRestriction, false
 	}

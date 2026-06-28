@@ -232,6 +232,11 @@ const (
 	// ("Activate only as an instant"), which is the default timing for an
 	// activated ability and lowers to no runtime restriction.
 	ActivationTimingInstant
+	// ActivationTimingDuringYourTurnBeforeAttackers marks the combined "during
+	// your turn, before attackers are declared" window (the Portal precombat
+	// cycle). It lowers to a runtime timing restriction that permits activation
+	// only on the controller's turn, before the declare-attackers step.
+	ActivationTimingDuringYourTurnBeforeAttackers
 )
 
 // AbilityContent is the reusable semantic content of an ability, independent

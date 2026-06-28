@@ -194,6 +194,16 @@ func TestCompileActivatedAbilityTiming(t *testing.T) {
 		{"upkeep", "{1}: Draw a card. Activate only during your upkeep.", ActivationTimingDuringUpkeep},
 		{"during your turn", "{1}: Draw a card. Activate only during your turn.", ActivationTimingDuringYourTurn},
 		{
+			"during your turn before attackers",
+			"{1}: Draw a card. Activate only during your turn, before attackers are declared.",
+			ActivationTimingDuringYourTurnBeforeAttackers,
+		},
+		{
+			"opponent turn before attackers unsupported",
+			"{1}: Draw a card. Activate only during an opponent's turn, before attackers are declared.",
+			ActivationTimingUnsupported,
+		},
+		{
 			"opponent turn unsupported",
 			"{1}: Draw a card. Activate only during an opponent's turn.",
 			ActivationTimingUnsupported,

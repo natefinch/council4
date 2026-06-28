@@ -865,6 +865,23 @@ func activatedAbilityTimingAllows(g *game.Game, playerID game.PlayerID, timing g
 			g.Turn.Step == game.StepUpkeep
 	case game.DuringYourTurn:
 		return g.Turn.ActivePlayer == playerID
+	case game.DuringYourTurnBeforeAttackers:
+		return g.Turn.ActivePlayer == playerID && turnBeforeAttackersDeclared(g.Turn)
+	default:
+		return false
+	}
+}
+
+// turnBeforeAttackersDeclared reports whether the turn has not yet reached the
+// declare-attackers step (CR 508): the beginning phase, the precombat main
+// phase, or the beginning-of-combat step. It backs the "before attackers are
+// declared" activation window.
+func turnBeforeAttackersDeclared(turn game.TurnState) bool {
+	switch turn.Phase {
+	case game.PhaseBeginning, game.PhasePrecombatMain:
+		return true
+	case game.PhaseCombat:
+		return turn.Step == game.StepBeginningOfCombat
 	default:
 		return false
 	}

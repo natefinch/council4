@@ -46,6 +46,8 @@ var Cards = []*game.CardDef{
 	LoxodonAnchorite,
 	LoxodonWarhammer,
 	LoyalPegasus,
+	LoyalRetainers,
+	LuSuWuAdvisor,
 	LumaretSFavor,
 	LupinflowerVillage,
 	LurkingDeadeye,
