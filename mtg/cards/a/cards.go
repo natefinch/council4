@@ -7,6 +7,7 @@ import "github.com/natefinch/council4/mtg/game"
 // Cards lists all card definitions in this package.
 var Cards = []*game.CardDef{
 	AbattoirGhoul,
+	Abduction,
 	AbyssalNightstalker,
 	AbzanCharm,
 	AbzanMonument,
@@ -95,6 +96,7 @@ var Cards = []*game.CardDef{
 	AspectOfLamprey,
 	AssassinInitiate,
 	AugurOfBolas,
+	AuraOfDominion,
 	AuriokGlaivemaster,
 	AuroraEidolon,
 	AuroraGriffin,

@@ -57,6 +57,7 @@ var Cards = []*game.CardDef{
 	ProsperityTycoon,
 	ProtectionOfTheHekma,
 	ProwlingNightstalker,
+	PsychicOverload,
 	PsychicVenom,
 	PsychotropeThallid,
 	PublicThoroughfare,

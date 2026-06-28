@@ -38,6 +38,7 @@ var Cards = []*game.CardDef{
 	LivingTsunami,
 	LlanowarLoamspeaker,
 	LlanowarWastes,
+	LockedInTheCemetery,
 	LocthwainPaladin,
 	LodestoneGolem,
 	LongFinnedSkywhale,

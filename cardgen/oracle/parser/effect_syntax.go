@@ -1581,6 +1581,8 @@ func finalizeParsedEffect(effect *EffectSyntax, sentence Sentence, atoms Atoms) 
 	effect.TokenCopyOfAttached = exactCreateCopyTokenAttachedEffectSyntax(effect)
 	effect.RegenerateAttached = effect.Kind == EffectRegenerate && exactRegenerateAttachedEffectSyntax(effect)
 	effect.ExileAttached = effect.Kind == EffectExile && exactExileAttachedEffectSyntax(effect)
+	effect.TapAttached = effect.Kind == EffectTap && exactTapAttachedEffectSyntax(effect)
+	effect.UntapAttached = effect.Kind == EffectUntap && exactUntapAttachedEffectSyntax(effect)
 	if group, ok := exactCreateCopyTokenForEachEffectSyntax(effect, atoms); ok {
 		effect.TokenCopyOfForEach = true
 		effect.TokenCopyForEachGroup = group
