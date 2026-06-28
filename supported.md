@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,986 of 32,501 cards eligible for paper support (49.2%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,003 of 32,501 cards eligible for paper support (49.2%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1298,6 +1298,7 @@ Council4 currently supports **15,986 of 32,501 cards eligible for paper support 
 - Bitterthorn, Nissa's Animus
 - Bituminous Blast
 - Black Carriage
+- Black Cat
 - Black Dragon
 - Black Dragon Gate
 - Black Knight
@@ -1689,6 +1690,7 @@ Council4 currently supports **15,986 of 32,501 cards eligible for paper support 
 - Botanical Sanctum
 - Bottle Gnomes
 - Bottle Golems
+- Bottomless Pit
 - Bottomless Pool // Locker Room
 - Boulder Dash
 - Boulderborn Dragon
@@ -1866,6 +1868,7 @@ Council4 currently supports **15,986 of 32,501 cards eligible for paper support 
 - Burner Rocket
 - Burning Anger
 - Burning Fields
+- Burning Inquiry
 - Burning Oil
 - Burning Shield Askari
 - Burning Sun's Fury
@@ -2720,6 +2723,7 @@ Council4 currently supports **15,986 of 32,501 cards eligible for paper support 
 - Corrosive Mentor
 - Corrupt Court Official
 - Corrupt Eunuchs
+- Corrupt Official
 - Corrupted Conscience
 - Corrupted Conviction
 - Corrupted Harvester
@@ -6028,6 +6032,7 @@ Council4 currently supports **15,986 of 32,501 cards eligible for paper support 
 - Guul Draz Assassin
 - Guul Draz Mucklord
 - Gwaihir, Greatest of the Eagles
+- Gwendlyn Di Corci
 - Gwenom, Remorseless
 - Gwyllion Hedge-Mage
 - Gyre Engineer
@@ -6180,6 +6185,7 @@ Council4 currently supports **15,986 of 32,501 cards eligible for paper support 
 - Headless Horseman
 - Headless Rider
 - Headless Skaab
+- Headless Specter
 - Headlong Rush
 - Headstone
 - Headstrong Brute
@@ -6614,10 +6620,12 @@ Council4 currently supports **15,986 of 32,501 cards eligible for paper support 
 - Hydrosurge
 - Hyena Pack
 - Hymn of Rebirth
+- Hymn to Tourach
 - Hyperion Blacksmith
 - Hypersonic Dragon
 - Hypervolt Grasp
 - Hypnotic Grifter
+- Hypnotic Specter
 - Hypnotic Sprite // Mesmeric Glare
 - Hypochondria
 - Hypothesizzle
@@ -8540,6 +8548,7 @@ Council4 currently supports **15,986 of 32,501 cards eligible for paper support 
 - Mind Drain
 - Mind Drill Assailant
 - Mind Flayer
+- Mind Knives
 - Mind Over Matter
 - Mind Ravel
 - Mind Rot
@@ -9228,6 +9237,7 @@ Council4 currently supports **15,986 of 32,501 cards eligible for paper support 
 - Nocturnal Feeder
 - Noggle Bandit
 - Noggle Bridgebreaker
+- Noggle Ransacker
 - Noggle Robber
 - Noggle the Mind
 - Noise Marine
@@ -10461,6 +10471,7 @@ Council4 currently supports **15,986 of 32,501 cards eligible for paper support 
 - Rakdos Locket
 - Rakdos Pit Dragon
 - Rakdos Ragemutt
+- Rakdos Ringleader
 - Rakdos Roustabout
 - Rakdos Shred-Freak
 - Rakdos Signet
@@ -10806,6 +10817,7 @@ Council4 currently supports **15,986 of 32,501 cards eligible for paper support 
 - Resolute Rider
 - Resolute Watchdog
 - Resounding Roar
+- Resounding Scream
 - Resounding Thunder
 - Resounding Wave
 - Resourceful Return
@@ -11364,6 +11376,7 @@ Council4 currently supports **15,986 of 32,501 cards eligible for paper support 
 - Sanguine Syphoner
 - Sanitarium Skeleton
 - Sanitation Automaton
+- Sanity Gnawers
 - Sapphire Dragon // Psionic Pulse
 - Sapphire Drake
 - Sapphire Leech
@@ -12689,6 +12702,7 @@ Council4 currently supports **15,986 of 32,501 cards eligible for paper support 
 - Spectator Seating
 - Specter of the Fens
 - Specter's Shroud
+- Specter's Wail
 - Spectra Ward
 - Spectral Flight
 - Spectral Hunt-Caller
@@ -13271,6 +13285,7 @@ Council4 currently supports **15,986 of 32,501 cards eligible for paper support 
 - Stun Sniper
 - Stunning Shot
 - Stunt Double
+- Stupor
 - Sturdy Hatchling
 - Sturdy Shield
 - Sturmgeist
@@ -14225,6 +14240,7 @@ Council4 currently supports **15,986 of 32,501 cards eligible for paper support 
 - Touch of Invisibility
 - Touch the Spirit Realm
 - Touchstone
+- Tourach, Dread Cantor
 - Towashi Songshaper
 - Tower Defense
 - Tower Drake
@@ -14702,6 +14718,7 @@ Council4 currently supports **15,986 of 32,501 cards eligible for paper support 
 - Urborg Drake
 - Urborg Elf
 - Urborg Emissary
+- Urborg Mindsucker
 - Urborg Phantom
 - Urborg Repossession
 - Urborg Shambler
