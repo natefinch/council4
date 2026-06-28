@@ -62,6 +62,7 @@ var Cards = []*game.CardDef{
 	ShiftingCeratops,
 	ShivanFire,
 	ShriekingSpecter,
+	Shriekmaw,
 	ShuFarmer,
 	SierraNukaSBiggestFan,
 	SigardaChampionOfLight,

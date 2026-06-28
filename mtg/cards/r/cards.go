@@ -62,6 +62,7 @@ var Cards = []*game.CardDef{
 	RiteOfFlame,
 	RiteOfOblivion,
 	RiteOfReplication,
+	RitualOfTheMachine,
 	RiveteersOverlook,
 	RoamingGhostlight,
 	RockSlide,
