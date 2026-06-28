@@ -395,6 +395,9 @@ func exactSinglePermanentTargetSyntax(text string, selection SelectionSyntax) bo
 	if len(selection.SubtypesAny) >= 2 {
 		return exactSubtypeUnionTargetSyntax(text, selection)
 	}
+	if len(selection.ExcludedTypes) > 0 && len(selection.ExcludedColors) > 0 {
+		return exactExcludedTypeColorTargetSyntax(text, selection)
+	}
 	if len(selection.ExcludedTypes) > 0 {
 		return exactExcludedTypeTargetSyntax(text, selection)
 	}
@@ -1542,7 +1545,53 @@ func exactExcludedTypeTargetSyntax(text string, selection SelectionSyntax) bool 
 	return strings.EqualFold(text, expected)
 }
 
-// exactExcludedSupertypeTargetSyntax reconstructs the canonical Oracle phrase for
+// exactExcludedTypeColorTargetSyntax reconstructs the canonical Oracle phrase for
+// a permanent target restricted by one excluded card type and one excluded color
+// joined in a comma list ("target nonartifact, nonblack creature", Terror,
+// Nekrataal, Shriekmaw) and compares it byte-exactly to the source text. The
+// excluded card type renders first, then the excluded color, before the permanent
+// noun, with an optional controller clause. It accepts exactly one excluded type
+// and one excluded color on a redundant permanent noun, failing closed for every
+// other qualifier so unsupported wordings keep failing the text-blind round-trip.
+// Both exclusions lower to Selection.ExcludedTypes and Selection.ExcludedColors.
+func exactExcludedTypeColorTargetSyntax(text string, selection SelectionSyntax) bool {
+	if selection.All || selection.Another || selection.Other ||
+		selection.Attacking || selection.Blocking || selection.Tapped || selection.Untapped ||
+		selection.Keyword != KeywordUnknown || selection.ExcludedKeyword != KeywordUnknown ||
+		selection.Zone != zone.None ||
+		selection.MatchManaValue || selection.MatchPower || selection.MatchToughness ||
+		selection.PowerLessThanSource || selection.PowerGreaterThanSource ||
+		selection.Colorless || selection.Multicolored ||
+		len(selection.Supertypes) != 0 || len(selection.ExcludedSupertypes) != 0 ||
+		len(selection.ExcludedSubtypes) != 0 ||
+		len(selection.ColorsAny) != 0 || len(selection.SubtypesAny) != 0 {
+		return false
+	}
+	if !selectionRedundantRequiredNoun(selection) {
+		return false
+	}
+	if len(selection.ExcludedTypes) != 1 || len(selection.ExcludedColors) != 1 {
+		return false
+	}
+	excludedNoun, ok := permanentCardTypeNoun(selection.ExcludedTypes[0])
+	if !ok {
+		return false
+	}
+	excludedColor, ok := colorWord(selection.ExcludedColors[0])
+	if !ok {
+		return false
+	}
+	noun, ok := permanentSelectionNoun(selection.Kind)
+	if !ok {
+		return false
+	}
+	expected, ok := targetControllerSuffix("target non"+excludedNoun+", non"+excludedColor+" "+noun, selection.Controller)
+	if !ok {
+		return false
+	}
+	return strings.EqualFold(text, expected)
+}
+
 // a permanent target restricted by a single excluded supertype ("target nonbasic
 // land", "target nonlegendary creature") and compares it byte-exactly to the
 // source text. It accepts exactly one excluded supertype on a redundant permanent
@@ -1833,25 +1882,29 @@ func targetSyntaxEnd(tokens []shared.Token, atoms Atoms, start int) int {
 }
 
 // negatedTypeListCommaAt reports whether the comma at index i joins two negated
-// card-type or subtype qualifiers within a single target noun phrase (e.g. the
-// comma in "non-Saga, nonland permanent"). Such a comma is internal to the noun
-// phrase rather than a clause boundary, so target scanning continues past it. It
-// requires a negated qualifier immediately on both sides, leaving an ordinary
-// comma to terminate the target.
+// qualifiers within a single target noun phrase (e.g. the comma in "non-Saga,
+// nonland permanent" or "nonartifact, nonblack creature"). Such a comma is
+// internal to the noun phrase rather than a clause boundary, so target scanning
+// continues past it. It requires a negated qualifier immediately on both sides,
+// leaving an ordinary comma to terminate the target.
 func negatedTypeListCommaAt(tokens []shared.Token, atoms Atoms, i, start int) bool {
 	if i <= start || i+1 >= len(tokens) {
 		return false
 	}
-	return isNegatedTypeQualifier(tokens[i-1], atoms) && isNegatedTypeQualifier(tokens[i+1], atoms)
+	return isNegatedSelectionQualifier(tokens[i-1], atoms) && isNegatedSelectionQualifier(tokens[i+1], atoms)
 }
 
-// isNegatedTypeQualifier reports whether the token begins a "non-<type>" or
-// "non-<subtype>" exclusion qualifier ("nonland", "non-Saga").
-func isNegatedTypeQualifier(token shared.Token, atoms Atoms) bool {
+// isNegatedSelectionQualifier reports whether the token begins a "non-<type>",
+// "non-<subtype>", or "non<color>" exclusion qualifier ("nonland", "non-Saga",
+// "nonblack").
+func isNegatedSelectionQualifier(token shared.Token, atoms Atoms) bool {
 	if _, ok := atoms.ExcludedCardTypeAt(token.Span); ok {
 		return true
 	}
 	if _, ok := atoms.ExcludedSubtypeAt(token.Span); ok {
+		return true
+	}
+	if _, ok := atoms.ExcludedColorAt(token.Span); ok {
 		return true
 	}
 	return false
