@@ -18,6 +18,7 @@ var Cards = []*game.CardDef{
 	WanderlightSpirit,
 	WantedGriffin,
 	WarDance,
+	WarbriarBlessing,
 	WardSliver,
 	WardenOfTheEye,
 	WarriorAngel,

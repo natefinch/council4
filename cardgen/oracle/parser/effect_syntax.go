@@ -1476,6 +1476,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			CounterKnown:             counterKnown,
 			CounterKindChoices:       counterKindChoices,
 			CounterRecipientAttached: counterRecipientAttached(kind, counterKnown, clause),
+			FightSubjectAttached:     fightSubjectAttached(kind, tokens[ownershipStart:tokenIndex]),
 			MoveCountersAll:          kind == EffectMoveCounters && moveAllCountersClause(clause),
 			RemoveCountersAll:        kind == EffectRemoveCounter && removeAllCountersClause(clause),
 			MoveCountersDistribute:   kind == EffectMoveCounters && moveCountersDistributeClause(clause),
@@ -6567,6 +6568,23 @@ func counterRecipientAttached(kind EffectKind, counterKnown bool, clause []share
 	}
 	return effectHasTokenWords(clause, "on", "enchanted", "creature") ||
 		effectHasTokenWords(clause, "on", "equipped", "creature")
+}
+
+// fightSubjectAttached reports that a fight effect's fighter is the permanent the
+// source Aura or Equipment is attached to ("enchanted creature fights up to one
+// target creature an opponent controls", "equipped creature fights target
+// creature"). The bare attached-creature subject precedes the fight verb, so it
+// is matched against the subject tokens that lead the clause; the "<enchanted|
+// equipped> creature" run appears only in the subject position, so any later
+// object phrase cannot false-match. Every other fighting subject leaves it false
+// so lowering keeps the existing source, event-permanent, and two-target fight
+// shapes.
+func fightSubjectAttached(kind EffectKind, subject []shared.Token) bool {
+	if kind != EffectFight {
+		return false
+	}
+	return effectHasTokenWords(subject, "enchanted", "creature") ||
+		effectHasTokenWords(subject, "equipped", "creature")
 }
 
 // moveAllCountersClause reports the kind-agnostic "move all counters" form,

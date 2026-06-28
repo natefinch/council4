@@ -18,6 +18,7 @@ var Cards = []*game.CardDef{
 	CartoucheOfAmbition,
 	CartoucheOfKnowledge,
 	CartoucheOfSolidarity,
+	CartoucheOfStrength,
 	CartoucheOfZeal,
 	CaseyJonesJuryRigJusticiar,
 	CastleDoom,

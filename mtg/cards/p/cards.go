@@ -28,6 +28,7 @@ var Cards = []*game.CardDef{
 	PillagingHorde,
 	PincerSpider,
 	PiousWarrior,
+	PitilessFists,
 	PlanarGuide,
 	PlantElemental,
 	PointTheWay,

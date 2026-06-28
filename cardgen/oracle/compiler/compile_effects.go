@@ -329,6 +329,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				CounterKindKnown:             syntax.CounterKnown,
 				CounterKindChoices:           append([]counter.Kind(nil), syntax.CounterKindChoices...),
 				CounterRecipientAttached:     syntax.CounterRecipientAttached,
+				FightSubjectAttached:         syntax.FightSubjectAttached,
 				CounterRecipientSingleChoice: syntax.CounterRecipientSingleChoice,
 				RegenerateAttached:           syntax.RegenerateAttached,
 				MoveCountersAll:              syntax.MoveCountersAll,
