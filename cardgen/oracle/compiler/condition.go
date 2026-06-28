@@ -191,6 +191,13 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 		}
 		condition.Predicate = ConditionPredicateEventSubjectHadNoCounter
 		condition.Counter = counter
+	case parser.ConditionPredicateEventSubjectHadCounter:
+		counter, ok := compileConditionCounter(clause.Counter)
+		if !ok {
+			return
+		}
+		condition.Predicate = ConditionPredicateEventSubjectHadCounter
+		condition.Counter = counter
 	case parser.ConditionPredicateCounterPlacementOnControlledCreature:
 		counter, ok := compileConditionCounter(clause.Counter)
 		if !ok {

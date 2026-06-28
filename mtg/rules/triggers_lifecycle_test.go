@@ -625,6 +625,52 @@ func TestSelfDiesCounterAbsenceInterveningIfUsesLKI(t *testing.T) {
 	}
 }
 
+func TestSelfDiesCounterPresenceInterveningIfUsesLKI(t *testing.T) {
+	tests := []struct {
+		name        string
+		counterKind counter.Kind
+		add         []counter.Kind
+		wantTrigger bool
+	}{
+		{
+			name:        "absent",
+			counterKind: counter.PlusOnePlusOne,
+		},
+		{
+			name:        "same kind present",
+			counterKind: counter.PlusOnePlusOne,
+			add:         []counter.Kind{counter.PlusOnePlusOne},
+			wantTrigger: true,
+		},
+		{
+			name:        "different kind present",
+			counterKind: counter.PlusOnePlusOne,
+			add:         []counter.Kind{counter.Charge},
+		},
+		{
+			name:        "minus kind present",
+			counterKind: counter.MinusOneMinusOne,
+			add:         []counter.Kind{counter.MinusOneMinusOne},
+			wantTrigger: true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+			engine := NewEngine(nil)
+			source := addSelfDiesCounterPresenceTrigger(g, test.counterKind)
+			for _, kind := range test.add {
+				source.Counters.Add(kind, 1)
+			}
+
+			movePermanentToZone(g, source, zone.Graveyard)
+			if got := engine.putTriggeredAbilitiesOnStack(g); got != test.wantTrigger {
+				t.Fatalf("putTriggeredAbilitiesOnStack = %v, want %v", got, test.wantTrigger)
+			}
+		})
+	}
+}
+
 func TestSelfDiesCounterAbsenceInterveningIfFailsClosedAtResolution(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

@@ -535,6 +535,11 @@ const (
 	ConditionPredicateEventSubjectEnteredOrCastFromGraveyard
 	ConditionPredicateEventSubjectEnteredOrCastFromControllerGraveyard
 	ConditionPredicateEventSubjectHadNoCounter
+	// ConditionPredicateEventSubjectHadCounter is satisfied when the event's
+	// permanent had at least one counter of Counter's kind in its last-known
+	// information ("if it had a +1/+1 counter on it"). It is the affirmative
+	// counterpart of ConditionPredicateEventSubjectHadNoCounter.
+	ConditionPredicateEventSubjectHadCounter
 	ConditionPredicatePriorInstructionNotAccepted
 	// ConditionPredicatePriorInstructionAccepted is satisfied when the prior
 	// optional instruction was performed ("if you do"). It is the affirmative

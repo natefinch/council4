@@ -72,6 +72,7 @@ func lowerEnterTrigger(
 			InterveningCondition:                   intervening.condition,
 			InterveningIfEventPermanentHadCounters: intervening.hadCounters,
 			InterveningIfEventPermanentHadNoCounterKind:                     intervening.hadNoCounterKind,
+			InterveningIfEventPermanentHadCounterKind:                       intervening.hadCounterKind,
 			InterveningIfEventPermanentWasKicked:                            intervening.wasKicked,
 			InterveningIfEventPermanentWasCast:                              intervening.wasCast,
 			InterveningIfEventPermanentWasCastByController:                  intervening.wasCastByController,
@@ -304,6 +305,7 @@ type enterInterveningCondition struct {
 	condition            opt.V[game.Condition]
 	hadCounters          bool
 	hadNoCounterKind     opt.V[counter.Kind]
+	hadCounterKind       opt.V[counter.Kind]
 	wasKicked            bool
 	wasCast              bool
 	wasCastByController  bool
@@ -407,13 +409,29 @@ func lowerDiesInterveningCondition(trigger *compiler.CompiledTrigger) (enterInte
 	if condition.Kind != compiler.ConditionIf || !condition.Intervening {
 		return enterInterveningCondition{}, false
 	}
-	if condition.Predicate != compiler.ConditionPredicateEventSubjectHadNoCounter {
+	return eventSubjectCounterInterveningCondition(condition)
+}
+
+// eventSubjectCounterInterveningCondition maps the dying creature's last-known
+// counter intervening-if predicates to their lowered form. The negative form
+// ("if it had no +1/+1 counters on it") is the Undying/Persist gate; the
+// positive form ("if it had a +1/+1 counter on it") is its affirmative
+// counterpart. Both read the permanent's last-known information (CR 603.10).
+func eventSubjectCounterInterveningCondition(condition *compiler.CompiledCondition) (enterInterveningCondition, bool) {
+	had := condition.Predicate == compiler.ConditionPredicateEventSubjectHadCounter
+	if condition.Predicate != compiler.ConditionPredicateEventSubjectHadNoCounter && !had {
 		return enterInterveningCondition{}, false
 	}
 	switch condition.Counter {
 	case compiler.ConditionCounterPlusOnePlusOne:
+		if had {
+			return enterInterveningCondition{hadCounterKind: opt.Val(counter.PlusOnePlusOne)}, true
+		}
 		return enterInterveningCondition{hadNoCounterKind: opt.Val(counter.PlusOnePlusOne)}, true
 	case compiler.ConditionCounterMinusOneMinusOne:
+		if had {
+			return enterInterveningCondition{hadCounterKind: opt.Val(counter.MinusOneMinusOne)}, true
+		}
 		return enterInterveningCondition{hadNoCounterKind: opt.Val(counter.MinusOneMinusOne)}, true
 	default:
 		return enterInterveningCondition{}, false
@@ -837,6 +855,11 @@ func lowerPermanentZoneChangeInterveningCondition(
 			}
 			return enterInterveningCondition{hadCounters: true}, true
 		}
+		if pattern.Event == game.EventPermanentDied {
+			if intervening, ok := eventSubjectCounterInterveningCondition(trigger.Condition); ok {
+				return intervening, true
+			}
+		}
 	}
 	if pattern.Event == game.EventPermanentEnteredBattlefield {
 		intervening, ok := lowerEnterInterveningCondition(trigger)
@@ -867,6 +890,7 @@ func permanentZoneChangeTriggeredAbility(
 			InterveningCondition:                   intervening.condition,
 			InterveningIfEventPermanentHadCounters: intervening.hadCounters,
 			InterveningIfEventPermanentHadNoCounterKind:                     intervening.hadNoCounterKind,
+			InterveningIfEventPermanentHadCounterKind:                       intervening.hadCounterKind,
 			InterveningIfEventPermanentWasKicked:                            intervening.wasKicked,
 			InterveningIfEventPermanentWasCast:                              intervening.wasCast,
 			InterveningIfEventPermanentWasCastByController:                  intervening.wasCastByController,

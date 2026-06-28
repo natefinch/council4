@@ -59,6 +59,7 @@ var Cards = []*game.CardDef{
 	GolgariRaiders,
 	GracefulRestoration,
 	GraftedButcher,
+	GrakmawSkyclaveRavager,
 	GrandArbiterAugustinIV,
 	GraveDefiler,
 	GraveStrength,
