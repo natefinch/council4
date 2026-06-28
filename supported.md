@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,131 of 32,501 cards eligible for paper support (49.6%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,134 of 32,501 cards eligible for paper support (49.6%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -3853,6 +3853,7 @@ Council4 currently supports **16,131 of 32,501 cards eligible for paper support 
 - Duskwielder
 - Dust Bowl
 - Dust Corona
+- Dust Elemental
 - Dust Stalker
 - Dust to Dust
 - Dutiful Attendant
@@ -7379,6 +7380,7 @@ Council4 currently supports **16,131 of 32,501 cards eligible for paper support 
 - Kezzerdrix
 - Khalni Ambush // Khalni Territory
 - Khalni Garden
+- Khalni Gem
 - Khalni Heart Expedition
 - Khenra Charioteer
 - Khenra Eternal
@@ -11699,6 +11701,7 @@ Council4 currently supports **16,131 of 32,501 cards eligible for paper support 
 - Scuzzback Scrapper
 - Scythe Leopard
 - Scythe Tiger
+- Sea Drake
 - Sea Eagle
 - Sea Gate
 - Sea Gate Banneret
