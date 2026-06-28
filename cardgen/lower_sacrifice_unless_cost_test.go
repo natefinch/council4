@@ -136,19 +136,6 @@ func TestLowerSacrificeSourceUnlessReturnToHandForms(t *testing.T) {
 			},
 		},
 		{
-			name:       "Faerie Bounce",
-			typeLine:   "Creature — Faerie",
-			oracleText: "When this creature enters, sacrifice it unless you return another creature you control to its owner's hand.",
-			check: func(t *testing.T, a cost.Additional) {
-				if !a.ExcludeSource {
-					t.Error("ExcludeSource = false, want true")
-				}
-				if !a.MatchPermanentType || a.PermanentType != types.Creature {
-					t.Errorf("permanent type = (%v, %v), want (true, Creature)", a.MatchPermanentType, a.PermanentType)
-				}
-			},
-		},
-		{
 			name:       "Lair Bounce",
 			typeLine:   "Land — Lair",
 			oracleText: "When this land enters, sacrifice it unless you return a non-Lair land you control to its owner's hand.",
@@ -192,5 +179,20 @@ func TestLowerSacrificeSourceUnlessNonManaCostFailsClosed(t *testing.T) {
 		Layout:     "normal",
 		TypeLine:   "Creature — Ogre",
 		OracleText: "When this creature enters, sacrifice it unless you discard a card. Draw a card.",
+	})
+}
+
+// TestLowerSacrificeSourceUnlessReturnAnotherFailsClosed keeps the source-
+// excluding ("another") return cost out of reach until the return-to-hand
+// payment path threads the ability's source permanent. Lowering must fail
+// closed rather than emit a cost that would let the payer return the source
+// itself to satisfy "return another creature you control."
+func TestLowerSacrificeSourceUnlessReturnAnotherFailsClosed(t *testing.T) {
+	t.Parallel()
+	lowerSingleFaceExpectingUnsupported(t, &ScryfallCard{
+		Name:       "Bounce Faerie",
+		Layout:     "normal",
+		TypeLine:   "Creature — Faerie",
+		OracleText: "When this creature enters, sacrifice it unless you return another creature you control to its owner's hand.",
 	})
 }

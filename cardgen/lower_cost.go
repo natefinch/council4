@@ -235,13 +235,20 @@ func lowerReturnToHandCost(component compiler.CostComponent) (cost.Additional, b
 		component.ToZone != zone.Hand {
 		return cost.Additional{}, false
 	}
+	// A source-excluding ("another") return cost is not yet representable: the
+	// return-to-hand payment path does not thread the ability's source
+	// permanent, so the runtime cannot drop the source from the eligible set
+	// (unlike the sacrifice cost path). Fail closed until that plumbing exists
+	// rather than emit a cost that would let the payer return the source itself.
+	if component.ExcludeSource {
+		return cost.Additional{}, false
+	}
 	additional := cost.Additional{
 		Kind:            cost.AdditionalReturnToHand,
 		Text:            component.Text,
 		Amount:          component.AmountValue,
 		RequireTapped:   component.RequireTapped,
 		RequireUntapped: component.RequireUntapped,
-		ExcludeSource:   component.ExcludeSource,
 	}
 	if lowerCostPermanentObject(component, &additional, true) {
 		return additional, true
