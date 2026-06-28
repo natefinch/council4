@@ -101,6 +101,7 @@ var Cards = []*game.CardDef{
 	BubbleSnare,
 	BuckyBarnesEagerAlly,
 	BugenhagenWiseElder,
+	BullAurochs,
 	BullElephant,
 	BurdenOfGuilt,
 	BurnTheAccursed,

@@ -46,6 +46,7 @@ var Cards = []*game.CardDef{
 	WillOfTheTemur,
 	WindbriskHeights,
 	Windscouter,
+	WingmateRoc,
 	WingnutBatOnTheBelfry,
 	WingedWords,
 	WingspanMentor,

@@ -92,6 +92,17 @@ func collectReferences(tokens []shared.Token, cardName string, legendary bool) [
 				i += len(nameWords) - 1
 				continue
 			}
+			if i >= 1 && equalWord(tokens[i-1], "attacking") {
+				if _, isSubtype := recognizeSubtypePhrase(joinTokens(tokens[i : i+len(nameWords)])); isSubtype {
+					// "for each other attacking [CardName]" (Aurochs) counts a
+					// creature subtype that happens to share the card's own name,
+					// not a reference to the source. The combat count head owns
+					// the word as a subtype, so it must not surface as a self-name
+					// reference that would claim an effect subject slot.
+					i += len(nameWords) - 1
+					continue
+				}
+			}
 			if referencePossessiveNameAt(tokens, i, nameWords) {
 				phrase := tokens[i : i+len(nameWords)]
 				if referenceSpanOverlaps(references, shared.SpanOf(phrase)) {

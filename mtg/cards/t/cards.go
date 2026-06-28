@@ -27,6 +27,7 @@ var Cards = []*game.CardDef{
 	TerraHeraldOfHope,
 	TerritorialWitchstalker,
 	Terror,
+	TesakJudithSHellhound,
 	TestOfFaith,
 	ThaliaGuardianOfThraben,
 	Thallid,

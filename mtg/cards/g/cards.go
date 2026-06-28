@@ -52,6 +52,7 @@ var Cards = []*game.CardDef{
 	GoblinFirestarter,
 	GoblinLegionnaire,
 	GoblinLookout,
+	GoblinPiledriver,
 	GoblinPyromancer,
 	GoblinRingleader,
 	GodPharaohSStatue,
