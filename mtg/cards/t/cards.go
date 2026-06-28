@@ -34,6 +34,7 @@ var Cards = []*game.CardDef{
 	ThallidGerminator,
 	ThallidShellDweller,
 	TheDawningArchaic,
+	TheEarthCrystal,
 	TheElderDragonWar,
 	TheGitrogMonster,
 	TheHauntOfHightower,

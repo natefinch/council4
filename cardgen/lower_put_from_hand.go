@@ -34,6 +34,9 @@ func lowerPutEffectSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnosti
 	if content, ok := lowerPutThoseCountersSpell(ctx); ok {
 		return content, nil
 	}
+	if content, ok := lowerDistributeCountersSpell(ctx); ok {
+		return content, nil
+	}
 	if ctx.content.Effects[0].ToZone == zone.Library {
 		return game.AbilityContent{}, unsupportedLibraryPlacementDiagnostic(ctx)
 	}

@@ -2212,11 +2212,15 @@ type CompiledEffect struct {
 	FallbackOnInability bool
 	Optional            bool
 	Divided             bool
-	OptionalSpan        shared.Span
-	Mana                CompiledEffectMana
-	Replacement         parser.EffectReplacementSyntax
-	Payment             CompiledEffectPayment
-	Exact               bool
+	// DistributeCounters mirrors the parser flag for a "Distribute N <kind>
+	// counters among <cardinality> target creatures" effect: a fixed (or X)
+	// total of counters split among the chosen targets, at least one each.
+	DistributeCounters bool
+	OptionalSpan       shared.Span
+	Mana               CompiledEffectMana
+	Replacement        parser.EffectReplacementSyntax
+	Payment            CompiledEffectPayment
+	Exact              bool
 	// KeywordGrantChoice marks a keyword grant whose listed keywords are a
 	// disjunctive runtime choice ("gains banding, first strike, or trample")
 	// rather than a conjunctive grant of every listed keyword. Lowering keys on

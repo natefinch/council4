@@ -140,7 +140,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 			exactPutThoseCountersEffectSyntax(effect) || exactPutThoseCardsIntoHandEffectSyntax(effect) ||
 			exactBottomLinkedExiledCardsEffectSyntax(effect) ||
 			exactPutLinkedExiledRestOnLibraryBottomEffectSyntax(effect) ||
-			exactCounterExiledCardManaValueEffectSyntax(effect)
+			exactCounterExiledCardManaValueEffectSyntax(effect) ||
+			exactDistributeCountersEffectSyntax(effect)
 	case EffectProliferate:
 		return exactStandaloneActionEffectSyntax(effect, "Proliferate")
 	case EffectRemoveCounter:
@@ -4516,6 +4517,104 @@ func exactCounterPlacementEffectSyntax(effect *EffectSyntax) bool {
 		}
 	}
 	return false
+}
+
+// distributeCountersEffect reports whether a counter-placement effect is the
+// "Distribute N <kind> counters among <cardinality> target creatures" form: a
+// fixed (or X) total of counters split among the chosen targets, at least one
+// each, the counter analog of divided damage. It is detected by the same
+// byte-exact reconstruction the exactness gate uses, so the parser sets the
+// DistributeCounters flag only for wordings the executable backend lowers.
+func distributeCountersEffect(effect *EffectSyntax) bool {
+	return effect.Kind == EffectPut && exactDistributeCountersEffectSyntax(effect)
+}
+
+// exactDistributeCountersEffectSyntax reconstructs the canonical "Distribute
+// <amount> <kind> counters among <cardinality> target creatures[ you control]."
+// clause and compares it byte-for-byte to the source. It supports a fixed total
+// of at least one or the spell's variable X, the enumerated and "any number of"
+// cardinalities divided damage recognizes, and a plain creature target
+// optionally restricted to "you control". Every other shape fails closed,
+// leaving the byte-exact round-trip to reject the wording.
+func exactDistributeCountersEffectSyntax(effect *EffectSyntax) bool {
+	if !effect.CounterKnown || effect.Negated || effect.Optional || len(effect.Targets) != 1 {
+		return false
+	}
+	amountText, ok := distributeCountersAmountText(effect.Amount)
+	if !ok {
+		return false
+	}
+	cardinality, ok := dividedCardinalityPhrase(effect.Targets[0].Cardinality)
+	if !ok {
+		return false
+	}
+	noun, ok := distributeCountersTargetNoun(effect.Targets[0].Selection)
+	if !ok {
+		return false
+	}
+	expected := fmt.Sprintf("Distribute %s %s counters among %s %s.",
+		amountText, effect.CounterKind.String(), cardinality, noun)
+	return strings.EqualFold(exactEffectClauseText(effect), expected)
+}
+
+// distributeCountersAmountText reconstructs the canonical amount token for a
+// distribute counters clause: the spelled-out cardinal word for a fixed total of
+// at least one (Oracle wording writes "Distribute three +1/+1 counters", not the
+// digit form), or "X" for the spell's bare variable X. It fails closed for a
+// non-positive or out-of-range fixed total and for every dynamic amount form, so
+// those wordings keep failing the round-trip.
+func distributeCountersAmountText(amount EffectAmountSyntax) (string, bool) {
+	if amount.DynamicForm != EffectDynamicAmountFormNone ||
+		amount.DynamicKind != EffectDynamicAmountNone ||
+		amount.Addend != 0 || amount.Multiplier != 0 {
+		return "", false
+	}
+	switch {
+	case amount.Known:
+		return cardinalWord(amount.Value)
+	case amount.VariableX:
+		return "X", true
+	default:
+		return "", false
+	}
+}
+
+// counters effect splits among. It supports the plain "target creatures" and the
+// "target creatures you control" controller restriction, failing closed for
+// every other selector the distributed counter placement does not model.
+func distributeCountersTargetNoun(selection SelectionSyntax) (string, bool) {
+	if selection.Kind != SelectionCreature {
+		return "", false
+	}
+	if selection.All || selection.Another || selection.Other ||
+		selection.Tapped || selection.Untapped ||
+		selection.Colorless || selection.Multicolored ||
+		selection.MatchManaValue || selection.MatchPower || selection.MatchToughness ||
+		selection.PowerLessThanSource || selection.PowerGreaterThanSource ||
+		selection.TokenOnly || selection.NonToken ||
+		selection.Attacking || selection.Blocking ||
+		selection.Zone != zone.None ||
+		len(selection.ExcludedTypes) != 0 ||
+		len(selection.ExcludedColors) != 0 ||
+		len(selection.ColorsAny) != 0 ||
+		len(selection.SubtypesAny) != 0 ||
+		len(selection.Supertypes) != 0 ||
+		len(selection.ExcludedSupertypes) != 0 ||
+		len(selection.ExcludedSubtypes) != 0 {
+		return "", false
+	}
+	if required := selection.RequiredTypesAny; len(required) > 1 ||
+		(len(required) == 1 && required[0] != CardTypeCreature) {
+		return "", false
+	}
+	switch selection.Controller {
+	case SelectionControllerAny:
+		return "target creatures", true
+	case SelectionControllerYou:
+		return "target creatures you control", true
+	default:
+		return "", false
+	}
 }
 
 // counterPlacementChoiceTextMatches reconstructs the controller-choice counter

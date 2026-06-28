@@ -407,6 +407,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				FallbackOnInability:       syntax.FallbackOnInability,
 				Optional:                  syntax.Optional,
 				Divided:                   syntax.Divided,
+				DistributeCounters:        syntax.DistributeCounters,
 				OptionalSpan:              syntax.OptionalSpan,
 				LifeObject:                syntax.LifeObject,
 				Mana: CompiledEffectMana{

@@ -24,6 +24,7 @@ var Cards = []*game.CardDef{
 	VengefulRebel,
 	VenomSHunger,
 	VerdantSunSAvatar,
+	VerdurousGearhulk,
 	VertigoSpawn,
 	Vesperlark,
 	VeteranGuardmouse,

@@ -465,6 +465,9 @@ func (r Renderer) renderAddCounter(ctx *renderCtx, value *game.AddCounter) (stri
 		fields = append(fields, fmt.Sprintf("Object: %s,", object))
 	}
 	fields = append(fields, fmt.Sprintf("CounterKind: %s,", kind))
+	if value.Distribute {
+		fields = append(fields, "Distribute: true,")
+	}
 	return structLit("game.AddCounter", fields), nil
 }
 

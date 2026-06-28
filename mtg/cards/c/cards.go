@@ -96,6 +96,7 @@ var Cards = []*game.CardDef{
 	ConquerorSPledge,
 	Conservator,
 	ConsumingBonfire,
+	Contagion,
 	ContestOfClaws,
 	ContractHero,
 	CoopedUp,

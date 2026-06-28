@@ -363,6 +363,13 @@ type AddCounter struct {
 	// It holds two or more distinct, permanent-placeable kinds and is set only
 	// with a single Object, never a Group or AllKinds.
 	KindChoices []counter.Kind
+	// Distribute makes the resolving controller split Amount counters among the
+	// permanents chosen for a target spec, each receiving at least one ("Distribute
+	// three +1/+1 counters among one, two, or three target creatures"). It is the
+	// counter analog of Damage.Divided: Object addresses the target spec through an
+	// AllTargetPermanents reference, and it is set only with that Object, never a
+	// Group, AllKinds, ChooseOne, or KindChoices.
+	Distribute bool
 }
 
 // AddPlayerCounter places counters on a referenced player or group of players.

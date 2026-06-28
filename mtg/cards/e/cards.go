@@ -22,6 +22,8 @@ var Cards = []*game.CardDef{
 	ElderPineOfJukai,
 	ElspethSDevotee,
 	ElspethSSmite,
+	ElusiveOtter,
+	ElvenRite,
 	ElvishFarmer,
 	ElvishRejuvenator,
 	Embargo,
