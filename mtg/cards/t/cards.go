@@ -63,6 +63,7 @@ var Cards = []*game.CardDef{
 	Thunderblust,
 	ThunderingWurm,
 	TidalCourier,
+	ThundersongTrumpeter,
 	TinWingChimera,
 	TolarianSerpent,
 	TomeScour,

@@ -19,6 +19,7 @@ var Cards = []*game.CardDef{
 	NeonateSRush,
 	NessianWanderer,
 	NestOfScarabs,
+	NetterEnDal,
 	NettleGuard,
 	NeyithOfTheDireHunt,
 	NezumiLinkbreaker,

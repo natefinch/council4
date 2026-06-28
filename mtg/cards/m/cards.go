@@ -27,6 +27,7 @@ var Cards = []*game.CardDef{
 	MarduWarshrieker,
 	MarkovEnforcer,
 	MarthaJones,
+	MartyredRusalka,
 	MartyrsTomb,
 	MaskOfTheJadecrafter,
 	MasterApothecary,

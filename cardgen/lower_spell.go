@@ -1591,6 +1591,10 @@ func lowerImmediateSingleEffectSpell(
 		return lowerCanAttackAsThoughDefenderSpell(ctx)
 	case compiler.EffectCantBlock:
 		return lowerCantBlockSpell(ctx)
+	case compiler.EffectCantAttack:
+		return lowerCantAttackSpell(ctx)
+	case compiler.EffectCantAttackOrBlock:
+		return lowerCantAttackOrBlockSpell(ctx)
 	case compiler.EffectDraw:
 		return lowerFixedDrawSpell(ctx, syntax)
 	case compiler.EffectDestroy:

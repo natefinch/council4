@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,903 of 32,501 cards eligible for paper support (48.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,914 of 32,501 cards eligible for paper support (49.0%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -288,6 +288,7 @@ Council4 currently supports **15,903 of 32,501 cards eligible for paper support 
 - Alchemax Slayer-Bots
 - Alchemist's Apprentice
 - Alchemist's Greeting
+- Alchemist's Vial
 - Alela, Artful Provocateur
 - Alert Shu Infantry
 - Alesha's Legacy
@@ -1570,6 +1571,7 @@ Council4 currently supports **15,903 of 32,501 cards eligible for paper support 
 - Bogwater Lumaret
 - Boil
 - Boilerbilges Ripper
+- Boiling Blood
 - Boiling Rock Prison
 - Boiling Seas
 - Bojuka Bog
@@ -1762,6 +1764,7 @@ Council4 currently supports **15,903 of 32,501 cards eligible for paper support 
 - Briarhorn
 - Briarknit Kami
 - Briarpack Alpha
+- Briber's Purse
 - Bridgeworks Battle // Tanglespan Bridgeworks
 - Bridled Bighorn
 - Bright Reprisal
@@ -4122,6 +4125,7 @@ Council4 currently supports **15,903 of 32,501 cards eligible for paper support 
 - Encroaching Mycosynth
 - Encroaching Wastes
 - End-Raze Forerunners
+- Endbringer
 - Endless Cockroaches
 - Endless Obedience
 - Endless One
@@ -6180,6 +6184,7 @@ Council4 currently supports **15,903 of 32,501 cards eligible for paper support 
 - Heavy Ballista
 - Heavy Infantry
 - Hecatomb
+- Heckling Fiends
 - Hecteyes
 - Hedge Maze
 - Hedge Shredder
@@ -8221,6 +8226,7 @@ Council4 currently supports **15,903 of 32,501 cards eligible for paper support 
 - Martyr of Dusk
 - Martyr of Spores
 - Martyr's Soul
+- Martyred Rusalka
 - Martyrs' Tomb
 - Marvelous Melee
 - Marwyn, the Nurturer
@@ -9038,6 +9044,7 @@ Council4 currently supports **15,903 of 32,501 cards eligible for paper support 
 - Netcaster Spider
 - Nether Horror
 - Nether Traitor
+- Netter en-Dal
 - Nettle Drone
 - Nettle Guard
 - Nettle Swine
@@ -9305,6 +9312,7 @@ Council4 currently supports **15,903 of 32,501 cards eligible for paper support 
 - Odric's Outrider
 - Odylic Wraith
 - Of Herbs and Stewed Rabbit
+- Off Balance
 - Offalsnout
 - Offender at Large
 - Offer Immortality
@@ -10348,6 +10356,7 @@ Council4 currently supports **15,903 of 32,501 cards eligible for paper support 
 - Rag Dealer
 - Ragamuffyn
 - Ragavan
+- Rage Nimbus
 - Rage Reflection
 - Rage Thrower
 - Rage Weaver
@@ -11904,6 +11913,7 @@ Council4 currently supports **15,903 of 32,501 cards eligible for paper support 
 - Shipwreck Marsh
 - Shipwreck Moray
 - Shipwreck Patrol
+- Shipwreck Singer
 - Shire Scarecrow
 - Shire Shirriff
 - Shire Terrace
@@ -13999,6 +14009,7 @@ Council4 currently supports **15,903 of 32,501 cards eligible for paper support 
 - Thunderscape Apprentice
 - Thunderscape Familiar
 - Thunderscape Master
+- Thundersong Trumpeter
 - Thundersteel Colossus
 - Thundertrap Trainer
 - Thunderwolf Cavalry

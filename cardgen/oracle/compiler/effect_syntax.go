@@ -387,6 +387,10 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectAttach
 	case parser.EffectCanAttackAsThoughDefender:
 		return EffectCanAttackAsThoughDefender
+	case parser.EffectCantAttack:
+		return EffectCantAttack
+	case parser.EffectCantAttackOrBlock:
+		return EffectCantAttackOrBlock
 	case parser.EffectCantBeBlocked:
 		return EffectCantBeBlocked
 	case parser.EffectCantBlock:

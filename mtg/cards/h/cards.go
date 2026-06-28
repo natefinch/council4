@@ -30,6 +30,7 @@ var Cards = []*game.CardDef{
 	HeartsOnFire,
 	HeatOfBattle,
 	Hecatomb,
+	HecklingFiends,
 	HeirloomAuntie,
 	HellionCrucible,
 	Hellrider,
