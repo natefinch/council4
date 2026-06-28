@@ -1,6 +1,10 @@
 package parser
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/natefinch/council4/mtg/game/counter"
+)
 
 func TestRecognizeModalChoiceCounts(t *testing.T) {
 	t.Parallel()
@@ -161,6 +165,48 @@ func TestEntersTappedSelfSyntax(t *testing.T) {
 			}
 			if got := effects[0].EntersTappedSelf; got != tc.want {
 				t.Fatalf("EntersTappedSelf = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+// TestEntersTappedAndWithCountersSyntax checks that the combined self
+// enters-tapped-with-counters clause ("enters tapped and with N <kind> counters
+// on it.", Sphere of the Suns, Noble's Purse) detects the counter kind despite
+// the "and" that joins the tapped qualifier to the with-counters portion, which
+// otherwise makes the shared counter-placement parse fail closed. The bare
+// Vivid-style "enters tapped with N counters on it." form is unaffected.
+func TestEntersTappedAndWithCountersSyntax(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		source string
+		kind   counter.Kind
+		amount int
+	}{
+		{source: "This land enters tapped with two charge counters on it.", kind: counter.Charge, amount: 2},
+		{source: "This artifact enters tapped and with three charge counters on it.", kind: counter.Charge, amount: 3},
+		{source: "This artifact enters tapped and with three coin counters on it.", kind: counter.Coin, amount: 3},
+	}
+	for _, tc := range cases {
+		t.Run(tc.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(tc.source, Context{})
+			if len(document.Abilities) != 1 || len(document.Abilities[0].Sentences) == 0 {
+				t.Fatalf("abilities = %#v", document.Abilities)
+			}
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %d, want 1", len(effects))
+			}
+			effect := effects[0]
+			if effect.Kind != EffectEnterTapped {
+				t.Fatalf("kind = %v, want EffectEnterTapped", effect.Kind)
+			}
+			if !effect.CounterKnown || effect.CounterKind != tc.kind {
+				t.Fatalf("CounterKnown=%v CounterKind=%v, want true %v", effect.CounterKnown, effect.CounterKind, tc.kind)
+			}
+			if !effect.Amount.Known || effect.Amount.Value != tc.amount {
+				t.Fatalf("Amount = {Known:%v Value:%v}, want %d", effect.Amount.Known, effect.Amount.Value, tc.amount)
 			}
 		})
 	}

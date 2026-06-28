@@ -141,6 +141,7 @@ var Cards = []*game.CardDef{
 	SphereOfPurity,
 	SphereOfReason,
 	SphereOfResistance,
+	SphereOfTheSuns,
 	SphereOfTruth,
 	SphinxMindbreaker,
 	SphinxOfUthuun,

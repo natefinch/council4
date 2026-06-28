@@ -1592,6 +1592,39 @@ func TestGenerateEntersTappedWithCountersReplacementSource(t *testing.T) {
 	}
 }
 
+// TestLowerEntersTappedAndWithCountersReplacement covers the combined
+// "enters tapped and with N <kind> counters on it." phrasing (Sphere of the
+// Suns, Noble's Purse), which joins the tapped qualifier to the with-counters
+// clause with "and". It must lower identically to the bare Vivid-style
+// "enters tapped with N counters on it." form.
+func TestLowerEntersTappedAndWithCountersReplacement(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Sphere of the Suns",
+		Layout:     "normal",
+		TypeLine:   "Artifact",
+		ManaCost:   "{2}",
+		OracleText: "This artifact enters tapped and with three charge counters on it.\n{T}, Remove a charge counter from this artifact: Add one mana of any color.",
+	})
+	if len(face.ReplacementAbilities) != 1 {
+		t.Fatalf("got %d replacement abilities, want 1", len(face.ReplacementAbilities))
+	}
+	replacement := face.ReplacementAbilities[0].Replacement
+	if !replacement.EntersTapped {
+		t.Fatal("replacement does not enter tapped")
+	}
+	if replacement.Condition.Exists {
+		t.Fatal("replacement unexpectedly has a condition")
+	}
+	if len(replacement.EntersWithCounters) != 1 {
+		t.Fatalf("counter placements = %#v, want one", replacement.EntersWithCounters)
+	}
+	placement := replacement.EntersWithCounters[0]
+	if placement.Kind != counter.Charge || placement.Amount != 3 {
+		t.Fatalf("placement = %#v, want charge x3", placement)
+	}
+}
+
 func TestLowerConditionalEntersWithCountersReplacement(t *testing.T) {
 	t.Parallel()
 	tests := map[string]struct {
