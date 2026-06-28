@@ -68,6 +68,21 @@ func addSelfDiesCounterAbsenceTrigger(g *game.Game, kind counter.Kind) *game.Per
 	return permanent
 }
 
+func addSelfDiesCounterPresenceTrigger(g *game.Game, kind counter.Kind) *game.Permanent {
+	permanent := addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:  game.EventPermanentDied,
+		Source: game.TriggerSourceSelf,
+	}, []game.Instruction{{
+		Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()},
+	}}, nil)
+	card, ok := g.GetCardInstance(permanent.CardInstanceID)
+	if !ok {
+		panic("triggered permanent card instance not found")
+	}
+	card.Def.TriggeredAbilities[0].Trigger.InterveningIfEventPermanentHadCounterKind = opt.Val(kind)
+	return permanent
+}
+
 func selfDiesEventCardDefinition(primitive game.Primitive) *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{
 		Name:      "Returning Creature",

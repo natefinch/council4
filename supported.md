@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,003 of 32,501 cards eligible for paper support (49.2%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,008 of 32,501 cards eligible for paper support (49.3%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1056,6 +1056,7 @@ Council4 currently supports **16,003 of 32,501 cards eligible for paper support 
 - Basking Capybara
 - Basking Rootwalla
 - Basri's Acolyte
+- Basri's Lieutenant
 - Basri's Solidarity
 - Basri, Tomorrow's Champion
 - Bassara Tower Archer
@@ -1520,6 +1521,7 @@ Council4 currently supports **16,003 of 32,501 cards eligible for paper support 
 - Blossoming Sands
 - Blossoming Wreath
 - Blot Out the Sky
+- Blowfly Infestation
 - Blue Elemental Blast
 - Blue Horror
 - Blue Marvel, Adam Brashear
@@ -3174,6 +3176,7 @@ Council4 currently supports **16,003 of 32,501 cards eligible for paper support 
 - Deathgaze Cockatrice
 - Deathgreeter
 - Deathgrip
+- Deathknell Berserker
 - Deathknell Kami
 - Deathless Ancient
 - Deathless Angel
@@ -5790,6 +5793,7 @@ Council4 currently supports **16,003 of 32,501 cards eligible for paper support 
 - Grafted Identity
 - Grafted Skullcap
 - Graham O'Brien
+- Grakmaw, Skyclave Ravager
 - Grand Abolisher
 - Grand Arbiter Augustin IV
 - Grand Coliseum
@@ -10198,6 +10202,7 @@ Council4 currently supports **16,003 of 32,501 cards eligible for paper support 
 - Prologue to Phyresis
 - Promise of Bunrei
 - Promised Kannushi
+- Promising Duskmage
 - Promising Vein
 - Prompto Argentum
 - Propaganda

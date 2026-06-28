@@ -49,6 +49,7 @@ var Cards = []*game.CardDef{
 	PrismaticUndercurrents,
 	PrizedStatue,
 	ProctorSGaze,
+	PromisingDuskmage,
 	PromptoArgentum,
 	PropagatorDrone,
 	ProperBurial,

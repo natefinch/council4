@@ -424,6 +424,60 @@ func TestParseConditionEventSubjectAndSourceState(t *testing.T) {
 	}
 }
 
+// TestParseEventSubjectHadCounterCondition covers the affirmative counter-presence
+// intervening-if on the dying creature's last-known information, the mirror of the
+// Undying/Persist negative "it had no <kind> counters" gate. Both the singular
+// "it had a <kind> counter on it" and the equivalent "it had one or more <kind>
+// counters on it" spellings test the presence of at least one counter of that
+// kind, binding the event permanent.
+func TestParseEventSubjectHadCounterCondition(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name      string
+		condition string
+		predicate ConditionPredicateKind
+		counter   ConditionCounterKind
+	}{
+		{"had a plus counter", "it had a +1/+1 counter on it", ConditionPredicateEventSubjectHadCounter, ConditionCounterPlusOnePlusOne},
+		{"had a minus counter", "it had a -1/-1 counter on it", ConditionPredicateEventSubjectHadCounter, ConditionCounterMinusOneMinusOne},
+		{"had one or more plus counters", "it had one or more +1/+1 counters on it", ConditionPredicateEventSubjectHadCounter, ConditionCounterPlusOnePlusOne},
+		{"had a plus counter no suffix", "it had a +1/+1 counter", ConditionPredicateEventSubjectHadCounter, ConditionCounterPlusOnePlusOne},
+		{"had no plus counters", "it had no +1/+1 counters on it", ConditionPredicateEventSubjectHadNoCounter, ConditionCounterPlusOnePlusOne},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			clause := parseSingleConditionClause(t, test.condition)
+			if clause.Predicate != test.predicate ||
+				clause.ObjectBinding != ConditionObjectBindingNone ||
+				clause.Counter != test.counter {
+				t.Fatalf("clause = %#v", clause)
+			}
+		})
+	}
+}
+
+// TestParseEventSubjectPastTensePowerCondition covers the past-tense power
+// threshold "its power was N or greater" used by dies triggers (Deathknell
+// Berserker). It must produce the same event-permanent power-at-least predicate
+// as the present-tense "its power is N or greater" enter form, because the dying
+// creature's power is read from its last-known information.
+func TestParseEventSubjectPastTensePowerCondition(t *testing.T) {
+	t.Parallel()
+	for _, condition := range []string{
+		"its power is 3 or greater",
+		"its power was 3 or greater",
+	} {
+		clause := parseSingleConditionClause(t, condition)
+		if clause.Predicate != ConditionPredicateObjectMatches ||
+			clause.ObjectBinding != ConditionObjectBindingEventPermanent ||
+			!clause.Selection.MatchPowerAtLeast ||
+			clause.Selection.PowerAtLeast != 3 {
+			t.Fatalf("condition %q clause = %#v", condition, clause)
+		}
+	}
+}
+
 // TestParseSelfNamePossessivePowerCondition covers the source-power activation
 // condition written with a possessive self-name subject ("Kitsa's power is 3 or
 // greater") rather than "this creature's power ...". The possessive self-name

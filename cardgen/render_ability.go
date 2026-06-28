@@ -591,6 +591,15 @@ func (r Renderer) renderTriggerCondition(ctx *renderCtx, trigger *game.TriggerCo
 		ctx.need(importOpt)
 		fields = append(fields, fmt.Sprintf("InterveningIfEventPermanentHadNoCounterKind: opt.Val(%s),", kind))
 	}
+	if trigger.InterveningIfEventPermanentHadCounterKind.Exists {
+		kind, err := renderCounterKind(trigger.InterveningIfEventPermanentHadCounterKind.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importCounter)
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("InterveningIfEventPermanentHadCounterKind: opt.Val(%s),", kind))
+	}
 	if trigger.InterveningIfEventPermanentHadCounters {
 		fields = append(fields, "InterveningIfEventPermanentHadCounters: true,")
 	}

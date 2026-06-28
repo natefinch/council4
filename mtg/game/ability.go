@@ -643,6 +643,13 @@ type TriggerCondition struct {
 	// information.
 	InterveningIfEventPermanentHadNoCounterKind opt.V[counter.Kind]
 
+	// InterveningIfEventPermanentHadCounterKind identifies a counter kind that
+	// must be present (at least one) on the event permanent's current object or
+	// last-known information, e.g. "if it had a +1/+1 counter on it" on a dies
+	// trigger. It is the affirmative counterpart of
+	// InterveningIfEventPermanentHadNoCounterKind.
+	InterveningIfEventPermanentHadCounterKind opt.V[counter.Kind]
+
 	// InterveningIfEventPermanentWasKicked is true for "if it was kicked" on
 	// enter triggers. The entering permanent event preserves the spell's kicker
 	// choice for both trigger-time and resolution-time checks.

@@ -19,6 +19,7 @@ var Cards = []*game.CardDef{
 	DeadeyeHarpooner,
 	DeathDenied,
 	DeathcapGlade,
+	DeathknellBerserker,
 	DeathsporeThallid,
 	Decommission,
 	Decompose,

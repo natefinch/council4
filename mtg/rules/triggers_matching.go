@@ -521,6 +521,10 @@ func triggerInterveningIf(g *game.Game, source *game.Permanent, controller game.
 		!eventPermanentHadNoCounterKind(g, event, trigger.InterveningIfEventPermanentHadNoCounterKind.Val) {
 		return false
 	}
+	if trigger.InterveningIfEventPermanentHadCounterKind.Exists &&
+		!eventPermanentHadCounterKind(g, event, trigger.InterveningIfEventPermanentHadCounterKind.Val) {
+		return false
+	}
 	if trigger.InterveningIfEventPermanentWasKicked && (event == nil || !event.KickerPaid) {
 		return false
 	}
@@ -854,6 +858,19 @@ func eventPermanentHadNoCounterKind(g *game.Game, event *game.Event, kind counte
 	}
 	if snapshot, ok := lastKnownObject(g, event.PermanentID); ok {
 		return !snapshot.Counters.Has(kind)
+	}
+	return false
+}
+
+func eventPermanentHadCounterKind(g *game.Game, event *game.Event, kind counter.Kind) bool {
+	if event == nil || event.PermanentID == 0 {
+		return false
+	}
+	if permanent, ok := permanentByObjectID(g, event.PermanentID); ok {
+		return permanent.Counters.Has(kind)
+	}
+	if snapshot, ok := lastKnownObject(g, event.PermanentID); ok {
+		return snapshot.Counters.Has(kind)
 	}
 	return false
 }

@@ -49,6 +49,7 @@ const (
 	ConditionPredicateEventSubjectEnteredOrCastFromGraveyard           ConditionPredicateKind = "ConditionPredicateEventSubjectEnteredOrCastFromGraveyard"
 	ConditionPredicateEventSubjectEnteredOrCastFromControllerGraveyard ConditionPredicateKind = "ConditionPredicateEventSubjectEnteredOrCastFromControllerGraveyard"
 	ConditionPredicateEventSubjectHadNoCounter                         ConditionPredicateKind = "ConditionPredicateEventSubjectHadNoCounter"
+	ConditionPredicateEventSubjectHadCounter                           ConditionPredicateKind = "ConditionPredicateEventSubjectHadCounter"
 	ConditionPredicateEventSubjectHadCounters                          ConditionPredicateKind = "ConditionPredicateEventSubjectHadCounters"
 	ConditionPredicatePriorInstructionNotAccepted                      ConditionPredicateKind = "ConditionPredicatePriorInstructionNotAccepted"
 	ConditionPredicatePriorInstructionAccepted                         ConditionPredicateKind = "ConditionPredicatePriorInstructionAccepted"
@@ -1140,13 +1141,17 @@ func recognizeEnteredOrCastFromGraveyardCondition(body []shared.Token) (Conditio
 
 // recognizeEventSubjectPowerState handles the triggering object's own power
 // threshold "its power is <n> or greater" ("Whenever a creature you control
-// enters, draw a card if its power is 3 or greater."). The possessive "its"
-// binds the event permanent, so the recognized clause carries a power-at-least
-// selection matched against that object.
+// enters, draw a card if its power is 3 or greater.") and the past-tense dies
+// form "its power was <n> or greater" (Deathknell Berserker). The possessive
+// "its" binds the event permanent, so the recognized clause carries a
+// power-at-least selection matched against that object; for the dying creature
+// the runtime reads its power from last-known information (CR 603.10).
 func recognizeEventSubjectPowerState(body []shared.Token) (ConditionClause, bool) {
 	rest, ok := cutTokenPrefix(body, "its", "power", "is")
 	if !ok {
-		return ConditionClause{}, false
+		if rest, ok = cutTokenPrefix(body, "its", "power", "was"); !ok {
+			return ConditionClause{}, false
+		}
 	}
 	if len(rest) != 3 {
 		return ConditionClause{}, false
@@ -1180,9 +1185,22 @@ func recognizeEventSubjectNameUniqueCondition(body []shared.Token) (ConditionCla
 	return ConditionClause{}, false
 }
 
-// recognizeEventSubjectCounterCondition handles "it had no <counter> counters"
-// and the optional trailing "on it".
+// recognizeEventSubjectCounterCondition handles the dying creature's last-known
+// counter state. The negative form "it had no <counter> counters [on it]"
+// (Undying/Persist reminder text) tests the absence of a counter kind; the
+// positive form "it had a <counter> counter [on it]" and the equivalent
+// "it had one or more <counter> counters [on it]" test the presence of at least
+// one counter of that kind ("When this creature dies, if it had a +1/+1 counter
+// on it, draw a card." — Promising Duskmage). Both forms read the permanent's
+// last-known information at the moment it left the battlefield (CR 603.10).
 func recognizeEventSubjectCounterCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
+	if clause, ok := recognizeEventSubjectHadNoCounterCondition(body, atoms); ok {
+		return clause, true
+	}
+	return recognizeEventSubjectHadCounterCondition(body, atoms)
+}
+
+func recognizeEventSubjectHadNoCounterCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
 	rest, ok := cutTokenPrefix(body, "it", "had", "no")
 	if !ok {
 		return ConditionClause{}, false
@@ -1199,6 +1217,29 @@ func recognizeEventSubjectCounterCondition(body []shared.Token, atoms Atoms) (Co
 	}
 	return ConditionClause{
 		Predicate: ConditionPredicateEventSubjectHadNoCounter,
+		Counter:   counterKind,
+	}, true
+}
+
+func recognizeEventSubjectHadCounterCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
+	rest, ok := cutTokenPrefix(body, "it", "had", "a")
+	if !ok {
+		if rest, ok = cutTokenPrefix(body, "it", "had", "one", "or", "more"); !ok {
+			return ConditionClause{}, false
+		}
+	}
+	if trimmed, ok := stripTokenSuffix(rest, "on", "it"); ok {
+		rest = trimmed
+	}
+	if !tokenSuffixWord(rest, "counter") && !tokenSuffixWord(rest, "counters") {
+		return ConditionClause{}, false
+	}
+	counterKind, ok := conditionCounterAtom(shared.SpanOf(body), atoms)
+	if !ok {
+		return ConditionClause{}, false
+	}
+	return ConditionClause{
+		Predicate: ConditionPredicateEventSubjectHadCounter,
 		Counter:   counterKind,
 	}, true
 }
