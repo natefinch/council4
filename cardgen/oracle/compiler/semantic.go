@@ -2425,6 +2425,14 @@ type CompiledEffect struct {
 	DiscardThenDraw       bool
 	DiscardThenDrawMax    int
 	DiscardThenDrawOffset int
+	// SacrificeThenCount marks a sacrifice clause whose count feeds an
+	// immediately following "then <create|draw|add> that many/much" reward, so
+	// lowering publishes the number sacrificed and scales the reward by it.
+	// SacrificeAnyNumber records that the sacrifice form is "any number of"
+	// (player-chosen count) rather than "all". They are false for every other
+	// effect.
+	SacrificeThenCount bool
+	SacrificeAnyNumber bool
 	// SearchSplit carries the split-destination put clause's structured fields
 	// from the parser so the search lowerer can build a SearchSpec.SplitDestination
 	// from typed slots rather than re-reading the put text.

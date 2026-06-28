@@ -297,6 +297,48 @@ func (e *Engine) chooseSacrificePermanentsForPlayer(g *game.Game, resolver refer
 	return chosen
 }
 
+// chooseAnyNumberToSacrificeForPlayer makes playerID choose any number (none up
+// to all) of the permanents they control that satisfy sel, modeling "sacrifice
+// any number of <permanents>". The controller may decline entirely, so the
+// choice's minimum is zero; the chosen permanents are returned for the caller to
+// sacrifice and count.
+func (e *Engine) chooseAnyNumberToSacrificeForPlayer(g *game.Game, resolver referenceResolver, playerID game.PlayerID, sel game.Selection, agents [game.NumPlayers]PlayerAgent, log *TurnLog) []*game.Permanent {
+	var candidates []*game.Permanent
+	for _, permanent := range g.Battlefield {
+		if effectiveController(g, permanent) != playerID {
+			continue
+		}
+		if !resolver.permanentMatchesGroupSelection(&sel, nil, permanent) {
+			continue
+		}
+		candidates = append(candidates, permanent)
+	}
+	if len(candidates) == 0 {
+		return nil
+	}
+	options := make([]game.ChoiceOption, len(candidates))
+	for i, permanent := range candidates {
+		options[i] = game.ChoiceOption{Index: i, Label: permanentChoiceLabel(g, permanent), Card: permanentChoiceInfo(g, permanent)}
+	}
+	request := game.ChoiceRequest{
+		Kind:             game.ChoicePayment,
+		Player:           playerID,
+		Prompt:           "Choose any number of permanents to sacrifice",
+		Options:          options,
+		MinChoices:       0,
+		MaxChoices:       len(candidates),
+		DefaultSelection: nil,
+	}
+	selected := e.chooseChoice(g, agents, request, log)
+	chosen := make([]*game.Permanent, 0, len(selected))
+	for _, idx := range selected {
+		if idx >= 0 && idx < len(candidates) {
+			chosen = append(chosen, candidates[idx])
+		}
+	}
+	return chosen
+}
+
 func damageSourceIDs(g *game.Game, obj *game.StackObject) (sourceID, sourceObjectID id.ID) {
 	switch obj.Kind {
 	case game.StackActivatedAbility, game.StackTriggeredAbility:

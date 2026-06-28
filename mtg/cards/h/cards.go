@@ -35,6 +35,7 @@ var Cards = []*game.CardDef{
 	HecklingFiends,
 	HeirloomAuntie,
 	HellionCrucible,
+	HellionEruption,
 	Hellrider,
 	HelmOfAwakening,
 	HematiteTalisman,

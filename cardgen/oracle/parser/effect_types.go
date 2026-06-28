@@ -2817,6 +2817,20 @@ type EffectSyntax struct {
 	DiscardThenDraw       bool `json:",omitempty"`
 	DiscardThenDrawMax    int  `json:",omitempty"`
 	DiscardThenDrawOffset int  `json:",omitempty"`
+	// SacrificeThenCount marks an EffectSacrifice clause whose count feeds an
+	// immediately following "then <create|draw|add> that many/much" reward in the
+	// same sentence ("Sacrifice all creatures you control, then create that many
+	// 4/4 red Hellion creature tokens." — Hellion Eruption; "Sacrifice any number
+	// of lands, then add that much {C}." — Mana Seism). The reward clause is left
+	// in place as a sibling effect; lowering reads this marker to publish the
+	// number sacrificed and scale the reward by it. It is false for every other
+	// effect.
+	SacrificeThenCount bool `json:",omitempty"`
+	// SacrificeAnyNumber records that a SacrificeThenCount clause sacrifices "any
+	// number of" eligible permanents (the resolving player chooses how many, none
+	// up to all) rather than "all" of them. It is meaningful only when
+	// SacrificeThenCount is set and is false otherwise.
+	SacrificeAnyNumber bool `json:",omitempty"`
 }
 
 // ManaSpendConditionKind identifies the exact spend condition of a mana-spend

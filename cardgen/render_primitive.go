@@ -1714,9 +1714,12 @@ func (r Renderer) renderSacrificePermanents(ctx *renderCtx, value *game.Sacrific
 		return "", err
 	}
 	var fields []string
-	if value.All {
+	switch {
+	case value.All:
 		fields = append(fields, "All: true,")
-	} else {
+	case value.AnyNumber:
+		fields = append(fields, "AnyNumber: true,")
+	default:
 		renderedAmount, err := r.renderQuantity(ctx, value.Amount)
 		if err != nil {
 			return "", err
