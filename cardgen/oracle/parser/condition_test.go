@@ -139,6 +139,9 @@ func TestParseConditionPredicateMeaning(t *testing.T) {
 		{"controller is monarch long form", "you are the monarch", ConditionPredicateControllerIsMonarch, 0},
 		{"controller has initiative", "you have the initiative", ConditionPredicateControllerHasInitiative, 0},
 		{"controller has city's blessing", "you have the city's blessing", ConditionPredicateControllerHasCityBlessing, 0},
+		{"event spell no mana spent", "no mana was spent to cast it", ConditionPredicateEventSpellNoManaSpentToCast, 0},
+		{"event spell mana spent at least", "at least four mana was spent to cast it", ConditionPredicateEventSpellManaSpentToCastAtLeast, 4},
+		{"event spell mana spent that spell", "at least eight mana was spent to cast that spell", ConditionPredicateEventSpellManaSpentToCastAtLeast, 8},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

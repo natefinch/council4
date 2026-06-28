@@ -36,6 +36,7 @@ func emitResolvingSyntax(abilities []Ability) {
 			abilities[i].ActivationRestrictions,
 			abilities[i].TriggerFrequency,
 			abilities[i].SourceAbilityCostReduction,
+			abilities[i].interveningConditionStrip(),
 		)
 		fuseDiscardThenDrawSentences(abilities[i].Sentences)
 		attachTokenGrantedAbilities(&abilities[i])
@@ -51,7 +52,7 @@ func emitResolvingSyntax(abilities []Ability) {
 		if abilities[i].DiceTable != nil {
 			for k := range abilities[i].DiceTable.Rows {
 				row := &abilities[i].DiceTable.Rows[k]
-				emitSentenceResolvingSyntax(row.Sentences, row.Atoms, nil, nil, nil)
+				emitSentenceResolvingSyntax(row.Sentences, row.Atoms, nil, nil, nil, interveningConditionStrip{})
 				fuseDiscardThenDrawSentences(row.Sentences)
 			}
 		}
@@ -60,7 +61,7 @@ func emitResolvingSyntax(abilities []Ability) {
 		}
 		for j := range abilities[i].Modal.Options {
 			mode := &abilities[i].Modal.Options[j]
-			emitSentenceResolvingSyntax(mode.Sentences, mode.Atoms, nil, nil, nil)
+			emitSentenceResolvingSyntax(mode.Sentences, mode.Atoms, nil, nil, nil, interveningConditionStrip{})
 			fuseDiscardThenDrawSentences(mode.Sentences)
 			if sentencesHaveImpulseExile(mode.Sentences) {
 				mode.SemanticReferences = nil
@@ -260,12 +261,54 @@ func createEffectContainingSpan(ability *Ability, span shared.Span) *EffectSynta
 	return match
 }
 
+// interveningConditionStrip removes a triggered ability's intervening-if clause
+// from the token stream that feeds the body effect and target parse. The
+// intervening "if" gates whether the trigger's effect happens; its own tokens,
+// references, and pronouns ("if at least four mana was spent to cast it, ...")
+// belong to the condition, not the effect, and are recognized separately as the
+// ability's condition. Leaving them in the effect parse would seed a spurious
+// leading effect from a condition verb ("cast"/"spent") and leak the condition's
+// pronoun into the effect's reference set, defeating the controller-subject and
+// single-reference effect recognizers. The strip is keyed to the intervening
+// boundary position, so non-trigger leading conditions and replacement effects
+// ("If X would happen, ... instead") are untouched.
+type interveningConditionStrip struct {
+	start shared.Position
+	set   bool
+}
+
+// strip drops the intervening-if clause, including its trailing comma, when the
+// supplied effect tokens begin at the recognized intervening boundary. Tokens
+// that do not begin there are returned unchanged.
+func (s interveningConditionStrip) strip(tokens []shared.Token) []shared.Token {
+	if !s.set || len(tokens) == 0 || tokens[0].Span.Start.Offset != s.start.Offset {
+		return tokens
+	}
+	end := conditionClauseEnd(tokens, 0)
+	if end >= len(tokens) || tokens[end].Kind != shared.Comma {
+		return tokens
+	}
+	return tokens[end+1:]
+}
+
+// interveningConditionStrip returns the strip for this ability's triggered
+// intervening-if condition, or the zero strip when the ability has none.
+func (a *Ability) interveningConditionStrip() interveningConditionStrip {
+	for _, boundary := range a.ConditionBoundaries {
+		if boundary.Intervening {
+			return interveningConditionStrip{start: boundary.Start, set: true}
+		}
+	}
+	return interveningConditionStrip{}
+}
+
 func emitSentenceResolvingSyntax(
 	sentences []Sentence,
 	atoms Atoms,
 	restrictions []ActivationRestriction,
 	triggerFrequency *TriggerFrequencyRestriction,
 	sourceCostReduction *SourceAbilityCostReductionSyntax,
+	intervening interveningConditionStrip,
 ) {
 	if recognizeImpulseExileSequence(sentences) {
 		return
@@ -287,7 +330,8 @@ func emitSentenceResolvingSyntax(
 			spanInsideTriggerFrequency(sentences[i].Span, triggerFrequency) {
 			continue
 		}
-		tokens := stripLeadingConditionClause(semanticEffectTokens(sentences[i].Tokens), atoms)
+		tokens := stripLeadingConditionClause(
+			intervening.strip(semanticEffectTokens(sentences[i].Tokens)), atoms)
 		count := orderedEffectCount(tokens, atoms)
 		legacyEffects += count
 		sentences[i].LegacyEffects = count > 0

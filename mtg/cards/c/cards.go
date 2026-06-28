@@ -77,6 +77,7 @@ var Cards = []*game.CardDef{
 	CommuneWithNature,
 	CommuneWithSpirits,
 	CompellingArgument,
+	CompySwarm,
 	ConjurerSMantle,
 	ConquerorSPledge,
 	Conservator,

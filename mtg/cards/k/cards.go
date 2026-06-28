@@ -39,4 +39,5 @@ var Cards = []*game.CardDef{
 	KrotiqNestguard,
 	KusariGama,
 	KyoshiIslandPlaza,
+	KyoshiWarriorExemplars,
 }

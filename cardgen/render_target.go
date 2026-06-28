@@ -877,6 +877,8 @@ func renderAggregateKind(kind game.AggregateKind) (string, error) {
 		return "game.AggregateControllerGainedLifeThisTurn", nil
 	case game.AggregateSpellX:
 		return "game.AggregateSpellX", nil
+	case game.AggregateEventSpellManaSpentToCast:
+		return "game.AggregateEventSpellManaSpentToCast", nil
 	default:
 		return "", fmt.Errorf("render: unsupported aggregate kind %d", kind)
 	}

@@ -69,6 +69,10 @@ func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringC
 		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateControllerLife, Op: compare.Equal, Value: condition.Threshold})
 	case compiler.ConditionPredicateSpellXAtLeast:
 		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateSpellX, Op: compare.GreaterOrEqual, Value: condition.Threshold})
+	case compiler.ConditionPredicateEventSpellManaSpentToCastAtLeast:
+		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateEventSpellManaSpentToCast, Op: compare.GreaterOrEqual, Value: condition.Threshold})
+	case compiler.ConditionPredicateEventSpellManaSpentToCastAtMost:
+		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateEventSpellManaSpentToCast, Op: compare.LessOrEqual, Value: condition.Threshold})
 	case compiler.ConditionPredicateAnyOpponentPoisonAtLeast:
 		result.AnyOpponentPoisonAtLeast = condition.Threshold
 	case compiler.ConditionPredicateAnyPlayerLifeAtMost:
@@ -344,6 +348,8 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 			compiler.ConditionPredicateControllerIsMonarch,
 			compiler.ConditionPredicateControllerHasInitiative,
 			compiler.ConditionPredicateControllerHasCityBlessing,
+			compiler.ConditionPredicateEventSpellManaSpentToCastAtLeast,
+			compiler.ConditionPredicateEventSpellManaSpentToCastAtMost,
 			compiler.ConditionPredicateAttackersAttackingControllerAtLeast:
 			return ctx == conditionContextInterveningTrigger
 		case compiler.ConditionPredicateControllerControlsCommander:

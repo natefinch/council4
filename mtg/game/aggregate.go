@@ -75,6 +75,13 @@ const (
 	// "an opponent has N or more cards in their graveyard" existential gate is
 	// satisfied exactly when this maximum is at least N.
 	AggregateAnyOpponentGraveyardCardCount
+
+	// AggregateEventSpellManaSpentToCast is the total amount of mana spent to
+	// cast a spell-cast trigger's triggering spell ("if no mana was spent to
+	// cast it", "if at least four mana was spent to cast it"). It resolves only
+	// in a spell-cast trigger's intervening-if context, where the triggering
+	// event records the mana spent; it fails closed elsewhere.
+	AggregateEventSpellManaSpentToCast
 )
 
 // AggregateComparison compares a player- or board-derived quantity against a

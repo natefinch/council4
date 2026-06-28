@@ -38,6 +38,7 @@ var Cards = []*game.CardDef{
 	HerdMigration,
 	HeronBlessedGeist,
 	HiddenFootblade,
+	HiddenHerbalists,
 	HiddenHorror,
 	HiddenStockpile,
 	HightideHermit,
