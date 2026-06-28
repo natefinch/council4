@@ -17,6 +17,7 @@ var Cards = []*game.CardDef{
 	KashiTribeReaver,
 	KashiTribeWarriors,
 	KavuAggressor,
+	KavuHowler,
 	KavuPrimarch,
 	KayaSGhostform,
 	KederektLeviathan,

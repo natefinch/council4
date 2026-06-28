@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,889 of 32,501 cards eligible for paper support (48.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,903 of 32,501 cards eligible for paper support (48.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1139,6 +1139,7 @@ Council4 currently supports **15,889 of 32,501 cards eligible for paper support 
 - Beast
 - Beast
 - Beast Attack
+- Beast Hunt
 - Beast of Burden
 - Beast Walkers
 - Beast Whisperer
@@ -1635,6 +1636,7 @@ Council4 currently supports **15,889 of 32,501 cards eligible for paper support 
 - Boosted Sloop
 - Boots of Speed
 - Borborygmos
+- Borborygmos Enraged
 - Border Guard
 - Border Patrol
 - Borderland Behemoth
@@ -2315,6 +2317,7 @@ Council4 currently supports **15,889 of 32,501 cards eligible for paper support 
 - Chrome Mox
 - Chrome Prowler
 - Chrome Steed
+- Chromescale Drake
 - Chromium
 - Chronic Flooding
 - Chronicle of Victory
@@ -3908,6 +3911,7 @@ Council4 currently supports **15,889 of 32,501 cards eligible for paper support 
 - Elder Mastery
 - Elder of Laurels
 - Elder Owyn Lyons
+- Elder Pine of Jukai
 - Elderfang Disciple
 - Elderfang Ritualist
 - Elderleaf Mentor
@@ -4148,6 +4152,7 @@ Council4 currently supports **15,889 of 32,501 cards eligible for paper support 
 - Enlightened Maniac
 - Enlightened Tutor
 - Enlisted Wurm
+- Enlistment Officer
 - Enormous Baloth
 - Enrage
 - Enraged Ceratok
@@ -5203,6 +5208,7 @@ Council4 currently supports **15,889 of 32,501 cards eligible for paper support 
 - Garruk's Packleader
 - Garruk's Uprising
 - Garruk's Warsteed
+- Garruk, Caller of Beasts
 - Garruk, Cursed Huntsman
 - Garruk, Primal Hunter
 - Garrulous Sycophant
@@ -5603,6 +5609,7 @@ Council4 currently supports **15,889 of 32,501 cards eligible for paper support 
 - Goblin Razerunners
 - Goblin Replica
 - Goblin Rimerunner
+- Goblin Ringleader
 - Goblin Rogue
 - Goblin Roughrider
 - Goblin Ruinblaster
@@ -5768,6 +5775,7 @@ Council4 currently supports **15,889 of 32,501 cards eligible for paper support 
 - Gratuitous Violence
 - Gravblade Heavy
 - Grave Bramble
+- Grave Defiler
 - Grave Pact
 - Grave Peril
 - Grave Robbers
@@ -7192,6 +7200,7 @@ Council4 currently supports **15,889 of 32,501 cards eligible for paper support 
 - Kavu Aggressor
 - Kavu Climber
 - Kavu Glider
+- Kavu Howler
 - Kavu Predator
 - Kavu Primarch
 - Kavu Scout
@@ -7542,6 +7551,7 @@ Council4 currently supports **15,889 of 32,501 cards eligible for paper support 
 - Lagac Lizard
 - Lagonna-Band Elder
 - Laid to Rest
+- Lair Delve
 - Lakeside Shack
 - Lambholt Harrier
 - Lampad of Death's Vigil
@@ -8377,6 +8387,7 @@ Council4 currently supports **15,889 of 32,501 cards eligible for paper support 
 - Merfolk Skyscout
 - Merfolk Sovereign
 - Merfolk Traders
+- Merfolk Wayfinder
 - Merfolk Windrobber
 - Merfolk Wizard
 - Meria's Outrider
@@ -8809,6 +8820,7 @@ Council4 currently supports **15,889 of 32,501 cards eligible for paper support 
 - Mudbutton Torchrunner
 - Mudflat Village
 - Mukotai Ambusher
+- Mulch
 - Mulldrifter
 - Multani's Decree
 - Multani's Harmony
@@ -13428,6 +13440,7 @@ Council4 currently supports **15,889 of 32,501 cards eligible for paper support 
 - Sylvan Brushstrider
 - Sylvan Caryatid
 - Sylvan Hierophant
+- Sylvan Messenger
 - Sylvan Might
 - Sylvan Ranger
 - Sylvan Reclamation
@@ -13994,6 +14007,7 @@ Council4 currently supports **15,889 of 32,501 cards eligible for paper support 
 - Tibor and Lumia
 - Ticked Off
 - Ticket Booth // Tunnel of Hate
+- Tidal Courier
 - Tidal Force
 - Tidal Kraken
 - Tide Drifter

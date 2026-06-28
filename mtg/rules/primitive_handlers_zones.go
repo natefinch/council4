@@ -2002,6 +2002,16 @@ func handleDig(r *effectResolver, prim game.Dig) effectResolved {
 	return res
 }
 
+func handleRevealTopPartition(r *effectResolver, prim game.RevealTopPartition) effectResolved {
+	amount := r.quantity(prim.Amount)
+	res := effectResolved{accepted: true, amount: amount}
+	playerID, ok := r.resolvePlayer(prim.Player)
+	if ok {
+		res.succeeded = revealTopPartition(r.game, r.obj, playerID, amount, prim.Selection, prim.Remainder)
+	}
+	return res
+}
+
 func handleImpulseExile(r *effectResolver, prim game.ImpulseExile) effectResolved {
 	res := effectResolved{accepted: true}
 	playerID, ok := resolvePlayerReference(r.game, r.obj, prim.Player)

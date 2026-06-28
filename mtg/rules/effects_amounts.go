@@ -990,9 +990,10 @@ func cardMatchesSelection(g *game.Game, obj *game.StackObject, card *game.CardIn
 		return false
 	}
 	subject := &selectionSubject{
-		kind: subjectCard,
-		g:    g,
-		card: card,
+		kind:       subjectCard,
+		g:          g,
+		card:       card,
+		controller: card.Owner,
 	}
 	if obj != nil {
 		subject.resolutionChoices = obj.ResolutionChoices

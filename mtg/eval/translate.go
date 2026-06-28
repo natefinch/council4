@@ -138,6 +138,11 @@ func appendPrimitiveAtoms(atoms []EffectAtom, primitive game.Primitive) []Effect
 			return append(atoms, quantityAtom(EffectLandRamp, p.Amount, AffectedYou))
 		}
 		return append(atoms, quantityAtom(EffectCardTutored, p.Amount, AffectedYou))
+	case game.RevealTopPartition:
+		// The player puts an indeterminate number of the revealed cards into
+		// their hand (every revealed card matching the filter), so the gain is
+		// dynamic card advantage for that player.
+		return append(atoms, EffectAtom{Kind: EffectCardsDrawn, IsDynamic: true, Affected: affectedFromPlayer(p.Player)})
 	default:
 		return atoms
 	}

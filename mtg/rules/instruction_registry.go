@@ -127,6 +127,7 @@ func newPrimitiveRegistry() *primitiveRegistry {
 	registerPrimitiveHandler(reg, handleSurveil)
 	registerPrimitiveHandler(reg, handleDig)
 	registerPrimitiveHandler(reg, handlePileSplit)
+	registerPrimitiveHandler(reg, handleRevealTopPartition)
 	registerPrimitiveHandler(reg, handleImpulseExile)
 	registerPrimitiveHandler(reg, handleInvestigate)
 	registerPrimitiveHandler(reg, handleProliferate)

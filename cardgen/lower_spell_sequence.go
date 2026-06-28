@@ -636,6 +636,9 @@ func lowerCombinedSequenceShapes(cardName string, ctx contentCtx, syntax *parser
 	if content, ok := lowerPileSplitSequence(ctx); ok {
 		return content, true
 	}
+	if content, ok := lowerRevealTopPartitionSequence(ctx); ok {
+		return content, true
+	}
 	if content, ok := lowerRemovalManifestSequence(ctx); ok {
 		return content, true
 	}
@@ -2218,6 +2221,58 @@ func lowerPileSplitSequence(ctx contentCtx) (game.AbilityContent, bool) {
 				ChooserOpponent:   put.PileSplitChooserOpponent,
 				Kept:              zone.Hand,
 				Other:             put.PileSplitOtherZone,
+			}},
+		},
+	}.Ability(), true
+}
+
+// lowerRevealTopPartitionSequence lowers the closed "Reveal the top N cards of
+// your library. Put all <type> cards revealed this way into your hand and the
+// rest <remainder>." family (Borborygmos Enraged, Sift Through Sands, the tribal
+// "reveal and gather" creatures) into a single RevealTopPartition primitive. The
+// parser marks the Reveal and Put effects with RevealTopPartition, leaves the
+// fixed count on the Reveal's Amount and the typed filter on the Put's Selector,
+// and records the remainder on RevealPartitionRemainder. This text-blind lowerer
+// reads only those typed fields; any shape mismatch or unmodeled filter fails
+// closed.
+func lowerRevealTopPartitionSequence(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 2 || ctx.optional ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, false
+	}
+	reveal := ctx.content.Effects[0]
+	put := ctx.content.Effects[1]
+	if reveal.Kind != compiler.EffectReveal || !reveal.RevealTopPartition ||
+		put.Kind != compiler.EffectPut || !put.RevealTopPartition ||
+		reveal.Context != parser.EffectContextController ||
+		put.Context != parser.EffectContextController ||
+		!reveal.Amount.Known || reveal.Amount.Value < 1 {
+		return game.AbilityContent{}, false
+	}
+	// The reveal-partition clauses' only references are the put clause's "revealed
+	// this way" / "from among them" anaphors back to the revealed cards, which the
+	// RevealTopPartition primitive models directly. Every content reference must
+	// fall within the reveal or put spans so no reference needing its own
+	// instruction is dropped.
+	for ri := range ctx.content.References {
+		if !spanCovered(ctx.content.References[ri].Span, []shared.Span{reveal.Span, put.Span}) {
+			return game.AbilityContent{}, false
+		}
+	}
+	selection, ok := cardSelectionForSelector(put.Selector)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{
+			{Primitive: game.RevealTopPartition{
+				Player:    game.ControllerReference(),
+				Amount:    game.Fixed(reveal.Amount.Value),
+				Selection: selection,
+				Remainder: digRemainder(put.RevealPartitionRemainder),
 			}},
 		},
 	}.Ability(), true

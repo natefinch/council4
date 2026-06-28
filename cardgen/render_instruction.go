@@ -631,6 +631,12 @@ func (r Renderer) renderPrimitiveTail(ctx *renderCtx, primitive game.Primitive) 
 			return "", err
 		}
 		return r.renderPileSplit(ctx, &value)
+	case game.PrimitiveRevealTopPartition:
+		value, err := assertPrimitive[game.RevealTopPartition](primitive)
+		if err != nil {
+			return "", err
+		}
+		return r.renderRevealTopPartition(ctx, &value)
 	case game.PrimitivePunisherEachLoseLife:
 		value, err := assertPrimitive[game.PunisherEachLoseLife](primitive)
 		if err != nil {

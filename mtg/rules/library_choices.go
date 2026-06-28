@@ -674,6 +674,72 @@ func peekLibrary(player *game.Player, amount int) []id.ID {
 	return append([]id.ID(nil), cards[:amount]...)
 }
 
+// revealTopPartition reveals the top amount cards of playerID's library, puts
+// every revealed card matching selection into that player's hand, and routes the
+// rest to remainder (the player's graveyard or the bottom of their library). It
+// backs the RevealTopPartition primitive: every revealed card is turned face up
+// publicly and the matching cards are taken without a choice, so the partition
+// is fully deterministic.
+func revealTopPartition(g *game.Game, obj *game.StackObject, playerID game.PlayerID, amount int, selection game.Selection, remainder game.DigRemainder) bool {
+	player, ok := playerByID(g, playerID)
+	if !ok || amount <= 0 {
+		return false
+	}
+	seen := peekLibrary(player, amount)
+	if len(seen) == 0 {
+		return false
+	}
+	for _, cardID := range seen {
+		emitCardRevealEvent(g, obj, playerID, cardID, zone.Library)
+	}
+	for _, cardID := range seen {
+		card, cardOK := g.GetCardInstance(cardID)
+		if !cardOK || !player.Library.Remove(cardID) {
+			continue
+		}
+		if cardMatchesSelection(g, obj, card, selection) {
+			player.Hand.Add(cardID)
+			emitZoneChangeEvent(g, game.Event{
+				Player:   playerID,
+				CardID:   cardID,
+				FromZone: zone.Library,
+				ToZone:   zone.Hand,
+				Amount:   1,
+			})
+			continue
+		}
+		if remainder == game.DigRemainderLibraryBottom {
+			player.Library.AddToBottom(cardID)
+			emitZoneChangeEvent(g, game.Event{
+				Player:   playerID,
+				CardID:   cardID,
+				FromZone: zone.Library,
+				ToZone:   zone.Library,
+				Amount:   1,
+			})
+			continue
+		}
+		destination := commanderReplacementDestination(g, cardID, zone.Graveyard)
+		zoneOwner := playerID
+		if destination == zone.Command {
+			zoneOwner = card.Owner
+		}
+		destinationCards, zoneOK := destinationZone(g, zoneOwner, destination)
+		if !zoneOK {
+			continue
+		}
+		destinationCards.Add(cardID)
+		emitZoneChangeEvent(g, game.Event{
+			Player:   playerID,
+			CardID:   cardID,
+			FromZone: zone.Library,
+			ToZone:   destination,
+			Amount:   1,
+		})
+	}
+	return true
+}
+
 func reorderLibraryTop(player *game.Player, cards []id.ID) {
 	if len(cards) == 0 {
 		return

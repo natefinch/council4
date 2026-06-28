@@ -1746,6 +1746,30 @@ func (r Renderer) renderPileSplit(ctx *renderCtx, value *game.PileSplit) (string
 	return structLit("game.PileSplit", fields), nil
 }
 
+func (r Renderer) renderRevealTopPartition(ctx *renderCtx, value *game.RevealTopPartition) (string, error) {
+	player, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	renderedAmount, err := r.renderQuantity(ctx, value.Amount)
+	if err != nil {
+		return "", err
+	}
+	selection, err := r.renderSelection(ctx, value.Selection)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{
+		fmt.Sprintf("Player: %s,", player),
+		fmt.Sprintf("Amount: %s,", renderedAmount),
+		fmt.Sprintf("Selection: %s,", selection),
+	}
+	if value.Remainder == game.DigRemainderLibraryBottom {
+		fields = append(fields, "Remainder: game.DigRemainderLibraryBottom,")
+	}
+	return structLit("game.RevealTopPartition", fields), nil
+}
+
 func (r Renderer) renderPunisherEachLoseLife(ctx *renderCtx, value *game.PunisherEachLoseLife) (string, error) {
 	renderedAmount, err := r.renderQuantity(ctx, value.Amount)
 	if err != nil {

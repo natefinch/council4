@@ -442,6 +442,8 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				Exact:                                  syntax.Exact,
 				KeywordGrantChoice:                     syntax.KeywordGrantChoice,
 				RevealUntilThenPut:                     syntax.RevealUntilThenPut,
+				RevealTopPartition:                     syntax.RevealTopPartition,
+				RevealPartitionRemainder:               syntax.RevealPartitionRemainder,
 				PileSplitSequence:                      syntax.PileSplitSequence,
 				PileSplitSeparatorOpponent:             syntax.PileSplitSeparatorOpponent,
 				PileSplitChooserOpponent:               syntax.PileSplitChooserOpponent,

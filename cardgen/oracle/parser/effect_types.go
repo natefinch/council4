@@ -2341,6 +2341,20 @@ type EffectSyntax struct {
 	// the Put's ToZone. Lowering reads these typed fields to emit a single
 	// RevealUntil primitive; the marker is false for every other effect.
 	RevealUntilThenPut bool `json:",omitempty"`
+	// RevealTopPartition marks each effect of the recognized closed "Reveal the
+	// top N cards of your library. Put all <type> cards revealed this way into
+	// your hand and the rest <remainder>." sequence. The parser keeps the two-
+	// effect shape [Reveal, Put], sets this marker on each, leaves the revealed
+	// count on the Reveal's Amount and the typed filter on the Put's Selection,
+	// and records the remainder destination on the Put's RevealPartitionRemainder.
+	// Lowering reads these typed fields to emit a single RevealTopPartition
+	// primitive; the marker is false for every other effect.
+	RevealTopPartition bool `json:",omitempty"`
+	// RevealPartitionRemainder records where the un-taken revealed cards go in a
+	// RevealTopPartition sequence (the controller's graveyard or the bottom of
+	// their library). It is set only on the Put half; the zero value is the
+	// graveyard remainder.
+	RevealPartitionRemainder DigRemainderKind `json:",omitempty"`
 	// PileSplitSequence marks each effect of the recognized closed pile-split
 	// sequence "reveal the top N cards of your library[ and separate them into
 	// two piles]. An opponent {separates those cards into|chooses one of} two

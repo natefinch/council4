@@ -49,6 +49,7 @@ var Cards = []*game.CardDef{
 	ChitteringSkitterling,
 	ChoMannoSBlessing,
 	Choke,
+	ChromescaleDrake,
 	ChronicFlooding,
 	CinderGlade,
 	CinderWall,

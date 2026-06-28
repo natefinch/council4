@@ -366,6 +366,7 @@ func emitSentenceResolvingSyntax(
 	}
 	recognizeShuffleRevealPermanentSequence(sentences)
 	recognizeRevealUntilThenPutSequence(sentences)
+	recognizeRevealTopPartitionSequence(sentences)
 	recognizeRevealChooseHandDiscardSequence(sentences)
 	if len(pileSplitMiddleCandidates) > 0 && !recognizePileSplitSequence(sentences) {
 		unrecognizedSibling = true

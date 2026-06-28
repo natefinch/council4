@@ -135,10 +135,16 @@ const (
 	// one pile, and routes the kept and other piles to their destinations
 	// (game.PileSplit). It models the "Fact or Fiction" family.
 	PrimitivePileSplit
+	// PrimitiveRevealTopPartition reveals the top N cards of a player's library,
+	// puts every revealed card matching a typed filter into that player's hand,
+	// and routes the rest to a remainder destination (game.RevealTopPartition).
+	// It models the "Reveal the top N cards of your library. Put all <type>
+	// cards revealed this way into your hand and the rest <remainder>." family.
+	PrimitiveRevealTopPartition
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitivePileSplit) + 1
+const primitiveKindCount = int(PrimitiveRevealTopPartition) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -1255,6 +1261,24 @@ type PileSplit struct {
 	ChooserOpponent   bool
 	Kept              zone.Type
 	Other             zone.Type
+}
+
+// RevealTopPartition reveals the top Amount cards of a referenced player's
+// library, puts every revealed card matching Selection into that player's hand,
+// and puts the rest into the Remainder destination (that player's graveyard or
+// the bottom of their library). It models the closed "Reveal the top N cards of
+// your library. Put all <type> cards revealed this way into your hand and the
+// rest <remainder>." family (Borborygmos Enraged, Sift Through Sands, the Goblin
+// Matron / tribal "reveal and gather" cards). Unlike Dig, every revealed card is
+// turned face up publicly and the matching cards are taken without a choice, so
+// the partition is fully deterministic. Remainder is DigRemainderGraveyard or
+// DigRemainderLibraryBottom; the "in any order" and "in a random order" library-
+// bottom riders share one placement.
+type RevealTopPartition struct {
+	Player    PlayerReference
+	Amount    Quantity
+	Selection Selection
+	Remainder DigRemainder
 }
 
 // ImpulseExile exiles cards from the top of a player's library and lets the
