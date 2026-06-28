@@ -111,3 +111,37 @@ func TestRevealTopPartitionLibraryBottomRemainder(t *testing.T) {
 		t.Fatal("reveal-top-partition disturbed the untouched bottom card")
 	}
 }
+
+// TestRevealTopPartitionMatchesForNonFirstController guards the latent
+// cardMatchesSelection bug: a ControllerYou filter (which the generated reveal-
+// partition cards carry) must still match the resolving controller's own
+// revealed cards when that controller is not Player 1. Resolving for Player 2
+// must route the matching land into Player 2's hand, not the remainder zone.
+func TestRevealTopPartitionMatchesForNonFirstController(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	land := addCardToLibrary(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Test Forest",
+		Types: []types.Card{types.Land},
+	}})
+	spell := addCardToLibrary(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Test Bolt",
+		Types: []types.Card{types.Instant},
+	}})
+	addEffectSpellToStack(g, game.Player2, game.RevealTopPartition{
+		Player:    game.ControllerReference(),
+		Amount:    game.Fixed(2),
+		Selection: game.Selection{RequiredTypes: []types.Card{types.Land}, Controller: game.ControllerYou},
+		Remainder: game.DigRemainderGraveyard,
+	}, nil)
+
+	engine.resolveTopOfStackWithChoices(g, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+
+	player := g.Players[game.Player2]
+	if !player.Hand.Contains(land) {
+		t.Fatal("reveal-top-partition did not put the land into the non-first controller's hand")
+	}
+	if !player.Graveyard.Contains(spell) {
+		t.Fatal("reveal-top-partition did not send the non-land to the graveyard")
+	}
+}
