@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,861 of 32,501 cards eligible for paper support (48.8%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,866 of 32,501 cards eligible for paper support (48.8%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2627,6 +2627,7 @@ Council4 currently supports **15,861 of 32,501 cards eligible for paper support 
 - Contingency Plan
 - Contortionist Troupe
 - Contraband Kingpin
+- Contract Hero
 - Contract Killing
 - Contradict
 - Control Magic
@@ -2843,6 +2844,7 @@ Council4 currently supports **15,861 of 32,501 cards eligible for paper support 
 - Crypt Creeper
 - Crypt Feaster
 - Crypt Ghast
+- Crypt Lurker
 - Crypt of the Eternals
 - Crypt Ripper
 - Cryptbreaker
@@ -7108,6 +7110,7 @@ Council4 currently supports **15,861 of 32,501 cards eligible for paper support 
 - Jwari Scuttler
 - Jwari Shapeshifter
 - K'rrik, Son of Yawgmoth
+- K'un-Lun Warrior
 - Kaalia, Zenith Seeker
 - Kabira Crossroads
 - Kabira Takedown // Kabira Plateau
@@ -10550,6 +10553,7 @@ Council4 currently supports **15,861 of 32,501 cards eligible for paper support 
 - Reckless Barbarian
 - Reckless Brute
 - Reckless Charge
+- Reckless Detective
 - Reckless Fireweaver
 - Reckless Impulse
 - Reckless Lackey
@@ -14929,6 +14933,7 @@ Council4 currently supports **15,861 of 32,501 cards eligible for paper support 
 - Viscera Seer
 - Viscerid Armor
 - Viscid Lemures
+- Vision of Love
 - Vision Skeins
 - Visionary Augmenter
 - Visionary's Dance
