@@ -37,6 +37,7 @@ var simplePredicateMap = map[parser.ConditionPredicateKind]ConditionPredicate{
 	parser.ConditionPredicateEventSubjectWasKicked:                            ConditionPredicateEventSubjectWasKicked,
 	parser.ConditionPredicateEventSubjectWasCast:                              ConditionPredicateEventSubjectWasCast,
 	parser.ConditionPredicateEventSubjectWasCastByController:                  ConditionPredicateEventSubjectWasCastByController,
+	parser.ConditionPredicateEventSubjectWasCastFromControllerHand:            ConditionPredicateEventSubjectWasCastFromControllerHand,
 	parser.ConditionPredicateEventSubjectEnteredOrCastFromGraveyard:           ConditionPredicateEventSubjectEnteredOrCastFromGraveyard,
 	parser.ConditionPredicateEventSubjectEnteredOrCastFromControllerGraveyard: ConditionPredicateEventSubjectEnteredOrCastFromControllerGraveyard,
 	parser.ConditionPredicatePriorInstructionNotAccepted:                      ConditionPredicatePriorInstructionNotAccepted,

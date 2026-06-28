@@ -154,6 +154,34 @@ func TestEnteredOrCastFromControllerGraveyardInterveningIfChecksOwnership(t *tes
 	}
 }
 
+// TestCastFromControllerHandInterveningIfChecksEnterEvent verifies that the "if
+// you cast it from your hand" enter-trigger intervening condition fires only
+// when the entering permanent was cast by the trigger controller from their
+// hand, and fails closed for every other provenance.
+func TestCastFromControllerHandInterveningIfChecksEnterEvent(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	trigger := game.TriggerCondition{InterveningIfEventPermanentWasCastFromControllerHand: true}
+	cases := []struct {
+		name  string
+		event *game.Event
+		want  bool
+	}{
+		{"you cast it from your hand", &game.Event{FromZone: zone.Stack, ToZone: zone.Battlefield, EnterWasCast: true, EnterCastFromZone: zone.Hand, EnterHasCastController: true, EnterCastController: game.Player1}, true},
+		{"opponent cast it from hand", &game.Event{FromZone: zone.Stack, ToZone: zone.Battlefield, EnterWasCast: true, EnterCastFromZone: zone.Hand, EnterHasCastController: true, EnterCastController: game.Player2}, false},
+		{"you cast it from graveyard", &game.Event{FromZone: zone.Stack, ToZone: zone.Battlefield, EnterWasCast: true, EnterCastFromZone: zone.Graveyard, EnterHasCastController: true, EnterCastController: game.Player1}, false},
+		{"entered from hand without cast", &game.Event{FromZone: zone.Hand, ToZone: zone.Battlefield, EnterCastFromZone: zone.Hand}, false},
+		{"cast from hand without controller provenance", &game.Event{FromZone: zone.Stack, ToZone: zone.Battlefield, EnterWasCast: true, EnterCastFromZone: zone.Hand}, false},
+		{"nil event", nil, false},
+	}
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			if got := triggerInterveningIf(g, nil, game.Player1, &trigger, test.event); got != test.want {
+				t.Fatalf("triggerInterveningIf() = %v, want %v", got, test.want)
+			}
+		})
+	}
+}
+
 func TestEnteredOrCastFromGraveyardInterveningIfCheckedOnStack(t *testing.T) {
 	t.Run("reanimated permanent fires", func(t *testing.T) {
 		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})

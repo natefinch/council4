@@ -47,6 +47,7 @@ var Cards = []*game.CardDef{
 	AnabaSpiritCrafter,
 	AncientKavu,
 	AncientStirrings,
+	AngelOfTheDireHour,
 	AngelicChorus,
 	AndraditeLeech,
 	AngelicCub,

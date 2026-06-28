@@ -23,6 +23,7 @@ var Cards = []*game.CardDef{
 	FathomFleetCutthroat,
 	FavorOfJukai,
 	FavorOfTheOverbeing,
+	FeastingTrollKing,
 	FeedTheFlames,
 	FellingBlow,
 	FemerefHealer,
@@ -79,5 +80,6 @@ var Cards = []*game.CardDef{
 	FrostBite,
 	FungalBloom,
 	Fylamarid,
+	FurnaceDragon,
 	FynnTheFangbearer,
 }

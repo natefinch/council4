@@ -541,6 +541,22 @@ func TestParseEnteredOrCastFromGraveyardCondition(t *testing.T) {
 	}
 }
 
+// TestParseCastFromControllerHandCondition covers the enters-the-battlefield
+// intervening condition that gates on the entering object having been cast by
+// the controller from their hand ("if you cast it from your hand"), and
+// confirms it stays distinct from the bare "you cast it" controller form.
+func TestParseCastFromControllerHandCondition(t *testing.T) {
+	t.Parallel()
+	clause := parseSingleConditionClause(t, "you cast it from your hand")
+	if clause.Predicate != ConditionPredicateEventSubjectWasCastFromControllerHand {
+		t.Fatalf("clause = %#v, want %s", clause, ConditionPredicateEventSubjectWasCastFromControllerHand)
+	}
+	bare := parseSingleConditionClause(t, "you cast it")
+	if bare.Predicate != ConditionPredicateEventSubjectWasCastByController {
+		t.Fatalf("bare clause = %#v, want %s", bare, ConditionPredicateEventSubjectWasCastByController)
+	}
+}
+
 // TestParseConditionPriorInstruction covers the affirmative "you do" and
 // negative "you don't" reflexive prior-instruction clauses used by optional
 // resolving flow ("you may X. If you do/don't, Y").
