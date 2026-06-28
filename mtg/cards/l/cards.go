@@ -9,6 +9,7 @@ var Cards = []*game.CardDef{
 	LabyrinthMinotaur,
 	LadyOfLaughter,
 	LaidToRest,
+	LairDelve,
 	LapisLazuliTalisman,
 	LashwhipPredator,
 	LassoedByTheLaw,

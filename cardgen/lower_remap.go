@@ -227,6 +227,10 @@ func transformPrimitiveTargetIndices(primitive game.Primitive, transform targetI
 		value.Player, ok = transformPlayerReference(value.Player, transform)
 		return value, ok
 	}
+	if value, ok := primitive.(game.RevealTopPartition); ok {
+		value.Player, ok = transformPlayerReference(value.Player, transform)
+		return value, ok
+	}
 	if value, ok := primitive.(game.GainLife); ok {
 		value.Player, ok = transformPlayerReference(value.Player, transform)
 		return value, ok

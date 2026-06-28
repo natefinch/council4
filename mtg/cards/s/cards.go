@@ -198,5 +198,6 @@ var Cards = []*game.CardDef{
 	SwiftManeuver,
 	SwordOfTruthAndJustice,
 	SylvanBasilisk,
+	SylvanMessenger,
 	SyndicateInfiltrator,
 }

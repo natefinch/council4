@@ -2220,6 +2220,17 @@ type CompiledEffect struct {
 	// the recognized shape; lowering keys on it (with the match-Reveal's
 	// Selector and the Put's ToZone) to emit a single RevealUntil primitive.
 	RevealUntilThenPut bool
+	// RevealTopPartition carries the parser's typed marker for the closed
+	// "Reveal the top N cards of your library. Put all <type> cards revealed this
+	// way into your hand and the rest <remainder>." sequence. It is set on the
+	// Reveal and Put effects of the recognized shape; lowering keys on it (with
+	// the Reveal's Amount, the Put's Selector, and RevealPartitionRemainder) to
+	// emit a single RevealTopPartition primitive.
+	RevealTopPartition bool
+	// RevealPartitionRemainder records where the un-taken revealed cards go in a
+	// RevealTopPartition sequence. It is set only on the Put effect; the zero
+	// value is the graveyard remainder.
+	RevealPartitionRemainder parser.DigRemainderKind
 	// PileSplitSequence, with the role/destination/amount/middle-span fields
 	// below, carries the parser's typed marker for the closed pile-split
 	// sequence (Fact or Fiction, Steam Augury, Sphinx of Uthuun). It is set on

@@ -2145,6 +2145,22 @@ func (p PileSplit) validatePrimitive(targets []TargetSpec, checkTargets bool) er
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 
+func (p RevealTopPartition) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
+		return err
+	}
+	if !p.Amount.IsDynamic() && p.Amount.Value() < 1 {
+		return errors.New("RevealTopPartition requires revealing a positive number of cards")
+	}
+	if p.Remainder != DigRemainderGraveyard && p.Remainder != DigRemainderLibraryBottom {
+		return errors.New("RevealTopPartition requires a Graveyard or LibraryBottom remainder")
+	}
+	if err := firstProblem(p.Selection.Validate()); err != nil {
+		return err
+	}
+	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
 func (p ImpulseExile) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err
