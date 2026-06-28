@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,127 of 32,501 cards eligible for paper support (49.6%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,131 of 32,501 cards eligible for paper support (49.6%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -3702,6 +3702,7 @@ Council4 currently supports **16,127 of 32,501 cards eligible for paper support 
 - Dreadfeast Demon
 - Dreadful Apathy
 - Dreadhorde Butcher
+- Dreadhorde Twins
 - Dreadmalkin
 - Dreadmobile
 - Dreadwaters
@@ -4317,6 +4318,7 @@ Council4 currently supports **16,127 of 32,501 cards eligible for paper support 
 - Etched Familiar
 - Eternal Dragon
 - Eternal of Harsh Truths
+- Eternal Skylord
 - Eternal Student
 - Eternal Taskmaster
 - Eternal Thirst
@@ -5531,6 +5533,7 @@ Council4 currently supports **16,127 of 32,501 cards eligible for paper support 
 - Gleam of Battle
 - Gleaming Barrier
 - Gleaming Geardrake
+- Gleaming Overseer
 - Gleeful Arsonist
 - Glen Elendra Archmage
 - Glen Elendra Liege
@@ -15211,6 +15214,7 @@ Council4 currently supports **16,127 of 32,501 cards eligible for paper support 
 - Vivisection
 - Vivisection Evangelist
 - Vivisurgeon's Insight
+- Vizier of the Scorpion
 - Vizier of Tumbling Sands
 - Vizkopa Vampire
 - Vizzerdrix
