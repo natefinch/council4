@@ -39,6 +39,7 @@ func emitResolvingSyntax(abilities []Ability) {
 			abilities[i].interveningConditionStrip(),
 		)
 		fuseDiscardThenDrawSentences(abilities[i].Sentences)
+		annotateSacrificeThenCountSentences(abilities[i].Sentences)
 		attachTokenGrantedAbilities(&abilities[i])
 		attachGainGrantedAbilities(&abilities[i])
 		attachEmblemEffects(&abilities[i])
@@ -54,6 +55,7 @@ func emitResolvingSyntax(abilities []Ability) {
 				row := &abilities[i].DiceTable.Rows[k]
 				emitSentenceResolvingSyntax(row.Sentences, row.Atoms, nil, nil, nil, interveningConditionStrip{})
 				fuseDiscardThenDrawSentences(row.Sentences)
+				annotateSacrificeThenCountSentences(row.Sentences)
 			}
 		}
 		if abilities[i].Modal == nil {
@@ -63,6 +65,7 @@ func emitResolvingSyntax(abilities []Ability) {
 			mode := &abilities[i].Modal.Options[j]
 			emitSentenceResolvingSyntax(mode.Sentences, mode.Atoms, nil, nil, nil, interveningConditionStrip{})
 			fuseDiscardThenDrawSentences(mode.Sentences)
+			annotateSacrificeThenCountSentences(mode.Sentences)
 			if sentencesHaveImpulseExile(mode.Sentences) {
 				mode.SemanticReferences = nil
 				mode.ConditionBoundaries = nil

@@ -478,6 +478,8 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				DiscardThenDraw:                        syntax.DiscardThenDraw,
 				DiscardThenDrawMax:                     syntax.DiscardThenDrawMax,
 				DiscardThenDrawOffset:                  syntax.DiscardThenDrawOffset,
+				SacrificeThenCount:                     syntax.SacrificeThenCount,
+				SacrificeAnyNumber:                     syntax.SacrificeAnyNumber,
 				SearchSplit:                            syntax.SearchSplit,
 				ManaSpendRider:                         compileManaSpendRider(syntax.ManaSpendRider),
 				SearchSharedSubtype:                    syntax.SearchSharedSubtype,

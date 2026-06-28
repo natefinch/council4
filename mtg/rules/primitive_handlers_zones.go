@@ -1514,6 +1514,10 @@ func handleSacrificePermanents(r *effectResolver, prim game.SacrificePermanents)
 			chosen = append(chosen, playerControlledMatchingSelection(r.game, resolver, playerID, prim.Selection)...)
 			continue
 		}
+		if prim.AnyNumber {
+			chosen = append(chosen, r.engine.chooseAnyNumberToSacrificeForPlayer(r.game, resolver, playerID, prim.Selection, r.agents, r.log)...)
+			continue
+		}
 		if prim.Fallback.Kind != game.SacrificeFallbackNone &&
 			!playerControlsSelection(r.game, resolver, playerID, prim.Selection) {
 			cantSacrifice = append(cantSacrifice, playerID)
@@ -1528,6 +1532,12 @@ func handleSacrificePermanents(r *effectResolver, prim game.SacrificePermanents)
 			rememberLinkedObject(r.game, key, permanentLinkedObjectRef(permanent))
 		}
 	}
+	// Report the number of permanents sacrificed as the resolved amount so a
+	// count-scaled follow-up published off this instruction ("add that much",
+	// "draw that many", "create that many") reads it. The amount is recorded
+	// only when this instruction carries a PublishResult key, so it is inert for
+	// the many edicts that do not publish a count.
+	res.amount = len(chosen)
 	res.succeeded = sacrificePermanentsSimultaneously(r.game, chosen)
 	r.applySacrificeFallback(prim.Fallback, cantSacrifice)
 	return res

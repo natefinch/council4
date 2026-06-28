@@ -1002,6 +1002,15 @@ type SacrificePermanents struct {
 	// all permanents they control that are one or more colors." — All Is Dust).
 	// Amount is ignored when All is set, and no per-player choice is offered.
 	All bool
+	// AnyNumber, when set, lets each affected player choose any number of
+	// permanents matching Selection to sacrifice, from none up to all eligible,
+	// rather than a fixed Amount ("Sacrifice any number of lands, then add that
+	// much {C}." — Mana Seism). Amount is ignored when AnyNumber is set. The
+	// number actually sacrificed is reported as the instruction's resolved
+	// amount, so a later count-scaled effect published off this instruction
+	// ("add that much", "draw that many", "create that many") reads it through
+	// DynamicAmountPreviousEffectResult. It is mutually exclusive with All.
+	AnyNumber bool
 	// Fallback is applied to each affected player who controls no permanent
 	// matching Selection, i.e. who can't satisfy the edict ("Each player who
 	// can't discards a card."). SacrificeFallbackNone leaves no rider.

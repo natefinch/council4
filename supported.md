@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,233 of 32,501 cards eligible for paper support (49.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,235 of 32,501 cards eligible for paper support (50.0%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -6349,6 +6349,7 @@ Council4 currently supports **16,233 of 32,501 cards eligible for paper support 
 - Hellhole Flailer
 - Hellion
 - Hellion Crucible
+- Hellion Eruption
 - Hellkite Igniter
 - Hellkite Overlord
 - Hellkite Punisher
@@ -8293,6 +8294,7 @@ Council4 currently supports **16,233 of 32,501 cards eligible for paper support 
 - Mana Matrix
 - Mana Prism
 - Mana Reflection
+- Mana Seism
 - Mana Tithe
 - Mana Vault
 - Manabarbs

@@ -71,6 +71,9 @@ func lowerOrderedSequenceSpecialCase(
 	if content, ok := lowerOptionalSacrificeScaledReward(ctx); ok {
 		return content, nil, true
 	}
+	if content, ok := lowerSacrificeThenCountSequence(ctx); ok {
+		return content, nil, true
+	}
 	if content, ok := lowerOptionalSacrificeThenSearchSequence(ctx); ok {
 		return content, nil, true
 	}

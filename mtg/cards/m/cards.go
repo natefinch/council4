@@ -25,6 +25,7 @@ var Cards = []*game.CardDef{
 	Malfunction,
 	MalleableImpostor,
 	ManaReflection,
+	ManaSeism,
 	ManifestationSage,
 	Manticore,
 	MarchingDuodrone,
