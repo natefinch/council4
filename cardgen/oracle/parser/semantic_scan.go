@@ -37,6 +37,15 @@ func (a *Ability) computeSemanticReferences() []Reference {
 			if effect.Kind == EffectCanAttackAsThoughDefender {
 				tokens = tokensOutsideParserSpan(tokens, effect.CanAttackDefenderSpan)
 			}
+			// "<player> mills half their library, rounded up/down" owns its
+			// possessive "their"/"your": the milling player is the effect's own
+			// subject, so the pronoun names no free referent. Remove the amount's
+			// span before reference scanning so it does not surface as a dangling
+			// semantic reference that would block the single-player mill lowering.
+			if effect.Kind == EffectMill &&
+				effect.Amount.DynamicKind == EffectDynamicAmountHalfPlayerLibrary {
+				tokens = tokensOutsideParserSpan(tokens, effect.Amount.Span)
+			}
 		}
 	}
 	return a.Atoms.ReferencesWithin(tokens)

@@ -835,6 +835,15 @@ const (
 	// which counts every graveyard; the source name is read at resolution. Added
 	// last so existing kinds keep their values.
 	EffectDynamicAmountCardsNamedSelfInControllerGraveyard EffectDynamicAmountKind = "EffectDynamicAmountCardsNamedSelfInControllerGraveyard"
+	// EffectDynamicAmountHalfPlayerLibrary is half the number of cards in the
+	// milling player's library, rounded up or down per the amount's RoundUp flag
+	// ("mills half their library, rounded down" — Traumatize; "mills half their
+	// library, rounded up" — Fleet Swallower). The "their" possessive names the
+	// player doing the milling (the effect's subject), so the library counted is
+	// that same player's, halved as the effect resolves (CR 107.4, CR 701.13).
+	// It carries no in-text referent and is recognized only on mill effects.
+	// Added last so existing kinds keep their values.
+	EffectDynamicAmountHalfPlayerLibrary EffectDynamicAmountKind = "EffectDynamicAmountHalfPlayerLibrary"
 )
 
 // EffectDynamicAmountForm identifies how a dynamic amount is introduced.
@@ -846,6 +855,11 @@ const (
 	EffectDynamicAmountFormEqual   EffectDynamicAmountForm = "EffectDynamicAmountFormEqual"
 	EffectDynamicAmountFormForEach EffectDynamicAmountForm = "EffectDynamicAmountFormForEach"
 	EffectDynamicAmountFormWhereX  EffectDynamicAmountForm = "EffectDynamicAmountFormWhereX"
+	// EffectDynamicAmountFormHalfLibrary introduces the "half their library,
+	// rounded up/down" mill amount, whose noun is the milling player's library
+	// rather than a counted "cards" plural, so its exact reconstruction appends
+	// the amount phrase directly after the subject verb with no "cards" noun.
+	EffectDynamicAmountFormHalfLibrary EffectDynamicAmountForm = "EffectDynamicAmountFormHalfLibrary"
 )
 
 // EffectAmountSyntax is a fixed or rules-derived source-spanned amount.
@@ -867,6 +881,10 @@ type EffectAmountSyntax struct {
 	DynamicKind EffectDynamicAmountKind `json:",omitempty"`
 	DynamicForm EffectDynamicAmountForm `json:",omitempty"`
 	Multiplier  int                     `json:",omitempty"`
+	// RoundUp records that a halving amount rounds up rather than down ("rounded
+	// up" versus "rounded down"). It is meaningful only for the half-library mill
+	// amount (EffectDynamicAmountHalfPlayerLibrary) and is false otherwise.
+	RoundUp bool `json:",omitempty"`
 	// Addend is a fixed integer added to a dynamic count after the multiplier,
 	// modeling the "plus N" rider on a counted amount ("the number of cards in
 	// your hand plus one.", Sea Gate Restoration). It is zero when no such rider

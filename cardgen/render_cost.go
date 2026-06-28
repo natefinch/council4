@@ -518,6 +518,12 @@ func (r Renderer) renderDynamicAmount(ctx *renderCtx, dynamic *game.DynamicAmoun
 	if dynamic.Addend != 0 {
 		fields = append(fields, fmt.Sprintf("Addend: %d,", dynamic.Addend))
 	}
+	if dynamic.Divisor != 0 {
+		fields = append(fields, fmt.Sprintf("Divisor: %d,", dynamic.Divisor))
+	}
+	if dynamic.RoundUp {
+		fields = append(fields, "RoundUp: true,")
+	}
 	if dynamic.Kind == game.DynamicAmountTargetCounters ||
 		dynamic.Kind == game.DynamicAmountObjectCounters ||
 		dynamic.CounterKind != 0 {

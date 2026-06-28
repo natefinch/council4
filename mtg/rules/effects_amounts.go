@@ -178,7 +178,23 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj opt.V[*game.StackObject], c
 	if multiplier == 0 {
 		multiplier = 1
 	}
-	return amount*multiplier + dynamic.Addend
+	return applyDynamicAmountDivisor(amount*multiplier+dynamic.Addend, dynamic)
+}
+
+// applyDynamicAmountDivisor divides a dynamic amount's value by its Divisor when
+// one is set, rounding down unless RoundUp is set ("half their library, rounded
+// up/down" — Traumatize, Fleet Swallower; CR 107.4). A Divisor of zero or one
+// leaves the value unchanged. Library sizes are non-negative, so truncating
+// integer division yields the floor and the (value+Divisor-1) form yields the
+// ceiling.
+func applyDynamicAmountDivisor(value int, dynamic game.DynamicAmount) int {
+	if dynamic.Divisor <= 1 {
+		return value
+	}
+	if dynamic.RoundUp {
+		return (value + dynamic.Divisor - 1) / dynamic.Divisor
+	}
+	return value / dynamic.Divisor
 }
 
 // sourceDerivedDynamicAmount evaluates the dynamic amounts that read from the

@@ -3110,6 +3110,13 @@ const (
 	// source name is read at resolution. Added last so existing kinds keep their
 	// wire values.
 	DynamicAmountCardsNamedSelfInControllerGraveyard
+	// DynamicAmountHalfPlayerLibrary is half the number of cards in the milling
+	// player's library, rounded up or down per CompiledAmount.RoundUp ("mills
+	// half their library, rounded down" — Traumatize; "rounded up" — Fleet
+	// Swallower; CR 107.4, CR 701.13). The milling player is the effect's subject
+	// (target/defending player); lowering counts that player's library. Added
+	// last so existing kinds keep their wire values.
+	DynamicAmountHalfPlayerLibrary
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.
@@ -3121,6 +3128,11 @@ const (
 	DynamicAmountEqual
 	DynamicAmountForEach
 	DynamicAmountWhereX
+	// DynamicAmountFormHalfLibrary introduces the "half their library, rounded
+	// up/down" mill amount, whose noun is the milling player's library rather
+	// than a counted "cards" plural. Added last so existing forms keep their wire
+	// values.
+	DynamicAmountFormHalfLibrary
 )
 
 // CompiledAmount is a fixed or rules-derived amount recognized in an effect.
@@ -3135,10 +3147,13 @@ type CompiledAmount struct {
 	// parser.EffectAmountSyntax.AnyNumber. It is the only positive signal for
 	// that form, since "all", "the", and a bare plural noun share the same empty
 	// amount shape.
-	AnyNumber     bool
-	DynamicKind   DynamicAmountKind
-	DynamicForm   DynamicAmountForm
-	Multiplier    int
+	AnyNumber   bool
+	DynamicKind DynamicAmountKind
+	DynamicForm DynamicAmountForm
+	Multiplier  int
+	// RoundUp records that a half-library mill amount rounds up rather than down
+	// (DynamicAmountHalfPlayerLibrary). It is false for every other amount.
+	RoundUp       bool
 	ReferenceSpan shared.Span
 	Addend        int
 	CounterKind   counter.Kind

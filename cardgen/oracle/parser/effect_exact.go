@@ -3882,6 +3882,13 @@ func exactCountedNounEffectText(
 			(amount.Multiplier == 1 && strings.EqualFold(text, fmt.Sprintf("%s a %s %s.", prefix, noun, amount.Text)))
 	case EffectDynamicAmountFormWhereX:
 		return strings.EqualFold(text, fmt.Sprintf("%s X %s, %s.", prefix, plural, amount.Text))
+	case EffectDynamicAmountFormHalfLibrary:
+		// The half-library amount's noun is the milling player's library, carried
+		// whole in amount.Text ("half their library, rounded down"), so the clause
+		// reconstructs as the bare subject verb followed by that phrase with no
+		// counted "cards" noun: "Target player mills half their library, rounded
+		// down."
+		return strings.EqualFold(text, fmt.Sprintf("%s %s.", prefix, amount.Text))
 	default:
 		return false
 	}

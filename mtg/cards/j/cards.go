@@ -12,6 +12,7 @@ var Cards = []*game.CardDef{
 	JackalFamiliar,
 	JadeLeech,
 	JhessianBalmgiver,
+	JidoorAristocraticCapital,
 	JinxedIdol,
 	JinxedRing,
 	JirinaDauntlessGeneral,
