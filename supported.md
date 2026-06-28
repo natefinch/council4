@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,871 of 32,501 cards eligible for paper support (48.8%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,876 of 32,501 cards eligible for paper support (48.8%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2849,6 +2849,7 @@ Council4 currently supports **15,871 of 32,501 cards eligible for paper support 
 - Crypt of the Eternals
 - Crypt Ripper
 - Cryptbreaker
+- Cryptcaller Chariot
 - Cryptic Annelid
 - Cryptic Caves
 - Cryptic Command
@@ -5487,6 +5488,7 @@ Council4 currently supports **15,871 of 32,501 cards eligible for paper support 
 - Gluttonous Guest
 - Gluttonous Slime
 - Gluttonous Slug
+- Gluttonous Troll
 - Gluttonous Zombie
 - Gnarlback Rhino
 - Gnarled Effigy
@@ -5658,6 +5660,7 @@ Council4 currently supports **15,871 of 32,501 cards eligible for paper support 
 - Goldnight Commander
 - Goldnight Redeemer
 - Goldspan Dragon
+- Goldvein Hydra
 - Goldvein Pick
 - Golem
 - Golem
@@ -7256,6 +7259,7 @@ Council4 currently supports **15,871 of 32,501 cards eligible for paper support 
 - Kill Shot
 - Kill-Zone Acrobat
 - Killer Bees
+- Killer Service
 - Killer Whale
 - Killian's Confidence
 - Killmonger, Scourge of Wakanda
@@ -9002,6 +9006,7 @@ Council4 currently supports **15,871 of 32,501 cards eligible for paper support 
 - Nessian Hornbeetle
 - Nessian Wanderer
 - Nessian Wilds Ravager
+- Nest of Scarabs
 - Nest Robber
 - Nested Ghoul
 - Nested Shambler
