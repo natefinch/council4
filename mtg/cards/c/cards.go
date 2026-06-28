@@ -86,6 +86,7 @@ var Cards = []*game.CardDef{
 	CommuneWithSpirits,
 	CompellingArgument,
 	CompellingDeterrence,
+	ComposerOfSpring,
 	CompySwarm,
 	ConjurerSMantle,
 	ConquerorSPledge,
