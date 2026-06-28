@@ -47,6 +47,7 @@ var Cards = []*game.CardDef{
 	MeltstriderEulogist,
 	MeltstriderSResolve,
 	MemorialToUnity,
+	MemoryLapse,
 	MemoryPlunder,
 	MendingHands,
 	MentorSGuidance,

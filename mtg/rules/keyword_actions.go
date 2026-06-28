@@ -55,7 +55,7 @@ func emitFightEvent(g *game.Game, permanent, related *game.Permanent, simultaneo
 	})
 }
 
-func counterTargetStackObject(g *game.Game, obj *game.StackObject, targetIndex int, exileInstead bool) bool {
+func counterTargetStackObject(g *game.Game, obj *game.StackObject, targetIndex int, exileInstead bool, destination game.CounteredSpellDestination) bool {
 	stackObjectID, ok := effectStackObjectID(obj, targetIndex)
 	if !ok {
 		return false
@@ -67,6 +67,7 @@ func counterTargetStackObject(g *game.Game, obj *game.StackObject, targetIndex i
 	if exileInstead {
 		target.ExileOnResolution = true
 	}
+	target.CounteredDestination = destination
 	if obj.TargetControllerLKI == nil {
 		obj.TargetControllerLKI = make(map[int]game.PlayerID)
 	}

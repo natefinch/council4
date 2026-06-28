@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,935 of 32,501 cards eligible for paper support (49.0%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,938 of 32,501 cards eligible for paper support (49.0%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -7588,6 +7588,7 @@ Council4 currently supports **15,935 of 32,501 cards eligible for paper support 
 - Lantern Spirit
 - Lantern-Lit Graveyard
 - Lapis Lazuli Talisman
+- Lapse of Certainty
 - Laquatus's Champion
 - Larceny
 - Larder Zombie
@@ -8354,6 +8355,7 @@ Council4 currently supports **15,935 of 32,501 cards eligible for paper support 
 - Memory Drain
 - Memory Erosion
 - Memory Guardian
+- Memory Lapse
 - Memory Plunder
 - Memory Worm
 - Menagerie Liberator
@@ -10707,6 +10709,7 @@ Council4 currently supports **15,935 of 32,501 cards eligible for paper support 
 - Reliquary Monk
 - Reliquary Tower
 - Relm's Sketching
+- Remand
 - Remember the Fallen
 - Remnant Elemental
 - Remorseful Cleric

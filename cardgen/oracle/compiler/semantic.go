@@ -2362,6 +2362,12 @@ type CompiledEffect struct {
 	// spell is countered this way, exile it instead of putting it into its
 	// owner's graveyard." rider through the text-blind compiler boundary.
 	CounteredSpellExileReplacement bool
+	// CounteredSpellDestinationReplacement carries the parser-recognized "If that
+	// spell is countered this way, put it [on top of its owner's library | into
+	// its owner's hand] instead of into that player's graveyard." rider through
+	// the text-blind compiler boundary. The redirect zone is read from ToZone and
+	// Destination by the counter lowerer.
+	CounteredSpellDestinationReplacement bool
 	// ExileUntilSourceLeaves carries the parser-recognized O-Ring exile clause
 	// "exile <target> until <this permanent> leaves the battlefield." through the
 	// text-blind compiler boundary so lowering links the exile to the source.

@@ -11,6 +11,7 @@ var Cards = []*game.CardDef{
 	LaidToRest,
 	LairDelve,
 	LapisLazuliTalisman,
+	LapseOfCertainty,
 	LashwhipPredator,
 	LassoedByTheLaw,
 	LatticeBladeMantis,

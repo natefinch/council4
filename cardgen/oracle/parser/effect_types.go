@@ -2490,6 +2490,14 @@ type EffectSyntax struct {
 	// owner's graveyard." (CR 614 replacement). It pairs with a preceding
 	// counter effect so lowering can emit a single counter-and-exile primitive.
 	CounteredSpellExileReplacement bool `json:",omitempty"`
+	// CounteredSpellDestinationReplacement marks the exact counter rider "If that
+	// spell is countered this way, put it [on top of its owner's library | into
+	// its owner's hand] instead of into that player's graveyard." (Memory Lapse,
+	// Lapse of Certainty, Remand). It pairs with a preceding counter effect so
+	// lowering can emit a single CounterObject that redirects the countered spell
+	// to the zone named by ToZone and Destination. The redirect zone other than
+	// exile is the only difference from CounteredSpellExileReplacement.
+	CounteredSpellDestinationReplacement bool `json:",omitempty"`
 	// ExileUntilSourceLeaves marks the exact O-Ring exile clause "exile <target>
 	// until <this permanent> leaves the battlefield." (Banisher Priest, Banishing
 	// Light, Journey to Nowhere-style enchantments). The exiled permanent is

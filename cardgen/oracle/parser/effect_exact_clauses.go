@@ -783,6 +783,36 @@ func exactPlayerGraveyardExileEffectSyntax(effect *EffectSyntax) bool {
 	return strings.EqualFold(exactEffectClauseText(effect), canonical)
 }
 
+// exactCounteredSpellDestinationSyntax recognizes the counter rider "If that
+// spell is countered this way, put it [on top of its owner's library | into its
+// owner's hand] instead of into that player's graveyard." (Memory Lapse, Lapse
+// of Certainty, Remand) and marks it so a preceding counter effect lowers to a
+// single CounterObject that redirects the countered spell to the named zone. The
+// parser owns this wording; any other destination phrasing leaves the clause
+// non-exact so lowering fails closed.
+func exactCounteredSpellDestinationSyntax(effect *EffectSyntax) bool {
+	if effect.Kind != EffectPut || effect.Negated {
+		return false
+	}
+	var destination string
+	switch {
+	case effect.ToZone == zone.Library && effect.Destination == EffectDestinationTop:
+		destination = "put it on top of its owner's library"
+	case effect.ToZone == zone.Hand && effect.Destination == EffectDestinationUnspecified:
+		destination = "put it into its owner's hand"
+	default:
+		return false
+	}
+	expected := "If that spell is countered this way, " + destination + " instead of into that player's graveyard."
+	if !strings.EqualFold(strings.TrimSpace(effect.Text), expected) {
+		return false
+	}
+	effect.CounteredSpellDestinationReplacement = true
+	return true
+}
+
+// exactGraveyardPutEffectSyntax reports whether a "Put <graveyard card>"
+// destination clause reconstructs one of the supported destinations exactly.
 func exactGraveyardPutEffectSyntax(effect *EffectSyntax) bool {
 	if len(effect.Targets) != 1 || !exactGraveyardCardTargetSyntax(&effect.Targets[0]) {
 		return false

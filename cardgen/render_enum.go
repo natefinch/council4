@@ -135,6 +135,20 @@ func supertypeLiteral(st types.Super) (string, error) {
 	return lit, nil
 }
 
+// counteredSpellDestinationLiteral returns the Go constant for a non-default
+// CounterObject destination. It errors for the graveyard default (which renders
+// no Destination field) and any unknown value.
+func counteredSpellDestinationLiteral(d game.CounteredSpellDestination) (string, error) {
+	switch d {
+	case game.CounteredSpellLibraryTop:
+		return "game.CounteredSpellLibraryTop", nil
+	case game.CounteredSpellHand:
+		return "game.CounteredSpellHand", nil
+	default:
+		return "", fmt.Errorf("render: unsupported countered-spell destination %d", d)
+	}
+}
+
 func renderAdditionalKind(kind cost.AdditionalKind) (string, error) {
 	switch kind {
 	case cost.AdditionalSacrifice:

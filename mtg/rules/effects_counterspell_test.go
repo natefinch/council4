@@ -133,6 +133,73 @@ func TestCounterEffectExilesTargetStackObject(t *testing.T) {
 	}
 }
 
+func TestCounterEffectRedirectsToLibraryTop(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	targetID := g.IDGen.Next()
+	g.CardInstances[targetID] = &game.CardInstance{
+		ID: targetID,
+		Def: &game.CardDef{CardFace: game.CardFace{Name: "Target Spell",
+			Types: []types.Card{types.Sorcery}},
+		},
+		Owner: game.Player2,
+	}
+	targetObj := &game.StackObject{
+		ID:         g.IDGen.Next(),
+		Kind:       game.StackSpell,
+		SourceID:   targetID,
+		Controller: game.Player2,
+	}
+	g.Stack.Push(targetObj)
+	addEffectSpellToStack(g, game.Player1, game.CounterObject{Object: game.TargetStackObjectReference(0), Destination: game.CounteredSpellLibraryTop}, []game.Target{game.StackObjectTarget(targetObj.ID)})
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if _, ok := stackObjectByID(g, targetObj.ID); ok {
+		t.Fatal("target stack object remained after counter effect")
+	}
+	if g.Players[game.Player2].Graveyard.Contains(targetID) {
+		t.Fatal("countered spell moved to graveyard, want library top")
+	}
+	top, ok := g.Players[game.Player2].Library.Top()
+	if !ok || top != targetID {
+		t.Fatal("countered spell did not move to top of library")
+	}
+}
+
+func TestCounterEffectRedirectsToHand(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	targetID := g.IDGen.Next()
+	g.CardInstances[targetID] = &game.CardInstance{
+		ID: targetID,
+		Def: &game.CardDef{CardFace: game.CardFace{Name: "Target Spell",
+			Types: []types.Card{types.Sorcery}},
+		},
+		Owner: game.Player2,
+	}
+	targetObj := &game.StackObject{
+		ID:         g.IDGen.Next(),
+		Kind:       game.StackSpell,
+		SourceID:   targetID,
+		Controller: game.Player2,
+	}
+	g.Stack.Push(targetObj)
+	addEffectSpellToStack(g, game.Player1, game.CounterObject{Object: game.TargetStackObjectReference(0), Destination: game.CounteredSpellHand}, []game.Target{game.StackObjectTarget(targetObj.ID)})
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if _, ok := stackObjectByID(g, targetObj.ID); ok {
+		t.Fatal("target stack object remained after counter effect")
+	}
+	if g.Players[game.Player2].Graveyard.Contains(targetID) {
+		t.Fatal("countered spell moved to graveyard, want hand")
+	}
+	if !g.Players[game.Player2].Hand.Contains(targetID) {
+		t.Fatal("countered spell did not move to hand")
+	}
+}
+
 func TestCounterEffectCountersTargetStackObject(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

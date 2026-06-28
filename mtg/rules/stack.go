@@ -847,6 +847,18 @@ func moveStackCardToZone(g *game.Game, obj *game.StackObject, card *game.CardIns
 		// Flashback replaces any move from the stack to anywhere else with exile
 		// after the spell was cast from a graveyard (CR 702.34a, CR 702.34c).
 		intendedDestination = zone.Exile
+	} else if obj != nil {
+		// A counter-and-redirect replacement diverts the countered spell's card
+		// to a non-graveyard zone other than exile (Memory Lapse, Remand). Top of
+		// library is honored by Add below, which adds to the top of a zone.
+		switch obj.CounteredDestination {
+		case game.CounteredSpellLibraryTop:
+			intendedDestination = zone.Library
+		case game.CounteredSpellHand:
+			intendedDestination = zone.Hand
+		default:
+			// CounteredSpellGraveyard keeps the caller's intended destination.
+		}
 	}
 	event := game.Event{
 		Kind:          game.EventZoneChanged,

@@ -1991,6 +1991,14 @@ func (p CounterObject) validatePrimitive(targets []TargetSpec, checkTargets bool
 	if p.Object.Kind() != ObjectReferenceTargetStackObject {
 		return errors.New("counter object requires a target stack object reference")
 	}
+	if p.ExileInstead && p.Destination != CounteredSpellGraveyard {
+		return errors.New("counter object cannot both exile and redirect a countered spell")
+	}
+	switch p.Destination {
+	case CounteredSpellGraveyard, CounteredSpellLibraryTop, CounteredSpellHand:
+	default:
+		return errors.New("counter object has an unknown countered-spell destination")
+	}
 	return validateTargetAllows(p.Object.TargetIndex(), TargetAllowStackObject, targets, checkTargets)
 }
 

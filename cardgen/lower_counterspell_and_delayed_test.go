@@ -1538,3 +1538,64 @@ func TestLowerCounterPlainStillGraveyard(t *testing.T) {
 		t.Fatal("ExileInstead = true, want false for plain counter")
 	}
 }
+
+func TestLowerCounterThenAlternateDestination(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name            string
+		oracleText      string
+		wantDestination game.CounteredSpellDestination
+		wantDraw        bool
+	}{
+		{
+			name: "library top",
+			oracleText: "Counter target spell. If that spell is countered this way, put it on top of " +
+				"its owner's library instead of into that player's graveyard.",
+			wantDestination: game.CounteredSpellLibraryTop,
+		},
+		{
+			name: "into hand with draw",
+			oracleText: "Counter target spell. If that spell is countered this way, put it into " +
+				"its owner's hand instead of into that player's graveyard.\nDraw a card.",
+			wantDestination: game.CounteredSpellHand,
+			wantDraw:        true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Counter Redirect",
+				Layout:     "normal",
+				TypeLine:   "Instant",
+				OracleText: test.oracleText,
+			})
+			if !face.SpellAbility.Exists {
+				t.Fatal("spell ability missing")
+			}
+			mode := face.SpellAbility.Val.Modes[0]
+			wantLen := 1
+			if test.wantDraw {
+				wantLen = 2
+			}
+			if len(mode.Sequence) != wantLen {
+				t.Fatalf("sequence = %d, want %d", len(mode.Sequence), wantLen)
+			}
+			counter, ok := mode.Sequence[0].Primitive.(game.CounterObject)
+			if !ok {
+				t.Fatalf("primitive = %T, want game.CounterObject", mode.Sequence[0].Primitive)
+			}
+			if counter.ExileInstead {
+				t.Fatal("ExileInstead = true, want false for redirect")
+			}
+			if counter.Destination != test.wantDestination {
+				t.Fatalf("destination = %v, want %v", counter.Destination, test.wantDestination)
+			}
+			if test.wantDraw {
+				if _, ok := mode.Sequence[1].Primitive.(game.Draw); !ok {
+					t.Fatalf("second primitive = %T, want game.Draw", mode.Sequence[1].Primitive)
+				}
+			}
+		})
+	}
+}
