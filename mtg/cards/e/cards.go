@@ -50,6 +50,7 @@ var Cards = []*game.CardDef{
 	EternalTaskmaster,
 	EtherealChampion,
 	EtherealElk,
+	Everglades,
 	ExaltedAngel,
 	ExcaliburII,
 	ExemplarOfStrength,

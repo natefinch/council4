@@ -236,10 +236,12 @@ func lowerReturnToHandCost(component compiler.CostComponent) (cost.Additional, b
 		return cost.Additional{}, false
 	}
 	additional := cost.Additional{
-		Kind:          cost.AdditionalReturnToHand,
-		Text:          component.Text,
-		Amount:        component.AmountValue,
-		RequireTapped: component.RequireTapped,
+		Kind:            cost.AdditionalReturnToHand,
+		Text:            component.Text,
+		Amount:          component.AmountValue,
+		RequireTapped:   component.RequireTapped,
+		RequireUntapped: component.RequireUntapped,
+		ExcludeSource:   component.ExcludeSource,
 	}
 	if lowerCostPermanentObject(component, &additional, true) {
 		return additional, true
@@ -254,6 +256,9 @@ func lowerCostPermanentObject(component compiler.CostComponent, additional *cost
 	additional.RequireToken = component.ObjectTokenOnly
 	if component.ObjectExcludedTypeKnown {
 		additional.ExcludePermanentType = component.ObjectExcludedType
+	}
+	if component.ObjectExcludedSubtypeKnown {
+		additional.ExcludeSubtype = component.ObjectExcludedSubtype
 	}
 	if component.ObjectColorKnown {
 		additional.MatchCardColor = true

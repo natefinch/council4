@@ -77,6 +77,11 @@ func TestSelectionForAdditionalCost(t *testing.T) {
 			want: game.Selection{ExcludedTypes: []types.Card{types.Land}, TokenOnly: true},
 		},
 		{
+			name: "exclude subtype",
+			cost: cost.Additional{Kind: cost.AdditionalReturnToHand, MatchPermanentType: true, PermanentType: types.Land, ExcludeSubtype: types.Lair},
+			want: game.Selection{RequiredTypesAny: []types.Card{types.Land}, ExcludedSubtype: types.Lair},
+		},
+		{
 			name: "tapped",
 			cost: cost.Additional{Kind: cost.AdditionalTapPermanents, RequireTapped: true},
 			want: game.Selection{Tapped: game.TriTrue},

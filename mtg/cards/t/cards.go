@@ -85,6 +85,7 @@ var Cards = []*game.CardDef{
 	TreetopBracers,
 	TreetopRangers,
 	TreetopScout,
+	TrevaSRuins,
 	TributaryInstructor,
 	TributeMage,
 	TrophyHunter,

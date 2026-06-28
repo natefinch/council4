@@ -414,6 +414,10 @@ func renderAdditional(ctx *renderCtx, additional cost.Additional) (string, error
 		ctx.need(importTypes)
 		fields = append(fields, fmt.Sprintf("ExcludePermanentType: %s,", excludedType))
 	}
+	if additional.ExcludeSubtype != "" {
+		ctx.need(importTypes)
+		fields = append(fields, fmt.Sprintf("ExcludeSubtype: %s,", SubtypeToLiteral(string(additional.ExcludeSubtype), []string{"Land", "Creature"})))
+	}
 	if additional.MatchCardType {
 		cardType, err := cardTypeLiteral(additional.CardType)
 		if err != nil {
@@ -444,6 +448,9 @@ func renderAdditional(ctx *renderCtx, additional cost.Additional) (string, error
 	}
 	if additional.RequireTapped {
 		fields = append(fields, "RequireTapped: true,")
+	}
+	if additional.RequireUntapped {
+		fields = append(fields, "RequireUntapped: true,")
 	}
 	if additional.RequireToken {
 		fields = append(fields, "RequireToken: true,")

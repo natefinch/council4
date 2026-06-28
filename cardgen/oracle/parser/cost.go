@@ -101,6 +101,14 @@ type CostComponent struct {
 	ObjectExcludedType      CardType `json:",omitempty"`
 	ObjectExcludedTypeKnown bool     `json:",omitempty"`
 
+	// ObjectExcludedSubtype constrains a permanent cost object to permanents
+	// that lack the named subtype, recognized from a "non-<subtype>" qualifier
+	// such as "non-Lair" in "return a non-Lair land you control to its owner's
+	// hand" (the Lair cycle). ObjectExcludedSubtypeKnown reports its presence;
+	// the compiler carries the subtype onto the typed cost component.
+	ObjectExcludedSubtype      types.Sub `json:",omitempty"`
+	ObjectExcludedSubtypeKnown bool      `json:",omitempty"`
+
 	// SecondObjectNoun is the second permanent-type noun of a two-type cost
 	// union such as "sacrifice an artifact or creature." It is empty unless the
 	// object names two permanent types joined by "or".
@@ -1242,12 +1250,25 @@ func annotateReturnCostObject(component *CostComponent, object []shared.Token, a
 		return
 	}
 	prefix := object[:len(object)-6]
-	if len(prefix) < 2 || !costAmountAt(component, prefix[0], atoms, false) {
+	if len(prefix) < 2 {
 		return
 	}
-	prefix = prefix[1:]
+	if equalWord(prefix[0], "another") {
+		component.ExcludeSource = true
+		component.AmountValue = 1
+		component.AmountKnown = true
+		prefix = prefix[1:]
+	} else {
+		if !costAmountAt(component, prefix[0], atoms, false) {
+			return
+		}
+		prefix = prefix[1:]
+	}
 	if len(prefix) > 0 && equalWord(prefix[0], "tapped") {
 		component.RequireTapped = true
+		prefix = prefix[1:]
+	} else if len(prefix) > 0 && equalWord(prefix[0], "untapped") {
+		component.RequireUntapped = true
 		prefix = prefix[1:]
 	}
 	if annotateCostPermanentObject(component, prefix, atoms, true, []types.Card{types.Land, types.Creature, types.Artifact, types.Enchantment}) {
@@ -1283,6 +1304,18 @@ func annotateCostPermanentObject(component *CostComponent, object []shared.Token
 		return false
 	}
 	if len(object) == 2 {
+		if sub, ok := atoms.ExcludedSubtypeAt(object[0].Span); ok {
+			noun, ok := atoms.ObjectNounAt(object[1].Span)
+			if !ok || !annotateCostObjectNoun(component, noun) {
+				return false
+			}
+			if !SubtypeMatchesAnyRuntimeCardType(sub, subtypeTypes) {
+				return false
+			}
+			component.ObjectExcludedSubtype = sub
+			component.ObjectExcludedSubtypeKnown = true
+			return true
+		}
 		if supertype, ok := atoms.SupertypeAt(object[0].Span); ok {
 			return annotateCostSupertypeObject(component, supertype, object[1], atoms, allowSnowLand)
 		}

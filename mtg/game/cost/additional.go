@@ -105,6 +105,11 @@ type Additional struct {
 	// independent of MatchPermanentType.
 	ExcludePermanentType types.Card
 
+	// ExcludeSubtype constrains a battlefield cost to permanents that lack the
+	// named subtype, as required by "return a non-Lair land you control to its
+	// owner's hand" (the Lair cycle). An empty value imposes no exclusion.
+	ExcludeSubtype types.Sub
+
 	// MatchCardType constrains card costs such as "discard a creature card."
 	// When false, any card in the relevant zone is allowed for card costs.
 	MatchCardType bool
@@ -144,6 +149,11 @@ type Additional struct {
 
 	// RequireTapped constrains battlefield costs to tapped permanents.
 	RequireTapped bool
+
+	// RequireUntapped constrains battlefield costs to untapped permanents, as
+	// required by "return an untapped Plains you control to its owner's hand"
+	// (the Karoo cycle). It parallels RequireTapped.
+	RequireUntapped bool
 
 	// RequireToken constrains a battlefield cost to token permanents (CR 111),
 	// as required by "sacrifice an artifact token" or a bare "sacrifice a token."
