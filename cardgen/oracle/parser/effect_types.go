@@ -1990,6 +1990,13 @@ type EffectSyntax struct {
 	// for the bare attached-creature recipient; any other wording leaves it false
 	// so lowering fails closed.
 	CounterRecipientAttached bool `json:",omitempty"`
+	// FightSubjectAttached reports that a fight effect's fighting subject is the
+	// permanent the source Aura or Equipment is attached to ("enchanted creature
+	// fights up to one target creature", "equipped creature fights target
+	// creature"), the attached-permanent fighter the runtime models with its
+	// source attached-permanent reference. It is set only for the bare attached
+	// fighter; every other fight subject leaves it false so lowering fails closed.
+	FightSubjectAttached bool `json:",omitempty"`
 	// CounterRecipientSingleChoice reports that a non-target counter-placement
 	// effect places its counters on a single permanent the controller chooses
 	// from a battlefield group ("put a vigilance counter on a creature you

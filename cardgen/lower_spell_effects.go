@@ -1692,6 +1692,38 @@ func lowerSourceFightSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnos
 		"the executable source backend supports only a source permanent fighting one target creature",
 	)
 	effect := ctx.content.Effects[0]
+	// "enchanted creature fights ..." / "equipped creature fights ..." name the
+	// permanent the source Aura or Equipment is attached to as the fighter. The
+	// parser leaves no subject reference for this attached fighter (the runtime
+	// resolves it through the source's attachment link), so it is recognized by
+	// the FightSubjectAttached flag and lowered to the source attached-permanent
+	// reference against the lone creature target.
+	if effect.FightSubjectAttached {
+		if effect.Negated ||
+			effect.Optional ||
+			ctx.optional ||
+			effect.Selector.Another ||
+			len(ctx.content.Targets) != 1 ||
+			len(ctx.content.References) != 0 ||
+			len(ctx.content.Conditions) != 0 ||
+			len(ctx.content.Keywords) != 0 ||
+			len(ctx.content.Modes) != 0 {
+			return game.AbilityContent{}, unsupported
+		}
+		target, ok := fightCreatureTargetSpec(ctx.content.Targets[0], fightAnotherReject)
+		if !ok {
+			return game.AbilityContent{}, unsupported
+		}
+		return game.Mode{
+			Targets: []game.TargetSpec{target},
+			Sequence: []game.Instruction{{
+				Primitive: game.Fight{
+					Object:        game.SourceAttachedPermanentReference(),
+					RelatedObject: game.TargetPermanentReference(0),
+				},
+			}},
+		}.Ability(), nil
+	}
 	// "another target creature" excludes the source fighter. It is only sound to
 	// drop the fighter from the target pool when the fighting object is the
 	// source permanent itself, so the "another" determiner is accepted only for
@@ -1798,8 +1830,11 @@ const (
 // fightCreatureTargetSpec lowers one fight target. The another parameter selects
 // how the "another target creature" determiner lowers: rejected, distinct from a
 // prior fight target (two-target fights), or distinct from the source fighter
-// (source fights). "the other" (Selector.Other) and the directional combat
-// qualifiers remain unsupported.
+// (source fights). The combat-state qualifiers "attacking"/"blocking" carry
+// through as the matched permanent's combat involvement ("target attacking
+// creature you control fights up to one target creature you don't control",
+// "target blocking creature fights another target blocking creature"). "the
+// other" (Selector.Other) and the tapped/untapped qualifiers remain unsupported.
 func fightCreatureTargetSpec(target compiler.CompiledTarget, another fightAnotherKind) (game.TargetSpec, bool) {
 	if target.Cardinality.Max != 1 ||
 		target.Cardinality.Min < 0 ||
@@ -1807,8 +1842,6 @@ func fightCreatureTargetSpec(target compiler.CompiledTarget, another fightAnothe
 		!fightTargetSelectsCreature(target.Selector) ||
 		(target.Selector.Another && another == fightAnotherReject) ||
 		target.Selector.Other ||
-		target.Selector.Attacking ||
-		target.Selector.Blocking ||
 		target.Selector.Tapped ||
 		target.Selector.Untapped {
 		return game.TargetSpec{}, false
@@ -1825,6 +1858,16 @@ func fightCreatureTargetSpec(target compiler.CompiledTarget, another fightAnothe
 		SubtypesAny:      slices.Clone(target.Selector.SubtypesAny()),
 		Name:             target.Selector.RequiredName,
 		ExcludeSource:    target.Selector.Another && another == fightAnotherExcludeSource,
+	}
+	switch {
+	case target.Selector.Attacking && target.Selector.Blocking:
+		selection.CombatState = game.CombatStateAttackingOrBlocking
+	case target.Selector.Attacking:
+		selection.CombatState = game.CombatStateAttacking
+	case target.Selector.Blocking:
+		selection.CombatState = game.CombatStateBlocking
+	default:
+		selection.CombatState = game.CombatStateAny
 	}
 	switch target.Selector.Controller {
 	case compiler.ControllerAny:

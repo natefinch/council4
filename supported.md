@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,828 of 32,501 cards eligible for paper support (48.7%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,835 of 32,501 cards eligible for paper support (48.7%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2030,6 +2030,7 @@ Council4 currently supports **15,828 of 32,501 cards eligible for paper support 
 - Cartouche of Ambition
 - Cartouche of Knowledge
 - Cartouche of Solidarity
+- Cartouche of Strength
 - Cartouche of Zeal
 - Carven Caryatid
 - Cascade Bluffs
@@ -3441,6 +3442,7 @@ Council4 currently supports **15,828 of 32,501 cards eligible for paper support 
 - Disruptive Student
 - Disruptor of Currents
 - Disruptor Wanderglyph
+- Dissension in the Ranks
 - Dissenter's Deliverance
 - Dissipate
 - Dissipation Field
@@ -5369,6 +5371,7 @@ Council4 currently supports **15,828 of 32,501 cards eligible for paper support 
 - Giltgrove Stalker
 - Gimli of the Glittering Caves
 - Gimli's Axe
+- Gimli's Reckless Might
 - Gimli, Counter of Kills
 - Gingerbread Cabin
 - Gingerbread Hunter // Puny Snack
@@ -8280,6 +8283,7 @@ Council4 currently supports **15,828 of 32,501 cards eligible for paper support 
 - Melt Terrain
 - Meltstrider Eulogist
 - Meltstrider's Gear
+- Meltstrider's Resolve
 - Memnite
 - Memorial to Folly
 - Memorial to Genius
@@ -9149,6 +9153,7 @@ Council4 currently supports **15,828 of 32,501 cards eligible for paper support 
 - Nova Cleric
 - Nova Flame
 - Novablast Wurm
+- Novel Nunchaku
 - Novice Dissector
 - Novice Inspector
 - Novice Occultist
@@ -9844,6 +9849,7 @@ Council4 currently supports **15,828 of 32,501 cards eligible for paper support 
 - Pit Spawn
 - Pitchburn Devils
 - Pith Driller
+- Pitiless Fists
 - Pitiless Gorgon
 - Pitiless Plunderer
 - Pitiless Pontiff
@@ -15157,6 +15163,7 @@ Council4 currently supports **15,828 of 32,501 cards eligible for paper support 
 - War-Torch Goblin
 - War-Wing Siren
 - Warbeast of Gorgoroth
+- Warbriar Blessing
 - Warchanter of Mogis
 - Warclamp Mastiff
 - Ward Sliver

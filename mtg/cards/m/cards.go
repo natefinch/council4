@@ -44,6 +44,7 @@ var Cards = []*game.CardDef{
 	MeatLocker,
 	MeletisAstronomer,
 	MeltstriderEulogist,
+	MeltstriderSResolve,
 	MemorialToUnity,
 	MemoryPlunder,
 	MendingHands,

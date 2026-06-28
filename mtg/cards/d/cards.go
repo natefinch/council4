@@ -42,6 +42,7 @@ var Cards = []*game.CardDef{
 	DirtyWererat,
 	DisruptivePitmage,
 	DisruptiveStudent,
+	DissensionInTheRanks,
 	DistortedCuriosity,
 	DiversionUnit,
 	DivineVisitation,
