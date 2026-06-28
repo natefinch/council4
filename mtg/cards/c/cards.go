@@ -102,6 +102,7 @@ var Cards = []*game.CardDef{
 	CrumblingColossus,
 	CrushingPain,
 	CruxOfFate,
+	Cryoclasm,
 	CryogenRelic,
 	CrystalRod,
 	CrystallineCrawler,

@@ -12,6 +12,7 @@ var Cards = []*game.CardDef{
 	ParadoxSurveyor,
 	PathOfAnnihilation,
 	PatronWizard,
+	PeakEruption,
 	PearlOfWisdom,
 	PeerThroughDepths,
 	PentagramOfTheAges,

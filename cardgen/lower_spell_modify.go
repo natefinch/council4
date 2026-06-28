@@ -721,9 +721,9 @@ func lowerReferencedPlayerDamageSpell(
 // effect aimed at the controller or owner of the inherited removal target. The
 // recipient reference is the sole target-bound reference in the clause ("that
 // land's"/"its"); its occurrence indexes the inherited target. The target's
-// selector kind drives the object reference: a permanent target yields a
-// permanent reference, a spell target a stack-object reference. It fails closed
-// for any other shape.
+// selector drives the object reference: a permanent target (including bare
+// subtype and compound type leads) yields a permanent reference, a spell target
+// a stack-object reference. It fails closed for any other shape.
 func referencedDamageRecipientPlayer(
 	ctx contentCtx,
 	kind parser.DamageRecipientReferenceKind,
@@ -745,15 +745,8 @@ func referencedDamageRecipientPlayer(
 		return game.PlayerReference{}, false
 	}
 	occ := recipientRef.Occurrence
-	var object game.ObjectReference
-	switch ctx.content.Targets[0].Selector.Kind {
-	case compiler.SelectorArtifact, compiler.SelectorCreature, compiler.SelectorEnchantment,
-		compiler.SelectorLand, compiler.SelectorPermanent, compiler.SelectorPlaneswalker,
-		compiler.SelectorBattle:
-		object = game.TargetPermanentReference(occ)
-	case compiler.SelectorSpell:
-		object = game.TargetStackObjectReference(occ)
-	default:
+	object, ok := inheritedRemovalTargetObjectRef(ctx.content.Targets[0], occ)
+	if !ok {
 		return game.PlayerReference{}, false
 	}
 	switch kind {
