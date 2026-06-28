@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,914 of 32,501 cards eligible for paper support (49.0%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,916 of 32,501 cards eligible for paper support (49.0%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2563,6 +2563,7 @@ Council4 currently supports **15,914 of 32,501 cards eligible for paper support 
 - Compelling Argument
 - Compelling Deterrence
 - Complete Disregard
+- Composer of Spring
 - Composite Golem
 - Compulsion
 - Compulsory Rest
@@ -14092,6 +14093,7 @@ Council4 currently supports **15,914 of 32,501 cards eligible for paper support 
 - Tocasia's Dig Site
 - Tocasia's Onulet
 - Tocasia's Welcome
+- Toils of Night and Day
 - Tokka & Rahzar, Unsupervised
 - Tolarian Academy
 - Tolarian Emissary
