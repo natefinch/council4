@@ -593,6 +593,19 @@ func recognizeOptionalManaPaymentBenefitSequence(ability *Ability) {
 		ManaCost:               manaCost,
 		SuccessConditionNodeID: boundary.NodeID,
 	}
+	// A single-effect consequence ("If you do, target player loses 1 life.") was
+	// demoted to non-exact because the unrecognized "you may pay" offer counted as
+	// an unrecognized sibling of the lone consequence effect (see the
+	// currentEffects==1 demotion in classifyEffectSyntax). Now that the offer is
+	// folded into the payment, the offer is recognized, so the consequence is no
+	// longer accompanied by an unrecognized sibling; restore its exact syntax so a
+	// targeted rider ("target player loses 1 life", "this enchantment deals 1
+	// damage to any target") lowers as a gated single effect. Multi-effect
+	// consequences keep their per-effect classification untouched.
+	if len(consequenceSentence.Effects) == 1 {
+		firstEffect.HasUnrecognizedSibling = false
+		firstEffect.Exact = exactEffectSyntax(firstEffect)
+	}
 	paymentSentence.PaymentPrelude = &firstEffect.Payment
 	ability.Optional = false
 	ability.OptionalSpan = shared.Span{}

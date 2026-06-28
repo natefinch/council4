@@ -615,6 +615,49 @@ func TestLowerOptionalPaidBenefitTargetedConsequence(t *testing.T) {
 	}
 }
 
+// TestLowerOptionalPaidBenefitSingleTargetedConsequence verifies the
+// non-controller leading benefit path also covers a single targeted rider ("you
+// may pay {mana}. If you do, target player loses N life."). The lone consequence
+// is demoted to non-exact by the unrecognized "you may pay" offer during parsing;
+// once the offer is folded into the payment the consequence's exact syntax is
+// restored, so it promotes its target onto the mode and gates the single benefit
+// instruction on the resolution payment.
+func TestLowerOptionalPaidBenefitSingleTargetedConsequence(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Paid Singer",
+		Layout:     "normal",
+		TypeLine:   "Creature — Elemental Shaman",
+		OracleText: "Whenever a player casts a black spell, you may pay {1}. If you do, target player loses 1 life.",
+	})
+	if len(face.TriggeredAbilities) != 1 || len(face.TriggeredAbilities[0].Content.Modes) != 1 {
+		t.Fatalf("triggered ability not a single mode: %#v", face.TriggeredAbilities)
+	}
+	mode := face.TriggeredAbilities[0].Content.Modes[0]
+	if len(mode.Targets) != 1 {
+		t.Fatalf("mode targets = %#v, want one promoted from the consequence", mode.Targets)
+	}
+	if len(mode.Sequence) != 2 {
+		t.Fatalf("sequence = %#v, want pay + gated lose-life", mode.Sequence)
+	}
+	if _, ok := mode.Sequence[0].Primitive.(game.Pay); !ok {
+		t.Fatalf("instruction[0] = %T, want game.Pay", mode.Sequence[0].Primitive)
+	}
+	if mode.Sequence[0].PublishResult != controllerPaidResultKey {
+		t.Fatalf("pay publish = %q, want %q", mode.Sequence[0].PublishResult, controllerPaidResultKey)
+	}
+	if _, ok := mode.Sequence[1].Primitive.(game.LoseLife); !ok {
+		t.Fatalf("instruction[1] = %T, want game.LoseLife", mode.Sequence[1].Primitive)
+	}
+	gate := mode.Sequence[1].ResultGate
+	if !gate.Exists || gate.Val.Key != controllerPaidResultKey || gate.Val.Succeeded != game.TriTrue {
+		t.Fatalf("lose-life ResultGate = %#v, want succeeded gate on %q", gate, controllerPaidResultKey)
+	}
+	if err := game.ValidateInstructionSequence(mode.Sequence, mode.Targets); err != nil {
+		t.Fatalf("invalid instruction sequence: %v", err)
+	}
+}
+
 // TestLowerOptionalIfYouDoDiscardHandDraw verifies that the optional "You may
 // discard your hand. If you do, <Y>." form lowers the entire-hand discard as an
 // optional result-publishing instruction with the benefit gated on it. The
