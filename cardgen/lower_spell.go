@@ -464,6 +464,9 @@ func lowerOptionalContent(
 	if content, ok := lowerOptionalDigReveal(ctx); ok {
 		return content, nil
 	}
+	if content, ok := lowerOptionalDisjunctiveSacrificeDiscard(cardName, ctx, syntax); ok {
+		return content, nil
+	}
 	if content, ok := lowerOptionalDigToBattlefield(ctx); ok {
 		return content, nil
 	}

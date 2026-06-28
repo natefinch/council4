@@ -30,6 +30,7 @@ var Cards = []*game.CardDef{
 	RealmCloakedGiant,
 	ReaperFromTheAbyss,
 	Recoil,
+	RecklessDetective,
 	ReconCraftTheta,
 	RecruitmentOfficer,
 	Recuperate,
