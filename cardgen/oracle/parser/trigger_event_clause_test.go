@@ -49,6 +49,7 @@ func triggerEventClauseTests() []triggerEventClauseTest {
 	tests = append(tests, spellTypeDisjunctionTriggerEventClauseTests()...)
 	tests = append(tests, actorOrdinalSpellTriggerEventClauseTests()...)
 	tests = append(tests, chosenTypeSpellTriggerEventClauseTests()...)
+	tests = append(tests, chosenColorSpellTriggerEventClauseTests()...)
 	tests = append(tests, combatTriggerEventClauseTests()...)
 	tests = append(tests, blockUnionTriggerEventClauseTests()...)
 	tests = append(tests, enterAttackUnionTriggerEventClauseTests()...)
@@ -107,6 +108,34 @@ func chosenTypeSpellTriggerEventClauseTests() []triggerEventClauseTest {
 				t.Helper()
 				if !clause.SpellSelection.SubtypeFromEntryChoice ||
 					len(clause.SpellSelection.Types) != 0 {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+	}
+}
+
+func chosenColorSpellTriggerEventClauseTests() []triggerEventClauseTest {
+	return []triggerEventClauseTest{
+		{
+			name:   "spell of the chosen color you",
+			source: "Whenever you cast a spell of the chosen color, you gain 1 life.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if !clause.SpellSelection.ColorFromEntryChoice ||
+					len(clause.SpellSelection.ColorsAny) != 0 ||
+					clause.Actor.Kind != TriggerEventActorYou {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+		{
+			name:   "spell of the chosen color player",
+			source: "Whenever a player casts a spell of the chosen color, that player loses 1 life.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if !clause.SpellSelection.ColorFromEntryChoice ||
+					clause.Actor.Kind != TriggerEventActorPlayer {
 					t.Fatalf("clause = %#v", clause)
 				}
 			},

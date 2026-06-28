@@ -214,6 +214,11 @@ func parseTriggerEventSpellSelection(tokens []shared.Token) (TriggerEventSpellSe
 		tokens = rest
 		fromEntryChoice = true
 	}
+	colorFromEntryChoice := false
+	if rest, ok := cutTriggerSpellChosenColorSuffix(tokens); ok {
+		tokens = rest
+		colorFromEntryChoice = true
+	}
 	castNotFromHand := false
 	if rest, ok := cutTriggerSpellNotFromHandSuffix(tokens); ok {
 		tokens = rest
@@ -255,6 +260,10 @@ func parseTriggerEventSpellSelection(tokens []shared.Token) (TriggerEventSpellSe
 	}
 	if fromEntryChoice {
 		selection.SubtypeFromEntryChoice = true
+		selection.Span = shared.SpanOf(full)
+	}
+	if colorFromEntryChoice {
+		selection.ColorFromEntryChoice = true
 		selection.Span = shared.SpanOf(full)
 	}
 	if castNotFromHand {
@@ -371,6 +380,21 @@ func cutTriggerSpellChosenTypeSuffix(tokens []shared.Token) ([]shared.Token, boo
 		return nil, false
 	}
 	if syntaxWordsEqual(tokens[n-4:], "of", "the", "chosen", "type") {
+		return tokens[:n-4], true
+	}
+	return nil, false
+}
+
+// cutTriggerSpellChosenColorSuffix strips a trailing "of the chosen color"
+// phrase from a spell-selection token run, reporting the remaining filter
+// tokens. The suffix ties the cast spell to the color the source permanent
+// chose as it entered (Prism Ring, Diamond Mare).
+func cutTriggerSpellChosenColorSuffix(tokens []shared.Token) ([]shared.Token, bool) {
+	n := len(tokens)
+	if n < 4 {
+		return nil, false
+	}
+	if syntaxWordsEqual(tokens[n-4:], "of", "the", "chosen", "color") {
 		return tokens[:n-4], true
 	}
 	return nil, false

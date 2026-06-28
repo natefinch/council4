@@ -760,6 +760,12 @@ type TriggerEventSpellSelection struct {
 	// permanent chose as it entered. It lowers to the runtime
 	// Selection.SubtypeFromSourceEntryChoice predicate.
 	SubtypeFromEntryChoice bool `json:",omitempty"`
+	// ColorFromEntryChoice records the trailing "of the chosen color"
+	// restriction ("Whenever you cast a spell of the chosen color"), requiring
+	// the cast spell to share the color the source permanent chose as it entered
+	// (Prism Ring). It lowers to the runtime Selection.ColorChoice =
+	// ColorChoiceSourceEntry predicate.
+	ColorFromEntryChoice bool `json:",omitempty"`
 	// CastNotFromHand records the trailing "from anywhere other than their hand"
 	// (or "your hand") cast-provenance restriction ("Whenever an opponent casts
 	// a spell from anywhere other than their hand"). It fires only for spells

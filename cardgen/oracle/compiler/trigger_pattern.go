@@ -245,6 +245,10 @@ type TriggerSelection struct {
 	// subtype the predicate's source permanent chose as it entered ("of the
 	// chosen type"). It lowers to Selection.SubtypeFromSourceEntryChoice.
 	SubtypeFromEntryChoice bool
+	// ColorFromEntryChoice requires the matched object to share the color the
+	// predicate's source permanent chose as it entered ("of the chosen color",
+	// Prism Ring). It lowers to Selection.ColorChoice = ColorChoiceSourceEntry.
+	ColorFromEntryChoice bool
 	// Modified requires the matched permanent to be modified (a counter, Aura, or
 	// Equipment, CR 701.50). It lowers to Selection.MatchModified.
 	Modified bool
