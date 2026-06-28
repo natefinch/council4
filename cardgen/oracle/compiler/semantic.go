@@ -2165,6 +2165,7 @@ type CompiledEffect struct {
 	// LayerColor color addition during lowering.
 	BecomeTypeAddTypes       []types.Card
 	BecomeTypeAddColors      []color.Color
+	BecomeTypeAddSubtypes    []types.Sub
 	BecomeTypeUntilEndOfTurn bool
 	// BecomeColorColors, BecomeColorColorless, BecomeColorSource, and
 	// BecomeColorUntilEndOfTurn mirror the parser's EffectBecomeColor color-set

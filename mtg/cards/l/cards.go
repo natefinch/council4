@@ -30,6 +30,7 @@ var Cards = []*game.CardDef{
 	LightningBolt,
 	LightningSerpent,
 	Lightwalker,
+	LilianaDeathSMajesty,
 	LilianaSSpoils,
 	Lithophage,
 	LivingLiesOfLoki,
