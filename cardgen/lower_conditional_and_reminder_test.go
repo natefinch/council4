@@ -50,6 +50,47 @@ func TestLowerConditionalEntersTappedReplacement(t *testing.T) {
 	}
 }
 
+func TestLowerConditionalEntersTappedIfControlReplacement(t *testing.T) {
+	t.Parallel()
+	// The leading "If you control ..., this land enters tapped." form gates the
+	// replacement on the condition holding (the manland cycle: Cave of the Frost
+	// Dragon), the inverse of the trailing "unless" wording, so its condition is
+	// unnegated.
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Cave",
+		Layout:     "normal",
+		TypeLine:   "Land",
+		OracleText: "If you control two or more other lands, this land enters tapped.",
+	})
+	if len(face.ReplacementAbilities) != 1 {
+		t.Fatalf("got %d replacement abilities, want 1", len(face.ReplacementAbilities))
+	}
+	repl := face.ReplacementAbilities[0]
+	if !repl.Replacement.EntersTapped {
+		t.Fatal("replacement is not an enters-tapped replacement")
+	}
+	if !repl.Replacement.Condition.Exists {
+		t.Fatal("conditional replacement has no condition")
+	}
+	cond := repl.Replacement.Condition.Val
+	if cond.Negate {
+		t.Fatal("condition should not be negated (if form)")
+	}
+	if !cond.ControlsMatching.Exists {
+		t.Fatal("condition has no matching-selection count")
+	}
+	filter := cond.ControlsMatching.Val.Selection
+	if len(filter.RequiredTypes) != 1 || filter.RequiredTypes[0] != types.Land {
+		t.Fatalf("filter types = %#v, want [types.Land]", filter.RequiredTypes)
+	}
+	if !filter.ExcludeSource {
+		t.Fatal("filter should exclude the source land (other lands)")
+	}
+	if cond.ControlsMatching.Val.MinCount != 2 {
+		t.Fatalf("filter MinCount = %d, want 2", cond.ControlsMatching.Val.MinCount)
+	}
+}
+
 func TestLowerEntersTappedUnlessLegendaryCreatureReplacement(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
