@@ -2943,7 +2943,7 @@ func exactDividedDamageText(effect *EffectSyntax, prefix, text string) bool {
 	if effect.Negated || len(effect.Targets) != 1 {
 		return false
 	}
-	amountText, ok := dividedDamageAmountText(effect.Amount)
+	amountText, amountSuffix, ok := dividedDamageAmountText(effect.Amount)
 	if !ok {
 		return false
 	}
@@ -2955,33 +2955,45 @@ func exactDividedDamageText(effect *EffectSyntax, prefix, text string) bool {
 	if !ok {
 		return false
 	}
-	expected := fmt.Sprintf("%s %s damage divided as you choose among %s %s.",
-		prefix, amountText, cardinality, noun)
+	expected := fmt.Sprintf("%s %s damage divided as you choose among %s %s%s.",
+		prefix, amountText, cardinality, noun, amountSuffix)
 	return text == expected
 }
 
 // dividedDamageAmountText reconstructs the canonical amount token for a divided
-// damage clause: the literal integer for a fixed total of at least one, or "X"
-// for the spell's bare variable X. It fails closed for a non-positive fixed
-// total, for any dynamic amount form ("equal to ...", "where X is ..."), and for
-// the "X plus N" rider, none of which the divided path can represent, so those
-// wordings keep failing the round-trip.
-func dividedDamageAmountText(amount EffectAmountSyntax) (string, bool) {
-	if amount.DynamicForm != EffectDynamicAmountFormNone ||
-		amount.DynamicKind != EffectDynamicAmountNone ||
-		amount.Addend != 0 || amount.Multiplier != 0 {
-		return "", false
-	}
-	switch {
-	case amount.Known:
-		if amount.Value < 1 {
-			return "", false
+// damage clause and any trailing dynamic-amount suffix. A fixed total of at
+// least one renders as the literal integer and the spell's bare variable X
+// renders as "X", both with an empty suffix. A "where X is ..." dynamic total
+// renders the "X" token plus the verbatim ", where X is ..." suffix, which the
+// caller appends after the target noun so the round-trip stays byte-exact. It
+// fails closed for a non-positive fixed total, for the "equal to ..." dynamic
+// form, and for the "X plus N" rider, none of which the divided path can
+// represent, so those wordings keep failing the round-trip.
+func dividedDamageAmountText(amount EffectAmountSyntax) (amountText, suffix string, ok bool) {
+	switch amount.DynamicForm {
+	case EffectDynamicAmountFormNone:
+		if amount.DynamicKind != EffectDynamicAmountNone ||
+			amount.Addend != 0 || amount.Multiplier != 0 {
+			return "", "", false
 		}
-		return strconv.Itoa(amount.Value), true
-	case amount.VariableX:
-		return "X", true
+		switch {
+		case amount.Known:
+			if amount.Value < 1 {
+				return "", "", false
+			}
+			return strconv.Itoa(amount.Value), "", true
+		case amount.VariableX:
+			return "X", "", true
+		default:
+			return "", "", false
+		}
+	case EffectDynamicAmountFormWhereX:
+		if amount.Text == "" {
+			return "", "", false
+		}
+		return "X", ", " + amount.Text, true
 	default:
-		return "", false
+		return "", "", false
 	}
 }
 
@@ -3024,10 +3036,11 @@ func dividedTargetNoun(selection SelectionSyntax) (string, bool) {
 
 // dividedCreatureNounWords reconstructs the words that follow the "target"
 // determiner of a divided-damage creature noun: an optional attacking/blocking
-// combat prefix, the plural creature noun or "creature and/or planeswalker"
-// union, and a single "with"/"without" keyword clause. It fails closed for every
-// controller, color, subtype, supertype, tapped, numeric, or determiner
-// qualifier the divided lowering does not yet represent.
+// combat prefix, optional "white and/or blue" color adjectives, the plural
+// creature noun or "creature and/or planeswalker" union, an optional controller
+// clause ("your opponents control"), and a single "with"/"without" keyword
+// clause. It fails closed for every subtype, supertype, tapped, numeric, or
+// determiner qualifier the divided lowering does not yet represent.
 func dividedCreatureNounWords(selection SelectionSyntax) ([]string, bool) {
 	if selection.All || selection.Another || selection.Other ||
 		selection.Tapped || selection.Untapped ||
@@ -3035,11 +3048,9 @@ func dividedCreatureNounWords(selection SelectionSyntax) ([]string, bool) {
 		selection.MatchManaValue || selection.MatchPower || selection.MatchToughness ||
 		selection.PowerLessThanSource || selection.PowerGreaterThanSource ||
 		selection.TokenOnly || selection.NonToken ||
-		selection.Controller != SelectionControllerAny ||
 		selection.Zone != zone.None ||
 		len(selection.ExcludedTypes) != 0 ||
 		len(selection.ExcludedColors) != 0 ||
-		len(selection.ColorsAny) != 0 ||
 		len(selection.SubtypesAny) != 0 ||
 		len(selection.Supertypes) != 0 ||
 		len(selection.ExcludedSupertypes) != 0 ||
@@ -3056,17 +3067,74 @@ func dividedCreatureNounWords(selection SelectionSyntax) ([]string, bool) {
 		words = append(words, "blocking")
 	default:
 	}
+	colorWords, ok := dividedColorAdjectiveWords(selection.ColorsAny)
+	if !ok {
+		return nil, false
+	}
+	words = append(words, colorWords...)
 	nouns, ok := dividedCreatureNouns(selection.RequiredTypesAny)
 	if !ok {
 		return nil, false
 	}
 	words = append(words, nouns...)
+	controllerWords, ok := dividedControllerWords(selection.Controller, selection.OpponentEach)
+	if !ok {
+		return nil, false
+	}
+	words = append(words, controllerWords...)
 	keywordWords, ok := permanentKeywordQualifierWords(selection)
 	if !ok {
 		return nil, false
 	}
 	words = append(words, keywordWords...)
 	return words, true
+}
+
+// dividedColorAdjectiveWords reconstructs the color adjectives that precede a
+// divided-damage creature noun ("white and/or blue"). An empty selection
+// contributes no words; otherwise each color renders as its canonical lowercase
+// adjective joined with "and/or", mirroring the "creatures and/or planeswalkers"
+// card-type union. It fails closed for any color the round-trip cannot spell.
+func dividedColorAdjectiveWords(colors []Color) ([]string, bool) {
+	if len(colors) == 0 {
+		return nil, true
+	}
+	words := make([]string, 0, len(colors)*2)
+	for i, c := range colors {
+		word, ok := colorWord(c)
+		if !ok {
+			return nil, false
+		}
+		if i > 0 {
+			words = append(words, "and/or")
+		}
+		words = append(words, word)
+	}
+	return words, true
+}
+
+// dividedControllerWords reconstructs the controller clause that follows a
+// divided-damage creature noun ("you control", "your opponents control", "you
+// don't control"), matching the canonical group-damage controller suffix. The
+// any-controller selection contributes no words. It fails closed for the
+// distributive "each opponent controls" form the divided lowering does not
+// represent.
+func dividedControllerWords(controller SelectionController, opponentEach bool) ([]string, bool) {
+	switch controller {
+	case SelectionControllerAny:
+		return nil, true
+	case SelectionControllerYou:
+		return []string{"you", "control"}, true
+	case SelectionControllerOpponent:
+		if opponentEach {
+			return nil, false
+		}
+		return []string{"your", "opponents", "control"}, true
+	case SelectionControllerNotYou:
+		return []string{"you", "don't", "control"}, true
+	default:
+		return nil, false
+	}
 }
 
 // dividedCreatureNouns reconstructs the plural card-type noun(s) of a divided

@@ -15,6 +15,7 @@ func TestGenerateExecutableCardSourceDividedDamage(t *testing.T) {
 	tests := []struct {
 		name        string
 		oracleText  string
+		typeLine    string
 		wantedSnips []string
 	}{
 		{
@@ -115,15 +116,66 @@ func TestGenerateExecutableCardSourceDividedDamage(t *testing.T) {
 				"Divided:   true",
 			},
 		},
+		{
+			name:       "controller filtered union",
+			oracleText: "Test Bolt deals 5 damage divided as you choose among any number of target creatures and/or planeswalkers your opponents control.",
+			wantedSnips: []string{
+				"MinTargets: 1",
+				"MaxTargets: 5",
+				"RequiredTypesAny: []types.Card{types.Creature, types.Planeswalker}",
+				"game.ControllerOpponent",
+				"Divided:   true",
+			},
+		},
+		{
+			name:       "color filtered creatures",
+			oracleText: "Test Bolt deals 3 damage divided as you choose among one, two, or three target white and/or blue creatures.",
+			wantedSnips: []string{
+				"MinTargets: 1",
+				"MaxTargets: 3",
+				"RequiredTypesAny: []types.Card{types.Creature}",
+				"[]color.Color{color.White, color.Blue}",
+				"Divided:   true",
+			},
+		},
+		{
+			name:       "dynamic count total",
+			oracleText: "Test Bolt deals X damage divided as you choose among any number of target creatures and/or planeswalkers your opponents control, where X is the number of lands you control.",
+			wantedSnips: []string{
+				"MinTargets: 1",
+				"MaxTargets: 99",
+				"RequiredTypesAny: []types.Card{types.Creature, types.Planeswalker}",
+				"game.ControllerOpponent",
+				"game.DynamicAmountCountSelector",
+				"Divided:   true",
+			},
+		},
+		{
+			name:       "dynamic source counter total",
+			oracleText: "At the beginning of your end step, this enchantment deals X damage divided as you choose among any number of target creatures, where X is the number of age counters on it.",
+			typeLine:   "Enchantment",
+			wantedSnips: []string{
+				"MinTargets: 1",
+				"MaxTargets: 99",
+				"RequiredTypesAny: []types.Card{types.Creature}",
+				"game.DynamicAmountObjectCounters",
+				"counter.Age",
+				"Divided:      true",
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
+			typeLine := test.typeLine
+			if typeLine == "" {
+				typeLine = "Instant"
+			}
 			card := &ScryfallCard{
 				Name:       "Test Bolt",
 				Layout:     "normal",
 				ManaCost:   "{R}",
-				TypeLine:   "Instant",
+				TypeLine:   typeLine,
 				OracleText: test.oracleText,
 				Colors:     []string{"R"},
 			}
