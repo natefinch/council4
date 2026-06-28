@@ -18,6 +18,7 @@ var Cards = []*game.CardDef{
 	OozeTokenee54f59ea3344f0d8bc644fb97c948ac,
 	OrcArmyToken620159f8eb7f4756a1368ad9728adbad,
 	OrnithopterToken75336d5252784e989875b3ac8b91bfe2,
+	OsgoodOperationDoubleTokendce71fa45e0b4c19807e59a60917fe6b,
 	OtterToken6c1bb10eb0834978ab0a6f6a6b5bcf2c,
 	OxTokenbcb63395fec24792bb4e2c3e9b4703b4,
 	OxTokend82356994c2c4cf1815ad2a1c01b0cae,

@@ -32,6 +32,7 @@ var Cards = []*game.CardDef{
 	PointTheWay,
 	PonybackBrigade,
 	PotionerSTrove,
+	PowerDepot,
 	PredatorOoze,
 	PricklyPair,
 	PrideSovereign,
@@ -53,5 +54,6 @@ var Cards = []*game.CardDef{
 	PullThroughTheWeft,
 	PuncturingBlow,
 	PurgingStormbrood,
+	PurpleDragonPunks,
 	PutridImp,
 }

@@ -214,7 +214,12 @@ typed `EffectManaSpendRider` carrying source-spanned
 `ManaSpendRiderSyntax{Condition, Effect, Restricted, ScryAmount}`. The closed
 grammar includes Path of Ancestry's commander-creature-type scry rider and Cavern
 of Souls' exact "Spend this mana only to cast a creature spell of the chosen
-type, and that spell can't be countered." restriction. Every near-miss (changed
+type, and that spell can't be countered." restriction. It also recognizes the
+artifact mana-spend restrictions "Spend this mana only to cast an artifact
+spell", "...to cast artifact spells or activate abilities of artifacts",
+"...to activate abilities of artifacts", and "...to cast an artifact spell or
+activate an ability", mapping each closed clause set to its own condition.
+Every near-miss (changed
 pronoun, missing `only`, different spell qualifier, noncanonical counter wording,
 extra trailing qualifier, different rider effect, or `scry 0`) remains ordinary
 untyped effects so compiler and lowering fail closed. Entry

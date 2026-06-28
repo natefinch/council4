@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,724 of 32,501 cards eligible for paper support (48.4%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,739 of 32,501 cards eligible for paper support (48.4%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -828,6 +828,7 @@ Council4 currently supports **15,724 of 32,501 cards eligible for paper support 
 - Austere Command
 - Authority of the Consuls
 - Autochthon Wurm
+- Automated Artificer
 - Automated Assembly Line
 - Automatic Librarian
 - Avacyn
@@ -1988,6 +1989,7 @@ Council4 currently supports **15,724 of 32,501 cards eligible for paper support 
 - Caregiver
 - Careless Celebrant
 - Caretaker's Talent
+- Cargo Ship
 - Caribou Range
 - Carnage Altar
 - Carnage Tyrant
@@ -2029,6 +2031,7 @@ Council4 currently supports **15,724 of 32,501 cards eligible for paper support 
 - Cast Out
 - Castle
 - Castle Ardenvale
+- Castle Doom
 - Castle Embereth
 - Castle Locthwain
 - Castle Raptors
@@ -5890,6 +5893,7 @@ Council4 currently supports **15,724 of 32,501 cards eligible for paper support 
 - Guenhwyvar
 - Guerrilla Gorilla
 - Guided Strike
+- Guidelight Optimizer
 - Guidelight Synergist
 - Guiding Bolt
 - Guildless Commons
@@ -5993,6 +5997,7 @@ Council4 currently supports **15,724 of 32,501 cards eligible for paper support 
 - Hardened Tactician
 - Hardened-Scale Armor
 - Hardy Veteran
+- Hargilde, Kindly Runechanter
 - Harmattan Efreet
 - Harmonic Prodigy
 - Harmonious Archon
@@ -8480,6 +8485,7 @@ Council4 currently supports **15,724 of 32,501 cards eligible for paper support 
 - Mishra's Juggernaut
 - Mishra's Onslaught
 - Mishra's Self-Replicator
+- Mishra's Workshop
 - Mishra, Excavation Prodigy
 - Misshapen Fiend
 - Mist Leopard
@@ -9135,6 +9141,7 @@ Council4 currently supports **15,724 of 32,501 cards eligible for paper support 
 - Nyxborn Courser
 - Nyxborn Marauder
 - Nyxborn Seaguard
+- Oaken Siren
 - Oakenform
 - Oakgnarl Warrior
 - Oakhame Adversary
@@ -9390,6 +9397,8 @@ Council4 currently supports **15,724 of 32,501 cards eligible for paper support 
 - Orzhova, the Church of Deals
 - Osai Vultures
 - Oscorp Research Team
+- Osgood, Operation Double
+- Osgood, Operation Double
 - Ossuary Rats
 - Ostiary Thrull
 - Ostracize
@@ -9878,6 +9887,7 @@ Council4 currently supports **15,724 of 32,501 cards eligible for paper support 
 - Power Armor
 - Power Boost
 - Power Conduit
+- Power Depot
 - Power Fist
 - Power Matrix
 - Power of Fire
@@ -10091,6 +10101,7 @@ Council4 currently supports **15,724 of 32,501 cards eligible for paper support 
 - Purging Stormbrood // Absorb Essence
 - Purify
 - Purify the Grave
+- Purple Dragon Punks
 - Purple Pentapus
 - Purple-Crystal Crab
 - Purraj of Urborg
@@ -10575,6 +10586,7 @@ Council4 currently supports **15,724 of 32,501 cards eligible for paper support 
 - Renegade's Getaway
 - Renewal
 - Renewed Faith
+- Renowned Weaponsmith
 - Renowned Weaver
 - Repair and Recharge
 - Repel the Darkness
@@ -12301,6 +12313,7 @@ Council4 currently supports **15,724 of 32,501 cards eligible for paper support 
 - Solar Blaze
 - Solar Transformer
 - Soldevi Golem
+- Soldevi Machinist
 - Soldevi Simulacrum
 - Soldevi Steam Beast
 - Soldier
@@ -12849,6 +12862,7 @@ Council4 currently supports **15,724 of 32,501 cards eligible for paper support 
 - Steelform Sliver
 - Steelgaze Griffin
 - Steelshaper's Gift
+- Steelswarm Operator
 - Steeple Creeper
 - Steeple Roc
 - Stella Lee, Wild Card
@@ -14616,6 +14630,7 @@ Council4 currently supports **15,724 of 32,501 cards eligible for paper support 
 - Vedalken Archmage
 - Vedalken Blademaster
 - Vedalken Certarch
+- Vedalken Engineer
 - Vedalken Entrancer
 - Vedalken Ghoul
 - Vedalken Heretic

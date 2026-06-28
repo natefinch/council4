@@ -299,6 +299,9 @@ func collapseManaSpendRiderSentence(sentence *Sentence, tokens []shared.Token) b
 		rider, ok = recognizeCreatureSpellRestrictedManaSpendRider(tokens)
 	}
 	if !ok {
+		rider, ok = recognizeArtifactManaSpendRider(tokens)
+	}
+	if !ok {
 		return false
 	}
 	span := shared.SpanOf(tokens)
