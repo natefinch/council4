@@ -846,6 +846,30 @@ func validateManaSpendRider(rider ManaSpendRider) error {
 }
 
 func (p AddCounter) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.Distribute {
+		if p.Group.Domain() != groupDomainNone {
+			return errors.New("distributed add counter requires a target spec, not a group")
+		}
+		if p.AllKinds || p.ChooseOne || len(p.KindChoices) != 0 {
+			return errors.New("distributed add counter cannot combine with AllKinds, ChooseOne, or KindChoices")
+		}
+		if p.Object.Kind() != ObjectReferenceAllTargetPermanents {
+			return errors.New("distributed add counter requires an all-target-permanents object reference")
+		}
+		if !p.CounterKind.Valid() {
+			return errors.New("add counter requires a recognized counter kind")
+		}
+		if p.CounterKind.PlayerOnly() {
+			return errors.New("player-only counter kind cannot be placed on a permanent")
+		}
+		if err := validatePositiveQuantity(p.Amount, targets, checkTargets); err != nil {
+			return err
+		}
+		if err := validateObjectReference(p.Object, targets, checkTargets); err != nil {
+			return err
+		}
+		return validateTargetAllows(p.Object.TargetIndex(), TargetAllowPermanent, targets, checkTargets)
+	}
 	if p.ChooseOne && p.Group.Domain() == groupDomainNone {
 		return errors.New("add counter choosing one recipient requires a group")
 	}

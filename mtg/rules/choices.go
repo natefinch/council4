@@ -129,7 +129,7 @@ func fallbackChoice(request game.ChoiceRequest) []int {
 			selected = append(selected, request.Options[i].Index)
 		}
 		return selected
-	case game.ChoiceDamageAllocation:
+	case game.ChoiceDamageAllocation, game.ChoiceCounterAllocation:
 		return defaultDividedAllocation(request.MaxChoices, len(request.Options))
 	default:
 		return nil
@@ -149,7 +149,7 @@ func choiceSelectionValid(request game.ChoiceRequest, selected []int) bool {
 	switch request.Kind {
 	case game.ChoiceOrder:
 		return orderSelectionValid(request, selected)
-	case game.ChoiceDamageAllocation:
+	case game.ChoiceDamageAllocation, game.ChoiceCounterAllocation:
 		return damageAllocationSelectionValid(request, selected)
 	default:
 		seen := make(map[int]bool, len(selected))

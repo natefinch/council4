@@ -2301,10 +2301,15 @@ type EffectSyntax struct {
 	Optional            bool `json:",omitempty"`
 	// Divided reports a "deals N damage divided as you choose among <targets>"
 	// effect: a fixed total split among the chosen targets, at least one each.
-	Divided      bool             `json:",omitempty"`
-	OptionalSpan shared.Span      `json:"-"`
-	Symbol       string           `json:",omitempty"`
-	Mana         EffectManaSyntax `json:",omitzero"`
+	Divided bool `json:",omitempty"`
+	// DistributeCounters reports a "Distribute N <kind> counters among
+	// <cardinality> target creatures" effect: a fixed (or X) total of counters
+	// split among the chosen targets, at least one each, the counter analog of
+	// Divided damage.
+	DistributeCounters bool             `json:",omitempty"`
+	OptionalSpan       shared.Span      `json:"-"`
+	Symbol             string           `json:",omitempty"`
+	Mana               EffectManaSyntax `json:",omitzero"`
 	// SourceSpellCostReduction marks the EffectCast effect of the exact
 	// single-clause ability "This spell costs {N} less to cast for each
 	// <countable battlefield object>." It is a typed cast cost modifier rather

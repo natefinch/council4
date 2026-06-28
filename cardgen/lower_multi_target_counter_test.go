@@ -128,8 +128,6 @@ func TestLowerMultiTargetCounterPlacementOtherYouControl(t *testing.T) {
 func TestLowerMultiTargetCounterPlacementFailsClosed(t *testing.T) {
 	t.Parallel()
 	cases := []string{
-		// Distribution among targets is not modeled.
-		"Distribute three +1/+1 counters among any number of target creatures.",
 		// A dynamic per-target amount stays unsupported.
 		"Put X +1/+1 counters on each of up to two target creatures, where X is the number of cards in your hand.",
 		// Subtype-restricted plural targets are not a plain permanent noun.

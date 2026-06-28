@@ -22,6 +22,7 @@ var Cards = []*game.CardDef{
 	Decommission,
 	Decompose,
 	DeepGoblinSkulltaker,
+	DefendTheCelestus,
 	DefendersOfHumanity,
 	DeftDismissal,
 	DemolisherSpawn,

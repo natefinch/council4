@@ -34,6 +34,15 @@ const (
 	// allocated to that target. MinChoices and MaxChoices both equal the total
 	// damage, and every target must receive at least one (CR 601.2d).
 	ChoiceDamageAllocation
+	// ChoiceCounterAllocation asks the controller of a distribute-counters effect
+	// to split a fixed total of counters among the chosen targets. Each option
+	// corresponds to one chosen target; the returned selection lists option
+	// indices with repetition, so the number of times an option appears equals
+	// the counters allocated to that target. MinChoices and MaxChoices both equal
+	// the total counters, and every target must receive at least one. It mirrors
+	// ChoiceDamageAllocation for the "Distribute N +1/+1 counters among ... target
+	// creatures" placement.
+	ChoiceCounterAllocation
 	// ChoiceDig asks the controller of a Dig effect which of the cards revealed
 	// from the top of their library to put into their hand. Each option
 	// corresponds to one looked-at card; the returned selection lists the option

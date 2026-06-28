@@ -1700,7 +1700,10 @@ func effectWordKind(token shared.Token) EffectKind {
 		return EffectMoveCounters
 	case "get", "gets":
 		return EffectModifyPT
-	case "put", "puts":
+	case "put", "puts", "distribute", "distributes":
+		// "Distribute N <kind> counters among ... target creatures" places
+		// counters split among the chosen targets; it is a counter placement
+		// whose distribution the DistributeCounters flag and lowerer model.
 		return EffectPut
 	case "proliferate", "proliferates":
 		return EffectProliferate

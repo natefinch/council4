@@ -41,6 +41,7 @@ var Cards = []*game.CardDef{
 	GlimpseTheUnthinkable,
 	GlintHawk,
 	GlintNestCrane,
+	GlintWeaver,
 	Gloomwidow,
 	Glowrider,
 	GluttonousTroll,

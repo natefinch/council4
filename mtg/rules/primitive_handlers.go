@@ -247,6 +247,9 @@ func handleAddCounter(r *effectResolver, prim game.AddCounter) effectResolved {
 	if res.amount <= 0 {
 		return res
 	}
+	if prim.Distribute {
+		return r.addCountersDistributed(prim, res.amount)
+	}
 	placementController := stackObjectController(r.obj)
 	if prim.Group.Valid() {
 		if prim.ChooseOne {
@@ -273,6 +276,76 @@ func handleAddCounter(r *effectResolver, prim game.AddCounter) effectResolved {
 		res.succeeded = true
 	}
 	return res
+}
+
+// addCountersDistributed splits a fixed total of counters among the permanents
+// chosen for a distribute-counters effect's target spec, each receiving at least
+// one ("Distribute three +1/+1 counters among one, two, or three target
+// creatures"). It mirrors damageDivided: the division spans every originally
+// chosen target, an illegal target keeps its share but is placed no counters, and
+// only still-legal permanents receive their allocation.
+func (r *effectResolver) addCountersDistributed(prim game.AddCounter, total int) effectResolved {
+	res := effectResolved{accepted: true, amount: total}
+	targets := r.dividedTargets(prim.Object.TargetIndex())
+	if len(targets) == 0 {
+		return res
+	}
+	allocations := r.allocateCounters(total, targets)
+	placementController := stackObjectController(r.obj)
+	placedAny := false
+	for i, entry := range targets {
+		amount := allocations[i]
+		// An illegal target keeps its share of the division but is placed no
+		// counters; the amount is lost, never redistributed.
+		if amount <= 0 || !entry.legal || entry.target.Kind != game.TargetPermanent {
+			continue
+		}
+		permanent, found := permanentByObjectID(r.game, entry.target.PermanentID)
+		if !found {
+			continue
+		}
+		if addCountersToPermanentControlledBy(r.game, placementController, permanent, prim.CounterKind, amount) {
+			placedAny = true
+		}
+	}
+	res.succeeded = placedAny
+	return res
+}
+
+// allocateCounters asks the controller to split total counters among every target
+// chosen for the spec, returning one allocation per target. Each target receives
+// at least one and the allocations sum to total, including targets that have
+// since become illegal (whose share addCountersDistributed then drops). It
+// mirrors allocateDividedDamage but raises a ChoiceCounterAllocation request.
+func (r *effectResolver) allocateCounters(total int, targets []dividedDamageTarget) []int {
+	n := len(targets)
+	allocations := make([]int, n)
+	if total < n {
+		for i := range total {
+			allocations[i] = 1
+		}
+		return allocations
+	}
+	options := make([]game.ChoiceOption, n)
+	for i, entry := range targets {
+		options[i] = game.ChoiceOption{Index: i, Label: entry.label}
+	}
+	request := game.ChoiceRequest{
+		Kind:             game.ChoiceCounterAllocation,
+		Player:           stackObjectController(r.obj),
+		Prompt:           "Distribute counters among the chosen targets.",
+		Options:          options,
+		MinChoices:       total,
+		MaxChoices:       total,
+		DefaultSelection: defaultDividedAllocation(total, n),
+	}
+	selected := r.engine.chooseChoice(r.game, r.agents, request, r.log)
+	for _, index := range selected {
+		if index >= 0 && index < n {
+			allocations[index]++
+		}
+	}
+	return allocations
 }
 
 // chooseCounterKindToPlace resolves which counter kind an "Put a <X> counter or a

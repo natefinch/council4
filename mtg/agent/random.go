@@ -48,7 +48,7 @@ func (a RandomAgent) ChooseChoice(_ rules.PlayerObservation, request game.Choice
 	switch request.Kind {
 	case game.ChoiceOrder:
 		return a.randomPermutation(request)
-	case game.ChoiceDamageAllocation:
+	case game.ChoiceDamageAllocation, game.ChoiceCounterAllocation:
 		return a.randomAllocation(request)
 	default:
 		return a.randomSelection(request)
