@@ -1484,6 +1484,38 @@ func TestGenerateExecutableCardSourceEachOfUpToTwoTargetCreatures(t *testing.T) 
 	}
 }
 
+func TestGenerateExecutableCardSourceEachOfUpToThreeTargetsVariableX(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Inferno",
+		Layout:     "normal",
+		ManaCost:   "{X}{R}{R}{R}",
+		TypeLine:   "Sorcery",
+		OracleText: "Test Inferno deals X damage to each of up to three targets.",
+		Colors:     []string{"R"},
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		`Constraint: "up to three targets"`,
+		"MinTargets: 0",
+		"MaxTargets: 3",
+		"game.DynamicAmountX",
+		"Recipient: game.AnyTargetDamageRecipient(0)",
+		"Recipient: game.AnyTargetDamageRecipient(1)",
+		"Recipient: game.AnyTargetDamageRecipient(2)",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceInheritedSourcePowerGroupDamageSequence(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

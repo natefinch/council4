@@ -103,3 +103,36 @@ func TestGenerateExecutableCardSourceCounterCountDamageWhereX(t *testing.T) {
 		}
 	}
 }
+
+// TestGenerateExecutableCardSourceLeadingAddendCountDamage proves the leading
+// addend form "where X is N plus the number of <count>" (Welding Sparks) lowers
+// to a DynamicAmountCountSelector that carries the constant N as the amount's
+// Addend, the dynamic sibling of the trailing "<count> plus N" addend.
+func TestGenerateExecutableCardSourceLeadingAddendCountDamage(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Welding Sparks",
+		Layout:     "normal",
+		ManaCost:   "{2}{R}",
+		TypeLine:   "Instant",
+		OracleText: "Test Welding Sparks deals X damage to target creature, where X is 3 plus the number of artifacts you control.",
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, want := range []string{
+		"game.Damage{",
+		"game.AnyTargetDamageRecipient(0)",
+		"Kind:       game.DynamicAmountCountSelector",
+		"Addend:     3",
+		"RequiredTypes: []types.Card{types.Artifact}",
+		"Controller: game.ControllerYou",
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("source missing %q:\n%s", want, source)
+		}
+	}
+}
