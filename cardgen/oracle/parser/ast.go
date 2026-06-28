@@ -1335,6 +1335,17 @@ const (
 	// alone", "can't attack or block alone"): the subject can't be the only
 	// creature attacking or blocking.
 	StaticRuleQualifierAlone StaticRuleQualifierKind = "StaticRuleQualifierAlone"
+	// StaticRuleQualifierCantActivateAbilities augments an attack-or-block
+	// prohibition with Arrest's compound clause ("Enchanted creature can't attack
+	// or block, and its activated abilities can't be activated."): the subject's
+	// own activated abilities, including mana abilities, also can't be activated.
+	StaticRuleQualifierCantActivateAbilities StaticRuleQualifierKind = "StaticRuleQualifierCantActivateAbilities"
+	// StaticRuleQualifierCantActivateNonManaAbilities augments an attack-or-block
+	// prohibition with Faith's Fetters' compound clause ("Enchanted permanent
+	// can't attack or block, and its activated abilities can't be activated unless
+	// they're mana abilities."): the subject's activated abilities can't be
+	// activated except for its mana abilities.
+	StaticRuleQualifierCantActivateNonManaAbilities StaticRuleQualifierKind = "StaticRuleQualifierCantActivateNonManaAbilities"
 )
 
 // StaticRuleSubject is a source-spanned simple static-rule subject.

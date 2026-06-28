@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,212 of 32,501 cards eligible for paper support (49.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,223 of 32,501 cards eligible for paper support (49.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -712,6 +712,7 @@ Council4 currently supports **16,212 of 32,501 cards eligible for paper support 
 - Arnjlot's Ascent
 - Arno Dorian
 - Aron, Benalia's Ruin
+- Arrest
 - Arrester's Admonition
 - Arrogant Bloodlord
 - Arrogant Outlaw
@@ -4519,6 +4520,7 @@ Council4 currently supports **16,212 of 32,501 cards eligible for paper support 
 - Fairgrounds Warden
 - Faith of the Devoted
 - Faith Unbroken
+- Faith's Fetters
 - Faithbearer Paladin
 - Faithful Mending
 - Faithful Watchdog
@@ -7777,6 +7779,7 @@ Council4 currently supports **16,212 of 32,501 cards eligible for paper support 
 - Law-Rune Enforcer
 - Lawbringer
 - Lawless Broker
+- Lawmage's Binding
 - Lay Bare the Heart
 - Lay Claim
 - Lay of the Land
@@ -9116,6 +9119,7 @@ Council4 currently supports **16,212 of 32,501 cards eligible for paper support 
 - Naga Vitalist
 - Nagao, Bound by Honor
 - Nagging Thoughts
+- Nahiri's Binding
 - Nahiri's Machinations
 - Nahiri's Stoneblades
 - Nalaar Aetherjet
@@ -9585,6 +9589,7 @@ Council4 currently supports **16,212 of 32,501 cards eligible for paper support 
 - Ondu Inversion // Ondu Skyruins
 - Ondu Spiritdancer
 - Ondu War Cleric
+- One Thousand Lashes
 - One with Nature
 - One with Nothing
 - One with the Machine
@@ -9948,6 +9953,7 @@ Council4 currently supports **16,212 of 32,501 cards eligible for paper support 
 - Petrahydrox
 - Petravark
 - Petrified Field
+- Petrify
 - Petrifying Meddler
 - Pewter Golem
 - Phalanx Leader
@@ -10132,6 +10138,7 @@ Council4 currently supports **16,212 of 32,501 cards eligible for paper support 
 - Planar Bridge
 - Planar Cleansing
 - Planar Despair
+- Planar Disruption
 - Planar Gate
 - Planar Guide
 - Planar Incision
@@ -10309,6 +10316,7 @@ Council4 currently supports **16,212 of 32,501 cards eligible for paper support 
 - Prismatic Vista
 - Prismite
 - Prison Realm
+- Prison Sentence
 - Pristine Talisman
 - Private Research
 - Privileged Position
@@ -10780,6 +10788,7 @@ Council4 currently supports **16,212 of 32,501 cards eligible for paper support 
 - Reality Hemorrhage
 - Reality Shift
 - Realm-Cloaked Giant // Cast Off
+- Realmbreaker's Grasp
 - Realmwalker
 - Reanimate
 - Reap the Seagraf
@@ -11827,6 +11836,7 @@ Council4 currently supports **16,212 of 32,501 cards eligible for paper support 
 - Secret Passage
 - Secret Rendezvous
 - Secrets of the Dead
+- Secure Detention
 - Secure the Scene
 - Secure the Wastes
 - Security Blockade
@@ -13215,6 +13225,7 @@ Council4 currently supports **16,212 of 32,501 cards eligible for paper support 
 - Starting Column
 - Startled Relic Sloth
 - Starved Rusalka
+- Stasis Cocoon
 - Stasis Snare
 - Static Net
 - Static Snare

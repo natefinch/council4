@@ -16,6 +16,7 @@ var Cards = []*game.CardDef{
 	LassoedByTheLaw,
 	LatticeBladeMantis,
 	LavaCoil,
+	LawmageSBinding,
 	LeadBellyChimera,
 	LeadGolem,
 	LeadTheStampede,

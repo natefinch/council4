@@ -32,6 +32,7 @@ var Cards = []*game.CardDef{
 	RazormaneMasticore,
 	RealityHeist,
 	RealmCloakedGiant,
+	RealmbreakerSGrasp,
 	ReaperFromTheAbyss,
 	ReapingWillow,
 	RebuffTheWicked,

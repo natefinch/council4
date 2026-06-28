@@ -477,12 +477,17 @@ func spellCastProhibited(g *game.Game, playerID game.PlayerID, spellDef *game.Ca
 	return false
 }
 
-// abilityActivationProhibited reports whether an active
-// RuleEffectCantActivateAbilities effect forbids playerID from activating an
-// ability of permanent ("... activate abilities of artifacts, creatures, or
-// enchantments."). The prohibition honors its affected-player relation, optional
-// controller-turn scope, and the permanent-type filter.
-func abilityActivationProhibited(g *game.Game, playerID game.PlayerID, permanent *game.Permanent) bool {
+// abilityActivationProhibited reports whether an active activation-prohibition
+// rule effect forbids playerID from activating an ability of permanent. The
+// player-scoped RuleEffectCantActivateAbilities ("... activate abilities of
+// artifacts, creatures, or enchantments.") honors its affected-player relation,
+// optional controller-turn scope, and permanent-type filter. The
+// permanent-scoped RuleEffectCantActivateAbilitiesOfPermanent ("Enchanted
+// creature ... its activated abilities can't be activated.", Arrest) forbids any
+// player from activating the matched permanent's abilities, sparing mana
+// abilities when isManaAbility and ExemptManaAbilities both hold (Faith's
+// Fetters).
+func abilityActivationProhibited(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, isManaAbility bool) bool {
 	card, ok := permanentCardDef(g, permanent)
 	if !ok {
 		return false
@@ -490,15 +495,27 @@ func abilityActivationProhibited(g *game.Game, playerID game.PlayerID, permanent
 	effects := activeRuleEffects(g)
 	for i := range effects {
 		effect := &effects[i]
-		if effect.Kind != game.RuleEffectCantActivateAbilities ||
-			!playerRelationMatches(effect.Controller, playerID, effect.AffectedPlayer) ||
-			!actionRestrictionTurnActive(g, effect) {
+		switch effect.Kind {
+		case game.RuleEffectCantActivateAbilities:
+			if !playerRelationMatches(effect.Controller, playerID, effect.AffectedPlayer) ||
+				!actionRestrictionTurnActive(g, effect) {
+				continue
+			}
+			if len(effect.PermanentTypes) > 0 && !cardDefHasAnyType(card, effect.PermanentTypes) {
+				continue
+			}
+			return true
+		case game.RuleEffectCantActivateAbilitiesOfPermanent:
+			if !ruleEffectMatchesPermanent(g, effect, permanent) {
+				continue
+			}
+			if isManaAbility && effect.ExemptManaAbilities {
+				continue
+			}
+			return true
+		default:
 			continue
 		}
-		if len(effect.PermanentTypes) > 0 && !cardDefHasAnyType(card, effect.PermanentTypes) {
-			continue
-		}
-		return true
 	}
 	return false
 }

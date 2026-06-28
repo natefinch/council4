@@ -89,6 +89,7 @@ var Cards = []*game.CardDef{
 	ArmorThrull,
 	ArmoredScrapgorger,
 	ArmoryVeteran,
+	Arrest,
 	ArrogantBloodlord,
 	ArtisanOfKozilek,
 	ArwenSGift,

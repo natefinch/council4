@@ -59,18 +59,18 @@ func TestAbilityActivationProhibitedByGrandAbolisher(t *testing.T) {
 
 	opponentCreature := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
 		Name: "Opponent Creature", Types: []types.Card{types.Creature}}})
-	if !abilityActivationProhibited(g, game.Player2, opponentCreature) {
+	if !abilityActivationProhibited(g, game.Player2, opponentCreature, false) {
 		t.Fatal("opponent creature abilities should be restricted during the controller's turn")
 	}
 
 	opponentLand := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
 		Name: "Opponent Land", Types: []types.Card{types.Land}}})
-	if abilityActivationProhibited(g, game.Player2, opponentLand) {
+	if abilityActivationProhibited(g, game.Player2, opponentLand, false) {
 		t.Fatal("land abilities are not in the restricted permanent-type set")
 	}
 
 	g.Turn.ActivePlayer = game.Player2
-	if abilityActivationProhibited(g, game.Player2, opponentCreature) {
+	if abilityActivationProhibited(g, game.Player2, opponentCreature, false) {
 		t.Fatal("the turn-scoped restriction must lift on the opponent's turn")
 	}
 }

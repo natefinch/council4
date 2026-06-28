@@ -175,6 +175,33 @@ func selfNameStaticRuleSubjectWidth(tokens []shared.Token, atoms Atoms) (int, bo
 	return 0, false
 }
 
+// parseStaticOperationQualifier parses the optional qualifier that follows a
+// prohibited operation, trying each recognized qualifier form in turn and
+// returning the first match with the index past it. The activation clause (the
+// Arrest-family compound "..., and its activated abilities can't be activated")
+// only attaches to an active "can't attack or block" prohibition.
+func parseStaticOperationQualifier(tokens []shared.Token, operation *StaticRuleOperation, opNext int) (StaticRuleQualifier, int, bool) {
+	limit := len(tokens) - 1
+	if qualifier, qualifierNext, ok := parseStaticBlockedExceptClause(tokens, operation, opNext, limit); ok {
+		return qualifier, qualifierNext, true
+	}
+	if qualifier, qualifierNext, ok := parseStaticBlockerRestrictionQualifier(tokens, opNext, limit); ok {
+		return qualifier, qualifierNext, true
+	}
+	if qualifier, qualifierNext, ok := parseStaticByMoreThanOneQualifier(tokens, opNext, limit); ok {
+		return qualifier, qualifierNext, true
+	}
+	if qualifier, qualifierNext, ok := parseStaticAloneQualifier(tokens, opNext); ok {
+		return qualifier, qualifierNext, true
+	}
+	if operation.Kind == StaticRuleOperationAttackOrBlock && operation.Voice == StaticRuleVoiceActive {
+		if qualifier, qualifierNext, ok := parseStaticActivatedAbilitiesClause(tokens, opNext); ok {
+			return qualifier, qualifierNext, true
+		}
+	}
+	return StaticRuleQualifier{}, opNext, false
+}
+
 func parseStaticRuleOperationsForSubject(tokens []shared.Token, subject StaticRuleSubject, next int) (*StaticRuleSyntax, bool) {
 	rule := &StaticRuleSyntax{
 		Span:    shared.SpanOf(tokens),
@@ -188,16 +215,7 @@ func parseStaticRuleOperationsForSubject(tokens []shared.Token, subject StaticRu
 			return nil, false
 		}
 		rule.Operation = operation
-		if qualifier, qualifierNext, ok := parseStaticBlockedExceptClause(tokens, &rule.Operation, opNext, len(tokens)-1); ok {
-			rule.Qualifiers = append(rule.Qualifiers, qualifier)
-			opNext = qualifierNext
-		} else if qualifier, qualifierNext, ok := parseStaticBlockerRestrictionQualifier(tokens, opNext, len(tokens)-1); ok {
-			rule.Qualifiers = append(rule.Qualifiers, qualifier)
-			opNext = qualifierNext
-		} else if qualifier, qualifierNext, ok := parseStaticByMoreThanOneQualifier(tokens, opNext, len(tokens)-1); ok {
-			rule.Qualifiers = append(rule.Qualifiers, qualifier)
-			opNext = qualifierNext
-		} else if qualifier, qualifierNext, ok := parseStaticAloneQualifier(tokens, opNext); ok {
+		if qualifier, qualifierNext, ok := parseStaticOperationQualifier(tokens, &rule.Operation, opNext); ok {
 			rule.Qualifiers = append(rule.Qualifiers, qualifier)
 			opNext = qualifierNext
 		}
@@ -368,6 +386,33 @@ func parseStaticAloneQualifier(tokens []shared.Token, start int) (StaticRuleQual
 		Kind: StaticRuleQualifierAlone,
 		Span: tokens[start].Span,
 	}, start + 1, true
+}
+
+// parseStaticActivatedAbilitiesClause recognizes Arrest's trailing compound
+// clause appended to an active "can't attack or block" prohibition: a comma,
+// then "and its activated abilities can't be activated", optionally extended
+// with "unless they're mana abilities" (Faith's Fetters). It returns the
+// activation qualifier and the index past the clause so the caller can confirm
+// only the closing period remains. The mana-exemption variant yields
+// StaticRuleQualifierCantActivateNonManaAbilities; the plain form yields
+// StaticRuleQualifierCantActivateAbilities.
+func parseStaticActivatedAbilitiesClause(tokens []shared.Token, start int) (StaticRuleQualifier, int, bool) {
+	if start < 0 || start >= len(tokens) || tokens[start].Kind != shared.Comma {
+		return StaticRuleQualifier{}, start, false
+	}
+	if !staticRuleWordsAt(tokens, start+1, "and", "its", "activated", "abilities", "can't", "be", "activated") {
+		return StaticRuleQualifier{}, start, false
+	}
+	clauseEnd := start + 8
+	kind := StaticRuleQualifierCantActivateAbilities
+	if staticRuleWordsAt(tokens, clauseEnd, "unless", "they're", "mana", "abilities") {
+		kind = StaticRuleQualifierCantActivateNonManaAbilities
+		clauseEnd += 4
+	}
+	return StaticRuleQualifier{
+		Kind: kind,
+		Span: shared.SpanOf(tokens[start:clauseEnd]),
+	}, clauseEnd, true
 }
 
 type requiredAttackRuleSyntax struct {
@@ -652,10 +697,11 @@ func validStaticRuleSyntax(rule StaticRuleSyntax) bool {
 	case StaticRuleSubjectSourceCreature, StaticRuleSubjectAttachedObject:
 		return validCreatureStaticRuleOperation(rule)
 	case StaticRuleSubjectSourcePermanent, StaticRuleSubjectAttachedPermanent, StaticRuleSubjectBattlefieldPermanents:
-		return rule.Constraint.Kind == StaticRuleConstraintProhibition &&
+		return (rule.Constraint.Kind == StaticRuleConstraintProhibition &&
 			rule.Operation.Kind == StaticRuleOperationUntap &&
 			rule.Operation.Voice == StaticRuleVoiceActive &&
-			len(rule.Qualifiers) == 0
+			len(rule.Qualifiers) == 0) ||
+			validAttachedPermanentAttackBlockRule(rule)
 	case StaticRuleSubjectSourceSpell:
 		return rule.Constraint.Kind == StaticRuleConstraintProhibition &&
 			rule.Operation.Kind == StaticRuleOperationCounter &&
@@ -688,6 +734,22 @@ func validStaticRuleSyntax(rule StaticRuleSyntax) bool {
 	default:
 		return false
 	}
+}
+
+// validAttachedPermanentAttackBlockRule reports whether a rule on the permanent
+// an Aura is attached to ("Enchanted permanent") is the Arrest-family pinning
+// prohibition "can't attack or block, and its activated abilities can't be
+// activated[ unless they're mana abilities]." Faith's Fetters and similar Auras
+// name "enchanted permanent" rather than "enchanted creature", so they thread
+// the attached-permanent subject here. The bare "can't attack or block" without
+// the activation clause stays the attached-object creature subject's job.
+func validAttachedPermanentAttackBlockRule(rule StaticRuleSyntax) bool {
+	return rule.Subject.Kind == StaticRuleSubjectAttachedPermanent &&
+		rule.Constraint.Kind == StaticRuleConstraintProhibition &&
+		rule.Operation.Kind == StaticRuleOperationAttackOrBlock &&
+		rule.Operation.Voice == StaticRuleVoiceActive &&
+		(staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierCantActivateAbilities) ||
+			staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierCantActivateNonManaAbilities))
 }
 
 // validGroupMustAttackRule reports whether a group-scoped static rule is the
@@ -745,7 +807,9 @@ func validCreatureStaticRuleOperation(rule StaticRuleSyntax) bool {
 			rule.Operation.Kind == StaticRuleOperationAttackOrBlock &&
 			rule.Operation.Voice == StaticRuleVoiceActive &&
 			(len(rule.Qualifiers) == 0 ||
-				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierAlone))) ||
+				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierAlone) ||
+				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierCantActivateAbilities) ||
+				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierCantActivateNonManaAbilities))) ||
 		(rule.Constraint.Kind == StaticRuleConstraintProhibition &&
 			rule.Operation.Kind == StaticRuleOperationBlock &&
 			rule.Operation.Voice == StaticRuleVoiceActive &&

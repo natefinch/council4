@@ -878,7 +878,9 @@ func staticRuleDomain(kind compiler.StaticRuleKind) compiler.StaticRuleDomain {
 		return compiler.StaticRuleDomainBlock
 	case compiler.StaticRuleCantBeCountered:
 		return compiler.StaticRuleDomainCountering
-	case compiler.StaticRuleCantAttackOrBlock, compiler.StaticRuleCantAttackOrBlockAlone:
+	case compiler.StaticRuleCantAttackOrBlock, compiler.StaticRuleCantAttackOrBlockAlone,
+		compiler.StaticRuleCantAttackOrBlockAndCantActivate,
+		compiler.StaticRuleCantAttackOrBlockAndCantActivateNonMana:
 		return compiler.StaticRuleDomainAttackBlock
 	case compiler.StaticRuleDoesntUntap:
 		return compiler.StaticRuleDomainUntap
@@ -1425,6 +1427,18 @@ func lowerStaticRuleEffects(kind compiler.StaticRuleKind) ([]game.RuleEffect, bo
 		return []game.RuleEffect{
 			{Kind: game.RuleEffectCantAttack},
 			{Kind: game.RuleEffectCantBlock},
+		}, true
+	case compiler.StaticRuleCantAttackOrBlockAndCantActivate:
+		return []game.RuleEffect{
+			{Kind: game.RuleEffectCantAttack},
+			{Kind: game.RuleEffectCantBlock},
+			{Kind: game.RuleEffectCantActivateAbilitiesOfPermanent},
+		}, true
+	case compiler.StaticRuleCantAttackOrBlockAndCantActivateNonMana:
+		return []game.RuleEffect{
+			{Kind: game.RuleEffectCantAttack},
+			{Kind: game.RuleEffectCantBlock},
+			{Kind: game.RuleEffectCantActivateAbilitiesOfPermanent, ExemptManaAbilities: true},
 		}, true
 	case compiler.StaticRuleCantAttackOrBlockAlone:
 		return []game.RuleEffect{

@@ -119,6 +119,61 @@ func TestParseAttachedAndUntapStaticRuleSentences(t *testing.T) {
 	}
 }
 
+// TestParseArrestActivatedAbilitiesStaticRuleSentences covers the Arrest-family
+// pinning prohibition "Enchanted <creature|permanent> can't attack or block, and
+// its activated abilities can't be activated[ unless they're mana abilities]."
+// The active attack-or-block prohibition must carry the activation qualifier so
+// the compiler can lower the compound clause into the can't-attack, can't-block,
+// and can't-activate-abilities rule effects.
+func TestParseArrestActivatedAbilitiesStaticRuleSentences(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		source    string
+		subject   StaticRuleSubjectKind
+		qualifier StaticRuleQualifierKind
+	}{
+		"arrest enchanted creature": {
+			source:    "Enchanted creature can't attack or block, and its activated abilities can't be activated.",
+			subject:   StaticRuleSubjectAttachedObject,
+			qualifier: StaticRuleQualifierCantActivateAbilities,
+		},
+		"arrest enchanted permanent": {
+			source:    "Enchanted permanent can't attack or block, and its activated abilities can't be activated.",
+			subject:   StaticRuleSubjectAttachedPermanent,
+			qualifier: StaticRuleQualifierCantActivateAbilities,
+		},
+		"faith's fetters enchanted permanent mana exempt": {
+			source:    "Enchanted permanent can't attack or block, and its activated abilities can't be activated unless they're mana abilities.",
+			subject:   StaticRuleSubjectAttachedPermanent,
+			qualifier: StaticRuleQualifierCantActivateNonManaAbilities,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			rule := parseStaticRuleSentence(t, test.source)
+			if rule == nil {
+				t.Fatalf("StaticRule = nil, want a static rule for %q", test.source)
+			}
+			if rule.Subject.Kind != test.subject {
+				t.Fatalf("subject = %s, want %s", rule.Subject.Kind, test.subject)
+			}
+			if rule.Constraint.Kind != StaticRuleConstraintProhibition {
+				t.Fatalf("constraint = %s, want %s", rule.Constraint.Kind, StaticRuleConstraintProhibition)
+			}
+			if rule.Operation.Kind != StaticRuleOperationAttackOrBlock || rule.Operation.Voice != StaticRuleVoiceActive {
+				t.Fatalf("operation = %#v, want %s voice %s", rule.Operation, StaticRuleOperationAttackOrBlock, StaticRuleVoiceActive)
+			}
+			if len(rule.Qualifiers) != 1 || rule.Qualifiers[0].Kind != test.qualifier {
+				t.Fatalf("qualifiers = %#v, want one %s", rule.Qualifiers, test.qualifier)
+			}
+			if rule.Guarded {
+				t.Fatalf("guarded = %v, want false for the activation clause", rule.Guarded)
+			}
+		})
+	}
+}
+
 // TestParseCantAttackOrBlockUnlessLandsStaticRuleSentence covers the land-gated
 // combat restriction "<this> can't attack or block unless you control N or more
 // lands" (Topiary Stomper). The trailing condition must be retained as a guard

@@ -747,6 +747,9 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 	if effect.BlockedSource {
 		fields = append(fields, "BlockedSource: true,")
 	}
+	if effect.ExemptManaAbilities {
+		fields = append(fields, "ExemptManaAbilities: true,")
+	}
 	if len(effect.SpellTypes) > 0 {
 		spellTypes, err := renderTypesCardSlice(ctx, effect.SpellTypes)
 		if err != nil {
@@ -913,6 +916,8 @@ func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
 		return "game.RuleEffectCantEnterFromZones", nil
 	case game.RuleEffectCantActivateAbilities:
 		return "game.RuleEffectCantActivateAbilities", nil
+	case game.RuleEffectCantActivateAbilitiesOfPermanent:
+		return "game.RuleEffectCantActivateAbilitiesOfPermanent", nil
 	case game.RuleEffectAdditionalTriggerForEnteringPermanent:
 		return "game.RuleEffectAdditionalTriggerForEnteringPermanent", nil
 	case game.RuleEffectAdditionalTriggerForControlledPermanent:
