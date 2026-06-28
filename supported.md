@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,814 of 32,501 cards eligible for paper support (48.7%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,818 of 32,501 cards eligible for paper support (48.7%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -846,6 +846,7 @@ Council4 currently supports **15,814 of 32,501 cards eligible for paper support 
 - Avatar Enthusiasts
 - Avatar of Discord
 - Avatar of Slaughter
+- Aveline de Grandpré
 - Aven Archer
 - Aven Battle Priest
 - Aven Brigadier
@@ -1294,6 +1295,7 @@ Council4 currently supports **15,814 of 32,501 cards eligible for paper support 
 - Black Ward
 - Black Widow, Agile Avenger
 - Black Widow, Daring Operative
+- Black Widow, Deadly Hunter
 - Black Widow, Double Agent
 - Black Widow, Natasha Romanoff
 - Blackblade Reforged
@@ -5107,6 +5109,7 @@ Council4 currently supports **15,814 of 32,501 cards eligible for paper support 
 - Fyndhorn Elder
 - Fyndhorn Elves
 - Fyndhorn Pollen
+- Fynn, the Fangbearer
 - G'raha Tia
 - Gadget Technician
 - Gadwick, the Wizened
@@ -15345,6 +15348,7 @@ Council4 currently supports **15,814 of 32,501 cards eligible for paper support 
 - White Sun's Zenith
 - White Tiger, Amulet Keeper
 - White Ward
+- White Widow, Yelena Belova
 - Whitemane Lion
 - Whitesun's Passage
 - Whitewater Naiads

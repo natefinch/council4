@@ -189,6 +189,8 @@ func compileTriggerSelectionKeyword(value parser.KeywordKind) (parser.KeywordKin
 	switch value {
 	case parser.KeywordUnknown:
 		return parser.KeywordUnknown, true
+	case parser.KeywordDeathtouch:
+		return parser.KeywordDeathtouch, true
 	case parser.KeywordDefender:
 		return parser.KeywordDefender, true
 	case parser.KeywordFlash:

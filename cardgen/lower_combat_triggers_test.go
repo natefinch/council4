@@ -114,6 +114,22 @@ func TestLowerCombatEventTriggers(t *testing.T) {
 			wantTyp: game.TriggerWhenever,
 		},
 		{
+			name: "controlled deathtouch source combat damage to player",
+			text: "Whenever a creature you control with deathtouch deals combat damage to a player, draw a card.",
+			want: game.TriggerPattern{
+				Event:               game.EventDamageDealt,
+				Controller:          game.TriggerControllerYou,
+				Subject:             game.TriggerSubjectDamageSource,
+				DamageRecipient:     game.DamageRecipientPlayer,
+				RequireCombatDamage: true,
+				DamageSourceSelection: game.Selection{
+					RequiredTypes: []types.Card{types.Creature},
+					Keyword:       game.Deathtouch,
+				},
+			},
+			wantTyp: game.TriggerWhenever,
+		},
+		{
 			name: "attacks alone",
 			text: "Whenever this creature attacks alone, draw a card.",
 			want: game.TriggerPattern{
