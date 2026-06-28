@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,883 of 32,501 cards eligible for paper support (48.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,889 of 32,501 cards eligible for paper support (48.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -164,6 +164,7 @@ Council4 currently supports **15,883 of 32,501 cards eligible for paper support 
 - Aethergeode Miner
 - Aetherize
 - Aetherjacket
+- Aetherling
 - Aethershield Artificer
 - Aethersnipe
 - Aethersphere Harvester
@@ -504,6 +505,7 @@ Council4 currently supports **15,883 of 32,501 cards eligible for paper support 
 - Anthem of Champions
 - Anticipate
 - Anurid Barkripper
+- Anurid Brushhopper
 - Anurid Murkdiver
 - Anvilwrought Raptor
 - Ape
@@ -645,6 +647,7 @@ Council4 currently supports **15,883 of 32,501 cards eligible for paper support 
 - Arena Trickster
 - Ares, God of War
 - Argent Mutation
+- Argent Sphinx
 - Argentum Armor
 - Argivian Archaeologist
 - Argivian Find
@@ -3486,6 +3489,7 @@ Council4 currently supports **15,883 of 32,501 cards eligible for paper support 
 - Divinity of Pride
 - Djeru's Renunciation
 - Djinn Monk
+- Djinn of the Fountain
 - Djinn of the Lamp
 - Djinni Windseer
 - Doc Ock, Sinister Scientist
@@ -4788,6 +4792,7 @@ Council4 currently supports **15,883 of 32,501 cards eligible for paper support 
 - Fleeting Flight
 - Fleeting Image
 - Fleeting Memories
+- Fleeting Spirit
 - Flensermite
 - Flensing Raptor
 - Flesh Burrower
@@ -11214,6 +11219,7 @@ Council4 currently supports **15,883 of 32,501 cards eligible for paper support 
 - Salt Road Quartermasters
 - Saltblast
 - Saltfield Recluse
+- Saltskitter
 - Saltwater Stalwart
 - Salvage
 - Salvage Scout
