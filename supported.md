@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,008 of 32,501 cards eligible for paper support (49.3%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,019 of 32,501 cards eligible for paper support (49.3%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2696,6 +2696,7 @@ Council4 currently supports **16,008 of 32,501 cards eligible for paper support 
 - Copy Catchers
 - Copy Enchantment
 - Copy Land
+- Coral Atoll
 - Coral Barrier
 - Coral Commando
 - Coral Eel
@@ -2839,6 +2840,7 @@ Council4 currently supports **16,008 of 32,501 cards eligible for paper support 
 - Crookshank Kobolds
 - Crop Rotation
 - Crosis's Attendant
+- Crosis's Catacombs
 - Crossbow Ambush
 - Crossbow Infantry
 - Crossroads Candleguide
@@ -3009,6 +3011,7 @@ Council4 currently supports **16,008 of 32,501 cards eligible for paper support 
 - Daredevil's Billy Club
 - Darien, King of Kjeldor
 - Darigaaz's Attendant
+- Darigaaz's Caldera
 - Darigaaz's Charm
 - Daring Apprentice
 - Daring Archaeologist
@@ -3561,6 +3564,7 @@ Council4 currently supports **16,008 of 32,501 cards eligible for paper support 
 - Door of Destinies
 - Door to Nothingness
 - Doran, the Siege Tower
+- Dormant Volcano
 - Dosan's Oldest Chant
 - Double Cleave
 - Double Trouble
@@ -3723,6 +3727,7 @@ Council4 currently supports **16,008 of 32,501 cards eligible for paper support 
 - Drogskol Shieldmate
 - Dromad Purebred
 - Dromar's Attendant
+- Dromar's Cavern
 - Dromar's Charm
 - Dromoka Dunecaster
 - Dromoka Monument
@@ -4314,6 +4319,7 @@ Council4 currently supports **16,008 of 32,501 cards eligible for paper support 
 - Evasive Action
 - Everbark Shaman
 - Everflowing Chalice
+- Everglades
 - Evernight Shade
 - Evil Presence
 - Evil Reawakened
@@ -7163,6 +7169,7 @@ Council4 currently supports **16,008 of 32,501 cards eligible for paper support 
 - Jund Hackblade
 - Jund Panorama
 - Jungle Barrier
+- Jungle Basin
 - Jungle Creeper
 - Jungle Delver
 - Jungle Hollow
@@ -7239,6 +7246,7 @@ Council4 currently supports **16,008 of 32,501 cards eligible for paper support 
 - Karlov of the Ghost Council
 - Karn's Bastion
 - Karok Wrangler
+- Karoo
 - Karoo Meerkat
 - Karox Bladewing
 - Karplusan Forest
@@ -11005,6 +11013,7 @@ Council4 currently supports **16,008 of 32,501 cards eligible for paper support 
 - Rite of Undoing
 - Rites of Reaping
 - Rith's Attendant
+- Rith's Grove
 - Ritual Guardian
 - Ritual of Rejuvenation
 - Ritual of Restoration
@@ -14374,6 +14383,7 @@ Council4 currently supports **16,008 of 32,501 cards eligible for paper support 
 - Trestle Troll
 - Treva's Attendant
 - Treva's Charm
+- Treva's Ruins
 - Trial of a Time Lord
 - Trial of Ambition
 - Trial of Knowledge
@@ -15405,6 +15415,7 @@ Council4 currently supports **16,008 of 32,501 cards eligible for paper support 
 - Waterfront District
 - Waterkin Shaman
 - Waterlogged Grove
+- Waterspout Djinn
 - Waterspout Warden
 - Watertrap Weaver
 - Waterveil Cavern
