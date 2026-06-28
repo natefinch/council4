@@ -645,6 +645,12 @@ func effectContextAt(tokens []shared.Token, index int, atoms Atoms) EffectContex
 		// "You and target <player> each <verb>": the controller and a single
 		// player target both receive the effect.
 		return EffectContextControllerAndTarget
+	case len(words) >= 3 && youAndPrefix && words[0] == "that" && words[1] == "player" &&
+		words[len(words)-1] == "each":
+		// "You and that player each <verb>": the controller and the triggering
+		// event's player ("that player") both receive the effect. It mirrors the
+		// controller-and-target case but for an event-bound recipient.
+		return EffectContextControllerAndReferencedPlayer
 	case effectContainsWords(words, "target"):
 		return EffectContextTarget
 	case len(words) >= 2 && words[len(words)-2] == "that" && words[len(words)-1] == "player":

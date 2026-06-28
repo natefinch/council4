@@ -1681,6 +1681,82 @@ func massGroupRequiredType(kind compiler.SelectorKind) (types.Card, bool) {
 	}
 }
 
+// lowerControllerAndReferencedPlayerDraw lowers a "You and that player each draw
+// N cards" trigger body: the controller and the triggering event's player ("that
+// player") each draw. The amount is either a fixed count ("each draw two cards",
+// Black Widow) or the triggering event's quantity ("each draw that many cards"
+// after a combat-damage trigger, Diviner Spirit). It is modeled as two parallel
+// draw instructions, one for the controller and one for the event player.
+func lowerControllerAndReferencedPlayerDraw(
+	ctx contentCtx,
+	effect compiler.CompiledEffect,
+) (game.AbilityContent, *shared.Diagnostic) {
+	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported draw spell",
+			"the executable source backend supports only exact fixed card draw",
+		)
+	}
+	if effect.Negated || effect.Optional || ctx.optional ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.Targets) != 0 {
+		return unsupported()
+	}
+	// The recipient "that player" must bind the triggering event's player. Any
+	// remaining references are the trigger's own source ("Whenever <self> deals
+	// combat damage ..."), which carries no recipient and is tolerated.
+	recipientRefs := 0
+	for _, reference := range ctx.content.References {
+		if reference.Kind == compiler.ReferenceThatPlayer &&
+			reference.Binding == compiler.ReferenceBindingEventPlayer {
+			recipientRefs++
+			continue
+		}
+		if reference.Binding == compiler.ReferenceBindingSource {
+			continue
+		}
+		return unsupported()
+	}
+	if recipientRefs != 1 {
+		return unsupported()
+	}
+	amount, ok := controllerAndReferencedPlayerDrawAmount(ctx, effect.Amount)
+	if !ok {
+		return unsupported()
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{
+			{Primitive: game.Draw{Amount: amount, Player: game.ControllerReference()}},
+			{Primitive: game.Draw{Amount: amount, Player: game.EventPlayerReference()}},
+		},
+	}.Ability(), nil
+}
+
+// controllerAndReferencedPlayerDrawAmount resolves the per-player draw count of a
+// "you and that player each draw ..." body. It accepts a fixed count and the
+// triggering-event quantity anaphor ("that many cards"), failing closed on every
+// other dynamic form.
+func controllerAndReferencedPlayerDrawAmount(ctx contentCtx, compiled compiler.CompiledAmount) (game.Quantity, bool) {
+	switch {
+	case compiled.Known:
+		if compiled.Value < 1 {
+			return game.Quantity{}, false
+		}
+		return game.Fixed(compiled.Value), true
+	case triggeringEventQuantityKind(compiled.DynamicKind):
+		dynamic, ok := lowerTriggeringEventQuantityAmount(ctx, compiled)
+		if !ok {
+			return game.Quantity{}, false
+		}
+		return game.Dynamic(dynamic), true
+	default:
+		return game.Quantity{}, false
+	}
+}
+
 // lowerControllerAndTargetDraw lowers a "You and target <player> each draw N
 // cards" body: the controller and the single player target each draw, modeled as
 // two parallel draw instructions sharing the mode's player target.
@@ -1707,6 +1783,9 @@ func lowerFixedDrawSpell(
 	_ *parser.Ability,
 ) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
+	if effect.Context == parser.EffectContextControllerAndReferencedPlayer {
+		return lowerControllerAndReferencedPlayerDraw(ctx, effect)
+	}
 	// Allow a single EventPlayer reference for "They draw N card(s)." bodies;
 	// reject all other non-zero-reference forms.
 	hasEventPlayerRef := len(ctx.content.References) == 1 &&

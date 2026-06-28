@@ -1122,6 +1122,13 @@ const (
 	// to the attacking creature's defending player, identified by the triggering
 	// attack event.
 	EffectContextDefendingPlayer EffectContextKind = "EffectContextDefendingPlayer"
+	// EffectContextControllerAndReferencedPlayer marks an effect distributed to
+	// both the controller and the referenced/event player ("You and that player
+	// each draw a card"). The referenced player is the triggering event's player
+	// subject (the player a "that player" reference binds to); the controller is
+	// the implicit co-recipient. It mirrors EffectContextControllerAndTarget but
+	// for an event-bound "that player" recipient rather than a chosen target.
+	EffectContextControllerAndReferencedPlayer EffectContextKind = "EffectContextControllerAndReferencedPlayer"
 )
 
 // DamageRecipientReferenceKind identifies a damage recipient that is the
