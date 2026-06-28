@@ -12,6 +12,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -128,6 +129,64 @@ func TestSpellCastTriggerChosenTypeFailsWithoutEntryChoice(t *testing.T) {
 	}
 	if triggerMatchesEvent(g, source, pattern, event) {
 		t.Fatal("chosen-type trigger matched when the source recorded no entry choice")
+	}
+}
+
+// TestSpellCastTriggerFiltersChosenColor verifies the "Whenever you cast a spell
+// of the chosen color" cast trigger (Prism Ring, Diamond Mare): only a cast
+// spell sharing the color the source permanent recorded as it entered fires it.
+func TestSpellCastTriggerFiltersChosenColor(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatCreaturePermanent(g, game.Player1)
+	source.EntryChoices = map[game.ChoiceKey]game.ResolutionChoiceResult{
+		game.EntryColorChoiceKey: {Kind: game.ResolutionChoiceMana, Color: mana.R},
+	}
+	pattern := &game.TriggerPattern{
+		Event:      game.EventSpellCast,
+		Controller: game.TriggerControllerYou,
+		CardSelection: game.Selection{
+			ColorChoice: game.ColorChoiceSourceEntry,
+		},
+	}
+
+	event := game.Event{
+		Kind:       game.EventSpellCast,
+		Controller: game.Player1,
+		Colors:     []color.Color{color.Red},
+	}
+	if !triggerMatchesEvent(g, source, pattern, event) {
+		t.Fatal("red spell did not match chosen-color (red) cast trigger")
+	}
+	event.Colors = []color.Color{color.Blue}
+	if triggerMatchesEvent(g, source, pattern, event) {
+		t.Fatal("blue spell matched chosen-color (red) cast trigger")
+	}
+	event.Colors = nil
+	if triggerMatchesEvent(g, source, pattern, event) {
+		t.Fatal("colorless spell matched chosen-color (red) cast trigger")
+	}
+}
+
+// TestSpellCastTriggerChosenColorFailsWithoutEntryChoice verifies the
+// chosen-color cast trigger fails closed when the source recorded no entry-time
+// color choice.
+func TestSpellCastTriggerChosenColorFailsWithoutEntryChoice(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatCreaturePermanent(g, game.Player1)
+	pattern := &game.TriggerPattern{
+		Event:      game.EventSpellCast,
+		Controller: game.TriggerControllerYou,
+		CardSelection: game.Selection{
+			ColorChoice: game.ColorChoiceSourceEntry,
+		},
+	}
+	event := game.Event{
+		Kind:       game.EventSpellCast,
+		Controller: game.Player1,
+		Colors:     []color.Color{color.Red},
+	}
+	if triggerMatchesEvent(g, source, pattern, event) {
+		t.Fatal("chosen-color trigger matched when the source recorded no entry choice")
 	}
 }
 

@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,192 of 32,501 cards eligible for paper support (49.8%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,198 of 32,501 cards eligible for paper support (49.8%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2982,6 +2982,7 @@ Council4 currently supports **16,192 of 32,501 cards eligible for paper support 
 - Curse of Chains
 - Curse of Marit Lage
 - Curse of the Swine
+- Curse of Wizardry
 - Cursebreak
 - Cursecatcher
 - Cursed Flesh
@@ -3421,7 +3422,9 @@ Council4 currently supports **16,192 of 32,501 cards eligible for paper support 
 - Diabolic Tutor
 - Diamond City
 - Diamond Kaleidoscope
+- Diamond Knight
 - Diamond Lion
+- Diamond Mare
 - Diamond Pick-Axe
 - Diamond Valley
 - Dictate of Erebos
@@ -7192,6 +7195,7 @@ Council4 currently supports **16,192 of 32,501 cards eligible for paper support 
 - Jetmir's Garden
 - Jewel Thief
 - Jewel-Eyed Cobra
+- Jeweled Torque
 - Jhessian Balmgiver
 - Jhessian Infiltrator
 - Jhessian Lookout
@@ -9794,6 +9798,7 @@ Council4 currently supports **16,192 of 32,501 cards eligible for paper support 
 - Papercraft Decoy
 - Paradise Druid
 - Paradise Mantle
+- Paradise Plume
 - Paradox Engine
 - Paradox Gardens
 - Paradox Surveyor
@@ -10283,6 +10288,7 @@ Council4 currently supports **16,192 of 32,501 cards eligible for paper support 
 - Primordial Wurm
 - Prince Imrahil the Fair
 - Princess Lucrezia
+- Prism Ring
 - Prismari Campus
 - Prismari Charm
 - Prismari Command

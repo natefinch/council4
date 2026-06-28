@@ -322,6 +322,10 @@ func SelectionForSelectorMasked(selector compiler.CompiledSelector, mask Selecti
 	}
 	selection.SubtypeChoice = choice
 
+	if selector.ColorFromEntryChoice {
+		selection.ColorChoice = game.ColorChoiceSourceEntry
+	}
+
 	if honor, ok := mask.dimension(selector.ConjunctiveTypes, DimConjunctiveTypes); !ok {
 		return game.Selection{}, false
 	} else if honor {

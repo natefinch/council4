@@ -1253,6 +1253,10 @@ type CompiledSelector struct {
 	// subtype the source permanent chose as it entered ("creatures you control of
 	// the chosen type"). It lowers to Selection.SubtypeFromSourceEntryChoice.
 	SubtypeFromEntryChoice bool
+	// ColorFromEntryChoice requires each matched object to share the color the
+	// source permanent chose as it entered ("of the chosen color", Prism Ring,
+	// Heraldic Banner). It lowers to Selection.ColorChoice = ColorChoiceSourceEntry.
+	ColorFromEntryChoice bool
 	// SubtypeFromChosenType requires each matched permanent to share the creature
 	// subtype chosen earlier in the same resolution by a "Choose a creature type."
 	// effect ("each permanent you control of that type"). It lowers to

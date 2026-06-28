@@ -581,6 +581,7 @@ func compileTriggerSpellSelection(syntax parser.TriggerEventSpellSelection) (Tri
 		selection.SubtypesAny = append(selection.SubtypesAny, syntax.SubtypesAny...)
 	}
 	selection.SubtypeFromEntryChoice = syntax.SubtypeFromEntryChoice
+	selection.ColorFromEntryChoice = syntax.ColorFromEntryChoice
 	return selection, true
 }
 

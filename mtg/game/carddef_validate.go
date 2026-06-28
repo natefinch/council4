@@ -1683,6 +1683,7 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 			unsupported.Colorless = false
 			unsupported.Multicolored = false
 			unsupported.ManaValue.Exists = false
+			unsupported.ColorChoice = ColorChoiceNone
 		}
 		if eventCarriesMovedCardCharacteristics(pattern.Event) {
 			unsupported.Supertypes = nil

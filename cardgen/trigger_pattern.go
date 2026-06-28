@@ -574,6 +574,7 @@ func triggerSelectionSelector(selection compiler.TriggerSelection) (compiler.Com
 		Keyword:                selection.Keyword,
 		ExcludedKeyword:        selection.ExcludedKeyword,
 		SubtypeFromEntryChoice: selection.SubtypeFromEntryChoice,
+		ColorFromEntryChoice:   selection.ColorFromEntryChoice,
 		MatchAnyCounter:        selection.MatchAnyCounter,
 		MatchCounter:           selection.MatchCounter,
 		RequiredCounter:        selection.RequiredCounter,
