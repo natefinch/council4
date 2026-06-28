@@ -26,6 +26,7 @@ var Cards = []*game.CardDef{
 	KessigWolfRun,
 	KhalniAmbush,
 	KhalniHeartExpedition,
+	KillerService,
 	KinTreeInvocation,
 	KingSAssassin,
 	KitesailApprentice,

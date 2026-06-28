@@ -113,6 +113,7 @@ var Cards = []*game.CardDef{
 	CruxOfFate,
 	Cryoclasm,
 	CryogenRelic,
+	CryptcallerChariot,
 	CryptLurker,
 	CrystalRod,
 	CrystallineCrawler,
