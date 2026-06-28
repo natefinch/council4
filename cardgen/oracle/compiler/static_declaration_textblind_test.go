@@ -210,6 +210,44 @@ func TestRecognizeStaticChosenTypePowerToughnessGroupFromTypedNodes(t *testing.T
 	}
 }
 
+func TestRecognizeStaticBattlefieldChosenTypePowerToughnessGroupFromTypedNodes(t *testing.T) {
+	t.Parallel()
+	for name, tc := range map[string]struct {
+		subject    StaticSubjectKind
+		controller ControllerKind
+	}{
+		"battlefield": {subject: StaticSubjectAllCreaturesChosenType, controller: ControllerAny},
+		"opponent":    {subject: StaticSubjectOpponentControlledCreaturesChosenType, controller: ControllerOpponent},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			ability := CompiledAbility{
+				Kind: AbilityStatic,
+				Content: AbilityContent{
+					Effects: []CompiledEffect{{
+						Kind:           EffectModifyPT,
+						PowerDelta:     CompiledSignedAmount{Value: -1, Known: true},
+						ToughnessDelta: CompiledSignedAmount{Value: -1, Known: true},
+						StaticSubject:  tc.subject,
+					}},
+				},
+			}
+			statics := []parser.StaticDeclarationSyntax{{Kind: parser.StaticDeclarationContinuousPowerToughness}}
+			declarations, ok := recognizeStaticPowerToughnessDeclarations(ability, statics)
+			if !ok || len(declarations) != 1 {
+				t.Fatalf("declarations = %#v ok = %v, want one", declarations, ok)
+			}
+			if declarations[0].Group.Domain != StaticGroupBattlefield ||
+				!declarations[0].Group.Selection.SubtypeFromEntryChoice {
+				t.Fatalf("declaration = %#v, want chosen-type battlefield group", declarations[0])
+			}
+			if declarations[0].Group.Selection.Controller != tc.controller {
+				t.Fatalf("Controller = %v, want %v", declarations[0].Group.Selection.Controller, tc.controller)
+			}
+		})
+	}
+}
+
 func TestRecognizeStaticKeywordGrantSourceRequiresConditionFailsClosed(t *testing.T) {
 	t.Parallel()
 	ability := CompiledAbility{

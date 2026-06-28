@@ -79,6 +79,7 @@ var Cards = []*game.CardDef{
 	BrackwaterElemental,
 	BragoKingEternal,
 	BrandywineFarmer,
+	BrassHerald,
 	BrassTalonChimera,
 	BrazenBorrower,
 	BrazenUpstart,

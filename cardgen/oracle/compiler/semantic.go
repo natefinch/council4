@@ -1766,6 +1766,8 @@ const (
 	StaticSubjectAllLands
 	StaticSubjectControlledCreaturesChosenType
 	StaticSubjectOtherControlledCreaturesChosenType
+	StaticSubjectAllCreaturesChosenType
+	StaticSubjectOpponentControlledCreaturesChosenType
 	StaticSubjectOpponentControlledPermanents
 	StaticSubjectOtherAttackingCreatures
 	StaticSubjectOtherControlledPermanents

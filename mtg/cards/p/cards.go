@@ -31,6 +31,7 @@ var Cards = []*game.CardDef{
 	PincerSpider,
 	PiousWarrior,
 	PitilessFists,
+	PlagueEngineer,
 	PlanarGuide,
 	PlantElemental,
 	PointTheWay,

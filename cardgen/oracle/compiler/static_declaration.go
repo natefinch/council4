@@ -3465,6 +3465,15 @@ func staticGroupForSubject(subject StaticSubjectKind, span shared.Span, subtype 
 		group.Selection.RequiredTypes = []types.Card{types.Creature}
 		group.Selection.SubtypeFromEntryChoice = true
 		group.ExcludeSource = true
+	case StaticSubjectAllCreaturesChosenType:
+		group.Domain = StaticGroupBattlefield
+		group.Selection.RequiredTypes = []types.Card{types.Creature}
+		group.Selection.SubtypeFromEntryChoice = true
+	case StaticSubjectOpponentControlledCreaturesChosenType:
+		group.Domain = StaticGroupBattlefield
+		group.Selection.RequiredTypes = []types.Card{types.Creature}
+		group.Selection.Controller = ControllerOpponent
+		group.Selection.SubtypeFromEntryChoice = true
 	default:
 		return StaticGroupReference{}, false
 	}

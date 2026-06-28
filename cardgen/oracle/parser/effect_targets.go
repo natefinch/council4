@@ -3467,8 +3467,12 @@ func parseBattlefieldCreatureGroupSubject(tokens []shared.Token, atoms Atoms) (E
 // anthem group subjects "[Other] creatures you control of the chosen type
 // get/have/gain ...", the affected group of cards that buff only the controlled
 // creatures whose type matches the source permanent's entry-time creature-type
-// choice (Patchwork Banner, Adaptive Automaton, Obelisk of Urd). It returns
-// false so callers fall through to the bare controlled-creature grammar.
+// choice (Patchwork Banner, Adaptive Automaton, Obelisk of Urd). It also
+// recognizes the battlefield-wide forms "[All] creatures of the chosen type
+// get/have ..." (Shared Triumph, Engineered Plague) and the opponent-only form
+// "Creatures of the chosen type your opponents control get/have ..." (Plague
+// Engineer). It returns false so callers fall through to the bare
+// controlled-creature grammar.
 func parseChosenTypeControlledCreatureGroupSubject(tokens []shared.Token) (EffectStaticSubjectSyntax, bool) {
 	switch {
 	case len(tokens) >= 9 && effectWordsAt(tokens, 0, "other", "creatures", "you", "control", "of", "the", "chosen", "type") &&
@@ -3477,6 +3481,15 @@ func parseChosenTypeControlledCreatureGroupSubject(tokens []shared.Token) (Effec
 	case len(tokens) >= 8 && effectWordsAt(tokens, 0, "creatures", "you", "control", "of", "the", "chosen", "type") &&
 		staticGroupVerb(tokens[7]):
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledCreaturesChosenType, Span: shared.SpanOf(tokens[:7])}, true
+	case len(tokens) >= 9 && effectWordsAt(tokens, 0, "creatures", "of", "the", "chosen", "type", "your", "opponents", "control") &&
+		staticGroupVerb(tokens[8]):
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectOpponentControlledCreaturesChosenType, Span: shared.SpanOf(tokens[:8])}, true
+	case len(tokens) >= 7 && effectWordsAt(tokens, 0, "all", "creatures", "of", "the", "chosen", "type") &&
+		staticGroupVerb(tokens[6]):
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectAllCreaturesChosenType, Span: shared.SpanOf(tokens[:6])}, true
+	case len(tokens) >= 6 && effectWordsAt(tokens, 0, "creatures", "of", "the", "chosen", "type") &&
+		staticGroupVerb(tokens[5]):
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectAllCreaturesChosenType, Span: shared.SpanOf(tokens[:5])}, true
 	default:
 	}
 	return EffectStaticSubjectSyntax{}, false
