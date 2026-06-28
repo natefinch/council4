@@ -3044,6 +3044,9 @@ func parseEffectStaticSubject(tokens []shared.Token, atoms Atoms) EffectStaticSu
 	if subject, ok := parseCounterFilteredCreatureGroupSubject(tokens); ok {
 		return subject
 	}
+	if subject, ok := parseControlledCreatureSubtypeTokenGroupSubject(tokens, atoms); ok {
+		return subject
+	}
 	if subject, ok := parseTypeFilteredControlledCreatureGroupSubject(tokens); ok {
 		return subject
 	}
@@ -3258,6 +3261,46 @@ func parseControlledCreatureSubtypeSubject(tokens []shared.Token, atoms Atoms) E
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledCreatureSubtype, Span: shared.SpanOf(tokens[:3]), Subtype: value, SubtypeText: tokens[0].Text, SubtypeKnown: ok}
 	default:
 		return EffectStaticSubjectSyntax{}
+	}
+}
+
+// parseControlledCreatureSubtypeTokenGroupSubject recognizes the controlled
+// creature-token group subjects filtered by a named creature subtype:
+// "[Other] <Subtype> tokens you control get/have ...". It is the token-only
+// sibling of the bare "<Subtype> creatures you control" group, matching the
+// Amass Zombie cycle's "Zombie tokens you control have <keyword>" anthem (Eternal
+// Skylord, Dreadhorde Twins, Vizier of the Scorpion, Gleaming Overseer). The
+// named subtype rides SubtypesAny; the leading "Other" maps to the
+// source-excluding subject kind. The subtype must resolve to a creature or
+// kindred subtype so the noncreature permanent-token groups keep falling through
+// to their own productions. It returns false for any other shape.
+func parseControlledCreatureSubtypeTokenGroupSubject(tokens []shared.Token, atoms Atoms) (EffectStaticSubjectSyntax, bool) {
+	creatureSubtype := func(index int) (types.Sub, bool) {
+		if index >= len(tokens) {
+			return "", false
+		}
+		value, ok := atoms.SubtypeAt(tokens[index].Span)
+		return value, ok && SubtypeMatchesAnyRuntimeCardType(value, []types.Card{types.Creature, types.Kindred})
+	}
+	switch {
+	case len(tokens) >= 6 && equalWord(tokens[0], "other") && equalWord(tokens[2], "tokens") &&
+		effectWordsAt(tokens, 3, "you", "control") &&
+		(equalWord(tokens[5], "have") || equalWord(tokens[5], "get")):
+		value, ok := creatureSubtype(1)
+		if !ok {
+			return EffectStaticSubjectSyntax{}, false
+		}
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectOtherControlledCreatureSubtypeTokens, Span: shared.SpanOf(tokens[:5]), Subtype: value, SubtypeText: tokens[1].Text, SubtypeKnown: true, SubtypesAny: []types.Sub{value}}, true
+	case len(tokens) >= 5 && equalWord(tokens[1], "tokens") &&
+		effectWordsAt(tokens, 2, "you", "control") &&
+		(equalWord(tokens[4], "have") || equalWord(tokens[4], "get")):
+		value, ok := creatureSubtype(0)
+		if !ok {
+			return EffectStaticSubjectSyntax{}, false
+		}
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledCreatureSubtypeTokens, Span: shared.SpanOf(tokens[:4]), Subtype: value, SubtypeText: tokens[0].Text, SubtypeKnown: true, SubtypesAny: []types.Sub{value}}, true
+	default:
+		return EffectStaticSubjectSyntax{}, false
 	}
 }
 
