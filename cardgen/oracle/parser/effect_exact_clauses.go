@@ -1728,6 +1728,44 @@ func exactControlledBounceEffectSyntax(effect *EffectSyntax) bool {
 	return strings.EqualFold(exactEffectClauseText(effect), "Return "+phrase+" "+bounceHandDestSingular)
 }
 
+// exactControlledCountBounceEffectSyntax recognizes the fixed-count
+// controlled-choice battlefield bounce "Return <N> <group> you control to their
+// owner's hand." (e.g. Dust Elemental's "Return three creatures you control to
+// their owner's hand.", Khalni Gem's "Return two lands you control to their
+// owner's hand.") that lowers to a Bounce whose resolving controller chooses
+// exactly N permanents they control. It is the multi-count sibling of
+// exactControlledBounceEffectSyntax: the count word replaces the singular
+// "a/an/another" determiner and the plural group phrase is validated by the
+// shared exactMassPluralGroupPhrase, the same validator the mass "Return all
+// <group>" bounce uses. It accepts only a known fixed count of two or more
+// (the "up to <N>" and "any number of" optional forms carry a count word the
+// byte-exact round-trip rejects) so the singular controlled, targeted, and mass
+// bounce paths are untouched.
+func exactControlledCountBounceEffectSyntax(effect *EffectSyntax) bool {
+	if effect.ToZone != zone.Hand || len(effect.Targets) != 0 ||
+		effect.Context != EffectContextController ||
+		effect.Selection.Controller != SelectionControllerYou ||
+		!effect.Amount.Known || effect.Amount.AnyNumber || effect.Amount.VariableX ||
+		effect.Amount.Value < 2 {
+		return false
+	}
+	word, ok := cardinalWord(effect.Amount.Value)
+	if !ok {
+		return false
+	}
+	prefix := "Return " + word + " "
+	text := exactEffectClauseText(effect)
+	if !strings.HasPrefix(strings.ToLower(text), strings.ToLower(prefix)) {
+		return false
+	}
+	for _, suffix := range []string{" " + bounceHandDestTheirOwner, " " + bounceHandDestPlural} {
+		if remainder, ok := strings.CutSuffix(text, suffix); ok {
+			return exactMassPluralGroupPhrase(&effect.Selection, remainder[len(prefix):])
+		}
+	}
+	return false
+}
+
 func exactBounceEffectSyntax(effect *EffectSyntax) bool {
 	return len(effect.Targets) == 1 &&
 		effect.Targets[0].Exact &&
@@ -1758,15 +1796,26 @@ func exactDualBounceEffectSyntax(effect *EffectSyntax) bool {
 
 // exactMultiBounceEffectSyntax recognizes the plural battlefield bounce
 // "Return <N target permanents> to their owners' hands." (and the optional "up
-// to N" form) that the executable backend lowers to one multi-target spec with
-// one Bounce per slot. It accepts only the exact plural possessive destination
-// for a multi-target permanent, failing closed for every other wording so the
-// single-target "to its owner's hand" path is untouched.
+// to N" and "any number of" count forms) that the executable backend lowers to
+// one multi-target spec with one Bounce per slot. It accepts the plural
+// possessive destination "to their owners' hands." and the equivalent singular
+// "to their owner's hand." wording some printings use for the same per-owner
+// return (e.g. "Return up to two target creatures to their owner's hand."),
+// failing closed for every other wording so the single-target "to its owner's
+// hand" path is untouched.
 func exactMultiBounceEffectSyntax(effect *EffectSyntax) bool {
-	return len(effect.Targets) == 1 &&
-		effect.Targets[0].Exact &&
-		effect.Targets[0].Cardinality.Max >= 2 &&
-		strings.EqualFold(exactEffectClauseText(effect), "Return "+effect.Targets[0].Text+" "+bounceHandDestPlural)
+	if len(effect.Targets) != 1 ||
+		!effect.Targets[0].Exact ||
+		effect.Targets[0].Cardinality.Max < 2 {
+		return false
+	}
+	clause := exactEffectClauseText(effect)
+	for _, dest := range []string{bounceHandDestPlural, bounceHandDestTheirOwner} {
+		if strings.EqualFold(clause, "Return "+effect.Targets[0].Text+" "+dest) {
+			return true
+		}
+	}
+	return false
 }
 
 // exactSelfBounceEffectSyntax recognizes "Return <subject> to its owner's hand."

@@ -37,6 +37,7 @@ var Cards = []*game.CardDef{
 	ScrapskinDrake,
 	ScrollOfTheMasters,
 	ScytheTiger,
+	SeaDrake,
 	SecondWind,
 	SecurityBlockade,
 	SecurityDetail,

@@ -2109,6 +2109,7 @@ func targetDestinationStartsAt(tokens []shared.Token, index int) bool {
 	for _, phrase := range [][]string{
 		{"to", "its", "owner's", "hand"},
 		{"to", "their", "owners", "'", "hands"},
+		{"to", "their", "owner's", "hand"},
 		{"to", "your", "hand"},
 		{"to", "their", "hand"},
 		{"to", "their", "hands"},
