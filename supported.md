@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,824 of 32,501 cards eligible for paper support (48.7%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,828 of 32,501 cards eligible for paper support (48.7%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2498,6 +2498,7 @@ Council4 currently supports **15,824 of 32,501 cards eligible for paper support 
 - Colorful Feiyi Sparrow
 - Colos Yearling
 - Colossadactyl
+- Colossal Collision
 - Colossal Dreadmask
 - Colossal Dreadmaw
 - Colossal Grave-Reaver
@@ -3485,6 +3486,7 @@ Council4 currently supports **15,824 of 32,501 cards eligible for paper support 
 - Dogged Pursuit
 - Dokuchi Shadow-Walker
 - Dominus of Fealty
+- Domri's Ambush
 - Domri's Nodorog
 - Domri, City Smasher
 - Donate
@@ -4523,6 +4525,7 @@ Council4 currently supports **15,824 of 32,501 cards eligible for paper support 
 - Fell Specter
 - Fell the Pheasant
 - Fell the Profane // Fell Mire
+- Felling Blow
 - Fellwar Stone
 - Felothar, Dawn of the Abzan
 - Femeref Archers
@@ -6505,6 +6508,7 @@ Council4 currently supports **15,824 of 32,501 cards eligible for paper support 
 - Hunted Phantasm
 - Hunted Troll
 - Hunted Witness
+- Hunter's Edge
 - Hunter's Talent
 - Hunting Cheetah
 - Hunting Pack
