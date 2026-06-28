@@ -1473,6 +1473,20 @@ func (r Renderer) renderObjectPrimitive(primitive game.Primitive) (string, error
 				"ExileInstead: true,",
 			}), nil
 		}
+		if value.Destination != game.CounteredSpellGraveyard {
+			literal, err := counteredSpellDestinationLiteral(value.Destination)
+			if err != nil {
+				return "", err
+			}
+			rendered, err := r.renderObjectReference(value.Object)
+			if err != nil {
+				return "", err
+			}
+			return structLit("game.CounterObject", []string{
+				fmt.Sprintf("Object: %s,", rendered),
+				fmt.Sprintf("Destination: %s,", literal),
+			}), nil
+		}
 		typeName, object = "game.CounterObject", value.Object
 	case game.PrimitiveChooseNewTargets:
 		value, err := assertPrimitive[game.ChooseNewTargets](primitive)

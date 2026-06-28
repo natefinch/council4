@@ -151,6 +151,14 @@ type StackObject struct {
 	// graveyard destination after its remaining instructions resolve.
 	ExileOnResolution bool
 
+	// CounteredDestination redirects this spell's card to a zone other than its
+	// owner's graveyard when it is countered, backing the CR 614-style
+	// replacement "If that spell is countered this way, put it [on top of its
+	// owner's library | into its owner's hand] instead of into that player's
+	// graveyard." The zero value leaves a countered spell in its owner's
+	// graveyard. It is mutually exclusive with ExileOnResolution.
+	CounteredDestination CounteredSpellDestination
+
 	// ShuffleIntoLibraryOnResolution is set by a resolving self-shuffle
 	// instruction. A non-copy instant or sorcery is shuffled into its owner's
 	// library instead of its normal graveyard destination after its remaining

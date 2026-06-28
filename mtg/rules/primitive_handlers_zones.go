@@ -1643,7 +1643,7 @@ func handleCounterObject(r *effectResolver, prim game.CounterObject) effectResol
 	if prim.Object.Kind() != game.ObjectReferenceTargetStackObject {
 		return effectResolved{accepted: true}
 	}
-	return effectResolved{accepted: true, succeeded: counterTargetStackObject(r.game, r.obj, prim.Object.TargetIndex(), prim.ExileInstead)}
+	return effectResolved{accepted: true, succeeded: counterTargetStackObject(r.game, r.obj, prim.Object.TargetIndex(), prim.ExileInstead, prim.Destination)}
 }
 
 func handleChooseNewTargets(r *effectResolver, prim game.ChooseNewTargets) effectResolved {

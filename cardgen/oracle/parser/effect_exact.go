@@ -135,6 +135,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return exactGainPlayerCounterEffectSyntax(effect)
 	case EffectPut:
 		return exactCounterPlacementEffectSyntax(effect) || exactGraveyardPutEffectSyntax(effect) ||
+			exactCounteredSpellDestinationSyntax(effect) ||
 			exactDigPutEffectSyntax(effect) || exactHandLibraryPutEffectSyntax(effect) ||
 			exactPutThoseCountersEffectSyntax(effect) || exactPutThoseCardsIntoHandEffectSyntax(effect) ||
 			exactBottomLinkedExiledCardsEffectSyntax(effect) ||

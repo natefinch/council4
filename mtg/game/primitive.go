@@ -1081,12 +1081,35 @@ type RemoveFromCombat struct {
 	Object ObjectReference
 }
 
+// CounteredSpellDestination identifies the zone a countered spell's card is put
+// into instead of its owner's graveyard, backing the CR 614-style replacement
+// rider "If that spell is countered this way, put it [on top of its owner's
+// library | into its owner's hand] instead of into that player's graveyard."
+// (Memory Lapse, Lapse of Certainty, Remand). The zero value leaves a countered
+// spell in its owner's graveyard. The exile destination is carried separately by
+// CounterObject.ExileInstead, which predates this enum.
+type CounteredSpellDestination uint8
+
+const (
+	// CounteredSpellGraveyard puts a countered spell into its owner's graveyard,
+	// the default destination (CR 701.5g).
+	CounteredSpellGraveyard CounteredSpellDestination = iota
+	// CounteredSpellLibraryTop puts a countered spell on top of its owner's
+	// library (Memory Lapse, Lapse of Certainty).
+	CounteredSpellLibraryTop
+	// CounteredSpellHand puts a countered spell into its owner's hand (Remand).
+	CounteredSpellHand
+)
+
 // CounterObject counters a referenced spell or ability on the stack. When
 // ExileInstead is set, a countered spell is exiled instead of being put into
 // its owner's graveyard (CR 614-style replacement, e.g. Force of Negation).
+// Destination redirects a countered spell to a non-graveyard zone other than
+// exile; it is mutually exclusive with ExileInstead.
 type CounterObject struct {
 	Object       ObjectReference
 	ExileInstead bool
+	Destination  CounteredSpellDestination
 }
 
 // ChooseNewTargets re-chooses the targets of a referenced spell or ability on

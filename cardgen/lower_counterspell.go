@@ -9,6 +9,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -460,7 +461,105 @@ func lowerCounterThenExileInstead(ctx contentCtx) (game.AbilityContent, bool) {
 	}.Ability(), true
 }
 
-// counterExileRiderConditions reports whether the conditions accompanying a
+// lowerCounterThenAlternateDestination lowers the counter-and-redirect body
+// "Counter target <filter> spell. If that spell is countered this way, put it
+// [on top of its owner's library | into its owner's hand] instead of into that
+// player's graveyard." into a single CounterObject whose Destination redirects
+// the countered spell to the named zone (Memory Lapse, Lapse of Certainty). An
+// optional trailing "Draw a card." clause (Remand) is appended as a controller
+// Draw. The parser marks the exact redirect rider via
+// CounteredSpellDestinationReplacement; the intrinsic "If that spell is countered
+// this way" condition is consumed as part of the recognized shape.
+func lowerCounterThenAlternateDestination(ctx contentCtx) (game.AbilityContent, bool) {
+	effects := ctx.content.Effects
+	if len(effects) < 2 || len(effects) > 3 ||
+		len(ctx.content.Targets) != 1 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, false
+	}
+	counter := effects[0]
+	put := effects[1]
+	if counter.Kind != compiler.EffectCounter ||
+		!counter.Exact ||
+		counter.Negated ||
+		counter.Context != parser.EffectContextController ||
+		counter.Amount.Known ||
+		put.Kind != compiler.EffectPut {
+		return game.AbilityContent{}, false
+	}
+	destination, ok := counteredSpellRedirectDestination(&put)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	if !counterExileRiderConditions(ctx.content.Conditions) {
+		return game.AbilityContent{}, false
+	}
+	target := ctx.content.Targets[0]
+	if target.Cardinality.Min != 1 || target.Cardinality.Max != 1 {
+		return game.AbilityContent{}, false
+	}
+	targetSpec, ok := counterTargetSpec(target)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	sequence := []game.Instruction{{
+		Primitive: game.CounterObject{
+			Object:      game.TargetStackObjectReference(0),
+			Destination: destination,
+		},
+	}}
+	if len(effects) == 3 {
+		amount, ok := controllerFixedDrawAmount(&effects[2])
+		if !ok {
+			return game.AbilityContent{}, false
+		}
+		sequence = append(sequence, game.Instruction{
+			Primitive: game.Draw{Player: game.ControllerReference(), Amount: amount},
+		})
+	}
+	return game.Mode{
+		Targets:  []game.TargetSpec{targetSpec},
+		Sequence: sequence,
+	}.Ability(), true
+}
+
+// counteredSpellRedirectDestination maps a parser-recognized counter-redirect
+// put rider to its typed CounterObject destination. It fails closed for any
+// zone or ordered position other than the two it recognizes.
+func counteredSpellRedirectDestination(effect *compiler.CompiledEffect) (game.CounteredSpellDestination, bool) {
+	if !effect.CounteredSpellDestinationReplacement {
+		return game.CounteredSpellGraveyard, false
+	}
+	switch {
+	case effect.ToZone == zone.Library && effect.Destination == parser.EffectDestinationTop:
+		return game.CounteredSpellLibraryTop, true
+	case effect.ToZone == zone.Hand && effect.Destination == parser.EffectDestinationUnspecified:
+		return game.CounteredSpellHand, true
+	}
+	return game.CounteredSpellGraveyard, false
+}
+
+// controllerFixedDrawAmount resolves a plain "Draw a card." / "Draw N cards."
+// controller clause to its fixed quantity, failing closed for any targeted,
+// delayed, optional, or dynamic draw.
+func controllerFixedDrawAmount(effect *compiler.CompiledEffect) (game.Quantity, bool) {
+	if effect.Kind != compiler.EffectDraw ||
+		!effect.Exact ||
+		effect.Negated ||
+		effect.Optional ||
+		effect.Context != parser.EffectContextController ||
+		effect.DelayedTiming != 0 ||
+		effect.Duration != compiler.DurationNone ||
+		len(effect.Targets) != 0 ||
+		len(effect.References) != 0 ||
+		!effect.Amount.Known ||
+		effect.Amount.Value <= 0 {
+		return game.Quantity{}, false
+	}
+	return game.Fixed(effect.Amount.Value), true
+}
+
 // counter-and-exile body are exactly the intrinsic "If that spell is countered
 // this way" rider (a single plain ConditionIf with no predicate) or none at
 // all. Any other condition leaves the body unrecognized so it fails closed.

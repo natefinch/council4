@@ -40,6 +40,7 @@ var Cards = []*game.CardDef{
 	ReduceToAshes,
 	ReinforcedBulwark,
 	RelicGolem,
+	Remand,
 	RendFlesh,
 	RenegadeRallier,
 	RenownedWeaponsmith,

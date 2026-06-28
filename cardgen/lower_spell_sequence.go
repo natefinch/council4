@@ -92,6 +92,9 @@ func lowerOrderedSequenceSpecialCase(
 	if content, ok := lowerCounterThenExileInstead(ctx); ok {
 		return content, nil, true
 	}
+	if content, ok := lowerCounterThenAlternateDestination(ctx); ok {
+		return content, nil, true
+	}
 	if content, ok := lowerSelfBlinkSequence(ctx); ok {
 		return content, nil, true
 	}

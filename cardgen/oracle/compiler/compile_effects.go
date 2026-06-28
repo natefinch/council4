@@ -480,6 +480,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				SearchSlots:                            syntax.SearchSlots,
 				DiscardEntireHand:                      syntax.DiscardEntireHand,
 				CounteredSpellExileReplacement:         syntax.CounteredSpellExileReplacement,
+				CounteredSpellDestinationReplacement:   syntax.CounteredSpellDestinationReplacement,
 				ExileUntilSourceLeaves:                 syntax.ExileUntilSourceLeaves,
 				ReturnExiledCard:                       syntax.ReturnExiledCard,
 				ExileEntireHand:                        syntax.ExileEntireHand,
