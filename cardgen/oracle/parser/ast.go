@@ -345,6 +345,12 @@ const (
 	ActivationRestrictionPhaseStep     ActivationRestrictionKind = "ActivationRestrictionPhaseStep"
 	ActivationRestrictionPlayerTurn    ActivationRestrictionKind = "ActivationRestrictionPlayerTurn"
 	ActivationRestrictionInstantTiming ActivationRestrictionKind = "ActivationRestrictionInstantTiming"
+	// ActivationRestrictionTurnBeforeAttackers limits activation to a player's
+	// own turn before the declare-attackers step ("Activate only during your
+	// turn, before attackers are declared." — the Portal precombat cycle). The
+	// possessive player selector is carried in PlayerTurn so the compiler can
+	// fail closed on selectors other than "your".
+	ActivationRestrictionTurnBeforeAttackers ActivationRestrictionKind = "ActivationRestrictionTurnBeforeAttackers"
 )
 
 // ActivationFrequencyCountKind identifies how many activations are permitted.

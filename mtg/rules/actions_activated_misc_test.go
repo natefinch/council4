@@ -251,6 +251,61 @@ func TestDuringYourTurnActivatedAbilityRequiresControllersTurn(t *testing.T) {
 	}
 }
 
+func TestDuringYourTurnBeforeAttackersActivatedAbilityWindow(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, activatedAbilityPermanent(&game.ActivatedAbility{
+		Timing: game.DuringYourTurnBeforeAttackers,
+		Content: game.Mode{
+			Sequence: []game.Instruction{{Primitive: game.GainLife{
+				Amount: game.Fixed(1),
+				Player: game.ControllerReference(),
+			}}},
+		}.Ability(),
+	}))
+	g.Turn.ActivePlayer = game.Player2
+	g.Turn.PriorityPlayer = game.Player1
+	g.Turn.Phase = game.PhaseBeginning
+	g.Turn.Step = game.StepUpkeep
+	act := action.ActivateAbility(source.ObjectID, 0, nil, 0)
+
+	if containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("before-attackers ability was legal during an opponent's turn")
+	}
+
+	g.Turn.ActivePlayer = game.Player1
+	for _, window := range []struct {
+		phase game.Phase
+		step  game.Step
+	}{
+		{game.PhaseBeginning, game.StepUpkeep},
+		{game.PhasePrecombatMain, game.StepNone},
+		{game.PhaseCombat, game.StepBeginningOfCombat},
+	} {
+		g.Turn.Phase = window.phase
+		g.Turn.Step = window.step
+		if !containsAction(engine.legalActions(g, game.Player1), act) {
+			t.Fatalf("before-attackers ability was not legal at phase %v step %v", window.phase, window.step)
+		}
+	}
+
+	for _, window := range []struct {
+		phase game.Phase
+		step  game.Step
+	}{
+		{game.PhaseCombat, game.StepDeclareAttackers},
+		{game.PhaseCombat, game.StepDeclareBlockers},
+		{game.PhasePostcombatMain, game.StepNone},
+		{game.PhaseEnding, game.StepEnd},
+	} {
+		g.Turn.Phase = window.phase
+		g.Turn.Step = window.step
+		if containsAction(engine.legalActions(g, game.Player1), act) {
+			t.Fatalf("before-attackers ability was legal at phase %v step %v", window.phase, window.step)
+		}
+	}
+}
+
 func TestActivatedAbilityWithSacrificeCostResolvesAfterSourceLeaves(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

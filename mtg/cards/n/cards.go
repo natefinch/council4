@@ -33,6 +33,7 @@ var Cards = []*game.CardDef{
 	NobleVestige,
 	NoggleBandit,
 	NovelNunchaku,
+	NorwoodPriestess,
 	NoxiousGhoul,
 	NoxiousHatchling,
 	Nulldrifter,

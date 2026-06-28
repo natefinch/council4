@@ -371,6 +371,8 @@ func renderTimingRestriction(timing game.TimingRestriction) (string, error) {
 		return "game.DuringUpkeep", nil
 	case game.DuringYourTurn:
 		return "game.DuringYourTurn", nil
+	case game.DuringYourTurnBeforeAttackers:
+		return "game.DuringYourTurnBeforeAttackers", nil
 	default:
 		return "", fmt.Errorf("unsupported timing restriction %d", timing)
 	}

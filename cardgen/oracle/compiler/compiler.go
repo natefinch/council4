@@ -360,6 +360,10 @@ func compileActivationRestriction(restriction *parser.ActivationRestriction) Act
 		if restriction.PlayerTurn.Player.Kind == parser.TriggerPlayerSelectorYou {
 			return ActivationTimingDuringYourTurn
 		}
+	case parser.ActivationRestrictionTurnBeforeAttackers:
+		if restriction.PlayerTurn.Player.Kind == parser.TriggerPlayerSelectorYou {
+			return ActivationTimingDuringYourTurnBeforeAttackers
+		}
 	default:
 	}
 	return ActivationTimingUnsupported

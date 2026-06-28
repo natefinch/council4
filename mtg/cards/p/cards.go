@@ -9,6 +9,7 @@ var Cards = []*game.CardDef{
 	PaladinOfAtonement,
 	PalliationAccord,
 	PallidMycoderm,
+	PangTongYoungPhoenix,
 	ParadoxSurveyor,
 	PathOfAnnihilation,
 	PatronWizard,

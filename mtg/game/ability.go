@@ -999,6 +999,13 @@ const (
 	// The ability may be activated at any time the player has priority during
 	// any phase or step of their own turn.
 	DuringYourTurn
+
+	// DuringYourTurnBeforeAttackers means "activate only during your turn, before
+	// attackers are declared." (the Portal precombat cycle, e.g. Stern Marshal).
+	// The ability may be activated only while its controller is the active player
+	// and the turn has not yet reached the declare-attackers step: during the
+	// beginning phase, the precombat main phase, or the beginning-of-combat step.
+	DuringYourTurnBeforeAttackers
 )
 
 // EffectResultAmountKind identifies which numeric result an effect records for

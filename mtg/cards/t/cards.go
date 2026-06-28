@@ -8,6 +8,7 @@ import "github.com/natefinch/council4/mtg/game"
 var Cards = []*game.CardDef{
 	TabletOfEpityr,
 	TajuruStalwart,
+	TalasResearcher,
 	TapestryOfTheAges,
 	TappingAtTheWindow,
 	TarrianSSoulcleaver,
@@ -17,6 +18,7 @@ var Cards = []*game.CardDef{
 	TeferiSWavecaster,
 	TelJiladDefiance,
 	TempestTechnique,
+	TempleElder,
 	TenebTheHarvester,
 	TentativeConnection,
 	TenuredInkcaster,

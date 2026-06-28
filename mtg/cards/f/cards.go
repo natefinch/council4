@@ -37,6 +37,7 @@ var Cards = []*game.CardDef{
 	FilthyCur,
 	FinalStingFaerie,
 	FireAtWill,
+	FireBowman,
 	FireLitThicket,
 	FireWhip,
 	FirebladeCharger,
