@@ -1594,11 +1594,11 @@ func lowerImmediateSingleEffectSpell(
 	case compiler.EffectLose:
 		return lowerLoseSpellEffect(ctx)
 	case compiler.EffectScry:
-		return lowerFixedControllerSpell(ctx, syntax, "scry", false, func(amount game.Quantity, player game.PlayerReference) game.Primitive {
+		return lowerFixedControllerSpell(ctx, syntax, "scry", true, func(amount game.Quantity, player game.PlayerReference) game.Primitive {
 			return game.Scry{Amount: amount, Player: player}
 		})
 	case compiler.EffectSurveil:
-		return lowerFixedControllerSpell(ctx, syntax, "surveil", false, func(amount game.Quantity, player game.PlayerReference) game.Primitive {
+		return lowerFixedControllerSpell(ctx, syntax, "surveil", true, func(amount game.Quantity, player game.PlayerReference) game.Primitive {
 			return game.Surveil{Amount: amount, Player: player}
 		})
 	case compiler.EffectInvestigate:

@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,710 of 32,501 cards eligible for paper support (48.3%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,717 of 32,501 cards eligible for paper support (48.4%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -295,6 +295,7 @@ Council4 currently supports **15,710 of 32,501 cards eligible for paper support 
 - Alharu, Solemn Ritualist
 - Ali Baba
 - Aliban's Tower
+- Alibou, Ancient Witness
 - Alien
 - Alien
 - Alien
@@ -2143,6 +2144,7 @@ Council4 currently supports **15,710 of 32,501 cards eligible for paper support 
 - Cephalid Retainer
 - Cephalid Scout
 - Cephalopod Sentry
+- Cerebral Download
 - Ceremonial Groundbreaker
 - Ceremonial Guard
 - Ceremonial Knife
@@ -5914,6 +5916,7 @@ Council4 currently supports **15,710 of 32,501 cards eligible for paper support 
 - Gyre Engineer
 - Gyre Sage
 - H.E.R.B.I.E. Scout Unit
+- H.E.R.B.I.E., Lovable Robot
 - Haazda Exonerator
 - Haazda Marshal
 - Haazda Officer
@@ -7886,6 +7889,7 @@ Council4 currently supports **15,710 of 32,501 cards eligible for paper support 
 - Lux Cannon
 - Luxurious Libation
 - Luxury Suite
+- Lydia Frye
 - Lyla, Holographic Assistant
 - Lynx
 - Lyra Dawnbringer
@@ -9421,6 +9425,7 @@ Council4 currently supports **15,710 of 32,501 cards eligible for paper support 
 - Oversoul of Dusk
 - Overtaker
 - Overwhelm
+- Overwhelmed Apprentice
 - Overwhelming Instinct
 - Overwhelming Remorse
 - Overwhelming Stampede
@@ -14257,6 +14262,7 @@ Council4 currently supports **15,710 of 32,501 cards eligible for paper support 
 - Two-Headed Hunter // Twice the Rage
 - Two-Headed Sliver
 - Two-Headed Zombie
+- Tymaret Calls the Dead
 - Tymaret, the Murder King
 - Typhoid Rats
 - Tyranid
@@ -14274,6 +14280,7 @@ Council4 currently supports **15,710 of 32,501 cards eligible for paper support 
 - Tyrranax Rex
 - Tyvar's Stand
 - Ubul Sar Gatekeepers
+- Ugin's Insight
 - Uktabi Efreet
 - Uktabi Faerie
 - Uktabi Orangutan
