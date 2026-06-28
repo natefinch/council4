@@ -15,6 +15,7 @@ var Cards = []*game.CardDef{
 	KamahlHeartOfKrosa,
 	KamiOfTheHonoredDead,
 	Kapow,
+	KardurSViciousReturn,
 	Karoo,
 	KarplusanForest,
 	KashiTribeReaver,

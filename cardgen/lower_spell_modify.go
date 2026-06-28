@@ -2357,8 +2357,11 @@ func lowerTemporaryKeywordSpell(ctx contentCtx) (game.AbilityContent, *shared.Di
 		!effect.Exact ||
 		(!targetSubject && !referencedObject && !sourceSubject && !eventPermanentSubject) ||
 		effect.Negated ||
-		effect.StaticSubject != compiler.StaticSubjectNone ||
-		effect.Duration != compiler.DurationUntilEndOfTurn {
+		effect.StaticSubject != compiler.StaticSubjectNone {
+		return unsupported()
+	}
+	duration, ok := temporaryKeywordGrantDuration(effect.Duration)
+	if !ok {
 		return unsupported()
 	}
 	keywords, abilities, ok := partitionTemporaryKeywords(ctx.content.Keywords)
@@ -2377,7 +2380,7 @@ func lowerTemporaryKeywordSpell(ctx contentCtx) (game.AbilityContent, *shared.Di
 		AddAbilities: abilities,
 	}}
 	if targetSubject {
-		return temporaryKeywordTargetMode(ctx.content.Targets[0], continuousEffects, unsupported)
+		return continuousTargetMode(ctx.content.Targets[0], continuousEffects, duration, unsupported)
 	}
 	var object game.ObjectReference
 	switch {
@@ -2399,10 +2402,28 @@ func lowerTemporaryKeywordSpell(ctx contentCtx) (game.AbilityContent, *shared.Di
 			Primitive: game.ApplyContinuous{
 				Object:            opt.Val(object),
 				ContinuousEffects: continuousEffects,
-				Duration:          game.DurationUntilEndOfTurn,
+				Duration:          duration,
 			},
 		}},
 	}.Ability(), nil
+}
+
+// temporaryKeywordGrantDuration maps the compiled duration of a resolving
+// single-permanent keyword grant to its runtime EffectDuration. Only the bounded
+// "until end of turn" and "until your next turn" forms are realized; the parser
+// gates the latter to the singular referenced-object subject ("It gains haste
+// until your next turn." on a permanent an earlier sequence clause produced —
+// Kardur's Vicious Return chapter III), so a grant to any other subject never
+// reaches this duration. Any other compiled duration fails closed.
+func temporaryKeywordGrantDuration(duration compiler.DurationKind) (game.EffectDuration, bool) {
+	switch duration {
+	case compiler.DurationUntilEndOfTurn:
+		return game.DurationUntilEndOfTurn, true
+	case compiler.DurationUntilYourNextTurn:
+		return game.DurationUntilYourNextTurn, true
+	default:
+		return game.DurationUntilEndOfTurn, false
+	}
 }
 
 // temporaryKeywordTargetMode builds the until-end-of-turn ApplyContinuous mode
