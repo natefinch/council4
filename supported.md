@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,973 of 32,501 cards eligible for paper support (49.1%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,977 of 32,501 cards eligible for paper support (49.2%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -970,6 +970,7 @@ Council4 currently supports **15,973 of 32,501 cards eligible for paper support 
 - Balloon Peddler
 - Ballroom
 - Ballynock Cohort
+- Ballyrush Banneret
 - Balm of Restoration
 - Balmor, Battlemage Captain
 - Baloth Gorger
@@ -1679,6 +1680,7 @@ Council4 currently supports **15,973 of 32,501 cards eligible for paper support 
 - Borrowed Time
 - Boseiju Reaches Skyward // Branch of Boseiju
 - Boseiju, Who Endures
+- Bosk Banneret
 - Bot Bashing Time
 - Botanical Plaza
 - Botanical Sanctum
@@ -5082,6 +5084,7 @@ Council4 currently supports **15,973 of 32,501 cards eligible for paper support 
 - Frog-Squirrels
 - Frogify
 - Frogmite
+- Frogtosser Banneret
 - Frolicking Familiar // Blow Off Steam
 - Frondland Felidar
 - Frontier Bivouac
@@ -13140,6 +13143,7 @@ Council4 currently supports **15,973 of 32,501 cards eligible for paper support 
 - Stonework Puma
 - Stony Strength
 - Stonybrook Angler
+- Stonybrook Banneret
 - Stonybrook Schoolmaster
 - Storm Caller
 - Storm Crow

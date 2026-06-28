@@ -177,6 +177,7 @@ var Cards = []*game.CardDef{
 	StoicEphemera,
 	StoicRebuttal,
 	StolenStarkTech,
+	StonybrookBanneret,
 	StormOfSteel,
 	StormTheFestival,
 	StormboundGeist,
