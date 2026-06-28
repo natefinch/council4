@@ -24,6 +24,7 @@ var Cards = []*game.CardDef{
 	FavorOfJukai,
 	FavorOfTheOverbeing,
 	FeastingTrollKing,
+	Fecundity,
 	FeedTheFlames,
 	FellingBlow,
 	FemerefHealer,

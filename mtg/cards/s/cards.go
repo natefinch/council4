@@ -71,6 +71,7 @@ var Cards = []*game.CardDef{
 	ShriekingSpecter,
 	Shriekmaw,
 	ShuFarmer,
+	SibilantSpirit,
 	SierraNukaSBiggestFan,
 	SigardaChampionOfLight,
 	SigardaSImprisonment,
@@ -219,5 +220,6 @@ var Cards = []*game.CardDef{
 	SwordOfTruthAndJustice,
 	SylvanBasilisk,
 	SylvanMessenger,
+	SynapseSliver,
 	SyndicateInfiltrator,
 }

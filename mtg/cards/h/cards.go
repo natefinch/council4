@@ -14,6 +14,7 @@ var Cards = []*game.CardDef{
 	HaliyaAscendantCadet,
 	HallowedHealer,
 	HaraldKingOfSkemfar,
+	HarborGuardian,
 	HargildeKindlyRunechanter,
 	HarmlessOffering,
 	HarmonicProdigy,

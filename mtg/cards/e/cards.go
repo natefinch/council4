@@ -18,6 +18,7 @@ var Cards = []*game.CardDef{
 	EclipsedMerrow,
 	EdgeOfTheDivinity,
 	EdgeRover,
+	EdricSpymasterOfTrest,
 	EerieInterlude,
 	EfreetFlamepainter,
 	EfreetWeaponmaster,
