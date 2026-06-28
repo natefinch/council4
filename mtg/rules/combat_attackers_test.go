@@ -216,6 +216,77 @@ func TestGoadDoesNotForceIllegalAttacks(t *testing.T) {
 	}
 }
 
+// TestGoadedByAttachedAuraRuleEffectMustAttackNonControllingOpponent models the
+// Impetus Aura cycle ("Enchanted creature gets +N/+N and is goaded."): a goad
+// Aura controlled by Player2 attached to a Player1 creature contributes a
+// continuous RuleEffectGoaded scoped to the attached object. The enchanted
+// creature must attack, and must attack a player other than the goading Aura's
+// controller when able.
+func TestGoadedByAttachedAuraRuleEffectMustAttackNonControllingOpponent(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	enchanted := addCombatCreaturePermanent(g, game.Player1)
+	aura := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Goad Impetus",
+		Types:    []types.Card{types.Enchantment},
+		Subtypes: []types.Sub{types.Aura},
+		StaticAbilities: []game.StaticAbility{
+			{
+				KeywordAbilities: []game.KeywordAbility{game.EnchantKeyword{Target: game.TargetSpec{
+					Allow:     game.TargetAllowPermanent,
+					Selection: opt.Val(game.Selection{RequiredTypesAny: []types.Card{types.Creature}}),
+				}}},
+			},
+			{
+				RuleEffects: []game.RuleEffect{{
+					Kind:             game.RuleEffectGoaded,
+					AffectedAttached: true,
+				}},
+			},
+		},
+	}})
+	if !attachPermanent(g, aura, enchanted) {
+		t.Fatal("attachPermanent(aura, enchanted) = false")
+	}
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareAttackers
+	g.Combat = &game.CombatState{}
+	engine := NewEngine(nil)
+
+	if !isGoadedNow(g, enchanted) {
+		t.Fatal("enchanted creature not goaded by attached goad Aura")
+	}
+	if !wasGoadedByNow(g, enchanted, game.Player2) {
+		t.Fatal("enchanted creature not goaded by the Aura's controller")
+	}
+
+	for _, act := range legalDeclareAttackersActions(g, game.Player1) {
+		attackers := mustDeclareAttackersPayload(t, act)
+		if len(attackers.Attackers) == 0 {
+			t.Fatal("legal actions included no attacks despite goad Aura")
+		}
+		for _, declaration := range attackers.Attackers {
+			if declaration.Target.Player == game.Player2 {
+				t.Fatal("legal actions allowed attacking the goading Aura's controller while alternatives exist")
+			}
+		}
+	}
+	if engine.applyDeclareAttackers(g, game.Player1, mustDeclareAttackersPayload(t, action.DeclareAttackers(nil))) {
+		t.Fatal("applyDeclareAttackers() accepted no attacks despite goad Aura")
+	}
+	goadingAttack := mustDeclareAttackersPayload(t, action.DeclareAttackers([]game.AttackDeclaration{
+		{Attacker: enchanted.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+	}))
+	if engine.applyDeclareAttackers(g, game.Player1, goadingAttack) {
+		t.Fatal("applyDeclareAttackers() accepted attack at the goading Aura's controller while alternatives exist")
+	}
+	nonGoadingAttack := mustDeclareAttackersPayload(t, action.DeclareAttackers([]game.AttackDeclaration{
+		{Attacker: enchanted.ObjectID, Target: game.AttackTarget{Player: game.Player3}},
+	}))
+	if !engine.applyDeclareAttackers(g, game.Player1, nonGoadingAttack) {
+		t.Fatal("applyDeclareAttackers() rejected legal goaded attack at a non-goading player")
+	}
+}
+
 func TestMustAttackStaticBodyRequiresSourceToAttackIfAble(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	attacker := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{

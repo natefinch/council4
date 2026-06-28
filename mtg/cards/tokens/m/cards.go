@@ -8,6 +8,7 @@ import "github.com/natefinch/council4/mtg/game"
 var Cards = []*game.CardDef{
 	ManifoldMouseTokenc1692b44c27747778e1a6356e02f642f,
 	MaritLageToken48e9147e59f7469383d77f514be871bc,
+	MarkOfTheRaniToken2319b39df34241369cc15285ca54b20c,
 	MerfolkToken23f86e9302034222b78a8f1c9fa16394,
 	MerfolkToken4998e2fe153740bba4d7f668a5b8975f,
 	MerfolkTokenfd6663bc49ae4e31b0aa60f142dfd18c,

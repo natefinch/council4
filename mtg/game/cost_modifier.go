@@ -487,6 +487,17 @@ const (
 	// Fetters, Realmbreaker's Grasp). Added last so existing kinds keep their wire
 	// values.
 	RuleEffectCantActivateAbilitiesOfPermanent
+	// RuleEffectGoaded makes the affected creature goaded by this effect's
+	// controller for as long as the effect applies ("Enchanted creature gets
+	// +2/+2 and is goaded.", Psychic Impetus; "Equipped creature ... and is
+	// goaded.", Bloodthirsty Blade). A goaded creature attacks each combat if
+	// able and attacks a player other than the goading player if able (CR 701.38).
+	// Unlike the one-shot goad keyword action, which records a turn-limited entry
+	// in the permanent's Goaded map, this is a continuous static contribution:
+	// AffectedAttached scopes it to the creature an Aura or Equipment is attached
+	// to, and the effect's Controller is the goading player. Added last so
+	// existing kinds keep their wire values.
+	RuleEffectGoaded
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -542,7 +553,8 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectCantBlockAlone,
 		RuleEffectCanAttackAsThoughDefender,
 		RuleEffectAssignCombatDamageUsingToughness,
-		RuleEffectCantActivateAbilitiesOfPermanent:
+		RuleEffectCantActivateAbilitiesOfPermanent,
+		RuleEffectGoaded:
 		return true
 	default:
 		return false

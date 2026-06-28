@@ -117,6 +117,9 @@ const (
 	// StaticRuleDomainCombatDamage governs how the subject assigns combat damage
 	// ("... assigns combat damage equal to its toughness rather than its power").
 	StaticRuleDomainCombatDamage
+	// StaticRuleDomainGoad governs whether the subject is goaded ("<subject> is
+	// goaded.").
+	StaticRuleDomainGoad
 )
 
 // Static rule declarations currently recognized by Card Generation.
@@ -193,23 +196,14 @@ const (
 	// of their power. It lowers to the assign-combat-damage-using-toughness
 	// runtime rule effect.
 	StaticRuleAssignsCombatDamageByToughness
-	// StaticRuleCantAttackOrBlockAndCantActivate is the Arrest-family pinning
-	// prohibition "Enchanted creature can't attack or block, and its activated
-	// abilities can't be activated." (Arrest, Lawmage's Binding, Planar
-	// Disruption): the affected permanent can't attack or block and none of its
-	// activated abilities, including mana abilities, can be activated. It lowers
-	// to the can't-attack, can't-block, and permanent-scoped
-	// can't-activate-abilities runtime rule effects.
 	StaticRuleCantAttackOrBlockAndCantActivate
-	// StaticRuleCantAttackOrBlockAndCantActivateNonMana is the mana-exempt
-	// Arrest-family variant "Enchanted permanent can't attack or block, and its
-	// activated abilities can't be activated unless they're mana abilities."
-	// (Faith's Fetters, Realmbreaker's Grasp): like
-	// StaticRuleCantAttackOrBlockAndCantActivate, except the permanent's mana
-	// abilities can still be activated. It lowers to the can't-attack, can't-
-	// block, and mana-exempt permanent-scoped can't-activate-abilities runtime
-	// rule effects.
 	StaticRuleCantAttackOrBlockAndCantActivateNonMana
+	// StaticRuleGoaded is the continuous goad declaration "<subject> is goaded."
+	// (the Impetus Auras, Bloodthirsty Blade): the affected creature is goaded by
+	// the source's controller, so it attacks each combat if able and attacks a
+	// player other than that controller if able. It lowers to the goaded runtime
+	// rule effect.
+	StaticRuleGoaded
 )
 
 // StaticBlockerRestrictionKind identifies the blocker characteristic bounding a
@@ -1671,6 +1665,13 @@ func semanticStaticRuleForSyntax(rule parser.StaticRuleSyntax) (StaticRuleKind, 
 		len(rule.Qualifiers) == 0 {
 		return StaticRuleCantBeCountered, StaticZoneStack, true
 	}
+	if isCreatureRuleSubject(rule.Subject.Kind) &&
+		rule.Constraint.Kind == parser.StaticRuleConstraintRequirement &&
+		rule.Operation.Kind == parser.StaticRuleOperationGoaded &&
+		rule.Operation.Voice == parser.StaticRuleVoiceActive &&
+		len(rule.Qualifiers) == 0 {
+		return StaticRuleGoaded, StaticZoneBattlefield, true
+	}
 	return StaticRuleUnknown, StaticZoneBattlefield, false
 }
 
@@ -1802,6 +1803,8 @@ func staticRuleDomain(rule StaticRuleKind) StaticRuleDomain {
 		return StaticRuleDomainUntap
 	case StaticRuleCantTransform:
 		return StaticRuleDomainTransform
+	case StaticRuleGoaded:
+		return StaticRuleDomainGoad
 	default:
 		return StaticRuleDomainUnknown
 	}

@@ -846,6 +846,10 @@ func validCreatureStaticRuleOperation(rule StaticRuleSyntax) bool {
 			rule.Operation.Kind == StaticRuleOperationAssignDamageAsUnblocked &&
 			rule.Operation.Voice == StaticRuleVoicePassive &&
 			len(rule.Qualifiers) == 0) ||
+		(rule.Constraint.Kind == StaticRuleConstraintRequirement &&
+			rule.Operation.Kind == StaticRuleOperationGoaded &&
+			rule.Operation.Voice == StaticRuleVoiceActive &&
+			len(rule.Qualifiers) == 0) ||
 		validAssignDamageByToughnessRule(rule)
 }
 

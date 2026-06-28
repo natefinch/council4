@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,223 of 32,501 cards eligible for paper support (49.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,229 of 32,501 cards eligible for paper support (49.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2543,6 +2543,7 @@ Council4 currently supports **16,223 of 32,501 cards eligible for paper support 
 - Codex Shredder
 - Coerced to Kill
 - Coercion
+- Coercive Impetus
 - Coeurl
 - Coffin Purge
 - Cogwork Archivist
@@ -8368,6 +8369,7 @@ Council4 currently supports **16,223 of 32,501 cards eligible for paper support 
 - Mark of Fury
 - Mark of Mutiny
 - Mark of the Oni
+- Mark of the Rani
 - Mark of the Vampire
 - Marked by Honor
 - Marker Beetles
@@ -9829,6 +9831,7 @@ Council4 currently supports **16,223 of 32,501 cards eligible for paper support 
 - Parapet Watchers
 - Paraselene
 - Parasitic Bond
+- Parasitic Impetus
 - Parasitic Strix
 - Parcel Myr
 - Parch
@@ -10396,6 +10399,7 @@ Council4 currently supports **16,223 of 32,501 cards eligible for paper support 
 - Psychic Corrosion
 - Psychic Drain
 - Psychic Frog
+- Psychic Impetus
 - Psychic Membrane
 - Psychic Overload
 - Psychic Strike
@@ -10853,6 +10857,7 @@ Council4 currently supports **16,223 of 32,501 cards eligible for paper support 
 - Red Scarab
 - Red Ward
 - Redcap Thief
+- Redemption Arc
 - Redemption Choir
 - Redirect
 - Rediscover the Way
@@ -12151,6 +12156,7 @@ Council4 currently supports **16,223 of 32,501 cards eligible for paper support 
 - Shining Armor
 - Shinka, the Bloodsoaked Keep
 - Shinra Reinforcements
+- Shiny Impetus
 - Shipwreck Dowser
 - Shipwreck Looter
 - Shipwreck Marsh
