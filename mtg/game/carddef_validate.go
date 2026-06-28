@@ -894,6 +894,46 @@ func (v *cardDefValidator) validateStackObjectTargetPredicate(faceName, path str
 	if len(target.Predicate.StackObjectSourceTypes) > 0 && !allowsStackObjects {
 		v.add(faceName, appendPath(path, "Predicate.StackObjectSourceTypes"), CardDefIssueInvalidTargetSpec, "stack-object source types require stack-object targets")
 	}
+	v.validateSpellTargetRequirements(faceName, path, target.Predicate.SpellTargets, allowsSpells, allowsAbilities)
+}
+
+// validateSpellTargetRequirements checks a "Counter target spell that targets
+// <X>" restriction. The restriction filters the matched spell by its own chosen
+// targets, so it requires a spell-only stack-object target, and each requirement
+// must name a recognized kind and well-formed relations (CR 115.4, CR 608.2b).
+func (v *cardDefValidator) validateSpellTargetRequirements(faceName, path string, requirements []SpellTargetRequirement, allowsSpells, allowsAbilities bool) {
+	if len(requirements) == 0 {
+		return
+	}
+	if !allowsSpells || allowsAbilities {
+		v.add(faceName, appendPath(path, "Predicate.SpellTargets"), CardDefIssueInvalidTargetSpec, "spell-target restriction requires spell-only stack-object targets")
+	}
+	for i := range requirements {
+		requirement := requirements[i]
+		itemPath := appendPath(path, fmt.Sprintf("Predicate.SpellTargets[%d]", i))
+		switch requirement.Kind {
+		case SpellTargetRequirementPermanent:
+			if requirement.Player != PlayerAny {
+				v.add(faceName, itemPath, CardDefIssueInvalidTargetSpec, "permanent spell-target requirement cannot set a player relation")
+			}
+			seenTypes := make(map[types.Card]bool, len(requirement.RequiredTypes))
+			for j, cardType := range requirement.RequiredTypes {
+				if seenTypes[cardType] {
+					v.add(faceName, appendPath(itemPath, fmt.Sprintf("RequiredTypes[%d]", j)), CardDefIssueInvalidTargetSpec, "duplicate required card type")
+				}
+				seenTypes[cardType] = true
+			}
+		case SpellTargetRequirementPlayer:
+			if len(requirement.RequiredTypes) > 0 || requirement.Controller != ControllerAny {
+				v.add(faceName, itemPath, CardDefIssueInvalidTargetSpec, "player spell-target requirement cannot set permanent filters")
+			}
+			if !requirement.Player.Valid() {
+				v.add(faceName, itemPath, CardDefIssueInvalidTargetSpec, "unknown player relation")
+			}
+		default:
+			v.add(faceName, itemPath, CardDefIssueInvalidTargetSpec, "unknown spell-target requirement kind")
+		}
+	}
 }
 
 func (v *cardDefValidator) validateSelection(faceName, path string, selection Selection) {

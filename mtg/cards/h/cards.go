@@ -44,6 +44,7 @@ var Cards = []*game.CardDef{
 	HiddenHorror,
 	HiddenStockpile,
 	HightideHermit,
+	HinderingLight,
 	HoldAtBay,
 	HoofprintsOfTheStag,
 	HopeAgainstHope,
@@ -61,5 +62,7 @@ var Cards = []*game.CardDef{
 	HunterSEdge,
 	HunterSTalent,
 	Hydroform,
+	HydromorphGuardian,
+	HydromorphGull,
 	Hypochondria,
 }

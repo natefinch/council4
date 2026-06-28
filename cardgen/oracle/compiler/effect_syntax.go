@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 func compileEffectPayment(payment parser.EffectPaymentSyntax) CompiledEffectPayment {
@@ -220,6 +221,7 @@ func compileTypedSelection(syntax parser.SelectionSyntax) CompiledSelector {
 	for i := range syntax.Alternatives {
 		selector.Alternatives = append(selector.Alternatives, compileTypedSelection(syntax.Alternatives[i]))
 	}
+	selector.SpellTargetRestrictions = compileSpellTargetRestrictions(syntax.SpellTargetRestrictions)
 	for _, cardType := range syntax.SourceTypes {
 		if value, ok := runtimeCardTypeFromParser(cardType); ok {
 			appendSelectorSourceType(&selector, value)
@@ -368,6 +370,37 @@ func compileSelectionKind(kind parser.SelectionKind) SelectorKind {
 	default:
 		return SelectorUnknown
 	}
+}
+
+// compileSpellTargetRestrictions lowers parser spell-target restriction
+// alternatives ("Counter target spell that targets <X>") into their compiled
+// form, dropping any unrecognized parser card type so the lowering can fail
+// closed on an empty result.
+func compileSpellTargetRestrictions(restrictions []parser.SpellTargetRestriction) []CompiledSpellTargetRestriction {
+	if len(restrictions) == 0 {
+		return nil
+	}
+	compiled := make([]CompiledSpellTargetRestriction, 0, len(restrictions))
+	for _, restriction := range restrictions {
+		var entry CompiledSpellTargetRestriction
+		entry.Controller = compileSelectionController(restriction.Controller)
+		switch restriction.Kind {
+		case parser.SpellTargetRestrictionPlayer:
+			entry.IsPlayer = true
+		case parser.SpellTargetRestrictionPermanent:
+			if restriction.PermanentType != parser.CardTypeUnknown {
+				value, ok := runtimeCardTypeFromParser(restriction.PermanentType)
+				if !ok {
+					return nil
+				}
+				entry.PermanentTypes = []types.Card{value}
+			}
+		default:
+			return nil
+		}
+		compiled = append(compiled, entry)
+	}
+	return compiled
 }
 
 func compileSelectionController(controller parser.SelectionController) ControllerKind {

@@ -73,6 +73,7 @@ var Cards = []*game.CardDef{
 	MinnWilyIllusionist,
 	MinotaurExplorer,
 	MirrodinAvenged,
+	MirrorSheen,
 	MirrorWall,
 	MishraSWorkshop,
 	MistmeadowCouncil,

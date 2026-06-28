@@ -120,6 +120,43 @@ type TargetPredicate struct {
 	// ManaValue compares the matched spell's mana value ("counter target spell
 	// with mana value 3 or less"). It applies only to spell stack objects.
 	ManaValue opt.V[compare.Int]
+
+	// SpellTargets restricts a matched spell stack object to one whose chosen
+	// targets include at least one target satisfying any of these requirements
+	// ("counter target spell that targets a permanent you control"). Each
+	// requirement matches either a permanent (by card types and controller
+	// relation) or a player (by relation), relative to the player choosing the
+	// counter target. It applies only to spell stack objects; abilities never
+	// match. An empty slice imposes no restriction (CR 115.4, CR 608.2b).
+	SpellTargets []SpellTargetRequirement
+}
+
+// SpellTargetRequirementKind classifies one alternative of a "that targets <X>"
+// spell-target restriction as matching a permanent or a player.
+type SpellTargetRequirementKind int
+
+// Spell-target requirement kinds distinguish permanent and player requirements.
+const (
+	SpellTargetRequirementPermanent SpellTargetRequirementKind = iota
+	SpellTargetRequirementPlayer
+)
+
+// Valid reports whether the kind is a recognized closed-enum value.
+func (k SpellTargetRequirementKind) Valid() bool {
+	return k == SpellTargetRequirementPermanent || k == SpellTargetRequirementPlayer
+}
+
+// SpellTargetRequirement is one acceptable target of a matched spell's chosen
+// targets, for "Counter target spell that targets <X>". A permanent requirement
+// matches a targeted permanent that has every type in RequiredTypes (an empty
+// list matches any permanent) and whose controller satisfies Controller. A
+// player requirement matches a targeted player satisfying Player. Controller and
+// Player are relative to the player choosing the counter target.
+type SpellTargetRequirement struct {
+	Kind          SpellTargetRequirementKind
+	RequiredTypes []types.Card
+	Controller    ControllerRelation
+	Player        PlayerRelation
 }
 
 // Empty reports whether the predicate carries no stack-object or spell qualifier
@@ -136,5 +173,6 @@ func (p TargetPredicate) Empty() bool {
 		!p.SpellMulticolored &&
 		len(p.StackObjectSourceTypes) == 0 &&
 		p.Controller == ControllerAny &&
-		!p.ManaValue.Exists
+		!p.ManaValue.Exists &&
+		len(p.SpellTargets) == 0
 }

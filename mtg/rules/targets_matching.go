@@ -153,7 +153,66 @@ func stackObjectTargetMatchesSpec(g *game.Game, controller game.PlayerID, source
 	if !stackObjectSourceHasTypes(g, obj, pred.StackObjectSourceTypes) {
 		return false
 	}
+	if !stackObjectSpellTargetsMatch(g, controller, obj, pred.SpellTargets) {
+		return false
+	}
 	return stackObjectSpellQualifiersMatch(g, obj, pred)
+}
+
+// stackObjectSpellTargetsMatch enforces a "Counter target spell that targets
+// <X>" restriction: the matched spell must have at least one chosen target
+// satisfying one of the requirements. Abilities never satisfy the restriction,
+// since only spells carry the "that targets" qualifier (CR 115.4). An empty
+// requirement list imposes no restriction.
+func stackObjectSpellTargetsMatch(g *game.Game, controller game.PlayerID, obj *game.StackObject, requirements []game.SpellTargetRequirement) bool {
+	if len(requirements) == 0 {
+		return true
+	}
+	if obj.Kind != game.StackSpell {
+		return false
+	}
+	for i := range obj.Targets {
+		for j := range requirements {
+			if spellTargetSatisfiesRequirement(g, controller, obj.Targets[i], &requirements[j]) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// spellTargetSatisfiesRequirement reports whether one of a matched spell's
+// chosen targets satisfies a single "that targets" requirement: a permanent
+// requirement checks the targeted permanent's types and controller; a player
+// requirement checks the targeted player's relation. Relations are evaluated
+// relative to the player choosing the counter target.
+func spellTargetSatisfiesRequirement(g *game.Game, controller game.PlayerID, target game.Target, requirement *game.SpellTargetRequirement) bool {
+	switch requirement.Kind {
+	case game.SpellTargetRequirementPlayer:
+		if target.Kind != game.TargetPlayer {
+			return false
+		}
+		return playerRelationMatches(controller, target.PlayerID, requirement.Player)
+	case game.SpellTargetRequirementPermanent:
+		if target.Kind != game.TargetPermanent {
+			return false
+		}
+		permanent, ok := permanentByObjectID(g, target.PermanentID)
+		if !ok || permanent.PhasedOut {
+			return false
+		}
+		if !controllerRelationMatches(controller, effectiveController(g, permanent), requirement.Controller) {
+			return false
+		}
+		for _, cardType := range requirement.RequiredTypes {
+			if !permanentHasType(g, permanent, cardType) {
+				return false
+			}
+		}
+		return true
+	default:
+		return false
+	}
 }
 
 // stackObjectSpellQualifiersMatch enforces the spell-only restrictions a mixed
