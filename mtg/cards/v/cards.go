@@ -27,6 +27,7 @@ var Cards = []*game.CardDef{
 	VeteranGuardmouse,
 	ViashinoBranchrider,
 	VictorTimelyWilyTycoon,
+	VisageOfBolas,
 	VisionsOfVillainy,
 	VitasporeThallid,
 	VivienReid,

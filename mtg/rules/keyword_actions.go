@@ -302,6 +302,89 @@ func (e *Engine) searchLibrary(g *game.Game, obj *game.StackObject, agents [game
 	return len(found) > 0, foundPermanent
 }
 
+// searchLibraryAndGraveyard resolves a "search your library and/or graveyard for
+// a card named X, reveal it, and put it into your hand. If you search your
+// library this way, shuffle." planeswalker-companion tutor. The searching player
+// finds a single card matching the spec's name in either their library or
+// graveyard, reveals it, and puts it into their hand; the library is shuffled
+// afterward because it is always among the searched zones. The player may decline
+// to find a card even when a match exists (CR 701.19e).
+func (e *Engine) searchLibraryAndGraveyard(g *game.Game, obj *game.StackObject, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID, spec game.SearchSpec) bool {
+	player, ok := playerByID(g, playerID)
+	if !ok {
+		return false
+	}
+	// Searching the library fires the search event once (CR 701.19a) and forces
+	// the closing shuffle, both of which always apply because the library is
+	// among the searched zones.
+	emitEvent(g, game.Event{
+		Kind:       game.EventLibrarySearched,
+		Controller: playerID,
+		Player:     playerID,
+	})
+	defer player.Library.Shuffle(e.rng)
+
+	type tutorCandidate struct {
+		cardID   id.ID
+		fromZone zone.Type
+	}
+	var candidates []tutorCandidate
+	for _, cardID := range player.Library.All() {
+		if searchSpecMatches(g, obj, cardID, spec) {
+			candidates = append(candidates, tutorCandidate{cardID: cardID, fromZone: zone.Library})
+		}
+	}
+	for _, cardID := range player.Graveyard.All() {
+		if searchSpecMatches(g, obj, cardID, spec) {
+			candidates = append(candidates, tutorCandidate{cardID: cardID, fromZone: zone.Graveyard})
+		}
+	}
+	if len(candidates) == 0 {
+		return false
+	}
+	candidateIDs := make([]id.ID, len(candidates))
+	for i := range candidates {
+		candidateIDs[i] = candidates[i].cardID
+	}
+	// The tutor is optional ("you may search"), so the player may always decline
+	// to find a card (minimum of zero chosen).
+	found := e.chooseSearchMatches(g, agents, log, playerID, candidateIDs, 1, 0)
+	if len(found) == 0 {
+		return false
+	}
+	cardID := found[0]
+	fromZone := zone.Library
+	for i := range candidates {
+		if candidates[i].cardID == cardID {
+			fromZone = candidates[i].fromZone
+			break
+		}
+	}
+	switch fromZone {
+	case zone.Graveyard:
+		if !player.Graveyard.Remove(cardID) {
+			return false
+		}
+	default:
+		if !player.Library.Remove(cardID) {
+			return false
+		}
+	}
+	emitCardRevealEvent(g, obj, playerID, cardID, fromZone)
+	player.Hand.Add(cardID)
+	emitZoneChangeEvent(g, game.Event{
+		SourceID:      stackObjectSourceID(obj),
+		StackObjectID: stackObjectID(obj),
+		Controller:    stackObjectController(obj),
+		Player:        playerID,
+		CardID:        cardID,
+		FromZone:      fromZone,
+		ToZone:        zone.Hand,
+		Amount:        1,
+	})
+	return true
+}
+
 func searchMustFindIfAvailable(spec game.SearchSpec, amount int) bool {
 	switch spec.FailToFindPolicy {
 	case game.SearchMustFindIfAvailable:

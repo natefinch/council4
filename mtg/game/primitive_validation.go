@@ -1119,6 +1119,21 @@ func (p Search) validatePrimitive(targets []TargetSpec, checkTargets bool) error
 	}) {
 		return errors.New("search has unsupported source or destination")
 	}
+	if p.Spec.AlsoGraveyard {
+		if p.Spec.Destination != zone.Hand ||
+			!p.Spec.Reveal ||
+			p.Spec.Name == "" ||
+			p.Spec.RevealOnly ||
+			p.Spec.MaxManaValueFromX ||
+			p.Spec.SharedSubtype ||
+			p.Spec.EntersTapped ||
+			p.Spec.SplitDestination.Exists ||
+			len(p.Spec.SlotFilters) != 0 ||
+			p.Controller.Exists ||
+			p.PlayerGroup.Kind != PlayerGroupReferenceNone {
+			return errors.New("library-and-graveyard search requires a named reveal-to-hand search with no other riders")
+		}
+	}
 	if p.Spec.Destination == zone.Library &&
 		(p.Amount.IsDynamic() || p.Amount.Value() != 1 || p.Spec.SplitDestination.Exists) {
 		return errors.New("library-top search requires exactly one card and no split destination")

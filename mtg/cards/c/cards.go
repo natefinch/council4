@@ -29,6 +29,7 @@ var Cards = []*game.CardDef{
 	CeremonialGuard,
 	ChainedToTheRocks,
 	ChainsOfCustody,
+	ChandraSFiremaw,
 	ChandraSIgnition,
 	ChandraSRevolution,
 	ChaosImps,

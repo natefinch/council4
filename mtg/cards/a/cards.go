@@ -78,6 +78,7 @@ var Cards = []*game.CardDef{
 	AscendingAven,
 	AshPartyCrasher,
 	AshePrincessOfDalmasca,
+	AshiokSForerunner,
 	AshmouthHound,
 	AspectOfLamprey,
 	AssassinInitiate,

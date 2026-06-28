@@ -1208,6 +1208,9 @@ func (r Renderer) renderSearchPrimitive(ctx *renderCtx, value game.Search) (stri
 	if value.Spec.Reveal {
 		specFields = append(specFields, "Reveal: true,")
 	}
+	if value.Spec.AlsoGraveyard {
+		specFields = append(specFields, "AlsoGraveyard: true,")
+	}
 	if value.Spec.RevealOnly {
 		specFields = append(specFields, "RevealOnly: true,")
 	}

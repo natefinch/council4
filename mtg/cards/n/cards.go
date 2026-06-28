@@ -21,6 +21,7 @@ var Cards = []*game.CardDef{
 	NettleGuard,
 	NeyithOfTheDireHunt,
 	NezumiLinkbreaker,
+	NiambiFaithfulHealer,
 	NibelheimAflame,
 	NickValentinePrivateEye,
 	NightMarketAeronaut,

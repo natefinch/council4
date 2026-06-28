@@ -1,0 +1,77 @@
+package g
+
+import (
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
+)
+
+// GarrukSWarsteed is the card definition for Garruk's Warsteed.
+//
+// Type: Creature — Rhino
+// Cost: {3}{G}{G}
+//
+// Oracle text:
+//
+//	Vigilance
+//	When this creature enters, you may search your library and/or graveyard for a card named Garruk, Savage Herald, reveal it, and put it into your hand. If you search your library this way, shuffle.
+var GarrukSWarsteed = newGarrukSWarsteed()
+
+func newGarrukSWarsteed() *game.CardDef {
+	return &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Green),
+		CardFace: game.CardFace{
+			Name: "Garruk's Warsteed",
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(3),
+				cost.G,
+				cost.G,
+			}),
+			Colors:    []color.Color{color.Green},
+			Types:     []types.Card{types.Creature},
+			Subtypes:  []types.Sub{types.Rhino},
+			Power:     opt.Val(game.PT{Value: 3}),
+			Toughness: opt.Val(game.PT{Value: 5}),
+			StaticAbilities: []game.StaticAbility{
+				game.VigilanceStaticBody,
+			},
+			TriggeredAbilities: []game.TriggeredAbility{
+				game.TriggeredAbility{
+					Trigger: game.TriggerCondition{
+						Type: game.TriggerWhen,
+						Pattern: game.TriggerPattern{
+							Event:  game.EventPermanentEnteredBattlefield,
+							Source: game.TriggerSourceSelf,
+						},
+					},
+					Content: game.Mode{
+						Sequence: []game.Instruction{
+							{
+								Primitive: game.Search{
+									Player: game.ControllerReference(),
+									Spec: game.SearchSpec{
+										SourceZone:    zone.Library,
+										Destination:   zone.Hand,
+										Name:          "Garruk, Savage Herald",
+										Reveal:        true,
+										AlsoGraveyard: true,
+									},
+									Amount: game.Fixed(1),
+								},
+								Optional:      true,
+								OptionalActor: opt.Val(game.ControllerReference()),
+							},
+						},
+					}.Ability(),
+				},
+			},
+			OracleText: `
+			Vigilance
+			When this creature enters, you may search your library and/or graveyard for a card named Garruk, Savage Herald, reveal it, and put it into your hand. If you search your library this way, shuffle.
+		`,
+		},
+	}
+}

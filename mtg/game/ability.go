@@ -1325,6 +1325,19 @@ type SearchSpec struct {
 	// Amount equals len(SlotFilters); it is mutually exclusive with
 	// SplitDestination, SharedSubtype, RevealOnly, MaxManaValueFromX, and Name.
 	SlotFilters []Selection
+
+	// AlsoGraveyard, when true, extends the library search to also consider the
+	// searching player's graveyard, modeling the "search your library and/or
+	// graveyard for a card named X, reveal it, and put it into your hand. If you
+	// search your library this way, shuffle." planeswalker-companion tutor
+	// (Ashiok's Forerunner, Niambi, Faithful Healer). The searching player finds
+	// a single matching card in either zone, reveals it, and puts it into their
+	// hand; the library is shuffled afterward because the library is always among
+	// the searched zones. It is meaningful only with SourceZone Library,
+	// Destination Hand, Reveal true, a single searching player, and no split
+	// destination, slot filters, RevealOnly, MaxManaValueFromX, shared subtype,
+	// or tapped entry; the search may fail to find a card (CR 701.19e).
+	AlsoGraveyard bool
 }
 
 // IsUnrestricted reports whether every library card matches the search filter.
@@ -1332,6 +1345,7 @@ func (s SearchSpec) IsUnrestricted() bool {
 	return s.Filter.Empty() &&
 		!s.MaxManaValueFromX &&
 		!s.SharedSubtype &&
+		!s.AlsoGraveyard &&
 		len(s.SlotFilters) == 0 &&
 		s.Name == ""
 }
