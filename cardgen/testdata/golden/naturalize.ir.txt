@@ -38,6 +38,7 @@
             EachSourceGroup: 
           TokenCopyOverrideColors: 
           BecomeTypeAddColors: 
+          BecomeColorColors: 
           PolymorphColors: 
           PolymorphSupertypes: 
           Exact: true

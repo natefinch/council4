@@ -352,6 +352,8 @@ func lowerContent(
 			return lowerBecomeCopyContent(ctx)
 		case compiler.EffectBecomeType:
 			return lowerBecomeTypeContent(ctx)
+		case compiler.EffectBecomeColor:
+			return lowerBecomeColorContent(ctx)
 		case compiler.EffectPolymorph:
 			return lowerPolymorphContent(ctx)
 		case compiler.EffectSetBasePT:

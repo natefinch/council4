@@ -373,6 +373,11 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				BecomeTypeAddColors:      polymorphColors(syntax.BecomeTypeAddColors),
 				BecomeTypeUntilEndOfTurn: syntax.BecomeTypeUntilEndOfTurn,
 
+				BecomeColorColors:         polymorphColors(syntax.BecomeColorColors),
+				BecomeColorColorless:      syntax.BecomeColorColorless,
+				BecomeColorSource:         syntax.BecomeColorSource,
+				BecomeColorUntilEndOfTurn: syntax.BecomeColorUntilEndOfTurn,
+
 				PolymorphColors:        polymorphColors(syntax.PolymorphColors),
 				PolymorphColorless:     syntax.PolymorphColorless,
 				PolymorphSubtypes:      slices.Clone(syntax.PolymorphSubtypes),

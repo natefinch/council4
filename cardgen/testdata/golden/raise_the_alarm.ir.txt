@@ -24,6 +24,7 @@
           TokenPTKnown: true
           TokenCopyOverrideColors: 
           BecomeTypeAddColors: 
+          BecomeColorColors: 
           PolymorphColors: 
           PolymorphSupertypes: 
           Exact: true

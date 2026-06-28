@@ -69,6 +69,7 @@ var Cards = []*game.CardDef{
 	CloudPirates,
 	CloudSpirit,
 	CloudSprite,
+	CloudchaserKestrel,
 	CloutOfTheDominus,
 	CoatiScavenger,
 	CollectorSCase,

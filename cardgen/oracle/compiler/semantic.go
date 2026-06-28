@@ -1683,6 +1683,13 @@ const (
 	// of their power. It pairs only with a static rule declaration. Added last so
 	// existing kinds keep their wire values.
 	EffectAssignsCombatDamageByToughness
+	// EffectBecomeColor is the one-shot continuous color-set "<subject> becomes
+	// <color>... until end of turn." (Cerulean Wisps, Niveous Wisps, Raging
+	// Spirit): the named colors SET the subject's color set, or the "colorless"
+	// form clears it, until end of turn. The subject is the source or a single
+	// target. It lowers to an ApplyContinuous at LayerColor. Added last so
+	// existing kinds keep their wire values.
+	EffectBecomeColor
 )
 
 // DurationKind identifies common continuous-effect durations.
@@ -2123,6 +2130,15 @@ type CompiledEffect struct {
 	BecomeTypeAddTypes       []types.Card
 	BecomeTypeAddColors      []color.Color
 	BecomeTypeUntilEndOfTurn bool
+	// BecomeColorColors, BecomeColorColorless, BecomeColorSource, and
+	// BecomeColorUntilEndOfTurn mirror the parser's EffectBecomeColor color-set
+	// payload ("<subject> becomes <color>... until end of turn."). Lowering reads
+	// them to build the ApplyContinuous LayerColor SET (or colorless clear) over
+	// the source or single target for the duration.
+	BecomeColorColors         []color.Color
+	BecomeColorColorless      bool
+	BecomeColorSource         bool
+	BecomeColorUntilEndOfTurn bool
 	// Polymorph* mirror the parser's EffectPolymorph payload ("Until end of turn,
 	// target creature loses all abilities and becomes a <color> <subtype> with
 	// base power and toughness N/N."). Lowering reads them to build the

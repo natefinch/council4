@@ -416,6 +416,16 @@ const (
 	// indefinitely") duration, a quoted granted ability, or an unsupported
 	// keyword — fails closed.
 	EffectAnimateTarget EffectKind = "EffectAnimateTarget"
+	// EffectBecomeColor models the one-shot continuous color-set "<subject>
+	// becomes <color>... until end of turn." (Cerulean Wisps, Niveous Wisps,
+	// Tidal Visionary; CR 613.1e, layer 5). The subject is either the source
+	// ("This creature becomes colorless until end of turn.", Raging Spirit) or a
+	// single target ("Target permanent becomes white until end of turn.",
+	// Cloudchaser Kestrel). The named colors SET the subject's color set (any
+	// existing colors are removed); the "colorless" form clears the color set.
+	// The "until end of turn" duration is required. The "the color of your
+	// choice" form, which needs a resolution-time color choice, fails closed.
+	EffectBecomeColor EffectKind = "EffectBecomeColor"
 )
 
 // DigSourceKind identifies how an impulse "Put N <source> into your hand ..."
@@ -2188,6 +2198,19 @@ type EffectSyntax struct {
 	// EffectBecomeType targeted type-change. It is always set for the recognized
 	// Liquimetal form; a permanent form is not yet recognized.
 	BecomeTypeUntilEndOfTurn bool `json:",omitempty"`
+	// BecomeColorColors, BecomeColorColorless, BecomeColorSource, and
+	// BecomeColorUntilEndOfTurn carry the EffectBecomeColor one-shot color-set
+	// payload ("<subject> becomes <color>... until end of turn."). BecomeColorColors
+	// lists the named colors that SET the subject's color set; BecomeColorColorless
+	// marks the "becomes colorless" clear form (mutually exclusive with named
+	// colors). BecomeColorSource marks the source-affecting form ("This creature
+	// becomes ..."); when false the single targeted permanent is left to the
+	// target machinery. BecomeColorUntilEndOfTurn is always set for the recognized
+	// form.
+	BecomeColorColors         []Color `json:",omitempty"`
+	BecomeColorColorless      bool    `json:",omitempty"`
+	BecomeColorSource         bool    `json:",omitempty"`
+	BecomeColorUntilEndOfTurn bool    `json:",omitempty"`
 	// Polymorph* carry the structured payload of an EffectPolymorph resolving
 	// polymorph ("Until end of turn, target creature loses all abilities and
 	// becomes a <color> <subtype> with base power and toughness N/N."). The

@@ -55,6 +55,7 @@ var Cards = []*game.CardDef{
 	MerfolkWindrobber,
 	MesmericOrb,
 	MesmerizingBenthid,
+	MetathranTransport,
 	MichelangeloGameMaster,
 	Micromancer,
 	MidnightMayhem,
