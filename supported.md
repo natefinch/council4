@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,867 of 32,501 cards eligible for paper support (48.8%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,871 of 32,501 cards eligible for paper support (48.8%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -4322,6 +4322,7 @@ Council4 currently supports **15,867 of 32,501 cards eligible for paper support 
 - Explosive Welcome
 - Expose Evil
 - Expose to Daylight
+- Expunge
 - Exquisite Blood
 - Exsanguinate
 - Exsanguinator Cavalry
@@ -10900,6 +10901,7 @@ Council4 currently supports **15,867 of 32,501 cards eligible for paper support 
 - Ritual of Restoration
 - Ritual of Soot
 - Ritual of Steel
+- Ritual of the Machine
 - Riven Turnbull
 - Rivendell
 - River Bear
@@ -11923,6 +11925,7 @@ Council4 currently supports **15,867 of 32,501 cards eligible for paper support 
 - Shrieking Drake
 - Shrieking Mogg
 - Shrieking Specter
+- Shriekmaw
 - Shrike Force
 - Shrike Harpy
 - Shrine
@@ -13669,6 +13672,7 @@ Council4 currently supports **15,867 of 32,501 cards eligible for paper support 
 - Territorial Scythecat
 - Territorial Witchstalker
 - Territory Culler
+- Terror
 - Terror Ballista
 - Terror of Mount Velus
 - Terror of the Fairgrounds
