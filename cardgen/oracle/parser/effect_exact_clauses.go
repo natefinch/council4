@@ -2548,6 +2548,7 @@ func exactDamageEffectSyntax(effect *EffectSyntax) bool {
 			}
 			exactSubject = reference.Kind == ReferenceSelfName ||
 				reference.Kind == ReferenceThisObject ||
+				reference.Kind == ReferenceThatObject ||
 				reference.Kind == ReferencePronoun && reference.Pronoun == PronounIt
 		}
 		if !exactSubject {
