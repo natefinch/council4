@@ -27,6 +27,7 @@ var Cards = []*game.CardDef{
 	CastleRaptors,
 	CatharticPyre,
 	CavalcadeOfCalamity,
+	CaveOfTheFrostDragon,
 	Cease,
 	CelestialArmor,
 	CerebralDownload,

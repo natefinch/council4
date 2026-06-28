@@ -468,10 +468,6 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedConditionalEntersTapped(t
 			name:       "unsupported keyword creature selection",
 			oracleText: "This land enters tapped unless you control a creature with deathtouch and flying.",
 		},
-		{
-			name:       "if instead of unless",
-			oracleText: "This land enters tapped if you control two or more basic lands.",
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -491,6 +487,63 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedConditionalEntersTapped(t
 			}
 			if len(diagnostics) == 0 {
 				t.Fatal("expected diagnostics for unsupported condition, got none")
+			}
+		})
+	}
+}
+
+func TestGenerateExecutableCardSourceConditionalEntersTappedIfControl(t *testing.T) {
+	t.Parallel()
+	// The leading "If you control ..., this land enters tapped" wording (the
+	// manland cycle, e.g. Cave of the Frost Dragon) gates entry on the condition
+	// holding, so the generated condition is unnegated. It is the inverse of the
+	// trailing "unless you control ..." wording.
+	tests := []struct {
+		name       string
+		oracleText string
+		wants      []string
+	}{
+		{
+			name:       "two or more other lands",
+			oracleText: "If you control two or more other lands, this land enters tapped.",
+			wants: []string{
+				"game.EntersTappedIfReplacement",
+				"RequiredTypes: []types.Card{types.Land}, ExcludeSource: true",
+				"MinCount:  2",
+			},
+		},
+		{
+			name:       "two or more basic lands",
+			oracleText: "If you control two or more basic lands, this land enters tapped.",
+			wants: []string{
+				"game.EntersTappedIfReplacement",
+				"Supertypes: []types.Super{types.Basic}",
+				"MinCount:  2",
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+				Name:       "Test Vista",
+				Layout:     "normal",
+				TypeLine:   "Land",
+				OracleText: test.oracleText,
+			}, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			if strings.Contains(source, "Negate:") {
+				t.Fatalf("if-form condition must not be negated:\n%s", source)
+			}
+			for _, want := range test.wants {
+				if !strings.Contains(source, want) {
+					t.Fatalf("source missing %q:\n%s", want, source)
+				}
 			}
 		})
 	}

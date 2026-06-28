@@ -433,6 +433,59 @@ func TestConditionalEntersTappedCondition(t *testing.T) {
 	}
 }
 
+func TestConditionalEntersTappedIfControlCondition(t *testing.T) {
+	// The leading "If you control two or more other lands, this land enters
+	// tapped." form (Cave of the Frost Dragon) enters tapped when the condition
+	// holds, the inverse of the trailing "unless" wording.
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	setSorcerySpeedTurn(g, game.Player1)
+	cardID := addCardToHand(g, game.Player1, caveLikeLand())
+	engine := NewEngine(nil)
+	if !engine.applyPlayLand(g, game.Player1, cardID) {
+		t.Fatal("play land without other lands failed")
+	}
+	if got := g.Battlefield[len(g.Battlefield)-1]; got.Tapped {
+		t.Fatalf("land = %+v, want untapped without two other lands", got)
+	}
+
+	g = game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	setSorcerySpeedTurn(g, game.Player1)
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Forest",
+		Supertypes: []types.Super{types.Basic},
+		Types:      []types.Card{types.Land},
+		Subtypes:   []types.Sub{types.Forest}},
+	})
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Island",
+		Supertypes: []types.Super{types.Basic},
+		Types:      []types.Card{types.Land},
+		Subtypes:   []types.Sub{types.Island}},
+	})
+	cardID = addCardToHand(g, game.Player1, caveLikeLand())
+	if !engine.applyPlayLand(g, game.Player1, cardID) {
+		t.Fatal("play land with two other lands failed")
+	}
+	if got := g.Battlefield[len(g.Battlefield)-1]; !got.Tapped {
+		t.Fatalf("land = %+v, want tapped with two other lands", got)
+	}
+}
+
+func caveLikeLand() *game.CardDef {
+	return &game.CardDef{CardFace: game.CardFace{Name: "Cave-like",
+		Types: []types.Card{types.Land},
+		ReplacementAbilities: []game.ReplacementAbility{
+			game.EntersTappedIfReplacement("If you control two or more other lands, this land enters tapped.", &game.Condition{
+				ControlsMatching: opt.Val(game.SelectionCount{
+					Selection: game.Selection{
+						RequiredTypes: []types.Card{types.Land},
+						ExcludeSource: true,
+					},
+					MinCount: 2,
+				}),
+			}),
+		}},
+	}
+}
+
 func TestConditionalEntersTappedLegendaryCreatureCondition(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	setSorcerySpeedTurn(g, game.Player1)

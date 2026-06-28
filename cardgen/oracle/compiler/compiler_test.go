@@ -55,6 +55,34 @@ func TestCompileEntersTappedUnlessCondition(t *testing.T) {
 	}
 }
 
+func TestCompileEntersTappedIfControlCondition(t *testing.T) {
+	t.Parallel()
+	source := "If you control two or more other lands, this land enters tapped."
+	compilation, diagnostics := compileSource(source, pipelineContext{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	ability := compilation.Abilities[0]
+	if ability.Kind != AbilityReplacement {
+		t.Fatalf("kind = %v, want AbilityReplacement", ability.Kind)
+	}
+	if len(ability.Content.Effects) != 1 || ability.Content.Effects[0].Kind != EffectEnterTapped {
+		t.Fatalf("effects = %#v", ability.Content.Effects)
+	}
+	if len(ability.Content.Conditions) != 1 {
+		t.Fatalf("conditions = %#v", ability.Content.Conditions)
+	}
+	condition := ability.Content.Conditions[0]
+	// The leading "If" form gates entry on the condition holding, so the
+	// condition is an unnegated "if" rather than the trailing "unless" form.
+	if condition.Kind != ConditionIf ||
+		condition.Intervening ||
+		condition.Negated ||
+		condition.Predicate != ConditionPredicateControllerControls {
+		t.Fatalf("condition = %#v, want unnegated if controller-controls", condition)
+	}
+}
+
 func TestCompileEntersTappedUnlessLegendaryCreature(t *testing.T) {
 	t.Parallel()
 	source := "Minas Tirith enters tapped unless you control a legendary creature."

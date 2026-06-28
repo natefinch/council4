@@ -236,7 +236,14 @@ func conditionKindAllowedInContext(condition compiler.CompiledCondition, ctx con
 	case conditionContextInterveningTrigger:
 		return condition.Kind == compiler.ConditionIf && condition.Intervening
 	case conditionContextReplacement:
-		return condition.Kind == compiler.ConditionUnless && !condition.Intervening
+		// The "unless" form ("This land enters tapped unless you control a
+		// Plains.") gates the replacement on the negation of its condition; the
+		// "if" form ("If you control two or more other lands, this land enters
+		// tapped.") gates it on the condition holding. The runtime evaluates
+		// both through the same Condition (the compiler records the "unless"
+		// negation in Negated), so accept either non-intervening shape.
+		return (condition.Kind == compiler.ConditionUnless ||
+			condition.Kind == compiler.ConditionIf) && !condition.Intervening
 	case conditionContextEntryCounters, conditionContextEffectGate, conditionContextSpellCostReduction:
 		return condition.Kind == compiler.ConditionIf && !condition.Intervening
 	default:

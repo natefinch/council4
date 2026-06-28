@@ -236,7 +236,8 @@ mana outputs with exact typed activation costs, ordinary and modal activated
 abilities with exact typed costs and supported effect bodies, and exact trailing
 typed activation timing restrictions,
 unconditional enters-tapped replacements and common land-count or basic-land-subtype
-conditions, fixed, `X`, or supported typed dynamic single-target damage,
+conditions in either the trailing "unless you control ..." or leading
+"If you control ..., this land enters tapped" wording, fixed, `X`, or supported typed dynamic single-target damage,
 destruction, exile, return-to-hand, and power/toughness changes with common
 controller, tapped-state, and combat-state target restrictions, narrow mass
 destruction, fixed, `X`, or supported typed dynamic draw and life changes,
