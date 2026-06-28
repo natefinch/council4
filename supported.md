@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,969 of 32,501 cards eligible for paper support (49.1%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,973 of 32,501 cards eligible for paper support (49.1%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2507,6 +2507,7 @@ Council4 currently supports **15,969 of 32,501 cards eligible for paper support 
 - Coeurl
 - Coffin Purge
 - Cogwork Archivist
+- Cogwork Assembler
 - Cogwork Wrestler
 - Cogworker's Puzzleknot
 - Coiled Tinviper
@@ -8136,6 +8137,7 @@ Council4 currently supports **15,969 of 32,501 cards eligible for paper support 
 - Malevolent Chandelier
 - Malevolent Whispers
 - Malicious Intent
+- Malleable Impostor
 - Mammoth Spider
 - Man-o'-War
 - Mana Chains
@@ -8704,6 +8706,7 @@ Council4 currently supports **15,969 of 32,501 cards eligible for paper support 
 - Molt Tender
 - Molten Blast
 - Molten Duplication
+- Molten Echoes
 - Molten Frame
 - Molten Gatekeeper
 - Molten Man, Inferno Incarnate
@@ -11269,6 +11272,7 @@ Council4 currently supports **15,969 of 32,501 cards eligible for paper support 
 - Sai, Master Thopterist
 - Said // Done
 - Sailor of Means
+- Sakashima's Student
 - Sakura-Tribe Elder
 - Sakura-Tribe Scout
 - Salamander Warrior

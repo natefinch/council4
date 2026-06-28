@@ -194,6 +194,9 @@ func lowerActivatedAbilityKind(
 		if ability.Content.Effects[i].CopyMayChooseNewTargets {
 			spans = append(spans, ability.Content.Effects[i].CopyChooseNewTargetsRiderSpan)
 		}
+		if len(ability.Content.Effects[i].TokenCopyGrantKeywords) != 0 {
+			spans = append(spans, ability.Content.Effects[i].TokenCopyGrantRiderSpan)
+		}
 	}
 	for _, target := range ability.Content.Targets {
 		spans = append(spans, target.Span)
@@ -307,6 +310,12 @@ func lowerLoyaltyAbility(
 	spans = append(spans, ability.Cost.Span)
 	for i := range ability.Content.Effects {
 		spans = append(spans, ability.Content.Effects[i].Span)
+		if ability.Content.Effects[i].CopyMayChooseNewTargets {
+			spans = append(spans, ability.Content.Effects[i].CopyChooseNewTargetsRiderSpan)
+		}
+		if len(ability.Content.Effects[i].TokenCopyGrantKeywords) != 0 {
+			spans = append(spans, ability.Content.Effects[i].TokenCopyGrantRiderSpan)
+		}
 	}
 	for _, target := range ability.Content.Targets {
 		spans = append(spans, target.Span)

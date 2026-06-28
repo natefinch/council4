@@ -287,10 +287,18 @@ func lowerOrderedEffectSequence(
 			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — clause reference not localizable")
 		}
 		effectAbility.content.References = localReferences
-		effectAbility.content.Keywords = keywordsWithinSpan(ctx.content.Keywords, effect.ClauseSpan)
+		effectKeywords := keywordsWithinSpan(ctx.content.Keywords, effect.ClauseSpan)
+		// A copy-token effect's "[That token] gains <keyword>." rider is a folded
+		// sibling sentence whose keyword and pronoun fall outside the create
+		// clause's span; attribute them here so the copy-token lowerer sees the
+		// granted keyword and the sequence accounts for both as consumed.
+		riderKeywords, riderReferences := tokenCopyGrantRiderAttribution(effect, ctx.content.Keywords, ctx.content.References)
+		effectKeywords = append(effectKeywords, riderKeywords...)
+		effectAbility.content.References = append(effectAbility.content.References, riderReferences...)
+		effectAbility.content.Keywords = effectKeywords
 		consumedTargets += len(clauseTargets)
 		consumedKeywords += len(effectAbility.content.Keywords)
-		consumedReferences += ownedReferenceCount
+		consumedReferences += ownedReferenceCount + len(riderReferences)
 		// Lower the effect through the shared lowerAbilityContent entry point.
 		// allSharedTargets: try with inherited targets; if that fails, retry
 		//   with targets cleared (e.g. "then proliferate" rejects any target).

@@ -23,6 +23,14 @@ func lowerReplacementAbility(ability compiler.CompiledAbility) (abilityLowering,
 		if replacementAbility, ok := lowerOptionalEntryZoneReplacement(ability); ok {
 			return replacementAbilityLowering(ability, &replacementAbility, nil)
 		}
+		// The self "You may have this creature enter as a copy of <filter>"
+		// replacement (Clone family) carries its optionality on the enters-as-copy
+		// effect itself; the enters-as-copy lowerer already honors that optional
+		// flag, so route the optional copy replacement to it rather than failing
+		// closed as an unlowered optional replacement.
+		if replacementAbility, handled, diagnostic := lowerEntersAsCopyReplacement(ability); handled || diagnostic != nil {
+			return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
+		}
 		return abilityLowering{}, executableDiagnostic(
 			ability,
 			"unsupported optional replacement effect",
