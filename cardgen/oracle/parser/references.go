@@ -367,6 +367,9 @@ func referenceNameWordMatches(token shared.Token, word string) bool {
 	if word == "'" {
 		return token.Kind == shared.Apostrophe
 	}
+	if word == "-" {
+		return strings.EqualFold(token.Text, "-")
+	}
 	return equalWord(token, word)
 }
 
@@ -381,14 +384,14 @@ func referenceTokenWordsEqual(tokens []shared.Token, words []string) bool {
 			}
 			continue
 		}
-		if words[i] == "," || words[i] == "." || words[i] == "&" || words[i] == "/" {
+		if words[i] == "," || words[i] == "." || words[i] == "&" || words[i] == "/" || words[i] == "-" {
 			if !strings.EqualFold(tokens[i].Text, words[i]) {
 				return false
 			}
 			continue
 		}
 		normalized := strings.ToLower(strings.Trim(tokens[i].Text, ",.'\u2019"))
-		if tokens[i].Kind != shared.Word || normalized != words[i] {
+		if (tokens[i].Kind != shared.Word && tokens[i].Kind != shared.Integer) || normalized != words[i] {
 			return false
 		}
 	}
@@ -632,7 +635,7 @@ func referenceNameWords(name string) []string {
 	words := make([]string, 0, len(tokens))
 	for _, token := range tokens {
 		switch token.Kind {
-		case shared.Word, shared.Integer, shared.Ampersand, shared.Slash, shared.Period, shared.Comma:
+		case shared.Word, shared.Integer, shared.Ampersand, shared.Slash, shared.Period, shared.Comma, shared.Minus:
 			words = append(words, strings.ToLower(token.Text))
 		case shared.Apostrophe:
 			// A trailing apostrophe in a plural-possessive name ("Inventors'
@@ -665,7 +668,7 @@ func referenceWordsAt(tokens []shared.Token, words []string) bool {
 			}
 			continue
 		}
-		if word == "&" || word == "/" || word == "." || word == "," {
+		if word == "&" || word == "/" || word == "." || word == "," || word == "-" {
 			if !strings.EqualFold(tokens[i].Text, word) {
 				return false
 			}

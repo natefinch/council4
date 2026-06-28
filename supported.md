@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,124 of 32,501 cards eligible for paper support (49.6%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,127 of 32,501 cards eligible for paper support (49.6%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -7220,6 +7220,7 @@ Council4 currently supports **16,124 of 32,501 cards eligible for paper support 
 - Jungleborn Pioneer
 - Juniper Order Advocate
 - Juniper Order Druid
+- Juniper Order Ranger
 - Juniper Order Rootweaver
 - Junk Diver
 - Junk Golem
@@ -8120,6 +8121,7 @@ Council4 currently supports **16,124 of 32,501 cards eligible for paper support 
 - Macabre Waltz
 - Mace of the Valiant
 - Macetail Hystrodon
+- MACH-1, Swooping Scoundrel
 - Machine Over Matter
 - Machinesmith Automaton
 - Mad Auntie
@@ -15935,6 +15937,7 @@ Council4 currently supports **16,124 of 32,501 cards eligible for paper support 
 - Wydwen, the Biting Gale
 - Wylie Duke, Atiin Hero
 - Wyluli Wolf
+- X-23, Deadly Weapon
 - Xander's Lounge
 - Xathrid Necromancer
 - Xathrid Slyblade

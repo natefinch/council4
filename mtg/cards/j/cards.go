@@ -20,5 +20,6 @@ var Cards = []*game.CardDef{
 	JoragaWarcaller,
 	JudgeSFamiliar,
 	JungleBasin,
+	JuniperOrderRanger,
 	JunkGolem,
 }
