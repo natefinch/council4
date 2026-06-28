@@ -660,6 +660,14 @@ type TriggerCondition struct {
 	// it" and additionally requires the trigger controller to be the caster.
 	InterveningIfEventPermanentWasCastByController bool
 
+	// InterveningIfEventPermanentWasCastFromControllerHand is true for "if you
+	// cast it from your hand" on enter triggers. It requires the entering
+	// permanent to have resulted from a cast the trigger controller made from
+	// their hand, so mtg/rules additionally checks the caster and the cast
+	// source zone. The entering permanent event preserves the cast's caster and
+	// source zone for both trigger-time and resolution-time checks (CR 603.4).
+	InterveningIfEventPermanentWasCastFromControllerHand bool
+
 	// InterveningIfEventPermanentEnteredOrCastFromGraveyard is true for the
 	// enter-trigger intervening "if" that gates on the entering object(s) having
 	// come from any graveyard, either by entering directly from a graveyard or by

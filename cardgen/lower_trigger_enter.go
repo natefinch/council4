@@ -75,6 +75,7 @@ func lowerEnterTrigger(
 			InterveningIfEventPermanentWasKicked:                            intervening.wasKicked,
 			InterveningIfEventPermanentWasCast:                              intervening.wasCast,
 			InterveningIfEventPermanentWasCastByController:                  intervening.wasCastByController,
+			InterveningIfEventPermanentWasCastFromControllerHand:            intervening.wasCastFromCtrlHand,
 			InterveningIfEventPermanentEnteredOrCastFromGraveyard:           intervening.enteredOrCastFromGY,
 			InterveningIfEventPermanentEnteredOrCastFromControllerGraveyard: intervening.enteredOrCastFromCGY,
 		},
@@ -306,6 +307,7 @@ type enterInterveningCondition struct {
 	wasKicked            bool
 	wasCast              bool
 	wasCastByController  bool
+	wasCastFromCtrlHand  bool
 	enteredOrCastFromGY  bool
 	enteredOrCastFromCGY bool
 }
@@ -380,6 +382,8 @@ func lowerEnterInterveningCondition(trigger *compiler.CompiledTrigger) (enterInt
 		return enterInterveningCondition{wasCast: true}, true
 	case compiler.ConditionPredicateEventSubjectWasCastByController:
 		return enterInterveningCondition{wasCastByController: true}, true
+	case compiler.ConditionPredicateEventSubjectWasCastFromControllerHand:
+		return enterInterveningCondition{wasCastFromCtrlHand: true}, true
 	case compiler.ConditionPredicateEventSubjectEnteredOrCastFromGraveyard:
 		return enterInterveningCondition{enteredOrCastFromGY: true}, true
 	case compiler.ConditionPredicateEventSubjectEnteredOrCastFromControllerGraveyard:
@@ -866,6 +870,7 @@ func permanentZoneChangeTriggeredAbility(
 			InterveningIfEventPermanentWasKicked:                            intervening.wasKicked,
 			InterveningIfEventPermanentWasCast:                              intervening.wasCast,
 			InterveningIfEventPermanentWasCastByController:                  intervening.wasCastByController,
+			InterveningIfEventPermanentWasCastFromControllerHand:            intervening.wasCastFromCtrlHand,
 			InterveningIfEventPermanentEnteredOrCastFromGraveyard:           intervening.enteredOrCastFromGY,
 			InterveningIfEventPermanentEnteredOrCastFromControllerGraveyard: intervening.enteredOrCastFromCGY,
 		},

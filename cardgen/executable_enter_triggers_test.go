@@ -84,6 +84,11 @@ func TestGenerateExecutableCardSourceAdditionalEnterConditions(t *testing.T) {
 			wants:     []string{"InterveningIfEventPermanentWasCast: true"},
 		},
 		{
+			name:      "cast from controller hand",
+			condition: "if you cast it from your hand",
+			wants:     []string{"InterveningIfEventPermanentWasCastFromControllerHand: true"},
+		},
+		{
 			name:      "controls artifact",
 			condition: "if you control an artifact",
 			wants:     []string{"InterveningCondition: opt.Val", "RequiredTypes: []types.Card{types.Artifact}"},

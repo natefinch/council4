@@ -45,6 +45,7 @@ const (
 	ConditionPredicateEventSubjectWasKicked                            ConditionPredicateKind = "ConditionPredicateEventSubjectWasKicked"
 	ConditionPredicateEventSubjectWasCast                              ConditionPredicateKind = "ConditionPredicateEventSubjectWasCast"
 	ConditionPredicateEventSubjectWasCastByController                  ConditionPredicateKind = "ConditionPredicateEventSubjectWasCastByController"
+	ConditionPredicateEventSubjectWasCastFromControllerHand            ConditionPredicateKind = "ConditionPredicateEventSubjectWasCastFromControllerHand"
 	ConditionPredicateEventSubjectEnteredOrCastFromGraveyard           ConditionPredicateKind = "ConditionPredicateEventSubjectEnteredOrCastFromGraveyard"
 	ConditionPredicateEventSubjectEnteredOrCastFromControllerGraveyard ConditionPredicateKind = "ConditionPredicateEventSubjectEnteredOrCastFromControllerGraveyard"
 	ConditionPredicateEventSubjectHadNoCounter                         ConditionPredicateKind = "ConditionPredicateEventSubjectHadNoCounter"
@@ -992,6 +993,9 @@ func recognizeCastTimingCondition(body []shared.Token, _ Atoms) (ConditionClause
 func recognizeEventSubjectCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
 	if tokenWordsEqual(body, "you", "cast", "it") {
 		return ConditionClause{Predicate: ConditionPredicateEventSubjectWasCastByController}, true
+	}
+	if tokenWordsEqual(body, "you", "cast", "it", "from", "your", "hand") {
+		return ConditionClause{Predicate: ConditionPredicateEventSubjectWasCastFromControllerHand}, true
 	}
 	if tokenWordsEqual(body, "it", "was", "kicked") {
 		return ConditionClause{Predicate: ConditionPredicateEventSubjectWasKicked}, true

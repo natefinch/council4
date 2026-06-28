@@ -72,6 +72,7 @@ var Cards = []*game.CardDef{
 	CloudSprite,
 	CloudchaserKestrel,
 	CloutOfTheDominus,
+	CoalStoker,
 	CoatiScavenger,
 	CollectorSCase,
 	ColossalCollision,

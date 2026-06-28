@@ -535,6 +535,11 @@ func triggerInterveningIf(g *game.Game, source *game.Permanent, controller game.
 			event.EnterCastController != controller) {
 		return false
 	}
+	if trigger.InterveningIfEventPermanentWasCastFromControllerHand &&
+		(event == nil || !event.EnterWasCast || !event.EnterHasCastController ||
+			event.EnterCastController != controller || event.EnterCastFromZone != zone.Hand) {
+		return false
+	}
 	if trigger.InterveningIfEventPermanentEnteredOrCastFromGraveyard &&
 		!eventEnteredOrCastFromGraveyard(event) {
 		return false
