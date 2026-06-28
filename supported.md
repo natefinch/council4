@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,759 of 32,501 cards eligible for paper support (48.5%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,775 of 32,501 cards eligible for paper support (48.5%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -740,6 +740,7 @@ Council4 currently supports **15,759 of 32,501 cards eligible for paper support 
 - Ashenmoor Liege
 - Ashes to Ashes
 - Ashiok's Adept
+- Ashiok's Forerunner
 - Ashiok's Reaper
 - Ashiok's Skulker
 - Ashmouth Hound
@@ -2185,6 +2186,7 @@ Council4 currently supports **15,759 of 32,501 cards eligible for paper support 
 - Chance-Met Elves
 - Chancellor of Tales
 - Chandler
+- Chandra's Firemaw
 - Chandra's Ignition
 - Chandra's Magmutt
 - Chandra's Outrage
@@ -3469,6 +3471,7 @@ Council4 currently supports **15,759 of 32,501 cards eligible for paper support 
 - Dogged Pursuit
 - Dokuchi Shadow-Walker
 - Dominus of Fealty
+- Domri's Nodorog
 - Domri, City Smasher
 - Donatello, the Brains
 - Donatello, Turtle Techie
@@ -3971,6 +3974,7 @@ Council4 currently supports **15,759 of 32,501 cards eligible for paper support 
 - Eloise, Nephalia Sleuth
 - Elsha, Threefold Master
 - Elspeth Conquers Death
+- Elspeth's Devotee
 - Elspeth's Smite
 - Elspeth, Sun's Champion
 - Elspeth, Sun's Nemesis
@@ -4207,6 +4211,7 @@ Council4 currently supports **15,759 of 32,501 cards eligible for paper support 
 - Ethercaste Knight
 - Ethereal Armor
 - Ethereal Champion
+- Ethereal Elk
 - Ethereal Guidance
 - Etherium Abomination
 - Etherium Astrolabe
@@ -5152,6 +5157,7 @@ Council4 currently supports **15,759 of 32,501 cards eligible for paper support 
 - Garruk's Horde
 - Garruk's Packleader
 - Garruk's Uprising
+- Garruk's Warsteed
 - Garruk, Cursed Huntsman
 - Garruk, Primal Hunter
 - Garrulous Sycophant
@@ -5312,6 +5318,7 @@ Council4 currently supports **15,759 of 32,501 cards eligible for paper support 
 - Gideon's Company
 - Gideon's Lawkeeper
 - Gideon's Reproach
+- Gideon's Resolve
 - Gift of Granite
 - Gift of Orzhova
 - Gift of Strands
@@ -5605,6 +5612,7 @@ Council4 currently supports **15,759 of 32,501 cards eligible for paper support 
 - Goldenglow Moth
 - Goldfury Strider
 - Goldhound
+- Goldmane Griffin
 - Goldmaw Champion
 - Goldmeadow Dodger
 - Goldmeadow Harrier
@@ -8975,6 +8983,7 @@ Council4 currently supports **15,759 of 32,501 cards eligible for paper support 
 - Nezumi Ronin
 - Nezumi Shadow-Watcher
 - Niall Silvain
+- Niambi, Faithful Healer
 - Nibelheim Aflame
 - Niblis of Dusk
 - Niblis of Frost
@@ -10397,6 +10406,7 @@ Council4 currently supports **15,759 of 32,501 cards eligible for paper support 
 - Ravaged Highlands
 - Ravages of War
 - Ravaging Horde
+- Raven Clan War-Axe
 - Raven of Fell Omens
 - Raven Wings
 - Raven's Crime
@@ -10961,6 +10971,7 @@ Council4 currently supports **15,759 of 32,501 cards eligible for paper support 
 - Roving Harper
 - Rowan Treefolk
 - Rowan's Battleguard
+- Rowan's Stalwarts
 - Rowdy Snowballers
 - Roxxon Brutes
 - Royal Assassin
@@ -12402,6 +12413,7 @@ Council4 currently supports **15,759 of 32,501 cards eligible for paper support 
 - Sorcerer of the Fang
 - Sorcerer's Broom
 - Sorcerous Sight
+- Sorin's Guide
 - Sorin's Thirst
 - Sorin's Vengeance
 - Sosuke's Summons
@@ -13153,6 +13165,7 @@ Council4 currently supports **15,759 of 32,501 cards eligible for paper support 
 - Sun Sentinel
 - Sun Titan
 - Sun-Blessed Healer
+- Sun-Blessed Mount
 - Sun-Blessed Peak
 - Sun-Collared Raptor
 - Sun-Crested Pterodon
@@ -13489,6 +13502,7 @@ Council4 currently supports **15,759 of 32,501 cards eligible for paper support 
 - Teferi's Protege
 - Teferi's Sentinel
 - Teferi's Tutelage
+- Teferi's Wavecaster
 - Tegwyll, Duke of Splendor
 - Tel-Jilad Archers
 - Tel-Jilad Chosen
@@ -14834,6 +14848,7 @@ Council4 currently supports **15,759 of 32,501 cards eligible for paper support 
 - Virulent Silencer
 - Virulent Swipe
 - Virus Beetle
+- Visage of Bolas
 - Viscera Dragger
 - Viscera Seer
 - Viscerid Armor
@@ -15586,6 +15601,7 @@ Council4 currently supports **15,759 of 32,501 cards eligible for paper support 
 - Xorn
 - Yahenni's Expertise
 - Yahenni, Undying Partisan
+- Yanling's Harbinger
 - Yargle and Multani
 - Yargle, Glutton of Urborg
 - Yarok's Wavecrasher
