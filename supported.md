@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,134 of 32,501 cards eligible for paper support (49.6%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,137 of 32,501 cards eligible for paper support (49.7%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -5575,6 +5575,7 @@ Council4 currently supports **16,134 of 32,501 cards eligible for paper support 
 - Glittering Massif
 - Glittermonger
 - Gloom Pangolin
+- Gloom Sower
 - Gloomhunter
 - Gloomlake Verge
 - Gloomshrieker
@@ -8124,6 +8125,7 @@ Council4 currently supports **16,134 of 32,501 cards eligible for paper support 
 - Mabel's Mettle
 - Macabre Mockery
 - Macabre Waltz
+- MacCready, Lamplight Mayor
 - Mace of the Valiant
 - Macetail Hystrodon
 - MACH-1, Swooping Scoundrel
@@ -10958,6 +10960,7 @@ Council4 currently supports **16,134 of 32,501 cards eligible for paper support 
 - Revel of the Fallen God
 - Revelsong Horn
 - Revenant
+- Revenge of Ravens
 - Revenge of the Rats
 - Reverberate
 - Revered Dead
