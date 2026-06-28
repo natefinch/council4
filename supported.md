@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,818 of 32,501 cards eligible for paper support (48.7%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,824 of 32,501 cards eligible for paper support (48.7%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2006,6 +2006,7 @@ Council4 currently supports **15,818 of 32,501 cards eligible for paper support 
 - Carnage Wurm
 - Carnassid
 - Carnifex Demon
+- Carnival // Carnage
 - Carnival Hellsteed
 - Carnival of Souls
 - Carnivore
@@ -2540,6 +2541,7 @@ Council4 currently supports **15,818 of 32,501 cards eligible for paper support 
 - Compass Gnome
 - Compassionate Healer
 - Compelling Argument
+- Compelling Deterrence
 - Complete Disregard
 - Composite Golem
 - Compulsion
@@ -3370,6 +3372,7 @@ Council4 currently supports **15,818 of 32,501 cards eligible for paper support 
 - Dinosaur Soldier
 - Dinosaur Stampede
 - Dinotomaton
+- Dinrova Horror
 - Diplomatic Immunity
 - Diplomatic Relations
 - Dire Fleet Hoarder
@@ -6616,6 +6619,7 @@ Council4 currently supports **15,818 of 32,501 cards eligible for paper support 
 - Illvoi Operative
 - Immersturm Predator
 - Immersturm Raider
+- Immersturm Skullcairn
 - Immerwolf
 - Immobilizing Ink
 - Immolating Glare
@@ -9502,6 +9506,7 @@ Council4 currently supports **15,818 of 32,501 cards eligible for paper support 
 - Oxidda Scrapmelter
 - Oxidize
 - Oyobi, Who Split the Heavens
+- Ozai's Cruelty
 - Ozolith, the Shattered Spire
 - Pacification Array
 - Pacifism
@@ -10536,6 +10541,7 @@ Council4 currently supports **15,818 of 32,501 cards eligible for paper support 
 - Reclamation Sage
 - Reclusive Artificer
 - Reclusive Taxidermist
+- Recoil
 - Recollect
 - Recon Craft Theta
 - Reconnaissance
