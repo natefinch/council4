@@ -3016,6 +3016,16 @@ const (
 	EffectStaticSubjectControlledNontokenCreatures      EffectStaticSubjectKind = "EffectStaticSubjectControlledNontokenCreatures"
 	EffectStaticSubjectOtherControlledNontokenCreatures EffectStaticSubjectKind = "EffectStaticSubjectOtherControlledNontokenCreatures"
 
+	// EffectStaticSubjectControlledCreatureSubtypeTokens and its "other" sibling
+	// name the controlled creature tokens carrying a named creature subtype
+	// ("Zombie tokens you control have ...", the Amass Zombie cycle's Eternal
+	// Skylord, Dreadhorde Twins, Vizier of the Scorpion, and Gleaming Overseer).
+	// The named subtype rides the group's SubtypesAny slot exactly like the bare
+	// "<Subtype> creatures you control" group; the compiler additionally requires
+	// the token state. The "other" form excludes the source permanent.
+	EffectStaticSubjectControlledCreatureSubtypeTokens      EffectStaticSubjectKind = "EffectStaticSubjectControlledCreatureSubtypeTokens"
+	EffectStaticSubjectOtherControlledCreatureSubtypeTokens EffectStaticSubjectKind = "EffectStaticSubjectOtherControlledCreatureSubtypeTokens"
+
 	// EffectStaticSubjectAllLands names every land on the battlefield regardless
 	// of controller ("Each land ...", "All lands ..."). It is the affected group
 	// of the continuous land-type-adding statics printed on cards such as

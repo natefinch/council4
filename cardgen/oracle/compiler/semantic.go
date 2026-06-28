@@ -1830,6 +1830,13 @@ const (
 	StaticSubjectNonlandPermanents
 	StaticSubjectSnowPermanents
 	StaticSubjectAllPermanentSubtype
+	// StaticSubjectControlledCreatureSubtypeTokens and its "other" sibling name
+	// the controlled creature tokens carrying a named creature subtype ("Zombie
+	// tokens you control have <keyword>", the Amass Zombie cycle). The named
+	// subtype rides the affected group's SubtypesAny slot and the token state is
+	// required; the "other" form excludes the source permanent.
+	StaticSubjectControlledCreatureSubtypeTokens
+	StaticSubjectOtherControlledCreatureSubtypeTokens
 )
 
 // CompiledDamageRecipient bundles the primary-recipient descriptors of a

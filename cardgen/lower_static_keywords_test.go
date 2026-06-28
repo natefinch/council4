@@ -789,6 +789,71 @@ func TestLowerStaticFilteredCreatureGroupAnthem(t *testing.T) {
 	}
 }
 
+// TestLowerStaticDeclarationSubtypeTokenAnthem verifies the controlled
+// creature-subtype token keyword anthem ("[Other] <Subtype> tokens you control
+// have <keyword>", the Amass Zombie cycle) lowers onto a controlled-permanent
+// group whose Selection requires the Creature type, the named subtype, and the
+// token state, and grants the keyword on the ability layer.
+func TestLowerStaticDeclarationSubtypeTokenAnthem(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		oracleText string
+		subtype    types.Sub
+		keyword    game.Keyword
+		excluded   bool
+	}{
+		"controlled subtype tokens": {
+			oracleText: "Zombie tokens you control have flying.",
+			subtype:    types.Zombie,
+			keyword:    game.Flying,
+		},
+		"controlled subtype tokens deathtouch": {
+			oracleText: "Zombie tokens you control have deathtouch.",
+			subtype:    types.Zombie,
+			keyword:    game.Deathtouch,
+		},
+		"other controlled subtype tokens": {
+			oracleText: "Other Goblin tokens you control have haste.",
+			subtype:    types.Goblin,
+			keyword:    game.Haste,
+			excluded:   true,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Token Lord",
+				Layout:     "normal",
+				TypeLine:   "Creature — Test",
+				OracleText: test.oracleText,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			})
+			if len(face.StaticAbilities) != 1 {
+				t.Fatalf("static abilities = %#v, want one", face.StaticAbilities)
+			}
+			effects := face.StaticAbilities[0].Body.ContinuousEffects
+			if len(effects) != 1 {
+				t.Fatalf("continuous effects = %#v, want one", effects)
+			}
+			effect := effects[0]
+			selection := effect.Group.Selection()
+			if effect.Layer != game.LayerAbility ||
+				effect.Group.Domain() != game.GroupDomainObjectControlled ||
+				!slices.Equal(selection.RequiredTypes, []types.Card{types.Creature}) ||
+				!slices.Equal(selection.SubtypesAny, []types.Sub{test.subtype}) ||
+				!selection.TokenOnly ||
+				!slices.Equal(effect.AddKeywords, []game.Keyword{test.keyword}) {
+				t.Fatalf("continuous effect = %#v selection = %#v", effect, selection)
+			}
+			if _, excluded := effect.Group.Exclusion(); excluded != test.excluded {
+				t.Fatalf("group exclusion = %v, want %v", excluded, test.excluded)
+			}
+		})
+	}
+}
+
 func TestLowerStaticControlGrantAura(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
