@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,179 of 32,501 cards eligible for paper support (49.8%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,192 of 32,501 cards eligible for paper support (49.8%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1457,6 +1457,7 @@ Council4 currently supports **16,179 of 32,501 cards eligible for paper support 
 - Blood Pact
 - Blood Pet
 - Blood Petal Celebrant
+- Blood Reckoning
 - Blood Researcher
 - Blood Rites
 - Blood Seeker
@@ -2053,6 +2054,7 @@ Council4 currently supports **16,179 of 32,501 cards eligible for paper support 
 - Cargo Ship
 - Caribou Range
 - Carnage Altar
+- Carnage Gladiator
 - Carnage Tyrant
 - Carnage Wurm
 - Carnassid
@@ -2688,6 +2690,8 @@ Council4 currently supports **16,179 of 32,501 cards eligible for paper support 
 - Containment Construct
 - Containment Protocol
 - Contaminated Aquifer
+- Contaminated Bond
+- Contaminated Ground
 - Contaminated Landscape
 - Contemplation
 - Contentious Plan
@@ -2758,6 +2762,7 @@ Council4 currently supports **16,179 of 32,501 cards eligible for paper support 
 - Corrupted Conscience
 - Corrupted Conviction
 - Corrupted Harvester
+- Corrupted Roots
 - Corsair Captain
 - Coruscation Mage
 - Cosi's Ravager
@@ -4328,6 +4333,7 @@ Council4 currently supports **16,179 of 32,501 cards eligible for paper support 
 - Essence Infusion
 - Essence Pulse
 - Essence Scatter
+- Essence Sliver
 - Essence Warden
 - Etched Champion
 - Etched Cornfield
@@ -4875,6 +4881,7 @@ Council4 currently supports **16,179 of 32,501 cards eligible for paper support 
 - Flatten
 - Flawless Maneuver
 - Flaxen Intruder // Welcome Home
+- Flayed Nim
 - Flayed One
 - Flayer Drone
 - Flayer Husk
@@ -6448,6 +6455,7 @@ Council4 currently supports **16,179 of 32,501 cards eligible for paper support 
 - Hired Blade
 - Hired Poisoner
 - Hissing Iguanar
+- Hissing Miasma
 - Historian of Zhalfir
 - History of Benalia
 - Hit-Monkey
@@ -8319,6 +8327,7 @@ Council4 currently supports **16,179 of 32,501 cards eligible for paper support 
 - March of the Drowned
 - March of the Multitudes
 - March of the Returned
+- Marchesa's Decree
 - Marchesa's Emissary
 - Marchesa's Infiltrator
 - Marching Duodrone
@@ -10153,6 +10162,7 @@ Council4 currently supports **16,179 of 32,501 cards eligible for paper support 
 - Poison the Well
 - Poison-Blade Mentor
 - Poison-Tip Archer
+- Poisonbelly Ogre
 - Poisoner's Apprentice
 - Pol Jamaar, Illusionist
 - Pollenbright Wings
@@ -10546,6 +10556,7 @@ Council4 currently supports **16,179 of 32,501 cards eligible for paper support 
 - Ragefire
 - Ragefire Hellkite
 - Ragged Playmate
+- Ragged Veins
 - Raging Bull
 - Raging Cougar
 - Raging Goblin
@@ -12319,6 +12330,7 @@ Council4 currently supports **16,179 of 32,501 cards eligible for paper support 
 - Sinister Concoction
 - Sinister Hideout
 - Sinister Monolith
+- Sinister Possession
 - Sinister Sabotage
 - Sinister Starfish
 - Sinister Strength
@@ -15236,6 +15248,7 @@ Council4 currently supports **16,179 of 32,501 cards eligible for paper support 
 - Vision Skeins
 - Visionary Augmenter
 - Visionary's Dance
+- Visions of Brutality
 - Visions of Villainy
 - Vital Splicer
 - Vitality Charm

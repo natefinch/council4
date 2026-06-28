@@ -125,6 +125,17 @@ func lowerFixedLifeSpell(
 				ctx.content.References[0].Kind == compiler.ReferenceThatPlayer &&
 				ctx.content.References[0].Binding != compiler.ReferenceBindingTarget):
 		playerRef = game.EventPlayerReference()
+	case len(ctx.content.Targets) == 0 &&
+		effect.Context == parser.EffectContextReferencedObjectController:
+		ref, ok := eventReferencedObjectControllerPlayer(ctx.content.References)
+		if !ok {
+			return game.AbilityContent{}, contentDiagnostic(
+				ctx,
+				"unsupported life spell",
+				"the executable source backend supports only exact fixed life changes",
+			)
+		}
+		playerRef = ref
 	case len(ctx.content.Targets) == 1 &&
 		effect.Context == parser.EffectContextReferencedObjectController:
 		ref, ok := referencedControllerPlayerRef(ctx)
