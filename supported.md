@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,775 of 32,501 cards eligible for paper support (48.5%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,777 of 32,501 cards eligible for paper support (48.5%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2822,6 +2822,7 @@ Council4 currently supports **15,775 of 32,501 cards eligible for paper support 
 - Crushing Vines
 - Crustacean Commando
 - Crux of Fate
+- Cryoclasm
 - Cryogen Relic
 - Crypt Cobra
 - Crypt Creeper
@@ -9574,6 +9575,7 @@ Council4 currently supports **15,775 of 32,501 cards eligible for paper support 
 - Peace of Mind
 - Peace Strider
 - Peach Garden Oath
+- Peak Eruption
 - Pearl Dragon
 - Pearl Lake Ancient
 - Pearl Medallion
