@@ -1169,7 +1169,8 @@ func selectorHasUnsupportedPermanentFilters(selector compiler.CompiledSelector) 
 	return selector.Zone != zone.None ||
 		selector.Colorless ||
 		selector.Multicolored ||
-		selector.Historic
+		selector.Historic ||
+		selector.SameNameGroup != nil
 }
 
 func stackSpellTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {

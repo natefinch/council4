@@ -1597,6 +1597,27 @@ type SelectionSyntax struct {
 	// player (by relation). It is meaningful only on a SelectionSpell target and
 	// lowers to TargetPredicate.SpellTargets.
 	SpellTargetRestrictions []SpellTargetRestriction `json:",omitempty"`
+	// SameNameGroup records a trailing "and all other <group> with the same name
+	// as that <noun>" clause on a single-permanent target ("Destroy target
+	// nonland permanent and all other permanents with the same name as that
+	// permanent", Maelstrom Pulse; the Echoing cycle). The clause is stripped
+	// from the target's selection so the bare "target <noun>" reconstructs
+	// exactly, and the recorded group names the additional same-name permanents
+	// the effect also affects. It lowers to a same-name battlefield group
+	// anchored on the chosen target.
+	SameNameGroup *SameNameGroupSyntax `json:",omitempty"`
+}
+
+// SameNameGroupSyntax describes the additional "all other <group> with the same
+// name as that <noun>" permanents a same-name effect affects alongside its
+// single target. GroupTypes names the card types the printed group noun
+// restricts the same-name permanents to (empty for the bare "permanents" noun,
+// which imposes no card-type restriction). Text is the verbatim clause spelling
+// (without the leading conjunction) used to reconstruct the byte-exact phrase.
+type SameNameGroupSyntax struct {
+	GroupTypes []CardType  `json:",omitempty"`
+	Text       string      `json:",omitempty"`
+	Span       shared.Span `json:"-"`
 }
 
 // SpellTargetRestrictionKind classifies one alternative of a counter spell

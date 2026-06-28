@@ -372,6 +372,8 @@ func (r referenceResolver) groupMembers(ref game.GroupReference) []id.ID {
 		return r.playerControlledGroupMembers(ref)
 	case game.GroupDomainBattlefield:
 		return r.battlefieldGroupMembers(ref)
+	case game.GroupDomainSameName:
+		return r.sameNameGroupMembers(ref)
 	default:
 		return []id.ID{}
 	}
@@ -411,6 +413,59 @@ func (r referenceResolver) battlefieldGroupMembers(ref game.GroupReference) []id
 		members = append(members, permanent.ObjectID)
 	}
 	return members
+}
+
+// sameNameGroupMembers enumerates every battlefield permanent whose name equals
+// the anchor object's name and satisfies the group's Selection, the "<target>
+// and all other <group> with the same name as that permanent" wording (Maelstrom
+// Pulse, the Echoing cycle). The anchor permanent is included because it shares
+// its own name. A missing anchor, an anchor with no available name (a face-down
+// permanent or a token without a card def), or a permanent with no available
+// name fails closed, so an unnamed object never matches.
+func (r referenceResolver) sameNameGroupMembers(ref game.GroupReference) []id.ID {
+	anchor, ok := ref.Anchor()
+	if !ok {
+		return []id.ID{}
+	}
+	resolved, ok := r.object(anchor)
+	if !ok || resolved.permanent == nil {
+		return []id.ID{}
+	}
+	anchorName, ok := permanentNameForSameNameGroup(r.g, resolved.permanent)
+	if !ok {
+		return []id.ID{}
+	}
+	sel := ref.Selection()
+	source, _ := r.sourcePermanent()
+	if sel.ExcludeSource && source == nil {
+		return []id.ID{}
+	}
+	members := make([]id.ID, 0, len(r.g.Battlefield))
+	for _, permanent := range r.g.Battlefield {
+		name, ok := permanentNameForSameNameGroup(r.g, permanent)
+		if !ok || name != anchorName {
+			continue
+		}
+		if !r.permanentMatchesGroupSelection(&sel, source, permanent) {
+			continue
+		}
+		members = append(members, permanent.ObjectID)
+	}
+	return members
+}
+
+// permanentNameForSameNameGroup resolves a permanent's effective name for
+// same-name group matching, reporting false when no name is available (a
+// face-down permanent or a permanent without a card def) so an unnamed object
+// neither anchors nor joins the group.
+func permanentNameForSameNameGroup(g *game.Game, permanent *game.Permanent) (string, bool) {
+	if permanent == nil || permanent.FaceDown {
+		return "", false
+	}
+	if _, ok := permanentCardDef(g, permanent); !ok {
+		return "", false
+	}
+	return permanentEffectiveName(g, permanent), true
 }
 
 func (r referenceResolver) objectControlledGroupMembers(ref game.GroupReference) []id.ID {
