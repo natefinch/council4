@@ -222,6 +222,7 @@ func compileTypedSelection(syntax parser.SelectionSyntax) CompiledSelector {
 		selector.Alternatives = append(selector.Alternatives, compileTypedSelection(syntax.Alternatives[i]))
 	}
 	selector.SpellTargetRestrictions = compileSpellTargetRestrictions(syntax.SpellTargetRestrictions)
+	selector.SameNameGroup = compileSameNameGroup(syntax.SameNameGroup)
 	for _, cardType := range syntax.SourceTypes {
 		if value, ok := runtimeCardTypeFromParser(cardType); ok {
 			appendSelectorSourceType(&selector, value)
@@ -399,6 +400,25 @@ func compileSpellTargetRestrictions(restrictions []parser.SpellTargetRestriction
 			return nil
 		}
 		compiled = append(compiled, entry)
+	}
+	return compiled
+}
+
+// compileSameNameGroup lowers a parser same-name destroy group ("and all other
+// <type> with the same name as that <noun>") into its compiled form, dropping
+// any unrecognized parser card type so the lowering can fail closed. It returns
+// nil when the parser recorded no group.
+func compileSameNameGroup(group *parser.SameNameGroupSyntax) *CompiledSameNameGroup {
+	if group == nil {
+		return nil
+	}
+	compiled := &CompiledSameNameGroup{}
+	for _, cardType := range group.GroupTypes {
+		value, ok := runtimeCardTypeFromParser(cardType)
+		if !ok {
+			return nil
+		}
+		compiled.GroupTypes = append(compiled.GroupTypes, value)
 	}
 	return compiled
 }

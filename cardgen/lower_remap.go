@@ -540,6 +540,11 @@ func transformGroupReference(group game.GroupReference, transform targetIndexTra
 			return game.PlayerControlledGroupExcluding(player, selection, exclude.Val), true
 		}
 		return game.PlayerControlledGroup(player, selection), true
+	case game.GroupDomainSameName:
+		if !anchor.Exists {
+			return game.GroupReference{}, false
+		}
+		return game.SameNamePermanentGroup(anchor.Val, selection), true
 	default:
 		return game.GroupReference{}, false
 	}

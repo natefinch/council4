@@ -96,6 +96,11 @@ func parseTargets(tokens []shared.Token, atoms Atoms) []TargetSyntax {
 			selectionTokens = head
 			nameUnique = true
 		}
+		var sameNameGroup *SameNameGroupSyntax
+		if head, group, ok := splitSelectionSameNameGroupTail(selectionTokens); ok {
+			selectionTokens = head
+			sameNameGroup = group
+		}
 		dealtDamage := false
 		if head, ok := splitSelectionDealtDamageThisTurnTail(selectionTokens); ok {
 			selectionTokens = head
@@ -129,6 +134,7 @@ func parseTargets(tokens []shared.Token, atoms Atoms) []TargetSyntax {
 		}
 		selection.NameUniqueAmongControlled = nameUnique
 		selection.DealtDamageThisTurn = dealtDamage
+		selection.SameNameGroup = sameNameGroup
 		if len(spellTargetRestrictions) > 0 && selection.Kind == SelectionSpell {
 			selection.SpellTargetRestrictions = spellTargetRestrictions
 		}
@@ -321,6 +327,13 @@ func exactSinglePermanentTargetSyntax(text string, selection SelectionSyntax) bo
 	}
 	if selection.DealtDamageThisTurn {
 		trimmed, had := strings.CutSuffix(text, " "+dealtDamageThisTurnClauseText)
+		if !had {
+			return false
+		}
+		text = trimmed
+	}
+	if selection.SameNameGroup != nil {
+		trimmed, had := strings.CutSuffix(text, " "+selection.SameNameGroup.Text)
 		if !had {
 			return false
 		}
@@ -2320,6 +2333,79 @@ func splitSelectionDealtDamageThisTurnTail(tokens []shared.Token) (head []shared
 		return nil, false
 	}
 	return tokens[:offset], true
+}
+
+// sameNameGroupClauseLength is the fixed token count of the same-name group
+// clause "and all other <group> with the same name as that <noun>": the eleven
+// words with one group noun and one back-reference noun.
+const sameNameGroupClauseLength = 11
+
+// splitSelectionSameNameGroupTail strips a trailing "and all other <group> with
+// the same name as that <noun>" clause from a single-permanent target's
+// selection tokens, returning the head tokens that name the target and the
+// same-name group the effect additionally affects ("Destroy target nonland
+// permanent and all other permanents with the same name as that permanent",
+// Maelstrom Pulse; the Echoing cycle). The group noun is either the bare
+// "permanents" (no card-type restriction) or one card-type plural; the trailing
+// back-reference noun must be the matching singular permanent noun. It fails
+// closed unless the clause runs to the end of the selection and leaves a
+// non-empty head naming the target.
+func splitSelectionSameNameGroupTail(tokens []shared.Token) (head []shared.Token, group *SameNameGroupSyntax, ok bool) {
+	if len(tokens) <= sameNameGroupClauseLength {
+		return nil, nil, false
+	}
+	c := len(tokens) - sameNameGroupClauseLength
+	fixed := []struct {
+		offset int
+		word   string
+	}{
+		{0, "and"}, {1, "all"}, {2, "other"},
+		{4, "with"}, {5, "the"}, {6, "same"}, {7, "name"}, {8, "as"}, {9, "that"},
+	}
+	for _, f := range fixed {
+		if !equalWord(tokens[c+f.offset], f.word) {
+			return nil, nil, false
+		}
+	}
+	groupTypes, ok := sameNameGroupNounTypes(tokens[c+3])
+	if !ok {
+		return nil, nil, false
+	}
+	if !sameNameBackReferenceNoun(tokens[c+10]) {
+		return nil, nil, false
+	}
+	clauseTokens := tokens[c:]
+	return tokens[:c], &SameNameGroupSyntax{
+		GroupTypes: groupTypes,
+		Text:       joinedEffectText(clauseTokens),
+		Span:       shared.SpanOf(clauseTokens),
+	}, true
+}
+
+// sameNameGroupNounTypes maps the plural group noun of a same-name group clause
+// to the card types it restricts the same-name permanents to. The bare
+// "permanents" noun imposes no card-type restriction (an empty slice); a single
+// card-type plural ("lands", "artifacts", "enchantments", ...) restricts to that
+// type. It fails closed for any other word.
+func sameNameGroupNounTypes(token shared.Token) ([]CardType, bool) {
+	if equalWord(token, "permanents") {
+		return nil, true
+	}
+	if cardType, ok := recognizeCardTypeWord(token.Text); ok {
+		return []CardType{cardType}, true
+	}
+	return nil, false
+}
+
+// sameNameBackReferenceNoun reports whether token is the singular permanent noun
+// that ends a same-name group clause ("... as that permanent" / "... as that
+// land"). It accepts the bare "permanent" and every singular card-type noun.
+func sameNameBackReferenceNoun(token shared.Token) bool {
+	if equalWord(token, "permanent") {
+		return true
+	}
+	_, ok := recognizeCardTypeWord(token.Text)
+	return ok
 }
 
 func parseSelection(tokens []shared.Token, atoms Atoms) SelectionSyntax {

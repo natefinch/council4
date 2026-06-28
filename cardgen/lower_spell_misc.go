@@ -242,6 +242,9 @@ func lowerFixedDestroySpell(
 	}); ok {
 		return content, nil
 	}
+	if content, ok := lowerSameNameDestroySpell(ctx, preventRegeneration); ok {
+		return content, nil
+	}
 	colorGate, hasColorGate := targetColorGateSelection(ctx.content.Conditions)
 	if len(ctx.content.Targets) != 1 ||
 		ctx.content.Targets[0].Cardinality.Min != 1 ||
@@ -284,6 +287,75 @@ func lowerFixedDestroySpell(
 		Targets:  []game.TargetSpec{targetSpec},
 		Sequence: []game.Instruction{instruction},
 	}.Ability(), nil
+}
+
+// lowerSameNameDestroySpell lowers a single-target destroy that also destroys
+// every other battlefield permanent sharing the target's name ("Destroy target
+// nonland permanent and all other permanents with the same name as that
+// permanent", Maelstrom Pulse; "Destroy target land and all other lands with the
+// same name as that land", Wake of Destruction). The parser records the trailing
+// "and all other <type> with the same name as that <noun>" clause as the target
+// selector's SameNameGroup; the cleaned target keeps the bare "target <noun>"
+// shape. A single Destroy over a SameNamePermanentGroup anchored on the chosen
+// target destroys the target together with every same-named permanent, since the
+// group includes the anchor itself. It returns false for any other shape so the
+// caller falls through to the generic destroy paths.
+func lowerSameNameDestroySpell(ctx contentCtx, preventRegeneration bool) (game.AbilityContent, bool) {
+	if len(ctx.content.Targets) != 1 {
+		return game.AbilityContent{}, false
+	}
+	group := ctx.content.Targets[0].Selector.SameNameGroup
+	if group == nil {
+		return game.AbilityContent{}, false
+	}
+	if len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		ctx.content.Effects[0].Negated ||
+		!ctx.content.Effects[0].Exact ||
+		ctx.content.Effects[0].Context != parser.EffectContextController ||
+		!sameNameDestroyReferencesSupported(ctx.content.References) {
+		return game.AbilityContent{}, false
+	}
+	cleaned := ctx.content.Targets[0]
+	cleaned.Selector.SameNameGroup = nil
+	spec, ok := permanentTargetSpec(cleaned)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	groupSelection := game.Selection{}
+	if len(group.GroupTypes) > 0 {
+		groupSelection.RequiredTypes = append([]types.Card(nil), group.GroupTypes...)
+	}
+	return game.Mode{
+		Targets: []game.TargetSpec{spec},
+		Sequence: []game.Instruction{
+			{
+				Primitive: game.Destroy{
+					Group: game.SameNamePermanentGroup(
+						game.TargetPermanentReference(0),
+						groupSelection,
+					),
+					PreventRegeneration: preventRegeneration,
+				},
+			},
+		},
+	}.Ability(), true
+}
+
+// sameNameDestroyReferencesSupported reports whether every reference in a
+// same-name destroy body is the tolerated "that <noun>" back-reference that binds
+// to the chosen target. The destroy instruction reads the target through the
+// group anchor, so the back-reference carries no additional runtime meaning; any
+// other reference shape is rejected.
+func sameNameDestroyReferencesSupported(references []compiler.CompiledReference) bool {
+	for i := range references {
+		if references[i].Kind != compiler.ReferenceThatObject ||
+			references[i].Binding != compiler.ReferenceBindingTarget {
+			return false
+		}
+	}
+	return true
 }
 
 func lowerFixedExileSpell(

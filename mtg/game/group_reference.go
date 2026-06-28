@@ -32,6 +32,14 @@ const (
 	// by the player named by the anchor player reference, such as every
 	// creature a targeted player controls.
 	GroupDomainPlayerControlled
+
+	// GroupDomainSameName draws from every battlefield permanent whose name
+	// equals the anchor object's name and satisfies the Selection, such as a
+	// targeted permanent and all other permanents with the same name as it
+	// (Maelstrom Pulse, the Echoing cycle). The anchor itself is included
+	// because it shares its own name, so destroying the whole group covers the
+	// "<target> and all other <group> with the same name" wording in one move.
+	GroupDomainSameName
 )
 
 // GroupReference is pure rules data describing WHERE a mass effect finds a group
@@ -95,6 +103,14 @@ func PlayerControlledGroup(player PlayerReference, selection Selection) GroupRef
 // identified by exclude.
 func PlayerControlledGroupExcluding(player PlayerReference, selection Selection, exclude ObjectReference) GroupReference {
 	return GroupReference{domain: GroupDomainPlayerControlled, selection: selection, playerAnchor: opt.Val(player), exclude: opt.Val(exclude)}
+}
+
+// SameNamePermanentGroup matches every battlefield permanent whose name equals
+// anchor's name and satisfying selection. The anchor is the permanent the group
+// is defined relative to (a targeted permanent), and it is included in the group
+// because it shares its own name.
+func SameNamePermanentGroup(anchor ObjectReference, selection Selection) GroupReference {
+	return GroupReference{domain: GroupDomainSameName, selection: selection, anchor: opt.Val(anchor)}
 }
 
 // Domain reports the candidate domain the group draws from.
@@ -162,6 +178,13 @@ func (r GroupReference) Validate() []string {
 		}
 		if r.anchor.Exists {
 			problems = append(problems, "player-controlled group must not set an anchor object")
+		}
+	case GroupDomainSameName:
+		if !r.anchor.Exists {
+			problems = append(problems, "same-name group requires an anchor object")
+		}
+		if r.exclude.Exists {
+			problems = append(problems, "same-name group must not set an exclusion")
 		}
 	case groupDomainNone:
 		problems = append(problems, "group reference has no domain")

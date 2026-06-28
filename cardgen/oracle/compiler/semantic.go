@@ -1306,6 +1306,13 @@ type CompiledSelector struct {
 	// graveyard"), requiring every chosen card to lie in one and the same
 	// graveyard. It lowers to TargetSpec.SameGraveyard.
 	SingleGraveyard bool
+	// SameNameGroup records a "and all other <type> with the same name as that
+	// <noun>" group attached to a single destroy target ("Destroy target nonland
+	// permanent and all other permanents with the same name as that permanent",
+	// Maelstrom Pulse). GroupTypes carries the printed group card types (empty
+	// for "permanents", meaning no type restriction). It lowers to a
+	// SameNamePermanentGroup on the destroy primitive.
+	SameNameGroup *CompiledSameNameGroup
 	// SpellTargetRestrictions records a "Counter target spell that targets <X>"
 	// restriction, requiring the matched spell to have a chosen target satisfying
 	// one of these alternatives. Each names either a permanent (by card types and
@@ -1325,6 +1332,15 @@ type CompiledSpellTargetRestriction struct {
 	IsPlayer       bool
 	PermanentTypes []types.Card
 	Controller     ControllerKind
+}
+
+// CompiledSameNameGroup is the compiled form of a destroy target's "and all
+// other <type> with the same name as that <noun>" group. GroupTypes carries the
+// printed group card types and is empty for the "permanents" wording, meaning no
+// card-type restriction (the runtime relies on shared name, which implies a
+// shared card, so the printed type is fidelity only).
+type CompiledSameNameGroup struct {
+	GroupTypes []types.Card
 }
 
 // CompiledSelectorAtoms holds parser-owned atom-derived selector filters that
