@@ -1596,7 +1596,55 @@ func parseDynamicCountSubject(tokens []shared.Token, start int, atoms Atoms) (dy
 	if subject, ok := parseDynamicObjectNounCountSubject(tokens, start, atoms); ok {
 		return subject, true
 	}
+	if subject, ok := parseDynamicAttackingCreatureCountSubject(tokens, start, atoms); ok {
+		return subject, true
+	}
 	return parseDynamicSelectionCountSubject(tokens, start, atoms)
+}
+
+// parseDynamicAttackingCreatureCountSubject recognizes the "[other] attacking
+// <creature-noun-or-subtype>" count subject of an attack-triggered self-pump
+// scaled by the attacking force ("for each other attacking Goblin", Goblin
+// Piledriver; "for each other attacking Aurochs", Aurochs; "for each other
+// attacking creature", Rampaging Classmate; "for each attacking creature",
+// Charging Hooligan). The "attacking" combat adjective scopes the counted group
+// to attacking creatures and stands in for a "you control"/"on the battlefield"
+// scope suffix, mirroring the Shared Animosity count subject; no suffix is
+// permitted. The head must be the bare "creature" noun or a single creature
+// subtype, so a battle, planeswalker, or richer trailing qualifier fails closed.
+// The optional leading "other" self-exclusion is kept in the span handed to
+// parseSelection so it records the Other flag, which excludes the attacking
+// permanent itself at resolution rather than through the group filter.
+func parseDynamicAttackingCreatureCountSubject(tokens []shared.Token, start int, atoms Atoms) (dynamicAmountSubject, bool) {
+	scanStart := start
+	if equalWord(tokens[start], "other") {
+		scanStart = start + 1
+	}
+	if !effectWordsAt(tokens, scanStart, "attacking") {
+		return dynamicAmountSubject{}, false
+	}
+	nounIndex := scanStart + 1
+	if nounIndex >= len(tokens) {
+		return dynamicAmountSubject{}, false
+	}
+	headWord := false
+	if noun, ok := atoms.ObjectNounAt(tokens[nounIndex].Span); ok && noun == ObjectNounCreature {
+		headWord = true
+	} else if _, ok := atoms.SubtypeAt(tokens[nounIndex].Span); ok {
+		headWord = true
+	}
+	if !headWord || !dynamicAmountBoundary(tokens, nounIndex+1) {
+		return dynamicAmountSubject{}, false
+	}
+	plural := dynamicCountHeadPlural(tokens, nounIndex, atoms)
+	selection := parseSelection(tokens[start:nounIndex+1], atoms)
+	if selection.Zone != zone.None || !selection.Attacking || selection.Blocking {
+		return dynamicAmountSubject{}, false
+	}
+	return dynamicAmountSubject{
+		amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountCount, Selection: &selection},
+		end:    nounIndex + 1, count: true, plural: plural,
+	}, true
 }
 
 // parseDynamicTypeUnionCountSubject recognizes a "for each" count subject whose

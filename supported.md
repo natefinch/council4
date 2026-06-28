@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,142 of 32,501 cards eligible for paper support (49.7%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,165 of 32,501 cards eligible for paper support (49.7%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -388,6 +388,7 @@ Council4 currently supports **16,142 of 32,501 cards eligible for paper support 
 - Anarchist
 - Anarchy
 - Anax and Cymede
+- Ancestor Dragon
 - Ancestor's Chosen
 - Ancestor's Prophet
 - Ancestors' Aid
@@ -414,6 +415,7 @@ Council4 currently supports **16,142 of 32,501 cards eligible for paper support 
 - Ancient Spider
 - Ancient Spring
 - Ancient Stirrings
+- Ancient Stone Idol
 - Ancient Tomb
 - Ancient Ziggurat
 - Andradite Leech
@@ -451,6 +453,7 @@ Council4 currently supports **16,142 of 32,501 cards eligible for paper support 
 - Angelic Ascension
 - Angelic Benediction
 - Angelic Blessing
+- Angelic Captain
 - Angelic Chorus
 - Angelic Cub
 - Angelic Curator
@@ -838,6 +841,8 @@ Council4 currently supports **16,142 of 32,501 cards eligible for paper support 
 - Auriok Salvagers
 - Auriok Sunchaser
 - Auriok Transfixer
+- Aurochs
+- Aurochs Herd
 - Auron's Inspiration
 - Aurora Eidolon
 - Aurora Griffin
@@ -1859,6 +1864,7 @@ Council4 currently supports **16,142 of 32,501 cards eligible for paper support 
 - Bugenhagen, Wise Elder
 - Builder's Blessing
 - Bulette
+- Bull Aurochs
 - Bull Cerodon
 - Bull Elephant
 - Bull Hippo
@@ -2178,6 +2184,7 @@ Council4 currently supports **16,142 of 32,501 cards eligible for paper support 
 - Cemetery Prowler
 - Cemetery Reaper
 - Cenn's Enlistment
+- Cenn's Heir
 - Cenote Scout
 - Censor
 - Centaur
@@ -2441,6 +2448,7 @@ Council4 currently supports **16,142 of 32,501 cards eligible for paper support 
 - Clear the Stage
 - Clearwater Pathway // Murkwater Pathway
 - Cleaver Riot
+- Cleaving Skyrider
 - Cleaving Sliver
 - Cleon, Merry Champion
 - Clergy en-Vec
@@ -3453,6 +3461,7 @@ Council4 currently supports **16,142 of 32,501 cards eligible for paper support 
 - Dinrova Horror
 - Diplomatic Immunity
 - Diplomatic Relations
+- Dire Fleet Captain
 - Dire Fleet Hoarder
 - Dire Fleet Interloper
 - Dire Fleet Poisoner
@@ -3542,6 +3551,7 @@ Council4 currently supports **16,142 of 32,501 cards eligible for paper support 
 - Divine Arrow
 - Divine Favor
 - Divine Offering
+- Divine Retribution
 - Divine Transformation
 - Divine Verdict
 - Divine Visitation
@@ -4949,6 +4959,7 @@ Council4 currently supports **16,142 of 32,501 cards eligible for paper support 
 - Flowstone Wyvern
 - Flumph
 - Flurry of Horns
+- Flurry of Wings
 - Flusterstorm
 - Flux Channeler
 - Flying Carpet
@@ -5698,6 +5709,7 @@ Council4 currently supports **16,142 of 32,501 cards eligible for paper support 
 - Goblin Outlander
 - Goblin Picker
 - Goblin Piker
+- Goblin Piledriver
 - Goblin Pyromancer
 - Goblin Raider
 - Goblin Rally
@@ -7316,6 +7328,7 @@ Council4 currently supports **16,142 of 32,501 cards eligible for paper support 
 - Kavu Climber
 - Kavu Glider
 - Kavu Howler
+- Kavu Mauler
 - Kavu Predator
 - Kavu Primarch
 - Kavu Scout
@@ -7342,6 +7355,7 @@ Council4 currently supports **16,142 of 32,501 cards eligible for paper support 
 - Keensight Mentor
 - Keep Out
 - Keep Safe
+- Keep Watch
 - Keeper of Kookus
 - Keeper of the Accord
 - Keeper of the Cadence
@@ -8345,6 +8359,7 @@ Council4 currently supports **16,142 of 32,501 cards eligible for paper support 
 - Marsh Lurker
 - Marsh Threader
 - Marsh Viper
+- Marshal of the Lost
 - Marshal of Zhalfir
 - Marshaling Cry
 - Marshmist Titan
@@ -9630,6 +9645,7 @@ Council4 currently supports **16,142 of 32,501 cards eligible for paper support 
 - Origin of the Hidden Ones
 - Origin of the Hulk
 - Origin Spellbomb
+- Orim's Prayer
 - Orim, Samite Healer
 - Ornamental Courage
 - Ornery Dilophosaur
@@ -10600,6 +10616,7 @@ Council4 currently supports **16,142 of 32,501 cards eligible for paper support 
 - Rampage of the Valkyries
 - Rampaging Baloths
 - Rampaging Brontodon
+- Rampaging Classmate
 - Rampaging Hippo
 - Rampaging Monument
 - Rampaging Rendhorn
@@ -10915,6 +10932,7 @@ Council4 currently supports **16,142 of 32,501 cards eligible for paper support 
 - Resounding Thunder
 - Resounding Wave
 - Resourceful Return
+- Respite
 - Resplendent Angel
 - Resplendent Mentor
 - Response // Resurgence
@@ -11961,6 +11979,7 @@ Council4 currently supports **16,142 of 32,501 cards eligible for paper support 
 - Shake the Foundations
 - Shalai and Hallar
 - Shalai's Acolyte
+- Shaleskin Bruiser
 - Shaleskin Plower
 - Shaman of Spring
 - Shaman of the Great Hunt
@@ -12545,6 +12564,7 @@ Council4 currently supports **16,142 of 32,501 cards eligible for paper support 
 - Smash to Smithereens
 - Smashing Spree
 - Smaug
+- Smellerbee, Rebel Fighter
 - Smelt
 - Smelt-Ward Gatekeepers
 - Smelt-Ward Ignus
@@ -13154,6 +13174,7 @@ Council4 currently supports **16,142 of 32,501 cards eligible for paper support 
 - Starved Rusalka
 - Stasis Snare
 - Static Net
+- Static Snare
 - Station Monitor
 - Status // Statue
 - Statute of Denial
@@ -13915,6 +13936,7 @@ Council4 currently supports **16,142 of 32,501 cards eligible for paper support 
 - Terror of Mount Velus
 - Terror of the Fairgrounds
 - Terrus Wurm
+- Tesak, Judith's Hellhound
 - Teshar, Ancestor's Apostle
 - Test of Endurance
 - Test of Faith
@@ -15770,6 +15792,7 @@ Council4 currently supports **16,142 of 32,501 cards eligible for paper support 
 - Winged Shepherd
 - Winged Sliver
 - Winged Words
+- Wingmate Roc
 - Wingnut, Bat on the Belfry
 - Wings of Aesthir
 - Wings of Hope

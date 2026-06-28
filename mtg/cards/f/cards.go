@@ -59,6 +59,7 @@ var Cards = []*game.CardDef{
 	FloatingShield,
 	FloriferousVinewall,
 	FloweringField,
+	FlurryOfWings,
 	FogElemental,
 	FootMystic,
 	FootbottomFeast,

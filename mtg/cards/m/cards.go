@@ -31,6 +31,7 @@ var Cards = []*game.CardDef{
 	MarduBlazebringer,
 	MarduWarshrieker,
 	MarkovEnforcer,
+	MarshalOfTheLost,
 	MarthaJones,
 	MartyredRusalka,
 	MartyrsTomb,
