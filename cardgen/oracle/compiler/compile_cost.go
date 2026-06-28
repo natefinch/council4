@@ -62,6 +62,10 @@ func compileCostComponent(component parser.CostComponent) CostComponent {
 			compiled.ObjectExcludedTypeKnown = true
 		}
 	}
+	if component.ObjectExcludedSubtypeKnown {
+		compiled.ObjectExcludedSubtype = component.ObjectExcludedSubtype
+		compiled.ObjectExcludedSubtypeKnown = true
+	}
 	applyCostObjectNoun(&compiled, component)
 	return compiled
 }

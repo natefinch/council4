@@ -405,6 +405,12 @@ type CostComponent struct {
 	ObjectExcludedType      types.Card
 	ObjectExcludedTypeKnown bool
 
+	// ObjectExcludedSubtype constrains a permanent cost object to permanents
+	// that lack the named subtype ("non-Lair land"), recognized by the parser.
+	// ObjectExcludedSubtypeKnown reports its presence.
+	ObjectExcludedSubtype      types.Sub
+	ObjectExcludedSubtypeKnown bool
+
 	RequireTapped    bool
 	RequireUntapped  bool
 	SourceZone       zone.Type

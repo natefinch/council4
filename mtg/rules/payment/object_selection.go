@@ -37,7 +37,7 @@ func objectCostChoiceForCost(additional cost.Additional) (objectCostChoice, bool
 	return objectCostChoice{
 		selection:       sel,
 		excludeSource:   additional.ExcludeSource,
-		requireUntapped: additional.Kind == cost.AdditionalTapPermanents,
+		requireUntapped: additional.Kind == cost.AdditionalTapPermanents || additional.RequireUntapped,
 	}, true
 }
 

@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 // sacrificeUnlessCostSequence asserts a single triggered ability whose body is
@@ -108,6 +109,64 @@ func TestLowerSacrificeSourceUnlessNonManaCost(t *testing.T) {
 	}
 }
 
+// TestLowerSacrificeSourceUnlessReturnToHandForms proves the broadened
+// return-to-hand controller payment recognizes the untapped-subtype (Karoo
+// cycle), "another" self-excluding (Faerie Impostor), and non-Lair excluded
+// subtype (Lair cycle) wordings, each lowering to a return-to-hand additional
+// cost that carries the matching object constraint.
+func TestLowerSacrificeSourceUnlessReturnToHandForms(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name       string
+		typeLine   string
+		oracleText string
+		check      func(t *testing.T, additional cost.Additional)
+	}{
+		{
+			name:       "Karoo Bounce",
+			typeLine:   "Land",
+			oracleText: "When this land enters, sacrifice it unless you return an untapped Plains you control to its owner's hand.",
+			check: func(t *testing.T, a cost.Additional) {
+				if !a.RequireUntapped {
+					t.Error("RequireUntapped = false, want true")
+				}
+				if a.SubtypesAny != (cost.SubtypeSet{types.Plains}) {
+					t.Errorf("SubtypesAny = %v, want {Plains}", a.SubtypesAny)
+				}
+			},
+		},
+		{
+			name:       "Lair Bounce",
+			typeLine:   "Land — Lair",
+			oracleText: "When this land enters, sacrifice it unless you return a non-Lair land you control to its owner's hand.",
+			check: func(t *testing.T, a cost.Additional) {
+				if a.ExcludeSubtype != types.Lair {
+					t.Errorf("ExcludeSubtype = %v, want Lair", a.ExcludeSubtype)
+				}
+				if !a.MatchPermanentType || a.PermanentType != types.Land {
+					t.Errorf("permanent type = (%v, %v), want (true, Land)", a.MatchPermanentType, a.PermanentType)
+				}
+			},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       tc.name,
+				Layout:     "normal",
+				TypeLine:   tc.typeLine,
+				OracleText: tc.oracleText,
+			})
+			additional := sacrificeUnlessCostSequence(t, face)
+			if additional.Kind != cost.AdditionalReturnToHand {
+				t.Fatalf("additional cost kind = %v, want AdditionalReturnToHand", additional.Kind)
+			}
+			tc.check(t, additional)
+		})
+	}
+}
+
 // TestLowerSacrificeSourceUnlessNonManaCostFailsClosed keeps the gate strict:
 // the trailing payment must be a single non-mana controller cost. A second
 // genuine effect after the gated sacrifice must not be folded into the cost, so
@@ -120,5 +179,20 @@ func TestLowerSacrificeSourceUnlessNonManaCostFailsClosed(t *testing.T) {
 		Layout:     "normal",
 		TypeLine:   "Creature — Ogre",
 		OracleText: "When this creature enters, sacrifice it unless you discard a card. Draw a card.",
+	})
+}
+
+// TestLowerSacrificeSourceUnlessReturnAnotherFailsClosed keeps the source-
+// excluding ("another") return cost out of reach until the return-to-hand
+// payment path threads the ability's source permanent. Lowering must fail
+// closed rather than emit a cost that would let the payer return the source
+// itself to satisfy "return another creature you control."
+func TestLowerSacrificeSourceUnlessReturnAnotherFailsClosed(t *testing.T) {
+	t.Parallel()
+	lowerSingleFaceExpectingUnsupported(t, &ScryfallCard{
+		Name:       "Bounce Faerie",
+		Layout:     "normal",
+		TypeLine:   "Creature — Faerie",
+		OracleText: "When this creature enters, sacrifice it unless you return another creature you control to its owner's hand.",
 	})
 }

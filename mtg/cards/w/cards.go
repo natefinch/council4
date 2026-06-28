@@ -24,6 +24,7 @@ var Cards = []*game.CardDef{
 	WardenOfTheEye,
 	WarriorAngel,
 	WaryFarmer,
+	WaterspoutDjinn,
 	WaterspoutWarden,
 	WayspeakerBodyguard,
 	Weatherlight,

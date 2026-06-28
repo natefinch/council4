@@ -473,6 +473,9 @@ func SelectionForAdditionalCost(additional cost.Additional) (game.Selection, boo
 	if additional.ExcludePermanentType != "" {
 		sel.ExcludedTypes = append(sel.ExcludedTypes, additional.ExcludePermanentType)
 	}
+	if additional.ExcludeSubtype != "" {
+		sel.ExcludedSubtype = additional.ExcludeSubtype
+	}
 	if additional.RequireSupertype != "" {
 		sel.Supertypes = append(sel.Supertypes, additional.RequireSupertype)
 	}
