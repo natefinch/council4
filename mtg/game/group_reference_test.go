@@ -108,6 +108,8 @@ func TestGroupReferenceConstructorsAreValid(t *testing.T) {
 		AttachedObjectGroup(SourcePermanentReference()),
 		ObjectControlledGroup(EventPermanentReference(), creatures),
 		ObjectControlledGroupExcluding(EventPermanentReference(), creatures, EventPermanentReference()),
+		PlayerControlledGroup(TargetPlayerReference(0), creatures),
+		PlayerControlledGroupExcluding(TargetPlayerReference(0), creatures, SourcePermanentReference()),
 	}
 	for _, group := range groups {
 		if !group.Valid() {
@@ -148,6 +150,23 @@ func TestGroupReferenceValidateRejectsStructuralProblems(t *testing.T) {
 			exclude: opt.Val(SourcePermanentReference()),
 		},
 		"object controlled without anchor": {domain: GroupDomainObjectControlled, selection: creatures},
+		"player controlled without player": {domain: GroupDomainPlayerControlled, selection: creatures},
+		"player controlled with object anchor": {
+			domain:       GroupDomainPlayerControlled,
+			selection:    creatures,
+			playerAnchor: opt.Val(TargetPlayerReference(0)),
+			anchor:       opt.Val(SourcePermanentReference()),
+		},
+		"player anchor on battlefield group": {
+			domain:       GroupDomainBattlefield,
+			selection:    creatures,
+			playerAnchor: opt.Val(TargetPlayerReference(0)),
+		},
+		"bad player anchor reference": {
+			domain:       GroupDomainPlayerControlled,
+			selection:    creatures,
+			playerAnchor: opt.Val(playerReferenceForTest(PlayerReferenceKind(99), 0, opt.V[ObjectReference]{})),
+		},
 		"bad anchor reference": {
 			domain: GroupDomainObjectControlled,
 			anchor: opt.Val(objectReferenceForTest(ObjectReferenceLinkedObject, 0, "")),
@@ -174,6 +193,24 @@ func TestGroupReferenceAccessors(t *testing.T) {
 	}
 	if group.Selection().Empty() {
 		t.Fatal("Selection() unexpectedly empty")
+	}
+}
+
+func TestPlayerControlledGroupAccessors(t *testing.T) {
+	creatures := Selection{RequiredTypes: []types.Card{types.Creature}}
+	group := PlayerControlledGroupExcluding(TargetPlayerReference(0), creatures, SourcePermanentReference())
+	if group.Domain() != GroupDomainPlayerControlled {
+		t.Fatalf("Domain() = %d, want GroupDomainPlayerControlled", group.Domain())
+	}
+	player, ok := group.PlayerAnchor()
+	if !ok || player.Kind() != PlayerReferenceTargetPlayer || player.TargetIndex() != 0 {
+		t.Fatalf("PlayerAnchor() = %+v, %v", player, ok)
+	}
+	if _, ok := group.Anchor(); ok {
+		t.Fatal("Anchor() = ok, want no object anchor for a player-controlled group")
+	}
+	if exclude, ok := group.Exclusion(); !ok || exclude.Kind() != ObjectReferenceSourcePermanent {
+		t.Fatalf("Exclusion() = %+v, %v", exclude, ok)
 	}
 }
 

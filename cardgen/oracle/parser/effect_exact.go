@@ -4497,16 +4497,30 @@ func exactCounterPlacementEffectSyntax(effect *EffectSyntax) bool {
 	}
 	objects := []string{}
 	switch {
-	case len(effect.Targets) == 1 && effect.Targets[0].Exact:
-		object := effect.Targets[0].Text
-		// "Put a +1/+1 counter on each of up to two target creatures." places one
-		// counter on each of several targets, so the canonical object reads "each
-		// of <target>" for any genuine multi-target cardinality (Max >= 2). The
-		// singular and "up to one" forms keep the bare target text.
-		if effect.Targets[0].Cardinality.Max >= 2 {
-			object = "each of " + object
+	case len(effect.Targets) == 1 && (effect.Targets[0].Exact || counterPlacementTargetIsPlayerControls(effect.Targets[0])):
+		// A "<group> target <player|opponent> controls" placement reconstructs
+		// the recipient group jointly with its targeted player; the targeted
+		// player supplies the group's controller and does not receive the
+		// counter itself. Try that reconstruction first, then fall back to the
+		// standard exact single target (which covers a player-counter placement
+		// such as "Put a poison counter on target player.", whose recipient is
+		// the targeted player).
+		if object, ok := counterPlacementTargetPlayerControlsObject(effect); ok {
+			objects = append(objects, object)
+		} else if effect.Targets[0].Exact {
+			object := effect.Targets[0].Text
+			// "Put a +1/+1 counter on each of up to two target creatures."
+			// places one counter on each of several targets, so the canonical
+			// object reads "each of <target>" for any genuine multi-target
+			// cardinality (Max >= 2). The singular and "up to one" forms keep
+			// the bare target text.
+			if effect.Targets[0].Cardinality.Max >= 2 {
+				object = "each of " + object
+			}
+			objects = append(objects, object)
+		} else {
+			return false
 		}
-		objects = append(objects, object)
 	case len(effect.Targets) == 0:
 		if effect.CounterRecipientAttached {
 			// The attached recipient is "enchanted creature" (Aura) or
@@ -4562,7 +4576,61 @@ func exactCounterPlacementEffectSyntax(effect *EffectSyntax) bool {
 	return false
 }
 
-// distributeCountersEffect reports whether a counter-placement effect is the
+// counterPlacementTargetIsPlayerControls reports whether a counter-placement
+// target is the bare single player or opponent of a "<group> target <player|
+// opponent> controls" group recipient. The targeted player supplies the
+// recipient group's controller relationship rather than receiving the counter
+// itself, so this target is reconstructed jointly with the recipient group
+// (counterPlacementTargetPlayerControlsObject) rather than through the standard
+// exact-target path.
+func counterPlacementTargetIsPlayerControls(target TargetSyntax) bool {
+	switch target.Selection.Kind {
+	case SelectionPlayer, SelectionOpponent:
+	default:
+		return false
+	}
+	return target.Cardinality.Min == 1 && target.Cardinality.Max == 1 &&
+		!target.Selection.Other &&
+		target.Selection.Controller == SelectionControllerAny
+}
+
+// counterPlacementTargetPlayerControlsObject reconstructs the recipient phrase
+// for a group counter placement whose group is every permanent a single targeted
+// player controls ("each creature target player controls", Meadowboon; "each
+// creature target opponent controls"). The targeted player is the effect's sole
+// target and carries no qualifier of its own; the recipient permanent group is
+// the effect's selection with no controller of its own (the controller
+// relationship is supplied by the targeted player). It returns the combined
+// "<group> target <player|opponent> controls" object only for the bare single
+// player or opponent target; every other shape fails closed so the byte-exact
+// round-trip keeps unrepresentable wordings unsupported.
+func counterPlacementTargetPlayerControlsObject(effect *EffectSyntax) (string, bool) {
+	target := effect.Targets[0]
+	if target.Cardinality.Min != 1 || target.Cardinality.Max != 1 {
+		return "", false
+	}
+	var controlsPhrase string
+	switch target.Selection.Kind {
+	case SelectionPlayer:
+		controlsPhrase = "target player controls"
+	case SelectionOpponent:
+		controlsPhrase = "target opponent controls"
+	default:
+		return "", false
+	}
+	if target.Selection.Other || target.Selection.Controller != SelectionControllerAny {
+		return "", false
+	}
+	if effect.Selection.Controller != SelectionControllerAny {
+		return "", false
+	}
+	group, ok := exactGroupDamagePermanentRecipientText(effect.Selection)
+	if !ok {
+		return "", false
+	}
+	return group + " " + controlsPhrase, true
+}
+
 // "Distribute N <kind> counters among <cardinality> target creatures" form: a
 // fixed (or X) total of counters split among the chosen targets, at least one
 // each, the counter analog of divided damage. It is detected by the same

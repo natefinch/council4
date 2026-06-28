@@ -201,17 +201,46 @@ func TestLowerGroupCounterDynamicCountSubtype(t *testing.T) {
 	}
 }
 
-// TestLowerGroupCounterTargetPlayerControlledRejected confirms a group whose
-// controller is a runtime-chosen target player ("each creature target player
-// controls") fails closed: the recipient has no static controller relation and
-// no target-player group binding exists, so it must stay unsupported rather than
-// lower to a wrong group.
-func TestLowerGroupCounterTargetPlayerControlledRejected(t *testing.T) {
+// TestLowerGroupCounterTargetPlayerControlled proves a group counter placement
+// whose recipient is every creature a targeted player controls ("Put a +1/+1
+// counter on each creature target player controls.") lowers to an AddCounter on
+// a player-controlled group anchored to the spell's single player target. The
+// targeted player supplies the group's controller relationship rather than
+// receiving the counter itself.
+func TestLowerGroupCounterTargetPlayerControlled(t *testing.T) {
 	t.Parallel()
-	lowerSingleFaceExpectingUnsupported(t, &ScryfallCard{
+	face := lowerSingleFace(t, &ScryfallCard{
 		Name:       "Test Target Player Group",
 		Layout:     "normal",
 		TypeLine:   "Instant",
 		OracleText: "Put a +1/+1 counter on each creature target player controls.",
 	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("no spell ability lowered")
+	}
+	content := face.SpellAbility.Val
+	if len(content.Modes) != 1 {
+		t.Fatalf("modes = %d, want 1", len(content.Modes))
+	}
+	mode := content.Modes[0]
+	if len(mode.Targets) != 1 {
+		t.Fatalf("targets = %d, want 1", len(mode.Targets))
+	}
+	if mode.Targets[0].Allow != game.TargetAllowPlayer || mode.Targets[0].Constraint != "target player" {
+		t.Fatalf("target spec = %+v, want a 'target player' player target", mode.Targets[0])
+	}
+	if len(mode.Sequence) != 1 {
+		t.Fatalf("sequence len = %d, want 1", len(mode.Sequence))
+	}
+	addCounter, ok := mode.Sequence[0].Primitive.(game.AddCounter)
+	if !ok {
+		t.Fatalf("primitive = %#v, want AddCounter", mode.Sequence[0].Primitive)
+	}
+	if addCounter.Group.Domain() != game.GroupDomainPlayerControlled {
+		t.Fatalf("group domain = %d, want GroupDomainPlayerControlled", addCounter.Group.Domain())
+	}
+	player, ok := addCounter.Group.PlayerAnchor()
+	if !ok || player.Kind() != game.PlayerReferenceTargetPlayer || player.TargetIndex() != 0 {
+		t.Fatalf("group player anchor = %+v, want TargetPlayerReference(0)", player)
+	}
 }

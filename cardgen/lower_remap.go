@@ -486,11 +486,14 @@ func transformBattlefieldSource(source game.BattlefieldSource, transform targetI
 	return source, source.Valid()
 }
 
-// transformGroupReference transforms the anchor and exclusion object references
-// of a battlefield or object-controlled group, leaving its characteristic
-// Selection (which carries no target index) unchanged. It backs the inherited
-// source-power group damage shape ("It deals damage equal to its power to each
-// other creature."), whose recipient group excludes the dealing target. It fails
+// transformGroupReference transforms the anchor, exclusion, and player-anchor
+// references of a battlefield, object-controlled, or player-controlled group,
+// leaving its characteristic Selection (which carries no target index)
+// unchanged. It backs the inherited source-power group damage shape ("It deals
+// damage equal to its power to each other creature."), whose recipient group
+// excludes the dealing target, and the targeted-player counter placement ("Put a
+// +1/+1 counter on each creature target player controls."), whose recipient
+// group's player anchor moves with the remapped player target slot. It fails
 // closed for any other group domain.
 func transformGroupReference(group game.GroupReference, transform targetIndexTransform) (game.GroupReference, bool) {
 	selection := group.Selection()
@@ -524,6 +527,19 @@ func transformGroupReference(group game.GroupReference, transform targetIndexTra
 			return game.ObjectControlledGroupExcluding(anchor.Val, selection, exclude.Val), true
 		}
 		return game.ObjectControlledGroup(anchor.Val, selection), true
+	case game.GroupDomainPlayerControlled:
+		player, ok := group.PlayerAnchor()
+		if !ok {
+			return game.GroupReference{}, false
+		}
+		player, ok = transformPlayerReference(player, transform)
+		if !ok {
+			return game.GroupReference{}, false
+		}
+		if exclude.Exists {
+			return game.PlayerControlledGroupExcluding(player, selection, exclude.Val), true
+		}
+		return game.PlayerControlledGroup(player, selection), true
 	default:
 		return game.GroupReference{}, false
 	}

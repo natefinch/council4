@@ -591,6 +591,9 @@ func lowerCounterPlacementSpell(
 	if content, ok := lowerSingleChoiceCounterPlacement(ctx); ok {
 		return content, nil
 	}
+	if content, ok := lowerTargetPlayerControlledCounterPlacement(ctx); ok {
+		return content, nil
+	}
 	if len(ctx.content.Targets) == 0 &&
 		len(ctx.content.References) == 1 &&
 		(ctx.content.References[0].Binding == compiler.ReferenceBindingSource ||
@@ -1022,10 +1025,7 @@ func groupCounterQualifierClause(effect *compiler.CompiledEffect) bool {
 // "each legendary creature you control") so dynamic-count placements reach the
 // same groups other mass effects already support.
 func groupCounterRecipient(sel compiler.CompiledSelector) (game.GroupReference, bool) {
-	if group, ok := damageGroupRecipient(sel); ok {
-		return group, true
-	}
-	selection, ok := massGroupSelection(sel)
+	selection, ok := groupCounterRecipientSelection(sel)
 	if !ok {
 		return game.GroupReference{}, false
 	}
@@ -1033,6 +1033,125 @@ func groupCounterRecipient(sel compiler.CompiledSelector) (game.GroupReference, 
 		return game.BattlefieldGroupExcluding(selection, game.SourcePermanentReference()), true
 	}
 	return game.BattlefieldGroup(selection), true
+}
+
+// groupCounterRecipientSelection reconstructs the runtime Selection of a counter
+// placement's battlefield group, reusing the group-damage recipient projection
+// first (so groups already accepted for group damage project identically) and
+// falling back to the broader mass-group selection (which represents supertype
+// filters such as "each legendary creature you control"). It is shared by the
+// battlefield-anchored group recipient and the player-controlled group recipient
+// so both accept exactly the same recipient filters.
+func groupCounterRecipientSelection(sel compiler.CompiledSelector) (game.Selection, bool) {
+	if selection, ok := damageGroupSelection(sel); ok {
+		return selection, true
+	}
+	return massGroupSelection(sel)
+}
+
+// lowerTargetPlayerControlledCounterPlacement lowers an exact counter placement
+// whose recipient is every permanent a single targeted player or opponent
+// controls ("Put a +1/+1 counter on each creature target player controls",
+// Practiced Offense; "put a -1/-1 counter on each creature target player
+// controls", Contagion Engine). The targeted player supplies the recipient
+// group's controller relationship, so the placement carries one player target
+// and a player-controlled group whose selection narrows that player's
+// permanents through the shared group-counter recipient projection. It is
+// restricted to a supported permanent counter kind and a fixed or recognized
+// dynamic amount in the controller effect context, failing closed for player
+// counters, negation, single-choice recipients, controller-constrained
+// recipients, and any conditional or modal shape.
+func lowerTargetPlayerControlledCounterPlacement(ctx contentCtx) (game.AbilityContent, bool) {
+	effect := ctx.content.Effects[0]
+	if len(ctx.content.Targets) != 1 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		!counterPlacementKeywordsBenign(ctx.content.Keywords, effect.CounterKind) ||
+		!effect.Exact ||
+		effect.Negated ||
+		effect.Context != parser.EffectContextController ||
+		!effect.CounterKindKnown ||
+		!compiler.CounterKindPlacementSupported(effect.CounterKind) ||
+		effect.CounterKind.PlayerOnly() ||
+		effect.CounterRecipientSingleChoice ||
+		effect.Selector.Controller != compiler.ControllerAny {
+		return game.AbilityContent{}, false
+	}
+	target, ok := targetControlsPlayerSpec(ctx.content.Targets[0])
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	references := ctx.content.References
+	if effect.Selector.MatchCounter || effect.Selector.MatchAnyCounter {
+		references = counterQualifierFilteredReferences(references)
+	}
+	amount, ok := groupCounterPlacementAmount(effect.Amount, references)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	group, ok := targetPlayerControlledCounterGroup(effect.Selector, game.TargetPlayerReference(0))
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Targets: []game.TargetSpec{target},
+		Sequence: []game.Instruction{{
+			Primitive: game.AddCounter{
+				Amount:      amount,
+				Group:       group,
+				CounterKind: effect.CounterKind,
+			},
+		}},
+	}.Ability(), true
+}
+
+// targetControlsPlayerSpec builds the single player target of a "<group> target
+// <player|opponent> controls" counter placement. The compiled target's Text
+// carries the trailing "controls" relationship, so the spec's constraint is
+// reconstructed from the selector kind rather than copied from the target text,
+// and the target is restricted to the bare single player or opponent.
+func targetControlsPlayerSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
+	if !targetCardinalityIsOne(target) || target.Selector.Controller != compiler.ControllerAny {
+		return game.TargetSpec{}, false
+	}
+	spec := game.TargetSpec{
+		MinTargets: 1,
+		MaxTargets: 1,
+		Allow:      game.TargetAllowPlayer,
+	}
+	switch target.Selector.Kind {
+	case compiler.SelectorPlayer:
+		spec.Constraint = "target player"
+	case compiler.SelectorOpponent:
+		spec.Constraint = "target opponent"
+		spec.Selection = opt.Val(game.Selection{Player: game.PlayerOpponent})
+	default:
+		return game.TargetSpec{}, false
+	}
+	return spec, true
+}
+
+// targetPlayerControlledCounterGroup reconstructs the recipient group of a
+// counter placement on every permanent a targeted player controls. The player
+// reference supplies the controller relationship, so the recipient selector must
+// not carry its own controller constraint; the selection narrows the player's
+// permanents through the shared group-counter recipient projection, excluding
+// the source for an "other" recipient.
+func targetPlayerControlledCounterGroup(
+	sel compiler.CompiledSelector,
+	player game.PlayerReference,
+) (game.GroupReference, bool) {
+	if sel.Controller != compiler.ControllerAny {
+		return game.GroupReference{}, false
+	}
+	selection, ok := groupCounterRecipientSelection(sel)
+	if !ok {
+		return game.GroupReference{}, false
+	}
+	if sel.Another || sel.Other {
+		return game.PlayerControlledGroupExcluding(player, selection, game.SourcePermanentReference()), true
+	}
+	return game.PlayerControlledGroup(player, selection), true
 }
 
 // lowerReferencedCounterPlacement lowers an exact fixed counter placement whose

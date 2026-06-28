@@ -361,3 +361,44 @@ func TestExactForEachCounterPlacementFailsClosed(t *testing.T) {
 		}
 	}
 }
+
+// TestExactTargetPlayerControlledGroupCounterPlacementAccepts keeps the group
+// counter placement whose recipient is every permanent a single targeted player
+// or opponent controls inside the exact production. The targeted player supplies
+// the recipient group's controller relationship rather than receiving the
+// counter, so the recipient group and its targeted player reconstruct jointly.
+func TestExactTargetPlayerControlledGroupCounterPlacementAccepts(t *testing.T) {
+	t.Parallel()
+	accepted := []string{
+		"Put a +1/+1 counter on each creature target player controls.",
+		"Put a -1/-1 counter on each creature target player controls.",
+		"Put a +1/+1 counter on each creature target opponent controls.",
+		"Put two +1/+1 counters on each creature target player controls.",
+		"Put a +1/+1 counter on each artifact target player controls.",
+	}
+	for _, source := range accepted {
+		if !counterPlacementExact(t, source) {
+			t.Errorf("counterPlacementExact(%q) = false, want true", source)
+		}
+	}
+}
+
+// TestExactTargetPlayerCounterPlacementStillAccepts is a regression guard that
+// the joint "<group> target player controls" reconstruction did not capture the
+// ordinary single-recipient placements: a counter placed on the targeted player
+// itself ("Put a poison counter on target player.") and a counter placed on a
+// single targeted creature both still round-trip through their own exact
+// productions.
+func TestExactTargetPlayerCounterPlacementStillAccepts(t *testing.T) {
+	t.Parallel()
+	accepted := []string{
+		"Put a poison counter on target player.",
+		"Put a +1/+1 counter on target creature.",
+		"Put a +1/+1 counter on each creature you control.",
+	}
+	for _, source := range accepted {
+		if !counterPlacementExact(t, source) {
+			t.Errorf("counterPlacementExact(%q) = false, want true", source)
+		}
+	}
+}

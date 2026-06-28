@@ -46,6 +46,7 @@ var Cards = []*game.CardDef{
 	RendFlesh,
 	RenegadeRallier,
 	RenownedWeaponsmith,
+	RequisitionRaid,
 	ResoundingScream,
 	RestorationAngel,
 	ReturnToTheRanks,
