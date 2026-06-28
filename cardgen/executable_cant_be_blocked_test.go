@@ -186,7 +186,7 @@ func TestGenerateExecutableCardSourceCantBeBlockedThisTurnFailsClosed(t *testing
 		"Target creature can't be blocked.",
 		"Target creature can't be blocked until end of turn.",
 		"Target creature can't be blocked this turn except by Walls.",
-		"Target creature can't attack this turn.",
+		"Target creature can't be blocked this turn unless its controller pays {2}.",
 		"Target creature can't be blocked this turn if it's tapped.",
 	}
 	for _, oracle := range rejected {

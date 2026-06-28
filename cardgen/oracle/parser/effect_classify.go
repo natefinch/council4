@@ -1027,6 +1027,58 @@ func cantBlockThisTurnVerbAt(tokens []shared.Token, index int) bool {
 		equalWord(tokens[index+3], "turn")
 }
 
+// cantAttackThisTurnVerbAt reports whether the temporary prohibition "can't
+// attack this turn" / "cannot attack this turn" begins at index. It anchors the
+// temporary can't-attack resolving effect ("Target creature can't attack this
+// turn.") on the negated "can't"/"cannot" so the subject is the targeted
+// creature. Like the sibling can't-block recognizer, the trailing "this turn"
+// distinguishes this resolving, until-end-of-turn effect from the continuous
+// static "can't attack" prohibitions, which keep flowing through the
+// static-declaration path. The combined "can't attack or block this turn" form
+// is recognized separately by cantAttackOrBlockThisTurnVerbAt, so this matcher
+// excludes it.
+func cantAttackThisTurnVerbAt(tokens []shared.Token, index int) bool {
+	return (equalWord(tokens[index], "can't") || equalWord(tokens[index], "cannot")) &&
+		index+3 < len(tokens) &&
+		equalWord(tokens[index+1], "attack") &&
+		equalWord(tokens[index+2], "this") &&
+		equalWord(tokens[index+3], "turn")
+}
+
+// cantAttackOrBlockThisTurnVerbAt reports whether the combined temporary
+// prohibition "can't attack or block this turn" / "cannot attack or block this
+// turn" begins at index. It anchors the temporary can't-attack-or-block
+// resolving effect ("Target creature can't attack or block this turn.",
+// Thundersong Trumpeter) on the negated "can't"/"cannot". The fixed "attack or
+// block this turn" tail distinguishes this resolving effect from the continuous
+// static prohibition that carries no turn duration.
+func cantAttackOrBlockThisTurnVerbAt(tokens []shared.Token, index int) bool {
+	return (equalWord(tokens[index], "can't") || equalWord(tokens[index], "cannot")) &&
+		index+5 < len(tokens) &&
+		equalWord(tokens[index+1], "attack") &&
+		equalWord(tokens[index+2], "or") &&
+		equalWord(tokens[index+3], "block") &&
+		equalWord(tokens[index+4], "this") &&
+		equalWord(tokens[index+5], "turn")
+}
+
+// mustAttackTargetVerbAt reports whether the single-target forced-attack verb
+// "attacks this turn if able" begins at index. It anchors the temporary
+// single-target must-attack resolving effect ("Target creature attacks this
+// turn if able.", Kookus, Norritt) on the "attacks" verb so the subject is the
+// targeted creature. The fixed "this turn if able" tail distinguishes the
+// one-shot, until-end-of-turn requirement from the continuous static "attacks
+// each combat if able" rule and the directed "attacks <player> this turn if
+// able" form, both of which fail closed here.
+func mustAttackTargetVerbAt(tokens []shared.Token, index int) bool {
+	return equalWord(tokens[index], "attacks") &&
+		index+4 < len(tokens) &&
+		equalWord(tokens[index+1], "this") &&
+		equalWord(tokens[index+2], "turn") &&
+		equalWord(tokens[index+3], "if") &&
+		equalWord(tokens[index+4], "able")
+}
+
 // negatedNextUntapStepVerbAt reports whether the token at index begins the
 // standalone stun predicate "doesn't/don't untap during ... next untap step"
 // that follows a leading target subject ("Target creature doesn't untap during
@@ -1343,6 +1395,12 @@ func effectKindAt(tokens []shared.Token, index int) EffectKind {
 		return EffectCantBeBlocked
 	case cantBlockThisTurnVerbAt(tokens, index):
 		return EffectCantBlock
+	case cantAttackOrBlockThisTurnVerbAt(tokens, index):
+		return EffectCantAttackOrBlock
+	case cantAttackThisTurnVerbAt(tokens, index):
+		return EffectCantAttack
+	case mustAttackTargetVerbAt(tokens, index):
+		return EffectMustAttack
 	case kind == EffectGrantKeyword && index >= 2 &&
 		(equalWord(tokens[index-2], "opponent") || equalWord(tokens[index-2], "opponents")) &&
 		equalWord(tokens[index-1], "you"):

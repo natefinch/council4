@@ -33,6 +33,7 @@ var Cards = []*game.CardDef{
 	EmblemOfTheWarmind,
 	EmeraldCharm,
 	EmrakulSMessenger,
+	Endbringer,
 	EndlessWurm,
 	EnduringCourage,
 	EngulfingSlagwurm,

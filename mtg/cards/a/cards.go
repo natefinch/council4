@@ -37,6 +37,7 @@ var Cards = []*game.CardDef{
 	AlabasterLeech,
 	AlabasterWall,
 	AlabornVeteran,
+	AlchemistSVial,
 	AlharuSolemnRitualist,
 	AlibouAncientWitness,
 	AllIsDust,

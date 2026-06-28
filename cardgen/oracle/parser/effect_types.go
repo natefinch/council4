@@ -20,6 +20,8 @@ const (
 	EffectAddMana                   EffectKind = "EffectAddMana"
 	EffectAttach                    EffectKind = "EffectAttach"
 	EffectCanAttackAsThoughDefender EffectKind = "EffectCanAttackAsThoughDefender"
+	EffectCantAttack                EffectKind = "EffectCantAttack"
+	EffectCantAttackOrBlock         EffectKind = "EffectCantAttackOrBlock"
 	EffectCantBeBlocked             EffectKind = "EffectCantBeBlocked"
 	EffectCantBlock                 EffectKind = "EffectCantBlock"
 	EffectCast                      EffectKind = "EffectCast"
@@ -178,13 +180,16 @@ const (
 	// CounterKnown (unset for the kind-agnostic "all counters" form), and the
 	// fixed count is in Amount. MoveCountersAll records the "all counters" form.
 	EffectMoveCounters EffectKind = "EffectMoveCounters"
-	// EffectMustAttack models the one-shot, turn-scoped forced-attack effect
-	// "<group> attack this turn if able." (Bident of Thassa: "Creatures your
-	// opponents control attack this turn if able."). The affected creature group
-	// is carried in StaticSubject (creatures you control, creatures your
-	// opponents control, or all creatures); lowering reads it to scope the
-	// continuous RuleEffectMustAttack rule effect, applied with a this-turn
-	// duration.
+	// EffectMustAttack models the one-shot, turn-scoped forced-attack effect in
+	// two recognized shapes. The group form "<group> attack this turn if able."
+	// (Bident of Thassa: "Creatures your opponents control attack this turn if
+	// able.") carries its affected creature group in StaticSubject (creatures you
+	// control, creatures your opponents control, or all creatures). The
+	// single-target form "Target creature attacks this turn if able." (Kookus,
+	// Norritt) carries one creature target and EffectContextTarget instead.
+	// Lowering reads the context to scope the continuous RuleEffectMustAttack rule
+	// effect onto the affected group or the targeted creature, applied with a
+	// this-turn duration.
 	EffectMustAttack EffectKind = "EffectMustAttack"
 	// EffectDirectedMustAttack models The Brothers' War chapter II forced-attack
 	// effect "Until your next turn, each creature they control attacks the other

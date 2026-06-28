@@ -187,12 +187,15 @@ func conditionAttacksEachCombatIfAble(semantic []shared.Token) bool {
 
 // conditionForcedAttackIfAble reports whether the semantic tokens spell a
 // forced-attack restriction whose trailing "if able" must not become a
-// standalone condition: the static "attacks each combat if able" form or the
+// standalone condition: the static "attacks each combat if able" form, the
 // one-shot group "attack this turn if able" form (Bident of Thassa: "Creatures
-// your opponents control attack this turn if able.").
+// your opponents control attack this turn if able."), or the one-shot
+// single-target "attacks this turn if able" form (Heckling Fiends: "Target
+// creature attacks this turn if able.").
 func conditionForcedAttackIfAble(semantic []shared.Token) bool {
 	return conditionAttacksEachCombatIfAble(semantic) ||
-		conditionContainsSequence(semantic, 0, "attack", "this", "turn", "if", "able")
+		conditionContainsSequence(semantic, 0, "attack", "this", "turn", "if", "able") ||
+		conditionContainsSequence(semantic, 0, "attacks", "this", "turn", "if", "able")
 }
 
 // conditionAsLongAsIsDuration reports whether an "as long as" introducer at index

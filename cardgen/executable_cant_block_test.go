@@ -83,7 +83,6 @@ func TestGenerateExecutableCardSourceCantBlockThisTurnFailsClosed(t *testing.T) 
 		"Target creature can't block.",
 		"Target creature can't block this turn unless you pay {1}.",
 		"Any number of target creatures can't block this turn.",
-		"Target creature can't attack this turn.",
 	}
 	for _, oracle := range rejected {
 		card := &ScryfallCard{

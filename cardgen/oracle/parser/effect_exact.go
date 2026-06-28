@@ -24,6 +24,12 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return exactCantBeBlockedEffectSyntax(effect)
 	case EffectCantBlock:
 		return exactCantBlockEffectSyntax(effect)
+	case EffectCantAttack:
+		return exactCantAttackEffectSyntax(effect)
+	case EffectCantAttackOrBlock:
+		return exactCantAttackOrBlockEffectSyntax(effect)
+	case EffectMustAttack:
+		return exactTargetMustAttackEffectSyntax(effect)
 	case EffectCounter:
 		return exactCounterEffectSyntax(effect)
 	case EffectCopyStackObject:
@@ -2112,6 +2118,71 @@ func exactCantBlockEffectSyntax(effect *EffectSyntax) bool {
 		strings.EqualFold(
 			exactEffectClauseText(effect),
 			effect.Targets[0].Text+" can't block this turn.",
+		)
+}
+
+// exactCantAttackEffectSyntax recognizes the temporary combat-restriction
+// resolving effect "<targets> can't attack this turn." that grants the targeted
+// creature(s) a "can't attack" restriction until end of turn. It mirrors the
+// sibling can't-block recognizer, accepting the single-target and optional
+// multi-target cardinalities ("Up to two target creatures can't attack this
+// turn.") the lowering applies per target. The clause is reconstructed
+// byte-exactly from the target's own text, so every deviation fails closed (a
+// different duration, a "can't attack you"/"can't attack unless ..." rider, or
+// the combined "can't attack or block this turn." form recognized separately).
+func exactCantAttackEffectSyntax(effect *EffectSyntax) bool {
+	return exactTargetCombatClause(effect, "can't attack this turn.")
+}
+
+// exactCantAttackOrBlockEffectSyntax recognizes the combined temporary
+// combat-restriction resolving effect "<targets> can't attack or block this
+// turn." (Thundersong Trumpeter, Off Balance), which grants the targeted
+// creature(s) both a "can't attack" and a "can't block" restriction until end of
+// turn. The clause is reconstructed byte-exactly from the target's own text, so
+// any other duration, rider, or qualifier fails closed.
+func exactCantAttackOrBlockEffectSyntax(effect *EffectSyntax) bool {
+	return exactTargetCombatClause(effect, "can't attack or block this turn.")
+}
+
+// exactTargetMustAttackEffectSyntax recognizes the temporary single-target
+// forced-attack resolving effect "<target> attacks this turn if able." (Kookus,
+// Norritt), which forces the targeted creature to attack this turn. The clause
+// text reconstruction strips the trailing "if able" qualifier, so the predicate
+// matched here is "attacks this turn."; the verb recognizer already required the
+// full "attacks this turn if able" wording before this kind is assigned. The
+// group "<group> attack this turn if able." form (owned by the dedicated group
+// recognizer) and the directed "attacks <player> this turn if able" form both
+// fail closed because they never reach this single-target recognizer.
+func exactTargetMustAttackEffectSyntax(effect *EffectSyntax) bool {
+	return effect.Duration == EffectDurationThisTurn &&
+		effect.Context == EffectContextTarget &&
+		len(effect.Targets) == 1 &&
+		effect.Targets[0].Exact &&
+		effect.Targets[0].Cardinality.Min == 1 &&
+		effect.Targets[0].Cardinality.Max == 1 &&
+		strings.EqualFold(
+			exactEffectClauseText(effect),
+			effect.Targets[0].Text+" attacks this turn.",
+		)
+}
+
+// exactTargetCombatClause reports whether effect is an exact, this-turn,
+// creature-target combat clause whose reconstructed text is exactly the
+// target's own text followed by predicate. It backs the temporary
+// combat-restriction recognizers (can't attack, can't attack or block) that
+// share the same this-turn, byte-exact reconstruction shape and the optional
+// multi-target cardinalities applied per target by lowering.
+func exactTargetCombatClause(effect *EffectSyntax, predicate string) bool {
+	return effect.Duration == EffectDurationThisTurn &&
+		effect.Context == EffectContextTarget &&
+		len(effect.Targets) == 1 &&
+		effect.Targets[0].Exact &&
+		effect.Targets[0].Cardinality.Min >= 0 &&
+		effect.Targets[0].Cardinality.Max >= 1 &&
+		effect.Targets[0].Cardinality.Min <= effect.Targets[0].Cardinality.Max &&
+		strings.EqualFold(
+			exactEffectClauseText(effect),
+			effect.Targets[0].Text+" "+predicate,
 		)
 }
 

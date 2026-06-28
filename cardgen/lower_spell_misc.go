@@ -1029,6 +1029,10 @@ func lowerPlayerRuleOrPhaseEffect(ctx contentCtx) (game.AbilityContent, *shared.
 		content, diagnostic := lowerSpellsCantBeCountered(ctx)
 		return content, diagnostic, true
 	case compiler.EffectMustAttack:
+		if ctx.content.Effects[0].Context == parser.EffectContextTarget {
+			content, diagnostic := lowerTargetMustAttack(ctx)
+			return content, diagnostic, true
+		}
 		content, diagnostic := lowerGroupMustAttack(ctx)
 		return content, diagnostic, true
 	case compiler.EffectDirectedMustAttack:
