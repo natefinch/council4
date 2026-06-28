@@ -225,7 +225,11 @@ func handleDiscard(r *effectResolver, prim game.Discard) effectResolved {
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
 	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
 		for _, playerID := range playersInAPNAPOrder(r.game, r.playerGroupMembers(prim.PlayerGroup)) {
-			res.succeeded = discardCards(r.game, playerID, res.amount) || res.succeeded
+			if prim.AtRandom {
+				res.succeeded = len(discardCardsAtRandomFromHand(r.game, playerID, res.amount)) > 0 || res.succeeded
+			} else {
+				res.succeeded = discardCards(r.game, playerID, res.amount) || res.succeeded
+			}
 		}
 		return res
 	}

@@ -2332,6 +2332,11 @@ type CompiledEffect struct {
 	// HandDiscard carries the exact fixed-cardinality own-hand discard clause
 	// through the text-blind compiler boundary.
 	HandDiscard parser.HandDiscardSyntax
+	// RandomDiscard carries the "discard N card(s) at random" flag for a
+	// non-controller subject through the text-blind compiler boundary so lowering
+	// selects the random discard primitive variant without inspecting Oracle
+	// words.
+	RandomDiscard bool
 	// RevealChooseDiscard marks the reveal and discard halves of a recognized
 	// "Target player reveals their hand. You choose a [filter] card from it. That
 	// player discards that card." sequence so the text-blind lowering can pair

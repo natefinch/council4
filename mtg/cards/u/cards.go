@@ -19,6 +19,7 @@ var Cards = []*game.CardDef{
 	UntamedKavu,
 	UntimelyMalfunction,
 	UnwillingRecruit,
+	UrborgMindsucker,
 	UrborgSkeleton,
 	UreniOfTheUnwritten,
 	UrsineFylgja,

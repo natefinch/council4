@@ -23,6 +23,7 @@ var Cards = []*game.CardDef{
 	HarvestSeason,
 	HauntedRidge,
 	HazoretGodseeker,
+	HeadlessSpecter,
 	Heal,
 	HealingLeaves,
 	HealingSalve,
@@ -64,5 +65,7 @@ var Cards = []*game.CardDef{
 	Hydroform,
 	HydromorphGuardian,
 	HydromorphGull,
+	HymnToTourach,
+	HypnoticSpecter,
 	Hypochondria,
 }

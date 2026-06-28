@@ -82,4 +82,5 @@ var Cards = []*game.CardDef{
 	GuruPathik,
 	GustOfWind,
 	GwaihirGreatestOfTheEagles,
+	GwendlynDiCorci,
 }

@@ -1659,7 +1659,7 @@ func lowerImmediateSingleEffectSpell(
 		if content, ok := lowerFilteredControllerDiscard(ctx); ok {
 			return content, nil
 		}
-		atRandom := ctx.content.Effects[0].HandDiscard.AtRandom
+		atRandom := ctx.content.Effects[0].HandDiscard.AtRandom || ctx.content.Effects[0].RandomDiscard
 		return lowerFixedCardCountPlayerSpell(
 			ctx, syntax, "discard", "discards", false, func(amount game.Quantity, player game.PlayerReference) game.Primitive {
 				return game.Discard{Amount: amount, Player: player, AtRandom: atRandom}

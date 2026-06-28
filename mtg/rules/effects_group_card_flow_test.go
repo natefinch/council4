@@ -257,3 +257,34 @@ func TestWheelDiscardThenDrawFixedEmptiesAndRefillsEveryHand(t *testing.T) {
 		}
 	}
 }
+
+// TestGroupRandomDiscardRemovesCardsWithoutChoice proves a player-group "at
+// random" discard ("each player discards a card at random") removes one card
+// from every player's hand without prompting any player to choose.
+func TestGroupRandomDiscardRemovesCardsWithoutChoice(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addInstructionSpellToStack(g, []game.Instruction{
+		{Primitive: game.Discard{Amount: game.Fixed(1), PlayerGroup: game.AllPlayersReference(), AtRandom: true}},
+	})
+	for _, playerID := range []game.PlayerID{game.Player1, game.Player2, game.Player3, game.Player4} {
+		addCardToHand(g, playerID, &game.CardDef{CardFace: game.CardFace{Name: "A"}})
+		addCardToHand(g, playerID, &game.CardDef{CardFace: game.CardFace{Name: "B"}})
+	}
+
+	agent := &orderedHandChoiceAgent{}
+	var agents [game.NumPlayers]PlayerAgent
+	for _, playerID := range []game.PlayerID{game.Player1, game.Player2, game.Player3, game.Player4} {
+		agents[playerID] = agent
+	}
+	NewEngine(nil).resolveTopOfStackWithChoices(g, agents, &TurnLog{})
+
+	for _, playerID := range []game.PlayerID{game.Player1, game.Player2, game.Player3, game.Player4} {
+		if got := g.Players[playerID].Hand.Size(); got != 1 {
+			t.Fatalf("player %d hand size = %d, want 1 after random discard", playerID, got)
+		}
+	}
+	if len(agent.requests) != 0 {
+		t.Fatalf("choice requests = %#v, want none for an at-random group discard", agent.requests)
+	}
+}
