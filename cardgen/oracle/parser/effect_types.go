@@ -2236,9 +2236,17 @@ type EffectSyntax struct {
 	// Unctus, Grand Metatect). The colors are added to the target without removing
 	// its existing colors. It is empty for the color-free form.
 	BecomeTypeAddColors []Color `json:",omitempty"`
+	// BecomeTypeAddSubtypes lists the creature subtypes added by an
+	// EffectBecomeType continuous grant ("That creature is a black Zombie in
+	// addition to its other colors and types.", Rise from the Grave; "It's a
+	// Phyrexian in addition to its other types.", Portal to Phyrexia). The
+	// subtypes are added without removing the affected permanent's existing
+	// types. It is empty for the card-type-only Liquimetal form.
+	BecomeTypeAddSubtypes []types.Sub `json:",omitempty"`
 	// BecomeTypeUntilEndOfTurn reports the "until end of turn" duration on an
-	// EffectBecomeType targeted type-change. It is always set for the recognized
-	// Liquimetal form; a permanent form is not yet recognized.
+	// EffectBecomeType targeted type-change. It is set for the recognized
+	// Liquimetal form and absent for the permanent referenced-object reanimation
+	// grant whose duration is the permanent's lifetime on the battlefield.
 	BecomeTypeUntilEndOfTurn bool `json:",omitempty"`
 	// BecomeColorColors, BecomeColorColorless, BecomeColorSource, and
 	// BecomeColorUntilEndOfTurn carry the EffectBecomeColor one-shot color-set

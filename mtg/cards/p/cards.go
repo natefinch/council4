@@ -36,6 +36,7 @@ var Cards = []*game.CardDef{
 	PlantElemental,
 	PointTheWay,
 	PonybackBrigade,
+	PortalToPhyrexia,
 	PotionerSTrove,
 	PowerDepot,
 	PredatorOoze,

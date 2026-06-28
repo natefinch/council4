@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,022 of 32,501 cards eligible for paper support (49.3%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,026 of 32,501 cards eligible for paper support (49.3%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1948,6 +1948,7 @@ Council4 currently supports **16,022 of 32,501 cards eligible for paper support 
 - Caldera Lake
 - Caldera Pyremaw
 - Caligo Skin-Witch
+- Call a Surprise Witness
 - Call for Blood
 - Call of the Conclave
 - Call of the Herd
@@ -7844,6 +7845,7 @@ Council4 currently supports **16,022 of 32,501 cards eligible for paper support 
 - Liliana's Specter
 - Liliana's Spoils
 - Liliana's Steward
+- Liliana, Death's Majesty
 - Lilysplash Mentor
 - Lim-Dûl's High Guard
 - Limestone Golem
@@ -10069,6 +10071,7 @@ Council4 currently supports **16,022 of 32,501 cards eligible for paper support 
 - Port of Karfell
 - Port Town
 - Portable Hole
+- Portal to Phyrexia
 - Portent of Betrayal
 - Possessed Skaab
 - Pothole Mole
@@ -10990,6 +10993,7 @@ Council4 currently supports **16,022 of 32,501 cards eligible for paper support 
 - Riptide Survivor
 - Riptide Turtle
 - Rise Again
+- Rise from the Grave
 - Rise from the Tides
 - Rise of Eagles
 - Rise of the Ants

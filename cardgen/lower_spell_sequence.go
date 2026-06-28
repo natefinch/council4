@@ -2842,6 +2842,10 @@ func lowerDelayedSequenceClause(
 		sequence[len(sequence)-1].Primitive = publisher
 		return placement, true, false
 	}
+	if publisher, grant, ok := lowerSequentialReanimationTypeColorGrant(effectIndex, ctx, sequence); ok {
+		sequence[len(sequence)-1].Primitive = publisher
+		return grant, true, false
+	}
 	if exile, delayed, ok := lowerDelayedBlinkReturn(effects, effectIndex, ctx, sequence); ok {
 		sequence[len(sequence)-1].Primitive = exile
 		return delayed, true, false
@@ -3513,7 +3517,6 @@ func lowerSequentialReanimationCounterPlacement(
 	return publisher, game.Mode{Sequence: []game.Instruction{{Primitive: add}}}.Ability(), true
 }
 
-// reuseOrPublishLinkedPermanent locates the permanent an earlier clause in the
 // sequence recorded under a linked key so a later linked effect can bind to it.
 // It scans backward for the most recent already-published linked key and reuses
 // it (returning the immediately-prior primitive unchanged); when none exists it

@@ -64,6 +64,7 @@ var Cards = []*game.CardDef{
 	RighteousValkyrie,
 	RimescaleDragon,
 	RingOfThreeWishes,
+	RiseFromTheGrave,
 	RiseFromTheTides,
 	RisenReef,
 	RishadanAirship,

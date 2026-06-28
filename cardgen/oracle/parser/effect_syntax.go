@@ -1140,6 +1140,7 @@ func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) 
 		func() ([]EffectSyntax, bool) { return parseSwitchPowerToughnessEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseNamedBecomePolymorphEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseBecomeTypeEffect(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parseReferencedTypeGrantEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseBecomeColorEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseDrawEmptyLibraryWinReplacement(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseDrawDoublingReplacement(sentence, tokens, atoms) },
@@ -5764,7 +5765,6 @@ func parseBecomeTypeEffect(sentence Sentence, tokens []shared.Token, atoms Atoms
 	return []EffectSyntax{effect}, true
 }
 
-// parsePolymorphEffect recognizes the targeted resolving polymorph effect
 // "Until end of turn, target <creature> loses all abilities and becomes a
 // [colorless] <color>* <subtype> [creature] with base power and toughness N/N."
 // (Turn to Frog, Snakeform, Gift of Tusks; CR 613). The leading "until end of
