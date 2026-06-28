@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,091 of 32,501 cards eligible for paper support (49.5%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,095 of 32,501 cards eligible for paper support (49.5%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -3930,6 +3930,8 @@ Council4 currently supports **16,091 of 32,501 cards eligible for paper support 
 - Eccentric Farmer
 - Echo of Dusk
 - Echo Tracer
+- Echoing Calm
+- Echoing Ruin
 - Eclipsed Boggart
 - Eclipsed Elf
 - Eclipsed Flamekin
@@ -8121,6 +8123,7 @@ Council4 currently supports **16,091 of 32,501 cards eligible for paper support 
 - Maelstrom Archangel
 - Maelstrom Artisan // Rocket Volley
 - Maelstrom Colossus
+- Maelstrom Pulse
 - Maelstrom Wanderer
 - Maestros Charm
 - Maestros Initiate
@@ -15300,6 +15303,7 @@ Council4 currently supports **16,091 of 32,501 cards eligible for paper support 
 - Wakandan Drone Flock
 - Wakandan Shield Guard
 - Wakandan Tusker
+- Wake of Destruction
 - Wake of Vultures
 - Wake Thrasher
 - Wakedancer
