@@ -78,6 +78,7 @@ var Cards = []*game.CardDef{
 	CloutOfTheDominus,
 	CoalStoker,
 	CoatiScavenger,
+	CogworkAssembler,
 	CollectorSCase,
 	ColossalCollision,
 	ColossusOfTheBloodAge,

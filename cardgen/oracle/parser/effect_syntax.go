@@ -6165,11 +6165,20 @@ func entersAsCopyAddTypeClause(words []string) (cardTypes []types.Card, subtypes
 	}
 	words = words[1:]
 	suffix := []string{"in", "addition", "to", "its", "other", "types"}
-	if len(words) <= len(suffix) {
-		return nil, nil, false
-	}
-	typeWords := words[:len(words)-len(suffix)]
-	if !slices.Equal(words[len(words)-len(suffix):], suffix) {
+	// Newer printings scope the added types to the copied permanent's creature
+	// types ("a Ninja in addition to its other creature types", Sakashima's
+	// Student); the added types are subtypes either way, so accept the
+	// "creature types" suffix as the same copiable add-type rider.
+	creatureSuffix := []string{"in", "addition", "to", "its", "other", "creature", "types"}
+	var typeWords []string
+	switch {
+	case len(words) > len(creatureSuffix) &&
+		slices.Equal(words[len(words)-len(creatureSuffix):], creatureSuffix):
+		typeWords = words[:len(words)-len(creatureSuffix)]
+	case len(words) > len(suffix) &&
+		slices.Equal(words[len(words)-len(suffix):], suffix):
+		typeWords = words[:len(words)-len(suffix)]
+	default:
 		return nil, nil, false
 	}
 	for _, word := range typeWords {
@@ -6288,9 +6297,10 @@ func entersAsCopyWordIndex(tokens []shared.Token, word string, start int) int {
 
 // entersAsCopyFilterOnBattlefield reports whether a copy-filter token run is
 // scoped to the battlefield, either via a trailing "on the battlefield" phrase
-// or a "you control" controller relation. Filters without such a scope (for
-// example "any creature card in a graveyard") fail closed because this
-// replacement can only copy battlefield permanents.
+// or a controller relation ("you control", "an opponent controls", "your
+// opponents control"). Filters without such a scope (for example "any creature
+// card in a graveyard") fail closed because this replacement can only copy
+// battlefield permanents.
 func entersAsCopyFilterOnBattlefield(filter []shared.Token) bool {
 	if len(filter) >= 3 &&
 		equalWord(filter[len(filter)-3], "on") &&
@@ -6300,6 +6310,12 @@ func entersAsCopyFilterOnBattlefield(filter []shared.Token) bool {
 	}
 	for i := 0; i+1 < len(filter); i++ {
 		if equalWord(filter[i], "you") && equalWord(filter[i+1], "control") {
+			return true
+		}
+		if equalWord(filter[i], "opponent") && equalWord(filter[i+1], "controls") {
+			return true
+		}
+		if equalWord(filter[i], "opponents") && equalWord(filter[i+1], "control") {
 			return true
 		}
 	}
