@@ -1468,6 +1468,44 @@ func exactExileAttachedEffectSyntax(effect *EffectSyntax) bool {
 		strings.EqualFold(text, "Exile equipped creature.")
 }
 
+// exactTapAttachedEffectSyntax recognizes the attached-recipient form "Tap
+// enchanted creature." / "Tap enchanted permanent." (Aura) or "Tap equipped
+// creature." (Equipment), where the tapped permanent is the one the source is
+// attached to. There is no target or reference; lowering routes it to the
+// runtime's source attached-permanent reference. Any other wording leaves the
+// clause non-exact so lowering fails closed.
+func exactTapAttachedEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Kind != EffectTap || effect.Negated {
+		return false
+	}
+	if len(effect.Targets) != 0 || len(effect.References) != 0 {
+		return false
+	}
+	text := exactEffectClauseText(effect)
+	return strings.EqualFold(text, "Tap enchanted creature.") ||
+		strings.EqualFold(text, "Tap enchanted permanent.") ||
+		strings.EqualFold(text, "Tap equipped creature.")
+}
+
+// exactUntapAttachedEffectSyntax recognizes the attached-recipient form "Untap
+// enchanted creature." / "Untap enchanted permanent." (Aura) or "Untap equipped
+// creature." (Equipment), where the untapped permanent is the one the source is
+// attached to. There is no target or reference; lowering routes it to the
+// runtime's source attached-permanent reference. Any other wording leaves the
+// clause non-exact so lowering fails closed.
+func exactUntapAttachedEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Kind != EffectUntap || effect.Negated {
+		return false
+	}
+	if len(effect.Targets) != 0 || len(effect.References) != 0 {
+		return false
+	}
+	text := exactEffectClauseText(effect)
+	return strings.EqualFold(text, "Untap enchanted creature.") ||
+		strings.EqualFold(text, "Untap enchanted permanent.") ||
+		strings.EqualFold(text, "Untap equipped creature.")
+}
+
 // exactCopyStackObjectEffectSyntax recognizes the resolving effect "Copy <target
 // activated or triggered ability you control>." The single stack-object target
 // is the ability to copy. The optional "You may choose new targets for the

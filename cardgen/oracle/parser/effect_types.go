@@ -2090,6 +2090,20 @@ type EffectSyntax struct {
 	// attached-creature recipient; any other wording leaves it false so lowering
 	// fails closed.
 	ExileAttached bool `json:",omitempty"`
+	// TapAttached reports that an EffectTap effect taps the permanent the source
+	// is attached to ("Tap enchanted creature." / "Tap enchanted permanent." /
+	// "Tap equipped creature."), the Aura or Equipment recipient the runtime
+	// models with its source attached-permanent reference. It is set only for the
+	// bare attached recipient; any other wording leaves it false so lowering fails
+	// closed.
+	TapAttached bool `json:",omitempty"`
+	// UntapAttached reports that an EffectUntap effect untaps the permanent the
+	// source is attached to ("Untap enchanted creature." / "Untap enchanted
+	// permanent." / "Untap equipped creature."), the Aura or Equipment recipient
+	// the runtime models with its source attached-permanent reference. It is set
+	// only for the bare attached recipient; any other wording leaves it false so
+	// lowering fails closed.
+	UntapAttached bool `json:",omitempty"`
 	// MoveCountersAll reports the kind-agnostic "move all counters" form of an
 	// EffectMoveCounters effect, where every counter on the source moves to the
 	// destination regardless of kind ("Move all counters from this permanent onto

@@ -1404,8 +1404,10 @@ func exactMassExileGroup(ctx contentCtx) (game.GroupReference, bool) {
 // resolved group feeds the group constructor (game.Tap{Group}/game.Untap{Group}),
 // which the rules engine resolves by tapping or untapping every permanent the
 // group matches; the single target falls through to the shared fixed-target
-// path. groupPrimitive and objectPrimitive build the same primitive type with
-// its Group or Object field set, respectively.
+// path. The attached-recipient form ("Tap enchanted creature.", "Untap equipped
+// creature.") routes through lowerSourceAttachedTapUntapObject to the runtime's
+// source attached-permanent reference. groupPrimitive and objectPrimitive build
+// the same primitive type with its Group or Object field set, respectively.
 func lowerMassOrSinglePermanentSpell(
 	ctx contentCtx,
 	verb string,
@@ -1417,7 +1419,45 @@ func lowerMassOrSinglePermanentSpell(
 			Sequence: []game.Instruction{{Primitive: groupPrimitive(group)}},
 		}.Ability(), nil
 	}
+	if object, ok := lowerSourceAttachedTapUntapObject(ctx); ok {
+		return game.Mode{
+			Sequence: []game.Instruction{{Primitive: objectPrimitive(object)}},
+		}.Ability(), nil
+	}
 	return lowerFixedPermanentTargetSpell(ctx, verb, objectPrimitive)
+}
+
+// lowerSourceAttachedTapUntapObject resolves the attached-recipient tap or untap
+// form "Tap enchanted creature." / "Untap equipped creature.", where the affected
+// permanent is the one the source Aura or Equipment is attached to. It mirrors
+// lowerSourceAttachedExile: a single exact controller effect carrying the
+// TapAttached or UntapAttached flag with no target, reference, condition, mode,
+// keyword, or optional offer, and fails closed for every other shape.
+func lowerSourceAttachedTapUntapObject(ctx contentCtx) (game.ObjectReference, bool) {
+	if len(ctx.content.Effects) != 1 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.References) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(abilityKeywordsExcludingSelectorPredicates(ctx.content)) != 0 ||
+		ctx.optional {
+		return game.ObjectReference{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if !effect.TapAttached && !effect.UntapAttached {
+		return game.ObjectReference{}, false
+	}
+	if !effect.Exact ||
+		effect.Negated ||
+		effect.Optional ||
+		effect.Context != parser.EffectContextController {
+		return game.ObjectReference{}, false
+	}
+	object := game.SourceAttachedPermanentReference()
+	if len(object.Validate()) != 0 {
+		return game.ObjectReference{}, false
+	}
+	return object, true
 }
 
 // lowerPhaseOutSpell lowers the "phases out"/"phase out" family (CR 702.26) into

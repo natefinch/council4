@@ -71,6 +71,7 @@ var Cards = []*game.CardDef{
 	FractalSummoning,
 	FracturedSanity,
 	FranticSalvage,
+	FreedFromTheReal,
 	FreestriderLookout,
 	FreyaliseSCharm,
 	FreyaliseSRadiance,

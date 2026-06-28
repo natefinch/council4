@@ -2065,6 +2065,16 @@ type CompiledEffect struct {
 	// to the runtime's source attached-permanent reference; it is false for every
 	// other exile recipient.
 	ExileAttached bool
+	// TapAttached reports the attached-recipient tap form ("Tap enchanted
+	// creature." / "Tap enchanted permanent." / "Tap equipped creature.").
+	// Lowering routes the tapped object to the runtime's source attached-permanent
+	// reference; it is false for every other tap recipient.
+	TapAttached bool
+	// UntapAttached reports the attached-recipient untap form ("Untap enchanted
+	// creature." / "Untap enchanted permanent." / "Untap equipped creature.").
+	// Lowering routes the untapped object to the runtime's source attached-
+	// permanent reference; it is false for every other untap recipient.
+	UntapAttached bool
 	// MoveCountersAll carries the parser's kind-agnostic "move all counters"
 	// form of an EffectMoveCounters effect through to lowering, which moves every
 	// counter on the source regardless of kind. It is false for a specific-kind
