@@ -1641,7 +1641,7 @@ func TestCreateTokenFailsClosedForUnsupportedShapes(t *testing.T) {
 		"Create an Incubator token.", // named token without a representable ability
 		"Create a 1/1 white Soldier creature token with flying and protection from red.", // parameterized keyword rider not representable
 		"Create a 2/2 green Boar creature token that's tapped and blocking.",             // blocking entry not representable
-		"Each opponent creates a 1/1 white Human creature token.",                        // player-group recipient not a single player reference
+		"Each other player creates a 1/1 white Human creature token.",                    // "each other player" has no player-group reference
 	} {
 		_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
 			Name:       "Test Token",

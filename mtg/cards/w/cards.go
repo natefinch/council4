@@ -55,6 +55,7 @@ var Cards = []*game.CardDef{
 	WizardReplica,
 	WizardSLightning,
 	WizardSRetort,
+	WizenedMentor,
 	WojekBodyguard,
 	WolverineRiders,
 	WoodenSphere,
