@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,137 of 32,501 cards eligible for paper support (49.7%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,142 of 32,501 cards eligible for paper support (49.7%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -3949,6 +3949,7 @@ Council4 currently supports **16,137 of 32,501 cards eligible for paper support 
 - Edge of the Divinity
 - Edge Rover
 - Edgewall Pack
+- Edric, Spymaster of Trest
 - Eel-Hounds
 - Eerie Gravestone
 - Eerie Interlude
@@ -4605,6 +4606,7 @@ Council4 currently supports **16,137 of 32,501 cards eligible for paper support 
 - Feather
 - Feather of Flight
 - Featherbrained Filcher
+- Fecundity
 - Feebleness
 - Feed the Flames
 - Feed the Pack
@@ -6155,6 +6157,7 @@ Council4 currently supports **16,137 of 32,501 cards eligible for paper support 
 - Harbinger of Night
 - Harbinger of the Hunt
 - Harbor Bandit
+- Harbor Guardian
 - Hard Cover
 - Hard Evidence
 - Hard-Hitting Question
@@ -12155,6 +12158,7 @@ Council4 currently supports **16,137 of 32,501 cards eligible for paper support 
 - Shu Soldier-Farmers
 - Shuko
 - Shunt
+- Sibilant Spirit
 - Sibling Rivalry
 - Sibsig Appraiser
 - Sibsig Host
@@ -13661,6 +13665,7 @@ Council4 currently supports **16,137 of 32,501 cards eligible for paper support 
 - Symbiotic Wurm
 - Symbol of Unsummoning
 - Synapse Necromage
+- Synapse Sliver
 - Synchronous Sliver
 - Syndic of Tithes
 - Syndicate Enforcer
