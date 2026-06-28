@@ -3316,26 +3316,52 @@ func lowerDelayedTargetExile(
 // the permanent remains on the battlefield, so the duration is absent rather than
 // until end of turn.
 func isSequentialReferencedKeywordGrantEffect(effect *compiler.CompiledEffect) bool {
+	_, durationOK := sequentialReferencedKeywordGrantDuration(effect.Duration)
 	return effect.Kind == compiler.EffectGain &&
 		effect.Exact &&
 		!effect.Negated &&
 		!effect.KeywordGrantChoice &&
 		effect.Context == parser.EffectContextReferencedObject &&
-		effect.Duration == compiler.DurationNone &&
+		durationOK &&
 		effect.StaticSubject == compiler.StaticSubjectNone &&
 		referencesBindTo(effect.References, compiler.ReferenceBindingTarget, 0)
 }
 
-// lowerSequentialReferencedKeywordGrant lowers an "it gains <keyword>." clause
-// that grants a keyword to the permanent an earlier clause in the same sequence
-// put onto the battlefield or otherwise acted on. "It" binds to that earlier
-// permanent, which (for a reanimation) is a freshly created object that the
-// targeted graveyard card became, so a plain target-permanent reference cannot
-// resolve it. The earlier publishing instruction is rewritten to record the
-// permanent under a linked key, and the keyword grant reads that linked object,
-// mirroring lowerDelayedTargetExile's capture. It returns the rewritten
-// publishing primitive and the grant content, or false to fail closed so the
-// caller lowers the clause normally.
+// sequentialReferencedKeywordGrantDuration maps the compiled duration of a
+// keyword grant bound to a permanent an earlier sequence clause acted on to its
+// runtime EffectDuration. A no-duration grant lasts as long as the permanent
+// remains on the battlefield (DurationPermanent), which composes with the
+// temporary reanimation pattern that exiles the permanent at end of turn ("It
+// gains haste. Exile it at the beginning of the next end step.", Whip of
+// Erebos). The bounded "until end of turn" and "until your next turn" forms
+// ("Return target creature card from your graveyard to the battlefield. It gains
+// haste until your next turn.", Bond of Revival) expire on their own. Any other
+// duration returns ok=false so richer grants stay fail-closed.
+func sequentialReferencedKeywordGrantDuration(duration compiler.DurationKind) (game.EffectDuration, bool) {
+	switch duration {
+	case compiler.DurationNone:
+		return game.DurationPermanent, true
+	case compiler.DurationUntilEndOfTurn:
+		return game.DurationUntilEndOfTurn, true
+	case compiler.DurationUntilYourNextTurn:
+		return game.DurationUntilYourNextTurn, true
+	default:
+		return game.DurationPermanent, false
+	}
+}
+
+// lowerSequentialReferencedKeywordGrant lowers an "it gains <keyword>[ until end
+// of turn| until your next turn]." clause that grants a keyword to the permanent
+// an earlier clause in the same sequence put onto the battlefield or otherwise
+// acted on. "It" binds to that earlier permanent, which (for a reanimation) is a
+// freshly created object that the targeted graveyard card became, so a plain
+// target-permanent reference cannot resolve it. The earlier publishing
+// instruction is rewritten to record the permanent under a linked key, and the
+// keyword grant reads that linked object, mirroring lowerDelayedTargetExile's
+// capture. The grant lasts permanently (no duration), until end of turn, or
+// until the controller's next turn per sequentialReferencedKeywordGrantDuration.
+// It returns the rewritten publishing primitive and the grant content, or false
+// to fail closed so the caller lowers the clause normally.
 func lowerSequentialReferencedKeywordGrant(
 	effectIndex int,
 	ctx contentCtx,
@@ -3350,6 +3376,10 @@ func lowerSequentialReferencedKeywordGrant(
 		return nil, game.AbilityContent{}, false
 	}
 	keywords, abilities, ok := partitionTemporaryKeywords(ctx.content.Keywords)
+	if !ok {
+		return nil, game.AbilityContent{}, false
+	}
+	duration, ok := sequentialReferencedKeywordGrantDuration(ctx.content.Effects[0].Duration)
 	if !ok {
 		return nil, game.AbilityContent{}, false
 	}
@@ -3378,7 +3408,7 @@ func lowerSequentialReferencedKeywordGrant(
 			AddKeywords:  keywords,
 			AddAbilities: abilities,
 		}},
-		Duration: game.DurationPermanent,
+		Duration: duration,
 	}
 	return publisher, game.Mode{Sequence: []game.Instruction{{Primitive: grant}}}.Ability(), true
 }

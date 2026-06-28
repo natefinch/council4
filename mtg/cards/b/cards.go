@@ -71,6 +71,7 @@ var Cards = []*game.CardDef{
 	BoilingBlood,
 	BolasSCitadel,
 	BoltBend,
+	BondOfRevival,
 	BondedConstruct,
 	BondedHorncrest,
 	BoneHarvest,

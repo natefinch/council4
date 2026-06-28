@@ -1863,7 +1863,20 @@ func exactTemporaryKeywordChangeSyntax(effect *EffectSyntax, pluralVerb, singula
 	validBody := func(body string) bool {
 		return exactTemporaryKeywordList(body) || (allowChoice && exactKeywordChoiceList(body))
 	}
-	if effect.Duration != EffectDurationUntilEndOfTurn {
+	switch effect.Duration {
+	case EffectDurationUntilEndOfTurn:
+	case EffectDurationUntilYourNextTurn:
+		// The "until your next turn" duration is only reconstructed for the
+		// singular referenced-object rider ("It gains haste until your next
+		// turn." on a permanent an earlier sequence clause produced — Bond of
+		// Revival), the one shape the sequential referenced keyword-grant
+		// lowering threads the duration through. Every other subject context
+		// keeps the until-end-of-turn form, so a grant whose duration the
+		// lowering would silently treat as end-of-turn stays fail-closed here.
+		if effect.Context != EffectContextReferencedObject {
+			return false
+		}
+	default:
 		return false
 	}
 	text := strings.ToLower(exactEffectClauseText(effect))
@@ -1990,6 +2003,13 @@ func cutTemporaryKeywordDurationSuffix(effect *EffectSyntax, body string) (strin
 	}
 	if middle, ok := strings.CutSuffix(body, " until end of turn."); ok {
 		return middle, true
+	}
+	if effect.Duration == EffectDurationUntilYourNextTurn {
+		// "It gains haste until your next turn." (Bond of Revival): the
+		// referenced-object grant that exactTemporaryKeywordChangeSyntax gates to
+		// this duration carries the "until your next turn" suffix in its clause
+		// body, consumed here so the clause reconstructs byte-exactly.
+		return strings.CutSuffix(body, " until your next turn.")
 	}
 	if effect.Duration == EffectDurationUntilEndOfTurn {
 		return strings.CutSuffix(body, ".")
