@@ -525,6 +525,18 @@ func plannedCounterRemovalsBySourceKind(planned []counterRemoval) map[counterSou
 	return reserved
 }
 
+// presentCounterKinds returns every counter kind present on a permanent in a
+// stable order, sorted by kind value so selection is deterministic.
+func presentCounterKinds(permanent *game.Permanent) []counter.Kind {
+	present := permanent.Counters.All()
+	kinds := make([]counter.Kind, 0, len(present))
+	for kind := range present {
+		kinds = append(kinds, kind)
+	}
+	slices.Sort(kinds)
+	return kinds
+}
+
 // amongCounterKinds returns the counter kinds an among-removal cost may take
 // from a permanent, in a stable order. A kind-specific cost yields the single
 // named kind; the generic any-kind cost yields every kind present on the
@@ -533,13 +545,37 @@ func amongCounterKinds(permanent *game.Permanent, additional cost.Additional) []
 	if !additional.AnyCounterKind {
 		return []counter.Kind{additional.CounterKind}
 	}
-	present := permanent.Counters.All()
-	kinds := make([]counter.Kind, 0, len(present))
-	for kind := range present {
-		kinds = append(kinds, kind)
+	return presentCounterKinds(permanent)
+}
+
+// planRemoveCounterFromSource plans the removal of amount counters from a single
+// source permanent for a generic any-kind "remove N counters from this
+// permanent" cost. It takes counters across the kinds present in stable order,
+// honoring counters already reserved by earlier planned removals, and returns
+// false when the source cannot supply amount counters.
+func planRemoveCounterFromSource(source *game.Permanent, amount int, alreadyPlanned []counterRemoval) ([]counterRemoval, bool) {
+	if amount <= 0 {
+		return nil, false
 	}
-	slices.Sort(kinds)
-	return kinds
+	reserved := plannedCounterRemovalsBySourceKind(alreadyPlanned)
+	var removals []counterRemoval
+	remaining := amount
+	for _, kind := range presentCounterKinds(source) {
+		if remaining == 0 {
+			break
+		}
+		available := source.Counters.Get(kind) - reserved[counterSourceKind{source: source, kind: kind}]
+		if available <= 0 {
+			continue
+		}
+		take := min(available, remaining)
+		removals = append(removals, counterRemoval{source: source, kind: kind, amount: take})
+		remaining -= take
+	}
+	if remaining > 0 {
+		return nil, false
+	}
+	return removals, true
 }
 
 // RemovableAmongCounterCount reports how many counters a permanent can supply

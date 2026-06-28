@@ -337,15 +337,20 @@ func lowerRemoveCounterCost(
 	if component.RemoveCounterAmong {
 		return lowerRemoveCounterAmongCost(component)
 	}
-	if !component.AmountKnown || !component.CounterKindKnown || !component.SourceSelf {
+	if !component.AmountKnown || !component.SourceSelf || component.AmountValue <= 0 {
 		return cost.Additional{}, false
 	}
-	return cost.Additional{
-		Kind:        cost.AdditionalRemoveCounter,
-		Text:        component.Text,
-		Amount:      component.AmountValue,
-		CounterKind: component.CounterKind,
-	}, true
+	additional := cost.Additional{
+		Kind:   cost.AdditionalRemoveCounter,
+		Text:   component.Text,
+		Amount: component.AmountValue,
+	}
+	if component.CounterKindKnown {
+		additional.CounterKind = component.CounterKind
+	} else {
+		additional.AnyCounterKind = true
+	}
+	return additional, true
 }
 
 // lowerRemoveCounterAmongCost lowers "remove N <kind> counters from among

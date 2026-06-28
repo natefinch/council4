@@ -33,6 +33,7 @@ var Cards = []*game.CardDef{
 	RealityHeist,
 	RealmCloakedGiant,
 	ReaperFromTheAbyss,
+	ReapingWillow,
 	RebuffTheWicked,
 	Recoil,
 	RecklessDetective,

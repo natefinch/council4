@@ -101,6 +101,7 @@ var Cards = []*game.CardDef{
 	MonasteryMessenger,
 	MonologueTax,
 	MonumentalHenge,
+	MoonlitLamenter,
 	MoonstoneEulogist,
 	MoonveilDragon,
 	MorbidOpportunist,

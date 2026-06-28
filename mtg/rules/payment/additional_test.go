@@ -526,3 +526,51 @@ func TestPlanRemoveCounterAmongAnyKindFailsWhenInsufficient(t *testing.T) {
 		t.Fatalf("removals = %#v ok = true, want failure for insufficient counters", removals)
 	}
 }
+
+func TestPlanRemoveCounterFromSourceSingleKind(t *testing.T) {
+	source := &game.Permanent{ObjectID: 1, Controller: game.Player1}
+	source.Counters.Add(counter.MinusOneMinusOne, 2)
+
+	removals, ok := planRemoveCounterFromSource(source, 1, nil)
+	if !ok || len(removals) != 1 ||
+		removals[0].source != source ||
+		removals[0].kind != counter.MinusOneMinusOne ||
+		removals[0].amount != 1 {
+		t.Fatalf("removals = %#v ok = %t, want one -1/-1 counter from the source", removals, ok)
+	}
+}
+
+func TestPlanRemoveCounterFromSourceSpreadsAcrossKinds(t *testing.T) {
+	source := &game.Permanent{ObjectID: 1, Controller: game.Player1}
+	source.Counters.Add(counter.MinusOneMinusOne, 1)
+	source.Counters.Add(counter.Charge, 1)
+
+	removals, ok := planRemoveCounterFromSource(source, 2, nil)
+	if !ok || removeCounterAmongTotal(removals) != 2 {
+		t.Fatalf("removals = %#v ok = %t, want two counters across the source's kinds", removals, ok)
+	}
+	for _, removal := range removals {
+		if removal.source != source {
+			t.Fatalf("removal source = %#v, want the cost source", removal.source)
+		}
+	}
+}
+
+func TestPlanRemoveCounterFromSourceFailsWhenInsufficient(t *testing.T) {
+	source := &game.Permanent{ObjectID: 1, Controller: game.Player1}
+	source.Counters.Add(counter.MinusOneMinusOne, 1)
+
+	if removals, ok := planRemoveCounterFromSource(source, 2, nil); ok {
+		t.Fatalf("removals = %#v ok = true, want failure for insufficient counters", removals)
+	}
+}
+
+func TestPlanRemoveCounterFromSourceReservesPlannedCounters(t *testing.T) {
+	source := &game.Permanent{ObjectID: 1, Controller: game.Player1}
+	source.Counters.Add(counter.MinusOneMinusOne, 1)
+	planned := []counterRemoval{{source: source, kind: counter.MinusOneMinusOne, amount: 1}}
+
+	if removals, ok := planRemoveCounterFromSource(source, 1, planned); ok {
+		t.Fatalf("removals = %#v ok = true, want failure once the only counter is reserved", removals)
+	}
+}
