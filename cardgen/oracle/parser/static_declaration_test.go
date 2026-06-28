@@ -1691,6 +1691,18 @@ func TestParseStaticSpellCostModifierDeclarationMeaning(t *testing.T) {
 			spellSubtypes: []types.Sub{types.Aura, types.Equipment},
 			amount:        1,
 		},
+		"repeated noun subtype pair reduction": {
+			source:        "Kithkin spells and Soldier spells you cast cost {1} less to cast.",
+			modifier:      StaticDeclarationCostModifierSpellReduction,
+			spellSubtypes: []types.Sub{types.Kithkin, types.Soldier},
+			amount:        1,
+		},
+		"repeated noun subtype pair reduction treefolk shaman": {
+			source:        "Treefolk spells and Shaman spells you cast cost {1} less to cast.",
+			modifier:      StaticDeclarationCostModifierSpellReduction,
+			spellSubtypes: []types.Sub{types.Treefolk, types.Shaman},
+			amount:        1,
+		},
 		"graveyard zone reduction": {
 			source:    "Spells you cast from your graveyard cost {1} less to cast.",
 			modifier:  StaticDeclarationCostModifierSpellReduction,

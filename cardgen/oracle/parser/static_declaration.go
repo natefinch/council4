@@ -3284,11 +3284,15 @@ func staticUntapGroup(tokens []shared.Token) (StaticUntapGroupKind, int, bool) {
 }
 
 // staticSpellSubtypeFilter strips an optional leading subtype filter from a
-// "spells you cast cost ..." declaration: one or more subtype words joined by
-// "and" and immediately followed by "spells" ("Aura spells", "Aura and
-// Equipment spells"). It returns the recognized subtypes with the remaining
-// tokens beginning at "spells", or false when the leading tokens are not a
-// subtype list terminated by "spells".
+// "spells you cast cost ..." declaration. It accepts both the shared-noun
+// conjunction, where the subtypes precede a single "spells" head noun ("Aura
+// spells", "Aura and Equipment spells"), and the repeated-noun conjunction,
+// where each subtype carries its own "spells" head noun joined by "and"
+// ("Kithkin spells and Soldier spells", the Banneret cycle). It returns the
+// recognized subtypes with the remaining tokens beginning at the final "spells"
+// head noun, or false when the leading tokens are not a subtype list terminated
+// by "spells". Either way every listed subtype is matched disjunctively, so a
+// spell qualifies when it carries any one of them.
 func staticSpellSubtypeFilter(tokens []shared.Token, atoms Atoms) ([]types.Sub, []shared.Token, bool) {
 	var subtypes []types.Sub
 	rest := tokens
@@ -3303,8 +3307,22 @@ func staticSpellSubtypeFilter(tokens []shared.Token, atoms Atoms) ([]types.Sub, 
 		subtypes = append(subtypes, sub)
 		rest = rest[1:]
 		if len(rest) >= 1 && equalWord(rest[0], "spells") {
+			// Repeated-noun conjunction: a following "and <Subtype> spells"
+			// continues the list with another head noun ("Kithkin spells and
+			// Soldier spells"). The lookahead requires the conjoined word to be
+			// a recognized subtype so an unrelated trailing "and ..." clause is
+			// left for the caller.
+			if len(rest) >= 3 && equalWord(rest[1], "and") {
+				if _, ok := atoms.SubtypeAt(rest[2].Span); ok {
+					rest = rest[2:]
+					continue
+				}
+			}
 			return subtypes, rest, true
 		}
+		// Shared-noun conjunction: "and <Subtype>" before any head noun
+		// continues the list under one trailing "spells" ("Aura and Equipment
+		// spells").
 		if len(rest) >= 1 && equalWord(rest[0], "and") {
 			rest = rest[1:]
 			continue
