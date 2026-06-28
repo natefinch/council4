@@ -1122,6 +1122,24 @@ func sacrificeReferencedPlayerChoice(references []compiler.CompiledReference) bo
 // nontoken/token qualifier. It fails closed for any other selector shape so
 // unrecognized filters stay unsupported.
 func sacrificeChoiceSelection(selector compiler.CompiledSelector) (game.Selection, bool) {
+	if len(selector.Alternatives) > 0 {
+		// A heterogeneous disjunctive sacrifice selection ("creature or Vehicle",
+		// "creature or a token", "a token or a land") lowers each side to its own
+		// Selection and unites them through AnyOf. A leading "another" applies to
+		// the whole disjunction, so the source exclusion lives on the union.
+		var anyOf []game.Selection
+		for _, alternative := range selector.Alternatives {
+			lowered, ok := sacrificeChoiceSelection(alternative)
+			if !ok {
+				return game.Selection{}, false
+			}
+			anyOf = append(anyOf, lowered)
+		}
+		return game.Selection{
+			AnyOf:         anyOf,
+			ExcludeSource: selector.Another || selector.Other,
+		}, true
+	}
 	var selection game.Selection
 	subtypes := selector.SubtypesAny()
 	switch {

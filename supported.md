@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,229 of 32,501 cards eligible for paper support (49.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,233 of 32,501 cards eligible for paper support (49.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -5336,6 +5336,7 @@ Council4 currently supports **16,229 of 32,501 cards eligible for paper support 
 - Garruk, Primal Hunter
 - Garrulous Sycophant
 - Garza Zol, Plague Queen
+- Gastal Blockbuster
 - Gate Colossus
 - Gatebreaker Ram
 - Gatecreeper Vine
@@ -8880,6 +8881,7 @@ Council4 currently supports **16,229 of 32,501 cards eligible for paper support 
 - Moment of Valor
 - Moment's Peace
 - Momentary Blink
+- Momentum Breaker
 - Mona Lisa, Ever Adaptable
 - Mona Lisa, Science Geek
 - Monastery Flock
@@ -9555,6 +9557,7 @@ Council4 currently supports **16,229 of 32,501 cards eligible for paper support 
 - Old Flitterfang
 - Old Ghastbark
 - Old Gnawbone
+- Old Man Willow
 - Old One Eye
 - Old-Growth Educator
 - Oliphaunt
@@ -15702,6 +15705,7 @@ Council4 currently supports **16,229 of 32,501 cards eligible for paper support 
 - Well Rested
 - Wellwisher
 - Werebear
+- West Wind Avatar
 - Western Paladin
 - Westfold Rider
 - Wetland Sambar

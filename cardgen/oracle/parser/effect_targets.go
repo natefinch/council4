@@ -2575,6 +2575,8 @@ func parseSelection(tokens []shared.Token, atoms Atoms) SelectionSyntax {
 		selection.Colorless = false
 		selection.Multicolored = false
 		selection.Colored = false
+		selection.TokenOnly = false
+		selection.NonToken = false
 	}
 	return selection
 }
@@ -2623,21 +2625,109 @@ func disjunctiveSelectionAlternatives(tokens []shared.Token, atoms Atoms) ([]Sel
 	if !ok {
 		return nil, false
 	}
-	if slices.Equal(left.Supertypes, right.Supertypes) {
-		return nil, false
-	}
-	// A differing supertype is lossy only when it cannot distribute across both
-	// sides. When neither side names a genuine card type ("basic Forest or
-	// Plains [card]"), both sides are subtype-only and the leading supertype
-	// belongs to the whole card, so the flattened "basic" + subtype-union parse
-	// is correct and must be left intact. Splitting is required only when at
-	// least one side carries a real card-type kind ("creature or basic land
-	// card", "basic land card or Gate card"), where flattening would force every
-	// type alternative to satisfy the other's supertype.
-	if !disjunctSideTypedKind(left) && !disjunctSideTypedKind(right) {
+	if !disjunctSidesShouldSplit(left, right) {
 		return nil, false
 	}
 	return []SelectionSyntax{left, right}, true
+}
+
+// disjunctSidesShouldSplit reports whether the two parsed sides of a single
+// top-level "or" selection must become Selection.Alternatives because flattening
+// them into one selection would change meaning. parseSelection otherwise merges
+// every dimension of the whole phrase into a single selection, which is lossless
+// only when the two sides share a dimension: two card types unite through
+// RequiredTypesAny ("artifact or creature") and two subtypes unite through
+// SubtypesAny ("Forest or Plains"). It is lossy when the sides carry different
+// supertypes (the runtime treats supertypes as all-of) or occupy different
+// dimensions — a card type with a subtype ("creature or Vehicle"), a card type
+// with a token ("creature or a token"), or a token with a card type ("a token or
+// a land") — because flattening would force every match to satisfy both sides at
+// once. Only the lossy cases split; same-dimension unions keep their existing
+// flattened parse so no already-supported selection regresses.
+func disjunctSidesShouldSplit(left, right SelectionSyntax) bool {
+	if !slices.Equal(left.Supertypes, right.Supertypes) {
+		// A differing supertype is lossy only when it cannot distribute across
+		// both sides. When neither side names a genuine card type ("basic Forest
+		// or Plains [card]"), both sides are subtype-only and the leading
+		// supertype belongs to the whole card, so the flattened "basic" +
+		// subtype-union parse is correct and must be left intact. Splitting is
+		// required only when at least one side carries a real card-type kind
+		// ("creature or basic land card", "basic land card or Gate card"), where
+		// flattening would force every type alternative to satisfy the other's
+		// supertype.
+		return disjunctSideTypedKind(left) || disjunctSideTypedKind(right)
+	}
+	leftCategory, ok := disjunctSideCategory(left)
+	if !ok {
+		return false
+	}
+	rightCategory, ok := disjunctSideCategory(right)
+	if !ok {
+		return false
+	}
+	if leftCategory == rightCategory && leftCategory != disjunctSideToken {
+		return false
+	}
+	// A cross-dimension union splits only when at least one side denotes a
+	// distinct artifact/token permanent class — a bare token ("creature or a
+	// token", "a token or a land") or an artifact-token subtype ("creature or
+	// Vehicle", "creature or a Treasure"). A creature/land/enchantment subtype
+	// paired with a card type ("Dinosaur or land", "Human or artifact") is the
+	// shape the search and reveal filters already approximate through a flattened
+	// parse, so it is left unsplit to avoid regressing those selections.
+	return disjunctSideForcesSplit(left) || disjunctSideForcesSplit(right)
+}
+
+// disjunctSideForcesSplit reports whether a disjunction side denotes a distinct
+// artifact/token permanent class that no flattened selection approximates: a
+// bare token, or a card named purely by a single artifact subtype (Vehicle,
+// Treasure, Food, Clue, Blood). These are the sacrifice-fodder shapes that
+// require a Selection.AnyOf union; every other side leaves the cross-dimension
+// decision to its partner.
+func disjunctSideForcesSplit(side SelectionSyntax) bool {
+	category, ok := disjunctSideCategory(side)
+	if !ok {
+		return false
+	}
+	switch category {
+	case disjunctSideToken:
+		return true
+	case disjunctSideSubtype:
+		return len(side.SubtypesAny) == 1 &&
+			SubtypeMatchesCardType(side.SubtypesAny[0], CardTypeArtifact)
+	default:
+		return false
+	}
+}
+
+// disjunctSideKind classifies the single dimension a disjunction side occupies,
+// the basis for deciding whether a "<left> or <right>" union flattens losslessly.
+type disjunctSideKind int
+
+const (
+	disjunctSideCardType disjunctSideKind = iota
+	disjunctSideSubtype
+	disjunctSideToken
+)
+
+// disjunctSideCategory reports which single dimension a disjunction side
+// occupies: a card-type kind ("creature"), a card matched purely by subtype
+// ("Vehicle", "Treasure"), or a bare token ("a token"). It fails closed for any
+// side mixing dimensions so only cleanly single-dimension sides take the
+// cross-dimension split path.
+func disjunctSideCategory(side SelectionSyntax) (disjunctSideKind, bool) {
+	switch {
+	case side.TokenOnly && side.Kind == SelectionUnknown &&
+		len(side.RequiredTypesAny) == 0 && len(side.SubtypesAny) == 0:
+		return disjunctSideToken, true
+	case !side.TokenOnly && side.Kind == SelectionCard &&
+		len(side.SubtypesAny) > 0 && len(side.RequiredTypesAny) == 0:
+		return disjunctSideSubtype, true
+	case !side.TokenOnly && len(side.SubtypesAny) == 0 && disjunctSideTypedKind(side):
+		return disjunctSideCardType, true
+	default:
+		return 0, false
+	}
 }
 
 // disjunctSideTypedKind reports whether a disjunction side names a real card
@@ -2681,6 +2771,8 @@ func disjunctSelectionSide(tokens []shared.Token, atoms Atoms) (SelectionSyntax,
 		ExcludedColors:     parsed.ExcludedColors,
 		Colorless:          parsed.Colorless,
 		Multicolored:       parsed.Multicolored,
+		TokenOnly:          parsed.TokenOnly,
+		NonToken:           parsed.NonToken,
 	}
 	if side.Kind == SelectionUnknown && len(side.SubtypesAny) > 0 && len(side.RequiredTypesAny) == 0 {
 		side.Kind = SelectionCard
@@ -2692,13 +2784,16 @@ func disjunctSelectionSide(tokens []shared.Token, atoms Atoms) (SelectionSyntax,
 }
 
 // disjunctSideExpressible reports whether a disjunction side names a card-type
-// or permanent kind the search filter can carry, the precondition for splitting
-// a selection into alternatives.
+// or permanent kind the search filter can carry, or a bare token, the
+// precondition for splitting a selection into alternatives.
 func disjunctSideExpressible(side SelectionSyntax) bool {
 	switch side.Kind {
 	case SelectionCard, SelectionCreature, SelectionLand, SelectionArtifact,
 		SelectionEnchantment, SelectionPlaneswalker, SelectionPermanent:
 		return true
+	case SelectionUnknown:
+		return side.TokenOnly &&
+			len(side.RequiredTypesAny) == 0 && len(side.SubtypesAny) == 0
 	default:
 		return false
 	}
