@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,977 of 32,501 cards eligible for paper support (49.2%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,984 of 32,501 cards eligible for paper support (49.2%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -725,6 +725,7 @@ Council4 currently supports **15,977 of 32,501 cards eligible for paper support 
 - Artificer's Epiphany
 - Artificer's Intuition
 - Artillerize
+- Artillery Blast
 - Artisan of Kozilek
 - Artisan's Sorrow
 - Artistic Refusal
@@ -1681,6 +1682,7 @@ Council4 currently supports **15,977 of 32,501 cards eligible for paper support 
 - Boseiju Reaches Skyward // Branch of Boseiju
 - Boseiju, Who Endures
 - Bosk Banneret
+- Boss's Chauffeur
 - Bot Bashing Time
 - Botanical Plaza
 - Botanical Sanctum
@@ -2551,6 +2553,7 @@ Council4 currently supports **15,977 of 32,501 cards eligible for paper support 
 - Combat Research
 - Combat Tutorial
 - Combine Chrysalis
+- Combustion Technique
 - Comet Crawler
 - Coming In Hot
 - Command Beacon
@@ -3572,6 +3575,7 @@ Council4 currently supports **15,977 of 32,501 cards eligible for paper support 
 - Dracosaur Auxiliary
 - Drag Down
 - Drag the Canal
+- Drag to the Bottom
 - Drag to the Underworld
 - Drag Under
 - Dragon
@@ -7061,6 +7065,7 @@ Council4 currently supports **15,977 of 32,501 cards eligible for paper support 
 - Jawbone Skulkin
 - Jaya's Firenado
 - Jaya's Greeting
+- Jaya's Immolating Inferno
 - Jaya, Venerated Firemage
 - Jayemdae Tome
 - Jedit Ojanen
@@ -15442,11 +15447,13 @@ Council4 currently supports **15,977 of 32,501 cards eligible for paper support 
 - Weird // Goblin
 - Weirded Vampire
 - Weirding Shaman
+- Welcome to Sweettooth
 - Welcoming Vampire
 - Welder Automaton
 - Weldfast Monitor
 - Weldfast Wingsmith
 - Welding Jar
+- Welding Sparks
 - Welkin Guide
 - Welkin Hawk
 - Welkin Tern

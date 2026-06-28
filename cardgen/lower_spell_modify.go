@@ -1387,25 +1387,29 @@ func lowerEventPowerGroupDamageSpell(ctx contentCtx) (game.AbilityContent, bool)
 }
 
 // lowerEachOfTargetsDamageSpell lowers "deals N damage to each of <cardinality>
-// <targets>" effects, which deal the full fixed amount to each of the chosen
-// targets (unlike divided damage, which splits one total). It emits one Damage
+// <targets>" effects, which deal the full amount to each of the chosen targets
+// (unlike divided damage, which splits one total). It emits one Damage
 // instruction per target slot, each addressing its own flat target index, the
 // same per-slot pattern the multi-target pump path uses. Declined "up to N"
 // slots leave fewer chosen targets and the runtime Damage no-ops on an
-// unresolved target index, so only the chosen targets take damage. The recipient
-// may be an "any target" slot (permanent or player) or a creature target. It
-// fails closed (ok=false) for dynamic amounts, divided damage, riders, or any
-// other selector so the single-target path and its diagnostic stay unchanged.
+// unresolved target index, so only the chosen targets take damage. The amount is
+// either an exact fixed value or the spell's bare variable X ("deals X damage to
+// each of up to three targets", Jaya's Immolating Inferno, Fall of the Titans),
+// dealt in full to each chosen target. The recipient may be an "any target" slot
+// (permanent or player) or a creature target. It fails closed (ok=false) for
+// every other dynamic amount form, divided damage, riders, or any other selector
+// so the single-target path and its diagnostic stay unchanged.
 func lowerEachOfTargetsDamageSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	if len(ctx.content.Effects) != 1 || len(ctx.content.Targets) != 1 {
 		return game.AbilityContent{}, false
 	}
 	effect := ctx.content.Effects[0]
+	amount, amountOK := eachOfDamageAmount(effect.Amount)
 	if effect.Kind != compiler.EffectDealDamage ||
 		!effect.Exact ||
 		effect.Negated ||
 		effect.Divided ||
-		!effect.Amount.Known || effect.Amount.Value < 1 ||
+		!amountOK ||
 		effect.DamageRecipient.Reference != parser.DamageRecipientReferenceNone ||
 		(effect.Context != parser.EffectContextSource &&
 			effect.Context != parser.EffectContextReferencedObject) ||
@@ -1423,7 +1427,7 @@ func lowerEachOfTargetsDamageSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	sequence := make([]game.Instruction, 0, spec.MaxTargets)
 	for i := range spec.MaxTargets {
 		sequence = append(sequence, game.Instruction{Primitive: game.Damage{
-			Amount:       game.Fixed(effect.Amount.Value),
+			Amount:       amount,
 			Recipient:    game.AnyTargetDamageRecipient(i),
 			DamageSource: damageSourceRef,
 		}})
@@ -1432,6 +1436,30 @@ func lowerEachOfTargetsDamageSpell(ctx contentCtx) (game.AbilityContent, bool) {
 		Targets:  []game.TargetSpec{spec},
 		Sequence: sequence,
 	}.Ability(), true
+}
+
+// eachOfDamageAmount resolves the per-target amount an "each of N targets" damage
+// effect deals to every chosen target. It supports an exact fixed value of at
+// least one and the spell's bare variable X, returning each as a runtime
+// Quantity. It fails closed for every dynamic, modified, or non-positive amount
+// the each-of path cannot represent, so those wordings keep their diagnostics.
+func eachOfDamageAmount(amount compiler.CompiledAmount) (game.Quantity, bool) {
+	if amount.DynamicKind != compiler.DynamicAmountNone ||
+		amount.DynamicForm != compiler.DynamicAmountFormNone ||
+		amount.Addend != 0 || amount.Multiplier != 0 {
+		return game.Quantity{}, false
+	}
+	switch {
+	case amount.Known:
+		if amount.Value < 1 {
+			return game.Quantity{}, false
+		}
+		return game.Fixed(amount.Value), true
+	case amount.VariableX:
+		return game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX}), true
+	default:
+		return game.Quantity{}, false
+	}
 }
 
 // eachOfDamageTargetSpec builds the multi-target spec an "each of N targets"

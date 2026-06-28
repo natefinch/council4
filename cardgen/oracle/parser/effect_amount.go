@@ -573,6 +573,10 @@ type dynamicAmountPrefix struct {
 	multiplier int
 	plural     bool
 	count      bool
+	// addend is a fixed leading offset added to the counted amount, from the
+	// "N plus the number of <count>" form ("X is 2 plus the number of artifacts
+	// you control"). It is zero for every prefix without a leading addend.
+	addend int
 }
 
 type dynamicAmountSubject struct {
@@ -598,6 +602,9 @@ func parseDynamicEffectAmount(tokens []shared.Token, atoms Atoms) (amount Effect
 		match.DynamicForm = prefix.form
 		match.Multiplier = prefix.multiplier
 		end := subject.end
+		if prefix.addend != 0 {
+			match.Addend = prefix.addend
+		}
 		if addend, addendEnd, ok := parseDynamicAmountAddend(tokens, subject.end); ok {
 			match.Addend = addend
 			end = addendEnd
@@ -648,24 +655,71 @@ func parseCreateForEachAmount(kind EffectKind, context EffectContextKind, tokenP
 }
 
 func parseDynamicAmountPrefix(tokens []shared.Token, index int, atoms Atoms) (dynamicAmountPrefix, bool) {
+	if prefix, ok := parseLeadingAddendCountPrefix(tokens, index); ok {
+		return prefix, true
+	}
 	switch {
 	case effectWordsAt(tokens, index, "equal", "to", "twice", "the", "number", "of"):
-		return dynamicAmountPrefix{EffectDynamicAmountFormEqual, index + 6, 2, true, true}, true
+		return dynamicAmountPrefix{EffectDynamicAmountFormEqual, index + 6, 2, true, true, 0}, true
 	case effectWordsAt(tokens, index, "equal", "to", "the", "number", "of"):
-		return dynamicAmountPrefix{EffectDynamicAmountFormEqual, index + 5, 1, true, true}, true
+		return dynamicAmountPrefix{EffectDynamicAmountFormEqual, index + 5, 1, true, true, 0}, true
 	case effectWordsAt(tokens, index, "for", "each"):
-		return dynamicAmountPrefix{EffectDynamicAmountFormForEach, index + 2, precedingEffectMultiplier(tokens[:index], atoms), false, true}, true
+		return dynamicAmountPrefix{EffectDynamicAmountFormForEach, index + 2, precedingEffectMultiplier(tokens[:index], atoms), false, true, 0}, true
 	case effectWordsAt(tokens, index, "equal", "to"):
-		return dynamicAmountPrefix{EffectDynamicAmountFormEqual, index + 2, 1, false, false}, true
+		return dynamicAmountPrefix{EffectDynamicAmountFormEqual, index + 2, 1, false, false, 0}, true
 	case effectWordsAt(tokens, index, "where", "X", "is", "twice", "the", "number", "of"):
-		return dynamicAmountPrefix{EffectDynamicAmountFormWhereX, index + 7, 2, true, true}, true
+		return dynamicAmountPrefix{EffectDynamicAmountFormWhereX, index + 7, 2, true, true, 0}, true
 	case effectWordsAt(tokens, index, "where", "X", "is", "the", "number", "of"):
-		return dynamicAmountPrefix{EffectDynamicAmountFormWhereX, index + 6, 1, true, true}, true
+		return dynamicAmountPrefix{EffectDynamicAmountFormWhereX, index + 6, 1, true, true, 0}, true
 	case effectWordsAt(tokens, index, "where", "X", "is"):
-		return dynamicAmountPrefix{EffectDynamicAmountFormWhereX, index + 3, 1, false, false}, true
+		return dynamicAmountPrefix{EffectDynamicAmountFormWhereX, index + 3, 1, false, false, 0}, true
 	default:
 		return dynamicAmountPrefix{}, false
 	}
+}
+
+// parseLeadingAddendCountPrefix recognizes a dynamic count amount whose count is
+// offset by a fixed leading addend: "where X is N plus the number of <count>" or
+// "equal to N plus the number of <count>" (Welding Sparks: "X is 3 plus the
+// number of artifacts you control"; Galvanic Bombardment, Thunder Salvo). The
+// "N plus" sits between the form keyword and the "the number of" count phrase,
+// the leading mirror of the trailing "the number of <count> plus N" addend
+// parseDynamicAmountAddend already consumes. It returns a prefix positioned just
+// past "the number of", carrying the leading addend and the count's multiplier
+// of one. It fails closed for every wording without the exact
+// "<form> <N> plus the number of" run, so amounts without a leading addend keep
+// their existing prefixes.
+func parseLeadingAddendCountPrefix(tokens []shared.Token, index int) (dynamicAmountPrefix, bool) {
+	var form EffectDynamicAmountForm
+	var addendIndex int
+	switch {
+	case effectWordsAt(tokens, index, "where", "X", "is"):
+		form = EffectDynamicAmountFormWhereX
+		addendIndex = index + 3
+	case effectWordsAt(tokens, index, "equal", "to"):
+		form = EffectDynamicAmountFormEqual
+		addendIndex = index + 2
+	default:
+		return dynamicAmountPrefix{}, false
+	}
+	if addendIndex >= len(tokens) {
+		return dynamicAmountPrefix{}, false
+	}
+	addend, ok := addendCardinal(tokens[addendIndex])
+	if !ok || addend < 1 {
+		return dynamicAmountPrefix{}, false
+	}
+	if !effectWordsAt(tokens, addendIndex+1, "plus", "the", "number", "of") {
+		return dynamicAmountPrefix{}, false
+	}
+	return dynamicAmountPrefix{
+		form:       form,
+		start:      addendIndex + 5,
+		multiplier: 1,
+		plural:     true,
+		count:      true,
+		addend:     addend,
+	}, true
 }
 
 func precedingEffectMultiplier(tokens []shared.Token, atoms Atoms) int {
