@@ -344,7 +344,7 @@ func lowerOrderedEffectSequence(
 		if category := applySequenceClauseGates(mode.Sequence, i, effectConditions, insteadGates, otherwiseGates); category != "" {
 			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, category)
 		}
-		if optionalFlow.enabled || optionalFlow.bareIndex >= 0 {
+		if optionalFlow.enabled || optionalFlow.bareIndex >= 0 || optionalFlow.independentOptional {
 			if category, ok := applyOptionalFlowEnvelope(optionalFlow, i, mode.Sequence); !ok {
 				return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, category)
 			}

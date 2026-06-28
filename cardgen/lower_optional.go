@@ -912,13 +912,23 @@ type optionalFlowPlan struct {
 	// on X having succeeded and is itself performed only if the controller then
 	// chooses to. It is -1 whenever no nested optional is present.
 	extraOptionalIndex int
+	// independentOptional selects the all-independent bare-optional shape: a
+	// gate-free sequence in which every effect carries its own resolving "you
+	// may" with no relationship between them ("you may tap or untap target
+	// permanent, then you may tap or untap another target permanent"). Each
+	// effect lowers to a single instruction marked Optional independently, so the
+	// controller decides each one separately. It is mutually exclusive with the
+	// enabled/bareIndex shapes.
+	independentOptional bool
 }
 
 // marksOptional reports whether the optional flow marks the instruction produced
-// by effect i Optional: the optional effect of an "if you do" pair, or the
-// trailing bare optional effect. The mandatory publish-without-optional shape
-// publishes its leading effect's result but never marks it Optional.
+// by effect i Optional: the optional effect of an "if you do" pair, the trailing
+// bare optional effect, or — in the all-independent shape — every effect.
 func (p optionalFlowPlan) marksOptional(i int) bool {
+	if p.independentOptional {
+		return true
+	}
 	if p.enabled && p.extraOptionalIndex >= 0 && i == p.extraOptionalIndex {
 		return true
 	}
@@ -1003,13 +1013,26 @@ func planOptionalFlow(content compiler.AbilityContent) (optionalFlowPlan, bool) 
 		}
 	}
 	if priorAcceptedConditions == 0 {
+		// Multiple independent bare optionals with no resolving-success gate:
+		// "you may X, then you may Y[, then you may Z]." Every effect must carry
+		// its own resolving "you may" so none silently resolves as though gated
+		// on another's result; a leading or trailing mandatory effect, a negated
+		// optional, or a delayed optional leaves the body unsupported. Each effect
+		// lowers to a single instruction marked Optional independently.
+		if extraOptional != -1 {
+			for ei := range content.Effects {
+				if !content.Effects[ei].Optional ||
+					content.Effects[ei].Negated ||
+					content.Effects[ei].DelayedTiming != 0 {
+					return optionalFlowPlan{}, false
+				}
+			}
+			return optionalFlowPlan{bareIndex: -1, elseIndex: -1, elseGateCondition: -1, extraOptionalIndex: -1, independentOptional: true}, true
+		}
 		// Bare trailing optional: the optional effect must be the final effect so
 		// no later mandatory effect silently resolves as though gated on the
-		// optional's result. A negated or delayed optional is left unsupported. A
-		// second optional with no gate has no modeled relationship and fails
-		// closed.
-		if extraOptional != -1 ||
-			optionalIndex != len(content.Effects)-1 ||
+		// optional's result. A negated or delayed optional is left unsupported.
+		if optionalIndex != len(content.Effects)-1 ||
 			content.Effects[optionalIndex].Negated ||
 			content.Effects[optionalIndex].DelayedTiming != 0 {
 			return optionalFlowPlan{}, false
@@ -1478,6 +1501,12 @@ func applyOptionalFlowEnvelope(plan optionalFlowPlan, i int, sequence []game.Ins
 		if plan.gatesElse(i) && !applyOptionalFlowGate(sequence, game.TriFalse) {
 			return "structural — otherwise gate not applicable", false
 		}
+	}
+	if plan.independentOptional {
+		if !applyBareOptional(sequence) {
+			return "structural — optional effect not single-instruction", false
+		}
+		return "", true
 	}
 	if i == plan.bareIndex && !applyBareOptional(sequence) {
 		return "structural — optional effect not single-instruction", false
