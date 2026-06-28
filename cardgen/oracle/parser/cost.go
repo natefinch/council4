@@ -1045,8 +1045,8 @@ func annotateRemoveCounterCostObject(component *CostComponent, object []shared.T
 // annotateRemoveCounterSourceObject recognizes the single-source cost "Remove N
 // <kind> counters from <this permanent>", which removes the counters from the
 // ability's own source. The counter kind may be named or omitted: a bare "Remove
-// a counter from this creature" removes counters of any kind the payer chooses
-// and leaves CounterKindKnown false.
+// a counter from this creature" removes counters regardless of kind, resolved by
+// the payment planner, and leaves CounterKindKnown false.
 func annotateRemoveCounterSourceObject(component *CostComponent, amount shared.Token, kindTokens, rest []shared.Token, atoms Atoms) {
 	if !costAmountAt(component, amount, atoms, false) ||
 		!costSelfReference(rest, atoms, true) {
