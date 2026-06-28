@@ -41,6 +41,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 	case EffectCreate:
 		return exactCreateMultiTokenEffectSyntax(effect) ||
 			exactCreateTokenEffectSyntax(effect) ||
+			exactCreateTokenEachPlayerEffectSyntax(effect) ||
 			exactCreateTokenForEachDestroyedThisWayEffectSyntax(effect) ||
 			exactCreateTokenForEachExiledThisWayEffectSyntax(effect) ||
 			exactCreateNamedTokenEffectSyntax(effect) ||
@@ -2535,10 +2536,10 @@ func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
 	switch effect.Amount.DynamicForm {
 	case EffectDynamicAmountFormNone:
 		if effect.Amount.VariableX {
-			return strings.EqualFold(exactEffectClauseText(effect), "Create "+specBody("X", "tokens")+".")
+			return createTokenControllerClauseMatches(exactEffectClauseText(effect), specBody("X", "tokens")+".")
 		}
 		if effect.Amount.DynamicKind == EffectDynamicAmountTriggeringCombatDamage {
-			return strings.EqualFold(exactEffectClauseText(effect), "Create "+specBody("that many", "tokens")+".")
+			return createTokenControllerClauseMatches(exactEffectClauseText(effect), specBody("that many", "tokens")+".")
 		}
 		if !effect.Amount.Known || effect.Amount.Value < 1 {
 			return false
@@ -2550,15 +2551,13 @@ func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
 		if effect.Amount.Value != 1 {
 			countWord, noun = effectAmountSourceText(effect), "tokens"
 		}
-		return strings.EqualFold(exactEffectClauseText(effect), "Create "+specBody(countWord, noun)+".")
+		return createTokenControllerClauseMatches(exactEffectClauseText(effect), specBody(countWord, noun)+".")
 	case EffectDynamicAmountFormForEach:
 		if effect.Amount.DynamicKind == EffectDynamicAmountNone || effect.Amount.Multiplier != 1 {
 			return false
 		}
 		spec := specBody("a", "token")
-		full := fullEffectClauseText(effect)
-		return strings.EqualFold(full, effect.Amount.Text+", create "+spec+".") ||
-			strings.EqualFold(full, "Create "+spec+" "+effect.Amount.Text+".")
+		return createTokenControllerForEachClauseMatches(fullEffectClauseText(effect), spec, effect.Amount.Text)
 	case EffectDynamicAmountFormEqual:
 		if effect.Amount.DynamicKind == EffectDynamicAmountNone {
 			return false
@@ -2567,9 +2566,7 @@ func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
 		// a number of X tokens equal to ..."), which effectSubjectStart does not
 		// strip, so accept both the bare and "You" prefixes.
 		spec := specBody("a number of", "tokens")
-		clause := exactEffectClauseText(effect)
-		return strings.EqualFold(clause, "Create "+spec+" "+effect.Amount.Text+".") ||
-			strings.EqualFold(clause, "You create "+spec+" "+effect.Amount.Text+".")
+		return createTokenControllerClauseMatches(exactEffectClauseText(effect), spec+" "+effect.Amount.Text+".")
 	case EffectDynamicAmountFormWhereX:
 		if effect.Amount.DynamicKind == EffectDynamicAmountNone && !effect.Amount.VariableX {
 			return false
@@ -2579,11 +2576,11 @@ func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
 			// the token's printed power and toughness rather than counting tokens, so
 			// the count is the singular article and the trailing "where X is" clause
 			// binds the size. One such token is created.
-			return strings.EqualFold(exactEffectClauseText(effect),
-				"Create "+specBody("an", "token")+", "+effect.Amount.Text+".")
+			return createTokenControllerClauseMatches(exactEffectClauseText(effect),
+				specBody("an", "token")+", "+effect.Amount.Text+".")
 		}
-		return strings.EqualFold(exactEffectClauseText(effect),
-			"Create "+specBody("X", "tokens")+", "+effect.Amount.Text+".")
+		return createTokenControllerClauseMatches(exactEffectClauseText(effect),
+			specBody("X", "tokens")+", "+effect.Amount.Text+".")
 	default:
 		return false
 	}
@@ -2668,20 +2665,16 @@ func exactCreateNamedTokenEffectSyntax(effect *EffectSyntax) bool {
 	}
 	if equalDynamicCount {
 		spec := fmt.Sprintf("a number of %s%s tokens", tappedPart, string(sel.SubtypesAny[0]))
-		clause := exactEffectClauseText(effect)
-		return strings.EqualFold(clause, "Create "+spec+" "+effect.Amount.Text+".") ||
-			strings.EqualFold(clause, "You create "+spec+" "+effect.Amount.Text+".")
+		return createTokenControllerClauseMatches(exactEffectClauseText(effect), spec+" "+effect.Amount.Text+".")
 	}
 	if forEachCount {
 		spec := fmt.Sprintf("a %s%s token", tappedPart, string(sel.SubtypesAny[0]))
-		full := fullEffectClauseText(effect)
-		return strings.EqualFold(full, effect.Amount.Text+", create "+spec+".") ||
-			strings.EqualFold(full, "Create "+spec+" "+effect.Amount.Text+".")
+		return createTokenControllerForEachClauseMatches(fullEffectClauseText(effect), spec, effect.Amount.Text)
 	}
 	if whereXDynamicCount {
 		spec := fmt.Sprintf("X %s%s tokens", tappedPart, string(sel.SubtypesAny[0]))
-		return strings.EqualFold(exactEffectClauseText(effect),
-			"Create "+spec+", "+effect.Amount.Text+".")
+		return createTokenControllerClauseMatches(exactEffectClauseText(effect),
+			spec+", "+effect.Amount.Text+".")
 	}
 	countWord, noun := "a", "token"
 	switch {
@@ -2701,7 +2694,7 @@ func exactCreateNamedTokenEffectSyntax(effect *EffectSyntax) bool {
 		}
 		return strings.EqualFold(exactEffectClauseText(effect), subject+" creates "+specBody+".")
 	}
-	return strings.EqualFold(exactEffectClauseText(effect), "Create "+specBody+".")
+	return createTokenControllerClauseMatches(exactEffectClauseText(effect), specBody+".")
 }
 
 // exactCreatePredefinedTokenEffectSyntax recognizes "Create a [tapped] <Name>
@@ -2741,7 +2734,7 @@ func exactCreatePredefinedTokenEffectSyntax(effect *EffectSyntax) bool {
 		tappedPart = "tapped "
 	}
 	specBody := fmt.Sprintf("a %s%s token", tappedPart, effect.TokenPredefinedName)
-	return strings.EqualFold(exactEffectClauseText(effect), "Create "+specBody+".")
+	return createTokenControllerClauseMatches(exactEffectClauseText(effect), specBody+".")
 }
 
 // exactCreateNamedTokenChoiceEffectSyntax recognizes an N-way (N >= 2) choice

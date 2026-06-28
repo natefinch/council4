@@ -1561,7 +1561,15 @@ func (p CreateToken) validatePrimitive(targets []TargetSpec, checkTargets bool) 
 		}
 	}
 	if p.Recipient.Exists {
+		if p.RecipientGroup.Kind != PlayerGroupReferenceNone {
+			return errors.New("create token cannot set both a recipient and a recipient group")
+		}
 		return validatePlayerReference(p.Recipient.Val, targets, checkTargets)
+	}
+	if p.RecipientGroup.Kind != PlayerGroupReferenceNone {
+		if problems := p.RecipientGroup.Validate(); len(problems) != 0 {
+			return errors.New(problems[0])
+		}
 	}
 	return nil
 }

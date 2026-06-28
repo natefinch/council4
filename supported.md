@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,095 of 32,501 cards eligible for paper support (49.5%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,124 of 32,501 cards eligible for paper support (49.6%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -541,6 +541,7 @@ Council4 currently supports **16,095 of 32,501 cards eligible for paper support 
 - Apprentice Sharpshooter
 - Apprentice Sorcerer
 - Apprentice Wizard
+- April O'Neil, Human Element
 - April O'Neil, Kunoichi Trainee
 - April, Reporter of the Weird
 - Aquamoeba
@@ -1446,6 +1447,7 @@ Council4 currently supports **16,095 of 32,501 cards eligible for paper support 
 - Blood Hypnotist
 - Blood Knight
 - Blood Mist
+- Blood Money
 - Blood Ogre
 - Blood Pact
 - Blood Pet
@@ -2836,6 +2838,7 @@ Council4 currently supports **16,095 of 32,501 cards eligible for paper support 
 - Criminal Enterprise
 - Crimson Acolyte
 - Crimson Caravaneer
+- Crimson Cowl, Master of Evil
 - Crimson Fleet Commodore
 - Crimson Kobolds
 - Crimson Mage
@@ -3942,6 +3945,7 @@ Council4 currently supports **16,095 of 32,501 cards eligible for paper support 
 - Ecstatic Electromancer
 - Edea, Possessed Sorceress
 - Edge of the Divinity
+- Edge Rover
 - Edgewall Pack
 - Eel-Hounds
 - Eerie Gravestone
@@ -4046,6 +4050,7 @@ Council4 currently supports **16,095 of 32,501 cards eligible for paper support 
 - Elephant Ambush
 - Elephant Graveyard
 - Elephant Guide
+- Elephant-Mandrill
 - Elephant-Rat
 - Elesh Norn, Grand Cenobite
 - Elesh Norn, Mother of Machines
@@ -4468,6 +4473,7 @@ Council4 currently supports **16,095 of 32,501 cards eligible for paper support 
 - Faerie Rogue
 - Faerie Rogue
 - Faerie Seer
+- Faerie Slumber Party
 - Faerie Snoop
 - Faerie Spy
 - Faerie Swarm
@@ -4681,6 +4687,7 @@ Council4 currently supports **16,095 of 32,501 cards eligible for paper support 
 - Fevered Convulsions
 - Fevered Strength
 - Fey Steed
+- Feywild Visitor
 - Fiddlehead Kami
 - Field Creeper
 - Field Marshal
@@ -4882,6 +4889,7 @@ Council4 currently supports **16,095 of 32,501 cards eligible for paper support 
 - Fleshmad Steed
 - Fleshpulper Giant
 - Fleshtaker
+- Flick a Coin
 - Flicker
 - Flicker of Fate
 - Flickering Spirit
@@ -5975,6 +5983,7 @@ Council4 currently supports **16,095 of 32,501 cards eligible for paper support 
 - Grisly Salvage
 - Grisly Survivor
 - Grisly Transformation
+- Grismold, the Dreadsower
 - Gristle Grinner
 - Gristleback
 - Grixis Battlemage
@@ -7875,6 +7884,7 @@ Council4 currently supports **16,095 of 32,501 cards eligible for paper support 
 - Liliana's Devotee
 - Liliana's Elite
 - Liliana's Mastery
+- Liliana's Reaver
 - Liliana's Scrounger
 - Liliana's Shade
 - Liliana's Specter
@@ -8274,6 +8284,7 @@ Council4 currently supports **16,095 of 32,501 cards eligible for paper support 
 - March of the Returned
 - Marchesa's Emissary
 - Marchesa's Infiltrator
+- Marching Duodrone
 - Mardu Ascendancy
 - Mardu Banner
 - Mardu Blazebringer
@@ -8653,6 +8664,7 @@ Council4 currently supports **16,095 of 32,501 cards eligible for paper support 
 - Minotaur Sureshot
 - Minotaur Tactician
 - Minotaur Warrior
+- Minotaur, Roxxon CEO
 - Mintstrosity
 - Minwu, White Mage
 - Miraculous Recovery
@@ -8803,6 +8815,7 @@ Council4 currently supports **16,095 of 32,501 cards eligible for paper support 
 - Moment of Valor
 - Moment's Peace
 - Momentary Blink
+- Mona Lisa, Ever Adaptable
 - Mona Lisa, Science Geek
 - Monastery Flock
 - Monastery Mentor
@@ -8816,6 +8829,7 @@ Council4 currently supports **16,095 of 32,501 cards eligible for paper support 
 - Monk of the Open Hand
 - Monk Realist
 - Monoist Sentry
+- Monologue Tax
 - Monoskelion
 - Mons's Goblin Raiders
 - Monster Mashup
@@ -8842,6 +8856,7 @@ Council4 currently supports **16,095 of 32,501 cards eligible for paper support 
 - Moonshaker Cavalry
 - Moonsilver Spear
 - Moonsnare Specialist
+- Moonstone Eulogist
 - Moonveil Dragon
 - Moonwing Moth
 - Moor Fiend
@@ -9116,6 +9131,7 @@ Council4 currently supports **16,095 of 32,501 cards eligible for paper support 
 - Necropouncer
 - Necrosavant
 - Necroskitter
+- Necrotic Hex
 - Necrotic Wound
 - Nectar Faerie
 - Need for Speed
@@ -10611,6 +10627,7 @@ Council4 currently supports **16,095 of 32,501 cards eligible for paper support 
 - Rat
 - Rat
 - Rat King, Pale Piper
+- Rat Out
 - Rat Rogue
 - Ratadrabik of Urborg
 - Ratcatcher
@@ -11815,6 +11832,7 @@ Council4 currently supports **16,095 of 32,501 cards eligible for paper support 
 - Senate Courier
 - Senate Griffin
 - Senate Guildmage
+- Send in the Pest
 - Sengir Bats
 - Sengir Connoisseur
 - Sengir Vampire
@@ -12439,6 +12457,7 @@ Council4 currently supports **16,095 of 32,501 cards eligible for paper support 
 - Slaughter Cry
 - Slaughter Drone
 - Slaughter Pact
+- Slaughter Specialist
 - Slaughter-Priest of Mogis
 - Slaughterhorn
 - Slaughterhouse Bouncer
@@ -12454,6 +12473,7 @@ Council4 currently supports **16,095 of 32,501 cards eligible for paper support 
 - Sleep Magic
 - Sleep of the Dead
 - Sleep Paralysis
+- Sleep with the Fishes
 - Sleep-Cursed Faerie
 - Sleeper Dart
 - Sleeper's Guile
@@ -12957,6 +12977,7 @@ Council4 currently supports **16,095 of 32,501 cards eligible for paper support 
 - Spite of Mogis
 - Spitebellows
 - Spiteflame Witch
+- Spiteful Banditry
 - Spiteful Blow
 - Spiteful Bully
 - Spiteful Motives
@@ -13084,6 +13105,7 @@ Council4 currently supports **16,095 of 32,501 cards eligible for paper support 
 - Stampede
 - Stampede Driver
 - Stampede Rider
+- Stampede Surfer
 - Stampeding Elk Herd
 - Stampeding Horncrest
 - Stampeding Rhino
@@ -13588,6 +13610,7 @@ Council4 currently supports **16,095 of 32,501 cards eligible for paper support 
 - Swooping Lookout
 - Swooping Protector
 - Sword Dancer
+- Sword of Body and Mind
 - Sword of Feast and Famine
 - Sword of Fire and Ice
 - Sword of Kaldra
@@ -13742,6 +13765,7 @@ Council4 currently supports **16,095 of 32,501 cards eligible for paper support 
 - Task Force
 - Tasseled Dromedary
 - Taste of Blood
+- Taste of Death
 - Tattered Apparition
 - Tattered Drake
 - Tattered Haunter
@@ -14177,6 +14201,7 @@ Council4 currently supports **16,095 of 32,501 cards eligible for paper support 
 - Tibor and Lumia
 - Ticked Off
 - Ticket Booth // Tunnel of Hate
+- Ticket Tortoise
 - Tidal Courier
 - Tidal Force
 - Tidal Kraken
@@ -14717,6 +14742,7 @@ Council4 currently supports **16,095 of 32,501 cards eligible for paper support 
 - Undying Rage
 - Unearth
 - Unearthly Blizzard
+- Uneasy Alliance
 - Unesh, Criosphinx Sovereign
 - Unexpected Assistance
 - Unexpected Windfall
@@ -15104,6 +15130,7 @@ Council4 currently supports **16,095 of 32,501 cards eligible for paper support 
 - Village Bell-Ringer
 - Village Cannibals
 - Village Elder
+- Village Pillagers
 - Village Rites
 - Villain
 - Vindicate
@@ -15795,6 +15822,7 @@ Council4 currently supports **16,095 of 32,501 cards eligible for paper support 
 - Wizard's Retort
 - Wizards' School
 - Wizened Cenn
+- Wizened Mentor
 - Woebearer
 - Wojek Bodyguard
 - Wojek Halberdiers
@@ -16043,6 +16071,7 @@ Council4 currently supports **16,095 of 32,501 cards eligible for paper support 
 - Zhur-Taa Goblin
 - Zhur-Taa Swine
 - Ziatora's Proving Ground
+- Ziatora, the Incinerator
 - Zodiac Dog
 - Zodiac Goat
 - Zodiac Horse

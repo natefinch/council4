@@ -496,6 +496,9 @@ func handleCreateToken(r *effectResolver, prim game.CreateToken) effectResolved 
 	if res.amount <= 0 {
 		res.amount = 1
 	}
+	if prim.RecipientGroup.Kind != game.PlayerGroupReferenceNone {
+		return r.createTokenForGroup(prim, res.amount)
+	}
 	var recipientRef game.PlayerReference
 	if prim.Recipient.Exists {
 		recipientRef = prim.Recipient.Val
@@ -534,6 +537,39 @@ func handleCreateToken(r *effectResolver, prim game.CreateToken) effectResolved 
 		}
 	}
 	res.succeeded = res.amount > 0
+	return res
+}
+
+// createTokenForGroup creates the token for every player in the primitive's
+// recipient group ("Each player creates a 1/1 white Soldier creature token.",
+// "Each opponent creates a Treasure token."). Members are resolved in APNAP
+// order so the created tokens enter in the correct turn-based sequence, and each
+// member receives the full token amount. The reported amount is the total number
+// of tokens created across the group.
+func (r *effectResolver) createTokenForGroup(prim game.CreateToken, amount int) effectResolved {
+	res := effectResolved{accepted: true}
+	token, ok := r.typedTokenDefinition(prim.Source)
+	if !ok {
+		return res
+	}
+	if prim.Power.Exists && prim.Toughness.Exists {
+		sized := *token
+		sized.Power = opt.Val(game.PT{Value: r.quantity(prim.Power.Val)})
+		sized.Toughness = opt.Val(game.PT{Value: r.quantity(prim.Toughness.Val)})
+		token = &sized
+	}
+	members := playersInAPNAPOrder(r.game, r.playerGroupMembers(prim.RecipientGroup))
+	for _, member := range members {
+		created, ok := createTokenPermanentsCollectingWithChoices(r.engine, r.game, member, token, amount, prim.EntryTapped, r.agents, r.log)
+		if !ok {
+			continue
+		}
+		if prim.EntryAttacking {
+			declareCreatedTokensAttacking(r.engine, r.game, member, created, r.agents, r.log)
+		}
+		res.amount += len(created)
+		res.succeeded = true
+	}
 	return res
 }
 

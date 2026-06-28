@@ -1305,9 +1305,12 @@ func TestParseCreateTokenTargetRecipientExactness(t *testing.T) {
 		{"Target opponent creates a 4/4 black Horror creature token.", true},
 		{"Target player creates a 1/1 white Soldier creature token.", true},
 		{"Target opponent creates two Treasure tokens.", true},
-		// Player-group recipients are not a single player reference; stay fail-closed.
-		{"Each opponent creates a 1/1 white Human creature token.", false},
-		{"Each player creates a 1/1 green Cat creature token.", false},
+		// Player-group recipients widen the token to every member of the group;
+		// "each player" and "each opponent" are now representable for fixed counts.
+		{"Each opponent creates a 1/1 white Human creature token.", true},
+		{"Each player creates a 1/1 green Cat creature token.", true},
+		// "Each other player" has no player-group reference and stays fail-closed.
+		{"Each other player creates a 1/1 green Cat creature token.", false},
 	}
 	for _, test := range tests {
 		t.Run(test.source, func(t *testing.T) {

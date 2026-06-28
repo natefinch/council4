@@ -97,6 +97,7 @@ var Cards = []*game.CardDef{
 	SkyriderElf,
 	SkywinderDrake,
 	SlateStreetRuffian,
+	SlaughterSpecialist,
 	SlayingFire,
 	SleepMagic,
 	SleepParalysis,

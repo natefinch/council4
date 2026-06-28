@@ -60,6 +60,9 @@ func lowerCreateTokenSpellLinked(ctx contentCtx, publishLinked game.LinkedKey) (
 	referencedRecipient := effect.Context == parser.EffectContextReferencedObjectController
 	targetRecipient := effect.Context == parser.EffectContextTarget
 	extraKeywords, keywordsOK := tokenContentKeywords(ctx.content)
+	if group, ok := createTokenRecipientGroup(effect.Context); ok {
+		return lowerCreateTokenGroupRecipient(ctx, &effect, group, publishLinked, extraKeywords, keywordsOK)
+	}
 	expectedTargets := 0
 	if targetRecipient {
 		expectedTargets = 1

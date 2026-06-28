@@ -128,6 +128,7 @@ var Cards = []*game.CardDef{
 	CrashTheParty,
 	CravenHulk,
 	CrazedArmodon,
+	CrimsonCowlMasterOfEvil,
 	CroakingCounterpart,
 	CrosisSCatacombs,
 	CrosstownCourier,

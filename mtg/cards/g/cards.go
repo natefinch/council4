@@ -74,6 +74,7 @@ var Cards = []*game.CardDef{
 	GriffnautTracker,
 	GrimAffliction,
 	GrimFeast,
+	GrismoldTheDreadsower,
 	Grollub,
 	Groundskeeper,
 	GrowthCycle,

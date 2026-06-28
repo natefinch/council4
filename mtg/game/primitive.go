@@ -518,9 +518,16 @@ type PutOnBattlefield struct {
 // effect only while the token's controller is the attacking player in an active
 // combat and is otherwise ignored, leaving the token to enter normally.
 type CreateToken struct {
-	Amount         Quantity
-	Source         TokenSource
-	Recipient      opt.V[PlayerReference]
+	Amount    Quantity
+	Source    TokenSource
+	Recipient opt.V[PlayerReference]
+	// RecipientGroup, when set, creates the token for each player in the group
+	// rather than for a single recipient ("Each player creates a 1/1 white
+	// Soldier creature token.", "Each opponent creates a Treasure token."). The
+	// handler resolves the group and creates the token amount for every member in
+	// APNAP order. It is mutually exclusive with Recipient and unset for the
+	// single-recipient forms.
+	RecipientGroup PlayerGroupReference
 	EntryTapped    bool
 	EntryAttacking bool
 
