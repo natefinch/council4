@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,922 of 32,501 cards eligible for paper support (49.0%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,929 of 32,501 cards eligible for paper support (49.0%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2108,6 +2108,7 @@ Council4 currently supports **15,922 of 32,501 cards eligible for paper support 
 - Cathedral of War
 - Cathedral Sanctifier
 - Cathodion
+- Caught in the Brights
 - Cauldron Familiar
 - Cauldron of Essence
 - Caustic Bronco
@@ -2308,6 +2309,7 @@ Council4 currently supports **15,922 of 32,501 cards eligible for paper support 
 - Choke
 - Choked Estuary
 - Choking Fumes
+- Choking Restraints
 - Choking Tethers
 - Chomping Changeling
 - Chord of Calling
@@ -2654,6 +2656,7 @@ Council4 currently supports **15,922 of 32,501 cards eligible for paper support 
 - Conversion Chamber
 - Conviction
 - Convolute
+- Cooped Up
 - Cooperation
 - Coordinated Assault
 - Coordinated Barrage
@@ -3645,6 +3648,7 @@ Council4 currently supports **15,922 of 32,501 cards eligible for paper support 
 - Dreadbore
 - Dreadbringer Lampads
 - Dreadfeast Demon
+- Dreadful Apathy
 - Dreadhorde Butcher
 - Dreadmalkin
 - Dreadmobile
@@ -9655,6 +9659,7 @@ Council4 currently supports **15,922 of 32,501 cards eligible for paper support 
 - Path of Annihilation
 - Path of Discovery
 - Path to Exile
+- Path to Redemption
 - Pathbreaker Ibex
 - Pathfinding Axejaw
 - Pathmaker Initiate
@@ -12018,6 +12023,7 @@ Council4 currently supports **15,922 of 32,501 cards eligible for paper support 
 - Sif's Spearmaster
 - Sift
 - Sigarda's Aid
+- Sigarda's Imprisonment
 - Sigarda's Summons
 - Sigarda, Champion of Light
 - Sigardian Priest
@@ -14682,6 +14688,7 @@ Council4 currently supports **15,922 of 32,501 cards eligible for paper support 
 - Utrom Monitor
 - Utrom Scientists
 - Utter End
+- Utter Insignificance
 - Utvara Hellkite
 - Utvara Scalper
 - Uurg, Spawn of Turg

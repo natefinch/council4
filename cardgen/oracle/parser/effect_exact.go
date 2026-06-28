@@ -77,6 +77,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 			exactExileForEachPlayerUntilLeavesEffectSyntax(effect) ||
 			exactExileTopOfLibrarySyntax(effect) ||
 			exactExileEntireHandEffectSyntax(effect) ||
+			exactExileAttachedEffectSyntax(effect) ||
 			exactDirectTargetEffectSyntax(effect, "Exile") ||
 			exactMultiDistinctTargetEffectSyntax(effect, "Exile") ||
 			exactMassEffectSyntax(effect, "Exile all ") ||

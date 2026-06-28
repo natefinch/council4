@@ -310,6 +310,9 @@ func lowerFixedExileSpell(
 	if content, ok := lowerAllGraveyardExile(ctx); ok {
 		return content, nil
 	}
+	if content, ok := lowerSourceAttachedExile(ctx); ok {
+		return content, nil
+	}
 	if group, ok := exactMassExileGroup(ctx); ok {
 		return game.Mode{
 			Sequence: []game.Instruction{{
@@ -346,6 +349,40 @@ func lowerSourceSpellExile(ctx contentCtx) (game.AbilityContent, bool) {
 	}
 	return game.Mode{Sequence: []game.Instruction{{
 		Primitive: game.Exile{SourceSpell: true},
+	}}}.Ability(), true
+}
+
+// lowerSourceAttachedExile lowers the attached-recipient exile form "Exile
+// enchanted creature." (Aura) or "Exile equipped creature." (Equipment) into a
+// single Exile instruction acting on the source attached-permanent reference,
+// the permanent the source Aura or Equipment is attached to. It mirrors the
+// attached-recipient regenerate path: a single exact controller effect with no
+// target, reference, condition, mode, keyword, or optional offer, and fails
+// closed for every other shape.
+func lowerSourceAttachedExile(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 1 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.References) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(abilityKeywordsExcludingSelectorPredicates(ctx.content)) != 0 ||
+		ctx.optional {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if !effect.ExileAttached ||
+		!effect.Exact ||
+		effect.Negated ||
+		effect.Optional ||
+		effect.Context != parser.EffectContextController {
+		return game.AbilityContent{}, false
+	}
+	object := game.SourceAttachedPermanentReference()
+	if len(object.Validate()) != 0 {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{Sequence: []game.Instruction{{
+		Primitive: game.Exile{Object: object},
 	}}}.Ability(), true
 }
 

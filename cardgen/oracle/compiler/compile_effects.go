@@ -332,6 +332,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				FightSubjectAttached:         syntax.FightSubjectAttached,
 				CounterRecipientSingleChoice: syntax.CounterRecipientSingleChoice,
 				RegenerateAttached:           syntax.RegenerateAttached,
+				ExileAttached:                syntax.ExileAttached,
 				MoveCountersAll:              syntax.MoveCountersAll,
 				RemoveCountersAll:            syntax.RemoveCountersAll,
 				MoveCountersDistribute:       syntax.MoveCountersDistribute,
