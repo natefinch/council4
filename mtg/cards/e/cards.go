@@ -36,6 +36,7 @@ var Cards = []*game.CardDef{
 	Endbringer,
 	EndlessWurm,
 	EnduringCourage,
+	EngineeredPlague,
 	EngulfingSlagwurm,
 	EnlistmentOfficer,
 	EnterprisingScallywag,

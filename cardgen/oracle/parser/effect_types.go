@@ -2953,6 +2953,18 @@ const (
 	// Patchwork Banner and Adaptive Automaton.
 	EffectStaticSubjectControlledCreaturesChosenType      EffectStaticSubjectKind = "EffectStaticSubjectControlledCreaturesChosenType"
 	EffectStaticSubjectOtherControlledCreaturesChosenType EffectStaticSubjectKind = "EffectStaticSubjectOtherControlledCreaturesChosenType"
+	// EffectStaticSubjectAllCreaturesChosenType names every creature on the
+	// battlefield whose creature type matches the source permanent's entry-time
+	// creature-type choice ("Creatures of the chosen type get/have ...", Shared
+	// Triumph; "All creatures of the chosen type get -1/-1.", Engineered Plague),
+	// the battlefield-wide chosen-type anthem or weakening group.
+	EffectStaticSubjectAllCreaturesChosenType EffectStaticSubjectKind = "EffectStaticSubjectAllCreaturesChosenType"
+	// EffectStaticSubjectOpponentControlledCreaturesChosenType names every creature
+	// your opponents control whose creature type matches the source permanent's
+	// entry-time creature-type choice ("Creatures of the chosen type your opponents
+	// control get -1/-1.", Plague Engineer), the opponent-only chosen-type
+	// weakening group.
+	EffectStaticSubjectOpponentControlledCreaturesChosenType EffectStaticSubjectKind = "EffectStaticSubjectOpponentControlledCreaturesChosenType"
 
 	// EffectStaticSubjectOpponentControlledPermanents names every permanent your
 	// opponents control ("Permanents your opponents control lose hexproof and

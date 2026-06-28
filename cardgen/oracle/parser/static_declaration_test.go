@@ -2629,6 +2629,18 @@ func TestParseStaticChosenTypeAnthemSubjectKinds(t *testing.T) {
 			source: "Other creatures you control of the chosen type get +1/+1.",
 			kind:   EffectStaticSubjectOtherControlledCreaturesChosenType,
 		},
+		"battlefield chosen type": {
+			source: "Creatures of the chosen type get +1/+1.",
+			kind:   EffectStaticSubjectAllCreaturesChosenType,
+		},
+		"all battlefield chosen type": {
+			source: "All creatures of the chosen type get -1/-1.",
+			kind:   EffectStaticSubjectAllCreaturesChosenType,
+		},
+		"opponent controlled chosen type": {
+			source: "Creatures of the chosen type your opponents control get -1/-1.",
+			kind:   EffectStaticSubjectOpponentControlledCreaturesChosenType,
+		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
@@ -2648,7 +2660,6 @@ func TestParseStaticChosenTypeAnthemFailsClosed(t *testing.T) {
 	t.Parallel()
 	for name, source := range map[string]string{
 		"indefinite chosen type": "Creatures you control of a chosen type get +1/+1.",
-		"missing you control":    "Creatures of the chosen type get +1/+1.",
 		"plural chosen types":    "Creatures you control of the chosen types get +1/+1.",
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -2656,7 +2667,9 @@ func TestParseStaticChosenTypeAnthemFailsClosed(t *testing.T) {
 			for _, declaration := range parseStaticDeclarationSyntax(t, source, Context{}) {
 				if declaration.Subject.Kind == StaticDeclarationSubjectGroup &&
 					(declaration.Subject.Group.Kind == EffectStaticSubjectControlledCreaturesChosenType ||
-						declaration.Subject.Group.Kind == EffectStaticSubjectOtherControlledCreaturesChosenType) {
+						declaration.Subject.Group.Kind == EffectStaticSubjectOtherControlledCreaturesChosenType ||
+						declaration.Subject.Group.Kind == EffectStaticSubjectAllCreaturesChosenType ||
+						declaration.Subject.Group.Kind == EffectStaticSubjectOpponentControlledCreaturesChosenType) {
 					t.Fatalf("source %q unexpectedly parsed as chosen-type group: %#v", source, declaration)
 				}
 			}
