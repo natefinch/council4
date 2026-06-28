@@ -504,6 +504,48 @@ func TestCompileActionTriggerPatterns(t *testing.T) {
 				}
 			},
 		},
+		{
+			source: "Whenever you gain life during your turn, draw a card.",
+			check: func(t *testing.T, pattern TriggerPattern) {
+				if pattern.Event != TriggerEventLifeGained ||
+					pattern.Player != TriggerPlayerYou ||
+					pattern.CastDuringTurn != TriggerCastTurnYours {
+					t.Fatalf("pattern = %#v", pattern)
+				}
+			},
+		},
+		{
+			source: "Whenever you lose life during your turn, draw a card.",
+			check: func(t *testing.T, pattern TriggerPattern) {
+				if pattern.Event != TriggerEventLifeLost ||
+					pattern.Player != TriggerPlayerYou ||
+					pattern.CastDuringTurn != TriggerCastTurnYours {
+					t.Fatalf("pattern = %#v", pattern)
+				}
+			},
+		},
+		{
+			source: "Whenever you gain life for the first time during each of your turns, draw a card.",
+			check: func(t *testing.T, pattern TriggerPattern) {
+				if pattern.Event != TriggerEventLifeGained ||
+					pattern.Player != TriggerPlayerYou ||
+					pattern.PlayerEventOrdinalThisTurn != 1 ||
+					pattern.CastDuringTurn != TriggerCastTurnYours {
+					t.Fatalf("pattern = %#v", pattern)
+				}
+			},
+		},
+		{
+			source: "Whenever an opponent loses life for the first time during each of their turns, draw a card.",
+			check: func(t *testing.T, pattern TriggerPattern) {
+				if pattern.Event != TriggerEventLifeLost ||
+					pattern.Player != TriggerPlayerOpponent ||
+					pattern.PlayerEventOrdinalThisTurn != 1 ||
+					pattern.CastDuringTurn != TriggerCastTurnNotYours {
+					t.Fatalf("pattern = %#v", pattern)
+				}
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.source, func(t *testing.T) {

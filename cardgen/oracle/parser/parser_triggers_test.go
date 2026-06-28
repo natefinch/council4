@@ -407,6 +407,67 @@ func TestParsePlayerEventTriggerClauses(t *testing.T) {
 	}
 }
 
+func TestParsePlayerEventTriggerTurnRelation(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		event      string
+		player     TriggerPlayerSelectorKind
+		action     PlayerEventActionKind
+		occurrence PlayerEventOccurrenceKind
+		ordinal    int
+		relation   TriggerCastTurnRelation
+	}{
+		{"Whenever you gain life during your turn", TriggerPlayerSelectorYou, PlayerEventActionGainLife, PlayerEventOccurrenceAny, 0, TriggerCastTurnRelationYourTurn},
+		{"Whenever you lose life during your turn", TriggerPlayerSelectorYou, PlayerEventActionLoseLife, PlayerEventOccurrenceAny, 0, TriggerCastTurnRelationYourTurn},
+		{"Whenever you gain life for the first time during each of your turns", TriggerPlayerSelectorYou, PlayerEventActionGainLife, PlayerEventOccurrenceFirstEachTurn, 1, TriggerCastTurnRelationYourTurn},
+		{"Whenever an opponent loses life for the first time during each of their turns", TriggerPlayerSelectorOpponent, PlayerEventActionLoseLife, PlayerEventOccurrenceFirstEachTurn, 1, TriggerCastTurnRelationNotYourTurn},
+	}
+	for _, test := range tests {
+		t.Run(test.event, func(t *testing.T) {
+			t.Parallel()
+			source := test.event + ", draw a card."
+			document, diagnostics := Parse(source, Context{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			trigger := document.Abilities[0].Trigger
+			if trigger == nil || trigger.PlayerEvent == nil {
+				t.Fatalf("trigger = %#v, want typed player-event clause", trigger)
+			}
+			if trigger.PlayerEvent.Player.Kind != test.player ||
+				trigger.PlayerEvent.Action.Kind != test.action ||
+				trigger.PlayerEvent.Occurrence.Kind != test.occurrence ||
+				trigger.PlayerEvent.Occurrence.Ordinal != test.ordinal ||
+				trigger.PlayerEvent.TurnRelation != test.relation {
+				t.Fatalf("trigger = %#v", trigger.PlayerEvent)
+			}
+		})
+	}
+}
+
+// TestParsePlayerEventTurnRelationFailClosed confirms the active-turn timing
+// qualifier is restricted to the life-change events and rejects unrecognized
+// or malformed timing phrases.
+func TestParsePlayerEventTurnRelationFailClosed(t *testing.T) {
+	t.Parallel()
+	for _, event := range []string{
+		"Whenever you draw a card during your turn",
+		"Whenever you gain life during their turn",
+		"Whenever you gain life for the first time during each turn",
+	} {
+		t.Run(event, func(t *testing.T) {
+			t.Parallel()
+			source := event + ", draw a card."
+			document, _ := Parse(source, Context{})
+			trigger := document.Abilities[0].Trigger
+			if trigger != nil && trigger.PlayerEvent != nil &&
+				trigger.PlayerEvent.TurnRelation != TriggerCastTurnRelationNone {
+				t.Fatalf("trigger = %#v, want no turn relation", trigger.PlayerEvent)
+			}
+		})
+	}
+}
+
 func TestParsePlayerEventDiscardCardTypeFilters(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

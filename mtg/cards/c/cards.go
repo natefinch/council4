@@ -25,6 +25,7 @@ var Cards = []*game.CardDef{
 	CaseyJonesJuryRigJusticiar,
 	CastleDoom,
 	CastleRaptors,
+	CatCollector,
 	CatharticPyre,
 	CaughtInTheBrights,
 	CavalcadeOfCalamity,

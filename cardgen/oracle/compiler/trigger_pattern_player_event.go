@@ -36,6 +36,10 @@ func compilePlayerEventTriggerPattern(
 		(occurrenceRequiresWhenever(clause.Occurrence.Kind) && kind != TriggerWhenever && !modifiers.self) {
 		return pattern
 	}
+	turn, ok := compileSpellCastTurnRelation(clause.TurnRelation)
+	if !ok {
+		return pattern
+	}
 	pattern.Event = event
 	pattern.Player = player
 	pattern.OneOrMore = modifiers.oneOrMore
@@ -46,6 +50,7 @@ func compilePlayerEventTriggerPattern(
 	pattern.PlayerEventOrdinalThisTurn = modifiers.ordinal
 	pattern.ExcludeFirstDrawInDrawStep = modifiers.exceptFirstDrawInDrawStep
 	pattern.CardSelection = modifiers.cardSelection
+	pattern.CastDuringTurn = turn
 	return pattern
 }
 

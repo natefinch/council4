@@ -174,7 +174,10 @@ func lowerTriggerPattern(pattern *compiler.TriggerPattern) (game.TriggerPattern,
 		result.SpellTargetAllow = game.TargetAllowPermanent
 		result.SpellTargetPattern = opt.Val(spellSelection)
 	}
-	if castDuringTurn != game.TriggerTurnAny && event != game.EventSpellCast {
+	if castDuringTurn != game.TriggerTurnAny &&
+		event != game.EventSpellCast &&
+		event != game.EventLifeGained &&
+		event != game.EventLifeLost {
 		return game.TriggerPattern{}, false
 	}
 

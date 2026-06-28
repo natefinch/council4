@@ -1084,11 +1084,12 @@ type PlayerEventOccurrence struct {
 
 // PlayerEventTriggerClause is composable typed syntax for an acting-player event.
 type PlayerEventTriggerClause struct {
-	Span       shared.Span           `json:"-"`
-	Player     TriggerPlayerSelector `json:",omitzero"`
-	Action     PlayerEventAction     `json:",omitzero"`
-	Card       PlayerEventCard       `json:",omitzero"`
-	Occurrence PlayerEventOccurrence `json:",omitzero"`
+	Span         shared.Span             `json:"-"`
+	Player       TriggerPlayerSelector   `json:",omitzero"`
+	Action       PlayerEventAction       `json:",omitzero"`
+	Card         PlayerEventCard         `json:",omitzero"`
+	Occurrence   PlayerEventOccurrence   `json:",omitzero"`
+	TurnRelation TriggerCastTurnRelation `json:",omitempty"`
 }
 
 // Sentence is a top-level sentence in an ability.
