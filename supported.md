@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,169 of 32,501 cards eligible for paper support (49.7%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,177 of 32,501 cards eligible for paper support (49.8%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1735,6 +1735,7 @@ Council4 currently supports **16,169 of 32,501 cards eligible for paper support 
 - Bramble Armor
 - Bramble Creeper
 - Bramble Wurm
+- Brambleback Brute
 - Bramblecrush
 - Brambleguard Captain
 - Bramblesnap
@@ -1876,6 +1877,7 @@ Council4 currently supports **16,169 of 32,501 cards eligible for paper support 
 - Buoyancy
 - Burden of Guilt
 - Burdened Aerialist
+- Burdened Stoneback
 - Burglar Rat
 - Buried Alive
 - Buried Ruin
@@ -5551,6 +5553,7 @@ Council4 currently supports **16,169 of 32,501 cards eligible for paper support 
 - Gleaming Overseer
 - Gleeful Arsonist
 - Glen Elendra Archmage
+- Glen Elendra Guardian
 - Glen Elendra Liege
 - Glen Elendra Pranksters
 - Glidedive Duo
@@ -5612,6 +5615,7 @@ Council4 currently supports **16,169 of 32,501 cards eligible for paper support 
 - Gluttonous Troll
 - Gluttonous Zombie
 - Gnarlback Rhino
+- Gnarlbark Elm
 - Gnarled Effigy
 - Gnarled Mass
 - Gnarlid Colony
@@ -6575,6 +6579,7 @@ Council4 currently supports **16,169 of 32,501 cards eligible for paper support 
 - Hour of Devastation
 - Hour of Promise
 - House Guildmage
+- Hovel Hurler
 - Hover Barrier
 - Hoverguard Observer
 - Hoverguard Sweepers
@@ -7987,6 +7992,7 @@ Council4 currently supports **16,169 of 32,501 cards eligible for paper support 
 - Lobber Crew
 - Loch Dragon
 - Loch Korrigan
+- Loch Mare
 - Lochmere Serpent
 - Locke Cole
 - Locked in the Cemetery
@@ -8880,6 +8886,7 @@ Council4 currently supports **16,169 of 32,501 cards eligible for paper support 
 - Moonglove Extractor
 - Moonglove Winnower
 - Moonlight Geist
+- Moonlit Lamenter
 - Moonlit Strider
 - Moonlit Wake
 - Moonrise Cleric
@@ -10753,6 +10760,7 @@ Council4 currently supports **16,169 of 32,501 cards eligible for paper support 
 - Reaper of the Wilds
 - Reaper's Talisman
 - Reaping the Graves
+- Reaping Willow
 - Rearing Embermare
 - Reassembling Skeleton
 - Reave Soul
