@@ -53,6 +53,7 @@ var Cards = []*game.CardDef{
 	HornbashMentor,
 	HornedCheetah,
 	HotSprings,
+	HovelHurler,
 	HoverguardObserver,
 	HowlOfTheNightPack,
 	HuaTuoHonoredPhysician,

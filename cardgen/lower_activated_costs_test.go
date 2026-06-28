@@ -583,6 +583,55 @@ func TestLowerActivatedAbilityLowersUnkindedRemoveCounterAmong(t *testing.T) {
 	}
 }
 
+// TestLowerActivatedRemoveCounterFromSelfKindUnspecified proves the bare
+// "Remove a/N counter(s) from this <permanent>" activation cost (the -1/-1
+// counter creatures) lowers to an AdditionalRemoveCounter with AnyCounterKind so
+// the payer removes whatever counters the source carries.
+func TestLowerActivatedRemoveCounterFromSelfKindUnspecified(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		wantAmount int
+	}{
+		{
+			name:       "single counter",
+			oracleText: "This creature enters with a -1/-1 counter on it.\n{1}{U}, Remove a counter from this creature: Draw a card.",
+			wantAmount: 1,
+		},
+		{
+			name:       "two counters",
+			oracleText: "This creature enters with two -1/-1 counters on it.\n{2}{B}, Remove two counters from this creature: Draw a card.",
+			wantAmount: 2,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Stoneback",
+				Layout:     "normal",
+				TypeLine:   "Creature — Beast",
+				OracleText: test.oracleText,
+			})
+			if len(face.ActivatedAbilities) != 1 {
+				t.Fatalf("activated abilities = %d, want 1", len(face.ActivatedAbilities))
+			}
+			costs := face.ActivatedAbilities[0].AdditionalCosts
+			if len(costs) != 1 {
+				t.Fatalf("additional costs = %#v, want 1", costs)
+			}
+			got := costs[0]
+			if got.Kind != cost.AdditionalRemoveCounter ||
+				got.Amount != test.wantAmount ||
+				!got.AnyCounterKind ||
+				got.CounterKind != 0 {
+				t.Fatalf("additional cost = %#v, want any-kind self removal amount %d", got, test.wantAmount)
+			}
+		})
+	}
+}
+
 func TestLowerActivatedAbilityRejectsVariableRemoveCounterCosts(t *testing.T) {
 	t.Parallel()
 	for _, oracleText := range []string{

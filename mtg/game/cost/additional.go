@@ -137,14 +137,15 @@ type Additional struct {
 	Source zone.Type
 
 	// CounterKind identifies the counter removed from the source permanent by
-	// an AdditionalRemoveCounter cost.
+	// an AdditionalRemoveCounter cost. It is ignored when AnyCounterKind is set.
 	CounterKind counter.Kind
 
-	// AnyCounterKind, set only on an AdditionalRemoveCounterAmong cost, marks
-	// the generic "remove N counters from among <permanents> you control" cost
-	// that removes counters of any kind. CounterKind is ignored when it is set;
-	// the payment planner spreads the removal across whatever counters the
-	// chosen permanents carry.
+	// AnyCounterKind marks a generic counter-removal cost that removes counters
+	// of any kind rather than a single named kind, as required by "remove N
+	// counters from among <permanents> you control" (AdditionalRemoveCounterAmong)
+	// and the bare "remove a counter from this permanent"
+	// (AdditionalRemoveCounter). CounterKind is ignored when it is set; the
+	// payment planner removes whatever counters the chosen permanents carry.
 	AnyCounterKind bool
 
 	// RequireTapped constrains battlefield costs to tapped permanents.

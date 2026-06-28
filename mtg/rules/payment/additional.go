@@ -124,6 +124,15 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 			if source == nil || s.EffectiveController(source) != playerID {
 				return plan, false
 			}
+			if additional.AnyCounterKind {
+				removals, ok := planRemoveCounterFromSource(source, amount, plan.counterRemovals)
+				if !ok {
+					return plan, false
+				}
+				plan.counterRemovals = append(plan.counterRemovals, removals...)
+				plan.paid = append(plan.paid, AdditionalCostText(additional))
+				continue
+			}
 			planned := 0
 			for _, removal := range plan.counterRemovals {
 				if removal.source == source && removal.kind == additional.CounterKind {

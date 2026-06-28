@@ -477,7 +477,7 @@ func renderAdditional(ctx *renderCtx, additional cost.Additional) (string, error
 		}
 		fields = append(fields, fmt.Sprintf("SubtypesAny: cost.SubtypeSet{%s},", strings.Join(literals, ", ")))
 	}
-	if additional.Kind == cost.AdditionalRemoveCounterAmong && additional.AnyCounterKind {
+	if (additional.Kind == cost.AdditionalRemoveCounterAmong || additional.Kind == cost.AdditionalRemoveCounter) && additional.AnyCounterKind {
 		fields = append(fields, "AnyCounterKind: true,")
 	} else if additional.Kind == cost.AdditionalRemoveCounter ||
 		additional.Kind == cost.AdditionalRemoveCounterAmong ||
