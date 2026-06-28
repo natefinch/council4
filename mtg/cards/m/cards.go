@@ -42,6 +42,7 @@ var Cards = []*game.CardDef{
 	MattMurdockJusticeSeeker,
 	MaximusKnightApparent,
 	MayaelTheAnima,
+	Meadowboon,
 	MeasureOfWickedness,
 	MeatLocker,
 	MeletisAstronomer,

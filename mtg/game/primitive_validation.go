@@ -532,6 +532,11 @@ func validateGroupReference(group GroupReference, targets []TargetSpec, checkTar
 			return fmt.Errorf("exclusion: %w", err)
 		}
 	}
+	if player, ok := group.PlayerAnchor(); ok {
+		if err := validatePlayerReference(player, targets, checkTargets); err != nil {
+			return fmt.Errorf("player anchor: %w", err)
+		}
+	}
 	return nil
 }
 

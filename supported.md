@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,019 of 32,501 cards eligible for paper support (49.3%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,022 of 32,501 cards eligible for paper support (49.3%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2657,6 +2657,7 @@ Council4 currently supports **16,019 of 32,501 cards eligible for paper support 
 - Contact Other Plane
 - Contagion
 - Contagion Clasp
+- Contagion Engine
 - Contagious Nim
 - Containment Construct
 - Contaminated Aquifer
@@ -8367,6 +8368,7 @@ Council4 currently supports **16,019 of 32,501 cards eligible for paper support 
 - Maze Sentinel
 - Maze Skullbomb
 - Mazirek, Kraul Death Priest
+- Meadowboon
 - Meandering River
 - Measure of Wickedness
 - Meat Locker // Drowned Diner
@@ -10807,6 +10809,7 @@ Council4 currently supports **16,019 of 32,501 cards eligible for paper support 
 - Repulsor Bots
 - Repulsor Rays
 - Reputable Merchant
+- Requisition Raid
 - Reroute
 - Reroute Systems
 - Rescind

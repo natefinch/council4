@@ -27,6 +27,11 @@ const (
 	// by the controller of the anchor object, such as the creatures the
 	// defending player controls.
 	GroupDomainObjectControlled
+
+	// GroupDomainPlayerControlled draws from battlefield permanents controlled
+	// by the player named by the anchor player reference, such as every
+	// creature a targeted player controls.
+	GroupDomainPlayerControlled
 )
 
 // GroupReference is pure rules data describing WHERE a mass effect finds a group
@@ -35,10 +40,11 @@ const (
 // object. Selection still describes WHAT matches; GroupReference describes the
 // binding. The zero value is invalid.
 type GroupReference struct {
-	domain    GroupReferenceDomain
-	selection Selection
-	anchor    opt.V[ObjectReference]
-	exclude   opt.V[ObjectReference]
+	domain       GroupReferenceDomain
+	selection    Selection
+	anchor       opt.V[ObjectReference]
+	playerAnchor opt.V[PlayerReference]
+	exclude      opt.V[ObjectReference]
 }
 
 // BattlefieldGroup matches every battlefield permanent satisfying selection.
@@ -78,6 +84,19 @@ func ObjectControlledGroupExcluding(anchor ObjectReference, selection Selection,
 	return GroupReference{domain: GroupDomainObjectControlled, selection: selection, anchor: opt.Val(anchor), exclude: opt.Val(exclude)}
 }
 
+// PlayerControlledGroup matches every battlefield permanent controlled by the
+// player named by player and satisfying selection.
+func PlayerControlledGroup(player PlayerReference, selection Selection) GroupReference {
+	return GroupReference{domain: GroupDomainPlayerControlled, selection: selection, playerAnchor: opt.Val(player)}
+}
+
+// PlayerControlledGroupExcluding matches every battlefield permanent controlled
+// by the player named by player and satisfying selection, except the permanent
+// identified by exclude.
+func PlayerControlledGroupExcluding(player PlayerReference, selection Selection, exclude ObjectReference) GroupReference {
+	return GroupReference{domain: GroupDomainPlayerControlled, selection: selection, playerAnchor: opt.Val(player), exclude: opt.Val(exclude)}
+}
+
 // Domain reports the candidate domain the group draws from.
 func (r GroupReference) Domain() GroupReferenceDomain { return r.domain }
 
@@ -86,6 +105,7 @@ func (r GroupReference) Empty() bool {
 	return r.domain == groupDomainNone &&
 		r.selection.Empty() &&
 		!r.anchor.Exists &&
+		!r.playerAnchor.Exists &&
 		!r.exclude.Exists
 }
 
@@ -95,6 +115,12 @@ func (r GroupReference) Selection() Selection { return r.selection }
 // Anchor returns the object the domain is defined relative to, if any.
 func (r GroupReference) Anchor() (ObjectReference, bool) {
 	return r.anchor.Val, r.anchor.Exists
+}
+
+// PlayerAnchor returns the player whose controlled permanents the domain draws
+// from, if any.
+func (r GroupReference) PlayerAnchor() (PlayerReference, bool) {
+	return r.playerAnchor.Val, r.playerAnchor.Exists
 }
 
 // Exclusion returns the object dropped from the group, if any.
@@ -130,6 +156,13 @@ func (r GroupReference) Validate() []string {
 		if !r.anchor.Exists {
 			problems = append(problems, "object-controlled group requires an anchor object")
 		}
+	case GroupDomainPlayerControlled:
+		if !r.playerAnchor.Exists {
+			problems = append(problems, "player-controlled group requires an anchor player")
+		}
+		if r.anchor.Exists {
+			problems = append(problems, "player-controlled group must not set an anchor object")
+		}
 	case groupDomainNone:
 		problems = append(problems, "group reference has no domain")
 	default:
@@ -137,6 +170,12 @@ func (r GroupReference) Validate() []string {
 	}
 	if r.anchor.Exists {
 		problems = appendPrefixed(problems, "anchor", r.anchor.Val.Validate())
+	}
+	if r.playerAnchor.Exists {
+		if r.domain != GroupDomainPlayerControlled {
+			problems = append(problems, "only a player-controlled group may set an anchor player")
+		}
+		problems = appendPrefixed(problems, "player anchor", r.playerAnchor.Val.Validate())
 	}
 	if r.exclude.Exists {
 		problems = appendPrefixed(problems, "exclude", r.exclude.Val.Validate())

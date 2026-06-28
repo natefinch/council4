@@ -368,6 +368,8 @@ func (r referenceResolver) groupMembers(ref game.GroupReference) []id.ID {
 		return r.attachedObjectGroupMembers(ref)
 	case game.GroupDomainObjectControlled:
 		return r.objectControlledGroupMembers(ref)
+	case game.GroupDomainPlayerControlled:
+		return r.playerControlledGroupMembers(ref)
 	case game.GroupDomainBattlefield:
 		return r.battlefieldGroupMembers(ref)
 	default:
@@ -421,6 +423,42 @@ func (r referenceResolver) objectControlledGroupMembers(ref game.GroupReference)
 		return []id.ID{}
 	}
 	controller, ok := resolved.controller(r.g)
+	if !ok {
+		return []id.ID{}
+	}
+	sel := ref.Selection()
+	source, _ := r.sourcePermanent()
+	if sel.ExcludeSource && source == nil {
+		return []id.ID{}
+	}
+	excludedID := r.exclusionObjectID(ref)
+	members := make([]id.ID, 0, len(r.g.Battlefield))
+	for _, permanent := range r.g.Battlefield {
+		if excludedID != 0 && permanent.ObjectID == excludedID {
+			continue
+		}
+		if effectiveController(r.g, permanent) != controller {
+			continue
+		}
+		if !r.permanentMatchesGroupSelection(&sel, source, permanent) {
+			continue
+		}
+		members = append(members, permanent.ObjectID)
+	}
+	return members
+}
+
+// playerControlledGroupMembers enumerates the battlefield permanents controlled
+// by the player named by the group's anchor player reference and satisfying its
+// Selection, such as every creature a targeted player controls. It mirrors
+// objectControlledGroupMembers but resolves the controlling player directly from
+// the anchor player reference rather than from an anchor object's controller.
+func (r referenceResolver) playerControlledGroupMembers(ref game.GroupReference) []id.ID {
+	anchor, ok := ref.PlayerAnchor()
+	if !ok {
+		return []id.ID{}
+	}
+	controller, ok := r.player(anchor)
 	if !ok {
 		return []id.ID{}
 	}

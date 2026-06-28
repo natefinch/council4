@@ -308,6 +308,20 @@ func (r Renderer) renderGroupReference(ctx *renderCtx, group game.GroupReference
 			return fmt.Sprintf("game.ObjectControlledGroupExcluding(%s, %s, %s)", renderedAnchor, selection, renderedExclude), nil
 		}
 		return fmt.Sprintf("game.ObjectControlledGroup(%s, %s)", renderedAnchor, selection), nil
+	case game.GroupDomainPlayerControlled:
+		player, _ := group.PlayerAnchor()
+		renderedPlayer, err := r.renderPlayerReference(player)
+		if err != nil {
+			return "", err
+		}
+		if hasExclude {
+			renderedExclude, err := r.renderObjectReference(exclude)
+			if err != nil {
+				return "", err
+			}
+			return fmt.Sprintf("game.PlayerControlledGroupExcluding(%s, %s, %s)", renderedPlayer, selection, renderedExclude), nil
+		}
+		return fmt.Sprintf("game.PlayerControlledGroup(%s, %s)", renderedPlayer, selection), nil
 	default:
 		return "", fmt.Errorf("render: unsupported group reference domain %d", group.Domain())
 	}
