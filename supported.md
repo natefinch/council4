@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,739 of 32,501 cards eligible for paper support (48.4%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,759 of 32,501 cards eligible for paper support (48.5%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -856,6 +856,7 @@ Council4 currently supports **15,739 of 32,501 cards eligible for paper support 
 - Aven Fleetwing
 - Aven Flock
 - Aven Fogbringer
+- Aven Heartstabber
 - Aven Initiate
 - Aven Initiate
 - Aven Liberator
@@ -1033,6 +1034,7 @@ Council4 currently supports **15,739 of 32,501 cards eligible for paper support 
 - Basilisk Gate
 - Basim Ibn Ishaq
 - Basking Broodscale
+- Basking Capybara
 - Basking Rootwalla
 - Basri's Acolyte
 - Basri's Solidarity
@@ -1291,6 +1293,7 @@ Council4 currently supports **15,739 of 32,501 cards eligible for paper support 
 - Black Widow, Double Agent
 - Black Widow, Natasha Romanoff
 - Blackblade Reforged
+- Blackbloom Rogue // Blackbloom Bog
 - Blackcleave Cliffs
 - Blackcleave Goblin
 - Blacklance Paragon
@@ -2454,6 +2457,7 @@ Council4 currently supports **15,739 of 32,501 cards eligible for paper support 
 - Coastal Tower
 - Coat of Arms
 - Coat with Venom
+- Coati Scavenger
 - Cobalt Golem
 - Cobblebrute
 - Cobbled Lancer
@@ -3316,6 +3320,7 @@ Council4 currently supports **15,739 of 32,501 cards eligible for paper support 
 - Dictate of Heliod
 - Dictate of Kruphix
 - Dictate of the Twin Gods
+- Didact Echo
 - Didgeridoo
 - Didn't Say Please
 - Dig Site Inventory
@@ -3819,6 +3824,7 @@ Council4 currently supports **15,739 of 32,501 cards eligible for paper support 
 - Ebony Rhino
 - Ebony Treefolk
 - Eccentric Farmer
+- Echo of Dusk
 - Echo Tracer
 - Eclipsed Boggart
 - Eclipsed Elf
@@ -4979,6 +4985,7 @@ Council4 currently supports **15,739 of 32,501 cards eligible for paper support 
 - Friendly Neighborhood
 - Friendly Teddy
 - Frightcrawler
+- Frilled Cave-Wurm
 - Frilled Deathspitter
 - Frilled Mystic
 - Frilled Oculus
@@ -6906,6 +6913,7 @@ Council4 currently supports **15,739 of 32,501 cards eligible for paper support 
 - Jace Beleren
 - Jace's Erasure
 - Jace's Ingenuity
+- Jace's Phantasm
 - Jace's Projection
 - Jace's Sanctum
 - Jace's Scrutiny
@@ -6985,6 +6993,7 @@ Council4 currently supports **15,739 of 32,501 cards eligible for paper support 
 - Jiwari, the Earth Aflame
 - Joel, Resolute Survivor
 - Join the Dance
+- Join the Dead
 - Join the Ranks
 - Joiner Adept
 - Joint Exploration
@@ -7997,6 +8006,7 @@ Council4 currently supports **15,739 of 32,501 cards eligible for paper support 
 - Malakir Soothsayer
 - Malamet Brawler
 - Malamet Scythe
+- Malamet Veteran
 - Malamet War Scribe
 - Malcator's Watcher
 - Malcator, Purity Overseer
@@ -8289,6 +8299,7 @@ Council4 currently supports **15,739 of 32,501 cards eligible for paper support 
 - Merfolk Skyscout
 - Merfolk Sovereign
 - Merfolk Traders
+- Merfolk Windrobber
 - Merfolk Wizard
 - Meria's Outrider
 - Meriadoc Brandybuck
@@ -9018,6 +9029,7 @@ Council4 currently supports **15,739 of 32,501 cards eligible for paper support 
 - Nim Shambler
 - Nim Shrieker
 - Nimana Sell-Sword
+- Nimana Skitter-Sneak
 - Nimana Skydancer
 - Nimble Birdsticker
 - Nimble Innovator
@@ -10558,6 +10570,7 @@ Council4 currently supports **15,739 of 32,501 cards eligible for paper support 
 - Relentless Rohirrim
 - Relentless Skaabs
 - Relic Barrier
+- Relic Golem
 - Relic of Legends
 - Relic Putrescence
 - Relic Sloth
@@ -11174,6 +11187,7 @@ Council4 currently supports **15,739 of 32,501 cards eligible for paper support 
 - Sanguine Glorifier
 - Sanguine Guard
 - Sanguine Savior
+- Sanguine Spy
 - Sanguine Syphoner
 - Sanitarium Skeleton
 - Sanitation Automaton
@@ -12279,6 +12293,7 @@ Council4 currently supports **15,739 of 32,501 cards eligible for paper support 
 - Snarling Wolf
 - Sneaking Guide
 - Sneering Shadewriter
+- Snooping Newsie
 - Snooping Page
 - Snorting Gahr
 - Snow Day
@@ -12297,6 +12312,7 @@ Council4 currently supports **15,739 of 32,501 cards eligible for paper support 
 - Soaring Sandwing
 - Soaring Seacliff
 - Soaring Show-Off
+- Soaring Thought-Thief
 - Social Climber
 - Sodden Verdure
 - Soilshaper
@@ -12890,6 +12906,7 @@ Council4 currently supports **15,739 of 32,501 cards eligible for paper support 
 - Stingblade Assassin
 - Stingerfling Spider
 - Stinging Barrier
+- Stinging Cave Crawler
 - Stinging Lionfish
 - Stinging Shot
 - Stingmoggie
@@ -13328,6 +13345,7 @@ Council4 currently supports **15,739 of 32,501 cards eligible for paper support 
 - Syndicate Enforcer
 - Syndicate Guildmage
 - Syndicate Heavy
+- Syndicate Infiltrator
 - Syndicate Messenger
 - Synth Infiltrator
 - Syphon Fuel
@@ -13536,6 +13554,7 @@ Council4 currently supports **15,739 of 32,501 cards eligible for paper support 
 - Tenth District Legionnaire
 - Tenth District Veteran
 - Tenured Inkcaster
+- Tenured Oilcaster
 - Teo, Spirited Glider
 - Terashi's Cry
 - Terashi's Grasp
@@ -13684,6 +13703,7 @@ Council4 currently supports **15,739 of 32,501 cards eligible for paper support 
 - They Went This Way
 - Thicket Crasher
 - Thief of Hope
+- Thieves' Guild Enforcer
 - Thieving Magpie
 - Thieving Otter
 - Thing from the Deep
