@@ -669,6 +669,18 @@ const (
 	// way." drain pattern, reading the amount published by the preceding
 	// life-loss instruction.
 	EffectDynamicAmountLifeLostThisWay EffectDynamicAmountKind = "EffectDynamicAmountLifeLostThisWay"
+	// EffectDynamicAmountDamageDealtThisWay is the damage dealt by an earlier
+	// damage effect in the same ability ("equal to the damage dealt this way").
+	// It scales a follow-on life gain such as the "deals N damage to any target.
+	// You gain life equal to the damage dealt this way." drain pattern, reading
+	// the amount published by the preceding damage instruction.
+	EffectDynamicAmountDamageDealtThisWay EffectDynamicAmountKind = "EffectDynamicAmountDamageDealtThisWay"
+	// EffectDynamicAmountExcessDamageDealtThisWay is the excess damage dealt by an
+	// earlier damage effect in the same ability ("equal to the excess damage dealt
+	// this way"). It scales a follow-on life gain that reads only the damage beyond
+	// what was needed to destroy the recipient, published by the preceding damage
+	// instruction.
+	EffectDynamicAmountExcessDamageDealtThisWay EffectDynamicAmountKind = "EffectDynamicAmountExcessDamageDealtThisWay"
 	// EffectDynamicAmountGreatestPower is the greatest power among a battlefield
 	// group ("the greatest power among <group>"). The group is carried in the
 	// amount's Selection. EffectDynamicAmountGreatestToughness and

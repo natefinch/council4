@@ -3233,6 +3233,19 @@ const (
 	// (target/defending player); lowering counts that player's library. Added
 	// last so existing kinds keep their wire values.
 	DynamicAmountHalfPlayerLibrary
+	// DynamicAmountDamageDealtThisWay is the damage dealt by the immediately
+	// preceding damage effect in the same ability ("equal to the damage dealt
+	// this way"). Lowering publishes the dealt amount from the damage instruction
+	// and consumes it via this amount on a follow-on life gain (drain spells such
+	// as Corrupt). Added last so existing kinds keep their wire values.
+	DynamicAmountDamageDealtThisWay
+	// DynamicAmountExcessDamageDealtThisWay is the excess damage dealt by the
+	// immediately preceding damage effect in the same ability ("equal to the
+	// excess damage dealt this way") — only the damage beyond what was needed to
+	// destroy the recipient. Lowering publishes the excess amount from the damage
+	// instruction and consumes it via this amount on a follow-on life gain. Added
+	// last so existing kinds keep their wire values.
+	DynamicAmountExcessDamageDealtThisWay
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.

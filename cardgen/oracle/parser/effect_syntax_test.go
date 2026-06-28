@@ -81,6 +81,56 @@ func TestParseLifeLostThisWayAmountExactness(t *testing.T) {
 	}
 }
 
+// TestParseDamageDealtThisWayAmountExactness verifies that "equal to the
+// (excess) damage dealt this way" parses to the matching dynamic kind and the
+// gain clause reconstructs exactly, the drain rider on Corrupt and Razor Rings.
+func TestParseDamageDealtThisWayAmountExactness(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source  string
+		dynamic EffectDynamicAmountKind
+		exact   bool
+	}{
+		{
+			"Lightning Bolt deals 3 damage to any target. You gain life equal to the damage dealt this way.",
+			EffectDynamicAmountDamageDealtThisWay, true,
+		},
+		{
+			"Razor Rings deals 4 damage to target creature. You gain life equal to the excess damage dealt this way.",
+			EffectDynamicAmountExcessDamageDealtThisWay, true,
+		},
+		// A bare fixed life gain stays exact without the dynamic amount (regression
+		// guard).
+		{"Lightning Bolt deals 3 damage to any target. You gain 2 life.", "", true},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			var gain *EffectSyntax
+			for ai := range document.Abilities {
+				for si := range document.Abilities[ai].Sentences {
+					sentence := &document.Abilities[ai].Sentences[si]
+					for ei := range sentence.Effects {
+						if sentence.Effects[ei].Kind == EffectGain {
+							gain = &sentence.Effects[ei]
+						}
+					}
+				}
+			}
+			if gain == nil {
+				t.Fatalf("no gain effect parsed from %q", test.source)
+			}
+			if gain.Amount.DynamicKind != test.dynamic {
+				t.Fatalf("gain dynamic kind = %v, want %v", gain.Amount.DynamicKind, test.dynamic)
+			}
+			if gain.Exact != test.exact {
+				t.Fatalf("gain Exact = %v, want %v", gain.Exact, test.exact)
+			}
+		})
+	}
+}
+
 // TestParseSacrificedCreatureAmount verifies that "the sacrificed creature's
 // power/toughness/mana value" parses to the matching back-reference dynamic
 // kind and reconstructs exactly, including the apostrophe-split possessive

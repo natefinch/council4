@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,198 of 32,501 cards eligible for paper support (49.8%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,203 of 32,501 cards eligible for paper support (49.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2756,6 +2756,7 @@ Council4 currently supports **16,198 of 32,501 cards eligible for paper support 
 - Corroding Dragonstorm
 - Corrosive Gale
 - Corrosive Mentor
+- Corrupt
 - Corrupt Court Official
 - Corrupt Eunuchs
 - Corrupt Official
@@ -2838,6 +2839,7 @@ Council4 currently supports **16,198 of 32,501 cards eligible for paper support 
 - Crazed Skirge
 - Creakwood Ghoul
 - Creakwood Liege
+- Creeping Bloodsucker
 - Creeping Chill
 - Creeping Corrosion
 - Creeping Crystal Coating
@@ -4263,6 +4265,7 @@ Council4 currently supports **16,198 of 32,501 cards eligible for paper support 
 - Enslaved Scout
 - Ensouled Scimitar
 - Enter the Enigma
+- Enter the God-Eternals
 - Enter the Unknown
 - Enterprising Scallywag
 - Enthralling Victor
@@ -10743,6 +10746,7 @@ Council4 currently supports **16,198 of 32,501 cards eligible for paper support 
 - Raze the Effigy
 - Razing Snidd
 - Razor Golem
+- Razor Rings
 - Razor Swine
 - Razorclaw Bear
 - Razorfield Rhino
@@ -11137,6 +11141,7 @@ Council4 currently supports **16,198 of 32,501 cards eligible for paper support 
 - Rising Populace
 - Risky Research
 - Risky Shortcut
+- Rite of Consumption
 - Rite of Flame
 - Rite of Oblivion
 - Rite of Passage

@@ -748,6 +748,10 @@ func compileDynamicAmountKind(kind parser.EffectDynamicAmountKind) DynamicAmount
 		return DynamicAmountEventCardCount
 	case parser.EffectDynamicAmountLifeLostThisWay:
 		return DynamicAmountLifeLostThisWay
+	case parser.EffectDynamicAmountDamageDealtThisWay:
+		return DynamicAmountDamageDealtThisWay
+	case parser.EffectDynamicAmountExcessDamageDealtThisWay:
+		return DynamicAmountExcessDamageDealtThisWay
 	case parser.EffectDynamicAmountGreatestPower:
 		return DynamicAmountGreatestPower
 	case parser.EffectDynamicAmountGreatestToughness:

@@ -40,6 +40,14 @@ func objectCharacteristicAmount(kind compiler.DynamicAmountKind, object game.Obj
 // (Ancient Copper Dragon and the Ancient Dragon dice cycle).
 const dieRollResultKey = game.ResultKey("die-roll-result")
 
+// damageDealtThisWayKey is the result key under which a Damage instruction
+// publishes the amount it dealt, consumed by a following "...equal to the
+// damage dealt this way." (or "...excess damage dealt this way.") life gain on
+// drain spells such as Corrupt and Razor Rings. The preceding damage
+// instruction's PublishResult is wired up by linkDamageDealtThisWay during
+// ordered-sequence lowering.
+const damageDealtThisWayKey = game.ResultKey("damage-dealt-this-way")
+
 func lowerDynamicAmount(amount compiler.CompiledAmount, object game.ObjectReference) (game.DynamicAmount, bool) {
 	dynamic, ok := lowerDynamicAmountKind(amount, object)
 	if !ok {
@@ -166,6 +174,12 @@ func lowerDynamicAmountKind(amount compiler.CompiledAmount, object game.ObjectRe
 	case compiler.DynamicAmountDieRollResult:
 		dynamic.Kind = game.DynamicAmountPreviousEffectResult
 		dynamic.ResultKey = dieRollResultKey
+	case compiler.DynamicAmountDamageDealtThisWay:
+		dynamic.Kind = game.DynamicAmountPreviousEffectResult
+		dynamic.ResultKey = damageDealtThisWayKey
+	case compiler.DynamicAmountExcessDamageDealtThisWay:
+		dynamic.Kind = game.DynamicAmountPreviousEffectExcessDamage
+		dynamic.ResultKey = damageDealtThisWayKey
 	case compiler.DynamicAmountCardsNamedSelfInGraveyards:
 		dynamic.Kind = game.DynamicAmountCardsNamedSourceInGraveyards
 	case compiler.DynamicAmountCardsNamedSelfInControllerGraveyard:
