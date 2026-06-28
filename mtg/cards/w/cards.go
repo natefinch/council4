@@ -42,6 +42,7 @@ var Cards = []*game.CardDef{
 	WingnutBatOnTheBelfry,
 	WingedWords,
 	WingspanMentor,
+	WitchEngine,
 	WitchSMist,
 	Withstand,
 	WizardReplica,
@@ -53,4 +54,5 @@ var Cards = []*game.CardDef{
 	WoodlandWanderer,
 	WorldBreaker,
 	WrithingChrysalis,
+	WrongTurn,
 }

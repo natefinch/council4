@@ -48,6 +48,7 @@ var Cards = []*game.CardDef{
 	DomriSNodorog,
 	DoctorStrangeSurgeon,
 	DomriAnarchOfBolas,
+	Donate,
 	DonatelloMutantMechanic,
 	DoorOfDestinies,
 	DoranTheSiegeTower,

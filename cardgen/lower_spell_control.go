@@ -180,9 +180,15 @@ func lowerControlSequenceFollowOn(
 		return game.Untap{Object: game.TargetPermanentReference(0)}, true
 
 	case compiler.EffectGain:
-		// Keyword grant: "It gains haste until end of turn." — back-ref, no new targets.
+		// Keyword grant: "It gains haste until end of turn." — back-ref, no new
+		// targets. The keyword may carry its own "it"/"that creature" back
+		// reference (referencesTargetZero) or, when it rides a combined
+		// power/toughness-and-keyword clause ("It gets +2/+0 and gains haste
+		// until end of turn."), inherit the prior clause's subject with no
+		// reference of its own (EffectContextPriorSubject). Both forms address
+		// the controlled creature in slot 0.
 		if len(ctx.content.Targets) != 0 || len(ctx.content.Keywords) == 0 ||
-			!referencesTargetZero(ctx.content.References) {
+			!controlSequenceBackReferencesTargetZero(effect, ctx.content.References) {
 			return nil, false
 		}
 		if effect.Duration != compiler.DurationUntilEndOfTurn {
@@ -199,6 +205,32 @@ func lowerControlSequenceFollowOn(
 				AddKeywords: keywords,
 			}},
 			Duration: game.DurationUntilEndOfTurn,
+		}, true
+
+	case compiler.EffectModifyPT:
+		// Power/toughness boost back-reference: "It gets +2/+0 until end of
+		// turn." / "It gets +X/+0 until end of turn." — back-ref to the
+		// controlled creature, no new targets and no keywords (a same-sentence
+		// "and gains haste" rider segments into its own EffectGain clause handled
+		// above). Only fixed and spell-X deltas lower; dynamic count-based forms
+		// ("+1/+1 for each …") fail closed.
+		if len(ctx.content.Targets) != 0 || len(ctx.content.Keywords) != 0 ||
+			!referencesTargetZero(ctx.content.References) {
+			return nil, false
+		}
+		if effect.Duration != compiler.DurationUntilEndOfTurn {
+			return nil, false
+		}
+		if effect.Amount.DynamicKind != compiler.DynamicAmountNone ||
+			!modifyPTSideResolved(effect.PowerDelta) ||
+			!modifyPTSideResolved(effect.ToughnessDelta) {
+			return nil, false
+		}
+		return game.ModifyPT{
+			Object:         game.TargetPermanentReference(0),
+			PowerDelta:     modifyPTSideQuantity(effect.PowerDelta),
+			ToughnessDelta: modifyPTSideQuantity(effect.ToughnessDelta),
+			Duration:       game.DurationUntilEndOfTurn,
 		}, true
 
 	case compiler.EffectPut:
@@ -244,6 +276,24 @@ func referencesTargetZero(references []compiler.CompiledReference) bool {
 		references[0].Occurrence == 0
 }
 
+// controlSequenceBackReferencesTargetZero reports whether a gain-control
+// sequence follow-on addresses the controlled creature in target slot 0. The
+// follow-on either carries its own "it"/"that creature" reference to that slot
+// (referencesTargetZero) or, when it is the trailing keyword half of a combined
+// power/toughness-and-keyword clause, inherits the prior clause's subject with
+// no reference of its own (EffectContextPriorSubject). Within a gain-control
+// sequence every prior clause already addresses slot 0, so the inherited
+// subject is that same creature.
+func controlSequenceBackReferencesTargetZero(
+	effect compiler.CompiledEffect,
+	references []compiler.CompiledReference,
+) bool {
+	if referencesTargetZero(references) {
+		return true
+	}
+	return effect.Context == parser.EffectContextPriorSubject && len(references) == 0
+}
+
 // referencesSourceSelfOnly reports whether every reference (if any) binds to the
 // source permanent. Self-relative gain-control durations restate the source
 // ("this creature remains on the battlefield") as a back-reference that carries
@@ -271,12 +321,17 @@ func lowerSingleControlSpell(
 			"the executable source backend supports only exact gain-control of one target permanent",
 		)
 	}
-	if len(ctx.content.Targets) != 1 ||
-		len(ctx.content.Keywords) != 0 ||
+	if len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Modes) != 0 ||
 		!ctx.content.Effects[0].Exact ||
 		ctx.content.Effects[0].Negated {
+		return unsupported()
+	}
+	if ctx.content.Effects[0].Context == parser.EffectContextTarget {
+		return lowerGiveControlSpell(ctx)
+	}
+	if len(ctx.content.Targets) != 1 {
 		return unsupported()
 	}
 	targetSpec, ok := permanentTargetSpec(ctx.content.Targets[0])
@@ -329,6 +384,81 @@ func lowerSingleControlSpell(
 				ContinuousEffects: []game.ContinuousEffect{{
 					Layer:         game.LayerControl,
 					NewController: opt.Val(game.Player1),
+				}},
+				Duration: duration,
+			},
+		}},
+	}.Ability(), nil
+}
+
+// lowerGiveControlSpell lowers the give-control forms whose subject is a target
+// player who gains control of a permanent (EffectContextTarget). The new
+// controller is the chosen target player, resolved at application time through
+// NewControllerRef. Two shapes are supported:
+//
+//	Two-target: "Target player gains control of target permanent you control."
+//	  (Donate, Harmless Offering, Wrong Turn) — target slot 0 is the player and
+//	  target slot 1 is the controlled permanent.
+//
+//	Source self-gift: "Target opponent gains control of this <object>."
+//	  (Jinxed Idol, Avarice Amulet, Measure of Wickedness) — target slot 0 is the
+//	  player and the controlled object is the ability's own source.
+//
+// Unlike the controller-subject gain-control forms, a "you control" object is
+// the whole point of giving a permanent away, so it is accepted here.
+func lowerGiveControlSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported gain-control spell",
+			"the executable source backend supports only exact give-control to a target player",
+		)
+	}
+	if len(ctx.content.Targets) == 0 {
+		return unsupported()
+	}
+	playerSpec, ok := playerTargetSpec(ctx.content.Targets[0])
+	if !ok {
+		return unsupported()
+	}
+
+	var duration game.EffectDuration
+	switch ctx.content.Effects[0].Duration {
+	case compiler.DurationUntilEndOfTurn:
+		duration = game.DurationUntilEndOfTurn
+	case compiler.DurationNone:
+		duration = game.DurationPermanent
+	default:
+		return unsupported()
+	}
+
+	var object game.ObjectReference
+	targets := []game.TargetSpec{playerSpec}
+	switch {
+	case len(ctx.content.Targets) == 2 && len(ctx.content.References) == 0:
+		permSpec, ok := permanentTargetSpec(ctx.content.Targets[1])
+		if !ok {
+			return unsupported()
+		}
+		object = game.TargetPermanentReference(1)
+		targets = append(targets, permSpec)
+	case len(ctx.content.Targets) == 1 && referencesSourceSelfOnly(ctx.content.References):
+		if len(ctx.content.References) != 1 {
+			return unsupported()
+		}
+		object = game.SourcePermanentReference()
+	default:
+		return unsupported()
+	}
+
+	return game.Mode{
+		Targets: targets,
+		Sequence: []game.Instruction{{
+			Primitive: game.ApplyContinuous{
+				Object: opt.Val(object),
+				ContinuousEffects: []game.ContinuousEffect{{
+					Layer:            game.LayerControl,
+					NewControllerRef: opt.Val(game.TargetPlayerReference(0)),
 				}},
 				Duration: duration,
 			},

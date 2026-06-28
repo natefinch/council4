@@ -946,6 +946,15 @@ func (v *cardDefValidator) validateContinuousEffect(faceName, path string, conti
 	if continuous.AffectedSource && !continuous.Group.Empty() {
 		v.add(faceName, path, CardDefIssueInvalidReference, "continuous effect sets both AffectedSource and Group")
 	}
+	if continuous.NewControllerRef.Exists {
+		if continuous.NewController.Exists {
+			v.add(faceName, appendPath(path, "NewControllerRef"), CardDefIssueInvalidReference, "continuous effect sets both NewController and NewControllerRef")
+		}
+		if continuous.Layer != LayerControl {
+			v.add(faceName, appendPath(path, "Layer"), CardDefIssueInvalidAbilityBody, "NewControllerRef requires the control layer")
+		}
+		v.validatePlayerRef(faceName, appendPath(path, "NewControllerRef"), continuous.NewControllerRef.Val, targets)
+	}
 	if !continuous.Group.Empty() {
 		v.validateGroupRef(faceName, appendPath(path, "Group"), continuous.Group, targets)
 	}

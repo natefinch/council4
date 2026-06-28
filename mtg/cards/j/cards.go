@@ -12,6 +12,8 @@ var Cards = []*game.CardDef{
 	JackalFamiliar,
 	JadeLeech,
 	JhessianBalmgiver,
+	JinxedIdol,
+	JinxedRing,
 	JirinaDauntlessGeneral,
 	JoinTheDead,
 	JoragaWarcaller,

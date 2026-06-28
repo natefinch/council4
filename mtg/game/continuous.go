@@ -120,6 +120,14 @@ type ContinuousEffect struct {
 
 	NewController opt.V[PlayerID]
 
+	// NewControllerRef binds a LayerControl effect's new controller to a player
+	// resolved at application time (the give-control forms whose new controller
+	// is a chosen target player, e.g. "Target player gains control of target
+	// permanent you control."). The runtime resolves it once when the effect is
+	// created and stores the result in NewController; it is mutually exclusive
+	// with the NewController sentinel.
+	NewControllerRef opt.V[PlayerReference]
+
 	TextFrom string
 	TextTo   string
 

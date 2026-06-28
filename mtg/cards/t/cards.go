@@ -65,6 +65,7 @@ var Cards = []*game.CardDef{
 	TowerOfMurmurs,
 	TowerOfTheMagistrate,
 	ToweringWaveMystic,
+	TraitorousInstinct,
 	TranquilDomain,
 	TransguildPromenade,
 	TraverseTheOutlands,

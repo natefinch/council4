@@ -971,6 +971,11 @@ func (p ApplyContinuous) validatePrimitive(targets []TargetSpec, checkTargets bo
 	if len(p.ContinuousEffects) == 0 {
 		return errors.New("continuous effect instruction has no declarations")
 	}
+	for i := range p.ContinuousEffects {
+		if err := validateContinuousEffectNewControllerRef(&p.ContinuousEffects[i], targets, checkTargets); err != nil {
+			return err
+		}
+	}
 	if p.ChooseFrom.Valid() {
 		if p.Object.Exists {
 			return errors.New("continuous effect instruction cannot both choose from a group and target an object")
@@ -990,6 +995,23 @@ func (p ApplyContinuous) validatePrimitive(targets []TargetSpec, checkTargets bo
 		return validateObjectReference(p.Object.Val, targets, checkTargets)
 	}
 	return nil
+}
+
+// validateContinuousEffectNewControllerRef enforces the invariants of a
+// LayerControl effect whose new controller is resolved from a player reference
+// at application time: it is mutually exclusive with the NewController sentinel,
+// requires the control layer, and must reference an in-bounds player.
+func validateContinuousEffectNewControllerRef(continuous *ContinuousEffect, targets []TargetSpec, checkTargets bool) error {
+	if !continuous.NewControllerRef.Exists {
+		return nil
+	}
+	if continuous.NewController.Exists {
+		return errors.New("continuous effect sets both NewController and NewControllerRef")
+	}
+	if continuous.Layer != LayerControl {
+		return errors.New("NewControllerRef requires the control layer")
+	}
+	return validatePlayerReference(continuous.NewControllerRef.Val, targets, checkTargets)
 }
 
 func (p ApplyRule) validatePrimitive(targets []TargetSpec, checkTargets bool) error {

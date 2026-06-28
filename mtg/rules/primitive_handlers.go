@@ -1536,6 +1536,14 @@ func applyTypedContinuousEffects(g *game.Game, obj *game.StackObject, permanent 
 		if runtimeEffect.NewController.Exists && runtimeEffect.NewController.Val == game.Player1 {
 			runtimeEffect.NewController = opt.Val(obj.Controller)
 		}
+		if runtimeEffect.NewControllerRef.Exists {
+			newController, ok := resolvePlayerReference(g, obj, runtimeEffect.NewControllerRef.Val)
+			if !ok {
+				continue
+			}
+			runtimeEffect.NewController = opt.Val(newController)
+			runtimeEffect.NewControllerRef = opt.V[game.PlayerReference]{}
+		}
 		if runtimeEffect.Group.Valid() {
 			members := newReferenceResolver(g, obj).groupMembers(runtimeEffect.Group)
 			runtimeEffect.Group = game.GroupReference{}

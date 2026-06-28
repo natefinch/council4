@@ -27,6 +27,7 @@ var Cards = []*game.CardDef{
 	BasriTomorrowSChampion,
 	BattleStrain,
 	BattlefieldPercher,
+	BazaarTrader,
 	BeastWithin,
 	BeastriderVanguard,
 	BelbeSPercher,
