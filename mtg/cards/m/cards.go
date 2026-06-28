@@ -67,6 +67,7 @@ var Cards = []*game.CardDef{
 	MilitiaBugler,
 	MilitiaRallier,
 	MimingSlime,
+	MindKnives,
 	MindSculpt,
 	Mindcrank,
 	MindeyeDrake,

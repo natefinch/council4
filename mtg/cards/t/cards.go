@@ -70,6 +70,7 @@ var Cards = []*game.CardDef{
 	TolarianSerpent,
 	TomeScour,
 	TorrentialGearhulk,
+	TourachDreadCantor,
 	TowerOfMurmurs,
 	TowerOfTheMagistrate,
 	ToweringWaveMystic,

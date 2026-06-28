@@ -105,6 +105,7 @@ var Cards = []*game.CardDef{
 	CoopedUp,
 	CoralSword,
 	CorpsesOfTheLost,
+	CorruptOfficial,
 	CosmicHunger,
 	CosmicLarva,
 	CosmicSpiderMan,

@@ -927,7 +927,10 @@ func (r Renderer) renderPlayerAmountPrimitive(ctx *renderCtx, primitive game.Pri
 			return r.renderDiscardEntireHand(value)
 		}
 		if value.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
-			return r.renderAmountPlayerGroup(ctx, "game.Discard", value.Amount, value.PlayerGroup)
+			return r.renderDiscardAmountGroup(ctx, value)
+		}
+		if value.AtRandom {
+			return r.renderDiscardAmountPlayer(ctx, value)
 		}
 		typeName, amount, player = "game.Discard", value.Amount, value.Player
 	case game.PrimitiveMill:
@@ -1641,6 +1644,56 @@ func (r Renderer) renderAmountPlayerGroup(
 		fmt.Sprintf("Amount: %s,", renderedAmount),
 		fmt.Sprintf("PlayerGroup: %s,", renderedGroup),
 	}), nil
+}
+
+// renderDiscardAmountPlayer renders a single-player discard, preserving the
+// "at random" selection flag the shared amount/player renderer drops. The
+// non-random case routes through renderAmountPlayer, so only the random variant
+// reaches here.
+func (r Renderer) renderDiscardAmountPlayer(ctx *renderCtx, value game.Discard) (string, error) {
+	renderedAmount, err := r.renderQuantity(ctx, value.Amount)
+	if err != nil {
+		return "", err
+	}
+	player, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{
+		fmt.Sprintf("Amount: %s,", renderedAmount),
+		fmt.Sprintf("Player: %s,", player),
+	}
+	if value.AtRandom {
+		fields = append(fields, "AtRandom: true,")
+	}
+	return structLit("game.Discard", fields), nil
+}
+
+// renderDiscardAmountGroup renders a player-group discard, preserving the "at
+// random" selection flag. A non-random group discard renders byte-identically to
+// the shared amount/player-group renderer (AtRandom omitted when false).
+func (r Renderer) renderDiscardAmountGroup(ctx *renderCtx, value game.Discard) (string, error) {
+	renderedAmount, err := r.renderQuantity(ctx, value.Amount)
+	if err != nil {
+		return "", err
+	}
+	var renderedGroup string
+	switch value.PlayerGroup.Kind {
+	case game.PlayerGroupReferenceOpponents:
+		renderedGroup = "game.OpponentsReference()"
+	case game.PlayerGroupReferenceAllPlayers:
+		renderedGroup = "game.AllPlayersReference()"
+	default:
+		return "", fmt.Errorf("render: unsupported player group reference kind %d", value.PlayerGroup.Kind)
+	}
+	fields := []string{
+		fmt.Sprintf("Amount: %s,", renderedAmount),
+		fmt.Sprintf("PlayerGroup: %s,", renderedGroup),
+	}
+	if value.AtRandom {
+		fields = append(fields, "AtRandom: true,")
+	}
+	return structLit("game.Discard", fields), nil
 }
 
 func (r Renderer) renderSacrificePermanents(ctx *renderCtx, value *game.SacrificePermanents) (string, error) {

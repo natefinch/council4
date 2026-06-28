@@ -34,6 +34,7 @@ var Cards = []*game.CardDef{
 	NoblePurpose,
 	NobleVestige,
 	NoggleBandit,
+	NoggleRansacker,
 	NovelNunchaku,
 	NorwoodPriestess,
 	NoxiousGhoul,

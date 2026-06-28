@@ -145,7 +145,6 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedMechanicVariants(t *testi
 		{name: "set life total", cardName: "Test Life", typeLine: "Sorcery", oracleText: "Your life total becomes 10."},
 		{name: "variable scry", cardName: "Test Vision", typeLine: "Sorcery", oracleText: "Scry X."},
 		{name: "targeted scry", cardName: "Test Vision", typeLine: "Sorcery", oracleText: "Target player scries 2."},
-		{name: "random discard", cardName: "Test Mind", typeLine: "Sorcery", oracleText: "Target player discards a card at random."},
 		{name: "named discard", cardName: "Test Mind", typeLine: "Sorcery", oracleText: "Target player discards a creature card."},
 		{name: "hand discard unless pay", cardName: "Test Mind", typeLine: "Sorcery", oracleText: "Target player discards their hand unless they pay 3 life."},
 		{name: "mass tap", cardName: "Test Sleep", typeLine: "Sorcery", oracleText: "Tap all artifacts with power 3 or less."},

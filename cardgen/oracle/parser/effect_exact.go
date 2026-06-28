@@ -55,7 +55,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 	case EffectDiscard:
 		return exactCardCountEffectSyntax(effect, "Discard", "discards", false) ||
 			effect.DiscardEntireHand ||
-			effect.HandDiscard.AtRandom
+			effect.HandDiscard.AtRandom ||
+			effect.RandomDiscard
 	case EffectDestroy:
 		return exactDirectTargetEffectSyntax(effect, "Destroy") ||
 			exactMultiDistinctTargetEffectSyntax(effect, "Destroy") ||
@@ -3421,52 +3422,7 @@ func exactCardCountEffectSyntax(effect *EffectSyntax, controllerVerb, subjectVer
 	if effect.Kind == EffectMill && effect.Amount.DynamicKind == EffectDynamicAmountControllerLife {
 		return false
 	}
-	var prefixes []string
-	switch effect.Context {
-	case EffectContextController:
-		prefixes = []string{controllerVerb, "You " + controllerVerb}
-	case EffectContextEachPlayer:
-		prefixes = inabilityAwarePrefixes(effect, "Each player", subjectVerb)
-	case EffectContextEachOtherPlayer:
-		prefixes = inabilityAwarePrefixes(effect, "Each other player", subjectVerb)
-	case EffectContextEachOpponent:
-		prefixes = inabilityAwarePrefixes(effect, "Each opponent", subjectVerb)
-	case EffectContextDefendingPlayer:
-		prefixes = []string{"Defending player " + subjectVerb}
-	case EffectContextTarget:
-		if len(effect.Targets) == 1 && effect.Targets[0].Exact &&
-			exactCardCountTargetPlayer(effect.Targets[0].Selection) {
-			prefixes = []string{titleFirstEffectText(effect.Targets[0].Text) + " " + subjectVerb}
-		}
-	case EffectContextControllerAndTarget:
-		if len(effect.Targets) == 1 && effect.Targets[0].Exact &&
-			exactCardCountTargetPlayer(effect.Targets[0].Selection) {
-			// exactEffectClauseText drops the leading "You and" at its "and"
-			// split, so the reconstructed clause begins at the target subject:
-			// "target opponent each draw a card".
-			prefixes = []string{effect.Targets[0].Text + " each " + strings.ToLower(controllerVerb)}
-		}
-	case EffectContextPriorSubject:
-		if len(effect.Targets) == 1 && effect.Targets[0].Exact &&
-			exactCardCountTargetPlayer(effect.Targets[0].Selection) {
-			prefixes = []string{titleFirstEffectText(effect.Targets[0].Text) + " " + subjectVerb}
-		} else {
-			prefixes = []string{controllerVerb, subjectVerb}
-		}
-	case EffectContextEventPlayer, EffectContextReferencedPlayer:
-		prefixes = []string{"They " + strings.TrimSuffix(subjectVerb, "s"), "That player " + subjectVerb}
-	case EffectContextReferencedObjectController:
-		if subject := referencedControllerSubjectText(effect); subject != "" {
-			if effect.Optional && effect.Amount.RangeKnown &&
-				effect.DelayedTiming == DelayedTimingNextUpkeep {
-				subject = strings.TrimSuffix(subject, " may")
-				prefixes = []string{subject + " may " + strings.TrimSuffix(subjectVerb, "s")}
-			} else {
-				prefixes = []string{subject + " " + subjectVerb}
-			}
-		}
-	default:
-	}
+	prefixes := cardCountSubjectPrefixes(effect, controllerVerb, subjectVerb)
 	text := exactEffectClauseText(effect)
 	singular, plural := "card", "cards"
 	if effect.Additional {
@@ -3474,6 +3430,93 @@ func exactCardCountEffectSyntax(effect *EffectSyntax, controllerVerb, subjectVer
 	}
 	for _, prefix := range prefixes {
 		if exactCountedNounEffectText(text, prefix, singular, plural, effect.Amount, effectAmountSourceText(effect), allowDynamic) {
+			return true
+		}
+	}
+	return false
+}
+
+// cardCountSubjectPrefixes builds the accepted subject-clause prefix(es) for a
+// draw, discard, or mill card-count effect, keyed off the effect's subject
+// context. controllerVerb is the controller-voice verb ("Discard"), subjectVerb
+// the third-person voice ("discards"). The returned prefixes are compared
+// against the reconstructed clause text by the exact-card-count and random
+// discard recognizers; an unrecognized context yields no prefixes.
+func cardCountSubjectPrefixes(effect *EffectSyntax, controllerVerb, subjectVerb string) []string {
+	switch effect.Context {
+	case EffectContextController:
+		return []string{controllerVerb, "You " + controllerVerb}
+	case EffectContextEachPlayer:
+		return inabilityAwarePrefixes(effect, "Each player", subjectVerb)
+	case EffectContextEachOtherPlayer:
+		return inabilityAwarePrefixes(effect, "Each other player", subjectVerb)
+	case EffectContextEachOpponent:
+		return inabilityAwarePrefixes(effect, "Each opponent", subjectVerb)
+	case EffectContextDefendingPlayer:
+		return []string{"Defending player " + subjectVerb}
+	case EffectContextTarget:
+		if len(effect.Targets) == 1 && effect.Targets[0].Exact &&
+			exactCardCountTargetPlayer(effect.Targets[0].Selection) {
+			return []string{titleFirstEffectText(effect.Targets[0].Text) + " " + subjectVerb}
+		}
+	case EffectContextControllerAndTarget:
+		if len(effect.Targets) == 1 && effect.Targets[0].Exact &&
+			exactCardCountTargetPlayer(effect.Targets[0].Selection) {
+			// exactEffectClauseText drops the leading "You and" at its "and"
+			// split, so the reconstructed clause begins at the target subject:
+			// "target opponent each draw a card".
+			return []string{effect.Targets[0].Text + " each " + strings.ToLower(controllerVerb)}
+		}
+	case EffectContextPriorSubject:
+		if len(effect.Targets) == 1 && effect.Targets[0].Exact &&
+			exactCardCountTargetPlayer(effect.Targets[0].Selection) {
+			return []string{titleFirstEffectText(effect.Targets[0].Text) + " " + subjectVerb}
+		}
+		return []string{controllerVerb, subjectVerb}
+	case EffectContextEventPlayer, EffectContextReferencedPlayer:
+		return []string{"They " + strings.TrimSuffix(subjectVerb, "s"), "That player " + subjectVerb}
+	case EffectContextReferencedObjectController:
+		if subject := referencedControllerSubjectText(effect); subject != "" {
+			if effect.Optional && effect.Amount.RangeKnown &&
+				effect.DelayedTiming == DelayedTimingNextUpkeep {
+				subject = strings.TrimSuffix(subject, " may")
+				return []string{subject + " may " + strings.TrimSuffix(subjectVerb, "s")}
+			}
+			return []string{subject + " " + subjectVerb}
+		}
+	default:
+	}
+	return nil
+}
+
+// exactNonControllerRandomDiscardSyntax reconstructs the canonical
+// "<subject> discards <N> card(s) at random." wording for a fixed-count random
+// discard by a non-controller subject (each player, each opponent, the
+// defending player, a target player, or the "that player"/"they" anaphor).
+// Controller random discards are recognized separately by
+// exactControllerRandomDiscardSyntax and travel on HandDiscard, so this helper
+// skips the controller voice. The "at random" suffix marks the random variant,
+// distinguishing it from the player-choice discard exactCardCountEffectSyntax
+// recognizes. Only a plain unqualified card selection of a known positive fixed
+// count round-trips; every filtered, ranged, dynamic, or whole-hand discard
+// fails the reconstruction and stays inexact.
+func exactNonControllerRandomDiscardSyntax(effect *EffectSyntax) bool {
+	if effect.Kind != EffectDiscard ||
+		effect.Context == EffectContextController ||
+		effect.DiscardEntireHand ||
+		effect.Negated ||
+		!effect.Amount.Known || effect.Amount.Value < 1 || effect.Amount.RangeKnown ||
+		effect.Amount.DynamicForm != EffectDynamicAmountFormNone {
+		return false
+	}
+	noun := "cards"
+	if effect.Amount.Value == 1 {
+		noun = "card"
+	}
+	text := exactEffectClauseText(effect)
+	amountText := effectAmountSourceText(effect)
+	for _, prefix := range cardCountSubjectPrefixes(effect, "Discard", "discards") {
+		if strings.EqualFold(text, fmt.Sprintf("%s %s %s at random.", prefix, amountText, noun)) {
 			return true
 		}
 	}

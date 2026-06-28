@@ -468,6 +468,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				Dig:                                    syntax.Dig,
 				HandLibraryPut:                         syntax.HandLibraryPut,
 				HandDiscard:                            syntax.HandDiscard,
+				RandomDiscard:                          syntax.RandomDiscard,
 				RevealChooseDiscard:                    syntax.RevealChooseDiscard,
 				HandChoiceDiscard:                      syntax.HandChoiceDiscard,
 				DiscardThenDraw:                        syntax.DiscardThenDraw,

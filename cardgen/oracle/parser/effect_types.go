@@ -2479,6 +2479,13 @@ type EffectSyntax struct {
 	// HandDiscard marks an exact fixed-cardinality discard chosen from the
 	// resolving controller's hand.
 	HandDiscard HandDiscardSyntax `json:",omitzero"`
+	// RandomDiscard marks an exact fixed-cardinality "discard N card(s) at
+	// random" by a non-controller subject (each player, each opponent, the
+	// defending player, a target player, or the "that player" anaphor). The
+	// controller random discard travels on HandDiscard.AtRandom instead. It
+	// carries the "at random" semantics through to lowering, which selects the
+	// random discard primitive variant.
+	RandomDiscard bool `json:",omitempty"`
 	// SearchSplit holds the structured fields of a split-destination put clause
 	// "put one <slot> and the other <slot>" that distributes the cards found by a
 	// preceding "up to two" library search across two single-card destination
