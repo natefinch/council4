@@ -1427,6 +1427,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			tokenNameLeading = true
 		}
 		tokenKeywords := parseTokenKeywords(kind, clause, atoms)
+		tokenToxic := parseTokenKeywordToxic(kind, clause, atoms)
 		tokenPredefinedName := parsePredefinedTokenName(kind, clause)
 		// A multi-token create clause ("Create a 1/1 green Snake creature token, a
 		// 2/2 green Wolf creature token, and a 3/3 green Elephant creature token.")
@@ -1446,6 +1447,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 				tokenPTKnown = first.TokenPTKnown
 				tokenPTVariableX = false
 				tokenKeywords = first.TokenKeywords
+				tokenToxic = first.TokenToxic
 				tokenName = first.TokenName
 				tokenNameLeading = false
 				tokenPredefinedName = first.TokenPredefinedName
@@ -1479,6 +1481,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			TokenPTKnown:             tokenPTKnown,
 			TokenPTVariableX:         tokenPTVariableX,
 			TokenKeywords:            tokenKeywords,
+			TokenToxic:               tokenToxic,
 			TokenName:                tokenName,
 			TokenPredefinedName:      tokenPredefinedName,
 			TokenNameLeading:         tokenNameLeading,
@@ -1827,6 +1830,7 @@ func parsePassiveTokenAdditiveEffects(sentence Sentence, tokens []shared.Token, 
 		TokenToughness:      tokenToughness,
 		TokenPTKnown:        tokenPTKnown,
 		TokenKeywords:       parseTokenKeywords(EffectCreate, addendClause, atoms),
+		TokenToxic:          parseTokenKeywordToxic(EffectCreate, addendClause, atoms),
 		TokenName:           parseTokenName(EffectCreate, addendClause),
 		TokenPredefinedName: parsePredefinedTokenName(EffectCreate, addendClause),
 		Replacement: EffectReplacementSyntax{

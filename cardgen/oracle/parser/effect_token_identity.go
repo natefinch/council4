@@ -89,6 +89,7 @@ func parsePassiveTokenIdentityEffects(sentence Sentence, tokens []shared.Token, 
 		TokenToughness:      tokenToughness,
 		TokenPTKnown:        tokenPTKnown,
 		TokenKeywords:       parseTokenKeywords(EffectCreate, outputClause, atoms),
+		TokenToxic:          parseTokenKeywordToxic(EffectCreate, outputClause, atoms),
 		TokenName:           parseTokenName(EffectCreate, nounClause),
 		TokenPredefinedName: parsePredefinedTokenName(EffectCreate, nounClause),
 		Replacement: EffectReplacementSyntax{
