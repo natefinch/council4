@@ -1011,6 +1011,22 @@ func removalTargetSpecForRecipient(target compiler.CompiledTarget) (game.TargetS
 	return permanentTargetSpec(target)
 }
 
+// inheritedTargetSubjectReference reports whether reference is a singular
+// inherited back-reference to a prior effect's target, the antecedent subject of
+// a follow-up clause. Both the pronoun "it" and the object demonstrative "that
+// creature" name that antecedent ("... gets +N/+N until end of turn. It deals
+// ..." vs "Put a +1/+1 counter on target creature you control. Then that creature
+// deals ..."); the compiler binds either to the target with a non-negative
+// occurrence index. It fails closed for any other reference kind or binding.
+func inheritedTargetSubjectReference(reference compiler.CompiledReference) bool {
+	isIt := reference.Kind == compiler.ReferencePronoun &&
+		reference.Pronoun == compiler.ReferencePronounIt
+	isThatCreature := reference.Kind == compiler.ReferenceThatObject
+	return (isIt || isThatCreature) &&
+		reference.Binding == compiler.ReferenceBindingTarget &&
+		reference.Occurrence >= 0
+}
+
 // lowerInheritedPowerDamageSpell lowers an inherited "it deals damage equal to
 // its power to <target>" effect, where "it" refers to a prior effect's target
 // (e.g. Clear Shot / Rabid Gnaw: "Target creature you control gets +N/+N until
@@ -1041,10 +1057,7 @@ func lowerInheritedPowerDamageSpell(ctx contentCtx) (game.AbilityContent, bool) 
 	}
 	source := ctx.content.References[0]
 	amountRef := ctx.content.References[1]
-	if source.Kind != compiler.ReferencePronoun ||
-		source.Pronoun != compiler.ReferencePronounIt ||
-		source.Binding != compiler.ReferenceBindingTarget ||
-		source.Occurrence < 0 ||
+	if !inheritedTargetSubjectReference(source) ||
 		source.Occurrence >= len(ctx.content.Targets) {
 		return game.AbilityContent{}, false
 	}
