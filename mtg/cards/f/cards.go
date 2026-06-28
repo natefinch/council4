@@ -77,5 +77,6 @@ var Cards = []*game.CardDef{
 	FrontierSeeker,
 	FrostBite,
 	FungalBloom,
+	Fylamarid,
 	FynnTheFangbearer,
 }

@@ -53,6 +53,7 @@
             Known: true
           TokenCopyOverrideColors: 
           BecomeTypeAddColors: 
+          BecomeColorColors: 
           PolymorphColors: 
           PolymorphSupertypes: 
           Exact: true

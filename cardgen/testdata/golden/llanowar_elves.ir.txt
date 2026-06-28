@@ -34,6 +34,7 @@
           Details: 
             Symbol: {G}
           BecomeTypeAddColors: 
+          BecomeColorColors: 
           PolymorphColors: 
           PolymorphSupertypes: 
           Mana: 

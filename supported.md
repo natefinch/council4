@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,876 of 32,501 cards eligible for paper support (48.8%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,883 of 32,501 cards eligible for paper support (48.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -403,6 +403,7 @@ Council4 currently supports **15,876 of 32,501 cards eligible for paper support 
 - Ancient Gold Dragon
 - Ancient Greenwarden
 - Ancient Grudge
+- Ancient Kavu
 - Ancient Silver Dragon
 - Ancient Silverback
 - Ancient Spider
@@ -825,6 +826,7 @@ Council4 currently supports **15,876 of 32,501 cards eligible for paper support 
 - Auriok Transfixer
 - Auron's Inspiration
 - Aurora Eidolon
+- Aurora Griffin
 - Auroral Procession
 - Auspicious Ancestor
 - Auspicious Arrival
@@ -1335,6 +1337,7 @@ Council4 currently supports **15,876 of 32,501 cards eligible for paper support 
 - Blaze
 - Blazemire Verge
 - Blazethorn Scarecrow
+- Blazing Blade Askari
 - Blazing Crescendo
 - Blazing Firesinger // Seething Song
 - Blazing Hellhound
@@ -2444,6 +2447,7 @@ Council4 currently supports **15,876 of 32,501 cards eligible for paper support 
 - Cloudblazer
 - Cloudbound Moogle
 - Cloudchaser Eagle
+- Cloudchaser Kestrel
 - Cloudcrest Lake
 - Cloudcrown Oak
 - Cloudfin Raptor
@@ -5124,6 +5128,7 @@ Council4 currently supports **15,876 of 32,501 cards eligible for paper support 
 - Future Sight
 - Futurist Forge
 - Futurist Sentinel
+- Fylamarid
 - Fyndhorn Bow
 - Fyndhorn Brownie
 - Fyndhorn Elder
@@ -8401,6 +8406,7 @@ Council4 currently supports **15,876 of 32,501 cards eligible for paper support 
 - Metamorphic Wurm
 - Metastatic Evangel
 - Metathran Soldier
+- Metathran Transport
 - Metathran Zombie
 - Meteor Golem
 - Meteor Storm
@@ -10343,6 +10349,7 @@ Council4 currently supports **15,876 of 32,501 cards eligible for paper support 
 - Raging Poltergeist
 - Raging Redcap
 - Raging Regisaur
+- Raging Spirit
 - Raging Swordtooth
 - Ragnar
 - Raid Bombardment

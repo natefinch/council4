@@ -1139,6 +1139,7 @@ func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) 
 		func() ([]EffectSyntax, bool) { return parseSwitchPowerToughnessEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseNamedBecomePolymorphEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseBecomeTypeEffect(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parseBecomeColorEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseDrawEmptyLibraryWinReplacement(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseDrawDoublingReplacement(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseDrawReplacementDig(sentence, tokens, atoms) },

@@ -47,6 +47,7 @@ var Cards = []*game.CardDef{
 	BladedBattleFan,
 	BladedBracers,
 	BlazemireVerge,
+	BlazingBladeAskari,
 	BlazingSunsteel,
 	BleedDry,
 	BlitzLeech,

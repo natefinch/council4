@@ -21,6 +21,7 @@
             Known: true
           TokenCopyOverrideColors: 
           BecomeTypeAddColors: 
+          BecomeColorColors: 
           PolymorphColors: 
           PolymorphSupertypes: 
           Exact: true
@@ -51,6 +52,7 @@
           ToZone: Library
           Destination: EffectDestinationTop
           BecomeTypeAddColors: 
+          BecomeColorColors: 
           PolymorphColors: 
           PolymorphSupertypes: 
           Exact: true
