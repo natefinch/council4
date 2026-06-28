@@ -4152,3 +4152,45 @@ func TestParseRegenerateRecipientExactness(t *testing.T) {
 		})
 	}
 }
+
+func TestParseGiveControlExactness(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		exact  bool
+	}{
+		// Two-target give-control: subject is a target player.
+		{"Target player gains control of target permanent you control.", true},
+		{"Target opponent gains control of target permanent you control.", true},
+		{"Target opponent gains control of target creature.", true},
+		{"Target player gains control of target creature until end of turn.", true},
+		// Source self-gift via "this <object>".
+		{"Target opponent gains control of this artifact.", true},
+		{"Target opponent gains control of this enchantment.", true},
+		// Trailing clause text leaves the clause non-exact.
+		{"Target opponent gains control of target creature with the greatest power.", false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{})
+			var control *EffectSyntax
+			for ai := range document.Abilities {
+				for si := range document.Abilities[ai].Sentences {
+					for ei := range document.Abilities[ai].Sentences[si].Effects {
+						effect := &document.Abilities[ai].Sentences[si].Effects[ei]
+						if effect.Kind == EffectGainControl {
+							control = effect
+						}
+					}
+				}
+			}
+			if control == nil {
+				t.Fatalf("no EffectGainControl parsed from %q", test.source)
+			}
+			if control.Exact != test.exact {
+				t.Fatalf("Exact = %v, want %v", control.Exact, test.exact)
+			}
+		})
+	}
+}

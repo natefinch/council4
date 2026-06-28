@@ -92,7 +92,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 			exactBackReferenceTargetKeywordGrantEffectSyntax(effect) ||
 			exactGainGrantedAbilityEffectSyntax(effect)
 	case EffectGainControl:
-		return exactGainControlEffectSyntax(effect)
+		return exactGainControlEffectSyntax(effect) ||
+			exactGiveControlEffectSyntax(effect)
 	case EffectBecomeMonarch:
 		return exactBecomeMonarchEffectSyntax(effect)
 	case EffectInvestigate:
@@ -3477,6 +3478,60 @@ func exactGainControlEffectSyntax(effect *EffectSyntax) bool {
 	default:
 		return false
 	}
+}
+
+// exactGiveControlEffectSyntax recognizes the give-control forms whose subject
+// is a target player who gains control of a permanent. It covers the two-target
+// spell "<target player> gains control of <target permanent>." (Donate,
+// Harmless Offering, Wrong Turn) and the source self-gift "<target player>
+// gains control of this <object>." (Jinxed Idol, Avarice Amulet, Measure of
+// Wickedness), where the controlled object is the ability's own source. The
+// clause is exact only when its verbatim reconstruction matches, so any other
+// wording leaves it non-exact and lowering fails closed.
+func exactGiveControlEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Negated || effect.Context != EffectContextTarget {
+		return false
+	}
+	if len(effect.Targets) == 0 || !effect.Targets[0].Exact {
+		return false
+	}
+	suffix := ""
+	switch effect.Duration {
+	case EffectDurationNone:
+		suffix = "."
+	case EffectDurationUntilEndOfTurn:
+		suffix = " until end of turn."
+	default:
+		return false
+	}
+	prefix := effect.Targets[0].Text + " gains control of "
+	text := exactEffectClauseText(effect)
+	switch {
+	case len(effect.Targets) == 2 && len(effect.References) == 0 && effect.Targets[1].Exact:
+		return strings.EqualFold(text, prefix+effect.Targets[1].Text+suffix)
+	case len(effect.Targets) == 1 && len(effect.References) == 1 &&
+		effect.References[0].Kind == ReferenceThisObject:
+		rest, ok := strings.CutPrefix(strings.ToLower(text), strings.ToLower(prefix))
+		if !ok {
+			return false
+		}
+		object, ok := strings.CutSuffix(rest, suffix)
+		if !ok {
+			return false
+		}
+		return giveControlThisObjectNoun(object)
+	default:
+		return false
+	}
+}
+
+// giveControlThisObjectNoun reports whether object is a single-word "this
+// <noun>" self reference (e.g. "this artifact", "this enchantment", "this
+// equipment"). The reference kind already binds the noun to the ability's
+// source, so only the shape needs confirming.
+func giveControlThisObjectNoun(object string) bool {
+	rest, ok := strings.CutPrefix(object, "this ")
+	return ok && rest != "" && !strings.Contains(rest, " ")
 }
 
 func exactGainControlControlledSourceDuration(text, prefix string) bool {

@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,801 of 32,501 cards eligible for paper support (48.6%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,814 of 32,501 cards eligible for paper support (48.7%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -838,6 +838,7 @@ Council4 currently supports **15,801 of 32,501 cards eligible for paper support 
 - Avacyn, Angel of Hope
 - Avacynian Priest
 - Avarax
+- Avarice Amulet
 - Avaricious Dragon
 - Avatar
 - Avatar
@@ -1099,6 +1100,7 @@ Council4 currently supports **15,801 of 32,501 cards eligible for paper support 
 - Bazaar Krovod
 - Bazaar of Baghdad
 - Bazaar Trademage
+- Bazaar Trader
 - Be'lakor, the Dark Master
 - Beacon Behemoth
 - Beacon Hawk
@@ -3480,6 +3482,7 @@ Council4 currently supports **15,801 of 32,501 cards eligible for paper support 
 - Dominus of Fealty
 - Domri's Nodorog
 - Domri, City Smasher
+- Donate
 - Donatello, the Brains
 - Donatello, Turtle Techie
 - Donatello, Way with Machines
@@ -6024,6 +6027,7 @@ Council4 currently supports **15,801 of 32,501 cards eligible for paper support 
 - Hardy Veteran
 - Hargilde, Kindly Runechanter
 - Harmattan Efreet
+- Harmless Offering
 - Harmonic Prodigy
 - Harmonious Archon
 - Harmonious Grovestrider
@@ -6469,6 +6473,7 @@ Council4 currently supports **15,801 of 32,501 cards eligible for paper support 
 - Human Warrior
 - Human Wizard
 - Humble Budoka
+- Humble Defector
 - Humble Naturalist
 - Humble the Brute
 - Humbler of Mortals
@@ -7009,6 +7014,8 @@ Council4 currently supports **15,801 of 32,501 cards eligible for paper support 
 - Jhovall Rider
 - Jiang Yanggu, Wildcrafter
 - Jibbirik Omnivore
+- Jinxed Idol
+- Jinxed Ring
 - Jirina, Dauntless General
 - Jiwari, the Earth Aflame
 - Joel, Resolute Survivor
@@ -8034,6 +8041,7 @@ Council4 currently supports **15,801 of 32,501 cards eligible for paper support 
 - Malcolm, the Eyes
 - Malevolent Awakening
 - Malevolent Chandelier
+- Malevolent Whispers
 - Malicious Intent
 - Mammoth Spider
 - Man-o'-War
@@ -8234,6 +8242,7 @@ Council4 currently supports **15,801 of 32,501 cards eligible for paper support 
 - Maze Skullbomb
 - Mazirek, Kraul Death Priest
 - Meandering River
+- Measure of Wickedness
 - Meat Locker // Drowned Diner
 - Mechan Assembler
 - Mechan Navigator
@@ -14107,6 +14116,7 @@ Council4 currently supports **15,801 of 32,501 cards eligible for paper support 
 - Training Drone
 - Training Regimen
 - Traitorous Blood
+- Traitorous Instinct
 - Tramway Station
 - Tranquil Cove
 - Tranquil Domain
@@ -14516,6 +14526,7 @@ Council4 currently supports **15,801 of 32,501 cards eligible for paper support 
 - Unwavering Initiate
 - Unwelcome Sprite
 - Unwilling Ingredient
+- Unwilling Recruit
 - Unwind
 - Unwinding Clock
 - Unworthy Dead
@@ -15475,6 +15486,7 @@ Council4 currently supports **15,801 of 32,501 cards eligible for paper support 
 - Wistful Thinking
 - Wit's End
 - Witch Enchanter // Witch-Blessed Meadow
+- Witch Engine
 - Witch Hunter
 - Witch's Cauldron
 - Witch's Cottage
@@ -15599,6 +15611,7 @@ Council4 currently supports **15,801 of 32,501 cards eligible for paper support 
 - Wring Flesh
 - Writhing Chrysalis
 - Writhing Necromass
+- Wrong Turn
 - Wu Admiral
 - Wu Elite Cavalry
 - Wu Infantry

@@ -185,6 +185,14 @@ func (r Renderer) renderContinuousEffect(ctx *renderCtx, effect *game.Continuous
 		ctx.need(importOpt)
 		fields = append(fields, "NewController: opt.Val(game.Player1),")
 	}
+	if effect.Layer == game.LayerControl && effect.NewControllerRef.Exists {
+		rendered, err := r.renderPlayerReference(effect.NewControllerRef.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("NewControllerRef: opt.Val(%s),", rendered))
+	}
 	if effect.AffectedSource {
 		fields = append(fields, "AffectedSource: true,")
 	}

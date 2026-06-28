@@ -88,6 +88,7 @@ var Cards = []*game.CardDef{
 	AuspiciousAncestor,
 	AutomatedArtificer,
 	AvacynianPriest,
+	AvariceAmulet,
 	AvatarOfDiscord,
 	AvenHeartstabber,
 	AvenRedeemer,
