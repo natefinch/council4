@@ -46,6 +46,7 @@ var Cards = []*game.CardDef{
 	DistortedCuriosity,
 	DiversionUnit,
 	DivineVisitation,
+	DjinnOfTheFountain,
 	DocSamsonSuperPsychiatrist,
 	DomriSAmbush,
 	DomriSNodorog,
