@@ -183,3 +183,36 @@ func TestLowerDrainFailsClosed(t *testing.T) {
 		})
 	}
 }
+
+// TestLowerEventControllerDrain verifies the punisher drain whose drained
+// subject is the controller of a triggering or related permanent rather than a
+// target or group. Revenge of Ravens' "Whenever a creature attacks you ..., that
+// creature's controller loses 1 life and you gain 1 life." drains the attacking
+// creature's controller through an event-permanent reference and gains the same
+// life for the source's controller, with no targets.
+func TestLowerEventControllerDrain(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Raven Revenge",
+		Layout:     "normal",
+		TypeLine:   "Enchantment",
+		OracleText: "Whenever a creature attacks you or a planeswalker you control, that creature's controller loses 1 life and you gain 1 life.",
+	})
+	content := face.TriggeredAbilities[0].Content
+	if len(content.Modes[0].Targets) != 0 {
+		t.Fatalf("targets = %#v, want no targets", content.Modes[0].Targets)
+	}
+	lose, gain := drainInstructions(t, content)
+	if lose.Player != game.ObjectControllerReference(game.EventPermanentReference()) {
+		t.Fatalf("lose player = %+v, want controller of event permanent", lose.Player)
+	}
+	if gain.Player != game.ControllerReference() {
+		t.Fatalf("gain player = %+v, want controller", gain.Player)
+	}
+	if lose.Amount != gain.Amount {
+		t.Fatalf("lose amount %+v != gain amount %+v", lose.Amount, gain.Amount)
+	}
+	if lose.Amount != game.Fixed(1) {
+		t.Fatalf("amount = %+v, want fixed 1", lose.Amount)
+	}
+}

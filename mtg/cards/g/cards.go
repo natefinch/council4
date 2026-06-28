@@ -42,6 +42,7 @@ var Cards = []*game.CardDef{
 	GlintHawk,
 	GlintNestCrane,
 	GlintWeaver,
+	GloomSower,
 	Gloomwidow,
 	Glowrider,
 	GluttonousTroll,

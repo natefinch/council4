@@ -160,7 +160,40 @@ func drainLosePrimitive(
 			return nil, nil, false
 		}
 		return game.LoseLife{Player: game.TargetPlayerReference(0), Amount: amount}, []game.TargetSpec{spec}, true
+	case parser.EffectContextReferencedObjectController:
+		if len(abilityTargets) != 0 {
+			return nil, nil, false
+		}
+		recipient, ok := eventReferencedObjectControllerPlayer(lose.References)
+		if !ok {
+			return nil, nil, false
+		}
+		return game.LoseLife{Player: recipient, Amount: amount}, nil, true
 	default:
 		return nil, nil, false
 	}
+}
+
+// eventReferencedObjectControllerPlayer resolves a "that creature's
+// controller"/"its controller" drained subject to the controller of the
+// permanent that fired the trigger. The lone subject reference binds to the
+// triggering event's permanent (the attacking or blocking creature) or its
+// related permanent (the opposing combatant in a became-blocked trigger), so the
+// drained player is that permanent's controller: Gloom Sower ("Whenever this
+// creature becomes blocked by a creature, that creature's controller loses 2 life
+// and you gain 2 life."), Revenge of Ravens, and MacCready, Lamplight Mayor.
+//
+// It fails closed for any reference set other than a sole event-bound permanent
+// reference — a source-bound subject ("you"), a target-bound subject (owned by
+// the inherited-target life path), or a multi-reference clause — so only the
+// event-controller drain reaches this recipient.
+func eventReferencedObjectControllerPlayer(references []compiler.CompiledReference) (game.PlayerReference, bool) {
+	if len(references) != 1 {
+		return game.PlayerReference{}, false
+	}
+	object, ok := lowerObjectReference(references[0], referenceLoweringContext{AllowEvent: true})
+	if !ok {
+		return game.PlayerReference{}, false
+	}
+	return game.ObjectControllerReference(object), true
 }
