@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,177 of 32,501 cards eligible for paper support (49.8%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,179 of 32,501 cards eligible for paper support (49.8%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1615,6 +1615,7 @@ Council4 currently supports **16,177 of 32,501 cards eligible for paper support 
 - Bomber Corps
 - Bond Beetle
 - Bond of Discipline
+- Bond of Revival
 - Bonded Construct
 - Bonded Fetch
 - Bonded Horncrest
@@ -7308,6 +7309,7 @@ Council4 currently supports **16,177 of 32,501 cards eligible for paper support 
 - Karakas
 - Karametra's Acolyte
 - Karametra's Favor
+- Kardur's Vicious Return
 - Karfell Kennel-Master
 - Kargan Dragonrider
 - Kargan Warleader
