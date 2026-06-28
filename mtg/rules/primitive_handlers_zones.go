@@ -332,6 +332,14 @@ func handleSearch(r *effectResolver, prim game.Search) effectResolved {
 	if prim.Spec.RevealOnly {
 		return handleSearchRevealOnly(r, prim)
 	}
+	if prim.Spec.AlsoGraveyard {
+		playerID, ok := r.resolvePlayer(prim.Player)
+		if !ok {
+			return res
+		}
+		res.succeeded = r.engine.searchLibraryAndGraveyard(r.game, r.obj, r.agents, r.log, playerID, prim.Spec)
+		return res
+	}
 	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
 		// "Each player searches their library ..." — every member searches their
 		// own library and any found permanent enters under that searcher's

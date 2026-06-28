@@ -479,6 +479,9 @@ func lowerOptionalContent(
 	if content, ok := lowerOptionalSearchSpell(ctx); ok {
 		return content, nil
 	}
+	if content, ok := lowerOptionalLibraryGraveyardTutor(ctx); ok {
+		return content, nil
+	}
 	if content, ok := lowerOptionalReferencedControllerSearch(ctx); ok {
 		return content, nil
 	}

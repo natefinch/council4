@@ -43,6 +43,7 @@ var Cards = []*game.CardDef{
 	DiversionUnit,
 	DivineVisitation,
 	DocSamsonSuperPsychiatrist,
+	DomriSNodorog,
 	DomriAnarchOfBolas,
 	DonatelloMutantMechanic,
 	DoorOfDestinies,
