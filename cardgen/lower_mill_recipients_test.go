@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // millSpell builds a minimal sorcery card carrying the given mill oracle text so
@@ -168,6 +169,68 @@ func TestLowerMillDefendingPlayer(t *testing.T) {
 		if mill.Player != game.DefendingPlayerReference() {
 			t.Fatalf("mill player = %v, want DefendingPlayerReference", mill.Player)
 		}
+	})
+}
+
+// TestLowerMillHalfLibrary proves the "mills half their library, rounded
+// up/down" family (Traumatize, Fleet Swallower, Terisian Mindbreaker) lowers to
+// a Mill whose amount counts the resolved recipient's library and halves it via
+// Divisor 2, rounding down by default and up when the source says "rounded up".
+func TestLowerMillHalfLibrary(t *testing.T) {
+	t.Parallel()
+
+	assertHalfLibrary := func(t *testing.T, mill game.Mill, wantPlayer game.PlayerReference, wantRoundUp bool) {
+		t.Helper()
+		dynamic := mill.Amount.DynamicAmount()
+		if !dynamic.Exists {
+			t.Fatalf("mill amount = %#v, want dynamic half-library", mill.Amount)
+		}
+		if dynamic.Val.Kind != game.DynamicAmountCountCardsInZone {
+			t.Fatalf("dynamic kind = %v, want DynamicAmountCountCardsInZone", dynamic.Val.Kind)
+		}
+		if dynamic.Val.Divisor != 2 {
+			t.Fatalf("dynamic divisor = %d, want 2", dynamic.Val.Divisor)
+		}
+		if dynamic.Val.RoundUp != wantRoundUp {
+			t.Fatalf("dynamic roundUp = %v, want %v", dynamic.Val.RoundUp, wantRoundUp)
+		}
+		if dynamic.Val.CardZone != zone.Library {
+			t.Fatalf("dynamic zone = %v, want Library", dynamic.Val.CardZone)
+		}
+		if dynamic.Val.Player == nil || *dynamic.Val.Player != wantPlayer {
+			t.Fatalf("dynamic player = %v, want %v", dynamic.Val.Player, wantPlayer)
+		}
+		if mill.Player != wantPlayer {
+			t.Fatalf("mill player = %v, want %v", mill.Player, wantPlayer)
+		}
+	}
+
+	t.Run("target player rounded down", func(t *testing.T) {
+		t.Parallel()
+		face := lowerSingleFace(t, millSpell("Test Traumatize",
+			"Target player mills half their library, rounded down."))
+		assertHalfLibrary(t, soleSpellMill(t, face), game.TargetPlayerReference(0), false)
+	})
+
+	t.Run("target opponent rounded up", func(t *testing.T) {
+		t.Parallel()
+		face := lowerSingleFace(t, millSpell("Test Cut Losses",
+			"Target opponent mills half their library, rounded up."))
+		assertHalfLibrary(t, soleSpellMill(t, face), game.TargetPlayerReference(0), true)
+	})
+
+	t.Run("controller self rounded down", func(t *testing.T) {
+		t.Parallel()
+		face := lowerSingleFace(t, millSpell("Test Self Half Mill",
+			"You mill half your library, rounded down."))
+		assertHalfLibrary(t, soleSpellMill(t, face), game.ControllerReference(), false)
+	})
+
+	t.Run("defending player attack trigger rounded up", func(t *testing.T) {
+		t.Parallel()
+		face := lowerSingleFace(t, millCreature("Test Fleet Swallower",
+			"Whenever this creature attacks, defending player mills half their library, rounded up."))
+		assertHalfLibrary(t, soleTriggeredMill(t, face), game.DefendingPlayerReference(), true)
 	})
 }
 

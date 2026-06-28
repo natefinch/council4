@@ -49,6 +49,7 @@ var Cards = []*game.CardDef{
 	FlamecacheGecko,
 	FlamespeakerSWill,
 	FlamingFist,
+	FleetSwallower,
 	FleshCarver,
 	FlickeringWard,
 	FlintGolem,

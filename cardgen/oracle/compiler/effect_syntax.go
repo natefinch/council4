@@ -639,6 +639,7 @@ func compileTypedAmount(amount parser.EffectAmountSyntax) CompiledAmount {
 		CounterKind:   amount.CounterKind,
 		Text:          amount.Text,
 		Colors:        compileAmountColors(amount.Colors),
+		RoundUp:       amount.RoundUp,
 	}
 	if amount.Selection != nil {
 		selection := compileTypedSelection(*amount.Selection)
@@ -738,6 +739,8 @@ func compileDynamicAmountKind(kind parser.EffectDynamicAmountKind) DynamicAmount
 		return DynamicAmountCardsNamedSelfInGraveyards
 	case parser.EffectDynamicAmountCardsNamedSelfInControllerGraveyard:
 		return DynamicAmountCardsNamedSelfInControllerGraveyard
+	case parser.EffectDynamicAmountHalfPlayerLibrary:
+		return DynamicAmountHalfPlayerLibrary
 	default:
 		return DynamicAmountNone
 	}
@@ -769,6 +772,8 @@ func compileDynamicAmountForm(form parser.EffectDynamicAmountForm) DynamicAmount
 		return DynamicAmountForEach
 	case parser.EffectDynamicAmountFormWhereX:
 		return DynamicAmountWhereX
+	case parser.EffectDynamicAmountFormHalfLibrary:
+		return DynamicAmountFormHalfLibrary
 	default:
 		return DynamicAmountFormNone
 	}

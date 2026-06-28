@@ -265,6 +265,16 @@ type DynamicAmount struct {
 	CardZone    zone.Type
 	Selection   *Selection
 	ResultKey   ResultKey
+	// Divisor, when greater than one, divides the amount after the multiplier and
+	// addend are applied, rounding down unless RoundUp is set. It backs the "half
+	// their library, rounded up/down" mill amounts (Traumatize, Fleet Swallower),
+	// where the counted library size is halved as the effect resolves (CR 107.4).
+	// A Divisor of zero or one leaves the value unchanged.
+	Divisor int
+	// RoundUp rounds a Divisor division up instead of down ("rounded up" versus
+	// "rounded down"). It is meaningful only alongside a Divisor greater than one
+	// and is ignored otherwise.
+	RoundUp bool
 	// Colors lists the colors counted by a DynamicAmountDevotion amount; empty
 	// for every other kind.
 	Colors []color.Color

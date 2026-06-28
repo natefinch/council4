@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,857 of 32,501 cards eligible for paper support (48.8%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,861 of 32,501 cards eligible for paper support (48.8%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -4768,6 +4768,7 @@ Council4 currently supports **15,857 of 32,501 cards eligible for paper support 
 - Fledgling Imp
 - Fledgling Mawcor
 - Fledgling Osprey
+- Fleet Swallower
 - Fleet-Footed Monk
 - Fleetfeather Sandals
 - Fleetfoot Dancer
@@ -7036,6 +7037,7 @@ Council4 currently supports **15,857 of 32,501 cards eligible for paper support 
 - Jhovall Rider
 - Jiang Yanggu, Wildcrafter
 - Jibbirik Omnivore
+- Jidoor, Aristocratic Capital // Overture
 - Jinxed Idol
 - Jinxed Ring
 - Jirina, Dauntless General
@@ -13642,6 +13644,7 @@ Council4 currently supports **15,857 of 32,501 cards eligible for paper support 
 - Terashi's Grasp
 - Terashi's Verdict
 - Teremko Griffin
+- Terisian Mindbreaker
 - Terminal Agony
 - Terminal Moraine
 - Terminate
@@ -14182,6 +14185,7 @@ Council4 currently supports **15,857 of 32,501 cards eligible for paper support 
 - Trash for Treasure
 - Traumatic Critique
 - Traumatic Visions
+- Traumatize
 - Travel Preparations
 - Travel the Overworld
 - Traveler's Amulet

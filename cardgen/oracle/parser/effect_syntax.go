@@ -1545,6 +1545,9 @@ func finalizeParsedEffect(effect *EffectSyntax, sentence Sentence, atoms Atoms) 
 	if recognizeColorsAmongControlledMana(effect, atoms) {
 		effect.Exact = true
 	}
+	if recognizeMillHalfLibrary(effect) {
+		effect.Exact = exactEffectSyntax(effect)
+	}
 	if recognizeEachColorAmongControlledMana(effect, atoms) {
 		effect.Exact = true
 	}
@@ -2681,6 +2684,45 @@ func recognizeLookAtTargetPlayerHandSentence(sentence *Sentence) {
 // you control", recognizeControlledCountMana), a chosen-color battlefield count
 // ("equal to <count>", recognizeChosenColorCountMana), or a source-counter count
 // ("for each <kind> counter on this permanent", recognizeSourceCounterCountMana).
+// recognizeMillHalfLibrary types the "mills half their library, rounded up/down"
+// amount on a mill effect (Traumatize, Fleet Swallower, Cut Your Losses). The
+// amount is half the milling player's library, counted as the effect resolves
+// and rounded up or down per the trailing "rounded up"/"rounded down" word
+// (CR 107.4). The milling player is the effect's own subject, so the possessive
+// "their"/"your" names no free referent; the recognizer leaves no reference of
+// its own and the semantic reference scan drops the possessive's span (see
+// computeSemanticReferences), so downstream stages see a referent-free
+// single-player mill. It matches only the exact six-token "half <their|your>
+// library , rounded <up|down>" run on a mill effect; every other mill amount is
+// left untouched.
+func recognizeMillHalfLibrary(effect *EffectSyntax) bool {
+	if effect.Kind != EffectMill {
+		return false
+	}
+	for i := 0; i+5 < len(effect.Tokens); i++ {
+		if !equalWord(effect.Tokens[i], "half") ||
+			(!equalWord(effect.Tokens[i+1], "their") && !equalWord(effect.Tokens[i+1], "your")) ||
+			!equalWord(effect.Tokens[i+2], "library") ||
+			effect.Tokens[i+3].Kind != shared.Comma ||
+			!equalWord(effect.Tokens[i+4], "rounded") ||
+			(!equalWord(effect.Tokens[i+5], "down") && !equalWord(effect.Tokens[i+5], "up")) {
+			continue
+		}
+		matched := effect.Tokens[i : i+6]
+		span := shared.SpanOf(matched)
+		effect.Amount = EffectAmountSyntax{
+			Span:        span,
+			Text:        joinedEffectText(matched),
+			DynamicKind: EffectDynamicAmountHalfPlayerLibrary,
+			DynamicForm: EffectDynamicAmountFormHalfLibrary,
+			RoundUp:     equalWord(effect.Tokens[i+5], "up"),
+		}
+		effect.Selection = SelectionSyntax{Kind: SelectionCard, Text: effect.Selection.Text}
+		return true
+	}
+	return false
+}
+
 func recognizeDynamicCountMana(effect *EffectSyntax) bool {
 	return recognizeControlledCountMana(effect) ||
 		recognizeCardsNamedSelfInGraveyardsMana(effect) ||

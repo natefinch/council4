@@ -3411,17 +3411,28 @@ func lowerFixedCardCountPlayerSpell(
 			"the executable source backend supports only exact fixed "+controllerVerb+" by one player",
 		)
 	}
-	amount, ok := cardCountQuantityForContext(ctx, effect.Amount, allowDynamic)
-	if !ok {
-		return game.AbilityContent{}, contentDiagnostic(
-			ctx,
-			"unsupported "+controllerVerb+" spell",
-			"the executable source backend supports only exact fixed "+controllerVerb+" by one player",
-		)
+	// The half-library amount ("mills half their library, rounded up/down") is
+	// half the milling player's library, so its dynamic count names the resolved
+	// recipient rather than a fixed or source-derived number. Defer building the
+	// amount until the recipient playerRef is chosen below; the generic
+	// card-count quantity helper cannot lower it (it is neither a triggering-event
+	// nor a selector count) and would fail the clause closed.
+	halfLibrary := effect.Amount.DynamicKind == compiler.DynamicAmountHalfPlayerLibrary
+	var amount game.Quantity
+	if !halfLibrary {
+		resolved, ok := cardCountQuantityForContext(ctx, effect.Amount, allowDynamic)
+		if !ok {
+			return game.AbilityContent{}, contentDiagnostic(
+				ctx,
+				"unsupported "+controllerVerb+" spell",
+				"the executable source backend supports only exact fixed "+controllerVerb+" by one player",
+			)
+		}
+		amount = resolved
 	}
 	playerRef := game.ControllerReference()
 	var targets []game.TargetSpec
-	if len(ctx.content.Targets) == 0 && len(ctx.content.References) == 0 {
+	if len(ctx.content.Targets) == 0 && len(ctx.content.References) == 0 && !halfLibrary {
 		switch effect.Context {
 		case parser.EffectContextEachOpponent, parser.EffectContextEachOtherPlayer:
 			return game.Mode{
@@ -3487,6 +3498,21 @@ func lowerFixedCardCountPlayerSpell(
 			"unsupported "+controllerVerb+" spell",
 			"the executable source backend supports only exact fixed "+controllerVerb+" by one player",
 		)
+	}
+	if halfLibrary {
+		// Count the resolved recipient's library and halve it as the effect
+		// resolves, rounding up or down per the recognized "rounded up"/"rounded
+		// down" word. The empty selection matches every card, so the count is the
+		// whole library size before halving.
+		recipient := playerRef
+		amount = game.Dynamic(game.DynamicAmount{
+			Kind:      game.DynamicAmountCountCardsInZone,
+			Player:    &recipient,
+			CardZone:  zone.Library,
+			Selection: &game.Selection{},
+			Divisor:   2,
+			RoundUp:   effect.Amount.RoundUp,
+		})
 	}
 	return game.Mode{
 		Targets: targets,
