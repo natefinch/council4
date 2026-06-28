@@ -140,10 +140,66 @@ func (Renderer) renderTargetPredicate(ctx *renderCtx, predicate game.TargetPredi
 		}
 		fields = append(fields, fmt.Sprintf("ManaValue: opt.Val(%s),", cmp))
 	}
+	if len(predicate.SpellTargets) > 0 {
+		lit, err := renderSpellTargetRequirements(ctx, predicate.SpellTargets)
+		if err != nil {
+			return "", false, err
+		}
+		fields = append(fields, fmt.Sprintf("SpellTargets: %s,", lit))
+	}
 	if len(fields) == 0 {
 		return "", false, nil
 	}
 	return structLit("game.TargetPredicate", fields), true, nil
+}
+
+// renderSpellTargetRequirements renders a "Counter target spell that targets
+// <X>" restriction as a []game.SpellTargetRequirement composite literal.
+func renderSpellTargetRequirements(ctx *renderCtx, requirements []game.SpellTargetRequirement) (string, error) {
+	elements := make([]string, 0, len(requirements))
+	for i := range requirements {
+		element, err := renderSpellTargetRequirement(ctx, requirements[i])
+		if err != nil {
+			return "", err
+		}
+		elements = append(elements, element)
+	}
+	return fmt.Sprintf("[]game.SpellTargetRequirement{%s}", strings.Join(elements, ", ")), nil
+}
+
+func renderSpellTargetRequirement(ctx *renderCtx, requirement game.SpellTargetRequirement) (string, error) {
+	var fields []string
+	switch requirement.Kind {
+	case game.SpellTargetRequirementPlayer:
+		fields = append(fields, "Kind: game.SpellTargetRequirementPlayer,")
+		if requirement.Player != game.PlayerAny {
+			relation, err := renderPlayerRelation(requirement.Player)
+			if err != nil {
+				return "", err
+			}
+			fields = append(fields, fmt.Sprintf("Player: %s,", relation))
+		}
+	case game.SpellTargetRequirementPermanent:
+		fields = append(fields, "Kind: game.SpellTargetRequirementPermanent,")
+		if len(requirement.RequiredTypes) > 0 {
+			ctx.need(importTypes)
+			lits, err := renderTypesCardSlice(ctx, requirement.RequiredTypes)
+			if err != nil {
+				return "", err
+			}
+			fields = append(fields, fmt.Sprintf("RequiredTypes: %s,", lits))
+		}
+		if requirement.Controller != game.ControllerAny {
+			relation, err := renderControllerRelation(requirement.Controller)
+			if err != nil {
+				return "", err
+			}
+			fields = append(fields, fmt.Sprintf("Controller: %s,", relation))
+		}
+	default:
+		return "", fmt.Errorf("render: unsupported spell-target requirement kind %d", requirement.Kind)
+	}
+	return structLit("game.SpellTargetRequirement", fields), nil
 }
 
 func renderStackObjectPredicateFields(ctx *renderCtx, predicate game.TargetPredicate) ([]string, error) {

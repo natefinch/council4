@@ -1242,6 +1242,11 @@ func stackSpellTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool
 		default:
 		}
 	}
+	restrictions, ok := lowerSpellTargetRestrictions(target.Selector.SpellTargetRestrictions)
+	if !ok {
+		return game.TargetSpec{}, false
+	}
+	predicate.SpellTargets = restrictions
 	spec := game.TargetSpec{
 		MinTargets: 1,
 		MaxTargets: 1,
@@ -1250,6 +1255,56 @@ func stackSpellTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool
 		Constraint: lowerFirst(target.Text),
 	}
 	return spec, true
+}
+
+// lowerSpellTargetRestrictions lowers compiled "that targets <X>" alternatives
+// into the runtime predicate's spell-target requirements. It fails closed for an
+// unrecognized controller relation so an unsupported wording leaves the counter
+// target unlowered. A nil input yields a nil result with ok true, imposing no
+// restriction.
+func lowerSpellTargetRestrictions(restrictions []compiler.CompiledSpellTargetRestriction) ([]game.SpellTargetRequirement, bool) {
+	if len(restrictions) == 0 {
+		return nil, true
+	}
+	requirements := make([]game.SpellTargetRequirement, 0, len(restrictions))
+	for _, restriction := range restrictions {
+		if restriction.IsPlayer {
+			relation, ok := spellTargetPlayerRelation(restriction.Controller)
+			if !ok {
+				return nil, false
+			}
+			requirements = append(requirements, game.SpellTargetRequirement{
+				Kind:   game.SpellTargetRequirementPlayer,
+				Player: relation,
+			})
+			continue
+		}
+		controller, ok := counterAbilityController(restriction.Controller)
+		if !ok {
+			return nil, false
+		}
+		requirements = append(requirements, game.SpellTargetRequirement{
+			Kind:          game.SpellTargetRequirementPermanent,
+			RequiredTypes: append([]types.Card(nil), restriction.PermanentTypes...),
+			Controller:    controller,
+		})
+	}
+	return requirements, true
+}
+
+// spellTargetPlayerRelation maps a compiled controller relation onto the player
+// relation of a player spell-target requirement. Only the "any player" and "you"
+// forms appear in the supported wordings ("that targets a player", "that targets
+// you"), so opponent and not-you relations fail closed.
+func spellTargetPlayerRelation(controller compiler.ControllerKind) (game.PlayerRelation, bool) {
+	switch controller {
+	case compiler.ControllerAny:
+		return game.PlayerAny, true
+	case compiler.ControllerYou:
+		return game.PlayerYou, true
+	default:
+		return game.PlayerAny, false
+	}
 }
 
 func counterAbilityTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {

@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,956 of 32,501 cards eligible for paper support (49.1%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,969 of 32,501 cards eligible for paper support (49.1%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2190,6 +2190,7 @@ Council4 currently supports **15,956 of 32,501 cards eligible for paper support 
 - Ceremonious Rejection
 - Cerodon Yearling
 - Certain Death
+- Cerulean Drake
 - Cerulean Wyvern
 - Cessation
 - Ceta Disciple
@@ -2599,6 +2600,7 @@ Council4 currently supports **15,956 of 32,501 cards eligible for paper support 
 - Confidence from Strength
 - Confirm Suspicions
 - Confiscate
+- Confound
 - Confounding Riddle
 - Congregate
 - Congregation Gryff
@@ -3075,6 +3077,7 @@ Council4 currently supports **15,956 of 32,501 cards eligible for paper support 
 - Dauthi Slayer
 - Dauthi Trapper
 - Davriel's Shadowfugue
+- Dawn Charm
 - Dawn Gryff
 - Dawn of Hope
 - Dawn to Dusk
@@ -6346,6 +6349,7 @@ Council4 currently supports **15,956 of 32,501 cards eligible for paper support 
 - Hill Giant Herdgorger
 - Hill Gigas
 - Hillcomber Giant
+- Hindering Light
 - Hindering Touch
 - Hinterland Harbor
 - Hinterland Sanctifier
@@ -6595,6 +6599,8 @@ Council4 currently supports **15,956 of 32,501 cards eligible for paper support 
 - Hydroblast
 - Hydroform
 - Hydrolash
+- Hydromorph Guardian
+- Hydromorph Gull
 - Hydrosurge
 - Hyena Pack
 - Hymn of Rebirth
@@ -6883,6 +6889,7 @@ Council4 currently supports **15,956 of 32,501 cards eligible for paper support 
 - Intelligence Bobblehead
 - Interdisciplinary Mascot
 - Interjection
+- Intervene
 - Inti, Seneschal of the Sun
 - Intimidation
 - Intimidation Campaign
@@ -7254,6 +7261,7 @@ Council4 currently supports **15,956 of 32,501 cards eligible for paper support 
 - Keening Banshee
 - Keensight Mentor
 - Keep Out
+- Keep Safe
 - Keeper of Kookus
 - Keeper of the Accord
 - Keeper of the Cadence
@@ -8595,6 +8603,7 @@ Council4 currently supports **15,956 of 32,501 cards eligible for paper support 
 - Mirror Entity
 - Mirror Image
 - Mirror of Galadriel
+- Mirror Sheen
 - Mirror Wall
 - Mirror-Sigil Sergeant
 - Mirrormade
@@ -9556,6 +9565,7 @@ Council4 currently supports **15,956 of 32,501 cards eligible for paper support 
 - Outlaw Medic
 - Outnumber
 - Outrider of Jhess
+- Outwit
 - Ovalchase Daredevil
 - Ovalchase Dragster
 - Overbeing of Myth
@@ -10613,6 +10623,7 @@ Council4 currently supports **15,956 of 32,501 cards eligible for paper support 
 - Rebel
 - Rebellious Strike
 - Reborn Hope
+- Rebuff the Wicked
 - Rebuild
 - Rebuke
 - Reckless Abandon
@@ -14423,6 +14434,7 @@ Council4 currently supports **15,956 of 32,501 cards eligible for paper support 
 - Turbulent Steppe
 - Turbulent Wilderness
 - Turn Against
+- Turn Aside
 - Turn into a Pumpkin
 - Turn the Tide
 - Turn to Dust
@@ -14962,6 +14974,7 @@ Council4 currently supports **15,956 of 32,501 cards eligible for paper support 
 - Victory's Herald
 - Vigilant Baloth
 - Vigilant Drake
+- Vigilant Martyr
 - Vigilante Justice
 - Vile Deacon
 - Vile Entomber

@@ -380,6 +380,9 @@ func parseSignedAmount(sign, amount shared.Token) (SignedAmountSyntax, bool) {
 }
 
 func parseEffectAmount(kind EffectKind, tokens []shared.Token, atoms Atoms) EffectAmountSyntax {
+	if kind == EffectCounter {
+		tokens = trimSpellTargetRestrictionTail(tokens)
+	}
 	if kind == EffectGainPlayerCounter {
 		if symbols := energySymbolsAfter(tokens, 0); len(symbols) > 0 {
 			return EffectAmountSyntax{

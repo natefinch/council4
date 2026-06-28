@@ -1582,6 +1582,36 @@ type SelectionSyntax struct {
 	// graveyard. It is meaningful only with the any-graveyard ("from a
 	// graveyard") owner relation and lowers to TargetSpec.SameGraveyard.
 	SingleGraveyard bool `json:",omitempty"`
+	// SpellTargetRestrictions records a trailing "that targets <X>" relative
+	// clause on a counter spell target ("Counter target spell that targets a
+	// permanent you control"), restricting the matched spell to one whose chosen
+	// targets include something matching one of these alternatives. Each
+	// alternative names either a permanent (by card type and controller) or a
+	// player (by relation). It is meaningful only on a SelectionSpell target and
+	// lowers to TargetPredicate.SpellTargets.
+	SpellTargetRestrictions []SpellTargetRestriction `json:",omitempty"`
+}
+
+// SpellTargetRestrictionKind classifies one alternative of a counter spell
+// target's "that targets <X>" restriction as a permanent or a player.
+type SpellTargetRestrictionKind string
+
+// Spell-target restriction kinds distinguish permanent and player alternatives.
+const (
+	SpellTargetRestrictionPermanent SpellTargetRestrictionKind = "SpellTargetRestrictionPermanent"
+	SpellTargetRestrictionPlayer    SpellTargetRestrictionKind = "SpellTargetRestrictionPlayer"
+)
+
+// SpellTargetRestriction is one alternative the matched spell's chosen targets
+// may satisfy, for "Counter target spell that targets <X>". A permanent
+// alternative names an optional card type (CardTypeUnknown matches any
+// permanent) and a controller relation; a player alternative names a player
+// relation through Controller (SelectionControllerAny for "a player",
+// SelectionControllerYou for "you").
+type SpellTargetRestriction struct {
+	Kind          SpellTargetRestrictionKind `json:",omitempty"`
+	PermanentType CardType                   `json:",omitempty"`
+	Controller    SelectionController        `json:",omitempty"`
 }
 
 // TargetCardinalitySyntax is an inclusive target-count range.

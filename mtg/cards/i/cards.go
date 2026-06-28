@@ -32,6 +32,7 @@ var Cards = []*game.CardDef{
 	InnerDemon,
 	InsectoidExterminator,
 	Insolence,
+	Intervene,
 	IntoTheFaeCourt,
 	IntoTheWilds,
 	InvasionOfIxalan,

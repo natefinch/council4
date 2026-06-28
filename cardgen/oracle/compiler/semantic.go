@@ -1295,8 +1295,25 @@ type CompiledSelector struct {
 	// graveyard"), requiring every chosen card to lie in one and the same
 	// graveyard. It lowers to TargetSpec.SameGraveyard.
 	SingleGraveyard bool
-	Alternatives    []CompiledSelector
-	atoms           *CompiledSelectorAtoms
+	// SpellTargetRestrictions records a "Counter target spell that targets <X>"
+	// restriction, requiring the matched spell to have a chosen target satisfying
+	// one of these alternatives. Each names either a permanent (by card types and
+	// controller relation) or a player (by relation). It lowers to
+	// TargetPredicate.SpellTargets.
+	SpellTargetRestrictions []CompiledSpellTargetRestriction
+	Alternatives            []CompiledSelector
+	atoms                   *CompiledSelectorAtoms
+}
+
+// CompiledSpellTargetRestriction is one alternative of a counter spell target's
+// "that targets <X>" restriction. A player alternative sets IsPlayer with a
+// player relation in Controller; a permanent alternative leaves IsPlayer false
+// and names optional required card types with a controller relation. Relations
+// are relative to the player choosing the counter target.
+type CompiledSpellTargetRestriction struct {
+	IsPlayer       bool
+	PermanentTypes []types.Card
+	Controller     ControllerKind
 }
 
 // CompiledSelectorAtoms holds parser-owned atom-derived selector filters that

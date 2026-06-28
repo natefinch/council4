@@ -92,6 +92,7 @@ var Cards = []*game.CardDef{
 	TruckToss,
 	TrustyCompanion,
 	TunnelTipster,
+	TurnAside,
 	TurnIntoAPumpkin,
 	TwinBlades,
 	TwinflameTravelers,

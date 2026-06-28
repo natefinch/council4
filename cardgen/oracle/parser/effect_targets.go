@@ -106,6 +106,11 @@ func parseTargets(tokens []shared.Token, atoms Atoms) []TargetSyntax {
 			selectionTokens = head
 			otherThanSource = true
 		}
+		var spellTargetRestrictions []SpellTargetRestriction
+		if head, restrictions, ok := splitSpellTargetRestrictionTail(selectionTokens); ok {
+			selectionTokens = head
+			spellTargetRestrictions = restrictions
+		}
 		selection := parseSelection(selectionTokens, atoms)
 		if otherThanSource {
 			selection.Another = true
@@ -124,6 +129,9 @@ func parseTargets(tokens []shared.Token, atoms Atoms) []TargetSyntax {
 		}
 		selection.NameUniqueAmongControlled = nameUnique
 		selection.DealtDamageThisTurn = dealtDamage
+		if len(spellTargetRestrictions) > 0 && selection.Kind == SelectionSpell {
+			selection.SpellTargetRestrictions = spellTargetRestrictions
+		}
 		if plural {
 			// "targets" with no following noun means "any target" — a permanent
 			// or a player (CR 115.4).
@@ -358,6 +366,17 @@ func exactSinglePermanentTargetSyntax(text string, selection SelectionSyntax) bo
 		return selectionHasCounterAbilityQualifier(selection)
 	case SelectionSpell:
 		base := strings.ToLower(text)
+		if len(selection.SpellTargetRestrictions) > 0 {
+			clause, ok := spellTargetRestrictionsClause(selection.SpellTargetRestrictions)
+			if !ok {
+				return false
+			}
+			trimmed, had := strings.CutSuffix(base, clause)
+			if !had {
+				return false
+			}
+			base = trimmed
+		}
 		if selection.MatchManaValue {
 			rider, ok := targetManaValueRider(selection.ManaValue)
 			if !ok {

@@ -13,6 +13,7 @@ var Cards = []*game.CardDef{
 	DarkMaze,
 	DaruHealer,
 	DauthiMindripper,
+	DawnCharm,
 	Dawnfluke,
 	DawnhartWardens,
 	DeadeyeHarpooner,

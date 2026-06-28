@@ -33,6 +33,7 @@ var Cards = []*game.CardDef{
 	OsaiVultures,
 	OsgoodOperationDouble,
 	OtherworldlyJourney,
+	Outwit,
 	OvergrownPest,
 	OverwhelmedApprentice,
 	OviyaPashiriSageLifecrafter,
