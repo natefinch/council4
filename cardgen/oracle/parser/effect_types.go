@@ -1934,6 +1934,13 @@ type EffectSyntax struct {
 	// <keyword> and <keyword> ..." rider, and lowering grants one static ability
 	// per keyword. It is empty for tokens with no keyword rider.
 	TokenKeywords []KeywordKind `json:",omitempty"`
+	// TokenToxic holds the integer rank of a created token's toxic keyword
+	// ("with toxic 1" -> 1), the one parameterized creature keyword that appears
+	// on created tokens. TokenKeywords records that toxic is present but drops
+	// its rank; this carries the rank so the create-token exactness recognizer
+	// reconstructs "toxic N" and lowering grants the parameterized keyword
+	// ability. It is 0 for tokens with no toxic keyword.
+	TokenToxic int `json:",omitempty"`
 	// TokenName holds a created creature token's explicit Oracle name ("...
 	// creature token named Koma's Coil." -> "Koma's Coil"), captured verbatim
 	// from the source so the create-token exactness recognizer can reconstruct

@@ -2341,7 +2341,7 @@ func creatureTokenSpecBody(effect *EffectSyntax) (func(countWord, noun string) s
 	if !ok {
 		return nil, false
 	}
-	keywordPart, ok := tokenKeywordPart(effect.TokenKeywords)
+	keywordPart, ok := tokenKeywordPart(effect.TokenKeywords, effect.TokenToxic)
 	if !ok {
 		return nil, false
 	}
@@ -2357,7 +2357,7 @@ func creatureTokenSpecBody(effect *EffectSyntax) (func(countWord, noun string) s
 		if len(effect.TokenKeywords) == 0 {
 			grantedPart = " with"
 		} else {
-			rider, ok := tokenKeywordGrantedRiderPart(effect.TokenKeywords)
+			rider, ok := tokenKeywordGrantedRiderPart(effect.TokenKeywords, effect.TokenToxic)
 			if !ok {
 				return nil, false
 			}
@@ -2428,17 +2428,15 @@ func tokenSupertypePart(sel SelectionSyntax) (string, bool) {
 
 // tokenKeywordPart renders the canonical "with <keyword>[ and <keyword>]" rider
 // for a created token's bare creature keywords, or ok=false if any keyword is not
-// a representable bare creature keyword.
-func tokenKeywordPart(keywords []KeywordKind) (string, bool) {
+// a representable bare creature keyword. The token's toxic rank (0 when absent)
+// supplies the integer for the parameterized "toxic N" keyword.
+func tokenKeywordPart(keywords []KeywordKind, toxic int) (string, bool) {
 	if len(keywords) == 0 {
 		return "", true
 	}
 	words := make([]string, 0, len(keywords))
 	for _, kw := range keywords {
-		if !tokenCreatureKeyword(kw) {
-			return "", false
-		}
-		word, ok := kw.OracleWord()
+		word, ok := tokenKeywordWord(kw, toxic)
 		if !ok {
 			return "", false
 		}
@@ -2456,13 +2454,10 @@ func tokenKeywordPart(keywords []KeywordKind) (string, bool) {
 // keyword words and the omitted final item, then drops that placeholder, leaving
 // the trailing "and"/", and". It returns ok=false if any keyword is not a
 // representable bare creature keyword.
-func tokenKeywordGrantedRiderPart(keywords []KeywordKind) (string, bool) {
+func tokenKeywordGrantedRiderPart(keywords []KeywordKind, toxic int) (string, bool) {
 	words := make([]string, 0, len(keywords)+1)
 	for _, kw := range keywords {
-		if !tokenCreatureKeyword(kw) {
-			return "", false
-		}
-		word, ok := kw.OracleWord()
+		word, ok := tokenKeywordWord(kw, toxic)
 		if !ok {
 			return "", false
 		}
@@ -2471,6 +2466,23 @@ func tokenKeywordGrantedRiderPart(keywords []KeywordKind) (string, bool) {
 	joined := joinKeywordWords(append(words, "\x00"))
 	joined = strings.TrimRight(strings.TrimSuffix(joined, "\x00"), " ")
 	return " with " + joined, true
+}
+
+// tokenKeywordWord renders one created-token creature keyword's Oracle words,
+// supplying the integer rank for the parameterized "toxic N" keyword from toxic.
+// It returns ok=false for any keyword that is not a representable bare creature
+// keyword, or for toxic with a non-positive rank.
+func tokenKeywordWord(kw KeywordKind, toxic int) (string, bool) {
+	if !tokenCreatureKeyword(kw) {
+		return "", false
+	}
+	if kw == KeywordToxic {
+		if toxic <= 0 {
+			return "", false
+		}
+		return "toxic " + strconv.Itoa(toxic), true
+	}
+	return kw.OracleWord()
 }
 
 // tokenColorPart renders a created token's canonical color words ("colorless " or
@@ -2549,7 +2561,7 @@ func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
 		if subject == "" {
 			return false
 		}
-		countWord, noun := "a", "token"
+		countWord, noun := createTokenArticle(effect), "token"
 		if effect.Amount.Value != 1 {
 			countWord, noun = effectAmountSourceText(effect), "tokens"
 		}
@@ -2566,10 +2578,7 @@ func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
 		if !effect.Amount.Known || effect.Amount.Value < 1 {
 			return false
 		}
-		countWord, noun := "a", "token"
-		if effect.TokenPTVariableX {
-			countWord = "an"
-		}
+		countWord, noun := createTokenArticle(effect), "token"
 		if effect.Amount.Value != 1 {
 			countWord, noun = effectAmountSourceText(effect), "tokens"
 		}
@@ -2578,7 +2587,7 @@ func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
 		if effect.Amount.DynamicKind == EffectDynamicAmountNone || effect.Amount.Multiplier != 1 {
 			return false
 		}
-		spec := specBody("a", "token")
+		spec := specBody(createTokenArticle(effect), "token")
 		return createTokenControllerForEachClauseMatches(fullEffectClauseText(effect), spec, effect.Amount.Text)
 	case EffectDynamicAmountFormEqual:
 		if effect.Amount.DynamicKind == EffectDynamicAmountNone {
@@ -3412,13 +3421,15 @@ func joinKeywordWords(words []string) string {
 // keyword that is safe to grant a synthesized creature token through its typed
 // static-ability body. The landwalk evasion family (CR 702.14) is included: each
 // typed variant ("islandwalk", "swampwalk", ...) and the generic and nonbasic
-// forms carry a fixed typed static body the runtime already models.
+// forms carry a fixed typed static body the runtime already models. Toxic is the
+// one parameterized member; its integer rank rides on TokenToxic and lowering
+// grants a typed toxic keyword ability sized from that rank.
 func tokenCreatureKeyword(k KeywordKind) bool {
 	switch k {
 	case KeywordChangeling, KeywordFlying, KeywordFirstStrike, KeywordDoubleStrike, KeywordDeathtouch,
 		KeywordHaste, KeywordHexproof, KeywordIndestructible, KeywordLifelink,
 		KeywordMenace, KeywordReach, KeywordTrample, KeywordVigilance,
-		KeywordDefender, KeywordShroud, KeywordWither, KeywordInfect, KeywordProwess,
+		KeywordDefender, KeywordShroud, KeywordWither, KeywordInfect, KeywordProwess, KeywordToxic,
 		KeywordLandwalk, KeywordPlainswalk, KeywordIslandwalk, KeywordSwampwalk,
 		KeywordMountainwalk, KeywordForestwalk, KeywordDesertwalk, KeywordNonbasicLandwalk:
 		return true

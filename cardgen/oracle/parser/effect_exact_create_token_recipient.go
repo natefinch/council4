@@ -69,7 +69,7 @@ func exactCreateTokenEachPlayerEffectSyntax(effect *EffectSyntax) bool {
 		!effect.Amount.Known || effect.Amount.Value < 1 {
 		return false
 	}
-	countWord, noun := "a", "token"
+	countWord, noun := createTokenArticle(effect), "token"
 	if effect.Amount.Value != 1 {
 		countWord, noun = effectAmountSourceText(effect), "tokens"
 	}

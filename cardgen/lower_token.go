@@ -795,6 +795,14 @@ func synthesizeCreatureTokenDef(effect *compiler.CompiledEffect, extraKeywords [
 	}
 	keywords = append(keywords, extraKeywords...)
 	for _, keyword := range keywords {
+		if keyword == parser.KeywordToxic {
+			body, ok := toxicTokenStaticBody(effect.TokenToxic)
+			if !ok {
+				return nil, false
+			}
+			def.StaticAbilities = append(def.StaticAbilities, body)
+			continue
+		}
 		static, ok := keywordStaticBodies[keyword]
 		if !ok {
 			return nil, false
@@ -807,6 +815,19 @@ func synthesizeCreatureTokenDef(effect *compiler.CompiledEffect, extraKeywords [
 		}
 	}
 	return def, true
+}
+
+// toxicTokenStaticBody builds the typed static-ability body granting a created
+// token the parameterized toxic keyword sized from its Oracle rank ("with toxic
+// 1" -> ToxicKeyword{Amount: 1}). It mirrors the toxic keyword body normal cards
+// carry (lowerKeywordStatic), and fails closed for a non-positive rank.
+func toxicTokenStaticBody(amount int) (game.StaticAbility, bool) {
+	if amount <= 0 {
+		return game.StaticAbility{}, false
+	}
+	return game.StaticAbility{
+		KeywordAbilities: []game.KeywordAbility{game.ToxicKeyword{Amount: amount}},
+	}, true
 }
 
 // attachTokenGrantedAbility compiles and lowers the quoted ability a created

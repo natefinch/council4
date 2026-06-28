@@ -50,6 +50,7 @@ func multiTokenCreateSpecs(kind EffectKind, clause []shared.Token, atoms Atoms) 
 			TokenToughness:      toughness,
 			TokenPTKnown:        ptKnown,
 			TokenKeywords:       parseTokenKeywords(EffectCreate, segment, atoms),
+			TokenToxic:          parseTokenKeywordToxic(EffectCreate, segment, atoms),
 			TokenName:           parseTokenName(EffectCreate, segment),
 			TokenPredefinedName: parsePredefinedTokenName(EffectCreate, segment),
 			Amount:              EffectAmountSyntax{Known: true, Value: 1},
@@ -161,7 +162,7 @@ func exactCreateMultiTokenEffectSyntax(effect *EffectSyntax) bool {
 		if !ok {
 			return false
 		}
-		bodies = append(bodies, body(multiTokenArticle(spec), "token"))
+		bodies = append(bodies, body(createTokenArticle(spec), "token"))
 	}
 	var joined string
 	if len(bodies) == 2 {
@@ -172,16 +173,22 @@ func exactCreateMultiTokenEffectSyntax(effect *EffectSyntax) bool {
 	return strings.EqualFold(exactEffectClauseText(effect), "Create "+joined+".")
 }
 
-// multiTokenArticle returns the indefinite article a created creature token's
+// createTokenArticle returns the indefinite article a created creature token's
 // spec is printed with: "an" before a power that reads with a leading vowel
-// sound (8, 11, 18) when no leading "tapped" or "legendary" adjective intervenes,
-// and "a" otherwise.
-func multiTokenArticle(spec *EffectSyntax) string {
+// sound (8, 11, 18) or a variable "X/X" token ("ex"), provided no leading
+// "tapped" or "legendary" adjective intervenes, and "a" otherwise. The article
+// agrees with the first spoken word of the rendered spec body, so a "tapped" or
+// "legendary" lead reads "a" while the power/toughness lead governs the rest.
+// It serves both the single-token and multi-token byte-exact reconstructions.
+func createTokenArticle(spec *EffectSyntax) string {
 	if spec.Selection.Tapped && !spec.Selection.Attacking {
 		return "a"
 	}
 	if len(spec.Selection.Supertypes) != 0 {
 		return "a"
+	}
+	if spec.TokenPTVariableX {
+		return "an"
 	}
 	switch spec.TokenPower {
 	case 8, 11, 18:

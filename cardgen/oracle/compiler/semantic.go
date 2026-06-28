@@ -1930,6 +1930,12 @@ type CompiledEffect struct {
 	// than the single keyword the selector records (Divine Visitation's 4/4 Angel
 	// with flying and vigilance). It is nil for tokens with no keyword rider.
 	TokenKeywords []parser.KeywordKind
+	// TokenToxic carries the integer rank of a created token's toxic keyword
+	// ("with toxic 1" -> 1), the one parameterized creature keyword a created
+	// token enters with. TokenKeywords records that toxic is present but drops
+	// its rank; lowering reads this rank to grant the parameterized toxic keyword
+	// ability. It is 0 for tokens with no toxic keyword.
+	TokenToxic int
 	// TokenGrantedAbility is the quoted ability a created token enters with ("...
 	// token with \"When this token dies, you gain 1 life.\""), parsed once through
 	// the pipeline. Lowering compiles its inner document and attaches the runtime

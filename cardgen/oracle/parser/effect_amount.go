@@ -159,6 +159,29 @@ func parseTokenKeywords(kind EffectKind, tokens []shared.Token, atoms Atoms) []K
 	return kinds
 }
 
+// parseTokenKeywordToxic returns the integer rank of a created token's toxic
+// keyword ("with toxic 1" -> 1), the one parameterized creature keyword that
+// appears on created tokens in the corpus. The bare keyword list (TokenKeywords)
+// records that toxic is present but drops its integer; this captures the rank so
+// the create-token exactness recognizer can reconstruct "toxic N" and lowering
+// can grant the parameterized keyword ability. It returns 0 for non-create
+// clauses and for clauses whose token carries no toxic keyword.
+func parseTokenKeywordToxic(kind EffectKind, tokens []shared.Token, atoms Atoms) int {
+	if kind != EffectCreate {
+		return 0
+	}
+	for _, keyword := range scanKeywords(tokens, atoms) {
+		if keyword.Kind != KeywordToxic {
+			continue
+		}
+		if keyword.Parameter.Kind != KeywordParameterInteger {
+			return 0
+		}
+		return keyword.Parameter.Integer()
+	}
+	return 0
+}
+
 // predefinedTokenNames lists the named tokens whose identity is a card name
 // rather than a card subtype, so the create clause spells out neither their
 // printed characteristics nor their abilities ("create a tapped Mutavault

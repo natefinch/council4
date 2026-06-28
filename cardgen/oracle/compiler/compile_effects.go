@@ -284,6 +284,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				TokenPTVariableX:                syntax.TokenPTVariableX,
 				TokenPTDynamic:                  syntax.TokenPTDynamic,
 				TokenKeywords:                   append([]parser.KeywordKind(nil), syntax.TokenKeywords...),
+				TokenToxic:                      syntax.TokenToxic,
 				TokenGrantedAbility:             syntax.TokenGrantedAbility,
 				GainGrantedAbility:              syntax.GainGrantedAbility,
 				EmblemAbilities:                 syntax.EmblemAbilities,
