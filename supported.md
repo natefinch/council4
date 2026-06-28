@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,717 of 32,501 cards eligible for paper support (48.4%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,724 of 32,501 cards eligible for paper support (48.4%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -6800,6 +6800,7 @@ Council4 currently supports **15,717 of 32,501 cards eligible for paper support 
 - Invasion of Karsus // Refraction Elemental
 - Invasion of Moag // Bloomwielder Dryads
 - Invasion of Shandalar // Leyline Surge
+- Invasion of Tolvada // The Broken Sky
 - Invasion of Xerex // Vertex Paladin
 - Invasion Reinforcements
 - Invasion Tactics
@@ -8536,6 +8537,7 @@ Council4 currently supports **15,717 of 32,501 cards eligible for paper support 
 - Mogg Squad
 - Moggcatcher
 - Mogis's Favor
+- Moira and Teshar
 - Mold Adder
 - Mold Demon
 - Mold Shambler
@@ -8578,6 +8580,7 @@ Council4 currently supports **15,717 of 32,501 cards eligible for paper support 
 - Mona Lisa, Science Geek
 - Monastery Flock
 - Monastery Mentor
+- Monastery Messenger
 - Monastery Swiftspear
 - Mondrak, Glory Dominus
 - Mongoose Lizard
@@ -10063,6 +10066,7 @@ Council4 currently supports **15,717 of 32,501 cards eligible for paper support 
 - Puffer Extract
 - Pull from the Grave
 - Pull from Tomorrow
+- Pull Through the Weft
 - Pull Under
 - Pulsating Illusion
 - Pulse of Murasa
@@ -13117,6 +13121,7 @@ Council4 currently supports **15,717 of 32,501 cards eligible for paper support 
 - Sun Quan, Lord of Wu
 - Sun Sentinel
 - Sun Titan
+- Sun-Blessed Healer
 - Sun-Blessed Peak
 - Sun-Collared Raptor
 - Sun-Crested Pterodon
@@ -15059,6 +15064,7 @@ Council4 currently supports **15,717 of 32,501 cards eligible for paper support 
 - Ward Sliver
 - Warded Battlements
 - Warden of Geometries
+- Warden of the Eye
 - Warden of the Woods
 - Wardscale Crocodile
 - Warehouse Tabby
@@ -15146,6 +15152,7 @@ Council4 currently supports **15,717 of 32,501 cards eligible for paper support 
 - Wayfarer's Bauble
 - Wayfaring Giant
 - Waylaying Pirates
+- Wayspeaker Bodyguard
 - Wayward Giant
 - Wayward Guide-Beast
 - Wayward Servant

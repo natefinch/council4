@@ -50,6 +50,7 @@ var Cards = []*game.CardDef{
 	PsychicVenom,
 	PsychotropeThallid,
 	PublicThoroughfare,
+	PullThroughTheWeft,
 	PuncturingBlow,
 	PurgingStormbrood,
 	PutridImp,
