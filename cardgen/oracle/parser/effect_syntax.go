@@ -3219,8 +3219,9 @@ func exactControllerRandomDiscardSyntax(effect *EffectSyntax) bool {
 
 // parseDiscardEntireHand recognizes a "discard their hand" clause whose affected
 // player discards every card in hand. It accepts the controller ("Discard your
-// hand"), each-player, each-opponent, and single-target-player forms; the
-// amount is unknown because it depends on the player's hand at resolution. The
+// hand" and the verbose "Discard all the cards in your hand"), each-player,
+// each-opponent, and single-target-player forms; the amount is unknown because
+// it depends on the player's hand at resolution. The
 // optional "You may discard your hand." offer is accepted too: exactEffectClause
 // text strips the "you may" prefix, so the controller clause reconstructs
 // exactly and the optional wrapper gates the entire-hand discard.
@@ -3235,7 +3236,9 @@ func parseDiscardEntireHand(effect *EffectSyntax) bool {
 	case EffectContextController:
 		return len(effect.Targets) == 0 &&
 			(strings.EqualFold(text, "Discard your hand.") ||
-				strings.EqualFold(text, "You discard your hand."))
+				strings.EqualFold(text, "You discard your hand.") ||
+				strings.EqualFold(text, "Discard all the cards in your hand.") ||
+				strings.EqualFold(text, "You discard all the cards in your hand."))
 	case EffectContextEachPlayer:
 		return len(effect.Targets) == 0 &&
 			strings.EqualFold(text, "Each player discards their hand.")

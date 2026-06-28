@@ -65,6 +65,7 @@ var Cards = []*game.CardDef{
 	Forest,
 	ForeverYoung,
 	ForgingTheAnchor,
+	ForgottenCreation,
 	FormAPosse,
 	FormlessGenesis,
 	FractalSummoning,
