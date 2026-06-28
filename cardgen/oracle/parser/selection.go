@@ -548,6 +548,8 @@ func parseTriggerPowerToughness(word string, tokens []shared.Token) triggerPower
 
 func triggerSelectionKeyword(word string) KeywordKind {
 	switch word {
+	case "deathtouch":
+		return KeywordDeathtouch
 	case "defender":
 		return KeywordDefender
 	case "flash":

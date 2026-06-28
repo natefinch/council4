@@ -90,6 +90,7 @@ var Cards = []*game.CardDef{
 	AvacynianPriest,
 	AvariceAmulet,
 	AvatarOfDiscord,
+	AvelineDeGrandpré,
 	AvenHeartstabber,
 	AvenRedeemer,
 	AxelrodGunnarson,

@@ -31,6 +31,7 @@ var Cards = []*game.CardDef{
 	WelkinTern,
 	WhiskerquillScribe,
 	WhiteWard,
+	WhiteWidowYelenaBelova,
 	Wight,
 	WildHypothesis,
 	WildInstincts,
