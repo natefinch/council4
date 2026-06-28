@@ -68,6 +68,7 @@ var Cards = []*game.CardDef{
 	ShuFarmer,
 	SierraNukaSBiggestFan,
 	SigardaChampionOfLight,
+	SigardaSImprisonment,
 	SigardianPriest,
 	SigiledContender,
 	SilhanaLedgewalker,

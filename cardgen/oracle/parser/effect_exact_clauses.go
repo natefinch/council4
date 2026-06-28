@@ -1417,6 +1417,27 @@ func exactRegenerateAttachedEffectSyntax(effect *EffectSyntax) bool {
 		strings.EqualFold(text, "Regenerate equipped creature.")
 }
 
+// exactExileAttachedEffectSyntax recognizes the attached-recipient form "Exile
+// enchanted creature." (Aura) or "Exile equipped creature." (Equipment), where
+// the exiled permanent is the one the source is attached to. There is no target
+// or reference; lowering routes it to the runtime's source attached-permanent
+// reference. Any other wording leaves the clause non-exact so lowering fails
+// closed.
+func exactExileAttachedEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Kind != EffectExile || effect.Negated {
+		return false
+	}
+	if len(effect.Targets) != 0 || len(effect.References) != 0 {
+		return false
+	}
+	if effect.Duration != EffectDurationNone || effect.FromZone != zone.None || effect.ToZone != zone.None {
+		return false
+	}
+	text := exactEffectClauseText(effect)
+	return strings.EqualFold(text, "Exile enchanted creature.") ||
+		strings.EqualFold(text, "Exile equipped creature.")
+}
+
 // exactCopyStackObjectEffectSyntax recognizes the resolving effect "Copy <target
 // activated or triggered ability you control>." The single stack-object target
 // is the ability to copy. The optional "You may choose new targets for the

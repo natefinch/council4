@@ -63,6 +63,7 @@ var Cards = []*game.CardDef{
 	DrakeHatcher,
 	DranaSChosen,
 	DreadCacodemon,
+	DreadfulApathy,
 	DreadWarlock,
 	DreadfeastDemon,
 	DreamcallerSiren,

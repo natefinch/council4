@@ -2030,6 +2030,11 @@ type CompiledEffect struct {
 	// to the runtime's source attached-permanent reference; it is false for every
 	// other regenerate recipient.
 	RegenerateAttached bool
+	// ExileAttached reports the attached-recipient exile form ("Exile enchanted
+	// creature." / "Exile equipped creature."). Lowering routes the exiled object
+	// to the runtime's source attached-permanent reference; it is false for every
+	// other exile recipient.
+	ExileAttached bool
 	// MoveCountersAll carries the parser's kind-agnostic "move all counters"
 	// form of an EffectMoveCounters effect through to lowering, which moves every
 	// counter on the source regardless of kind. It is false for a specific-kind
