@@ -638,6 +638,10 @@ func cloneTargetPredicate(predicate TargetPredicate) TargetPredicate {
 	cloned.SpellColors = slices.Clone(predicate.SpellColors)
 	cloned.SpellExcludedColors = slices.Clone(predicate.SpellExcludedColors)
 	cloned.StackObjectSourceTypes = slices.Clone(predicate.StackObjectSourceTypes)
+	cloned.SpellTargets = slices.Clone(predicate.SpellTargets)
+	for i := range cloned.SpellTargets {
+		cloned.SpellTargets[i].RequiredTypes = slices.Clone(predicate.SpellTargets[i].RequiredTypes)
+	}
 	return cloned
 }
 
