@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,203 of 32,501 cards eligible for paper support (49.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,212 of 32,501 cards eligible for paper support (49.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1056,6 +1056,7 @@ Council4 currently supports **16,203 of 32,501 cards eligible for paper support 
 - Basilica Bell-Haunt
 - Basilica Guards
 - Basilica Screecher
+- Basilica Shepherd
 - Basilica Skullbomb
 - Basilica Stalker
 - Basilisk Collar
@@ -2833,6 +2834,7 @@ Council4 currently supports **16,203 of 32,501 cards eligible for paper support 
 - Craw Giant
 - Craw Wurm
 - Crawl from the Cellar
+- Crawling Chorus
 - Crawling Filth
 - Crazed Armodon
 - Crazed Goblin
@@ -6045,6 +6047,7 @@ Council4 currently supports **16,203 of 32,501 cards eligible for paper support 
 - Groundshaker Sliver
 - Groundskeeper
 - Group Project
+- Grove of the Guardian
 - Grove Rumbler
 - Grovetender Druids
 - Growth Cycle
@@ -6873,6 +6876,7 @@ Council4 currently supports **16,203 of 32,501 cards eligible for paper support 
 - Indebted Samurai
 - Independent Troops
 - Index
+- Indoctrination Attendant
 - Indomitable Ancients
 - Indomitable Will
 - Indrik Stomphowler
@@ -6904,6 +6908,7 @@ Council4 currently supports **16,203 of 32,501 cards eligible for paper support 
 - Inferno Titan
 - Infest
 - Infestation Sage
+- Infested Fleshcutter
 - Infested Roothold
 - Infiltrate
 - Infiltration Lens
@@ -8796,6 +8801,7 @@ Council4 currently supports **16,203 of 32,501 cards eligible for paper support 
 - Mistwalker
 - Misty Palms Oasis
 - Misty Rainforest
+- Mite Overseer
 - Mithril Coat
 - Mizzium Transreliquat
 - MJ, Rising Star
@@ -9564,6 +9570,7 @@ Council4 currently supports **16,203 of 32,501 cards eligible for paper support 
 - Ominous Asylum
 - Ominous Parcel
 - Ominous Roost
+- Ominous Seas
 - Ominous Sphinx
 - Omnath, Locus of Rage
 - Omnath, Locus of the Roil
@@ -13284,6 +13291,7 @@ Council4 currently supports **16,203 of 32,501 cards eligible for paper support 
 - Stingerfling Spider
 - Stinging Barrier
 - Stinging Cave Crawler
+- Stinging Hivemaster
 - Stinging Lionfish
 - Stinging Shot
 - Stingmoggie
@@ -13473,6 +13481,7 @@ Council4 currently supports **16,203 of 32,501 cards eligible for paper support 
 - Subterranean Cavern
 - Subterranean Scout
 - Subterranean Spirit
+- Subterranean Tremors
 - Subtle Strike
 - Suburban Sanctuary
 - Subversion
