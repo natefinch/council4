@@ -37,6 +37,7 @@ var Cards = []*game.CardDef{
 	DingusEgg,
 	DingusStaff,
 	DinosaurStampede,
+	DinrovaHorror,
 	DirectorNickFury,
 	DirtyWererat,
 	DisruptivePitmage,
