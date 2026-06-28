@@ -1739,6 +1739,23 @@ const (
 	// target. It lowers to an ApplyContinuous at LayerColor. Added last so
 	// existing kinds keep their wire values.
 	EffectBecomeColor
+	// EffectCantAttackOrBlockAndCantActivate is the Arrest-family pinning
+	// prohibition "Enchanted creature can't attack or block, and its activated
+	// abilities can't be activated." (Arrest, Lawmage's Binding, Planar
+	// Disruption): the affected permanent can't attack or block and none of its
+	// activated abilities can be activated. It pairs only with a static rule
+	// declaration and lowers to the can't-attack, can't-block, and permanent-
+	// scoped can't-activate-abilities runtime rule effects. Added last so existing
+	// kinds keep their wire values.
+	EffectCantAttackOrBlockAndCantActivate
+	// EffectCantAttackOrBlockAndCantActivateNonMana is the mana-exempt Arrest-
+	// family variant "Enchanted permanent can't attack or block, and its activated
+	// abilities can't be activated unless they're mana abilities." (Faith's
+	// Fetters, Realmbreaker's Grasp): like EffectCantAttackOrBlockAndCantActivate,
+	// except the permanent's mana abilities can still be activated. It pairs only
+	// with a static rule declaration. Added last so existing kinds keep their wire
+	// values.
+	EffectCantAttackOrBlockAndCantActivateNonMana
 )
 
 // DurationKind identifies common continuous-effect durations.

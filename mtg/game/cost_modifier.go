@@ -475,6 +475,18 @@ const (
 	// creature group ("each creature you control", "each creature"). Added last so
 	// existing kinds keep their wire values.
 	RuleEffectAssignCombatDamageUsingToughness
+	// RuleEffectCantActivateAbilitiesOfPermanent forbids any player from
+	// activating the affected permanent's own activated abilities ("Enchanted
+	// creature can't attack or block, and its activated abilities can't be
+	// activated.", Arrest; Pacifism's pinning siblings). It scopes to a single
+	// permanent (AffectedAttached resolves to the enchanted permanent, or
+	// AffectedSource to the source itself), so it ignores the affected-player
+	// relation that the player-scoped RuleEffectCantActivateAbilities uses. When
+	// ExemptManaAbilities is set the prohibition spares the permanent's mana
+	// abilities ("... can't be activated unless they're mana abilities.", Faith's
+	// Fetters, Realmbreaker's Grasp). Added last so existing kinds keep their wire
+	// values.
+	RuleEffectCantActivateAbilitiesOfPermanent
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -529,7 +541,8 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectCantAttackAlone,
 		RuleEffectCantBlockAlone,
 		RuleEffectCanAttackAsThoughDefender,
-		RuleEffectAssignCombatDamageUsingToughness:
+		RuleEffectAssignCombatDamageUsingToughness,
+		RuleEffectCantActivateAbilitiesOfPermanent:
 		return true
 	default:
 		return false
@@ -648,6 +661,14 @@ type RuleEffect struct {
 	// RuleEffectCantActivateAbilities prohibition to the source controller's turn
 	// ("During your turn, ..."). When false the prohibition applies on every turn.
 	RestrictedDuringControllerTurn bool
+
+	// ExemptManaAbilities spares mana abilities from a
+	// RuleEffectCantActivateAbilitiesOfPermanent prohibition ("Enchanted permanent
+	// can't attack or block, and its activated abilities can't be activated unless
+	// they're mana abilities.", Faith's Fetters, Realmbreaker's Grasp). When false
+	// the prohibition stops every activated ability including mana abilities
+	// (Arrest). It is unused for every other kind.
+	ExemptManaAbilities bool
 
 	// AppliesToNextSpellOnly limits a RuleEffectCantBeCountered effect to the
 	// single next spell its controller casts ("The next spell you cast this turn

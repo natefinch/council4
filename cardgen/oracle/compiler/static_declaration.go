@@ -193,6 +193,23 @@ const (
 	// of their power. It lowers to the assign-combat-damage-using-toughness
 	// runtime rule effect.
 	StaticRuleAssignsCombatDamageByToughness
+	// StaticRuleCantAttackOrBlockAndCantActivate is the Arrest-family pinning
+	// prohibition "Enchanted creature can't attack or block, and its activated
+	// abilities can't be activated." (Arrest, Lawmage's Binding, Planar
+	// Disruption): the affected permanent can't attack or block and none of its
+	// activated abilities, including mana abilities, can be activated. It lowers
+	// to the can't-attack, can't-block, and permanent-scoped
+	// can't-activate-abilities runtime rule effects.
+	StaticRuleCantAttackOrBlockAndCantActivate
+	// StaticRuleCantAttackOrBlockAndCantActivateNonMana is the mana-exempt
+	// Arrest-family variant "Enchanted permanent can't attack or block, and its
+	// activated abilities can't be activated unless they're mana abilities."
+	// (Faith's Fetters, Realmbreaker's Grasp): like
+	// StaticRuleCantAttackOrBlockAndCantActivate, except the permanent's mana
+	// abilities can still be activated. It lowers to the can't-attack, can't-
+	// block, and mana-exempt permanent-scoped can't-activate-abilities runtime
+	// rule effects.
+	StaticRuleCantAttackOrBlockAndCantActivateNonMana
 )
 
 // StaticBlockerRestrictionKind identifies the blocker characteristic bounding a
@@ -1483,6 +1500,16 @@ func isUntapRuleSubject(kind parser.StaticRuleSubjectKind) bool {
 		kind == parser.StaticRuleSubjectBattlefieldPermanents
 }
 
+// isAttachedRuleSubject reports whether a static rule subject names the object
+// an Aura or Equipment is attached to, whether worded as "enchanted creature"
+// (StaticRuleSubjectAttachedObject) or the wider "enchanted permanent"/"enchanted
+// artifact" (StaticRuleSubjectAttachedPermanent). The Arrest-family pinning
+// prohibition applies to either.
+func isAttachedRuleSubject(kind parser.StaticRuleSubjectKind) bool {
+	return kind == parser.StaticRuleSubjectAttachedObject ||
+		kind == parser.StaticRuleSubjectAttachedPermanent
+}
+
 func semanticStaticRuleForSyntax(rule parser.StaticRuleSyntax) (StaticRuleKind, StaticZone, bool) {
 	if isCreatureRuleSubject(rule.Subject.Kind) &&
 		rule.Constraint.Kind == parser.StaticRuleConstraintProhibition &&
@@ -1545,6 +1572,20 @@ func semanticStaticRuleForSyntax(rule parser.StaticRuleSyntax) (StaticRuleKind, 
 		rule.Operation.Voice == parser.StaticRuleVoiceActive &&
 		len(rule.Qualifiers) == 0 {
 		return StaticRuleCantAttackOrBlock, StaticZoneBattlefield, true
+	}
+	if isAttachedRuleSubject(rule.Subject.Kind) &&
+		rule.Constraint.Kind == parser.StaticRuleConstraintProhibition &&
+		rule.Operation.Kind == parser.StaticRuleOperationAttackOrBlock &&
+		rule.Operation.Voice == parser.StaticRuleVoiceActive &&
+		staticRuleQualifiersAre(rule.Qualifiers, parser.StaticRuleQualifierCantActivateAbilities) {
+		return StaticRuleCantAttackOrBlockAndCantActivate, StaticZoneBattlefield, true
+	}
+	if isAttachedRuleSubject(rule.Subject.Kind) &&
+		rule.Constraint.Kind == parser.StaticRuleConstraintProhibition &&
+		rule.Operation.Kind == parser.StaticRuleOperationAttackOrBlock &&
+		rule.Operation.Voice == parser.StaticRuleVoiceActive &&
+		staticRuleQualifiersAre(rule.Qualifiers, parser.StaticRuleQualifierCantActivateNonManaAbilities) {
+		return StaticRuleCantAttackOrBlockAndCantActivateNonMana, StaticZoneBattlefield, true
 	}
 	if isCreatureRuleSubject(rule.Subject.Kind) &&
 		rule.Constraint.Kind == parser.StaticRuleConstraintProhibition &&
@@ -1694,6 +1735,10 @@ func staticRuleForEffect(kind EffectKind) StaticRuleKind {
 		return StaticRuleCantBeBlockedByMoreThanOne
 	case EffectCantAttackOrBlock:
 		return StaticRuleCantAttackOrBlock
+	case EffectCantAttackOrBlockAndCantActivate:
+		return StaticRuleCantAttackOrBlockAndCantActivate
+	case EffectCantAttackOrBlockAndCantActivateNonMana:
+		return StaticRuleCantAttackOrBlockAndCantActivateNonMana
 	case EffectCantAttackAlone:
 		return StaticRuleCantAttackAlone
 	case EffectCantBlockAlone:
@@ -1750,7 +1795,8 @@ func staticRuleDomain(rule StaticRuleKind) StaticRuleDomain {
 		return StaticRuleDomainCountering
 	case StaticRuleAssignsCombatDamageByToughness:
 		return StaticRuleDomainCombatDamage
-	case StaticRuleCantAttackOrBlock, StaticRuleCantAttackOrBlockAlone:
+	case StaticRuleCantAttackOrBlock, StaticRuleCantAttackOrBlockAlone,
+		StaticRuleCantAttackOrBlockAndCantActivate, StaticRuleCantAttackOrBlockAndCantActivateNonMana:
 		return StaticRuleDomainAttackBlock
 	case StaticRuleDoesntUntap:
 		return StaticRuleDomainUntap

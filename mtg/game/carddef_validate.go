@@ -1168,6 +1168,8 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		}
 	case RuleEffectCantCastSpells, RuleEffectCantActivateAbilities:
 		v.validateActionRestrictionRuleEffect(faceName, path, effect)
+	case RuleEffectCantActivateAbilitiesOfPermanent:
+		v.validatePermanentActivationRestrictionRuleEffect(faceName, path, effect)
 	case RuleEffectCantCastFromZones:
 		v.validateCastZoneRestrictionRuleEffect(faceName, path, effect)
 	case RuleEffectCantEnterFromZones:
@@ -1224,6 +1226,23 @@ func (v *cardDefValidator) validateActionRestrictionRuleEffect(faceName, path st
 	}
 	if effect.Kind == RuleEffectCantActivateAbilities && len(effect.ExcludedSpellTypes) != 0 {
 		v.add(faceName, appendPath(path, "ExcludedSpellTypes"), CardDefIssueInvalidRuleEffect, "activation prohibition does not constrain spell types")
+	}
+}
+
+// validatePermanentActivationRestrictionRuleEffect checks a
+// RuleEffectCantActivateAbilitiesOfPermanent prohibition. Unlike the
+// player-scoped action restriction, this prohibition scopes to a single
+// permanent (AffectedSource, AffectedAttached, or a resolved AffectedObjectID)
+// and carries no player relation, permanent-type, or spell-type filter.
+func (v *cardDefValidator) validatePermanentActivationRestrictionRuleEffect(faceName, path string, effect *RuleEffect) {
+	if !effect.AffectedSource && !effect.AffectedAttached && effect.AffectedObjectID == 0 {
+		v.add(faceName, path, CardDefIssueInvalidRuleEffect, "permanent activation restriction must affect a permanent")
+	}
+	if len(effect.PermanentTypes) != 0 {
+		v.add(faceName, appendPath(path, "PermanentTypes"), CardDefIssueInvalidRuleEffect, "permanent activation restriction does not constrain permanent types")
+	}
+	if len(effect.SpellTypes) != 0 {
+		v.add(faceName, appendPath(path, "SpellTypes"), CardDefIssueInvalidRuleEffect, "permanent activation restriction does not constrain spell types")
 	}
 }
 

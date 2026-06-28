@@ -675,6 +675,10 @@ func effectKindForStaticRule(rule StaticRuleKind) EffectKind {
 		return EffectCantBeBlockedByMoreThanOne
 	case StaticRuleCantAttackOrBlock:
 		return EffectCantAttackOrBlock
+	case StaticRuleCantAttackOrBlockAndCantActivate:
+		return EffectCantAttackOrBlockAndCantActivate
+	case StaticRuleCantAttackOrBlockAndCantActivateNonMana:
+		return EffectCantAttackOrBlockAndCantActivateNonMana
 	case StaticRuleCantAttackAlone:
 		return EffectCantAttackAlone
 	case StaticRuleCantBlockAlone:
