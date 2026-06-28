@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,049 of 32,501 cards eligible for paper support (49.4%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,054 of 32,501 cards eligible for paper support (49.4%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -824,6 +824,7 @@ Council4 currently supports **16,049 of 32,501 cards eligible for paper support 
 - Aura Blast
 - Aura Fracture
 - Aura Gnarlid
+- Aura of Silence
 - Aura Shards
 - Auramancer
 - Auratog
@@ -6361,6 +6362,7 @@ Council4 currently supports **16,049 of 32,501 cards eligible for paper support 
 - High Market
 - High Noon
 - High Priest of Penance
+- High Seas
 - High Stride
 - High-Flying Ace
 - High-Rise Sawjack
@@ -6989,6 +6991,7 @@ Council4 currently supports **16,049 of 32,501 cards eligible for paper support 
 - Iridescent Blademaster
 - Iridescent Tiger
 - Iridescent Vinelasher
+- Irini Sengir
 - Iroas's Blessing
 - Iroas's Champion
 - Iroh's Demonstration
@@ -8196,6 +8199,7 @@ Council4 currently supports **16,049 of 32,501 cards eligible for paper support 
 - Mana Geode
 - Mana Geyser
 - Mana Leak
+- Mana Matrix
 - Mana Prism
 - Mana Reflection
 - Mana Tithe
@@ -13069,6 +13073,7 @@ Council4 currently supports **16,049 of 32,501 cards eligible for paper support 
 - Starlit Angel
 - Starlit Sanctum
 - Starnheim Aspirant
+- Starnheim Courser
 - Starnheim Memento
 - Starscape Cleric
 - Starstorm
