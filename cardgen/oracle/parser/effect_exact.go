@@ -393,7 +393,7 @@ func exactSacrificeChoiceEffectSyntax(effect *EffectSyntax) bool {
 	if !effect.Amount.Known || effect.Amount.Value < 1 || effect.Amount.Value > 10 {
 		return false
 	}
-	noun, ok := sacrificeChoiceNoun(&effect.Selection, effect.Amount.Value > 1)
+	nouns, ok := sacrificeChoiceNounCandidates(&effect.Selection, effect.Amount.Value > 1)
 	if !ok {
 		return false
 	}
@@ -402,8 +402,13 @@ func exactSacrificeChoiceEffectSyntax(effect *EffectSyntax) bool {
 	if effect.Context == EffectContextController {
 		// Imperative controller form: "Sacrifice a creature." or the rarer
 		// "You sacrifice a creature." Both compile to EffectContextController.
-		return strings.EqualFold(text, fmt.Sprintf("Sacrifice %s %s.", amount, noun)) ||
-			strings.EqualFold(text, fmt.Sprintf("You sacrifice %s %s.", amount, noun))
+		for _, noun := range nouns {
+			if strings.EqualFold(text, fmt.Sprintf("Sacrifice %s %s.", amount, noun)) ||
+				strings.EqualFold(text, fmt.Sprintf("You sacrifice %s %s.", amount, noun)) {
+				return true
+			}
+		}
+		return false
 	}
 	subject := ""
 	switch effect.Context {
@@ -425,9 +430,116 @@ func exactSacrificeChoiceEffectSyntax(effect *EffectSyntax) bool {
 	default:
 		return false
 	}
-	prefix := fmt.Sprintf("%s sacrifices %s %s", subject, amount, noun)
-	return strings.EqualFold(text, prefix+".") ||
-		strings.EqualFold(text, prefix+" of their choice.")
+	for _, noun := range nouns {
+		prefix := fmt.Sprintf("%s sacrifices %s %s", subject, amount, noun)
+		if strings.EqualFold(text, prefix+".") ||
+			strings.EqualFold(text, prefix+" of their choice.") {
+			return true
+		}
+	}
+	return false
+}
+
+// sacrificeChoiceNounCandidates reconstructs the candidate permanent noun
+// phrases of a sacrifice effect. A single-selection effect yields exactly one
+// candidate from sacrificeChoiceNoun; a heterogeneous disjunctive selection
+// ("creature or Vehicle", "creature or a token", "a token or a land") parsed
+// into Selection.Alternatives yields the variant Oracle wordings, the matching
+// one of which the caller compares against the source text. It fails closed for
+// selector shapes the runtime sacrifice selection cannot express.
+func sacrificeChoiceNounCandidates(selection *SelectionSyntax, plural bool) ([]string, bool) {
+	if len(selection.Alternatives) > 0 {
+		return sacrificeDisjunctionNounCandidates(selection, plural)
+	}
+	noun, ok := sacrificeChoiceNoun(selection, plural)
+	if !ok {
+		return nil, false
+	}
+	return []string{noun}, true
+}
+
+// sacrificeDisjunctionNounCandidates reconstructs the candidate noun phrases of a
+// two-sided heterogeneous sacrifice disjunction whose sides parsed into
+// Selection.Alternatives. Each side renders through sacrificeDisjunctSideNoun and
+// the two are joined by "or", with the variant article placements ("creature or
+// Vehicle", "creature or a token", "creature or an Insect") offered as
+// candidates so the caller's byte-exact compare selects the printed wording. It
+// fails closed when either side is not an expressible single-dimension noun.
+func sacrificeDisjunctionNounCandidates(selection *SelectionSyntax, plural bool) ([]string, bool) {
+	if len(selection.Alternatives) != 2 {
+		return nil, false
+	}
+	first, ok := sacrificeDisjunctSideNoun(selection.Alternatives[0], plural)
+	if !ok {
+		return nil, false
+	}
+	second, ok := sacrificeDisjunctSideNoun(selection.Alternatives[1], plural)
+	if !ok {
+		return nil, false
+	}
+	return []string{
+		first + " or " + second,
+		first + " or a " + second,
+		first + " or an " + second,
+	}, true
+}
+
+// sacrificeDisjunctSideNoun renders one side of a sacrifice disjunction as its
+// bare noun: a card-type kind ("creature", "artifact", "land"), a bare token
+// ("token"), or a card matched purely by a single subtype ("Vehicle",
+// "Treasure"). It fails closed for any side carrying further qualifiers so the
+// disjunction reconstruction stays byte-exact.
+func sacrificeDisjunctSideNoun(side SelectionSyntax, plural bool) (string, bool) {
+	if side.Controller != SelectionControllerAny ||
+		side.All || side.Another || side.Other || side.Attacking || side.Blocking ||
+		side.Tapped || side.Untapped || side.Multicolored || side.Colorless ||
+		side.Keyword != KeywordUnknown ||
+		len(side.RequiredTypesAny) > 1 || len(side.ExcludedTypes) != 0 ||
+		len(side.ExcludedSubtypes) != 0 || len(side.Supertypes) != 0 ||
+		len(side.ExcludedSupertypes) != 0 || len(side.ColorsAny) != 0 ||
+		len(side.ExcludedColors) != 0 || len(side.Alternatives) != 0 {
+		return "", false
+	}
+	if side.TokenOnly && side.Kind == SelectionUnknown &&
+		len(side.SubtypesAny) == 0 && len(side.RequiredTypesAny) == 0 {
+		noun := "token"
+		if plural {
+			noun += "s"
+		}
+		return noun, true
+	}
+	if !side.TokenOnly && side.Kind == SelectionCard &&
+		len(side.SubtypesAny) == 1 && len(side.RequiredTypesAny) == 0 {
+		noun := string(side.SubtypesAny[0])
+		if plural {
+			noun += "s"
+		}
+		return noun, true
+	}
+	if side.TokenOnly || len(side.SubtypesAny) != 0 {
+		return "", false
+	}
+	noun := ""
+	switch side.Kind {
+	case SelectionArtifact:
+		noun = "artifact"
+	case SelectionCreature:
+		noun = "creature"
+	case SelectionEnchantment:
+		noun = "enchantment"
+	case SelectionLand:
+		noun = "land"
+	case SelectionPlaneswalker:
+		noun = "planeswalker"
+	case SelectionPermanent:
+		noun = "permanent"
+	default:
+		return "", false
+	}
+	if plural {
+		noun += "s"
+	}
+	return noun, true
 }
 
 // sacrificeChoiceNoun reconstructs the permanent noun phrase of a sacrifice
