@@ -164,6 +164,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 			exactMassBounceEffectSyntax(effect) ||
 			exactMassEachBounceEffectSyntax(effect) ||
 			exactControlledBounceEffectSyntax(effect) ||
+			exactControlledCountBounceEffectSyntax(effect) ||
 			exactSelfBounceEffectSyntax(effect) ||
 			exactGraveyardReturnEffectSyntax(effect) ||
 			exactChosenCardsBattlefieldReturnEffectSyntax(effect) ||

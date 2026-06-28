@@ -3097,6 +3097,7 @@ func lowerControlledBounceSpell(ctx contentCtx) (game.AbilityContent, bool) {
 		!effect.Exact ||
 		!plainControllerBounceToHand(ctx) ||
 		effect.Selector.All ||
+		controlledBounceCount(effect) >= 2 ||
 		effect.Selector.Controller != compiler.ControllerYou ||
 		!choiceBounceDestinationReferencesOnly(ctx.content.References) {
 		return game.AbilityContent{}, false
@@ -3111,6 +3112,56 @@ func lowerControlledBounceSpell(ctx contentCtx) (game.AbilityContent, bool) {
 			Primitive: game.Bounce{
 				ControlledChoice: true,
 				Amount:           game.Fixed(1),
+				Group:            game.BattlefieldGroup(selection),
+			},
+		}},
+	}.Ability(), true
+}
+
+// controlledBounceCount returns the fixed count a controlled-choice bounce
+// returns, or zero when the effect carries no known count of two or more. The
+// singular "Return a/an/another <permanent> you control" form compiles to a
+// count of one (or an unset amount); only the multi-count "Return <N> <group>"
+// form records a known value of two or more, so it routes to
+// lowerControlledCountBounceSpell while the singular form stays on
+// lowerControlledBounceSpell.
+func controlledBounceCount(effect compiler.CompiledEffect) int {
+	if !effect.Amount.Known || effect.Amount.Value < 2 {
+		return 0
+	}
+	return effect.Amount.Value
+}
+
+// lowerControlledCountBounceSpell lowers the fixed-count controlled-choice
+// battlefield bounce "Return <N> <group> you control to their owner's hand."
+// (Dust Elemental, Khalni Gem) to a Bounce whose resolving controller chooses
+// exactly N permanents they control matching the effect's selector. It is the
+// multi-count sibling of lowerControlledBounceSpell: the only difference is the
+// returned count, which it reads from the effect's compiled amount rather than
+// hardcoding one. It returns ok=false for every other return wording so the
+// singular controlled, targeted, and mass bounce paths are untouched.
+func lowerControlledCountBounceSpell(ctx contentCtx) (game.AbilityContent, bool) {
+	effect := ctx.content.Effects[0]
+	count := controlledBounceCount(effect)
+	if len(ctx.content.Targets) != 0 ||
+		!effect.Exact ||
+		!plainControllerBounceToHand(ctx) ||
+		effect.Selector.All ||
+		count < 2 ||
+		effect.Selector.Controller != compiler.ControllerYou ||
+		!choiceBounceDestinationReferencesOnly(ctx.content.References) {
+		return game.AbilityContent{}, false
+	}
+	selection, ok := massGroupSelection(effect.Selector)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	selection.ExcludeSource = effect.Selector.Other || effect.Selector.Another
+	return game.Mode{
+		Sequence: []game.Instruction{{
+			Primitive: game.Bounce{
+				ControlledChoice: true,
+				Amount:           game.Fixed(count),
 				Group:            game.BattlefieldGroup(selection),
 			},
 		}},
