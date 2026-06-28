@@ -1371,6 +1371,7 @@ func recognizedStaticAbilityWord(word string) bool {
 	case "",
 		"Coven",
 		"Delirium",
+		"Descend",
 		"Domain",
 		"Ferocious",
 		"Hellbent",

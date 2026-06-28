@@ -68,6 +68,24 @@ func TestLowerLeadingConditionSelfStatic(t *testing.T) {
 			condition:  game.Condition{ControllerHandEmpty: true},
 			keywords:   []game.Keyword{game.DoubleStrike},
 		},
+		"opponent graveyard card count": {
+			oracleText: "As long as an opponent has eight or more cards in their graveyard, this creature gets +1/+0 and has menace.",
+			condition:  game.Condition{Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateAnyOpponentGraveyardCardCount, Op: compare.GreaterOrEqual, Value: 8}}},
+			power:      1,
+			keywords:   []game.Keyword{game.Menace},
+		},
+		"graveyard mana value count": {
+			oracleText: "As long as there are five or more mana values among cards in your graveyard, this creature gets +2/+2 and has deathtouch.",
+			condition:  game.Condition{Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateControllerGraveyardManaValueCount, Op: compare.GreaterOrEqual, Value: 5}}},
+			power:      2,
+			toughness:  2,
+			keywords:   []game.Keyword{game.Deathtouch},
+		},
+		"trailing graveyard permanent card count descend": {
+			oracleText: "Descend 4 — This creature gets +2/+0 as long as there are four or more permanent cards in your graveyard.",
+			condition:  game.Condition{Aggregates: []game.AggregateComparison{{Aggregate: game.AggregateControllerGraveyardPermanentCardCount, Op: compare.GreaterOrEqual, Value: 4}}},
+			power:      2,
+		},
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {

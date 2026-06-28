@@ -859,6 +859,12 @@ func renderAggregateKind(kind game.AggregateKind) (string, error) {
 		return "game.AggregateControllerGraveyardCardCount", nil
 	case game.AggregateControllerGraveyardCardTypeCount:
 		return "game.AggregateControllerGraveyardCardTypeCount", nil
+	case game.AggregateControllerGraveyardPermanentCardCount:
+		return "game.AggregateControllerGraveyardPermanentCardCount", nil
+	case game.AggregateControllerGraveyardManaValueCount:
+		return "game.AggregateControllerGraveyardManaValueCount", nil
+	case game.AggregateAnyOpponentGraveyardCardCount:
+		return "game.AggregateAnyOpponentGraveyardCardCount", nil
 	case game.AggregateControllerBasicLandTypeCount:
 		return "game.AggregateControllerBasicLandTypeCount", nil
 	case game.AggregateControllerCreaturePowerDiversity:

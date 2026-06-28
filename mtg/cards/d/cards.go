@@ -31,6 +31,7 @@ var Cards = []*game.CardDef{
 	DesolationTwin,
 	DestructiveForce,
 	DiamondCity,
+	DidactEcho,
 	DingusEgg,
 	DingusStaff,
 	DinosaurStampede,

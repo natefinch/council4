@@ -76,6 +76,12 @@ func aggregateValue(g *game.Game, ctx conditionContext, kind game.AggregateKind)
 		return cardInstanceCount(g, player.Graveyard.All()), true
 	case game.AggregateControllerGraveyardCardTypeCount:
 		return controllerGraveyardCardTypeCount(g, ctx.controller), true
+	case game.AggregateControllerGraveyardPermanentCardCount:
+		return controllerGraveyardPermanentCardCount(g, ctx.controller), true
+	case game.AggregateControllerGraveyardManaValueCount:
+		return controllerGraveyardManaValueCount(g, ctx.controller), true
+	case game.AggregateAnyOpponentGraveyardCardCount:
+		return anyOpponentGraveyardCardCount(g, ctx.controller), true
 	case game.AggregateControllerBasicLandTypeCount:
 		return controllerBasicLandTypeCount(g, ctx), true
 	case game.AggregateControllerCreaturePowerDiversity:
@@ -279,7 +285,73 @@ func controllerGraveyardCardTypeCount(g *game.Game, controller game.PlayerID) in
 	return len(distinct)
 }
 
-// controllerGraveyardCardOfTypeCount counts the cards in the controller's
+// controllerGraveyardPermanentCardCount counts the cards in the controller's
+// graveyard that are permanent cards ("there are four or more permanent cards in
+// your graveyard", the Descend ability word).
+func controllerGraveyardPermanentCardCount(g *game.Game, controller game.PlayerID) int {
+	player, ok := playerByID(g, controller)
+	if !ok {
+		return 0
+	}
+	count := 0
+	for _, cardID := range player.Graveyard.All() {
+		card, ok := g.GetCardInstance(cardID)
+		if !ok {
+			continue
+		}
+		if cardFaceOrDefault(card, game.FaceFront).IsPermanent() {
+			count++
+			continue
+		}
+		if card.Def.Layout == game.LayoutSplit && card.Def.Alternate.Exists &&
+			card.Def.Alternate.Val.IsPermanent() {
+			count++
+		}
+	}
+	return count
+}
+
+// controllerGraveyardManaValueCount counts the distinct mana values among cards
+// in the controller's graveyard ("there are five or more mana values among cards
+// in your graveyard", Syndicate Infiltrator).
+func controllerGraveyardManaValueCount(g *game.Game, controller game.PlayerID) int {
+	player, ok := playerByID(g, controller)
+	if !ok {
+		return 0
+	}
+	distinct := make(map[int]bool)
+	for _, cardID := range player.Graveyard.All() {
+		card, ok := g.GetCardInstance(cardID)
+		if !ok {
+			continue
+		}
+		manaValue := cardFaceOrDefault(card, game.FaceFront).ManaValue()
+		if card.Def.Layout == game.LayoutSplit && card.Def.Alternate.Exists {
+			manaValue += card.Def.Alternate.Val.ManaValue()
+		}
+		distinct[manaValue] = true
+	}
+	return len(distinct)
+}
+
+// anyOpponentGraveyardCardCount returns the largest graveyard size among the
+// controller's living opponents ("an opponent has eight or more cards in their
+// graveyard", Nimana Skitter-Sneak). The existential "an opponent has N or more"
+// gate is satisfied exactly when this maximum is at least N.
+func anyOpponentGraveyardCardCount(g *game.Game, controller game.PlayerID) int {
+	largest := 0
+	for _, opponentID := range aliveOpponents(g, controller) {
+		opponent, ok := playerByID(g, opponentID)
+		if !ok {
+			continue
+		}
+		if size := cardInstanceCount(g, opponent.Graveyard.All()); size > largest {
+			largest = size
+		}
+	}
+	return largest
+}
+
 // graveyard whose card types include cardType ("twenty or more creature cards
 // are in your graveyard", Mortal Combat).
 func controllerGraveyardCardOfTypeCount(g *game.Game, controller game.PlayerID, cardType types.Card) int {

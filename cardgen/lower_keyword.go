@@ -1729,6 +1729,7 @@ func rulesFreeAbilityWordLabel(label string) bool {
 		"Corrupted",
 		"Coven",
 		"Delirium",
+		"Descend",
 		"Domain",
 		"Enrage",
 		"Fateful hour",

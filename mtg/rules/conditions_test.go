@@ -8,6 +8,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/compare"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -446,6 +447,70 @@ func TestConditionDeliriumCombinesSplitCardTypesOnly(t *testing.T) {
 	addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Aura", Types: []types.Card{types.Enchantment}}})
 	if conditionSatisfied(g, conditionContext{controller: game.Player1}, delirium) {
 		t.Fatal("Adventure face contributed its card type to Delirium")
+	}
+}
+
+func TestConditionGraveyardQuantityAggregates(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	// Controller graveyard: two permanent cards (creature, artifact) with mana
+	// values 1 and 2, plus an instant with mana value 1 (a non-permanent that
+	// shares a mana value).
+	addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Bear",
+		Types:    []types.Card{types.Creature},
+		ManaCost: opt.Val(cost.Mana{cost.O(1)}),
+	}})
+	addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Relic",
+		Types:    []types.Card{types.Artifact},
+		ManaCost: opt.Val(cost.Mana{cost.O(2)}),
+	}})
+	addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Bolt",
+		Types:    []types.Card{types.Instant},
+		ManaCost: opt.Val(cost.Mana{cost.O(1)}),
+	}})
+	// A split card contributes its combined mana value (front 2 + back 4 = 6),
+	// a distinct value not otherwise present.
+	addCardToGraveyard(g, game.Player1, &game.CardDef{
+		CardFace: game.CardFace{
+			Name:     "Cease",
+			Types:    []types.Card{types.Instant},
+			ManaCost: opt.Val(cost.Mana{cost.O(2)}),
+		},
+		Layout: game.LayoutSplit,
+		Alternate: opt.Val(game.CardFace{
+			Name:     "Desist",
+			Types:    []types.Card{types.Sorcery},
+			ManaCost: opt.Val(cost.Mana{cost.O(4)}),
+		}),
+	})
+	// Opponent graveyard: three cards.
+	for _, n := range []string{"A", "B", "C"} {
+		addCardToGraveyard(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+			Name:  n,
+			Types: []types.Card{types.Creature},
+		}})
+	}
+
+	ctx := conditionContext{controller: game.Player1}
+	checks := []struct {
+		name string
+		kind game.AggregateKind
+		want int
+	}{
+		{"permanent card count", game.AggregateControllerGraveyardPermanentCardCount, 2},
+		{"mana value count", game.AggregateControllerGraveyardManaValueCount, 3},
+		{"any opponent graveyard count", game.AggregateAnyOpponentGraveyardCardCount, 3},
+	}
+	for _, c := range checks {
+		got, ok := aggregateValue(g, ctx, c.kind)
+		if !ok {
+			t.Fatalf("%s: aggregateValue unresolved", c.name)
+		}
+		if got != c.want {
+			t.Fatalf("%s: got %d, want %d", c.name, got, c.want)
+		}
 	}
 }
 
