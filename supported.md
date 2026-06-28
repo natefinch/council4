@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **15,938 of 32,501 cards eligible for paper support (49.0%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **15,941 of 32,501 cards eligible for paper support (49.0%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2078,6 +2078,7 @@ Council4 currently supports **15,938 of 32,501 cards eligible for paper support 
 - Cat Beast
 - Cat Bird
 - Cat Burglar
+- Cat Collector
 - Cat Dragon
 - Cat Soldier
 - Cat Warrior
@@ -14711,6 +14712,7 @@ Council4 currently supports **15,938 of 32,501 cards eligible for paper support 
 - Valeron Outlander
 - Valgavoth's Faithful
 - Valgavoth's Lair
+- Valgavoth, Harrower of Souls
 - Valiant Guard
 - Valiant Knight
 - Valiant Rescuer
@@ -14752,6 +14754,7 @@ Council4 currently supports **15,938 of 32,501 cards eligible for paper support 
 - Vampire Outcasts
 - Vampire Revenant
 - Vampire Rogue
+- Vampire Scrivener
 - Vampire Slayer
 - Vampire Soulcaller
 - Vampire Sovereign

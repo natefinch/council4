@@ -340,19 +340,20 @@ func parsePlayerEventTriggerClause(tokens []shared.Token, introduction TriggerIn
 	if !ok {
 		return nil
 	}
-	card, occurrence, ok := parsePlayerEventModifiers(rest, action.Kind, parsedPlayer.player.Kind)
+	modifiers, ok := parsePlayerEventModifiers(rest, action.Kind, parsedPlayer.player.Kind)
 	if !ok ||
-		(occurrence.Kind == PlayerEventOccurrenceAny &&
+		(modifiers.occurrence.Kind == PlayerEventOccurrenceAny &&
 			introduction != TriggerIntroductionWhenever &&
-			card.Kind != PlayerEventCardThis) {
+			modifiers.card.Kind != PlayerEventCardThis) {
 		return nil
 	}
 	return &PlayerEventTriggerClause{
-		Span:       shared.SpanOf(tokens),
-		Player:     parsedPlayer.player,
-		Action:     action,
-		Card:       card,
-		Occurrence: occurrence,
+		Span:         shared.SpanOf(tokens),
+		Player:       parsedPlayer.player,
+		Action:       action,
+		Card:         modifiers.card,
+		Occurrence:   modifiers.occurrence,
+		TurnRelation: modifiers.turnRelation,
 	}
 }
 
@@ -435,38 +436,52 @@ func possessiveMatches(token shared.Token, player TriggerPlayerSelectorKind) boo
 	return equalWord(token, "their")
 }
 
+// playerEventModifiers bundles the optional modifiers that follow a player-event
+// action: the card object, the turn-relative occurrence, and the active-turn
+// timing relation folded in by a "during your turn" phrase.
+type playerEventModifiers struct {
+	card         PlayerEventCard
+	occurrence   PlayerEventOccurrence
+	turnRelation TriggerCastTurnRelation
+}
+
 func parsePlayerEventModifiers(
 	tokens []shared.Token,
 	action PlayerEventActionKind,
 	player TriggerPlayerSelectorKind,
-) (PlayerEventCard, PlayerEventOccurrence, bool) {
+) (playerEventModifiers, bool) {
 	card := PlayerEventCard{Kind: PlayerEventCardNone}
 	occurrence := PlayerEventOccurrence{Kind: PlayerEventOccurrenceAny}
+	turnRelation := TriggerCastTurnRelationNone
 	rest := tokens
 	if playerEventActionHasCard(action) {
 		parsed := parsePlayerEventCard(rest, action, player)
 		if !parsed.ok {
-			return PlayerEventCard{}, PlayerEventOccurrence{}, false
+			return playerEventModifiers{}, false
 		}
 		card = parsed.card
 		occurrence = parsed.occurrence
 		rest = parsed.remainder
 	}
-	if next, ok := cutSyntaxWords(rest, "for", "the", "first", "time", "each", "turn"); ok {
+	if next, relation, ok := cutPlayerEventFirstEachTurn(rest, player); ok {
 		if occurrence.Kind != PlayerEventOccurrenceAny || !playerEventFirstEachTurnAllowed(action, player) {
-			return PlayerEventCard{}, PlayerEventOccurrence{}, false
+			return playerEventModifiers{}, false
+		}
+		if relation != TriggerCastTurnRelationNone && !playerEventTurnRelationAllowed(action) {
+			return playerEventModifiers{}, false
 		}
 		occurrence = PlayerEventOccurrence{
 			Kind:    PlayerEventOccurrenceFirstEachTurn,
 			Span:    shared.SpanOf(rest),
 			Ordinal: 1,
 		}
+		turnRelation = relation
 		rest = next
 	}
 	if action == PlayerEventActionDraw {
 		if next, ok := cutExceptFirstInDrawStep(rest, player); ok {
 			if occurrence.Kind != PlayerEventOccurrenceAny {
-				return PlayerEventCard{}, PlayerEventOccurrence{}, false
+				return playerEventModifiers{}, false
 			}
 			occurrence = PlayerEventOccurrence{
 				Kind: PlayerEventOccurrenceExceptFirstInDrawStep,
@@ -475,10 +490,78 @@ func parsePlayerEventModifiers(
 			rest = next
 		}
 	}
-	if len(rest) != 0 {
-		return PlayerEventCard{}, PlayerEventOccurrence{}, false
+	if turnRelation == TriggerCastTurnRelationNone {
+		if next, relation, ok := cutPlayerEventTurnRelation(rest); ok {
+			if !playerEventTurnRelationAllowed(action) {
+				return playerEventModifiers{}, false
+			}
+			turnRelation = relation
+			rest = next
+		}
 	}
-	return card, occurrence, true
+	if len(rest) != 0 {
+		return playerEventModifiers{}, false
+	}
+	return playerEventModifiers{card: card, occurrence: occurrence, turnRelation: turnRelation}, true
+}
+
+// cutPlayerEventFirstEachTurn consumes the "for the first time" occurrence
+// qualifier in either the plain "for the first time each turn" form or the
+// active-turn "for the first time during each of your turns" / "... their turns"
+// form, reporting the controller-relative turn relation the timing phrase folds
+// in (none for the plain form).
+func cutPlayerEventFirstEachTurn(
+	tokens []shared.Token,
+	player TriggerPlayerSelectorKind,
+) ([]shared.Token, TriggerCastTurnRelation, bool) {
+	rest, ok := cutSyntaxWords(tokens, "for", "the", "first", "time")
+	if !ok {
+		return tokens, TriggerCastTurnRelationNone, false
+	}
+	if next, ok := cutSyntaxWords(rest, "each", "turn"); ok {
+		return next, TriggerCastTurnRelationNone, true
+	}
+	if next, ok := cutSyntaxWords(rest, "during", "each", "of"); ok {
+		if len(next) >= 2 && possessiveMatches(next[0], player) && equalWord(next[1], "turns") {
+			return next[2:], playerEventTurnRelationFor(player), true
+		}
+	}
+	return tokens, TriggerCastTurnRelationNone, false
+}
+
+// cutPlayerEventTurnRelation strips a trailing "during your turn" / "during an
+// opponent's turn" timing phrase, reporting the controller-relative turn the
+// triggering event must occur on.
+func cutPlayerEventTurnRelation(tokens []shared.Token) ([]shared.Token, TriggerCastTurnRelation, bool) {
+	if next, ok := cutSyntaxWords(tokens, "during", "your", "turn"); ok {
+		return next, TriggerCastTurnRelationYourTurn, true
+	}
+	if next, ok := cutSyntaxWords(tokens, "during", "an", "opponent's", "turn"); ok {
+		return next, TriggerCastTurnRelationNotYourTurn, true
+	}
+	return tokens, TriggerCastTurnRelationNone, false
+}
+
+// playerEventTurnRelationFor reports the controller-relative turn restriction for
+// a "during each of <player>'s turns" phrase: the controller's own turn for the
+// "you" selector and a turn that isn't the controller's for an opponent.
+func playerEventTurnRelationFor(player TriggerPlayerSelectorKind) TriggerCastTurnRelation {
+	if player == TriggerPlayerSelectorYou {
+		return TriggerCastTurnRelationYourTurn
+	}
+	return TriggerCastTurnRelationNotYourTurn
+}
+
+// playerEventTurnRelationAllowed restricts the active-turn timing qualifier to
+// the life-change events, where "during your turn" / "during each of their
+// turns" appears in printed templating (CR 603.2).
+func playerEventTurnRelationAllowed(action PlayerEventActionKind) bool {
+	switch action {
+	case PlayerEventActionGainLife, PlayerEventActionLoseLife:
+		return true
+	default:
+		return false
+	}
 }
 
 // cutExceptFirstInDrawStep consumes the "except the first one they draw in each
