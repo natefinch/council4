@@ -1270,6 +1270,13 @@ const (
 	// damage equal to their toughness instead of their power. It always pairs with
 	// a requirement constraint and active voice and carries no qualifier.
 	StaticRuleOperationAssignDamageByToughness StaticRuleOperationKind = "StaticRuleOperationAssignDamageByToughness"
+	// StaticRuleOperationGoaded is the continuous goad declaration printed as
+	// "<subject> is goaded." (the Impetus Auras, Bloodthirsty Blade): the subject
+	// creature is goaded by the source's controller, so it attacks each combat if
+	// able and attacks a player other than that controller if able (CR 701.38). It
+	// always pairs with a requirement constraint and active voice and carries no
+	// qualifier.
+	StaticRuleOperationGoaded StaticRuleOperationKind = "StaticRuleOperationGoaded"
 )
 
 // StaticRuleVoice identifies the grammatical role the subject has in an

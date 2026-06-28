@@ -1951,6 +1951,9 @@ func parseStaticRuleOperation(
 	if rule, next, ok := parseStaticRequiredBlockRuleOperation(tokens, index, end, subject); ok {
 		return rule, next, true
 	}
+	if rule, next, ok := parseStaticGoadedRuleOperation(tokens, index, end, subject); ok {
+		return rule, next, true
+	}
 	if rule, next, ok := parseStaticAssignsCombatDamageRuleOperation(tokens, index, end, subject); ok {
 		return rule, next, true
 	}
@@ -2123,6 +2126,29 @@ func parseStaticRequiredBlockRuleOperation(
 		StaticRuleConstraint{Kind: StaticRuleConstraintRequirement, Span: tokens[index].Span},
 		StaticRuleOperation{Kind: StaticRuleOperationBlock, Voice: StaticRuleVoicePassive, Span: shared.SpanOf(tokens[index+1 : index+3])},
 		qualifiers,
+	)
+}
+
+// parseStaticGoadedRuleOperation recognizes the continuous goad operation
+// "<subject> is/are goaded" inside a static declaration ("Enchanted creature
+// gets +2/+2 and is goaded.", the Impetus Auras; "Equipped creature gets +2/+0
+// and is goaded.", Bloodthirsty Blade). The subject creature becomes goaded by
+// the source's controller; the reminder text describing goad's combat
+// requirements is parsed separately and ignored here.
+func parseStaticGoadedRuleOperation(
+	tokens []shared.Token,
+	index, end int,
+	subject StaticDeclarationSubject,
+) (StaticDeclarationSyntax, int, bool) {
+	if (!staticWordsAt(tokens, index, "is", "goaded") &&
+		!staticWordsAt(tokens, index, "are", "goaded")) ||
+		index+2 > end {
+		return StaticDeclarationSyntax{}, 0, false
+	}
+	return staticRuleOperation(tokens, index, index+2, subject,
+		StaticRuleConstraint{Kind: StaticRuleConstraintRequirement, Span: tokens[index].Span},
+		StaticRuleOperation{Kind: StaticRuleOperationGoaded, Voice: StaticRuleVoiceActive, Span: tokens[index+1].Span},
+		nil,
 	)
 }
 

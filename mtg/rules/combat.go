@@ -1047,7 +1047,7 @@ func preferredRequiredAttackDeclarations(g *game.Game, playerID game.PlayerID, a
 }
 
 func attackerMustAttack(g *game.Game, attacker *game.Permanent) bool {
-	return isGoaded(attacker) || ruleEffectRequiresAttack(g, attacker)
+	return isGoadedNow(g, attacker) || ruleEffectRequiresAttack(g, attacker)
 }
 
 // attackerHasUnconditionalMustAttack reports whether attacker is forced to
@@ -1056,7 +1056,7 @@ func attackerMustAttack(g *game.Game, attacker *game.Permanent) bool {
 // A directed RuleEffectMustAttack is excluded: it forces an attack only while
 // the directed defender is reachable.
 func attackerHasUnconditionalMustAttack(g *game.Game, attacker *game.Permanent) bool {
-	if isGoaded(attacker) {
+	if isGoadedNow(g, attacker) {
 		return true
 	}
 	effects := activeRuleEffects(g)
@@ -1123,15 +1123,15 @@ func goadAllowsAttackTarget(g *game.Game, playerID game.PlayerID, attacker *game
 	if !isLegalAttackTarget(g, playerID, target) {
 		return false
 	}
-	if !isGoaded(attacker) || !canAttackNonGoadingOpponentWithoutTax(g, playerID, attacker) {
+	if !isGoadedNow(g, attacker) || !canAttackNonGoadingOpponentWithoutTax(g, playerID, attacker) {
 		return true
 	}
-	return target.IsPlayerAttack() && !wasGoadedBy(attacker, target.Player)
+	return target.IsPlayerAttack() && !wasGoadedByNow(g, attacker, target.Player)
 }
 
 func canAttackNonGoadingOpponentWithoutTax(g *game.Game, playerID game.PlayerID, attacker *game.Permanent) bool {
 	for _, opponent := range aliveOpponents(g, playerID) {
-		if wasGoadedBy(attacker, opponent) {
+		if wasGoadedByNow(g, attacker, opponent) {
 			continue
 		}
 		target := game.AttackTarget{Player: opponent}
@@ -1199,6 +1199,40 @@ func isGoaded(permanent *game.Permanent) bool {
 func wasGoadedBy(permanent *game.Permanent, player game.PlayerID) bool {
 	_, ok := permanent.Goaded[player]
 	return ok
+}
+
+// isGoadedNow reports whether attacker is goaded right now, by either a
+// turn-limited entry in its Goaded map (the goad keyword action) or an active
+// continuous RuleEffectGoaded contribution ("Enchanted creature ... is goaded.",
+// the Impetus Auras and Bloodthirsty Blade).
+func isGoadedNow(g *game.Game, permanent *game.Permanent) bool {
+	if isGoaded(permanent) {
+		return true
+	}
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		if effects[i].Kind == game.RuleEffectGoaded && ruleEffectMatchesPermanent(g, &effects[i], permanent) {
+			return true
+		}
+	}
+	return false
+}
+
+// wasGoadedByNow reports whether permanent is goaded by player right now, by
+// either a Goaded map entry or an active continuous RuleEffectGoaded whose
+// controller (the goading player) is player.
+func wasGoadedByNow(g *game.Game, permanent *game.Permanent, player game.PlayerID) bool {
+	if wasGoadedBy(permanent, player) {
+		return true
+	}
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		if effects[i].Kind == game.RuleEffectGoaded && effects[i].Controller == player &&
+			ruleEffectMatchesPermanent(g, &effects[i], permanent) {
+			return true
+		}
+	}
+	return false
 }
 
 func goadPermanent(g *game.Game, permanent *game.Permanent, player game.PlayerID) {

@@ -42,6 +42,7 @@ var Cards = []*game.CardDef{
 	RecruitmentOfficer,
 	Recuperate,
 	RedWard,
+	RedemptionArc,
 	ReduceToAshes,
 	ReinforcedBulwark,
 	RelicGolem,

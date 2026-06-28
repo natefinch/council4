@@ -888,6 +888,8 @@ func staticRuleDomain(kind compiler.StaticRuleKind) compiler.StaticRuleDomain {
 		return compiler.StaticRuleDomainTransform
 	case compiler.StaticRuleAssignsCombatDamageByToughness:
 		return compiler.StaticRuleDomainCombatDamage
+	case compiler.StaticRuleGoaded:
+		return compiler.StaticRuleDomainGoad
 	case compiler.StaticRuleAdditionalTriggerForChosenCreatureType:
 		return compiler.StaticRuleDomainTrigger
 	default:
@@ -1501,6 +1503,8 @@ func lowerStaticRuleKind(kind compiler.StaticRuleKind) (game.RuleEffectKind, boo
 		return game.RuleEffectCantTransform, true
 	case compiler.StaticRuleAdditionalTriggerForChosenCreatureType:
 		return game.RuleEffectAdditionalTriggerForChosenCreatureType, true
+	case compiler.StaticRuleGoaded:
+		return game.RuleEffectGoaded, true
 	default:
 		return game.RuleEffectNone, false
 	}

@@ -954,6 +954,8 @@ func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
 		return "game.RuleEffectDrawLimitPerTurn", nil
 	case game.RuleEffectCastLimitPerTurn:
 		return "game.RuleEffectCastLimitPerTurn", nil
+	case game.RuleEffectGoaded:
+		return "game.RuleEffectGoaded", nil
 	default:
 		return "", fmt.Errorf("render: unsupported rule effect kind %d", kind)
 	}
