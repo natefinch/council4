@@ -125,6 +125,7 @@ var Cards = []*game.CardDef{
 	SmellerbeeRebelFighter,
 	SmiteTheDeathless,
 	SnoopingNewsie,
+	SnowHound,
 	SoShiny,
 	SoaringThoughtThief,
 	Soilshaper,

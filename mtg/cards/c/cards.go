@@ -84,6 +84,7 @@ var Cards = []*game.CardDef{
 	CloudchaserKestrel,
 	CloutOfTheDominus,
 	CoalStoker,
+	CoastalWizard,
 	CoatiScavenger,
 	CoerciveImpetus,
 	CogworkAssembler,
@@ -152,4 +153,5 @@ var Cards = []*game.CardDef{
 	CurseOfTheSwine,
 	Cursecatcher,
 	CursedMonstrosity,
+	CyclopeanSnare,
 }

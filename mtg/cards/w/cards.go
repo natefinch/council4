@@ -55,6 +55,7 @@ var Cards = []*game.CardDef{
 	WitchEngine,
 	WitchSMist,
 	Withstand,
+	WizardMentor,
 	WizardReplica,
 	WizardSLightning,
 	WizardSRetort,
