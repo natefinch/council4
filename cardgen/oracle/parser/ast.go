@@ -276,13 +276,15 @@ const (
 
 // LookAtTopBattlefieldElse identifies the trailing fallback disposition of an
 // ExactSequenceConditionalLookAtTopBattlefield body: nothing (the card stays on
-// top of the library) or a mandatory move into the controller's hand.
+// top of the library), a mandatory move into the controller's hand, or an
+// optional move to the bottom of the controller's library.
 type LookAtTopBattlefieldElse uint8
 
 // Look-at-top battlefield fallback dispositions.
 const (
 	LookAtTopBattlefieldElseNone LookAtTopBattlefieldElse = iota
 	LookAtTopBattlefieldElseHand
+	LookAtTopBattlefieldElseBottom
 )
 
 // ExactSequenceSyntax records an exact sequence and its resolving-body span.
