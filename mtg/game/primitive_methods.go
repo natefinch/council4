@@ -213,6 +213,11 @@ func (RevealTopPartition) Kind() PrimitiveKind { return PrimitiveRevealTopPartit
 // Kind implements Primitive for ImpulseExile.
 func (ImpulseExile) Kind() PrimitiveKind { return PrimitiveImpulseExile }
 
+// Kind implements Primitive for ExileLibraryUntilNonlandCast.
+func (ExileLibraryUntilNonlandCast) Kind() PrimitiveKind {
+	return PrimitiveExileLibraryUntilNonlandCast
+}
+
 // Kind implements Primitive for Investigate.
 func (Investigate) Kind() PrimitiveKind { return PrimitiveInvestigate }
 
@@ -395,6 +400,7 @@ func (Dig) isPrimitive()                                  {}
 func (PileSplit) isPrimitive()                            {}
 func (RevealTopPartition) isPrimitive()                   {}
 func (ImpulseExile) isPrimitive()                         {}
+func (ExileLibraryUntilNonlandCast) isPrimitive()         {}
 func (Investigate) isPrimitive()                          {}
 func (Proliferate) isPrimitive()                          {}
 func (Explore) isPrimitive()                              {}
@@ -606,18 +612,19 @@ func (p Mill) instructionRefs() primitiveRefs {
 func (p ExileTopOfLibrary) instructionRefs() primitiveRefs {
 	return quantityRefs(p.Amount)
 }
-func (PutHandOnLibraryThenDraw) instructionRefs() primitiveRefs { return primitiveRefs{} }
-func (DiscardThenDraw) instructionRefs() primitiveRefs          { return primitiveRefs{} }
-func (RevealUntil) instructionRefs() primitiveRefs              { return primitiveRefs{} }
-func (p Scry) instructionRefs() primitiveRefs                   { return quantityRefs(p.Amount) }
-func (p Surveil) instructionRefs() primitiveRefs                { return quantityRefs(p.Amount) }
-func (p Dig) instructionRefs() primitiveRefs                    { return quantityRefs(p.Look) }
-func (p PileSplit) instructionRefs() primitiveRefs              { return quantityRefs(p.Amount) }
-func (p RevealTopPartition) instructionRefs() primitiveRefs     { return quantityRefs(p.Amount) }
-func (p ImpulseExile) instructionRefs() primitiveRefs           { return quantityRefs(p.Amount) }
-func (p Investigate) instructionRefs() primitiveRefs            { return quantityRefs(p.Amount) }
-func (p Proliferate) instructionRefs() primitiveRefs            { return quantityRefs(p.Amount) }
-func (Explore) instructionRefs() primitiveRefs                  { return primitiveRefs{} }
+func (PutHandOnLibraryThenDraw) instructionRefs() primitiveRefs     { return primitiveRefs{} }
+func (DiscardThenDraw) instructionRefs() primitiveRefs              { return primitiveRefs{} }
+func (RevealUntil) instructionRefs() primitiveRefs                  { return primitiveRefs{} }
+func (p Scry) instructionRefs() primitiveRefs                       { return quantityRefs(p.Amount) }
+func (p Surveil) instructionRefs() primitiveRefs                    { return quantityRefs(p.Amount) }
+func (p Dig) instructionRefs() primitiveRefs                        { return quantityRefs(p.Look) }
+func (p PileSplit) instructionRefs() primitiveRefs                  { return quantityRefs(p.Amount) }
+func (p RevealTopPartition) instructionRefs() primitiveRefs         { return quantityRefs(p.Amount) }
+func (p ImpulseExile) instructionRefs() primitiveRefs               { return quantityRefs(p.Amount) }
+func (ExileLibraryUntilNonlandCast) instructionRefs() primitiveRefs { return primitiveRefs{} }
+func (p Investigate) instructionRefs() primitiveRefs                { return quantityRefs(p.Amount) }
+func (p Proliferate) instructionRefs() primitiveRefs                { return quantityRefs(p.Amount) }
+func (Explore) instructionRefs() primitiveRefs                      { return primitiveRefs{} }
 func (p Manifest) instructionRefs() primitiveRefs {
 	return primitiveRefs{publishesLinked: p.PublishLinked}
 }

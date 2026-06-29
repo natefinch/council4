@@ -2269,6 +2269,10 @@ func (p ImpulseExile) validatePrimitive(targets []TargetSpec, checkTargets bool)
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 
+func (p ExileLibraryUntilNonlandCast) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
 func (p HideawayExile) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err

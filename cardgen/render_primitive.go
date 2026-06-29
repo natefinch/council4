@@ -366,6 +366,16 @@ func (r Renderer) renderImpulseExile(ctx *renderCtx, value game.ImpulseExile) (s
 	}), nil
 }
 
+func (r Renderer) renderExileLibraryUntilNonlandCast(value game.ExileLibraryUntilNonlandCast) (string, error) {
+	player, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.ExileLibraryUntilNonlandCast", []string{
+		fmt.Sprintf("Player: %s,", player),
+	}), nil
+}
+
 func renderCardReference(reference game.CardReference) (string, error) {
 	switch reference.Kind {
 	case game.CardReferenceEvent:

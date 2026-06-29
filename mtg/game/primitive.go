@@ -146,10 +146,14 @@ const (
 	// type under an exile-until-leaves link, sacrificing the source when no
 	// eligible permanent exists (game.ChampionExile).
 	PrimitiveChampionExile
+	// PrimitiveExileLibraryUntilNonlandCast exiles cards from the top of a
+	// player's library until a nonland card is exiled, then lets that player cast
+	// the nonland card without paying its mana cost (game.ExileLibraryUntilNonlandCast).
+	PrimitiveExileLibraryUntilNonlandCast
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveChampionExile) + 1
+const primitiveKindCount = int(PrimitiveExileLibraryUntilNonlandCast) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -1358,6 +1362,18 @@ type ImpulseExile struct {
 	Player   PlayerReference
 	Amount   Quantity
 	Duration EffectDuration
+}
+
+// ExileLibraryUntilNonlandCast exiles cards from the top of Player's library one
+// at a time until a nonland card is exiled (or the library empties), then lets
+// Player cast that nonland card without paying its mana cost. The other cards
+// exiled this way stay in exile. It models the single-effect family "Exile cards
+// from the top of your library until you exile a nonland card. You may cast that
+// card without paying its mana cost." The whole sequence is one primitive
+// because the dig depth is the first nonland card and the free cast targets that
+// same card, neither of which is expressible across separate instructions.
+type ExileLibraryUntilNonlandCast struct {
+	Player PlayerReference
 }
 
 // HideawayExile implements the Hideaway N enters-the-battlefield action (CR
