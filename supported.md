@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,384 of 32,501 cards eligible for paper support (50.4%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,385 of 32,501 cards eligible for paper support (50.4%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -14685,6 +14685,7 @@ Council4 currently supports **16,384 of 32,501 cards eligible for paper support 
 - Treasury Thrull
 - Tree Monkey
 - Tree of Tales
+- Treebeard, Gracious Host
 - Treefolk
 - Treefolk
 - Treefolk
