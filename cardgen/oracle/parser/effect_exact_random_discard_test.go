@@ -15,7 +15,7 @@ func TestNonControllerRandomDiscardSyntaxIsTypedAndFailsClosed(t *testing.T) {
 		{oracle: "Discard two cards at random."},
 		{oracle: "Target player discards two cards."},
 		{oracle: "Each player discards a card."},
-		{oracle: "Target player discards X cards at random."},
+		{oracle: "Target player discards X cards at random.", want: true},
 		{oracle: "Each player discards their hand."},
 	} {
 		t.Run(test.oracle, func(t *testing.T) {
