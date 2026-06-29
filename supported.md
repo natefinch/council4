@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,418 of 32,501 cards eligible for paper support (50.5%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,435 of 32,501 cards eligible for paper support (50.6%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -404,6 +404,7 @@ Council4 currently supports **16,418 of 32,501 cards eligible for paper support 
 - Ancestral Vengeance
 - Anchovy & Banana Pizza
 - Ancient Amphitheater
+- Ancient Animus
 - Ancient Brontodon
 - Ancient Carp
 - Ancient Copper Dragon
@@ -1402,6 +1403,7 @@ Council4 currently supports **16,418 of 32,501 cards eligible for paper support 
 - Blessed Orator
 - Blessed Spirits
 - Blessed Wine
+- Blessing of Belzenlok
 - Blessing of Leeches
 - Blight Grenade
 - Blight Keeper
@@ -1460,6 +1462,7 @@ Council4 currently supports **16,418 of 32,501 cards eligible for paper support 
 - Blood
 - Blood Artist
 - Blood Bairn
+- Blood Beckoning
 - Blood Burglar
 - Blood Celebrant
 - Blood Crypt
@@ -1495,6 +1498,7 @@ Council4 currently supports **16,418 of 32,501 cards eligible for paper support 
 - Bloodbraid Challenger
 - Bloodbraid Elf
 - Bloodbriar
+- Bloodchief's Thirst
 - Bloodcrazed Neonate
 - Bloodcrazed Socialite
 - Bloodcurdling Scream
@@ -3342,6 +3346,7 @@ Council4 currently supports **16,418 of 32,501 cards eligible for paper support 
 - Deflection
 - Deft Dismissal
 - Deft Duelist
+- Defy Death
 - Defy Gravity
 - Dega Disciple
 - Dehydration
@@ -4381,6 +4386,7 @@ Council4 currently supports **16,418 of 32,501 cards eligible for paper support 
 - Essence Drain
 - Essence Extraction
 - Essence Flare
+- Essence Flux
 - Essence Fracture
 - Essence Harvest
 - Essence Infusion
@@ -4504,6 +4510,7 @@ Council4 currently supports **16,418 of 32,501 cards eligible for paper support 
 - Exultant Cultist
 - Exultant Skymarcher
 - Eye Collector
+- Eye Gouge
 - Eye of Malcator
 - Eye of Nowhere
 - Eye of Ramos
@@ -4672,6 +4679,7 @@ Council4 currently supports **16,418 of 32,501 cards eligible for paper support 
 - Fearless Halberdier
 - Fearless Liberator
 - Fearless Pup
+- Fearsome Awakening
 - Feast of Sanity
 - Feast of Succession
 - Feast of the Unicorn
@@ -4930,6 +4938,7 @@ Council4 currently supports **16,418 of 32,501 cards eligible for paper support 
 - Flaming Tyrannosaurus
 - Flanking Troops
 - Flare
+- Flare of Faith
 - Flaring Cinder
 - Flash Counter
 - Flash Flood
@@ -5575,6 +5584,7 @@ Council4 currently supports **16,418 of 32,501 cards eligible for paper support 
 - Giltgrove Stalker
 - Gimli of the Glittering Caves
 - Gimli's Axe
+- Gimli's Fury
 - Gimli's Reckless Might
 - Gimli, Counter of Kills
 - Gingerbread Cabin
@@ -8746,6 +8756,7 @@ Council4 currently supports **16,418 of 32,501 cards eligible for paper support 
 - Might of Oaks
 - Might of the Ancestors
 - Might of the Masses
+- Might of the Meek
 - Might of the Old Ways
 - Might Sliver
 - Might Weaver
@@ -11517,6 +11528,7 @@ Council4 currently supports **16,418 of 32,501 cards eligible for paper support 
 - Rush of Blood
 - Rush of Knowledge
 - Rush of Vitality
+- Rush the Room
 - Rushwood Dryad
 - Rushwood Elemental
 - Rushwood Herbalist
@@ -13357,6 +13369,7 @@ Council4 currently supports **16,418 of 32,501 cards eligible for paper support 
 - Stampeding Wildebeests
 - Stand // Deliver
 - Stand Firm
+- Stand United
 - Stand Up for Yourself
 - Standing Stones
 - Standing Troops
@@ -14462,6 +14475,7 @@ Council4 currently supports **16,418 of 32,501 cards eligible for paper support 
 - Thundersteel Colossus
 - Thundertrap Trainer
 - Thunderwolf Cavalry
+- Thwip!
 - Théoden, King of Rohan
 - Tibalt's Rager
 - Tibor and Lumia
@@ -14964,6 +14978,7 @@ Council4 currently supports **16,418 of 32,501 cards eligible for paper support 
 - Uncanny Speed
 - Unchained Berserker
 - Uncharted Haven
+- Unchecked Growth
 - Unclaimed Territory
 - Uncomfortable Chill
 - Uncontrollable Anger
@@ -15205,6 +15220,7 @@ Council4 currently supports **16,418 of 32,501 cards eligible for paper support 
 - Vampire Spawn
 - Vampire Warlord
 - Vampire's Kiss
+- Vampire's Zeal
 - Vampires' Vengeance
 - Vampiric Dragon
 - Vampiric Feast
@@ -15983,6 +15999,7 @@ Council4 currently supports **16,418 of 32,501 cards eligible for paper support 
 - Wildwood Mentor
 - Wildwood Patrol
 - Wildwood Rebirth
+- Will of the All-Hunter
 - Will of the Naga
 - Will of the Sultai
 - Will of the Temur
