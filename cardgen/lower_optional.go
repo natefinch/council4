@@ -1717,35 +1717,37 @@ func causativeActionForcibleExact(
 	}
 }
 
-// lowerOptionalBlinkReturn lowers the optional immediate-blink (flicker) body —
-// "You may exile [another] target <permanent>, then return that card to the
-// battlefield under [its owner's / your] control." — the Conjurer's Closet /
-// Soulherder / Felidar Guardian / Wispweaver Angel shape. The "you may" attaches
-// to the leading exile effect, and the trailing ", then return that card" clause
-// back-references the exiled card. The whole flow is optional at resolution: the
-// controller chooses the target when the spell or ability goes on the stack, then
-// decides on resolution whether to exile-and-return.
+// lowerOptionalBlinkReturn lowers the optional blink (flicker) body — "You may
+// exile [another] target <permanent>, then return that card to the battlefield
+// under [its owner's / your] control." (immediate, Conjurer's Closet / Soulherder
+// / Felidar Guardian / Wispweaver Angel) and "You may exile target <permanent>.
+// If you do, return that card to the battlefield … at the beginning of the next
+// end step." (delayed, Sentinel of the Pearl Trident / Astral Slide / Astral
+// Drift). The "you may" attaches to the leading exile effect, and the trailing
+// return clause back-references the exiled card. The whole flow is optional at
+// resolution: the controller chooses the target when the spell or ability goes on
+// the stack, then decides on resolution whether to exile-and-return.
 //
 // The body compiles to two effects sharing the blink semantics: a leading
-// single-target Exile carrying the resolving optionality and a trailing immediate
-// Return whose object binds to the exile's result. This clears the exile's
-// optionality, lowers the now-mandatory blink through the ordered effect-sequence
-// path (which produces the two-instruction [Exile, PutOnBattlefield] sequence
-// lowerImmediateBlinkReturn builds, with the exile rewritten to remember the
-// exiled card under a linked key), then marks the exile instruction Optional and
-// publishing and gates the put on the exile having succeeded. Declining the exile
-// publishes a not-accepted result, so the gated put is skipped and nothing
-// returns; accepting it exiles the target and returns it, exactly honoring the
-// controller's choice on both branches.
+// single-target Exile carrying the resolving optionality and a trailing return
+// (immediate PutOnBattlefield, or a delayed CreateDelayedTrigger wrapping it)
+// whose object binds to the exile's result. This clears the exile's optionality,
+// lowers the now-mandatory blink through the ordered effect-sequence path (which
+// produces the two-instruction sequence lowerImmediateBlinkReturn or
+// lowerDelayedBlinkReturn builds, with the exile rewritten to remember the exiled
+// card under a linked key), then marks the exile instruction Optional and
+// publishing and gates the return on the exile having succeeded. Declining the
+// exile publishes a not-accepted result, so the gated return is skipped and
+// nothing returns; accepting it exiles the target and returns it, exactly
+// honoring the controller's choice on both branches.
 //
 // It fails closed (ok=false) unless the body is exactly this controller
-// optional-exile-then-immediate-return shape lowering to one non-modal,
-// no-shared-target [Exile, PutOnBattlefield] sequence: a body-level optional, a
-// modal body, a non-single ability target, a non-optional or negated/delayed
-// exile, a non-controller exile, an independently-optional return, a delayed
-// ("at the beginning of the next end step") return, or any lowering that does not
-// produce the exact two-instruction blink sequence all leave the body unsupported
-// rather than lowered to a silently-wrong sequence.
+// optional-exile-then-return shape lowering to one non-modal, no-shared-target
+// two-instruction sequence: a body-level optional, a modal body, a non-single
+// ability target, a non-optional or negated/delayed exile, a non-controller
+// exile, an independently-optional return, or any lowering that does not produce
+// the exact two-instruction blink sequence all leave the body unsupported rather
+// than lowered to a silently-wrong sequence.
 func lowerOptionalBlinkReturn(
 	cardName string,
 	ctx contentCtx,
@@ -1772,17 +1774,21 @@ func lowerOptionalBlinkReturn(
 		len(exile.Targets) != 1 {
 		return game.AbilityContent{}, false
 	}
-	// The trailing return must be the immediate ", then return that card to the
-	// battlefield" blink form and must not carry independent optionality: its
-	// optionality rides the same resolving "you may" as the exile. A delayed
-	// return ("at the beginning of the next end step") is left unsupported here so
-	// only the same-resolution blink is gated on the exile result.
+	// The trailing return is either the immediate ", then return that card to the
+	// battlefield" blink form or the delayed "If you do, return that card … at the
+	// beginning of the next end step" form (Sentinel of the Pearl Trident, Astral
+	// Slide, Astral Drift). Either way it must not carry independent optionality:
+	// its optionality rides the same resolving "you may" as the exile. The two
+	// shapes differ only in whether the put returns this resolution or at the next
+	// end step; markBlinkExileOptional gates whichever instruction the ordered
+	// sequence emits on the exile result.
+	immediateReturn := ret.Connection == parser.EffectConnectionThen && ret.DelayedTiming == 0
+	delayedReturn := ret.DelayedTiming == game.DelayedAtBeginningOfNextEndStep
 	if ret.Kind != compiler.EffectReturn ||
 		ret.Optional ||
 		ret.Negated ||
-		ret.Connection != parser.EffectConnectionThen ||
-		ret.DelayedTiming != 0 ||
-		ret.ToZone != zone.Battlefield {
+		ret.ToZone != zone.Battlefield ||
+		!immediateReturn && !delayedReturn {
 		return game.AbilityContent{}, false
 	}
 	// Clear the exile's resolving optionality and lower the now-mandatory blink
@@ -1792,6 +1798,13 @@ func lowerOptionalBlinkReturn(
 	stripped.content.Effects = slices.Clone(ctx.content.Effects)
 	stripped.content.Effects[0].Optional = false
 	stripped.content.Effects[0].OptionalSpan = shared.Span{}
+	// The delayed "If you do, return …" form gates the return on the exile via a
+	// resolving-success condition. Drop it so the now-mandatory blink lowers as a
+	// plain exile-then-delayed-return; markBlinkExileOptional re-applies the gate
+	// on the exile instruction, faithfully reconstructing the "if you do" flow.
+	if delayedReturn {
+		stripped.content.Conditions = nil
+	}
 	content, diagnostic := lowerOrderedEffectSequence(cardName, stripped, syntax)
 	if diagnostic != nil {
 		return game.AbilityContent{}, false
@@ -1826,8 +1839,12 @@ func markBlinkExileOptional(content *game.AbilityContent) bool {
 		exile.OptionalActor.Exists {
 		return false
 	}
+	// The return instruction is either the immediate PutOnBattlefield blink or the
+	// delayed CreateDelayedTrigger that wraps it; both gate identically on the
+	// exile result so declining the exile skips the return entirely.
 	if put.Primitive == nil ||
-		put.Primitive.Kind() != game.PrimitivePutOnBattlefield ||
+		(put.Primitive.Kind() != game.PrimitivePutOnBattlefield &&
+			put.Primitive.Kind() != game.PrimitiveCreateDelayedTrigger) ||
 		put.Optional ||
 		put.PublishResult != "" ||
 		put.ResultGate.Exists {
