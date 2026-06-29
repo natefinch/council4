@@ -78,6 +78,7 @@ var Cards = []*game.CardDef{
 	ShinyImpetus,
 	ShipwreckSinger,
 	ShivanFire,
+	ShriekingAffliction,
 	ShriekingSpecter,
 	Shriekmaw,
 	ShuFarmer,

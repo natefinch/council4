@@ -124,6 +124,12 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 	case parser.ConditionPredicateEventSpellNoManaSpentToCast:
 		condition.Predicate = ConditionPredicateEventSpellManaSpentToCastAtMost
 		condition.Threshold = 0
+	case parser.ConditionPredicateTriggeringPlayerHandSizeAtMost:
+		condition.Predicate = ConditionPredicateTriggeringPlayerHandSizeAtMost
+		condition.Threshold = clause.Threshold
+	case parser.ConditionPredicateTriggeringPlayerHandSizeAtLeast:
+		condition.Predicate = ConditionPredicateTriggeringPlayerHandSizeAtLeast
+		condition.Threshold = clause.Threshold
 	case parser.ConditionPredicateAnyOpponentPoisonAtLeast:
 		condition.Predicate = ConditionPredicateAnyOpponentPoisonAtLeast
 		condition.Threshold = clause.Threshold

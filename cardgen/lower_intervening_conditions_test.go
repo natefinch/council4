@@ -910,3 +910,42 @@ func TestManaLoweringFollowsTypedMeaningNotText(t *testing.T) {
 		t.Fatalf("content = %#v, ok = %v", content, ok)
 	}
 }
+
+// TestLowerTriggeringPlayerHandSizeCondition verifies the phase-trigger
+// intervening-if "if that player has N or fewer/more cards in hand" lowers to a
+// hand-size comparison against the triggering player on each opponent's upkeep,
+// including the "no cards in hand" zero-threshold form.
+func TestLowerTriggeringPlayerHandSizeCondition(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		oracle string
+		op     compare.Op
+		value  int
+	}{
+		{"two or fewer", "At the beginning of each opponent's upkeep, if that player has two or fewer cards in hand, this creature deals 3 damage to that player.", compare.LessOrEqual, 2},
+		{"no cards", "At the beginning of each opponent's upkeep, if that player has no cards in hand, they lose 2 life.", compare.LessOrEqual, 0},
+		{"five or more", "At the beginning of each opponent's upkeep, if that player has five or more cards in hand, this creature deals 4 damage to that player.", compare.GreaterOrEqual, 5},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Hand Watcher",
+				Layout:     "normal",
+				TypeLine:   "Creature — Imp",
+				OracleText: tc.oracle,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			})
+			if len(face.TriggeredAbilities) != 1 {
+				t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+			}
+			cond := face.TriggeredAbilities[0].Trigger.InterveningCondition
+			want := game.AggregateComparison{Aggregate: game.AggregateEventPlayerHandSize, Op: tc.op, Value: tc.value}
+			if !cond.Exists || len(cond.Val.Aggregates) != 1 || cond.Val.Aggregates[0] != want {
+				t.Fatalf("aggregates = %#v, want %#v", cond.Val.Aggregates, want)
+			}
+		})
+	}
+}

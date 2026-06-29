@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,358 of 32,501 cards eligible for paper support (50.3%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,366 of 32,501 cards eligible for paper support (50.4%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -801,6 +801,7 @@ Council4 currently supports **16,358 of 32,501 cards eligible for paper support 
 - Astral Steel
 - Astral Wingspan
 - Astrid Peth
+- Asylum Visitor
 - Atalan Jackal
 - Atarka Beastbreaker
 - Atarka Monument
@@ -3989,6 +3990,7 @@ Council4 currently supports **16,358 of 32,501 cards eligible for paper support 
 - Ebon Stronghold
 - Ebony Charm
 - Ebony Horse
+- Ebony Owl Netsuke
 - Ebony Rhino
 - Ebony Treefolk
 - Eccentric Farmer
@@ -6389,6 +6391,7 @@ Council4 currently supports **16,358 of 32,501 cards eligible for paper support 
 - Hell's Kitchen
 - Hell's Thunder
 - Hell-Bent Raider
+- Hellfire Mongrel
 - Hellhole Flailer
 - Hellion
 - Hellion Crucible
@@ -6533,6 +6536,7 @@ Council4 currently supports **16,358 of 32,501 cards eligible for paper support 
 - Holdout Settlement
 - Hollow Dogs
 - Hollow Scavenger // Bakery Raid
+- Hollowborn Barghest
 - Hollowhead Sliver
 - Hollowhenge Beast
 - Hollowhenge Overlord
@@ -7833,6 +7837,7 @@ Council4 currently supports **16,358 of 32,501 cards eligible for paper support 
 - Lava Spike
 - Lava Zombie
 - Lavabelly Sliver
+- Lavaborn Muse
 - Lavafume Invoker
 - Lavakin Brawler
 - Lavaspur Boots
@@ -8841,6 +8846,7 @@ Council4 currently supports **16,358 of 32,501 cards eligible for paper support 
 - Mischievous Pup
 - Mischievous Sneakling
 - Misdirection
+- Misers' Cage
 - Misery Charm
 - Misery's Shadow
 - Misfortune's Gain
@@ -9955,6 +9961,7 @@ Council4 currently supports **16,358 of 32,501 cards eligible for paper support 
 - Patron of the Wild
 - Patron Wizard
 - Pattern of Rebirth
+- Paupers' Cage
 - Pause for Reflection
 - Pavel Maliki
 - Pawpatch Formation
@@ -12310,6 +12317,7 @@ Council4 currently supports **16,358 of 32,501 cards eligible for paper support 
 - Shriekdiver
 - Shriekgeist
 - Shriekhorn
+- Shrieking Affliction
 - Shrieking Drake
 - Shrieking Mogg
 - Shrieking Specter

@@ -73,6 +73,10 @@ func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringC
 		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateEventSpellManaSpentToCast, Op: compare.GreaterOrEqual, Value: condition.Threshold})
 	case compiler.ConditionPredicateEventSpellManaSpentToCastAtMost:
 		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateEventSpellManaSpentToCast, Op: compare.LessOrEqual, Value: condition.Threshold})
+	case compiler.ConditionPredicateTriggeringPlayerHandSizeAtMost:
+		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateEventPlayerHandSize, Op: compare.LessOrEqual, Value: condition.Threshold})
+	case compiler.ConditionPredicateTriggeringPlayerHandSizeAtLeast:
+		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateEventPlayerHandSize, Op: compare.GreaterOrEqual, Value: condition.Threshold})
 	case compiler.ConditionPredicateAnyOpponentPoisonAtLeast:
 		result.AnyOpponentPoisonAtLeast = condition.Threshold
 	case compiler.ConditionPredicateAnyPlayerLifeAtMost:
@@ -357,6 +361,8 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 			compiler.ConditionPredicateControllerHasCityBlessing,
 			compiler.ConditionPredicateEventSpellManaSpentToCastAtLeast,
 			compiler.ConditionPredicateEventSpellManaSpentToCastAtMost,
+			compiler.ConditionPredicateTriggeringPlayerHandSizeAtMost,
+			compiler.ConditionPredicateTriggeringPlayerHandSizeAtLeast,
 			compiler.ConditionPredicateAttackersAttackingControllerAtLeast:
 			return ctx == conditionContextInterveningTrigger
 		case compiler.ConditionPredicateControllerControlsCommander:

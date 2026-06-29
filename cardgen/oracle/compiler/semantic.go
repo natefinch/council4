@@ -839,6 +839,19 @@ const (
 	// (Boromir, Lavinia, Roiling Vortex), the free-spell punisher gate. It reads
 	// the mana spent recorded on the triggering event.
 	ConditionPredicateEventSpellManaSpentToCastAtMost
+	// ConditionPredicateTriggeringPlayerHandSizeAtMost is satisfied when the
+	// triggering player has at most Threshold cards in hand ("if that player has
+	// two or fewer cards in hand"; with Threshold zero, "if that player has no
+	// cards in hand"). It reads the hand of the player recorded on the triggering
+	// step event, so it resolves only in a phase/step trigger's intervening-if
+	// context (each opponent's or each player's upkeep).
+	ConditionPredicateTriggeringPlayerHandSizeAtMost
+	// ConditionPredicateTriggeringPlayerHandSizeAtLeast is satisfied when the
+	// triggering player has at least Threshold cards in hand ("if that player has
+	// five or more cards in hand"). It reads the hand of the player recorded on
+	// the triggering step event and resolves only in a phase/step trigger's
+	// intervening-if context.
+	ConditionPredicateTriggeringPlayerHandSizeAtLeast
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard

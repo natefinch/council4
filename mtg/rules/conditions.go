@@ -102,6 +102,15 @@ func aggregateValue(g *game.Game, ctx conditionContext, kind game.AggregateKind)
 			return 0, false
 		}
 		return ctx.event.ManaSpentToCast.Val, true
+	case game.AggregateEventPlayerHandSize:
+		if ctx.event == nil {
+			return 0, false
+		}
+		player, ok := playerByID(g, ctx.event.Player)
+		if !ok {
+			return 0, false
+		}
+		return cardInstanceCount(g, player.Hand.All()), true
 	}
 	return 0, false
 }

@@ -82,6 +82,13 @@ const (
 	// in a spell-cast trigger's intervening-if context, where the triggering
 	// event records the mana spent; it fails closed elsewhere.
 	AggregateEventSpellManaSpentToCast
+
+	// AggregateEventPlayerHandSize is the number of cards in the triggering
+	// player's hand ("if that player has two or fewer cards in hand"). It reads
+	// the player recorded on the triggering step event, so it resolves only in a
+	// phase/step trigger's intervening-if context (each opponent's or each
+	// player's upkeep) and fails closed elsewhere.
+	AggregateEventPlayerHandSize
 )
 
 // AggregateComparison compares a player- or board-derived quantity against a

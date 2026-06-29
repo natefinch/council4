@@ -88,6 +88,7 @@ var Cards = []*game.CardDef{
 	MirrodinAvenged,
 	MirrorSheen,
 	MirrorWall,
+	MisersCage,
 	MishraSWorkshop,
 	MistmeadowCouncil,
 	MobileFort,
