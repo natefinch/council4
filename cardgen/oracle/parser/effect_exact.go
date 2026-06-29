@@ -3879,6 +3879,13 @@ func exactControllerAmountClauseText(text, prefix string, amount EffectAmountSyn
 		return strings.EqualFold(text, fmt.Sprintf("%s %s.", prefix, amountText))
 	case EffectDynamicAmountFormWhereX:
 		return strings.EqualFold(text, fmt.Sprintf("%s X, %s.", prefix, amount.Text))
+	case EffectDynamicAmountFormForEach:
+		if amount.Multiplier != 1 {
+			return false
+		}
+		return strings.EqualFold(text, fmt.Sprintf("%s %s.", prefix, amount.Text)) ||
+			strings.EqualFold(text, fmt.Sprintf("%s 1 %s.", prefix, amount.Text)) ||
+			strings.EqualFold(text, fmt.Sprintf("%s once %s.", prefix, amount.Text))
 	default:
 		return false
 	}
@@ -4033,10 +4040,21 @@ func exactTargetExploresEffectSyntax(effect *EffectSyntax) bool {
 }
 
 func exactStandaloneActionEffectSyntax(effect *EffectSyntax, verb string) bool {
-	if effect.Context != EffectContextController || !effect.Amount.Known {
+	if effect.Context != EffectContextController {
 		return false
 	}
 	text := exactEffectClauseText(effect)
+	if effect.Amount.DynamicForm == EffectDynamicAmountFormWhereX {
+		return strings.EqualFold(text, fmt.Sprintf("%s X, %s.", verb, effect.Amount.Text)) ||
+			strings.EqualFold(text, fmt.Sprintf("%s X times, %s.", verb, effect.Amount.Text))
+	}
+	if effect.Amount.DynamicForm == EffectDynamicAmountFormForEach && effect.Amount.Multiplier == 1 {
+		return strings.EqualFold(text, fmt.Sprintf("%s %s.", verb, effect.Amount.Text)) ||
+			strings.EqualFold(text, fmt.Sprintf("%s once %s.", verb, effect.Amount.Text))
+	}
+	if !effect.Amount.Known {
+		return false
+	}
 	if effect.Amount.Value == 1 && strings.EqualFold(text, verb+".") {
 		return true
 	}
