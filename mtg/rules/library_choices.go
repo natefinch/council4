@@ -528,6 +528,52 @@ func (e *Engine) chooseCorrelatedSearchMatches(g *game.Game, agents [game.NumPla
 	return found
 }
 
+// chooseDifferentNameSearchMatches chooses up to amount matching library cards
+// under a "with different names" correlation: no two chosen cards may share a
+// name. It runs a staged dependent choice, one card at a time, only ever
+// offering cards whose name no already-chosen card has, so a duplicate-name set
+// cannot be assembled rather than being chosen and then silently dropped
+// (CR 701.19). The player may stop early or fail to find entirely by choosing
+// none at any stage. Agents that do not answer fall back to the deterministic
+// first-available-card selection.
+func (e *Engine) chooseDifferentNameSearchMatches(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID, candidates []id.ID, amount int) []id.ID {
+	if len(candidates) == 0 || amount <= 0 {
+		return nil
+	}
+	remaining := slices.Clone(candidates)
+	var found []id.ID
+	chosenNames := map[string]bool{}
+	for len(found) < amount {
+		pool := make([]id.ID, 0, len(remaining))
+		for _, cardID := range remaining {
+			if !chosenNames[searchCardName(g, cardID)] {
+				pool = append(pool, cardID)
+			}
+		}
+		if len(pool) == 0 {
+			break
+		}
+		pick, ok := e.chooseCorrelatedSearchCard(g, agents, log, playerID, pool)
+		if !ok {
+			break
+		}
+		found = append(found, pick)
+		chosenNames[searchCardName(g, pick)] = true
+		remaining = removeFoundID(remaining, pick)
+	}
+	return found
+}
+
+// searchCardName returns a library card's front-face name, or "" when the card
+// cannot be resolved so an unidentifiable card never blocks a distinct pick.
+func searchCardName(g *game.Game, cardID id.ID) string {
+	card, ok := g.GetCardInstance(cardID)
+	if !ok {
+		return ""
+	}
+	return cardFaceOrDefault(card, game.FaceFront).Name
+}
+
 // chooseCorrelatedSearchCard offers one optional pick from the still-compatible
 // pool of a correlated search. It returns the chosen card and true, or ok=false
 // when the player declines (choosing none stops the search). Agents that do not

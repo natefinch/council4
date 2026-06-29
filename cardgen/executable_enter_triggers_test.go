@@ -278,6 +278,15 @@ func TestGenerateExecutableCardSourceLibrarySearches(t *testing.T) {
 				"Reveal",
 			},
 		},
+		{
+			name:       "Three Dreams",
+			oracleText: "Search your library for up to three Aura cards with different names, reveal them, put them into your hand, then shuffle.",
+			wants: []string{
+				"zone.Hand",
+				"DifferentNames: true",
+				"Reveal",
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -311,7 +320,6 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedLibrarySearches(t *testin
 	t.Parallel()
 	tests := []string{
 		"Search your library for an artifact creature card, put it into your hand, then shuffle.",
-		"Search your library for up to two basic land cards with different names, put them onto the battlefield tapped, then shuffle.",
 		"Search target opponent's library for a card, put that card into their hand, then shuffle.",
 		"Search your library for that card, reveal it, put it into your hand, then shuffle.",
 		"Search your library for a creature card, reveal it, put it into your hand or graveyard, then shuffle.",

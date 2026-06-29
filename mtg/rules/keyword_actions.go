@@ -247,9 +247,12 @@ func (e *Engine) searchLibrary(g *game.Game, obj *game.StackObject, agents [game
 	// staged dependent choice that only offers cards still able to share a subtype
 	// with those already chosen, so an illegal combination can never be assembled.
 	var found []id.ID
-	if spec.SharedSubtype {
+	switch {
+	case spec.SharedSubtype:
 		found = e.chooseCorrelatedSearchMatches(g, agents, log, playerID, candidates, amount)
-	} else {
+	case spec.DifferentNames:
+		found = e.chooseDifferentNameSearchMatches(g, agents, log, playerID, candidates, amount)
+	default:
 		minChoices := 0
 		if searchMustFindIfAvailable(spec, amount) {
 			minChoices = 1

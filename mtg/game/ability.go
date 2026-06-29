@@ -1330,6 +1330,17 @@ type SearchSpec struct {
 	// one card may be found and the matched cards carry subtypes.
 	SharedSubtype bool
 
+	// DifferentNames, when true, requires every card found by a multi-card search
+	// to have a name distinct from each other found card, modeling the "with
+	// different names" correlation rider ("up to three Aura cards with different
+	// names", Three Dreams; "up to two creature cards with different names",
+	// Shared Summons). The search-choice machinery enforces it while the cards are
+	// chosen, only offering cards whose name is not already chosen, so a
+	// duplicate-name set can never be assembled rather than being found and
+	// silently dropped (CR 701.19). Finding zero or one card satisfies it
+	// vacuously. It is meaningful only when more than one card may be found.
+	DifferentNames bool
+
 	// Name, when non-empty, restricts matches to cards whose name equals it,
 	// modeling a "card named <Name>" library search (Daru Cavalier, Trustworthy
 	// Scout, Embermage Goblin). It composes with the other filters but in
@@ -1367,6 +1378,7 @@ func (s SearchSpec) IsUnrestricted() bool {
 	return s.Filter.Empty() &&
 		!s.MaxManaValueFromX &&
 		!s.SharedSubtype &&
+		!s.DifferentNames &&
 		!s.AlsoGraveyard &&
 		len(s.SlotFilters) == 0 &&
 		s.Name == ""

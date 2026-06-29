@@ -2587,6 +2587,12 @@ type EffectSyntax struct {
 	// the runtime requires every found card to share a land subtype with the
 	// others (CR 701.19), modeling Myriad Landscape.
 	SearchSharedSubtype bool `json:",omitempty"`
+	// SearchDifferentNames reports the "with different names" correlation rider on
+	// a multi-card library search ("up to three Aura cards with different names").
+	// It is set only on the EffectSearch clause carrying the rider; the runtime
+	// requires every found card to have a distinct name (CR 701.19), modeling
+	// Three Dreams, Shared Summons, and Deathbellow War Cry.
+	SearchDifferentNames bool `json:",omitempty"`
 	// SearchDestination carries the ordered destination of an exact library
 	// search whose found card stays in the library. It is currently set only for
 	// the singular "then shuffle and put that card on top" family.

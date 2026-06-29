@@ -745,6 +745,31 @@ func searchSharedSubtypeRider(effect *EffectSyntax) bool {
 	return analyzeSearchClause(effect).sharedSubtype
 }
 
+// searchDifferentNamesRider reports whether a library-search clause carries the
+// "with different names" correlation rider, requiring every found card to have a
+// distinct name. It shares analyzeSearchClause with the byte-exact
+// reconstruction so both agree on the recognized envelope.
+func searchDifferentNamesRider(effect *EffectSyntax) bool {
+	return analyzeSearchClause(effect).differentNames
+}
+
+// stripSearchDifferentNamesRider removes a recognized different-names correlation
+// rider prefix ("with different names", "that have different names", or "that
+// each have different names") from a reconstructed search clause tail, returning
+// the remainder and whether a rider was stripped.
+func stripSearchDifferentNamesRider(tail string) (string, bool) {
+	for _, rider := range []string{
+		" with different names",
+		" that each have different names",
+		" that have different names",
+	} {
+		if remainder, ok := strings.CutPrefix(tail, rider); ok {
+			return remainder, true
+		}
+	}
+	return tail, false
+}
+
 // searchDestinationPosition reports the ordered destination carried by an exact
 // search clause. The zero value denotes the ordinary hand/battlefield families.
 func searchDestinationPosition(effect *EffectSyntax) EffectDestinationPosition {
@@ -764,6 +789,7 @@ func searchControlRider(effect *EffectSyntax) SearchControlRider {
 type searchClauseAnalysis struct {
 	detail              string
 	sharedSubtype       bool
+	differentNames      bool
 	destinationPosition EffectDestinationPosition
 	control             SearchControlRider
 }
@@ -785,6 +811,7 @@ type searchClauseAnalysis struct {
 // bounds, "for each player", X counts) fails closed.
 func analyzeSearchClause(effect *EffectSyntax) searchClauseAnalysis {
 	var sharedSubtype bool
+	var differentNames bool
 	prefix, text := searchClausePrefix(effect)
 	if !strings.HasPrefix(text, prefix) {
 		return searchClauseAnalysis{detail: `the executable source backend supports only exact searches of your library`, sharedSubtype: false, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
@@ -897,13 +924,24 @@ func analyzeSearchClause(effect *EffectSyntax) searchClauseAnalysis {
 		}
 		afterNoun = stripped
 	}
+	if remainder, ok := stripSearchDifferentNamesRider(afterNoun); ok {
+		// "with different names" (or "that have different names") correlates the
+		// found cards: no two may share a name. It is meaningful only for a
+		// multi-card search, so a singular search fails closed; the runtime stages
+		// the choice so a duplicate-name pair can never be assembled.
+		if amount < 2 && !dynamic {
+			return searchClauseAnalysis{detail: "the executable source backend supports the different-names rider only on a multi-card search", sharedSubtype: false, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
+		}
+		afterNoun = remainder
+		differentNames = true
+	}
 	if afterNoun == "." {
 		// A two-sentence search ("Search your library for <filter>[, where X is
 		// ...]. Put those cards onto the battlefield, then shuffle.") ends the
 		// search sentence after the filter and any count phrase; its destination
 		// is a separate following put effect that lowering validates and lowers as
 		// the search destination. The search clause itself is exact.
-		return searchClauseAnalysis{detail: "", sharedSubtype: false, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
+		return searchClauseAnalysis{detail: "", sharedSubtype: false, differentNames: differentNames, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
 	}
 	if remainder, ok := strings.CutPrefix(afterNoun, searchSharedSubtypeRiderText); ok {
 		// "that share a land type" correlates the found cards: each must share a
@@ -944,7 +982,7 @@ func analyzeSearchClause(effect *EffectSyntax) searchClauseAnalysis {
 		return searchClauseAnalysis{detail: "", sharedSubtype: false, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
 	}
 	if searchDestinationSupported(destination, plural) {
-		return searchClauseAnalysis{detail: "", sharedSubtype: sharedSubtype, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
+		return searchClauseAnalysis{detail: "", sharedSubtype: sharedSubtype, differentNames: differentNames, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
 	}
 	if base, ok := stripSearchRiderClause(destination); ok && searchDestinationSupported(base, plural) {
 		// A supported rider ("discard a card at random", "you lose N life") may
@@ -952,7 +990,7 @@ func analyzeSearchClause(effect *EffectSyntax) searchClauseAnalysis {
 		// compiled as its own effect that lowering validates and lowers after the
 		// search; here we only confirm the base destination is one the runtime
 		// models so the search clause itself stays exact.
-		return searchClauseAnalysis{detail: "", sharedSubtype: sharedSubtype, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
+		return searchClauseAnalysis{detail: "", sharedSubtype: sharedSubtype, differentNames: differentNames, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
 	}
 	if base, ok := stripSearchLifeGainRider(destination); ok && searchDestinationSupported(base, plural) {
 		// A "you gain N life" reward may close the search sentence, joined to the

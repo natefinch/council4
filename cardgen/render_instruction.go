@@ -1243,6 +1243,9 @@ func (r Renderer) renderSearchPrimitive(ctx *renderCtx, value game.Search) (stri
 	if value.Spec.SharedSubtype {
 		specFields = append(specFields, "SharedSubtype: true,")
 	}
+	if value.Spec.DifferentNames {
+		specFields = append(specFields, "DifferentNames: true,")
+	}
 	if len(value.Spec.SlotFilters) != 0 {
 		slotLits := make([]string, 0, len(value.Spec.SlotFilters))
 		for _, slot := range value.Spec.SlotFilters {

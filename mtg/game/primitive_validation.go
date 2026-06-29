@@ -1195,6 +1195,7 @@ func (p Search) validatePrimitive(targets []TargetSpec, checkTargets bool) error
 			p.Spec.RevealOnly ||
 			p.Spec.MaxManaValueFromX ||
 			p.Spec.SharedSubtype ||
+			p.Spec.DifferentNames ||
 			p.Spec.EntersTapped ||
 			p.Spec.SplitDestination.Exists ||
 			len(p.Spec.SlotFilters) != 0 ||
@@ -1224,6 +1225,17 @@ func (p Search) validatePrimitive(targets []TargetSpec, checkTargets bool) error
 		(!validSearchDestination(p.Spec.SplitDestination.Val) ||
 			p.Spec.SplitDestination.Val.Zone == zone.Library) {
 		return errors.New("search has unsupported split destination")
+	}
+	if p.Spec.DifferentNames {
+		if !p.Amount.IsDynamic() && p.Amount.Value() < 2 {
+			return errors.New("different-names search must allow more than one card")
+		}
+		if p.Spec.SharedSubtype ||
+			p.Spec.SplitDestination.Exists ||
+			len(p.Spec.SlotFilters) != 0 ||
+			p.Spec.Destination == zone.Library {
+			return errors.New("different-names search cannot combine shared-subtype, split, slot, or library-top riders")
+		}
 	}
 	if len(p.Spec.Filter.RequiredTypes) != 0 && len(p.Spec.Filter.RequiredTypesAny) != 0 {
 		return errors.New("search cannot combine one required card type with a card-type union")
@@ -1302,6 +1314,7 @@ func (p Search) validateRevealOnlySearch(targets []TargetSpec, checkTargets bool
 		p.Spec.EntersTapped ||
 		p.Spec.MaxManaValueFromX ||
 		p.Spec.SharedSubtype ||
+		p.Spec.DifferentNames ||
 		p.Spec.DestinationPosition != SearchPositionUnspecified {
 		return errors.New("reveal-only search does not support split destination, tapped entry, X bound, shared-subtype, or library-position riders")
 	}
