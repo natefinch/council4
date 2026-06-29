@@ -1112,7 +1112,10 @@ func pastCastCountPhraseAt(tokens []shared.Token, index int) bool {
 	if !contracted && !expanded {
 		return false
 	}
-	return effectWordsAt(tokens, index+1, "this", "turn")
+	if effectWordsAt(tokens, index+1, "this", "turn") {
+		return true
+	}
+	return effectWordsAt(tokens, index+1, "your", "commander", "from", "the", "command", "zone", "this", "game")
 }
 
 // castDuringMainPhaseConditionAt reports whether the "cast" verb at index begins

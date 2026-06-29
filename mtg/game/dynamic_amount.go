@@ -243,6 +243,15 @@ const (
 	// source name from the resolving stack object. Added last so existing kinds
 	// keep their wire values.
 	DynamicAmountCardsNamedSourceInControllerGraveyard
+	// DynamicAmountCommanderCastCount is the number of times the resolving
+	// ability controller has cast their commander from the command zone this game
+	// ("for each time you've cast your commander from the command zone this
+	// game"), read from the controller's CommanderCastCount as the effect
+	// resolves (CR 903.8, CR 608.2c). It backs the command-zone-cast anthem family
+	// (Commander's Insignia; Vanguard of the Restless). It is controller-scoped
+	// and zero for a player with no commander. Added last so existing kinds keep
+	// their wire values.
+	DynamicAmountCommanderCastCount
 )
 
 // DynamicAmount describes an effect amount determined as the effect resolves

@@ -711,6 +711,8 @@ func renderDynamicAmountKind(kind game.DynamicAmountKind) (string, error) {
 		return "game.DynamicAmountCardsNamedSourceInGraveyards", nil
 	case game.DynamicAmountCardsNamedSourceInControllerGraveyard:
 		return "game.DynamicAmountCardsNamedSourceInControllerGraveyard", nil
+	case game.DynamicAmountCommanderCastCount:
+		return "game.DynamicAmountCommanderCastCount", nil
 	default:
 		return "", fmt.Errorf("render: unsupported dynamic amount kind %d", kind)
 	}

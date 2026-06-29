@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,242 of 32,501 cards eligible for paper support (50.0%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,244 of 32,501 cards eligible for paper support (50.0%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2601,6 +2601,7 @@ Council4 currently supports **16,242 of 32,501 cards eligible for paper support 
 - Commander Eesha
 - Commander Greven il-Vec
 - Commander's Authority
+- Commander's Insignia
 - Commander's Sphere
 - Commanding Presence
 - Commercial District
@@ -15056,6 +15057,7 @@ Council4 currently supports **16,242 of 32,501 cards eligible for paper support 
 - Vandalblast
 - Vandalize
 - Vanguard of Brimaz
+- Vanguard of the Restless
 - Vanguard of the Rose
 - Vanguard Seraph
 - Vanguard Suppressor
