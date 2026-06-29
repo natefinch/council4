@@ -3179,6 +3179,78 @@ func lowerDualTargetBounceSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	return game.Mode{Targets: specs, Sequence: sequence}.Ability(), true
 }
 
+// lowerSelfAndTargetBounceSpell lowers the source-and-target battlefield bounce
+// "Return this creature and (another) target <permanent> to their owners'
+// hands." (e.g. Wizard Mentor, Coastal Wizard, Snow Hound, Lady Sun) to a Mode
+// carrying the one target's single-target spec and two Bounce instructions: the
+// source first, then the chosen target. It is the self sibling of
+// lowerDualTargetBounceSpell, where one of the two returned permanents is the
+// ability's own source named by its card name or "this <type>" rather than a
+// second target. The compound clause folds the effect inexact, so this path
+// tolerates an inexact return where the dual-target path requires exactness. The
+// references are the source object plus the plural possessive destination pronoun
+// ("their owners' hands"); both are tolerated and any other reference fails
+// closed. It returns ok=false for every other return wording so the single, dual,
+// multi-slot, mass, controlled, and pure-self bounce paths are untouched.
+func lowerSelfAndTargetBounceSpell(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Targets) != 1 ||
+		!plainControllerBounceToHand(ctx) ||
+		!selfAndTargetBounceReferences(ctx.content.References) {
+		return game.AbilityContent{}, false
+	}
+	target := ctx.content.Targets[0]
+	if target.Cardinality.Min != 1 || target.Cardinality.Max != 1 {
+		return game.AbilityContent{}, false
+	}
+	spec, ok := permanentTargetSpec(target)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	source, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{AllowSource: true})
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Targets: []game.TargetSpec{spec},
+		Sequence: []game.Instruction{
+			{Primitive: game.Bounce{Object: source}},
+			{Primitive: game.Bounce{Object: game.TargetPermanentReference(0)}},
+		},
+	}.Ability(), true
+}
+
+// selfAndTargetBounceReferences reports whether the references are exactly the
+// source object returning itself, named by the card's own name
+// (ReferenceSelfName, "Return Lady Sun and ...") or "this <object>"
+// (ReferenceThisObject, "Return this creature and ..."), followed only by the
+// destination possessive pronouns ("their"/"its" in "their owners' hands"). The
+// source object is reference zero; every other reference must be that destination
+// possessive. Any other reference fails closed.
+func selfAndTargetBounceReferences(references []compiler.CompiledReference) bool {
+	if len(references) == 0 {
+		return false
+	}
+	switch references[0].Kind {
+	case compiler.ReferenceThisObject, compiler.ReferenceSelfName:
+	default:
+		return false
+	}
+	if references[0].Binding != compiler.ReferenceBindingSource {
+		return false
+	}
+	for i := 1; i < len(references); i++ {
+		if references[i].Kind != compiler.ReferencePronoun {
+			return false
+		}
+		switch references[i].Pronoun {
+		case compiler.ReferencePronounTheir, compiler.ReferencePronounIts:
+		default:
+			return false
+		}
+	}
+	return true
+}
+
 // lowerControlledBounceSpell lowers the controlled-choice battlefield bounce
 // "Return a/an/another <permanent> you control to its owner's hand." to a Bounce
 // whose resolving controller chooses one permanent they control matching the
