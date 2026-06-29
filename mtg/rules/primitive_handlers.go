@@ -244,13 +244,25 @@ func handleAddCounter(r *effectResolver, prim game.AddCounter) effectResolved {
 		return handleDoubleAllCounterKinds(r, prim)
 	}
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
+	placementController := stackObjectController(r.obj)
+	if prim.Group.Valid() && prim.DoubleKind {
+		for _, permanent := range r.groupPermanents(prim.Group) {
+			amount := permanent.Counters.Get(prim.CounterKind)
+			if amount <= 0 {
+				continue
+			}
+			if addCountersToPermanentControlledBy(r.game, placementController, permanent, prim.CounterKind, amount) {
+				res.succeeded = true
+			}
+		}
+		return res
+	}
 	if res.amount <= 0 {
 		return res
 	}
 	if prim.Distribute {
 		return r.addCountersDistributed(prim, res.amount)
 	}
-	placementController := stackObjectController(r.obj)
 	if prim.Group.Valid() {
 		if prim.ChooseOne {
 			if permanent, ok := r.chooseOneGroupPermanent(prim.Group); ok {

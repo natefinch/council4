@@ -375,6 +375,13 @@ type AddCounter struct {
 	// AllTargetPermanents reference, and it is set only with that Object, never a
 	// Group, AllKinds, ChooseOne, or KindChoices.
 	Distribute bool
+	// DoubleKind doubles the CounterKind already on each permanent in Group: every
+	// member receives as many more counters of CounterKind as it currently has,
+	// ignoring Amount. It backs "double the number of +1/+1 counters on each
+	// creature you control" (Bristly Bill, Spine Sower). It is set only with a
+	// Group, never an Object, AllKinds, ChooseOne, KindChoices, or Distribute. The
+	// single-object and one-target forms use a dynamic ObjectCounters Amount.
+	DoubleKind bool
 }
 
 // AddPlayerCounter places counters on a referenced player or group of players.

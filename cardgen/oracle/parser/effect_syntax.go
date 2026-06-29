@@ -1301,6 +1301,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		var doubleSourceCounterKind counter.Kind
 		doubleCountersTarget := false
 		doubleCountersAllKinds := false
+		doubleCountersGroup := false
 		if kind == EffectDouble {
 			if object, okDouble := parseDoublePTObject(clause, atoms); okDouble {
 				staticSubject = object.Subject
@@ -1310,6 +1311,10 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 				doubleSourceCounterKind = counters.Kind
 				doubleCountersTarget = counters.Target
 				doubleCountersAllKinds = counters.AllKinds
+				if counters.Group {
+					doubleCountersGroup = true
+					staticSubject = counters.Subject
+				}
 			}
 		}
 		tokenPower, tokenToughness, tokenPTKnown := parseTokenPowerToughness(kind, clause)
@@ -1500,6 +1505,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			DoubleSourceCounterKind:  doubleSourceCounterKind,
 			DoubleCountersTarget:     doubleCountersTarget,
 			DoubleCountersAllKinds:   doubleCountersAllKinds,
+			DoubleCountersGroup:      doubleCountersGroup,
 			CounterKind:              counterKind,
 			CounterKnown:             counterKnown,
 			CounterKindChoices:       counterKindChoices,

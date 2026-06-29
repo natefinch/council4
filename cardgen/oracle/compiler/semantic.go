@@ -2622,6 +2622,11 @@ type CompiledEffect struct {
 	// double every counter kind. Both are false for the self single-kind form.
 	DoubleCountersTarget   bool
 	DoubleCountersAllKinds bool
+	// DoubleCountersGroup mirrors the parser flag for the group counter-doubling
+	// form ("double the number of +1/+1 counters on each creature you control",
+	// Bristly Bill, Spine Sower); the group rides on Selector. Lowering doubles
+	// the single kind on each member. It is false for the source and target forms.
+	DoubleCountersGroup bool
 	// UnderOwnersControl mirrors the parser flag for a battlefield-destination
 	// effect carrying the "under their owners' control" rider (Open the Vaults,
 	// Planar Birth), where each moved card enters under its owner's control. It
