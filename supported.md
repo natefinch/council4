@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,248 of 32,501 cards eligible for paper support (50.0%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,257 of 32,501 cards eligible for paper support (50.0%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1589,6 +1589,7 @@ Council4 currently supports **16,248 of 32,501 cards eligible for paper support 
 - Boggart Cursecrafter
 - Boggart Harbinger
 - Boggart Loggers
+- Boggart Mob
 - Boggart Prankster
 - Boggart Ram-Gang
 - Boggart Shenanigans
@@ -2265,8 +2266,11 @@ Council4 currently supports **16,248 of 32,501 cards eligible for paper support 
 - Chandra's Pyrohelix
 - Chandra's Revolution
 - Chandra, Novice Pyromancer
+- Changeling Berserker
+- Changeling Hero
 - Changeling Outcast
 - Changeling Sentinel
+- Changeling Titan
 - Changeling Wayfinder
 - Channel the Suns
 - Channeler Initiate
@@ -7920,6 +7924,7 @@ Council4 currently supports **16,248 of 32,501 cards eligible for paper support 
 - Lightning Blow
 - Lightning Bolt
 - Lightning Cloud
+- Lightning Crafter
 - Lightning Diadem
 - Lightning Elemental
 - Lightning Greaves
@@ -9418,6 +9423,7 @@ Council4 currently supports **16,248 of 32,501 cards eligible for paper support 
 - Nothic
 - Notion Rain
 - Nourish
+- Nova Chaser
 - Nova Cleric
 - Nova Flame
 - Novablast Wurm
@@ -13647,6 +13653,7 @@ Council4 currently supports **16,248 of 32,501 cards eligible for paper support 
 - Supply Runners
 - Supply-Line Cranes
 - Supportive Parents
+- Supreme Exemplar
 - Supreme Phantom
 - Supreme Verdict
 - Supreme Will
@@ -14910,6 +14917,7 @@ Council4 currently supports **16,248 of 32,501 cards eligible for paper support 
 - Unspeakable Symbol
 - Unstable Mutation
 - Unstable Obelisk
+- Unstoppable Ash
 - Unstoppable Ogre
 - Unstoppable Plan
 - Unsubstantiate
@@ -16027,6 +16035,7 @@ Council4 currently supports **16,248 of 32,501 cards eligible for paper support 
 - Wrecking Beast
 - Wrecking Crew
 - Wrecking Ogre
+- Wren's Run Packmaster
 - Wrench
 - Wrenn and Six
 - Wrenn's Resolve
