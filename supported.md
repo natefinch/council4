@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,334 of 32,501 cards eligible for paper support (50.3%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,337 of 32,501 cards eligible for paper support (50.3%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -80,6 +80,7 @@ Council4 currently supports **16,334 of 32,501 cards eligible for paper support 
 - Acolyte of the Inferno
 - Acolyte of Xathrid
 - Acorn Harvest
+- Acquisition Octopus
 - Acrobatic Leap
 - Acrobatic Maneuver
 - Act of Aggression
@@ -9598,6 +9599,7 @@ Council4 currently supports **16,334 of 32,501 cards eligible for paper support 
 - Ogre Warrior
 - Ogre Warrior
 - Ogre's Cleaver
+- Ogre-Head Helm
 - Ohran Frostfang
 - Ohran Yeti
 - Oji, the Exquisite Blade
@@ -14828,6 +14830,7 @@ Council4 currently supports **16,334 of 32,501 cards eligible for paper support 
 - Tyranid
 - Tyranid
 - Tyranid Gargoyle
+- Tyranid Harridan
 - Tyranid Invasion
 - Tyranid Warrior
 - Tyrant of Kher Ridges
