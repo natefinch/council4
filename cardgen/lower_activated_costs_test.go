@@ -295,6 +295,34 @@ func TestLowerActivatedTapPermanentsCosts(t *testing.T) {
 		check      func(*testing.T, cost.Additional)
 	}{
 		{
+			name:       "tap another creature excludes source",
+			oracleText: "Tap another untapped creature you control: Draw a card.",
+			check: func(t *testing.T, additional cost.Additional) {
+				t.Helper()
+				if additional.Kind != cost.AdditionalTapPermanents ||
+					additional.Amount != 1 ||
+					!additional.MatchPermanentType ||
+					additional.PermanentType != types.Creature ||
+					!additional.ExcludeSource {
+					t.Fatalf("additional cost = %#v, want tap one other creature", additional)
+				}
+			},
+		},
+		{
+			name:       "tap two other creatures excludes source",
+			oracleText: "Tap two other untapped creatures you control: Draw a card.",
+			check: func(t *testing.T, additional cost.Additional) {
+				t.Helper()
+				if additional.Kind != cost.AdditionalTapPermanents ||
+					additional.Amount != 2 ||
+					!additional.MatchPermanentType ||
+					additional.PermanentType != types.Creature ||
+					!additional.ExcludeSource {
+					t.Fatalf("additional cost = %#v, want tap two other creatures", additional)
+				}
+			},
+		},
+		{
 			name:       "tap legendary creature",
 			oracleText: "Tap an untapped legendary creature you control: Draw a card.",
 			check: func(t *testing.T, additional cost.Additional) {

@@ -320,9 +320,10 @@ func lowerTapPermanentsCost(component compiler.CostComponent) (cost.Additional, 
 		return cost.Additional{}, false
 	}
 	additional := cost.Additional{
-		Kind:   cost.AdditionalTapPermanents,
-		Text:   component.Text,
-		Amount: component.AmountValue,
+		Kind:          cost.AdditionalTapPermanents,
+		Text:          component.Text,
+		Amount:        component.AmountValue,
+		ExcludeSource: component.ExcludeSource,
 	}
 	if lowerCostPermanentObject(component, &additional, false) {
 		return additional, true

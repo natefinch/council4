@@ -30,6 +30,7 @@ var Cards = []*game.CardDef{
 	VertigoSpawn,
 	Vesperlark,
 	VeteranGuardmouse,
+	VeteranWarleader,
 	ViashinoBranchrider,
 	VictorTimelyWilyTycoon,
 	VigilantMartyr,
