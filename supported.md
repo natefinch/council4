@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,257 of 32,501 cards eligible for paper support (50.0%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,262 of 32,501 cards eligible for paper support (50.0%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -3764,6 +3764,7 @@ Council4 currently supports **16,257 of 32,501 cards eligible for paper support 
 - Dreamstone Hedron
 - Dreamtail Heron
 - Dredge
+- Dredger's Insight
 - Dreg Mangler
 - Dreg Reaver
 - Dreg Recycler
@@ -7873,6 +7874,7 @@ Council4 currently supports **16,257 of 32,501 cards eligible for paper support 
 - Ley Druid
 - Ley Weaver
 - Leyline Axe
+- Leyline Dowser
 - Leyline Invocation
 - Leyline of Abundance
 - Leyline of Anticipation
@@ -11280,6 +11282,7 @@ Council4 currently supports **16,257 of 32,501 cards eligible for paper support 
 - Rolling Thunder
 - Romantic Rendezvous
 - Ronin Cavekeeper
+- Ronin Cliffrider
 - Ronin Houndmaster
 - Ronom Unicorn
 - Roofstalker Wight
@@ -11648,6 +11651,7 @@ Council4 currently supports **16,257 of 32,501 cards eligible for paper support 
 - Scald
 - Scalding Cauldron
 - Scalding Devil
+- Scalding Salamander
 - Scalding Tarn
 - Scalding Viper // Steam Clean
 - Scaldkin
@@ -15620,6 +15624,7 @@ Council4 currently supports **16,257 of 32,501 cards eligible for paper support 
 - Wasp Lancer
 - Waste Away
 - Waste Not
+- Wasteful Harvest
 - Wasteland
 - Wasteland Scorpion
 - Wasteland Viper
