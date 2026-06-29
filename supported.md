@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,342 of 32,501 cards eligible for paper support (50.3%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,345 of 32,501 cards eligible for paper support (50.3%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -11119,6 +11119,7 @@ Council4 currently supports **16,342 of 32,501 cards eligible for paper support 
 - Revered Dead
 - Revered Elder
 - Reverent Hoplite
+- Reverent Hunter
 - Reverse Engineer
 - Revitalize
 - Revitalizing Repast // Old-Growth Grove
@@ -11799,6 +11800,7 @@ Council4 currently supports **16,342 of 32,501 cards eligible for paper support 
 - Scourge Devil
 - Scourge of Geier Reach
 - Scourge of Kher Ridges
+- Scourge of Skola Vale
 - Scourge of the Undercity
 - Scourge of Valkas
 - Scourge Servant
@@ -12345,6 +12347,7 @@ Council4 currently supports **16,342 of 32,501 cards eligible for paper support 
 - Siegebreaker Giant
 - Siegecraft
 - Siegehorn Ceratops
+- Siegfried, Famed Swordsman
 - Sierra, Nuka's Biggest Fan
 - Sif's Spearmaster
 - Sift
