@@ -17,6 +17,7 @@ var Cards = []*game.CardDef{
 	GarzaZolPlagueQueen,
 	GatewayPlaza,
 	GavonyIronwright,
+	GeistSnatch,
 	GempalmAvenger,
 	GempalmStrider,
 	GeneralLeoCristophe,

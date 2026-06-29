@@ -22,6 +22,7 @@ var Cards = []*game.CardDef{
 	OneThousandLashes,
 	OnyxTalisman,
 	OonaSBlackguard,
+	OozeSpill,
 	OperaLoveSong,
 	Opportunist,
 	OrcGeneral,

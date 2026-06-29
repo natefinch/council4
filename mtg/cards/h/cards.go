@@ -57,6 +57,7 @@ var Cards = []*game.CardDef{
 	HopeAgainstHope,
 	HornbashMentor,
 	HornedCheetah,
+	Hornswoggle,
 	HotSprings,
 	HovelHurler,
 	HoverguardObserver,

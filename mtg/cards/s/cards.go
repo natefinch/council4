@@ -218,6 +218,7 @@ var Cards = []*game.CardDef{
 	Stupor,
 	SturdyHatchling,
 	SumalaWoodshaper,
+	SummonerSBane,
 	SunBlessedHealer,
 	SunBlessedMount,
 	SunDroplet,
@@ -237,4 +238,5 @@ var Cards = []*game.CardDef{
 	SylvanMessenger,
 	SynapseSliver,
 	SyndicateInfiltrator,
+	SyphonEssence,
 }
