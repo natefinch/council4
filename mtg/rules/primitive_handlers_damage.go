@@ -59,6 +59,9 @@ func handleDamage(r *effectResolver, prim game.Damage) effectResolved {
 		return r.damageDivided(res, source, prim)
 	}
 	if object, ok := prim.Recipient.ObjectReference(); ok {
+		if prim.ExcessRecipient.Valid() {
+			return r.damagePermanentRedirectingExcess(res, source, prim, object)
+		}
 		return r.damageReferencedPermanent(res, source, prim.ResultAmountKind, object)
 	}
 	if player, ok := prim.Recipient.PlayerReference(); ok {
@@ -74,6 +77,9 @@ func handleDamage(r *effectResolver, prim game.Damage) effectResolved {
 		}
 	}
 	if object, ok := prim.Recipient.AnyTargetObjectReference(); ok {
+		if prim.ExcessRecipient.Valid() {
+			return r.damagePermanentRedirectingExcess(res, source, prim, object)
+		}
 		return r.damageReferencedPermanent(res, source, prim.ResultAmountKind, object)
 	}
 	if group, ok := prim.Recipient.GroupReference(); ok {
@@ -294,6 +300,53 @@ func (r *effectResolver) damageReferencedPermanent(res effectResolved, source ef
 	res.excessDamage = max(0, dealt-lethalRemaining)
 	res.amount = typedDamageResultAmount(resultKind, dealt, res.excessDamage)
 	res.succeeded = dealt > 0 && (resultKind != game.EffectResultAmountExcessDamage || res.excessDamage > 0)
+	return res
+}
+
+// damagePermanentRedirectingExcess models "<source> deals N damage to target
+// creature. Excess damage is dealt to that creature's controller instead."
+// (Pigment Storm, Flame Spill). The self-replacement splits the damage event
+// before it is dealt: the permanent is dealt only its lethal damage and the
+// remainder — the excess beyond lethal — is dealt to prim.ExcessRecipient as a
+// single overall damage event. Splitting on lethalRemaining first (rather than
+// dealing the full amount and reading the excess afterward) keeps the permanent
+// from being over-damaged when it would otherwise survive (indestructible,
+// regeneration, or damage prevention).
+func (r *effectResolver) damagePermanentRedirectingExcess(res effectResolved, source effectDamageSource, prim game.Damage, object game.ObjectReference) effectResolved {
+	permanent, ok := r.resolveObject(object)
+	if !ok {
+		return res
+	}
+	excessPlayer, ok := prim.ExcessRecipient.PlayerReference()
+	if !ok {
+		return r.damageReferencedPermanent(res, source, prim.ResultAmountKind, object)
+	}
+	lethalRemaining := lethalDamageRemaining(r.game, permanent)
+	if source.deathtouch {
+		lethalRemaining = 1
+		if permanent.MarkedDeathtouchDamage {
+			lethalRemaining = 0
+		}
+	} else if source.permanent != nil {
+		lethalRemaining = lethalDamageRemainingFromSource(r.game, source.permanent, permanent)
+	}
+	creatureAmount := min(res.amount, max(0, lethalRemaining))
+	excessAmount := res.amount - creatureAmount
+	dealtToPermanent := 0
+	if creatureAmount > 0 {
+		dealtToPermanent = dealPermanentDamage(r.game, source.sourceID, source.sourceObjectID, source.controller, permanent, creatureAmount, false)
+		applyDamageSourceKeywordEffects(r.game, source, permanent, dealtToPermanent)
+	}
+	dealtToPlayer := 0
+	if excessAmount > 0 {
+		if playerID, playerOK := r.resolvePlayer(excessPlayer); playerOK {
+			dealtToPlayer = dealPlayerDamage(r.game, source.sourceID, source.sourceObjectID, source.controller, playerID, excessAmount, false)
+			applyDamageSourceLifelink(r.game, source, dealtToPlayer)
+		}
+	}
+	res.excessDamage = excessAmount
+	res.amount = typedDamageResultAmount(prim.ResultAmountKind, dealtToPermanent+dealtToPlayer, excessAmount)
+	res.succeeded = dealtToPermanent > 0 || dealtToPlayer > 0
 	return res
 }
 

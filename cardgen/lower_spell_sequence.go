@@ -753,6 +753,9 @@ func lowerCombinedSequenceShapes(cardName string, ctx contentCtx, syntax *parser
 	if content, ok := lowerCyclingCountDamageAndGain(cardName, ctx); ok {
 		return content, true
 	}
+	if content, ok := lowerExcessDamageToControllerSpell(ctx); ok {
+		return content, true
+	}
 	if content, ok := lowerGroupLinkedLifeSpell(ctx); ok {
 		return content, true
 	}
@@ -4122,6 +4125,70 @@ func lowerCyclingCountDamageAndGain(_ string, ctx contentCtx) (game.AbilityConte
 				Player: game.ControllerReference(),
 			}},
 		},
+	}.Ability(), true
+}
+
+// lowerExcessDamageToControllerSpell lowers the "<Spell> deals N damage to target
+// creature. Excess damage is dealt to that creature's controller instead." family
+// (Flame Spill, Pigment Storm, Gandalf's Sanction): a fixed or X amount of damage
+// dealt to one target creature, with the overflow beyond what was lethal to the
+// creature redirected to that creature's controller (or owner). It emits one
+// target spec and a single Damage instruction whose ExcessRecipient redirects the
+// excess to the resolved controller/owner, so the creature is dealt only its
+// lethal damage and the remainder is dealt to the player as one damage event
+// (CR self-replacement). It fails closed for every other shape, leaving the
+// ordinary single-target and sequence paths unchanged.
+func lowerExcessDamageToControllerSpell(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 2 ||
+		ctx.content.Effects[0].Kind != compiler.EffectDealDamage ||
+		ctx.content.Effects[1].Kind != compiler.EffectDealDamage ||
+		ctx.content.Effects[0].Negated || ctx.content.Effects[1].Negated ||
+		ctx.content.Effects[0].Divided || ctx.content.Effects[1].Divided ||
+		ctx.content.Effects[0].DamageRecipient.Reference != parser.DamageRecipientReferenceNone ||
+		len(ctx.content.Effects[0].DamageRiders) != 0 ||
+		len(ctx.content.Targets) != 1 ||
+		ctx.content.Targets[0].Cardinality.Min != 1 ||
+		ctx.content.Targets[0].Cardinality.Max != 1 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(abilityKeywordsExcludingSelectorPredicates(ctx.content)) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, false
+	}
+	recipientKind := ctx.content.Effects[1].DamageRecipient.Reference
+	if recipientKind != parser.DamageRecipientReferenceController &&
+		recipientKind != parser.DamageRecipientReferenceOwner {
+		return game.AbilityContent{}, false
+	}
+	if ctx.content.Effects[1].Amount.DynamicKind != compiler.DynamicAmountExcessDamageDealtThisWay {
+		return game.AbilityContent{}, false
+	}
+	primary := ctx.content.Effects[0]
+	if primary.Amount.Known && primary.Amount.Value < 1 {
+		return game.AbilityContent{}, false
+	}
+	amount, ok := lowerSingleTargetDamageAmount(ctx, primary)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	target, ok := damageTargetSpec(ctx.content.Targets[0])
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	recipient, ok := referencedDamageRecipientPlayer(ctx, recipientKind)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	source := primaryDamageSource(ctx.content.References)
+	return game.Mode{
+		Targets: []game.TargetSpec{target},
+		Sequence: []game.Instruction{{
+			Primitive: game.Damage{
+				Amount:          amount,
+				Recipient:       game.AnyTargetDamageRecipient(0),
+				DamageSource:    source,
+				ExcessRecipient: game.PlayerDamageRecipient(recipient),
+			},
+		}},
 	}.Ability(), true
 }
 
