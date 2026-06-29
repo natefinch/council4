@@ -1770,7 +1770,7 @@ func exactLifeEffectSyntax(effect *EffectSyntax, controllerVerb, subjectVerb str
 		}
 	case EffectContextEventPlayer, EffectContextReferencedPlayer:
 		prefixes = []string{"They " + controllerVerb, "That player " + subjectVerb}
-	case EffectContextReferencedObjectController:
+	case EffectContextReferencedObjectController, EffectContextReferencedObjectOwner:
 		if subject := referencedControllerSubjectText(effect); subject != "" {
 			prefixes = []string{subject + " " + subjectVerb}
 		}

@@ -3095,6 +3095,10 @@ func lifeRiderRecipient(
 		recipientCtx := ctx
 		recipientCtx.content.References = subjectRefs
 		return referencedControllerPlayerRef(recipientCtx)
+	case parser.EffectContextReferencedObjectOwner:
+		recipientCtx := ctx
+		recipientCtx.content.References = subjectRefs
+		return referencedOwnerPlayerRef(recipientCtx)
 	default:
 		return game.PlayerReference{}, false
 	}

@@ -69,3 +69,33 @@ func TestLowerSequenceThatPlayerLosesLife(t *testing.T) {
 		}
 	}
 }
+
+// TestLowerSequenceItsOwnerGainsLife proves the owner sibling of the
+// "Its controller gains N life" rider lowers inside an ordered destroy sequence:
+// Misfortune's Gain's "Destroy target creature. Its owner gains 4 life." gains
+// four life for the destroyed creature's owner rather than its last controller.
+func TestLowerSequenceItsOwnerGainsLife(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Misfortune's Gain",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		ManaCost:   "{3}{W}",
+		OracleText: "Destroy target creature. Its owner gains 4 life.",
+	}, "m")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Primitive: game.GainLife{",
+		"game.Fixed(4)",
+		"game.ObjectOwnerReference(game.TargetPermanentReference(0))",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}

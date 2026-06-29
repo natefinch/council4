@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,328 of 32,501 cards eligible for paper support (50.2%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,330 of 32,501 cards eligible for paper support (50.2%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -8830,6 +8830,7 @@ Council4 currently supports **16,328 of 32,501 cards eligible for paper support 
 - Misdirection
 - Misery Charm
 - Misery's Shadow
+- Misfortune's Gain
 - Misguided Rage
 - Mishra's Factory
 - Mishra's Foundry
@@ -9919,6 +9920,7 @@ Council4 currently supports **16,328 of 32,501 cards eligible for paper support 
 - Path of Anger's Flame
 - Path of Annihilation
 - Path of Discovery
+- Path of Peace
 - Path to Exile
 - Path to Redemption
 - Path to the World Tree

@@ -1123,7 +1123,14 @@ const (
 	// creature's controller creates …"). The recipient is the controller of the
 	// object the subject reference resolves to.
 	EffectContextReferencedObjectController EffectContextKind = "EffectContextReferencedObjectController"
-	EffectContextPriorSubject               EffectContextKind = "EffectContextPriorSubject"
+	// EffectContextReferencedObjectOwner marks an effect whose subject is the
+	// owner of a referenced object ("Its owner gains 4 life.", "That creature's
+	// owner gains N life."). The recipient is the owner of the object the subject
+	// reference resolves to. It mirrors EffectContextReferencedObjectController
+	// but resolves the owner rather than the current controller, so a destroyed
+	// permanent's owner — not whoever last controlled it — receives the effect.
+	EffectContextReferencedObjectOwner EffectContextKind = "EffectContextReferencedObjectOwner"
+	EffectContextPriorSubject          EffectContextKind = "EffectContextPriorSubject"
 	// EffectContextControllerAndTarget marks an effect distributed to both the
 	// controller and a single player target ("You and target opponent each draw
 	// a card"). The target player is the effect's sole target; the controller is
