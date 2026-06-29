@@ -54,7 +54,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 	case EffectCreateEmblem:
 		return exactCreateEmblemEffectSyntax(effect)
 	case EffectDiscard:
-		return exactCardCountEffectSyntax(effect, "Discard", "discards", false) ||
+		return exactCardCountEffectSyntax(effect, "Discard", "discards", true) ||
 			effect.DiscardEntireHand ||
 			effect.HandDiscard.AtRandom ||
 			effect.RandomDiscard
@@ -3645,12 +3645,17 @@ func exactNonControllerRandomDiscardSyntax(effect *EffectSyntax) bool {
 		effect.Context == EffectContextController ||
 		effect.DiscardEntireHand ||
 		effect.Negated ||
-		!effect.Amount.Known || effect.Amount.Value < 1 || effect.Amount.RangeKnown ||
+		effect.Amount.RangeKnown ||
 		effect.Amount.DynamicForm != EffectDynamicAmountFormNone {
 		return false
 	}
+	// Mind Twist / Mind Shatter spell the count as the spell's {X}; otherwise a
+	// known positive fixed count is required.
+	if !effect.Amount.VariableX && (!effect.Amount.Known || effect.Amount.Value < 1) {
+		return false
+	}
 	noun := "cards"
-	if effect.Amount.Value == 1 {
+	if effect.Amount.Known && effect.Amount.Value == 1 {
 		noun = "card"
 	}
 	text := exactEffectClauseText(effect)

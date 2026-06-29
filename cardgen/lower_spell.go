@@ -1667,7 +1667,7 @@ func lowerImmediateSingleEffectSpell(
 		}
 		atRandom := ctx.content.Effects[0].HandDiscard.AtRandom || ctx.content.Effects[0].RandomDiscard
 		return lowerFixedCardCountPlayerSpell(
-			ctx, syntax, "discard", "discards", false, func(amount game.Quantity, player game.PlayerReference) game.Primitive {
+			ctx, syntax, "discard", "discards", true, func(amount game.Quantity, player game.PlayerReference) game.Primitive {
 				return game.Discard{Amount: amount, Player: player, AtRandom: atRandom}
 			}, func(amount game.Quantity, group game.PlayerGroupReference) game.Primitive {
 				return game.Discard{Amount: amount, PlayerGroup: group, AtRandom: atRandom}
