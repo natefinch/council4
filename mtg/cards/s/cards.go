@@ -16,6 +16,7 @@ var Cards = []*game.CardDef{
 	SamiteHealer,
 	SanarUnfinishedGenius,
 	SanctumCustodian,
+	SandScout,
 	SandstoneNeedle,
 	SanguineSpy,
 	SanityGnawers,
