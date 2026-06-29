@@ -141,10 +141,15 @@ const (
 	// It models the "Reveal the top N cards of your library. Put all <type>
 	// cards revealed this way into your hand and the rest <remainder>." family.
 	PrimitiveRevealTopPartition
+	// PrimitiveChampionExile is the Champion keyword enters action (CR 702.71):
+	// the controller exiles another permanent they control matching the keyword's
+	// type under an exile-until-leaves link, sacrificing the source when no
+	// eligible permanent exists (game.ChampionExile).
+	PrimitiveChampionExile
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveRevealTopPartition) + 1
+const primitiveKindCount = int(PrimitiveChampionExile) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -765,6 +770,19 @@ type ReturnExiledCardsToHand struct {
 // permanents are otherwise unrecoverable.
 type ExileForEachPlayer struct {
 	Chooser   PlayerReference
+	Selection Selection
+	LinkedKey LinkedKey
+}
+
+// ChampionExile is the Champion keyword enters-the-battlefield action (CR
+// 702.71): the source's controller exiles another permanent they control
+// matching Selection, remembering it under LinkedKey (an exile-until-leaves
+// link) so the paired return brings it back when the source leaves. When the
+// controller controls no other matching permanent, they instead sacrifice the
+// source so nothing is championed. Selection's ExcludeSource models the
+// "another" qualifier. LinkedKey must be set; the exiled card is otherwise
+// unrecoverable.
+type ChampionExile struct {
 	Selection Selection
 	LinkedKey LinkedKey
 }

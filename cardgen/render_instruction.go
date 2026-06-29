@@ -344,6 +344,12 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 			return "", err
 		}
 		return r.renderExileForEachPlayer(ctx, value)
+	case game.PrimitiveChampionExile:
+		value, err := assertPrimitive[game.ChampionExile](primitive)
+		if err != nil {
+			return "", err
+		}
+		return r.renderChampionExile(ctx, value)
 	case game.PrimitiveReturnLinkedExiledCardsToBattlefield:
 		value, err := assertPrimitive[game.ReturnLinkedExiledCardsToBattlefield](primitive)
 		if err != nil {
@@ -809,6 +815,17 @@ func (r Renderer) renderExileForEachPlayer(ctx *renderCtx, value game.ExileForEa
 	}
 	return structLit("game.ExileForEachPlayer", []string{
 		fmt.Sprintf("Chooser: %s,", chooser),
+		fmt.Sprintf("Selection: %s,", selection),
+		fmt.Sprintf("LinkedKey: game.LinkedKey(%q),", string(value.LinkedKey)),
+	}), nil
+}
+
+func (r Renderer) renderChampionExile(ctx *renderCtx, value game.ChampionExile) (string, error) {
+	selection, err := r.renderSelection(ctx, value.Selection)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.ChampionExile", []string{
 		fmt.Sprintf("Selection: %s,", selection),
 		fmt.Sprintf("LinkedKey: game.LinkedKey(%q),", string(value.LinkedKey)),
 	}), nil

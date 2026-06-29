@@ -24,6 +24,7 @@ const (
 	KeywordBloodthirst      KeywordKind = "KeywordBloodthirst"
 	KeywordCascade          KeywordKind = "KeywordCascade"
 	KeywordChangeling       KeywordKind = "KeywordChangeling"
+	KeywordChampion         KeywordKind = "KeywordChampion"
 	KeywordCompanion        KeywordKind = "KeywordCompanion"
 	KeywordConvoke          KeywordKind = "KeywordConvoke"
 	KeywordCumulativeUpkeep KeywordKind = "KeywordCumulativeUpkeep"
@@ -193,6 +194,7 @@ var keywordNames = map[KeywordKind]string{
 	KeywordBloodthirst:       "Bloodthirst",
 	KeywordCascade:           "Cascade",
 	KeywordChangeling:        "Changeling",
+	KeywordChampion:          "Champion",
 	KeywordCompanion:         "Companion",
 	KeywordConvoke:           "Convoke",
 	KeywordCumulativeUpkeep:  "Cumulative upkeep",
@@ -335,6 +337,7 @@ var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordBloodthirst, Words: []string{"bloodthirst"}},
 	{Kind: KeywordCascade, Words: []string{"cascade"}},
 	{Kind: KeywordChangeling, Words: []string{"changeling"}},
+	{Kind: KeywordChampion, Words: []string{"champion"}},
 	{Kind: KeywordCompanion, Words: []string{"companion"}},
 	{Kind: KeywordConvoke, Words: []string{"convoke"}},
 	{Kind: KeywordCycling, Words: []string{"cycling"}},
@@ -434,6 +437,7 @@ const (
 	KeywordParameterManaCost      KeywordParameterKind = "KeywordParameterManaCost"
 	KeywordParameterInteger       KeywordParameterKind = "KeywordParameterInteger"
 	KeywordParameterEnchantTarget KeywordParameterKind = "KeywordParameterEnchantTarget"
+	KeywordParameterChampion      KeywordParameterKind = "KeywordParameterChampion"
 	KeywordParameterProtection    KeywordParameterKind = "KeywordParameterProtection"
 )
 
@@ -524,6 +528,19 @@ func NewIntegerKeywordParameter(span shared.Span, value int) KeywordParameter {
 func NewEnchantTargetKeywordParameter(span shared.Span, target EnchantPredicate) KeywordParameter {
 	return KeywordParameter{
 		Kind:    KeywordParameterEnchantTarget,
+		Span:    span,
+		Text:    enchantTargetName(target),
+		details: &keywordParameterDetails{EnchantTarget: cloneEnchantPredicate(target)},
+	}
+}
+
+// NewChampionKeywordParameter constructs a typed Champion type parameter. The
+// predicate names the creature kind the keyword's enters-the-battlefield exile
+// chooses ("Champion a creature", "Champion a Goblin", "Champion a Goblin or
+// Shaman"); it reuses the disjunctive EnchantPredicate shape.
+func NewChampionKeywordParameter(span shared.Span, target EnchantPredicate) KeywordParameter {
+	return KeywordParameter{
+		Kind:    KeywordParameterChampion,
 		Span:    span,
 		Text:    enchantTargetName(target),
 		details: &keywordParameterDetails{EnchantTarget: cloneEnchantPredicate(target)},
@@ -1504,6 +1521,15 @@ func parseKeywordParameter(
 	case KeywordEnchant:
 		if predicate, end, ok := parseEnchantTargetPredicate(tokens, start, atoms); ok {
 			return NewEnchantTargetKeywordParameter(shared.SpanOf(tokens[start:end]), predicate), end
+		}
+		return KeywordParameter{}, start
+	case KeywordChampion:
+		typeStart := start
+		if typeStart < len(tokens) && (equalWord(tokens[typeStart], "a") || equalWord(tokens[typeStart], "an")) {
+			typeStart++
+		}
+		if predicate, end, ok := parseEnchantTargetPredicate(tokens, typeStart, atoms); ok {
+			return NewChampionKeywordParameter(shared.SpanOf(tokens[start:end]), predicate), end
 		}
 		return KeywordParameter{}, start
 	default:

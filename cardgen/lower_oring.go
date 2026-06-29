@@ -318,6 +318,9 @@ func contentExilesUntilLeaves(content *game.AbilityContent) bool {
 			if exile, ok := primitive.(game.ExileForEachPlayer); ok && exile.LinkedKey == exileUntilLeavesKey {
 				return true
 			}
+			if champion, ok := primitive.(game.ChampionExile); ok && champion.LinkedKey == exileUntilLeavesKey {
+				return true
+			}
 		}
 	}
 	return false
