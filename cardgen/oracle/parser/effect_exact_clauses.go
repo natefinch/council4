@@ -3253,6 +3253,18 @@ func exactGroupDamageRecipientText(selection SelectionSyntax) (string, bool) {
 	return exactGroupDamagePermanentRecipientText(selection)
 }
 
+// damageRecipientUnionNoun renders the canonical noun for the two-type permanent
+// union supported in a dual-recipient group-damage clause's second group. Only
+// "creature and planeswalker" — the union "each creature and planeswalker [they]
+// control" (Goblin Chainwhirler, End the Festivities) — is supported, ordered as
+// the parser captures it. Every other type pair fails closed.
+func damageRecipientUnionNoun(cardTypes []CardType) (string, bool) {
+	if len(cardTypes) != 2 || cardTypes[0] != CardTypeCreature || cardTypes[1] != CardTypePlaneswalker {
+		return "", false
+	}
+	return "creature and planeswalker", true
+}
+
 // exactGroupDamagePermanentRecipientText reconstructs the recipient phrase for a
 // group damage spell whose recipients form a single filtered permanent group. It
 // renders only the controller, combat, tapped, single-color, single-subtype,
@@ -3264,7 +3276,8 @@ func exactGroupDamagePermanentRecipientText(selection SelectionSyntax) (string, 
 		selection.Colorless || selection.Multicolored ||
 		len(selection.Supertypes) > 1 ||
 		len(selection.ExcludedColors) != 0 ||
-		(len(selection.RequiredTypesAny) > 1 && !selection.ConjunctiveTypes) ||
+		(len(selection.RequiredTypesAny) > 2 && !selection.ConjunctiveTypes) ||
+		(len(selection.RequiredTypesAny) == 2 && !selection.ConjunctiveTypes && selection.Kind != SelectionCreature) ||
 		len(selection.ColorsAny) > 1 ||
 		len(selection.ExcludedTypes) > 1 ||
 		len(selection.ExcludedSubtypes) > 1 ||
@@ -3285,13 +3298,23 @@ func exactGroupDamagePermanentRecipientText(selection SelectionSyntax) (string, 
 	// single Kind noun. The two card types live in RequiredTypesAny with the
 	// ConjunctiveTypes marker, so render the joined noun and skip the
 	// single-type redundancy check below.
-	if selection.ConjunctiveTypes {
+	switch {
+	case selection.ConjunctiveTypes:
 		conjunctiveNoun, ok := conjunctiveCreatureTargetNoun(selection)
 		if !ok {
 			return "", false
 		}
 		noun, hasNoun = conjunctiveNoun, true
-	} else if len(selection.RequiredTypesAny) == 1 {
+	case len(selection.RequiredTypesAny) == 2:
+		// A dual-recipient damage group can name a two-type union ("each creature
+		// and planeswalker they control"). The card-type union renders both nouns
+		// joined by "and"; lowering deals to each type as its own recipient.
+		unionNoun, ok := damageRecipientUnionNoun(selection.RequiredTypesAny)
+		if !ok {
+			return "", false
+		}
+		noun, hasNoun = unionNoun, true
+	case len(selection.RequiredTypesAny) == 1:
 		// The parser records a permanent noun both as the selection Kind and as a
 		// redundant single-element RequiredTypesAny. Accept only that redundant
 		// form (a union or a type inconsistent with the noun is not
@@ -3300,6 +3323,7 @@ func exactGroupDamagePermanentRecipientText(selection SelectionSyntax) (string, 
 		if !ok || !hasNoun || requiredNoun != noun {
 			return "", false
 		}
+	default:
 	}
 	words := []string{"each"}
 	if selection.Other {
@@ -3375,9 +3399,12 @@ func exactGroupDamagePermanentRecipientText(selection SelectionSyntax) (string, 
 	case SelectionControllerYou:
 		words = append(words, "you", "control")
 	case SelectionControllerOpponent:
-		if selection.OpponentEach {
+		switch {
+		case selection.OpponentThey:
+			words = append(words, "they", "control")
+		case selection.OpponentEach:
 			words = append(words, "each", "opponent", "controls")
-		} else {
+		default:
 			words = append(words, "your", "opponents", "control")
 		}
 	case SelectionControllerNotYou:
@@ -3439,6 +3466,12 @@ func exactGroupDamagePermanentRecipientText(selection SelectionSyntax) (string, 
 // is intentionally not comparable to the recipient in those forms.
 func selectionPhraseVerifiesGroupRecipient(selection SelectionSyntax, recipient, rider string, counterWords []string) bool {
 	if rider != "" || len(counterWords) != 0 {
+		return true
+	}
+	// The "they control" pronoun and the two-type union noun are dual-recipient
+	// group forms selectionPhrase does not model; their bespoke reconstruction
+	// stands alone, verified by the byte-exact source comparison in the caller.
+	if selection.OpponentThey || len(selection.RequiredTypesAny) == 2 {
 		return true
 	}
 	rendered, ok := selectionPhrase(selection, selectionPhraseOptions{

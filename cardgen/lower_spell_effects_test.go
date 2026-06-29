@@ -1361,6 +1361,68 @@ func TestLowerSpellDamageGroupVariableXTwoRecipients(t *testing.T) {
 	}
 }
 
+func TestLowerSpellDamageEachOpponentAndTheirCreatures(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Tectonic Hazard",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Tectonic Hazard deals 1 damage to each opponent and each creature they control.",
+	})
+	sequence := face.SpellAbility.Val.Modes[0].Sequence
+	if len(sequence) != 2 {
+		t.Fatalf("sequence = %d instructions, want 2", len(sequence))
+	}
+	players, ok := sequence[0].Primitive.(game.Damage)
+	if !ok {
+		t.Fatalf("sequence[0].Primitive = %T, want game.Damage", sequence[0].Primitive)
+	}
+	if want := game.PlayerGroupDamageRecipient(game.OpponentsReference()); !reflect.DeepEqual(players.Recipient, want) {
+		t.Fatalf("player recipient = %#v, want %#v", players.Recipient, want)
+	}
+	creatures, ok := sequence[1].Primitive.(game.Damage)
+	if !ok {
+		t.Fatalf("sequence[1].Primitive = %T, want game.Damage", sequence[1].Primitive)
+	}
+	wantCreatures := game.GroupDamageRecipient(game.BattlefieldGroup(game.Selection{
+		RequiredTypes: []types.Card{types.Creature},
+		Controller:    game.ControllerOpponent,
+	}))
+	if !reflect.DeepEqual(creatures.Recipient, wantCreatures) {
+		t.Fatalf("creature recipient = %#v, want %#v", creatures.Recipient, wantCreatures)
+	}
+	if !reflect.DeepEqual(creatures.Amount, game.Fixed(1)) {
+		t.Fatalf("creature amount = %#v, want Fixed(1)", creatures.Amount)
+	}
+}
+
+// TestLowerSpellDamageEachCreatureAndPlaneswalkerUnion covers the two-type union
+// recipient "each creature and planeswalker" (Splatter Technique), where one
+// group recipient damages both card types.
+func TestLowerSpellDamageEachCreatureAndPlaneswalkerUnion(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Splatter Technique",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Splatter Technique deals 4 damage to each creature and planeswalker.",
+	})
+	sequence := face.SpellAbility.Val.Modes[0].Sequence
+	if len(sequence) != 1 {
+		t.Fatalf("sequence = %d instructions, want 1", len(sequence))
+	}
+	damage, ok := sequence[0].Primitive.(game.Damage)
+	if !ok {
+		t.Fatalf("sequence[0].Primitive = %T, want game.Damage", sequence[0].Primitive)
+	}
+	want := game.GroupDamageRecipient(game.BattlefieldGroup(game.Selection{
+		RequiredTypesAny: []types.Card{types.Creature, types.Planeswalker},
+	}))
+	if !reflect.DeepEqual(damage.Recipient, want) {
+		t.Fatalf("recipient = %#v, want %#v", damage.Recipient, want)
+	}
+}
+
 func TestLowerSpellDamageUnsupportedGroupKeywordFailsClosed(t *testing.T) {
 	t.Parallel()
 	// "shadow" is not a runtime-modelable selector keyword, so the group

@@ -19,6 +19,7 @@ var Cards = []*game.CardDef{
 	IlluminateHistory,
 	IllvoiLightJammer,
 	ImmersturmSkullcairn,
+	ImmolatingGyre,
 	ImpendingDoom,
 	InameLifeAspect,
 	IncisorGlider,

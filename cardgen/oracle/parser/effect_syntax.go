@@ -4788,10 +4788,35 @@ func parseDamageRecipientPair(kind EffectKind, clause []shared.Token, amount Eff
 	if !ok {
 		return nil
 	}
-	return []SelectionSyntax{
-		parseSelection(left, atoms),
-		parseSelection(right, atoms),
+	leftSel := parseSelection(left, atoms)
+	rightSel := parseSelection(right, atoms)
+	applyOpponentTheyControl(&rightSel, right, atoms)
+	return []SelectionSyntax{leftSel, rightSel}
+}
+
+// applyOpponentTheyControl scopes a dual-recipient group's second group to
+// permanents the opponents control when the recipient ends in the pronoun "they
+// control" — "each opponent and each creature [and planeswalker] they control"
+// (Tectonic Hazard, Goblin Chainwhirler). The first recipient is "each
+// opponent", so the trailing "they" binds to those opponents; parseSelection
+// leaves the controller unset because "they control" is not a standalone control
+// phrase. It records SelectionControllerOpponent with OpponentThey so lowering
+// scopes to opponent-controlled permanents and the byte-exact reconstruction
+// rebuilds the verbatim pronoun. It leaves any group that already carries an
+// explicit controller untouched.
+func applyOpponentTheyControl(sel *SelectionSyntax, tokens []shared.Token, atoms Atoms) {
+	if sel.Controller != SelectionControllerAny {
+		return
 	}
+	if _, ok := atoms.ControllerIn(shared.SpanOf(tokens)); ok {
+		return
+	}
+	n := len(tokens)
+	if n < 2 || !equalWord(tokens[n-2], "they") || !equalWord(tokens[n-1], "control") {
+		return
+	}
+	sel.Controller = SelectionControllerOpponent
+	sel.OpponentThey = true
 }
 
 // groupDamageRecipientFollowsAmount reports whether a deal-damage clause whose
@@ -5205,13 +5230,20 @@ func damageSecondTargetRider(effect *EffectSyntax) (value int, dynamic, ok bool)
 // path.
 func splitEachAndEach(recipient []shared.Token) (left, right []shared.Token, ok bool) {
 	andIndex := -1
-	for i := range recipient {
-		if equalWord(recipient[i], "and") {
-			if andIndex != -1 {
-				return nil, nil, false
-			}
-			andIndex = i
+	for i := 0; i+1 < len(recipient); i++ {
+		if !equalWord(recipient[i], "and") {
+			continue
 		}
+		if !equalWord(recipient[i+1], "each") {
+			continue
+		}
+		// Split on the first "and each" boundary so a union noun inside the
+		// second group ("each creature and planeswalker they control") stays
+		// whole; a second "and" then belongs to the union rather than a third
+		// recipient. A boundary "and" not followed by "each" is part of a noun
+		// union and never separates recipients.
+		andIndex = i
+		break
 	}
 	if andIndex <= 0 || andIndex >= len(recipient)-1 {
 		return nil, nil, false

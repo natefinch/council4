@@ -167,6 +167,7 @@ var Cards = []*game.CardDef{
 	SpiritLink,
 	SpiritLoop,
 	SpiritShackle,
+	SplatterTechnique,
 	SplendidAgony,
 	SplinterRadicalRat,
 	SplitTailMiko,

@@ -1440,6 +1440,14 @@ type SelectionSyntax struct {
 	// reconstruction can rebuild the verbatim phrasing; both wordings lower to
 	// the same opponent controller.
 	OpponentEach bool `json:",omitempty"`
+	// OpponentThey records that an opponent-controlled selection used the
+	// pronoun "they control" wording, where "they" refers back to the "each
+	// opponent" recipient of a dual-recipient group-damage clause ("each opponent
+	// and each creature they control"). It is meaningful only when Controller is
+	// SelectionControllerOpponent and exists solely so the byte-exact recipient
+	// reconstruction can rebuild the verbatim pronoun; it lowers to the same
+	// opponent controller as the other wordings.
+	OpponentThey bool `json:",omitempty"`
 	All          bool `json:",omitempty"`
 	Another      bool `json:",omitempty"`
 	Other        bool `json:",omitempty"`
