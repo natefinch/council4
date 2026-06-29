@@ -1318,7 +1318,14 @@ func lowerEntersWithCountersReplacement(
 	if !effect.CounterKindKnown {
 		return unsupported("the executable source backend does not support this enters-with-counters counter kind")
 	}
-	if !effect.Exact {
+	// A concretely resolved count (a known positive amount, the spell's X, or a
+	// lowered dynamic amount) places an exact number of counters even when the
+	// parser flagged the sentence non-exact only because the word numeral above
+	// four ("five", "six", "seven") is not an integer token. Such fixed self
+	// counts (Pentavus, Ghave) still place a definite number, so only a count
+	// the runtime cannot resolve stays unsupported.
+	concreteAmount := amountFromX || dynamic.Exists || (effect.Amount.Known && effect.Amount.Value > 0)
+	if !effect.Exact && !concreteAmount {
 		return unsupported("the executable source backend does not yet support dynamic enters-with-counters quantities")
 	}
 	placement := game.CounterPlacement{
