@@ -2475,7 +2475,7 @@ func exactCreateTokenRecipientContext(effect *EffectSyntax) (targetRecipient, ok
 func creatureTokenSpecBody(effect *EffectSyntax) (func(countWord, noun string) string, bool) {
 	sel := effect.Selection
 	if len(sel.SubtypesAny) < 1 || len(sel.SubtypesAny) > 2 ||
-		len(sel.ColorsAny) > 2 ||
+		len(sel.ColorsAny) > 5 ||
 		len(sel.ExcludedTypes) != 0 || len(sel.ExcludedColors) != 0 ||
 		sel.Multicolored ||
 		sel.MatchPower || sel.MatchToughness || sel.MatchManaValue ||
@@ -2538,19 +2538,34 @@ func creatureTokenSpecBody(effect *EffectSyntax) (func(countWord, noun string) s
 	if effect.TokenName != "" && effect.TokenNameLeading {
 		leadingNamePart = effect.TokenName + ", "
 	}
-	// A token entering attacking carries a trailing "that's/that are [tapped
-	// and] attacking" relative clause; its "tapped" modifier lives in that clause
-	// rather than as a leading adjective, so the leading tapped slot is cleared
-	// whenever the attacking clause is present.
+	// A token entering attacking usually carries a trailing "that's/that are
+	// [tapped and] attacking" relative clause; its "tapped" modifier lives in that
+	// clause rather than as a leading adjective, so the leading tapped slot is
+	// cleared whenever the attacking clause is present. The "tapped and attacking"
+	// modifier may instead print as a leading adjective ahead of the
+	// power/toughness ("create a tapped and attacking 1/1 ... token"); detect that
+	// ordering so the byte-exact reconstruction prints the modifier in front. A
+	// leading-attacking token never carries an explicit attacked-defender tail.
+	attackingLeading := sel.Attacking && tokenAttackingLeading(sel)
+	if attackingLeading && effect.AttackDefender != AttackDefenderNone {
+		return nil, false
+	}
 	tappedPart := ""
 	if sel.Tapped && !sel.Attacking {
 		tappedPart = "tapped "
 	}
+	if attackingLeading {
+		tappedPart = "tapped and attacking "
+	}
 	return func(countWord, noun string) string {
+		attackClause := tokenAttackClause(sel, noun, effect.AttackDefender)
+		if attackingLeading {
+			attackClause = ""
+		}
 		return fmt.Sprintf("%s%s %s%s%s %s%s %s %s%s%s%s%s",
 			leadingNamePart, countWord, tappedPart, supertypePart, ptPart, colorPart,
 			subtypeJoin, typeWords, noun, keywordPart, grantedPart, namePart,
-			tokenAttackClause(sel, noun, effect.AttackDefender))
+			attackClause)
 	}, true
 }
 
@@ -2655,7 +2670,27 @@ func tokenColorPart(sel SelectionSyntax) (string, bool) {
 		}
 		words = append(words, word)
 	}
-	return strings.Join(words, " and ") + " ", true
+	colorJoin := strings.Join(words, " and ")
+	if len(words) > 2 {
+		colorJoin = strings.Join(words[:len(words)-1], ", ") + ", and " + words[len(words)-1]
+	}
+	return colorJoin + " ", true
+}
+
+// tokenAttackingLeading reports whether a created token prints the "tapped and
+// attacking" entry modifier as a leading adjective ahead of its
+// power/toughness ("create a tapped and attacking 1/1 ... token") rather than as
+// a trailing "that's/that are tapped and attacking" relative clause. The leading
+// form names "attacking" before the printed power/toughness, so its position
+// precedes the "/" of the size; the trailing relative clause names it after.
+func tokenAttackingLeading(sel SelectionSyntax) bool {
+	lower := strings.ToLower(sel.Text)
+	attack := strings.Index(lower, "attacking")
+	if attack < 0 {
+		return false
+	}
+	size := strings.Index(lower, "/")
+	return size < 0 || attack < size
 }
 
 // tokenAttackClause renders the trailing attacking-entry relative clause for a

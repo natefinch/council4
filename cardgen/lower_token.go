@@ -752,7 +752,7 @@ func synthesizeCreatureTokenDef(effect *compiler.CompiledEffect, extraKeywords [
 		return nil, false
 	}
 	colors := effect.Selector.ColorsAny()
-	if len(colors) > 2 {
+	if len(colors) > 5 {
 		return nil, false
 	}
 	supertypes := effect.Selector.Supertypes()

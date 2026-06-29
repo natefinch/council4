@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,404 of 32,501 cards eligible for paper support (50.5%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,405 of 32,501 cards eligible for paper support (50.5%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -11644,6 +11644,7 @@ Council4 currently supports **16,404 of 32,501 cards eligible for paper support 
 - Sanctum of Ugin
 - Sanctum Seeker
 - Sanctum Weaver
+- Sand Scout
 - Sand Warrior
 - Sandbar Merfolk
 - Sandbar Serpent
