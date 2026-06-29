@@ -22,6 +22,7 @@ var Cards = []*game.CardDef{
 	NestOfScarabs,
 	NetterEnDal,
 	NettleGuard,
+	NetworkTerminal,
 	NeyithOfTheDireHunt,
 	NezumiLinkbreaker,
 	NiambiFaithfulHealer,

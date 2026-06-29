@@ -16,6 +16,7 @@ var Cards = []*game.CardDef{
 	WallOfJunk,
 	WallOfOneThousandCuts,
 	WallOfWonder,
+	WanderbrineTrapper,
 	WanderingMind,
 	WanderlightSpirit,
 	WantedGriffin,

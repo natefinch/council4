@@ -1280,13 +1280,30 @@ func annotateReturnCostObject(component *CostComponent, object []shared.Token, a
 
 func annotateTapPermanentsCostObject(component *CostComponent, object []shared.Token, atoms Atoms) {
 	if len(object) < 5 ||
-		!costAmountAt(component, object[0], atoms, false) ||
-		!equalWord(object[1], "untapped") ||
 		!equalWord(object[len(object)-2], "you") ||
 		!equalWord(object[len(object)-1], "control") {
 		return
 	}
-	middle := object[2 : len(object)-2]
+	rest := object
+	if equalWord(rest[0], "another") {
+		component.ExcludeSource = true
+		component.AmountValue = 1
+		component.AmountKnown = true
+		rest = rest[1:]
+	} else {
+		if !costAmountAt(component, rest[0], atoms, false) {
+			return
+		}
+		rest = rest[1:]
+		if len(rest) >= 1 && equalWord(rest[0], "other") {
+			component.ExcludeSource = true
+			rest = rest[1:]
+		}
+	}
+	if len(rest) < 4 || !equalWord(rest[0], "untapped") {
+		return
+	}
+	middle := rest[1 : len(rest)-2]
 	if first, second, ok := costTwoTypeUnionNouns(middle); ok {
 		if annotateCostTwoTypeUnionObject(component, first, second, atoms) {
 			component.RequireUntapped = true

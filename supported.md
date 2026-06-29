@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,298 of 32,501 cards eligible for paper support (50.1%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,307 of 32,501 cards eligible for paper support (50.2%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1327,6 +1327,7 @@ Council4 currently supports **16,298 of 32,501 cards eligible for paper support 
 - Black Lotus
 - Black Market
 - Black Market Connections
+- Black Oak of Odunos
 - Black Panther, Claws of Bast
 - Black Panther, Vanguard
 - Black Poplar Shaman
@@ -7715,6 +7716,7 @@ Council4 currently supports **16,298 of 32,501 cards eligible for paper support 
 - Kulrath Mystic
 - Kulrath Zealot
 - Kumena's Speaker
+- Kumena, Tyrant of Orazca
 - Kunoros, Hound of Athreos
 - Kurgadon
 - Kuro's Taken
@@ -9292,6 +9294,7 @@ Council4 currently supports **16,298 of 32,501 cards eligible for paper support 
 - Nettlecyst
 - Nettletooth Djinn
 - Network Disruptor
+- Network Terminal
 - Neurok Commando
 - Neurok Hoversail
 - Neurok Invisimancer
@@ -11613,6 +11616,7 @@ Council4 currently supports **16,298 of 32,501 cards eligible for paper support 
 - Saproling // Insect
 - Saproling Migration
 - Sapseep Forest
+- Saradoc, Master of Buckland
 - Sarah Jane Smith
 - Sarcatog
 - Sarcomite Myr
@@ -12077,6 +12081,7 @@ Council4 currently supports **16,298 of 32,501 cards eligible for paper support 
 - Shadow Rider
 - Shadow Rift
 - Shadow Sliver
+- Shadow Stinger
 - Shadow Summoning
 - Shadow-Rite Priest
 - Shadowbeast Sighting
@@ -13696,6 +13701,7 @@ Council4 currently supports **16,298 of 32,501 cards eligible for paper support 
 - Suq'Ata Assassin
 - Suq'Ata Lancer
 - Sure Strike
+- Sure-Footed Infiltrator
 - Surge Conductor
 - Surge Mare
 - Surge of Thoughtweft
@@ -14807,6 +14813,7 @@ Council4 currently supports **16,298 of 32,501 cards eligible for paper support 
 - Tyrranax Atrocity
 - Tyrranax Rex
 - Tyvar's Stand
+- Tyvar, the Pummeler
 - Ubul Sar Gatekeepers
 - Ugin's Insight
 - Uktabi Efreet
@@ -15238,6 +15245,7 @@ Council4 currently supports **16,298 of 32,501 cards eligible for paper support 
 - Veteran Guardmouse
 - Veteran of the Depths
 - Veteran Swordsmith
+- Veteran Warleader
 - Veteran's Powerblade
 - Veteran's Reflexes
 - Veteran's Sidearm
@@ -15568,6 +15576,7 @@ Council4 currently supports **16,298 of 32,501 cards eligible for paper support 
 - Wander Off
 - Wanderbrine Preacher
 - Wanderbrine Rootcutters
+- Wanderbrine Trapper
 - Wanderer's Intervention
 - Wanderer's Strike
 - Wanderer's Twig
