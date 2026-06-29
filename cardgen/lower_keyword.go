@@ -1592,54 +1592,76 @@ func resolvingStaticSubjectGroup(effect *compiler.CompiledEffect) (game.GroupRef
 		selection.RequiredTypes = []types.Card{types.Creature}
 		selection.Controller = game.ControllerOpponent
 	case compiler.StaticSubjectControlledCreatureSubtype:
-		if !effect.StaticSubjectSubKnown() {
+		subtypes, ok := staticSubjectSubtypeList(effect)
+		if !ok {
 			return game.GroupReference{}, false
 		}
 		if effect.StaticSubjectSubExcluded() {
 			selection.RequiredTypes = []types.Card{types.Creature}
-			selection.ExcludedSubtype = effect.StaticSubjectSub()
+			selection.ExcludedSubtype = subtypes[0]
 		} else {
-			selection.SubtypesAny = []types.Sub{effect.StaticSubjectSub()}
+			selection.SubtypesAny = subtypes
 		}
 	case compiler.StaticSubjectOtherControlledCreatureSubtype:
-		if !effect.StaticSubjectSubKnown() {
+		subtypes, ok := staticSubjectSubtypeList(effect)
+		if !ok {
 			return game.GroupReference{}, false
 		}
 		if effect.StaticSubjectSubExcluded() {
 			selection.RequiredTypes = []types.Card{types.Creature}
-			selection.ExcludedSubtype = effect.StaticSubjectSub()
+			selection.ExcludedSubtype = subtypes[0]
 		} else {
-			selection.SubtypesAny = []types.Sub{effect.StaticSubjectSub()}
+			selection.SubtypesAny = subtypes
 		}
 		return game.BattlefieldGroupExcluding(selection, game.SourcePermanentReference()), true
 	case compiler.StaticSubjectAllCreatureSubtype:
-		if !effect.StaticSubjectSubKnown() {
+		subtypes, ok := staticSubjectSubtypeList(effect)
+		if !ok {
 			return game.GroupReference{}, false
 		}
 		battlefield := game.Selection{}
 		if effect.StaticSubjectSubExcluded() {
 			battlefield.RequiredTypes = []types.Card{types.Creature}
-			battlefield.ExcludedSubtype = effect.StaticSubjectSub()
+			battlefield.ExcludedSubtype = subtypes[0]
 		} else {
-			battlefield.SubtypesAny = []types.Sub{effect.StaticSubjectSub()}
+			battlefield.SubtypesAny = subtypes
 		}
 		return game.BattlefieldGroup(battlefield), true
 	case compiler.StaticSubjectOtherCreatureSubtype:
-		if !effect.StaticSubjectSubKnown() {
+		subtypes, ok := staticSubjectSubtypeList(effect)
+		if !ok {
 			return game.GroupReference{}, false
 		}
 		battlefield := game.Selection{}
 		if effect.StaticSubjectSubExcluded() {
 			battlefield.RequiredTypes = []types.Card{types.Creature}
-			battlefield.ExcludedSubtype = effect.StaticSubjectSub()
+			battlefield.ExcludedSubtype = subtypes[0]
 		} else {
-			battlefield.SubtypesAny = []types.Sub{effect.StaticSubjectSub()}
+			battlefield.SubtypesAny = subtypes
 		}
 		return game.BattlefieldGroupExcluding(battlefield, game.SourcePermanentReference()), true
 	default:
 		return game.GroupReference{}, false
 	}
 	return game.BattlefieldGroup(selection), true
+}
+
+// staticSubjectSubtypeList resolves the creature-subtype filter for a subtype
+// anthem subject, accepting both the single-subtype lord ("Other Goblins") and
+// the multi-subtype list ("Other Pegasi, Unicorns, and Horses"). It rejects
+// unresolved subtypes and multi-subtype exclusions, which have no representable
+// runtime group.
+func staticSubjectSubtypeList(effect *compiler.CompiledEffect) ([]types.Sub, bool) {
+	if subs := effect.StaticSubjectSubsAny(); len(subs) != 0 {
+		if effect.StaticSubjectSubExcluded() && len(subs) != 1 {
+			return nil, false
+		}
+		return append([]types.Sub(nil), subs...), true
+	}
+	if !effect.StaticSubjectSubKnown() {
+		return nil, false
+	}
+	return []types.Sub{effect.StaticSubjectSub()}, true
 }
 
 func lowerKeywordAbility(
