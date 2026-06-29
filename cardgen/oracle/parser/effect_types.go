@@ -871,6 +871,13 @@ const (
 	// It carries no in-text referent and is recognized only on mill effects.
 	// Added last so existing kinds keep their values.
 	EffectDynamicAmountHalfPlayerLibrary EffectDynamicAmountKind = "EffectDynamicAmountHalfPlayerLibrary"
+	// EffectDynamicAmountCommanderCastCount is the number of times the controller
+	// has cast their commander from the command zone this game ("for each time
+	// you've cast your commander from the command zone this game"). It backs the
+	// command-zone-cast anthem family (Commander's Insignia; Vanguard of the
+	// Restless). It is controller-scoped and carries no in-text referent. Added
+	// last so existing kinds keep their values.
+	EffectDynamicAmountCommanderCastCount EffectDynamicAmountKind = "EffectDynamicAmountCommanderCastCount"
 )
 
 // EffectDynamicAmountForm identifies how a dynamic amount is introduced.

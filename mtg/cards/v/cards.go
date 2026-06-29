@@ -13,6 +13,7 @@ var Cards = []*game.CardDef{
 	VampireScrivener,
 	VampiricDragon,
 	VampiricLink,
+	VanguardOfTheRestless,
 	VantressPaladin,
 	VaporSnare,
 	Vaporkin,

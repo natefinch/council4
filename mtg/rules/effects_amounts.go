@@ -71,7 +71,7 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj opt.V[*game.StackObject], c
 	case game.DynamicAmountControllerLife, game.DynamicAmountControllerHandSize,
 		game.DynamicAmountControllerGraveyardSize, game.DynamicAmountControllerBasicLandTypeCount,
 		game.DynamicAmountOpponentCount, game.DynamicAmountOpponentsAttackedThisCombat,
-		game.DynamicAmountControllerSpeed:
+		game.DynamicAmountControllerSpeed, game.DynamicAmountCommanderCastCount:
 		amount = controllerAggregateAmount(g, controller, dynamic, before)
 	case game.DynamicAmountOpponentControllingCount:
 		for _, opponent := range aliveOpponents(g, controller) {
@@ -325,6 +325,10 @@ func controllerAggregateAmount(g *game.Game, controller game.PlayerID, dynamic g
 		})
 	case game.DynamicAmountOpponentCount:
 		return len(aliveOpponents(g, controller))
+	case game.DynamicAmountCommanderCastCount:
+		if player, ok := playerByID(g, controller); ok {
+			return player.CommanderCastCount
+		}
 	case game.DynamicAmountOpponentsAttackedThisCombat:
 		return opponentsAttackedThisCombat(g, controller)
 	case game.DynamicAmountControllerSpeed:

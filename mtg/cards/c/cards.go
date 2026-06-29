@@ -95,6 +95,7 @@ var Cards = []*game.CardDef{
 	CombatResearch,
 	CommandBridge,
 	CommandTower,
+	CommanderSInsignia,
 	CommuneWithBeavers,
 	CommuneWithDinosaurs,
 	CommuneWithNature,

@@ -3277,6 +3277,13 @@ const (
 	// instruction and consumes it via this amount on a follow-on life gain. Added
 	// last so existing kinds keep their wire values.
 	DynamicAmountExcessDamageDealtThisWay
+	// DynamicAmountCommanderCastCount is the number of times the controller has
+	// cast their commander from the command zone this game ("for each time you've
+	// cast your commander from the command zone this game"). It backs the
+	// command-zone-cast anthem family (Commander's Insignia; Vanguard of the
+	// Restless); lowering reads the controller's commander cast count. Added last
+	// so existing kinds keep their wire values.
+	DynamicAmountCommanderCastCount
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.
