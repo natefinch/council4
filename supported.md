@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,373 of 32,501 cards eligible for paper support (50.4%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,384 of 32,501 cards eligible for paper support (50.4%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -994,6 +994,7 @@ Council4 currently supports **16,373 of 32,501 cards eligible for paper support 
 - Balmor, Battlemage Captain
 - Baloth Gorger
 - Baloth Null
+- Baloth Prime
 - Baloth Pup
 - Baloth Woodcrasher
 - Balshan Collaborator
@@ -4384,6 +4385,7 @@ Council4 currently supports **16,373 of 32,501 cards eligible for paper support 
 - Etched Champion
 - Etched Cornfield
 - Etched Familiar
+- Etched Monstrosity
 - Eternal Dragon
 - Eternal of Harsh Truths
 - Eternal Skylord
@@ -5451,6 +5453,7 @@ Council4 currently supports **16,373 of 32,501 cards eligible for paper support 
 - Ghalma's Warden
 - Ghalta, Primal Hunger
 - Ghastly Gloomhunter
+- Ghave, Guru of Spores
 - Ghen, Arcanum Weaver
 - Ghirapur Aether Grid
 - Ghirapur Gearcrafter
@@ -7408,6 +7411,7 @@ Council4 currently supports **16,373 of 32,501 cards eligible for paper support 
 - Karplusan Forest
 - Karplusan Hound
 - Karplusan Wolverine
+- Karstoderm
 - Kashi-Tribe Reaver
 - Kashi-Tribe Warriors
 - Kasimir the Lone Wolf
@@ -8069,6 +8073,7 @@ Council4 currently supports **16,373 of 32,501 cards eligible for paper support 
 - Llanowar Cavalry
 - Llanowar Dead
 - Llanowar Druid
+- Llanowar Elite
 - Llanowar Elves
 - Llanowar Elves
 - Llanowar Envoy
@@ -9474,6 +9479,7 @@ Council4 currently supports **16,373 of 32,501 cards eligible for paper support 
 - Nomadic Elf
 - Nomads' Assembly
 - Noose Constrictor
+- Noosegraf Mob
 - Norika Yamazaki, the Poet
 - Norn's Wellspring
 - North Pole Gates
@@ -10004,6 +10010,7 @@ Council4 currently supports **16,373 of 32,501 cards eligible for paper support 
 - Pentagram of the Ages
 - Pentarch Ward
 - Pentavite
+- Pentavus
 - Penumbra Bobcat
 - Penumbra Kavu
 - Penumbra Spider
@@ -11695,6 +11702,7 @@ Council4 currently supports **16,373 of 32,501 cards eligible for paper support 
 - Sauroform Hybrid
 - Sauron, the Lidless Eye
 - Savage Conception
+- Savage Firecat
 - Savage Gorger
 - Savage Gorilla
 - Savage Hunger
@@ -13099,6 +13107,7 @@ Council4 currently supports **16,373 of 32,501 cards eligible for paper support 
 - Spike Colony
 - Spike Drone
 - Spike Feeder
+- Spike Hatcher
 - Spike Jester
 - Spike Rogue
 - Spike Soldier
@@ -13760,6 +13769,7 @@ Council4 currently supports **16,373 of 32,501 cards eligible for paper support 
 - Sure-Footed Infiltrator
 - Surge Conductor
 - Surge Mare
+- Surge Node
 - Surge of Thoughtweft
 - Surgehacker Mech
 - Surgespanner
@@ -15351,6 +15361,7 @@ Council4 currently supports **16,373 of 32,501 cards eligible for paper support 
 - Victory's Envoy
 - Victory's Herald
 - View from Above
+- Vigean Hydropon
 - Vigilant Baloth
 - Vigilant Drake
 - Vigilant Martyr
