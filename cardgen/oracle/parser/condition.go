@@ -397,6 +397,12 @@ type ConditionClause struct {
 	// TriggerColorUnknown for the same-color form, which compares the largest
 	// single-color tally instead of a named color.
 	ManaSpentColor TriggerColor `json:",omitempty"`
+
+	// Negated marks a clause whose recognized wording is the logical negation of
+	// its positive predicate ("there are no <kind> counters on this land" is a
+	// negated ObjectMatches whose positive form means "has at least one counter
+	// of that kind"). The compiler flips Condition.Negated when this is set.
+	Negated bool `json:",omitempty"`
 }
 
 // ConditionControlComparison describes a cross-player control-count comparison
@@ -686,6 +692,7 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		recognizeSourceSaddledCondition,
 		recognizeSourceStateCondition,
 		recognizeAttachedCreatureStateCondition,
+		recognizeSourceNoCounterCondition,
 		recognizeSourceCounterStateCondition,
 		recognizeControllerResourceCondition,
 		recognizeGainedLifeThisTurnCondition,
@@ -1689,6 +1696,58 @@ func sourceCounterThreshold(after []shared.Token) (int, bool) {
 		return 1, true
 	}
 	return 0, false
+}
+
+// recognizeSourceNoCounterCondition matches the negated source counter-state
+// form "there are no <kind> counters on this <type>" (Mercadian Masques depletion
+// taplands: "If there are no depletion counters on this land, sacrifice it."). It
+// produces a negated ObjectMatches clause with Source binding whose Selection
+// carries the counter kind and a minimum count of 1, so the condition means
+// "source does NOT have >= 1 counter of kind" = "source has zero counters of kind".
+func recognizeSourceNoCounterCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
+	rest, ok := cutTokenPrefix(body, "there", "are", "no")
+	if !ok {
+		return ConditionClause{}, false
+	}
+	// Strip trailing source subject: "on this <type>" or "on it".
+	inner, ok := stripSourceSuffix(rest)
+	if !ok {
+		return ConditionClause{}, false
+	}
+	if !tokenSuffixWord(inner, "counters") {
+		return ConditionClause{}, false
+	}
+	kind, _, ok := atoms.CounterIn(shared.SpanOf(rest))
+	if !ok {
+		return ConditionClause{}, false
+	}
+	return ConditionClause{
+		Predicate:     ConditionPredicateObjectMatches,
+		ObjectBinding: ConditionObjectBindingSource,
+		Selection: ConditionSelection{
+			CounterKind:         kind,
+			CounterKindKnown:    true,
+			CounterCountAtLeast: 1,
+		},
+		Negated: true,
+	}, true
+}
+
+// stripSourceSuffix strips a trailing "on this <type>" or "on it" source subject
+// from a token slice, returning the remaining inner tokens. It fails closed when
+// neither form is present.
+func stripSourceSuffix(tokens []shared.Token) ([]shared.Token, bool) {
+	if trimmed, ok := stripTokenSuffix(tokens, "on", "it"); ok {
+		return trimmed, true
+	}
+	// Try "on this <type>": require at least 3 trailing tokens "on this <noun>".
+	n := len(tokens)
+	if n >= 3 &&
+		strings.EqualFold(tokens[n-3].Text, "on") &&
+		strings.EqualFold(tokens[n-2].Text, "this") {
+		return tokens[:n-3], true
+	}
+	return nil, false
 }
 
 // cutSourceSubjectTokens consumes a leading source self-subject — the card's own

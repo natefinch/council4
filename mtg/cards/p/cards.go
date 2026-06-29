@@ -17,6 +17,7 @@ var Cards = []*game.CardDef{
 	PatronWizard,
 	PeakEruption,
 	PearlOfWisdom,
+	PeatBog,
 	PeerThroughDepths,
 	PentagramOfTheAges,
 	PentarchWard,

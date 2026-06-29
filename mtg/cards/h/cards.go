@@ -42,6 +42,7 @@ var Cards = []*game.CardDef{
 	HengeWalker,
 	HerdMigration,
 	HeronBlessedGeist,
+	HickoryWoodlot,
 	HiddenFootblade,
 	HiddenHerbalists,
 	HiddenHorror,

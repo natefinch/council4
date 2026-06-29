@@ -231,7 +231,18 @@ func lowerActivatedAbilityKind(
 }
 
 func isSemanticManaAbility(ability compiler.CompiledAbility) bool {
-	return !abilityContentHasTargets(ability.Content) && abilityContentHasAddManaEffect(ability.Content)
+	if abilityContentHasTargets(ability.Content) || !abilityContentHasAddManaEffect(ability.Content) {
+		return false
+	}
+	// An add-mana ability whose body contains a condition-gated effect (e.g.
+	// "If there are no depletion counters on this land, sacrifice it.") is not a
+	// mana ability: the body-owned condition gates a non-mana effect that the
+	// mana-ability lowerer cannot express. Route it through the activated-ability
+	// path instead.
+	if activationConditionOwnedByBody(ability.Content) {
+		return false
+	}
+	return true
 }
 
 func abilityContentHasAddManaEffect(content compiler.AbilityContent) bool {
@@ -727,20 +738,39 @@ func prepareActivationCondition(ability *compiler.CompiledAbility, syntax *parse
 }
 
 // activationConditionOwnedByBody reports whether an activated ability's single
-// condition is a resolution-time "unless its controller pays" tax that the body
-// content lowerer consumes directly, rather than an activation gate. The
-// counter-unless-pays lowerer ("Counter target spell unless its controller pays
-// {1}.") reads this condition from the body, so it must stay in the body instead
-// of being extracted and rejected as an unsupported activation condition.
+// condition is a body-level gate that the ordered-sequence lowerer consumes
+// directly, rather than an activation gate. Recognized forms:
+//   - "unless its controller pays" tax (counter-unless-pays)
+//   - "If <source object matches>, <effect>" conditional body rider (e.g.
+//     depletion taplands: "If there are no depletion counters on this land,
+//     sacrifice it.")
 func activationConditionOwnedByBody(content compiler.AbilityContent) bool {
 	if len(content.Conditions) != 1 {
 		return false
 	}
 	condition := content.Conditions[0]
-	return condition.Kind == compiler.ConditionUnless &&
-		!condition.Intervening &&
-		!condition.Resolving &&
-		condition.Predicate == compiler.ConditionPredicateTargetControllerDoesNotPay
+	if condition.Intervening || condition.Resolving {
+		return false
+	}
+	// "Unless its controller pays" body tax.
+	if condition.Kind == compiler.ConditionUnless &&
+		condition.Predicate == compiler.ConditionPredicateTargetControllerDoesNotPay {
+		return true
+	}
+	// Body-level "If <gate>, <effect>" rider (e.g. "If there are no depletion
+	// counters on this land, sacrifice it."). The condition gates a body effect
+	// whose span follows or contains the condition, so
+	// prepareActivationCondition's span-precedes-all-effects test would reject it
+	// as an activation gate. Recognize it by predicate and binding: source object
+	// match negated (the "no counters" wording) within an "If" clause is always a
+	// body rider, never an activation restriction.
+	if condition.Kind == compiler.ConditionIf &&
+		condition.Predicate == compiler.ConditionPredicateObjectMatches &&
+		condition.ObjectBinding == compiler.ReferenceBindingSource &&
+		condition.Negated {
+		return true
+	}
+	return false
 }
 
 func appendModeEffects(effects []compiler.CompiledEffect, modes []compiler.CompiledMode) []compiler.CompiledEffect {

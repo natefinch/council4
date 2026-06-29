@@ -47,6 +47,7 @@ var Cards = []*game.CardDef{
 	ReinforcedBulwark,
 	RelicGolem,
 	Remand,
+	RemoteFarm,
 	RendFlesh,
 	RenegadeRallier,
 	RenownedWeaponsmith,
