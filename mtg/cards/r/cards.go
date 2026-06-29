@@ -45,6 +45,7 @@ var Cards = []*game.CardDef{
 	RedemptionArc,
 	ReduceToAshes,
 	ReinforcedBulwark,
+	RelentlessPursuit,
 	RelicGolem,
 	Remand,
 	RemoteFarm,

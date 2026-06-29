@@ -478,6 +478,9 @@ func lowerOptionalContent(
 	if content, ok := lowerOptionalRevealTakeToGraveyard(ctx); ok {
 		return content, nil
 	}
+	if content, ok := lowerOptionalRevealKeepOneOfEach(ctx); ok {
+		return content, nil
+	}
 	if content, ok := lowerOptionalMillKeepHand(ctx); ok {
 		return content, nil
 	}

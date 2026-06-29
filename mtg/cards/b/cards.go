@@ -38,6 +38,7 @@ var Cards = []*game.CardDef{
 	BelligerentBrontodon,
 	BelligerentHatchling,
 	BelligerentOfTheBall,
+	BenefactionOfRhonas,
 	BenevolentAncestor,
 	BenevolentBlessing,
 	BenevolentHydra,
