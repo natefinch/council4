@@ -109,6 +109,7 @@ var Cards = []*game.CardDef{
 	BurdenedStoneback,
 	BurnTheAccursed,
 	BurningInquiry,
+	BurningProphet,
 	BurstLightning,
 	Bushwhack,
 	ButcherOfTheHorde,

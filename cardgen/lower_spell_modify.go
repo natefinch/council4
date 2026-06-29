@@ -3772,12 +3772,27 @@ func lowerFixedControllerSpell(
 	primitiveFactory func(amount game.Quantity, player game.PlayerReference) game.Primitive,
 ) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
+	// A scry/surveil verb always acts on the resolving controller, so when it
+	// trails a prior-subject, target, or source clause ("Target creature gets
+	// +1/+0…, then scry 1." / "~ gets +1/+0…, then scry 1.") its inherited
+	// subject target and references denote that earlier object and are simply
+	// ignored here. Conditions, keywords, and nested modes must still be consumed.
+	inheritedSubject := effect.Context == parser.EffectContextPriorSubject ||
+		effect.Context == parser.EffectContextTarget ||
+		effect.Context == parser.EffectContextSource
+	acceptedContext := controllerActionContext(effect.Context) || inheritedSubject
+	unconsumed := ctx.content.Unconsumed()
+	if inheritedSubject {
+		unconsumed = len(ctx.content.Conditions) != 0 ||
+			len(ctx.content.Keywords) != 0 ||
+			len(ctx.content.Modes) != 0
+	}
 	if (effect.Amount.Known && effect.Amount.Value < 1) ||
 		!effect.Exact ||
 		effect.Negated ||
-		!controllerActionContext(effect.Context) ||
-		ctx.content.Unconsumed() ||
-		len(ctx.content.References) != 0 {
+		!acceptedContext ||
+		unconsumed ||
+		(!inheritedSubject && len(ctx.content.References) != 0) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported "+verb+" spell",
