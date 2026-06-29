@@ -30,6 +30,7 @@ var Cards = []*game.CardDef{
 	LeoninLightbringer,
 	LeylineDowser,
 	LeylineInvocation,
+	LeylineOfSanctity,
 	LifeBurst,
 	LifecraftCavalry,
 	Lifesmith,

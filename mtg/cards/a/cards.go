@@ -21,6 +21,7 @@ var Cards = []*game.CardDef{
 	AdaptiveOmnitool,
 	AdditiveEvolution,
 	AdventurousImpulse,
+	AegisOfTheGods,
 	AerialVolley,
 	AetherChaser,
 	AetherFigment,

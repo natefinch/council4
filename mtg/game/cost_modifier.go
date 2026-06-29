@@ -501,6 +501,17 @@ const (
 	// to, and the effect's Controller is the goading player. Added last so
 	// existing kinds keep their wire values.
 	RuleEffectGoaded
+	// RuleEffectPlayerHexproof grants the affected player hexproof ("You have
+	// hexproof.", Aegis of the Gods, Leyline of Sanctity, Spirit of the Hearth):
+	// that player can't be the target of spells or abilities opponents control.
+	// AffectedPlayer scopes it to the controller. Added last so existing kinds
+	// keep their wire values.
+	RuleEffectPlayerHexproof
+	// RuleEffectPlayerShroud grants the affected player shroud ("You have
+	// shroud.", Ivory Mask, True Believer): that player can't be the target of
+	// spells or abilities at all. AffectedPlayer scopes it to the controller.
+	// Added last so existing kinds keep their wire values.
+	RuleEffectPlayerShroud
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -557,7 +568,9 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectCanAttackAsThoughDefender,
 		RuleEffectAssignCombatDamageUsingToughness,
 		RuleEffectCantActivateAbilitiesOfPermanent,
-		RuleEffectGoaded:
+		RuleEffectGoaded,
+		RuleEffectPlayerHexproof,
+		RuleEffectPlayerShroud:
 		return true
 	default:
 		return false

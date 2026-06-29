@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,405 of 32,501 cards eligible for paper support (50.5%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,413 of 32,501 cards eligible for paper support (50.5%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -119,6 +119,7 @@ Council4 currently supports **16,405 of 32,501 cards eligible for paper support 
 - Advocate of the Beast
 - Aegis Angel
 - Aegis Automaton
+- Aegis of the Gods
 - Aegis of the Heavens
 - Aegis Sculptor
 - Aegis Turtle
@@ -7196,6 +7197,7 @@ Council4 currently supports **16,405 of 32,501 cards eligible for paper support 
 - Ithilien Kingfisher
 - Ivory Charm
 - Ivory Cup
+- Ivory Mask
 - Ivy Dancer
 - Ivy Elemental
 - Ivy Lane Denizen
@@ -7951,6 +7953,7 @@ Council4 currently supports **16,405 of 32,501 cards eligible for paper support 
 - Leyline of Anticipation
 - Leyline of Hope
 - Leyline of Lightning
+- Leyline of Sanctity
 - Leyline of the Meek
 - Leyline of the Void
 - Leyline of Transformation
@@ -8715,6 +8718,7 @@ Council4 currently supports **16,405 of 32,501 cards eligible for paper support 
 - Methods of the Mighty
 - Meticulous Archive
 - Meticulous Artisan
+- Metropolis Reformer
 - Metropolis Sprite
 - Miara, Thorn of the Glade
 - Miasmic Mummy
@@ -9756,6 +9760,7 @@ Council4 currently supports **16,405 of 32,501 cards eligible for paper support 
 - Orazca Puzzle-Door
 - Orazca Raptor
 - Orb of Dreams
+- Orbs of Warding
 - Orbweaver Kumo
 - Orc Army
 - Orc General
@@ -13196,6 +13201,7 @@ Council4 currently supports **16,405 of 32,501 cards eligible for paper support 
 - Spirit Mantle
 - Spirit Mascot
 - Spirit of Malevolence
+- Spirit of the Hearth
 - Spirit of the Hunt
 - Spirit of the Labyrinth
 - Spirit of the Night
@@ -14159,6 +14165,7 @@ Council4 currently supports **16,405 of 32,501 cards eligible for paper support 
 - Tetsuko Umezawa, Fugitive
 - Teval, the Balanced Scale
 - Teyo's Lightshield
+- Teyo, the Shieldmage
 - Teysa, Envoy of Ghosts
 - Teysa, Orzhov Scion
 - Tezzeret's Ambition
@@ -14795,6 +14802,7 @@ Council4 currently supports **16,405 of 32,501 cards eligible for paper support 
 - Truck Toss
 - Trudge Garden
 - True Ancestry
+- True Believer
 - True Conviction
 - True Love's Kiss
 - Truefire Captain

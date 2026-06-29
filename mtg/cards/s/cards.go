@@ -172,6 +172,7 @@ var Cards = []*game.CardDef{
 	SpiritBonds,
 	SpiritLink,
 	SpiritLoop,
+	SpiritOfTheHearth,
 	SpiritShackle,
 	SplatterTechnique,
 	SplendidAgony,

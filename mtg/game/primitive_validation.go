@@ -1071,7 +1071,7 @@ func (p ApplyRule) validatePrimitive(targets []TargetSpec, checkTargets bool) er
 			return errors.New("rule effect has an unsupported kind")
 		}
 		switch effect.Kind {
-		case RuleEffectLifeTotalCantChange, RuleEffectNoMaximumHandSize:
+		case RuleEffectLifeTotalCantChange, RuleEffectNoMaximumHandSize, RuleEffectPlayerHexproof, RuleEffectPlayerShroud:
 			if effect.AffectedPlayer == PlayerAny {
 				return errors.New("player rule effect requires an affected player")
 			}
