@@ -272,6 +272,13 @@ const (
 	// battlefield[ tapped]." family, with an optional trailing "if you don't put
 	// it onto the battlefield, put it into your hand" fallback.
 	ExactSequenceConditionalLookAtTopBattlefield
+	// ExactSequenceDrawThenDiscardUnlessType is the spell body "Draw N cards.
+	// Then discard M cards unless you discard a <type[ or type...]> card."
+	// (Thirst for Knowledge family): the controller draws DrawCount cards, then
+	// discards DiscardCount cards unless they instead discard a single card of
+	// one of the recorded exempt types. The counts and exempt types travel on
+	// the compiled ability so lowering stays free of Oracle wording.
+	ExactSequenceDrawThenDiscardUnlessType
 )
 
 // LookAtTopBattlefieldElse identifies the trailing fallback disposition of an
@@ -306,6 +313,12 @@ type ExactSequenceSyntax struct {
 	LookAtTopCardTypes    []CardType
 	LookAtTopEntersTapped bool
 	LookAtTopBattlefield  LookAtTopBattlefieldElse
+	// DrawCount and DiscardCount carry the typed counts of
+	// ExactSequenceDrawThenDiscardUnlessType: the cards drawn first, then the
+	// cards discarded unless an exempt-type card (recorded in LookAtTopCardTypes)
+	// is discarded instead.
+	DrawCount    int
+	DiscardCount int
 }
 
 // SourceAbilityCostReductionSyntax is the typed syntax for a source-local

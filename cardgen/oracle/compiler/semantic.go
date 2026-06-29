@@ -98,21 +98,27 @@ type CompiledAbility struct {
 	ExactSequenceLookAtTopEntersTapped bool
 	ExactSequenceLookAtTopElseHand     bool
 	ExactSequenceLookAtTopElseBottom   bool
-	Span                               shared.Span
-	Text                               string
-	ActivationTiming                   ActivationTimingKind
-	ActivationTimingSpan               shared.Span
-	ActivationZone                     zone.Type
-	AbilityWord                        string
-	Chapters                           []int
-	ChapterSpan                        shared.Span
-	OptionalSpan                       shared.Span
-	Cost                               *CompiledCost
-	SourceAbilityCostReduction         *CompiledSourceAbilityCostReduction
-	AlternativeCost                    *CompiledAlternativeCost
-	Trigger                            *CompiledTrigger
-	Content                            AbilityContent
-	Static                             *CompiledStaticSemantics
+	// ExactSequenceDrawCount and ExactSequenceDiscardCount carry the typed counts
+	// of ExactSequenceDrawThenDiscardUnlessType: the cards drawn first, then the
+	// cards discarded unless an exempt-type card (in ExactSequenceLookAtTopTypes)
+	// is discarded instead. Both are zero for every other exact sequence.
+	ExactSequenceDrawCount     uint8
+	ExactSequenceDiscardCount  uint8
+	Span                       shared.Span
+	Text                       string
+	ActivationTiming           ActivationTimingKind
+	ActivationTimingSpan       shared.Span
+	ActivationZone             zone.Type
+	AbilityWord                string
+	Chapters                   []int
+	ChapterSpan                shared.Span
+	OptionalSpan               shared.Span
+	Cost                       *CompiledCost
+	SourceAbilityCostReduction *CompiledSourceAbilityCostReduction
+	AlternativeCost            *CompiledAlternativeCost
+	Trigger                    *CompiledTrigger
+	Content                    AbilityContent
+	Static                     *CompiledStaticSemantics
 	// ClassLevelGain is the target level of a Class enchantment's level-up
 	// activated ability ("{cost}: Level N"), or 0 when this ability is not a
 	// level-up. The compiler copies the parser's typed level so lowering emits

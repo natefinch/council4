@@ -46,6 +46,7 @@ var Cards = []*game.CardDef{
 	PortalToPhyrexia,
 	PotionerSTrove,
 	PowerDepot,
+	PracticalResearch,
 	PredatorOoze,
 	PricklyPair,
 	PrideSovereign,

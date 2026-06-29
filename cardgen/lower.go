@@ -864,6 +864,13 @@ func lowerExecutableAbility(
 				sourceSpans:  []shared.Span{body.Content.Span},
 			}, nil
 		}
+		if body.ExactSequence == compiler.ExactSequenceDrawThenDiscardUnlessType {
+			spellAbility := lowerDrawThenDiscardUnlessSequence(body)
+			return abilityLowering{
+				spellAbility: opt.Val(spellAbility),
+				sourceSpans:  []shared.Span{body.Content.Span},
+			}, nil
+		}
 		if len(body.Content.Effects) == 1 &&
 			body.Content.Effects[0].Kind == compiler.EffectAddMana &&
 			(body.Content.Effects[0].Mana.AnyColor || body.Content.Effects[0].Mana.FilterPair) {

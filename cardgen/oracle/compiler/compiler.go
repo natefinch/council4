@@ -73,6 +73,12 @@ func compileAbility(
 		compiled.ExactSequenceLookAtTopEntersTapped = ability.ExactSequence.LookAtTopEntersTapped
 		compiled.ExactSequenceLookAtTopElseHand = ability.ExactSequence.LookAtTopBattlefield == parser.LookAtTopBattlefieldElseHand
 		compiled.ExactSequenceLookAtTopElseBottom = ability.ExactSequence.LookAtTopBattlefield == parser.LookAtTopBattlefieldElseBottom
+		if n := ability.ExactSequence.DrawCount; n >= 0 && n <= math.MaxUint8 {
+			compiled.ExactSequenceDrawCount = uint8(n)
+		}
+		if n := ability.ExactSequence.DiscardCount; n >= 0 && n <= math.MaxUint8 {
+			compiled.ExactSequenceDiscardCount = uint8(n)
+		}
 	}
 	compiled.ClassLevelGain = ability.ClassLevelGain
 	compiled.LevelUpRecognized = ability.LevelUpRecognized

@@ -150,10 +150,13 @@ const (
 	// player's library until a nonland card is exiled, then lets that player cast
 	// the nonland card without paying its mana cost (game.ExileLibraryUntilNonlandCast).
 	PrimitiveExileLibraryUntilNonlandCast
+	// PrimitiveDiscardUnlessType discards a fixed number of cards unless the
+	// player instead discards a single card of an exempt type (game.DiscardUnlessType).
+	PrimitiveDiscardUnlessType
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveExileLibraryUntilNonlandCast) + 1
+const primitiveKindCount = int(PrimitiveDiscardUnlessType) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -1252,6 +1255,19 @@ type DiscardThenDraw struct {
 	Player     PlayerReference
 	Max        int
 	DrawOffset int
+}
+
+// DiscardUnlessType has Player discard Amount cards unless they instead discard
+// a single card of one of ExemptTypes. It models the "discard N cards unless you
+// discard a <type> card." rider of the Thirst for Knowledge family: the
+// controller may discard one exempt-type card to satisfy the effect, or discard
+// Amount cards otherwise. ExemptTypes lists the card types whose disjunction
+// waives the full discard. The player-chosen branch is not expressible through
+// separate instructions, so the whole choice resolves as one primitive.
+type DiscardUnlessType struct {
+	Player      PlayerReference
+	Amount      int
+	ExemptTypes []types.Card
 }
 
 // Scry looks at and reorders the top cards of a referenced player's library.

@@ -410,6 +410,10 @@ func (p DiscardThenDraw) validateCapturedTargetControllerReferences(targets []Ta
 	return validateCapturedTargetControllerReference(p.Player, targets, checkTargets)
 }
 
+func (p DiscardUnlessType) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	return validateCapturedTargetControllerReference(p.Player, targets, checkTargets)
+}
+
 func (p RevealUntil) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
 	return validateCapturedTargetControllerReference(p.Player, targets, checkTargets)
 }
@@ -2156,6 +2160,16 @@ func (p DiscardThenDraw) validatePrimitive(targets []TargetSpec, checkTargets bo
 	}
 	if p.DrawOffset < 0 {
 		return errors.New("DiscardThenDraw requires a non-negative DrawOffset")
+	}
+	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
+func (p DiscardUnlessType) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.Amount < 0 {
+		return errors.New("DiscardUnlessType requires a non-negative Amount")
+	}
+	if len(p.ExemptTypes) == 0 {
+		return errors.New("DiscardUnlessType requires at least one ExemptType")
 	}
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }

@@ -384,6 +384,8 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 		return r.renderPutHandOnLibraryThenDraw(primitive)
 	case game.PrimitiveDiscardThenDraw:
 		return r.renderDiscardThenDraw(primitive)
+	case game.PrimitiveDiscardUnlessType:
+		return r.renderDiscardUnlessType(ctx, primitive)
 	case game.PrimitiveCastForFree:
 		value, err := assertPrimitive[game.CastForFree](primitive)
 		if err != nil {
@@ -1053,6 +1055,27 @@ func (r Renderer) renderDiscardThenDraw(primitive game.Primitive) (string, error
 		fields = append(fields, fmt.Sprintf("DrawOffset: %d,", value.DrawOffset))
 	}
 	return structLit("game.DiscardThenDraw", fields), nil
+}
+
+func (r Renderer) renderDiscardUnlessType(ctx *renderCtx, primitive game.Primitive) (string, error) {
+	value, err := assertPrimitive[game.DiscardUnlessType](primitive)
+	if err != nil {
+		return "", err
+	}
+	player, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	exempt, err := renderTypesCardSlice(ctx, value.ExemptTypes)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{
+		fmt.Sprintf("Player: %s,", player),
+		fmt.Sprintf("Amount: %d,", value.Amount),
+		fmt.Sprintf("ExemptTypes: %s,", exempt),
+	}
+	return structLit("game.DiscardUnlessType", fields), nil
 }
 
 func (r Renderer) renderCastForFree(ctx *renderCtx, value game.CastForFree) (string, error) {
