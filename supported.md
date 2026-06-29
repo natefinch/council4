@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,435 of 32,501 cards eligible for paper support (50.6%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,438 of 32,501 cards eligible for paper support (50.6%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -4910,6 +4910,7 @@ Council4 currently supports **16,435 of 32,501 cards eligible for paper support 
 - Flame Lash
 - Flame Rift
 - Flame Slash
+- Flame Spill
 - Flame Spirit
 - Flame-Blessed Bolt
 - Flame-Chain Mauler
@@ -5367,6 +5368,7 @@ Council4 currently supports **16,435 of 32,501 cards eligible for paper support 
 - Game Trail
 - Game-Trail Changeling
 - Ganax, Astral Hunter
+- Gandalf's Sanction
 - Gang of Devils
 - Gangly Stompling
 - Gangrenous Goliath
@@ -10196,6 +10198,7 @@ Council4 currently supports **16,435 of 32,501 cards eligible for paper support 
 - Piercing Light
 - Piety
 - Piggy Bank
+- Pigment Storm
 - Pikemen
 - Pile On
 - Pileated Provisioner

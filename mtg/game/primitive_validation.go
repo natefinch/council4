@@ -681,7 +681,32 @@ func (p Damage) validatePrimitive(targets []TargetSpec, checkTargets bool) error
 	if p.DamageSource.Exists {
 		return validateObjectReference(p.DamageSource.Val, targets, checkTargets)
 	}
-	return nil
+	return p.validateExcessRecipient(targets, checkTargets)
+}
+
+// validateExcessRecipient checks an excess-damage redirect: the redirect target
+// must be a single player, and the primary recipient must be a single permanent
+// (object or any-target), since excess damage is defined only relative to a
+// creature's lethal damage. The zero-value (unset) recipient imposes no
+// constraints.
+func (p Damage) validateExcessRecipient(targets []TargetSpec, checkTargets bool) error {
+	if !p.ExcessRecipient.set {
+		return nil
+	}
+	player, ok := p.ExcessRecipient.PlayerReference()
+	if !ok {
+		return errors.New("excess damage redirect requires a player recipient")
+	}
+	if err := validatePlayerReference(player, targets, checkTargets); err != nil {
+		return err
+	}
+	if _, ok := p.Recipient.ObjectReference(); ok {
+		return nil
+	}
+	if _, ok := p.Recipient.AnyTargetObjectReference(); ok {
+		return nil
+	}
+	return errors.New("excess damage redirect requires a single-permanent recipient")
 }
 
 func (p Draw) validatePrimitive(targets []TargetSpec, checkTargets bool) error {

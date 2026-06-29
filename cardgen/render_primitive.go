@@ -929,6 +929,13 @@ func (r Renderer) renderDamagePrimitive(ctx *renderCtx, primitive game.Primitive
 		fields = append(fields, fmt.Sprintf("DamageSource: opt.Val(%s),", source))
 		ctx.need(importOpt)
 	}
+	if value.ExcessRecipient.Valid() {
+		excess, err := r.renderDamageRecipient(ctx, value.ExcessRecipient)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("ExcessRecipient: %s,", excess))
+	}
 	return structLit("game.Damage", fields), nil
 }
 

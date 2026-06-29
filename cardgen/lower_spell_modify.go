@@ -391,6 +391,47 @@ func damageGroupRequiredType(kind compiler.SelectorKind) (cardType types.Card, h
 	}
 }
 
+// lowerSingleTargetDamageAmount resolves the game.Quantity for a single-target
+// deal-damage effect, supporting fixed values, triggering-event quantities, and
+// other dynamic-amount kinds (and defaulting to DynamicAmountX when no amount is
+// specified). It returns false when the dynamic amount is unsupported. It is
+// shared by the single-target damage spell lowerers so they resolve the damage
+// amount identically.
+func lowerSingleTargetDamageAmount(ctx contentCtx, effect compiler.CompiledEffect) (game.Quantity, bool) {
+	amount := game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX})
+	var damageSource game.ObjectReference
+	var sourceBound bool
+	if len(ctx.content.References) > 0 {
+		damageSource, sourceBound = lowerDamageSourceReference(ctx.content.References[:1])
+	}
+	switch {
+	case effect.Amount.Known:
+		amount = game.Fixed(effect.Amount.Value)
+	case triggeringEventQuantityKind(effect.Amount.DynamicKind):
+		dynamic, ok := lowerTriggeringEventQuantityAmount(ctx, effect.Amount)
+		if !ok {
+			return game.Quantity{}, false
+		}
+		amount = game.Dynamic(dynamic)
+	case effect.Amount.DynamicKind != compiler.DynamicAmountNone:
+		amountObject := game.SourcePermanentReference()
+		if sourceBound {
+			amountObject = damageSource
+		}
+		if obj, ok := lowerDamageAmountObject(effect.Amount, ctx.content.References); ok {
+			amountObject = obj
+		}
+		dynamic, ok := lowerDynamicAmount(effect.Amount, amountObject)
+		if !ok {
+			return game.Quantity{}, false
+		}
+		amount = game.Dynamic(dynamic)
+	default:
+		// No amount override: the damage defaults to X (DynamicAmountX).
+	}
+	return amount, true
+}
+
 func lowerFixedDamageSpell(
 	_ string,
 	ctx contentCtx,
@@ -418,44 +459,13 @@ func lowerFixedDamageSpell(
 			"the executable source backend supports only exact supported damage amounts to one target",
 		)
 	}
-	amount := game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX})
-	var damageSource game.ObjectReference
-	var sourceBound bool
-	if len(ctx.content.References) > 0 {
-		damageSource, sourceBound = lowerDamageSourceReference(ctx.content.References[:1])
-	}
-	switch {
-	case effect.Amount.Known:
-		amount = game.Fixed(effect.Amount.Value)
-	case triggeringEventQuantityKind(effect.Amount.DynamicKind):
-		dynamic, ok := lowerTriggeringEventQuantityAmount(ctx, effect.Amount)
-		if !ok {
-			return game.AbilityContent{}, contentDiagnostic(
-				ctx,
-				"unsupported damage spell",
-				"the executable source backend supports only exact supported damage amounts to one target",
-			)
-		}
-		amount = game.Dynamic(dynamic)
-	case effect.Amount.DynamicKind != compiler.DynamicAmountNone:
-		amountObject := game.SourcePermanentReference()
-		if sourceBound {
-			amountObject = damageSource
-		}
-		if obj, ok := lowerDamageAmountObject(effect.Amount, ctx.content.References); ok {
-			amountObject = obj
-		}
-		dynamic, ok := lowerDynamicAmount(effect.Amount, amountObject)
-		if !ok {
-			return game.AbilityContent{}, contentDiagnostic(
-				ctx,
-				"unsupported damage spell",
-				"the executable source backend supports only exact supported damage amounts to one target",
-			)
-		}
-		amount = game.Dynamic(dynamic)
-	default:
-		// No amount override: the damage defaults to X (DynamicAmountX).
+	amount, amountOK := lowerSingleTargetDamageAmount(ctx, effect)
+	if !amountOK {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported damage spell",
+			"the executable source backend supports only exact supported damage amounts to one target",
+		)
 	}
 	if effect.DamageRecipient.Reference != parser.DamageRecipientReferenceNone {
 		return lowerReferencedPlayerDamageSpell(ctx, effect.DamageRecipient.Reference, amount)

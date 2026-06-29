@@ -187,6 +187,15 @@ type Damage struct {
 	DamageSource     opt.V[ObjectReference]
 	ResultAmountKind EffectResultAmountKind
 
+	// ExcessRecipient redirects the portion of Amount beyond what is lethal to a
+	// single permanent recipient onto this player instead, modeling "Excess
+	// damage is dealt to that creature's controller instead." (Pigment Storm,
+	// Flame Spill). When set, the permanent recipient is dealt only its lethal
+	// damage and the remainder is dealt to this player as a single damage event.
+	// It is valid only with a single-permanent (object or any-target) recipient
+	// and a player ExcessRecipient. The zero value leaves damage undivided.
+	ExcessRecipient DamageRecipient
+
 	// Divided reports that the controller divides Amount as a fixed total among
 	// the targets chosen for the recipient's target spec, allocating at least
 	// one to each at resolution (CR 601.2d). It is valid only with an

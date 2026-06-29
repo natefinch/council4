@@ -1178,6 +1178,7 @@ func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) 
 			return parseDieThisTurnExileReplacement(sentence, tokens, atoms)
 		},
 		func() ([]EffectSyntax, bool) { return parseLifeLossReplacement(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parseExcessDamageToControllerEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parsePunisherEachLoseLifeEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseLibraryTopReorderEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseGroupEntersTappedEffect(sentence, tokens) },
@@ -2502,6 +2503,47 @@ func parseLifeLossReplacement(sentence Sentence, tokens []shared.Token, atoms At
 		Replacement: replacement,
 		References:  referencesInSpan(atoms, shared.SpanOf(resolving)),
 		Exact:       true,
+	}}, true
+}
+
+// parseExcessDamageToControllerEffect recognizes the standalone follow-on
+// sentence "Excess damage is dealt to that creature's controller instead."
+// (Flame Spill, Pigment Storm, Gandalf's Sanction). It redirects the overflow of
+// the preceding "deals N damage to target creature" clause — the damage beyond
+// what was needed to destroy the targeted creature — onto that creature's
+// controller (or owner). It emits a deal-damage effect whose amount is the
+// excess damage dealt this way and whose recipient is the prior target's
+// controller/owner, so the pair lowers to two ordered Damage instructions: the
+// targeted creature damage publishes its excess, and this instruction deals that
+// excess to its controller. It fails closed for every other wording.
+func parseExcessDamageToControllerEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	clause := tokens
+	if n := len(clause); n > 0 && clause[n-1].Kind == shared.Period {
+		clause = clause[:n-1]
+	}
+	if len(clause) < 7 ||
+		!effectWordsAt(clause, 0, "excess", "damage", "is", "dealt", "to") ||
+		!equalWord(clause[len(clause)-1], "instead") {
+		return nil, false
+	}
+	recipient := clause[5 : len(clause)-1]
+	role, ok := referencedControllerOwnerRecipient(recipient)
+	if !ok {
+		return nil, false
+	}
+	synthesized := append([]shared.Token{clause[1], clause[4]}, recipient...)
+	return []EffectSyntax{{
+		Kind:            EffectDealDamage,
+		Context:         EffectContextSource,
+		Span:            shared.SpanOf(tokens),
+		VerbSpan:        clause[3].Span,
+		ClauseSpan:      shared.SpanOf(tokens),
+		Text:            sentence.Text,
+		Tokens:          synthesized,
+		Amount:          EffectAmountSyntax{DynamicKind: EffectDynamicAmountExcessDamageDealtThisWay, Multiplier: 1},
+		DamageRecipient: DamageRecipientSyntax{Reference: role},
+		References:      referencesInSpan(atoms, shared.SpanOf(recipient)),
+		Exact:           true,
 	}}, true
 }
 
