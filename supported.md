@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,337 of 32,501 cards eligible for paper support (50.3%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,342 of 32,501 cards eligible for paper support (50.3%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -4253,6 +4253,7 @@ Council4 currently supports **16,337 of 32,501 cards eligible for paper support 
 - Encroaching Dragonstorm
 - Encroaching Mycosynth
 - Encroaching Wastes
+- End the Festivities
 - End-Raze Forerunners
 - Endbringer
 - Endless Cockroaches
@@ -5720,6 +5721,7 @@ Council4 currently supports **16,337 of 32,501 cards eligible for paper support 
 - Goblin Bushwhacker
 - Goblin Cannon
 - Goblin Cavaliers
+- Goblin Chainwhirler
 - Goblin Champion
 - Goblin Chariot
 - Goblin Chieftain
@@ -6854,6 +6856,7 @@ Council4 currently supports **16,337 of 32,501 cards eligible for paper support 
 - Immerwolf
 - Immobilizing Ink
 - Immolating Glare
+- Immolating Gyre
 - Immolating Souleater
 - Immolation
 - Immortal Phoenix
@@ -13175,6 +13178,7 @@ Council4 currently supports **16,337 of 32,501 cards eligible for paper support 
 - Spitting Spider
 - Splash Lasher
 - Splatter Goblin
+- Splatter Technique
 - Splatter Thug
 - Splendid Agony
 - Splendid Reclamation
@@ -13980,6 +13984,7 @@ Council4 currently supports **16,337 of 32,501 cards eligible for paper support 
 - Teardrop Kami
 - Tears of Valakut
 - Tectonic Edge
+- Tectonic Hazard
 - Tectonic Reformation
 - Teddy Bear
 - Teeming Dragonstorm
