@@ -160,6 +160,8 @@ func TestExactSourcePowerDamageAccepts(t *testing.T) {
 		{"Bite Down", "Target creature you control deals damage equal to its power to target creature or planeswalker you don't control."},
 		{"Soul's Fire", "Target creature you control deals damage equal to its power to any target."},
 		{"Fall of the Hammer", "Target creature you control deals damage equal to its power to another target creature."},
+		{"Betrayal at the Vault", "Target creature you control deals damage equal to its power to each of two other target creatures."},
+		{"Cosmic Hunger", "Target creature you control deals damage equal to its power to another target creature, planeswalker, or battle."},
 	}
 	for _, test := range tests {
 		if !damageEffectExact(t, test.name, test.source) {

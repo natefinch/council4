@@ -2917,8 +2917,15 @@ func exactSourcePowerDamageEffectSyntax(effect *EffectSyntax) bool {
 		if !effect.Targets[0].Exact || !effect.Targets[1].Exact {
 			return false
 		}
+		// "deals damage equal to its power to each of N other target creatures"
+		// (Betrayal at the Vault): a plural recipient slot reads "each of" before
+		// the count. The single-recipient form keeps the bare target phrase.
+		recipient := effect.Targets[1].Text
+		if effect.Targets[1].Cardinality.Max >= 2 {
+			recipient = "each of " + recipient
+		}
 		return text == fmt.Sprintf("%s deals damage %s to %s.",
-			effect.Targets[0].Text, effect.Amount.Text, effect.Targets[1].Text)
+			effect.Targets[0].Text, effect.Amount.Text, recipient)
 	default:
 		return false
 	}

@@ -41,6 +41,7 @@ var Cards = []*game.CardDef{
 	BenevolentBlessing,
 	BenevolentHydra,
 	Bereavement,
+	BetrayalAtTheVault,
 	BilboRetiredBurglar,
 	BirdsOfParadise,
 	BiteDown,

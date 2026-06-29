@@ -46,6 +46,14 @@ func parseTargets(tokens []shared.Token, atoms Atoms) []TargetSyntax {
 				if !ok || cardinality.Max < 1 {
 					cardinality = TargetCardinalitySyntax{}
 				}
+			case i >= 2 && equalWord(tokens[i-1], "other") &&
+				func() bool { c, ok := effectNumber(tokens[i-2], atoms); return ok && c > 1 }():
+				// "two other target creatures" (a bite spell's "each of N other
+				// target creatures" recipient): the count precedes the "other"
+				// distinctness qualifier, so capture both as a fixed plural slot.
+				count, _ := effectNumber(tokens[i-2], atoms)
+				start = i - 2
+				cardinality = TargetCardinalitySyntax{Min: count, Max: count}
 			case i >= 1:
 				if count, ok := effectNumber(tokens[i-1], atoms); ok && count > 0 {
 					start = i - 1
@@ -1159,7 +1167,7 @@ func comparisonClauseWords(qualifier string, comparison compare.Int) ([]string, 
 // combat or tapped state, "another"/"other") is present, or when any member is
 // not a permanent card type.
 func exactTypeUnionTargetSyntax(text string, selection SelectionSyntax) bool {
-	if selection.All || selection.Another || selection.Other ||
+	if selection.All || selection.Other ||
 		selection.Attacking || selection.Blocking || selection.Tapped || selection.Untapped ||
 		selection.Keyword != KeywordUnknown || selection.ExcludedKeyword != KeywordUnknown ||
 		selection.Zone != zone.None || selection.Colorless || selection.Multicolored ||
@@ -1236,6 +1244,15 @@ func exactTypeUnionTargetSyntax(text string, selection SelectionSyntax) bool {
 // with a controller clause fails the round-trip closed.
 func typeUnionTargetExpected(union string, spellUnion bool, selection SelectionSyntax) (string, bool) {
 	expected := "target " + union
+	if selection.Another {
+		// "another target creature, planeswalker, or battle" (Cosmic Hunger): the
+		// "another" self-exclusion determiner replaces "target". It applies only
+		// to permanent unions; lowering maps Another to an ExcludeSource filter.
+		if spellUnion {
+			return "", false
+		}
+		expected = "another target " + union
+	}
 	if spellUnion {
 		expected += " spell"
 	}

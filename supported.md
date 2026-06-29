@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,244 of 32,501 cards eligible for paper support (50.0%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,248 of 32,501 cards eligible for paper support (50.0%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -34,6 +34,7 @@ Council4 currently supports **16,244 of 32,501 cards eligible for paper support 
 - Absolute Law
 - Absorb
 - Absorb Vis
+- Abuelo, Ancestral Echo
 - Abundant Countryside
 - Abundant Growth
 - Abyssal Gatekeeper
@@ -1245,6 +1246,7 @@ Council4 currently supports **16,244 of 32,501 cards eligible for paper support 
 - Bestial Menace
 - Bestow Greatness
 - Betor, Ancestor's Voice
+- Betrayal at the Vault
 - Bewilder
 - Bewildering Blizzard
 - Beyeen Veil // Beyeen Coast
@@ -2773,6 +2775,7 @@ Council4 currently supports **16,244 of 32,501 cards eligible for paper support 
 - Coruscation Mage
 - Cosi's Ravager
 - Cosmic Epiphany
+- Cosmic Hunger
 - Cosmic Larva
 - Cosmic Spider-Man
 - Cosmium Blast
@@ -8831,6 +8834,7 @@ Council4 currently supports **16,244 of 32,501 cards eligible for paper support 
 - Mob
 - Mob Justice
 - Mobile Fort
+- Mobile Garrison
 - Mobile Homestead
 - Mobilization
 - Mobilize
