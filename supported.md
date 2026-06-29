@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,371 of 32,501 cards eligible for paper support (50.4%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,373 of 32,501 cards eligible for paper support (50.4%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -9363,6 +9363,7 @@ Council4 currently supports **16,371 of 32,501 cards eligible for paper support 
 - Niblis of the Mist
 - Niblis of the Urn
 - Nick Valentine, Private Eye
+- Nico Minoru, Runaway
 - Nicol Bolas, the Deceiver
 - Night Incarnate
 - Night Market
@@ -15634,6 +15635,7 @@ Council4 currently supports **16,371 of 32,501 cards eligible for paper support 
 - Wall Off
 - Wallop
 - Wand of the Elements
+- Wanda's Vision
 - Wander in Death
 - Wander Off
 - Wanderbrine Preacher
