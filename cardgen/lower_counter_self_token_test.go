@@ -119,3 +119,18 @@ func TestLowerCounterThenSelfTokenRejectsDynamicCount(t *testing.T) {
 		OracleText: "Counter target spell. Create X Treasure tokens, where X is that spell's mana value.",
 	})
 }
+
+// TestLowerCounterThenSelfTokenRejectsOptionalCreate keeps the lowerer
+// mandatory: a "you may create" rider stays unsupported rather than collapsing
+// into an unconditional token.
+func TestLowerCounterThenSelfTokenRejectsOptionalCreate(t *testing.T) {
+	t.Parallel()
+	lowerSingleFaceExpectingUnsupported(t, &ScryfallCard{
+		Name:       "Near Geist Snatch",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		ManaCost:   "{2}{U}{U}",
+		Colors:     []string{"U"},
+		OracleText: "Counter target creature spell. You may create a 1/1 blue Spirit creature token with flying.",
+	})
+}

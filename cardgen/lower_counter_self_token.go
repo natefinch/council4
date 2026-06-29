@@ -59,6 +59,7 @@ func hasExactSelfCounterTokenEnvelope(ctx contentCtx) bool {
 // attacking, copy, and choice forms.
 func selfTokenInstruction(ctx contentCtx, tokenEffect *compiler.CompiledEffect) (game.Instruction, bool) {
 	if tokenEffect.Context != parser.EffectContextController ||
+		!isExactMandatoryEffect(tokenEffect) ||
 		len(tokenEffect.Targets) != 0 ||
 		len(tokenEffect.References) != 0 ||
 		tokenEffect.TokenCopyOfTarget ||
