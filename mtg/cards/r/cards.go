@@ -61,6 +61,7 @@ var Cards = []*game.CardDef{
 	Reveillark,
 	RevengeOfRavens,
 	ReveredElder,
+	ReverentHunter,
 	RevivalOfTheAncestors,
 	RhinoBarrelingBrute,
 	RhinoSRampage,

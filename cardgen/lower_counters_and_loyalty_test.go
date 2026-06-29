@@ -272,6 +272,25 @@ func TestLowerPlayerCounterPlacement(t *testing.T) {
 	}
 }
 
+func TestLowerDynamicReferencedCounterPlacement(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Hoarder",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human",
+		OracleText: "When Test Hoarder enters, put a number of +1/+1 counters on it equal to the number of creature cards in your graveyard.",
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
+	}
+	add, ok := face.TriggeredAbilities[0].Content.Modes[0].Sequence[0].Primitive.(game.AddCounter)
+	if !ok ||
+		add.CounterKind != counter.PlusOnePlusOne ||
+		!add.Amount.IsDynamic() {
+		t.Fatalf("primitive = %+v, want dynamic +1/+1 counters on self", face.TriggeredAbilities[0].Content.Modes[0].Sequence[0].Primitive)
+	}
+}
+
 func TestLowerEveryRecognizedCounterKindOnItsValidTarget(t *testing.T) {
 	t.Parallel()
 	for kind := counter.PlusOnePlusOne; kind <= counter.Experience; kind++ {

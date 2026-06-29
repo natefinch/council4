@@ -1236,17 +1236,12 @@ func referencedCounterPlacementAmount(
 		}
 		return game.Dynamic(dynamic), true
 	}
-	// A "for each <group>" count ("Put a +1/+1 counter on this creature for each
-	// creature you control.") resolves through the shared dynamic-amount lowerer
-	// when it counts a battlefield group (DynamicAmountCount); the count is
-	// controller- or group-relative, so it needs no recipient object. Every
-	// other dynamic kind or form keeps the referenced placement fail-closed.
-	if amount.DynamicForm == compiler.DynamicAmountForEach &&
-		amount.DynamicKind == compiler.DynamicAmountCount {
-		dynamic, ok := lowerDynamicAmount(amount, game.SourcePermanentReference())
-		if !ok {
-			return game.Quantity{}, false
-		}
+	// Every other dynamic amount ("for each creature you control", devotion,
+	// twice the creatures in your graveyard, the sacrificed creature's
+	// toughness, ...) resolves through the shared dynamic-amount lowerer
+	// against the placement's own permanent. Amounts the lowerer cannot model
+	// keep the referenced placement fail-closed.
+	if dynamic, ok := lowerDynamicAmount(amount, game.SourcePermanentReference()); ok {
 		return game.Dynamic(dynamic), true
 	}
 	return game.Quantity{}, false
