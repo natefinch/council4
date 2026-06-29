@@ -253,6 +253,9 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 		condition.Predicate = ConditionPredicateObjectMatches
 		condition.ObjectBinding = compileConditionObjectBinding(clause.ObjectBinding)
 		condition.Selection = selection
+		if clause.Negated {
+			condition.Negated = !condition.Negated
+		}
 	case parser.ConditionPredicateObjectExists:
 		condition.Predicate = ConditionPredicateObjectExists
 		condition.ObjectBinding = compileConditionObjectBinding(clause.ObjectBinding)

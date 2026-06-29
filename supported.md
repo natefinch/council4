@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,267 of 32,501 cards eligible for paper support (50.1%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,273 of 32,501 cards eligible for paper support (50.1%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -6433,6 +6433,7 @@ Council4 currently supports **16,267 of 32,501 cards eligible for paper support 
 - Hex
 - Hexplate Golem
 - Hibernation
+- Hickory Woodlot
 - Hidden Footblade
 - Hidden Grotto
 - Hidden Herbalists
@@ -9913,6 +9914,7 @@ Council4 currently supports **16,267 of 32,501 cards eligible for paper support 
 - Pearl Medallion
 - Pearl of Wisdom
 - Pearled Unicorn
+- Peat Bog
 - Peculiar Lighthouse
 - Pedal to the Metal
 - Pedantic Learning
@@ -10952,6 +10954,7 @@ Council4 currently supports **16,267 of 32,501 cards eligible for paper support 
 - Remember the Fallen
 - Remnant Elemental
 - Remorseful Cleric
+- Remote Farm
 - Remote Isle
 - Remove Soul
 - Rend Flesh
@@ -11557,6 +11560,7 @@ Council4 currently supports **16,267 of 32,501 cards eligible for paper support 
 - Sandsower
 - Sandsteppe Citadel
 - Sandstone Bridge
+- Sandstone Needle
 - Sandstone Warrior
 - Sandstorm
 - Sandstorm Eidolon
@@ -11584,6 +11588,7 @@ Council4 currently supports **16,267 of 32,501 cards eligible for paper support 
 - Sapphire Medallion
 - Saprazzan Heir
 - Saprazzan Outrigger
+- Saprazzan Skerry
 - Saproling
 - Saproling // Elf Knight
 - Saproling // Insect
@@ -12003,6 +12008,7 @@ Council4 currently supports **16,267 of 32,501 cards eligible for paper support 
 - Serra's Embrace
 - Serra's Guardian
 - Serra's Sanctum
+- Serrated Arrows
 - Serrated Scorpion
 - Serum Raker
 - Serum Sovereign

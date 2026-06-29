@@ -1192,7 +1192,7 @@ func removeCounterCostKinds() []counter.Kind {
 		counter.Foreshadow, counter.Arrowhead, counter.Carrion, counter.Corpse,
 		counter.Loot, counter.Net, counter.Gold, counter.Currency, counter.Book,
 		counter.Blaze, counter.Palliation, counter.Gem, counter.Pressure, counter.Flame,
-		counter.Ice, counter.Coin,
+		counter.Ice, counter.Coin, counter.Depletion,
 	}
 }
 

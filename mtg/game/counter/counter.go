@@ -105,11 +105,12 @@ const (
 	Flame      // Flame counter (Flame Channeler)
 	Ice        // Ice counter (Iceberg)
 	Coin       // Coin counter (Noble's Purse)
+	Depletion  // Depletion counter (Hickory Woodlot)
 )
 
 // Valid reports whether k is a recognized counter kind.
 func (k Kind) Valid() bool {
-	return k >= PlusOnePlusOne && k <= Coin
+	return k >= PlusOnePlusOne && k <= Depletion
 }
 
 // PlayerOnly reports whether k may be placed only on players.
@@ -281,6 +282,8 @@ func (k Kind) String() string {
 		return "ice"
 	case Coin:
 		return "coin"
+	case Depletion:
+		return "depletion"
 	default:
 		return "unknown"
 	}
