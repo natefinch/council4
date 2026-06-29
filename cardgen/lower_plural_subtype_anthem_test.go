@@ -62,6 +62,48 @@ func TestGenerateExecutablePluralSubtypeAnthems(t *testing.T) {
 				"game.LandwalkKeyword{Subtype: types.Mountain}",
 			},
 		},
+		"battlefield other conjunction": {
+			card: &ScryfallCard{
+				Name:       "Tribal Marshal",
+				Layout:     "normal",
+				ManaCost:   "{2}{G}",
+				TypeLine:   "Creature — Elf",
+				OracleText: "Other Goblins, Soldiers, and Elves get +1/+1.",
+				Power:      &power,
+				Toughness:  &power,
+			},
+			wants: []string{
+				"game.BattlefieldGroupExcluding(game.Selection{SubtypesAny: []types.Sub{types.Sub(\"Goblin\"), types.Sub(\"Soldier\"), types.Sub(\"Elf\")}}, game.SourcePermanentReference())",
+			},
+		},
+		"controlled other conjunction": {
+			card: &ScryfallCard{
+				Name:       "Crypt Marshal",
+				Layout:     "normal",
+				ManaCost:   "{2}{B}",
+				TypeLine:   "Creature — Zombie",
+				OracleText: "Other Zombies, Skeletons, and Vampires you control get +1/+1.",
+				Power:      &power,
+				Toughness:  &power,
+			},
+			wants: []string{
+				"game.ObjectControlledGroupExcluding(game.SourcePermanentReference(), game.Selection{SubtypesAny: []types.Sub{types.Sub(\"Zombie\"), types.Sub(\"Skeleton\"), types.Sub(\"Vampire\")}}, game.SourcePermanentReference())",
+			},
+		},
+		"relative clause disjunction": {
+			card: &ScryfallCard{
+				Name:       "Pack Sovereign",
+				Layout:     "normal",
+				ManaCost:   "{2}{G}",
+				TypeLine:   "Creature — Werewolf",
+				OracleText: "Each other creature you control that's a Wolf or a Werewolf gets +1/+1.",
+				Power:      &power,
+				Toughness:  &power,
+			},
+			wants: []string{
+				"game.ObjectControlledGroupExcluding(game.SourcePermanentReference(), game.Selection{SubtypesAny: []types.Sub{types.Sub(\"Wolf\"), types.Sub(\"Werewolf\")}}, game.SourcePermanentReference())",
+			},
+		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
