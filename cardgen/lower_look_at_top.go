@@ -56,12 +56,40 @@ func lowerConditionalLookAtTopBattlefieldTrigger(
 		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability",
 			"the executable source backend does not support this semantic trigger condition")
 	}
+	sequence := conditionalLookAtTopBattlefieldSequence(ability)
+	return game.TriggeredAbility{
+		Text: ability.Text,
+		Trigger: game.TriggerCondition{
+			Type:                 triggerType,
+			Pattern:              pattern,
+			InterveningIf:        interveningIfText(ability.Trigger),
+			InterveningCondition: intervening,
+		},
+		Content: game.Mode{Text: ability.Text, Sequence: sequence}.Ability(),
+	}, nil
+}
+
+// conditionalLookAtTopBattlefieldSequence builds the look-at-top then
+// gated-optional battlefield placement instruction sequence shared by the
+// triggered and activated forms of the exact look-at-top battlefield sequence.
+// The else disposition is none (leave the card on top), hand, or an optional
+// move to the bottom of the controller's library.
+func conditionalLookAtTopBattlefieldSequence(ability compiler.CompiledAbility) []game.Instruction {
 	lookedCard := game.CardReference{Kind: game.CardReferenceLinked, LinkID: string(lookAtTopBattlefieldLookedKey)}
 	elseZone := zone.None
-	if ability.ExactSequenceLookAtTopElseHand {
+	elseBottom := false
+	elseOptional := false
+	switch {
+	case ability.ExactSequenceLookAtTopElseHand:
 		elseZone = zone.Hand
+	case ability.ExactSequenceLookAtTopElseBottom:
+		elseZone = zone.Library
+		elseBottom = true
+		elseOptional = true
+	default:
+		// No fallback: a declined or non-matching card stays atop the library.
 	}
-	sequence := []game.Instruction{
+	return []game.Instruction{
 		{
 			Primitive: game.LookAtLibraryTop{
 				Player:        game.ControllerReference(),
@@ -78,21 +106,13 @@ func lowerConditionalLookAtTopBattlefieldTrigger(
 						RequiredTypesAny: ability.ExactSequenceLookAtTopTypes,
 					},
 				}),
-				EntryTapped: ability.ExactSequenceLookAtTopEntersTapped,
-				Else:        elseZone,
+				EntryTapped:  ability.ExactSequenceLookAtTopEntersTapped,
+				Else:         elseZone,
+				ElseBottom:   elseBottom,
+				ElseOptional: elseOptional,
 			},
 		},
 	}
-	return game.TriggeredAbility{
-		Text: ability.Text,
-		Trigger: game.TriggerCondition{
-			Type:                 triggerType,
-			Pattern:              pattern,
-			InterveningIf:        interveningIfText(ability.Trigger),
-			InterveningCondition: intervening,
-		},
-		Content: game.Mode{Text: ability.Text, Sequence: sequence}.Ability(),
-	}, nil
 }
 
 // lowerConditionalLookAtTopTrigger lowers the parser-recognized sequence "look

@@ -12,6 +12,7 @@ var Cards = []*game.CardDef{
 	PangTongYoungPhoenix,
 	ParadoxSurveyor,
 	ParasiticImpetus,
+	Parcelbeast,
 	PathOfAnnihilation,
 	PathToRedemption,
 	PathToTheWorldTree,

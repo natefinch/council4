@@ -10,6 +10,7 @@ var Cards = []*game.CardDef{
 	LadyOfLaughter,
 	LaidToRest,
 	LairDelve,
+	LanternOfRevealing,
 	LapisLazuliTalisman,
 	LapseOfCertainty,
 	LashwhipPredator,

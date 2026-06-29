@@ -87,14 +87,17 @@ type CompiledAbility struct {
 	// looked-at card matches one of these types. It is nil for all other exact
 	// sequences. The parser owns the wording; this holds only the typed values.
 	ExactSequenceLookAtTopTypes []types.Card
-	// ExactSequenceLookAtTopEntersTapped and ExactSequenceLookAtTopElseHand carry
-	// the typed parameters of ExactSequenceConditionalLookAtTopBattlefield: the
-	// former records the "tapped" battlefield entry rider, the latter that the
-	// card moves into the controller's hand when it is not put onto the
-	// battlefield (false leaves the card on top of the library). Both are false
-	// for every other exact sequence.
+	// ExactSequenceLookAtTopEntersTapped, ExactSequenceLookAtTopElseHand, and
+	// ExactSequenceLookAtTopElseBottom carry the typed parameters of
+	// ExactSequenceConditionalLookAtTopBattlefield: the first records the "tapped"
+	// battlefield entry rider, the second that the card moves into the
+	// controller's hand when it is not put onto the battlefield, and the third
+	// that the controller may instead put it on the bottom of their library (at
+	// most one else flag is set; both false leaves the card on top of the
+	// library). All are false for every other exact sequence.
 	ExactSequenceLookAtTopEntersTapped bool
 	ExactSequenceLookAtTopElseHand     bool
+	ExactSequenceLookAtTopElseBottom   bool
 	Span                               shared.Span
 	Text                               string
 	ActivationTiming                   ActivationTimingKind

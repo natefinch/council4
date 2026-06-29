@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,345 of 32,501 cards eligible for paper support (50.3%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,348 of 32,501 cards eligible for paper support (50.3%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -7783,6 +7783,7 @@ Council4 currently supports **16,345 of 32,501 cards eligible for paper support 
 - Landscape Painter // Vibrant Idea
 - Languish
 - Lantern Kami
+- Lantern of Revealing
 - Lantern Scout
 - Lantern Spirit
 - Lantern-Lit Graveyard
@@ -9175,6 +9176,7 @@ Council4 currently supports **16,345 of 32,501 cards eligible for paper support 
 - Mystical Tutor
 - Mystifying Maze
 - Mythic Proportions
+- N'Yami-Class Mother Ship
 - Nacatl Outlander
 - Nacatl Savage
 - Nacre Talisman
@@ -9905,6 +9907,7 @@ Council4 currently supports **16,345 of 32,501 cards eligible for paper support 
 - Parasitic Impetus
 - Parasitic Strix
 - Parcel Myr
+- Parcelbeast
 - Parch
 - Pardic Collaborator
 - Pardic Lancer

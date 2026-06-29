@@ -204,7 +204,7 @@ func lowerActivationShell(
 		CoinFlip:  syntax.CoinFlip,
 		Vote:      syntax.Vote,
 	}
-	content, diagnostic := lowerAbilityContent(cardName, ability.Kind, bodyContent, false, &bodySyntax)
+	content, diagnostic := lowerActivatedBodyContent(cardName, ability, bodyContent, &bodySyntax, bodyText)
 	if diagnostic != nil {
 		if diagnostic.Summary == "unsupported ability modes" {
 			diagnostic.Summary = "unsupported activation modes"

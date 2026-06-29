@@ -215,6 +215,9 @@ func lowerActivatedAbilityKind(
 	if len(ability.Content.Modes) > 0 {
 		spans = append(spans, ability.Span)
 	}
+	if ability.ExactSequence != compiler.ExactSequenceUnknown {
+		spans = append(spans, ability.Content.Span)
+	}
 	return abilityLowering{
 		activatedAbility: opt.Val(activatedAbility),
 		consumed: semanticConsumption{
@@ -669,6 +672,14 @@ func lowerActivatedAbility(
 }
 
 func prepareActivationCondition(ability *compiler.CompiledAbility, syntax *parser.Ability) (opt.V[game.Condition], bool) {
+	if ability.ExactSequence == compiler.ExactSequenceConditionalLookAtTopBattlefield {
+		// The conditional look-at-top battlefield body keeps its "if it's a
+		// <type> card" characteristic gate in the body, where the dedicated
+		// exact-sequence lowering consumes it as a typed CardCondition. Leave it
+		// in place instead of extracting it as an activation gate.
+		*syntax = syntaxWithoutAbilityWord(syntax)
+		return opt.V[game.Condition]{}, true
+	}
 	if len(ability.Content.Conditions) == 0 {
 		*syntax = syntaxWithoutAbilityWord(syntax)
 		return opt.V[game.Condition]{}, true
