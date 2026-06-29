@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,286 of 32,501 cards eligible for paper support (50.1%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,298 of 32,501 cards eligible for paper support (50.1%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -393,6 +393,7 @@ Council4 currently supports **16,286 of 32,501 cards eligible for paper support 
 - Ancestor's Chosen
 - Ancestor's Prophet
 - Ancestors' Aid
+- Ancestral Blade
 - Ancestral Mask
 - Ancestral Memories
 - Ancestral Recall
@@ -859,6 +860,7 @@ Council4 currently supports **16,286 of 32,501 cards eligible for paper support 
 - Automated Artificer
 - Automated Assembly Line
 - Automatic Librarian
+- Auxiliary Boosters
 - Avacyn
 - Avacyn's Collar
 - Avacyn's Pilgrim
@@ -1023,6 +1025,7 @@ Council4 currently supports **16,286 of 32,501 cards eligible for paper support 
 - Barbed Battlegear
 - Barbed Bloodletter
 - Barbed Field
+- Barbed Spike
 - Barbtooth Wurm
 - Bargain
 - Barging Sergeant
@@ -5745,6 +5748,7 @@ Council4 currently supports **16,286 of 32,501 cards eligible for paper support 
 - Goblin Masons
 - Goblin Matron
 - Goblin Medics
+- Goblin Morningstar
 - Goblin Motivator
 - Goblin Mountaineer
 - Goblin Offensive
@@ -6298,6 +6302,7 @@ Council4 currently supports **16,286 of 32,501 cards eligible for paper support 
 - Headless Skaab
 - Headless Specter
 - Headlong Rush
+- Headsplitter
 - Headstone
 - Headstrong Brute
 - Headwater Sentries
@@ -6551,6 +6556,7 @@ Council4 currently supports **16,286 of 32,501 cards eligible for paper support 
 - Hoodwink
 - Hoof Skulkin
 - Hoofprints of the Stag
+- Hook Swords
 - Hookblade Veteran
 - Hooting Mandrills
 - Hop to It
@@ -6728,6 +6734,7 @@ Council4 currently supports **16,286 of 32,501 cards eligible for paper support 
 - Hydra
 - Hydra
 - Hydra
+- HYDRA Disintegrator
 - HYDRA Infiltration
 - HYDRA Troopers
 - Hydroblast
@@ -7716,6 +7723,7 @@ Council4 currently supports **16,286 of 32,501 cards eligible for paper support 
 - Kykar, Wind's Fury
 - Kykar, Zephyr Awakener
 - Kyoki, Sanity's Eclipse
+- Kyoshi Battle Fan
 - Kyoshi Island Plaza
 - Kyoshi Village
 - Kyoshi Warrior Exemplars
@@ -8445,6 +8453,7 @@ Council4 currently supports **16,286 of 32,501 cards eligible for paper support 
 - Mascot Exhibition
 - Mask of Avacyn
 - Mask of Griselbrand
+- Mask of Immolation
 - Mask of Law and Grace
 - Mask of Memory
 - Mask of Riddles
@@ -8662,6 +8671,7 @@ Council4 currently supports **16,286 of 32,501 cards eligible for paper support 
 - Michiko's Reign of Truth // Portrait of Michiko
 - Micromancer
 - Midgar, City of Mako // Reactor Raid
+- Midnight Angel Armor
 - Midnight Assassin
 - Midnight Charm
 - Midnight Covenant
@@ -15995,6 +16005,7 @@ Council4 currently supports **16,286 of 32,501 cards eligible for paper support 
 - Wolf-Skull Shaman
 - Wolfir Avenger
 - Wolfkin Bond
+- Wolfrider's Saddle
 - Wolfsbane, Highland Hero
 - Wolfwillow Haven
 - Wolverine Pack
@@ -16008,6 +16019,7 @@ Council4 currently supports **16,286 of 32,501 cards eligible for paper support 
 - Wooded Bastion
 - Wooded Foothills
 - Wooded Ridgeline
+- Wooden Cane
 - Wooden Sphere
 - Woodfall Primus
 - Woodland Acolyte // Mend the Wilds
