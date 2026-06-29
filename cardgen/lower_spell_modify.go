@@ -2682,12 +2682,15 @@ func lowerTemporaryKeywordLossSpell(ctx contentCtx) (game.AbilityContent, *share
 // into one game.ApplyContinuous per target slot, each carrying both a
 // power/toughness layer and a keyword layer. The parser splits the body into a
 // target EffectModifyPT and a prior-subject EffectGain sharing one span; both
-// must be exact and until-end-of-turn with fixed deltas. The target slot may be
-// single ("Target creature gets +1/+1 and gains trample…") or multi-cardinality
-// ("Up to two target creatures each get +1/+1 and gain lifelink…"); a declined
-// "up to" slot leaves an unresolved target index that the runtime
-// ApplyContinuous no-ops, so only chosen creatures are buffed. It fails closed
-// for any richer shape.
+// must be until-end-of-turn. The pump delta is a fixed +N/+N, the spell's "X",
+// or a "for each <permanent>"/"where X is …" dynamic amount; the dynamic
+// for-each clause loses its own "until end of turn" terminator to the shared
+// gain clause and so reports inexact, which the identical-span coverage
+// tolerates. The target slot may be single ("Target creature gets +1/+1 and
+// gains trample…") or multi-cardinality ("Up to two target creatures each get
+// +1/+1 and gain lifelink…"); a declined "up to" slot leaves an unresolved
+// target index that the runtime ApplyContinuous no-ops, so only chosen
+// creatures are buffed. It fails closed for any richer shape.
 func lowerTemporaryPTKeywordSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	if len(ctx.content.Effects) != 2 ||
 		ctx.content.Effects[0].Kind != compiler.EffectModifyPT ||
@@ -2702,7 +2705,7 @@ func lowerTemporaryPTKeywordSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	modifyEffect := ctx.content.Effects[0]
 	keywordEffect := ctx.content.Effects[1]
 	if modifyEffect.Span != keywordEffect.Span ||
-		!modifyEffect.Exact ||
+		!temporaryPTKeywordPumpExact(modifyEffect) ||
 		!keywordEffect.Exact ||
 		modifyEffect.Negated ||
 		keywordEffect.Negated ||
@@ -2783,6 +2786,18 @@ func temporaryPTKeywordDeltas(modifyEffect, keywordEffect compiler.CompiledEffec
 	}
 	return whereXSignedQuantity(&dynamic, modifyEffect.PowerDelta),
 		whereXSignedQuantity(&dynamic, modifyEffect.ToughnessDelta), true
+}
+
+// temporaryPTKeywordPumpExact reports whether the pump clause of a combined
+// "<target> gets <deltas> and gains <keyword> until end of turn" buff covers its
+// source exactly. A fixed or "where X is …" pump is recognized exact directly. A
+// "for each <permanent>" pump reports inexact only because the shared trailing
+// "until end of turn" terminator binds to the gain clause; the caller's
+// identical-span check already proves the combined clause is fully consumed, so
+// that dynamic for-each form counts as exact here too.
+func temporaryPTKeywordPumpExact(modifyEffect compiler.CompiledEffect) bool {
+	return modifyEffect.Exact ||
+		modifyEffect.Amount.DynamicForm == compiler.DynamicAmountForEach
 }
 
 // temporaryKeywordTarget reports whether a permanent target is one the temporary
