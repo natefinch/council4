@@ -121,6 +121,8 @@ func appendPrimitiveAtoms(atoms []EffectAtom, primitive game.Primitive) []Effect
 		return append(atoms, EffectAtom{Kind: EffectPermanentRemoved, Affected: AffectedTarget})
 	case game.Exile:
 		return append(atoms, EffectAtom{Kind: EffectPermanentRemoved, Affected: AffectedTarget})
+	case game.ChampionExile:
+		return append(atoms, EffectAtom{Kind: EffectPermanentRemoved, Affected: AffectedYou})
 	case game.Bounce:
 		return append(atoms, EffectAtom{Kind: EffectPermanentRemoved, Affected: AffectedTarget})
 	case game.RemoveTargetsForToken:

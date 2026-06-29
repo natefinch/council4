@@ -1411,6 +1411,13 @@ func (p ExileForEachPlayer) validatePrimitive(targets []TargetSpec, checkTargets
 	return validatePlayerReference(p.Chooser, targets, checkTargets)
 }
 
+func (p ChampionExile) validatePrimitive([]TargetSpec, bool) error {
+	if p.LinkedKey == "" {
+		return errors.New("champion exile requires a linked key")
+	}
+	return firstProblem(p.Selection.Validate())
+}
+
 func (p ReturnLinkedExiledCardsToBattlefield) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if p.LinkedKey == "" {
 		return errors.New("return linked exiled cards to battlefield requires a linked key")
