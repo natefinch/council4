@@ -2042,11 +2042,12 @@ func lowerInvestigateSpell(
 	ctx contentCtx,
 	syntax *parser.Ability,
 ) (game.AbilityContent, *shared.Diagnostic) {
-	return lowerExactPrimitiveSpell(
+	return lowerFixedControllerSpell(
 		ctx,
 		syntax,
 		"investigate",
-		func(amount game.Quantity) game.Primitive {
+		true,
+		func(amount game.Quantity, _ game.PlayerReference) game.Primitive {
 			return game.Investigate{Amount: amount}
 		},
 	)
