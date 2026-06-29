@@ -43,7 +43,7 @@ func lowerCantBeBlockedSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagn
 	targetSubject := effect.Context == parser.EffectContextTarget &&
 		len(ctx.content.Targets) == 1 &&
 		len(ctx.content.References) == 0 &&
-		ctx.content.Targets[0].Selector.Kind == compiler.SelectorCreature
+		creatureTargetSubject(ctx.content.Targets[0])
 	sourceSubject := (effect.Context == parser.EffectContextSource ||
 		effect.Context == parser.EffectContextPriorSubject) &&
 		len(ctx.content.Targets) == 0 &&
@@ -102,6 +102,19 @@ func lowerCantBeBlockedSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagn
 	default:
 		return unsupported()
 	}
+}
+
+// creatureTargetSubject reports whether the target selector names a creature
+// subject that can carry a can't-be-blocked restriction: the bare "target
+// creature" selector or a creature subtype noun ("target Detective", "target
+// Merfolk"). It rejects non-creature permanent selectors, which the parser does
+// not produce for this effect but which would be nonsensical to make unblockable.
+func creatureTargetSubject(target compiler.CompiledTarget) bool {
+	if target.Selector.Kind == compiler.SelectorCreature {
+		return true
+	}
+	return target.Selector.Kind == compiler.SelectorUnknown &&
+		len(target.Selector.SubtypesAny()) > 0
 }
 
 // cantBeBlockedInstruction builds the ApplyRule instruction that grants the
