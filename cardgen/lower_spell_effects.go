@@ -649,6 +649,12 @@ func lowerCounterPlacementSpell(
 	case effect.Amount.Known:
 		amount = game.Fixed(effect.Amount.Value)
 	case effect.Amount.VariableX:
+	case effect.Amount.DynamicKind == compiler.DynamicAmountTriggeringEventAmount:
+		dynamic, supported := lowerTriggeringEventQuantity(ctx, effect.Amount)
+		if !supported {
+			return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
+		}
+		amount = game.Dynamic(dynamic)
 	case effect.Amount.DynamicKind != compiler.DynamicAmountNone:
 		dynamic, supported := lowerDynamicAmount(effect.Amount, game.SourcePermanentReference())
 		if !supported {
