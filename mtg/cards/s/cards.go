@@ -97,6 +97,7 @@ var Cards = []*game.CardDef{
 	Skeletonize,
 	SkewerSlinger,
 	SkitteringPrecursor,
+	SkyCycle,
 	SkyclaveShadowcat,
 	SkyclaveSquid,
 	SkycoachConductor,

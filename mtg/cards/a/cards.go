@@ -102,6 +102,7 @@ var Cards = []*game.CardDef{
 	AshmouthHound,
 	AspectOfLamprey,
 	AssassinInitiate,
+	AssertPerfection,
 	AugurOfBolas,
 	AuraOfDominion,
 	AuriokGlaivemaster,

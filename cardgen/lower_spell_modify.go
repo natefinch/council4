@@ -396,8 +396,9 @@ func lowerFixedDamageSpell(
 		!effect.Amount.Known && !effect.Amount.VariableX && effect.Amount.DynamicKind == compiler.DynamicAmountNone ||
 		effect.Negated ||
 		len(ctx.content.Targets) != 1 ||
-		ctx.content.Targets[0].Cardinality.Min != 1 ||
 		ctx.content.Targets[0].Cardinality.Max != 1 ||
+		ctx.content.Targets[0].Cardinality.Min < 0 ||
+		ctx.content.Targets[0].Cardinality.Min > 1 ||
 		len(ctx.content.Conditions) != 0 ||
 		len(abilityKeywordsExcludingSelectorPredicates(ctx.content)) != 0 ||
 		len(ctx.content.Modes) != 0 {
@@ -581,8 +582,9 @@ func lowerTwoTargetDamageSpell(
 		return unsupported()
 	}
 	for i := range ctx.content.Targets {
-		if ctx.content.Targets[i].Cardinality.Min != 1 ||
-			ctx.content.Targets[i].Cardinality.Max != 1 {
+		if ctx.content.Targets[i].Cardinality.Max != 1 ||
+			ctx.content.Targets[i].Cardinality.Min < 0 ||
+			ctx.content.Targets[i].Cardinality.Min > 1 {
 			return unsupported()
 		}
 	}
