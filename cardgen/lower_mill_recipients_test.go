@@ -300,6 +300,36 @@ func TestLowerMillEventQuantityThatMany(t *testing.T) {
 	})
 }
 
+// TestLowerMillSourceCounterCount verifies the "Target player mills X cards,
+// where X is the number of charge counters on this artifact." family (Grindclock,
+// Font of Progress) lowers its activated ability to a Mill whose dynamic amount
+// counts the named counter kind on the ability's own source, recipient unchanged.
+func TestLowerMillSourceCounterCount(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Grindclock",
+		Layout:     "normal",
+		ManaCost:   "{4}",
+		TypeLine:   "Artifact",
+		OracleText: "{T}: Target player mills X cards, where X is the number of charge counters on this artifact.",
+	})
+	if len(face.ActivatedAbilities) != 1 {
+		t.Fatalf("activated abilities = %d, want 1", len(face.ActivatedAbilities))
+	}
+	mill, ok := face.ActivatedAbilities[0].Content.Modes[0].Sequence[0].Primitive.(game.Mill)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.Mill", face.ActivatedAbilities[0].Content.Modes[0].Sequence[0].Primitive)
+	}
+	dynamic := mill.Amount.DynamicAmount()
+	if !dynamic.Exists || dynamic.Val.Kind != game.DynamicAmountObjectCounters ||
+		dynamic.Val.Object != game.SourcePermanentReference() {
+		t.Fatalf("mill amount = %#v, want source-counter count", mill.Amount)
+	}
+	if mill.Player != game.TargetPlayerReference(0) {
+		t.Fatalf("mill player = %v, want target player", mill.Player)
+	}
+}
+
 // TestLowerMillControllerLifeStillUnsupported pins the deliberately deferred
 // "mills cards equal to your life total" form (Space-Time Anomaly) as fail-
 // closed, guarding against an accidental future miscompilation of a controller-
