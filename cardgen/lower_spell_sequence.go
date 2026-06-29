@@ -301,6 +301,18 @@ func lowerOrderedEffectSequence(
 		riderKeywords, riderReferences := tokenCopyGrantRiderAttribution(effect, ctx.content.Keywords, ctx.content.References)
 		effectKeywords = append(effectKeywords, riderKeywords...)
 		effectAbility.content.References = append(effectAbility.content.References, riderReferences...)
+		// In a combined "gets +N/+N and gains <keyword>" sentence, the parser
+		// splits the clause into a ModifyPT effect and a sibling Gain effect that
+		// share the same sentence Span. The keyword belongs to the Gain sibling; do
+		// not attribute it to the ModifyPT iteration so the Gain iteration
+		// consumes it instead. This avoids double-counting in sequenceCountsConsumed
+		// and lets lowerReferencedFixedModifyPT succeed with Keywords == nil.
+		if effect.Kind == compiler.EffectModifyPT &&
+			i+1 < len(ctx.content.Effects) &&
+			ctx.content.Effects[i+1].Kind == compiler.EffectGain &&
+			ctx.content.Effects[i+1].Span == effect.Span {
+			effectKeywords = nil
+		}
 		effectAbility.content.Keywords = effectKeywords
 		consumedTargets += len(clauseTargets)
 		consumedKeywords += len(effectAbility.content.Keywords)

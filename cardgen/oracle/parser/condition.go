@@ -234,6 +234,11 @@ const (
 	ConditionObjectBindingEventPermanent ConditionObjectBinding = "ConditionObjectBindingEventPermanent"
 	ConditionObjectBindingSourceAttached ConditionObjectBinding = "ConditionObjectBindingSourceAttached"
 	ConditionObjectBindingCreatedToken   ConditionObjectBinding = "ConditionObjectBindingCreatedToken"
+	// ConditionObjectBindingTarget binds the condition's object to the spell or
+	// activated ability's first target rather than to a triggering event
+	// permanent. Used by "if it's a <subtype>" and "if it's legendary" riders
+	// that gate a single-target effect clause.
+	ConditionObjectBindingTarget ConditionObjectBinding = "ConditionObjectBindingTarget"
 )
 
 // ConditionSelection is the source-independent permanent selection used by typed
@@ -692,6 +697,7 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		recognizeControlsGreatestPowerCondition,
 		recognizeControlsGreatestToughnessCondition,
 		recognizeDestroyedThisWayCondition,
+		recognizeTargetObjectMatchCondition,
 		recognizeEventSubjectCondition,
 		recognizeSourceSaddledCondition,
 		recognizeSourceStateCondition,
@@ -1321,6 +1327,59 @@ func recognizeTargetColorCondition(body []shared.Token, atoms Atoms) (ConditionC
 	return ConditionClause{
 		Predicate: ConditionPredicateTargetColor,
 		Selection: ConditionSelection{ColorsAny: []TriggerColor{triggerColorFromAtom(color)}},
+	}, true
+}
+
+// recognizeTargetObjectMatchCondition handles "it's a <selection>", "it's an
+// <selection>", and the bare supertype form "it's <supertype>" (e.g. "if it's
+// legendary"). It binds the condition's object to the spell's target permanent
+// rather than to a triggering event permanent; the lowering resolves the target
+// at runtime. Only the "it's" contraction is accepted; "it was a <selection>"
+// is handled by recognizeEventSubjectMatchCondition for trigger bodies.
+//
+// Only selections that resolve to subtypes or supertypes (with no required card
+// types) are accepted here. Selections with required card types (e.g. "a
+// creature") fall through to recognizeEventSubjectCondition so that those forms
+// keep their EventPermanent binding in trigger-body contexts.
+func recognizeTargetObjectMatchCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
+	rest, ok := cutTokenPrefix(body, "it's", "a")
+	if !ok {
+		if rest, ok = cutTokenPrefix(body, "it's", "an"); !ok {
+			// Bare "it's <supertype>" form — no article required.
+			bare, ok2 := cutTokenPrefix(body, "it's")
+			if !ok2 || len(bare) == 0 {
+				return ConditionClause{}, false
+			}
+			var supertypes []ConditionSupertype
+			for _, tok := range bare {
+				st, ok3 := conditionSupertypeAtom(tok.Span, atoms)
+				if !ok3 {
+					return ConditionClause{}, false
+				}
+				supertypes = append(supertypes, st)
+			}
+			return ConditionClause{
+				Predicate:     ConditionPredicateObjectMatches,
+				ObjectBinding: ConditionObjectBindingTarget,
+				Selection:     ConditionSelection{Supertypes: supertypes},
+			}, true
+		}
+	}
+	selection, ok := parseConditionSelection(rest, atoms)
+	if !ok {
+		return ConditionClause{}, false
+	}
+	// Only accept selections that resolve purely through subtypes/supertypes.
+	// Selections with required card types (e.g. "a creature", "a legendary
+	// creature") are left for recognizeEventSubjectCondition so they keep the
+	// EventPermanent binding used by trigger intervening-if conditions.
+	if len(selection.RequiredTypes) > 0 {
+		return ConditionClause{}, false
+	}
+	return ConditionClause{
+		Predicate:     ConditionPredicateObjectMatches,
+		ObjectBinding: ConditionObjectBindingTarget,
+		Selection:     selection,
 	}, true
 }
 
