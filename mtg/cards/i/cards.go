@@ -33,6 +33,7 @@ var Cards = []*game.CardDef{
 	InnerDemon,
 	InsectoidExterminator,
 	Insolence,
+	InspiredSprite,
 	Intervene,
 	InThePresenceOfAges,
 	IntoTheFaeCourt,

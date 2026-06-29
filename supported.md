@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,388 of 32,501 cards eligible for paper support (50.4%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,404 of 32,501 cards eligible for paper support (50.5%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -989,6 +989,7 @@ Council4 currently supports **16,388 of 32,501 cards eligible for paper support 
 - Balloon Peddler
 - Ballroom
 - Ballynock Cohort
+- Ballynock Trapper
 - Ballyrush Banneret
 - Balm of Restoration
 - Balmor, Battlemage Captain
@@ -1093,6 +1094,7 @@ Council4 currently supports **16,388 of 32,501 cards eligible for paper support 
 - Bathe in Dragonfire
 - Baton of Morale
 - Batterbone
+- Battered Golem
 - Batterhorn
 - Battering Craghorn
 - Battering Krasis
@@ -1376,6 +1378,7 @@ Council4 currently supports **16,388 of 32,501 cards eligible for paper support 
 - Blasphemous Act
 - Blasted Landscape
 - Blaster Mage
+- Blasting Station
 - Blaze
 - Blazemire Verge
 - Blazethorn Scarecrow
@@ -2405,6 +2408,7 @@ Council4 currently supports **16,388 of 32,501 cards eligible for paper support 
 - Cinder Glade
 - Cinder Hellion
 - Cinder Marsh
+- Cinder Pyromancer
 - Cinder Shade
 - Cinder Storm
 - Cinder Wall
@@ -2565,6 +2569,7 @@ Council4 currently supports **16,388 of 32,501 cards eligible for paper support 
 - Cobblebrute
 - Cobbled Lancer
 - Cobbled Wings
+- Code of Constraint
 - Codex Shredder
 - Coerced to Kill
 - Coercion
@@ -5410,6 +5415,7 @@ Council4 currently supports **16,388 of 32,501 cards eligible for paper support 
 - Geistblast
 - Geistcatcher's Rig
 - Geistflame
+- Gelectrode
 - Gempalm Avenger
 - Gempalm Incinerator
 - Gempalm Polluter
@@ -5576,6 +5582,7 @@ Council4 currently supports **16,388 of 32,501 cards eligible for paper support 
 - Gird for Battle
 - Gisa's Bidding
 - Gisa, the Hellraiser
+- Gitaxian Anatomist
 - Gitaxian Probe
 - Gitaxian Raptor
 - Githzerai Monk
@@ -6070,6 +6077,7 @@ Council4 currently supports **16,388 of 32,501 cards eligible for paper support 
 - Grim Tutor
 - Grimclaw Bats
 - Grindclock
+- Grinding Station
 - Grinning Demon
 - Grip of Desolation
 - Griselbrand
@@ -7051,6 +7059,7 @@ Council4 currently supports **16,388 of 32,501 cards eligible for paper support 
 - Inspired Charge
 - Inspired Insurgent
 - Inspired Sphinx
+- Inspired Sprite
 - Inspired Tinkering
 - Inspired Ultimatum
 - Inspiring Call
@@ -7907,6 +7916,7 @@ Council4 currently supports **16,388 of 32,501 cards eligible for paper support 
 - Leonardo, Worldly Warrior
 - Leonin Abunas
 - Leonin Armorguard
+- Leonin Battlemage
 - Leonin Bladetrap
 - Leonin Den-Guard
 - Leonin Elder
@@ -8664,6 +8674,7 @@ Council4 currently supports **16,388 of 32,501 cards eligible for paper support 
 - Meriadoc Brandybuck
 - Merrow Grimeblotter
 - Merrow Harbinger
+- Merrow Levitator
 - Merrow Reejerey
 - Merrow Skyswimmer
 - Merrow Wavebreakers
@@ -9333,6 +9344,7 @@ Council4 currently supports **16,388 of 32,501 cards eligible for paper support 
 - Netter en-Dal
 - Nettle Drone
 - Nettle Guard
+- Nettle Sentinel
 - Nettle Swine
 - Nettlecyst
 - Nettletooth Djinn
@@ -11598,6 +11610,7 @@ Council4 currently supports **16,388 of 32,501 cards eligible for paper support 
 - Salvage Slasher
 - Salvaged Manaworker
 - Salvager of Secrets
+- Salvaging Station
 - Salvation Engine
 - Salvation Swan
 - Sam's Desperate Rescue
@@ -13682,6 +13695,7 @@ Council4 currently supports **16,388 of 32,501 cards eligible for paper support 
 - Summoned Dromedary
 - Summoner's Bane
 - Summoner's Pact
+- Summoning Station
 - Sun Ce, Young Conquerer
 - Sun Droplet
 - Sun Quan, Lord of Wu
@@ -14196,6 +14210,7 @@ Council4 currently supports **16,388 of 32,501 cards eligible for paper support 
 - The Fair Basilica
 - The Falcon, Airship Restored
 - The Falcon, Sam Wilson
+- The Fire Nation Drill
 - The First Eruption
 - The First Iroan Games
 - The Flux
@@ -14445,6 +14460,7 @@ Council4 currently supports **16,388 of 32,501 cards eligible for paper support 
 - Tidal Kraken
 - Tide Drifter
 - Tidecaller Mentor
+- Tideforce Elemental
 - Tidehollow Strix
 - Tidepool Turtle
 - Tidespout Tyrant

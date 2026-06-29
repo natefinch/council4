@@ -66,6 +66,7 @@ var Cards = []*game.CardDef{
 	MercurialKite,
 	MerfolkWayfinder,
 	MerfolkWindrobber,
+	MerrowLevitator,
 	MesmericOrb,
 	MesmerizingBenthid,
 	MesmerizingDose,
