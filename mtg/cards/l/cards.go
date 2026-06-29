@@ -25,6 +25,7 @@ var Cards = []*game.CardDef{
 	LeadGolem,
 	LeadTheStampede,
 	LegolasMasterArcher,
+	LeoninBattlemage,
 	LeoninDenGuard,
 	LeoninLightbringer,
 	LeylineDowser,
