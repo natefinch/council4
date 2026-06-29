@@ -26,6 +26,7 @@ var Cards = []*game.CardDef{
 	SavaiThundermane,
 	SavedByTheShell,
 	SawbackManticore,
+	ScaldingSalamander,
 	ScamperingScorcher,
 	ScarabFeast,
 	ScorchRider,
