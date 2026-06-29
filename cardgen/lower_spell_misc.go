@@ -148,6 +148,17 @@ func lowerFixedLifeSpell(
 		}
 		playerRef = ref
 	case len(ctx.content.Targets) == 1 &&
+		effect.Context == parser.EffectContextReferencedObjectOwner:
+		ref, ok := referencedOwnerPlayerRef(ctx)
+		if !ok {
+			return game.AbilityContent{}, contentDiagnostic(
+				ctx,
+				"unsupported life spell",
+				"the executable source backend supports only exact fixed life changes",
+			)
+		}
+		playerRef = ref
+	case len(ctx.content.Targets) == 1 &&
 		effect.Context == parser.EffectContextReferencedPlayer &&
 		hasThatPlayerTargetReference(ctx.content.References):
 		ref, ok := referencedThatPlayerRef(ctx.content.Targets[0])
@@ -2081,7 +2092,29 @@ func referencedControllerPlayerRef(ctx contentCtx) (game.PlayerReference, bool) 
 	return game.ObjectControllerReference(object), true
 }
 
-// hasThatPlayerTargetReference reports whether the clause carries a "that
+// referencedOwnerPlayerRef resolves the recipient player for an "Its owner
+// <effect>" body whose subject is the owner of the inherited antecedent target
+// in an ordered sequence. It mirrors referencedControllerPlayerRef but binds the
+// destroyed permanent's owner rather than its last controller, the recipient
+// "Destroy target creature. Its owner gains 4 life." (Misfortune's Gain, Path of
+// Peace) names. It returns false (fail closed) for any other antecedent kind.
+func referencedOwnerPlayerRef(ctx contentCtx) (game.PlayerReference, bool) {
+	if len(ctx.content.Effects) == 0 ||
+		ctx.content.Effects[0].Context != parser.EffectContextReferencedObjectOwner ||
+		len(ctx.content.References) != 1 ||
+		ctx.content.References[0].Binding != compiler.ReferenceBindingTarget ||
+		ctx.content.References[0].Occurrence < 0 ||
+		len(ctx.content.Targets) != 1 {
+		return game.PlayerReference{}, false
+	}
+	occ := ctx.content.References[0].Occurrence
+	object, ok := inheritedRemovalTargetObjectRef(ctx.content.Targets[0], occ)
+	if !ok {
+		return game.PlayerReference{}, false
+	}
+	return game.ObjectOwnerReference(object), true
+}
+
 // player" reference bound to an inherited antecedent target, the typed shape an
 // ordered-sequence life clause takes when its subject ("That player loses N
 // life.") is the player established by the preceding clause's target.
