@@ -116,7 +116,7 @@ func exactVariableXGraveyardTargetText(target *TargetSyntax) (string, bool) {
 		len(sel.ExcludedSupertypes) != 0 || len(sel.ExcludedColors) != 0 {
 		return "", false
 	}
-	owner, ok := graveyardOwnerSuffix(sel.Controller)
+	owner, ok := graveyardOwnerSuffix(sel.Controller, false)
 	if !ok {
 		return "", false
 	}
@@ -866,7 +866,11 @@ func exactGraveyardCardTargetSyntax(target *TargetSyntax) bool {
 		len(sel.ExcludedSupertypes) != 0 || len(sel.ExcludedColors) != 0 {
 		return false
 	}
-	owner, ok := graveyardOwnerSuffix(sel.Controller)
+	prefix, plural, ok := graveyardCardCardinalityPrefix(target.Cardinality, sel.Another)
+	if !ok {
+		return false
+	}
+	owner, ok := graveyardOwnerSuffix(sel.Controller, plural)
 	if !ok {
 		return false
 	}
@@ -879,10 +883,6 @@ func exactGraveyardCardTargetSyntax(target *TargetSyntax) bool {
 			return false
 		}
 		owner = "from a single graveyard"
-	}
-	prefix, plural, ok := graveyardCardCardinalityPrefix(target.Cardinality, sel.Another)
-	if !ok {
-		return false
 	}
 	noun, ok := graveyardCardNoun(sel, plural)
 	if !ok {
@@ -900,13 +900,18 @@ func exactGraveyardCardTargetSyntax(target *TargetSyntax) bool {
 
 // graveyardOwnerSuffix renders the canonical "from <owner> graveyard" clause for
 // a graveyard-card target's controller relation: "your" for the controller,
-// "a" for any graveyard, and "an opponent's" for an opponent. It fails closed for
-// the "you don't control" relation, which has no graveyard-owner phrasing.
-func graveyardOwnerSuffix(controller SelectionController) (string, bool) {
+// "a" for any graveyard, and "an opponent's" for an opponent. A plural
+// multi-target count over any graveyard renders "from graveyards", letting each
+// chosen card lie in a different graveyard. It fails closed for the "you don't
+// control" relation, which has no graveyard-owner phrasing.
+func graveyardOwnerSuffix(controller SelectionController, plural bool) (string, bool) {
 	switch controller {
 	case SelectionControllerYou:
 		return "from your graveyard", true
 	case SelectionControllerAny:
+		if plural {
+			return "from graveyards", true
+		}
 		return "from a graveyard", true
 	case SelectionControllerOpponent:
 		return "from an opponent's graveyard", true

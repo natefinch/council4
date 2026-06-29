@@ -622,6 +622,10 @@ func TestExactGraveyardExileAccepts(t *testing.T) {
 		// graveyard; it round-trips on the any-graveyard owner relation.
 		"Exile up to three target cards from a single graveyard.",
 		"Exile up to two target cards from a single graveyard.",
+		// The plural "from graveyards" owner relation lets each chosen card lie
+		// in a different graveyard; it round-trips with no same-graveyard flag.
+		"Exile up to two target cards from graveyards.",
+		"Exile up to three target cards from graveyards.",
 	}
 	for _, source := range accepted {
 		if !exileEffectExact(t, source) {
