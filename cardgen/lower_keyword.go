@@ -1571,6 +1571,19 @@ func resolvingStaticSubjectGroup(effect *compiler.CompiledEffect) (game.GroupRef
 		return game.BattlefieldGroupExcluding(selection, game.SourcePermanentReference()), true
 	case compiler.StaticSubjectControlledWalls:
 		selection.SubtypesAny = []types.Sub{types.Wall}
+	case compiler.StaticSubjectControlledAttackingCreatures:
+		selection.RequiredTypes = []types.Card{types.Creature}
+		selection.CombatState = game.CombatStateAttacking
+	case compiler.StaticSubjectControlledAttackingCreatureSubtype:
+		if !effect.StaticSubjectSubKnown() {
+			return game.GroupReference{}, false
+		}
+		selection.SubtypesAny = []types.Sub{effect.StaticSubjectSub()}
+		selection.CombatState = game.CombatStateAttacking
+	case compiler.StaticSubjectControlledAttackingCreatureTokens:
+		selection.RequiredTypes = []types.Card{types.Creature}
+		selection.TokenOnly = true
+		selection.CombatState = game.CombatStateAttacking
 	case compiler.StaticSubjectControlledArtifacts:
 		selection.RequiredTypes = []types.Card{types.Artifact}
 	case compiler.StaticSubjectControlledTokens:

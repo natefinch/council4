@@ -3049,12 +3049,24 @@ const (
 	EffectStaticSubjectAllCreatureSubtype             EffectStaticSubjectKind = "EffectStaticSubjectAllCreatureSubtype"
 	EffectStaticSubjectOtherCreatureSubtype           EffectStaticSubjectKind = "EffectStaticSubjectOtherCreatureSubtype"
 	EffectStaticSubjectControlledAttackingCreatures   EffectStaticSubjectKind = "EffectStaticSubjectControlledAttackingCreatures"
-	EffectStaticSubjectControlledCreatureTokens       EffectStaticSubjectKind = "EffectStaticSubjectControlledCreatureTokens"
-	EffectStaticSubjectBattlefieldCreatureTokens      EffectStaticSubjectKind = "EffectStaticSubjectBattlefieldCreatureTokens"
-	EffectStaticSubjectControlledLegendaryCreatures   EffectStaticSubjectKind = "EffectStaticSubjectControlledLegendaryCreatures"
-	EffectStaticSubjectControlledUntappedCreatures    EffectStaticSubjectKind = "EffectStaticSubjectControlledUntappedCreatures"
-	EffectStaticSubjectControlledModifiedCreatures    EffectStaticSubjectKind = "EffectStaticSubjectControlledModifiedCreatures"
-	EffectStaticSubjectOtherControlledTappedCreatures EffectStaticSubjectKind = "EffectStaticSubjectOtherControlledTappedCreatures"
+	// EffectStaticSubjectControlledAttackingCreatureSubtype names the attacking
+	// creatures of a single creature subtype the controller controls ("Attacking
+	// Vampires you control have ...", Crossway Troublemakers; "Attacking Elves you
+	// control have ...", Elderfang Venom). The named subtype rides SubtypesAny and
+	// the compiler additionally requires the attacking combat state.
+	EffectStaticSubjectControlledAttackingCreatureSubtype EffectStaticSubjectKind = "EffectStaticSubjectControlledAttackingCreatureSubtype"
+	// EffectStaticSubjectControlledAttackingCreatureTokens names the attacking
+	// creature tokens the controller controls ("Attacking tokens you control
+	// have ...", Starry-Eyed Skyrider; "Attacking creature tokens you control
+	// have ...", Okoye, Dora Milaje Leader). The compiler requires the token state
+	// alongside the attacking combat state.
+	EffectStaticSubjectControlledAttackingCreatureTokens EffectStaticSubjectKind = "EffectStaticSubjectControlledAttackingCreatureTokens"
+	EffectStaticSubjectControlledCreatureTokens          EffectStaticSubjectKind = "EffectStaticSubjectControlledCreatureTokens"
+	EffectStaticSubjectBattlefieldCreatureTokens         EffectStaticSubjectKind = "EffectStaticSubjectBattlefieldCreatureTokens"
+	EffectStaticSubjectControlledLegendaryCreatures      EffectStaticSubjectKind = "EffectStaticSubjectControlledLegendaryCreatures"
+	EffectStaticSubjectControlledUntappedCreatures       EffectStaticSubjectKind = "EffectStaticSubjectControlledUntappedCreatures"
+	EffectStaticSubjectControlledModifiedCreatures       EffectStaticSubjectKind = "EffectStaticSubjectControlledModifiedCreatures"
+	EffectStaticSubjectOtherControlledTappedCreatures    EffectStaticSubjectKind = "EffectStaticSubjectOtherControlledTappedCreatures"
 
 	EffectStaticSubjectControlledArtifactCreatures      EffectStaticSubjectKind = "EffectStaticSubjectControlledArtifactCreatures"
 	EffectStaticSubjectOtherControlledArtifactCreatures EffectStaticSubjectKind = "EffectStaticSubjectOtherControlledArtifactCreatures"
