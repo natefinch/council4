@@ -3551,6 +3551,18 @@ func TestParseDualRecipientGroupDamage(t *testing.T) {
 			wantPair: []SelectionKind{SelectionCreature, SelectionOpponent},
 			exact:    true,
 		},
+		{
+			source:   "Tectonic Hazard deals 1 damage to each opponent and each creature they control.",
+			cardName: "Tectonic Hazard",
+			wantPair: []SelectionKind{SelectionOpponent, SelectionCreature},
+			exact:    true,
+		},
+		{
+			source:   "End the Festivities deals 1 damage to each opponent and each creature and planeswalker they control.",
+			cardName: "End the Festivities",
+			wantPair: []SelectionKind{SelectionOpponent, SelectionCreature},
+			exact:    true,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.source, func(t *testing.T) {

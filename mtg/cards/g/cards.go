@@ -51,6 +51,7 @@ var Cards = []*game.CardDef{
 	GnarlbarkElm,
 	GnarlidColony,
 	GoblinBushwhacker,
+	GoblinChainwhirler,
 	GoblinDarkDwellers,
 	GoblinFirestarter,
 	GoblinLegionnaire,

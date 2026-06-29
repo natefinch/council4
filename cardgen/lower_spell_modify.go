@@ -107,7 +107,14 @@ func lowerGroupDamageSpell(
 			"the executable source backend supports only exact fixed or X group damage amounts",
 		)
 	}
-	if _, ok := lowerDamageSourceReference(ctx.content.References); !ok {
+	if len(ctx.content.References) == 0 {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported damage spell",
+			"the executable source backend supports only exact fixed group damage amounts",
+		)
+	}
+	if _, ok := lowerDamageSourceReference(ctx.content.References[:1]); !ok {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported damage spell",
@@ -312,9 +319,12 @@ func damageGroupRecipientExcluding(sel compiler.CompiledSelector, exclude game.O
 // fails closed on a chosen-{X} bound; damageGroupSelectionMask drops the
 // remaining canonical dimensions a damage group never carries.
 func damageGroupSelection(sel compiler.CompiledSelector) (game.Selection, bool) {
+	requiredTypes := sel.RequiredTypesAny()
+	unionTypes := len(requiredTypes) == 2 &&
+		requiredTypes[0] == types.Creature && requiredTypes[1] == types.Planeswalker
 	if sel.All || sel.Another || sel.Zone != zone.None ||
 		sel.Colorless || sel.Multicolored ||
-		len(sel.RequiredTypesAny()) != 0 ||
+		(len(requiredTypes) != 0 && !unionTypes) ||
 		len(sel.Supertypes()) != 0 ||
 		len(sel.ExcludedColors()) != 0 ||
 		len(sel.ColorsAny()) > 1 ||

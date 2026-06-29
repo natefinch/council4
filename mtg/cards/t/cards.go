@@ -14,6 +14,7 @@ var Cards = []*game.CardDef{
 	TarrianSSoulcleaver,
 	TatteredHaunter,
 	TattooWard,
+	TectonicHazard,
 	TeferiSProtection,
 	TeferiSWavecaster,
 	TelJiladDefiance,
