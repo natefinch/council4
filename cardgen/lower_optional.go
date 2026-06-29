@@ -1670,7 +1670,8 @@ func lowerOptionalHaveEffect(
 // count effects, known power and toughness deltas (or a recognized dynamic
 // amount) for the "+X/+X / -X/-X" change, and either a known amount ("gain N
 // life") or a keyword within the action clause ("gain flying until end of turn")
-// for the grant. Dynamic amounts are admitted rather than excluded because the
+// for the grant, and a known fixed or recognized dynamic amount ("deal damage
+// equal to its power") for the damage. Dynamic amounts are admitted rather than excluded because the
 // single-effect lowerer re-validates the dynamic form and fails closed for any it
 // cannot model, exactly as it does for the standalone finite-verb clause; a
 // genuinely unrecognized amount still leaves the body unsupported.
@@ -1690,7 +1691,13 @@ func causativeActionForcibleExact(
 	case compiler.EffectDraw,
 		compiler.EffectMill,
 		compiler.EffectDiscard,
-		compiler.EffectLose:
+		compiler.EffectLose,
+		compiler.EffectDealDamage:
+		// The count effects carry their magnitude in Amount. A causative "deal N
+		// damage to <target>" likewise carries a known fixed value, and "deal
+		// damage equal to its power" a recognized dynamic amount; the downstream
+		// single-effect damage lowerer re-validates the damage source, recipient,
+		// and targeting and fails closed for any it cannot model.
 		return countAmountParsed
 	case compiler.EffectGain:
 		// "gain N life" carries its magnitude in Amount; "gain <keyword> until

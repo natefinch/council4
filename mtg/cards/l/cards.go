@@ -23,6 +23,7 @@ var Cards = []*game.CardDef{
 	LegolasMasterArcher,
 	LeoninDenGuard,
 	LeoninLightbringer,
+	LeylineDowser,
 	LeylineInvocation,
 	LifeBurst,
 	LifecraftCavalry,

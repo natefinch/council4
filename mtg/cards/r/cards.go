@@ -86,6 +86,7 @@ var Cards = []*game.CardDef{
 	RogueElephant,
 	RoilEruption,
 	RoilSRetribution,
+	RoninCliffrider,
 	RooftopAssassin,
 	RosethornHalberd,
 	RotWolf,

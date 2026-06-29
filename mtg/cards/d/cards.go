@@ -74,6 +74,7 @@ var Cards = []*game.CardDef{
 	DreadWarlock,
 	DreadfeastDemon,
 	DreamcallerSiren,
+	DredgerSInsight,
 	DromarSCavern,
 	DuchessWaywardTavernkeep,
 	DuskFeaster,
