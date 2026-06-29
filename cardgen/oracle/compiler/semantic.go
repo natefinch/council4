@@ -1858,6 +1858,16 @@ const (
 	// required; the "other" form excludes the source permanent.
 	StaticSubjectControlledCreatureSubtypeTokens
 	StaticSubjectOtherControlledCreatureSubtypeTokens
+	// StaticSubjectControlledAttackingCreatureSubtype names the attacking
+	// creatures of a named subtype the controller controls ("Attacking Vampires
+	// you control have ...", Crossway Troublemakers). The subtype rides the
+	// affected group's SubtypesAny slot alongside the attacking combat state.
+	StaticSubjectControlledAttackingCreatureSubtype
+	// StaticSubjectControlledAttackingCreatureTokens names the attacking creature
+	// tokens the controller controls ("Attacking tokens you control have ...",
+	// Starry-Eyed Skyrider). The token state rides the affected group alongside
+	// the attacking combat state.
+	StaticSubjectControlledAttackingCreatureTokens
 )
 
 // CompiledDamageRecipient bundles the primary-recipient descriptors of a

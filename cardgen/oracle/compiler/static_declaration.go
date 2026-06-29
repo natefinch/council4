@@ -3449,6 +3449,18 @@ func staticGroupForSubject(subject StaticSubjectKind, span shared.Span, subtype 
 		group.Domain = StaticGroupSourceControllerPermanents
 		group.Selection.RequiredTypes = []types.Card{types.Creature}
 		group.Selection.CombatState = StaticCombatStateAttacking
+	case StaticSubjectControlledAttackingCreatureSubtype:
+		if !subtypeKnown {
+			return StaticGroupReference{}, false
+		}
+		group.Domain = StaticGroupSourceControllerPermanents
+		group.Selection.SubtypesAny = staticGroupSubtypes(subtype, subsAny)
+		group.Selection.CombatState = StaticCombatStateAttacking
+	case StaticSubjectControlledAttackingCreatureTokens:
+		group.Domain = StaticGroupSourceControllerPermanents
+		group.Selection.RequiredTypes = []types.Card{types.Creature}
+		group.Selection.TokenOnly = true
+		group.Selection.CombatState = StaticCombatStateAttacking
 	case StaticSubjectControlledCreatureTokens:
 		group.Domain = StaticGroupSourceControllerPermanents
 		group.Selection.RequiredTypes = []types.Card{types.Creature}

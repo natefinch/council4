@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,313 of 32,501 cards eligible for paper support (50.2%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,322 of 32,501 cards eligible for paper support (50.2%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1399,6 +1399,7 @@ Council4 currently supports **16,313 of 32,501 cards eligible for paper support 
 - Blight Grenade
 - Blight Keeper
 - Blight Mamba
+- Blight Mound
 - Blight Rot
 - Blight Sickle
 - Blight-Breath Catoblepas
@@ -2909,6 +2910,7 @@ Council4 currently supports **16,313 of 32,501 cards eligible for paper support 
 - Crossroads Village
 - Crossroads Watcher
 - Crosstown Courier
+- Crossway Troublemakers
 - Crossway Vampire
 - Crosswinds
 - Crow of Dark Tidings
@@ -3503,6 +3505,7 @@ Council4 currently supports **16,313 of 32,501 cards eligible for paper support 
 - Dire Fleet Captain
 - Dire Fleet Hoarder
 - Dire Fleet Interloper
+- Dire Fleet Neckbreaker
 - Dire Fleet Poisoner
 - Dire Fleet Warmonger
 - Dire Undercurrents
@@ -4036,6 +4039,7 @@ Council4 currently supports **16,313 of 32,501 cards eligible for paper support 
 - Elder Pine of Jukai
 - Elderfang Disciple
 - Elderfang Ritualist
+- Elderfang Venom
 - Elderleaf Mentor
 - Elderwood Scion
 - Eldrazi
@@ -7214,6 +7218,7 @@ Council4 currently supports **16,313 of 32,501 cards eligible for paper support 
 - Jaya's Immolating Inferno
 - Jaya, Venerated Firemage
 - Jayemdae Tome
+- Jazal Goldmane
 - Jedit Ojanen
 - Jedit Ojanen of Efrava
 - Jedit Ojanen, Mercenary
@@ -9604,6 +9609,7 @@ Council4 currently supports **16,313 of 32,501 cards eligible for paper support 
 - Okiba-Gang Shinobi
 - Okina, Temple to the Grandfathers
 - Oko's Accomplices
+- Okoye, Dora Milaje Leader
 - Old Flitterfang
 - Old Ghastbark
 - Old Gnawbone
@@ -9842,6 +9848,7 @@ Council4 currently supports **16,313 of 32,501 cards eligible for paper support 
 - Pain Kami
 - Painful Lesson
 - Painted Bluffs
+- Painter's Studio // Defaced Gallery
 - Palace Familiar
 - Palace Sentinels
 - Paladin en-Vec
@@ -13293,6 +13300,7 @@ Council4 currently supports **16,313 of 32,501 cards eligible for paper support 
 - Starnheim Aspirant
 - Starnheim Courser
 - Starnheim Memento
+- Starry-Eyed Skyrider
 - Starscape Cleric
 - Starstorm
 - Start from Scratch
@@ -15651,6 +15659,7 @@ Council4 currently supports **16,313 of 32,501 cards eligible for paper support 
 - Warren Elder
 - Warren Instigator
 - Warren Soultrader
+- Warren Warleader
 - Warren-Scourge Elf
 - Warrior
 - Warrior

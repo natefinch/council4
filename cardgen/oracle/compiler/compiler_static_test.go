@@ -927,6 +927,19 @@ func TestCompileStaticGroupAnthemSubjects(t *testing.T) {
 			requireType: []types.Card{types.Creature},
 			combatState: StaticCombatStateAttacking,
 		},
+		"attacking subtype you control": {
+			source:      "Attacking Pirates you control get +2/+0.",
+			domain:      StaticGroupSourceControllerPermanents,
+			subtypesAny: []types.Sub{types.Pirate},
+			combatState: StaticCombatStateAttacking,
+		},
+		"attacking creature tokens you control": {
+			source:      "Attacking creature tokens you control get +1/+1.",
+			domain:      StaticGroupSourceControllerPermanents,
+			requireType: []types.Card{types.Creature},
+			tokenOnly:   true,
+			combatState: StaticCombatStateAttacking,
+		},
 		"controlled creature tokens": {
 			source:      "Creature tokens you control get +1/+1.",
 			domain:      StaticGroupSourceControllerPermanents,

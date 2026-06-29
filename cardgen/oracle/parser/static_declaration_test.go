@@ -248,6 +248,19 @@ func TestParseStaticGroupAnthemSubjectKinds(t *testing.T) {
 			source: "Attacking creatures you control get +1/+0.",
 			kind:   EffectStaticSubjectControlledAttackingCreatures,
 		},
+		"attacking subtype you control": {
+			source:  "Attacking Vampires you control have deathtouch.",
+			kind:    EffectStaticSubjectControlledAttackingCreatureSubtype,
+			subtype: types.Vampire,
+		},
+		"attacking tokens you control": {
+			source: "Attacking tokens you control have flying.",
+			kind:   EffectStaticSubjectControlledAttackingCreatureTokens,
+		},
+		"attacking creature tokens you control": {
+			source: "Attacking creature tokens you control have first strike.",
+			kind:   EffectStaticSubjectControlledAttackingCreatureTokens,
+		},
 		"controlled creature tokens": {
 			source: "Creature tokens you control get +1/+1.",
 			kind:   EffectStaticSubjectControlledCreatureTokens,
