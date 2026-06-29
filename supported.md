@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,235 of 32,501 cards eligible for paper support (50.0%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,241 of 32,501 cards eligible for paper support (50.0%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -5972,6 +5972,7 @@ Council4 currently supports **16,235 of 32,501 cards eligible for paper support 
 - Greed's Gambit
 - Greedy Freebooter
 - Greel's Caress
+- Greel, Mind Raker
 - Green Goblin, Nemesis
 - Green Scarab
 - Green Sun's Zenith
@@ -6510,6 +6511,7 @@ Council4 currently supports **16,235 of 32,501 cards eligible for paper support 
 - Honden of Cleansing Fire
 - Honden of Infinite Rage
 - Honden of Life's Web
+- Honden of Night's Reach
 - Honden of Seeing Winds
 - Honed Khopesh
 - Honest Rutstein
@@ -8688,8 +8690,11 @@ Council4 currently supports **16,235 of 32,501 cards eligible for paper support 
 - Mind Ravel
 - Mind Rot
 - Mind Sculpt
+- Mind Shatter
+- Mind Sludge
 - Mind Spring
 - Mind Stone
+- Mind Twist
 - Mind Unbound
 - Mind's Eye
 - Mindcrank
@@ -15339,6 +15344,7 @@ Council4 currently supports **16,235 of 32,501 cards eligible for paper support 
 - Voice of the Woods
 - Voice of Truth
 - Voiceless Spirit
+- Voices from the Void
 - Void Beckoner
 - Void Grafter
 - Void Helix
