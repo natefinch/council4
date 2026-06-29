@@ -194,6 +194,15 @@ type Condition struct {
 	// Walker). It is satisfied when some single color contributed at least this
 	// many mana to the resolving spell's cost. Zero disables the predicate.
 	SpellSameColorManaSpentAtLeast int
+
+	// LandEnteredThisTurnOrControlsBasicLand is satisfied when the condition
+	// source land entered the battlefield this turn or its controller controls a
+	// basic land ("Activate only if this land entered this turn or if you control
+	// a basic land."; the Mercadian Masques tap-for-two-colors land cycle). It is
+	// the disjunctive activation gate those lands print to bar second-turn
+	// fixing, holding on either half. It reads the source's enter history and the
+	// controller's basic-land board state.
+	LandEnteredThisTurnOrControlsBasicLand bool
 }
 
 // ColorManaSpendThreshold names a single color and the minimum number of mana of
@@ -278,7 +287,8 @@ func (c *Condition) Empty() bool {
 		!c.ControllerHasCityBlessing &&
 		!c.SourceControllerTurn &&
 		c.SpellColorManaSpent.Count == 0 &&
-		c.SpellSameColorManaSpentAtLeast == 0
+		c.SpellSameColorManaSpentAtLeast == 0 &&
+		!c.LandEnteredThisTurnOrControlsBasicLand
 }
 
 // EventHistoryWindow selects which turn's event log an EventHistoryCondition

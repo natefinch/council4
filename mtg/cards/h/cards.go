@@ -49,6 +49,7 @@ var Cards = []*game.CardDef{
 	HiddenFootblade,
 	HiddenHerbalists,
 	HiddenHorror,
+	HiddenLair,
 	HiddenStockpile,
 	HightideHermit,
 	HinderingLight,

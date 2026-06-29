@@ -79,6 +79,7 @@ var Cards = []*game.CardDef{
 	TowerOfTheMagistrate,
 	ToweringWaveMystic,
 	TractorBeam,
+	TrainingCompound,
 	TraitorousInstinct,
 	TranquilDomain,
 	TransguildPromenade,

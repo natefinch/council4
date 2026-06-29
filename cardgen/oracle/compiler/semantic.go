@@ -852,6 +852,12 @@ const (
 	// the triggering step event and resolves only in a phase/step trigger's
 	// intervening-if context.
 	ConditionPredicateTriggeringPlayerHandSizeAtLeast
+	// ConditionPredicateLandEnteredThisTurnOrControlsBasic is satisfied when the
+	// source land entered the battlefield this turn or its controller controls a
+	// basic land ("Activate only if this land entered this turn or if you control
+	// a basic land."; the Mercadian Masques tap-for-two-colors land cycle). It
+	// gates the dual-mana ability on either disjunct.
+	ConditionPredicateLandEnteredThisTurnOrControlsBasic
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard

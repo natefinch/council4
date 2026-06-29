@@ -722,3 +722,27 @@ func TestConditionSourceHasAnyCounter(t *testing.T) {
 		t.Fatal("source with a +1/+1 counter should satisfy a has-counters condition")
 	}
 }
+
+// TestConditionLandEnteredThisTurnOrControlsBasic verifies the disjunctive land
+// activation gate ("Activate only if this land entered this turn or if you
+// control a basic land.") holds when the controller already controls a basic
+// land and fails when no source entry and no basic land satisfy either disjunct.
+func TestConditionLandEnteredThisTurnOrControlsBasic(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Gateland",
+		Types: []types.Card{types.Land}},
+	})
+	condition := opt.Val(game.Condition{LandEnteredThisTurnOrControlsBasicLand: true})
+	ctx := conditionContext{controller: game.Player1, source: source}
+	if conditionSatisfied(g, ctx, condition) {
+		t.Fatal("no source entry and no basic land must fail both disjuncts")
+	}
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Plains",
+		Supertypes: []types.Super{types.Basic},
+		Types:      []types.Card{types.Land},
+		Subtypes:   []types.Sub{types.Plains}},
+	})
+	if !conditionSatisfied(g, ctx, condition) {
+		t.Fatal("controlling a basic land should satisfy the control-a-basic disjunct")
+	}
+}

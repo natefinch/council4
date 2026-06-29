@@ -113,6 +113,7 @@ const (
 	ConditionPredicateEventSpellNoManaSpentToCast                      ConditionPredicateKind = "ConditionPredicateEventSpellNoManaSpentToCast"
 	ConditionPredicateTriggeringPlayerHandSizeAtMost                   ConditionPredicateKind = "ConditionPredicateTriggeringPlayerHandSizeAtMost"
 	ConditionPredicateTriggeringPlayerHandSizeAtLeast                  ConditionPredicateKind = "ConditionPredicateTriggeringPlayerHandSizeAtLeast"
+	ConditionPredicateLandEnteredThisTurnOrControlsBasic               ConditionPredicateKind = "ConditionPredicateLandEnteredThisTurnOrControlsBasic"
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard
@@ -687,6 +688,7 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 	for _, recognize := range []func([]shared.Token, Atoms) (ConditionClause, bool){
 		recognizePriorInstructionCondition,
 		recognizeControlsCommanderCondition,
+		recognizeLandEnteredOrControlsBasicCondition,
 		recognizeControlsGreatestPowerCondition,
 		recognizeControlsGreatestToughnessCondition,
 		recognizeDestroyedThisWayCondition,
@@ -841,6 +843,22 @@ func recognizeSpellXCondition(body []shared.Token, _ Atoms) (ConditionClause, bo
 func recognizeControlsCommanderCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
 	if tokenWordsEqual(body, "you", "control", "your", "commander") {
 		return ConditionClause{Predicate: ConditionPredicateControllerControlsCommander}, true
+	}
+	return ConditionClause{}, false
+}
+
+// recognizeLandEnteredOrControlsBasicCondition matches the disjunctive land
+// activation gate "this land entered this turn or if you control a basic land"
+// (the Mercadian Masques tap-for-two-colors land cycle: Gleaming Bastion,
+// Hidden Lair, Dark Fortress, Training Compound, Gathering Place). It holds when
+// either disjunct is true and bars the second activated mana ability the turn
+// after the land entered unless the controller already has a basic land. It
+// fails closed on any other wording.
+func recognizeLandEnteredOrControlsBasicCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
+	if tokenWordsEqual(body,
+		"this", "land", "entered", "this", "turn",
+		"or", "if", "you", "control", "a", "basic", "land") {
+		return ConditionClause{Predicate: ConditionPredicateLandEnteredThisTurnOrControlsBasic}, true
 	}
 	return ConditionClause{}, false
 }
