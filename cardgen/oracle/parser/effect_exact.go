@@ -2052,7 +2052,14 @@ func exactTemporaryKeywordChangeSyntax(effect *EffectSyntax, pluralVerb, singula
 		if !ok {
 			return false
 		}
-		middle, ok := strings.CutPrefix(text, strings.ToLower(subject)+" "+singularVerb+" ")
+		subjectLower := strings.ToLower(subject)
+		middle, ok := strings.CutPrefix(text, subjectLower+" "+singularVerb+" ")
+		if !ok {
+			// "it also gains" form: the additive "also" adverb appears between
+			// the subject pronoun and the verb in gated sequence clauses such as
+			// "If it's legendary, it also gains trample until end of turn."
+			middle, ok = strings.CutPrefix(text, subjectLower+" also "+singularVerb+" ")
+		}
 		if !ok {
 			return false
 		}
@@ -4289,6 +4296,18 @@ func exactModifyPTEffectSyntax(effect *EffectSyntax) bool {
 	text := exactEffectClauseText(effect)
 	if effect.Amount.DynamicKind == EffectDynamicAmountNone {
 		prefix := fmt.Sprintf("%s gets %s/%s", subject, power, toughness)
+		// In gated sequence clauses the additive adverb "also" appears between
+		// the subject pronoun and the verb ("it also gets +2/+2 until end of
+		// turn."); accept that form alongside the canonical one.
+		if effect.Context == EffectContextReferencedObject {
+			alsoPrefix := fmt.Sprintf("%s also gets %s/%s", strings.ToLower(subject), power, toughness)
+			if strings.EqualFold(text, alsoPrefix+" until end of turn.") ||
+				strings.EqualFold(text, alsoPrefix+".") ||
+				strings.HasPrefix(strings.ToLower(text), alsoPrefix+" and gains ") &&
+					strings.HasSuffix(strings.ToLower(text), " until end of turn.") {
+				return true
+			}
+		}
 		if strings.EqualFold(text, prefix+" until end of turn.") ||
 			strings.EqualFold(text, prefix+".") ||
 			strings.HasPrefix(strings.ToLower(text), strings.ToLower(prefix+" and gains ")) &&

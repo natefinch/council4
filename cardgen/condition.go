@@ -597,6 +597,7 @@ func lowerConditionObjectReference(binding compiler.ReferenceBinding) (game.Obje
 	return lowerObjectReference(compiler.CompiledReference{Binding: binding}, referenceLoweringContext{
 		AllowSource: true,
 		AllowEvent:  true,
+		AllowTarget: true,
 	})
 }
 

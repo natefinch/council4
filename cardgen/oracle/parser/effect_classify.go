@@ -723,8 +723,10 @@ func effectSubjectStart(tokens []shared.Token, index int, selfNames []shared.Spa
 		// adverb that carries no subject; skip it so the controller subject and
 		// exact verb coverage are recognized. A non-leading "also" (e.g.
 		// "creatures you control also gain first strike") follows a real subject
-		// and must be retained.
-		leadingAlso := equalWord(tokens[i], "also") && i == start
+		// and must be retained. Similarly, a clause-leading "instead" ("...,
+		// instead it gets +3/+3") is a replacement marker that precedes the
+		// subject and must be skipped for exact subject recognition.
+		leadingAlso := (equalWord(tokens[i], "also") || equalWord(tokens[i], "instead")) && i == start
 		if boundary || leadingAlso {
 			start = i + 1
 		}
