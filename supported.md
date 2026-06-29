@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,310 of 32,501 cards eligible for paper support (50.2%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,313 of 32,501 cards eligible for paper support (50.2%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1228,6 +1228,7 @@ Council4 currently supports **16,310 of 32,501 cards eligible for paper support 
 - Benalish Veteran
 - Bender's Waterskin
 - Beneath the Sands
+- Benefaction of Rhonas
 - Benefactor's Draught
 - Benevolent Ancestor
 - Benevolent Blessing
@@ -6896,6 +6897,7 @@ Council4 currently supports **16,310 of 32,501 cards eligible for paper support 
 - Improvised Weaponry
 - Impulse
 - In Oketra's Name
+- In the Presence of Ages
 - In the Web of War
 - Iname, Life Aspect
 - Incandescent Aria
@@ -10963,6 +10965,7 @@ Council4 currently supports **16,310 of 32,501 cards eligible for paper support 
 - Release to Memory
 - Relentless Advance
 - Relentless Hunter
+- Relentless Pursuit
 - Relentless Rohirrim
 - Relentless Skaabs
 - Relic Barrier
