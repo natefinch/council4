@@ -2016,6 +2016,91 @@ func handleDiscardThenDraw(r *effectResolver, prim game.DiscardThenDraw) effectR
 	return res
 }
 
+// handleDiscardUnlessType resolves "discard N cards unless you discard a <type>
+// card." (Thirst for Knowledge family): the player discards prim.Amount cards
+// unless they instead discard a single exempt-type card. When the player holds
+// an exempt-type card they choose which branch to take; otherwise they discard
+// the full count. The exempt branch counts as full payment, so res.amount
+// reflects the cards actually discarded.
+func handleDiscardUnlessType(r *effectResolver, prim game.DiscardUnlessType) effectResolved {
+	res := effectResolved{accepted: true}
+	playerID, ok := r.resolvePlayer(prim.Player)
+	if !ok {
+		return res
+	}
+	player, ok := playerByID(r.game, playerID)
+	if !ok {
+		return res
+	}
+	selection := game.Selection{RequiredTypesAny: prim.ExemptTypes}
+	hasExempt := false
+	for _, cardID := range player.Hand.All() {
+		if card, found := r.game.GetCardInstance(cardID); found && handCardMatchesSelection(r.game, card, selection, playerID) {
+			hasExempt = true
+			break
+		}
+	}
+	if hasExempt {
+		exemptOptions := []game.ChoiceOption{
+			{Index: 0, Label: "Discard one matching card"},
+			{Index: 1, Label: "Discard cards"},
+		}
+		choice := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
+			Kind:             game.ChoiceResolution,
+			Player:           playerID,
+			Prompt:           "Discard a matching card, or discard cards instead",
+			Options:          exemptOptions,
+			MinChoices:       1,
+			MaxChoices:       1,
+			DefaultSelection: []int{0},
+		}, r.log)
+		if len(choice) == 1 && choice[0] == 0 {
+			res.succeeded = r.discardSingleMatching(playerID, selection)
+			res.amount = 1
+			return res
+		}
+	}
+	res.succeeded = r.discardCardsWithChoices(playerID, prim.Amount, game.LinkedObjectKey{})
+	res.amount = min(prim.Amount, len(player.Hand.All()))
+	return res
+}
+
+// discardSingleMatching discards one chooser-selected card matching selection
+// from the player's hand, returning whether a card was discarded.
+func (r *effectResolver) discardSingleMatching(playerID game.PlayerID, selection game.Selection) bool {
+	player, ok := playerByID(r.game, playerID)
+	if !ok {
+		return false
+	}
+	var candidates []id.ID
+	for _, cardID := range player.Hand.All() {
+		if card, found := r.game.GetCardInstance(cardID); found && handCardMatchesSelection(r.game, card, selection, playerID) {
+			candidates = append(candidates, cardID)
+		}
+	}
+	if len(candidates) == 0 {
+		return false
+	}
+	options := make([]game.ChoiceOption, len(candidates))
+	for i, cardID := range candidates {
+		options[i] = game.ChoiceOption{Index: i, Label: cardChoiceLabel(r.game, cardID), Card: cardChoiceInfo(r.game, cardID)}
+	}
+	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
+		Kind:             game.ChoiceResolution,
+		Player:           playerID,
+		Prompt:           "Choose a card to discard",
+		Options:          options,
+		MinChoices:       1,
+		MaxChoices:       1,
+		DefaultSelection: []int{0},
+	}, r.log)
+	if len(selected) != 1 || selected[0] < 0 || selected[0] >= len(candidates) {
+		return false
+	}
+	simultaneousID := r.game.IDGen.Next()
+	return discardCardFromHandInBatch(r.game, playerID, candidates[selected[0]], simultaneousID)
+}
+
 func handleScry(r *effectResolver, prim game.Scry) effectResolved {
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
 	playerID, ok := r.resolvePlayer(prim.Player)

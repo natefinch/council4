@@ -127,6 +127,7 @@ var Cards = []*game.CardDef{
 	MurderInvestigation,
 	Mycologist,
 	MycosynthWellspring,
+	MysticMeditation,
 	MysticMight,
 	MysticRestraints,
 }

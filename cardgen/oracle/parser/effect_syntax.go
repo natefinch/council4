@@ -30,6 +30,9 @@ func emitResolvingSyntax(abilities []Ability) {
 		if recognizeDiscardHandThenDrawSequence(&abilities[i]) {
 			continue
 		}
+		if recognizeDrawThenDiscardUnlessSequence(&abilities[i]) {
+			continue
+		}
 		emitSentenceResolvingSyntax(
 			abilities[i].Sentences,
 			abilities[i].Atoms,

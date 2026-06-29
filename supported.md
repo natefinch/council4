@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,413 of 32,501 cards eligible for paper support (50.5%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,418 of 32,501 cards eligible for paper support (50.5%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -9197,6 +9197,7 @@ Council4 currently supports **16,413 of 32,501 cards eligible for paper support 
 - Mystic Familiar
 - Mystic Forge
 - Mystic Gate
+- Mystic Meditation
 - Mystic Melting
 - Mystic Might
 - Mystic Monastery
@@ -10348,6 +10349,7 @@ Council4 currently supports **16,413 of 32,501 cards eligible for paper support 
 - Powerstone Engineer
 - Powerstone Fracture
 - Poxwalkers
+- Practical Research
 - Praetor's Counsel
 - Prairie Stream
 - Prakhata Club Security
@@ -14290,6 +14292,9 @@ Council4 currently supports **16,413 of 32,501 cards eligible for paper support 
 - Third Path Iconoclast
 - Third Path Savant
 - Thirst
+- Thirst for Identity
+- Thirst for Knowledge
+- Thirst for Meaning
 - Thirsting Bloodlord
 - Thirsting Roots
 - Thirsting Shade

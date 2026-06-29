@@ -37,6 +37,14 @@ const (
 	// the compiled ability so lowering routes the card without reading Oracle
 	// words.
 	ExactSequenceConditionalLookAtTopBattlefield
+	// ExactSequenceDrawThenDiscardUnlessType is the spell "Draw N cards. Then
+	// discard M cards unless you discard a <type[ or type...]> card." sequence:
+	// the controller draws ExactSequenceDrawCount cards, then discards
+	// ExactSequenceDiscardCount cards unless they instead discard a single card
+	// of one of the recorded exempt types. The counts and exempt types travel on
+	// the compiled ability so lowering routes the discard without reading Oracle
+	// words.
+	ExactSequenceDrawThenDiscardUnlessType
 )
 
 func compileExactSequenceKind(kind parser.ExactSequenceKind) ExactSequenceKind {
@@ -51,6 +59,8 @@ func compileExactSequenceKind(kind parser.ExactSequenceKind) ExactSequenceKind {
 		return ExactSequenceConditionalLookAtTopReveal
 	case parser.ExactSequenceConditionalLookAtTopBattlefield:
 		return ExactSequenceConditionalLookAtTopBattlefield
+	case parser.ExactSequenceDrawThenDiscardUnlessType:
+		return ExactSequenceDrawThenDiscardUnlessType
 	default:
 		return ExactSequenceUnknown
 	}
