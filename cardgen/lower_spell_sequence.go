@@ -45,6 +45,9 @@ func lowerLinkedCounterTokenSequence(
 	if content, ok := lowerCounterThenTargetControllerTokenSequence(ctx); ok {
 		return content, nil, true
 	}
+	if content, ok := lowerCounterThenSelfTokenSequence(ctx); ok {
+		return content, nil, true
+	}
 	return game.AbilityContent{},
 		unsupportedEffectSequenceDiagnostic(ctx, "structural — unsupported linked counter and token creation"),
 		true

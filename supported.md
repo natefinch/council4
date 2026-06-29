@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,322 of 32,501 cards eligible for paper support (50.2%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,328 of 32,501 cards eligible for paper support (50.2%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -5390,6 +5390,7 @@ Council4 currently supports **16,322 of 32,501 cards eligible for paper support 
 - Geier Reach Sanitarium
 - Geist of the Archives
 - Geist of the Moors
+- Geist Snatch
 - Geist-Fueled Scarecrow
 - Geist-Honored Monk
 - Geistblast
@@ -6602,6 +6603,7 @@ Council4 currently supports **16,322 of 32,501 cards eligible for paper support 
 - Hornet Nest
 - Hornet Queen
 - Hornet Sting
+- Hornswoggle
 - Horobi, Death's Wail
 - Horrible Hordes
 - Horribly Awry
@@ -7807,6 +7809,7 @@ Council4 currently supports **16,322 of 32,501 cards eligible for paper support 
 - Latulla, Keldon Overseer
 - Laughing Mad
 - Launch
+- Launch Mishap
 - Launch Party
 - Lava Axe
 - Lava Coil
@@ -9675,6 +9678,7 @@ Council4 currently supports **16,322 of 32,501 cards eligible for paper support 
 - Ooze
 - Ooze
 - Ooze
+- Ooze Spill
 - Opal Lake Gatekeepers
 - Opaline Unicorn
 - Open Fire
@@ -13627,6 +13631,7 @@ Council4 currently supports **16,322 of 32,501 cards eligible for paper support 
 - Summon: Shiva
 - Summon: Yojimbo
 - Summoned Dromedary
+- Summoner's Bane
 - Summoner's Pact
 - Sun Ce, Young Conquerer
 - Sun Droplet
@@ -13835,6 +13840,7 @@ Council4 currently supports **16,322 of 32,501 cards eligible for paper support 
 - Syndicate Infiltrator
 - Syndicate Messenger
 - Synth Infiltrator
+- Syphon Essence
 - Syphon Fuel
 - Syphon Life
 - Syphon Sliver

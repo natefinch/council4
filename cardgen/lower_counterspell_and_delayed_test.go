@@ -650,7 +650,6 @@ func TestLowerCounterThenTargetControllerCreatesTokenFailsClosed(t *testing.T) {
 	for _, oracleText := range []string{
 		"Counter target blue enchantment, instant, or sorcery spell. Its controller creates a 2/2 blue Bird creature token with flying.",
 		"Counter two target enchantment, instant, or sorcery spells. Their controller creates a 2/2 blue Bird creature token with flying.",
-		"Counter target enchantment, instant, or sorcery spell. You create a 2/2 blue Bird creature token with flying.",
 		"Counter target enchantment, instant, or sorcery spell. Its owner creates a 2/2 blue Bird creature token with flying.",
 		"Counter target enchantment, instant, or sorcery spell. Its controller creates a tapped 2/2 blue Bird creature token with flying.",
 		"Counter target enchantment, instant, or sorcery spell. Its controller creates a 2/2 blue Bird creature token with flying and haste.",
