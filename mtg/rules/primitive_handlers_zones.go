@@ -2101,6 +2101,47 @@ func handleImpulseExile(r *effectResolver, prim game.ImpulseExile) effectResolve
 	return res
 }
 
+func handleExileLibraryUntilNonlandCast(r *effectResolver, prim game.ExileLibraryUntilNonlandCast) effectResolved {
+	res := effectResolved{accepted: true}
+	playerID, ok := resolvePlayerReference(r.game, r.obj, prim.Player)
+	if !ok {
+		return res
+	}
+	player, ok := playerByID(r.game, playerID)
+	if !ok {
+		return res
+	}
+	var found id.ID
+	for {
+		cardID, topOK := player.Library.Top()
+		if !topOK {
+			break
+		}
+		player.Library.Remove(cardID)
+		player.Exile.Add(cardID)
+		emitZoneChangeEvent(r.game, game.Event{
+			Player:   playerID,
+			CardID:   cardID,
+			FromZone: zone.Library,
+			ToZone:   zone.Exile,
+		})
+		res.succeeded = true
+		card, cardOK := r.game.GetCardInstance(cardID)
+		if !cardOK {
+			continue
+		}
+		if !cardFaceOrDefault(card, game.FaceFront).HasType(types.Land) {
+			found = cardID
+			break
+		}
+	}
+	if found != 0 &&
+		r.engine.chooseMay(r.game, r.agents, playerID, "Cast that card without paying its mana cost?", r.log) {
+		r.engine.castFreeSpellFromExile(r.game, playerID, found, r.agents, r.log)
+	}
+	return res
+}
+
 func handleInvestigate(r *effectResolver, prim game.Investigate) effectResolved {
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
 	if res.amount <= 0 {

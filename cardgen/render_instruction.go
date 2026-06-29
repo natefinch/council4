@@ -572,6 +572,12 @@ func (r Renderer) renderPrimitiveTail(ctx *renderCtx, primitive game.Primitive) 
 			return "", err
 		}
 		return r.renderImpulseExile(ctx, value)
+	case game.PrimitiveExileLibraryUntilNonlandCast:
+		value, err := assertPrimitive[game.ExileLibraryUntilNonlandCast](primitive)
+		if err != nil {
+			return "", err
+		}
+		return r.renderExileLibraryUntilNonlandCast(value)
 	case game.PrimitiveHideawayExile:
 		value, err := assertPrimitive[game.HideawayExile](primitive)
 		if err != nil {
