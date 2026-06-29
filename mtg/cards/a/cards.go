@@ -72,6 +72,7 @@ var Cards = []*game.CardDef{
 	AppliedGeometry,
 	ApprenticeSorcerer,
 	AprilONeilHumanElement,
+	AquaticIncursion,
 	ArashinSunshield,
 	ArcaneEpiphany,
 	ArcaneInfusion,

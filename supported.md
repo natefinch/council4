@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,274 of 32,501 cards eligible for paper support (50.1%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,278 of 32,501 cards eligible for paper support (50.1%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -549,6 +549,7 @@ Council4 currently supports **16,274 of 32,501 cards eligible for paper support 
 - April O'Neil, Kunoichi Trainee
 - April, Reporter of the Weird
 - Aquamoeba
+- Aquatic Incursion
 - Aqueous Form
 - Aquus Steed
 - Araba Mothrider
@@ -3131,6 +3132,7 @@ Council4 currently supports **16,274 of 32,501 cards eligible for paper support 
 - Daru Sanctifier
 - Daru Spiritualist
 - Daru Warchief
+- Daughter of the Deep
 - Dauntless Aven
 - Dauntless Cathar
 - Dauntless Escort
@@ -10352,6 +10354,7 @@ Council4 currently supports **16,274 of 32,501 cards eligible for paper support 
 - Prison Realm
 - Prison Sentence
 - Pristine Talisman
+- Private Eye
 - Private Research
 - Privileged Position
 - Prized Amalgam
@@ -13133,6 +13136,7 @@ Council4 currently supports **16,274 of 32,501 cards eligible for paper support 
 - Splendid Reclamation
 - Splendor Mare
 - Splinter Twin
+- Splinter, Radical Rat
 - Splinter, the Mentor
 - Splinterfright
 - Split Up

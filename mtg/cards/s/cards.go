@@ -165,6 +165,7 @@ var Cards = []*game.CardDef{
 	SpiritLoop,
 	SpiritShackle,
 	SplendidAgony,
+	SplinterRadicalRat,
 	SplitTailMiko,
 	SporeFlower,
 	SporesowerThallid,

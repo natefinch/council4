@@ -53,6 +53,7 @@ var Cards = []*game.CardDef{
 	PrismariPledgemage,
 	PrismaticUndercurrents,
 	PrisonSentence,
+	PrivateEye,
 	PrizedStatue,
 	ProctorSGaze,
 	PromisingDuskmage,
