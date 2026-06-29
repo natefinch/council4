@@ -894,11 +894,11 @@ func singleSelfReference(references []compiler.CompiledReference) bool {
 }
 
 func damageTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
-	if !target.Exact || !targetCardinalityIsOne(target) {
+	if !target.Exact || !targetCardinalityIsOneOrUpToOne(target) {
 		return game.TargetSpec{}, false
 	}
 	spec := game.TargetSpec{
-		MinTargets: 1,
+		MinTargets: target.Cardinality.Min,
 		MaxTargets: 1,
 		Constraint: target.Text,
 	}
@@ -913,7 +913,7 @@ func damageTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
 		}
 		spec.Allow = game.TargetAllowPermanent | game.TargetAllowPlayer
 	case compiler.SelectorCreature, compiler.SelectorPlaneswalker, compiler.SelectorBattle:
-		permanent, ok := permanentTargetSpec(target)
+		permanent, ok := permanentTargetSpecWithCardinality(target)
 		if !ok {
 			return game.TargetSpec{}, false
 		}

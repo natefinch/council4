@@ -43,6 +43,7 @@ var Cards = []*game.CardDef{
 	Bereavement,
 	BetrayalAtTheVault,
 	BilboRetiredBurglar,
+	BionicBlow,
 	BirdsOfParadise,
 	BiteDown,
 	BlackCat,

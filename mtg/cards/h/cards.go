@@ -64,6 +64,7 @@ var Cards = []*game.CardDef{
 	HumbleDefector,
 	HuntTheHunter,
 	HuntTheWeak,
+	HunterSBow,
 	HunterSEdge,
 	HunterSTalent,
 	Hydroform,

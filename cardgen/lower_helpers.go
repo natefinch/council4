@@ -14,6 +14,14 @@ func targetCardinalityIsOne(target compiler.CompiledTarget) bool {
 	return target.Cardinality.Min == 1 && target.Cardinality.Max == 1
 }
 
+// targetCardinalityIsOneOrUpToOne reports whether the target selects a single
+// object that is either mandatory ("target creature") or optional ("up to one
+// target creature"). Both forms have Max 1; the optional form drops Min to 0.
+func targetCardinalityIsOneOrUpToOne(target compiler.CompiledTarget) bool {
+	return target.Cardinality.Max == 1 &&
+		(target.Cardinality.Min == 0 || target.Cardinality.Min == 1)
+}
+
 // targetCardinalityIsUnbounded reports whether the target uses the unbounded
 // "any number of" cardinality the parser encodes as Min 0, Max 99. Such a target
 // cannot be unrolled into a fixed instruction per slot; only lowerers that model

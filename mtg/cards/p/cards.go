@@ -14,6 +14,7 @@ var Cards = []*game.CardDef{
 	ParasiticImpetus,
 	PathOfAnnihilation,
 	PathToRedemption,
+	PathToTheWorldTree,
 	PatronWizard,
 	PeakEruption,
 	PearlOfWisdom,

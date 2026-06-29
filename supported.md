@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,278 of 32,501 cards eligible for paper support (50.1%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,286 of 32,501 cards eligible for paper support (50.1%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -790,6 +790,7 @@ Council4 currently supports **16,278 of 32,501 cards eligible for paper support 
 - Assembly-Worker
 - Assembly-Worker
 - Assert Authority
+- Assert Perfection
 - Assure // Assemble
 - Astartes Warrior
 - Astartes Warrior
@@ -1275,6 +1276,7 @@ Council4 currently supports **16,278 of 32,501 cards eligible for paper support 
 - Biomass Mutation
 - Biomathematician
 - Biomechan Engineer
+- Bionic Blow
 - Biosynthic Burst
 - Biotech Specialist
 - Biotransference
@@ -6708,6 +6710,7 @@ Council4 currently supports **16,278 of 32,501 cards eligible for paper support 
 - Hunted Phantasm
 - Hunted Troll
 - Hunted Witness
+- Hunter's Bow
 - Hunter's Edge
 - Hunter's Talent
 - Hunting Cheetah
@@ -7848,6 +7851,7 @@ Council4 currently supports **16,278 of 32,501 cards eligible for paper support 
 - Legion Lieutenant
 - Legion Vanguard
 - Legion's Judgment
+- Legolas, Master Archer
 - Leinore, Autumn Sovereign
 - Lens Flare
 - Leonardo, the Balance
@@ -9889,6 +9893,7 @@ Council4 currently supports **16,278 of 32,501 cards eligible for paper support 
 - Path of Discovery
 - Path to Exile
 - Path to Redemption
+- Path to the World Tree
 - Pathbreaker Ibex
 - Pathfinding Axejaw
 - Pathmaker Initiate
@@ -12506,6 +12511,7 @@ Council4 currently supports **16,278 of 32,501 cards eligible for paper support 
 - Skullslither Worm
 - Skulltap
 - Sky Crier
+- Sky Cycle
 - Sky Diamond
 - Sky Ruin Drake
 - Sky Scourer
@@ -15170,6 +15176,7 @@ Council4 currently supports **16,278 of 32,501 cards eligible for paper support 
 - Vengeful Townsfolk
 - Vengeful Vampire
 - Vengeful Warchief
+- Venom Blast
 - Venom Sliver
 - Venom's Hunger
 - Venom, Evil Unleashed
@@ -15413,6 +15420,7 @@ Council4 currently supports **16,278 of 32,501 cards eligible for paper support 
 - Volcanic Submersion
 - Volcanic Upheaval
 - Volcano Imp
+- Voldaren Ambusher
 - Voldaren Duelist
 - Voldaren Epicure
 - Voldaren Stinger
