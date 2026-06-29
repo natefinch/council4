@@ -1172,6 +1172,31 @@ func lowerSourcePowerDamageSpell(ctx contentCtx) (game.AbilityContent, bool) {
 		if !ok {
 			return game.AbilityContent{}, false
 		}
+		// "deals damage equal to its power to each of N other target creatures"
+		// (Betrayal at the Vault): the recipient is a plural slot dealt the
+		// dealer's power once per chosen target. Unroll one Damage instruction
+		// per recipient slot, keyed past the single source slot.
+		if ctx.content.Targets[recipientIdx].Cardinality.Max >= 2 {
+			if sourceIdx != 0 {
+				return game.AbilityContent{}, false
+			}
+			recipientSpec, ok := eachOfDamageTargetSpec(ctx.content.Targets[recipientIdx])
+			if !ok {
+				return game.AbilityContent{}, false
+			}
+			sequence := make([]game.Instruction, 0, recipientSpec.MaxTargets)
+			for i := range recipientSpec.MaxTargets {
+				sequence = append(sequence, game.Instruction{Primitive: game.Damage{
+					Amount:       game.Dynamic(dynamic),
+					Recipient:    game.AnyTargetDamageRecipient(1 + i),
+					DamageSource: opt.Val(sourceRef),
+				}})
+			}
+			return game.Mode{
+				Targets:  []game.TargetSpec{sourceSpec, recipientSpec},
+				Sequence: sequence,
+			}.Ability(), true
+		}
 		recipientSpec, ok := damageTargetSpec(ctx.content.Targets[recipientIdx])
 		if !ok {
 			return game.AbilityContent{}, false
