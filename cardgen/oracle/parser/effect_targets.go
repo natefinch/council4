@@ -2638,19 +2638,7 @@ func parseSelection(tokens []shared.Token, atoms Atoms) SelectionSyntax {
 		selection.ExcludedKeyword = keyword.Keyword
 	}
 	if match, ok := selectionCounterQualifier(tokens); ok {
-		switch {
-		case match.KindAbsent:
-			selection.CounterKindAbsent = true
-			selection.CounterKind = match.Kind
-		case match.Absent:
-			selection.CounterAbsent = true
-		case match.Any:
-			selection.CounterRequired = true
-			selection.CounterAny = true
-		default:
-			selection.CounterRequired = true
-			selection.CounterKind = match.Kind
-		}
+		selection.applyCounterQualifier(match)
 	}
 	if (selection.Kind == SelectionPlayer && slices.Equal(words, []string{"player", "or", "planeswalker"})) ||
 		(selection.Kind == SelectionOpponent && slices.Equal(words, []string{"opponent", "or", "planeswalker"})) {
@@ -3036,6 +3024,50 @@ func selectionCounterQualifier(tokens []shared.Token) (counterQualifierMatch, bo
 		}
 	}
 	return counterQualifierMatch{}, false
+}
+
+// applyCounterQualifier records a parsed counter qualifier onto a selection's
+// counter-filter fields, covering every form counterQualifierKind recognizes:
+// the named "with a <kind> counter on it/them", the kind-agnostic "with a
+// counter on it" (Rishkar), the negated "with no counters on them" (Damning
+// Verdict), and the kind-specific negated "without a <kind> counter on it"
+// (Wave Goodbye). It is the single mapping any selection-qualifier caller shares
+// so the modeled fields never drift between call sites.
+func (selection *SelectionSyntax) applyCounterQualifier(match counterQualifierMatch) {
+	switch {
+	case match.KindAbsent:
+		selection.CounterKindAbsent = true
+		selection.CounterKind = match.Kind
+	case match.Absent:
+		selection.CounterAbsent = true
+	case match.Any:
+		selection.CounterRequired = true
+		selection.CounterAny = true
+	default:
+		selection.CounterRequired = true
+		selection.CounterKind = match.Kind
+	}
+}
+
+// applyCounterQualifier records a parsed positive counter qualifier (named or
+// kind-agnostic) onto a creature-group static subject, returning whether the
+// qualifier is a supported positive form. The negated "with no counters" and
+// "without a <kind> counter" forms have no modeled counter-filtered group
+// subject, so they return false without mutating the subject and the caller
+// fails closed. It is shared by every static-subject counter-qualifier caller
+// (controlled-creature prohibitions, don't-untap groups, and counter-matters
+// anthems) so the three stay uniform and compose with the same tokenizer.
+func (subject *EffectStaticSubjectSyntax) applyCounterQualifier(match counterQualifierMatch) bool {
+	if match.Absent || match.KindAbsent {
+		return false
+	}
+	subject.CounterRequired = true
+	if match.Any {
+		subject.CounterAny = true
+	} else {
+		subject.CounterKind = match.Kind
+	}
+	return true
 }
 
 func parseSelectionNumbers(tokens []shared.Token, atoms Atoms, selection *SelectionSyntax) bool {
@@ -4096,10 +4128,7 @@ func parseCounterFilteredCreatureGroupSubject(tokens []shared.Token) (EffectStat
 	}
 	idx += 2
 	match, ok := counterQualifierKind(tokens, idx)
-	if !ok || match.Absent {
-		// The negated "with no counters" qualifier has no modeled
-		// counter-filtered group subject; fail closed so it is not mistaken for a
-		// required-counter group.
+	if !ok {
 		return EffectStaticSubjectSyntax{}, false
 	}
 	if !counterGroupVerbAt(tokens, match.End, head.singular) {
@@ -4110,14 +4139,14 @@ func parseCounterFilteredCreatureGroupSubject(tokens []shared.Token) (EffectStat
 		groupKind = EffectStaticSubjectOtherControlledCreatures
 	}
 	subject := EffectStaticSubjectSyntax{
-		Kind:            groupKind,
-		Span:            shared.SpanOf(tokens[:match.End]),
-		CounterRequired: true,
+		Kind: groupKind,
+		Span: shared.SpanOf(tokens[:match.End]),
 	}
-	if match.Any {
-		subject.CounterAny = true
-	} else {
-		subject.CounterKind = match.Kind
+	if !subject.applyCounterQualifier(match) {
+		// The negated "with no counters" / "without a <kind> counter"
+		// qualifiers have no modeled counter-filtered group subject; fail closed
+		// so they are not mistaken for a required-counter group.
+		return EffectStaticSubjectSyntax{}, false
 	}
 	return subject, true
 }

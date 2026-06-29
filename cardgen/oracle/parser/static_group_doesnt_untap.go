@@ -2,7 +2,6 @@ package parser
 
 import (
 	"github.com/natefinch/council4/cardgen/oracle/shared"
-	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -126,52 +125,14 @@ func staticAllCreaturesDoesntUntapSubject(tokens []shared.Token, atoms Atoms) (E
 		subject.PowerLessThanSource = match.powerLessThanSource
 		subject.PowerGreaterThanSource = match.powerGreaterThanSource
 		idx = match.end
-	} else if kind, counterEnd, ok := staticDoesntUntapCounterQualifier(tokens, idx, atoms); ok {
-		subject.CounterRequired = true
-		subject.CounterKind = kind
-		idx = counterEnd
+	} else if match, ok := counterQualifierKind(tokens, idx); ok && subject.applyCounterQualifier(match) {
+		idx = match.End
 	}
 	if !staticWordsAt(tokens, idx, "don't") {
 		return EffectStaticSubjectSyntax{}, 0, false
 	}
 	subject.Span = shared.SpanOf(tokens[:idx])
 	return subject, idx, true
-}
-
-// staticDoesntUntapCounterQualifier recognizes a "with [a] <kind> counter[s] on
-// it/them" qualifier on a battlefield creature untap group ("Creatures with ice
-// counters on them don't untap ...", Rimescale Dragon), beginning at index start
-// (the "with" word). It returns the named counter kind and the index one past
-// the qualifier. The kind name is recognized through the lexer's counter atom so
-// the parser owns no counter vocabulary here.
-func staticDoesntUntapCounterQualifier(tokens []shared.Token, start int, atoms Atoms) (counter.Kind, int, bool) {
-	if !staticWordsAt(tokens, start, "with") {
-		return 0, 0, false
-	}
-	idx := start + 1
-	if staticWordsAt(tokens, idx, "a") || staticWordsAt(tokens, idx, "an") {
-		idx++
-	}
-	if idx >= len(tokens) {
-		return 0, 0, false
-	}
-	kind, span, ok := atoms.CounterIn(tokens[idx].Span)
-	if !ok || !spanEquals(span, tokens[idx].Span) {
-		return 0, 0, false
-	}
-	idx++
-	if !staticWordsAt(tokens, idx, "counters") && !staticWordsAt(tokens, idx, "counter") {
-		return 0, 0, false
-	}
-	idx++
-	if !staticWordsAt(tokens, idx, "on") {
-		return 0, 0, false
-	}
-	idx++
-	if !staticWordsAt(tokens, idx, "them") && !staticWordsAt(tokens, idx, "it") {
-		return 0, 0, false
-	}
-	return kind, idx + 1, true
 }
 
 // staticSubtypeDoesntUntapSubject recognizes the "<creature subtype plural>
