@@ -1643,6 +1643,9 @@ func appendStaticSpellCostModifierDeclaration(body *game.StaticAbility, declarat
 	if cost.SharedExiledCardTypeReduction > 0 {
 		return appendStaticSpellSharedExiledTypeCostModifier(body, declaration)
 	}
+	if cost.PerObjectReduction > 0 {
+		return appendStaticSpellPerObjectCostModifier(body, declaration)
+	}
 	reduces := cost.GenericReduction != 0
 	increases := cost.GenericIncrease != 0 || len(cost.ColoredIncrease) != 0
 	if reduces == increases {
@@ -1768,6 +1771,61 @@ func appendStaticSpellSharedExiledTypeCostModifier(body *game.StaticAbility, dec
 			SharedExiledCardTypeReduction: cost.SharedExiledCardTypeReduction,
 			ExiledLinkKey:                 exiledWithSourceKey,
 		},
+	})
+	return true
+}
+
+// appendStaticSpellPerObjectCostModifier lowers the dynamic group cast-cost
+// discount that scales with a countable battlefield permanent the controller
+// controls ("During your turn, spells you cast cost {1} less to cast for each
+// creature you control with power 4 or greater.", Temur Battlecrier; "Creature
+// spells you cast cost {1} less to cast for each creature you control with a
+// +1/+1 counter on it.", Hamza, Guardian of Arashin). The per-permanent amount
+// and battlefield count selection ride on PerObjectReduction and CountSelection;
+// the rules layer totals the controller's matching permanents at cost time. An
+// optional single card-type spell filter scopes the affected spells, and the
+// controller's-turn gate rides on RestrictedDuringControllerTurn. Any other
+// filter or an unrepresentable count selection fails closed.
+func appendStaticSpellPerObjectCostModifier(body *game.StaticAbility, declaration compiler.StaticDeclaration) bool {
+	cost := declaration.Cost
+	if cost.GenericReduction != 0 ||
+		cost.GenericIncrease != 0 ||
+		cost.SharedExiledCardTypeReduction != 0 ||
+		cost.TargetsSource ||
+		cost.ChosenSubtypeFromEntryChoice ||
+		cost.MatchSpellColor ||
+		cost.MatchMinPower ||
+		cost.MatchMinManaValue ||
+		cost.SourceZone != "" ||
+		len(cost.SpellColors) != 0 ||
+		len(cost.SpellSubtypes) != 0 ||
+		len(cost.ExcludedSpellTypes) != 0 {
+		return false
+	}
+	if len(cost.SpellTypes) > 1 {
+		return false
+	}
+	affectedPlayer, ok := lowerSpellCaster(cost.Caster)
+	if !ok || affectedPlayer != game.PlayerYou {
+		return false
+	}
+	selection, ok := dynamicAmountSelection(cost.CountSelection)
+	if !ok {
+		return false
+	}
+	modifier := game.CostModifier{
+		Kind:               game.CostModifierSpell,
+		PerObjectReduction: cost.PerObjectReduction,
+		CountSelection:     &selection,
+	}
+	if len(cost.SpellTypes) == 1 {
+		modifier.CardSelection.RequiredTypes = []types.Card{cost.SpellTypes[0]}
+	}
+	body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+		Kind:                           game.RuleEffectCostModifier,
+		AffectedPlayer:                 affectedPlayer,
+		CostModifier:                   modifier,
+		RestrictedDuringControllerTurn: cost.RestrictDuringControllerTurn,
 	})
 	return true
 }

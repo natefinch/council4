@@ -19,6 +19,7 @@ var Cards = []*game.CardDef{
 	TelJiladDefiance,
 	TempestTechnique,
 	TempleElder,
+	TemurBattlecrier,
 	TenebTheHarvester,
 	TentativeConnection,
 	TenuredInkcaster,

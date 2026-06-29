@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // StaticDeclarationKind identifies the static-declaration family the parser
@@ -235,6 +236,17 @@ const (
 	// this creature.", Cemetery Prowler). CostReductionAmount carries the per-
 	// shared-type amount.
 	StaticDeclarationCostModifierSpellSharedExiledTypeReduction StaticDeclarationCostModifierKind = "StaticDeclarationCostModifierSpellSharedExiledTypeReduction"
+	// StaticDeclarationCostModifierSpellPerObjectReduction is the dynamic group
+	// cast-cost discount that scales with a countable battlefield permanent the
+	// controller controls ("[<filter>] spells you cast cost {N} less to cast for
+	// each <permanent> you control[ with power M or greater]."). Temur
+	// Battlecrier ("During your turn, spells you cast cost {1} less to cast for
+	// each creature you control with power 4 or greater.") and Hamza, Guardian
+	// of Arashin ("Creature spells you cast cost {1} less to cast for each
+	// creature you control with a +1/+1 counter on it.") are the targets.
+	// CostReductionAmount carries the per-permanent amount and
+	// PerObjectCountSelection carries the typed battlefield count subject.
+	StaticDeclarationCostModifierSpellPerObjectReduction StaticDeclarationCostModifierKind = "StaticDeclarationCostModifierSpellPerObjectReduction"
 )
 
 // StaticDeclarationSpellTypeKind identifies the closed spell-type filter a
@@ -490,6 +502,13 @@ type StaticDeclarationSyntax struct {
 	// combines with the spell-type, color, subtype, and zone filters.
 	SpellManaValueAtLeast      int  `json:",omitempty"`
 	MatchSpellManaValueAtLeast bool `json:",omitempty"`
+
+	// PerObjectCountSelection carries the typed battlefield count subject of a
+	// StaticDeclarationCostModifierSpellPerObjectReduction modifier ("... for
+	// each creature you control with power 4 or greater."): the controller's
+	// matching battlefield permanents are counted at cost time, each worth
+	// CostReductionAmount generic mana. It is nil for every other modifier shape.
+	PerObjectCountSelection *SelectionSyntax `json:"-"`
 
 	// SpellCaster scopes a cast-cost modifier to a set of casting players
 	// ("Spells you cast ..." vs "Spells your opponents cast ..." vs "Spells
@@ -1872,11 +1891,11 @@ func parseStaticCastZoneSpec(tokens []shared.Token, index, end int) (staticCastZ
 	}
 	var zones []StaticDeclarationCastZoneKind
 	for index < end {
-		zone, consumed, zok := staticCastZoneWord(tokens, index)
+		castZone, consumed, zok := staticCastZoneWord(tokens, index)
 		if !zok {
 			break
 		}
-		zones = append(zones, zone)
+		zones = append(zones, castZone)
 		index += consumed
 		separated := false
 		if index < end && tokens[index].Kind == shared.Comma {
@@ -1982,11 +2001,11 @@ func parseStaticEnterRestrictionFilter(tokens []shared.Token, index *int) (Stati
 func parseStaticEnterRestrictionZones(tokens []shared.Token, index, end int) ([]StaticDeclarationCastZoneKind, int, bool) {
 	var zones []StaticDeclarationCastZoneKind
 	for index < end {
-		zone, consumed, zok := staticCastZoneWord(tokens, index)
-		if !zok || (zone != StaticDeclarationCastZoneGraveyard && zone != StaticDeclarationCastZoneLibrary) {
+		castZone, consumed, zok := staticCastZoneWord(tokens, index)
+		if !zok || (castZone != StaticDeclarationCastZoneGraveyard && castZone != StaticDeclarationCastZoneLibrary) {
 			break
 		}
-		zones = append(zones, zone)
+		zones = append(zones, castZone)
 		index += consumed
 		separated := false
 		if index < end && tokens[index].Kind == shared.Comma {
@@ -2744,6 +2763,9 @@ func parseStaticSpellCostModifierDeclaration(tokens []shared.Token, atoms Atoms)
 	if declaration, ok := parseStaticSpellSharedExiledTypeCostReduction(tokens); ok {
 		return declaration, true
 	}
+	if declaration, ok := parseStaticSpellPerObjectCostReduction(tokens, atoms); ok {
+		return declaration, true
+	}
 	if declaration, ok := parseStaticSpellColorDisjunctionCostModifier(tokens); ok {
 		return declaration, true
 	}
@@ -2965,6 +2987,83 @@ func parseStaticSpellSharedExiledTypeCostReduction(tokens []shared.Token) (Stati
 		CostModifier:        StaticDeclarationCostModifierSpellSharedExiledTypeReduction,
 		CostReductionAmount: amount,
 		SpellType:           StaticDeclarationSpellTypeAll,
+	}, true
+}
+
+// parseStaticSpellPerObjectCostReduction recognizes the dynamic group cast-cost
+// discount whose amount scales with a countable battlefield permanent the
+// controller controls:
+//
+//	"During your turn, spells you cast cost {1} less to cast for each creature you control with power 4 or greater." (Temur Battlecrier)
+//	"Creature spells you cast cost {1} less to cast for each creature you control with a +1/+1 counter on it." (Hamza, Guardian of Arashin)
+//
+// The optional leading "During your turn," gate scopes the discount to the
+// controller's turn; an optional single card-type word ("Creature spells")
+// constrains the affected spells. The trailing "for each <permanent> you
+// control[ with ...]" count subject must resolve to a battlefield permanent
+// count (zone.None) so the runtime can total the controller's matching
+// permanents at cost time. Card-zone counts, dynamic non-count forms, or any
+// other tail fall through to the fixed-amount and shared-exiled forms.
+func parseStaticSpellPerObjectCostReduction(tokens []shared.Token, atoms Atoms) (StaticDeclarationSyntax, bool) {
+	if len(tokens) == 0 || tokens[len(tokens)-1].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	idx := 0
+	duringControllerTurn := false
+	if staticWordsAt(tokens, idx, "during", "your", "turn") {
+		duringControllerTurn = true
+		idx += 3
+		if idx < len(tokens) && tokens[idx].Kind == shared.Comma {
+			idx++
+		}
+	}
+	spellType := StaticDeclarationSpellTypeAll
+	if filterType, rest, ok := staticSpellTypeFilter(tokens[idx:]); ok {
+		spellType = filterType
+		idx = len(tokens) - len(rest)
+	}
+	if !staticWordsAt(tokens, idx, "spells", "you", "cast", "cost") {
+		return StaticDeclarationSyntax{}, false
+	}
+	idx += 4
+	if idx >= len(tokens) || tokens[idx].Kind != shared.Symbol {
+		return StaticDeclarationSyntax{}, false
+	}
+	amount, ok := staticGenericSymbolValue(tokens[idx].Text)
+	if !ok || amount <= 0 {
+		return StaticDeclarationSyntax{}, false
+	}
+	opSpan := tokens[idx].Span
+	idx++
+	if !staticWordsAt(tokens, idx, "less", "to", "cast", "for", "each") {
+		return StaticDeclarationSyntax{}, false
+	}
+	idx += 5
+	if idx >= len(tokens)-1 {
+		return StaticDeclarationSyntax{}, false
+	}
+	subject, ok := parseDynamicCountSubject(tokens, idx, atoms)
+	if !ok || !subject.count {
+		return StaticDeclarationSyntax{}, false
+	}
+	if subject.end != len(tokens)-1 {
+		return StaticDeclarationSyntax{}, false
+	}
+	if subject.amount.DynamicKind != EffectDynamicAmountCount ||
+		subject.amount.Selection == nil ||
+		subject.amount.Selection.Zone != zone.None {
+		return StaticDeclarationSyntax{}, false
+	}
+	selection := *subject.amount.Selection
+	return StaticDeclarationSyntax{
+		Kind:                         StaticDeclarationCostModifier,
+		Span:                         shared.SpanOf(tokens),
+		OperationSpan:                opSpan,
+		CostModifier:                 StaticDeclarationCostModifierSpellPerObjectReduction,
+		CostReductionAmount:          amount,
+		SpellType:                    spellType,
+		PerObjectCountSelection:      &selection,
+		RestrictDuringControllerTurn: duringControllerTurn,
 	}, true
 }
 

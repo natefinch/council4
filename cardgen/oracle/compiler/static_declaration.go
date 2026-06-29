@@ -568,6 +568,18 @@ type StaticCostModifierDeclaration struct {
 	// they share with cards exiled with this creature.", Cemetery Prowler). It is
 	// mutually exclusive with GenericReduction and GenericIncrease.
 	SharedExiledCardTypeReduction int
+
+	// PerObjectReduction, when positive, is the per-permanent generic discount of
+	// a dynamic group cast-cost modifier whose amount scales with a countable
+	// battlefield permanent the controller controls ("[<filter>] spells you cast
+	// cost {N} less to cast for each <permanent> you control[ with power M or
+	// greater].", Temur Battlecrier; Hamza, Guardian of Arashin). CountSelection
+	// is the typed battlefield count subject. RestrictDuringControllerTurn scopes
+	// the discount to the controller's turn. It is mutually exclusive with the
+	// flat GenericReduction, GenericIncrease, and shared-exiled discount.
+	PerObjectReduction           int
+	CountSelection               CompiledSelector
+	RestrictDuringControllerTurn bool
 }
 
 // StaticSpellCasterKind identifies which players' spells a cast-cost modifier
@@ -3668,7 +3680,8 @@ func recognizeStaticSpellCostModifierDeclaration(ability CompiledAbility, static
 	node := statics[0]
 	if node.CostModifier != parser.StaticDeclarationCostModifierSpellReduction &&
 		node.CostModifier != parser.StaticDeclarationCostModifierSpellIncrease &&
-		node.CostModifier != parser.StaticDeclarationCostModifierSpellSharedExiledTypeReduction {
+		node.CostModifier != parser.StaticDeclarationCostModifierSpellSharedExiledTypeReduction &&
+		node.CostModifier != parser.StaticDeclarationCostModifierSpellPerObjectReduction {
 		return StaticDeclaration{}, false
 	}
 	if ability.Cost != nil ||
@@ -3688,7 +3701,8 @@ func recognizeStaticSpellCostModifierDeclaration(ability CompiledAbility, static
 	// parser owns. Every other cast-cost modifier must carry no targets or
 	// references.
 	parserOwnsReferences := node.SpellTargetsSource ||
-		node.CostModifier == parser.StaticDeclarationCostModifierSpellSharedExiledTypeReduction
+		node.CostModifier == parser.StaticDeclarationCostModifierSpellSharedExiledTypeReduction ||
+		node.CostModifier == parser.StaticDeclarationCostModifierSpellPerObjectReduction
 	if !parserOwnsReferences &&
 		(len(ability.Content.Targets) != 0 || len(ability.Content.References) != 0) {
 		return StaticDeclaration{}, false
@@ -3782,6 +3796,13 @@ func recognizeStaticSpellCostModifierDeclaration(ability CompiledAbility, static
 		cost.ColoredIncrease = coloredIncrease
 	case parser.StaticDeclarationCostModifierSpellSharedExiledTypeReduction:
 		cost.SharedExiledCardTypeReduction = node.CostReductionAmount
+	case parser.StaticDeclarationCostModifierSpellPerObjectReduction:
+		if node.PerObjectCountSelection == nil {
+			return StaticDeclaration{}, false
+		}
+		cost.PerObjectReduction = node.CostReductionAmount
+		cost.CountSelection = compileTypedSelection(*node.PerObjectCountSelection)
+		cost.RestrictDuringControllerTurn = node.RestrictDuringControllerTurn
 	default:
 		cost.GenericReduction = node.CostReductionAmount
 	}
