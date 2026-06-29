@@ -13,6 +13,7 @@ var Cards = []*game.CardDef{
 	HalanaAndAlenaPartners,
 	HaliyaAscendantCadet,
 	HallowedHealer,
+	HamzaGuardianOfArashin,
 	HaraldKingOfSkemfar,
 	HarborGuardian,
 	HargildeKindlyRunechanter,

@@ -8,9 +8,11 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/compare"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
 
 func TestLowerStaticSpellCostModifier(t *testing.T) {
@@ -290,6 +292,76 @@ func TestLowerStaticSpellCostModifierManaValueThreshold(t *testing.T) {
 		!modifier.CardSelection.ManaValue.Exists ||
 		modifier.CardSelection.ManaValue.Val != (compare.Int{Op: compare.GreaterOrEqual, Value: 6}) {
 		t.Fatalf("modifier = %#v, want mana-value-6 creature {2} reduction", modifier)
+	}
+}
+
+func TestLowerStaticSpellPerObjectCostModifier(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		oracleText string
+		modifier   game.CostModifier
+		duringTurn bool
+	}{
+		"temur battlecrier": {
+			oracleText: "During your turn, spells you cast cost {1} less to cast for each creature you control with power 4 or greater.",
+			modifier: game.CostModifier{
+				Kind:               game.CostModifierSpell,
+				PerObjectReduction: 1,
+				CountSelection: &game.Selection{
+					RequiredTypes: []types.Card{types.Creature},
+					Controller:    game.ControllerYou,
+					Power:         opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 4}),
+				},
+			},
+			duringTurn: true,
+		},
+		"hamza guardian of arashin": {
+			oracleText: "Creature spells you cast cost {1} less to cast for each creature you control with a +1/+1 counter on it.",
+			modifier: game.CostModifier{
+				Kind:               game.CostModifierSpell,
+				PerObjectReduction: 1,
+				CardSelection:      game.Selection{RequiredTypes: []types.Card{types.Creature}},
+				CountSelection: &game.Selection{
+					RequiredTypes:   []types.Card{types.Creature},
+					Controller:      game.ControllerYou,
+					MatchCounter:    true,
+					RequiredCounter: counter.PlusOnePlusOne,
+				},
+			},
+		},
+	}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Crier",
+				Layout:     "normal",
+				TypeLine:   "Creature — Human",
+				Power:      new("2"),
+				Toughness:  new("2"),
+				OracleText: tc.oracleText,
+			})
+			if len(face.StaticAbilities) != 1 || len(face.StaticAbilities[0].Body.RuleEffects) != 1 {
+				t.Fatalf("static abilities = %#v, want one per-object cost effect", face.StaticAbilities)
+			}
+			effect := face.StaticAbilities[0].Body.RuleEffects[0]
+			if effect.RestrictedDuringControllerTurn != tc.duringTurn {
+				t.Fatalf("RestrictedDuringControllerTurn = %v, want %v", effect.RestrictedDuringControllerTurn, tc.duringTurn)
+			}
+			if effect.AffectedPlayer != game.PlayerYou {
+				t.Fatalf("affected player = %v, want PlayerYou", effect.AffectedPlayer)
+			}
+			modifier := effect.CostModifier
+			if modifier.Kind != tc.modifier.Kind || modifier.PerObjectReduction != tc.modifier.PerObjectReduction {
+				t.Fatalf("modifier = %#v, want %#v", modifier, tc.modifier)
+			}
+			if !reflect.DeepEqual(modifier.CardSelection, tc.modifier.CardSelection) {
+				t.Fatalf("card selection = %#v, want %#v", modifier.CardSelection, tc.modifier.CardSelection)
+			}
+			if modifier.CountSelection == nil || !reflect.DeepEqual(*modifier.CountSelection, *tc.modifier.CountSelection) {
+				t.Fatalf("count selection = %#v, want %#v", modifier.CountSelection, tc.modifier.CountSelection)
+			}
+		})
 	}
 }
 

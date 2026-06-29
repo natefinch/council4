@@ -1090,9 +1090,39 @@ func staticCostModifiersForContext(g *game.Game, playerID game.PlayerID, card *g
 			modifiers = append(modifiers, game.CostModifier{Kind: game.CostModifierSpell, GenericReduction: reduction})
 			continue
 		}
+		if modifier.PerObjectReduction > 0 {
+			if !actionRestrictionTurnActive(g, effect) {
+				continue
+			}
+			reduction := perObjectGroupReduction(g, effect.SourceObjectID, effect.Controller, modifier)
+			if reduction <= 0 {
+				continue
+			}
+			modifiers = append(modifiers, game.CostModifier{Kind: game.CostModifierSpell, GenericReduction: reduction})
+			continue
+		}
 		modifiers = append(modifiers, modifier)
 	}
 	return modifiers
+}
+
+// perObjectGroupReduction resolves the concrete generic reduction for a group
+// spell cost modifier whose amount scales with a countable battlefield permanent
+// the modifier controller controls ("[<filter>] spells you cast cost {N} less to
+// cast for each <permanent> you control[ with power M or greater].", Temur
+// Battlecrier; Hamza, Guardian of Arashin). It counts the permanents the source
+// permanent's controller controls that match CountSelection and multiplies that
+// count by the per-permanent amount.
+func perObjectGroupReduction(g *game.Game, sourceObjectID id.ID, controller game.PlayerID, modifier game.CostModifier) int {
+	if modifier.CountSelection == nil {
+		return 0
+	}
+	owner := controller
+	if source, ok := permanentByObjectID(g, sourceObjectID); ok {
+		owner = effectiveController(g, source)
+	}
+	count := countPermanentsMatchingGroup(g, nil, owner, game.BattlefieldGroup(*modifier.CountSelection))
+	return count * modifier.PerObjectReduction
 }
 
 // sharedExiledCardTypeReduction resolves the concrete generic reduction for a
