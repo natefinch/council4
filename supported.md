@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,352 of 32,501 cards eligible for paper support (50.3%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,358 of 32,501 cards eligible for paper support (50.3%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2555,6 +2555,7 @@ Council4 currently supports **16,352 of 32,501 cards eligible for paper support 
 - Coastal Peak
 - Coastal Piracy
 - Coastal Tower
+- Coastal Wizard
 - Coat of Arms
 - Coat with Venom
 - Coati Scavenger
@@ -3032,6 +3033,7 @@ Council4 currently supports **16,352 of 32,501 cards eligible for paper support 
 - Cycle of Renewal
 - Cyclonic Rift
 - Cyclopean Mummy
+- Cyclopean Snare
 - Cyclops Electromancer
 - Cyclops of Eternal Fury
 - Cyclops of One-Eyed Pass
@@ -7768,6 +7770,7 @@ Council4 currently supports **16,352 of 32,501 cards eligible for paper support 
 - Lady of Laughter
 - Lady Orca
 - Lady Spider, Maybelle Reilly
+- Lady Sun
 - Lady Zhurong, Warrior Queen
 - Lagac Lizard
 - Lagonna-Band Elder
@@ -12780,6 +12783,7 @@ Council4 currently supports **16,352 of 32,501 cards eligible for paper support 
 - Snooping Page
 - Snorting Gahr
 - Snow Day
+- Snow Hound
 - Snow Villiers
 - Snow-Covered Forest
 - Snow-Covered Island
@@ -15332,6 +15336,7 @@ Council4 currently supports **16,352 of 32,501 cards eligible for paper support 
 - Victorious Destruction
 - Victory's Envoy
 - Victory's Herald
+- View from Above
 - Vigilant Baloth
 - Vigilant Drake
 - Vigilant Martyr
@@ -16041,6 +16046,7 @@ Council4 currently supports **16,352 of 32,501 cards eligible for paper support 
 - Wizard
 - Wizard
 - Wizard Class
+- Wizard Mentor
 - Wizard Replica
 - Wizard's Lightning
 - Wizard's Retort
