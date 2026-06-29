@@ -1728,6 +1728,9 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 	if !pattern.DamageSourceSelection.Empty() {
 		v.validateSelection(faceName, appendPath(path, "DamageSourceSelection"), pattern.DamageSourceSelection)
 	}
+	if pattern.DamageSourceSelectionOrSelf {
+		v.validateDamageSourceSelectionOrSelf(faceName, path, pattern)
+	}
 	if pattern.DamageRecipientIsSource && pattern.DamageRecipient&DamageRecipientPermanent == 0 {
 		v.add(faceName, path, CardDefIssueInvalidSelection, "DamageRecipientIsSource requires a permanent damage recipient")
 	}
@@ -1901,6 +1904,25 @@ func (v *cardDefValidator) validateSubjectSelectionOrSelf(faceName, path string,
 	case EventPermanentEnteredBattlefield, EventPermanentDied, EventZoneChanged:
 	default:
 		v.add(faceName, subPath, CardDefIssueInvalidSelection, "SubjectSelectionOrSelf is only supported for permanent zone-change events")
+	}
+}
+
+func (v *cardDefValidator) validateDamageSourceSelectionOrSelf(faceName, path string, pattern *TriggerPattern) {
+	subPath := appendPath(path, "DamageSourceSelectionOrSelf")
+	if pattern.Event != EventDamageDealt {
+		v.add(faceName, subPath, CardDefIssueInvalidSelection, "DamageSourceSelectionOrSelf requires a damage-dealt event")
+	}
+	if pattern.ExcludeSelf {
+		v.add(faceName, subPath, CardDefIssueInvalidSelection, "DamageSourceSelectionOrSelf cannot combine with ExcludeSelf")
+	}
+	switch pattern.Source {
+	case TriggerSourceAny:
+		if pattern.DamageSourceSelection.Empty() {
+			v.add(faceName, subPath, CardDefIssueInvalidSelection, "DamageSourceSelectionOrSelf requires a DamageSourceSelection unless the source is an attached permanent")
+		}
+	case TriggerSourceAttachedPermanent:
+	default:
+		v.add(faceName, subPath, CardDefIssueInvalidSelection, "DamageSourceSelectionOrSelf cannot combine with this source filter")
 	}
 }
 

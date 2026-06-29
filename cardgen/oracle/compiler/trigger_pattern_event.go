@@ -410,7 +410,7 @@ func compileDamageEvent(clause *parser.TriggerEventClause, pattern *TriggerPatte
 	}
 	if clause.DamageSource.Kind != parser.TriggerEventSubjectUnknown {
 		pattern.Subject = TriggerSubjectDamageSource
-		return compileDamageSourceSubject(&clause.DamageSource, pattern)
+		return compileDamageSourceSubject(&clause.DamageSource, pattern, clause.SelfOrAnother)
 	}
 	if clause.DamageSourceIsStackObject {
 		if clause.DamageSourceSpellSelection.Kicker ||
@@ -521,20 +521,28 @@ func compileEventSubject(
 	return true
 }
 
-func compileDamageSourceSubject(subject *parser.TriggerEventSubject, pattern *TriggerPattern) bool {
+func compileDamageSourceSubject(subject *parser.TriggerEventSubject, pattern *TriggerPattern, selfOrAnother bool) bool {
 	selection, ok := compileTriggerSelection(subject.Selection)
 	if !ok {
 		return false
 	}
 	switch subject.Kind {
 	case parser.TriggerEventSubjectSelf:
+		if selfOrAnother {
+			return false
+		}
 		pattern.Source = TriggerSourceSelf
 	case parser.TriggerEventSubjectAttached:
 		pattern.Source = TriggerSourceAttachedPermanent
 		pattern.DamageSourceSelection = selection
+		pattern.DamageSourceSelectionOrSelf = selfOrAnother
 	case parser.TriggerEventSubjectSelection:
 		pattern.DamageSourceSelection = selection
+		pattern.DamageSourceSelectionOrSelf = selfOrAnother
 	case parser.TriggerEventSubjectDamageSource:
+		if selfOrAnother {
+			return false
+		}
 	default:
 		return false
 	}

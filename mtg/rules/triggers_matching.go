@@ -94,7 +94,10 @@ func triggerMatchesEventForController(g *game.Game, source *game.Permanent, sour
 		return false
 	}
 	if !triggerSourceMatches(g, source, pattern.Source, pattern.Subject, event) {
-		return false
+		if !pattern.DamageSourceSelectionOrSelf ||
+			!triggerSourceMatches(g, source, game.TriggerSourceSelf, pattern.Subject, event) {
+			return false
+		}
 	}
 	if pattern.ExcludeSelf && triggerSourceMatches(g, source, game.TriggerSourceSelf, pattern.Subject, event) {
 		return false
@@ -295,7 +298,10 @@ func triggerCombatPatternMatches(g *game.Game, viewer game.PlayerID, source *gam
 	}
 	if !pattern.DamageSourceSelection.Empty() &&
 		!triggerSelectionMatches(g, viewer, event, event.SourceObjectID, &pattern.DamageSourceSelection, source.ObjectID) {
-		return false
+		if !pattern.DamageSourceSelectionOrSelf ||
+			!triggerSourceMatches(g, source, game.TriggerSourceSelf, game.TriggerSubjectDamageSource, event) {
+			return false
+		}
 	}
 	if !pattern.RelatedSubjectSelection.Empty() &&
 		!triggerSelectionMatches(g, viewer, event, event.RelatedPermanentID, &pattern.RelatedSubjectSelection, source.ObjectID) {

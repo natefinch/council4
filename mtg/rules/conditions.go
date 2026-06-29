@@ -997,6 +997,7 @@ func eventHistoryPatternNeedsSource(pattern *game.TriggerPattern) bool {
 		pattern.Source != game.TriggerSourceAny ||
 		pattern.ExcludeSelf ||
 		pattern.SubjectSelectionOrSelf ||
+		pattern.DamageSourceSelectionOrSelf ||
 		pattern.DamageRecipientIsSource ||
 		pattern.SpellTargetsSource ||
 		!pattern.StepPlayerSourceAttachedSelection.Empty()

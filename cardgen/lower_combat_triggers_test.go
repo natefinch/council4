@@ -160,6 +160,34 @@ func TestLowerCombatEventTriggers(t *testing.T) {
 			},
 			wantTyp: game.TriggerWhenever,
 		},
+		{
+			name: "self or another type union combat damage to player",
+			text: "Whenever this creature or another Tyranid you control deals combat damage to a player, draw a card.",
+			want: game.TriggerPattern{
+				Event:                       game.EventDamageDealt,
+				Controller:                  game.TriggerControllerYou,
+				Subject:                     game.TriggerSubjectDamageSource,
+				RequireCombatDamage:         true,
+				DamageRecipient:             game.DamageRecipientPlayer,
+				DamageSourceSelection:       game.Selection{SubtypesAny: []types.Sub{types.Sub("Tyranid")}},
+				DamageSourceSelectionOrSelf: true,
+			},
+			wantTyp: game.TriggerWhenever,
+		},
+		{
+			name: "self or equipped creature combat damage to player",
+			text: "Whenever this creature or equipped creature deals combat damage to a player, draw a card.",
+			want: game.TriggerPattern{
+				Event:                       game.EventDamageDealt,
+				Source:                      game.TriggerSourceAttachedPermanent,
+				Subject:                     game.TriggerSubjectDamageSource,
+				RequireCombatDamage:         true,
+				DamageRecipient:             game.DamageRecipientPlayer,
+				DamageSourceSelection:       game.Selection{RequiredTypes: []types.Card{types.Creature}},
+				DamageSourceSelectionOrSelf: true,
+			},
+			wantTyp: game.TriggerWhenever,
+		},
 	}
 
 	for _, tc := range tests {

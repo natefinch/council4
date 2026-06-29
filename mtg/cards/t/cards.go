@@ -105,5 +105,6 @@ var Cards = []*game.CardDef{
 	TwinflameTravelers,
 	TwistedEmbrace,
 	TymaretCallsTheDead,
+	TyranidHarridan,
 	TyvarThePummeler,
 }

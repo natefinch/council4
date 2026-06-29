@@ -286,6 +286,12 @@ type TriggerPattern struct {
 	// <Selection> you control" zone-change triggers.
 	SubjectSelectionOrSelf bool
 
+	// DamageSourceSelectionOrSelf widens a combat-damage source filter to also
+	// match the ability's own source, expressing "this creature or another
+	// <Selection> you control deals combat damage" and "this creature or
+	// equipped creature deals combat damage".
+	DamageSourceSelectionOrSelf bool
+
 	// DyingDamagedBySource restricts a permanent-died pattern to a permanent that
 	// was dealt damage by the ability's own source earlier this turn ("Whenever a
 	// creature dealt damage by this creature this turn dies", CR 603.2). It is

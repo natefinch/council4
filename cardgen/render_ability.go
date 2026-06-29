@@ -941,6 +941,9 @@ func renderTriggerPatternSelectionFields(ctx *renderCtx, pattern *game.TriggerPa
 		}
 		fields = append(fields, sourceFields...)
 	}
+	if pattern.DamageSourceSelectionOrSelf {
+		fields = append(fields, "DamageSourceSelectionOrSelf: true,")
+	}
 	if !pattern.StepPlayerSourceAttachedSelection.Empty() {
 		stepFields, err := renderTriggerPatternSelection(ctx, "StepPlayerSourceAttachedSelection", pattern.StepPlayerSourceAttachedSelection)
 		if err != nil {
