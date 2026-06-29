@@ -804,6 +804,9 @@ func lowerCombinedSequenceShapes(cardName string, ctx contentCtx, syntax *parser
 	if content, ok := lowerCreateTokenThenCountersSequence(ctx); ok {
 		return content, true
 	}
+	if content, ok := lowerCreateTokenThenAttachSequence(ctx); ok {
+		return content, true
+	}
 	if content, ok := lowerManifestDreadThenCountersSequence(ctx); ok {
 		return content, true
 	}
