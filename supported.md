@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,385 of 32,501 cards eligible for paper support (50.4%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,388 of 32,501 cards eligible for paper support (50.4%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -4540,6 +4540,7 @@ Council4 currently supports **16,385 of 32,501 cards eligible for paper support 
 - Faerie Guidemother // Gift of the Fae
 - Faerie Harbinger
 - Faerie Invaders
+- Faerie Macabre
 - Faerie Mastermind
 - Faerie Mechanist
 - Faerie Noble
@@ -11371,6 +11372,7 @@ Council4 currently supports **16,385 of 32,501 cards eligible for paper support 
 - Roofstalker Wight
 - Rooftop Assassin
 - Rooftop Bypass
+- Rooftop Percher
 - Rook Turret
 - Rookie Mistake
 - Roon of the Hidden Realm
@@ -14175,6 +14177,7 @@ Council4 currently supports **16,385 of 32,501 cards eligible for paper support 
 - The Art of Tea
 - The Atropal
 - The Autonomous Furnace
+- The Binding of the Titans
 - The Birth of Meletis
 - The Black Breath
 - The Brothers' War

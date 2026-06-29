@@ -1740,7 +1740,7 @@ func selectionGrammarWord(token shared.Token) bool {
 		"with", "without", "from", "in", "your", "you", "control", "controls", "don't",
 		"opponent", "opponent's", "opponents", "activated", "triggered", "source",
 		"mana", "value", "power", "toughness", "equal", "less", "greater", "lesser",
-		"battlefield", "graveyard", "hand", "library", "exile", "command",
+		"battlefield", "graveyard", "graveyards", "hand", "library", "exile", "command",
 		"historic", "single",
 	} {
 		if equalWord(token, word) {

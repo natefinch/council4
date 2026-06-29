@@ -114,6 +114,41 @@ func TestLowerTargetedGraveyardExileSingleGraveyard(t *testing.T) {
 	}
 }
 
+// TestLowerTargetedGraveyardExileAnyGraveyards lowers the plural "from
+// graveyards" variant, which lets each chosen card lie in a different graveyard.
+// Unlike the "from a single graveyard" form it carries no SameGraveyard
+// restriction, so the runtime may draw targets from distinct graveyards.
+func TestLowerTargetedGraveyardExileAnyGraveyards(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Macabre",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Exile up to two target cards from graveyards.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 1 {
+		t.Fatalf("targets = %#v, want one", mode.Targets)
+	}
+	target := mode.Targets[0]
+	if target.MinTargets != 0 || target.MaxTargets != 2 ||
+		target.Allow != game.TargetAllowCard || target.TargetZone != zone.Graveyard ||
+		target.SameGraveyard || !target.Selection.Val.Empty() {
+		t.Fatalf("target = %#v", target)
+	}
+	if len(mode.Sequence) != 2 {
+		t.Fatalf("sequence = %#v, want two moves", mode.Sequence)
+	}
+	for i := range mode.Sequence {
+		move, ok := mode.Sequence[i].Primitive.(game.MoveCard)
+		if !ok || move.Card.Kind != game.CardReferenceTarget ||
+			move.Card.TargetIndex != i ||
+			move.FromZone != zone.Graveyard || move.Destination != zone.Exile {
+			t.Fatalf("move[%d] = %#v", i, mode.Sequence[i].Primitive)
+		}
+	}
+}
+
 // TestGenerateSingleGraveyardExileSource proves the SameGraveyard restriction
 // survives rendering into the generated card source (not just the in-memory
 // lowering), so the executable card actually enforces one shared graveyard.
