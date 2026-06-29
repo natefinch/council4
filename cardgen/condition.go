@@ -186,6 +186,8 @@ func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringC
 		result.SourceTributeNotPaid = true
 	case compiler.ConditionPredicateControllerControlsCommander:
 		result.ControllerControlsCommander = true
+	case compiler.ConditionPredicateLandEnteredThisTurnOrControlsBasic:
+		result.LandEnteredThisTurnOrControlsBasicLand = true
 	case compiler.ConditionPredicateControllerControlsNamed:
 		if len(condition.ControlledNames) == 0 {
 			return game.Condition{}, false
@@ -367,6 +369,8 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 			return ctx == conditionContextInterveningTrigger
 		case compiler.ConditionPredicateControllerControlsCommander:
 			return ctx == conditionContextInterveningTrigger || ctx == conditionContextStatic
+		case compiler.ConditionPredicateLandEnteredThisTurnOrControlsBasic:
+			return ctx == conditionContextActivation
 		case compiler.ConditionPredicateControllerHandSizeExactly:
 			return ctx == conditionContextStatic || ctx == conditionContextActivation ||
 				ctx == conditionContextInterveningTrigger

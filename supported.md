@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,366 of 32,501 cards eligible for paper support (50.4%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,371 of 32,501 cards eligible for paper support (50.4%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -3097,6 +3097,7 @@ Council4 currently supports **16,366 of 32,501 cards eligible for paper support 
 - Dark Betrayal
 - Dark Deed
 - Dark Favor
+- Dark Fortress
 - Dark Heart of the Wood
 - Dark Inquiry
 - Dark Maze
@@ -5386,6 +5387,7 @@ Council4 currently supports **16,366 of 32,501 cards eligible for paper support 
 - Gateway Sneak
 - Gather Courage
 - Gather the White Lotus
+- Gathering Place
 - Gauntlet of Might
 - Gavi, Nest Warden
 - Gavony Ironwright
@@ -5608,6 +5610,7 @@ Council4 currently supports **16,366 of 32,501 cards eligible for paper support 
 - Glaze Fiend
 - Gleam of Battle
 - Gleaming Barrier
+- Gleaming Bastion
 - Gleaming Geardrake
 - Gleaming Overseer
 - Gleeful Arsonist
@@ -6470,6 +6473,7 @@ Council4 currently supports **16,366 of 32,501 cards eligible for paper support 
 - Hidden Grotto
 - Hidden Herbalists
 - Hidden Horror
+- Hidden Lair
 - Hidden Path
 - Hidden Stockpile
 - Hideous End
@@ -14612,6 +14616,7 @@ Council4 currently supports **16,366 of 32,501 cards eligible for paper support 
 - Trained Jackal
 - Trained Orgg
 - Training Center
+- Training Compound
 - Training Drone
 - Training Regimen
 - Traitorous Blood

@@ -207,6 +207,9 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 		matches = matches && ctx.obj != nil && !ctx.obj.Copy &&
 			greatestSameColorManaSpent(ctx.obj.ManaSpentByColorToCast) >= cond.SpellSameColorManaSpentAtLeast
 	}
+	if cond.LandEnteredThisTurnOrControlsBasicLand {
+		matches = matches && sourceLandEnteredThisTurnOrControlsBasicLand(g, ctx)
+	}
 	if cond.ControllerCreatedTokenThisTurn {
 		matches = matches && controllerCreatedTokenThisTurn(g, ctx.controller)
 	}
@@ -389,6 +392,22 @@ func controllerGraveyardCardOfTypeCount(g *game.Game, controller game.PlayerID, 
 		}
 	}
 	return count
+}
+
+// sourceLandEnteredThisTurnOrControlsBasicLand reports whether the condition
+// source entered the battlefield this turn or its controller controls at least
+// one basic land. It backs the disjunctive activation gate "Activate only if
+// this land entered this turn or if you control a basic land." and fails closed
+// without a source permanent.
+func sourceLandEnteredThisTurnOrControlsBasicLand(g *game.Game, ctx conditionContext) bool {
+	if ctx.source != nil && permanentEnteredThisTurn(g, ctx.source.ObjectID) {
+		return true
+	}
+	selection := game.Selection{
+		RequiredTypes: []types.Card{types.Land},
+		Supertypes:    []types.Super{types.Basic},
+	}
+	return countPlayerMatchingSelection(g, ctx, ctx.controller, selection) >= 1
 }
 
 func controllerBasicLandTypeCount(g *game.Game, ctx conditionContext) int {

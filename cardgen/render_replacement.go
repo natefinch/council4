@@ -982,6 +982,10 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 		fields = append(fields, "ControllerControlsCommander: true,")
 		hasPredicate = true
 	}
+	if cond.LandEnteredThisTurnOrControlsBasicLand {
+		fields = append(fields, "LandEnteredThisTurnOrControlsBasicLand: true,")
+		hasPredicate = true
+	}
 	if cond.FirstCombatPhaseOfTurn {
 		fields = append(fields, "FirstCombatPhaseOfTurn: true,")
 		hasPredicate = true

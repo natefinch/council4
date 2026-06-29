@@ -11,6 +11,7 @@ var Cards = []*game.CardDef{
 	DanceOfTheTumbleweeds,
 	DarigaazSCaldera,
 	DaringWaverider,
+	DarkFortress,
 	DarkMaze,
 	DaruHealer,
 	DaughterOfTheDeep,
