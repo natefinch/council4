@@ -158,8 +158,7 @@ func TestExactLibrarySearchFailsClosed(t *testing.T) {
 		// Power/toughness exact-equality bounds are not modeled (only "or less"
 		// and "or greater").
 		"Search your library for a creature card with power 2, put it into your hand, then shuffle.",
-		// "different names" and variable counts.
-		"Search your library for up to two basic land cards with different names, put them onto the battlefield tapped, then shuffle.",
+		// Variable counts.
 		"Search your library for up to X basic land cards, put them onto the battlefield tapped, then shuffle.",
 		// Unsupported destinations and ordering.
 		"Search your library for a card, put it on top of your library, then shuffle.",

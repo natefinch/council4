@@ -483,6 +483,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				SearchSplit:                            syntax.SearchSplit,
 				ManaSpendRider:                         compileManaSpendRider(syntax.ManaSpendRider),
 				SearchSharedSubtype:                    syntax.SearchSharedSubtype,
+				SearchDifferentNames:                   syntax.SearchDifferentNames,
 				SearchDestination:                      syntax.SearchDestination,
 				SearchControl:                          syntax.SearchControl,
 				SearchSlots:                            syntax.SearchSlots,

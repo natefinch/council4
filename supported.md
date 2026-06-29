@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,330 of 32,501 cards eligible for paper support (50.2%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,334 of 32,501 cards eligible for paper support (50.3%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -3233,6 +3233,7 @@ Council4 currently supports **16,330 of 32,501 cards eligible for paper support 
 - Death-Hood Cobra
 - Death-Priest of Myrkul
 - Deathbellow Raider
+- Deathbellow War Cry
 - Deathbloom Gardener
 - Deathbloom Ritualist
 - Deathbloom Thallid
@@ -11534,6 +11535,7 @@ Council4 currently supports **16,330 of 32,501 cards eligible for paper support 
 - Sagu Archer
 - Sagu Mauler
 - Sagu Wildling // Roost Seek
+- Saheeli Rai
 - Saheeli's Artistry
 - Sai, Master Thopterist
 - Said // Done
@@ -12151,6 +12153,7 @@ Council4 currently supports **16,330 of 32,501 cards eligible for paper support 
 - Shared Animosity
 - Shared Discovery
 - Shared Roots
+- Shared Summons
 - Shared Triumph
 - Shark
 - Shark
@@ -14306,6 +14309,7 @@ Council4 currently supports **16,330 of 32,501 cards eligible for paper support 
 - Threaten
 - Threats Around Every Corner
 - Three Blind Mice
+- Three Dreams
 - Three Steps Ahead
 - Three Tragedies
 - Three Tree City

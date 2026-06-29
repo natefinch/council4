@@ -1631,6 +1631,7 @@ func finalizeParsedEffect(effect *EffectSyntax, sentence Sentence, atoms Atoms) 
 	if effect.Kind == EffectSearch {
 		effect.UnsupportedDetail = searchUnsupportedDetail(effect)
 		effect.SearchSharedSubtype = searchSharedSubtypeRider(effect)
+		effect.SearchDifferentNames = searchDifferentNamesRider(effect)
 		effect.SearchDestination = searchDestinationPosition(effect)
 		effect.SearchControl = searchControlRider(effect)
 		effect.SearchSlots = searchHeterogeneousSlotSubtypes(effect)

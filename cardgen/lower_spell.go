@@ -866,6 +866,17 @@ func searchGroupSpec(effects []compiler.CompiledEffect) (searchGroup, bool) {
 		spec.SharedSubtype = true
 	}
 
+	if search.SearchDifferentNames {
+		// "with different names" correlates the found cards: no two may share a
+		// name. The runtime stages the choice so a duplicate-name set is never
+		// assembled, so it is meaningful only for a multi-card search (a fixed
+		// count of two or more, or an "up to X" dynamic count).
+		if !dynamic && search.Amount.Value < 2 {
+			return searchGroup{}, false
+		}
+		spec.DifferentNames = true
+	}
+
 	spec.Reveal = shape.reveal
 	put := effects[shape.putIndex]
 	if shape.top {
