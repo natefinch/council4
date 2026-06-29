@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,308 of 32,501 cards eligible for paper support (50.2%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,310 of 32,501 cards eligible for paper support (50.2%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -6201,6 +6201,7 @@ Council4 currently supports **16,308 of 32,501 cards eligible for paper support 
 - Hammerhead, Maggia Boss
 - Hampering Snare
 - Hamster
+- Hamza, Guardian of Arashin
 - Hana Kami
 - Hand of Cruelty
 - Hand of Death
@@ -14015,6 +14016,7 @@ Council4 currently supports **16,308 of 32,501 cards eligible for paper support 
 - Tempting Witch
 - Temur Ascendancy
 - Temur Banner
+- Temur Battlecrier
 - Temur Devotee
 - Temur Monument
 - Temur Tawnyback
