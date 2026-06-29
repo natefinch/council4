@@ -109,6 +109,11 @@ func parseTargets(tokens []shared.Token, atoms Atoms) []TargetSyntax {
 			selectionTokens = head
 			sameNameGroup = group
 		}
+		possessivePTTarget := false
+		if head, ok := splitSelectionPossessivePowerToughnessTail(selectionTokens); ok {
+			selectionTokens = head
+			possessivePTTarget = true
+		}
 		dealtDamage := false
 		if head, ok := splitSelectionDealtDamageThisTurnTail(selectionTokens); ok {
 			selectionTokens = head
@@ -125,6 +130,15 @@ func parseTargets(tokens []shared.Token, atoms Atoms) []TargetSyntax {
 			spellTargetRestrictions = restrictions
 		}
 		selection := parseSelection(selectionTokens, atoms)
+		if possessivePTTarget && selection.Kind == SelectionUnknown {
+			switch strings.ToLower(joinedEffectText(selectionTokens)) {
+			case "creature":
+				selection.Kind = SelectionCreature
+			case "permanent":
+				selection.Kind = SelectionPermanent
+			default:
+			}
+		}
 		if otherThanSource {
 			selection.Another = true
 			selection.OtherThanSource = true
@@ -137,7 +151,7 @@ func parseTargets(tokens []shared.Token, atoms Atoms) []TargetSyntax {
 			// wiped by the unrecognized name tokens (The Curse of Fenric III).
 			qualifierTokens = head
 		}
-		if targetSelectionHasUnsupportedQualifier(qualifierTokens, atoms) {
+		if !possessivePTTarget && targetSelectionHasUnsupportedQualifier(qualifierTokens, atoms) {
 			selection = SelectionSyntax{Span: selection.Span, Text: selection.Text}
 		}
 		selection.NameUniqueAmongControlled = nameUnique
@@ -167,6 +181,9 @@ func parseTargets(tokens []shared.Token, atoms Atoms) []TargetSyntax {
 			selection.ConjunctiveTypes = true
 		}
 		exact := exactRuntimeTargetSyntax(targetTokens, cardinality, selection)
+		if possessivePTTarget {
+			exact = true
+		}
 		targets = append(targets, TargetSyntax{
 			Span:        shared.SpanOf(tokens[start:end]),
 			ChoiceSpan:  exactTargetChoiceSpan(tokens, start, targetTokens, cardinality, selection),
@@ -177,6 +194,68 @@ func parseTargets(tokens []shared.Token, atoms Atoms) []TargetSyntax {
 		})
 	}
 	return targets
+}
+
+func splitSelectionPossessivePowerToughnessTail(tokens []shared.Token) ([]shared.Token, bool) {
+	tokens = stripDoublePTDurationSuffix(tokens)
+	if len(tokens) == 0 {
+		return nil, false
+	}
+	for i := 0; i+1 < len(tokens); i++ {
+		if !equalWord(tokens[i+1], "power") && !equalWord(tokens[i+1], "toughness") {
+			continue
+		}
+		head := append([]shared.Token(nil), tokens[:i+1]...)
+		if trimPossessiveToken(&head[len(head)-1]) {
+			return head, true
+		}
+	}
+	if len(tokens) == 1 {
+		head := append([]shared.Token(nil), tokens...)
+		if trimPossessiveToken(&head[0]) {
+			return head, true
+		}
+		return nil, false
+	}
+	prefixEnd := len(tokens) - 1
+	switch {
+	case equalWord(tokens[len(tokens)-1], "power"):
+	case equalWord(tokens[len(tokens)-1], "toughness"):
+		if len(tokens) >= 3 &&
+			equalWord(tokens[len(tokens)-3], "power") &&
+			equalWord(tokens[len(tokens)-2], "and") {
+			prefixEnd = len(tokens) - 3
+		}
+	default:
+		return nil, false
+	}
+	if prefixEnd == 0 {
+		return nil, false
+	}
+	head := append([]shared.Token(nil), tokens[:prefixEnd]...)
+	if !trimPossessiveToken(&head[len(head)-1]) {
+		return nil, false
+	}
+	return head, true
+}
+
+func trimPossessiveToken(token *shared.Token) bool {
+	switch {
+	case strings.HasSuffix(token.Text, "'s"):
+		trimPossessiveSuffix(token, "'s")
+		return true
+	case strings.HasSuffix(token.Text, "’s"):
+		trimPossessiveSuffix(token, "’s")
+		return true
+	default:
+		return false
+	}
+}
+
+func trimPossessiveSuffix(token *shared.Token, suffix string) {
+	token.Text = strings.TrimSuffix(token.Text, suffix)
+	token.Span.End.Offset -= len(suffix)
+	token.Span.End.Column -= 2
 }
 
 // selectionIsBareTokenTarget reports whether a target selection names a plain
@@ -2439,6 +2518,9 @@ func parseSelection(tokens []shared.Token, atoms Atoms) SelectionSyntax {
 	if kind, ok := stackObjectSelectionKind(words); ok {
 		selection.Kind = kind
 	}
+	if len(words) == 1 && words[0] == "creature" {
+		selection.Kind = SelectionCreature
+	}
 	for _, token := range tokens {
 		if noun, ok := atoms.ObjectNounAt(token.Span); ok && selection.Kind == SelectionUnknown {
 			selection.Kind = selectionKindForNoun(noun)
@@ -3517,11 +3599,10 @@ type doublePTObject struct {
 // parseDoublePTObject recognizes the object of a power/toughness doubling
 // effect: "the power and toughness of <group>", "the power of <group>", or "the
 // toughness of <group>" (with a trailing duration and period the caller already
-// scopes elsewhere). It returns the affected group as a static subject together
-// with which characteristics double. Only the controlled-creatures and
-// all-creatures groups are recognized; every other object (a player's life, a
-// counter count, a single target) returns ok=false so the doubling effect fails
-// closed.
+// scopes elsewhere). It returns the affected group as a static subject when the
+// object is a group. For target/referenced wording ("the power of target
+// creature", "the power of it"), target/reference extraction owns the recipient;
+// this helper records only which characteristics double.
 func parseDoublePTObject(tokens []shared.Token, atoms Atoms) (doublePTObject, bool) {
 	if len(tokens) < 2 || !equalWord(tokens[0], "the") {
 		return doublePTObject{}, false
@@ -3545,12 +3626,83 @@ func parseDoublePTObject(tokens []shared.Token, atoms Atoms) (doublePTObject, bo
 	if index >= len(tokens) || !equalWord(tokens[index], "of") {
 		return doublePTObject{}, false
 	}
-	group, groupOK := doubleGroupStaticSubject(tokens[index+1:], atoms)
-	if !groupOK {
-		return doublePTObject{}, false
+	objectTokens := stripDoublePTDurationSuffix(tokens[index+1:])
+	if group, groupOK := doubleGroupStaticSubject(objectTokens, atoms); groupOK {
+		object.Subject = group
+		return object, true
 	}
-	object.Subject = group
-	return object, true
+	if doublePTObjectResolvedElsewhere(objectTokens) {
+		return object, true
+	}
+	return doublePTObject{}, false
+}
+
+// parsePossessiveDoublePTObject recognizes the targeted/referenced object of a
+// power/toughness doubling effect: "target creature's power", "that creature's
+// power and toughness", or "its toughness". Target and reference extraction are
+// owned elsewhere; this helper records only which characteristic is doubled.
+func parsePossessiveDoublePTObject(tokens []shared.Token) (doublePower, doubleToughness, ok bool) {
+	tokens = stripDoublePTDurationSuffix(tokens)
+	if len(tokens) < 2 {
+		return false, false, false
+	}
+	prefixEnd := len(tokens) - 1
+	switch {
+	case equalWord(tokens[len(tokens)-1], "power"):
+		doublePower = true
+	case equalWord(tokens[len(tokens)-1], "toughness"):
+		doubleToughness = true
+		if len(tokens) >= 3 &&
+			equalWord(tokens[len(tokens)-3], "power") &&
+			equalWord(tokens[len(tokens)-2], "and") {
+			doublePower = true
+			prefixEnd = len(tokens) - 3
+		}
+	default:
+		return false, false, false
+	}
+	if prefixEnd <= 0 {
+		return false, false, false
+	}
+	return doublePower, doubleToughness, true
+}
+
+func doublePTObjectResolvedElsewhere(tokens []shared.Token) bool {
+	if len(tokens) == 0 {
+		return false
+	}
+	switch {
+	case equalWord(tokens[0], "target"):
+		return true
+	case equalWord(tokens[0], "it"), equalWord(tokens[0], "its"):
+		return true
+	case len(tokens) >= 2 && equalWord(tokens[0], "that"):
+		return equalWord(tokens[1], "creature") || equalWord(tokens[1], "permanent")
+	default:
+		return false
+	}
+}
+
+func stripDoublePTDurationSuffix(tokens []shared.Token) []shared.Token {
+	if len(tokens) > 0 && tokens[len(tokens)-1].Text == "." {
+		tokens = tokens[:len(tokens)-1]
+	}
+	if len(tokens) >= 4 &&
+		equalWord(tokens[len(tokens)-4], "until") &&
+		equalWord(tokens[len(tokens)-3], "end") &&
+		equalWord(tokens[len(tokens)-2], "of") &&
+		equalWord(tokens[len(tokens)-1], "turn") {
+		return tokens[:len(tokens)-4]
+	}
+	if len(tokens) >= 5 &&
+		equalWord(tokens[len(tokens)-5], "until") &&
+		equalWord(tokens[len(tokens)-4], "the") &&
+		equalWord(tokens[len(tokens)-3], "end") &&
+		equalWord(tokens[len(tokens)-2], "of") &&
+		equalWord(tokens[len(tokens)-1], "turn") {
+		return tokens[:len(tokens)-5]
+	}
+	return tokens
 }
 
 // doubleCountersObject describes the object of a counter-doubling effect: the
@@ -3642,32 +3794,39 @@ func doubleCountersObjectScope(object []shared.Token, atoms Atoms) (target, ok b
 	return false, true
 }
 
-// doubling object's "of <group>" tail: "each creature you control" / "creatures
-// you control" (the controlled-creatures group) and "each creature" / "all
-// creatures" (every creature on the battlefield). Unlike parseEffectStaticSubject
-// these forms are not anchored to a trailing group verb and accept the singular
-// "each creature" wording, so they are recognized here rather than reused.
+// doubleGroupStaticSubject recognizes the doubled object's "of <group>" tail by
+// adapting the object phrase to the existing static-subject parser. Double-P/T
+// text names a group without a trailing verb ("each Dragon you control"), while
+// static subjects use the same object set with a verb ("Dragons you control
+// get"). Add a synthetic verb and let parseEffectStaticSubject own the group
+// grammar, so subtype and controller support stays shared across effects.
 func doubleGroupStaticSubject(tokens []shared.Token, atoms Atoms) (EffectStaticSubjectSyntax, bool) {
-	_ = atoms
-	start := 0
-	hasEach := false
-	if len(tokens) > 0 && (equalWord(tokens[0], "each") || equalWord(tokens[0], "all")) {
-		hasEach = true
-		start = 1
+	tokens = stripDoublePTDurationSuffix(tokens)
+	candidates := [][]shared.Token{
+		appendDoublePTSyntheticVerb(tokens, "get"),
+		appendDoublePTSyntheticVerb(tokens, "gets"),
 	}
-	rest := tokens[start:]
-	switch {
-	case effectWordsAt(rest, 0, "creature", "you", "control"):
-		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledCreatures, Span: shared.SpanOf(tokens[:start+3])}, true
-	case effectWordsAt(rest, 0, "creatures", "you", "control"):
-		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledCreatures, Span: shared.SpanOf(tokens[:start+3])}, true
-	case hasEach && effectWordsAt(rest, 0, "creature"):
-		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectAllCreatures, Span: shared.SpanOf(tokens[:start+1])}, true
-	case hasEach && effectWordsAt(rest, 0, "creatures"):
-		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectAllCreatures, Span: shared.SpanOf(tokens[:start+1])}, true
-	default:
-		return EffectStaticSubjectSyntax{}, false
+	if len(tokens) > 0 && equalWord(tokens[0], "each") {
+		candidates = append(candidates,
+			appendDoublePTSyntheticVerb(tokens[1:], "get"),
+			appendDoublePTSyntheticVerb(tokens[1:], "gets"),
+		)
 	}
+	for _, candidate := range candidates {
+		if subject := parseEffectStaticSubject(candidate, atoms); subject.Kind != EffectStaticSubjectNone {
+			return subject, true
+		}
+	}
+	return EffectStaticSubjectSyntax{}, false
+}
+
+func appendDoublePTSyntheticVerb(tokens []shared.Token, verb string) []shared.Token {
+	candidate := append([]shared.Token(nil), tokens...)
+	candidate = append(candidate, shared.Token{
+		Kind: shared.Word,
+		Text: verb,
+	})
+	return candidate
 }
 
 func parseBattlefieldCreatureGroupSubject(tokens []shared.Token, atoms Atoms) (EffectStaticSubjectSyntax, bool) {

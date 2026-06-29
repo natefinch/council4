@@ -744,6 +744,9 @@ func lowerCombinedSequenceShapes(cardName string, ctx contentCtx, syntax *parser
 	if len(ctx.content.Conditions) != 0 {
 		return game.AbilityContent{}, false
 	}
+	if content, ok := lowerTemporaryDoublePTKeywordSpell(ctx); ok {
+		return content, true
+	}
 	if content, ok := lowerTemporaryPTKeywordSpell(ctx); ok {
 		return content, true
 	}

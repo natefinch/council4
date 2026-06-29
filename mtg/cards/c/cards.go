@@ -58,6 +58,7 @@ var Cards = []*game.CardDef{
 	ChokingRestraints,
 	ChoMannoSBlessing,
 	Choke,
+	ChooseYourWeapon,
 	ChromescaleDrake,
 	ChronicFlooding,
 	CinderGlade,

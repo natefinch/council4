@@ -62,6 +62,27 @@ func TestRunGeneratesOnlyFullySupportedCards(t *testing.T) {
 	}
 }
 
+func TestCompileCardPanicContextNamesCard(t *testing.T) {
+	t.Parallel()
+	got := compileCardPanicContext(job{
+		index: 42,
+		card: cardgen.ScryfallCard{
+			Name:     "Problem Card",
+			OracleID: "oracle-123",
+		},
+	}, "boom")
+	for _, want := range []string{
+		`card 42`,
+		`"Problem Card"`,
+		`oracle_id oracle-123`,
+		`boom`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("panic context %q missing %q", got, want)
+		}
+	}
+}
+
 func TestRunReportsCompilerAndBackendDiagnostics(t *testing.T) {
 	t.Parallel()
 	directory := t.TempDir()

@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,438 of 32,501 cards eligible for paper support (50.6%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,451 of 32,501 cards eligible for paper support (50.6%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1895,6 +1895,7 @@ Council4 currently supports **16,438 of 32,501 cards eligible for paper support 
 - Bugenhagen, Wise Elder
 - Builder's Blessing
 - Bulette
+- Bulk Up
 - Bull Aurochs
 - Bull Cerodon
 - Bull Elephant
@@ -2387,6 +2388,7 @@ Council4 currently supports **16,438 of 32,501 cards eligible for paper support 
 - Choking Restraints
 - Choking Tethers
 - Chomping Changeling
+- Choose Your Weapon
 - Chord of Calling
 - Chorus of Might
 - Chorus of the Tides
@@ -3444,6 +3446,7 @@ Council4 currently supports **16,438 of 32,501 cards eligible for paper support 
 - Deviant Glee
 - Devil
 - Devil Dinosaur
+- Devilish Valet
 - Devilthorn Fox
 - Devkarin Dissident
 - Devoted Druid
@@ -3718,6 +3721,7 @@ Council4 currently supports **16,438 of 32,501 cards eligible for paper support 
 - Dragon-Style Twins
 - Dragonback Assault
 - Dragonborn Looter
+- Dragonclaw Strike
 - Dragonfly Suit
 - Dragonlair Spider
 - Dragonloft Idol
@@ -4340,6 +4344,7 @@ Council4 currently supports **16,438 of 32,501 cards eligible for paper support 
 - Ephemeron
 - Epic Confrontation
 - Epic Downfall
+- Epic Fight
 - Epic Proportions
 - Epic Struggle
 - Epicure of Blood
@@ -6790,6 +6795,7 @@ Council4 currently supports **16,438 of 32,501 cards eligible for paper support 
 - HYDRA Disintegrator
 - HYDRA Infiltration
 - HYDRA Troopers
+- Hydra's Growth
 - Hydroblast
 - Hydroform
 - Hydrolash
@@ -7920,6 +7926,7 @@ Council4 currently supports **16,438 of 32,501 cards eligible for paper support 
 - Legacy Weapon
 - Legion Extruder
 - Legion Guildmage
+- Legion Leadership // Legion Stronghold
 - Legion Lieutenant
 - Legion Vanguard
 - Legion's Judgment
@@ -9127,6 +9134,7 @@ Council4 currently supports **16,438 of 32,501 cards eligible for paper support 
 - Mox Pearl
 - Mox Ruby
 - Mox Sapphire
+- Mr. Orfeo, the Boulder
 - Mtenda Griffin
 - Mtenda Herder
 - Muck Rats
@@ -9563,6 +9571,7 @@ Council4 currently supports **16,438 of 32,501 cards eligible for paper support 
 - Nut Collector
 - Nutrient Block
 - Nykthos, Shrine to Nyx
+- Nylea's Colossus
 - Nylea's Disciple
 - Nylea's Forerunner
 - Nylea's Huntmaster
@@ -10954,6 +10963,7 @@ Council4 currently supports **16,438 of 32,501 cards eligible for paper support 
 - Rebuke
 - Reckless Abandon
 - Reckless Air Strike
+- Reckless Amplimancer
 - Reckless Assault
 - Reckless Barbarian
 - Reckless Brute
@@ -14383,6 +14393,7 @@ Council4 currently supports **16,438 of 32,501 cards eligible for paper support 
 - Thraben Valiant
 - Thraben Watcher
 - Thragtusk
+- Thrakkus the Butcher
 - Thran Dynamo
 - Thran Golem
 - Thran Quarry
@@ -14497,6 +14508,7 @@ Council4 currently supports **16,438 of 32,501 cards eligible for paper support 
 - Tidings
 - Tidus, Blitzball Star
 - Tidy Conclusion
+- Tifa Lockhart
 - Tiger Claws
 - Tiger-Dillo
 - Tiger-Seal
@@ -15059,6 +15071,7 @@ Council4 currently supports **16,438 of 32,501 cards eligible for paper support 
 - Universal Surveillance
 - University Campus
 - Unknown Shores
+- Unleash Fury
 - Unleash Shell
 - Unlicensed Disintegration
 - Unlikely Aid

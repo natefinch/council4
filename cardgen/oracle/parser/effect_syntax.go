@@ -1310,6 +1310,8 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			if object, okDouble := parseDoublePTObject(clause, atoms); okDouble {
 				staticSubject = object.Subject
 				doublePower, doubleToughness = object.DoublePower, object.DoubleToughness
+			} else if power, toughness, okTargetPT := parsePossessiveDoublePTObject(clause); okTargetPT {
+				doublePower, doubleToughness = power, toughness
 			} else if counters, okCounters := parseDoubleCountersObject(clause, atoms); okCounters {
 				doubleSourceCounters = true
 				doubleSourceCounterKind = counters.Kind

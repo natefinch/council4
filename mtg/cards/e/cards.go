@@ -50,6 +50,7 @@ var Cards = []*game.CardDef{
 	EnlistmentOfficer,
 	EnterprisingScallywag,
 	EpicConfrontation,
+	EpicFight,
 	EquestrianSkill,
 	Equilibrium,
 	EsperBattlemage,

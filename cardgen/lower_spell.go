@@ -1792,6 +1792,13 @@ func lowerImmediateSingleEffectSpellTail(
 			content, diag := lowerDoubleCountersSpell(ctx)
 			return content, diag, true
 		}
+		if !ctx.content.Effects[0].DoublePower && !ctx.content.Effects[0].DoubleToughness {
+			return game.AbilityContent{}, contentDiagnostic(
+				ctx,
+				"unsupported double effect",
+				"the executable source backend does not yet lower this double effect",
+			), true
+		}
 		content, diag := lowerDoublePTSpell(ctx)
 		return content, diag, true
 	case compiler.EffectCounter:
