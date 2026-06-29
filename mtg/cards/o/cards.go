@@ -16,6 +16,7 @@ var Cards = []*game.CardDef{
 	ObscuraStorefront,
 	OffBalance,
 	OffenderAtLarge,
+	OgreHeadHelm,
 	OgreSiegebreaker,
 	OminousRoost,
 	OnduWarCleric,

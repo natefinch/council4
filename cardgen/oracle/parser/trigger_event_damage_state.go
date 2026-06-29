@@ -129,6 +129,9 @@ func parseDamageSourcePattern(tokens []shared.Token, plural bool, atoms Atoms) *
 		plural = true
 		oneOrMore = true
 	}
+	if clause := parseSelfOrOtherDamageSource(working, oneOrMore, atoms); clause != nil {
+		return clause
+	}
 	if syntaxWordsEqual(working, "a", "source") {
 		return &TriggerEventClause{
 			DamageSource: TriggerEventSubject{
@@ -169,6 +172,37 @@ func parseDamageSourcePattern(tokens []shared.Token, plural bool, atoms Atoms) *
 		Controller:   subject.controller,
 		ExcludeSelf:  subject.excludeSelf,
 		OneOrMore:    subject.oneOrMore || oneOrMore,
+	}
+}
+
+// parseSelfOrOtherDamageSource recognizes the combat-damage source union
+// "this creature or another <Selection> you control" / "this creature or
+// equipped creature", where the ability's own source and a self-excluding
+// selection (or its equipped permanent) jointly satisfy the trigger. The union
+// re-admits the source, so the self-excluding "another"/"equipped" subject is
+// kept while SelfOrAnother widens it back to include the source itself.
+func parseSelfOrOtherDamageSource(tokens []shared.Token, oneOrMore bool, atoms Atoms) *TriggerEventClause {
+	_, count, ok := parseSelfSubject(tokens, atoms)
+	if !ok || count >= len(tokens) || !equalWord(tokens[count], "or") {
+		return nil
+	}
+	rest := tokens[count+1:]
+	if attached, ok := parseAttachedEventSubject(rest); ok {
+		return &TriggerEventClause{
+			DamageSource:  attached,
+			OneOrMore:     oneOrMore,
+			SelfOrAnother: true,
+		}
+	}
+	subject := parsePermanentEventSubject(rest, false, atoms)
+	if !subject.ok || !subject.excludeSelf {
+		return nil
+	}
+	return &TriggerEventClause{
+		DamageSource:  subject.subject,
+		Controller:    subject.controller,
+		OneOrMore:     subject.oneOrMore || oneOrMore,
+		SelfOrAnother: true,
 	}
 }
 

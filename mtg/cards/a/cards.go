@@ -16,6 +16,7 @@ var Cards = []*game.CardDef{
 	AcademyJourneymage,
 	AcclaimedContender,
 	AcolyteOfTheInferno,
+	AcquisitionOctopus,
 	AdantoVanguard,
 	AdaptiveOmnitool,
 	AdditiveEvolution,

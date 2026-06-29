@@ -847,6 +847,16 @@ type TriggerPattern struct {
 	// DamageSourceSelection restricts the permanent that dealt damage.
 	DamageSourceSelection Selection
 
+	// DamageSourceSelectionOrSelf widens a combat-damage source filter to also
+	// match the ability's own source, expressing "this creature or another
+	// <Selection> you control deals combat damage" and "this creature or
+	// equipped creature deals combat damage". When set, the trigger fires if the
+	// damage source matches DamageSourceSelection (or, for an attached-permanent
+	// source filter, the attached permanent) or is the source itself. It is only
+	// valid on an EventDamageDealt pattern with either Source == TriggerSourceAny
+	// and a non-empty DamageSourceSelection, or Source == TriggerSourceAttachedPermanent.
+	DamageSourceSelectionOrSelf bool
+
 	// DamageSourceCaptured restricts an EventDamageDealt pattern to combat damage
 	// dealt by a specific permanent captured when the trigger was created, rather
 	// than by a static filter. It is only meaningful on an event-based delayed
