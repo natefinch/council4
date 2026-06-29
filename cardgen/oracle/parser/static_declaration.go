@@ -191,6 +191,15 @@ const (
 	// this spell from the command zone this game, pay 2 life that many times.",
 	// Liesa, Shroud of Dusk).
 	StaticDeclarationPlayerRuleLifeForCommanderTax StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleLifeForCommanderTax"
+	// StaticDeclarationPlayerRuleHexproof grants the controller hexproof, the
+	// player-scoped protection static "You have hexproof." (Aegis of the Gods,
+	// Leyline of Sanctity, Spirit of the Hearth): the player can't be the target
+	// of spells or abilities opponents control.
+	StaticDeclarationPlayerRuleHexproof StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleHexproof"
+	// StaticDeclarationPlayerRuleShroud grants the controller shroud, the
+	// player-scoped protection static "You have shroud." (Ivory Mask, True
+	// Believer): the player can't be the target of spells or abilities at all.
+	StaticDeclarationPlayerRuleShroud StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleShroud"
 )
 
 // StaticDeclarationCardFilterKind identifies the closed card filter that a
@@ -2073,6 +2082,8 @@ var staticPlayerRuleParsers = []staticPlayerRuleParser{
 	parseStaticLookAtTopCardAnyTimeDeclaration,
 	parseStaticLifeForColoredManaDeclaration,
 	parseStaticLifeForCommanderTaxDeclaration,
+	parseStaticPlayerHexproofDeclaration,
+	parseStaticPlayerShroudDeclaration,
 }
 
 func parseStaticPlayerRuleDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
@@ -2123,6 +2134,49 @@ func parseStaticSkipDrawStepDeclaration(tokens []shared.Token) (StaticDeclaratio
 			Span: tokens[1].Span,
 		},
 		PlayerRule: StaticDeclarationPlayerRuleSkipDrawStep,
+	}, true
+}
+
+// parseStaticPlayerHexproofDeclaration recognizes the exact controller-scoped
+// player protection static "You have hexproof." (Aegis of the Gods, Leyline of
+// Sanctity, Spirit of the Hearth).
+func parseStaticPlayerHexproofDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if len(tokens) != 4 || tokens[3].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	if !staticWordsAt(tokens, 0, "you", "have", "hexproof") {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:          StaticDeclarationPlayerRule,
+		Span:          shared.SpanOf(tokens),
+		OperationSpan: shared.SpanOf(tokens[0:3]),
+		Subject: StaticDeclarationSubject{
+			Kind: StaticDeclarationSubjectController,
+			Span: tokens[0].Span,
+		},
+		PlayerRule: StaticDeclarationPlayerRuleHexproof,
+	}, true
+}
+
+// parseStaticPlayerShroudDeclaration recognizes the exact controller-scoped
+// player protection static "You have shroud." (Ivory Mask, True Believer).
+func parseStaticPlayerShroudDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if len(tokens) != 4 || tokens[3].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	if !staticWordsAt(tokens, 0, "you", "have", "shroud") {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:          StaticDeclarationPlayerRule,
+		Span:          shared.SpanOf(tokens),
+		OperationSpan: shared.SpanOf(tokens[0:3]),
+		Subject: StaticDeclarationSubject{
+			Kind: StaticDeclarationSubjectController,
+			Span: tokens[0].Span,
+		},
+		PlayerRule: StaticDeclarationPlayerRuleShroud,
 	}, true
 }
 

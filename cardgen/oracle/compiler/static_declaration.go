@@ -617,6 +617,8 @@ const (
 	StaticPlayerRuleLifeForColoredMana
 	StaticPlayerRuleLifeForCommanderTax
 	StaticPlayerRuleSkipDrawStep
+	StaticPlayerRuleHexproof
+	StaticPlayerRuleShroud
 )
 
 // StaticPlayerRuleDeclaration is one player-scoped static rule applied to the
@@ -4206,6 +4208,7 @@ type staticPlayerRuleSpec struct {
 	usesAdditionalLandPlays bool
 	usesManaColor           bool
 	allowsAllPlayers        bool
+	keyword                 parser.KeywordKind
 	matchesContent          func(AbilityContent) bool
 }
 
@@ -4216,6 +4219,16 @@ var staticPlayerRuleSpecs = map[parser.StaticDeclarationPlayerRuleKind]staticPla
 	},
 	parser.StaticDeclarationPlayerRuleSkipDrawStep: {
 		kind:           StaticPlayerRuleSkipDrawStep,
+		matchesContent: emptyStaticPlayerRuleContent,
+	},
+	parser.StaticDeclarationPlayerRuleHexproof: {
+		kind:           StaticPlayerRuleHexproof,
+		keyword:        parser.KeywordHexproof,
+		matchesContent: emptyStaticPlayerRuleContent,
+	},
+	parser.StaticDeclarationPlayerRuleShroud: {
+		kind:           StaticPlayerRuleShroud,
+		keyword:        parser.KeywordShroud,
 		matchesContent: emptyStaticPlayerRuleContent,
 	},
 	parser.StaticDeclarationPlayerRuleAttackTax: {
@@ -4279,14 +4292,15 @@ func recognizeStaticPlayerRuleDeclaration(ability CompiledAbility, statics []par
 		len(ability.Content.Modes) != 0 ||
 		len(ability.Content.Targets) != 0 ||
 		len(ability.Content.Effects) != 0 ||
-		len(ability.Content.Keywords) != 0 ||
 		ability.AbilityWord != "" {
 		return StaticDeclaration{}, false
 	}
 	node := statics[0]
 	spec, ok := staticPlayerRuleSpecs[node.PlayerRule]
-	if !ok ||
-		!staticPlayerRuleSubjectAllowed(node.Subject.Kind, spec) ||
+	if !ok || !staticPlayerRuleKeywordContent(ability.Content, spec) {
+		return StaticDeclaration{}, false
+	}
+	if !staticPlayerRuleSubjectAllowed(node.Subject.Kind, spec) ||
 		spec.matchesContent == nil ||
 		!spec.matchesContent(ability.Content) ||
 		(spec.usesAttackTax && node.AttackTaxGeneric <= 0) ||
@@ -4355,6 +4369,19 @@ func staticPlayerRuleSubjectAllowed(subject parser.StaticDeclarationSubjectKind,
 
 func emptyStaticPlayerRuleContent(content AbilityContent) bool {
 	return len(content.Conditions) == 0 && len(content.References) == 0
+}
+
+// staticPlayerRuleKeywordContent reports whether a player rule's keyword content
+// matches its spec: keywordless rules carry no keywords, while a keyword-bearing
+// player protection rule ("You have hexproof." / "You have shroud.") carries
+// exactly that one keyword in its non-parameterized form.
+func staticPlayerRuleKeywordContent(content AbilityContent, spec staticPlayerRuleSpec) bool {
+	if spec.keyword == "" {
+		return len(content.Keywords) == 0
+	}
+	return len(content.Keywords) == 1 &&
+		content.Keywords[0].Kind == spec.keyword &&
+		content.Keywords[0].ParameterKind == parser.KeywordParameterNone
 }
 
 // lifeForCommanderTaxStaticPlayerRuleContent accepts the life-for-commander-tax

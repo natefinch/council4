@@ -175,6 +175,27 @@ var SkipDrawStepStaticBody = StaticAbility{
 	}},
 }
 
+// PlayerHexproofStaticBody is the complete static ability for "You have
+// hexproof." The controller can't be the target of spells or abilities opponents
+// control.
+var PlayerHexproofStaticBody = StaticAbility{
+	Text: "You have hexproof.",
+	RuleEffects: []RuleEffect{{
+		Kind:           RuleEffectPlayerHexproof,
+		AffectedPlayer: PlayerYou,
+	}},
+}
+
+// PlayerShroudStaticBody is the complete static ability for "You have shroud."
+// The controller can't be the target of spells or abilities at all.
+var PlayerShroudStaticBody = StaticAbility{
+	Text: "You have shroud.",
+	RuleEffects: []RuleEffect{{
+		Kind:           RuleEffectPlayerShroud,
+		AffectedPlayer: PlayerYou,
+	}},
+}
+
 // PlayLandsFromGraveyardStaticBody is the complete static ability for "You may
 // play lands from your graveyard." The controller may play land cards from their
 // graveyard, subject to the usual one-land-per-turn limit.

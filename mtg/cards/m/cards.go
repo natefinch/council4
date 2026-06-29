@@ -71,6 +71,7 @@ var Cards = []*game.CardDef{
 	MesmerizingBenthid,
 	MesmerizingDose,
 	MetathranTransport,
+	MetropolisReformer,
 	MichelangeloGameMaster,
 	Micromancer,
 	MidnightAngelArmor,

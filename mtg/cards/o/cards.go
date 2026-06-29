@@ -26,6 +26,7 @@ var Cards = []*game.CardDef{
 	OozeSpill,
 	OperaLoveSong,
 	Opportunist,
+	OrbsOfWarding,
 	OrcGeneral,
 	OrchardWarden,
 	OrderOfTheStars,

@@ -51,4 +51,5 @@ var Cards = []*game.CardDef{
 	ItThatHeraldsTheEnd,
 	IvoryCharm,
 	IvoryCup,
+	IvoryMask,
 }
