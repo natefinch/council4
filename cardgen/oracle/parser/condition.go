@@ -111,6 +111,8 @@ const (
 	ConditionPredicateAnyOpponentGraveyardCardCountAtLeast             ConditionPredicateKind = "ConditionPredicateAnyOpponentGraveyardCardCountAtLeast"
 	ConditionPredicateEventSpellManaSpentToCastAtLeast                 ConditionPredicateKind = "ConditionPredicateEventSpellManaSpentToCastAtLeast"
 	ConditionPredicateEventSpellNoManaSpentToCast                      ConditionPredicateKind = "ConditionPredicateEventSpellNoManaSpentToCast"
+	ConditionPredicateTriggeringPlayerHandSizeAtMost                   ConditionPredicateKind = "ConditionPredicateTriggeringPlayerHandSizeAtMost"
+	ConditionPredicateTriggeringPlayerHandSizeAtLeast                  ConditionPredicateKind = "ConditionPredicateTriggeringPlayerHandSizeAtLeast"
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard
@@ -695,6 +697,7 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		recognizeSourceNoCounterCondition,
 		recognizeSourceCounterStateCondition,
 		recognizeControllerResourceCondition,
+		recognizeTriggeringPlayerHandSizeCondition,
 		recognizeGainedLifeThisTurnCondition,
 		recognizeGraveyardCondition,
 		recognizeCounterPlacementCondition,
@@ -1858,6 +1861,34 @@ func recognizeControllerResourceCondition(body []shared.Token, atoms Atoms) (Con
 		}
 	}
 	return ConditionClause{}, false
+}
+
+// recognizeTriggeringPlayerHandSizeCondition matches an intervening-if body that
+// compares the triggering player's hand size against a threshold: "that player
+// has no cards in hand", "that player has two or fewer cards in hand", or "that
+// player has five or more cards in hand". "that player" denotes the player whose
+// step began the trigger (the active player on each opponent's or each player's
+// upkeep), so the condition resolves against the triggering event's player.
+func recognizeTriggeringPlayerHandSizeCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
+	rest, ok := cutTokenPrefix(body, "that", "player", "has")
+	if !ok {
+		return ConditionClause{}, false
+	}
+	if tokenWordsEqual(rest, "no", "cards", "in", "hand") {
+		return ConditionClause{Predicate: ConditionPredicateTriggeringPlayerHandSizeAtMost, Threshold: 0}, true
+	}
+	count, tail, ok := parseLeadingCount(rest)
+	if !ok || !tokenWordsEqual(tail, "cards", "in", "hand") {
+		return ConditionClause{}, false
+	}
+	switch count.Comparison {
+	case ConditionComparisonAtMost:
+		return ConditionClause{Predicate: ConditionPredicateTriggeringPlayerHandSizeAtMost, Threshold: count.Value}, true
+	case ConditionComparisonAtLeast:
+		return ConditionClause{Predicate: ConditionPredicateTriggeringPlayerHandSizeAtLeast, Threshold: count.Value}, true
+	default:
+		return ConditionClause{}, false
+	}
 }
 
 // recognizeGainedLifeThisTurnCondition matches the intervening-if body

@@ -19,6 +19,7 @@ var Cards = []*game.CardDef{
 	LatticeBladeMantis,
 	LaunchMishap,
 	LavaCoil,
+	LavabornMuse,
 	LawmageSBinding,
 	LeadBellyChimera,
 	LeadGolem,

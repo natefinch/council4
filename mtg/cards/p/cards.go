@@ -17,6 +17,7 @@ var Cards = []*game.CardDef{
 	PathToRedemption,
 	PathToTheWorldTree,
 	PatronWizard,
+	PaupersCage,
 	PeakEruption,
 	PearlOfWisdom,
 	PeatBog,
