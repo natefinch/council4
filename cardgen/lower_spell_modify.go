@@ -3553,6 +3553,13 @@ func lowerFixedCardCountPlayerSpell(
 	hasThatPlayerRef := len(ctx.content.References) == 1 &&
 		effect.Context == parser.EffectContextReferencedPlayer &&
 		hasThatPlayerTargetReference(ctx.content.References)
+	// "Target player mills X cards, where X is the number of charge counters on
+	// this artifact." (Grindclock, Font of Progress) counts a counter kind on the
+	// ability's own source. The self-counter amount carries a lone source
+	// reference; cardCountQuantityForContext resolves the count against the source
+	// permanent, so the recipient still derives from the target player.
+	hasSourceCounterRef := effect.Amount.DynamicKind == compiler.DynamicAmountSourceCounterCount &&
+		singleSelfReference(ctx.content.References)
 	if (effect.Amount.Known && effect.Amount.Value < 1) ||
 		!effect.Amount.Known && !effect.Amount.VariableX && effect.Amount.DynamicKind == compiler.DynamicAmountNone ||
 		!effect.Exact ||
@@ -3564,7 +3571,7 @@ func lowerFixedCardCountPlayerSpell(
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||
 		(len(ctx.content.References) != 0 && !hasEventPlayerRef && !hasReferencedControllerRef &&
-			!hasEventPermanentControllerRef && !hasThatPlayerRef) {
+			!hasEventPermanentControllerRef && !hasThatPlayerRef && !hasSourceCounterRef) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported "+controllerVerb+" spell",

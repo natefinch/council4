@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,348 of 32,501 cards eligible for paper support (50.3%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,350 of 32,501 cards eligible for paper support (50.3%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -5040,6 +5040,7 @@ Council4 currently supports **16,348 of 32,501 cards eligible for paper support 
 - Font of Fortunes
 - Font of Ire
 - Font of Mythos
+- Font of Progress
 - Font of Return
 - Font of Vigor
 - Food
@@ -6055,6 +6056,7 @@ Council4 currently supports **16,348 of 32,501 cards eligible for paper support 
 - Grim Strider
 - Grim Tutor
 - Grimclaw Bats
+- Grindclock
 - Grinning Demon
 - Grip of Desolation
 - Griselbrand
