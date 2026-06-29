@@ -121,3 +121,52 @@ func TestLowerDoubleCountersTargetAllKinds(t *testing.T) {
 		t.Fatalf("object = %#v, want target permanent", add.Object)
 	}
 }
+
+// TestLowerDoubleCountersGroup proves "double the number of +1/+1 counters on
+// each creature you control" (Bristly Bill, Spine Sower) lowers to a group
+// AddCounter with DoubleKind, doubling the single kind on each controlled
+// creature.
+func TestLowerDoubleCountersGroup(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Group Doubler",
+		Layout:     "normal",
+		TypeLine:   "Creature — Plant",
+		OracleText: "{3}{G}{G}: Double the number of +1/+1 counters on each creature you control.",
+		Power:      new("0"),
+		Toughness:  new("0"),
+	})
+	add, ok := face.ActivatedAbilities[0].Content.Modes[0].Sequence[0].Primitive.(game.AddCounter)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.AddCounter", face.ActivatedAbilities[0].Content.Modes[0].Sequence[0].Primitive)
+	}
+	if !add.DoubleKind || !add.Group.Valid() || add.CounterKind != counter.PlusOnePlusOne {
+		t.Fatalf("add = %#v, want group DoubleKind on +1/+1", add)
+	}
+}
+
+// TestLowerDoubleCountersEventPermanent proves a triggered "double the number of
+// +1/+1 counters on it" doubling whose "it" is the triggering event permanent
+// (Byrke, Long Ear of the Law; Seismic Tutelage's attacking enchanted creature)
+// lowers to a dynamic placement bound to that event permanent.
+func TestLowerDoubleCountersEventPermanent(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Pump",
+		Layout:     "normal",
+		TypeLine:   "Creature — Rabbit",
+		OracleText: "Whenever a creature you control with a +1/+1 counter on it attacks, double the number of +1/+1 counters on it.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	add, ok := face.TriggeredAbilities[0].Content.Modes[0].Sequence[0].Primitive.(game.AddCounter)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.AddCounter", face.TriggeredAbilities[0].Content.Modes[0].Sequence[0].Primitive)
+	}
+	if add.Object != game.EventPermanentReference() {
+		t.Fatalf("object = %#v, want event permanent", add.Object)
+	}
+	if d := add.Amount.DynamicAmount(); !d.Exists || d.Val.Object != game.EventPermanentReference() {
+		t.Fatalf("amount = %#v, want event-permanent counter count", add.Amount)
+	}
+}

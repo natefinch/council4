@@ -448,6 +448,9 @@ func (r Renderer) renderAddCounter(ctx *renderCtx, value *game.AddCounter) (stri
 	fields := []string{
 		fmt.Sprintf("Amount: %s,", amount),
 	}
+	if value.DoubleKind {
+		fields = nil
+	}
 	if value.Group.Domain() != 0 {
 		group, err := r.renderGroupReference(ctx, value.Group)
 		if err != nil {
@@ -467,6 +470,9 @@ func (r Renderer) renderAddCounter(ctx *renderCtx, value *game.AddCounter) (stri
 	fields = append(fields, fmt.Sprintf("CounterKind: %s,", kind))
 	if value.Distribute {
 		fields = append(fields, "Distribute: true,")
+	}
+	if value.DoubleKind {
+		fields = append(fields, "DoubleKind: true,")
 	}
 	return structLit("game.AddCounter", fields), nil
 }

@@ -2737,6 +2737,11 @@ type EffectSyntax struct {
 	// are false for the original self single-kind form.
 	DoubleCountersTarget   bool `json:",omitempty"`
 	DoubleCountersAllKinds bool `json:",omitempty"`
+	// DoubleCountersGroup marks a counter-doubling EffectDouble whose object is a
+	// creature group ("double the number of +1/+1 counters on each creature you
+	// control", Bristly Bill, Spine Sower). The group is carried by StaticSubject;
+	// lowering doubles DoubleSourceCounterKind on each member.
+	DoubleCountersGroup bool `json:",omitempty"`
 	// UnderOwnersControl marks a battlefield-destination effect carrying the
 	// rider "under their owners' control" / "under its owner's control" (Open
 	// the Vaults, Planar Birth, Living Death), where each moved card enters under

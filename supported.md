@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,262 of 32,501 cards eligible for paper support (50.0%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,267 of 32,501 cards eligible for paper support (50.1%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1254,6 +1254,7 @@ Council4 currently supports **16,262 of 32,501 cards eligible for paper support 
 - Biblioplex Kraken
 - Bident of Thassa
 - Big Apple, 3 a.m.
+- Big Mother Mouser
 - Big Play
 - Big Score
 - Big Wheel
@@ -1829,6 +1830,7 @@ Council4 currently supports **16,262 of 32,501 cards eligible for paper support 
 - Brion Stoutarm
 - Bristling Backwoods
 - Bristling Boar
+- Bristly Bill, Spine Sower
 - Brittle Effigy
 - Broadcast Rambler
 - Broadside Barrage
@@ -1929,6 +1931,7 @@ Council4 currently supports **16,262 of 32,501 cards eligible for paper support 
 - Buzz Bots
 - Buzzard-Wasp Colony
 - Bygone Bishop
+- Byrke, Long Ear of the Law
 - Byway Courier
 - Cabal Archon
 - Cabal Coffers
@@ -7317,6 +7320,7 @@ Council4 currently supports **16,262 of 32,501 cards eligible for paper support 
 - Kalastria Nightwatch
 - Kaleidostone
 - Kalonian Behemoth
+- Kalonian Hydra
 - Kalonian Tusker
 - Kamahl's Desire
 - Kamahl, Fist of Krosa
@@ -11909,6 +11913,7 @@ Council4 currently supports **16,262 of 32,501 cards eligible for paper support 
 - Seismic Shudder
 - Seismic Spike
 - Seismic Strike
+- Seismic Tutelage
 - Seizan, Perverter of Truth
 - Seize Opportunity
 - Seize the Day

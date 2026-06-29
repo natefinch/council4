@@ -3561,6 +3561,11 @@ type doubleCountersObject struct {
 	Kind     counter.Kind
 	AllKinds bool
 	Target   bool
+	// Group, when set, names the controlled or all-creatures group whose
+	// members each have their CounterKind doubled ("double the number of +1/+1
+	// counters on each creature you control", Bristly Bill, Spine Sower).
+	Group   bool
+	Subject EffectStaticSubjectSyntax
 }
 
 // parseDoubleCountersObject recognizes the object of a counter-doubling effect:
@@ -3599,6 +3604,13 @@ func parseDoubleCountersObject(tokens []shared.Token, atoms Atoms) (doubleCounte
 		}
 		target, okScope := doubleCountersObjectScope(rest[counterNoun+2:], atoms)
 		if !okScope {
+			object := rest[counterNoun+2:]
+			if len(object) > 0 && object[len(object)-1].Kind == shared.Period {
+				object = object[:len(object)-1]
+			}
+			if subject, okGroup := doubleGroupStaticSubject(object, atoms); okGroup {
+				return doubleCountersObject{Kind: atom.Kind, Group: true, Subject: subject}, true
+			}
 			continue
 		}
 		return doubleCountersObject{Kind: atom.Kind, Target: target}, true

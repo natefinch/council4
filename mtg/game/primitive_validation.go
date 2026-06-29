@@ -875,6 +875,24 @@ func (p AddCounter) validatePrimitive(targets []TargetSpec, checkTargets bool) e
 		}
 		return validateTargetAllows(p.Object.TargetIndex(), TargetAllowPermanent, targets, checkTargets)
 	}
+	if p.DoubleKind {
+		if p.Group.Domain() == groupDomainNone {
+			return errors.New("add counter doubling a kind requires a group")
+		}
+		if p.Object.Kind() != ObjectReferenceNone {
+			return errors.New("add counter doubling a kind requires a group, not an object")
+		}
+		if p.AllKinds || p.ChooseOne || len(p.KindChoices) != 0 {
+			return errors.New("add counter doubling a kind cannot combine with AllKinds, ChooseOne, or KindChoices")
+		}
+		if !p.CounterKind.Valid() {
+			return errors.New("add counter requires a recognized counter kind")
+		}
+		if p.CounterKind.PlayerOnly() {
+			return errors.New("player-only counter kind cannot be placed on a permanent")
+		}
+		return validateGroupReference(p.Group, targets, checkTargets)
+	}
 	if p.ChooseOne && p.Group.Domain() == groupDomainNone {
 		return errors.New("add counter choosing one recipient requires a group")
 	}

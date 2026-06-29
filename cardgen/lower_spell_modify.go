@@ -2170,9 +2170,20 @@ func lowerDoubleCountersSpell(ctx contentCtx) (game.AbilityContent, *shared.Diag
 		return unsupported()
 	}
 	var primitive game.Primitive
-	if effect.DoubleCountersAllKinds {
+	switch {
+	case effect.DoubleCountersAllKinds:
 		primitive = game.AddCounter{Object: object, AllKinds: true}
-	} else {
+	case effect.DoubleCountersGroup:
+		kind := effect.DoubleSourceCounterKind
+		if !kind.Valid() || kind.PlayerOnly() || !compiler.CounterKindPlacementSupported(kind) {
+			return unsupported()
+		}
+		group, ok := groupCounterRecipient(effect.Selector)
+		if !ok {
+			return unsupported()
+		}
+		primitive = game.AddCounter{Group: group, CounterKind: kind, DoubleKind: true}
+	default:
 		kind := effect.DoubleSourceCounterKind
 		if !kind.Valid() || kind.PlayerOnly() || !compiler.CounterKindPlacementSupported(kind) {
 			return unsupported()
@@ -2210,8 +2221,20 @@ func doubleCountersObjectReference(ctx contentCtx, effect *compiler.CompiledEffe
 		}
 		return game.TargetPermanentReference(0), opt.Val(spec), true
 	}
-	if len(ctx.content.Targets) != 0 ||
-		(len(ctx.content.References) != 0 && !singleSelfReference(ctx.content.References)) {
+	if len(ctx.content.Targets) != 0 {
+		return game.ObjectReference{}, opt.V[game.TargetSpec]{}, false
+	}
+	if len(ctx.content.References) == 1 {
+		object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
+			AllowSource: true,
+			AllowEvent:  !ctx.sequenceClause || ctx.allowEventPronoun,
+		})
+		if !ok {
+			return game.ObjectReference{}, opt.V[game.TargetSpec]{}, false
+		}
+		return object, opt.V[game.TargetSpec]{}, true
+	}
+	if len(ctx.content.References) != 0 {
 		return game.ObjectReference{}, opt.V[game.TargetSpec]{}, false
 	}
 	return game.SourcePermanentReference(), opt.V[game.TargetSpec]{}, true
