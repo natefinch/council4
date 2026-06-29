@@ -2378,6 +2378,7 @@ Council4 currently supports **16,350 of 32,501 cards eligible for paper support 
 - Choking Tethers
 - Chomping Changeling
 - Chord of Calling
+- Chorus of Might
 - Chorus of the Tides
 - Chorus of Woe
 - Chosen by Heliod
@@ -5435,6 +5436,7 @@ Council4 currently supports **16,350 of 32,501 cards eligible for paper support 
 - Gerrard's Irregulars
 - Gerrard's Wisdom
 - Gert and Old Lace, Runaways
+- Get a Leg Up
 - Get Lost
 - Get the Point
 - Geth's Grimoire

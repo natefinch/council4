@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/opt"
 )
 
 // applyContinuousFromSequence returns the lone ApplyContinuous primitive in a
@@ -83,6 +84,52 @@ func TestLowerFixedPumpKeywordStillSupported(t *testing.T) {
 	if pt.PowerDelta != 1 || pt.ToughnessDelta != 1 ||
 		pt.PowerDeltaDynamic.Exists || pt.ToughnessDeltaDynamic.Exists {
 		t.Fatalf("power/toughness layer = %+v, want fixed +1/+1", pt)
+	}
+}
+
+// TestLowerForEachPumpKeywordSpell verifies the combined "Until end of turn,
+// target creature gets +1/+1 for each creature you control and gains <keyword>"
+// pump (Chorus of Might, Get a Leg Up) lowers to one ApplyContinuous carrying a
+// dynamic creature-count power/toughness layer and a keyword layer. The "for
+// each" pump clause reports inexact because the shared trailing "until end of
+// turn" terminator binds to the gain clause, so the lowering must accept that
+// form on identical-span coverage.
+func TestLowerForEachPumpKeywordSpell(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test For Each Buff",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		ManaCost:   "{3}{G}",
+		OracleText: "Until end of turn, target creature gets +1/+1 for each creature you control and gains trample.",
+	})
+	apply := applyContinuousFromSequence(t, face.SpellAbility.Val)
+	if len(apply.ContinuousEffects) != 2 {
+		t.Fatalf("continuous effects = %d, want 2", len(apply.ContinuousEffects))
+	}
+	pt := apply.ContinuousEffects[0]
+	if pt.Layer != game.LayerPowerToughnessModify {
+		t.Fatalf("layer[0] = %v, want power/toughness modify", pt.Layer)
+	}
+	for _, side := range []struct {
+		name    string
+		dynamic opt.V[game.DynamicAmount]
+	}{
+		{"power", pt.PowerDeltaDynamic},
+		{"toughness", pt.ToughnessDeltaDynamic},
+	} {
+		if !side.dynamic.Exists || side.dynamic.Val.Kind != game.DynamicAmountCountSelector {
+			t.Fatalf("%s delta dynamic = %+v, want count selector", side.name, side.dynamic)
+		}
+	}
+	keywordLayer := apply.ContinuousEffects[1]
+	if keywordLayer.Layer != game.LayerAbility ||
+		len(keywordLayer.AddKeywords) != 1 ||
+		keywordLayer.AddKeywords[0] != game.Trample {
+		t.Fatalf("keyword layer = %+v, want add trample", keywordLayer)
+	}
+	if apply.Duration != game.DurationUntilEndOfTurn {
+		t.Fatalf("duration = %v, want until end of turn", apply.Duration)
 	}
 }
 
