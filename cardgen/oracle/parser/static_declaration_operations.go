@@ -629,13 +629,7 @@ func staticControlledCreaturesProhibitionSubject(tokens []shared.Token, atoms At
 		return EffectStaticSubjectSyntax{}, 0, false
 	}
 	idx += 3
-	if match, ok := controlledGroupProhibitionCounterQualifier(tokens, idx); ok {
-		subject.CounterRequired = true
-		if match.Any {
-			subject.CounterAny = true
-		} else {
-			subject.CounterKind = match.Kind
-		}
+	if match, ok := counterQualifierKind(tokens, idx); ok && subject.applyCounterQualifier(match) {
 		idx = match.End
 	} else if match, ok := controlledGroupProhibitionPowerToughnessQualifier(tokens, idx, atoms); ok {
 		subject.Power = match.power
@@ -961,43 +955,6 @@ func numberComparisonAt(tokens []shared.Token, start int, atoms Atoms) (compare.
 		}
 	}
 	return compare.Int{Op: compare.Equal, Value: value}, start + 1, true
-}
-
-// controlledGroupProhibitionCounterQualifier recognizes a "with [a] <kind>
-// counter(s) on it/them" qualifier on a controlled-creature prohibition group
-// beginning at index start. It accepts both the singular article form ("with a
-// +1/+1 counter on it") and the bare plural form printed on mass-evasion statics
-// ("with +1/+1 counters on them"), naming the required counter kind or, when no
-// kind is named, matching a counter of any kind. It fails closed for any other
-// phrase so callers keep the unfiltered group.
-func controlledGroupProhibitionCounterQualifier(tokens []shared.Token, start int) (counterQualifierMatch, bool) {
-	if !staticWordsAt(tokens, start, "with") {
-		return counterQualifierMatch{}, false
-	}
-	nameStart := start + 1
-	if nameStart < len(tokens) && (equalWord(tokens[nameStart], "a") || equalWord(tokens[nameStart], "an")) {
-		nameStart++
-	}
-	counterIndex := nameStart
-	for counterIndex < len(tokens) &&
-		!equalWord(tokens[counterIndex], "counter") && !equalWord(tokens[counterIndex], "counters") {
-		counterIndex++
-	}
-	if counterIndex >= len(tokens) {
-		return counterQualifierMatch{}, false
-	}
-	if !effectWordsAt(tokens, counterIndex+1, "on", "it") &&
-		!effectWordsAt(tokens, counterIndex+1, "on", "them") {
-		return counterQualifierMatch{}, false
-	}
-	if counterIndex == nameStart {
-		return counterQualifierMatch{Any: true, End: counterIndex + 3}, true
-	}
-	kind, _, ok := counterNameBefore(tokens, counterIndex)
-	if !ok {
-		return counterQualifierMatch{}, false
-	}
-	return counterQualifierMatch{Kind: kind, End: counterIndex + 3}, true
 }
 
 // staticSourceSubjectAt returns the span and token width of a source-marker
