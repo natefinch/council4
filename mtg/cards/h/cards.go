@@ -75,6 +75,7 @@ var Cards = []*game.CardDef{
 	HunterSEdge,
 	HunterSTalent,
 	HYDRADisintegrator,
+	HydraSGrowth,
 	Hydroform,
 	HydromorphGuardian,
 	HydromorphGull,

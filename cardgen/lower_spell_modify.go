@@ -2117,41 +2117,73 @@ func lowerReferencedFixedModifyPT(ctx contentCtx) (game.AbilityContent, *shared.
 	}.Ability(), nil
 }
 
-// lowerDoublePTSpell lowers a power/toughness doubling effect over a creature
-// group ("double the power and toughness of each creature you control until end
-// of turn", Unnatural Growth) into an until-end-of-turn continuous effect whose
-// DoublePower/DoubleToughness flags add each affected creature's own current
-// value back into itself (CR 107.16). Only the group form is supported; targets,
-// references, conditions, keywords, and modes fail closed.
+// lowerDoublePTSpell lowers a power/toughness doubling effect ("double target
+// creature's power until end of turn", Unleash Fury; "double the power and
+// toughness of each creature you control until end of turn", Unnatural Growth)
+// into an until-end-of-turn continuous effect whose DoublePower/DoubleToughness
+// flags add each affected creature's own current value back into itself (CR
+// 107.16). The same continuous-effect building block is used for both targeted
+// and group recipients. Conditions, keyword riders, modes, and non-target
+// references fail closed here; richer supported combinations are handled by
+// sequence composition helpers.
 func lowerDoublePTSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported double power/toughness spell",
-			"the executable source backend supports only doubling the power and/or toughness of a creature group until end of turn",
+			"the executable source backend supports only doubling the power and/or toughness of supported targets or creature groups until end of turn",
 		)
 	}
 	effect := &ctx.content.Effects[0]
-	if len(ctx.content.Targets) != 0 ||
-		len(ctx.content.References) != 0 ||
-		len(ctx.content.Conditions) != 0 ||
+	if len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||
 		effect.Negated ||
-		effect.Duration != compiler.DurationUntilEndOfTurn ||
-		(!effect.DoublePower && !effect.DoubleToughness) {
+		effect.Duration != compiler.DurationUntilEndOfTurn {
+		return unsupported()
+	}
+	continuous := doublePTContinuousEffect(effect)
+	if len(ctx.content.Targets) == 1 && len(ctx.content.References) == 0 {
+		return continuousTargetMode(
+			ctx.content.Targets[0],
+			[]game.ContinuousEffect{continuous},
+			game.DurationUntilEndOfTurn,
+			unsupported,
+		)
+	}
+	if len(ctx.content.Targets) == 0 && len(ctx.content.References) == 1 {
+		switch {
+		case ctx.content.References[0].Binding == compiler.ReferenceBindingSource:
+		case ctx.content.References[0].Binding == compiler.ReferenceBindingTarget &&
+			effect.Context == parser.EffectContextReferencedObject:
+		default:
+			return unsupported()
+		}
+		object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
+			AllowSource: true,
+			AllowTarget: true,
+		})
+		if !ok {
+			return unsupported()
+		}
+		return game.Mode{
+			Sequence: []game.Instruction{{
+				Primitive: game.ApplyContinuous{
+					Object:            opt.Val(object),
+					ContinuousEffects: []game.ContinuousEffect{continuous},
+					Duration:          game.DurationUntilEndOfTurn,
+				},
+			}},
+		}.Ability(), nil
+	}
+	if len(ctx.content.Targets) != 0 || len(ctx.content.References) != 0 {
 		return unsupported()
 	}
 	group, ok := resolvingStaticSubjectGroup(effect)
 	if !ok {
 		return unsupported()
 	}
-	continuous := game.ContinuousEffect{
-		Layer:           game.LayerPowerToughnessModify,
-		Group:           group,
-		DoublePower:     effect.DoublePower,
-		DoubleToughness: effect.DoubleToughness,
-	}
+	continuous.Group = group
 	return game.Mode{
 		Sequence: []game.Instruction{{
 			Primitive: game.ApplyContinuous{
@@ -2160,6 +2192,90 @@ func lowerDoublePTSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic
 			},
 		}},
 	}.Ability(), nil
+}
+
+func doublePTContinuousEffect(effect *compiler.CompiledEffect) game.ContinuousEffect {
+	if !effect.DoublePower && !effect.DoubleToughness {
+		panic("doublePTContinuousEffect called without doubled power or toughness")
+	}
+	return game.ContinuousEffect{
+		Layer:           game.LayerPowerToughnessModify,
+		DoublePower:     effect.DoublePower,
+		DoubleToughness: effect.DoubleToughness,
+	}
+}
+
+// lowerTemporaryDoublePTKeywordSpell composes two already-supported continuous
+// building blocks for the Legion Leadership shape: one targeted continuous
+// effect doubles power/toughness, and another grants keyword(s), all for the
+// shared until-end-of-turn duration. The keyword clause may inherit the target
+// either structurally ("target creature ... and gains ...") or through the
+// singular back-reference ("it gains ...").
+func lowerTemporaryDoublePTKeywordSpell(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 2 ||
+		len(ctx.content.Targets) != 1 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		!temporaryKeywordTarget(ctx.content.Targets[0]) {
+		return game.AbilityContent{}, false
+	}
+	var doubleEffect, keywordEffect compiler.CompiledEffect
+	switch {
+	case ctx.content.Effects[0].Kind == compiler.EffectDouble &&
+		ctx.content.Effects[1].Kind == compiler.EffectGain:
+		doubleEffect = ctx.content.Effects[0]
+		keywordEffect = ctx.content.Effects[1]
+	case ctx.content.Effects[0].Kind == compiler.EffectGain &&
+		ctx.content.Effects[1].Kind == compiler.EffectDouble:
+		keywordEffect = ctx.content.Effects[0]
+		doubleEffect = ctx.content.Effects[1]
+	default:
+		return game.AbilityContent{}, false
+	}
+	if doubleEffect.Negated ||
+		keywordEffect.Negated ||
+		doubleEffect.StaticSubject != compiler.StaticSubjectNone ||
+		keywordEffect.StaticSubject != compiler.StaticSubjectNone ||
+		doubleEffect.Duration != compiler.DurationUntilEndOfTurn ||
+		keywordEffect.Duration != compiler.DurationUntilEndOfTurn ||
+		!keywordEffect.Exact {
+		return game.AbilityContent{}, false
+	}
+	if !doubleEffect.Exact && doubleEffect.Span != keywordEffect.Span {
+		return game.AbilityContent{}, false
+	}
+	switch len(ctx.content.References) {
+	case 0:
+	case 1:
+		if ctx.content.References[0].Binding != compiler.ReferenceBindingTarget ||
+			keywordEffect.Context != parser.EffectContextReferencedObject {
+			return game.AbilityContent{}, false
+		}
+	default:
+		return game.AbilityContent{}, false
+	}
+	keywords, ok := mixedStaticKeywords(ctx.content.Keywords)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	content, diag := continuousTargetMode(
+		ctx.content.Targets[0],
+		[]game.ContinuousEffect{
+			doublePTContinuousEffect(&doubleEffect),
+			{
+				Layer:       game.LayerAbility,
+				AddKeywords: keywords,
+			},
+		},
+		game.DurationUntilEndOfTurn,
+		func() (game.AbilityContent, *shared.Diagnostic) {
+			return game.AbilityContent{}, nil
+		},
+	)
+	if diag != nil {
+		return game.AbilityContent{}, false
+	}
+	return content, true
 }
 
 // lowerDoubleCountersSpell lowers a counter-doubling effect ("Double the number

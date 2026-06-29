@@ -86,6 +86,11 @@ func compileCorpus(input io.Reader, workers int) ([]result, error) {
 }
 
 func compileCard(item job) result {
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			panic(compileCardPanicContext(item, recovered))
+		}
+	}()
 	card := item.card
 	compiled := result{index: item.index, card: card}
 	if reason, excluded := (cardgen.CorpusPolicy{}).Exclusion(card); excluded {
@@ -116,6 +121,18 @@ func compileCard(item job) result {
 		(cardgen.ExecutableGenerator{IdentifierSuffix: identity.IdentifierSuffix}).
 			GenerateCardSource(&card, identity.PackageName)
 	return compiled
+}
+
+func compileCardPanicContext(item job, recovered any) string {
+	name := item.card.Name
+	if name == "" {
+		name = "<unnamed>"
+	}
+	oracleID := item.card.OracleID
+	if oracleID == "" {
+		oracleID = "<missing>"
+	}
+	return fmt.Sprintf("compiling card %d %q (oracle_id %s): %v", item.index, name, oracleID, recovered)
 }
 
 func disambiguateCollisions(results []result) {

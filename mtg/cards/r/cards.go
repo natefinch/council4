@@ -36,6 +36,7 @@ var Cards = []*game.CardDef{
 	ReaperFromTheAbyss,
 	ReapingWillow,
 	RebuffTheWicked,
+	RecklessAmplimancer,
 	Recoil,
 	RecklessDetective,
 	ReconCraftTheta,

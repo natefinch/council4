@@ -13,6 +13,7 @@ var Cards = []*game.CardDef{
 	UneshCriosphinxSovereign,
 	UnexplainedVision,
 	UnfathomableTruths,
+	UnleashFury,
 	UnshakableTail,
 	UnsparingBoltcaster,
 	UnstableMutation,

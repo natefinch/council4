@@ -4096,6 +4096,91 @@ func TestParseDoublePowerToughnessObject(t *testing.T) {
 	}
 }
 
+func TestParsePossessiveDoublePowerToughnessObject(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source          string
+		doublePower     bool
+		doubleToughness bool
+	}{
+		{"Double target creature's power until end of turn.", true, false},
+		{"Until end of turn, double target creature's power and toughness.", true, true},
+		{"Double its toughness until end of turn.", false, true},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) == 0 {
+				t.Fatalf("effects = %#v, want at least one", effects)
+			}
+			effect := effects[0]
+			if effect.Kind != EffectDouble {
+				t.Fatalf("effect Kind = %v, want EffectDouble", effect.Kind)
+			}
+			if effect.DoublePower != test.doublePower || effect.DoubleToughness != test.doubleToughness {
+				t.Fatalf("doublePower=%v doubleToughness=%v, want %v %v",
+					effect.DoublePower, effect.DoubleToughness, test.doublePower, test.doubleToughness)
+			}
+			if len(effect.Targets) > 0 && effect.Targets[0].Selection.Kind != SelectionCreature {
+				t.Fatalf("target selection = %#v, want creature", effect.Targets[0].Selection)
+			}
+		})
+	}
+}
+
+func TestParseTargetDoublePowerToughnessObject(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source          string
+		doublePower     bool
+		doubleToughness bool
+	}{
+		{"Double the power of target creature until end of turn.", true, false},
+		{"Double the power and toughness of target creature until end of turn.", true, true},
+		{"Double the toughness of target creature until end of turn.", false, true},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one", effects)
+			}
+			effect := effects[0]
+			if effect.Kind != EffectDouble {
+				t.Fatalf("effect Kind = %v, want EffectDouble", effect.Kind)
+			}
+			if effect.DoublePower != test.doublePower || effect.DoubleToughness != test.doubleToughness {
+				t.Fatalf("doublePower=%v doubleToughness=%v, want %v %v",
+					effect.DoublePower, effect.DoubleToughness, test.doublePower, test.doubleToughness)
+			}
+			if len(effect.Targets) != 1 || effect.Targets[0].Selection.Kind != SelectionCreature {
+				t.Fatalf("targets = %#v, want one creature target", effect.Targets)
+			}
+		})
+	}
+}
+
+func TestParseSubtypeGroupDoublePowerObject(t *testing.T) {
+	t.Parallel()
+	document, _ := Parse("Double the power of each Dragon you control until end of turn.", Context{InstantOrSorcery: true})
+	effects := document.Abilities[0].Sentences[0].Effects
+	if len(effects) != 1 {
+		t.Fatalf("effects = %#v, want one", effects)
+	}
+	effect := effects[0]
+	if effect.Kind != EffectDouble || !effect.DoublePower || effect.DoubleToughness {
+		t.Fatalf("effect = %#v, want double power only", effect)
+	}
+	if effect.StaticSubject.Kind != EffectStaticSubjectControlledCreatureSubtype ||
+		effect.StaticSubject.SubtypeText != "Dragon" {
+		t.Fatalf("static subject = %#v, want controlled Dragons", effect.StaticSubject)
+	}
+}
+
 // TestParseDoubleCountersObject verifies the counter-doubling object "double the
 // number of <kind> counters on <object>" captures the doubled counter kind, the
 // target vs self scope, and the all-kinds form, and fails closed for an
