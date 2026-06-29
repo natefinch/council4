@@ -33,6 +33,7 @@ var Cards = []*game.CardDef{
 	InsectoidExterminator,
 	Insolence,
 	Intervene,
+	InThePresenceOfAges,
 	IntoTheFaeCourt,
 	IntoTheWilds,
 	InvasionOfIxalan,
