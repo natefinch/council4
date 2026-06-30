@@ -2138,8 +2138,11 @@ func lowerDoublePTSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic
 	if len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||
-		effect.Negated ||
-		effect.Duration != compiler.DurationUntilEndOfTurn {
+		effect.Negated {
+		return unsupported()
+	}
+	duration, ok := temporaryContinuousDuration(effect.Duration)
+	if !ok {
 		return unsupported()
 	}
 	continuous := doublePTContinuousEffect(effect)
@@ -2148,7 +2151,7 @@ func lowerDoublePTSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic
 		ctx,
 		effect,
 		continuousEffects,
-		game.DurationUntilEndOfTurn,
+		duration,
 		continuousSubjectOptions{
 			AllowGroup:           true,
 			AllowTarget:          true,
@@ -2502,7 +2505,7 @@ func lowerTemporaryKeywordSpell(ctx contentCtx) (game.AbilityContent, *shared.Di
 		effect.StaticSubject != compiler.StaticSubjectNone {
 		return unsupported()
 	}
-	duration, ok := temporaryKeywordGrantDuration(effect.Duration)
+	duration, ok := temporaryContinuousDuration(effect.Duration)
 	if !ok {
 		return unsupported()
 	}
@@ -2528,14 +2531,14 @@ func lowerTemporaryKeywordSpell(ctx contentCtx) (game.AbilityContent, *shared.Di
 	return continuousObjectMode(object, continuousEffects, duration), nil
 }
 
-// temporaryKeywordGrantDuration maps the compiled duration of a resolving
-// single-permanent keyword grant to its runtime EffectDuration. Only the bounded
-// "until end of turn" and "until your next turn" forms are realized; the parser
-// gates the latter to the singular referenced-object subject ("It gains haste
-// until your next turn." on a permanent an earlier sequence clause produced —
-// Kardur's Vicious Return chapter III), so a grant to any other subject never
-// reaches this duration. Any other compiled duration fails closed.
-func temporaryKeywordGrantDuration(duration compiler.DurationKind) (game.EffectDuration, bool) {
+// temporaryContinuousDuration maps a compiled effect duration to the runtime
+// EffectDuration for a one-shot continuous effect (a keyword grant or loss, a
+// power/toughness double, and the rest of the continuous family). Only the two
+// bounded forms the ApplyContinuous machinery expires are realized: "until end of
+// turn" and "until your next turn" (proven by the keyword-grant path, e.g. "It
+// gains haste until your next turn." on Kardur's Vicious Return chapter III). Any
+// other compiled duration fails closed.
+func temporaryContinuousDuration(duration compiler.DurationKind) (game.EffectDuration, bool) {
 	switch duration {
 	case compiler.DurationUntilEndOfTurn:
 		return game.DurationUntilEndOfTurn, true
@@ -2607,8 +2610,11 @@ func lowerTemporaryKeywordLossSpell(ctx contentCtx) (game.AbilityContent, *share
 		len(ctx.content.Modes) != 0 ||
 		effect.Kind != compiler.EffectLose ||
 		!effect.Exact ||
-		effect.Negated ||
-		effect.Duration != compiler.DurationUntilEndOfTurn {
+		effect.Negated {
+		return unsupported()
+	}
+	duration, ok := temporaryContinuousDuration(effect.Duration)
+	if !ok {
 		return unsupported()
 	}
 	keywords, ok := mixedStaticKeywords(ctx.content.Keywords)
@@ -2624,7 +2630,7 @@ func lowerTemporaryKeywordLossSpell(ctx contentCtx) (game.AbilityContent, *share
 		ctx,
 		&effect,
 		continuousEffects,
-		game.DurationUntilEndOfTurn,
+		duration,
 		continuousSubjectOptions{
 			AllowGroup:           true,
 			AllowTarget:          true,
