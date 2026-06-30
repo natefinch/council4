@@ -1,6 +1,7 @@
 package cardgen
 
 import (
+	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/opt"
@@ -78,9 +79,10 @@ func keywordChoiceGrantContent(
 // modal choice cannot represent.
 func lowerTemporaryKeywordChoiceGrant(
 	ctx contentCtx,
+	effect *compiler.CompiledEffect,
 	keywords []game.Keyword,
 	abilities []game.Ability,
-	targetSubject, sourceSubject, eventPermanentSubject bool,
+	targetSubject bool,
 	unsupported func() (game.AbilityContent, *shared.Diagnostic),
 ) (game.AbilityContent, *shared.Diagnostic) {
 	if targetSubject {
@@ -96,19 +98,7 @@ func lowerTemporaryKeywordChoiceGrant(
 			game.DurationUntilEndOfTurn,
 		)
 	}
-	var object game.ObjectReference
-	var ok bool
-	switch {
-	case sourceSubject:
-		object, ok = lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
-			AllowSource:      true,
-			SourceCardObject: true,
-		})
-	case eventPermanentSubject:
-		object, ok = lowerObjectReference(ctx.content.References[0], referenceLoweringContext{AllowEvent: true})
-	default:
-		object, ok = lowerObjectReference(ctx.content.References[0], referenceLoweringContext{AllowTarget: true})
-	}
+	object, ok := continuousReferenceObject(ctx.content.References[0], effect, true)
 	if !ok {
 		return unsupported()
 	}
