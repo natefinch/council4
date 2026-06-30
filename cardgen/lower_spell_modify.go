@@ -2143,14 +2143,7 @@ func lowerDoublePTSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic
 		return unsupported()
 	}
 	continuous := doublePTContinuousEffect(effect)
-	if len(ctx.content.Targets) == 1 && len(ctx.content.References) == 0 {
-		return continuousTargetMode(
-			ctx.content.Targets[0],
-			[]game.ContinuousEffect{continuous},
-			game.DurationUntilEndOfTurn,
-			unsupported,
-		)
-	}
+	continuousEffects := []game.ContinuousEffect{continuous}
 	if len(ctx.content.Targets) == 0 && len(ctx.content.References) == 1 {
 		switch {
 		case ctx.content.References[0].Binding == compiler.ReferenceBindingSource:
@@ -2166,32 +2159,16 @@ func lowerDoublePTSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic
 		if !ok {
 			return unsupported()
 		}
-		return game.Mode{
-			Sequence: []game.Instruction{{
-				Primitive: game.ApplyContinuous{
-					Object:            opt.Val(object),
-					ContinuousEffects: []game.ContinuousEffect{continuous},
-					Duration:          game.DurationUntilEndOfTurn,
-				},
-			}},
-		}.Ability(), nil
+		return continuousObjectMode(object, continuousEffects, game.DurationUntilEndOfTurn), nil
 	}
-	if len(ctx.content.Targets) != 0 || len(ctx.content.References) != 0 {
-		return unsupported()
-	}
-	group, ok := resolvingStaticSubjectGroup(effect)
-	if !ok {
-		return unsupported()
-	}
-	continuous.Group = group
-	return game.Mode{
-		Sequence: []game.Instruction{{
-			Primitive: game.ApplyContinuous{
-				ContinuousEffects: []game.ContinuousEffect{continuous},
-				Duration:          game.DurationUntilEndOfTurn,
-			},
-		}},
-	}.Ability(), nil
+	return continuousSubjectMode(
+		ctx,
+		effect,
+		continuousEffects,
+		game.DurationUntilEndOfTurn,
+		continuousSubjectOptions{AllowGroup: true, AllowTarget: true},
+		unsupported,
+	)
 }
 
 func doublePTContinuousEffect(effect *compiler.CompiledEffect) game.ContinuousEffect {
@@ -2612,55 +2589,6 @@ func temporaryKeywordGrantDuration(duration compiler.DurationKind) (game.EffectD
 	}
 }
 
-// temporaryKeywordTargetMode builds the until-end-of-turn ApplyContinuous mode
-// for a keyword grant or loss applied to one permanent target slot per chosen
-// target. The target may be single ("Target creature gains flying…"), optional
-// ("up to one target creature gains…"), or multi-cardinality; a declined "up to"
-// slot leaves an unresolved target index the runtime ApplyContinuous no-ops, so
-// only chosen permanents are affected. The target's filter is validated by the
-// canonical permanentTargetSpecWithCardinality, so the same subtype, card-type,
-// color, and tapped restrictions destroy and exile already target (e.g. "target
-// Human", "target artifact", "target black creature") apply here too. It fails
-// closed for any target permanentTargetSpecWithCardinality cannot express.
-func temporaryKeywordTargetMode(
-	target compiler.CompiledTarget,
-	continuousEffects []game.ContinuousEffect,
-	unsupported func() (game.AbilityContent, *shared.Diagnostic),
-) (game.AbilityContent, *shared.Diagnostic) {
-	return continuousTargetMode(target, continuousEffects, game.DurationUntilEndOfTurn, unsupported)
-}
-
-// continuousTargetMode builds an ApplyContinuous mode that applies the given
-// continuous effects to each targeted permanent for the given duration. It backs
-// both the until-end-of-turn keyword/polymorph forms and the permanent
-// named-become polymorph. It fails closed when the target cannot reduce to a
-// permanent target spec.
-func continuousTargetMode(
-	target compiler.CompiledTarget,
-	continuousEffects []game.ContinuousEffect,
-	duration game.EffectDuration,
-	unsupported func() (game.AbilityContent, *shared.Diagnostic),
-) (game.AbilityContent, *shared.Diagnostic) {
-	spec, ok := permanentTargetSpecWithCardinality(target)
-	if !ok || spec.MaxTargets < 1 {
-		return unsupported()
-	}
-	sequence := make([]game.Instruction, 0, spec.MaxTargets)
-	for i := range spec.MaxTargets {
-		sequence = append(sequence, game.Instruction{
-			Primitive: game.ApplyContinuous{
-				Object:            opt.Val(game.TargetPermanentReference(i)),
-				ContinuousEffects: continuousEffects,
-				Duration:          duration,
-			},
-		})
-	}
-	return game.Mode{
-		Targets:  []game.TargetSpec{spec},
-		Sequence: sequence,
-	}.Ability(), nil
-}
-
 // lowerGroupTemporaryKeywordSpell lowers a resolving keyword grant to a
 // never-resolving creature or permanent group until end of turn ("Creatures you
 // control gain trample until end of turn.") into a single game.ApplyContinuous
@@ -2692,19 +2620,11 @@ func lowerGroupTemporaryKeywordSpell(
 	if !ok {
 		return unsupported()
 	}
-	return game.Mode{
-		Sequence: []game.Instruction{{
-			Primitive: game.ApplyContinuous{
-				ContinuousEffects: []game.ContinuousEffect{{
-					Layer:        game.LayerAbility,
-					Group:        group,
-					AddKeywords:  keywords,
-					AddAbilities: abilities,
-				}},
-				Duration: game.DurationUntilEndOfTurn,
-			},
-		}},
-	}.Ability(), nil
+	return continuousGroupMode(group, []game.ContinuousEffect{{
+		Layer:        game.LayerAbility,
+		AddKeywords:  keywords,
+		AddAbilities: abilities,
+	}}, game.DurationUntilEndOfTurn), nil
 }
 
 // lowerTemporaryKeywordLossSpell lowers a resolving keyword removal until end of
@@ -2742,6 +2662,7 @@ func lowerTemporaryKeywordLossSpell(ctx contentCtx) (game.AbilityContent, *share
 		Layer:          game.LayerAbility,
 		RemoveKeywords: keywords,
 	}
+	continuousEffects := []game.ContinuousEffect{continuous}
 	if effect.StaticSubject != compiler.StaticSubjectNone {
 		if len(ctx.content.Targets) != 0 || len(ctx.content.References) != 0 {
 			return unsupported()
@@ -2750,15 +2671,7 @@ func lowerTemporaryKeywordLossSpell(ctx contentCtx) (game.AbilityContent, *share
 		if !ok {
 			return unsupported()
 		}
-		continuous.Group = group
-		return game.Mode{
-			Sequence: []game.Instruction{{
-				Primitive: game.ApplyContinuous{
-					ContinuousEffects: []game.ContinuousEffect{continuous},
-					Duration:          game.DurationUntilEndOfTurn,
-				},
-			}},
-		}.Ability(), nil
+		return continuousGroupMode(group, continuousEffects, game.DurationUntilEndOfTurn), nil
 	}
 	referencedObject := len(ctx.content.Targets) == 0 &&
 		len(ctx.content.References) == 1 &&
@@ -2775,7 +2688,6 @@ func lowerTemporaryKeywordLossSpell(ctx contentCtx) (game.AbilityContent, *share
 	if !targetSubject && !referencedObject && !sourceSubject {
 		return unsupported()
 	}
-	continuousEffects := []game.ContinuousEffect{continuous}
 	if targetSubject {
 		return temporaryKeywordTargetMode(ctx.content.Targets[0], continuousEffects, unsupported)
 	}
@@ -2792,15 +2704,7 @@ func lowerTemporaryKeywordLossSpell(ctx contentCtx) (game.AbilityContent, *share
 	if !ok {
 		return unsupported()
 	}
-	return game.Mode{
-		Sequence: []game.Instruction{{
-			Primitive: game.ApplyContinuous{
-				Object:            opt.Val(object),
-				ContinuousEffects: continuousEffects,
-				Duration:          game.DurationUntilEndOfTurn,
-			},
-		}},
-	}.Ability(), nil
+	return continuousObjectMode(object, continuousEffects, game.DurationUntilEndOfTurn), nil
 }
 
 // lowerTemporaryPTKeywordSpell lowers the single-subject combined buff

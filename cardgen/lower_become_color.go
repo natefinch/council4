@@ -50,7 +50,7 @@ func lowerBecomeColorContent(ctx contentCtx) (game.AbilityContent, *shared.Diagn
 		if len(ctx.content.Targets) != 0 {
 			return unsupported()
 		}
-		return sourceContinuousMode(continuousEffects), nil
+		return continuousSourceMode(continuousEffects, game.DurationUntilEndOfTurn), nil
 	}
 	if len(ctx.content.Targets) != 1 || len(ctx.content.References) != 0 {
 		return unsupported()

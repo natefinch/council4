@@ -1,7 +1,6 @@
 package cardgen
 
 import (
-	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/opt"
@@ -55,49 +54,16 @@ func lowerSetBasePTContent(ctx contentCtx) (game.AbilityContent, *shared.Diagnos
 		})
 	}
 
-	switch {
-	case effect.SetBasePTSource:
-		if len(ctx.content.Targets) != 0 {
-			return unsupported()
-		}
-		return sourceContinuousMode(continuousEffects), nil
-	case effect.StaticSubject != compiler.StaticSubjectNone:
-		if len(ctx.content.Targets) != 0 {
-			return unsupported()
-		}
-		group, ok := resolvingStaticSubjectGroup(&effect)
-		if !ok {
-			return unsupported()
-		}
-		for i := range continuousEffects {
-			continuousEffects[i].Group = group
-		}
-		return game.Mode{
-			Sequence: []game.Instruction{{
-				Primitive: game.ApplyContinuous{
-					ContinuousEffects: continuousEffects,
-					Duration:          game.DurationUntilEndOfTurn,
-				},
-			}},
-		}.Ability(), nil
-	default:
-		if len(ctx.content.Targets) != 1 {
-			return unsupported()
-		}
-		return temporaryKeywordTargetMode(ctx.content.Targets[0], continuousEffects, unsupported)
-	}
-}
-
-// sourceContinuousMode builds an ApplyContinuous mode applying the given
-// continuous effects to the source permanent until end of turn.
-func sourceContinuousMode(continuousEffects []game.ContinuousEffect) game.AbilityContent {
-	return game.Mode{
-		Sequence: []game.Instruction{{
-			Primitive: game.ApplyContinuous{
-				Object:            opt.Val(game.SourcePermanentReference()),
-				ContinuousEffects: continuousEffects,
-				Duration:          game.DurationUntilEndOfTurn,
-			},
-		}},
-	}.Ability()
+	return continuousSubjectMode(
+		ctx,
+		&effect,
+		continuousEffects,
+		game.DurationUntilEndOfTurn,
+		continuousSubjectOptions{
+			SourceForm:  effect.SetBasePTSource,
+			AllowGroup:  true,
+			AllowTarget: true,
+		},
+		unsupported,
+	)
 }

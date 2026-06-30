@@ -29,5 +29,5 @@ func lowerSwitchPTContent(ctx contentCtx) (game.AbilityContent, *shared.Diagnost
 	}
 
 	continuousEffects := []game.ContinuousEffect{{Layer: game.LayerPowerToughnessSwitch}}
-	return sourceContinuousMode(continuousEffects), nil
+	return continuousSourceMode(continuousEffects, game.DurationUntilEndOfTurn), nil
 }

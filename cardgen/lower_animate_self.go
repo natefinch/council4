@@ -43,13 +43,30 @@ func lowerAnimateSelfContent(ctx contentCtx) (game.AbilityContent, *shared.Diagn
 		return unsupported("the self-animation accepts no targets, references, conditions, keywords, or modes")
 	}
 
+	continuousEffects, ok := animationContinuousEffects(payload)
+	if !ok {
+		return unsupported("unsupported animated color or keyword")
+	}
+	return continuousSourceMode(continuousEffects, game.DurationUntilEndOfTurn), nil
+}
+
+// animationContinuousEffects builds the layered continuous effects shared by the
+// self- and target-animation lowerers from an animation payload: LayerColor sets
+// the stated colors, LayerType adds the creature card type (plus the artifact
+// type when stated) and the named subtypes or every creature type, LayerAbility
+// grants the keywords, and LayerPowerToughnessSet sets the literal base
+// power/toughness. The animated permanent keeps its existing land or artifact
+// types because the type layer adds rather than sets. It fails closed for an
+// unsupported animated color or keyword. The target-animation parser never sets
+// AddArtifact or EveryCreatureType, so those riders apply only to self-animation.
+func animationContinuousEffects(payload *parser.AnimateSelfSyntax) ([]game.ContinuousEffect, bool) {
 	continuousEffects := make([]game.ContinuousEffect, 0, 4)
 	if len(payload.Colors) != 0 {
 		colors := make([]color.Color, 0, len(payload.Colors))
 		for _, parserColor := range payload.Colors {
 			runtimeColor, ok := animateSelfColor(parserColor)
 			if !ok {
-				return unsupported("unsupported animated color")
+				return nil, false
 			}
 			colors = append(colors, runtimeColor)
 		}
@@ -63,20 +80,19 @@ func lowerAnimateSelfContent(ctx contentCtx) (game.AbilityContent, *shared.Diagn
 	if payload.AddArtifact {
 		addTypes = append(addTypes, types.Artifact)
 	}
-	typeEffect := game.ContinuousEffect{
+	continuousEffects = append(continuousEffects, game.ContinuousEffect{
 		Layer:                game.LayerType,
 		AddTypes:             addTypes,
 		AddSubtypes:          slices.Clone(payload.Subtypes),
 		AddEveryCreatureType: payload.EveryCreatureType,
-	}
-	continuousEffects = append(continuousEffects, typeEffect)
+	})
 
 	if len(payload.Keywords) != 0 {
 		keywords := make([]game.Keyword, 0, len(payload.Keywords))
 		for _, kind := range payload.Keywords {
 			keyword, ok := runtimeKeyword(kind)
 			if !ok {
-				return unsupported("unsupported animated keyword")
+				return nil, false
 			}
 			keywords = append(keywords, keyword)
 		}
@@ -91,8 +107,7 @@ func lowerAnimateSelfContent(ctx contentCtx) (game.AbilityContent, *shared.Diagn
 		SetPower:     opt.Val(game.PT{Value: payload.Power}),
 		SetToughness: opt.Val(game.PT{Value: payload.Toughness}),
 	})
-
-	return sourceContinuousMode(continuousEffects), nil
+	return continuousEffects, true
 }
 
 // animateSelfColor maps a parser color to its runtime color, failing closed for
