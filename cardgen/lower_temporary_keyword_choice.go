@@ -68,21 +68,21 @@ func keywordChoiceGrantContent(
 	return content, nil
 }
 
-// lowerTemporaryKeywordChoiceGrant lowers an until-end-of-turn disjunctive
-// keyword grant ("This creature gains your choice of vigilance, lifelink, or
-// haste until end of turn.", "Target creature gains your choice of lifelink or
-// indestructible until end of turn.") into a one-of-N modal grant whose modes
-// each add one of the listed keywords until end of turn. It accepts the same
-// single-permanent subjects the conjunctive grant does — a single exact target,
-// the source permanent, the triggering event permanent, or a referenced target
-// object — and fails closed for any group, plural, or quoted-ability shape the
-// modal choice cannot represent.
+// lowerTemporaryKeywordChoiceGrant lowers a disjunctive keyword grant ("This
+// creature gains your choice of vigilance, lifelink, or haste until end of
+// turn.", "Target creature gains your choice of lifelink or indestructible until
+// end of turn.") into a one-of-N modal grant whose modes each add one of the
+// listed keywords for the given duration. It accepts the same single-permanent
+// subjects the conjunctive grant does — a single exact target or any object the
+// shared continuousReferenceObject resolver names — and fails closed for any
+// group, plural, or quoted-ability shape the modal choice cannot represent.
 func lowerTemporaryKeywordChoiceGrant(
 	ctx contentCtx,
 	effect *compiler.CompiledEffect,
 	keywords []game.Keyword,
 	abilities []game.Ability,
 	targetSubject bool,
+	duration game.EffectDuration,
 	unsupported func() (game.AbilityContent, *shared.Diagnostic),
 ) (game.AbilityContent, *shared.Diagnostic) {
 	if targetSubject {
@@ -95,7 +95,7 @@ func lowerTemporaryKeywordChoiceGrant(
 			abilities,
 			game.TargetPermanentReference(0),
 			opt.Val(spec),
-			game.DurationUntilEndOfTurn,
+			duration,
 		)
 	}
 	object, ok := continuousReferenceObject(ctx.content.References[0], effect, true)
@@ -107,6 +107,6 @@ func lowerTemporaryKeywordChoiceGrant(
 		abilities,
 		object,
 		opt.V[game.TargetSpec]{},
-		game.DurationUntilEndOfTurn,
+		duration,
 	)
 }

@@ -2514,7 +2514,7 @@ func lowerTemporaryKeywordSpell(ctx contentCtx) (game.AbilityContent, *shared.Di
 		return unsupported()
 	}
 	if effect.KeywordGrantChoice {
-		return lowerTemporaryKeywordChoiceGrant(ctx, &effect, keywords, abilities, targetSubject, unsupported)
+		return lowerTemporaryKeywordChoiceGrant(ctx, &effect, keywords, abilities, targetSubject, duration, unsupported)
 	}
 	continuousEffects := []game.ContinuousEffect{{
 		Layer:        game.LayerAbility,
