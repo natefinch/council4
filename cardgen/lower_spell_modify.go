@@ -2650,48 +2650,19 @@ func lowerTemporaryKeywordLossSpell(ctx contentCtx) (game.AbilityContent, *share
 		RemoveKeywords: keywords,
 	}
 	continuousEffects := []game.ContinuousEffect{continuous}
-	if effect.StaticSubject != compiler.StaticSubjectNone {
-		if len(ctx.content.Targets) != 0 || len(ctx.content.References) != 0 {
-			return unsupported()
-		}
-		group, ok := resolvingStaticSubjectGroup(&effect)
-		if !ok {
-			return unsupported()
-		}
-		return continuousGroupMode(group, continuousEffects, game.DurationUntilEndOfTurn), nil
-	}
-	referencedObject := len(ctx.content.Targets) == 0 &&
-		len(ctx.content.References) == 1 &&
-		ctx.content.References[0].Binding == compiler.ReferenceBindingTarget &&
-		effect.Context == parser.EffectContextReferencedObject
-	sourceSubject := len(ctx.content.Targets) == 0 &&
-		len(ctx.content.References) == 1 &&
-		ctx.content.References[0].Binding == compiler.ReferenceBindingSource &&
-		effect.Context == parser.EffectContextSource
-	targetSubject := len(ctx.content.Targets) == 1 &&
-		len(ctx.content.References) == 0 &&
-		effect.Context == parser.EffectContextTarget &&
-		temporaryKeywordTarget(ctx.content.Targets[0])
-	if !targetSubject && !referencedObject && !sourceSubject {
-		return unsupported()
-	}
-	if targetSubject {
-		return temporaryKeywordTargetMode(ctx.content.Targets[0], continuousEffects, unsupported)
-	}
-	var object game.ObjectReference
-	switch {
-	case sourceSubject:
-		object, ok = lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
-			AllowSource:      true,
-			SourceCardObject: true,
-		})
-	default:
-		object, ok = lowerObjectReference(ctx.content.References[0], referenceLoweringContext{AllowTarget: true})
-	}
-	if !ok {
-		return unsupported()
-	}
-	return continuousObjectMode(object, continuousEffects, game.DurationUntilEndOfTurn), nil
+	return continuousSubjectMode(
+		ctx,
+		&effect,
+		continuousEffects,
+		game.DurationUntilEndOfTurn,
+		continuousSubjectOptions{
+			AllowGroup:           true,
+			AllowTarget:          true,
+			AllowReferenceObject: true,
+			SourceAsCard:         true,
+		},
+		unsupported,
+	)
 }
 
 // lowerTemporaryPTKeywordSpell lowers the single-subject combined buff
