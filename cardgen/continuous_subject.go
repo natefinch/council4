@@ -4,6 +4,7 @@ import (
 	"slices"
 
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
+	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/opt"
@@ -20,10 +21,7 @@ import (
 // re-derived per effect family.
 
 // continuousSubjectOptions configures continuousSubjectMode: which subjects a set
-// of continuous effects may be routed to. The referenced-object subject is
-// intentionally excluded; its recognition gating (which reference bindings and
-// effect contexts are valid) is effect-specific, so callers resolve a reference
-// themselves and assemble it with continuousObjectMode.
+// of continuous effects may be routed to.
 type continuousSubjectOptions struct {
 	// SourceForm reports that the typed effect selects the source permanent
 	// through its own boolean signal (such as EffectModifyPT's SetBasePTSource or
@@ -37,17 +35,28 @@ type continuousSubjectOptions struct {
 	AllowGroup bool
 	// AllowTarget permits a single permanent target subject.
 	AllowTarget bool
+	// AllowReferenceObject permits a singular referenced-object subject: content
+	// carrying exactly one reference and no targets, whose reference names the
+	// object the continuous effects apply to ("Double its power until end of
+	// turn." on a triggering creature, "Double equipped creature's power…" on an
+	// Equipment's wearer). Every binding the runtime's ApplyContinuous can resolve
+	// is accepted; see continuousReferenceObject.
+	AllowReferenceObject bool
+	// SourceAsCard selects how a Source-binding reference object resolves when
+	// AllowReferenceObject is set: the source card's battlefield permanent
+	// (SourceCardPermanentReference) rather than the resolving stack object's
+	// source permanent. It is meaningful only with AllowReferenceObject.
+	SourceAsCard bool
 }
 
 // continuousSubjectMode routes continuousEffects to the subject a one-shot
 // continuous effect selects and builds the ApplyContinuous mode for the given
-// duration. It handles the three subjects whose recognition is uniform across
+// duration. It handles the four subjects whose recognition is uniform across
 // effect families: the source permanent (opts.SourceForm), a static
-// creature/permanent group (opts.AllowGroup), and a single permanent target
-// (opts.AllowTarget). Referenced-object subjects are resolved by callers before
-// delegating here, because their valid bindings differ per effect. Any shape the
-// router cannot reduce, or a subject the caller disallows, fails closed via
-// unsupported.
+// creature/permanent group (opts.AllowGroup), a singular referenced object
+// (opts.AllowReferenceObject), and a single permanent target (opts.AllowTarget).
+// Any shape the router cannot reduce, or a subject the caller disallows, fails
+// closed via unsupported.
 func continuousSubjectMode(
 	ctx contentCtx,
 	effect *compiler.CompiledEffect,
@@ -72,10 +81,44 @@ func continuousSubjectMode(
 		}
 		return continuousGroupMode(group, continuousEffects, duration), nil
 	}
+	if opts.AllowReferenceObject && len(ctx.content.Targets) == 0 && len(ctx.content.References) == 1 {
+		object, ok := continuousReferenceObject(ctx.content.References[0], effect, opts.SourceAsCard)
+		if !ok {
+			return unsupported()
+		}
+		return continuousObjectMode(object, continuousEffects, duration), nil
+	}
 	if opts.AllowTarget && len(ctx.content.Targets) == 1 && len(ctx.content.References) == 0 {
 		return continuousTargetMode(ctx.content.Targets[0], continuousEffects, duration, unsupported)
 	}
 	return unsupported()
+}
+
+// continuousReferenceObject resolves the object a continuous effect's single
+// referenced-object subject names. The effect applies to whichever object the
+// reference binds, so every binding the runtime's ApplyContinuous can resolve is
+// accepted: the source permanent, the source's attached permanent, a triggering
+// (related) event permanent, a prior instruction's published object, or a
+// back-referenced target. Source resolution honors sourceAsCard. The one binding
+// that needs a consistency gate is a Target back-reference: its occurrence indexes
+// a target slot resolved in another clause, so it is accepted only when the effect
+// context marks it as the effect's referenced object. lowerObjectReference fails
+// closed for any binding it cannot represent.
+func continuousReferenceObject(
+	reference compiler.CompiledReference,
+	effect *compiler.CompiledEffect,
+	sourceAsCard bool,
+) (game.ObjectReference, bool) {
+	if reference.Binding == compiler.ReferenceBindingTarget &&
+		effect.Context != parser.EffectContextReferencedObject {
+		return game.ObjectReference{}, false
+	}
+	return lowerObjectReference(reference, referenceLoweringContext{
+		AllowSource:      true,
+		AllowTarget:      true,
+		AllowEvent:       true,
+		SourceCardObject: sourceAsCard,
+	})
 }
 
 // referencesAllSourceSelf reports whether every reference is the inherent source

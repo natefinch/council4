@@ -2144,29 +2144,16 @@ func lowerDoublePTSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic
 	}
 	continuous := doublePTContinuousEffect(effect)
 	continuousEffects := []game.ContinuousEffect{continuous}
-	if len(ctx.content.Targets) == 0 && len(ctx.content.References) == 1 {
-		switch {
-		case ctx.content.References[0].Binding == compiler.ReferenceBindingSource:
-		case ctx.content.References[0].Binding == compiler.ReferenceBindingTarget &&
-			effect.Context == parser.EffectContextReferencedObject:
-		default:
-			return unsupported()
-		}
-		object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
-			AllowSource: true,
-			AllowTarget: true,
-		})
-		if !ok {
-			return unsupported()
-		}
-		return continuousObjectMode(object, continuousEffects, game.DurationUntilEndOfTurn), nil
-	}
 	return continuousSubjectMode(
 		ctx,
 		effect,
 		continuousEffects,
 		game.DurationUntilEndOfTurn,
-		continuousSubjectOptions{AllowGroup: true, AllowTarget: true},
+		continuousSubjectOptions{
+			AllowGroup:           true,
+			AllowTarget:          true,
+			AllowReferenceObject: true,
+		},
 		unsupported,
 	)
 }

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
+	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -170,5 +171,82 @@ func targetCreatureFixture() compiler.CompiledTarget {
 		Exact:       true,
 		Cardinality: compiler.TargetCardinality{Min: 1, Max: 1},
 		Selector:    compiler.CompiledSelector{Kind: compiler.SelectorCreature},
+	}
+}
+
+// TestContinuousReferenceObject confirms the referenced-object subject resolver
+// accepts every binding the runtime's ApplyContinuous can resolve — source,
+// source-attached, and triggering event permanent — so a continuous effect can
+// name any of them, while gating a bare target back-reference on the referenced
+// object context and failing closed on a player binding it cannot represent.
+func TestContinuousReferenceObject(t *testing.T) {
+	cases := []struct {
+		name      string
+		reference compiler.CompiledReference
+		effect    compiler.CompiledEffect
+		want      game.ObjectReference
+		wantOK    bool
+	}{
+		{
+			name:      "source",
+			reference: compiler.CompiledReference{Binding: compiler.ReferenceBindingSource},
+			want:      game.SourcePermanentReference(),
+			wantOK:    true,
+		},
+		{
+			name:      "source attached",
+			reference: compiler.CompiledReference{Binding: compiler.ReferenceBindingSourceAttached},
+			want:      game.SourceAttachedPermanentReference(),
+			wantOK:    true,
+		},
+		{
+			name:      "event permanent",
+			reference: compiler.CompiledReference{Binding: compiler.ReferenceBindingEventPermanent},
+			want:      game.EventPermanentReference(),
+			wantOK:    true,
+		},
+		{
+			name:      "target back-reference with referenced-object context",
+			reference: compiler.CompiledReference{Binding: compiler.ReferenceBindingTarget, Occurrence: 0},
+			effect:    compiler.CompiledEffect{Context: parser.EffectContextReferencedObject},
+			want:      game.TargetPermanentReference(0),
+			wantOK:    true,
+		},
+		{
+			name:      "target back-reference without referenced-object context fails closed",
+			reference: compiler.CompiledReference{Binding: compiler.ReferenceBindingTarget, Occurrence: 0},
+			effect:    compiler.CompiledEffect{Context: parser.EffectContextController},
+			wantOK:    false,
+		},
+		{
+			name:      "player binding fails closed",
+			reference: compiler.CompiledReference{Binding: compiler.ReferenceBindingEventPlayer},
+			wantOK:    false,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			object, ok := continuousReferenceObject(tc.reference, &tc.effect, false)
+			if ok != tc.wantOK {
+				t.Fatalf("ok = %v, want %v", ok, tc.wantOK)
+			}
+			if ok && !reflect.DeepEqual(object, tc.want) {
+				t.Fatalf("object = %#v, want %#v", object, tc.want)
+			}
+		})
+	}
+}
+
+// TestContinuousReferenceObjectSourceAsCard confirms sourceAsCard switches a
+// source-binding subject from the stack object's source permanent to the source
+// card's battlefield permanent, the form keyword loss uses.
+func TestContinuousReferenceObjectSourceAsCard(t *testing.T) {
+	reference := compiler.CompiledReference{Binding: compiler.ReferenceBindingSource}
+	object, ok := continuousReferenceObject(reference, &compiler.CompiledEffect{}, true)
+	if !ok {
+		t.Fatal("source-as-card reference did not resolve")
+	}
+	if !reflect.DeepEqual(object, game.SourceCardPermanentReference()) {
+		t.Fatalf("object = %#v, want source card permanent reference", object)
 	}
 }
