@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,451 of 32,501 cards eligible for paper support (50.6%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,456 of 32,501 cards eligible for paper support (50.6%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1766,6 +1766,7 @@ Council4 currently supports **16,451 of 32,501 cards eligible for paper support 
 - Bramble Wurm
 - Brambleback Brute
 - Bramblecrush
+- Bramblefort Fink
 - Brambleguard Captain
 - Bramblesnap
 - Brambleweft Behemoth
@@ -1860,6 +1861,7 @@ Council4 currently supports **16,451 of 32,501 cards eligible for paper support 
 - Broken Wings
 - Brokers Charm
 - Brokers Hideout
+- Brokers Initiate
 - Brokers Veteran
 - Bronze Sable
 - Bronze Sword
@@ -8502,6 +8504,7 @@ Council4 currently supports **16,451 of 32,501 cards eligible for paper support 
 - Marsh Boa
 - Marsh Crocodile
 - Marsh Flats
+- Marsh Flitter
 - Marsh Gas
 - Marsh Goblins
 - Marsh Lurker
@@ -11303,6 +11306,7 @@ Council4 currently supports **16,451 of 32,501 cards eligible for paper support 
 - Rise to the Challenge
 - Risen Necroregent
 - Risen Reef
+- Risen Riptide
 - Risen Sanctuary
 - Rishadan Airship
 - Rishadan Dockhand
@@ -13413,6 +13417,7 @@ Council4 currently supports **16,451 of 32,501 cards eligible for paper support 
 - Static Net
 - Static Snare
 - Station Monitor
+- Stature, Young Avenger
 - Status // Statue
 - Statute of Denial
 - Staunch Crewmate
