@@ -27,8 +27,11 @@ import (
 type continuousSubjectOptions struct {
 	// SourceForm reports that the typed effect selects the source permanent
 	// through its own boolean signal (such as EffectModifyPT's SetBasePTSource or
-	// EffectBecomeColor's BecomeColorSource) rather than through a reference. When
-	// set, the content must carry no targets and no references.
+	// EffectBecomeColor's BecomeColorSource). When set, the content must carry no
+	// targets, and any references must be the inherent source self-reference the
+	// "This <permanent>" subject produces ("This creature has base power and
+	// toughness 3/3 until end of turn." — Marsh Flitter), which resolves to the
+	// same source permanent the boolean already names.
 	SourceForm bool
 	// AllowGroup permits a static-subject creature/permanent group subject.
 	AllowGroup bool
@@ -54,7 +57,7 @@ func continuousSubjectMode(
 	unsupported func() (game.AbilityContent, *shared.Diagnostic),
 ) (game.AbilityContent, *shared.Diagnostic) {
 	if opts.SourceForm {
-		if len(ctx.content.Targets) != 0 || len(ctx.content.References) != 0 {
+		if len(ctx.content.Targets) != 0 || !referencesAllSourceSelf(ctx.content.References) {
 			return unsupported()
 		}
 		return continuousSourceMode(continuousEffects, duration), nil
@@ -73,6 +76,22 @@ func continuousSubjectMode(
 		return continuousTargetMode(ctx.content.Targets[0], continuousEffects, duration, unsupported)
 	}
 	return unsupported()
+}
+
+// referencesAllSourceSelf reports whether every reference is the inherent source
+// self-reference a "This <permanent>" subject produces. The source boolean forms
+// (SetBasePTSource, BecomeColorSource, …) name the source directly, so this lone
+// self-reference is redundant with the boolean and resolves to the same source
+// permanent; an empty reference list also qualifies. Any other binding (a target,
+// event, or referenced object) means the subject is not the bare source and fails
+// the SourceForm gate.
+func referencesAllSourceSelf(references []compiler.CompiledReference) bool {
+	for _, reference := range references {
+		if reference.Binding != compiler.ReferenceBindingSource {
+			return false
+		}
+	}
+	return true
 }
 
 // continuousSourceMode builds an ApplyContinuous mode applying the given

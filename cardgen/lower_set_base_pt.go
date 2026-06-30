@@ -33,8 +33,7 @@ func lowerSetBasePTContent(ctx contentCtx) (game.AbilityContent, *shared.Diagnos
 		effect.Optional ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
-		len(ctx.content.Modes) != 0 ||
-		len(ctx.content.References) != 0 {
+		len(ctx.content.Modes) != 0 {
 		return unsupported()
 	}
 
