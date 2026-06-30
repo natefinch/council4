@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,456 of 32,501 cards eligible for paper support (50.6%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,478 of 32,501 cards eligible for paper support (50.7%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1247,6 +1247,7 @@ Council4 currently supports **16,456 of 32,501 cards eligible for paper support 
 - Benthic Criminologists
 - Benthic Djinn
 - Benthic Giant
+- Benthicore
 - Bequeathal
 - Bereavement
 - Beregond of the Guard
@@ -1535,6 +1536,7 @@ Council4 currently supports **16,456 of 32,501 cards eligible for paper support 
 - Bloodshed Fever
 - Bloodshot Cyclops
 - Bloodshot Trainee
+- Bloodsky Berserker
 - Bloodsoaked Altar
 - Bloodstained Mire
 - Bloodstoke Howler
@@ -1852,6 +1854,7 @@ Council4 currently supports **16,456 of 32,501 cards eligible for paper support 
 - Brion Stoutarm
 - Bristling Backwoods
 - Bristling Boar
+- Bristling Hydra
 - Bristly Bill, Spine Sower
 - Brittle Effigy
 - Broadcast Rambler
@@ -3864,6 +3867,7 @@ Council4 currently supports **16,456 of 32,501 cards eligible for paper support 
 - Drownyard Temple
 - Drudge Beetle
 - Drudge Reavers
+- Drudge Sentinel
 - Drudge Skeletons
 - Druid Lyrist
 - Druid of Horns
@@ -4683,6 +4687,7 @@ Council4 currently supports **16,456 of 32,501 cards eligible for paper support 
 - Fear of Isolation
 - Fear of Lost Teeth
 - Fear of Surveillance
+- Fearless Fledgling
 - Fearless Halberdier
 - Fearless Liberator
 - Fearless Pup
@@ -6013,6 +6018,7 @@ Council4 currently supports **16,456 of 32,501 cards eligible for paper support 
 - Graveyard Marshal
 - Gravitational Shift
 - Gravitic Punch
+- Gravity Well
 - Gravpack Monoist
 - Gray Merchant of Asphodel
 - Gray Ogre
@@ -6140,6 +6146,7 @@ Council4 currently supports **16,456 of 32,501 cards eligible for paper support 
 - Gruesome Realization
 - Gruesome Scourger
 - Grumgully, the Generous
+- Grunn, the Lonely King
 - Gruul Beastmaster
 - Gruul Cluestone
 - Gruul Guildgate
@@ -6225,6 +6232,7 @@ Council4 currently supports **16,456 of 32,501 cards eligible for paper support 
 - Hail of Arrows
 - Hailstorm Valkyrie
 - Hair-Strung Koto
+- Halana and Alena, Partners
 - Halberdier
 - Halfling
 - Halimar Depths
@@ -6995,6 +7003,7 @@ Council4 currently supports **16,456 of 32,501 cards eligible for paper support 
 - Infectious Inquiry
 - Infernal Grasp
 - Infernal Idol
+- Infernal Pet
 - Infernal Plunge
 - Infernal Rebirth
 - Infernal Scarring
@@ -9147,6 +9156,7 @@ Council4 currently supports **16,456 of 32,501 cards eligible for paper support 
 - Mudbutton Torchrunner
 - Mudflat Village
 - Mukotai Ambusher
+- Mukotai Soulripper
 - Mulch
 - Mulldrifter
 - Multani's Decree
@@ -9177,6 +9187,7 @@ Council4 currently supports **16,456 of 32,501 cards eligible for paper support 
 - Muse Drake
 - Muse's Encouragement
 - Museum Nightwatch
+- Mushroom Watchdogs
 - Mutable Explorer
 - Mutagen
 - Mutagenic Growth
@@ -10469,6 +10480,7 @@ Council4 currently supports **16,456 of 32,501 cards eligible for paper support 
 - Prismite
 - Prison Realm
 - Prison Sentence
+- Pristine Skywise
 - Pristine Talisman
 - Private Eye
 - Private Research
@@ -11995,6 +12007,7 @@ Council4 currently supports **16,456 of 32,501 cards eligible for paper support 
 - Season of Growth
 - Season of Renewal
 - Seasoned Consultant
+- Seasoned Hallowblade
 - Seasoned Marshal
 - Seasoned Pyromancer
 - Seat of the Synod
@@ -12481,6 +12494,7 @@ Council4 currently supports **16,456 of 32,501 cards eligible for paper support 
 - Silumgar Monument
 - Silumgar's Command
 - Silundi Vision // Silundi Isle
+- Silvar, Devourer of the Free
 - Silver Deputy
 - Silver Drake
 - Silver Erne
@@ -13943,6 +13957,7 @@ Council4 currently supports **16,456 of 32,501 cards eligible for paper support 
 - Syndicate Heavy
 - Syndicate Infiltrator
 - Syndicate Messenger
+- Syndicate Trafficker
 - Synth Infiltrator
 - Syphon Essence
 - Syphon Fuel
@@ -14015,6 +14030,7 @@ Council4 currently supports **16,456 of 32,501 cards eligible for paper support 
 - Talons of Wildwood
 - Talrand's Invocation
 - Talrand, Sky Summoner
+- Talruum Champion
 - Talruum Minotaur
 - Tamiyo's Epiphany
 - Tamiyo's Immobilizer
@@ -14929,6 +14945,7 @@ Council4 currently supports **16,456 of 32,501 cards eligible for paper support 
 - Twisted Landscape
 - Twisted Spider-Clone
 - Twitch
+- Two-Handed Axe // Sweeping Cleave
 - Two-Headed Cerberus
 - Two-Headed Hellkite
 - Two-Headed Hunter // Twice the Rage
@@ -14952,6 +14969,7 @@ Council4 currently supports **16,456 of 32,501 cards eligible for paper support 
 - Tyrranax
 - Tyrranax Atrocity
 - Tyrranax Rex
+- Tyvar Kell
 - Tyvar's Stand
 - Tyvar, the Pummeler
 - Ubul Sar Gatekeepers
@@ -15019,6 +15037,7 @@ Council4 currently supports **16,456 of 32,501 cards eligible for paper support 
 - Undercity Dire Rat
 - Undercity Eliminator
 - Undercity Informer
+- Undercity Necrolisk
 - Undercity Scavenger
 - Undercity Scrounger
 - Undercity Sewers
@@ -15509,6 +15528,7 @@ Council4 currently supports **16,456 of 32,501 cards eligible for paper support 
 - Vitaspore Thallid
 - Vithian Renegades
 - Vithian Stinger
+- Vito's Inquisitor
 - Vito, Thorn of the Dusk Rose
 - Vitu-Ghazi, the City-Tree
 - Vivid Crag
@@ -15759,6 +15779,7 @@ Council4 currently supports **16,456 of 32,501 cards eligible for paper support 
 - War-Name Aspirant
 - War-Spike Changeling
 - War-Torch Goblin
+- War-Trained Slasher
 - War-Wing Siren
 - Warbeast of Gorgoroth
 - Warbriar Blessing
@@ -15979,6 +16000,7 @@ Council4 currently supports **16,456 of 32,501 cards eligible for paper support 
 - Wiccan, Young Avenger
 - Wicked Reward
 - Wicked Visitor
+- Wicked Wolf
 - Wicker Witch
 - Wickerbough Elder
 - Wickersmith's Tools
