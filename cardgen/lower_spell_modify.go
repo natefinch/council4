@@ -1,6 +1,7 @@
 package cardgen
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
@@ -3024,7 +3025,11 @@ func spellBounceTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, boo
 		predicate.Controller = game.ControllerNotYou
 		selection.Controller = game.ControllerNotYou
 	default:
-		return game.TargetSpec{}, false
+		// ControllerKind is a closed const-iota enum whose only values
+		// (ControllerAny, ControllerYou, ControllerOpponent, ControllerNotYou)
+		// are all handled above; an unhandled value is an internal compiler bug,
+		// not an unsupported card.
+		panic(fmt.Sprintf("spellBounceTargetSpec: unhandled ControllerKind %v", selector.Controller))
 	}
 	spec := game.TargetSpec{
 		MinTargets: target.Cardinality.Min,
