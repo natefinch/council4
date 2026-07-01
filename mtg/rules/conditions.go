@@ -111,6 +111,8 @@ func aggregateValue(g *game.Game, ctx conditionContext, kind game.AggregateKind)
 			return 0, false
 		}
 		return cardInstanceCount(g, player.Hand.All()), true
+	default:
+		// AggregateNone carries no resolvable quantity; fail the comparison closed.
 	}
 	return 0, false
 }

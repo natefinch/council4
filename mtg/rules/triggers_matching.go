@@ -20,6 +20,8 @@ func (e *Engine) triggerTargets(g *game.Game, controller game.PlayerID, source *
 	switch result.kind {
 	case targetNoLegalChoices, targetInvalidSpec:
 		return nil, false
+	default:
+		// targetNoTargetsRequired and targetLegalChoicesFound proceed to choose.
 	}
 	choices := result.choices
 	if len(choices) == 1 {

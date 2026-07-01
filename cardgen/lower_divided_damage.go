@@ -1,6 +1,8 @@
 package cardgen
 
 import (
+	"fmt"
+
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
@@ -252,7 +254,9 @@ func dividedDamagePermanentSelection(selector compiler.CompiledSelector) (game.S
 	case compiler.ControllerNotYou:
 		selection.Controller = game.ControllerNotYou
 	default:
-		return game.Selection{}, false
+		// ControllerKind is a closed enum whose values are all handled above;
+		// an unhandled value is an internal bug, not an unsupported card.
+		panic(fmt.Sprintf("dividedDamagePermanentSelection: unhandled ControllerKind %v", selector.Controller))
 	}
 	return selection, true
 }

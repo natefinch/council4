@@ -1426,6 +1426,8 @@ func hasManaSpentToCastCondition(conditions []compiler.CompiledCondition) bool {
 		case compiler.ConditionPredicateColoredManaSpentToCastAtLeast,
 			compiler.ConditionPredicateSameColorManaSpentToCastAtLeast:
 			return true
+		default:
+			// Other predicates do not match; continue scanning.
 		}
 	}
 	return false

@@ -659,6 +659,8 @@ func lowerTriggeringEventQuantityAmount(ctx contentCtx, amount compiler.Compiled
 	switch ctx.triggerCardCountEvent {
 	case game.EventCardDrawn, game.EventCardDiscarded, game.EventCycled:
 		return game.DynamicAmount{Kind: game.DynamicAmountEventCardCount, Multiplier: multiplier}, true
+	default:
+		// Non-card-count trigger events fall through to the trigger-event switch.
 	}
 	switch ctx.triggerEvent {
 	case game.EventDamageDealt:

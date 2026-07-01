@@ -59,6 +59,9 @@ func (r Renderer) renderDamageRecipient(ctx *renderCtx, recipient game.DamageRec
 			return "game.PlayerGroupDamageRecipient(game.OpponentsReference())", nil
 		case game.PlayerGroupReferenceAllPlayers:
 			return "game.PlayerGroupDamageRecipient(game.AllPlayersReference())", nil
+		default:
+			// PlayerGroupReferenceNone is not a renderable group; fall through
+			// to the unsupported-recipient error.
 		}
 	}
 	return "", errors.New("render: unsupported damage recipient")

@@ -90,6 +90,8 @@ func expireConditionalControlDurations(g *game.Game) bool {
 				return true
 			}
 			return !permanentIsEnchanted(g, affected)
+		default:
+			// Other durations are not conditional-control durations.
 		}
 		return false
 	}
@@ -303,6 +305,8 @@ func delayedTriggerTimingForStepBoundary(events []game.Event) game.DelayedTrigge
 			return game.DelayedAtBeginningOfNextMainPhase
 		case game.StepEndOfCombat:
 			return game.DelayedAtEndOfCombat
+		default:
+			// Other steps do not schedule a delayed trigger; keep scanning.
 		}
 	}
 	return 0

@@ -1532,6 +1532,8 @@ func revealUntilPlayerSubject(
 		}
 		primitive.Player = game.TargetPlayerReference(0)
 		return []game.TargetSpec{targetSpec}, true
+	default:
+		// Other contexts are not supported player recipients; fail closed.
 	}
 	return nil, false
 }

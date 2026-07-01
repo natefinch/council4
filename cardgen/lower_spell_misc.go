@@ -106,6 +106,9 @@ func lowerFixedLifeSpell(
 					Primitive: groupPrimitiveFactory(amount, game.AllPlayersReference()),
 				}},
 			}.Ability(), nil
+		default:
+			// Non-"each player/opponent" contexts fall through to the
+			// single-recipient handling below.
 		}
 	}
 	playerRef := game.ControllerReference()
@@ -2013,6 +2016,9 @@ func lowerFixedDrawSpell(
 					Primitive: game.Draw{Amount: amount, PlayerGroup: game.AllPlayersReference()},
 				}},
 			}.Ability(), nil
+		default:
+			// Non-"each player/opponent" contexts fall through to the
+			// single-recipient handling below.
 		}
 	}
 	switch {
@@ -2140,6 +2146,8 @@ func referencedThatPlayerRef(target compiler.CompiledTarget) (game.PlayerReferen
 	switch target.Selector.Kind {
 	case compiler.SelectorPlayer, compiler.SelectorOpponent:
 		return game.TargetPlayerReference(0), true
+	default:
+		// Non-player selectors resolve to the target object's controller below.
 	}
 	object, ok := inheritedRemovalTargetObjectRef(target, 0)
 	if !ok {

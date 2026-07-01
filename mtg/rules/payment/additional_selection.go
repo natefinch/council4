@@ -195,6 +195,9 @@ func remainingGraveyardCostsPayable(s State, playerID game.PlayerID, remainingCo
 				sourceCardID,
 				sourceZone,
 			)
+		default:
+			// Only the selection-bearing additional cost kinds above carry card
+			// selection; other kinds need no handling here.
 		}
 	}
 	return true

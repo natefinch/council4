@@ -3630,6 +3630,9 @@ func lowerFixedCardCountPlayerSpell(
 					Primitive: groupPrimitiveFactory(amount, game.AllPlayersReference()),
 				}},
 			}.Ability(), nil
+		default:
+			// Non-"each player/opponent" contexts fall through to the
+			// single-recipient handling below.
 		}
 	}
 	switch {

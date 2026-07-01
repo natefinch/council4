@@ -1,6 +1,8 @@
 package cardgen
 
 import (
+	"fmt"
+
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/mtg/game"
@@ -90,7 +92,9 @@ func eventPermanentControllerOwnerRecipient(
 	case parser.DamageRecipientReferenceOwner:
 		return game.ObjectOwnerReference(object), true
 	default:
-		return game.PlayerReference{}, false
+		// Unreachable: the guard above already fail-closed any role other than
+		// controller or owner, so reaching here is an internal bug.
+		panic(fmt.Sprintf("eventPermanentControllerOwnerRecipient: role %v passed the controller/owner guard but is neither", role))
 	}
 }
 
