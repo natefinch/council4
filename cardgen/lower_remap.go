@@ -694,3 +694,47 @@ func sequenceClauseCategory(diagnostic *shared.Diagnostic) string {
 	}
 	return "structural — clause produced modal/shared/multi-mode content"
 }
+
+// appendClauseReason records one failing ordered-sequence clause. It wraps the
+// clause's blocker as an ordered-sequence category (preserving the exact primary
+// reason a first-failure bail used to return) and carries forward any Additional
+// reasons the clause itself collected (e.g. a modal clause blocked on several
+// modes), so completeness composes across nested fan-out.
+func appendClauseReason(reasons []shared.Diagnostic, ctx contentCtx, clause *shared.Diagnostic) []shared.Diagnostic {
+	reasons = append(reasons, *unsupportedEffectSequenceDiagnostic(ctx, sequenceClauseCategory(clause)))
+	if clause != nil {
+		reasons = append(reasons, clause.Additional...)
+	}
+	return reasons
+}
+
+// combineReasons folds a non-empty list of blocker reasons into a single primary
+// diagnostic carrying the rest as Additional. The first reason stays primary so
+// the card's headline blocker is exactly the one a first-failure bail reported;
+// the remaining distinct reasons ride along so the report lists every blocker.
+func combineReasons(reasons []shared.Diagnostic) *shared.Diagnostic {
+	deduped := dedupeReasons(reasons)
+	primary := deduped[0]
+	primary.Additional = deduped[1:]
+	return &primary
+}
+
+// dedupeReasons drops repeated blocker reasons (same summary and detail), keeping
+// first-seen order, so a construct blocked identically on several sub-parts reports
+// that blocker once.
+func dedupeReasons(reasons []shared.Diagnostic) []shared.Diagnostic {
+	deduped := make([]shared.Diagnostic, 0, len(reasons))
+	for _, reason := range reasons {
+		seen := false
+		for _, existing := range deduped {
+			if existing.Summary == reason.Summary && existing.Detail == reason.Detail {
+				seen = true
+				break
+			}
+		}
+		if !seen {
+			deduped = append(deduped, reason)
+		}
+	}
+	return deduped
+}

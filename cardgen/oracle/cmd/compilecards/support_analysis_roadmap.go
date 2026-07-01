@@ -28,8 +28,11 @@ type roadmapStep struct {
 // that — given the reasons already fixed — newly completes the most still-blocked
 // cards. It returns those fixes in priority order with marginal and cumulative
 // fully-unblocked counts, turning "how do we unblock the most cards at once?" into
-// a ranked to-do list. It uses the same per-card distinct-summary blocker sets as
-// analyzeSupport, so it shares that view's one-reason-per-ability granularity.
+// a ranked to-do list. Each ability's fan-out lowerers (ordered sequence, modal,
+// optional) now report every independent blocker they carry, so a card's distinct
+// summary set reflects all of its blockers rather than only the first encountered;
+// the marginal counts below therefore no longer overstate how many cards a single
+// fix unblocks.
 func analyzeUnblockRoadmap(output report) []roadmapStep {
 	type cardBlockers struct {
 		name      string
