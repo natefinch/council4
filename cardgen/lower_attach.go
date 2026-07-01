@@ -1,6 +1,8 @@
 package cardgen
 
 import (
+	"fmt"
+
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
@@ -24,9 +26,19 @@ func lowerAttachSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) 
 			"the executable source backend supports only \"attach it/that <Equipment> to target <permanent> you control\" attaching the entering or source permanent",
 		)
 	}
+	// lowerAttachSpell is reached only through the EffectAttach arm of
+	// lowerImmediateSingleEffectSpellTail, which lowerImmediateSingleEffectSpell
+	// dispatches solely in single-effect context (the len==1 gate at
+	// lower_spell.go:297, the delayed len==1 gate, RepeatBody==1, and
+	// contextForEffect's one-effect slice), so an effect count other than one is
+	// a dispatch bug rather than an unsupported card.
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf(
+			"lowerAttachSpell: reached with %d effects; single-effect dispatch guarantees exactly one",
+			len(ctx.content.Effects)))
+	}
 	effect := ctx.content.Effects[0]
 	if ctx.optional ||
-		len(ctx.content.Effects) != 1 ||
 		len(ctx.content.Targets) != 1 ||
 		len(ctx.content.Modes) != 0 ||
 		len(ctx.content.Conditions) != 0 ||

@@ -1,6 +1,8 @@
 package cardgen
 
 import (
+	"fmt"
+
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/mtg/game"
@@ -65,7 +67,10 @@ func lowerThatMuchLifeBackref(
 	case compiler.EffectLose:
 		primitive = game.LoseLife{Amount: amount, Player: player}
 	default:
-		return game.AbilityContent{}, false
+		panic(fmt.Sprintf(
+			"lowerThatMuchLifeBackref: effect.Kind %v is neither EffectGain nor EffectLose despite the earlier kind guard",
+			effect.Kind,
+		))
 	}
 	return game.Mode{
 		Sequence: []game.Instruction{{

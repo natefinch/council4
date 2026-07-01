@@ -1,6 +1,8 @@
 package cardgen
 
 import (
+	"fmt"
+
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/mtg/game"
@@ -23,9 +25,13 @@ import (
 // context, a target it cannot drop, a selector it cannot project, or references
 // beyond the distributive "that player" anchor and the source duration anchor.
 func lowerExileForEachPlayerUntilLeavesContent(ctx contentCtx) (game.AbilityContent, bool) {
+	// lowerContent calls this only from its len(Effects)==1 block, so a different
+	// effect count is a dispatch bug rather than an unsupported card.
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf("lowerExileForEachPlayerUntilLeavesContent: reached with %d effects; lowerContent dispatches here only for single-effect content", len(ctx.content.Effects)))
+	}
 	if ctx.enclosingKind != compiler.AbilityChapter ||
 		ctx.optional ||
-		len(ctx.content.Effects) != 1 ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 {

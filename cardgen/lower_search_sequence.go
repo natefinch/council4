@@ -1,6 +1,7 @@
 package cardgen
 
 import (
+	"fmt"
 	"slices"
 
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
@@ -48,8 +49,13 @@ func lowerSearchThenTrailingSequence(
 		return game.AbilityContent{}, false
 	}
 	search := ctx.content.Effects[0]
-	if search.Kind != compiler.EffectSearch ||
-		search.Context != parser.EffectContextController ||
+	// lowerContent dispatches here only inside its
+	// Effects[0].Kind == EffectSearch block, so a different lead kind is a
+	// dispatch bug rather than an unsupported card.
+	if search.Kind != compiler.EffectSearch {
+		panic(fmt.Sprintf("lowerSearchThenTrailingSequence: reached with lead effect kind %v; lowerContent dispatches here only for an EffectSearch lead", search.Kind))
+	}
+	if search.Context != parser.EffectContextController ||
 		search.Optional ||
 		search.Negated ||
 		search.SearchControl != parser.SearchControlRiderNone {

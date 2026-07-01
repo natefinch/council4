@@ -1,6 +1,7 @@
 package cardgen
 
 import (
+	"fmt"
 	"slices"
 
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
@@ -603,8 +604,14 @@ func lowerChooseNewTargetsSpell(ctx contentCtx) (game.AbilityContent, *shared.Di
 		return unsupported()
 	}
 	effect := ctx.content.Effects[0]
-	if effect.Kind != compiler.EffectChooseNewTargets ||
-		!effect.Exact ||
+	// Invariant: both callers guarantee Effects[0].Kind here — the
+	// EffectChooseNewTargets dispatch arm in lowerImmediateSingleEffectSpellTail
+	// and lowerOptionalChooseNewTargets, which returns early unless
+	// Effects[0].Kind == EffectChooseNewTargets before delegating here.
+	if effect.Kind != compiler.EffectChooseNewTargets {
+		panic(fmt.Sprintf("lowerChooseNewTargetsSpell: dispatched with effect kind %v, want EffectChooseNewTargets", effect.Kind))
+	}
+	if !effect.Exact ||
 		effect.Negated ||
 		effect.Context != parser.EffectContextController ||
 		effect.Amount.Known ||
@@ -665,8 +672,12 @@ func lowerChooseCreatureTypeSpell(ctx contentCtx) (game.AbilityContent, *shared.
 		return unsupported()
 	}
 	effect := ctx.content.Effects[0]
-	if effect.Kind != compiler.EffectChooseCreatureType ||
-		!effect.Exact ||
+	// Invariant: the sole caller is lowerImmediateSingleEffectSpellTail's
+	// EffectChooseCreatureType dispatch arm, which guarantees Effects[0].Kind.
+	if effect.Kind != compiler.EffectChooseCreatureType {
+		panic(fmt.Sprintf("lowerChooseCreatureTypeSpell: dispatched with effect kind %v, want EffectChooseCreatureType", effect.Kind))
+	}
+	if !effect.Exact ||
 		effect.Negated ||
 		effect.Optional ||
 		effect.DelayedTiming != 0 ||
@@ -710,8 +721,12 @@ func lowerCopyStackObjectSpell(ctx contentCtx) (game.AbilityContent, *shared.Dia
 		return unsupported()
 	}
 	effect := ctx.content.Effects[0]
-	if effect.Kind != compiler.EffectCopyStackObject ||
-		!effect.Exact ||
+	// Invariant: the sole caller is lowerImmediateSingleEffectSpellTail's
+	// EffectCopyStackObject dispatch arm, which guarantees Effects[0].Kind.
+	if effect.Kind != compiler.EffectCopyStackObject {
+		panic(fmt.Sprintf("lowerCopyStackObjectSpell: dispatched with effect kind %v, want EffectCopyStackObject", effect.Kind))
+	}
+	if !effect.Exact ||
 		effect.Negated ||
 		effect.Optional ||
 		ctx.optional ||

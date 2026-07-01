@@ -1,7 +1,6 @@
 package cardgen
 
 import (
-	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
@@ -22,6 +21,7 @@ import (
 // condition, keyword, or mode).
 func lowerAttackedDefenderDamageSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
+	assertUndividedRecipientDamageDispatch(ctx, parser.DamageRecipientReferenceAttackedDefender)
 	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
@@ -29,12 +29,8 @@ func lowerAttackedDefenderDamageSpell(ctx contentCtx) (game.AbilityContent, *sha
 			"the executable source backend supports only exact fixed, X, or source-power damage to the attacked player or planeswalker",
 		)
 	}
-	if len(ctx.content.Effects) != 1 ||
-		effect.Kind != compiler.EffectDealDamage ||
-		effect.DamageRecipient.Reference != parser.DamageRecipientReferenceAttackedDefender ||
-		!effect.Exact ||
+	if !effect.Exact ||
 		effect.Negated ||
-		effect.Divided ||
 		len(ctx.content.Targets) != 0 ||
 		len(effect.DamageRecipient.GroupSelectors) != 0 ||
 		len(ctx.content.Conditions) != 0 ||

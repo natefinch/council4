@@ -1,6 +1,8 @@
 package cardgen
 
 import (
+	"fmt"
+
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/mtg/game"
@@ -50,9 +52,17 @@ func lowerSequentialReanimationTypeColorGrant(
 	ctx contentCtx,
 	sequence []game.Instruction,
 ) (game.Primitive, game.AbilityContent, bool) {
+	// This lowerer runs per sequence clause on the single-effect context that
+	// contextForEffect produces (it narrows content.Effects to the one clause
+	// effect), so an effect count other than one is a dispatch bug rather than an
+	// unsupported card.
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf(
+			"lowerSequentialReanimationTypeColorGrant: reached with %d effects; contextForEffect narrows each clause to a single effect",
+			len(ctx.content.Effects)))
+	}
 	if effectIndex == 0 ||
 		len(sequence) != effectIndex ||
-		len(ctx.content.Effects) != 1 ||
 		ctx.optional ||
 		!isSequentialReanimationTypeColorGrantEffect(&ctx.content.Effects[0]) {
 		return nil, game.AbilityContent{}, false

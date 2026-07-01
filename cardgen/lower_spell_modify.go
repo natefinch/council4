@@ -1,6 +1,7 @@
 package cardgen
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
@@ -20,12 +21,9 @@ import (
 // It fails closed (ok=false) for every other shape, leaving the standard damage
 // paths to handle their own effects.
 func lowerEachSourceDamageSpell(ctx contentCtx) (game.AbilityContent, bool) {
-	if len(ctx.content.Effects) != 1 {
-		return game.AbilityContent{}, false
-	}
+	assertDealDamageDispatch(ctx, false)
 	effect := ctx.content.Effects[0]
-	if effect.Kind != compiler.EffectDealDamage ||
-		effect.DamageRecipient.EachSourceRole == parser.DamageRecipientReferenceNone ||
+	if effect.DamageRecipient.EachSourceRole == parser.DamageRecipientReferenceNone ||
 		effect.DamageRecipient.EachSourceRole == parser.DamageRecipientReferenceItself ||
 		effect.Negated ||
 		len(ctx.content.Targets) != 0 ||
@@ -63,12 +61,9 @@ func lowerEachSourceDamageSpell(ctx contentCtx) (game.AbilityContent, bool) {
 // every other recipient role, amount, or shape, leaving the fixed/X and source-
 // power damage paths unchanged.
 func lowerEachSelfPowerDamageSpell(ctx contentCtx) (game.AbilityContent, bool) {
-	if len(ctx.content.Effects) != 1 {
-		return game.AbilityContent{}, false
-	}
+	assertDealDamageDispatch(ctx, false)
 	effect := ctx.content.Effects[0]
-	if effect.Kind != compiler.EffectDealDamage ||
-		effect.DamageRecipient.EachSourceRole != parser.DamageRecipientReferenceItself ||
+	if effect.DamageRecipient.EachSourceRole != parser.DamageRecipientReferenceItself ||
 		effect.Amount.DynamicKind != compiler.DynamicAmountSourcePower ||
 		effect.Negated ||
 		effect.DamageRecipient.EachSourceGroup.Kind != compiler.SelectorCreature ||
@@ -91,11 +86,10 @@ func lowerGroupDamageSpell(
 	_ string,
 	ctx contentCtx,
 ) (game.AbilityContent, *shared.Diagnostic) {
+	assertDealDamageDispatch(ctx, false)
 	effect := ctx.content.Effects[0]
 	amount, amountOK := groupDamageAmountForContext(ctx, effect.Amount)
-	if len(ctx.content.Effects) != 1 ||
-		effect.Kind != compiler.EffectDealDamage ||
-		!amountOK ||
+	if !amountOK ||
 		effect.Negated ||
 		len(ctx.content.Targets) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
@@ -565,6 +559,7 @@ func lowerTwoTargetDamageSpell(
 	_ string,
 	ctx contentCtx,
 ) (game.AbilityContent, *shared.Diagnostic) {
+	assertDealDamageDispatch(ctx, false)
 	effect := ctx.content.Effects[0]
 	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
 		return game.AbilityContent{}, contentDiagnostic(
@@ -574,15 +569,12 @@ func lowerTwoTargetDamageSpell(
 		)
 	}
 	secondRider, hasSecondRider := parser.SecondTargetDamageRider(effect.DamageRiders)
-	if len(ctx.content.Effects) != 1 ||
-		effect.Kind != compiler.EffectDealDamage ||
-		!effect.Exact ||
+	if !effect.Exact ||
 		!hasSecondRider ||
 		(effect.Context != parser.EffectContextSource &&
 			effect.Context != parser.EffectContextReferencedObject &&
 			effect.Context != parser.EffectContextPriorSubject) ||
 		effect.Negated ||
-		effect.Divided ||
 		len(ctx.content.Targets) != 2 ||
 		len(ctx.content.Conditions) != 0 ||
 		len(abilityKeywordsExcludingSelectorPredicates(ctx.content)) != 0 ||
@@ -790,6 +782,7 @@ func referencedDamageRecipientPlayer(
 // recipient, a dynamic count amount, any target, condition, keyword, or mode).
 func lowerControllerDamageSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
+	assertUndividedRecipientDamageDispatch(ctx, parser.DamageRecipientReferenceYou)
 	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
@@ -797,12 +790,8 @@ func lowerControllerDamageSpell(ctx contentCtx) (game.AbilityContent, *shared.Di
 			"the executable source backend supports only exact fixed or X damage to you",
 		)
 	}
-	if len(ctx.content.Effects) != 1 ||
-		effect.Kind != compiler.EffectDealDamage ||
-		effect.DamageRecipient.Reference != parser.DamageRecipientReferenceYou ||
-		!effect.Exact ||
+	if !effect.Exact ||
 		effect.Negated ||
-		effect.Divided ||
 		len(ctx.content.Targets) != 0 ||
 		len(effect.DamageRecipient.GroupSelectors) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
@@ -845,6 +834,7 @@ func lowerControllerDamageSpell(ctx contentCtx) (game.AbilityContent, *shared.Di
 // any target, recipient selector, condition, keyword, or mode).
 func lowerEventPlayerDamageSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
+	assertUndividedRecipientDamageDispatch(ctx, parser.DamageRecipientReferenceThatPlayer)
 	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
@@ -852,12 +842,8 @@ func lowerEventPlayerDamageSpell(ctx contentCtx) (game.AbilityContent, *shared.D
 			"the executable source backend supports only exact fixed, X, or source-power damage to that player",
 		)
 	}
-	if len(ctx.content.Effects) != 1 ||
-		effect.Kind != compiler.EffectDealDamage ||
-		effect.DamageRecipient.Reference != parser.DamageRecipientReferenceThatPlayer ||
-		!effect.Exact ||
+	if !effect.Exact ||
 		effect.Negated ||
-		effect.Divided ||
 		len(ctx.content.Targets) != 0 ||
 		len(effect.DamageRecipient.GroupSelectors) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
@@ -957,6 +943,7 @@ func damageReferencesEventPlayer(references []compiler.CompiledReference) bool {
 // mode).
 func lowerEventRelatedPermanentDamageSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
+	assertUndividedRecipientDamageDispatch(ctx, parser.DamageRecipientReferenceThatCreature)
 	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
@@ -964,12 +951,8 @@ func lowerEventRelatedPermanentDamageSpell(ctx contentCtx) (game.AbilityContent,
 			"the executable source backend supports only exact fixed, X, or source-power damage to that creature",
 		)
 	}
-	if len(ctx.content.Effects) != 1 ||
-		effect.Kind != compiler.EffectDealDamage ||
-		effect.DamageRecipient.Reference != parser.DamageRecipientReferenceThatCreature ||
-		!effect.Exact ||
+	if !effect.Exact ||
 		effect.Negated ||
-		effect.Divided ||
 		len(ctx.content.Targets) != 0 ||
 		len(effect.DamageRecipient.GroupSelectors) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
@@ -1059,12 +1042,9 @@ func inheritedTargetSubjectReference(reference compiler.CompiledReference) bool 
 // This handles only the two-target inherited shape and fails closed (ok=false)
 // otherwise, leaving lowerFixedDamageSpell's single-target form byte-identical.
 func lowerInheritedPowerDamageSpell(ctx contentCtx) (game.AbilityContent, bool) {
-	if len(ctx.content.Effects) != 1 {
-		return game.AbilityContent{}, false
-	}
+	assertDealDamageDispatch(ctx, false)
 	effect := ctx.content.Effects[0]
-	if effect.Kind != compiler.EffectDealDamage ||
-		!effect.Exact ||
+	if !effect.Exact ||
 		effect.Negated ||
 		effect.Context != parser.EffectContextReferencedObject ||
 		effect.Amount.DynamicKind != compiler.DynamicAmountSourcePower {
@@ -1139,12 +1119,9 @@ func lowerInheritedPowerDamageSpell(ctx contentCtx) (game.AbilityContent, bool) 
 // It fails closed (ok=false) for every other shape, leaving lowerFixedDamageSpell
 // and its diagnostic unchanged.
 func lowerSourcePowerDamageSpell(ctx contentCtx) (game.AbilityContent, bool) {
-	if len(ctx.content.Effects) != 1 {
-		return game.AbilityContent{}, false
-	}
+	assertDealDamageDispatch(ctx, false)
 	effect := ctx.content.Effects[0]
-	if effect.Kind != compiler.EffectDealDamage ||
-		!effect.Exact ||
+	if !effect.Exact ||
 		effect.Negated ||
 		effect.Context != parser.EffectContextTarget ||
 		effect.Amount.DynamicKind != compiler.DynamicAmountSourcePower ||
@@ -1247,12 +1224,9 @@ func lowerSourcePowerDamageSpell(ctx contentCtx) (game.AbilityContent, bool) {
 // closed (ok=false) for every other shape, leaving the single-target source-power
 // and group-damage paths unchanged.
 func lowerSourcePowerGroupDamageSpell(ctx contentCtx) (game.AbilityContent, bool) {
-	if len(ctx.content.Effects) != 1 {
-		return game.AbilityContent{}, false
-	}
+	assertDealDamageDispatch(ctx, false)
 	effect := ctx.content.Effects[0]
-	if effect.Kind != compiler.EffectDealDamage ||
-		!effect.Exact ||
+	if !effect.Exact ||
 		effect.Negated ||
 		effect.Context != parser.EffectContextTarget ||
 		effect.Amount.DynamicKind != compiler.DynamicAmountSourcePower ||
@@ -1314,12 +1288,9 @@ func lowerSourcePowerGroupDamageSpell(ctx contentCtx) (game.AbilityContent, bool
 // closed (ok=false) for every other shape, leaving the two-target inherited and
 // dual-recipient source-power paths unchanged.
 func lowerInheritedPowerGroupDamageSpell(ctx contentCtx) (game.AbilityContent, bool) {
-	if len(ctx.content.Effects) != 1 {
-		return game.AbilityContent{}, false
-	}
+	assertDealDamageDispatch(ctx, false)
 	effect := ctx.content.Effects[0]
-	if effect.Kind != compiler.EffectDealDamage ||
-		!effect.Exact ||
+	if !effect.Exact ||
 		effect.Negated ||
 		effect.Context != parser.EffectContextReferencedObject ||
 		effect.Amount.DynamicKind != compiler.DynamicAmountSourcePower ||
@@ -1384,12 +1355,9 @@ func lowerInheritedPowerGroupDamageSpell(ctx contentCtx) (game.AbilityContent, b
 // source permanent). It fails closed (ok=false) for every other shape, leaving
 // the fixed/X group-damage and single-target source-power paths unchanged.
 func lowerEventPowerGroupDamageSpell(ctx contentCtx) (game.AbilityContent, bool) {
-	if len(ctx.content.Effects) != 1 {
-		return game.AbilityContent{}, false
-	}
+	assertDealDamageDispatch(ctx, false)
 	effect := ctx.content.Effects[0]
-	if effect.Kind != compiler.EffectDealDamage ||
-		!effect.Exact ||
+	if !effect.Exact ||
 		effect.Negated ||
 		(effect.Amount.DynamicKind != compiler.DynamicAmountSourcePower &&
 			effect.Amount.DynamicKind != compiler.DynamicAmountSourceToughness) ||
@@ -1447,15 +1415,14 @@ func lowerEventPowerGroupDamageSpell(ctx contentCtx) (game.AbilityContent, bool)
 // every other dynamic amount form, divided damage, riders, or any other selector
 // so the single-target path and its diagnostic stay unchanged.
 func lowerEachOfTargetsDamageSpell(ctx contentCtx) (game.AbilityContent, bool) {
-	if len(ctx.content.Effects) != 1 || len(ctx.content.Targets) != 1 {
+	assertDealDamageDispatch(ctx, false)
+	if len(ctx.content.Targets) != 1 {
 		return game.AbilityContent{}, false
 	}
 	effect := ctx.content.Effects[0]
 	amount, amountOK := eachOfDamageAmount(effect.Amount)
-	if effect.Kind != compiler.EffectDealDamage ||
-		!effect.Exact ||
+	if !effect.Exact ||
 		effect.Negated ||
-		effect.Divided ||
 		!amountOK ||
 		effect.DamageRecipient.Reference != parser.DamageRecipientReferenceNone ||
 		(effect.Context != parser.EffectContextSource &&
@@ -3058,7 +3025,11 @@ func spellBounceTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, boo
 		predicate.Controller = game.ControllerNotYou
 		selection.Controller = game.ControllerNotYou
 	default:
-		return game.TargetSpec{}, false
+		// ControllerKind is a closed const-iota enum whose only values
+		// (ControllerAny, ControllerYou, ControllerOpponent, ControllerNotYou)
+		// are all handled above; an unhandled value is an internal compiler bug,
+		// not an unsupported card.
+		panic(fmt.Sprintf("spellBounceTargetSpec: unhandled ControllerKind %v", selector.Controller))
 	}
 	spec := game.TargetSpec{
 		MinTargets: target.Cardinality.Min,
@@ -3664,6 +3635,9 @@ func lowerFixedCardCountPlayerSpell(
 					Primitive: groupPrimitiveFactory(amount, game.AllPlayersReference()),
 				}},
 			}.Ability(), nil
+		default:
+			// Non-"each player/opponent" contexts fall through to the
+			// single-recipient handling below.
 		}
 	}
 	switch {

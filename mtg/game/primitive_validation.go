@@ -123,6 +123,8 @@ func validateObjectReferenceTargetBounds(ref ObjectReference, targets []TargetSp
 		return validateTargetReference(ref.TargetIndex(), targets, checkTargets)
 	case ObjectReferenceAllTargetPermanents:
 		return validateTargetSpecReference(ref.TargetIndex(), targets, checkTargets)
+	default:
+		// Non-target-addressed references have no target bounds to check.
 	}
 	return nil
 }
@@ -150,6 +152,8 @@ func validatePlayerReference(ref PlayerReference, targets []TargetSpec, checkTar
 	case PlayerReferenceObjectController, PlayerReferenceObjectOwner:
 		object, _ := ref.Object()
 		return validateObjectReferenceTargetBounds(object, targets, checkTargets)
+	default:
+		// Non-target-addressed player references have no target bounds to check.
 	}
 	return nil
 }

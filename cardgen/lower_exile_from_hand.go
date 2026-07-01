@@ -1,6 +1,8 @@
 package cardgen
 
 import (
+	"fmt"
+
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/mtg/game"
@@ -22,9 +24,13 @@ import (
 // falls through to the generic exile path's diagnostic rather than lowering to a
 // silently-wrong instruction.
 func lowerExileFromHandContent(ctx contentCtx) (game.AbilityContent, bool) {
+	// lowerContent calls this only from its len(Effects)==1 block, so a different
+	// effect count is a dispatch bug rather than an unsupported card.
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf("lowerExileFromHandContent: reached with %d effects; lowerContent dispatches here only for single-effect content", len(ctx.content.Effects)))
+	}
 	if ctx.optional ||
 		len(ctx.content.Modes) != 0 ||
-		len(ctx.content.Effects) != 1 ||
 		len(ctx.content.Targets) != 0 ||
 		len(ctx.content.References) != 0 ||
 		ctx.content.Unconsumed() {
