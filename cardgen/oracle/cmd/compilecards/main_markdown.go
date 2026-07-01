@@ -159,10 +159,46 @@ func writeUnsupportedReasonsMarkdown(path string, output report, results []resul
 			strings.Join(summaries, "; "),
 		)
 	}
+	writeUnblockRoadmap(&builder, output)
 	writeOrderedSequenceCategories(&builder, output)
 	writeConditionRecognitionBacklog(&builder, output)
 	writeEnvelopeGapBacklog(&builder, output, results)
 	return writeDocumentationFile(path, builder.String())
+}
+
+// writeUnblockRoadmap renders the greedy set-cover priority of fixes: the reasons
+// that, applied in order, fully unblock the most cards. It is the direct answer to
+// "how do we unblock the most cards at once?" — because a card is generated only
+// when every one of its distinct diagnostic reasons is resolved.
+func writeUnblockRoadmap(builder *strings.Builder, output report) {
+	steps := analyzeUnblockRoadmap(output)
+	if len(steps) == 0 {
+		return
+	}
+	_, _ = builder.WriteString("\n## Unblock roadmap\n\n")
+	_, _ = builder.WriteString(
+		"Greedy set-cover priority: each step fixes the reason that — given the reasons already " +
+			"fixed in the steps above it — newly fully unblocks the most still-blocked cards. " +
+			"Cumulative is the running total of cards fully unblocked. Lowering records one reason " +
+			"per ability but short-circuits within a single ability, so these are an optimistic " +
+			"estimate: fixing a reason can reveal another blocker in the same ability.\n\n",
+	)
+	_, _ = builder.WriteString(
+		"| Step | Fix this reason | Capability | Newly unblocked | Cumulative | Sample cards |\n",
+	)
+	_, _ = builder.WriteString("| ---: | --- | --- | ---: | ---: | --- |\n")
+	for index, step := range steps {
+		_, _ = fmt.Fprintf(
+			builder,
+			"| %d | %s | %s | %s | %s | %s |\n",
+			index+1,
+			markdownTableCell(step.summary),
+			step.capability,
+			formatCount(step.newlyUnblocked),
+			formatCount(step.cumulativeUnblocked),
+			markdownTableCell(strings.Join(step.sampleCards, ", ")),
+		)
+	}
 }
 
 // writeOrderedSequenceCategories renders the sub-category breakdown of the
