@@ -1,6 +1,7 @@
 package cardgen
 
 import (
+	"fmt"
 	"slices"
 	"strings"
 
@@ -323,8 +324,19 @@ func lowerMassReanimationExchangeSpell(ctx contentCtx) (game.AbilityContent, *sh
 		"unsupported mass reanimation exchange",
 		"the executable source backend supports only the symmetric exile-sacrifice-return reanimation of one creature or artifact card type",
 	)
-	if len(ctx.content.Effects) != 1 ||
-		len(ctx.content.Targets) != 0 ||
+	// Invariant: dispatched only from lowerImmediateSingleEffectSpellTail's
+	// EffectMassReanimationExchange arm, reached exclusively through
+	// lowerImmediateSingleEffectSpell, whose every caller narrows the content to
+	// a single effect (the len==1 gate before lowerSingleEffectSpell,
+	// RepeatBody==1 in lower_repeat.go, and contextForEffect's one-effect slice
+	// for control sequences), so any other effect count here is impossible.
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf(
+			"lowerMassReanimationExchangeSpell: expected exactly one effect, got %d",
+			len(ctx.content.Effects),
+		))
+	}
+	if len(ctx.content.Targets) != 0 ||
 		len(ctx.content.Modes) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 {
