@@ -129,6 +129,26 @@ func TestLowerSetBasePTActivatedTargetFixed(t *testing.T) {
 	)
 }
 
+// TestLowerSetBasePTSourceFixed covers the source form "This creature has base
+// power and toughness N/N until end of turn." (Marsh Flitter). The "This
+// creature" subject carries the inherent source self-reference, which must not
+// block the source-form lowering.
+func TestLowerSetBasePTSourceFixed(t *testing.T) {
+	source := generateSetBasePTSource(t, &ScryfallCard{
+		Name:       "Marsh Flitter",
+		Layout:     "normal",
+		TypeLine:   "Creature — Faerie Goblin",
+		ManaCost:   "{3}{B}",
+		OracleText: "Sacrifice a Goblin: This creature has base power and toughness 3/3 until end of turn.",
+	}, "m")
+	assertSourceContains(t, source,
+		"game.LayerPowerToughnessSet,",
+		"Object: opt.Val(game.SourcePermanentReference()),",
+		"SetPower:     opt.Val(game.PT{Value: 3}),",
+		"SetToughness: opt.Val(game.PT{Value: 3}),",
+	)
+}
+
 // TestSetBasePTFailsClosedOnUnsupportedRider confirms a base power/toughness set
 // carrying an extra keyword rider stays unsupported (fail closed) rather than
 // silently dropping the keyword.
