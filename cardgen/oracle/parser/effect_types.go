@@ -2463,7 +2463,25 @@ type EffectSyntax struct {
 	Targets                             []TargetSyntax          `json:",omitempty"`
 	SubjectTargets                      []TargetSyntax          `json:",omitempty"`
 	Payment                             EffectPaymentSyntax     `json:",omitzero"`
-	Exact                               bool                    `json:",omitempty"`
+	// Exact reports that this effect's typed fields, on their own, fully and
+	// losslessly reconstruct its Oracle wording: the parser sets it true only when
+	// a byte-exact recognizer (exactEffectSyntax) rebuilds the effect's clause from
+	// its typed fields and that reconstruction matches the source tokens
+	// case-insensitively (see exactEffectClauseText). A false value means no single
+	// exact recognizer reproduced the whole clause — the effect kind was recognized
+	// but some residual wording (a rider, qualifier, condition, or unusual
+	// phrasing) was not folded into an exact form.
+	//
+	// Exact is an input to the text-blind consumers (the compiler and lowering
+	// never read raw Oracle text), not a hard pre-filter. Most lowering paths
+	// require it and fail closed, but some accept a non-exact effect when the
+	// residual wording is captured by a separately-modeled typed rider or amount
+	// they fold in — for example a graveyard return that reports inexact only
+	// because of a modeled "with a +1/+1 counter on it" entry rider. Because the
+	// requirement differs per path, exactness is checked in the lowerers rather
+	// than pre-filtered, and !Exact does not by itself mean the effect cannot be
+	// lowered.
+	Exact bool `json:",omitempty"`
 	// KeywordGrantChoice marks an EffectGain keyword grant whose keyword list is a
 	// disjunction ("gains banding, first strike, or trample") rather than a
 	// conjunction. The disjunction means the controller chooses exactly one of the
