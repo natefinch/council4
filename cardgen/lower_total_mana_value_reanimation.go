@@ -1,6 +1,8 @@
 package cardgen
 
 import (
+	"fmt"
+
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/compare"
@@ -23,18 +25,30 @@ import (
 // non-"or less" total comparison, an unknown or non-positive count, or a
 // selector qualifier the chosen-card selection cannot express.
 func lowerTotalManaValueGraveyardReanimation(ctx contentCtx) (game.AbilityContent, bool) {
+	// lowerReturnSpell — this function's only caller — is reached solely through
+	// the EffectReturn arm of lowerImmediateSingleEffectSpell, whose content is
+	// always single-effect, so an effect count other than one or an effect kind
+	// other than EffectReturn is a dispatch bug rather than an unsupported card.
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf(
+			"lowerTotalManaValueGraveyardReanimation: reached with %d effects; lowerReturnSpell dispatches only single-effect content",
+			len(ctx.content.Effects)))
+	}
 	if ctx.optional ||
 		len(ctx.content.Targets) != 0 ||
 		len(ctx.content.References) != 0 ||
-		len(ctx.content.Effects) != 1 ||
 		len(ctx.content.Modes) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 {
 		return game.AbilityContent{}, false
 	}
 	effect := ctx.content.Effects[0]
-	if effect.Kind != compiler.EffectReturn ||
-		effect.Negated ||
+	if effect.Kind != compiler.EffectReturn {
+		panic(fmt.Sprintf(
+			"lowerTotalManaValueGraveyardReanimation: reached with effect kind %v; lowerReturnSpell dispatches only EffectReturn content",
+			effect.Kind))
+	}
+	if effect.Negated ||
 		effect.Optional ||
 		effect.DelayedTiming != 0 ||
 		effect.Duration != compiler.DurationNone ||
