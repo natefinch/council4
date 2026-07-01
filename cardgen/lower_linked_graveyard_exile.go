@@ -1,6 +1,8 @@
 package cardgen
 
 import (
+	"fmt"
+
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/mtg/game"
@@ -31,17 +33,24 @@ const exiledWithSourceKey = game.LinkedKey("exiled-with-source")
 // wording falls through to the generic exile path's diagnostic rather than
 // lowering to a silently-wrong instruction.
 func lowerLinkedAnyGraveyardChoiceExile(ctx contentCtx) (game.AbilityContent, bool) {
+	// lowerFixedExileSpell reaches this only through lowerImmediateSingleEffectSpell's
+	// EffectExile arm, which guarantees single-effect content whose sole effect is an
+	// EffectExile; a different count or kind is a dispatch bug, not an unsupported card.
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf("lowerLinkedAnyGraveyardChoiceExile: reached with %d effects; the EffectExile dispatch is single-effect", len(ctx.content.Effects)))
+	}
 	if len(ctx.content.Targets) != 0 ||
 		len(ctx.content.References) != 0 ||
-		len(ctx.content.Effects) != 1 ||
 		len(ctx.content.Modes) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 {
 		return game.AbilityContent{}, false
 	}
 	effect := ctx.content.Effects[0]
-	if effect.Kind != compiler.EffectExile ||
-		effect.Negated ||
+	if effect.Kind != compiler.EffectExile {
+		panic(fmt.Sprintf("lowerLinkedAnyGraveyardChoiceExile: reached with effect kind %v; the EffectExile dispatch guarantees EffectExile", effect.Kind))
+	}
+	if effect.Negated ||
 		effect.Divided ||
 		effect.DelayedTiming != 0 ||
 		effect.Duration != compiler.DurationNone ||

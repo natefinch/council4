@@ -1,6 +1,8 @@
 package cardgen
 
 import (
+	"fmt"
+
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/mtg/game"
@@ -27,8 +29,12 @@ import (
 // a non-exile or non-controller effect, more than one back-reference, or a
 // condition that is not a supported effect-gate condition.
 func lowerTrailingBackReferenceExile(ctx contentCtx) (game.AbilityContent, bool) {
+	// lowerContent calls this only from its len(Effects)==1 block, so a different
+	// effect count is a dispatch bug rather than an unsupported card.
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf("lowerTrailingBackReferenceExile: reached with %d effects; lowerContent dispatches here only for single-effect content", len(ctx.content.Effects)))
+	}
 	if ctx.enclosingKind != compiler.AbilitySpell ||
-		len(ctx.content.Effects) != 1 ||
 		len(ctx.content.Targets) != 0 ||
 		len(ctx.content.Modes) != 0 ||
 		len(ctx.content.Keywords) != 0 ||

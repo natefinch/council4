@@ -1,6 +1,8 @@
 package cardgen
 
 import (
+	"fmt"
+
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/mtg/game"
@@ -25,8 +27,12 @@ const exileHandReturnKey = game.LinkedKey("exile-hand-return")
 // reference, condition, mode, or keyword rider, an optional or negated effect,
 // or a non-controller context, so an unmodeled wording fails closed.
 func lowerExileEntireHandContent(ctx contentCtx) (game.AbilityContent, bool) {
+	// lowerContent calls this only from its len(Effects)==1 block, so a different
+	// effect count is a dispatch bug rather than an unsupported card.
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf("lowerExileEntireHandContent: reached with %d effects; lowerContent dispatches here only for single-effect content", len(ctx.content.Effects)))
+	}
 	if ctx.optional ||
-		len(ctx.content.Effects) != 1 ||
 		len(ctx.content.Targets) != 0 ||
 		len(ctx.content.References) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
@@ -62,8 +68,12 @@ func lowerExileEntireHandContent(ctx contentCtx) (game.AbilityContent, bool) {
 // condition, mode, or keyword rider, an optional or negated effect, or a
 // non-controller context, so an unmodeled wording fails closed.
 func lowerReturnExiledCardsToHandContent(ctx contentCtx) (game.AbilityContent, bool) {
+	// lowerContent calls this only from its len(Effects)==1 block, so a different
+	// effect count is a dispatch bug rather than an unsupported card.
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf("lowerReturnExiledCardsToHandContent: reached with %d effects; lowerContent dispatches here only for single-effect content", len(ctx.content.Effects)))
+	}
 	if ctx.optional ||
-		len(ctx.content.Effects) != 1 ||
 		len(ctx.content.Targets) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
