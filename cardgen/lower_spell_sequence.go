@@ -294,6 +294,9 @@ func lowerOrderedEffectSequence(
 			effectAbility.content.Targets,
 		)
 		if !ok {
+			if len(clauseReasons) > 0 {
+				continue
+			}
 			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — clause reference not localizable")
 		}
 		effectAbility.content.References = localReferences
