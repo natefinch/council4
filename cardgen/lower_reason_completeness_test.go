@@ -93,7 +93,7 @@ func TestSequenceCollectsAllClauseBlockers(t *testing.T) {
 		OracleText: "Whenever you cast your first spell each turn, reveal the top card of your library. You may cast it without paying its mana cost if it's a spell with lesser mana value. If you don't cast it, put it into your hand.",
 	})
 	if len(diagnostics) == 0 {
-		t.Fatalf("expected diagnostics for an unsupported card")
+		t.Fatal("expected diagnostics for an unsupported card")
 	}
 	if !hasDiagnosticSummary(diagnostics, "unsupported ordered effect sequence") {
 		t.Errorf("expected the ordered-sequence blocker to be reported; got %#v", diagnostics)
