@@ -27,18 +27,14 @@ import (
 // recipient selector, condition, keyword, or mode — leaving the standard damage
 // paths to handle their own effects and emit their own diagnostics.
 func lowerEventPermanentControllerDamageSpell(ctx contentCtx) (game.AbilityContent, bool) {
-	if len(ctx.content.Effects) != 1 {
-		return game.AbilityContent{}, false
-	}
+	assertDealDamageDispatch(ctx, false)
 	effect := ctx.content.Effects[0]
 	player, ok := eventPermanentControllerOwnerRecipient(effect.DamageRecipient.Reference, ctx.content.References)
 	if !ok {
 		return game.AbilityContent{}, false
 	}
-	if effect.Kind != compiler.EffectDealDamage ||
-		!effect.Exact ||
+	if !effect.Exact ||
 		effect.Negated ||
-		effect.Divided ||
 		len(effect.DamageRiders) != 0 ||
 		len(effect.DamageRecipient.GroupSelectors) != 0 ||
 		len(ctx.content.Targets) != 0 ||

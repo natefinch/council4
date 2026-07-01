@@ -18,11 +18,9 @@ import (
 // for any shape the executable backend cannot represent exactly.
 func lowerDividedDamageSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
+	assertDealDamageDispatch(ctx, true)
 	amount, capTotal, amountOK := dividedDamageTotal(effect.Amount, ctx)
-	if len(ctx.content.Effects) != 1 ||
-		effect.Kind != compiler.EffectDealDamage ||
-		!effect.Exact ||
-		!effect.Divided ||
+	if !effect.Exact ||
 		(effect.Context != parser.EffectContextSource &&
 			effect.Context != parser.EffectContextReferencedObject &&
 			effect.Context != parser.EffectContextPriorSubject) ||
