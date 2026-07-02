@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,663 of 32,501 cards eligible for paper support (51.3%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,677 of 32,501 cards eligible for paper support (51.3%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -705,6 +705,7 @@ Council4 currently supports **16,663 of 32,501 cards eligible for paper support 
 - Armorcraft Judge
 - Armored Ascension
 - Armored Cancrix
+- Armored Galleon
 - Armored Griffin
 - Armored Guardian
 - Armored Pegasus
@@ -3342,6 +3343,7 @@ Council4 currently supports **16,663 of 32,501 cards eligible for paper support 
 - Deep Analysis
 - Deep Goblin Skulltaker
 - Deep Reconnaissance
+- Deep-Sea Serpent
 - Deep-Slumber Titan
 - Deepchannel Duelist
 - Deepchannel Mentor
@@ -4470,6 +4472,7 @@ Council4 currently supports **16,663 of 32,501 cards eligible for paper support 
 - Ethereal Elk
 - Ethereal Guidance
 - Ethereal Investigator
+- Ethereal Whiskergill
 - Etherium Abomination
 - Etherium Astrolabe
 - Etherium Cell
@@ -6334,6 +6337,7 @@ Council4 currently supports **16,663 of 32,501 cards eligible for paper support 
 - Hammer of Nazahn
 - Hammerfist Giant
 - Hammerhand
+- Hammerhead Shark
 - Hammerhead, Maggia Boss
 - Hampering Snare
 - Hamster
@@ -8374,6 +8378,7 @@ Council4 currently supports **16,663 of 32,501 cards eligible for paper support 
 - Lure
 - Lurking Crocodile
 - Lurking Deadeye
+- Lurking Green Dragon
 - Lurking Lizards
 - Lurking Nightstalker
 - Lurking Roper
@@ -11142,6 +11147,7 @@ Council4 currently supports **16,663 of 32,501 cards eligible for paper support 
 - Recruitment Officer
 - Recumbent Bliss
 - Recuperate
+- Red Cliffs Armada
 - Red Dragon
 - Red Elemental Blast
 - Red Ghost, Intangible Genius
@@ -12108,6 +12114,7 @@ Council4 currently supports **16,663 of 32,501 cards eligible for paper support 
 - Sea Gate Wreckage
 - Sea God's Scorn
 - Sea Hag // Aquatic Ingress
+- Sea Monster
 - Sea of Clouds
 - Sea Scryer
 - Sea Spirit
@@ -12276,6 +12283,7 @@ Council4 currently supports **16,663 of 32,501 cards eligible for paper support 
 - Sergeant John Benton
 - Sergeant-at-Arms
 - Serpent Assassin
+- Serpent of the Endless Sea
 - Serpent Skin
 - Serpent Warrior
 - Serpent's Gift
@@ -12925,6 +12933,7 @@ Council4 currently supports **16,663 of 32,501 cards eligible for paper support 
 - Slip Through Space
 - Slippery Bogle
 - Slippery Karst
+- Slipstream Eel
 - Sliptide Serpent
 - Slith Ascendant
 - Slith Bloodletter
@@ -13610,6 +13619,7 @@ Council4 currently supports **16,663 of 32,501 cards eligible for paper support 
 - Steam Augury
 - Steam Blast
 - Steam Catapult
+- Steam Frigate
 - Steam Spitter
 - Steam Vents
 - Steamclaw
@@ -15735,6 +15745,7 @@ Council4 currently supports **16,663 of 32,501 cards eligible for paper support 
 - Vodalian Hypnotist
 - Vodalian Mage
 - Vodalian Merchant
+- Vodalian Serpent
 - Vodalian Soldiers
 - Vodalian Wave-Knight
 - Vodalian Zombie
@@ -16137,6 +16148,7 @@ Council4 currently supports **16,663 of 32,501 cards eligible for paper support 
 - Where Ancients Tread
 - Whetstone
 - Whetwheel
+- Whimwader
 - Whip of Erebos
 - Whip Sergeant
 - Whip Silk
@@ -16458,6 +16470,7 @@ Council4 currently supports **16,663 of 32,501 cards eligible for paper support 
 - Wu Light Cavalry
 - Wu Longbowman
 - Wu Scout
+- Wu Warship
 - Wurm
 - Wurm
 - Wurm
@@ -16605,6 +16618,7 @@ Council4 currently supports **16,663 of 32,501 cards eligible for paper support 
 - Zhao Zilong, Tiger General
 - Zhao, the Seething Flame
 - Zhentarim Bandit
+- Zhou Yu, Chief Commander
 - Zhuge Jin, Wu Strategist
 - Zhur-Taa Druid
 - Zhur-Taa Goblin
