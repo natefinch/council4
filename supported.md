@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,791 of 32,501 cards eligible for paper support (51.7%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,792 of 32,501 cards eligible for paper support (51.7%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2891,6 +2891,7 @@ Council4 currently supports **16,791 of 32,501 cards eligible for paper support 
 - Court Homunculus
 - Court of Bounty
 - Court of Embereth
+- Court of Grace
 - Court of Ire
 - Court Street Denizen
 - Covenant of Blood
