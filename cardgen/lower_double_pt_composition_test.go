@@ -1,6 +1,7 @@
 package cardgen
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -178,5 +179,73 @@ func TestUnsupportedRepeatedDoublePowerDoesNotPanic(t *testing.T) {
 	})
 	if face.SpellAbility.Exists {
 		t.Fatalf("spell ability = %#v, want unsupported repeated doubling to fail closed", face.SpellAbility)
+	}
+}
+
+// TestRenderDoublePowerToughnessFields guards against the regression where the
+// renderer dropped the ContinuousEffect DoublePower/DoubleToughness fields,
+// silently emitting a no-op power/toughness modify. It asserts the generated
+// source carries the doubling fields for the power-only and power-and-toughness
+// forms.
+func TestRenderDoublePowerToughnessFields(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		oracle string
+		want   []string
+	}{
+		{"Double target creature's power until end of turn.", []string{"DoublePower:"}},
+		{"Double target creature's power and toughness until end of turn.", []string{"DoublePower:", "DoubleToughness:"}},
+	}
+	for _, test := range tests {
+		t.Run(test.oracle, func(t *testing.T) {
+			t.Parallel()
+			source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+				Name:       "Test Double Render",
+				Layout:     "normal",
+				TypeLine:   "Instant",
+				ManaCost:   "{R}",
+				OracleText: test.oracle,
+			}, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			for _, want := range test.want {
+				if !strings.Contains(source, want) {
+					t.Fatalf("source missing %q:\n%s", want, source)
+				}
+			}
+		})
+	}
+}
+
+// TestGenerateJunkJetEquippedSubject covers the resolving "Double equipped
+// creature's power" form (issue #2648): the "equipped creature's" possessive
+// subject lowers to the source's attached permanent, doubling its power.
+func TestGenerateJunkJetEquippedSubject(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Junk Jet",
+		Layout:     "normal",
+		TypeLine:   "Artifact — Equipment",
+		ManaCost:   "{2}",
+		OracleText: "{3}, Sacrifice another artifact: Double equipped creature's power until end of turn.\nEquip {1}",
+	}, "j")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, want := range []string{
+		"game.SourceAttachedPermanentReference()",
+		"DoublePower:",
+		"game.LayerPowerToughnessModify,",
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("source missing %q:\n%s", want, source)
+		}
 	}
 }

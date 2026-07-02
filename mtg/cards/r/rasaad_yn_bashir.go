@@ -66,8 +66,9 @@ func newRasaadYnBashir() *game.CardDef {
 								Primitive: game.ApplyContinuous{
 									ContinuousEffects: []game.ContinuousEffect{
 										game.ContinuousEffect{
-											Layer: game.LayerPowerToughnessModify,
-											Group: game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, Controller: game.ControllerYou}),
+											Layer:           game.LayerPowerToughnessModify,
+											Group:           game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, Controller: game.ControllerYou}),
+											DoubleToughness: true,
 										},
 									},
 									Duration: game.DurationUntilEndOfTurn,
