@@ -35,6 +35,7 @@ var Cards = []*game.CardDef{
 	BazaarTrader,
 	BeastHunt,
 	BeastWithin,
+	BeastbreakerOfBalaGed,
 	BeastriderVanguard,
 	BelbeSPercher,
 	BelligerentBrontodon,

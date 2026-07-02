@@ -11,6 +11,7 @@ var Cards = []*game.CardDef{
 	HaazdaSnareSquad,
 	HailOfArrows,
 	HalanaAndAlenaPartners,
+	HalimarWavewatch,
 	HaliyaAscendantCadet,
 	HallowedHealer,
 	HamletbackGoliath,

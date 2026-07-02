@@ -71,3 +71,32 @@ func TestCounterThresholdStaticAppliesOnlyAtThreshold(t *testing.T) {
 		t.Fatalf("power with 7 quest counters = %d, want 7 (+5/+5 applies)", got)
 	}
 }
+
+func TestCounterThresholdKeywordAppliesOnlyInLevelBand(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	permanent := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Leveler",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 1}),
+		Toughness: opt.Val(game.PT{Value: 1}),
+		StaticAbilities: []game.StaticAbility{{
+			Condition: opt.Val(game.Condition{
+				SourceLevelCountersAtLeast:  2,
+				SourceLevelCountersLessThan: 7,
+			}),
+			KeywordAbilities: game.SimpleKeywords(game.FirstStrike),
+		}},
+	}})
+
+	if hasKeyword(g, permanent, game.FirstStrike) {
+		t.Fatal("first strike active below level band")
+	}
+	permanent.Counters.Add(counter.Level, 2)
+	if !hasKeyword(g, permanent, game.FirstStrike) {
+		t.Fatal("first strike inactive inside level band")
+	}
+	permanent.Counters.Add(counter.Level, 5)
+	if hasKeyword(g, permanent, game.FirstStrike) {
+		t.Fatal("first strike active above level band")
+	}
+}

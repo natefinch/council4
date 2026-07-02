@@ -36,6 +36,7 @@ var Cards = []*game.CardDef{
 	NightwhorlHermit,
 	NimanaSkitterSneak,
 	NimblewrightSchematic,
+	NirkanaCutthroat,
 	NivixCyclops,
 	NoblePurpose,
 	NobleSPurse,

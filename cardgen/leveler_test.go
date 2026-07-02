@@ -47,3 +47,43 @@ func TestGenerateExecutableCardSourceLevelUp(t *testing.T) {
 		}
 	}
 }
+
+func TestGenerateExecutableCardSourceLevelBandKeywords(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:      "Student of Warfare",
+		Layout:    "leveler",
+		ManaCost:  "{W}",
+		TypeLine:  "Creature — Human Knight",
+		Power:     new("1"),
+		Toughness: new("1"),
+		OracleText: "Level up {W} ({W}: Put a level counter on this. Level up only as a sorcery.)\n" +
+			"LEVEL 2-6\n" +
+			"3/3\n" +
+			"First strike\n" +
+			"LEVEL 7+\n" +
+			"4/4\n" +
+			"Double strike",
+	}, "s")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, want := range []string{
+		"game.SimpleKeyword{Kind: game.FirstStrike}",
+		"game.SimpleKeyword{Kind: game.DoubleStrike}",
+		"SourceLevelCountersAtLeast:  2",
+		"SourceLevelCountersLessThan: 7",
+		"SourceLevelCountersAtLeast: 7",
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("generated source missing %q:\n%s", want, source)
+		}
+	}
+	if strings.Contains(source, "game.FirstStrikeStaticBody") ||
+		strings.Contains(source, "game.DoubleStrikeStaticBody") {
+		t.Fatalf("conditioned keyword bands must render as literals:\n%s", source)
+	}
+}

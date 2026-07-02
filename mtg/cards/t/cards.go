@@ -94,6 +94,7 @@ var Cards = []*game.CardDef{
 	TrainingCompound,
 	TraitorousInstinct,
 	TranquilDomain,
+	TranscendentMaster,
 	TransguildPromenade,
 	Traumatize,
 	TraverseTheOutlands,
