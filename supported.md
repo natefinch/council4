@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,575 of 32,501 cards eligible for paper support (51.0%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,578 of 32,501 cards eligible for paper support (51.0%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -6804,6 +6804,7 @@ Council4 currently supports **16,575 of 32,501 cards eligible for paper support 
 - Human Warrior
 - Human Warrior
 - Human Wizard
+- Humble
 - Humble Budoka
 - Humble Defector
 - Humble Naturalist
@@ -9976,6 +9977,7 @@ Council4 currently supports **16,575 of 32,501 cards eligible for paper support 
 - Overwhelming Remorse
 - Overwhelming Stampede
 - Overwhelming Surge
+- Ovinize
 - Oviya Pashiri, Sage Lifecrafter
 - Owl Familiar
 - Owlbear
@@ -15418,6 +15420,7 @@ Council4 currently supports **16,575 of 32,501 cards eligible for paper support 
 - Vedalken Entrancer
 - Vedalken Ghoul
 - Vedalken Heretic
+- Vedalken Humiliator
 - Vedalken Infiltrator
 - Vedalken Infuser
 - Vedalken Mastermind
