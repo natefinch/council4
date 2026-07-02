@@ -28,6 +28,7 @@ var Cards = []*game.CardDef{
 	UrsineFylgja,
 	UrzaPrinceOfKroog,
 	UrzaSArmor,
+	UrzaSBauble,
 	UtopiaMycon,
 	UrzaSChalice,
 	UrzaSRage,
