@@ -2385,6 +2385,14 @@ type EffectSyntax struct {
 	// to a LayerAbility RemoveAllAbilities continuous effect alongside the base
 	// power/toughness set.
 	SetBasePTLosesAllAbilities bool `json:",omitempty"`
+	// LoseAllAbilities marks a resolving/one-shot "<subject> loses all abilities
+	// [until end of turn]" effect (Nullhide Ferox, Final Showdown, Ray of Frost):
+	// the total ability-removal form, whose grammatical object is "all abilities"
+	// rather than a named keyword list. It lowers to a LayerAbility
+	// RemoveAllAbilities continuous effect through the shared continuous-subject
+	// routing, so it applies to source, group, target, and referenced-object
+	// subjects alike.
+	LoseAllAbilities bool `json:",omitempty"`
 	// SwitchPTSource marks the EffectSwitchPT source-affecting form ("Switch this
 	// creature's power and toughness until end of turn."). When false and the
 	// effect carries a target, the single-target form applies; any other subject

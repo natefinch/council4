@@ -1260,6 +1260,23 @@ func gainLoseLifeObject(kind EffectKind, clause []shared.Token) bool {
 	return false
 }
 
+// loseAllAbilitiesObject reports whether a lose effect's grammatical object is
+// the total "all abilities" removal ("<subject> loses all abilities until end of
+// turn"), rather than life, the game, or a named keyword. The parser strips a
+// quoted ability class ("loses all \"bands with other\" abilities", Shelkin
+// Brownie) out of the clause tokens, leaving them identical to the total form, so
+// the raw sentence text is checked for the contiguous "lose(s) all abilities"
+// phrase: a specific-ability-class removal keeps its quoted class between "all"
+// and "abilities" and so is not mistaken for total ability removal.
+func loseAllAbilitiesObject(kind EffectKind, sentenceText string) bool {
+	if kind != EffectLose {
+		return false
+	}
+	lower := strings.ToLower(sentenceText)
+	return strings.Contains(lower, "loses all abilities") ||
+		strings.Contains(lower, "lose all abilities")
+}
+
 // loseGameObject reports whether a lose effect's grammatical object is "the
 // game" rather than life or a keyword. It scans the post-verb clause for a
 // top-level "game" word outside any quoted granted ability.

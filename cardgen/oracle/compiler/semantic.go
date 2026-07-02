@@ -2311,6 +2311,10 @@ type CompiledEffect struct {
 	// loses all abilities for the duration ("<subject> loses all abilities and has
 	// base power and toughness N/N").
 	SetBasePTLosesAllAbilities bool
+	// LoseAllAbilities mirrors the parser flag: a resolving "<subject> loses all
+	// abilities" effect that removes every ability for the duration, lowering to a
+	// LayerAbility RemoveAllAbilities continuous effect.
+	LoseAllAbilities bool
 	// SwitchPTSource mirrors the parser's EffectSwitchPT source-affecting form
 	// ("Switch this creature's power and toughness until end of turn."). When
 	// false and the effect carries a target, the single-target switch applies.

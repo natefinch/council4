@@ -2586,13 +2586,26 @@ func lowerTemporaryKeywordLossSpell(ctx contentCtx) (game.AbilityContent, *share
 	if !ok {
 		return unsupported()
 	}
-	keywords, ok := mixedStaticKeywords(ctx.content.Keywords)
-	if !ok {
-		return unsupported()
-	}
-	continuous := game.ContinuousEffect{
-		Layer:          game.LayerAbility,
-		RemoveKeywords: keywords,
+	var continuous game.ContinuousEffect
+	if effect.LoseAllAbilities {
+		// "<subject> loses all abilities" removes every ability at once; the
+		// named-keyword list must be empty (the total form subsumes any keyword).
+		if len(ctx.content.Keywords) != 0 {
+			return unsupported()
+		}
+		continuous = game.ContinuousEffect{
+			Layer:              game.LayerAbility,
+			RemoveAllAbilities: true,
+		}
+	} else {
+		keywords, ok := mixedStaticKeywords(ctx.content.Keywords)
+		if !ok {
+			return unsupported()
+		}
+		continuous = game.ContinuousEffect{
+			Layer:          game.LayerAbility,
+			RemoveKeywords: keywords,
+		}
 	}
 	continuousEffects := []game.ContinuousEffect{continuous}
 	return continuousSubjectMode(
