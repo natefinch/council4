@@ -179,6 +179,14 @@ func transformPrimitiveTargetIndices(primitive game.Primitive, transform targetI
 		value.Object, ok = transformObjectReference(value.Object, transform)
 		return value, ok
 	}
+	if value, ok := primitive.(game.LookAtHand); ok {
+		value.Player, ok = transformPlayerReference(value.Player, transform)
+		return value, ok
+	}
+	if value, ok := primitive.(game.BecomeMonarch); ok {
+		value.Player, ok = transformPlayerReference(value.Player, transform)
+		return value, ok
+	}
 	if value, ok := primitive.(game.Exile); ok {
 		if value.Group.Valid() {
 			return nil, false

@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,573 of 32,501 cards eligible for paper support (51.0%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,575 of 32,501 cards eligible for paper support (51.0%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -3405,6 +3405,7 @@ Council4 currently supports **16,573 of 32,501 cards eligible for paper support 
 - Demonic Tutor
 - Demonic Vigor
 - Demystify
+- Denethor, Stone Seer
 - Denizen of the Deep
 - Deny Entry
 - Deny Existence
@@ -15267,6 +15268,7 @@ Council4 currently supports **16,573 of 32,501 cards eligible for paper support 
 - Ursine Fylgja
 - Uruk-hai Berserker
 - Urza's Armor
+- Urza's Bauble
 - Urza's Cave
 - Urza's Chalice
 - Urza's Factory
