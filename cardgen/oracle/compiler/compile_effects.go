@@ -54,6 +54,9 @@ func compileTrigger(ability *parser.Ability, _ Context) CompiledTrigger {
 		}
 	}
 	switch {
+	case ability.Trigger.State != nil:
+		trigger.Kind = TriggerState
+		trigger.Pattern = compileStateTriggerPattern(ability.Trigger.State, ability.Trigger.EventSpan)
 	case ability.Trigger.PhaseStep != nil:
 		trigger.Pattern = compilePhaseStepTriggerPattern(
 			ability.Trigger.PhaseStep,
@@ -80,6 +83,21 @@ func compileTrigger(ability *parser.Ability, _ Context) CompiledTrigger {
 		}
 	}
 	return trigger
+}
+
+// compileStateTriggerPattern maps a recognized state-trigger clause onto a
+// TriggerState pattern carrying the compiled board-state condition. The
+// condition uses the AsLongAs kind so it reads as a continuously evaluated
+// predicate; an unrepresentable selection leaves the predicate unsupported and
+// lowering fails closed.
+func compileStateTriggerPattern(state *parser.StateTriggerClause, span shared.Span) TriggerPattern {
+	condition := CompiledCondition{Kind: ConditionAsLongAs, ClauseIndex: -1}
+	compileConditionClause(&condition, &state.Condition)
+	return TriggerPattern{
+		Span:           span,
+		Kind:           TriggerState,
+		StateCondition: &condition,
+	}
 }
 
 func runtimeCardTypeFromParser(cardType parser.CardType) (types.Card, bool) {

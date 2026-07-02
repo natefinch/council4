@@ -313,6 +313,8 @@ func lowerTriggerKind(kind compiler.TriggerKind) (game.TriggerType, bool) {
 		return game.TriggerWhenever, true
 	case compiler.TriggerAt:
 		return game.TriggerAt, true
+	case compiler.TriggerState:
+		return game.TriggerState, true
 	default:
 		return 0, false
 	}

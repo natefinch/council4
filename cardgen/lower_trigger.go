@@ -194,6 +194,9 @@ func lowerTriggeredAbility(
 	if pattern.Kind == compiler.TriggerAt {
 		return lowerAtTrigger(cardName, ability, syntax)
 	}
+	if pattern.Kind == compiler.TriggerState {
+		return lowerStateTrigger(cardName, ability, syntax)
+	}
 	switch pattern.Event {
 	case compiler.TriggerEventCardDrawn, compiler.TriggerEventCardDiscarded, compiler.TriggerEventCycled:
 		return lowerDrawDiscardTrigger(cardName, ability, syntax)
@@ -274,6 +277,55 @@ func lowerDrawDiscardTrigger(
 			Pattern:              pattern,
 			InterveningIf:        interveningIfText(ability.Trigger),
 			InterveningCondition: intervening,
+		},
+		Optional: triggerOptional,
+		Content:  content,
+	}, nil
+}
+
+func lowerStateTrigger(
+	cardName string,
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (game.TriggeredAbility, *shared.Diagnostic) {
+	const summary = "unsupported state-triggered ability"
+	if ability.Trigger == nil || ability.Trigger.Pattern.StateCondition == nil {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, summary,
+			"the executable source backend requires a semantic state-trigger condition")
+	}
+	// A state trigger carries no event pattern, only a board-state condition. It
+	// takes no intervening "if" and no modal, per-turn, or optional body: the
+	// only supported shape is a bare "When <state>, <effect>." clause.
+	if ability.Trigger.Condition != nil ||
+		ability.Trigger.MaxTriggersPerTurn != 0 ||
+		modalTriggerBody(ability) {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, summary,
+			"the executable source backend supports only a bare state trigger with no intervening, modal, or per-turn qualifier")
+	}
+	condition, ok := lowerCondition(*ability.Trigger.Pattern.StateCondition, conditionContextStateTrigger)
+	if !ok {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, summary,
+			"the executable source backend does not support this state-trigger condition")
+	}
+	if triggerContentUnsupported(ability) {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported state-triggered ability effect",
+			"the executable source backend does not support this state-trigger body")
+	}
+	prepared, ok := prepareTriggerBody(ability, syntax)
+	if !ok {
+		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported state-triggered ability effect",
+			"the executable source backend does not support this state-trigger body")
+	}
+	body, bodySyntax, triggerOptional := prepared.body, prepared.syntax, prepared.optional
+	content, diagnostic := lowerAbilityContent(cardName, compiler.AbilityTriggered, body.Content, body.Optional, &bodySyntax)
+	if diagnostic != nil {
+		return game.TriggeredAbility{}, diagnostic
+	}
+	return game.TriggeredAbility{
+		Text: ability.Text,
+		Trigger: game.TriggerCondition{
+			Type:  game.TriggerState,
+			State: opt.Val(game.StateTriggerCondition{Condition: opt.Val(condition)}),
 		},
 		Optional: triggerOptional,
 		Content:  content,

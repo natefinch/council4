@@ -150,6 +150,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitOptional(document.Abilities)
 	emitConditionBoundaries(document.Abilities, context.CardName)
 	emitTriggerEventClauses(document.Abilities, context.CardName)
+	emitStateTriggerClauses(document.Abilities)
 	emitEventHistoryConditions(document.Abilities)
 	emitConditionClauses(document.Abilities)
 	emitSourceAbilityCostReduction(document.Abilities)
