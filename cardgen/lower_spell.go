@@ -344,6 +344,15 @@ func lowerContent(
 		if content, ok := lowerControlledGroupSkipUntapEffect(ctx); ok {
 			return content, nil
 		}
+		// A single "<subject> loses all abilities and has base power and toughness
+		// N/N" effect is counted as two legacy effects (the ability loss and the
+		// base-P/T set), so it carries RequiresOrderedLowering even though it lowers
+		// as one continuous effect. Route it to the base-P/T lowerer before the
+		// ordered-lowering bail below.
+		if ctx.content.Effects[0].Kind == compiler.EffectSetBasePT &&
+			ctx.content.Effects[0].SetBasePTLosesAllAbilities {
+			return lowerSetBasePTContent(ctx)
+		}
 		if ctx.content.Effects[0].RequiresOrderedLowering {
 			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — single effect requires ordered lowering")
 		}

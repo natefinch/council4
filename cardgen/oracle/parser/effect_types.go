@@ -2379,6 +2379,12 @@ type EffectSyntax struct {
 	SetBasePTVariableX         bool `json:",omitempty"`
 	SetBasePTEveryCreatureType bool `json:",omitempty"`
 	SetBasePTSource            bool `json:",omitempty"`
+	// SetBasePTLosesAllAbilities marks the "<subject> loses all abilities and has
+	// base power and toughness N/N" form (Humble, Ovinize, Sudden Spoiling): the
+	// affected object additionally loses every ability for the duration. It lowers
+	// to a LayerAbility RemoveAllAbilities continuous effect alongside the base
+	// power/toughness set.
+	SetBasePTLosesAllAbilities bool `json:",omitempty"`
 	// SwitchPTSource marks the EffectSwitchPT source-affecting form ("Switch this
 	// creature's power and toughness until end of turn."). When false and the
 	// effect carries a target, the single-target form applies; any other subject
