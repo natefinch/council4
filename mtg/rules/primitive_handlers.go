@@ -1131,8 +1131,16 @@ func (r *effectResolver) chooseUntapPermanents(prim game.Untap) []*game.Permanen
 
 func handleSkipNextUntap(r *effectResolver, prim game.SkipNextUntap) effectResolved {
 	res := effectResolved{accepted: true}
-	if permanent, ok := r.resolveObject(prim.Object); ok {
-		permanent.Exerted = true
+	targets := r.resolveObjectGroup(prim.Object, prim.Group)
+	if !targets.single {
+		for _, permanent := range targets.permanents {
+			permanent.Exerted = true
+			res.succeeded = true
+		}
+		return res
+	}
+	if targets.resolved {
+		targets.permanents[0].Exerted = true
 		res.succeeded = true
 	}
 	return res

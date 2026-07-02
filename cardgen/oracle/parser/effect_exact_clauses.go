@@ -1581,16 +1581,45 @@ func exactChooseNewTargetsEffectSyntax(effect *EffectSyntax) bool {
 		strings.EqualFold(exactEffectClauseText(effect), "Choose new targets for "+effect.Targets[0].Text+".")
 }
 
-func exactNegatedNextUntapStepSyntax(effect *EffectSyntax) bool {
-	if !effect.Negated || effect.Context != EffectContextUnknown ||
+// negatedControlledGroupNextUntapStep recognizes the mass self-stun clause
+// "<group> you control don't untap during your next untap step." (Rhonas's Last
+// Stand's "Lands you control ...", and the parallel creatures/permanents/artifacts
+// wordings). It returns the controlled-permanent group the skip-untap applies to.
+// The clause carries no target or reference: the affected group is the source's
+// own controlled permanents and the window is the controller's own next untap
+// step, so it lowers to a single group skip-untap. Every other wording — a
+// targeted player's permanents, a multi-step window, or a color/subtype filter —
+// leaves the clause unmatched so lowering fails closed.
+func negatedControlledGroupNextUntapStep(effect *EffectSyntax) (EffectStaticSubjectKind, bool) {
+	if effect.Kind != EffectUntap || !effect.Negated ||
+		effect.Context != EffectContextUnknown ||
 		len(effect.Targets) != 0 || len(effect.References) != 0 {
-		return false
+		return EffectStaticSubjectNone, false
 	}
 	words := normalizedWords(effect.Tokens)
 	verb := slices.Index(words, "untap")
-	return verb == 4 &&
-		slices.Equal(words[:verb], []string{"lands", "you", "control", "don't"}) &&
-		slices.Equal(words[verb+1:], []string{"during", "your", "next", "untap", "step"})
+	if verb != 4 ||
+		!slices.Equal(words[1:verb], []string{"you", "control", "don't"}) ||
+		!slices.Equal(words[verb+1:], []string{"during", "your", "next", "untap", "step"}) {
+		return EffectStaticSubjectNone, false
+	}
+	switch words[0] {
+	case "lands":
+		return EffectStaticSubjectControlledLands, true
+	case "creatures":
+		return EffectStaticSubjectControlledCreatures, true
+	case "permanents":
+		return EffectStaticSubjectControlledPermanents, true
+	case "artifacts":
+		return EffectStaticSubjectControlledArtifacts, true
+	default:
+		return EffectStaticSubjectNone, false
+	}
+}
+
+func exactNegatedNextUntapStepSyntax(effect *EffectSyntax) bool {
+	_, ok := negatedControlledGroupNextUntapStep(effect)
+	return ok
 }
 
 // exactTargetNextUntapStepSyntax recognizes the standalone targeted stun spell or
