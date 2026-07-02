@@ -24,6 +24,7 @@ var Cards = []*game.CardDef{
 	BarbedSpike,
 	BaronSengir,
 	BarrentonMedic,
+	BarrowBlade,
 	BasiliskCollar,
 	BaskingBroodscale,
 	BaskingCapybara,

@@ -1997,6 +1997,18 @@ func exactTemporaryKeywordLossEffectSyntax(effect *EffectSyntax) bool {
 	return exactTemporaryKeywordChangeSyntax(effect, "lose", "loses", false)
 }
 
+// keywordChangeBodyExact reports whether the reconstructed keyword-change body
+// round-trips: either an exact named-keyword list, or the total "all abilities"
+// object of a loses-all-abilities effect. The all-abilities form is gated on the
+// LoseAllAbilities flag (only set for a resolving "loses all abilities" lose
+// effect), so a keyword grant or any other change never accepts the literal.
+func keywordChangeBodyExact(effect *EffectSyntax, body string) bool {
+	if effect.LoseAllAbilities && body == "all abilities" {
+		return true
+	}
+	return exactTemporaryKeywordList(body)
+}
+
 // exactTemporaryKeywordChangeSyntax reconstructs the byte-exact form of a
 // resolving until-end-of-turn keyword change clause for the supplied plural verb
 // ("gain"/"lose") and singular verb ("gains"/"loses"). It covers every affected
@@ -2011,7 +2023,7 @@ func exactTemporaryKeywordLossEffectSyntax(effect *EffectSyntax) bool {
 // loss verb passes false, since a keyword-loss choice is not lowered.
 func exactTemporaryKeywordChangeSyntax(effect *EffectSyntax, pluralVerb, singularVerb string, allowChoice bool) bool {
 	validBody := func(body string) bool {
-		return exactTemporaryKeywordList(body) || (allowChoice && exactKeywordChoiceList(body))
+		return keywordChangeBodyExact(effect, body) || (allowChoice && exactKeywordChoiceList(body))
 	}
 	switch effect.Duration {
 	case EffectDurationUntilEndOfTurn:
@@ -2045,7 +2057,7 @@ func exactTemporaryKeywordChangeSyntax(effect *EffectSyntax, pluralVerb, singula
 			return false
 		}
 		middle, ok = cutTemporaryKeywordDurationSuffix(effect, middle)
-		return ok && exactTemporaryKeywordList(middle)
+		return ok && keywordChangeBodyExact(effect, middle)
 	}
 	if effect.Context == EffectContextReferencedObject {
 		subject, ok := exactObjectReferenceText(effect.SubjectReferences)
@@ -2198,7 +2210,7 @@ func exactGroupTemporaryKeywordEffectSyntax(effect *EffectSyntax, text, pluralVe
 		if !ok {
 			continue
 		}
-		if body, ok := strings.CutSuffix(middle, " until end of turn."); ok && body != "" && exactTemporaryKeywordList(body) {
+		if body, ok := strings.CutSuffix(middle, " until end of turn."); ok && body != "" && keywordChangeBodyExact(effect, body) {
 			return true
 		}
 		// A keyword-first mass pump ("Creatures you control gain trample and get
@@ -2208,7 +2220,7 @@ func exactGroupTemporaryKeywordEffectSyntax(effect *EffectSyntax, text, pluralVe
 		// bare "<subject> gain <keywords>." form only when the duration was
 		// recognized so a static anthem (no duration) never matches.
 		if effect.Duration == EffectDurationUntilEndOfTurn {
-			if body, ok := strings.CutSuffix(middle, "."); ok && body != "" && exactTemporaryKeywordList(body) {
+			if body, ok := strings.CutSuffix(middle, "."); ok && body != "" && keywordChangeBodyExact(effect, body) {
 				return true
 			}
 		}
