@@ -101,6 +101,7 @@ var Cards = []*game.CardDef{
 	BrassTalonChimera,
 	BrazenBorrower,
 	BrazenUpstart,
+	BreakThroughTheLine,
 	BredForTheHunt,
 	BriaRiptideRogue,
 	BriberSPurse,

@@ -260,6 +260,16 @@ func transformPrimitiveTargetIndices(primitive game.Primitive, transform targetI
 		}
 		return value, true
 	}
+	if value, ok := primitive.(game.ApplyRule); ok {
+		if value.Object.Exists {
+			transformed, ok := transformObjectReference(value.Object.Val, transform)
+			if !ok {
+				return nil, false
+			}
+			value.Object = opt.Val(transformed)
+		}
+		return value, true
+	}
 	if value, ok := primitive.(game.CreateToken); ok {
 		if value.Recipient.Exists {
 			transformed, ok := transformPlayerReference(value.Recipient.Val, transform)

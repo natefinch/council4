@@ -9,5 +9,6 @@ var Cards = []*game.CardDef{
 	YanlingSHarbinger,
 	YavimayaIconoclast,
 	YouAreAlreadyDead,
+	YouComeToARiver,
 	YouMeetInATavern,
 }

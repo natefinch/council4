@@ -59,6 +59,7 @@ var Cards = []*game.CardDef{
 	EtherealChampion,
 	EtherealElk,
 	Everglades,
+	EvieFrye,
 	ExaltedAngel,
 	ExcaliburII,
 	ExemplarOfStrength,
