@@ -968,7 +968,8 @@ func exactPermanentTargetText(selection SelectionSyntax) (string, bool) {
 func permanentSelectionQualifierWords(selection SelectionSyntax) ([]string, bool) {
 	conjunctiveNoun, conjunctive := conjunctiveCreatureTargetNoun(selection)
 	if selection.All || selection.Zone != zone.None ||
-		selection.Colorless || selection.Multicolored ||
+		(selection.Colorless && selection.Multicolored) ||
+		((selection.Colorless || selection.Multicolored) && len(selection.ColorsAny) != 0) ||
 		len(selection.ExcludedColors) != 0 ||
 		len(selection.ExcludedTypes) != 0 ||
 		(len(selection.RequiredTypesAny) > 1 && !conjunctive) ||
@@ -1015,6 +1016,13 @@ func permanentSelectionQualifierWords(selection SelectionSyntax) ([]string, bool
 			}
 			words = append(words, colorText)
 		}
+	}
+	switch {
+	case selection.Colorless:
+		words = append(words, "colorless")
+	case selection.Multicolored:
+		words = append(words, "multicolored")
+	default:
 	}
 	if len(selection.SubtypesAny) == 1 {
 		words = append(words, string(selection.SubtypesAny[0]))

@@ -1395,8 +1395,10 @@ func TestParseManaValueTargetExactness(t *testing.T) {
 		// A two-color union ("black or red") reconstructs canonically as
 		// "<color> or <color> <noun>" and is exact.
 		{"Exile target black or red permanent.", true},
-		// A multicolored qualifier is not representable and must stay fail-closed.
-		{"Exile target multicolored permanent with mana value 3 or greater.", false},
+		// A multicolored color shape combines with the mana-value rider and
+		// reconstructs canonically ("target multicolored permanent with mana
+		// value 3 or greater"), so it round-trips exactly.
+		{"Exile target multicolored permanent with mana value 3 or greater.", true},
 	}
 	for _, test := range tests {
 		t.Run(test.source, func(t *testing.T) {
@@ -4369,6 +4371,63 @@ func TestParseGiveControlExactness(t *testing.T) {
 			}
 			if control.Exact != test.exact {
 				t.Fatalf("Exact = %v, want %v", control.Exact, test.exact)
+			}
+		})
+	}
+}
+
+// TestParseColorlessMulticoloredTargetExactness verifies the "colorless" and
+// "multicolored" color-shape qualifiers on a single permanent target round-trip
+// through the exactness reconstruction, so a destroy/exile/etc. of such a target
+// is recognized as exact and can lower. It also confirms the nonsensical
+// "colorless multicolored" combination and a mix of a color word with a color
+// shape stay non-exact (fail closed).
+func TestParseColorlessMulticoloredTargetExactness(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source           string
+		wantExact        bool
+		wantColorless    bool
+		wantMulticolored bool
+	}{
+		{source: "Destroy target colorless creature.", wantExact: true, wantColorless: true},
+		{source: "Destroy target multicolored creature.", wantExact: true, wantMulticolored: true},
+		{source: "Destroy target colorless permanent.", wantExact: true, wantColorless: true},
+		{source: "Destroy target multicolored permanent.", wantExact: true, wantMulticolored: true},
+		{source: "Destroy target legendary multicolored creature.", wantExact: true, wantMulticolored: true},
+		// "colored" ("one or more colors") is not rendered, so it stays non-exact.
+		{source: "Destroy target colored creature.", wantExact: false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			var destroy *EffectSyntax
+			for ai := range document.Abilities {
+				for si := range document.Abilities[ai].Sentences {
+					for ei := range document.Abilities[ai].Sentences[si].Effects {
+						effect := &document.Abilities[ai].Sentences[si].Effects[ei]
+						if effect.Kind == EffectDestroy {
+							destroy = effect
+						}
+					}
+				}
+			}
+			if destroy == nil {
+				t.Fatalf("no EffectDestroy parsed from %q", test.source)
+			}
+			if len(destroy.Targets) != 1 {
+				t.Fatalf("targets = %d, want 1", len(destroy.Targets))
+			}
+			target := destroy.Targets[0]
+			if target.Exact != test.wantExact {
+				t.Fatalf("target Exact = %v, want %v", target.Exact, test.wantExact)
+			}
+			if target.Selection.Colorless != test.wantColorless {
+				t.Fatalf("Colorless = %v, want %v", target.Selection.Colorless, test.wantColorless)
+			}
+			if target.Selection.Multicolored != test.wantMulticolored {
+				t.Fatalf("Multicolored = %v, want %v", target.Selection.Multicolored, test.wantMulticolored)
 			}
 		})
 	}
