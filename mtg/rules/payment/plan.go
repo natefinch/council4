@@ -778,6 +778,27 @@ func restrictedManaCanPay(s State, rider game.ManaRiderInstance, ctx spendContex
 		// non-spell payment (ability cost; ctx.spell is nil) is not a creature
 		// spell, so the tagged mana cannot pay for it.
 		return ctx.spell != nil && ctx.spell.HasType(types.Creature)
+	case game.ManaSpendCastInstantOrSorcerySpell:
+		// Vodalian Arcanist: spendable only to cast an instant or sorcery spell.
+		// A non-spell payment (ability cost; ctx.spell is nil) is neither, so the
+		// tagged mana cannot pay for it.
+		return ctx.spell != nil &&
+			(ctx.spell.HasType(types.Instant) || ctx.spell.HasType(types.Sorcery))
+	case game.ManaSpendCastNoncreatureSpell:
+		// Nardole, Resourceful Cyborg: spendable only to cast a noncreature
+		// spell. A non-spell payment (ability cost; ctx.spell is nil) is not a
+		// spell cast, so the tagged mana cannot pay for it.
+		return ctx.spell != nil && !ctx.spell.HasType(types.Creature)
+	case game.ManaSpendCastMulticoloredSpell:
+		// Pillar of the Paruns: spendable only to cast a multicolored spell (two
+		// or more colors). A non-spell payment (ability cost; ctx.spell is nil)
+		// is not a spell cast, so the tagged mana cannot pay for it.
+		return ctx.spell != nil && len(ctx.spell.Colors) >= 2
+	case game.ManaSpendCastPlaneswalkerSpell:
+		// Interplanar Beacon: spendable only to cast a planeswalker spell. A
+		// non-spell payment (ability cost; ctx.spell is nil) is not a planeswalker
+		// spell, so the tagged mana cannot pay for it.
+		return ctx.spell != nil && ctx.spell.HasType(types.Planeswalker)
 	default:
 		return false
 	}

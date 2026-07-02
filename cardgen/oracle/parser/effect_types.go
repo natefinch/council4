@@ -2944,6 +2944,28 @@ const (
 	// Optimizer, Automated Artificer, Purple Dragon Punks). The tagged mana may
 	// pay to cast an artifact spell or to activate any activated ability.
 	ManaSpendCastArtifactOrActivateAbility ManaSpendConditionKind = "ManaSpendCastArtifactOrActivateAbility"
+	// ManaSpendCastInstantOrSorcerySpell is the restricted "spend this mana only
+	// to cast an instant or sorcery spell" condition (Vodalian Arcanist, Pelargir
+	// Survivor, Cormela, Glamour Thief), including the "instant and/or sorcery
+	// spells" / "instant and sorcery spells" plural phrasings. The tagged mana may
+	// pay only to cast an instant or sorcery spell; it cannot pay ability costs or
+	// other payments.
+	ManaSpendCastInstantOrSorcerySpell ManaSpendConditionKind = "ManaSpendCastInstantOrSorcerySpell"
+	// ManaSpendCastNoncreatureSpell is the restricted "spend this mana only to
+	// cast a noncreature spell" / "to cast noncreature spells" condition (Nardole,
+	// Resourceful Cyborg). The tagged mana may pay only to cast a spell that is not
+	// a creature; it cannot pay ability costs or other payments.
+	ManaSpendCastNoncreatureSpell ManaSpendConditionKind = "ManaSpendCastNoncreatureSpell"
+	// ManaSpendCastMulticoloredSpell is the restricted "spend this mana only to
+	// cast a multicolored spell" / "to cast multicolored spells" condition (Pillar
+	// of the Paruns, Obsidian Obelisk). The tagged mana may pay only to cast a
+	// spell with two or more colors; it cannot pay ability costs or other payments.
+	ManaSpendCastMulticoloredSpell ManaSpendConditionKind = "ManaSpendCastMulticoloredSpell"
+	// ManaSpendCastPlaneswalkerSpell is the restricted "spend this mana only to
+	// cast a planeswalker spell" / "to cast planeswalker spells" condition
+	// (Interplanar Beacon). The tagged mana may pay only to cast a planeswalker
+	// spell; it cannot pay ability costs or other payments.
+	ManaSpendCastPlaneswalkerSpell ManaSpendConditionKind = "ManaSpendCastPlaneswalkerSpell"
 )
 
 // ManaSpendRiderEffectKind identifies the exact resolving effect of a mana-spend

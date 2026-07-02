@@ -265,7 +265,8 @@ func isManaSpendRider(effect *compiler.CompiledEffect) bool {
 		isLegendarySpellManaSpendRider(effect.ManaSpendRider) ||
 		isCreatureSpellRestrictedManaSpendRider(effect.ManaSpendRider) ||
 		isCreatureSpellHasteManaSpendRider(effect.ManaSpendRider) ||
-		isArtifactManaSpendRider(effect.ManaSpendRider)
+		isArtifactManaSpendRider(effect.ManaSpendRider) ||
+		isSpellTypeRestrictedManaSpendRider(effect.ManaSpendRider)
 }
 
 func isCommanderScryManaSpendRider(rider *compiler.CompiledManaSpendRider) bool {
@@ -363,8 +364,40 @@ func artifactManaSpendCondition(condition parser.ManaSpendConditionKind) (game.M
 	}
 }
 
-// lowerManaSpendRiderContent lowers a typed add-mana effect and its exact
-// spend-linked rider without consulting source text.
+// isSpellTypeRestrictedManaSpendRider reports whether rider is one of the
+// restriction-only spell-type mana-spend riders (Vodalian Arcanist, Nardole,
+// Pillar of the Paruns, Interplanar Beacon). Each restricts the tagged mana to
+// casting a spell of a modeled type with no further qualifier or rider effect.
+// The creature-spell restriction is intentionally excluded here because
+// isCreatureSpellRestrictedManaSpendRider already owns it.
+func isSpellTypeRestrictedManaSpendRider(rider *compiler.CompiledManaSpendRider) bool {
+	if rider.Effect != parser.ManaSpendRiderEffectUnknown ||
+		!rider.Restricted ||
+		rider.ScryAmount != 0 {
+		return false
+	}
+	_, ok := spellTypeManaSpendCondition(rider.Condition)
+	return ok
+}
+
+// spellTypeManaSpendCondition maps a parser spell-type mana-spend condition to
+// its runtime counterpart, failing closed on any other condition. The
+// creature-spell condition is deliberately omitted so the dedicated
+// creature-spell lowering branch keeps ownership of it.
+func spellTypeManaSpendCondition(condition parser.ManaSpendConditionKind) (game.ManaSpendConditionKind, bool) {
+	switch condition {
+	case parser.ManaSpendCastInstantOrSorcerySpell:
+		return game.ManaSpendCastInstantOrSorcerySpell, true
+	case parser.ManaSpendCastNoncreatureSpell:
+		return game.ManaSpendCastNoncreatureSpell, true
+	case parser.ManaSpendCastMulticoloredSpell:
+		return game.ManaSpendCastMulticoloredSpell, true
+	case parser.ManaSpendCastPlaneswalkerSpell:
+		return game.ManaSpendCastPlaneswalkerSpell, true
+	default:
+		return 0, false
+	}
+}
 func lowerManaSpendRiderContent(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	manaEffect := ctx.content.Effects[0]
 	if ctx.optional ||
@@ -474,6 +507,14 @@ func lowerManaSpendRiderContent(ctx contentCtx) (game.AbilityContent, *shared.Di
 				mana.W, mana.U, mana.B, mana.R, mana.G,
 			).Content, nil
 		}
+		if manaEffect.Mana.AnyColor && manaEffect.Mana.AnyColorCount >= 2 {
+			return game.TapManaChoiceCountWithSpendRiderAbility(
+				ctx.text,
+				rider,
+				manaEffect.Mana.AnyColorCount,
+				mana.W, mana.U, mana.B, mana.R, mana.G,
+			).Content, nil
+		}
 		content, ok := typedManaEffectContent(manaEffect.Mana)
 		if !ok {
 			return game.AbilityContent{}, contentDiagnostic(
@@ -554,6 +595,51 @@ func lowerManaSpendRiderContent(ctx contentCtx) (game.AbilityContent, *shared.Di
 				ctx,
 				"unsupported mana effect",
 				"the restricted artifact rider requires an exact add-mana instruction to tag",
+			)
+		}
+		return content, nil
+	}
+	if isSpellTypeRestrictedManaSpendRider(riderEffect) {
+		condition, ok := spellTypeManaSpendCondition(riderEffect.Condition)
+		if !ok {
+			return game.AbilityContent{}, contentDiagnostic(
+				ctx,
+				"unsupported mana effect",
+				"the spell-type rider requires a recognized spell-type spend condition",
+			)
+		}
+		rider := game.ManaSpendRider{
+			Condition:   condition,
+			Restriction: game.ManaSpendRestrictedToCondition,
+		}
+		if manaEffect.Mana.AnyColor && manaEffect.Mana.AnyColorCount < 2 {
+			return game.TapManaChoiceWithSpendRiderAbility(
+				ctx.text,
+				rider,
+				mana.W, mana.U, mana.B, mana.R, mana.G,
+			).Content, nil
+		}
+		if manaEffect.Mana.AnyColor && manaEffect.Mana.AnyColorCount >= 2 {
+			return game.TapManaChoiceCountWithSpendRiderAbility(
+				ctx.text,
+				rider,
+				manaEffect.Mana.AnyColorCount,
+				mana.W, mana.U, mana.B, mana.R, mana.G,
+			).Content, nil
+		}
+		content, ok := typedManaEffectContent(manaEffect.Mana)
+		if !ok {
+			return game.AbilityContent{}, contentDiagnostic(
+				ctx,
+				"unsupported mana effect",
+				"the restricted spell-type rider requires an exact modeled add-mana effect",
+			)
+		}
+		if !attachManaSpendRider(&content, rider) {
+			return game.AbilityContent{}, contentDiagnostic(
+				ctx,
+				"unsupported mana effect",
+				"the restricted spell-type rider requires an exact add-mana instruction to tag",
 			)
 		}
 		return content, nil

@@ -67,6 +67,26 @@ const (
 	// It is a restriction-only rider: the tagged mana may pay to cast an artifact
 	// spell or to activate any activated ability.
 	ManaSpendCastArtifactOrActivateAbility
+	// ManaSpendCastInstantOrSorcerySpell is "spent only to cast an instant or
+	// sorcery spell" (Vodalian Arcanist, Pelargir Survivor). It is a restriction-
+	// only rider: the tagged mana may pay only to cast a spell that is an instant
+	// or a sorcery, never an ability cost or other payment.
+	ManaSpendCastInstantOrSorcerySpell
+	// ManaSpendCastNoncreatureSpell is "spent only to cast a noncreature spell"
+	// (Nardole, Resourceful Cyborg). It is a restriction-only rider: the tagged
+	// mana may pay only to cast a spell that is not a creature, never an ability
+	// cost or other payment.
+	ManaSpendCastNoncreatureSpell
+	// ManaSpendCastMulticoloredSpell is "spent only to cast a multicolored spell"
+	// (Pillar of the Paruns). It is a restriction-only rider: the tagged mana may
+	// pay only to cast a spell with two or more colors, never an ability cost or
+	// other payment.
+	ManaSpendCastMulticoloredSpell
+	// ManaSpendCastPlaneswalkerSpell is "spent only to cast a planeswalker spell"
+	// (Interplanar Beacon). It is a restriction-only rider: the tagged mana may
+	// pay only to cast a planeswalker spell, never an ability cost or other
+	// payment.
+	ManaSpendCastPlaneswalkerSpell
 )
 
 // ManaSpendRestrictionKind identifies whether a tagged mana unit may be spent
