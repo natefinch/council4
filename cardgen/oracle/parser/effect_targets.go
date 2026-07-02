@@ -2485,6 +2485,13 @@ func splitSelectionOtherThanSelfTail(tokens []shared.Token, atoms Atoms) (head [
 			continue
 		}
 		nameTokens := tokens[i+2:]
+		// "other than this creature/permanent/<self-type>" names the source via
+		// the self-reference pronoun (Sorceress Queen, Serendib Sorcerer), the
+		// same self-exclusion the card-name form expresses.
+		if len(nameTokens) == 2 && equalWord(nameTokens[0], "this") &&
+			referenceSelfMarkerNoun(nameTokens[1]) {
+			return tokens[:i], true
+		}
 		span, found := atoms.SelfNameSpanStartingAt(nameTokens[0].Span)
 		if !found || tokenCountForSpan(nameTokens, span) != len(nameTokens) {
 			return nil, false

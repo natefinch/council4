@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,621 of 32,501 cards eligible for paper support (51.1%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,625 of 32,501 cards eligible for paper support (51.2%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -4128,6 +4128,7 @@ Council4 currently supports **16,621 of 32,501 cards eligible for paper support 
 - Electrostatic Infantry
 - Electrostatic Pummeler
 - Elegant Edgecrafters
+- Elegant Entourage
 - Elegant Parlor
 - Elemental
 - Elemental
@@ -12241,6 +12242,7 @@ Council4 currently supports **16,621 of 32,501 cards eligible for paper support 
 - Seraph Sanctuary
 - Seraphic Steed
 - Serendib Efreet
+- Serendib Sorcerer
 - Serene Heart
 - Serene Offering
 - Serene Steward
@@ -13096,6 +13098,7 @@ Council4 currently supports **16,621 of 32,501 cards eligible for paper support 
 - Soraya the Falconer
 - Sorcerer of the Fang
 - Sorcerer's Broom
+- Sorceress Queen
 - Sorcerous Sight
 - Sorin's Guide
 - Sorin's Thirst
@@ -16056,6 +16059,7 @@ Council4 currently supports **16,621 of 32,501 cards eligible for paper support 
 - Webweaver Changeling
 - Wedding Security
 - Wee Dragonauts
+- Weed-Pruner Poplar
 - Wei Ambush Force
 - Wei Elite Companions
 - Wei Infantry

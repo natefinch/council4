@@ -36,6 +36,7 @@ var Cards = []*game.CardDef{
 	Weatherlight,
 	WeatherseedTotem,
 	WebOfLifeAndDestiny,
+	WeedPrunerPoplar,
 	WeightAdvantage,
 	WelkinTern,
 	WhiskerquillScribe,
