@@ -508,6 +508,9 @@ const (
 	SelectionFlagUntapped  SelectionFlag = "SelectionFlagUntapped"
 	SelectionFlagToken     SelectionFlag = "SelectionFlagToken"
 	SelectionFlagNonToken  SelectionFlag = "SelectionFlagNonToken"
+	SelectionFlagModified  SelectionFlag = "SelectionFlagModified"
+	SelectionFlagEnchanted SelectionFlag = "SelectionFlagEnchanted"
+	SelectionFlagEquipped  SelectionFlag = "SelectionFlagEquipped"
 )
 
 func recognizeSelectionFlag(word string) (SelectionFlag, bool) {
@@ -528,6 +531,12 @@ func recognizeSelectionFlag(word string) (SelectionFlag, bool) {
 		return SelectionFlagToken, true
 	case "nontoken":
 		return SelectionFlagNonToken, true
+	case "modified":
+		return SelectionFlagModified, true
+	case "enchanted":
+		return SelectionFlagEnchanted, true
+	case "equipped":
+		return SelectionFlagEquipped, true
 	default:
 		return SelectionFlagUnknown, false
 	}

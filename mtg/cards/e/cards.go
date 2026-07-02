@@ -65,6 +65,7 @@ var Cards = []*game.CardDef{
 	ExaltedAngel,
 	ExcaliburII,
 	ExemplarOfStrength,
+	ExpandingOoze,
 	ExperimentalSynthesizer,
 	ExplorerSCache,
 	ExplorerSScope,

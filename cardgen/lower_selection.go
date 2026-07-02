@@ -316,6 +316,21 @@ func SelectionForSelectorMasked(selector compiler.CompiledSelector, mask Selecti
 		selection.ExcludedCounter = selector.ExcludedCounter
 	}
 
+	// The positive attachment/modification qualifiers ("target modified
+	// creature", "target enchanted permanent", "target equipped creature") map
+	// onto the runtime battlefield predicates. A non-battlefield subject never
+	// satisfies them, matching the runtime's own guard, so they are mapped
+	// unconditionally like the counter requirement above.
+	if selector.Modified {
+		selection.MatchModified = true
+	}
+	if selector.Enchanted {
+		selection.MatchEnchanted = true
+	}
+	if selector.Equipped {
+		selection.MatchEquipped = true
+	}
+
 	choice, choiceOK := selectorSubtypeChoice(selector, mask)
 	if !choiceOK {
 		return game.Selection{}, false

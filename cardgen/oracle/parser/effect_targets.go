@@ -591,6 +591,9 @@ func chosenCreatureTargetHasScalarQualifiers(selection SelectionSyntax) bool {
 		selection.Blocking ||
 		selection.Tapped ||
 		selection.Untapped ||
+		selection.Modified ||
+		selection.Enchanted ||
+		selection.Equipped ||
 		selection.Colorless ||
 		selection.Multicolored ||
 		selection.MatchManaValue ||
@@ -765,6 +768,18 @@ func exactMultiPermanentTargetSyntax(text string, cardinality TargetCardinalityS
 	if plural {
 		noun += "s"
 	}
+	// The attachment adjective ("modified", "enchanted", "equipped") prints
+	// between the "target" determiner and the (optionally excluded-prefixed)
+	// noun, e.g. "up to two target enchanted creatures". More than one qualifier
+	// fails closed.
+	attachmentWords, ok := selectionAttachmentWords(selection)
+	if !ok {
+		return false
+	}
+	attachmentPrefix := ""
+	if len(attachmentWords) == 1 {
+		attachmentPrefix = attachmentWords[0] + " "
+	}
 	// The plural "other" exclusion ("up to two other target creatures") reads
 	// between the count words and "target"; "another" stays rejected above as a
 	// singular shape the multi-target round-trip does not represent.
@@ -772,7 +787,7 @@ func exactMultiPermanentTargetSyntax(text string, cardinality TargetCardinalityS
 	if selection.Other {
 		otherWord = "other "
 	}
-	expected, ok := targetControllerSuffix(prefix+otherWord+"target "+excludedPrefix+noun, selection.Controller)
+	expected, ok := targetControllerSuffix(prefix+otherWord+"target "+attachmentPrefix+excludedPrefix+noun, selection.Controller)
 	if !ok {
 		return false
 	}
@@ -1027,7 +1042,13 @@ func permanentSelectionQualifierWords(selection SelectionSyntax) ([]string, bool
 			return nil, false
 		}
 	}
-	words := append([]string(nil), combatWords...)
+	attachmentWords, ok := selectionAttachmentWords(selection)
+	if !ok {
+		return nil, false
+	}
+	words := make([]string, 0, len(attachmentWords)+len(combatWords))
+	words = append(words, attachmentWords...)
+	words = append(words, combatWords...)
 	if len(selection.Supertypes) == 1 {
 		supertypeText, ok := supertypeWord(selection.Supertypes[0])
 		if !ok {
@@ -1113,6 +1134,44 @@ func selectionCombatStateWords(selection SelectionSyntax) ([]string, bool) {
 	default:
 		return nil, true
 	}
+}
+
+// selectionHasAttachmentQualifier reports whether the selection carries a
+// positive attachment/modification adjective ("modified", "enchanted", or
+// "equipped"). These qualifiers restrict a permanent target to one carrying the
+// matching attachment state (CR 701.50).
+func selectionHasAttachmentQualifier(selection SelectionSyntax) bool {
+	return selection.Modified || selection.Enchanted || selection.Equipped
+}
+
+// selectionAttachmentWords reconstructs the canonical Oracle adjective for a
+// permanent target's attachment qualifier ("modified", "enchanted", or
+// "equipped"), which prints immediately after the "target" determiner. The three
+// qualifiers are mutually exclusive; a selection carrying more than one fails
+// closed so no reconstruction silently drops a qualifier. A selection carrying
+// none returns the empty word list, leaving the reconstruction unchanged.
+func selectionAttachmentWords(selection SelectionSyntax) ([]string, bool) {
+	count := 0
+	word := ""
+	if selection.Modified {
+		count++
+		word = "modified"
+	}
+	if selection.Enchanted {
+		count++
+		word = "enchanted"
+	}
+	if selection.Equipped {
+		count++
+		word = "equipped"
+	}
+	if count > 1 {
+		return nil, false
+	}
+	if count == 0 {
+		return nil, true
+	}
+	return []string{word}, true
 }
 
 // tokenQualifiedNoun applies a selection's token adjective to its permanent
@@ -2695,6 +2754,9 @@ func parseSelection(tokens []shared.Token, atoms Atoms) SelectionSyntax {
 	selection.Untapped = atoms.SelectionFlagIn(span, SelectionFlagUntapped)
 	selection.NonToken = atoms.SelectionFlagIn(span, SelectionFlagNonToken)
 	selection.TokenOnly = atoms.SelectionFlagIn(span, SelectionFlagToken)
+	selection.Modified = atoms.SelectionFlagIn(span, SelectionFlagModified)
+	selection.Enchanted = atoms.SelectionFlagIn(span, SelectionFlagEnchanted)
+	selection.Equipped = atoms.SelectionFlagIn(span, SelectionFlagEquipped)
 	selection.EnteredThisTurn = effectContainsWords(words, "that", "entered", "this", "turn") ||
 		effectContainsWords(words, "that", "entered", "the", "battlefield", "this", "turn")
 	selection.DealtDamageThisTurn = effectContainsWords(words, "that", "was", "dealt", "damage", "this", "turn")

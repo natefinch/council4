@@ -25,6 +25,7 @@ var Cards = []*game.CardDef{
 	RallyForTheThrone,
 	RampagingClassmate,
 	RampantGrowth,
+	RamsesOverdark,
 	RancorousArchaic,
 	RankAndFile,
 	RapidDecay,
