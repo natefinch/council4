@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,699 of 32,501 cards eligible for paper support (51.4%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,709 of 32,501 cards eligible for paper support (51.4%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -35,6 +35,7 @@ Council4 currently supports **16,699 of 32,501 cards eligible for paper support 
 - Absolute Law
 - Absorb
 - Absorb Vis
+- Abstract Paintmage
 - Abuelo, Ancestral Echo
 - Abundant Countryside
 - Abundant Growth
@@ -2820,6 +2821,7 @@ Council4 currently supports **16,699 of 32,501 cards eligible for paper support 
 - Coretapper
 - Cori Mountain Monastery
 - Cori Mountain Stalwart
+- Cormela, Glamour Thief
 - Cornered by Black Mages
 - Cornered Crook
 - Corpse Blockade
@@ -6899,6 +6901,7 @@ Council4 currently supports **16,699 of 32,501 cards eligible for paper support 
 - HYDRA Infiltration
 - HYDRA Troopers
 - Hydra's Growth
+- Hydro-Channeler
 - Hydroblast
 - Hydroform
 - Hydrolash
@@ -8113,6 +8116,7 @@ Council4 currently supports **16,699 of 32,501 cards eligible for paper support 
 - Life Chisel
 - Life from the Loam
 - Life Insurance
+- Life of Toshiro Umezawa // Memory of Toshiro
 - Life's Legacy
 - Lifeblood
 - Lifecraft Cavalry
@@ -9777,6 +9781,7 @@ Council4 currently supports **16,699 of 32,501 cards eligible for paper support 
 - Obsianus Golem
 - Obsidian Acolyte
 - Obsidian Giant
+- Obsidian Obelisk
 - Obyra's Attendants // Desperate Parry
 - Obyra, Dreaming Duelist
 - Obzedat's Aid
@@ -10191,6 +10196,7 @@ Council4 currently supports **16,699 of 32,501 cards eligible for paper support 
 - Pegasus Refuge
 - Peggy Carter, Secret Agent
 - Pelakka Wurm
+- Pelargir Survivor
 - Pendrell Drake
 - Pendulum of Patterns
 - Pennon Blade
@@ -10371,6 +10377,7 @@ Council4 currently supports **16,699 of 32,501 cards eligible for paper support 
 - Pillar Launch
 - Pillar of Light
 - Pillar of Origins
+- Pillar of the Paruns
 - Pillardrop Rescuer
 - Pillardrop Warden
 - Pillarfield Ox
@@ -13122,6 +13129,7 @@ Council4 currently supports **16,699 of 32,501 cards eligible for paper support 
 - Somberwald Alpha
 - Somberwald Beastmaster
 - Somberwald Dryad
+- Somberwald Sage
 - Somberwald Spider
 - Somberwald Stag
 - Somberwald Vigilante
@@ -15761,6 +15769,7 @@ Council4 currently supports **16,699 of 32,501 cards eligible for paper support 
 - Vizkopa Vampire
 - Vizzerdrix
 - Vnwxt, Verbose Host
+- Vodalian Arcanist
 - Vodalian Hexcatcher
 - Vodalian Hypnotist
 - Vodalian Knights
@@ -16379,6 +16388,7 @@ Council4 currently supports **16,699 of 32,501 cards eligible for paper support 
 - Witness of the Ages
 - Witness of Tomorrows
 - Witty Roastmaster
+- Wizard
 - Wizard
 - Wizard
 - Wizard
