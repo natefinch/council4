@@ -2670,12 +2670,40 @@ func matchSequenceEffectConditions(
 			if _, exists := result[ei]; exists {
 				return nil, effectGateCategoryMultiCondition, false
 			}
+			// A per-effect gate that tests the source permanent's own
+			// characteristics ("if it's tapped") while gating a target-scoped
+			// clause means the condition's "it" antecedent was resolved to the
+			// source rather than the clause's target — the source is not the
+			// subject the printed condition names. Binding the gate to the wrong
+			// object would silently test the wrong permanent, so fail closed.
+			if effects[ei].Context == parser.EffectContextTarget &&
+				conditionTestsSourceObjectCharacteristics(lowered) {
+				return nil, effectGateCategoryPredicate, false
+			}
 			result[ei] = game.EffectCondition{
 				Condition: opt.Val(lowered),
 			}
 		}
 	}
 	return result, "", true
+}
+
+// conditionTestsSourceObjectCharacteristics reports whether a lowered effect-gate
+// condition tests the source permanent's own characteristics (a Selection match on
+// a source object reference), the signature of an "it"/"that" antecedent that was
+// resolved to the source rather than to the clause's own target subject.
+func conditionTestsSourceObjectCharacteristics(condition game.Condition) bool {
+	if !condition.Object.Exists || !condition.ObjectMatches.Exists {
+		return false
+	}
+	switch condition.Object.Val.Kind() {
+	case game.ObjectReferenceSourcePermanent,
+		game.ObjectReferenceSourceAttachedPermanent,
+		game.ObjectReferenceSourceCard:
+		return true
+	default:
+		return false
+	}
 }
 
 // Closed blocker categories for an ordered sequence whose per-effect condition

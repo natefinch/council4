@@ -28,6 +28,7 @@ var Cards = []*game.CardDef{
 	ManaSeism,
 	ManifestationSage,
 	Manticore,
+	MarchesaSSmuggler,
 	MarchingDuodrone,
 	MarduBlazebringer,
 	MarduWarshrieker,
