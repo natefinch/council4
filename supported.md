@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,709 of 32,501 cards eligible for paper support (51.4%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,719 of 32,501 cards eligible for paper support (51.4%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2852,6 +2852,7 @@ Council4 currently supports **16,709 of 32,501 cards eligible for paper support 
 - Cosmic Spider-Man
 - Cosmium Blast
 - Cosmogrand Zenith
+- Cosmotronic Wave
 - Cost of Brilliance
 - Costly Plunder
 - Council of Advisors
@@ -3484,6 +3485,7 @@ Council4 currently supports **16,709 of 32,501 cards eligible for paper support 
 - Destructive Digger
 - Destructive Force
 - Destructive Revelry
+- Destructive Tampering
 - Destructive Urge
 - Destructor Dragon
 - Detained by Legionnaires
@@ -4683,6 +4685,7 @@ Council4 currently supports **16,709 of 32,501 cards eligible for paper support 
 - False Mourning
 - False Prophet
 - False Summoning
+- Falter
 - Falthis, Shadowcat Familiar
 - Familiar's Ruse
 - Family Reunion
@@ -4923,6 +4926,7 @@ Council4 currently supports **16,709 of 32,501 cards eligible for paper support 
 - Fire Nation Soldier
 - Fire Nation Warship
 - Fire Nation's Conquest
+- Fire of Orthanc
 - Fire Shrine Keeper
 - Fire Snake
 - Fire Sprites
@@ -5878,6 +5882,7 @@ Council4 currently supports **16,709 of 32,501 cards eligible for paper support 
 - Goblin King
 - Goblin Lackey
 - Goblin Legionnaire
+- Goblin Locksmith
 - Goblin Lookout
 - Goblin Lore
 - Goblin Masons
@@ -6443,6 +6448,7 @@ Council4 currently supports **16,709 of 32,501 cards eligible for paper support 
 - Hawkeye, Clint Barton
 - Hawkeye, Trick Shot
 - Haywire Mite
+- Hazardous Blast
 - Haze of Pollen
 - Hazel's Nocturne
 - Hazerider Drake
@@ -8462,6 +8468,7 @@ Council4 currently supports **16,709 of 32,501 cards eligible for paper support 
 - Magmakin Artillerist
 - Magmaquake
 - Magmaroth
+- Magmatic Chasm
 - Magmatic Core
 - Magmatic Force
 - Magmatic Insight
@@ -12225,12 +12232,14 @@ Council4 currently supports **16,709 of 32,501 cards eligible for paper support 
 - Segovian Leviathan
 - Seifer Almasy
 - Seismic Assault
+- Seismic Elemental
 - Seismic Mage
 - Seismic Monstrosaur
 - Seismic Rupture
 - Seismic Shift
 - Seismic Shudder
 - Seismic Spike
+- Seismic Stomp
 - Seismic Strike
 - Seismic Tutelage
 - Seizan, Perverter of Truth
@@ -14294,6 +14303,7 @@ Council4 currently supports **16,709 of 32,501 cards eligible for paper support 
 - Tectonic Edge
 - Tectonic Hazard
 - Tectonic Reformation
+- Tectonic Rift
 - Teddy Bear
 - Teeming Dragonstorm
 - Teetering Peaks
