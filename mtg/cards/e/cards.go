@@ -9,6 +9,7 @@ var Cards = []*game.CardDef{
 	EarthshakerDreadmaw,
 	EbonyCharm,
 	EbonyOwlNetsuke,
+	EchoInspector,
 	EchoOfDusk,
 	EchoingCalm,
 	EchoingRuin,

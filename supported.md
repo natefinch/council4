@@ -1,11 +1,12 @@
 # Supported Cards
 
-Council4 currently supports **16,560 of 32,501 cards eligible for paper support (51.0%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,575 of 32,501 cards eligible for paper support (51.0%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
 - A.I.M. Bot
 - A.I.M. Labs
+- A.I.M. Scientists
 - A.I.M. Synthoids
 - Aang's Defense
 - Aang, Air Nomad
@@ -818,6 +819,7 @@ Council4 currently supports **16,560 of 32,501 cards eligible for paper support 
 - Atarka Pummeler
 - Atarka, World Render
 - Atlantean Cavalry
+- Atlantean Skirmisher
 - Atlas, Sizable Stooge
 - Atmosphere Surgeon
 - Atog
@@ -3649,10 +3651,12 @@ Council4 currently supports **16,560 of 32,501 cards eligible for paper support 
 - Djinn of the Fountain
 - Djinn of the Lamp
 - Djinni Windseer
+- Doc Ock's Henchmen
 - Doc Ock, Sinister Scientist
 - Doc Samson, Super Psychiatrist
 - Dockside Chef
 - Dockworker Drone
+- Doctor Doom, King of Latveria
 - Doctor Strange, Surgeon
 - Dog
 - Dog
@@ -4037,6 +4041,7 @@ Council4 currently supports **16,560 of 32,501 cards eligible for paper support 
 - Ebony Rhino
 - Ebony Treefolk
 - Eccentric Farmer
+- Echo Inspector
 - Echo of Dusk
 - Echo Tracer
 - Echoing Calm
@@ -6928,6 +6933,7 @@ Council4 currently supports **16,560 of 32,501 cards eligible for paper support 
 - Illuminate History
 - Illuminated Folio
 - Illuminated Wings
+- Illuminator Virtuoso
 - Illusion
 - Illusion
 - Illusion
@@ -9006,6 +9012,7 @@ Council4 currently supports **16,560 of 32,501 cards eligible for paper support 
 - Moat Piranhas
 - Mob
 - Mob Justice
+- Mob Lookout
 - Mobile Fort
 - Mobile Garrison
 - Mobile Homestead
@@ -10613,6 +10620,7 @@ Council4 currently supports **16,560 of 32,501 cards eligible for paper support 
 - Pseudodragon Familiar
 - Psionic Blast
 - Psionic Gift
+- Psionic Snoop
 - Psychatog
 - Psychic Barrier
 - Psychic Corrosion
@@ -10790,7 +10798,10 @@ Council4 currently supports **16,560 of 32,501 cards eligible for paper support 
 - Radical Idea
 - Radjan Spirit
 - Radstorm
+- Raffine's Informant
+- Raffine's Silencer
 - Raffine's Tower
+- Raffine, Scheming Seer
 - Rafiq of the Many
 - Rag Dealer
 - Ragamuffyn
@@ -11076,6 +11087,7 @@ Council4 currently supports **16,560 of 32,501 cards eligible for paper support 
 - Red Elemental Blast
 - Red Ghost, Intangible Genius
 - Red Herring
+- Red Room Recruit
 - Red Scarab
 - Red Ward
 - Redcap Thief
@@ -11258,6 +11270,7 @@ Council4 currently supports **16,560 of 32,501 cards eligible for paper support 
 - Reveille Squad
 - Revel in Riches
 - Revel of the Fallen God
+- Revel Ruiner
 - Revelsong Horn
 - Revenant
 - Revenge of Ravens
@@ -11947,6 +11960,7 @@ Council4 currently supports **16,560 of 32,501 cards eligible for paper support 
 - Scorpion Dragon
 - Scorpion Sentinel
 - Scorpion's Sting
+- Scorpion, Seething Striker
 - Scour All Possibilities
 - Scour for Scrap
 - Scour from Existence
@@ -12009,6 +12023,7 @@ Council4 currently supports **16,560 of 32,501 cards eligible for paper support 
 - Sculptor of Winter
 - Sculpture
 - Scurrid Colony
+- Scurrilous Sentry
 - Scurry Oak
 - Scute Mob
 - Scute Swarm

@@ -17,6 +17,7 @@ var Cards = []*game.CardDef{
 	IizukaTheRuthless,
 	IkraShidiqiTheUsurper,
 	IlluminateHistory,
+	IlluminatorVirtuoso,
 	IllvoiLightJammer,
 	ImmaculateMagistrate,
 	ImmersturmSkullcairn,

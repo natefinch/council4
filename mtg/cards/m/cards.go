@@ -96,6 +96,7 @@ var Cards = []*game.CardDef{
 	MisersCage,
 	MishraSWorkshop,
 	MistmeadowCouncil,
+	MobLookout,
 	MobileFort,
 	MobileGarrison,
 	MobileHomestead,

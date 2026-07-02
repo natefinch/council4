@@ -58,6 +58,7 @@ var Cards = []*game.CardDef{
 	DivineRetribution,
 	DivineVisitation,
 	DjinnOfTheFountain,
+	DocOckSHenchmen,
 	DocSamsonSuperPsychiatrist,
 	DomriSAmbush,
 	DomriSNodorog,
