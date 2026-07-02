@@ -48,6 +48,42 @@ func TestRunGoldfishCompletesExactTurnLimit(t *testing.T) {
 			t.Fatalf("turn %d = number %d player %d", index, turn.TurnNumber, turn.ActivePlayer)
 		}
 	}
+	firstTurnStructure := []struct {
+		kind  TurnLogEntryKind
+		phase game.Phase
+		step  game.Step
+	}{
+		{kind: TurnLogEntryPhase, phase: game.PhaseBeginning},
+		{kind: TurnLogEntryStep, step: game.StepUntap},
+		{kind: TurnLogEntryStep, step: game.StepUpkeep},
+		{kind: TurnLogEntryStep, step: game.StepDraw},
+		{kind: TurnLogEntryPhase, phase: game.PhasePrecombatMain},
+		{kind: TurnLogEntryPhase, phase: game.PhaseCombat},
+		{kind: TurnLogEntryStep, step: game.StepBeginningOfCombat},
+		{kind: TurnLogEntryStep, step: game.StepDeclareAttackers},
+		{kind: TurnLogEntryStep, step: game.StepEndOfCombat},
+		{kind: TurnLogEntryPhase, phase: game.PhasePostcombatMain},
+		{kind: TurnLogEntryPhase, phase: game.PhaseEnding},
+		{kind: TurnLogEntryStep, step: game.StepEnd},
+		{kind: TurnLogEntryStep, step: game.StepCleanup},
+	}
+	var structure []TurnLogEntry
+	for _, entry := range result.Turns[0].Entries {
+		if entry.Kind == TurnLogEntryPhase || entry.Kind == TurnLogEntryStep {
+			structure = append(structure, entry)
+		}
+	}
+	if len(structure) != len(firstTurnStructure) {
+		t.Fatalf("first-turn structure entries = %d, want %d: %#v", len(structure), len(firstTurnStructure), structure)
+	}
+	for i, want := range firstTurnStructure {
+		if structure[i].Kind != want.kind ||
+			structure[i].Phase.Phase != want.phase ||
+			structure[i].Step.Step != want.step {
+			t.Fatalf("first-turn structure[%d] = %#v, want kind=%v phase=%v step=%v",
+				i, structure[i], want.kind, want.phase, want.step)
+		}
+	}
 	if result.EndState.Players[game.Player1].LibrarySize != 82 {
 		t.Fatalf("library size = %d, want 82", result.EndState.Players[game.Player1].LibrarySize)
 	}

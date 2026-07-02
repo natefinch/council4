@@ -39,6 +39,7 @@ type combatEngine struct {
 // end of combat.
 func (ce combatEngine) runPhase(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
 	g.Turn.Phase = game.PhaseCombat
+	log.addPhase(game.PhaseCombat)
 	g.Turn.CombatPhasesThisTurn++
 	g.Combat = &game.CombatState{}
 	defer func() {
@@ -50,6 +51,7 @@ func (ce combatEngine) runPhase(g *game.Game, agents [game.NumPlayers]PlayerAgen
 	}
 
 	g.Turn.Step = game.StepDeclareAttackers
+	log.addStep(game.StepDeclareAttackers)
 	ce.declareAttackers(g, agents, log)
 	if !ce.runPriority(g, agents, log) {
 		return
@@ -62,6 +64,7 @@ func (ce combatEngine) runPhase(g *game.Game, agents [game.NumPlayers]PlayerAgen
 	// attacker list, which can empty out as attackers leave combat.
 	if g.Combat.AttackersDeclared {
 		g.Turn.Step = game.StepDeclareBlockers
+		log.addStep(game.StepDeclareBlockers)
 		ce.declareBlockers(g, agents, log)
 		if !ce.runPriority(g, agents, log) {
 			return
@@ -70,6 +73,7 @@ func (ce combatEngine) runPhase(g *game.Game, agents [game.NumPlayers]PlayerAgen
 
 		if combatHasFirstStrikeDamage(g) {
 			g.Turn.Step = game.StepFirstStrikeDamage
+			log.addStep(game.StepFirstStrikeDamage)
 			ce.resolveDamagePass(g, firstStrikeCombatDamage, log)
 			ce.e.applyStateBasedActionsWithLog(g, log)
 			if g.IsGameOver() {
@@ -82,6 +86,7 @@ func (ce combatEngine) runPhase(g *game.Game, agents [game.NumPlayers]PlayerAgen
 		}
 
 		g.Turn.Step = game.StepCombatDamage
+		log.addStep(game.StepCombatDamage)
 		ce.resolveDamagePass(g, normalCombatDamage, log)
 		ce.e.applyStateBasedActionsWithLog(g, log)
 		if g.IsGameOver() {
@@ -101,6 +106,7 @@ func (ce combatEngine) runPhase(g *game.Game, agents [game.NumPlayers]PlayerAgen
 // ended during the priority window.
 func (ce combatEngine) runPriorityStep(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, step game.Step) bool {
 	g.Turn.Step = step
+	log.addStep(step)
 	emitBeginningOfStepEvent(g, step)
 	if !ce.runPriority(g, agents, log) {
 		return false
