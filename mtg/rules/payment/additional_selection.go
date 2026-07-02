@@ -412,18 +412,34 @@ func preferredTapPermanentsTotalPower(s State, playerID game.PlayerID, additiona
 	return nil
 }
 
-func chooseReturnPermanents(s State, playerID game.PlayerID, additional cost.Additional, amount int, alreadyChosen []*game.Permanent) []*game.Permanent {
+// costSourcePermanentByCardID resolves an object cost's ExcludeSource source
+// permanent for a resolution payment that carries only the source card ID: it
+// returns the battlefield permanent based on that card instance, or nil when the
+// source is no longer on the battlefield, in which case no permanent is dropped.
+func costSourcePermanentByCardID(s State, sourceCardID id.ID) *game.Permanent {
+	if sourceCardID == 0 {
+		return nil
+	}
+	for _, permanent := range s.Battlefield() {
+		if permanent.CardInstanceID == sourceCardID {
+			return permanent
+		}
+	}
+	return nil
+}
+
+func chooseReturnPermanents(s State, playerID game.PlayerID, additional cost.Additional, amount int, alreadyChosen []*game.Permanent, source *game.Permanent) []*game.Permanent {
 	choice, ok := objectCostChoiceForCost(additional)
 	if !ok {
 		return nil
 	}
-	candidates := candidatePermanentsForObjectCost(s, playerID, choice, nil, reservedPermanentIDs(alreadyChosen))
+	candidates := candidatePermanentsForObjectCost(s, playerID, choice, source, reservedPermanentIDs(alreadyChosen))
 	return truncatePermanents(candidates, amount)
 }
 
-func preferredReturnPermanents(s State, playerID game.PlayerID, additional cost.Additional, amount int, alreadyChosen []*game.Permanent, prefs *Preferences) []*game.Permanent {
+func preferredReturnPermanents(s State, playerID game.PlayerID, additional cost.Additional, amount int, alreadyChosen []*game.Permanent, prefs *Preferences, source *game.Permanent) []*game.Permanent {
 	if prefs == nil || len(prefs.ReturnChoices) == 0 {
-		return chooseReturnPermanents(s, playerID, additional, amount, alreadyChosen)
+		return chooseReturnPermanents(s, playerID, additional, amount, alreadyChosen, source)
 	}
 	choice, ok := objectCostChoiceForCost(additional)
 	if !ok {
@@ -434,7 +450,7 @@ func preferredReturnPermanents(s State, playerID game.PlayerID, additional cost.
 	var consumed int
 	for _, permanentID := range prefs.ReturnChoices {
 		permanent, ok := s.PermanentByObjectID(permanentID)
-		if !ok || chosenIDs[permanentID] || !permanentSatisfiesObjectCost(s, playerID, permanent, choice, nil) {
+		if !ok || chosenIDs[permanentID] || !permanentSatisfiesObjectCost(s, playerID, permanent, choice, source) {
 			return nil
 		}
 		chosen = append(chosen, permanent)
