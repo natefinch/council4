@@ -2774,6 +2774,20 @@ func exactEffectClauseText(effect *EffectSyntax) string {
 	if len(effect.Tokens) > 0 && effect.Tokens[len(effect.Tokens)-1].Kind != shared.Period {
 		text += "."
 	}
+	// A plain trailing-"instead" conditional replacement ("... create a 4/4 Angel
+	// token instead.", "... put two +1/+1 counters on target creature instead.")
+	// marks the escalation branch of an ordered-effect sequence ("[base]. If
+	// <condition>, [escalated] instead.", the Court cycle and similar). The
+	// sequence's "instead" gate handles the replacement relationship, so strip the
+	// suffix here so every effect-type recognizer sees the canonical clause and
+	// treats the branch as an ordinary effect. Only the plain
+	// EffectReplacementInstead form is stripped; the twice-that-many, double-that,
+	// and plus-N replacement kinds keep their distinct wording and handling.
+	if effect.Replacement.Kind == EffectReplacementInstead {
+		if stripped, ok := strings.CutSuffix(text, " instead."); ok {
+			text = stripped + "."
+		}
+	}
 	if effect.DelayedTiming != DelayedTimingNone {
 		for _, suffix := range []string{
 			" at the beginning of the next end step.",

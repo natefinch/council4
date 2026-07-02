@@ -11,27 +11,13 @@ import (
 // wording that embedded trigger and ability bodies use ("..., you create a
 // Treasure token.", "Whenever ..., you create a 1/1 ... token."). The two
 // wordings describe the identical controller effect; the subject "You" is a
-// surface variant the byte-exact reconstruction would otherwise reject.
-//
-// A trailing " instead" before the period is the conditional-replacement form
-// used by escalation sequences ("Create a 1/1 Spirit token. If you're the
-// monarch, create a 4/4 Angel token instead.", the Court cycle). The word marks
-// the effect as the replacement branch; the ordered-sequence lowerer gates it
-// against the negated preceding effect, so accept the same body with the
-// " instead" suffix. This mirrors how the damage and copy-token forms already
-// tolerate the trailing "instead".
+// surface variant the byte-exact reconstruction would otherwise reject. A
+// trailing-"instead" escalation clause is normalized by exactEffectClauseText
+// (the " instead" suffix is stripped for the plain EffectReplacementInstead
+// form), so it reaches here as the bare body.
 func createTokenControllerClauseMatches(clause, body string) bool {
-	if strings.EqualFold(clause, "Create "+body) ||
-		strings.EqualFold(clause, "You create "+body) {
-		return true
-	}
-	insteadBody, ok := strings.CutSuffix(body, ".")
-	if !ok {
-		return false
-	}
-	insteadBody += " instead."
-	return strings.EqualFold(clause, "Create "+insteadBody) ||
-		strings.EqualFold(clause, "You create "+insteadBody)
+	return strings.EqualFold(clause, "Create "+body) ||
+		strings.EqualFold(clause, "You create "+body)
 }
 
 // createTokenControllerForEachClauseMatches reports whether a "for each"
