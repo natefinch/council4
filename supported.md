@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,589 of 32,501 cards eligible for paper support (51.0%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,593 of 32,501 cards eligible for paper support (51.1%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -5156,6 +5156,7 @@ Council4 currently supports **16,589 of 32,501 cards eligible for paper support 
 - Foreboding Ruins
 - Forecasting Fortune Teller
 - Forensic Researcher
+- Forerunner of Slaughter
 - Forerunner of the Coalition
 - Forerunner of the Empire
 - Forerunner of the Heralds
@@ -7061,6 +7062,7 @@ Council4 currently supports **16,589 of 32,501 cards eligible for paper support 
 - Infernal Pet
 - Infernal Plunge
 - Infernal Rebirth
+- Infernal Reckoning
 - Infernal Scarring
 - Inferno
 - Inferno Elemental
@@ -9643,6 +9645,7 @@ Council4 currently supports **16,589 of 32,501 cards eligible for paper support 
 - Null Brooch
 - Null Caller
 - Null Champion
+- Null Elemental Blast
 - Null Group Biological Assets
 - Nulldrifter
 - Nullmage Shepherd
@@ -10644,6 +10647,7 @@ Council4 currently supports **16,589 of 32,501 cards eligible for paper support 
 - Psychic Venom
 - Psychic Whorl
 - Psychosis Crawler
+- Psychotic Fury
 - Psychotic Haze
 - Psychotrope Thallid
 - Pterafractyl
