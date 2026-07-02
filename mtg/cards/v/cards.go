@@ -22,6 +22,7 @@ var Cards = []*game.CardDef{
 	VatEmergence,
 	Vebulid,
 	VedalkenEngineer,
+	VedalkenHumiliator,
 	VeinwitchCoven,
 	VengefulRebel,
 	VenomBlast,

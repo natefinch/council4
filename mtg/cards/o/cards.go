@@ -42,6 +42,7 @@ var Cards = []*game.CardDef{
 	Outwit,
 	OvergrownPest,
 	OverwhelmedApprentice,
+	Ovinize,
 	OviyaPashiriSageLifecrafter,
 	OwlbearShepherd,
 	OzaiSCruelty,

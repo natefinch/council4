@@ -71,6 +71,7 @@ var Cards = []*game.CardDef{
 	HuaTuoHonoredPhysician,
 	HuatliRadiantChampion,
 	HuatliTheSunSHeart,
+	Humble,
 	HumbleDefector,
 	HuntTheHunter,
 	HuntTheWeak,

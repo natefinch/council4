@@ -46,6 +46,12 @@ func lowerSetBasePTContent(ctx contentCtx) (game.AbilityContent, *shared.Diagnos
 		setEffect.SetToughness = opt.Val(game.PT{Value: effect.SetBaseToughness})
 	}
 	continuousEffects := []game.ContinuousEffect{setEffect}
+	if effect.SetBasePTLosesAllAbilities {
+		continuousEffects = append(continuousEffects, game.ContinuousEffect{
+			Layer:              game.LayerAbility,
+			RemoveAllAbilities: true,
+		})
+	}
 	if effect.SetBasePTEveryCreatureType {
 		continuousEffects = append(continuousEffects, game.ContinuousEffect{
 			Layer:                game.LayerType,

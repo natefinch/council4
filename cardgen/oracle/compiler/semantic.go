@@ -2307,6 +2307,10 @@ type CompiledEffect struct {
 	SetBasePTVariableX         bool
 	SetBasePTEveryCreatureType bool
 	SetBasePTSource            bool
+	// SetBasePTLosesAllAbilities mirrors the parser flag: the affected object also
+	// loses all abilities for the duration ("<subject> loses all abilities and has
+	// base power and toughness N/N").
+	SetBasePTLosesAllAbilities bool
 	// SwitchPTSource mirrors the parser's EffectSwitchPT source-affecting form
 	// ("Switch this creature's power and toughness until end of turn."). When
 	// false and the effect carries a target, the single-target switch applies.
