@@ -149,6 +149,44 @@ func TestLowerSetBasePTSourceFixed(t *testing.T) {
 	)
 }
 
+// TestLowerSetBasePTTargetLosesAllAbilities covers the single-target "loses all
+// abilities and has base power and toughness N/N" form (Humble, Ovinize): the
+// rider composes with the existing target set-base-P/T lowering, adding a
+// LayerAbility RemoveAllAbilities continuous effect alongside the P/T set.
+func TestLowerSetBasePTTargetLosesAllAbilities(t *testing.T) {
+	source := generateSetBasePTSource(t, &ScryfallCard{
+		Name:       "Humble",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		ManaCost:   "{W}",
+		OracleText: "Until end of turn, target creature loses all abilities and has base power and toughness 0/1.",
+	}, "h")
+	assertSourceContains(t, source,
+		"game.LayerPowerToughnessSet,",
+		"game.TargetPermanentReference(0)",
+		"SetPower:     opt.Val(game.PT{Value: 0}),",
+		"SetToughness: opt.Val(game.PT{Value: 1}),",
+		"game.LayerAbility,",
+		"RemoveAllAbilities: true,",
+	)
+}
+
+// TestSetBasePTLosesAllAbilitiesWithoutRider confirms the plain single-target
+// set form (no ability loss) does NOT emit a RemoveAllAbilities effect, so the
+// rider is only added when the Oracle text actually calls for it.
+func TestSetBasePTLosesAllAbilitiesWithoutRider(t *testing.T) {
+	source := generateSetBasePTSource(t, &ScryfallCard{
+		Name:       "Square Up Plain",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		ManaCost:   "{G}",
+		OracleText: "Target creature has base power and toughness 4/4 until end of turn.",
+	}, "s")
+	if strings.Contains(source, "RemoveAllAbilities") {
+		t.Fatalf("plain set base P/T must not remove abilities:\n%s", source)
+	}
+}
+
 // TestSetBasePTFailsClosedOnUnsupportedRider confirms a base power/toughness set
 // carrying an extra keyword rider stays unsupported (fail closed) rather than
 // silently dropping the keyword.

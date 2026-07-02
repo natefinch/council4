@@ -38,6 +38,8 @@ func parseSetBasePowerToughnessEffect(sentence Sentence, tokens []shared.Token, 
 		return nil, false
 	}
 
+	remaining, losesAllAbilities := stripLosesAllAbilitiesRider(remaining)
+
 	anchor := setBasePowerToughnessAnchor(remaining)
 	if anchor < 2 {
 		return nil, false
@@ -85,8 +87,35 @@ func parseSetBasePowerToughnessEffect(sentence Sentence, tokens []shared.Token, 
 		SetBasePTVariableX:         amount.variableX,
 		SetBasePTEveryCreatureType: everyCreatureType,
 		SetBasePTSource:            source,
+		SetBasePTLosesAllAbilities: losesAllAbilities,
 	}
 	return []EffectSyntax{effect}, true
+}
+
+// stripLosesAllAbilitiesRider removes the "lose(s) all abilities and" clause that
+// can precede the "ha(s|ve) base power and toughness" verb ("<subject> loses all
+// abilities and has base power and toughness N/N"). It returns the tokens with the
+// rider removed — leaving the plain "<subject> ha(s|ve) base ..." shape the rest of
+// the parser already handles — and whether the rider was present. Any other shape
+// is returned unchanged.
+func stripLosesAllAbilitiesRider(tokens []shared.Token) ([]shared.Token, bool) {
+	anchor := setBasePowerToughnessAnchor(tokens)
+	if anchor < 5 {
+		return tokens, false
+	}
+	if !equalWord(tokens[anchor-1], "has") && !equalWord(tokens[anchor-1], "have") {
+		return tokens, false
+	}
+	losesVerb := equalWord(tokens[anchor-5], "loses") || equalWord(tokens[anchor-5], "lose")
+	if !losesVerb ||
+		!equalWord(tokens[anchor-4], "all") ||
+		!equalWord(tokens[anchor-3], "abilities") ||
+		!equalWord(tokens[anchor-2], "and") {
+		return tokens, false
+	}
+	stripped := append([]shared.Token(nil), tokens[:anchor-5]...)
+	stripped = append(stripped, tokens[anchor-1:]...)
+	return stripped, true
 }
 
 // setBasePowerToughnessAnchor returns the index of the "base power and toughness"

@@ -397,6 +397,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				SetBasePTVariableX:         syntax.SetBasePTVariableX,
 				SetBasePTEveryCreatureType: syntax.SetBasePTEveryCreatureType,
 				SetBasePTSource:            syntax.SetBasePTSource,
+				SetBasePTLosesAllAbilities: syntax.SetBasePTLosesAllAbilities,
 				SwitchPTSource:             syntax.SwitchPTSource,
 
 				EntersWithCounters:        syntax.EntersWithCounters,
