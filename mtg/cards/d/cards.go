@@ -49,6 +49,7 @@ var Cards = []*game.CardDef{
 	DirectorNickFury,
 	DireFleetCaptain,
 	DirtyWererat,
+	Disempower,
 	DisruptivePitmage,
 	DisruptiveStudent,
 	DissensionInTheRanks,

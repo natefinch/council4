@@ -57,6 +57,7 @@ var Cards = []*game.CardDef{
 	Equilibrium,
 	EsperBattlemage,
 	EssenceFlare,
+	EternalIsolation,
 	EternalTaskmaster,
 	EtherealChampion,
 	EtherealElk,

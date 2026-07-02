@@ -20,6 +20,7 @@ var Cards = []*game.CardDef{
 	Bandage,
 	BanditSHaul,
 	BansheeSBlade,
+	BantCharm,
 	BarbedBloodletter,
 	BarbedSpike,
 	BaronSengir,
