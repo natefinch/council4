@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,554 of 32,501 cards eligible for paper support (50.9%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,558 of 32,501 cards eligible for paper support (50.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -640,6 +640,7 @@ Council4 currently supports **16,554 of 32,501 cards eligible for paper support 
 - Archmage of Runes
 - Archmage's Charm
 - Archon of Absolution
+- Archon of Cruelty
 - Archon of Falling Stars
 - Archon of Justice
 - Archon of Redemption
@@ -5507,6 +5508,7 @@ Council4 currently supports **16,554 of 32,501 cards eligible for paper support 
 - Get Lost
 - Get the Point
 - Geth's Grimoire
+- Geth's Verdict
 - Geyser Glider
 - Geyserfield Stalker
 - Ghalma's Warden
@@ -6022,6 +6024,7 @@ Council4 currently supports **16,554 of 32,501 cards eligible for paper support 
 - Gravblade Heavy
 - Grave Bramble
 - Grave Defiler
+- Grave Exchange
 - Grave Pact
 - Grave Peril
 - Grave Robbers
@@ -15118,6 +15121,7 @@ Council4 currently supports **16,554 of 32,501 cards eligible for paper support 
 - Undercity Shade
 - Undercity Troll
 - Undercity Uprising
+- Undercity's Embrace
 - Undercover Crocodelf
 - Underdark Basilisk
 - Underfoot Underdogs

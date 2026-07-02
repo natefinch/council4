@@ -11,6 +11,7 @@ var Cards = []*game.CardDef{
 	UmezawaSJitte,
 	UncoveredClues,
 	UndercityInformer,
+	UndercitySEmbrace,
 	UneshCriosphinxSovereign,
 	UnexplainedVision,
 	UnfathomableTruths,

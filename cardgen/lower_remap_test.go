@@ -105,6 +105,9 @@ func playerIndex(p game.Primitive) (int, bool) {
 	if v, ok := p.(game.LoseLife); ok {
 		return v.Player.TargetIndex(), true
 	}
+	if v, ok := p.(game.SacrificePermanents); ok {
+		return v.Player.TargetIndex(), true
+	}
 	if v, ok := p.(game.MoveCard); ok {
 		return v.Player.TargetIndex(), true
 	}
@@ -148,6 +151,7 @@ func targetBearingPrimitives() []targetBearingPrimitive {
 		playerPrimitive("RevealUntil", func() game.Primitive { return game.RevealUntil{Player: plr()} }),
 		playerPrimitive("GainLife", func() game.Primitive { return game.GainLife{Player: plr()} }),
 		playerPrimitive("LoseLife", func() game.Primitive { return game.LoseLife{Player: plr()} }),
+		playerPrimitive("SacrificePermanents", func() game.Primitive { return game.SacrificePermanents{Player: plr()} }),
 		playerPrimitive("MoveCard player-zone", func() game.Primitive {
 			return game.MoveCard{Player: plr(), FromZone: zone.Graveyard, Destination: zone.Exile}
 		}),
