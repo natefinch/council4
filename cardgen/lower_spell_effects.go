@@ -606,13 +606,15 @@ func lowerCounterPlacementSpell(
 	if content, ok := lowerTargetPlayerControlledCounterPlacement(ctx); ok {
 		return content, nil
 	}
-	if len(ctx.content.Targets) == 0 &&
-		len(ctx.content.References) == 1 &&
-		(ctx.content.References[0].Binding == compiler.ReferenceBindingSource ||
-			ctx.content.References[0].Binding == compiler.ReferenceBindingSourceAttached ||
-			ctx.content.References[0].Binding == compiler.ReferenceBindingTarget ||
-			ctx.content.References[0].Binding == compiler.ReferenceBindingEventPermanent ||
-			ctx.content.References[0].Binding == compiler.ReferenceBindingEventRelatedPermanent) {
+	recipientReferences := ctx.content.References
+	var amountReferences []compiler.CompiledReference
+	if effect.Amount.ReferenceSpan != (shared.Span{}) {
+		recipientReferences = referencesOutsideSpan(recipientReferences, effect.Amount.ReferenceSpan)
+		amountReferences = referencesWithinSpan(ctx.content.References, effect.Amount.ReferenceSpan)
+	}
+	if len(recipientReferences) == 1 &&
+		counterPlacementAmountConsumesTargets(ctx.content.Targets, amountReferences) &&
+		counterPlacementReferenceBindingSupported(recipientReferences[0].Binding) {
 		return lowerReferencedCounterPlacement(ctx)
 	}
 	if content, ok := lowerDualReferencedCounterPlacement(ctx); ok {
@@ -653,27 +655,19 @@ func lowerCounterPlacementSpell(
 		}
 	}
 
-	if !singleTargetCounterReferencesOK(effect.Amount, ctx.content.References) {
-		return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
+	singleTargetAmountReferences := ctx.content.References
+	if effect.Amount.ReferenceSpan == (shared.Span{}) &&
+		referencesBindTo(singleTargetAmountReferences, compiler.ReferenceBindingTarget, 0) {
+		singleTargetAmountReferences = nil
 	}
-	amount := game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX})
-	switch {
-	case effect.Amount.Known:
-		amount = game.Fixed(effect.Amount.Value)
-	case effect.Amount.VariableX:
-	case effect.Amount.DynamicKind == compiler.DynamicAmountTriggeringEventAmount:
-		dynamic, supported := lowerTriggeringEventQuantity(ctx, effect.Amount)
-		if !supported {
-			return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
-		}
-		amount = game.Dynamic(dynamic)
-	case effect.Amount.DynamicKind != compiler.DynamicAmountNone:
-		dynamic, supported := lowerDynamicAmount(effect.Amount, game.SourcePermanentReference())
-		if !supported {
-			return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
-		}
-		amount = game.Dynamic(dynamic)
-	default:
+	amount, ok := lowerCounterPlacementAmount(
+		ctx,
+		effect.Amount,
+		singleTargetAmountReferences,
+		game.SourcePermanentReference(),
+	)
+	if !ok {
+		return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
 	}
 	if kind.PlayerOnly() {
 		primitive = game.AddPlayerCounter{
@@ -694,6 +688,19 @@ func lowerCounterPlacementSpell(
 			Primitive: primitive,
 		}},
 	}.Ability(), nil
+}
+
+func counterPlacementReferenceBindingSupported(binding compiler.ReferenceBinding) bool {
+	switch binding {
+	case compiler.ReferenceBindingSource,
+		compiler.ReferenceBindingSourceAttached,
+		compiler.ReferenceBindingTarget,
+		compiler.ReferenceBindingEventPermanent,
+		compiler.ReferenceBindingEventRelatedPermanent:
+		return true
+	default:
+		return false
+	}
 }
 
 // lowerAttachedCounterPlacement lowers an exact fixed counter placement on the
@@ -902,7 +909,12 @@ func lowerGroupCounterPlacement(ctx contentCtx) (game.AbilityContent, bool) {
 	if effect.Selector.MatchCounter || effect.Selector.MatchAnyCounter {
 		references = counterQualifierFilteredReferences(references)
 	}
-	amount, ok := groupCounterPlacementAmount(effect.Amount, references)
+	amount, ok := lowerCounterPlacementAmount(
+		ctx,
+		effect.Amount,
+		references,
+		game.SourcePermanentReference(),
+	)
 	if !ok {
 		return game.AbilityContent{}, false
 	}
@@ -967,30 +979,6 @@ func lowerSingleChoiceCounterPlacement(ctx contentCtx) (game.AbilityContent, boo
 // no references, while a recognized dynamic amount accepts either no references
 // or source-bound referents (such as "this creature" in "where X is the number
 // of +1/+1 counters on this creature"). It fails closed for any other shape.
-func groupCounterPlacementAmount(
-	amount compiler.CompiledAmount,
-	references []compiler.CompiledReference,
-) (game.Quantity, bool) {
-	if amount.Known {
-		if amount.Value < 1 || len(references) != 0 {
-			return game.Quantity{}, false
-		}
-		return game.Fixed(amount.Value), true
-	}
-	if amount.DynamicKind == compiler.DynamicAmountNone {
-		return game.Quantity{}, false
-	}
-	if len(references) != 0 &&
-		!referencesBindTo(references, compiler.ReferenceBindingSource, 0) {
-		return game.Quantity{}, false
-	}
-	dynamic, supported := lowerDynamicAmount(amount, game.SourcePermanentReference())
-	if !supported {
-		return game.Quantity{}, false
-	}
-	return game.Dynamic(dynamic), true
-}
-
 // counterQualifierFilteredReferences drops the pronoun referent a
 // "with a <kind> counter on it/them" group filter introduces ("it", "them"),
 // leaving the references that genuinely bind a placement count. The caller
@@ -1106,7 +1094,12 @@ func lowerTargetPlayerControlledCounterPlacement(ctx contentCtx) (game.AbilityCo
 	if effect.Selector.MatchCounter || effect.Selector.MatchAnyCounter {
 		references = counterQualifierFilteredReferences(references)
 	}
-	amount, ok := groupCounterPlacementAmount(effect.Amount, references)
+	amount, ok := lowerCounterPlacementAmount(
+		ctx,
+		effect.Amount,
+		references,
+		game.SourcePermanentReference(),
+	)
 	if !ok {
 		return game.AbilityContent{}, false
 	}
@@ -1189,8 +1182,14 @@ func targetPlayerControlledCounterGroup(
 // supported permanent counter kind.
 func lowerReferencedCounterPlacement(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
-	if len(ctx.content.Targets) != 0 ||
-		len(ctx.content.References) != 1 ||
+	recipientReferences := ctx.content.References
+	var amountReferences []compiler.CompiledReference
+	if effect.Amount.ReferenceSpan != (shared.Span{}) {
+		recipientReferences = referencesOutsideSpan(ctx.content.References, effect.Amount.ReferenceSpan)
+		amountReferences = referencesWithinSpan(ctx.content.References, effect.Amount.ReferenceSpan)
+	}
+	if len(recipientReferences) != 1 ||
+		!counterPlacementAmountConsumesTargets(ctx.content.Targets, amountReferences) ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Modes) != 0 ||
 		!effect.Exact ||
@@ -1198,7 +1197,12 @@ func lowerReferencedCounterPlacement(ctx contentCtx) (game.AbilityContent, *shar
 		effect.Context != parser.EffectContextController {
 		return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
 	}
-	amount, ok := referencedCounterPlacementAmount(ctx, effect.Amount)
+	amount, ok := lowerCounterPlacementAmount(
+		ctx,
+		effect.Amount,
+		amountReferences,
+		game.SourcePermanentReference(),
+	)
 	if !ok {
 		return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
 	}
@@ -1206,7 +1210,7 @@ func lowerReferencedCounterPlacement(ctx contentCtx) (game.AbilityContent, *shar
 	if !ok {
 		return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
 	}
-	object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
+	object, ok := lowerObjectReference(recipientReferences[0], referenceLoweringContext{
 		AllowSource: true,
 		AllowTarget: true,
 		AllowEvent:  !ctx.sequenceClause || ctx.allowEventPronoun,
@@ -1230,39 +1234,125 @@ func lowerReferencedCounterPlacement(ctx contentCtx) (game.AbilityContent, *shar
 	}.Ability(), nil
 }
 
-// referencedCounterPlacementAmount lowers the count of a referenced counter
-// placement ("Put a +1/+1 counter on this creature.", "Whenever you discard one
-// or more cards, put that many +1/+1 counters on this creature."). It accepts a
-// fixed positive amount or the generic quantity the enclosing trigger measured
-// (DynamicAmountTriggeringEventAmount), which lowerTriggeringEventQuantity keeps
-// closed outside a measuring trigger. Every other shape, including X and
-// unrecognized dynamic amounts, fails closed.
-func referencedCounterPlacementAmount(
+func counterPlacementAmountConsumesTargets(
+	targets []compiler.CompiledTarget,
+	references []compiler.CompiledReference,
+) bool {
+	if len(targets) == 0 {
+		return true
+	}
+	consumed := make([]bool, len(targets))
+	for _, reference := range references {
+		if reference.Binding != compiler.ReferenceBindingTarget ||
+			reference.Occurrence < 0 ||
+			reference.Occurrence >= len(targets) {
+			continue
+		}
+		consumed[reference.Occurrence] = true
+	}
+	for _, targetConsumed := range consumed {
+		if !targetConsumed {
+			return false
+		}
+	}
+	return true
+}
+
+// lowerCounterPlacementAmount lowers a counter count shared by single-target,
+// referenced, and group placements. Object-reading dynamic amounts resolve their
+// own amount-bound reference; source-relative and group-wide amounts use
+// defaultObject. Every supplied reference must belong to the dynamic amount.
+func lowerCounterPlacementAmount(
 	ctx contentCtx,
 	amount compiler.CompiledAmount,
+	references []compiler.CompiledReference,
+	defaultObject game.ObjectReference,
 ) (game.Quantity, bool) {
 	if amount.Known {
-		if amount.Value <= 0 {
+		if amount.Value <= 0 || len(references) != 0 {
 			return game.Quantity{}, false
 		}
 		return game.Fixed(amount.Value), true
 	}
+	if amount.VariableX {
+		if len(references) != 0 {
+			return game.Quantity{}, false
+		}
+		return game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX}), true
+	}
 	if amount.DynamicKind == compiler.DynamicAmountTriggeringEventAmount {
+		if len(references) != 0 {
+			return game.Quantity{}, false
+		}
 		dynamic, ok := lowerTriggeringEventQuantity(ctx, amount)
 		if !ok {
 			return game.Quantity{}, false
 		}
 		return game.Dynamic(dynamic), true
 	}
-	// Every other dynamic amount ("for each creature you control", devotion,
-	// twice the creatures in your graveyard, the sacrificed creature's
-	// toughness, ...) resolves through the shared dynamic-amount lowerer
-	// against the placement's own permanent. Amounts the lowerer cannot model
-	// keep the referenced placement fail-closed.
-	if dynamic, ok := lowerDynamicAmount(amount, game.SourcePermanentReference()); ok {
+	if amount.DynamicKind == compiler.DynamicAmountNone {
+		return game.Quantity{}, false
+	}
+	object, ok := counterPlacementAmountObject(ctx, amount, references, defaultObject)
+	if !ok {
+		return game.Quantity{}, false
+	}
+	if amount.DynamicKind == compiler.DynamicAmountSourceManaValue {
+		dynamic, ok := objectCharacteristicAmount(amount.DynamicKind, object)
+		if !ok {
+			return game.Quantity{}, false
+		}
+		dynamic.Addend = amount.Addend
+		return game.Dynamic(dynamic), true
+	}
+	if dynamic, ok := lowerDynamicAmount(amount, object); ok {
 		return game.Dynamic(dynamic), true
 	}
 	return game.Quantity{}, false
+}
+
+func counterPlacementAmountObject(
+	ctx contentCtx,
+	amount compiler.CompiledAmount,
+	references []compiler.CompiledReference,
+	defaultObject game.ObjectReference,
+) (game.ObjectReference, bool) {
+	if amount.ReferenceSpan == (shared.Span{}) {
+		return defaultObject, len(references) == 0
+	}
+	if !counterPlacementAmountReadsObject(amount.DynamicKind) ||
+		len(references) != 1 ||
+		references[0].Span != amount.ReferenceSpan {
+		return game.ObjectReference{}, false
+	}
+	if references[0].Binding == compiler.ReferenceBindingTarget {
+		if references[0].Kind == compiler.ReferencePronoun &&
+			references[0].Pronoun == compiler.ReferencePronounIts {
+			return game.ObjectReference{}, false
+		}
+		index := references[0].Occurrence
+		if index < 0 || index >= len(ctx.content.Targets) {
+			return game.ObjectReference{}, false
+		}
+		return inheritedRemovalTargetObjectRef(ctx.content.Targets[index], index)
+	}
+	return lowerObjectReference(references[0], referenceLoweringContext{
+		AllowSource: true,
+		AllowTarget: true,
+		AllowEvent:  !ctx.sequenceClause || ctx.allowEventPronoun,
+	})
+}
+
+func counterPlacementAmountReadsObject(kind compiler.DynamicAmountKind) bool {
+	switch kind {
+	case compiler.DynamicAmountSourcePower,
+		compiler.DynamicAmountSourceToughness,
+		compiler.DynamicAmountSourceManaValue,
+		compiler.DynamicAmountSourceCounterCount:
+		return true
+	default:
+		return false
+	}
 }
 
 // lowerTriggeringEventQuantity resolves a generic "that many" triggering-event
@@ -1700,33 +1790,6 @@ func unsupportedLibraryPlacementDiagnostic(ctx contentCtx) *shared.Diagnostic {
 		"unsupported library placement",
 		"the executable source backend supports only exact target graveyard-to-library placement",
 	)
-}
-
-func singleTargetCounterReferencesOK(
-	amount compiler.CompiledAmount,
-	references []compiler.CompiledReference,
-) bool {
-	if len(references) == 0 {
-		return true
-	}
-	if amount.ReferenceSpan == (shared.Span{}) &&
-		referencesBindTo(references, compiler.ReferenceBindingTarget, 0) {
-		return true
-	}
-	return exactDynamicAmountReference(amount, references)
-}
-
-func exactDynamicAmountReference(
-	amount compiler.CompiledAmount,
-	references []compiler.CompiledReference,
-) bool {
-	if amount.DynamicKind != compiler.DynamicAmountSourcePower {
-		return len(references) == 0
-	}
-	if len(references) != 1 || references[0].Span != amount.ReferenceSpan {
-		return false
-	}
-	return references[0].Binding == compiler.ReferenceBindingSource
 }
 
 func textWithoutDelimited(text string, span shared.Span, groups []parser.Delimited) string {

@@ -47,6 +47,7 @@ var Cards = []*game.CardDef{
 	NoxiousHatchling,
 	Nulldrifter,
 	NumotTheDevastator,
+	NykthosParagon,
 	NyleaSColossus,
 	NyxbloomAncient,
 }

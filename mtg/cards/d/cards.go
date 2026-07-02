@@ -71,6 +71,7 @@ var Cards = []*game.CardDef{
 	DragonSHoard,
 	DragonclawStrike,
 	DragonskullSummit,
+	DrainingWhelk,
 	DrakeHatcher,
 	DranaSChosen,
 	DreadCacodemon,

@@ -114,7 +114,7 @@ func transformPrimitiveTargetIndices(primitive game.Primitive, transform targetI
 			}
 			value.DamageSource = opt.Val(source)
 		}
-		amount, ok := transformDamageAmount(value.Amount, transform)
+		amount, ok := transformQuantity(value.Amount, transform)
 		if !ok {
 			return nil, false
 		}
@@ -130,6 +130,10 @@ func transformPrimitiveTargetIndices(primitive game.Primitive, transform targetI
 	}
 	if value, ok := primitive.(game.AddCounter); ok {
 		value.Object, ok = transformObjectReference(value.Object, transform)
+		if !ok {
+			return nil, false
+		}
+		value.Amount, ok = transformQuantity(value.Amount, transform)
 		return value, ok
 	}
 	if value, ok := primitive.(game.AddPlayerCounter); ok {
@@ -382,11 +386,10 @@ func objectReferenceCarriesTargetIndex(reference game.ObjectReference) bool {
 	}
 }
 
-// transformDamageAmount transforms a damage Quantity whose dynamic formula reads
-// a target's value (e.g. DynamicAmountObjectPower for "equal to its power").
-// Fixed amounts and dynamic formulas that do not reference a target are returned
-// unchanged so non-inherited damage stays byte-identical.
-func transformDamageAmount(amount game.Quantity, transform targetIndexTransform) (game.Quantity, bool) {
+// transformQuantity transforms a Quantity whose dynamic formula reads a target's
+// value (e.g. DynamicAmountObjectPower for "equal to its power"). Fixed amounts
+// and dynamic formulas that do not reference a target are returned unchanged.
+func transformQuantity(amount game.Quantity, transform targetIndexTransform) (game.Quantity, bool) {
 	dynamic := amount.DynamicAmount()
 	if !dynamic.Exists || !objectReferenceCarriesTargetIndex(dynamic.Val.Object) {
 		return amount, true
