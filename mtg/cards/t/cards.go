@@ -133,4 +133,7 @@ var Cards = []*game.CardDef{
 	TormentorExarch,
 	Trufflesnout,
 	TrustyRetriever,
+	ThatSRoughBuddy,
+	ThrowFromTheSaddle,
+	TragicBanshee,
 }

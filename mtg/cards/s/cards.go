@@ -285,4 +285,5 @@ var Cards = []*game.CardDef{
 	SaurianSymbiote,
 	ShamblingGhast,
 	StorvaldFrostGiantJarl,
+	SecretsOfTheKey,
 }

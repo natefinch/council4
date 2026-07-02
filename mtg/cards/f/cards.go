@@ -102,4 +102,6 @@ var Cards = []*game.CardDef{
 	FynnTheFangbearer,
 	FangkeeperSFamiliar,
 	FlashThompsonSpiderFan,
+	FieldResearch,
+	ForTheFamily,
 }

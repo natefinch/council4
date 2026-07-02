@@ -96,4 +96,7 @@ var Cards = []*game.CardDef{
 	Hypochondria,
 	HivespineWolverine,
 	HoodedAssassin,
+	HauntingHymn,
+	HuatliSSpurring,
+	HypnoticCloud,
 }
