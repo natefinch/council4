@@ -82,3 +82,43 @@ func TestControllerDesignationConditionRejectedOutsideInterveningTrigger(t *test
 		}
 	}
 }
+
+// TestLowerMonarchInsteadEscalationEffectGate verifies the monarch "instead"
+// escalation cycle ("At the beginning of your upkeep, <base>. If you're the
+// monarch, <escalated> instead.", the Court cycle) lowers both sub-effects with
+// per-effect gates: the base effect runs only when the controller is not the
+// monarch (a negated ControllerIsMonarch gate) and the escalated effect runs
+// only when they are.
+func TestLowerMonarchInsteadEscalationEffectGate(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:     "Test Court",
+		Layout:   "normal",
+		TypeLine: "Enchantment",
+		OracleText: "When this enchantment enters, you become the monarch.\n" +
+			"At the beginning of your upkeep, this enchantment deals 2 damage to any target. " +
+			"If you're the monarch, it deals 7 damage instead.",
+	})
+	var upkeep *game.AbilityContent
+	for i := range face.TriggeredAbilities {
+		content := face.TriggeredAbilities[i].Content
+		if len(content.Modes) == 1 && len(content.Modes[0].Sequence) == 2 {
+			upkeep = &face.TriggeredAbilities[i].Content
+			break
+		}
+	}
+	if upkeep == nil {
+		t.Fatalf("no upkeep trigger with a two-instruction sequence: %#v", face.TriggeredAbilities)
+	}
+	seq := upkeep.Modes[0].Sequence
+	base := seq[0].Condition
+	escalated := seq[1].Condition
+	if !base.Exists || !base.Val.Condition.Exists ||
+		!base.Val.Condition.Val.ControllerIsMonarch || !base.Val.Condition.Val.Negate {
+		t.Fatalf("base gate = %#v, want negated ControllerIsMonarch", base)
+	}
+	if !escalated.Exists || !escalated.Val.Condition.Exists ||
+		!escalated.Val.Condition.Val.ControllerIsMonarch || escalated.Val.Condition.Val.Negate {
+		t.Fatalf("escalated gate = %#v, want ControllerIsMonarch", escalated)
+	}
+}
