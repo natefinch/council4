@@ -141,4 +141,5 @@ var Cards = []*game.CardDef{
 	MysticMeditation,
 	MysticMight,
 	MysticRestraints,
+	MomoPlayfulPet,
 }

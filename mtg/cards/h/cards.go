@@ -94,4 +94,6 @@ var Cards = []*game.CardDef{
 	HymnToTourach,
 	HypnoticSpecter,
 	Hypochondria,
+	HivespineWolverine,
+	HoodedAssassin,
 }

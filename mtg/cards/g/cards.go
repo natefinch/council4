@@ -109,4 +109,8 @@ var Cards = []*game.CardDef{
 	GustOfWind,
 	GwaihirGreatestOfTheEagles,
 	GwendlynDiCorci,
+	GaladrielGiftGiver,
+	GearbaneOrangutan,
+	GhastlyDeathTyrant,
+	Glamermite,
 }

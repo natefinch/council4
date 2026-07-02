@@ -95,4 +95,9 @@ var Cards = []*game.CardDef{
 	DustElemental,
 	DwarfholdChampion,
 	DwynenGiltLeafDaen,
+	DailyBugleReporters,
+	DawnbringerCleric,
+	DeceiverExarch,
+	DefiantOgre,
+	DownwindAmbusher,
 }

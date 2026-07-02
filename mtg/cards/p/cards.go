@@ -84,4 +84,7 @@ var Cards = []*game.CardDef{
 	PurgingStormbrood,
 	PurpleDragonPunks,
 	PutridImp,
+	PlunderingBarbarian,
+	PollenbrightDruid,
+	ProudPackRhino,
 }
