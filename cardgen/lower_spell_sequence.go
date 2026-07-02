@@ -1867,6 +1867,57 @@ func lowerTapStunSequence(ctx contentCtx) (game.AbilityContent, bool) {
 	}.Ability(), true
 }
 
+// lowerControlledGroupSkipUntapEffect lowers the mass self-stun "<group> you
+// control don't untap during your next untap step." (Rhonas's Last Stand's "Lands
+// you control ...", and the parallel creatures/permanents/artifacts wordings) into
+// a single group SkipNextUntap over the controlled-permanent group. The affected
+// group is the source controller's own permanents (recorded in StaticSubject by
+// the parser) and the window is that controller's own next untap step, so the
+// clause carries no target or reference. It accepts only the parser-exact negated
+// untap effect whose StaticSubject is a controlled-permanent group with no
+// duration; every other shape (a targeted player's permanents, a multi-step
+// window, a color or subtype filter) fails closed so the general paths are
+// untouched.
+func lowerControlledGroupSkipUntapEffect(ctx contentCtx) (game.AbilityContent, bool) {
+	// Invariant: the sole caller dispatches this lowerer only inside the
+	// `len(ctx.content.Effects) == 1` branch (lower_spell.go), so a length other
+	// than one is an upstream bug rather than an unsupported card shape.
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf("lowerControlledGroupSkipUntapEffect: expected a single effect, got %d", len(ctx.content.Effects)))
+	}
+	if ctx.optional ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.References) != 0 {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if effect.Kind != compiler.EffectUntap || !effect.Negated || effect.Optional || !effect.Exact ||
+		effect.Duration != compiler.DurationNone || effect.DelayedTiming != 0 ||
+		len(effect.Targets) != 0 || len(effect.References) != 0 {
+		return game.AbilityContent{}, false
+	}
+	switch effect.StaticSubject {
+	case compiler.StaticSubjectControlledLands,
+		compiler.StaticSubjectControlledCreatures,
+		compiler.StaticSubjectControlledPermanents,
+		compiler.StaticSubjectControlledArtifacts:
+	default:
+		return game.AbilityContent{}, false
+	}
+	group, ok := resolvingStaticSubjectGroup(&effect)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{
+			{Primitive: game.SkipNextUntap{Group: group}},
+		},
+	}.Ability(), true
+}
+
 // lowerStandaloneStunEffect lowers the standalone targeted stun "Target
 // <permanent> doesn't untap during its controller's next untap step." (Sleeper
 // Dart, House Guildmage, Skyline Cascade) into a single SkipNextUntap on the

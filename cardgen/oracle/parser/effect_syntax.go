@@ -1620,6 +1620,19 @@ func finalizeParsedEffect(effect *EffectSyntax, sentence Sentence, atoms Atoms) 
 	effect.ExileAttached = effect.Kind == EffectExile && exactExileAttachedEffectSyntax(effect)
 	effect.TapAttached = effect.Kind == EffectTap && exactTapAttachedEffectSyntax(effect)
 	effect.UntapAttached = effect.Kind == EffectUntap && exactUntapAttachedEffectSyntax(effect)
+	// A mass self-stun "<group> you control don't untap during your next untap
+	// step." carries its affected group only in its subject noun (no target or
+	// reference), so record that controlled-permanent group in StaticSubject for
+	// the group skip-untap lowering. The subject tokens are the clause's first
+	// three semantic tokens ("<group> you control"); crediting their span keeps
+	// the consumed-token accounting exact.
+	if kind, ok := negatedControlledGroupNextUntapStep(effect); ok {
+		semantic := semanticEffectTokens(effect.Tokens)
+		effect.StaticSubject = EffectStaticSubjectSyntax{
+			Kind: kind,
+			Span: shared.SpanOf(semantic[:3]),
+		}
+	}
 	if group, ok := exactCreateCopyTokenForEachEffectSyntax(effect, atoms); ok {
 		effect.TokenCopyOfForEach = true
 		effect.TokenCopyForEachGroup = group

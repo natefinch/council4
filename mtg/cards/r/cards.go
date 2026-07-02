@@ -67,6 +67,7 @@ var Cards = []*game.CardDef{
 	RhinoBarrelingBrute,
 	RhinoSRampage,
 	RhizomeLurcher,
+	RhonasSLastStand,
 	RhonasTheIndomitable,
 	RhoxPummeler,
 	Riddlekeeper,

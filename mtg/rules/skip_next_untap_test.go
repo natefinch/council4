@@ -61,7 +61,64 @@ func TestTapDownSequenceKeepsTargetTappedThroughNextUntapStep(t *testing.T) {
 	}
 }
 
-// TestMultiTargetTapStunSequenceStunsEachChosenTarget verifies the multi-target
+// TestGroupSkipNextUntapExertsOnlyTheControlledGroup verifies the mass self-stun
+// "Lands you control don't untap during your next untap step." exerts every land
+// the resolving controller controls (leaving other permanents and opponents'
+// lands untouched) and that those lands stay tapped through the controller's next
+// untap step.
+func TestGroupSkipNextUntapExertsOnlyTheControlledGroup(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	ownLand := addBattlefieldPermanent(g, game.Player1, "Forest", []types.Card{types.Land})
+	ownOtherLand := addBattlefieldPermanent(g, game.Player1, "Island", []types.Card{types.Land})
+	ownCreature := addBattlefieldPermanent(g, game.Player1, "Bear", []types.Card{types.Creature})
+	opponentLand := addBattlefieldPermanent(g, game.Player2, "Swamp", []types.Card{types.Land})
+	for _, p := range []*game.Permanent{ownLand, ownOtherLand, ownCreature, opponentLand} {
+		p.Tapped = true
+	}
+
+	addInstructionSpellToStackForController(g, game.Player1, []game.Instruction{
+		{Primitive: game.SkipNextUntap{Group: game.BattlefieldGroup(game.Selection{
+			RequiredTypes: []types.Card{types.Land},
+			Controller:    game.ControllerYou,
+		})}},
+	}, nil)
+
+	log := TurnLog{}
+	engine.resolveTopOfStackWithChoices(g, [game.NumPlayers]PlayerAgent{}, &log)
+
+	if !ownLand.Exerted || !ownOtherLand.Exerted {
+		t.Fatal("group skip-untap did not exert every land the controller controls")
+	}
+	if ownCreature.Exerted {
+		t.Fatal("group skip-untap exerted a non-land permanent")
+	}
+	if opponentLand.Exerted {
+		t.Fatal("group skip-untap exerted an opponent's land")
+	}
+
+	// The controller's untap step: their lands stay tapped and shed the exert.
+	g.Turn.ActivePlayer = game.Player1
+	g.Turn.PriorityPlayer = game.Player1
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Draw One"}})
+	engine.runBeginningPhase(g, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+
+	if !ownLand.Tapped || !ownOtherLand.Tapped {
+		t.Fatal("controlled lands untapped during their skipped untap step")
+	}
+	if ownLand.Exerted || ownOtherLand.Exerted {
+		t.Fatal("controlled lands did not shed their skip-next-untap flag")
+	}
+
+	// The following untap step untaps them normally.
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Draw Two"}})
+	engine.runBeginningPhase(g, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+
+	if ownLand.Tapped || ownOtherLand.Tapped {
+		t.Fatal("controlled lands did not untap on the untap step after their skipped one")
+	}
+}
+
 // tap-stun sequence ("Tap up to two target creatures. Those creatures don't
 // untap during their controller's next untap step.") taps and exerts every
 // chosen target slot, and that each stays tapped through its controller's next
