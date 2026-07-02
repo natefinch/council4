@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,487 of 32,501 cards eligible for paper support (50.7%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,499 of 32,501 cards eligible for paper support (50.8%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -261,6 +261,7 @@ Council4 currently supports **16,487 of 32,501 cards eligible for paper support 
 - Akrasan Squire
 - Akroan Conscriptor
 - Akroan Crusader
+- Akroan Hoplite
 - Akroan Jailer
 - Akroan Line Breaker
 - Akroan Mastiff
@@ -3644,6 +3645,7 @@ Council4 currently supports **16,487 of 32,501 cards eligible for paper support 
 - Dogged Detective
 - Dogged Hunter
 - Dogged Pursuit
+- Dogpile
 - Dokuchi Shadow-Walker
 - Dominus of Fealty
 - Domri's Ambush
@@ -3971,6 +3973,7 @@ Council4 currently supports **16,487 of 32,501 cards eligible for paper support 
 - Dwarven Weaponsmith
 - Dwindle
 - Dwynen's Elite
+- Dwynen, Gilt-Leaf Daen
 - Dying to Serve
 - Dying Wail
 - Dynavolt Tower
@@ -4234,6 +4237,7 @@ Council4 currently supports **16,487 of 32,501 cards eligible for paper support 
 - Ember Shot
 - Ember Weaver
 - Ember-Eye Wolf
+- Embercleave
 - Embereth Paladin
 - Embereth Shieldbreaker // Battle Display
 - Emberheart Challenger
@@ -5174,6 +5178,7 @@ Council4 currently supports **16,487 of 32,501 cards eligible for paper support 
 - Foul Presence
 - Foul Spirit
 - Foul Watcher
+- Foul-Tongue Shriek
 - Foulmire Knight // Profane Insight
 - Foundation Breaker
 - Founding of Omashu
@@ -5679,6 +5684,7 @@ Council4 currently supports **16,487 of 32,501 cards eligible for paper support 
 - Glint-Horn Buccaneer
 - Glint-Nest Crane
 - Glint-Sleeve Artisan
+- Glinting Creeper
 - Glintwing Invoker
 - Glissa's Courier
 - Glissa's Scorn
@@ -5736,6 +5742,7 @@ Council4 currently supports **16,487 of 32,501 cards eligible for paper support 
 - Go Forth
 - Go Ninja Go
 - Go-Shintai of Ancient Wars
+- Go-Shintai of Boundless Vigor
 - Go-Shintai of Life's Origin
 - Go-Shintai of Lost Wisdom
 - Go-Shintai of Shared Purpose
@@ -6076,6 +6083,7 @@ Council4 currently supports **16,487 of 32,501 cards eligible for paper support 
 - Greta, Sweettooth Scourge
 - Gretchen Titchwillow
 - Grey Havens Navigator
+- Grief Tyrant
 - Griffin
 - Griffin Aerie
 - Griffin Dreamfinder
@@ -6908,6 +6916,7 @@ Council4 currently supports **16,487 of 32,501 cards eligible for paper support 
 - Illvoi Galeblade
 - Illvoi Light Jammer
 - Illvoi Operative
+- Immaculate Magistrate
 - Immersturm Predator
 - Immersturm Raider
 - Immersturm Skullcairn
@@ -11504,6 +11513,7 @@ Council4 currently supports **16,487 of 32,501 cards eligible for paper support 
 - Rubblebelt Boar
 - Rubblebelt Maaka
 - Rubblebelt Maverick
+- Rubblebelt Raiders
 - Rubblebelt Recluse
 - Rubblebelt Rioters
 - Rubblehulk
@@ -13036,6 +13046,7 @@ Council4 currently supports **16,487 of 32,501 cards eligible for paper support 
 - Soulreaper of Mogis
 - Soulscour
 - Soulshriek
+- Soulstinger
 - Soulsurge Elemental
 - Soulsworn Jury
 - Soured Springs
@@ -14003,6 +14014,7 @@ Council4 currently supports **16,487 of 32,501 cards eligible for paper support 
 - Tajuru Warcaller
 - Take Down
 - Take Flight
+- Take Heart
 - Take into Custody
 - Take Out the Trash
 - Take Possession
