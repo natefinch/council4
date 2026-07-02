@@ -1588,6 +1588,9 @@ func resolvingStaticSubjectGroup(effect *compiler.CompiledEffect) (game.GroupRef
 		selection.RequiredTypes = []types.Card{types.Creature}
 		selection.TokenOnly = true
 		selection.CombatState = game.CombatStateAttacking
+	case compiler.StaticSubjectControlledCreatureTokens:
+		selection.RequiredTypes = []types.Card{types.Creature}
+		selection.TokenOnly = true
 	case compiler.StaticSubjectControlledArtifacts:
 		selection.RequiredTypes = []types.Card{types.Artifact}
 	case compiler.StaticSubjectControlledLands:
@@ -1669,6 +1672,14 @@ func resolvingStaticSubjectBaseSelection(effect *compiler.CompiledEffect) (game.
 			return game.Selection{}, false
 		}
 		selection.ColorsAny = append(selection.ColorsAny, runtimeColor)
+	}
+	if kind, anyKind, present := effect.StaticSubjectCounter(); present {
+		if anyKind {
+			selection.MatchAnyCounter = true
+		} else {
+			selection.MatchCounter = true
+			selection.RequiredCounter = kind
+		}
 	}
 	return selection, true
 }

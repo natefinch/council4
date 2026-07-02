@@ -1518,6 +1518,8 @@ func permanentSelectionNoun(kind SelectionKind) (string, bool) {
 		return "artifact", true
 	case SelectionBattle:
 		return "battle", true
+	case SelectionCommander:
+		return "commander", true
 	case SelectionCreature:
 		return "creature", true
 	case SelectionEnchantment:
@@ -4035,7 +4037,7 @@ func parseChosenColorControlledGroupSubject(tokens []shared.Token, atoms Atoms) 
 func parseFilteredControlledCreatureGroupSubject(tokens []shared.Token) (EffectStaticSubjectSyntax, bool) {
 	switch {
 	case len(tokens) >= 5 && effectWordsAt(tokens, 0, "creature", "tokens", "you", "control") &&
-		(equalWord(tokens[4], "get") || equalWord(tokens[4], "have")):
+		staticGroupVerb(tokens[4]):
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledCreatureTokens, Span: shared.SpanOf(tokens[:4])}, true
 	case len(tokens) >= 5 && effectWordsAt(tokens, 0, "legendary", "creatures", "you", "control") &&
 		(equalWord(tokens[4], "get") || equalWord(tokens[4], "have")):
@@ -4205,15 +4207,16 @@ func counterGroupNounPhrase(tokens []shared.Token) (counterGroupHead, bool) {
 
 // counterGroupVerbAt reports whether the token at index introduces the group
 // effect verb that follows a counter-matters anthem subject: the singular
-// "has"/"gets" after "each creature", or the plural "have"/"get".
+// "has"/"gets"/"gains"/"loses" after "each creature", or the plural
+// "have"/"get"/"gain"/"lose".
 func counterGroupVerbAt(tokens []shared.Token, index int, singular bool) bool {
 	if index >= len(tokens) {
 		return false
 	}
 	if singular {
-		return equalWord(tokens[index], "has") || equalWord(tokens[index], "gets")
+		return staticGroupVerbSingular(tokens[index])
 	}
-	return equalWord(tokens[index], "have") || equalWord(tokens[index], "get")
+	return staticGroupVerb(tokens[index])
 }
 
 // staticKeywordGroupKind resolves the static subject kind for a keyword-filtered

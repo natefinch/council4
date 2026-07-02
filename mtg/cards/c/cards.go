@@ -56,6 +56,7 @@ var Cards = []*game.CardDef{
 	ChillOfTheGrave,
 	ChiseiHeartOfOceans,
 	ChitteringSkitterling,
+	ChocoboKnights,
 	ChokingRestraints,
 	ChoMannoSBlessing,
 	Choke,
