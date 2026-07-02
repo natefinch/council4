@@ -1534,6 +1534,8 @@ func resolvingStaticSubjectGroup(effect *compiler.CompiledEffect) (game.GroupRef
 	}
 	selection := game.Selection{Controller: game.ControllerYou}
 	switch effect.StaticSubject {
+	case compiler.StaticSubjectAttachedObject:
+		return game.AttachedObjectGroup(game.SourcePermanentReference()), true
 	case compiler.StaticSubjectAllCreatures:
 		return game.BattlefieldGroup(game.Selection{
 			RequiredTypes: []types.Card{types.Creature},
