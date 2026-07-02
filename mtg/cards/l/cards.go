@@ -42,6 +42,7 @@ var Cards = []*game.CardDef{
 	LilianaDeathSMajesty,
 	LilianaSSpoils,
 	Lithophage,
+	LivingArmor,
 	LivingLiesOfLoki,
 	LivingPhone,
 	LivingTsunami,

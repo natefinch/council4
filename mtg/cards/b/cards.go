@@ -52,6 +52,7 @@ var Cards = []*game.CardDef{
 	BiteDown,
 	BlackCat,
 	BlackOakOfOdunos,
+	BlackSunSZenith,
 	BlackWard,
 	BlackWidowDeadlyHunter,
 	BlackbloomRogue,
