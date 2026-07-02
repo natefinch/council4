@@ -57,4 +57,7 @@ var Cards = []*game.CardDef{
 	KyoshiBattleFan,
 	KyoshiIslandPlaza,
 	KyoshiWarriorExemplars,
+	KamiOfRestlessShadows,
+	KnightOfAutumn,
+	KuraTheBoundlessSky,
 }

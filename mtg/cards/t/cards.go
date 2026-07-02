@@ -128,4 +128,8 @@ var Cards = []*game.CardDef{
 	TymaretCallsTheDead,
 	TyranidHarridan,
 	TyvarThePummeler,
+	TitanOfIndustry,
+	TormentorExarch,
+	Trufflesnout,
+	TrustyRetriever,
 }

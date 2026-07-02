@@ -14,4 +14,5 @@ var Cards = []*game.CardDef{
 	QuickDrawDagger,
 	Quickling,
 	QuicksilverBehemoth,
+	QutrubForayer,
 }

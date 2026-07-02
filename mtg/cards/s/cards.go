@@ -280,4 +280,8 @@ var Cards = []*game.CardDef{
 	SyndicateInfiltrator,
 	SynodCenturion,
 	SyphonEssence,
+	SandsteppeOutcast,
+	SaurianSymbiote,
+	ShamblingGhast,
+	StorvaldFrostGiantJarl,
 }

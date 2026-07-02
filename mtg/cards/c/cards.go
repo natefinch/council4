@@ -169,4 +169,6 @@ var Cards = []*game.CardDef{
 	CyclopeanSnare,
 	CytoplastManipulator,
 	CytospawnShambler,
+	CleanupCrew,
+	ColiseumBehemoth,
 }

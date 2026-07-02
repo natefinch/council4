@@ -49,4 +49,5 @@ var Cards = []*game.CardDef{
 	OviyaPashiriSageLifecrafter,
 	OwlbearShepherd,
 	OzaiSCruelty,
+	OltecArchaeologists,
 }

@@ -135,4 +135,7 @@ var Cards = []*game.CardDef{
 	Bushwhack,
 	ButcherOfTheHorde,
 	ButcherSCleaver,
+	BalefulBeholder,
+	BrotherhoodOutcast,
+	BrutalizerExarch,
 }

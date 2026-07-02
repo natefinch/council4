@@ -100,4 +100,6 @@ var Cards = []*game.CardDef{
 	Fylamarid,
 	FurnaceDragon,
 	FynnTheFangbearer,
+	FangkeeperSFamiliar,
+	FlashThompsonSpiderFan,
 }

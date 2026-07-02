@@ -57,4 +57,8 @@ var Cards = []*game.CardDef{
 	IvoryCharm,
 	IvoryCup,
 	IvoryMask,
+	InquisitorExarch,
+	InspiredInventor,
+	InspiringBard,
+	IrreverentRevelers,
 }
