@@ -264,6 +264,78 @@ func TestLowerTemporaryKeywordLossBroadTargets(t *testing.T) {
 	}
 }
 
+// TestLowerTemporaryLoseAllAbilities covers the resolving total "loses all
+// abilities" removal (#2646): the ability-removal continuous effect routes
+// through the same continuous-subject machinery as keyword loss, so it composes
+// across target, group, and source subjects, each emitting a LayerAbility
+// RemoveAllAbilities continuous effect.
+func TestLowerTemporaryLoseAllAbilities(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		typeLine string
+		oracle   string
+	}{
+		{
+			name:     "single target",
+			typeLine: "Instant",
+			oracle:   "Target creature loses all abilities until end of turn.",
+		},
+		{
+			name:     "opponent group",
+			typeLine: "Sorcery",
+			oracle:   "Creatures your opponents control lose all abilities until end of turn.",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Lose All",
+				Layout:     "normal",
+				TypeLine:   tc.typeLine,
+				OracleText: tc.oracle,
+			})
+			mode := face.SpellAbility.Val.Modes[0]
+			apply, ok := mode.Sequence[0].Primitive.(game.ApplyContinuous)
+			if !ok {
+				t.Fatalf("primitive = %T, want game.ApplyContinuous", mode.Sequence[0].Primitive)
+			}
+			if apply.Duration != game.DurationUntilEndOfTurn {
+				t.Fatalf("duration = %v, want until end of turn", apply.Duration)
+			}
+			effect := apply.ContinuousEffects[0]
+			if effect.Layer != game.LayerAbility || !effect.RemoveAllAbilities ||
+				len(effect.RemoveKeywords) != 0 {
+				t.Fatalf("continuous effect = %+v, want LayerAbility RemoveAllAbilities", effect)
+			}
+		})
+	}
+}
+
+// TestLowerLoseSpecificAbilityClassFailsClosed confirms that removing a specific
+// quoted ability class ("loses all \"bands with other\" abilities", Shelkin
+// Brownie) is NOT mistaken for total ability removal: the parser strips the
+// quoted class from the clause tokens, but the raw-text discriminator keeps the
+// LoseAllAbilities flag off, so the spell fails closed rather than wrongly
+// removing every ability.
+func TestLowerLoseSpecificAbilityClassFailsClosed(t *testing.T) {
+	t.Parallel()
+	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Specific Loss",
+		Layout:     "normal",
+		TypeLine:   "Creature — Faerie",
+		ManaCost:   "{2}",
+		OracleText: `{T}: Target creature loses all "bands with other" abilities until end of turn.`,
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("expected diagnostics for specific ability-class removal, got none")
+	}
+}
+
 // TestLowerTemporaryLandwalkGrant covers the broadened temporary keyword grant
 // for the landwalk evasion family (CR 702.14). Landwalk is parameterized by a
 // land subtype, so it lowers to a granted LandwalkKeyword static-ability body via

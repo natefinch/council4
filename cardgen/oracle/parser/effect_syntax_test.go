@@ -4334,6 +4334,52 @@ func TestParseRegenerateRecipientExactness(t *testing.T) {
 	}
 }
 
+// TestParseLoseAllAbilitiesExactness verifies the resolving total "loses all
+// abilities" form round-trips (exact) and sets the LoseAllAbilities flag across
+// target/group/source subjects, while a specific quoted ability-class removal
+// ("loses all \"bands with other\" abilities") does NOT set the flag.
+func TestParseLoseAllAbilitiesExactness(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source      string
+		context     Context
+		wantExact   bool
+		wantLoseAll bool
+	}{
+		{source: "Target creature loses all abilities until end of turn.", context: Context{InstantOrSorcery: true}, wantExact: true, wantLoseAll: true},
+		{source: "Creatures your opponents control lose all abilities until end of turn.", context: Context{InstantOrSorcery: true}, wantExact: true, wantLoseAll: true},
+		{source: "This creature loses all abilities until end of turn.", context: Context{}, wantExact: true, wantLoseAll: true},
+		// A specific quoted ability-class removal must not be read as total removal.
+		{source: `Target creature loses all "bands with other" abilities until end of turn.`, context: Context{InstantOrSorcery: true}, wantExact: false, wantLoseAll: false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, test.context)
+			var lose *EffectSyntax
+			for ai := range document.Abilities {
+				for si := range document.Abilities[ai].Sentences {
+					for ei := range document.Abilities[ai].Sentences[si].Effects {
+						effect := &document.Abilities[ai].Sentences[si].Effects[ei]
+						if effect.Kind == EffectLose {
+							lose = effect
+						}
+					}
+				}
+			}
+			if lose == nil {
+				t.Fatalf("no EffectLose parsed from %q", test.source)
+			}
+			if lose.LoseAllAbilities != test.wantLoseAll {
+				t.Fatalf("LoseAllAbilities = %v, want %v", lose.LoseAllAbilities, test.wantLoseAll)
+			}
+			if lose.Exact != test.wantExact {
+				t.Fatalf("Exact = %v, want %v", lose.Exact, test.wantExact)
+			}
+		})
+	}
+}
+
 func TestParseGiveControlExactness(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

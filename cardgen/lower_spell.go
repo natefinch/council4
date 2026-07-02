@@ -2045,7 +2045,7 @@ func lowerPermanentKeywordGrantSpell(ctx contentCtx) (game.AbilityContent, *shar
 // lowerLoseSpellEffect lowers an EffectLose body: either a temporary keyword
 // loss, a life-loss effect, or an unsupported keyword/ability loss.
 func lowerLoseSpellEffect(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
-	if len(ctx.content.Keywords) != 0 &&
+	if (len(ctx.content.Keywords) != 0 || ctx.content.Effects[0].LoseAllAbilities) &&
 		temporaryKeywordDuration(ctx.content.Effects[0].Duration) {
 		return lowerTemporaryKeywordLossSpell(ctx)
 	}
