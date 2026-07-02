@@ -16,6 +16,7 @@ var Cards = []*game.CardDef{
 	ObscuraStorefront,
 	ObsidianObelisk,
 	OcularHalo,
+	OdunosRiverTrawler,
 	OffBalance,
 	OffenderAtLarge,
 	OgreHeadHelm,

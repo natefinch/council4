@@ -1243,6 +1243,14 @@ func graveyardCardTypeNoun(sel SelectionSyntax, plural bool) (string, bool) {
 		}
 		words = append(words, word)
 	}
+	// A conjunctive multi-type intersection ("artifact creature card",
+	// "enchantment creature card") names every listed type at once, so the type
+	// words are juxtaposed with spaces in their stored canonical type-line order
+	// rather than joined by the disjunctive "or"/"and/or". Lowering routes these
+	// through Selection.RequiredTypes (AND) instead of RequiredTypesAny (OR).
+	if sel.ConjunctiveTypes {
+		return strings.Join(words, " ") + " card", true
+	}
 	conjunction := "or"
 	if plural {
 		conjunction = "and/or"
