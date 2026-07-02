@@ -8,6 +8,7 @@ import "github.com/natefinch/council4/mtg/game"
 var Cards = []*game.CardDef{
 	UginSInsight,
 	UltrosObnoxiousOctopus,
+	UmezawaSJitte,
 	UncoveredClues,
 	UndercityInformer,
 	UneshCriosphinxSovereign,

@@ -56,6 +56,7 @@ var Cards = []*game.CardDef{
 	HinderingLight,
 	HoldAtBay,
 	HollowbornBarghest,
+	HolyArmor,
 	HoofprintsOfTheStag,
 	HookSwords,
 	HopeAgainstHope,

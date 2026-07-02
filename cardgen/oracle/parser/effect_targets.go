@@ -3313,7 +3313,8 @@ func parseEffectStaticSubject(tokens []shared.Token, atoms Atoms) EffectStaticSu
 	case len(tokens) >= 3 &&
 		(equalWord(tokens[0], "enchanted") || equalWord(tokens[0], "equipped")) &&
 		equalWord(tokens[1], "creature") &&
-		(equalWord(tokens[2], "gets") || equalWord(tokens[2], "has")):
+		(equalWord(tokens[2], "gets") || equalWord(tokens[2], "has") ||
+			equalWord(tokens[2], "gains") || equalWord(tokens[2], "loses")):
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectAttachedObject, Span: shared.SpanOf(tokens[:2])}
 	case len(tokens) >= 4 && effectWordsAt(tokens, 0, "all", "other", "creatures") &&
 		staticGroupVerb(tokens[3]):

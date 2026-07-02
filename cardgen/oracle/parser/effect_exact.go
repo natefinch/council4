@@ -4370,7 +4370,8 @@ func exactGroupModifyPTEffectSyntax(effect *EffectSyntax) bool {
 	// creature gets ..."), unlike the plural "all creatures get ..."; pick the
 	// verb form from the subject so the round-trip reconstructs the source text.
 	verb := "get"
-	if equalWord(subject[0], "each") {
+	if equalWord(subject[0], "each") ||
+		effect.StaticSubject.Kind == EffectStaticSubjectAttachedObject {
 		verb = "gets"
 	}
 	prefix := fmt.Sprintf(

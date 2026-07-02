@@ -24,6 +24,7 @@ var Cards = []*game.CardDef{
 	LeadBellyChimera,
 	LeadGolem,
 	LeadTheStampede,
+	LeeringEmblem,
 	LegionLeadership,
 	LegolasMasterArcher,
 	LeoninBattlemage,
