@@ -60,6 +60,7 @@ var Cards = []*game.CardDef{
 	DomriSAmbush,
 	DomriSNodorog,
 	DoctorStrangeSurgeon,
+	Dogpile,
 	DomriAnarchOfBolas,
 	Donate,
 	DonatelloMutantMechanic,
@@ -86,4 +87,5 @@ var Cards = []*game.CardDef{
 	DuskfangMentor,
 	DustElemental,
 	DwarfholdChampion,
+	DwynenGiltLeafDaen,
 }

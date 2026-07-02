@@ -35,6 +35,7 @@ var Cards = []*game.CardDef{
 	Embargo,
 	EmberBeast,
 	EmberIslandProduction,
+	Embercleave,
 	EmberethPaladin,
 	EmberheartChallenger,
 	EmberwildeCaliph,

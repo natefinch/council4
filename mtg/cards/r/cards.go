@@ -97,6 +97,7 @@ var Cards = []*game.CardDef{
 	RotcrownGhoul,
 	RottingGiant,
 	RowanSStalwarts,
+	RubblebeltRaiders,
 	RubyLeech,
 	RuinLurkerBat,
 	RunawayCarriage,

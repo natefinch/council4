@@ -1745,36 +1745,27 @@ func TestGenerateConditionalEntersWithCountersReplacementSource(t *testing.T) {
 	}
 }
 
-func TestLowerConditionalEntersWithCountersFailsClosed(t *testing.T) {
+func TestLowerDynamicEntersWithCounters(t *testing.T) {
 	t.Parallel()
-	tests := map[string]struct {
-		typeLine   string
-		oracleText string
-	}{
-		// Dynamic "for each" counter quantity is not modeled.
-		"dynamic for each": {
-			typeLine:   "Creature — Plant",
-			oracleText: "Converge — This creature enters with two +1/+1 counters on it for each color of mana spent to cast it.",
-		},
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Creature",
+		Layout:     "normal",
+		TypeLine:   "Creature — Plant",
+		OracleText: "Converge — This creature enters with two +1/+1 counters on it for each color of mana spent to cast it.",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	})
+	if len(face.ReplacementAbilities) != 1 {
+		t.Fatalf("replacement abilities = %d, want 1", len(face.ReplacementAbilities))
 	}
-	for name, test := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-			_, diagnostics := lowerExecutableFaces(&ScryfallCard{
-				Name:       "Test Creature",
-				Layout:     "normal",
-				TypeLine:   test.typeLine,
-				OracleText: test.oracleText,
-				Power:      new("1"),
-				Toughness:  new("1"),
-			})
-			if len(diagnostics) == 0 {
-				t.Fatal("expected diagnostic")
-			}
-			if diagnostics[0].Summary != "unsupported enters-with-counters replacement" {
-				t.Fatalf("summary = %q, want unsupported enters-with-counters replacement", diagnostics[0].Summary)
-			}
-		})
+	placements := face.ReplacementAbilities[0].Replacement.EntersWithCounters
+	if len(placements) != 1 || placements[0].Kind != counter.PlusOnePlusOne ||
+		!placements[0].Dynamic.Exists {
+		t.Fatalf("placements = %#v, want one dynamic +1/+1 placement", placements)
+	}
+	dynamic := placements[0].Dynamic.Val
+	if dynamic.Kind != game.DynamicAmountColorsOfManaSpentToCast || dynamic.Multiplier != 2 {
+		t.Fatalf("dynamic amount = %#v, want twice colors of mana spent", dynamic)
 	}
 }
 

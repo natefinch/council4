@@ -2001,6 +2001,7 @@ func targetSyntaxEnd(tokens []shared.Token, atoms Atoms, start int) int {
 			(equalWord(token, "this") && end+1 < len(tokens) && equalWord(tokens[end+1], "turn") &&
 				thisTurnIsTrailingDuration(tokens, end)) ||
 			(end > start && equalWord(token, "if")) ||
+			counterPlacementForEachAmountAt(tokens, atoms, start, end) ||
 			(equalWord(token, "for") && effectWordsAt(tokens, end, "for", "as", "long", "as")) ||
 			(equalWord(token, "as") && effectWordsAt(tokens, end, "as", "long", "as", "this")) {
 			break
@@ -2010,6 +2011,22 @@ func targetSyntaxEnd(tokens []shared.Token, atoms Atoms, start int) int {
 	}
 
 	return end
+}
+
+func counterPlacementForEachAmountAt(tokens []shared.Token, atoms Atoms, start, end int) bool {
+	if end <= start || !effectWordsAt(tokens, end, "for", "each") {
+		return false
+	}
+	for i := start - 1; i >= 0; i-- {
+		if tokens[i].Kind == shared.Period || tokens[i].Kind == shared.Semicolon {
+			return false
+		}
+		if effectWordKind(tokens[i]) == EffectPut {
+			_, _, ok := atoms.CounterIn(shared.SpanOf(tokens[i:start]))
+			return ok
+		}
+	}
+	return false
 }
 
 // negatedTypeListCommaAt reports whether the comma at index i joins two negated

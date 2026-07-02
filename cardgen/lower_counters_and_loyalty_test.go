@@ -427,7 +427,6 @@ func TestLowerCounterPlacementRejectsUnsupportedForms(t *testing.T) {
 		"Put a charge and time counter on target artifact.",
 		"Put 0 charge counters on target artifact.",
 		"Put -1 charge counters on target artifact.",
-		"Put a charge counter on target artifact for each land you control.",
 	} {
 		_, diagnostics := lowerExecutableFaces(&ScryfallCard{
 			Name:       "Test Counter",

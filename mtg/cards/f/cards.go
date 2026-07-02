@@ -71,6 +71,7 @@ var Cards = []*game.CardDef{
 	ForgottenCreation,
 	FormAPosse,
 	FormlessGenesis,
+	FoulTongueShriek,
 	FractalSummoning,
 	FracturedSanity,
 	FranticSalvage,
