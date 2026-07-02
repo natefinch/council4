@@ -34,6 +34,7 @@ var Cards = []*game.CardDef{
 	ScaldingSalamander,
 	ScamperingScorcher,
 	ScarabFeast,
+	Scarecrone,
 	ScorchRider,
 	ScorchSpitter,
 	ScorchingDragonfire,

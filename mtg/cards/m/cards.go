@@ -121,6 +121,7 @@ var Cards = []*game.CardDef{
 	MoonstoneEulogist,
 	MoonveilDragon,
 	MorbidOpportunist,
+	MoriokScavenger,
 	MortalObstinacy,
 	MossfireValley,
 	MosswortBridge,

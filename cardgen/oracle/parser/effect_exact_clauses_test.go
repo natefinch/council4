@@ -242,14 +242,23 @@ func TestExactGraveyardCardTargetFailsClosed(t *testing.T) {
 	// cannot faithfully reconstruct, so the round-trip must fail closed and the
 	// card must keep failing rather than lower to a wrong predicate.
 	rejected := []string{
-		// A subtype-qualified type noun is exact, but a supertype exclusion on
-		// that noun ("nonlegendary creature card") is still unrendered, so it must
-		// keep failing closed rather than dropping the exclusion.
-		"Return target nonlegendary creature card from your graveyard to the battlefield.",
+		// A subtype-qualified type noun with an unsupported additional qualifier
+		// keeps failing closed.
+		"Return target enchanted creature card from your graveyard to the battlefield.",
 	}
 	for _, source := range rejected {
 		if graveyardReturnExact(t, source) {
 			t.Errorf("graveyardReturnExact(%q) = true, want false (fail closed)", source)
+		}
+	}
+	// A supertype exclusion on the type noun ("nonlegendary creature card") now
+	// renders in the canonical card phrasing and round-trips, so it is exact.
+	for _, source := range []string{
+		"Return target nonlegendary creature card from your graveyard to the battlefield.",
+		"Return target nonbasic land card from your graveyard to your hand.",
+	} {
+		if !graveyardReturnExact(t, source) {
+			t.Errorf("graveyardReturnExact(%q) = false, want true", source)
 		}
 	}
 }

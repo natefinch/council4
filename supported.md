@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,727 of 32,501 cards eligible for paper support (51.5%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,733 of 32,501 cards eligible for paper support (51.5%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -6492,6 +6492,7 @@ Council4 currently supports **16,727 of 32,501 cards eligible for paper support 
 - Hearthfire Hobgoblin
 - Heartless Pillage
 - Heartless Summoning
+- Heartmender
 - Hearts on Fire
 - Heartstabber Mosquito
 - Heartwood Giant
@@ -9216,6 +9217,7 @@ Council4 currently supports **16,727 of 32,501 cards eligible for paper support 
 - Moriok Reaver
 - Moriok Replica
 - Moriok Rigger
+- Moriok Scavenger
 - Morkrut Banshee
 - Morkrut Necropod
 - Morningtide
@@ -9804,6 +9806,7 @@ Council4 currently supports **16,727 of 32,501 cards eligible for paper support 
 - Oculus
 - Odious Trow
 - Odric's Outrider
+- Odunos River Trawler
 - Odylic Wraith
 - Of Herbs and Stewed Rabbit
 - Off Balance
@@ -10258,6 +10261,7 @@ Council4 currently supports **16,727 of 32,501 cards eligible for paper support 
 - Pestermite
 - Pestilence Demon
 - Pestilent Cauldron // Restorative Burst
+- Pestilent Haze
 - Pestilent Kathari
 - Pestilent Souleater
 - Pestilent Syphoner
@@ -10922,6 +10926,7 @@ Council4 currently supports **16,727 of 32,501 cards eligible for paper support 
 - Raging Spirit
 - Raging Swordtooth
 - Ragnar
+- Ragnarok, Divine Deliverance
 - Raid Bombardment
 - Raiders' Karve
 - Raiders' Spoils
@@ -11999,6 +12004,7 @@ Council4 currently supports **16,727 of 32,501 cards eligible for paper support 
 - Scarblade Elite
 - Scarblade Scout
 - Scare Tactics
+- Scarecrone
 - Scarecrow
 - Scarecrow
 - Scarecrow Guide

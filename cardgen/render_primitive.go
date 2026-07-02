@@ -818,12 +818,17 @@ func (r Renderer) renderMoveCounters(ctx *renderCtx, value *game.MoveCounters) (
 }
 
 // renderRemoveCounter renders a RemoveCounter primitive: a fixed amount removed
-// from one referenced object, of either a named CounterKind or a controller-
-// chosen kind (ChooseKind), modeling the "remove a counter from target
-// permanent" family (Ferropede). The kind-agnostic mass form (AllKinds) removes
-// every counter regardless of kind ("Remove all counters from target
-// permanent.", Vampire Hexmage) and carries neither an amount nor a kind.
+// of either a named CounterKind or a controller-chosen kind (ChooseKind),
+// modeling the "remove a counter from target permanent" family (Ferropede).
+// The kind-agnostic mass form (AllKinds) removes every counter regardless of
+// kind ("Remove all counters from target permanent.", Vampire Hexmage) and
+// carries neither an amount nor a kind. The counter is removed from a single
+// referenced Object, or from every permanent of a Group when Group is set
+// ("Remove a -1/-1 counter from each creature you control.", Heartmender).
 func (r Renderer) renderRemoveCounter(ctx *renderCtx, value *game.RemoveCounter) (string, error) {
+	if value.Group.Valid() {
+		return r.renderRemoveCounterGroup(ctx, value)
+	}
 	object, err := r.renderObjectReference(value.Object)
 	if err != nil {
 		return "", err
@@ -853,6 +858,39 @@ func (r Renderer) renderRemoveCounter(ctx *renderCtx, value *game.RemoveCounter)
 	ctx.need(importCounter)
 	fields = append(fields, fmt.Sprintf("CounterKind: %s,", kind))
 	return structLit("game.RemoveCounter", fields), nil
+}
+
+// renderRemoveCounterGroup renders the group form of RemoveCounter, in which the
+// counter is removed from every permanent selected by a GroupReference rather
+// than from a single Object ("Remove a -1/-1 counter from each creature you
+// control.", Heartmender). ChooseKind is ignored for group removals, matching
+// the runtime, so only the named-kind and kind-agnostic (AllKinds) forms are
+// rendered here.
+func (r Renderer) renderRemoveCounterGroup(ctx *renderCtx, value *game.RemoveCounter) (string, error) {
+	group, err := r.renderGroupReference(ctx, value.Group)
+	if err != nil {
+		return "", err
+	}
+	if value.AllKinds {
+		return structLit("game.RemoveCounter", []string{
+			fmt.Sprintf("Group: %s,", group),
+			"AllKinds: true,",
+		}), nil
+	}
+	amount, err := r.renderQuantity(ctx, value.Amount)
+	if err != nil {
+		return "", err
+	}
+	kind, err := renderCounterKind(value.CounterKind)
+	if err != nil {
+		return "", err
+	}
+	ctx.need(importCounter)
+	return structLit("game.RemoveCounter", []string{
+		fmt.Sprintf("Amount: %s,", amount),
+		fmt.Sprintf("Group: %s,", group),
+		fmt.Sprintf("CounterKind: %s,", kind),
+	}), nil
 }
 
 func (r Renderer) renderCounterSourceSpec(source game.CounterSourceSpec) (string, error) {

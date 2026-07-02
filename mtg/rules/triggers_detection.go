@@ -121,7 +121,20 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 		if source, ok := permanentByObjectID(g, trigger.sourceID); ok {
 			seedEntryChoices(obj, source)
 		}
+		ability, ok := pendingTriggerAbility(g, trigger)
+		if !ok {
+			panic("prepared triggered ability became unavailable")
+		}
 		pushAbilityToStack(g, obj)
+		// CR 603.3: record each ability after it is successfully put on the
+		// stack, including additional occurrences created by trigger doublers.
+		log.addTriggeredAbility(TriggeredAbilityLog{
+			StackObjectID: obj.ID,
+			Controller:    obj.Controller,
+			SourceID:      obj.SourceID,
+			SourceName:    stackObjectSourceName(g, obj),
+			AbilityText:   ability.Text,
+		})
 		placed = true
 	}
 	return placed

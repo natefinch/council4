@@ -496,6 +496,15 @@ func cardSelectionForSelector(selector compiler.CompiledSelector) (game.Selectio
 		ExcludedColors:   slices.Clone(selector.ExcludedColors()),
 		SubtypesAny:      slices.Clone(selector.SubtypesAny()),
 	}
+	if excluded := selector.ExcludedSupertypes(); len(excluded) > 0 {
+		// The runtime Selection models a single excluded supertype ("nonlegendary
+		// creature card"); the parser reconstruction only ever accepts one, so
+		// more than one has no representable form and fails closed.
+		if len(excluded) != 1 {
+			return game.Selection{}, false
+		}
+		selection.ExcludedSupertype = excluded[0]
+	}
 	switch selector.Kind {
 	case compiler.SelectorCard:
 	case compiler.SelectorArtifact:
@@ -520,8 +529,18 @@ func cardSelectionForSelector(selector compiler.CompiledSelector) (game.Selectio
 	// Kind's type alone ("creature or enchantment card" matching creatures
 	// only). Drop it so the union's OR semantics stand, mirroring the permanent
 	// target path's union overwrite in permanentTargetSpecWithCardinality.
+	//
+	// A conjunctive multi-type intersection ("artifact creature card") is the
+	// exception: every listed type must be present at once, so route the type
+	// list through RequiredTypes (AND) and clear the RequiredTypesAny (OR) form,
+	// mirroring the permanent target path.
 	if len(selection.RequiredTypesAny) > 0 {
-		selection.RequiredTypes = nil
+		if selector.ConjunctiveTypes {
+			selection.RequiredTypes = slices.Clone(selection.RequiredTypesAny)
+			selection.RequiredTypesAny = nil
+		} else {
+			selection.RequiredTypes = nil
+		}
 	}
 	if selector.Historic {
 		// A historic card is an artifact, a legendary, or a Saga (CR 702.61b).
@@ -1490,6 +1509,23 @@ func lowerRemoveCounterSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagn
 	}
 	object, targets, ok := removeCounterObjectAndTargets(ctx)
 	if !ok {
+		if group, gok := removeCounterGroup(ctx); gok {
+			remove := game.RemoveCounter{Amount: game.Fixed(effect.Amount.Value), Group: group}
+			// A group removal has no single controller-chosen kind to resolve, so
+			// only the named-kind form is supported; the kind-unspecified form
+			// fails closed.
+			if !effect.CounterKindKnown {
+				return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
+			}
+			if !compiler.CounterKindPlacementSupported(effect.CounterKind) ||
+				effect.CounterKind.PlayerOnly() {
+				return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
+			}
+			remove.CounterKind = effect.CounterKind
+			return game.Mode{
+				Sequence: []game.Instruction{{Primitive: remove}},
+			}.Ability(), nil
+		}
 		return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
 	}
 	remove := game.RemoveCounter{
@@ -1578,6 +1614,19 @@ func removeCounterObjectAndTargets(ctx contentCtx) (game.ObjectReference, []game
 		return object, nil, true
 	}
 	return game.ObjectReference{}, nil, false
+}
+
+// removeCounterGroup resolves the battlefield group a counter is removed from for
+// the group-recipient form "Remove a <kind> counter from each creature you
+// control." (Heartmender): no targets and no references, with the recipient group
+// carried on the effect's selector. It reuses groupCounterRecipient so a group
+// already accepted for counter placement lowers to the same GroupReference. Any
+// other shape fails closed (ok=false).
+func removeCounterGroup(ctx contentCtx) (game.GroupReference, bool) {
+	if len(ctx.content.Targets) != 0 || len(ctx.content.References) != 0 {
+		return game.GroupReference{}, false
+	}
+	return groupCounterRecipient(ctx.content.Effects[0].Selector)
 }
 
 // lowerMoveCountersOntoEventPermanent lowers the Graft-style move "move a +1/+1
