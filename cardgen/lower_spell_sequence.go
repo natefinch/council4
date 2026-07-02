@@ -439,7 +439,73 @@ func lowerOrderedEffectSequence(
 	if !linkDamageDealtThisWay(sequence) {
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — damage-dealt-this-way drain not linkable")
 	}
+	if sequenceAmountReferencesPlayerSlotPermanent(sequence, targets) {
+		// A payoff amount that reads a permanent's characteristics ("gain life
+		// equal to that creature's toughness") but whose object resolves to a
+		// player-only target slot is a mis-bound "that creature" antecedent: the
+		// referenced permanent (the sacrificed creature of an edict) is not a
+		// target, so the amount silently resolves to zero. Fail closed rather than
+		// emit a card that does nothing until the sacrificed-creature reference is
+		// modeled (linked object).
+		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — payoff amount references a non-target permanent")
+	}
 	return game.Mode{Targets: targets, Sequence: sequence}.Ability(), nil
+}
+
+// sequenceAmountReferencesPlayerSlotPermanent reports whether any resolving
+// payoff instruction scales by a permanent's characteristics through a target
+// permanent reference that actually addresses a player-only target slot. Such a
+// reference can never resolve to an object, so the amount is silently zero. Only
+// the player-payoff primitives that carry a scalable Quantity are inspected.
+func sequenceAmountReferencesPlayerSlotPermanent(sequence []game.Instruction, targets []game.TargetSpec) bool {
+	for i := range sequence {
+		primitive := sequence[i].Primitive
+		if value, ok := primitive.(game.GainLife); ok && amountReferencesPlayerSlotPermanent(value.Amount, targets) {
+			return true
+		}
+		if value, ok := primitive.(game.LoseLife); ok && amountReferencesPlayerSlotPermanent(value.Amount, targets) {
+			return true
+		}
+		if value, ok := primitive.(game.Draw); ok && amountReferencesPlayerSlotPermanent(value.Amount, targets) {
+			return true
+		}
+		if value, ok := primitive.(game.Mill); ok && amountReferencesPlayerSlotPermanent(value.Amount, targets) {
+			return true
+		}
+	}
+	return false
+}
+
+// amountReferencesPlayerSlotPermanent reports whether a dynamic quantity reads a
+// target permanent's characteristics through a target slot that admits only a
+// player.
+func amountReferencesPlayerSlotPermanent(amount game.Quantity, targets []game.TargetSpec) bool {
+	dynamic := amount.DynamicAmount()
+	if !dynamic.Exists {
+		return false
+	}
+	object := dynamic.Val.Object
+	if object.Kind() != game.ObjectReferenceTargetPermanent {
+		return false
+	}
+	return targetSlotIsPlayerOnly(targets, object.TargetIndex())
+}
+
+// targetSlotIsPlayerOnly reports whether the flat target slot at index is owned by
+// a spec whose explicit Allow admits only a player.
+func targetSlotIsPlayerOnly(targets []game.TargetSpec, index int) bool {
+	if index < 0 {
+		return false
+	}
+	cumulative := 0
+	for i := range targets {
+		width := max(targets[i].MaxTargets, 1)
+		if index < cumulative+width {
+			return targets[i].Allow == game.TargetAllowPlayer
+		}
+		cumulative += width
+	}
+	return false
 }
 
 // publishCreatedTokenLink wires a resolving "If the token is ..." gate (Yenna,
