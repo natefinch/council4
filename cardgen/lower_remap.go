@@ -247,6 +247,17 @@ func transformPrimitiveTargetIndices(primitive game.Primitive, transform targetI
 		value.Player, ok = transformPlayerReference(value.Player, transform)
 		return value, ok
 	}
+	if value, ok := primitive.(game.SacrificePermanents); ok {
+		// The player-group form ("Each opponent sacrifices ...") carries no
+		// clause-local target index; only the single-player form ("Target player
+		// sacrifices ...") does, so transform that and leave the group form
+		// unchanged. Selection is a permanent filter and carries no target index.
+		if value.Player.Kind() == game.PlayerReferenceNone {
+			return value, true
+		}
+		value.Player, ok = transformPlayerReference(value.Player, transform)
+		return value, ok
+	}
 	if value, ok := primitive.(game.CreateDelayedTrigger); ok {
 		return value, true
 	}
