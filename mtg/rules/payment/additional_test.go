@@ -209,7 +209,7 @@ func TestPreferredReturnPermanentsRejectsInvalidPreference(t *testing.T) {
 	additional := cost.Additional{Kind: cost.AdditionalReturnToHand, Amount: 1}
 	prefs := &Preferences{ReturnChoices: []id.ID{999}}
 
-	if chosen := preferredReturnPermanents(state, game.Player1, additional, 1, nil, prefs); chosen != nil {
+	if chosen := preferredReturnPermanents(state, game.Player1, additional, 1, nil, prefs, nil); chosen != nil {
 		t.Fatalf("chosen = %#v, want invalid preference rejected", chosen)
 	}
 }
@@ -572,5 +572,61 @@ func TestPlanRemoveCounterFromSourceReservesPlannedCounters(t *testing.T) {
 
 	if removals, ok := planRemoveCounterFromSource(source, 1, planned); ok {
 		t.Fatalf("removals = %#v ok = true, want failure once the only counter is reserved", removals)
+	}
+}
+
+func TestChooseReturnPermanentsExcludesSource(t *testing.T) {
+	source := &game.Permanent{ObjectID: 1, Controller: game.Player1}
+	other := &game.Permanent{ObjectID: 2, Controller: game.Player1}
+	state := fakePaymentState{battlefield: []*game.Permanent{source, other}}
+	additional := cost.Additional{Kind: cost.AdditionalReturnToHand, Amount: 1, ExcludeSource: true}
+
+	chosen := chooseReturnPermanents(state, game.Player1, additional, 1, nil, source)
+	if len(chosen) != 1 || chosen[0].ObjectID != other.ObjectID {
+		t.Fatalf("chosen = %#v, want only the non-source permanent", chosen)
+	}
+
+	soloState := fakePaymentState{battlefield: []*game.Permanent{source}}
+	if chosen := chooseReturnPermanents(soloState, game.Player1, additional, 1, nil, source); len(chosen) != 0 {
+		t.Fatalf("chosen = %#v, want no permanent when only the source is present", chosen)
+	}
+
+	plain := cost.Additional{Kind: cost.AdditionalReturnToHand, Amount: 1}
+	if chosen := chooseReturnPermanents(soloState, game.Player1, plain, 1, nil, source); len(chosen) != 1 {
+		t.Fatalf("chosen = %#v, want the source eligible for a plain return", chosen)
+	}
+}
+
+func TestPreferredReturnPermanentsRejectsSourcePreferenceWhenExcluded(t *testing.T) {
+	source := &game.Permanent{ObjectID: 1, Controller: game.Player1}
+	other := &game.Permanent{ObjectID: 2, Controller: game.Player1}
+	state := fakePaymentState{battlefield: []*game.Permanent{source, other}}
+	additional := cost.Additional{Kind: cost.AdditionalReturnToHand, Amount: 1, ExcludeSource: true}
+
+	prefs := &Preferences{ReturnChoices: []id.ID{source.ObjectID}}
+	if chosen := preferredReturnPermanents(state, game.Player1, additional, 1, nil, prefs, source); chosen != nil {
+		t.Fatalf("chosen = %#v, want rejected preference choosing the excluded source", chosen)
+	}
+
+	prefs = &Preferences{ReturnChoices: []id.ID{other.ObjectID}}
+	chosen := preferredReturnPermanents(state, game.Player1, additional, 1, nil, prefs, source)
+	if len(chosen) != 1 || chosen[0].ObjectID != other.ObjectID {
+		t.Fatalf("chosen = %#v, want the non-source preference honored", chosen)
+	}
+}
+
+func TestCostSourcePermanentByCardID(t *testing.T) {
+	source := &game.Permanent{ObjectID: 1, Controller: game.Player1, CardInstanceID: 42}
+	other := &game.Permanent{ObjectID: 2, Controller: game.Player1, CardInstanceID: 43}
+	state := fakePaymentState{battlefield: []*game.Permanent{source, other}}
+
+	if got := costSourcePermanentByCardID(state, 42); got != source {
+		t.Fatalf("costSourcePermanentByCardID(42) = %#v, want the source permanent", got)
+	}
+	if got := costSourcePermanentByCardID(state, 99); got != nil {
+		t.Fatalf("costSourcePermanentByCardID(99) = %#v, want nil when absent", got)
+	}
+	if got := costSourcePermanentByCardID(state, 0); got != nil {
+		t.Fatalf("costSourcePermanentByCardID(0) = %#v, want nil for zero card ID", got)
 	}
 }

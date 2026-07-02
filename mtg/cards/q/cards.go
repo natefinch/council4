@@ -12,5 +12,6 @@ var Cards = []*game.CardDef{
 	QuestForTheGemblades,
 	QuestForTheGravelord,
 	QuickDrawDagger,
+	Quickling,
 	QuicksilverBehemoth,
 }

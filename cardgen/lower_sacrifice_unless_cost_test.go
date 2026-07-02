@@ -148,6 +148,22 @@ func TestLowerSacrificeSourceUnlessReturnToHandForms(t *testing.T) {
 				}
 			},
 		},
+		{
+			// "return another creature you control" excludes the source itself;
+			// the cost carries ExcludeSource so the runtime drops the source from
+			// the eligible set (Faerie Impostor).
+			name:       "Faerie Impostor",
+			typeLine:   "Creature — Faerie",
+			oracleText: "When this creature enters, sacrifice it unless you return another creature you control to its owner's hand.",
+			check: func(t *testing.T, a cost.Additional) {
+				if !a.ExcludeSource {
+					t.Error("ExcludeSource = false, want true for the \"another\" return cost")
+				}
+				if !a.MatchPermanentType || a.PermanentType != types.Creature {
+					t.Errorf("permanent type = (%v, %v), want (true, Creature)", a.MatchPermanentType, a.PermanentType)
+				}
+			},
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -182,17 +198,24 @@ func TestLowerSacrificeSourceUnlessNonManaCostFailsClosed(t *testing.T) {
 	})
 }
 
-// TestLowerSacrificeSourceUnlessReturnAnotherFailsClosed keeps the source-
-// excluding ("another") return cost out of reach until the return-to-hand
-// payment path threads the ability's source permanent. Lowering must fail
-// closed rather than emit a cost that would let the payer return the source
-// itself to satisfy "return another creature you control."
-func TestLowerSacrificeSourceUnlessReturnAnotherFailsClosed(t *testing.T) {
+// TestLowerSacrificeSourceUnlessReturnAnother proves the source-excluding
+// ("another") return cost now lowers with ExcludeSource set, so the runtime
+// drops the ability's own source permanent from the eligible set rather than
+// letting the payer return the source itself to satisfy "return another creature
+// you control." (Faerie Impostor, Quickling.)
+func TestLowerSacrificeSourceUnlessReturnAnother(t *testing.T) {
 	t.Parallel()
-	lowerSingleFaceExpectingUnsupported(t, &ScryfallCard{
+	face := lowerSingleFace(t, &ScryfallCard{
 		Name:       "Bounce Faerie",
 		Layout:     "normal",
 		TypeLine:   "Creature — Faerie",
 		OracleText: "When this creature enters, sacrifice it unless you return another creature you control to its owner's hand.",
 	})
+	additional := sacrificeUnlessCostSequence(t, face)
+	if additional.Kind != cost.AdditionalReturnToHand {
+		t.Fatalf("additional cost kind = %v, want AdditionalReturnToHand", additional.Kind)
+	}
+	if !additional.ExcludeSource {
+		t.Error("ExcludeSource = false, want true")
+	}
 }

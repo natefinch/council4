@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,677 of 32,501 cards eligible for paper support (51.3%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,679 of 32,501 cards eligible for paper support (51.3%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -4616,6 +4616,7 @@ Council4 currently supports **16,677 of 32,501 cards eligible for paper support 
 - Faerie Formation
 - Faerie Guidemother // Gift of the Fae
 - Faerie Harbinger
+- Faerie Impostor
 - Faerie Invaders
 - Faerie Macabre
 - Faerie Mastermind
@@ -10810,6 +10811,7 @@ Council4 currently supports **16,677 of 32,501 cards eligible for paper support 
 - Quick-Draw Dagger
 - Quick-Draw Katana
 - Quickbeam, Upstart Ent
+- Quickling
 - Quicksand
 - Quicksilver Amulet
 - Quicksilver Behemoth
