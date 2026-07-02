@@ -14,6 +14,7 @@ var Cards = []*game.CardDef{
 	MageSAttendant,
 	MagmaSpray,
 	Magmaroth,
+	MagmaticChasm,
 	Magmaw,
 	MagneticMine,
 	MalachiteTalisman,

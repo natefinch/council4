@@ -17,6 +17,7 @@ var Cards = []*game.CardDef{
 	TatteredHaunter,
 	TattooWard,
 	TectonicHazard,
+	TectonicRift,
 	TeferiSProtection,
 	TeferiSWavecaster,
 	TelJiladDefiance,

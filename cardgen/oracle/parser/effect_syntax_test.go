@@ -4517,3 +4517,75 @@ func TestParseColorlessMulticoloredTargetExactness(t *testing.T) {
 		})
 	}
 }
+
+// TestParseGroupCantBlockEffect proves the group-scoped one-shot combat
+// restriction "<group> can't block this turn." is recognized for the
+// controller-scoped whole-creature groups and their optional color and keyword
+// refinements, recording the affected group in StaticSubject with an
+// EffectContextController, this-turn duration, and Exact set. The targeted
+// "<target> can't block this turn." form, subtype/counter/power-filtered groups,
+// and other durations fail closed and flow through the generic parser.
+func TestParseGroupCantBlockEffect(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source          string
+		recognized      bool
+		subject         EffectStaticSubjectKind
+		keyword         KeywordKind
+		excludedKeyword KeywordKind
+		colors          []Color
+	}{
+		{"Creatures without flying can't block this turn.", true, EffectStaticSubjectAllCreatures, KeywordUnknown, KeywordFlying, nil},
+		{"Creatures your opponents control can't block this turn.", true, EffectStaticSubjectOpponentControlledCreatures, KeywordUnknown, KeywordUnknown, nil},
+		{"Creatures you control can't block this turn.", true, EffectStaticSubjectControlledCreatures, KeywordUnknown, KeywordUnknown, nil},
+		{"Green creatures can't block this turn.", true, EffectStaticSubjectAllCreatures, KeywordUnknown, KeywordUnknown, []Color{ColorGreen}},
+		{"Creatures with defender can't block this turn.", true, EffectStaticSubjectAllCreatures, KeywordDefender, KeywordUnknown, nil},
+		// Targeted and unrepresentable wordings fail closed.
+		{"Target creature can't block this turn.", false, EffectStaticSubjectNone, KeywordUnknown, KeywordUnknown, nil},
+		{"Up to three target creatures can't block this turn.", false, EffectStaticSubjectNone, KeywordUnknown, KeywordUnknown, nil},
+		{"Monocolored creatures can't block this turn.", false, EffectStaticSubjectNone, KeywordUnknown, KeywordUnknown, nil},
+		{"Nonartifact creatures can't block this turn.", false, EffectStaticSubjectNone, KeywordUnknown, KeywordUnknown, nil},
+		{"Cowards can't block this turn.", false, EffectStaticSubjectNone, KeywordUnknown, KeywordUnknown, nil},
+		{"Creatures with power 2 or less can't block this turn.", false, EffectStaticSubjectNone, KeywordUnknown, KeywordUnknown, nil},
+		{"Creatures you control can't block.", false, EffectStaticSubjectNone, KeywordUnknown, KeywordUnknown, nil},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			got := len(effects) == 1 &&
+				effects[0].Kind == EffectCantBlock &&
+				effects[0].Context == EffectContextController
+			if got != test.recognized {
+				t.Fatalf("recognized = %v, want %v (effects=%#v)", got, test.recognized, effects)
+			}
+			if !got {
+				return
+			}
+			if effects[0].StaticSubject.Kind != test.subject {
+				t.Fatalf("subject = %v, want %v", effects[0].StaticSubject.Kind, test.subject)
+			}
+			if effects[0].Duration != EffectDurationThisTurn {
+				t.Fatalf("duration = %v, want this turn", effects[0].Duration)
+			}
+			if !effects[0].Exact {
+				t.Fatal("Exact = false, want true")
+			}
+			if effects[0].StaticSubject.Keyword != test.keyword {
+				t.Fatalf("keyword = %v, want %v", effects[0].StaticSubject.Keyword, test.keyword)
+			}
+			if effects[0].StaticSubject.ExcludedKeyword != test.excludedKeyword {
+				t.Fatalf("excluded keyword = %v, want %v", effects[0].StaticSubject.ExcludedKeyword, test.excludedKeyword)
+			}
+			if len(effects[0].StaticSubject.Colors) != len(test.colors) {
+				t.Fatalf("colors = %v, want %v", effects[0].StaticSubject.Colors, test.colors)
+			}
+			for i, c := range test.colors {
+				if effects[0].StaticSubject.Colors[i] != c {
+					t.Fatalf("color[%d] = %v, want %v", i, effects[0].StaticSubject.Colors[i], c)
+				}
+			}
+		})
+	}
+}

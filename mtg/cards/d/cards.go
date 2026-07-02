@@ -41,6 +41,7 @@ var Cards = []*game.CardDef{
 	DesertSDue,
 	DesolationTwin,
 	DestructiveForce,
+	DestructiveTampering,
 	DevilishValet,
 	DiamondCity,
 	DidactEcho,

@@ -130,6 +130,7 @@ var Cards = []*game.CardDef{
 	CosmicHunger,
 	CosmicLarva,
 	CosmicSpiderMan,
+	CosmotronicWave,
 	Counterintelligence,
 	CountlessGearsRenegade,
 	CourageInCrisis,
