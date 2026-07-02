@@ -4380,6 +4380,45 @@ func TestParseLoseAllAbilitiesExactness(t *testing.T) {
 	}
 }
 
+// TestParseSelfExclusionTargetExactness verifies the "other than this creature"
+// self-exclusion pronoun form round-trips (exact) and sets OtherThanSource +
+// Another (which lowers to Selection.ExcludeSource), matching the card-name form.
+func TestParseSelfExclusionTargetExactness(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source      string
+		wantExact   bool
+		wantExclude bool
+	}{
+		{source: "Destroy target creature other than this creature.", wantExact: true, wantExclude: true},
+		{source: "Destroy target permanent other than this permanent.", wantExact: true, wantExclude: true},
+		{source: "Destroy target creature.", wantExact: true, wantExclude: false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			var target *TargetSyntax
+			for ai := range document.Abilities {
+				for si := range document.Abilities[ai].Sentences {
+					for ti := range document.Abilities[ai].Sentences[si].Targets {
+						target = &document.Abilities[ai].Sentences[si].Targets[ti]
+					}
+				}
+			}
+			if target == nil {
+				t.Fatalf("no target parsed from %q", test.source)
+			}
+			if target.Selection.OtherThanSource != test.wantExclude {
+				t.Fatalf("OtherThanSource = %v, want %v", target.Selection.OtherThanSource, test.wantExclude)
+			}
+			if target.Exact != test.wantExact {
+				t.Fatalf("target Exact = %v, want %v", target.Exact, test.wantExact)
+			}
+		})
+	}
+}
+
 func TestParseGiveControlExactness(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
