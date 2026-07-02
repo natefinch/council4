@@ -1509,6 +1509,23 @@ func lowerRemoveCounterSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagn
 	}
 	object, targets, ok := removeCounterObjectAndTargets(ctx)
 	if !ok {
+		if group, gok := removeCounterGroup(ctx); gok {
+			remove := game.RemoveCounter{Amount: game.Fixed(effect.Amount.Value), Group: group}
+			// A group removal has no single controller-chosen kind to resolve, so
+			// only the named-kind form is supported; the kind-unspecified form
+			// fails closed.
+			if !effect.CounterKindKnown {
+				return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
+			}
+			if !compiler.CounterKindPlacementSupported(effect.CounterKind) ||
+				effect.CounterKind.PlayerOnly() {
+				return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
+			}
+			remove.CounterKind = effect.CounterKind
+			return game.Mode{
+				Sequence: []game.Instruction{{Primitive: remove}},
+			}.Ability(), nil
+		}
 		return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
 	}
 	remove := game.RemoveCounter{
@@ -1597,6 +1614,19 @@ func removeCounterObjectAndTargets(ctx contentCtx) (game.ObjectReference, []game
 		return object, nil, true
 	}
 	return game.ObjectReference{}, nil, false
+}
+
+// removeCounterGroup resolves the battlefield group a counter is removed from for
+// the group-recipient form "Remove a <kind> counter from each creature you
+// control." (Heartmender): no targets and no references, with the recipient group
+// carried on the effect's selector. It reuses groupCounterRecipient so a group
+// already accepted for counter placement lowers to the same GroupReference. Any
+// other shape fails closed (ok=false).
+func removeCounterGroup(ctx contentCtx) (game.GroupReference, bool) {
+	if len(ctx.content.Targets) != 0 || len(ctx.content.References) != 0 {
+		return game.GroupReference{}, false
+	}
+	return groupCounterRecipient(ctx.content.Effects[0].Selector)
 }
 
 // lowerMoveCountersOntoEventPermanent lowers the Graft-style move "move a +1/+1

@@ -27,6 +27,7 @@ var Cards = []*game.CardDef{
 	PentarchWard,
 	PerfectIntimidation,
 	PestilentCauldron,
+	PestilentHaze,
 	PestsOfHonor,
 	Petrify,
 	PetrifyingMeddler,
