@@ -1,6 +1,7 @@
 package cardgen
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -143,19 +144,36 @@ func TestLowerGroupKeywordGrantOtherControlledCreatureSubtype(t *testing.T) {
 	}
 }
 
-// TestLowerGroupKeywordGrantColorFilteredRejected verifies a color-filtered
-// group keyword grant fails closed: the executable backend does not model the
-// color constraint on a one-shot affected group.
-func TestLowerGroupKeywordGrantColorFilteredRejected(t *testing.T) {
+func TestLowerGroupKeywordGrantColorFiltered(t *testing.T) {
 	t.Parallel()
-	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
-		Name:       "Test Color Group Keyword",
-		Layout:     "normal",
-		TypeLine:   "Sorcery",
-		OracleText: "White creatures you control gain trample until end of turn.",
-	})
-	if len(diagnostics) != 1 || diagnostics[0].Summary != "unsupported temporary keyword spell" {
-		t.Fatalf("diagnostics = %#v, want one unsupported temporary keyword spell", diagnostics)
+	effect := groupKeywordGrant(t, "White creatures you control gain trample until end of turn.")
+	selection := effect.Group.Selection()
+	if !slices.Equal(selection.ColorsAny, []color.Color{color.White}) ||
+		selection.Controller != game.ControllerYou {
+		t.Fatalf("selection = %#v, want white creatures you control", selection)
+	}
+}
+
+func TestLowerGroupKeywordGrantColorFamilies(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name         string
+		oracleText   string
+		colorless    bool
+		multicolored bool
+	}{
+		{"colorless", "Colorless creatures you control gain vigilance until end of turn.", true, false},
+		{"multicolored", "Multicolored creatures you control gain vigilance until end of turn.", false, true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			selection := groupKeywordGrant(t, test.oracleText).Group.Selection()
+			if selection.Colorless != test.colorless ||
+				selection.Multicolored != test.multicolored {
+				t.Fatalf("selection = %#v", selection)
+			}
+		})
 	}
 }
 
