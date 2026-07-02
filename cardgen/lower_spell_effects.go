@@ -2300,14 +2300,12 @@ func lowerAdaptContent(
 	)
 }
 
-// lowerConniveContent lowers the connive keyword action whose subject is the
-// source permanent ("this creature connives."). It produces a game.Connive
-// primitive whose controller draws and discards and whose source permanent
-// receives a +1/+1 counter for each nonland card discarded. A bare "connives"
-// is connive 1; an explicit numeric count must be a fixed value of at least one.
-// The references the trigger context contributes ("their", "this creature")
-// carry no additional instruction data, so they are consumed here; any leftover
-// targets, conditions, keywords, or modes fail closed.
+// lowerConniveContent lowers connive for the source permanent, one exact target,
+// or one referenced permanent. The conniving permanent's controller draws and
+// discards, and that permanent receives the counters. A bare "connives" is one;
+// fixed and supported dynamic quantities compose through the shared amount
+// lowerer. Trigger-context references not used by the action are tolerated, while
+// conditions, keywords, modes, or unrepresentable subjects fail closed.
 func lowerConniveContent(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	unsupported := contentDiagnostic(
 		ctx,
@@ -2315,33 +2313,101 @@ func lowerConniveContent(ctx contentCtx) (game.AbilityContent, *shared.Diagnosti
 		"the executable source backend supports only the source permanent connive keyword action",
 	)
 	effect := ctx.content.Effects[0]
-	if effect.Negated ||
-		!effect.Exact ||
-		effect.Context != parser.EffectContextSource {
+	if effect.Negated || !effect.Exact {
 		return game.AbilityContent{}, unsupported
 	}
-	amount := 1
-	if effect.Amount.Known {
-		if effect.Amount.Value < 1 {
-			return game.AbilityContent{}, unsupported
-		}
-		amount = effect.Amount.Value
+	object, targets, ok := conniveSubject(ctx, effect)
+	if !ok {
+		return game.AbilityContent{}, unsupported
+	}
+	amount, ok := conniveAmount(ctx, effect.Amount, object)
+	if !ok {
+		return game.AbilityContent{}, unsupported
 	}
 	if !conniveReferencesBenign(ctx.content.References) {
 		return game.AbilityContent{}, unsupported
 	}
 	consumed := ctx
+	consumed.content.Targets = nil
 	consumed.content.References = nil
 	if consumed.content.Unconsumed() {
 		return game.AbilityContent{}, unsupported
 	}
+	player := game.ObjectControllerReference(object)
+	if effect.Context == parser.EffectContextSource {
+		player = game.ControllerReference()
+	}
 	return game.Mode{Sequence: []game.Instruction{{
 		Primitive: game.Connive{
-			Object: game.SourcePermanentReference(),
-			Player: game.ControllerReference(),
-			Amount: game.Fixed(amount),
+			Object: object,
+			Player: player,
+			Amount: amount,
 		},
-	}}}.Ability(), nil
+	}}, Targets: targets}.Ability(), nil
+}
+
+func conniveSubject(
+	ctx contentCtx,
+	effect compiler.CompiledEffect,
+) (game.ObjectReference, []game.TargetSpec, bool) {
+	switch effect.Context {
+	case parser.EffectContextSource:
+		if len(ctx.content.Targets) != 0 {
+			return game.ObjectReference{}, nil, false
+		}
+		return game.SourcePermanentReference(), nil, true
+	case parser.EffectContextTarget:
+		if len(ctx.content.Targets) != 1 {
+			return game.ObjectReference{}, nil, false
+		}
+		target, ok := permanentTargetSpec(ctx.content.Targets[0])
+		if !ok {
+			return game.ObjectReference{}, nil, false
+		}
+		return game.TargetPermanentReference(0), []game.TargetSpec{target}, true
+	case parser.EffectContextReferencedObject:
+		if len(ctx.content.Targets) != 0 || len(effect.SubjectReferences) != 1 {
+			return game.ObjectReference{}, nil, false
+		}
+		object, ok := lowerObjectReference(effect.SubjectReferences[0], referenceLoweringContext{
+			AllowSource: true,
+			AllowTarget: true,
+			AllowEvent:  !ctx.sequenceClause || ctx.allowEventPronoun,
+		})
+		return object, nil, ok
+	default:
+		return game.ObjectReference{}, nil, false
+	}
+}
+
+func conniveAmount(
+	ctx contentCtx,
+	amount compiler.CompiledAmount,
+	object game.ObjectReference,
+) (game.Quantity, bool) {
+	switch {
+	case amount.Known:
+		if amount.Value < 1 {
+			return game.Quantity{}, false
+		}
+		return game.Fixed(amount.Value), true
+	case amount.VariableX:
+		return game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX}), true
+	case triggeringEventQuantityKind(amount.DynamicKind):
+		dynamic, ok := lowerTriggeringEventQuantityAmount(ctx, amount)
+		if !ok {
+			return game.Quantity{}, false
+		}
+		return game.Dynamic(dynamic), true
+	case amount.DynamicKind != compiler.DynamicAmountNone:
+		dynamic, ok := lowerDynamicAmount(amount, object)
+		if !ok {
+			return game.Quantity{}, false
+		}
+		return game.Dynamic(dynamic), true
+	default:
+		return game.Fixed(1), true
+	}
 }
 
 // conniveReferencesBenign reports whether every reference in a source-scoped
@@ -2353,6 +2419,7 @@ func conniveReferencesBenign(references []compiler.CompiledReference) bool {
 	for _, reference := range references {
 		switch reference.Binding {
 		case compiler.ReferenceBindingSource,
+			compiler.ReferenceBindingTarget,
 			compiler.ReferenceBindingEventPlayer,
 			compiler.ReferenceBindingEventPermanent,
 			compiler.ReferenceBindingEventStackObject,

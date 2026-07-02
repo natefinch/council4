@@ -4058,20 +4058,36 @@ func digSourceText(source DigSourceKind) string {
 }
 
 // exactConniveEffectSyntax reconstructs a connive keyword-action clause whose
-// subject is the conniving permanent itself ("this creature connives.",
-// "<this card's name> connives.", and the rarer numeric "<subject> connives N."
-// form). It requires the source-scoped self subject and, when a count is
-// printed, a fixed count of at least one; the variable form fails closed. The
-// parenthetical reminder text is excluded from the parsed clause upstream.
+// subject is the source, one exact target, or one referenced permanent. A bare
+// connive has amount one; fixed and recognized dynamic-X counts are reconstructed
+// from their typed amount. The parenthetical reminder text is excluded upstream.
 func exactConniveEffectSyntax(effect *EffectSyntax) bool {
-	if effect.Context != EffectContextSource {
-		return false
+	var subject string
+	var ok bool
+	switch effect.Context {
+	case EffectContextSource:
+		subject, ok = exactSelfSubjectReferenceText(effect.SubjectReferences)
+	case EffectContextTarget:
+		if len(effect.Targets) == 1 && effect.Targets[0].Exact {
+			subject, ok = effect.Targets[0].Text, true
+		}
+	case EffectContextReferencedObject:
+		subject, ok = exactObjectReferenceText(effect.SubjectReferences)
+	default:
 	}
-	subject, ok := exactSelfSubjectReferenceText(effect.SubjectReferences)
-	if !ok {
+	if !ok || subject == "" {
 		return false
 	}
 	text := exactEffectClauseText(effect)
+	if effect.Amount.DynamicKind != EffectDynamicAmountNone {
+		if effect.Amount.DynamicForm != EffectDynamicAmountFormWhereX {
+			return false
+		}
+		return strings.EqualFold(
+			text,
+			fmt.Sprintf("%s connives X, %s.", subject, effect.Amount.Text),
+		)
+	}
 	if !effect.Amount.Known {
 		return strings.EqualFold(text, subject+" connives.")
 	}
