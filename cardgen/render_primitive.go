@@ -1363,6 +1363,12 @@ func (r Renderer) renderObjectOrGroupPrimitive(ctx *renderCtx, primitive game.Pr
 			return "", err
 		}
 		return r.renderObjectOrGroup(ctx, "game.Tap", value.Object, value.Group)
+	case game.PrimitiveSkipNextUntap:
+		value, err := assertPrimitive[game.SkipNextUntap](primitive)
+		if err != nil {
+			return "", err
+		}
+		return r.renderObjectOrGroup(ctx, "game.SkipNextUntap", value.Object, value.Group)
 	case game.PrimitiveTapOrUntap:
 		value, err := assertPrimitive[game.TapOrUntap](primitive)
 		if err != nil {
@@ -1541,12 +1547,6 @@ func (r Renderer) renderObjectPrimitive(primitive game.Primitive) (string, error
 			return "", err
 		}
 		typeName, object = "game.Sacrifice", value.Object
-	case game.PrimitiveSkipNextUntap:
-		value, err := assertPrimitive[game.SkipNextUntap](primitive)
-		if err != nil {
-			return "", err
-		}
-		typeName, object = "game.SkipNextUntap", value.Object
 	case game.PrimitiveRemoveFromCombat:
 		value, err := assertPrimitive[game.RemoveFromCombat](primitive)
 		if err != nil {

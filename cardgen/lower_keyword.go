@@ -1586,6 +1586,8 @@ func resolvingStaticSubjectGroup(effect *compiler.CompiledEffect) (game.GroupRef
 		selection.CombatState = game.CombatStateAttacking
 	case compiler.StaticSubjectControlledArtifacts:
 		selection.RequiredTypes = []types.Card{types.Artifact}
+	case compiler.StaticSubjectControlledLands:
+		selection.RequiredTypes = []types.Card{types.Land}
 	case compiler.StaticSubjectControlledTokens:
 		selection.TokenOnly = true
 	case compiler.StaticSubjectOpponentControlledCreatures:

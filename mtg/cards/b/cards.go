@@ -85,6 +85,7 @@ var Cards = []*game.CardDef{
 	BondedHorncrest,
 	BoneHarvest,
 	BoneclubBerserker,
+	BontuSLastReckoning,
 	BookDevourer,
 	BorborygmosEnraged,
 	BorderlandBehemoth,

@@ -341,6 +341,9 @@ func lowerContent(
 		if content, ok := lowerEventSubjectStunEffect(ctx); ok {
 			return content, nil
 		}
+		if content, ok := lowerControlledGroupSkipUntapEffect(ctx); ok {
+			return content, nil
+		}
 		if ctx.content.Effects[0].RequiresOrderedLowering {
 			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — single effect requires ordered lowering")
 		}
