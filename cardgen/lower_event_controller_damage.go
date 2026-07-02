@@ -1,6 +1,8 @@
 package cardgen
 
 import (
+	"fmt"
+
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/mtg/game"
@@ -27,18 +29,14 @@ import (
 // recipient selector, condition, keyword, or mode — leaving the standard damage
 // paths to handle their own effects and emit their own diagnostics.
 func lowerEventPermanentControllerDamageSpell(ctx contentCtx) (game.AbilityContent, bool) {
-	if len(ctx.content.Effects) != 1 {
-		return game.AbilityContent{}, false
-	}
+	assertDealDamageDispatch(ctx, false)
 	effect := ctx.content.Effects[0]
 	player, ok := eventPermanentControllerOwnerRecipient(effect.DamageRecipient.Reference, ctx.content.References)
 	if !ok {
 		return game.AbilityContent{}, false
 	}
-	if effect.Kind != compiler.EffectDealDamage ||
-		!effect.Exact ||
+	if !effect.Exact ||
 		effect.Negated ||
-		effect.Divided ||
 		len(effect.DamageRiders) != 0 ||
 		len(effect.DamageRecipient.GroupSelectors) != 0 ||
 		len(ctx.content.Targets) != 0 ||
@@ -94,7 +92,9 @@ func eventPermanentControllerOwnerRecipient(
 	case parser.DamageRecipientReferenceOwner:
 		return game.ObjectOwnerReference(object), true
 	default:
-		return game.PlayerReference{}, false
+		// Unreachable: the guard above already fail-closed any role other than
+		// controller or owner, so reaching here is an internal bug.
+		panic(fmt.Sprintf("eventPermanentControllerOwnerRecipient: role %v passed the controller/owner guard but is neither", role))
 	}
 }
 

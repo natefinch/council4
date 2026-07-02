@@ -126,6 +126,9 @@ func coinFlipBranchResult(branch compiler.CoinFlipBranch) (int, bool) {
 		return coinFlipHeads, true
 	case compiler.CoinFlipBranchLose:
 		return coinFlipTails, true
+	default:
+		// CoinFlipBranchNone is not a resolvable win/lose branch; fall through
+		// to the fail-closed result.
 	}
 	return 0, false
 }

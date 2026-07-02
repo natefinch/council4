@@ -1,6 +1,7 @@
 package cardgen
 
 import (
+	"fmt"
 	"reflect"
 	"slices"
 	"strings"
@@ -40,6 +41,13 @@ func lowerCreateTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnos
 // copy- and choice-token variants do not thread the link key; callers that need a
 // published token must restrict themselves to the synthesized token forms.
 func lowerCreateTokenSpellLinked(ctx contentCtx, publishLinked game.LinkedKey) (game.AbilityContent, *shared.Diagnostic) {
+	// lowerCreateTokenSpellLinked is reached only through lowerImmediateSingleEffectSpell's
+	// EffectCreate arm (the len==1 gate at lower_spell.go:297) or via contextForEffect
+	// (lower_remap.go), which narrows content to exactly one effect; a different count is a
+	// dispatch bug, not an unsupported card.
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf("lowerCreateTokenSpellLinked: reached with %d effects; the EffectCreate dispatch is single-effect", len(ctx.content.Effects)))
+	}
 	effect := ctx.content.Effects[0]
 	if effect.TokenCopyOfTarget {
 		return lowerCreateCopyTokenSpell(ctx)
@@ -67,9 +75,16 @@ func lowerCreateTokenSpellLinked(ctx contentCtx, publishLinked game.LinkedKey) (
 	if targetRecipient {
 		expectedTargets = 1
 	}
-	if len(ctx.content.Effects) != 1 ||
-		effect.Kind != compiler.EffectCreate ||
-		!effect.Exact ||
+	// Every caller guarantees the sole effect is an EffectCreate: lower_spell.go:1820
+	// dispatches here only for `case compiler.EffectCreate`, and the sequence callers
+	// (lower_create_token_counter.go:32, lower_create_token_attach.go:32,
+	// lower_spell_sequence.go:1083, lower_instead_token_count.go:36) each guard
+	// createEffect.Kind == EffectCreate before threading it through contextForEffect. A
+	// different kind is a dispatch bug, not an unsupported card.
+	if effect.Kind != compiler.EffectCreate {
+		panic(fmt.Sprintf("lowerCreateTokenSpellLinked: reached with effect kind %v; every caller guarantees EffectCreate", effect.Kind))
+	}
+	if !effect.Exact ||
 		(!controllerRecipient && !referencedRecipient && !targetRecipient) ||
 		effect.Negated ||
 		effect.DelayedTiming != 0 ||
@@ -403,9 +418,13 @@ func createTokenAmount(ctx contentCtx, effect *compiler.CompiledEffect, amountOb
 // single fixed target, controller recipient, and supported copy modifiers are
 // accepted here.
 func lowerCreateCopyTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	// Reached only from lowerCreateTokenSpellLinked's TokenCopyOfTarget branch, which
+	// runs on its single-effect content, so a different count is a dispatch bug.
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf("lowerCreateCopyTokenSpell: reached with %d effects; the copy-token dispatch is single-effect", len(ctx.content.Effects)))
+	}
 	effect := ctx.content.Effects[0]
-	if len(ctx.content.Effects) != 1 ||
-		effect.Context != parser.EffectContextController ||
+	if effect.Context != parser.EffectContextController ||
 		!effect.Exact ||
 		effect.Negated ||
 		effect.DelayedTiming != 0 ||
@@ -449,9 +468,13 @@ func lowerCreateCopyTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Dia
 // token" pronouns of the recognized copy modifiers. Only a controller recipient
 // with supported copy modifiers is accepted here.
 func lowerCreateCopyTokenReferenceSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	// Reached only from lowerCreateTokenSpellLinked's TokenCopyOfReference branch, which
+	// runs on its single-effect content, so a different count is a dispatch bug.
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf("lowerCreateCopyTokenReferenceSpell: reached with %d effects; the copy-token dispatch is single-effect", len(ctx.content.Effects)))
+	}
 	effect := ctx.content.Effects[0]
-	if len(ctx.content.Effects) != 1 ||
-		effect.Context != parser.EffectContextController ||
+	if effect.Context != parser.EffectContextController ||
 		!effect.Exact ||
 		effect.Negated ||
 		effect.DelayedTiming != 0 ||
@@ -514,9 +537,13 @@ func lowerCreateCopyTokenReferenceSpell(ctx contentCtx) (game.AbilityContent, *s
 // at resolution; only a controller recipient with supported copy modifiers is
 // accepted here.
 func lowerCreateCopyTokenAttachedSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	// Reached only from lowerCreateTokenSpellLinked's TokenCopyOfAttached branch, which
+	// runs on its single-effect content, so a different count is a dispatch bug.
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf("lowerCreateCopyTokenAttachedSpell: reached with %d effects; the copy-token dispatch is single-effect", len(ctx.content.Effects)))
+	}
 	effect := ctx.content.Effects[0]
-	if len(ctx.content.Effects) != 1 ||
-		effect.Context != parser.EffectContextController ||
+	if effect.Context != parser.EffectContextController ||
 		!effect.Exact ||
 		effect.Negated ||
 		effect.DelayedTiming != 0 ||
@@ -554,9 +581,13 @@ func lowerCreateCopyTokenAttachedSpell(ctx contentCtx) (game.AbilityContent, *sh
 // reference naming that batch; only a controller recipient with supported copy
 // modifiers (legendary drop, tapped entry) is accepted here.
 func lowerCreateCopyTokenTriggeringSetSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	// Reached only from lowerCreateTokenSpellLinked's TokenCopyOfTriggeringSet branch,
+	// which runs on its single-effect content, so a different count is a dispatch bug.
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf("lowerCreateCopyTokenTriggeringSetSpell: reached with %d effects; the copy-token dispatch is single-effect", len(ctx.content.Effects)))
+	}
 	effect := ctx.content.Effects[0]
-	if len(ctx.content.Effects) != 1 ||
-		effect.Context != parser.EffectContextController ||
+	if effect.Context != parser.EffectContextController ||
 		!effect.Exact ||
 		effect.Negated ||
 		effect.DelayedTiming != 0 ||
@@ -615,9 +646,13 @@ func tokenCopyTriggeringSetModifiers(effect *compiler.CompiledEffect) (game.Toke
 // per-iteration pronoun the runtime resolves member-by-member; only a controller
 // recipient over a controlled group with supported copy modifiers is accepted.
 func lowerCreateCopyTokenForEachSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	// Reached only from lowerCreateTokenSpellLinked's TokenCopyOfForEach branch, which
+	// runs on its single-effect content, so a different count is a dispatch bug.
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf("lowerCreateCopyTokenForEachSpell: reached with %d effects; the copy-token dispatch is single-effect", len(ctx.content.Effects)))
+	}
 	effect := ctx.content.Effects[0]
-	if len(ctx.content.Effects) != 1 ||
-		effect.Context != parser.EffectContextController ||
+	if effect.Context != parser.EffectContextController ||
 		effect.Negated ||
 		effect.DelayedTiming != 0 ||
 		effect.Duration != compiler.DurationNone ||

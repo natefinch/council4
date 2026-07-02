@@ -1,6 +1,8 @@
 package cardgen
 
 import (
+	"fmt"
+
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
@@ -34,9 +36,22 @@ func createTokenRecipientGroup(context parser.EffectContextKind) (game.PlayerGro
 // published-link key. Any richer shape fails closed pending follow-up work under
 // the token-creation epic.
 func lowerCreateTokenGroupRecipient(ctx contentCtx, effect *compiler.CompiledEffect, group game.PlayerGroupReference, publishLinked game.LinkedKey, extraKeywords []parser.KeywordKind, keywordsOK bool) (game.AbilityContent, *shared.Diagnostic) {
-	if len(ctx.content.Effects) != 1 ||
-		effect.Kind != compiler.EffectCreate ||
-		!effect.Exact ||
+	// The sole caller lowerCreateTokenSpellLinked passes its own single-effect
+	// content (it already panics on len != 1) and its ctx.content.Effects[0] as
+	// effect, and every caller of lowerCreateTokenSpellLinked guarantees that
+	// sole effect is an EffectCreate. So neither a count other than one nor a
+	// kind other than EffectCreate can reach here — either is a dispatch bug.
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf(
+			"lowerCreateTokenGroupRecipient: reached with %d effects; the EffectCreate dispatch is single-effect",
+			len(ctx.content.Effects)))
+	}
+	if effect.Kind != compiler.EffectCreate {
+		panic(fmt.Sprintf(
+			"lowerCreateTokenGroupRecipient: reached with effect kind %v; every caller guarantees EffectCreate",
+			effect.Kind))
+	}
+	if !effect.Exact ||
 		effect.Negated ||
 		effect.DelayedTiming != 0 ||
 		!createTokenDurationOK(effect.Duration) ||

@@ -1,6 +1,8 @@
 package cardgen
 
 import (
+	"fmt"
+
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
@@ -25,9 +27,19 @@ func lowerGainGrantedAbilitySpell(ctx contentCtx) (game.AbilityContent, *shared.
 			"the executable source backend does not yet lower spells that grant a keyword or quoted ability",
 		)
 	}
+	// lowerGainGrantedAbilitySpell is reached only from the default arm of
+	// lowerImmediateSingleEffectSpellTail, which lowerImmediateSingleEffectSpell
+	// dispatches solely in single-effect context (the len==1 gate at
+	// lower_spell.go:297, the delayed len==1 gate, RepeatBody==1, and
+	// contextForEffect's one-effect slice), so an effect count other than one is
+	// a dispatch bug rather than an unsupported card.
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf(
+			"lowerGainGrantedAbilitySpell: reached with %d effects; single-effect dispatch guarantees exactly one",
+			len(ctx.content.Effects)))
+	}
 	effect := ctx.content.Effects[0]
-	if len(ctx.content.Effects) != 1 ||
-		len(ctx.content.Targets) != 0 ||
+	if len(ctx.content.Targets) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||

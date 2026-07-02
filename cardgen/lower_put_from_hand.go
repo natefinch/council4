@@ -1,6 +1,8 @@
 package cardgen
 
 import (
+	"fmt"
+
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
@@ -59,8 +61,14 @@ func lowerPutSourceOnLibrary(ctx contentCtx) (game.AbilityContent, bool) {
 		return game.AbilityContent{}, false
 	}
 	effect := ctx.content.Effects[0]
-	if effect.Kind != compiler.EffectPut ||
-		effect.Negated ||
+	// Invariant: lowerPutSourceOnLibrary is reached only from lowerPutEffectSpell,
+	// which lowerImmediateSingleEffectSpell dispatches solely from its
+	// `case compiler.EffectPut` arm (lower_spell.go). Effects[0].Kind is therefore
+	// always EffectPut here; a different kind means the dispatch switch is broken.
+	if effect.Kind != compiler.EffectPut {
+		panic(fmt.Sprintf("lowerPutSourceOnLibrary: expected EffectPut, got kind %v", effect.Kind))
+	}
+	if effect.Negated ||
 		effect.Divided ||
 		effect.Optional ||
 		effect.DelayedTiming != 0 ||
@@ -125,8 +133,14 @@ func lowerPutFromHandSpell(ctx contentCtx) (game.AbilityContent, bool) {
 		return game.AbilityContent{}, false
 	}
 	effect := ctx.content.Effects[0]
-	if effect.Kind != compiler.EffectPut ||
-		effect.Negated ||
+	// Invariant: lowerPutFromHandSpell is reached only from lowerPutEffectSpell,
+	// which lowerImmediateSingleEffectSpell dispatches solely from its
+	// `case compiler.EffectPut` arm (lower_spell.go), so the kind is always
+	// EffectPut here.
+	if effect.Kind != compiler.EffectPut {
+		panic(fmt.Sprintf("lowerPutFromHandSpell: expected EffectPut, got kind %v", effect.Kind))
+	}
+	if effect.Negated ||
 		effect.Divided ||
 		effect.DelayedTiming != 0 ||
 		effect.Duration != compiler.DurationNone ||

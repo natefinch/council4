@@ -209,6 +209,8 @@ func sameTargetObject(a, b game.Target) bool {
 		return a.StackObjectID == b.StackObjectID
 	case game.TargetCard:
 		return a.CardID == b.CardID
+	default:
+		// TargetDeferred has no concrete object identity to compare.
 	}
 	return false
 }

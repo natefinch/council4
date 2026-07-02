@@ -1,6 +1,8 @@
 package cardgen
 
 import (
+	"fmt"
+
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
@@ -61,8 +63,16 @@ func lowerRegenerateSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnost
 // It requires a single exact controller effect with no conditional or modal
 // content and fails closed for every other shape.
 func lowerSourceRegenerateObject(ctx contentCtx) (game.ObjectReference, bool) {
-	if len(ctx.content.Effects) != 1 ||
-		len(ctx.content.Conditions) != 0 ||
+	// lowerRegenerateSpell — this function's only caller — is reached solely
+	// through the EffectRegenerate arm of lowerImmediateSingleEffectSpell, whose
+	// content is always single-effect, so an effect count other than one is a
+	// dispatch bug rather than an unsupported card.
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf(
+			"lowerSourceRegenerateObject: reached with %d effects; lowerRegenerateSpell dispatches only single-effect content",
+			len(ctx.content.Effects)))
+	}
+	if len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Modes) != 0 ||
 		len(abilityKeywordsExcludingSelectorPredicates(ctx.content)) != 0 ||
 		ctx.optional {

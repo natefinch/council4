@@ -1,6 +1,8 @@
 package cardgen
 
 import (
+	"fmt"
+
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
@@ -106,6 +108,9 @@ func lowerFixedLifeSpell(
 					Primitive: groupPrimitiveFactory(amount, game.AllPlayersReference()),
 				}},
 			}.Ability(), nil
+		default:
+			// Non-"each player/opponent" contexts fall through to the
+			// single-recipient handling below.
 		}
 	}
 	playerRef := game.ControllerReference()
@@ -428,8 +433,14 @@ func lowerFixedExileSpell(
 }
 
 func lowerSourceSpellExile(ctx contentCtx) (game.AbilityContent, bool) {
+	// Invariant: reached only via lowerFixedExileSpell from the EffectExile arm
+	// of lowerImmediateSingleEffectSpell, whose every entry path (the len==1 gate
+	// in lower_spell.go and contextForEffect in lower_remap.go) narrows content
+	// to exactly one effect.
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf("lowerSourceSpellExile: expected single effect in single-effect context, got %d", len(ctx.content.Effects)))
+	}
 	if ctx.enclosingKind != compiler.AbilitySpell ||
-		len(ctx.content.Effects) != 1 ||
 		!ctx.content.Effects[0].Exact ||
 		ctx.content.Effects[0].Negated ||
 		ctx.content.Effects[0].Duration != compiler.DurationNone ||
@@ -454,8 +465,13 @@ func lowerSourceSpellExile(ctx contentCtx) (game.AbilityContent, bool) {
 // target, reference, condition, mode, keyword, or optional offer, and fails
 // closed for every other shape.
 func lowerSourceAttachedExile(ctx contentCtx) (game.AbilityContent, bool) {
-	if len(ctx.content.Effects) != 1 ||
-		len(ctx.content.Targets) != 0 ||
+	// Invariant: reached only via lowerFixedExileSpell from the EffectExile arm
+	// of lowerImmediateSingleEffectSpell, whose every entry path narrows content
+	// to exactly one effect.
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf("lowerSourceAttachedExile: expected single effect in single-effect context, got %d", len(ctx.content.Effects)))
+	}
+	if len(ctx.content.Targets) != 0 ||
 		len(ctx.content.References) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Modes) != 0 ||
@@ -502,8 +518,13 @@ func isExactSourceSpellShuffleIntoLibrary(effect *compiler.CompiledEffect) bool 
 // to a single source-spell shuffle-into-library instruction. The shuffled
 // object is the resolving spell itself, so the instruction carries no referent.
 func lowerSourceSpellShuffleIntoLibrary(ctx contentCtx) (game.AbilityContent, bool) {
+	// Invariant: reached only from the EffectShuffle arm of
+	// lowerImmediateSingleEffectSpell, whose every entry path narrows content to
+	// exactly one effect.
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf("lowerSourceSpellShuffleIntoLibrary: expected single effect in single-effect context, got %d", len(ctx.content.Effects)))
+	}
 	if ctx.enclosingKind != compiler.AbilitySpell ||
-		len(ctx.content.Effects) != 1 ||
 		len(ctx.content.Targets) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Modes) != 0 ||
@@ -536,8 +557,13 @@ func isExactControllerGraveyardShuffleIntoLibrary(effect *compiler.CompiledEffec
 // your library." (The Mending of Dominaria chapter III) to a single
 // shuffle-graveyard-into-library instruction targeting the controller.
 func lowerControllerGraveyardShuffleIntoLibrary(ctx contentCtx) (game.AbilityContent, bool) {
-	if len(ctx.content.Effects) != 1 ||
-		len(ctx.content.Targets) != 0 ||
+	// Invariant: reached only from the EffectShuffle arm of
+	// lowerImmediateSingleEffectSpell, whose every entry path narrows content to
+	// exactly one effect.
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf("lowerControllerGraveyardShuffleIntoLibrary: expected single effect in single-effect context, got %d", len(ctx.content.Effects)))
+	}
+	if len(ctx.content.Targets) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Modes) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
@@ -1190,8 +1216,13 @@ func lowerPlayerRuleOrPhaseEffect(ctx contentCtx) (game.AbilityContent, *shared.
 // the riders, modal siblings, and "that player's graveyard"/"all graveyards"
 // forms stay unsupported.
 func lowerPlayerGraveyardExile(ctx contentCtx) (game.AbilityContent, bool) {
-	if len(ctx.content.Effects) != 1 ||
-		len(ctx.content.Targets) != 1 ||
+	// Invariant: reached only via lowerFixedExileSpell from the EffectExile arm
+	// of lowerImmediateSingleEffectSpell, whose every entry path narrows content
+	// to exactly one effect.
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf("lowerPlayerGraveyardExile: expected single effect in single-effect context, got %d", len(ctx.content.Effects)))
+	}
+	if len(ctx.content.Targets) != 1 ||
 		len(ctx.content.Modes) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
@@ -1235,8 +1266,13 @@ func lowerPlayerGraveyardExile(ctx contentCtx) (game.AbilityContent, bool) {
 // for any extra clause, target, condition, mode, keyword, or reference so riders
 // and modal siblings stay unsupported.
 func lowerAllGraveyardExile(ctx contentCtx) (game.AbilityContent, bool) {
-	if len(ctx.content.Effects) != 1 ||
-		len(ctx.content.Targets) != 0 ||
+	// Invariant: reached only via lowerFixedExileSpell from the EffectExile arm
+	// of lowerImmediateSingleEffectSpell, whose every entry path narrows content
+	// to exactly one effect.
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf("lowerAllGraveyardExile: expected single effect in single-effect context, got %d", len(ctx.content.Effects)))
+	}
+	if len(ctx.content.Targets) != 0 ||
 		len(ctx.content.Modes) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
@@ -1269,8 +1305,13 @@ func lowerAllGraveyardExile(ctx contentCtx) (game.AbilityContent, bool) {
 // its graveyard and adding it to exile. It returns ok=false for any non-graveyard
 // exile so the mass, multi-target, and single-permanent exile paths are untouched.
 func lowerTargetedGraveyardExile(ctx contentCtx) (game.AbilityContent, bool) {
+	// Invariant: reached only via lowerFixedExileSpell from the EffectExile arm
+	// of lowerImmediateSingleEffectSpell, whose every entry path narrows content
+	// to exactly one effect.
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf("lowerTargetedGraveyardExile: expected single effect in single-effect context, got %d", len(ctx.content.Effects)))
+	}
 	if len(ctx.content.Targets) != 1 ||
-		len(ctx.content.Effects) != 1 ||
 		!ctx.content.Effects[0].Exact ||
 		ctx.content.Effects[0].Negated ||
 		len(ctx.content.Modes) != 0 ||
@@ -1311,17 +1352,26 @@ func lowerTargetedGraveyardExile(ctx contentCtx) (game.AbilityContent, bool) {
 // falls through to the generic exile path's diagnostic rather than lowering to a
 // silently-wrong instruction.
 func lowerControllerGraveyardChoiceExile(ctx contentCtx) (game.AbilityContent, bool) {
+	// Invariant: reached only via lowerFixedExileSpell from the EffectExile arm
+	// of lowerImmediateSingleEffectSpell, whose every entry path narrows content
+	// to exactly one effect.
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf("lowerControllerGraveyardChoiceExile: expected single effect in single-effect context, got %d", len(ctx.content.Effects)))
+	}
 	if len(ctx.content.Targets) != 0 ||
 		len(ctx.content.References) != 0 ||
-		len(ctx.content.Effects) != 1 ||
 		len(ctx.content.Modes) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 {
 		return game.AbilityContent{}, false
 	}
 	effect := ctx.content.Effects[0]
-	if effect.Kind != compiler.EffectExile ||
-		effect.Negated ||
+	// Invariant: the sole caller lowerFixedExileSpell is the EffectExile dispatch
+	// arm, so Effects[0].Kind is always EffectExile here.
+	if effect.Kind != compiler.EffectExile {
+		panic(fmt.Sprintf("lowerControllerGraveyardChoiceExile: expected EffectExile, got %v", effect.Kind))
+	}
+	if effect.Negated ||
 		effect.Divided ||
 		effect.DelayedTiming != 0 ||
 		effect.Duration != compiler.DurationNone ||
@@ -1528,8 +1578,14 @@ func lowerMassOrSinglePermanentSpell(
 // TapAttached or UntapAttached flag with no target, reference, condition, mode,
 // keyword, or optional offer, and fails closed for every other shape.
 func lowerSourceAttachedTapUntapObject(ctx contentCtx) (game.ObjectReference, bool) {
-	if len(ctx.content.Effects) != 1 ||
-		len(ctx.content.Targets) != 0 ||
+	// Invariant: reached only via lowerMassOrSinglePermanentSpell from the
+	// EffectTap arm and lowerUntapSpell (EffectUntap arm) of
+	// lowerImmediateSingleEffectSpell, whose every entry path narrows content to
+	// exactly one effect.
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf("lowerSourceAttachedTapUntapObject: expected single effect in single-effect context, got %d", len(ctx.content.Effects)))
+	}
+	if len(ctx.content.Targets) != 0 ||
 		len(ctx.content.References) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Modes) != 0 ||
@@ -1596,8 +1652,14 @@ func lowerPhaseOutSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic
 // It requires a single exact controller effect with no conditional or modal
 // content and a single source reference, and fails closed for every other shape.
 func lowerSourcePhaseOutObject(ctx contentCtx) (game.ObjectReference, bool) {
-	if len(ctx.content.Effects) != 1 ||
-		len(ctx.content.Conditions) != 0 ||
+	// Invariant: reached only via lowerPhaseOutSpell from the EffectPhaseOut arm
+	// of lowerPlayerRuleOrPhaseEffect, whose caller lowerSingleEffectSpell is only
+	// entered in single-effect context (the len==1 gate in lower_spell.go and
+	// contextForEffect in lower_remap.go).
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf("lowerSourcePhaseOutObject: expected single effect in single-effect context, got %d", len(ctx.content.Effects)))
+	}
+	if len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Modes) != 0 ||
 		ctx.optional {
 		return game.ObjectReference{}, false
@@ -2013,6 +2075,9 @@ func lowerFixedDrawSpell(
 					Primitive: game.Draw{Amount: amount, PlayerGroup: game.AllPlayersReference()},
 				}},
 			}.Ability(), nil
+		default:
+			// Non-"each player/opponent" contexts fall through to the
+			// single-recipient handling below.
 		}
 	}
 	switch {
@@ -2140,6 +2205,8 @@ func referencedThatPlayerRef(target compiler.CompiledTarget) (game.PlayerReferen
 	switch target.Selector.Kind {
 	case compiler.SelectorPlayer, compiler.SelectorOpponent:
 		return game.TargetPlayerReference(0), true
+	default:
+		// Non-player selectors resolve to the target object's controller below.
 	}
 	object, ok := inheritedRemovalTargetObjectRef(target, 0)
 	if !ok {

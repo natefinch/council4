@@ -219,6 +219,10 @@ func lowerOrderedEffectSequence(
 	// contributed target specs before the then-joined group.
 	oracleSpanToGameIdx := make(map[shared.Span]int)
 	clauseSyntaxes := splitEffectSyntaxes(syntax, ctx.content.Effects)
+	// clauseReasons collects every clause that fails to lower so the whole
+	// sequence reports all of its blockers, not just the first. It stays empty
+	// for a fully-supported sequence, so the success path below is unchanged.
+	var clauseReasons []shared.Diagnostic
 	for i := range ctx.content.Effects {
 		effect := &ctx.content.Effects[i]
 		resolvedEffect, clauseAbility := prepareSequenceClause(ctx, optionalFlow, clauseSyntaxes, i)
@@ -290,6 +294,9 @@ func lowerOrderedEffectSequence(
 			effectAbility.content.Targets,
 		)
 		if !ok {
+			if len(clauseReasons) > 0 {
+				continue
+			}
 			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — clause reference not localizable")
 		}
 		effectAbility.content.References = localReferences
@@ -333,6 +340,9 @@ func lowerOrderedEffectSequence(
 		allowEventPronoun := effect.Connection == parser.EffectConnectionOtherwise || i == 0
 		if delayedContent, handled, failed := lowerDelayedSequenceClause(ctx.content.Effects, i, effectAbility, sequence); handled {
 			if failed {
+				if len(clauseReasons) > 0 {
+					continue
+				}
 				return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — delayed-target sacrifice not linkable")
 			}
 			content = delayedContent
@@ -350,7 +360,8 @@ func lowerOrderedEffectSequence(
 			len(content.SharedTargets) != 0 ||
 			content.IsModal() ||
 			len(content.Modes) != 1 {
-			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, sequenceClauseCategory(diagnostic))
+			clauseReasons = appendClauseReason(clauseReasons, ctx, diagnostic)
+			continue
 		}
 		mode := content.Modes[0]
 		// An inherited target that no prior clause owned (a bare "Choose target
@@ -370,14 +381,23 @@ func lowerOrderedEffectSequence(
 			targets, oracleSpanToGameIdx,
 		)
 		if !ok {
+			if len(clauseReasons) > 0 {
+				continue
+			}
 			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — inherited target not remappable")
 		}
 		targets = newTargets
 		if category := applySequenceClauseGates(mode.Sequence, i, effectConditions, insteadGates, otherwiseGates); category != "" {
+			if len(clauseReasons) > 0 {
+				continue
+			}
 			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, category)
 		}
 		if optionalFlow.enabled || optionalFlow.bareIndex >= 0 || optionalFlow.independentOptional {
 			if category, ok := applyOptionalFlowEnvelope(optionalFlow, i, mode.Sequence); !ok {
+				if len(clauseReasons) > 0 {
+					continue
+				}
 				return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, category)
 			}
 		}
@@ -391,9 +411,19 @@ func lowerOrderedEffectSequence(
 		// target/reference is fully consumed, so only require non-empty here and
 		// rely on the consumed-count checks below to prove nothing was dropped.
 		if len(mode.Sequence) == 0 {
+			if len(clauseReasons) > 0 {
+				continue
+			}
 			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — effect produced no instructions")
 		}
 		sequence = append(sequence, mode.Sequence...)
+	}
+	// If any clause failed to lower, the sequence is unsupported. Report every
+	// collected clause blocker (the first stays primary, matching the reason a
+	// first-failure bail used to return) and skip the post-loop structural checks,
+	// which assume a fully-consumed sequence.
+	if len(clauseReasons) > 0 {
+		return game.AbilityContent{}, combineReasons(clauseReasons)
 	}
 	// A condition's own object pronoun ("its power" in "draw a card if its power
 	// is 3 or greater") sits outside every effect clause span, so it is consumed
@@ -1171,8 +1201,13 @@ func lowerPonderSequence(ctx contentCtx) (game.AbilityContent, bool) {
 // here rather than bound to an external antecedent. It fails closed on any other
 // shape (targets, conditions, modes, keywords, or a non-reorder effect).
 func lowerStandaloneReorderLibraryTop(ctx contentCtx) (game.AbilityContent, bool) {
-	if len(ctx.content.Effects) != 1 ||
-		len(ctx.content.Targets) != 0 ||
+	// Invariant: the sole caller dispatches this lowerer only inside the
+	// `len(ctx.content.Effects) == 1` branch (lower_spell.go:297), so a length
+	// other than one is an upstream bug rather than an unsupported card shape.
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf("lowerStandaloneReorderLibraryTop: expected a single effect, got %d", len(ctx.content.Effects)))
+	}
+	if len(ctx.content.Targets) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Modes) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
@@ -1532,6 +1567,8 @@ func revealUntilPlayerSubject(
 		}
 		primitive.Player = game.TargetPlayerReference(0)
 		return []game.TargetSpec{targetSpec}, true
+	default:
+		// Other contexts are not supported player recipients; fail closed.
 	}
 	return nil, false
 }
@@ -1841,7 +1878,13 @@ func lowerTapStunSequence(ctx contentCtx) (game.AbilityContent, bool) {
 // non-target reference, or a multi-step window) fails closed so the general
 // paths are untouched.
 func lowerStandaloneStunEffect(ctx contentCtx) (game.AbilityContent, bool) {
-	if len(ctx.content.Effects) != 1 || ctx.optional ||
+	// Invariant: the sole caller dispatches this lowerer only inside the
+	// `len(ctx.content.Effects) == 1` branch (lower_spell.go:297), so a length
+	// other than one is an upstream bug rather than an unsupported card shape.
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf("lowerStandaloneStunEffect: expected a single effect, got %d", len(ctx.content.Effects)))
+	}
+	if ctx.optional ||
 		len(ctx.content.Targets) != 1 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||
@@ -1896,7 +1939,13 @@ func lowerStandaloneStunEffect(ctx contentCtx) (game.AbilityContent, bool) {
 // duration, or a stray reference) fails closed so lowerStandaloneStunEffect and
 // the general paths are untouched.
 func lowerInheritedSubjectStunEffect(ctx contentCtx) (game.AbilityContent, bool) {
-	if len(ctx.content.Effects) != 1 || ctx.optional ||
+	// Invariant: the sole caller dispatches this lowerer only inside the
+	// `len(ctx.content.Effects) == 1` branch (lower_spell.go:297), so a length
+	// other than one is an upstream bug rather than an unsupported card shape.
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf("lowerInheritedSubjectStunEffect: expected a single effect, got %d", len(ctx.content.Effects)))
+	}
+	if ctx.optional ||
 		len(ctx.content.Targets) != 1 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||
@@ -1962,7 +2011,13 @@ func lowerInheritedSubjectStunEffect(ctx contentCtx) (game.AbilityContent, bool)
 // reference needing its own instruction) fails closed so the target and inherited
 // stun paths are untouched.
 func lowerEventSubjectStunEffect(ctx contentCtx) (game.AbilityContent, bool) {
-	if len(ctx.content.Effects) != 1 || ctx.optional ||
+	// Invariant: the sole caller dispatches this lowerer only inside the
+	// `len(ctx.content.Effects) == 1` branch (lower_spell.go:297), so a length
+	// other than one is an upstream bug rather than an unsupported card shape.
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf("lowerEventSubjectStunEffect: expected a single effect, got %d", len(ctx.content.Effects)))
+	}
+	if ctx.optional ||
 		len(ctx.content.Targets) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||
@@ -2013,7 +2068,13 @@ func lowerEventSubjectStunEffect(ctx contentCtx) (game.AbilityContent, bool) {
 // sequence path, so "{T}: Add {R} or {G}. This land doesn't untap ..." lowers
 // the appended stun as its own instruction.
 func lowerStandaloneSourceStunEffect(ctx contentCtx) (game.AbilityContent, bool) {
-	if len(ctx.content.Effects) != 1 || ctx.optional ||
+	// Invariant: the sole caller dispatches this lowerer only inside the
+	// `len(ctx.content.Effects) == 1` branch (lower_spell.go:297), so a length
+	// other than one is an upstream bug rather than an unsupported card shape.
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf("lowerStandaloneSourceStunEffect: expected a single effect, got %d", len(ctx.content.Effects)))
+	}
+	if ctx.optional ||
 		len(ctx.content.Targets) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||
@@ -2826,9 +2887,15 @@ func lowerDelayedTargetReturn(
 	ctx contentCtx,
 	sequence []game.Instruction,
 ) (game.ModifyPT, game.AbilityContent, bool) {
+	// Invariant: ctx is the contextForEffect-narrowed per-clause effectAbility
+	// built at lowerOrderedEffectSequence and threaded through
+	// lowerDelayedSequenceClause, so content.Effects always holds exactly one
+	// clause effect; any other length is an upstream bug.
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf("lowerDelayedTargetReturn: expected a single effect, got %d", len(ctx.content.Effects)))
+	}
 	if effectIndex == 0 ||
 		len(sequence) != effectIndex ||
-		len(ctx.content.Effects) != 1 ||
 		ctx.content.Effects[0].Kind != compiler.EffectReturn ||
 		ctx.content.Effects[0].DelayedTiming != game.DelayedAtBeginningOfNextEndStep ||
 		ctx.content.Effects[0].Negated ||
@@ -3001,9 +3068,15 @@ func lowerCharacteristicLifeRider(
 	ctx contentCtx,
 	sequence []game.Instruction,
 ) (characteristicLifeRiderLowering, bool) {
+	// Invariant: ctx is the contextForEffect-narrowed per-clause effectAbility
+	// built at lowerOrderedEffectSequence and threaded through
+	// lowerDelayedSequenceClause, so content.Effects always holds exactly one
+	// clause effect; any other length is an upstream bug.
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf("lowerCharacteristicLifeRider: expected a single effect, got %d", len(ctx.content.Effects)))
+	}
 	if effectIndex == 0 ||
-		len(sequence) != effectIndex ||
-		len(ctx.content.Effects) != 1 {
+		len(sequence) != effectIndex {
 		return characteristicLifeRiderLowering{}, false
 	}
 	effect := &ctx.content.Effects[0]
@@ -3306,9 +3379,15 @@ func lowerDelayedTargetSacrifice(
 	ctx contentCtx,
 	sequence []game.Instruction,
 ) (game.Primitive, game.AbilityContent, bool) {
+	// Invariant: ctx is the contextForEffect-narrowed per-clause effectAbility
+	// built at lowerOrderedEffectSequence and threaded through
+	// lowerDelayedSequenceClause, so content.Effects always holds exactly one
+	// clause effect; any other length is an upstream bug.
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf("lowerDelayedTargetSacrifice: expected a single effect, got %d", len(ctx.content.Effects)))
+	}
 	if effectIndex == 0 ||
 		len(sequence) != effectIndex ||
-		len(ctx.content.Effects) != 1 ||
 		!isDelayedTargetSacrificeEffect(&ctx.content.Effects[0]) ||
 		ctx.optional ||
 		!referencesBindTo(ctx.content.References, compiler.ReferenceBindingTarget, 0) {
@@ -3366,9 +3445,15 @@ func lowerDelayedTargetExile(
 	ctx contentCtx,
 	sequence []game.Instruction,
 ) (game.Primitive, game.AbilityContent, bool) {
+	// Invariant: ctx is the contextForEffect-narrowed per-clause effectAbility
+	// built at lowerOrderedEffectSequence and threaded through
+	// lowerDelayedSequenceClause, so content.Effects always holds exactly one
+	// clause effect; any other length is an upstream bug.
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf("lowerDelayedTargetExile: expected a single effect, got %d", len(ctx.content.Effects)))
+	}
 	if effectIndex == 0 ||
 		len(sequence) != effectIndex ||
-		len(ctx.content.Effects) != 1 ||
 		!isDelayedTargetExileEffect(&ctx.content.Effects[0]) ||
 		ctx.optional ||
 		!referencesBindTo(ctx.content.References, compiler.ReferenceBindingTarget, 0) {
@@ -3459,9 +3544,15 @@ func lowerSequentialReferencedKeywordGrant(
 	ctx contentCtx,
 	sequence []game.Instruction,
 ) (game.Primitive, game.AbilityContent, bool) {
+	// Invariant: ctx is the contextForEffect-narrowed per-clause effectAbility
+	// built at lowerOrderedEffectSequence and threaded through
+	// lowerDelayedSequenceClause, so content.Effects always holds exactly one
+	// clause effect; any other length is an upstream bug.
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf("lowerSequentialReferencedKeywordGrant: expected a single effect, got %d", len(ctx.content.Effects)))
+	}
 	if effectIndex == 0 ||
 		len(sequence) != effectIndex ||
-		len(ctx.content.Effects) != 1 ||
 		ctx.optional ||
 		len(ctx.content.Keywords) == 0 ||
 		!isSequentialReferencedKeywordGrantEffect(&ctx.content.Effects[0]) {
@@ -3535,9 +3626,15 @@ func lowerSequentialLeaveBattlefieldExileReplacement(
 	ctx contentCtx,
 	sequence []game.Instruction,
 ) (game.Primitive, game.AbilityContent, bool) {
+	// Invariant: ctx is the contextForEffect-narrowed per-clause effectAbility
+	// built at lowerOrderedEffectSequence and threaded through
+	// lowerDelayedSequenceClause, so content.Effects always holds exactly one
+	// clause effect; any other length is an upstream bug.
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf("lowerSequentialLeaveBattlefieldExileReplacement: expected a single effect, got %d", len(ctx.content.Effects)))
+	}
 	if effectIndex == 0 ||
 		len(sequence) != effectIndex ||
-		len(ctx.content.Effects) != 1 ||
 		ctx.optional ||
 		!isLeaveBattlefieldExileReplacementEffect(&ctx.content.Effects[0]) {
 		return nil, game.AbilityContent{}, false
@@ -3587,10 +3684,16 @@ func lowerSequentialReanimationCounterPlacement(
 	ctx contentCtx,
 	sequence []game.Instruction,
 ) (game.Primitive, game.AbilityContent, bool) {
+	// Invariant: ctx is the contextForEffect-narrowed per-clause effectAbility
+	// built at lowerOrderedEffectSequence and threaded through
+	// lowerDelayedSequenceClause, so content.Effects always holds exactly one
+	// clause effect; any other length is an upstream bug.
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf("lowerSequentialReanimationCounterPlacement: expected a single effect, got %d", len(ctx.content.Effects)))
+	}
 	if effectIndex == 0 ||
 		len(sequence) != effectIndex ||
 		ctx.optional ||
-		len(ctx.content.Effects) != 1 ||
 		len(ctx.content.References) != 1 {
 		return nil, game.AbilityContent{}, false
 	}
@@ -3731,12 +3834,18 @@ func lowerDelayedBlinkReturn(
 	ctx contentCtx,
 	sequence []game.Instruction,
 ) (game.Exile, game.AbilityContent, bool) {
+	// Invariant: ctx is the contextForEffect-narrowed per-clause effectAbility
+	// built at lowerOrderedEffectSequence and threaded through
+	// lowerDelayedSequenceClause, so content.Effects always holds exactly one
+	// clause effect; any other length is an upstream bug.
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf("lowerDelayedBlinkReturn: expected a single effect, got %d", len(ctx.content.Effects)))
+	}
 	returnEffect := ctx.content.Effects[0]
 	if effectIndex == 0 ||
 		len(sequence) != effectIndex ||
 		effects[effectIndex-1].Kind != compiler.EffectExile ||
 		effects[effectIndex-1].DelayedTiming != 0 ||
-		len(ctx.content.Effects) != 1 ||
 		returnEffect.Kind != compiler.EffectReturn ||
 		returnEffect.DelayedTiming != game.DelayedAtBeginningOfNextEndStep ||
 		returnEffect.Negated ||
@@ -3841,12 +3950,18 @@ func lowerImmediateBlinkReturn(
 	ctx contentCtx,
 	sequence []game.Instruction,
 ) (game.Exile, game.AbilityContent, bool) {
+	// Invariant: ctx is the contextForEffect-narrowed per-clause effectAbility
+	// built at lowerOrderedEffectSequence and threaded through
+	// lowerDelayedSequenceClause, so content.Effects always holds exactly one
+	// clause effect; any other length is an upstream bug.
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf("lowerImmediateBlinkReturn: expected a single effect, got %d", len(ctx.content.Effects)))
+	}
 	returnEffect := ctx.content.Effects[0]
 	if effectIndex == 0 ||
 		len(sequence) != effectIndex ||
 		effects[effectIndex-1].Kind != compiler.EffectExile ||
 		effects[effectIndex-1].DelayedTiming != 0 ||
-		len(ctx.content.Effects) != 1 ||
 		returnEffect.Kind != compiler.EffectReturn ||
 		// Only the ", then return …" connective form lowers immediately. A return
 		// whose clause omits "then" (e.g. a leading "At the beginning of the next

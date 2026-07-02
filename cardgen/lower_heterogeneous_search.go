@@ -1,6 +1,8 @@
 package cardgen
 
 import (
+	"fmt"
+
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/mtg/game"
@@ -36,8 +38,13 @@ func lowerHeterogeneousSearch(ctx contentCtx) (game.AbilityContent, bool) {
 		return game.AbilityContent{}, false
 	}
 	search := ctx.content.Effects[0]
-	if search.Kind != compiler.EffectSearch ||
-		len(search.SearchSlots) != 2 ||
+	// lowerContent dispatches here only inside its
+	// Effects[0].Kind == EffectSearch block, so a different lead kind is a
+	// dispatch bug rather than an unsupported card.
+	if search.Kind != compiler.EffectSearch {
+		panic(fmt.Sprintf("lowerHeterogeneousSearch: reached with lead effect kind %v; lowerContent dispatches here only for an EffectSearch lead", search.Kind))
+	}
+	if len(search.SearchSlots) != 2 ||
 		search.Context != parser.EffectContextController ||
 		search.Optional ||
 		search.Negated ||

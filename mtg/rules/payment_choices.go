@@ -430,6 +430,9 @@ func remainingGraveyardPreferenceCostsPayable(g *game.Game, playerID game.Player
 			nextReserved := cardIDSet(reservedCardIDs(reserved)...)
 			nextReserved[sourceCardID] = true
 			return remainingGraveyardPreferenceCostsPayable(g, playerID, remainingCosts[i+1:], xValue, sourceCardID, sourceZone, nextReserved)
+		default:
+			// Only the selection-bearing additional cost kinds above carry card
+			// selection; other kinds need no handling here.
 		}
 	}
 	return true

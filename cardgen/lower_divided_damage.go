@@ -1,6 +1,8 @@
 package cardgen
 
 import (
+	"fmt"
+
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
@@ -18,11 +20,9 @@ import (
 // for any shape the executable backend cannot represent exactly.
 func lowerDividedDamageSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
+	assertDealDamageDispatch(ctx, true)
 	amount, capTotal, amountOK := dividedDamageTotal(effect.Amount, ctx)
-	if len(ctx.content.Effects) != 1 ||
-		effect.Kind != compiler.EffectDealDamage ||
-		!effect.Exact ||
-		!effect.Divided ||
+	if !effect.Exact ||
 		(effect.Context != parser.EffectContextSource &&
 			effect.Context != parser.EffectContextReferencedObject &&
 			effect.Context != parser.EffectContextPriorSubject) ||
@@ -254,7 +254,9 @@ func dividedDamagePermanentSelection(selector compiler.CompiledSelector) (game.S
 	case compiler.ControllerNotYou:
 		selection.Controller = game.ControllerNotYou
 	default:
-		return game.Selection{}, false
+		// ControllerKind is a closed enum whose values are all handled above;
+		// an unhandled value is an internal bug, not an unsupported card.
+		panic(fmt.Sprintf("dividedDamagePermanentSelection: unhandled ControllerKind %v", selector.Controller))
 	}
 	return selection, true
 }

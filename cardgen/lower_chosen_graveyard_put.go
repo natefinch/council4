@@ -1,6 +1,8 @@
 package cardgen
 
 import (
+	"fmt"
+
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -24,17 +26,27 @@ import (
 // counter rider, an amount other than exactly one card, or a selector qualifier
 // the chosen-card selection cannot express.
 func lowerChosenCardGraveyardPut(ctx contentCtx) (game.AbilityContent, bool) {
+	// Invariant: lowerChosenCardGraveyardPut is reached only from lowerPutEffectSpell,
+	// dispatched from lowerImmediateSingleEffectSpell's `case compiler.EffectPut` arm.
+	// Every path into lowerImmediateSingleEffectSpell narrows to a single effect (the
+	// len==1 gate in lower_spell.go, RepeatBody==1 in lower_repeat.go, and
+	// contextForEffect in lower_remap.go), so a non-single effect here is impossible.
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf("lowerChosenCardGraveyardPut: expected exactly one effect, got %d", len(ctx.content.Effects)))
+	}
 	if len(ctx.content.Targets) != 0 ||
 		len(ctx.content.References) != 0 ||
-		len(ctx.content.Effects) != 1 ||
 		len(ctx.content.Modes) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 {
 		return game.AbilityContent{}, false
 	}
 	effect := ctx.content.Effects[0]
-	if effect.Kind != compiler.EffectPut ||
-		effect.Negated ||
+	// Invariant: the same EffectPut-arm dispatch guarantees the kind here.
+	if effect.Kind != compiler.EffectPut {
+		panic(fmt.Sprintf("lowerChosenCardGraveyardPut: expected EffectPut, got kind %v", effect.Kind))
+	}
+	if effect.Negated ||
 		effect.Divided ||
 		effect.Optional ||
 		effect.DelayedTiming != 0 ||

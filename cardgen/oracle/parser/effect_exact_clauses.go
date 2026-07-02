@@ -1932,6 +1932,8 @@ func exactSelfSubjectReferenceText(references []Reference) (string, bool) {
 	switch references[0].Kind {
 	case ReferenceThisObject, ReferenceSelfName:
 		return joinedEffectText(references[0].Tokens), true
+	default:
+		// Other reference kinds are not this-object self references.
 	}
 	return "", false
 }

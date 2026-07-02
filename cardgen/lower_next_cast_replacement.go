@@ -1,6 +1,8 @@
 package cardgen
 
 import (
+	"fmt"
+
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/mtg/game"
@@ -21,8 +23,16 @@ import (
 // object-ID binding could not match the entering permanent. It fails closed on
 // any other shape.
 func lowerNextCastEntersWithCountersReplacement(ctx contentCtx) (game.AbilityContent, bool) {
-	if len(ctx.content.Effects) != 1 ||
-		len(ctx.content.Targets) != 0 ||
+	// This recognizer's sole caller is the len==1 gated block at
+	// lower_spell.go:297-298, so it never sees content with an effect count
+	// other than one; a different count is a dispatch bug, not an unsupported
+	// card. (The effect kind, by contrast, is a genuine capability check below.)
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf(
+			"lowerNextCastEntersWithCountersReplacement: reached with %d effects; caller gates on single-effect content",
+			len(ctx.content.Effects)))
+	}
+	if len(ctx.content.Targets) != 0 ||
 		len(ctx.content.Modes) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Conditions) != 0 {

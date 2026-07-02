@@ -1,6 +1,8 @@
 package cardgen
 
 import (
+	"fmt"
+
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/mtg/game"
@@ -16,12 +18,20 @@ import (
 // for any non-controller, negated, referenced, conditional, or modal shape, an
 // unplaceable counter kind, and an amount the distribution cannot represent.
 func lowerDistributeCountersSpell(ctx contentCtx) (game.AbilityContent, bool) {
+	// lowerPutEffectSpell — this function's only caller — is reached solely
+	// through the EffectPut arm of lowerImmediateSingleEffectSpell, whose content
+	// is always single-effect, so an effect count other than one is a dispatch
+	// bug rather than an unsupported card.
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf(
+			"lowerDistributeCountersSpell: reached with %d effects; lowerPutEffectSpell dispatches only single-effect content",
+			len(ctx.content.Effects)))
+	}
 	effect := ctx.content.Effects[0]
 	if !effect.DistributeCounters {
 		return game.AbilityContent{}, false
 	}
-	if len(ctx.content.Effects) != 1 ||
-		!effect.Exact ||
+	if !effect.Exact ||
 		effect.Negated ||
 		effect.Context != parser.EffectContextController ||
 		len(ctx.content.Targets) != 1 ||

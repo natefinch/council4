@@ -29,7 +29,6 @@ disable = [
   'dupword',
   'err113',
   'errcheck',
-  'exhaustive',
   'exhaustruct',
   'forbidigo',
   'funlen',
@@ -79,6 +78,9 @@ disable = [
 errorf = true
 asserts = true
 comparison = true
+
+[linters.settings.exhaustive]
+default-signifies-exhaustive = true
 
 [linters.settings.forbidigo]
 [[linters.settings.forbidigo.forbid]]
