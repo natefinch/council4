@@ -9,6 +9,7 @@ var Cards = []*game.CardDef{
 	VadmirNewBlood,
 	ValgavothHarrowerOfSouls,
 	ValiantKnight,
+	ValorousCharge,
 	VampireHexmage,
 	VampireScrivener,
 	VampiricDragon,

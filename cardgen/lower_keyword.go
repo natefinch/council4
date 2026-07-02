@@ -1526,43 +1526,45 @@ func mixedStaticKeywordImplemented(keyword game.Keyword) bool {
 }
 
 func resolvingStaticSubjectGroup(effect *compiler.CompiledEffect) (game.GroupReference, bool) {
-	// One-shot mass effects do not yet lower a color-filtered affected group;
-	// fail closed rather than silently dropping the color constraint. Color
-	// filtering is supported only for never-resolving static declarations.
-	if effect.StaticSubjectHasColorFilter() {
+	selection, ok := resolvingStaticSubjectBaseSelection(effect)
+	if !ok {
 		return game.GroupReference{}, false
 	}
-	selection := game.Selection{Controller: game.ControllerYou}
 	switch effect.StaticSubject {
 	case compiler.StaticSubjectAttachedObject:
+		if effect.StaticSubjectHasColorFilter() {
+			return game.GroupReference{}, false
+		}
 		return game.AttachedObjectGroup(game.SourcePermanentReference()), true
 	case compiler.StaticSubjectAllCreatures:
-		return game.BattlefieldGroup(game.Selection{
-			RequiredTypes: []types.Card{types.Creature},
-		}), true
+		selection.Controller = game.ControllerAny
+		selection.RequiredTypes = []types.Card{types.Creature}
+		return game.BattlefieldGroup(selection), true
 	case compiler.StaticSubjectAllOtherCreatures:
+		selection.Controller = game.ControllerAny
+		selection.RequiredTypes = []types.Card{types.Creature}
 		return game.BattlefieldGroupExcluding(
-			game.Selection{RequiredTypes: []types.Card{types.Creature}},
+			selection,
 			game.SourcePermanentReference(),
 		), true
 	case compiler.StaticSubjectAttackingCreatures:
-		return game.BattlefieldGroup(game.Selection{
-			RequiredTypes: []types.Card{types.Creature},
-			CombatState:   game.CombatStateAttacking,
-		}), true
+		selection.Controller = game.ControllerAny
+		selection.RequiredTypes = []types.Card{types.Creature}
+		selection.CombatState = game.CombatStateAttacking
+		return game.BattlefieldGroup(selection), true
 	case compiler.StaticSubjectOtherAttackingCreatures:
+		selection.Controller = game.ControllerAny
+		selection.RequiredTypes = []types.Card{types.Creature}
+		selection.CombatState = game.CombatStateAttacking
 		return game.BattlefieldGroupExcluding(
-			game.Selection{
-				RequiredTypes: []types.Card{types.Creature},
-				CombatState:   game.CombatStateAttacking,
-			},
+			selection,
 			game.SourcePermanentReference(),
 		), true
 	case compiler.StaticSubjectBlockingCreatures:
-		return game.BattlefieldGroup(game.Selection{
-			RequiredTypes: []types.Card{types.Creature},
-			CombatState:   game.CombatStateBlocking,
-		}), true
+		selection.Controller = game.ControllerAny
+		selection.RequiredTypes = []types.Card{types.Creature}
+		selection.CombatState = game.CombatStateBlocking
+		return game.BattlefieldGroup(selection), true
 	case compiler.StaticSubjectControlledPermanents:
 	case compiler.StaticSubjectOpponentControlledPermanents:
 		selection.Controller = game.ControllerOpponent
@@ -1623,7 +1625,8 @@ func resolvingStaticSubjectGroup(effect *compiler.CompiledEffect) (game.GroupRef
 		if !ok {
 			return game.GroupReference{}, false
 		}
-		battlefield := game.Selection{}
+		battlefield := selection
+		battlefield.Controller = game.ControllerAny
 		if effect.StaticSubjectSubExcluded() {
 			battlefield.RequiredTypes = []types.Card{types.Creature}
 			battlefield.ExcludedSubtype = subtypes[0]
@@ -1636,7 +1639,8 @@ func resolvingStaticSubjectGroup(effect *compiler.CompiledEffect) (game.GroupRef
 		if !ok {
 			return game.GroupReference{}, false
 		}
-		battlefield := game.Selection{}
+		battlefield := selection
+		battlefield.Controller = game.ControllerAny
 		if effect.StaticSubjectSubExcluded() {
 			battlefield.RequiredTypes = []types.Card{types.Creature}
 			battlefield.ExcludedSubtype = subtypes[0]
@@ -1648,6 +1652,25 @@ func resolvingStaticSubjectGroup(effect *compiler.CompiledEffect) (game.GroupRef
 		return game.GroupReference{}, false
 	}
 	return game.BattlefieldGroup(selection), true
+}
+
+func resolvingStaticSubjectBaseSelection(effect *compiler.CompiledEffect) (game.Selection, bool) {
+	selection := game.Selection{
+		Controller:   game.ControllerYou,
+		Colorless:    effect.StaticSubjectColorless(),
+		Multicolored: effect.StaticSubjectMulticolored(),
+	}
+	if effect.StaticSubjectChosenColorFromEntry() {
+		return game.Selection{}, false
+	}
+	for _, parserColor := range effect.StaticSubjectColorsAny() {
+		runtimeColor, ok := animateSelfColor(parserColor)
+		if !ok {
+			return game.Selection{}, false
+		}
+		selection.ColorsAny = append(selection.ColorsAny, runtimeColor)
+	}
+	return selection, true
 }
 
 // staticSubjectSubtypeList resolves the creature-subtype filter for a subtype

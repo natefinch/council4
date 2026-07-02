@@ -23,6 +23,7 @@ var Cards = []*game.CardDef{
 	RampagingClassmate,
 	RampantGrowth,
 	RancorousArchaic,
+	RankAndFile,
 	RapidDecay,
 	RasaadYnBashir,
 	RatadrabikOfUrborg,
