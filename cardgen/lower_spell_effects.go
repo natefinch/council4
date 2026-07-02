@@ -529,8 +529,18 @@ func cardSelectionForSelector(selector compiler.CompiledSelector) (game.Selectio
 	// Kind's type alone ("creature or enchantment card" matching creatures
 	// only). Drop it so the union's OR semantics stand, mirroring the permanent
 	// target path's union overwrite in permanentTargetSpecWithCardinality.
+	//
+	// A conjunctive multi-type intersection ("artifact creature card") is the
+	// exception: every listed type must be present at once, so route the type
+	// list through RequiredTypes (AND) and clear the RequiredTypesAny (OR) form,
+	// mirroring the permanent target path.
 	if len(selection.RequiredTypesAny) > 0 {
-		selection.RequiredTypes = nil
+		if selector.ConjunctiveTypes {
+			selection.RequiredTypes = slices.Clone(selection.RequiredTypesAny)
+			selection.RequiredTypesAny = nil
+		} else {
+			selection.RequiredTypes = nil
+		}
 	}
 	if selector.Historic {
 		// A historic card is an artifact, a legendary, or a Saga (CR 702.61b).
