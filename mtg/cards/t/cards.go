@@ -7,6 +7,7 @@ import "github.com/natefinch/council4/mtg/game"
 // Cards lists all card definitions in this package.
 var Cards = []*game.CardDef{
 	TabletOfEpityr,
+	TaigamSStrike,
 	TajuruStalwart,
 	TakeHeart,
 	TalasResearcher,
@@ -19,6 +20,7 @@ var Cards = []*game.CardDef{
 	TeferiSProtection,
 	TeferiSWavecaster,
 	TelJiladDefiance,
+	TemmetVizierOfNaktamun,
 	TempestTechnique,
 	TempleElder,
 	TemurBattlecrier,

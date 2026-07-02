@@ -67,6 +67,7 @@ var Cards = []*game.CardDef{
 	ForebodingFruit,
 	Forest,
 	ForeverYoung,
+	ForgehammerCenturion,
 	ForgingTheAnchor,
 	ForgottenCreation,
 	FormAPosse,

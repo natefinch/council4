@@ -66,6 +66,7 @@ var Cards = []*game.CardDef{
 	HovelHurler,
 	HoverguardObserver,
 	HowlOfTheNightPack,
+	HraesvelgrOfTheFirstBrood,
 	HuaTuoHonoredPhysician,
 	HuatliRadiantChampion,
 	HuatliTheSunSHeart,

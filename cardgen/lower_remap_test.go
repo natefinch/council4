@@ -182,6 +182,18 @@ func targetBearingPrimitives() []targetBearingPrimitive {
 			},
 		},
 		{
+			name:   "ApplyRule",
+			build:  func() game.Primitive { return game.ApplyRule{Object: opt.Val(obj())} },
+			domain: targetIndexObject,
+			index: func(p game.Primitive) (int, bool) {
+				apply, ok := p.(game.ApplyRule)
+				if !ok || !apply.Object.Exists {
+					return 0, false
+				}
+				return apply.Object.Val.TargetIndex(), true
+			},
+		},
+		{
 			name:   "CreateToken",
 			build:  func() game.Primitive { return game.CreateToken{Recipient: opt.Val(plr())} },
 			domain: targetIndexObject,

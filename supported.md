@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,499 of 32,501 cards eligible for paper support (50.8%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,516 of 32,501 cards eligible for paper support (50.8%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -535,6 +535,7 @@ Council4 currently supports **16,499 of 32,501 cards eligible for paper support 
 - Aphetto Runecaster
 - Aphetto Vulture
 - Apocalypse
+- Apocalypse Runner
 - Apostle of Invasion
 - Apostle of Purifying Light
 - Apothecary Geist
@@ -1805,6 +1806,7 @@ Council4 currently supports **16,499 of 32,501 cards eligible for paper support 
 - Break Asunder
 - Break Down
 - Break Down the Door
+- Break Through the Line
 - Breaker of Armies
 - Breakneck Berserker
 - Breath of Fire
@@ -3607,6 +3609,7 @@ Council4 currently supports **16,499 of 32,501 cards eligible for paper support 
 - Distemper of the Blood
 - Distinguished Conjurer
 - Distorted Curiosity
+- Distortion Strike
 - Distress
 - District Guide
 - District Mascot
@@ -4450,6 +4453,7 @@ Council4 currently supports **16,499 of 32,501 cards eligible for paper support 
 - Everflowing Chalice
 - Everglades
 - Evernight Shade
+- Evie Frye
 - Evil Presence
 - Evil Reawakened
 - Eviscerate
@@ -5137,6 +5141,7 @@ Council4 currently supports **16,499 of 32,501 cards eligible for paper support 
 - Forge Boss
 - Forge Devil
 - Forgeborn Oreads
+- Forgehammer Centurion
 - Forging the Anchor
 - Forging the Tyrite Sword
 - Forgotten Ancient
@@ -6727,6 +6732,7 @@ Council4 currently supports **16,499 of 32,501 cards eligible for paper support 
 - Howling Moon
 - Howling Wolf
 - Howlpack Resurgence
+- Hraesvelgr of the First Brood
 - Hua Tuo, Honored Physician
 - Huang Zhong, Shu General
 - Huatli's Final Strike
@@ -7165,6 +7171,7 @@ Council4 currently supports **16,499 of 32,501 cards eligible for paper support 
 - Invigorating Boon
 - Invigorating Hot Spring
 - Invisible Stalker
+- Invisible Woman
 - Invisible Woman, Sue Storm
 - Invoke the Divine
 - Invoke the Firemind
@@ -7416,6 +7423,7 @@ Council4 currently supports **16,499 of 32,501 cards eligible for paper support 
 - Kabira Vindicator
 - Kabuto Moth
 - Kagemaro, First to Suffer
+- Kaito, Cunning Infiltrator
 - Kalakscion, Hunger Tyrant
 - Kalastria Healer
 - Kalastria Highborn
@@ -8158,6 +8166,7 @@ Council4 currently supports **16,499 of 32,501 cards eligible for paper support 
 - Locke Cole
 - Locked in the Cemetery
 - Lockjaw Snapper
+- Lockjaw, Slobbering Teleporter
 - Locthwain Gargoyle
 - Locthwain Lancer
 - Locthwain Paladin
@@ -8482,6 +8491,7 @@ Council4 currently supports **16,499 of 32,501 cards eligible for paper support 
 - Marchesa's Decree
 - Marchesa's Emissary
 - Marchesa's Infiltrator
+- Marchesa's Smuggler
 - Marching Duodrone
 - Mardu Ascendancy
 - Mardu Banner
@@ -10638,6 +10648,7 @@ Council4 currently supports **16,499 of 32,501 cards eligible for paper support 
 - Pygmy Razorback
 - Pygmy Troll
 - Pyknite
+- Pym Particles
 - Pym Technologies
 - Pyre Charger
 - Pyre Hound
@@ -11985,6 +11996,7 @@ Council4 currently supports **16,499 of 32,501 cards eligible for paper support 
 - Sea Gate Restoration // Sea Gate, Reborn
 - Sea Gate Wreckage
 - Sea God's Scorn
+- Sea Hag // Aquatic Ingress
 - Sea of Clouds
 - Sea Scryer
 - Sea Spirit
@@ -12076,6 +12088,7 @@ Council4 currently supports **16,499 of 32,501 cards eligible for paper support 
 - Seismic Mage
 - Seismic Monstrosaur
 - Seismic Rupture
+- Seismic Shift
 - Seismic Shudder
 - Seismic Spike
 - Seismic Strike
@@ -12839,6 +12852,7 @@ Council4 currently supports **16,499 of 32,501 cards eligible for paper support 
 - Smitten Swordmaster // Curry Favor
 - Smog Elemental
 - Smogsteed Rider
+- Smoke Bomb
 - Smokespew Invoker
 - Smolder Initiate
 - Smoldering Butcher
@@ -13995,6 +14009,7 @@ Council4 currently supports **16,499 of 32,501 cards eligible for paper support 
 - Tah-Crop Skirmisher
 - Taiga
 - Taigam's Scheming
+- Taigam's Strike
 - Taigam, Sidisi's Hand
 - Tail Slash
 - Tainted Field
@@ -14141,6 +14156,7 @@ Council4 currently supports **16,499 of 32,501 cards eligible for paper support 
 - Telim'Tor's Darts
 - Teller of Tales
 - Temmet, Naktamun's Will
+- Temmet, Vizier of Naktamun
 - Temperamental Oozewagg
 - Tempered in Solitude
 - Tempered Sliver
@@ -16367,6 +16383,7 @@ Council4 currently supports **16,499 of 32,501 cards eligible for paper support 
 - Yotian Soldier
 - Yotian Tactician
 - You Are Already Dead
+- You Come to a River
 - You Come to the Gnoll Camp
 - You Find the Villains' Lair
 - You Happen On a Glade

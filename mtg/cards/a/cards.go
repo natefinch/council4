@@ -71,6 +71,7 @@ var Cards = []*game.CardDef{
 	AntManColonyCommander,
 	AnuridBrushhopper,
 	ApesOfRath,
+	ApocalypseRunner,
 	ApothecaryInitiate,
 	AppealToEirdu,
 	AppliedGeometry,
