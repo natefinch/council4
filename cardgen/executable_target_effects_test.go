@@ -43,6 +43,51 @@ func TestGenerateExecutableCardSourceFixedDraw(t *testing.T) {
 	}
 }
 
+// TestGenerateExecutableCardSourceColorlessMulticoloredTargets verifies that the
+// "colorless" and "multicolored" color-shape qualifiers compose onto a permanent
+// target across different effect verbs (exile, destroy), lowering to the runtime
+// Selection.Colorless / Selection.Multicolored predicates.
+func TestGenerateExecutableCardSourceColorlessMulticoloredTargets(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		want       string
+	}{
+		{
+			name:       "exile colorless",
+			oracleText: "Exile target colorless creature.",
+			want:       "Colorless: true",
+		},
+		{
+			name:       "destroy multicolored permanent",
+			oracleText: "Destroy target multicolored permanent.",
+			want:       "Multicolored: true",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+				Name:       "Test Colorshape",
+				Layout:     "normal",
+				ManaCost:   "{2}{B}",
+				TypeLine:   "Sorcery",
+				OracleText: test.oracleText,
+			}, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			if !strings.Contains(source, test.want) {
+				t.Fatalf("source missing %q:\n%s", test.want, source)
+			}
+		})
+	}
+}
+
 func TestGenerateExecutableCardSourceTargetPlayerDraw(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

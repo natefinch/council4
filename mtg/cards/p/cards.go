@@ -71,6 +71,7 @@ var Cards = []*game.CardDef{
 	PsychicImpetus,
 	PsychicOverload,
 	PsychicVenom,
+	PsychoticFury,
 	PsychotropeThallid,
 	PublicThoroughfare,
 	PullThroughTheWeft,

@@ -28,6 +28,7 @@ var Cards = []*game.CardDef{
 	IncisorGlider,
 	IncreasingDevotion,
 	Incubation,
+	InfernalReckoning,
 	InfernoElemental,
 	InfernoFist,
 	InfiltrationLens,

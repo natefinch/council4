@@ -71,6 +71,7 @@ var Cards = []*game.CardDef{
 	FootMystic,
 	FootbottomFeast,
 	ForebodingFruit,
+	ForerunnerOfSlaughter,
 	Forest,
 	ForeverYoung,
 	ForgehammerCenturion,

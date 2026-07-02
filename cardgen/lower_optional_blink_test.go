@@ -229,9 +229,10 @@ func TestLowerOptionalBlinkFailsClosed(t *testing.T) {
 		{"plural group blink", "Instant",
 			"You may exile up to two target creatures you control, then return those cards to the battlefield under their owners' control."},
 		// An unsupported exile selector still blocks the sequence underneath the
-		// optional wrapper.
+		// optional wrapper. A "historic" permanent target is not representable, so
+		// it fails closed.
 		{"unsupported selector", "Instant",
-			"You may exile target multicolored permanent, then return it to the battlefield under its owner's control."},
+			"You may exile target historic permanent, then return it to the battlefield under its owner's control."},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

@@ -1059,6 +1059,12 @@ func permanentTargetSpecAllowingUnbounded(target compiler.CompiledTarget, allowU
 	if excludedColors := target.Selector.ExcludedColors(); len(excludedColors) > 0 {
 		selection.ExcludedColors = append([]color.Color(nil), excludedColors...)
 	}
+	if target.Selector.Colorless {
+		selection.Colorless = true
+	}
+	if target.Selector.Multicolored {
+		selection.Multicolored = true
+	}
 	if target.Selector.Keyword != parser.KeywordUnknown {
 		keyword, ok := runtimeKeyword(target.Selector.Keyword)
 		if !ok {
@@ -1182,15 +1188,14 @@ func alternativePermanentTargetSpec(target *compiler.CompiledTarget, spec *game.
 }
 
 // selectorHasUnsupportedPermanentFilters reports whether a permanent target
-// selector carries a characteristic the runtime TargetPredicate cannot represent
-// exactly. Subtypes, supertypes, colors, excluded colors, a recognized keyword,
-// mana value, power, and toughness comparisons all map onto the predicate, so
-// only zone restrictions and the colorless/multicolored color shapes (which the
-// predicate cannot express) stay rejected, keeping unsupported wordings closed.
+// selector carries a characteristic the runtime Selection cannot represent
+// exactly. Subtypes, supertypes, colors, excluded colors, the colorless and
+// multicolored color shapes, a recognized keyword, mana value, power, and
+// toughness comparisons all map onto the Selection, so only zone restrictions,
+// the historic qualifier, and same-name grouping (which the Selection cannot
+// express) stay rejected, keeping unsupported wordings closed.
 func selectorHasUnsupportedPermanentFilters(selector compiler.CompiledSelector) bool {
 	return selector.Zone != zone.None ||
-		selector.Colorless ||
-		selector.Multicolored ||
 		selector.Historic ||
 		selector.SameNameGroup != nil
 }

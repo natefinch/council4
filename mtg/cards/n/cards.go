@@ -48,6 +48,7 @@ var Cards = []*game.CardDef{
 	NorwoodPriestess,
 	NoxiousGhoul,
 	NoxiousHatchling,
+	NullElementalBlast,
 	Nulldrifter,
 	NumotTheDevastator,
 	NykthosParagon,
