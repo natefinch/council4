@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,575 of 32,501 cards eligible for paper support (51.0%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,586 of 32,501 cards eligible for paper support (51.0%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1190,6 +1190,7 @@ Council4 currently supports **16,575 of 32,501 cards eligible for paper support 
 - Beast Whisperer
 - Beast Within
 - Beast-Kin Ranger
+- Beastbreaker of Bala Ged
 - Beastcaller Savant
 - Beastmaster Ascension
 - Beastrider Vanguard
@@ -2095,6 +2096,7 @@ Council4 currently supports **16,575 of 32,501 cards eligible for paper support 
 - Captured Sunlight
 - Carapace
 - Carapace Forger
+- Caravan Escort
 - Caravan Hurda
 - Careening Mine Cart
 - Carefree Swinemaster
@@ -2797,6 +2799,7 @@ Council4 currently supports **16,575 of 32,501 cards eligible for paper support 
 - Coral Merfolk
 - Coral Sword
 - Coral Trickster
+- Coralhelm Commander
 - Coralhelm Guide
 - Cordial Vampire
 - Cordyceps Infected
@@ -6281,6 +6284,7 @@ Council4 currently supports **16,575 of 32,501 cards eligible for paper support 
 - Halfling
 - Halimar Depths
 - Halimar Excavator
+- Halimar Wavewatch
 - Haliya, Ascendant Cadet
 - Hall
 - Hall Monitor
@@ -6925,6 +6929,7 @@ Council4 currently supports **16,575 of 32,501 cards eligible for paper support 
 - Iguana Parrot
 - Ihsan's Shade
 - Iizuka the Ruthless
+- Ikiral Outrider
 - Ikra Shidiqi, the Usurper
 - Il Mheg Pixie
 - Ill-Gotten Inheritance
@@ -7493,6 +7498,7 @@ Council4 currently supports **16,575 of 32,501 cards eligible for paper support 
 - Karametra's Favor
 - Kardur's Vicious Return
 - Karfell Kennel-Master
+- Kargan Dragonlord
 - Kargan Dragonrider
 - Kargan Warleader
 - Karlov of the Ghost Council
@@ -7694,6 +7700,7 @@ Council4 currently supports **16,575 of 32,501 cards eligible for paper support 
 - Knight Ally
 - Knight Errant
 - Knight Exemplar
+- Knight of Cliffhaven
 - Knight of Dawn
 - Knight of Dawn's Light
 - Knight of Doves
@@ -9555,6 +9562,7 @@ Council4 currently supports **16,575 of 32,501 cards eligible for paper support 
 - Ninth Bridge Patrol
 - Nip Gwyllion
 - Nirkana Assassin
+- Nirkana Cutthroat
 - Nirkana Revenant
 - Nishoba Brawler
 - Nissa's Expedition
@@ -12801,6 +12809,7 @@ Council4 currently supports **16,575 of 32,501 cards eligible for paper support 
 - Skyswimmer Koi
 - Skyswirl Harrier
 - Skywarp Skaab
+- Skywatcher Adept
 - Skyway Sniper
 - Skywhaler's Shot
 - Skywinder Drake
@@ -13761,6 +13770,7 @@ Council4 currently supports **16,575 of 32,501 cards eligible for paper support 
 - Stronghold Taskmaster
 - Stronghold Zeppelin
 - Student of Ojutai
+- Student of Warfare
 - Studious First-Year // Rampant Growth
 - Study
 - Stuffed Bear
@@ -14818,6 +14828,7 @@ Council4 currently supports **16,575 of 32,501 cards eligible for paper support 
 - Tranquility
 - Tranquilize
 - Transcendent Envoy
+- Transcendent Master
 - Transcendent Message
 - Transdimensional Bovine
 - Transguild Courier
