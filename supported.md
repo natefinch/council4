@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,478 of 32,501 cards eligible for paper support (50.7%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,487 of 32,501 cards eligible for paper support (50.7%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1342,6 +1342,7 @@ Council4 currently supports **16,478 of 32,501 cards eligible for paper support 
 - Black Panther, Vanguard
 - Black Poplar Shaman
 - Black Scarab
+- Black Sun's Zenith
 - Black Ward
 - Black Widow, Agile Avenger
 - Black Widow, Daring Operative
@@ -3746,6 +3747,7 @@ Council4 currently supports **16,478 of 32,501 cards eligible for paper support 
 - Dragonstorm Globe
 - Dragoon's Wyvern
 - Drain the Well
+- Draining Whelk
 - Drainpipe Vermin
 - Drake
 - Drake
@@ -6254,6 +6256,7 @@ Council4 currently supports **16,478 of 32,501 cards eligible for paper support 
 - Hamato Guardian Stance
 - Hamato Ninpō
 - Hamlet Captain
+- Hamletback Goliath
 - Hammer Dropper
 - Hammer of Bogardan
 - Hammer of Nazahn
@@ -7262,6 +7265,7 @@ Council4 currently supports **16,478 of 32,501 cards eligible for paper support 
 - Jade Mage
 - Jade-Cast Sentinel
 - Jadecraft Artisan
+- Jadzi, Steward of Fate // Oracle's Gift
 - Jagged Barrens
 - Jagged Lightning
 - Jagged-Scar Archers
@@ -8098,6 +8102,7 @@ Council4 currently supports **16,478 of 32,501 cards eligible for paper support 
 - Lively Dirge
 - Livewire Lash
 - Living Airship
+- Living Armor
 - Living Death
 - Living Hive
 - Living Lies of Loki
@@ -9584,6 +9589,7 @@ Council4 currently supports **16,478 of 32,501 cards eligible for paper support 
 - Nurturing Presence
 - Nut Collector
 - Nutrient Block
+- Nykthos Paragon
 - Nykthos, Shrine to Nyx
 - Nylea's Colossus
 - Nylea's Disciple
@@ -12162,6 +12168,7 @@ Council4 currently supports **16,478 of 32,501 cards eligible for paper support 
 - Serum Visions
 - Servant of Nefarox
 - Servant of the Conduit
+- Servant of the Scale
 - Servant of Tymaret
 - Servant of Volrath
 - Servo
@@ -13014,6 +13021,7 @@ Council4 currently supports **16,478 of 32,501 cards eligible for paper support 
 - Soul Warden
 - Soul's Attendant
 - Soul's Fire
+- Soul's Might
 - Soul-Guide Gryff
 - Soul-Strike Technique
 - Soulblade Corrupter
@@ -14327,6 +14335,7 @@ Council4 currently supports **16,478 of 32,501 cards eligible for paper support 
 - Thermopod
 - Thespian's Stage
 - They Went This Way
+- Thickest in the Thicket
 - Thicket Crasher
 - Thief of Hope
 - Thieves' Guild Enforcer
