@@ -27,6 +27,7 @@ var Cards = []*game.CardDef{
 	HarvestHand,
 	HarvestSeason,
 	HauntedRidge,
+	HazardousBlast,
 	HazoretGodseeker,
 	HeadlessSpecter,
 	Headsplitter,

@@ -97,3 +97,115 @@ func TestGenerateExecutableCardSourceCreaturesCantBlockUnconditional(t *testing.
 		t.Fatalf("unconditional can't-block source should carry no protected object:\n%s", source)
 	}
 }
+
+// spellCantBlockCard builds a red sorcery bearing oracle as its only text so the
+// group-scoped "<group> can't block this turn." spell family can be lowered.
+func spellCantBlockCard(name, oracle string) *ScryfallCard {
+	return &ScryfallCard{
+		Name:       name,
+		Layout:     "normal",
+		ManaCost:   "{2}{R}",
+		TypeLine:   "Sorcery",
+		OracleText: oracle,
+		Colors:     []string{"R"},
+	}
+}
+
+// TestGenerateExecutableCardSourceGroupCantBlockKeyword verifies that the
+// keyword-filtered group spell "Creatures without flying can't block this turn."
+// (Falter, Magmatic Chasm, Seismic Stomp) lowers to a single object-less
+// ApplyRule placing an unconditional this-turn RuleEffectCantBlock on every
+// non-flying creature, with no controller scope and no protected object.
+func TestGenerateExecutableCardSourceGroupCantBlockKeyword(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(
+		spellCantBlockCard("Test Falter", "Creatures without flying can't block this turn."), "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.ApplyRule{",
+		"Kind:              game.RuleEffectCantBlock,",
+		"PermanentTypes:    []types.Card{types.Creature},",
+		"AffectedSelection: game.Selection{ExcludedKeyword: game.Flying},",
+		"Duration: game.DurationThisTurn,",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+	if strings.Contains(source, "AffectedController") {
+		t.Fatalf("all-creatures group must carry no controller scope:\n%s", source)
+	}
+	if strings.Contains(source, "TargetPermanentReference") || strings.Contains(source, "Object:") {
+		t.Fatalf("group can't-block must be object-less:\n%s", source)
+	}
+}
+
+// TestGenerateExecutableCardSourceGroupCantBlockOpponent verifies that the
+// controller-scoped group spell "Creatures your opponents control can't block
+// this turn." (Cosmotronic Wave, Hazardous Blast) lowers to an object-less
+// ApplyRule scoped by ControllerOpponent to every creature for the turn.
+func TestGenerateExecutableCardSourceGroupCantBlockOpponent(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(
+		spellCantBlockCard("Test Cosmotronic", "Creatures your opponents control can't block this turn."), "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Kind:               game.RuleEffectCantBlock,",
+		"AffectedController: game.ControllerOpponent,",
+		"PermanentTypes:     []types.Card{types.Creature},",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+// TestGenerateExecutableCardSourceGroupCantBlockColor verifies that the
+// color-filtered group spell "Green creatures can't block this turn." folds the
+// color filter onto the affected Selection.
+func TestGenerateExecutableCardSourceGroupCantBlockColor(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(
+		spellCantBlockCard("Test Green Falter", "Green creatures can't block this turn."), "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "AffectedSelection: game.Selection{ColorsAny: []color.Color{color.Green}},") {
+		t.Fatalf("source missing green color filter:\n%s", source)
+	}
+}
+
+// TestGenerateExecutableCardSourceGroupCantBlockFailsClosed verifies that group
+// subjects the rule effect cannot faithfully represent — the monocolored family
+// (no runtime color filter) and subtype-filtered groups — fail closed rather
+// than widening to every creature.
+func TestGenerateExecutableCardSourceGroupCantBlockFailsClosed(t *testing.T) {
+	t.Parallel()
+	for _, oracle := range []string{
+		"Monocolored creatures can't block this turn.",
+		"Cowards can't block this turn.",
+		"Creatures with power 2 or less can't block this turn.",
+	} {
+		_, diagnostics, err := GenerateExecutableCardSource(
+			spellCantBlockCard("Test Fail", oracle), "t")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(diagnostics) == 0 {
+			t.Fatalf("expected diagnostics for %q, got none", oracle)
+		}
+	}
+}

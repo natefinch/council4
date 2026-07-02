@@ -1227,6 +1227,7 @@ func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) 
 		func() ([]EffectSyntax, bool) { return parseCantCastSpellsEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseSpellCostModifierEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseGroupMustAttackEffect(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parseGroupCantBlockEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseDirectedMustAttackEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseAttackTaxEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseSpellsCantBeCounteredEffect(sentence, tokens) },
@@ -3936,6 +3937,104 @@ func cantCastSpellsFilterType(word string) (required, excluded CardType, ok bool
 		}
 	}
 	return CardTypeUnknown, CardTypeUnknown, false
+}
+
+// parseGroupCantBlockEffect recognizes the one-shot, group-scoped combat
+// restriction "<group> can't block this turn." (Falter, Magmatic Chasm, Seismic
+// Stomp: "Creatures without flying can't block this turn."; Cosmotronic Wave:
+// "Creatures your opponents control can't block this turn."). The affected
+// creature group is recognized through the shared static-subject grammar and
+// recorded in StaticSubject so lowering can scope the this-turn can't-block rule
+// effect by controller, color, and keyword filter. It deliberately never matches
+// the targeted form "<target> can't block this turn." (that keeps flowing to the
+// generic per-clause target recognizer), so a leading "target" quantifier fails
+// closed here. Any subject the static-subject grammar cannot represent also
+// fails closed and flows through the generic effect parser.
+func parseGroupCantBlockEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	remaining, leadingDuration := stripLeadingDurationClause(tokens, atoms)
+	if leadingDuration != EffectDurationNone {
+		return nil, false
+	}
+	words := make([]shared.Token, 0, len(remaining))
+	for _, token := range remaining {
+		if token.Kind == shared.Period {
+			continue
+		}
+		words = append(words, token)
+	}
+	tail := []string{"can't", "block", "this", "turn"}
+	if len(words) <= len(tail) {
+		return nil, false
+	}
+	verbIndex := len(words) - len(tail)
+	for offset, want := range tail {
+		if !equalWord(words[verbIndex+offset], want) {
+			return nil, false
+		}
+	}
+	subjectWords := words[:verbIndex]
+	for _, word := range subjectWords {
+		// The targeted form "<target> can't block this turn." is owned by the
+		// generic target recognizer; never hijack it here.
+		if equalWord(word, "target") {
+			return nil, false
+		}
+	}
+	subject, ok := recognizeGroupSubjectWords(subjectWords)
+	if !ok {
+		return nil, false
+	}
+	subject.Span = shared.SpanOf(subjectWords)
+	return []EffectSyntax{{
+		Kind:          EffectCantBlock,
+		Span:          sentence.Span,
+		ClauseSpan:    sentence.Span,
+		VerbSpan:      words[verbIndex].Span,
+		Text:          sentence.Text,
+		Tokens:        append([]shared.Token(nil), tokens...),
+		Context:       EffectContextController,
+		Duration:      EffectDurationThisTurn,
+		StaticSubject: subject,
+		Exact:         true,
+	}}, true
+}
+
+// recognizeGroupSubjectWords recognizes a static creature-group subject standing
+// on its own (without a trailing group verb) by reusing the shared
+// parseEffectStaticSubject grammar: it appends a synthetic "have" verb so the
+// subject sub-parsers, which require a trailing group verb, engage over exactly
+// the subject tokens. It returns the recognized subject with Kind==None cleared
+// to a failure so an unrepresentable subject fails closed.
+func recognizeGroupSubjectWords(subjectWords []shared.Token) (EffectStaticSubjectSyntax, bool) {
+	if len(subjectWords) == 0 {
+		return EffectStaticSubjectSyntax{}, false
+	}
+	synthetic := append(append([]shared.Token(nil), subjectWords...), shared.Token{Kind: shared.Word, Text: "have"})
+	subject := parseEffectStaticSubject(synthetic, collectAtoms(synthetic, nil, nil, "", false))
+	if subject.Kind == EffectStaticSubjectNone {
+		return EffectStaticSubjectSyntax{}, false
+	}
+	// Only a plain creature group refined by an optional color and/or single
+	// keyword filter is representable by the this-turn can't-block rule effect.
+	// Subtype-, counter-, power-, and chosen-color-filtered groups drop their
+	// refinement when compiled, so they must fail closed here rather than widen
+	// to every creature.
+	if subject.SubtypeKnown ||
+		len(subject.SubtypesAny) != 0 ||
+		subject.ExcludedSubtype ||
+		len(subject.ExcludedSubtypes) != 0 ||
+		len(subject.ExcludedTypes) != 0 ||
+		subject.CounterRequired ||
+		subject.CounterAny ||
+		subject.MatchPower ||
+		subject.MatchToughness ||
+		subject.PowerOrToughness ||
+		subject.PowerLessThanSource ||
+		subject.PowerGreaterThanSource ||
+		subject.ChosenColorFromEntry {
+		return EffectStaticSubjectSyntax{}, false
+	}
+	return subject, true
 }
 
 // parseGroupMustAttackEffect recognizes the one-shot forced-attack effect
