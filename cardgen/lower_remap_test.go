@@ -108,6 +108,12 @@ func playerIndex(p game.Primitive) (int, bool) {
 	if v, ok := p.(game.SacrificePermanents); ok {
 		return v.Player.TargetIndex(), true
 	}
+	if v, ok := p.(game.LookAtHand); ok {
+		return v.Player.TargetIndex(), true
+	}
+	if v, ok := p.(game.BecomeMonarch); ok {
+		return v.Player.TargetIndex(), true
+	}
 	if v, ok := p.(game.MoveCard); ok {
 		return v.Player.TargetIndex(), true
 	}
@@ -143,6 +149,8 @@ func targetBearingPrimitives() []targetBearingPrimitive {
 			return game.Attach{Attachment: game.SourcePermanentReference(), Target: obj()}
 		}),
 		objectPrimitive("PreventDamage", func() game.Primitive { return game.PreventDamage{Object: obj()} }),
+		playerPrimitive("LookAtHand", func() game.Primitive { return game.LookAtHand{Player: plr()} }),
+		playerPrimitive("BecomeMonarch", func() game.Primitive { return game.BecomeMonarch{Player: plr()} }),
 		playerPrimitive("AddPlayerCounter", func() game.Primitive { return game.AddPlayerCounter{Player: plr()} }),
 		playerPrimitive("Draw", func() game.Primitive { return game.Draw{Player: plr()} }),
 		playerPrimitive("Discard", func() game.Primitive { return game.Discard{Player: plr()} }),
