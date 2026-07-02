@@ -481,7 +481,8 @@ func lowerManaValueDynamicBound(kind compiler.DynamicAmountKind) (game.ManaValue
 // design; prefer SelectionForSelectorMasked for new code. (retire: #1393)
 func cardSelectionForSelector(selector compiler.CompiledSelector) (game.Selection, bool) {
 	if selector.PowerLessThanSource || selector.PowerGreaterThanSource ||
-		selectorHasCounterQualifier(selector) {
+		selectorHasCounterQualifier(selector) ||
+		selectorHasAttachmentQualifier(selector) {
 		// Source-relative power and battlefield-counter predicates apply only to
 		// permanents; a card-zone selection cannot honor them, so reject them
 		// rather than silently dropping the filter.
@@ -2059,6 +2060,7 @@ func fightCreatureTargetSpec(target compiler.CompiledTarget, another fightAnothe
 		ExcludeSource:    target.Selector.Another && another == fightAnotherExcludeSource,
 	}
 	applyCounterTargetSelection(&selection, target.Selector)
+	applyAttachmentTargetSelection(&selection, target.Selector)
 	switch {
 	case target.Selector.Attacking && target.Selector.Blocking:
 		selection.CombatState = game.CombatStateAttackingOrBlocking

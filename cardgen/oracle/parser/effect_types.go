@@ -1602,6 +1602,18 @@ type SelectionSyntax struct {
 	// Blow), restricting the match to a permanent that was dealt damage during
 	// the current turn. It lowers to Selection.DealtDamageThisTurn.
 	DealtDamageThisTurn bool `json:",omitempty"`
+	// Modified records a "modified" attachment qualifier on a permanent target
+	// ("target modified creature you control", Silver Sable), requiring the
+	// matched permanent to be modified: it carries one or more counters, or has
+	// one or more Auras or Equipment attached (CR 701.50). Enchanted records the
+	// "enchanted" qualifier ("target enchanted permanent", Cut the Earthly Bond),
+	// requiring one or more Auras attached; Equipped records the "equipped"
+	// qualifier, requiring one or more Equipment attached. A non-battlefield
+	// subject never matches. They lower to Selection.MatchModified /
+	// Selection.MatchEnchanted / Selection.MatchEquipped.
+	Modified  bool `json:",omitempty"`
+	Enchanted bool `json:",omitempty"`
+	Equipped  bool `json:",omitempty"`
 	// PowerLessThanSource records a trailing "with lesser power" relative clause
 	// ("target attacking creature with lesser power", Mentor), restricting the
 	// match to permanents whose power is strictly less than the ability's source

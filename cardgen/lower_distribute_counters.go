@@ -159,6 +159,7 @@ func distributeCountersPermanentSelection(selector compiler.CompiledSelector) (g
 	}
 	selection := game.Selection{RequiredTypesAny: []types.Card{types.Creature}}
 	applyCounterTargetSelection(&selection, selector)
+	applyAttachmentTargetSelection(&selection, selector)
 	switch selector.Controller {
 	case compiler.ControllerAny:
 	case compiler.ControllerYou:

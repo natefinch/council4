@@ -162,6 +162,7 @@ var Cards = []*game.CardDef{
 	CurseOfTheSwine,
 	Cursecatcher,
 	CursedMonstrosity,
+	CutTheEarthlyBond,
 	CyclopeanSnare,
 	CytoplastManipulator,
 	CytospawnShambler,

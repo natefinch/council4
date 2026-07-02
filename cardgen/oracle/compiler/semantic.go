@@ -1312,6 +1312,15 @@ type CompiledSelector struct {
 	// damage this turn ("target creature that was dealt damage this turn", Fatal
 	// Blow). It lowers to Selection.DealtDamageThisTurn.
 	DealtDamageThisTurn bool
+	// Modified requires each matched permanent to be modified (a counter, Aura,
+	// or Equipment attached; CR 701.50) for "target modified creature you
+	// control" (Silver Sable). Enchanted requires one or more Auras attached
+	// ("target enchanted permanent", Cut the Earthly Bond); Equipped requires one
+	// or more Equipment attached. They lower to Selection.MatchModified /
+	// Selection.MatchEnchanted / Selection.MatchEquipped.
+	Modified  bool
+	Enchanted bool
+	Equipped  bool
 	// PowerLessThanSource requires each matched permanent's power to be strictly
 	// less than the ability's source permanent's power ("target attacking
 	// creature with lesser power", Mentor); PowerGreaterThanSource is the

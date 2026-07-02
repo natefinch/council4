@@ -911,7 +911,8 @@ func damageTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
 		// reject it so single-target damage stays faithful. The two-target damage
 		// rider handles its own "other" (distinct-from-prior-target) separately.
 		if target.Selector.Other || target.Selector.Another ||
-			selectorHasCounterQualifier(target.Selector) {
+			selectorHasCounterQualifier(target.Selector) ||
+			selectorHasAttachmentQualifier(target.Selector) {
 			return game.TargetSpec{}, false
 		}
 		spec.Allow = game.TargetAllowPermanent | game.TargetAllowPlayer
@@ -1083,6 +1084,7 @@ func permanentTargetSpecAllowingUnbounded(target compiler.CompiledTarget, allowU
 		selection.ExcludedKeyword = keyword
 	}
 	applyCounterTargetSelection(&selection, target.Selector)
+	applyAttachmentTargetSelection(&selection, target.Selector)
 	if target.Selector.MatchManaValue {
 		if target.Selector.ManaValueX {
 			return game.TargetSpec{}, false
@@ -1170,6 +1172,7 @@ func alternativePermanentTargetSpec(target *compiler.CompiledTarget, spec *game.
 		return game.TargetSpec{}, false
 	}
 	applyCounterTargetSelection(&selection, *selector)
+	applyAttachmentTargetSelection(&selection, *selector)
 	for i := range selector.Alternatives {
 		alternativeSpec, ok := permanentTargetSpecWithCardinality(compiler.CompiledTarget{
 			Cardinality: compiler.TargetCardinality{Min: 1, Max: 1},
@@ -1210,6 +1213,30 @@ func selectorHasCounterQualifier(selector compiler.CompiledSelector) bool {
 		selector.MatchNoCounters || selector.MatchExcludedCounter
 }
 
+// selectorHasAttachmentQualifier reports whether the selector carries a positive
+// attachment/modification qualifier ("target modified/enchanted/equipped
+// <noun>"). Projectors that cannot represent it fail closed on it, mirroring the
+// counter-qualifier guard.
+func selectorHasAttachmentQualifier(selector compiler.CompiledSelector) bool {
+	return selector.Modified || selector.Enchanted || selector.Equipped
+}
+
+// applyAttachmentTargetSelection records a selector's positive attachment
+// qualifier onto a target's game.Selection, reusing the runtime MatchModified /
+// MatchEnchanted / MatchEquipped predicates. A non-battlefield subject never
+// satisfies them, matching the runtime's own guard.
+func applyAttachmentTargetSelection(selection *game.Selection, selector compiler.CompiledSelector) {
+	if selector.Modified {
+		selection.MatchModified = true
+	}
+	if selector.Enchanted {
+		selection.MatchEnchanted = true
+	}
+	if selector.Equipped {
+		selection.MatchEquipped = true
+	}
+}
+
 func applyCounterTargetSelection(selection *game.Selection, selector compiler.CompiledSelector) {
 	if selector.MatchCounter {
 		selection.MatchCounter = true
@@ -1237,6 +1264,7 @@ func stackSpellTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool
 		target.Selector.Keyword != parser.KeywordUnknown ||
 		target.Selector.Zone != zone.None ||
 		selectorHasCounterQualifier(target.Selector) ||
+		selectorHasAttachmentQualifier(target.Selector) ||
 		target.Selector.MatchPower ||
 		target.Selector.MatchToughness {
 		return game.TargetSpec{}, false
@@ -1366,7 +1394,8 @@ func spellTargetPlayerRelation(controller compiler.ControllerKind) (game.PlayerR
 func counterAbilityTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
 	if !targetCardinalityIsOne(target) ||
 		target.Selector.Another || target.Selector.Other ||
-		selectorHasCounterQualifier(target.Selector) {
+		selectorHasCounterQualifier(target.Selector) ||
+		selectorHasAttachmentQualifier(target.Selector) {
 		return game.TargetSpec{}, false
 	}
 	var kinds []game.StackObjectKind

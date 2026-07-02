@@ -101,6 +101,7 @@ var Cards = []*game.CardDef{
 	SilhanaLedgewalker,
 	SilkweaverElite,
 	SilundiVision,
+	SilverSableMercenaryLeader,
 	SilverShroudCostume,
 	SilverbackElder,
 	SilverquillPledgemage,

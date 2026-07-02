@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,616 of 32,501 cards eligible for paper support (51.1%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,621 of 32,501 cards eligible for paper support (51.1%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -3070,6 +3070,7 @@ Council4 currently supports **16,616 of 32,501 cards eligible for paper support 
 - Cursed Ronin
 - Custodi Soulbinders
 - Custodian of the Trove
+- Cut the Earthly Bond
 - Cutthroat Centurion
 - Cutthroat Contender
 - Cutthroat il-Dal
@@ -4517,6 +4518,7 @@ Council4 currently supports **16,616 of 32,501 cards eligible for paper support 
 - Exotic Disease
 - Exotic Orchard
 - Expanded Anatomy
+- Expanding Ooze
 - Expedite
 - Expedition Champion
 - Expedition Envoy
@@ -10936,6 +10938,7 @@ Council4 currently supports **16,616 of 32,501 cards eligible for paper support 
 - Rampant Growth
 - Rampart Architect
 - Ramroller
+- Ramses Overdark
 - Ramunap Excavator
 - Ramunap Ruins
 - Rancid Rats
@@ -12614,6 +12617,7 @@ Council4 currently supports **16,616 of 32,501 cards eligible for paper support 
 - Silver Knight
 - Silver Myr
 - Silver Raven
+- Silver Sable, Mercenary Leader
 - Silver Seraph
 - Silver Shroud Costume
 - Silverback Ape
@@ -15499,6 +15503,7 @@ Council4 currently supports **16,616 of 32,501 cards eligible for paper support 
 - Venomous Brutalizer
 - Venomous Changeling
 - Venomous Hierophant
+- Venomous Vines
 - Venomsac Lagac
 - Venomspout Brackus
 - Venomthrope
