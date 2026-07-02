@@ -464,6 +464,13 @@ func lowerModalContent(
 	}
 
 	modes := make([]game.Mode, 0, len(ctx.content.Modes))
+	// modeReasons collects every mode that fails to lower. Modes are independent,
+	// so all of their blockers are reported; the first failing mode stays primary,
+	// matching the reason a first-failure bail used to return.
+	var modeReasons []shared.Diagnostic
+	modeUnsupported := func(detail string) shared.Diagnostic {
+		return *contentDiagnostic(ctx, "unsupported ability modes", detail)
+	}
 	for i, mode := range ctx.content.Modes {
 		syntaxMode := syntax.Modal.Options[i]
 		bodySyntax := parser.Ability{
@@ -484,26 +491,38 @@ func lowerModalContent(
 		}
 		content, diagnostic := lowerAbilityContent(cardName, ctx.enclosingKind, mode.Content, false, &bodySyntax)
 		if diagnostic != nil {
-			diagnostic.Detail = fmt.Sprintf("mode %d: %s", i+1, diagnostic.Detail)
-			return game.AbilityContent{}, diagnostic
+			primary := *diagnostic
+			additional := primary.Additional
+			primary.Additional = nil
+			primary.Detail = fmt.Sprintf("mode %d: %s", i+1, primary.Detail)
+			modeReasons = append(modeReasons, primary)
+			modeReasons = append(modeReasons, additional...)
+			continue
 		}
 		if content.IsModal() || len(content.Modes) != 1 {
-			return unsupported("mode lowering produced unexpected modal content")
+			modeReasons = append(modeReasons, modeUnsupported("mode lowering produced unexpected modal content"))
+			continue
 		}
 		if !modalOptionCompletelyRecognized(mode.Content, &syntaxMode) {
-			return unsupported("a modal option contains rules text without complete executable semantics")
+			modeReasons = append(modeReasons, modeUnsupported("a modal option contains rules text without complete executable semantics"))
+			continue
 		}
 		loweredMode := content.Modes[0]
 		loweredMode.Text = mode.Text
 		if modal.Spree {
 			if len(mode.SpreeCost) == 0 {
-				return unsupported("a Spree option is missing its additional cost")
+				modeReasons = append(modeReasons, modeUnsupported("a Spree option is missing its additional cost"))
+				continue
 			}
 			loweredMode.Cost = opt.Val(slices.Clone(mode.SpreeCost))
 		} else if len(mode.SpreeCost) != 0 {
-			return unsupported("a non-Spree modal option carries an additional cost")
+			modeReasons = append(modeReasons, modeUnsupported("a non-Spree modal option carries an additional cost"))
+			continue
 		}
 		modes = append(modes, loweredMode)
+	}
+	if len(modeReasons) > 0 {
+		return game.AbilityContent{}, combineReasons(modeReasons)
 	}
 	result := game.AbilityContent{
 		Modes:           modes,

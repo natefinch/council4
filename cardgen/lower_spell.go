@@ -512,11 +512,44 @@ func lowerOptionalContent(
 	if content, ok := lowerOptionalBlinkReturn(cardName, ctx, syntax); ok {
 		return content, nil
 	}
-	return game.AbilityContent{}, contentDiagnostic(
+	optionalReason := contentDiagnostic(
 		ctx,
 		"unsupported optional effect",
 		"the executable source backend does not yet lower optional resolving effects",
 	)
+	// Discover whether optionality is the ONLY blocker. Re-lowering the same
+	// content with the "may" removed reveals any independent blockers that would
+	// remain even if optional effects were supported, so support-prioritization
+	// does not overcount how many cards supporting optional effects would unblock.
+	if inner := probeStrippedOptionalReason(cardName, ctx, syntax); inner != nil {
+		optionalReason.Additional = append(optionalReason.Additional, *inner)
+		optionalReason.Additional = append(optionalReason.Additional, inner.Additional...)
+		optionalReason.Additional = dedupeReasons(optionalReason.Additional)
+	}
+	return game.AbilityContent{}, optionalReason
+}
+
+// probeStrippedOptionalReason re-lowers optional content with its "may" optionality
+// removed. If the mandatory version still fails, that failure is an independent
+// blocker that would remain even if optional resolving effects were supported, and
+// it is returned so the card reports it alongside the optional blocker. If the
+// mandatory version lowers cleanly, optionality is the sole blocker and this
+// returns nil. Clearing every effect's Optional flag makes the content route away
+// from the optional path, so this never recurses.
+func probeStrippedOptionalReason(cardName string, ctx contentCtx, syntax *parser.Ability) *shared.Diagnostic {
+	stripped := ctx
+	effects := make([]compiler.CompiledEffect, len(ctx.content.Effects))
+	copy(effects, ctx.content.Effects)
+	for i := range effects {
+		effects[i].Optional = false
+	}
+	stripped.content.Effects = effects
+	stripped.optional = false
+	if hasOptionalResolvingEffect(stripped.content.Effects) {
+		return nil
+	}
+	_, diagnostic := lowerContent(cardName, stripped, syntax)
+	return diagnostic
 }
 
 func lowerImpulseExileContent(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {

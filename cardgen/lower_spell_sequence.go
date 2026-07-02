@@ -219,6 +219,10 @@ func lowerOrderedEffectSequence(
 	// contributed target specs before the then-joined group.
 	oracleSpanToGameIdx := make(map[shared.Span]int)
 	clauseSyntaxes := splitEffectSyntaxes(syntax, ctx.content.Effects)
+	// clauseReasons collects every clause that fails to lower so the whole
+	// sequence reports all of its blockers, not just the first. It stays empty
+	// for a fully-supported sequence, so the success path below is unchanged.
+	var clauseReasons []shared.Diagnostic
 	for i := range ctx.content.Effects {
 		effect := &ctx.content.Effects[i]
 		resolvedEffect, clauseAbility := prepareSequenceClause(ctx, optionalFlow, clauseSyntaxes, i)
@@ -290,6 +294,9 @@ func lowerOrderedEffectSequence(
 			effectAbility.content.Targets,
 		)
 		if !ok {
+			if len(clauseReasons) > 0 {
+				continue
+			}
 			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — clause reference not localizable")
 		}
 		effectAbility.content.References = localReferences
@@ -333,6 +340,9 @@ func lowerOrderedEffectSequence(
 		allowEventPronoun := effect.Connection == parser.EffectConnectionOtherwise || i == 0
 		if delayedContent, handled, failed := lowerDelayedSequenceClause(ctx.content.Effects, i, effectAbility, sequence); handled {
 			if failed {
+				if len(clauseReasons) > 0 {
+					continue
+				}
 				return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — delayed-target sacrifice not linkable")
 			}
 			content = delayedContent
@@ -350,7 +360,8 @@ func lowerOrderedEffectSequence(
 			len(content.SharedTargets) != 0 ||
 			content.IsModal() ||
 			len(content.Modes) != 1 {
-			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, sequenceClauseCategory(diagnostic))
+			clauseReasons = appendClauseReason(clauseReasons, ctx, diagnostic)
+			continue
 		}
 		mode := content.Modes[0]
 		// An inherited target that no prior clause owned (a bare "Choose target
@@ -370,14 +381,23 @@ func lowerOrderedEffectSequence(
 			targets, oracleSpanToGameIdx,
 		)
 		if !ok {
+			if len(clauseReasons) > 0 {
+				continue
+			}
 			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — inherited target not remappable")
 		}
 		targets = newTargets
 		if category := applySequenceClauseGates(mode.Sequence, i, effectConditions, insteadGates, otherwiseGates); category != "" {
+			if len(clauseReasons) > 0 {
+				continue
+			}
 			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, category)
 		}
 		if optionalFlow.enabled || optionalFlow.bareIndex >= 0 || optionalFlow.independentOptional {
 			if category, ok := applyOptionalFlowEnvelope(optionalFlow, i, mode.Sequence); !ok {
+				if len(clauseReasons) > 0 {
+					continue
+				}
 				return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, category)
 			}
 		}
@@ -391,9 +411,19 @@ func lowerOrderedEffectSequence(
 		// target/reference is fully consumed, so only require non-empty here and
 		// rely on the consumed-count checks below to prove nothing was dropped.
 		if len(mode.Sequence) == 0 {
+			if len(clauseReasons) > 0 {
+				continue
+			}
 			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — effect produced no instructions")
 		}
 		sequence = append(sequence, mode.Sequence...)
+	}
+	// If any clause failed to lower, the sequence is unsupported. Report every
+	// collected clause blocker (the first stays primary, matching the reason a
+	// first-failure bail used to return) and skip the post-loop structural checks,
+	// which assume a fully-consumed sequence.
+	if len(clauseReasons) > 0 {
+		return game.AbilityContent{}, combineReasons(clauseReasons)
 	}
 	// A condition's own object pronoun ("its power" in "draw a card if its power
 	// is 3 or greater") sits outside every effect clause span, so it is consumed

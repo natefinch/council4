@@ -354,9 +354,28 @@ func lowerFaceAbilities(
 	linkExplicitExileReturns(&result)
 	synthesizeExileUntilLeavesReturns(&result)
 	if len(unsupported) > 0 {
-		return loweredFaceAbilities{}, append(diagnostics, unsupported...)
+		return loweredFaceAbilities{}, append(diagnostics, flattenAdditionalReasons(unsupported)...)
 	}
 	return result, diagnostics
+}
+
+// flattenAdditionalReasons expands each diagnostic's Additional blockers into
+// sibling diagnostics so a card's report lists every independent reason it is
+// unsupported, not just the first. The primary diagnostic keeps its own
+// summary/detail; the copy's Additional slice is cleared so downstream consumers
+// (the report, the support analysis) see one flat list. Producers attach flat
+// Additional lists (a fan-out lowerer that carries forward a nested failure's
+// reasons appends that failure's primary and its Additional as flat entries), so a
+// single expansion pass suffices.
+func flattenAdditionalReasons(diagnostics []shared.Diagnostic) []shared.Diagnostic {
+	flattened := make([]shared.Diagnostic, 0, len(diagnostics))
+	for _, diagnostic := range diagnostics {
+		additional := diagnostic.Additional
+		diagnostic.Additional = nil
+		flattened = append(flattened, diagnostic)
+		flattened = append(flattened, additional...)
+	}
+	return flattened
 }
 
 func appendSimpleLoweredAbilities(result *loweredFaceAbilities, lowered *abilityLowering) {

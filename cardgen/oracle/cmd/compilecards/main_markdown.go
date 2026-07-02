@@ -179,9 +179,11 @@ func writeUnblockRoadmap(builder *strings.Builder, output report) {
 	_, _ = builder.WriteString(
 		"Greedy set-cover priority: each step fixes the reason that — given the reasons already " +
 			"fixed in the steps above it — newly fully unblocks the most still-blocked cards. " +
-			"Cumulative is the running total of cards fully unblocked. Lowering records one reason " +
-			"per ability but short-circuits within a single ability, so these are an optimistic " +
-			"estimate: fixing a reason can reveal another blocker in the same ability.\n\n",
+			"Cumulative is the running total of cards fully unblocked. Fan-out lowerers (ordered " +
+			"sequence, modal, optional) now report every independent blocker they carry, so these " +
+			"counts account for co-blockers rather than crediting a fix with cards that need other " +
+			"fixes too. A few remaining lowerers still short-circuit within an ability, so the " +
+			"counts stay a slight over-estimate.\n\n",
 	)
 	_, _ = builder.WriteString(
 		"| Step | Fix this reason | Capability | Newly unblocked | Cumulative | Sample cards |\n",
