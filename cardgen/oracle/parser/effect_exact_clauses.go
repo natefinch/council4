@@ -170,7 +170,6 @@ func exactChosenGraveyardReturnEffectSyntax(effect *EffectSyntax, text string) b
 		(sel.Tapped && !entryTapped) || sel.Untapped ||
 		sel.Keyword != KeywordUnknown || sel.ExcludedKeyword != KeywordUnknown ||
 		len(sel.SourceTypes) != 0 ||
-		len(sel.ExcludedSupertypes) != 0 ||
 		len(sel.ExcludedColors) != 0 || len(sel.Alternatives) != 0 {
 		return false
 	}
@@ -904,7 +903,7 @@ func exactGraveyardCardTargetSyntax(target *TargetSyntax) bool {
 	if sel.All || sel.Attacking || sel.Blocking || sel.Tapped || sel.Untapped ||
 		sel.Keyword != KeywordUnknown ||
 		len(sel.SourceTypes) != 0 ||
-		len(sel.ExcludedSupertypes) != 0 || len(sel.ExcludedColors) != 0 {
+		len(sel.ExcludedColors) != 0 {
 		return false
 	}
 	prefix, plural, ok := graveyardCardCardinalityPrefix(target.Cardinality, sel.Another)
@@ -1072,6 +1071,10 @@ func graveyardCardNoun(sel SelectionSyntax, plural bool) (string, bool) {
 	if !ok {
 		return "", false
 	}
+	excludedSupertypePrefix, hasExcludedSupertype, ok := graveyardExcludedSupertypePrefix(sel)
+	if !ok {
+		return "", false
+	}
 	// A supertype adjective ("legendary creature card", "snow land card") has no
 	// single canonical order relative to a color word in Oracle text (both
 	// "legendary white" and "white legendary" occur), so the two never combine
@@ -1079,15 +1082,22 @@ func graveyardCardNoun(sel SelectionSyntax, plural bool) (string, bool) {
 	if hasSupertype && (hasColor || sel.Historic) {
 		return "", false
 	}
+	// A negated supertype ("nonlegendary creature card") occupies the same
+	// leading adjective slot as a positive supertype, so the two never coexist,
+	// and it likewise has no canonical combined order with a color or "historic"
+	// qualifier.
+	if hasExcludedSupertype && (hasSupertype || hasColor || sel.Historic) {
+		return "", false
+	}
 	// An excluded-card-type prefix ("nonland permanent card", "noncreature
 	// artifact card", "noncreature, nonland card") leads the noun. No printed
 	// card combines an excluded card type with a color, supertype, historic, or
 	// subtype qualifier, so those have no canonical combined order and fail
 	// closed rather than guessing one.
-	if hasExcluded && (hasColor || hasSupertype || sel.Historic || hasSubtype) {
+	if hasExcluded && (hasColor || hasSupertype || hasExcludedSupertype || sel.Historic || hasSubtype) {
 		return "", false
 	}
-	return excludedPrefix + supertypePrefix + colorPrefix + historicPrefix + core, true
+	return excludedPrefix + supertypePrefix + excludedSupertypePrefix + colorPrefix + historicPrefix + core, true
 }
 
 // graveyardExcludedTypePrefix renders the optional leading excluded-card-type
@@ -1134,6 +1144,27 @@ func graveyardSupertypePrefix(sel SelectionSyntax) (prefix string, hasSupertype,
 		return "", false, false
 	}
 	return word + " ", true, true
+}
+
+// graveyardExcludedSupertypePrefix renders the optional leading negated-supertype
+// qualifier of a graveyard-card noun ("nonlegendary ", "nonbasic ", "nonsnow "),
+// followed by a trailing space so the caller appends the core noun directly. The
+// runtime Selection matches it through the ExcludedSupertype filter. It reports
+// whether a negated supertype was present and fails closed for more than one
+// excluded supertype or an unknown supertype word, which have no canonical
+// single-adjective phrasing.
+func graveyardExcludedSupertypePrefix(sel SelectionSyntax) (prefix string, hasExcludedSupertype, ok bool) {
+	if len(sel.ExcludedSupertypes) == 0 {
+		return "", false, true
+	}
+	if len(sel.ExcludedSupertypes) != 1 {
+		return "", false, false
+	}
+	word, ok := supertypeWord(sel.ExcludedSupertypes[0])
+	if !ok {
+		return "", false, false
+	}
+	return "non" + word + " ", true, true
 }
 
 // graveyardColorPrefix renders the optional leading color qualifier of a

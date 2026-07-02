@@ -13,6 +13,7 @@ var Cards = []*game.CardDef{
 	RageNimbus,
 	RagingKronch,
 	RagingSpirit,
+	RagnarokDivineDeliverance,
 	RaidBombardment,
 	RaidersKarve,
 	RaisedByGiants,
