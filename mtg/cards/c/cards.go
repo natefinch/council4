@@ -174,4 +174,5 @@ var Cards = []*game.CardDef{
 	CourtOfBounty,
 	CourtOfEmbereth,
 	CourtOfIre,
+	CourtOfGrace,
 }
