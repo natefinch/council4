@@ -525,6 +525,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				PreventDamageSourceColors:              compilePreventDamageSourceColors(syntax.PreventDamageSourceColors),
 				SpellsCantBeCounteredNextOnly:          syntax.SpellsCantBeCounteredNextOnly,
 				DoublePower:                            syntax.DoublePower,
+				SubjectSourceAttached:                  syntax.SubjectSourceAttached,
 				DoubleToughness:                        syntax.DoubleToughness,
 				DoubleSourceCounters:                   syntax.DoubleSourceCounters,
 				DoubleSourceCounterKind:                syntax.DoubleSourceCounterKind,

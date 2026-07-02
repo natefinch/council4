@@ -1533,6 +1533,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			CanAttackDefenderSpan:    canAttackDefenderSpan,
 			TokenChoice:              parseTokenChoice(kind, clause),
 			StaticSubject:            staticSubject,
+			SubjectSourceAttached:    resolvingAttachedPossessiveSubject(ownership, staticSubject),
 			DoublePower:              doublePower,
 			DoubleToughness:          doubleToughness,
 			DoubleSourceCounters:     doubleSourceCounters,

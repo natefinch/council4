@@ -2767,6 +2767,13 @@ type EffectSyntax struct {
 	// life, double counters, double mana).
 	DoublePower     bool `json:",omitempty"`
 	DoubleToughness bool `json:",omitempty"`
+	// SubjectSourceAttached marks a resolving continuous effect whose possessive
+	// subject is the source's attached permanent named by "equipped creature's" or
+	// "enchanted creature's" ("Double equipped creature's power until end of
+	// turn.", Junk Jet). Only the possessive object form sets it — the leading
+	// "equipped creature" subject is a StaticSubject handled separately — so it
+	// lowers to the source-attached permanent through continuousSubjectMode.
+	SubjectSourceAttached bool `json:",omitempty"`
 	// DoubleSourceCounters marks an EffectDouble whose object is "the number of
 	// <kind> counters on <self>" ("double the number of +1/+1 counters on this
 	// creature", Mossborn Hydra). The source permanent gains additional counters
