@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,548 of 32,501 cards eligible for paper support (50.9%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,554 of 32,501 cards eligible for paper support (50.9%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -5867,6 +5867,7 @@ Council4 currently supports **16,548 of 32,501 cards eligible for paper support 
 - Goblin Sledder
 - Goblin Smuggler
 - Goblin Soldier
+- Goblin Soothsayer
 - Goblin Spelunkers
 - Goblin Spy
 - Goblin Striker
@@ -6216,6 +6217,7 @@ Council4 currently supports **16,548 of 32,501 cards eligible for paper support 
 - Guardian Seraph
 - Guardians of Akrasa
 - Guardians of Meletis
+- Guardians' Pledge
 - Guenhwyvar
 - Guerrilla Gorilla
 - Guided Strike
@@ -9345,6 +9347,7 @@ Council4 currently supports **16,548 of 32,501 cards eligible for paper support 
 - Nature's Blessing
 - Nature's Chant
 - Nature's Claim
+- Nature's Cloak
 - Nature's Lore
 - Nature's Ruin
 - Nature's Spiral
@@ -9567,6 +9570,7 @@ Council4 currently supports **16,548 of 32,501 cards eligible for paper support 
 - Noble's Purse
 - Nobody
 - Nocturnal Feeder
+- Nocturnal Raid
 - Noggle Bandit
 - Noggle Bridgebreaker
 - Noggle Ransacker
@@ -10900,6 +10904,7 @@ Council4 currently supports **16,548 of 32,501 cards eligible for paper support 
 - Ranger's Path
 - Ranger-Captain of Eos
 - Ranging Raptors
+- Rank and File
 - Rank Officer
 - Rankle's Prank
 - Ransack the Lab
@@ -15293,6 +15298,7 @@ Council4 currently supports **16,548 of 32,501 cards eligible for paper support 
 - Valor in Akros
 - Valor of the Worthy
 - Valor Singer
+- Valorous Charge
 - Valorous Stance
 - Valorous Steed
 - Vampire
