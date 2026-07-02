@@ -124,6 +124,7 @@ var Cards = []*game.CardDef{
 	CoralAtoll,
 	CoralSword,
 	CoralhelmCommander,
+	CormelaGlamourThief,
 	CorpsesOfTheLost,
 	CorruptOfficial,
 	CosmicHunger,

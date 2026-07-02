@@ -34,6 +34,7 @@ var Cards = []*game.CardDef{
 	LeylineInvocation,
 	LeylineOfSanctity,
 	LifeBurst,
+	LifeOfToshiroUmezawa,
 	LifecraftCavalry,
 	Lifesmith,
 	LifesparkSpellbomb,

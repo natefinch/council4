@@ -153,6 +153,7 @@ var Cards = []*game.CardDef{
 	SokkaTenaciousTactician,
 	SoldeviMachinist,
 	SolemnRecruit,
+	SomberwaldSage,
 	SomberwaldVigilante,
 	SoratamiSavant,
 	SorayaTheFalconer,

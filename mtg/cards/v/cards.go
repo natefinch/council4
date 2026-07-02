@@ -47,6 +47,7 @@ var Cards = []*game.CardDef{
 	VitasporeThallid,
 	VivienReid,
 	Vivify,
+	VodalianArcanist,
 	VodalianHexcatcher,
 	VodalianKnights,
 	VodalianMage,

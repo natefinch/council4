@@ -698,6 +698,14 @@ func renderManaSpendConditionKind(kind game.ManaSpendConditionKind) (string, err
 		return "game.ManaSpendActivateArtifactAbility", nil
 	case game.ManaSpendCastArtifactOrActivateAbility:
 		return "game.ManaSpendCastArtifactOrActivateAbility", nil
+	case game.ManaSpendCastInstantOrSorcerySpell:
+		return "game.ManaSpendCastInstantOrSorcerySpell", nil
+	case game.ManaSpendCastNoncreatureSpell:
+		return "game.ManaSpendCastNoncreatureSpell", nil
+	case game.ManaSpendCastMulticoloredSpell:
+		return "game.ManaSpendCastMulticoloredSpell", nil
+	case game.ManaSpendCastPlaneswalkerSpell:
+		return "game.ManaSpendCastPlaneswalkerSpell", nil
 	default:
 		return "", fmt.Errorf("render: unsupported mana spend condition kind %d", kind)
 	}

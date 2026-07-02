@@ -249,6 +249,15 @@ func manaSpendConditionSatisfied(g *game.Game, rider game.ManaRiderInstance, spe
 		return spellDef != nil && spellDef.HasSupertype(types.Legendary)
 	case game.ManaSpendCastCreatureSpell:
 		return spellDef != nil && spellDef.HasType(types.Creature)
+	case game.ManaSpendCastInstantOrSorcerySpell:
+		return spellDef != nil &&
+			(spellDef.HasType(types.Instant) || spellDef.HasType(types.Sorcery))
+	case game.ManaSpendCastNoncreatureSpell:
+		return spellDef != nil && !spellDef.HasType(types.Creature)
+	case game.ManaSpendCastMulticoloredSpell:
+		return spellDef != nil && len(spellDef.Colors) >= 2
+	case game.ManaSpendCastPlaneswalkerSpell:
+		return spellDef != nil && spellDef.HasType(types.Planeswalker)
 	case game.ManaSpendCastArtifactSpell,
 		game.ManaSpendCastArtifactSpellOnly,
 		game.ManaSpendCastOrActivateArtifact,
