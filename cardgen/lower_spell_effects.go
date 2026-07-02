@@ -496,6 +496,15 @@ func cardSelectionForSelector(selector compiler.CompiledSelector) (game.Selectio
 		ExcludedColors:   slices.Clone(selector.ExcludedColors()),
 		SubtypesAny:      slices.Clone(selector.SubtypesAny()),
 	}
+	if excluded := selector.ExcludedSupertypes(); len(excluded) > 0 {
+		// The runtime Selection models a single excluded supertype ("nonlegendary
+		// creature card"); the parser reconstruction only ever accepts one, so
+		// more than one has no representable form and fails closed.
+		if len(excluded) != 1 {
+			return game.Selection{}, false
+		}
+		selection.ExcludedSupertype = excluded[0]
+	}
 	switch selector.Kind {
 	case compiler.SelectorCard:
 	case compiler.SelectorArtifact:
