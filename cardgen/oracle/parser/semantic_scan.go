@@ -21,6 +21,19 @@ func (a *Ability) computeSemanticReferences() []Reference {
 			tokens = tokensOutsideParserSpan(tokens, a.StaticDeclarations[i].Span)
 		}
 	}
+	// A target's "other than this creature" self-exclusion tail owns its "this
+	// creature" pronoun: the exclusion is already modeled by the target's
+	// ExcludeSource selection, so remove the target span before reference scanning
+	// to keep that pronoun from surfacing as a dangling semantic reference that
+	// would otherwise block the single-target routing (Sorceress Queen, Serendib
+	// Sorcerer).
+	for i := range a.Sentences {
+		for j := range a.Sentences[i].Targets {
+			if a.Sentences[i].Targets[j].Selection.OtherThanSource {
+				tokens = tokensOutsideParserSpan(tokens, a.Sentences[i].Targets[j].Span)
+			}
+		}
+	}
 	// A created attacking token's "... attacking <defender>" phrase owns any
 	// anaphoric "that player" within it; the defender-agnostic runtime ignores
 	// the defender, so remove the phrase's tokens before reference scanning to

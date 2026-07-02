@@ -26,6 +26,7 @@ var Cards = []*game.CardDef{
 	EfreetWeaponmaster,
 	EiganjoCastle,
 	ElderPineOfJukai,
+	ElegantEntourage,
 	ElephantMandrill,
 	ElspethSDevotee,
 	ElspethSSmite,
