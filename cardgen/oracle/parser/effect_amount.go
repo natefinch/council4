@@ -748,7 +748,7 @@ func parseLeadingAddendCountPrefix(tokens []shared.Token, index int) (dynamicAmo
 func precedingEffectMultiplier(tokens []shared.Token, atoms Atoms) int {
 	multiplier := 0
 	for i, token := range tokens {
-		if powerToughnessDigit(tokens, i) {
+		if tokenInCounterAtom(token, atoms) || powerToughnessDigit(tokens, i) {
 			continue
 		}
 		value, ok := effectNumber(token, atoms)
@@ -764,6 +764,15 @@ func precedingEffectMultiplier(tokens []shared.Token, atoms Atoms) int {
 		return 1
 	}
 	return multiplier
+}
+
+func tokenInCounterAtom(token shared.Token, atoms Atoms) bool {
+	for _, atom := range atoms.Counters() {
+		if spanCovers(atom.Span, token.Span) {
+			return true
+		}
+	}
+	return false
 }
 
 // powerToughnessDigit reports whether the token at index i is one of the two
@@ -1649,10 +1658,10 @@ func parseDynamicCountSubject(tokens []shared.Token, start int, atoms Atoms) (dy
 // Piledriver; "for each other attacking Aurochs", Aurochs; "for each other
 // attacking creature", Rampaging Classmate; "for each attacking creature",
 // Charging Hooligan). The "attacking" combat adjective scopes the counted group
-// to attacking creatures and stands in for a "you control"/"on the battlefield"
-// scope suffix, mirroring the Shared Animosity count subject; no suffix is
-// permitted. The head must be the bare "creature" noun or a single creature
-// subtype, so a battle, planeswalker, or richer trailing qualifier fails closed.
+// to attacking creatures. An optional "you control" suffix narrows that combat
+// group to the controller's attackers; no other suffix is permitted. The head
+// must be the bare "creature" noun or a single creature subtype, so a battle,
+// planeswalker, or richer trailing qualifier fails closed.
 // The optional leading "other" self-exclusion is kept in the span handed to
 // parseSelection so it records the Other flag, which excludes the attacking
 // permanent itself at resolution rather than through the group filter.
@@ -1674,17 +1683,21 @@ func parseDynamicAttackingCreatureCountSubject(tokens []shared.Token, start int,
 	} else if _, ok := atoms.SubtypeAt(tokens[nounIndex].Span); ok {
 		headWord = true
 	}
-	if !headWord || !dynamicAmountBoundary(tokens, nounIndex+1) {
+	end := nounIndex + 1
+	if effectWordsAt(tokens, end, "you", "control") {
+		end += 2
+	}
+	if !headWord || !dynamicAmountBoundary(tokens, end) {
 		return dynamicAmountSubject{}, false
 	}
 	plural := dynamicCountHeadPlural(tokens, nounIndex, atoms)
-	selection := parseSelection(tokens[start:nounIndex+1], atoms)
+	selection := parseSelection(tokens[start:end], atoms)
 	if selection.Zone != zone.None || !selection.Attacking || selection.Blocking {
 		return dynamicAmountSubject{}, false
 	}
 	return dynamicAmountSubject{
 		amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountCount, Selection: &selection},
-		end:    nounIndex + 1, count: true, plural: plural,
+		end:    end, count: true, plural: plural,
 	}, true
 }
 

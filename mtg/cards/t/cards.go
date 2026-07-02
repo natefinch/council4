@@ -9,6 +9,7 @@ var Cards = []*game.CardDef{
 	TabletOfEpityr,
 	TaigamSStrike,
 	TajuruStalwart,
+	TakeHeart,
 	TalasResearcher,
 	TapestryOfTheAges,
 	TappingAtTheWindow,

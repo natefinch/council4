@@ -149,6 +149,7 @@ var Cards = []*game.CardDef{
 	SoulSMight,
 	SoulStairExpedition,
 	SoulbladeCorrupter,
+	Soulstinger,
 	SouthWindAvatar,
 	SpawnGangCommander,
 	SpawnbedProtector,

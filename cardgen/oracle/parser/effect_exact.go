@@ -5037,14 +5037,23 @@ func counterPlacementTextMatches(effect *EffectSyntax, object string) bool {
 	// The "for each" form ("Put a +1/+1 counter on target creature for each Elf
 	// you control.") places one counter per counted object and states its count
 	// as a trailing "for each <iterator>" clause that the amount captured
-	// verbatim. Only the multiplier-one form prints the bare "a <kind> counter"
-	// count word, so a richer multiplier or an unrecognized iterator fails
-	// closed.
+	// verbatim. A multiplier of one prints the bare "a <kind> counter"; a larger
+	// fixed multiplier prints its canonical cardinal word and the plural noun.
 	if effect.Amount.DynamicForm == EffectDynamicAmountFormForEach {
-		if effect.Amount.DynamicKind == EffectDynamicAmountNone || effect.Amount.Multiplier != 1 {
+		if effect.Amount.DynamicKind == EffectDynamicAmountNone || effect.Amount.Multiplier < 1 {
 			return false
 		}
-		forEachPrefix := fmt.Sprintf("Put a %s counter on %s", effect.CounterKind.String(), object)
+		count := "a"
+		noun := "counter"
+		if effect.Amount.Multiplier > 1 {
+			var ok bool
+			count, ok = cardinalWord(effect.Amount.Multiplier)
+			if !ok {
+				return false
+			}
+			noun = "counters"
+		}
+		forEachPrefix := fmt.Sprintf("Put %s %s %s on %s", count, effect.CounterKind.String(), noun, object)
 		return strings.EqualFold(text, forEachPrefix+" "+effect.Amount.Text+".")
 	}
 	prefix := fmt.Sprintf("Put %s %s %s on %s", effectAmountSourceText(effect), effect.CounterKind.String(), noun, object)

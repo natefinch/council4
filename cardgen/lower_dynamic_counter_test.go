@@ -252,6 +252,27 @@ func TestLowerGroupCounterTriggeringLifeAmount(t *testing.T) {
 	}
 }
 
+func TestLowerTargetCounterDynamicForEachAmount(t *testing.T) {
+	t.Parallel()
+	mode := spellCounterMode(t, "Put a charge counter on target artifact for each land you control.")
+	add, ok := mode.Sequence[0].Primitive.(game.AddCounter)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.AddCounter", mode.Sequence[0].Primitive)
+	}
+	if add.Object != game.TargetPermanentReference(0) || add.CounterKind != counter.Charge {
+		t.Fatalf("counter placement = %#v, want charge counters on target 0", add)
+	}
+	dynamic := add.Amount.DynamicAmount()
+	if !dynamic.Exists || dynamic.Val.Kind != game.DynamicAmountCountSelector {
+		t.Fatalf("amount = %#v, want DynamicAmountCountSelector", add.Amount)
+	}
+	selection := dynamic.Val.Group.Selection()
+	if selection.Controller != game.ControllerYou ||
+		!slices.Equal(selection.RequiredTypes, []types.Card{types.Land}) {
+		t.Fatalf("counted group = %#v, want lands you control", selection)
+	}
+}
+
 func TestLowerOrderedCounterAmountTargetRemap(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
