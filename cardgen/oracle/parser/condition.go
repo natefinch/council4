@@ -157,6 +157,12 @@ const (
 	// controller of the permanent whose entry triggered the ability, as in
 	// Archaeomancer's Map: "if that player controls more lands than you").
 	ConditionControlScopeTriggeringPlayer ConditionControlScope = "ConditionControlScopeTriggeringPlayer"
+	// ConditionControlScopeDefendingPlayer counts permanents controlled by the
+	// defending player of an attack ("defending player controls an Island", Sea
+	// Monster). It is only meaningful as the guard on a can't-attack static rule,
+	// where the defending player is resolved per attack; every other use fails
+	// closed downstream.
+	ConditionControlScopeDefendingPlayer ConditionControlScope = "ConditionControlScopeDefendingPlayer"
 )
 
 // ConditionComparison identifies the numeric comparison a count predicate uses.
@@ -3156,6 +3162,9 @@ func cutControlScope(tokens []shared.Token) (ConditionControlScope, []shared.Tok
 	}
 	if rest, ok := cutTokenPrefix(tokens, "your", "opponents", "control"); ok {
 		return ConditionControlScopeOpponents, rest, true
+	}
+	if rest, ok := cutTokenPrefix(tokens, "defending", "player", "controls"); ok {
+		return ConditionControlScopeDefendingPlayer, rest, true
 	}
 	return ConditionControlScopeController, nil, false
 }

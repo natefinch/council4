@@ -325,6 +325,8 @@ func controlScopePredicate(scope parser.ConditionControlScope) (ConditionPredica
 		return ConditionPredicateAnyOpponentControls, true
 	case parser.ConditionControlScopeOpponents:
 		return ConditionPredicateOpponentsControl, true
+	case parser.ConditionControlScopeDefendingPlayer:
+		return ConditionPredicateDefendingPlayerControls, true
 	default:
 		return ConditionPredicateUnsupported, false
 	}

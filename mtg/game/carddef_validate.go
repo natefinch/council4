@@ -1204,6 +1204,10 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		if effect.ManaProductionMultiplier < 2 {
 			v.add(faceName, appendPath(path, "ManaProductionMultiplier"), CardDefIssueInvalidRuleEffect, "mana-production multiplier requires a factor of at least two")
 		}
+	case RuleEffectCantAttack:
+		if !effect.AttackDefenderControlsSelection.Empty() {
+			v.validateSelection(faceName, appendPath(path, "AttackDefenderControlsSelection"), effect.AttackDefenderControlsSelection)
+		}
 	default:
 	}
 }

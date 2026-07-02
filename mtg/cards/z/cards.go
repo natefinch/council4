@@ -12,6 +12,7 @@ var Cards = []*game.CardDef{
 	ZektarShrineExpedition,
 	ZephyrSpirit,
 	ZhangHeWeiGeneral,
+	ZhouYuChiefCommander,
 	ZhugeJinWuStrategist,
 	ZulaportChainmage,
 	ZulaportEnforcer,

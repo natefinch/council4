@@ -49,6 +49,7 @@ var Cards = []*game.CardDef{
 	Vivify,
 	VodalianHexcatcher,
 	VodalianMage,
+	VodalianSerpent,
 	VoiceOfAll,
 	VoiceOfTheBlessed,
 	VoldarenAmbusher,

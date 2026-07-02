@@ -15,6 +15,7 @@ var Cards = []*game.CardDef{
 	HaliyaAscendantCadet,
 	HallowedHealer,
 	HamletbackGoliath,
+	HammerheadShark,
 	HamzaGuardianOfArashin,
 	HaraldKingOfSkemfar,
 	HarborGuardian,

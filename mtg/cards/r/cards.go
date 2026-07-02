@@ -49,6 +49,7 @@ var Cards = []*game.CardDef{
 	ReconCraftTheta,
 	RecruitmentOfficer,
 	Recuperate,
+	RedCliffsArmada,
 	RedWard,
 	RedemptionArc,
 	ReduceToAshes,

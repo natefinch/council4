@@ -344,13 +344,38 @@ func TestGenerateExecutableCardSourceSelfMustBeBlocked(t *testing.T) {
 	}
 }
 
-func TestGenerateExecutableCardSourceRejectsConditionalCannotAttack(t *testing.T) {
+func TestGenerateExecutableCardSourceConditionalCannotAttack(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
 		Name:       "Conditional Bear",
 		Layout:     "normal",
 		TypeLine:   "Creature — Bear",
 		OracleText: "This creature can't attack unless defending player controls an Island.",
+		Power:      new("3"),
+		Toughness:  new("2"),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "c")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "Kind:                            game.RuleEffectCantAttack") {
+		t.Fatalf("source missing can't-attack rule effect:\n%s", source)
+	}
+	if !strings.Contains(source, `AttackDefenderControlsSelection: game.Selection{SubtypesAny: []types.Sub{types.Sub("Island")}}`) {
+		t.Fatalf("source missing defender-controls selection:\n%s", source)
+	}
+}
+
+func TestGenerateExecutableCardSourceRejectsConditionalCannotAttackUnsupportedSelection(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Conditional Bear",
+		Layout:     "normal",
+		TypeLine:   "Creature — Bear",
+		OracleText: "This creature can't attack unless defending player controls an enchantment or an enchanted permanent.",
 		Power:      new("3"),
 		Toughness:  new("2"),
 	}

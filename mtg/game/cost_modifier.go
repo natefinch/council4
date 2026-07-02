@@ -778,6 +778,16 @@ type RuleEffect struct {
 	// exclusive with a non-empty BlockedSelection.
 	BlockedSource bool
 
+	// AttackDefenderControlsSelection turns a RuleEffectCantAttack restriction into
+	// a conditional "can't attack unless defending player controls ..." permission
+	// gate ("This creature can't attack unless defending player controls an
+	// Island.", Sea Monster). When the Selection is non-empty the affected creature
+	// may attack a defending player (or a planeswalker/battle whose controller is
+	// that player) only if that player controls at least one permanent matching the
+	// Selection; otherwise the attack is prohibited. An empty Selection leaves the
+	// RuleEffectCantAttack unconditional. It is unused for every other kind.
+	AttackDefenderControlsSelection Selection
+
 	// AffectedPlayerRef binds a group-scoped rule effect's affected permanents to
 	// a specific player chosen at resolution rather than to the AffectedController
 	// relation, expressing "each creature <a chosen target player> controls"
