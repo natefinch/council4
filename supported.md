@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,793 of 32,501 cards eligible for paper support (51.7%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,805 of 32,501 cards eligible for paper support (51.7%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -4888,6 +4888,7 @@ Council4 currently supports **16,793 of 32,501 cards eligible for paper support 
 - Field of Ruin
 - Field of Souls
 - Field of the Dead
+- Field Research
 - Field Surgeon
 - Fields of Strife
 - Fiend Artisan
@@ -5196,6 +5197,7 @@ Council4 currently supports **16,793 of 32,501 cards eligible for paper support 
 - Footlight Fiend
 - Footsteps of the Goryo
 - For the Emperor!
+- For the Family
 - Foratog
 - Forbidden Alchemy
 - Forbidden Friendship
@@ -6465,6 +6467,7 @@ Council4 currently supports **16,793 of 32,501 cards eligible for paper support 
 - Haunted Mire
 - Haunted Ridge
 - Haunter of Nightveil
+- Haunting Hymn
 - Haunting Misery
 - Havengul Runebinder
 - Havengul Skaab
@@ -6856,6 +6859,7 @@ Council4 currently supports **16,793 of 32,501 cards eligible for paper support 
 - Huatli's Final Strike
 - Huatli's Raptor
 - Huatli's Snubhorn
+- Huatli's Spurring
 - Huatli, Radiant Champion
 - Huatli, the Sun's Heart
 - Hugs, Grisly Guardian
@@ -6957,6 +6961,7 @@ Council4 currently supports **16,793 of 32,501 cards eligible for paper support 
 - Hyperion Blacksmith
 - Hypersonic Dragon
 - Hypervolt Grasp
+- Hypnotic Cloud
 - Hypnotic Grifter
 - Hypnotic Specter
 - Hypnotic Sprite // Mesmeric Glare
@@ -7398,6 +7403,7 @@ Council4 currently supports **16,793 of 32,501 cards eligible for paper support 
 - Jace's Sanctum
 - Jace's Scrutiny
 - Jace's Sentinel
+- Jace's Triumph
 - Jackal Familiar
 - Jackdaw
 - Jackhammer
@@ -8165,6 +8171,7 @@ Council4 currently supports **16,793 of 32,501 cards eligible for paper support 
 - Life Burst
 - Life Chisel
 - Life from the Loam
+- Life Goes On
 - Life Insurance
 - Life of Toshiro Umezawa // Memory of Toshiro
 - Life's Legacy
@@ -12257,6 +12264,7 @@ Council4 currently supports **16,793 of 32,501 cards eligible for paper support 
 - Secret Passage
 - Secret Rendezvous
 - Secrets of the Dead
+- Secrets of the Key
 - Secure Detention
 - Secure the Scene
 - Secure the Wastes
@@ -14521,6 +14529,7 @@ Council4 currently supports **16,793 of 32,501 cards eligible for paper support 
 - Thassa's Bounty
 - Thassa's Devourer
 - Thassa's Ire
+- That's Rough Buddy
 - Thaumatog
 - Thaumaturge's Familiar
 - Thawbringer
@@ -14748,6 +14757,7 @@ Council4 currently supports **16,793 of 32,501 cards eligible for paper support 
 - Throne of the High City
 - Throne Warden
 - Throttle
+- Throw from the Saddle
 - Throwing Knife
 - Thrull
 - Thrull
@@ -14979,6 +14989,7 @@ Council4 currently supports **16,793 of 32,501 cards eligible for paper support 
 - Trade Routes
 - Tradewind Rider
 - Trading Post
+- Tragic Banshee
 - Tragic Fall
 - Tragic Poet
 - Tragic Slip
@@ -16669,6 +16680,7 @@ Council4 currently supports **16,793 of 32,501 cards eligible for paper support 
 - You See a Pair of Goblins
 - You're Ambushed on the Road
 - You're Confronted by Robbers
+- You're Not Alone
 - Young Blue Dragon // Sand Augury
 - Young Necromancer
 - Young Pyromancer

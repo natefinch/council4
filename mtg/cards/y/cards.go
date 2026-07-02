@@ -11,4 +11,5 @@ var Cards = []*game.CardDef{
 	YouAreAlreadyDead,
 	YouComeToARiver,
 	YouMeetInATavern,
+	YouReNotAlone,
 }

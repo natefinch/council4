@@ -73,4 +73,5 @@ var Cards = []*game.CardDef{
 	LurkingGreenDragon,
 	LustForWar,
 	LydiaFrye,
+	LifeGoesOn,
 }
