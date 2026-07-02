@@ -365,11 +365,21 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 		case compiler.ConditionPredicateControllerTurn:
 			return ctx == conditionContextStatic ||
 				ctx == conditionContextStaticRuleGuard
+		case compiler.ConditionPredicateControllerIsMonarch,
+			compiler.ConditionPredicateControllerHasInitiative,
+			compiler.ConditionPredicateControllerHasCityBlessing:
+			// Player-designation predicates ("if you're the monarch", "if you
+			// have the initiative", "if you have the city's blessing") gate both
+			// intervening triggers and per-effect sequence clauses, the latter
+			// powering the monarch/initiative "instead" escalation cycles ("At
+			// the beginning of your upkeep, <base>. If you're the monarch,
+			// <escalated> instead.", the Court cycle). The runtime condition
+			// evaluator resolves all three from the controller's designation,
+			// including under negation, so the effect-gate form is safe.
+			return ctx == conditionContextInterveningTrigger ||
+				ctx == conditionContextEffectGate
 		case compiler.ConditionPredicateEventSubjectNameUnique,
 			compiler.ConditionPredicateSourceTributeNotPaid,
-			compiler.ConditionPredicateControllerIsMonarch,
-			compiler.ConditionPredicateControllerHasInitiative,
-			compiler.ConditionPredicateControllerHasCityBlessing,
 			compiler.ConditionPredicateEventSpellManaSpentToCastAtLeast,
 			compiler.ConditionPredicateEventSpellManaSpentToCastAtMost,
 			compiler.ConditionPredicateTriggeringPlayerHandSizeAtMost,
