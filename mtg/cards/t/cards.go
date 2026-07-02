@@ -110,6 +110,7 @@ var Cards = []*game.CardDef{
 	TributaryInstructor,
 	TributeMage,
 	TriclopeanSight,
+	TriplicateTitan,
 	TrophyHunter,
 	TrophyMage,
 	TroubledHealer,
