@@ -135,4 +135,11 @@ var Cards = []*game.CardDef{
 	AvenHeartstabber,
 	AvenRedeemer,
 	AxelrodGunnarson,
+	AdaptiveSporesinger,
+	AetherChanneler,
+	AinokGuide,
+	ApothecaryStomper,
+	ArbalestEngineers,
+	AtsushiTheBlazingSky,
+	AvenSurveyor,
 }

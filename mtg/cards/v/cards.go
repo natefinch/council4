@@ -63,4 +63,5 @@ var Cards = []*game.CardDef{
 	VrynWingmare,
 	VulshokWarBoar,
 	VultureSchemingScavenger,
+	VoraciousHydra,
 }

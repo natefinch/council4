@@ -77,4 +77,5 @@ var Cards = []*game.CardDef{
 	EyeblightMassacre,
 	EyeblightSEnding,
 	EzrimAgencyChief,
+	ExhibitionMagician,
 }

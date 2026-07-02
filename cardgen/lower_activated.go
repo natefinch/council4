@@ -397,6 +397,24 @@ func lowerModalAbility(
 	}, nil
 }
 
+// hasNonSourceSharedReference reports whether the modal ability content carries
+// a shared reference that is not the ability's own source permanent. A modal
+// trigger body records the trigger subject ("When this creature enters, choose
+// one — ...") as a content-level reference bound to the source, but each mode is
+// lowered independently from its own content and resolves any "this creature"
+// wording through its own per-mode reference, so a shared source reference is
+// redundant and safe to allow. Any other shared reference (a target, event
+// object, or prior-instruction result carried across the modes) still fails
+// closed because the mode-independent lowering cannot thread it.
+func hasNonSourceSharedReference(references []compiler.CompiledReference) bool {
+	for _, reference := range references {
+		if reference.Binding != compiler.ReferenceBindingSource {
+			return true
+		}
+	}
+	return false
+}
+
 func lowerModalContent(
 	cardName string,
 	ctx contentCtx,
@@ -456,7 +474,7 @@ func lowerModalContent(
 		len(ctx.content.Targets) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
-		len(ctx.content.References) != 0 {
+		hasNonSourceSharedReference(ctx.content.References) {
 		return unsupported("the executable source backend does not support shared targets, effects, keywords, conditions, or references across modes")
 	}
 	if len(ctx.content.Modes) != len(syntax.Modal.Options) {
