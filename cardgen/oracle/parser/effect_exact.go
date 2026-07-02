@@ -4573,12 +4573,14 @@ func exactRemoveAllCountersEffectSyntax(effect *EffectSyntax) bool {
 }
 
 // exactRemoveCounterObjectText returns the rendered object a counter is removed
-// from, for either a single exact target permanent ("target creature") or a lone
+// from, for a single exact target permanent ("target creature"), a lone
 // source/self reference ("this creature"/"this artifact"/the card's own name, as
-// in "Remove a -1/-1 counter from this creature."). It fails closed for every
-// other shape — multiple or inexact targets, a targeted cardinality above one, a
-// group ("each creature you control"), or a "from it" pronoun paired with delayed
-// timing — so unrepresentable removals keep the wording unsupported.
+// in "Remove a -1/-1 counter from this creature."), or a group recipient ("each
+// creature you control", Heartmender) that removes a counter from every
+// permanent in a battlefield group. It fails closed for every other shape —
+// multiple or inexact targets, a targeted cardinality above one, or a "from it"
+// pronoun paired with delayed timing — so unrepresentable removals keep the
+// wording unsupported.
 func exactRemoveCounterObjectText(effect *EffectSyntax) (string, bool) {
 	switch {
 	case len(effect.Targets) == 1 && len(effect.References) == 0:
@@ -4591,6 +4593,13 @@ func exactRemoveCounterObjectText(effect *EffectSyntax) (string, bool) {
 			return object, true
 		}
 		return exactSelfSubjectReferenceText(effect.References)
+	case len(effect.Targets) == 0 && len(effect.References) == 0:
+		// A group recipient ("each creature you control", Heartmender) removes a
+		// counter from every permanent in a battlefield group. It carries no
+		// target or reference; the group selection reconstructs the "each <group>"
+		// phrase, reusing the group-damage recipient renderer counter placement
+		// already shares.
+		return exactGroupDamagePermanentRecipientText(effect.Selection)
 	}
 	return "", false
 }

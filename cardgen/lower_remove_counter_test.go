@@ -262,3 +262,83 @@ func TestLowerRemoveAllCountersSelfActivated(t *testing.T) {
 		t.Fatalf("primitive = %#v", content.Modes[0].Sequence[0].Primitive)
 	}
 }
+
+// removeCounterFromGroupMode pulls the single RemoveCounter primitive out of a
+// no-target, one-instruction ability mode (the group-recipient form "remove a
+// counter from each <group>"), failing the test on any other shape.
+func removeCounterFromGroupMode(t *testing.T, content game.AbilityContent) game.RemoveCounter {
+	t.Helper()
+	if len(content.Modes) != 1 {
+		t.Fatalf("modes = %#v", content.Modes)
+	}
+	mode := content.Modes[0]
+	if len(mode.Targets) != 0 {
+		t.Fatalf("targets = %#v", mode.Targets)
+	}
+	if len(mode.Sequence) != 1 {
+		t.Fatalf("sequence = %#v", mode.Sequence)
+	}
+	remove, ok := mode.Sequence[0].Primitive.(game.RemoveCounter)
+	if !ok {
+		t.Fatalf("primitive = %#v", mode.Sequence[0].Primitive)
+	}
+	return remove
+}
+
+// TestLowerRemoveCounterGroupControllerRestricted proves the group-recipient
+// form "remove a -1/-1 counter from each creature you control" (Heartmender)
+// lowers to a RemoveCounter with a controller-restricted battlefield Group and
+// no single Object, so the runtime removes the named kind from every matching
+// permanent.
+func TestLowerRemoveCounterGroupControllerRestricted(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Heartmender",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Remove a -1/-1 counter from each creature you control.",
+	})
+	remove := removeCounterFromGroupMode(t, face.SpellAbility.Val)
+	if !remove.Group.Valid() || remove.Object != (game.ObjectReference{}) {
+		t.Fatalf("group/object = %#v", remove)
+	}
+	if remove.Amount != game.Fixed(1) || remove.ChooseKind || remove.AllKinds ||
+		remove.CounterKind != counter.MinusOneMinusOne {
+		t.Fatalf("remove = %#v", remove)
+	}
+}
+
+// TestLowerRemoveCounterGroupPlural proves the group form supports a plural
+// amount and an unrestricted (any-controller) group: "Remove two loyalty
+// counters from each planeswalker." (Pestilent Haze) lowers to a RemoveCounter
+// removing two loyalty counters from every planeswalker.
+func TestLowerRemoveCounterGroupPlural(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Pestilent Haze",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Remove two loyalty counters from each planeswalker.",
+	})
+	remove := removeCounterFromGroupMode(t, face.SpellAbility.Val)
+	if !remove.Group.Valid() || remove.Object != (game.ObjectReference{}) {
+		t.Fatalf("group/object = %#v", remove)
+	}
+	if remove.Amount != game.Fixed(2) || remove.ChooseKind || remove.AllKinds ||
+		remove.CounterKind != counter.Loyalty {
+		t.Fatalf("remove = %#v", remove)
+	}
+}
+
+// TestLowerRemoveCounterGroupUnspecifiedKind proves the kind-unspecified group
+// form "Remove a counter from each creature you control." fails closed: a group
+// removal has no single controller-chosen kind to resolve.
+func TestLowerRemoveCounterGroupUnspecifiedKind(t *testing.T) {
+	t.Parallel()
+	lowerSingleFaceExpectingUnsupported(t, &ScryfallCard{
+		Name:       "Test Unspecified Group",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Remove a counter from each creature you control.",
+	})
+}
