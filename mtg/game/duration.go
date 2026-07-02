@@ -88,6 +88,15 @@ type DelayedTriggerDef struct {
 	// turn, ..."). It is only valid with EventPattern whose DamageSourceCaptured
 	// flag is set.
 	DamageSourceObject opt.V[ObjectReference]
+	// CapturedObject, when present, freezes the permanent this object reference
+	// resolves to against the creating ability's triggering event at schedule
+	// time, storing its object ID on the scheduled trigger so the trigger's
+	// content can act on it once the original event is gone. It backs delayed
+	// "at end of combat" disposal of the creature involved in combat ("destroy
+	// that creature at end of combat"), where CapturedObject is the event or
+	// event-related permanent and the content references
+	// ObjectReferenceCapturedObject. It is only valid with a fixed-phase Timing.
+	CapturedObject opt.V[ObjectReference]
 }
 
 // DelayedTrigger is a runtime delayed triggered ability waiting for its timing
@@ -120,4 +129,11 @@ type DelayedTrigger struct {
 	// ability's DamageSourceObject reference when the trigger is scheduled. Zero
 	// means the captured permanent was already gone, so the trigger never fires.
 	BoundDamageSourceObjectID id.ID
+	// CapturedObjectID is the concrete permanent frozen from the creating
+	// ability's CapturedObject reference at schedule time, carried into the
+	// fired trigger's content so it can act on the combat creature after the
+	// original event is gone ("destroy that creature at end of combat"). Zero
+	// means no object was captured, so content that references
+	// ObjectReferenceCapturedObject finds nothing and does nothing.
+	CapturedObjectID id.ID
 }

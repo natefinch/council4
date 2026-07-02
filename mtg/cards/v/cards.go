@@ -28,6 +28,7 @@ var Cards = []*game.CardDef{
 	VengefulRebel,
 	VenomBlast,
 	VenomSHunger,
+	VenomousDragonfly,
 	VenomousVines,
 	VerdantSunSAvatar,
 	VerdurousGearhulk,

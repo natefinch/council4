@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,779 of 32,501 cards eligible for paper support (51.6%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,787 of 32,501 cards eligible for paper support (51.7%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -3325,6 +3325,7 @@ Council4 currently supports **16,779 of 32,501 cards eligible for paper support 
 - Deathcoil Wurm
 - Deathcurse Ogre
 - Deathgaze Cockatrice
+- Deathgazer
 - Deathgreeter
 - Deathgrip
 - Deathknell Berserker
@@ -3846,6 +3847,7 @@ Council4 currently supports **16,779 of 32,501 cards eligible for paper support 
 - Dread Rider
 - Dread Shade
 - Dread Slag
+- Dread Specter
 - Dread Statuary
 - Dread Warlock
 - Dreadbore
@@ -6050,6 +6052,7 @@ Council4 currently supports **16,779 of 32,501 cards eligible for paper support 
 - Goretusk Firebeast
 - Gorger Wurm
 - Gorgon Flail
+- Gorgon Recluse
 - Gorgon's Head
 - Gorilla Chieftain
 - Gorilla Pack
@@ -8372,6 +8375,7 @@ Council4 currently supports **16,779 of 32,501 cards eligible for paper support 
 - Lotus-Eye Mystics
 - Lounge
 - Love Song of Night and Day
+- Lowland Basilisk
 - Lowland Giant
 - Lowland Oaf
 - Loxodon Anchorite
@@ -9868,6 +9872,7 @@ Council4 currently supports **16,779 of 32,501 cards eligible for paper support 
 - Ogre's Cleaver
 - Ogre-Head Helm
 - Ohran Frostfang
+- Ohran Viper
 - Ohran Yeti
 - Oji, the Exquisite Blade
 - Ojutai Exemplars
@@ -12370,6 +12375,7 @@ Council4 currently supports **16,779 of 32,501 cards eligible for paper support 
 - Serpent Warrior
 - Serpent's Gift
 - Serpent's Pass
+- Serpentine Basilisk
 - Serpentine Kavu
 - Serra Advocate
 - Serra Angel
@@ -14302,6 +14308,7 @@ Council4 currently supports **16,779 of 32,501 cards eligible for paper support 
 - Tamiyo's Safekeeping
 - Tana, the Bloodsower
 - Tandem Tactics
+- Tangle Asp
 - Tangle Golem
 - Tangle Hulk
 - Tangle Mantis
@@ -15647,6 +15654,7 @@ Council4 currently supports **16,779 of 32,501 cards eligible for paper support 
 - Venomized Cat
 - Venomous Brutalizer
 - Venomous Changeling
+- Venomous Dragonfly
 - Venomous Hierophant
 - Venomous Vines
 - Venomsac Lagac

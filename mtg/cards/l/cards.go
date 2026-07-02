@@ -61,6 +61,7 @@ var Cards = []*game.CardDef{
 	LookoutSDispersal,
 	LordDreggInsectInvader,
 	LostJitte,
+	LowlandBasilisk,
 	LoxodonAnchorite,
 	LoxodonWarhammer,
 	LoyalPegasus,

@@ -11,6 +11,7 @@ var Cards = []*game.CardDef{
 	TajuruStalwart,
 	TakeHeart,
 	TalasResearcher,
+	TangleAsp,
 	TapestryOfTheAges,
 	TappingAtTheWindow,
 	TarrianSSoulcleaver,

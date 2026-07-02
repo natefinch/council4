@@ -717,6 +717,14 @@ func (v *cardDefValidator) validateInstructionSequence(
 			} else if delayed.Trigger.Window != DelayedWindowNone {
 				v.add(faceName, instructionPath, CardDefIssueInvalidAbilityBody, "fixed-phase delayed trigger sets Window without EventPattern")
 			}
+			if delayed.Trigger.CapturedObject.Exists {
+				if delayed.Trigger.EventPattern.Exists {
+					v.add(faceName, instructionPath, CardDefIssueInvalidAbilityBody, "delayed trigger sets CapturedObject with EventPattern")
+				}
+				if err := firstProblem(delayed.Trigger.CapturedObject.Val.Validate()); err != nil {
+					v.add(faceName, appendPath(instructionPath, "Primitive.Trigger.CapturedObject"), CardDefIssueInvalidAbilityBody, err.Error())
+				}
+			}
 			v.validateAbilityContentWithLinked(
 				faceName,
 				appendPath(instructionPath, "Primitive.Trigger.Content"),

@@ -56,6 +56,16 @@ const (
 	// one exile must capture all chosen permanents under a single linked key so
 	// one return brings the whole group back together.
 	ObjectReferenceAllTargetPermanents
+	// ObjectReferenceCapturedObject references the permanent captured at
+	// schedule time by the delayed trigger this content belongs to, resolved
+	// from the creating ability's triggering event (its event or event-related
+	// permanent) and frozen to a concrete object ID. It backs the "at end of
+	// combat" combat-creature disposal family (Tangle Asp, Serpentine Basilisk),
+	// where "Whenever this creature blocks or becomes blocked by a creature,
+	// destroy that creature at end of combat" must remember the blocked creature
+	// across the delay because the original combat event is gone when the
+	// trigger fires.
+	ObjectReferenceCapturedObject
 )
 
 // ObjectReference describes how a rules effect finds an object at resolution.
@@ -173,6 +183,15 @@ func AllTargetPermanentsReference(specIndex int) ObjectReference {
 	return ObjectReference{kind: ObjectReferenceAllTargetPermanents, targetIndex: specIndex}
 }
 
+// CapturedObjectReference references the permanent captured at schedule time by
+// the enclosing delayed trigger, frozen to a concrete object ID from the
+// creating ability's triggering event. It backs delayed "at end of combat"
+// disposal of the creature involved in combat ("destroy that creature at end of
+// combat").
+func CapturedObjectReference() ObjectReference {
+	return ObjectReference{kind: ObjectReferenceCapturedObject}
+}
+
 // Validate reports structural problems with an ObjectReference that represent
 // card-definition bugs. It checks kind/field consistency only; target-index
 // bounds depend on the surrounding TargetSpec list and are checked by
@@ -259,6 +278,10 @@ func (r ObjectReference) Validate() []string {
 		}
 		if r.targetIndex < 0 {
 			return []string{"all target permanents reference must not use a negative TargetIndex"}
+		}
+	case ObjectReferenceCapturedObject:
+		if r.targetIndex != 0 || r.linkID != "" {
+			return []string{"captured object reference must not set TargetIndex or LinkID"}
 		}
 	case ObjectReferenceNone:
 		return []string{"object reference has no kind"}

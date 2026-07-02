@@ -68,6 +68,7 @@ var Cards = []*game.CardDef{
 	SerendibSorcerer,
 	SereneSteward,
 	SerpentOfTheEndlessSea,
+	SerpentineBasilisk,
 	SerraPaladin,
 	SerratedArrows,
 	ServantOfTheScale,
