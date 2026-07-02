@@ -78,6 +78,7 @@ var Cards = []*game.CardDef{
 	AppliedGeometry,
 	ApprenticeSorcerer,
 	AprilONeilHumanElement,
+	AquastrandSpider,
 	AquaticIncursion,
 	AquitectSDefenses,
 	ArashinSunshield,

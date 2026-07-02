@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -18,11 +19,15 @@ import (
 func TestLowerTemporaryKeywordGrantBroadTargets(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name         string
-		oracle       string
-		wantKeywords []game.Keyword
-		wantTypes    []types.Card
-		wantSubtypes []types.Sub
+		name                string
+		oracle              string
+		wantKeywords        []game.Keyword
+		wantTypes           []types.Card
+		wantSubtypes        []types.Sub
+		wantCounter         bool
+		wantAnyCounter      bool
+		wantNoCounters      bool
+		wantExcludedCounter bool
 	}{
 		{
 			name:         "bare subtype noun target",
@@ -41,6 +46,34 @@ func TestLowerTemporaryKeywordGrantBroadTargets(t *testing.T) {
 			oracle:       "Target black creature gains flying until end of turn.",
 			wantKeywords: []game.Keyword{game.Flying},
 			wantTypes:    []types.Card{types.Creature},
+		},
+		{
+			name:         "named-counter creature target",
+			oracle:       "Target creature with a +1/+1 counter on it gains trample until end of turn.",
+			wantKeywords: []game.Keyword{game.Trample},
+			wantTypes:    []types.Card{types.Creature},
+			wantCounter:  true,
+		},
+		{
+			name:           "any-counter creature target",
+			oracle:         "Target creature with a counter on it gains lifelink until end of turn.",
+			wantKeywords:   []game.Keyword{game.Lifelink},
+			wantTypes:      []types.Card{types.Creature},
+			wantAnyCounter: true,
+		},
+		{
+			name:           "no-counter creature target",
+			oracle:         "Target creature with no counters on it gains haste until end of turn.",
+			wantKeywords:   []game.Keyword{game.Haste},
+			wantTypes:      []types.Card{types.Creature},
+			wantNoCounters: true,
+		},
+		{
+			name:                "excluded-counter creature target",
+			oracle:              "Target creature without a +1/+1 counter on it gains flying until end of turn.",
+			wantKeywords:        []game.Keyword{game.Flying},
+			wantTypes:           []types.Card{types.Creature},
+			wantExcludedCounter: true,
 		},
 	}
 	for _, tc := range tests {
@@ -64,6 +97,19 @@ func TestLowerTemporaryKeywordGrantBroadTargets(t *testing.T) {
 			}
 			if tc.wantSubtypes != nil && !reflect.DeepEqual(mode.Targets[0].Selection.Val.SubtypesAny, tc.wantSubtypes) {
 				t.Fatalf("subtypes = %v, want %v", mode.Targets[0].Selection.Val.SubtypesAny, tc.wantSubtypes)
+			}
+			selection := mode.Targets[0].Selection.Val
+			if selection.MatchCounter != tc.wantCounter ||
+				selection.MatchAnyCounter != tc.wantAnyCounter ||
+				selection.MatchNoCounters != tc.wantNoCounters ||
+				selection.MatchExcludedCounter != tc.wantExcludedCounter {
+				t.Fatalf("counter selection = %#v", selection)
+			}
+			if tc.wantCounter && selection.RequiredCounter != counter.PlusOnePlusOne {
+				t.Fatalf("required counter = %v, want +1/+1", selection.RequiredCounter)
+			}
+			if tc.wantExcludedCounter && selection.ExcludedCounter != counter.PlusOnePlusOne {
+				t.Fatalf("excluded counter = %v, want +1/+1", selection.ExcludedCounter)
 			}
 			if len(mode.Sequence) != 1 {
 				t.Fatalf("sequence = %#v, want one instruction", mode.Sequence)

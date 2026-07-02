@@ -7,6 +7,7 @@ import "github.com/natefinch/council4/cardgen/oracle/shared"
 // activation-timing clause removed for activated abilities.
 func (a *Ability) computeSemanticReferences() []Reference {
 	tokens := eventHistorySemanticTokens(a.Tokens, a.Reminders, a.Quoted)
+	tokens = tokensOutsideCounterQualifierReferences(tokens, a.Sentences, a.Atoms.References())
 	if span, ok := a.activationTimingSpan(); ok {
 		tokens = tokensOutsideParserSpan(tokens, span)
 	}
@@ -101,7 +102,29 @@ func (a *Ability) computeSemanticKeywords() []Keyword {
 // option's semantic tokens, with rendered Text.
 func (m *Mode) computeSemanticReferences() []Reference {
 	tokens := eventHistorySemanticTokens(m.Body.Tokens, m.Reminders, m.Quoted)
+	tokens = tokensOutsideCounterQualifierReferences(tokens, m.Sentences, m.Atoms.References())
 	return m.Atoms.ReferencesWithin(tokens)
+}
+
+func tokensOutsideCounterQualifierReferences(
+	tokens []shared.Token,
+	sentences []Sentence,
+	references []Reference,
+) []shared.Token {
+	for i := range sentences {
+		for j := range sentences[i].Targets {
+			target := sentences[i].Targets[j]
+			if !selectionHasCounterQualifier(target.Selection) {
+				continue
+			}
+			for _, reference := range references {
+				if targetOwnsCounterQualifierReference(target, reference) {
+					tokens = tokensOutsideParserSpan(tokens, reference.Span)
+				}
+			}
+		}
+	}
+	return tokens
 }
 
 // computeSemanticKeywords returns the keywords recognized in a modal option's

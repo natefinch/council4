@@ -480,10 +480,11 @@ func lowerManaValueDynamicBound(kind compiler.DynamicAmountKind) (game.ManaValue
 // filter, which the battlefield-only canonical projector fails closed on by
 // design; prefer SelectionForSelectorMasked for new code. (retire: #1393)
 func cardSelectionForSelector(selector compiler.CompiledSelector) (game.Selection, bool) {
-	if selector.PowerLessThanSource || selector.PowerGreaterThanSource {
-		// A source-relative power comparison applies only to a targeted
-		// permanent (Mentor); a card-zone selection has no source to compare
-		// against, so reject it rather than silently dropping the filter.
+	if selector.PowerLessThanSource || selector.PowerGreaterThanSource ||
+		selectorHasCounterQualifier(selector) {
+		// Source-relative power and battlefield-counter predicates apply only to
+		// permanents; a card-zone selection cannot honor them, so reject them
+		// rather than silently dropping the filter.
 		return game.Selection{}, false
 	}
 	selection := game.Selection{
@@ -2057,6 +2058,7 @@ func fightCreatureTargetSpec(target compiler.CompiledTarget, another fightAnothe
 		Name:             target.Selector.RequiredName,
 		ExcludeSource:    target.Selector.Another && another == fightAnotherExcludeSource,
 	}
+	applyCounterTargetSelection(&selection, target.Selector)
 	switch {
 	case target.Selector.Attacking && target.Selector.Blocking:
 		selection.CombatState = game.CombatStateAttackingOrBlocking

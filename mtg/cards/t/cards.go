@@ -21,6 +21,7 @@ var Cards = []*game.CardDef{
 	TeferiSWavecaster,
 	TelJiladDefiance,
 	TemmetVizierOfNaktamun,
+	TemperedVeteran,
 	TempestTechnique,
 	TempleElder,
 	TemurBattlecrier,
