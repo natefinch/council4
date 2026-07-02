@@ -36,6 +36,7 @@ var Cards = []*game.CardDef{
 	PillagingHorde,
 	PincerSpider,
 	PiousWarrior,
+	PirateShip,
 	PitilessFists,
 	PlagueEngineer,
 	PlanarDisruption,

@@ -1003,7 +1003,7 @@ func (*Engine) detectStateTriggeredAbilities(g *game.Game) []pendingTriggeredAbi
 				AbilityIndex:   i,
 			}
 			seen[key] = true
-			if !stateTriggerConditionSatisfied(g, controller, &triggeredBody.Trigger.State.Val) {
+			if !stateTriggerConditionSatisfied(g, controller, permanent, &triggeredBody.Trigger.State.Val) {
 				continue
 			}
 			if g.StateTriggerLatches[key] {
@@ -1034,13 +1034,19 @@ func (*Engine) detectStateTriggeredAbilities(g *game.Game) []pendingTriggeredAbi
 	return pending
 }
 
-func stateTriggerConditionSatisfied(g *game.Game, controller game.PlayerID, condition *game.StateTriggerCondition) bool {
+func stateTriggerConditionSatisfied(g *game.Game, controller game.PlayerID, source *game.Permanent, condition *game.StateTriggerCondition) bool {
 	if condition == nil {
 		return false
 	}
 	if condition.MatchControllerLifeLessOrEqual {
 		player, ok := playerByID(g, controller)
 		if !ok || player.Life > condition.ControllerLifeLessOrEqual {
+			return false
+		}
+	}
+	if condition.Condition.Exists {
+		ctx := conditionContext{controller: controller, source: source}
+		if !conditionSatisfied(g, ctx, condition.Condition) {
 			return false
 		}
 	}

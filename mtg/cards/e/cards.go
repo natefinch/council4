@@ -43,6 +43,7 @@ var Cards = []*game.CardDef{
 	EmberwildeCaliph,
 	EmblemOfTheWarmind,
 	EmeraldCharm,
+	EmperorCrocodile,
 	EmrakulSMessenger,
 	EndTheFestivities,
 	Endbringer,

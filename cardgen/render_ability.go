@@ -563,13 +563,15 @@ func (r Renderer) renderTriggerCondition(ctx *renderCtx, trigger *game.TriggerCo
 	if err != nil {
 		return "", err
 	}
-	pattern, err := r.renderTriggerPattern(ctx, &trigger.Pattern)
-	if err != nil {
-		return "", err
-	}
 	fields := []string{
 		fmt.Sprintf("Type: %s,", triggerType),
-		fmt.Sprintf("Pattern: %s,", pattern),
+	}
+	if trigger.Type != game.TriggerState {
+		pattern, err := r.renderTriggerPattern(ctx, &trigger.Pattern)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Pattern: %s,", pattern))
 	}
 	if trigger.InterveningIf != "" {
 		fields = append(fields, fmt.Sprintf("InterveningIf: %q,", trigger.InterveningIf))
@@ -581,6 +583,14 @@ func (r Renderer) renderTriggerCondition(ctx *renderCtx, trigger *game.TriggerCo
 		}
 		ctx.need(importOpt)
 		fields = append(fields, fmt.Sprintf("InterveningCondition: opt.Val(%s),", condition))
+	}
+	if trigger.State.Exists {
+		state, err := r.renderStateTriggerCondition(ctx, &trigger.State.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("State: opt.Val(%s),", state))
 	}
 	if trigger.InterveningIfEventPermanentHadNoCounterKind.Exists {
 		kind, err := renderCounterKind(trigger.InterveningIfEventPermanentHadNoCounterKind.Val)
@@ -625,6 +635,26 @@ func (r Renderer) renderTriggerCondition(ctx *renderCtx, trigger *game.TriggerCo
 		fields = append(fields, "InterveningIfEventPermanentEnteredOrCastFromControllerGraveyard: true,")
 	}
 	return structLit("game.TriggerCondition", fields), nil
+}
+
+// renderStateTriggerCondition renders a state trigger's board-state condition
+// (CR 603.8). Only the general Condition form is produced by the compiler; the
+// dedicated life-threshold fields are rendered when set for completeness.
+func (r Renderer) renderStateTriggerCondition(ctx *renderCtx, state *game.StateTriggerCondition) (string, error) {
+	var fields []string
+	if state.MatchControllerLifeLessOrEqual {
+		fields = append(fields, "MatchControllerLifeLessOrEqual: true,")
+		fields = append(fields, fmt.Sprintf("ControllerLifeLessOrEqual: %d,", state.ControllerLifeLessOrEqual))
+	}
+	if state.Condition.Exists {
+		condition, err := r.renderControllerControlsCondition(ctx, &state.Condition.Val, "state trigger")
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("Condition: opt.Val(%s),", condition))
+	}
+	return structLit("game.StateTriggerCondition", fields), nil
 }
 
 func (r Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPattern) (string, error) {

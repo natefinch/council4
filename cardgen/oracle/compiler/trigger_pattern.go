@@ -388,4 +388,10 @@ type TriggerPattern struct {
 	ClassBecameLevel int
 
 	InterveningCondition *CompiledCondition
+
+	// StateCondition holds the board-state predicate of a state trigger
+	// (Kind == TriggerState). The runtime fires the trigger whenever this
+	// condition holds while it is not already on the stack (CR 603.8). It is nil
+	// for every event-based pattern.
+	StateCondition *CompiledCondition
 }

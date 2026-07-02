@@ -38,6 +38,12 @@ const (
 	// stack object or source permanent available, so only controller- and
 	// board-scoped predicates are permitted.
 	conditionContextSpellCostReduction
+	// conditionContextStateTrigger gates the board-state condition of a state
+	// trigger ("When you control no Islands, sacrifice this creature.", CR
+	// 603.8). The runtime evaluates the condition continuously with the trigger
+	// controller and source permanent bound, so controller-scoped board- and
+	// player-state predicates resolve.
+	conditionContextStateTrigger
 )
 
 // lowerCondition is the single semantic Condition to game.Condition adapter.
@@ -232,7 +238,10 @@ func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringC
 
 func conditionKindAllowedInContext(condition compiler.CompiledCondition, ctx conditionLoweringContext) bool {
 	switch ctx {
-	case conditionContextStatic:
+	case conditionContextStatic, conditionContextStateTrigger:
+		// Both a static ability's "as long as" gate and a state trigger's
+		// continuously-evaluated board condition compile to the AsLongAs kind
+		// and are never intervening conditions.
 		return condition.Kind == compiler.ConditionAsLongAs && !condition.Intervening
 	case conditionContextStaticRuleGuard:
 		return (condition.Kind == compiler.ConditionAsLongAs ||

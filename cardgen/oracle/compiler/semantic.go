@@ -486,6 +486,11 @@ const (
 	TriggerWhen
 	TriggerWhenever
 	TriggerAt
+	// TriggerState is a state trigger checked continuously; it fires whenever its
+	// board-state condition holds while it is not already on the stack
+	// (CR 603.8). Unlike event triggers it carries no event pattern, only a
+	// StateCondition on its TriggerPattern.
+	TriggerState
 )
 
 // CompiledTrigger is the event clause before a triggered ability's first
