@@ -83,10 +83,15 @@ func tokenNameTaken(defs []tokenDefEntry, name string) bool {
 }
 
 // tokenDefKey is a structural identity for a synthesized token def so identical
-// tokens reuse one emitted var.
+// tokens reuse one emitted var. It covers every identity-bearing field a
+// synthesized token carries — including Supertypes and StaticAbilities (where
+// keyword abilities such as deathtouch/lifelink live) — so two tokens that share
+// a name/type/color/power/toughness but differ in their abilities get distinct
+// keys and distinct vars rather than collapsing onto one (Wurmcoil Engine,
+// Triplicate Titan).
 func tokenDefKey(def *game.CardDef) string {
-	return fmt.Sprintf("%s|%v|%v|%v|%v|%v", def.Name, def.Types, def.Subtypes, def.Colors,
-		def.Power, def.Toughness)
+	return fmt.Sprintf("%s|%v|%v|%v|%v|%v|%v|%#v", def.Name, def.Types, def.Subtypes, def.Supertypes,
+		def.Colors, def.Power, def.Toughness, def.StaticAbilities)
 }
 
 func (c *renderCtx) sortedImports() []string {
