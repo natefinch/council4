@@ -84,6 +84,15 @@ func lowerCreateTokenSpellLinked(ctx contentCtx, publishLinked game.LinkedKey) (
 	if effect.Kind != compiler.EffectCreate {
 		panic(fmt.Sprintf("lowerCreateTokenSpellLinked: reached with effect kind %v; every caller guarantees EffectCreate", effect.Kind))
 	}
+	// A create-token clause marked as a trailing-"instead" conditional
+	// replacement ("... create a 4/4 Angel token instead.") is only meaningful as
+	// the escalation branch of an ordered sequence, where the sequence gates it
+	// against the negated preceding effect (every sequence path sets
+	// sequenceClause). Reached standalone there is no preceding effect to
+	// replace, so creating the token unconditionally would be wrong; fail closed.
+	if effect.Replacement.Kind == parser.EffectReplacementInstead && !ctx.sequenceClause {
+		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+	}
 	if !effect.Exact ||
 		(!controllerRecipient && !referencedRecipient && !targetRecipient) ||
 		effect.Negated ||
