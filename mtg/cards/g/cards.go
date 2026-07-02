@@ -75,6 +75,7 @@ var Cards = []*game.CardDef{
 	GoldmaneGriffin,
 	GoldveinHydra,
 	GolgariRaiders,
+	GorgonRecluse,
 	GorillaPack,
 	GracefulRestoration,
 	GraftedButcher,

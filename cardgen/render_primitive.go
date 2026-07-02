@@ -128,6 +128,14 @@ func (r Renderer) renderCreateDelayedTrigger(ctx *renderCtx, value game.CreateDe
 			return "", err
 		}
 		triggerFields = append(triggerFields, fmt.Sprintf("Timing: %s,", timing))
+		if value.Trigger.CapturedObject.Exists {
+			object, err := r.renderObjectReference(value.Trigger.CapturedObject.Val)
+			if err != nil {
+				return "", err
+			}
+			ctx.need(importOpt)
+			triggerFields = append(triggerFields, fmt.Sprintf("CapturedObject: opt.Val(%s),", object))
+		}
 	}
 	triggerFields = append(triggerFields, fmt.Sprintf("Content: %s,", content))
 	if value.Trigger.Optional {

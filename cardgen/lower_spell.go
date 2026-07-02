@@ -1303,6 +1303,10 @@ func lowerDelayedSingleEffectSpell(
 	effect := ctx.content.Effects[0]
 	ctx.content.Effects[0].DelayedTiming = 0
 
+	if content, ok := lowerDelayedCapturedCombatDisposal(ctx, effect.DelayedTiming); ok {
+		return content, nil
+	}
+
 	var content game.AbilityContent
 	if primitive, ok := lowerDelayedSelfPrimitive(ctx); ok {
 		content = game.Mode{Sequence: []game.Instruction{{Primitive: primitive}}}.Ability()

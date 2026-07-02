@@ -188,6 +188,11 @@ func (r referenceResolver) object(ref game.ObjectReference) (resolvedObjectRefer
 			return resolvePermanentOrLastKnown(r.g, r.obj.TriggerEvent.RelatedPermanentID)
 		}
 		return resolvedObjectReference{}, false
+	case game.ObjectReferenceCapturedObject:
+		if r.obj != nil && r.obj.CapturedObjectID != 0 {
+			return resolvePermanentOrLastKnown(r.g, r.obj.CapturedObjectID)
+		}
+		return resolvedObjectReference{}, false
 	case game.ObjectReferenceTargetObject:
 		return r.targetObject(ref.TargetIndex())
 	case game.ObjectReferenceSacrificedCost:
@@ -591,6 +596,11 @@ func (r referenceResolver) objectIdentityID(ref game.ObjectReference) (id.ID, bo
 	case game.ObjectReferenceEventRelatedPermanent:
 		if r.obj != nil && r.obj.HasTriggerEvent && r.obj.TriggerEvent.RelatedPermanentID != 0 {
 			return r.obj.TriggerEvent.RelatedPermanentID, true
+		}
+		return 0, false
+	case game.ObjectReferenceCapturedObject:
+		if r.obj != nil && r.obj.CapturedObjectID != 0 {
+			return r.obj.CapturedObjectID, true
 		}
 		return 0, false
 	case game.ObjectReferenceSourceAttachedPermanent:
