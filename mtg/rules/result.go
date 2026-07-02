@@ -76,6 +76,9 @@ type TurnLog struct {
 	CombatDamage   []CombatDamageLog
 	CreatureDamage []CreatureDamageLog
 	Deaths         []PermanentDeathLog
+	Phases         []PhaseLog
+	Steps          []StepLog
+	Triggers       []TriggeredAbilityLog
 
 	// LandsPlayed is the number of lands the active player played during this
 	// turn. Zero on a turn the active player could have played a land but did
@@ -122,6 +125,9 @@ const (
 	TurnLogEntryCreatureDamage
 	TurnLogEntryDeath
 	TurnLogEntryEnter
+	TurnLogEntryPhase
+	TurnLogEntryStep
+	TurnLogEntryTriggeredAbility
 )
 
 // TurnLogEntry records one event in the order it happened during the turn.
@@ -136,6 +142,29 @@ type TurnLogEntry struct {
 	CreatureDamage CreatureDamageLog
 	Death          PermanentDeathLog
 	Enter          PermanentEnterLog
+	Phase          PhaseLog
+	Step           StepLog
+	Trigger        TriggeredAbilityLog
+}
+
+// PhaseLog records the start of a turn phase (CR 500.1).
+type PhaseLog struct {
+	Phase game.Phase
+}
+
+// StepLog records the start of a turn step (CR 500.1).
+type StepLog struct {
+	Step game.Step
+}
+
+// TriggeredAbilityLog records a triggered ability as it is put on the stack
+// (CR 603.3), preserving enough public information for play-by-play reports.
+type TriggeredAbilityLog struct {
+	StackObjectID id.ID
+	Controller    game.PlayerID
+	SourceID      id.ID
+	SourceName    string
+	AbilityText   string
 }
 
 // DrawLog records a player draw during a game.
@@ -361,6 +390,32 @@ func (log *TurnLog) addEnter(enter PermanentEnterLog) {
 		return
 	}
 	log.Entries = append(log.Entries, TurnLogEntry{Kind: TurnLogEntryEnter, Enter: enter})
+}
+
+func (log *TurnLog) addPhase(phase game.Phase) {
+	if log == nil {
+		return
+	}
+	phaseLog := PhaseLog{Phase: phase}
+	log.Phases = append(log.Phases, phaseLog)
+	log.Entries = append(log.Entries, TurnLogEntry{Kind: TurnLogEntryPhase, Phase: phaseLog})
+}
+
+func (log *TurnLog) addStep(step game.Step) {
+	if log == nil {
+		return
+	}
+	stepLog := StepLog{Step: step}
+	log.Steps = append(log.Steps, stepLog)
+	log.Entries = append(log.Entries, TurnLogEntry{Kind: TurnLogEntryStep, Step: stepLog})
+}
+
+func (log *TurnLog) addTriggeredAbility(trigger TriggeredAbilityLog) {
+	if log == nil {
+		return
+	}
+	log.Triggers = append(log.Triggers, trigger)
+	log.Entries = append(log.Entries, TurnLogEntry{Kind: TurnLogEntryTriggeredAbility, Trigger: trigger})
 }
 
 // entryCount reports how many chronological entries the log holds, treating a
