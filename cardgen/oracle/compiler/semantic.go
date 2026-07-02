@@ -2674,6 +2674,10 @@ type CompiledEffect struct {
 	// doubling continuous effect; both are false for every other double effect.
 	DoublePower     bool
 	DoubleToughness bool
+	// SubjectSourceAttached mirrors the parser flag: a resolving continuous effect
+	// whose possessive subject is the source's attached permanent ("equipped
+	// creature's"/"enchanted creature's"), lowering to SourceAttachedPermanentReference.
+	SubjectSourceAttached bool
 	// DoubleSourceCounters mirrors the parser flag for an EffectDouble whose
 	// object is "the number of <kind> counters on <self>" (Mossborn Hydra).
 	// Lowering reads it together with DoubleSourceCounterKind to emit a dynamic

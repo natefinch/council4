@@ -322,6 +322,12 @@ func validateContinuousEffectLayerFields(effect *game.ContinuousEffect) error {
 // in canonical order.
 func (r Renderer) renderContinuousPowerToughnessFields(ctx *renderCtx, effect *game.ContinuousEffect) ([]string, error) {
 	var fields []string
+	if effect.DoublePower {
+		fields = append(fields, "DoublePower: true,")
+	}
+	if effect.DoubleToughness {
+		fields = append(fields, "DoubleToughness: true,")
+	}
 	if effect.PowerDelta != 0 {
 		fields = append(fields, fmt.Sprintf("PowerDelta: %d,", effect.PowerDelta))
 	}

@@ -45,7 +45,8 @@ func newUnleashFury() *game.CardDef {
 							Object: opt.Val(game.TargetPermanentReference(0)),
 							ContinuousEffects: []game.ContinuousEffect{
 								game.ContinuousEffect{
-									Layer: game.LayerPowerToughnessModify,
+									Layer:       game.LayerPowerToughnessModify,
+									DoublePower: true,
 								},
 							},
 							Duration: game.DurationUntilEndOfTurn,

@@ -81,6 +81,12 @@ func continuousSubjectMode(
 		}
 		return continuousGroupMode(group, continuousEffects, duration), nil
 	}
+	if effect.SubjectSourceAttached {
+		if len(ctx.content.Targets) != 0 || len(ctx.content.References) != 0 {
+			return unsupported()
+		}
+		return continuousObjectMode(game.SourceAttachedPermanentReference(), continuousEffects, duration), nil
+	}
 	if opts.AllowReferenceObject && len(ctx.content.Targets) == 0 && len(ctx.content.References) == 1 {
 		object, ok := continuousReferenceObject(ctx.content.References[0], effect, opts.SourceAsCard)
 		if !ok {

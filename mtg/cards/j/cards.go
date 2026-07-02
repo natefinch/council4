@@ -23,4 +23,5 @@ var Cards = []*game.CardDef{
 	JungleBasin,
 	JuniperOrderRanger,
 	JunkGolem,
+	JunkJet,
 }
