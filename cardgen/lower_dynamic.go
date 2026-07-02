@@ -1012,6 +1012,8 @@ func permanentTargetSpecAllowingUnbounded(target compiler.CompiledTarget, allowU
 		permanentTypes = []types.Card{types.Planeswalker}
 	case compiler.SelectorBattle:
 		permanentTypes = []types.Card{types.Battle}
+	case compiler.SelectorCommander:
+		selection.MatchCommander = true
 	default:
 		return game.TargetSpec{}, false
 	}

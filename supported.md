@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,593 of 32,501 cards eligible for paper support (51.1%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,598 of 32,501 cards eligible for paper support (51.1%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1146,6 +1146,7 @@ Council4 currently supports **16,593 of 32,501 cards eligible for paper support 
 - Battlewise Hoplite
 - Battlewise Valor
 - Baxter Stockman
+- Baxter, Fly in the Ointment
 - Bay Falcon
 - Bayou
 - Bayou Dragonfly
@@ -1924,6 +1925,7 @@ Council4 currently supports **16,593 of 32,501 cards eligible for paper support 
 - Bull Rush
 - Bull's Strength
 - Bulwark Giant
+- Bulwark Ox
 - Bumbleflower's Sharepot
 - Bump in the Night
 - Buoyancy
@@ -2403,6 +2405,7 @@ Council4 currently supports **16,593 of 32,501 cards eligible for paper support 
 - Chivalric Alliance
 - Cho-Arrim Bruiser
 - Cho-Manno's Blessing
+- Chocobo Knights
 - Chocobo Racetrack
 - Choke
 - Choked Estuary
@@ -10992,6 +10995,7 @@ Council4 currently supports **16,593 of 32,501 cards eligible for paper support 
 - Ravenous Intruder
 - Ravenous Lindwurm
 - Ravenous Rats
+- Ravenous Robots
 - Ravenous Skirge
 - Ravenous Slime
 - Ravenous Squirrel
@@ -16254,6 +16258,7 @@ Council4 currently supports **16,593 of 32,501 cards eligible for paper support 
 - Witch Engine
 - Witch Hunter
 - Witch's Cauldron
+- Witch's Clinic
 - Witch's Cottage
 - Witch's Familiar
 - Witch's Mist

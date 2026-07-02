@@ -28,6 +28,7 @@ func TestLowerTemporaryKeywordGrantBroadTargets(t *testing.T) {
 		wantAnyCounter      bool
 		wantNoCounters      bool
 		wantExcludedCounter bool
+		wantCommander       bool
 	}{
 		{
 			name:         "bare subtype noun target",
@@ -75,6 +76,12 @@ func TestLowerTemporaryKeywordGrantBroadTargets(t *testing.T) {
 			wantTypes:           []types.Card{types.Creature},
 			wantExcludedCounter: true,
 		},
+		{
+			name:          "commander target",
+			oracle:        "Target commander gains lifelink until end of turn.",
+			wantKeywords:  []game.Keyword{game.Lifelink},
+			wantCommander: true,
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -110,6 +117,9 @@ func TestLowerTemporaryKeywordGrantBroadTargets(t *testing.T) {
 			}
 			if tc.wantExcludedCounter && selection.ExcludedCounter != counter.PlusOnePlusOne {
 				t.Fatalf("excluded counter = %v, want +1/+1", selection.ExcludedCounter)
+			}
+			if selection.MatchCommander != tc.wantCommander {
+				t.Fatalf("match commander = %v, want %v", selection.MatchCommander, tc.wantCommander)
 			}
 			if len(mode.Sequence) != 1 {
 				t.Fatalf("sequence = %#v, want one instruction", mode.Sequence)
