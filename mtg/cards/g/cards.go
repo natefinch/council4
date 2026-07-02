@@ -94,6 +94,7 @@ var Cards = []*game.CardDef{
 	GrimAffliction,
 	GrimFeast,
 	GrindingStation,
+	Griptide,
 	GrismoldTheDreadsower,
 	Grollub,
 	Groundskeeper,

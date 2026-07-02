@@ -811,6 +811,47 @@ func exactCounteredSpellDestinationSyntax(effect *EffectSyntax) bool {
 	return true
 }
 
+// exactTargetPermanentLibraryPutEffectSyntax reports whether an in-play
+// permanent tuck "Put <target permanent> on top of its owner's library." (and
+// the bottom / "the top" / "the bottom" wording variants) reconstructs its
+// clause text byte-for-byte. It backs Time Ebb, Griptide, Excommunicate, Uproot,
+// Totally Lost, and every other single-target "put target <permanent> on
+// top/bottom of its owner's library" spell, ability, or trigger.
+//
+// The single target must be an exact battlefield (zone-unspecified) permanent
+// target: a graveyard-card target is owned by exactGraveyardPutEffectSyntax and a
+// self or back reference by the counter/redirect paths, so any other wording
+// fails the byte-exact round-trip and stays unsupported.
+func exactTargetPermanentLibraryPutEffectSyntax(effect *EffectSyntax) bool {
+	if len(effect.Targets) != 1 || effect.ToZone != zone.Library {
+		return false
+	}
+	target := &effect.Targets[0]
+	if !target.Exact ||
+		target.Cardinality.Min != 1 || target.Cardinality.Max != 1 ||
+		target.Selection.Zone != zone.None {
+		return false
+	}
+	switch effect.Destination {
+	case EffectDestinationTop, EffectDestinationBottom:
+	default:
+		return false
+	}
+	text := exactEffectClauseText(effect)
+	prefix := "Put " + target.Text
+	for _, suffix := range []string{
+		" on top of its owner's library.",
+		" on the top of its owner's library.",
+		" on bottom of its owner's library.",
+		" on the bottom of its owner's library.",
+	} {
+		if strings.EqualFold(text, prefix+suffix) {
+			return true
+		}
+	}
+	return false
+}
+
 // exactGraveyardPutEffectSyntax reports whether a "Put <graveyard card>"
 // destination clause reconstructs one of the supported destinations exactly.
 func exactGraveyardPutEffectSyntax(effect *EffectSyntax) bool {

@@ -82,6 +82,7 @@ var Cards = []*game.CardDef{
 	ThundersongTrumpeter,
 	TideforceElemental,
 	TifaLockhart,
+	TimeEbb,
 	TinWingChimera,
 	ToilsOfNightAndDay,
 	TolarianSerpent,

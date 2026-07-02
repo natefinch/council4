@@ -33,6 +33,9 @@ func lowerPutEffectSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnosti
 	if content, ok := lowerPutSourceOnLibrary(ctx); ok {
 		return content, nil
 	}
+	if content, ok := lowerPutTargetOnLibrary(ctx); ok {
+		return content, nil
+	}
 	if content, ok := lowerPutThoseCountersSpell(ctx); ok {
 		return content, nil
 	}
@@ -109,6 +112,78 @@ func lowerPutSourceOnLibrary(ctx contentCtx) (game.AbilityContent, bool) {
 			Bottom: bottom,
 		},
 	}}}.Ability(), true
+}
+
+// lowerPutTargetOnLibrary lowers the in-play permanent tuck "put target
+// <permanent> on top of its owner's library" — Time Ebb, Griptide,
+// Excommunicate, Uproot, Totally Lost — and the corresponding bottom wording,
+// into a single PutPermanentOnLibrary instruction that moves the chosen target
+// permanent to the top (or bottom) of its owner's library without shuffling.
+//
+// It reuses the shared permanentTargetSpec projector, so it composes with every
+// permanent target qualifier that projector supports (card type, subtype,
+// supertype, color shape, power/toughness, counter and attachment filters, type
+// unions such as "artifact or enchantment", ...) without per-qualifier work, and
+// composes across spell, activated, and triggered shells because it lowers at the
+// AbilityContent level. It is text-blind and fails closed on any shape it does
+// not fully model: a destination other than the recognized top/bottom, a
+// non-exact or non-single target, a graveyard or other non-battlefield
+// destination/source, a reference that does not bind to the target, an "enters
+// tapped" or under-your-control rider, negation, division, an optional wrapper, a
+// delayed timing, or a non-instant duration.
+func lowerPutTargetOnLibrary(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Targets) != 1 {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	// Invariant: lowerPutTargetOnLibrary is reached only from lowerPutEffectSpell,
+	// which lowerImmediateSingleEffectSpell dispatches solely from its
+	// `case compiler.EffectPut` arm (lower_spell.go), so the kind is always
+	// EffectPut here.
+	if effect.Kind != compiler.EffectPut {
+		panic(fmt.Sprintf("lowerPutTargetOnLibrary: expected EffectPut, got kind %v", effect.Kind))
+	}
+	if !effect.Exact ||
+		effect.Negated ||
+		effect.Divided ||
+		effect.Optional ||
+		effect.DelayedTiming != 0 ||
+		effect.Duration != compiler.DurationNone ||
+		effect.FromZone != zone.None ||
+		effect.ToZone != zone.Library ||
+		effect.EntersTapped ||
+		effect.UnderYourControl {
+		return game.AbilityContent{}, false
+	}
+	var bottom bool
+	switch effect.Destination {
+	case parser.EffectDestinationTop:
+		bottom = false
+	case parser.EffectDestinationBottom:
+		bottom = true
+	default:
+		return game.AbilityContent{}, false
+	}
+	// Every reference in the clause is the target's "its owner's library"
+	// possessive; a reference that binds to anything other than the single target
+	// denotes some other object and fails closed rather than moving the wrong
+	// permanent.
+	if !referencesBindTo(ctx.content.References, compiler.ReferenceBindingTarget, 0) {
+		return game.AbilityContent{}, false
+	}
+	targetSpec, ok := permanentTargetSpec(ctx.content.Targets[0])
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Targets: []game.TargetSpec{targetSpec},
+		Sequence: []game.Instruction{{
+			Primitive: game.PutPermanentOnLibrary{
+				Object: game.TargetPermanentReference(0),
+				Bottom: bottom,
+			},
+		}},
+	}.Ability(), true
 }
 
 // lowerPutFromHandSpell lowers "put a <filter> card from your hand onto the

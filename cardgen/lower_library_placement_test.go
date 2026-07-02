@@ -34,7 +34,12 @@ func expectLibraryPlacementNotCounter(t *testing.T, oracleText string) {
 
 func TestLibraryPlacementOwnerLibraryNotCounter(t *testing.T) {
 	t.Parallel()
-	expectLibraryPlacementNotCounter(t, "Put target land on top of its owner's library.")
+	// A non-target "put a creature you control on top of its owner's library"
+	// (Nulltread Gargantuan) is still an unsupported library placement — the
+	// supported forms are the source-permanent tuck (lowerPutSourceOnLibrary) and
+	// the single-target tuck (lowerPutTargetOnLibrary) — so it still exercises the
+	// owner's-library-vs-counter-placement distinction while remaining unlowered.
+	expectLibraryPlacementNotCounter(t, "Put a creature you control on top of its owner's library.")
 }
 
 func TestLibraryPlacementTheirLibraryNotCounter(t *testing.T) {
