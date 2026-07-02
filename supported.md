@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,681 of 32,501 cards eligible for paper support (51.3%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,699 of 32,501 cards eligible for paper support (51.4%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1042,6 +1042,7 @@ Council4 currently supports **16,681 of 32,501 cards eligible for paper support 
 - Barbarian General
 - Barbarian Horde
 - Barbarian Lunatic
+- Barbarian Outcast
 - Barbarian Riftcutter
 - Barbarian Ring
 - Barbary Apes
@@ -1617,6 +1618,7 @@ Council4 currently supports **16,681 of 32,501 cards eligible for paper support 
 - Bog Initiate
 - Bog Naughty
 - Bog Raiders
+- Bog Serpent
 - Bog Smugglers
 - Bog Tatters
 - Bog Witch
@@ -2875,6 +2877,7 @@ Council4 currently supports **16,681 of 32,501 cards eligible for paper support 
 - Covenant of Blood
 - Cover of Darkness
 - Covert Operative
+- Covetous Dragon
 - Cowabunga!
 - Cower in Fear
 - Cowl Prowler
@@ -3126,6 +3129,7 @@ Council4 currently supports **16,681 of 32,501 cards eligible for paper support 
 - Dance of Shadows
 - Dance of the Tumbleweeds
 - Dancing Scimitar
+- Dandân
 - Dangerous Wager
 - Danitha Capashen, Paragon
 - Dapper Shieldmate
@@ -4309,6 +4313,7 @@ Council4 currently supports **16,681 of 32,501 cards eligible for paper support 
 - Emissary of the Sleepless
 - Emmara, Soul of the Accord
 - Emmessi Tome
+- Emperor Crocodile
 - Emperor's Vanguard
 - Empress Galina
 - Empty the Pits
@@ -6013,6 +6018,7 @@ Council4 currently supports **16,681 of 32,501 cards eligible for paper support 
 - Gorgon Flail
 - Gorgon's Head
 - Gorilla Chieftain
+- Gorilla Pack
 - Gorilla Warrior
 - Goring Ceratops
 - Gorion, Wise Mentor
@@ -7308,6 +7314,7 @@ Council4 currently supports **16,681 of 32,501 cards eligible for paper support 
 - Ishi-Ishi, Akki Crackshot
 - Ishkanah, Grafwidow
 - Island
+- Island Fish Jasconius
 - Isolate
 - Isolated Chapel
 - Isolation Zone
@@ -8544,6 +8551,7 @@ Council4 currently supports **16,681 of 32,501 cards eligible for paper support 
 - Manor Gate
 - Manor Skeleton
 - Manriki-Gusari
+- Manta Ray
 - Manta Riders
 - Manticore
 - Manticore Eternal
@@ -8596,6 +8604,7 @@ Council4 currently supports **16,681 of 32,501 cards eligible for paper support 
 - Marit Lage
 - Marit Lage's Slumber
 - Maritime Guard
+- Marjhan
 - Mark of Fury
 - Mark of Mutiny
 - Mark of the Oni
@@ -8782,6 +8791,7 @@ Council4 currently supports **16,681 of 32,501 cards eligible for paper support 
 - Merchant of the Vale // Haggle
 - Merchant of Truth
 - Merchant of Venom
+- Merchant Ship
 - Merciless Enforcers
 - Merciless Eternal
 - Merciless Eviction
@@ -10387,6 +10397,7 @@ Council4 currently supports **16,681 of 32,501 cards eligible for paper support 
 - Pirate // Treasure
 - Pirate Hat
 - Pirate Peddlers
+- Pirate Ship
 - Pirate's Cutlass
 - Pirate's Pillage
 - Pirate's Prize
@@ -11568,6 +11579,7 @@ Council4 currently supports **16,681 of 32,501 cards eligible for paper support 
 - Ronin Cavekeeper
 - Ronin Cliffrider
 - Ronin Houndmaster
+- Ronom Serpent
 - Ronom Unicorn
 - Roofstalker Wight
 - Rooftop Assassin
@@ -12119,6 +12131,7 @@ Council4 currently supports **16,681 of 32,501 cards eligible for paper support 
 - Sea Monster
 - Sea of Clouds
 - Sea Scryer
+- Sea Serpent
 - Sea Spirit
 - Sea Sprite
 - Sea's Claim
@@ -12762,6 +12775,7 @@ Council4 currently supports **16,681 of 32,501 cards eligible for paper support 
 - Skeleton Crew
 - Skeleton Key
 - Skeleton Pirate
+- Skeleton Ship
 - Skeletonize
 - Skemfar Avenger
 - Skemfar Elderhall
@@ -12936,6 +12950,7 @@ Council4 currently supports **16,681 of 32,501 cards eligible for paper support 
 - Slippery Bogle
 - Slippery Karst
 - Slipstream Eel
+- Slipstream Serpent
 - Sliptide Serpent
 - Slith Ascendant
 - Slith Bloodletter
@@ -14131,6 +14146,7 @@ Council4 currently supports **16,681 of 32,501 cards eligible for paper support 
 - Syndicate Infiltrator
 - Syndicate Messenger
 - Syndicate Trafficker
+- Synod Centurion
 - Synth Infiltrator
 - Syphon Essence
 - Syphon Fuel
@@ -14388,6 +14404,7 @@ Council4 currently supports **16,681 of 32,501 cards eligible for paper support 
 - Test of Endurance
 - Test of Faith
 - Testament Bearer
+- Tethered Griffin
 - Tethered Skirge
 - Tethmos High Priest
 - Tetsuko Umezawa, Fugitive
@@ -15746,6 +15763,7 @@ Council4 currently supports **16,681 of 32,501 cards eligible for paper support 
 - Vnwxt, Verbose Host
 - Vodalian Hexcatcher
 - Vodalian Hypnotist
+- Vodalian Knights
 - Vodalian Mage
 - Vodalian Merchant
 - Vodalian Serpent
