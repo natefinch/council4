@@ -744,6 +744,13 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 		}
 		fields = append(fields, fmt.Sprintf("BlockedSelection: %s,", selection))
 	}
+	if !effect.AttackDefenderControlsSelection.Empty() {
+		selection, err := r.renderSelection(ctx, effect.AttackDefenderControlsSelection)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("AttackDefenderControlsSelection: %s,", selection))
+	}
 	if effect.BlockedSource {
 		fields = append(fields, "BlockedSource: true,")
 	}

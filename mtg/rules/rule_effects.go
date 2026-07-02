@@ -620,7 +620,51 @@ func ruleEffectProhibitsAttack(g *game.Game, attacker *game.Permanent, target *g
 				continue
 			}
 		}
+		if !effect.AttackDefenderControlsSelection.Empty() {
+			// "Can't attack unless defending player controls ...": the attacker may
+			// attack only a defending player who controls a matching permanent. With
+			// no specific target the restriction cannot rule out every defender, so
+			// the attacker remains able to attack someone.
+			if target == nil {
+				continue
+			}
+			if defendingPlayerControlsSelection(g, effect, target.Player) {
+				continue
+			}
+		}
 		return true
+	}
+	return false
+}
+
+// defendingPlayerControlsSelection reports whether the defending player controls
+// at least one active battlefield permanent matching the effect's
+// AttackDefenderControlsSelection, gating a conditional "can't attack unless
+// defending player controls ..." restriction.
+func defendingPlayerControlsSelection(g *game.Game, effect *game.RuleEffect, defender game.PlayerID) bool {
+	sel := &effect.AttackDefenderControlsSelection
+	for _, permanent := range g.Battlefield {
+		if !activeBattlefieldPermanent(permanent) {
+			continue
+		}
+		if effectiveController(g, permanent) != defender {
+			continue
+		}
+		values := effectivePermanentValues(g, permanent)
+		subject := selectionSubject{
+			kind:           subjectPermanent,
+			g:              g,
+			permanent:      permanent,
+			values:         &values,
+			viewer:         effect.Controller,
+			sourceObjectID: effect.SourceObjectID,
+		}
+		if sel.Controller != game.ControllerAny {
+			subject.controller = effectiveController(g, permanent)
+		}
+		if matchSelection(&subject, sel) {
+			return true
+		}
 	}
 	return false
 }

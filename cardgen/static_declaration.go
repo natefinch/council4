@@ -59,23 +59,31 @@ func lowerStaticDeclarations(
 			)
 		}
 		if declaration.Condition != nil && conditionSpan == (shared.Span{}) {
-			if declaration.Condition.SourceInGraveyard {
-				body.ZoneOfFunction = zone.Graveyard
+			if declaration.Condition.Predicate == compiler.ConditionPredicateDefendingPlayerControls {
+				// "unless defending player controls ...": a per-attack guard that
+				// resolves against the defending player's board when an attack is
+				// declared, so it is threaded onto the rule effect below rather than
+				// gating the static ability on or off.
+				conditionSpan = declaration.Condition.Span
+			} else {
+				if declaration.Condition.SourceInGraveyard {
+					body.ZoneOfFunction = zone.Graveyard
+				}
+				conditionContext := conditionContextStatic
+				if declaration.Kind == compiler.StaticDeclarationRule {
+					conditionContext = conditionContextStaticRuleGuard
+				}
+				condition, ok := lowerCondition(*declaration.Condition, conditionContext)
+				if !ok {
+					return abilityLowering{}, true, staticDeclarationDiagnostic(
+						ability,
+						"unsupported static declaration condition",
+						"the recognized static declaration condition is not representable in a static runtime ability",
+					)
+				}
+				body.Condition = opt.Val(condition)
+				conditionSpan = declaration.Condition.Span
 			}
-			conditionContext := conditionContextStatic
-			if declaration.Kind == compiler.StaticDeclarationRule {
-				conditionContext = conditionContextStaticRuleGuard
-			}
-			condition, ok := lowerCondition(*declaration.Condition, conditionContext)
-			if !ok {
-				return abilityLowering{}, true, staticDeclarationDiagnostic(
-					ability,
-					"unsupported static declaration condition",
-					"the recognized static declaration condition is not representable in a static runtime ability",
-				)
-			}
-			body.Condition = opt.Val(condition)
-			conditionSpan = declaration.Condition.Span
 		}
 		var ok bool
 		if !staticDeclarationPayloadValid(declaration) {
@@ -809,6 +817,18 @@ func appendStaticRuleDeclaration(body *game.StaticAbility, declaration compiler.
 		return false
 	}
 	body.ZoneOfFunction = functionZone
+	var defenderControlsSelection game.Selection
+	if declaration.Condition != nil &&
+		declaration.Condition.Predicate == compiler.ConditionPredicateDefendingPlayerControls {
+		if declaration.Rule.Kind != compiler.StaticRuleCantAttack {
+			return false
+		}
+		selection, ok := lowerConditionSelection(declaration.Condition.Selection)
+		if !ok || selection.Empty() {
+			return false
+		}
+		defenderControlsSelection = selection
+	}
 	for i := range effects {
 		effects[i].AffectedSource = affectedSource
 		effects[i].AffectedAttached = affectedAttached
@@ -817,6 +837,7 @@ func appendStaticRuleDeclaration(body *game.StaticAbility, declaration compiler.
 		effects[i].AffectedSelection = affectedSelection
 		effects[i].BlockedSource = blockedSource
 		effects[i].BlockedSelection = blockedSelection
+		effects[i].AttackDefenderControlsSelection = defenderControlsSelection
 		body.RuleEffects = append(body.RuleEffects, effects[i])
 	}
 	return true

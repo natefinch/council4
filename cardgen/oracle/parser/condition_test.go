@@ -352,6 +352,13 @@ func TestParseConditionControlsComposition(t *testing.T) {
 			subtypes:      []types.Sub{types.Wolf, types.Werewolf},
 			excludeSource: true,
 		},
+		{
+			name:          "defending player scope",
+			condition:     "defending player controls a creature",
+			scope:         ConditionControlScopeDefendingPlayer,
+			comparison:    ConditionComparisonNone,
+			requiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

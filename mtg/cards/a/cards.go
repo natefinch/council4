@@ -99,6 +99,7 @@ var Cards = []*game.CardDef{
 	ArmedAssailant,
 	ArmorOfFaith,
 	ArmorThrull,
+	ArmoredGalleon,
 	ArmoredScrapgorger,
 	ArmoryVeteran,
 	Arrest,

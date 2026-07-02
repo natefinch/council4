@@ -68,6 +68,7 @@ var Cards = []*game.CardDef{
 	LumaretSFavor,
 	LupinflowerVillage,
 	LurkingDeadeye,
+	LurkingGreenDragon,
 	LustForWar,
 	LydiaFrye,
 }

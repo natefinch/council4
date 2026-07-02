@@ -864,6 +864,13 @@ const (
 	// a basic land."; the Mercadian Masques tap-for-two-colors land cycle). It
 	// gates the dual-mana ability on either disjunct.
 	ConditionPredicateLandEnteredThisTurnOrControlsBasic
+	// ConditionPredicateDefendingPlayerControls is satisfied when the defending
+	// player of an attack controls at least one permanent matching Selection
+	// ("defending player controls an Island", Sea Monster). It is only supported
+	// as the negated guard on a can't-attack static rule, where the defending
+	// player is resolved per attack; the closed vocabulary carries no defending
+	// player anywhere else, so every other use fails closed downstream.
+	ConditionPredicateDefendingPlayerControls
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard

@@ -39,6 +39,7 @@ var Cards = []*game.CardDef{
 	WeedPrunerPoplar,
 	WeightAdvantage,
 	WelkinTern,
+	Whimwader,
 	WhiskerquillScribe,
 	WhiteWard,
 	WhiteWidowYelenaBelova,
@@ -73,5 +74,6 @@ var Cards = []*game.CardDef{
 	WrithingChrysalis,
 	WrongTurn,
 	WuLongbowman,
+	WuWarship,
 	WurmskinForger,
 }
