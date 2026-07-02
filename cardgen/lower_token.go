@@ -206,11 +206,12 @@ func lowerMultiTokenCreate(ctx contentCtx, effect *compiler.CompiledEffect, reci
 		if !ok {
 			return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 		}
-		// The renderer keys synthesized token vars on name, types, subtypes,
-		// colors, and power/toughness only (tokenDefKey); two tokens that share
-		// that key but differ in their abilities would collapse onto one emitted
-		// var, dropping the second token's distinct abilities. Fail closed on such
-		// a collision so a multi-token card never renders a wrong token. Tokens
+		// tokenDefKey now covers every identity-bearing field a synthesized token
+		// carries (including Supertypes and StaticAbilities), so two tokens that
+		// differ only in their abilities get distinct keys and distinct vars
+		// (Wurmcoil Engine's deathtouch/lifelink Wurms). This guard remains a
+		// defensive net: if two tokens ever share a key yet are not identical,
+		// fail closed so a multi-token card never renders a wrong token. Tokens
 		// that share a key and are fully identical reuse one var correctly.
 		if prior, ok := seen[tokenDefKey(def)]; ok && !reflect.DeepEqual(prior, def) {
 			return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)

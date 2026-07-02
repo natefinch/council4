@@ -75,5 +75,6 @@ var Cards = []*game.CardDef{
 	WrongTurn,
 	WuLongbowman,
 	WuWarship,
+	WurmcoilEngine,
 	WurmskinForger,
 }

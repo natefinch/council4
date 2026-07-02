@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,679 of 32,501 cards eligible for paper support (51.3%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,681 of 32,501 cards eligible for paper support (51.3%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -15008,6 +15008,7 @@ Council4 currently supports **16,679 of 32,501 cards eligible for paper support 
 - Trinket Mage
 - Trip Noose
 - Triplicate Spirits
+- Triplicate Titan
 - Triskaidekaphile
 - Triskelavite
 - Triskelion
@@ -16482,6 +16483,7 @@ Council4 currently supports **16,679 of 32,501 cards eligible for paper support 
 - Wurm
 - Wurm // Saproling
 - Wurm's Tooth
+- Wurmcoil Engine
 - Wurmcoil Larva
 - Wurmskin Forger
 - Wydwen, the Biting Gale
