@@ -1071,7 +1071,7 @@ func enterBattlefieldPaymentPaid(ctx enterBattlefieldContext, g *game.Game, play
 		return false
 	}
 	res = resolved
-	if !canPayResolutionPayment(g, playerID, &res) {
+	if !canPayResolutionPayment(g, playerID, source.CardInstanceID, &res) {
 		return false
 	}
 	engine := ctx.engine

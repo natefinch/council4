@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/rules/payment"
 	"github.com/natefinch/council4/opt"
 )
@@ -19,7 +20,7 @@ func (e *Engine) resolveResolutionPaymentValue(g *game.Game, obj *game.StackObje
 	if !ok {
 		return false, false
 	}
-	if !canPayResolutionPayment(g, playerID, res) {
+	if !canPayResolutionPayment(g, playerID, stackObjectSourceID(obj), res) {
 		return false, false
 	}
 	prompt := res.Prompt
@@ -139,12 +140,13 @@ func resolutionPaymentPayer(g *game.Game, obj *game.StackObject, res *game.Resol
 	return stackObjectController(obj), true
 }
 
-func canPayResolutionPayment(g *game.Game, playerID game.PlayerID, res *game.ResolutionPayment) bool {
+func canPayResolutionPayment(g *game.Game, playerID game.PlayerID, sourceCardID id.ID, res *game.ResolutionPayment) bool {
 	if res == nil {
 		return true
 	}
 	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{
 		PlayerID:        playerID,
+		SourceCardID:    sourceCardID,
 		Cost:            manaCostPtr(res.ManaCost),
 		XValue:          res.XValue,
 		AdditionalCosts: res.AdditionalCosts,
