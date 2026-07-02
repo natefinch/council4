@@ -177,6 +177,31 @@ func TestLowerGroupKeywordGrantColorFamilies(t *testing.T) {
 	}
 }
 
+func TestLowerGroupKeywordGrantQualifiedGroups(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		oracleText      string
+		tokenOnly       bool
+		matchAnyCounter bool
+		matchCounter    bool
+	}{
+		{"Creature tokens you control gain haste until end of turn.", true, false, false},
+		{"Creatures you control with counters on them gain double strike until end of turn.", false, true, false},
+		{"Creatures you control with a +1/+1 counter on them gain vigilance until end of turn.", false, false, true},
+	}
+	for _, test := range tests {
+		t.Run(test.oracleText, func(t *testing.T) {
+			t.Parallel()
+			selection := groupKeywordGrant(t, test.oracleText).Group.Selection()
+			if selection.TokenOnly != test.tokenOnly ||
+				selection.MatchAnyCounter != test.matchAnyCounter ||
+				selection.MatchCounter != test.matchCounter {
+				t.Fatalf("selection = %#v", selection)
+			}
+		})
+	}
+}
+
 // TestLowerGroupKeywordGrantQuotedAbilityRejected verifies a granted quoted
 // ability fails closed rather than dropping the ability text.
 func TestLowerGroupKeywordGrantQuotedAbilityRejected(t *testing.T) {

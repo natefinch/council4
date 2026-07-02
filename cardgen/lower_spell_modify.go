@@ -2527,9 +2527,10 @@ func lowerGroupTemporaryKeywordSpell(
 	unsupported func() (game.AbilityContent, *shared.Diagnostic),
 ) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
+	_, _, hasCounterQualifier := effect.StaticSubjectCounter()
 	if len(ctx.content.Effects) != 1 ||
 		len(ctx.content.Targets) != 0 ||
-		len(ctx.content.References) != 0 ||
+		!counterQualifierReferencesOnly(ctx.content.References, hasCounterQualifier) ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Modes) != 0 ||
 		effect.Kind != compiler.EffectGain ||

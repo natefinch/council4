@@ -18,11 +18,12 @@ import (
 func TestLowerTemporaryKeywordGrantBroadTargets(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name         string
-		oracle       string
-		wantKeywords []game.Keyword
-		wantTypes    []types.Card
-		wantSubtypes []types.Sub
+		name          string
+		oracle        string
+		wantKeywords  []game.Keyword
+		wantTypes     []types.Card
+		wantSubtypes  []types.Sub
+		wantCommander bool
 	}{
 		{
 			name:         "bare subtype noun target",
@@ -41,6 +42,12 @@ func TestLowerTemporaryKeywordGrantBroadTargets(t *testing.T) {
 			oracle:       "Target black creature gains flying until end of turn.",
 			wantKeywords: []game.Keyword{game.Flying},
 			wantTypes:    []types.Card{types.Creature},
+		},
+		{
+			name:          "commander target",
+			oracle:        "Target commander gains lifelink until end of turn.",
+			wantKeywords:  []game.Keyword{game.Lifelink},
+			wantCommander: true,
 		},
 	}
 	for _, tc := range tests {
@@ -64,6 +71,9 @@ func TestLowerTemporaryKeywordGrantBroadTargets(t *testing.T) {
 			}
 			if tc.wantSubtypes != nil && !reflect.DeepEqual(mode.Targets[0].Selection.Val.SubtypesAny, tc.wantSubtypes) {
 				t.Fatalf("subtypes = %v, want %v", mode.Targets[0].Selection.Val.SubtypesAny, tc.wantSubtypes)
+			}
+			if mode.Targets[0].Selection.Val.MatchCommander != tc.wantCommander {
+				t.Fatalf("match commander = %v, want %v", mode.Targets[0].Selection.Val.MatchCommander, tc.wantCommander)
 			}
 			if len(mode.Sequence) != 1 {
 				t.Fatalf("sequence = %#v, want one instruction", mode.Sequence)

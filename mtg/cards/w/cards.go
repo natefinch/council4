@@ -54,6 +54,7 @@ var Cards = []*game.CardDef{
 	WingedWords,
 	WingspanMentor,
 	WitchEngine,
+	WitchSClinic,
 	WitchSMist,
 	Withstand,
 	WizardMentor,

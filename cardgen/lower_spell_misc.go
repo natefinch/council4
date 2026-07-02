@@ -1817,10 +1817,17 @@ func massCounterQualifierReferencesOnly(
 	references []compiler.CompiledReference,
 	selector compiler.CompiledSelector,
 ) bool {
-	if len(references) == 0 {
-		return true
-	}
-	if !selector.MatchCounter && !selector.MatchNoCounters {
+	return counterQualifierReferencesOnly(
+		references,
+		selector.MatchCounter || selector.MatchNoCounters,
+	)
+}
+
+func counterQualifierReferencesOnly(
+	references []compiler.CompiledReference,
+	hasCounterQualifier bool,
+) bool {
+	if len(references) != 0 && !hasCounterQualifier {
 		return false
 	}
 	for _, reference := range references {
