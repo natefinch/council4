@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,598 of 32,501 cards eligible for paper support (51.1%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,614 of 32,501 cards eligible for paper support (51.1%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -558,6 +558,7 @@ Council4 currently supports **16,598 of 32,501 cards eligible for paper support 
 - April O'Neil, Kunoichi Trainee
 - April, Reporter of the Weird
 - Aquamoeba
+- Aquastrand Spider
 - Aquatic Incursion
 - Aqueous Form
 - Aquitect's Defenses
@@ -2977,6 +2978,7 @@ Council4 currently supports **16,598 of 32,501 cards eligible for paper support 
 - Cruel Tutor
 - Cruel Witness
 - Crumble
+- Crumbling Ashes
 - Crumbling Colossus
 - Crumbling Necropolis
 - Crumbling Vestige
@@ -3082,6 +3084,8 @@ Council4 currently supports **16,598 of 32,501 cards eligible for paper support 
 - Cylian Elf
 - Cynette, Jelly Drover
 - Cystbearer
+- Cytoplast Manipulator
+- Cytospawn Shambler
 - D'Avenant Archer
 - D'Avenant Healer
 - D'Avenant Trapper
@@ -6481,6 +6485,7 @@ Council4 currently supports **16,598 of 32,501 cards eligible for paper support 
 - Hekma Sentinels
 - Heliod's Pilgrim
 - Helionaut
+- Helium Squirter
 - Hell Mongrel
 - Hell Swarm
 - Hell's Caretaker
@@ -6565,6 +6570,7 @@ Council4 currently supports **16,598 of 32,501 cards eligible for paper support 
 - Hidden Footblade
 - Hidden Grotto
 - Hidden Herbalists
+- Hidden Hideout
 - Hidden Horror
 - Hidden Lair
 - Hidden Path
@@ -6840,6 +6846,7 @@ Council4 currently supports **16,598 of 32,501 cards eligible for paper support 
 - Hunted Phantasm
 - Hunted Troll
 - Hunted Witness
+- Hunter of Eyeblights
 - Hunter's Bow
 - Hunter's Edge
 - Hunter's Talent
@@ -8134,6 +8141,7 @@ Council4 currently supports **16,598 of 32,501 cards eligible for paper support 
 - Liliana's Specter
 - Liliana's Spoils
 - Liliana's Steward
+- Liliana, Death Wielder
 - Liliana, Death's Majesty
 - Lilysplash Mentor
 - Lim-Dûl's High Guard
@@ -9269,6 +9277,7 @@ Council4 currently supports **16,598 of 32,501 cards eligible for paper support 
 - Mutant Chain Reaction
 - Mutant Town
 - Mutant Town Musicians
+- Mutant's Prey
 - Mutavault
 - Mutavault
 - Mutilate
@@ -9790,6 +9799,7 @@ Council4 currently supports **16,598 of 32,501 cards eligible for paper support 
 - Olivia's Bloodsworn
 - Olivia's Dragoon
 - Olivia, Opulent Outlaw
+- Ollenbock Escort
 - Oltec Cloud Guard
 - Oltec Matterweaver
 - Omashu City
@@ -10404,6 +10414,7 @@ Council4 currently supports **16,598 of 32,501 cards eligible for paper support 
 - Plated Spider
 - Plated Wurm
 - Platoon Dispenser
+- Plaxcaster Frogling
 - Playful Shove
 - Plaza of Heroes
 - Plea for Guidance
@@ -11020,6 +11031,7 @@ Council4 currently supports **16,598 of 32,501 cards eligible for paper support 
 - Razorclaw Bear
 - Razorfield Rhino
 - Razorfield Thresher
+- Razorfin Abolisher
 - Razorfin Hunter
 - Razorfoot Griffin
 - Razorgrass Ambush // Razorgrass Field
@@ -13405,6 +13417,7 @@ Council4 currently supports **16,598 of 32,501 cards eligible for paper support 
 - Spore Flower
 - Spore Frog
 - Spore Swarm
+- Sporeback Troll
 - Sporeback Wolf
 - Sporecap Spider
 - Sporecrown Thallid
@@ -13588,6 +13601,7 @@ Council4 currently supports **16,598 of 32,501 cards eligible for paper support 
 - Stensia Bloodhall
 - Stensia Innkeeper
 - Stensia Masquerade
+- Steppe Glider
 - Steppe Lynx
 - Sterling Hound
 - Sterling Keykeeper
@@ -14236,6 +14250,7 @@ Council4 currently supports **16,598 of 32,501 cards eligible for paper support 
 - Tempered in Solitude
 - Tempered Sliver
 - Tempered Steel
+- Tempered Veteran
 - Tempest Angler
 - Tempest Djinn
 - Tempest Drake
@@ -15569,6 +15584,7 @@ Council4 currently supports **16,598 of 32,501 cards eligible for paper support 
 - Victory's Envoy
 - Victory's Herald
 - View from Above
+- Vigean Graftmage
 - Vigean Hydropon
 - Vigilant Baloth
 - Vigilant Drake
