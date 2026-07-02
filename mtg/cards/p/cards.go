@@ -41,6 +41,7 @@ var Cards = []*game.CardDef{
 	PlanarDisruption,
 	PlanarGuide,
 	PlantElemental,
+	PlaxcasterFrogling,
 	PointTheWay,
 	PonybackBrigade,
 	PortalToPhyrexia,

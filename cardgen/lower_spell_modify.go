@@ -1490,6 +1490,7 @@ func eachOfDamageTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bo
 	switch target.Selector.Kind {
 	case compiler.SelectorAny:
 		if selectorHasUnsupportedPermanentFilters(target.Selector) ||
+			selectorHasCounterQualifier(target.Selector) ||
 			len(target.Selector.SubtypesAny()) != 0 ||
 			len(target.Selector.ColorsAny()) != 0 ||
 			len(target.Selector.ExcludedTypes()) != 0 ||
@@ -2978,7 +2979,7 @@ func spellBounceTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, boo
 		selector.Attacking || selector.Blocking ||
 		selector.Tapped || selector.Untapped ||
 		selector.Colorless || selector.Multicolored ||
-		selector.BasicLandType || selector.MatchCounter ||
+		selector.BasicLandType || selectorHasCounterQualifier(selector) ||
 		selector.MatchManaValue || selector.MatchPower || selector.MatchToughness ||
 		selector.Keyword != parser.KeywordUnknown ||
 		selector.ExcludedKeyword != parser.KeywordUnknown ||

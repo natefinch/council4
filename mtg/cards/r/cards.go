@@ -34,6 +34,7 @@ var Cards = []*game.CardDef{
 	RattlebackApothecary,
 	RavenClanWarAxe,
 	RavenousRobots,
+	RazorfinAbolisher,
 	RazormaneMasticore,
 	RealityHeist,
 	RealmCloakedGiant,

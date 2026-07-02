@@ -146,6 +146,7 @@ var Cards = []*game.CardDef{
 	CrosstownCourier,
 	CrownOfFlames,
 	CruelRevival,
+	CrumblingAshes,
 	CrumblingColossus,
 	CrushingPain,
 	CruxOfFate,
@@ -162,4 +163,6 @@ var Cards = []*game.CardDef{
 	Cursecatcher,
 	CursedMonstrosity,
 	CyclopeanSnare,
+	CytoplastManipulator,
+	CytospawnShambler,
 }

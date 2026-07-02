@@ -475,6 +475,24 @@ func TestLowerFightSpell(t *testing.T) {
 	}
 }
 
+func TestLowerFightSpellCounterQualifiedTarget(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Counter Fight",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Target creature you control with a +1/+1 counter on it fights target creature you don't control.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 2 {
+		t.Fatalf("targets = %+v, want two creatures", mode.Targets)
+	}
+	selection := mode.Targets[0].Selection.Val
+	if !selection.MatchCounter || selection.RequiredCounter != counter.PlusOnePlusOne {
+		t.Fatalf("first target selection = %#v, want +1/+1 counter requirement", selection)
+	}
+}
+
 func TestLowerLoyaltyAbilityPositiveCost(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{

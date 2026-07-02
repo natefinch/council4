@@ -2070,19 +2070,11 @@ func massChosenTypeBasePhrase(selection *SelectionSyntax, phrase string) (string
 	return "", false
 }
 
-// massCounterBasePhrase strips a trailing counter qualifier ("with a +1/+1
-// counter on it" / "with a -1/-1 counter on them", or the negated "with no
-// counters on them") from a mass group phrase when the selection records the
-// matching counter requirement, returning the base group phrase to validate and
-// true. The base ("creatures") is then checked by the shared mass group/subtype
-// validators, so "Destroy all creatures with a +1/+1 counter on them." and
-// "Destroy all creatures with no counters on them." round-trip through the same
-// machinery as the bare mass group. Because stripping is driven by the modeled
-// CounterKind/CounterAbsent (not by text), an unmodeled named counter leaves
-// CounterRequired false and the phrase fails closed. The kind-agnostic "any
-// counter" form is intentionally not accepted: the runtime cannot honor it for a
-// mass group (it would require the zero-value counter kind in addition to any
-// counter), so it stays fail closed.
+// massCounterBasePhrase strips a trailing modeled counter qualifier from a
+// permanent phrase. It is shared by mass groups and exact target reconstruction,
+// accepting the named, kind-agnostic, no-counter, and excluded-kind forms with
+// singular or plural pronouns. The caller validates the remaining base phrase,
+// so an unmodeled or mismatched counter qualifier still fails closed.
 func massCounterBasePhrase(selection *SelectionSyntax, phrase string) (string, bool) {
 	if selection.CounterKindAbsent {
 		kind := selection.CounterKind.String()
@@ -2107,7 +2099,18 @@ func massCounterBasePhrase(selection *SelectionSyntax, phrase string) (string, b
 		}
 		return "", false
 	}
-	if !selection.CounterRequired || selection.CounterAny {
+	if selection.CounterAny {
+		for _, suffix := range []string{
+			" with a counter on it", " with a counter on them",
+			" with counters on it", " with counters on them",
+		} {
+			if base, ok := strings.CutSuffix(phrase, suffix); ok {
+				return base, true
+			}
+		}
+		return "", false
+	}
+	if !selection.CounterRequired {
 		return "", false
 	}
 	for _, suffix := range massCounterQualifierSuffixes(selection) {
@@ -2120,16 +2123,22 @@ func massCounterBasePhrase(selection *SelectionSyntax, phrase string) (string, b
 
 // massCounterQualifierSuffixes reconstructs the recognized counter-qualifier
 // suffixes for a named-counter selection from its modeled counter kind, covering
-// both the singular ("on it") and plural ("on them") pronoun and both articles
-// ("a"/"an") so the reconstructed text matches the source.
+// singular and plural counter nouns, both pronouns, and the optional article
+// forms recognized by the parser.
 func massCounterQualifierSuffixes(selection *SelectionSyntax) []string {
 	pronouns := []string{"it", "them"}
 	kind := selection.CounterKind.String()
-	suffixes := make([]string, 0, 2*len(pronouns))
+	suffixes := make([]string, 0, 4*len(pronouns))
 	for _, article := range []string{"a", "an"} {
 		for _, pronoun := range pronouns {
 			suffixes = append(suffixes, " with "+article+" "+kind+" counter on "+pronoun)
 		}
+	}
+	for _, pronoun := range pronouns {
+		suffixes = append(suffixes,
+			" with "+kind+" counter on "+pronoun,
+			" with "+kind+" counters on "+pronoun,
+		)
 	}
 	return suffixes
 }

@@ -36,6 +36,7 @@ var Cards = []*game.CardDef{
 	ViashinoBranchrider,
 	VictorTimelyWilyTycoon,
 	ViewFromAbove,
+	VigeanGraftmage,
 	VigilantMartyr,
 	VisageOfBolas,
 	VineshaperProdigy,

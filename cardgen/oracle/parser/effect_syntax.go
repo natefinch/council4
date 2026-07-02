@@ -1080,6 +1080,34 @@ func referencesOutsideAttackDefender(refs []Reference, hasDefender bool, defende
 	return kept
 }
 
+// referencesOutsideTargetCounterQualifiers drops the "it"/"them" pronoun that
+// closes a modeled counter qualifier inside a target noun phrase. The target's
+// typed Selection owns that pronoun; retaining it as a free semantic reference
+// would make lowerers treat the qualifier as a second resolving object.
+func referencesOutsideTargetCounterQualifiers(refs []Reference, targets []TargetSyntax) []Reference {
+	kept := make([]Reference, 0, len(refs))
+	for _, ref := range refs {
+		internal := false
+		for _, target := range targets {
+			if targetOwnsCounterQualifierReference(target, ref) {
+				internal = true
+				break
+			}
+		}
+		if !internal {
+			kept = append(kept, ref)
+		}
+	}
+	return kept
+}
+
+func targetOwnsCounterQualifierReference(target TargetSyntax, ref Reference) bool {
+	return selectionHasCounterQualifier(target.Selection) &&
+		ref.Kind == ReferencePronoun &&
+		(ref.Pronoun == PronounIt || ref.Pronoun == PronounThem) &&
+		spanCovers(target.Span, ref.Span)
+}
+
 // stripLeadingConditionClause drops a leading "As long as ..." condition clause
 // so the subject grammar sees only the effect's group subject ("creatures you
 // control"). The first effect's ownership tokens begin at the sentence start, so
@@ -1535,15 +1563,25 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			CastAsAdventure:          effectContainsWords(normalizedWords(clause), "as", "an", "adventure"),
 			CastWithoutPayingManaCost: kind == EffectCast &&
 				effectContainsWords(normalizedWords(clause), "without", "paying", "its", "mana", "cost"),
-			Negated:                 effectIsNegated(tokens, tokenIndex) && !fallbackOnInability,
-			FallbackOnInability:     fallbackOnInability,
-			Optional:                optional,
-			OptionalSpan:            optionalSpan,
-			LifeObject:              gainLoseLifeObject(kind, clause),
-			Symbol:                  firstEffectSymbol(clause),
-			Mana:                    parseEffectMana(kind, clause, nextConnection != EffectConnectionNone),
-			Replacement:             parseEffectReplacement(ownership, atoms),
-			References:              referencesOutsideSpan(referencesOutsideAttackDefender(referencesInSpan(atoms, ownershipSpan), hasAttackDefender, tokenAttackDefenderSpan), canAttackDefenderSpan),
+			Negated:             effectIsNegated(tokens, tokenIndex) && !fallbackOnInability,
+			FallbackOnInability: fallbackOnInability,
+			Optional:            optional,
+			OptionalSpan:        optionalSpan,
+			LifeObject:          gainLoseLifeObject(kind, clause),
+			Symbol:              firstEffectSymbol(clause),
+			Mana:                parseEffectMana(kind, clause, nextConnection != EffectConnectionNone),
+			Replacement:         parseEffectReplacement(ownership, atoms),
+			References: referencesOutsideTargetCounterQualifiers(
+				referencesOutsideSpan(
+					referencesOutsideAttackDefender(
+						referencesInSpan(atoms, ownershipSpan),
+						hasAttackDefender,
+						tokenAttackDefenderSpan,
+					),
+					canAttackDefenderSpan,
+				),
+				sentence.Targets,
+			),
 			SubjectReferences:       referencesInSpan(atoms, shared.SpanOf(tokens[ownershipStart:tokenIndex])),
 			Targets:                 targetsInSpan(sentence.Targets, ownershipSpan),
 			SubjectTargets:          targetsInSpan(sentence.Targets, shared.SpanOf(tokens[ownershipStart:tokenIndex])),

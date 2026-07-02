@@ -129,6 +129,7 @@ var Cards = []*game.CardDef{
 	Mulch,
 	MundaSVanguard,
 	MurderInvestigation,
+	MutantSPrey,
 	Mycologist,
 	MycosynthWellspring,
 	MysticMeditation,

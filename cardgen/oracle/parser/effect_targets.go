@@ -398,6 +398,14 @@ func exactRuntimeTargetSyntax(tokens []shared.Token, cardinality TargetCardinali
 // set of single-target qualifiers; exactRuntimeTargetSyntax also reuses it for
 // the "up to one target <noun>" optional form after stripping the count words.
 func exactSinglePermanentTargetSyntax(text string, selection SelectionSyntax) bool {
+	if selectionHasCounterQualifier(selection) {
+		base, ok := massCounterBasePhrase(&selection, text)
+		if !ok {
+			return false
+		}
+		text = base
+		clearSelectionCounterQualifier(&selection)
+	}
 	if selection.RequiredName != "" {
 		trimmed, had := strings.CutSuffix(text, " named "+selection.RequiredName)
 		if !had {
@@ -680,10 +688,19 @@ func exactTargetChoiceSpan(
 // failing closed for every other qualifier so unsupported plural wordings keep
 // failing the byte-exact round-trip.
 func exactMultiPermanentTargetSyntax(text string, cardinality TargetCardinalitySyntax, selection SelectionSyntax) bool {
+	if selectionHasCounterQualifier(selection) {
+		base, ok := massCounterBasePhrase(&selection, text)
+		if !ok {
+			return false
+		}
+		text = base
+		clearSelectionCounterQualifier(&selection)
+	}
 	prefix, plural, ok := multiTargetCardinalityPrefix(cardinality)
 	if !ok {
 		return false
 	}
+
 	if selection.All || selection.Another ||
 		selection.Attacking || selection.Blocking || selection.Tapped || selection.Untapped ||
 		selection.Keyword != KeywordUnknown || selection.Zone != zone.None ||
@@ -760,6 +777,19 @@ func exactMultiPermanentTargetSyntax(text string, cardinality TargetCardinalityS
 		return false
 	}
 	return strings.EqualFold(text, expected)
+}
+
+func selectionHasCounterQualifier(selection SelectionSyntax) bool {
+	return selection.CounterRequired || selection.CounterAny ||
+		selection.CounterAbsent || selection.CounterKindAbsent
+}
+
+func clearSelectionCounterQualifier(selection *SelectionSyntax) {
+	selection.CounterRequired = false
+	selection.CounterKind = 0
+	selection.CounterAny = false
+	selection.CounterAbsent = false
+	selection.CounterKindAbsent = false
 }
 
 // exactMultiPermanentUnionTargetSyntax reconstructs the canonical Oracle phrase
@@ -1810,8 +1840,12 @@ func exactExcludedSubtypeTargetSyntax(text string, selection SelectionSyntax) bo
 
 func targetSelectionHasUnsupportedQualifier(tokens []shared.Token, atoms Atoms) bool {
 	dynStart, dynEnd, hasDyn := selectionManaValueDynamicSpan(tokens)
+	counterStart, counterEnd, hasCounter := selectionCounterQualifierSpan(tokens)
 	for idx, token := range tokens {
 		if hasDyn && idx >= dynStart && idx < dynEnd {
+			continue
+		}
+		if hasCounter && idx >= counterStart && idx < counterEnd {
 			continue
 		}
 		if token.Kind == shared.Integer || token.Kind == shared.Comma || token.Kind == shared.Slash ||
@@ -1955,6 +1989,15 @@ func targetSyntaxEnd(tokens []shared.Token, atoms Atoms, start int) int {
 	}
 	for end < len(tokens) {
 		token := tokens[end]
+		// A modeled counter qualifier contains the effect verb-shaped noun
+		// "counter", which would otherwise terminate target scanning. Keep the
+		// whole qualifier in the target so parseSelection can preserve it.
+		if end > start {
+			if match, ok := counterQualifierKind(tokens, end); ok {
+				end = match.End
+				continue
+			}
+		}
 		// The same-name restriction clause embeds "have ... you control", whose
 		// "have" would otherwise terminate the target as an effect verb. Skip the
 		// whole clause so the target noun phrase keeps it; parseTargets records
@@ -3051,6 +3094,15 @@ func selectionCounterQualifier(tokens []shared.Token) (counterQualifierMatch, bo
 		}
 	}
 	return counterQualifierMatch{}, false
+}
+
+func selectionCounterQualifierSpan(tokens []shared.Token) (start, end int, found bool) {
+	for i := range tokens {
+		if match, ok := counterQualifierKind(tokens, i); ok {
+			return i, match.End, true
+		}
+	}
+	return 0, 0, false
 }
 
 // applyCounterQualifier records a parsed counter qualifier onto a selection's

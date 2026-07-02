@@ -910,7 +910,8 @@ func damageTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
 		// ability's source, a meaning the bare "any target" spec cannot express;
 		// reject it so single-target damage stays faithful. The two-target damage
 		// rider handles its own "other" (distinct-from-prior-target) separately.
-		if target.Selector.Other || target.Selector.Another {
+		if target.Selector.Other || target.Selector.Another ||
+			selectorHasCounterQualifier(target.Selector) {
 			return game.TargetSpec{}, false
 		}
 		spec.Allow = game.TargetAllowPermanent | game.TargetAllowPlayer
@@ -1081,6 +1082,7 @@ func permanentTargetSpecAllowingUnbounded(target compiler.CompiledTarget, allowU
 		}
 		selection.ExcludedKeyword = keyword
 	}
+	applyCounterTargetSelection(&selection, target.Selector)
 	if target.Selector.MatchManaValue {
 		if target.Selector.ManaValueX {
 			return game.TargetSpec{}, false
@@ -1167,6 +1169,7 @@ func alternativePermanentTargetSpec(target *compiler.CompiledTarget, spec *game.
 	default:
 		return game.TargetSpec{}, false
 	}
+	applyCounterTargetSelection(&selection, *selector)
 	for i := range selector.Alternatives {
 		alternativeSpec, ok := permanentTargetSpecWithCardinality(compiler.CompiledTarget{
 			Cardinality: compiler.TargetCardinality{Min: 1, Max: 1},
@@ -1202,6 +1205,28 @@ func selectorHasUnsupportedPermanentFilters(selector compiler.CompiledSelector) 
 		selector.SameNameGroup != nil
 }
 
+func selectorHasCounterQualifier(selector compiler.CompiledSelector) bool {
+	return selector.MatchCounter || selector.MatchAnyCounter ||
+		selector.MatchNoCounters || selector.MatchExcludedCounter
+}
+
+func applyCounterTargetSelection(selection *game.Selection, selector compiler.CompiledSelector) {
+	if selector.MatchCounter {
+		selection.MatchCounter = true
+		selection.RequiredCounter = selector.RequiredCounter
+	}
+	if selector.MatchAnyCounter {
+		selection.MatchAnyCounter = true
+	}
+	if selector.MatchNoCounters {
+		selection.MatchNoCounters = true
+	}
+	if selector.MatchExcludedCounter {
+		selection.MatchExcludedCounter = true
+		selection.ExcludedCounter = selector.ExcludedCounter
+	}
+}
+
 func stackSpellTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
 	if !targetCardinalityIsOne(target) ||
 		target.Selector.Another || target.Selector.Other ||
@@ -1211,6 +1236,7 @@ func stackSpellTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool
 		len(target.Selector.SubtypesAny()) != 0 ||
 		target.Selector.Keyword != parser.KeywordUnknown ||
 		target.Selector.Zone != zone.None ||
+		selectorHasCounterQualifier(target.Selector) ||
 		target.Selector.MatchPower ||
 		target.Selector.MatchToughness {
 		return game.TargetSpec{}, false
@@ -1339,7 +1365,8 @@ func spellTargetPlayerRelation(controller compiler.ControllerKind) (game.PlayerR
 
 func counterAbilityTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
 	if !targetCardinalityIsOne(target) ||
-		target.Selector.Another || target.Selector.Other {
+		target.Selector.Another || target.Selector.Other ||
+		selectorHasCounterQualifier(target.Selector) {
 		return game.TargetSpec{}, false
 	}
 	var kinds []game.StackObjectKind
