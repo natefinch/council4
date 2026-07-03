@@ -47,7 +47,7 @@ func (e *Engine) runTurn(g *game.Game, agents [game.NumPlayers]PlayerAgent) (log
 	if g.IsGameOver() {
 		return log
 	}
-	e.runEndingPhase(g, agents)
+	e.runEndingPhaseWithLog(g, agents, &log)
 	if g.IsGameOver() {
 		return log
 	}
@@ -81,8 +81,10 @@ func (e *Engine) runExtraPhases(g *game.Game, agents [game.NumPlayers]PlayerAgen
 
 func (e *Engine) runBeginningPhase(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
 	g.Turn.Phase = game.PhaseBeginning
+	log.addPhase(game.PhaseBeginning)
 
 	g.Turn.Step = game.StepUntap
+	log.addStep(game.StepUntap)
 	expireTurnStartDurations(g)
 	expireGoadForActivePlayer(g)
 	for _, permanent := range g.Battlefield {
@@ -137,6 +139,7 @@ func (e *Engine) runBeginningPhase(g *game.Game, agents [game.NumPlayers]PlayerA
 	untapDuringOtherPlayersUntapStep(g)
 
 	g.Turn.Step = game.StepUpkeep
+	log.addStep(game.StepUpkeep)
 	// Beginning-of-step triggers fire at the start of the upkeep and are put on
 	// the stack before the game advances to draw (CR 603.6c, CR 117.3b).
 	emitBeginningOfStepEvent(g, game.StepUpkeep)
@@ -156,6 +159,7 @@ func (e *Engine) runBeginningPhase(g *game.Game, agents [game.NumPlayers]PlayerA
 	scheduledSkip := consumeSkipStep(g, g.Turn.ActivePlayer, game.StepDraw)
 	if !playerSkipsDrawStep(g, g.Turn.ActivePlayer) && !scheduledSkip {
 		g.Turn.Step = game.StepDraw
+		log.addStep(game.StepDraw)
 		emitBeginningOfStepEvent(g, game.StepDraw)
 		e.drawCardWithReplacements(g, g.Turn.ActivePlayer, agents, log, true)
 		advanceSagas(g, g.Turn.ActivePlayer)
@@ -216,6 +220,7 @@ func untapForOtherPlayersStep(g *game.Game, permanent *game.Permanent) {
 
 func (e *Engine) runMainPhase(g *game.Game, agents [game.NumPlayers]PlayerAgent, phase game.Phase, log *TurnLog) {
 	g.Turn.Phase = phase
+	log.addPhase(phase)
 	step := game.StepNone
 	switch phase {
 	case game.PhasePrecombatMain:
@@ -237,8 +242,14 @@ func (e *Engine) runMainPhase(g *game.Game, agents [game.NumPlayers]PlayerAgent,
 }
 
 func (e *Engine) runEndingPhase(g *game.Game, agents [game.NumPlayers]PlayerAgent) {
+	e.runEndingPhaseWithLog(g, agents, nil)
+}
+
+func (e *Engine) runEndingPhaseWithLog(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
 	g.Turn.Phase = game.PhaseEnding
+	log.addPhase(game.PhaseEnding)
 	g.Turn.Step = game.StepEnd
+	log.addStep(game.StepEnd)
 	// "At the beginning of the end step" triggers use the same event as delayed
 	// next-end-step triggers before the end-step priority window (CR 603.6c,
 	// CR 603.7b).
@@ -247,17 +258,18 @@ func (e *Engine) runEndingPhase(g *game.Game, agents [game.NumPlayers]PlayerAgen
 	// End steps occur only on the active player's turn, so this is the monarch's
 	// end step exactly when the active player is the monarch.
 	if monarch, ok := playerByID(g, g.Turn.ActivePlayer); ok && monarch.IsMonarch {
-		e.drawCards(g, g.Turn.ActivePlayer, 1, agents, nil)
+		e.drawCards(g, g.Turn.ActivePlayer, 1, agents, log)
 	}
-	if e.putTriggeredAbilitiesOnStackWithChoices(g, agents, nil) || !g.Stack.IsEmpty() {
+	if e.putTriggeredAbilitiesOnStackWithChoices(g, agents, log) || !g.Stack.IsEmpty() {
 		g.Turn.PriorityPlayer = g.Turn.ActivePlayer
-		e.runPriorityLoop(g, agents, nil)
+		e.runPriorityLoop(g, agents, log)
 		if g.IsGameOver() {
 			return
 		}
 	}
 
 	g.Turn.Step = game.StepCleanup
+	log.addStep(game.StepCleanup)
 	discardToMaximumHandSize(g, g.Turn.ActivePlayer)
 	for _, permanent := range g.Battlefield {
 		if activeBattlefieldPermanent(permanent) {
@@ -274,7 +286,7 @@ func (e *Engine) runEndingPhase(g *game.Game, agents [game.NumPlayers]PlayerAgen
 	expirePreventionShields(g)
 	expireReplacementEffects(g)
 	expireRuleEffects(g)
-	e.applyStateBasedActions(g)
+	e.applyStateBasedActionsWithLog(g, log)
 	emptyManaPools(g)
 	g.Combat = nil
 }

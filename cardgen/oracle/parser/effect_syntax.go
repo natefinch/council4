@@ -1080,6 +1080,34 @@ func referencesOutsideAttackDefender(refs []Reference, hasDefender bool, defende
 	return kept
 }
 
+// referencesOutsideTargetCounterQualifiers drops the "it"/"them" pronoun that
+// closes a modeled counter qualifier inside a target noun phrase. The target's
+// typed Selection owns that pronoun; retaining it as a free semantic reference
+// would make lowerers treat the qualifier as a second resolving object.
+func referencesOutsideTargetCounterQualifiers(refs []Reference, targets []TargetSyntax) []Reference {
+	kept := make([]Reference, 0, len(refs))
+	for _, ref := range refs {
+		internal := false
+		for _, target := range targets {
+			if targetOwnsCounterQualifierReference(target, ref) {
+				internal = true
+				break
+			}
+		}
+		if !internal {
+			kept = append(kept, ref)
+		}
+	}
+	return kept
+}
+
+func targetOwnsCounterQualifierReference(target TargetSyntax, ref Reference) bool {
+	return selectionHasCounterQualifier(target.Selection) &&
+		ref.Kind == ReferencePronoun &&
+		(ref.Pronoun == PronounIt || ref.Pronoun == PronounThem) &&
+		spanCovers(target.Span, ref.Span)
+}
+
 // stripLeadingConditionClause drops a leading "As long as ..." condition clause
 // so the subject grammar sees only the effect's group subject ("creatures you
 // control"). The first effect's ownership tokens begin at the sentence start, so
@@ -1199,6 +1227,7 @@ func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) 
 		func() ([]EffectSyntax, bool) { return parseCantCastSpellsEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseSpellCostModifierEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseGroupMustAttackEffect(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parseGroupCantBlockEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseDirectedMustAttackEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseAttackTaxEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseSpellsCantBeCounteredEffect(sentence, tokens) },
@@ -1505,6 +1534,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			CanAttackDefenderSpan:    canAttackDefenderSpan,
 			TokenChoice:              parseTokenChoice(kind, clause),
 			StaticSubject:            staticSubject,
+			SubjectSourceAttached:    resolvingAttachedPossessiveSubject(ownership, staticSubject),
 			DoublePower:              doublePower,
 			DoubleToughness:          doubleToughness,
 			DoubleSourceCounters:     doubleSourceCounters,
@@ -1535,15 +1565,26 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			CastAsAdventure:          effectContainsWords(normalizedWords(clause), "as", "an", "adventure"),
 			CastWithoutPayingManaCost: kind == EffectCast &&
 				effectContainsWords(normalizedWords(clause), "without", "paying", "its", "mana", "cost"),
-			Negated:                 effectIsNegated(tokens, tokenIndex) && !fallbackOnInability,
-			FallbackOnInability:     fallbackOnInability,
-			Optional:                optional,
-			OptionalSpan:            optionalSpan,
-			LifeObject:              gainLoseLifeObject(kind, clause),
-			Symbol:                  firstEffectSymbol(clause),
-			Mana:                    parseEffectMana(kind, clause, nextConnection != EffectConnectionNone),
-			Replacement:             parseEffectReplacement(ownership, atoms),
-			References:              referencesOutsideSpan(referencesOutsideAttackDefender(referencesInSpan(atoms, ownershipSpan), hasAttackDefender, tokenAttackDefenderSpan), canAttackDefenderSpan),
+			Negated:             effectIsNegated(tokens, tokenIndex) && !fallbackOnInability,
+			FallbackOnInability: fallbackOnInability,
+			Optional:            optional,
+			OptionalSpan:        optionalSpan,
+			LifeObject:          gainLoseLifeObject(kind, clause),
+			LoseAllAbilities:    loseAllAbilitiesObject(kind, sentence.Text),
+			Symbol:              firstEffectSymbol(clause),
+			Mana:                parseEffectMana(kind, clause, nextConnection != EffectConnectionNone),
+			Replacement:         parseEffectReplacement(ownership, atoms),
+			References: referencesOutsideTargetCounterQualifiers(
+				referencesOutsideSpan(
+					referencesOutsideAttackDefender(
+						referencesInSpan(atoms, ownershipSpan),
+						hasAttackDefender,
+						tokenAttackDefenderSpan,
+					),
+					canAttackDefenderSpan,
+				),
+				sentence.Targets,
+			),
 			SubjectReferences:       referencesInSpan(atoms, shared.SpanOf(tokens[ownershipStart:tokenIndex])),
 			Targets:                 targetsInSpan(sentence.Targets, ownershipSpan),
 			SubjectTargets:          targetsInSpan(sentence.Targets, shared.SpanOf(tokens[ownershipStart:tokenIndex])),
@@ -1620,6 +1661,19 @@ func finalizeParsedEffect(effect *EffectSyntax, sentence Sentence, atoms Atoms) 
 	effect.ExileAttached = effect.Kind == EffectExile && exactExileAttachedEffectSyntax(effect)
 	effect.TapAttached = effect.Kind == EffectTap && exactTapAttachedEffectSyntax(effect)
 	effect.UntapAttached = effect.Kind == EffectUntap && exactUntapAttachedEffectSyntax(effect)
+	// A mass self-stun "<group> you control don't untap during your next untap
+	// step." carries its affected group only in its subject noun (no target or
+	// reference), so record that controlled-permanent group in StaticSubject for
+	// the group skip-untap lowering. The subject tokens are the clause's first
+	// three semantic tokens ("<group> you control"); crediting their span keeps
+	// the consumed-token accounting exact.
+	if kind, ok := negatedControlledGroupNextUntapStep(effect); ok {
+		semantic := semanticEffectTokens(effect.Tokens)
+		effect.StaticSubject = EffectStaticSubjectSyntax{
+			Kind: kind,
+			Span: shared.SpanOf(semantic[:3]),
+		}
+	}
 	if group, ok := exactCreateCopyTokenForEachEffectSyntax(effect, atoms); ok {
 		effect.TokenCopyOfForEach = true
 		effect.TokenCopyForEachGroup = group
@@ -3883,6 +3937,104 @@ func cantCastSpellsFilterType(word string) (required, excluded CardType, ok bool
 		}
 	}
 	return CardTypeUnknown, CardTypeUnknown, false
+}
+
+// parseGroupCantBlockEffect recognizes the one-shot, group-scoped combat
+// restriction "<group> can't block this turn." (Falter, Magmatic Chasm, Seismic
+// Stomp: "Creatures without flying can't block this turn."; Cosmotronic Wave:
+// "Creatures your opponents control can't block this turn."). The affected
+// creature group is recognized through the shared static-subject grammar and
+// recorded in StaticSubject so lowering can scope the this-turn can't-block rule
+// effect by controller, color, and keyword filter. It deliberately never matches
+// the targeted form "<target> can't block this turn." (that keeps flowing to the
+// generic per-clause target recognizer), so a leading "target" quantifier fails
+// closed here. Any subject the static-subject grammar cannot represent also
+// fails closed and flows through the generic effect parser.
+func parseGroupCantBlockEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	remaining, leadingDuration := stripLeadingDurationClause(tokens, atoms)
+	if leadingDuration != EffectDurationNone {
+		return nil, false
+	}
+	words := make([]shared.Token, 0, len(remaining))
+	for _, token := range remaining {
+		if token.Kind == shared.Period {
+			continue
+		}
+		words = append(words, token)
+	}
+	tail := []string{"can't", "block", "this", "turn"}
+	if len(words) <= len(tail) {
+		return nil, false
+	}
+	verbIndex := len(words) - len(tail)
+	for offset, want := range tail {
+		if !equalWord(words[verbIndex+offset], want) {
+			return nil, false
+		}
+	}
+	subjectWords := words[:verbIndex]
+	for _, word := range subjectWords {
+		// The targeted form "<target> can't block this turn." is owned by the
+		// generic target recognizer; never hijack it here.
+		if equalWord(word, "target") {
+			return nil, false
+		}
+	}
+	subject, ok := recognizeGroupSubjectWords(subjectWords)
+	if !ok {
+		return nil, false
+	}
+	subject.Span = shared.SpanOf(subjectWords)
+	return []EffectSyntax{{
+		Kind:          EffectCantBlock,
+		Span:          sentence.Span,
+		ClauseSpan:    sentence.Span,
+		VerbSpan:      words[verbIndex].Span,
+		Text:          sentence.Text,
+		Tokens:        append([]shared.Token(nil), tokens...),
+		Context:       EffectContextController,
+		Duration:      EffectDurationThisTurn,
+		StaticSubject: subject,
+		Exact:         true,
+	}}, true
+}
+
+// recognizeGroupSubjectWords recognizes a static creature-group subject standing
+// on its own (without a trailing group verb) by reusing the shared
+// parseEffectStaticSubject grammar: it appends a synthetic "have" verb so the
+// subject sub-parsers, which require a trailing group verb, engage over exactly
+// the subject tokens. It returns the recognized subject with Kind==None cleared
+// to a failure so an unrepresentable subject fails closed.
+func recognizeGroupSubjectWords(subjectWords []shared.Token) (EffectStaticSubjectSyntax, bool) {
+	if len(subjectWords) == 0 {
+		return EffectStaticSubjectSyntax{}, false
+	}
+	synthetic := append(append([]shared.Token(nil), subjectWords...), shared.Token{Kind: shared.Word, Text: "have"})
+	subject := parseEffectStaticSubject(synthetic, collectAtoms(synthetic, nil, nil, "", false))
+	if subject.Kind == EffectStaticSubjectNone {
+		return EffectStaticSubjectSyntax{}, false
+	}
+	// Only a plain creature group refined by an optional color and/or single
+	// keyword filter is representable by the this-turn can't-block rule effect.
+	// Subtype-, counter-, power-, and chosen-color-filtered groups drop their
+	// refinement when compiled, so they must fail closed here rather than widen
+	// to every creature.
+	if subject.SubtypeKnown ||
+		len(subject.SubtypesAny) != 0 ||
+		subject.ExcludedSubtype ||
+		len(subject.ExcludedSubtypes) != 0 ||
+		len(subject.ExcludedTypes) != 0 ||
+		subject.CounterRequired ||
+		subject.CounterAny ||
+		subject.MatchPower ||
+		subject.MatchToughness ||
+		subject.PowerOrToughness ||
+		subject.PowerLessThanSource ||
+		subject.PowerGreaterThanSource ||
+		subject.ChosenColorFromEntry {
+		return EffectStaticSubjectSyntax{}, false
+	}
+	return subject, true
 }
 
 // parseGroupMustAttackEffect recognizes the one-shot forced-attack effect

@@ -242,6 +242,13 @@ type StackObject struct {
 	// CapturedTargetManaValueLKI preserves target spell mana values captured
 	// from the enclosing spell or ability that created a delayed trigger.
 	CapturedTargetManaValueLKI map[int]int
+
+	// CapturedObjectID is the permanent frozen at schedule time by the delayed
+	// trigger that produced this stack object, carried so content referencing
+	// ObjectReferenceCapturedObject can act on the combat creature after the
+	// triggering combat event is gone ("destroy that creature at end of
+	// combat").
+	CapturedObjectID id.ID
 }
 
 // Stack represents the game stack — the zone where spells and abilities

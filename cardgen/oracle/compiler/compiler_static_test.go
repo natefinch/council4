@@ -657,6 +657,91 @@ func TestCompileGuardedCantAttackOrBlockDeclaration(t *testing.T) {
 	}
 }
 
+func TestCompileCantAttackUnlessDefenderControlsDeclaration(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		source        string
+		subtypes      []string
+		colors        []color.Color
+		requiredTypes []types.Card
+		keyword       parser.KeywordKind
+	}{
+		"island": {
+			source:   "This creature can't attack unless defending player controls an Island.",
+			subtypes: []string{"Island"},
+		},
+		"blue permanent": {
+			source: "This creature can't attack unless defending player controls a blue permanent.",
+			colors: []color.Color{color.Blue},
+		},
+		"creature with flying": {
+			source:        "This creature can't attack unless defending player controls a creature with flying.",
+			requiredTypes: []types.Card{types.Creature},
+			keyword:       parser.KeywordFlying,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := compileSource(test.source, pipelineContext{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			static := compilation.Abilities[0].Static
+			if static == nil || len(static.Declarations) != 1 {
+				t.Fatalf("static semantics = %#v, want one declaration", static)
+			}
+			declaration := static.Declarations[0]
+			if declaration.Rule == nil || declaration.Rule.Kind != StaticRuleCantAttack {
+				t.Fatalf("rule = %#v, want CantAttack", declaration.Rule)
+			}
+			if declaration.Group.Domain != StaticGroupSource {
+				t.Fatalf("group domain = %v, want StaticGroupSource", declaration.Group.Domain)
+			}
+			if declaration.Condition == nil {
+				t.Fatal("declaration condition = nil, want the guard condition")
+			}
+			if !declaration.Condition.Negated {
+				t.Fatalf("condition = %#v, want negated", declaration.Condition)
+			}
+			if declaration.Condition.Predicate != ConditionPredicateDefendingPlayerControls {
+				t.Fatalf("condition predicate = %v, want defending player controls", declaration.Condition.Predicate)
+			}
+			selection := declaration.Condition.Selection
+			if !slices.Equal(selection.SubtypesAny, test.subtypes) ||
+				!slices.Equal(selection.ColorsAny, test.colors) ||
+				!slices.Equal(selection.RequiredTypes, test.requiredTypes) ||
+				selection.Keyword != test.keyword {
+				t.Fatalf("selection = %#v", selection)
+			}
+		})
+	}
+}
+
+func TestCompileCantAttackUnlessDefenderControlsFailsClosed(t *testing.T) {
+	t.Parallel()
+	tests := map[string]string{
+		// Disjunctive selection is not representable as a single Selection.
+		"unrepresentable selection": "This creature can't attack unless defending player controls an enchantment or an enchanted permanent.",
+		// The defending-player-controls guard is only accepted for the negated
+		// "unless" can't-attack form; an affirmative must-attack form is rejected.
+		"affirmative must attack": "This creature attacks each combat if able if defending player controls an Island.",
+	}
+	for name, source := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			compilation, _ := compileSource(source, pipelineContext{})
+			if len(compilation.Abilities) == 0 {
+				return
+			}
+			static := compilation.Abilities[0].Static
+			if static != nil && len(static.Declarations) != 0 {
+				t.Fatalf("static declarations = %#v, want none (fail closed)", static.Declarations)
+			}
+		})
+	}
+}
+
 func TestCompileStaticPTBuffSubjects(t *testing.T) {
 	t.Parallel()
 	tests := map[string]struct {

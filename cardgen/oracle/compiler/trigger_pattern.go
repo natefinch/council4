@@ -55,6 +55,10 @@ const (
 	// opponent, an object an opponent controls, or a card in an opponent's
 	// graveyard.
 	TriggerEventCrimeCommitted
+	// TriggerEventBecameMonarch is the "become the monarch" event (CR 720.2): a
+	// player who was not already the monarch takes the crown, whether by a
+	// designation effect or by dealing combat damage to the monarch.
+	TriggerEventBecameMonarch
 )
 
 // TriggerCastTurn restricts a spell-cast pattern by whose turn the spell was
@@ -388,4 +392,10 @@ type TriggerPattern struct {
 	ClassBecameLevel int
 
 	InterveningCondition *CompiledCondition
+
+	// StateCondition holds the board-state predicate of a state trigger
+	// (Kind == TriggerState). The runtime fires the trigger whenever this
+	// condition holds while it is not already on the stack (CR 603.8). It is nil
+	// for every event-based pattern.
+	StateCondition *CompiledCondition
 }

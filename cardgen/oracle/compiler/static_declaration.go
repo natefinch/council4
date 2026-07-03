@@ -1445,18 +1445,21 @@ func recognizeTypedStaticRuleDeclarations(ability CompiledAbility, syntax *parse
 }
 
 // staticRuleGuardCondition pairs a static rule's trailing guard clause (its
-// Guarded flag, e.g. "unless you control seven or more lands.") with the single
-// supported compiled condition the condition machinery produced for it. An
-// unguarded rule must carry no conditions. A guarded rule is supported only for
-// the land-gated can't-attack-or-block restriction (Topiary Stomper) and must
-// carry exactly one supported condition; every other guarded rule fails closed
-// so the broadening stays narrow and text-blind.
+// Guarded flag) with the single supported compiled condition the condition
+// machinery produced for it. An unguarded rule must carry no conditions. Two
+// guarded rules are supported and every other guarded rule fails closed so the
+// broadening stays narrow and text-blind:
+//
+//   - the land-gated can't-attack-or-block restriction (Topiary Stomper) accepts
+//     any recognized controller-state gate ("unless you control seven or more
+//     lands.") as a static on/off condition; and
+//   - the can't-attack-unless-defending-player-controls restriction (Sea Monster)
+//     accepts only the negated "unless defending player controls ..." guard,
+//     which resolves per attack against the defending player's board rather than
+//     gating the static ability on/off.
 func staticRuleGuardCondition(ability CompiledAbility, node parser.StaticRuleSyntax, rule StaticRuleKind) (*CompiledCondition, bool) {
 	if !node.Guarded {
 		return nil, len(ability.Content.Conditions) == 0
-	}
-	if rule != StaticRuleCantAttackOrBlock {
-		return nil, false
 	}
 	if len(ability.Content.Conditions) != 1 {
 		return nil, false
@@ -1465,7 +1468,20 @@ func staticRuleGuardCondition(ability CompiledAbility, node parser.StaticRuleSyn
 	if condition.Predicate == ConditionPredicateUnsupported || condition.Resolving {
 		return nil, false
 	}
-	return condition, true
+	switch rule {
+	case StaticRuleCantAttackOrBlock:
+		if condition.Predicate == ConditionPredicateDefendingPlayerControls {
+			return nil, false
+		}
+		return condition, true
+	case StaticRuleCantAttack:
+		if condition.Predicate != ConditionPredicateDefendingPlayerControls || !condition.Negated {
+			return nil, false
+		}
+		return condition, true
+	default:
+		return nil, false
+	}
 }
 
 // staticRuleGroupDomain maps a parsed static rule subject to the affected group

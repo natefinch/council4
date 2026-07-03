@@ -120,21 +120,32 @@ func TestLowerMultiTokenPerTokenKeyword(t *testing.T) {
 	}
 }
 
-// TestLowerMultiTokenRendererCollisionFailsClosed proves the fail-closed guard
-// against the renderer's tokenDefKey limitation. Wurmcoil Engine creates two
-// "Phyrexian Wurm" tokens that share name, colorless color, and 3/3 P/T but
-// differ in keywords (deathtouch vs. lifelink). Because tokenDefKey omits static
-// abilities, those two definitions would collapse to a single var and render
-// identically, so lowering must fail closed rather than emit a wrong card.
-func TestLowerMultiTokenRendererCollisionFailsClosed(t *testing.T) {
+// TestLowerMultiTokenDistinctKeywordTokens proves the two-token form whose
+// tokens share name/color/power/toughness but differ only in keyword now lowers
+// to two DISTINCT token defs (Wurmcoil Engine's deathtouch and lifelink Phyrexian
+// Wurms), rather than failing closed. tokenDefKey now includes StaticAbilities, so
+// the two defs get distinct render vars instead of collapsing onto one.
+func TestLowerMultiTokenDistinctKeywordTokens(t *testing.T) {
 	t.Parallel()
-	face := lowerSingleFaceExpectingUnsupported(t, &ScryfallCard{
+	face := lowerSingleFace(t, &ScryfallCard{
 		Name:       "Test Wurmcoil",
 		Layout:     "normal",
 		TypeLine:   "Sorcery",
 		OracleText: "Create a 3/3 colorless Phyrexian Wurm artifact creature token with deathtouch and a 3/3 colorless Phyrexian Wurm artifact creature token with lifelink.",
 	})
-	if face.SpellAbility.Exists {
-		t.Fatal("spell ability lowered, want fail-closed for colliding token defs")
+	creates := multiTokenCreateInstructions(t, face)
+	if len(creates) != 2 {
+		t.Fatalf("sequence length = %d, want 2", len(creates))
+	}
+	first := multiTokenDef(t, creates[0])
+	if len(first.StaticAbilities) != 1 || !reflect.DeepEqual(first.StaticAbilities[0], game.DeathtouchStaticBody) {
+		t.Fatalf("token[0] statics = %v, want [Deathtouch]", first.StaticAbilities)
+	}
+	second := multiTokenDef(t, creates[1])
+	if len(second.StaticAbilities) != 1 || !reflect.DeepEqual(second.StaticAbilities[0], game.LifelinkStaticBody) {
+		t.Fatalf("token[1] statics = %v, want [Lifelink]", second.StaticAbilities)
+	}
+	if tokenDefKey(first) == tokenDefKey(second) {
+		t.Fatal("tokenDefKey collapsed the deathtouch and lifelink tokens onto one key")
 	}
 }

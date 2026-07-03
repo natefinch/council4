@@ -1490,6 +1490,8 @@ func eachOfDamageTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bo
 	switch target.Selector.Kind {
 	case compiler.SelectorAny:
 		if selectorHasUnsupportedPermanentFilters(target.Selector) ||
+			selectorHasCounterQualifier(target.Selector) ||
+			selectorHasAttachmentQualifier(target.Selector) ||
 			len(target.Selector.SubtypesAny()) != 0 ||
 			len(target.Selector.ColorsAny()) != 0 ||
 			len(target.Selector.ExcludedTypes()) != 0 ||
@@ -2527,9 +2529,10 @@ func lowerGroupTemporaryKeywordSpell(
 	unsupported func() (game.AbilityContent, *shared.Diagnostic),
 ) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
+	_, _, hasCounterQualifier := effect.StaticSubjectCounter()
 	if len(ctx.content.Effects) != 1 ||
 		len(ctx.content.Targets) != 0 ||
-		len(ctx.content.References) != 0 ||
+		!counterQualifierReferencesOnly(ctx.content.References, hasCounterQualifier) ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Modes) != 0 ||
 		effect.Kind != compiler.EffectGain ||
@@ -2584,13 +2587,26 @@ func lowerTemporaryKeywordLossSpell(ctx contentCtx) (game.AbilityContent, *share
 	if !ok {
 		return unsupported()
 	}
-	keywords, ok := mixedStaticKeywords(ctx.content.Keywords)
-	if !ok {
-		return unsupported()
-	}
-	continuous := game.ContinuousEffect{
-		Layer:          game.LayerAbility,
-		RemoveKeywords: keywords,
+	var continuous game.ContinuousEffect
+	if effect.LoseAllAbilities {
+		// "<subject> loses all abilities" removes every ability at once; the
+		// named-keyword list must be empty (the total form subsumes any keyword).
+		if len(ctx.content.Keywords) != 0 {
+			return unsupported()
+		}
+		continuous = game.ContinuousEffect{
+			Layer:              game.LayerAbility,
+			RemoveAllAbilities: true,
+		}
+	} else {
+		keywords, ok := mixedStaticKeywords(ctx.content.Keywords)
+		if !ok {
+			return unsupported()
+		}
+		continuous = game.ContinuousEffect{
+			Layer:          game.LayerAbility,
+			RemoveKeywords: keywords,
+		}
 	}
 	continuousEffects := []game.ContinuousEffect{continuous}
 	return continuousSubjectMode(
@@ -2977,7 +2993,8 @@ func spellBounceTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, boo
 		selector.Attacking || selector.Blocking ||
 		selector.Tapped || selector.Untapped ||
 		selector.Colorless || selector.Multicolored ||
-		selector.BasicLandType || selector.MatchCounter ||
+		selector.BasicLandType || selectorHasCounterQualifier(selector) ||
+		selectorHasAttachmentQualifier(selector) ||
 		selector.MatchManaValue || selector.MatchPower || selector.MatchToughness ||
 		selector.Keyword != parser.KeywordUnknown ||
 		selector.ExcludedKeyword != parser.KeywordUnknown ||

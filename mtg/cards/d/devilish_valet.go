@@ -55,7 +55,8 @@ func newDevilishValet() *game.CardDef {
 									Object: opt.Val(game.SourcePermanentReference()),
 									ContinuousEffects: []game.ContinuousEffect{
 										game.ContinuousEffect{
-											Layer: game.LayerPowerToughnessModify,
+											Layer:       game.LayerPowerToughnessModify,
+											DoublePower: true,
 										},
 									},
 									Duration: game.DurationUntilEndOfTurn,

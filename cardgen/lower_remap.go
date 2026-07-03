@@ -114,7 +114,7 @@ func transformPrimitiveTargetIndices(primitive game.Primitive, transform targetI
 			}
 			value.DamageSource = opt.Val(source)
 		}
-		amount, ok := transformDamageAmount(value.Amount, transform)
+		amount, ok := transformQuantity(value.Amount, transform)
 		if !ok {
 			return nil, false
 		}
@@ -130,6 +130,10 @@ func transformPrimitiveTargetIndices(primitive game.Primitive, transform targetI
 	}
 	if value, ok := primitive.(game.AddCounter); ok {
 		value.Object, ok = transformObjectReference(value.Object, transform)
+		if !ok {
+			return nil, false
+		}
+		value.Amount, ok = transformQuantity(value.Amount, transform)
 		return value, ok
 	}
 	if value, ok := primitive.(game.AddPlayerCounter); ok {
@@ -173,6 +177,14 @@ func transformPrimitiveTargetIndices(primitive game.Primitive, transform targetI
 	}
 	if value, ok := primitive.(game.RemoveFromCombat); ok {
 		value.Object, ok = transformObjectReference(value.Object, transform)
+		return value, ok
+	}
+	if value, ok := primitive.(game.LookAtHand); ok {
+		value.Player, ok = transformPlayerReference(value.Player, transform)
+		return value, ok
+	}
+	if value, ok := primitive.(game.BecomeMonarch); ok {
+		value.Player, ok = transformPlayerReference(value.Player, transform)
 		return value, ok
 	}
 	if value, ok := primitive.(game.Exile); ok {
@@ -243,10 +255,31 @@ func transformPrimitiveTargetIndices(primitive game.Primitive, transform targetI
 		value.Player, ok = transformPlayerReference(value.Player, transform)
 		return value, ok
 	}
+	if value, ok := primitive.(game.SacrificePermanents); ok {
+		// The player-group form ("Each opponent sacrifices ...") carries no
+		// clause-local target index; only the single-player form ("Target player
+		// sacrifices ...") does, so transform that and leave the group form
+		// unchanged. Selection is a permanent filter and carries no target index.
+		if value.Player.Kind() == game.PlayerReferenceNone {
+			return value, true
+		}
+		value.Player, ok = transformPlayerReference(value.Player, transform)
+		return value, ok
+	}
 	if value, ok := primitive.(game.CreateDelayedTrigger); ok {
 		return value, true
 	}
 	if value, ok := primitive.(game.ApplyContinuous); ok {
+		if value.Object.Exists {
+			transformed, ok := transformObjectReference(value.Object.Val, transform)
+			if !ok {
+				return nil, false
+			}
+			value.Object = opt.Val(transformed)
+		}
+		return value, true
+	}
+	if value, ok := primitive.(game.ApplyRule); ok {
 		if value.Object.Exists {
 			transformed, ok := transformObjectReference(value.Object.Val, transform)
 			if !ok {
@@ -382,11 +415,10 @@ func objectReferenceCarriesTargetIndex(reference game.ObjectReference) bool {
 	}
 }
 
-// transformDamageAmount transforms a damage Quantity whose dynamic formula reads
-// a target's value (e.g. DynamicAmountObjectPower for "equal to its power").
-// Fixed amounts and dynamic formulas that do not reference a target are returned
-// unchanged so non-inherited damage stays byte-identical.
-func transformDamageAmount(amount game.Quantity, transform targetIndexTransform) (game.Quantity, bool) {
+// transformQuantity transforms a Quantity whose dynamic formula reads a target's
+// value (e.g. DynamicAmountObjectPower for "equal to its power"). Fixed amounts
+// and dynamic formulas that do not reference a target are returned unchanged.
+func transformQuantity(amount game.Quantity, transform targetIndexTransform) (game.Quantity, bool) {
 	dynamic := amount.DynamicAmount()
 	if !dynamic.Exists || !objectReferenceCarriesTargetIndex(dynamic.Val.Object) {
 		return amount, true

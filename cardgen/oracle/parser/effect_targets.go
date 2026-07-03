@@ -398,6 +398,14 @@ func exactRuntimeTargetSyntax(tokens []shared.Token, cardinality TargetCardinali
 // set of single-target qualifiers; exactRuntimeTargetSyntax also reuses it for
 // the "up to one target <noun>" optional form after stripping the count words.
 func exactSinglePermanentTargetSyntax(text string, selection SelectionSyntax) bool {
+	if selectionHasCounterQualifier(selection) {
+		base, ok := massCounterBasePhrase(&selection, text)
+		if !ok {
+			return false
+		}
+		text = base
+		clearSelectionCounterQualifier(&selection)
+	}
 	if selection.RequiredName != "" {
 		trimmed, had := strings.CutSuffix(text, " named "+selection.RequiredName)
 		if !had {
@@ -583,6 +591,9 @@ func chosenCreatureTargetHasScalarQualifiers(selection SelectionSyntax) bool {
 		selection.Blocking ||
 		selection.Tapped ||
 		selection.Untapped ||
+		selection.Modified ||
+		selection.Enchanted ||
+		selection.Equipped ||
 		selection.Colorless ||
 		selection.Multicolored ||
 		selection.MatchManaValue ||
@@ -680,10 +691,19 @@ func exactTargetChoiceSpan(
 // failing closed for every other qualifier so unsupported plural wordings keep
 // failing the byte-exact round-trip.
 func exactMultiPermanentTargetSyntax(text string, cardinality TargetCardinalitySyntax, selection SelectionSyntax) bool {
+	if selectionHasCounterQualifier(selection) {
+		base, ok := massCounterBasePhrase(&selection, text)
+		if !ok {
+			return false
+		}
+		text = base
+		clearSelectionCounterQualifier(&selection)
+	}
 	prefix, plural, ok := multiTargetCardinalityPrefix(cardinality)
 	if !ok {
 		return false
 	}
+
 	if selection.All || selection.Another ||
 		selection.Attacking || selection.Blocking || selection.Tapped || selection.Untapped ||
 		selection.Keyword != KeywordUnknown || selection.Zone != zone.None ||
@@ -748,6 +768,18 @@ func exactMultiPermanentTargetSyntax(text string, cardinality TargetCardinalityS
 	if plural {
 		noun += "s"
 	}
+	// The attachment adjective ("modified", "enchanted", "equipped") prints
+	// between the "target" determiner and the (optionally excluded-prefixed)
+	// noun, e.g. "up to two target enchanted creatures". More than one qualifier
+	// fails closed.
+	attachmentWords, ok := selectionAttachmentWords(selection)
+	if !ok {
+		return false
+	}
+	attachmentPrefix := ""
+	if len(attachmentWords) == 1 {
+		attachmentPrefix = attachmentWords[0] + " "
+	}
 	// The plural "other" exclusion ("up to two other target creatures") reads
 	// between the count words and "target"; "another" stays rejected above as a
 	// singular shape the multi-target round-trip does not represent.
@@ -755,11 +787,24 @@ func exactMultiPermanentTargetSyntax(text string, cardinality TargetCardinalityS
 	if selection.Other {
 		otherWord = "other "
 	}
-	expected, ok := targetControllerSuffix(prefix+otherWord+"target "+excludedPrefix+noun, selection.Controller)
+	expected, ok := targetControllerSuffix(prefix+otherWord+"target "+attachmentPrefix+excludedPrefix+noun, selection.Controller)
 	if !ok {
 		return false
 	}
 	return strings.EqualFold(text, expected)
+}
+
+func selectionHasCounterQualifier(selection SelectionSyntax) bool {
+	return selection.CounterRequired || selection.CounterAny ||
+		selection.CounterAbsent || selection.CounterKindAbsent
+}
+
+func clearSelectionCounterQualifier(selection *SelectionSyntax) {
+	selection.CounterRequired = false
+	selection.CounterKind = 0
+	selection.CounterAny = false
+	selection.CounterAbsent = false
+	selection.CounterKindAbsent = false
 }
 
 // exactMultiPermanentUnionTargetSyntax reconstructs the canonical Oracle phrase
@@ -968,7 +1013,8 @@ func exactPermanentTargetText(selection SelectionSyntax) (string, bool) {
 func permanentSelectionQualifierWords(selection SelectionSyntax) ([]string, bool) {
 	conjunctiveNoun, conjunctive := conjunctiveCreatureTargetNoun(selection)
 	if selection.All || selection.Zone != zone.None ||
-		selection.Colorless || selection.Multicolored ||
+		(selection.Colorless && selection.Multicolored) ||
+		((selection.Colorless || selection.Multicolored) && len(selection.ColorsAny) != 0) ||
 		len(selection.ExcludedColors) != 0 ||
 		len(selection.ExcludedTypes) != 0 ||
 		(len(selection.RequiredTypesAny) > 1 && !conjunctive) ||
@@ -996,7 +1042,13 @@ func permanentSelectionQualifierWords(selection SelectionSyntax) ([]string, bool
 			return nil, false
 		}
 	}
-	words := append([]string(nil), combatWords...)
+	attachmentWords, ok := selectionAttachmentWords(selection)
+	if !ok {
+		return nil, false
+	}
+	words := make([]string, 0, len(attachmentWords)+len(combatWords))
+	words = append(words, attachmentWords...)
+	words = append(words, combatWords...)
 	if len(selection.Supertypes) == 1 {
 		supertypeText, ok := supertypeWord(selection.Supertypes[0])
 		if !ok {
@@ -1015,6 +1067,13 @@ func permanentSelectionQualifierWords(selection SelectionSyntax) ([]string, bool
 			}
 			words = append(words, colorText)
 		}
+	}
+	switch {
+	case selection.Colorless:
+		words = append(words, "colorless")
+	case selection.Multicolored:
+		words = append(words, "multicolored")
+	default:
 	}
 	if len(selection.SubtypesAny) == 1 {
 		words = append(words, string(selection.SubtypesAny[0]))
@@ -1075,6 +1134,44 @@ func selectionCombatStateWords(selection SelectionSyntax) ([]string, bool) {
 	default:
 		return nil, true
 	}
+}
+
+// selectionHasAttachmentQualifier reports whether the selection carries a
+// positive attachment/modification adjective ("modified", "enchanted", or
+// "equipped"). These qualifiers restrict a permanent target to one carrying the
+// matching attachment state (CR 701.50).
+func selectionHasAttachmentQualifier(selection SelectionSyntax) bool {
+	return selection.Modified || selection.Enchanted || selection.Equipped
+}
+
+// selectionAttachmentWords reconstructs the canonical Oracle adjective for a
+// permanent target's attachment qualifier ("modified", "enchanted", or
+// "equipped"), which prints immediately after the "target" determiner. The three
+// qualifiers are mutually exclusive; a selection carrying more than one fails
+// closed so no reconstruction silently drops a qualifier. A selection carrying
+// none returns the empty word list, leaving the reconstruction unchanged.
+func selectionAttachmentWords(selection SelectionSyntax) ([]string, bool) {
+	count := 0
+	word := ""
+	if selection.Modified {
+		count++
+		word = "modified"
+	}
+	if selection.Enchanted {
+		count++
+		word = "enchanted"
+	}
+	if selection.Equipped {
+		count++
+		word = "equipped"
+	}
+	if count > 1 {
+		return nil, false
+	}
+	if count == 0 {
+		return nil, true
+	}
+	return []string{word}, true
 }
 
 // tokenQualifiedNoun applies a selection's token adjective to its permanent
@@ -1510,6 +1607,8 @@ func permanentSelectionNoun(kind SelectionKind) (string, bool) {
 		return "artifact", true
 	case SelectionBattle:
 		return "battle", true
+	case SelectionCommander:
+		return "commander", true
 	case SelectionCreature:
 		return "creature", true
 	case SelectionEnchantment:
@@ -1800,8 +1899,12 @@ func exactExcludedSubtypeTargetSyntax(text string, selection SelectionSyntax) bo
 
 func targetSelectionHasUnsupportedQualifier(tokens []shared.Token, atoms Atoms) bool {
 	dynStart, dynEnd, hasDyn := selectionManaValueDynamicSpan(tokens)
+	counterStart, counterEnd, hasCounter := selectionCounterQualifierSpan(tokens)
 	for idx, token := range tokens {
 		if hasDyn && idx >= dynStart && idx < dynEnd {
+			continue
+		}
+		if hasCounter && idx >= counterStart && idx < counterEnd {
 			continue
 		}
 		if token.Kind == shared.Integer || token.Kind == shared.Comma || token.Kind == shared.Slash ||
@@ -1945,6 +2048,15 @@ func targetSyntaxEnd(tokens []shared.Token, atoms Atoms, start int) int {
 	}
 	for end < len(tokens) {
 		token := tokens[end]
+		// A modeled counter qualifier contains the effect verb-shaped noun
+		// "counter", which would otherwise terminate target scanning. Keep the
+		// whole qualifier in the target so parseSelection can preserve it.
+		if end > start {
+			if match, ok := counterQualifierKind(tokens, end); ok {
+				end = match.End
+				continue
+			}
+		}
 		// The same-name restriction clause embeds "have ... you control", whose
 		// "have" would otherwise terminate the target as an effect verb. Skip the
 		// whole clause so the target noun phrase keeps it; parseTargets records
@@ -2001,6 +2113,7 @@ func targetSyntaxEnd(tokens []shared.Token, atoms Atoms, start int) int {
 			(equalWord(token, "this") && end+1 < len(tokens) && equalWord(tokens[end+1], "turn") &&
 				thisTurnIsTrailingDuration(tokens, end)) ||
 			(end > start && equalWord(token, "if")) ||
+			counterPlacementForEachAmountAt(tokens, atoms, start, end) ||
 			(equalWord(token, "for") && effectWordsAt(tokens, end, "for", "as", "long", "as")) ||
 			(equalWord(token, "as") && effectWordsAt(tokens, end, "as", "long", "as", "this")) {
 			break
@@ -2010,6 +2123,22 @@ func targetSyntaxEnd(tokens []shared.Token, atoms Atoms, start int) int {
 	}
 
 	return end
+}
+
+func counterPlacementForEachAmountAt(tokens []shared.Token, atoms Atoms, start, end int) bool {
+	if end <= start || !effectWordsAt(tokens, end, "for", "each") {
+		return false
+	}
+	for i := start - 1; i >= 0; i-- {
+		if tokens[i].Kind == shared.Period || tokens[i].Kind == shared.Semicolon {
+			return false
+		}
+		if effectWordKind(tokens[i]) == EffectPut {
+			_, _, ok := atoms.CounterIn(shared.SpanOf(tokens[i:start]))
+			return ok
+		}
+	}
+	return false
 }
 
 // negatedTypeListCommaAt reports whether the comma at index i joins two negated
@@ -2356,6 +2485,13 @@ func splitSelectionOtherThanSelfTail(tokens []shared.Token, atoms Atoms) (head [
 			continue
 		}
 		nameTokens := tokens[i+2:]
+		// "other than this creature/permanent/<self-type>" names the source via
+		// the self-reference pronoun (Sorceress Queen, Serendib Sorcerer), the
+		// same self-exclusion the card-name form expresses.
+		if len(nameTokens) == 2 && equalWord(nameTokens[0], "this") &&
+			referenceSelfMarkerNoun(nameTokens[1]) {
+			return tokens[:i], true
+		}
 		span, found := atoms.SelfNameSpanStartingAt(nameTokens[0].Span)
 		if !found || tokenCountForSpan(nameTokens, span) != len(nameTokens) {
 			return nil, false
@@ -2625,6 +2761,9 @@ func parseSelection(tokens []shared.Token, atoms Atoms) SelectionSyntax {
 	selection.Untapped = atoms.SelectionFlagIn(span, SelectionFlagUntapped)
 	selection.NonToken = atoms.SelectionFlagIn(span, SelectionFlagNonToken)
 	selection.TokenOnly = atoms.SelectionFlagIn(span, SelectionFlagToken)
+	selection.Modified = atoms.SelectionFlagIn(span, SelectionFlagModified)
+	selection.Enchanted = atoms.SelectionFlagIn(span, SelectionFlagEnchanted)
+	selection.Equipped = atoms.SelectionFlagIn(span, SelectionFlagEquipped)
 	selection.EnteredThisTurn = effectContainsWords(words, "that", "entered", "this", "turn") ||
 		effectContainsWords(words, "that", "entered", "the", "battlefield", "this", "turn")
 	selection.DealtDamageThisTurn = effectContainsWords(words, "that", "was", "dealt", "damage", "this", "turn")
@@ -3026,6 +3165,15 @@ func selectionCounterQualifier(tokens []shared.Token) (counterQualifierMatch, bo
 	return counterQualifierMatch{}, false
 }
 
+func selectionCounterQualifierSpan(tokens []shared.Token) (start, end int, found bool) {
+	for i := range tokens {
+		if match, ok := counterQualifierKind(tokens, i); ok {
+			return i, match.End, true
+		}
+	}
+	return 0, 0, false
+}
+
 // applyCounterQualifier records a parsed counter qualifier onto a selection's
 // counter-filter fields, covering every form counterQualifierKind recognizes:
 // the named "with a <kind> counter on it/them", the kind-agnostic "with a
@@ -3296,7 +3444,8 @@ func parseEffectStaticSubject(tokens []shared.Token, atoms Atoms) EffectStaticSu
 	case len(tokens) >= 3 &&
 		(equalWord(tokens[0], "enchanted") || equalWord(tokens[0], "equipped")) &&
 		equalWord(tokens[1], "creature") &&
-		(equalWord(tokens[2], "gets") || equalWord(tokens[2], "has")):
+		(equalWord(tokens[2], "gets") || equalWord(tokens[2], "has") ||
+			equalWord(tokens[2], "gains") || equalWord(tokens[2], "loses")):
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectAttachedObject, Span: shared.SpanOf(tokens[:2])}
 	case len(tokens) >= 4 && effectWordsAt(tokens, 0, "all", "other", "creatures") &&
 		staticGroupVerb(tokens[3]):
@@ -4009,7 +4158,7 @@ func parseChosenColorControlledGroupSubject(tokens []shared.Token, atoms Atoms) 
 func parseFilteredControlledCreatureGroupSubject(tokens []shared.Token) (EffectStaticSubjectSyntax, bool) {
 	switch {
 	case len(tokens) >= 5 && effectWordsAt(tokens, 0, "creature", "tokens", "you", "control") &&
-		(equalWord(tokens[4], "get") || equalWord(tokens[4], "have")):
+		staticGroupVerb(tokens[4]):
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledCreatureTokens, Span: shared.SpanOf(tokens[:4])}, true
 	case len(tokens) >= 5 && effectWordsAt(tokens, 0, "legendary", "creatures", "you", "control") &&
 		(equalWord(tokens[4], "get") || equalWord(tokens[4], "have")):
@@ -4179,15 +4328,16 @@ func counterGroupNounPhrase(tokens []shared.Token) (counterGroupHead, bool) {
 
 // counterGroupVerbAt reports whether the token at index introduces the group
 // effect verb that follows a counter-matters anthem subject: the singular
-// "has"/"gets" after "each creature", or the plural "have"/"get".
+// "has"/"gets"/"gains"/"loses" after "each creature", or the plural
+// "have"/"get"/"gain"/"lose".
 func counterGroupVerbAt(tokens []shared.Token, index int, singular bool) bool {
 	if index >= len(tokens) {
 		return false
 	}
 	if singular {
-		return equalWord(tokens[index], "has") || equalWord(tokens[index], "gets")
+		return staticGroupVerbSingular(tokens[index])
 	}
-	return equalWord(tokens[index], "have") || equalWord(tokens[index], "get")
+	return staticGroupVerb(tokens[index])
 }
 
 // staticKeywordGroupKind resolves the static subject kind for a keyword-filtered

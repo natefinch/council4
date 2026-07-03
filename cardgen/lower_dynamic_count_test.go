@@ -40,6 +40,7 @@ func TestLowerDynamicLifeBattlefieldSelectionCounts(t *testing.T) {
 		colorless    bool
 		controller   game.ControllerRelation
 		tapped       game.TriState
+		combatState  game.CombatStateFilter
 	}{
 		{
 			name:       "subtype Shrine",
@@ -78,6 +79,14 @@ func TestLowerDynamicLifeBattlefieldSelectionCounts(t *testing.T) {
 			requiredType: types.Creature,
 			colorless:    true,
 			controller:   game.ControllerYou,
+		},
+		{
+			name:         "attacking creature you control",
+			oracleText:   "You gain 1 life for each attacking creature you control.",
+			multiplier:   1,
+			requiredType: types.Creature,
+			controller:   game.ControllerYou,
+			combatState:  game.CombatStateAttacking,
 		},
 		{
 			name:         "legendary creature supertype",
@@ -128,6 +137,9 @@ func TestLowerDynamicLifeBattlefieldSelectionCounts(t *testing.T) {
 			}
 			if selection.Tapped != test.tapped {
 				t.Fatalf("tapped = %v, want %v", selection.Tapped, test.tapped)
+			}
+			if selection.CombatState != test.combatState {
+				t.Fatalf("combat state = %v, want %v", selection.CombatState, test.combatState)
 			}
 		})
 	}
@@ -276,7 +288,6 @@ func TestLowerDynamicLifeZoneCounts(t *testing.T) {
 func TestLowerDynamicLifeFailsClosed(t *testing.T) {
 	t.Parallel()
 	for _, oracleText := range []string{
-		"You gain 1 life for each attacking creature you control.",
 		"You gain 1 life for each another creature you control.",
 		"You gain 1 life for each instant card in your graveyard.",
 		"You gain 1 life for each sorcery card in your graveyard.",

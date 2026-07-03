@@ -54,3 +54,71 @@ func TestLowerConniveTrigger(t *testing.T) {
 		t.Fatalf("connive amount = %#v, want Fixed(1)", connive.Amount)
 	}
 }
+
+func TestLowerTargetConnive(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Mob Lookout",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human Rogue",
+		OracleText: "When this creature enters, target creature you control connives.",
+		Power:      new("2"),
+		Toughness:  new("3"),
+	})
+	mode := face.TriggeredAbilities[0].Content.Modes[0]
+	if len(mode.Targets) != 1 {
+		t.Fatalf("targets = %#v, want one", mode.Targets)
+	}
+	connive, ok := mode.Sequence[0].Primitive.(game.Connive)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.Connive", mode.Sequence[0].Primitive)
+	}
+	object := game.TargetPermanentReference(0)
+	if connive.Object != object ||
+		connive.Player != game.ObjectControllerReference(object) ||
+		connive.Amount != game.Fixed(1) {
+		t.Fatalf("connive = %#v", connive)
+	}
+}
+
+func TestLowerEventPermanentConnive(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Raffine's Informant",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human Wizard",
+		OracleText: "When this creature enters, it connives.",
+		Power:      new("2"),
+		Toughness:  new("1"),
+	})
+	connive, ok := face.TriggeredAbilities[0].Content.Modes[0].Sequence[0].Primitive.(game.Connive)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.Connive", face.TriggeredAbilities[0].Content.Modes[0].Sequence[0].Primitive)
+	}
+	object := game.EventPermanentReference()
+	if connive.Object != object ||
+		connive.Player != game.ObjectControllerReference(object) {
+		t.Fatalf("connive = %#v", connive)
+	}
+}
+
+func TestLowerTargetConniveDynamicAmount(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Raffine, Scheming Seer",
+		Layout:     "normal",
+		TypeLine:   "Legendary Creature — Sphinx Demon",
+		OracleText: "Flying, ward {1}\nWhenever you attack, target attacking creature connives X, where X is the number of attacking creatures.",
+		Power:      new("1"),
+		Toughness:  new("4"),
+	})
+	connive, ok := face.TriggeredAbilities[0].Content.Modes[0].Sequence[0].Primitive.(game.Connive)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.Connive", face.TriggeredAbilities[0].Content.Modes[0].Sequence[0].Primitive)
+	}
+	dynamic := connive.Amount.DynamicAmount()
+	if !dynamic.Exists || dynamic.Val.Kind != game.DynamicAmountCountSelector ||
+		dynamic.Val.Group.Selection().CombatState != game.CombatStateAttacking {
+		t.Fatalf("amount = %#v", connive.Amount)
+	}
+}

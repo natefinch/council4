@@ -11,7 +11,10 @@ import (
 // wording that embedded trigger and ability bodies use ("..., you create a
 // Treasure token.", "Whenever ..., you create a 1/1 ... token."). The two
 // wordings describe the identical controller effect; the subject "You" is a
-// surface variant the byte-exact reconstruction would otherwise reject.
+// surface variant the byte-exact reconstruction would otherwise reject. A
+// trailing-"instead" escalation clause is normalized by exactEffectClauseText
+// (the " instead" suffix is stripped for the plain EffectReplacementInstead
+// form), so it reaches here as the bare body.
 func createTokenControllerClauseMatches(clause, body string) bool {
 	return strings.EqualFold(clause, "Create "+body) ||
 		strings.EqualFold(clause, "You create "+body)

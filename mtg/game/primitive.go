@@ -1131,9 +1131,13 @@ type Untap struct {
 // SkipNextUntap marks the referenced permanent so it doesn't untap during its
 // controller's next untap step (the "doesn't untap during its controller's next
 // untap step" clause that follows a tap effect). The permanent stays tapped
-// through one of its controller's untap steps and then untaps normally.
+// through one of its controller's untap steps and then untaps normally. A group
+// form marks every permanent in Group instead (the mass "Lands you control don't
+// untap during your next untap step." clause). Exactly one of Object or Group is
+// set.
 type SkipNextUntap struct {
 	Object ObjectReference
+	Group  GroupReference
 }
 
 // RemoveFromCombat removes the referenced creature from combat ("Remove target

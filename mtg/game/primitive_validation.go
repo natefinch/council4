@@ -868,7 +868,11 @@ func validateManaSpendRider(rider ManaSpendRider) error {
 		ManaSpendCastArtifactSpellOnly,
 		ManaSpendCastOrActivateArtifact,
 		ManaSpendActivateArtifactAbility,
-		ManaSpendCastArtifactOrActivateAbility:
+		ManaSpendCastArtifactOrActivateAbility,
+		ManaSpendCastInstantOrSorcerySpell,
+		ManaSpendCastNoncreatureSpell,
+		ManaSpendCastMulticoloredSpell,
+		ManaSpendCastPlaneswalkerSpell:
 		if rider.Restriction != ManaSpendRestrictedToCondition ||
 			rider.ChosenSubtypeFrom != "" ||
 			rider.SpellRuleEffect != RuleEffectNone ||
@@ -2096,7 +2100,7 @@ func (p Untap) validatePrimitive(targets []TargetSpec, checkTargets bool) error 
 }
 
 func (p SkipNextUntap) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
-	return validateObjectReference(p.Object, targets, checkTargets)
+	return validateMassObjectOrGroup(p.Object, p.Group, targets, checkTargets)
 }
 
 func (p RemoveFromCombat) validatePrimitive(targets []TargetSpec, checkTargets bool) error {

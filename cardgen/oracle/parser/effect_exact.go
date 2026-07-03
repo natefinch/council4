@@ -137,6 +137,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return exactGainPlayerCounterEffectSyntax(effect)
 	case EffectPut:
 		return exactCounterPlacementEffectSyntax(effect) || exactGraveyardPutEffectSyntax(effect) ||
+			exactTargetPermanentLibraryPutEffectSyntax(effect) ||
 			exactDualReferencedCounterPlacementEffectSyntax(effect) ||
 			exactCounteredSpellDestinationSyntax(effect) ||
 			exactDigPutEffectSyntax(effect) || exactHandLibraryPutEffectSyntax(effect) ||
@@ -1997,6 +1998,18 @@ func exactTemporaryKeywordLossEffectSyntax(effect *EffectSyntax) bool {
 	return exactTemporaryKeywordChangeSyntax(effect, "lose", "loses", false)
 }
 
+// keywordChangeBodyExact reports whether the reconstructed keyword-change body
+// round-trips: either an exact named-keyword list, or the total "all abilities"
+// object of a loses-all-abilities effect. The all-abilities form is gated on the
+// LoseAllAbilities flag (only set for a resolving "loses all abilities" lose
+// effect), so a keyword grant or any other change never accepts the literal.
+func keywordChangeBodyExact(effect *EffectSyntax, body string) bool {
+	if effect.LoseAllAbilities && body == "all abilities" {
+		return true
+	}
+	return exactTemporaryKeywordList(body)
+}
+
 // exactTemporaryKeywordChangeSyntax reconstructs the byte-exact form of a
 // resolving until-end-of-turn keyword change clause for the supplied plural verb
 // ("gain"/"lose") and singular verb ("gains"/"loses"). It covers every affected
@@ -2011,7 +2024,7 @@ func exactTemporaryKeywordLossEffectSyntax(effect *EffectSyntax) bool {
 // loss verb passes false, since a keyword-loss choice is not lowered.
 func exactTemporaryKeywordChangeSyntax(effect *EffectSyntax, pluralVerb, singularVerb string, allowChoice bool) bool {
 	validBody := func(body string) bool {
-		return exactTemporaryKeywordList(body) || (allowChoice && exactKeywordChoiceList(body))
+		return keywordChangeBodyExact(effect, body) || (allowChoice && exactKeywordChoiceList(body))
 	}
 	switch effect.Duration {
 	case EffectDurationUntilEndOfTurn:
@@ -2045,7 +2058,7 @@ func exactTemporaryKeywordChangeSyntax(effect *EffectSyntax, pluralVerb, singula
 			return false
 		}
 		middle, ok = cutTemporaryKeywordDurationSuffix(effect, middle)
-		return ok && exactTemporaryKeywordList(middle)
+		return ok && keywordChangeBodyExact(effect, middle)
 	}
 	if effect.Context == EffectContextReferencedObject {
 		subject, ok := exactObjectReferenceText(effect.SubjectReferences)
@@ -2198,7 +2211,7 @@ func exactGroupTemporaryKeywordEffectSyntax(effect *EffectSyntax, text, pluralVe
 		if !ok {
 			continue
 		}
-		if body, ok := strings.CutSuffix(middle, " until end of turn."); ok && body != "" && exactTemporaryKeywordList(body) {
+		if body, ok := strings.CutSuffix(middle, " until end of turn."); ok && body != "" && keywordChangeBodyExact(effect, body) {
 			return true
 		}
 		// A keyword-first mass pump ("Creatures you control gain trample and get
@@ -2208,7 +2221,7 @@ func exactGroupTemporaryKeywordEffectSyntax(effect *EffectSyntax, text, pluralVe
 		// bare "<subject> gain <keywords>." form only when the duration was
 		// recognized so a static anthem (no duration) never matches.
 		if effect.Duration == EffectDurationUntilEndOfTurn {
-			if body, ok := strings.CutSuffix(middle, "."); ok && body != "" && exactTemporaryKeywordList(body) {
+			if body, ok := strings.CutSuffix(middle, "."); ok && body != "" && keywordChangeBodyExact(effect, body) {
 				return true
 			}
 		}
@@ -4058,20 +4071,36 @@ func digSourceText(source DigSourceKind) string {
 }
 
 // exactConniveEffectSyntax reconstructs a connive keyword-action clause whose
-// subject is the conniving permanent itself ("this creature connives.",
-// "<this card's name> connives.", and the rarer numeric "<subject> connives N."
-// form). It requires the source-scoped self subject and, when a count is
-// printed, a fixed count of at least one; the variable form fails closed. The
-// parenthetical reminder text is excluded from the parsed clause upstream.
+// subject is the source, one exact target, or one referenced permanent. A bare
+// connive has amount one; fixed and recognized dynamic-X counts are reconstructed
+// from their typed amount. The parenthetical reminder text is excluded upstream.
 func exactConniveEffectSyntax(effect *EffectSyntax) bool {
-	if effect.Context != EffectContextSource {
-		return false
+	var subject string
+	var ok bool
+	switch effect.Context {
+	case EffectContextSource:
+		subject, ok = exactSelfSubjectReferenceText(effect.SubjectReferences)
+	case EffectContextTarget:
+		if len(effect.Targets) == 1 && effect.Targets[0].Exact {
+			subject, ok = effect.Targets[0].Text, true
+		}
+	case EffectContextReferencedObject:
+		subject, ok = exactObjectReferenceText(effect.SubjectReferences)
+	default:
 	}
-	subject, ok := exactSelfSubjectReferenceText(effect.SubjectReferences)
-	if !ok {
+	if !ok || subject == "" {
 		return false
 	}
 	text := exactEffectClauseText(effect)
+	if effect.Amount.DynamicKind != EffectDynamicAmountNone {
+		if effect.Amount.DynamicForm != EffectDynamicAmountFormWhereX {
+			return false
+		}
+		return strings.EqualFold(
+			text,
+			fmt.Sprintf("%s connives X, %s.", subject, effect.Amount.Text),
+		)
+	}
 	if !effect.Amount.Known {
 		return strings.EqualFold(text, subject+" connives.")
 	}
@@ -4370,7 +4399,8 @@ func exactGroupModifyPTEffectSyntax(effect *EffectSyntax) bool {
 	// creature gets ..."), unlike the plural "all creatures get ..."; pick the
 	// verb form from the subject so the round-trip reconstructs the source text.
 	verb := "get"
-	if equalWord(subject[0], "each") {
+	if equalWord(subject[0], "each") ||
+		effect.StaticSubject.Kind == EffectStaticSubjectAttachedObject {
 		verb = "gets"
 	}
 	prefix := fmt.Sprintf(
@@ -4543,12 +4573,14 @@ func exactRemoveAllCountersEffectSyntax(effect *EffectSyntax) bool {
 }
 
 // exactRemoveCounterObjectText returns the rendered object a counter is removed
-// from, for either a single exact target permanent ("target creature") or a lone
+// from, for a single exact target permanent ("target creature"), a lone
 // source/self reference ("this creature"/"this artifact"/the card's own name, as
-// in "Remove a -1/-1 counter from this creature."). It fails closed for every
-// other shape — multiple or inexact targets, a targeted cardinality above one, a
-// group ("each creature you control"), or a "from it" pronoun paired with delayed
-// timing — so unrepresentable removals keep the wording unsupported.
+// in "Remove a -1/-1 counter from this creature."), or a group recipient ("each
+// creature you control", Heartmender) that removes a counter from every
+// permanent in a battlefield group. It fails closed for every other shape —
+// multiple or inexact targets, a targeted cardinality above one, or a "from it"
+// pronoun paired with delayed timing — so unrepresentable removals keep the
+// wording unsupported.
 func exactRemoveCounterObjectText(effect *EffectSyntax) (string, bool) {
 	switch {
 	case len(effect.Targets) == 1 && len(effect.References) == 0:
@@ -4561,6 +4593,13 @@ func exactRemoveCounterObjectText(effect *EffectSyntax) (string, bool) {
 			return object, true
 		}
 		return exactSelfSubjectReferenceText(effect.References)
+	case len(effect.Targets) == 0 && len(effect.References) == 0:
+		// A group recipient ("each creature you control", Heartmender) removes a
+		// counter from every permanent in a battlefield group. It carries no
+		// target or reference; the group selection reconstructs the "each <group>"
+		// phrase, reusing the group-damage recipient renderer counter placement
+		// already shares.
+		return exactGroupDamagePermanentRecipientText(effect.Selection)
 	}
 	return "", false
 }
@@ -5037,14 +5076,23 @@ func counterPlacementTextMatches(effect *EffectSyntax, object string) bool {
 	// The "for each" form ("Put a +1/+1 counter on target creature for each Elf
 	// you control.") places one counter per counted object and states its count
 	// as a trailing "for each <iterator>" clause that the amount captured
-	// verbatim. Only the multiplier-one form prints the bare "a <kind> counter"
-	// count word, so a richer multiplier or an unrecognized iterator fails
-	// closed.
+	// verbatim. A multiplier of one prints the bare "a <kind> counter"; a larger
+	// fixed multiplier prints its canonical cardinal word and the plural noun.
 	if effect.Amount.DynamicForm == EffectDynamicAmountFormForEach {
-		if effect.Amount.DynamicKind == EffectDynamicAmountNone || effect.Amount.Multiplier != 1 {
+		if effect.Amount.DynamicKind == EffectDynamicAmountNone || effect.Amount.Multiplier < 1 {
 			return false
 		}
-		forEachPrefix := fmt.Sprintf("Put a %s counter on %s", effect.CounterKind.String(), object)
+		count := "a"
+		noun := "counter"
+		if effect.Amount.Multiplier > 1 {
+			var ok bool
+			count, ok = cardinalWord(effect.Amount.Multiplier)
+			if !ok {
+				return false
+			}
+			noun = "counters"
+		}
+		forEachPrefix := fmt.Sprintf("Put %s %s %s on %s", count, effect.CounterKind.String(), noun, object)
 		return strings.EqualFold(text, forEachPrefix+" "+effect.Amount.Text+".")
 	}
 	prefix := fmt.Sprintf("Put %s %s %s on %s", effectAmountSourceText(effect), effect.CounterKind.String(), noun, object)

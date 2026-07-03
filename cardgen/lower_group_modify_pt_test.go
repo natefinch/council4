@@ -1,9 +1,11 @@
 package cardgen
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -121,6 +123,26 @@ func TestLowerGroupModifyPTControlledCreatures(t *testing.T) {
 	}
 	if _, excludes := effect.Group.Exclusion(); excludes {
 		t.Fatal("creatures you control must not exclude the source")
+	}
+}
+
+func TestLowerGroupModifyPTColorFiltered(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		oracleText string
+		controller game.ControllerRelation
+		wantColor  color.Color
+	}{
+		{"White creatures you control get +2/+2 until end of turn.", game.ControllerYou, color.White},
+		{"Black creatures get +2/+0 until end of turn.", game.ControllerAny, color.Black},
+	}
+	for _, test := range tests {
+		effect := groupModifyPTContinuous(t, test.oracleText)
+		selection := effect.Group.Selection()
+		if selection.Controller != test.controller ||
+			!slices.Equal(selection.ColorsAny, []color.Color{test.wantColor}) {
+			t.Fatalf("selection = %#v", selection)
+		}
 	}
 }
 
@@ -269,8 +291,7 @@ func TestLowerGroupModifyPTFailsClosed(t *testing.T) {
 		"All creatures get -X/-X until end of turn.",
 		"Each creature gets -X/-X until end of turn.",
 		"Creatures you control get +X/+X until end of turn.",
-		// Color-filtered groups are not yet representable.
-		"Green creatures you control get +1/+1 until end of turn.",
+		// Excluded-color groups are not yet representable.
 		"Nongreen creatures you control get +1/+0 until end of turn.",
 		// Rider beyond the bare power/toughness change.
 		"All creatures get -1/-1 until end of turn and can't block this turn.",

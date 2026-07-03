@@ -157,6 +157,10 @@ func dividedDamageTargetSpec(target compiler.CompiledTarget, capTotal int) (game
 	// "Any target" admits both permanents and players, a combination the
 	// permanent selection does not model, so build it directly.
 	if target.Selector.Kind == compiler.SelectorAny {
+		if selectorHasCounterQualifier(target.Selector) ||
+			selectorHasAttachmentQualifier(target.Selector) {
+			return game.TargetSpec{}, false
+		}
 		return game.TargetSpec{
 			MinTargets: 1,
 			MaxTargets: maxTargets,
@@ -184,10 +188,10 @@ func dividedDamageTargetSpec(target compiler.CompiledTarget, capTotal int) (game
 // divided-damage spell chooses among. It supports the plain "creature" noun, the
 // "creature and/or planeswalker" card-type union, a controller filter ("your
 // opponents control"), color adjectives ("white and/or blue"), an
-// attacking/blocking combat state, and a single "with"/"without" keyword
-// qualifier — the selectors the divided round-trip reconstructs. It fails closed
-// for every subtype, supertype, tapped, counter, or numeric qualifier it does
-// not model.
+// attacking/blocking combat state, counter qualifier, and a single
+// "with"/"without" keyword qualifier — the selectors the divided round-trip
+// reconstructs. It fails closed for every subtype, supertype, tapped, or numeric
+// qualifier it does not model.
 func dividedDamagePermanentSelection(selector compiler.CompiledSelector) (game.Selection, bool) {
 	if selector.Kind != compiler.SelectorCreature {
 		return game.Selection{}, false
@@ -219,6 +223,8 @@ func dividedDamagePermanentSelection(selector compiler.CompiledSelector) (game.S
 		required = append([]types.Card(nil), union...)
 	}
 	selection := game.Selection{RequiredTypesAny: required}
+	applyCounterTargetSelection(&selection, selector)
+	applyAttachmentTargetSelection(&selection, selector)
 	switch {
 	case selector.Attacking && selector.Blocking:
 		selection.CombatState = game.CombatStateAttackingOrBlocking

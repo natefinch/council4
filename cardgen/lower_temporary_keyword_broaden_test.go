@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -18,11 +19,16 @@ import (
 func TestLowerTemporaryKeywordGrantBroadTargets(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name         string
-		oracle       string
-		wantKeywords []game.Keyword
-		wantTypes    []types.Card
-		wantSubtypes []types.Sub
+		name                string
+		oracle              string
+		wantKeywords        []game.Keyword
+		wantTypes           []types.Card
+		wantSubtypes        []types.Sub
+		wantCounter         bool
+		wantAnyCounter      bool
+		wantNoCounters      bool
+		wantExcludedCounter bool
+		wantCommander       bool
 	}{
 		{
 			name:         "bare subtype noun target",
@@ -41,6 +47,40 @@ func TestLowerTemporaryKeywordGrantBroadTargets(t *testing.T) {
 			oracle:       "Target black creature gains flying until end of turn.",
 			wantKeywords: []game.Keyword{game.Flying},
 			wantTypes:    []types.Card{types.Creature},
+		},
+		{
+			name:         "named-counter creature target",
+			oracle:       "Target creature with a +1/+1 counter on it gains trample until end of turn.",
+			wantKeywords: []game.Keyword{game.Trample},
+			wantTypes:    []types.Card{types.Creature},
+			wantCounter:  true,
+		},
+		{
+			name:           "any-counter creature target",
+			oracle:         "Target creature with a counter on it gains lifelink until end of turn.",
+			wantKeywords:   []game.Keyword{game.Lifelink},
+			wantTypes:      []types.Card{types.Creature},
+			wantAnyCounter: true,
+		},
+		{
+			name:           "no-counter creature target",
+			oracle:         "Target creature with no counters on it gains haste until end of turn.",
+			wantKeywords:   []game.Keyword{game.Haste},
+			wantTypes:      []types.Card{types.Creature},
+			wantNoCounters: true,
+		},
+		{
+			name:                "excluded-counter creature target",
+			oracle:              "Target creature without a +1/+1 counter on it gains flying until end of turn.",
+			wantKeywords:        []game.Keyword{game.Flying},
+			wantTypes:           []types.Card{types.Creature},
+			wantExcludedCounter: true,
+		},
+		{
+			name:          "commander target",
+			oracle:        "Target commander gains lifelink until end of turn.",
+			wantKeywords:  []game.Keyword{game.Lifelink},
+			wantCommander: true,
 		},
 	}
 	for _, tc := range tests {
@@ -64,6 +104,22 @@ func TestLowerTemporaryKeywordGrantBroadTargets(t *testing.T) {
 			}
 			if tc.wantSubtypes != nil && !reflect.DeepEqual(mode.Targets[0].Selection.Val.SubtypesAny, tc.wantSubtypes) {
 				t.Fatalf("subtypes = %v, want %v", mode.Targets[0].Selection.Val.SubtypesAny, tc.wantSubtypes)
+			}
+			selection := mode.Targets[0].Selection.Val
+			if selection.MatchCounter != tc.wantCounter ||
+				selection.MatchAnyCounter != tc.wantAnyCounter ||
+				selection.MatchNoCounters != tc.wantNoCounters ||
+				selection.MatchExcludedCounter != tc.wantExcludedCounter {
+				t.Fatalf("counter selection = %#v", selection)
+			}
+			if tc.wantCounter && selection.RequiredCounter != counter.PlusOnePlusOne {
+				t.Fatalf("required counter = %v, want +1/+1", selection.RequiredCounter)
+			}
+			if tc.wantExcludedCounter && selection.ExcludedCounter != counter.PlusOnePlusOne {
+				t.Fatalf("excluded counter = %v, want +1/+1", selection.ExcludedCounter)
+			}
+			if selection.MatchCommander != tc.wantCommander {
+				t.Fatalf("match commander = %v, want %v", selection.MatchCommander, tc.wantCommander)
 			}
 			if len(mode.Sequence) != 1 {
 				t.Fatalf("sequence = %#v, want one instruction", mode.Sequence)
@@ -205,6 +261,78 @@ func TestLowerTemporaryKeywordLossBroadTargets(t *testing.T) {
 				t.Fatalf("continuous effect = %+v, want %v keyword loss", effect, tc.wantKeywords)
 			}
 		})
+	}
+}
+
+// TestLowerTemporaryLoseAllAbilities covers the resolving total "loses all
+// abilities" removal (#2646): the ability-removal continuous effect routes
+// through the same continuous-subject machinery as keyword loss, so it composes
+// across target, group, and source subjects, each emitting a LayerAbility
+// RemoveAllAbilities continuous effect.
+func TestLowerTemporaryLoseAllAbilities(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		typeLine string
+		oracle   string
+	}{
+		{
+			name:     "single target",
+			typeLine: "Instant",
+			oracle:   "Target creature loses all abilities until end of turn.",
+		},
+		{
+			name:     "opponent group",
+			typeLine: "Sorcery",
+			oracle:   "Creatures your opponents control lose all abilities until end of turn.",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Lose All",
+				Layout:     "normal",
+				TypeLine:   tc.typeLine,
+				OracleText: tc.oracle,
+			})
+			mode := face.SpellAbility.Val.Modes[0]
+			apply, ok := mode.Sequence[0].Primitive.(game.ApplyContinuous)
+			if !ok {
+				t.Fatalf("primitive = %T, want game.ApplyContinuous", mode.Sequence[0].Primitive)
+			}
+			if apply.Duration != game.DurationUntilEndOfTurn {
+				t.Fatalf("duration = %v, want until end of turn", apply.Duration)
+			}
+			effect := apply.ContinuousEffects[0]
+			if effect.Layer != game.LayerAbility || !effect.RemoveAllAbilities ||
+				len(effect.RemoveKeywords) != 0 {
+				t.Fatalf("continuous effect = %+v, want LayerAbility RemoveAllAbilities", effect)
+			}
+		})
+	}
+}
+
+// TestLowerLoseSpecificAbilityClassFailsClosed confirms that removing a specific
+// quoted ability class ("loses all \"bands with other\" abilities", Shelkin
+// Brownie) is NOT mistaken for total ability removal: the parser strips the
+// quoted class from the clause tokens, but the raw-text discriminator keeps the
+// LoseAllAbilities flag off, so the spell fails closed rather than wrongly
+// removing every ability.
+func TestLowerLoseSpecificAbilityClassFailsClosed(t *testing.T) {
+	t.Parallel()
+	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Specific Loss",
+		Layout:     "normal",
+		TypeLine:   "Creature — Faerie",
+		ManaCost:   "{2}",
+		OracleText: `{T}: Target creature loses all "bands with other" abilities until end of turn.`,
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("expected diagnostics for specific ability-class removal, got none")
 	}
 }
 

@@ -9,6 +9,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -198,7 +199,7 @@ func basePermanentValues(g *game.Game, permanent *game.Permanent) permanentEffec
 		if permanent.FaceDownKind == game.FaceDownDisguise {
 			ward := faceDownDisguiseWardBody()
 			values.abilities = []game.Ability{&ward}
-			rebuildKeywords(&values)
+			rebuildKeywords(permanent, &values)
 		}
 		values.power, values.powerOK = 2, true
 		values.toughness, values.toughnessOK = 2, true
@@ -258,7 +259,7 @@ func basePermanentValues(g *game.Game, permanent *game.Permanent) permanentEffec
 		values.dynamicToughness = dynamicValuePtr(card.DynamicToughness)
 		values.toughness, values.toughnessOK = ptValue(g, values.controller, values.toughnessPT, values.dynamicToughness)
 	}
-	rebuildKeywords(&values)
+	rebuildKeywords(permanent, &values)
 	return values
 }
 
@@ -1228,7 +1229,7 @@ func applyCopyValues(g *game.Game, permanent *game.Permanent, values *permanentE
 	values.dynamicToughness = dynamicValuePtr(copyValues.DynamicToughness)
 	values.power, values.powerOK = ptValue(g, values.controller, values.powerPT, values.dynamicPower)
 	values.toughness, values.toughnessOK = ptValue(g, values.controller, values.toughnessPT, values.dynamicToughness)
-	rebuildKeywords(values)
+	rebuildKeywords(permanent, values)
 }
 
 func recalculateDynamicPT(g *game.Game, values *permanentEffectiveValues) {
@@ -1345,15 +1346,34 @@ func applyCounterAndTemporaryValues(permanent *game.Permanent, values *permanent
 	}
 }
 
-func rebuildKeywords(values *permanentEffectiveValues) {
+func rebuildKeywords(permanent *game.Permanent, values *permanentEffectiveValues) {
 	if values.keywords == nil {
 		values.keywords = make(map[game.Keyword]bool)
 	} else {
 		clear(values.keywords)
 	}
 	for _, body := range values.abilities {
+		if static, ok := body.(*game.StaticAbility); ok &&
+			!levelBandKeywordConditionSatisfied(permanent, static.Condition) {
+			continue
+		}
 		game.BodyAddKeywordKindsTo(body, values.keywords)
 	}
+}
+
+func levelBandKeywordConditionSatisfied(
+	permanent *game.Permanent,
+	condition opt.V[game.Condition],
+) bool {
+	if !condition.Exists ||
+		condition.Val.SourceLevelCountersAtLeast == 0 &&
+			condition.Val.SourceLevelCountersLessThan == 0 {
+		return true
+	}
+	levels := permanent.Counters.Get(counter.Level)
+	return levels >= condition.Val.SourceLevelCountersAtLeast &&
+		(condition.Val.SourceLevelCountersLessThan == 0 ||
+			levels < condition.Val.SourceLevelCountersLessThan)
 }
 
 func bodyFunctionsOnBattlefield(body game.Ability) bool {

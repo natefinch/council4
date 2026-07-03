@@ -439,7 +439,73 @@ func lowerOrderedEffectSequence(
 	if !linkDamageDealtThisWay(sequence) {
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — damage-dealt-this-way drain not linkable")
 	}
+	if sequenceAmountReferencesPlayerSlotPermanent(sequence, targets) {
+		// A payoff amount that reads a permanent's characteristics ("gain life
+		// equal to that creature's toughness") but whose object resolves to a
+		// player-only target slot is a mis-bound "that creature" antecedent: the
+		// referenced permanent (the sacrificed creature of an edict) is not a
+		// target, so the amount silently resolves to zero. Fail closed rather than
+		// emit a card that does nothing until the sacrificed-creature reference is
+		// modeled (linked object).
+		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — payoff amount references a non-target permanent")
+	}
 	return game.Mode{Targets: targets, Sequence: sequence}.Ability(), nil
+}
+
+// sequenceAmountReferencesPlayerSlotPermanent reports whether any resolving
+// payoff instruction scales by a permanent's characteristics through a target
+// permanent reference that actually addresses a player-only target slot. Such a
+// reference can never resolve to an object, so the amount is silently zero. Only
+// the player-payoff primitives that carry a scalable Quantity are inspected.
+func sequenceAmountReferencesPlayerSlotPermanent(sequence []game.Instruction, targets []game.TargetSpec) bool {
+	for i := range sequence {
+		primitive := sequence[i].Primitive
+		if value, ok := primitive.(game.GainLife); ok && amountReferencesPlayerSlotPermanent(value.Amount, targets) {
+			return true
+		}
+		if value, ok := primitive.(game.LoseLife); ok && amountReferencesPlayerSlotPermanent(value.Amount, targets) {
+			return true
+		}
+		if value, ok := primitive.(game.Draw); ok && amountReferencesPlayerSlotPermanent(value.Amount, targets) {
+			return true
+		}
+		if value, ok := primitive.(game.Mill); ok && amountReferencesPlayerSlotPermanent(value.Amount, targets) {
+			return true
+		}
+	}
+	return false
+}
+
+// amountReferencesPlayerSlotPermanent reports whether a dynamic quantity reads a
+// target permanent's characteristics through a target slot that admits only a
+// player.
+func amountReferencesPlayerSlotPermanent(amount game.Quantity, targets []game.TargetSpec) bool {
+	dynamic := amount.DynamicAmount()
+	if !dynamic.Exists {
+		return false
+	}
+	object := dynamic.Val.Object
+	if object.Kind() != game.ObjectReferenceTargetPermanent {
+		return false
+	}
+	return targetSlotIsPlayerOnly(targets, object.TargetIndex())
+}
+
+// targetSlotIsPlayerOnly reports whether the flat target slot at index is owned by
+// a spec whose explicit Allow admits only a player.
+func targetSlotIsPlayerOnly(targets []game.TargetSpec, index int) bool {
+	if index < 0 {
+		return false
+	}
+	cumulative := 0
+	for i := range targets {
+		width := max(targets[i].MaxTargets, 1)
+		if index < cumulative+width {
+			return targets[i].Allow == game.TargetAllowPlayer
+		}
+		cumulative += width
+	}
+	return false
 }
 
 // publishCreatedTokenLink wires a resolving "If the token is ..." gate (Yenna,
@@ -1867,6 +1933,57 @@ func lowerTapStunSequence(ctx contentCtx) (game.AbilityContent, bool) {
 	}.Ability(), true
 }
 
+// lowerControlledGroupSkipUntapEffect lowers the mass self-stun "<group> you
+// control don't untap during your next untap step." (Rhonas's Last Stand's "Lands
+// you control ...", and the parallel creatures/permanents/artifacts wordings) into
+// a single group SkipNextUntap over the controlled-permanent group. The affected
+// group is the source controller's own permanents (recorded in StaticSubject by
+// the parser) and the window is that controller's own next untap step, so the
+// clause carries no target or reference. It accepts only the parser-exact negated
+// untap effect whose StaticSubject is a controlled-permanent group with no
+// duration; every other shape (a targeted player's permanents, a multi-step
+// window, a color or subtype filter) fails closed so the general paths are
+// untouched.
+func lowerControlledGroupSkipUntapEffect(ctx contentCtx) (game.AbilityContent, bool) {
+	// Invariant: the sole caller dispatches this lowerer only inside the
+	// `len(ctx.content.Effects) == 1` branch (lower_spell.go), so a length other
+	// than one is an upstream bug rather than an unsupported card shape.
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf("lowerControlledGroupSkipUntapEffect: expected a single effect, got %d", len(ctx.content.Effects)))
+	}
+	if ctx.optional ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.References) != 0 {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if effect.Kind != compiler.EffectUntap || !effect.Negated || effect.Optional || !effect.Exact ||
+		effect.Duration != compiler.DurationNone || effect.DelayedTiming != 0 ||
+		len(effect.Targets) != 0 || len(effect.References) != 0 {
+		return game.AbilityContent{}, false
+	}
+	switch effect.StaticSubject {
+	case compiler.StaticSubjectControlledLands,
+		compiler.StaticSubjectControlledCreatures,
+		compiler.StaticSubjectControlledPermanents,
+		compiler.StaticSubjectControlledArtifacts:
+	default:
+		return game.AbilityContent{}, false
+	}
+	group, ok := resolvingStaticSubjectGroup(&effect)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{
+			{Primitive: game.SkipNextUntap{Group: group}},
+		},
+	}.Ability(), true
+}
+
 // lowerStandaloneStunEffect lowers the standalone targeted stun "Target
 // <permanent> doesn't untap during its controller's next untap step." (Sleeper
 // Dart, House Guildmage, Skyline Cascade) into a single SkipNextUntap on the
@@ -2670,12 +2787,40 @@ func matchSequenceEffectConditions(
 			if _, exists := result[ei]; exists {
 				return nil, effectGateCategoryMultiCondition, false
 			}
+			// A per-effect gate that tests the source permanent's own
+			// characteristics ("if it's tapped") while gating a target-scoped
+			// clause means the condition's "it" antecedent was resolved to the
+			// source rather than the clause's target — the source is not the
+			// subject the printed condition names. Binding the gate to the wrong
+			// object would silently test the wrong permanent, so fail closed.
+			if effects[ei].Context == parser.EffectContextTarget &&
+				conditionTestsSourceObjectCharacteristics(lowered) {
+				return nil, effectGateCategoryPredicate, false
+			}
 			result[ei] = game.EffectCondition{
 				Condition: opt.Val(lowered),
 			}
 		}
 	}
 	return result, "", true
+}
+
+// conditionTestsSourceObjectCharacteristics reports whether a lowered effect-gate
+// condition tests the source permanent's own characteristics (a Selection match on
+// a source object reference), the signature of an "it"/"that" antecedent that was
+// resolved to the source rather than to the clause's own target subject.
+func conditionTestsSourceObjectCharacteristics(condition game.Condition) bool {
+	if !condition.Object.Exists || !condition.ObjectMatches.Exists {
+		return false
+	}
+	switch condition.Object.Val.Kind() {
+	case game.ObjectReferenceSourcePermanent,
+		game.ObjectReferenceSourceAttachedPermanent,
+		game.ObjectReferenceSourceCard:
+		return true
+	default:
+		return false
+	}
 }
 
 // Closed blocker categories for an ordered sequence whose per-effect condition

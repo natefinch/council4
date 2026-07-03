@@ -170,7 +170,6 @@ func exactChosenGraveyardReturnEffectSyntax(effect *EffectSyntax, text string) b
 		(sel.Tapped && !entryTapped) || sel.Untapped ||
 		sel.Keyword != KeywordUnknown || sel.ExcludedKeyword != KeywordUnknown ||
 		len(sel.SourceTypes) != 0 ||
-		len(sel.ExcludedSupertypes) != 0 ||
 		len(sel.ExcludedColors) != 0 || len(sel.Alternatives) != 0 {
 		return false
 	}
@@ -811,6 +810,47 @@ func exactCounteredSpellDestinationSyntax(effect *EffectSyntax) bool {
 	return true
 }
 
+// exactTargetPermanentLibraryPutEffectSyntax reports whether an in-play
+// permanent tuck "Put <target permanent> on top of its owner's library." (and
+// the bottom / "the top" / "the bottom" wording variants) reconstructs its
+// clause text byte-for-byte. It backs Time Ebb, Griptide, Excommunicate, Uproot,
+// Totally Lost, and every other single-target "put target <permanent> on
+// top/bottom of its owner's library" spell, ability, or trigger.
+//
+// The single target must be an exact battlefield (zone-unspecified) permanent
+// target: a graveyard-card target is owned by exactGraveyardPutEffectSyntax and a
+// self or back reference by the counter/redirect paths, so any other wording
+// fails the byte-exact round-trip and stays unsupported.
+func exactTargetPermanentLibraryPutEffectSyntax(effect *EffectSyntax) bool {
+	if len(effect.Targets) != 1 || effect.ToZone != zone.Library {
+		return false
+	}
+	target := &effect.Targets[0]
+	if !target.Exact ||
+		target.Cardinality.Min != 1 || target.Cardinality.Max != 1 ||
+		target.Selection.Zone != zone.None {
+		return false
+	}
+	switch effect.Destination {
+	case EffectDestinationTop, EffectDestinationBottom:
+	default:
+		return false
+	}
+	text := exactEffectClauseText(effect)
+	prefix := "Put " + target.Text
+	for _, suffix := range []string{
+		" on top of its owner's library.",
+		" on the top of its owner's library.",
+		" on bottom of its owner's library.",
+		" on the bottom of its owner's library.",
+	} {
+		if strings.EqualFold(text, prefix+suffix) {
+			return true
+		}
+	}
+	return false
+}
+
 // exactGraveyardPutEffectSyntax reports whether a "Put <graveyard card>"
 // destination clause reconstructs one of the supported destinations exactly.
 func exactGraveyardPutEffectSyntax(effect *EffectSyntax) bool {
@@ -863,7 +903,7 @@ func exactGraveyardCardTargetSyntax(target *TargetSyntax) bool {
 	if sel.All || sel.Attacking || sel.Blocking || sel.Tapped || sel.Untapped ||
 		sel.Keyword != KeywordUnknown ||
 		len(sel.SourceTypes) != 0 ||
-		len(sel.ExcludedSupertypes) != 0 || len(sel.ExcludedColors) != 0 {
+		len(sel.ExcludedColors) != 0 {
 		return false
 	}
 	prefix, plural, ok := graveyardCardCardinalityPrefix(target.Cardinality, sel.Another)
@@ -1031,6 +1071,10 @@ func graveyardCardNoun(sel SelectionSyntax, plural bool) (string, bool) {
 	if !ok {
 		return "", false
 	}
+	excludedSupertypePrefix, hasExcludedSupertype, ok := graveyardExcludedSupertypePrefix(sel)
+	if !ok {
+		return "", false
+	}
 	// A supertype adjective ("legendary creature card", "snow land card") has no
 	// single canonical order relative to a color word in Oracle text (both
 	// "legendary white" and "white legendary" occur), so the two never combine
@@ -1038,15 +1082,22 @@ func graveyardCardNoun(sel SelectionSyntax, plural bool) (string, bool) {
 	if hasSupertype && (hasColor || sel.Historic) {
 		return "", false
 	}
+	// A negated supertype ("nonlegendary creature card") occupies the same
+	// leading adjective slot as a positive supertype, so the two never coexist,
+	// and it likewise has no canonical combined order with a color or "historic"
+	// qualifier.
+	if hasExcludedSupertype && (hasSupertype || hasColor || sel.Historic) {
+		return "", false
+	}
 	// An excluded-card-type prefix ("nonland permanent card", "noncreature
 	// artifact card", "noncreature, nonland card") leads the noun. No printed
 	// card combines an excluded card type with a color, supertype, historic, or
 	// subtype qualifier, so those have no canonical combined order and fail
 	// closed rather than guessing one.
-	if hasExcluded && (hasColor || hasSupertype || sel.Historic || hasSubtype) {
+	if hasExcluded && (hasColor || hasSupertype || hasExcludedSupertype || sel.Historic || hasSubtype) {
 		return "", false
 	}
-	return excludedPrefix + supertypePrefix + colorPrefix + historicPrefix + core, true
+	return excludedPrefix + supertypePrefix + excludedSupertypePrefix + colorPrefix + historicPrefix + core, true
 }
 
 // graveyardExcludedTypePrefix renders the optional leading excluded-card-type
@@ -1093,6 +1144,27 @@ func graveyardSupertypePrefix(sel SelectionSyntax) (prefix string, hasSupertype,
 		return "", false, false
 	}
 	return word + " ", true, true
+}
+
+// graveyardExcludedSupertypePrefix renders the optional leading negated-supertype
+// qualifier of a graveyard-card noun ("nonlegendary ", "nonbasic ", "nonsnow "),
+// followed by a trailing space so the caller appends the core noun directly. The
+// runtime Selection matches it through the ExcludedSupertype filter. It reports
+// whether a negated supertype was present and fails closed for more than one
+// excluded supertype or an unknown supertype word, which have no canonical
+// single-adjective phrasing.
+func graveyardExcludedSupertypePrefix(sel SelectionSyntax) (prefix string, hasExcludedSupertype, ok bool) {
+	if len(sel.ExcludedSupertypes) == 0 {
+		return "", false, true
+	}
+	if len(sel.ExcludedSupertypes) != 1 {
+		return "", false, false
+	}
+	word, ok := supertypeWord(sel.ExcludedSupertypes[0])
+	if !ok {
+		return "", false, false
+	}
+	return "non" + word + " ", true, true
 }
 
 // graveyardColorPrefix renders the optional leading color qualifier of a
@@ -1170,6 +1242,14 @@ func graveyardCardTypeNoun(sel SelectionSyntax, plural bool) (string, bool) {
 			return "", false
 		}
 		words = append(words, word)
+	}
+	// A conjunctive multi-type intersection ("artifact creature card",
+	// "enchantment creature card") names every listed type at once, so the type
+	// words are juxtaposed with spaces in their stored canonical type-line order
+	// rather than joined by the disjunctive "or"/"and/or". Lowering routes these
+	// through Selection.RequiredTypes (AND) instead of RequiredTypesAny (OR).
+	if sel.ConjunctiveTypes {
+		return strings.Join(words, " ") + " card", true
 	}
 	conjunction := "or"
 	if plural {
@@ -1581,16 +1661,45 @@ func exactChooseNewTargetsEffectSyntax(effect *EffectSyntax) bool {
 		strings.EqualFold(exactEffectClauseText(effect), "Choose new targets for "+effect.Targets[0].Text+".")
 }
 
-func exactNegatedNextUntapStepSyntax(effect *EffectSyntax) bool {
-	if !effect.Negated || effect.Context != EffectContextUnknown ||
+// negatedControlledGroupNextUntapStep recognizes the mass self-stun clause
+// "<group> you control don't untap during your next untap step." (Rhonas's Last
+// Stand's "Lands you control ...", and the parallel creatures/permanents/artifacts
+// wordings). It returns the controlled-permanent group the skip-untap applies to.
+// The clause carries no target or reference: the affected group is the source's
+// own controlled permanents and the window is the controller's own next untap
+// step, so it lowers to a single group skip-untap. Every other wording — a
+// targeted player's permanents, a multi-step window, or a color/subtype filter —
+// leaves the clause unmatched so lowering fails closed.
+func negatedControlledGroupNextUntapStep(effect *EffectSyntax) (EffectStaticSubjectKind, bool) {
+	if effect.Kind != EffectUntap || !effect.Negated ||
+		effect.Context != EffectContextUnknown ||
 		len(effect.Targets) != 0 || len(effect.References) != 0 {
-		return false
+		return EffectStaticSubjectNone, false
 	}
 	words := normalizedWords(effect.Tokens)
 	verb := slices.Index(words, "untap")
-	return verb == 4 &&
-		slices.Equal(words[:verb], []string{"lands", "you", "control", "don't"}) &&
-		slices.Equal(words[verb+1:], []string{"during", "your", "next", "untap", "step"})
+	if verb != 4 ||
+		!slices.Equal(words[1:verb], []string{"you", "control", "don't"}) ||
+		!slices.Equal(words[verb+1:], []string{"during", "your", "next", "untap", "step"}) {
+		return EffectStaticSubjectNone, false
+	}
+	switch words[0] {
+	case "lands":
+		return EffectStaticSubjectControlledLands, true
+	case "creatures":
+		return EffectStaticSubjectControlledCreatures, true
+	case "permanents":
+		return EffectStaticSubjectControlledPermanents, true
+	case "artifacts":
+		return EffectStaticSubjectControlledArtifacts, true
+	default:
+		return EffectStaticSubjectNone, false
+	}
+}
+
+func exactNegatedNextUntapStepSyntax(effect *EffectSyntax) bool {
+	_, ok := negatedControlledGroupNextUntapStep(effect)
+	return ok
 }
 
 // exactTargetNextUntapStepSyntax recognizes the standalone targeted stun spell or
@@ -2041,19 +2150,11 @@ func massChosenTypeBasePhrase(selection *SelectionSyntax, phrase string) (string
 	return "", false
 }
 
-// massCounterBasePhrase strips a trailing counter qualifier ("with a +1/+1
-// counter on it" / "with a -1/-1 counter on them", or the negated "with no
-// counters on them") from a mass group phrase when the selection records the
-// matching counter requirement, returning the base group phrase to validate and
-// true. The base ("creatures") is then checked by the shared mass group/subtype
-// validators, so "Destroy all creatures with a +1/+1 counter on them." and
-// "Destroy all creatures with no counters on them." round-trip through the same
-// machinery as the bare mass group. Because stripping is driven by the modeled
-// CounterKind/CounterAbsent (not by text), an unmodeled named counter leaves
-// CounterRequired false and the phrase fails closed. The kind-agnostic "any
-// counter" form is intentionally not accepted: the runtime cannot honor it for a
-// mass group (it would require the zero-value counter kind in addition to any
-// counter), so it stays fail closed.
+// massCounterBasePhrase strips a trailing modeled counter qualifier from a
+// permanent phrase. It is shared by mass groups and exact target reconstruction,
+// accepting the named, kind-agnostic, no-counter, and excluded-kind forms with
+// singular or plural pronouns. The caller validates the remaining base phrase,
+// so an unmodeled or mismatched counter qualifier still fails closed.
 func massCounterBasePhrase(selection *SelectionSyntax, phrase string) (string, bool) {
 	if selection.CounterKindAbsent {
 		kind := selection.CounterKind.String()
@@ -2078,7 +2179,18 @@ func massCounterBasePhrase(selection *SelectionSyntax, phrase string) (string, b
 		}
 		return "", false
 	}
-	if !selection.CounterRequired || selection.CounterAny {
+	if selection.CounterAny {
+		for _, suffix := range []string{
+			" with a counter on it", " with a counter on them",
+			" with counters on it", " with counters on them",
+		} {
+			if base, ok := strings.CutSuffix(phrase, suffix); ok {
+				return base, true
+			}
+		}
+		return "", false
+	}
+	if !selection.CounterRequired {
 		return "", false
 	}
 	for _, suffix := range massCounterQualifierSuffixes(selection) {
@@ -2091,16 +2203,22 @@ func massCounterBasePhrase(selection *SelectionSyntax, phrase string) (string, b
 
 // massCounterQualifierSuffixes reconstructs the recognized counter-qualifier
 // suffixes for a named-counter selection from its modeled counter kind, covering
-// both the singular ("on it") and plural ("on them") pronoun and both articles
-// ("a"/"an") so the reconstructed text matches the source.
+// singular and plural counter nouns, both pronouns, and the optional article
+// forms recognized by the parser.
 func massCounterQualifierSuffixes(selection *SelectionSyntax) []string {
 	pronouns := []string{"it", "them"}
 	kind := selection.CounterKind.String()
-	suffixes := make([]string, 0, 2*len(pronouns))
+	suffixes := make([]string, 0, 4*len(pronouns))
 	for _, article := range []string{"a", "an"} {
 		for _, pronoun := range pronouns {
 			suffixes = append(suffixes, " with "+article+" "+kind+" counter on "+pronoun)
 		}
+	}
+	for _, pronoun := range pronouns {
+		suffixes = append(suffixes,
+			" with "+kind+" counter on "+pronoun,
+			" with "+kind+" counters on "+pronoun,
+		)
 	}
 	return suffixes
 }
@@ -2655,6 +2773,20 @@ func exactEffectClauseText(effect *EffectSyntax) string {
 	text := joinedEffectText(effect.Tokens[start:])
 	if len(effect.Tokens) > 0 && effect.Tokens[len(effect.Tokens)-1].Kind != shared.Period {
 		text += "."
+	}
+	// A plain trailing-"instead" conditional replacement ("... create a 4/4 Angel
+	// token instead.", "... put two +1/+1 counters on target creature instead.")
+	// marks the escalation branch of an ordered-effect sequence ("[base]. If
+	// <condition>, [escalated] instead.", the Court cycle and similar). The
+	// sequence's "instead" gate handles the replacement relationship, so strip the
+	// suffix here so every effect-type recognizer sees the canonical clause and
+	// treats the branch as an ordinary effect. Only the plain
+	// EffectReplacementInstead form is stripped; the twice-that-many, double-that,
+	// and plus-N replacement kinds keep their distinct wording and handling.
+	if effect.Replacement.Kind == EffectReplacementInstead {
+		if stripped, ok := strings.CutSuffix(text, " instead."); ok {
+			text = stripped + "."
+		}
 	}
 	if effect.DelayedTiming != DelayedTimingNone {
 		for _, suffix := range []string{

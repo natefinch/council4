@@ -313,6 +313,8 @@ func lowerTriggerKind(kind compiler.TriggerKind) (game.TriggerType, bool) {
 		return game.TriggerWhenever, true
 	case compiler.TriggerAt:
 		return game.TriggerAt, true
+	case compiler.TriggerState:
+		return game.TriggerState, true
 	default:
 		return 0, false
 	}
@@ -381,6 +383,8 @@ func lowerTriggerEvent(event compiler.TriggerEvent) (game.EventKind, bool) {
 		return game.EventClassLevelGained, true
 	case compiler.TriggerEventCrimeCommitted:
 		return game.EventCrimeCommitted, true
+	case compiler.TriggerEventBecameMonarch:
+		return game.EventBecameMonarch, true
 	default:
 		return game.EventUnknown, false
 	}

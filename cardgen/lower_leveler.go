@@ -121,7 +121,10 @@ func gateLoweredAbilityByLevelBand(
 	}
 	for i := range lowered.staticAbilities {
 		if lowered.staticAbilities[i].VarName != "" {
-			return executableDiagnostic(ability, "unsupported Level up ability", unsupportedDetail)
+			if !levelBandKeywordStatic(lowered.staticAbilities[i].Body) {
+				return executableDiagnostic(ability, "unsupported Level up ability", unsupportedDetail)
+			}
+			lowered.staticAbilities[i].VarName = ""
 		}
 		lowered.staticAbilities[i].Body.Condition = mergeLevelBandGate(lowered.staticAbilities[i].Body.Condition, condition)
 		gated = true
@@ -137,6 +140,14 @@ func gateLoweredAbilityByLevelBand(
 		return executableDiagnostic(ability, "unsupported Level up ability", unsupportedDetail)
 	}
 	return nil
+}
+
+func levelBandKeywordStatic(body game.StaticAbility) bool {
+	return !body.Condition.Exists &&
+		body.ZoneOfFunction == 0 &&
+		len(body.KeywordAbilities) == 1 &&
+		len(body.ContinuousEffects) == 0 &&
+		len(body.RuleEffects) == 0
 }
 
 // mergeLevelBandGate merges a leveler band's level-counter bounds into a

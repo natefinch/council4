@@ -296,6 +296,20 @@ func lowerContent(
 		return lowerOrderedEffectSequence(cardName, ctx, syntax)
 	}
 	if len(ctx.content.Effects) == 1 {
+		// A single effect marked as a trailing-"instead" conditional replacement
+		// is only meaningful as the escalation branch of an ordered sequence,
+		// where the sequence gates it against the negated preceding effect (every
+		// sequence path sets sequenceClause). Reached standalone there is no
+		// preceding effect to replace, so running it unconditionally would be
+		// wrong; fail closed. No real card is a lone "... instead." resolving
+		// effect — every one is an inline-gated sequence escalation.
+		if ctx.content.Effects[0].Replacement.Kind == parser.EffectReplacementInstead && !ctx.sequenceClause {
+			return game.AbilityContent{}, contentDiagnostic(
+				ctx,
+				"unsupported ability content",
+				"a standalone 'instead' replacement effect has no preceding effect to replace",
+			)
+		}
 		if content, ok := lowerNextCastEntersWithCountersReplacement(ctx); ok {
 			return content, nil
 		}
@@ -340,6 +354,18 @@ func lowerContent(
 		}
 		if content, ok := lowerEventSubjectStunEffect(ctx); ok {
 			return content, nil
+		}
+		if content, ok := lowerControlledGroupSkipUntapEffect(ctx); ok {
+			return content, nil
+		}
+		// A single "<subject> loses all abilities and has base power and toughness
+		// N/N" effect is counted as two legacy effects (the ability loss and the
+		// base-P/T set), so it carries RequiresOrderedLowering even though it lowers
+		// as one continuous effect. Route it to the base-P/T lowerer before the
+		// ordered-lowering bail below.
+		if ctx.content.Effects[0].Kind == compiler.EffectSetBasePT &&
+			ctx.content.Effects[0].SetBasePTLosesAllAbilities {
+			return lowerSetBasePTContent(ctx)
 		}
 		if ctx.content.Effects[0].RequiresOrderedLowering {
 			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — single effect requires ordered lowering")
@@ -1291,6 +1317,10 @@ func lowerDelayedSingleEffectSpell(
 	effect := ctx.content.Effects[0]
 	ctx.content.Effects[0].DelayedTiming = 0
 
+	if content, ok := lowerDelayedCapturedCombatDisposal(ctx, effect.DelayedTiming); ok {
+		return content, nil
+	}
+
 	var content game.AbilityContent
 	if primitive, ok := lowerDelayedSelfPrimitive(ctx); ok {
 		content = game.Mode{Sequence: []game.Instruction{{Primitive: primitive}}}.Ability()
@@ -2033,7 +2063,7 @@ func lowerPermanentKeywordGrantSpell(ctx contentCtx) (game.AbilityContent, *shar
 // lowerLoseSpellEffect lowers an EffectLose body: either a temporary keyword
 // loss, a life-loss effect, or an unsupported keyword/ability loss.
 func lowerLoseSpellEffect(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
-	if len(ctx.content.Keywords) != 0 &&
+	if (len(ctx.content.Keywords) != 0 || ctx.content.Effects[0].LoseAllAbilities) &&
 		temporaryKeywordDuration(ctx.content.Effects[0].Duration) {
 		return lowerTemporaryKeywordLossSpell(ctx)
 	}

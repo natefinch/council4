@@ -700,6 +700,12 @@ type TriggerCondition struct {
 type StateTriggerCondition struct {
 	MatchControllerLifeLessOrEqual bool
 	ControllerLifeLessOrEqual      int
+
+	// Condition is a general board-state predicate that must hold for the state
+	// trigger to fire, such as "you control no Islands" (CR 603.8). It is
+	// evaluated with the trigger controller and source permanent bound. It is
+	// absent when the trigger uses one of the dedicated fields above instead.
+	Condition opt.V[Condition]
 }
 
 // TriggerControllerFilter constrains a trigger by the controller recorded on an event.

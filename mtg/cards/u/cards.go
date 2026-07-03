@@ -8,8 +8,10 @@ import "github.com/natefinch/council4/mtg/game"
 var Cards = []*game.CardDef{
 	UginSInsight,
 	UltrosObnoxiousOctopus,
+	UmezawaSJitte,
 	UncoveredClues,
 	UndercityInformer,
+	UndercitySEmbrace,
 	UneshCriosphinxSovereign,
 	UnexplainedVision,
 	UnfathomableTruths,
@@ -26,6 +28,7 @@ var Cards = []*game.CardDef{
 	UrsineFylgja,
 	UrzaPrinceOfKroog,
 	UrzaSArmor,
+	UrzaSBauble,
 	UtopiaMycon,
 	UrzaSChalice,
 	UrzaSRage,

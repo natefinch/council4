@@ -486,6 +486,11 @@ const (
 	TriggerWhen
 	TriggerWhenever
 	TriggerAt
+	// TriggerState is a state trigger checked continuously; it fires whenever its
+	// board-state condition holds while it is not already on the stack
+	// (CR 603.8). Unlike event triggers it carries no event pattern, only a
+	// StateCondition on its TriggerPattern.
+	TriggerState
 )
 
 // CompiledTrigger is the event clause before a triggered ability's first
@@ -864,6 +869,13 @@ const (
 	// a basic land."; the Mercadian Masques tap-for-two-colors land cycle). It
 	// gates the dual-mana ability on either disjunct.
 	ConditionPredicateLandEnteredThisTurnOrControlsBasic
+	// ConditionPredicateDefendingPlayerControls is satisfied when the defending
+	// player of an attack controls at least one permanent matching Selection
+	// ("defending player controls an Island", Sea Monster). It is only supported
+	// as the negated guard on a can't-attack static rule, where the defending
+	// player is resolved per attack; the closed vocabulary carries no defending
+	// player anywhere else, so every other use fails closed downstream.
+	ConditionPredicateDefendingPlayerControls
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard
@@ -1312,6 +1324,15 @@ type CompiledSelector struct {
 	// damage this turn ("target creature that was dealt damage this turn", Fatal
 	// Blow). It lowers to Selection.DealtDamageThisTurn.
 	DealtDamageThisTurn bool
+	// Modified requires each matched permanent to be modified (a counter, Aura,
+	// or Equipment attached; CR 701.50) for "target modified creature you
+	// control" (Silver Sable). Enchanted requires one or more Auras attached
+	// ("target enchanted permanent", Cut the Earthly Bond); Equipped requires one
+	// or more Equipment attached. They lower to Selection.MatchModified /
+	// Selection.MatchEnchanted / Selection.MatchEquipped.
+	Modified  bool
+	Enchanted bool
+	Equipped  bool
 	// PowerLessThanSource requires each matched permanent's power to be strictly
 	// less than the ability's source permanent's power ("target attacking
 	// creature with lesser power", Mentor); PowerGreaterThanSource is the
@@ -2307,6 +2328,14 @@ type CompiledEffect struct {
 	SetBasePTVariableX         bool
 	SetBasePTEveryCreatureType bool
 	SetBasePTSource            bool
+	// SetBasePTLosesAllAbilities mirrors the parser flag: the affected object also
+	// loses all abilities for the duration ("<subject> loses all abilities and has
+	// base power and toughness N/N").
+	SetBasePTLosesAllAbilities bool
+	// LoseAllAbilities mirrors the parser flag: a resolving "<subject> loses all
+	// abilities" effect that removes every ability for the duration, lowering to a
+	// LayerAbility RemoveAllAbilities continuous effect.
+	LoseAllAbilities bool
 	// SwitchPTSource mirrors the parser's EffectSwitchPT source-affecting form
 	// ("Switch this creature's power and toughness until end of turn."). When
 	// false and the effect carries a target, the single-target switch applies.
@@ -2657,6 +2686,10 @@ type CompiledEffect struct {
 	// doubling continuous effect; both are false for every other double effect.
 	DoublePower     bool
 	DoubleToughness bool
+	// SubjectSourceAttached mirrors the parser flag: a resolving continuous effect
+	// whose possessive subject is the source's attached permanent ("equipped
+	// creature's"/"enchanted creature's"), lowering to SourceAttachedPermanentReference.
+	SubjectSourceAttached bool
 	// DoubleSourceCounters mirrors the parser flag for an EffectDouble whose
 	// object is "the number of <kind> counters on <self>" (Mossborn Hydra).
 	// Lowering reads it together with DoubleSourceCounterKind to emit a dynamic

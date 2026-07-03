@@ -427,7 +427,6 @@ func TestLowerCounterPlacementRejectsUnsupportedForms(t *testing.T) {
 		"Put a charge and time counter on target artifact.",
 		"Put 0 charge counters on target artifact.",
 		"Put -1 charge counters on target artifact.",
-		"Put a charge counter on target artifact for each land you control.",
 	} {
 		_, diagnostics := lowerExecutableFaces(&ScryfallCard{
 			Name:       "Test Counter",
@@ -473,6 +472,24 @@ func TestLowerFightSpell(t *testing.T) {
 		fight.Object != game.TargetPermanentReference(0) ||
 		fight.RelatedObject != game.TargetPermanentReference(1) {
 		t.Fatalf("primitive = %+v, want targets 0 and 1 fight", mode.Sequence[0].Primitive)
+	}
+}
+
+func TestLowerFightSpellCounterQualifiedTarget(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Counter Fight",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Target creature you control with a +1/+1 counter on it fights target creature you don't control.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 2 {
+		t.Fatalf("targets = %+v, want two creatures", mode.Targets)
+	}
+	selection := mode.Targets[0].Selection.Val
+	if !selection.MatchCounter || selection.RequiredCounter != counter.PlusOnePlusOne {
+		t.Fatalf("first target selection = %#v, want +1/+1 counter requirement", selection)
 	}
 }
 

@@ -144,8 +144,25 @@ func scheduleDelayedTrigger(g *game.Game, obj *game.StackObject, def *game.Delay
 		CapturedTargetControllerLKI: clonePlayerIDMap(obj.TargetControllerLKI),
 		CapturedTargetManaValueLKI:  cloneIntMap(obj.TargetManaValueLKI),
 		BoundDamageSourceObjectID:   capturedDamageSourceObjectID(g, obj, def),
+		CapturedObjectID:            capturedObjectID(g, obj, def),
 	})
 	return true
+}
+
+// capturedObjectID freezes the permanent a fixed-phase delayed trigger binds to
+// from the creating ability's CapturedObject reference, resolving it against the
+// creating ability's triggering event at schedule time. It backs delayed "at end
+// of combat" disposal of the creature involved in combat ("destroy that creature
+// at end of combat"), where the original combat event is gone once the trigger
+// fires, so the blocked or damaged creature must be captured now. It returns
+// zero when the definition carries no such reference or the creature cannot be
+// identified, in which case the trigger's content finds nothing and does nothing.
+func capturedObjectID(g *game.Game, obj *game.StackObject, def *game.DelayedTriggerDef) id.ID {
+	if !def.CapturedObject.Exists {
+		return 0
+	}
+	objectID, _ := newReferenceResolver(g, obj).objectIdentityID(def.CapturedObject.Val)
+	return objectID
 }
 
 // capturedDamageSourceObjectID resolves the permanent a combat-damage delayed
@@ -284,6 +301,7 @@ func drainReadyDelayedTriggers(g *game.Game, events []game.Event) []pendingTrigg
 			inline:                      &ability,
 			capturedTargetControllerLKI: clonePlayerIDMap(trigger.CapturedTargetControllerLKI),
 			capturedTargetManaValueLKI:  cloneIntMap(trigger.CapturedTargetManaValueLKI),
+			capturedObjectID:            trigger.CapturedObjectID,
 		})
 	}
 	g.DelayedTriggers = remaining

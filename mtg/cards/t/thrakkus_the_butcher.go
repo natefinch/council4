@@ -53,8 +53,9 @@ func newThrakkusTheButcher() *game.CardDef {
 								Primitive: game.ApplyContinuous{
 									ContinuousEffects: []game.ContinuousEffect{
 										game.ContinuousEffect{
-											Layer: game.LayerPowerToughnessModify,
-											Group: game.BattlefieldGroup(game.Selection{SubtypesAny: []types.Sub{types.Sub("Dragon")}, Controller: game.ControllerYou}),
+											Layer:       game.LayerPowerToughnessModify,
+											Group:       game.BattlefieldGroup(game.Selection{SubtypesAny: []types.Sub{types.Sub("Dragon")}, Controller: game.ControllerYou}),
+											DoublePower: true,
 										},
 									},
 									Duration: game.DurationUntilEndOfTurn,

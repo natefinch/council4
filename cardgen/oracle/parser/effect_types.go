@@ -1602,6 +1602,18 @@ type SelectionSyntax struct {
 	// Blow), restricting the match to a permanent that was dealt damage during
 	// the current turn. It lowers to Selection.DealtDamageThisTurn.
 	DealtDamageThisTurn bool `json:",omitempty"`
+	// Modified records a "modified" attachment qualifier on a permanent target
+	// ("target modified creature you control", Silver Sable), requiring the
+	// matched permanent to be modified: it carries one or more counters, or has
+	// one or more Auras or Equipment attached (CR 701.50). Enchanted records the
+	// "enchanted" qualifier ("target enchanted permanent", Cut the Earthly Bond),
+	// requiring one or more Auras attached; Equipped records the "equipped"
+	// qualifier, requiring one or more Equipment attached. A non-battlefield
+	// subject never matches. They lower to Selection.MatchModified /
+	// Selection.MatchEnchanted / Selection.MatchEquipped.
+	Modified  bool `json:",omitempty"`
+	Enchanted bool `json:",omitempty"`
+	Equipped  bool `json:",omitempty"`
 	// PowerLessThanSource records a trailing "with lesser power" relative clause
 	// ("target attacking creature with lesser power", Mentor), restricting the
 	// match to permanents whose power is strictly less than the ability's source
@@ -2379,6 +2391,20 @@ type EffectSyntax struct {
 	SetBasePTVariableX         bool `json:",omitempty"`
 	SetBasePTEveryCreatureType bool `json:",omitempty"`
 	SetBasePTSource            bool `json:",omitempty"`
+	// SetBasePTLosesAllAbilities marks the "<subject> loses all abilities and has
+	// base power and toughness N/N" form (Humble, Ovinize, Sudden Spoiling): the
+	// affected object additionally loses every ability for the duration. It lowers
+	// to a LayerAbility RemoveAllAbilities continuous effect alongside the base
+	// power/toughness set.
+	SetBasePTLosesAllAbilities bool `json:",omitempty"`
+	// LoseAllAbilities marks a resolving/one-shot "<subject> loses all abilities
+	// [until end of turn]" effect (Nullhide Ferox, Final Showdown, Ray of Frost):
+	// the total ability-removal form, whose grammatical object is "all abilities"
+	// rather than a named keyword list. It lowers to a LayerAbility
+	// RemoveAllAbilities continuous effect through the shared continuous-subject
+	// routing, so it applies to source, group, target, and referenced-object
+	// subjects alike.
+	LoseAllAbilities bool `json:",omitempty"`
 	// SwitchPTSource marks the EffectSwitchPT source-affecting form ("Switch this
 	// creature's power and toughness until end of turn."). When false and the
 	// effect carries a target, the single-target form applies; any other subject
@@ -2759,6 +2785,13 @@ type EffectSyntax struct {
 	// life, double counters, double mana).
 	DoublePower     bool `json:",omitempty"`
 	DoubleToughness bool `json:",omitempty"`
+	// SubjectSourceAttached marks a resolving continuous effect whose possessive
+	// subject is the source's attached permanent named by "equipped creature's" or
+	// "enchanted creature's" ("Double equipped creature's power until end of
+	// turn.", Junk Jet). Only the possessive object form sets it — the leading
+	// "equipped creature" subject is a StaticSubject handled separately — so it
+	// lowers to the source-attached permanent through continuousSubjectMode.
+	SubjectSourceAttached bool `json:",omitempty"`
 	// DoubleSourceCounters marks an EffectDouble whose object is "the number of
 	// <kind> counters on <self>" ("double the number of +1/+1 counters on this
 	// creature", Mossborn Hydra). The source permanent gains additional counters
@@ -2929,6 +2962,28 @@ const (
 	// Optimizer, Automated Artificer, Purple Dragon Punks). The tagged mana may
 	// pay to cast an artifact spell or to activate any activated ability.
 	ManaSpendCastArtifactOrActivateAbility ManaSpendConditionKind = "ManaSpendCastArtifactOrActivateAbility"
+	// ManaSpendCastInstantOrSorcerySpell is the restricted "spend this mana only
+	// to cast an instant or sorcery spell" condition (Vodalian Arcanist, Pelargir
+	// Survivor, Cormela, Glamour Thief), including the "instant and/or sorcery
+	// spells" / "instant and sorcery spells" plural phrasings. The tagged mana may
+	// pay only to cast an instant or sorcery spell; it cannot pay ability costs or
+	// other payments.
+	ManaSpendCastInstantOrSorcerySpell ManaSpendConditionKind = "ManaSpendCastInstantOrSorcerySpell"
+	// ManaSpendCastNoncreatureSpell is the restricted "spend this mana only to
+	// cast a noncreature spell" / "to cast noncreature spells" condition (Nardole,
+	// Resourceful Cyborg). The tagged mana may pay only to cast a spell that is not
+	// a creature; it cannot pay ability costs or other payments.
+	ManaSpendCastNoncreatureSpell ManaSpendConditionKind = "ManaSpendCastNoncreatureSpell"
+	// ManaSpendCastMulticoloredSpell is the restricted "spend this mana only to
+	// cast a multicolored spell" / "to cast multicolored spells" condition (Pillar
+	// of the Paruns, Obsidian Obelisk). The tagged mana may pay only to cast a
+	// spell with two or more colors; it cannot pay ability costs or other payments.
+	ManaSpendCastMulticoloredSpell ManaSpendConditionKind = "ManaSpendCastMulticoloredSpell"
+	// ManaSpendCastPlaneswalkerSpell is the restricted "spend this mana only to
+	// cast a planeswalker spell" / "to cast planeswalker spells" condition
+	// (Interplanar Beacon). The tagged mana may pay only to cast a planeswalker
+	// spell; it cannot pay ability costs or other payments.
+	ManaSpendCastPlaneswalkerSpell ManaSpendConditionKind = "ManaSpendCastPlaneswalkerSpell"
 )
 
 // ManaSpendRiderEffectKind identifies the exact resolving effect of a mana-spend

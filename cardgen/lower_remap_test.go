@@ -105,6 +105,15 @@ func playerIndex(p game.Primitive) (int, bool) {
 	if v, ok := p.(game.LoseLife); ok {
 		return v.Player.TargetIndex(), true
 	}
+	if v, ok := p.(game.SacrificePermanents); ok {
+		return v.Player.TargetIndex(), true
+	}
+	if v, ok := p.(game.LookAtHand); ok {
+		return v.Player.TargetIndex(), true
+	}
+	if v, ok := p.(game.BecomeMonarch); ok {
+		return v.Player.TargetIndex(), true
+	}
 	if v, ok := p.(game.MoveCard); ok {
 		return v.Player.TargetIndex(), true
 	}
@@ -140,6 +149,8 @@ func targetBearingPrimitives() []targetBearingPrimitive {
 			return game.Attach{Attachment: game.SourcePermanentReference(), Target: obj()}
 		}),
 		objectPrimitive("PreventDamage", func() game.Primitive { return game.PreventDamage{Object: obj()} }),
+		playerPrimitive("LookAtHand", func() game.Primitive { return game.LookAtHand{Player: plr()} }),
+		playerPrimitive("BecomeMonarch", func() game.Primitive { return game.BecomeMonarch{Player: plr()} }),
 		playerPrimitive("AddPlayerCounter", func() game.Primitive { return game.AddPlayerCounter{Player: plr()} }),
 		playerPrimitive("Draw", func() game.Primitive { return game.Draw{Player: plr()} }),
 		playerPrimitive("Discard", func() game.Primitive { return game.Discard{Player: plr()} }),
@@ -148,6 +159,7 @@ func targetBearingPrimitives() []targetBearingPrimitive {
 		playerPrimitive("RevealUntil", func() game.Primitive { return game.RevealUntil{Player: plr()} }),
 		playerPrimitive("GainLife", func() game.Primitive { return game.GainLife{Player: plr()} }),
 		playerPrimitive("LoseLife", func() game.Primitive { return game.LoseLife{Player: plr()} }),
+		playerPrimitive("SacrificePermanents", func() game.Primitive { return game.SacrificePermanents{Player: plr()} }),
 		playerPrimitive("MoveCard player-zone", func() game.Primitive {
 			return game.MoveCard{Player: plr(), FromZone: zone.Graveyard, Destination: zone.Exile}
 		}),
@@ -175,6 +187,18 @@ func targetBearingPrimitives() []targetBearingPrimitive {
 			domain: targetIndexObject,
 			index: func(p game.Primitive) (int, bool) {
 				apply, ok := p.(game.ApplyContinuous)
+				if !ok || !apply.Object.Exists {
+					return 0, false
+				}
+				return apply.Object.Val.TargetIndex(), true
+			},
+		},
+		{
+			name:   "ApplyRule",
+			build:  func() game.Primitive { return game.ApplyRule{Object: opt.Val(obj())} },
+			domain: targetIndexObject,
+			index: func(p game.Primitive) (int, bool) {
+				apply, ok := p.(game.ApplyRule)
 				if !ok || !apply.Object.Exists {
 					return 0, false
 				}

@@ -157,6 +157,12 @@ const (
 	// controller of the permanent whose entry triggered the ability, as in
 	// Archaeomancer's Map: "if that player controls more lands than you").
 	ConditionControlScopeTriggeringPlayer ConditionControlScope = "ConditionControlScopeTriggeringPlayer"
+	// ConditionControlScopeDefendingPlayer counts permanents controlled by the
+	// defending player of an attack ("defending player controls an Island", Sea
+	// Monster). It is only meaningful as the guard on a can't-attack static rule,
+	// where the defending player is resolved per attack; every other use fails
+	// closed downstream.
+	ConditionControlScopeDefendingPlayer ConditionControlScope = "ConditionControlScopeDefendingPlayer"
 )
 
 // ConditionComparison identifies the numeric comparison a count predicate uses.
@@ -899,11 +905,37 @@ func recognizeControlsGreatestToughnessCondition(body []shared.Token, _ Atoms) (
 	return ConditionClause{}, false
 }
 
+// recognizePriorInstructionCondition matches the resolving-success/failure gate
+// that follows a preceding effect and tests whether that effect happened: the
+// literal controller "if you do"/"if you don't" and the equivalent
+// non-controller player-subject affirmative wordings "if they do", "if the
+// player does", and "if that player does". Each names the same gate — whether
+// the immediately preceding action resolved — so it maps to the shared
+// prior-instruction predicate; the subject only restates who performed that
+// action (the controller for "you", the acting non-controller player for
+// "they"/"the player"/"that player"). The lowering (planMandatoryIfYouDoFlow and
+// the optional-flow planner) gates the trailing effects on the preceding
+// action's published success regardless of which player performed it, so a
+// non-controller "target opponent sacrifices a creature. If that player does,
+// they lose 2 life" gates the life loss on the sacrifice exactly as "if you do"
+// gates a controller's own action.
+//
+// The negative non-controller wordings ("if they don't", "if the player
+// doesn't", "if that player doesn't") are deliberately not matched here: they
+// name the failure branch of a non-controller "<player> may pay ..." offer,
+// which the dedicated event-player payment recognizers already fold onto the
+// payment (ConditionPredicateEventPlayerDoesNotPay). Matching them here would
+// pre-empt that typed payment recognition and regress those cards. It fails
+// closed on any other wording.
 func recognizePriorInstructionCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
 	if tokenWordsEqual(body, "you", "don't") {
 		return ConditionClause{Predicate: ConditionPredicatePriorInstructionNotAccepted}, true
 	}
-	if tokenWordsEqual(body, "you", "do") {
+	switch {
+	case tokenWordsEqual(body, "you", "do"),
+		tokenWordsEqual(body, "they", "do"),
+		tokenWordsEqual(body, "the", "player", "does"),
+		tokenWordsEqual(body, "that", "player", "does"):
 		return ConditionClause{Predicate: ConditionPredicatePriorInstructionAccepted}, true
 	}
 	return ConditionClause{}, false
@@ -3156,6 +3188,9 @@ func cutControlScope(tokens []shared.Token) (ConditionControlScope, []shared.Tok
 	}
 	if rest, ok := cutTokenPrefix(tokens, "your", "opponents", "control"); ok {
 		return ConditionControlScopeOpponents, rest, true
+	}
+	if rest, ok := cutTokenPrefix(tokens, "defending", "player", "controls"); ok {
+		return ConditionControlScopeDefendingPlayer, rest, true
 	}
 	return ConditionControlScopeController, nil, false
 }

@@ -92,6 +92,26 @@ func TestManaDrainCapturesTargetManaValueBeforeCountering(t *testing.T) {
 	}
 }
 
+func TestTargetStackObjectManaValueUsesCounteredTargetLKI(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	target := addStackSpellWithFace(g, game.Player2, manaDrainTargetFace(false))
+	target.XValue = 3
+	resolving := &game.StackObject{
+		Targets: []game.Target{game.StackObjectTarget(target.ID)},
+	}
+
+	if !counterTargetStackObject(g, resolving, 0, false, game.CounteredSpellGraveyard) {
+		t.Fatal("target spell was not countered")
+	}
+	dynamic := game.DynamicAmount{
+		Kind:   game.DynamicAmountObjectManaValue,
+		Object: game.TargetStackObjectReference(0),
+	}
+	if got := dynamicObjectManaValue(g, resolving, &dynamic); got != 4 {
+		t.Fatalf("countered target mana value = %d, want 4", got)
+	}
+}
+
 func TestManaDrainCapturesTokenBackedAlternateFaceManaValue(t *testing.T) {
 	tokenDef := &game.CardDef{CardFace: game.CardFace{
 		Name:     "Prepared Front",

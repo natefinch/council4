@@ -1260,6 +1260,43 @@ func gainLoseLifeObject(kind EffectKind, clause []shared.Token) bool {
 	return false
 }
 
+// resolvingAttachedPossessiveSubject reports whether a resolving effect's
+// possessive subject is the source's attached permanent named by "equipped
+// creature's" or "enchanted creature's" ("Double equipped creature's power…",
+// Junk Jet). The leading non-possessive "equipped/enchanted creature" subject is
+// parsed as a StaticSubject and handled by the static-group path, so this is
+// gated on there being no static subject: only the possessive object form, which
+// leaves no static subject, routes to the source-attached permanent.
+func resolvingAttachedPossessiveSubject(ownership []shared.Token, staticSubject EffectStaticSubjectSyntax) bool {
+	if staticSubject.Kind != EffectStaticSubjectNone {
+		return false
+	}
+	for i := 0; i+1 < len(ownership); i++ {
+		if (equalWord(ownership[i], "equipped") || equalWord(ownership[i], "enchanted")) &&
+			strings.EqualFold(ownership[i+1].Text, "creature's") {
+			return true
+		}
+	}
+	return false
+}
+
+// loseAllAbilitiesObject reports whether a lose effect's grammatical object is
+// the total "all abilities" removal ("<subject> loses all abilities until end of
+// turn"), rather than life, the game, or a named keyword. The parser strips a
+// quoted ability class ("loses all \"bands with other\" abilities", Shelkin
+// Brownie) out of the clause tokens, leaving them identical to the total form, so
+// the raw sentence text is checked for the contiguous "lose(s) all abilities"
+// phrase: a specific-ability-class removal keeps its quoted class between "all"
+// and "abilities" and so is not mistaken for total ability removal.
+func loseAllAbilitiesObject(kind EffectKind, sentenceText string) bool {
+	if kind != EffectLose {
+		return false
+	}
+	lower := strings.ToLower(sentenceText)
+	return strings.Contains(lower, "loses all abilities") ||
+		strings.Contains(lower, "lose all abilities")
+}
+
 // loseGameObject reports whether a lose effect's grammatical object is "the
 // game" rather than life or a keyword. It scans the post-verb clause for a
 // top-level "game" word outside any quoted granted ability.

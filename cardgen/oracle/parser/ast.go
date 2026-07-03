@@ -491,9 +491,23 @@ type TriggerClause struct {
 	PhaseStep    *PhaseStepTriggerClause   `json:",omitempty"`
 	PlayerEvent  *PlayerEventTriggerClause `json:",omitempty"`
 	TriggerEvent *TriggerEventClause       `json:",omitempty"`
+	// State is the structured state-trigger condition for a "When you control no
+	// <selection>" style trigger (CR 603.8). It is nil unless the event clause
+	// parses as a recognized state condition and no event-based clause matched.
+	State *StateTriggerClause `json:",omitempty"`
 	// Order is the trigger clause's dense source-order rank, used downstream to
 	// bind references within the trigger body without byte offsets.
 	Order shared.SourceOrder `json:"-"`
+}
+
+// StateTriggerClause is a recognized state-trigger condition. State triggers are
+// checked continuously and fire whenever their condition holds while it is not
+// already on the stack (CR 603.8); they carry no event pattern. Condition is the
+// board-state predicate that must hold, expressed with the same typed condition
+// vocabulary the compiler already consumes for intervening and activation
+// conditions.
+type StateTriggerClause struct {
+	Condition ConditionClause `json:",omitzero"`
 }
 
 // TriggerEventKind identifies a typed trigger event clause family.
@@ -1035,6 +1049,7 @@ const (
 	PlayerEventActionLoseLife       PlayerEventActionKind = "PlayerEventActionLoseLife"
 	PlayerEventActionSearchLibrary  PlayerEventActionKind = "PlayerEventActionSearchLibrary"
 	PlayerEventActionCommitCrime    PlayerEventActionKind = "PlayerEventActionCommitCrime"
+	PlayerEventActionBecomeMonarch  PlayerEventActionKind = "PlayerEventActionBecomeMonarch"
 )
 
 // PlayerEventAction is a source-spanned player-event action.

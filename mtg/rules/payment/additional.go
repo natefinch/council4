@@ -236,10 +236,19 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 			reservedTapPermanents = append(reservedTapPermanents, chosen...)
 			plan.paid = append(plan.paid, AdditionalCostText(additional))
 		case cost.AdditionalReturnToHand:
+			// A source-excluding ("another") return cost drops the ability's own
+			// source permanent. Activated-ability payments carry the source
+			// directly; resolution payments (GenericRequest) carry only the source
+			// card ID, so resolve it to the source's battlefield permanent when
+			// needed so ExcludeSource can match by object ID.
+			returnSource := source
+			if returnSource == nil && additional.ExcludeSource {
+				returnSource = costSourcePermanentByCardID(s, sourceCardID)
+			}
 			hadPreference := prefs != nil && len(prefs.ReturnChoices) > 0
-			chosen := preferredReturnPermanents(s, playerID, additional, amount, plannedBattlefieldCosts(plan), prefs)
+			chosen := preferredReturnPermanents(s, playerID, additional, amount, plannedBattlefieldCosts(plan), prefs, returnSource)
 			if len(chosen) != amount && preferenceFallbackAllowed(prefs, hadPreference) {
-				chosen = chooseReturnPermanents(s, playerID, additional, amount, plannedBattlefieldCosts(plan))
+				chosen = chooseReturnPermanents(s, playerID, additional, amount, plannedBattlefieldCosts(plan), returnSource)
 			}
 			if len(chosen) != amount {
 				return plan, false

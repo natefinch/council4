@@ -11,6 +11,7 @@ var Cards = []*game.CardDef{
 	JaceSSentinel,
 	JackalFamiliar,
 	JadeLeech,
+	JadziStewardOfFate,
 	JhessianBalmgiver,
 	JidoorAristocraticCapital,
 	JinxedIdol,
@@ -22,4 +23,6 @@ var Cards = []*game.CardDef{
 	JungleBasin,
 	JuniperOrderRanger,
 	JunkGolem,
+	JunkJet,
+	JaceSTriumph,
 }

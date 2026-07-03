@@ -7,6 +7,7 @@ import "github.com/natefinch/council4/cardgen/oracle/shared"
 // activation-timing clause removed for activated abilities.
 func (a *Ability) computeSemanticReferences() []Reference {
 	tokens := eventHistorySemanticTokens(a.Tokens, a.Reminders, a.Quoted)
+	tokens = tokensOutsideCounterQualifierReferences(tokens, a.Sentences, a.Atoms.References())
 	if span, ok := a.activationTimingSpan(); ok {
 		tokens = tokensOutsideParserSpan(tokens, span)
 	}
@@ -18,6 +19,19 @@ func (a *Ability) computeSemanticReferences() []Reference {
 	for i := range a.StaticDeclarations {
 		if staticDeclarationConsumesReferences(&a.StaticDeclarations[i]) {
 			tokens = tokensOutsideParserSpan(tokens, a.StaticDeclarations[i].Span)
+		}
+	}
+	// A target's "other than this creature" self-exclusion tail owns its "this
+	// creature" pronoun: the exclusion is already modeled by the target's
+	// ExcludeSource selection, so remove the target span before reference scanning
+	// to keep that pronoun from surfacing as a dangling semantic reference that
+	// would otherwise block the single-target routing (Sorceress Queen, Serendib
+	// Sorcerer).
+	for i := range a.Sentences {
+		for j := range a.Sentences[i].Targets {
+			if a.Sentences[i].Targets[j].Selection.OtherThanSource {
+				tokens = tokensOutsideParserSpan(tokens, a.Sentences[i].Targets[j].Span)
+			}
 		}
 	}
 	// A created attacking token's "... attacking <defender>" phrase owns any
@@ -101,7 +115,29 @@ func (a *Ability) computeSemanticKeywords() []Keyword {
 // option's semantic tokens, with rendered Text.
 func (m *Mode) computeSemanticReferences() []Reference {
 	tokens := eventHistorySemanticTokens(m.Body.Tokens, m.Reminders, m.Quoted)
+	tokens = tokensOutsideCounterQualifierReferences(tokens, m.Sentences, m.Atoms.References())
 	return m.Atoms.ReferencesWithin(tokens)
+}
+
+func tokensOutsideCounterQualifierReferences(
+	tokens []shared.Token,
+	sentences []Sentence,
+	references []Reference,
+) []shared.Token {
+	for i := range sentences {
+		for j := range sentences[i].Targets {
+			target := sentences[i].Targets[j]
+			if !selectionHasCounterQualifier(target.Selection) {
+				continue
+			}
+			for _, reference := range references {
+				if targetOwnsCounterQualifierReference(target, reference) {
+					tokens = tokensOutsideParserSpan(tokens, reference.Span)
+				}
+			}
+		}
+	}
+	return tokens
 }
 
 // computeSemanticKeywords returns the keywords recognized in a modal option's

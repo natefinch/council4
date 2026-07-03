@@ -177,8 +177,9 @@ func TestLowerSelfBlinkRejectsStandaloneSelfExile(t *testing.T) {
 func TestLowerImmediateBlinkRejectsUnsupportedVariants(t *testing.T) {
 	t.Parallel()
 	for _, text := range []string{
-		// Exile of a non-supported selector still blocks the sequence.
-		"Exile target multicolored permanent, then return it to the battlefield under its owner's control.",
+		// Exile of a non-supported selector still blocks the sequence. A
+		// "historic" permanent target is not representable, so it fails closed.
+		"Exile target historic permanent, then return it to the battlefield under its owner's control.",
 	} {
 		t.Run(text, func(t *testing.T) {
 			t.Parallel()

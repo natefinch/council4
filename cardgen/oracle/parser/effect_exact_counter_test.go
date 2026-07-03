@@ -227,6 +227,29 @@ func TestExactCounterPlacementGroupDynamicWhereXAccepts(t *testing.T) {
 	}
 }
 
+func TestExactCounterPlacementTargetDynamicForEachAccepts(t *testing.T) {
+	t.Parallel()
+	sources := []string{
+		"Put a +1/+1 counter on target creature for each Elf you control.",
+		"Put a -1/-1 counter on target creature for each -1/-1 counter on this creature.",
+		"Put two +1/+1 counters on target creature for each artifact you control.",
+	}
+	for _, source := range sources {
+		effect := counterPlacementEffect(t, source)
+		if !effect.Exact {
+			t.Errorf("counterPlacementExact(%q) = false, want true", source)
+		}
+		if len(effect.Targets) != 1 || !effect.Targets[0].Exact ||
+			effect.Targets[0].Text != "target creature" {
+			t.Errorf("Parse(%q) target = %#v, want exact target creature", source, effect.Targets)
+		}
+		if effect.Amount.DynamicForm != EffectDynamicAmountFormForEach ||
+			effect.Amount.DynamicKind == EffectDynamicAmountNone {
+			t.Errorf("Parse(%q) amount = %#v, want dynamic for-each", source, effect.Amount)
+		}
+	}
+}
+
 // counterPlacementEffect parses a single counter-placement sentence and returns
 // its resolving effect for recipient-shape assertions.
 func counterPlacementEffect(t *testing.T, source string) EffectSyntax {
@@ -335,29 +358,12 @@ func TestExactForEachCounterPlacementAccepts(t *testing.T) {
 		"Put a +1/+1 counter on this creature for each creature card in your graveyard.",
 		"Put a +1/+1 counter on this creature for each card in your hand.",
 		"Put a +1/+1 counter on this creature for each creature you control.",
+		"Put two +1/+1 counters on this creature for each creature you control.",
+		"Put a +1/+1 counter on this creature for each attacking creature you control.",
 	}
 	for _, source := range accepted {
 		if !counterPlacementExact(t, source) {
 			t.Errorf("counterPlacementExact(%q) = false, want true", source)
-		}
-	}
-}
-
-// TestExactForEachCounterPlacementFailsClosed keeps for-each forms the runtime
-// cannot model out of the exact production: a count word above one (the bare "a
-// <kind> counter" wording is required) and an iterator the dynamic-amount lowerer
-// does not recognize both leave the effect inexact.
-func TestExactForEachCounterPlacementFailsClosed(t *testing.T) {
-	t.Parallel()
-	rejected := []string{
-		// A multiplier above one is not the bare "a <kind> counter" count word.
-		"Put two +1/+1 counters on this creature for each creature you control.",
-		// Combat-state iterators are not recognized dynamic count subjects.
-		"Put a +1/+1 counter on this creature for each attacking creature you control.",
-	}
-	for _, source := range rejected {
-		if counterPlacementExact(t, source) {
-			t.Errorf("counterPlacementExact(%q) = true, want false", source)
 		}
 	}
 }

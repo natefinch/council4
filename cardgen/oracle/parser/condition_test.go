@@ -352,6 +352,13 @@ func TestParseConditionControlsComposition(t *testing.T) {
 			subtypes:      []types.Sub{types.Wolf, types.Werewolf},
 			excludeSource: true,
 		},
+		{
+			name:          "defending player scope",
+			condition:     "defending player controls a creature",
+			scope:         ConditionControlScopeDefendingPlayer,
+			comparison:    ConditionComparisonNone,
+			requiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -613,7 +620,10 @@ func TestParseCastFromControllerHandCondition(t *testing.T) {
 
 // TestParseConditionPriorInstruction covers the affirmative "you do" and
 // negative "you don't" reflexive prior-instruction clauses used by optional
-// resolving flow ("you may X. If you do/don't, Y").
+// resolving flow ("you may X. If you do/don't, Y"), plus the affirmative
+// non-controller player-subject wordings "if they do", "if the player does",
+// and "if that player does" that name the same resolving-success gate for an
+// action taken by a non-controller player.
 func TestParseConditionPriorInstruction(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -624,6 +634,9 @@ func TestParseConditionPriorInstruction(t *testing.T) {
 		{"if you do", "You may discard a card. If you do, draw a card.", ConditionPredicatePriorInstructionAccepted},
 		{"if you don't", "You may discard a card. If you don't, draw a card.", ConditionPredicatePriorInstructionNotAccepted},
 		{"when you do", "You may discard a card. When you do, draw a card.", ConditionPredicatePriorInstructionAccepted},
+		{"if they do", "Target opponent discards a card. If they do, they draw a card.", ConditionPredicatePriorInstructionAccepted},
+		{"if the player does", "Target opponent discards a card. If the player does, they draw a card.", ConditionPredicatePriorInstructionAccepted},
+		{"if that player does", "Target opponent discards a card. If that player does, they draw a card.", ConditionPredicatePriorInstructionAccepted},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

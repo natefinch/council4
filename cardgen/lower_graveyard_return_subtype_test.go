@@ -2,6 +2,7 @@ package cardgen
 
 import (
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -86,18 +87,71 @@ func TestLowerGraveyardReturnSubtypeQualifiedMultiTarget(t *testing.T) {
 	}
 }
 
-// TestLowerGraveyardReturnSupertypeExclusionStillFailsClosed guards the narrow
-// scope of the subtype-qualified support: a supertype exclusion ("nonlegendary")
-// is not captured by the card noun, so the effect stays inexact and the card
-// fails closed rather than silently dropping the exclusion.
-func TestLowerGraveyardReturnSupertypeExclusionStillFailsClosed(t *testing.T) {
+// TestLowerGraveyardReturnSupertypeExclusion covers a supertype exclusion
+// ("nonlegendary creature card") on a graveyard-return target: the negated
+// supertype now renders in the card noun and lowers to the runtime
+// Selection.ExcludedSupertype, so the card generates rather than failing closed.
+func TestLowerGraveyardReturnSupertypeExclusion(t *testing.T) {
 	t.Parallel()
-	lowerSingleFaceExpectingUnsupported(t, &ScryfallCard{
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
 		Name:       "Test Nonlegendary Return",
 		Layout:     "normal",
 		TypeLine:   "Sorcery",
+		ManaCost:   "{2}{B}",
 		OracleText: "Return target nonlegendary creature card from your graveyard to the battlefield.",
-	})
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "ExcludedSupertype: types.Legendary") {
+		t.Fatalf("source missing ExcludedSupertype: types.Legendary:\n%s", source)
+	}
+}
+
+// TestLowerGraveyardReturnConjunctiveTypes covers a multi-type intersection
+// ("artifact creature card", "enchantment creature card") on a graveyard-return
+// target: the conjunctive type pair renders in the card noun and lowers to the
+// runtime Selection.RequiredTypes (AND), not RequiredTypesAny (OR), so a matched
+// card must carry every listed type (Moriok Scavenger, Odunos River Trawler).
+func TestLowerGraveyardReturnConjunctiveTypes(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		oracle string
+		want   string
+	}{
+		{
+			oracle: "Return target artifact creature card from your graveyard to your hand.",
+			want:   "RequiredTypes: []types.Card{types.Artifact, types.Creature}",
+		},
+		{
+			oracle: "Return target enchantment creature card from your graveyard to the battlefield.",
+			want:   "RequiredTypes: []types.Card{types.Enchantment, types.Creature}",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.oracle, func(t *testing.T) {
+			t.Parallel()
+			source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+				Name:       "Test Conjunctive Return",
+				Layout:     "normal",
+				TypeLine:   "Sorcery",
+				ManaCost:   "{2}{B}",
+				OracleText: test.oracle,
+			}, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			if !strings.Contains(source, test.want) {
+				t.Fatalf("source missing %q:\n%s", test.want, source)
+			}
+		})
+	}
 }
 
 // TestLowerGraveyardReturnSubtypeDisjunctionCardToHand proves a subtype

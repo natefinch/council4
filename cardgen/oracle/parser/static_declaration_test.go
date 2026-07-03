@@ -3056,7 +3056,6 @@ func TestParseStaticDeclarationsFailClosed(t *testing.T) {
 		"unknown verb":             "This creature flickers +1/+1.",
 		"dangling connector":       "This creature gets +1/+1 and.",
 		"attack missing qualifier": "This creature attacks each combat.",
-		"cant attack conditional":  "This creature can't attack unless defending player controls an Island.",
 		"must be blocked no able":  "This creature must be blocked.",
 		"must be blocked alone":    "This creature must be blocked alone.",
 		"unsupported keyword slot": "This creature has +1/+1.",

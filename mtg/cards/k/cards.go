@@ -6,6 +6,7 @@ import "github.com/natefinch/council4/mtg/game"
 
 // Cards lists all card definitions in this package.
 var Cards = []*game.CardDef{
+	KaitoCunningInfiltrator,
 	KavuMauler,
 	KeepWatch,
 	KUnLunWarrior,
@@ -16,6 +17,7 @@ var Cards = []*game.CardDef{
 	KamiOfTheHonoredDead,
 	Kapow,
 	KardurSViciousReturn,
+	KarganDragonlord,
 	Karoo,
 	KarplusanForest,
 	KashiTribeReaver,
@@ -28,6 +30,7 @@ var Cards = []*game.CardDef{
 	KeensightMentor,
 	KeepSafe,
 	KeiTakahashi,
+	KeldonMantle,
 	KessigCagebreakers,
 	KessigWolfRun,
 	KhalniAmbush,
@@ -35,11 +38,13 @@ var Cards = []*game.CardDef{
 	KhalniHeartExpedition,
 	KillerService,
 	KinTreeInvocation,
+	KingCrab,
 	KingSAssassin,
 	KitesailApprentice,
 	KineticAugur,
 	KithkinHealer,
 	KjeldoranGargoyle,
+	KnightOfCliffhaven,
 	KodamaOfTheSouthTree,
 	KolaghanAspirant,
 	KolaghanWarmonger,
@@ -52,4 +57,7 @@ var Cards = []*game.CardDef{
 	KyoshiBattleFan,
 	KyoshiIslandPlaza,
 	KyoshiWarriorExemplars,
+	KamiOfRestlessShadows,
+	KnightOfAutumn,
+	KuraTheBoundlessSky,
 }

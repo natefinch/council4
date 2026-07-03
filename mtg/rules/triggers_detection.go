@@ -31,6 +31,7 @@ type pendingTriggeredAbility struct {
 	wardTargetID                id.ID
 	capturedTargetControllerLKI map[int]game.PlayerID
 	capturedTargetManaValueLKI  map[int]int
+	capturedObjectID            id.ID
 	additionalTriggers          int
 	triggerMultiplierCaptured   bool
 	// ordinaryTrigger marks a triggered ability eligible for chosen-creature-type
@@ -115,11 +116,25 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 			TargetCounts:                append([]int(nil), trigger.targetCounts...),
 			CapturedTargetControllerLKI: clonePlayerIDMap(trigger.capturedTargetControllerLKI),
 			CapturedTargetManaValueLKI:  cloneIntMap(trigger.capturedTargetManaValueLKI),
+			CapturedObjectID:            trigger.capturedObjectID,
 		}
 		if source, ok := permanentByObjectID(g, trigger.sourceID); ok {
 			seedEntryChoices(obj, source)
 		}
+		ability, ok := pendingTriggerAbility(g, trigger)
+		if !ok {
+			panic("prepared triggered ability became unavailable")
+		}
 		pushAbilityToStack(g, obj)
+		// CR 603.3: record each ability after it is successfully put on the
+		// stack, including additional occurrences created by trigger doublers.
+		log.addTriggeredAbility(TriggeredAbilityLog{
+			StackObjectID: obj.ID,
+			Controller:    obj.Controller,
+			SourceID:      obj.SourceID,
+			SourceName:    stackObjectSourceName(g, obj),
+			AbilityText:   ability.Text,
+		})
 		placed = true
 	}
 	return placed
@@ -1003,7 +1018,7 @@ func (*Engine) detectStateTriggeredAbilities(g *game.Game) []pendingTriggeredAbi
 				AbilityIndex:   i,
 			}
 			seen[key] = true
-			if !stateTriggerConditionSatisfied(g, controller, &triggeredBody.Trigger.State.Val) {
+			if !stateTriggerConditionSatisfied(g, controller, permanent, &triggeredBody.Trigger.State.Val) {
 				continue
 			}
 			if g.StateTriggerLatches[key] {
@@ -1034,13 +1049,19 @@ func (*Engine) detectStateTriggeredAbilities(g *game.Game) []pendingTriggeredAbi
 	return pending
 }
 
-func stateTriggerConditionSatisfied(g *game.Game, controller game.PlayerID, condition *game.StateTriggerCondition) bool {
+func stateTriggerConditionSatisfied(g *game.Game, controller game.PlayerID, source *game.Permanent, condition *game.StateTriggerCondition) bool {
 	if condition == nil {
 		return false
 	}
 	if condition.MatchControllerLifeLessOrEqual {
 		player, ok := playerByID(g, controller)
 		if !ok || player.Life > condition.ControllerLifeLessOrEqual {
+			return false
+		}
+	}
+	if condition.Condition.Exists {
+		ctx := conditionContext{controller: controller, source: source}
+		if !conditionSatisfied(g, ctx, condition.Condition) {
 			return false
 		}
 	}

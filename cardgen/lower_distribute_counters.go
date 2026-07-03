@@ -128,9 +128,9 @@ func distributeCountersTargetSpec(target compiler.CompiledTarget, capTotal int) 
 
 // distributeCountersPermanentSelection builds the runtime permanent filter a
 // distribute-counters spell chooses among. It supports the plain "creature" noun
-// optionally restricted to the controller ("target creatures you control") — the
-// selectors the distribute round-trip reconstructs byte-exactly. It fails closed
-// for every other qualifier so an unsupported wording cannot reach a spec.
+// optionally restricted to the controller or a counter qualifier — the selectors
+// the distribute round-trip reconstructs byte-exactly. It fails closed for every
+// other qualifier so an unsupported wording cannot reach a spec.
 func distributeCountersPermanentSelection(selector compiler.CompiledSelector) (game.Selection, bool) {
 	if selector.Kind != compiler.SelectorCreature {
 		return game.Selection{}, false
@@ -158,6 +158,8 @@ func distributeCountersPermanentSelection(selector compiler.CompiledSelector) (g
 		return game.Selection{}, false
 	}
 	selection := game.Selection{RequiredTypesAny: []types.Card{types.Creature}}
+	applyCounterTargetSelection(&selection, selector)
+	applyAttachmentTargetSelection(&selection, selector)
 	switch selector.Controller {
 	case compiler.ControllerAny:
 	case compiler.ControllerYou:

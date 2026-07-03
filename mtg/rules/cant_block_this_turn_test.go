@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -66,5 +67,64 @@ func TestCantBlockThisTurnMultiTargetUnfilledSlotDoesNotRestrictOthers(t *testin
 	}
 	if !canBlockWith(g, bystander, game.Player2) {
 		t.Fatal("an unfilled target slot wrongly restricted a non-targeted creature from blocking")
+	}
+}
+
+// TestGroupCantBlockThisTurnControllerScope models the runtime behavior of the
+// group-scoped "Creatures your opponents control can't block this turn."
+// (Cosmotronic Wave, Hazardous Blast) resolving effect: an object-less
+// RuleEffectCantBlock scoped by ControllerOpponent stops every creature an
+// opponent of the caster controls from blocking, while the caster's own
+// creatures block normally.
+func TestGroupCantBlockThisTurnControllerScope(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	opponentCreature := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	casterCreature := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	obj := &game.StackObject{Controller: game.Player1}
+
+	resolveInstruction(engine, g, obj, game.ApplyRule{
+		RuleEffects: []game.RuleEffect{{
+			Kind:               game.RuleEffectCantBlock,
+			AffectedController: game.ControllerOpponent,
+			PermanentTypes:     []types.Card{types.Creature},
+		}},
+		Duration: game.DurationThisTurn,
+	}, nil)
+
+	if canBlockWith(g, opponentCreature, game.Player2) {
+		t.Fatal("group can't-block let an opponent-controlled creature block")
+	}
+	if !canBlockWith(g, casterCreature, game.Player1) {
+		t.Fatal("group can't-block wrongly restricted the caster's own creature")
+	}
+}
+
+// TestGroupCantBlockThisTurnKeywordFilter models the runtime behavior of the
+// keyword-filtered group spell "Creatures without flying can't block this turn."
+// (Falter, Magmatic Chasm, Seismic Stomp): an object-less RuleEffectCantBlock
+// carrying an ExcludedKeyword: Flying affected Selection stops every non-flying
+// creature from blocking while flying creatures block normally.
+func TestGroupCantBlockThisTurnKeywordFilter(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	grounded := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	flyer := addCombatCreaturePermanentWithPower(g, game.Player2, 2, game.Flying)
+	obj := &game.StackObject{Controller: game.Player1}
+
+	resolveInstruction(engine, g, obj, game.ApplyRule{
+		RuleEffects: []game.RuleEffect{{
+			Kind:              game.RuleEffectCantBlock,
+			PermanentTypes:    []types.Card{types.Creature},
+			AffectedSelection: game.Selection{ExcludedKeyword: game.Flying},
+		}},
+		Duration: game.DurationThisTurn,
+	}, nil)
+
+	if canBlockWith(g, grounded, game.Player2) {
+		t.Fatal("group can't-block let a non-flying creature block")
+	}
+	if !canBlockWith(g, flyer, game.Player2) {
+		t.Fatal("group can't-block wrongly restricted a flying creature")
 	}
 }

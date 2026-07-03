@@ -1395,8 +1395,10 @@ func TestParseManaValueTargetExactness(t *testing.T) {
 		// A two-color union ("black or red") reconstructs canonically as
 		// "<color> or <color> <noun>" and is exact.
 		{"Exile target black or red permanent.", true},
-		// A multicolored qualifier is not representable and must stay fail-closed.
-		{"Exile target multicolored permanent with mana value 3 or greater.", false},
+		// A multicolored color shape combines with the mana-value rider and
+		// reconstructs canonically ("target multicolored permanent with mana
+		// value 3 or greater"), so it round-trips exactly.
+		{"Exile target multicolored permanent with mana value 3 or greater.", true},
 	}
 	for _, test := range tests {
 		t.Run(test.source, func(t *testing.T) {
@@ -4332,6 +4334,91 @@ func TestParseRegenerateRecipientExactness(t *testing.T) {
 	}
 }
 
+// TestParseLoseAllAbilitiesExactness verifies the resolving total "loses all
+// abilities" form round-trips (exact) and sets the LoseAllAbilities flag across
+// target/group/source subjects, while a specific quoted ability-class removal
+// ("loses all \"bands with other\" abilities") does NOT set the flag.
+func TestParseLoseAllAbilitiesExactness(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source      string
+		context     Context
+		wantExact   bool
+		wantLoseAll bool
+	}{
+		{source: "Target creature loses all abilities until end of turn.", context: Context{InstantOrSorcery: true}, wantExact: true, wantLoseAll: true},
+		{source: "Creatures your opponents control lose all abilities until end of turn.", context: Context{InstantOrSorcery: true}, wantExact: true, wantLoseAll: true},
+		{source: "This creature loses all abilities until end of turn.", context: Context{}, wantExact: true, wantLoseAll: true},
+		// A specific quoted ability-class removal must not be read as total removal.
+		{source: `Target creature loses all "bands with other" abilities until end of turn.`, context: Context{InstantOrSorcery: true}, wantExact: false, wantLoseAll: false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, test.context)
+			var lose *EffectSyntax
+			for ai := range document.Abilities {
+				for si := range document.Abilities[ai].Sentences {
+					for ei := range document.Abilities[ai].Sentences[si].Effects {
+						effect := &document.Abilities[ai].Sentences[si].Effects[ei]
+						if effect.Kind == EffectLose {
+							lose = effect
+						}
+					}
+				}
+			}
+			if lose == nil {
+				t.Fatalf("no EffectLose parsed from %q", test.source)
+			}
+			if lose.LoseAllAbilities != test.wantLoseAll {
+				t.Fatalf("LoseAllAbilities = %v, want %v", lose.LoseAllAbilities, test.wantLoseAll)
+			}
+			if lose.Exact != test.wantExact {
+				t.Fatalf("Exact = %v, want %v", lose.Exact, test.wantExact)
+			}
+		})
+	}
+}
+
+// TestParseSelfExclusionTargetExactness verifies the "other than this creature"
+// self-exclusion pronoun form round-trips (exact) and sets OtherThanSource +
+// Another (which lowers to Selection.ExcludeSource), matching the card-name form.
+func TestParseSelfExclusionTargetExactness(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source      string
+		wantExact   bool
+		wantExclude bool
+	}{
+		{source: "Destroy target creature other than this creature.", wantExact: true, wantExclude: true},
+		{source: "Destroy target permanent other than this permanent.", wantExact: true, wantExclude: true},
+		{source: "Destroy target creature.", wantExact: true, wantExclude: false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			var target *TargetSyntax
+			for ai := range document.Abilities {
+				for si := range document.Abilities[ai].Sentences {
+					for ti := range document.Abilities[ai].Sentences[si].Targets {
+						target = &document.Abilities[ai].Sentences[si].Targets[ti]
+					}
+				}
+			}
+			if target == nil {
+				t.Fatalf("no target parsed from %q", test.source)
+			}
+			if target.Selection.OtherThanSource != test.wantExclude {
+				t.Fatalf("OtherThanSource = %v, want %v", target.Selection.OtherThanSource, test.wantExclude)
+			}
+			if target.Exact != test.wantExact {
+				t.Fatalf("target Exact = %v, want %v", target.Exact, test.wantExact)
+			}
+		})
+	}
+}
+
 func TestParseGiveControlExactness(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -4369,6 +4456,135 @@ func TestParseGiveControlExactness(t *testing.T) {
 			}
 			if control.Exact != test.exact {
 				t.Fatalf("Exact = %v, want %v", control.Exact, test.exact)
+			}
+		})
+	}
+}
+
+// TestParseColorlessMulticoloredTargetExactness verifies the "colorless" and
+// "multicolored" color-shape qualifiers on a single permanent target round-trip
+// through the exactness reconstruction, so a destroy/exile/etc. of such a target
+// is recognized as exact and can lower. It also confirms the nonsensical
+// "colorless multicolored" combination and a mix of a color word with a color
+// shape stay non-exact (fail closed).
+func TestParseColorlessMulticoloredTargetExactness(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source           string
+		wantExact        bool
+		wantColorless    bool
+		wantMulticolored bool
+	}{
+		{source: "Destroy target colorless creature.", wantExact: true, wantColorless: true},
+		{source: "Destroy target multicolored creature.", wantExact: true, wantMulticolored: true},
+		{source: "Destroy target colorless permanent.", wantExact: true, wantColorless: true},
+		{source: "Destroy target multicolored permanent.", wantExact: true, wantMulticolored: true},
+		{source: "Destroy target legendary multicolored creature.", wantExact: true, wantMulticolored: true},
+		// "colored" ("one or more colors") is not rendered, so it stays non-exact.
+		{source: "Destroy target colored creature.", wantExact: false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			var destroy *EffectSyntax
+			for ai := range document.Abilities {
+				for si := range document.Abilities[ai].Sentences {
+					for ei := range document.Abilities[ai].Sentences[si].Effects {
+						effect := &document.Abilities[ai].Sentences[si].Effects[ei]
+						if effect.Kind == EffectDestroy {
+							destroy = effect
+						}
+					}
+				}
+			}
+			if destroy == nil {
+				t.Fatalf("no EffectDestroy parsed from %q", test.source)
+			}
+			if len(destroy.Targets) != 1 {
+				t.Fatalf("targets = %d, want 1", len(destroy.Targets))
+			}
+			target := destroy.Targets[0]
+			if target.Exact != test.wantExact {
+				t.Fatalf("target Exact = %v, want %v", target.Exact, test.wantExact)
+			}
+			if target.Selection.Colorless != test.wantColorless {
+				t.Fatalf("Colorless = %v, want %v", target.Selection.Colorless, test.wantColorless)
+			}
+			if target.Selection.Multicolored != test.wantMulticolored {
+				t.Fatalf("Multicolored = %v, want %v", target.Selection.Multicolored, test.wantMulticolored)
+			}
+		})
+	}
+}
+
+// TestParseGroupCantBlockEffect proves the group-scoped one-shot combat
+// restriction "<group> can't block this turn." is recognized for the
+// controller-scoped whole-creature groups and their optional color and keyword
+// refinements, recording the affected group in StaticSubject with an
+// EffectContextController, this-turn duration, and Exact set. The targeted
+// "<target> can't block this turn." form, subtype/counter/power-filtered groups,
+// and other durations fail closed and flow through the generic parser.
+func TestParseGroupCantBlockEffect(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source          string
+		recognized      bool
+		subject         EffectStaticSubjectKind
+		keyword         KeywordKind
+		excludedKeyword KeywordKind
+		colors          []Color
+	}{
+		{"Creatures without flying can't block this turn.", true, EffectStaticSubjectAllCreatures, KeywordUnknown, KeywordFlying, nil},
+		{"Creatures your opponents control can't block this turn.", true, EffectStaticSubjectOpponentControlledCreatures, KeywordUnknown, KeywordUnknown, nil},
+		{"Creatures you control can't block this turn.", true, EffectStaticSubjectControlledCreatures, KeywordUnknown, KeywordUnknown, nil},
+		{"Green creatures can't block this turn.", true, EffectStaticSubjectAllCreatures, KeywordUnknown, KeywordUnknown, []Color{ColorGreen}},
+		{"Creatures with defender can't block this turn.", true, EffectStaticSubjectAllCreatures, KeywordDefender, KeywordUnknown, nil},
+		// Targeted and unrepresentable wordings fail closed.
+		{"Target creature can't block this turn.", false, EffectStaticSubjectNone, KeywordUnknown, KeywordUnknown, nil},
+		{"Up to three target creatures can't block this turn.", false, EffectStaticSubjectNone, KeywordUnknown, KeywordUnknown, nil},
+		{"Monocolored creatures can't block this turn.", false, EffectStaticSubjectNone, KeywordUnknown, KeywordUnknown, nil},
+		{"Nonartifact creatures can't block this turn.", false, EffectStaticSubjectNone, KeywordUnknown, KeywordUnknown, nil},
+		{"Cowards can't block this turn.", false, EffectStaticSubjectNone, KeywordUnknown, KeywordUnknown, nil},
+		{"Creatures with power 2 or less can't block this turn.", false, EffectStaticSubjectNone, KeywordUnknown, KeywordUnknown, nil},
+		{"Creatures you control can't block.", false, EffectStaticSubjectNone, KeywordUnknown, KeywordUnknown, nil},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			got := len(effects) == 1 &&
+				effects[0].Kind == EffectCantBlock &&
+				effects[0].Context == EffectContextController
+			if got != test.recognized {
+				t.Fatalf("recognized = %v, want %v (effects=%#v)", got, test.recognized, effects)
+			}
+			if !got {
+				return
+			}
+			if effects[0].StaticSubject.Kind != test.subject {
+				t.Fatalf("subject = %v, want %v", effects[0].StaticSubject.Kind, test.subject)
+			}
+			if effects[0].Duration != EffectDurationThisTurn {
+				t.Fatalf("duration = %v, want this turn", effects[0].Duration)
+			}
+			if !effects[0].Exact {
+				t.Fatal("Exact = false, want true")
+			}
+			if effects[0].StaticSubject.Keyword != test.keyword {
+				t.Fatalf("keyword = %v, want %v", effects[0].StaticSubject.Keyword, test.keyword)
+			}
+			if effects[0].StaticSubject.ExcludedKeyword != test.excludedKeyword {
+				t.Fatalf("excluded keyword = %v, want %v", effects[0].StaticSubject.ExcludedKeyword, test.excludedKeyword)
+			}
+			if len(effects[0].StaticSubject.Colors) != len(test.colors) {
+				t.Fatalf("colors = %v, want %v", effects[0].StaticSubject.Colors, test.colors)
+			}
+			for i, c := range test.colors {
+				if effects[0].StaticSubject.Colors[i] != c {
+					t.Fatalf("color[%d] = %v, want %v", i, effects[0].StaticSubject.Colors[i], c)
+				}
 			}
 		})
 	}
