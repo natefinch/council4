@@ -1,7 +1,9 @@
 package agent
 
 import (
+	"cmp"
 	"math"
+	"slices"
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
@@ -25,6 +27,13 @@ type Searcher struct {
 	// non-action choices. It should be a fast, sensible strategy such as
 	// GenericStrategy.
 	Rollout Strategy
+
+	// Budget caps how many legal actions are evaluated by simulation at each
+	// decision. When more actions are legal, the agent pre-ranks them cheaply with
+	// the rollout policy and simulates only the most promising, plus Pass, so a
+	// decision's cost stays bounded regardless of how many actions are legal.
+	// Zero or negative means no cap: every legal action is simulated.
+	Budget int
 }
 
 // Compile-time checks that a Searcher drives every engine decision point and is
@@ -56,7 +65,17 @@ func (s Searcher) ChooseChoice(obs rules.PlayerObservation, request game.ChoiceR
 // the searching seat. It plays the highest-scoring action, breaking ties toward
 // the earlier action in the engine's order (productive actions before Pass).
 func (s Searcher) ChooseActionBySearch(ctx rules.SearchContext, legal []action.Action) action.Action {
-	return s.searchBestAction(ctx.Simulator(), ctx.Determinize(), ctx.Player(), legal)
+	world := ctx.Determinize()
+	me := ctx.Player()
+	// Search is expensive, so spend it where it matters: the searcher's own turn,
+	// where the meaningful sequencing, deployment, and combat decisions are made.
+	// On opponents' turns the decision is a reactive window (hold or answer), which
+	// the rollout policy already handles well (it holds interaction and answers the
+	// biggest threat), so use the fast heuristic there instead of a full search.
+	if world.Turn.ActivePlayer != me {
+		return Agent{Strategy: s.Rollout}.ChooseAction(rules.NewObservation(world, me), legal)
+	}
+	return s.searchBestAction(ctx.Simulator(), world, me, legal)
 }
 
 // searchBestAction is the search core, separated from the SearchContext so it can
@@ -67,19 +86,55 @@ func (s Searcher) searchBestAction(sim rules.Simulator, world *game.Game, me gam
 	if len(legal) == 0 {
 		return action.Pass()
 	}
+	if len(legal) == 1 {
+		// A forced decision (typically only Pass): nothing to search.
+		return legal[0]
+	}
+	candidates := s.candidateActions(world, me, legal)
 	applyPolicies := s.uniformPolicies()
 	resolvePolicies := s.resolvePolicies(me)
 
-	best := legal[0]
+	best := candidates[0]
 	bestValue := math.Inf(-1)
-	for i := range legal {
-		value := s.actionValue(sim, world, me, legal[i], applyPolicies, resolvePolicies)
+	for i := range candidates {
+		value := s.actionValue(sim, world, me, candidates[i], applyPolicies, resolvePolicies)
 		if value > bestValue {
 			bestValue = value
-			best = legal[i]
+			best = candidates[i]
 		}
 	}
 	return best
+}
+
+// candidateActions is the set of legal actions the search will simulate. With no
+// budget, or when the budget covers every action, it is the legal set unchanged.
+// Otherwise it pre-ranks the legal actions with the rollout policy's cheap scorer
+// and keeps the highest-scoring Budget of them, always including Pass so the
+// "do nothing" baseline is evaluated. Pruning the least promising actions bounds
+// a decision's simulation cost without discarding the plays worth considering.
+func (s Searcher) candidateActions(world *game.Game, me game.PlayerID, legal []action.Action) []action.Action {
+	if s.Budget <= 0 || len(legal) <= s.Budget {
+		return legal
+	}
+	obs := rules.NewObservation(world, me)
+	ranked := append([]action.Action(nil), legal...)
+	slices.SortStableFunc(ranked, func(a, b action.Action) int {
+		return cmp.Compare(s.Rollout.ScoreAction(obs, b), s.Rollout.ScoreAction(obs, a))
+	})
+	candidates := ranked[:s.Budget]
+	if !containsPass(candidates) {
+		candidates = append(candidates, action.Pass())
+	}
+	return candidates
+}
+
+func containsPass(actions []action.Action) bool {
+	for i := range actions {
+		if actions[i].Kind == action.ActionPass {
+			return true
+		}
+	}
+	return false
 }
 
 // actionValue scores one candidate action: apply it to the world (resolving the
