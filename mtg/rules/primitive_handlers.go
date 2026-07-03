@@ -42,6 +42,12 @@ func (r *effectResolver) resolveObject(object game.ObjectReference) (*game.Perma
 }
 
 func (r *effectResolver) resolvePlayer(player game.PlayerReference) (game.PlayerID, bool) {
+	if player.Kind() == game.PlayerReferenceGroupOfferMember {
+		if r.groupOfferMember.Exists {
+			return r.groupOfferMember.Val, true
+		}
+		return 0, false
+	}
 	return resolvePlayerReference(r.game, r.obj, player)
 }
 

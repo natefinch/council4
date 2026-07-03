@@ -70,6 +70,20 @@ type Instruction struct {
 	// since left the battlefield via last-known information.
 	OptionalActor opt.V[PlayerReference]
 
+	// OptionalActorGroup turns an Optional instruction into a group offer: every
+	// player in the referenced group is asked, in turn, whether to apply the
+	// effect, and the primitive resolves once per accepting player. It models the
+	// multiplayer "may have" offer "Any player may have <source> deal N damage to
+	// them" (Browbeat, Book Burning) and "any opponent may have it deal N damage
+	// to them" (Vexing Devil), where each accepting player becomes the effect's
+	// recipient — reference the currently-offered player with
+	// GroupOfferMemberReference(). PublishResult reports accepted=true when at
+	// least one player accepted, so a following "If no one does" / "If a player
+	// does" consequence gates on the group's collective decision. It is
+	// meaningful only when Optional is true and is mutually exclusive with
+	// OptionalActor (which names a single decider).
+	OptionalActorGroup opt.V[PlayerGroupReference]
+
 	// PublishResult publishes this instruction's result under the given key so that
 	// downstream instructions can reference it via ResultGate.
 	PublishResult ResultKey

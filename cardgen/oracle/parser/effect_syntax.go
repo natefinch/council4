@@ -55,6 +55,7 @@ func emitResolvingSyntax(abilities []Ability) {
 		recognizeControllerMandatoryPaymentSequence(&abilities[i])
 		recognizeEventPlayerOptionalActionGate(&abilities[i])
 		recognizeNonControllerMayHaveActionGate(&abilities[i])
+		recognizeGroupMayHaveActionGate(&abilities[i])
 		recognizePayRepeatedlyAnimateSequence(&abilities[i])
 		foldAnimateSelfStillSentence(&abilities[i])
 		foldAnimateTargetStillSentence(&abilities[i])

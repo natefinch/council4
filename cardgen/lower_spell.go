@@ -247,6 +247,9 @@ func lowerContent(
 	if content, ok := lowerMayHaveActionGate(cardName, ctx, syntax); ok {
 		return content, nil
 	}
+	if content, ok := lowerGroupMayHaveActionGate(cardName, ctx, syntax); ok {
+		return content, nil
+	}
 	if hasOptionalResolvingEffect(ctx.content.Effects) {
 		return lowerOptionalContent(cardName, ctx, syntax)
 	}

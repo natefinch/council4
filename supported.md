@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,828 of 32,501 cards eligible for paper support (51.8%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,832 of 32,501 cards eligible for paper support (51.8%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1712,6 +1712,7 @@ Council4 currently supports **16,828 of 32,501 cards eligible for paper support 
 - Bontu's Last Reckoning
 - Bontu's Monument
 - Boo
+- Book Burning
 - Book Devourer
 - Book of Mazarbul
 - Book of Rass
@@ -1921,6 +1922,7 @@ Council4 currently supports **16,828 of 32,501 cards eligible for paper support 
 - Brotherhood Vertibird
 - Brotherhood's End
 - Brothers of Fire
+- Browbeat
 - Brown Ouphe
 - Bruna, the Fading Light
 - Bruse Tarl, Boorish Herder
@@ -8343,6 +8345,7 @@ Council4 currently supports **16,828 of 32,501 cards eligible for paper support 
 - Long-Finned Skywhale
 - Long-Forgotten Gohei
 - Longbow Archer
+- Longhorn Firebeast
 - Longshot Squad
 - Longshot, Rebel Bowman
 - Longtusk Cub
@@ -15742,6 +15745,7 @@ Council4 currently supports **16,828 of 32,501 cards eligible for paper support 
 - Veteran's Powerblade
 - Veteran's Reflexes
 - Veteran's Sidearm
+- Vexing Devil
 - Vexing Gull
 - Vial of Dragonfire
 - Vial of Poison

@@ -690,6 +690,17 @@ func (v *cardDefValidator) validateInstructionSequence(
 			}
 			v.validatePlayerRef(faceName, appendPath(instructionPath, "OptionalActor"), seq[i].OptionalActor.Val, referenceTargets)
 		}
+		if seq[i].OptionalActorGroup.Exists {
+			if !seq[i].Optional {
+				v.add(faceName, instructionPath, CardDefIssueInvalidAbilityBody, "OptionalActorGroup set on a non-optional instruction")
+			}
+			if seq[i].OptionalActor.Exists {
+				v.add(faceName, instructionPath, CardDefIssueInvalidAbilityBody, "OptionalActorGroup and OptionalActor are mutually exclusive")
+			}
+			for _, problem := range seq[i].OptionalActorGroup.Val.Validate() {
+				v.add(faceName, appendPath(instructionPath, "OptionalActorGroup"), CardDefIssueInvalidAbilityBody, problem)
+			}
+		}
 		effectCondition := seq[i].Condition
 		if effectCondition.Exists && effectCondition.Val.Condition.Exists {
 			condition := effectCondition.Val.Condition.Val

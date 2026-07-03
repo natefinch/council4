@@ -157,6 +157,14 @@ func (r Renderer) renderInstruction(ctx *renderCtx, instruction *game.Instructio
 		ctx.need(importOpt)
 		fields = append(fields, fmt.Sprintf("OptionalActor: opt.Val(%s),", actor))
 	}
+	if instruction.OptionalActorGroup.Exists {
+		group, err := renderPlayerGroupReference(instruction.OptionalActorGroup.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("OptionalActorGroup: opt.Val(%s),", group))
+	}
 	if instruction.PublishResult != "" {
 		fields = append(fields, fmt.Sprintf("PublishResult: game.ResultKey(%q),", string(instruction.PublishResult)))
 	}
