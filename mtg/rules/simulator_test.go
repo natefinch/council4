@@ -72,7 +72,8 @@ func TestSimulatorLegalActionsMatchesEngine(t *testing.T) {
 	addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Forest", Types: []types.Card{types.Land}}})
 	setMainPhasePriority(g, game.Player1)
 
-	legal := e.LegalActions(g, game.Player1)
+	sim := e.Simulator()
+	legal := sim.LegalActions(g, game.Player1)
 	if !simHasKind(legal, action.ActionPlayLand) {
 		t.Fatalf("LegalActions = %v, want a play-land action", summarizeLegalActions(g, legal))
 	}
@@ -84,13 +85,14 @@ func TestSimulateActionBranchesWithoutMutatingOriginal(t *testing.T) {
 	addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Forest", Types: []types.Card{types.Land}}})
 	setMainPhasePriority(g, game.Player1)
 
-	landAction, ok := simFirstOfKind(e.LegalActions(g, game.Player1), action.ActionPlayLand)
+	sim := e.Simulator()
+	landAction, ok := simFirstOfKind(sim.LegalActions(g, game.Player1), action.ActionPlayLand)
 	if !ok {
 		t.Fatal("no play-land action offered")
 	}
 	before := len(g.Battlefield)
 
-	next, ok := e.SimulateAction(g, game.Player1, landAction, simPassPolicies())
+	next, ok := sim.Apply(g, game.Player1, landAction, simPassPolicies())
 	if !ok {
 		t.Fatal("SimulateAction reported the land play illegal")
 	}
@@ -109,7 +111,7 @@ func TestSimulateActionRejectsIllegalAction(t *testing.T) {
 
 	// Playing a land that is not in hand is not a legal action.
 	bogus := action.PlayLandFace(id.ID(999999), game.FaceFront)
-	if _, ok := e.SimulateAction(g, game.Player1, bogus, simPassPolicies()); ok {
+	if _, ok := e.Simulator().Apply(g, game.Player1, bogus, simPassPolicies()); ok {
 		t.Fatal("SimulateAction accepted an illegal land play")
 	}
 }
@@ -120,11 +122,12 @@ func TestResolvePriorityResolvesStackedSpell(t *testing.T) {
 	creatureID := addCardToHand(g, game.Player1, zeroCostCreature("Bear"))
 	setMainPhasePriority(g, game.Player1)
 
-	castAction, ok := simFirstOfKind(e.LegalActions(g, game.Player1), action.ActionCastSpell)
+	sim := e.Simulator()
+	castAction, ok := simFirstOfKind(sim.LegalActions(g, game.Player1), action.ActionCastSpell)
 	if !ok {
 		t.Fatal("no cast action offered for the zero-cost creature")
 	}
-	afterCast, ok := e.SimulateAction(g, game.Player1, castAction, simPassPolicies())
+	afterCast, ok := sim.Apply(g, game.Player1, castAction, simPassPolicies())
 	if !ok {
 		t.Fatal("SimulateAction reported the cast illegal")
 	}
@@ -132,7 +135,7 @@ func TestResolvePriorityResolvesStackedSpell(t *testing.T) {
 		t.Fatal("expected the creature spell on the stack after SimulateAction")
 	}
 
-	resolved := e.ResolvePriority(afterCast, simPassPolicies())
+	resolved := sim.ResolvePriority(afterCast, simPassPolicies())
 	if !resolved.Stack.IsEmpty() {
 		t.Fatal("ResolvePriority left the stack non-empty")
 	}
