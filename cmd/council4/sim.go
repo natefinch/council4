@@ -25,7 +25,7 @@ var seatStreams = [game.NumPlayers]uint64{
 }
 
 // agentProfiles lists the supported -agent values for help text and validation.
-var agentProfiles = []string{"firstlegal", "random", "generic"}
+var agentProfiles = []string{"firstlegal", "random", "generic", "search"}
 
 // loadConfigs parses the four decklist files, resolves them against the registry,
 // and returns Commander-legal player configs, reporting parse or legality
@@ -61,6 +61,10 @@ func agentFactory(profile string) (sim.AgentFactory, error) {
 	case "generic":
 		return func(uint64) [game.NumPlayers]rules.PlayerAgent {
 			return agents(agent.Agent{Strategy: agent.GenericStrategy{}})
+		}, nil
+	case "search":
+		return func(uint64) [game.NumPlayers]rules.PlayerAgent {
+			return agents(agent.Searcher{Rollout: agent.GenericStrategy{}})
 		}, nil
 	case "random":
 		return func(gameSeed uint64) [game.NumPlayers]rules.PlayerAgent {
