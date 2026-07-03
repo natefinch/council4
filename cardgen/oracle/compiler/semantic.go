@@ -2376,7 +2376,14 @@ type CompiledEffect struct {
 	Mana               CompiledEffectMana
 	Replacement        parser.EffectReplacementSyntax
 	Payment            CompiledEffectPayment
-	Exact              bool
+	// Exact mirrors parser.EffectSyntax.Exact: true only when a byte-exact
+	// recognizer reconstructed the effect's whole Oracle clause from its typed
+	// fields. It is an input to text-blind lowering, not a hard pre-filter — most
+	// lowering paths require it and fail closed, but some accept a non-exact effect
+	// when a separately-modeled rider or amount accounts for the residual wording,
+	// so !Exact does not by itself mean the effect cannot be lowered. See
+	// parser.EffectSyntax.Exact for how the parser determines it.
+	Exact bool
 	// KeywordGrantChoice marks a keyword grant whose listed keywords are a
 	// disjunctive runtime choice ("gains banding, first strike, or trample")
 	// rather than a conjunctive grant of every listed keyword. Lowering keys on
