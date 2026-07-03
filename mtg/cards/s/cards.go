@@ -287,4 +287,5 @@ var Cards = []*game.CardDef{
 	StorvaldFrostGiantJarl,
 	SecretsOfTheKey,
 	SpelleaterWolverine,
+	StormTheSeedcore,
 }

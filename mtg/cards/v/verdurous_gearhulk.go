@@ -50,7 +50,7 @@ func newVerdurousGearhulk() *game.CardDef {
 					Content: game.Mode{
 						Targets: []game.TargetSpec{
 							game.TargetSpec{
-								MinTargets: 1,
+								MinTargets: 0,
 								MaxTargets: 4,
 								Constraint: "any number of target creatures you control",
 								Allow:      game.TargetAllowPermanent,

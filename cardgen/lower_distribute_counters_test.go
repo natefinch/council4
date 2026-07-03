@@ -30,6 +30,26 @@ func TestGenerateExecutableCardSourceDistributeCounters(t *testing.T) {
 			},
 		},
 		{
+			name:       "up to two target creatures",
+			oracleText: "Distribute two +1/+1 counters among up to two target creatures.",
+			wantedSnips: []string{
+				"MinTargets: 0",
+				"MaxTargets: 2",
+				"Amount:      game.Fixed(2)",
+				"Distribute:  true",
+			},
+		},
+		{
+			name:       "up to three target creatures you control",
+			oracleText: "Distribute three +1/+1 counters among up to three target creatures you control.",
+			wantedSnips: []string{
+				"MinTargets: 0",
+				"MaxTargets: 3",
+				"Amount:      game.Fixed(3)",
+				"Distribute:  true",
+			},
+		},
+		{
 			name:       "one two or three target creatures",
 			oracleText: "Distribute three +1/+1 counters among one, two, or three target creatures.",
 			wantedSnips: []string{
@@ -53,7 +73,7 @@ func TestGenerateExecutableCardSourceDistributeCounters(t *testing.T) {
 			name:       "any number of target creatures",
 			oracleText: "Distribute four +1/+1 counters among any number of target creatures.",
 			wantedSnips: []string{
-				"MinTargets: 1",
+				"MinTargets: 0",
 				"MaxTargets: 4",
 				"Amount:      game.Fixed(4)",
 				"Distribute:  true",
@@ -63,7 +83,7 @@ func TestGenerateExecutableCardSourceDistributeCounters(t *testing.T) {
 			name:       "variable X among any number of target creatures",
 			oracleText: "Distribute X +1/+1 counters among any number of target creatures.",
 			wantedSnips: []string{
-				"MinTargets: 1",
+				"MinTargets: 0",
 				"MaxTargets: 99",
 				"Kind: game.DynamicAmountX",
 				"Distribute:  true",

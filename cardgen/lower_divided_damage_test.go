@@ -22,7 +22,7 @@ func TestGenerateExecutableCardSourceDividedDamage(t *testing.T) {
 			name:       "any number of targets",
 			oracleText: "Test Bolt deals 3 damage divided as you choose among any number of targets.",
 			wantedSnips: []string{
-				"MinTargets: 1",
+				"MinTargets: 0",
 				"MaxTargets: 3",
 				"Allow:      game.TargetAllowPermanent | game.TargetAllowPlayer",
 				"Amount:    game.Fixed(3)",
@@ -34,7 +34,7 @@ func TestGenerateExecutableCardSourceDividedDamage(t *testing.T) {
 			name:       "variable X among any number of targets",
 			oracleText: "Test Bolt deals X damage divided as you choose among any number of targets.",
 			wantedSnips: []string{
-				"MinTargets: 1",
+				"MinTargets: 0",
 				"MaxTargets: 99",
 				"Allow:      game.TargetAllowPermanent | game.TargetAllowPlayer",
 				"Kind: game.DynamicAmountX",
@@ -46,7 +46,7 @@ func TestGenerateExecutableCardSourceDividedDamage(t *testing.T) {
 			name:       "variable X among any number of target creatures",
 			oracleText: "Test Bolt deals X damage divided as you choose among any number of target creatures.",
 			wantedSnips: []string{
-				"MinTargets: 1",
+				"MinTargets: 0",
 				"MaxTargets: 99",
 				"RequiredTypesAny: []types.Card{types.Creature}",
 				"Kind: game.DynamicAmountX",
@@ -73,10 +73,20 @@ func TestGenerateExecutableCardSourceDividedDamage(t *testing.T) {
 			},
 		},
 		{
+			name:       "up to three target creatures",
+			oracleText: "Test Bolt deals 3 damage divided as you choose among up to three target creatures.",
+			wantedSnips: []string{
+				"MinTargets: 0",
+				"MaxTargets: 3",
+				"RequiredTypesAny: []types.Card{types.Creature}",
+				"Divided:   true",
+			},
+		},
+		{
 			name:       "keyword filtered creatures",
 			oracleText: "Test Bolt deals 4 damage divided as you choose among any number of target creatures with flying.",
 			wantedSnips: []string{
-				"MinTargets: 1",
+				"MinTargets: 0",
 				"MaxTargets: 4",
 				"RequiredTypesAny: []types.Card{types.Creature}",
 				"Keyword: game.Flying",
@@ -87,7 +97,7 @@ func TestGenerateExecutableCardSourceDividedDamage(t *testing.T) {
 			name:       "combat state filtered creatures",
 			oracleText: "Test Bolt deals 5 damage divided as you choose among any number of target attacking creatures.",
 			wantedSnips: []string{
-				"MinTargets: 1",
+				"MinTargets: 0",
 				"MaxTargets: 5",
 				"RequiredTypesAny: []types.Card{types.Creature}",
 				"CombatState: game.CombatStateAttacking",
@@ -98,7 +108,7 @@ func TestGenerateExecutableCardSourceDividedDamage(t *testing.T) {
 			name:       "combat state without keyword",
 			oracleText: "Test Bolt deals X damage divided as you choose among any number of target attacking or blocking creatures without flying.",
 			wantedSnips: []string{
-				"MinTargets: 1",
+				"MinTargets: 0",
 				"MaxTargets: 99",
 				"RequiredTypesAny: []types.Card{types.Creature}",
 				"CombatState: game.CombatStateAttackingOrBlocking",
@@ -110,7 +120,7 @@ func TestGenerateExecutableCardSourceDividedDamage(t *testing.T) {
 			name:       "type union",
 			oracleText: "Test Bolt deals 5 damage divided as you choose among any number of target creatures and/or planeswalkers.",
 			wantedSnips: []string{
-				"MinTargets: 1",
+				"MinTargets: 0",
 				"MaxTargets: 5",
 				"RequiredTypesAny: []types.Card{types.Creature, types.Planeswalker}",
 				"Divided:   true",
@@ -120,7 +130,7 @@ func TestGenerateExecutableCardSourceDividedDamage(t *testing.T) {
 			name:       "controller filtered union",
 			oracleText: "Test Bolt deals 5 damage divided as you choose among any number of target creatures and/or planeswalkers your opponents control.",
 			wantedSnips: []string{
-				"MinTargets: 1",
+				"MinTargets: 0",
 				"MaxTargets: 5",
 				"RequiredTypesAny: []types.Card{types.Creature, types.Planeswalker}",
 				"game.ControllerOpponent",
@@ -142,7 +152,7 @@ func TestGenerateExecutableCardSourceDividedDamage(t *testing.T) {
 			name:       "dynamic count total",
 			oracleText: "Test Bolt deals X damage divided as you choose among any number of target creatures and/or planeswalkers your opponents control, where X is the number of lands you control.",
 			wantedSnips: []string{
-				"MinTargets: 1",
+				"MinTargets: 0",
 				"MaxTargets: 99",
 				"RequiredTypesAny: []types.Card{types.Creature, types.Planeswalker}",
 				"game.ControllerOpponent",
@@ -155,7 +165,7 @@ func TestGenerateExecutableCardSourceDividedDamage(t *testing.T) {
 			oracleText: "At the beginning of your end step, this enchantment deals X damage divided as you choose among any number of target creatures, where X is the number of age counters on it.",
 			typeLine:   "Enchantment",
 			wantedSnips: []string{
-				"MinTargets: 1",
+				"MinTargets: 0",
 				"MaxTargets: 99",
 				"RequiredTypesAny: []types.Card{types.Creature}",
 				"game.DynamicAmountObjectCounters",

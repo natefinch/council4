@@ -65,7 +65,7 @@ func newElusiveOtter() *game.CardDef {
 			SpellAbility: opt.Val(game.Mode{
 				Targets: []game.TargetSpec{
 					game.TargetSpec{
-						MinTargets: 1,
+						MinTargets: 0,
 						MaxTargets: 99,
 						Constraint: "any number of target creatures you control",
 						Allow:      game.TargetAllowPermanent,
