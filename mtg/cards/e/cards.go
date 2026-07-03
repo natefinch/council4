@@ -78,4 +78,6 @@ var Cards = []*game.CardDef{
 	EyeblightSEnding,
 	EzrimAgencyChief,
 	ExhibitionMagician,
+	ÉomerKingOfRohan,
+	ÉomerMarshalOfRohan,
 }

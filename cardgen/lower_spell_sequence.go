@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
@@ -4198,7 +4200,8 @@ func upperFirst(s string) string {
 	if s == "" {
 		return s
 	}
-	return strings.ToUpper(s[:1]) + s[1:]
+	r, size := utf8.DecodeRuneInString(s)
+	return string(unicode.ToUpper(r)) + s[size:]
 }
 
 // sharedTargetRebaseOffset returns the accumulated-targets start index for the
