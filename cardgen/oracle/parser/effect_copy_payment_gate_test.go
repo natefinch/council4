@@ -5,15 +5,18 @@ import (
 )
 
 // TestParseResolvingCopyPaymentGate proves the payment-gated copy-chain family
-// folds its "that ... controller may pay {mana}." offer onto the copy consequence
-// effect as a MayPayThenIfDo mana payment whose payer is the affected target's
-// controller, linked to the "If the player does" gate.
+// folds its "that ... controller may <cost>." offer onto the copy consequence
+// effect as a MayPayThenIfDo payment whose payer is the affected target's
+// controller, linked to the "If the player does" gate. The offered cost is
+// either mana ("may pay {mana}") or a single non-mana resolution cost ("may
+// discard a card", "may sacrifice a land of their choice").
 func TestParseResolvingCopyPaymentGate(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name   string
-		oracle string
-		mana   string
+		name       string
+		oracle     string
+		mana       string
+		additional bool
 	}{
 		{
 			name:   "String of Disappearances",
@@ -29,6 +32,16 @@ func TestParseResolvingCopyPaymentGate(t *testing.T) {
 			name:   "Chain Stasis",
 			oracle: "You may tap or untap target creature. Then that creature's controller may pay {2}{U}. If the player does, they may copy this spell and may choose a new target for that copy.",
 			mana:   "{2}{U}",
+		},
+		{
+			name:       "Chain of Plasma",
+			oracle:     "Chain of Plasma deals 3 damage to any target. Then that player or that permanent's controller may discard a card. If the player does, they may copy this spell and may choose a new target for that copy.",
+			additional: true,
+		},
+		{
+			name:       "Chain of Vapor",
+			oracle:     "Return target nonland permanent to its owner's hand. Then that permanent's controller may sacrifice a land of their choice. If the player does, they may copy this spell and may choose a new target for that copy.",
+			additional: true,
 		},
 	}
 	for _, test := range tests {
@@ -49,14 +62,24 @@ func TestParseResolvingCopyPaymentGate(t *testing.T) {
 			}
 			payment := copyEffect.Payment
 			if payment.Form != EffectPaymentFormMayPayThenIfDo ||
-				payment.Payer != EffectPaymentPayerAffectedTargetController ||
-				payment.ManaCost.String() != test.mana ||
-				payment.AdditionalCost != nil {
-				t.Fatalf("payment = %#v (mana %q)", payment, payment.ManaCost.String())
+				payment.Payer != EffectPaymentPayerAffectedTargetController {
+				t.Fatalf("payment = %#v", payment)
+			}
+			if test.additional {
+				if payment.AdditionalCost == nil || len(payment.ManaCost) != 0 {
+					t.Fatalf("expected non-mana AdditionalCost, got payment = %#v (mana %q)", payment, payment.ManaCost.String())
+				}
+			} else {
+				if payment.ManaCost.String() != test.mana || payment.AdditionalCost != nil {
+					t.Fatalf("payment = %#v (mana %q)", payment, payment.ManaCost.String())
+				}
 			}
 			offer := ability.Sentences[len(ability.Sentences)-2]
 			if offer.PaymentPrelude == nil {
 				t.Fatalf("payment offer sentence has no PaymentPrelude: %#v", offer)
+			}
+			if len(offer.Effects) != 0 {
+				t.Fatalf("folded payment offer sentence still carries effects: %#v", offer.Effects)
 			}
 		})
 	}
@@ -64,8 +87,9 @@ func TestParseResolvingCopyPaymentGate(t *testing.T) {
 
 // TestParseResolvingCopyPaymentGateFailsClosed proves the recognizer folds no
 // payment onto wordings outside the payment-gated copy-chain family: the
-// unconditional copy-chain siblings (no payment sentence) and a non-mana payment
-// offer both leave the copy effect's payment unset.
+// unconditional copy-chain siblings carry the copy in the base sentence with no
+// payment offer and no "If the player does" gate, so their copy effect's payment
+// stays unset.
 func TestParseResolvingCopyPaymentGateFailsClosed(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -77,8 +101,8 @@ func TestParseResolvingCopyPaymentGateFailsClosed(t *testing.T) {
 			oracle: "Destroy target noncreature permanent. Then that permanent's controller may copy this spell and may choose a new target for that copy.",
 		},
 		{
-			name:   "Chain of Plasma non-mana payment",
-			oracle: "Chain of Plasma deals 3 damage to any target. Then that player or that permanent's controller may discard a card. If the player does, they may copy this spell and may choose a new target for that copy.",
+			name:   "Barroom Brawl unconditional plural",
+			oracle: "Target creature you control fights target creature the opponent to your left controls. Then that player may copy this spell and may choose new targets for the copy.",
 		},
 	}
 	for _, test := range tests {

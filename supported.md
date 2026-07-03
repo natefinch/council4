@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,837 of 32,501 cards eligible for paper support (51.8%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,839 of 32,501 cards eligible for paper support (51.8%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2311,7 +2311,9 @@ Council4 currently supports **16,837 of 32,501 cards eligible for paper support 
 - Chain Devil
 - Chain Lightning
 - Chain of Acid
+- Chain of Plasma
 - Chain of Smog
+- Chain of Vapor
 - Chain Reaction
 - Chain Stasis
 - Chain to Memory
