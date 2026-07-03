@@ -235,6 +235,9 @@ func lowerContent(
 	if content, ok := lowerEventPlayerPaidBenefit(cardName, ctx, syntax); ok {
 		return content, nil
 	}
+	if content, ok := lowerNonControllerOptionalEdictGate(cardName, ctx, syntax); ok {
+		return content, nil
+	}
 	if hasOptionalResolvingEffect(ctx.content.Effects) {
 		return lowerOptionalContent(cardName, ctx, syntax)
 	}

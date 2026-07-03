@@ -830,13 +830,22 @@ func lowerSacrificeSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnosti
 			}}}.Ability(), nil
 		}
 	}
-	// Strict fail-closed: reject unsupported modifiers and dynamic amounts.
+	// Strict fail-closed: reject unsupported modifiers and dynamic amounts. A
+	// non-controller optional edict ("target opponent may sacrifice ...") is only
+	// ever lowered as the gated action of a negative resolving gate
+	// (lowerNonControllerOptionalEdictGate), which strips the optionality before
+	// reaching this mandatory path; a bare non-controller optional edict would
+	// silently lose its optionality if forced through here, so it stays
+	// unsupported. A controller optional sacrifice ("you may sacrifice ...") is
+	// left to the optional-resolving flow, which wraps this mandatory lowering in
+	// its own optional envelope, so it is not rejected here.
 	if len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||
 		!effect.Amount.Known ||
 		effect.Amount.Value < 1 ||
-		effect.Negated {
+		effect.Negated ||
+		(effect.Optional && effect.Context != parser.EffectContextController) {
 		return unsupported()
 	}
 
@@ -1203,6 +1212,12 @@ func sacrificeChoiceSelection(selector compiler.CompiledSelector) (game.Selectio
 	// "... permanents ... that are one or more colors" (All Is Dust) restricts
 	// the eligible set to colored permanents; colorless ones survive.
 	selection.Colored = selector.Colored
+	// A required color or color disjunction ("green or white creature";
+	// Self-Inflicted Wound) restricts the eligible set to permanents carrying at
+	// least one of the named colors. The parser reconstructs the same colors for
+	// its byte-exact wording check, so the filter and the printed noun stay in
+	// lockstep.
+	selection.ColorsAny = selector.ColorsAny()
 	return selection, true
 }
 

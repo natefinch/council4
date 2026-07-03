@@ -235,11 +235,16 @@ func lowerOrderedEffectSequence(
 		// A leading condition that shares its effect's sentence (e.g. "If this
 		// spell was kicked, draw a card.") contributes its own references (the
 		// "this spell" object) inside the effect's clause span, so the compiler
-		// attributes them to the effect. Those references belong to the gate
+		// attributes them to the effect. Those references belong to the
 		// condition, not the effect body, and are credited separately below via
 		// conditionReferenceCount; strip them here so the per-effect lowerer sees
-		// only the effect's own references.
-		clauseRefs := referencesOutsideConditionSpans(effect.References, gateConditions)
+		// only the effect's own references. Strip against every condition (not just
+		// the effect-gate conditions): an optional-flow gate the sequence consumes
+		// itself ("... If that player does, they lose 2 life.") also carries an
+		// anaphoric player reference ("that player") inside the consequence's
+		// clause span, which would otherwise survive as a phantom second reference
+		// and make the consequence's own "they" lowering fail closed.
+		clauseRefs := referencesOutsideConditionSpans(effect.References, ctx.content.Conditions)
 		ownedReferenceCount := len(clauseRefs)
 		// A group counter-placement clause whose group filter carries a "with a
 		// <kind> counter on it/them" qualifier introduces a pronoun naming each
@@ -428,8 +433,11 @@ func lowerOrderedEffectSequence(
 	// A condition's own object pronoun ("its power" in "draw a card if its power
 	// is 3 or greater") sits outside every effect clause span, so it is consumed
 	// by the matched condition gate rather than by an effect. Credit those
-	// references so the consumed-count check does not see them as dropped.
-	consumedReferences += conditionReferenceCount(ctx.content.References, gateConditions)
+	// references so the consumed-count check does not see them as dropped. Count
+	// against every condition to match the clause-reference stripping above, so an
+	// optional-flow gate's own anaphor ("that player" in "If that player does")
+	// is credited rather than reported as an unconsumed reference.
+	consumedReferences += conditionReferenceCount(ctx.content.References, ctx.content.Conditions)
 	if !sequenceCountsConsumed(ctx, consumedTargets, consumedKeywords, consumedReferences, consumedConditions) {
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — unconsumed targets/references/keywords")
 	}
