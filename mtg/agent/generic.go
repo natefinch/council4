@@ -138,6 +138,7 @@ func scoreCastSpell(obs rules.PlayerObservation, act action.Action, personality 
 		}
 		score += rampBonus(obs, card)
 		score -= holdUpPenalty(obs, card, personality)
+		score -= archenemyPaint(obs, card, personality)
 	}
 	score += targetingScore(obs, cast.Targets, personality)
 	return score

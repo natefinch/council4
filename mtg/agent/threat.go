@@ -125,3 +125,39 @@ func commanderOnBattlefield(obs rules.PlayerObservation, player rules.PlayerView
 	}
 	return false
 }
+
+// Archenemy-paint weights (playbook §3.1, §10.4). In a four-player game the
+// scariest-looking player draws the other three's attacks and removal, so once
+// the agent is clearly ahead it should stop painting a bigger target and let the
+// threat baton pass rather than over-committing.
+const (
+	// archenemyMargin is how far ahead in aggregate threat the agent must be
+	// before it is the table's clear archenemy — one large creature's worth of
+	// lead in the threat currency.
+	archenemyMargin = 6.0
+	// archenemyPaintPenalty discourages deploying yet another creature while
+	// already the archenemy. It is smaller than a creature's deploy value, so the
+	// agent still develops; it just does so less eagerly once it is ahead.
+	archenemyPaintPenalty = 12.0
+)
+
+// archenemyPaint penalizes deploying another creature when the agent is already
+// the table's clear archenemy, so it stops painting a bigger target once it is
+// ahead. It applies only to creatures and only past archenemyMargin of
+// aggregate-threat lead over the strongest opponent, and is scaled by
+// personality: an aggressive deck accepts the paint and piles on, a political
+// deck avoids it more.
+func archenemyPaint(obs rules.PlayerObservation, card rules.CardView, personality Personality) float64 {
+	if !isCreature(card) {
+		return 0
+	}
+	model := NewThreatModel(obs)
+	_, opponentThreat, ok := model.HighestThreatOpponent()
+	if !ok {
+		return 0
+	}
+	if model.PlayerThreat(obs.Player)-opponentThreat <= archenemyMargin {
+		return 0
+	}
+	return archenemyPaintPenalty * personality.paintScale()
+}
