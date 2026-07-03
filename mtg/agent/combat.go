@@ -23,6 +23,12 @@ const (
 	blockChumpBase      = -3.0
 	blockChumpPerPower  = 0.5
 	blockPreventDamage  = 2.0
+
+	// blockSurvival is added to a block assignment that prevents an otherwise
+	// lethal attack (by life total or commander damage). It dominates every trade
+	// term, so the agent will chump-block whatever it must to survive the turn —
+	// staying alive is worth more than any creature.
+	blockSurvival = 100.0
 )
 
 // scoreAttackDeclarations scores a declare-attackers action. Declaring no
@@ -97,11 +103,15 @@ func canBlock(attacker, blocker rules.PermanentView) bool {
 	return true
 }
 
-// scoreBlockDeclarations scores a declare-blockers action by the quality of each
-// blocker-vs-attacker trade. Declaring no blockers is the score floor.
+// scoreBlockDeclarations scores a declare-blockers action. It combines the
+// quality of each blocker-vs-attacker trade with a survival term: if taking the
+// attack unblocked would be lethal (by life total or commander damage) and this
+// block assignment prevents that, the assignment is rewarded above any trade, so
+// the agent chump-blocks whatever it must to stay alive — the way a human always
+// does. Declaring no blockers is the score floor when no attack threatens lethal.
 func scoreBlockDeclarations(obs rules.PlayerObservation, act action.Action) float64 {
 	declare, ok := act.DeclareBlockersPayload()
-	if !ok || len(declare.Blockers) == 0 {
+	if !ok {
 		return scorePass
 	}
 	var total float64
@@ -116,7 +126,7 @@ func scoreBlockDeclarations(obs rules.PlayerObservation, act action.Action) floa
 		}
 		total += blockValue(attacker, blocker)
 	}
-	return total
+	return total + survivalValue(obs, declare.Blockers)
 }
 
 func blockValue(attacker, blocker rules.PermanentView) float64 {
