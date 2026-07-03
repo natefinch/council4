@@ -68,16 +68,51 @@ func TestParseGroupMayHaveActionGate(t *testing.T) {
 	}
 }
 
-// TestParseGroupMayHaveGateFailsClosedOnThirdSentence confirms the recognizer
-// declines a multiplayer "may have" offer followed by a third semantic sentence
-// (Breaking Point's "Creatures destroyed this way can't be regenerated."): the
-// gate handles exactly the offer and its consequence, so a further semantic
-// sentence leaves the grant context unset and appends no ConditionClause.
-func TestParseGroupMayHaveGateFailsClosedOnThirdSentence(t *testing.T) {
+// TestParseGroupMayHaveGateRegenerationRiderThirdSentence confirms the
+// recognizer handles a multiplayer "may have" offer whose consequence carries a
+// credited regeneration rider as a third sentence (Breaking Point's "Creatures
+// destroyed this way can't be regenerated."): the rider folds onto the destroy
+// consequence during sentence parsing, so the gate tolerates it, sets the group
+// chooser context, and appends the negative-branch prior-instruction gate.
+func TestParseGroupMayHaveGateRegenerationRiderThirdSentence(t *testing.T) {
 	t.Parallel()
 	document, diagnostics := Parse(
 		"Any player may have Breaking Point deal 6 damage to them. If no one does, destroy all creatures. Creatures destroyed this way can't be regenerated.",
 		Context{CardName: "Breaking Point", InstantOrSorcery: true},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	ability := document.Abilities[0]
+	have := ability.Sentences[0].Effects[0]
+	if have.Context != EffectContextEachPlayer {
+		t.Fatalf("have context = %v, want EffectContextEachPlayer", have.Context)
+	}
+	destroy := ability.Sentences[1].Effects[0]
+	if !destroy.PreventRegeneration {
+		t.Fatal("destroy consequence PreventRegeneration = false, want true (credited rider)")
+	}
+	found := false
+	for _, clause := range ability.ConditionClauses {
+		if clause.Predicate == ConditionPredicatePriorInstructionNotAccepted {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("condition clauses = %#v, want a not-accepted prior-instruction gate", ability.ConditionClauses)
+	}
+}
+
+// TestParseGroupMayHaveGateFailsClosedOnThirdSentence confirms the recognizer
+// still declines a multiplayer "may have" offer followed by a third semantic
+// sentence that is not a credited rider ("Draw a card."): such a sentence is a
+// distinct third effect the gate cannot model, so the grant context stays unset
+// and no prior-instruction ConditionClause is appended.
+func TestParseGroupMayHaveGateFailsClosedOnThirdSentence(t *testing.T) {
+	t.Parallel()
+	document, diagnostics := Parse(
+		"Any player may have Browbeat deal 5 damage to them. If no one does, target player draws three cards. Draw a card.",
+		Context{CardName: "Browbeat", InstantOrSorcery: true},
 	)
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)

@@ -12,7 +12,7 @@ func (a *Ability) computeSemanticReferences() []Reference {
 		tokens = tokensOutsideParserSpan(tokens, span)
 	}
 	for i := range a.Sentences {
-		if a.Sentences[i].RegenerationRider || a.Sentences[i].ReturnAsEnchantmentRider || a.Sentences[i].CopyChooseNewTargetsRider || a.Sentences[i].PlayFromTopPayLifeRider || a.Sentences[i].PileSplitRider || a.Sentences[i].RemoveAuraRider {
+		if sentenceIsCreditedRider(&a.Sentences[i]) {
 			tokens = tokensOutsideParserSpan(tokens, a.Sentences[i].Span)
 		}
 	}

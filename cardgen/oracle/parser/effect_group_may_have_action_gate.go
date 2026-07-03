@@ -124,13 +124,20 @@ func groupResolvingGateWidth(tokens []shared.Token) (int, ConditionPredicateKind
 //     consequence effects, along with any spurious negation the negative gate
 //     leaked, so each consequence lowers as its own standalone effect.
 //
-// It fails closed on any other shape (for example a third semantic sentence, as
-// in Breaking Point's regeneration rider).
+// A trailing sentence already folded onto a preceding effect as a credited
+// rider (for example Breaking Point's "Creatures destroyed this way can't be
+// regenerated." regeneration rider, which stamps PreventRegeneration on the
+// destroy consequence) is not a distinct third effect: its span is covered
+// independently and it contributes no standalone instruction, so the gate
+// tolerates it. It fails closed on any other trailing semantic sentence.
 func recognizeGroupMayHaveActionGate(ability *Ability) {
 	if len(ability.Sentences) < 2 {
 		return
 	}
 	for i := 2; i < len(ability.Sentences); i++ {
+		if sentenceIsCreditedRider(&ability.Sentences[i]) {
+			continue
+		}
 		if len(semanticEffectTokens(ability.Sentences[i].Tokens)) != 0 {
 			return
 		}

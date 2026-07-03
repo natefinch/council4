@@ -85,6 +85,44 @@ func TestGenerateExecutableCardSourceBookBurning(t *testing.T) {
 	}
 }
 
+// TestGenerateExecutableCardSourceBreakingPoint covers the multiplayer "may
+// have" gate whose negative consequence destroys all creatures and carries a
+// credited regeneration rider third sentence ("Creatures destroyed this way
+// can't be regenerated."). The rider folds onto the destroy during sentence
+// parsing, so the gate tolerates the third sentence, offers each player the
+// source's 6 damage, and gates the PreventRegeneration mass destroy on nobody
+// having accepted (Accepted TriFalse).
+func TestGenerateExecutableCardSourceBreakingPoint(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Breaking Point",
+		Layout:     "normal",
+		ManaCost:   "{1}{R}{R}",
+		TypeLine:   "Sorcery",
+		OracleText: "Any player may have Breaking Point deal 6 damage to them. If no one does, destroy all creatures. Creatures destroyed this way can't be regenerated.",
+	}, "b")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, want := range []string{
+		"Amount:    game.Fixed(6)",
+		"Recipient: game.PlayerDamageRecipient(game.GroupOfferMemberReference())",
+		"OptionalActorGroup: opt.Val(game.AllPlayersReference())",
+		"PublishResult:      game.ResultKey(\"group-may-have-action\")",
+		"Primitive: game.Destroy{",
+		"PreventRegeneration: true",
+		"Key:      \"group-may-have-action\"",
+		"Accepted: game.TriFalse",
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("generated source missing %q:\n%s", want, source)
+		}
+	}
+}
+
 // TestGenerateExecutableCardSourceVexingDevil covers the multiplayer "may have"
 // gate on an enters ability whose actor is the source pronoun and whose scope is
 // opponents ("any opponent may have it deal 4 damage to them"), with an
@@ -161,19 +199,12 @@ func TestGenerateExecutableCardSourceLonghornFirebeast(t *testing.T) {
 // TestGenerateExecutableCardSourceGroupMayHaveGateFailsClosed confirms the
 // multiplayer "may have" gate fails closed on shapes outside the damage-to-
 // accepters family, rather than silently dropping the offer or mis-lowering the
-// consequence: Breaking Point carries a third regeneration-rider sentence,
-// Distant Memories leads with a search/exile and a "put into hand" actor, and
-// Sin Prodder branches with an Otherwise clause. Each must emit diagnostics.
+// consequence: Distant Memories leads with a search/exile and a "put into hand"
+// actor, and Sin Prodder branches with an Otherwise clause. Each must emit
+// diagnostics.
 func TestGenerateExecutableCardSourceGroupMayHaveGateFailsClosed(t *testing.T) {
 	t.Parallel()
 	for _, card := range []ScryfallCard{
-		{
-			Name:       "Breaking Point",
-			Layout:     "normal",
-			ManaCost:   "{2}{R}{R}",
-			TypeLine:   "Sorcery",
-			OracleText: "Any player may have Breaking Point deal 6 damage to them. If no one does, destroy all creatures. Creatures destroyed this way can't be regenerated.",
-		},
 		{
 			Name:       "Distant Memories",
 			Layout:     "normal",

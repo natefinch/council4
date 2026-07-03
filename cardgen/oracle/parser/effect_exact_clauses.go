@@ -1503,6 +1503,31 @@ func exactRemoveFromCombatEffectSyntax(effect *EffectSyntax) bool {
 		strings.EqualFold(exactEffectClauseText(effect), "Remove "+effect.Targets[0].Text+" from combat.")
 }
 
+// exactRemoveFromCombatSelfEffectSyntax recognizes the self/back-reference form
+// "Remove this creature from combat." / "Remove <CardName> from combat." / the
+// pronoun "Remove it from combat." (Shakedown Heavy), where the creature taken
+// out of combat is the ability's own source. There is no target; the single
+// reference is the source self-reference ("this <object>" or the card's own
+// name) or the "it" pronoun that a self trigger binds to the source. Lowering
+// routes it to the runtime's source permanent reference. Any other wording
+// leaves the clause non-exact so lowering fails closed.
+func exactRemoveFromCombatSelfEffectSyntax(effect *EffectSyntax) bool {
+	if len(effect.Targets) != 0 || len(effect.References) != 1 {
+		return false
+	}
+	reference := effect.References[0]
+	switch reference.Kind {
+	case ReferenceThisObject, ReferenceSelfName:
+	case ReferencePronoun:
+		if reference.Pronoun != PronounIt {
+			return false
+		}
+	default:
+		return false
+	}
+	return strings.EqualFold(exactEffectClauseText(effect), "Remove "+reference.Text+" from combat.")
+}
+
 // exactRegenerateSelfEffectSyntax recognizes the self-regeneration form
 // "Regenerate this creature." (and the "this permanent"/"this token" object
 // nouns) or "Regenerate <CardName>." where the regenerated permanent is the
