@@ -1,6 +1,6 @@
 # Unsupported Cards
 
-Council4 currently supports **16,846 of 32,501 cards eligible for paper support (51.8%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,855 of 32,501 cards eligible for paper support (51.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 These cards are eligible for paper support but cardgen cannot yet generate them. Cards excluded by the corpus policy are not listed.
 
@@ -4435,7 +4435,6 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Faith's Reward** — unsupported ordered effect sequence: sub-effect — unsupported return spell; unsupported ordered effect sequence: sub-effect — unsupported counter placement
 - **Faith's Shield** — unsupported ability content: a standalone 'instead' replacement effect has no preceding effect to replace
 - **Faithbound Judge // Sinner's Judgment** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Disturb {5}{W}{W}; unsupported phase/step trigger phrase: the executable source backend does not support this intervening-if condition; unsupported mixed keyword ability: the executable source backend recognized Defender but does not yet lower the additional rules text; unsupported static ability: the executable source backend does not yet lower non-keyword static rules text; unsupported ordered effect sequence: structural — per-effect condition unrecognized: if there are three or more judgment counters on it
-- **Faithful Pikemaster** — unsupported static declaration condition: the static declaration has an unsupported or ambiguously scoped condition
 - **Faithful Squire // Kaiso, Memory of Loyalty** — unsupported card layout: the source generator does not support Scryfall layout "flip"
 - **Fake Your Own Death** — unsupported ordered effect sequence: sub-effect — unsupported keyword or ability grant
 - **Falco Spara, Pactweaver** — unsupported Oracle construct: the compiler preserved but did not confidently lower: You may cast spells from the top of your library by removing a counter from a creature you control in addition to paying their other costs.; unsupported static ability: the executable source backend does not yet lower non-keyword static rules text
@@ -4510,12 +4509,7 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Fate Foretold** — unsupported draw spell: the executable source backend supports only exact fixed card draw
 - **Fate of the Sun-Cryst** — unsupported cast effect: only cast-without-paying-mana-cost spells are supported
 - **Fated Clash** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported cast effect: only cast-without-paying-mana-cost spells are supported; unsupported ordered effect sequence: sub-effect — unsupported temporary keyword spell
-- **Fated Conflagration** — unsupported ordered effect sequence: structural — per-effect condition unrecognized: If it's your turn
 - **Fated Firepower** — unsupported enters-with-counters replacement: the executable source backend does not support this enters-with-counters counter kind; unsupported damage replacement: the executable source backend supports only double, triple, or additive damage replacements
-- **Fated Infatuation** — unsupported ordered effect sequence: structural — per-effect condition unrecognized: If it's your turn
-- **Fated Intervention** — unsupported ordered effect sequence: structural — per-effect condition unrecognized: If it's your turn
-- **Fated Retribution** — unsupported ordered effect sequence: structural — per-effect condition unrecognized: If it's your turn
-- **Fated Return** — unsupported ordered effect sequence: structural — per-effect condition unrecognized: If it's your turn
 - **Fateful Absence** — unsupported ordered effect sequence: sub-effect — unsupported investigate spell
 - **Fateful Handoff** — unsupported ordered effect sequence: sub-effect — unsupported draw spell; unsupported ordered effect sequence: sub-effect — unsupported gain-control spell
 - **Fateful Showdown** — unsupported ordered effect sequence: sub-effect — unsupported draw spell
@@ -4561,7 +4555,6 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Feather, Radiant Arbiter** — unsupported triggered ability: the object-became-target event exists, but this trigger requires a missing target-subject, targeting-cause, or source relation slot
 - **Feather, the Redeemed** — unsupported ordered effect sequence: structural — unsupported resolving optionality
 - **Fecund Greenshell** — unsupported triggered ability: the runtime events exist, but this trigger requires a missing event-or-subject-union semantic slot
-- **Feed the Cauldron** — unsupported ordered effect sequence: structural — per-effect condition unrecognized: If it's your turn
 - **Feed the Clan** — unsupported ability content: a standalone 'instead' replacement effect has no preceding effect to replace
 - **Feed the Cycle** — unsupported cost: the compiler preserved this cost component but did not assign executable semantics; unsupported activation cost: the executable source backend does not yet lower this additional cost to cast
 - **Feed the Infection** — unsupported life spell: the executable source backend supports only exact fixed life changes
@@ -7966,7 +7959,7 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **M'Baku, Jabari Chieftain** — unsupported phase/step trigger phrase: the executable source backend does not support this intervening-if condition; unsupported triggered ability: the executable source backend does not support this semantic trigger condition
 - **M.O.D.O.K.** — unsupported activation ability word: the executable source backend cannot lower this activated ability word; unsupported static declaration shell: the recognized static declarations require an otherwise empty static ability shell
 - **Ma Chao, Western Warrior** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Whenever Ma Chao attacks alone, it can't be blocked this combat.; unsupported triggered ability effect: the executable source backend supports only recognized semantic self triggers with supported effects
-- **Maarika, Brutal Gladiator** — unsupported static declaration condition: the static declaration has an unsupported or ambiguously scoped condition; unsupported triggered ability: the executable source backend does not support this semantic life or damage trigger condition
+- **Maarika, Brutal Gladiator** — unsupported triggered ability: the executable source backend does not support this semantic life or damage trigger condition
 - **Mabel, Heir to Cragflame** — unsupported token creation: the executable source backend supports only a single fixed-power/toughness creature token with one subtype and at most one color
 - **Macabre Reconstruction** — unsupported ordered effect sequence: structural — per-effect condition spans multiple clauses
 - **Machinate** — unsupported ordered effect sequence: sub-effect — unsupported manifest spell; unsupported ordered effect sequence: sub-effect — unsupported counter placement
@@ -10526,7 +10519,6 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Rapid Augmenter** — unsupported permanent zone-change trigger: the executable source backend does not support this semantic permanent zone-change trigger condition
 - **Rapid Fire** — unsupported cast effect: only cast-without-paying-mana-cost spells are supported; unsupported ordered effect sequence: structural — per-effect condition unrecognized: If it doesn't have rampage
 - **Rapid Rescue** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ordered effect sequence: sub-effect — unsupported counter placement
-- **Rapier Wit** — unsupported ordered effect sequence: structural — per-effect condition unrecognized: If it's your turn
 - **Rashida Scalebane** — unsupported ordered effect sequence: structural — multi-effect body not lowered as a sequence
 - **Rashka the Slayer** — unsupported triggered ability: the runtime event exists, but this combat, phase, or step relation requires a missing runtime capability
 - **Rashmi and Ragavan** — unsupported triggered ability: the spell event exists, but this trigger requires a missing spell-event relation, copy, or provenance semantic slot
@@ -12833,7 +12825,6 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Stolen Identity** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Cipher (Then you may exile this spell card encoded on a creature you control. Whenever that creature deals combat damage to a player, its controller may cast a copy of the encoded card without paying its mana cost.); unsupported ability content: the executable source backend does not yet lower this ability content
 - **Stolen Strategy** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ordered effect sequence: sub-effect — unsupported cast effect
 - **Stolen Uniform** — unsupported gain-control spell: the executable source backend supports only exact gain-control sequences targeting one permanent
-- **Stolen Vitality** — unsupported ordered effect sequence: structural — per-effect condition unrecognized: If it's your turn
 - **Stomped by the Foot** — unsupported ability word: the executable source backend does not yet lower the "Kicker" ability word; unsupported ordered effect sequence: sub-effect — unsupported power/toughness spell
 - **Stomping Slabs** — unsupported ordered effect sequence: structural — per-effect condition unrecognized: If a card named Stomping Slabs was revealed this way
 - **Stone Catapult** — unsupported destroy spell: the executable source backend supports only exact destruction of one target permanent
@@ -15208,7 +15199,7 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Whirlwind Technique** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Airbend up to two target creatures. (To airbend a creature, exile it. While it's exiled, its owner may cast it for {2} rather than its mana cost.); unsupported ability content: the executable source backend does not yet lower this ability content
 - **Whirlwind, Killer Cyclone** — unsupported triggered ability: the runtime event exists, but this combat, phase, or step relation requires a missing runtime capability
 - **Whirlwing Stormbrood // Dynamic Soar** — unsupported static ability: the executable source backend does not yet lower non-keyword static rules text
-- **Whiskervale Forerunner** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ordered effect sequence: structural — per-effect condition unrecognized: if it's your turn
+- **Whiskervale Forerunner** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ordered effect sequence: structural — per-effect condition unrecognized: If you don't put it onto the battlefield
 - **Whispergear Sneak** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Draft this card face up.; unsupported static ability: the executable source backend does not yet lower non-keyword static rules text; unsupported static ability: the executable source backend does not yet lower non-keyword static rules text
 - **Whispering Madness** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Cipher (Then you may exile this spell card encoded on a creature you control. Whenever that creature deals combat damage to a player, its controller may cast a copy of the encoded card without paying its mana cost.); unsupported ability content: the executable source backend does not yet lower this ability content
 - **Whispering Specter** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ordered effect sequence: sub-effect — unsupported discard spell; unsupported ordered effect sequence: sub-effect — unsupported ability content

@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,846 of 32,501 cards eligible for paper support (51.8%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,855 of 32,501 cards eligible for paper support (51.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -4693,6 +4693,7 @@ Council4 currently supports **16,846 of 32,501 cards eligible for paper support 
 - Faith's Fetters
 - Faithbearer Paladin
 - Faithful Mending
+- Faithful Pikemaster
 - Faithful Watchdog
 - Faithless Looting
 - Faithless Salvaging
@@ -4775,6 +4776,11 @@ Council4 currently supports **16,846 of 32,501 cards eligible for paper support 
 - Fate Forgotten
 - Fate Transfer
 - Fate Unraveler
+- Fated Conflagration
+- Fated Infatuation
+- Fated Intervention
+- Fated Retribution
+- Fated Return
 - Fateful End
 - Fatestitcher
 - Fathom Fleet Cutthroat
@@ -4813,6 +4819,7 @@ Council4 currently supports **16,846 of 32,501 cards eligible for paper support 
 - Featherbrained Filcher
 - Fecundity
 - Feebleness
+- Feed the Cauldron
 - Feed the Flames
 - Feed the Pack
 - Feed the Serpent
@@ -11108,6 +11115,7 @@ Council4 currently supports **16,846 of 32,501 cards eligible for paper support 
 - Raphael, Tough Turtle
 - Rapid Decay
 - Rapid Hybridization
+- Rapier Wit
 - Rappelling Scouts
 - Raptor Companion
 - Raptor Hatchling
@@ -13835,6 +13843,7 @@ Council4 currently supports **16,846 of 32,501 cards eligible for paper support 
 - Stoke the Flames
 - Stolen Grain
 - Stolen Stark Tech
+- Stolen Vitality
 - Stomp and Howl
 - Stomper Cub
 - Stomping Ground
