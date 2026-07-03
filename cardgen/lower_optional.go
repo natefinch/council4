@@ -1807,12 +1807,16 @@ func causativeActionForcibleExact(
 		compiler.EffectMill,
 		compiler.EffectDiscard,
 		compiler.EffectLose,
-		compiler.EffectDealDamage:
+		compiler.EffectDealDamage,
+		compiler.EffectCreate:
 		// The count effects carry their magnitude in Amount. A causative "deal N
 		// damage to <target>" likewise carries a known fixed value, and "deal
-		// damage equal to its power" a recognized dynamic amount; the downstream
-		// single-effect damage lowerer re-validates the damage source, recipient,
-		// and targeting and fails closed for any it cannot model.
+		// damage equal to its power" a recognized dynamic amount; a causative
+		// "create N <token>" carries its token count in Amount. The downstream
+		// single-effect lowerer re-validates the damage source/recipient/target
+		// or the token identity (a predefined named token, or a fixed
+		// power/toughness token with its types, one subtype, and at most one
+		// color) and fails closed for any it cannot model.
 		return countAmountParsed
 	case compiler.EffectGain:
 		// "gain N life" carries its magnitude in Amount; "gain <keyword> until

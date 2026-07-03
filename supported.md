@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,825 of 32,501 cards eligible for paper support (51.8%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,828 of 32,501 cards eligible for paper support (51.8%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -836,6 +836,7 @@ Council4 currently supports **16,825 of 32,501 cards eligible for paper support 
 - Atraxa, Praetors' Voice
 - Atrocious Experiment
 - Atsushi, the Blazing Sky
+- Attack-in-the-Box
 - Attendant of Vraska
 - Attended Healer
 - Attended Knight
@@ -9823,6 +9824,7 @@ Council4 currently supports **16,825 of 32,501 cards eligible for paper support 
 - Oath of the Ancient Wood
 - Oathsworn Giant
 - Ob Nixilis's Cruelty
+- Ob Nixilis, the Fallen
 - Ob Nixilis, the Hate-Twisted
 - Ob Nixilis, Unshackled
 - Obelisk of Alara
@@ -14493,6 +14495,7 @@ Council4 currently supports **16,825 of 32,501 cards eligible for paper support 
 - Terrain Generator
 - Terramorph
 - Terramorphic Expanse
+- Terrapact Intimidator
 - Terrasymbiosis
 - Terrian, World Tyrant
 - Territorial Baloth
