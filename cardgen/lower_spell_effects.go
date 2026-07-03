@@ -2779,19 +2779,23 @@ func lowerPreventDamageSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagn
 	if !ok {
 		return unsupported()
 	}
+	// The combat-only Maze of Ith form shields every combat damage event; the
+	// all-types form ("Prevent all damage target creature would deal this turn.")
+	// shields every damage event of any kind.
+	combatOnly := !effect.PreventDamageAllTypes
 	var sequence []game.Instruction
 	if effect.PreventDamageTo {
 		sequence = append(sequence, game.Instruction{Primitive: game.PreventDamage{
 			Object:     object,
 			All:        true,
-			CombatOnly: true,
+			CombatOnly: combatOnly,
 		}})
 	}
 	if effect.PreventDamageBy {
 		sequence = append(sequence, game.Instruction{Primitive: game.PreventDamage{
 			Object:     object,
 			All:        true,
-			CombatOnly: true,
+			CombatOnly: combatOnly,
 			BySource:   true,
 		}})
 	}

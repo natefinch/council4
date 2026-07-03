@@ -80,3 +80,67 @@ func TestLowerPreventAmountYou(t *testing.T) {
 		t.Fatalf("prevent amount = %#v, want %#v", got, want)
 	}
 }
+
+// TestLowerPreventAllDamageTargetTo covers the non-combat "Prevent all damage
+// that would be dealt to target creature this turn." shield (Shielded Passage).
+// Unlike the combat-only Maze of Ith form, the all-types shield lowers to a
+// PreventDamage whose CombatOnly is false so every damage event to the target is
+// prevented, not just combat damage.
+func TestLowerPreventAllDamageTargetTo(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Shielded Passage",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Prevent all damage that would be dealt to target creature this turn.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatalf("spell ability = %#v, want present", face.SpellAbility)
+	}
+	modes := face.SpellAbility.Val.Modes
+	if len(modes) != 1 || len(modes[0].Sequence) != 1 || len(modes[0].Targets) != 1 {
+		t.Fatalf("ability content = %#v, want one single-target mode with one instruction", modes)
+	}
+	prevent, ok := modes[0].Sequence[0].Primitive.(game.PreventDamage)
+	if !ok {
+		t.Fatalf("primitive = %#v, want game.PreventDamage", modes[0].Sequence[0].Primitive)
+	}
+	if !prevent.All || prevent.CombatOnly || prevent.BySource || prevent.Global {
+		t.Fatalf("prevent = %#v, want All non-combat shield dealt to the target", prevent)
+	}
+	if prevent.Object.Kind() != game.ObjectReferenceTargetPermanent || prevent.Object.TargetIndex() != 0 {
+		t.Fatalf("prevent object = %#v, want target permanent index 0", prevent.Object)
+	}
+}
+
+// TestLowerPreventAllDamageTargetBySource covers the active by-source "Prevent
+// all damage target creature would deal this turn." shield (Chain of Silence's
+// base). The all-types shield sets BySource so damage dealt by the target is
+// prevented, with CombatOnly false so noncombat damage the target would deal is
+// prevented too.
+func TestLowerPreventAllDamageTargetBySource(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Chain of Silence base",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Prevent all damage target creature would deal this turn.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatalf("spell ability = %#v, want present", face.SpellAbility)
+	}
+	modes := face.SpellAbility.Val.Modes
+	if len(modes) != 1 || len(modes[0].Sequence) != 1 || len(modes[0].Targets) != 1 {
+		t.Fatalf("ability content = %#v, want one single-target mode with one instruction", modes)
+	}
+	prevent, ok := modes[0].Sequence[0].Primitive.(game.PreventDamage)
+	if !ok {
+		t.Fatalf("primitive = %#v, want game.PreventDamage", modes[0].Sequence[0].Primitive)
+	}
+	if !prevent.All || !prevent.BySource || prevent.CombatOnly || prevent.Global {
+		t.Fatalf("prevent = %#v, want All non-combat by-source shield", prevent)
+	}
+	if prevent.Object.Kind() != game.ObjectReferenceTargetPermanent || prevent.Object.TargetIndex() != 0 {
+		t.Fatalf("prevent object = %#v, want target permanent index 0", prevent.Object)
+	}
+}

@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,839 of 32,501 cards eligible for paper support (51.8%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,844 of 32,501 cards eligible for paper support (51.8%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2312,6 +2312,7 @@ Council4 currently supports **16,839 of 32,501 cards eligible for paper support 
 - Chain Lightning
 - Chain of Acid
 - Chain of Plasma
+- Chain of Silence
 - Chain of Smog
 - Chain of Vapor
 - Chain Reaction
@@ -5999,6 +6000,7 @@ Council4 currently supports **16,839 of 32,501 cards eligible for paper support 
 - Godless Shrine
 - Gods Willing
 - Gods' Eye, Gate to the Reikai
+- Godtoucher
 - Godtracker of Jund
 - Goggles of Night
 - Gohn, Town of Ruin
@@ -6466,6 +6468,7 @@ Council4 currently supports **16,839 of 32,501 cards eligible for paper support 
 - Harvester Druid
 - Harvester of Souls
 - Harvester Troll
+- Harvestguard Alseids
 - Hashep Oasis
 - Hatching Plans
 - Hate Weaver
@@ -7143,6 +7146,7 @@ Council4 currently supports **16,839 of 32,501 cards eligible for paper support 
 - Indatha Triome
 - Indebted Samurai
 - Independent Troops
+- Indestructible Aura
 - Index
 - Indoctrination Attendant
 - Indomitable Ancients
@@ -7797,6 +7801,7 @@ Council4 currently supports **16,839 of 32,501 cards eligible for paper support 
 - Kitsune Blademaster
 - Kitsune Dawnblade
 - Kitsune Diviner
+- Kitsune Healer
 - Kitsune Loreweaver
 - Kjeldoran Dead
 - Kjeldoran Escort
@@ -12592,6 +12597,7 @@ Council4 currently supports **16,839 of 32,501 cards eligible for paper support 
 - Shield Sphere
 - Shield Wall
 - Shielded Aether Thief
+- Shielded Passage
 - Shieldmate's Blessing
 - Shifting Ceratops
 - Shifting Wall
@@ -14523,7 +14529,6 @@ Council4 currently supports **16,839 of 32,501 cards eligible for paper support 
 - Tesak, Judith's Hellhound
 - Teshar, Ancestor's Apostle
 - Test of Endurance
-- Test of Faith
 - Testament Bearer
 - Tethered Griffin
 - Tethered Skirge

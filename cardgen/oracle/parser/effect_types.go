@@ -1823,6 +1823,13 @@ type EffectSyntax struct {
 	// be dealt to and dealt by that creature this turn." — Maze of Ith).
 	PreventDamageTo bool `json:",omitempty"`
 	PreventDamageBy bool `json:",omitempty"`
+	// PreventDamageAllTypes marks a PreventDamageTo/By clause that prevents all
+	// damage (of any kind) rather than only combat damage ("Prevent all damage
+	// target creature would deal this turn." — Shieldmage Elder, Chain of
+	// Silence). The combat-only Maze of Ith form ("Prevent all combat damage ...")
+	// leaves it false, so lowering shields every combat damage event for that
+	// form and every damage event for this one.
+	PreventDamageAllTypes bool `json:",omitempty"`
 	// PreventDamageGlobal marks an EffectPreventDamage clause that prevents all
 	// combat damage that would be dealt this turn, with no recipient or source
 	// object ("Prevent all combat damage that would be dealt this turn." — Spike
