@@ -35,4 +35,5 @@ var Cards = []*game.CardDef{
 	UtopiaMycon,
 	UtromScientists,
 	UtterInsignificance,
+	UnholyHunger,
 }

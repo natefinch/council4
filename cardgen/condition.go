@@ -135,6 +135,8 @@ func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringC
 		}
 		result.ControllerGraveyardCardOfTypeCountAtLeast = condition.Threshold
 		result.ControllerGraveyardCountCardType = condition.GraveyardCountCardType
+	case compiler.ConditionPredicateControllerGraveyardInstantOrSorceryCountAtLeast:
+		result.ControllerGraveyardInstantOrSorceryCountAtLeast = condition.Threshold
 	case compiler.ConditionPredicateControllerCreaturePowerDiversityAtLeast:
 		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateControllerCreaturePowerDiversity, Op: compare.GreaterOrEqual, Value: condition.Threshold})
 	case compiler.ConditionPredicateAttackersAttackingControllerAtLeast:
@@ -332,6 +334,7 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 			compiler.ConditionPredicateControllerGraveyardCardCountAtLeast,
 			compiler.ConditionPredicateControllerGraveyardCardTypeCountAtLeast,
 			compiler.ConditionPredicateControllerGraveyardCardOfTypeCountAtLeast,
+			compiler.ConditionPredicateControllerGraveyardInstantOrSorceryCountAtLeast,
 			compiler.ConditionPredicateControllerGraveyardPermanentCardCountAtLeast,
 			compiler.ConditionPredicateControllerGraveyardManaValueCountAtLeast,
 			compiler.ConditionPredicateAnyOpponentGraveyardCardCountAtLeast,

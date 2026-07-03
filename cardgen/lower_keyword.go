@@ -1827,6 +1827,7 @@ func rulesFreeAbilityWordLabel(label string) bool {
 		"Parley",
 		"Raid",
 		"Revolt",
+		"Spell mastery",
 		"Survival",
 		"Teleport",
 		"Threshold",

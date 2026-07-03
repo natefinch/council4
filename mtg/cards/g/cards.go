@@ -114,4 +114,5 @@ var Cards = []*game.CardDef{
 	GearbaneOrangutan,
 	GhastlyDeathTyrant,
 	Glamermite,
+	GhituLavarunner,
 }

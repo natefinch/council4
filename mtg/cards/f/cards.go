@@ -104,4 +104,5 @@ var Cards = []*game.CardDef{
 	FlashThompsonSpiderFan,
 	FieldResearch,
 	ForTheFamily,
+	FieryImpulse,
 }

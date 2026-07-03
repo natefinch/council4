@@ -176,4 +176,5 @@ var Cards = []*game.CardDef{
 	CourtOfIre,
 	CourtOfGrace,
 	CustodiLich,
+	CalculatedDismissal,
 }
