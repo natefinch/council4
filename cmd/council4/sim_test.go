@@ -161,8 +161,9 @@ func TestRandomSeatStreamsDoNotCollideWithEngine(t *testing.T) {
 }
 
 func TestAgentFactoryProfiles(t *testing.T) {
-	for _, profile := range []string{"", "firstlegal", "random", "generic"} {
-		factory, err := agentFactory(profile)
+	var configs [game.NumPlayers]game.PlayerConfig
+	for _, profile := range []string{"", "firstlegal", "random", "generic", "search"} {
+		factory, err := agentFactory(profile, configs)
 		if err != nil {
 			t.Fatalf("agentFactory(%q) = %v", profile, err)
 		}
@@ -173,7 +174,7 @@ func TestAgentFactoryProfiles(t *testing.T) {
 			}
 		}
 	}
-	if _, err := agentFactory("bogus"); err == nil {
+	if _, err := agentFactory("bogus", configs); err == nil {
 		t.Error("agentFactory(bogus) = nil error, want an error for an unknown profile")
 	}
 }
