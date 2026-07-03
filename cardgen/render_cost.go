@@ -132,8 +132,23 @@ func (r Renderer) renderPlayerReference(reference game.PlayerReference) (string,
 		return fmt.Sprintf("game.CapturedTargetControllerReference(%d)", reference.TargetIndex()), nil
 	case game.PlayerReferenceDefendingPlayer:
 		return "game.DefendingPlayerReference()", nil
+	case game.PlayerReferenceGroupOfferMember:
+		return "game.GroupOfferMemberReference()", nil
 	default:
 		return "", fmt.Errorf("render: unsupported player reference kind %d", reference.Kind())
+	}
+}
+
+// renderPlayerGroupReference renders a PlayerGroupReference to its constructor
+// source. It fails closed on any group kind the backend cannot express.
+func renderPlayerGroupReference(group game.PlayerGroupReference) (string, error) {
+	switch group.Kind {
+	case game.PlayerGroupReferenceOpponents:
+		return "game.OpponentsReference()", nil
+	case game.PlayerGroupReferenceAllPlayers:
+		return "game.AllPlayersReference()", nil
+	default:
+		return "", fmt.Errorf("render: unsupported player group reference kind %d", group.Kind)
 	}
 }
 

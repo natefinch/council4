@@ -314,6 +314,12 @@ const (
 	// Annihilator keyword). It is valid only inside triggered abilities whose
 	// event is an attacker declaration.
 	PlayerReferenceDefendingPlayer
+	// PlayerReferenceGroupOfferMember references the player currently being
+	// offered an OptionalActorGroup instruction (the "them" of "Any player may
+	// have <source> deal N damage to them"). It is valid only inside the
+	// primitive of an instruction whose OptionalActorGroup is set, where it
+	// resolves to each accepting player in turn.
+	PlayerReferenceGroupOfferMember
 )
 
 // PlayerReference describes how a rules effect finds a player at resolution.
@@ -381,6 +387,13 @@ func DefendingPlayerReference() PlayerReference {
 	return PlayerReference{kind: PlayerReferenceDefendingPlayer}
 }
 
+// GroupOfferMemberReference references the player currently being offered an
+// OptionalActorGroup instruction. It is valid only inside that instruction's
+// primitive, where it resolves to each accepting player in turn.
+func GroupOfferMemberReference() PlayerReference {
+	return PlayerReference{kind: PlayerReferenceGroupOfferMember}
+}
+
 // Validate reports structural problems with a PlayerReference that represent
 // card-definition bugs. It checks player-level kind/field consistency and the
 // structure of any nested object reference; target-index bounds depend on the
@@ -424,6 +437,10 @@ func (r PlayerReference) Validate() []string {
 	case PlayerReferenceDefendingPlayer:
 		if r.targetIndex != 0 || r.object.Exists {
 			return []string{"defending player reference must not set TargetIndex or Object"}
+		}
+	case PlayerReferenceGroupOfferMember:
+		if r.targetIndex != 0 || r.object.Exists {
+			return []string{"group offer member reference must not set TargetIndex or Object"}
 		}
 	default:
 		return []string{fmt.Sprintf("unknown player reference kind %d", r.kind)}

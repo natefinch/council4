@@ -149,6 +149,12 @@ type effectResolver struct {
 	agents             [game.NumPlayers]PlayerAgent
 	log                *TurnLog
 	currentInstruction *game.Instruction
+
+	// groupOfferMember, when set, names the player currently being offered an
+	// OptionalActorGroup instruction. It resolves PlayerReferenceGroupOfferMember
+	// (the "them" of "Any player may have <source> deal N damage to them") to that
+	// player while the group offer's primitive resolves for each accepting player.
+	groupOfferMember opt.V[game.PlayerID]
 }
 
 func newEffectResolver(e *Engine, g *game.Game, obj *game.StackObject, agents [game.NumPlayers]PlayerAgent, log *TurnLog) *effectResolver {
@@ -203,6 +209,10 @@ func (r *effectResolver) resolveInstruction(instr *game.Instruction) {
 	if instr.Primitive == nil {
 		panic("rules: nil instruction primitive")
 	}
+	if instr.Optional && instr.OptionalActorGroup.Exists {
+		r.resolveGroupOffer(instr)
+		return
+	}
 	// Optional: ask the deciding player before executing.
 	accepted := true
 	if instr.Optional {
@@ -238,6 +248,42 @@ func (r *effectResolver) resolveInstruction(instr *game.Instruction) {
 	res := handler(r, instr.Primitive)
 	if instr.PublishResult != "" {
 		recordResultKey(r.obj, instr.PublishResult, res)
+	}
+}
+
+// resolveGroupOffer resolves an OptionalActorGroup instruction: every player in
+// the group is offered the effect in turn, and the primitive resolves once for
+// each accepting player, with GroupOfferMemberReference() bound to that player.
+// It publishes accepted=true when at least one player accepted so a following
+// "If no one does" (gate Accepted TriFalse) or "If a player does" (gate Accepted
+// TriTrue) consequence branches on the group's collective decision. It models
+// the multiplayer "may have" offer (Browbeat, Book Burning, Vexing Devil).
+func (r *effectResolver) resolveGroupOffer(instr *game.Instruction) {
+	members := newReferenceResolver(r.game, r.obj).playerGroup(instr.OptionalActorGroup.Val)
+	kind := instr.Primitive.Kind()
+	handler := globalPrimitiveRegistry().dispatch(kind)
+	prev := r.currentInstruction
+	r.currentInstruction = instr
+	prevMember := r.groupOfferMember
+	defer func() {
+		r.currentInstruction = prev
+		r.groupOfferMember = prevMember
+	}()
+	anyAccepted := false
+	anySucceeded := false
+	for _, member := range members {
+		if !r.engine.chooseMay(r.game, r.agents, member, "Apply optional effect?", r.log) {
+			continue
+		}
+		anyAccepted = true
+		r.groupOfferMember = opt.Val(member)
+		res := handler(r, instr.Primitive)
+		if res.succeeded {
+			anySucceeded = true
+		}
+	}
+	if instr.PublishResult != "" {
+		recordResultKey(r.obj, instr.PublishResult, effectResolved{accepted: anyAccepted, succeeded: anySucceeded})
 	}
 }
 
