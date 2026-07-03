@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,819 of 32,501 cards eligible for paper support (51.7%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,821 of 32,501 cards eligible for paper support (51.8%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -16821,3 +16821,5 @@ Council4 currently supports **16,819 of 32,501 cards eligible for paper support 
 - Zuran Orb
 - Zuran Spellcaster
 - Zuri, Warrior of Wakanda
+- Éomer, King of Rohan
+- Éomer, Marshal of Rohan

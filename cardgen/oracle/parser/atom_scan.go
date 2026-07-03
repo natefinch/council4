@@ -3,6 +3,8 @@ package parser
 import (
 	"slices"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game/counter"
@@ -456,7 +458,8 @@ func titleCaseWord(word string) string {
 		}
 		return strings.Join(parts, " ")
 	}
-	return strings.ToUpper(word[:1]) + strings.ToLower(word[1:])
+	r, size := utf8.DecodeRuneInString(word)
+	return string(unicode.ToUpper(r)) + strings.ToLower(word[size:])
 }
 
 func joinTokens(tokens []shared.Token) string {

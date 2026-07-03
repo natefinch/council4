@@ -5,6 +5,8 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game/compare"
@@ -1389,7 +1391,8 @@ func titleFirstEffectText(text string) string {
 	if text == "" {
 		return ""
 	}
-	return strings.ToUpper(text[:1]) + text[1:]
+	r, size := utf8.DecodeRuneInString(text)
+	return string(unicode.ToUpper(r)) + text[size:]
 }
 
 func signedEffectAmountText(amount SignedAmountSyntax) string {

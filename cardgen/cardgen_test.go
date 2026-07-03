@@ -198,6 +198,11 @@ func TestCardNameToPackageLetter(t *testing.T) {
 	}{
 		{"Lightning Bolt", "l"},
 		{"Sol Ring", "s"},
+		{"Éomer, King of Rohan", "e"},
+		{"Ávila Rider", "a"},
+		{"Ölülük", "o"},
+		{"123 Numbers", "n"},
+		{"", "other"},
 	}
 
 	for _, tt := range tests {
@@ -271,4 +276,30 @@ func sliceEqual(a, b []string) bool {
 		}
 	}
 	return true
+}
+
+// TestFirstRuneHelpersHandleMultibyte verifies lowerFirst, titleFirst, and
+// upperFirst operate on the leading rune rather than the leading byte, so
+// multi-byte characters (e.g. an accented "É") are not corrupted into U+FFFD.
+func TestFirstRuneHelpersHandleMultibyte(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		in, lower, title string
+	}{
+		{"ÉomerKingOfRohan", "éomerKingOfRohan", "ÉomerKingOfRohan"},
+		{"éomer", "éomer", "Éomer"},
+		{"Bolt", "bolt", "Bolt"},
+		{"", "", ""},
+	}
+	for _, c := range cases {
+		if got := lowerFirst(c.in); got != c.lower {
+			t.Errorf("lowerFirst(%q) = %q, want %q", c.in, got, c.lower)
+		}
+		if got := titleFirst(c.in); got != c.title {
+			t.Errorf("titleFirst(%q) = %q, want %q", c.in, got, c.title)
+		}
+		if got := upperFirst(c.in); got != c.title {
+			t.Errorf("upperFirst(%q) = %q, want %q", c.in, got, c.title)
+		}
+	}
 }
