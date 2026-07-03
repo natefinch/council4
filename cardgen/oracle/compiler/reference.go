@@ -102,6 +102,29 @@ func bindReferences(
 			}
 			continue
 		}
+		// A subject player pronoun ("they"/"their") in the body of a trigger with
+		// an authoritative player subject names that event player, exactly as the
+		// explicit "that player" demonstrative above does ("Whenever ~ deals
+		// damage to an opponent, that player discards a card. If the player does,
+		// they draw a card." — the drawer is the damaged player). This mirrors the
+		// ReferenceThatPlayer rule with the broad triggerPatternBindsThatPlayer
+		// predicate. It is ordered after the target antecedent above so a nearer
+		// target referent still wins ("target opponent exiles a card from their
+		// hand" keeps "their" on the target), and ahead of the event-permanent
+		// fallbacks below so the player pronoun is not captured as the triggering
+		// permanent. It is restricted to the subject pronoun "they" and possessive
+		// "their", which denote a player; the object pronoun "them" can denote
+		// plural permanents ("tap those creatures ... untap them") and is left to
+		// the existing event-permanent and narrow event-player bindings.
+		if trigger != nil &&
+			reference.Kind == ReferencePronoun &&
+			(reference.Pronoun == ReferencePronounThey ||
+				reference.Pronoun == ReferencePronounTheir) &&
+			reference.Order.Start >= trigger.Order.Start &&
+			triggerPatternBindsThatPlayer(&trigger.Pattern) {
+			reference.Binding = ReferenceBindingEventPlayer
+			continue
+		}
 		if trigger == nil && precedingSourceReference(bound[:i], reference.Order) {
 			reference.Binding = ReferenceBindingSource
 			continue
