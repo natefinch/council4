@@ -181,6 +181,35 @@ func sacrificeDestroyArtifact(name string, sacCount int) *game.CardDef {
 	}}
 }
 
+func payLifeDrawArtifact(name string, life int) *game.CardDef {
+	return &game.CardDef{CardFace: game.CardFace{
+		Name:  name,
+		Types: []types.Card{types.Artifact},
+		ActivatedAbilities: []game.ActivatedAbility{{
+			AdditionalCosts: []cost.Additional{{Kind: cost.AdditionalPayLife, Amount: life}},
+			Content: game.Mode{Sequence: []game.Instruction{{
+				Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()},
+			}}}.Ability(),
+		}},
+	}}
+}
+
+// payLifeNoopArtifact activates by paying life for an effect the eval translator
+// does not model (Untap produces no value atom), so it stands in for the class
+// of "pay N life: <does nothing useful>" abilities the agent must not activate.
+func payLifeNoopArtifact(name string, life int) *game.CardDef {
+	return &game.CardDef{CardFace: game.CardFace{
+		Name:  name,
+		Types: []types.Card{types.Artifact},
+		ActivatedAbilities: []game.ActivatedAbility{{
+			AdditionalCosts: []cost.Additional{{Kind: cost.AdditionalPayLife, Amount: life}},
+			Content: game.Mode{Sequence: []game.Instruction{{
+				Primitive: game.Untap{},
+			}}}.Ability(),
+		}},
+	}}
+}
+
 func modalDrawOrLoseLifeArtifact(name string) *game.CardDef {
 	you := game.ControllerReference()
 	return &game.CardDef{CardFace: game.CardFace{
@@ -385,5 +414,67 @@ func TestGenericStrategySacrificesWeakToRemoveThreat(t *testing.T) {
 	wastefulScore := strategy.ScoreAction(wastefulObs, action.ActivateAbility(wastefulAltar.ObjectID, 0, wastefulTargets, 0))
 	if wastefulScore >= wastefulPass {
 		t.Fatalf("sacrificing three 5/5s to kill a 1/1 scored %v, want below pass %v", wastefulScore, wastefulPass)
+	}
+}
+func TestGenericStrategyDoesNotPayLifeForNothing(t *testing.T) {
+	// The reported failure: an ability that pays life for an effect the agent
+	// cannot value must score below Pass, so the agent never taps its life away
+	// on a do-nothing ability until it dies.
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	leech := addObservedPermanent(g, game.Player1, payLifeNoopArtifact("Leech", 2))
+	obs := rules.NewObservation(g, game.Player1)
+	strategy := GenericStrategy{}
+
+	pass := strategy.ScoreAction(obs, action.Pass())
+	score := strategy.ScoreAction(obs, action.ActivateAbility(leech.ObjectID, 0, nil, 0))
+	if score >= pass {
+		t.Fatalf("pay-2-life do-nothing scored %v, want below pass %v", score, pass)
+	}
+}
+
+func TestGenericStrategyPaysLifeForValueWhenHealthy(t *testing.T) {
+	// "Pay 2 life: draw a card" is a good deal at a healthy life total, so it
+	// must still beat Pass — the life cost is counted but not prohibitive.
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := addObservedPermanent(g, game.Player1, payLifeDrawArtifact("Study", 2))
+	obs := rules.NewObservation(g, game.Player1)
+	strategy := GenericStrategy{}
+
+	pass := strategy.ScoreAction(obs, action.Pass())
+	score := strategy.ScoreAction(obs, action.ActivateAbility(engine.ObjectID, 0, nil, 0))
+	if score <= pass {
+		t.Fatalf("pay-2-life draw at 40 life scored %v, want above pass %v", score, pass)
+	}
+}
+
+func TestGenericStrategyHoldsLifeWhenLow(t *testing.T) {
+	// The same "Pay 2 life: draw a card" ability must fall below Pass once the
+	// agent's life is low, so it stops paying life for marginal value near death.
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	g.Players[game.Player1].Life = 3
+	engine := addObservedPermanent(g, game.Player1, payLifeDrawArtifact("Study", 2))
+	obs := rules.NewObservation(g, game.Player1)
+	strategy := GenericStrategy{}
+
+	pass := strategy.ScoreAction(obs, action.Pass())
+	score := strategy.ScoreAction(obs, action.ActivateAbility(engine.ObjectID, 0, nil, 0))
+	if score >= pass {
+		t.Fatalf("pay-2-life draw at 3 life scored %v, want below pass %v", score, pass)
+	}
+}
+
+func TestGenericStrategyNeverPaysLethalLife(t *testing.T) {
+	// A life payment that would drop the agent to 0 loses the game, so it must
+	// score below Pass no matter how good the effect is.
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	g.Players[game.Player1].Life = 5
+	engine := addObservedPermanent(g, game.Player1, payLifeDrawArtifact("Study", 5))
+	obs := rules.NewObservation(g, game.Player1)
+	strategy := GenericStrategy{}
+
+	pass := strategy.ScoreAction(obs, action.Pass())
+	score := strategy.ScoreAction(obs, action.ActivateAbility(engine.ObjectID, 0, nil, 0))
+	if score >= pass {
+		t.Fatalf("paying all 5 life scored %v, want below pass %v", score, pass)
 	}
 }
