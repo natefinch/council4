@@ -76,6 +76,9 @@ func TestNeverCounterOwnSpell(t *testing.T) {
 // scores above Pass.
 func TestDontWasteRemovalOnSmallCreature(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	// Score on an opponent's turn — removal's natural window — so this exercises
+	// the target-value threshold without the own-turn hold-for-later timing.
+	g.Turn.ActivePlayer = game.Player2
 	removalID := addObservedHandCard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
 		Name:  "Doom Blade",
 		Types: []types.Card{types.Instant},
