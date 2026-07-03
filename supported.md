@@ -3097,6 +3097,7 @@ Council4 currently supports **16,805 of 32,501 cards eligible for paper support 
 - Cursed Mirror
 - Cursed Monstrosity
 - Cursed Ronin
+- Custodi Lich
 - Custodi Soulbinders
 - Custodian of the Trove
 - Cut the Earthly Bond

@@ -74,6 +74,8 @@ func compilePlayerEventAction(action parser.PlayerEventActionKind) (TriggerEvent
 		return TriggerEventLibrarySearched, true
 	case parser.PlayerEventActionCommitCrime:
 		return TriggerEventCrimeCommitted, true
+	case parser.PlayerEventActionBecomeMonarch:
+		return TriggerEventBecameMonarch, true
 	default:
 		return TriggerEventUnknown, false
 	}

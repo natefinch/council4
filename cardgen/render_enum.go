@@ -549,6 +549,8 @@ func renderEventKind(event game.EventKind) (string, error) {
 		return "game.EventClassLevelGained", nil
 	case game.EventCrimeCommitted:
 		return "game.EventCrimeCommitted", nil
+	case game.EventBecameMonarch:
+		return "game.EventBecameMonarch", nil
 	default:
 		return "", fmt.Errorf("render: unsupported event kind %d", event)
 	}

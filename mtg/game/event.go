@@ -75,12 +75,18 @@ const (
 	// such targets it has. Controller and Player identify the player who
 	// committed the crime, and StackObjectID identifies the spell or ability.
 	EventCrimeCommitted
+	// EventBecameMonarch marks a player becoming the monarch (CR 720.2). It is
+	// emitted once each time a player who was not already the monarch takes the
+	// crown, whether by a "become the monarch" effect or by dealing combat damage
+	// to the monarch, so "whenever you/an opponent become(s) the monarch"
+	// triggers fire. Controller and Player identify the new monarch.
+	EventBecameMonarch
 )
 
 // EventKindCount is the number of EventKind values, including EventUnknown. It
 // is appended at the end of the const block so existing wire values are
 // preserved; new kinds must be added immediately before this sentinel.
-const EventKindCount = int(EventCrimeCommitted) + 1
+const EventKindCount = int(EventBecameMonarch) + 1
 
 // DamageRecipientKind identifies what received damage. Values are flags so a
 // trigger pattern can match either kind.
