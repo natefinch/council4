@@ -131,6 +131,15 @@ func appendPrimitiveAtoms(atoms []EffectAtom, primitive game.Primitive) []Effect
 		return append(atoms, EffectAtom{Kind: EffectPermanentRemoved, Affected: AffectedTarget})
 	case game.Tap:
 		return append(atoms, EffectAtom{Kind: EffectPermanentTapped, Affected: AffectedTarget})
+	case game.Fight:
+		// Two creatures fight, each dealing its power to the other (CR 701.12).
+		// The value is damaging the opposing creature, so treat it as targeted
+		// damage; the target-value scoring resolves it against the fight's targets.
+		return append(atoms, EffectAtom{Kind: EffectDamageDealt, Affected: AffectedTarget})
+	case game.Monstrosity:
+		// Monstrosity puts +1/+1 counters on the controller's own creature and
+		// makes it monstrous (CR 701.33) — board-boosting counters.
+		return append(atoms, quantityAtom(EffectCounterAdded, p.Amount, AffectedUnknown))
 	case game.AddMana:
 		return append(atoms, quantityAtom(EffectManaAdded, p.Amount, AffectedYou))
 	case game.CreateToken:

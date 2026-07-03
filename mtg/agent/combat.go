@@ -48,7 +48,7 @@ func scoreAttackDeclarations(obs rules.PlayerObservation, act action.Action, per
 		}
 		total += attackValue(obs, model, attacker, declare.Attackers[i].Target, personality)
 	}
-	return total
+	return total - crackbackPenalty(obs, declare)
 }
 
 func attackValue(obs rules.PlayerObservation, model ThreatModel, attacker rules.PermanentView, target game.AttackTarget, personality Personality) float64 {

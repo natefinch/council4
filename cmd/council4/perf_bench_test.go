@@ -67,6 +67,6 @@ func BenchmarkPerfDeckGameGeneric(b *testing.B) {
 // expected to be far slower than the heuristic agents.
 func BenchmarkPerfDeckGameSearch(b *testing.B) {
 	benchmarkPerfDeckGame(b, func(uint64) [game.NumPlayers]rules.PlayerAgent {
-		return agents(agent.Searcher{Rollout: agent.GenericStrategy{}})
+		return agents(agent.Searcher{Rollout: agent.GenericStrategy{}, Budget: 8})
 	})
 }

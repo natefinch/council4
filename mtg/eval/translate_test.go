@@ -34,6 +34,8 @@ func TestScorableEffectClassifiesValueDominantPrimitives(t *testing.T) {
 		{"exile", game.Exile{}, EffectAtom{Kind: EffectPermanentRemoved, Affected: AffectedTarget}},
 		{"bounce", game.Bounce{}, EffectAtom{Kind: EffectPermanentRemoved, Affected: AffectedTarget}},
 		{"tap", game.Tap{}, EffectAtom{Kind: EffectPermanentTapped, Affected: AffectedTarget}},
+		{"fight", game.Fight{}, EffectAtom{Kind: EffectDamageDealt, Affected: AffectedTarget}},
+		{"monstrosity", game.Monstrosity{Amount: game.Fixed(3)}, EffectAtom{Kind: EffectCounterAdded, Amount: 3, Affected: AffectedUnknown}},
 		{"add mana", game.AddMana{Amount: game.Fixed(2)}, EffectAtom{Kind: EffectManaAdded, Amount: 2, Affected: AffectedYou}},
 		{"create token", game.CreateToken{Amount: game.Fixed(1)}, EffectAtom{Kind: EffectTokenCreated, Amount: 1, Affected: AffectedYou}},
 		{"search", game.Search{Amount: game.Fixed(1)}, EffectAtom{Kind: EffectCardTutored, Amount: 1, Affected: AffectedYou}},

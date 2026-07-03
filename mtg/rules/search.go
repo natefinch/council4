@@ -39,14 +39,17 @@ func (c SearchContext) Player() game.PlayerID {
 	return c.player
 }
 
-// Determinize returns a full game state the search agent may read and simulate
-// on. In the current milestone (S1) it is a faithful Clone of the live state —
-// perfect information — which is an accepted stepping stone; a later milestone
-// re-samples the zones hidden from the searching player (opponents' hands,
-// library orders) so the agent only ever sees plausible sampled worlds and never
-// the true hidden state. Each call returns an independent state.
+// Determinize returns a full, self-consistent game state the search agent may
+// read and simulate on. It re-samples the information hidden from the searching
+// player — each library's order and every opponent's hand, re-dealt from that
+// opponent's own deck (see determinize) — so the agent only ever sees plausible
+// sampled worlds and never an opponent's true hand, preserving fog of war. Each
+// call returns an independent sample, so a caller can average a decision over
+// several determinizations (PIMC).
 func (c SearchContext) Determinize() *game.Game {
-	return c.game.Clone()
+	clone := c.game.Clone()
+	determinize(clone, c.player, c.rng)
+	return clone
 }
 
 // Simulator returns a forward model whose randomness is isolated from the live

@@ -53,18 +53,25 @@ func loadConfigs(paths []string, tested int, registry *cards.Registry) ([game.Nu
 	return loaded.Configs, nil
 }
 
-// agentFactory returns the per-game agent factory for an -agent profile.
-func agentFactory(profile string) (sim.AgentFactory, error) {
+// agentFactory returns the per-game agent factory for an -agent profile. The
+// generic and search profiles analyze each seat's deck and pilot it in its
+// archetype's style (see agent.DeckPersonality), so agents play to their deck's
+// game plan rather than identically.
+func agentFactory(profile string, configs [game.NumPlayers]game.PlayerConfig) (sim.AgentFactory, error) {
 	switch profile {
 	case "", "firstlegal":
 		return func(uint64) [game.NumPlayers]rules.PlayerAgent { return agents(agent.FirstLegal{}) }, nil
 	case "generic":
 		return func(uint64) [game.NumPlayers]rules.PlayerAgent {
-			return agents(agent.Agent{Strategy: agent.GenericStrategy{}})
+			return seatedAgents(configs, func(strategy agent.GenericStrategy) rules.PlayerAgent {
+				return agent.Agent{Strategy: strategy}
+			})
 		}, nil
 	case "search":
 		return func(uint64) [game.NumPlayers]rules.PlayerAgent {
-			return agents(agent.Searcher{Rollout: agent.GenericStrategy{}})
+			return seatedAgents(configs, func(strategy agent.GenericStrategy) rules.PlayerAgent {
+				return agent.Searcher{Rollout: strategy, Budget: 8}
+			})
 		}, nil
 	case "random":
 		return func(gameSeed uint64) [game.NumPlayers]rules.PlayerAgent {
@@ -79,6 +86,22 @@ func agentFactory(profile string) (sim.AgentFactory, error) {
 	}
 }
 
+// seatedAgents builds one agent per seat from a deck-aware GenericStrategy: each
+// seat's strategy carries its own deck's profile and archetype-derived
+// personality, and wrap turns that strategy into the seat's agent (a plain Agent
+// or a Searcher). Analysis is done once here, off the per-game hot path.
+func seatedAgents(configs [game.NumPlayers]game.PlayerConfig, wrap func(agent.GenericStrategy) rules.PlayerAgent) [game.NumPlayers]rules.PlayerAgent {
+	var seated [game.NumPlayers]rules.PlayerAgent
+	for i := range configs {
+		profile := agent.AnalyzeDeck(configs[i])
+		seated[i] = wrap(agent.GenericStrategy{
+			Profile:     &profile,
+			Personality: agent.DeckPersonality(profile),
+		})
+	}
+	return seated
+}
+
 // runDeckSimulation loads the four decklists and plays a multi-game simulation,
 // writing a summary to w and, when outPath is set, a JSON report.
 func runDeckSimulation(w io.Writer, paths []string, tested, games, workers int, seed uint64, profile, outPath string, registry *cards.Registry) error {
@@ -89,7 +112,7 @@ func runDeckSimulation(w io.Writer, paths []string, tested, games, workers int, 
 	if err != nil {
 		return err
 	}
-	factory, err := agentFactory(profile)
+	factory, err := agentFactory(profile, configs)
 	if err != nil {
 		return err
 	}

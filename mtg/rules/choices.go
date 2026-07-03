@@ -251,8 +251,9 @@ func targetChoiceRequest(player game.PlayerID, prompt string, choices [][]game.T
 	options := make([]game.ChoiceOption, 0, len(choices))
 	for i, targets := range choices {
 		options = append(options, game.ChoiceOption{
-			Index: i,
-			Label: fmt.Sprintf("%v", targets),
+			Index:   i,
+			Label:   fmt.Sprintf("%v", targets),
+			Targets: append([]game.Target(nil), targets...),
 		})
 	}
 	return game.ChoiceRequest{
