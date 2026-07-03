@@ -2665,6 +2665,9 @@ type CompiledEffect struct {
 	// and/or dealt by the referenced permanent is prevented for the turn.
 	PreventDamageTo bool
 	PreventDamageBy bool
+	// PreventDamageAllTypes mirrors the parser flag: a PreventDamageTo/By clause
+	// that prevents all damage of any kind rather than only combat damage.
+	PreventDamageAllTypes bool
 	// PreventDamageGlobal mirrors the parser flag for an EffectPreventDamage
 	// clause that prevents every combat damage event this turn with no recipient
 	// or source object.

@@ -536,6 +536,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				PlayFromTopPayLifeRiderSpan:            syntax.PlayFromTopPayLifeRiderSpan,
 				PreventDamageTo:                        syntax.PreventDamageTo,
 				PreventDamageBy:                        syntax.PreventDamageBy,
+				PreventDamageAllTypes:                  syntax.PreventDamageAllTypes,
 				PreventDamageGlobal:                    syntax.PreventDamageGlobal,
 				PreventDamageNextRecipient:             syntax.PreventDamageNextRecipient,
 				PreventDamageThatAmount:                syntax.PreventDamageThatAmount,

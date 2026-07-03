@@ -595,6 +595,86 @@ func TestParsePreventCombatDamageEffect(t *testing.T) {
 	}
 }
 
+// TestParsePreventAllDamageTargetEffect covers the non-combat "Prevent all
+// damage" targeted prevention recognizer: the active by-source form ("Prevent
+// all damage target creature would deal this turn." — Chain of Silence,
+// Shieldmage Elder) and the passive to/by forms ("Prevent all damage that would
+// be dealt to target creature this turn." — Shielded Passage). Each names a
+// single target and sets PreventDamageAllTypes so lowering shields every damage
+// event rather than only combat damage. Variant wordings fail closed.
+func TestParsePreventAllDamageTargetEffect(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source     string
+		recognized bool
+		to         bool
+		by         bool
+	}{
+		{"Prevent all damage target creature would deal this turn.", true, false, true},
+		{"Prevent all damage that would be dealt to target creature this turn.", true, true, false},
+		{"Prevent all damage that would be dealt by target creature this turn.", true, false, true},
+		// Combat-only and amount-based wordings are handled by other recognizers.
+		{"Prevent all combat damage that would be dealt to target creature this turn.", false, false, false},
+		{"Prevent the next 3 damage that would be dealt to target creature this turn.", false, false, false},
+		// The combined "to and dealt by" all-damage form only appears in
+		// durational, enchantment-anchored, or planeswalker contexts (Heart of
+		// Light, Kiora), not the plain one-shot spell form, so it fails closed.
+		{"Prevent all damage that would be dealt to and dealt by target creature this turn.", false, false, false},
+		// Missing duration fails closed.
+		{"Prevent all damage that would be dealt to target creature.", false, false, false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			got := len(effects) == 1 && effects[0].Kind == EffectPreventDamage &&
+				effects[0].PreventDamageAllTypes
+			if got != test.recognized {
+				t.Fatalf("recognized = %v, want %v (effects=%#v)", got, test.recognized, effects)
+			}
+			if got {
+				if effects[0].PreventDamageTo != test.to {
+					t.Fatalf("PreventDamageTo = %v, want %v", effects[0].PreventDamageTo, test.to)
+				}
+				if effects[0].PreventDamageBy != test.by {
+					t.Fatalf("PreventDamageBy = %v, want %v", effects[0].PreventDamageBy, test.by)
+				}
+				if len(effects[0].Targets) != 1 || !effects[0].Targets[0].Exact {
+					t.Fatalf("targets = %#v, want one exact target", effects[0].Targets)
+				}
+			}
+		})
+	}
+}
+
+// TestParseForEachDamagePreventedRiderFailsClosed proves the leading "For each 1
+// damage prevented this way, <effect>" iteration rider fails closed rather than
+// round-tripping while silently dropping the multiplier. No runtime construct
+// tracks "damage prevented this way", and the leading prefix is not folded into
+// the effect's amount, so the effect must not be marked exact (Brace for Impact,
+// Test of Faith, Temper).
+func TestParseForEachDamagePreventedRiderFailsClosed(t *testing.T) {
+	t.Parallel()
+	sources := []string{
+		"For each 1 damage prevented this way, put a +1/+1 counter on that creature.",
+		"For each 1 damage prevented this way, you gain 1 life.",
+	}
+	for _, source := range sources {
+		t.Run(source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one", effects)
+			}
+			if effects[0].Exact {
+				t.Fatalf("effect unexpectedly exact; the dropped damage-prevented multiplier must fail closed: %#v", effects[0])
+			}
+		})
+	}
+}
+
 func TestParseDevotionDrawAmount(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

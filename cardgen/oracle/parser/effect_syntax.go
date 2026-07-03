@@ -1179,6 +1179,30 @@ func stripLeadingDurationClause(tokens []shared.Token, atoms Atoms) ([]shared.To
 	return tokens[comma+1:], duration
 }
 
+// leadingForEachDamagePreventedThisWay reports whether the effect's ownership
+// tokens open with a "for each <count> damage prevented this way," iteration
+// prefix. The prefix scales the effect by a companion prevention shield's
+// prevented total (Brace for Impact's "For each 1 damage prevented this way, put
+// a +1/+1 counter on that creature."), a dynamic amount no runtime construct
+// tracks. The per-clause loop never folds this leading prefix into the effect's
+// amount, so callers use this to fail the effect closed rather than round-trip
+// the sentence while silently dropping the multiplier.
+func leadingForEachDamagePreventedThisWay(effect *EffectSyntax) bool {
+	tokens := effect.Tokens
+	if len(tokens) < 2 || !effectWordsAt(tokens, 0, "for", "each") {
+		return false
+	}
+	for i := 2; i+2 < len(tokens); i++ {
+		if tokens[i].Kind == shared.Comma {
+			return false
+		}
+		if effectWordsAt(tokens, i, "prevented", "this", "way") {
+			return true
+		}
+	}
+	return false
+}
+
 // parseSpecialEffects dispatches the sentence to the whole-sentence effect
 // recognizers that bypass the per-clause loop in parseEffects. It returns the
 // first recognizer's result, or ok=false when none match and the general
@@ -1252,6 +1276,9 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		return effects
 	}
 	if effects, ok := parsePreventCombatDamageEffect(sentence, tokens, atoms); ok {
+		return effects
+	}
+	if effects, ok := parsePreventAllDamageTargetEffect(sentence, tokens, atoms); ok {
 		return effects
 	}
 	if effects, ok := parsePreventNextDamageFromSourceEffect(sentence, tokens, atoms); ok {
@@ -1625,6 +1652,17 @@ func finalizeParsedEffect(effect *EffectSyntax, sentence Sentence, atoms Atoms) 
 	effect.MoveCountersAnyKind = effect.Kind == EffectMoveCounters &&
 		!effect.MoveCountersDistribute && !effect.MoveCountersAll && !effect.CounterKnown
 	effect.Exact = exactEffectSyntax(effect)
+	// A leading "For each 1 damage prevented this way, <effect>" rider scales the
+	// effect by the amount of damage a companion prevention shield stops this turn
+	// (Brace for Impact, Test of Faith, Temper). No runtime construct tracks
+	// "damage prevented this way", and the leading iteration prefix is not folded
+	// into the effect's amount (the counter/life amount stays a fixed 1), so the
+	// parser would otherwise round-trip the sentence while silently dropping the
+	// multiplier. Fail the effect closed instead so such cards are not generated
+	// with a wrong fixed amount.
+	if effect.Exact && leadingForEachDamagePreventedThisWay(effect) {
+		effect.Exact = false
+	}
 	effect.KeywordGrantChoice = keywordGrantIsChoice(effect)
 	if recognizeTargetOpponentHandMana(effect) {
 		effect.Exact = true
@@ -4514,6 +4552,95 @@ func parsePreventCombatDamageEffect(sentence Sentence, tokens []shared.Token, at
 		PreventDamageBy: preventBy,
 		References:      references,
 		Exact:           true,
+	}}, true
+}
+
+// parsePreventAllDamageTargetEffect recognizes the turn-scoped all-damage (not
+// only combat) prevention shield that names a single target permanent as the
+// damage source or recipient:
+//
+//	Prevent all damage target creature would deal this turn. (Shieldmage Elder,
+//	Chain of Silence — active by-source)
+//	Prevent all damage that would be dealt by target creature this turn.
+//	(by-source, passive voice)
+//	Prevent all damage that would be dealt to target creature this turn. (Oriss,
+//	Samite Guardian — to-recipient)
+//
+// Unlike parsePreventCombatDamageEffect it covers "all damage" rather than "all
+// combat damage" and names the shielded permanent by a lone target rather than a
+// back-reference, so it sets PreventDamageAllTypes and carries the target. The
+// target's own selection ("target attacking or blocking creature", "target
+// creature") is left to the shared target-spec lowering, which fails closed on
+// any selector the backend cannot represent.
+func parsePreventAllDamageTargetEffect(sentence Sentence, tokens []shared.Token, _ Atoms) ([]EffectSyntax, bool) {
+	words := make([]shared.Token, 0, len(tokens))
+	for _, token := range tokens {
+		if token.Kind == shared.Period {
+			continue
+		}
+		words = append(words, token)
+	}
+	prefix := []string{"prevent", "all", "damage"}
+	if len(words) < len(prefix)+3 {
+		return nil, false
+	}
+	for i, want := range prefix {
+		if !equalWord(words[i], want) {
+			return nil, false
+		}
+	}
+	// Every accepted form ends with "this turn".
+	if !equalWord(words[len(words)-2], "this") || !equalWord(words[len(words)-1], "turn") {
+		return nil, false
+	}
+	idx := len(prefix)
+	preventTo, preventBy := false, false
+	var targetStart, spanEnd int
+	switch {
+	case idx+4 < len(words) && equalWord(words[idx], "that") && equalWord(words[idx+1], "would") &&
+		equalWord(words[idx+2], "be") && equalWord(words[idx+3], "dealt") &&
+		(equalWord(words[idx+4], "to") || equalWord(words[idx+4], "by")):
+		// Passive voice: "... that would be dealt to|by <target> this turn."
+		if equalWord(words[idx+4], "to") {
+			preventTo = true
+		} else {
+			preventBy = true
+		}
+		targetStart = idx + 5
+		spanEnd = len(words) - 2
+	default:
+		// Active by-source: "... <target> would deal this turn." The atomizer
+		// tends to extend the target atom through the trailing "would", so the
+		// recipient span reaches up to (but excludes) "deal" to contain it.
+		if !equalWord(words[len(words)-4], "would") || !equalWord(words[len(words)-3], "deal") {
+			return nil, false
+		}
+		preventBy = true
+		targetStart = idx
+		spanEnd = len(words) - 3
+	}
+	if targetStart >= spanEnd || !equalWord(words[targetStart], "target") {
+		return nil, false
+	}
+	targetSpan := shared.SpanOf(words[targetStart:spanEnd])
+	targets := targetsInSpan(sentence.Targets, targetSpan)
+	if len(targets) != 1 {
+		return nil, false
+	}
+	return []EffectSyntax{{
+		Kind:                  EffectPreventDamage,
+		Span:                  sentence.Span,
+		ClauseSpan:            sentence.Span,
+		VerbSpan:              words[0].Span,
+		Text:                  sentence.Text,
+		Tokens:                append([]shared.Token(nil), tokens...),
+		Context:               EffectContextController,
+		Duration:              EffectDurationThisTurn,
+		PreventDamageTo:       preventTo,
+		PreventDamageBy:       preventBy,
+		PreventDamageAllTypes: true,
+		Targets:               targets,
+		Exact:                 true,
 	}}, true
 }
 
