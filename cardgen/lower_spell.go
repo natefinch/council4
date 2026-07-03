@@ -250,6 +250,9 @@ func lowerContent(
 	if content, ok := lowerGroupMayHaveActionGate(cardName, ctx, syntax); ok {
 		return content, nil
 	}
+	if content, ok := lowerResolvingCopyChain(cardName, ctx, syntax); ok {
+		return content, nil
+	}
 	if hasOptionalResolvingEffect(ctx.content.Effects) {
 		return lowerOptionalContent(cardName, ctx, syntax)
 	}

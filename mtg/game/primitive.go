@@ -1204,9 +1204,18 @@ type ChooseNewTargets struct {
 // MayChooseNewTargets is set, the resolving controller may re-choose the copy's
 // targets, bounded by the copied ability's own targeting restrictions (CR
 // 707.12). Object references the targeted ability to copy.
+//
+// Chooser, when set, is the player who creates and controls the copy and chooses
+// its new targets, rather than the resolving controller. It models the copy-chain
+// family, where "that player or that permanent's controller ... may copy this
+// spell and may choose a new target for that copy" (Chain Lightning, Chain Stasis,
+// String of Disappearances): the affected target's controller controls the copy
+// so its own iterative copy offer chains off the copy's new target. The zero
+// value leaves the resolving controller as the copier, preserving prior behavior.
 type CopyStackObject struct {
 	Object              ObjectReference
 	MayChooseNewTargets bool
+	Chooser             opt.V[PlayerReference]
 }
 
 // Mill puts cards from the top of a referenced player's library into their

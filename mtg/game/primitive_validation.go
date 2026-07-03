@@ -147,7 +147,7 @@ func validatePlayerReference(ref PlayerReference, targets []TargetSpec, checkTar
 		return err
 	}
 	switch ref.Kind() {
-	case PlayerReferenceTargetPlayer:
+	case PlayerReferenceTargetPlayer, PlayerReferenceAffectedTargetController:
 		return validateTargetReference(ref.TargetIndex(), targets, checkTargets)
 	case PlayerReferenceObjectController, PlayerReferenceObjectOwner:
 		object, _ := ref.Object()
@@ -2143,6 +2143,11 @@ func (p ChooseNewTargets) validatePrimitive(targets []TargetSpec, checkTargets b
 func (p CopyStackObject) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if err := validateObjectReference(p.Object, targets, checkTargets); err != nil {
 		return err
+	}
+	if p.Chooser.Exists {
+		if err := validatePlayerReference(p.Chooser.Val, targets, checkTargets); err != nil {
+			return err
+		}
 	}
 	switch p.Object.Kind() {
 	case ObjectReferenceTargetStackObject:

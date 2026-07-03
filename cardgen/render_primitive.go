@@ -1618,6 +1618,13 @@ func (r Renderer) renderCopyStackObjectPrimitive(value game.CopyStackObject) (st
 	if value.MayChooseNewTargets {
 		fields = append(fields, "MayChooseNewTargets: true,")
 	}
+	if value.Chooser.Exists {
+		chooser, err := r.renderPlayerReference(value.Chooser.Val)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Chooser: opt.Val(%s),", chooser))
+	}
 	return structLit("game.CopyStackObject", fields), nil
 }
 

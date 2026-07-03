@@ -3009,6 +3009,14 @@ const (
 	// an attack-triggered optional-payment gate (Shrouded Serpent). It resolves
 	// downstream to game.DefendingPlayerReference, distinct from the event player.
 	EffectPaymentPayerDefendingPlayer EffectPaymentPayerKind = "EffectPaymentPayerDefendingPlayer"
+	// EffectPaymentPayerAffectedTargetController offers the payment to the player
+	// affected by the effect's lone target ("that player or that permanent's
+	// controller may pay", "that creature's controller may pay"), the payer role
+	// of the copy-chain family (Chain Lightning, Chain Stasis, String of
+	// Disappearances). It resolves downstream to
+	// game.AffectedTargetControllerReference, which reads a player target as that
+	// player and any other target as its controller.
+	EffectPaymentPayerAffectedTargetController EffectPaymentPayerKind = "EffectPaymentPayerAffectedTargetController"
 )
 
 // EffectPaymentForm identifies the Oracle grammar that offers a resolution

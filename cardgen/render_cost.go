@@ -134,6 +134,8 @@ func (r Renderer) renderPlayerReference(reference game.PlayerReference) (string,
 		return "game.DefendingPlayerReference()", nil
 	case game.PlayerReferenceGroupOfferMember:
 		return "game.GroupOfferMemberReference()", nil
+	case game.PlayerReferenceAffectedTargetController:
+		return fmt.Sprintf("game.AffectedTargetControllerReference(%d)", reference.TargetIndex()), nil
 	default:
 		return "", fmt.Errorf("render: unsupported player reference kind %d", reference.Kind())
 	}
