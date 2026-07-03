@@ -93,6 +93,39 @@ func TestGenerateResolvingCopyChainSource(t *testing.T) {
 			},
 			absent: []string{"game.Pay{", "ResultGate"},
 		},
+		{
+			name:     "Chain of Plasma",
+			typeLine: "Instant",
+			manaCost: "{1}{R}",
+			oracle:   "Chain of Plasma deals 3 damage to any target. Then that player or that permanent's controller may discard a card. If the player does, they may copy this spell and may choose a new target for that copy.",
+			want: []string{
+				"Primitive: game.Damage{",
+				"Primitive: game.Pay{",
+				"Prompt: \"Discard a card?\",",
+				"Payer:  opt.Val(game.AffectedTargetControllerReference(0)),",
+				"Kind:   cost.AdditionalDiscard,",
+				"PublishResult: game.ResultKey(\"copy-chain-paid\"),",
+				"Primitive: game.CopyStackObject{",
+				"MayChooseNewTargets: true,",
+				"Chooser:             opt.Val(game.AffectedTargetControllerReference(0)),",
+				"Succeeded: game.TriTrue,",
+			},
+		},
+		{
+			name:     "Chain of Vapor",
+			typeLine: "Instant",
+			manaCost: "{U}",
+			oracle:   "Return target nonland permanent to its owner's hand. Then that permanent's controller may sacrifice a land of their choice. If the player does, they may copy this spell and may choose a new target for that copy.",
+			want: []string{
+				"Primitive: game.Bounce{",
+				"Primitive: game.Pay{",
+				"Prompt: \"Sacrifice a land?\",",
+				"Kind:               cost.AdditionalSacrifice,",
+				"PublishResult: game.ResultKey(\"copy-chain-paid\"),",
+				"Chooser:             opt.Val(game.AffectedTargetControllerReference(0)),",
+				"Succeeded: game.TriTrue,",
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -125,9 +158,11 @@ func TestGenerateResolvingCopyChainSource(t *testing.T) {
 }
 
 // TestGenerateResolvingCopyChainFailsClosed proves near-miss wordings that share
-// the "may copy this spell" surface do not lower through the copy-chain path: a
-// non-mana payment offer (Chain of Plasma) and a plural-new-targets copy
-// (Barroom Brawl) are left unsupported rather than silently mis-lowered.
+// the "may copy this spell" surface do not lower through the copy-chain path and
+// are left unsupported rather than silently mis-lowered: Chain of Silence's base
+// ("Prevent all damage ...") is a damage-prevention effect the backend cannot
+// lower, and Barroom Brawl combines a two-target fight base with a plural
+// "choose new targets" retarget that the single-target copy-chain path rejects.
 func TestGenerateResolvingCopyChainFailsClosed(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -137,10 +172,16 @@ func TestGenerateResolvingCopyChainFailsClosed(t *testing.T) {
 		oracle   string
 	}{
 		{
-			name:     "Chain of Plasma",
+			name:     "Chain of Silence",
 			typeLine: "Instant",
-			manaCost: "{1}{R}",
-			oracle:   "Chain of Plasma deals 3 damage to any target. Then that player or that permanent's controller may discard a card. If the player does, they may copy this spell and may choose a new target for that copy.",
+			manaCost: "{1}{W}",
+			oracle:   "Prevent all damage target creature would deal this turn. That creature's controller may sacrifice a land of their choice. If the player does, they may copy this spell and may choose a new target for that copy.",
+		},
+		{
+			name:     "Barroom Brawl",
+			typeLine: "Sorcery",
+			manaCost: "{1}{G}",
+			oracle:   "Target creature you control fights target creature the opponent to your left controls. Then that player may copy this spell and may choose new targets for the copy.",
 		},
 	}
 	for _, test := range tests {

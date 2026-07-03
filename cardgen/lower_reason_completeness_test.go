@@ -59,16 +59,17 @@ func TestFlattenAdditionalReasonsExpandsSiblings(t *testing.T) {
 
 // TestOptionalProbeSurfacesInnerBlocker proves the optional wrapper no longer
 // hides the blockers that would remain even if optional resolving effects were
-// supported: Chain of Plasma is blocked by both an optional effect and an
-// unsupported ordered sequence, and both must be reported so support planning does
-// not overcount how many cards supporting optional effects alone would unblock.
+// supported: Chain of Silence is blocked by both an optional effect and an
+// unsupported ordered sequence (its damage-prevention base is unsupported), and
+// both must be reported so support planning does not overcount how many cards
+// supporting optional effects alone would unblock.
 func TestOptionalProbeSurfacesInnerBlocker(t *testing.T) {
 	t.Parallel()
 	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
-		Name:       "Chain of Plasma",
+		Name:       "Chain of Silence",
 		Layout:     "normal",
 		TypeLine:   "Instant",
-		OracleText: "Chain of Plasma deals 3 damage to any target. Then that player or that permanent's controller may discard a card. If the player does, they may copy this spell and may choose a new target for that copy.",
+		OracleText: "Prevent all damage target creature would deal this turn. That creature's controller may sacrifice a land of their choice. If the player does, they may copy this spell and may choose a new target for that copy.",
 	})
 	if !hasDiagnosticSummary(diagnostics, "unsupported optional effect") {
 		t.Errorf("expected the optional blocker to be reported; got %#v", diagnostics)

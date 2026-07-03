@@ -15,11 +15,16 @@ const copyChainPaidResultKey = game.ResultKey("copy-chain-paid")
 // lowerResolvingCopyChain lowers the copy-chain family: a resolving spell that
 // performs a base effect on one target, then lets the affected target's
 // controller copy the spell with a new target, so the copy chains iteratively
-// off each new target. Two forms are handled:
+// off each new target. Three forms are handled:
 //
 //	Return target creature to its owner's hand. Then that creature's controller
 //	may pay {U}{U}. If the player does, they may copy this spell and may choose a
-//	new target for that copy. (String of Disappearances — payment-gated)
+//	new target for that copy. (String of Disappearances — mana-payment-gated)
+//
+//	Chain of Plasma deals 3 damage to any target. Then that player or that
+//	permanent's controller may discard a card. If the player does, they may copy
+//	this spell and may choose a new target for that copy. (Chain of Plasma —
+//	non-mana-payment-gated)
 //
 //	Destroy target noncreature permanent. Then that permanent's controller may
 //	copy this spell and may choose a new target for that copy. (Chain of Acid —
@@ -33,12 +38,14 @@ const copyChainPaidResultKey = game.ResultKey("copy-chain-paid")
 // (AffectedTargetControllerReference(0)), so the copier controls the copy and its
 // own iterative offer chains off the copier's new target (CR 707.10a).
 //
-// For the payment-gated form the payment folds onto the copy effect as a
-// MayPayThenIfDo mana payment whose payer is the affected target's controller,
-// linked to an "If the player does" PriorInstructionAccepted gate; it lowers to a
-// resolution Pay instruction publishing its result and a result-gated copy. The
-// unconditional form has no payment or condition and lowers to the base effect
-// followed by the optional copy. Every other shape fails closed.
+// For a payment-gated form the payment folds onto the copy effect as a
+// MayPayThenIfDo payment whose payer is the affected target's controller, linked
+// to an "If the player does" PriorInstructionAccepted gate; the offered cost is
+// either mana or a single non-mana resolution cost (discard a card, sacrifice a
+// land). It lowers to a resolution Pay instruction publishing its result and a
+// result-gated copy. The unconditional form has no payment or condition and
+// lowers to the base effect followed by the optional copy. Every other shape
+// fails closed.
 func lowerResolvingCopyChain(
 	cardName string,
 	ctx contentCtx,
@@ -78,9 +85,15 @@ func lowerResolvingCopyChain(
 			return game.AbilityContent{}, false
 		}
 		condition := ctx.content.Conditions[0]
-		if len(payment.ManaCost) == 0 ||
-			payment.AdditionalCost != nil ||
-			manaCostHasVariableSymbol(payment.ManaCost) ||
+		hasMana := len(payment.ManaCost) != 0
+		hasAdditional := payment.AdditionalCost != nil
+		// The copy-chain payment offer is exactly one of a mana payment (Chain
+		// Lightning, String of Disappearances) or a non-mana resolution cost
+		// (Chain of Plasma's "discard a card", Chain of Vapor's "sacrifice a
+		// land"); both-or-neither fails closed. controllerPaidResolutionPayment
+		// lowers whichever is present.
+		if hasMana == hasAdditional ||
+			(hasMana && manaCostHasVariableSymbol(payment.ManaCost)) ||
 			payment.GenericManaAmount.DynamicKind != compiler.DynamicAmountNone ||
 			condition.Kind != compiler.ConditionIf ||
 			condition.Predicate != compiler.ConditionPredicatePriorInstructionAccepted ||
