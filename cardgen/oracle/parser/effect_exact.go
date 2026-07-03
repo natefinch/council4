@@ -432,7 +432,16 @@ func exactSacrificeChoiceEffectSyntax(effect *EffectSyntax) bool {
 		return false
 	}
 	for _, noun := range nouns {
-		prefix := fmt.Sprintf("%s sacrifices %s %s", subject, amount, noun)
+		verb := "sacrifices"
+		if effect.Optional {
+			// The optional edict offer ("target opponent may sacrifice ...";
+			// Rakdos, Patron of Chaos) spells the base verb after "may" instead
+			// of the mandatory third-person "sacrifices". Its optionality is
+			// carried on Optional, so only the "may sacrifice" reconstruction
+			// matches; the mandatory form is not attempted.
+			verb = "may sacrifice"
+		}
+		prefix := fmt.Sprintf("%s %s %s %s", subject, verb, amount, noun)
 		if strings.EqualFold(text, prefix+".") ||
 			strings.EqualFold(text, prefix+" of their choice.") {
 			return true
@@ -549,6 +558,26 @@ func sacrificeDisjunctSideNoun(side SelectionSyntax, plural bool) (string, bool)
 // for selector shapes the runtime sacrifice selection cannot express so the
 // effect stays unsupported.
 func sacrificeChoiceNoun(selection *SelectionSyntax, plural bool) (string, bool) {
+	// A permanent named by a single color or a disjunction of colors over a bare
+	// card-type kind ("green or white creature"; Self-Inflicted Wound) prints the
+	// color adjective(s) before the noun. It is reconstructed here so the
+	// byte-exact compare accepts the printed Oracle wording; the runtime sacrifice
+	// selection matches it through the Selection.ColorsAny filter. Only the plain
+	// colored card-type shape is reconstructed — any excluded type/subtype or
+	// token qualifier combined with a color has no unambiguous ordering here and
+	// falls through to fail closed.
+	if colored, ok := sacrificeChoiceColoredNoun(selection, plural); ok {
+		return colored, true
+	}
+	// A permanent carrying both a "nontoken" qualifier and a single excluded card
+	// type ("nonland, nontoken permanent"; Rakdos, Patron of Chaos and Braids's
+	// Frightful Return) prints the excluded-type qualifier first, then a comma,
+	// then "nontoken", the reverse of the single-qualifier order below. It is
+	// reconstructed as its own candidate so the byte-exact compare accepts the
+	// printed Oracle wording.
+	if combined, ok := sacrificeChoiceCommaQualifiedNoun(selection, plural); ok {
+		return combined, true
+	}
 	base, ok := sacrificeChoiceBaseNoun(selection, plural)
 	if !ok {
 		return "", false
@@ -576,6 +605,96 @@ func sacrificeTokenSuffixForm(selection *SelectionSyntax) bool {
 		len(selection.RequiredTypesAny) == 0 &&
 		len(selection.ExcludedTypes) == 0 &&
 		len(selection.SubtypesAny) <= 1
+}
+
+// sacrificeChoiceCommaQualifiedNoun reconstructs the combined "non<type>,
+// nontoken <noun>" permanent phrase ("nonland, nontoken permanent") whose two
+// qualifiers print in the reverse order of the single-qualifier forms: the
+// excluded card type leads, a comma separates it from "nontoken", and the plain
+// card-type noun trails. It applies only when the selector carries both the
+// nontoken qualifier and exactly one excluded card type over a bare card-type
+// kind noun with no other qualifiers, and fails closed otherwise so the ordinary
+// single-qualifier reconstruction keeps ownership of every other shape.
+func sacrificeChoiceCommaQualifiedNoun(selection *SelectionSyntax, plural bool) (string, bool) {
+	if !selection.NonToken ||
+		len(selection.ExcludedTypes) != 1 ||
+		len(selection.ExcludedSubtypes) != 0 ||
+		len(selection.RequiredTypesAny) != 0 ||
+		len(selection.SubtypesAny) != 0 ||
+		len(selection.Supertypes) != 0 ||
+		len(selection.ColorsAny) != 0 ||
+		selection.TokenOnly || selection.Colored ||
+		selection.Colorless || selection.Multicolored {
+		return "", false
+	}
+	var noun string
+	switch selection.Kind {
+	case SelectionArtifact:
+		noun = "artifact"
+	case SelectionCreature:
+		noun = "creature"
+	case SelectionEnchantment:
+		noun = "enchantment"
+	case SelectionPermanent:
+		noun = "permanent"
+	default:
+		return "", false
+	}
+	if plural {
+		noun += "s"
+	}
+	word, ok := searchFilterCardTypeWord(selection.ExcludedTypes[0])
+	if !ok {
+		return "", false
+	}
+	return "non" + word + ", nontoken " + noun, true
+}
+
+// sacrificeChoiceColoredNoun reconstructs a plain colored card-type permanent
+// phrase ("green creature", "green or white creature") whose color adjective(s)
+// print before the noun. It applies only to a bare card-type kind carrying one
+// or more required colors and no other qualifier (no excluded type/subtype, no
+// token qualifier, no colorless/multicolored constraint), the only shape whose
+// color-plus-noun ordering is unambiguous. The colors print in the parsed text
+// order joined by "or", matching the Oracle wording; the runtime sacrifice
+// selection matches them through Selection.ColorsAny.
+func sacrificeChoiceColoredNoun(selection *SelectionSyntax, plural bool) (string, bool) {
+	if len(selection.ColorsAny) == 0 ||
+		len(selection.ExcludedTypes) != 0 ||
+		len(selection.ExcludedSubtypes) != 0 ||
+		len(selection.ExcludedColors) != 0 ||
+		len(selection.SubtypesAny) != 0 ||
+		len(selection.Supertypes) != 0 ||
+		len(selection.RequiredTypesAny) > 1 ||
+		selection.NonToken || selection.TokenOnly ||
+		selection.Colored || selection.Colorless || selection.Multicolored {
+		return "", false
+	}
+	var noun string
+	switch selection.Kind {
+	case SelectionArtifact:
+		noun = "artifact"
+	case SelectionCreature:
+		noun = "creature"
+	case SelectionEnchantment:
+		noun = "enchantment"
+	case SelectionPermanent:
+		noun = "permanent"
+	default:
+		return "", false
+	}
+	if plural {
+		noun += "s"
+	}
+	words := make([]string, 0, len(selection.ColorsAny))
+	for _, c := range selection.ColorsAny {
+		word, ok := colorWord(c)
+		if !ok {
+			return "", false
+		}
+		words = append(words, word)
+	}
+	return joinOrList(words) + " " + noun, true
 }
 
 // sacrificeChoiceBaseNoun maps the selector kind (or a card-type union such as

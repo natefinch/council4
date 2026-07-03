@@ -2100,6 +2100,8 @@ func targetSyntaxEnd(tokens []shared.Token, atoms Atoms, start int) int {
 			(equalWord(token, "or") && end+1 < len(tokens) && (equalWord(tokens[end+1], "remove") || equalWord(tokens[end+1], "removes"))) ||
 			(equalWord(token, "and") && end+1 < len(tokens) && effectWordKind(tokens[end+1]) != EffectUnknown) ||
 			(end > start && effectWordKind(token) != EffectUnknown) ||
+			(end > start && equalWord(token, "may") && end+1 < len(tokens) &&
+				effectWordKind(tokens[end+1]) != EffectUnknown) ||
 			(end > start && equalWord(token, "becomes")) ||
 			(end > start && cantBeBlockedThisTurnVerbAt(tokens, end)) ||
 			(end > start && canAttackAsThoughDefenderVerbAt(tokens, end)) ||
