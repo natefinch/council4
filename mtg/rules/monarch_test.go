@@ -129,3 +129,43 @@ func TestCombatDamageToNonMonarchKeepsMonarch(t *testing.T) {
 		t.Fatal("monarch lost the crown to unrelated combat damage")
 	}
 }
+
+// TestSetMonarchEmitsBecameMonarchEvent covers CR 720.2: a player who was not
+// already the monarch emits EventBecameMonarch when they take the crown, so
+// "whenever you/an opponent become(s) the monarch" triggers fire. A player who
+// is already the monarch keeps the crown without re-emitting (CR 720.5).
+func TestSetMonarchEmitsBecameMonarchEvent(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+
+	if !setMonarch(g, game.Player1) {
+		t.Fatal("setMonarch did not crown an active player")
+	}
+	assertEvent(t, g.Events, game.EventBecameMonarch, func(event game.Event) bool {
+		return event.Player == game.Player1 && event.Controller == game.Player1
+	})
+
+	before := len(g.Events)
+	if !setMonarch(g, game.Player1) {
+		t.Fatal("setMonarch failed to keep the crown")
+	}
+	for _, event := range g.Events[before:] {
+		if event.Kind == game.EventBecameMonarch {
+			t.Fatal("already-monarch re-emitted EventBecameMonarch")
+		}
+	}
+
+	before = len(g.Events)
+	if !setMonarch(g, game.Player2) {
+		t.Fatal("setMonarch did not transfer the crown")
+	}
+	found := false
+	for _, event := range g.Events[before:] {
+		if event.Kind == game.EventBecameMonarch && event.Player == game.Player2 {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("crown transfer did not emit EventBecameMonarch for the new monarch")
+	}
+}

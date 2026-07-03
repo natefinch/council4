@@ -1049,6 +1049,7 @@ const (
 	PlayerEventActionLoseLife       PlayerEventActionKind = "PlayerEventActionLoseLife"
 	PlayerEventActionSearchLibrary  PlayerEventActionKind = "PlayerEventActionSearchLibrary"
 	PlayerEventActionCommitCrime    PlayerEventActionKind = "PlayerEventActionCommitCrime"
+	PlayerEventActionBecomeMonarch  PlayerEventActionKind = "PlayerEventActionBecomeMonarch"
 )
 
 // PlayerEventAction is a source-spanned player-event action.

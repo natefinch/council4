@@ -127,6 +127,12 @@ type Condition struct {
 	// ControllerGraveyardCountCardType is the card type counted by
 	// ControllerGraveyardCardOfTypeCountAtLeast.
 	ControllerGraveyardCountCardType types.Card
+	// ControllerGraveyardInstantOrSorceryCountAtLeast requires the context
+	// controller's graveyard to hold at least this many cards that are instants
+	// and/or sorceries ("Spell mastery — If there are two or more instant and/or
+	// sorcery cards in your graveyard, ...", Fiery Impulse). Zero disables the
+	// predicate.
+	ControllerGraveyardInstantOrSorceryCountAtLeast int
 
 	// ControllerControlsNamed requires the context controller to control at
 	// least one permanent matching each listed card name ("If you control an
@@ -278,6 +284,7 @@ func (c *Condition) Empty() bool {
 		!c.SpellWasKicked &&
 		!c.EventPermanentWasKicked &&
 		c.ControllerGraveyardCardOfTypeCountAtLeast == 0 &&
+		c.ControllerGraveyardInstantOrSorceryCountAtLeast == 0 &&
 		len(c.ControllerControlsNamed) == 0 &&
 		!c.FirstCombatPhaseOfTurn &&
 		!c.ControllerControlsGreatestPowerCreature &&

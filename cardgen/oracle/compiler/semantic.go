@@ -745,6 +745,11 @@ const (
 	// GraveyardCountCardType card type ("if twenty or more creature cards are in
 	// your graveyard", Mortal Combat).
 	ConditionPredicateControllerGraveyardCardOfTypeCountAtLeast
+	// ConditionPredicateControllerGraveyardInstantOrSorceryCountAtLeast is
+	// satisfied when the controller's graveyard holds at least Threshold cards
+	// that are instants and/or sorceries ("Spell mastery — If there are two or
+	// more instant and/or sorcery cards in your graveyard, ...", Fiery Impulse).
+	ConditionPredicateControllerGraveyardInstantOrSorceryCountAtLeast
 	// ConditionPredicateControllerDoesNotPay is satisfied when the ability's
 	// controller does not pay the cost embedded in an "unless you pay {cost}"
 	// effect ("sacrifice this creature unless you pay {U}"). It is derived from

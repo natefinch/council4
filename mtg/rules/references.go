@@ -284,7 +284,8 @@ func triggeringEventPlayer(event game.Event) (game.PlayerID, bool) {
 		game.EventBeginningOfStep,
 		game.EventLifeGained,
 		game.EventLifeLost,
-		game.EventLibrarySearched:
+		game.EventLibrarySearched,
+		game.EventBecameMonarch:
 		return event.Player, true
 	case game.EventDamageDealt:
 		return event.Player, event.DamageRecipient == game.DamageRecipientPlayer

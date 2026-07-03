@@ -102,4 +102,5 @@ var Cards = []*game.CardDef{
 	DeceiverExarch,
 	DefiantOgre,
 	DownwindAmbusher,
+	DarkDabbling,
 }
