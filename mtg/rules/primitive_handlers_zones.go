@@ -1715,10 +1715,22 @@ func handleCopyStackObject(r *effectResolver, prim game.CopyStackObject) effectR
 	if !ok {
 		return effectResolved{accepted: true}
 	}
+	chooser := r.obj.Controller
+	if prim.Chooser.Exists {
+		resolved, ok := r.resolvePlayer(prim.Chooser.Val)
+		if !ok {
+			return effectResolved{accepted: true}
+		}
+		chooser = resolved
+	}
 	copyObj := game.NewStackObjectCopy(original, r.game.IDGen.Next())
+	// The copier controls the copy (CR 707.10a): the "may copy this spell" player
+	// becomes the copy's controller so the copy's own iterative offer chains off
+	// the copier's new target rather than the original controller.
+	copyObj.Controller = chooser
 	r.game.Stack.Push(copyObj)
 	if prim.MayChooseNewTargets {
-		r.engine.retargetStackObjectChoice(r.game, r.obj.Controller, copyObj, r.agents, r.log)
+		r.engine.retargetStackObjectChoice(r.game, chooser, copyObj, r.agents, r.log)
 	}
 	return effectResolved{accepted: true, succeeded: true}
 }

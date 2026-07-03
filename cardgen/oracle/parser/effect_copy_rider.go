@@ -72,10 +72,17 @@ func conjoinedCopyRiderTail(body []shared.Token) bool {
 	default:
 		return false
 	}
-	if !effectWordsAt(body, j, "for", "the") {
+	// The demonstrative closing the rider is "the copy" (Sevinne's Reclamation)
+	// or "that copy" (the Chain cycle's "a new target for that copy"); both name
+	// the freshly created copy, so accept either.
+	if j >= len(body) || !equalWord(body[j], "for") {
 		return false
 	}
-	j += 2
+	j++
+	if j >= len(body) || (!equalWord(body[j], "the") && !equalWord(body[j], "that")) {
+		return false
+	}
+	j++
 	if j >= len(body) || (!equalWord(body[j], "copy") && !equalWord(body[j], "copies")) {
 		return false
 	}

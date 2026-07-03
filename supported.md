@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,832 of 32,501 cards eligible for paper support (51.8%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,837 of 32,501 cards eligible for paper support (51.8%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2309,7 +2309,11 @@ Council4 currently supports **16,832 of 32,501 cards eligible for paper support 
 - Cessation
 - Ceta Disciple
 - Chain Devil
+- Chain Lightning
+- Chain of Acid
+- Chain of Smog
 - Chain Reaction
+- Chain Stasis
 - Chain to Memory
 - Chainbreaker
 - Chained Brute
@@ -13941,6 +13945,7 @@ Council4 currently supports **16,832 of 32,501 cards eligible for paper support 
 - Strife Scholar // Awaken the Ages
 - Strike It Rich
 - Striking Sliver
+- String of Disappearances
 - Strionic Resonator
 - Strip Mine
 - Striped Bears

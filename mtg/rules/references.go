@@ -233,6 +233,8 @@ func (r referenceResolver) player(ref game.PlayerReference) (game.PlayerID, bool
 		playerID, ok = r.targetPlayer(ref.TargetIndex())
 	case game.PlayerReferenceObjectController:
 		playerID, ok = r.referencedObjectController(ref)
+	case game.PlayerReferenceAffectedTargetController:
+		playerID, ok = r.affectedTargetController(ref.TargetIndex())
 	case game.PlayerReferenceObjectOwner:
 		playerID, ok = r.referencedObjectOwner(ref)
 	case game.PlayerReferenceEventPlayer:
@@ -338,6 +340,25 @@ func (r referenceResolver) targetPlayer(targetIndex int) (game.PlayerID, bool) {
 		return 0, false
 	}
 	return target.PlayerID, true
+}
+
+// affectedTargetController resolves the player affected by a target slot: a
+// player target resolves to that player, while any other target (a permanent,
+// including a planeswalker) resolves to that object's controller. It backs the
+// "that player or that permanent's controller" / "that creature's controller"
+// payer and copier of the copy-chain family.
+func (r referenceResolver) affectedTargetController(targetIndex int) (game.PlayerID, bool) {
+	if r.obj == nil || targetIndex < 0 || targetIndex >= len(r.obj.Targets) {
+		return 0, false
+	}
+	if r.obj.Targets[targetIndex].Kind == game.TargetPlayer {
+		return r.targetPlayer(targetIndex)
+	}
+	resolved, ok := r.targetObject(targetIndex)
+	if !ok {
+		return 0, false
+	}
+	return resolved.controller(r.g)
 }
 
 func (r referenceResolver) referencedObjectController(ref game.PlayerReference) (game.PlayerID, bool) {

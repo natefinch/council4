@@ -320,6 +320,14 @@ const (
 	// primitive of an instruction whose OptionalActorGroup is set, where it
 	// resolves to each accepting player in turn.
 	PlayerReferenceGroupOfferMember
+	// PlayerReferenceAffectedTargetController references the player affected by a
+	// target slot, resolving a player target to that player and any other target
+	// (a permanent, including a planeswalker) to that object's controller. It
+	// models the "that player or that permanent's controller" and "that
+	// creature's controller" payer/chooser of the copy-chain family (Chain
+	// Lightning, Chain Stasis, String of Disappearances), where the affected
+	// target's controller may pay and copy the spell.
+	PlayerReferenceAffectedTargetController
 )
 
 // PlayerReference describes how a rules effect finds a player at resolution.
@@ -394,6 +402,15 @@ func GroupOfferMemberReference() PlayerReference {
 	return PlayerReference{kind: PlayerReferenceGroupOfferMember}
 }
 
+// AffectedTargetControllerReference references the player affected by the target
+// slot at targetIndex: a player target resolves to that player, while any other
+// target resolves to that object's controller. It models the "that player or
+// that permanent's controller" / "that creature's controller" payer and copier
+// of the copy-chain family.
+func AffectedTargetControllerReference(targetIndex int) PlayerReference {
+	return PlayerReference{kind: PlayerReferenceAffectedTargetController, targetIndex: targetIndex}
+}
+
 // Validate reports structural problems with a PlayerReference that represent
 // card-definition bugs. It checks player-level kind/field consistency and the
 // structure of any nested object reference; target-index bounds depend on the
@@ -441,6 +458,13 @@ func (r PlayerReference) Validate() []string {
 	case PlayerReferenceGroupOfferMember:
 		if r.targetIndex != 0 || r.object.Exists {
 			return []string{"group offer member reference must not set TargetIndex or Object"}
+		}
+	case PlayerReferenceAffectedTargetController:
+		if r.object.Exists {
+			return []string{"affected target controller reference must not set Object"}
+		}
+		if r.targetIndex < 0 {
+			return []string{"affected target controller reference must not use a negative TargetIndex"}
 		}
 	default:
 		return []string{fmt.Sprintf("unknown player reference kind %d", r.kind)}
