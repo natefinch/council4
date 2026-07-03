@@ -1575,9 +1575,14 @@ func exactTapAttachedEffectSyntax(effect *EffectSyntax) bool {
 // exactUntapAttachedEffectSyntax recognizes the attached-recipient form "Untap
 // enchanted creature." / "Untap enchanted permanent." (Aura) or "Untap equipped
 // creature." (Equipment), where the untapped permanent is the one the source is
-// attached to. There is no target or reference; lowering routes it to the
-// runtime's source attached-permanent reference. Any other wording leaves the
-// clause non-exact so lowering fails closed.
+// attached to. It also accepts the definite "Untap the creature." wording used
+// by an Aura upkeep gate whose sole creature in context is the enchanted one
+// (Paralyze's "that player may pay {4}. If the player does, untap the
+// creature."); "the creature" is a definite back-reference to the enchanted
+// creature, so it resolves through the same source attached-permanent reference.
+// There is no target or reference; lowering routes it to the runtime's source
+// attached-permanent reference. Any other wording leaves the clause non-exact so
+// lowering fails closed.
 func exactUntapAttachedEffectSyntax(effect *EffectSyntax) bool {
 	if effect.Kind != EffectUntap || effect.Negated {
 		return false
@@ -1588,6 +1593,7 @@ func exactUntapAttachedEffectSyntax(effect *EffectSyntax) bool {
 	text := exactEffectClauseText(effect)
 	return strings.EqualFold(text, "Untap enchanted creature.") ||
 		strings.EqualFold(text, "Untap enchanted permanent.") ||
+		strings.EqualFold(text, "Untap the creature.") ||
 		strings.EqualFold(text, "Untap equipped creature.")
 }
 

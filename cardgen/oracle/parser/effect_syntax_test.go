@@ -2277,6 +2277,73 @@ func TestParseEventPlayerMayPayFailureConsequence(t *testing.T) {
 	}
 }
 
+func TestParseEventPlayerMayPaySuccessConsequence(t *testing.T) {
+	t.Parallel()
+	// The affirmative resolving-success mirror of the Smothering Tithe failure
+	// gate: the event player is offered the payment and the consequence resolves
+	// only when they pay ("If the player does, they draw a card"). The payment
+	// folds with EffectPaymentFormMayPayThenIfDo + EventPlayer payer, and the
+	// prior-instruction-accepted gate pairs with the payment's success node.
+	document, diagnostics := Parse(
+		"Whenever a player casts a spell, that player may pay {2}. If the player does, they draw a card.",
+		Context{CardName: "Unifying Theory"},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	ability := document.Abilities[0]
+	if ability.Optional || len(ability.Sentences) != 2 ||
+		ability.Sentences[0].PaymentPrelude == nil {
+		t.Fatalf("payment sequence = %#v", ability)
+	}
+	effect := ability.Sentences[1].Effects[0]
+	if effect.Payment.Form != EffectPaymentFormMayPayThenIfDo ||
+		effect.Payment.Payer != EffectPaymentPayerEventPlayer ||
+		!slices.Equal(effect.Payment.ManaCost, cost.Mana{cost.O(2)}) ||
+		effect.Optional || effect.Negated || !effect.Exact {
+		t.Fatalf("consequence = %#v", effect)
+	}
+	if len(ability.ConditionClauses) != 1 ||
+		ability.ConditionClauses[0].Predicate != ConditionPredicatePriorInstructionAccepted ||
+		len(ability.ConditionBoundaries) != 1 ||
+		ability.ConditionBoundaries[0].NodeID != effect.Payment.SuccessConditionNodeID {
+		t.Fatalf("conditions = %#v", ability.ConditionClauses)
+	}
+}
+
+func TestParseEventPlayerMayPaySuccessConsequenceAttachedUntap(t *testing.T) {
+	t.Parallel()
+	// Paralyze's upkeep gate: the enchanted creature's controller may pay, and on
+	// success the enchanted creature ("the creature") untaps. The verb-first
+	// consequence folds and stays exact so lowering can route it to the
+	// source-attached permanent.
+	document, diagnostics := Parse(
+		"At the beginning of the upkeep of enchanted creature's controller, that player may pay {4}. If the player does, untap the creature.",
+		Context{CardName: "Paralyze"},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	ability := document.Abilities[0]
+	if ability.Optional || len(ability.Sentences) != 2 ||
+		ability.Sentences[0].PaymentPrelude == nil {
+		t.Fatalf("payment sequence = %#v", ability)
+	}
+	effect := ability.Sentences[1].Effects[0]
+	if effect.Payment.Form != EffectPaymentFormMayPayThenIfDo ||
+		effect.Payment.Payer != EffectPaymentPayerEventPlayer ||
+		!slices.Equal(effect.Payment.ManaCost, cost.Mana{cost.O(4)}) ||
+		effect.Optional || effect.Negated || !effect.Exact {
+		t.Fatalf("consequence = %#v", effect)
+	}
+	if len(ability.ConditionClauses) != 1 ||
+		ability.ConditionClauses[0].Predicate != ConditionPredicatePriorInstructionAccepted ||
+		len(ability.ConditionBoundaries) != 1 ||
+		ability.ConditionBoundaries[0].NodeID != effect.Payment.SuccessConditionNodeID {
+		t.Fatalf("conditions = %#v", ability.ConditionClauses)
+	}
+}
+
 func TestParseControllerMayPaySuccessConsequence(t *testing.T) {
 	t.Parallel()
 	document, diagnostics := Parse(
@@ -2492,6 +2559,34 @@ func TestParseEventPlayerMayPayFailureConsequenceRejectsOtherPaymentWording(t *t
 				}
 				for _, effect := range sentence.Effects {
 					if effect.Payment.Form == EffectPaymentFormMayPayThenIfDoesNot {
+						t.Fatalf("unexpected payment = %#v", effect.Payment)
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestParseEventPlayerMaySuccessConsequenceRejectsOtherPaymentWording(t *testing.T) {
+	t.Parallel()
+	for _, oracle := range []string{
+		// Non-mana cost.
+		"Whenever a player casts a spell, that player may pay 2 life. If the player does, they draw a card.",
+		// Non-payment discard offer.
+		"Whenever a player casts a spell, that player may sacrifice a creature. If the player does, they draw a card.",
+		// Targeted (not the resolving event player) payer.
+		"Whenever a player casts a spell, target player may pay {2}. If the player does, they draw a card.",
+	} {
+		t.Run(oracle, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(oracle, Context{CardName: "Unsafe Theory"})
+			for _, sentence := range document.Abilities[0].Sentences {
+				if sentence.PaymentPrelude != nil {
+					t.Fatalf("unexpected payment prelude = %#v", sentence.PaymentPrelude)
+				}
+				for _, effect := range sentence.Effects {
+					if effect.Payment.Form == EffectPaymentFormMayPayThenIfDo &&
+						effect.Payment.Payer == EffectPaymentPayerEventPlayer {
 						t.Fatalf("unexpected payment = %#v", effect.Payment)
 					}
 				}

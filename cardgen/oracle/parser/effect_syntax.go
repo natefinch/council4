@@ -49,6 +49,7 @@ func emitResolvingSyntax(abilities []Ability) {
 		recognizeControllerOptionalPaymentSequence(&abilities[i])
 		recognizeOptionalManaPaymentBenefitSequence(&abilities[i])
 		recognizeEventPlayerOptionalPaymentSequence(&abilities[i])
+		recognizeEventPlayerOptionalPaymentAffirmativeSequence(&abilities[i])
 		recognizeControllerMandatoryPaymentSequence(&abilities[i])
 		recognizePayRepeatedlyAnimateSequence(&abilities[i])
 		foldAnimateSelfStillSentence(&abilities[i])

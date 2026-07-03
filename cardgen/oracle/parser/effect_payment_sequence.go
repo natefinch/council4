@@ -712,3 +712,83 @@ func recognizeEventPlayerOptionalPaymentSequence(ability *Ability) {
 	paymentSentence.PaymentPrelude = &effect.Payment
 	consequenceSentence.Effects[0] = effect
 }
+
+// recognizeEventPlayerOptionalPaymentAffirmativeSequence folds the exact
+// two-sentence "that player may pay {N}. If the player does, EFFECT." form onto
+// its consequence effect, the resolving-success mirror of
+// recognizeEventPlayerOptionalPaymentSequence's "If the player doesn't" failure
+// gate. The event player is offered the payment; when the player pays, the
+// consequence resolves. The affirmative "If the player does" gate is already a
+// ConditionPredicatePriorInstructionAccepted clause (recognizePriorInstructionCondition),
+// so this recognizer does not append a duplicate condition — it only folds the
+// payment onto the consequence effect (Form MayPayThenIfDo, payer the event
+// player) and records the shared success-gate NodeID so the compiler pairs the
+// payment offer with the gate. The consequence may be verb-first ("untap the
+// creature") or subject-led ("they draw a card"); either way it is folded whole
+// and the downstream lowering gates it on the published payment success. It
+// fails closed on any other wording, leaving the "doesn't" failure gate to the
+// recognizer above.
+func recognizeEventPlayerOptionalPaymentAffirmativeSequence(ability *Ability) {
+	if ability.Kind != AbilityTriggered || len(ability.Sentences) < 2 {
+		return
+	}
+	for i := 2; i < len(ability.Sentences); i++ {
+		if len(semanticEffectTokens(ability.Sentences[i].Tokens)) != 0 {
+			return
+		}
+	}
+	paymentSentence := &ability.Sentences[0]
+	consequenceSentence := &ability.Sentences[1]
+	paymentTokens := semanticEffectTokens(paymentSentence.Tokens)
+	if len(paymentTokens) < 6 ||
+		!effectWordsAt(paymentTokens, 0, "that", "player", "may", "pay") {
+		return
+	}
+	manaCost, paymentEnd, ok := parseKeywordManaCost(paymentTokens, 4)
+	if !ok || paymentEnd != len(paymentTokens)-1 || paymentTokens[paymentEnd].Kind != shared.Period {
+		return
+	}
+
+	consequenceTokens := semanticEffectTokens(consequenceSentence.Tokens)
+	if len(consequenceTokens) < 6 ||
+		!effectWordsAt(consequenceTokens, 0, "if", "the", "player", "does") ||
+		consequenceTokens[4].Kind != shared.Comma ||
+		len(consequenceSentence.Effects) != 1 {
+		return
+	}
+	boundary, ok := conditionBoundaryAt(ability.ConditionBoundaries, consequenceTokens[0].Span.Start)
+	if !ok || boundary.Kind != ConditionIntroIf {
+		return
+	}
+
+	// The consequence body is everything after the "if the player does,"
+	// introducer (a verb-first "untap the creature" or a subject-led "they draw
+	// a card"). Isolate it so the folded effect parses exactly on its own; the
+	// effect's verb must sit at or after the body start, matching the affirmative
+	// controller recognizer's verb-position guard.
+	consequence := consequenceTokens[5:]
+	if len(consequence) == 0 {
+		return
+	}
+	effect := consequenceSentence.Effects[0]
+	if effect.VerbSpan.Start.Offset < consequence[0].Span.Start.Offset {
+		return
+	}
+	effect.Tokens = cloneTokens(consequence)
+	effect.ClauseSpan = shared.SpanOf(consequence)
+	effect.Negated = false
+	effect.HasUnrecognizedSibling = false
+	effect.Payment = EffectPaymentSyntax{
+		Span:                   shared.SpanOf(paymentTokens),
+		Form:                   EffectPaymentFormMayPayThenIfDo,
+		Payer:                  EffectPaymentPayerEventPlayer,
+		ManaCost:               manaCost,
+		SuccessConditionNodeID: boundary.NodeID,
+	}
+	effect.Exact = exactEffectSyntax(&effect)
+	if !effect.Exact {
+		return
+	}
+	paymentSentence.PaymentPrelude = &effect.Payment
+	consequenceSentence.Effects[0] = effect
+}
