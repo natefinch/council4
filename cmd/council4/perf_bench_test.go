@@ -60,3 +60,13 @@ func BenchmarkPerfDeckGameGeneric(b *testing.B) {
 		return agents(agent.Agent{Strategy: agent.GenericStrategy{}})
 	})
 }
+
+// BenchmarkPerfDeckGameSearch plays one full game over the baseline decks with
+// the search agent (one-ply lookahead + position evaluation) in every seat. It
+// is the search agent's game-time baseline; search is compute-heavy, so this is
+// expected to be far slower than the heuristic agents.
+func BenchmarkPerfDeckGameSearch(b *testing.B) {
+	benchmarkPerfDeckGame(b, func(uint64) [game.NumPlayers]rules.PlayerAgent {
+		return agents(agent.Searcher{Rollout: agent.GenericStrategy{}})
+	})
+}

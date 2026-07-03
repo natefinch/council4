@@ -3,6 +3,8 @@ package cardgen
 import (
 	"fmt"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
@@ -44,18 +46,26 @@ func compiledSignedAmountValue(amount compiler.CompiledSignedAmount) int {
 	return amount.Value
 }
 
+// titleFirst upper-cases the first rune of text, leaving the remainder
+// unchanged. It decodes the leading rune so multi-byte characters (e.g. an
+// accented "é") are not corrupted by byte slicing.
 func titleFirst(text string) string {
 	if text == "" {
 		return ""
 	}
-	return strings.ToUpper(text[:1]) + text[1:]
+	r, size := utf8.DecodeRuneInString(text)
+	return string(unicode.ToUpper(r)) + text[size:]
 }
 
+// lowerFirst lower-cases the first rune of text, leaving the remainder
+// unchanged. It decodes the leading rune so multi-byte characters (e.g. an
+// accented "É") are not corrupted by byte slicing.
 func lowerFirst(text string) string {
 	if text == "" {
 		return ""
 	}
-	return strings.ToLower(text[:1]) + text[1:]
+	r, size := utf8.DecodeRuneInString(text)
+	return string(unicode.ToLower(r)) + text[size:]
 }
 
 func spanCoveredByKeyword(span shared.Span, keywords []compiler.CompiledKeyword) bool {
