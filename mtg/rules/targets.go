@@ -408,7 +408,11 @@ func (e *Engine) chooseExternalTarget(g *game.Game, controller game.PlayerID, so
 func (e *Engine) chooseTargetingOpponent(g *game.Game, controller game.PlayerID, spec *game.TargetSpec, opponents []game.PlayerID, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (game.PlayerID, bool) {
 	options := make([]game.ChoiceOption, 0, len(opponents))
 	for i, opponent := range opponents {
-		options = append(options, game.ChoiceOption{Index: i, Label: fmt.Sprintf("Player %d", opponent+1)})
+		options = append(options, game.ChoiceOption{
+			Index:   i,
+			Label:   fmt.Sprintf("Player %d", opponent+1),
+			Targets: []game.Target{game.PlayerTarget(opponent)},
+		})
 	}
 	selected := e.chooseChoice(g, agents, game.ChoiceRequest{
 		Kind:       game.ChoicePlayer,
