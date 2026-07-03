@@ -25,6 +25,70 @@ import (
 // any face matching both wordings uses the same key.
 const imprintLinkKey = "imprint"
 
+// referencedAnyColorManaChoiceKey links the color chosen as a referenced /
+// that-player add-mana body resolves ("its controller adds an additional one
+// mana of any color", Fertile Ground) to the AddMana that spends it. The key is
+// scoped to the single instruction sequence it appears in, so one fixed value is
+// unique.
+const referencedAnyColorManaChoiceKey = game.ChoiceKey("any-color-mana")
+
+// referencedAnyColorAddMana builds the resolution-time "add <count> mana of any
+// color" sequence for a triggered add-mana body whose recipient is a referenced
+// player rather than the ability's controller ("its controller adds an
+// additional one mana of any color", Fertile Ground and the mana-additional aura
+// family; "that player adds ... one mana of any color"). The recipient — the
+// player who adds the mana, and therefore chooses its color (CR 106.4) — picks
+// one basic color among {W}{U}{B}{R}{G} as the ability resolves, then receives
+// count mana of that chosen color. count is manaEffect.AnyColorCount when the
+// body names two or more mana of any one color (Gilded Lotus wording) and one
+// for the plain "one mana of any color" body.
+func referencedAnyColorAddMana(recipient game.PlayerReference, manaEffect compiler.CompiledEffectMana) game.AbilityContent {
+	count := 1
+	if manaEffect.AnyColorCount >= 2 {
+		count = manaEffect.AnyColorCount
+	}
+	chooser := recipient
+	return game.Mode{Sequence: []game.Instruction{
+		{Primitive: game.Choose{
+			Choice: game.ResolutionChoice{
+				Kind:            game.ResolutionChoiceMana,
+				Prompt:          "Choose a color",
+				Colors:          []mana.Color{mana.W, mana.U, mana.B, mana.R, mana.G},
+				PlayerReference: &chooser,
+			},
+			PublishChoice: referencedAnyColorManaChoiceKey,
+		}},
+		{Primitive: game.AddMana{
+			Amount:     game.Fixed(count),
+			ChoiceFrom: referencedAnyColorManaChoiceKey,
+			Player:     opt.Val(recipient),
+		}},
+	}}.Ability()
+}
+
+// referencedAddManaAnyColorOnly reports whether a referenced add-mana body is the
+// plain freely-chosen "one mana of any color" / "N mana of any one color" form,
+// with none of the other add-mana shapes (commander identity, lands-produce,
+// chosen entry color, filter pair, a dynamic amount, an among-controlled color
+// source, or a conditional "instead" rider) that each need their own lowering.
+func referencedAddManaAnyColorOnly(manaEffect compiler.CompiledEffectMana) bool {
+	return manaEffect.AnyColor &&
+		!manaEffect.CommanderIdentity &&
+		!manaEffect.LandsProduce &&
+		!manaEffect.Choice &&
+		!manaEffect.FilterPair &&
+		!manaEffect.ChosenColor &&
+		!manaEffect.ChosenColorDevotion &&
+		!manaEffect.ChosenColorDynamic &&
+		!manaEffect.LinkedExileColors &&
+		!manaEffect.ColorsAmongControlled &&
+		!manaEffect.EachColorAmongControlled &&
+		!manaEffect.AnyOneColorDynamic &&
+		!manaEffect.TriggerLandProducedType &&
+		!manaEffect.DynamicColorless &&
+		!manaEffect.Instead
+}
+
 // lowerReminderManaAbility preserves a parenthesized reminder mana ability such
 // as "({T}: Add {R} or {G}.)" and consumes other rules-free reminder abilities.
 func lowerReminderManaAbility(
@@ -1181,6 +1245,9 @@ func lowerReferencedControllerAddMana(ctx contentCtx) (game.AbilityContent, bool
 			Player:          opt.Val(recipient),
 		}}}}.Ability(), true
 	}
+	if referencedAddManaAnyColorOnly(manaEffect) {
+		return referencedAnyColorAddMana(recipient, manaEffect), true
+	}
 	if manaEffect.AnyColor ||
 		manaEffect.CommanderIdentity ||
 		manaEffect.LandsProduce ||
@@ -1233,6 +1300,10 @@ func lowerReferencedPlayerAddMana(ctx contentCtx) (game.AbilityContent, bool) {
 		return game.AbilityContent{}, false
 	}
 	manaEffect := effect.Mana
+	recipient := game.EventPlayerReference()
+	if referencedAddManaAnyColorOnly(manaEffect) {
+		return referencedAnyColorAddMana(recipient, manaEffect), true
+	}
 	if manaEffect.AnyColor ||
 		manaEffect.CommanderIdentity ||
 		manaEffect.LandsProduce ||
@@ -1244,7 +1315,6 @@ func lowerReferencedPlayerAddMana(ctx contentCtx) (game.AbilityContent, bool) {
 		len(manaEffect.Colors) == 0 {
 		return game.AbilityContent{}, false
 	}
-	recipient := game.EventPlayerReference()
 	seq := make([]game.Instruction, 0, len(manaEffect.Colors))
 	for _, c := range manaEffect.Colors {
 		seq = append(seq, game.Instruction{Primitive: game.AddMana{
