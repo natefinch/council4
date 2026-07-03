@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,814 of 32,501 cards eligible for paper support (51.7%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,816 of 32,501 cards eligible for paper support (51.7%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2892,6 +2892,7 @@ Council4 currently supports **16,814 of 32,501 cards eligible for paper support 
 - Court Homunculus
 - Court of Bounty
 - Court of Embereth
+- Court of Garenbrig
 - Court of Grace
 - Court of Ire
 - Court Street Denizen
@@ -13862,6 +13863,7 @@ Council4 currently supports **16,814 of 32,501 cards eligible for paper support 
 - Storm Spirit
 - Storm Strike
 - Storm the Festival
+- Storm the Seedcore
 - Storm's Wrath
 - Storm, Shaker of Skies
 - Storm-Kiln Artist
