@@ -13,6 +13,129 @@ import (
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
+func TestLowerCastTriggerEventPlayerMayPaySuccessDraws(t *testing.T) {
+	t.Parallel()
+	// Unifying Theory: the affirmative resolving-success mirror of Smothering
+	// Tithe. The event player is offered the payment and draws only when they
+	// pay. The payment lowers to a resolution Pay charged to the event player
+	// publishing its result, and the draw is gated on that payment succeeding.
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Unifying Theory",
+		Layout:     "normal",
+		TypeLine:   "Enchantment",
+		OracleText: "Whenever a player casts a spell, that player may pay {2}. If the player does, they draw a card.",
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
+	}
+	trigger := face.TriggeredAbilities[0]
+	if trigger.Optional ||
+		trigger.Trigger.Pattern.Event != game.EventSpellCast {
+		t.Fatalf("trigger = %#v", trigger)
+	}
+	sequence := trigger.Content.Modes[0].Sequence
+	if len(sequence) != 2 {
+		t.Fatalf("sequence = %#v, want payment and consequence", sequence)
+	}
+	pay, ok := sequence[0].Primitive.(game.Pay)
+	if !ok || !pay.Payment.Payer.Exists ||
+		pay.Payment.Payer.Val != game.EventPlayerReference() ||
+		!pay.Payment.ManaCost.Exists ||
+		!slices.Equal(pay.Payment.ManaCost.Val, cost.Mana{cost.O(2)}) {
+		t.Fatalf("payment = %#v", sequence[0])
+	}
+	if sequence[0].PublishResult != eventPlayerPaidResultKey {
+		t.Fatalf("payment result = %q", sequence[0].PublishResult)
+	}
+	consequence := sequence[1]
+	if consequence.Optional || !consequence.ResultGate.Exists ||
+		consequence.ResultGate.Val.Key != eventPlayerPaidResultKey ||
+		consequence.ResultGate.Val.Succeeded != game.TriTrue {
+		t.Fatalf("consequence envelope = %#v", consequence)
+	}
+	draw, ok := consequence.Primitive.(game.Draw)
+	if !ok || draw.Amount != game.Fixed(1) ||
+		draw.Player != game.EventPlayerReference() {
+		t.Fatalf("consequence = %#v, want event-player single draw", consequence.Primitive)
+	}
+}
+
+func TestLowerUpkeepTriggerEventPlayerMayPaySuccessUntapsAttached(t *testing.T) {
+	t.Parallel()
+	// Paralyze: on payment the enchanted creature ("the creature") untaps. The
+	// consequence routes to the source attached-permanent reference, gated on the
+	// event player having paid.
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Paralyze",
+		Layout:     "normal",
+		TypeLine:   "Enchantment — Aura",
+		OracleText: "Enchant creature\nWhen this Aura enters, tap enchanted creature.\nEnchanted creature doesn't untap during its controller's untap step.\nAt the beginning of the upkeep of enchanted creature's controller, that player may pay {4}. If the player does, untap the creature.",
+	})
+	if len(face.TriggeredAbilities) != 2 {
+		t.Fatalf("triggered abilities = %d, want 2", len(face.TriggeredAbilities))
+	}
+	upkeep := face.TriggeredAbilities[1]
+	if upkeep.Optional ||
+		upkeep.Trigger.Pattern.Event != game.EventBeginningOfStep ||
+		upkeep.Trigger.Pattern.Step != game.StepUpkeep {
+		t.Fatalf("upkeep trigger = %#v", upkeep)
+	}
+	sequence := upkeep.Content.Modes[0].Sequence
+	if len(sequence) != 2 {
+		t.Fatalf("sequence = %#v, want payment and consequence", sequence)
+	}
+	pay, ok := sequence[0].Primitive.(game.Pay)
+	if !ok || !pay.Payment.Payer.Exists ||
+		pay.Payment.Payer.Val != game.EventPlayerReference() ||
+		!pay.Payment.ManaCost.Exists ||
+		!slices.Equal(pay.Payment.ManaCost.Val, cost.Mana{cost.O(4)}) {
+		t.Fatalf("payment = %#v", sequence[0])
+	}
+	if sequence[0].PublishResult != eventPlayerPaidResultKey {
+		t.Fatalf("payment result = %q", sequence[0].PublishResult)
+	}
+	consequence := sequence[1]
+	if consequence.Optional || !consequence.ResultGate.Exists ||
+		consequence.ResultGate.Val.Key != eventPlayerPaidResultKey ||
+		consequence.ResultGate.Val.Succeeded != game.TriTrue {
+		t.Fatalf("consequence envelope = %#v", consequence)
+	}
+	untap, ok := consequence.Primitive.(game.Untap)
+	if !ok || untap.Object != game.SourceAttachedPermanentReference() {
+		t.Fatalf("consequence = %#v, want source-attached untap", consequence.Primitive)
+	}
+}
+
+func TestLowerEventPlayerMayPaySuccessRejectsUnsafeForms(t *testing.T) {
+	t.Parallel()
+	for _, oracle := range []string{
+		// Non-mana cost.
+		"Whenever a player casts a spell, that player may pay 2 life. If the player does, they draw a card.",
+		// Variable mana cost.
+		"Whenever a player casts a spell, that player may pay {X}. If the player does, they draw a card.",
+		// Unrecognized consequence body.
+		"Whenever a player casts a spell, that player may pay {2}. If the player does, you flip a coin.",
+		// Extra trailing instruction after the gated benefit.
+		"Whenever a player casts a spell, that player may pay {2}. If the player does, they draw a card. You gain 1 life.",
+	} {
+		t.Run(oracle, func(t *testing.T) {
+			t.Parallel()
+			faces, diagnostics := lowerExecutableFaces(&ScryfallCard{
+				Name:       "Unsafe Theory",
+				Layout:     "normal",
+				TypeLine:   "Enchantment",
+				OracleText: oracle,
+			})
+			if len(diagnostics) == 0 {
+				t.Fatalf("expected unsupported diagnostic for %q", oracle)
+			}
+			if len(faces) > 0 && len(faces[0].TriggeredAbilities) != 0 {
+				t.Fatalf("unexpected supported trigger for %q", oracle)
+			}
+		})
+	}
+}
+
 func TestLowerDrawTriggerYou(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{

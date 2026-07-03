@@ -372,6 +372,121 @@ func lowerEventPlayerTaxedControllerBenefit(
 	}}.Ability(), true
 }
 
+const eventPlayerPaidResultKey = game.ResultKey("event-player-paid")
+
+// lowerEventPlayerPaidBenefit lowers the affirmative event-player optional
+// payment "that player may pay {N}. If the player does, <benefit>." (Unifying
+// Theory's "they draw a card"), the resolving-success mirror of
+// lowerEventPlayerTaxedControllerBenefit's "If the player doesn't" failure gate.
+// The event player is offered the payment; the consequence resolves only when
+// the player pays. The optional payment becomes a resolution Pay instruction
+// charged to the event player and publishing its result, and every consequence
+// instruction is gated on that payment having succeeded (TriTrue).
+//
+// The consequence is lowered compositionally through the shared content path
+// after stripping the payment and the "if the player does" gate, so it fails
+// closed on any benefit the backend cannot already lower. The payment offer's
+// "that player" payer reference sits inside the payment span; it is dropped
+// before the consequence lowers so a recipient reference in the benefit (the
+// event-player "they" of "they draw a card") is the only reference the
+// consequence sees.
+func lowerEventPlayerPaidBenefit(
+	cardName string,
+	ctx contentCtx,
+	syntax *parser.Ability,
+) (game.AbilityContent, bool) {
+	if ctx.optional ||
+		len(ctx.content.Effects) == 0 ||
+		len(ctx.content.Conditions) != 1 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.Targets) != 0 {
+		return game.AbilityContent{}, false
+	}
+	payIdx := -1
+	for i := range ctx.content.Effects {
+		if ctx.content.Effects[i].Payment.Form == parser.EffectPaymentFormMayPayThenIfDo {
+			if payIdx != -1 {
+				return game.AbilityContent{}, false
+			}
+			payIdx = i
+		}
+	}
+	if payIdx != 0 {
+		return game.AbilityContent{}, false
+	}
+	payment := ctx.content.Effects[0].Payment
+	condition := ctx.content.Conditions[0]
+	if len(payment.ManaCost) == 0 ||
+		payment.AdditionalCost != nil ||
+		payment.Form != parser.EffectPaymentFormMayPayThenIfDo ||
+		payment.Payer != parser.EffectPaymentPayerEventPlayer ||
+		manaCostHasVariableSymbol(payment.ManaCost) ||
+		payment.GenericManaAmount.DynamicKind != compiler.DynamicAmountNone ||
+		condition.Kind != compiler.ConditionIf ||
+		condition.Predicate != compiler.ConditionPredicatePriorInstructionAccepted ||
+		condition.NodeID != payment.SuccessConditionNodeID ||
+		payment.Span.End.Offset >= condition.Span.Start.Offset {
+		return game.AbilityContent{}, false
+	}
+	// Drop the payer reference ("that player") that lives inside the payment
+	// span; keep every other reference (the benefit's recipient pronoun) for the
+	// consequence lowering. Any reference straddling the payment boundary is
+	// unexpected and fails closed.
+	bodyReferences := make([]compiler.CompiledReference, 0, len(ctx.content.References))
+	for _, reference := range ctx.content.References {
+		if reference.Span.End.Offset <= payment.Span.End.Offset {
+			if reference.Span.Start.Offset < payment.Span.Start.Offset {
+				return game.AbilityContent{}, false
+			}
+			continue
+		}
+		if reference.Span.Start.Offset < payment.Span.End.Offset {
+			return game.AbilityContent{}, false
+		}
+		bodyReferences = append(bodyReferences, reference)
+	}
+	resolutionPayment, ok := lowerEventPlayerResolutionPayment(payment)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+
+	bodyCtx := ctx
+	bodyCtx.content.Conditions = nil
+	bodyCtx.content.References = bodyReferences
+	bodyEffects := slices.Clone(ctx.content.Effects)
+	bodyEffects[0].Payment = compiler.CompiledEffectPayment{}
+	bodyCtx.content.Effects = bodyEffects
+	content, diagnostic := lowerContent(cardName, bodyCtx, syntax)
+	if diagnostic != nil ||
+		content.IsModal() ||
+		len(content.SharedTargets) != 0 ||
+		len(content.Modes) != 1 ||
+		len(content.Modes[0].Targets) != 0 ||
+		len(content.Modes[0].Sequence) == 0 {
+		return game.AbilityContent{}, false
+	}
+	consequence := content.Modes[0].Sequence
+	for i := range consequence {
+		if consequence[i].Optional ||
+			consequence[i].PublishResult != "" ||
+			consequence[i].ResultGate.Exists {
+			return game.AbilityContent{}, false
+		}
+		consequence[i].ResultGate = opt.Val(game.InstructionResultGate{
+			Key:       eventPlayerPaidResultKey,
+			Succeeded: game.TriTrue,
+		})
+	}
+	sequence := make([]game.Instruction, 0, len(consequence)+1)
+	sequence = append(sequence, game.Instruction{
+		Primitive:     game.Pay{Payment: resolutionPayment},
+		PublishResult: eventPlayerPaidResultKey,
+	})
+	sequence = append(sequence, consequence...)
+	return game.Mode{Sequence: sequence}.Ability(), true
+}
+
 func eventPlayerPaymentCostSupported(payment compiler.CompiledEffectPayment) bool {
 	if payment.GenericManaAmount.DynamicKind == compiler.DynamicAmountNone {
 		return !manaCostHasVariableSymbol(payment.ManaCost)
