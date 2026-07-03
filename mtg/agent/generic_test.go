@@ -88,6 +88,9 @@ func TestGenericStrategyTargetsBiggestThreat(t *testing.T) {
 
 func TestGenericStrategyPenalizesSelfTargeting(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	// Score on an opponent's turn so the self-vs-enemy targeting comparison is
+	// not shifted by the own-turn hold-removal-for-later timing.
+	g.Turn.ActivePlayer = game.Player2
 	removalID := addObservedHandCard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
 		Name:  "Removal",
 		Types: []types.Card{types.Instant},

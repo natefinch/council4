@@ -33,6 +33,12 @@ const (
 	// worth a card rather than spent on a small creature.
 	scoreRemovalCardCost = 12.0
 
+	// scoreHoldRemoval discourages firing instant-speed removal on the agent's
+	// own turn, nudging it to hold the answer for an opponent's turn where it can
+	// react with more information (playbook §9.3). It is modest so a large enough
+	// threat is still removed immediately.
+	scoreHoldRemoval = 15.0
+
 	// scoreOwnInstantValue is the modest value of an instant aimed at the agent's
 	// own permanent — typically a combat trick, protection, or pump. The coarse
 	// model cannot tell a beneficial instant from a destructive one, so this
@@ -105,6 +111,7 @@ func spellInteractValue(object rules.StackObjectView) float64 {
 func removalScore(obs rules.PlayerObservation, targets []game.Target, personality Personality) float64 {
 	cardCost := scoreRemovalCardCost * personality.cardCostScale()
 	var score float64
+	targetsOpponent := false
 	for i := range targets {
 		permanent, ok := permanentByID(obs, targets[i].PermanentID)
 		if !ok {
@@ -114,9 +121,27 @@ func removalScore(obs rules.PlayerObservation, targets []game.Target, personalit
 			score += scoreOwnInstantValue
 			continue
 		}
+		targetsOpponent = true
 		score += threatScoreUnit*permanentThreat(permanent) - cardCost
 	}
+	if targetsOpponent {
+		score -= holdRemovalTiming(obs, personality)
+	}
 	return score
+}
+
+// holdRemovalTiming discourages spending instant-speed removal on the agent's own
+// turn. An instant can be held for an opponent's turn — ideally their end step,
+// after they have committed their mana — where it answers what they actually did
+// with the most information and the least waste (playbook §9.3). The penalty
+// applies only on the agent's own turn and is eased by risk tolerance (a
+// risk-tolerant agent fires removal more freely); it is modest, so a big enough
+// threat is still worth removing immediately rather than held.
+func holdRemovalTiming(obs rules.PlayerObservation, personality Personality) float64 {
+	if obs.Turn.ActivePlayer != obs.Player {
+		return 0
+	}
+	return scoreHoldRemoval * personality.cardCostScale()
 }
 
 func isThreatSpell(object rules.StackObjectView) bool {
