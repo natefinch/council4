@@ -64,7 +64,7 @@ func agentFactory(profile string) (sim.AgentFactory, error) {
 		}, nil
 	case "search":
 		return func(uint64) [game.NumPlayers]rules.PlayerAgent {
-			return agents(agent.Searcher{Rollout: agent.GenericStrategy{}})
+			return agents(agent.Searcher{Rollout: agent.GenericStrategy{}, Budget: 8})
 		}, nil
 	case "random":
 		return func(gameSeed uint64) [game.NumPlayers]rules.PlayerAgent {
