@@ -35,6 +35,14 @@ func (GenericStrategy) ChooseChoice(obs rules.PlayerObservation, request game.Ch
 		if selection, ok := loseLeastValuable(request); ok {
 			return selection
 		}
+	case game.ChoiceTarget:
+		if selection, ok := threatAwareTargetChoice(obs, request); ok {
+			return selection
+		}
+	case game.ChoicePlayer:
+		if selection, ok := threatAwarePlayerChoice(obs, request); ok {
+			return selection
+		}
 	default:
 	}
 	return BaselineStrategy{}.ChooseChoice(obs, request)

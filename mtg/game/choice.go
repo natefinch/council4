@@ -96,6 +96,14 @@ type ChoiceOption struct {
 	// option selects, when the option represents one. It is unset for options
 	// that are not a specific card (e.g. "top"/"bottom" or "Pay 2 life").
 	Card opt.V[ChoiceCardInfo]
+
+	// Targets are the game targets this option would select, when the option
+	// represents a targeting decision (a triggered ability's target, a redirect,
+	// or an opponent-to-target choice). It lets an agent resolve which permanent
+	// or player each option affects and choose the best one — for example aiming
+	// removal at the biggest threat — instead of taking the first option. It is
+	// empty for non-targeting options.
+	Targets []Target
 }
 
 // ChoiceRequest describes a bounded decision the rules engine needs from a
