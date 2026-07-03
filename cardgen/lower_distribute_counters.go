@@ -90,12 +90,13 @@ func distributeCountersAmount(amount compiler.CompiledAmount) (game.Quantity, in
 }
 
 // distributeCountersTargetSpec builds the multi-target spec a distribute-counters
-// effect chooses among. The minimum is one (the controller must choose at least
-// one target to receive the counters); the maximum is the wording's bound,
-// further capped at the fixed total since each chosen target must receive at
-// least one counter. A variable-X total passes capTotal == 0, leaving the bound
-// at the wording's maximum; the runtime distributes the resolved X among the
-// chosen targets. The effect-level byte-exact round-trip already restricts the
+// effect chooses among. The minimum comes from the wording: "up to N" and "any
+// number of" let the controller choose zero targets, while the enumerated "one or
+// two"/"one, two, or three" forms require at least one. The maximum is the
+// wording's bound, further capped at the fixed total since each chosen target must
+// receive at least one counter. A variable-X total passes capTotal == 0, leaving
+// the bound at the wording's maximum; the runtime distributes the resolved X among
+// the chosen targets. The effect-level byte-exact round-trip already restricts the
 // clause to "target creatures[ you control]", so the spec is built directly from
 // the cardinality rather than the target's own exactness flag, which the wider
 // "one, two, or three" range does not set. It mirrors dividedDamageTargetSpec.
@@ -114,8 +115,14 @@ func distributeCountersTargetSpec(target compiler.CompiledTarget, capTotal int) 
 	if !ok {
 		return game.TargetSpec{}, false
 	}
+	// "up to N" and "any number of" cardinalities let the controller choose zero
+	// targets, in which case no counters are placed (CR 601.2d, the post-War of
+	// the Spark rule change); the enumerated "one or two"/"one, two, or three"
+	// forms require at least one. Derive the minimum from the wording rather than
+	// forcing at least one target.
+	minTargets := min(target.Cardinality.Min, maxTargets)
 	spec := game.TargetSpec{
-		MinTargets: 1,
+		MinTargets: minTargets,
 		MaxTargets: maxTargets,
 		Allow:      game.TargetAllowPermanent,
 		Constraint: lowerFirst(target.Text),

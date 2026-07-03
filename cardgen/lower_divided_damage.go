@@ -131,13 +131,15 @@ func dividedDynamicTotalKind(kind compiler.DynamicAmountKind) bool {
 }
 
 // dividedDamageTargetSpec builds the multi-target spec a divided-damage effect
-// chooses among. The minimum is one (a divided spell must have at least one
-// target); the maximum is the wording's bound, further capped at the total for a
-// fixed total since each chosen target must receive at least one damage. A
-// variable-X total passes capTotal == 0, leaving the bound at the wording's
-// maximum; the runtime divides the resolved X among the chosen targets and is
-// defensive when fewer than the target count are available. It supports only the
-// "any target" and plain "creature" selectors the parser marks exact.
+// chooses among. The minimum comes from the wording: "up to N" and "any number
+// of" let the controller choose zero targets, while the enumerated "one or
+// two"/"one, two, or three" forms require at least one. The maximum is the
+// wording's bound, further capped at the total for a fixed total since each chosen
+// target must receive at least one damage. A variable-X total passes capTotal == 0,
+// leaving the bound at the wording's maximum; the runtime divides the resolved X
+// among the chosen targets and is defensive when fewer than the target count are
+// available. It supports only the "any target" and plain "creature" selectors the
+// parser marks exact.
 func dividedDamageTargetSpec(target compiler.CompiledTarget, capTotal int) (game.TargetSpec, bool) {
 	if !target.Exact && target.Cardinality.Max < 1 {
 		return game.TargetSpec{}, false
@@ -154,6 +156,12 @@ func dividedDamageTargetSpec(target compiler.CompiledTarget, capTotal int) (game
 	if maxTargets < 1 {
 		return game.TargetSpec{}, false
 	}
+	// "up to N" and "any number of" cardinalities let the controller choose zero
+	// targets, in which case no damage is dealt (CR 601.2d/608.2d, which apply the
+	// post-War of the Spark rule change to both damage and counters); the
+	// enumerated forms require at least one. Derive the minimum from the wording
+	// rather than forcing at least one target.
+	minTargets := min(target.Cardinality.Min, maxTargets)
 	// "Any target" admits both permanents and players, a combination the
 	// permanent selection does not model, so build it directly.
 	if target.Selector.Kind == compiler.SelectorAny {
@@ -162,7 +170,7 @@ func dividedDamageTargetSpec(target compiler.CompiledTarget, capTotal int) (game
 			return game.TargetSpec{}, false
 		}
 		return game.TargetSpec{
-			MinTargets: 1,
+			MinTargets: minTargets,
 			MaxTargets: maxTargets,
 			Allow:      game.TargetAllowPermanent | game.TargetAllowPlayer,
 			Constraint: target.Text,
@@ -173,7 +181,7 @@ func dividedDamageTargetSpec(target compiler.CompiledTarget, capTotal int) (game
 		return game.TargetSpec{}, false
 	}
 	spec := game.TargetSpec{
-		MinTargets: 1,
+		MinTargets: minTargets,
 		MaxTargets: maxTargets,
 		Allow:      game.TargetAllowPermanent,
 		Constraint: target.Text,

@@ -3160,9 +3160,18 @@ func dividedCardinalityPhrase(cardinality TargetCardinalitySyntax) (string, bool
 		return "one, two, or three", true
 	case TargetCardinalitySyntax{Min: 0, Max: 99}:
 		return "any number of", true
-	default:
-		return "", false
 	}
+	// "up to N target creatures" (Court of Garenbrig, Ajani Sleeper Agent, Vivien
+	// Arkbow Ranger, Storm the Seedcore) lets the controller choose 0..N targets.
+	// The fixed-total distribute places one counter on each chosen target and, per
+	// CR 601.2d, allows choosing zero (the lowering derives MinTargets from the
+	// cardinality minimum); it caps MaxTargets by the total.
+	if cardinality.Min == 0 && cardinality.Max >= 1 && cardinality.Max <= 10 {
+		if word, ok := cardinalWord(cardinality.Max); ok {
+			return "up to " + word, true
+		}
+	}
+	return "", false
 }
 
 // dividedTargetNoun reconstructs the target noun phrase for divided damage. It
