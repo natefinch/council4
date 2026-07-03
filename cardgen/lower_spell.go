@@ -235,6 +235,12 @@ func lowerContent(
 	if content, ok := lowerEventPlayerPaidBenefit(cardName, ctx, syntax); ok {
 		return content, nil
 	}
+	if content, ok := lowerDefendingPlayerTaxedSourceConsequence(cardName, ctx, syntax); ok {
+		return content, nil
+	}
+	if content, ok := lowerEventPlayerPerCreatureUntapPayment(cardName, ctx, syntax); ok {
+		return content, nil
+	}
 	if content, ok := lowerNonControllerOptionalEdictGate(cardName, ctx, syntax); ok {
 		return content, nil
 	}

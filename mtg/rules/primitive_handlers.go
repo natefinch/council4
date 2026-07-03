@@ -1103,6 +1103,14 @@ func (r *effectResolver) chooseUntapPermanents(prim game.Untap) []*game.Permanen
 	if maxChoices == 0 {
 		return nil
 	}
+	chooser := r.obj.Controller
+	if prim.Chooser.Kind() != game.PlayerReferenceNone {
+		playerID, ok := r.resolvePlayer(prim.Chooser)
+		if !ok {
+			return nil
+		}
+		chooser = playerID
+	}
 	options := make([]game.ChoiceOption, len(candidates))
 	for i, permanent := range candidates {
 		options[i] = game.ChoiceOption{
@@ -1113,7 +1121,7 @@ func (r *effectResolver) chooseUntapPermanents(prim game.Untap) []*game.Permanen
 	}
 	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
 		Kind:             game.ChoiceResolution,
-		Player:           r.obj.Controller,
+		Player:           chooser,
 		Prompt:           "Choose permanents to untap",
 		Options:          options,
 		MinChoices:       0,

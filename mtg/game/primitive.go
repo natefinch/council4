@@ -1120,12 +1120,20 @@ type RepeatProcess struct {
 // Untap untaps one referenced permanent or permanents in a referenced group.
 // ChooseUpTo has the resolving controller choose up to Amount distinct
 // permanents from Group instead of untapping the whole group.
+//
+// Chooser names the player who makes the ChooseUpTo selection when it is not the
+// resolving controller. The zero value (PlayerReferenceNone) leaves the choice
+// with the ability's controller; a non-empty reference (an event player on an
+// "each player's upkeep" trigger, where the upkeep player chooses which of their
+// own permanents to untap) redirects the prompt to that player. It is only
+// consulted for the ChooseUpTo form.
 type Untap struct {
 	Object ObjectReference
 	Group  GroupReference
 
 	ChooseUpTo bool
 	Amount     Quantity
+	Chooser    PlayerReference
 }
 
 // SkipNextUntap marks the referenced permanent so it doesn't untap during its

@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,821 of 32,501 cards eligible for paper support (51.8%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,825 of 32,501 cards eligible for paper support (51.8%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -3875,6 +3875,7 @@ Council4 currently supports **16,821 of 32,501 cards eligible for paper support 
 - Dream Fracture
 - Dream Spoilers
 - Dream Stalker
+- Dream Tides
 - Dream Trawler
 - Dream Twist
 - Dreamcaller Siren
@@ -8533,6 +8534,7 @@ Council4 currently supports **16,821 of 32,501 cards eligible for paper support 
 - Magmatic Sinkhole
 - Magmaw
 - Magnetic Mine
+- Magnetic Mountain
 - Magnify
 - Magnifying Glass
 - Magnigoth Sentry
@@ -12673,6 +12675,7 @@ Council4 currently supports **16,821 of 32,501 cards eligible for paper support 
 - Shrink
 - Shrivel
 - Shroofus Sproutsire
+- Shrouded Serpent
 - Shrouded Shepherd // Cleave Shadows
 - Shroudstomper
 - Shu Cavalry
@@ -14621,6 +14624,7 @@ Council4 currently supports **16,821 of 32,501 cards eligible for paper support 
 - The Whizzer, Classic Speedster
 - The Wind Crystal
 - Their Name Is Death
+- Thelon's Curse
 - Thelonite Hermit
 - Thermal Blast
 - Thermal Glider

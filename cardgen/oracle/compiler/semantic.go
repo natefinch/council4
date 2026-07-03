@@ -886,6 +886,12 @@ const (
 	// player is resolved per attack; the closed vocabulary carries no defending
 	// player anywhere else, so every other use fails closed downstream.
 	ConditionPredicateDefendingPlayerControls
+	// ConditionPredicateDefendingPlayerDoesNotPay is the failure gate of an
+	// attack-triggered defending-player optional-payment sequence ("defending
+	// player may pay {N}. If that player doesn't, <consequence>."). It is the
+	// defending-player counterpart of ConditionPredicateEventPlayerDoesNotPay,
+	// satisfied when the offered payment is declined (Shrouded Serpent).
+	ConditionPredicateDefendingPlayerDoesNotPay
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard
@@ -2924,6 +2930,11 @@ type CompiledEffectPayment struct {
 	AdditionalCost         *CompiledCost
 	SuccessConditionNodeID int
 	FailureConditionNodeID int
+	// PerCreatureSelector is the folded creature filter of an
+	// EffectPaymentFormPerChosenCreature offer: the payer pays ManaCost once for
+	// each creature they choose from this selector. It is the zero selector for
+	// every other payment form.
+	PerCreatureSelector CompiledSelector
 	// Order is the payment's dense source-order rank, used to test condition
 	// containment without byte offsets.
 	Order shared.SourceOrder

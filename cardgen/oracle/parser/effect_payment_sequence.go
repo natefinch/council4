@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"slices"
 	"strconv"
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
@@ -713,7 +714,108 @@ func recognizeEventPlayerOptionalPaymentSequence(ability *Ability) {
 	consequenceSentence.Effects[0] = effect
 }
 
-// recognizeEventPlayerOptionalPaymentAffirmativeSequence folds the exact
+// recognizeDefendingPlayerOptionalPaymentSequence folds the exact two-sentence
+// "defending player may pay {N}. If that player doesn't, <consequence>." form
+// (Shrouded Serpent) onto its consequence effect. It is the defending-player
+// counterpart of recognizeEventPlayerOptionalPaymentSequence: the player being
+// attacked is offered the payment, and when they decline, the consequence
+// resolves. The payment records Payer EffectPaymentPayerDefendingPlayer and the
+// failure-gate NodeID, and the parser appends the shared
+// ConditionPredicateDefendingPlayerDoesNotPay clause so the downstream lowering
+// pairs the offer with the gate.
+//
+// The consequence body is re-isolated to everything after the "if that player
+// doesn't," introducer and re-checked for exactness with its references and
+// subject references narrowed to that body span, so the "that player" payer
+// reference of the gate does not leak into the folded effect. Any consequence
+// the parser cannot reconstruct exactly on its own fails closed, leaving the
+// unfolded two-sentence form for downstream diagnostics.
+func recognizeDefendingPlayerOptionalPaymentSequence(ability *Ability) {
+	if ability.Kind != AbilityTriggered || len(ability.Sentences) < 2 {
+		return
+	}
+	for i := 2; i < len(ability.Sentences); i++ {
+		if len(semanticEffectTokens(ability.Sentences[i].Tokens)) != 0 {
+			return
+		}
+	}
+	paymentSentence := &ability.Sentences[0]
+	consequenceSentence := &ability.Sentences[1]
+	paymentTokens := semanticEffectTokens(paymentSentence.Tokens)
+	if len(paymentTokens) < 6 ||
+		!effectWordsAt(paymentTokens, 0, "defending", "player", "may", "pay") {
+		return
+	}
+	manaCost, paymentEnd, ok := parseKeywordManaCost(paymentTokens, 4)
+	if !ok || paymentEnd != len(paymentTokens)-1 || paymentTokens[paymentEnd].Kind != shared.Period {
+		return
+	}
+
+	consequenceTokens := semanticEffectTokens(consequenceSentence.Tokens)
+	if len(consequenceTokens) < 6 ||
+		!effectWordsAt(consequenceTokens, 0, "if", "that", "player", "doesn't") ||
+		consequenceTokens[4].Kind != shared.Comma ||
+		len(consequenceSentence.Effects) != 1 {
+		return
+	}
+	boundary, ok := conditionBoundaryAt(ability.ConditionBoundaries, consequenceTokens[0].Span.Start)
+	if !ok || boundary.Kind != ConditionIntroIf {
+		return
+	}
+
+	// The consequence body is everything after the "if that player doesn't,"
+	// introducer. It is subject-led (a source-context "this creature can't be
+	// blocked this turn."), so the body begins at its own subject; isolate it and
+	// narrow the effect's references to that span so the gate's "that player"
+	// payer reference is dropped before exactness is re-checked.
+	consequence := consequenceTokens[5:]
+	if len(consequence) == 0 {
+		return
+	}
+	bodySpan := shared.SpanOf(consequence)
+	effect := consequenceSentence.Effects[0]
+	if effect.ClauseSpan.Start.Offset > bodySpan.Start.Offset {
+		return
+	}
+	effect.Tokens = cloneTokens(consequence)
+	effect.ClauseSpan = bodySpan
+	effect.References = referencesWithinSpan(effect.References, bodySpan)
+	effect.SubjectReferences = referencesWithinSpan(effect.SubjectReferences, bodySpan)
+	effect.Negated = false
+	effect.HasUnrecognizedSibling = false
+	effect.Payment = EffectPaymentSyntax{
+		Span:                   shared.SpanOf(paymentTokens),
+		Form:                   EffectPaymentFormMayPayThenIfDoesNot,
+		Payer:                  EffectPaymentPayerDefendingPlayer,
+		ManaCost:               manaCost,
+		FailureConditionNodeID: boundary.NodeID,
+	}
+	effect.Exact = exactEffectSyntax(&effect)
+	if !effect.Exact {
+		return
+	}
+
+	ability.ConditionClauses = append(ability.ConditionClauses, ConditionClause{
+		Span:      shared.SpanOf(consequenceTokens[:4]),
+		Intro:     ConditionIntroIf,
+		Predicate: ConditionPredicateDefendingPlayerDoesNotPay,
+	})
+	paymentSentence.PaymentPrelude = &effect.Payment
+	consequenceSentence.Effects[0] = effect
+}
+
+// referencesWithinSpan returns the references whose source span is fully covered
+// by span, dropping any reference that lies outside it.
+func referencesWithinSpan(references []Reference, span shared.Span) []Reference {
+	var result []Reference
+	for _, reference := range references {
+		if spanCovers(span, reference.Span) {
+			result = append(result, reference)
+		}
+	}
+	return result
+}
+
 // two-sentence "that player may pay {N}. If the player does, EFFECT." form onto
 // its consequence effect, the resolving-success mirror of
 // recognizeEventPlayerOptionalPaymentSequence's "If the player doesn't" failure
@@ -791,4 +893,101 @@ func recognizeEventPlayerOptionalPaymentAffirmativeSequence(ability *Ability) {
 	}
 	paymentSentence.PaymentPrelude = &effect.Payment
 	consequenceSentence.Effects[0] = effect
+}
+
+// recognizeEventPlayerPerCreatureUntapPayment folds the two-sentence "that
+// player may choose any number of tapped <filter> creatures they control and pay
+// {N} for each creature chosen this way. If the player does, untap those
+// creatures." form (Dream Tides, Magnetic Mountain, Thelon's Curse) onto its
+// untap consequence. It is the per-creature member of the event-player payment
+// family: the upkeep player pays the fixed cost once per creature they choose
+// from the folded selection and those creatures untap. The affirmative "If the
+// player does" gate is already a ConditionPredicatePriorInstructionAccepted
+// clause, so this recognizer only attaches the payment (Form
+// EffectPaymentFormPerChosenCreature, payer the event player, the parsed creature
+// filter travelling on the payment) to the untap effect and records the shared
+// success-gate NodeID. It fails closed on any other wording, leaving the
+// unfolded two-sentence form for downstream diagnostics.
+func recognizeEventPlayerPerCreatureUntapPayment(ability *Ability) {
+	if ability.Kind != AbilityTriggered || len(ability.Sentences) < 2 {
+		return
+	}
+	for i := 2; i < len(ability.Sentences); i++ {
+		if len(semanticEffectTokens(ability.Sentences[i].Tokens)) != 0 {
+			return
+		}
+	}
+	paymentSentence := &ability.Sentences[0]
+	consequenceSentence := &ability.Sentences[1]
+
+	paymentTokens := semanticEffectTokens(paymentSentence.Tokens)
+	if !effectWordsAt(paymentTokens, 0, "that", "player", "may", "choose", "any", "number", "of") {
+		return
+	}
+	const selectionStart = 7
+	// The creature filter runs from "any number of" up to the "and pay" join.
+	andIdx := -1
+	for i := selectionStart; i+1 < len(paymentTokens); i++ {
+		if equalWord(paymentTokens[i], "and") && equalWord(paymentTokens[i+1], "pay") {
+			andIdx = i
+			break
+		}
+	}
+	if andIdx <= selectionStart {
+		return
+	}
+	selectionTokens := paymentTokens[selectionStart:andIdx]
+	selection := parseSelection(selectionTokens, ability.Atoms)
+	if selection.Kind != SelectionCreature ||
+		!selection.Tapped ||
+		selection.Controller != SelectionControllerAny ||
+		selection.Other ||
+		selection.Another {
+		return
+	}
+	manaCost, costEnd, ok := parseKeywordManaCost(paymentTokens, andIdx+2)
+	if !ok ||
+		paymentManaCostHasVariable(manaCost) ||
+		!effectWordsAt(paymentTokens, costEnd, "for", "each", "creature", "chosen", "this", "way") ||
+		costEnd+6 != len(paymentTokens)-1 ||
+		paymentTokens[len(paymentTokens)-1].Kind != shared.Period {
+		return
+	}
+
+	consequenceTokens := semanticEffectTokens(consequenceSentence.Tokens)
+	if !effectWordsAt(consequenceTokens, 0, "if", "the", "player", "does") ||
+		len(consequenceTokens) < 5 ||
+		consequenceTokens[4].Kind != shared.Comma ||
+		!effectWordsAt(consequenceTokens, 5, "untap", "those", "creatures") ||
+		len(consequenceSentence.Effects) != 1 {
+		return
+	}
+	boundary, ok := conditionBoundaryAt(ability.ConditionBoundaries, consequenceTokens[0].Span.Start)
+	if !ok || boundary.Kind != ConditionIntroIf {
+		return
+	}
+
+	effect := consequenceSentence.Effects[0]
+	if effect.Kind != EffectUntap {
+		return
+	}
+	folded := selection
+	effect.HasUnrecognizedSibling = false
+	effect.Payment = EffectPaymentSyntax{
+		Span:                   shared.SpanOf(paymentTokens),
+		Form:                   EffectPaymentFormPerChosenCreature,
+		Payer:                  EffectPaymentPayerEventPlayer,
+		ManaCost:               manaCost,
+		SuccessConditionNodeID: boundary.NodeID,
+		PerCreatureSelection:   &folded,
+	}
+	paymentSentence.PaymentPrelude = &effect.Payment
+	consequenceSentence.Effects[0] = effect
+}
+
+// paymentManaCostHasVariable reports whether a parsed fixed mana cost carries an
+// {X} symbol, which the per-creature untap payment cannot represent as a fixed
+// per-creature cost and so fails closed on.
+func paymentManaCostHasVariable(manaCost cost.Mana) bool {
+	return slices.Contains(manaCost, cost.X)
 }
