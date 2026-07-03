@@ -42,6 +42,13 @@ const (
 	// advantage (drawing, and the cost of losing cards), per aggression point, so
 	// a controlling (low-aggression) agent values cards relatively more.
 	aggressionCardUnit = 0.10
+
+	// aggressionPaintUnit shrinks the archenemy-paint penalty per aggression
+	// point, so an aggressive deck accepts being the target and keeps deploying.
+	aggressionPaintUnit = 0.30
+	// politicsPaintUnit grows the archenemy-paint penalty per politics point, so
+	// a politically-minded deck works harder to avoid becoming the archenemy.
+	politicsPaintUnit = 0.30
 )
 
 // WithNoiseSource returns a copy of the personality that draws decision noise
@@ -78,6 +85,14 @@ func (p Personality) cardCostScale() float64 {
 
 func (p Personality) extraThreatWeight() float64 {
 	return p.PoliticsWeight * politicsThreatUnit
+}
+
+// paintScale tunes how strongly the agent avoids becoming the archenemy: an
+// aggressive deck accepts the paint (scale shrinks toward zero and it keeps
+// deploying), a political deck avoids it more (scale grows). Its neutral value is
+// one and it never goes below zero.
+func (p Personality) paintScale() float64 {
+	return max(0, 1-p.Aggression*aggressionPaintUnit+p.PoliticsWeight*politicsPaintUnit)
 }
 
 // boardValueScale scales the value of board-presence effects (tokens): an
