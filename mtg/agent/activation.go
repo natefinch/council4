@@ -17,16 +17,33 @@ import (
 // announced X uses that X instead (see dynamicEstimateFor).
 const dynamicAmountEstimate = 1
 
+// Life-cost weights for scoring an activated ability's life payment (see
+// lifePaymentValue). They keep a life cost cheap while the agent is healthy and
+// make it climb steeply as death approaches, so the agent stops paying life for
+// marginal value instead of activating a life-cost ability until it dies.
+const (
+	// lowLifeThreshold is the remaining life below which each point of life is
+	// weighted more heavily, so an activation's life cost rises sharply once the
+	// agent is genuinely endangered.
+	lowLifeThreshold = 10.0
+	// prohibitiveActivationCost is a cost no modeled effect can outweigh, used
+	// for a life payment that would drop the agent to 0 or less (a lethal cost
+	// the agent must never pay for an activated ability).
+	prohibitiveActivationCost = 1e6
+)
+
 // scoreActivateAbility scores activating an ability as the value of what it does
 // minus the value of what it spends, both in the threatScoreUnit currency, so
 // the agent activates an ability only when it is worth its cost given the board.
 // This replaces the agent's blanket activate preference and stops it from
-// "randomly" sacrificing or discarding for a marginal effect: a sacrifice cost
-// is valued at the threat of the creatures it would consume, so paying three
-// useless 1/1s to remove a real threat is favored while feeding good creatures
-// for a small effect is not. Abilities the observation cannot resolve to a
-// scorable summary (hand- or graveyard-activated) keep the routine activate
-// score.
+// "randomly" sacrificing, discarding, or paying life for a marginal effect: a
+// sacrifice cost is valued at the threat of the creatures it would consume, so
+// paying three useless 1/1s to remove a real threat is favored while feeding
+// good creatures for a small effect is not, and a life cost grows toward
+// prohibitive as the agent nears death (see lifePaymentValue) so it never pays
+// life for a do-nothing ability until it dies. Abilities the observation cannot
+// resolve to a scorable summary (hand- or graveyard-activated) keep the routine
+// activate score.
 func scoreActivateAbility(obs rules.PlayerObservation, act action.Action, personality Personality) float64 {
 	ability, ok := obs.ScorableActivatedAbility(act)
 	if !ok {
@@ -35,7 +52,7 @@ func scoreActivateAbility(obs rules.PlayerObservation, act action.Action, person
 	targets := activationTargets(act)
 	dynamicEstimate := dynamicEstimateFor(activationXValue(act))
 	return activationEffectValue(obs, targets, ability.Effect, personality, dynamicEstimate) -
-		activationCostValue(obs, ability.Costs)
+		activationCostValue(obs, ability.Costs, dynamicEstimate)
 }
 
 func activationTargets(act action.Action) []game.Target {
@@ -128,11 +145,13 @@ func atomMagnitude(atom eval.EffectAtom, dynamicEstimate float64) float64 {
 }
 
 // activationCostValue values the resources an ability spends from the agent's
-// own cards and board: sacrificing other permanents (valued by the threat of the
-// weakest creatures that would be sacrificed), discarding, and exiling. It does
-// not value sacrificing the ability's own source, paying life, or tapping, so
-// fetchlands and ordinary mana abilities are not penalized.
-func activationCostValue(obs rules.PlayerObservation, costs []cost.Additional) float64 {
+// own cards, board, and life total: sacrificing other permanents (valued by the
+// threat of the weakest creatures that would be sacrificed), discarding,
+// exiling, and paying life (CR 118.4). It does not value sacrificing the
+// ability's own source or tapping, so fetchlands and ordinary mana abilities are
+// not penalized. dynamicEstimate is the magnitude assumed for a pay-X-life cost
+// whose amount is the announced X rather than a fixed number.
+func activationCostValue(obs rules.PlayerObservation, costs []cost.Additional, dynamicEstimate float64) float64 {
 	var value float64
 	for i := range costs {
 		c := costs[i]
@@ -141,8 +160,43 @@ func activationCostValue(obs rules.PlayerObservation, costs []cost.Additional) f
 			value += weakestCreaturesValue(obs, additionalAmount(c))
 		case cost.AdditionalDiscard, cost.AdditionalExile:
 			value += float64(additionalAmount(c)) * scoreCardValue
+		case cost.AdditionalPayLife:
+			value += lifePaymentValue(obs, payLifeAmount(c, dynamicEstimate))
 		default:
 		}
+	}
+	return value
+}
+
+// payLifeAmount is the life an AdditionalPayLife cost spends. A cost whose amount
+// is the announced X or a rules-derived value is not statically known, so it
+// uses the same conservative dynamic estimate the effect side uses; a fixed cost
+// uses its printed amount.
+func payLifeAmount(c cost.Additional, dynamicEstimate float64) int {
+	if c.AmountFromX || c.AmountDynamic != cost.AdditionalDynamicAmountNone {
+		return int(dynamicEstimate)
+	}
+	return additionalAmount(c)
+}
+
+// lifePaymentValue prices paying n life as an activation cost. Life is cheap
+// while the agent is healthy (roughly scoreLifeValue per point) and grows
+// steeply as its remaining life falls below lowLifeThreshold, so the agent
+// stops spending life for marginal value as it nears death. A payment that would
+// leave the agent at 0 or less is prohibitive: a player with 0 or less life
+// loses the game (CR 704.5a), so the agent never pays lethal life for an
+// activated ability's effect, no matter how it is valued.
+func lifePaymentValue(obs rules.PlayerObservation, n int) float64 {
+	if n <= 0 {
+		return 0
+	}
+	remaining := obs.Life(obs.Player) - n
+	if remaining <= 0 {
+		return prohibitiveActivationCost
+	}
+	value := float64(n) * scoreLifeValue
+	if float64(remaining) < lowLifeThreshold {
+		value *= lowLifeThreshold / float64(remaining)
 	}
 	return value
 }
