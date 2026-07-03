@@ -17,8 +17,23 @@ type Engine struct {
 	// per independently reproducible game stream.
 	rng *rand.Rand
 
+	// searchRNG seeds the isolated forward-model engines a SearchAgent uses to
+	// look ahead (see search.go). It is a separate stream from rng, seeded
+	// deterministically, so search never perturbs the live game's RNG and a game
+	// stays reproducible whether or not a searching agent is at the table.
+	searchRNG *rand.Rand
+
 	cardImplementations map[string]CardImplementation
 }
+
+// searchSeed is the fixed seed for every engine's search RNG stream. Fixed (not
+// derived from the live rng) so search randomness is independent of and never
+// advances the live game stream; per-engine *rand.Rand objects keep parallel
+// games isolated.
+const (
+	searchSeedHi = 0x5EA5C45EED1234
+	searchSeedLo = 0x9E3779B97F4A7C15
+)
 
 // NewEngine creates an Engine using rng for deterministic game execution.
 func NewEngine(rng *rand.Rand) *Engine {
@@ -27,6 +42,7 @@ func NewEngine(rng *rand.Rand) *Engine {
 	}
 	return &Engine{
 		rng:                 rng,
+		searchRNG:           rand.New(rand.NewPCG(searchSeedHi, searchSeedLo)),
 		cardImplementations: map[string]CardImplementation{},
 	}
 }
