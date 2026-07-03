@@ -116,6 +116,12 @@ const (
 	ConditionPredicateTriggeringPlayerHandSizeAtMost                   ConditionPredicateKind = "ConditionPredicateTriggeringPlayerHandSizeAtMost"
 	ConditionPredicateTriggeringPlayerHandSizeAtLeast                  ConditionPredicateKind = "ConditionPredicateTriggeringPlayerHandSizeAtLeast"
 	ConditionPredicateLandEnteredThisTurnOrControlsBasic               ConditionPredicateKind = "ConditionPredicateLandEnteredThisTurnOrControlsBasic"
+	// ConditionPredicateDefendingPlayerDoesNotPay is the failure gate of an
+	// attack-triggered defending-player optional-payment sequence ("defending
+	// player may pay {N}. If that player doesn't, <consequence>."). It is the
+	// defending-player counterpart of ConditionPredicateEventPlayerDoesNotPay and
+	// is satisfied when the offered payment is declined (Shrouded Serpent).
+	ConditionPredicateDefendingPlayerDoesNotPay ConditionPredicateKind = "ConditionPredicateDefendingPlayerDoesNotPay"
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard

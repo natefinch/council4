@@ -2096,6 +2096,11 @@ func (p Untap) validatePrimitive(targets []TargetSpec, checkTargets bool) error 
 	if !p.Amount.IsDynamic() && p.Amount.Value() <= 0 {
 		return errors.New("bounded untap requires a positive Amount")
 	}
+	if p.Chooser.Kind() != PlayerReferenceNone {
+		if err := firstProblem(p.Chooser.Validate()); err != nil {
+			return fmt.Errorf("untap chooser: %w", err)
+		}
+	}
 	return nil
 }
 

@@ -2026,11 +2026,19 @@ func (r Renderer) renderUntap(ctx *renderCtx, value game.Untap) (string, error) 
 	if err != nil {
 		return "", err
 	}
-	return structLit("game.Untap", []string{
+	fields := []string{
 		"ChooseUpTo: true,",
 		fmt.Sprintf("Amount: %s,", renderedAmount),
 		fmt.Sprintf("Group: %s,", renderedGroup),
-	}), nil
+	}
+	if value.Chooser.Kind() != game.PlayerReferenceNone {
+		renderedChooser, err := r.renderPlayerReference(value.Chooser)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Chooser: %s,", renderedChooser))
+	}
+	return structLit("game.Untap", fields), nil
 }
 
 func (r Renderer) renderObjectOrGroup(ctx *renderCtx, typeName string, object game.ObjectReference, group game.GroupReference) (string, error) {

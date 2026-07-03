@@ -24,6 +24,9 @@ func compileEffectPayment(payment parser.EffectPaymentSyntax) CompiledEffectPaym
 		additional := compileCost(*payment.AdditionalCost)
 		compiled.AdditionalCost = &additional
 	}
+	if payment.PerCreatureSelection != nil {
+		compiled.PerCreatureSelector = compileTypedSelection(*payment.PerCreatureSelection)
+	}
 	return compiled
 }
 

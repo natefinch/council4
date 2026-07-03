@@ -3004,6 +3004,11 @@ const (
 	EffectPaymentPayerController       EffectPaymentPayerKind = "EffectPaymentPayerController"
 	EffectPaymentPayerTargetController EffectPaymentPayerKind = "EffectPaymentPayerTargetController"
 	EffectPaymentPayerEventPlayer      EffectPaymentPayerKind = "EffectPaymentPayerEventPlayer"
+	// EffectPaymentPayerDefendingPlayer offers the payment to the player being
+	// attacked by the source ("defending player may pay {N}"), the payer role of
+	// an attack-triggered optional-payment gate (Shrouded Serpent). It resolves
+	// downstream to game.DefendingPlayerReference, distinct from the event player.
+	EffectPaymentPayerDefendingPlayer EffectPaymentPayerKind = "EffectPaymentPayerDefendingPlayer"
 )
 
 // EffectPaymentForm identifies the Oracle grammar that offers a resolution
@@ -3017,6 +3022,14 @@ const (
 	EffectPaymentFormUnless              EffectPaymentForm = "EffectPaymentFormUnless"
 	EffectPaymentFormMayPayThenIfDo      EffectPaymentForm = "EffectPaymentFormMayPayThenIfDo"
 	EffectPaymentFormMayPayThenIfDoesNot EffectPaymentForm = "EffectPaymentFormMayPayThenIfDoesNot"
+	// EffectPaymentFormPerChosenCreature is the "may choose any number of tapped
+	// <filter> creatures they control and pay {N} for each creature chosen this
+	// way. If the player does, untap those creatures." offer (Dream Tides,
+	// Magnetic Mountain, Thelon's Curse): the payer pays the fixed cost once per
+	// creature they choose from the folded selection, and the chosen creatures
+	// are untapped. The per-creature mana cost lives in ManaCost and the folded
+	// creature filter travels on the consequence effect's Selection.
+	EffectPaymentFormPerChosenCreature EffectPaymentForm = "EffectPaymentFormPerChosenCreature"
 )
 
 // EffectPaymentSyntax is a source-spanned typed resolution payment.
@@ -3034,6 +3047,11 @@ type EffectPaymentSyntax struct {
 	AdditionalCost         *Cost `json:",omitempty"`
 	SuccessConditionNodeID int   `json:"-"`
 	FailureConditionNodeID int   `json:"-"`
+	// PerCreatureSelection is the folded creature filter of an
+	// EffectPaymentFormPerChosenCreature offer ("any number of tapped <filter>
+	// creatures they control"): the payer pays ManaCost once for each creature
+	// they choose from this selection. It is nil for every other payment form.
+	PerCreatureSelection *SelectionSyntax `json:",omitempty"`
 	// Order is the payment's dense source-order rank, used downstream to test
 	// condition containment without byte offsets.
 	Order shared.SourceOrder `json:"-"`
