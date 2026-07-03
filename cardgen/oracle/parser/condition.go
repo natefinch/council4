@@ -102,6 +102,7 @@ const (
 	ConditionPredicateControlsGreatestToughnessCreature                ConditionPredicateKind = "ConditionPredicateControlsGreatestToughnessCreature"
 	ConditionPredicateSubjectSharesCreatureTypeWithSource              ConditionPredicateKind = "ConditionPredicateSubjectSharesCreatureTypeWithSource"
 	ConditionPredicateControllerIsMonarch                              ConditionPredicateKind = "ConditionPredicateControllerIsMonarch"
+	ConditionPredicateAnOpponentIsMonarch                              ConditionPredicateKind = "ConditionPredicateAnOpponentIsMonarch"
 	ConditionPredicateControllerHasInitiative                          ConditionPredicateKind = "ConditionPredicateControllerHasInitiative"
 	ConditionPredicateControllerHasCityBlessing                        ConditionPredicateKind = "ConditionPredicateControllerHasCityBlessing"
 	ConditionPredicateControllerTurn                                   ConditionPredicateKind = "ConditionPredicateControllerTurn"
@@ -2021,15 +2022,18 @@ func recognizeGainedLifeThisTurnCondition(body []shared.Token, _ Atoms) (Conditi
 }
 
 // recognizeControllerDesignationCondition matches an intervening-if body that
-// tests whether the controller currently holds a player designation: the
-// monarch (CR 720), the initiative (CR 720/dungeon), or the city's blessing
-// (CR 702.131 ascend). These are live single-player game-state predicates that
-// the runtime evaluates against the ability controller's designation flags.
+// tests a player designation: whether the controller currently holds the monarch
+// (CR 720), the initiative (CR 720/dungeon), or the city's blessing (CR 702.131
+// ascend), or whether an opponent currently holds the monarch ("if an opponent is
+// the monarch", Queen Marchesa). These are live game-state predicates that the
+// runtime evaluates against the relevant players' designation flags.
 func recognizeControllerDesignationCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
 	switch {
 	case tokenWordsEqual(body, "you're", "the", "monarch"),
 		tokenWordsEqual(body, "you", "are", "the", "monarch"):
 		return ConditionClause{Predicate: ConditionPredicateControllerIsMonarch}, true
+	case tokenWordsEqual(body, "an", "opponent", "is", "the", "monarch"):
+		return ConditionClause{Predicate: ConditionPredicateAnOpponentIsMonarch}, true
 	case tokenWordsEqual(body, "you", "have", "the", "initiative"):
 		return ConditionClause{Predicate: ConditionPredicateControllerHasInitiative}, true
 	case tokenWordsEqual(body, "you", "have", "the", "city's", "blessing"):

@@ -211,6 +211,8 @@ func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringC
 		result.ControllerControlsGreatestToughnessCreature = true
 	case compiler.ConditionPredicateControllerIsMonarch:
 		result.ControllerIsMonarch = true
+	case compiler.ConditionPredicateAnOpponentIsMonarch:
+		result.AnOpponentIsMonarch = true
 	case compiler.ConditionPredicateControllerHasInitiative:
 		result.ControllerHasInitiative = true
 	case compiler.ConditionPredicateControllerHasCityBlessing:
@@ -369,15 +371,17 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 			return ctx == conditionContextStatic ||
 				ctx == conditionContextStaticRuleGuard
 		case compiler.ConditionPredicateControllerIsMonarch,
+			compiler.ConditionPredicateAnOpponentIsMonarch,
 			compiler.ConditionPredicateControllerHasInitiative,
 			compiler.ConditionPredicateControllerHasCityBlessing:
-			// Player-designation predicates ("if you're the monarch", "if you
-			// have the initiative", "if you have the city's blessing") gate both
-			// intervening triggers and per-effect sequence clauses, the latter
-			// powering the monarch/initiative "instead" escalation cycles ("At
-			// the beginning of your upkeep, <base>. If you're the monarch,
-			// <escalated> instead.", the Court cycle). The runtime condition
-			// evaluator resolves all three from the controller's designation,
+			// Player-designation predicates ("if you're the monarch", "if an
+			// opponent is the monarch", "if you have the initiative", "if you
+			// have the city's blessing") gate both intervening triggers and
+			// per-effect sequence clauses, the latter powering the
+			// monarch/initiative "instead" escalation cycles ("At the beginning
+			// of your upkeep, <base>. If you're the monarch, <escalated>
+			// instead.", the Court cycle). The runtime condition evaluator
+			// resolves them from the relevant players' designation flags,
 			// including under negation, so the effect-gate form is safe.
 			return ctx == conditionContextInterveningTrigger ||
 				ctx == conditionContextEffectGate

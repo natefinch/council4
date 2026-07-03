@@ -137,6 +137,7 @@ func TestParseConditionPredicateMeaning(t *testing.T) {
 		{"spell X at least greater", "X is 4 or greater", ConditionPredicateSpellXAtLeast, 4},
 		{"controller is monarch", "you're the monarch", ConditionPredicateControllerIsMonarch, 0},
 		{"controller is monarch long form", "you are the monarch", ConditionPredicateControllerIsMonarch, 0},
+		{"an opponent is monarch", "an opponent is the monarch", ConditionPredicateAnOpponentIsMonarch, 0},
 		{"controller has initiative", "you have the initiative", ConditionPredicateControllerHasInitiative, 0},
 		{"controller has city's blessing", "you have the city's blessing", ConditionPredicateControllerHasCityBlessing, 0},
 		{"event spell no mana spent", "no mana was spent to cast it", ConditionPredicateEventSpellNoManaSpentToCast, 0},
