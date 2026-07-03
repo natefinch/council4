@@ -1,0 +1,102 @@
+package agent
+
+import (
+	"testing"
+
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/rules"
+)
+
+func evalOf(g *game.Game, player game.PlayerID) float64 {
+	return Evaluate(rules.NewObservation(g, player))
+}
+
+func TestEvaluateSymmetricStartIsNeutral(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	if got := evalOf(g, game.Player1); got != 0 {
+		t.Fatalf("symmetric empty start scored %v, want 0", got)
+	}
+}
+
+func TestEvaluateRewardsOwnBoardAndMana(t *testing.T) {
+	base := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	baseline := evalOf(base, game.Player1)
+
+	withCreature := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addObservedPermanent(withCreature, game.Player1, creatureCardDef("Bear", 3, 3))
+	if got := evalOf(withCreature, game.Player1); got <= baseline {
+		t.Fatalf("adding a 3/3 scored %v, want above baseline %v", got, baseline)
+	}
+
+	withRock := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addObservedPermanent(withRock, game.Player1, manaRockDef("Signet", 2))
+	if got := evalOf(withRock, game.Player1); got <= baseline {
+		t.Fatalf("adding a mana rock scored %v, want above baseline %v (mana development)", got, baseline)
+	}
+}
+
+func TestEvaluatePenalizesOpponentBoard(t *testing.T) {
+	base := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	baseline := evalOf(base, game.Player1)
+
+	oppThreat := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addObservedPermanent(oppThreat, game.Player2, creatureCardDef("Wurm", 8, 8))
+	if got := evalOf(oppThreat, game.Player1); got >= baseline {
+		t.Fatalf("an opponent's 8/8 scored %v for me, want below baseline %v", got, baseline)
+	}
+}
+
+func TestEvaluateValuesRemovingTheLeadersThreat(t *testing.T) {
+	// Removing the strongest opponent's threat should raise my evaluation, so a
+	// search that leads to that state prefers it.
+	before := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addObservedPermanent(before, game.Player2, creatureCardDef("Wurm", 8, 8))
+	after := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+
+	if evalOf(after, game.Player1) <= evalOf(before, game.Player1) {
+		t.Fatalf("removing the leader's 8/8 did not improve the evaluation: before=%v after=%v",
+			evalOf(before, game.Player1), evalOf(after, game.Player1))
+	}
+}
+
+func TestEvaluateRewardsCardAdvantage(t *testing.T) {
+	base := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	baseline := evalOf(base, game.Player1)
+
+	withCards := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addObservedHandCard(withCards, game.Player1, creatureCardDef("A", 1, 1))
+	addObservedHandCard(withCards, game.Player1, creatureCardDef("B", 1, 1))
+	if got := evalOf(withCards, game.Player1); got <= baseline {
+		t.Fatalf("two extra cards scored %v, want above baseline %v", got, baseline)
+	}
+}
+
+func TestEvaluateRewardsLife(t *testing.T) {
+	low := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	low.Players[game.Player1].Life = 10
+	high := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	high.Players[game.Player1].Life = 40
+
+	if evalOf(high, game.Player1) <= evalOf(low, game.Player1) {
+		t.Fatalf("more life did not raise the evaluation: life10=%v life40=%v",
+			evalOf(low, game.Player1), evalOf(high, game.Player1))
+	}
+}
+
+func TestEvaluateWinWhenOpponentsEliminated(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	for _, seat := range []game.PlayerID{game.Player2, game.Player3, game.Player4} {
+		g.Players[seat].Eliminated = true
+	}
+	if got := evalOf(g, game.Player1); got != evalWin {
+		t.Fatalf("last player standing scored %v, want evalWin %v", got, evalWin)
+	}
+}
+
+func TestEvaluateLossWhenEliminated(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	g.Players[game.Player1].Eliminated = true
+	if got := evalOf(g, game.Player1); got != evalLoss {
+		t.Fatalf("eliminated player scored %v, want evalLoss %v", got, evalLoss)
+	}
+}
