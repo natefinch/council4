@@ -34,6 +34,13 @@ type Searcher struct {
 	// decision's cost stays bounded regardless of how many actions are legal.
 	// Zero or negative means no cap: every legal action is simulated.
 	Budget int
+
+	// Determinizations is how many sampled worlds a decision is averaged over
+	// (Perfect Information Monte Carlo). Each world re-samples the opponents'
+	// hidden hands and every library order, so averaging reduces the chance of
+	// deciding against one unlucky sample. Zero or one searches a single sampled
+	// world. Higher values play more robustly at a proportional cost.
+	Determinizations int
 }
 
 // Compile-time checks that a Searcher drives every engine decision point and is
@@ -75,7 +82,45 @@ func (s Searcher) ChooseActionBySearch(ctx rules.SearchContext, legal []action.A
 	if world.Turn.ActivePlayer != me {
 		return Agent{Strategy: s.Rollout}.ChooseAction(rules.NewObservation(world, me), legal)
 	}
+	if s.Determinizations > 1 {
+		return s.searchAcrossWorlds(ctx, world, me, legal)
+	}
 	return s.searchBestAction(ctx.Simulator(), world, me, legal)
+}
+
+// searchAcrossWorlds averages each candidate action's value over several
+// determinized worlds (Perfect Information Monte Carlo), so a decision is robust
+// to any single unlucky sample of the opponents' hidden hands. The first world is
+// reused for the own-turn check and candidate pre-ranking; the rest are sampled
+// here.
+func (s Searcher) searchAcrossWorlds(ctx rules.SearchContext, first *game.Game, me game.PlayerID, legal []action.Action) action.Action {
+	if len(legal) == 1 {
+		return legal[0]
+	}
+	worlds := make([]*game.Game, 0, s.Determinizations)
+	worlds = append(worlds, first)
+	for len(worlds) < s.Determinizations {
+		worlds = append(worlds, ctx.Determinize())
+	}
+
+	sim := ctx.Simulator()
+	applyPolicies := s.uniformPolicies()
+	resolvePolicies := s.resolvePolicies(me)
+	candidates := s.candidateActions(first, me, legal)
+
+	best := candidates[0]
+	bestValue := math.Inf(-1)
+	for i := range candidates {
+		total := 0.0
+		for _, world := range worlds {
+			total += s.actionValue(sim, world, me, candidates[i], applyPolicies, resolvePolicies)
+		}
+		if average := total / float64(len(worlds)); average > bestValue {
+			bestValue = average
+			best = candidates[i]
+		}
+	}
+	return best
 }
 
 // searchBestAction is the search core, separated from the SearchContext so it can
