@@ -95,6 +95,7 @@ const (
 	ConditionPredicateControllerGainedLifeThisTurnAtLeast              ConditionPredicateKind = "ConditionPredicateControllerGainedLifeThisTurnAtLeast"
 	ConditionPredicateSpellXAtLeast                                    ConditionPredicateKind = "ConditionPredicateSpellXAtLeast"
 	ConditionPredicateGraveyardCardOfTypeCountAtLeast                  ConditionPredicateKind = "ConditionPredicateGraveyardCardOfTypeCountAtLeast"
+	ConditionPredicateGraveyardInstantOrSorceryCountAtLeast            ConditionPredicateKind = "ConditionPredicateGraveyardInstantOrSorceryCountAtLeast"
 	ConditionPredicateControllerControlsNamed                          ConditionPredicateKind = "ConditionPredicateControllerControlsNamed"
 	ConditionPredicateFirstCombatPhaseOfTurn                           ConditionPredicateKind = "ConditionPredicateFirstCombatPhaseOfTurn"
 	ConditionPredicateControlsGreatestPowerCreature                    ConditionPredicateKind = "ConditionPredicateControlsGreatestPowerCreature"
@@ -2066,6 +2067,8 @@ func recognizeGraveyardCondition(body []shared.Token, atoms Atoms) (ConditionCla
 		return ConditionClause{Predicate: ConditionPredicateGraveyardManaValueCountAtLeast, Threshold: count.Value}, true
 	case tokenWordsEqual(tail, "card", "types", "among", "cards", "in", "your", "graveyard"):
 		return ConditionClause{Predicate: ConditionPredicateGraveyardCardTypeCountAtLeast, Threshold: count.Value}, true
+	case graveyardCountInstantOrSorcery(tail):
+		return ConditionClause{Predicate: ConditionPredicateGraveyardInstantOrSorceryCountAtLeast, Threshold: count.Value}, true
 	}
 	if cardType, ok := graveyardCountCardType(tail, atoms); ok {
 		return ConditionClause{
@@ -2075,6 +2078,36 @@ func recognizeGraveyardCondition(body []shared.Token, atoms Atoms) (ConditionCla
 		}, true
 	}
 	return ConditionClause{}, false
+}
+
+// graveyardCountInstantOrSorcery reports whether the tail of a graveyard
+// card-count condition names the instant-and/or-sorcery card set ("instant
+// and/or sorcery cards in your graveyard" / "instant and sorcery cards ...",
+// Spell mastery). The "and/or", "and", and "or" joiners all describe the same
+// union of instant and sorcery cards; the lexer splits "and/or" into the words
+// "and" and "or" around a Slash symbol.
+func graveyardCountInstantOrSorcery(tail []shared.Token) bool {
+	if len(tail) == 0 || !equalWord(tail[0], "instant") {
+		return false
+	}
+	i := 1
+	switch {
+	case i < len(tail) && equalWord(tail[i], "or"):
+		i++
+	case i+2 < len(tail) && equalWord(tail[i], "and") &&
+		tail[i+1].Kind == shared.Slash && equalWord(tail[i+2], "or"):
+		i += 3
+	case i < len(tail) && equalWord(tail[i], "and"):
+		i++
+	default:
+		return false
+	}
+	if i >= len(tail) || !equalWord(tail[i], "sorcery") {
+		return false
+	}
+	rest := tail[i+1:]
+	return tokenWordsEqual(rest, "cards", "in", "your", "graveyard") ||
+		tokenWordsEqual(rest, "cards", "are", "in", "your", "graveyard")
 }
 
 // graveyardCountCardType recognizes the tail "<card type> cards [are] in your

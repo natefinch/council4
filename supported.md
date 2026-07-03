@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,805 of 32,501 cards eligible for paper support (51.7%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,812 of 32,501 cards eligible for paper support (51.7%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2037,6 +2037,7 @@ Council4 currently supports **16,805 of 32,501 cards eligible for paper support 
 - Calamitous Tide
 - Calamity of Cinders
 - Calamity's Wake
+- Calculated Dismissal
 - Calculating Lich
 - Caldera Hellion
 - Caldera Lake
@@ -3174,6 +3175,7 @@ Council4 currently supports **16,805 of 32,501 cards eligible for paper support 
 - Daring Waverider
 - Dark Banishing
 - Dark Betrayal
+- Dark Dabbling
 - Dark Deed
 - Dark Favor
 - Dark Fortress
@@ -4904,6 +4906,7 @@ Council4 currently supports **16,805 of 32,501 cards eligible for paper support 
 - Fiery Fall
 - Fiery Finish
 - Fiery Hellhound
+- Fiery Impulse
 - Fiery Inscription
 - Fiery Intervention
 - Fiery Islet
@@ -5606,6 +5609,7 @@ Council4 currently supports **16,805 of 32,501 cards eligible for paper support 
 - Ghitu Fire-Eater
 - Ghitu Firebreathing
 - Ghitu Journeymage
+- Ghitu Lavarunner
 - Ghitu War Cry
 - Ghor-Clan Bloodscale
 - Ghor-Clan Rampager
@@ -13375,6 +13379,7 @@ Council4 currently supports **16,805 of 32,501 cards eligible for paper support 
 - Spell Syphon
 - Spellbook
 - Spellbook Seeker // Careful Study
+- Spelleater Wolverine
 - Spellgorger Barbarian
 - Spellgorger Weird
 - Spellgorger Weird
@@ -15389,6 +15394,7 @@ Council4 currently supports **16,805 of 32,501 cards eligible for paper support 
 - Unholy Annex // Ritual Chamber
 - Unholy Grotto
 - Unholy Heat
+- Unholy Hunger
 - Unholy Indenture
 - Unholy Officiant
 - Unholy Strength

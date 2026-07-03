@@ -32,6 +32,7 @@ func conditionParametersNegative(cond *game.Condition) bool {
 	return cond.AnyPlayerLifeAtMost < 0 ||
 		cond.AnyOpponentPoisonAtLeast < 0 ||
 		cond.ControllerGraveyardCardOfTypeCountAtLeast < 0 ||
+		cond.ControllerGraveyardInstantOrSorceryCountAtLeast < 0 ||
 		cond.ControlsMatching.Exists && cond.ControlsMatching.Val.MinCount < 0 ||
 		cond.AnyOpponentControls.Exists && cond.AnyOpponentControls.Val.MinCount < 0 ||
 		cond.OpponentsControl.Exists && cond.OpponentsControl.Val.MinCount < 0 ||
@@ -145,6 +146,9 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	}
 	if cond.ControllerGraveyardCardOfTypeCountAtLeast > 0 {
 		matches = matches && controllerGraveyardCardOfTypeCount(g, ctx.controller, cond.ControllerGraveyardCountCardType) >= cond.ControllerGraveyardCardOfTypeCountAtLeast
+	}
+	if cond.ControllerGraveyardInstantOrSorceryCountAtLeast > 0 {
+		matches = matches && controllerGraveyardInstantOrSorceryCount(g, ctx.controller) >= cond.ControllerGraveyardInstantOrSorceryCountAtLeast
 	}
 	if cond.AnyOpponentControls.Exists {
 		matches = matches && anyOpponentControlsMatchingSelection(g, ctx, cond.AnyOpponentControls.Val)
@@ -396,10 +400,36 @@ func controllerGraveyardCardOfTypeCount(g *game.Game, controller game.PlayerID, 
 	return count
 }
 
-// sourceLandEnteredThisTurnOrControlsBasicLand reports whether the condition
-// source entered the battlefield this turn or its controller controls at least
-// one basic land. It backs the disjunctive activation gate "Activate only if
-// this land entered this turn or if you control a basic land." and fails closed
+// controllerGraveyardInstantOrSorceryCount counts the cards in the controller's
+// graveyard that are instants and/or sorceries, backing the "instant and/or
+// sorcery cards in your graveyard" count condition (Spell mastery). A split card
+// counts once when either half is an instant or sorcery.
+func controllerGraveyardInstantOrSorceryCount(g *game.Game, controller game.PlayerID) int {
+	player, ok := playerByID(g, controller)
+	if !ok {
+		return 0
+	}
+	isInstantOrSorcery := func(cardTypes []types.Card) bool {
+		return slices.Contains(cardTypes, types.Instant) || slices.Contains(cardTypes, types.Sorcery)
+	}
+	count := 0
+	for _, cardID := range player.Graveyard.All() {
+		card, ok := g.GetCardInstance(cardID)
+		if !ok {
+			continue
+		}
+		if isInstantOrSorcery(cardFaceOrDefault(card, game.FaceFront).Types) {
+			count++
+			continue
+		}
+		if card.Def.Layout == game.LayoutSplit && card.Def.Alternate.Exists &&
+			isInstantOrSorcery(card.Def.Alternate.Val.Types) {
+			count++
+		}
+	}
+	return count
+}
+
 // without a source permanent.
 func sourceLandEnteredThisTurnOrControlsBasicLand(g *game.Game, ctx conditionContext) bool {
 	if ctx.source != nil && permanentEnteredThisTurn(g, ctx.source.ObjectID) {
