@@ -241,6 +241,9 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 		player, ok := playerByID(g, ctx.controller)
 		matches = matches && ok && player.IsMonarch
 	}
+	if cond.AnOpponentIsMonarch {
+		matches = matches && anyAliveOpponentIsMonarch(g, ctx.controller)
+	}
 	if cond.ControllerHasInitiative {
 		player, ok := playerByID(g, ctx.controller)
 		matches = matches && ok && player.HasInitiative
@@ -256,6 +259,19 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 		return !matches
 	}
 	return matches
+}
+
+// anyAliveOpponentIsMonarch reports whether any of the controller's alive
+// opponents currently holds the monarch designation (CR 720). Exactly one
+// player is the monarch at a time, so this is true when the monarch exists and
+// is one of the controller's opponents.
+func anyAliveOpponentIsMonarch(g *game.Game, controller game.PlayerID) bool {
+	for _, opponentID := range aliveOpponents(g, controller) {
+		if opponent, ok := playerByID(g, opponentID); ok && opponent.IsMonarch {
+			return true
+		}
+	}
+	return false
 }
 
 func cardInstanceCount(g *game.Game, objectIDs []id.ID) int {

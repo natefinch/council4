@@ -1,6 +1,7 @@
 package cardgen
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -32,6 +33,11 @@ func TestLowerControllerDesignationInterveningConditions(t *testing.T) {
 			name:   "city's blessing",
 			oracle: "At the beginning of your end step, if you have the city's blessing, you draw a card.",
 			field:  func(c game.Condition) bool { return c.ControllerHasCityBlessing },
+		},
+		{
+			name:   "an opponent is the monarch",
+			oracle: "At the beginning of your end step, if an opponent is the monarch, you draw a card.",
+			field:  func(c game.Condition) bool { return c.AnOpponentIsMonarch },
 		},
 	}
 	for _, tc := range tests {
@@ -182,4 +188,33 @@ func TestLowerStandaloneCreateTokenInsteadFailsClosed(t *testing.T) {
 		TypeLine:   "Sorcery",
 		OracleText: "Create a 4/4 white Angel creature token with flying instead.",
 	})
+}
+
+// TestGenerateCityBlessingOnlyInterveningTriggerRenders proves an intervening-if
+// trigger gated solely on "if you have the city's blessing" survives rendering.
+// The predicate is the sole condition, so the renderer must mark it as a
+// supported predicate; otherwise the whole card is dropped with a "no supported
+// predicate" error. No corpus card currently isolates this predicate, so this
+// generation-level test guards the renderer directly.
+func TestGenerateCityBlessingOnlyInterveningTriggerRenders(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test City Sentinel",
+		Layout:     "normal",
+		ManaCost:   "{2}{W}",
+		TypeLine:   "Creature — Human Soldier",
+		OracleText: "At the beginning of your upkeep, if you have the city's blessing, you draw a card.",
+		Colors:     []string{"W"},
+		Power:      new("2"),
+		Toughness:  new("2"),
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v, want none", diagnostics)
+	}
+	if !strings.Contains(source, "ControllerHasCityBlessing: true,") {
+		t.Fatalf("source missing rendered city's-blessing predicate:\n%s", source)
+	}
 }
