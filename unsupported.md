@@ -1,6 +1,6 @@
 # Unsupported Cards
 
-Council4 currently supports **16,844 of 32,501 cards eligible for paper support (51.8%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,846 of 32,501 cards eligible for paper support (51.8%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 These cards are eligible for paper support but cardgen cannot yet generate them. Cards excluded by the corpus policy are not listed.
 
@@ -1565,7 +1565,6 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Breaker of Creation** — unsupported mixed keyword ability: the executable source backend recognized Hexproof but does not yet lower the additional rules text
 - **Breaking // Entering** — unsupported ordered effect sequence: sub-effect — unsupported temporary keyword spell
 - **Breaking of the Fellowship** — unsupported ordered effect sequence: sub-effect — unsupported damage spell
-- **Breaking Point** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ordered effect sequence: structural — per-effect condition unrecognized: If no one does
 - **Breaking Wave** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ordered effect sequence: structural — per-effect condition spans multiple clauses; unsupported ordered effect sequence: sub-effect — unsupported untap spell
 - **Breakneck Rider // Neck Breaker** — unsupported ability content: the executable source backend does not yet lower this ability content; unsupported phase/step trigger phrase: the executable source backend does not support this intervening-if condition
 - **Breakthrough** — unsupported ordered effect sequence: sub-effect — unsupported draw spell; unsupported ordered effect sequence: sub-effect — unsupported discard spell
@@ -3398,7 +3397,7 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Discreet Retreat** — unsupported static declaration operation: the recognized static declaration operation is not representable by the runtime static-value vocabulary; unsupported triggered ability: the spell event exists, but this trigger requires a missing spell-event relation, copy, or provenance semantic slot
 - **Diseased Vermin** — unsupported counter placement: the executable source backend supports exact recognized counter placement on one valid target; unsupported damage spell: the executable source backend supports only exact supported damage amounts to one target
 - **Disembowel** — unsupported destroy spell: the executable source backend supports only exact destruction of one target permanent
-- **Disharmony** — unsupported cast effect: only cast-without-paying-mana-cost spells are supported; unsupported ordered effect sequence: sub-effect — unsupported untap spell; unsupported ordered effect sequence: sub-effect — unsupported remove from combat spell; unsupported ordered effect sequence: sub-effect — unsupported gain-control spell
+- **Disharmony** — unsupported cast effect: only cast-without-paying-mana-cost spells are supported; unsupported ordered effect sequence: sub-effect — unsupported untap spell; unsupported ordered effect sequence: sub-effect — unsupported gain-control spell
 - **Disintegrate** — unsupported enters-tapped replacement: the executable source backend supports only exact unconditional self enters-tapped replacements
 - **Dismantle** — unsupported ordered effect sequence: structural — per-effect condition unrecognized: If that artifact had counters on it
 - **Dismantling Wave** — unsupported destroy spell: the executable source backend supports only exact destruction of one target permanent
@@ -5799,12 +5798,12 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Gurzigost** — unsupported ordered effect sequence: structural — per-effect condition spans multiple clauses; unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ability content: the executable source backend does not yet lower this ability content
 - **Gush** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported return spell: the executable source backend supports only exact return of one target permanent to its owner's hand
 - **Gust Walker** — unsupported mixed keyword ability: the executable source backend recognized Flying but does not yet lower the additional rules text
-- **Gustcloak Cavalier** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ordered effect sequence: sub-effect — unsupported remove from combat spell
-- **Gustcloak Harrier** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ordered effect sequence: sub-effect — unsupported remove from combat spell
-- **Gustcloak Runner** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ordered effect sequence: sub-effect — unsupported remove from combat spell
-- **Gustcloak Savior** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ordered effect sequence: sub-effect — unsupported remove from combat spell
-- **Gustcloak Sentinel** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ordered effect sequence: sub-effect — unsupported remove from combat spell
-- **Gustcloak Skirmisher** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ordered effect sequence: sub-effect — unsupported remove from combat spell
+- **Gustcloak Cavalier** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects
+- **Gustcloak Harrier** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects
+- **Gustcloak Runner** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects
+- **Gustcloak Savior** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects
+- **Gustcloak Sentinel** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects
+- **Gustcloak Skirmisher** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects
 - **Gustha's Scepter** — unsupported activation references: the executable source backend cannot lower every bound reference in this activated ability; unsupported return spell: the executable source backend supports only exact return of one target permanent to its owner's hand; unsupported triggered ability: the runtime does not emit an authoritative event for this trigger action
 - **Gustrider Exuberant** — unsupported temporary keyword spell: the executable source backend supports only exact non-parameterized keyword grants to one target creature or permanent until end of turn
 - **Gut, True Soul Zealot** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ordered effect sequence: sub-effect — unsupported sacrifice spell
@@ -11819,7 +11818,6 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Shah of Naar Isle** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Echo {0} (At the beginning of your upkeep, if this came under your control since the beginning of your last upkeep, sacrifice it unless you pay its echo cost.); unsupported static ability: the executable source backend does not yet lower non-keyword static rules text; unsupported triggered ability: the runtime does not emit an authoritative event for this trigger action
 - **Shahrazad** — unsupported life spell: the executable source backend supports only exact supported life changes
 - **Shaile, Dean of Radiance // Embrose, Dean of Shadow** — unsupported counter placement: the executable source backend supports exact recognized counter placement on one valid target; unsupported ordered effect sequence: sub-effect — unsupported damage spell
-- **Shakedown Heavy** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ordered effect sequence: sub-effect — unsupported ability content; unsupported ordered effect sequence: sub-effect — unsupported draw spell; unsupported ordered effect sequence: sub-effect — unsupported remove from combat spell
 - **Shalai, Voice of Plenty** — unsupported static declaration group: the static declaration affected group is unsupported or ambiguous
 - **Shallow Grave** — unsupported ordered effect sequence: sub-effect — unsupported return spell; unsupported ordered effect sequence: sub-effect — unsupported temporary keyword spell; unsupported ordered effect sequence: sub-effect — unsupported delayed effect
 - **Shaman en-Kor** — unsupported Oracle construct: the compiler preserved but did not confidently lower: {0}: The next 1 damage that would be dealt to this creature this turn is dealt to target creature you control instead.; unsupported ability content: the executable source backend does not yet lower this ability content; unsupported ability content: a standalone 'instead' replacement effect has no preceding effect to replace
@@ -12955,7 +12953,7 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Stuffy Doll** — unsupported enters-tapped replacement: the executable source backend supports only exact unconditional self enters-tapped replacements; unsupported damage spell: the executable source backend supports only exact fixed group damage amounts; unsupported damage spell: the executable source backend does not support this group recipient
 - **Stumpsquall Hydra** — unsupported counter placement: the executable source backend supports exact recognized counter placement on one valid target
 - **Stunning Reversal** — unsupported enters-tapped replacement: the executable source backend supports only exact unconditional self enters-tapped replacements
-- **Stunning Strike** — unsupported ordered effect sequence: sub-effect — unsupported remove from combat spell; unsupported static ability: the executable source backend does not yet lower non-keyword static rules text
+- **Stunning Strike** — unsupported static ability: the executable source backend does not yet lower non-keyword static rules text
 - **Stunted Growth** — unsupported library placement: the executable source backend supports only exact target graveyard-to-library placement
 - **Stupefying Touch** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Enchanted creature's activated abilities can't be activated.; unsupported static ability: the executable source backend does not yet lower non-keyword static rules text
 - **Stymied Hopes** — unsupported ordered effect sequence: structural — per-effect condition kind not gateable
@@ -13534,7 +13532,7 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Thassa, God of the Sea** — unsupported Oracle construct: the compiler preserved but did not confidently lower: As long as your devotion to blue is less than five, Thassa isn't a creature. (Each {U} in the mana costs of permanents you control counts toward your devotion to blue.); unsupported static ability: the executable source backend does not yet lower non-keyword static rules text
 - **That Which Was Taken** — unsupported static declaration group: the static declaration affected group is unsupported or ambiguous
 - **Thatcher Revolt** — unsupported ordered effect sequence: sub-effect — unsupported delayed effect
-- **Thaumatic Compass // Spires of Orazca** — unsupported ability content: the executable source backend does not yet lower this ability content; unsupported ordered effect sequence: sub-effect — unsupported untap spell; unsupported ordered effect sequence: sub-effect — unsupported remove from combat spell
+- **Thaumatic Compass // Spires of Orazca** — unsupported ability content: the executable source backend does not yet lower this ability content; unsupported ordered effect sequence: sub-effect — unsupported untap spell
 - **Thaumaton Torpedo** — unsupported activation condition: the executable source backend cannot lower every activation condition
 - **Thawing Glaciers** — unsupported search effect: unexpected non-result reference in search effect
 - **The Abyss** — unsupported destroy spell: the executable source backend supports only exact destruction of one target permanent

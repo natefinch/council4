@@ -1182,6 +1182,22 @@ type Sentence struct {
 	RemoveAuraRider bool `json:",omitempty"`
 }
 
+// sentenceIsCreditedRider reports whether the sentence has been folded onto a
+// preceding effect as a credited rider whose span is covered independently. Such
+// a sentence emits no standalone instruction, so reference and coverage scans —
+// and resolving-gate recognizers scanning for a distinct trailing effect — treat
+// its tokens as belonging to the effect it modifies rather than as an
+// unrecognized sibling. TokenCopyGrantRider is intentionally excluded: it is
+// credited through a separate fold path and is not consumed here.
+func sentenceIsCreditedRider(s *Sentence) bool {
+	return s.RegenerationRider ||
+		s.ReturnAsEnchantmentRider ||
+		s.CopyChooseNewTargetsRider ||
+		s.PlayFromTopPayLifeRider ||
+		s.PileSplitRider ||
+		s.RemoveAuraRider
+}
+
 // StaticRuleSubjectKind identifies the source object constrained by a simple
 // static rule.
 type StaticRuleSubjectKind string

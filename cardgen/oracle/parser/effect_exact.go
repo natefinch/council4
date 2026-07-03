@@ -225,7 +225,8 @@ func exactEffectSyntaxTail(effect *EffectSyntax) bool {
 	case EffectTransform:
 		return exactDirectTargetEffectSyntax(effect, "Transform")
 	case EffectRemoveFromCombat:
-		return exactRemoveFromCombatEffectSyntax(effect)
+		return exactRemoveFromCombatEffectSyntax(effect) ||
+			exactRemoveFromCombatSelfEffectSyntax(effect)
 	default:
 		return false
 	}

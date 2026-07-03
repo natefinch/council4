@@ -1496,11 +1496,12 @@ func unsupportedDelayedEffectDiagnostic(ctx contentCtx) *shared.Diagnostic {
 
 // lowerReferencedPermanentEffect lowers a no-target single effect whose object is
 // the source or a singular back-reference. It covers destroy, exile, tap, untap,
-// sacrifice, and return-to-hand. A "you may tap/untap <it/this creature>" body
-// carries its optionality at the ability level, leaving the residual clause
-// ("you may untap it") non-exact; that demotion is tolerated for the tap/untap
-// verbs so the self/back-reference tap-down family lowers identically to its
-// mandatory sibling, the engine asking the controller whether to apply it.
+// remove-from-combat, sacrifice, and return-to-hand. A "you may tap/untap
+// <it/this creature>" body carries its optionality at the ability level, leaving
+// the residual clause ("you may untap it") non-exact; that demotion is tolerated
+// for the tap/untap verbs so the self/back-reference tap-down family lowers
+// identically to its mandatory sibling, the engine asking the controller whether
+// to apply it.
 func lowerReferencedPermanentEffect(ctx contentCtx) (game.AbilityContent, bool) {
 	exact := ctx.content.Effects[0].Exact
 	if ctx.content.Effects[0].Kind == compiler.EffectUntap ||
@@ -1542,7 +1543,8 @@ func lowerReferencedPermanentEffect(ctx contentCtx) (game.AbilityContent, bool) 
 				return game.AbilityContent{}, false
 			}
 			if ctx.content.Effects[0].Kind != compiler.EffectTap &&
-				ctx.content.Effects[0].Kind != compiler.EffectUntap {
+				ctx.content.Effects[0].Kind != compiler.EffectUntap &&
+				ctx.content.Effects[0].Kind != compiler.EffectRemoveFromCombat {
 				return game.AbilityContent{}, false
 			}
 			hasDirectObject = true
@@ -1577,6 +1579,8 @@ func lowerReferencedPermanentEffect(ctx contentCtx) (game.AbilityContent, bool) 
 		primitive = game.Tap{Object: object}
 	case compiler.EffectUntap:
 		primitive = game.Untap{Object: object}
+	case compiler.EffectRemoveFromCombat:
+		primitive = game.RemoveFromCombat{Object: object}
 	case compiler.EffectSacrifice:
 		primitive = game.Sacrifice{Object: object}
 	case compiler.EffectReturn:
