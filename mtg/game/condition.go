@@ -170,6 +170,12 @@ type Condition struct {
 	// monarch, ...". It reads the controller's live IsMonarch designation flag.
 	ControllerIsMonarch bool
 
+	// AnOpponentIsMonarch is satisfied when any of the context controller's
+	// opponents is the monarch (CR 720), as in "At the beginning of your upkeep,
+	// if an opponent is the monarch, ..." (Queen Marchesa). It reads the live
+	// IsMonarch designation flag of each opponent.
+	AnOpponentIsMonarch bool
+
 	// ControllerHasInitiative is satisfied when the context controller has the
 	// initiative (CR 720), as in "At the beginning of your end step, if you have
 	// the initiative, ...". It reads the controller's live HasInitiative flag.
@@ -290,6 +296,7 @@ func (c *Condition) Empty() bool {
 		!c.ControllerControlsGreatestPowerCreature &&
 		!c.ControllerControlsGreatestToughnessCreature &&
 		!c.ControllerIsMonarch &&
+		!c.AnOpponentIsMonarch &&
 		!c.ControllerHasInitiative &&
 		!c.ControllerHasCityBlessing &&
 		!c.SourceControllerTurn &&

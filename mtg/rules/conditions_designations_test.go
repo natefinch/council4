@@ -54,3 +54,25 @@ func TestConditionControllerDesignations(t *testing.T) {
 		})
 	}
 }
+
+// TestConditionAnOpponentIsMonarch exercises the opponent-designation
+// intervening-if predicate "if an opponent is the monarch" (Queen Marchesa). It
+// holds only when a player other than the context controller currently holds the
+// monarch designation.
+func TestConditionAnOpponentIsMonarch(t *testing.T) {
+	condition := opt.Val(game.Condition{AnOpponentIsMonarch: true})
+
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	if conditionSatisfied(g, conditionContext{controller: game.Player1}, condition) {
+		t.Fatal("condition held before any opponent became the monarch")
+	}
+
+	g = game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	g.Players[game.Player2].IsMonarch = true
+	if !conditionSatisfied(g, conditionContext{controller: game.Player1}, condition) {
+		t.Fatal("condition did not hold when the controller's opponent was the monarch")
+	}
+	if conditionSatisfied(g, conditionContext{controller: game.Player2}, condition) {
+		t.Fatal("condition held when the controller themselves was the monarch")
+	}
+}

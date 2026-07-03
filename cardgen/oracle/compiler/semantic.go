@@ -795,6 +795,11 @@ const (
 	// controller is the monarch (CR 720). It is a live single-player game-state
 	// predicate with no clause parameters.
 	ConditionPredicateControllerIsMonarch
+	// ConditionPredicateAnOpponentIsMonarch is satisfied when any of the context
+	// controller's opponents is the monarch (CR 720), as in "if an opponent is
+	// the monarch" (Queen Marchesa). It is a live game-state predicate with no
+	// clause parameters.
+	ConditionPredicateAnOpponentIsMonarch
 	// ConditionPredicateControllerHasInitiative is satisfied when the context
 	// controller has the initiative (CR 720). It is a live single-player
 	// game-state predicate with no clause parameters.
