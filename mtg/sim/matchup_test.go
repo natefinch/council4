@@ -1,6 +1,7 @@
 package sim
 
 import (
+	"sync/atomic"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/agent"
@@ -9,18 +10,19 @@ import (
 )
 
 // matchupSeatSpy is a SeatAgent-built agent that records which seat it was built
-// for, so a matchup test can confirm the tested agent visited every seat.
+// for, so a matchup test can confirm the tested agent visited every seat. The
+// counters are atomic because sim.Run calls the agent factory from parallel
+// worker goroutines (a factory must be safe for concurrent use).
 type matchupSeatSpy struct {
 	agent.FirstLegal
 
 	seat game.PlayerID
-	seen *[game.NumPlayers]int
 }
 
-func recordingSeatAgent(seen *[game.NumPlayers]int) SeatAgent {
+func recordingSeatAgent(seen *[game.NumPlayers]atomic.Int64) SeatAgent {
 	return func(_ uint64, seat game.PlayerID) rules.PlayerAgent {
-		seen[seat]++
-		return matchupSeatSpy{seat: seat, seen: seen}
+		seen[seat].Add(1)
+		return matchupSeatSpy{seat: seat}
 	}
 }
 
@@ -70,7 +72,7 @@ func TestAccumulateRotationCountsFailuresNotDraws(t *testing.T) {
 }
 
 func TestRunMatchupRotatesTestedAgentThroughEverySeat(t *testing.T) {
-	var seen [game.NumPlayers]int
+	var seen [game.NumPlayers]atomic.Int64
 	m := Matchup{
 		Configs:      smokeConfigs(),
 		GamesPerSeat: 2,
@@ -82,8 +84,8 @@ func TestRunMatchupRotatesTestedAgentThroughEverySeat(t *testing.T) {
 	RunMatchup(m)
 
 	for seat := range seen {
-		if seen[seat] == 0 {
-			t.Fatalf("tested agent never seated in seat %d; rotation missed a seat: %v", seat, seen)
+		if seen[seat].Load() == 0 {
+			t.Fatalf("tested agent never seated in seat %d; rotation missed a seat", seat)
 		}
 	}
 }
