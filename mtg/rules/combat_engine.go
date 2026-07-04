@@ -53,6 +53,22 @@ func (ce combatEngine) runPhase(g *game.Game, agents [game.NumPlayers]PlayerAgen
 	g.Turn.Step = game.StepDeclareAttackers
 	log.addStep(game.StepDeclareAttackers)
 	ce.declareAttackers(g, agents, log)
+	ce.resolveCombatAfterAttackers(g, agents, log)
+}
+
+// resolveCombatAfterAttackers runs the combat phase from the post-declare-
+// attackers priority window through end of combat: the attack-declaration
+// priority window, then (when a creature attacked, CR 508.8) the declare-blockers
+// step, the first-strike and normal combat-damage steps with their priority
+// windows, and finally the end-of-combat step. It assumes attackers have already
+// been declared for the current combat and g is in the declare-attackers step.
+//
+// It is the resumable tail of runPhase, split out so a search agent's Simulator
+// can play a candidate attack out to its combat result (see
+// Simulator.ResolveCombatWithAttackers) using the same authoritative sequence
+// real games use. runPhase is its only in-engine caller, so extracting it does
+// not change real-game combat.
+func (ce combatEngine) resolveCombatAfterAttackers(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
 	if !ce.runPriority(g, agents, log) {
 		return
 	}
