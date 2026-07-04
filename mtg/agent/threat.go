@@ -27,9 +27,28 @@ const (
 	threatScoreUnit    = 3.0
 )
 
-// permanentThreat scores how dangerous a single permanent is. It is a pure
-// function of the permanent's public effective characteristics.
+// permanentThreat scores how dangerous a single permanent is right now. It is a
+// pure function of the permanent's public effective characteristics, discounting
+// a tapped permanent as a less immediate threat this turn. Threat assessment
+// (targeting, combat, blocks) uses it; position value (Evaluate) uses the
+// tapped-agnostic permanentBoardValue instead, since a creature untaps every
+// turn.
 func permanentThreat(permanent rules.PermanentView) float64 {
+	threat := permanentBoardValue(permanent)
+	// A tapped permanent is a less immediate threat this turn.
+	if permanent.Tapped {
+		threat *= threatTappedScale
+	}
+	return threat
+}
+
+// permanentBoardValue is a permanent's value ignoring whether it is tapped: a
+// creature by its power and damage-relevant keywords, a noncreature by a small
+// base. It is the tapped-agnostic core of permanentThreat, used by position
+// evaluation where a momentarily tapped creature (for example one that just
+// attacked) untaps before it matters again, so tapping should not lower the
+// position's value.
+func permanentBoardValue(permanent rules.PermanentView) float64 {
 	if !isCreaturePermanent(permanent) {
 		return threatNoncreature
 	}
@@ -43,10 +62,6 @@ func permanentThreat(permanent rules.PermanentView) float64 {
 	}
 	if permanent.HasKeyword(game.Deathtouch) {
 		threat += threatDeathtouch
-	}
-	// A tapped permanent is a less immediate threat this turn.
-	if permanent.Tapped {
-		threat *= threatTappedScale
 	}
 	return threat
 }

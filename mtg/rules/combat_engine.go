@@ -157,7 +157,7 @@ func (ce combatEngine) declareAttackers(g *game.Game, agents [game.NumPlayers]Pl
 
 	chosen := legal[len(legal)-1]
 	if agent := agentFor(agents, playerID); agent != nil {
-		chosen = agent.ChooseAction(observe(g, playerID), legal)
+		chosen = ce.e.decideAction(g, agent, playerID, legal)
 	}
 	if !containsAction(legal, chosen) {
 		chosen = legal[len(legal)-1]
