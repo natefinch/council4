@@ -27,6 +27,48 @@ func attackCandidates(attacker *game.Permanent, defender game.PlayerID) []action
 	}
 }
 
+func attackTarget(attacker *game.Permanent, defender game.PlayerID) action.Action {
+	return action.DeclareAttackers([]game.AttackDeclaration{
+		{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: defender}},
+	})
+}
+
+func TestSearchAttackersFinishesAKillablePlayerOverChippingTheLeader(t *testing.T) {
+	// Given a lethal swing at a non-leader and a chip swing at the board leader, a
+	// real player takes the kill: removing a seat from a free-for-all is a bigger
+	// swing than shaving the leader's life. Without the eliminate-opponent reward
+	// the evaluator only sees "reduce the strongest opponent", so it would chip the
+	// leader (whose life it can lower) and ignore the free kill (which leaves the
+	// strongest opponent unchanged) — the eliminate reward is what fixes that.
+	e := searchTestEngine()
+	g := combatWorld()
+	attacker := addObservedPermanent(g, game.Player1, creatureCardDef("Raider", 5, 5))
+	// Player2 is in lethal range with no blockers, so a 5/5 swing kills them.
+	g.Players[game.Player2].Life = 3
+	// Player3 is the board leader (biggest power) at full life. Its creature is
+	// tapped, so it cannot block: swinging at Player3 safely chips its life (which
+	// the "reduce the strongest opponent" term rewards) without losing the
+	// attacker, making it the tempting greedy line over the free kill.
+	titan := addObservedPermanent(g, game.Player3, creatureCardDef("Titan", 9, 9))
+	titan.Tapped = true
+
+	legal := []action.Action{
+		attackTarget(attacker, game.Player3), // chip the leader
+		attackTarget(attacker, game.Player2), // lethal on a non-leader
+		action.DeclareAttackers(nil),         // no attack
+	}
+	searcher := Searcher{Rollout: GenericStrategy{}}
+	chosen := searcher.searchAttackers(e.Simulator(), g, game.Player1, legal)
+
+	payload, ok := chosen.DeclareAttackersPayload()
+	if !ok || len(payload.Attackers) == 0 {
+		t.Fatalf("searcher chose %v, want a lethal swing at Player2", chosen)
+	}
+	if got := payload.Attackers[0].Target.Player; got != game.Player2 {
+		t.Fatalf("searcher attacked Player%d; want to finish the killable Player2", got+1)
+	}
+}
+
 func TestSearchAttackersSwingsForValueIntoOpenBoard(t *testing.T) {
 	e := searchTestEngine()
 	g := combatWorld()
