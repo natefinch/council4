@@ -71,13 +71,14 @@ func (e *Engine) newSearchContext(g *game.Game, playerID game.PlayerID) SearchCo
 	return SearchContext{engine: e, game: g, player: playerID, rng: e.searchRNG}
 }
 
-// decidePriorityAction asks the agent for its priority action, routing through
-// the search capability when the agent implements SearchAgent and through the
-// observation-scoring path otherwise. The observation path runs inside a
-// static-source frame so the agent's evaluation reuses one static-ability source
-// scan; the frame is closed via defer so a panicking agent cannot leak it. The
-// search path branches on cloned states and needs no frame on the live game.
-func (e *Engine) decidePriorityAction(g *game.Game, agent PlayerAgent, playerID game.PlayerID, legal []action.Action) action.Action {
+// decideAction asks the agent for its action at a priority or combat decision,
+// routing through the search capability when the agent implements SearchAgent and
+// through the observation-scoring path otherwise. The observation path runs
+// inside a static-source frame so the agent's evaluation reuses one
+// static-ability source scan; the frame is closed via defer so a panicking agent
+// cannot leak it. The search path branches on cloned states and needs no frame on
+// the live game.
+func (e *Engine) decideAction(g *game.Game, agent PlayerAgent, playerID game.PlayerID, legal []action.Action) action.Action {
 	if searcher, ok := agent.(SearchAgent); ok {
 		return searcher.ChooseActionBySearch(e.newSearchContext(g, playerID), legal)
 	}

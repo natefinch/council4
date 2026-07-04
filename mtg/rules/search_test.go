@@ -43,7 +43,7 @@ func TestEngineRoutesPriorityThroughSearchAgent(t *testing.T) {
 
 	stub := &stubSearchAgent{}
 	legal := e.Simulator().LegalActions(g, game.Player1)
-	chosen := e.decidePriorityAction(g, stub, game.Player1, legal)
+	chosen := e.decideAction(g, stub, game.Player1, legal)
 
 	if !stub.searched {
 		t.Fatal("engine did not route the priority decision through ChooseActionBySearch")
@@ -65,7 +65,7 @@ func TestNonSearchAgentUsesObservationPath(t *testing.T) {
 	// simPassPolicy is a plain PlayerAgent (not a SearchAgent), so the engine must
 	// use the ordinary observation path and honor its choice (pass).
 	legal := e.Simulator().LegalActions(g, game.Player1)
-	if chosen := e.decidePriorityAction(g, simPassPolicy{}, game.Player1, legal); chosen.Kind != action.ActionPass {
+	if chosen := e.decideAction(g, simPassPolicy{}, game.Player1, legal); chosen.Kind != action.ActionPass {
 		t.Fatalf("plain agent decision = %v, want pass", chosen.Kind)
 	}
 }

@@ -103,12 +103,16 @@ func playerPower(obs rules.PlayerObservation, playerID game.PlayerID) float64 {
 }
 
 // permanentPower values one permanent as board presence: a creature by its
-// threat (evasion- and keyword-aware, via threat.go), any other permanent by a
-// small base, plus a development bonus for a mana source (a rock, dork, or land).
+// tapped-agnostic board value (evasion- and keyword-aware, via
+// permanentBoardValue), any other permanent by a small base, plus a development
+// bonus for a mana source (a rock, dork, or land). It ignores tapped state
+// because a position's value looks across turns, where a creature that is
+// momentarily tapped — for example one that just attacked — untaps before it
+// matters again.
 func permanentPower(permanent rules.PermanentView) float64 {
 	power := evalPermanentBase
 	if isCreaturePermanent(permanent) {
-		power = permanentThreat(permanent)
+		power = permanentBoardValue(permanent)
 	}
 	if permanent.ProducesMana {
 		power += evalManaSource

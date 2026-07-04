@@ -65,15 +65,21 @@ func (s Searcher) ChooseChoice(obs rules.PlayerObservation, request game.ChoiceR
 	return s.Rollout.ChooseChoice(obs, request)
 }
 
-// ChooseActionBySearch implements rules.SearchAgent with one-ply lookahead and
-// position evaluation. For each legal action it applies the action to a
-// determinized world, resolves it (opponents responding via the rollout policy
-// while the searcher itself only passes), and scores the resulting position for
-// the searching seat. It plays the highest-scoring action, breaking ties toward
-// the earlier action in the engine's order (productive actions before Pass).
+// ChooseActionBySearch implements rules.SearchAgent. It handles two decision
+// kinds: a declare-attackers decision, which it evaluates by playing each
+// candidate attack out through combat (see searchAttackers), and an ordinary
+// priority decision, which it evaluates one ply by applying and resolving the
+// action. In both it plays the action whose resulting position scores highest for
+// the searching seat.
 func (s Searcher) ChooseActionBySearch(ctx rules.SearchContext, legal []action.Action) action.Action {
-	world := ctx.Determinize()
 	me := ctx.Player()
+	if isAttackDeclaration(legal) {
+		// Attack declarations happen on the searcher's own turn; evaluate each
+		// candidate by its actual combat result.
+		return s.searchAttackers(ctx.Simulator(), ctx.Determinize(), me, legal)
+	}
+
+	world := ctx.Determinize()
 	// Search is expensive, so spend it where it matters: the searcher's own turn,
 	// where the meaningful sequencing, deployment, and combat decisions are made.
 	// On opponents' turns the decision is a reactive window (hold or answer), which
@@ -86,6 +92,50 @@ func (s Searcher) ChooseActionBySearch(ctx rules.SearchContext, legal []action.A
 		return s.searchAcrossWorlds(ctx, world, me, legal)
 	}
 	return s.searchBestAction(ctx.Simulator(), world, me, legal)
+}
+
+// searchAttackers chooses a declare-attackers action by simulating each candidate
+// attack all the way through combat — opponents declaring blockers and responding
+// via the rollout policy — and evaluating the resulting position. It plays the
+// attack (or the no-attack option) whose post-combat position scores highest for
+// the searching seat, so the agent attacks for real value: profitable trades,
+// connecting damage, and lethal, while declining attacks that a good defender
+// punishes. Ties resolve to the earlier action in the engine's order.
+func (s Searcher) searchAttackers(sim rules.Simulator, world *game.Game, me game.PlayerID, legal []action.Action) action.Action {
+	if len(legal) == 0 {
+		return action.Pass()
+	}
+	policies := s.resolvePolicies(me)
+
+	best := legal[0]
+	bestValue := math.Inf(-1)
+	for i := range legal {
+		payload, ok := legal[i].DeclareAttackersPayload()
+		if !ok {
+			continue
+		}
+		resolved, ok := sim.ResolveCombatWithAttackers(world, me, payload, policies)
+		if !ok {
+			continue
+		}
+		if value := Evaluate(rules.NewObservation(resolved, me)); value > bestValue {
+			bestValue = value
+			best = legal[i]
+		}
+	}
+	return best
+}
+
+// isAttackDeclaration reports whether the legal actions are declare-attackers
+// options, so the searcher can route them through combat rollout rather than the
+// priority-action search.
+func isAttackDeclaration(legal []action.Action) bool {
+	for i := range legal {
+		if legal[i].Kind == action.ActionDeclareAttackers {
+			return true
+		}
+	}
+	return false
 }
 
 // searchAcrossWorlds averages each candidate action's value over several
