@@ -79,3 +79,31 @@ func (s Simulator) ResolvePriority(g *game.Game, policies [game.NumPlayers]Playe
 	s.engine.runPriorityLoop(clone, policies, &TurnLog{})
 	return clone
 }
+
+// ResolveCombatWithAttackers returns a Clone of g in which playerID has declared
+// the given attackers and the rest of the combat phase has been played out —
+// opponents declaring blockers and responding via policies, then combat damage
+// dealt — so the resulting board can be evaluated. The original g is never
+// modified.
+//
+// It requires g to be at the declare-attackers step of a combat phase with the
+// attackers not yet declared (the state a search agent sees when it is asked to
+// declare attackers). ok is false, and the returned game nil, when g is not in
+// that state or the attackers are not a legal declaration for playerID.
+//
+// This lets a search agent value an attack by what it actually does — which
+// creatures trade, how much damage and commander damage lands, whether it is
+// lethal — using the engine's authoritative combat sequence rather than a
+// heuristic estimate.
+func (s Simulator) ResolveCombatWithAttackers(g *game.Game, playerID game.PlayerID, attackers action.DeclareAttackersAction, policies [game.NumPlayers]PlayerAgent) (*game.Game, bool) {
+	if g.Combat == nil || g.Turn.Step != game.StepDeclareAttackers {
+		return nil, false
+	}
+	clone := g.Clone()
+	ce := combatEngine{s.engine}
+	if !ce.applyAttackers(clone, playerID, attackers) {
+		return nil, false
+	}
+	ce.resolveCombatAfterAttackers(clone, policies, &TurnLog{})
+	return clone, true
+}
