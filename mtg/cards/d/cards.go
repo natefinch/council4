@@ -19,6 +19,7 @@ var Cards = []*game.CardDef{
 	DauthiMindripper,
 	DawnCharm,
 	Dawnfluke,
+	DawngladeRegent,
 	DawnhartWardens,
 	DeadeyeHarpooner,
 	DeathDenied,

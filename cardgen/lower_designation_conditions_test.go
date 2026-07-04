@@ -69,12 +69,15 @@ func TestLowerControllerDesignationInterveningConditions(t *testing.T) {
 	}
 }
 
-// TestControllerDesignationConditionRejectedOutsideInterveningTrigger verifies
-// the designation predicates fail closed when used as a static "as long as"
-// condition, which the runtime does not evaluate for these designations.
-func TestControllerDesignationConditionRejectedOutsideInterveningTrigger(t *testing.T) {
+// TestControllerDesignationStaticConditionLowers verifies a static ability gated
+// on a live player designation ("As long as you're the monarch, Test Bear gets
+// +1/+1.") lowers onto a conditioned continuous effect. The runtime re-evaluates
+// the designation each time continuous effects are recomputed
+// (staticAbilitySourceContinuousEffects), so the bonus turns on and off as the
+// designation changes.
+func TestControllerDesignationStaticConditionLowers(t *testing.T) {
 	t.Parallel()
-	face := lowerSingleFaceExpectingUnsupported(t, &ScryfallCard{
+	face := lowerSingleFace(t, &ScryfallCard{
 		Name:       "Test Bear",
 		Layout:     "normal",
 		TypeLine:   "Creature — Bear",
@@ -82,10 +85,15 @@ func TestControllerDesignationConditionRejectedOutsideInterveningTrigger(t *test
 		Power:      new("2"),
 		Toughness:  new("2"),
 	})
-	for _, ability := range face.TriggeredAbilities {
-		if ability.Trigger.InterveningCondition.Val.ControllerIsMonarch {
-			t.Fatalf("static monarch condition unexpectedly lowered: %+v", ability)
-		}
+	if len(face.StaticAbilities) != 1 {
+		t.Fatalf("got %d static abilities, want 1", len(face.StaticAbilities))
+	}
+	static := face.StaticAbilities[0].Body
+	if !static.Condition.Exists || !static.Condition.Val.ControllerIsMonarch {
+		t.Fatalf("static condition = %+v, want ControllerIsMonarch", static.Condition)
+	}
+	if static.Condition.Val.Negate {
+		t.Error("static monarch condition Negate = true, want false")
 	}
 }
 
