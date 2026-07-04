@@ -7,3 +7,5 @@ deck.txt
 MagicCompRules*.txt
 oracle-cards-*.json
 .DS_Store
+# Compiled CLI binary from `go build ./cmd/council4`
+/council4

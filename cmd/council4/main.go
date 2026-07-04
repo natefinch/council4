@@ -34,16 +34,20 @@ func main() {
 	tested := flag.Int("tested", 1, "1-based index of the deck under test (used with -deck)")
 	games := flag.Int("games", 1, "number of games to simulate (with -deck); >1 runs the simulation harness")
 	workers := flag.Int("workers", 0, "max games to run concurrently (0 = number of CPUs)")
-	agentProfile := flag.String("agent", "firstlegal", "agent profile for simulation: firstlegal, random, or generic")
+	agentProfile := flag.String("agent", "firstlegal", "agent profile for simulation: firstlegal, random, generic, or search")
+	baseline := flag.String("baseline", "", "opponent agent profile; when set with -deck, runs a head-to-head matchup of -agent (tested) vs -baseline over -games games per seat")
 	out := flag.String("out", "", "path to write a JSON simulation report (with -deck and -games>1)")
 	flag.Parse()
 
 	if len(deckPaths) > 0 {
 		registry := cards.NewDefaultRegistry()
 		var err error
-		if *games > 1 {
+		switch {
+		case *baseline != "":
+			err = runMatchup(os.Stdout, deckPaths, *games, *workers, *seed, *agentProfile, *baseline, registry)
+		case *games > 1:
 			err = runDeckSimulation(os.Stdout, deckPaths, *tested, *games, *workers, *seed, *agentProfile, *out, registry)
-		} else {
+		default:
 			err = runDeckGame(os.Stdout, deckPaths, *tested, *seed, *verbose, *noPass, registry)
 		}
 		if err != nil {

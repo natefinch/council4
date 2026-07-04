@@ -46,6 +46,51 @@ Provide a `NewAgents` factory to seat real agents. It receives each game's
 derived seed, so any agent randomness stays reproducible — derive each seat's
 RNG from `gameSeed` rather than sharing one source.
 
+## Matchup measurement
+
+`RunMatchup` measures one agent (`Tested`) against another (`Baseline`) over the
+same four decks. It seats the tested agent in a single seat and the baseline in
+the other three, and **rotates the tested seat through every position**, running
+`GamesPerSeat` games in each rotation. Rotating through all four seats cancels
+turn-order advantage, so if the two agents were equal strength the tested agent
+would win exactly one game in four (`1/NumPlayers` = 25%); a higher win rate
+means the tested agent is genuinely stronger.
+
+```go
+result := sim.RunMatchup(sim.Matchup{
+    Configs:      configs,
+    GamesPerSeat: 25,   // 25 games in each of 4 seat rotations = 100 games
+    Seed:         42,
+    Tested:       testedSeatAgent,   // e.g. the search agent
+    Baseline:     baselineSeatAgent, // e.g. GenericStrategy
+})
+fmt.Println(result.TestedWinRate()) // compare against 0.25
+```
+
+`MatchupResult.TestedWinRate()` is the fraction of completed games the tested
+agent won (failures excluded); `TestedWinsBySeat` exposes per-seat (turn-order)
+effects.
+
+For a **pure agent-skill** comparison, pass the same decklist four times so every
+seat plays a mirror — then the only differences between seats are turn order
+(which the rotation cancels) and agent skill. With four distinct decks the number
+also reflects the strength of the decks the tested agent happened to pilot.
+
+The CLI exposes this via the `-baseline` flag:
+
+```
+# search (tested) vs generic (baseline), 25 games per seat = 100 games
+council4 -deck a.txt -deck b.txt -deck c.txt -deck d.txt \
+    -agent search -baseline generic -games 25
+
+# pure agent-skill mirror: the same deck in all four seats
+council4 -deck mirror.txt -deck mirror.txt -deck mirror.txt -deck mirror.txt \
+    -agent search -baseline generic -games 50
+```
+
+Matchup games are capped at a modest turn limit so a weak agent cannot drag a
+game toward the engine's safety cap; capped games count as draws.
+
 ## Goldfish
 
 `RunGoldfish` plays one Commander deck without opponents for an exact turn
