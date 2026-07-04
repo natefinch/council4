@@ -368,8 +368,15 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 			return ctx == conditionContextEffectGate ||
 				ctx == conditionContextInterveningTrigger
 		case compiler.ConditionPredicateControllerTurn:
+			// The "During your turn," self-static gate and the "If it's your
+			// turn," per-effect sequence gate (the Fated cycle) both read the
+			// same live active-player comparison (SourceControllerTurn), which
+			// the runtime condition evaluator resolves from the turn's active
+			// player under negation as well, so the effect-gate form (including
+			// the negated "Otherwise," else branch) is safe.
 			return ctx == conditionContextStatic ||
-				ctx == conditionContextStaticRuleGuard
+				ctx == conditionContextStaticRuleGuard ||
+				ctx == conditionContextEffectGate
 		case compiler.ConditionPredicateControllerIsMonarch,
 			compiler.ConditionPredicateAnOpponentIsMonarch,
 			compiler.ConditionPredicateControllerHasInitiative,

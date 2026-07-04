@@ -1021,10 +1021,16 @@ func recognizeFirstCombatPhaseCondition(body []shared.Token, _ Atoms) (Condition
 
 // recognizeControllerTurnCondition matches the controller-turn body "your turn"
 // that the "During your turn," introducer leaves behind (Fresh-Faced Recruit,
-// Embereth Skyblazer). It gates a conditional self-static on the controller
-// being the active player. It fails closed on any other wording.
+// Embereth Skyblazer) and the per-effect gate body "it's your turn" / "it is
+// your turn" that the "If it's your turn," introducer leaves behind (the Fated
+// cycle — Fated Return, Fated Retribution, Fated Intervention, Fated
+// Conflagration, Fated Infatuation — plus Feed the Cauldron, Stolen Vitality,
+// Rapier Wit). Both bodies gate on the controller being the active player. It
+// fails closed on any other wording.
 func recognizeControllerTurnCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
-	if tokenWordsEqual(body, "your", "turn") {
+	if tokenWordsEqual(body, "your", "turn") ||
+		tokenWordsEqual(body, "it's", "your", "turn") ||
+		tokenWordsEqual(body, "it", "is", "your", "turn") {
 		return ConditionClause{Predicate: ConditionPredicateControllerTurn}, true
 	}
 	return ConditionClause{}, false

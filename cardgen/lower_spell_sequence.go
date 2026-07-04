@@ -345,7 +345,14 @@ func lowerOrderedEffectSequence(
 		// EventPermanent pronoun could denote, so its "it" must be the triggering
 		// permanent ("Whenever ~ attacks, put a +1/+1 counter on it, then ...").
 		allowEventPronoun := effect.Connection == parser.EffectConnectionOtherwise || i == 0
-		if delayedContent, handled, failed := lowerDelayedSequenceClause(ctx.content.Effects, i, effectAbility, sequence); handled {
+		// The linked-object publisher a sequential referenced grant chains off is
+		// the immediately preceding instruction; if that instruction is itself
+		// gated (per-effect condition, "instead", or "otherwise" negation) it may
+		// be skipped at resolution and never record its linked key. Signal that so
+		// the grant fails closed instead of chaining off a publisher it cannot
+		// rely on.
+		publisherGated := i > 0 && sequenceClauseInstructionGated(i-1, effectConditions, insteadGates, otherwiseGates)
+		if delayedContent, handled, failed := lowerDelayedSequenceClause(ctx.content.Effects, i, effectAbility, sequence, publisherGated); handled {
 			if failed {
 				if len(clauseReasons) > 0 {
 					continue
@@ -2752,6 +2759,27 @@ func applySequenceClauseGates(
 	return ""
 }
 
+// sequenceClauseInstructionGated reports whether the sequence clause at index i
+// will carry a per-effect condition gate — a matched effect condition, an
+// "instead" negated gate, or an "otherwise" negated gate. A gated clause's
+// instruction is skipped at resolution whenever its condition does not hold, so
+// a later clause must not chain a linked-object reference off it.
+func sequenceClauseInstructionGated(
+	i int,
+	effectConditions, insteadGates, otherwiseGates map[int]game.EffectCondition,
+) bool {
+	if _, gated := effectConditions[i]; gated {
+		return true
+	}
+	if _, gated := insteadGates[i]; gated {
+		return true
+	}
+	if _, gated := otherwiseGates[i]; gated {
+		return true
+	}
+	return false
+}
+
 // matchSequenceEffectConditions maps each compiled condition to the single
 // effect whose clause span contains it and lowers it as an effect gate. It
 // returns the lowered EffectCondition keyed by effect index. ok is false (fail
@@ -3119,6 +3147,7 @@ func lowerDelayedSequenceClause(
 	effectIndex int,
 	ctx contentCtx,
 	sequence []game.Instruction,
+	publisherGated bool,
 ) (content game.AbilityContent, handled, failed bool) {
 	if isDelayedTargetSacrificeEffect(&effects[effectIndex]) {
 		publisher, delayed, ok := lowerDelayedTargetSacrifice(effectIndex, ctx, sequence)
@@ -3140,7 +3169,7 @@ func lowerDelayedSequenceClause(
 		sequence[len(sequence)-1].Primitive = publisher
 		return delayed, true, false
 	}
-	if publisher, grant, ok := lowerSequentialReferencedKeywordGrant(effectIndex, ctx, sequence); ok {
+	if publisher, grant, ok := lowerSequentialReferencedKeywordGrant(effectIndex, ctx, sequence, publisherGated); ok {
 		sequence[len(sequence)-1].Primitive = publisher
 		return grant, true, false
 	}
@@ -3693,11 +3722,27 @@ func sequentialReferencedKeywordGrantDuration(duration compiler.DurationKind) (g
 // capture. The grant lasts permanently (no duration), until end of turn, or
 // until the controller's next turn per sequentialReferencedKeywordGrantDuration.
 // It returns the rewritten publishing primitive and the grant content, or false
-// to fail closed so the caller lowers the clause normally.
+// to decline the linked-capture lowering so the caller lowers the clause
+// normally. It declines when the immediately preceding publishing instruction is
+// itself gated by a per-effect condition (publisherGated): a gated publisher is
+// skipped whenever its condition does not hold, so its linked key is never
+// recorded and this grant's linked-object reference would resolve to nothing.
+// That is exactly the mutually-exclusive "If it's your turn, ... gains trample.
+// Otherwise, it gains first strike." shape (Stolen Vitality, Rapier Wit), where
+// the else branch would chain off the "your turn" branch it can never co-occur
+// with. Declining routes the clause through normal reference lowering, which for
+// a plain targeted subject binds the target permanent directly (correct — the
+// same permanent the linked key would have captured) and otherwise fails the
+// clause closed. Only a created/reanimated subject ("it" naming a freshly made
+// object that a plain target reference cannot denote) would bind the wrong
+// permanent through the fallback; no such created-object subject appears in a
+// two-branch publisher-gated shape in the corpus, so every generated card that
+// reaches this decline binds correctly.
 func lowerSequentialReferencedKeywordGrant(
 	effectIndex int,
 	ctx contentCtx,
 	sequence []game.Instruction,
+	publisherGated bool,
 ) (game.Primitive, game.AbilityContent, bool) {
 	// Invariant: ctx is the contextForEffect-narrowed per-clause effectAbility
 	// built at lowerOrderedEffectSequence and threaded through
@@ -3707,6 +3752,7 @@ func lowerSequentialReferencedKeywordGrant(
 		panic(fmt.Sprintf("lowerSequentialReferencedKeywordGrant: expected a single effect, got %d", len(ctx.content.Effects)))
 	}
 	if effectIndex == 0 ||
+		publisherGated ||
 		len(sequence) != effectIndex ||
 		ctx.optional ||
 		len(ctx.content.Keywords) == 0 ||
