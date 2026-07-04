@@ -788,6 +788,16 @@ type RuleEffect struct {
 	// RuleEffectCantAttack unconditional. It is unused for every other kind.
 	AttackDefenderControlsSelection Selection
 
+	// AttackDefenderIsMonarch turns a RuleEffectCantAttack restriction into a
+	// conditional "can't attack unless defending player is the monarch" permission
+	// gate ("This creature can't attack unless defending player is the monarch.",
+	// Crown-Hunter Hireling). When true the affected creature may attack a
+	// defending player (or a planeswalker/battle whose controller is that player)
+	// only if that player currently holds the monarch designation; otherwise the
+	// attack is prohibited. It is false for every other kind and is mutually
+	// exclusive with a non-empty AttackDefenderControlsSelection.
+	AttackDefenderIsMonarch bool
+
 	// AffectedPlayerRef binds a group-scoped rule effect's affected permanents to
 	// a specific player chosen at resolution rather than to the AffectedController
 	// relation, expressing "each creature <a chosen target player> controls"

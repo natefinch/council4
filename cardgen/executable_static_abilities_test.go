@@ -369,6 +369,35 @@ func TestGenerateExecutableCardSourceConditionalCannotAttack(t *testing.T) {
 	}
 }
 
+// TestGenerateExecutableCardSourceConditionalCannotAttackMonarch verifies the
+// "can't attack unless defending player is the monarch" designation guard
+// (Crown-Hunter Hireling) lowers onto the AttackDefenderIsMonarch rule-effect
+// flag, the designation counterpart of the defender-controls selection guard.
+func TestGenerateExecutableCardSourceConditionalCannotAttackMonarch(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Crown Hunter Bear",
+		Layout:     "normal",
+		TypeLine:   "Creature — Bear",
+		OracleText: "This creature can't attack unless defending player is the monarch.",
+		Power:      new("3"),
+		Toughness:  new("2"),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "c")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "Kind:                    game.RuleEffectCantAttack") {
+		t.Fatalf("source missing can't-attack rule effect:\n%s", source)
+	}
+	if !strings.Contains(source, "AttackDefenderIsMonarch: true,") {
+		t.Fatalf("source missing defender-is-monarch flag:\n%s", source)
+	}
+}
+
 func TestGenerateExecutableCardSourceRejectsConditionalCannotAttackUnsupportedSelection(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

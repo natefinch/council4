@@ -757,6 +757,9 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 		}
 		fields = append(fields, fmt.Sprintf("AttackDefenderControlsSelection: %s,", selection))
 	}
+	if effect.AttackDefenderIsMonarch {
+		fields = append(fields, "AttackDefenderIsMonarch: true,")
+	}
 	if effect.BlockedSource {
 		fields = append(fields, "BlockedSource: true,")
 	}

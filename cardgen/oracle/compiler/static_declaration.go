@@ -1475,7 +1475,11 @@ func staticRuleGuardCondition(ability CompiledAbility, node parser.StaticRuleSyn
 		}
 		return condition, true
 	case StaticRuleCantAttack:
-		if condition.Predicate != ConditionPredicateDefendingPlayerControls || !condition.Negated {
+		if !condition.Negated {
+			return nil, false
+		}
+		if condition.Predicate != ConditionPredicateDefendingPlayerControls &&
+			condition.Predicate != ConditionPredicateDefendingPlayerIsMonarch {
 			return nil, false
 		}
 		return condition, true

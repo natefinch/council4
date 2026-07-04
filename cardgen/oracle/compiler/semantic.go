@@ -800,6 +800,13 @@ const (
 	// the monarch" (Queen Marchesa). It is a live game-state predicate with no
 	// clause parameters.
 	ConditionPredicateAnOpponentIsMonarch
+	// ConditionPredicateDefendingPlayerIsMonarch is satisfied when the defending
+	// player of an attack currently holds the monarch (CR 720), as in "can't
+	// attack unless defending player is the monarch" (Crown-Hunter Hireling). Like
+	// ConditionPredicateDefendingPlayerControls, it is only meaningful as the guard
+	// on a can't-attack static rule, where the defending player is resolved per
+	// attack.
+	ConditionPredicateDefendingPlayerIsMonarch
 	// ConditionPredicateControllerHasInitiative is satisfied when the context
 	// controller has the initiative (CR 720). It is a live single-player
 	// game-state predicate with no clause parameters.
