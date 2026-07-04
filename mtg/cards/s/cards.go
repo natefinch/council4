@@ -86,6 +86,7 @@ var Cards = []*game.CardDef{
 	ShedWeakness,
 	ShelteredByGhosts,
 	ShieldOfTheAges,
+	ShepherdOfTheClouds,
 	ShieldOfTheOversoul,
 	ShieldOfTheRighteous,
 	ShieldSphere,

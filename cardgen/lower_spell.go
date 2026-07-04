@@ -1594,6 +1594,24 @@ func lowerReferencedPermanentEffect(ctx contentCtx) (game.AbilityContent, bool) 
 	return game.Mode{Sequence: []game.Instruction{{Primitive: primitive}}}.Ability(), true
 }
 
+// backReferencedGraveyardCardReference maps a singular back-reference ("that
+// permanent card", "it") to the runtime card binding a graveyard-return
+// instruction reads. It supports the target, source, and event bindings the
+// referenced-permanent effects already admit; any other binding fails closed.
+func backReferencedGraveyardCardReference(reference compiler.CompiledReference) (game.CardReference, bool) {
+	switch reference.Binding {
+	case compiler.ReferenceBindingTarget:
+		return game.CardReference{Kind: game.CardReferenceTarget}, true
+	case compiler.ReferenceBindingSource:
+		return game.CardReference{Kind: game.CardReferenceSource}, true
+	case compiler.ReferenceBindingEventPermanent,
+		compiler.ReferenceBindingEventRelatedPermanent:
+		return game.CardReference{Kind: game.CardReferenceEvent}, true
+	default:
+		return game.CardReference{}, false
+	}
+}
+
 // lowerDealDamageSpell dispatches a single deal-damage effect to the matching
 // damage lowerer, trying the more specific shapes (divided, inherited/source
 // power, "each of N targets") before falling back to group and fixed damage so
@@ -1691,7 +1709,53 @@ func lowerReturnSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) 
 	if content, ok := lowerSpellBounce(ctx); ok {
 		return content, nil
 	}
+	if content, ok := lowerBackReferencedReanimation(ctx); ok {
+		return content, nil
+	}
 	return lowerFixedBounceSpell(ctx)
+}
+
+// lowerBackReferencedReanimation lowers a no-target "return that permanent card
+// to the battlefield" whose subject is a singular back-reference to a graveyard
+// card the surrounding sequence established (Court of Ardenvale's monarch
+// escalation: "... return target permanent card ... to your hand. If you're the
+// monarch, return that permanent card to the battlefield instead."). The trailing
+// "instead" demotes the escalated clause to inexact, so exactness is not required
+// here; every structural slot other than the lone back-reference must be empty,
+// and only the battlefield destination reanimates.
+func lowerBackReferencedReanimation(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 1 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.References) != 1 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if effect.Kind != compiler.EffectReturn ||
+		effect.Negated ||
+		effect.ToZone != zone.Battlefield ||
+		effect.Context != parser.EffectContextController {
+		return game.AbilityContent{}, false
+	}
+	reference := ctx.content.References[0]
+	if reference.Kind != compiler.ReferenceThatObject {
+		return game.AbilityContent{}, false
+	}
+	card, ok := backReferencedGraveyardCardReference(reference)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	instruction, ok := graveyardReturnInstruction(card, graveyardReturnDestination{
+		Zone:             zone.Battlefield,
+		EntryTapped:      effect.EntersTapped,
+		UnderYourControl: effect.UnderYourControl,
+	})
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{Sequence: []game.Instruction{instruction}}.Ability(), true
 }
 
 func lowerImmediateSingleEffectSpell(

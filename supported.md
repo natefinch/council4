@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,855 of 32,501 cards eligible for paper support (51.9%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,858 of 32,501 cards eligible for paper support (51.9%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2901,6 +2901,7 @@ Council4 currently supports **16,855 of 32,501 cards eligible for paper support 
 - Court Archers
 - Court Cleric
 - Court Homunculus
+- Court of Ardenvale
 - Court of Bounty
 - Court of Embereth
 - Court of Garenbrig
@@ -3722,6 +3723,7 @@ Council4 currently supports **16,855 of 32,501 cards eligible for paper support 
 - Dockside Chef
 - Dockworker Drone
 - Doctor Doom, King of Latveria
+- Doctor Jane Foster
 - Doctor Spectrum
 - Doctor Strange, Surgeon
 - Dog
@@ -12594,6 +12596,7 @@ Council4 currently supports **16,855 of 32,501 cards eligible for paper support 
 - Sheoldred, the Apocalypse
 - Sheoldred, Whispering One
 - Shepherd of Rot
+- Shepherd of the Clouds
 - Shepherd of the Flock // Usher to Safety
 - Shepherd of the Lost
 - Shepherding Spirits
