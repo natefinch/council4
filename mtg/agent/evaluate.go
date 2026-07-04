@@ -21,8 +21,13 @@ const (
 
 	// evalCardInHand values a card in hand. Card advantage is the dominant
 	// long-game resource in multiplayer Commander (§4.1: you fall ~3 cards behind
-	// the table each cycle), so a held card is worth about a small creature.
-	evalCardInHand = 4.0
+	// the table each cycle), so raw card count matters — but a card in hand is
+	// worth strictly LESS than the permanent it becomes once cast: it cannot yet
+	// attack, block, tap for mana, or pressure the table, and it costs a turn of
+	// tempo to deploy. Valuing it below an average creature's board value (a 3/3 is
+	// 4.0) is what makes one-ply search deploy its hand and develop a board instead
+	// of hoarding cards and passing every turn (which stalls games to a draw).
+	evalCardInHand = 2.0
 	// evalLifePerPoint values one life point. Life is a real but shallow resource
 	// (§6, W_LIFE low), so a full 40 life contributes about one creature.
 	evalLifePerPoint = 0.1

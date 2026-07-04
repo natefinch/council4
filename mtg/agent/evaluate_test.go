@@ -83,6 +83,25 @@ func TestEvaluateRewardsLife(t *testing.T) {
 	}
 }
 
+func TestEvaluateDeployingACreatureBeatsHoardingIt(t *testing.T) {
+	// A creature is worth more on the battlefield than in hand: it can attack,
+	// block, tap, and pressure the table, where a held card only threatens to. If a
+	// card in hand were valued as high as the creature it becomes, one-ply search
+	// would hoard its hand and never develop a board — measured to make the search
+	// agent lose every game to GenericStrategy. So deploying must raise the score.
+	inHand := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addObservedHandCard(inHand, game.Player1, creatureCardDef("Bear", 2, 2))
+
+	onBoard := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addObservedPermanent(onBoard, game.Player1, creatureCardDef("Bear", 2, 2))
+
+	if evalOf(onBoard, game.Player1) <= evalOf(inHand, game.Player1) {
+		t.Fatalf("a 2/2 on the battlefield (%v) did not beat the same 2/2 in hand (%v); "+
+			"a card in hand must be worth less than the creature it becomes",
+			evalOf(onBoard, game.Player1), evalOf(inHand, game.Player1))
+	}
+}
+
 func TestEvaluateWinWhenOpponentsEliminated(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	for _, seat := range []game.PlayerID{game.Player2, game.Player3, game.Player4} {
