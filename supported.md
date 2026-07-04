@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,859 of 32,501 cards eligible for paper support (51.9%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,860 of 32,501 cards eligible for paper support (51.9%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -3269,6 +3269,7 @@ Council4 currently supports **16,859 of 32,501 cards eligible for paper support 
 - Dawnbringer Cleric
 - Dawnfeather Eagle
 - Dawnfluke
+- Dawnglade Regent
 - Dawnhart Disciple
 - Dawnhart Geist
 - Dawnhart Mentor

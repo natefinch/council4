@@ -3179,15 +3179,36 @@ func recognizeStaticKeywordGrantDeclarations(ability CompiledAbility, statics []
 				// grant. Order of the Stars and Voice of All rely on this path.
 				return nil, false
 			}
-		} else if condition != nil && !condition.SourceInGraveyard {
+		} else if condition != nil && !condition.SourceInGraveyard &&
+			!isLivePlayerDesignationPredicate(condition.Predicate) {
 			// A group anthem ("creatures you control have ...") may carry a condition
 			// only when the static ability functions from the graveyard, as on the
 			// Incarnation cycle ("As long as this card is in your graveyard and you
-			// control a <land>, ..."). Other conditioned group anthems fail closed.
+			// control a <land>, ..."), or when the condition is a live player
+			// designation the runtime re-evaluates each time continuous effects are
+			// recomputed ("As long as you're the monarch, permanents you control have
+			// hexproof.", Dawnglade Regent). Other conditioned group anthems fail
+			// closed.
 			return nil, false
 		}
 	}
 	return []StaticDeclaration{staticKeywordGrantDeclaration(ability.Span, group.Group, condition, ability.Content.Keywords)}, true
+}
+
+// isLivePlayerDesignationPredicate reports whether the predicate tests a live
+// single-controller player designation (monarch, initiative, city's blessing)
+// that the runtime re-evaluates on every continuous-effect recomputation, making
+// it safe to gate a group anthem that turns on and off as the designation
+// changes.
+func isLivePlayerDesignationPredicate(predicate ConditionPredicate) bool {
+	switch predicate {
+	case ConditionPredicateControllerIsMonarch,
+		ConditionPredicateControllerHasInitiative,
+		ConditionPredicateControllerHasCityBlessing:
+		return true
+	default:
+		return false
+	}
 }
 
 // staticGrantKeywordsAllKnownProtection reports whether keywords is a non-empty

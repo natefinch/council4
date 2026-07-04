@@ -383,15 +383,19 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 			compiler.ConditionPredicateControllerHasCityBlessing:
 			// Player-designation predicates ("if you're the monarch", "if an
 			// opponent is the monarch", "if you have the initiative", "if you
-			// have the city's blessing") gate both intervening triggers and
-			// per-effect sequence clauses, the latter powering the
-			// monarch/initiative "instead" escalation cycles ("At the beginning
-			// of your upkeep, <base>. If you're the monarch, <escalated>
-			// instead.", the Court cycle). The runtime condition evaluator
-			// resolves them from the relevant players' designation flags,
-			// including under negation, so the effect-gate form is safe.
+			// have the city's blessing") gate intervening triggers, per-effect
+			// sequence clauses (the monarch/initiative "instead" escalation
+			// cycles, the Court cycle), and continuous static abilities ("as long
+			// as you're the monarch, permanents you control have hexproof.",
+			// Dawnglade Regent). The runtime condition evaluator resolves them
+			// from the relevant players' designation flags, including under
+			// negation, and re-evaluates a static ability's condition each time
+			// continuous effects are recomputed
+			// (staticAbilitySourceContinuousEffects), so the granted effect turns
+			// on and off as the designation changes.
 			return ctx == conditionContextInterveningTrigger ||
-				ctx == conditionContextEffectGate
+				ctx == conditionContextEffectGate ||
+				ctx == conditionContextStatic
 		case compiler.ConditionPredicateEventSubjectNameUnique,
 			compiler.ConditionPredicateSourceTributeNotPaid,
 			compiler.ConditionPredicateEventSpellManaSpentToCastAtLeast,
