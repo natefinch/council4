@@ -93,13 +93,44 @@ func agentFactory(profile string, configs [game.NumPlayers]game.PlayerConfig) (s
 func seatedAgents(configs [game.NumPlayers]game.PlayerConfig, wrap func(agent.GenericStrategy) rules.PlayerAgent) [game.NumPlayers]rules.PlayerAgent {
 	var seated [game.NumPlayers]rules.PlayerAgent
 	for i := range configs {
-		profile := agent.AnalyzeDeck(configs[i])
-		seated[i] = wrap(agent.GenericStrategy{
-			Profile:     &profile,
-			Personality: agent.DeckPersonality(profile),
-		})
+		seated[i] = wrap(deckAwareStrategy(configs[i]))
 	}
 	return seated
+}
+
+// deckAwareStrategy builds the deck-aware GenericStrategy for one seat's deck:
+// it analyzes the deck once and carries the resulting profile and
+// archetype-derived personality, so the strategy plays to that deck's game plan.
+func deckAwareStrategy(config game.PlayerConfig) agent.GenericStrategy {
+	profile := agent.AnalyzeDeck(config)
+	return agent.GenericStrategy{
+		Profile:     &profile,
+		Personality: agent.DeckPersonality(profile),
+	}
+}
+
+// seatAgentFor returns a sim.SeatAgent that builds one seat's agent for the given
+// profile, using the seat's own deck for deck-aware profiles. It backs the
+// head-to-head matchup harness, where different seats run different agents.
+func seatAgentFor(profile string, configs [game.NumPlayers]game.PlayerConfig) (sim.SeatAgent, error) {
+	switch profile {
+	case "", "firstlegal":
+		return func(uint64, game.PlayerID) rules.PlayerAgent { return agent.FirstLegal{} }, nil
+	case "generic":
+		return func(_ uint64, seat game.PlayerID) rules.PlayerAgent {
+			return agent.Agent{Strategy: deckAwareStrategy(configs[seat])}
+		}, nil
+	case "search":
+		return func(_ uint64, seat game.PlayerID) rules.PlayerAgent {
+			return agent.Searcher{Rollout: deckAwareStrategy(configs[seat]), Budget: 8}
+		}, nil
+	case "random":
+		return func(gameSeed uint64, seat game.PlayerID) rules.PlayerAgent {
+			return agent.NewRandomAgent(rand.New(rand.NewPCG(gameSeed, gameSeed^seatStreams[seat])))
+		}, nil
+	default:
+		return nil, fmt.Errorf("agent profile must be one of %v", agentProfiles)
+	}
 }
 
 // runDeckSimulation loads the four decklists and plays a multi-game simulation,
