@@ -171,6 +171,7 @@ var Cards = []*game.CardDef{
 	CytospawnShambler,
 	CleanupCrew,
 	ColiseumBehemoth,
+	CourtOfArdenvale,
 	CourtOfBounty,
 	CourtOfEmbereth,
 	CourtOfIre,
