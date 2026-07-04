@@ -70,6 +70,7 @@ var simplePredicateMap = map[parser.ConditionPredicateKind]ConditionPredicate{
 	parser.ConditionPredicateSubjectSharesCreatureTypeWithSource:              ConditionPredicateSubjectSharesCreatureTypeWithSource,
 	parser.ConditionPredicateControllerIsMonarch:                              ConditionPredicateControllerIsMonarch,
 	parser.ConditionPredicateAnOpponentIsMonarch:                              ConditionPredicateAnOpponentIsMonarch,
+	parser.ConditionPredicateDefendingPlayerIsMonarch:                         ConditionPredicateDefendingPlayerIsMonarch,
 	parser.ConditionPredicateControllerHasInitiative:                          ConditionPredicateControllerHasInitiative,
 	parser.ConditionPredicateControllerHasCityBlessing:                        ConditionPredicateControllerHasCityBlessing,
 	parser.ConditionPredicateControllerTurn:                                   ConditionPredicateControllerTurn,

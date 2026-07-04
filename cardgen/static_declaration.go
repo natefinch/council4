@@ -59,11 +59,13 @@ func lowerStaticDeclarations(
 			)
 		}
 		if declaration.Condition != nil && conditionSpan == (shared.Span{}) {
-			if declaration.Condition.Predicate == compiler.ConditionPredicateDefendingPlayerControls {
-				// "unless defending player controls ...": a per-attack guard that
-				// resolves against the defending player's board when an attack is
-				// declared, so it is threaded onto the rule effect below rather than
-				// gating the static ability on or off.
+			if declaration.Condition.Predicate == compiler.ConditionPredicateDefendingPlayerControls ||
+				declaration.Condition.Predicate == compiler.ConditionPredicateDefendingPlayerIsMonarch {
+				// "unless defending player controls ..." / "unless defending player
+				// is the monarch": a per-attack guard that resolves against the
+				// defending player when an attack is declared, so it is threaded
+				// onto the rule effect below rather than gating the static ability
+				// on or off.
 				conditionSpan = declaration.Condition.Span
 			} else {
 				if declaration.Condition.SourceInGraveyard {
@@ -818,6 +820,7 @@ func appendStaticRuleDeclaration(body *game.StaticAbility, declaration compiler.
 	}
 	body.ZoneOfFunction = functionZone
 	var defenderControlsSelection game.Selection
+	defenderIsMonarch := false
 	if declaration.Condition != nil &&
 		declaration.Condition.Predicate == compiler.ConditionPredicateDefendingPlayerControls {
 		if declaration.Rule.Kind != compiler.StaticRuleCantAttack {
@@ -829,6 +832,13 @@ func appendStaticRuleDeclaration(body *game.StaticAbility, declaration compiler.
 		}
 		defenderControlsSelection = selection
 	}
+	if declaration.Condition != nil &&
+		declaration.Condition.Predicate == compiler.ConditionPredicateDefendingPlayerIsMonarch {
+		if declaration.Rule.Kind != compiler.StaticRuleCantAttack {
+			return false
+		}
+		defenderIsMonarch = true
+	}
 	for i := range effects {
 		effects[i].AffectedSource = affectedSource
 		effects[i].AffectedAttached = affectedAttached
@@ -838,6 +848,7 @@ func appendStaticRuleDeclaration(body *game.StaticAbility, declaration compiler.
 		effects[i].BlockedSource = blockedSource
 		effects[i].BlockedSelection = blockedSelection
 		effects[i].AttackDefenderControlsSelection = defenderControlsSelection
+		effects[i].AttackDefenderIsMonarch = defenderIsMonarch
 		body.RuleEffects = append(body.RuleEffects, effects[i])
 	}
 	return true

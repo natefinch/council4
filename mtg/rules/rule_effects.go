@@ -632,6 +632,18 @@ func ruleEffectProhibitsAttack(g *game.Game, attacker *game.Permanent, target *g
 				continue
 			}
 		}
+		if effect.AttackDefenderIsMonarch {
+			// "Can't attack unless defending player is the monarch": the attacker
+			// may attack only a defending player who currently holds the monarch
+			// designation. With no specific target the restriction cannot rule out
+			// every defender, so the attacker remains able to attack someone.
+			if target == nil {
+				continue
+			}
+			if player, ok := playerByID(g, target.Player); ok && player.IsMonarch {
+				continue
+			}
+		}
 		return true
 	}
 	return false

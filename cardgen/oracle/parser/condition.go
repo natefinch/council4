@@ -103,6 +103,7 @@ const (
 	ConditionPredicateSubjectSharesCreatureTypeWithSource              ConditionPredicateKind = "ConditionPredicateSubjectSharesCreatureTypeWithSource"
 	ConditionPredicateControllerIsMonarch                              ConditionPredicateKind = "ConditionPredicateControllerIsMonarch"
 	ConditionPredicateAnOpponentIsMonarch                              ConditionPredicateKind = "ConditionPredicateAnOpponentIsMonarch"
+	ConditionPredicateDefendingPlayerIsMonarch                         ConditionPredicateKind = "ConditionPredicateDefendingPlayerIsMonarch"
 	ConditionPredicateControllerHasInitiative                          ConditionPredicateKind = "ConditionPredicateControllerHasInitiative"
 	ConditionPredicateControllerHasCityBlessing                        ConditionPredicateKind = "ConditionPredicateControllerHasCityBlessing"
 	ConditionPredicateControllerTurn                                   ConditionPredicateKind = "ConditionPredicateControllerTurn"
@@ -2046,6 +2047,8 @@ func recognizeControllerDesignationCondition(body []shared.Token, _ Atoms) (Cond
 		return ConditionClause{Predicate: ConditionPredicateControllerIsMonarch}, true
 	case tokenWordsEqual(body, "an", "opponent", "is", "the", "monarch"):
 		return ConditionClause{Predicate: ConditionPredicateAnOpponentIsMonarch}, true
+	case tokenWordsEqual(body, "defending", "player", "is", "the", "monarch"):
+		return ConditionClause{Predicate: ConditionPredicateDefendingPlayerIsMonarch}, true
 	case tokenWordsEqual(body, "you", "have", "the", "initiative"):
 		return ConditionClause{Predicate: ConditionPredicateControllerHasInitiative}, true
 	case tokenWordsEqual(body, "you", "have", "the", "city's", "blessing"):

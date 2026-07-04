@@ -147,6 +147,7 @@ var Cards = []*game.CardDef{
 	CroakingCounterpart,
 	CrosisSCatacombs,
 	CrosstownCourier,
+	CrownHunterHireling,
 	CrownOfFlames,
 	CruelRevival,
 	CrumblingAshes,
