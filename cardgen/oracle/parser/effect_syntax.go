@@ -2053,15 +2053,36 @@ func parseDrawEmptyLibraryWinReplacement(sentence Sentence, tokens []shared.Toke
 
 // parsePunisherEachLoseLifeEffect recognizes the "punisher" family ("<group>
 // punisherUnlessClauseAt reports whether tokens[i:] begins the punisher idiom
-// "unless that player sacrifices ... [or discards ...]". This per-player
-// alternative-cost clause is consumed wholesale by parsePunisherEachLoseLifeEffect
-// and must not be parsed as a game-state condition. It is distinguished from the
-// "unless that player pays ..." payment idiom by the sacrifice/discard verb.
+// "unless that player sacrifices ... [or discards ...]" or its "unless they
+// sacrifice/discard ..." plural-pronoun variant. This per-player alternative-cost
+// clause is consumed wholesale by parsePunisherEachLoseLifeEffect and must not be
+// parsed as a game-state condition. It is distinguished from the "unless that
+// player pays ..." payment idiom by the sacrifice/discard verb.
 func punisherUnlessClauseAt(tokens []shared.Token, i int) bool {
-	if !effectWordsAt(tokens, i, "unless", "that", "player") || i+3 >= len(tokens) {
-		return false
+	if rest, ok := cutPunisherUnlessSubject(tokens[i:]); ok {
+		return len(rest) > 0 &&
+			(equalWord(rest[0], "sacrifices") || equalWord(rest[0], "sacrifice") ||
+				equalWord(rest[0], "discards") || equalWord(rest[0], "discard"))
 	}
-	return equalWord(tokens[i+3], "sacrifices") || equalWord(tokens[i+3], "discards")
+	return false
+}
+
+// cutPunisherUnlessSubject consumes the "unless that player" / "unless they"
+// prefix of a punisher avoidance clause, returning the tokens after the subject.
+// The "that player" form takes singular verbs (sacrifices/discards); the "they"
+// form takes plural verbs (sacrifice/discard).
+func cutPunisherUnlessSubject(tokens []shared.Token) ([]shared.Token, bool) {
+	if len(tokens) == 0 || !equalWord(tokens[0], "unless") {
+		return nil, false
+	}
+	rest := tokens[1:]
+	if len(rest) >= 2 && equalWord(rest[0], "that") && equalWord(rest[1], "player") {
+		return rest[2:], true
+	}
+	if len(rest) >= 1 && equalWord(rest[0], "they") {
+		return rest[1:], true
+	}
+	return nil, false
 }
 
 // loses N life unless that player sacrifices a <permanent> [of their choice]
@@ -2090,13 +2111,10 @@ func parsePunisherEachLoseLifeEffect(sentence Sentence, tokens []shared.Token, a
 		return nil, false
 	}
 	rest := tokens[verbIndex+3:]
-	if len(rest) < 4 ||
-		!equalWord(rest[0], "unless") ||
-		!equalWord(rest[1], "that") ||
-		!equalWord(rest[2], "player") {
+	options, ok := cutPunisherUnlessSubject(rest)
+	if !ok || len(options) < 1 {
 		return nil, false
 	}
-	options := rest[3:]
 	if n := len(options); n > 0 && options[n-1].Kind == shared.Period {
 		options = options[:n-1]
 	}

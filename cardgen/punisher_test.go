@@ -62,3 +62,33 @@ func TestGenerateExecutableCardSourcePunisherDiscardOnly(t *testing.T) {
 		t.Fatalf("discard-only punisher should not set AllowSacrifice:\n%s", source)
 	}
 }
+
+// TestGenerateExecutableCardSourcePunisherTheyPronoun verifies the punisher
+// avoidance clause accepts the "they" plural pronoun ("... unless they discard a
+// card" / "... unless they sacrifice ...") in addition to the singular "that
+// player" form (Bellowing Mauler, Court of Ambition's base clause).
+func TestGenerateExecutableCardSourcePunisherTheyPronoun(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Punisher They Pronoun",
+		Layout:     "normal",
+		ManaCost:   "{2}{B}",
+		TypeLine:   "Sorcery",
+		OracleText: "Each opponent loses 2 life unless they discard a card.",
+	}, "p")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, want := range []string{
+		"game.PunisherEachLoseLife{",
+		"game.Fixed(2)",
+		"AllowDiscard:",
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("generated source missing %q:\n%s", want, source)
+		}
+	}
+}
