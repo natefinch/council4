@@ -41,6 +41,16 @@ const (
 	// evalCommanderOnBoard rewards having the commander in play, the recurring
 	// engine or threat most Commander decks are built around (§1.2).
 	evalCommanderOnBoard = 4.0
+	// evalOpponentEliminated rewards each opponent already removed from the game.
+	// Eliminating a player is the largest swing in a free-for-all: their board,
+	// blockers, interaction, and future threats vanish, and the position moves one
+	// seat closer to the win (§2, the goal is to be the last player standing). It
+	// is deliberately large — a strong board's worth — so search takes a line that
+	// eliminates a player, including a lethal attack on someone who is NOT the
+	// current leader, which the "my power minus the strongest opponent" core would
+	// otherwise barely reward (killing a non-leader leaves the max unchanged). That
+	// is what turns a durdling board stall into a closed-out game.
+	evalOpponentEliminated = 20.0
 )
 
 // Evaluate returns a position value for obs.Player: higher is a better position
@@ -48,10 +58,12 @@ const (
 // principled, position-level companion to the per-action heuristics — a
 // replacement target for coarse action constants.
 //
-// The value is that player's power minus the strongest opponent's power, so it
-// rises when the agent develops (board, mana, cards, life) and when the table's
-// leader is set back, and falls when an opponent pulls ahead. Winning the game is
-// evalWin and being eliminated is evalLoss, dominating every heuristic term.
+// The value is that player's power minus the strongest opponent's power, plus a
+// reward for every opponent already eliminated, so it rises when the agent
+// develops (board, mana, cards, life), when the table's leader is set back, and
+// when a rival is removed from the game, and falls when an opponent pulls ahead.
+// Winning the game is evalWin and being eliminated is evalLoss, dominating every
+// heuristic term.
 //
 // Evaluate reads only the observation, so it respects fog of war: opponents'
 // board, life, and hand sizes are public, and their hidden hand contents are
@@ -65,9 +77,14 @@ func Evaluate(obs rules.PlayerObservation) float64 {
 
 	strongestOpponent := 0.0
 	livingOpponents := 0
+	eliminatedOpponents := 0
 	players := obs.Players()
 	for i := range players {
-		if players[i].ID == me || players[i].Eliminated {
+		if players[i].ID == me {
+			continue
+		}
+		if players[i].Eliminated {
+			eliminatedOpponents++
 			continue
 		}
 		livingOpponents++
@@ -78,7 +95,7 @@ func Evaluate(obs rules.PlayerObservation) float64 {
 	if livingOpponents == 0 {
 		return evalWin
 	}
-	return playerPower(obs, me) - strongestOpponent
+	return playerPower(obs, me) - strongestOpponent + evalOpponentEliminated*float64(eliminatedOpponents)
 }
 
 // playerPower scores how well positioned one player is, aggregating board
