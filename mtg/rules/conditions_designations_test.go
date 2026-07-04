@@ -76,3 +76,30 @@ func TestConditionAnOpponentIsMonarch(t *testing.T) {
 		t.Fatal("condition held when the controller themselves was the monarch")
 	}
 }
+
+// TestConditionControllerWasMonarchAtTurnStart exercises the turn-start monarch
+// snapshot predicate "if you were the monarch as the turn began" (Knights of the
+// Black Rose). It reads Turn.MonarchAtTurnStart, not the live designation, so it
+// holds for the player recorded as the monarch when the turn advanced even after
+// the crown changes hands mid-turn.
+func TestConditionControllerWasMonarchAtTurnStart(t *testing.T) {
+	condition := opt.Val(game.Condition{ControllerWasMonarchAtTurnStart: true})
+
+	// No snapshot: the condition holds for nobody.
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	if conditionSatisfied(g, conditionContext{controller: game.Player1}, condition) {
+		t.Fatal("condition held with no turn-start monarch snapshot")
+	}
+
+	// Player1 was the monarch as the turn began; the crown then passed to Player2.
+	g = game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	g.Turn.MonarchAtTurnStart = opt.Val(game.Player1)
+	g.Players[game.Player2].IsMonarch = true
+	if !conditionSatisfied(g, conditionContext{controller: game.Player1}, condition) {
+		t.Fatal("condition did not hold for the player who was the monarch at turn start")
+	}
+	// The current (mid-turn) monarch was not the monarch at turn start.
+	if conditionSatisfied(g, conditionContext{controller: game.Player2}, condition) {
+		t.Fatal("condition held for the current monarch who was not the turn-start monarch")
+	}
+}

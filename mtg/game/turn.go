@@ -1,5 +1,7 @@
 package game
 
+import "github.com/natefinch/council4/opt"
+
 // Phase represents one of the five phases of a Magic turn (CR 500).
 type Phase int
 
@@ -154,6 +156,12 @@ type TurnState struct {
 	// of the turn" gate (Raiyuu, Storm's Edge; Karlach, Fury of Avernus), which
 	// holds while the count is 1. It resets to zero at the start of each turn.
 	CombatPhasesThisTurn int
+
+	// MonarchAtTurnStart records the monarch (CR 720) as the current turn began,
+	// snapshotted when the turn advances. It backs the "if you were the monarch as
+	// the turn began" intervening-if gate (Knights of the Black Rose). It is unset
+	// when no player was the monarch at the start of the turn.
+	MonarchAtTurnStart opt.V[PlayerID]
 }
 
 // CanPlayLand reports whether the active player can still play a land

@@ -226,3 +226,29 @@ func TestGenerateCityBlessingOnlyInterveningTriggerRenders(t *testing.T) {
 		t.Fatalf("source missing rendered city's-blessing predicate:\n%s", source)
 	}
 }
+
+// TestLowerControllerWasMonarchAtTurnStartCondition verifies the turn-start
+// monarch snapshot intervening-if "if you were the monarch as the turn began"
+// (Knights of the Black Rose) lowers onto the ControllerWasMonarchAtTurnStart
+// predicate on the become-monarch trigger's intervening condition.
+func TestLowerControllerWasMonarchAtTurnStartCondition(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Knight",
+		Layout:     "normal",
+		TypeLine:   "Creature — Knight",
+		OracleText: "Whenever an opponent becomes the monarch, if you were the monarch as the turn began, you draw a card.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+	}
+	cond := face.TriggeredAbilities[0].Trigger.InterveningCondition.Val
+	if !cond.ControllerWasMonarchAtTurnStart {
+		t.Fatalf("condition = %+v, want ControllerWasMonarchAtTurnStart", cond)
+	}
+	if cond.Negate {
+		t.Error("condition Negate = true, want false")
+	}
+}

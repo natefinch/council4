@@ -69,6 +69,7 @@ var simplePredicateMap = map[parser.ConditionPredicateKind]ConditionPredicate{
 	parser.ConditionPredicateControlsGreatestToughnessCreature:                ConditionPredicateControlsGreatestToughnessCreature,
 	parser.ConditionPredicateSubjectSharesCreatureTypeWithSource:              ConditionPredicateSubjectSharesCreatureTypeWithSource,
 	parser.ConditionPredicateControllerIsMonarch:                              ConditionPredicateControllerIsMonarch,
+	parser.ConditionPredicateControllerWasMonarchAtTurnStart:                  ConditionPredicateControllerWasMonarchAtTurnStart,
 	parser.ConditionPredicateAnOpponentIsMonarch:                              ConditionPredicateAnOpponentIsMonarch,
 	parser.ConditionPredicateDefendingPlayerIsMonarch:                         ConditionPredicateDefendingPlayerIsMonarch,
 	parser.ConditionPredicateControllerHasInitiative:                          ConditionPredicateControllerHasInitiative,

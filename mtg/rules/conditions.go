@@ -241,6 +241,10 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 		player, ok := playerByID(g, ctx.controller)
 		matches = matches && ok && player.IsMonarch
 	}
+	if cond.ControllerWasMonarchAtTurnStart {
+		matches = matches && g.Turn.MonarchAtTurnStart.Exists &&
+			g.Turn.MonarchAtTurnStart.Val == ctx.controller
+	}
 	if cond.AnOpponentIsMonarch {
 		matches = matches && anyAliveOpponentIsMonarch(g, ctx.controller)
 	}

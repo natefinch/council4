@@ -795,6 +795,12 @@ const (
 	// controller is the monarch (CR 720). It is a live single-player game-state
 	// predicate with no clause parameters.
 	ConditionPredicateControllerIsMonarch
+	// ConditionPredicateControllerWasMonarchAtTurnStart is satisfied when the
+	// context controller was the monarch (CR 720) as the current turn began, as in
+	// "if you were the monarch as the turn began" (Knights of the Black Rose). It
+	// reads the monarch snapshot taken when the turn advanced, not the live
+	// designation.
+	ConditionPredicateControllerWasMonarchAtTurnStart
 	// ConditionPredicateAnOpponentIsMonarch is satisfied when any of the context
 	// controller's opponents is the monarch (CR 720), as in "if an opponent is
 	// the monarch" (Queen Marchesa). It is a live game-state predicate with no

@@ -1,6 +1,21 @@
 package rules
 
-import "github.com/natefinch/council4/mtg/game"
+import (
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/opt"
+)
+
+// currentMonarch returns the player who currently holds the monarch designation
+// (CR 720), or an unset value when no player is the monarch. At most one player
+// is the monarch at a time.
+func currentMonarch(g *game.Game) opt.V[game.PlayerID] {
+	for i := range g.Players {
+		if g.Players[i].IsMonarch {
+			return opt.Val(game.PlayerID(i))
+		}
+	}
+	return opt.V[game.PlayerID]{}
+}
 
 // setMonarch makes playerID the monarch (CR 720.2). At most one player is the
 // monarch at a time, so any prior monarch loses the designation. It reports
