@@ -169,3 +169,27 @@ func TestSetMonarchEmitsBecameMonarchEvent(t *testing.T) {
 		t.Fatal("crown transfer did not emit EventBecameMonarch for the new monarch")
 	}
 }
+
+// TestAdvanceToNextTurnSnapshotsMonarch verifies advanceToNextTurn records the
+// current monarch into Turn.MonarchAtTurnStart, and leaves it unset when no
+// player holds the crown, backing the "if you were the monarch as the turn began"
+// gate (Knights of the Black Rose).
+func TestAdvanceToNextTurnSnapshotsMonarch(t *testing.T) {
+	t.Parallel()
+	engine := NewEngine(nil)
+
+	// No monarch: the snapshot is unset after the turn advances.
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine.advanceToNextTurn(g)
+	if g.Turn.MonarchAtTurnStart.Exists {
+		t.Fatalf("MonarchAtTurnStart = %+v, want unset with no monarch", g.Turn.MonarchAtTurnStart)
+	}
+
+	// Player2 holds the crown: the snapshot records Player2 when the turn advances.
+	g = game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	g.Players[game.Player2].IsMonarch = true
+	engine.advanceToNextTurn(g)
+	if !g.Turn.MonarchAtTurnStart.Exists || g.Turn.MonarchAtTurnStart.Val != game.Player2 {
+		t.Fatalf("MonarchAtTurnStart = %+v, want Player2", g.Turn.MonarchAtTurnStart)
+	}
+}

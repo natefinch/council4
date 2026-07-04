@@ -1003,6 +1003,10 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 		fields = append(fields, "ControllerIsMonarch: true,")
 		hasPredicate = true
 	}
+	if cond.ControllerWasMonarchAtTurnStart {
+		fields = append(fields, "ControllerWasMonarchAtTurnStart: true,")
+		hasPredicate = true
+	}
 	if cond.AnOpponentIsMonarch {
 		fields = append(fields, "AnOpponentIsMonarch: true,")
 		hasPredicate = true

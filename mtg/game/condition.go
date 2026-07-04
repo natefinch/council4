@@ -170,6 +170,13 @@ type Condition struct {
 	// monarch, ...". It reads the controller's live IsMonarch designation flag.
 	ControllerIsMonarch bool
 
+	// ControllerWasMonarchAtTurnStart is satisfied when the context controller was
+	// the monarch (CR 720) as the current turn began, as in "if you were the
+	// monarch as the turn began" (Knights of the Black Rose). It reads the monarch
+	// snapshot taken when the turn advanced (Turn.MonarchAtTurnStart), not the live
+	// designation.
+	ControllerWasMonarchAtTurnStart bool
+
 	// AnOpponentIsMonarch is satisfied when any of the context controller's
 	// opponents is the monarch (CR 720), as in "At the beginning of your upkeep,
 	// if an opponent is the monarch, ..." (Queen Marchesa). It reads the live
@@ -296,6 +303,7 @@ func (c *Condition) Empty() bool {
 		!c.ControllerControlsGreatestPowerCreature &&
 		!c.ControllerControlsGreatestToughnessCreature &&
 		!c.ControllerIsMonarch &&
+		!c.ControllerWasMonarchAtTurnStart &&
 		!c.AnOpponentIsMonarch &&
 		!c.ControllerHasInitiative &&
 		!c.ControllerHasCityBlessing &&

@@ -211,6 +211,8 @@ func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringC
 		result.ControllerControlsGreatestToughnessCreature = true
 	case compiler.ConditionPredicateControllerIsMonarch:
 		result.ControllerIsMonarch = true
+	case compiler.ConditionPredicateControllerWasMonarchAtTurnStart:
+		result.ControllerWasMonarchAtTurnStart = true
 	case compiler.ConditionPredicateAnOpponentIsMonarch:
 		result.AnOpponentIsMonarch = true
 	case compiler.ConditionPredicateControllerHasInitiative:
@@ -402,7 +404,13 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 			compiler.ConditionPredicateEventSpellManaSpentToCastAtMost,
 			compiler.ConditionPredicateTriggeringPlayerHandSizeAtMost,
 			compiler.ConditionPredicateTriggeringPlayerHandSizeAtLeast,
-			compiler.ConditionPredicateAttackersAttackingControllerAtLeast:
+			compiler.ConditionPredicateAttackersAttackingControllerAtLeast,
+			// "if you were the monarch as the turn began" reads a per-turn snapshot
+			// rather than the live designation, so it gates only intervening
+			// triggers (Knights of the Black Rose fires its "whenever an opponent
+			// becomes the monarch" trigger only if the controller held the crown as
+			// the turn began).
+			compiler.ConditionPredicateControllerWasMonarchAtTurnStart:
 			return ctx == conditionContextInterveningTrigger
 		case compiler.ConditionPredicateControllerControlsCommander:
 			return ctx == conditionContextInterveningTrigger || ctx == conditionContextStatic
