@@ -2837,6 +2837,12 @@ type EffectSyntax struct {
 	// are false for every other effect.
 	PunisherSacrifice bool `json:",omitempty"`
 	PunisherDiscard   bool `json:",omitempty"`
+	// PunisherDiscardCount is the number of cards the discard alternative of a
+	// punisher effect requires ("... unless they discard two cards.", Court of
+	// Ambition's monarch escalation). It is 1 for the plain "discard a card" form
+	// and only set above 1 for an explicit card count, so the common form stays
+	// unchanged downstream.
+	PunisherDiscardCount int `json:",omitempty"`
 	// RepeatBody holds the sub-effect(s) of an EffectRepeatProcess loop ("Repeat
 	// the following process X times. <body>"). It is nil for every other effect.
 	RepeatBody []EffectSyntax `json:",omitempty"`

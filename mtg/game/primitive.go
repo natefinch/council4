@@ -1104,6 +1104,12 @@ type PunisherEachLoseLife struct {
 	AllowSacrifice     bool
 	SacrificeSelection Selection
 	AllowDiscard       bool
+	// DiscardCount is the number of cards the discard alternative requires. Zero
+	// means the common "discard a card" form (one card); it is only set above 1
+	// for effects that demand more ("... unless they discard two cards." — Court
+	// of Ambition's monarch escalation), so the ubiquitous one-card form stays
+	// serialized identically.
+	DiscardCount int
 }
 
 // RepeatProcess resolves Body a number of times equal to Times ("Repeat the

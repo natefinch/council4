@@ -2123,15 +2123,16 @@ func parsePunisherEachLoseLifeEffect(sentence Sentence, tokens []shared.Token, a
 		return nil, false
 	}
 	effect := EffectSyntax{
-		Kind:       EffectPunisherLoseLife,
-		Context:    context,
-		Span:       shared.SpanOf(tokens),
-		VerbSpan:   tokens[verbIndex].Span,
-		ClauseSpan: shared.SpanOf(tokens),
-		Text:       sentence.Text,
-		Tokens:     append([]shared.Token(nil), tokens...),
-		Amount:     EffectAmountSyntax{Value: amount, Known: true, Span: tokens[verbIndex+1].Span},
-		Exact:      true,
+		Kind:        EffectPunisherLoseLife,
+		Context:     context,
+		Span:        shared.SpanOf(tokens),
+		VerbSpan:    tokens[verbIndex].Span,
+		ClauseSpan:  shared.SpanOf(tokens),
+		Text:        sentence.Text,
+		Tokens:      append([]shared.Token(nil), tokens...),
+		Amount:      EffectAmountSyntax{Value: amount, Known: true, Span: tokens[verbIndex+1].Span},
+		Exact:       true,
+		Replacement: parseEffectReplacement(tokens, atoms),
 	}
 	for _, segment := range segments {
 		if len(segment) == 0 {
@@ -2150,10 +2151,12 @@ func parsePunisherEachLoseLifeEffect(sentence Sentence, tokens []shared.Token, a
 			effect.PunisherSacrifice = true
 			effect.Selection = selection
 		case equalWord(segment[0], "discards") || equalWord(segment[0], "discard"):
-			if effect.PunisherDiscard || !punisherDiscardACard(segment[1:]) {
+			count, countOK := punisherDiscardCount(segment[1:], atoms)
+			if effect.PunisherDiscard || !countOK {
 				return nil, false
 			}
 			effect.PunisherDiscard = true
+			effect.PunisherDiscardCount = count
 		default:
 			return nil, false
 		}
@@ -2194,6 +2197,22 @@ func stripOfTheirChoice(tokens []shared.Token) []shared.Token {
 // punisher's discard alternative.
 func punisherDiscardACard(tokens []shared.Token) bool {
 	return len(tokens) == 2 && equalWord(tokens[0], "a") && equalWord(tokens[1], "card")
+}
+
+// punisherDiscardCount recognizes the discard alternative of a punisher effect
+// and returns the required card count: "a card" (1), or "<n> cards" (n) for an
+// explicit cardinal ("... unless they discard two cards.", Court of Ambition). It
+// fails closed for any other discard wording.
+func punisherDiscardCount(tokens []shared.Token, atoms Atoms) (int, bool) {
+	if punisherDiscardACard(tokens) {
+		return 1, true
+	}
+	if len(tokens) == 2 && equalWord(tokens[1], "cards") {
+		if n, ok := effectNumber(tokens[0], atoms); ok && n >= 1 {
+			return n, true
+		}
+	}
+	return 0, false
 }
 
 // matchDrawEmptyLibraryWin reports the index of the comma separating the

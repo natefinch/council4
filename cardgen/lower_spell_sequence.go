@@ -447,6 +447,15 @@ func lowerOrderedEffectSequence(
 	// optional-flow gate's own anaphor ("that player" in "If that player does")
 	// is credited rather than reported as an unconsumed reference.
 	consumedReferences += conditionReferenceCount(ctx.content.References, ctx.content.Conditions)
+	// A punisher clause ("each opponent loses N life unless they discard a card")
+	// carries a subject pronoun ("they" / "that player") that the parser folds
+	// into the EffectPunisherLoseLife effect, so it never lands in the effect's own
+	// reference list, yet the compiler still records it as a content-level pronoun
+	// reference. The punisher lowerer models each affected group member
+	// intrinsically, so that pronoun is fully consumed; credit it here so a
+	// sequence of punisher clauses (Court of Ambition's escalating edict) does not
+	// see it as a dropped reference.
+	consumedReferences += punisherSubjectReferenceCount(ctx.content.References, ctx.content.Effects, ctx.content.Conditions)
 	if !sequenceCountsConsumed(ctx, consumedTargets, consumedKeywords, consumedReferences, consumedConditions) {
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — unconsumed targets/references/keywords")
 	}
@@ -641,6 +650,51 @@ func conditionReferenceCount(
 		}
 	}
 	return count
+}
+
+// punisherSubjectReferenceCount credits the subject pronoun of each punisher
+// clause ("each opponent loses N life unless they discard a card") in an ordered
+// sequence. The parser folds that "unless <subject>" pronoun into the
+// EffectPunisherLoseLife effect, so it never appears in the effect's own
+// reference list, but the compiler still records it as a content-level pronoun
+// reference. Because the punisher lowerer models each affected group member
+// intrinsically, the pronoun is fully consumed by the effect; count it here so a
+// sequence of punisher clauses does not fail the consumed-reference check.
+// References already covered by a condition span are excluded so they are not
+// double-counted with conditionReferenceCount.
+func punisherSubjectReferenceCount(
+	references []compiler.CompiledReference,
+	effects []compiler.CompiledEffect,
+	conditions []compiler.CompiledCondition,
+) int {
+	count := 0
+	for ri := range references {
+		if references[ri].Kind != compiler.ReferencePronoun {
+			continue
+		}
+		if spanCovered(references[ri].Span, conditionSpans(conditions)) {
+			continue
+		}
+		for ei := range effects {
+			if effects[ei].Kind != compiler.EffectPunisherLoseLife {
+				continue
+			}
+			if spanCovered(references[ri].Span, []shared.Span{effects[ei].ClauseSpan}) {
+				count++
+				break
+			}
+		}
+	}
+	return count
+}
+
+// conditionSpans collects the source spans of the given conditions.
+func conditionSpans(conditions []compiler.CompiledCondition) []shared.Span {
+	spans := make([]shared.Span, len(conditions))
+	for ci := range conditions {
+		spans[ci] = conditions[ci].Span
+	}
+	return spans
 }
 
 // referencesOutsideConditionSpans returns the references whose source span is

@@ -1962,6 +1962,9 @@ func (r Renderer) renderPunisherEachLoseLife(ctx *renderCtx, value *game.Punishe
 	if value.AllowDiscard {
 		fields = append(fields, "AllowDiscard: true,")
 	}
+	if value.DiscardCount > 0 {
+		fields = append(fields, fmt.Sprintf("DiscardCount: %d,", value.DiscardCount))
+	}
 	return structLit("game.PunisherEachLoseLife", fields), nil
 }
 
