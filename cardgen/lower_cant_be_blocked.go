@@ -5,6 +5,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -54,7 +55,23 @@ func lowerCantBeBlockedSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagn
 		ctx.content.Targets[0].Selector.Kind == compiler.SelectorCreature &&
 		len(ctx.content.References) == 1 &&
 		ctx.content.References[0].Binding == compiler.ReferenceBindingSource
+	groupSubject := effect.StaticSubject != compiler.StaticSubjectNone &&
+		len(ctx.content.Targets) == 0 &&
+		len(ctx.content.References) == 0
 	switch {
+	case groupSubject:
+		// "<creature group> can't be blocked this turn." (Keeper of Keys) applies
+		// the restriction to every member of the group for the turn. It lowers to a
+		// single group-scoped rule effect (no object anchor) whose affected-
+		// permanent filter the runtime evaluates each combat, mirroring the static
+		// "<group> can't be blocked" anthem but bounded to this turn.
+		affectedController, permanentTypes, ok := cantBeBlockedGroupScope(effect.StaticSubject)
+		if !ok {
+			return unsupported()
+		}
+		return game.Mode{
+			Sequence: []game.Instruction{cantBeBlockedGroupInstruction(affectedController, permanentTypes)},
+		}.Ability(), nil
 	case sourceAndTargetSubject:
 		// "<source> and up to one other target creature can't be blocked this
 		// turn." (Martha Jones): the source itself plus the chosen target(s) each
@@ -126,6 +143,39 @@ func cantBeBlockedInstruction(object game.ObjectReference) game.Instruction {
 			RuleEffects: []game.RuleEffect{
 				{Kind: game.RuleEffectCantBeBlocked},
 			},
+			Duration: game.DurationThisTurn,
+		},
+	}
+}
+
+// cantBeBlockedGroupScope maps a static creature-group subject to the runtime
+// rule-effect group scope: the affected-controller relation and the required card
+// types. It covers the controller's creatures ("Creatures you control ...") and
+// every creature ("Creatures ..."). Any other group subject fails closed so the
+// group can't-be-blocked path stays bounded to the shapes it renders faithfully.
+func cantBeBlockedGroupScope(subject compiler.StaticSubjectKind) (game.ControllerRelation, []types.Card, bool) {
+	switch subject {
+	case compiler.StaticSubjectControlledCreatures:
+		return game.ControllerYou, []types.Card{types.Creature}, true
+	case compiler.StaticSubjectAllCreatures:
+		return game.ControllerAny, []types.Card{types.Creature}, true
+	default:
+		return game.ControllerAny, nil, false
+	}
+}
+
+// cantBeBlockedGroupInstruction builds the ApplyRule instruction that grants a
+// can't-be-blocked restriction to every member of a creature group for the turn.
+// It carries no object anchor, so the runtime scopes the rule to the affected
+// controller and card types rather than a single permanent.
+func cantBeBlockedGroupInstruction(controller game.ControllerRelation, permanentTypes []types.Card) game.Instruction {
+	return game.Instruction{
+		Primitive: game.ApplyRule{
+			RuleEffects: []game.RuleEffect{{
+				Kind:               game.RuleEffectCantBeBlocked,
+				AffectedController: controller,
+				PermanentTypes:     permanentTypes,
+			}},
 			Duration: game.DurationThisTurn,
 		},
 	}

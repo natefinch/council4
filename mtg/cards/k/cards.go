@@ -29,6 +29,7 @@ var Cards = []*game.CardDef{
 	KederektLeviathan,
 	KeensightMentor,
 	KeepSafe,
+	KeeperOfKeys,
 	KeiTakahashi,
 	KeldonMantle,
 	KessigCagebreakers,

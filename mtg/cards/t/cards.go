@@ -39,6 +39,7 @@ var Cards = []*game.CardDef{
 	TestOfFaith,
 	TetheredGriffin,
 	TeyoTheShieldmage,
+	TezzeretSGatebreaker,
 	ThaliaGuardianOfThraben,
 	Thallid,
 	ThallidDevourer,
