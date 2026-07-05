@@ -1376,6 +1376,10 @@ const (
 	// StaticRuleQualifierBlockerLegendary restricts a block prohibition to
 	// legendary-creature blockers ("... except by legendary creatures").
 	StaticRuleQualifierBlockerLegendary StaticRuleQualifierKind = "StaticRuleQualifierBlockerLegendary"
+	// StaticRuleQualifierBlockerControlledByMonarch restricts a block prohibition
+	// to blockers controlled by the monarch ("... by creatures the monarch
+	// controls", Azure Fleet Admiral).
+	StaticRuleQualifierBlockerControlledByMonarch StaticRuleQualifierKind = "StaticRuleQualifierBlockerControlledByMonarch"
 	// StaticRuleQualifierBlockedAttackerFlying restricts a "can block only"
 	// permission to attackers with flying ("This creature can block only
 	// creatures with flying."): the subject blocker may block only attackers that

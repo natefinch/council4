@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,863 of 32,501 cards eligible for paper support (51.9%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,877 of 32,501 cards eligible for paper support (51.9%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -975,6 +975,7 @@ Council4 currently supports **16,863 of 32,501 cards eligible for paper support 
 - Azra Smokeshaper
 - Azula Always Lies
 - Azure Drake
+- Azure Fleet Admiral
 - Azure Mage
 - Azusa's Many Journeys // Likeness of the Seeker
 - Azusa, Lost but Seeking
@@ -4115,6 +4116,7 @@ Council4 currently supports **16,863 of 32,501 cards eligible for paper support 
 - Ebony Rhino
 - Ebony Treefolk
 - Eccentric Farmer
+- Echo Circlet
 - Echo Inspector
 - Echo of Dusk
 - Echo Tracer
@@ -4436,6 +4438,7 @@ Council4 currently supports **16,863 of 32,501 cards eligible for paper support 
 - Enthusiastic Mechanaut
 - Entish Restoration
 - Entomb
+- Entourage of Trest
 - Entrails Feaster
 - Entropic Eidolon
 - Envelop
@@ -5273,6 +5276,8 @@ Council4 currently supports **16,863 of 32,501 cards eligible for paper support 
 - Forgotten Creation
 - Forgotten Harvest
 - Forgotten Sentinel
+- Foriysian Brigade
+- Foriysian Interceptor
 - Forked Bolt
 - Forked Lightning
 - Forlorn Flats
@@ -5622,6 +5627,7 @@ Council4 currently supports **16,863 of 32,501 cards eligible for paper support 
 - Geyserfield Stalker
 - Ghalma's Warden
 - Ghalta, Primal Hunger
+- Ghastbark Twins
 - Ghastly Death Tyrant
 - Ghastly Gloomhunter
 - Ghave, Guru of Spores
@@ -7849,6 +7855,7 @@ Council4 currently supports **16,863 of 32,501 cards eligible for paper support 
 - Knight of Meadowgrain
 - Knight of New Benalia
 - Knight of Obligation
+- Knight of Sorrows
 - Knight of Stromgald
 - Knight of the Keep
 - Knight of the New Coalition
@@ -9655,6 +9662,7 @@ Council4 currently supports **16,863 of 32,501 cards eligible for paper support 
 - Night Incarnate
 - Night Market
 - Night Market Aeronaut
+- Night Market Guard
 - Night Market Lookout
 - Night of Souls' Betrayal
 - Night of the Sweets' Revenge
@@ -12373,6 +12381,7 @@ Council4 currently supports **16,863 of 32,501 cards eligible for paper support 
 - Selesnya Guildmage
 - Selesnya Keyrune
 - Selesnya Locket
+- Selesnya Sagittars
 - Selesnya Sanctuary
 - Selesnya Sentry
 - Selesnya Signet
@@ -13497,6 +13506,7 @@ Council4 currently supports **16,863 of 32,501 cards eligible for paper support 
 - Spike Soldier
 - Spike Weaver
 - Spike Worker
+- Spike-Tailed Ceratops
 - Spiked Baloth
 - Spiked Ripsaw
 - Spikeshot Elder
@@ -15214,6 +15224,8 @@ Council4 currently supports **16,863 of 32,501 cards eligible for paper support 
 - True Love's Kiss
 - Truefire Captain
 - Truefire Paladin
+- Trueheart Duelist
+- Trueheart Duelist
 - Trufflesnout
 - Trumpet Blast
 - Trumpeting Gnarr
@@ -15301,6 +15313,8 @@ Council4 currently supports **16,863 of 32,501 cards eligible for paper support 
 - Twitch
 - Two-Handed Axe // Sweeping Cleave
 - Two-Headed Cerberus
+- Two-Headed Dragon
+- Two-Headed Giant of Foriys
 - Two-Headed Hellkite
 - Two-Headed Hunter // Twice the Rage
 - Two-Headed Sliver

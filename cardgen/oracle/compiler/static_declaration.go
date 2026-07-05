@@ -233,6 +233,10 @@ const (
 	// StaticBlockerRestrictionLegendary bounds the prohibition to legendary-creature
 	// blockers ("can't be blocked except by legendary creatures").
 	StaticBlockerRestrictionLegendary
+	// StaticBlockerRestrictionControlledByMonarch bounds the prohibition to blockers
+	// controlled by the monarch ("can't be blocked by creatures the monarch
+	// controls.", Azure Fleet Admiral).
+	StaticBlockerRestrictionControlledByMonarch
 )
 
 // StaticBlockerRestriction is the closed blocker characteristic bounding a
@@ -1775,6 +1779,8 @@ func staticBlockerRestrictionForSyntax(rule parser.StaticRuleSyntax) StaticBlock
 		return StaticBlockerRestriction{Kind: StaticBlockerRestrictionDefender}
 	case parser.StaticRuleQualifierBlockerLegendary:
 		return StaticBlockerRestriction{Kind: StaticBlockerRestrictionLegendary}
+	case parser.StaticRuleQualifierBlockerControlledByMonarch:
+		return StaticBlockerRestriction{Kind: StaticBlockerRestrictionControlledByMonarch}
 	default:
 		return StaticBlockerRestriction{}
 	}

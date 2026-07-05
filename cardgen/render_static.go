@@ -1002,6 +1002,8 @@ func renderBlockerRestriction(restriction game.BlockerRestriction) (string, erro
 		kind = "game.BlockerRestrictionDefender"
 	case game.BlockerRestrictionLegendary:
 		kind = "game.BlockerRestrictionLegendary"
+	case game.BlockerRestrictionControlledByMonarch:
+		kind = "game.BlockerRestrictionControlledByMonarch"
 	default:
 		return "", fmt.Errorf("render: unsupported blocker restriction kind %d", restriction.Kind)
 	}

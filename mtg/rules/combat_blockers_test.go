@@ -960,6 +960,41 @@ func TestCantBeBlockedByCreaturesWithFlyingRejectsFlyingBlocker(t *testing.T) {
 	}
 }
 
+// TestCantBeBlockedByCreaturesControlledByMonarchRejectsMonarchBlocker proves the
+// "can't be blocked by creatures the monarch controls" restriction (Azure Fleet
+// Admiral) stops a blocker whose controller holds the monarch while allowing a
+// blocker whose controller is not the monarch.
+func TestCantBeBlockedByCreaturesControlledByMonarchRejectsMonarchBlocker(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addRestrictedBlockAttacker(g, game.Player1, game.BlockerRestriction{Kind: game.BlockerRestrictionControlledByMonarch})
+	monarchBlocker := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	otherBlocker := addCombatCreaturePermanentWithPower(g, game.Player3, 2)
+	g.Players[game.Player2].IsMonarch = true
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareBlockers
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{
+			{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+		},
+	}
+	engine := NewEngine(nil)
+
+	monarchBlock := mustDeclareBlockersPayload(t, action.DeclareBlockers([]game.BlockDeclaration{
+		{Blocker: monarchBlocker.ObjectID, Blocking: attacker.ObjectID},
+	}))
+	if engine.applyDeclareBlockers(g, game.Player2, monarchBlock) {
+		t.Fatal("a creature the monarch controls blocked a can't-be-blocked-by-the-monarch attacker")
+	}
+
+	g.Combat.Attackers[0].Target = game.AttackTarget{Player: game.Player3}
+	otherBlock := mustDeclareBlockersPayload(t, action.DeclareBlockers([]game.BlockDeclaration{
+		{Blocker: otherBlocker.ObjectID, Blocking: attacker.ObjectID},
+	}))
+	if !engine.applyDeclareBlockers(g, game.Player3, otherBlock) {
+		t.Fatal("a creature the non-monarch controls was rejected as a blocker")
+	}
+}
+
 func TestCantBeBlockedByCreaturesWithPowerOrLessUsesThreshold(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	attacker := addRestrictedBlockAttacker(g, game.Player1, game.BlockerRestriction{Kind: game.BlockerRestrictionPowerLessOrEqual, Power: 2})
