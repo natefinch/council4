@@ -343,6 +343,35 @@ func exactExileUntilSourceLeavesEffectSyntax(effect *EffectSyntax) bool {
 	return true
 }
 
+// exactExileUntilOpponentBecomesMonarchEffectSyntax recognizes the monarch exile
+// clause "exile <target> until an opponent becomes the monarch." (Palace Jailer).
+// The single target is the exiled permanent and the trailing "until an opponent
+// becomes the monarch" names the return condition, not a second object or effect
+// (the sentence segmenter keeps the trailing clause on the exile via
+// untilBecomesMonarchBoundaryAt). It marks the effect so lowering links the exile
+// to the source and synthesizes the paired become-monarch return trigger. Any
+// other exile shape leaves the clause non-exact so lowering fails closed.
+func exactExileUntilOpponentBecomesMonarchEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Kind != EffectExile || effect.Negated {
+		return false
+	}
+	if effect.Duration != EffectDurationNone || effect.FromZone != zone.None || effect.ToZone != zone.None {
+		return false
+	}
+	if len(effect.Targets) != 1 || !effect.Targets[0].Exact {
+		return false
+	}
+	if len(effect.References) != 0 {
+		return false
+	}
+	expected := "Exile " + effect.Targets[0].Text + " until an opponent becomes the monarch."
+	if !strings.EqualFold(exactEffectClauseText(effect), expected) {
+		return false
+	}
+	effect.ExileUntilOpponentBecomesMonarch = true
+	return true
+}
+
 // exactExileForEachPlayerUntilLeavesEffectSyntax recognizes the distributive
 // Saga exile clause "For each player, exile up to one [other] target
 // <permanent> that player controls until <this Saga> leaves the battlefield."

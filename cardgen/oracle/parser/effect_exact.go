@@ -76,6 +76,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return exactSourceSpellExileSyntax(effect) ||
 			exactCounteredSpellExileSyntax(effect) ||
 			exactExileUntilSourceLeavesEffectSyntax(effect) ||
+			exactExileUntilOpponentBecomesMonarchEffectSyntax(effect) ||
 			exactExileForEachPlayerUntilLeavesEffectSyntax(effect) ||
 			exactExileTopOfLibrarySyntax(effect) ||
 			exactExileEntireHandEffectSyntax(effect) ||

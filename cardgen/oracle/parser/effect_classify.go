@@ -849,6 +849,7 @@ func classifyEffectVerbs(tokens []shared.Token, atoms Atoms) []classifiedVerb {
 			atoms.SelfNameAt(tokens[i].Span) ||
 			tapOrUntapInnerUntapAt(tokens, i) ||
 			withinAsThoughDidntHaveDefenderTail(tokens, i) ||
+			untilBecomesMonarchBoundaryAt(tokens, i) ||
 			copyTokenExceptRiderBoundaryAt(tokens, i) {
 			continue
 		}
@@ -887,6 +888,29 @@ func orderedEffectCount(tokens []shared.Token, atoms Atoms) int {
 		}
 	}
 	return count
+}
+
+// untilBecomesMonarchBoundaryAt reports whether the effect-boundary verb at index
+// is the "becomes"/"become" of an "until <player> becomes the monarch" duration
+// clause ("exile <target> until an opponent becomes the monarch.", Palace
+// Jailer). That trailing clause names the exile's return condition, not a second
+// effect, so it must not split the sentence into an exile and a stranded
+// become-monarch sibling.
+func untilBecomesMonarchBoundaryAt(tokens []shared.Token, index int) bool {
+	if !equalWord(tokens[index], "becomes") && !equalWord(tokens[index], "become") {
+		return false
+	}
+	if index+2 >= len(tokens) ||
+		!equalWord(tokens[index+1], "the") ||
+		!equalWord(tokens[index+2], "monarch") {
+		return false
+	}
+	for i := range index {
+		if equalWord(tokens[i], "until") {
+			return true
+		}
+	}
+	return false
 }
 
 // copyTokenExceptRiderBoundaryAt reports whether the effect-boundary verb at

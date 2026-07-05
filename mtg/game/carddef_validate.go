@@ -725,6 +725,9 @@ func (v *cardDefValidator) validateInstructionSequence(
 				if delayed.Trigger.Window == DelayedWindowNone {
 					v.add(faceName, instructionPath, CardDefIssueInvalidAbilityBody, "event delayed trigger has no Window")
 				}
+				if delayed.Trigger.Window == DelayedWindowUntilFires && !delayed.Trigger.OneShot {
+					v.add(faceName, instructionPath, CardDefIssueInvalidAbilityBody, "until-fires delayed trigger must be one-shot")
+				}
 			} else if delayed.Trigger.Window != DelayedWindowNone {
 				v.add(faceName, instructionPath, CardDefIssueInvalidAbilityBody, "fixed-phase delayed trigger sets Window without EventPattern")
 			}

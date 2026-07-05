@@ -635,6 +635,8 @@ func renderDelayedTriggerWindow(window game.DelayedTriggerWindow) (string, error
 	switch window {
 	case game.DelayedWindowThisTurn:
 		return "game.DelayedWindowThisTurn", nil
+	case game.DelayedWindowUntilFires:
+		return "game.DelayedWindowUntilFires", nil
 	default:
 		return "", fmt.Errorf("render: unsupported delayed trigger window %d", window)
 	}
