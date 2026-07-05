@@ -47,6 +47,9 @@ func lowerPunisherLoseLifeSpell(ctx contentCtx) (game.AbilityContent, *shared.Di
 		AllowSacrifice: effect.PunisherSacrifice,
 		AllowDiscard:   effect.PunisherDiscard,
 	}
+	if effect.PunisherDiscard && effect.PunisherDiscardCount > 1 {
+		prim.DiscardCount = effect.PunisherDiscardCount
+	}
 	if effect.PunisherSacrifice {
 		selection, ok := massGroupSelection(effect.Selector)
 		if !ok || selection.Controller != game.ControllerAny {

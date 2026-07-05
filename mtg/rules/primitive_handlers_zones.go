@@ -1,6 +1,8 @@
 package rules
 
 import (
+	"fmt"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -1593,11 +1595,15 @@ func (r *effectResolver) applySacrificeFallback(fallback game.SacrificeFallback,
 	}
 }
 
-// playerHasCardsInHand reports whether playerID has at least one card in hand,
-// i.e. can pay a discard-a-card alternative.
-func playerHasCardsInHand(g *game.Game, playerID game.PlayerID) bool {
+// playerHandSize reports how many cards playerID has in hand, used to gate
+// discard alternatives (a player must be able to discard the full required
+// count to pick that option).
+func playerHandSize(g *game.Game, playerID game.PlayerID) int {
 	player, ok := playerByID(g, playerID)
-	return ok && player.Hand.Size() > 0
+	if !ok {
+		return 0
+	}
+	return player.Hand.Size()
 }
 
 // handleRepeatProcess resolves a "Repeat the following process X times. <body>"
@@ -1653,8 +1659,13 @@ func (r *effectResolver) applyPunisherForPlayer(prim game.PunisherEachLoseLife, 
 		options = append(options, game.ChoiceOption{Index: len(options), Label: "Sacrifice a permanent"})
 		actions = append(actions, punisherSacrifice)
 	}
-	if prim.AllowDiscard && playerHasCardsInHand(r.game, playerID) {
-		options = append(options, game.ChoiceOption{Index: len(options), Label: "Discard a card"})
+	discardCount := max(prim.DiscardCount, 1)
+	if prim.AllowDiscard && playerHandSize(r.game, playerID) >= discardCount {
+		label := "Discard a card"
+		if discardCount > 1 {
+			label = fmt.Sprintf("Discard %d cards", discardCount)
+		}
+		options = append(options, game.ChoiceOption{Index: len(options), Label: label})
 		actions = append(actions, punisherDiscard)
 	}
 	action := punisherLoseLife
@@ -1681,7 +1692,7 @@ func (r *effectResolver) applyPunisherForPlayer(prim game.PunisherEachLoseLife, 
 		}
 		sacrificePermanentsSimultaneously(r.game, chosen)
 	case punisherDiscard:
-		if !r.discardCardsWithChoices(playerID, 1, game.LinkedObjectKey{}) {
+		if !r.discardCardsWithChoices(playerID, discardCount, game.LinkedObjectKey{}) {
 			loseLife(r.game, playerID, amount)
 		}
 	default:

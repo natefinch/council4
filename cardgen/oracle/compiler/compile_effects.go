@@ -554,6 +554,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				DoubleCountersGroup:                    syntax.DoubleCountersGroup,
 				PunisherSacrifice:                      syntax.PunisherSacrifice,
 				PunisherDiscard:                        syntax.PunisherDiscard,
+				PunisherDiscardCount:                   syntax.PunisherDiscardCount,
 				RepeatBody:                             compileEffects([]parser.Sentence{{Effects: syntax.RepeatBody}}),
 				ReturnAsEnchantment:                    syntax.ReturnAsEnchantment,
 				ReturnAsEnchantmentRiderSpan:           syntax.ReturnAsEnchantmentRiderSpan,
