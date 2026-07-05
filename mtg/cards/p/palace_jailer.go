@@ -78,22 +78,25 @@ func newPalaceJailer() *game.CardDef {
 									ExileLinkedKey: game.LinkedKey("exile-until-opponent-monarch"),
 								},
 							},
-						},
-					}.Ability(),
-				},
-				game.TriggeredAbility{
-					Trigger: game.TriggerCondition{
-						Type: game.TriggerWhen,
-						Pattern: game.TriggerPattern{
-							Event:  game.EventBecameMonarch,
-							Player: game.TriggerPlayerOpponent,
-						},
-					},
-					Content: game.Mode{
-						Sequence: []game.Instruction{
 							{
-								Primitive: game.PutOnBattlefield{
-									Source: game.LinkedBattlefieldSource(game.LinkedKey("exile-until-opponent-monarch")),
+								Primitive: game.CreateDelayedTrigger{
+									Trigger: game.DelayedTriggerDef{
+										EventPattern: opt.Val(game.TriggerPattern{
+											Event:  game.EventBecameMonarch,
+											Player: game.TriggerPlayerOpponent,
+										}),
+										OneShot: true,
+										Window:  game.DelayedWindowUntilFires,
+										Content: game.Mode{
+											Sequence: []game.Instruction{
+												{
+													Primitive: game.PutOnBattlefield{
+														Source: game.LinkedBattlefieldSource(game.LinkedKey("exile-until-opponent-monarch")),
+													},
+												},
+											},
+										}.Ability(),
+									},
 								},
 							},
 						},

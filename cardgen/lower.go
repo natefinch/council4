@@ -353,7 +353,6 @@ func lowerFaceAbilities(
 	}
 	linkExplicitExileReturns(&result)
 	synthesizeExileUntilLeavesReturns(&result)
-	synthesizeExileUntilOpponentBecomesMonarchReturns(&result)
 	if len(unsupported) > 0 {
 		return loweredFaceAbilities{}, append(diagnostics, flattenAdditionalReasons(unsupported)...)
 	}

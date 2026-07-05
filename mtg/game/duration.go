@@ -58,6 +58,12 @@ const (
 	// was created on ("... this turn"). It is removed during that turn's cleanup
 	// step.
 	DelayedWindowThisTurn
+	// DelayedWindowUntilFires bounds an event-based delayed trigger to its own
+	// firing: it persists across turns until a matching event occurs, then a
+	// OneShot trigger removes itself. It is never removed at turn cleanup, backing
+	// return conditions with no turn bound ("until an opponent becomes the
+	// monarch", Palace Jailer). It is only valid with OneShot set.
+	DelayedWindowUntilFires
 )
 
 // DelayedTriggerDef is the card-definition-side data for creating a delayed

@@ -5,67 +5,55 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
 
-// exileUntilMonarchCardDef mirrors the two abilities the cardgen lowering
-// produces for Palace Jailer: an enters trigger that exiles a target under the
-// monarch link key, and a synthesized "when an opponent becomes the monarch"
-// trigger that returns the linked card.
-func exileUntilMonarchCardDef() *game.CardDef {
-	key := game.LinkedKey("exile-until-opponent-monarch")
-	return &game.CardDef{CardFace: game.CardFace{
-		Name:  "Warden of the Crown",
-		Types: []types.Card{types.Creature},
-		TriggeredAbilities: []game.TriggeredAbility{
-			{
-				Trigger: game.TriggerCondition{
-					Type: game.TriggerWhen,
-					Pattern: game.TriggerPattern{
-						Event:  game.EventPermanentEnteredBattlefield,
-						Source: game.TriggerSourceSelf,
-					},
-				},
-				Content: game.Mode{
-					Targets: []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Allow: game.TargetAllowPermanent}},
-					Sequence: []game.Instruction{{Primitive: game.Exile{
-						Object:         game.TargetPermanentReference(0),
-						ExileLinkedKey: key,
-					}}},
-				}.Ability(),
-			},
-			{
-				Trigger: game.TriggerCondition{
-					Type: game.TriggerWhen,
-					Pattern: game.TriggerPattern{
-						Event:  game.EventBecameMonarch,
-						Player: game.TriggerPlayerOpponent,
-					},
-				},
-				Content: game.Mode{Sequence: []game.Instruction{{Primitive: game.PutOnBattlefield{
-					Source: game.LinkedBattlefieldSource(key),
-				}}}}.Ability(),
-			},
-		},
-	}}
+// exileUntilMonarchLinkKey mirrors the constant the cardgen lowering emits for
+// the Palace Jailer exile link.
+const exileUntilMonarchLinkKey = game.LinkedKey("exile-until-opponent-monarch")
+
+// resolveExileUntilMonarch resolves the two instructions the cardgen lowering
+// produces for "exile <target> until an opponent becomes the monarch": a linked
+// exile of victim followed by the persistent become-monarch return delayed
+// trigger, both scoped to source.
+func resolveExileUntilMonarch(t *testing.T, engine *Engine, g *game.Game, source, victim *game.Permanent) {
+	t.Helper()
+	obj := linkedSourceObject(source)
+	obj.Targets = []game.Target{game.PermanentTarget(victim.ObjectID)}
+	resolveInstruction(engine, g, obj, game.Exile{
+		Object:         game.TargetPermanentReference(0),
+		ExileLinkedKey: exileUntilMonarchLinkKey,
+	}, nil)
+	resolveInstruction(engine, g, obj, game.CreateDelayedTrigger{Trigger: game.DelayedTriggerDef{
+		EventPattern: opt.Val(game.TriggerPattern{
+			Event:  game.EventBecameMonarch,
+			Player: game.TriggerPlayerOpponent,
+		}),
+		OneShot: true,
+		Window:  game.DelayedWindowUntilFires,
+		Content: game.Mode{Sequence: []game.Instruction{{
+			Primitive: game.PutOnBattlefield{Source: game.LinkedBattlefieldSource(exileUntilMonarchLinkKey)},
+		}}}.Ability(),
+	}}, nil)
+}
+
+func exileUntilMonarchSourceDef() *game.CardDef {
+	return &game.CardDef{CardFace: game.CardFace{Name: "Warden of the Crown", Types: []types.Card{types.Creature}}}
 }
 
 // TestExileUntilOpponentBecomesMonarchReturnsWhenOpponentTakesCrown models Palace
-// Jailer: a creature exiled "until an opponent becomes the monarch" stays exiled
-// while its controller holds the crown and returns to its owner's control once an
+// Jailer while its source stays in play: the exiled creature stays exiled while
+// its controller holds the crown and returns to its owner's control once an
 // opponent becomes the monarch.
 func TestExileUntilOpponentBecomesMonarchReturnsWhenOpponentTakesCrown(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	victim := addCombatCreaturePermanent(g, game.Player2)
-	source := addCombatPermanent(g, game.Player1, exileUntilMonarchCardDef())
+	source := addCombatPermanent(g, game.Player1, exileUntilMonarchSourceDef())
 	setMonarch(g, game.Player1)
 
-	obj := linkedSourceObject(source)
-	obj.Targets = []game.Target{game.PermanentTarget(victim.ObjectID)}
-	resolveInstruction(engine, g, obj, game.Exile{
-		Object:         game.TargetPermanentReference(0),
-		ExileLinkedKey: game.LinkedKey("exile-until-opponent-monarch"),
-	}, nil)
+	resolveExileUntilMonarch(t, engine, g, source, victim)
 
 	if permanentByCardID(g, victim.CardInstanceID) != nil {
 		t.Fatal("victim remained on the battlefield after exile-until-monarch")
@@ -74,7 +62,7 @@ func TestExileUntilOpponentBecomesMonarchReturnsWhenOpponentTakesCrown(t *testin
 		t.Fatal("victim did not reach its owner's exile zone")
 	}
 
-	// The controller staying the monarch must not return the card.
+	// The controller re-taking the crown must not return the card.
 	setMonarch(g, game.Player1)
 	if engine.putTriggeredAbilitiesOnStack(g) {
 		engine.resolveTopOfStack(g, &TurnLog{})
@@ -96,5 +84,44 @@ func TestExileUntilOpponentBecomesMonarchReturnsWhenOpponentTakesCrown(t *testin
 	}
 	if g.Players[game.Player2].Exile.Contains(victim.CardInstanceID) {
 		t.Fatal("victim remained in exile after an opponent became the monarch")
+	}
+}
+
+// TestExileUntilOpponentBecomesMonarchReturnsAfterSourceLeaves is the key
+// ruling: Palace Jailer leaving the battlefield does NOT return the exiled
+// creature; the game keeps watching, and the creature returns the next time an
+// opponent becomes the monarch. A persistent event delayed trigger (not a
+// battlefield-scoped ability) makes this hold after the source is gone.
+func TestExileUntilOpponentBecomesMonarchReturnsAfterSourceLeaves(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	victim := addCombatCreaturePermanent(g, game.Player2)
+	source := addCombatPermanent(g, game.Player1, exileUntilMonarchSourceDef())
+	setMonarch(g, game.Player1)
+
+	resolveExileUntilMonarch(t, engine, g, source, victim)
+	if !g.Players[game.Player2].Exile.Contains(victim.CardInstanceID) {
+		t.Fatal("victim did not reach exile")
+	}
+
+	// Source leaves the battlefield; the creature must stay exiled.
+	movePermanentToZone(g, source, zone.Graveyard)
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		engine.resolveTopOfStack(g, &TurnLog{})
+	}
+	if permanentByCardID(g, victim.CardInstanceID) != nil {
+		t.Fatal("victim returned when the source left the battlefield; should stay exiled")
+	}
+
+	// Later, an opponent becomes the monarch; the persistent delayed trigger fires.
+	setMonarch(g, game.Player2)
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("delayed return trigger did not fire after the source had left")
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	returned := permanentByCardID(g, victim.CardInstanceID)
+	if returned == nil || returned.Controller != game.Player2 {
+		t.Fatalf("returned permanent = %+v, want victim back under owner Player2 control", returned)
 	}
 }
