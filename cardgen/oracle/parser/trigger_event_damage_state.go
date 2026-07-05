@@ -289,7 +289,7 @@ func parseDamageRecipient(
 			Span:   shared.SpanOf(tokens),
 			Player: player,
 		}, player, true
-	case syntaxWordsEqual(tokens, "a", "player"):
+	case syntaxWordsEqual(tokens, "a", "player"), syntaxWordsEqual(tokens, "one", "or", "more", "players"):
 		player := playerSelectorFromKind(TriggerPlayerSelectorAny, shared.SpanOf(tokens))
 		return TriggerEventDamageRecipient{
 			Kind:   TriggerEventDamageRecipientPlayer,

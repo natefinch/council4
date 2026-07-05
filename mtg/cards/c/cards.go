@@ -118,6 +118,7 @@ var Cards = []*game.CardDef{
 	Contagion,
 	ContagionEngine,
 	ContainmentProtocol,
+	ContaminantGrafter,
 	ContestOfClaws,
 	ContractHero,
 	CoopedUp,
