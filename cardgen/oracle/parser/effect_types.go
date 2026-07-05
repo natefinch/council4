@@ -776,6 +776,13 @@ const (
 	// existing kinds keep their values.
 	EffectDynamicAmountLifeLostThisTurn   EffectDynamicAmountKind = "EffectDynamicAmountLifeLostThisTurn"
 	EffectDynamicAmountLifeGainedThisTurn EffectDynamicAmountKind = "EffectDynamicAmountLifeGainedThisTurn"
+	// EffectDynamicAmountTriggeringPlayerHandSize is the number of cards in the
+	// triggering event's player's hand ("equal to the number of cards in their
+	// hand", Emberwilde Captain), the "their"/"that player's" possessive naming
+	// the event player rather than the controller. It attaches no in-text
+	// referent; the runtime reads the triggering player's hand as the effect
+	// resolves.
+	EffectDynamicAmountTriggeringPlayerHandSize EffectDynamicAmountKind = "EffectDynamicAmountTriggeringPlayerHandSize"
 	// EffectDynamicAmountMaxOf is the greatest value among Operands, the
 	// "whichever is greater" combinator over two rules-derived amounts ("equal
 	// to the amount of life you gained this turn or the amount of life you lost

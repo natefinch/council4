@@ -857,12 +857,41 @@ func parseDynamicMaxSubject(tokens []shared.Token, start int, atoms Atoms) (dyna
 	return dynamicAmountSubject{}, false
 }
 
+// parseDynamicTriggeringPlayerHandSizeSubject recognizes "cards in their hand" /
+// "cards in that player's hand", the count subject naming the triggering event
+// player's hand size ("equal to the number of cards in their hand", Emberwilde
+// Captain). It fails closed for the controller-scoped "your hand" form, which the
+// selection-count subject recognizer owns.
+func parseDynamicTriggeringPlayerHandSizeSubject(tokens []shared.Token, start int) (dynamicAmountSubject, bool) {
+	handSize := func(end int) (dynamicAmountSubject, bool) {
+		if !dynamicAmountBoundary(tokens, end) {
+			return dynamicAmountSubject{}, false
+		}
+		return dynamicAmountSubject{
+			amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountTriggeringPlayerHandSize},
+			end:    end,
+			count:  true,
+			plural: true,
+		}, true
+	}
+	if effectWordsAt(tokens, start, "cards", "in", "their", "hand") {
+		return handSize(start + 4)
+	}
+	if effectWordsAt(tokens, start, "cards", "in", "that", "player's", "hand") {
+		return handSize(start + 5)
+	}
+	return dynamicAmountSubject{}, false
+}
+
 // parseDynamicAmountSubjectHelper runs the dedicated dynamic-amount subject
 // recognizers in priority order, returning the first that matches. It is split
 // out of parseDynamicAmountSubject so the dispatch chain stays within the
 // maintainability budget; the remaining inline switch handles the shorter
 // keyword-phrase forms.
 func parseDynamicAmountSubjectHelper(tokens []shared.Token, start int, atoms Atoms) (dynamicAmountSubject, bool) {
+	if subject, ok := parseDynamicTriggeringPlayerHandSizeSubject(tokens, start); ok {
+		return subject, true
+	}
 	if subject, ok := parseDynamicMaxSubject(tokens, start, atoms); ok {
 		return subject, true
 	}

@@ -356,6 +356,27 @@ func TestEventPlayerReferenceUsesZeroValuedEventPlayer(t *testing.T) {
 	}
 }
 
+// TestEventPlayerReferenceUsesAttackerForAttackerDeclared proves the event player
+// of an attacker-declared trigger is the attacking player (Event.Controller), so
+// "Whenever an opponent attacks you, ~ deals damage to that player." (Emberwilde
+// Captain) names the attacker rather than the defending player (Event.Player).
+func TestEventPlayerReferenceUsesAttackerForAttackerDeclared(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	obj := &game.StackObject{
+		HasTriggerEvent: true,
+		TriggerEvent: game.Event{
+			Kind:       game.EventAttackerDeclared,
+			Controller: game.Player2,
+			Player:     game.Player1,
+		},
+	}
+
+	player, ok := newReferenceResolver(g, obj).player(game.EventPlayerReference())
+	if !ok || player != game.Player2 {
+		t.Fatalf("event player = %v (%v), want the attacker Player2", player, ok)
+	}
+}
+
 func TestEventPlayerReferenceUsesSpellController(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	obj := &game.StackObject{

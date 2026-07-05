@@ -153,6 +153,13 @@ func lowerDynamicAmountKind(amount compiler.CompiledAmount, object game.ObjectRe
 		dynamic.Kind = game.DynamicAmountLifeLostThisTurn
 	case compiler.DynamicAmountLifeGainedThisTurn:
 		dynamic.Kind = game.DynamicAmountLifeGainedThisTurn
+	case compiler.DynamicAmountTriggeringPlayerHandSize:
+		player := game.EventPlayerReference()
+		selection := game.Selection{}
+		dynamic.Kind = game.DynamicAmountCountCardsInZone
+		dynamic.Player = &player
+		dynamic.CardZone = zone.Hand
+		dynamic.Selection = &selection
 	case compiler.DynamicAmountCardsDrawnThisTurn:
 		dynamic.Kind = game.DynamicAmountCardsDrawnThisTurn
 	case compiler.DynamicAmountMaxOf:

@@ -860,6 +860,16 @@ func lowerEventPlayerDamageSpell(ctx contentCtx) (game.AbilityContent, *shared.D
 			reference.Binding == compiler.ReferenceBindingEventPlayer {
 			continue
 		}
+		// The event-player hand-size amount ("... equal to the number of cards in
+		// their hand") reads the triggering player directly; its "their"/"they"
+		// pronoun reference is part of the amount, not a source reference, so it is
+		// excluded from the source-clause exactness check below.
+		if effect.Amount.DynamicKind == compiler.DynamicAmountTriggeringPlayerHandSize &&
+			reference.Kind == compiler.ReferencePronoun &&
+			(reference.Pronoun == compiler.ReferencePronounTheir ||
+				reference.Pronoun == compiler.ReferencePronounThey) {
+			continue
+		}
 		sourceReferences = append(sourceReferences, reference)
 	}
 	if !damageReferencesEventPlayer(ctx.content.References) ||
@@ -893,9 +903,13 @@ func eventPlayerDamageAmount(
 	sourceReferences []compiler.CompiledReference,
 ) (game.Quantity, bool) {
 	if effect.Amount.DynamicKind != compiler.DynamicAmountNone {
-		amountObject, ok := lowerDamageAmountObject(effect.Amount, sourceReferences)
-		if !ok {
-			return game.Quantity{}, false
+		var amountObject game.ObjectReference
+		if damageAmountReadsObjectReferent(effect.Amount.DynamicKind) {
+			obj, ok := lowerDamageAmountObject(effect.Amount, sourceReferences)
+			if !ok {
+				return game.Quantity{}, false
+			}
+			amountObject = obj
 		}
 		dynamic, ok := lowerDynamicAmount(effect.Amount, amountObject)
 		if !ok || !exactDamageAmountReferences(effect.Amount, sourceReferences) {

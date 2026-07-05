@@ -18,6 +18,7 @@ var Cards = []*game.CardDef{
 	GatewayPlaza,
 	GatheringPlace,
 	GavonyIronwright,
+	GazeOfAdamaro,
 	GeistSnatch,
 	Gelectrode,
 	GempalmAvenger,

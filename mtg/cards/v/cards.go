@@ -37,6 +37,7 @@ var Cards = []*game.CardDef{
 	VeteranGuardmouse,
 	VeteranWarleader,
 	ViashinoBranchrider,
+	ViciousShadows,
 	VictorTimelyWilyTycoon,
 	ViewFromAbove,
 	VigeanGraftmage,

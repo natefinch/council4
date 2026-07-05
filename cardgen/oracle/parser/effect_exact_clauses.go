@@ -2905,8 +2905,17 @@ func exactDamageEffectSyntax(effect *EffectSyntax) bool {
 		case EffectDynamicAmountFormEqual:
 			// "<prefix> damage equal to <referent> to <recipient>." reconstructs
 			// the dynamic amount phrase verbatim, so the recipient that follows
-			// the amount span round-trips exactly and cannot bleed into it.
-			return text == fmt.Sprintf("%s damage %s to %s.", prefix, effect.Amount.Text, recipientText)
+			// the amount span round-trips exactly and cannot bleed into it. The
+			// recipient-first order "<prefix> damage to <recipient> equal to
+			// <referent>." (Emberwilde Captain) round-trips the same tokens with
+			// the recipient before the amount; it is accepted only for the event
+			// "that player" recipient, leaving the attacked-defender recipient's
+			// recipient-first order inexact as before.
+			if text == fmt.Sprintf("%s damage %s to %s.", prefix, effect.Amount.Text, recipientText) {
+				return true
+			}
+			return effect.DamageRecipient.Reference == DamageRecipientReferenceThatPlayer &&
+				text == fmt.Sprintf("%s damage to %s %s.", prefix, recipientText, effect.Amount.Text)
 		default:
 			return false
 		}

@@ -3294,6 +3294,11 @@ const (
 	// controller-scoped. Added last so existing kinds keep their wire values.
 	DynamicAmountLifeLostThisTurn
 	DynamicAmountLifeGainedThisTurn
+	// DynamicAmountTriggeringPlayerHandSize is the number of cards in the
+	// triggering event player's hand ("equal to the number of cards in their
+	// hand", Emberwilde Captain). It lowers to a card-count in the event player's
+	// hand zone. Added last so existing kinds keep their wire values.
+	DynamicAmountTriggeringPlayerHandSize
 	// DynamicAmountMaxOf is the greatest value among Operands, the "whichever is
 	// greater" combinator over two rules-derived amounts ("equal to the amount
 	// of life you gained this turn or the amount of life you lost this turn,

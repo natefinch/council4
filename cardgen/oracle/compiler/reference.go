@@ -538,6 +538,15 @@ func triggerPatternBindsThatPlayer(pattern *TriggerPattern) bool {
 	if pattern.Event == TriggerEventPermanentTapped {
 		return true
 	}
+	if pattern.Event == TriggerEventAttackerDeclared &&
+		pattern.AttackRecipient == TriggerAttackRecipientPlayer {
+		// An attacker-declared trigger whose attack is against a player ("Whenever
+		// an opponent attacks you, ~ deals damage to that player.", Emberwilde
+		// Captain) binds "that player" to the attacking player (Event.Controller
+		// at runtime). The generic "Whenever a creature attacks" form (any attack
+		// recipient) stays conservative and does not bind.
+		return true
+	}
 	return pattern.Event == TriggerEventDamageDealt &&
 		pattern.DamageRecipient == TriggerDamageRecipientPlayer
 }
