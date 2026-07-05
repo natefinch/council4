@@ -2449,8 +2449,13 @@ func exactGroupCantBeBlockedEffectSyntax(effect *EffectSyntax, clause string) bo
 // qualifier, an "except" rider, or any "can't be blocked" / "can't attack"
 // wording leaves the clause non-exact.
 func exactCantBlockEffectSyntax(effect *EffectSyntax) bool {
-	return effect.Duration == EffectDurationThisTurn &&
-		effect.Context == EffectContextTarget &&
+	if effect.Duration != EffectDurationThisTurn {
+		return false
+	}
+	if effect.StaticSubject.Kind != EffectStaticSubjectNone {
+		return exactGroupCantBlockEffectSyntax(effect)
+	}
+	return effect.Context == EffectContextTarget &&
 		len(effect.Targets) == 1 &&
 		effect.Targets[0].Exact &&
 		effect.Targets[0].Cardinality.Min >= 0 &&
@@ -2460,6 +2465,26 @@ func exactCantBlockEffectSyntax(effect *EffectSyntax) bool {
 			exactEffectClauseText(effect),
 			effect.Targets[0].Text+" can't block this turn.",
 		)
+}
+
+// exactGroupCantBlockEffectSyntax reconstructs "<group subject> can't block this
+// turn." for a static-subject creature group ("Creatures can't block this turn.",
+// Aragorn, King of Gondor's monarch clause). It reads the subject text from the
+// effect's StaticSubject span so the group phrase round-trips byte-exactly. The
+// whole-sentence group form is owned by parseGroupCantBlockEffect; this gate
+// covers the same phrase when it appears as an ordered-sequence sub-clause.
+func exactGroupCantBlockEffectSyntax(effect *EffectSyntax) bool {
+	var subject []shared.Token
+	for i := range effect.Tokens {
+		if spanCovers(effect.StaticSubject.Span, effect.Tokens[i].Span) {
+			subject = append(subject, effect.Tokens[i])
+		}
+	}
+	if len(subject) == 0 {
+		return false
+	}
+	subjectText := joinedEffectText(subject)
+	return strings.EqualFold(exactEffectClauseText(effect), subjectText+" can't block this turn.")
 }
 
 // exactCantAttackEffectSyntax recognizes the temporary combat-restriction

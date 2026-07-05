@@ -82,6 +82,7 @@ var Cards = []*game.CardDef{
 	AquastrandSpider,
 	AquaticIncursion,
 	AquitectSDefenses,
+	AragornKingOfGondor,
 	ArashinSunshield,
 	ArcaneEpiphany,
 	ArcaneInfusion,

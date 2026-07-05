@@ -27,7 +27,8 @@ func lowerCantBlockSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnosti
 		)
 	}
 	effect := ctx.content.Effects[0]
-	if effect.Context == parser.EffectContextController {
+	if effect.Context == parser.EffectContextController ||
+		effect.StaticSubject != compiler.StaticSubjectNone {
 		return lowerGroupCantBlockSpell(ctx)
 	}
 	if !effect.Exact ||
