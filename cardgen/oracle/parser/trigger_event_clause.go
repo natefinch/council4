@@ -28,6 +28,7 @@ func parseTriggerEventClause(
 	if intro != TriggerIntroductionWhen && intro != TriggerIntroductionWhenever {
 		return nil
 	}
+	tokens = stripInterveningWhileCondition(tokens, atoms)
 	var matched *TriggerEventClause
 	matchCount := 0
 	for _, parse := range []func([]shared.Token, TriggerIntroductionKind, Atoms, string) *TriggerEventClause{
@@ -65,6 +66,26 @@ func parseTriggerEventClause(
 	}
 	matched.Span = shared.SpanOf(tokens)
 	return matched
+}
+
+// stripInterveningWhileCondition removes a trailing "while <state>" clause from a
+// trigger event phrase when the state is a recognized intervening condition
+// ("Whenever you tap a land for mana while you're the monarch, ...", Regal
+// Behemoth), so the event parsers see only the bare event and the condition is
+// picked up separately by emitConditionClauses. Event-specific "while" riders
+// ("attacks while saddled") are left in place, since conditionIntroAt does not
+// treat them as condition clauses.
+func stripInterveningWhileCondition(tokens []shared.Token, atoms Atoms) []shared.Token {
+	for i := 1; i < len(tokens); i++ {
+		if !equalWord(tokens[i], "while") {
+			continue
+		}
+		if len(parseConditionClauses(tokens[i:], atoms)) == 0 {
+			continue
+		}
+		return tokens[:i]
+	}
+	return tokens
 }
 
 type zoneSubjectResult struct {

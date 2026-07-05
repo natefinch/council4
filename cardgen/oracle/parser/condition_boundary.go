@@ -120,7 +120,7 @@ func conditionBoundaries(tokens []shared.Token, triggered, ifAbleExcluded bool, 
 			NodeID:            len(boundaries),
 			Kind:              intro,
 			DurationSkip:      intro == ConditionIntroAsLongAs && conditionAsLongAsIsDuration(tokens, i),
-			Intervening:       triggered && intro == ConditionIntroIf && i == intervening,
+			Intervening:       triggered && conditionBoundaryIsIntervening(tokens, i, intro, intervening),
 			Resolving:         conditionIsResolvingThenIf(tokens, i, intro),
 			ActivationKeyword: conditionActivationKeyword(tokens, i, intro),
 		})
@@ -128,6 +128,24 @@ func conditionBoundaries(tokens []shared.Token, triggered, ifAbleExcluded bool, 
 	}
 
 	return boundaries
+}
+
+// conditionBoundaryIsIntervening reports whether the condition boundary at index
+// is a triggered ability's intervening condition. The canonical form is an "if
+// <state>" clause positioned right after the trigger event comma. A "while
+// <state>" clause ("Whenever you tap a land for mana while you're the monarch,
+// ...", Regal Behemoth) is also intervening: it holds exactly when the state is
+// true as the trigger resolves, and it may sit inside the event phrase rather
+// than after the comma, so its position is not constrained. A duration "while"
+// (conditionAsLongAsIsDuration) is excluded, matching the "as long as" duration
+// handling.
+func conditionBoundaryIsIntervening(tokens []shared.Token, index int, intro ConditionIntroKind, intervening int) bool {
+	if intro == ConditionIntroIf {
+		return index == intervening
+	}
+	return intro == ConditionIntroAsLongAs &&
+		equalWord(tokens[index], "while") &&
+		!conditionAsLongAsIsDuration(tokens, index)
 }
 
 func conditionIsResolvingThenIf(tokens []shared.Token, index int, intro ConditionIntroKind) bool {

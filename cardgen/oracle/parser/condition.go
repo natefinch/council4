@@ -614,6 +614,18 @@ func conditionIntroAt(tokens []shared.Token, index int) (kind ConditionIntroKind
 		equalWord(tokens[index+1], "long") &&
 		equalWord(tokens[index+2], "as"):
 		return ConditionIntroAsLongAs, 3
+	case equalWord(tokens[index], "while"):
+		if index+1 < len(tokens) && equalWord(tokens[index+1], "saddled") {
+			// "attacks while saddled" is a combat event rider (AttackWhileSaddled)
+			// consumed by the trigger event parser, not an intervening condition, so
+			// the "while" here does not open a condition clause.
+			return ConditionIntroUnknown, 0
+		}
+		// A trigger or static "while <state>" clause holds exactly while the state
+		// is true, the same intervening/continuous gate an "as long as <state>"
+		// clause expresses ("Whenever you tap a land for mana while you're the
+		// monarch, ...", Regal Behemoth).
+		return ConditionIntroAsLongAs, 1
 	case isControllerTurnIntro(tokens, index):
 		// A sentence-leading "During your turn," gates a continuous self-static on
 		// the controller being the active player, exactly like an "As long as it's
