@@ -580,20 +580,29 @@ func (combatEngine) applyBlockers(g *game.Game, playerID game.PlayerID, declare 
 	for _, attack := range attacksAgainstPlayer(g, playerID) {
 		attackersByID[attack.Attacker] = true
 	}
-	alreadyBlocking := make(map[id.ID]bool)
+	alreadyBlocking := make(map[id.ID]int)
 	blockerCounts := make(map[id.ID]int)
 	for _, block := range g.Combat.Blockers {
-		alreadyBlocking[block.Blocker] = true
+		alreadyBlocking[block.Blocker]++
 		blockerCounts[block.Blocking]++
 	}
 
-	seenBlockers := make(map[id.ID]bool)
+	seenBlockers := make(map[id.ID]int)
+	seenPairs := make(map[[2]id.ID]bool)
+	for _, block := range g.Combat.Blockers {
+		seenPairs[[2]id.ID{block.Blocker, block.Blocking}] = true
+	}
 	for _, block := range declare.Blockers {
-		if seenBlockers[block.Blocker] || alreadyBlocking[block.Blocker] {
+		pair := [2]id.ID{block.Blocker, block.Blocking}
+		if seenPairs[pair] {
 			return false
 		}
-		seenBlockers[block.Blocker] = true
+		seenPairs[pair] = true
+		seenBlockers[block.Blocker]++
 		if eligibleByID[block.Blocker] == nil {
+			return false
+		}
+		if seenBlockers[block.Blocker]+alreadyBlocking[block.Blocker] > blockerBlockLimit(g, eligibleByID[block.Blocker]) {
 			return false
 		}
 		if !attackersByID[block.Blocking] {

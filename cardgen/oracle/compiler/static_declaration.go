@@ -176,6 +176,11 @@ const (
 	// It lowers to the can-block-only runtime rule effect bounded by the flying
 	// blocker restriction.
 	StaticRuleCanBlockOnlyCreaturesWithFlying
+	// StaticRuleCanBlockAdditional is the blocker-side capability "can block an
+	// additional creature each combat" (Brave the Sands, Coastline Chimera): the
+	// subject creature may block one more attacker than the usual single blocker
+	// limit. It lowers to the can-block-additional runtime rule effect.
+	StaticRuleCanBlockAdditional
 	// StaticRuleCantAttackAlone is the active attack restriction "can't attack
 	// alone" (Mogg Flunkies, Trusty Companion): the subject creature can't be
 	// declared as an attacker unless at least one other creature also attacks.
@@ -1494,6 +1499,16 @@ func staticRuleGuardCondition(ability CompiledAbility, node parser.StaticRuleSyn
 			return nil, false
 		}
 		return condition, true
+	case StaticRuleCanBlockAdditional:
+		// "... can block an additional creature each combat as long as you're the
+		// monarch." (Entourage of Trest): a live player-designation gate that turns
+		// the capability on and off as the designation changes. It is a non-negated
+		// on/off static condition the runtime re-evaluates when it gathers rule
+		// effects, not a per-event guard.
+		if condition.Negated || !isLivePlayerDesignationPredicate(condition.Predicate) {
+			return nil, false
+		}
+		return condition, true
 	default:
 		return nil, false
 	}
@@ -1691,6 +1706,13 @@ func semanticStaticRuleForSyntax(rule parser.StaticRuleSyntax) (StaticRuleKind, 
 	}
 	if isCreatureRuleSubject(rule.Subject.Kind) &&
 		rule.Constraint.Kind == parser.StaticRuleConstraintRequirement &&
+		rule.Operation.Kind == parser.StaticRuleOperationBlock &&
+		rule.Operation.Voice == parser.StaticRuleVoiceActive &&
+		staticRuleQualifiersAre(rule.Qualifiers, parser.StaticRuleQualifierAdditionalCreature) {
+		return StaticRuleCanBlockAdditional, StaticZoneBattlefield, true
+	}
+	if isCreatureRuleSubject(rule.Subject.Kind) &&
+		rule.Constraint.Kind == parser.StaticRuleConstraintRequirement &&
 		rule.Operation.Kind == parser.StaticRuleOperationBlockedByAll &&
 		rule.Operation.Voice == parser.StaticRuleVoicePassive &&
 		len(rule.Qualifiers) == 0 {
@@ -1797,6 +1819,8 @@ func staticRuleForEffect(kind EffectKind) StaticRuleKind {
 		return StaticRuleDoesntUntap
 	case EffectCanBlockOnlyCreaturesWithFlying:
 		return StaticRuleCanBlockOnlyCreaturesWithFlying
+	case EffectCanBlockAdditional:
+		return StaticRuleCanBlockAdditional
 	default:
 		return StaticRuleUnknown
 	}
@@ -1835,7 +1859,8 @@ func staticRuleDomain(rule StaticRuleKind) StaticRuleDomain {
 	case StaticRuleCantBlock, StaticRuleCantBeBlocked, StaticRuleMustBeBlocked, StaticRuleCantBeBlockedByMoreThanOne,
 		StaticRuleCantBeBlockedByCreaturesWith, StaticRuleCantBeBlockedExceptBy, StaticRuleCantBlockAndCantBeBlocked,
 		StaticRuleMustBeBlockedByAllAble, StaticRuleAssignDamageAsUnblocked,
-		StaticRuleCanBlockOnlyCreaturesWithFlying, StaticRuleCantBlockAlone:
+		StaticRuleCanBlockOnlyCreaturesWithFlying, StaticRuleCantBlockAlone,
+		StaticRuleCanBlockAdditional:
 		return StaticRuleDomainBlock
 	case StaticRuleCantBeCountered:
 		return StaticRuleDomainCountering

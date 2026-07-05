@@ -227,6 +227,55 @@ func TestApplyDeclareBlockersAllowsMultipleBlockersAndRecordsOrder(t *testing.T)
 	}
 }
 
+// TestCanBlockAdditionalCreatureAllowsBlockingTwoAttackers proves a creature
+// with a RuleEffectCanBlockAdditional static ("can block an additional creature
+// each combat") may block two attackers in one declaration, while an ordinary
+// creature may not.
+func TestCanBlockAdditionalCreatureAllowsBlockingTwoAttackers(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	first := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	second := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	wall := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Extra Blocker",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 0}),
+		Toughness: opt.Val(game.PT{Value: 5}),
+		StaticAbilities: []game.StaticAbility{{
+			RuleEffects: []game.RuleEffect{{
+				Kind:                 game.RuleEffectCanBlockAdditional,
+				AffectedSource:       true,
+				AdditionalBlockCount: 1,
+			}},
+		}},
+	}})
+	ordinary := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareBlockers
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{
+			{Attacker: first.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+			{Attacker: second.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+		},
+	}
+	engine := NewEngine(nil)
+
+	ordinaryBlock := mustDeclareBlockersPayload(t, action.DeclareBlockers([]game.BlockDeclaration{
+		{Blocker: ordinary.ObjectID, Blocking: first.ObjectID},
+		{Blocker: ordinary.ObjectID, Blocking: second.ObjectID},
+	}))
+	if engine.applyDeclareBlockers(g, game.Player2, ordinaryBlock) {
+		t.Fatal("ordinary creature blocked two attackers")
+	}
+
+	wallBlock := mustDeclareBlockersPayload(t, action.DeclareBlockers([]game.BlockDeclaration{
+		{Blocker: wall.ObjectID, Blocking: first.ObjectID},
+		{Blocker: wall.ObjectID, Blocking: second.ObjectID},
+	}))
+	if !engine.applyDeclareBlockers(g, game.Player2, wallBlock) {
+		t.Fatal("can-block-an-additional-creature creature could not block two attackers")
+	}
+}
+
 func TestHorsemanshipBlockLegalityRequiresHorsemanship(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 2, game.Horsemanship)

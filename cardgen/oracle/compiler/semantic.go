@@ -1777,6 +1777,12 @@ const (
 	// It lowers to the can-block-only runtime rule effect bounded by the flying
 	// blocker restriction. Added last so existing kinds keep their wire values.
 	EffectCanBlockOnlyCreaturesWithFlying
+	// EffectCanBlockAdditional is the blocker-side capability "can block an
+	// additional creature each combat" (Brave the Sands, Coastline Chimera): the
+	// subject creature may block one more attacker than the usual single blocker
+	// limit. It lowers to the can-block-additional runtime rule effect. Added last
+	// so existing kinds keep their wire values.
+	EffectCanBlockAdditional
 	// EffectAnimateSelf is the one-shot continuous self-animation "This
 	// <land|artifact|creature|permanent> becomes a N/N [<color>...] [artifact]
 	// <subtype>... creature [with <keyword>...|all creature types] until end of

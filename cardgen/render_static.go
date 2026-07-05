@@ -763,6 +763,9 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 	if effect.UntapUnlessControllerIsMonarch {
 		fields = append(fields, "UntapUnlessControllerIsMonarch: true,")
 	}
+	if effect.AdditionalBlockCount != 0 {
+		fields = append(fields, fmt.Sprintf("AdditionalBlockCount: %d,", effect.AdditionalBlockCount))
+	}
 	if effect.BlockedSource {
 		fields = append(fields, "BlockedSource: true,")
 	}
@@ -895,6 +898,8 @@ func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
 		return "game.RuleEffectAssignCombatDamageUsingToughness", nil
 	case game.RuleEffectCanBlockOnlyCreaturesWith:
 		return "game.RuleEffectCanBlockOnlyCreaturesWith", nil
+	case game.RuleEffectCanBlockAdditional:
+		return "game.RuleEffectCanBlockAdditional", nil
 	case game.RuleEffectCantBeBlockedByMoreThanOne:
 		return "game.RuleEffectCantBeBlockedByMoreThanOne", nil
 	case game.RuleEffectMustAttack:

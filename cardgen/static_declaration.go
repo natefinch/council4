@@ -73,7 +73,16 @@ func lowerStaticDeclarations(
 					body.ZoneOfFunction = zone.Graveyard
 				}
 				conditionContext := conditionContextStatic
-				if declaration.Kind == compiler.StaticDeclarationRule {
+				if declaration.Kind == compiler.StaticDeclarationRule &&
+					!isLivePlayerDesignationConditionPredicate(declaration.Condition.Predicate) {
+					// A static rule's trailing guard clause is a per-event guard
+					// (resolved when an attack, block, or untap step occurs) rather
+					// than an on/off gate. A live player-designation gate ("as long
+					// as you're the monarch", Entourage of Trest) is the exception:
+					// the runtime re-evaluates the static ability's condition each
+					// time rule effects are gathered, so it turns the rule effect on
+					// and off as the designation changes, exactly like a conditioned
+					// continuous static.
 					conditionContext = conditionContextStaticRuleGuard
 				}
 				condition, ok := lowerCondition(*declaration.Condition, conditionContext)
@@ -173,6 +182,24 @@ func lowerStaticDeclarations(
 		},
 		sourceSpans: spans,
 	}, true, nil
+}
+
+// isLivePlayerDesignationConditionPredicate reports whether a condition predicate
+// tests a live player designation (monarch, initiative, city's blessing) that the
+// runtime re-evaluates every time it gathers static rule effects. Such a gate
+// turns a static rule effect on and off as the designation changes ("... as long
+// as you're the monarch", Entourage of Trest), so it is threaded as an on/off
+// static condition rather than a per-event guard clause.
+func isLivePlayerDesignationConditionPredicate(predicate compiler.ConditionPredicate) bool {
+	switch predicate {
+	case compiler.ConditionPredicateControllerIsMonarch,
+		compiler.ConditionPredicateAnOpponentIsMonarch,
+		compiler.ConditionPredicateControllerHasInitiative,
+		compiler.ConditionPredicateControllerHasCityBlessing:
+		return true
+	default:
+		return false
+	}
 }
 
 // lowerStaticCharacteristicPowerToughness lowers a characteristic-defining
@@ -914,6 +941,7 @@ func staticRuleDomain(kind compiler.StaticRuleKind) compiler.StaticRuleDomain {
 		compiler.StaticRuleCantBeBlockedByMoreThanOne, compiler.StaticRuleCantBeBlockedByCreaturesWith,
 		compiler.StaticRuleCantBeBlockedExceptBy,
 		compiler.StaticRuleCanBlockOnlyCreaturesWithFlying,
+		compiler.StaticRuleCanBlockAdditional,
 		compiler.StaticRuleCantBlockAndCantBeBlocked,
 		compiler.StaticRuleMustBeBlockedByAllAble, compiler.StaticRuleAssignDamageAsUnblocked,
 		compiler.StaticRuleCantBlockAlone:
@@ -1509,6 +1537,10 @@ func lowerStaticRuleEffects(kind compiler.StaticRuleKind) ([]game.RuleEffect, bo
 	case compiler.StaticRuleCantAttackYou:
 		return []game.RuleEffect{
 			{Kind: game.RuleEffectCantAttack, DefendingPlayer: game.PlayerYou},
+		}, true
+	case compiler.StaticRuleCanBlockAdditional:
+		return []game.RuleEffect{
+			{Kind: game.RuleEffectCanBlockAdditional, AdditionalBlockCount: 1},
 		}, true
 	default:
 		single, ok := lowerStaticRuleKind(kind)

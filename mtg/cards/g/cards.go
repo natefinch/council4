@@ -25,6 +25,7 @@ var Cards = []*game.CardDef{
 	GeneralLeoCristophe,
 	GeralfSMindcrusher,
 	GethSVerdict,
+	GhastbarkTwins,
 	GhastlyGloomhunter,
 	GhituFirebreathing,
 	GhostHounds,

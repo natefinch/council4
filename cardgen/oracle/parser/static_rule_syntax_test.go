@@ -382,6 +382,43 @@ func TestParseSelfCanBlockOnlyFlyingStaticRuleSentence(t *testing.T) {
 	}
 }
 
+func TestParseSelfCanBlockAdditionalStaticRuleSentence(t *testing.T) {
+	t.Parallel()
+	rule := parseStaticRuleSentence(t, "This creature can block an additional creature each combat.")
+	if rule == nil {
+		t.Fatal("StaticRule = nil, want a static rule")
+	}
+	if rule.Subject.Kind != StaticRuleSubjectSourceCreature {
+		t.Fatalf("subject = %s, want %s", rule.Subject.Kind, StaticRuleSubjectSourceCreature)
+	}
+	if rule.Constraint.Kind != StaticRuleConstraintRequirement {
+		t.Fatalf("constraint = %s, want %s", rule.Constraint.Kind, StaticRuleConstraintRequirement)
+	}
+	if rule.Operation.Kind != StaticRuleOperationBlock || rule.Operation.Voice != StaticRuleVoiceActive {
+		t.Fatalf("operation = %#v, want %s voice %s", rule.Operation, StaticRuleOperationBlock, StaticRuleVoiceActive)
+	}
+	if len(rule.Qualifiers) != 1 || rule.Qualifiers[0].Kind != StaticRuleQualifierAdditionalCreature {
+		t.Fatalf("qualifiers = %#v, want one %s", rule.Qualifiers, StaticRuleQualifierAdditionalCreature)
+	}
+	if rule.Guarded {
+		t.Fatal("unguarded can-block-additional rule marked Guarded")
+	}
+}
+
+func TestParseCanBlockAdditionalMonarchGateStaticRuleSentence(t *testing.T) {
+	t.Parallel()
+	rule := parseStaticRuleSentence(t, "This creature can block an additional creature each combat as long as you're the monarch.")
+	if rule == nil {
+		t.Fatal("StaticRule = nil, want a static rule")
+	}
+	if len(rule.Qualifiers) != 1 || rule.Qualifiers[0].Kind != StaticRuleQualifierAdditionalCreature {
+		t.Fatalf("qualifiers = %#v, want one %s", rule.Qualifiers, StaticRuleQualifierAdditionalCreature)
+	}
+	if !rule.Guarded {
+		t.Fatal("monarch-gated can-block-additional rule not marked Guarded")
+	}
+}
+
 func TestParseCanBlockOnlyFlyingStaticRuleSentencesFailClosed(t *testing.T) {
 	t.Parallel()
 	for name, source := range map[string]string{

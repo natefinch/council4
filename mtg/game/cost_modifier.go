@@ -512,6 +512,14 @@ const (
 	// spells or abilities at all. AffectedPlayer scopes it to the controller.
 	// Added last so existing kinds keep their wire values.
 	RuleEffectPlayerShroud
+	// RuleEffectCanBlockAdditional raises the number of creatures the affected
+	// creature may block by AdditionalBlockCount ("This creature can block an
+	// additional creature each combat.", Brave the Sands, Coastline Chimera;
+	// "Each creature you control can block an additional creature each combat.").
+	// A creature with no such effect blocks at most one creature (CR 509.1a); each
+	// active effect matching the blocker adds its AdditionalBlockCount to that
+	// limit. Added last so existing kinds keep their wire values.
+	RuleEffectCanBlockAdditional
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -570,7 +578,8 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectCantActivateAbilitiesOfPermanent,
 		RuleEffectGoaded,
 		RuleEffectPlayerHexproof,
-		RuleEffectPlayerShroud:
+		RuleEffectPlayerShroud,
+		RuleEffectCanBlockAdditional:
 		return true
 	default:
 		return false
@@ -806,6 +815,12 @@ type RuleEffect struct {
 	// currently holds the monarch designation, and is prohibited from untapping
 	// otherwise. It is false for every other kind.
 	UntapUnlessControllerIsMonarch bool
+
+	// AdditionalBlockCount is the number of extra creatures a
+	// RuleEffectCanBlockAdditional lets the affected creature block, beyond the
+	// default limit of one ("can block an additional creature" sets it to 1). It
+	// is zero for every other kind.
+	AdditionalBlockCount int
 
 	// AffectedPlayerRef binds a group-scoped rule effect's affected permanents to
 	// a specific player chosen at resolution rather than to the AffectedController

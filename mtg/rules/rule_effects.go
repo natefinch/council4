@@ -896,6 +896,24 @@ func ruleEffectLimitsBlockersToOne(g *game.Game, attacker *game.Permanent) bool 
 	return false
 }
 
+// blockerBlockLimit reports how many attackers the given blocker may block. A
+// creature blocks at most one attacker by default (CR 509.1a); each active
+// RuleEffectCanBlockAdditional matching the blocker raises that limit by its
+// AdditionalBlockCount ("This creature can block an additional creature each
+// combat.", Brave the Sands, and the group "Each creature you control can block
+// an additional creature each combat." forms).
+func blockerBlockLimit(g *game.Game, blocker *game.Permanent) int {
+	limit := 1
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind == game.RuleEffectCanBlockAdditional && ruleEffectMatchesPermanent(g, effect, blocker) {
+			limit += effect.AdditionalBlockCount
+		}
+	}
+	return limit
+}
+
 // ruleEffectRestrictsBlocker reports whether a restricted block prohibition
 // ("can't be blocked by creatures with ...") on attacker stops the given blocker
 // because the blocker matches the prohibition's BlockerRestriction.
