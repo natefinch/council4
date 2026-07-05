@@ -343,6 +343,9 @@ func lowerContent(
 		if content, ok := lowerExileUntilLeavesContent(ctx); ok {
 			return content, nil
 		}
+		if content, ok := lowerExileUntilOpponentBecomesMonarchContent(ctx); ok {
+			return content, nil
+		}
 		if content, ok := lowerExileForEachPlayerUntilLeavesContent(ctx); ok {
 			return content, nil
 		}

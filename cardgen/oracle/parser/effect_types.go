@@ -2683,6 +2683,12 @@ type EffectSyntax struct {
 	// linked to the source so a paired leaves-the-battlefield trigger returns it;
 	// the trailing self-reference is the duration anchor, not a target.
 	ExileUntilSourceLeaves bool `json:",omitempty"`
+	// ExileUntilOpponentBecomesMonarch marks the exact monarch exile clause "exile
+	// <target> until an opponent becomes the monarch." (Palace Jailer). The exiled
+	// permanent is linked to the source so a paired "an opponent becomes the
+	// monarch" trigger returns it; the trailing "until an opponent becomes the
+	// monarch" is the return condition, not a second effect or a target.
+	ExileUntilOpponentBecomesMonarch bool `json:",omitempty"`
 	// ExileForEachPlayerUntilSourceLeaves marks the exact distributive Saga
 	// exile clause "For each player, exile up to one [other] target <permanent>
 	// that player controls until this Saga leaves the battlefield." (Vault 13:

@@ -2591,6 +2591,11 @@ type CompiledEffect struct {
 	// "exile <target> until <this permanent> leaves the battlefield." through the
 	// text-blind compiler boundary so lowering links the exile to the source.
 	ExileUntilSourceLeaves bool
+	// ExileUntilOpponentBecomesMonarch carries the parser-recognized monarch exile
+	// clause "exile <target> until an opponent becomes the monarch." (Palace
+	// Jailer) through the text-blind compiler boundary so lowering links the exile
+	// to the source and synthesizes the become-monarch return trigger.
+	ExileUntilOpponentBecomesMonarch bool
 	// ReturnExiledCard carries the parser-recognized explicit O-Ring return
 	// clause "return the exiled card to the battlefield under its owner's
 	// control." through the text-blind compiler boundary so lowering emits the

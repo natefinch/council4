@@ -511,6 +511,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				CounteredSpellExileReplacement:         syntax.CounteredSpellExileReplacement,
 				CounteredSpellDestinationReplacement:   syntax.CounteredSpellDestinationReplacement,
 				ExileUntilSourceLeaves:                 syntax.ExileUntilSourceLeaves,
+				ExileUntilOpponentBecomesMonarch:       syntax.ExileUntilOpponentBecomesMonarch,
 				ReturnExiledCard:                       syntax.ReturnExiledCard,
 				ExileEntireHand:                        syntax.ExileEntireHand,
 				ReturnExiledCardsToHand:                syntax.ReturnExiledCardsToHand,
