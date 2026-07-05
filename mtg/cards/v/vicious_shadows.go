@@ -54,7 +54,7 @@ func newViciousShadows() *game.CardDef {
 									Amount: game.Dynamic(game.DynamicAmount{
 										Kind:       game.DynamicAmountCountCardsInZone,
 										Multiplier: 1,
-										Player:     func() *game.PlayerReference { ref := game.EventPlayerReference(); return &ref }(),
+										Player:     func() *game.PlayerReference { ref := game.TargetPlayerReference(0); return &ref }(),
 										CardZone:   zone.Hand,
 										Selection:  &game.Selection{},
 									}),

@@ -493,7 +493,7 @@ func lowerFixedDamageSpell(
 	}
 
 	damage := game.Damage{
-		Amount:    amount,
+		Amount:    rebindRecipientHandSizeAmount(amount, game.TargetPlayerReference(0)),
 		Recipient: game.AnyTargetDamageRecipient(0),
 	}
 	damage.DamageSource = primaryDamageSource(ctx.content.References)
