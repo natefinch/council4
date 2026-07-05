@@ -112,6 +112,28 @@ func TestEmitConditionBoundaryInterveningIf(t *testing.T) {
 	}
 }
 
+// TestEmitConditionBoundaryInterveningWhile proves a triggered "while <state>"
+// clause inside the event phrase is an intervening condition (Regal Behemoth's
+// "Whenever you tap a land for mana while you're the monarch, ..."), while the
+// combat event rider "attacks while saddled" is left to the event parser and
+// never becomes a condition boundary.
+func TestEmitConditionBoundaryInterveningWhile(t *testing.T) {
+	t.Parallel()
+
+	triggered := parseSingleAbility(t,
+		"Whenever you tap a land for mana while you're the monarch, add {C}.", Context{})
+	boundary := boundaryOfKind(t, &triggered, ConditionIntroAsLongAs)
+	if !boundary.Intervening {
+		t.Fatal("triggered \"while\" boundary Intervening = false, want true")
+	}
+
+	saddled := parseSingleAbility(t,
+		"Whenever this creature attacks while saddled, draw a card.", Context{})
+	for _, b := range saddled.ConditionBoundaries {
+		t.Fatalf("\"while saddled\" event rider wrongly emitted a condition boundary: %#v", b)
+	}
+}
+
 func TestEmitConditionBoundaryIfAbleExcluded(t *testing.T) {
 	t.Parallel()
 	// "attacks each combat if able" is captured as a structural restriction; the

@@ -17,6 +17,7 @@ var Cards = []*game.CardDef{
 	HamletbackGoliath,
 	HammerheadShark,
 	HamzaGuardianOfArashin,
+	HandThatFeeds,
 	HaraldKingOfSkemfar,
 	HarborGuardian,
 	HargildeKindlyRunechanter,

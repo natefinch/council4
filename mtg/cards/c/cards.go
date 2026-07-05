@@ -134,6 +134,7 @@ var Cards = []*game.CardDef{
 	Counterintelligence,
 	CountlessGearsRenegade,
 	CourageInCrisis,
+	CourageousGoblin,
 	CourageousOutrider,
 	CoverOfDarkness,
 	CovetousDragon,

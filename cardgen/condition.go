@@ -255,7 +255,12 @@ func conditionKindAllowedInContext(condition compiler.CompiledCondition, ctx con
 	case conditionContextActivation:
 		return condition.Kind == compiler.ConditionOnlyIf && !condition.Intervening
 	case conditionContextInterveningTrigger:
-		return condition.Kind == compiler.ConditionIf && condition.Intervening
+		// "if <state>" compiles to ConditionIf and "while <state>" (Regal Behemoth)
+		// to ConditionAsLongAs; both express the same intervening gate the runtime
+		// checks as the trigger resolves, and both lower to the same predicate-only
+		// game.Condition, so accept either when marked intervening.
+		return (condition.Kind == compiler.ConditionIf ||
+			condition.Kind == compiler.ConditionAsLongAs) && condition.Intervening
 	case conditionContextReplacement:
 		// The "unless" form ("This land enters tapped unless you control a
 		// Plains.") gates the replacement on the negation of its condition; the

@@ -104,3 +104,32 @@ func TestLowerTappedForManaSelectionSubject(t *testing.T) {
 		t.Fatalf("trigger = %#v, want tapped-for-mana provenance", face.TriggeredAbilities[0].Trigger.Pattern)
 	}
 }
+
+// TestLowerTappedForManaWhileMonarchInterveningCondition proves a "while you're
+// the monarch" clause inside a tapped-for-mana trigger event (Regal Behemoth)
+// lowers to the same intervening ControllerIsMonarch condition an "if you're the
+// monarch" clause would, gating the trigger on the monarch designation.
+func TestLowerTappedForManaWhileMonarchInterveningCondition(t *testing.T) {
+	t.Parallel()
+
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:     "Test Behemoth",
+		Layout:   "normal",
+		TypeLine: "Creature — Dinosaur",
+		ManaCost: "{4}{G}{G}",
+		OracleText: "Trample\n" +
+			"Whenever you tap a land for mana while you're the monarch, add an additional one mana of any color.",
+		Power:     new("5"),
+		Toughness: new("5"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("triggered abilities = %#v, want one", face.TriggeredAbilities)
+	}
+	trigger := face.TriggeredAbilities[0].Trigger
+	if !trigger.Pattern.RequireTappedForMana {
+		t.Fatalf("trigger = %#v, want tapped-for-mana provenance", trigger.Pattern)
+	}
+	if !trigger.InterveningCondition.Exists || !trigger.InterveningCondition.Val.ControllerIsMonarch {
+		t.Fatalf("intervening condition = %#v, want ControllerIsMonarch", trigger.InterveningCondition)
+	}
+}
