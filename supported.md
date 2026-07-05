@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,877 of 32,501 cards eligible for paper support (51.9%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,885 of 32,501 cards eligible for paper support (52.0%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1830,6 +1830,7 @@ Council4 currently supports **16,877 of 32,501 cards eligible for paper support 
 - Brawl-Bash Ogre
 - Brawler's Plate
 - Brawn
+- Brazen Blademaster
 - Brazen Borrower // Petty Theft
 - Brazen Buccaneers
 - Brazen Freebooter
@@ -1972,6 +1973,7 @@ Council4 currently supports **16,877 of 32,501 cards eligible for paper support 
 - Burning Oil
 - Burning Prophet
 - Burning Shield Askari
+- Burning Sun Cavalry
 - Burning Sun's Fury
 - Burning Vengeance
 - Burning-Fist Minotaur
@@ -2893,6 +2895,7 @@ Council4 currently supports **16,877 of 32,501 cards eligible for paper support 
 - Countervailing Winds
 - Countless Gears Renegade
 - Courage in Crisis
+- Courageous Goblin
 - Courageous Outrider
 - Courier Bat
 - Courier Griffin
@@ -3061,7 +3064,6 @@ Council4 currently supports **16,877 of 32,501 cards eligible for paper support 
 - Crystal Ball
 - Crystal Carapace
 - Crystal Chimes
-- Crystal Golem
 - Crystal Grotto
 - Crystal Quarry
 - Crystal Rod
@@ -6435,6 +6437,7 @@ Council4 currently supports **16,877 of 32,501 cards eligible for paper support 
 - Hand of Death
 - Hand of Honor
 - Hand of Silumgar
+- Hand That Feeds
 - Hangarback Walker
 - Hanged Executioner
 - Hanna, Ship's Navigator
@@ -9271,6 +9274,7 @@ Council4 currently supports **16,877 of 32,501 cards eligible for paper support 
 - Moon Heron
 - Moon Sprite
 - Moon-Blessed Cleric
+- Moon-Boy, Dino Rider
 - Moon-Eating Dog
 - Moonblade Shinobi
 - Moonfolk
@@ -10468,6 +10472,7 @@ Council4 currently supports **16,877 of 32,501 cards eligible for paper support 
 - Phytotitan
 - Pia and Kiran Nalaar
 - Pianna, Nomad Captain
+- Picnic Ruiner // Stolen Goodies
 - Pictures of Spider-Man
 - Pierce Strider
 - Pierce the Sky
@@ -11323,6 +11328,7 @@ Council4 currently supports **16,877 of 32,501 cards eligible for paper support 
 - Refurbished Familiar
 - Refuse to Yield
 - Refute
+- Regal Behemoth
 - Regal Bloodlord
 - Regal Caracal
 - Regal Force
@@ -11788,6 +11794,7 @@ Council4 currently supports **16,877 of 32,501 cards eligible for paper support 
 - Rubblehulk
 - Ruby Leech
 - Ruby Medallion
+- Ruby, Daring Tracker
 - Rugged Highlands
 - Rugged Prairie
 - Ruin Crab
@@ -12304,6 +12311,7 @@ Council4 currently supports **16,877 of 32,501 cards eligible for paper support 
 - Seasoned Hallowblade
 - Seasoned Marshal
 - Seasoned Pyromancer
+- Seasoned Warrenguard
 - Seat of the Synod
 - Secluded Courtyard
 - Secluded Glen
