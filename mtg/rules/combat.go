@@ -102,19 +102,13 @@ func resolveUnblockedCombatDamage(g *game.Game, attacker *game.Permanent, target
 // assigns no combat damage (CR 510.1c) unless it has trample, which then assigns
 // its damage to the attack target as though all blockers had lethal damage
 // (CR 702.19d).
-func resolveBlockedCombatDamage(g *game.Game, attacker *game.Permanent, blockers []*game.Permanent, target game.AttackTarget, pass combatDamagePass, log *TurnLog) {
+func resolveBlockedCombatDamage(g *game.Game, attacker *game.Permanent, blockers []*game.Permanent, target game.AttackTarget, pass combatDamagePass, blockerDamageToAttacker map[id.ID]int, log *TurnLog) {
 	if ruleEffectAssignsCombatDamageAsThoughUnblocked(g, attacker) {
 		resolveCombatDamageAsThoughUnblocked(g, attacker, blockers, target, pass, log)
 		return
 	}
 	if len(blockers) == 0 && (!dealsCombatDamageInPass(g, attacker, pass) || !hasKeyword(g, attacker, game.Trample)) {
 		return
-	}
-	blockerDamage := make([]int, len(blockers))
-	for i, blocker := range blockers {
-		if dealsCombatDamageInPass(g, blocker, pass) {
-			blockerDamage[i] = combatDamageAssignedBy(g, blocker)
-		}
 	}
 	if dealsCombatDamageInPass(g, attacker, pass) {
 		assignments, tramplingDamage := assignAttackerCombatDamage(g, attacker, blockers)
@@ -123,9 +117,9 @@ func resolveBlockedCombatDamage(g *game.Game, attacker *game.Permanent, blockers
 		}
 		markAttackTargetCombatDamage(g, attacker, target, tramplingDamage, log)
 	}
-	for i, blocker := range blockers {
-		if blockerDamage[i] > 0 {
-			markCreatureCombatDamage(g, blocker, attacker, blockerDamage[i], log)
+	for _, blocker := range blockers {
+		if damage := blockerDamageToAttacker[blocker.ObjectID]; damage > 0 {
+			markCreatureCombatDamage(g, blocker, attacker, damage, log)
 		}
 	}
 }
@@ -624,6 +618,19 @@ func lethalDamageRemaining(g *game.Game, permanent *game.Permanent) int {
 	return max(0, lethal-permanent.MarkedDamage)
 }
 
+// blockerDamageForAttacker projects the per-pass blocker damage assignments onto a
+// single attacker, returning how much combat damage each blocking creature assigns
+// to that attacker.
+func blockerDamageForAttacker(assignments map[id.ID]map[id.ID]int, attackerID id.ID) map[id.ID]int {
+	perBlocker := make(map[id.ID]int)
+	for blockerID, byAttacker := range assignments {
+		if damage := byAttacker[attackerID]; damage > 0 {
+			perBlocker[blockerID] = damage
+		}
+	}
+	return perBlocker
+}
+
 func blockersByAttacker(g *game.Game) map[id.ID][]*game.Permanent {
 	blockers := make(map[id.ID][]*game.Permanent)
 	if g.Combat == nil {
@@ -650,6 +657,86 @@ func blockersByAttacker(g *game.Game) map[id.ID][]*game.Permanent {
 		}
 	}
 	return blockers
+}
+
+// attackersByBlocker inverts blockersByAttacker into the attackers each blocking
+// creature is blocking, in attacker declaration order (CR 509.2), so the damage a
+// creature blocking more than one attacker assigns is divided deterministically.
+func attackersByBlocker(g *game.Game, blockerMap map[id.ID][]*game.Permanent) map[id.ID][]*game.Permanent {
+	attackers := make(map[id.ID][]*game.Permanent)
+	if g.Combat == nil {
+		return attackers
+	}
+	seen := make(map[[2]id.ID]bool)
+	for _, declaration := range g.Combat.Attackers {
+		attacker, ok := permanentByObjectID(g, declaration.Attacker)
+		if !ok {
+			continue
+		}
+		for _, blocker := range blockerMap[declaration.Attacker] {
+			key := [2]id.ID{blocker.ObjectID, declaration.Attacker}
+			if seen[key] {
+				continue
+			}
+			seen[key] = true
+			attackers[blocker.ObjectID] = append(attackers[blocker.ObjectID], attacker)
+		}
+	}
+	return attackers
+}
+
+// blockerCombatDamageAssignments precomputes, for the given damage pass, how much
+// combat damage each blocking creature assigns to each attacker it is blocking. A
+// creature blocking one attacker assigns all of its combat damage to that
+// attacker; a creature blocking more than one divides its damage among them
+// (CR 510.1c). Precomputing once per pass, before any damage is marked, keeps the
+// division based on the pre-damage state (CR 510.2, simultaneous assignment).
+func blockerCombatDamageAssignments(g *game.Game, blockerMap map[id.ID][]*game.Permanent, pass combatDamagePass) map[id.ID]map[id.ID]int {
+	result := make(map[id.ID]map[id.ID]int)
+	for blockerID, attackers := range attackersByBlocker(g, blockerMap) {
+		blocker, ok := permanentByObjectID(g, blockerID)
+		if !ok || !dealsCombatDamageInPass(g, blocker, pass) {
+			continue
+		}
+		perAttacker := make(map[id.ID]int)
+		for _, assignment := range assignBlockerCombatDamage(g, blocker, attackers) {
+			perAttacker[assignment.permanent.ObjectID] = assignment.damage
+		}
+		result[blockerID] = perAttacker
+	}
+	return result
+}
+
+// assignBlockerCombatDamage divides a blocking creature's combat damage (equal to
+// its power, CR 510.1a) among the attackers it is blocking (CR 510.1c). A creature
+// blocking a single attacker assigns all of its damage to that attacker, matching
+// the pre-multiblock behavior exactly. A creature blocking more than one attacker
+// assigns lethal damage to each in declaration order until its damage is spent,
+// a legal division the "can block an additional creature" cards rely on.
+func assignBlockerCombatDamage(g *game.Game, blocker *game.Permanent, attackers []*game.Permanent) []creatureDamageAssignment {
+	damageRemaining := combatDamageAssignedBy(g, blocker)
+	if damageRemaining <= 0 || len(attackers) == 0 {
+		return nil
+	}
+	if len(attackers) == 1 {
+		return []creatureDamageAssignment{{permanent: attackers[0], damage: damageRemaining}}
+	}
+	assignments := make([]creatureDamageAssignment, 0, len(attackers))
+	for i, attacker := range attackers {
+		if damageRemaining <= 0 {
+			break
+		}
+		damage := damageRemaining
+		if i < len(attackers)-1 {
+			damage = min(damageRemaining, lethalDamageRemainingFromSource(g, blocker, attacker))
+		}
+		if damage <= 0 {
+			continue
+		}
+		assignments = append(assignments, creatureDamageAssignment{permanent: attacker, damage: damage})
+		damageRemaining -= damage
+	}
+	return assignments
 }
 
 // legalDeclareBlockersActions returns the legal declare-blockers actions for

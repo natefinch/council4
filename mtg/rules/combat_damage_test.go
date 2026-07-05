@@ -65,6 +65,37 @@ func TestResolveCombatDamageMultipleAttackersDealSeparateDamage(t *testing.T) {
 	}
 }
 
+// TestBlockerBlockingTwoAttackersDividesItsCombatDamage covers CR 510.1c for a
+// creature blocking more than one attacker ("can block an additional creature"):
+// its combat damage is divided among the attackers it blocks, not dealt in full
+// to each. A 5/5 blocking two 3/3 attackers assigns lethal (3) to the first and
+// its remaining 2 to the second (total 5), and takes 3 from each attacker.
+func TestBlockerBlockingTwoAttackersDividesItsCombatDamage(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	first := addCombatCreaturePermanentWithPower(g, game.Player1, 3)
+	second := addCombatCreaturePermanentWithPower(g, game.Player1, 3)
+	blocker := addCombatCreaturePermanentWithPower(g, game.Player2, 5)
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{
+			{Attacker: first.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+			{Attacker: second.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+		},
+		Blockers: []game.BlockDeclaration{
+			{Blocker: blocker.ObjectID, Blocking: first.ObjectID},
+			{Blocker: blocker.ObjectID, Blocking: second.ObjectID},
+		},
+	}
+
+	NewEngine(nil).resolveCombatDamage(g, &TurnLog{})
+
+	if first.MarkedDamage != 3 || second.MarkedDamage != 2 {
+		t.Fatalf("attacker damage = %d/%d, want divided 3/2 (not 5/5)", first.MarkedDamage, second.MarkedDamage)
+	}
+	if blocker.MarkedDamage != 6 {
+		t.Fatalf("blocker damage = %d, want 6 (3 from each attacker)", blocker.MarkedDamage)
+	}
+}
+
 func TestAttackerChosenCombatDamageAssignmentIsUsed(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 5)

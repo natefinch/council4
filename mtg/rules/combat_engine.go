@@ -352,10 +352,84 @@ func (combatEngine) legalBlockers(g *game.Game, playerID game.PlayerID) []action
 			}
 		}
 	}
+	actions = append(actions, multiAttackerBlockActions(g, attackers, blockers, required, lures)...)
 	if len(required) == 0 && !lureForcesBlock {
 		actions = append(actions, actionBuild.declareBlockers(nil))
 	}
 	return actions
+}
+
+// multiAttackerBlockActions enumerates declare-blockers actions in which a single
+// creature that can block more than one attacker ("can block an additional
+// creature", blockerBlockLimit > 1) blocks a subset of the attackers it can
+// legally block. It offers one such declaration per capable blocker per legal
+// attacker subset (size two up to the blocker's limit), so the added capability
+// is reachable through the action interface. Menace attackers (which need at
+// least two blockers) are excluded because a lone blocker can't satisfy them, and
+// every declaration is validated against the same must-block, lure, and alone
+// restrictions as the single-attacker declarations.
+func multiAttackerBlockActions(g *game.Game, attackers []game.AttackDeclaration, blockers []*game.Permanent, required map[id.ID]bool, lures map[id.ID]bool) []action.Action {
+	var actions []action.Action
+	for _, blocker := range blockers {
+		limit := blockerBlockLimit(g, blocker)
+		if limit < 2 {
+			continue
+		}
+		var blockable []game.AttackDeclaration
+		for _, attacker := range attackers {
+			attackingPermanent, ok := permanentByObjectID(g, attacker.Attacker)
+			if !ok || attackerRequiresMultipleBlockers(g, attackingPermanent) {
+				continue
+			}
+			if canBlockAttacker(g, blocker, attackingPermanent) {
+				blockable = append(blockable, attacker)
+			}
+		}
+		if len(blockable) < 2 {
+			continue
+		}
+		for _, subset := range attackerSubsets(blockable, 2, min(limit, len(blockable))) {
+			declaration := make([]game.BlockDeclaration, 0, len(subset))
+			for _, attacker := range subset {
+				declaration = append(declaration, game.BlockDeclaration{
+					Blocker:  blocker.ObjectID,
+					Blocking: attacker.Attacker,
+				})
+			}
+			if blockDeclarationsSatisfyMustBlockRequirements(required, declaration) &&
+				blockDeclarationsSatisfyLures(g, lures, blockers, declaration) &&
+				blockDeclarationsSatisfyAloneRestriction(g, appendCombatBlockers(g, declaration)) {
+				actions = append(actions, actionBuild.declareBlockers(declaration))
+			}
+		}
+	}
+	return actions
+}
+
+// attackerSubsets returns every subset of items whose size is between minSize and
+// maxSize inclusive, preserving the input (attacker declaration) order within each
+// subset so the generated block declarations are deterministic.
+func attackerSubsets(items []game.AttackDeclaration, minSize, maxSize int) [][]game.AttackDeclaration {
+	var subsets [][]game.AttackDeclaration
+	var build func(start int, current []game.AttackDeclaration)
+	build = func(start int, current []game.AttackDeclaration) {
+		if len(current) >= minSize {
+			subset := make([]game.AttackDeclaration, len(current))
+			copy(subset, current)
+			subsets = append(subsets, subset)
+		}
+		if len(current) == maxSize {
+			return
+		}
+		for i := start; i < len(items); i++ {
+			next := make([]game.AttackDeclaration, len(current)+1)
+			copy(next, current)
+			next[len(current)] = items[i]
+			build(i+1, next)
+		}
+	}
+	build(0, nil)
+	return subsets
 }
 
 // trueLureAttackers returns the set of attacker object IDs whose true-lure
@@ -698,6 +772,7 @@ func (combatEngine) resolveDamagePass(g *game.Game, pass combatDamagePass, log *
 	}
 	eventStart := len(g.Events)
 	blockerMap := blockersByAttacker(g)
+	blockerDamage := blockerCombatDamageAssignments(g, blockerMap, pass)
 	for _, declaration := range g.Combat.Attackers {
 		attacker, ok := permanentByObjectID(g, declaration.Attacker)
 		if !ok || attacker.PhasedOut {
@@ -705,7 +780,7 @@ func (combatEngine) resolveDamagePass(g *game.Game, pass combatDamagePass, log *
 		}
 		blockers := blockerMap[declaration.Attacker]
 		if attackerWasBlocked(g, declaration.Attacker) {
-			resolveBlockedCombatDamage(g, attacker, blockers, declaration.Target, pass, log)
+			resolveBlockedCombatDamage(g, attacker, blockers, declaration.Target, pass, blockerDamageForAttacker(blockerDamage, declaration.Attacker), log)
 			continue
 		}
 		if !isLegalAttackTarget(g, effectiveController(g, attacker), declaration.Target) {

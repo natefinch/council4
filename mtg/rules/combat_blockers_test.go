@@ -276,6 +276,61 @@ func TestCanBlockAdditionalCreatureAllowsBlockingTwoAttackers(t *testing.T) {
 	}
 }
 
+// TestLegalDeclareBlockersOffersMultiAttackerBlockForCapableBlocker proves the
+// block enumerator offers a declaration in which a creature that can block an
+// additional creature blocks both attackers, so the capability is reachable
+// through the action interface (not merely legal when hand-constructed).
+func TestLegalDeclareBlockersOffersMultiAttackerBlockForCapableBlocker(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	first := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	second := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	wall := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Extra Blocker",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 0}),
+		Toughness: opt.Val(game.PT{Value: 5}),
+		StaticAbilities: []game.StaticAbility{{
+			RuleEffects: []game.RuleEffect{{
+				Kind:                 game.RuleEffectCanBlockAdditional,
+				AffectedSource:       true,
+				AdditionalBlockCount: 1,
+			}},
+		}},
+	}})
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareBlockers
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{
+			{Attacker: first.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+			{Attacker: second.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+		},
+	}
+
+	legal := legalDeclareBlockersActions(g, game.Player2)
+	found := false
+	for _, act := range legal {
+		payload := mustDeclareBlockersPayload(t, act)
+		if len(payload.Blockers) != 2 {
+			continue
+		}
+		blocked := map[id.ID]bool{}
+		for _, block := range payload.Blockers {
+			if block.Blocker != wall.ObjectID {
+				blocked = nil
+				break
+			}
+			blocked[block.Blocking] = true
+		}
+		if blocked[first.ObjectID] && blocked[second.ObjectID] {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatal("enumerator did not offer a declaration blocking both attackers with the capable blocker")
+	}
+}
+
 func TestHorsemanshipBlockLegalityRequiresHorsemanship(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 2, game.Horsemanship)
