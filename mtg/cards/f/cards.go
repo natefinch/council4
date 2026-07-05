@@ -86,6 +86,7 @@ var Cards = []*game.CardDef{
 	ForiysianInterceptor,
 	FormAPosse,
 	FormlessGenesis,
+	ForthEorlingas,
 	FoulTongueShriek,
 	FractalSummoning,
 	FracturedSanity,

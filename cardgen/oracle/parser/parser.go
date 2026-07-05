@@ -178,7 +178,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitReminderInner(document.Abilities)
 	emitSourceOrder(document.Abilities)
 	stripConditionalModalHeaderSemantics(document.Abilities)
-	emitDelayedTriggerEffects(document.Abilities)
+	emitDelayedTriggerEffects(document.Abilities, context.InstantOrSorcery)
 	return document, diagnostics
 }
 
