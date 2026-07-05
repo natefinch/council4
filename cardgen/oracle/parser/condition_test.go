@@ -140,6 +140,7 @@ func TestParseConditionPredicateMeaning(t *testing.T) {
 		{"an opponent is monarch", "an opponent is the monarch", ConditionPredicateAnOpponentIsMonarch, 0},
 		{"controller was monarch at turn start", "you were the monarch as the turn began", ConditionPredicateControllerWasMonarchAtTurnStart, 0},
 		{"defending player is monarch", "defending player is the monarch", ConditionPredicateDefendingPlayerIsMonarch, 0},
+		{"that player is monarch", "that player is the monarch", ConditionPredicateThatPlayerIsMonarch, 0},
 		{"controller has initiative", "you have the initiative", ConditionPredicateControllerHasInitiative, 0},
 		{"controller has city's blessing", "you have the city's blessing", ConditionPredicateControllerHasCityBlessing, 0},
 		{"event spell no mana spent", "no mana was spent to cast it", ConditionPredicateEventSpellNoManaSpentToCast, 0},

@@ -12,6 +12,7 @@ var Cards = []*game.CardDef{
 	FaerieMechanist,
 	FaithSFetters,
 	FaithUnbroken,
+	FallFromFavor,
 	FallowWurm,
 	FalseMemories,
 	Falter,

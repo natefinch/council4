@@ -105,6 +105,7 @@ const (
 	ConditionPredicateControllerWasMonarchAtTurnStart                  ConditionPredicateKind = "ConditionPredicateControllerWasMonarchAtTurnStart"
 	ConditionPredicateAnOpponentIsMonarch                              ConditionPredicateKind = "ConditionPredicateAnOpponentIsMonarch"
 	ConditionPredicateDefendingPlayerIsMonarch                         ConditionPredicateKind = "ConditionPredicateDefendingPlayerIsMonarch"
+	ConditionPredicateThatPlayerIsMonarch                              ConditionPredicateKind = "ConditionPredicateThatPlayerIsMonarch"
 	ConditionPredicateControllerHasInitiative                          ConditionPredicateKind = "ConditionPredicateControllerHasInitiative"
 	ConditionPredicateControllerHasCityBlessing                        ConditionPredicateKind = "ConditionPredicateControllerHasCityBlessing"
 	ConditionPredicateControllerTurn                                   ConditionPredicateKind = "ConditionPredicateControllerTurn"
@@ -2039,8 +2040,11 @@ func recognizeGainedLifeThisTurnCondition(body []shared.Token, _ Atoms) (Conditi
 // tests a player designation: whether the controller currently holds the monarch
 // (CR 720), the initiative (CR 720/dungeon), or the city's blessing (CR 702.131
 // ascend), or whether an opponent currently holds the monarch ("if an opponent is
-// the monarch", Queen Marchesa). These are live game-state predicates that the
-// runtime evaluates against the relevant players' designation flags.
+// the monarch", Queen Marchesa). The defending-player and back-referenced "that
+// player" forms name the monarch relative to a permanent's controller for
+// per-event guards ("unless that player is the monarch.", Fall from Favor). These
+// are live game-state predicates that the runtime evaluates against the relevant
+// players' designation flags.
 func recognizeControllerDesignationCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
 	switch {
 	case tokenWordsEqual(body, "you're", "the", "monarch"),
@@ -2052,6 +2056,8 @@ func recognizeControllerDesignationCondition(body []shared.Token, _ Atoms) (Cond
 		return ConditionClause{Predicate: ConditionPredicateAnOpponentIsMonarch}, true
 	case tokenWordsEqual(body, "defending", "player", "is", "the", "monarch"):
 		return ConditionClause{Predicate: ConditionPredicateDefendingPlayerIsMonarch}, true
+	case tokenWordsEqual(body, "that", "player", "is", "the", "monarch"):
+		return ConditionClause{Predicate: ConditionPredicateThatPlayerIsMonarch}, true
 	case tokenWordsEqual(body, "you", "have", "the", "initiative"):
 		return ConditionClause{Predicate: ConditionPredicateControllerHasInitiative}, true
 	case tokenWordsEqual(body, "you", "have", "the", "city's", "blessing"):

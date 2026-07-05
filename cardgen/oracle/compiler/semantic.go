@@ -813,6 +813,13 @@ const (
 	// on a can't-attack static rule, where the defending player is resolved per
 	// attack.
 	ConditionPredicateDefendingPlayerIsMonarch
+	// ConditionPredicateThatPlayerIsMonarch is satisfied when the player named by
+	// a preceding "its controller" reference currently holds the monarch (CR 720),
+	// as in "doesn't untap during its controller's untap step unless that player is
+	// the monarch" (Fall from Favor). Like ConditionPredicateDefendingPlayerIsMonarch
+	// it is only meaningful as the guard on a static rule, where the affected
+	// permanent's controller is resolved per untap step.
+	ConditionPredicateThatPlayerIsMonarch
 	// ConditionPredicateControllerHasInitiative is satisfied when the context
 	// controller has the initiative (CR 720). It is a live single-player
 	// game-state predicate with no clause parameters.

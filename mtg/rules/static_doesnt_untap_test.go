@@ -95,6 +95,60 @@ func TestDoesntUntapAttachedKeepsEnchantedCreatureTapped(t *testing.T) {
 	}
 }
 
+// TestDoesntUntapMonarchGuardUntapsWhenControllerIsMonarch verifies that the
+// "doesn't untap during its controller's untap step unless that player is the
+// monarch" guard (Fall from Favor) freezes the enchanted creature while its
+// controller is not the monarch but lets it untap normally once its controller
+// holds the monarch designation.
+func TestDoesntUntapMonarchGuardUntapsWhenControllerIsMonarch(t *testing.T) {
+	newGame := func() (*Engine, *game.Game, *game.Permanent) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		engine := NewEngine(nil)
+		enchanted := makeCreaturePermanent(g, game.Player1, "Fallen Favorite")
+		aura := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+			Name:     "Fall from Favor",
+			Types:    []types.Card{types.Enchantment},
+			Subtypes: []types.Sub{types.Aura},
+			StaticAbilities: []game.StaticAbility{
+				{
+					KeywordAbilities: []game.KeywordAbility{game.EnchantKeyword{Target: game.TargetSpec{
+						Allow:     game.TargetAllowPermanent,
+						Selection: opt.Val(game.Selection{RequiredTypesAny: []types.Card{types.Creature}}),
+					}}},
+				},
+				{
+					RuleEffects: []game.RuleEffect{{
+						Kind:                           game.RuleEffectDoesntUntap,
+						AffectedAttached:               true,
+						UntapUnlessControllerIsMonarch: true,
+					}},
+				},
+			},
+		}})
+		if !attachPermanent(g, aura, enchanted) {
+			t.Fatal("attachPermanent(aura, enchanted) = false")
+		}
+		enchanted.Tapped = true
+		g.Turn.ActivePlayer = game.Player1
+		g.Turn.PriorityPlayer = game.Player1
+		addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Draw Step Card"}})
+		return engine, g, enchanted
+	}
+
+	engine, g, enchanted := newGame()
+	engine.runBeginningPhase(g, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+	if !enchanted.Tapped {
+		t.Fatal("enchanted creature untapped while its controller was not the monarch")
+	}
+
+	engine, g, enchanted = newGame()
+	g.Players[game.Player1].IsMonarch = true
+	engine.runBeginningPhase(g, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+	if enchanted.Tapped {
+		t.Fatal("enchanted creature stayed tapped while its controller was the monarch")
+	}
+}
+
 func TestUntapPhasesInAllPermanentsBeforeApplyingRestrictions(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

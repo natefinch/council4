@@ -760,6 +760,9 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 	if effect.AttackDefenderIsMonarch {
 		fields = append(fields, "AttackDefenderIsMonarch: true,")
 	}
+	if effect.UntapUnlessControllerIsMonarch {
+		fields = append(fields, "UntapUnlessControllerIsMonarch: true,")
+	}
 	if effect.BlockedSource {
 		fields = append(fields, "BlockedSource: true,")
 	}

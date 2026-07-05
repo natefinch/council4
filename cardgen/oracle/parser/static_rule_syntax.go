@@ -258,9 +258,17 @@ func parseStaticRuleOperationsForSubject(tokens []shared.Token, subject StaticRu
 		}
 		return rule, true
 	}
-	if constraint, operation, ok := parseStaticDoesntUntapRule(tokens, next); ok {
-		rule.Constraint = constraint
-		rule.Operation = operation
+	if untap, ok := parseStaticDoesntUntapRule(tokens, next); ok {
+		rule.Constraint = untap.Constraint
+		rule.Operation = untap.Operation
+		opNext := untap.OpNext
+		if staticRuleHasGuardClause(tokens, opNext) {
+			rule.Guarded = true
+			opNext = len(tokens) - 1
+		}
+		if opNext != len(tokens)-1 {
+			return nil, false
+		}
 		if !validStaticRuleSyntax(*rule) {
 			return nil, false
 		}
@@ -516,13 +524,23 @@ func parseCanBlockOnlyFlyingRule(tokens []shared.Token, start int) (requiredAtta
 	}, true
 }
 
+// doesntUntapRuleSyntax bundles a parsed "doesn't untap" prohibition with the
+// cursor just past its fixed "untap step" phrasing so the caller can detect a
+// trailing guard clause.
+type doesntUntapRuleSyntax struct {
+	Constraint StaticRuleConstraint `json:",omitzero"`
+	Operation  StaticRuleOperation  `json:",omitzero"`
+	OpNext     int                  `json:",omitempty"`
+}
+
 // parseStaticDoesntUntapRule recognizes "doesn't untap during your untap step"
 // or "doesn't untap during its controller's untap step", modeling the frozen
-// permanent as a prohibition on the untap operation. The trailing "untap step"
-// phrasing is fixed and fully consumed.
-func parseStaticDoesntUntapRule(tokens []shared.Token, start int) (StaticRuleConstraint, StaticRuleOperation, bool) {
+// permanent as a prohibition on the untap operation. OpNext points just past the
+// fixed "untap step" phrasing so the caller can detect a trailing guard clause
+// ("... unless that player is the monarch.", Fall from Favor).
+func parseStaticDoesntUntapRule(tokens []shared.Token, start int) (doesntUntapRuleSyntax, bool) {
 	if !staticRuleWordsAt(tokens, start, "doesn't", "untap", "during") {
-		return StaticRuleConstraint{}, StaticRuleOperation{}, false
+		return doesntUntapRuleSyntax{}, false
 	}
 	cursor := start + 3
 	switch {
@@ -531,21 +549,23 @@ func parseStaticDoesntUntapRule(tokens []shared.Token, start int) (StaticRuleCon
 	case staticRuleWordsAt(tokens, cursor, "its", "controller's"):
 		cursor += 2
 	default:
-		return StaticRuleConstraint{}, StaticRuleOperation{}, false
+		return doesntUntapRuleSyntax{}, false
 	}
-	if !staticRuleWordsAt(tokens, cursor, "untap", "step") || cursor+2 != len(tokens)-1 {
-		return StaticRuleConstraint{}, StaticRuleOperation{}, false
+	if !staticRuleWordsAt(tokens, cursor, "untap", "step") {
+		return doesntUntapRuleSyntax{}, false
 	}
-	constraint := StaticRuleConstraint{
-		Kind: StaticRuleConstraintProhibition,
-		Span: shared.SpanOf(tokens[start : start+1]),
-	}
-	operation := StaticRuleOperation{
-		Kind:  StaticRuleOperationUntap,
-		Voice: StaticRuleVoiceActive,
-		Span:  shared.SpanOf(tokens[start+1 : cursor+2]),
-	}
-	return constraint, operation, true
+	return doesntUntapRuleSyntax{
+		Constraint: StaticRuleConstraint{
+			Kind: StaticRuleConstraintProhibition,
+			Span: shared.SpanOf(tokens[start : start+1]),
+		},
+		Operation: StaticRuleOperation{
+			Kind:  StaticRuleOperationUntap,
+			Voice: StaticRuleVoiceActive,
+			Span:  shared.SpanOf(tokens[start+1 : cursor+2]),
+		},
+		OpNext: cursor + 2,
+	}, true
 }
 
 // parseStaticBlockerRestrictionQualifier consumes the blocker-characteristic
