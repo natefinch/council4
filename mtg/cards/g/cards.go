@@ -49,6 +49,7 @@ var Cards = []*game.CardDef{
 	GlaringFleshraker,
 	GleamingBastion,
 	GlenElendraGuardian,
+	GlimpseOfNature,
 	GlimpseTheUnthinkable,
 	GlintHawk,
 	GlintNestCrane,

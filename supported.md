@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,901 of 32,501 cards eligible for paper support (52.0%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,903 of 32,501 cards eligible for paper support (52.0%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -5299,6 +5299,7 @@ Council4 currently supports **16,901 of 32,501 cards eligible for paper support 
 - Forsaken Miner
 - Forsaken Monument
 - Forsaken Sanctuary
+- Forth Eorlingas!
 - Fortified Area
 - Fortified Rampart
 - Fortified Village
@@ -5826,6 +5827,7 @@ Council4 currently supports **16,901 of 32,501 cards eligible for paper support 
 - Glimmerpost
 - Glimmervoid
 - Glimpse of Freedom
+- Glimpse of Nature
 - Glimpse the Core
 - Glimpse the Future
 - Glimpse the Unthinkable

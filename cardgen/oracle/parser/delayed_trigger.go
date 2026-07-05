@@ -16,11 +16,69 @@ import (
 // delayed trigger. Rewriting fails closed: an ability the recognizer does not
 // match, or whose stripped body does not reparse to exactly one triggered
 // ability, is left untouched.
-func emitDelayedTriggerEffects(abilities []Ability) {
+func emitDelayedTriggerEffects(abilities []Ability, instantOrSorcery bool) {
 	for i := range abilities {
 		rewriteDelayedTriggerAbility(&abilities[i])
 		rewriteCapturedCombatDamageDelayedTrigger(&abilities[i])
+		rewriteSpellTriggeredThisTurnDelayedAbility(&abilities[i], instantOrSorcery)
 	}
+}
+
+// rewriteSpellTriggeredThisTurnDelayedAbility converts a spell paragraph that
+// parsed as a standing triggered ability whose trigger ends with "this turn"
+// ("Whenever one or more creatures you control deal combat damage to one or more
+// players this turn, you become the monarch.", Forth Eorlingas!'s second
+// paragraph) into a single EffectDelayedTrigger spell effect. On an instant or
+// sorcery such a paragraph is not a standing triggered ability but a delayed
+// trigger the spell sets up as it resolves; the parser strips the "this turn"
+// preamble into ability.Trigger, so this rebuilds the nested triggered ability
+// from ability.Text (which retains the full preamble) and reclassifies the
+// ability as a spell effect that the backend merges into the spell. It fails
+// closed on any non-spell ability, a trigger that does not end with "this turn",
+// or a body that does not reparse to exactly one plain triggered ability.
+func rewriteSpellTriggeredThisTurnDelayedAbility(ability *Ability, instantOrSorcery bool) {
+	if !instantOrSorcery ||
+		ability.Kind != AbilityTriggered ||
+		ability.Trigger == nil ||
+		len(ability.Sentences) != 1 {
+		return
+	}
+	triggerLower := strings.ToLower(strings.TrimSpace(ability.Trigger.Text))
+	if !strings.HasSuffix(triggerLower, "this turn") {
+		return
+	}
+	if !strings.Contains(triggerLower, "cast") && !strings.Contains(triggerLower, "combat damage") {
+		return
+	}
+	inner, oneShot, ok := delayedTriggerInnerText(ability.Text)
+	if !ok {
+		return
+	}
+	granted, ok := parseDelayedTriggerAbility(inner)
+	if !ok {
+		return
+	}
+	sentence := &ability.Sentences[0]
+	effect := EffectSyntax{
+		Kind:                  EffectDelayedTrigger,
+		Span:                  ability.Span,
+		VerbSpan:              ability.Span,
+		ClauseSpan:            ability.Span,
+		Text:                  ability.Text,
+		DelayedTriggerAbility: &granted,
+		DelayedTriggerOneShot: oneShot,
+	}
+	ability.Kind = AbilitySpell
+	ability.Trigger = nil
+	sentence.Effects = []EffectSyntax{effect}
+	sentence.Targets = nil
+	sentence.LegacyEffects = false
+	ability.SemanticReferences = nil
+	ability.SemanticKeywords = nil
+	ability.ConditionBoundaries = nil
+	ability.EventHistoryConditions = nil
+	ability.ConditionClauses = nil
+	ability.ConditionSegments = nil
 }
 
 // rewriteCapturedCombatDamageDelayedTrigger rewrites a trailing "Whenever that
