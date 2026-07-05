@@ -628,6 +628,7 @@ const (
 	StaticPlayerRuleSkipDrawStep
 	StaticPlayerRuleHexproof
 	StaticPlayerRuleShroud
+	StaticPlayerRuleDamageDoesntCauseLifeLoss
 )
 
 // StaticPlayerRuleDeclaration is one player-scoped static rule applied to the
@@ -4319,6 +4320,10 @@ var staticPlayerRuleSpecs = map[parser.StaticDeclarationPlayerRuleKind]staticPla
 		keyword:        parser.KeywordShroud,
 		matchesContent: emptyStaticPlayerRuleContent,
 	},
+	parser.StaticDeclarationPlayerRuleDamageDoesntCauseLifeLoss: {
+		kind:           StaticPlayerRuleDamageDoesntCauseLifeLoss,
+		matchesContent: conditionalStaticPlayerRuleContent,
+	},
 	parser.StaticDeclarationPlayerRuleAttackTax: {
 		kind:           StaticPlayerRuleAttackTax,
 		usesAttackTax:  true,
@@ -4413,7 +4418,8 @@ func recognizeStaticPlayerRuleDeclaration(ability CompiledAbility, statics []par
 		return StaticDeclaration{}, false
 	}
 	var condition *CompiledCondition
-	if spec.kind == StaticPlayerRuleCastThisFromGraveyard || spec.kind == StaticPlayerRuleCastThisFromExile {
+	if spec.kind == StaticPlayerRuleCastThisFromGraveyard || spec.kind == StaticPlayerRuleCastThisFromExile ||
+		spec.kind == StaticPlayerRuleDamageDoesntCauseLifeLoss {
 		compiledCondition, ok := staticDeclarationCondition(ability.Content.Conditions)
 		if !ok {
 			return StaticDeclaration{}, false
@@ -4457,6 +4463,14 @@ func staticPlayerRuleSubjectAllowed(subject parser.StaticDeclarationSubjectKind,
 
 func emptyStaticPlayerRuleContent(content AbilityContent) bool {
 	return len(content.Conditions) == 0 && len(content.References) == 0
+}
+
+// conditionalStaticPlayerRuleContent allows a player-scoped static rule to carry
+// an optional single condition ("As long as you're the monarch, ...") and no
+// references, so a designation-gated player rule (Archon of Coronation) compiles
+// while its condition flows to the static ability's gate.
+func conditionalStaticPlayerRuleContent(content AbilityContent) bool {
+	return len(content.Conditions) <= 1 && len(content.References) == 0
 }
 
 // staticPlayerRuleKeywordContent reports whether a player rule's keyword content

@@ -1003,6 +1003,12 @@ func appendStaticPlayerRuleDeclaration(body *game.StaticAbility, declaration com
 			AffectedPlayer: game.PlayerYou,
 		})
 		return true
+	case compiler.StaticPlayerRuleDamageDoesntCauseLifeLoss:
+		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+			Kind:           game.RuleEffectDamageDoesntCauseLifeLoss,
+			AffectedPlayer: game.PlayerYou,
+		})
+		return true
 	case compiler.StaticPlayerRuleAttackTax:
 		if declaration.Player.AttackTaxGeneric <= 0 {
 			return false

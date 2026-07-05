@@ -520,6 +520,13 @@ const (
 	// active effect matching the blocker adds its AdditionalBlockCount to that
 	// limit. Added last so existing kinds keep their wire values.
 	RuleEffectCanBlockAdditional
+	// RuleEffectDamageDoesntCauseLifeLoss stops damage dealt to the affected
+	// player from reducing that player's life total ("As long as you're the
+	// monarch, damage doesn't cause you to lose life.", Archon of Coronation). The
+	// damage is still dealt — it is marked, combat-damage triggers still fire, and
+	// the source's controller still becomes the monarch — but the life loss step
+	// is skipped. Added last so existing kinds keep their wire values.
+	RuleEffectDamageDoesntCauseLifeLoss
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -579,7 +586,8 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectGoaded,
 		RuleEffectPlayerHexproof,
 		RuleEffectPlayerShroud,
-		RuleEffectCanBlockAdditional:
+		RuleEffectCanBlockAdditional,
+		RuleEffectDamageDoesntCauseLifeLoss:
 		return true
 	default:
 		return false
