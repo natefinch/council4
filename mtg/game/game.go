@@ -199,6 +199,15 @@ type Game struct {
 	// state is not mutating. See static_frame.go.
 	staticFrame *staticSourceFrame
 
+	// computingCharacteristics tracks which permanents' effective characteristics
+	// are currently being computed, so the rules layer can break a
+	// characteristic-dependency loop (a characteristic-defining effect that
+	// depends on the very characteristic it defines, CR 613.8) instead of
+	// recursing forever. It is transient engine-computation state — empty except
+	// while a computation is in progress — and is never deep copied (Clone starts
+	// empty), like staticFrame. See characteristic_computation.go.
+	computingCharacteristics map[id.ID]bool
+
 	// choiceCtx is a transient, rules-owned context (held as an opaque any to
 	// avoid an import cycle) used to prompt a player for a CR 616.1 replacement
 	// selection from deep within zone-change and damage code. It is nil outside a
