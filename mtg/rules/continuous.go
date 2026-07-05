@@ -163,6 +163,16 @@ func effectiveController(g *game.Game, permanent *game.Permanent) game.PlayerID 
 // power/toughness modifiers are applied within power/toughness layer 7c during
 // the layer pass (see applyContinuousLayers), not afterward. Results are memoized
 // per static-source frame.
+//
+// A characteristic-defining effect can depend on the very characteristic it
+// defines — for example a creature whose power is set to "the greatest power
+// among creatures you control", a group that includes itself, or two such
+// creatures that measure each other. Computing the permanent then re-enters this
+// function for the same permanent; the game's characteristic-computation guard
+// detects that loop and breaks it by returning base (pre-layer) values, so a real
+// board state produces a finite answer instead of overflowing the stack (CR
+// 613.8c: a dependency loop is applied in timestamp order, i.e. without
+// re-entering).
 func effectivePermanentValues(g *game.Game, permanent *game.Permanent) permanentEffectiveValues {
 	fc := frameCacheFor(g)
 	if fc != nil {
@@ -170,6 +180,11 @@ func effectivePermanentValues(g *game.Game, permanent *game.Permanent) permanent
 			return values
 		}
 	}
+	if g.BeginCharacteristicComputation(permanent.ObjectID) {
+		return basePermanentValues(g, permanent)
+	}
+	defer g.EndCharacteristicComputation(permanent.ObjectID)
+
 	values := basePermanentValues(g, permanent)
 	baseSubtypes := append([]types.Sub(nil), values.subtypes...)
 	applyContinuousLayers(g, permanent, &values)
