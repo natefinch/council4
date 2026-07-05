@@ -43,6 +43,7 @@ func (g *Game) Clone() *Game {
 		SuspendedCards:             cloneComparableMap(g.SuspendedCards),
 		ReboundCards:               cloneComparableMap(g.ReboundCards),
 		AdventureCards:             cloneComparableMap(g.AdventureCards),
+		PlottedCards:               cloneComparableMap(g.PlottedCards),
 		LastKnownInformation:       cloneMapFunc(g.LastKnownInformation, cloneObjectSnapshot),
 		LinkedObjects:              cloneLinkedObjects(g.LinkedObjects),
 		Turn:                       cloneTurnState(g.Turn),

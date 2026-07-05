@@ -122,6 +122,13 @@ type Game struct {
 	// AdventureCards tracks cards in exile that may be cast from adventure exile.
 	AdventureCards map[id.ID]bool
 
+	// PlottedCards tracks cards plotted into exile (CR 718) and the turn number on
+	// which each was plotted. A card in this map is in exile face up and may be
+	// cast from exile without paying its mana cost, at sorcery speed, on any turn
+	// after the one it was plotted (so the map value gates the "later turn"
+	// restriction). The entry is removed when the card leaves exile.
+	PlottedCards map[id.ID]int
+
 	// LastKnownInformation stores snapshots for objects that have moved zones.
 	LastKnownInformation map[id.ID]ObjectSnapshot
 
@@ -278,6 +285,7 @@ func NewGameWithRand(configs [NumPlayers]PlayerConfig, rng *rand.Rand) *Game {
 		SuspendedCards:             make(map[id.ID]SuspendedCard),
 		ReboundCards:               make(map[id.ID]ReboundCard),
 		AdventureCards:             make(map[id.ID]bool),
+		PlottedCards:               make(map[id.ID]int),
 		LastKnownInformation:       make(map[id.ID]ObjectSnapshot),
 		LinkedObjects:              make(map[LinkedObjectKey][]LinkedObjectRef),
 		SkippedSteps:               make(map[PlayerID]map[Step]int),

@@ -89,6 +89,9 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 	// the library), so it must be determined before the card is moved to the
 	// stack below.
 	payLifeFromTop := sourceZone == zone.Library && castFromZoneRequiresPayLife(g, playerID, card.ID, sourceZone, cast.Face)
+	// plotted marks a plotted card being cast from exile (CR 718): it is cast
+	// without paying its mana cost. It must be read before the card leaves exile.
+	plotted := sourceZone == zone.Exile && cast.Face == game.FaceFront && cardIsPlottedInExile(g, card.ID)
 
 	// CR 601.2a: proposing a cast first moves the card from its source zone to
 	// the stack as the topmost object. Doing this before the spell's costs are
@@ -150,6 +153,19 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 			agents,
 			log,
 		)
+	case plotted:
+		emptyMana := cost.Mana{}
+		prefs = e.paymentPreferencesForCostFromSource(
+			g,
+			playerID,
+			&emptyMana,
+			spellDef.AdditionalCosts,
+			cast.XValue,
+			card.ID,
+			sourceZone,
+			agents,
+			log,
+		)
 	default:
 		prefs = e.paymentPreferencesForSpellFromZone(g, playerID, card.ID, sourceZone, cast.Face, spellDef, cast.XValue, agents, log)
 	}
@@ -168,10 +184,15 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		Targets:         cast.Targets,
 		Prefs:           prefs,
 	}
-	if cast.Overloaded {
+	switch {
+	case cast.Overloaded:
 		request.Alternative = opt.Val(overloadAlternativeCost(spellDef.Overload.Val.Cost))
-	} else if payLifeFromTop {
+	case payLifeFromTop:
 		request.Alternative = opt.Val(payLifeManaValueAlternativeCost(spellDef, cast.XValue))
+	case plotted:
+		request.Alternative = opt.Val(freeCastAlternativeCost())
+	default:
+		// No alternative cost; the spell is cast for its normal mana cost.
 	}
 	paymentResult, ok := paymentOrch.paySpellCosts(g, request)
 	if !ok {
@@ -583,6 +604,7 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 	if castFromZoneProhibited(g, playerID, sourceZone) {
 		return false
 	}
+	plotted := sourceZone == zone.Exile && face == game.FaceFront && cardIsPlottedInExile(g, cardID)
 	switch sourceZone {
 	case zone.Command:
 		if player.CommanderInstanceID != cardID {
@@ -595,10 +617,10 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 		}
 	case zone.Exile:
 		hasRulePermission := canCastFromZoneByRuleEffect(g, playerID, cardID, sourceZone, face)
-		if !g.AdventureCards[cardID] && !hasRulePermission {
+		if !g.AdventureCards[cardID] && !hasRulePermission && !plotted {
 			return false
 		}
-		if g.AdventureCards[cardID] && !hasRulePermission && face != game.FaceFront {
+		if g.AdventureCards[cardID] && !hasRulePermission && !plotted && face != game.FaceFront {
 			return false
 		}
 	case zone.Library:
@@ -632,6 +654,9 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 	if !canCastAtCurrentTiming(g, playerID, spellDef) {
 		return false
 	}
+	if plotted && !isSorcerySpeed(g, playerID) {
+		return false
+	}
 	if spellCastProhibited(g, playerID, spellDef) {
 		return false
 	}
@@ -656,21 +681,33 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 		CastPermissions: castPermissionsForZone(g, playerID, card.ID, sourceZone, face),
 		Targets:         targets,
 	}
-	if overloaded {
+	switch {
+	case overloaded:
 		request.Alternative = opt.Val(overloadAlternativeCost(spellDef.Overload.Val.Cost))
-	} else if sourceZone == zone.Library && castFromZoneRequiresPayLife(g, playerID, card.ID, sourceZone, face) {
+	case sourceZone == zone.Library && castFromZoneRequiresPayLife(g, playerID, card.ID, sourceZone, face):
 		request.Alternative = opt.Val(payLifeManaValueAlternativeCost(spellDef, xValue))
+	case plotted:
+		request.Alternative = opt.Val(freeCastAlternativeCost())
+	default:
+		// No alternative cost; the spell is cast for its normal mana cost.
 	}
-	if !paymentOrch.canPaySpellCosts(g, request) {
-		return false
-	}
-	return true
+	return paymentOrch.canPaySpellCosts(g, request)
 }
 
 func overloadAlternativeCost(manaCost cost.Mana) cost.Alternative {
 	return cost.Alternative{
 		Label:    "Overload",
 		ManaCost: opt.Val(append(cost.Mana(nil), manaCost...)),
+	}
+}
+
+// freeCastAlternativeCost is the alternative cost of a cast that pays no mana
+// cost ("without paying its mana cost"): the mana cost is emptied and no
+// additional cost replaces it. It backs the plotted cast from exile (CR 718).
+func freeCastAlternativeCost() cost.Alternative {
+	return cost.Alternative{
+		Label:    "Without paying its mana cost",
+		ManaCost: opt.Val(cost.Mana{}),
 	}
 }
 
@@ -707,6 +744,10 @@ func legalCastFacesForZone(g *game.Game, playerID game.PlayerID, card *game.Card
 		var faces []game.FaceIndex
 		for _, face := range card.Def.LegalCastFaces() {
 			if sourceZone == zone.Exile && g.AdventureCards[card.ID] && face == game.FaceFront {
+				faces = append(faces, face)
+				continue
+			}
+			if sourceZone == zone.Exile && face == game.FaceFront && cardIsPlottedInExile(g, card.ID) {
 				faces = append(faces, face)
 				continue
 			}

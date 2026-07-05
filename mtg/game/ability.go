@@ -168,6 +168,16 @@ const (
 	// reports true and the rules layer runs the look/exile body. Appended at the
 	// end of the enum so existing keyword ordinals are unchanged.
 	Hideaway
+	// Plot (CR 718) is printed on some instants and sorceries: "Plot <cost> (You
+	// may pay <cost> and exile this card from your hand. Cast it as a sorcery on a
+	// later turn without paying its mana cost. Plot only as a sorcery.)" It is
+	// modeled by PlotKeyword, which carries the plot mana cost. The rules layer
+	// reads it on a card in its owner's hand to offer the sorcery-speed plot
+	// activation (pay the cost, exile the card plotted) and later permits casting
+	// the plotted card from exile without paying its mana cost, at sorcery speed,
+	// on a turn after it was plotted. Appended at the end of the enum so existing
+	// keyword ordinals are unchanged.
+	Plot
 )
 
 // Reusable StaticAbilityBody templates for non-parameterized keyword abilities.

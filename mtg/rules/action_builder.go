@@ -78,6 +78,10 @@ func (b actionBuilderType) suspendCard(cardID id.ID) action.Action {
 	return b.mustBuild(action.SuspendCard(cardID))
 }
 
+func (b actionBuilderType) plotCard(cardID id.ID) action.Action {
+	return b.mustBuild(action.PlotCard(cardID))
+}
+
 func (b actionBuilderType) castFaceDown(cardID id.ID, face game.FaceIndex, kind game.FaceDownKind) action.Action {
 	return b.mustBuild(action.CastFaceDown(cardID, face, kind))
 }

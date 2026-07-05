@@ -480,6 +480,19 @@ func (f *CardFace) FlashbackCost() (cost.Mana, bool) {
 	return nil, false
 }
 
+// PlotCost returns the Plot mana cost on this face (CR 718), or (nil, false) when
+// the face has no Plot keyword.
+func (f *CardFace) PlotCost() (cost.Mana, bool) {
+	for i := range f.StaticAbilities {
+		if ka, ok := BodyKeywordAbility(&f.StaticAbilities[i], Plot); ok {
+			if plot, ok := ka.(PlotKeyword); ok {
+				return plot.Cost, true
+			}
+		}
+	}
+	return nil, false
+}
+
 // DredgeCount returns the Dredge mill count on this face, or (0, false) when the
 // face has no Dredge keyword. Dredge functions while the card is in its owner's
 // graveyard (CR 702.52).

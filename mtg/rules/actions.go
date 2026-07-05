@@ -80,6 +80,7 @@ func (e *Engine) legalActions(g *game.Game, playerID game.PlayerID) []action.Act
 	actions = append(actions, e.legalCyclingActions(g, playerID)...)
 	actions = append(actions, e.legalNinjutsuActions(g, playerID)...)
 	actions = append(actions, e.legalSuspendActions(g, playerID)...)
+	actions = append(actions, e.legalPlotActions(g, playerID)...)
 	actions = append(actions, e.legalTurnFaceUpActions(g, playerID)...)
 	actions = append(actions, actionBuild.pass())
 	return actions
@@ -351,6 +352,9 @@ func (e *Engine) applyActionWithChoices(g *game.Game, playerID game.PlayerID, ac
 	case action.ActionSuspendCard:
 		suspend, ok := act.SuspendCardPayload()
 		return ok && e.applySuspendCard(g, playerID, suspend.CardID, agents, log)
+	case action.ActionPlotCard:
+		plot, ok := act.PlotCardPayload()
+		return ok && e.applyPlotCard(g, playerID, plot.CardID, agents, log)
 	case action.ActionCastFaceDown:
 		faceDown, ok := act.CastFaceDownPayload()
 		return ok && e.applyCastFaceDownWithChoices(g, playerID, faceDown, agents, log)
