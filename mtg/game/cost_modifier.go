@@ -798,6 +798,15 @@ type RuleEffect struct {
 	// exclusive with a non-empty AttackDefenderControlsSelection.
 	AttackDefenderIsMonarch bool
 
+	// UntapUnlessControllerIsMonarch turns a RuleEffectDoesntUntap prohibition
+	// into a conditional "doesn't untap during its controller's untap step unless
+	// that player is the monarch" gate ("Enchanted creature doesn't untap during
+	// its controller's untap step unless that player is the monarch.", Fall from
+	// Favor). When true the affected permanent untaps normally while its controller
+	// currently holds the monarch designation, and is prohibited from untapping
+	// otherwise. It is false for every other kind.
+	UntapUnlessControllerIsMonarch bool
+
 	// AffectedPlayerRef binds a group-scoped rule effect's affected permanents to
 	// a specific player chosen at resolution rather than to the AffectedController
 	// relation, expressing "each creature <a chosen target player> controls"

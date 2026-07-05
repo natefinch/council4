@@ -1446,17 +1446,20 @@ func recognizeTypedStaticRuleDeclarations(ability CompiledAbility, syntax *parse
 
 // staticRuleGuardCondition pairs a static rule's trailing guard clause (its
 // Guarded flag) with the single supported compiled condition the condition
-// machinery produced for it. An unguarded rule must carry no conditions. Two
+// machinery produced for it. An unguarded rule must carry no conditions. Three
 // guarded rules are supported and every other guarded rule fails closed so the
 // broadening stays narrow and text-blind:
 //
 //   - the land-gated can't-attack-or-block restriction (Topiary Stomper) accepts
 //     any recognized controller-state gate ("unless you control seven or more
-//     lands.") as a static on/off condition; and
+//     lands.") as a static on/off condition;
 //   - the can't-attack-unless-defending-player-controls restriction (Sea Monster)
 //     accepts only the negated "unless defending player controls ..." guard,
 //     which resolves per attack against the defending player's board rather than
-//     gating the static ability on/off.
+//     gating the static ability on/off; and
+//   - the doesn't-untap-unless-that-player-is-the-monarch restriction (Fall from
+//     Favor) accepts only the negated "unless that player is the monarch" guard,
+//     which resolves per untap step against the affected permanent's controller.
 func staticRuleGuardCondition(ability CompiledAbility, node parser.StaticRuleSyntax, rule StaticRuleKind) (*CompiledCondition, bool) {
 	if !node.Guarded {
 		return nil, len(ability.Content.Conditions) == 0
@@ -1480,6 +1483,14 @@ func staticRuleGuardCondition(ability CompiledAbility, node parser.StaticRuleSyn
 		}
 		if condition.Predicate != ConditionPredicateDefendingPlayerControls &&
 			condition.Predicate != ConditionPredicateDefendingPlayerIsMonarch {
+			return nil, false
+		}
+		return condition, true
+	case StaticRuleDoesntUntap:
+		if !condition.Negated {
+			return nil, false
+		}
+		if condition.Predicate != ConditionPredicateThatPlayerIsMonarch {
 			return nil, false
 		}
 		return condition, true

@@ -985,9 +985,20 @@ func ruleEffectPreventsUntap(g *game.Game, permanent *game.Permanent) bool {
 	effects := activeRuleEffects(g)
 	for i := range effects {
 		effect := &effects[i]
-		if effect.Kind == game.RuleEffectDoesntUntap && ruleEffectMatchesPermanent(g, effect, permanent) {
-			return true
+		if effect.Kind != game.RuleEffectDoesntUntap || !ruleEffectMatchesPermanent(g, effect, permanent) {
+			continue
 		}
+		if effect.UntapUnlessControllerIsMonarch {
+			// "... doesn't untap during its controller's untap step unless that
+			// player is the monarch": the prohibition lifts while the affected
+			// permanent's controller currently holds the monarch designation, so the
+			// permanent untaps normally (Fall from Favor).
+			controller := effectiveController(g, permanent)
+			if player, ok := playerByID(g, controller); ok && player.IsMonarch {
+				continue
+			}
+		}
+		return true
 	}
 	return false
 }

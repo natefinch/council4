@@ -60,12 +60,13 @@ func lowerStaticDeclarations(
 		}
 		if declaration.Condition != nil && conditionSpan == (shared.Span{}) {
 			if declaration.Condition.Predicate == compiler.ConditionPredicateDefendingPlayerControls ||
-				declaration.Condition.Predicate == compiler.ConditionPredicateDefendingPlayerIsMonarch {
+				declaration.Condition.Predicate == compiler.ConditionPredicateDefendingPlayerIsMonarch ||
+				declaration.Condition.Predicate == compiler.ConditionPredicateThatPlayerIsMonarch {
 				// "unless defending player controls ..." / "unless defending player
-				// is the monarch": a per-attack guard that resolves against the
-				// defending player when an attack is declared, so it is threaded
-				// onto the rule effect below rather than gating the static ability
-				// on or off.
+				// is the monarch" / "unless that player is the monarch": a per-event
+				// guard that resolves against a specific player when the event occurs
+				// (an attack or an untap step), so it is threaded onto the rule effect
+				// below rather than gating the static ability on or off.
 				conditionSpan = declaration.Condition.Span
 			} else {
 				if declaration.Condition.SourceInGraveyard {
@@ -839,6 +840,14 @@ func appendStaticRuleDeclaration(body *game.StaticAbility, declaration compiler.
 		}
 		defenderIsMonarch = true
 	}
+	untapUnlessControllerIsMonarch := false
+	if declaration.Condition != nil &&
+		declaration.Condition.Predicate == compiler.ConditionPredicateThatPlayerIsMonarch {
+		if declaration.Rule.Kind != compiler.StaticRuleDoesntUntap {
+			return false
+		}
+		untapUnlessControllerIsMonarch = true
+	}
 	for i := range effects {
 		effects[i].AffectedSource = affectedSource
 		effects[i].AffectedAttached = affectedAttached
@@ -849,6 +858,7 @@ func appendStaticRuleDeclaration(body *game.StaticAbility, declaration compiler.
 		effects[i].BlockedSelection = blockedSelection
 		effects[i].AttackDefenderControlsSelection = defenderControlsSelection
 		effects[i].AttackDefenderIsMonarch = defenderIsMonarch
+		effects[i].UntapUnlessControllerIsMonarch = untapUnlessControllerIsMonarch
 		body.RuleEffects = append(body.RuleEffects, effects[i])
 	}
 	return true

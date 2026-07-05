@@ -788,6 +788,40 @@ func TestGenerateExecutableCardSourceAttachedDoesntUntap(t *testing.T) {
 	}
 }
 
+// TestGenerateExecutableCardSourceAttachedDoesntUntapUnlessMonarch verifies the
+// "doesn't untap during its controller's untap step unless that player is the
+// monarch" designation guard (Fall from Favor) lowers onto the
+// UntapUnlessControllerIsMonarch rule-effect flag, the untap-step counterpart of
+// the can't-attack defender-is-monarch guard.
+func TestGenerateExecutableCardSourceAttachedDoesntUntapUnlessMonarch(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:     "Frozen Crown",
+		Layout:   "normal",
+		ManaCost: "{2}{U}",
+		TypeLine: "Enchantment — Aura",
+		OracleText: "Enchant creature\n" +
+			"Enchanted creature doesn't untap during its controller's untap step unless that player is the monarch.",
+		Colors: []string{"U"},
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "f")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Kind:                           game.RuleEffectDoesntUntap,",
+		"AffectedAttached:               true,",
+		"UntapUnlessControllerIsMonarch: true,",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceComposedSimpleStaticRuleVariants(t *testing.T) {
 	t.Parallel()
 	tests := map[string]struct {

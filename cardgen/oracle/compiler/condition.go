@@ -72,6 +72,7 @@ var simplePredicateMap = map[parser.ConditionPredicateKind]ConditionPredicate{
 	parser.ConditionPredicateControllerWasMonarchAtTurnStart:                  ConditionPredicateControllerWasMonarchAtTurnStart,
 	parser.ConditionPredicateAnOpponentIsMonarch:                              ConditionPredicateAnOpponentIsMonarch,
 	parser.ConditionPredicateDefendingPlayerIsMonarch:                         ConditionPredicateDefendingPlayerIsMonarch,
+	parser.ConditionPredicateThatPlayerIsMonarch:                              ConditionPredicateThatPlayerIsMonarch,
 	parser.ConditionPredicateControllerHasInitiative:                          ConditionPredicateControllerHasInitiative,
 	parser.ConditionPredicateControllerHasCityBlessing:                        ConditionPredicateControllerHasCityBlessing,
 	parser.ConditionPredicateControllerTurn:                                   ConditionPredicateControllerTurn,
