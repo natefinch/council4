@@ -96,6 +96,54 @@ func TestBlockerBlockingTwoAttackersDividesItsCombatDamage(t *testing.T) {
 	}
 }
 
+// TestBlockerBlockingTwoAttackersAndAsThoughUnblockedStillDividesDamage proves the
+// combat-damage division also holds when one of the attackers a shared blocker
+// blocks assigns its combat damage as though it weren't blocked (Thorn Elemental,
+// Lone Wolf): the blocker still divides its own power among the attackers it
+// blocks rather than dealing full power on the as-though-unblocked path.
+func TestBlockerBlockingTwoAttackersAndAsThoughUnblockedStillDividesDamage(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	normal := addCombatCreaturePermanentWithPower(g, game.Player1, 3)
+	thorn := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Thornlike Attacker",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 3}),
+		Toughness: opt.Val(game.PT{Value: 3}),
+		StaticAbilities: []game.StaticAbility{{
+			RuleEffects: []game.RuleEffect{{
+				Kind:           game.RuleEffectAssignCombatDamageAsThoughUnblocked,
+				AffectedSource: true,
+			}},
+		}},
+	}})
+	blocker := addCombatCreaturePermanentWithPower(g, game.Player2, 5)
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{
+			{Attacker: normal.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+			{Attacker: thorn.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+		},
+		Blockers: []game.BlockDeclaration{
+			{Blocker: blocker.ObjectID, Blocking: normal.ObjectID},
+			{Blocker: blocker.ObjectID, Blocking: thorn.ObjectID},
+		},
+	}
+
+	NewEngine(nil).resolveCombatDamage(g, &TurnLog{})
+
+	// The blocker's 5 power is divided 3 (lethal to the normal attacker) + 2 to the
+	// thorn attacker, not 3 + 5. The thorn attacker deals its 3 to the player, not
+	// to the blocker; the normal attacker deals its 3 to the blocker.
+	if normal.MarkedDamage != 3 || thorn.MarkedDamage != 2 {
+		t.Fatalf("attacker damage = %d/%d, want 3/2 (blocker power divided)", normal.MarkedDamage, thorn.MarkedDamage)
+	}
+	if blocker.MarkedDamage != 3 {
+		t.Fatalf("blocker damage = %d, want 3 (only the normal attacker hits it)", blocker.MarkedDamage)
+	}
+	if g.Players[game.Player2].Life != 37 {
+		t.Fatalf("defending player life = %d, want 37 (thorn attacker's 3 through)", g.Players[game.Player2].Life)
+	}
+}
+
 func TestAttackerChosenCombatDamageAssignmentIsUsed(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 5)

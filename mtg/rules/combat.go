@@ -104,7 +104,7 @@ func resolveUnblockedCombatDamage(g *game.Game, attacker *game.Permanent, target
 // (CR 702.19d).
 func resolveBlockedCombatDamage(g *game.Game, attacker *game.Permanent, blockers []*game.Permanent, target game.AttackTarget, pass combatDamagePass, blockerDamageToAttacker map[id.ID]int, log *TurnLog) {
 	if ruleEffectAssignsCombatDamageAsThoughUnblocked(g, attacker) {
-		resolveCombatDamageAsThoughUnblocked(g, attacker, blockers, target, pass, log)
+		resolveCombatDamageAsThoughUnblocked(g, attacker, blockers, target, pass, blockerDamageToAttacker, log)
 		return
 	}
 	if len(blockers) == 0 && (!dealsCombatDamageInPass(g, attacker, pass) || !hasKeyword(g, attacker, game.Trample)) {
@@ -131,17 +131,15 @@ func resolveBlockedCombatDamage(g *game.Game, attacker *game.Permanent, blockers
 // to the blocking creatures. The controller's optional "you may have" choice is
 // modeled as always taken because the ability is purely beneficial and the
 // combat-damage step has no agent decision point.
-func resolveCombatDamageAsThoughUnblocked(g *game.Game, attacker *game.Permanent, blockers []*game.Permanent, target game.AttackTarget, pass combatDamagePass, log *TurnLog) {
+func resolveCombatDamageAsThoughUnblocked(g *game.Game, attacker *game.Permanent, blockers []*game.Permanent, target game.AttackTarget, pass combatDamagePass, blockerDamageToAttacker map[id.ID]int, log *TurnLog) {
 	if dealsCombatDamageInPass(g, attacker, pass) {
 		if damage := combatDamageAssignedBy(g, attacker); damage > 0 && isLegalAttackTarget(g, effectiveController(g, attacker), target) {
 			markAttackTargetCombatDamage(g, attacker, target, damage, log)
 		}
 	}
 	for _, blocker := range blockers {
-		if dealsCombatDamageInPass(g, blocker, pass) {
-			if damage := combatDamageAssignedBy(g, blocker); damage > 0 {
-				markCreatureCombatDamage(g, blocker, attacker, damage, log)
-			}
+		if damage := blockerDamageToAttacker[blocker.ObjectID]; damage > 0 {
+			markCreatureCombatDamage(g, blocker, attacker, damage, log)
 		}
 	}
 }
