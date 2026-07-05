@@ -3406,7 +3406,32 @@ func staticGroupVerbSingular(token shared.Token) bool {
 		equalWord(token, "gains") || equalWord(token, "loses")
 }
 
+// parseCombatRestrictionGroupSubject recognizes a creature group subject
+// immediately followed by a "can't"/"cannot" combat-restriction verb ("Creatures
+// you control can't be blocked this turn.", Keeper of Keys; "Creatures can't be
+// blocked this turn."). The get/have/gain/lose static-group recognizers do not
+// accept the "can't" verb, so these evasion and prohibition groups would
+// otherwise carry no static subject. It maps only the bare controlled-creatures
+// and all-creatures groups; every richer subject falls through to the ordinary
+// recognizers (which key on the pump verbs) and stays unrecognized here.
+func parseCombatRestrictionGroupSubject(tokens []shared.Token) (EffectStaticSubjectSyntax, bool) {
+	cantVerb := func(t shared.Token) bool {
+		return equalWord(t, "can't") || equalWord(t, "cannot")
+	}
+	switch {
+	case len(tokens) >= 4 && effectWordsAt(tokens, 0, "creatures", "you", "control") &&
+		cantVerb(tokens[3]):
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledCreatures, Span: shared.SpanOf(tokens[:3])}, true
+	case len(tokens) >= 2 && equalWord(tokens[0], "creatures") && cantVerb(tokens[1]):
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectAllCreatures, Span: shared.SpanOf(tokens[:1])}, true
+	}
+	return EffectStaticSubjectSyntax{}, false
+}
+
 func parseEffectStaticSubject(tokens []shared.Token, atoms Atoms) EffectStaticSubjectSyntax {
+	if subject, ok := parseCombatRestrictionGroupSubject(tokens); ok {
+		return subject
+	}
 	if subject, ok := parseChosenColorControlledGroupSubject(tokens, atoms); ok {
 		return subject
 	}

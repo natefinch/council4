@@ -2397,6 +2397,9 @@ func exactCantBeBlockedEffectSyntax(effect *EffectSyntax) bool {
 		return false
 	}
 	clause := exactEffectClauseText(effect)
+	if effect.StaticSubject.Kind != EffectStaticSubjectNone {
+		return exactGroupCantBeBlockedEffectSyntax(effect, clause)
+	}
 	switch effect.Context {
 	case EffectContextTarget:
 		return len(effect.Targets) == 1 &&
@@ -2413,6 +2416,25 @@ func exactCantBeBlockedEffectSyntax(effect *EffectSyntax) bool {
 	default:
 		return false
 	}
+}
+
+// exactGroupCantBeBlockedEffectSyntax reconstructs "<group subject> can't be
+// blocked this turn." for a static-subject creature group ("Creatures you control
+// can't be blocked this turn.", Keeper of Keys). It reads the subject text from
+// the effect's StaticSubject span so the group phrase round-trips byte-exactly and
+// the effect stays inexact for any subject the span does not cover.
+func exactGroupCantBeBlockedEffectSyntax(effect *EffectSyntax, clause string) bool {
+	var subject []shared.Token
+	for i := range effect.Tokens {
+		if spanCovers(effect.StaticSubject.Span, effect.Tokens[i].Span) {
+			subject = append(subject, effect.Tokens[i])
+		}
+	}
+	if len(subject) == 0 {
+		return false
+	}
+	subjectText := joinedEffectText(subject)
+	return strings.EqualFold(clause, subjectText+" can't be blocked this turn.")
 }
 
 // exactCantBlockEffectSyntax recognizes the temporary combat-restriction
