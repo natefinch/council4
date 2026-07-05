@@ -65,6 +65,7 @@ var Cards = []*game.CardDef{
 	FleshCarver,
 	FlickeringWard,
 	FlintGolem,
+	FlitterwingNuisance,
 	FloatingShield,
 	FloriferousVinewall,
 	FloweringField,

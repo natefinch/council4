@@ -151,7 +151,7 @@ func rewriteDelayedTriggerAbility(ability *Ability) {
 		return
 	}
 	lead := tokens[:comma]
-	if !isDelayedThisTurnPreamble(lead) || !leadMentionsCast(lead) {
+	if !isDelayedThisTurnPreamble(lead) || (!leadMentionsCast(lead) && !leadMentionsCombatDamage(lead)) {
 		return
 	}
 	body := delayedTriggerBodyEffect(sentence, tokens[comma].Span)
@@ -189,6 +189,23 @@ func rewriteDelayedTriggerAbility(ability *Ability) {
 func leadMentionsCast(lead []shared.Token) bool {
 	for i := range lead {
 		if equalWord(lead[i], "cast") {
+			return true
+		}
+	}
+	return false
+}
+
+// leadMentionsCombatDamage reports whether a delayed-trigger preamble names a
+// combat-damage event ("Whenever one or more creatures you control deal combat
+// damage to one or more players this turn, ...", Forth Eorlingas!), so the
+// spell or ability that sets it up schedules a combat-damage delayed trigger
+// rather than reading the preamble as an immediate resolving effect.
+func leadMentionsCombatDamage(lead []shared.Token) bool {
+	for i := range lead {
+		if i+2 < len(lead) &&
+			(equalWord(lead[i], "deal") || equalWord(lead[i], "deals")) &&
+			equalWord(lead[i+1], "combat") &&
+			equalWord(lead[i+2], "damage") {
 			return true
 		}
 	}
@@ -253,6 +270,20 @@ func delayedTriggerInnerText(text string) (inner string, oneShot bool, ok bool) 
 	case strings.HasPrefix(lowered, "whenever you cast"):
 	case strings.HasPrefix(lowered, "when you cast"):
 		preamble = "Whenever you cast" + preamble[len("when you cast"):]
+	case strings.Contains(lowered, "deal combat damage") || strings.Contains(lowered, "deals combat damage"):
+		// A combat-damage delayed trigger keeps its whole "Whenever <subject> deal
+		// combat damage to <recipient>" preamble ("Whenever one or more creatures
+		// you control deal combat damage to one or more players this turn, ...",
+		// Forth Eorlingas!); only the turn window is stripped. A "When" introducer
+		// is normalized to "Whenever" so the reparsed inner ability is an ordinary
+		// repeating triggered ability.
+		switch {
+		case strings.HasPrefix(lowered, "whenever "):
+		case strings.HasPrefix(lowered, "when "):
+			preamble = "Whenever " + preamble[len("when "):]
+		default:
+			return "", false, false
+		}
 	default:
 		return "", false, false
 	}
