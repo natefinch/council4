@@ -153,6 +153,19 @@ func lowerDynamicAmountKind(amount compiler.CompiledAmount, object game.ObjectRe
 		dynamic.Kind = game.DynamicAmountLifeLostThisTurn
 	case compiler.DynamicAmountLifeGainedThisTurn:
 		dynamic.Kind = game.DynamicAmountLifeGainedThisTurn
+	case compiler.DynamicAmountTriggeringPlayerHandSize:
+		// "... equal to the number of cards in that player's hand" counts the hand
+		// of the player the effect refers to with "that player"/"their". That
+		// player co-refers with the damage recipient, which is the triggering event
+		// player by default here; a damage lowering whose recipient is instead a
+		// chosen target rebinds this subject to that target with
+		// rebindRecipientHandSizeAmount.
+		player := game.EventPlayerReference()
+		selection := game.Selection{}
+		dynamic.Kind = game.DynamicAmountCountCardsInZone
+		dynamic.Player = &player
+		dynamic.CardZone = zone.Hand
+		dynamic.Selection = &selection
 	case compiler.DynamicAmountCardsDrawnThisTurn:
 		dynamic.Kind = game.DynamicAmountCardsDrawnThisTurn
 	case compiler.DynamicAmountMaxOf:
@@ -690,6 +703,32 @@ func damageAmountReadsObjectReferent(kind compiler.DynamicAmountKind) bool {
 	default:
 		return false
 	}
+}
+
+// rebindRecipientHandSizeAmount retargets a "cards in that player's hand" damage
+// amount from its default triggering-event-player subject to recipient. The
+// amount ("... equal to the number of cards in that player's hand") counts the
+// hand of the player the damage is dealt to; lowerDynamicAmountKind lowers that
+// subject as the triggering event player, which is correct only when the damage
+// recipient is the event player ("Whenever an opponent attacks you, ~ deals damage
+// to that player equal to the number of cards in their hand.", Emberwilde
+// Captain). When the damage instead targets a chosen player ("~ deals damage to
+// target player equal to the number of cards in that player's hand.", Gaze of
+// Adamaro), "that player" co-refers with that target, so recipient (the target
+// player) counts its own hand. Every other amount — including a controller-scoped
+// "cards in your hand" count — is returned unchanged.
+func rebindRecipientHandSizeAmount(amount game.Quantity, recipient game.PlayerReference) game.Quantity {
+	dyn := amount.DynamicAmount()
+	if !dyn.Exists ||
+		dyn.Val.Kind != game.DynamicAmountCountCardsInZone ||
+		dyn.Val.CardZone != zone.Hand ||
+		dyn.Val.Player == nil ||
+		dyn.Val.Player.Kind() != game.PlayerReferenceEventPlayer {
+		return amount
+	}
+	updated := dyn.Val
+	updated.Player = &recipient
+	return game.Dynamic(updated)
 }
 
 func exactDamageAmountReferences(amount compiler.CompiledAmount, references []compiler.CompiledReference) bool {

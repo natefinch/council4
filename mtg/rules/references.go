@@ -274,7 +274,12 @@ func defendingPlayerEvent(kind game.EventKind) bool {
 
 func triggeringEventPlayer(event game.Event) (game.PlayerID, bool) {
 	switch event.Kind {
-	case game.EventSpellCast, game.EventSpellCopied, game.EventPermanentTapped:
+	case game.EventSpellCast, game.EventSpellCopied, game.EventPermanentTapped,
+		game.EventAttackerDeclared:
+		// EventAttackerDeclared records the attacking player in Controller and the
+		// defending player in Player, so "that player" on an attack trigger
+		// ("Whenever an opponent attacks you, ~ deals damage to that player.",
+		// Emberwilde Captain) names the attacker, like the cast/tap events.
 		return event.Controller, true
 	case game.EventCardDrawn,
 		game.EventCardDiscarded,

@@ -5221,6 +5221,13 @@ func damageRecipientTokens(clause []shared.Token) ([]shared.Token, bool) {
 	for i := 0; i+1 < len(clause); i++ {
 		if equalWord(clause[i], "damage") && equalWord(clause[i+1], "to") {
 			recipient := clause[i+2:]
+			// Trim a trailing "equal to <amount>" / "where X is <amount>" clause
+			// that follows a recipient-first "deals damage to <recipient> equal to
+			// <amount>" phrase (Emberwilde Captain), so the recipient is read as
+			// just "<recipient>". The amount itself is parsed separately onto
+			// effect.Amount; the amount-first order is handled by
+			// damageRecipientTokensAfterAmount.
+			recipient = trimTrailingDamageAmountClause(recipient)
 			if len(recipient) > 0 && recipient[len(recipient)-1].Kind == shared.Period {
 				recipient = recipient[:len(recipient)-1]
 			}
@@ -5231,6 +5238,22 @@ func damageRecipientTokens(clause []shared.Token) ([]shared.Token, bool) {
 		}
 	}
 	return nil, false
+}
+
+// trimTrailingDamageAmountClause cuts a recipient token run at the start of a
+// trailing "equal to ..." or "where X is ..." dynamic-amount clause, so a
+// recipient-first "deals damage to <recipient> equal to <amount>" phrase yields
+// only the "<recipient>" run. A run with no such clause is returned unchanged.
+func trimTrailingDamageAmountClause(recipient []shared.Token) []shared.Token {
+	for i := range len(recipient) {
+		if equalWord(recipient[i], "equal") && i+1 < len(recipient) && equalWord(recipient[i+1], "to") {
+			return recipient[:i]
+		}
+		if equalWord(recipient[i], "where") && i+1 < len(recipient) && equalWord(recipient[i+1], "x") {
+			return recipient[:i]
+		}
+	}
+	return recipient
 }
 
 // damageRecipientReference recognizes a damage recipient that is the controller

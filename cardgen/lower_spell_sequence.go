@@ -4503,7 +4503,7 @@ func lowerExcessDamageToControllerSpell(ctx contentCtx) (game.AbilityContent, bo
 		Targets: []game.TargetSpec{target},
 		Sequence: []game.Instruction{{
 			Primitive: game.Damage{
-				Amount:          amount,
+				Amount:          rebindRecipientHandSizeAmount(amount, game.TargetPlayerReference(0)),
 				Recipient:       game.AnyTargetDamageRecipient(0),
 				DamageSource:    source,
 				ExcessRecipient: game.PlayerDamageRecipient(recipient),

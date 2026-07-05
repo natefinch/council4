@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,885 of 32,501 cards eligible for paper support (52.0%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,892 of 32,501 cards eligible for paper support (52.0%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -4346,6 +4346,7 @@ Council4 currently supports **16,885 of 32,501 cards eligible for paper support 
 - Emberstrike Duo
 - Emberwilde Augur
 - Emberwilde Caliph
+- Emberwilde Captain
 - Emblem of the Warmind
 - Embodiment of Spring
 - Embraal Bruiser
@@ -5571,6 +5572,7 @@ Council4 currently supports **16,885 of 32,501 cards eligible for paper support 
 - Gavony Township
 - Gavony Trapper
 - Gavony Unhallowed
+- Gaze of Adamaro
 - Gearbane Orangutan
 - Gearseeker Serpent
 - Gearsmith Guardian
@@ -13918,6 +13920,7 @@ Council4 currently supports **16,885 of 32,501 cards eligible for paper support 
 - Storm Herd
 - Storm of Steel
 - Storm Sculptor
+- Storm Seeker
 - Storm Shaman
 - Storm Skreelix
 - Storm Spirit
@@ -14049,6 +14052,7 @@ Council4 currently supports **16,885 of 32,501 cards eligible for paper support 
 - Sudden Breakthrough
 - Sudden Death
 - Sudden Edict
+- Sudden Impact
 - Sudden Shock
 - Sudden Spinnerets
 - Sudden Strength
@@ -14267,6 +14271,7 @@ Council4 currently supports **16,885 of 32,501 cards eligible for paper support 
 - Sword of the Chosen
 - Sword of Truth and Justice
 - Sword of Vengeance
+- Sword of War and Peace
 - Swords to Plowshares
 - Swordwise Centaur
 - Sworn Companions
@@ -14958,6 +14963,7 @@ Council4 currently supports **16,885 of 32,501 cards eligible for paper support 
 - Tocasia's Dig Site
 - Tocasia's Onulet
 - Tocasia's Welcome
+- Toil // Trouble
 - Toils of Night and Day
 - Tokka & Rahzar, Unsupervised
 - Tolarian Academy
@@ -15833,6 +15839,7 @@ Council4 currently supports **16,885 of 32,501 cards eligible for paper support 
 - Vicious Hunger
 - Vicious Kavu
 - Vicious Rumors
+- Vicious Shadows
 - Victimize
 - Victor Timely, Wily Tycoon
 - Victorious Destruction

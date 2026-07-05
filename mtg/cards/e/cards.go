@@ -42,6 +42,7 @@ var Cards = []*game.CardDef{
 	EmberethPaladin,
 	EmberheartChallenger,
 	EmberwildeCaliph,
+	EmberwildeCaptain,
 	EmblemOfTheWarmind,
 	EmeraldCharm,
 	EmperorCrocodile,

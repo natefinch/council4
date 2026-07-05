@@ -973,6 +973,41 @@ func TestGenerateExecutableCardSourceEventPlayerSourcePowerDamage(t *testing.T) 
 	}
 }
 
+// TestGenerateExecutableCardSourceEventPlayerHandSizeDamage verifies the
+// recipient-first "deals damage to that player equal to the number of cards in
+// their hand" form (Emberwilde Captain) lowers to event-player damage whose
+// dynamic amount counts the triggering player's hand, and that the "an opponent
+// attacks you" trigger binds "that player" to the attacking player.
+func TestGenerateExecutableCardSourceEventPlayerHandSizeDamage(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:     "Test Ember Knight",
+		Layout:   "normal",
+		ManaCost: "{4}{R}",
+		TypeLine: "Creature — Human Knight",
+		OracleText: "When this creature enters, you become the monarch.\n" +
+			"Whenever an opponent attacks you while you're the monarch, this creature deals damage to that player equal to the number of cards in their hand.",
+		Power:     new("2"),
+		Toughness: new("2"),
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, want := range []string{
+		"game.PlayerDamageRecipient(game.EventPlayerReference())",
+		"game.DynamicAmountCountCardsInZone",
+		"CardZone:   zone.Hand",
+		"ControllerIsMonarch: true,",
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("source missing %q:\n%s", want, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceInheritedPronounDestroy(t *testing.T) {
 	t.Parallel()
 	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
