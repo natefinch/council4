@@ -128,6 +128,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return strings.EqualFold(exactEffectClauseText(effect), "Manifest the top card of your library.")
 	case EffectManifestDread:
 		return strings.EqualFold(exactEffectClauseText(effect), "Manifest dread.")
+	case EffectCloak:
+		return strings.EqualFold(exactEffectClauseText(effect), "Cloak the top card of your library.")
 	case EffectMill:
 		return exactCardCountEffectSyntax(effect, "Mill", "mills", true)
 	case EffectMoveCounters:

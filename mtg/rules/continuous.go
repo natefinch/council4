@@ -239,7 +239,7 @@ func basePermanentValues(g *game.Game, permanent *game.Permanent) permanentEffec
 	values.controller = permanent.Controller
 	if permanent.FaceDown {
 		values.types = []types.Card{types.Creature}
-		if permanent.FaceDownKind == game.FaceDownDisguise {
+		if permanent.FaceDownKind == game.FaceDownDisguise || permanent.FaceDownKind == game.FaceDownCloak {
 			ward := faceDownDisguiseWardBody()
 			values.abilities = []game.Ability{&ward}
 			rebuildKeywords(permanent, &values)
@@ -264,7 +264,7 @@ func basePermanentValues(g *game.Game, permanent *game.Permanent) permanentEffec
 	}
 	for _, component := range permanent.MergedCards {
 		if component.FaceDown {
-			if component.FaceDownKind == game.FaceDownDisguise {
+			if component.FaceDownKind == game.FaceDownDisguise || component.FaceDownKind == game.FaceDownCloak {
 				ward := faceDownDisguiseWardBody()
 				values.abilities = append(values.abilities, &ward)
 			}

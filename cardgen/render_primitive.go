@@ -1230,6 +1230,9 @@ func (r Renderer) renderStandalonePrimitive(ctx *renderCtx, primitive game.Primi
 		if value.Dread {
 			fields = append(fields, "Dread: true,")
 		}
+		if value.Cloak {
+			fields = append(fields, "Cloak: true,")
+		}
 		if value.Player.Kind() != game.PlayerReferenceNone {
 			player, err := r.renderPlayerReference(value.Player)
 			if err != nil {

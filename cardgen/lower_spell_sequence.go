@@ -1003,6 +1003,9 @@ func lowerCombinedSequenceShapes(cardName string, ctx contentCtx, syntax *parser
 	if content, ok := lowerManifestDreadThenCountersSequence(ctx); ok {
 		return content, true
 	}
+	if content, ok := lowerCloakThenAttachSequence(ctx); ok {
+		return content, true
+	}
 	return game.AbilityContent{}, false
 }
 

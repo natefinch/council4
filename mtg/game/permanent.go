@@ -17,6 +17,12 @@ const (
 	FaceDownMorph
 	FaceDownDisguise
 	FaceDownManifest
+	// FaceDownCloak is a card cloaked onto the battlefield (CR 701.56): a
+	// face-down 2/2 creature with ward {2} that may be turned face up for its
+	// mana cost if it is a creature card. It shares Manifest's turn-face-up rule
+	// (mana cost when the hidden card is a creature) and Disguise's ward {2}
+	// characteristic.
+	FaceDownCloak
 )
 
 // Permanent represents a card (or token) on the battlefield with all its

@@ -1851,6 +1851,10 @@ const (
 	// with a static rule declaration. Added last so existing kinds keep their wire
 	// values.
 	EffectCantAttackOrBlockAndCantActivateNonMana
+	// EffectCloak is the Cloak keyword action (CR 701.56): put the top card of
+	// your library onto the battlefield face down as a 2/2 creature with ward
+	// {2}. Added last so existing kinds keep their wire values.
+	EffectCloak
 )
 
 // DurationKind identifies common continuous-effect durations.

@@ -213,7 +213,7 @@ func permanentCopyDef(g *game.Game, permanent *game.Permanent) (*game.CardDef, b
 			Power:     pt,
 			Toughness: pt,
 		}}
-		if permanent.FaceDownKind == game.FaceDownDisguise {
+		if permanent.FaceDownKind == game.FaceDownDisguise || permanent.FaceDownKind == game.FaceDownCloak {
 			def.StaticAbilities = []game.StaticAbility{faceDownDisguiseWardBody()}
 		}
 		return def, true
@@ -225,7 +225,7 @@ func permanentCopyDef(g *game.Game, permanent *game.Permanent) (*game.CardDef, b
 	copied := copyCardDef(top)
 	for _, component := range permanent.MergedCards {
 		if component.FaceDown {
-			if component.FaceDownKind == game.FaceDownDisguise {
+			if component.FaceDownKind == game.FaceDownDisguise || component.FaceDownKind == game.FaceDownCloak {
 				copied.StaticAbilities = append(copied.StaticAbilities, faceDownDisguiseWardBody())
 			}
 			continue

@@ -2288,7 +2288,11 @@ func handleManifest(r *effectResolver, prim game.Manifest) effectResolved {
 	if prim.Dread {
 		manifested, ok = r.engine.manifestDread(r.game, r.agents, r.log, playerID)
 	} else {
-		manifested, ok = r.engine.manifestTopCard(r.game, r.agents, r.log, playerID)
+		kind := game.FaceDownManifest
+		if prim.Cloak {
+			kind = game.FaceDownCloak
+		}
+		manifested, ok = r.engine.manifestTopCard(r.game, r.agents, r.log, playerID, kind)
 	}
 	res.succeeded = ok
 	if ok && prim.PublishLinked != "" && manifested != nil {

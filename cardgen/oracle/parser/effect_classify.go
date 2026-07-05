@@ -1442,6 +1442,8 @@ func effectKindAt(tokens []shared.Token, index int) EffectKind {
 		default:
 			return EffectManifest
 		}
+	case equalWord(tokens[index], "cloak") || equalWord(tokens[index], "cloaks"):
+		return EffectCloak
 	case equalWord(tokens[index], "look"):
 		if digLookInstruction(tokens[index:]) {
 			return EffectDig
@@ -1768,6 +1770,8 @@ func effectWordKind(token shared.Token) EffectKind {
 		return EffectLose
 	case "manifest", "manifests":
 		return EffectManifest
+	case "cloak", "cloaks":
+		return EffectCloak
 	case "mill", "mills":
 		return EffectMill
 	case "move", "moves":

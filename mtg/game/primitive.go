@@ -1468,7 +1468,11 @@ type Explore struct {
 // Player identifies the manifesting player; the zero value (PlayerReferenceNone)
 // manifests for the resolving ability's controller.
 type Manifest struct {
-	Dread  bool
+	Dread bool
+	// Cloak, when set, cloaks the card instead of manifesting it (CR 701.56):
+	// the face-down 2/2 additionally has ward {2}. The turn-face-up rule is
+	// unchanged from manifest (mana cost if the hidden card is a creature).
+	Cloak  bool
 	Player PlayerReference
 	// PublishLinked, when set, remembers the manifested permanent as an
 	// object-scoped linked object so a later instruction can reference it ("put
