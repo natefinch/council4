@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,895 of 32,501 cards eligible for paper support (52.0%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,897 of 32,501 cards eligible for paper support (52.0%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -575,6 +575,7 @@ Council4 currently supports **16,895 of 32,501 cards eligible for paper support 
 - Arachnoid Adaptation
 - Aradara Express
 - Aragorn and Arwen, Wed
+- Aragorn, King of Gondor
 - Aragorn, the Uniter
 - Arahbo, the First Fang
 - Arashi, the Sky Asunder
@@ -10070,6 +10071,7 @@ Council4 currently supports **16,895 of 32,501 cards eligible for paper support 
 - Orcish Oriflamme
 - Orcish Siegemaster
 - Orcish Vandal
+- Order // Chaos
 - Order of Leitbur
 - Order of Midnight // Alter Fate
 - Order of Sacred Dusk

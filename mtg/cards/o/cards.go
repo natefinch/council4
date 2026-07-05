@@ -34,6 +34,7 @@ var Cards = []*game.CardDef{
 	OrbsOfWarding,
 	OrcGeneral,
 	OrchardWarden,
+	Order,
 	OrderOfTheStars,
 	OrdruunCommando,
 	OrimSamiteHealer,

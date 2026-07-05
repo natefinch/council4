@@ -3415,6 +3415,12 @@ func staticGroupVerbSingular(token shared.Token) bool {
 // and all-creatures groups; every richer subject falls through to the ordinary
 // recognizers (which key on the pump verbs) and stays unrecognized here.
 func parseCombatRestrictionGroupSubject(tokens []shared.Token) (EffectStaticSubjectSyntax, bool) {
+	// A per-effect designation condition ("If you're the monarch, creatures can't
+	// block this turn.", Aragorn, King of Gondor) precedes the group subject; the
+	// ordered-sequence machinery captures the condition as a separate gate, so skip
+	// it here to recognize the group after it. exactEffectClauseText likewise reads
+	// the clause from the subject, so the reconstructed phrase stays byte-exact.
+	tokens = stripLeadingDesignationConditionClause(tokens)
 	cantVerb := func(t shared.Token) bool {
 		return equalWord(t, "can't") || equalWord(t, "cannot")
 	}
@@ -3426,6 +3432,29 @@ func parseCombatRestrictionGroupSubject(tokens []shared.Token) (EffectStaticSubj
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectAllCreatures, Span: shared.SpanOf(tokens[:1])}, true
 	}
 	return EffectStaticSubjectSyntax{}, false
+}
+
+// stripLeadingDesignationConditionClause removes a leading "If <designation>,"
+// clause (e.g. "If you're the monarch,") from a subject token run, returning the
+// tokens unchanged when no such clause leads. The designation condition is a
+// per-effect gate captured separately by the ordered-sequence machinery; skipping
+// it lets a following group subject be recognized.
+func stripLeadingDesignationConditionClause(tokens []shared.Token) []shared.Token {
+	if len(tokens) == 0 {
+		return tokens
+	}
+	intro, introWidth := conditionIntroAt(tokens, 0)
+	if intro != ConditionIntroIf {
+		return tokens
+	}
+	end := conditionClauseEnd(tokens, 0)
+	if end >= len(tokens) || tokens[end].Kind != shared.Comma {
+		return tokens
+	}
+	if _, ok := recognizeControllerDesignationCondition(tokens[introWidth:end], Atoms{}); !ok {
+		return tokens
+	}
+	return tokens[end+1:]
 }
 
 func parseEffectStaticSubject(tokens []shared.Token, atoms Atoms) EffectStaticSubjectSyntax {
