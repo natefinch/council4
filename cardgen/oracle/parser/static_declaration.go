@@ -200,6 +200,12 @@ const (
 	// player-scoped protection static "You have shroud." (Ivory Mask, True
 	// Believer): the player can't be the target of spells or abilities at all.
 	StaticDeclarationPlayerRuleShroud StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleShroud"
+	// StaticDeclarationPlayerRuleDamageDoesntCauseLifeLoss stops damage dealt to
+	// the controller from reducing their life total ("damage doesn't cause you to
+	// lose life", Archon of Coronation, usually gated "As long as you're the
+	// monarch, ..."). The damage is still dealt; only the life-loss step is
+	// skipped.
+	StaticDeclarationPlayerRuleDamageDoesntCauseLifeLoss StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleDamageDoesntCauseLifeLoss"
 )
 
 // StaticDeclarationCardFilterKind identifies the closed card filter that a
@@ -741,6 +747,7 @@ func emitStaticDeclarations(abilities []Ability) {
 			dropControllerTurnConditionsNativelyConsumed(ability, declarations)
 			foldStaticCastFromTopPayLifeRider(ability, declarations)
 			foldStaticSkipDrawStep(ability, declarations)
+			foldStaticDamageDoesntCauseLifeLoss(ability, declarations)
 			foldStaticRemoveAuraRider(ability, declarations)
 		}
 	}
@@ -908,6 +915,53 @@ func foldStaticSkipDrawStep(ability *Ability, declarations []StaticDeclarationSy
 		ability.Sentences[i].LegacyEffects = false
 		return
 	}
+}
+
+// foldStaticDamageDoesntCauseLifeLoss drops the spurious "lose life" effect the
+// generic classifier emits for "damage doesn't cause you to lose life." (Archon
+// of Coronation) once that sentence is credited to the typed player-rule static
+// declaration. The phrase may carry a leading "As long as <condition>," clause,
+// so the "damage doesn't cause you to lose life" run is matched wherever it
+// begins. Dropping the standalone effect lets the ability lower through the typed
+// player-rule path instead of the unsupported non-keyword static fallback.
+func foldStaticDamageDoesntCauseLifeLoss(ability *Ability, declarations []StaticDeclarationSyntax) {
+	credited := false
+	for i := range declarations {
+		if declarations[i].PlayerRule == StaticDeclarationPlayerRuleDamageDoesntCauseLifeLoss {
+			credited = true
+			break
+		}
+	}
+	if !credited {
+		return
+	}
+	phrase := []string{"damage", "doesn't", "cause", "you", "to", "lose", "life"}
+	for i := range ability.Sentences {
+		if len(ability.Sentences[i].Effects) == 0 && !ability.Sentences[i].LegacyEffects {
+			continue
+		}
+		tokens := semanticEffectTokens(ability.Sentences[i].Tokens)
+		if !tokenRunContains(tokens, phrase) {
+			continue
+		}
+		ability.Sentences[i].Effects = nil
+		ability.Sentences[i].LegacyEffects = false
+		return
+	}
+}
+
+// tokenRunContains reports whether words appears as a consecutive run anywhere in
+// tokens, matched case-insensitively word by word.
+func tokenRunContains(tokens []shared.Token, words []string) bool {
+	if len(words) == 0 || len(tokens) < len(words) {
+		return false
+	}
+	for start := 0; start+len(words) <= len(tokens); start++ {
+		if staticWordsAt(tokens, start, words...) {
+			return true
+		}
+	}
+	return false
 }
 
 // whose subject is the card's own printed name ("Toski attacks each combat if
@@ -1109,7 +1163,7 @@ func parseStaticDeclarations(tokens []shared.Token, quoted []Delimited, atoms At
 	if declaration, ok := parseStaticCastThisFromExileDeclaration(tokens, conditions); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
-	if declaration, ok := parseStaticPlayerRuleDeclaration(tokens); ok {
+	if declaration, ok := parseStaticPlayerRuleDeclaration(tokens, conditions); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseStaticOpponentActionRestrictionDeclaration(tokens); ok {
@@ -2084,15 +2138,47 @@ var staticPlayerRuleParsers = []staticPlayerRuleParser{
 	parseStaticLifeForCommanderTaxDeclaration,
 	parseStaticPlayerHexproofDeclaration,
 	parseStaticPlayerShroudDeclaration,
+	parseStaticDamageDoesntCauseLifeLossDeclaration,
 }
 
-func parseStaticPlayerRuleDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+func parseStaticPlayerRuleDeclaration(tokens []shared.Token, conditions []ConditionClause) (StaticDeclarationSyntax, bool) {
+	// Try the exact body recognizers first, so a rule that does not accept a gate
+	// keeps its existing unconditional-only behavior.
 	for _, parse := range staticPlayerRuleParsers {
 		if declaration, ok := parse(tokens); ok {
 			return declaration, true
 		}
 	}
+	// A player-scoped rule that accepts an "as long as <condition>" gate ("As long
+	// as you're the monarch, damage doesn't cause you to lose life.", Archon of
+	// Coronation) is retried after stripping the leading condition-covered tokens,
+	// recording the gate so lowering keeps it as the static ability's condition.
+	// Only rules that support a gate are accepted with a condition, so a
+	// conditional near-miss of an unconditional rule still fails closed.
+	opTokens, condition, hasCondition := staticOperationTokens(tokens, conditions)
+	if !hasCondition {
+		return StaticDeclarationSyntax{}, false
+	}
+	for _, parse := range staticPlayerRuleParsers {
+		if declaration, ok := parse(opTokens); ok {
+			if !staticPlayerRuleAcceptsCondition(declaration.PlayerRule) {
+				return StaticDeclarationSyntax{}, false
+			}
+			declaration.Span = shared.SpanOf(tokens)
+			declaration.HasCondition = true
+			declaration.ConditionSpan = condition.Span
+			return declaration, true
+		}
+	}
 	return StaticDeclarationSyntax{}, false
+}
+
+// staticPlayerRuleAcceptsCondition reports whether a player-scoped static rule may
+// carry a leading "as long as <condition>" designation gate. Only the
+// damage-doesn't-cause-life-loss rule does today (Archon of Coronation); every
+// other player rule stays unconditional so a conditional near-miss fails closed.
+func staticPlayerRuleAcceptsCondition(kind StaticDeclarationPlayerRuleKind) bool {
+	return kind == StaticDeclarationPlayerRuleDamageDoesntCauseLifeLoss
 }
 
 // parseStaticNoMaximumHandSizeDeclaration recognizes the exact controller-scoped
@@ -2134,6 +2220,29 @@ func parseStaticSkipDrawStepDeclaration(tokens []shared.Token) (StaticDeclaratio
 			Span: tokens[1].Span,
 		},
 		PlayerRule: StaticDeclarationPlayerRuleSkipDrawStep,
+	}, true
+}
+
+// parseStaticDamageDoesntCauseLifeLossDeclaration recognizes the exact
+// controller-scoped static "damage doesn't cause you to lose life." (Archon of
+// Coronation, usually gated by a leading "As long as you're the monarch,"
+// condition the static-declaration machinery captures separately).
+func parseStaticDamageDoesntCauseLifeLossDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if len(tokens) != 8 || tokens[7].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	if !staticWordsAt(tokens, 0, "damage", "doesn't", "cause", "you", "to", "lose", "life") {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:          StaticDeclarationPlayerRule,
+		Span:          shared.SpanOf(tokens),
+		OperationSpan: shared.SpanOf(tokens[0:7]),
+		Subject: StaticDeclarationSubject{
+			Kind: StaticDeclarationSubjectController,
+			Span: tokens[3].Span,
+		},
+		PlayerRule: StaticDeclarationPlayerRuleDamageDoesntCauseLifeLoss,
 	}, true
 }
 

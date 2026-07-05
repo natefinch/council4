@@ -269,7 +269,9 @@ func dealPlayerDamage(g *game.Game, sourceID, sourceObjectID id.ID, controller, 
 	if dealt <= 0 {
 		return 0
 	}
-	loseLife(g, playerID, dealt)
+	if !playerRuleEffectActive(g, playerID, game.RuleEffectDamageDoesntCauseLifeLoss) {
+		loseLife(g, playerID, dealt)
+	}
 	emitEvent(g, game.Event{
 		Kind:            game.EventDamageDealt,
 		SourceID:        sourceID,
