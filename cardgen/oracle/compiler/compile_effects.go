@@ -646,6 +646,29 @@ func appendVoteEffects(effects []CompiledEffect, vote *parser.VoteClause) []Comp
 	return effects
 }
 
+// appendEachPlayerChooseDestroyEffect translates a recognized "Starting with you,
+// each player may choose <permanent>. Destroy each permanent chosen this way."
+// construct (Druid of Purification) into a single destroy effect flagged for the
+// EachPlayerChooseDestroy lowering. Selector carries the shared candidate pool
+// (compiled from the clause's typed candidate filter), so lowering builds one
+// EachPlayerChooseDestroy over that pool. The construct span is stamped on the
+// effect so the position-blind backend's body-span machinery covers it.
+func appendEachPlayerChooseDestroyEffect(effects []CompiledEffect, clause *parser.EachPlayerChooseDestroyClause) []CompiledEffect {
+	if clause == nil {
+		return effects
+	}
+	return append(effects, CompiledEffect{
+		Kind:                            EffectDestroy,
+		Exact:                           true,
+		Context:                         parser.EffectContextController,
+		Selector:                        compileTypedSelection(clause.Pool),
+		EachPlayerChooseDestroy:         true,
+		EachPlayerChooseDestroyOptional: clause.Optional,
+		Span:                            clause.ConstructSpan,
+		VerbSpan:                        clause.ConstructSpan,
+	})
+}
+
 func compileStaticRuleEffect(sentence parser.Sentence) (CompiledEffect, bool) {
 	rule, _, ok := semanticStaticRuleForSyntax(*sentence.StaticRule)
 	if !ok {

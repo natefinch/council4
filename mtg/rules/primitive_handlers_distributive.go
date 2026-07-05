@@ -4,6 +4,26 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 )
 
+// eachPlayerChooseCandidates gathers every active battlefield permanent matching
+// sel, the single shared candidate pool for an EachPlayerChooseDestroy effect.
+// Unlike playerControlledSelectionCandidates it does not restrict candidates to
+// one player's permanents: sel is evaluated relative to source (the ability's
+// controller), so a controller-relative filter such as "an artifact or
+// enchantment you don't control" offers the identical pool to every chooser.
+func eachPlayerChooseCandidates(g *game.Game, resolver referenceResolver, source *game.Permanent, sel game.Selection) []*game.Permanent {
+	var candidates []*game.Permanent
+	for _, permanent := range g.Battlefield {
+		if !activeBattlefieldPermanent(permanent) {
+			continue
+		}
+		if !resolver.permanentMatchesGroupSelection(&sel, source, permanent) {
+			continue
+		}
+		candidates = append(candidates, permanent)
+	}
+	return candidates
+}
+
 // playerControlledSelectionCandidates gathers the active battlefield permanents
 // controlled by playerID that satisfy sel, the candidate pool one player
 // contributes to a distributive "for each player" effect. Passing source honors

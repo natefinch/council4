@@ -201,6 +201,13 @@ type Ability struct {
 	// consumed sentences' effects and condition wording, so the construct lowers
 	// to a Vote interaction whose tally gates each arm.
 	Vote *VoteClause `json:",omitempty"`
+	// EachPlayerChooseDestroy is the recognized "Starting with you, each player
+	// may choose <permanent>. Destroy each permanent chosen this way." construct
+	// (Druid of Purification), or nil when the ability holds none. Like Vote, the
+	// recognizer folds the two-sentence structure onto a typed clause and sheds
+	// the consumed sentences' effects so the construct lowers to a single
+	// EachPlayerChooseDestroy interaction over the shared candidate pool.
+	EachPlayerChooseDestroy *EachPlayerChooseDestroyClause `json:",omitempty"`
 	// ReadAheadSacrificeChapter is the final lore chapter named by a recognized
 	// "Read ahead" reminder ("Sacrifice after <chapter>"), or 0 when the reminder
 	// omits the sacrifice clause. The chapter is a typed semantic value derived
@@ -1588,6 +1595,22 @@ type VoteArm struct {
 	Option       int        `json:",omitempty"`
 	TieInclusive bool       `json:",omitempty"`
 	Sentences    []Sentence `json:",omitempty"`
+}
+
+// EachPlayerChooseDestroyClause is the recognized "Starting with you, each
+// player may choose <permanent>. Destroy each permanent chosen this way."
+// construct (Druid of Purification). Pool is the shared candidate selection
+// parsed from the choose sentence ("an artifact or enchantment you don't
+// control"), evaluated relative to the ability's controller so every chooser is
+// offered the same permanents. Optional records the "may". Spans are the source
+// spans of both consumed sentences, credited whole by coverage; ConstructSpan
+// covers the whole construct so the position-blind backend's body-span machinery
+// accounts for it.
+type EachPlayerChooseDestroyClause struct {
+	Pool          SelectionSyntax `json:",omitzero"`
+	Optional      bool            `json:",omitempty"`
+	Spans         []shared.Span   `json:"-"`
+	ConstructSpan shared.Span     `json:"-"`
 }
 
 // ModalChoiceKind identifies exact modal header vocabulary whose range alone

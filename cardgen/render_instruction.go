@@ -370,6 +370,12 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 			return "", err
 		}
 		return r.renderDestroyForEachPlayer(ctx, value)
+	case game.PrimitiveEachPlayerChooseDestroy:
+		value, err := assertPrimitive[game.EachPlayerChooseDestroy](primitive)
+		if err != nil {
+			return "", err
+		}
+		return r.renderEachPlayerChooseDestroy(ctx, value)
 	case game.PrimitiveCreateTokenForEachDestroyed:
 		value, err := assertPrimitive[game.CreateTokenForEachDestroyed](primitive)
 		if err != nil {
@@ -881,6 +887,21 @@ func (r Renderer) renderDestroyForEachPlayer(ctx *renderCtx, value game.DestroyF
 		fmt.Sprintf("Selection: %s,", selection),
 		fmt.Sprintf("LinkedKey: game.LinkedKey(%q),", string(value.LinkedKey)),
 	}), nil
+}
+
+func (r Renderer) renderEachPlayerChooseDestroy(ctx *renderCtx, value game.EachPlayerChooseDestroy) (string, error) {
+	selection, err := r.renderSelection(ctx, value.Selection)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{fmt.Sprintf("Selection: %s,", selection)}
+	if value.Optional {
+		fields = append(fields, "Optional: true,")
+	}
+	if value.PreventRegeneration {
+		fields = append(fields, "PreventRegeneration: true,")
+	}
+	return structLit("game.EachPlayerChooseDestroy", fields), nil
 }
 
 func (r Renderer) renderCreateTokenForEachDestroyed(ctx *renderCtx, value game.CreateTokenForEachDestroyed) (string, error) {

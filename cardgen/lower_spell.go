@@ -342,6 +342,9 @@ func lowerContent(
 		if content, ok := lowerNextCastEntersWithCountersReplacement(ctx); ok {
 			return content, nil
 		}
+		if content, ok := lowerEachPlayerChooseDestroyContent(ctx); ok {
+			return content, nil
+		}
 		if content, ok := lowerStandaloneReorderLibraryTop(ctx); ok {
 			return content, nil
 		}

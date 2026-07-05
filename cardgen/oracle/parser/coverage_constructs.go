@@ -17,6 +17,7 @@ func appendConstructRecognizedSpans(spans []shared.Span, a *Ability) []shared.Sp
 	spans = appendLeadingClauseSpans(spans, a.Sentences)
 	spans = appendCoinFlipSpans(spans, a)
 	spans = appendVoteSpans(spans, a)
+	spans = appendEachPlayerChooseDestroySpans(spans, a)
 	spans = appendPileSplitSpans(spans, a)
 	return spans
 }
@@ -50,6 +51,24 @@ func appendCoinFlipSpans(spans []shared.Span, a *Ability) []shared.Span {
 		return spans
 	}
 	for _, span := range a.CoinFlip.Spans {
+		if span != (shared.Span{}) {
+			spans = append(spans, span)
+		}
+	}
+	return spans
+}
+
+// appendEachPlayerChooseDestroySpans credits the source spans of both sentences a
+// recognized "Starting with you, each player may choose <permanent>. Destroy each
+// permanent chosen this way." construct consumed. The recognizer re-parsed the
+// candidate filter into a typed pool and shed both sentences' effects, so
+// crediting the whole sentence spans keeps the coverage union from leaving the
+// choose sentence (which carries no typed effect of its own) uncovered.
+func appendEachPlayerChooseDestroySpans(spans []shared.Span, a *Ability) []shared.Span {
+	if a.EachPlayerChooseDestroy == nil {
+		return spans
+	}
+	for _, span := range a.EachPlayerChooseDestroy.Spans {
 		if span != (shared.Span{}) {
 			spans = append(spans, span)
 		}
