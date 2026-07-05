@@ -25,6 +25,7 @@ var Cards = []*game.CardDef{
 	TreefolkToken79af2f72e60a4722a79492da85b994ee,
 	TriskelaviteToken80e72f55b718444293eef9175a739975,
 	TrollWarriorToken47f6e1b995e24078923b2d67d601989c,
+	TrueheartDuelistToken1cb54b3e92cb4b56a726468c89eb29a0,
 	TyranidGargoyleToken5fe924f8880c425c9daed2f5455a5f2c,
 	TyranidToken0042a526882840ebbd324f57b230625a,
 	TyranidTokena8a1ad2a614d4592bbba529fbaf4ebb3,

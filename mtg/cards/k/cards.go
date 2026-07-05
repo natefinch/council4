@@ -45,6 +45,7 @@ var Cards = []*game.CardDef{
 	KithkinHealer,
 	KjeldoranGargoyle,
 	KnightOfCliffhaven,
+	KnightOfSorrows,
 	KnightsOfTheBlackRose,
 	KodamaOfTheSouthTree,
 	KolaghanAspirant,

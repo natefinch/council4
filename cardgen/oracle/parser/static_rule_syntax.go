@@ -258,6 +258,22 @@ func parseStaticRuleOperationsForSubject(tokens []shared.Token, subject StaticRu
 		}
 		return rule, true
 	}
+	if block, opNext, ok := parseCanBlockAdditionalRule(tokens, next); ok {
+		rule.Constraint = block.Constraint
+		rule.Operation = block.Operation
+		rule.Qualifiers = block.Qualifiers
+		if staticRuleHasGuardClause(tokens, opNext) {
+			rule.Guarded = true
+			opNext = len(tokens) - 1
+		}
+		if opNext != len(tokens)-1 {
+			return nil, false
+		}
+		if !validStaticRuleSyntax(*rule) {
+			return nil, false
+		}
+		return rule, true
+	}
 	if untap, ok := parseStaticDoesntUntapRule(tokens, next); ok {
 		rule.Constraint = untap.Constraint
 		rule.Operation = untap.Operation
@@ -531,6 +547,34 @@ type doesntUntapRuleSyntax struct {
 	Constraint StaticRuleConstraint `json:",omitzero"`
 	Operation  StaticRuleOperation  `json:",omitzero"`
 	OpNext     int                  `json:",omitempty"`
+}
+
+// parseCanBlockAdditionalRule recognizes the blocker-side capability "can block
+// an additional creature each combat" (Brave the Sands, Coastline Chimera): the
+// subject creature may block one more attacker than the usual single-blocker
+// limit. The phrasing is fixed; "each combat" is consumed as part of the fixed
+// wording. It returns the cursor just past the recognized phrasing so the caller
+// can detect a trailing guard clause ("... as long as you're the monarch.",
+// Entourage of Trest).
+func parseCanBlockAdditionalRule(tokens []shared.Token, start int) (requiredAttackRuleSyntax, int, bool) {
+	if !staticRuleWordsAt(tokens, start, "can", "block", "an", "additional", "creature", "each", "combat") {
+		return requiredAttackRuleSyntax{}, 0, false
+	}
+	return requiredAttackRuleSyntax{
+		Constraint: StaticRuleConstraint{
+			Kind: StaticRuleConstraintRequirement,
+			Span: shared.SpanOf(tokens[start : start+2]),
+		},
+		Operation: StaticRuleOperation{
+			Kind:  StaticRuleOperationBlock,
+			Voice: StaticRuleVoiceActive,
+			Span:  tokens[start+1].Span,
+		},
+		Qualifiers: []StaticRuleQualifier{{
+			Kind: StaticRuleQualifierAdditionalCreature,
+			Span: shared.SpanOf(tokens[start+2 : start+7]),
+		}},
+	}, start + 7, true
 }
 
 // parseStaticDoesntUntapRule recognizes "doesn't untap during your untap step"
@@ -858,6 +902,10 @@ func validCreatureStaticRuleOperation(rule StaticRuleSyntax) bool {
 			rule.Operation.Kind == StaticRuleOperationBlock &&
 			rule.Operation.Voice == StaticRuleVoiceActive &&
 			staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierBlockedAttackerFlying)) ||
+		(rule.Constraint.Kind == StaticRuleConstraintRequirement &&
+			rule.Operation.Kind == StaticRuleOperationBlock &&
+			rule.Operation.Voice == StaticRuleVoiceActive &&
+			staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierAdditionalCreature)) ||
 		(rule.Constraint.Kind == StaticRuleConstraintRequirement &&
 			rule.Operation.Kind == StaticRuleOperationBlockedByAll &&
 			rule.Operation.Voice == StaticRuleVoicePassive &&

@@ -34,6 +34,7 @@ var Cards = []*game.CardDef{
 	NickValentinePrivateEye,
 	NicoMinoruRunaway,
 	NightMarketAeronaut,
+	NightMarketGuard,
 	NightwhorlHermit,
 	NimanaSkitterSneak,
 	NimblewrightSchematic,

@@ -176,6 +176,11 @@ const (
 	// It lowers to the can-block-only runtime rule effect bounded by the flying
 	// blocker restriction.
 	StaticRuleCanBlockOnlyCreaturesWithFlying
+	// StaticRuleCanBlockAdditional is the blocker-side capability "can block an
+	// additional creature each combat" (Brave the Sands, Coastline Chimera): the
+	// subject creature may block one more attacker than the usual single blocker
+	// limit. It lowers to the can-block-additional runtime rule effect.
+	StaticRuleCanBlockAdditional
 	// StaticRuleCantAttackAlone is the active attack restriction "can't attack
 	// alone" (Mogg Flunkies, Trusty Companion): the subject creature can't be
 	// declared as an attacker unless at least one other creature also attacks.
@@ -1446,7 +1451,7 @@ func recognizeTypedStaticRuleDeclarations(ability CompiledAbility, syntax *parse
 
 // staticRuleGuardCondition pairs a static rule's trailing guard clause (its
 // Guarded flag) with the single supported compiled condition the condition
-// machinery produced for it. An unguarded rule must carry no conditions. Three
+// machinery produced for it. An unguarded rule must carry no conditions. Four
 // guarded rules are supported and every other guarded rule fails closed so the
 // broadening stays narrow and text-blind:
 //
@@ -1456,10 +1461,15 @@ func recognizeTypedStaticRuleDeclarations(ability CompiledAbility, syntax *parse
 //   - the can't-attack-unless-defending-player-controls restriction (Sea Monster)
 //     accepts only the negated "unless defending player controls ..." guard,
 //     which resolves per attack against the defending player's board rather than
-//     gating the static ability on/off; and
+//     gating the static ability on/off;
 //   - the doesn't-untap-unless-that-player-is-the-monarch restriction (Fall from
 //     Favor) accepts only the negated "unless that player is the monarch" guard,
-//     which resolves per untap step against the affected permanent's controller.
+//     which resolves per untap step against the affected permanent's controller;
+//     and
+//   - the can-block-an-additional-creature capability (Entourage of Trest) accepts
+//     only a non-negated live player-designation gate ("as long as you're the
+//     monarch"), a static on/off condition the runtime re-evaluates when it
+//     gathers rule effects.
 func staticRuleGuardCondition(ability CompiledAbility, node parser.StaticRuleSyntax, rule StaticRuleKind) (*CompiledCondition, bool) {
 	if !node.Guarded {
 		return nil, len(ability.Content.Conditions) == 0
@@ -1491,6 +1501,16 @@ func staticRuleGuardCondition(ability CompiledAbility, node parser.StaticRuleSyn
 			return nil, false
 		}
 		if condition.Predicate != ConditionPredicateThatPlayerIsMonarch {
+			return nil, false
+		}
+		return condition, true
+	case StaticRuleCanBlockAdditional:
+		// "... can block an additional creature each combat as long as you're the
+		// monarch." (Entourage of Trest): a live player-designation gate that turns
+		// the capability on and off as the designation changes. It is a non-negated
+		// on/off static condition the runtime re-evaluates when it gathers rule
+		// effects, not a per-event guard.
+		if condition.Negated || !isLivePlayerDesignationPredicate(condition.Predicate) {
 			return nil, false
 		}
 		return condition, true
@@ -1691,6 +1711,13 @@ func semanticStaticRuleForSyntax(rule parser.StaticRuleSyntax) (StaticRuleKind, 
 	}
 	if isCreatureRuleSubject(rule.Subject.Kind) &&
 		rule.Constraint.Kind == parser.StaticRuleConstraintRequirement &&
+		rule.Operation.Kind == parser.StaticRuleOperationBlock &&
+		rule.Operation.Voice == parser.StaticRuleVoiceActive &&
+		staticRuleQualifiersAre(rule.Qualifiers, parser.StaticRuleQualifierAdditionalCreature) {
+		return StaticRuleCanBlockAdditional, StaticZoneBattlefield, true
+	}
+	if isCreatureRuleSubject(rule.Subject.Kind) &&
+		rule.Constraint.Kind == parser.StaticRuleConstraintRequirement &&
 		rule.Operation.Kind == parser.StaticRuleOperationBlockedByAll &&
 		rule.Operation.Voice == parser.StaticRuleVoicePassive &&
 		len(rule.Qualifiers) == 0 {
@@ -1797,6 +1824,8 @@ func staticRuleForEffect(kind EffectKind) StaticRuleKind {
 		return StaticRuleDoesntUntap
 	case EffectCanBlockOnlyCreaturesWithFlying:
 		return StaticRuleCanBlockOnlyCreaturesWithFlying
+	case EffectCanBlockAdditional:
+		return StaticRuleCanBlockAdditional
 	default:
 		return StaticRuleUnknown
 	}
@@ -1835,7 +1864,8 @@ func staticRuleDomain(rule StaticRuleKind) StaticRuleDomain {
 	case StaticRuleCantBlock, StaticRuleCantBeBlocked, StaticRuleMustBeBlocked, StaticRuleCantBeBlockedByMoreThanOne,
 		StaticRuleCantBeBlockedByCreaturesWith, StaticRuleCantBeBlockedExceptBy, StaticRuleCantBlockAndCantBeBlocked,
 		StaticRuleMustBeBlockedByAllAble, StaticRuleAssignDamageAsUnblocked,
-		StaticRuleCanBlockOnlyCreaturesWithFlying, StaticRuleCantBlockAlone:
+		StaticRuleCanBlockOnlyCreaturesWithFlying, StaticRuleCantBlockAlone,
+		StaticRuleCanBlockAdditional:
 		return StaticRuleDomainBlock
 	case StaticRuleCantBeCountered:
 		return StaticRuleDomainCountering

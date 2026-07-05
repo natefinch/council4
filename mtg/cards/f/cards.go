@@ -81,6 +81,8 @@ var Cards = []*game.CardDef{
 	ForgehammerCenturion,
 	ForgingTheAnchor,
 	ForgottenCreation,
+	ForiysianBrigade,
+	ForiysianInterceptor,
 	FormAPosse,
 	FormlessGenesis,
 	FoulTongueShriek,

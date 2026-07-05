@@ -344,6 +344,75 @@ func TestGenerateExecutableCardSourceSelfMustBeBlocked(t *testing.T) {
 	}
 }
 
+// TestGenerateExecutableCardSourceSelfCanBlockAdditional verifies the
+// blocker-side capability "can block an additional creature each combat" (Brave
+// the Sands, Coastline Chimera) lowers onto a RuleEffectCanBlockAdditional rule
+// effect with an AdditionalBlockCount of 1.
+func TestGenerateExecutableCardSourceSelfCanBlockAdditional(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Extra Blocker Bear",
+		Layout:     "normal",
+		ManaCost:   "{2}{G}",
+		TypeLine:   "Creature — Bear",
+		OracleText: "This creature can block an additional creature each combat.",
+		Colors:     []string{"G"},
+		Power:      new("2"),
+		Toughness:  new("4"),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "x")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Kind:                 game.RuleEffectCanBlockAdditional,",
+		"AffectedSource:       true,",
+		"AdditionalBlockCount: 1,",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+// TestGenerateExecutableCardSourceCanBlockAdditionalMonarchGate verifies the
+// designation-gated form "can block an additional creature each combat as long as
+// you're the monarch" (Entourage of Trest) lowers onto the same rule effect
+// gated by a ControllerIsMonarch static condition the runtime re-evaluates.
+func TestGenerateExecutableCardSourceCanBlockAdditionalMonarchGate(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:     "Monarch Blocker Bear",
+		Layout:   "normal",
+		ManaCost: "{2}{G}",
+		TypeLine: "Creature — Bear",
+		OracleText: "When this creature enters, you become the monarch.\n" +
+			"This creature can block an additional creature each combat as long as you're the monarch.",
+		Colors:    []string{"G"},
+		Power:     new("2"),
+		Toughness: new("2"),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "x")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Kind:                 game.RuleEffectCanBlockAdditional,",
+		"AdditionalBlockCount: 1,",
+		"ControllerIsMonarch: true,",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceConditionalCannotAttack(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

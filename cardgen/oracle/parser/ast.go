@@ -1383,6 +1383,11 @@ const (
 	// characteristic describes the attacker the subject blocks, not the subject's
 	// own blockers.
 	StaticRuleQualifierBlockedAttackerFlying StaticRuleQualifierKind = "StaticRuleQualifierBlockedAttackerFlying"
+	// StaticRuleQualifierAdditionalCreature marks the blocker-side capability "can
+	// block an additional creature each combat" (Brave the Sands, Coastline
+	// Chimera): the subject creature may block one more attacker than the usual
+	// single-blocker limit.
+	StaticRuleQualifierAdditionalCreature StaticRuleQualifierKind = "StaticRuleQualifierAdditionalCreature"
 	// StaticRuleQualifierAlone restricts an active attack, block, or attack-or-
 	// block prohibition to the "alone" case ("can't attack alone", "can't block
 	// alone", "can't attack or block alone"): the subject can't be the only
