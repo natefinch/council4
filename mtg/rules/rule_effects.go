@@ -69,6 +69,10 @@ func createRuleEffectTemplates(g *game.Game, obj *game.StackObject, object opt.V
 }
 
 func activeRuleEffects(g *game.Game) []game.RuleEffect {
+	fc := frameCacheFor(g)
+	if fc != nil && fc.ruleEffectsBuilt {
+		return fc.ruleEffects
+	}
 	effects := make([]game.RuleEffect, 0, len(g.RuleEffects))
 	for i := range g.RuleEffects {
 		if ruleEffectSourceIsActive(g, &g.RuleEffects[i]) {
@@ -79,6 +83,13 @@ func activeRuleEffects(g *game.Game) []game.RuleEffect {
 	effects = append(effects, stackStaticRuleEffects(g)...)
 	effects = append(effects, graveyardStaticRuleEffects(g)...)
 	effects = append(effects, exileStaticRuleEffects(g)...)
+	if fc != nil {
+		// Clip so a caller that appends reallocates instead of writing into the
+		// shared backing array.
+		fc.ruleEffects = effects[:len(effects):len(effects)]
+		fc.ruleEffectsBuilt = true
+		return fc.ruleEffects
+	}
 	return effects
 }
 

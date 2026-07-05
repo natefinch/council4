@@ -110,6 +110,34 @@ type frameCache struct {
 	sourcesBuilt bool
 	values       map[id.ID]permanentEffectiveValues
 	controllers  map[id.ID]game.PlayerID
+
+	// beforeValues memoizes permanentValuesBeforeLayer per (permanent, stop
+	// layer). Evaluating a static ability's condition during layer application
+	// scans the battlefield and recomputes each permanent's characteristics "as of
+	// an earlier layer", and that scan repeats for every permanent evaluated, every
+	// layer, and every conditional static ability — the dominant cost of a large
+	// board. Within a frame the game state is fixed, so the "before layer L" values
+	// of a permanent never change and are memoized here. Cached values are
+	// read-only to callers except for the scalar power/toughness a caller may add
+	// counters/modifiers to on its own by-value copy.
+	beforeValues map[beforeLayerKey]permanentEffectiveValues
+
+	// ruleEffects memoizes activeRuleEffects: the active rule effects on the
+	// battlefield (and stack/graveyard/exile). Building that set rescans every
+	// permanent's static abilities and evaluates each condition, and the engine
+	// asks for it constantly (every legality, combat, and trigger check). Within a
+	// frame the set is fixed, so it is built once. It is clipped (cap == len) so a
+	// caller that appends reallocates rather than corrupting the shared slice;
+	// callers otherwise treat it read-only.
+	ruleEffects      []game.RuleEffect
+	ruleEffectsBuilt bool
+}
+
+// beforeLayerKey identifies a permanentValuesBeforeLayer result: a permanent and
+// the layer the computation stops before.
+type beforeLayerKey struct {
+	object id.ID
+	stop   game.ContinuousLayer
 }
 
 // frameCacheFor returns the frame cache for the current frame, creating it on
@@ -582,6 +610,13 @@ func counterAndTemporaryEffect(permanent *game.Permanent) (game.ContinuousEffect
 }
 
 func permanentValuesBeforeLayer(g *game.Game, permanent *game.Permanent, stop game.ContinuousLayer) permanentEffectiveValues {
+	fc := frameCacheFor(g)
+	key := beforeLayerKey{object: permanent.ObjectID, stop: stop}
+	if fc != nil {
+		if cached, ok := fc.beforeValues[key]; ok {
+			return cached
+		}
+	}
 	values := basePermanentValues(g, permanent)
 	sources := staticAbilitySources(g)
 	for _, layer := range continuousLayers {
@@ -596,6 +631,12 @@ func permanentValuesBeforeLayer(g *game.Game, permanent *game.Permanent, stop ga
 		for i := range ordered {
 			applyContinuousEffect(g, permanent, &values, &ordered[i])
 		}
+	}
+	if fc != nil {
+		if fc.beforeValues == nil {
+			fc.beforeValues = make(map[beforeLayerKey]permanentEffectiveValues)
+		}
+		fc.beforeValues[key] = values
 	}
 	return values
 }
