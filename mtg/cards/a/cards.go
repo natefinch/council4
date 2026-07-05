@@ -142,4 +142,5 @@ var Cards = []*game.CardDef{
 	ArbalestEngineers,
 	AtsushiTheBlazingSky,
 	AvenSurveyor,
+	AzureFleetAdmiral,
 }

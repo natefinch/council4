@@ -704,6 +704,12 @@ func parseStaticBlockerRestrictionQualifier(tokens []shared.Token, start, end in
 	if qualifier, next, ok := parseStaticBlockerTypeQualifier(tokens, start, end); ok {
 		return qualifier, next, true
 	}
+	if staticRuleWordsAt(tokens, start, "by", "creatures", "the", "monarch", "controls") {
+		return StaticRuleQualifier{
+			Kind: StaticRuleQualifierBlockerControlledByMonarch,
+			Span: shared.SpanOf(tokens[start : start+5]),
+		}, start + 5, true
+	}
 	if !staticRuleWordsAt(tokens, start, "by", "creatures", "with") {
 		return StaticRuleQualifier{}, 0, false
 	}
@@ -852,7 +858,8 @@ func validCreatureStaticRuleOperation(rule StaticRuleSyntax) bool {
 				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierBlockerPowerOrLess) ||
 				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierBlockerPowerOrGreater) ||
 				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierBlockerColor) ||
-				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierBlockerArtifact))) ||
+				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierBlockerArtifact) ||
+				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierBlockerControlledByMonarch))) ||
 		(rule.Constraint.Kind == StaticRuleConstraintProhibition &&
 			rule.Operation.Kind == StaticRuleOperationBlockedExcept &&
 			rule.Operation.Voice == StaticRuleVoicePassive &&

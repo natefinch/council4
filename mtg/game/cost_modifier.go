@@ -619,6 +619,10 @@ const (
 	// BlockerRestrictionLegendary stops legendary-creature blockers ("can't be
 	// blocked except by legendary creatures").
 	BlockerRestrictionLegendary
+	// BlockerRestrictionControlledByMonarch stops blockers controlled by the
+	// player who currently holds the monarch designation ("can't be blocked by
+	// creatures the monarch controls.", Azure Fleet Admiral).
+	BlockerRestrictionControlledByMonarch
 )
 
 // BlockerRestriction bounds which blockers a restricted block prohibition stops.

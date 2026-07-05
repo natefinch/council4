@@ -950,6 +950,9 @@ func blockerMatchesRestriction(g *game.Game, blocker *game.Permanent, restrictio
 		return hasKeyword(g, blocker, game.Defender)
 	case game.BlockerRestrictionLegendary:
 		return permanentHasSupertype(g, blocker, types.Legendary)
+	case game.BlockerRestrictionControlledByMonarch:
+		player, ok := playerByID(g, effectiveController(g, blocker))
+		return ok && player.IsMonarch
 	default:
 		return false
 	}

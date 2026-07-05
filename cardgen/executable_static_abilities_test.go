@@ -1351,6 +1351,17 @@ func TestGenerateExecutableCardSourceCantBeBlockedByCreaturesWith(t *testing.T) 
 				"game.BlockerRestrictionFlying",
 			},
 		},
+		"source controlled by monarch": {
+			typeLine:   "Creature — Human Soldier",
+			oracleText: "This creature can't be blocked by creatures the monarch controls.",
+			power:      "2",
+			toughness:  "2",
+			wanted: []string{
+				"game.RuleEffectCantBeBlockedByCreaturesWith",
+				"AffectedSource: true",
+				"game.BlockerRestrictionControlledByMonarch",
+			},
+		},
 		"source power or less": {
 			typeLine:   "Creature — Merfolk",
 			oracleText: "This creature can't be blocked by creatures with power 2 or less.",

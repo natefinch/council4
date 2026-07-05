@@ -1615,6 +1615,8 @@ func lowerStaticBlockerRestriction(restriction compiler.StaticBlockerRestriction
 		return game.BlockerRestriction{Kind: game.BlockerRestrictionDefender}, true
 	case compiler.StaticBlockerRestrictionLegendary:
 		return game.BlockerRestriction{Kind: game.BlockerRestrictionLegendary}, true
+	case compiler.StaticBlockerRestrictionControlledByMonarch:
+		return game.BlockerRestriction{Kind: game.BlockerRestrictionControlledByMonarch}, true
 	default:
 		return game.BlockerRestriction{}, false
 	}
