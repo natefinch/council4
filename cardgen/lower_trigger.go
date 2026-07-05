@@ -391,7 +391,9 @@ func lowerGenericPatternTrigger(
 	body, bodySyntax, triggerOptional := prepared.body, prepared.syntax, prepared.optional
 	var content game.AbilityContent
 	var diagnostic *shared.Diagnostic
-	if pattern.Event == game.EventCountersAdded || attackDefendingPlayerEvent(pattern.Event) {
+	if groupContent, ok := lowerAttackGroupKeywordGrant(body.Content, pattern, body.Optional); ok {
+		content = groupContent
+	} else if pattern.Event == game.EventCountersAdded || attackDefendingPlayerEvent(pattern.Event) {
 		content, diagnostic = lowerTriggerBodyContent(cardName, body.Content, body.Optional, &bodySyntax, pattern)
 	} else {
 		content, diagnostic = lowerAbilityContent(cardName, compiler.AbilityTriggered, body.Content, body.Optional, &bodySyntax)
