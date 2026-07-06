@@ -36,6 +36,7 @@ var Cards = []*game.CardDef{
 	PhalanxTactics,
 	PhantomWhelp,
 	PhyrexianDriver,
+	Phytohydra,
 	PicnicRuiner,
 	PicturesOfSpiderMan,
 	PillagingHorde,
