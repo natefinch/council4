@@ -115,7 +115,7 @@ func TestTurnFaceUpPaysMorphCostAndRevealsPrintedCharacteristics(t *testing.T) {
 	}
 }
 
-func TestDisguiseTurnFaceUpAddsShieldAndFaceDownHasWard(t *testing.T) {
+func TestDisguiseTurnFaceUpGrantsNoShieldAndFaceDownHasWard(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	permanent := addFaceDownPermanent(g, game.Player1, disguiseCreature(cost.Mana{cost.W}), game.FaceDownDisguise)
@@ -135,8 +135,10 @@ func TestDisguiseTurnFaceUpAddsShieldAndFaceDownHasWard(t *testing.T) {
 		t.Fatal("turn face-up action failed")
 	}
 
-	if got := permanent.Counters.Get(counter.Shield); got != 1 {
-		t.Fatalf("shield counters = %d, want 1", got)
+	// Disguise turn-up grants no shield counter (CR 702.168d); the disguise
+	// effect simply ends and the permanent regains its normal characteristics.
+	if got := permanent.Counters.Get(counter.Shield); got != 0 {
+		t.Fatalf("shield counters = %d, want 0", got)
 	}
 	if permanent.FaceDownKind != game.FaceDownNone {
 		t.Fatalf("FaceDownKind = %v, want none after turn face up", permanent.FaceDownKind)
