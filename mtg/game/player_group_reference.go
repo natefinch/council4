@@ -10,6 +10,12 @@ const (
 	PlayerGroupReferenceNone PlayerGroupReferenceKind = iota
 	PlayerGroupReferenceOpponents
 	PlayerGroupReferenceAllPlayers
+	// PlayerGroupReferenceTargetedPlayers denotes every player chosen as a target
+	// of the resolving spell or ability ("any number of target players each mill
+	// two cards" — Court of Cunning). The runtime resolves it to each player
+	// target still legal as the effect resolves, so a group effect applies to the
+	// whole chosen set at once.
+	PlayerGroupReferenceTargetedPlayers
 )
 
 // PlayerGroupReference is a small sealed pure-data type describing a group of players.
@@ -28,10 +34,17 @@ func AllPlayersReference() PlayerGroupReference {
 	return PlayerGroupReference{Kind: PlayerGroupReferenceAllPlayers}
 }
 
+// TargetedPlayersReference returns a reference to every player targeted by the
+// resolving spell or ability.
+func TargetedPlayersReference() PlayerGroupReference {
+	return PlayerGroupReference{Kind: PlayerGroupReferenceTargetedPlayers}
+}
+
 // Validate reports structural problems with a PlayerGroupReference.
 func (r PlayerGroupReference) Validate() []string {
 	switch r.Kind {
-	case PlayerGroupReferenceOpponents, PlayerGroupReferenceAllPlayers:
+	case PlayerGroupReferenceOpponents, PlayerGroupReferenceAllPlayers,
+		PlayerGroupReferenceTargetedPlayers:
 		return nil
 	case PlayerGroupReferenceNone:
 		return []string{"player group reference has no kind"}

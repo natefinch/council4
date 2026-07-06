@@ -1685,14 +1685,9 @@ func (r Renderer) renderAmountPlayer(
 // EntireHand and leaves Amount unset.
 func (r Renderer) renderDiscardEntireHand(value game.Discard) (string, error) {
 	if value.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
-		var renderedGroup string
-		switch value.PlayerGroup.Kind {
-		case game.PlayerGroupReferenceOpponents:
-			renderedGroup = "game.OpponentsReference()"
-		case game.PlayerGroupReferenceAllPlayers:
-			renderedGroup = "game.AllPlayersReference()"
-		default:
-			return "", fmt.Errorf("render: unsupported player group reference kind %d", value.PlayerGroup.Kind)
+		renderedGroup, err := renderPlayerGroupReference(value.PlayerGroup)
+		if err != nil {
+			return "", err
 		}
 		return structLit("game.Discard", []string{
 			"EntireHand: true,",
@@ -1719,14 +1714,9 @@ func (r Renderer) renderAmountPlayerGroup(
 	if err != nil {
 		return "", err
 	}
-	var renderedGroup string
-	switch group.Kind {
-	case game.PlayerGroupReferenceOpponents:
-		renderedGroup = "game.OpponentsReference()"
-	case game.PlayerGroupReferenceAllPlayers:
-		renderedGroup = "game.AllPlayersReference()"
-	default:
-		return "", fmt.Errorf("render: unsupported player group reference kind %d", group.Kind)
+	renderedGroup, err := renderPlayerGroupReference(group)
+	if err != nil {
+		return "", err
 	}
 	return structLit(typeName, []string{
 		fmt.Sprintf("Amount: %s,", renderedAmount),
@@ -1765,14 +1755,9 @@ func (r Renderer) renderDiscardAmountGroup(ctx *renderCtx, value game.Discard) (
 	if err != nil {
 		return "", err
 	}
-	var renderedGroup string
-	switch value.PlayerGroup.Kind {
-	case game.PlayerGroupReferenceOpponents:
-		renderedGroup = "game.OpponentsReference()"
-	case game.PlayerGroupReferenceAllPlayers:
-		renderedGroup = "game.AllPlayersReference()"
-	default:
-		return "", fmt.Errorf("render: unsupported player group reference kind %d", value.PlayerGroup.Kind)
+	renderedGroup, err := renderPlayerGroupReference(value.PlayerGroup)
+	if err != nil {
+		return "", err
 	}
 	fields := []string{
 		fmt.Sprintf("Amount: %s,", renderedAmount),

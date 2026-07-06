@@ -3577,6 +3577,29 @@ func lowerFixedCardCountPlayerSpell(
 	groupPrimitiveFactory func(amount game.Quantity, group game.PlayerGroupReference) game.Primitive,
 ) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
+	// "any number of target players each mill two cards" / "each of those players
+	// mills ten cards instead" (Court of Cunning) apply the effect to a variable
+	// group of targeted players rather than one recipient. Lower to the group
+	// primitive naming the TargetedPlayers group so the runtime performs the
+	// effect for every chosen player target; the base clause also emits the
+	// player-group target spec, while a back-referencing "those players" clause
+	// reuses the targets the base clause already announced.
+	if targets, ok := targetedPlayersEachSpec(ctx, effect); ok {
+		amount, ok := cardCountQuantityForContext(ctx, effect.Amount, allowDynamic)
+		if !ok {
+			return game.AbilityContent{}, contentDiagnostic(
+				ctx,
+				"unsupported "+controllerVerb+" spell",
+				"the executable source backend supports only exact fixed "+controllerVerb+" by one player",
+			)
+		}
+		return game.Mode{
+			Targets: targets,
+			Sequence: []game.Instruction{{
+				Primitive: groupPrimitiveFactory(amount, game.TargetedPlayersReference()),
+			}},
+		}.Ability(), nil
+	}
 	// Allow a single EventPlayer reference for "They {verb} N card(s)." bodies;
 	// reject all other non-zero-reference forms.
 	hasEventPlayerRef := len(ctx.content.References) == 1 &&
@@ -3745,6 +3768,105 @@ func lowerFixedCardCountPlayerSpell(
 			},
 		},
 	}.Ability(), nil
+}
+
+// targetedPlayersEachSpec recognizes the two clause shapes of a "target players
+// each <verb> N cards" effect and returns the target specs the clause owns. The
+// affected recipients are the players targeted by the spell/ability, resolved at
+// runtime through the TargetedPlayers group. It accepts:
+//
+//   - the base clause "any number of / up to N target players each <verb> N
+//     cards": one variable player-group target (max count above one) and no
+//     back-reference. It returns that group target spec so the ability announces
+//     it once.
+//   - a back-referencing clause "each of those players <verb> N cards [instead]":
+//     a lone "those" pronoun and no target of its own. It reuses the players the
+//     base clause already targeted, so it returns no target spec.
+//
+// It fails closed (ok=false) for a single target player, a non-card selector, a
+// non-fixed amount, or any other reference/target/keyword/condition shape, so the
+// ordinary single-recipient handling still governs every existing card.
+func targetedPlayersEachSpec(ctx contentCtx, effect compiler.CompiledEffect) ([]game.TargetSpec, bool) {
+	if effect.Selector.Kind != compiler.SelectorCard ||
+		!effect.Amount.Known || effect.Amount.Value < 1 ||
+		effect.Negated || effect.Optional || ctx.optional ||
+		len(ctx.content.Keywords) != 0 || len(ctx.content.Modes) != 0 ||
+		len(ctx.content.Conditions) != 0 {
+		return nil, false
+	}
+	switch {
+	case len(ctx.content.Targets) == 1 && len(ctx.content.References) == 0 &&
+		effect.Context == parser.EffectContextTarget:
+		// Base clause "any number of / up to N target players each <verb> N
+		// cards": this clause owns the variable player-group target, so emit it.
+		spec, ok := targetPlayersGroupSpec(ctx.content.Targets[0])
+		if !ok {
+			return nil, false
+		}
+		return []game.TargetSpec{spec}, true
+	case len(ctx.content.Targets) == 0 && len(ctx.content.References) == 1 &&
+		ctx.hasTargetedPlayers &&
+		isThosePlayersReference(ctx.content.References[0]):
+		// Escalation clause "each of those players <verb> N cards [instead]": a
+		// lone "those players" anaphor and no target of its own, reusing the
+		// players a prior clause targeted. Guarded on ctx.hasTargetedPlayers — the
+		// enclosing sequence actually announced a player-group target — so a bare
+		// "those players" naming a non-target group (e.g. the "each opponent" of
+		// "deals 2 damage to each opponent. Those players each discard ...") does
+		// not mis-lower to the targeted-players group. The target is shared, so
+		// emit no new spec.
+		return nil, true
+	default:
+		return nil, false
+	}
+}
+
+// targetPlayersGroupSpec builds the player-group target spec for a variable-count
+// "target players" clause. It accepts only a plain player or opponent target with
+// a maximum count above one ("any number of target players", "up to N target
+// players"); a single-count target stays on the single-recipient path. It mirrors
+// distributeCountersTargetSpec's cardinality handling: "any number of"/"up to N"
+// allow zero targets (CR 601.2d).
+func targetPlayersGroupSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
+	if target.Cardinality.Max <= 1 || target.Cardinality.Min < 0 {
+		return game.TargetSpec{}, false
+	}
+	spec := game.TargetSpec{
+		MinTargets: min(target.Cardinality.Min, target.Cardinality.Max),
+		MaxTargets: target.Cardinality.Max,
+		Constraint: target.Text,
+		Allow:      game.TargetAllowPlayer,
+	}
+	switch target.Selector.Kind {
+	case compiler.SelectorPlayer:
+	case compiler.SelectorOpponent:
+		spec.Selection = opt.Val(game.Selection{Player: game.PlayerOpponent})
+	default:
+		return game.TargetSpec{}, false
+	}
+	return spec, true
+}
+
+// isThosePlayersReference reports whether a compiled reference is the "those
+// players" back-reference ("each of those players ...") that names the players a
+// prior clause targeted. It is the lone anaphor a target-players group escalation
+// carries.
+func isThosePlayersReference(ref compiler.CompiledReference) bool {
+	return ref.Kind == compiler.ReferencePronoun && ref.Pronoun == compiler.ReferencePronounThose
+}
+
+// sequenceHasPlayerGroupTarget reports whether any of an ordered sequence's
+// targets is a variable player-group target ("any number of / up to N target
+// players"). It gates the "those players each <verb>" escalation binding so the
+// anaphor resolves to the targeted players only when the sequence actually
+// announced such a target.
+func sequenceHasPlayerGroupTarget(targets []compiler.CompiledTarget) bool {
+	for i := range targets {
+		if _, ok := targetPlayersGroupSpec(targets[i]); ok {
+			return true
+		}
+	}
+	return false
 }
 
 // discardSelectorImposesCardFilter reports whether the discard clause's selector

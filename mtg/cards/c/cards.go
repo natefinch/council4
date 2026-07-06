@@ -183,4 +183,5 @@ var Cards = []*game.CardDef{
 	CalculatedDismissal,
 	CourtOfGarenbrig,
 	CourtOfAmbition,
+	CourtOfCunning,
 }

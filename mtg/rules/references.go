@@ -314,6 +314,17 @@ func (r referenceResolver) playerGroup(ref game.PlayerGroupReference) []game.Pla
 			}
 		}
 		return players
+	case game.PlayerGroupReferenceTargetedPlayers:
+		if r.obj == nil {
+			return nil
+		}
+		players := make([]game.PlayerID, 0, len(r.obj.Targets))
+		for _, target := range r.obj.Targets {
+			if target.Kind == game.TargetPlayer && isPlayerAlive(r.g, target.PlayerID) {
+				players = append(players, target.PlayerID)
+			}
+		}
+		return players
 	default:
 		return nil
 	}

@@ -67,6 +67,13 @@ type contentCtx struct {
 	// temporarily. Face lowering rejects it unless the following spell paragraph
 	// is the exact typed draw suffix.
 	allowPonderPrefix bool
+	// hasTargetedPlayers reports that the enclosing ordered sequence announced a
+	// variable player-group target ("any number of / up to N target players").
+	// It lets a later "those players each <verb> N cards" clause bind its bare
+	// anaphor to the TargetedPlayers group (Court of Cunning) while a "those
+	// players" that instead names a non-target group ("each opponent. Those
+	// players each discard ...") stays unmatched.
+	hasTargetedPlayers bool
 }
 
 // contentDiagnostic creates a content-level diagnostic attributed to ctx.span.
@@ -150,6 +157,7 @@ func lowerSequenceClauseContent(
 		triggerOneOrMore:      parent.triggerOneOrMore,
 		triggerToZone:         parent.triggerToZone,
 		selfTrigger:           parent.selfTrigger,
+		hasTargetedPlayers:    parent.hasTargetedPlayers,
 	}
 	return lowerContent(cardName, ctx, bodySyntax)
 }
