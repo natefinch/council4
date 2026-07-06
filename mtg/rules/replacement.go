@@ -1379,12 +1379,31 @@ func matchingDamageReplacementEffects(g *game.Game, event damageEvent, applied m
 		if replacement.DamageExcludeSource && damageSourceIsReplacementSource(event, replacement) {
 			continue
 		}
+		if replacement.DamageRecipientAttached && !damageRecipientIsSourceAttached(g, event, replacement) {
+			continue
+		}
 		if applied[replacement.ID] || !replacementEffectMatchesEvent(g, replacement, matchEvent) {
 			continue
 		}
 		matches = append(matches, *replacement)
 	}
 	return matches
+}
+
+// damageRecipientIsSourceAttached reports whether the damage event's recipient is
+// the permanent the replacement's source is currently attached to. The attached
+// recipient of a DamageRecipientAttached prevention (Panther Habit's equipped
+// creature) is resolved dynamically here rather than pinned at registration, so
+// the prevention follows the Equipment/Aura as it attaches and moves.
+func damageRecipientIsSourceAttached(g *game.Game, event damageEvent, replacement *game.ReplacementEffect) bool {
+	if event.permanent == nil {
+		return false
+	}
+	source, ok := permanentByObjectID(g, replacement.SourceObjectID)
+	if !ok || !source.AttachedTo.Exists {
+		return false
+	}
+	return source.AttachedTo.Val == event.permanent.ObjectID
 }
 
 func damageRecipientIsOpponent(g *game.Game, event damageEvent, replacement *game.ReplacementEffect) bool {

@@ -84,9 +84,11 @@ func TestDamagePreventionToPlusOneCountersAttached(t *testing.T) {
 		},
 	}}
 	equipment := addCombatPermanent(g, game.Player1, def)
+	// Real ordering: the Equipment enters (and registers its replacement) while
+	// unattached, then attaches later. The prevention must still apply.
+	registerPermanentReplacementEffects(g, equipment)
 	equipment.AttachedTo = opt.Val(equipped.ObjectID)
 	equipped.Attachments = append(equipped.Attachments, equipment.ObjectID)
-	registerPermanentReplacementEffects(g, equipment)
 	sourceID := addColoredSourceCard(g, game.Player2, color.Red)
 
 	if dealt := dealPermanentDamage(g, sourceID, 0, game.Player2, equipped, 3, false); dealt != 0 {
@@ -94,5 +96,14 @@ func TestDamagePreventionToPlusOneCountersAttached(t *testing.T) {
 	}
 	if got := equipped.Counters.Get(counter.PlusOnePlusOne); got != 3 {
 		t.Fatalf("equipped creature +1/+1 counters = %d, want 3", got)
+	}
+
+	// A creature the Equipment is not attached to is unaffected.
+	bystander := addCombatCreaturePermanent(g, game.Player1)
+	if dealt := dealPermanentDamage(g, sourceID, 0, game.Player2, bystander, 2, false); dealt != 2 {
+		t.Fatalf("dealt to bystander = %d, want 2 (unprevented)", dealt)
+	}
+	if got := bystander.Counters.Get(counter.PlusOnePlusOne); got != 0 {
+		t.Fatalf("bystander +1/+1 counters = %d, want 0", got)
 	}
 }

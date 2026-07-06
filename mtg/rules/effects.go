@@ -479,14 +479,10 @@ func registerPermanentReplacementEffects(g *game.Game, permanent *game.Permanent
 		if replacement.DamageRecipientSelf {
 			replacement.AffectedObjectID = permanent.ObjectID
 		}
-		if replacement.DamageRecipientAttached {
-			if !permanent.AttachedTo.Exists {
-				// An unattached Equipment/Aura protects nothing; skip until it is
-				// attached and the continuous layer re-registers the replacement.
-				continue
-			}
-			replacement.AffectedObjectID = permanent.AttachedTo.Val
-		}
+		// DamageRecipientAttached is scoped dynamically: the Equipment/Aura enters
+		// unattached and attaches later without re-registration, so AffectedObjectID
+		// is left unset here and the damage-replacement match resolves the recipient
+		// from the source's current AttachedTo (matchingDamageReplacementEffects).
 		g.ReplacementEffects = append(g.ReplacementEffects, replacement)
 	}
 }
