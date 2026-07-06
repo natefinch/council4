@@ -11,6 +11,7 @@ var Cards = []*game.CardDef{
 	PalliationAccord,
 	PallidMycoderm,
 	PangTongYoungPhoenix,
+	PantherHabit,
 	ParadoxSurveyor,
 	ParasiticImpetus,
 	Parcelbeast,

@@ -120,6 +120,17 @@ func applyDamageModifications(g *game.Game, event damageEvent) int {
 		default:
 			replacement := replacements[chosen-replacementsStart]
 			appliedReplacements[replacement.ID] = true
+			if replacement.DamagePreventAll {
+				prevented := amount
+				amount = 0
+				if prevented > 0 {
+					emitDamagePreventedEvent(g, event, prevented)
+					if replacement.DamagePreventedBecomesPlusOneCounters && event.permanent != nil {
+						addCountersToPermanentControlledBy(g, replacement.Controller, event.permanent, counter.PlusOnePlusOne, prevented)
+					}
+				}
+				continue
+			}
 			if replacement.DamagePreventAmount > 0 {
 				prevented := min(amount, replacement.DamagePreventAmount)
 				amount -= prevented
@@ -1344,7 +1355,7 @@ func matchingDamageReplacementEffects(g *game.Game, event damageEvent, applied m
 	var matches []game.ReplacementEffect
 	for i := range g.ReplacementEffects {
 		replacement := &g.ReplacementEffects[i]
-		if replacement.DamageMultiplier <= 1 && replacement.DamageAddend == 0 && replacement.DamagePreventAmount == 0 {
+		if replacement.DamageMultiplier <= 1 && replacement.DamageAddend == 0 && replacement.DamagePreventAmount == 0 && !replacement.DamagePreventAll {
 			continue
 		}
 		if len(replacement.DamageSourceColors) > 0 && !damageSourceHasAnyColor(g, event, replacement.DamageSourceColors) {
@@ -1368,12 +1379,31 @@ func matchingDamageReplacementEffects(g *game.Game, event damageEvent, applied m
 		if replacement.DamageExcludeSource && damageSourceIsReplacementSource(event, replacement) {
 			continue
 		}
+		if replacement.DamageRecipientAttached && !damageRecipientIsSourceAttached(g, event, replacement) {
+			continue
+		}
 		if applied[replacement.ID] || !replacementEffectMatchesEvent(g, replacement, matchEvent) {
 			continue
 		}
 		matches = append(matches, *replacement)
 	}
 	return matches
+}
+
+// damageRecipientIsSourceAttached reports whether the damage event's recipient is
+// the permanent the replacement's source is currently attached to. The attached
+// recipient of a DamageRecipientAttached prevention (Panther Habit's equipped
+// creature) is resolved dynamically here rather than pinned at registration, so
+// the prevention follows the Equipment/Aura as it attaches and moves.
+func damageRecipientIsSourceAttached(g *game.Game, event damageEvent, replacement *game.ReplacementEffect) bool {
+	if event.permanent == nil {
+		return false
+	}
+	source, ok := permanentByObjectID(g, replacement.SourceObjectID)
+	if !ok || !source.AttachedTo.Exists {
+		return false
+	}
+	return source.AttachedTo.Val == event.permanent.ObjectID
 }
 
 func damageRecipientIsOpponent(g *game.Game, event damageEvent, replacement *game.ReplacementEffect) bool {

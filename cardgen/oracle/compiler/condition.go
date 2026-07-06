@@ -253,6 +253,13 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 		}
 		condition.Predicate = ConditionPredicateDamageByControlledSource
 		condition.Selection = selection
+	case parser.ConditionPredicateDamageWouldBeDealtToPermanent:
+		selection, ok := compileConditionSelection(clause.Selection)
+		if !ok {
+			return
+		}
+		condition.Predicate = ConditionPredicateDamageWouldBeDealtToPermanent
+		condition.Selection = selection
 	case parser.ConditionPredicateSourceWouldDie:
 		condition.Predicate = ConditionPredicateSourceWouldDie
 		condition.SubjectSpan = clause.SubjectSpan
@@ -445,6 +452,8 @@ func compileConditionSelection(syntax parser.ConditionSelection) (ConditionSelec
 	selection.DamageSourceAnyController = syntax.DamageSourceAnyController
 	selection.DamageRecipientController = syntax.DamageRecipientController
 	selection.DamageSourceControllerOpponent = syntax.DamageSourceControllerOpponent
+	selection.DamageRecipientSelf = syntax.DamageRecipientSelf
+	selection.DamageRecipientAttached = syntax.DamageRecipientAttached
 	selection.AnyCounter = syntax.AnyCounter
 	selection.CounterKind = syntax.CounterKind
 	selection.CounterKindKnown = syntax.CounterKindKnown
