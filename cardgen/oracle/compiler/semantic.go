@@ -806,6 +806,10 @@ const (
 	// the monarch" (Queen Marchesa). It is a live game-state predicate with no
 	// clause parameters.
 	ConditionPredicateAnOpponentIsMonarch
+	// ConditionPredicateNoMonarch is satisfied when no player currently holds the
+	// monarch designation ("if there is no monarch", Crown of Gondor, Archivist of
+	// Gondor). It is a live game-state predicate with no clause parameters.
+	ConditionPredicateNoMonarch
 	// ConditionPredicateDefendingPlayerIsMonarch is satisfied when the defending
 	// player of an attack currently holds the monarch (CR 720), as in "can't
 	// attack unless defending player is the monarch" (Crown-Hunter Hireling). Like

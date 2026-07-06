@@ -215,6 +215,8 @@ func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringC
 		result.ControllerWasMonarchAtTurnStart = true
 	case compiler.ConditionPredicateAnOpponentIsMonarch:
 		result.AnOpponentIsMonarch = true
+	case compiler.ConditionPredicateNoMonarch:
+		result.NoMonarch = true
 	case compiler.ConditionPredicateControllerHasInitiative:
 		result.ControllerHasInitiative = true
 	case compiler.ConditionPredicateControllerHasCityBlessing:
@@ -386,6 +388,7 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 				ctx == conditionContextEffectGate
 		case compiler.ConditionPredicateControllerIsMonarch,
 			compiler.ConditionPredicateAnOpponentIsMonarch,
+			compiler.ConditionPredicateNoMonarch,
 			compiler.ConditionPredicateControllerHasInitiative,
 			compiler.ConditionPredicateControllerHasCityBlessing:
 			// Player-designation predicates ("if you're the monarch", "if an
