@@ -248,6 +248,9 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	if cond.AnOpponentIsMonarch {
 		matches = matches && anyAliveOpponentIsMonarch(g, ctx.controller)
 	}
+	if cond.NoMonarch {
+		matches = matches && !anyPlayerIsMonarch(g)
+	}
 	if cond.ControllerHasInitiative {
 		player, ok := playerByID(g, ctx.controller)
 		matches = matches && ok && player.HasInitiative
@@ -272,6 +275,20 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 func anyAliveOpponentIsMonarch(g *game.Game, controller game.PlayerID) bool {
 	for _, opponentID := range aliveOpponents(g, controller) {
 		if opponent, ok := playerByID(g, opponentID); ok && opponent.IsMonarch {
+			return true
+		}
+	}
+	return false
+}
+
+// anyPlayerIsMonarch reports whether any living player currently holds the
+// monarch designation, backing the "there is no monarch" condition (Crown of
+// Gondor, Archivist of Gondor). It filters to living players so a monarch who
+// has left the game (whose IsMonarch flag is not cleared on elimination) no
+// longer counts, matching anyAliveOpponentIsMonarch.
+func anyPlayerIsMonarch(g *game.Game) bool {
+	for i := range g.Players {
+		if g.Players[i].IsMonarch && g.Players[i].IsAlive() {
 			return true
 		}
 	}

@@ -183,6 +183,12 @@ type Condition struct {
 	// IsMonarch designation flag of each opponent.
 	AnOpponentIsMonarch bool
 
+	// NoMonarch is satisfied when no player currently holds the monarch
+	// designation ("if there is no monarch, you become the monarch." — Crown of
+	// Gondor, Archivist of Gondor). It reads the live IsMonarch designation flag
+	// of every player.
+	NoMonarch bool
+
 	// ControllerHasInitiative is satisfied when the context controller has the
 	// initiative (CR 720), as in "At the beginning of your end step, if you have
 	// the initiative, ...". It reads the controller's live HasInitiative flag.
@@ -305,6 +311,7 @@ func (c *Condition) Empty() bool {
 		!c.ControllerIsMonarch &&
 		!c.ControllerWasMonarchAtTurnStart &&
 		!c.AnOpponentIsMonarch &&
+		!c.NoMonarch &&
 		!c.ControllerHasInitiative &&
 		!c.ControllerHasCityBlessing &&
 		!c.SourceControllerTurn &&

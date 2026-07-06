@@ -194,6 +194,7 @@ func isLivePlayerDesignationConditionPredicate(predicate compiler.ConditionPredi
 	switch predicate {
 	case compiler.ConditionPredicateControllerIsMonarch,
 		compiler.ConditionPredicateAnOpponentIsMonarch,
+		compiler.ConditionPredicateNoMonarch,
 		compiler.ConditionPredicateControllerHasInitiative,
 		compiler.ConditionPredicateControllerHasCityBlessing:
 		return true

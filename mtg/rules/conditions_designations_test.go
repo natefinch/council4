@@ -55,6 +55,38 @@ func TestConditionControllerDesignations(t *testing.T) {
 	}
 }
 
+// TestConditionNoMonarch exercises the "if there is no monarch" intervening-if
+// predicate (Crown of Gondor, Archivist of Gondor). It holds only while no player
+// currently holds the monarch designation, independent of the context controller.
+func TestConditionNoMonarch(t *testing.T) {
+	condition := opt.Val(game.Condition{NoMonarch: true})
+
+	// A fresh game has no monarch, so the condition holds for any controller.
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	if !conditionSatisfied(g, conditionContext{controller: game.Player1}, condition) {
+		t.Fatal("condition did not hold when there was no monarch")
+	}
+	if !conditionSatisfied(g, conditionContext{controller: game.Player2}, condition) {
+		t.Fatal("condition did not hold for another controller when there was no monarch")
+	}
+
+	// Once any player is the monarch, the condition holds for nobody.
+	g.Players[game.Player2].IsMonarch = true
+	if conditionSatisfied(g, conditionContext{controller: game.Player1}, condition) {
+		t.Fatal("condition held while a player was the monarch")
+	}
+	if conditionSatisfied(g, conditionContext{controller: game.Player2}, condition) {
+		t.Fatal("condition held for the monarch themselves")
+	}
+
+	// A monarch who has left the game no longer counts (their IsMonarch flag is
+	// not cleared on elimination), so the crown is vacant again.
+	g.Players[game.Player2].Eliminated = true
+	if !conditionSatisfied(g, conditionContext{controller: game.Player1}, condition) {
+		t.Fatal("condition did not hold after the monarch left the game")
+	}
+}
+
 // TestConditionAnOpponentIsMonarch exercises the opponent-designation
 // intervening-if predicate "if an opponent is the monarch" (Queen Marchesa). It
 // holds only when a player other than the context controller currently holds the

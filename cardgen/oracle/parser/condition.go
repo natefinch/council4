@@ -104,6 +104,7 @@ const (
 	ConditionPredicateControllerIsMonarch                              ConditionPredicateKind = "ConditionPredicateControllerIsMonarch"
 	ConditionPredicateControllerWasMonarchAtTurnStart                  ConditionPredicateKind = "ConditionPredicateControllerWasMonarchAtTurnStart"
 	ConditionPredicateAnOpponentIsMonarch                              ConditionPredicateKind = "ConditionPredicateAnOpponentIsMonarch"
+	ConditionPredicateNoMonarch                                        ConditionPredicateKind = "ConditionPredicateNoMonarch"
 	ConditionPredicateDefendingPlayerIsMonarch                         ConditionPredicateKind = "ConditionPredicateDefendingPlayerIsMonarch"
 	ConditionPredicateThatPlayerIsMonarch                              ConditionPredicateKind = "ConditionPredicateThatPlayerIsMonarch"
 	ConditionPredicateControllerHasInitiative                          ConditionPredicateKind = "ConditionPredicateControllerHasInitiative"
@@ -2066,6 +2067,8 @@ func recognizeControllerDesignationCondition(body []shared.Token, _ Atoms) (Cond
 		return ConditionClause{Predicate: ConditionPredicateControllerWasMonarchAtTurnStart}, true
 	case tokenWordsEqual(body, "an", "opponent", "is", "the", "monarch"):
 		return ConditionClause{Predicate: ConditionPredicateAnOpponentIsMonarch}, true
+	case tokenWordsEqual(body, "there", "is", "no", "monarch"):
+		return ConditionClause{Predicate: ConditionPredicateNoMonarch}, true
 	case tokenWordsEqual(body, "defending", "player", "is", "the", "monarch"):
 		return ConditionClause{Predicate: ConditionPredicateDefendingPlayerIsMonarch}, true
 	case tokenWordsEqual(body, "that", "player", "is", "the", "monarch"):
