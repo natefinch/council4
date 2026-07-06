@@ -81,6 +81,7 @@ func newPrimitiveRegistry() *primitiveRegistry {
 	registerPrimitiveHandler(reg, handleConditionalDestinationPlace)
 	registerPrimitiveHandler(reg, handleStartEngines)
 	registerPrimitiveHandler(reg, handleBecomeMonarch)
+	registerPrimitiveHandler(reg, handleCantBecomeMonarch)
 	registerPrimitiveHandler(reg, handleRingTempts)
 	registerPrimitiveHandler(reg, handleVote)
 	registerPrimitiveHandler(reg, handleSetClassLevel)
