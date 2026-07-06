@@ -40,6 +40,19 @@ const (
 	// because it shares its own name, so destroying the whole group covers the
 	// "<target> and all other <group> with the same name" wording in one move.
 	GroupDomainSameName
+
+	// GroupDomainTriggeringAttackers draws from the creatures that were declared
+	// as attackers in the attack that triggered the resolving ability — the
+	// "they"/"those creatures" back-reference in "Whenever one or more creatures
+	// you control attack, they gain <keyword> until end of turn." (Angelic
+	// Guardian). Membership is the set of permanents named by the
+	// EventAttackerDeclared events sharing the resolving ability's trigger
+	// event's simultaneous batch, narrowed by the Selection (controller and
+	// type). Because it binds the declared attackers rather than re-querying the
+	// board, a creature that started attacking after the declaration is excluded
+	// and a declared attacker that left combat before resolution is still
+	// included. It draws no anchor.
+	GroupDomainTriggeringAttackers
 )
 
 // GroupReference is pure rules data describing WHERE a mass effect finds a group
@@ -111,6 +124,14 @@ func PlayerControlledGroupExcluding(player PlayerReference, selection Selection,
 // because it shares its own name.
 func SameNamePermanentGroup(anchor ObjectReference, selection Selection) GroupReference {
 	return GroupReference{domain: GroupDomainSameName, selection: selection, anchor: opt.Val(anchor)}
+}
+
+// TriggeringAttackersGroup matches the creatures declared as attackers in the
+// attack that triggered the resolving ability, narrowed by selection. It binds
+// the "they"/"those creatures" back-reference of a one-or-more-attackers trigger
+// to the specific declared attackers rather than re-querying the board.
+func TriggeringAttackersGroup(selection Selection) GroupReference {
+	return GroupReference{domain: GroupDomainTriggeringAttackers, selection: selection}
 }
 
 // Domain reports the candidate domain the group draws from.
@@ -185,6 +206,13 @@ func (r GroupReference) Validate() []string {
 		}
 		if r.exclude.Exists {
 			problems = append(problems, "same-name group must not set an exclusion")
+		}
+	case GroupDomainTriggeringAttackers:
+		if r.anchor.Exists {
+			problems = append(problems, "triggering-attackers group must not set an anchor object")
+		}
+		if r.exclude.Exists {
+			problems = append(problems, "triggering-attackers group must not set an exclusion")
 		}
 	case groupDomainNone:
 		problems = append(problems, "group reference has no domain")
