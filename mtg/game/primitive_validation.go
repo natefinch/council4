@@ -2375,7 +2375,7 @@ func (p Manifest) validatePrimitive(targets []TargetSpec, checkTargets bool) err
 }
 
 func (p Goad) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
-	return validateObjectReference(p.Object, targets, checkTargets)
+	return validateMassObjectOrGroup(p.Object, p.Group, targets, checkTargets)
 }
 
 func (p RemoveCounter) validatePrimitive(targets []TargetSpec, checkTargets bool) error {

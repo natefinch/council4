@@ -462,6 +462,31 @@ func TestGoadEffectExpiresOnGoadingPlayersNextTurn(t *testing.T) {
 	}
 }
 
+// TestGroupGoadGoadsEachCreatureYouDontControl verifies a mass goad over the
+// "creatures you don't control" battlefield group goads every such creature and
+// leaves the resolving player's own creatures ungoaded ("Goad all creatures you
+// don't control.", Disrupt Decorum).
+func TestGroupGoadGoadsEachCreatureYouDontControl(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	opponentFirst := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	opponentSecond := addCombatCreaturePermanentWithPower(g, game.Player2, 3)
+	own := addCombatCreaturePermanentWithPower(g, game.Player1, 4)
+	addEffectSpellToStack(g, game.Player1, game.Goad{Group: game.BattlefieldGroup(game.Selection{
+		RequiredTypes: []types.Card{types.Creature},
+		Controller:    game.ControllerNotYou,
+	})}, nil)
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if !wasGoadedBy(opponentFirst, game.Player1) || !wasGoadedBy(opponentSecond, game.Player1) {
+		t.Fatal("group goad did not goad each creature you don't control")
+	}
+	if wasGoadedBy(own, game.Player1) {
+		t.Fatal("group goad wrongly goaded a creature you control")
+	}
+}
+
 func TestScryAndSurveilUseChoiceAgent(t *testing.T) {
 	t.Run("scry bottom", func(t *testing.T) {
 		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})

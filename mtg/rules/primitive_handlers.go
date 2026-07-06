@@ -1198,8 +1198,18 @@ func handleExplore(r *effectResolver, prim game.Explore) effectResolved {
 
 func handleGoad(r *effectResolver, prim game.Goad) effectResolved {
 	res := effectResolved{accepted: true}
-	if permanent, ok := r.resolveObject(prim.Object); ok && permanentHasType(r.game, permanent, types.Creature) {
-		goadPermanent(r.game, permanent, r.obj.Controller)
+	targets := r.resolveObjectGroup(prim.Object, prim.Group)
+	if !targets.single {
+		for _, permanent := range targets.permanents {
+			if permanentHasType(r.game, permanent, types.Creature) {
+				goadPermanent(r.game, permanent, r.obj.Controller)
+				res.succeeded = true
+			}
+		}
+		return res
+	}
+	if targets.resolved && permanentHasType(r.game, targets.permanents[0], types.Creature) {
+		goadPermanent(r.game, targets.permanents[0], r.obj.Controller)
 		res.succeeded = true
 	}
 	return res

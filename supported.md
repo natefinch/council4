@@ -3695,6 +3695,7 @@ Council4 currently supports **16,945 of 32,501 cards eligible for paper support 
 - Displacer Kitten
 - Disposal Mummy
 - Disrupt
+- Disrupt Decorum
 - Disrupting Scepter
 - Disruptive Pitmage
 - Disruptive Stormbrood // Petty Revenge
