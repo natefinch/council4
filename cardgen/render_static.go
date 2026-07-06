@@ -902,6 +902,8 @@ func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
 		return "game.RuleEffectCanBlockAdditional", nil
 	case game.RuleEffectDamageDoesntCauseLifeLoss:
 		return "game.RuleEffectDamageDoesntCauseLifeLoss", nil
+	case game.RuleEffectRedirectDamageToSource:
+		return "game.RuleEffectRedirectDamageToSource", nil
 	case game.RuleEffectCantBeBlockedByMoreThanOne:
 		return "game.RuleEffectCantBeBlockedByMoreThanOne", nil
 	case game.RuleEffectMustAttack:

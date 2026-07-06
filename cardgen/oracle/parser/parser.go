@@ -974,6 +974,14 @@ func classifyAbility(tokens []shared.Token, context Context) AbilityKind {
 	if startsWithWord(tokens, "when", "whenever", "at") {
 		return AbilityTriggered
 	}
+	// "All damage that would be dealt to you is dealt to this creature instead."
+	// (Protector of the Crown) is a damage-redirection replacement, but it is
+	// modeled as a controller-scoped rule static, so classify it as a static
+	// ability rather than letting the "would ... instead" wording route it to the
+	// generic replacement path (which cannot express recipient redirection).
+	if redirectDamageToSelfWording(tokens) {
+		return AbilityStatic
+	}
 	if replacementWording(tokens) {
 		return AbilityReplacement
 	}
@@ -1019,6 +1027,30 @@ func replacementWording(tokens []shared.Token) bool {
 		return true
 	}
 	return slices.Contains(words, "would") && slices.Contains(words, "instead")
+}
+
+// redirectDamageToSelfWording reports whether the tokens read as the exact
+// controller-scoped damage-redirection static "All damage that would be dealt to
+// you is dealt to this creature/permanent instead." (Protector of the Crown). It
+// is matched here so the "would ... instead" replacement classifier does not
+// claim it; the static-declaration recognizer lowers it to a redirect rule
+// effect.
+func redirectDamageToSelfWording(tokens []shared.Token) bool {
+	words := normalizedWords(tokensOutsideParens(tokens))
+	self := []string{
+		"all", "damage", "that", "would", "be", "dealt", "to", "you",
+		"is", "dealt", "to", "this",
+	}
+	if len(words) != len(self)+2 {
+		return false
+	}
+	if !slices.Equal(words[:len(self)], self) {
+		return false
+	}
+	if words[len(self)] != "creature" && words[len(self)] != "permanent" {
+		return false
+	}
+	return words[len(self)+1] == "instead"
 }
 
 // damagePreventionStaticWording reports whether the tokens read as a continuous

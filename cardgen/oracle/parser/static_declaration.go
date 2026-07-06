@@ -206,6 +206,12 @@ const (
 	// monarch, ..."). The damage is still dealt; only the life-loss step is
 	// skipped.
 	StaticDeclarationPlayerRuleDamageDoesntCauseLifeLoss StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleDamageDoesntCauseLifeLoss"
+	// StaticDeclarationPlayerRuleRedirectDamageToSource redirects all damage that
+	// would be dealt to the controller to the ability's source permanent instead
+	// ("All damage that would be dealt to you is dealt to this creature instead.",
+	// Protector of the Crown). The redirect target is the source permanent, which
+	// the runtime resolves from the rule effect's source.
+	StaticDeclarationPlayerRuleRedirectDamageToSource StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleRedirectDamageToSource"
 )
 
 // StaticDeclarationCardFilterKind identifies the closed card filter that a
@@ -748,6 +754,7 @@ func emitStaticDeclarations(abilities []Ability) {
 			foldStaticCastFromTopPayLifeRider(ability, declarations)
 			foldStaticSkipDrawStep(ability, declarations)
 			foldStaticDamageDoesntCauseLifeLoss(ability, declarations)
+			foldStaticRedirectDamageToSource(ability, declarations)
 			foldStaticRemoveAuraRider(ability, declarations)
 		}
 	}
@@ -909,6 +916,37 @@ func foldStaticSkipDrawStep(ability *Ability, declarations []StaticDeclarationSy
 			continue
 		}
 		if !staticWordsAt(semanticEffectTokens(ability.Sentences[i].Tokens), 0, "skip", "your", "draw", "step") {
+			continue
+		}
+		ability.Sentences[i].Effects = nil
+		ability.Sentences[i].LegacyEffects = false
+		return
+	}
+}
+
+// foldStaticRedirectDamageToSource drops the spurious "is dealt to this creature"
+// damage effect the generic effect scanner emits for the redirect static "All
+// damage that would be dealt to you is dealt to this creature instead." once the
+// static-declaration recognizer has credited it, so the sentence is fully
+// consumed by the static rule rather than surfacing as an unlowered effect.
+func foldStaticRedirectDamageToSource(ability *Ability, declarations []StaticDeclarationSyntax) {
+	credited := false
+	for i := range declarations {
+		if declarations[i].PlayerRule == StaticDeclarationPlayerRuleRedirectDamageToSource {
+			credited = true
+			break
+		}
+	}
+	if !credited {
+		return
+	}
+	phrase := []string{"all", "damage", "that", "would", "be", "dealt", "to", "you"}
+	for i := range ability.Sentences {
+		if len(ability.Sentences[i].Effects) == 0 && !ability.Sentences[i].LegacyEffects {
+			continue
+		}
+		tokens := semanticEffectTokens(ability.Sentences[i].Tokens)
+		if !tokenRunContains(tokens, phrase) {
 			continue
 		}
 		ability.Sentences[i].Effects = nil
@@ -2139,6 +2177,7 @@ var staticPlayerRuleParsers = []staticPlayerRuleParser{
 	parseStaticPlayerHexproofDeclaration,
 	parseStaticPlayerShroudDeclaration,
 	parseStaticDamageDoesntCauseLifeLossDeclaration,
+	parseStaticRedirectDamageToSourceDeclaration,
 }
 
 func parseStaticPlayerRuleDeclaration(tokens []shared.Token, conditions []ConditionClause) (StaticDeclarationSyntax, bool) {
@@ -2220,6 +2259,36 @@ func parseStaticSkipDrawStepDeclaration(tokens []shared.Token) (StaticDeclaratio
 			Span: tokens[1].Span,
 		},
 		PlayerRule: StaticDeclarationPlayerRuleSkipDrawStep,
+	}, true
+}
+
+// parseStaticRedirectDamageToSourceDeclaration recognizes the exact
+// controller-scoped damage-redirection static "All damage that would be dealt to
+// you is dealt to this creature/permanent instead." (Protector of the Crown). The
+// redirect target is the ability's own source permanent, which the runtime
+// resolves from the rule effect's source, so no object is captured here.
+func parseStaticRedirectDamageToSourceDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if len(tokens) != 15 || tokens[14].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	if !staticWordsAt(tokens, 0, "all", "damage", "that", "would", "be", "dealt", "to", "you", "is", "dealt", "to", "this") {
+		return StaticDeclarationSyntax{}, false
+	}
+	if !equalWord(tokens[12], "creature") && !equalWord(tokens[12], "permanent") {
+		return StaticDeclarationSyntax{}, false
+	}
+	if !equalWord(tokens[13], "instead") {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:          StaticDeclarationPlayerRule,
+		Span:          shared.SpanOf(tokens),
+		OperationSpan: shared.SpanOf(tokens[0:14]),
+		Subject: StaticDeclarationSubject{
+			Kind: StaticDeclarationSubjectController,
+			Span: tokens[7].Span,
+		},
+		PlayerRule: StaticDeclarationPlayerRuleRedirectDamageToSource,
 	}, true
 }
 

@@ -200,15 +200,21 @@ func markPlayerCombatDamage(g *game.Game, source *game.Permanent, defendingPlaye
 	}
 	defender := g.Players[defendingPlayer]
 	sourceController := effectiveController(g, source)
-	dealt := dealPlayerDamage(g, source.CardInstanceID, source.ObjectID, sourceController, defendingPlayer, damage, true)
+	dealt, redirected := dealPlayerDamageMaybeRedirect(g, source.CardInstanceID, source.ObjectID, sourceController, defendingPlayer, damage, true)
+	// Lifelink applies to all damage the source deals, including damage redirected
+	// to another permanent, so it reads the full dealt amount.
+	applyLifelink(g, source, dealt)
+	if redirected || dealt <= 0 {
+		// Redirected combat damage never reaches the defending player, so the
+		// player-only combat consequences (commander damage, poison, the
+		// monarch-by-combat-damage transfer, ring-bearer life loss, and the
+		// combat-damage-to-player log) do not apply.
+		return
+	}
 	for _, commanderID := range sourceCommanderIDs(g, source) {
 		defender.CommanderDamage[commanderID] += dealt
 	}
 	applyToxic(g, source, defendingPlayer, dealt)
-	applyLifelink(g, source, dealt)
-	if dealt <= 0 {
-		return
-	}
 	log.addCombatDamage(CombatDamageLog{
 		Attacker:        source.ObjectID,
 		SourceID:        source.CardInstanceID,
@@ -254,8 +260,27 @@ func markPermanentDamage(g *game.Game, placementController game.PlayerID, perman
 }
 
 func dealPlayerDamage(g *game.Game, sourceID, sourceObjectID id.ID, controller, playerID game.PlayerID, damage int, combatDamage bool) int {
+	dealt, _ := dealPlayerDamageMaybeRedirect(g, sourceID, sourceObjectID, controller, playerID, damage, combatDamage)
+	return dealt
+}
+
+// dealPlayerDamageMaybeRedirect deals damage to playerID, or, when that player
+// controls an active RuleEffectRedirectDamageToSource ("All damage that would be
+// dealt to you is dealt to this creature instead." — Protector of the Crown), to
+// the redirect permanent instead. It returns the damage dealt and whether the
+// damage was redirected, so a combat caller can skip the player-only side effects
+// (commander damage, poison, the monarch-by-combat-damage transfer, ring-bearer
+// life loss) that only apply when combat damage actually reaches the player.
+func dealPlayerDamageMaybeRedirect(g *game.Game, sourceID, sourceObjectID id.ID, controller, playerID game.PlayerID, damage int, combatDamage bool) (int, bool) {
 	if damage <= 0 || !isPlayerAlive(g, playerID) {
-		return 0
+		return 0, false
+	}
+	if redirect, ok := playerDamageRedirectPermanent(g, playerID); ok {
+		dealt := dealPermanentDamage(g, sourceID, sourceObjectID, controller, redirect, damage, combatDamage)
+		if dealt > 0 && damageSourceHasDeathtouch(g, sourceObjectID) {
+			redirect.MarkedDeathtouchDamage = true
+		}
+		return dealt, true
 	}
 	event := damageEvent{
 		sourceID:       sourceID,
@@ -267,7 +292,7 @@ func dealPlayerDamage(g *game.Game, sourceID, sourceObjectID id.ID, controller, 
 	}
 	dealt := applyDamageModifications(g, event)
 	if dealt <= 0 {
-		return 0
+		return 0, false
 	}
 	if !playerRuleEffectActive(g, playerID, game.RuleEffectDamageDoesntCauseLifeLoss) {
 		loseLife(g, playerID, dealt)
@@ -282,7 +307,18 @@ func dealPlayerDamage(g *game.Game, sourceID, sourceObjectID id.ID, controller, 
 		DamageRecipient: game.DamageRecipientPlayer,
 		CombatDamage:    combatDamage,
 	})
-	return dealt
+	return dealt, false
+}
+
+// damageSourceHasDeathtouch reports whether the permanent identified by
+// sourceObjectID has deathtouch, so redirected damage from it marks its recipient
+// for the lethal state-based action.
+func damageSourceHasDeathtouch(g *game.Game, sourceObjectID id.ID) bool {
+	if sourceObjectID == 0 {
+		return false
+	}
+	source, ok := permanentByObjectID(g, sourceObjectID)
+	return ok && hasKeyword(g, source, game.Deathtouch)
 }
 
 func dealPermanentDamage(g *game.Game, sourceID, sourceObjectID id.ID, controller game.PlayerID, permanent *game.Permanent, damage int, combatDamage bool) int {

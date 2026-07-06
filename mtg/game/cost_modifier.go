@@ -527,6 +527,12 @@ const (
 	// the source's controller still becomes the monarch — but the life loss step
 	// is skipped. Added last so existing kinds keep their wire values.
 	RuleEffectDamageDoesntCauseLifeLoss
+	// RuleEffectRedirectDamageToSource redirects all damage that would be dealt to
+	// the affected player to the effect's source permanent instead ("All damage
+	// that would be dealt to you is dealt to this creature instead.", Protector of
+	// the Crown). The runtime resolves the redirect target from the rule effect's
+	// SourceObjectID. Added last so existing kinds keep their wire values.
+	RuleEffectRedirectDamageToSource
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -587,7 +593,8 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectPlayerHexproof,
 		RuleEffectPlayerShroud,
 		RuleEffectCanBlockAdditional,
-		RuleEffectDamageDoesntCauseLifeLoss:
+		RuleEffectDamageDoesntCauseLifeLoss,
+		RuleEffectRedirectDamageToSource:
 		return true
 	default:
 		return false
