@@ -45,6 +45,13 @@ const (
 // resolve to a scorable summary (hand- or graveyard-activated) keep the routine
 // activate score.
 func scoreActivateAbility(obs rules.PlayerObservation, act action.Action, personality Personality) float64 {
+	if obs.IsManaAbilityActivation(act) {
+		// Activating a mana ability standalone only floats mana that empties at end
+		// of step; the payment system taps mana sources as it pays for spells and
+		// abilities. Scoring it above passing would loop forever on a mana-neutral
+		// ability that pays for itself (Skyshroud Elf, "{1}: Add {R} or {W}").
+		return scoreNoOpActivation
+	}
 	if obs.RepeatedFreeActivation(act) {
 		// A free ability re-activated this turn almost never changes anything the
 		// first activation did not; scoring it above passing would loop forever
