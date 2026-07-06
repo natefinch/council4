@@ -286,6 +286,13 @@ const (
 	// one of the recorded exempt types. The counts and exempt types travel on
 	// the compiled ability so lowering stays free of Oracle wording.
 	ExactSequenceDrawThenDiscardUnlessType
+	// ExactSequencePayHandSizeOrCantAttack is the triggered body "that opponent
+	// may pay {X}, where X is the number of cards in their hand. If they don't,
+	// they can't attack you this combat." (Champions of Minas Tirith): the
+	// triggering opponent may pay generic mana equal to their hand size; on
+	// non-payment their creatures can't attack the source's controller for the
+	// rest of that combat. The whole body is fixed, so it carries no extra data.
+	ExactSequencePayHandSizeOrCantAttack
 )
 
 // LookAtTopBattlefieldElse identifies the trailing fallback disposition of an

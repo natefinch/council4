@@ -21,7 +21,12 @@ import (
 //
 // CantBecomeMonarch is value-neutral (no atom): the monarchy restriction has no
 // measurable card/life/board effect, matching BecomeMonarch.
-const knownPrimitiveCount = 113
+//
+// PlayerMayPayGenericOrRule is value-neutral (no atom): its outcome is either an
+// optional mana payment or an installed combat rule restriction, neither of
+// which the single-target card/life/board atom heuristic models, matching Pay
+// and ApplyRule.
+const knownPrimitiveCount = 114
 
 // TestPrimitiveCountIsReconciled keeps a newly added resolution primitive from
 // silently falling through the translator: adding one trips this guard so its

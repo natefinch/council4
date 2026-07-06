@@ -45,6 +45,13 @@ const (
 	// the compiled ability so lowering routes the discard without reading Oracle
 	// words.
 	ExactSequenceDrawThenDiscardUnlessType
+	// ExactSequencePayHandSizeOrCantAttack is the triggered "that opponent may
+	// pay {X}, where X is the number of cards in their hand. If they don't, they
+	// can't attack you this combat." punisher (Champions of Minas Tirith): the
+	// triggering opponent may pay generic mana equal to their hand size and, on
+	// non-payment, their creatures can't attack the source's controller for the
+	// rest of that combat. The whole body is fixed, so it carries no extra data.
+	ExactSequencePayHandSizeOrCantAttack
 )
 
 func compileExactSequenceKind(kind parser.ExactSequenceKind) ExactSequenceKind {
@@ -61,6 +68,8 @@ func compileExactSequenceKind(kind parser.ExactSequenceKind) ExactSequenceKind {
 		return ExactSequenceConditionalLookAtTopBattlefield
 	case parser.ExactSequenceDrawThenDiscardUnlessType:
 		return ExactSequenceDrawThenDiscardUnlessType
+	case parser.ExactSequencePayHandSizeOrCantAttack:
+		return ExactSequencePayHandSizeOrCantAttack
 	default:
 		return ExactSequenceUnknown
 	}

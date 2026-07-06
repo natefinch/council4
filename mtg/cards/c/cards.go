@@ -42,6 +42,7 @@ var Cards = []*game.CardDef{
 	CeruleanDrake,
 	ChainedToTheRocks,
 	ChainsOfCustody,
+	ChampionsOfMinasTirith,
 	ChandraSFiremaw,
 	ChandraSIgnition,
 	ChandraSRevolution,
