@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,910 of 32,501 cards eligible for paper support (52.0%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,915 of 32,501 cards eligible for paper support (52.0%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -474,6 +474,7 @@ Council4 currently supports **16,910 of 32,501 cards eligible for paper support 
 - Angelic Edict
 - Angelic Exaltation
 - Angelic Gift
+- Angelic Guardian
 - Angelic Observer
 - Angelic Overseer
 - Angelic Page
@@ -1964,6 +1965,7 @@ Council4 currently supports **16,910 of 32,501 cards eligible for paper support 
 - Burdened Stoneback
 - Burglar Rat
 - Buried Alive
+- Buried in the Garden
 - Buried Ruin
 - Burlfist Oak
 - Burn Bright
@@ -3063,6 +3065,7 @@ Council4 currently supports **16,910 of 32,501 cards eligible for paper support 
 - Cryptcaller Chariot
 - Cryptic Annelid
 - Cryptic Caves
+- Cryptic Coat
 - Cryptic Command
 - Cryptic Serpent
 - Cryptolith Rite
@@ -4897,6 +4900,7 @@ Council4 currently supports **16,910 of 32,501 cards eligible for paper support 
 - Ferropede
 - Ferrous Lake
 - Ferrovore
+- Fertile Ground
 - Fertilid
 - Fervent Cathar
 - Fervent Charge
@@ -15786,6 +15790,7 @@ Council4 currently supports **16,910 of 32,501 cards eligible for paper support 
 - Verdant Embrace
 - Verdant Field
 - Verdant Force
+- Verdant Haven
 - Verdant Sun's Avatar
 - Verdigris
 - Verduran Enchantress
