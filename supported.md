@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,937 of 32,501 cards eligible for paper support (52.1%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,944 of 32,501 cards eligible for paper support (52.1%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -5890,6 +5890,7 @@ Council4 currently supports **16,937 of 32,501 cards eligible for paper support 
 - Gluttonous Slug
 - Gluttonous Troll
 - Gluttonous Zombie
+- Glóin, Dwarf Emissary
 - Gnarlback Rhino
 - Gnarlbark Elm
 - Gnarled Effigy
@@ -7514,6 +7515,7 @@ Council4 currently supports **16,937 of 32,501 cards eligible for paper support 
 - Jedit Ojanen of Efrava
 - Jedit Ojanen, Mercenary
 - Jedit's Dragoons
+- Jeering Homunculus
 - Jelenn Sphinx
 - Jenara, Asura of War
 - Jennika, Bad Apple Big Sister
@@ -8093,6 +8095,7 @@ Council4 currently supports **16,937 of 32,501 cards eligible for paper support 
 - Larceny
 - Larder Zombie
 - Larger Than Life
+- Laser Screwdriver
 - Laserbeak
 - Lash of Malice
 - Lash of the Whip
@@ -8117,6 +8120,7 @@ Council4 currently supports **16,937 of 32,501 cards eligible for paper support 
 - Launch
 - Launch Mishap
 - Launch Party
+- Laurine, the Diversion
 - Lava Axe
 - Lava Coil
 - Lava Dart
@@ -11165,6 +11169,7 @@ Council4 currently supports **16,937 of 32,501 cards eligible for paper support 
 - Rank Officer
 - Rankle's Prank
 - Ransack the Lab
+- Ransom Note
 - Rapacious Dragon
 - Raph's Bravado
 - Raphael, Tough Turtle
@@ -14476,6 +14481,8 @@ Council4 currently supports **16,937 of 32,501 cards eligible for paper support 
 - Tattoo Ward
 - Tatyova, Benthic Druid
 - Taunting Elf
+- Taunting Kobold
+- Taunting Sliver
 - Taurean Mauler
 - Tavern Swindler
 - Tawnos's Wand

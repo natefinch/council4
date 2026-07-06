@@ -1803,6 +1803,8 @@ func effectWordKind(token shared.Token) EffectKind {
 		return EffectShuffle
 	case "tap", "taps":
 		return EffectTap
+	case "goad", "goads":
+		return EffectGoad
 	case "untap", "untaps":
 		return EffectUntap
 	case "transform", "transforms":

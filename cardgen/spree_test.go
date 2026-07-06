@@ -40,7 +40,7 @@ func TestGenerateSpreeSpellSource(t *testing.T) {
 
 func TestGenerateSpreeRejectsUnsupportedMode(t *testing.T) {
 	t.Parallel()
-	// The second Spree option goads a creature, an effect the executable backend
+	// The second Spree option detains a creature, an effect the executable backend
 	// does not lower, so the whole card must fail closed even though the Spree
 	// structure and the first option are recognized.
 	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
@@ -50,12 +50,12 @@ func TestGenerateSpreeRejectsUnsupportedMode(t *testing.T) {
 		ManaCost: "{R}",
 		OracleText: "Spree (Choose one or more additional costs.)\n" +
 			"+ {2} — Explosive Derailment deals 4 damage to target creature.\n" +
-			"+ {2} — Goad target creature.",
+			"+ {2} — Detain target creature.",
 	}, "e")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(diagnostics) == 0 {
-		t.Fatal("diagnostics = none; want the unsupported goad mode to fail closed")
+		t.Fatal("diagnostics = none; want the unsupported detain mode to fail closed")
 	}
 }

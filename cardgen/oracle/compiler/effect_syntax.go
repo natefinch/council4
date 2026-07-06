@@ -648,6 +648,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectShuffle
 	case parser.EffectTap:
 		return EffectTap
+	case parser.EffectGoad:
+		return EffectGoad
 	case parser.EffectTapOrUntap:
 		return EffectTapOrUntap
 	case parser.EffectUntap:
