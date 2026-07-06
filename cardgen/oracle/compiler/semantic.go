@@ -1063,6 +1063,9 @@ type ConditionSelection struct {
 	// permanent is the ability's own source or the permanent it is attached to.
 	DamageRecipientSelf     bool
 	DamageRecipientAttached bool
+	// DamageRecipientMonarchGate marks a DamageWouldBeDealtToPermanent clause
+	// gated by "... while you're the monarch" (Jared Carthalion).
+	DamageRecipientMonarchGate bool
 	// AnyCounter requires the matched permanent to carry at least one counter of
 	// any kind ("if this permanent has counters on it").
 	AnyCounter bool
