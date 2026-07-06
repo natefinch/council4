@@ -120,6 +120,17 @@ func applyDamageModifications(g *game.Game, event damageEvent) int {
 		default:
 			replacement := replacements[chosen-replacementsStart]
 			appliedReplacements[replacement.ID] = true
+			if replacement.DamagePreventAll {
+				prevented := amount
+				amount = 0
+				if prevented > 0 {
+					emitDamagePreventedEvent(g, event, prevented)
+					if replacement.DamagePreventedBecomesPlusOneCounters && event.permanent != nil {
+						addCountersToPermanentControlledBy(g, replacement.Controller, event.permanent, counter.PlusOnePlusOne, prevented)
+					}
+				}
+				continue
+			}
 			if replacement.DamagePreventAmount > 0 {
 				prevented := min(amount, replacement.DamagePreventAmount)
 				amount -= prevented
@@ -1344,7 +1355,7 @@ func matchingDamageReplacementEffects(g *game.Game, event damageEvent, applied m
 	var matches []game.ReplacementEffect
 	for i := range g.ReplacementEffects {
 		replacement := &g.ReplacementEffects[i]
-		if replacement.DamageMultiplier <= 1 && replacement.DamageAddend == 0 && replacement.DamagePreventAmount == 0 {
+		if replacement.DamageMultiplier <= 1 && replacement.DamageAddend == 0 && replacement.DamagePreventAmount == 0 && !replacement.DamagePreventAll {
 			continue
 		}
 		if len(replacement.DamageSourceColors) > 0 && !damageSourceHasAnyColor(g, event, replacement.DamageSourceColors) {

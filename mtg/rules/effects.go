@@ -463,6 +463,7 @@ func registerPermanentReplacementEffects(g *game.Game, permanent *game.Permanent
 			replacement.DrawCardMultiplier <= 1 &&
 			replacement.DrawCardDigLook <= 0 &&
 			!replacement.DrawFromEmptyLibraryWins &&
+			!replacement.DamagePreventAll &&
 			!replacement.ContinuousZoneRedirect {
 			continue
 		}
@@ -474,6 +475,17 @@ func registerPermanentReplacementEffects(g *game.Game, permanent *game.Permanent
 		replacement.CreatedTurn = g.Turn.TurnNumber
 		if replacement.CounterRecipientSelf {
 			replacement.AffectedObjectID = permanent.ObjectID
+		}
+		if replacement.DamageRecipientSelf {
+			replacement.AffectedObjectID = permanent.ObjectID
+		}
+		if replacement.DamageRecipientAttached {
+			if !permanent.AttachedTo.Exists {
+				// An unattached Equipment/Aura protects nothing; skip until it is
+				// attached and the continuous layer re-registers the replacement.
+				continue
+			}
+			replacement.AffectedObjectID = permanent.AttachedTo.Val
 		}
 		g.ReplacementEffects = append(g.ReplacementEffects, replacement)
 	}

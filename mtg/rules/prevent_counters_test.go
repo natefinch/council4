@@ -1,0 +1,70 @@
+package rules
+
+import (
+	"testing"
+
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/opt"
+)
+
+// TestDamagePreventionToPlusOneCountersSelfUngated proves the ungated self form
+// "If damage would be dealt to this permanent, prevent that damage and put that
+// many +1/+1 counters on it." (Anti-Venom): the damage is fully prevented, none
+// is marked, and the permanent gains that many +1/+1 counters.
+func TestDamagePreventionToPlusOneCountersSelfUngated(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	def := &game.CardDef{CardFace: game.CardFace{
+		Name: "Anti-Venom",
+		ReplacementAbilities: []game.ReplacementAbility{
+			game.DamagePreventionToPlusOneCountersReplacement("anti-venom", false, opt.V[game.Condition]{}),
+		},
+	}}
+	target := addCombatPermanent(g, game.Player1, def)
+	registerPermanentReplacementEffects(g, target)
+	sourceID := addColoredSourceCard(g, game.Player2, color.Red)
+
+	if dealt := dealPermanentDamage(g, sourceID, 0, game.Player2, target, 3, false); dealt != 0 {
+		t.Fatalf("dealt = %d, want 0 (prevented)", dealt)
+	}
+	if target.MarkedDamage != 0 {
+		t.Fatalf("marked damage = %d, want 0", target.MarkedDamage)
+	}
+	if got := target.Counters.Get(counter.PlusOnePlusOne); got != 3 {
+		t.Fatalf("+1/+1 counters = %d, want 3", got)
+	}
+}
+
+// TestDamagePreventionToPlusOneCountersSelfMonarchGated proves the monarch-gated
+// self form "If damage would be dealt to Jared while you're the monarch, prevent
+// that damage and put that many +1/+1 counters on it." (Jared Carthalion): the
+// prevention (and the counters) apply only while the controller is the monarch.
+func TestDamagePreventionToPlusOneCountersSelfMonarchGated(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	def := &game.CardDef{CardFace: game.CardFace{
+		Name: "Jared Carthalion",
+		ReplacementAbilities: []game.ReplacementAbility{
+			game.DamagePreventionToPlusOneCountersReplacement("jared", false, opt.Val(game.Condition{ControllerIsMonarch: true})),
+		},
+	}}
+	target := addCombatPermanent(g, game.Player1, def)
+	registerPermanentReplacementEffects(g, target)
+	sourceID := addColoredSourceCard(g, game.Player2, color.Red)
+
+	if dealt := dealPermanentDamage(g, sourceID, 0, game.Player2, target, 2, false); dealt != 2 {
+		t.Fatalf("dealt while not monarch = %d, want 2 (unprevented)", dealt)
+	}
+	if got := target.Counters.Get(counter.PlusOnePlusOne); got != 0 {
+		t.Fatalf("+1/+1 counters while not monarch = %d, want 0", got)
+	}
+
+	setMonarch(g, game.Player1)
+	target.MarkedDamage = 0
+	if dealt := dealPermanentDamage(g, sourceID, 0, game.Player2, target, 4, false); dealt != 0 {
+		t.Fatalf("dealt while monarch = %d, want 0 (prevented)", dealt)
+	}
+	if got := target.Counters.Get(counter.PlusOnePlusOne); got != 4 {
+		t.Fatalf("+1/+1 counters while monarch = %d, want 4", got)
+	}
+}
