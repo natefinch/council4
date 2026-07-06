@@ -89,4 +89,5 @@ var Cards = []*game.CardDef{
 	PlunderingBarbarian,
 	PollenbrightDruid,
 	ProudPackRhino,
+	ProtectorOfTheCrown,
 }

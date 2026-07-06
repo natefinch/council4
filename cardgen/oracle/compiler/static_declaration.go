@@ -629,6 +629,7 @@ const (
 	StaticPlayerRuleHexproof
 	StaticPlayerRuleShroud
 	StaticPlayerRuleDamageDoesntCauseLifeLoss
+	StaticPlayerRuleRedirectDamageToSource
 )
 
 // StaticPlayerRuleDeclaration is one player-scoped static rule applied to the
@@ -4324,6 +4325,10 @@ var staticPlayerRuleSpecs = map[parser.StaticDeclarationPlayerRuleKind]staticPla
 		kind:           StaticPlayerRuleDamageDoesntCauseLifeLoss,
 		matchesContent: conditionalStaticPlayerRuleContent,
 	},
+	parser.StaticDeclarationPlayerRuleRedirectDamageToSource: {
+		kind:           StaticPlayerRuleRedirectDamageToSource,
+		matchesContent: redirectStaticPlayerRuleContent,
+	},
 	parser.StaticDeclarationPlayerRuleAttackTax: {
 		kind:           StaticPlayerRuleAttackTax,
 		usesAttackTax:  true,
@@ -4463,6 +4468,20 @@ func staticPlayerRuleSubjectAllowed(subject parser.StaticDeclarationSubjectKind,
 
 func emptyStaticPlayerRuleContent(content AbilityContent) bool {
 	return len(content.Conditions) == 0 && len(content.References) == 0
+}
+
+// redirectStaticPlayerRuleContent accepts the redirect static's content, which
+// carries a single self "this object" reference for the redirect target ("... is
+// dealt to this creature instead.") produced by the static-rule reference
+// compiler, and no conditions.
+func redirectStaticPlayerRuleContent(content AbilityContent) bool {
+	if len(content.Conditions) != 0 {
+		return false
+	}
+	if len(content.References) == 0 {
+		return true
+	}
+	return len(content.References) == 1 && content.References[0].Kind == ReferenceThisObject
 }
 
 // conditionalStaticPlayerRuleContent allows a player-scoped static rule to carry

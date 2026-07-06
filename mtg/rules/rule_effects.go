@@ -1136,6 +1136,27 @@ func playerRuleEffectActive(g *game.Game, playerID game.PlayerID, kind game.Rule
 	return false
 }
 
+// playerDamageRedirectPermanent returns the permanent an active
+// RuleEffectRedirectDamageToSource redirects the given player's damage to ("All
+// damage that would be dealt to you is dealt to this creature instead." —
+// Protector of the Crown). The redirect target is the rule effect's source
+// permanent; it returns the first active redirect whose affected player is the
+// damaged player.
+func playerDamageRedirectPermanent(g *game.Game, playerID game.PlayerID) (*game.Permanent, bool) {
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind != game.RuleEffectRedirectDamageToSource ||
+			!playerRelationMatches(effect.Controller, playerID, effect.AffectedPlayer) {
+			continue
+		}
+		if permanent, ok := permanentByObjectID(g, effect.SourceObjectID); ok && activeBattlefieldPermanent(permanent) {
+			return permanent, true
+		}
+	}
+	return nil, false
+}
+
 // payLifeForManaColorActive reports whether an active RuleEffectPayLifeForColoredMana
 // effect lets playerID pay 2 life instead of a mana of color c when paying a cost
 // ("For each {B} in a cost, you may pay 2 life rather than pay that mana.", K'rrik).

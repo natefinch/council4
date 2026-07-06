@@ -83,4 +83,5 @@ var Cards = []*game.CardDef{
 	ExhibitionMagician,
 	ÉomerKingOfRohan,
 	ÉomerMarshalOfRohan,
+	EmpyrialArchangel,
 }
