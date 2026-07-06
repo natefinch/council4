@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,945 of 32,501 cards eligible for paper support (52.1%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,948 of 32,501 cards eligible for paper support (52.1%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -7499,6 +7499,7 @@ Council4 currently supports **16,945 of 32,501 cards eligible for paper support 
 - Jamuraan Lion
 - Jandor's Saddlebags
 - Janjeet Sentry
+- Jared Carthalion, True Heir
 - Jareth, Leonine Titan
 - Jarvis, Earth's Mightiest Butler
 - Jasmine Boreal
@@ -10507,6 +10508,7 @@ Council4 currently supports **16,945 of 32,501 cards eligible for paper support 
 - Phyrexian Wurm
 - Phyrexian Wurm
 - Phytoburst
+- Phytohydra
 - Phytotitan
 - Pia and Kiran Nalaar
 - Pianna, Nomad Captain
