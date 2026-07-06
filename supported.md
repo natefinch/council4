@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,909 of 32,501 cards eligible for paper support (52.0%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,910 of 32,501 cards eligible for paper support (52.0%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -3018,6 +3018,7 @@ Council4 currently supports **16,909 of 32,501 cards eligible for paper support 
 - Crowd of Cinders
 - Crowd's Favor
 - Crown of Flames
+- Crown of Gondor
 - Crown of Skemfar
 - Crown-Hunter Hireling
 - Crowned Ceratok
