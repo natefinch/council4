@@ -282,6 +282,12 @@ func lowerKeywordDispatch(
 		}
 		return keywordStaticLowering(&flashbackAbility, ability, syntax), true, nil
 	}
+	if plotAbility, ok, diag := lowerPlotAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordStaticLowering(&plotAbility, ability, syntax), true, nil
+	}
 	if evokeLowering, ok, diag := lowerEvokeAbility(ability, syntax); ok {
 		if diag != nil {
 			return abilityLowering{}, true, diag
@@ -1264,6 +1270,42 @@ func lowerFlashbackAbility(
 	}, true, nil
 }
 
+// lowerPlotAbility lowers the Plot keyword (CR 718) into a game.PlotKeyword
+// static ability carrying the plot mana cost. Only the exact keyword with a fixed
+// mana cost and no other rules text on the ability is supported; any other shape
+// fails closed. The rules layer reads game.PlotKeyword to offer the sorcery-speed
+// plot special action and the later free cast from exile.
+func lowerPlotAbility(
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (game.StaticAbility, bool, *shared.Diagnostic) {
+	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordPlot {
+		return game.StaticAbility{}, false, nil
+	}
+	keyword := ability.Content.Keywords[0]
+	manaCost, fixed := fixedKeywordManaCost(keyword)
+	if !fixed ||
+		(ability.Kind != compiler.AbilityStatic && ability.Kind != compiler.AbilitySpell) ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.References) != 0 ||
+		ability.AbilityWord != "" ||
+		!keywordOnlyCovered(syntax, keyword) {
+		return game.StaticAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Plot ability",
+			"the executable source backend supports only exact Plot with a fixed mana cost",
+		)
+	}
+	return game.StaticAbility{
+		Text:             keyword.Name + " " + keyword.Parameter,
+		KeywordAbilities: []game.KeywordAbility{game.PlotKeyword{Cost: manaCost}},
+	}, true, nil
+}
+
 // lowerEvokeAbility lowers the Evoke keyword (CR 702.74) into two lowered
 // pieces: an "Evoke" alternative spell cost the payment machinery auto-offers at
 // cast, and the canonical evoke-sacrifice triggered ability that sacrifices the
@@ -1963,6 +2005,12 @@ func lowerParameterizedStaticKeyword(keyword compiler.CompiledKeyword) (game.Sta
 			return game.StaticAbility{}, false
 		}
 		body.KeywordAbilities = []game.KeywordAbility{game.FlashbackKeyword{Cost: manaCost}}
+	case parser.KeywordPlot:
+		manaCost, ok := fixedKeywordManaCost(keyword)
+		if !ok {
+			return game.StaticAbility{}, false
+		}
+		body.KeywordAbilities = []game.KeywordAbility{game.PlotKeyword{Cost: manaCost}}
 	case parser.KeywordMorph:
 		manaCost, ok := fixedKeywordManaCost(keyword)
 		if !ok {

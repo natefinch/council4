@@ -120,6 +120,13 @@ type FlashbackKeyword struct {
 	Cost cost.Mana
 }
 
+// PlotKeyword parameterizes the Plot mana cost (CR 718). Cost is the mana paid to
+// plot the card (exiling it from hand); a plotted card is later cast from exile
+// without paying its mana cost.
+type PlotKeyword struct {
+	Cost cost.Mana
+}
+
 // MorphKeyword parameterizes Morph turn-face-up costs.
 type MorphKeyword struct {
 	Cost cost.Mana
@@ -218,6 +225,7 @@ func (MutateKeyword) isKeywordAbility()           {}
 func (KickerKeyword) isKeywordAbility()           {}
 func (MadnessKeyword) isKeywordAbility()          {}
 func (FlashbackKeyword) isKeywordAbility()        {}
+func (PlotKeyword) isKeywordAbility()             {}
 func (MorphKeyword) isKeywordAbility()            {}
 func (DisguiseKeyword) isKeywordAbility()         {}
 func (SuspendKeyword) isKeywordAbility()          {}
@@ -251,6 +259,7 @@ func (MutateKeyword) keyword() Keyword     { return Mutate }
 func (KickerKeyword) keyword() Keyword     { return Kicker }
 func (MadnessKeyword) keyword() Keyword    { return Madness }
 func (FlashbackKeyword) keyword() Keyword  { return Flashback }
+func (PlotKeyword) keyword() Keyword       { return Plot }
 func (MorphKeyword) keyword() Keyword      { return Morph }
 func (DisguiseKeyword) keyword() Keyword   { return Disguise }
 func (SuspendKeyword) keyword() Keyword    { return Suspend }
@@ -317,6 +326,10 @@ func (ability MadnessKeyword) cloneKeywordAbility() KeywordAbility {
 	return ability
 }
 func (ability FlashbackKeyword) cloneKeywordAbility() KeywordAbility {
+	ability.Cost = append(cost.Mana(nil), ability.Cost...)
+	return ability
+}
+func (ability PlotKeyword) cloneKeywordAbility() KeywordAbility {
 	ability.Cost = append(cost.Mana(nil), ability.Cost...)
 	return ability
 }
