@@ -33,19 +33,19 @@ func faceDownCostForCard(card *game.CardDef, kind game.FaceDownKind) (cost.Mana,
 
 func faceDownCostsForCard(card *game.CardDef, kind game.FaceDownKind) []cost.Mana {
 	var costs []cost.Mana
-	if kind == game.FaceDownManifest {
+	if kind == game.FaceDownManifest || kind == game.FaceDownCloak {
 		if card.HasType(types.Creature) && card.ManaCost.Exists {
 			costs = append(costs, card.ManaCost.Val)
 		}
 	}
 	for i := range card.ActivatedAbilities {
 		ability := &card.ActivatedAbilities[i]
-		if kind == game.FaceDownMorph || kind == game.FaceDownManifest {
+		if kind == game.FaceDownMorph || kind == game.FaceDownManifest || kind == game.FaceDownCloak {
 			if manaCost, ok := game.ActivatedBodyMorphCost(ability); ok {
 				costs = append(costs, manaCost)
 			}
 		}
-		if kind == game.FaceDownDisguise || kind == game.FaceDownManifest {
+		if kind == game.FaceDownDisguise || kind == game.FaceDownManifest || kind == game.FaceDownCloak {
 			if manaCost, ok := game.ActivatedBodyDisguiseCost(ability); ok {
 				costs = append(costs, manaCost)
 			}
@@ -53,12 +53,12 @@ func faceDownCostsForCard(card *game.CardDef, kind game.FaceDownKind) []cost.Man
 	}
 	for i := range card.StaticAbilities {
 		ability := &card.StaticAbilities[i]
-		if kind == game.FaceDownMorph || kind == game.FaceDownManifest {
+		if kind == game.FaceDownMorph || kind == game.FaceDownManifest || kind == game.FaceDownCloak {
 			if manaCost, ok := game.StaticBodyMorphCost(ability); ok {
 				costs = append(costs, manaCost)
 			}
 		}
-		if kind == game.FaceDownDisguise || kind == game.FaceDownManifest {
+		if kind == game.FaceDownDisguise || kind == game.FaceDownManifest || kind == game.FaceDownCloak {
 			if manaCost, ok := game.StaticBodyDisguiseCost(ability); ok {
 				costs = append(costs, manaCost)
 			}

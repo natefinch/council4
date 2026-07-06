@@ -608,6 +608,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectManifest
 	case parser.EffectManifestDread:
 		return EffectManifestDread
+	case parser.EffectCloak:
+		return EffectCloak
 	case parser.EffectLookAtLibraryTop:
 		return EffectLookAtLibraryTop
 	case parser.EffectMill:

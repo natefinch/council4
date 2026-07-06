@@ -2582,6 +2582,11 @@ func lowerManifestSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic
 	if effect.Kind == compiler.EffectManifestDread {
 		return manifestDreadAbility(), nil
 	}
+	if effect.Kind == compiler.EffectCloak {
+		return game.Mode{Sequence: []game.Instruction{{
+			Primitive: game.Manifest{Cloak: true},
+		}}}.Ability(), nil
+	}
 	return game.Mode{Sequence: []game.Instruction{{
 		Primitive: game.Manifest{},
 	}}}.Ability(), nil

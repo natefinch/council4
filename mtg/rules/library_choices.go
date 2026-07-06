@@ -357,7 +357,7 @@ func (e *Engine) chooseDigCards(g *game.Game, agents [game.NumPlayers]PlayerAgen
 	return taken
 }
 
-func (e *Engine) manifestTopCard(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID) (*game.Permanent, bool) {
+func (e *Engine) manifestTopCard(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID, kind game.FaceDownKind) (*game.Permanent, bool) {
 	player, ok := playerByID(g, playerID)
 	if !ok {
 		return nil, false
@@ -370,7 +370,7 @@ func (e *Engine) manifestTopCard(g *game.Game, agents [game.NumPlayers]PlayerAge
 	if !ok || !player.Library.Remove(cardID) {
 		return nil, false
 	}
-	permanent, ok := createCardPermanentFaceDownWithChoices(e, g, card, playerID, zone.Library, game.FaceFront, game.FaceDownManifest, false, agents, log)
+	permanent, ok := createCardPermanentFaceDownWithChoices(e, g, card, playerID, zone.Library, game.FaceFront, kind, false, agents, log)
 	return permanent, ok
 }
 

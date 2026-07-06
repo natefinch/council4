@@ -49,6 +49,7 @@ const (
 	EffectLose                      EffectKind = "EffectLose"
 	EffectManifest                  EffectKind = "EffectManifest"
 	EffectManifestDread             EffectKind = "EffectManifestDread"
+	EffectCloak                     EffectKind = "EffectCloak"
 	EffectLookAtLibraryTop          EffectKind = "EffectLookAtLibraryTop"
 	EffectMill                      EffectKind = "EffectMill"
 	EffectManaSpendRider            EffectKind = "EffectManaSpendRider"
