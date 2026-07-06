@@ -45,6 +45,12 @@ const (
 // resolve to a scorable summary (hand- or graveyard-activated) keep the routine
 // activate score.
 func scoreActivateAbility(obs rules.PlayerObservation, act action.Action, personality Personality) float64 {
+	if obs.RepeatedFreeActivation(act) {
+		// A free ability re-activated this turn almost never changes anything the
+		// first activation did not; scoring it above passing would loop forever
+		// (equip {0}, a tapped-out "{X}" ability at X=0). See scoreNoOpActivation.
+		return scoreNoOpActivation
+	}
 	ability, ok := obs.ScorableActivatedAbility(act)
 	if !ok {
 		return scoreActivate

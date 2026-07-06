@@ -58,6 +58,7 @@ func (g *Game) Clone() *Game {
 		StateTriggerLatches:        cloneComparableMap(g.StateTriggerLatches),
 		FiredManaSpendRiders:       cloneSlice(g.FiredManaSpendRiders),
 		ActivatedAbilitiesThisTurn: cloneComparableMap(g.ActivatedAbilitiesThisTurn),
+		AbilityActivationsThisTurn: cloneComparableMap(g.AbilityActivationsThisTurn),
 		TriggeredAbilitiesThisTurn: cloneComparableMap(g.TriggeredAbilitiesThisTurn),
 	}
 

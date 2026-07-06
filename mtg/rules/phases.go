@@ -332,6 +332,7 @@ func (*Engine) advanceToNextTurn(g *game.Game) {
 	g.Turn.CombatPhasesThisTurn = 0
 	g.Turn.MonarchAtTurnStart = currentMonarch(g)
 	g.ActivatedAbilitiesThisTurn = make(map[game.ActivatedAbilityUse]bool)
+	g.AbilityActivationsThisTurn = make(map[game.ActivatedAbilityUse]int)
 	g.TriggeredAbilitiesThisTurn = make(map[game.TriggeredAbilityUse]int)
 	g.Combat = nil
 	markCurrentTurnEventStart(g)
