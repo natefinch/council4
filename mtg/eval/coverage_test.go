@@ -26,7 +26,7 @@ import (
 // optional mana payment or an installed combat rule restriction, neither of
 // which the single-target card/life/board atom heuristic models, matching Pay
 // and ApplyRule.
-const knownPrimitiveCount = 114
+const knownPrimitiveCount = 115
 
 // TestPrimitiveCountIsReconciled keeps a newly added resolution primitive from
 // silently falling through the translator: adding one trips this guard so its

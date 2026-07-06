@@ -2567,10 +2567,21 @@ type EffectSyntax struct {
 	// separates those cards into two piles." / "An opponent chooses one of those
 	// piles.") so the lowerer can credit its tokens toward source coverage. It is
 	// set only on the Put effect of a recognized pile-split sequence.
-	PileSplitMiddleSpan     shared.Span `json:"-"`
-	RequiresOrderedLowering bool        `json:",omitempty"`
-	HasUnrecognizedSibling  bool        `json:",omitempty"`
-	UnsupportedDetail       string      `json:",omitempty"`
+	PileSplitMiddleSpan shared.Span `json:"-"`
+	// ExiledCardSplitOpponentChooses reports that a recognized "An opponent
+	// chooses one of the exiled cards." antecedent names an opponent as the
+	// chooser of the cost-exiled card this put effect disposes of (Coin of Fate).
+	// It is set only on the put effect of a recognized exiled-card opponent-choice
+	// disposal; lowering reads it to synthesize the opponent's choice.
+	ExiledCardSplitOpponentChooses bool `json:",omitempty"`
+	// ExiledCardChoiceRiderSpan covers the zero-effect antecedent "An opponent
+	// chooses one of the exiled cards." so the lowerer can credit its tokens
+	// toward source coverage. It is set only when ExiledCardSplitOpponentChooses
+	// is true.
+	ExiledCardChoiceRiderSpan shared.Span `json:"-"`
+	RequiresOrderedLowering   bool        `json:",omitempty"`
+	HasUnrecognizedSibling    bool        `json:",omitempty"`
+	UnsupportedDetail         string      `json:",omitempty"`
 	// Order is the effect's dense source-order rank (of Span); VerbOrder is the
 	// rank of VerbSpan. Downstream stages compare these ranks to order effects
 	// and bind references to effect verbs without inspecting byte offsets.

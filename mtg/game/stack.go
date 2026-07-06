@@ -200,6 +200,13 @@ type StackObject struct {
 	// power"). Empty when no permanent was sacrificed as a cost.
 	SacrificedAsCostIDs []id.ID
 
+	// ExiledAsCostIDs are the card-instance IDs of cards exiled from a zone to
+	// pay this ability's activation cost (e.g. "Exile two creature cards from
+	// your graveyard"). They let a resolution effect act on the cost-exiled
+	// cards ("An opponent chooses one of the exiled cards ..."). Empty when no
+	// card was exiled as a cost.
+	ExiledAsCostIDs []id.ID
+
 	// SourceZone is the zone the source card occupied before this spell or
 	// ability was put on the stack.
 	SourceZone zone.Type

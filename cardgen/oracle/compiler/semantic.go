@@ -2485,6 +2485,16 @@ type CompiledEffect struct {
 	// credit its tokens toward source coverage. It is set only on the Put effect
 	// of a recognized pile-split sequence.
 	PileSplitMiddleSpan shared.Span
+	// ExiledCardSplitOpponentChooses reports that a recognized "An opponent
+	// chooses one of the exiled cards." antecedent names an opponent as the
+	// chooser of the cost-exiled card this put effect disposes of (Coin of Fate).
+	// It is set only on the put effect of a recognized exiled-card opponent-choice
+	// disposal; lowering reads it to synthesize the opponent's choice.
+	ExiledCardSplitOpponentChooses bool
+	// ExiledCardChoiceRiderSpan covers the zero-effect antecedent "An opponent
+	// chooses one of the exiled cards." so lowering can credit its tokens toward
+	// source coverage. It is set only when ExiledCardSplitOpponentChooses is true.
+	ExiledCardChoiceRiderSpan shared.Span
 	// SourceSpellCostReduction and SourceSpellCostReductionAmount carry the typed
 	// source-scoped cast cost reduction recognized by the parser ("This spell
 	// costs {N} less to cast for each <countable battlefield object>"). Amount

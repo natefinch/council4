@@ -1,7 +1,6 @@
 package payment
 
 import (
-	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
 )
 
@@ -42,10 +41,10 @@ func (p Planner) BuildAbilityCostPlan(req AbilityRequest) bool {
 }
 
 // PayAbilityCosts pays all costs for the activated ability described by req. It
-// returns the per-unit amount of pool mana consumed (for mana-spend rider
-// resolution), the object IDs of permanents sacrificed as a cost, plus a
-// success flag.
-func (p Planner) PayAbilityCosts(req AbilityRequest) (poolSpend map[mana.Unit]int, sacrificedIDs []id.ID, ok bool) {
+// returns an AbilityCostPayment carrying the pool mana consumed (for mana-spend
+// rider resolution), the object IDs of permanents sacrificed as a cost, and the
+// card-instance IDs of cards exiled as a cost, plus a success flag.
+func (p Planner) PayAbilityCosts(req AbilityRequest) (AbilityCostPayment, bool) {
 	return payAbilityCosts(p.s, req)
 }
 

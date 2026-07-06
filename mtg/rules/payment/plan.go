@@ -258,21 +258,49 @@ func paymentPlanTappedPermanents(plan paymentPlan) []*game.Permanent {
 	return permanents
 }
 
-func payAbilityCosts(s State, req AbilityRequest) (poolSpend map[mana.Unit]int, sacrificedIDs []id.ID, ok bool) {
+// AbilityCostPayment carries the results of paying an ability's activation cost:
+// the per-unit pool mana consumed (for mana-spend rider resolution), the object
+// IDs of permanents sacrificed as a cost, and the card-instance IDs of cards
+// exiled as a cost so the caller can record them on the resolving stack object.
+type AbilityCostPayment struct {
+	PoolSpend     map[mana.Unit]int
+	SacrificedIDs []id.ID
+	ExiledIDs     []id.ID
+}
+
+func payAbilityCosts(s State, req AbilityRequest) (AbilityCostPayment, bool) {
 	plan, ok := buildAbilityCostPlan(s, req)
 	if !ok {
-		return nil, nil, false
+		return AbilityCostPayment{}, false
 	}
 	player, ok := s.Player(req.PlayerID)
 	if !ok || !abilityCostPlanStillValid(s, player, req.Source, plan) {
-		return nil, nil, false
+		return AbilityCostPayment{}, false
 	}
 	applyPaymentPlan(s, req.PlayerID, plan.mana)
 	if plan.tapSource && !tapForAbility(s, req.Source, req.ForMana) {
 		panic("ability source became untappable after prevalidation")
 	}
 	applyAdditionalCostPlan(s, plan.additional)
-	return clonePoolSpend(plan.mana.poolSpend), sacrificedPermanentIDs(plan.additional), true
+	return AbilityCostPayment{
+		PoolSpend:     clonePoolSpend(plan.mana.poolSpend),
+		SacrificedIDs: sacrificedPermanentIDs(plan.additional),
+		ExiledIDs:     exiledCardIDs(plan.additional),
+	}, true
+}
+
+// exiledCardIDs returns the card-instance IDs of cards exiled by the
+// additional-cost plan, in plan order, so a resolution effect can act on the
+// cost-exiled cards ("An opponent chooses one of the exiled cards ...").
+func exiledCardIDs(plan additionalCostPlan) []id.ID {
+	if len(plan.exiles) == 0 {
+		return nil
+	}
+	ids := make([]id.ID, 0, len(plan.exiles))
+	for _, exiled := range plan.exiles {
+		ids = append(ids, exiled.cardID)
+	}
+	return ids
 }
 
 // sacrificedPermanentIDs returns the object IDs of permanents sacrificed by the

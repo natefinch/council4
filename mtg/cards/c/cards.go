@@ -94,6 +94,7 @@ var Cards = []*game.CardDef{
 	CodeOfConstraint,
 	CoerciveImpetus,
 	CogworkAssembler,
+	CoinOfFate,
 	CollectorSCase,
 	ColossalCollision,
 	Colossification,

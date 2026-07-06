@@ -166,10 +166,18 @@ const (
 	// where X is the number of cards in their hand. If they don't, they can't
 	// attack you this combat." punisher (Champions of Minas Tirith).
 	PrimitivePlayerMayPayGenericOrRule
+	// PrimitivePartitionExiledCostCards disposes of the cards exiled to pay the
+	// resolving ability's cost: one player chooses one card, which goes to the
+	// bottom (or top) of its owner's library, and every other exiled card
+	// returns to the battlefield under the controller's control, optionally
+	// tapped (game.PartitionExiledCostCards). It models "An opponent chooses one
+	// of the exiled cards. You put that card on the bottom of your library and
+	// return the other to the battlefield tapped." (Coin of Fate).
+	PrimitivePartitionExiledCostCards
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitivePlayerMayPayGenericOrRule) + 1
+const primitiveKindCount = int(PrimitivePartitionExiledCostCards) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -633,6 +641,24 @@ type PutPermanentOnLibrary struct {
 type PutLinkedExiledCardsInLibrary struct {
 	LinkedKey LinkedKey
 	Bottom    bool
+}
+
+// PartitionExiledCostCards disposes of the cards exiled to pay the resolving
+// ability's activation cost by having one player choose a single card ("that
+// card") and routing it and the remaining cards to two destinations. When
+// ChooserOpponent is set, the next opponent of the ability's controller in turn
+// order chooses; otherwise the controller chooses. The chosen card goes to the
+// bottom of its owner's library when ChosenToLibraryBottom is set (top
+// otherwise); every other exiled card returns to the battlefield under the
+// controller's control, tapped when OtherEntersTapped is set. It backs "An
+// opponent chooses one of the exiled cards. You put that card on the bottom of
+// your library and return the other to the battlefield tapped." (Coin of Fate),
+// reading the resolving object's cost-exiled card IDs. Only cards still in exile
+// are considered, so a card that already moved is skipped.
+type PartitionExiledCostCards struct {
+	ChooserOpponent       bool
+	ChosenToLibraryBottom bool
+	OtherEntersTapped     bool
 }
 
 // StartEngines starts engine effects for a player.
