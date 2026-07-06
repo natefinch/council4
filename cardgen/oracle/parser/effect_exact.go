@@ -229,7 +229,9 @@ func exactEffectSyntaxTail(effect *EffectSyntax) bool {
 		return exactDirectTargetEffectSyntax(effect, "Transform")
 	case EffectGoad:
 		return exactDirectTargetEffectSyntax(effect, "Goad") ||
-			exactBackReferenceEffectSyntax(effect, "Goad")
+			exactBackReferenceEffectSyntax(effect, "Goad") ||
+			exactMassEffectSyntax(effect, "Goad all ") ||
+			exactMassEachEffectSyntax(effect, "Goad each ")
 	case EffectRemoveFromCombat:
 		return exactRemoveFromCombatEffectSyntax(effect) ||
 			exactRemoveFromCombatSelfEffectSyntax(effect)

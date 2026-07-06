@@ -1442,6 +1442,12 @@ func (r Renderer) renderObjectOrGroupPrimitive(ctx *renderCtx, primitive game.Pr
 			return "", err
 		}
 		return r.renderObjectOrGroup(ctx, "game.Regenerate", value.Object, value.Group)
+	case game.PrimitiveGoad:
+		value, err := assertPrimitive[game.Goad](primitive)
+		if err != nil {
+			return "", err
+		}
+		return r.renderObjectOrGroup(ctx, "game.Goad", value.Object, value.Group)
 	default:
 		return "", fmt.Errorf("render: unsupported object or group primitive kind %d", primitive.Kind())
 	}
@@ -1602,12 +1608,6 @@ func (r Renderer) renderObjectPrimitive(primitive game.Primitive) (string, error
 			return "", err
 		}
 		typeName, object = "game.RemoveFromCombat", value.Object
-	case game.PrimitiveGoad:
-		value, err := assertPrimitive[game.Goad](primitive)
-		if err != nil {
-			return "", err
-		}
-		typeName, object = "game.Goad", value.Object
 	default:
 		return "", fmt.Errorf("render: unsupported object primitive kind %d", primitive.Kind())
 	}

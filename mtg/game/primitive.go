@@ -1506,9 +1506,10 @@ type Manifest struct {
 	PublishLinked LinkedKey
 }
 
-// Goad goads the referenced creature.
+// Goad goads the referenced creature, or every creature in the referenced group.
 type Goad struct {
 	Object ObjectReference
+	Group  GroupReference
 }
 
 // RemoveCounter removes counters from one referenced permanent or every permanent in a referenced group.

@@ -302,11 +302,11 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 		return r.renderDigPrimitive(ctx, value)
 	case game.PrimitiveDestroy, game.PrimitiveBounce, game.PrimitiveUntap,
 		game.PrimitiveTap, game.PrimitiveTapOrUntap, game.PrimitiveExile, game.PrimitivePhaseOut,
-		game.PrimitiveRegenerate, game.PrimitiveSkipNextUntap:
+		game.PrimitiveRegenerate, game.PrimitiveSkipNextUntap, game.PrimitiveGoad:
 		return r.renderObjectOrGroupPrimitive(ctx, primitive)
 	case game.PrimitiveExplore,
 		game.PrimitiveCounterObject, game.PrimitiveSacrifice,
-		game.PrimitiveChooseNewTargets, game.PrimitiveRemoveFromCombat, game.PrimitiveGoad:
+		game.PrimitiveChooseNewTargets, game.PrimitiveRemoveFromCombat:
 		return r.renderObjectPrimitive(primitive)
 	case game.PrimitiveCopyStackObject:
 		value, err := assertPrimitive[game.CopyStackObject](primitive)

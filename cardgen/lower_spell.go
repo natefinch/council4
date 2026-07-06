@@ -1899,7 +1899,9 @@ func lowerImmediateSingleEffectSpell(
 			return game.RemoveFromCombat{Object: object}
 		})
 	case compiler.EffectGoad:
-		return lowerFixedPermanentTargetSpell(ctx, "goad", func(object game.ObjectReference) game.Primitive {
+		return lowerMassOrSinglePermanentSpell(ctx, "goad", func(group game.GroupReference) game.Primitive {
+			return game.Goad{Group: group}
+		}, func(object game.ObjectReference) game.Primitive {
 			return game.Goad{Object: object}
 		})
 	case compiler.EffectExile:
