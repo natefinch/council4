@@ -106,6 +106,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 			exactGiveControlEffectSyntax(effect)
 	case EffectBecomeMonarch:
 		return exactBecomeMonarchEffectSyntax(effect)
+	case EffectCantBecomeMonarch:
+		return exactCantBecomeMonarchEffectSyntax(effect)
 	case EffectInvestigate:
 		return exactStandaloneActionEffectSyntax(effect, "Investigate")
 	case EffectAmass:

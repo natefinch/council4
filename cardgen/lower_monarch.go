@@ -37,6 +37,31 @@ func lowerBecomeMonarchSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagn
 	}.Ability(), nil
 }
 
+// lowerCantBecomeMonarchSpell lowers the exact controller-scoped prohibition
+// "You can't become the monarch this turn." (Jared Carthalion) to a
+// CantBecomeMonarch primitive.
+func lowerCantBecomeMonarchSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	if effect.Negated || ctx.optional || !effect.Exact ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.References) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		effect.Context != parser.EffectContextController {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported can't-become-monarch effect",
+			"the executable source backend supports only the exact 'You can't become the monarch this turn.' effect",
+		)
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{{
+			Primitive: game.CantBecomeMonarch{Player: game.ControllerReference()},
+		}},
+	}.Ability(), nil
+}
+
 // becomeMonarchRecipient resolves the player who becomes the monarch from the
 // effect's typed context: the resolving controller ("you") or a single named
 // player target ("target player"/"target opponent").

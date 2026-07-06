@@ -42,6 +42,7 @@ const (
 	EffectGainControl               EffectKind = "EffectGainControl"
 	EffectGoad                      EffectKind = "EffectGoad"
 	EffectBecomeMonarch             EffectKind = "EffectBecomeMonarch"
+	EffectCantBecomeMonarch         EffectKind = "EffectCantBecomeMonarch"
 	EffectGrantKeyword              EffectKind = "EffectGrantKeyword"
 	EffectInvestigate               EffectKind = "EffectInvestigate"
 	EffectImpulseExile              EffectKind = "EffectImpulseExile"

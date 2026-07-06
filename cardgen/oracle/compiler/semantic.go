@@ -1699,6 +1699,7 @@ const (
 	// last so existing kinds keep their wire values.
 	EffectRemoveCounter
 	EffectBecomeMonarch
+	EffectCantBecomeMonarch
 	// EffectDelayedTrigger creates an event-based delayed triggered ability that
 	// fires on a matching game event within a bounded window ("Whenever you cast
 	// a spell this turn, ...", Showdown of the Skalds; "When you next cast a
