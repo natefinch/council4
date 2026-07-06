@@ -244,7 +244,13 @@ func compilePhaseStepTriggerPattern(
 	}
 	pattern.Event = TriggerEventBeginningOfStep
 	pattern.Step = step
-	pattern.Controller = controller
+	if clause.Player.Kind == parser.TriggerPlayerSelectorMonarch {
+		// The monarch step-player scope rides Player (matched against the step's
+		// active player), not the source-controller-relative Controller.
+		pattern.Player = TriggerPlayerMonarch
+	} else {
+		pattern.Controller = controller
+	}
 	pattern.StepPlayerSourceAttachedSelection = attached
 	pattern.NextOccurrence = clause.Next
 	return pattern
@@ -285,7 +291,9 @@ func compilePhaseStepName(name parser.PhaseStepNameKind) (TriggerStep, bool) {
 
 func compilePhaseStepPlayer(player *parser.TriggerPlayerSelector) (ControllerKind, TriggerSelection, bool) {
 	switch player.Kind {
-	case parser.TriggerPlayerSelectorAny:
+	case parser.TriggerPlayerSelectorAny, parser.TriggerPlayerSelectorMonarch:
+		// Monarch scope is routed to pattern.Player by the caller; the returned
+		// controller is unused (Any) in that path, matching the Any selector.
 		return ControllerAny, TriggerSelection{}, true
 	case parser.TriggerPlayerSelectorYou, parser.TriggerPlayerSelectorSourceController:
 		return ControllerYou, TriggerSelection{}, true

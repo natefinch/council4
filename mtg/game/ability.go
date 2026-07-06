@@ -760,6 +760,10 @@ const (
 	TriggerPlayerAny TriggerPlayerFilter = iota
 	TriggerPlayerYou
 	TriggerPlayerOpponent
+	// TriggerPlayerMonarch matches an event whose affected player is the current
+	// monarch ("At the beginning of the monarch's end step, ...", Archivist of
+	// Gondor).
+	TriggerPlayerMonarch
 )
 
 // AttackRecipientKind identifies what an attacker was declared against.

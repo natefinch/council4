@@ -141,6 +141,11 @@ type TriggerSelection struct {
 	// Equipment attached (CR 701.50). It compiles to Selection.MatchModified.
 	Modified bool `json:",omitempty"`
 
+	// Commander records a "commander" subject ("your commander deals combat
+	// damage to a player", Archivist of Gondor). The matched permanent must be a
+	// commander; it compiles to Selection.MatchCommander.
+	Commander bool `json:",omitempty"`
+
 	// SubtypeFromEntryChoice records a trailing "of the chosen type" qualifier
 	// ("a creature you control of the chosen type"), tying the matched permanent
 	// to the creature subtype the trigger's source permanent chose as it entered.
