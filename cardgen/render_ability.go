@@ -21,6 +21,21 @@ func (r Renderer) renderActivatedAbility(ctx *renderCtx, ability *game.Activated
 		}
 		return fmt.Sprintf("game.EquipActivatedAbility(%s)", renderedCost), nil
 	}
+	if manaCost, ok := game.ActivatedBodyEquipCost(ability); ok && len(ability.CostModifiers) == 1 &&
+		reflect.DeepEqual(*ability, game.EquipCostReductionActivatedAbility(manaCost, ability.CostModifiers[0])) {
+		renderedCost, err := r.renderManaCost(ctx, manaCost)
+		if err != nil {
+			return "", err
+		}
+		renderedModifier, err := r.renderCostModifier(ctx, ability.CostModifiers[0])
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.EquipCostReductionActivatedAbility(%s, %s)", renderedCost, renderedModifier), nil
+	}
+	if rendered, ok, err := r.renderEquipRestrictedCostReductionAbility(ctx, ability); ok {
+		return rendered, err
+	}
 	if rendered, ok, err := r.renderEquipRestrictedAbility(ctx, ability); ok {
 		return rendered, err
 	}
@@ -173,6 +188,45 @@ func (r Renderer) renderEquipRestrictedAbility(
 	return fmt.Sprintf(
 		"game.EquipRestrictedActivatedAbility(%s, %s, %s)",
 		renderedCost, superLit, subLit,
+	), true, nil
+}
+
+// renderEquipRestrictedCostReductionAbility renders a restricted Equip ability
+// carrying a single cost modifier ("Equip Knight {2}. This ability costs {1}
+// less to activate if ...") as the EquipRestrictedCostReductionActivatedAbility
+// factory call. It mirrors renderEquipRestrictedAbility with the modifier
+// appended.
+func (r Renderer) renderEquipRestrictedCostReductionAbility(ctx *renderCtx, ability *game.ActivatedAbility) (string, bool, error) {
+	manaCost, ok := game.ActivatedBodyEquipCost(ability)
+	if !ok || len(ability.CostModifiers) != 1 {
+		return "", false, nil
+	}
+	supertypes, subtypes, ok := equipRestrictionTypes(ability)
+	if !ok || (len(supertypes) == 0 && len(subtypes) == 0) {
+		return "", false, nil
+	}
+	if !reflect.DeepEqual(*ability, game.EquipRestrictedCostReductionActivatedAbility(manaCost, supertypes, subtypes, ability.CostModifiers[0])) {
+		return "", false, nil
+	}
+	renderedCost, err := r.renderManaCost(ctx, manaCost)
+	if err != nil {
+		return "", true, err
+	}
+	superLit, err := renderSupertypeSlice(ctx, supertypes)
+	if err != nil {
+		return "", true, err
+	}
+	subLit, err := renderSubtypeSlice(ctx, subtypes)
+	if err != nil {
+		return "", true, err
+	}
+	renderedModifier, err := r.renderCostModifier(ctx, ability.CostModifiers[0])
+	if err != nil {
+		return "", true, err
+	}
+	return fmt.Sprintf(
+		"game.EquipRestrictedCostReductionActivatedAbility(%s, %s, %s, %s)",
+		renderedCost, superLit, subLit, renderedModifier,
 	), true, nil
 }
 

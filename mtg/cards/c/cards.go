@@ -151,6 +151,7 @@ var Cards = []*game.CardDef{
 	CrosstownCourier,
 	CrownHunterHireling,
 	CrownOfFlames,
+	CrownOfGondor,
 	CruelRevival,
 	CrumblingAshes,
 	CrumblingColossus,

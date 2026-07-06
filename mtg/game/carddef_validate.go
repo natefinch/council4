@@ -1456,8 +1456,8 @@ func (v *cardDefValidator) validateCostModifier(faceName, path string, modifier 
 		}
 	}
 	if modifier.ReductionCondition.Exists {
-		if modifier.Kind != CostModifierSpell {
-			v.add(faceName, appendPath(path, "ReductionCondition"), CardDefIssueInvalidRuleEffect, "conditional cost reduction requires a spell modifier")
+		if modifier.Kind != CostModifierSpell && modifier.Kind != CostModifierAbility {
+			v.add(faceName, appendPath(path, "ReductionCondition"), CardDefIssueInvalidRuleEffect, "conditional cost reduction requires a spell or ability modifier")
 		}
 		if modifier.GenericReduction <= 0 {
 			v.add(faceName, appendPath(path, "ReductionCondition"), CardDefIssueInvalidRuleEffect, "conditional cost reduction requires a positive generic reduction")
