@@ -309,6 +309,8 @@ func compileStaticSubjectKind(kind parser.EffectStaticSubjectKind) StaticSubject
 		return StaticSubjectOtherControlledArtifactCreatures
 	case parser.EffectStaticSubjectControlledNontokenCreatures:
 		return StaticSubjectControlledNontokenCreatures
+	case parser.EffectStaticSubjectControlledNotOwnedCreatures:
+		return StaticSubjectControlledNotOwnedCreatures
 	case parser.EffectStaticSubjectControlledCreatureSubtypeTokens:
 		return StaticSubjectControlledCreatureSubtypeTokens
 	case parser.EffectStaticSubjectOtherControlledCreatureSubtypeTokens:
@@ -445,6 +447,8 @@ func compileSelectionController(controller parser.SelectionController) Controlle
 		return ControllerOpponent
 	case parser.SelectionControllerNotYou:
 		return ControllerNotYou
+	case parser.SelectionControllerThatPlayer:
+		return ControllerThatPlayer
 	default:
 		return ControllerAny
 	}
@@ -685,6 +689,8 @@ func compileEffectDuration(duration parser.EffectDurationKind) DurationKind {
 		return DurationForAsLongAsYouControlSource
 	case parser.EffectDurationWhileControlledCreatureEnchanted:
 		return DurationForAsLongAsControlledCreatureEnchanted
+	case parser.EffectDurationWhileThatPlayerIsMonarch:
+		return DurationForAsLongAsThatPlayerIsMonarch
 	default:
 		return DurationNone
 	}

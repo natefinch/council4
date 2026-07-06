@@ -51,7 +51,7 @@ func choosingOpponentsForTargetSpec(g *game.Game, controller game.PlayerID, sour
 		if !isPlayerAlive(g, current) {
 			continue
 		}
-		if len(targetCandidatesForSpecChosenBy(g, controller, current, source, sourceObjectID, spec)) > 0 {
+		if len(targetCandidatesForSpecChosenBy(g, controller, current, source, sourceObjectID, game.Event{}, spec)) > 0 {
 			players = append(players, current)
 		}
 	}
@@ -60,7 +60,7 @@ func choosingOpponentsForTargetSpec(g *game.Game, controller game.PlayerID, sour
 
 func externalChooserCouldChooseTarget(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, spec *game.TargetSpec, target game.Target) bool {
 	for _, chooser := range choosingOpponentsForTargetSpec(g, controller, source, sourceObjectID, spec) {
-		if slices.Contains(targetCandidatesForSpecChosenBy(g, controller, chooser, source, sourceObjectID, spec), target) {
+		if slices.Contains(targetCandidatesForSpecChosenBy(g, controller, chooser, source, sourceObjectID, game.Event{}, spec), target) {
 			return true
 		}
 	}
@@ -115,12 +115,12 @@ func targetSpecAllowsStackObjects(spec *game.TargetSpec) bool {
 	return false
 }
 
-func targetMatchesSpec(g *game.Game, controller game.PlayerID, sourceObjectID id.ID, spec *game.TargetSpec, target game.Target) bool {
+func targetMatchesSpec(g *game.Game, controller game.PlayerID, sourceObjectID id.ID, triggerEvent game.Event, spec *game.TargetSpec, target game.Target) bool {
 	switch target.Kind {
 	case game.TargetPlayer:
 		return playerTargetMatchesSpec(g, controller, spec, target.PlayerID)
 	case game.TargetPermanent:
-		return permanentTargetMatchesSpec(g, controller, sourceObjectID, spec, target.PermanentID)
+		return permanentTargetMatchesSpec(g, controller, sourceObjectID, triggerEvent, spec, target.PermanentID)
 	case game.TargetCard:
 		return cardTargetMatchesSpec(g, controller, spec, target)
 	case game.TargetStackObject:
@@ -375,7 +375,7 @@ func playerTargetMatchesSpec(g *game.Game, controller game.PlayerID, spec *game.
 	return true
 }
 
-func permanentTargetMatchesSpec(g *game.Game, controller game.PlayerID, sourceObjectID id.ID, spec *game.TargetSpec, permanentID id.ID) bool {
+func permanentTargetMatchesSpec(g *game.Game, controller game.PlayerID, sourceObjectID id.ID, triggerEvent game.Event, spec *game.TargetSpec, permanentID id.ID) bool {
 	if !targetSpecAllowsPermanents(spec) {
 		return false
 	}
@@ -393,6 +393,7 @@ func permanentTargetMatchesSpec(g *game.Game, controller game.PlayerID, sourceOb
 			values:         &values,
 			viewer:         controller,
 			sourceObjectID: sourceObjectID,
+			event:          triggerEvent,
 			clampPower:     true,
 		}
 		if sel.Controller != game.ControllerAny {

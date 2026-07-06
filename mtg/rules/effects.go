@@ -312,6 +312,9 @@ func (e *Engine) chooseSacrificePermanentsForPlayer(g *game.Game, resolver refer
 		if !resolver.permanentMatchesGroupSelection(&sel, nil, permanent) {
 			continue
 		}
+		if permanentCantBeSacrificed(g, permanent) {
+			continue
+		}
 		candidates = append(candidates, permanent)
 	}
 	if len(candidates) == 0 || amount <= 0 {
@@ -355,6 +358,9 @@ func (e *Engine) chooseAnyNumberToSacrificeForPlayer(g *game.Game, resolver refe
 			continue
 		}
 		if !resolver.permanentMatchesGroupSelection(&sel, nil, permanent) {
+			continue
+		}
+		if permanentCantBeSacrificed(g, permanent) {
 			continue
 		}
 		candidates = append(candidates, permanent)

@@ -58,12 +58,20 @@ func (e *Engine) prepareTriggeredAbility(g *game.Game, trigger *pendingTriggered
 		return false
 	}
 	trigger.chosenModes = chosenModes
-	targets, ok := e.triggerTargets(g, trigger.controller, source, trigger.sourceID, ability, chosenModes, agents, log)
+	// "That player" style target predicates (Garland, Royal Kidnapper) resolve
+	// against the player of the triggering event. The stack object does not exist
+	// yet while targets are chosen (CR 603.3d runs before the ability is on the
+	// stack), so thread the captured event into target selection and segmentation.
+	var triggerEvent game.Event
+	if trigger.hasEvent {
+		triggerEvent = trigger.event
+	}
+	targets, ok := e.triggerTargets(g, trigger.controller, source, trigger.sourceID, triggerEvent, ability, chosenModes, agents, log)
 	if !ok {
 		return false
 	}
 	trigger.targets = targets
-	targetCounts, ok := bodyTargetCountsWithModes(g, trigger.controller, source, trigger.sourceID, ability, chosenModes, targets)
+	targetCounts, ok := bodyTargetCountsWithModes(g, trigger.controller, source, trigger.sourceID, triggerEvent, ability, chosenModes, targets)
 	if !ok {
 		panic("validated triggered ability targets could not be segmented")
 	}

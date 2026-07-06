@@ -315,7 +315,7 @@ func TestOpponentChosenTargetSlotKeepsSourceControllerProtection(t *testing.T) {
 	hexproof := addHexproofPermanent(g, game.Player2)
 	normal := addCreaturePermanent(g, game.Player2)
 
-	candidates := targetCandidatesForSpecChosenBy(g, game.Player1, game.Player2, source, 0, &spec)
+	candidates := targetCandidatesForSpecChosenBy(g, game.Player1, game.Player2, source, 0, game.Event{}, &spec)
 
 	if slices.Contains(candidates, game.PermanentTarget(hexproof.ObjectID)) {
 		t.Fatal("opponent chooser could choose hexproof creature against source controller")
@@ -342,7 +342,7 @@ func TestStackSpellTargetCandidatesRespectTypeFilters(t *testing.T) {
 
 	source := counterTargetSpell(&spec)
 
-	candidates := targetCandidatesForSpecChosenBy(g, game.Player1, game.Player1, source, 0, &spec)
+	candidates := targetCandidatesForSpecChosenBy(g, game.Player1, game.Player1, source, 0, game.Event{}, &spec)
 
 	if !slices.Contains(candidates, game.StackObjectTarget(sorcery.ID)) {
 		t.Fatalf("candidates = %+v, want noncreature stack target %d", candidates, sorcery.ID)
@@ -369,7 +369,7 @@ func TestStackSpellTargetCandidatesRespectTypeUnion(t *testing.T) {
 	}
 	source := counterTargetSpell(&spec)
 
-	candidates := targetCandidatesForSpecChosenBy(g, game.Player1, game.Player1, source, 0, &spec)
+	candidates := targetCandidatesForSpecChosenBy(g, game.Player1, game.Player1, source, 0, game.Event{}, &spec)
 
 	for _, want := range []*game.StackObject{enchantment, instant, sorcery} {
 		if !slices.Contains(candidates, game.StackObjectTarget(want.ID)) {
@@ -397,7 +397,7 @@ func TestStackSpellTargetCandidatesIncludeCantBeCounteredSpells(t *testing.T) {
 	}
 	source := counterTargetSpell(&spec)
 
-	candidates := targetCandidatesForSpecChosenBy(g, game.Player1, game.Player1, source, 0, &spec)
+	candidates := targetCandidatesForSpecChosenBy(g, game.Player1, game.Player1, source, 0, game.Event{}, &spec)
 
 	if !slices.Contains(candidates, game.StackObjectTarget(protected.ID)) {
 		t.Fatal("candidates omitted can't-be-countered stack target")
@@ -429,8 +429,8 @@ func TestStackSpellTargetCandidatesUseFaceDownCreatureType(t *testing.T) {
 	}
 	source := counterTargetSpell(&creatureSpec)
 
-	creatureCandidates := targetCandidatesForSpecChosenBy(g, game.Player1, game.Player1, source, 0, &creatureSpec)
-	noncreatureCandidates := targetCandidatesForSpecChosenBy(g, game.Player1, game.Player1, source, 0, &noncreatureSpec)
+	creatureCandidates := targetCandidatesForSpecChosenBy(g, game.Player1, game.Player1, source, 0, game.Event{}, &creatureSpec)
+	noncreatureCandidates := targetCandidatesForSpecChosenBy(g, game.Player1, game.Player1, source, 0, game.Event{}, &noncreatureSpec)
 
 	if !slices.Contains(creatureCandidates, game.StackObjectTarget(faceDown.ID)) {
 		t.Fatal("creature-spell candidates omitted face-down spell")
@@ -458,7 +458,7 @@ func TestStackAbilityTargetCandidatesRespectKindsAndExcludeSource(t *testing.T) 
 		},
 	}
 
-	candidates := targetCandidatesForSpecChosenBy(g, game.Player1, game.Player1, nil, activated.ID, &spec)
+	candidates := targetCandidatesForSpecChosenBy(g, game.Player1, game.Player1, nil, activated.ID, game.Event{}, &spec)
 
 	if slices.Contains(candidates, game.StackObjectTarget(spell.ID)) {
 		t.Fatal("ability target candidates included spell")
@@ -524,7 +524,7 @@ func TestStackSpellTargetColorQualifiersMatchSpellColors(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			spec := test.spec
 			for obj, want := range test.want {
-				got := targetMatchesSpec(g, game.Player1, 0, &spec, game.StackObjectTarget(obj.ID))
+				got := targetMatchesSpec(g, game.Player1, 0, game.Event{}, &spec, game.StackObjectTarget(obj.ID))
 				if got != want {
 					t.Fatalf("%s match for spell %d = %v, want %v", test.name, obj.ID, got, want)
 				}
@@ -559,7 +559,7 @@ func TestStackObjectTargetKindsMatchExactly(t *testing.T) {
 				Predicate:  game.TargetPredicate{StackObjectKinds: test.kinds},
 			}
 			for _, obj := range []*game.StackObject{spell, activated, triggered} {
-				got := targetMatchesSpec(g, game.Player1, 0, &spec, game.StackObjectTarget(obj.ID))
+				got := targetMatchesSpec(g, game.Player1, 0, game.Event{}, &spec, game.StackObjectTarget(obj.ID))
 				if got != (obj == test.want) {
 					t.Fatalf("target kind %v match = %v, want %v", obj.Kind, got, obj == test.want)
 				}

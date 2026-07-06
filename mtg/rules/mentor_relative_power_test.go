@@ -44,13 +44,13 @@ func TestMentorTargetRequiresLesserPowerThanSource(t *testing.T) {
 		Selection:  opt.Val(game.Selection{RequiredTypesAny: []types.Card{types.Creature}, PowerLessThanSource: true}),
 	}
 
-	if !permanentTargetMatchesSpec(g, game.Player1, mentor.ObjectID, &spec, weaker.ObjectID) {
+	if !permanentTargetMatchesSpec(g, game.Player1, mentor.ObjectID, game.Event{}, &spec, weaker.ObjectID) {
 		t.Fatal("creature with lesser power than the source should be a legal target")
 	}
-	if permanentTargetMatchesSpec(g, game.Player1, mentor.ObjectID, &spec, equal.ObjectID) {
+	if permanentTargetMatchesSpec(g, game.Player1, mentor.ObjectID, game.Event{}, &spec, equal.ObjectID) {
 		t.Fatal("creature with equal power must not match a lesser-power filter")
 	}
-	if permanentTargetMatchesSpec(g, game.Player1, mentor.ObjectID, &spec, stronger.ObjectID) {
+	if permanentTargetMatchesSpec(g, game.Player1, mentor.ObjectID, game.Event{}, &spec, stronger.ObjectID) {
 		t.Fatal("creature with greater power must not match a lesser-power filter")
 	}
 
@@ -61,10 +61,10 @@ func TestMentorTargetRequiresLesserPowerThanSource(t *testing.T) {
 		Selection:  opt.Val(game.Selection{RequiredTypesAny: []types.Card{types.Creature}, PowerGreaterThanSource: true}),
 	}
 
-	if !permanentTargetMatchesSpec(g, game.Player1, mentor.ObjectID, &greaterSpec, stronger.ObjectID) {
+	if !permanentTargetMatchesSpec(g, game.Player1, mentor.ObjectID, game.Event{}, &greaterSpec, stronger.ObjectID) {
 		t.Fatal("creature with greater power than the source should be a legal target for a greater-power filter")
 	}
-	if permanentTargetMatchesSpec(g, game.Player1, mentor.ObjectID, &greaterSpec, weaker.ObjectID) {
+	if permanentTargetMatchesSpec(g, game.Player1, mentor.ObjectID, game.Event{}, &greaterSpec, weaker.ObjectID) {
 		t.Fatal("creature with lesser power must not match a greater-power filter")
 	}
 }

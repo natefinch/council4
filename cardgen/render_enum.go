@@ -615,6 +615,8 @@ func renderDuration(duration game.EffectDuration) (string, error) {
 		return "game.DurationForAsLongAsYouControlSource", nil
 	case game.DurationForAsLongAsControlledCreatureEnchanted:
 		return "game.DurationForAsLongAsControlledCreatureEnchanted", nil
+	case game.DurationForAsLongAsPlayerIsMonarch:
+		return "game.DurationForAsLongAsPlayerIsMonarch", nil
 	default:
 		return "", fmt.Errorf("render: unsupported effect duration %d", duration)
 	}

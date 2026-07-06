@@ -42,19 +42,19 @@ func TestNoncreatureTypeUnionTargetExcludesCreatures(t *testing.T) {
 		}),
 	}
 
-	if !permanentTargetMatchesSpec(g, game.Player1, plainArtifact.ObjectID, &spec, plainArtifact.ObjectID) {
+	if !permanentTargetMatchesSpec(g, game.Player1, plainArtifact.ObjectID, game.Event{}, &spec, plainArtifact.ObjectID) {
 		t.Fatal("plain artifact should be a legal target for a noncreature artifact-or-enchantment filter")
 	}
-	if !permanentTargetMatchesSpec(g, game.Player1, plainArtifact.ObjectID, &spec, plainEnchantment.ObjectID) {
+	if !permanentTargetMatchesSpec(g, game.Player1, plainArtifact.ObjectID, game.Event{}, &spec, plainEnchantment.ObjectID) {
 		t.Fatal("plain enchantment should be a legal target for a noncreature artifact-or-enchantment filter")
 	}
-	if permanentTargetMatchesSpec(g, game.Player1, plainArtifact.ObjectID, &spec, artifactCreature.ObjectID) {
+	if permanentTargetMatchesSpec(g, game.Player1, plainArtifact.ObjectID, game.Event{}, &spec, artifactCreature.ObjectID) {
 		t.Fatal("artifact creature must not match a noncreature artifact-or-enchantment filter")
 	}
-	if permanentTargetMatchesSpec(g, game.Player1, plainArtifact.ObjectID, &spec, enchantmentCreature.ObjectID) {
+	if permanentTargetMatchesSpec(g, game.Player1, plainArtifact.ObjectID, game.Event{}, &spec, enchantmentCreature.ObjectID) {
 		t.Fatal("enchantment creature must not match a noncreature artifact-or-enchantment filter")
 	}
-	if permanentTargetMatchesSpec(g, game.Player1, plainArtifact.ObjectID, &spec, plainLand.ObjectID) {
+	if permanentTargetMatchesSpec(g, game.Player1, plainArtifact.ObjectID, game.Event{}, &spec, plainLand.ObjectID) {
 		t.Fatal("land must not match a noncreature artifact-or-enchantment filter")
 	}
 }

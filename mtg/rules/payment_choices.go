@@ -485,7 +485,18 @@ func candidateSacrificePermanents(g *game.Game, playerID game.PlayerID, addCost 
 	if addCost.Kind == cost.AdditionalTapPermanents {
 		excludedIDs = excludedTapIDs
 	}
-	return payment.CandidatePermanentsForCost(&rulesPaymentState{g: g}, playerID, addCost, nil, excludedIDs...)
+	candidates := payment.CandidatePermanentsForCost(&rulesPaymentState{g: g}, playerID, addCost, nil, excludedIDs...)
+	if addCost.Kind != cost.AdditionalSacrifice {
+		return candidates
+	}
+	kept := candidates[:0]
+	for _, permanent := range candidates {
+		if permanentCantBeSacrificed(g, permanent) {
+			continue
+		}
+		kept = append(kept, permanent)
+	}
+	return kept
 }
 
 func candidateAdditionalCostCards(g *game.Game, playerID game.PlayerID, addCost cost.Additional, excludedCardIDs ...id.ID) []id.ID {

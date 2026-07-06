@@ -32,6 +32,8 @@ func parseEffectDuration(tokens []shared.Token, atoms Atoms) EffectDurationKind 
 		return EffectDurationWhileYouControlSource
 	case effectContainsWords(words, "for", "as", "long", "as", "that", "creature", "is", "enchanted"):
 		return EffectDurationWhileControlledCreatureEnchanted
+	case effectContainsWords(words, "for", "as", "long", "as", "they're", "the", "monarch"):
+		return EffectDurationWhileThatPlayerIsMonarch
 	}
 	for i := 0; i+6 < len(tokens); i++ {
 		if !effectWordsAt(tokens, i, "for", "as", "long", "as", "you", "control") {

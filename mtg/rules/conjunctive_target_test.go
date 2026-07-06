@@ -32,13 +32,13 @@ func TestConjunctivePermanentTargetRequiresAllTypes(t *testing.T) {
 		Selection:  opt.Val(game.Selection{RequiredTypes: []types.Card{types.Artifact, types.Creature}}),
 	}
 
-	if !permanentTargetMatchesSpec(g, game.Player1, plainArtifact.ObjectID, &spec, artifactCreature.ObjectID) {
+	if !permanentTargetMatchesSpec(g, game.Player1, plainArtifact.ObjectID, game.Event{}, &spec, artifactCreature.ObjectID) {
 		t.Fatal("artifact creature should be a legal target for an artifact-creature filter")
 	}
-	if permanentTargetMatchesSpec(g, game.Player1, plainArtifact.ObjectID, &spec, plainCreature.ObjectID) {
+	if permanentTargetMatchesSpec(g, game.Player1, plainArtifact.ObjectID, game.Event{}, &spec, plainCreature.ObjectID) {
 		t.Fatal("plain creature must not match a conjunctive artifact-creature filter")
 	}
-	if permanentTargetMatchesSpec(g, game.Player1, plainArtifact.ObjectID, &spec, plainArtifact.ObjectID) {
+	if permanentTargetMatchesSpec(g, game.Player1, plainArtifact.ObjectID, game.Event{}, &spec, plainArtifact.ObjectID) {
 		t.Fatal("plain artifact must not match a conjunctive artifact-creature filter")
 	}
 }

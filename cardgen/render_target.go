@@ -509,6 +509,12 @@ func (Renderer) renderSelection(ctx *renderCtx, selection game.Selection) (strin
 	if selection.DealtDamageThisTurn {
 		fields = append(fields, "DealtDamageThisTurn: true,")
 	}
+	if selection.OwnerNotController {
+		fields = append(fields, "OwnerNotController: true,")
+	}
+	if selection.ControlledByEventPlayer {
+		fields = append(fields, "ControlledByEventPlayer: true,")
+	}
 	if selection.RequirePermanentCard {
 		fields = append(fields, "RequirePermanentCard: true,")
 	}

@@ -1165,6 +1165,25 @@ func playerRuleEffectActive(g *game.Game, playerID game.PlayerID, kind game.Rule
 	return false
 }
 
+// permanentCantBeSacrificed reports whether an active RuleEffectCantBeSacrificed
+// protects permanent from being sacrificed ("Creatures you control but don't own
+// ... can't be sacrificed."). It matches whether the sacrifice would be a cost
+// or an effect, so a protected permanent is never a legal sacrifice.
+func permanentCantBeSacrificed(g *game.Game, permanent *game.Permanent) bool {
+	if permanent == nil {
+		return false
+	}
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind == game.RuleEffectCantBeSacrificed &&
+			ruleEffectMatchesPermanent(g, effect, permanent) {
+			return true
+		}
+	}
+	return false
+}
+
 // playerDamageRedirectPermanent returns the permanent an active
 // RuleEffectRedirectDamageToSource redirects the given player's damage to ("All
 // damage that would be dealt to you is dealt to this creature instead." —

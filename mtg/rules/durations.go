@@ -90,6 +90,12 @@ func expireConditionalControlDurations(g *game.Game) bool {
 				return true
 			}
 			return !permanentIsEnchanted(g, affected)
+		case game.DurationForAsLongAsPlayerIsMonarch:
+			// Expire when the player whose monarchy created the effect is no
+			// longer the monarch (a different player took the crown, or no
+			// player is the monarch). The bound player rides ExpiresFor.
+			monarch := currentMonarch(g)
+			return !monarch.Exists || monarch.Val != effect.ExpiresFor
 		default:
 			// Other durations are not conditional-control durations.
 		}

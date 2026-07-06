@@ -715,6 +715,9 @@ func applyEntryDevour(ctx enterBattlefieldContext, g *game.Game, permanent *game
 		if effectiveController(g, candidate) != controller {
 			continue
 		}
+		if permanentCantBeSacrificed(g, candidate) {
+			continue
+		}
 		if !devourCandidateMatches(g, candidate, cardType, subtype) {
 			continue
 		}

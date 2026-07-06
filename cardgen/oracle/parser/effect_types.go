@@ -578,6 +578,11 @@ const (
 	// attachment-dependent wording "for as long as that creature is enchanted".
 	// The effect expires when the affected creature is no longer enchanted.
 	EffectDurationWhileControlledCreatureEnchanted EffectDurationKind = "EffectDurationWhileControlledCreatureEnchanted"
+	// EffectDurationWhileThatPlayerIsMonarch matches "for as long as they're the
+	// monarch" (Garland, Royal Kidnapper), the gain-control duration that lasts
+	// while the triggering player remains the monarch. The effect expires when
+	// that player is no longer the monarch.
+	EffectDurationWhileThatPlayerIsMonarch EffectDurationKind = "EffectDurationWhileThatPlayerIsMonarch"
 )
 
 // SpellCostCasterKind names which player's spells a resolving spell cost
@@ -1409,6 +1414,12 @@ const (
 	SelectionControllerYou      SelectionController = "SelectionControllerYou"
 	SelectionControllerOpponent SelectionController = "SelectionControllerOpponent"
 	SelectionControllerNotYou   SelectionController = "SelectionControllerNotYou"
+	// SelectionControllerThatPlayer marks a target controlled by the triggering
+	// event's player ("target creature that player controls", Garland, Royal
+	// Kidnapper, where "that player" is the opponent who became the monarch). It
+	// is assigned only by the narrow gain-control monarch recognizer, so no other
+	// card's "that player controls" wording is retyped.
+	SelectionControllerThatPlayer SelectionController = "SelectionControllerThatPlayer"
 )
 
 // SelectionKind identifies the broad object selected by a phrase.
@@ -3214,6 +3225,12 @@ const (
 	EffectStaticSubjectOtherControlledArtifactCreatures EffectStaticSubjectKind = "EffectStaticSubjectOtherControlledArtifactCreatures"
 	EffectStaticSubjectControlledNontokenCreatures      EffectStaticSubjectKind = "EffectStaticSubjectControlledNontokenCreatures"
 	EffectStaticSubjectOtherControlledNontokenCreatures EffectStaticSubjectKind = "EffectStaticSubjectOtherControlledNontokenCreatures"
+	// EffectStaticSubjectControlledNotOwnedCreatures names the creatures a player
+	// controls but does not own ("Creatures you control but don't own get +2/+2
+	// and can't be sacrificed.", Garland, Royal Kidnapper). The group is the
+	// controller's permanents narrowed to creatures whose owner is a different
+	// player; the compiler marks the affected selection with OwnerNotController.
+	EffectStaticSubjectControlledNotOwnedCreatures EffectStaticSubjectKind = "EffectStaticSubjectControlledNotOwnedCreatures"
 
 	// EffectStaticSubjectControlledCreatureSubtypeTokens and its "other" sibling
 	// name the controlled creature tokens carrying a named creature subtype

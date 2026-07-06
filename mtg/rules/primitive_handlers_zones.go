@@ -1074,6 +1074,9 @@ func handleMassReanimationExchange(r *effectResolver, prim game.MassReanimationE
 	}
 	var sacrificed []*game.Permanent
 	for _, permanent := range r.game.Battlefield {
+		if permanentCantBeSacrificed(r.game, permanent) {
+			continue
+		}
 		if resolver.permanentMatchesGroupSelection(&prim.Selection, nil, permanent) {
 			sacrificed = append(sacrificed, permanent)
 		}
@@ -1495,6 +1498,9 @@ func handleSacrifice(r *effectResolver, prim game.Sacrifice) effectResolved {
 	if !ok || effectiveController(r.game, permanent) != r.obj.Controller {
 		return res
 	}
+	if permanentCantBeSacrificed(r.game, permanent) {
+		return res
+	}
 	res.succeeded = sacrificePermanent(r.game, permanent)
 	return res
 }
@@ -1552,6 +1558,9 @@ func playerControlsSelection(g *game.Game, resolver referenceResolver, playerID 
 		if effectiveController(g, permanent) != playerID {
 			continue
 		}
+		if permanentCantBeSacrificed(g, permanent) {
+			continue
+		}
 		if resolver.permanentMatchesGroupSelection(&sel, nil, permanent) {
 			return true
 		}
@@ -1567,6 +1576,9 @@ func playerControlledMatchingSelection(g *game.Game, resolver referenceResolver,
 	var matching []*game.Permanent
 	for _, permanent := range g.Battlefield {
 		if effectiveController(g, permanent) != playerID {
+			continue
+		}
+		if permanentCantBeSacrificed(g, permanent) {
 			continue
 		}
 		if resolver.permanentMatchesGroupSelection(&sel, nil, permanent) {
@@ -1807,7 +1819,15 @@ func (e *Engine) retargetStackObjectChoice(g *game.Game, chooser game.PlayerID, 
 	if !ok || len(specs.specs) == 0 {
 		return false
 	}
-	result := targetChoicesForSpecs(g, target.Controller, specs.def, specs.sourceObjectID, specs.specs)
+	// Re-enumerating a triggered ability's targets must reuse its captured
+	// triggering event so event-relative target predicates (e.g. "target
+	// creature that player controls", Garland, Royal Kidnapper) resolve the
+	// same event player as the original enumeration and resolution recheck.
+	retargetEvent := game.Event{}
+	if target.HasTriggerEvent {
+		retargetEvent = target.TriggerEvent
+	}
+	result := targetChoicesForSpecs(g, target.Controller, specs.def, specs.sourceObjectID, retargetEvent, specs.specs)
 	if result.kind != targetLegalChoicesFound || len(result.choices) == 0 {
 		return false
 	}

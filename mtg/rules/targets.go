@@ -38,7 +38,7 @@ type targetChoiceResult struct {
 
 func targetChoicesForSpell(g *game.Game, controller game.PlayerID, card *game.CardDef, chosenModes []int) targetChoiceResult {
 	specs := spellTargetSpecs(card, chosenModes)
-	return targetChoicesForSpecs(g, controller, card, 0, specs)
+	return targetChoicesForSpecs(g, controller, card, 0, game.Event{}, specs)
 }
 
 func targetChoicesForBody(g *game.Game, controller game.PlayerID, body game.Ability) targetChoiceResult {
@@ -50,10 +50,10 @@ func targetChoicesForBodyFromSource(g *game.Game, controller game.PlayerID, sour
 }
 
 func targetChoicesForBodyFromSourceObject(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, body game.Ability) targetChoiceResult {
-	return targetChoicesForBodyFromSourceObjectWithModes(g, controller, source, sourceObjectID, body, nil)
+	return targetChoicesForBodyFromSourceObjectWithModes(g, controller, source, sourceObjectID, game.Event{}, body, nil)
 }
 
-func targetChoicesForBodyFromSourceObjectWithModes(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, body game.Ability, chosenModes []int) targetChoiceResult {
+func targetChoicesForBodyFromSourceObjectWithModes(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, triggerEvent game.Event, body game.Ability, chosenModes []int) targetChoiceResult {
 	if body == nil {
 		return targetChoiceResult{kind: targetNoTargetsRequired, choices: [][]game.Target{nil}, targetCounts: [][]int{nil}}
 	}
@@ -63,7 +63,7 @@ func targetChoicesForBodyFromSourceObjectWithModes(g *game.Game, controller game
 			err:  fmt.Errorf("ability has invalid mode selection %v", chosenModes),
 		}
 	}
-	return targetChoicesForSpecs(g, controller, source, sourceObjectID, bodyTargetSpecs(body, chosenModes))
+	return targetChoicesForSpecs(g, controller, source, sourceObjectID, triggerEvent, bodyTargetSpecs(body, chosenModes))
 }
 
 // targetChoicesForSpecs enumerates every legal target combination for specs.
@@ -81,7 +81,7 @@ func targetChoicesForBodyFromSourceObjectWithModes(g *game.Game, controller game
 // per instance of "target" (CR 115.3); "another target" specs additionally exclude
 // the earlier targets of the same spell or ability, enforcing the card's "another"
 // criterion.
-func targetChoicesForSpecs(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, specs []game.TargetSpec) targetChoiceResult {
+func targetChoicesForSpecs(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, triggerEvent game.Event, specs []game.TargetSpec) targetChoiceResult {
 	if len(specs) == 0 {
 		return targetChoiceResult{kind: targetNoTargetsRequired, choices: [][]game.Target{nil}, targetCounts: [][]int{nil}}
 	}
@@ -97,19 +97,19 @@ func targetChoicesForSpecs(g *game.Game, controller game.PlayerID, source *game.
 	}
 	var result [][]game.Target
 	var targetCounts [][]int
-	appendTargetChoicesForSpec(g, controller, source, sourceObjectID, specs, 0, nil, nil, &result, &targetCounts)
+	appendTargetChoicesForSpec(g, controller, source, sourceObjectID, triggerEvent, specs, 0, nil, nil, &result, &targetCounts)
 	if len(result) == 0 {
 		return targetChoiceResult{kind: targetNoLegalChoices}
 	}
 	for i, targets := range result {
-		if _, unique := uniqueTargetCountsForSpecs(g, controller, source, sourceObjectID, specs, targets); unique {
+		if _, unique := uniqueTargetCountsForSpecs(g, controller, source, sourceObjectID, triggerEvent, specs, targets); unique {
 			targetCounts[i] = nil
 		}
 	}
 	return targetChoiceResult{kind: targetLegalChoicesFound, choices: result, targetCounts: targetCounts}
 }
 
-func appendTargetChoicesForSpec(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, specs []game.TargetSpec, specIndex int, prefix []game.Target, countPrefix []int, result *[][]game.Target, targetCounts *[][]int) {
+func appendTargetChoicesForSpec(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, triggerEvent game.Event, specs []game.TargetSpec, specIndex int, prefix []game.Target, countPrefix []int, result *[][]game.Target, targetCounts *[][]int) {
 	if specIndex >= len(specs) {
 		*result = append(*result, append([]game.Target(nil), prefix...))
 		*targetCounts = append(*targetCounts, append([]int(nil), countPrefix...))
@@ -125,10 +125,10 @@ func appendTargetChoicesForSpec(g *game.Game, controller game.PlayerID, source *
 		}
 		next := append(append([]game.Target(nil), prefix...), game.DeferredTarget())
 		nextCounts := append(append([]int(nil), countPrefix...), 1)
-		appendTargetChoicesForSpec(g, controller, source, sourceObjectID, specs, specIndex+1, next, nextCounts, result, targetCounts)
+		appendTargetChoicesForSpec(g, controller, source, sourceObjectID, triggerEvent, specs, specIndex+1, next, nextCounts, result, targetCounts)
 		return
 	}
-	candidates := targetCandidatesForSpec(g, controller, source, sourceObjectID, &spec)
+	candidates := targetCandidatesForSpec(g, controller, source, sourceObjectID, triggerEvent, &spec)
 	if spec.DistinctFromPriorTargets {
 		candidates = filterTargetsDistinctFrom(candidates, prefix)
 	}
@@ -140,7 +140,7 @@ func appendTargetChoicesForSpec(g *game.Game, controller game.PlayerID, source *
 			}
 			next := append(append([]game.Target(nil), prefix...), combination...)
 			nextCounts := append(append([]int(nil), countPrefix...), count)
-			appendTargetChoicesForSpec(g, controller, source, sourceObjectID, specs, specIndex+1, next, nextCounts, result, targetCounts)
+			appendTargetChoicesForSpec(g, controller, source, sourceObjectID, triggerEvent, specs, specIndex+1, next, nextCounts, result, targetCounts)
 		}
 	}
 }
@@ -230,8 +230,8 @@ func targetCountsForChoices(minTargets, maxTargets int) []int {
 	return counts
 }
 
-func targetCandidatesForSpec(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, spec *game.TargetSpec) []game.Target {
-	return targetCandidatesForSpecChosenBy(g, controller, controller, source, sourceObjectID, spec)
+func targetCandidatesForSpec(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, triggerEvent game.Event, spec *game.TargetSpec) []game.Target {
+	return targetCandidatesForSpecChosenBy(g, controller, controller, source, sourceObjectID, triggerEvent, spec)
 }
 
 // targetCandidatesForSpecChosenBy returns every object or player that is a legal
@@ -239,12 +239,12 @@ func targetCandidatesForSpec(g *game.Game, controller game.PlayerID, source *gam
 // Only permanents are candidates unless the spec allows players, stack objects, or
 // cards in other zones (CR 115.2, 115.4), and a candidate the source can't legally
 // target (e.g. protection, CR 702.16b, or hexproof, CR 702.11b-c) is excluded.
-func targetCandidatesForSpecChosenBy(g *game.Game, sourceController, predicatePlayer game.PlayerID, source *game.CardDef, sourceObjectID id.ID, spec *game.TargetSpec) []game.Target {
+func targetCandidatesForSpecChosenBy(g *game.Game, sourceController, predicatePlayer game.PlayerID, source *game.CardDef, sourceObjectID id.ID, triggerEvent game.Event, spec *game.TargetSpec) []game.Target {
 	var candidates []game.Target
 	if targetSpecAllowsPlayers(spec) {
 		for playerID := range game.PlayerID(game.NumPlayers) {
 			target := game.PlayerTarget(playerID)
-			if targetMatchesSpec(g, predicatePlayer, sourceObjectID, spec, target) && !targetProtectedFromSource(g, sourceController, source, sourceObjectID, target) {
+			if targetMatchesSpec(g, predicatePlayer, sourceObjectID, triggerEvent, spec, target) && !targetProtectedFromSource(g, sourceController, source, sourceObjectID, target) {
 				candidates = append(candidates, target)
 			}
 		}
@@ -252,7 +252,7 @@ func targetCandidatesForSpecChosenBy(g *game.Game, sourceController, predicatePl
 	if targetSpecAllowsPermanents(spec) {
 		for _, permanent := range g.Battlefield {
 			target := game.PermanentTarget(permanent.ObjectID)
-			if targetMatchesSpec(g, predicatePlayer, sourceObjectID, spec, target) && !targetProtectedFromSource(g, sourceController, source, sourceObjectID, target) {
+			if targetMatchesSpec(g, predicatePlayer, sourceObjectID, triggerEvent, spec, target) && !targetProtectedFromSource(g, sourceController, source, sourceObjectID, target) {
 				candidates = append(candidates, target)
 			}
 		}
@@ -260,7 +260,7 @@ func targetCandidatesForSpecChosenBy(g *game.Game, sourceController, predicatePl
 	if targetSpecAllowsStackObjects(spec) {
 		for _, obj := range g.Stack.Objects() {
 			target := game.StackObjectTarget(obj.ID)
-			if targetMatchesSpec(g, predicatePlayer, sourceObjectID, spec, target) {
+			if targetMatchesSpec(g, predicatePlayer, sourceObjectID, triggerEvent, spec, target) {
 				candidates = append(candidates, target)
 			}
 		}
@@ -268,7 +268,7 @@ func targetCandidatesForSpecChosenBy(g *game.Game, sourceController, predicatePl
 	if targetSpecAllowsCards(spec) {
 		for _, card := range g.CardInstances {
 			target := game.CardTargetWithZoneVersion(card.ID, card.ZoneVersion)
-			if targetMatchesSpec(g, predicatePlayer, sourceObjectID, spec, target) {
+			if targetMatchesSpec(g, predicatePlayer, sourceObjectID, triggerEvent, spec, target) {
 				candidates = append(candidates, target)
 			}
 		}
@@ -394,7 +394,7 @@ func (e *Engine) chooseExternalTarget(g *game.Game, controller game.PlayerID, so
 		if !ok {
 			return game.Target{}, false
 		}
-		targets := targetCandidatesForSpecChosenBy(g, controller, opponent, source, sourceObjectID, spec)
+		targets := targetCandidatesForSpecChosenBy(g, controller, opponent, source, sourceObjectID, game.Event{}, spec)
 		target, ok := e.chooseTargetFromCandidates(g, opponent, spec, targets, agents, log)
 		if !ok {
 			return game.Target{}, false

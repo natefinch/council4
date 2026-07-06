@@ -39,6 +39,14 @@ const (
 	// as the combat phase is torn down, before the following phases. Added last so
 	// existing durations keep their wire values.
 	DurationUntilEndOfCombat
+	// DurationForAsLongAsPlayerIsMonarch expires when the player bound in
+	// ExpiresFor is no longer the monarch ("gain control of target creature that
+	// player controls for as long as they're the monarch.", Garland, Royal
+	// Kidnapper). The bound player is the one whose becoming the monarch created
+	// the effect; when a different player takes the crown, or no player is the
+	// monarch, the effect ends. Added last so existing durations keep their wire
+	// values.
+	DurationForAsLongAsPlayerIsMonarch
 )
 
 // DelayedTriggerTiming describes when a delayed triggered ability should fire.
