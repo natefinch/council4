@@ -454,6 +454,7 @@ func compileConditionSelection(syntax parser.ConditionSelection) (ConditionSelec
 	selection.DamageSourceControllerOpponent = syntax.DamageSourceControllerOpponent
 	selection.DamageRecipientSelf = syntax.DamageRecipientSelf
 	selection.DamageRecipientAttached = syntax.DamageRecipientAttached
+	selection.DamageRecipientMonarchGate = syntax.DamageRecipientMonarchGate
 	selection.AnyCounter = syntax.AnyCounter
 	selection.CounterKind = syntax.CounterKind
 	selection.CounterKindKnown = syntax.CounterKindKnown

@@ -103,6 +103,7 @@ const (
 	PrimitiveShuffleGraveyardIntoLibrary
 	PrimitiveGroupSelfPowerDamage
 	PrimitiveBecomeMonarch
+	PrimitiveCantBecomeMonarch
 	PrimitiveRingTempts
 	PrimitiveVote
 	PrimitiveExileEntireHand
@@ -623,6 +624,14 @@ type StartEngines struct {
 // it applies this primitive. It backs "you become the monarch" and "target
 // player becomes the monarch".
 type BecomeMonarch struct {
+	Player PlayerReference
+}
+
+// CantBecomeMonarch blocks the referenced player from becoming the monarch for
+// the rest of the turn ("You can't become the monarch this turn.", Jared
+// Carthalion). The runtime sets a per-turn flag the monarch-designation code
+// honors; it is cleared as the next turn begins.
+type CantBecomeMonarch struct {
 	Player PlayerReference
 }
 

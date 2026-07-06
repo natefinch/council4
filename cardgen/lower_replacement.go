@@ -54,10 +54,14 @@ func lowerPreventDamageToCountersReplacement(
 	if selection.DamageRecipientAttached == selection.DamageRecipientSelf {
 		return unsupported("the executable source backend supports only a self or attached prevent-damage recipient")
 	}
+	gate := opt.V[game.Condition]{}
+	if selection.DamageRecipientMonarchGate {
+		gate = opt.Val(game.Condition{ControllerIsMonarch: true})
+	}
 	return game.DamagePreventionToPlusOneCountersReplacement(
 		ability.Text,
 		selection.DamageRecipientAttached,
-		opt.V[game.Condition]{},
+		gate,
 	), true, nil
 }
 

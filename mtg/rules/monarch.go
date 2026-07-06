@@ -28,7 +28,7 @@ func setMonarch(g *game.Game, playerID game.PlayerID) bool {
 		return false
 	}
 	player, ok := playerByID(g, playerID)
-	if !ok || player.Eliminated {
+	if !ok || player.Eliminated || player.CantBecomeMonarchThisTurn {
 		return false
 	}
 	alreadyMonarch := player.IsMonarch
@@ -69,5 +69,22 @@ func handleBecomeMonarch(r *effectResolver, prim game.BecomeMonarch) effectResol
 	if ok {
 		res.succeeded = setMonarch(r.game, playerID)
 	}
+	return res
+}
+
+// handleCantBecomeMonarch resolves the CantBecomeMonarch primitive, blocking the
+// referenced player from becoming the monarch for the rest of the turn.
+func handleCantBecomeMonarch(r *effectResolver, prim game.CantBecomeMonarch) effectResolved {
+	res := effectResolved{accepted: true}
+	playerID, ok := r.resolvePlayer(prim.Player)
+	if !ok {
+		return res
+	}
+	player, ok := playerByID(r.game, playerID)
+	if !ok {
+		return res
+	}
+	player.CantBecomeMonarchThisTurn = true
+	res.succeeded = true
 	return res
 }

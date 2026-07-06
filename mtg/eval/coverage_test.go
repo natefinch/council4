@@ -18,7 +18,10 @@ import (
 // sibling distributive removals DestroyForEachPlayer and ExileForEachPlayer:
 // its per-player player-relative choices are not modeled by the single-target
 // atom heuristic.
-const knownPrimitiveCount = 112
+//
+// CantBecomeMonarch is value-neutral (no atom): the monarchy restriction has no
+// measurable card/life/board effect, matching BecomeMonarch.
+const knownPrimitiveCount = 113
 
 // TestPrimitiveCountIsReconciled keeps a newly added resolution primitive from
 // silently falling through the translator: adding one trips this guard so its

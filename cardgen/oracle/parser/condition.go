@@ -324,6 +324,10 @@ type ConditionSelection struct {
 	// "enchanted creature"). Exactly one is set on such a clause.
 	DamageRecipientSelf     bool `json:",omitempty"`
 	DamageRecipientAttached bool `json:",omitempty"`
+	// DamageRecipientMonarchGate marks a ConditionPredicateDamageWouldBeDealtToPermanent
+	// clause gated by "... while you're the monarch" (Jared Carthalion): the
+	// prevention applies only while the controller is the monarch.
+	DamageRecipientMonarchGate bool `json:",omitempty"`
 
 	// AnyCounter requires the matched permanent to carry at least one counter of
 	// any kind ("if this permanent has counters on it"). It is the kind-agnostic
@@ -2422,6 +2426,15 @@ func recognizeDamageSourceCondition(body []shared.Token, atoms Atoms) (Condition
 // creature"/self name) or the permanent the source is attached to ("equipped
 // creature"/"enchanted creature").
 func recognizePreventDamageToPermanentCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
+	// Object form: "damage would be dealt to <recipient> [while you're the monarch]".
+	if rest, ok := cutTokenPrefix(body, "damage", "would", "be", "dealt", "to"); ok {
+		selection, ok := preventDamageRecipientSelection(rest, atoms, true)
+		if !ok {
+			return ConditionClause{}, false
+		}
+		return ConditionClause{Predicate: ConditionPredicateDamageWouldBeDealtToPermanent, Selection: selection}, true
+	}
+	// Subject form: "<recipient> would be dealt damage".
 	var selection ConditionSelection
 	rest := body
 	switch {
@@ -2444,6 +2457,43 @@ func recognizePreventDamageToPermanentCondition(body []shared.Token, atoms Atoms
 		Predicate: ConditionPredicateDamageWouldBeDealtToPermanent,
 		Selection: selection,
 	}, true
+}
+
+// preventDamageRecipientSelection parses the recipient of an object-form
+// "damage would be dealt to <recipient>" clause: the ability's own source
+// ("this creature"/self name) or the permanent it is attached to ("equipped
+// creature"/"enchanted creature"). When allowGate is set, a trailing
+// "while you're the monarch" gate is recognized and recorded.
+func preventDamageRecipientSelection(rest []shared.Token, atoms Atoms, allowGate bool) (ConditionSelection, bool) {
+	var selection ConditionSelection
+	switch {
+	case tokenPrefixIs(rest, "equipped", "creature"), tokenPrefixIs(rest, "enchanted", "creature"):
+		selection.DamageRecipientAttached = true
+		rest = rest[2:]
+	default:
+		_, count, ok := parseSelfSubject(rest, atoms)
+		if !ok {
+			return ConditionSelection{}, false
+		}
+		selection.DamageRecipientSelf = true
+		rest = rest[count:]
+	}
+	if len(rest) == 0 {
+		return selection, true
+	}
+	if !allowGate {
+		return ConditionSelection{}, false
+	}
+	gate, ok := cutTokenPrefix(rest, "while")
+	if !ok {
+		return ConditionSelection{}, false
+	}
+	if !tokenWordsEqual(gate, "you're", "the", "monarch") &&
+		!tokenWordsEqual(gate, "you", "are", "the", "monarch") {
+		return ConditionSelection{}, false
+	}
+	selection.DamageRecipientMonarchGate = true
+	return selection, true
 }
 
 func tokenPrefixIs(tokens []shared.Token, words ...string) bool {

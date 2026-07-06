@@ -1538,6 +1538,8 @@ func effectKindAt(tokens []shared.Token, index int) EffectKind {
 		return EffectGainPlayerCounter
 	case becomeMonarchVerbAt(tokens, index):
 		return EffectBecomeMonarch
+	case cantBecomeMonarchVerbAt(tokens, index):
+		return EffectCantBecomeMonarch
 	case kind == EffectTap && index+2 < len(tokens) &&
 		equalWord(tokens[index+1], "or") && equalWord(tokens[index+2], "untap"):
 		return EffectTapOrUntap
@@ -1681,6 +1683,17 @@ func becomeMonarchVerbAt(tokens []shared.Token, index int) bool {
 	return index+3 < len(tokens) &&
 		effectWordsAt(tokens, index+1, "the", "monarch") &&
 		tokens[index+3].Kind == shared.Period
+}
+
+// cantBecomeMonarchVerbAt reports whether the temporary prohibition "can't
+// become the monarch this turn." begins at index (Jared Carthalion). It anchors
+// on the negated "can't"/"cannot" so lowering blocks the controller from
+// becoming the monarch for the rest of the turn.
+func cantBecomeMonarchVerbAt(tokens []shared.Token, index int) bool {
+	return (equalWord(tokens[index], "can't") || equalWord(tokens[index], "cannot")) &&
+		effectWordsAt(tokens, index+1, "become", "the", "monarch", "this", "turn") &&
+		index+6 < len(tokens) &&
+		tokens[index+6].Kind == shared.Period
 }
 
 // playerCounterWordAfter reports whether the tokens beginning at start name a

@@ -342,6 +342,9 @@ func (p StartEngines) validateCapturedTargetControllerReferences(targets []Targe
 func (p BecomeMonarch) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
 	return validateCapturedTargetControllerReference(p.Player, targets, checkTargets)
 }
+func (p CantBecomeMonarch) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	return validateCapturedTargetControllerReference(p.Player, targets, checkTargets)
+}
 
 func (p SetClassLevel) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
 	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
@@ -1673,6 +1676,9 @@ func (p StartEngines) validatePrimitive(targets []TargetSpec, checkTargets bool)
 }
 
 func (p BecomeMonarch) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+func (p CantBecomeMonarch) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 
