@@ -329,6 +329,11 @@ type TriggerPattern struct {
 	// AttackWhileSaddled restricts an attacker-declared pattern to combats where
 	// the attacking source is saddled ("attacks while saddled", CR 702.166).
 	AttackWhileSaddled bool
+	// AttacksDifferentPlayerThanAnother restricts an attacker-declared pattern to
+	// combats where the source and at least one other attacking creature attack
+	// different players ("this creature and another creature attack different
+	// players", Canal Courier).
+	AttacksDifferentPlayerThanAnother bool
 	// AttackerCountAtLeast restricts a controller-scoped attacker-declared
 	// pattern to combats with at least this many attacking creatures. Zero
 	// imposes no minimum.

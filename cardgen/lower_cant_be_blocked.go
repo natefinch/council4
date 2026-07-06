@@ -34,12 +34,18 @@ func lowerCantBeBlockedSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagn
 	if !effect.Exact ||
 		effect.Negated ||
 		effect.Optional ||
-		effect.Duration != compiler.DurationThisTurn ||
+		(effect.Duration != compiler.DurationThisTurn && effect.Duration != compiler.DurationThisCombat) ||
 		ctx.optional ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 {
 		return unsupported()
+	}
+	// "this turn" grants the restriction for the whole turn; "this combat" ends it
+	// when the combat phase does (Canal Courier).
+	ruleDuration := game.DurationThisTurn
+	if effect.Duration == compiler.DurationThisCombat {
+		ruleDuration = game.DurationUntilEndOfCombat
 	}
 	targetSubject := effect.Context == parser.EffectContextTarget &&
 		len(ctx.content.Targets) == 1 &&
@@ -70,7 +76,7 @@ func lowerCantBeBlockedSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagn
 			return unsupported()
 		}
 		return game.Mode{
-			Sequence: []game.Instruction{cantBeBlockedGroupInstruction(affectedController, permanentTypes)},
+			Sequence: []game.Instruction{cantBeBlockedGroupInstruction(affectedController, permanentTypes, ruleDuration)},
 		}.Ability(), nil
 	case sourceAndTargetSubject:
 		// "<source> and up to one other target creature can't be blocked this
@@ -87,9 +93,9 @@ func lowerCantBeBlockedSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagn
 			return unsupported()
 		}
 		sequence := make([]game.Instruction, 0, targetSpec.MaxTargets+1)
-		sequence = append(sequence, cantBeBlockedInstruction(object))
+		sequence = append(sequence, cantBeBlockedInstruction(object, ruleDuration))
 		for i := range targetSpec.MaxTargets {
-			sequence = append(sequence, cantBeBlockedInstruction(game.TargetPermanentReference(i)))
+			sequence = append(sequence, cantBeBlockedInstruction(game.TargetPermanentReference(i), ruleDuration))
 		}
 		return game.Mode{
 			Targets:  []game.TargetSpec{targetSpec},
@@ -102,7 +108,7 @@ func lowerCantBeBlockedSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagn
 		}
 		sequence := make([]game.Instruction, 0, targetSpec.MaxTargets)
 		for i := range targetSpec.MaxTargets {
-			sequence = append(sequence, cantBeBlockedInstruction(game.TargetPermanentReference(i)))
+			sequence = append(sequence, cantBeBlockedInstruction(game.TargetPermanentReference(i), ruleDuration))
 		}
 		return game.Mode{
 			Targets:  []game.TargetSpec{targetSpec},
@@ -114,7 +120,7 @@ func lowerCantBeBlockedSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagn
 			return unsupported()
 		}
 		return game.Mode{
-			Sequence: []game.Instruction{cantBeBlockedInstruction(object)},
+			Sequence: []game.Instruction{cantBeBlockedInstruction(object, ruleDuration)},
 		}.Ability(), nil
 	default:
 		return unsupported()
@@ -136,14 +142,14 @@ func creatureTargetSubject(target compiler.CompiledTarget) bool {
 
 // cantBeBlockedInstruction builds the ApplyRule instruction that grants the
 // given object a can't-be-blocked restriction for the turn.
-func cantBeBlockedInstruction(object game.ObjectReference) game.Instruction {
+func cantBeBlockedInstruction(object game.ObjectReference, duration game.EffectDuration) game.Instruction {
 	return game.Instruction{
 		Primitive: game.ApplyRule{
 			Object: opt.Val(object),
 			RuleEffects: []game.RuleEffect{
 				{Kind: game.RuleEffectCantBeBlocked},
 			},
-			Duration: game.DurationThisTurn,
+			Duration: duration,
 		},
 	}
 }
@@ -168,7 +174,7 @@ func cantBeBlockedGroupScope(subject compiler.StaticSubjectKind) (game.Controlle
 // can't-be-blocked restriction to every member of a creature group for the turn.
 // It carries no object anchor, so the runtime scopes the rule to the affected
 // controller and card types rather than a single permanent.
-func cantBeBlockedGroupInstruction(controller game.ControllerRelation, permanentTypes []types.Card) game.Instruction {
+func cantBeBlockedGroupInstruction(controller game.ControllerRelation, permanentTypes []types.Card, duration game.EffectDuration) game.Instruction {
 	return game.Instruction{
 		Primitive: game.ApplyRule{
 			RuleEffects: []game.RuleEffect{{
@@ -176,7 +182,7 @@ func cantBeBlockedGroupInstruction(controller game.ControllerRelation, permanent
 				AffectedController: controller,
 				PermanentTypes:     permanentTypes,
 			}},
-			Duration: game.DurationThisTurn,
+			Duration: duration,
 		},
 	}
 }

@@ -845,6 +845,11 @@ type TriggerEventClause struct {
 	// where the attacking source is saddled ("attacks while saddled", saddle
 	// CR 702.166).
 	AttackWhileSaddled bool `json:",omitempty"`
+	// AttacksDifferentPlayerThanAnother marks an attacker-declared clause
+	// restricted to combats where the source and at least one other attacking
+	// creature attack different players ("this creature and another creature
+	// attack different players", Canal Courier).
+	AttacksDifferentPlayerThanAnother bool `json:",omitempty"`
 	// AttackerCountAtLeast restricts a controller-scoped attack clause to combats
 	// where the controller attacks with at least this many creatures ("attack
 	// with two or more creatures"). Zero imposes no minimum.

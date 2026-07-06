@@ -43,6 +43,7 @@ func (ce combatEngine) runPhase(g *game.Game, agents [game.NumPlayers]PlayerAgen
 	g.Turn.CombatPhasesThisTurn++
 	g.Combat = &game.CombatState{}
 	defer func() {
+		expireEndOfCombatRuleEffects(g)
 		g.Combat = nil
 	}()
 

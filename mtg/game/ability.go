@@ -963,6 +963,14 @@ type TriggerPattern struct {
 	// Event == EventAttackerDeclared and Source == TriggerSourceSelf.
 	AttacksWithGreaterPowerCreature bool
 
+	// AttacksDifferentPlayerThanAnother restricts an EventAttackerDeclared trigger
+	// to combats where the ability's source and at least one other attacking
+	// creature attack different players ("this creature and another creature
+	// attack different players", Canal Courier). The source must be attacking; the
+	// comparison is against every other attacker's defending player. It is only
+	// valid with Event == EventAttackerDeclared and Source == TriggerSourceSelf.
+	AttacksDifferentPlayerThanAnother bool
+
 	// AttackWhileSaddled restricts an EventAttackerDeclared trigger to combats
 	// where the ability's source is saddled ("attacks while saddled", saddle
 	// CR 702.166). It is only valid with Event == EventAttackerDeclared.

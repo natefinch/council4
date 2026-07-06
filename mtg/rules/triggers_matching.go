@@ -290,6 +290,9 @@ func triggerCombatPatternMatches(g *game.Game, viewer game.PlayerID, source *gam
 	if pattern.AttacksWithGreaterPowerCreature && !attacksWithGreaterPowerCreature(g, source, event) {
 		return false
 	}
+	if pattern.AttacksDifferentPlayerThanAnother && !attacksDifferentPlayerThanAnother(g, source, event) {
+		return false
+	}
 	if pattern.AttackWhileSaddled && !source.Saddled {
 		return false
 	}
@@ -423,6 +426,40 @@ func attacksWithGreaterPowerCreature(g *game.Game, source *game.Permanent, event
 			continue
 		}
 		if effectivePower(g, other) > sourcePower {
+			return true
+		}
+	}
+	return false
+}
+
+// attacksDifferentPlayerThanAnother reports whether, in the current combat, the
+// ability's source and at least one other attacking creature attack different
+// players ("this creature and another creature attack different players", Canal
+// Courier). The source's own attacker-declared event names the player it is
+// attacking; the comparison is against every other attacker's defending player.
+// The full attacker declaration is recorded in g.Combat.Attackers before any
+// attacker-declared event is processed, so the comparison is authoritative when
+// the source's own attack triggers.
+func attacksDifferentPlayerThanAnother(g *game.Game, source *game.Permanent, event game.Event) bool {
+	if event.Kind != game.EventAttackerDeclared || g.Combat == nil {
+		return false
+	}
+	// "Attack different players" requires both the source and the other creature
+	// to be attacking players directly; attacking a planeswalker or battle is not
+	// attacking a player (Canal Courier ruling), so those attacks never satisfy
+	// the relation.
+	if !event.AttackTarget.IsPlayerAttack() {
+		return false
+	}
+	sourcePlayer := event.AttackTarget.Player
+	for _, declaration := range g.Combat.Attackers {
+		if declaration.Attacker == source.ObjectID {
+			continue
+		}
+		if !declaration.Target.IsPlayerAttack() {
+			continue
+		}
+		if declaration.Target.Player != sourcePlayer {
 			return true
 		}
 	}

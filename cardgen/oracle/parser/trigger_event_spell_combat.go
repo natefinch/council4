@@ -768,6 +768,17 @@ func parseAttackBlockTriggerEventClause(
 		return clause
 	}
 	if index := syntaxWordsIndex(tokens, "attack"); index > 0 {
+		// "this creature and another creature attack different players" (Canal
+		// Courier): a source-scoped attacker trigger whose relation is that the
+		// source and at least one other attacker attack different players.
+		if syntaxWordsEqual(tokens[:index], "this", "creature", "and", "another", "creature") &&
+			syntaxWordsEqual(tokens[index+1:], "different", "players") {
+			return &TriggerEventClause{
+				Kind:                              TriggerEventKindAttack,
+				Subject:                           TriggerEventSubject{Kind: TriggerEventSubjectSelf},
+				AttacksDifferentPlayerThanAnother: true,
+			}
+		}
 		if subjectTokens, count, ok := attackerCountFromOtherCreaturesSuffix(tokens[:index]); ok && index+1 == len(tokens) {
 			subject := parsePermanentEventSubject(subjectTokens, false, atoms)
 			if subject.ok && !subject.oneOrMore && !subject.excludeSelf &&
