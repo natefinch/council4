@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,951 of 32,501 cards eligible for paper support (52.2%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,952 of 32,501 cards eligible for paper support (52.2%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -5560,6 +5560,7 @@ Council4 currently supports **16,951 of 32,501 cards eligible for paper support 
 - Gargoyle
 - Gargoyle Castle
 - Gargoyle Flock
+- Garland, Royal Kidnapper
 - Garrison Cat
 - Garrison Excavator
 - Garrison Griffin
