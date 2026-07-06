@@ -35,20 +35,20 @@ func TestAbilityCoverageSimpleSpellEffectIsComplete(t *testing.T) {
 }
 
 func TestAbilityCoverageUnknownEffectIsIncomplete(t *testing.T) {
-	report := AbilityCoverage(firstAbility(t, "Goad target creature.", Context{InstantOrSorcery: true}))
+	report := AbilityCoverage(firstAbility(t, "Frobnicate target creature.", Context{InstantOrSorcery: true}))
 	if report.Complete {
 		t.Fatal("unknown effect ability reported complete")
 	}
 	if len(report.Uncovered) == 0 {
 		t.Fatal("unknown effect ability reported no uncovered runs")
 	}
-	if got, want := report.Uncovered[0].Text, "Goad target creature"; got != want {
+	if got, want := report.Uncovered[0].Text, "Frobnicate target creature"; got != want {
 		t.Errorf("uncovered run text = %q, want %q", got, want)
 	}
 	if len(report.Components) != 1 {
 		t.Fatalf("components = %v, want exactly one", report.Components)
 	}
-	if got, want := report.Components[0].Text, "Goad target creature."; got != want {
+	if got, want := report.Components[0].Text, "Frobnicate target creature."; got != want {
 		t.Errorf("uncovered component text = %q, want %q", got, want)
 	}
 	if got := report.Components[0].Blocker; got != CoverageBlockerEffect {
@@ -68,7 +68,7 @@ func TestAbilityCoverageTriggerWithExactEffectIsComplete(t *testing.T) {
 }
 
 func TestDocumentCoverageAggregatesAbilities(t *testing.T) {
-	document, _ := Parse("Flying\nGoad target creature.", Context{})
+	document, _ := Parse("Flying\nFrobnicate target creature.", Context{})
 	report := DocumentCoverage(document)
 	if report.Complete {
 		t.Fatal("document with an unknown effect reported complete")
@@ -93,8 +93,8 @@ func TestAbilityCoverageTrailingOrphanClauseIsIncomplete(t *testing.T) {
 		source    string
 		uncovered string
 	}{
-		{"Draw a card and goad target creature.", "and goad target creature"},
-		{"Draw a card, then goad target creature.", "then goad target creature"},
+		{"Draw a card and frobnicate target creature.", "and frobnicate target creature"},
+		{"Draw a card, then frobnicate target creature.", "then frobnicate target creature"},
 		{"Draw a card and frobnicate.", "and frobnicate"},
 	}
 	for _, test := range cases {
@@ -112,15 +112,15 @@ func TestAbilityCoverageTrailingOrphanClauseIsIncomplete(t *testing.T) {
 }
 
 func TestAbilityCoverageLeadingOrphanClauseIsIncomplete(t *testing.T) {
-	report := orphanProbe(t, "Goad target creature and draw a card.")
+	report := orphanProbe(t, "Frobnicate target creature and draw a card.")
 	if report.Complete {
 		t.Fatal("leading unrepresented clause reported complete")
 	}
 	if report.ExactEffects != 0 {
 		t.Errorf("exact=%d, want 0", report.ExactEffects)
 	}
-	if len(report.Uncovered) == 0 || report.Uncovered[0].Text != "Goad target creature and" {
-		t.Errorf("uncovered = %v, want first run %q", report.Uncovered, "Goad target creature and")
+	if len(report.Uncovered) == 0 || report.Uncovered[0].Text != "Frobnicate target creature and" {
+		t.Errorf("uncovered = %v, want first run %q", report.Uncovered, "Frobnicate target creature and")
 	}
 }
 
@@ -129,8 +129,8 @@ func TestAbilityCoverageLeadingOrphanViaCommaOrThenIsIncomplete(t *testing.T) {
 		source    string
 		uncovered string
 	}{
-		{"Goad target creature, then draw a card.", "Goad target creature"},
-		{"Goad target creature, draw a card.", "Goad target creature"},
+		{"Frobnicate target creature, then draw a card.", "Frobnicate target creature"},
+		{"Frobnicate target creature, draw a card.", "Frobnicate target creature"},
 		{"Frobnicate, then draw a card.", "Frobnicate"},
 	}
 	for _, test := range cases {
@@ -149,12 +149,12 @@ func TestAbilityCoverageLeadingOrphanViaCommaOrThenIsIncomplete(t *testing.T) {
 
 func TestAbilityCoverageTriggerWithTrailingOrphanIsIncomplete(t *testing.T) {
 	report := AbilityCoverage(firstAbility(t,
-		"Whenever this creature attacks, draw a card and goad target creature.", Context{}))
+		"Whenever this creature attacks, draw a card and frobnicate target creature.", Context{}))
 	if report.Complete {
 		t.Fatal("trigger with a trailing unrepresented clause reported complete")
 	}
-	if len(report.Uncovered) == 0 || report.Uncovered[0].Text != "and goad target creature" {
-		t.Errorf("uncovered = %v, want first run %q", report.Uncovered, "and goad target creature")
+	if len(report.Uncovered) == 0 || report.Uncovered[0].Text != "and frobnicate target creature" {
+		t.Errorf("uncovered = %v, want first run %q", report.Uncovered, "and frobnicate target creature")
 	}
 }
 

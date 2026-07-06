@@ -1855,6 +1855,11 @@ const (
 	// your library onto the battlefield face down as a 2/2 creature with ward
 	// {2}. Added last so existing kinds keep their wire values.
 	EffectCloak
+	// EffectGoad is the goad keyword action (CR 701.38): the goaded creature
+	// attacks each combat if able and attacks a player other than its
+	// controller if able, until that player's next turn. Added last so existing
+	// kinds keep their wire values.
+	EffectGoad
 )
 
 // DurationKind identifies common continuous-effect durations.

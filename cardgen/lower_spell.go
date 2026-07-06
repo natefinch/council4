@@ -1595,6 +1595,8 @@ func lowerReferencedPermanentEffect(ctx contentCtx) (game.AbilityContent, bool) 
 		primitive = game.Untap{Object: object}
 	case compiler.EffectRemoveFromCombat:
 		primitive = game.RemoveFromCombat{Object: object}
+	case compiler.EffectGoad:
+		primitive = game.Goad{Object: object}
 	case compiler.EffectSacrifice:
 		primitive = game.Sacrifice{Object: object}
 	case compiler.EffectReturn:
@@ -1895,6 +1897,10 @@ func lowerImmediateSingleEffectSpell(
 	case compiler.EffectRemoveFromCombat:
 		return lowerFixedPermanentTargetSpell(ctx, "remove from combat", func(object game.ObjectReference) game.Primitive {
 			return game.RemoveFromCombat{Object: object}
+		})
+	case compiler.EffectGoad:
+		return lowerFixedPermanentTargetSpell(ctx, "goad", func(object game.ObjectReference) game.Primitive {
+			return game.Goad{Object: object}
 		})
 	case compiler.EffectExile:
 		if len(ctx.content.Effects) == 1 &&
