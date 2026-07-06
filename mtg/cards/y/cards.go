@@ -12,4 +12,5 @@ var Cards = []*game.CardDef{
 	YouComeToARiver,
 	YouMeetInATavern,
 	YouReNotAlone,
+	YuanShaoSInfantry,
 }

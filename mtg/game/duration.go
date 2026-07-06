@@ -34,6 +34,11 @@ const (
 	// ("until your next end step", Inti, Seneschal of the Sun). It is removed at
 	// the cleanup following that end step.
 	DurationUntilYourNextEndStep
+	// DurationUntilEndOfCombat expires when the combat phase ends ("this combat",
+	// Canal Courier's "this creature can't be blocked this combat"). It is removed
+	// as the combat phase is torn down, before the following phases. Added last so
+	// existing durations keep their wire values.
+	DurationUntilEndOfCombat
 )
 
 // DelayedTriggerTiming describes when a delayed triggered ability should fire.

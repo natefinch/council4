@@ -697,6 +697,7 @@ func (r Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatt
 		(pattern.RequireCombatDamage && pattern.RequireNonCombatDamage) ||
 		(pattern.AttackAlone && pattern.Event != game.EventAttackerDeclared) ||
 		(pattern.AttackWhileSaddled && pattern.Event != game.EventAttackerDeclared) ||
+		(pattern.AttacksDifferentPlayerThanAnother && pattern.Event != game.EventAttackerDeclared) ||
 		(pattern.DyingDamagedBySource && pattern.Event != game.EventPermanentDied) ||
 		(pattern.ExcludeFirstDrawInDrawStep && pattern.Event != game.EventCardDrawn) ||
 		(pattern.ClassBecameLevel > 0 && pattern.Event != game.EventClassLevelGained) ||
@@ -892,6 +893,9 @@ func renderTriggerPatternFlagFields(ctx *renderCtx, pattern *game.TriggerPattern
 	}
 	if pattern.AttackWhileSaddled {
 		fields = append(fields, "AttackWhileSaddled: true,")
+	}
+	if pattern.AttacksDifferentPlayerThanAnother {
+		fields = append(fields, "AttacksDifferentPlayerThanAnother: true,")
 	}
 	if pattern.DyingDamagedBySource {
 		fields = append(fields, "DyingDamagedBySource: true,")

@@ -2394,12 +2394,19 @@ func exactCanAttackAsThoughDefenderEffectSyntax(effect *EffectSyntax) bool {
 // a "by more than one creature" rider, or any "can't block" / "can't attack"
 // wording.
 func exactCantBeBlockedEffectSyntax(effect *EffectSyntax) bool {
-	if effect.Duration != EffectDurationThisTurn {
+	var window string
+	switch effect.Duration {
+	case EffectDurationThisTurn:
+		window = "turn"
+	case EffectDurationThisCombat:
+		window = "combat"
+	default:
 		return false
 	}
+	suffix := "can't be blocked this " + window + "."
 	clause := exactEffectClauseText(effect)
 	if effect.StaticSubject.Kind != EffectStaticSubjectNone {
-		return exactGroupCantBeBlockedEffectSyntax(effect, clause)
+		return exactGroupCantBeBlockedEffectSyntax(effect, clause, suffix)
 	}
 	switch effect.Context {
 	case EffectContextTarget:
@@ -2408,12 +2415,12 @@ func exactCantBeBlockedEffectSyntax(effect *EffectSyntax) bool {
 			effect.Targets[0].Cardinality.Min >= 0 &&
 			effect.Targets[0].Cardinality.Max >= 1 &&
 			effect.Targets[0].Cardinality.Min <= effect.Targets[0].Cardinality.Max &&
-			strings.EqualFold(clause, effect.Targets[0].Text+" can't be blocked this turn.")
+			strings.EqualFold(clause, effect.Targets[0].Text+" "+suffix)
 	case EffectContextSource:
 		subject, ok := exactSelfSubjectReferenceText(effect.SubjectReferences)
-		return ok && strings.EqualFold(clause, subject+" can't be blocked this turn.")
+		return ok && strings.EqualFold(clause, subject+" "+suffix)
 	case EffectContextPriorSubject:
-		return strings.EqualFold(clause, "can't be blocked this turn.")
+		return strings.EqualFold(clause, suffix)
 	default:
 		return false
 	}
@@ -2424,7 +2431,7 @@ func exactCantBeBlockedEffectSyntax(effect *EffectSyntax) bool {
 // can't be blocked this turn.", Keeper of Keys). It reads the subject text from
 // the effect's StaticSubject span so the group phrase round-trips byte-exactly and
 // the effect stays inexact for any subject the span does not cover.
-func exactGroupCantBeBlockedEffectSyntax(effect *EffectSyntax, clause string) bool {
+func exactGroupCantBeBlockedEffectSyntax(effect *EffectSyntax, clause, suffix string) bool {
 	var subject []shared.Token
 	for i := range effect.Tokens {
 		if spanCovers(effect.StaticSubject.Span, effect.Tokens[i].Span) {
@@ -2435,7 +2442,7 @@ func exactGroupCantBeBlockedEffectSyntax(effect *EffectSyntax, clause string) bo
 		return false
 	}
 	subjectText := joinedEffectText(subject)
-	return strings.EqualFold(clause, subjectText+" can't be blocked this turn.")
+	return strings.EqualFold(clause, subjectText+" "+suffix)
 }
 
 // exactCantBlockEffectSyntax recognizes the temporary combat-restriction

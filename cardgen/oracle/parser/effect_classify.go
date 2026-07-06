@@ -990,7 +990,7 @@ func cantBeBlockedThisTurnVerbAt(tokens []shared.Token, index int) bool {
 		equalWord(tokens[index+1], "be") &&
 		equalWord(tokens[index+2], "blocked") &&
 		equalWord(tokens[index+3], "this") &&
-		equalWord(tokens[index+4], "turn")
+		(equalWord(tokens[index+4], "turn") || equalWord(tokens[index+4], "combat"))
 }
 
 // canAttackAsThoughDefenderVerbAt reports whether the temporary combat

@@ -1903,6 +1903,9 @@ func (v *cardDefValidator) validateAttackerCountRelations(faceName, path string,
 	if pattern.AttackWhileSaddled && pattern.Event != EventAttackerDeclared {
 		v.add(faceName, appendPath(path, "AttackWhileSaddled"), CardDefIssueInvalidSelection, "attacks-while-saddled trigger filter is only supported for attacker-declared events")
 	}
+	if pattern.AttacksDifferentPlayerThanAnother && pattern.Event != EventAttackerDeclared {
+		v.add(faceName, appendPath(path, "AttacksDifferentPlayerThanAnother"), CardDefIssueInvalidSelection, "attacks-different-player trigger filter is only supported for attacker-declared events")
+	}
 	if pattern.AttackerCountAtLeast == 0 {
 		return
 	}

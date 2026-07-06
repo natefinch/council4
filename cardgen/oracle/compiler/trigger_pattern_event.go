@@ -333,6 +333,7 @@ func compileAttackEvent(clause *parser.TriggerEventClause, pattern *TriggerPatte
 	pattern.AttackRecipientSelection = selection
 	pattern.AttackAlone = clause.AttackAlone
 	pattern.AttackWhileSaddled = clause.AttackWhileSaddled
+	pattern.AttacksDifferentPlayerThanAnother = clause.AttacksDifferentPlayerThanAnother
 	pattern.AttackerCountAtLeast = clause.AttackerCountAtLeast
 	return true
 }

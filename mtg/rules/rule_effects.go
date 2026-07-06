@@ -264,6 +264,23 @@ func ruleEffectSourceIsActive(g *game.Game, effect *game.RuleEffect) bool {
 	return ok && activeBattlefieldPermanent(source)
 }
 
+// expireEndOfCombatRuleEffects removes rule effects that last only until the end
+// of combat (DurationUntilEndOfCombat, "this combat" — Canal Courier). It is
+// called as the combat phase is torn down, before the following phases.
+func expireEndOfCombatRuleEffects(g *game.Game) {
+	if len(g.RuleEffects) == 0 {
+		return
+	}
+	kept := g.RuleEffects[:0]
+	for i := range g.RuleEffects {
+		if g.RuleEffects[i].Duration == game.DurationUntilEndOfCombat {
+			continue
+		}
+		kept = append(kept, g.RuleEffects[i])
+	}
+	g.RuleEffects = kept
+}
+
 func expireRuleEffects(g *game.Game) {
 	if len(g.RuleEffects) == 0 {
 		return
@@ -277,6 +294,12 @@ func expireRuleEffects(g *game.Game) {
 			continue
 		}
 		if effect.Duration == game.DurationUntilEndOfTurn || effect.Duration == game.DurationThisTurn {
+			continue
+		}
+		// A "this combat" effect (DurationUntilEndOfCombat) is normally removed as
+		// the combat phase tears down; drop any that survive to the turn's cleanup
+		// as a backstop so one never outlives its turn.
+		if effect.Duration == game.DurationUntilEndOfCombat {
 			continue
 		}
 		// "Until your next end step" expires at the cleanup that follows the
