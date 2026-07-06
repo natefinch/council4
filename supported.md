@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,949 of 32,501 cards eligible for paper support (52.1%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,950 of 32,501 cards eligible for paper support (52.2%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2351,6 +2351,7 @@ Council4 currently supports **16,949 of 32,501 cards eligible for paper support 
 - Champion of the Parish
 - Champion of the Perished
 - Champion's Helm
+- Champions of Minas Tirith
 - Chance-Met Elves
 - Chancellor of Tales
 - Chandler
