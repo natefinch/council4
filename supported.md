@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,948 of 32,501 cards eligible for paper support (52.1%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,949 of 32,501 cards eligible for paper support (52.1%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -645,6 +645,7 @@ Council4 currently supports **16,948 of 32,501 cards eligible for paper support 
 - Archfiend's Vessel
 - Archive Dragon
 - Archivist
+- Archivist of Gondor
 - Archivist of Oghma
 - Archmage Emeritus
 - Archmage of Runes
