@@ -1273,6 +1273,12 @@ const (
 	// the compiler reads. It backs the mass don't-untap restriction for land and
 	// permanent groups.
 	StaticRuleSubjectBattlefieldPermanents StaticRuleSubjectKind = "StaticRuleSubjectBattlefieldPermanents"
+	// StaticRuleSubjectControlledNotOwnedCreatures scopes a static rule to the
+	// creatures the source's controller controls but does not own ("Creatures you
+	// control but don't own ... can't be sacrificed.", Garland, Royal Kidnapper).
+	// The compiler maps it to the controller-permanents affected group whose
+	// affected-permanent Selection carries the owner-not-controller filter.
+	StaticRuleSubjectControlledNotOwnedCreatures StaticRuleSubjectKind = "StaticRuleSubjectControlledNotOwnedCreatures"
 )
 
 // StaticRuleBlockedObjectKind identifies the protected object an active "can't
@@ -1350,6 +1356,11 @@ const (
 	// always pairs with a requirement constraint and active voice and carries no
 	// qualifier.
 	StaticRuleOperationGoaded StaticRuleOperationKind = "StaticRuleOperationGoaded"
+	// StaticRuleOperationSacrifice is the sacrifice prohibition printed as
+	// "<subject> can't be sacrificed." (Garland, Royal Kidnapper): the affected
+	// permanents can't be sacrificed by any player. It always pairs with a
+	// prohibition constraint and passive voice and carries no qualifier.
+	StaticRuleOperationSacrifice StaticRuleOperationKind = "StaticRuleOperationSacrifice"
 )
 
 // StaticRuleVoice identifies the grammatical role the subject has in an

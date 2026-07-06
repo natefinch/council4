@@ -77,7 +77,7 @@ func TestTargetChoiceResultKinds(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := targetChoicesForSpecs(g, game.Player1, nil, 0, tt.specs)
+			result := targetChoicesForSpecs(g, game.Player1, nil, 0, game.Event{}, tt.specs)
 			if result.kind != tt.wantKind {
 				t.Errorf("kind = %v, want %v", result.kind, tt.wantKind)
 			}

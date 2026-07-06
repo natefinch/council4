@@ -37,22 +37,22 @@ func targetsValidForBodyFromSourceObjectWithModes(g *game.Game, controller game.
 // CR 601.2c): the right number of legal targets is chosen for each instance of
 // the word "target", with no target repeated within one instance (CR 115.3).
 func targetsValidForSpecs(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, specs []game.TargetSpec, targets []game.Target) bool {
-	_, ok := targetCountsForSpecs(g, controller, source, sourceObjectID, specs, targets)
+	_, ok := targetCountsForSpecs(g, controller, source, sourceObjectID, game.Event{}, specs, targets)
 	return ok
 }
 
-func targetCountsForSpecs(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, specs []game.TargetSpec, targets []game.Target) ([]int, bool) {
+func targetCountsForSpecs(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, triggerEvent game.Event, specs []game.TargetSpec, targets []game.Target) ([]int, bool) {
 	if len(specs) == 0 {
 		return nil, len(targets) == 0
 	}
 	counts := make([]int, len(specs))
-	if !targetCountsForSpecFrom(g, controller, source, sourceObjectID, specs, targets, counts, 0, 0) {
+	if !targetCountsForSpecFrom(g, controller, source, sourceObjectID, triggerEvent, specs, targets, counts, 0, 0) {
 		return nil, false
 	}
 	return counts, true
 }
 
-func targetCountsForSpecFrom(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, specs []game.TargetSpec, targets []game.Target, counts []int, specIndex, targetIndex int) bool {
+func targetCountsForSpecFrom(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, triggerEvent game.Event, specs []game.TargetSpec, targets []game.Target, counts []int, specIndex, targetIndex int) bool {
 	if specIndex == len(specs) {
 		return targetIndex == len(targets)
 	}
@@ -64,9 +64,9 @@ func targetCountsForSpecFrom(g *game.Game, controller game.PlayerID, source *gam
 	maxTargets := min(spec.MaxTargets, remaining)
 	for count := spec.MinTargets; count <= maxTargets; count++ {
 		slice := targets[targetIndex : targetIndex+count]
-		if targetsMatchSpecSlice(g, controller, source, sourceObjectID, &spec, slice) &&
+		if targetsMatchSpecSlice(g, controller, source, sourceObjectID, triggerEvent, &spec, slice) &&
 			targetSliceDistinctFromPrior(&spec, targets[:targetIndex], slice) &&
-			targetCountsForSpecFrom(g, controller, source, sourceObjectID, specs, targets, counts, specIndex+1, targetIndex+count) {
+			targetCountsForSpecFrom(g, controller, source, sourceObjectID, triggerEvent, specs, targets, counts, specIndex+1, targetIndex+count) {
 			counts[specIndex] = count
 			return true
 		}
@@ -75,7 +75,7 @@ func targetCountsForSpecFrom(g *game.Game, controller game.PlayerID, source *gam
 }
 
 func spellTargetCounts(g *game.Game, controller game.PlayerID, card *game.CardDef, chosenModes []int, targets []game.Target) ([]int, bool) {
-	return targetCountsForSpecs(g, controller, card, 0, spellTargetSpecs(card, chosenModes), targets)
+	return targetCountsForSpecs(g, controller, card, 0, game.Event{}, spellTargetSpecs(card, chosenModes), targets)
 }
 
 // spellTargetCountsMatchX reports whether every CountEqualsX target spec of the
@@ -108,17 +108,17 @@ func spellTargetCountsMatchX(g *game.Game, controller game.PlayerID, card *game.
 }
 
 func bodyTargetCounts(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, body game.Ability, targets []game.Target) ([]int, bool) {
-	return bodyTargetCountsWithModes(g, controller, source, sourceObjectID, body, nil, targets)
+	return bodyTargetCountsWithModes(g, controller, source, sourceObjectID, game.Event{}, body, nil, targets)
 }
 
-func bodyTargetCountsWithModes(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, body game.Ability, chosenModes []int, targets []game.Target) ([]int, bool) {
+func bodyTargetCountsWithModes(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, triggerEvent game.Event, body game.Ability, chosenModes []int, targets []game.Target) ([]int, bool) {
 	if body == nil {
 		return nil, len(targets) == 0
 	}
 	if !modesValidForBody(body, chosenModes) {
 		return nil, false
 	}
-	return targetCountsForSpecs(g, controller, source, sourceObjectID, bodyTargetSpecs(body, chosenModes), targets)
+	return targetCountsForSpecs(g, controller, source, sourceObjectID, triggerEvent, bodyTargetSpecs(body, chosenModes), targets)
 }
 
 func bodyTargetCountsWithModesAndRecorded(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, body game.Ability, chosenModes, recorded []int, targets []game.Target) ([]int, bool) {
@@ -135,7 +135,7 @@ func bodyTargetCountsWithModesAndRecorded(g *game.Game, controller game.PlayerID
 		}
 		return append([]int(nil), recorded...), true
 	}
-	return uniqueTargetCountsForSpecs(g, controller, source, sourceObjectID, specs, targets)
+	return uniqueTargetCountsForSpecs(g, controller, source, sourceObjectID, game.Event{}, specs, targets)
 }
 
 func recordedTargetCountsValidForSpecs(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, specs []game.TargetSpec, recorded []int, targets []game.Target) bool {
@@ -150,7 +150,7 @@ func recordedTargetCountsValidForSpecs(g *game.Game, controller game.PlayerID, s
 			count < spec.MinTargets ||
 			count > spec.MaxTargets ||
 			targetIndex+count > len(targets) ||
-			!targetsMatchSpecSlice(g, controller, source, sourceObjectID, &spec, targets[targetIndex:targetIndex+count]) ||
+			!targetsMatchSpecSlice(g, controller, source, sourceObjectID, game.Event{}, &spec, targets[targetIndex:targetIndex+count]) ||
 			!targetSliceDistinctFromPrior(&spec, targets[:targetIndex], targets[targetIndex:targetIndex+count]) {
 			return false
 		}
@@ -159,16 +159,16 @@ func recordedTargetCountsValidForSpecs(g *game.Game, controller game.PlayerID, s
 	return targetIndex == len(targets)
 }
 
-func uniqueTargetCountsForSpecs(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, specs []game.TargetSpec, targets []game.Target) ([]int, bool) {
+func uniqueTargetCountsForSpecs(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, triggerEvent game.Event, specs []game.TargetSpec, targets []game.Target) ([]int, bool) {
 	var matches [][]int
-	appendMatchingTargetCounts(g, controller, source, sourceObjectID, specs, targets, 0, 0, nil, &matches)
+	appendMatchingTargetCounts(g, controller, source, sourceObjectID, triggerEvent, specs, targets, 0, 0, nil, &matches)
 	if len(matches) != 1 {
 		return nil, false
 	}
 	return matches[0], true
 }
 
-func appendMatchingTargetCounts(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, specs []game.TargetSpec, targets []game.Target, specIndex, targetIndex int, prefix []int, matches *[][]int) {
+func appendMatchingTargetCounts(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, triggerEvent game.Event, specs []game.TargetSpec, targets []game.Target, specIndex, targetIndex int, prefix []int, matches *[][]int) {
 	if len(*matches) > 1 {
 		return
 	}
@@ -185,12 +185,12 @@ func appendMatchingTargetCounts(g *game.Game, controller game.PlayerID, source *
 	maxTargets := min(spec.MaxTargets, len(targets)-targetIndex)
 	for count := spec.MinTargets; count <= maxTargets; count++ {
 		slice := targets[targetIndex : targetIndex+count]
-		if !targetsMatchSpecSlice(g, controller, source, sourceObjectID, &spec, slice) ||
+		if !targetsMatchSpecSlice(g, controller, source, sourceObjectID, triggerEvent, &spec, slice) ||
 			!targetSliceDistinctFromPrior(&spec, targets[:targetIndex], slice) {
 			continue
 		}
 		next := append(append([]int(nil), prefix...), count)
-		appendMatchingTargetCounts(g, controller, source, sourceObjectID, specs, targets, specIndex+1, targetIndex+count, next, matches)
+		appendMatchingTargetCounts(g, controller, source, sourceObjectID, triggerEvent, specs, targets, specIndex+1, targetIndex+count, next, matches)
 	}
 }
 
@@ -212,7 +212,7 @@ func targetSliceDistinctFromPrior(spec *game.TargetSpec, prior, slice []game.Tar
 	return true
 }
 
-func targetsMatchSpecSlice(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, spec *game.TargetSpec, targets []game.Target) bool {
+func targetsMatchSpecSlice(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, triggerEvent game.Event, spec *game.TargetSpec, targets []game.Target) bool {
 	if len(targets) < spec.MinTargets || len(targets) > spec.MaxTargets {
 		return false
 	}
@@ -227,7 +227,7 @@ func targetsMatchSpecSlice(g *game.Game, controller game.PlayerID, source *game.
 	}
 	seen := make(map[game.Target]bool, len(targets))
 	for _, target := range targets {
-		if seen[target] || !targetMatchesSpec(g, controller, sourceObjectID, spec, target) || targetProtectedFromSource(g, controller, source, sourceObjectID, target) {
+		if seen[target] || !targetMatchesSpec(g, controller, sourceObjectID, triggerEvent, spec, target) || targetProtectedFromSource(g, controller, source, sourceObjectID, target) {
 			return false
 		}
 		seen[target] = true
@@ -271,13 +271,22 @@ func stackObjectHasAnyLegalTargetsForSpecs(g *game.Game, source *game.CardDef, s
 		return true
 	}
 	targets := append([]game.Target(nil), obj.Targets...)
+	// A resolving triggered ability carries its triggering event on the stack
+	// object; thread it into resolution-time legality so "that player" style
+	// predicates (Garland, Royal Kidnapper) resolve against the opponent who
+	// caused the trigger rather than failing closed. Spells and events without a
+	// trigger event contribute a zero event, matching prior behaviour.
+	var triggerEvent game.Event
+	if obj.HasTriggerEvent {
+		triggerEvent = obj.TriggerEvent
+	}
 	anyLegal := false
 	targetIndex := 0
 	for specIndex := range specs {
 		spec := normalizeTargetSpec(&specs[specIndex])
 		for range counts[specIndex] {
 			target := targets[targetIndex]
-			if targetLegalForSpecAtResolution(g, obj.Controller, source, sourceObjectID, &spec, target) {
+			if targetLegalForSpecAtResolution(g, obj.Controller, source, sourceObjectID, triggerEvent, &spec, target) {
 				anyLegal = true
 			} else {
 				targets[targetIndex] = game.DeferredTargetFrom(target)
@@ -337,11 +346,11 @@ func targetCountsForCardinality(specs []game.TargetSpec, targetCount int, counts
 // predicate and the source must still be able to target it (e.g. it has not gained
 // protection, CR 702.16b, or hexproof, CR 702.11b-c). A target that has left the
 // zone it was in when targeted no longer matches its spec and so is illegal.
-func targetLegalForSpecAtResolution(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, spec *game.TargetSpec, target game.Target) bool {
+func targetLegalForSpecAtResolution(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, triggerEvent game.Event, spec *game.TargetSpec, target game.Target) bool {
 	if targetSpecUsesExternalChooser(spec) {
 		return externalChooserCouldChooseTarget(g, controller, source, sourceObjectID, spec, target)
 	}
-	return targetMatchesSpec(g, controller, sourceObjectID, spec, target) &&
+	return targetMatchesSpec(g, controller, sourceObjectID, triggerEvent, spec, target) &&
 		!targetProtectedFromSource(g, controller, source, sourceObjectID, target)
 }
 

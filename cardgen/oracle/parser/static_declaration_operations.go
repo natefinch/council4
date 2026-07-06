@@ -1993,6 +1993,13 @@ func parseStaticProhibitionRuleOperation(
 			Span:  shared.SpanOf(tokens[verb : verb+2]),
 		}, nil)
 	}
+	if staticWordsAt(tokens, verb, "be", "sacrificed") {
+		return staticRuleOperation(tokens, index, verb+2, subject, constraint, StaticRuleOperation{
+			Kind:  StaticRuleOperationSacrifice,
+			Voice: StaticRuleVoicePassive,
+			Span:  shared.SpanOf(tokens[verb : verb+2]),
+		}, nil)
+	}
 	if staticWordsAt(tokens, verb, "transform") {
 		return staticRuleOperation(tokens, index, verb+1, subject, constraint, StaticRuleOperation{
 			Kind:  StaticRuleOperationTransform,
@@ -2150,6 +2157,7 @@ func staticRuleSubjectKindAllowed(subject StaticDeclarationSubject) bool {
 	case StaticDeclarationSubjectGroup:
 		return subject.Group.Kind == EffectStaticSubjectAttachedObject ||
 			subject.Group.Kind == EffectStaticSubjectControlledCreatures ||
+			subject.Group.Kind == EffectStaticSubjectControlledNotOwnedCreatures ||
 			subject.Group.Kind == EffectStaticSubjectControlledCreatureSubtype ||
 			subject.Group.Kind == EffectStaticSubjectOpponentControlledCreatures ||
 			subject.Group.Kind == EffectStaticSubjectAllCreatures ||
@@ -2200,6 +2208,10 @@ func staticRuleSubjectForDeclaration(subject StaticDeclarationSubject, operation
 		case EffectStaticSubjectControlledCreatureSubtype:
 			if operation.Kind == StaticRuleOperationTransform && operation.Voice == StaticRuleVoiceActive {
 				return StaticRuleSubject{Kind: StaticRuleSubjectControlledCreatures, Span: subject.Span}, true
+			}
+		case EffectStaticSubjectControlledNotOwnedCreatures:
+			if operation.Kind == StaticRuleOperationSacrifice && operation.Voice == StaticRuleVoicePassive {
+				return StaticRuleSubject{Kind: StaticRuleSubjectControlledNotOwnedCreatures, Span: subject.Span}, true
 			}
 		case EffectStaticSubjectOpponentControlledCreatures:
 			if operation.Kind == StaticRuleOperationAttack && operation.Voice == StaticRuleVoiceActive {

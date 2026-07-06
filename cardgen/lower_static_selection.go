@@ -52,6 +52,9 @@ func lowerStaticSelection(selection compiler.StaticSelection) (game.Selection, b
 	if selection.Commander {
 		result.MatchCommander = true
 	}
+	if selection.OwnerNotController {
+		result.OwnerNotController = true
+	}
 	switch {
 	case selection.PowerOrToughness:
 		result.AnyOf = []game.Selection{

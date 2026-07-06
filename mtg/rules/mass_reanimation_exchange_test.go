@@ -86,3 +86,57 @@ func TestMassReanimationExchangeSwapsGraveyardAndBattlefield(t *testing.T) {
 		t.Error("reanimated creature stranded in exile")
 	}
 }
+
+// cantSacrificeControlNotOwnEnchantment installs Garland, Royal Kidnapper's
+// third-ability "creatures you control but don't own ... can't be sacrificed"
+// rule effect from a non-creature source, so tests can protect a foreign
+// creature without adding an extra creature to a sacrifice pool.
+func cantSacrificeControlNotOwnEnchantment(g *game.Game, controller game.PlayerID) *game.Permanent {
+	return addCombatPermanent(g, controller, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Sacrifice Shield",
+		Types: []types.Card{types.Enchantment},
+		StaticAbilities: []game.StaticAbility{{
+			RuleEffects: []game.RuleEffect{{
+				Kind:               game.RuleEffectCantBeSacrificed,
+				AffectedController: game.ControllerYou,
+				PermanentTypes:     []types.Card{types.Creature},
+				AffectedSelection:  game.Selection{OwnerNotController: true},
+			}},
+		}},
+	}})
+}
+
+// TestMassReanimationExchangeSkipsCreaturesThatCantBeSacrificed verifies that a
+// creature protected by a "can't be sacrificed" static (Garland's control-not-own
+// shield) is not gathered as a sacrifice victim by a Living-Death-style mass
+// reanimation exchange, while an unprotected creature the same player controls is.
+func TestMassReanimationExchangeSkipsCreaturesThatCantBeSacrificed(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Source",
+		Types: []types.Card{types.Artifact},
+	}})
+	obj := triggeredObjFor(source)
+
+	cantSacrificeControlNotOwnEnchantment(g, game.Player1)
+	protected := makeCreaturePermanent(g, game.Player2, "Borrowed Beast")
+	protected.Controller = game.Player1
+	victim := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Doomed Bear",
+		Types: []types.Card{types.Creature},
+	}})
+
+	instr := &game.Instruction{Primitive: game.MassReanimationExchange{
+		Selection: game.Selection{RequiredTypes: []types.Card{types.Creature}},
+	}}
+	agents := [game.NumPlayers]PlayerAgent{}
+	engine.resolveInstructionWithChoices(g, obj, instr, agents, &TurnLog{})
+
+	if _, ok := permanentByObjectID(g, protected.ObjectID); !ok {
+		t.Error("a can't-be-sacrificed creature was sacrificed by the mass reanimation exchange")
+	}
+	if _, ok := permanentByObjectID(g, victim.ObjectID); ok {
+		t.Error("the unprotected creature was not sacrificed")
+	}
+}

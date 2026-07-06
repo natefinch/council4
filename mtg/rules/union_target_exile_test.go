@@ -54,11 +54,11 @@ func TestUnionTargetExileMatchesEachUnionMember(t *testing.T) {
 		land := addTypedPermanent(g, game.Player2, []types.Card{types.Land}, nil)
 
 		for _, member := range []*game.Permanent{artifact, creature, enchantment} {
-			if !permanentTargetMatchesSpec(g, game.Player1, member.ObjectID, &spec, member.ObjectID) {
+			if !permanentTargetMatchesSpec(g, game.Player1, member.ObjectID, game.Event{}, &spec, member.ObjectID) {
 				t.Errorf("union member %v was not a legal target", member.CardInstanceID)
 			}
 		}
-		if permanentTargetMatchesSpec(g, game.Player1, land.ObjectID, &spec, land.ObjectID) {
+		if permanentTargetMatchesSpec(g, game.Player1, land.ObjectID, game.Event{}, &spec, land.ObjectID) {
 			t.Error("land outside the union was a legal target")
 		}
 	})
@@ -80,11 +80,11 @@ func TestUnionTargetExileMatchesEachUnionMember(t *testing.T) {
 		goblin := addTypedPermanent(g, game.Player2, []types.Card{types.Creature}, []types.Sub{types.Goblin})
 
 		for _, member := range []*game.Permanent{skeleton, vampire, zombie} {
-			if !permanentTargetMatchesSpec(g, game.Player1, member.ObjectID, &spec, member.ObjectID) {
+			if !permanentTargetMatchesSpec(g, game.Player1, member.ObjectID, game.Event{}, &spec, member.ObjectID) {
 				t.Errorf("union member %v was not a legal target", member.CardInstanceID)
 			}
 		}
-		if permanentTargetMatchesSpec(g, game.Player1, goblin.ObjectID, &spec, goblin.ObjectID) {
+		if permanentTargetMatchesSpec(g, game.Player1, goblin.ObjectID, game.Event{}, &spec, goblin.ObjectID) {
 			t.Error("Goblin outside the subtype union was a legal target")
 		}
 	})

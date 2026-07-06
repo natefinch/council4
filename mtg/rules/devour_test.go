@@ -106,3 +106,28 @@ func TestDevourDeclineSacrifice(t *testing.T) {
 		t.Fatal("creature was sacrificed despite declining devour")
 	}
 }
+
+// TestDevourSkipsCreaturesThatCantBeSacrificed verifies that a creature protected
+// by a "can't be sacrificed" static (Garland's control-not-own shield) is never
+// offered to Devour: only the unprotected fodder is eaten and the protected
+// creature survives with the entering creature gaining counters solely for the
+// fodder.
+func TestDevourSkipsCreaturesThatCantBeSacrificed(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	cantSacrificeControlNotOwnEnchantment(g, game.Player1)
+	protected := makeCreaturePermanent(g, game.Player2, "Borrowed Beast")
+	protected.Controller = game.Player1
+	fodder := addCombatPermanent(g, game.Player1, fodderCreatureDef("Fodder One"))
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: &choiceOnlyAgent{choices: [][]int{{0}}}}
+	permanent := enterRiotCreature(t, g, engine, devourCreatureDef(2), agents)
+	if got := permanent.Counters.Get(counter.PlusOnePlusOne); got != 2 {
+		t.Fatalf("devour counters = %d, want 2 (only the unprotected fodder eaten)", got)
+	}
+	if _, ok := permanentByObjectID(g, protected.ObjectID); !ok {
+		t.Error("a can't-be-sacrificed creature was devoured")
+	}
+	if _, ok := permanentByObjectID(g, fodder.ObjectID); ok {
+		t.Error("the unprotected fodder was not devoured")
+	}
+}

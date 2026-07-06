@@ -43,13 +43,13 @@ func TestBareSubtypeTargetSpecMatchesBySubtype(t *testing.T) {
 		}),
 	}
 
-	if !permanentTargetMatchesSpec(g, game.Player1, 0, &spec, ownBeast.ObjectID) {
+	if !permanentTargetMatchesSpec(g, game.Player1, 0, game.Event{}, &spec, ownBeast.ObjectID) {
 		t.Fatal("controlled Beast is not a legal target, want legal")
 	}
-	if permanentTargetMatchesSpec(g, game.Player1, 0, &spec, ownSoldier.ObjectID) {
+	if permanentTargetMatchesSpec(g, game.Player1, 0, game.Event{}, &spec, ownSoldier.ObjectID) {
 		t.Fatal("controlled non-Beast is a legal target, want illegal")
 	}
-	if permanentTargetMatchesSpec(g, game.Player1, 0, &spec, opponentBeast.ObjectID) {
+	if permanentTargetMatchesSpec(g, game.Player1, 0, game.Event{}, &spec, opponentBeast.ObjectID) {
 		t.Fatal("opponent's Beast is a legal target for a you-control spec, want illegal")
 	}
 }
@@ -74,10 +74,10 @@ func TestBareSubtypeAnotherTargetExcludesSource(t *testing.T) {
 		}),
 	}
 
-	if permanentTargetMatchesSpec(g, game.Player1, source.ObjectID, &spec, source.ObjectID) {
+	if permanentTargetMatchesSpec(g, game.Player1, source.ObjectID, game.Event{}, &spec, source.ObjectID) {
 		t.Fatal("source permanent is a legal target for an \"another\" spec, want excluded")
 	}
-	if !permanentTargetMatchesSpec(g, game.Player1, source.ObjectID, &spec, otherSoldier.ObjectID) {
+	if !permanentTargetMatchesSpec(g, game.Player1, source.ObjectID, game.Event{}, &spec, otherSoldier.ObjectID) {
 		t.Fatal("a different controlled Soldier is not a legal target, want legal")
 	}
 }

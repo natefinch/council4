@@ -356,6 +356,7 @@ func emitSentenceResolvingSyntax(
 		sentences[i].Effects = parseEffects(sentences[i], tokens, atoms)
 		recognizeTargetOpponentHandManaSentence(&sentences[i])
 		recognizeLookAtTargetPlayerHandSentence(&sentences[i])
+		recognizeGainControlThatPlayerMonarchSentence(&sentences[i])
 		reconcileRetargetSentenceTargets(&sentences[i])
 		collapseManaSpendRiderSentence(&sentences[i], tokens)
 		currentEffects += len(sentences[i].Effects)
@@ -2910,6 +2911,52 @@ func recognizeLookAtTargetPlayerHandSentence(sentence *Sentence) {
 	sentence.Effects[0].Targets = []TargetSyntax{target}
 	sentence.Effects[0].Context = EffectContextTarget
 	sentence.Effects[0].Exact = true
+}
+
+// recognizeGainControlThatPlayerMonarchSentence types the target of the
+// gain-control monarch ability "gain control of target creature that player
+// controls for as long as they're the monarch." (Garland, Royal Kidnapper).
+// The generic target parser leaves the "that player controls" controller clause
+// untyped because "that player" is a triggering-event reference rather than a
+// board relation; without the controller relation the target does not
+// reconstruct and the gain-control clause never becomes exact. This retypes the
+// creature target's controller to SelectionControllerThatPlayer so it round-trips
+// and lowers to the runtime "controlled by the event player" restriction. It is
+// gated on the monarch-bound gain-control duration, which is unique to this
+// card, so no other "that player controls" wording is affected.
+func recognizeGainControlThatPlayerMonarchSentence(sentence *Sentence) {
+	if len(sentence.Effects) != 1 || len(sentence.Targets) != 1 {
+		return
+	}
+	effect := &sentence.Effects[0]
+	if effect.Kind != EffectGainControl ||
+		effect.Context != EffectContextController ||
+		effect.Duration != EffectDurationWhileThatPlayerIsMonarch ||
+		len(effect.Targets) != 1 {
+		return
+	}
+	target := effect.Targets[0]
+	if !strings.EqualFold(target.Text, "target creature that player controls") {
+		return
+	}
+	// The generic target parser wipes the selection to bare Span/Text because the
+	// "that player controls" controller clause is an unrecognized qualifier.
+	// Rebuild the creature selection with the event-player controller relation so
+	// the target round-trips and lowers to the controlled-by-event-player
+	// restriction.
+	target.Selection = SelectionSyntax{
+		Span:       target.Selection.Span,
+		Text:       target.Selection.Text,
+		Kind:       SelectionCreature,
+		Controller: SelectionControllerThatPlayer,
+	}
+	target.Exact = exactSinglePermanentTargetSyntax(target.Text, target.Selection)
+	if !target.Exact {
+		return
+	}
+	sentence.Targets[0] = target
+	effect.Targets[0] = target
+	effect.Exact = exactEffectSyntax(effect)
 }
 
 // recognizeDynamicCountMana types an add-mana body whose produced amount scales

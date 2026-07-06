@@ -110,6 +110,14 @@ type ContinuousEffect struct {
 	CreatedTurn    int
 	ExpiresFor     PlayerID
 
+	// ExpiresForRef binds ExpiresFor to a player resolved at application time,
+	// used by DurationForAsLongAsPlayerIsMonarch to bind the duration to the
+	// triggering player who became the monarch ("... for as long as they're the
+	// monarch."). The runtime resolves it once when the effect is created and
+	// stores the result in ExpiresFor; it is the ExpiresFor analogue of
+	// NewControllerRef.
+	ExpiresForRef opt.V[PlayerReference]
+
 	AffectedObjectID id.ID
 	AffectedSource   bool
 	Group            GroupReference

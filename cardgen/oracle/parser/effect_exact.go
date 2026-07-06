@@ -4020,6 +4020,8 @@ func exactGainControlEffectSyntax(effect *EffectSyntax) bool {
 		return exactGainControlBattlefieldSourceDuration(text, prefix)
 	case EffectDurationWhileControlledCreatureEnchanted:
 		return strings.EqualFold(text, prefix+" for as long as that creature is enchanted.")
+	case EffectDurationWhileThatPlayerIsMonarch:
+		return strings.EqualFold(text, prefix+" for as long as they're the monarch.")
 	default:
 		return false
 	}

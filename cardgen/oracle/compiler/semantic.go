@@ -1258,6 +1258,11 @@ const (
 	ControllerYou
 	ControllerOpponent
 	ControllerNotYou
+	// ControllerThatPlayer restricts a target to permanents controlled by the
+	// triggering event's player ("target creature that player controls",
+	// Garland, Royal Kidnapper). The lowering maps it to the runtime
+	// Selection.ControlledByEventPlayer predicate.
+	ControllerThatPlayer
 )
 
 // CompiledSelector is a conservative semantic summary of a noun phrase.
@@ -1906,6 +1911,10 @@ const (
 	// bounded play window Inti, Seneschal of the Sun grants its impulse-exiled
 	// card. The effect expires at the controller's next end step.
 	DurationUntilYourNextEndStep
+	// DurationForAsLongAsThatPlayerIsMonarch matches "for as long as they're the
+	// monarch" (Garland, Royal Kidnapper). The gain-control effect expires when
+	// the triggering player who became the monarch is no longer the monarch.
+	DurationForAsLongAsThatPlayerIsMonarch
 )
 
 // StaticSubjectKind identifies the group affected by a static continuous effect.
@@ -1982,6 +1991,13 @@ const (
 	// Starry-Eyed Skyrider). The token state rides the affected group alongside
 	// the attacking combat state.
 	StaticSubjectControlledAttackingCreatureTokens
+	// StaticSubjectControlledNotOwnedCreatures names the creatures the source's
+	// controller controls but does not own ("Creatures you control but don't own
+	// get +2/+2 and can't be sacrificed.", Garland, Royal Kidnapper). Its group is
+	// the controller-permanents domain narrowed to creatures, and its selection
+	// carries the owner-not-controller filter. Added last so existing subjects keep
+	// their wire values.
+	StaticSubjectControlledNotOwnedCreatures
 )
 
 // CompiledDamageRecipient bundles the primary-recipient descriptors of a

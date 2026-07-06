@@ -1650,6 +1650,14 @@ func applyTypedContinuousEffects(g *game.Game, obj *game.StackObject, permanent 
 		if runtimeEffect.Duration == game.DurationUntilYourNextTurn && runtimeEffect.ExpiresFor == game.Player1 {
 			runtimeEffect.ExpiresFor = obj.Controller
 		}
+		if runtimeEffect.ExpiresForRef.Exists {
+			expiresFor, ok := resolvePlayerReference(g, obj, runtimeEffect.ExpiresForRef.Val)
+			if !ok {
+				continue
+			}
+			runtimeEffect.ExpiresFor = expiresFor
+			runtimeEffect.ExpiresForRef = opt.V[game.PlayerReference]{}
+		}
 		if runtimeEffect.NewController.Exists && runtimeEffect.NewController.Val == game.Player1 {
 			runtimeEffect.NewController = opt.Val(obj.Controller)
 		}

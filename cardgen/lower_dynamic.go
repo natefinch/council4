@@ -1179,6 +1179,8 @@ func permanentTargetSpecAllowingUnbounded(target compiler.CompiledTarget, allowU
 		selection.Controller = game.ControllerOpponent
 	case compiler.ControllerNotYou:
 		selection.Controller = game.ControllerNotYou
+	case compiler.ControllerThatPlayer:
+		selection.ControlledByEventPlayer = true
 	default:
 		return game.TargetSpec{}, false
 	}

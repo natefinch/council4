@@ -56,9 +56,9 @@ func FuzzTargetEnumerationIsStable(f *testing.F) {
 
 		specs := []game.TargetSpec{{MinTargets: 0, MaxTargets: 2, Constraint: "creature"}}
 
-		first := targetChoicesForSpecs(g, game.Player1, nil, 0, specs)
+		first := targetChoicesForSpecs(g, game.Player1, nil, 0, game.Event{}, specs)
 		for i := range 5 {
-			again := targetChoicesForSpecs(g, game.Player1, nil, 0, specs)
+			again := targetChoicesForSpecs(g, game.Player1, nil, 0, game.Event{}, specs)
 			if !reflect.DeepEqual(first.choices, again.choices) {
 				t.Fatalf("iteration %d: choices changed - not deterministic", i+1)
 			}

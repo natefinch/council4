@@ -507,7 +507,7 @@ func TestSelectionOnlyTargetSpecMatchesPermanent(t *testing.T) {
 	if !permanentTargetMatchesSpec(
 		board.g,
 		game.Player1,
-		0,
+		0, game.Event{},
 		&spec,
 		board.whiteCreature.ObjectID,
 	) {
@@ -516,7 +516,7 @@ func TestSelectionOnlyTargetSpecMatchesPermanent(t *testing.T) {
 	if permanentTargetMatchesSpec(
 		board.g,
 		game.Player1,
-		0,
+		0, game.Event{},
 		&spec,
 		board.artifact.ObjectID,
 	) {
@@ -557,7 +557,7 @@ func TestSelectionAnyOfKeepsQualifiedAlternativesAndCommonController(t *testing.
 		"nonbasic land":       nonbasicLand,
 		"basic artifact land": basicArtifactLand,
 	} {
-		if !permanentTargetMatchesSpec(board.g, game.Player1, 0, &spec, permanent.ObjectID) {
+		if !permanentTargetMatchesSpec(board.g, game.Player1, 0, game.Event{}, &spec, permanent.ObjectID) {
 			t.Errorf("%s did not match the qualified union", name)
 		}
 	}
@@ -566,7 +566,7 @@ func TestSelectionAnyOfKeepsQualifiedAlternativesAndCommonController(t *testing.
 		"opponent creature": board.greenCreatureP2,
 		"your basic land":   board.forest,
 	} {
-		if permanentTargetMatchesSpec(board.g, game.Player1, 0, &spec, permanent.ObjectID) {
+		if permanentTargetMatchesSpec(board.g, game.Player1, 0, game.Event{}, &spec, permanent.ObjectID) {
 			t.Errorf("%s unexpectedly matched the qualified union", name)
 		}
 	}

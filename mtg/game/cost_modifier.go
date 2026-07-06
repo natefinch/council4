@@ -533,6 +533,14 @@ const (
 	// the Crown). The runtime resolves the redirect target from the rule effect's
 	// SourceObjectID. Added last so existing kinds keep their wire values.
 	RuleEffectRedirectDamageToSource
+	// RuleEffectCantBeSacrificed prevents the affected permanents from being
+	// sacrificed ("Creatures you control but don't own ... can't be sacrificed.",
+	// Garland, Royal Kidnapper). AffectedController plus AffectedSelection scope
+	// the protected permanents (or AffectedSource for a self form). The runtime
+	// excludes a matching permanent from every sacrifice choice and refuses to
+	// sacrifice it, whether as a cost or by an effect. Added last so existing
+	// kinds keep their wire values.
+	RuleEffectCantBeSacrificed
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -594,7 +602,8 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectPlayerShroud,
 		RuleEffectCanBlockAdditional,
 		RuleEffectDamageDoesntCauseLifeLoss,
-		RuleEffectRedirectDamageToSource:
+		RuleEffectRedirectDamageToSource,
+		RuleEffectCantBeSacrificed:
 		return true
 	default:
 		return false

@@ -1636,6 +1636,8 @@ func targetControllerSuffix(expected string, controller SelectionController) (st
 		return expected + " an opponent controls", true
 	case SelectionControllerNotYou:
 		return expected + " you don't control", true
+	case SelectionControllerThatPlayer:
+		return expected + " that player controls", true
 	default:
 		return "", false
 	}
@@ -1655,6 +1657,8 @@ func targetControllerWords(controller SelectionController) ([]string, bool) {
 		return []string{"an", "opponent", "controls"}, true
 	case SelectionControllerNotYou:
 		return []string{"you", "don't", "control"}, true
+	case SelectionControllerThatPlayer:
+		return []string{"that", "player", "controls"}, true
 	default:
 		return nil, false
 	}
@@ -3547,6 +3551,13 @@ func parseEffectStaticSubject(tokens []shared.Token, atoms Atoms) EffectStaticSu
 	case len(tokens) >= 5 && effectWordsAt(tokens, 0, "other", "creatures", "you", "control") &&
 		staticGroupVerb(tokens[4]):
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectOtherControlledCreatures, Span: shared.SpanOf(tokens[:4])}
+	case len(tokens) >= 7 && effectWordsAt(tokens, 0, "creatures", "you", "control", "but", "don't", "own") &&
+		staticGroupVerb(tokens[6]):
+		// "Creatures you control but don't own get ..." names the permanents a
+		// player controls whose owner is a different player (Garland, Royal
+		// Kidnapper). It maps to the controller-permanents group carrying the
+		// owner-not-controller filter downstream.
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledNotOwnedCreatures, Span: shared.SpanOf(tokens[:6])}
 	case len(tokens) >= 4 && effectWordsAt(tokens, 0, "creatures", "you", "control") &&
 		staticGroupVerb(tokens[3]):
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledCreatures, Span: shared.SpanOf(tokens[:3])}

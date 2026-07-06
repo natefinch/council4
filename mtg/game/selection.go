@@ -299,6 +299,24 @@ type Selection struct {
 	// subject, which receives no damage, never matches. Placed at the end so the
 	// bool joins no existing cluster's packing.
 	DealtDamageThisTurn bool
+
+	// OwnerNotController requires the matched permanent's owner to differ from
+	// its controller ("creatures you control but don't own", Garland, Royal
+	// Kidnapper). It is the permanent-only ownership predicate that distinguishes
+	// permanents a player controls without owning from those they both own and
+	// control. A non-battlefield subject, which has no distinct controller, never
+	// matches. Placed at the end so the bool joins no existing cluster's packing.
+	OwnerNotController bool
+
+	// ControlledByEventPlayer requires the matched permanent to be controlled by
+	// the player of the triggering event ("target creature that player controls",
+	// Garland, Royal Kidnapper, where "that player" is the opponent who just
+	// became the monarch). The rules layer resolves the event player from the
+	// resolving ability's triggering event and compares it to the permanent's
+	// controller. Outside a triggered resolution there is no event player, so the
+	// predicate matches nothing. Placed at the end so the bool joins no existing
+	// cluster's packing.
+	ControlledByEventPlayer bool
 }
 
 // ManaValueDynamicBound bounds a card's mana value by a controller-relative
@@ -360,7 +378,9 @@ func (s Selection) Empty() bool {
 		!s.RequirePermanentCard &&
 		!s.NameUniqueAmongControlled &&
 		!s.SharesCreatureTypeWithSource &&
-		!s.DealtDamageThisTurn
+		!s.DealtDamageThisTurn &&
+		!s.OwnerNotController &&
+		!s.ControlledByEventPlayer
 }
 
 // Validate reports structural contradictions in the Selection that represent

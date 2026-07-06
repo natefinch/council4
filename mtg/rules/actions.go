@@ -402,7 +402,7 @@ func (e *Engine) legalActivateAbilityActions(g *game.Game, playerID game.PlayerI
 				effectiveCost := effectiveActivatedAbilityCost(g, playerID, sourceCard, body)
 				for _, xValue := range legalXValuesForCostAndAdditional(g, playerID, manaCostPtr(effectiveCost), body.AdditionalCosts) {
 					for _, modes := range modeChoicesForBody(body) {
-						targetResult := targetChoicesForBodyFromSourceObjectWithModes(g, playerID, card, permanent.ObjectID, body, modes)
+						targetResult := targetChoicesForBodyFromSourceObjectWithModes(g, playerID, card, permanent.ObjectID, game.Event{}, body, modes)
 						if targetResult.kind == targetInvalidSpec {
 							continue
 						}
@@ -455,7 +455,7 @@ func (*Engine) legalHandActivateAbilityActions(g *game.Game, playerID game.Playe
 			body := &indexed.body
 			for _, xValue := range legalXValuesForCostAndAdditional(g, playerID, manaCostPtr(body.ManaCost), body.AdditionalCosts) {
 				for _, modes := range modeChoicesForBody(body) {
-					targetResult := targetChoicesForBodyFromSourceObjectWithModes(g, playerID, def, 0, body, modes)
+					targetResult := targetChoicesForBodyFromSourceObjectWithModes(g, playerID, def, 0, game.Event{}, body, modes)
 					if targetResult.kind == targetInvalidSpec {
 						continue
 					}
@@ -488,7 +488,7 @@ func (*Engine) legalGraveyardActivateAbilityActions(g *game.Game, playerID game.
 			idx := def.ActivatedAbilityIndex(i)
 			for _, xValue := range legalXValuesForCostAndAdditional(g, playerID, manaCostPtr(body.ManaCost), body.AdditionalCosts) {
 				for _, modes := range modeChoicesForBody(body) {
-					targetResult := targetChoicesForBodyFromSourceObjectWithModes(g, playerID, def, 0, body, modes)
+					targetResult := targetChoicesForBodyFromSourceObjectWithModes(g, playerID, def, 0, game.Event{}, body, modes)
 					if targetResult.kind == targetInvalidSpec {
 						continue
 					}

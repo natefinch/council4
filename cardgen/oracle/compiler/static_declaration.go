@@ -120,6 +120,9 @@ const (
 	// StaticRuleDomainGoad governs whether the subject is goaded ("<subject> is
 	// goaded.").
 	StaticRuleDomainGoad
+	// StaticRuleDomainSacrifice governs whether the subject can be sacrificed
+	// ("<subject> can't be sacrificed.", Garland, Royal Kidnapper).
+	StaticRuleDomainSacrifice
 )
 
 // Static rule declarations currently recognized by Card Generation.
@@ -209,6 +212,11 @@ const (
 	// player other than that controller if able. It lowers to the goaded runtime
 	// rule effect.
 	StaticRuleGoaded
+	// StaticRuleCantBeSacrificed is the sacrifice prohibition "<subject> can't be
+	// sacrificed." (Garland, Royal Kidnapper): the affected permanents can't be
+	// sacrificed by any player. It lowers to the can't-be-sacrificed runtime rule
+	// effect.
+	StaticRuleCantBeSacrificed
 )
 
 // StaticBlockerRestrictionKind identifies the blocker characteristic bounding a
@@ -383,6 +391,11 @@ type StaticSelection struct {
 	// artifacts ...", Encroaching Mycosynth). Lowering routes it onto the runtime
 	// Selection.ExcludedTypes predicate.
 	ExcludedTypes []types.Card
+	// OwnerNotController, when true, restricts the group to permanents whose owner
+	// differs from their controller ("creatures you control but don't own",
+	// Garland, Royal Kidnapper). Lowering routes it onto the runtime
+	// Selection.OwnerNotController predicate.
+	OwnerNotController bool
 }
 
 // StaticGroupReference describes WHERE a static declaration finds objects and
@@ -930,6 +943,10 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Abili
 	}
 	if declaration, ok := recognizeStaticCharacteristicPowerToughnessDeclaration(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
+		return
+	}
+	if declarations, ok := recognizeStaticControlNotOwnedAnthemRuleDeclarations(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: declarations}
 		return
 	}
 	if declarations, ok := recognizeStaticPowerToughnessRuleDeclarations(*compiled, statics); ok {
@@ -1534,7 +1551,7 @@ func staticRuleGroupDomain(kind parser.StaticRuleSubjectKind) (StaticGroupDomain
 		return StaticGroupSource, true
 	case parser.StaticRuleSubjectAttachedObject, parser.StaticRuleSubjectAttachedPermanent:
 		return StaticGroupAttachedObject, true
-	case parser.StaticRuleSubjectControlledCreatures:
+	case parser.StaticRuleSubjectControlledCreatures, parser.StaticRuleSubjectControlledNotOwnedCreatures:
 		return StaticGroupSourceControllerPermanents, true
 	case parser.StaticRuleSubjectBattlefieldCreatures, parser.StaticRuleSubjectBattlefieldPermanents:
 		return StaticGroupBattlefield, true
@@ -1750,6 +1767,13 @@ func semanticStaticRuleForSyntax(rule parser.StaticRuleSyntax) (StaticRuleKind, 
 		len(rule.Qualifiers) == 0 {
 		return StaticRuleGoaded, StaticZoneBattlefield, true
 	}
+	if rule.Subject.Kind == parser.StaticRuleSubjectControlledNotOwnedCreatures &&
+		rule.Constraint.Kind == parser.StaticRuleConstraintProhibition &&
+		rule.Operation.Kind == parser.StaticRuleOperationSacrifice &&
+		rule.Operation.Voice == parser.StaticRuleVoicePassive &&
+		len(rule.Qualifiers) == 0 {
+		return StaticRuleCantBeSacrificed, StaticZoneBattlefield, true
+	}
 	return StaticRuleUnknown, StaticZoneBattlefield, false
 }
 
@@ -1888,6 +1912,8 @@ func staticRuleDomain(rule StaticRuleKind) StaticRuleDomain {
 		return StaticRuleDomainTransform
 	case StaticRuleGoaded:
 		return StaticRuleDomainGoad
+	case StaticRuleCantBeSacrificed:
+		return StaticRuleDomainSacrifice
 	default:
 		return StaticRuleDomainUnknown
 	}
@@ -2259,6 +2285,64 @@ func recognizeStaticPowerToughnessKeywordLossDeclarations(ability CompiledAbilit
 // are accepted only when the affected subject is the source, keeping conditional
 // rules within the single-subject runtime model; battlefield-group subjects with
 // a condition fail closed.
+// recognizeStaticControlNotOwnedAnthemRuleDeclarations maps the anthem-plus-rule
+// paragraph "Creatures you control but don't own get +N/+N and can't be
+// sacrificed." (Garland, Royal Kidnapper) onto a power/toughness declaration and
+// a can't-be-sacrificed rule declaration that SHARE the same affected group. The
+// group derives from the resolving effect's not-owned subject, so both
+// declarations carry the owner-not-controller creature selection; the generic
+// power/toughness rule recognizer would instead give the rule declaration a
+// domain-only group and drop that filter. Costs, triggers, targets, conditions,
+// keyword grants, or any other subject fail closed.
+func recognizeStaticControlNotOwnedAnthemRuleDeclarations(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) ([]StaticDeclaration, bool) {
+	if !staticSyntaxKindsAre(statics,
+		parser.StaticDeclarationContinuousPowerToughness,
+		parser.StaticDeclarationRule) {
+		return nil, false
+	}
+	ptNode := &statics[0]
+	ruleNode := &statics[1]
+	if ptNode.Subject.Kind != parser.StaticDeclarationSubjectGroup ||
+		ptNode.Subject.Group.Kind != parser.EffectStaticSubjectControlledNotOwnedCreatures ||
+		ruleNode.Rule.Subject.Kind != parser.StaticRuleSubjectControlledNotOwnedCreatures {
+		return nil, false
+	}
+	rule, zone, ok := semanticStaticRuleForSyntax(ruleNode.Rule)
+	if !ok || rule != StaticRuleCantBeSacrificed {
+		return nil, false
+	}
+	if ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 1 ||
+		ability.Content.Effects[0].Kind != EffectModifyPT ||
+		ability.Content.Effects[0].Duration != DurationNone {
+		return nil, false
+	}
+	effect := &ability.Content.Effects[0]
+	if !effect.PowerDelta.Known || !effect.ToughnessDelta.Known {
+		return nil, false
+	}
+	if statics[0].Dynamic != (effect.Amount.DynamicKind != DynamicAmountNone) {
+		return nil, false
+	}
+	if len(staticDeclarationGrantKeywords(ability.Content)) != 0 {
+		return nil, false
+	}
+	group, ok := staticDeclarationEffectGroup(ability, effect)
+	if !ok || group.Group.Domain != StaticGroupSourceControllerPermanents {
+		return nil, false
+	}
+	ruleDeclaration := staticRuleDeclaration(ability.Span, group.Group.Span, ruleNode.OperationSpan, rule, zone, group.Group.Domain, staticBlockerRestrictionForSyntax(ruleNode.Rule), nil)
+	ruleDeclaration.Group = group.Group
+	return []StaticDeclaration{
+		staticPTDeclaration(ability.Span, group.Group, nil, effect),
+		ruleDeclaration,
+	}, true
+}
+
 func recognizeStaticPowerToughnessRuleDeclarations(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) ([]StaticDeclaration, bool) {
 	plain := staticSyntaxKindsAre(statics,
 		parser.StaticDeclarationContinuousPowerToughness,
@@ -3617,6 +3701,10 @@ func staticGroupForSubject(subject StaticSubjectKind, span shared.Span, subtype 
 		group.Domain = StaticGroupSourceControllerPermanents
 		group.Selection.RequiredTypes = []types.Card{types.Creature}
 		group.Selection.NonToken = true
+	case StaticSubjectControlledNotOwnedCreatures:
+		group.Domain = StaticGroupSourceControllerPermanents
+		group.Selection.RequiredTypes = []types.Card{types.Creature}
+		group.Selection.OwnerNotController = true
 	case StaticSubjectOtherControlledNontokenCreatures:
 		group.Domain = StaticGroupSourceControllerPermanents
 		group.Selection.RequiredTypes = []types.Card{types.Creature}
