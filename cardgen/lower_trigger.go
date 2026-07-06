@@ -89,6 +89,9 @@ func lowerAtTrigger(
 	if ability.ExactSequence == compiler.ExactSequenceChosenTypeLibraryTopToHand {
 		return lowerChosenTypeLibraryTopTrigger(ability, &pattern, intervening)
 	}
+	if ability.ExactSequence == compiler.ExactSequencePayHandSizeOrCantAttack {
+		return lowerPayHandSizeOrCantAttackTrigger(ability, &pattern, intervening)
+	}
 	if triggerContentUnsupported(ability) {
 		return game.TriggeredAbility{}, executableDiagnostic(
 			ability,

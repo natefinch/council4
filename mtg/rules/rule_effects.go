@@ -650,6 +650,12 @@ func ruleEffectProhibitsAttack(g *game.Game, attacker *game.Permanent, target *g
 			if target == nil {
 				continue
 			}
+			if effect.DefendingPlayerDirectOnly && !target.IsPlayerAttack() {
+				// "Can't attack you" restricts direct attacks on the defending
+				// player only; a planeswalker or battle that player controls is a
+				// distinct attack target (CR 508.1) and stays attackable.
+				continue
+			}
 			if !playerRelationMatches(effect.Controller, target.Player, effect.DefendingPlayer) {
 				continue
 			}

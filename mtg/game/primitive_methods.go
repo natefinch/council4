@@ -87,6 +87,9 @@ func (ApplyContinuous) Kind() PrimitiveKind { return PrimitiveApplyContinuous }
 // Kind implements Primitive for ApplyRule.
 func (ApplyRule) Kind() PrimitiveKind { return PrimitiveApplyRule }
 
+// Kind implements Primitive for PlayerMayPayGenericOrRule.
+func (PlayerMayPayGenericOrRule) Kind() PrimitiveKind { return PrimitivePlayerMayPayGenericOrRule }
+
 // Kind implements Primitive for ModifyPT.
 func (ModifyPT) Kind() PrimitiveKind { return PrimitiveModifyPT }
 
@@ -367,6 +370,7 @@ func (AddPlayerCounter) isPrimitive()                     {}
 func (MoveCounters) isPrimitive()                         {}
 func (ApplyContinuous) isPrimitive()                      {}
 func (ApplyRule) isPrimitive()                            {}
+func (PlayerMayPayGenericOrRule) isPrimitive()            {}
 func (ModifyPT) isPrimitive()                             {}
 func (Fight) isPrimitive()                                {}
 func (Tap) isPrimitive()                                  {}
@@ -487,6 +491,10 @@ func (p ApplyContinuous) instructionRefs() primitiveRefs {
 	return refs
 }
 func (ApplyRule) instructionRefs() primitiveRefs { return primitiveRefs{} }
+
+func (p PlayerMayPayGenericOrRule) instructionRefs() primitiveRefs {
+	return quantityRefs(p.Amount)
+}
 
 func (p ModifyPT) instructionRefs() primitiveRefs {
 	refs := mergePrimitiveRefs(objectReferenceRefs(p.Object), quantityRefs(p.PowerDelta))

@@ -159,10 +159,17 @@ const (
 	// controller-relative pool, then destroys every chosen permanent
 	// simultaneously (game.EachPlayerChooseDestroy).
 	PrimitiveEachPlayerChooseDestroy
+	// PrimitivePlayerMayPayGenericOrRule offers a referenced player the option to
+	// pay a generic mana amount and, when they decline or cannot pay, installs a
+	// set of rule effects on that player's permanents for a duration
+	// (game.PlayerMayPayGenericOrRule). It models the "that opponent may pay {X},
+	// where X is the number of cards in their hand. If they don't, they can't
+	// attack you this combat." punisher (Champions of Minas Tirith).
+	PrimitivePlayerMayPayGenericOrRule
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveEachPlayerChooseDestroy) + 1
+const primitiveKindCount = int(PrimitivePlayerMayPayGenericOrRule) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -469,6 +476,20 @@ type ApplyContinuous struct {
 // ApplyRule creates rule effects for a target (or globally).
 type ApplyRule struct {
 	Object      opt.V[ObjectReference]
+	RuleEffects []RuleEffect
+	Duration    EffectDuration
+}
+
+// PlayerMayPayGenericOrRule offers Player the option to pay a generic mana
+// amount. When Player declines or cannot pay, it installs RuleEffects on that
+// player's permanents for Duration. It models the "that opponent may pay {X},
+// where X is the number of cards in their hand. If they don't, they can't
+// attack you this combat." punisher (Champions of Minas Tirith), where Amount
+// is the payer's hand size and RuleEffects prohibit that player's creatures
+// from attacking the resolving controller.
+type PlayerMayPayGenericOrRule struct {
+	Player      PlayerReference
+	Amount      Quantity
 	RuleEffects []RuleEffect
 	Duration    EffectDuration
 }

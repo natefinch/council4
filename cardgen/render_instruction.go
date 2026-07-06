@@ -641,6 +641,12 @@ func (r Renderer) renderPrimitiveTail(ctx *renderCtx, primitive game.Primitive) 
 			return "", err
 		}
 		return r.renderApplyRulePrimitive(ctx, value)
+	case game.PrimitivePlayerMayPayGenericOrRule:
+		value, err := assertPrimitive[game.PlayerMayPayGenericOrRule](primitive)
+		if err != nil {
+			return "", err
+		}
+		return r.renderPlayerMayPayGenericOrRule(ctx, value)
 	case game.PrimitiveSacrificePermanents:
 		value, err := assertPrimitive[game.SacrificePermanents](primitive)
 		if err != nil {
@@ -1447,4 +1453,37 @@ func (r Renderer) renderApplyRulePrimitive(ctx *renderCtx, value game.ApplyRule)
 	}
 	fields = append(fields, fmt.Sprintf("Duration: %s,", duration))
 	return structLit("game.ApplyRule", fields), nil
+}
+
+// renderPlayerMayPayGenericOrRule renders a PlayerMayPayGenericOrRule
+// instruction: the payer, the generic mana amount, the rule effects installed on
+// non-payment, and their duration.
+func (r Renderer) renderPlayerMayPayGenericOrRule(ctx *renderCtx, value game.PlayerMayPayGenericOrRule) (string, error) {
+	player, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	amount, err := r.renderQuantity(ctx, value.Amount)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{
+		fmt.Sprintf("Player: %s,", player),
+		fmt.Sprintf("Amount: %s,", amount),
+	}
+	ruleEffects := make([]string, 0, len(value.RuleEffects))
+	for i := range value.RuleEffects {
+		eff, err := r.renderRuleEffect(ctx, &value.RuleEffects[i])
+		if err != nil {
+			return "", err
+		}
+		ruleEffects = append(ruleEffects, eff+",")
+	}
+	fields = append(fields, sliceField("RuleEffects", "game.RuleEffect", ruleEffects))
+	duration, err := renderDuration(value.Duration)
+	if err != nil {
+		return "", err
+	}
+	fields = append(fields, fmt.Sprintf("Duration: %s,", duration))
+	return structLit("game.PlayerMayPayGenericOrRule", fields), nil
 }

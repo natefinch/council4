@@ -1151,6 +1151,27 @@ func (p ApplyRule) validatePrimitive(targets []TargetSpec, checkTargets bool) er
 	return nil
 }
 
+func (p PlayerMayPayGenericOrRule) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.Player.Kind() == PlayerReferenceNone {
+		return errors.New("pay-or-rule instruction requires a payer")
+	}
+	if err := validatePlayerReference(p.Player, targets, checkTargets); err != nil {
+		return err
+	}
+	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
+		return err
+	}
+	if len(p.RuleEffects) == 0 {
+		return errors.New("pay-or-rule instruction has no rule effects")
+	}
+	for i := range p.RuleEffects {
+		if !p.RuleEffects[i].Kind.Valid() {
+			return errors.New("pay-or-rule instruction has an unsupported rule effect kind")
+		}
+	}
+	return nil
+}
+
 func validateApplyRuleAttackTax(effect *RuleEffect, hasObject bool) error {
 	if !effect.AffectedPlayer.Valid() || effect.AffectedPlayer == PlayerAny {
 		return errors.New("attack tax requires a recognized affected player")

@@ -599,6 +599,9 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 			return "", err
 		}
 		fields = append(fields, fmt.Sprintf("DefendingPlayer: %s,", player))
+		if effect.DefendingPlayerDirectOnly {
+			fields = append(fields, "DefendingPlayerDirectOnly: true,")
+		}
 	}
 	if !effect.CardSelection.Empty() {
 		selection, err := r.renderSelection(ctx, effect.CardSelection)

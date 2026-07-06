@@ -66,6 +66,7 @@ func newPrimitiveRegistry() *primitiveRegistry {
 	registerPrimitiveHandler(reg, handleMoveCounters)
 	registerPrimitiveHandler(reg, handleApplyContinuous)
 	registerPrimitiveHandler(reg, handleApplyRule)
+	registerPrimitiveHandler(reg, handlePlayerMayPayGenericOrRule)
 	registerPrimitiveHandler(reg, handleModifyPT)
 	registerPrimitiveHandler(reg, handleFight)
 	registerPrimitiveHandler(reg, handleTap)

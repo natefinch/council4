@@ -673,6 +673,14 @@ type RuleEffect struct {
 	// family ("Your opponents can't cast noncreature spells this turn.").
 	ExcludedSpellTypes []types.Card
 	DefendingPlayer    PlayerRelation
+	// DefendingPlayerDirectOnly narrows a DefendingPlayer-scoped
+	// RuleEffectCantAttack to direct attacks on the defending player, leaving
+	// that player's planeswalkers and battles attackable ("can't attack you",
+	// Champions of Minas Tirith; CR 508.1 treats a planeswalker/battle as a
+	// distinct attack target). When false the restriction also covers attacks
+	// aimed at planeswalkers or battles the defending player controls ("can't
+	// attack you or planeswalkers you control", the Vow cycle).
+	DefendingPlayerDirectOnly bool
 
 	BlockerRestriction BlockerRestriction
 	Protection         ProtectionKeyword
