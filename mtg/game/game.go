@@ -181,6 +181,14 @@ type Game struct {
 	// during the current turn.
 	ActivatedAbilitiesThisTurn map[ActivatedAbilityUse]bool
 
+	// AbilityActivationsThisTurn counts, per ability, how many times a player has
+	// activated it this turn, regardless of any timing restriction. It exists so an
+	// agent can recognize that it is repeating a free activation with no new effect
+	// and stop, rather than re-activating a zero-cost ability without end (equip
+	// {0}, a tapped-out "{X}" ability at X = 0). It is reset each turn like
+	// ActivatedAbilitiesThisTurn.
+	AbilityActivationsThisTurn map[ActivatedAbilityUse]int
+
 	// TriggeredAbilitiesThisTurn records triggered ability trigger counts during
 	// the current turn for abilities with MaxTriggersPerTurn.
 	TriggeredAbilitiesThisTurn map[TriggeredAbilityUse]int
@@ -278,6 +286,7 @@ func NewGameWithRand(configs [NumPlayers]PlayerConfig, rng *rand.Rand) *Game {
 		MarkedToLoseGame:           make(map[PlayerID]bool),
 		StateTriggerLatches:        make(map[StateTriggerKey]bool),
 		ActivatedAbilitiesThisTurn: make(map[ActivatedAbilityUse]bool),
+		AbilityActivationsThisTurn: make(map[ActivatedAbilityUse]int),
 		TriggeredAbilitiesThisTurn: make(map[TriggeredAbilityUse]int),
 		EventTurnStarts:            []int{0},
 		Turn: TurnState{

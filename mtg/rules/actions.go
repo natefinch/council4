@@ -340,7 +340,14 @@ func (e *Engine) applyActionWithChoices(g *game.Game, playerID game.PlayerID, ac
 		return ok && e.applyCastSpellWithChoices(g, playerID, cast, agents, log)
 	case action.ActionActivateAbility:
 		activate, ok := act.ActivateAbilityPayload()
-		return ok && e.applyActivateAbilityWithChoices(g, playerID, activate, agents, log)
+		if !ok || !e.applyActivateAbilityWithChoices(g, playerID, activate, agents, log) {
+			return false
+		}
+		if g.AbilityActivationsThisTurn == nil {
+			g.AbilityActivationsThisTurn = make(map[game.ActivatedAbilityUse]int)
+		}
+		g.AbilityActivationsThisTurn[game.ActivatedAbilityUse{SourceID: activate.SourceID, AbilityIndex: activate.AbilityIndex}]++
+		return true
 	case action.ActionSuspendCard:
 		suspend, ok := act.SuspendCardPayload()
 		return ok && e.applySuspendCard(g, playerID, suspend.CardID, agents, log)

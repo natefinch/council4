@@ -25,6 +25,14 @@ const (
 	scoreKeywordPlay = 10.0
 	scoreCreature    = 15.0
 
+	// scoreNoOpActivation ranks an activation that changes nothing (re-equipping
+	// an Equipment to the creature it is already attached to) just below passing,
+	// so the agent does nothing rather than the no-op. An ability that does
+	// nothing must not score above doing nothing; otherwise a free-equip Equipment
+	// (Lightning Greaves, "Equip {0}") is re-equipped without end, spinning the
+	// priority loop and never yielding.
+	scoreNoOpActivation = scorePass - 1.0
+
 	// Effect- and cost-value units for scoring an activated ability by what it
 	// does and what it spends (see activation.go). They are expressed in the same
 	// currency as targetingScore, where threatScoreUnit (3) × a permanent's
