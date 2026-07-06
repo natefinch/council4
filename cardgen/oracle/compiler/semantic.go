@@ -582,6 +582,7 @@ const (
 	ConditionPredicateCounterPlacementOnSelf
 	ConditionPredicateControllerCounterPlacement
 	ConditionPredicateDamageByControlledSource
+	ConditionPredicateDamageWouldBeDealtToPermanent
 	ConditionPredicateTokenCreationUnderController
 	ConditionPredicateSourceWouldDie
 	ConditionPredicateSourceWouldGoToGraveyard
@@ -1057,6 +1058,11 @@ type ConditionSelection struct {
 	// static damage-prevention statics.
 	DamageRecipientController      bool
 	DamageSourceControllerOpponent bool
+	// DamageRecipientSelf and DamageRecipientAttached qualify a
+	// ConditionPredicateDamageWouldBeDealtToPermanent clause: the damaged
+	// permanent is the ability's own source or the permanent it is attached to.
+	DamageRecipientSelf     bool
+	DamageRecipientAttached bool
 	// AnyCounter requires the matched permanent to carry at least one counter of
 	// any kind ("if this permanent has counters on it").
 	AnyCounter bool

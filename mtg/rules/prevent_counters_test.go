@@ -68,3 +68,31 @@ func TestDamagePreventionToPlusOneCountersSelfMonarchGated(t *testing.T) {
 		t.Fatalf("+1/+1 counters while monarch = %d, want 4", got)
 	}
 }
+
+// TestDamagePreventionToPlusOneCountersAttached proves the attached form "If
+// equipped creature would be dealt damage, prevent that damage and put that many
+// +1/+1 counters on it." (Panther Habit): damage to the equipped creature is
+// prevented and that creature gains that many +1/+1 counters, while the
+// Equipment itself and an unattached bystander are unaffected.
+func TestDamagePreventionToPlusOneCountersAttached(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	equipped := addCombatCreaturePermanent(g, game.Player1)
+	def := &game.CardDef{CardFace: game.CardFace{
+		Name: "Panther Habit",
+		ReplacementAbilities: []game.ReplacementAbility{
+			game.DamagePreventionToPlusOneCountersReplacement("panther habit", true, opt.V[game.Condition]{}),
+		},
+	}}
+	equipment := addCombatPermanent(g, game.Player1, def)
+	equipment.AttachedTo = opt.Val(equipped.ObjectID)
+	equipped.Attachments = append(equipped.Attachments, equipment.ObjectID)
+	registerPermanentReplacementEffects(g, equipment)
+	sourceID := addColoredSourceCard(g, game.Player2, color.Red)
+
+	if dealt := dealPermanentDamage(g, sourceID, 0, game.Player2, equipped, 3, false); dealt != 0 {
+		t.Fatalf("dealt to equipped creature = %d, want 0 (prevented)", dealt)
+	}
+	if got := equipped.Counters.Get(counter.PlusOnePlusOne); got != 3 {
+		t.Fatalf("equipped creature +1/+1 counters = %d, want 3", got)
+	}
+}
