@@ -224,22 +224,37 @@ func transformPrimitiveTargetIndices(primitive game.Primitive, transform targetI
 		return value, ok
 	}
 	if value, ok := primitive.(game.Draw); ok {
+		if value.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
+			return value, true
+		}
 		value.Player, ok = transformPlayerReference(value.Player, transform)
 		return value, ok
 	}
 	if value, ok := primitive.(game.Discard); ok {
+		if value.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
+			return value, true
+		}
 		value.Player, ok = transformPlayerReference(value.Player, transform)
 		return value, ok
 	}
 	if value, ok := primitive.(game.Mill); ok {
+		if value.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
+			return value, true
+		}
 		value.Player, ok = transformPlayerReference(value.Player, transform)
 		return value, ok
 	}
 	if value, ok := primitive.(game.ExileTopOfLibrary); ok {
+		if value.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
+			return value, true
+		}
 		value.Player, ok = transformPlayerReference(value.Player, transform)
 		return value, ok
 	}
 	if value, ok := primitive.(game.RevealUntil); ok {
+		if value.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
+			return value, true
+		}
 		value.Player, ok = transformPlayerReference(value.Player, transform)
 		return value, ok
 	}

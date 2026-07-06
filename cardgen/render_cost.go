@@ -149,6 +149,8 @@ func renderPlayerGroupReference(group game.PlayerGroupReference) (string, error)
 		return "game.OpponentsReference()", nil
 	case game.PlayerGroupReferenceAllPlayers:
 		return "game.AllPlayersReference()", nil
+	case game.PlayerGroupReferenceTargetedPlayers:
+		return "game.TargetedPlayersReference()", nil
 	default:
 		return "", fmt.Errorf("render: unsupported player group reference kind %d", group.Kind)
 	}

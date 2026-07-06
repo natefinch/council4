@@ -159,6 +159,11 @@ func lowerOrderedEffectSequence(
 	if content, diagnostic, handled := lowerOrderedSequenceSpecialCase(cardName, ctx, syntax); handled {
 		return content, diagnostic
 	}
+	// Record whether the sequence announced a variable player-group target so a
+	// later "those players each <verb>" clause can bind its anaphor to the
+	// targeted players (Court of Cunning). The flag propagates to each clause's
+	// context through lowerSequenceClauseContent.
+	ctx.hasTargetedPlayers = sequenceHasPlayerGroupTarget(ctx.content.Targets)
 	// Resolving optionality ("you may X. If you do, Y") is realized by marking
 	// the optional effect's instruction Optional + PublishResult and gating the
 	// "if you do" effect on that result. planOptionalFlow fails closed unless the
