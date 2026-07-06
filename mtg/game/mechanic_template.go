@@ -840,6 +840,26 @@ func EquipRestrictedActivatedAbility(manaCost cost.Mana, supertypes []types.Supe
 	}
 }
 
+// EquipCostReductionActivatedAbility builds an Equip activated ability whose
+// activation cost carries a generic cost modifier ("Equip {4}. This ability
+// costs {3} less to activate if you're the monarch.", Crown of Gondor). The
+// modifier's GenericReduction lowers the equip cost, gated by its
+// ReductionCondition when present; the runtime applies it through
+// costModifierAppliesToAbility as the equip cost is determined.
+func EquipCostReductionActivatedAbility(manaCost cost.Mana, modifier CostModifier) ActivatedAbility {
+	ability := EquipActivatedAbility(manaCost)
+	ability.CostModifiers = append(ability.CostModifiers, modifier)
+	return ability
+}
+
+// EquipRestrictedCostReductionActivatedAbility is EquipCostReductionActivatedAbility
+// for a subtype- or supertype-restricted Equip.
+func EquipRestrictedCostReductionActivatedAbility(manaCost cost.Mana, supertypes []types.Super, subtypes []types.Sub, modifier CostModifier) ActivatedAbility {
+	ability := EquipRestrictedActivatedAbility(manaCost, supertypes, subtypes)
+	ability.CostModifiers = append(ability.CostModifiers, modifier)
+	return ability
+}
+
 // ReconfigureActivatedAbility builds the complete activated ability for
 // Reconfigure with a mana cost (CR 702.151). Like Equip, it is a sorcery-speed
 // activation that attaches the source Equipment to target creature you control;

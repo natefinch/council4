@@ -192,6 +192,12 @@ func lowerKeywordDispatch(
 		}
 		return keywordTriggeredLowering(&championAbility, ability, syntax), true, nil
 	}
+	if lowered, ok, diag := lowerEquipCostReductionAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return lowered, true, nil
+	}
 	if equipAbility, ok, diag := lowerEquipAbility(ability, syntax); ok {
 		if diag != nil {
 			return abilityLowering{}, true, diag

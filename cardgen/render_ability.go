@@ -21,6 +21,18 @@ func (r Renderer) renderActivatedAbility(ctx *renderCtx, ability *game.Activated
 		}
 		return fmt.Sprintf("game.EquipActivatedAbility(%s)", renderedCost), nil
 	}
+	if manaCost, ok := game.ActivatedBodyEquipCost(ability); ok && len(ability.CostModifiers) == 1 &&
+		reflect.DeepEqual(*ability, game.EquipCostReductionActivatedAbility(manaCost, ability.CostModifiers[0])) {
+		renderedCost, err := r.renderManaCost(ctx, manaCost)
+		if err != nil {
+			return "", err
+		}
+		renderedModifier, err := r.renderCostModifier(ctx, ability.CostModifiers[0])
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.EquipCostReductionActivatedAbility(%s, %s)", renderedCost, renderedModifier), nil
+	}
 	if rendered, ok, err := r.renderEquipRestrictedAbility(ctx, ability); ok {
 		return rendered, err
 	}

@@ -284,7 +284,10 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 		// A source-spell cost reduction is evaluated as the spell is cast, with
 		// only the caster known: no resolving stack object, source permanent, or
 		// triggering event is available. Permit only board- and player-state
-		// predicates that resolve from the controller alone.
+		// predicates that resolve from the controller and opponents alone,
+		// including player-designation predicates ("... if you're the monarch.",
+		// Crown of Gondor's Equip), which resolve from the players' designation
+		// flags as the cost is determined.
 		switch predicate {
 		case compiler.ConditionPredicateControllerControls,
 			compiler.ConditionPredicateAnyOpponentControls,
@@ -304,7 +307,12 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 			compiler.ConditionPredicateControllerGraveyardCardTypeCountAtLeast,
 			compiler.ConditionPredicateControllerGraveyardCardOfTypeCountAtLeast,
 			compiler.ConditionPredicateControllerCreaturePowerDiversityAtLeast,
-			compiler.ConditionPredicateAnyOpponentPoisonAtLeast:
+			compiler.ConditionPredicateAnyOpponentPoisonAtLeast,
+			compiler.ConditionPredicateControllerIsMonarch,
+			compiler.ConditionPredicateAnOpponentIsMonarch,
+			compiler.ConditionPredicateNoMonarch,
+			compiler.ConditionPredicateControllerHasInitiative,
+			compiler.ConditionPredicateControllerHasCityBlessing:
 			return true
 		default:
 			return false

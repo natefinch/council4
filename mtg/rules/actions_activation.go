@@ -86,6 +86,9 @@ func costModifierAppliesToAbility(g *game.Game, modifier game.CostModifier, play
 	if modifier.FirstCycleEachTurn && playerCycledThisTurn(g, playerID) {
 		return false
 	}
+	if !conditionSatisfied(g, conditionContext{controller: playerID}, modifier.ReductionCondition) {
+		return false
+	}
 	return true
 }
 
