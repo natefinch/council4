@@ -153,10 +153,15 @@ const (
 	// PrimitiveDiscardUnlessType discards a fixed number of cards unless the
 	// player instead discards a single card of an exempt type (game.DiscardUnlessType).
 	PrimitiveDiscardUnlessType
+	// PrimitiveEachPlayerChooseDestroy has every player, in turn order starting
+	// with the resolving controller, choose up to one permanent from a shared
+	// controller-relative pool, then destroys every chosen permanent
+	// simultaneously (game.EachPlayerChooseDestroy).
+	PrimitiveEachPlayerChooseDestroy
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveDiscardUnlessType) + 1
+const primitiveKindCount = int(PrimitiveEachPlayerChooseDestroy) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -841,6 +846,26 @@ type DestroyForEachPlayer struct {
 	Chooser   PlayerReference
 	Selection Selection
 	LinkedKey LinkedKey
+}
+
+// EachPlayerChooseDestroy has every player, in turn order starting with the
+// resolving controller, choose up to one permanent from a single shared
+// candidate pool — the battlefield permanents matching Selection evaluated
+// relative to the ability's controller — and then destroys every chosen
+// permanent simultaneously. It models "Starting with you, each player may
+// choose an artifact or enchantment you don't control. Destroy each permanent
+// chosen this way." (Druid of Purification): each player is their own chooser,
+// the pool is controller-relative and identical for every chooser (so
+// Selection's Controller resolves against the source, letting "you don't
+// control" offer the same permanents to all), and a permanent chosen by more
+// than one player is destroyed once. Optional models the "may" so a player may
+// decline even when the pool is non-empty; when false every player with a
+// non-empty pool must choose one. PreventRegeneration carries a "can't be
+// regenerated" rider onto the simultaneous destroy.
+type EachPlayerChooseDestroy struct {
+	Selection           Selection
+	Optional            bool
+	PreventRegeneration bool
 }
 
 // CreateTokenForEachDestroyed creates one token defined by Source for each

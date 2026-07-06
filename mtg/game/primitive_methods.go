@@ -46,6 +46,9 @@ func (ReturnLinkedExiledCardsToBattlefield) Kind() PrimitiveKind {
 // Kind implements Primitive for DestroyForEachPlayer.
 func (DestroyForEachPlayer) Kind() PrimitiveKind { return PrimitiveDestroyForEachPlayer }
 
+// Kind implements Primitive for EachPlayerChooseDestroy.
+func (EachPlayerChooseDestroy) Kind() PrimitiveKind { return PrimitiveEachPlayerChooseDestroy }
+
 // Kind implements Primitive for CreateTokenForEachDestroyed.
 func (CreateTokenForEachDestroyed) Kind() PrimitiveKind {
 	return PrimitiveCreateTokenForEachDestroyed
@@ -348,6 +351,7 @@ func (ExileForEachPlayer) isPrimitive()                   {}
 func (ChampionExile) isPrimitive()                        {}
 func (ReturnLinkedExiledCardsToBattlefield) isPrimitive() {}
 func (DestroyForEachPlayer) isPrimitive()                 {}
+func (EachPlayerChooseDestroy) isPrimitive()              {}
 func (CreateTokenForEachDestroyed) isPrimitive()          {}
 func (RemoveTargetsForToken) isPrimitive()                {}
 func (CastForFree) isPrimitive()                          {}
@@ -572,6 +576,9 @@ func (p ChampionExile) instructionRefs() primitiveRefs {
 }
 func (p DestroyForEachPlayer) instructionRefs() primitiveRefs {
 	return primitiveRefs{publishesLinked: p.LinkedKey}
+}
+func (EachPlayerChooseDestroy) instructionRefs() primitiveRefs {
+	return primitiveRefs{}
 }
 func (p CreateTokenForEachDestroyed) instructionRefs() primitiveRefs {
 	return primitiveRefs{consumesLinked: []LinkedKey{p.LinkedKey}}

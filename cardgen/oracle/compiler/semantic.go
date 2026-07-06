@@ -2649,6 +2649,15 @@ type CompiledEffect struct {
 	// boundary so lowering destroys up to one creature each player controls and
 	// links each destroyed creature for the paired token payoff.
 	DestroyForEachPlayer bool
+	// EachPlayerChooseDestroy carries the parser-recognized "Starting with you,
+	// each player may choose <permanent>. Destroy each permanent chosen this
+	// way." construct (Druid of Purification) through the text-blind compiler
+	// boundary. When set, Selector is the shared candidate pool and lowering
+	// emits a single EachPlayerChooseDestroy over it.
+	EachPlayerChooseDestroy bool
+	// EachPlayerChooseDestroyOptional records the "may" of an
+	// EachPlayerChooseDestroy construct, so each chooser may decline.
+	EachPlayerChooseDestroyOptional bool
 	// CreateTokenForEachDestroyedThisWay carries the parser-recognized per-
 	// controller payoff "For each creature destroyed this way, its controller
 	// creates a <token>." (The Curse of Fenric, chapter I) through the text-blind

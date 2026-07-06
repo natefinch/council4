@@ -13,7 +13,12 @@ import (
 // guard fails because a primitive was added or removed, review the new
 // primitive in appendPrimitiveAtoms (give it a value atom or confirm neutral)
 // and update this constant.
-const knownPrimitiveCount = 111
+//
+// EachPlayerChooseDestroy is treated as value-neutral (no atom), matching the
+// sibling distributive removals DestroyForEachPlayer and ExileForEachPlayer:
+// its per-player player-relative choices are not modeled by the single-target
+// atom heuristic.
+const knownPrimitiveCount = 112
 
 // TestPrimitiveCountIsReconciled keeps a newly added resolution primitive from
 // silently falling through the translator: adding one trips this guard so its

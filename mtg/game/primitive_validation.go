@@ -1509,6 +1509,13 @@ func (p DestroyForEachPlayer) validatePrimitive(targets []TargetSpec, checkTarge
 	return validatePlayerReference(p.Chooser, targets, checkTargets)
 }
 
+func (p EachPlayerChooseDestroy) validatePrimitive([]TargetSpec, bool) error {
+	if p.Selection.Empty() {
+		return errors.New("each player choose destroy requires a candidate selection")
+	}
+	return firstProblem(p.Selection.Validate())
+}
+
 func (p CreateTokenForEachDestroyed) validatePrimitive([]TargetSpec, bool) error {
 	if p.LinkedKey == "" {
 		return errors.New("create token for each destroyed requires a linked key")

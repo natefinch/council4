@@ -175,6 +175,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	stripAnimateTargetSemantics(document.Abilities)
 	emitCoinFlipSequences(document.Abilities)
 	emitVoteSequences(document.Abilities)
+	emitEachPlayerChooseDestroySequences(document.Abilities)
 	emitReminderInner(document.Abilities)
 	emitSourceOrder(document.Abilities)
 	stripConditionalModalHeaderSemantics(document.Abilities)
