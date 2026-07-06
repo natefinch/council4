@@ -59,15 +59,14 @@ func TestLowerAttackTriggerGroupKeywordGrant(t *testing.T) {
 		t.Fatalf("keywords = %v, want [Indestructible]", effect.AddKeywords)
 	}
 	selection := effect.Group.Selection()
-	if effect.Group.Domain() != game.GroupDomainBattlefield ||
+	if effect.Group.Domain() != game.GroupDomainTriggeringAttackers ||
 		selection.Controller != game.ControllerYou ||
-		selection.CombatState != game.CombatStateAttacking ||
 		len(selection.RequiredTypes) != 1 ||
 		selection.RequiredTypes[0] != types.Creature {
-		t.Fatalf("selection = %+v, want attacking creatures you control", selection)
+		t.Fatalf("selection = %+v (domain %v), want the triggering attackers you control", selection, effect.Group.Domain())
 	}
 	if _, excludes := effect.Group.Exclusion(); excludes {
-		t.Fatal("attacking creatures you control must not exclude the source")
+		t.Fatal("triggering attackers you control must not exclude the source")
 	}
 }
 

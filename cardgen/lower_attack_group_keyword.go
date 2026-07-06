@@ -11,20 +11,13 @@ import (
 // "Whenever one or more creatures you control attack, they gain indestructible
 // until end of turn." (Angelic Guardian). The plural back-reference
 // "they"/"those creatures" denotes the attacking creatures you control. The
-// lowering approximates that set by re-deriving it at resolution: it grants the
-// keyword to the "attacking creatures you control" battlefield group via a single
-// ApplyContinuous until end of turn. The runtime snapshots the group's members at
-// resolution (CR 611.2c), so each creature keeps the keyword for the rest of the
-// turn even if it later leaves combat.
-//
-// This re-derivation matches the declared-attacker set in the common case, but is
-// not a faithful binding of the exact objects that triggered the ability: a
-// creature put onto the battlefield attacking by another same-declaration trigger
-// resolving first would be wrongly included, and a declared attacker removed from
-// combat before this effect resolves would be wrongly excluded. Both require
-// specific card combinations and stack ordering; a precise binding would need a
-// runtime "the attacking creatures that caused this trigger" group reference,
-// tracked as future work.
+// lowering binds it faithfully to the creatures declared as attackers in the
+// triggering attack via a TriggeringAttackers group, granted the keyword with a
+// single ApplyContinuous until end of turn. The runtime snapshots the group's
+// members at resolution (CR 611.2c) from the trigger's declared-attacker batch,
+// so each creature keeps the keyword for the rest of the turn even if it later
+// leaves combat, while a creature that only started attacking after the
+// declaration is not included.
 //
 // It handles only the mandatory, non-modal, unconditional single keyword-grant
 // shape and fails closed (ok == false) for anything else, so unrelated attack
@@ -67,10 +60,9 @@ func lowerAttackGroupKeywordGrant(
 	if !ok || (len(keywords) == 0 && len(abilities) == 0) {
 		return game.AbilityContent{}, false
 	}
-	group := game.BattlefieldGroup(game.Selection{
+	group := game.TriggeringAttackersGroup(game.Selection{
 		RequiredTypes: []types.Card{types.Creature},
 		Controller:    game.ControllerYou,
-		CombatState:   game.CombatStateAttacking,
 	})
 	return game.Mode{
 		Sequence: []game.Instruction{{
