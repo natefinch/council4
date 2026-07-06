@@ -1703,6 +1703,13 @@ func (p CantBecomeMonarch) validatePrimitive(targets []TargetSpec, checkTargets 
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 
+// validatePrimitive implements Primitive for PartitionExiledCostCards. It reads
+// the resolving object's cost-exiled card IDs and consults no targets, so it has
+// nothing to validate against the ability's target specs.
+func (PartitionExiledCostCards) validatePrimitive([]TargetSpec, bool) error {
+	return nil
+}
+
 func (p SetClassLevel) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err

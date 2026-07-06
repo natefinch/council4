@@ -737,6 +737,12 @@ func (r Renderer) renderPrimitiveTail(ctx *renderCtx, primitive game.Primitive) 
 			return "", err
 		}
 		return renderVote(value), nil
+	case game.PrimitivePartitionExiledCostCards:
+		value, err := assertPrimitive[game.PartitionExiledCostCards](primitive)
+		if err != nil {
+			return "", err
+		}
+		return renderPartitionExiledCostCards(value), nil
 	default:
 		return "", fmt.Errorf("render: unsupported primitive kind %d", primitive.Kind())
 	}
@@ -769,6 +775,20 @@ func renderVote(value game.Vote) string {
 		options[i] = fmt.Sprintf("%q,", option)
 	}
 	return structLit("game.Vote", []string{sliceField("Options", "string", options)})
+}
+
+func renderPartitionExiledCostCards(value game.PartitionExiledCostCards) string {
+	var fields []string
+	if value.ChooserOpponent {
+		fields = append(fields, "ChooserOpponent: true,")
+	}
+	if value.ChosenToLibraryBottom {
+		fields = append(fields, "ChosenToLibraryBottom: true,")
+	}
+	if value.OtherEntersTapped {
+		fields = append(fields, "OtherEntersTapped: true,")
+	}
+	return structLit("game.PartitionExiledCostCards", fields)
 }
 
 func (r Renderer) renderCardSelection(ctx *renderCtx, condition game.CardSelection) (string, error) {

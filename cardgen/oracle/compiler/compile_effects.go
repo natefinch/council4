@@ -476,6 +476,8 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				PileSplitOtherZone:                     syntax.PileSplitOtherZone,
 				PileSplitAmount:                        syntax.PileSplitAmount,
 				PileSplitMiddleSpan:                    syntax.PileSplitMiddleSpan,
+				ExiledCardSplitOpponentChooses:         syntax.ExiledCardSplitOpponentChooses,
+				ExiledCardChoiceRiderSpan:              syntax.ExiledCardChoiceRiderSpan,
 				SourceSpellCostReduction:               syntax.SourceSpellCostReduction,
 				SourceSpellCostReductionAmount:         syntax.SourceSpellCostReductionAmount,
 				SourceSpellCostReductionDynamic:        syntax.SourceSpellCostReductionDynamic,

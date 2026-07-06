@@ -1193,6 +1193,12 @@ type Sentence struct {
 	// Reference and coverage scans treat its tokens as belonging to the folded
 	// pile-split rather than as an unrecognized sibling.
 	PileSplitRider bool `json:",omitempty"`
+	// ExiledCardChoiceRider reports that this sentence is the credited zero-effect
+	// antecedent "An opponent chooses one of the exiled cards." folded onto a
+	// following put/return disposal (Coin of Fate). Reference and coverage scans
+	// treat its tokens as belonging to that disposal rather than as an
+	// unrecognized sibling.
+	ExiledCardChoiceRider bool `json:",omitempty"`
 	// RemoveAuraRider reports that this sentence is the credited inert "This
 	// effect doesn't remove this Aura." clarification folded onto a preceding
 	// protection (or other continuous) keyword grant on an Aura. The clause only
@@ -1215,6 +1221,7 @@ func sentenceIsCreditedRider(s *Sentence) bool {
 		s.CopyChooseNewTargetsRider ||
 		s.PlayFromTopPayLifeRider ||
 		s.PileSplitRider ||
+		s.ExiledCardChoiceRider ||
 		s.RemoveAuraRider
 }
 
