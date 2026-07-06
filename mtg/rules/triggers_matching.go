@@ -104,7 +104,7 @@ func triggerMatchesEventForController(g *game.Game, source *game.Permanent, sour
 	if pattern.ExcludeSelf && triggerSourceMatches(g, source, game.TriggerSourceSelf, pattern.Subject, event) {
 		return false
 	}
-	if !triggerPlayerMatches(sourceController, pattern.Player, event.Player) {
+	if !triggerPlayerMatches(g, sourceController, pattern.Player, event.Player) {
 		return false
 	}
 	if !pattern.StepPlayerSourceAttachedSelection.Empty() &&
@@ -774,12 +774,15 @@ func dyingPermanentDamagedBySource(g *game.Game, source *game.Permanent, event g
 	return false
 }
 
-func triggerPlayerMatches(sourceController game.PlayerID, filter game.TriggerPlayerFilter, eventPlayer game.PlayerID) bool {
+func triggerPlayerMatches(g *game.Game, sourceController game.PlayerID, filter game.TriggerPlayerFilter, eventPlayer game.PlayerID) bool {
 	switch filter {
 	case game.TriggerPlayerYou:
 		return eventPlayer == sourceController
 	case game.TriggerPlayerOpponent:
 		return eventPlayer != sourceController && eventPlayer >= 0 && eventPlayer < game.NumPlayers
+	case game.TriggerPlayerMonarch:
+		player, ok := playerByID(g, eventPlayer)
+		return ok && player.IsMonarch
 	default:
 		return true
 	}

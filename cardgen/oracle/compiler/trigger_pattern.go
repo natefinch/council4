@@ -104,6 +104,9 @@ const (
 	TriggerPlayerAny TriggerPlayerRelation = iota
 	TriggerPlayerYou
 	TriggerPlayerOpponent
+	// TriggerPlayerMonarch matches an event whose player is the current monarch
+	// ("At the beginning of the monarch's end step, ...", Archivist of Gondor).
+	TriggerPlayerMonarch
 )
 
 // TriggerZone identifies a zone used by a trigger pattern.
@@ -256,6 +259,10 @@ type TriggerSelection struct {
 	// Modified requires the matched permanent to be modified (a counter, Aura, or
 	// Equipment, CR 701.50). It lowers to Selection.MatchModified.
 	Modified bool
+	// Commander requires the matched permanent to be a commander ("your commander
+	// deals combat damage to a player", Archivist of Gondor). It lowers to
+	// Selection.MatchCommander.
+	Commander bool
 }
 
 // TriggerPattern is a source-spanned semantic description of a representable

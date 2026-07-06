@@ -89,6 +89,7 @@ var Cards = []*game.CardDef{
 	ArcaneMelee,
 	ArcanistSOwl,
 	ArchdemonOfUnx,
+	ArchivistOfGondor,
 	ArchonOfCoronation,
 	ArchonOfCruelty,
 	ArchwayCommons,

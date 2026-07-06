@@ -484,6 +484,8 @@ func renderTriggerPlayer(player game.TriggerPlayerFilter) (string, error) {
 		return "game.TriggerPlayerYou", nil
 	case game.TriggerPlayerOpponent:
 		return "game.TriggerPlayerOpponent", nil
+	case game.TriggerPlayerMonarch:
+		return "game.TriggerPlayerMonarch", nil
 	default:
 		return "", fmt.Errorf("render: unsupported trigger player filter %d", player)
 	}

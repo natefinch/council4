@@ -235,7 +235,8 @@ func parsePhaseStepDeterminer(tokens []shared.Token) (phaseStepDeterminer, bool)
 	if parsed := parseTriggerPlayerSelector(tokens); parsed.ok &&
 		parsed.form == triggerPlayerSelectorPossessive &&
 		(parsed.player.Kind == TriggerPlayerSelectorYou ||
-			parsed.player.Kind == TriggerPlayerSelectorSourceController) {
+			parsed.player.Kind == TriggerPlayerSelectorSourceController ||
+			parsed.player.Kind == TriggerPlayerSelectorMonarch) {
 		return phaseStepDeterminer{
 			quantifier: PhaseStepQuantifier{Kind: PhaseStepQuantifierSingle, Span: parsed.player.Span},
 			player:     parsed.player,
@@ -323,6 +324,13 @@ func parseTriggerPlayerSelector(tokens []shared.Token) triggerPlayerSelectorPars
 		return triggerPlayerSelectorParse{
 			player:    TriggerPlayerSelector{Kind: TriggerPlayerSelectorOpponent, Span: tokens[0].Span},
 			remainder: tokens[1:],
+			form:      triggerPlayerSelectorPossessive,
+			ok:        true,
+		}
+	case len(tokens) >= 2 && equalWord(tokens[0], "the") && equalWord(tokens[1], "monarch's"):
+		return triggerPlayerSelectorParse{
+			player:    TriggerPlayerSelector{Kind: TriggerPlayerSelectorMonarch, Span: shared.SpanOf(tokens[:2])},
+			remainder: tokens[2:],
 			form:      triggerPlayerSelectorPossessive,
 			ok:        true,
 		}

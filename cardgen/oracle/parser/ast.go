@@ -990,6 +990,7 @@ const (
 	TriggerPlayerSelectorAny                TriggerPlayerSelectorKind = "TriggerPlayerSelectorAny"
 	TriggerPlayerSelectorYou                TriggerPlayerSelectorKind = "TriggerPlayerSelectorYou"
 	TriggerPlayerSelectorOpponent           TriggerPlayerSelectorKind = "TriggerPlayerSelectorOpponent"
+	TriggerPlayerSelectorMonarch            TriggerPlayerSelectorKind = "TriggerPlayerSelectorMonarch"
 	TriggerPlayerSelectorSourceController   TriggerPlayerSelectorKind = "TriggerPlayerSelectorSourceController"
 	TriggerPlayerSelectorAttachedController TriggerPlayerSelectorKind = "TriggerPlayerSelectorAttachedController"
 )
