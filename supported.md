@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,037 of 32,501 cards eligible for paper support (52.4%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,039 of 32,501 cards eligible for paper support (52.4%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -4232,6 +4232,7 @@ Council4 currently supports **17,037 of 32,501 cards eligible for paper support 
 - Electric Eel
 - Electric Revelation
 - Electric Seaweed
+- Electrickery
 - Electrify
 - Electrolyze
 - Electrostatic Field
@@ -9265,6 +9266,7 @@ Council4 currently supports **17,037 of 32,501 cards eligible for paper support 
 - Misty Rainforest
 - Mite Overseer
 - Mithril Coat
+- Mizzium Mortars
 - Mizzium Transreliquat
 - MJ, Rising Star
 - Mjölnir's Might
