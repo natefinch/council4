@@ -322,6 +322,9 @@ func lowerContent(
 		if content, ok := lowerDestroyForEachPlayerTokenChainContent(ctx); ok {
 			return content, nil
 		}
+		if content, ok := lowerExileForEachOpponentDrawChainContent(ctx); ok {
+			return content, nil
+		}
 		if content, ok := lowerRemovalVariableTargetsForEachTokenContent(ctx); ok {
 			return content, nil
 		}

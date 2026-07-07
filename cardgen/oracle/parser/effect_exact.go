@@ -68,7 +68,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 	case EffectDig:
 		return exactDigLookEffectSyntax(effect)
 	case EffectDraw:
-		return exactCardCountEffectSyntax(effect, "Draw", "draws", true)
+		return exactCardCountEffectSyntax(effect, "Draw", "draws", true) ||
+			exactDrawForEachExiledThisWayEffectSyntax(effect)
 	case EffectEnterTapped:
 		return exactLegacyFixedAmountSyntax(effect) ||
 			effect.GroupEntryModification.Kind != GroupEntryModificationNone
@@ -78,6 +79,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 			exactExileUntilSourceLeavesEffectSyntax(effect) ||
 			exactExileUntilOpponentBecomesMonarchEffectSyntax(effect) ||
 			exactExileForEachPlayerUntilLeavesEffectSyntax(effect) ||
+			exactExileForEachOpponentEffectSyntax(effect) ||
 			exactExileTopOfLibrarySyntax(effect) ||
 			exactExileEntireHandEffectSyntax(effect) ||
 			exactExileAttachedEffectSyntax(effect) ||

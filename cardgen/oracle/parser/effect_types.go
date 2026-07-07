@@ -2773,6 +2773,19 @@ type EffectSyntax struct {
 	// its controller create one token, so the count is one per exiled creature
 	// rather than a multiplier on the create.
 	CreateTokenForEachExiledThisWay bool `json:",omitempty"`
+	// ExileForEachOpponent marks the exact distributive enters clause "for each
+	// opponent, exile up to one target permanent that player controls with mana
+	// value 3 or greater." (King Solomon's Frogs). Each opponent's permanents are
+	// an independent "up to one" pool; the "that player" reference is the
+	// distributive anchor rather than a target. A paired DrawForEachExiledThisWay
+	// clause draws a card for each permanent exiled this way.
+	ExileForEachOpponent bool `json:",omitempty"`
+	// DrawForEachExiledThisWay marks the exact per-controller payoff "For each
+	// permanent exiled this way, its controller draws a card." (King Solomon's
+	// Frogs). It pairs with a preceding ExileForEachOpponent clause: each
+	// permanent exiled this way has its controller draw one card, so the count is
+	// one per exiled permanent rather than a multiplier on the draw.
+	DrawForEachExiledThisWay bool `json:",omitempty"`
 	// ReturnExiledCard marks the explicit O-Ring leaves-the-battlefield clause
 	// "return the exiled card to the battlefield under its owner's control."
 	// (Oblivion Ring, Journey to Nowhere, Fiend Hunter). The returned card is the
