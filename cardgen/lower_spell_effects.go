@@ -672,6 +672,12 @@ func lowerCounterPlacementSpell(
 		var ok bool
 		target, ok = permanentTargetSpec(ctx.content.Targets[0])
 		if !ok {
+			// A bare "<type> or <subtype>" disjunction target ("target creature
+			// or Vehicle") lowers to a Selection.AnyOf the general permanent
+			// target path leaves closed; the counter placement admits it here.
+			target, ok = permanentUnionTargetSpec(ctx.content.Targets[0])
+		}
+		if !ok {
 			return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
 		}
 	}

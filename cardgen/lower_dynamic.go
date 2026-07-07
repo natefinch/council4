@@ -1024,17 +1024,20 @@ func permanentTargetSpecAllowingUnbounded(target compiler.CompiledTarget, allowU
 		Allow:      game.TargetAllowPermanent,
 	}
 	if len(target.Selector.Alternatives) > 0 {
-		return alternativePermanentTargetSpec(&target, &spec)
+		return alternativePermanentTargetSpec(&target, &spec, false)
 	}
 	var selection game.Selection
 	var permanentTypes []types.Card
 	conjunctive := false
 	switch target.Selector.Kind {
-	case compiler.SelectorUnknown:
+	case compiler.SelectorUnknown, compiler.SelectorCard:
 		// A bare subtype noun ("target Soldier you control") selects any
 		// permanent carrying that subtype, with no card-type restriction. The
 		// subtype filter below supplies the constraint; without one this is not
-		// a recognized permanent target.
+		// a recognized permanent target. A disjunction member matched purely by
+		// an artifact subtype ("... or Vehicle") is promoted to the card kind by
+		// disjunctSelectionSide; it carries the same subtype-only predicate, so
+		// it lowers through this branch too.
 		if len(target.Selector.SubtypesAny()) == 0 {
 			return game.TargetSpec{}, false
 		}
@@ -1191,9 +1194,11 @@ func permanentTargetSpecAllowingUnbounded(target compiler.CompiledTarget, allowU
 	return spec, true
 }
 
-func alternativePermanentTargetSpec(target *compiler.CompiledTarget, spec *game.TargetSpec) (game.TargetSpec, bool) {
+func alternativePermanentTargetSpec(target *compiler.CompiledTarget, spec *game.TargetSpec, allowUnknownKind bool) (game.TargetSpec, bool) {
 	selector := &target.Selector
-	if selector.Kind != compiler.SelectorPermanent ||
+	kindOK := selector.Kind == compiler.SelectorPermanent ||
+		(allowUnknownKind && selector.Kind == compiler.SelectorUnknown)
+	if !kindOK ||
 		selectorHasUnsupportedPermanentFilters(*selector) ||
 		selector.Another || selector.Other ||
 		selector.Attacking || selector.Blocking ||
@@ -1234,6 +1239,33 @@ func alternativePermanentTargetSpec(target *compiler.CompiledTarget, spec *game.
 	}
 	spec.Selection = opt.Val(selection)
 	return *spec, true
+}
+
+// permanentUnionTargetSpec builds a single-permanent TargetSpec for a bare
+// "<type> or <subtype>" disjunction target the runtime models as a
+// Selection.AnyOf ("target creature or Vehicle", Nakia, Wakandan Operative). A
+// simple top-level "or" disjunction leaves the outer selector kind unknown
+// (disjunctiveSelectionAlternatives), unlike the Oxford-comma
+// qualified-disjunction production that sets the SelectorPermanent kind the
+// general alternativePermanentTargetSpec path requires. Only the
+// counter-placement lowering calls this, and only after its effect-level
+// exactness gate (exactCounterUnionTargetSyntax) has already proven the union
+// round-trips; the shared target.Exact stays false so the other single-object
+// verbs keep the mixed type+subtype union fail-closed. It fails closed for a
+// non-single cardinality or an outer selector that is not a bare disjunction,
+// and alternativePermanentTargetSpec validates each alternative in turn.
+func permanentUnionTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
+	if !targetCardinalityIsOne(target) ||
+		target.Selector.Kind != compiler.SelectorUnknown ||
+		len(target.Selector.Alternatives) == 0 {
+		return game.TargetSpec{}, false
+	}
+	spec := game.TargetSpec{
+		MinTargets: target.Cardinality.Min,
+		MaxTargets: target.Cardinality.Max,
+		Allow:      game.TargetAllowPermanent,
+	}
+	return alternativePermanentTargetSpec(&target, &spec, true)
 }
 
 // selectorHasUnsupportedPermanentFilters reports whether a permanent target

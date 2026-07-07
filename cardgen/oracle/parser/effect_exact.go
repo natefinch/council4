@@ -5001,6 +5001,13 @@ func exactCounterPlacementEffectSyntax(effect *EffectSyntax) bool {
 		} else {
 			return false
 		}
+	case len(effect.Targets) == 1 && exactCounterUnionTargetSyntax(effect.Targets[0]):
+		// A bare "<card type> or <subtype>" disjunction target ("target creature
+		// or Vehicle") is a mixed type+subtype union the shared single-permanent
+		// target path leaves fail-closed; only the counter placement verb lowers
+		// it (via permanentUnionTargetSpec), so it is recognized here locally
+		// rather than by flipping the shared target exactness for every verb.
+		objects = append(objects, effect.Targets[0].Text)
 	case len(effect.Targets) == 0:
 		if effect.CounterRecipientAttached {
 			// The attached recipient is "enchanted creature" (Aura) or
@@ -5072,6 +5079,22 @@ func counterPlacementTargetIsPlayerControls(target TargetSyntax) bool {
 	return target.Cardinality.Min == 1 && target.Cardinality.Max == 1 &&
 		!target.Selection.Other &&
 		target.Selection.Controller == SelectionControllerAny
+}
+
+// exactCounterUnionTargetSyntax reports whether a counter-placement target is a
+// bare "<card type> or <subtype>" disjunction ("target creature or Vehicle")
+// that round-trips to its canonical Oracle text. The shared single-permanent
+// target path leaves these mixed type+subtype unions fail-closed because only
+// the counter placement verb lowers them (via permanentUnionTargetSpec); this
+// local recognizer opens exactly that verb without flipping the shared target
+// exactness for the other single-object verbs (exile, destroy, tap, return).
+// It accepts only a single-object union, so every multi-target or "up to one"
+// wording keeps failing the text-blind round-trip.
+func exactCounterUnionTargetSyntax(target TargetSyntax) bool {
+	if target.Cardinality.Min != 1 || target.Cardinality.Max != 1 {
+		return false
+	}
+	return exactBareUnionTargetSyntax(target.Text, target.Selection)
 }
 
 // counterPlacementTargetPlayerControlsObject reconstructs the recipient phrase

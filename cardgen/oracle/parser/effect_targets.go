@@ -1002,6 +1002,62 @@ func exactPermanentTargetText(selection SelectionSyntax) (string, bool) {
 	return strings.Join(words, " "), true
 }
 
+// exactBareUnionTargetSyntax reconstructs the canonical Oracle phrase for a
+// single-target selection whose alternatives are a cross-dimension union of a
+// permanent card type and an artifact subtype ("target creature or Vehicle").
+// disjunctiveSelectionAlternatives records this union as Selection.Alternatives
+// with an outer SelectionUnknown kind because the two sides occupy different
+// type dimensions, so none of the same-dimension union reconstructions cover
+// it. Each alternative is reconstructed with the shared single-permanent
+// qualifier words and the two sides are joined with " or " (a two-member union
+// takes no Oxford comma), then compared byte-for-byte against text. It fails
+// closed for any outer controller, combat state, or numeric qualifier so only
+// the bare cross-dimension union round-trips; every richer wording keeps failing
+// the text-blind check and stays unsupported. Only exactCounterUnionTargetSyntax
+// calls it: mixed type+subtype unions stay fail-closed for the other shared
+// single-object verbs (exile, destroy, tap, return), which do not lower them.
+func exactBareUnionTargetSyntax(text string, selection SelectionSyntax) bool {
+	if len(selection.Alternatives) != 2 {
+		return false
+	}
+	memberPhrases := make([]string, 0, len(selection.Alternatives))
+	for i := range selection.Alternatives {
+		words, ok := bareUnionMemberWords(selection.Alternatives[i])
+		if !ok {
+			return false
+		}
+		memberPhrases = append(memberPhrases, strings.Join(words, " "))
+	}
+	var determiner string
+	switch {
+	case selection.Another:
+		determiner = "another target"
+	case selection.Other:
+		determiner = "other target"
+	default:
+		determiner = "target"
+	}
+	expected := determiner + " " + strings.Join(memberPhrases, " or ")
+	return strings.EqualFold(text, expected)
+}
+
+// bareUnionMemberWords reconstructs the noun words for one alternative of a bare
+// cross-dimension target union. disjunctSelectionSide promotes a subtype-only
+// side ("Vehicle") to SelectionCard so the split logic can tell it apart from a
+// bare card type; normalize that back to the subtype-only SelectionUnknown form
+// the shared reconstruction understands before delegating. A nested alternative
+// side is not representable here and fails closed.
+func bareUnionMemberWords(member SelectionSyntax) ([]string, bool) {
+	if len(member.Alternatives) != 0 {
+		return nil, false
+	}
+	if member.Kind == SelectionCard && len(member.SubtypesAny) == 1 &&
+		len(member.RequiredTypesAny) == 0 && len(member.Supertypes) == 0 {
+		member.Kind = SelectionUnknown
+	}
+	return permanentSelectionQualifierWords(member)
+}
+
 // permanentSelectionQualifierWords reconstructs the canonical Oracle words that
 // follow a single-permanent selection's leading determiner ("target", an
 // article, or "another"): any combat/tapped state, a supertype, colors, a

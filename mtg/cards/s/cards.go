@@ -51,6 +51,7 @@ var Cards = []*game.CardDef{
 	SeaHag,
 	SeaMonster,
 	SeaSerpent,
+	SearchForDagger,
 	SeasonedWarrenguard,
 	SecondWind,
 	SecureDetention,

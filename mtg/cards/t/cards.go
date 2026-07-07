@@ -93,6 +93,7 @@ var Cards = []*game.CardDef{
 	Toil,
 	ToilsOfNightAndDay,
 	TolarianSerpent,
+	TomeOfLegends,
 	TomeScour,
 	TorrentialGearhulk,
 	TourachDreadCantor,
