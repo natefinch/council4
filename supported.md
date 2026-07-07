@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,034 of 32,501 cards eligible for paper support (52.4%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,037 of 32,501 cards eligible for paper support (52.4%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -3812,6 +3812,7 @@ Council4 currently supports **17,034 of 32,501 cards eligible for paper support 
 - Down // Dirty
 - Downdraft
 - Downpour
+- Downsize
 - Downwind Ambusher
 - Dowsing Shaman
 - Dr. Madison Li
@@ -4113,6 +4114,7 @@ Council4 currently supports **17,034 of 32,501 cards eligible for paper support 
 - Dwynen, Gilt-Leaf Daen
 - Dying to Serve
 - Dying Wail
+- Dynacharge
 - Dynavolt Tower
 - Déjà Vu
 - Dúnedain Blade
@@ -13973,6 +13975,7 @@ Council4 currently supports **17,034 of 32,501 cards eligible for paper support 
 - Stinkdrinker Daredevil
 - Stinkweed Imp
 - Stir the Sands
+- Stirring Address
 - Stirring Hopesinger
 - Stitched Drake
 - Stitched Mangler
