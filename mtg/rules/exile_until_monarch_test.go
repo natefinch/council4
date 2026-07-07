@@ -125,3 +125,45 @@ func TestExileUntilOpponentBecomesMonarchReturnsAfterSourceLeaves(t *testing.T) 
 		t.Fatalf("returned permanent = %+v, want victim back under owner Player2 control", returned)
 	}
 }
+
+// TestExileUntilReturnStaysExileOnlyWhenCardLeftExile is the Banishing Light /
+// Oblivion Ring ruling: an exile-until return must return the card only while it
+// is still the same object in exile. If the exiled card leaves exile before the
+// return fires — here another effect moves it from exile to its owner's
+// graveyard — the return does nothing, even though a same-CardID card now sits
+// in the graveyard. The default (nil LinkedReturnZones) PutOnBattlefield is
+// exile-only, so it must never reanimate the card from the graveyard.
+func TestExileUntilReturnStaysExileOnlyWhenCardLeftExile(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	victim := addCombatCreaturePermanent(g, game.Player2)
+	source := addCombatPermanent(g, game.Player1, exileUntilMonarchSourceDef())
+	setMonarch(g, game.Player1)
+
+	resolveExileUntilMonarch(t, engine, g, source, victim)
+	if !g.Players[game.Player2].Exile.Contains(victim.CardInstanceID) {
+		t.Fatal("victim did not reach exile")
+	}
+
+	// Another effect moves the exiled card from exile to its owner's graveyard
+	// while the return link is still live.
+	if !g.Players[game.Player2].Exile.Remove(victim.CardInstanceID) {
+		t.Fatal("victim was not in exile to move")
+	}
+	g.Players[game.Player2].Graveyard.Add(victim.CardInstanceID)
+
+	// An opponent becomes the monarch: the return trigger fires but must do
+	// nothing because the card is no longer the exiled object.
+	setMonarch(g, game.Player2)
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("become-monarch return trigger did not fire when an opponent took the crown")
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if permanentByCardID(g, victim.CardInstanceID) != nil {
+		t.Fatal("card was wrongly returned to the battlefield from the graveyard; exile-until return must be exile-only")
+	}
+	if !g.Players[game.Player2].Graveyard.Contains(victim.CardInstanceID) {
+		t.Fatal("card left the graveyard; the exile-until return must leave a card that already left exile untouched")
+	}
+}

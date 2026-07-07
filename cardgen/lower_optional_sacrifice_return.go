@@ -89,8 +89,9 @@ func lowerOptionalSacrificeReturnWithCounters(ctx contentCtx) (game.AbilityConte
 		sacrificeInstr,
 		{
 			Primitive: game.PutOnBattlefield{
-				Source:        game.LinkedBattlefieldSource(sacrificedCreatureLinkKey),
-				EntryCounters: counters,
+				Source:            game.LinkedBattlefieldSource(sacrificedCreatureLinkKey),
+				EntryCounters:     counters,
+				LinkedReturnZones: []zone.Type{zone.Graveyard},
 			},
 			ResultGate: gate,
 		},

@@ -544,15 +544,17 @@ func permanentObjectBindingRef(permanent *game.Permanent) game.LinkedObjectRef {
 }
 
 // returnLinkedNonBattlefieldObjects returns every linked object recorded under
-// linkID from whichever non-battlefield zone currently holds it — its owner's
-// exile ("return the exiled card", Palace Jailer) or graveyard ("return that
-// card", where the linked permanent was sacrificed by an earlier instruction in
-// the same resolution, as on Heart-Shaped Herb). Each object is matched by its
-// last-known-object snapshot so a stale reference can never resurrect a
-// different card that happens to reuse the card id. Exile is consulted first so
-// existing exile-return effects keep their exact behavior; the graveyard branch
-// is reached only when the linked card is not in exile.
-func returnLinkedNonBattlefieldObjects(e *Engine, g *game.Game, obj *game.StackObject, linkID string, controllerOverride opt.V[game.PlayerID], options permanentCreationOptions, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+// linkID from the first of returnZones that currently holds it. Each object is
+// matched by its last-known-object snapshot so a stale reference can never
+// resurrect a different card that happens to reuse the card id.
+//
+// returnZones scopes which zones a return may consult, which is a correctness
+// requirement rather than an optimization: an exile-until or blink return
+// (Palace Jailer, Oblivion Ring) passes {zone.Exile} only and must do nothing
+// once its card has left exile — even if a same-id card now sits in the owner's
+// graveyard — whereas a sacrifice-then-return effect (Heart-Shaped Herb) passes
+// {zone.Graveyard} to return the card it just put there.
+func returnLinkedNonBattlefieldObjects(e *Engine, g *game.Game, obj *game.StackObject, linkID string, returnZones []zone.Type, controllerOverride opt.V[game.PlayerID], options permanentCreationOptions, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
 	key := linkedObjectSourceKey(g, obj, linkID)
 	returned := false
 	for _, ref := range linkedObjects(g, key) {
@@ -567,7 +569,7 @@ func returnLinkedNonBattlefieldObjects(e *Engine, g *game.Game, obj *game.StackO
 		if !ok {
 			continue
 		}
-		fromZone, ok := removeLinkedCardFromNonBattlefieldZone(owner, ref.CardID)
+		fromZone, ok := removeLinkedCardFromZones(owner, ref.CardID, returnZones)
 		if !ok {
 			continue
 		}
@@ -583,17 +585,24 @@ func returnLinkedNonBattlefieldObjects(e *Engine, g *game.Game, obj *game.StackO
 	return returned
 }
 
-// removeLinkedCardFromNonBattlefieldZone removes cardID from the owner's exile
-// or graveyard — whichever currently holds the linked card — and reports the
-// zone it left so the re-entry uses the correct origin for CR 603/614 zone-change
-// events. Exile is tried first to preserve the exact behavior of exile-return
-// effects.
-func removeLinkedCardFromNonBattlefieldZone(owner *game.Player, cardID id.ID) (zone.Type, bool) {
-	if owner.Exile.Remove(cardID) {
-		return zone.Exile, true
-	}
-	if owner.Graveyard.Remove(cardID) {
-		return zone.Graveyard, true
+// removeLinkedCardFromZones removes cardID from the first of zones that holds it
+// and reports that zone so the re-entry uses the correct origin for CR 603/614
+// zone-change events. It only consults the given zones, so a caller that permits
+// exile alone never reanimates a card that has moved on to the graveyard.
+func removeLinkedCardFromZones(owner *game.Player, cardID id.ID, zones []zone.Type) (zone.Type, bool) {
+	for _, z := range zones {
+		switch z {
+		case zone.Exile:
+			if owner.Exile.Remove(cardID) {
+				return zone.Exile, true
+			}
+		case zone.Graveyard:
+			if owner.Graveyard.Remove(cardID) {
+				return zone.Graveyard, true
+			}
+		default:
+			// Other zones cannot back a linked-source return; skip them.
+		}
 	}
 	return zone.None, false
 }

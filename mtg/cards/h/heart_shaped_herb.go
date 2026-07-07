@@ -57,8 +57,9 @@ func newHeartShapedHerb() *game.CardDef {
 							},
 							{
 								Primitive: game.PutOnBattlefield{
-									Source:        game.LinkedBattlefieldSource(game.LinkedKey("sacrificed-creature")),
-									EntryCounters: []game.CounterPlacement{game.CounterPlacement{Kind: counter.PlusOnePlusOne, Amount: 3}},
+									Source:            game.LinkedBattlefieldSource(game.LinkedKey("sacrificed-creature")),
+									EntryCounters:     []game.CounterPlacement{game.CounterPlacement{Kind: counter.PlusOnePlusOne, Amount: 3}},
+									LinkedReturnZones: []zone.Type{zone.Graveyard},
 								},
 								ResultGate: opt.Val(game.InstructionResultGate{
 									Key:       "if-you-do",

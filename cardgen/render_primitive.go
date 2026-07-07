@@ -218,6 +218,18 @@ func (r Renderer) renderPutOnBattlefield(ctx *renderCtx, value game.PutOnBattlef
 	if value.PublishLinked != "" {
 		fields = append(fields, fmt.Sprintf("PublishLinked: game.LinkedKey(%q),", string(value.PublishLinked)))
 	}
+	if len(value.LinkedReturnZones) > 0 {
+		zones := make([]string, len(value.LinkedReturnZones))
+		for i, z := range value.LinkedReturnZones {
+			rendered, err := renderZone(z)
+			if err != nil {
+				return "", err
+			}
+			zones[i] = rendered
+		}
+		ctx.need(importZone)
+		fields = append(fields, fmt.Sprintf("LinkedReturnZones: []zone.Type{%s},", strings.Join(zones, ", ")))
+	}
 	return structLit("game.PutOnBattlefield", fields), nil
 }
 
