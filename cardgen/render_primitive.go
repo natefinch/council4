@@ -367,11 +367,26 @@ func (r Renderer) renderImpulseExile(ctx *renderCtx, value game.ImpulseExile) (s
 	if err != nil {
 		return "", err
 	}
-	return structLit("game.ImpulseExile", []string{
+	return structLit("game.ImpulseExile", impulseExileFields(player, amount, duration, value)), nil
+}
+
+// impulseExileFields renders the ImpulseExile struct fields, appending the
+// any-type-mana rider and the source-keyed linked set only when Court of
+// Locthwain's play permission sets them, so every other impulse exile renders
+// unchanged.
+func impulseExileFields(player, amount, duration string, value game.ImpulseExile) []string {
+	fields := []string{
 		fmt.Sprintf("Player: %s,", player),
 		fmt.Sprintf("Amount: %s,", amount),
 		fmt.Sprintf("Duration: %s,", duration),
-	}), nil
+	}
+	if value.SpendAnyMana {
+		fields = append(fields, "SpendAnyMana: true,")
+	}
+	if value.PublishLinked != "" {
+		fields = append(fields, fmt.Sprintf("PublishLinked: game.LinkedKey(%q),", string(value.PublishLinked)))
+	}
+	return fields
 }
 
 func (r Renderer) renderExileLibraryUntilNonlandCast(value game.ExileLibraryUntilNonlandCast) (string, error) {

@@ -1490,11 +1490,24 @@ type RevealTopPartition struct {
 }
 
 // ImpulseExile exiles cards from the top of a player's library and lets the
-// resolving controller play those cards for a bounded duration.
+// resolving controller play those cards for a bounded duration. Player is
+// usually the resolving controller ("exile the top card of your library"), but
+// may resolve to a target opponent so the controller plays the top card of an
+// opponent's library ("exile the top card of target opponent's library ... You
+// may play that card for as long as it remains exiled", Court of Locthwain).
 type ImpulseExile struct {
 	Player   PlayerReference
 	Amount   Quantity
 	Duration EffectDuration
+	// SpendAnyMana, when set, lets the controller spend mana of any type to cast
+	// the exiled cards ("mana of any type can be spent to cast it.", Court of
+	// Locthwain). It carries onto the RuleEffectPlayFromZone permission.
+	SpendAnyMana bool
+	// PublishLinked, when set, remembers each exiled card under this source-keyed
+	// linked set so a later ability can act on "cards exiled with this ..." (Court
+	// of Locthwain's monarch free-cast reads the accumulated pool). It is empty
+	// when the exiled cards need not be tracked.
+	PublishLinked LinkedKey
 }
 
 // ExileLibraryUntilNonlandCast exiles cards from the top of Player's library one

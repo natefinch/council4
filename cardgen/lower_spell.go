@@ -228,6 +228,9 @@ func lowerContent(
 	if content, ok := lowerPonderSequence(ctx); ok {
 		return content, nil
 	}
+	if content, ok := lowerCourtOfLocthwainUpkeep(ctx); ok {
+		return content, nil
+	}
 	if content, ok := lowerCounterThenNextTurnUpkeepDraws(ctx); ok {
 		return content, nil
 	}

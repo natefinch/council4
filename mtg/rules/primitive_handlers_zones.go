@@ -2206,6 +2206,10 @@ func handleImpulseExile(r *effectResolver, prim game.ImpulseExile) effectResolve
 		return res
 	}
 	simultaneousID := r.game.IDGen.Next()
+	var linkKey game.LinkedObjectKey
+	if prim.PublishLinked != "" {
+		linkKey = linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked))
+	}
 	for range amount {
 		cardID, ok := player.Library.Top()
 		if !ok || !moveCardBetweenZonesInBatch(r.game, playerID, cardID, zone.Library, zone.Exile, false, simultaneousID) {
@@ -2223,7 +2227,11 @@ func handleImpulseExile(r *effectResolver, prim game.ImpulseExile) effectResolve
 			CastFromZone:   zone.Exile,
 			AffectedCardID: cardID,
 			ExpiresFor:     r.obj.Controller,
+			SpendAnyMana:   prim.SpendAnyMana,
 		})
+		if prim.PublishLinked != "" {
+			rememberLinkedObject(r.game, linkKey, game.LinkedObjectRef{CardID: cardID})
+		}
 		res.succeeded = true
 	}
 	return res

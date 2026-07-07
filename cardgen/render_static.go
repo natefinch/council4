@@ -811,6 +811,9 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 		}
 		fields = append(fields, fmt.Sprintf("SpellSubtypes: %s,", spellSubtypes))
 	}
+	if effect.ExiledLinkKey != "" {
+		fields = append(fields, fmt.Sprintf("ExiledLinkKey: game.LinkedKey(%q),", string(effect.ExiledLinkKey)))
+	}
 	if effect.RestrictedDuringControllerTurn {
 		fields = append(fields, "RestrictedDuringControllerTurn: true,")
 	}
@@ -997,6 +1000,8 @@ func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
 		return "game.RuleEffectGoaded", nil
 	case game.RuleEffectCantBeSacrificed:
 		return "game.RuleEffectCantBeSacrificed", nil
+	case game.RuleEffectCastLinkedExileForFree:
+		return "game.RuleEffectCastLinkedExileForFree", nil
 	default:
 		return "", fmt.Errorf("render: unsupported rule effect kind %d", kind)
 	}

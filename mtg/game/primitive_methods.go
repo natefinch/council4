@@ -641,16 +641,21 @@ func (p Mill) instructionRefs() primitiveRefs {
 func (p ExileTopOfLibrary) instructionRefs() primitiveRefs {
 	return quantityRefs(p.Amount)
 }
-func (PutHandOnLibraryThenDraw) instructionRefs() primitiveRefs     { return primitiveRefs{} }
-func (DiscardThenDraw) instructionRefs() primitiveRefs              { return primitiveRefs{} }
-func (DiscardUnlessType) instructionRefs() primitiveRefs            { return primitiveRefs{} }
-func (RevealUntil) instructionRefs() primitiveRefs                  { return primitiveRefs{} }
-func (p Scry) instructionRefs() primitiveRefs                       { return quantityRefs(p.Amount) }
-func (p Surveil) instructionRefs() primitiveRefs                    { return quantityRefs(p.Amount) }
-func (p Dig) instructionRefs() primitiveRefs                        { return quantityRefs(p.Look) }
-func (p PileSplit) instructionRefs() primitiveRefs                  { return quantityRefs(p.Amount) }
-func (p RevealTopPartition) instructionRefs() primitiveRefs         { return quantityRefs(p.Amount) }
-func (p ImpulseExile) instructionRefs() primitiveRefs               { return quantityRefs(p.Amount) }
+func (PutHandOnLibraryThenDraw) instructionRefs() primitiveRefs { return primitiveRefs{} }
+func (DiscardThenDraw) instructionRefs() primitiveRefs          { return primitiveRefs{} }
+func (DiscardUnlessType) instructionRefs() primitiveRefs        { return primitiveRefs{} }
+func (RevealUntil) instructionRefs() primitiveRefs              { return primitiveRefs{} }
+func (p Scry) instructionRefs() primitiveRefs                   { return quantityRefs(p.Amount) }
+func (p Surveil) instructionRefs() primitiveRefs                { return quantityRefs(p.Amount) }
+func (p Dig) instructionRefs() primitiveRefs                    { return quantityRefs(p.Look) }
+func (p PileSplit) instructionRefs() primitiveRefs              { return quantityRefs(p.Amount) }
+func (p RevealTopPartition) instructionRefs() primitiveRefs     { return quantityRefs(p.Amount) }
+func (p ImpulseExile) instructionRefs() primitiveRefs {
+	refs := quantityRefs(p.Amount)
+	refs.publishesLinked = p.PublishLinked
+	return refs
+}
+
 func (ExileLibraryUntilNonlandCast) instructionRefs() primitiveRefs { return primitiveRefs{} }
 func (p Investigate) instructionRefs() primitiveRefs                { return quantityRefs(p.Amount) }
 func (p Proliferate) instructionRefs() primitiveRefs                { return quantityRefs(p.Amount) }

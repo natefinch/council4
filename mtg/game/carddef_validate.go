@@ -1168,6 +1168,16 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		if effect.TopCardOnly && effect.CastFromZone != zone.Library {
 			v.add(faceName, appendPath(path, "TopCardOnly"), CardDefIssueInvalidRuleEffect, "top-card-only cast permission requires the library source zone")
 		}
+	case RuleEffectCastLinkedExileForFree:
+		if effect.AffectedPlayer == PlayerAny {
+			v.add(faceName, appendPath(path, "AffectedPlayer"), CardDefIssueInvalidRuleEffect, "linked-exile free-cast permission must set affected player")
+		}
+		if effect.AffectedSource || effect.AffectedAttached || effect.AffectedObjectID != 0 {
+			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "linked-exile free-cast permission cannot affect a permanent")
+		}
+		if effect.ExiledLinkKey == "" {
+			v.add(faceName, appendPath(path, "ExiledLinkKey"), CardDefIssueInvalidRuleEffect, "linked-exile free-cast permission requires a linked-exile key")
+		}
 	case RuleEffectPlayerProtection:
 		if effect.AffectedPlayer == PlayerAny {
 			v.add(faceName, appendPath(path, "AffectedPlayer"), CardDefIssueInvalidRuleEffect, "player protection must set affected player")
