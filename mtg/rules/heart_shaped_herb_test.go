@@ -70,6 +70,23 @@ func newHerbGame(t *testing.T) (*game.Game, *Engine, *game.Permanent) {
 	return g, engine, herb
 }
 
+// assertHerbActivationEnumerated proves the ability is reachable through the real
+// driver-facing path: it must appear in legalActions before the test drives it,
+// so the end-to-end coverage can never be masked by a hand-built action that the
+// engine would never actually offer.
+func assertHerbActivationEnumerated(t *testing.T, engine *Engine, g *game.Game, herb *game.Permanent) {
+	t.Helper()
+	for _, a := range engine.legalActions(g, game.Player1) {
+		if a.Kind != action.ActionActivateAbility {
+			continue
+		}
+		if p, ok := a.ActivateAbilityPayload(); ok && p.SourceID == herb.ObjectID && p.AbilityIndex == 0 {
+			return
+		}
+	}
+	t.Fatal("Heart-Shaped Herb's activated ability was not enumerated by legalActions")
+}
+
 // TestHeartShapedHerbSacrificeReturnsCreatureWithCountersAndMonarch drives the
 // full engine path: activate {2},{T},Sacrifice this artifact, accept the
 // optional sacrifice of a specific creature, and confirm that creature returns
@@ -86,6 +103,7 @@ func TestHeartShapedHerbSacrificeReturnsCreatureWithCountersAndMonarch(t *testin
 	agents := [game.NumPlayers]PlayerAgent{
 		game.Player1: &herbChoiceAgent{sacrifice: true, sacName: "Chosen Sacrifice"},
 	}
+	assertHerbActivationEnumerated(t, engine, g, herb)
 	act := action.ActivateAbility(herb.ObjectID, 0, nil, 0)
 	if !engine.applyActionWithChoices(g, game.Player1, act, agents, &TurnLog{}) {
 		t.Fatal("applyActionWithChoices(activate Heart-Shaped Herb) = false, want true")
