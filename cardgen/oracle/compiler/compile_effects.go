@@ -526,6 +526,8 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				DestroyForEachPlayer:                   syntax.DestroyForEachPlayer,
 				CreateTokenForEachDestroyedThisWay:     syntax.CreateTokenForEachDestroyedThisWay,
 				CreateTokenForEachExiledThisWay:        syntax.CreateTokenForEachExiledThisWay,
+				ExileForEachOpponent:                   syntax.ExileForEachOpponent,
+				DrawForEachExiledThisWay:               syntax.DrawForEachExiledThisWay,
 				CounterExiledCardManaValue:             syntax.CounterExiledCardManaValue,
 				ReturnSourceAndExiledCardToHand:        syntax.ReturnSourceAndExiledCardToHand,
 				CantCastSpellsAllPlayers:               syntax.CantCastSpellsAllPlayers,

@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,971 of 32,501 cards eligible for paper support (52.2%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,972 of 32,501 cards eligible for paper support (52.2%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -7820,6 +7820,7 @@ Council4 currently supports **16,971 of 32,501 cards eligible for paper support 
 - King Crab
 - King Macar, the Gold-Cursed
 - King of the Pride
+- King Solomon's Frogs
 - King Suleiman
 - King's Assassin
 - Kingfisher

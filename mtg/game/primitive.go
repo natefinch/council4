@@ -174,10 +174,23 @@ const (
 	// of the exiled cards. You put that card on the bottom of your library and
 	// return the other to the battlefield tapped." (Coin of Fate).
 	PrimitivePartitionExiledCostCards
+	// PrimitiveExileForEachOpponent walks each opponent of the resolving
+	// controller and, for each, has Chooser exile up to one permanent that
+	// opponent controls matching Selection, publishing each exiled permanent
+	// under LinkedKey (game.ExileForEachOpponent). It models "for each opponent,
+	// exile up to one target permanent that player controls ..." (King Solomon's
+	// Frogs).
+	PrimitiveExileForEachOpponent
+	// PrimitiveDrawForEachExiled has each linked exiled permanent's last-known
+	// controller draw one card, consuming the LinkedKey a sibling
+	// ExileForEachOpponent published (game.DrawForEachExiled). It models "For
+	// each permanent exiled this way, its controller draws a card." (King
+	// Solomon's Frogs).
+	PrimitiveDrawForEachExiled
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitivePartitionExiledCostCards) + 1
+const primitiveKindCount = int(PrimitiveDrawForEachExiled) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -955,6 +968,33 @@ type EachPlayerChooseDestroy struct {
 // the link after resolving. LinkedKey must be set and Source must be valid.
 type CreateTokenForEachDestroyed struct {
 	Source    TokenSource
+	LinkedKey LinkedKey
+}
+
+// ExileForEachOpponent walks each opponent of the resolving controller and, for
+// each, has Chooser pick up to one permanent that opponent controls matching
+// Selection and exiles it permanently, remembering each exiled permanent under
+// LinkedKey keyed by the source permanent. It models the distributive enters
+// trigger "for each opponent, exile up to one target permanent that player
+// controls with mana value 3 or greater." (King Solomon's Frogs). Each
+// opponent's permanents are an independent candidate pool, so the trigger exiles
+// at most one per opponent. Unlike ExileForEachPlayer this is a plain exile with
+// no return link; the linked set is recorded only so a paired DrawForEachExiled
+// payoff can iterate the exiled permanents and read each one's last-known
+// controller. LinkedKey must be set; the exiled permanents are otherwise
+// unrecoverable for the draw payoff.
+type ExileForEachOpponent struct {
+	Chooser   PlayerReference
+	Selection Selection
+	LinkedKey LinkedKey
+}
+
+// DrawForEachExiled has each permanent a sibling ExileForEachOpponent recorded
+// under LinkedKey draw one card for that permanent's last-known controller. It
+// models the per-controller payoff "For each permanent exiled this way, its
+// controller draws a card." (King Solomon's Frogs). It consumes and clears the
+// link after resolving. LinkedKey must be set.
+type DrawForEachExiled struct {
 	LinkedKey LinkedKey
 }
 

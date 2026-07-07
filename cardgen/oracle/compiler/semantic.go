@@ -2723,6 +2723,19 @@ type CompiledEffect struct {
 	// lowering creates one token for each creature a sibling variable-target exile
 	// removed, controlled by that creature's controller.
 	CreateTokenForEachExiledThisWay bool
+	// ExileForEachOpponent carries the parser-recognized distributive enters
+	// exile clause "for each opponent, exile up to one target permanent that
+	// player controls with mana value 3 or greater." (King Solomon's Frogs)
+	// through the text-blind compiler boundary so lowering exiles up to one
+	// permanent each opponent controls and links each exiled permanent for the
+	// paired draw payoff.
+	ExileForEachOpponent bool
+	// DrawForEachExiledThisWay carries the parser-recognized per-controller
+	// payoff "For each permanent exiled this way, its controller draws a card."
+	// (King Solomon's Frogs) through the text-blind compiler boundary so lowering
+	// draws one card for each permanent a sibling ExileForEachOpponent exiled,
+	// for that permanent's last-known controller.
+	DrawForEachExiledThisWay bool
 	// to the mana value of the exiled card." (The Aesir Escape Valhalla) through
 	// the text-blind compiler boundary so lowering scales the placement by the
 	// linked exiled card's mana value.

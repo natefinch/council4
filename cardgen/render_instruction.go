@@ -382,6 +382,18 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 			return "", err
 		}
 		return r.renderCreateTokenForEachDestroyed(ctx, value)
+	case game.PrimitiveExileForEachOpponent:
+		value, err := assertPrimitive[game.ExileForEachOpponent](primitive)
+		if err != nil {
+			return "", err
+		}
+		return r.renderExileForEachOpponent(ctx, value)
+	case game.PrimitiveDrawForEachExiled:
+		value, err := assertPrimitive[game.DrawForEachExiled](primitive)
+		if err != nil {
+			return "", err
+		}
+		return r.renderDrawForEachExiled(value)
 	case game.PrimitiveRemoveTargetsForToken:
 		value, err := assertPrimitive[game.RemoveTargetsForToken](primitive)
 		if err != nil {
@@ -943,6 +955,28 @@ func (r Renderer) renderCreateTokenForEachDestroyed(ctx *renderCtx, value game.C
 	}
 	return structLit("game.CreateTokenForEachDestroyed", []string{
 		fmt.Sprintf("Source: %s,", source),
+		fmt.Sprintf("LinkedKey: game.LinkedKey(%q),", string(value.LinkedKey)),
+	}), nil
+}
+
+func (r Renderer) renderExileForEachOpponent(ctx *renderCtx, value game.ExileForEachOpponent) (string, error) {
+	chooser, err := r.renderPlayerReference(value.Chooser)
+	if err != nil {
+		return "", err
+	}
+	selection, err := r.renderSelection(ctx, value.Selection)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.ExileForEachOpponent", []string{
+		fmt.Sprintf("Chooser: %s,", chooser),
+		fmt.Sprintf("Selection: %s,", selection),
+		fmt.Sprintf("LinkedKey: game.LinkedKey(%q),", string(value.LinkedKey)),
+	}), nil
+}
+
+func (Renderer) renderDrawForEachExiled(value game.DrawForEachExiled) (string, error) {
+	return structLit("game.DrawForEachExiled", []string{
 		fmt.Sprintf("LinkedKey: game.LinkedKey(%q),", string(value.LinkedKey)),
 	}), nil
 }
