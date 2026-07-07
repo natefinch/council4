@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,994 of 32,501 cards eligible for paper support (52.3%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,018 of 32,501 cards eligible for paper support (52.4%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -861,6 +861,7 @@ Council4 currently supports **16,994 of 32,501 cards eligible for paper support 
 - Augur of Bolas
 - Augur of Skulls
 - Augury Owl
+- Augury Raven
 - Auntie's Hovel
 - Aura Blast
 - Aura Extraction
@@ -1145,6 +1146,7 @@ Council4 currently supports **16,994 of 32,501 cards eligible for paper support 
 - Battle Brawler
 - Battle Hurda
 - Battle Hymn
+- Battle Mammoth
 - Battle Mastery
 - Battle Menu
 - Battle of Wits
@@ -1241,6 +1243,7 @@ Council4 currently supports **16,994 of 32,501 cards eligible for paper support 
 - Befuddle
 - Behemoth Sledge
 - Behind the Scenes
+- Behold the Multiverse
 - Belbe's Armor
 - Belbe's Percher
 - Belbe's Portal
@@ -3486,6 +3489,7 @@ Council4 currently supports **16,994 of 32,501 cards eligible for paper support 
 - Demon
 - Demon
 - Demon Berserker
+- Demon Bolt
 - Demon of Catastrophes
 - Demon of Loathing
 - Demon's Disciple
@@ -3506,6 +3510,7 @@ Council4 currently supports **16,994 of 32,501 cards eligible for paper support 
 - Deny Existence
 - Deny Reality
 - Deny the Divine
+- Depart the Realm
 - Dependable Quinjet
 - Deploy to the Front
 - Depose // Deploy
@@ -3782,6 +3787,9 @@ Council4 currently supports **16,994 of 32,501 cards eligible for paper support 
 - Doomed Dissenter
 - Doomed Necromancer
 - Doomed Traveler
+- Doomskar
+- Doomskar Oracle
+- Doomskar Titan
 - Doomwake Giant
 - Door of Destinies
 - Door to Nothingness
@@ -4090,6 +4098,7 @@ Council4 currently supports **16,994 of 32,501 cards eligible for paper support 
 - Dwarven Nomad
 - Dwarven Pony
 - Dwarven Priest
+- Dwarven Reinforcements
 - Dwarven Ruins
 - Dwarven Strike Force
 - Dwarven Trader
@@ -6065,6 +6074,7 @@ Council4 currently supports **16,994 of 32,501 cards eligible for paper support 
 - Godless Shrine
 - Gods Willing
 - Gods' Eye, Gate to the Reikai
+- Gods' Hall Guardian
 - Godtoucher
 - Godtracker of Jund
 - Goggles of Night
@@ -7434,6 +7444,7 @@ Council4 currently supports **16,994 of 32,501 cards eligible for paper support 
 - Iron Star
 - Iron Suitcase
 - Iron Tusk Elephant
+- Iron Verdict
 - Iron Will
 - Iron-Barb Hellion
 - Iron-Fist Pulverizer
@@ -7524,6 +7535,7 @@ Council4 currently supports **16,994 of 32,501 cards eligible for paper support 
 - Janjeet Sentry
 - Jared Carthalion, True Heir
 - Jareth, Leonine Titan
+- Jarl of the Forsaken
 - Jarvis, Earth's Mightiest Butler
 - Jasmine Boreal
 - Jaspera Sentinel
@@ -7731,6 +7743,7 @@ Council4 currently supports **16,994 of 32,501 cards eligible for paper support 
 - Kavu Primarch
 - Kavu Scout
 - Kaya's Ghostform
+- Kaya's Onslaught
 - Kaysa
 - Kazandu Blademaster
 - Kazandu Mammoth // Kazandu Valley
@@ -8688,6 +8701,7 @@ Council4 currently supports **16,994 of 32,501 cards eligible for paper support 
 - Malfunction
 - Malicious Intent
 - Malleable Impostor
+- Mammoth Growth
 - Mammoth Spider
 - Man-o'-War
 - Mana Chains
@@ -11252,6 +11266,7 @@ Council4 currently supports **16,994 of 32,501 cards eligible for paper support 
 - Raven Wings
 - Raven's Crime
 - Raven's Run Dragoon
+- Ravenform
 - Ravenous Baboons
 - Ravenous Baloth
 - Ravenous Bloodseeker
@@ -11554,6 +11569,7 @@ Council4 currently supports **16,994 of 32,501 cards eligible for paper support 
 - Return to Nature
 - Return to the Earth
 - Return to the Ranks
+- Return Upon the Tide
 - Returned Centaur
 - Returned Phalanx
 - Returned Reveler
@@ -12121,6 +12137,7 @@ Council4 currently supports **16,994 of 32,501 cards eligible for paper support 
 - Sarkhan's Resolve
 - Sarkhan's Triumph
 - Sarpadian Simulacrum
+- Sarulf's Packmate
 - Saruli Caretaker
 - Saruli Gatekeepers
 - Saruman the White
@@ -12167,6 +12184,7 @@ Council4 currently supports **16,994 of 32,501 cards eligible for paper support 
 - Savor
 - Savra, Queen of the Golgari
 - Savvy Hunter
+- Saw It Coming
 - Sawback Manticore
 - Sawblade Scamp
 - Sawtusk Demolisher
@@ -12256,6 +12274,7 @@ Council4 currently supports **16,994 of 32,501 cards eligible for paper support 
 - Scorchwalker
 - Scoria Cat
 - Scoria Elemental
+- Scorn Effigy
 - Scornful Aether-Lich
 - Scornful Egotist
 - Scorpion Dragon
@@ -12699,6 +12718,7 @@ Council4 currently supports **16,994 of 32,501 cards eligible for paper support 
 - Sheoldred, Whispering One
 - Shepherd of Rot
 - Shepherd of the Clouds
+- Shepherd of the Cosmos
 - Shepherd of the Flock // Usher to Safety
 - Shepherd of the Lost
 - Shepherding Spirits
@@ -14108,6 +14128,7 @@ Council4 currently supports **16,994 of 32,501 cards eligible for paper support 
 - Stronghold Rats
 - Stronghold Taskmaster
 - Stronghold Zeppelin
+- Struggle for Skemfar
 - Student of Ojutai
 - Student of Warfare
 - Studious First-Year // Rampant Growth
@@ -14632,6 +14653,7 @@ Council4 currently supports **16,994 of 32,501 cards eligible for paper support 
 - Terashi's Grasp
 - Terashi's Verdict
 - Teremko Griffin
+- Tergrid's Shadow
 - Terisian Mindbreaker
 - Terminal Agony
 - Terminal Moraine
@@ -15839,6 +15861,7 @@ Council4 currently supports **16,994 of 32,501 cards eligible for paper support 
 - Vengeful Dead
 - Vengeful Devil
 - Vengeful Possession
+- Vengeful Reaper
 - Vengeful Rebel
 - Vengeful Townsfolk
 - Vengeful Vampire
@@ -16296,6 +16319,7 @@ Council4 currently supports **16,994 of 32,501 cards eligible for paper support 
 - Warfire Javelineer
 - Warg Rider
 - Wargate
+- Warhorn Blast
 - Warhost's Frenzy
 - Warkite Marauder
 - Warleader's Call
