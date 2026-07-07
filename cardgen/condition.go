@@ -429,7 +429,17 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 			compiler.ConditionPredicateControllerWasMonarchAtTurnStart:
 			return ctx == conditionContextInterveningTrigger
 		case compiler.ConditionPredicateControllerControlsCommander:
-			return ctx == conditionContextInterveningTrigger || ctx == conditionContextStatic
+			// "As long as you control your commander" (Lieutenant statics), the
+			// intervening "if you control your commander" trigger gate, and the
+			// "Activate only if you control your commander." activation
+			// restriction (T'Chaka, Venerable King's graveyard become-monarch
+			// ability) all read the same live commander-control check
+			// (playerControlsCommander) from the controller alone, so it is safe
+			// as an activation gate even when the ability functions from the
+			// graveyard with no battlefield source.
+			return ctx == conditionContextInterveningTrigger ||
+				ctx == conditionContextStatic ||
+				ctx == conditionContextActivation
 		case compiler.ConditionPredicateLandEnteredThisTurnOrControlsBasic:
 			return ctx == conditionContextActivation
 		case compiler.ConditionPredicateControllerHandSizeExactly:
