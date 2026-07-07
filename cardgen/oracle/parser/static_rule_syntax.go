@@ -794,6 +794,10 @@ func validStaticRuleSyntax(rule StaticRuleSyntax) bool {
 			rule.Operation.Voice == StaticRuleVoiceActive &&
 			len(rule.Qualifiers) == 0) ||
 			(rule.Constraint.Kind == StaticRuleConstraintProhibition &&
+				rule.Operation.Kind == StaticRuleOperationAttack &&
+				rule.Operation.Voice == StaticRuleVoiceActive &&
+				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierDefenderYouDirect)) ||
+			(rule.Constraint.Kind == StaticRuleConstraintProhibition &&
 				rule.Operation.Kind == StaticRuleOperationUntap &&
 				rule.Operation.Voice == StaticRuleVoiceActive &&
 				len(rule.Qualifiers) == 0) ||
