@@ -28,6 +28,7 @@ var Cards = []*game.CardDef{
 	FathomFleetCutthroat,
 	FavorOfJukai,
 	FavorOfTheOverbeing,
+	FealtyToTheRealm,
 	FeastingTrollKing,
 	Fecundity,
 	FeedTheFlames,

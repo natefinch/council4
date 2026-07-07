@@ -29,6 +29,7 @@ const (
 	StaticDeclarationCardAbilityGrant                     StaticDeclarationKind = "StaticDeclarationCardAbilityGrant"
 	StaticDeclarationPermanentAbilityGrant                StaticDeclarationKind = "StaticDeclarationPermanentAbilityGrant"
 	StaticDeclarationControlGrant                         StaticDeclarationKind = "StaticDeclarationControlGrant"
+	StaticDeclarationMonarchControlGrant                  StaticDeclarationKind = "StaticDeclarationMonarchControlGrant"
 	StaticDeclarationPlayerRule                           StaticDeclarationKind = "StaticDeclarationPlayerRule"
 	StaticDeclarationLoseAbilitiesBecome                  StaticDeclarationKind = "StaticDeclarationLoseAbilitiesBecome"
 	StaticDeclarationOpponentActionRestriction            StaticDeclarationKind = "StaticDeclarationOpponentActionRestriction"
@@ -1195,6 +1196,9 @@ func parseStaticDeclarations(tokens []shared.Token, quoted []Delimited, atoms At
 	if declaration, ok := parseStaticControlGrantDeclaration(tokens); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
+	if declaration, ok := parseStaticMonarchControlGrantDeclaration(tokens); ok {
+		return []StaticDeclarationSyntax{declaration}
+	}
 	if declaration, ok := parseStaticCastThisFromGraveyardDeclaration(tokens, conditions); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
@@ -1675,6 +1679,35 @@ func parseStaticControlGrantDeclaration(tokens []shared.Token) (StaticDeclaratio
 		Kind:          StaticDeclarationControlGrant,
 		Span:          shared.SpanOf(tokens),
 		OperationSpan: tokens[1].Span,
+		Subject: StaticDeclarationSubject{
+			Kind:  StaticDeclarationSubjectGroup,
+			Span:  objectSpan,
+			Group: EffectStaticSubjectSyntax{Kind: EffectStaticSubjectAttachedObject, Span: objectSpan},
+		},
+	}, true
+}
+
+// parseStaticMonarchControlGrantDeclaration recognizes "The monarch controls
+// enchanted creature." (Fealty to the Realm): the enchanted permanent is
+// controlled by whoever currently holds the monarch designation. Unlike the
+// fixed "You control enchanted creature." grant, the controller follows the
+// crown, so the compiler lowers it to a monarch-bound control effect. Any other
+// wording leaves the clause unconsumed and fails closed.
+func parseStaticMonarchControlGrantDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if len(tokens) != 6 || tokens[5].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	if !staticWordsAt(tokens, 0, "the", "monarch", "controls", "enchanted") {
+		return StaticDeclarationSyntax{}, false
+	}
+	if !equalWord(tokens[4], "creature") && !equalWord(tokens[4], "permanent") {
+		return StaticDeclarationSyntax{}, false
+	}
+	objectSpan := shared.SpanOf(tokens[3:5])
+	return StaticDeclarationSyntax{
+		Kind:          StaticDeclarationMonarchControlGrant,
+		Span:          shared.SpanOf(tokens),
+		OperationSpan: tokens[2].Span,
 		Subject: StaticDeclarationSubject{
 			Kind:  StaticDeclarationSubjectGroup,
 			Span:  objectSpan,

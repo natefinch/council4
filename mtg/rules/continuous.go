@@ -175,6 +175,11 @@ func effectiveController(g *game.Game, permanent *game.Permanent) game.PlayerID 
 		if effect.NewController.Exists {
 			values.controller = effect.NewController.Val
 		}
+		if effect.NewControllerIsMonarch {
+			if monarch := livingMonarch(g); monarch.Exists {
+				values.controller = monarch.Val
+			}
+		}
 	}
 	if fc != nil {
 		if fc.controllers == nil {
@@ -1178,6 +1183,12 @@ func applyContinuousEffect(g *game.Game, permanent *game.Permanent, values *perm
 		if effect.NewController.Exists {
 			values.controller = effect.NewController.Val
 			recalculateDynamicPT(g, values)
+		}
+		if effect.NewControllerIsMonarch {
+			if monarch := livingMonarch(g); monarch.Exists {
+				values.controller = monarch.Val
+				recalculateDynamicPT(g, values)
+			}
 		}
 	case game.LayerText:
 		if effect.SetName != "" {
