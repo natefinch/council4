@@ -129,6 +129,14 @@ type Game struct {
 	// restriction). The entry is removed when the card leaves exile.
 	PlottedCards map[id.ID]int
 
+	// ForetoldCards tracks cards foretold into exile (CR 702.144) and the turn
+	// number on which each was foretold. A card in this map is in exile face down
+	// and may be cast from exile for its foretell cost, at the card's normal
+	// timing, on any turn after the one it was foretold (so the map value gates
+	// the "on a later turn" restriction). The entry is removed when the card
+	// leaves exile.
+	ForetoldCards map[id.ID]int
+
 	// LastKnownInformation stores snapshots for objects that have moved zones.
 	LastKnownInformation map[id.ID]ObjectSnapshot
 
@@ -286,6 +294,7 @@ func NewGameWithRand(configs [NumPlayers]PlayerConfig, rng *rand.Rand) *Game {
 		ReboundCards:               make(map[id.ID]ReboundCard),
 		AdventureCards:             make(map[id.ID]bool),
 		PlottedCards:               make(map[id.ID]int),
+		ForetoldCards:              make(map[id.ID]int),
 		LastKnownInformation:       make(map[id.ID]ObjectSnapshot),
 		LinkedObjects:              make(map[LinkedObjectKey][]LinkedObjectRef),
 		SkippedSteps:               make(map[PlayerID]map[Step]int),
