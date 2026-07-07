@@ -1400,6 +1400,28 @@ func lowerOverloadSpell(
 		primitive.Object = game.ObjectReference{}
 		primitive.Group = group
 		instruction.Primitive = primitive
+	case game.ModifyPT:
+		// Overloading a single-target fixed power/toughness pump ("Target
+		// creature you control gets +2/+2 until end of turn." -> "each") turns it
+		// into the group ApplyContinuous form the runtime already uses for mass
+		// pumps ("Creatures you control get +2/+2 until end of turn."). Dynamic,
+		// linked, or non-until-end-of-turn modifies fail closed.
+		if primitive.Object != game.TargetPermanentReference(0) ||
+			primitive.Duration != game.DurationUntilEndOfTurn ||
+			primitive.PowerDelta.IsDynamic() ||
+			primitive.ToughnessDelta.IsDynamic() ||
+			primitive.PublishLinked != "" {
+			return game.AbilityContent{}, false
+		}
+		instruction.Primitive = game.ApplyContinuous{
+			ContinuousEffects: []game.ContinuousEffect{{
+				Layer:          game.LayerPowerToughnessModify,
+				Group:          group,
+				PowerDelta:     primitive.PowerDelta.Value(),
+				ToughnessDelta: primitive.ToughnessDelta.Value(),
+			}},
+			Duration: game.DurationUntilEndOfTurn,
+		}
 	default:
 		return game.AbilityContent{}, false
 	}
