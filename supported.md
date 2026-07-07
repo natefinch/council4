@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,960 of 32,501 cards eligible for paper support (52.2%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,966 of 32,501 cards eligible for paper support (52.2%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -4418,6 +4418,7 @@ Council4 currently supports **16,960 of 32,501 cards eligible for paper support 
 - Endless Cockroaches
 - Endless Obedience
 - Endless One
+- Endless Ranks of HYDRA
 - Endless Wurm
 - Endrider Catalyzer
 - Endrider Spikespitter
@@ -8278,6 +8279,7 @@ Council4 currently supports **16,960 of 32,501 cards eligible for paper support 
 - Light of Hope
 - Light of Promise
 - Light of the Legion
+- Light the Way
 - Light Up the Stage
 - Lightbringer
 - Lightfoot Technique
@@ -9544,6 +9546,7 @@ Council4 currently supports **16,960 of 32,501 cards eligible for paper support 
 - Nahiri's Binding
 - Nahiri's Machinations
 - Nahiri's Stoneblades
+- Nakia, Wakandan Operative
 - Nalaar Aetherjet
 - Namazu Trader
 - Nanoform Sentinel
@@ -12347,6 +12350,7 @@ Council4 currently supports **16,960 of 32,501 cards eligible for paper support 
 - Seal of Strength
 - Seam Rip
 - Sear
+- Search for Dagger
 - Search the Premises
 - Searchlight Companion
 - Searchlight Geist
@@ -15047,6 +15051,7 @@ Council4 currently supports **16,960 of 32,501 cards eligible for paper support 
 - Tombstalker
 - Tombstone, Career Criminal
 - Tome Blast
+- Tome of Legends
 - Tome of the Guildpact
 - Tome Raider
 - Tome Scour
@@ -15994,6 +15999,7 @@ Council4 currently supports **16,960 of 32,501 cards eligible for paper support 
 - Vito's Inquisitor
 - Vito, Thorn of the Dusk Rose
 - Vitu-Ghazi, the City-Tree
+- Vivi's Persistence
 - Vivid Crag
 - Vivid Creek
 - Vivid Flying Fish
