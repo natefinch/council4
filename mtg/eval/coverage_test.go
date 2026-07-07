@@ -26,7 +26,13 @@ import (
 // optional mana payment or an installed combat rule restriction, neither of
 // which the single-target card/life/board atom heuristic models, matching Pay
 // and ApplyRule.
-const knownPrimitiveCount = 115
+//
+// ExileForEachOpponent and DrawForEachExiled are value-neutral (no atom),
+// matching the sibling distributive removals and per-controller payoffs
+// (DestroyForEachPlayer, ExileForEachPlayer, CreateTokenForEachDestroyed): their
+// per-opponent player-relative choices and linked-set payoffs are not modeled by
+// the single-target atom heuristic.
+const knownPrimitiveCount = 117
 
 // TestPrimitiveCountIsReconciled keeps a newly added resolution primitive from
 // silently falling through the translator: adding one trips this guard so its

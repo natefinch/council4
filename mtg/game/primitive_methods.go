@@ -54,6 +54,12 @@ func (CreateTokenForEachDestroyed) Kind() PrimitiveKind {
 	return PrimitiveCreateTokenForEachDestroyed
 }
 
+// Kind implements Primitive for ExileForEachOpponent.
+func (ExileForEachOpponent) Kind() PrimitiveKind { return PrimitiveExileForEachOpponent }
+
+// Kind implements Primitive for DrawForEachExiled.
+func (DrawForEachExiled) Kind() PrimitiveKind { return PrimitiveDrawForEachExiled }
+
 // Kind implements Primitive for RemoveTargetsForToken.
 func (RemoveTargetsForToken) Kind() PrimitiveKind { return PrimitiveRemoveTargetsForToken }
 
@@ -362,6 +368,8 @@ func (ReturnLinkedExiledCardsToBattlefield) isPrimitive() {}
 func (DestroyForEachPlayer) isPrimitive()                 {}
 func (EachPlayerChooseDestroy) isPrimitive()              {}
 func (CreateTokenForEachDestroyed) isPrimitive()          {}
+func (ExileForEachOpponent) isPrimitive()                 {}
+func (DrawForEachExiled) isPrimitive()                    {}
 func (RemoveTargetsForToken) isPrimitive()                {}
 func (CastForFree) isPrimitive()                          {}
 func (ChooseFromZone) isPrimitive()                       {}
@@ -603,6 +611,12 @@ func (EachPlayerChooseDestroy) instructionRefs() primitiveRefs {
 	return primitiveRefs{}
 }
 func (p CreateTokenForEachDestroyed) instructionRefs() primitiveRefs {
+	return primitiveRefs{consumesLinked: []LinkedKey{p.LinkedKey}}
+}
+func (p ExileForEachOpponent) instructionRefs() primitiveRefs {
+	return primitiveRefs{publishesLinked: p.LinkedKey}
+}
+func (p DrawForEachExiled) instructionRefs() primitiveRefs {
 	return primitiveRefs{consumesLinked: []LinkedKey{p.LinkedKey}}
 }
 func (p RemoveTargetsForToken) instructionRefs() primitiveRefs {

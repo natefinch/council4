@@ -1553,6 +1553,23 @@ func (p CreateTokenForEachDestroyed) validatePrimitive([]TargetSpec, bool) error
 	return nil
 }
 
+func (p ExileForEachOpponent) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.LinkedKey == "" {
+		return errors.New("exile for each opponent requires a linked key")
+	}
+	if err := firstProblem(p.Selection.Validate()); err != nil {
+		return err
+	}
+	return validatePlayerReference(p.Chooser, targets, checkTargets)
+}
+
+func (p DrawForEachExiled) validatePrimitive([]TargetSpec, bool) error {
+	if p.LinkedKey == "" {
+		return errors.New("draw for each exiled requires a linked key")
+	}
+	return nil
+}
+
 func (p RemoveTargetsForToken) validatePrimitive([]TargetSpec, bool) error {
 	if p.LinkedKey == "" {
 		return errors.New("remove targets for token requires a linked key")
