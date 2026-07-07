@@ -2078,6 +2078,9 @@ func recognizeControllerDesignationCondition(body []shared.Token, _ Atoms) (Cond
 	case tokenWordsEqual(body, "you're", "the", "monarch"),
 		tokenWordsEqual(body, "you", "are", "the", "monarch"):
 		return ConditionClause{Predicate: ConditionPredicateControllerIsMonarch}, true
+	case tokenWordsEqual(body, "you're", "not", "the", "monarch"),
+		tokenWordsEqual(body, "you", "are", "not", "the", "monarch"):
+		return ConditionClause{Predicate: ConditionPredicateControllerIsMonarch, Negated: true}, true
 	case tokenWordsEqual(body, "you", "were", "the", "monarch", "as", "the", "turn", "began"):
 		return ConditionClause{Predicate: ConditionPredicateControllerWasMonarchAtTurnStart}, true
 	case tokenWordsEqual(body, "an", "opponent", "is", "the", "monarch"):
