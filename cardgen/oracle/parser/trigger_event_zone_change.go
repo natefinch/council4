@@ -510,6 +510,15 @@ func parseZoneChangeSubject(
 		result.ok = true
 		return result
 	}
+	if commander, controller, ok := parseCommanderEventSubject(remaining); ok {
+		if subtypeFromEntryChoice || result.selfOrAnother {
+			return zoneSubjectResult{}
+		}
+		result.controller = controller
+		result.subject = commander
+		result.ok = true
+		return result
+	}
 	relations := stripZoneSubjectRelations(remaining)
 	if !relations.ok {
 		return zoneSubjectResult{}

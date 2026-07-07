@@ -9,6 +9,7 @@ var Cards = []*game.CardDef{
 	NYamiClassMotherShip,
 	NacreTalisman,
 	NahiriSBinding,
+	NakiaWakandanOperative,
 	NarnamRenegade,
 	NarsetParterOfVeils,
 	NarsetSRebuke,

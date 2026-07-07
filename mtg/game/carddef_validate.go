@@ -1720,6 +1720,13 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 			unsupported.RequiredCounter = 0
 			unsupported.MatchAnyCounter = false
 		}
+		if eventExposesSubjectCommander(pattern.Event) {
+			// The subject is an identifiable battlefield permanent, so the
+			// runtime can read whether its card is a commander to honor a "your
+			// commander" subject filter (Nakia, Wakandan Operative: "Whenever
+			// your commander enters, ...").
+			unsupported.MatchCommander = false
+		}
 		if !unsupported.Empty() {
 			v.add(faceName, appendPath(path, "SubjectSelection"), CardDefIssueInvalidSelection, "trigger subject Selection uses predicates unavailable from event data")
 		}
@@ -1926,6 +1933,16 @@ func eventExposesSubjectCounters(event EventKind) bool {
 	default:
 		return false
 	}
+}
+
+// eventExposesSubjectCommander reports whether a trigger event identifies a
+// specific battlefield permanent (or last-known snapshot) as its subject, so the
+// runtime can read whether that permanent's card is a commander to honor a "your
+// commander" subject filter. It shares the battlefield-subject event set with
+// eventExposesSubjectCounters: whenever the subject permanent's counters are
+// readable, its commander identity is too.
+func eventExposesSubjectCommander(event EventKind) bool {
+	return eventExposesSubjectCounters(event)
 }
 
 // validateAttackerCountRelations checks the attacker-count combat relations.
