@@ -35,6 +35,7 @@ var Cards = []*game.CardDef{
 	Heal,
 	HealingLeaves,
 	HealingSalve,
+	HeartShapedHerb,
 	HeartfireHero,
 	Heartmender,
 	HeartsOnFire,

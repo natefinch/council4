@@ -487,7 +487,7 @@ func handlePutOnBattlefield(r *effectResolver, prim game.PutOnBattlefield) effec
 					controllerOverride = opt.Val(controller)
 				}
 			}
-			res.succeeded = returnLinkedExiledObjects(r.engine, r.game, r.obj, string(key), controllerOverride, battlefieldEntryOptions(prim), r.agents, r.log)
+			res.succeeded = returnLinkedNonBattlefieldObjects(r.engine, r.game, r.obj, string(key), prim.LinkedReturnZonesOrExile(), controllerOverride, battlefieldEntryOptions(prim), r.agents, r.log)
 		}
 	}
 	return res

@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,967 of 32,501 cards eligible for paper support (52.2%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,971 of 32,501 cards eligible for paper support (52.2%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -262,6 +262,7 @@ Council4 currently supports **16,967 of 32,501 cards eligible for paper support 
 - Akki War Paint
 - Akoum Boulderfoot
 - Akoum Firebird
+- Akoum Flameseeker
 - Akoum Hellhound
 - Akoum Refuge
 - Akoum Warrior // Akoum Teeth
@@ -4156,6 +4157,7 @@ Council4 currently supports **16,967 of 32,501 cards eligible for paper support 
 - Ecologist's Terrarium
 - Ecstatic Electromancer
 - Edea, Possessed Sorceress
+- Eden, Seat of the Sanctum
 - Edge of the Divinity
 - Edge Rover
 - Edgewall Pack
@@ -6594,6 +6596,7 @@ Council4 currently supports **16,967 of 32,501 cards eligible for paper support 
 - Heart Warden
 - Heart-Piercer Manticore
 - Heart-Piercer Manticore
+- Heart-Shaped Herb
 - Heartfire
 - Heartfire Hero
 - Heartfire Immolator
@@ -12036,6 +12039,7 @@ Council4 currently supports **16,967 of 32,501 cards eligible for paper support 
 - Sanctuary Lockdown
 - Sanctuary Raptor
 - Sanctuary Smasher
+- Sanctuary Wall
 - Sanctum Custodian
 - Sanctum Gargoyle
 - Sanctum of Calm Waters

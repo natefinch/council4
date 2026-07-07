@@ -732,11 +732,9 @@ func prepareActivationCondition(ability *compiler.CompiledAbility, syntax *parse
 		// unsupported activation condition.
 		return opt.V[game.Condition]{}, true
 	}
-	if slices.ContainsFunc(ability.Content.Conditions, func(condition compiler.CompiledCondition) bool {
-		return condition.Resolving
-	}) {
+	if slices.ContainsFunc(ability.Content.Conditions, conditionIsBodyResolvingGate) {
 		if !slices.ContainsFunc(ability.Content.Conditions, func(condition compiler.CompiledCondition) bool {
-			return !condition.Resolving
+			return !conditionIsBodyResolvingGate(condition)
 		}) {
 			return opt.V[game.Condition]{}, true
 		}
@@ -786,6 +784,23 @@ func prepareActivationCondition(ability *compiler.CompiledAbility, syntax *parse
 		return token.Span.Start.Offset >= lastEffectEnd
 	})
 	return opt.Val(condition), true
+}
+
+// conditionIsBodyResolvingGate reports whether an activated ability's condition
+// is a resolution-time gate that belongs in the ordered resolving body rather
+// than as an activation restriction. It recognizes both the parser's explicit
+// resolving flag ("then if …", "if the token …") and the prior-instruction
+// "if you do" / "if you don't" gate (ConditionPredicatePriorInstructionAccepted
+// and its complement), which the optional-flow lowering consumes to gate the
+// clauses following a "You may X." resolving choice. Such a gate is never an
+// activation restriction, so leaving it in the body lets lowerAbilityContent
+// wire the optional flow instead of the activation backend rejecting it.
+func conditionIsBodyResolvingGate(condition compiler.CompiledCondition) bool {
+	if condition.Resolving {
+		return true
+	}
+	return condition.Predicate == compiler.ConditionPredicatePriorInstructionAccepted ||
+		condition.Predicate == compiler.ConditionPredicatePriorInstructionNotAccepted
 }
 
 // activationConditionOwnedByBody reports whether an activated ability's single

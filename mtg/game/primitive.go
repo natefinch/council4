@@ -577,6 +577,24 @@ type PutOnBattlefield struct {
 	EntryTapped       bool
 	EntryCounters     []CounterPlacement
 	PublishLinked     LinkedKey
+	// LinkedReturnZones is the ordered set of non-battlefield zones a
+	// LinkedBattlefieldSource return may pull its linked card from. nil means
+	// exile-only, the default for exile-until and blink returns (Palace Jailer,
+	// Oblivion Ring), which must return the card only while it remains the same
+	// object in exile and do nothing once it has left. A sacrifice-then-return
+	// effect that put the card into the graveyard sets {zone.Graveyard} so it
+	// returns that card from the graveyard.
+	LinkedReturnZones []zone.Type
+}
+
+// LinkedReturnZonesOrExile returns the ordered non-battlefield zones a
+// LinkedBattlefieldSource return may pull its linked card from, defaulting to
+// exile-only when unset.
+func (p PutOnBattlefield) LinkedReturnZonesOrExile() []zone.Type {
+	if len(p.LinkedReturnZones) == 0 {
+		return []zone.Type{zone.Exile}
+	}
+	return p.LinkedReturnZones
 }
 
 // CreateToken creates one or more tokens. EntryTapped makes every created token
