@@ -30,7 +30,11 @@ func handleExileForEachOpponent(r *effectResolver, prim game.ExileForEachOpponen
 		if !chosen {
 			continue
 		}
-		linkedRef := permanentLinkedObjectRef(permanent)
+		// permanentObjectBindingRef preserves the ObjectID even for a token
+		// (CardInstanceID == 0) so the paired DrawForEachExiled still draws for a
+		// token permanent's controller. permanentLinkedObjectRef drops tokens,
+		// which would silently deny that opponent the guaranteed draw.
+		linkedRef := permanentObjectBindingRef(permanent)
 		if movePermanentToZone(r.game, permanent, zone.Exile) {
 			rememberLinkedObject(r.game, key, linkedRef)
 			res.succeeded = true

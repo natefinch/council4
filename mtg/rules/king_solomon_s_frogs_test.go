@@ -217,3 +217,58 @@ func TestKingSolomonSFrogsBecomeMonarchAbility(t *testing.T) {
 		t.Fatal("King Solomon's Frogs did not reach its owner's exile zone")
 	}
 }
+
+// addKsfTokenPermanent puts a token artifact permanent with the given mana value
+// onto the battlefield under owner's control. A token copy of a mana-value-3+
+// permanent is a legal candidate for the distributive exile, and "For each
+// permanent exiled this way, its controller draws a card" must still draw for it
+// even though a token has CardInstanceID == 0.
+func addKsfTokenPermanent(g *game.Game, owner game.PlayerID, name string, manaValue int) *game.Permanent {
+	permanent := &game.Permanent{
+		ObjectID:   g.IDGen.Next(),
+		Owner:      owner,
+		Controller: owner,
+		Token:      true,
+		TokenDef: &game.CardDef{CardFace: game.CardFace{
+			Name:     name,
+			ManaCost: opt.Val(cost.Mana{cost.O(manaValue)}),
+			Types:    []types.Card{types.Artifact},
+		}},
+	}
+	g.Battlefield = append(g.Battlefield, permanent)
+	return permanent
+}
+
+// TestKingSolomonSFrogsExiledTokenControllerDraws proves the draw payoff is
+// text-faithful for tokens: exiling an opponent's mana-value-3 token permanent
+// still makes that opponent draw a card. The link must preserve the token's
+// ObjectID (permanentObjectBindingRef) rather than dropping it for having no card
+// instance id, or the opponent would be denied their guaranteed draw.
+func TestKingSolomonSFrogsExiledTokenControllerDraws(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+
+	token := addKsfTokenPermanent(g, game.Player2, "Relic Token", 3)
+	reward := addCardToLibrary(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Reward"}})
+
+	castKingSolomonSFrogs(t, g, engine)
+
+	agents := [game.NumPlayers]PlayerAgent{
+		game.Player1: &choiceOnlyAgent{choices: [][]int{{0}}},
+	}
+	log := TurnLog{}
+	if !engine.putTriggeredAbilitiesOnStackWithChoices(g, agents, &log) {
+		t.Fatal("King Solomon's Frogs enters trigger was not put on the stack after being cast")
+	}
+	engine.resolveTopOfStackWithChoices(g, agents, &log)
+
+	if _, ok := permanentByObjectID(g, token.ObjectID); ok {
+		t.Fatal("the opponent's token permanent was not exiled")
+	}
+	if !g.Players[game.Player2].Hand.Contains(reward) {
+		t.Fatal("the opponent did not draw a card for its exiled token (the draw payoff must be text-faithful for tokens)")
+	}
+	if got := g.Players[game.Player2].Hand.Size(); got != 1 {
+		t.Fatalf("opponent hand size = %d, want exactly 1 (one draw for the exiled token)", got)
+	}
+}
