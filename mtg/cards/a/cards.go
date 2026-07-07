@@ -41,6 +41,7 @@ var Cards = []*game.CardDef{
 	AjaniSInfluence,
 	AkalPakalFirstAmongEquals,
 	AkkiWarPaint,
+	AkoumFlameseeker,
 	AkroanHoplite,
 	AkromaSDevoted,
 	AlabasterLeech,
