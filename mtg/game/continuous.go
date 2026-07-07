@@ -136,6 +136,17 @@ type ContinuousEffect struct {
 	// with the NewController sentinel.
 	NewControllerRef opt.V[PlayerReference]
 
+	// NewControllerIsMonarch binds a LayerControl effect's new controller to
+	// whoever currently holds the monarch designation, re-evaluated every time
+	// control is computed ("The monarch controls enchanted creature.", Fealty to
+	// the Realm). Unlike NewController/NewControllerRef, which fix the controller
+	// once, this flag makes control follow the crown: while a monarch exists the
+	// affected object is controlled by the monarch, and when no player is the
+	// monarch the effect makes no change and the object keeps its normal
+	// controller (CR 720). It requires the control layer and is mutually
+	// exclusive with NewController and NewControllerRef.
+	NewControllerIsMonarch bool
+
 	TextFrom string
 	TextTo   string
 

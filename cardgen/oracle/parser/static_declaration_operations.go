@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"slices"
 	"strconv"
 	"strings"
 
@@ -187,6 +188,9 @@ func parseStaticSubjectDeclarations(
 	}
 	operations, ok := parseStaticOperations(opTokens, verbStart, subject, atoms)
 	if !ok {
+		return nil, false
+	}
+	if !staticDirectYouProhibitionWellFormed(operations) {
 		return nil, false
 	}
 	span := shared.SpanOf(tokens)
@@ -1933,6 +1937,9 @@ func parseStaticProhibitionRuleOperation(
 		if qualifier, qualifierNext, ok := parseStaticDefenderYouQualifier(tokens, next, end); ok {
 			qualifiers = append(qualifiers, qualifier)
 			next = qualifierNext
+		} else if qualifier, qualifierNext, ok := parseStaticDefenderYouDirectQualifier(tokens, next, end, subject); ok {
+			qualifiers = append(qualifiers, qualifier)
+			next = qualifierNext
 		}
 		return staticRuleOperation(tokens, index, next, subject, constraint, StaticRuleOperation{
 			Kind:  StaticRuleOperationAttack,
@@ -2021,6 +2028,60 @@ func parseStaticDefenderYouQualifier(tokens []shared.Token, start, end int) (Sta
 		Kind: StaticRuleQualifierDefenderYou,
 		Span: shared.SpanOf(tokens[start : start+5]),
 	}, start + 5, true
+}
+
+// staticDirectYouProhibitionWellFormed reports whether a bare "can't attack you"
+// attack prohibition (StaticRuleQualifierDefenderYouDirect) appears only inside a
+// rule-only compound. The direct-only defender restriction is supported for the
+// forced-attack Aura clause "Enchanted creature attacks each combat if able and
+// can't attack you." (Fealty to the Realm), whose operations are all combat
+// rules. Composing it with a power/toughness, keyword, or characteristic
+// operation ("... gets +2/+2 and can't attack you.") is a near-miss that must
+// fail the whole declaration closed rather than silently drop the qualifier.
+func staticDirectYouProhibitionWellFormed(operations []StaticDeclarationSyntax) bool {
+	if !slices.ContainsFunc(operations, staticOperationHasDirectYouQualifier) {
+		return true
+	}
+	for i := range operations {
+		if operations[i].Kind != StaticDeclarationRule {
+			return false
+		}
+	}
+	return true
+}
+
+// staticOperationHasDirectYouQualifier reports whether operation is an attack
+// prohibition carrying the bare direct-only "you" defender restriction.
+func staticOperationHasDirectYouQualifier(operation StaticDeclarationSyntax) bool {
+	if operation.Kind != StaticDeclarationRule {
+		return false
+	}
+	for _, qualifier := range operation.Rule.Qualifiers {
+		if qualifier.Kind == StaticRuleQualifierDefenderYouDirect {
+			return true
+		}
+	}
+	return false
+}
+
+// parseStaticDefenderYouDirectQualifier consumes the bare defender restriction
+// "you" that scopes an attack prohibition to the source's controller as a direct
+// target only ("Enchanted creature ... can't attack you.", Fealty to the Realm),
+// leaving the controller's planeswalkers and battles attackable (CR 508.1). It is
+// gated to the enchanted-object subject so the far more common group-scoped
+// "Creatures can't attack you." forms remain unrecognized and unchanged.
+func parseStaticDefenderYouDirectQualifier(tokens []shared.Token, start, end int, subject StaticDeclarationSubject) (StaticRuleQualifier, int, bool) {
+	if subject.Kind != StaticDeclarationSubjectGroup ||
+		subject.Group.Kind != EffectStaticSubjectAttachedObject {
+		return StaticRuleQualifier{}, 0, false
+	}
+	if start >= end || !staticWordsAt(tokens, start, "you") {
+		return StaticRuleQualifier{}, 0, false
+	}
+	return StaticRuleQualifier{
+		Kind: StaticRuleQualifierDefenderYouDirect,
+		Span: tokens[start].Span,
+	}, start + 1, true
 }
 
 // parseStaticByMoreThanOneQualifier consumes the bounded block exception "by

@@ -17,6 +17,19 @@ func currentMonarch(g *game.Game) opt.V[game.PlayerID] {
 	return opt.V[game.PlayerID]{}
 }
 
+// livingMonarch returns the current monarch only when that player is still in
+// the game. IsMonarch is never cleared when a player leaves (only setMonarch
+// unsets it), so a departed monarch keeps the flag; consumers that grant an
+// ongoing benefit to "the monarch" (e.g. Fealty to the Realm's continuous
+// control effect) must ignore an eliminated monarch (CR 800.4a), matching the
+// IsAlive gate used by anyPlayerIsMonarch.
+func livingMonarch(g *game.Game) opt.V[game.PlayerID] {
+	if monarch := currentMonarch(g); monarch.Exists && g.Players[monarch.Val].IsAlive() {
+		return monarch
+	}
+	return opt.V[game.PlayerID]{}
+}
+
 // setMonarch makes playerID the monarch (CR 720.2). At most one player is the
 // monarch at a time, so any prior monarch loses the designation. It reports
 // whether playerID is an active player able to take the crown. A player who was

@@ -1386,6 +1386,11 @@ const (
 	// controller and their planeswalkers ("can't attack you or planeswalkers
 	// you control").
 	StaticRuleQualifierDefenderYou StaticRuleQualifierKind = "StaticRuleQualifierDefenderYou"
+	// StaticRuleQualifierDefenderYouDirect restricts an attack prohibition to the
+	// controller as a direct target only ("can't attack you"), leaving the
+	// controller's planeswalkers and battles attackable (CR 508.1). Fealty to the
+	// Realm's enchanted creature "can't attack you" (the Aura's controller).
+	StaticRuleQualifierDefenderYouDirect StaticRuleQualifierKind = "StaticRuleQualifierDefenderYouDirect"
 	// StaticRuleQualifierByMoreThanOne bounds a "can't be blocked" prohibition
 	// to the exceptional case "by more than one creature".
 	StaticRuleQualifierByMoreThanOne StaticRuleQualifierKind = "StaticRuleQualifierByMoreThanOne"

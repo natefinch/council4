@@ -90,6 +90,12 @@ const (
 	StaticContinuousChangeControl
 	StaticContinuousRemoveAllAbilities
 	StaticContinuousGrantAbility
+	// StaticContinuousChangeControlToMonarch binds the enchanted object's control
+	// to whoever currently holds the monarch designation ("The monarch controls
+	// enchanted creature.", Fealty to the Realm), a dynamic control effect that
+	// follows the crown rather than fixing the controller like
+	// StaticContinuousChangeControl.
+	StaticContinuousChangeControlToMonarch
 )
 
 // StaticRuleKind identifies a non-layer rules declaration.
@@ -139,6 +145,12 @@ const (
 	// StaticRuleCantAttackYou prohibits attacking the source's controller or
 	// their planeswalkers ("can't attack you or planeswalkers you control").
 	StaticRuleCantAttackYou
+	// StaticRuleCantAttackYouDirect prohibits attacking the source's controller
+	// as a direct target only ("Enchanted creature ... can't attack you.", Fealty
+	// to the Realm), leaving the controller's planeswalkers and battles
+	// attackable (CR 508.1). It differs from StaticRuleCantAttackYou, which also
+	// bars the controller's planeswalkers.
+	StaticRuleCantAttackYouDirect
 	// StaticRuleCantBeBlockedByMoreThanOne bounds blocking the subject to at
 	// most one creature ("can't be blocked by more than one creature").
 	StaticRuleCantBeBlockedByMoreThanOne
@@ -969,6 +981,10 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Abili
 		compiled.Static = &CompiledStaticSemantics{Declarations: declarations}
 		return
 	}
+	if declarations, ok := recognizeStaticAttachedCombatRuleDeclarations(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: declarations}
+		return
+	}
 	if declarations, ok := recognizeStaticGroupDoesntUntapDeclarations(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: declarations}
 		return
@@ -1046,6 +1062,10 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Abili
 		return
 	}
 	if declaration, ok := recognizeStaticControlGrantDeclaration(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
+		return
+	}
+	if declaration, ok := recognizeStaticMonarchControlGrantDeclaration(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
 		return
 	}
@@ -1650,6 +1670,13 @@ func semanticStaticRuleForSyntax(rule parser.StaticRuleSyntax) (StaticRuleKind, 
 	}
 	if isCreatureRuleSubject(rule.Subject.Kind) &&
 		rule.Constraint.Kind == parser.StaticRuleConstraintProhibition &&
+		rule.Operation.Kind == parser.StaticRuleOperationAttack &&
+		rule.Operation.Voice == parser.StaticRuleVoiceActive &&
+		staticRuleQualifiersAre(rule.Qualifiers, parser.StaticRuleQualifierDefenderYouDirect) {
+		return StaticRuleCantAttackYouDirect, StaticZoneBattlefield, true
+	}
+	if isCreatureRuleSubject(rule.Subject.Kind) &&
+		rule.Constraint.Kind == parser.StaticRuleConstraintProhibition &&
 		rule.Operation.Kind == parser.StaticRuleOperationAttackOrBlock &&
 		rule.Operation.Voice == parser.StaticRuleVoiceActive &&
 		len(rule.Qualifiers) == 0 {
@@ -1891,7 +1918,7 @@ func staticRuleDeclaration(
 
 func staticRuleDomain(rule StaticRuleKind) StaticRuleDomain {
 	switch rule {
-	case StaticRuleCantAttack, StaticRuleMustAttack, StaticRuleCantAttackYou, StaticRuleCantAttackAlone:
+	case StaticRuleCantAttack, StaticRuleMustAttack, StaticRuleCantAttackYou, StaticRuleCantAttackYouDirect, StaticRuleCantAttackAlone:
 		return StaticRuleDomainAttack
 	case StaticRuleCantBlock, StaticRuleCantBeBlocked, StaticRuleMustBeBlocked, StaticRuleCantBeBlockedByMoreThanOne,
 		StaticRuleCantBeBlockedByCreaturesWith, StaticRuleCantBeBlockedExceptBy, StaticRuleCantBlockAndCantBeBlocked,
@@ -2595,6 +2622,66 @@ func recognizeStaticGroupMustAttackDeclarations(ability CompiledAbility, statics
 	declaration := staticRuleDeclaration(ability.Span, group.Span, ruleNode.OperationSpan, rule, zone, group.Domain, staticBlockerRestrictionForSyntax(ruleNode.Rule), nil)
 	declaration.Group = group
 	return []StaticDeclaration{declaration}, true
+}
+
+// recognizeStaticAttachedCombatRuleDeclarations maps the Aura combat statics that
+// scope the enchanted object onto closed semantic rule declarations, covering the
+// compound "Enchanted creature attacks each combat if able and can't attack you."
+// (Fealty to the Realm) whose two clauses parse to two attached-object rule
+// nodes. Each clause must scope the attached object and resolve to a supported
+// combat rule — the forced attack ("attacks each combat if able") or the direct
+// can't-attack-you restriction. Single-clause attached rules are recognized by
+// the sentence-level typed rule path first, so only the multi-clause forms reach
+// here. The forced-attack clause routes its "if able" through the effect pipeline
+// as an unsupported residual condition that carries no rule semantics, so an
+// otherwise-empty shell with at most that single unsupported condition is
+// accepted and every declaration lowers without a guard.
+func recognizeStaticAttachedCombatRuleDeclarations(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) ([]StaticDeclaration, bool) {
+	if len(statics) < 2 {
+		return nil, false
+	}
+	for i := range statics {
+		if statics[i].Kind != parser.StaticDeclarationRule {
+			return nil, false
+		}
+	}
+	if ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.References) != 0 ||
+		len(ability.Content.Keywords) != 0 {
+		return nil, false
+	}
+	for i := range ability.Content.Conditions {
+		if ability.Content.Conditions[i].Predicate != ConditionPredicateUnsupported ||
+			ability.Content.Conditions[i].Resolving {
+			return nil, false
+		}
+	}
+	declarations := make([]StaticDeclaration, 0, len(statics))
+	for i := range statics {
+		node := &statics[i]
+		if !isAttachedRuleSubject(node.Rule.Subject.Kind) {
+			return nil, false
+		}
+		rule, zone, ok := semanticStaticRuleForSyntax(node.Rule)
+		if !ok {
+			return nil, false
+		}
+		switch rule {
+		case StaticRuleMustAttack, StaticRuleCantAttackYouDirect:
+		default:
+			return nil, false
+		}
+		group, ok := staticRuleGroupDomain(node.Rule.Subject.Kind)
+		if !ok || group != StaticGroupAttachedObject {
+			return nil, false
+		}
+		declarations = append(declarations, staticRuleDeclaration(node.Span, node.Subject.Span, node.OperationSpan, rule, zone, group, staticBlockerRestrictionForSyntax(node.Rule), nil))
+	}
+	return declarations, true
 }
 
 // recognizeStaticGroupDoesntUntapDeclarations maps a standalone
@@ -4376,6 +4463,47 @@ func recognizeStaticControlGrantDeclaration(ability CompiledAbility, statics []p
 		Continuous: &StaticContinuousDeclaration{
 			Layer:     StaticLayerControl,
 			Operation: StaticContinuousChangeControl,
+		},
+	}, true
+}
+
+// recognizeStaticMonarchControlGrantDeclaration maps "The monarch controls
+// enchanted creature." (Fealty to the Realm) onto a control-layer continuous
+// declaration whose new controller follows the monarch designation rather than a
+// fixed player. It mirrors recognizeStaticControlGrantDeclaration but emits the
+// monarch-bound control operation; the runtime re-evaluates the controller each
+// time control is computed so the enchanted object tracks the crown.
+func recognizeStaticMonarchControlGrantDeclaration(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) (StaticDeclaration, bool) {
+	if !staticSyntaxKindsAre(statics, parser.StaticDeclarationMonarchControlGrant) {
+		return StaticDeclaration{}, false
+	}
+	if ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Keywords) != 0 ||
+		len(ability.Content.References) != 0 ||
+		ability.AbilityWord != "" {
+		return StaticDeclaration{}, false
+	}
+	node := statics[0]
+	if node.Subject.Kind != parser.StaticDeclarationSubjectGroup ||
+		node.Subject.Group.Kind != parser.EffectStaticSubjectAttachedObject {
+		return StaticDeclaration{}, false
+	}
+	return StaticDeclaration{
+		Kind:          StaticDeclarationContinuous,
+		Span:          node.Span,
+		OperationSpan: node.OperationSpan,
+		Group: StaticGroupReference{
+			Span:   node.Subject.Span,
+			Domain: StaticGroupAttachedObject,
+		},
+		Continuous: &StaticContinuousDeclaration{
+			Layer:     StaticLayerControl,
+			Operation: StaticContinuousChangeControlToMonarch,
 		},
 	}, true
 }

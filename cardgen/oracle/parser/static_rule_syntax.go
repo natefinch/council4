@@ -878,6 +878,7 @@ func validCreatureStaticRuleOperation(rule StaticRuleSyntax) bool {
 			rule.Operation.Voice == StaticRuleVoiceActive &&
 			(len(rule.Qualifiers) == 0 ||
 				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierDefenderYou) ||
+				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierDefenderYouDirect) ||
 				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierAlone))) ||
 		(rule.Constraint.Kind == StaticRuleConstraintProhibition &&
 			rule.Operation.Kind == StaticRuleOperationAttackOrBlock &&

@@ -193,6 +193,9 @@ func (r Renderer) renderContinuousEffect(ctx *renderCtx, effect *game.Continuous
 		ctx.need(importOpt)
 		fields = append(fields, fmt.Sprintf("NewControllerRef: opt.Val(%s),", rendered))
 	}
+	if effect.Layer == game.LayerControl && effect.NewControllerIsMonarch {
+		fields = append(fields, "NewControllerIsMonarch: true,")
+	}
 	if effect.ExpiresForRef.Exists {
 		rendered, err := r.renderPlayerReference(effect.ExpiresForRef.Val)
 		if err != nil {
