@@ -139,6 +139,35 @@ func TestRemoveTargetsForTokenChainMintsPerController(t *testing.T) {
 	}
 }
 
+// TestRemoveTargetsForTokenChainMintsForRemovedToken proves the payoff is
+// text-faithful for tokens: removing a token target still mints the payoff token
+// for that token's controller. A token has CardInstanceID == 0, so the link must
+// preserve its ObjectID (permanentObjectBindingRef) or the payoff would skip it.
+func TestRemoveTargetsForTokenChainMintsForRemovedToken(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	mine := addCombatCreaturePermanent(g, game.Player1)
+	theirToken := addTokenCreaturePermanent(g, game.Player2, "Boar")
+	source := addCombatPermanent(g, game.Player1, variableRemovalSourceDef())
+	obj := removalStackObjectWithTargets(source, mine, theirToken)
+
+	engine.resolveInstructionWithChoices(g, obj, &game.Instruction{Primitive: game.RemoveTargetsForToken{
+		Exile:     true,
+		LinkedKey: game.LinkedKey("removed-targets-for-token"),
+	}}, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+	engine.resolveInstructionWithChoices(g, obj, &game.Instruction{Primitive: game.CreateTokenForEachDestroyed{
+		Source:    game.TokenDef(namedTokenDef("Pig", color.Green)),
+		LinkedKey: game.LinkedKey("removed-targets-for-token"),
+	}}, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+
+	if got := namedTokenCount(g, game.Player1, "Pig"); got != 1 {
+		t.Fatalf("Player1 Pig tokens = %d, want 1 (its removed nontoken creature)", got)
+	}
+	if got := namedTokenCount(g, game.Player2, "Pig"); got != 1 {
+		t.Fatalf("Player2 Pig tokens = %d, want 1 (its removed TOKEN creature must still get the payoff)", got)
+	}
+}
+
 // TestRemoveTargetsForTokenDestroyRespectsIndestructible verifies the destroy
 // form honors indestructibility: an indestructible target is neither destroyed
 // nor linked, while its destructible companion is.
