@@ -159,6 +159,47 @@ func TestLowerOverloadPumpBecomesGroupContinuous(t *testing.T) {
 	}
 }
 
+// TestLowerOverloadDamageBecomesGroupRecipient verifies that overloading
+// single-target damage ("Mizzium Mortars deals 4 damage to target creature you
+// don't control.") swaps the any-target recipient for the group recipient the
+// runtime already uses for mass damage, dealing to every matching creature
+// instead of one target.
+func TestLowerOverloadDamageBecomesGroupRecipient(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:     "Mizzium Mortars",
+		Layout:   "normal",
+		TypeLine: "Sorcery",
+		ManaCost: "{1}{R}",
+		OracleText: "Mizzium Mortars deals 4 damage to target creature you don't control.\n" +
+			"Overload {3}{R}{R} (You may cast this spell for its overload cost. If you do, change \"target\" in its text to \"each.\")",
+	})
+	if !face.Overload.Exists {
+		t.Fatalf("overload = %#v", face.Overload)
+	}
+	normalDamage, ok := face.SpellAbility.Val.Modes[0].Sequence[0].Primitive.(game.Damage)
+	if !ok || normalDamage.Recipient != game.AnyTargetDamageRecipient(0) {
+		t.Fatalf("normal primitive = %#v", face.SpellAbility.Val.Modes[0].Sequence[0].Primitive)
+	}
+	overloaded := face.Overload.Val.SpellAbility.Modes[0]
+	if len(overloaded.Targets) != 0 {
+		t.Fatalf("overload targets = %#v, want none", overloaded.Targets)
+	}
+	overloadDamage, ok := overloaded.Sequence[0].Primitive.(game.Damage)
+	if !ok {
+		t.Fatalf("overload primitive = %#v", overloaded.Sequence[0].Primitive)
+	}
+	groupRef, ok := overloadDamage.Recipient.GroupReference()
+	if !ok {
+		t.Fatalf("overload recipient is not a group: %#v", overloadDamage.Recipient)
+	}
+	selection := groupRef.Selection()
+	if selection.Controller != game.ControllerNotYou ||
+		!slices.Equal(selection.RequiredTypes, []types.Card{types.Creature}) {
+		t.Fatalf("overload group selection = %#v", selection)
+	}
+}
+
 func TestLowerOverloadIsTextBlindAndFailsClosed(t *testing.T) {
 	t.Parallel()
 	normal := opt.Val(game.Mode{
