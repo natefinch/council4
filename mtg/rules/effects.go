@@ -538,9 +538,10 @@ func permanentLinkedObjectRef(permanent *game.Permanent) game.LinkedObjectRef {
 // permanentLinkedObjectRef, it does not require a card instance because its
 // consumers resolve the captured permanent by ObjectID: the
 // AddCounter.PublishLinked attacker binding resolves it while it remains on the
-// battlefield, and the ExileForEachOpponent draw payoff resolves its last-known
-// controller by ObjectID after it has left. A token has a stable ObjectID that
-// is never reused, so both bindings stay correct.
+// battlefield, and the distributive removal payoffs (ExileForEachOpponent's draw,
+// DestroyForEachPlayer's and RemoveTargetsForToken's per-controller token) resolve
+// its last-known controller by ObjectID after it has left. A token has a stable
+// ObjectID that is never reused, so all these bindings stay correct.
 func permanentObjectBindingRef(permanent *game.Permanent) game.LinkedObjectRef {
 	return game.LinkedObjectRef{ObjectID: permanent.ObjectID, CardID: permanent.CardInstanceID}
 }

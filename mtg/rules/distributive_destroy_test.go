@@ -77,9 +77,58 @@ func TestDestroyForEachPlayerDestroysOnePerPlayerUnderLink(t *testing.T) {
 	}
 }
 
-// TestCreateTokenForEachDestroyedMintsPerController verifies the chapter payoff:
-// each destroyed creature's last-known controller creates one token, and the
-// link is cleared so the payoff fires exactly once.
+// addTokenCreaturePermanent puts a token creature permanent (CardInstanceID == 0)
+// under controller's control, the case that must still be linked so a distributive
+// removal's per-controller payoff fires for it.
+func addTokenCreaturePermanent(g *game.Game, controller game.PlayerID, name string) *game.Permanent {
+	pt := game.PT{Value: 2}
+	permanent := &game.Permanent{
+		ObjectID:   g.IDGen.Next(),
+		Owner:      controller,
+		Controller: controller,
+		Token:      true,
+		TokenDef: &game.CardDef{CardFace: game.CardFace{
+			Name:      name,
+			Types:     []types.Card{types.Creature},
+			Power:     opt.Val(pt),
+			Toughness: opt.Val(pt),
+		}},
+	}
+	g.Battlefield = append(g.Battlefield, permanent)
+	return permanent
+}
+
+// TestCreateTokenForEachDestroyedMintsForDestroyedToken proves the per-controller
+// payoff is text-faithful for tokens: destroying an opponent's token creature
+// still mints the payoff token for that opponent. A token has CardInstanceID == 0,
+// so the link must preserve the token's ObjectID (permanentObjectBindingRef) or
+// the payoff would silently skip it.
+func TestCreateTokenForEachDestroyedMintsForDestroyedToken(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCombatCreaturePermanent(g, game.Player1)
+	addTokenCreaturePermanent(g, game.Player2, "Zombie")
+	source := addCombatPermanent(g, game.Player1, distributiveDestroySagaDef())
+	obj := linkedSourceObject(source)
+
+	engine.resolveInstructionWithChoices(g, obj, &game.Instruction{Primitive: game.DestroyForEachPlayer{
+		Chooser:   game.ControllerReference(),
+		Selection: game.Selection{RequiredTypes: []types.Card{types.Creature}},
+		LinkedKey: game.LinkedKey("destroyed-for-each-player"),
+	}}, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+
+	engine.resolveInstructionWithChoices(g, obj, &game.Instruction{Primitive: game.CreateTokenForEachDestroyed{
+		Source:    game.TokenDef(mutantTokenDef()),
+		LinkedKey: game.LinkedKey("destroyed-for-each-player"),
+	}}, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+
+	if got := mutantTokenCount(g, game.Player1); got != 1 {
+		t.Fatalf("Player1 Mutant tokens = %d, want 1 (its destroyed nontoken creature's controller)", got)
+	}
+	if got := mutantTokenCount(g, game.Player2); got != 1 {
+		t.Fatalf("Player2 Mutant tokens = %d, want 1 (its destroyed TOKEN creature's controller must still get the payoff)", got)
+	}
+}
 func TestCreateTokenForEachDestroyedMintsPerController(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
