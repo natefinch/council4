@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,966 of 32,501 cards eligible for paper support (52.2%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,967 of 32,501 cards eligible for paper support (52.2%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -8559,6 +8559,7 @@ Council4 currently supports **16,966 of 32,501 cards eligible for paper support 
 - Lys Alana Huntmaster
 - Lys Alana Informant
 - Lórien Revealed
+- M'Baku, Jabari Chieftain
 - M.O.D.O.K., Evil Intellect
 - Maalfeld Twins
 - Mabel's Mettle
