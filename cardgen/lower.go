@@ -1400,6 +1400,20 @@ func lowerOverloadSpell(
 		primitive.Object = game.ObjectReference{}
 		primitive.Group = group
 		instruction.Primitive = primitive
+	case game.Damage:
+		// Overloading single-target damage ("Mizzium Mortars deals 4 damage to
+		// target creature you don't control." -> "each") swaps the any-target
+		// recipient for the group recipient the runtime already uses for mass
+		// damage ("deals 4 damage to each creature you don't control."). Excess
+		// redirection and divided damage fail closed.
+		if primitive.Recipient != game.AnyTargetDamageRecipient(0) ||
+			primitive.Amount.IsDynamic() ||
+			primitive.ExcessRecipient.Valid() ||
+			primitive.Divided {
+			return game.AbilityContent{}, false
+		}
+		primitive.Recipient = game.GroupDamageRecipient(group)
+		instruction.Primitive = primitive
 	case game.ModifyPT:
 		// Overloading a single-target fixed power/toughness pump ("Target
 		// creature you control gets +2/+2 until end of turn." -> "each") turns it
