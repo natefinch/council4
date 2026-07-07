@@ -251,6 +251,10 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	if cond.NoMonarch {
 		matches = matches && !anyPlayerIsMonarch(g)
 	}
+	if cond.EventDefendingPlayerIsMonarch {
+		monarch := livingMonarch(g)
+		matches = matches && ctx.event != nil && monarch.Exists && monarch.Val == ctx.event.Player
+	}
 	if cond.ControllerHasInitiative {
 		player, ok := playerByID(g, ctx.controller)
 		matches = matches && ok && player.HasInitiative

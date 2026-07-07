@@ -217,6 +217,8 @@ func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringC
 		result.AnOpponentIsMonarch = true
 	case compiler.ConditionPredicateNoMonarch:
 		result.NoMonarch = true
+	case compiler.ConditionPredicateThatPlayerIsMonarch:
+		result.EventDefendingPlayerIsMonarch = true
 	case compiler.ConditionPredicateControllerHasInitiative:
 		result.ControllerHasInitiative = true
 	case compiler.ConditionPredicateControllerHasCityBlessing:
@@ -426,7 +428,12 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 			// triggers (Knights of the Black Rose fires its "whenever an opponent
 			// becomes the monarch" trigger only if the controller held the crown as
 			// the turn began).
-			compiler.ConditionPredicateControllerWasMonarchAtTurnStart:
+			compiler.ConditionPredicateControllerWasMonarchAtTurnStart,
+			// "if that player is the monarch" reads the triggering attack event's
+			// defending player against the live monarch designation, so it gates
+			// only an intervening trigger whose bound event names a defending
+			// player (M'Baku, Jabari Chieftain's attacks-an-opponent trigger).
+			compiler.ConditionPredicateThatPlayerIsMonarch:
 			return ctx == conditionContextInterveningTrigger
 		case compiler.ConditionPredicateControllerControlsCommander:
 			// "As long as you control your commander" (Lieutenant statics), the
