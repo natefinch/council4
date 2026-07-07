@@ -119,6 +119,46 @@ func TestLowerVandalblastOverload(t *testing.T) {
 	}
 }
 
+// TestLowerOverloadPumpBecomesGroupContinuous verifies that overloading a
+// single-target fixed power/toughness pump ("Target creature you control gets
+// +2/+2 until end of turn.") turns it into the group ApplyContinuous form the
+// runtime already uses for mass pumps, addressing every creature the caster
+// controls instead of one target.
+func TestLowerOverloadPumpBecomesGroupContinuous(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:     "Stirring Address",
+		Layout:   "normal",
+		TypeLine: "Instant",
+		ManaCost: "{1}{W}",
+		OracleText: "Target creature you control gets +2/+2 until end of turn.\n" +
+			"Overload {4}{W} (You may cast this spell for its overload cost. If you do, change \"target\" in its text to \"each.\")",
+	})
+	if !face.Overload.Exists {
+		t.Fatalf("overload = %#v", face.Overload)
+	}
+	normalModify, ok := face.SpellAbility.Val.Modes[0].Sequence[0].Primitive.(game.ModifyPT)
+	if !ok || normalModify.Object != game.TargetPermanentReference(0) {
+		t.Fatalf("normal primitive = %#v", face.SpellAbility.Val.Modes[0].Sequence[0].Primitive)
+	}
+	overloaded := face.Overload.Val.SpellAbility.Modes[0]
+	if len(overloaded.Targets) != 0 {
+		t.Fatalf("overload targets = %#v, want none", overloaded.Targets)
+	}
+	apply, ok := overloaded.Sequence[0].Primitive.(game.ApplyContinuous)
+	if !ok || len(apply.ContinuousEffects) != 1 {
+		t.Fatalf("overload primitive = %#v", overloaded.Sequence[0].Primitive)
+	}
+	continuous := apply.ContinuousEffects[0]
+	selection := continuous.Group.Selection()
+	if continuous.Layer != game.LayerPowerToughnessModify ||
+		continuous.PowerDelta != 2 || continuous.ToughnessDelta != 2 ||
+		selection.Controller != game.ControllerYou ||
+		!slices.Equal(selection.RequiredTypes, []types.Card{types.Creature}) {
+		t.Fatalf("overload continuous effect = %#v (group %#v)", continuous, selection)
+	}
+}
+
 func TestLowerOverloadIsTextBlindAndFailsClosed(t *testing.T) {
 	t.Parallel()
 	normal := opt.Val(game.Mode{
