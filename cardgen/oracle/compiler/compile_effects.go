@@ -313,6 +313,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				DelayedTriggerOneShot:           syntax.DelayedTriggerOneShot,
 				DelayedTriggerBindDamageSource:  syntax.DelayedTriggerBindDamageSource,
 				DelayedTriggerBindAttacker:      syntax.DelayedTriggerBindAttacker,
+				DelayedTriggerBindDyingObject:   syntax.DelayedTriggerBindDyingObject,
 				TokenName:                       syntax.TokenName,
 				TokenPredefinedName:             syntax.TokenPredefinedName,
 				AmassSubtype:                    syntax.AmassSubtype,

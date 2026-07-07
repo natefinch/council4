@@ -1996,6 +1996,15 @@ type EffectSyntax struct {
 	// carries the attacker-declared pattern; lowering rebinds that pattern to the
 	// captured object. It is meaningful only when Kind is EffectDelayedTrigger.
 	DelayedTriggerBindAttacker bool `json:",omitempty"`
+	// DelayedTriggerBindDyingObject records that an EffectDelayedTrigger's
+	// permanent-died event binds to the permanent an earlier clause in the same
+	// resolution acted on, named here by a definite description ("... target
+	// creature an opponent controls ... When the creature an opponent controls
+	// dies this turn, ..."). The inner ability is reparsed in the self ("this
+	// creature") form so it carries the permanent-died pattern; lowering rebinds
+	// that pattern to the captured object (the second fight target). It is
+	// meaningful only when Kind is EffectDelayedTrigger.
+	DelayedTriggerBindDyingObject bool `json:",omitempty"`
 	// TokenKeywords lists every creature keyword a created token enters with, in
 	// source order ("with menace and reach" -> [Menace, Reach]). The first
 	// keyword is also recorded on Selection.Keyword (a "with <keyword>" selector

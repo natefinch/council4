@@ -689,6 +689,9 @@ func (p CreateDelayedTrigger) instructionRefs() primitiveRefs {
 	if p.Trigger.CapturedAttackerObject.Exists {
 		return objectReferenceRefs(p.Trigger.CapturedAttackerObject.Val)
 	}
+	if p.Trigger.CapturedDyingObject.Exists {
+		return objectReferenceRefs(p.Trigger.CapturedDyingObject.Val)
+	}
 	return primitiveRefs{}
 }
 func (p CreateReplacement) instructionRefs() primitiveRefs { return objectReferenceRefs(p.Object) }

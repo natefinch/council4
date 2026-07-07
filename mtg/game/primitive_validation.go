@@ -2530,6 +2530,16 @@ func (p CreateDelayedTrigger) validatePrimitive(targets []TargetSpec, checkTarge
 	} else if p.Trigger.EventPattern.Exists && p.Trigger.EventPattern.Val.AttackerCaptured {
 		return errors.New("delayed trigger AttackerCaptured pattern requires a CapturedAttackerObject")
 	}
+	if p.Trigger.CapturedDyingObject.Exists {
+		if !p.Trigger.EventPattern.Exists || !p.Trigger.EventPattern.Val.DyingObjectCaptured {
+			return errors.New("delayed trigger CapturedDyingObject requires a DyingObjectCaptured event pattern")
+		}
+		if err := validateObjectReference(p.Trigger.CapturedDyingObject.Val, targets, checkTargets); err != nil {
+			return err
+		}
+	} else if p.Trigger.EventPattern.Exists && p.Trigger.EventPattern.Val.DyingObjectCaptured {
+		return errors.New("delayed trigger DyingObjectCaptured pattern requires a CapturedDyingObject")
+	}
 	return nil
 }
 

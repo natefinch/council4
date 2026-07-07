@@ -1802,6 +1802,14 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 			v.add(faceName, appendPath(path, "AttackerCaptured"), CardDefIssueInvalidSelection, "AttackerCaptured must not be combined with an attacker source filter")
 		}
 	}
+	if pattern.DyingObjectCaptured {
+		if pattern.Event != EventPermanentDied {
+			v.add(faceName, appendPath(path, "DyingObjectCaptured"), CardDefIssueInvalidSelection, "DyingObjectCaptured requires a permanent-died event")
+		}
+		if pattern.Source != TriggerSourceAny || pattern.Subject != TriggerSubjectDefault {
+			v.add(faceName, appendPath(path, "DyingObjectCaptured"), CardDefIssueInvalidSelection, "DyingObjectCaptured must not be combined with a dying source filter")
+		}
+	}
 	if pattern.OneOrMorePerAttackTarget && (!pattern.OneOrMore || pattern.Event != EventAttackerDeclared) {
 		v.add(faceName, path, CardDefIssueInvalidSelection, "OneOrMorePerAttackTarget requires a one-or-more attacker-declared pattern")
 	}
