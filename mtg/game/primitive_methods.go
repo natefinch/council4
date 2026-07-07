@@ -483,8 +483,12 @@ func (p Discard) instructionRefs() primitiveRefs {
 	refs.publishesLinked = p.PublishLinked
 	return refs
 }
-func (Destroy) instructionRefs() primitiveRefs      { return primitiveRefs{} }
-func (p AddCounter) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
+func (Destroy) instructionRefs() primitiveRefs { return primitiveRefs{} }
+func (p AddCounter) instructionRefs() primitiveRefs {
+	refs := quantityRefs(p.Amount)
+	refs.publishesLinked = p.PublishLinked
+	return refs
+}
 func (p AddPlayerCounter) instructionRefs() primitiveRefs {
 	return quantityRefs(p.Amount)
 }
@@ -679,10 +683,13 @@ func (ShuffleSpellIntoLibrary) instructionRefs() primitiveRefs { return primitiv
 func (SkipStep) instructionRefs() primitiveRefs                { return primitiveRefs{} }
 func (CreateEmblem) instructionRefs() primitiveRefs            { return primitiveRefs{} }
 func (p CreateDelayedTrigger) instructionRefs() primitiveRefs {
-	if !p.Trigger.DamageSourceObject.Exists {
-		return primitiveRefs{}
+	if p.Trigger.DamageSourceObject.Exists {
+		return objectReferenceRefs(p.Trigger.DamageSourceObject.Val)
 	}
-	return objectReferenceRefs(p.Trigger.DamageSourceObject.Val)
+	if p.Trigger.CapturedAttackerObject.Exists {
+		return objectReferenceRefs(p.Trigger.CapturedAttackerObject.Val)
+	}
+	return primitiveRefs{}
 }
 func (p CreateReplacement) instructionRefs() primitiveRefs { return objectReferenceRefs(p.Object) }
 func (p PreventDamage) instructionRefs() primitiveRefs     { return quantityRefs(p.Amount) }

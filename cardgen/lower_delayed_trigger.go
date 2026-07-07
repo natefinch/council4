@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -153,4 +154,82 @@ func lowerDelayedCombatDamageDrawTrigger(
 		DamageSourceObject: opt.Val(object),
 	}}
 	return modify, game.Mode{Sequence: []game.Instruction{{Primitive: delayed}}}.Ability(), true
+}
+
+// lowerDelayedAttacksMonarchGrant lowers a captured-object attacks-the-monarch
+// rider clause ("... put a +1/+1 counter on target creature ... Whenever that
+// creature attacks the monarch this turn, it gains double strike and trample
+// until end of turn.") into the publishing counter placement and a
+// CreateDelayedTrigger whose attacker-declared event binds to that same
+// permanent. The prior clause must be an AddCounter placing a +1/+1 counter on
+// the shared target; this lowerer publishes that permanent under a linked key
+// and rebinds the inner self-form attacks-the-monarch pattern to the captured
+// object so the trigger fires only when that specific permanent attacks the
+// monarch. It mirrors lowerDelayedCombatDamageDrawTrigger and fails closed on
+// any other shape.
+func lowerDelayedAttacksMonarchGrant(
+	effectIndex int,
+	ctx contentCtx,
+	sequence []game.Instruction,
+) (game.AddCounter, game.AbilityContent, bool) {
+	if effectIndex == 0 ||
+		len(sequence) != effectIndex ||
+		len(ctx.content.Effects) != 1 ||
+		ctx.content.Effects[0].Kind != compiler.EffectDelayedTrigger ||
+		!ctx.content.Effects[0].DelayedTriggerBindAttacker ||
+		ctx.content.Effects[0].DelayedTriggerAbility == nil ||
+		ctx.content.Effects[0].Negated ||
+		ctx.optional ||
+		!referencesBindTo(ctx.content.References, compiler.ReferenceBindingTarget, 0) {
+		return game.AddCounter{}, game.AbilityContent{}, false
+	}
+	previous := sequence[effectIndex-1].Primitive
+	if previous.Kind() != game.PrimitiveAddCounter {
+		return game.AddCounter{}, game.AbilityContent{}, false
+	}
+	add, ok := previous.(game.AddCounter)
+	if !ok ||
+		add.Object.Kind() != game.ObjectReferenceTargetPermanent ||
+		add.CounterKind != counter.PlusOnePlusOne ||
+		add.PublishLinked != "" ||
+		!add.Group.Empty() {
+		return game.AddCounter{}, game.AbilityContent{}, false
+	}
+	triggered, ok := lowerDelayedTriggerInner(ctx.content.Effects[0].DelayedTriggerAbility)
+	if !ok {
+		return game.AddCounter{}, game.AbilityContent{}, false
+	}
+	pattern := triggered.Trigger.Pattern
+	if pattern.Event != game.EventAttackerDeclared ||
+		pattern.Source != game.TriggerSourceSelf ||
+		pattern.Player != game.TriggerPlayerMonarch ||
+		pattern.AttackRecipient != game.AttackRecipientPlayer ||
+		pattern.AttackerCaptured ||
+		pattern.AttackAlone {
+		return game.AddCounter{}, game.AbilityContent{}, false
+	}
+	pattern.Source = game.TriggerSourceAny
+	pattern.Subject = game.TriggerSubjectDefault
+	pattern.AttackerCaptured = true
+	consumed := ctx
+	consumed.content.References = nil
+	consumed.content.Targets = nil
+	if consumed.content.Unconsumed() {
+		return game.AddCounter{}, game.AbilityContent{}, false
+	}
+	key := game.LinkedKey(fmt.Sprintf("delayed-target-%d", effectIndex))
+	object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
+		TargetLinkedKey: key,
+	})
+	if !ok {
+		return game.AddCounter{}, game.AbilityContent{}, false
+	}
+	add.PublishLinked = key
+	delayed := game.CreateDelayedTrigger{Trigger: game.DelayedTriggerDef{
+		EventPattern:           opt.Val(pattern),
+		Window:                 game.DelayedWindowThisTurn,
+		Content:                triggered.Content,
+		CapturedAttackerObject: opt.Val(object),
+	}}
+	return add, game.Mode{Sequence: []game.Instruction{{Primitive: delayed}}}.Ability(), true
 }

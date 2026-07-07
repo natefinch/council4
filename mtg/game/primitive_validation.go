@@ -992,6 +992,9 @@ func (p AddCounter) validatePrimitive(targets []TargetSpec, checkTargets bool) e
 		if p.Object.Kind() != ObjectReferenceNone {
 			return errors.New("add counter requires exactly one of Object or Group")
 		}
+		if p.PublishLinked != "" {
+			return errors.New("add counter PublishLinked requires a single object, not a group")
+		}
 		return validateGroupReference(p.Group, targets, checkTargets)
 	}
 	if err := validateObjectReference(p.Object, targets, checkTargets); err != nil {
@@ -2516,6 +2519,16 @@ func (p CreateDelayedTrigger) validatePrimitive(targets []TargetSpec, checkTarge
 		}
 	} else if p.Trigger.EventPattern.Exists && p.Trigger.EventPattern.Val.DamageSourceCaptured {
 		return errors.New("delayed trigger DamageSourceCaptured pattern requires a DamageSourceObject")
+	}
+	if p.Trigger.CapturedAttackerObject.Exists {
+		if !p.Trigger.EventPattern.Exists || !p.Trigger.EventPattern.Val.AttackerCaptured {
+			return errors.New("delayed trigger CapturedAttackerObject requires an AttackerCaptured event pattern")
+		}
+		if err := validateObjectReference(p.Trigger.CapturedAttackerObject.Val, targets, checkTargets); err != nil {
+			return err
+		}
+	} else if p.Trigger.EventPattern.Exists && p.Trigger.EventPattern.Val.AttackerCaptured {
+		return errors.New("delayed trigger AttackerCaptured pattern requires a CapturedAttackerObject")
 	}
 	return nil
 }

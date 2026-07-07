@@ -22,6 +22,7 @@ var Cards = []*game.CardDef{
 	OgreHeadHelm,
 	OgreSiegebreaker,
 	OhranViper,
+	OkoyeMightyAndAdored,
 	OllenbockEscort,
 	OminousRoost,
 	OnduWarCleric,

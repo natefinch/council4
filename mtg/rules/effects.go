@@ -532,6 +532,17 @@ func permanentLinkedObjectRef(permanent *game.Permanent) game.LinkedObjectRef {
 	return game.LinkedObjectRef{ObjectID: permanent.ObjectID, CardID: permanent.CardInstanceID}
 }
 
+// permanentObjectBindingRef returns a linked-object ref that preserves the
+// permanent's ObjectID even for a token (CardInstanceID == 0), so an
+// object-identity binding survives for a token creature. Unlike
+// permanentLinkedObjectRef, it does not require a card instance because its
+// only consumer (the AddCounter.PublishLinked attacker binding) resolves the
+// captured permanent by ObjectID for the current turn, and a token has a stable
+// ObjectID while it remains on the battlefield.
+func permanentObjectBindingRef(permanent *game.Permanent) game.LinkedObjectRef {
+	return game.LinkedObjectRef{ObjectID: permanent.ObjectID, CardID: permanent.CardInstanceID}
+}
+
 func returnLinkedExiledObjects(e *Engine, g *game.Game, obj *game.StackObject, linkID string, controllerOverride opt.V[game.PlayerID], options permanentCreationOptions, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
 	key := linkedObjectSourceKey(g, obj, linkID)
 	returned := false
