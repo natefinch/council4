@@ -231,6 +231,9 @@ func lowerContent(
 	if content, ok := lowerCourtOfLocthwainUpkeep(ctx); ok {
 		return content, nil
 	}
+	if content, ok := lowerCourtOfVantressUpkeep(ctx); ok {
+		return content, nil
+	}
 	if content, ok := lowerCounterThenNextTurnUpkeepDraws(ctx); ok {
 		return content, nil
 	}

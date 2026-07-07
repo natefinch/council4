@@ -1443,7 +1443,7 @@ func handleBecomeCopy(r *effectResolver, prim game.BecomeCopy) effectResolved {
 	}
 	if prim.RetainsThisAbility {
 		if sourceDef, ok := permanentCopyDef(g, source); ok {
-			values.Abilities = append(values.Abilities, becomeCopyRetainedAbilities(sourceDef)...)
+			values.Abilities = append(values.Abilities, becomeCopyRetainedAbilities(r, sourceDef)...)
 		}
 	}
 	controller := effectiveController(g, source)
@@ -1488,10 +1488,17 @@ func becomeCopyTargetDef(g *game.Game, r *effectResolver, prim game.BecomeCopy) 
 	return permanentCopyDef(g, target)
 }
 
-// becomeCopyRetainedAbilities returns the activated become-a-copy abilities of a
-// source permanent's definition, so an "except it has this ability" copy keeps
-// the ability that lets it become a copy again.
-func becomeCopyRetainedAbilities(def *game.CardDef) []game.Ability {
+// becomeCopyRetainedAbilities returns the ability an "except it has this ability"
+// copy keeps: the ability that produced the become-a-copy effect ("this
+// ability"). When a triggered ability is resolving (Court of Vantress's upkeep
+// ability), that exact ability rides on the stack object, so the copy retains
+// the whole triggered ability. Otherwise "this ability" is the source's
+// activated become-a-copy ability (Thespian's Stage), which lets the copy become
+// a copy again.
+func becomeCopyRetainedAbilities(r *effectResolver, def *game.CardDef) []game.Ability {
+	if r.obj.Kind == game.StackTriggeredAbility && r.obj.InlineTrigger != nil {
+		return []game.Ability{r.obj.InlineTrigger}
+	}
 	var abilities []game.Ability
 	for i := range def.ActivatedAbilities {
 		ability := &def.ActivatedAbilities[i]

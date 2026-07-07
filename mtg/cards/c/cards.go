@@ -140,6 +140,7 @@ var Cards = []*game.CardDef{
 	CourageousGoblin,
 	CourageousOutrider,
 	CourtOfLocthwain,
+	CourtOfVantress,
 	CoverOfDarkness,
 	CovetousDragon,
 	Cowabunga,

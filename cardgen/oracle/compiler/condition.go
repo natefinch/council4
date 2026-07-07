@@ -87,6 +87,9 @@ var simplePredicateMap = map[parser.ConditionPredicateKind]ConditionPredicate{
 func compileConditionClause(condition *CompiledCondition, clause *parser.ConditionClause) {
 	if predicate, ok := simplePredicateMap[clause.Predicate]; ok {
 		condition.Predicate = predicate
+		if clause.Negated {
+			condition.Negated = !condition.Negated
+		}
 		return
 	}
 	switch clause.Predicate {

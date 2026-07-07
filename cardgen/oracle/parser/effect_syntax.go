@@ -1227,6 +1227,9 @@ func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) 
 		func() ([]EffectSyntax, bool) { return parseDevourEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseTributeEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseBecomeCopyEffect(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) {
+			return parseHaveBecomeCopyOfReferenceEffect(sentence, tokens, atoms)
+		},
 		func() ([]EffectSyntax, bool) { return parsePolymorphEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseSetBasePowerToughnessEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseAnimateSelfEffect(sentence, tokens, atoms) },
@@ -6163,6 +6166,91 @@ func parseBecomeCopyEffect(sentence Sentence, tokens []shared.Token, atoms Atoms
 		BecomeCopyUntilEndOfTurn:     untilEndOfTurn,
 		BecomeCopyRetainsThisAbility: retainAbility,
 		BecomeCopyAddKeywords:        addKeywords,
+	}
+	return []EffectSyntax{effect}, true
+}
+
+// parseHaveBecomeCopyOfReferenceEffect recognizes the resolving optional
+// construction "have this <permanent> become a copy of it" whose copied object
+// is the pronoun "it" — a permanent chosen earlier in the same ability and
+// referenced here — rather than a target named in this clause (Court of
+// Vantress: "you may have this enchantment become a copy of it, except it has
+// this ability."). It consumes any leading "If <condition>," gate and the "you
+// may" permission so the whole sentence yields a single optional EffectBecomeCopy
+// instead of falling through to per-clause parsing, which otherwise misreads
+// "have ... become" and "it has this ability" as keyword grants. Only the
+// "except it has this ability" copiable rider (RetainsThisAbility) is accepted;
+// any other rider, a copied object that is not the bare pronoun "it", or a
+// subject that is not "this <permanent>" fails closed.
+func parseHaveBecomeCopyOfReferenceEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	body := semanticEffectTokens(tokens)
+	if len(body) < 2 || body[len(body)-1].Kind != shared.Period {
+		return nil, false
+	}
+	inner := body[:len(body)-1]
+	// Strip a leading "If <condition>," gate; the condition is scanned
+	// independently at the ability level and gates this effect by span.
+	if kind, _ := conditionIntroAt(inner, 0); kind == ConditionIntroIf {
+		if end := conditionClauseEnd(inner, 0); end < len(inner) && inner[end].Kind == shared.Comma {
+			inner = inner[end+1:]
+		}
+	}
+	// Strip the "you may" permission and record the effect as optional.
+	var optional bool
+	var optionalSpan shared.Span
+	if len(inner) >= 2 && equalWord(inner[0], "you") && equalWord(inner[1], "may") {
+		optional = true
+		optionalSpan = shared.Span{Start: inner[0].Span.Start, End: inner[1].Span.End}
+		inner = inner[2:]
+	}
+	// Require "have this <noun...> become a copy of it".
+	rest, ok := cutTokenPrefix(inner, "have", "this")
+	if !ok {
+		return nil, false
+	}
+	becomeIndex := -1
+	for i := range len(rest) {
+		if rest[i].Kind == shared.Comma {
+			return nil, false
+		}
+		if equalWord(rest[i], "become") {
+			becomeIndex = i
+			break
+		}
+	}
+	if becomeIndex <= 0 { // at least one noun word must sit between "this" and "become"
+		return nil, false
+	}
+	afterCopy, ok := cutTokenPrefix(rest[becomeIndex+1:], "a", "copy", "of", "it")
+	if !ok {
+		return nil, false
+	}
+	var retainAbility bool
+	// Optional trailing ", except it has this ability" copiable rider.
+	if len(afterCopy) > 0 {
+		if afterCopy[0].Kind != shared.Comma {
+			return nil, false
+		}
+		exceptRest, ok := cutTokenPrefix(afterCopy[1:], "except")
+		if !ok {
+			return nil, false
+		}
+		retain, keywords, ok := parseBecomeCopyRider(exceptRest, atoms)
+		if !ok || !retain || len(keywords) != 0 {
+			return nil, false
+		}
+		retainAbility = true
+	}
+	effect := EffectSyntax{
+		Kind:                         EffectBecomeCopy,
+		Context:                      EffectContextController,
+		Span:                         sentence.Span,
+		ClauseSpan:                   sentence.Span,
+		Text:                         sentence.Text,
+		Tokens:                       append([]shared.Token(nil), body...),
+		Optional:                     optional,
+		OptionalSpan:                 optionalSpan,
+		BecomeCopyRetainsThisAbility: retainAbility,
 	}
 	return []EffectSyntax{effect}, true
 }

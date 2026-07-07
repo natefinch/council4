@@ -641,6 +641,14 @@ func lowerTriggeredAbilityKind(
 	}
 	for _, target := range ability.Content.Targets {
 		spans = append(spans, target.Span)
+		// A dedicated content recognizer that consumes a separate "choose ...
+		// target" sentence also consumes that sentence's leading "choose" verb.
+		// The generic trigger body does not yet cover such a ChoiceSpan, so this
+		// is keyed on the exact Court of Vantress upkeep shape to keep every other
+		// triggered ability byte-identical.
+		if target.ChoiceSpan != (shared.Span{}) && courtOfVantressUpkeepContent(ability.Content) {
+			spans = append(spans, target.ChoiceSpan)
+		}
 	}
 	for _, condition := range ability.Content.Conditions {
 		spans = append(spans, condition.Span)
