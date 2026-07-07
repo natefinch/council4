@@ -781,8 +781,8 @@ func triggerPlayerMatches(g *game.Game, sourceController game.PlayerID, filter g
 	case game.TriggerPlayerOpponent:
 		return eventPlayer != sourceController && eventPlayer >= 0 && eventPlayer < game.NumPlayers
 	case game.TriggerPlayerMonarch:
-		player, ok := playerByID(g, eventPlayer)
-		return ok && player.IsMonarch
+		monarch := livingMonarch(g)
+		return monarch.Exists && monarch.Val == eventPlayer
 	default:
 		return true
 	}

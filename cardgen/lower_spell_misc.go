@@ -273,13 +273,27 @@ func lowerFixedDestroySpell(
 		return content, nil
 	}
 	colorGate, hasColorGate := targetColorGateSelection(ctx.content.Conditions)
+	// A "that player controls" destroy target on an attack trigger ("destroy
+	// target tapped nonland permanent that player controls", The Spear of
+	// Bashenga) leaves one "that player" reference naming the defending player of
+	// the attack. The target selector's ControllerThatPlayer relation resolves it
+	// from the event, so it is consumed here rather than dangling; every other
+	// reference shape stays unsupported.
+	defendingPlayerTarget := len(ctx.content.Targets) == 1 &&
+		ctx.content.Targets[0].Selector.Controller == compiler.ControllerThatPlayer &&
+		attackDefendingPlayerEvent(ctx.triggerEvent)
+	references := ctx.content.References
+	if defendingPlayerTarget && len(references) == 1 &&
+		references[0].Kind == compiler.ReferenceThatPlayer {
+		references = nil
+	}
 	if len(ctx.content.Targets) != 1 ||
 		ctx.content.Targets[0].Cardinality.Min != 1 ||
 		ctx.content.Targets[0].Cardinality.Max != 1 ||
 		len(ctx.content.Conditions) != 0 && !hasColorGate ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||
-		len(ctx.content.References) != 0 ||
+		len(references) != 0 ||
 		ctx.content.Effects[0].Negated ||
 		!ctx.content.Effects[0].Exact ||
 		ctx.content.Effects[0].Context != parser.EffectContextController {
@@ -296,6 +310,9 @@ func lowerFixedDestroySpell(
 			"unsupported destroy spell",
 			"the executable source backend supports only exact destruction of one target permanent",
 		)
+	}
+	if defendingPlayerTarget {
+		retargetControlledByDefendingPlayer(&targetSpec)
 	}
 	instruction := game.Instruction{
 		Primitive: game.Destroy{
@@ -316,7 +333,26 @@ func lowerFixedDestroySpell(
 	}.Ability(), nil
 }
 
-// lowerSameNameDestroySpell lowers a single-target destroy that also destroys
+// retargetControlledByDefendingPlayer rewrites a destroy target's event-player
+// controller predicate to the defending-player predicate. permanentTargetSpec
+// lowers a "that player controls" relation to Selection.ControlledByEventPlayer
+// with no trigger context, but on an attack trigger "that player" is the
+// attacked defending player, not the attacker the event player names. The caller
+// gates this to attack-defending triggers, so the tapped, nonland permanent
+// target matches only permanents the attacked player controls.
+func retargetControlledByDefendingPlayer(spec *game.TargetSpec) {
+	if !spec.Selection.Exists {
+		return
+	}
+	selection := spec.Selection.Val
+	if !selection.ControlledByEventPlayer {
+		return
+	}
+	selection.ControlledByEventPlayer = false
+	selection.ControlledByDefendingPlayer = true
+	spec.Selection = opt.Val(selection)
+}
+
 // every other battlefield permanent sharing the target's name ("Destroy target
 // nonland permanent and all other permanents with the same name as that
 // permanent", Maelstrom Pulse; "Destroy target land and all other lands with the

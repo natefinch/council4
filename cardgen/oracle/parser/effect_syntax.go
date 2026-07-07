@@ -357,6 +357,7 @@ func emitSentenceResolvingSyntax(
 		recognizeTargetOpponentHandManaSentence(&sentences[i])
 		recognizeLookAtTargetPlayerHandSentence(&sentences[i])
 		recognizeGainControlThatPlayerMonarchSentence(&sentences[i])
+		recognizeDestroyTappedNonlandThatPlayerControlsSentence(&sentences[i])
 		reconcileRetargetSentenceTargets(&sentences[i])
 		collapseManaSpendRiderSentence(&sentences[i], tokens)
 		currentEffects += len(sentences[i].Effects)
@@ -2952,6 +2953,45 @@ func recognizeGainControlThatPlayerMonarchSentence(sentence *Sentence) {
 		Text:       target.Selection.Text,
 		Kind:       SelectionCreature,
 		Controller: SelectionControllerThatPlayer,
+	}
+	target.Exact = exactSinglePermanentTargetSyntax(target.Text, target.Selection)
+	if !target.Exact {
+		return
+	}
+	sentence.Targets[0] = target
+	effect.Targets[0] = target
+	effect.Exact = exactEffectSyntax(effect)
+}
+
+// recognizeDestroyTappedNonlandThatPlayerControlsSentence rebuilds the destroy
+// target "target tapped nonland permanent that player controls" (The Spear of
+// Bashenga's attack trigger). The generic target parser wipes the selection to
+// bare Span/Text because the "that player controls" controller clause is an
+// unrecognized qualifier, leaving the destroy effect non-exact. This narrow
+// recognizer restores the tapped, nonland permanent selection with the
+// event-player controller relation so the target round-trips and lowers to the
+// controlled-by-defending-player restriction on the attack trigger. It fires
+// only on the exact single-target destroy wording, so every other target is
+// left untouched and keeps failing the text-blind round-trip.
+func recognizeDestroyTappedNonlandThatPlayerControlsSentence(sentence *Sentence) {
+	if len(sentence.Effects) != 1 || len(sentence.Targets) != 1 {
+		return
+	}
+	effect := &sentence.Effects[0]
+	if effect.Kind != EffectDestroy || len(effect.Targets) != 1 {
+		return
+	}
+	target := effect.Targets[0]
+	if !strings.EqualFold(target.Text, "target tapped nonland permanent that player controls") {
+		return
+	}
+	target.Selection = SelectionSyntax{
+		Span:          target.Selection.Span,
+		Text:          target.Selection.Text,
+		Kind:          SelectionPermanent,
+		Tapped:        true,
+		ExcludedTypes: []CardType{CardTypeLand},
+		Controller:    SelectionControllerThatPlayer,
 	}
 	target.Exact = exactSinglePermanentTargetSyntax(target.Text, target.Selection)
 	if !target.Exact {

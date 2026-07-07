@@ -515,6 +515,9 @@ func (Renderer) renderSelection(ctx *renderCtx, selection game.Selection) (strin
 	if selection.ControlledByEventPlayer {
 		fields = append(fields, "ControlledByEventPlayer: true,")
 	}
+	if selection.ControlledByDefendingPlayer {
+		fields = append(fields, "ControlledByDefendingPlayer: true,")
+	}
 	if selection.RequirePermanentCard {
 		fields = append(fields, "RequirePermanentCard: true,")
 	}
