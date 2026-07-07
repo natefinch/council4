@@ -319,6 +319,10 @@ func actionsEqual(a, b action.Action) bool {
 		aPayload, aOK := a.PlotCardPayload()
 		bPayload, bOK := b.PlotCardPayload()
 		return aOK && bOK && aPayload == bPayload
+	case action.ActionForetellCard:
+		aPayload, aOK := a.ForetellCardPayload()
+		bPayload, bOK := b.ForetellCardPayload()
+		return aOK && bOK && aPayload == bPayload
 	case action.ActionDeclareAttackers:
 		aPayload, aOK := a.DeclareAttackersPayload()
 		bPayload, bOK := b.DeclareAttackersPayload()

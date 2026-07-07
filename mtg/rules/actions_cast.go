@@ -93,6 +93,10 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 	// plotted marks a plotted card being cast from exile (CR 718): it is cast
 	// without paying its mana cost. It must be read before the card leaves exile.
 	plotted := sourceZone == zone.Exile && cast.Face == game.FaceFront && cardIsPlottedInExile(g, card.ID)
+	// foretold marks a foretold card being cast from exile (CR 702.144): it is
+	// cast for its foretell cost rather than its mana cost. It must be read before
+	// the card leaves exile.
+	foretold := sourceZone == zone.Exile && cast.Face == game.FaceFront && cardIsForetoldInExile(g, card.ID)
 	// freeLinkedExile marks a card cast for free from the pool of cards exiled
 	// under this source ("cast a spell from among cards exiled with this
 	// enchantment without paying its mana cost.", Court of Locthwain). The
@@ -100,7 +104,7 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 	// remembered so it can be consumed once the spell is cast.
 	var freeLinkedExilePermissionID id.ID
 	freeLinkedExile := false
-	if !plotted && sourceZone == zone.Exile && cast.Face == game.FaceFront {
+	if !plotted && !foretold && sourceZone == zone.Exile && cast.Face == game.FaceFront {
 		if permission, permOK := castLinkedExileForFreePermission(g, playerID, card.ID); permOK {
 			freeLinkedExile = true
 			freeLinkedExilePermissionID = permission.ID
@@ -110,7 +114,7 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 	// mana of any type pay its cost ("mana of any type can be spent to cast it.",
 	// Court of Locthwain). It replaces the mana cost with an all-generic cost of
 	// the same size. It never combines with the free-cast paths above.
-	spendAnyMana := !plotted && !freeLinkedExile && sourceZone == zone.Exile &&
+	spendAnyMana := !plotted && !foretold && !freeLinkedExile && sourceZone == zone.Exile &&
 		castFromZoneAllowsAnyMana(g, playerID, card.ID, sourceZone, cast.Face)
 
 	// CR 601.2a: proposing a cast first moves the card from its source zone to
@@ -237,6 +241,8 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		request.Alternative = opt.Val(payLifeManaValueAlternativeCost(spellDef, cast.XValue))
 	case plotted:
 		request.Alternative = opt.Val(freeCastAlternativeCost())
+	case foretold:
+		request.Alternative = opt.Val(foretellAlternativeCost(spellDef))
 	case freeLinkedExile:
 		request.Alternative = opt.Val(freeCastAlternativeCost())
 	case spendAnyMana:
@@ -658,6 +664,7 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 		return false
 	}
 	plotted := sourceZone == zone.Exile && face == game.FaceFront && cardIsPlottedInExile(g, cardID)
+	foretold := sourceZone == zone.Exile && face == game.FaceFront && cardIsForetoldInExile(g, cardID)
 	switch sourceZone {
 	case zone.Command:
 		if player.CommanderInstanceID != cardID {
@@ -671,10 +678,10 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 	case zone.Exile:
 		hasRulePermission := canCastFromZoneByRuleEffect(g, playerID, cardID, sourceZone, face)
 		freeLinkedExile := face == game.FaceFront && castLinkedExileForFree(g, playerID, cardID)
-		if !g.AdventureCards[cardID] && !hasRulePermission && !plotted && !freeLinkedExile {
+		if !g.AdventureCards[cardID] && !hasRulePermission && !plotted && !foretold && !freeLinkedExile {
 			return false
 		}
-		if g.AdventureCards[cardID] && !hasRulePermission && !plotted && !freeLinkedExile && face != game.FaceFront {
+		if g.AdventureCards[cardID] && !hasRulePermission && !plotted && !foretold && !freeLinkedExile && face != game.FaceFront {
 			return false
 		}
 	case zone.Library:
@@ -742,6 +749,8 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 		request.Alternative = opt.Val(payLifeManaValueAlternativeCost(spellDef, xValue))
 	case plotted:
 		request.Alternative = opt.Val(freeCastAlternativeCost())
+	case foretold:
+		request.Alternative = opt.Val(foretellAlternativeCost(spellDef))
 	case sourceZone == zone.Exile && face == game.FaceFront && castLinkedExileForFree(g, playerID, card.ID):
 		request.Alternative = opt.Val(freeCastAlternativeCost())
 	case sourceZone == zone.Exile && castFromZoneAllowsAnyMana(g, playerID, card.ID, sourceZone, face):
@@ -766,6 +775,18 @@ func freeCastAlternativeCost() cost.Alternative {
 	return cost.Alternative{
 		Label:    "Without paying its mana cost",
 		ManaCost: opt.Val(cost.Mana{}),
+	}
+}
+
+// foretellAlternativeCost is the alternative cost of casting a foretold card from
+// exile for its foretell cost rather than its mana cost (CR 702.144). It replaces
+// the mana cost with the card's Foretell cost; a card reaching this path always
+// has a Foretell keyword, so a missing cost falls back to an empty (free) cost.
+func foretellAlternativeCost(card *game.CardDef) cost.Alternative {
+	foretellCost, _ := card.ForetellCost()
+	return cost.Alternative{
+		Label:    "Foretell",
+		ManaCost: opt.Val(append(cost.Mana(nil), foretellCost...)),
 	}
 }
 
@@ -841,6 +862,10 @@ func legalCastFacesForZone(g *game.Game, playerID game.PlayerID, card *game.Card
 				continue
 			}
 			if sourceZone == zone.Exile && face == game.FaceFront && cardIsPlottedInExile(g, card.ID) {
+				faces = append(faces, face)
+				continue
+			}
+			if sourceZone == zone.Exile && face == game.FaceFront && cardIsForetoldInExile(g, card.ID) {
 				faces = append(faces, face)
 				continue
 			}

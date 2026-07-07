@@ -557,6 +557,8 @@ func (v *cardDefValidator) validateKeywordAbility(faceName, path string, ability
 		v.validateManaKeywordCost(faceName, path, keyword.Cost)
 	case PlotKeyword:
 		v.validateManaKeywordCost(faceName, path, keyword.Cost)
+	case ForetellKeyword:
+		v.validateManaKeywordCost(faceName, path, keyword.Cost)
 	case MorphKeyword:
 		v.validateManaKeywordCost(faceName, path, keyword.Cost)
 	case DisguiseKeyword:

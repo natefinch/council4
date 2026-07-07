@@ -127,6 +127,13 @@ type PlotKeyword struct {
 	Cost cost.Mana
 }
 
+// ForetellKeyword parameterizes the Foretell mana cost (CR 702.144). Cost is the
+// foretell cost paid to cast the card from exile after it has been foretold; the
+// card is foretold by paying a fixed {2} to exile it face down from hand.
+type ForetellKeyword struct {
+	Cost cost.Mana
+}
+
 // MorphKeyword parameterizes Morph turn-face-up costs.
 type MorphKeyword struct {
 	Cost cost.Mana
@@ -226,6 +233,7 @@ func (KickerKeyword) isKeywordAbility()           {}
 func (MadnessKeyword) isKeywordAbility()          {}
 func (FlashbackKeyword) isKeywordAbility()        {}
 func (PlotKeyword) isKeywordAbility()             {}
+func (ForetellKeyword) isKeywordAbility()         {}
 func (MorphKeyword) isKeywordAbility()            {}
 func (DisguiseKeyword) isKeywordAbility()         {}
 func (SuspendKeyword) isKeywordAbility()          {}
@@ -260,6 +268,7 @@ func (KickerKeyword) keyword() Keyword     { return Kicker }
 func (MadnessKeyword) keyword() Keyword    { return Madness }
 func (FlashbackKeyword) keyword() Keyword  { return Flashback }
 func (PlotKeyword) keyword() Keyword       { return Plot }
+func (ForetellKeyword) keyword() Keyword   { return Foretell }
 func (MorphKeyword) keyword() Keyword      { return Morph }
 func (DisguiseKeyword) keyword() Keyword   { return Disguise }
 func (SuspendKeyword) keyword() Keyword    { return Suspend }
@@ -330,6 +339,10 @@ func (ability FlashbackKeyword) cloneKeywordAbility() KeywordAbility {
 	return ability
 }
 func (ability PlotKeyword) cloneKeywordAbility() KeywordAbility {
+	ability.Cost = append(cost.Mana(nil), ability.Cost...)
+	return ability
+}
+func (ability ForetellKeyword) cloneKeywordAbility() KeywordAbility {
 	ability.Cost = append(cost.Mana(nil), ability.Cost...)
 	return ability
 }
