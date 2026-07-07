@@ -1723,7 +1723,7 @@ func exactExcludedColorTargetSyntax(text string, selection SelectionSyntax) bool
 
 func exactExcludedTypeTargetSyntax(text string, selection SelectionSyntax) bool {
 	if selection.All ||
-		selection.Attacking || selection.Blocking || selection.Tapped || selection.Untapped ||
+		selection.Attacking || selection.Blocking ||
 		selection.Keyword != KeywordUnknown || selection.Zone != zone.None ||
 		selection.MatchPower || selection.MatchToughness ||
 		len(selection.Supertypes) != 0 ||
@@ -1735,6 +1735,14 @@ func exactExcludedTypeTargetSyntax(text string, selection SelectionSyntax) bool 
 		return false
 	}
 	if len(selection.ExcludedTypes) != 1 {
+		return false
+	}
+	// A tapped/untapped rider precedes the excluded-type noun ("target tapped
+	// nonland permanent", The Spear of Bashenga). Attacking/blocking are rejected
+	// above because they are creature-only combat states that would silently drop
+	// on a non-creature noun. selectionCombatStateWords validates the state combo.
+	combatWords, ok := selectionCombatStateWords(selection)
+	if !ok {
 		return false
 	}
 	excludedNoun, ok := permanentCardTypeNoun(selection.ExcludedTypes[0])
@@ -1755,6 +1763,9 @@ func exactExcludedTypeTargetSyntax(text string, selection SelectionSyntax) bool 
 	case selection.Other:
 		prefix = "other target"
 	default:
+	}
+	if len(combatWords) > 0 {
+		prefix += " " + strings.Join(combatWords, " ")
 	}
 	expected, ok := targetControllerSuffix(prefix+" non"+excludedNoun+" "+noun, selection.Controller)
 	if !ok {

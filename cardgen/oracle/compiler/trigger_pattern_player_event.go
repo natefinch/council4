@@ -89,6 +89,8 @@ func compilePlayerEventPlayer(player *parser.TriggerPlayerSelector) (TriggerPlay
 		return TriggerPlayerYou, true
 	case parser.TriggerPlayerSelectorOpponent:
 		return TriggerPlayerOpponent, true
+	case parser.TriggerPlayerSelectorMonarch:
+		return TriggerPlayerMonarch, true
 	default:
 		return TriggerPlayerAny, false
 	}

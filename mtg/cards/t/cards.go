@@ -55,6 +55,7 @@ var Cards = []*game.CardDef{
 	TheIrencrag,
 	TheReaperKingNoMore,
 	TheScorpionGod,
+	TheSpearOfBashenga,
 	ThickestInTheThicket,
 	ThievesGuildEnforcer,
 	ThingFromTheDeep,

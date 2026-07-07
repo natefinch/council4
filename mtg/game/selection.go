@@ -317,6 +317,19 @@ type Selection struct {
 	// predicate matches nothing. Placed at the end so the bool joins no existing
 	// cluster's packing.
 	ControlledByEventPlayer bool
+
+	// ControlledByDefendingPlayer requires the matched permanent to be controlled
+	// by the defending player of the triggering attack ("destroy target tapped
+	// nonland permanent that player controls", The Spear of Bashenga, where "that
+	// player" is the monarch whose attack was declared against them). It differs
+	// from ControlledByEventPlayer because an attack event records the attacker in
+	// its event player and the defending player separately, so "that player" on an
+	// attack trigger names the attacked player, not the attacker. The rules layer
+	// resolves the defending player from the resolving ability's triggering attack
+	// event and compares it to the permanent's controller. Outside a triggered
+	// attack resolution there is no defending player, so the predicate matches
+	// nothing. Placed at the end so the bool joins no existing cluster's packing.
+	ControlledByDefendingPlayer bool
 }
 
 // ManaValueDynamicBound bounds a card's mana value by a controller-relative
@@ -380,7 +393,8 @@ func (s Selection) Empty() bool {
 		!s.SharesCreatureTypeWithSource &&
 		!s.DealtDamageThisTurn &&
 		!s.OwnerNotController &&
-		!s.ControlledByEventPlayer
+		!s.ControlledByEventPlayer &&
+		!s.ControlledByDefendingPlayer
 }
 
 // Validate reports structural contradictions in the Selection that represent
