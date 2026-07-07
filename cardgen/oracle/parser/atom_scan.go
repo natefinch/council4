@@ -301,6 +301,7 @@ func scanControllerRelations(tokens []shared.Token) []ControllerRelationAtom {
 		{[]string{"you", "don't", "control"}, ControllerRelationYouDontControl},
 		{[]string{"an", "opponent", "controls"}, ControllerRelationOpponentControls},
 		{[]string{"each", "opponent", "controls"}, ControllerRelationEachOpponentControls},
+		{[]string{"defending", "player", "controls"}, ControllerRelationDefendingPlayerControls},
 		{[]string{"your", "opponents", "control"}, ControllerRelationOpponentControls},
 		{[]string{"you", "own"}, ControllerRelationYouOwn},
 		{[]string{"an", "opponent", "owns"}, ControllerRelationOpponentOwns},

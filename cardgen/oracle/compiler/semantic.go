@@ -1263,6 +1263,11 @@ const (
 	// Garland, Royal Kidnapper). The lowering maps it to the runtime
 	// Selection.ControlledByEventPlayer predicate.
 	ControllerThatPlayer
+	// ControllerDefendingPlayer restricts a target to permanents controlled by
+	// the defending player of the triggering attack ("goad target creature
+	// defending player controls", Coveted Peacock). The lowering maps it to the
+	// runtime Selection.ControlledByDefendingPlayer predicate.
+	ControllerDefendingPlayer
 )
 
 // CompiledSelector is a conservative semantic summary of a noun phrase.

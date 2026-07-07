@@ -1694,6 +1694,8 @@ func targetControllerSuffix(expected string, controller SelectionController) (st
 		return expected + " you don't control", true
 	case SelectionControllerThatPlayer:
 		return expected + " that player controls", true
+	case SelectionControllerDefendingPlayer:
+		return expected + " defending player controls", true
 	default:
 		return "", false
 	}
@@ -1715,6 +1717,8 @@ func targetControllerWords(controller SelectionController) ([]string, bool) {
 		return []string{"you", "don't", "control"}, true
 	case SelectionControllerThatPlayer:
 		return []string{"that", "player", "controls"}, true
+	case SelectionControllerDefendingPlayer:
+		return []string{"defending", "player", "controls"}, true
 	default:
 		return nil, false
 	}
@@ -2797,6 +2801,8 @@ func parseSelection(tokens []shared.Token, atoms Atoms) SelectionSyntax {
 			selection.OpponentEach = true
 		case ControllerRelationYouDontControl:
 			selection.Controller = SelectionControllerNotYou
+		case ControllerRelationDefendingPlayerControls:
+			selection.Controller = SelectionControllerDefendingPlayer
 		default:
 		}
 	}

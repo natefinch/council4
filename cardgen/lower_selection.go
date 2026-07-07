@@ -242,6 +242,8 @@ func SelectionForSelectorMasked(selector compiler.CompiledSelector, mask Selecti
 		selection.Controller = game.ControllerOpponent
 	case compiler.ControllerNotYou:
 		selection.Controller = game.ControllerNotYou
+	case compiler.ControllerDefendingPlayer:
+		selection.ControlledByDefendingPlayer = true
 	default:
 		return game.Selection{}, false
 	}

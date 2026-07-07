@@ -1414,6 +1414,10 @@ const (
 	SelectionControllerYou      SelectionController = "SelectionControllerYou"
 	SelectionControllerOpponent SelectionController = "SelectionControllerOpponent"
 	SelectionControllerNotYou   SelectionController = "SelectionControllerNotYou"
+	// SelectionControllerDefendingPlayer restricts the selection to permanents
+	// controlled by the defending player of the triggering attack ("defending
+	// player controls").
+	SelectionControllerDefendingPlayer SelectionController = "SelectionControllerDefendingPlayer"
 	// SelectionControllerThatPlayer marks a target controlled by the triggering
 	// event's player ("target creature that player controls", Garland, Royal
 	// Kidnapper, where "that player" is the opponent who became the monarch). It

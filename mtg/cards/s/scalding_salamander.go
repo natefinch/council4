@@ -46,7 +46,7 @@ func newScaldingSalamander() *game.CardDef {
 							{
 								Primitive: game.Damage{
 									Amount:       game.Fixed(1),
-									Recipient:    game.GroupDamageRecipient(game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, ExcludedKeyword: game.Flying})),
+									Recipient:    game.GroupDamageRecipient(game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, ExcludedKeyword: game.Flying, ControlledByDefendingPlayer: true})),
 									DamageSource: opt.Val(game.EventPermanentReference()),
 								},
 								Optional: true,
