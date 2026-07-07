@@ -977,6 +977,10 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Abili
 		compiled.Static = &CompiledStaticSemantics{Declarations: declarations}
 		return
 	}
+	if declarations, ok := recognizeStaticBattlefieldAttackRuleDeclarations(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: declarations}
+		return
+	}
 	if declarations, ok := recognizeStaticGroupMustAttackDeclarations(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: declarations}
 		return
@@ -2580,6 +2584,53 @@ func recognizeStaticBattlefieldBlockRuleDeclarations(ability CompiledAbility, st
 	declaration := staticRuleDeclaration(ability.Span, group.Span, ruleNode.OperationSpan, rule, zone, group.Domain, staticBlockerRestrictionForSyntax(ruleNode.Rule), nil)
 	declaration.Group = group
 	declaration.Rule.BlockedObject = blocked
+	return []StaticDeclaration{declaration}, true
+}
+
+// recognizeStaticBattlefieldAttackRuleDeclarations maps a battlefield-scoped
+// "can't attack you" restriction gated on a live controller designation onto a
+// closed semantic declaration, e.g. Queen Mother Ramonda's "As long as you're
+// the monarch, creatures with power 2 or less can't attack you." The
+// battlefield-creatures subject yields an every-creature affected group narrowed
+// by the typed parser rule subject (its numeric power filter), and the
+// direct-only defender restriction leaves the controller's planeswalkers and
+// battles attackable (CR 508.1). The recognizer REQUIRES a single non-negated
+// live player-designation condition (the monarch gate); the runtime re-evaluates
+// the static ability's condition each time rule effects are gathered, so the
+// restriction turns on and off as the designation changes. Unconditional "can't
+// attack you" group forms carry no such gate and stay unrecognized here. Costs,
+// triggers, modes, targets, or any resolving content fail closed because a
+// continuous group rule carries none.
+func recognizeStaticBattlefieldAttackRuleDeclarations(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) ([]StaticDeclaration, bool) {
+	if !staticSyntaxKindsAre(statics, parser.StaticDeclarationRule) {
+		return nil, false
+	}
+	ruleNode := &statics[0]
+	if ruleNode.Rule.Subject.Kind != parser.StaticRuleSubjectBattlefieldCreatures {
+		return nil, false
+	}
+	group, ok := staticGroupForParserSubject(ruleNode.Subject)
+	if !ok || group.Domain != StaticGroupBattlefield {
+		return nil, false
+	}
+	rule, zone, ok := semanticStaticRuleForSyntax(ruleNode.Rule)
+	if !ok || rule != StaticRuleCantAttackYouDirect {
+		return nil, false
+	}
+	condition, ok := staticDeclarationCondition(ability.Content.Conditions)
+	if !ok || condition == nil || condition.Negated ||
+		!isLivePlayerDesignationPredicate(condition.Predicate) {
+		return nil, false
+	}
+	if ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Effects) != 0 {
+		return nil, false
+	}
+	declaration := staticRuleDeclaration(ability.Span, group.Span, ruleNode.OperationSpan, rule, zone, group.Domain, staticBlockerRestrictionForSyntax(ruleNode.Rule), condition)
+	declaration.Group = group
 	return []StaticDeclaration{declaration}, true
 }
 

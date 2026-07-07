@@ -709,10 +709,12 @@ func staticSubtypeControlledCreaturesProhibitionSubject(tokens []shared.Token, a
 // block.") when it precedes a prohibition verb ("can't"/"cannot"). Unlike
 // staticControlledCreaturesProhibitionSubject the group is every creature on the
 // battlefield, so a leading "creatures you control" routes to the controlled
-// path instead. It supports an optional trailing source-relative power filter
-// ("with power greater/less than <source>'s power"), attaching the recognized
-// predicate to the returned all-creatures subject. It returns the group subject
-// and the index of the prohibition verb.
+// path instead. It supports an optional trailing power filter: the
+// source-relative "with power greater/less than <source>'s power" form, or the
+// single-characteristic numeric "with power N or less/greater" form (Queen
+// Mother Ramonda's "creatures with power 2 or less can't attack you."). Any
+// other qualifier fails closed. It returns the group subject and the index of
+// the prohibition verb.
 func staticBattlefieldCreaturesProhibitionSubject(tokens []shared.Token, atoms Atoms) (EffectStaticSubjectSyntax, int, bool) {
 	if !staticWordsAt(tokens, 0, "creatures") || staticWordsAt(tokens, 1, "you", "control") {
 		return EffectStaticSubjectSyntax{}, 0, false
@@ -720,11 +722,20 @@ func staticBattlefieldCreaturesProhibitionSubject(tokens []shared.Token, atoms A
 	subject := EffectStaticSubjectSyntax{Kind: EffectStaticSubjectAllCreatures}
 	idx := 1
 	if match, ok := controlledGroupProhibitionPowerToughnessQualifier(tokens, idx, atoms); ok {
-		if !match.powerLessThanSource && !match.powerGreaterThanSource {
+		switch {
+		case match.powerLessThanSource || match.powerGreaterThanSource:
+			subject.PowerLessThanSource = match.powerLessThanSource
+			subject.PowerGreaterThanSource = match.powerGreaterThanSource
+		case match.matchPower && !match.matchToughness && !match.powerOrToughness:
+			// The single-characteristic numeric bound "with power N or less"
+			// scopes the every-creature group by a fixed power comparison
+			// (Queen Mother Ramonda's "creatures with power 2 or less can't
+			// attack you.").
+			subject.Power = match.power
+			subject.MatchPower = match.matchPower
+		default:
 			return EffectStaticSubjectSyntax{}, 0, false
 		}
-		subject.PowerLessThanSource = match.powerLessThanSource
-		subject.PowerGreaterThanSource = match.powerGreaterThanSource
 		idx = match.end
 	}
 	if !staticWordsAt(tokens, idx, "can't") && !staticWordsAt(tokens, idx, "cannot") {
@@ -2066,13 +2077,16 @@ func staticOperationHasDirectYouQualifier(operation StaticDeclarationSyntax) boo
 
 // parseStaticDefenderYouDirectQualifier consumes the bare defender restriction
 // "you" that scopes an attack prohibition to the source's controller as a direct
-// target only ("Enchanted creature ... can't attack you.", Fealty to the Realm),
+// target only ("Enchanted creature ... can't attack you.", Fealty to the Realm;
+// "creatures with power 2 or less can't attack you.", Queen Mother Ramonda),
 // leaving the controller's planeswalkers and battles attackable (CR 508.1). It is
-// gated to the enchanted-object subject so the far more common group-scoped
-// "Creatures can't attack you." forms remain unrecognized and unchanged.
+// gated to the enchanted-object subject and the every-creature battlefield group
+// so the near-miss group forms that lack a defender restriction remain
+// unrecognized and unchanged.
 func parseStaticDefenderYouDirectQualifier(tokens []shared.Token, start, end int, subject StaticDeclarationSubject) (StaticRuleQualifier, int, bool) {
 	if subject.Kind != StaticDeclarationSubjectGroup ||
-		subject.Group.Kind != EffectStaticSubjectAttachedObject {
+		(subject.Group.Kind != EffectStaticSubjectAttachedObject &&
+			subject.Group.Kind != EffectStaticSubjectAllCreatures) {
 		return StaticRuleQualifier{}, 0, false
 	}
 	if start >= end || !staticWordsAt(tokens, start, "you") {

@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,955 of 32,501 cards eligible for paper support (52.2%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,956 of 32,501 cards eligible for paper support (52.2%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -10987,6 +10987,7 @@ Council4 currently supports **16,955 of 32,501 cards eligible for paper support 
 - Queen Allenal of Ruadach
 - Queen Brahne
 - Queen Marchesa
+- Queen Mother Ramonda
 - Queen of Ice // Rage of Winter
 - Queen's Agent
 - Queen's Bay Soldier
