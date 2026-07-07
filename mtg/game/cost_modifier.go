@@ -541,6 +541,15 @@ const (
 	// sacrifice it, whether as a cost or by an effect. Added last so existing
 	// kinds keep their wire values.
 	RuleEffectCantBeSacrificed
+	// RuleEffectCastLinkedExileForFree lets the affected player cast one spell
+	// without paying its mana cost from among the cards exiled under the source's
+	// ExiledLinkKey set ("until end of turn, you may cast a spell from among cards
+	// exiled with this enchantment without paying its mana cost.", Court of
+	// Locthwain). AffectedPlayer scopes it to the controller and ExiledLinkKey
+	// names the source-keyed linked-exile pool. It is a one-shot permission: the
+	// rules layer removes it once its player casts a spell under it, matching the
+	// singular "a spell". Added last so existing kinds keep their wire values.
+	RuleEffectCastLinkedExileForFree
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -603,7 +612,8 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectCanBlockAdditional,
 		RuleEffectDamageDoesntCauseLifeLoss,
 		RuleEffectRedirectDamageToSource,
-		RuleEffectCantBeSacrificed:
+		RuleEffectCantBeSacrificed,
+		RuleEffectCastLinkedExileForFree:
 		return true
 	default:
 		return false
@@ -713,6 +723,23 @@ type RuleEffect struct {
 	AffectedCardID id.ID
 	CastFace       opt.V[FaceIndex]
 	ExpiresFor     PlayerID
+
+	// SpendAnyMana, on a RuleEffectPlayFromZone permission, lets the affected
+	// player spend mana of any type to cast the permitted card ("mana of any
+	// type can be spent to cast it.", Court of Locthwain, Court of the Grim
+	// Captain). The colored and colorless requirements of the cast card's mana
+	// cost stay the same size but become payable with mana of any color, so the
+	// rules layer casts it under an alternative cost whose symbols are all
+	// generic. It is false for every other kind.
+	SpendAnyMana bool
+
+	// ExiledLinkKey, on a RuleEffectCastLinkedExileForFree permission, names the
+	// source-keyed linked-exile set whose cards the affected player may cast for
+	// free ("cast a spell from among cards exiled with this enchantment", Court of
+	// Locthwain). The rules layer keys the pool by the effect's SourceCardID and
+	// this link key, matching how the source's ImpulseExile published the cards.
+	// It is unused for every other kind.
+	ExiledLinkKey LinkedKey
 
 	// AdditionalLandPlays is the number of extra land plays granted by a
 	// RuleEffectAdditionalLandPlays effect. It is unused for every other kind.

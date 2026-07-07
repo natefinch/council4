@@ -48,7 +48,7 @@ func TestJeskasWillTypedFieldsFailClosed(t *testing.T) {
 		{
 			name: "impulse wrong duration",
 			content: Mode{Sequence: []Instruction{{Primitive: ImpulseExile{
-				Player: ControllerReference(), Amount: Fixed(3), Duration: DurationPermanent,
+				Player: ControllerReference(), Amount: Fixed(3), Duration: DurationUntilYourNextTurn,
 			}}}}.Ability(),
 		},
 	}

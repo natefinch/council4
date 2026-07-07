@@ -172,6 +172,21 @@ func (*Engine) legalLandActions(g *game.Game, playerID game.PlayerID) []action.A
 			}
 		}
 	}
+	for _, cardID := range foreignExileCastableCards(g, playerID) {
+		if !canPlayLandFromZoneByRuleEffect(g, playerID, cardID, zone.Exile) {
+			continue
+		}
+		card, ok := g.GetCardInstance(cardID)
+		if !ok {
+			continue
+		}
+		sourcePlayer := castSourcePlayer(g, player, cardID, zone.Exile)
+		for _, face := range card.Def.FaceIndexes() {
+			if _, ok := landCardInstanceFaceFromZone(g, sourcePlayer, cardID, zone.Exile, face); ok {
+				actions = append(actions, actionBuild.playLandFromZone(cardID, zone.Exile, face))
+			}
+		}
+	}
 	for _, cardID := range player.Graveyard.All() {
 		if !canPlayLandFromZoneByRuleEffect(g, playerID, cardID, zone.Graveyard) {
 			continue
@@ -206,7 +221,11 @@ func (e *Engine) legalCastActions(g *game.Game, playerID game.PlayerID) []action
 	player := g.Players[playerID]
 	var actions []action.Action
 	for _, sourceZone := range castableZonesForPlayer(g, playerID) {
-		for _, cardID := range castSourceZoneCards(player, sourceZone) {
+		cards := castSourceZoneCards(player, sourceZone)
+		if sourceZone == zone.Exile {
+			cards = append(cards, foreignExileCastableCards(g, playerID)...)
+		}
+		for _, cardID := range cards {
 			card, ok := g.GetCardInstance(cardID)
 			if !ok {
 				continue
