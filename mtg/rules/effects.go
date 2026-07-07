@@ -534,11 +534,13 @@ func permanentLinkedObjectRef(permanent *game.Permanent) game.LinkedObjectRef {
 
 // permanentObjectBindingRef returns a linked-object ref that preserves the
 // permanent's ObjectID even for a token (CardInstanceID == 0), so an
-// object-identity binding survives for a token creature. Unlike
+// object-identity binding survives for a token permanent. Unlike
 // permanentLinkedObjectRef, it does not require a card instance because its
-// only consumer (the AddCounter.PublishLinked attacker binding) resolves the
-// captured permanent by ObjectID for the current turn, and a token has a stable
-// ObjectID while it remains on the battlefield.
+// consumers resolve the captured permanent by ObjectID: the
+// AddCounter.PublishLinked attacker binding resolves it while it remains on the
+// battlefield, and the ExileForEachOpponent draw payoff resolves its last-known
+// controller by ObjectID after it has left. A token has a stable ObjectID that
+// is never reused, so both bindings stay correct.
 func permanentObjectBindingRef(permanent *game.Permanent) game.LinkedObjectRef {
 	return game.LinkedObjectRef{ObjectID: permanent.ObjectID, CardID: permanent.CardInstanceID}
 }
