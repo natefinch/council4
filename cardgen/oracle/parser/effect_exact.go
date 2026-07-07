@@ -155,6 +155,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 			exactDistributeCountersEffectSyntax(effect)
 	case EffectProliferate:
 		return exactStandaloneActionEffectSyntax(effect, "Proliferate")
+	case EffectDiscover:
+		return exactDiscoverEffectSyntax(effect)
 	case EffectRemoveCounter:
 		return exactRemoveCounterEffectSyntax(effect) || exactRemoveAllCountersEffectSyntax(effect)
 	case EffectRegenerate:
@@ -4358,6 +4360,19 @@ func exactStandaloneActionEffectSyntax(effect *EffectSyntax, verb string) bool {
 	amount := effectAmountSourceText(effect)
 	return strings.EqualFold(text, fmt.Sprintf("%s %s.", verb, amount)) ||
 		strings.EqualFold(text, fmt.Sprintf("%s %s times.", verb, amount))
+}
+
+// exactDiscoverEffectSyntax reconstructs a discover keyword-action clause
+// ("Discover N.") and compares it byte-for-byte. Discover takes a fixed
+// mana-value threshold of at least one, so variable or dynamic amount forms fail
+// closed.
+func exactDiscoverEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Context != EffectContextController ||
+		!effect.Amount.Known || effect.Amount.Value < 1 {
+		return false
+	}
+	amount := effectAmountSourceText(effect)
+	return strings.EqualFold(exactEffectClauseText(effect), fmt.Sprintf("Discover %s.", amount))
 }
 
 // exactAmassEffectSyntax reconstructs an amass keyword-action clause ("Amass

@@ -1280,6 +1280,16 @@ func (r Renderer) renderStandalonePrimitive(ctx *renderCtx, primitive game.Primi
 			return "", err
 		}
 		return structLit("game.Proliferate", []string{fmt.Sprintf("Amount: %s,", amount)}), nil
+	case game.PrimitiveDiscoverCards:
+		value, err := assertPrimitive[game.DiscoverCards](primitive)
+		if err != nil {
+			return "", err
+		}
+		amount, err := r.renderQuantity(ctx, value.Amount)
+		if err != nil {
+			return "", err
+		}
+		return structLit("game.DiscoverCards", []string{fmt.Sprintf("Amount: %s,", amount)}), nil
 	case game.PrimitiveManifest:
 		value, err := assertPrimitive[game.Manifest](primitive)
 		if err != nil {

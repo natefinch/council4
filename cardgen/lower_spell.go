@@ -1854,6 +1854,10 @@ func lowerImmediateSingleEffectSpell(
 		return lowerExactPrimitiveSpell(ctx, syntax, "proliferate", func(amount game.Quantity) game.Primitive {
 			return game.Proliferate{Amount: amount}
 		})
+	case compiler.EffectDiscover:
+		return lowerExactPrimitiveSpell(ctx, syntax, "discover", func(amount game.Quantity) game.Primitive {
+			return game.DiscoverCards{Amount: amount}
+		})
 	case compiler.EffectExplore:
 		return lowerExploreSpell(ctx)
 	case compiler.EffectManifest, compiler.EffectManifestDread, compiler.EffectCloak:
