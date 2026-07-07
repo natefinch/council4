@@ -21,6 +21,7 @@ func emitDelayedTriggerEffects(abilities []Ability, instantOrSorcery bool) {
 		rewriteDelayedTriggerAbility(&abilities[i])
 		rewriteCapturedCombatDamageDelayedTrigger(&abilities[i])
 		rewriteCapturedAttacksMonarchDelayedTrigger(&abilities[i])
+		rewriteCapturedDiesMonarchDelayedTrigger(&abilities[i])
 		rewriteSpellTriggeredThisTurnDelayedAbility(&abilities[i], instantOrSorcery)
 	}
 }
@@ -314,6 +315,161 @@ func capturedAttacksMonarchInnerText(text string) (inner string, ok bool) {
 		return "", false
 	}
 	return "Whenever this " + rest + body, true
+}
+
+// rewriteCapturedDiesMonarchDelayedTrigger rewrites a trailing "When the
+// creature an opponent controls dies this turn, if you control your commander,
+// you become the monarch." rider sentence into one EffectDelayedTrigger whose
+// permanent-died event binds to the permanent an earlier clause in the same
+// resolution acted on: the second fight target ("... it fights target creature
+// an opponent controls. When the creature an opponent controls dies this turn,
+// ..."). The definite-description subject ("the creature an opponent controls")
+// otherwise reads as a spurious resolving become-the-monarch effect gated by an
+// intervening commander condition the ordered-sequence lowerer cannot gate. The
+// rider is reparsed in the self ("this creature") form so it carries an ordinary
+// permanent-died trigger pattern with its "if you control your commander"
+// intervening condition; lowering rebinds that pattern to the captured object
+// and preserves the intervening condition. The rider's condition belongs to the
+// reparsed nested ability, so the outer ability's conditions inside the rider
+// sentence are cleared to keep the sequence fully consumed. It fails closed: any
+// ability whose trailing sentence the recognizer does not match, or whose
+// reparsed self-form is not exactly one triggered ability, is left unchanged.
+func rewriteCapturedDiesMonarchDelayedTrigger(ability *Ability) {
+	if len(ability.Sentences) < 2 {
+		return
+	}
+	last := &ability.Sentences[len(ability.Sentences)-1]
+	tokens := semanticEffectTokens(last.Tokens)
+	comma := shared.TopLevelIndex(tokens, shared.Comma)
+	if comma <= 0 {
+		return
+	}
+	lead := tokens[:comma]
+	if !isDelayedThisTurnPreamble(lead) || !leadBindsDiesOpponentControls(lead) {
+		return
+	}
+	inner, ok := capturedDiesInnerText(last.Text)
+	if !ok {
+		return
+	}
+	granted, ok := parseDelayedTriggerAbility(inner)
+	if !ok {
+		return
+	}
+	var references, subjectReferences []Reference
+	for i := range last.Effects {
+		references = append(references, last.Effects[i].References...)
+		subjectReferences = append(subjectReferences, last.Effects[i].SubjectReferences...)
+	}
+	last.Effects = []EffectSyntax{{
+		Kind:                          EffectDelayedTrigger,
+		Span:                          last.Span,
+		VerbSpan:                      last.Span,
+		ClauseSpan:                    last.Span,
+		Text:                          last.Text,
+		References:                    references,
+		SubjectReferences:             subjectReferences,
+		DelayedTriggerAbility:         &granted,
+		DelayedTriggerBindDyingObject: true,
+	}}
+	last.Targets = nil
+	last.LegacyEffects = false
+	stripConditionsInSpan(ability, last.Span)
+}
+
+// leadBindsDiesOpponentControls reports whether a delayed-trigger preamble names
+// the opponent's creature ("the creature an opponent controls") dying, the
+// captured-object permanent-died shape the rider rewriter binds.
+func leadBindsDiesOpponentControls(lead []shared.Token) bool {
+	hasDies := false
+	hasOpponent := false
+	hasCreature := false
+	for i := range lead {
+		switch {
+		case equalWord(lead[i], "dies"):
+			hasDies = true
+		case equalWord(lead[i], "opponent"):
+			hasOpponent = true
+		case equalWord(lead[i], "creature"):
+			hasCreature = true
+		default:
+		}
+	}
+	return hasDies && hasOpponent && hasCreature
+}
+
+// capturedDiesInnerText reconstructs the self-form triggered-ability source of a
+// captured-object permanent-died rider by stripping the "this turn" window and
+// rewriting the definite-description subject "the creature an opponent controls"
+// to "this creature" so the result is an ordinary source-self permanent-died
+// trigger ("When the creature an opponent controls dies this turn, if you
+// control your commander, you become the monarch." -> "When this creature dies,
+// if you control your commander, you become the monarch."). Lowering rebinds the
+// resulting pattern to the captured object, so the self form supplies only the
+// permanent-died event shape and the intervening condition. It fails closed on
+// any other preamble.
+func capturedDiesInnerText(text string) (inner string, ok bool) {
+	trimmed := strings.TrimSpace(text)
+	comma := strings.Index(trimmed, ",")
+	if comma <= 0 {
+		return "", false
+	}
+	preamble := strings.TrimSpace(trimmed[:comma])
+	body := trimmed[comma:]
+	lowered := strings.ToLower(preamble)
+	if !strings.HasSuffix(lowered, "this turn") {
+		return "", false
+	}
+	preamble = strings.TrimSpace(preamble[:len(preamble)-len("this turn")])
+	lowered = strings.ToLower(preamble)
+	const subject = "when the creature an opponent controls "
+	if !strings.HasPrefix(lowered, subject) {
+		return "", false
+	}
+	rest := strings.TrimSpace(preamble[len(subject):])
+	if strings.ToLower(rest) != "dies" {
+		return "", false
+	}
+	return "When this creature dies" + body, true
+}
+
+// stripConditionsInSpan removes every condition boundary, segment, clause, and
+// event-history condition whose source position falls within span. It clears a
+// rewritten delayed-trigger rider's conditions from the outer ability so its
+// "if you control your commander" intervening condition lives only in the
+// reparsed nested ability rather than surfacing as an outer per-effect gate.
+func stripConditionsInSpan(ability *Ability, span shared.Span) {
+	within := func(offset int) bool {
+		return offset >= span.Start.Offset && offset < span.End.Offset
+	}
+	boundaries := ability.ConditionBoundaries[:0]
+	for _, boundary := range ability.ConditionBoundaries {
+		if !within(boundary.Start.Offset) {
+			boundaries = append(boundaries, boundary)
+		}
+	}
+	ability.ConditionBoundaries = boundaries
+	segments := ability.ConditionSegments[:0]
+	for _, segment := range ability.ConditionSegments {
+		if !within(segment.Span.Start.Offset) {
+			segments = append(segments, segment)
+		}
+	}
+	ability.ConditionSegments = segments
+	clauses := ability.ConditionClauses[:0]
+	for _, clause := range ability.ConditionClauses {
+		if !within(clause.Span.Start.Offset) {
+			clauses = append(clauses, clause)
+		}
+	}
+	ability.ConditionClauses = clauses
+	history := ability.EventHistoryConditions[:0]
+	for _, condition := range ability.EventHistoryConditions {
+		if !within(condition.Span.Start.Offset) {
+			history = append(history, condition)
+		}
+	}
+	ability.EventHistoryConditions = history
 }
 
 func rewriteDelayedTriggerAbility(ability *Ability) {

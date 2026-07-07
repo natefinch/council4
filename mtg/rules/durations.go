@@ -135,6 +135,14 @@ func scheduleDelayedTrigger(g *game.Game, obj *game.StackObject, def *game.Delay
 		Optional: def.Optional,
 		Content:  def.Content,
 	}
+	// Carry an intervening-if condition onto the scheduled ability's trigger so
+	// the ordinary intervening-if machinery re-checks it both when the captured
+	// event fires (drainReadyEventDelayedTriggers) and when the ability resolves
+	// (resolveTriggeredAbilityBodyWithChoices), evaluated against the delayed
+	// trigger's controller ("... if you control your commander, ...").
+	if def.InterveningCondition.Exists {
+		ability.Trigger.InterveningCondition = def.InterveningCondition
+	}
 	g.DelayedTriggers = append(g.DelayedTriggers, game.DelayedTrigger{
 		ID:                          g.IDGen.Next(),
 		SourceID:                    sourceID,
@@ -151,6 +159,7 @@ func scheduleDelayedTrigger(g *game.Game, obj *game.StackObject, def *game.Delay
 		CapturedTargetManaValueLKI:  cloneIntMap(obj.TargetManaValueLKI),
 		BoundDamageSourceObjectID:   capturedDamageSourceObjectID(g, obj, def),
 		BoundAttackerObjectID:       capturedAttackerObjectID(g, obj, def),
+		BoundDyingObjectID:          capturedDyingObjectID(g, obj, def),
 		CapturedObjectID:            capturedObjectID(g, obj, def),
 	})
 	return true
@@ -218,6 +227,24 @@ func capturedAttackerObjectID(g *game.Game, obj *game.StackObject, def *game.Del
 	return 0
 }
 
+// capturedDyingObjectID resolves the permanent a permanent-died delayed trigger
+// binds to from the creating ability's CapturedDyingObject reference, so the
+// scheduled trigger fires only when that specific object dies ("... target
+// creature an opponent controls ... When the creature an opponent controls dies
+// this turn, ..."). Unlike capturedDamageSourceObjectID and
+// capturedAttackerObjectID, the reference is a target permanent rather than a
+// linked object, so it resolves through objectIdentityID (the same path
+// capturedObjectID uses). It returns zero when the definition carries no such
+// reference or the captured permanent cannot be identified, in which case the
+// trigger never fires.
+func capturedDyingObjectID(g *game.Game, obj *game.StackObject, def *game.DelayedTriggerDef) id.ID {
+	if !def.CapturedDyingObject.Exists {
+		return 0
+	}
+	objectID, _ := newReferenceResolver(g, obj).objectIdentityID(def.CapturedDyingObject.Val)
+	return objectID
+}
+
 // drainReadyEventDelayedTriggers fires event-based delayed triggers whose stored
 // event pattern matches one of the freshly emitted events, reusing the ordinary
 // triggered-ability matcher bound to the trigger's stored controller. A one-shot
@@ -241,6 +268,16 @@ func drainReadyEventDelayedTriggers(g *game.Game, events []game.Event) []pending
 		if !matched {
 			remaining = append(remaining, *trigger)
 			continue
+		}
+		// An intervening-if condition is re-checked as the captured event fires
+		// (CR 603.4). When it fails the ability does not trigger, so the delayed
+		// trigger is retained unfired ("... if you control your commander, ...").
+		if trigger.Ability.Trigger.InterveningCondition.Exists {
+			source, _ := permanentByObjectID(g, trigger.SourceObjectID)
+			if !triggerInterveningIf(g, source, trigger.Controller, &trigger.Ability.Trigger, &matchEvent) {
+				remaining = append(remaining, *trigger)
+				continue
+			}
 		}
 		ability := trigger.Ability
 		pending = append(pending, pendingTriggeredAbility{
@@ -280,6 +317,11 @@ func matchEventDelayedTrigger(g *game.Game, trigger *game.DelayedTrigger, events
 		if pattern.AttackerCaptured &&
 			(trigger.BoundAttackerObjectID == 0 ||
 				events[i].SourceObjectID != trigger.BoundAttackerObjectID) {
+			continue
+		}
+		if pattern.DyingObjectCaptured &&
+			(trigger.BoundDyingObjectID == 0 ||
+				events[i].PermanentID != trigger.BoundDyingObjectID) {
 			continue
 		}
 		if triggerMatchesEventForController(g, source, trigger.Controller, &pattern, events[i]) {

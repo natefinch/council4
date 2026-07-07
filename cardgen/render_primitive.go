@@ -129,6 +129,20 @@ func (r Renderer) renderCreateDelayedTrigger(ctx *renderCtx, value game.CreateDe
 			}
 			triggerFields = append(triggerFields, fmt.Sprintf("CapturedAttackerObject: opt.Val(%s),", object))
 		}
+		if value.Trigger.CapturedDyingObject.Exists {
+			object, err := r.renderObjectReference(value.Trigger.CapturedDyingObject.Val)
+			if err != nil {
+				return "", err
+			}
+			triggerFields = append(triggerFields, fmt.Sprintf("CapturedDyingObject: opt.Val(%s),", object))
+		}
+		if value.Trigger.InterveningCondition.Exists {
+			condition, err := r.renderControllerControlsCondition(ctx, &value.Trigger.InterveningCondition.Val, "delayed trigger intervening")
+			if err != nil {
+				return "", err
+			}
+			triggerFields = append(triggerFields, fmt.Sprintf("InterveningCondition: opt.Val(%s),", condition))
+		}
 	} else {
 		timing, err := renderDelayedTriggerTiming(value.Trigger.Timing)
 		if err != nil {

@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **16,958 of 32,501 cards eligible for paper support (52.2%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,959 of 32,501 cards eligible for paper support (52.2%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -4972,6 +4972,7 @@ Council4 currently supports **16,958 of 32,501 cards eligible for paper support 
 - Fiery Mantle
 - Fiery Temper
 - Fight as One
+- Fight for the Throne
 - Fight On!
 - Fighting Drake
 - Filigree Angel

@@ -2149,6 +2149,12 @@ type CompiledEffect struct {
 	// attacks the monarch this turn, ..."). It is meaningful only when Kind is
 	// EffectDelayedTrigger.
 	DelayedTriggerBindAttacker bool
+	// DelayedTriggerBindDyingObject records that an EffectDelayedTrigger's
+	// permanent-died event binds to the permanent an earlier clause in the same
+	// resolution acted on ("... target creature an opponent controls ... When the
+	// creature an opponent controls dies this turn, ..."). It is meaningful only
+	// when Kind is EffectDelayedTrigger.
+	DelayedTriggerBindDyingObject bool
 	// TokenName is a created creature token's explicit Oracle name ("named Koma's
 	// Coil"), captured verbatim from source. It is empty when the token is named
 	// only by its subtypes.

@@ -904,6 +904,16 @@ type TriggerPattern struct {
 	// ("... target creature ... Whenever that creature attacks the monarch this
 	// turn, ..."). It must not be combined with a Source filter or Subject.
 	AttackerCaptured bool
+	// DyingObjectCaptured restricts an EventPermanentDied pattern to the specific
+	// permanent captured when the trigger was created, rather than by a static
+	// source filter. It is the death analog of DamageSourceCaptured and
+	// AttackerCaptured: it is only meaningful on an event-based delayed trigger
+	// whose DelayedTriggerDef carries a CapturedDyingObject reference; the
+	// delayed-trigger matcher resolves that reference at schedule time and
+	// enforces the captured dying permanent's identity ("... target creature an
+	// opponent controls ... When the creature an opponent controls dies this
+	// turn, ..."). It must not be combined with a Source filter or Subject.
+	DyingObjectCaptured bool
 	// AttackerCountAtLeast restricts a controller-scoped EventAttackerDeclared
 	// trigger to combats where at least this many creatures are attacking
 	// ("attack with two or more creatures"). Zero imposes no minimum; a positive

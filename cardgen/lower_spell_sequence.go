@@ -3234,6 +3234,9 @@ func lowerDelayedSequenceClause(
 		sequence[len(sequence)-1].Primitive = add
 		return delayed, true, false
 	}
+	if delayed, ok := lowerDelayedCommanderMonarchDiesTrigger(effectIndex, ctx, sequence); ok {
+		return delayed, true, false
+	}
 	if publisher, delayed, ok := lowerDelayedTargetExile(effectIndex, ctx, sequence); ok {
 		sequence[len(sequence)-1].Primitive = publisher
 		return delayed, true, false
