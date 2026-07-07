@@ -292,6 +292,13 @@ func handleAddCounter(r *effectResolver, prim game.AddCounter) effectResolved {
 		}
 		addCountersToPermanentControlledBy(r.game, placementController, permanent, counterKind, res.amount)
 		res.succeeded = true
+		if prim.PublishLinked != "" {
+			rememberLinkedObject(
+				r.game,
+				linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked)),
+				permanentObjectBindingRef(permanent),
+			)
+		}
 	}
 	return res
 }

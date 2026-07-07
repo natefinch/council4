@@ -419,6 +419,11 @@ type AddCounter struct {
 	// Group, never an Object, AllKinds, ChooseOne, KindChoices, or Distribute. The
 	// single-object and one-target forms use a dynamic ObjectCounters Amount.
 	DoubleKind bool
+	// PublishLinked, when set, remembers the single permanent the counters were
+	// placed on under this key so a later linked effect (such as a delayed
+	// attacker-declared trigger that binds to that creature) can resolve it. It is
+	// set only with a single Object, never a Group.
+	PublishLinked LinkedKey
 }
 
 // AddPlayerCounter places counters on a referenced player or group of players.

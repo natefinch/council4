@@ -20,6 +20,7 @@ func emitDelayedTriggerEffects(abilities []Ability, instantOrSorcery bool) {
 	for i := range abilities {
 		rewriteDelayedTriggerAbility(&abilities[i])
 		rewriteCapturedCombatDamageDelayedTrigger(&abilities[i])
+		rewriteCapturedAttacksMonarchDelayedTrigger(&abilities[i])
 		rewriteSpellTriggeredThisTurnDelayedAbility(&abilities[i], instantOrSorcery)
 	}
 }
@@ -193,6 +194,123 @@ func capturedCombatDamageInnerText(text string) (inner string, ok bool) {
 		return "", false
 	}
 	if !strings.Contains(strings.ToLower(rest), "deals combat damage") {
+		return "", false
+	}
+	return "Whenever this " + rest + body, true
+}
+
+// rewriteCapturedAttacksMonarchDelayedTrigger rewrites a trailing "Whenever that
+// creature attacks the monarch this turn, <body>" rider sentence into one
+// EffectDelayedTrigger whose attacker-declared event binds to the permanent an
+// earlier clause in the same ability acted on ("... target creature ... Whenever
+// that creature attacks the monarch this turn, it gains double strike and
+// trample until end of turn."). The back-reference subject ("that creature")
+// otherwise reads as a spurious keyword grant on a referenced object that drops
+// the attacks-the-monarch condition. The rider is reparsed in the self ("this
+// creature") form so it carries an ordinary attacker-declared trigger pattern
+// against the monarch; lowering rebinds that pattern to the captured object via
+// the ability's preserved back-reference. The rider's body keywords belong to
+// the reparsed nested ability, so the outer ability's semantic keywords are
+// cleared to keep the sequence fully consumed. It fails closed: any ability
+// whose trailing sentence the recognizer does not match, or whose reparsed
+// self-form is not exactly one triggered ability, is left unchanged.
+func rewriteCapturedAttacksMonarchDelayedTrigger(ability *Ability) {
+	if len(ability.Sentences) < 2 {
+		return
+	}
+	last := &ability.Sentences[len(ability.Sentences)-1]
+	tokens := semanticEffectTokens(last.Tokens)
+	comma := shared.TopLevelIndex(tokens, shared.Comma)
+	if comma <= 0 {
+		return
+	}
+	lead := tokens[:comma]
+	if !isDelayedThisTurnPreamble(lead) || !leadBindsThatAttacksMonarch(lead) {
+		return
+	}
+	inner, ok := capturedAttacksMonarchInnerText(last.Text)
+	if !ok {
+		return
+	}
+	granted, ok := parseDelayedTriggerAbility(inner)
+	if !ok {
+		return
+	}
+	var references, subjectReferences []Reference
+	for i := range last.Effects {
+		references = append(references, last.Effects[i].References...)
+		subjectReferences = append(subjectReferences, last.Effects[i].SubjectReferences...)
+	}
+	last.Effects = []EffectSyntax{{
+		Kind:                       EffectDelayedTrigger,
+		Span:                       last.Span,
+		VerbSpan:                   last.Span,
+		ClauseSpan:                 last.Span,
+		Text:                       last.Text,
+		References:                 references,
+		SubjectReferences:          subjectReferences,
+		DelayedTriggerAbility:      &granted,
+		DelayedTriggerBindAttacker: true,
+	}}
+	last.Targets = nil
+	last.LegacyEffects = false
+	ability.SemanticKeywords = nil
+}
+
+// leadBindsThatAttacksMonarch reports whether a delayed-trigger preamble names a
+// back-referenced permanent ("that creature") that attacks the monarch, the
+// captured-object attacks-the-monarch shape the rider rewriter binds.
+func leadBindsThatAttacksMonarch(lead []shared.Token) bool {
+	if len(lead) < 2 || !equalWord(lead[1], "that") {
+		return false
+	}
+	hasAttacks := false
+	hasMonarch := false
+	for i := range lead {
+		if equalWord(lead[i], "attacks") {
+			hasAttacks = true
+		}
+		if equalWord(lead[i], "monarch") {
+			hasMonarch = true
+		}
+	}
+	return hasAttacks && hasMonarch
+}
+
+// capturedAttacksMonarchInnerText reconstructs the self-form triggered-ability
+// source of a captured-object attacks-the-monarch rider by stripping the "this
+// turn" window and rewriting the "that <noun>" back-reference subject to "this
+// <noun>" so the result is an ordinary source-self attacker-declared trigger
+// ("Whenever that creature attacks the monarch this turn, it gains double strike
+// and trample until end of turn." -> "Whenever this creature attacks the
+// monarch, it gains double strike and trample until end of turn."). Lowering
+// rebinds the resulting pattern to the captured object, so the self form
+// supplies only the attacks-the-monarch event shape. It fails closed on any
+// other preamble.
+func capturedAttacksMonarchInnerText(text string) (inner string, ok bool) {
+	trimmed := strings.TrimSpace(text)
+	comma := strings.Index(trimmed, ",")
+	if comma <= 0 {
+		return "", false
+	}
+	preamble := strings.TrimSpace(trimmed[:comma])
+	body := trimmed[comma:]
+	lowered := strings.ToLower(preamble)
+	if !strings.HasSuffix(lowered, "this turn") {
+		return "", false
+	}
+	preamble = strings.TrimSpace(preamble[:len(preamble)-len("this turn")])
+	lowered = strings.ToLower(preamble)
+	var rest string
+	switch {
+	case strings.HasPrefix(lowered, "whenever that "):
+		rest = preamble[len("whenever that "):]
+	case strings.HasPrefix(lowered, "when that "):
+		rest = preamble[len("when that "):]
+	default:
+		return "", false
+	}
+	if !strings.Contains(strings.ToLower(rest), "attacks the monarch") {
 		return "", false
 	}
 	return "Whenever this " + rest + body, true

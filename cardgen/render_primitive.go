@@ -122,6 +122,13 @@ func (r Renderer) renderCreateDelayedTrigger(ctx *renderCtx, value game.CreateDe
 			}
 			triggerFields = append(triggerFields, fmt.Sprintf("DamageSourceObject: opt.Val(%s),", object))
 		}
+		if value.Trigger.CapturedAttackerObject.Exists {
+			object, err := r.renderObjectReference(value.Trigger.CapturedAttackerObject.Val)
+			if err != nil {
+				return "", err
+			}
+			triggerFields = append(triggerFields, fmt.Sprintf("CapturedAttackerObject: opt.Val(%s),", object))
+		}
 	} else {
 		timing, err := renderDelayedTriggerTiming(value.Trigger.Timing)
 		if err != nil {
@@ -506,6 +513,9 @@ func (r Renderer) renderAddCounter(ctx *renderCtx, value *game.AddCounter) (stri
 	}
 	if value.DoubleKind {
 		fields = append(fields, "DoubleKind: true,")
+	}
+	if value.PublishLinked != "" {
+		fields = append(fields, fmt.Sprintf("PublishLinked: game.LinkedKey(%q),", string(value.PublishLinked)))
 	}
 	return structLit("game.AddCounter", fields), nil
 }

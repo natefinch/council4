@@ -107,6 +107,15 @@ type DelayedTriggerDef struct {
 	// turn, ..."). It is only valid with EventPattern whose DamageSourceCaptured
 	// flag is set.
 	DamageSourceObject opt.V[ObjectReference]
+	// CapturedAttackerObject, when present, binds an EventPattern
+	// attacker-declared delayed trigger to the specific permanent this object
+	// reference resolves to at schedule time (the creature an earlier clause in
+	// the same resolution targeted and published as a linked object). The
+	// scheduled trigger fires only when that captured permanent is declared as an
+	// attacker ("... target creature ... Whenever that creature attacks the
+	// monarch this turn, ..."). It is the attack analog of DamageSourceObject and
+	// is only valid with an EventPattern whose AttackerCaptured flag is set.
+	CapturedAttackerObject opt.V[ObjectReference]
 	// CapturedObject, when present, freezes the permanent this object reference
 	// resolves to against the creating ability's triggering event at schedule
 	// time, storing its object ID on the scheduled trigger so the trigger's
@@ -148,6 +157,12 @@ type DelayedTrigger struct {
 	// ability's DamageSourceObject reference when the trigger is scheduled. Zero
 	// means the captured permanent was already gone, so the trigger never fires.
 	BoundDamageSourceObjectID id.ID
+	// BoundAttackerObjectID restricts an EventPattern attacker-declared delayed
+	// trigger whose pattern sets AttackerCaptured to events whose attacker is
+	// this captured permanent. It is resolved from the creating ability's
+	// CapturedAttackerObject reference when the trigger is scheduled. Zero means
+	// the captured permanent was already gone, so the trigger never fires.
+	BoundAttackerObjectID id.ID
 	// CapturedObjectID is the concrete permanent frozen from the creating
 	// ability's CapturedObject reference at schedule time, carried into the
 	// fired trigger's content so it can act on the combat creature after the

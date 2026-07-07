@@ -1794,6 +1794,14 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 			v.add(faceName, appendPath(path, "DamageSourceCaptured"), CardDefIssueInvalidSelection, "DamageSourceCaptured must not be combined with a damage-source filter")
 		}
 	}
+	if pattern.AttackerCaptured {
+		if pattern.Event != EventAttackerDeclared {
+			v.add(faceName, appendPath(path, "AttackerCaptured"), CardDefIssueInvalidSelection, "AttackerCaptured requires an attacker-declared event")
+		}
+		if pattern.Source != TriggerSourceAny || pattern.Subject != TriggerSubjectDefault {
+			v.add(faceName, appendPath(path, "AttackerCaptured"), CardDefIssueInvalidSelection, "AttackerCaptured must not be combined with an attacker source filter")
+		}
+	}
 	if pattern.OneOrMorePerAttackTarget && (!pattern.OneOrMore || pattern.Event != EventAttackerDeclared) {
 		v.add(faceName, path, CardDefIssueInvalidSelection, "OneOrMorePerAttackTarget requires a one-or-more attacker-declared pattern")
 	}

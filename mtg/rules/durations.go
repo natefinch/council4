@@ -150,6 +150,7 @@ func scheduleDelayedTrigger(g *game.Game, obj *game.StackObject, def *game.Delay
 		CapturedTargetControllerLKI: clonePlayerIDMap(obj.TargetControllerLKI),
 		CapturedTargetManaValueLKI:  cloneIntMap(obj.TargetManaValueLKI),
 		BoundDamageSourceObjectID:   capturedDamageSourceObjectID(g, obj, def),
+		BoundAttackerObjectID:       capturedAttackerObjectID(g, obj, def),
 		CapturedObjectID:            capturedObjectID(g, obj, def),
 	})
 	return true
@@ -183,6 +184,29 @@ func capturedDamageSourceObjectID(g *game.Game, obj *game.StackObject, def *game
 		return 0
 	}
 	reference := def.DamageSourceObject.Val
+	if reference.Kind() != game.ObjectReferenceLinkedObject {
+		return 0
+	}
+	for _, linked := range linkedObjects(g, linkedObjectSourceKey(g, obj, reference.LinkID())) {
+		if linked.ObjectID != 0 {
+			return linked.ObjectID
+		}
+	}
+	return 0
+}
+
+// capturedAttackerObjectID resolves the permanent an attacker-declared delayed
+// trigger binds to from the creating ability's CapturedAttackerObject reference,
+// so the scheduled trigger fires only when that specific object is declared as
+// an attacker ("... target creature ... Whenever that creature attacks the
+// monarch this turn, ..."). It mirrors capturedDamageSourceObjectID and returns
+// zero when the definition carries no such reference or the captured permanent is
+// already gone, in which case the trigger never fires.
+func capturedAttackerObjectID(g *game.Game, obj *game.StackObject, def *game.DelayedTriggerDef) id.ID {
+	if !def.CapturedAttackerObject.Exists {
+		return 0
+	}
+	reference := def.CapturedAttackerObject.Val
 	if reference.Kind() != game.ObjectReferenceLinkedObject {
 		return 0
 	}
@@ -251,6 +275,11 @@ func matchEventDelayedTrigger(g *game.Game, trigger *game.DelayedTrigger, events
 		if pattern.DamageSourceCaptured &&
 			(trigger.BoundDamageSourceObjectID == 0 ||
 				events[i].SourceObjectID != trigger.BoundDamageSourceObjectID) {
+			continue
+		}
+		if pattern.AttackerCaptured &&
+			(trigger.BoundAttackerObjectID == 0 ||
+				events[i].SourceObjectID != trigger.BoundAttackerObjectID) {
 			continue
 		}
 		if triggerMatchesEventForController(g, source, trigger.Controller, &pattern, events[i]) {
