@@ -39,6 +39,9 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 	case EffectChooseCreatureType:
 		return strings.EqualFold(exactEffectClauseText(effect), "Choose a creature type.")
 	case EffectCreate:
+		if createTokenLeadingPlayerSetForEachUnmodeled(effect) {
+			return false
+		}
 		return exactCreateMultiTokenEffectSyntax(effect) ||
 			exactCreateTokenEffectSyntax(effect) ||
 			exactCreateTokenEachPlayerEffectSyntax(effect) ||

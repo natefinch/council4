@@ -5,6 +5,35 @@ import (
 	"strings"
 )
 
+// createTokenLeadingPlayerSetForEachUnmodeled reports whether a create-token
+// effect opens with a "For each <player-set>[ who ...]," distributive quantifier
+// (opponent or player) that the token-count model does not represent. The only
+// modeled leading player-set distributive is the unconditional per-opponent
+// count "For each opponent, [you ]create <one token>.", which
+// parseCreateForEachAmount types as an EffectDynamicAmountFormForEach /
+// EffectDynamicAmountOpponentCount amount so the runtime creates one token per
+// opponent (Endless Ranks of HYDRA, Stampede Surfer). Every other leading
+// player-set distributive — a conditional "For each opponent who <condition>,"
+// (Faerie Slumber Party), a per-opponent count greater than one, or a per-player
+// "For each player," — leaves the amount a fixed count that silently ignores the
+// distributive, so this reports it unmodeled and the create dispatch fails closed
+// rather than emitting a wrong fixed token count. It reads only the effect's own
+// clause tokens and typed amount, so no downstream stage compares Oracle text.
+func createTokenLeadingPlayerSetForEachUnmodeled(effect *EffectSyntax) bool {
+	tokens := effect.Tokens
+	if len(tokens) < 3 || !equalWord(tokens[0], "for") || !equalWord(tokens[1], "each") {
+		return false
+	}
+	switch {
+	case equalWord(tokens[2], "opponent"), equalWord(tokens[2], "opponents"),
+		equalWord(tokens[2], "player"), equalWord(tokens[2], "players"):
+	default:
+		return false
+	}
+	return effect.Amount.DynamicForm != EffectDynamicAmountFormForEach ||
+		effect.Amount.DynamicKind != EffectDynamicAmountOpponentCount
+}
+
 // createTokenControllerClauseMatches reports whether a controller-form
 // create-token clause matches its canonical reconstruction, accepting both the
 // bare imperative "Create <body>" wording and the "You create <body>" subject
