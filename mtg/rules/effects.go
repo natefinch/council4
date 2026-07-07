@@ -543,7 +543,16 @@ func permanentObjectBindingRef(permanent *game.Permanent) game.LinkedObjectRef {
 	return game.LinkedObjectRef{ObjectID: permanent.ObjectID, CardID: permanent.CardInstanceID}
 }
 
-func returnLinkedExiledObjects(e *Engine, g *game.Game, obj *game.StackObject, linkID string, controllerOverride opt.V[game.PlayerID], options permanentCreationOptions, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+// returnLinkedNonBattlefieldObjects returns every linked object recorded under
+// linkID from whichever non-battlefield zone currently holds it — its owner's
+// exile ("return the exiled card", Palace Jailer) or graveyard ("return that
+// card", where the linked permanent was sacrificed by an earlier instruction in
+// the same resolution, as on Heart-Shaped Herb). Each object is matched by its
+// last-known-object snapshot so a stale reference can never resurrect a
+// different card that happens to reuse the card id. Exile is consulted first so
+// existing exile-return effects keep their exact behavior; the graveyard branch
+// is reached only when the linked card is not in exile.
+func returnLinkedNonBattlefieldObjects(e *Engine, g *game.Game, obj *game.StackObject, linkID string, controllerOverride opt.V[game.PlayerID], options permanentCreationOptions, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
 	key := linkedObjectSourceKey(g, obj, linkID)
 	returned := false
 	for _, ref := range linkedObjects(g, key) {
@@ -555,17 +564,36 @@ func returnLinkedExiledObjects(e *Engine, g *game.Game, obj *game.StackObject, l
 			continue
 		}
 		owner, ok := playerByID(g, card.Owner)
-		if !ok || !owner.Exile.Remove(ref.CardID) {
+		if !ok {
+			continue
+		}
+		fromZone, ok := removeLinkedCardFromNonBattlefieldZone(owner, ref.CardID)
+		if !ok {
 			continue
 		}
 		controller := card.Owner
 		if controllerOverride.Exists {
 			controller = controllerOverride.Val
 		}
-		if _, ok := createCardPermanentFaceWithOptions(e, g, card, controller, zone.Exile, game.FaceFront, nil, options, agents, log); ok {
+		if _, ok := createCardPermanentFaceWithOptions(e, g, card, controller, fromZone, game.FaceFront, nil, options, agents, log); ok {
 			returned = true
 		}
 	}
 	clearLinkedObjects(g, key)
 	return returned
+}
+
+// removeLinkedCardFromNonBattlefieldZone removes cardID from the owner's exile
+// or graveyard — whichever currently holds the linked card — and reports the
+// zone it left so the re-entry uses the correct origin for CR 603/614 zone-change
+// events. Exile is tried first to preserve the exact behavior of exile-return
+// effects.
+func removeLinkedCardFromNonBattlefieldZone(owner *game.Player, cardID id.ID) (zone.Type, bool) {
+	if owner.Exile.Remove(cardID) {
+		return zone.Exile, true
+	}
+	if owner.Graveyard.Remove(cardID) {
+		return zone.Graveyard, true
+	}
+	return zone.None, false
 }
