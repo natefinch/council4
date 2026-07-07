@@ -49,6 +49,7 @@ var Cards = []*game.CardDef{
 	EmrakulSMessenger,
 	EndTheFestivities,
 	Endbringer,
+	EndlessRanksOfHYDRA,
 	EndlessWurm,
 	EnduringCourage,
 	EngineeredPlague,
