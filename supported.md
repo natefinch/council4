@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,018 of 32,501 cards eligible for paper support (52.4%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,034 of 32,501 cards eligible for paper support (52.4%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1976,6 +1976,7 @@ Council4 currently supports **17,018 of 32,501 cards eligible for paper support 
 - Buried Alive
 - Buried in the Garden
 - Buried Ruin
+- Buried Treasure
 - Burlfist Oak
 - Burn Bright
 - Burn the Accursed
@@ -2447,6 +2448,7 @@ Council4 currently supports **17,018 of 32,501 cards eligible for paper support 
 - Chime of Night
 - Chimeric Egg
 - Chimeric Idol
+- Chimil, the Inner Sun
 - Chimney Rabble
 - Chisei, Heart of Oceans
 - Chitinous Cloak
@@ -3210,6 +3212,7 @@ Council4 currently supports **17,018 of 32,501 cards eligible for paper support 
 - Darigaaz's Charm
 - Daring Apprentice
 - Daring Archaeologist
+- Daring Discovery
 - Daring Escape
 - Daring Fiendbonder
 - Daring Leap
@@ -3612,6 +3615,7 @@ Council4 currently supports **17,018 of 32,501 cards eligible for paper support 
 - Didn't Say Please
 - Dig Site Inventory
 - Dig Through Time
+- Digsite Conservator
 - Digsite Engineer
 - Diligent Excavator
 - Dimension X
@@ -4553,6 +4557,7 @@ Council4 currently supports **17,018 of 32,501 cards eligible for paper support 
 - Essence Scatter
 - Essence Sliver
 - Essence Warden
+- Etali's Favor
 - Etched Champion
 - Etched Cornfield
 - Etched Familiar
@@ -5388,6 +5393,7 @@ Council4 currently supports **17,018 of 32,501 cards eligible for paper support 
 - Fracturing Gust
 - Fragmentize
 - Francisco, Fowl Marauder
+- Franklin Richards, Ascendant
 - Frantic Confrontation
 - Frantic Purification
 - Frantic Salvage
@@ -5655,6 +5661,7 @@ Council4 currently supports **17,018 of 32,501 cards eligible for paper support 
 - Genestealer Locus
 - Genghis Frog
 - Genji Glove
+- Geological Appraiser
 - Geology Enthusiast
 - Geomancer's Gambit
 - Geothermal Bog
@@ -6742,14 +6749,19 @@ Council4 currently supports **17,018 of 32,501 cards eligible for paper support 
 - Hexplate Golem
 - Hibernation
 - Hickory Woodlot
+- Hidden Cataract
+- Hidden Courtyard
 - Hidden Footblade
 - Hidden Grotto
 - Hidden Herbalists
 - Hidden Hideout
 - Hidden Horror
 - Hidden Lair
+- Hidden Necropolis
+- Hidden Nursery
 - Hidden Path
 - Hidden Stockpile
+- Hidden Volcano
 - Hideous End
 - Hideous Visage
 - Hieroglyphic Illumination
@@ -8453,6 +8465,7 @@ Council4 currently supports **17,018 of 32,501 cards eligible for paper support 
 - Long Road Home
 - Long-Finned Skywhale
 - Long-Forgotten Gohei
+- Long-Range Sensor
 - Longbow Archer
 - Longhorn Firebeast
 - Longshot Squad
@@ -10811,6 +10824,7 @@ Council4 currently supports **17,018 of 32,501 cards eligible for paper support 
 - Primevals' Glorious Rebirth
 - Primo, the Indivisible
 - Primoc Escapee
+- Primordial Gnawer
 - Primordial Hydra
 - Primordial Pachyderm
 - Primordial Sage
@@ -15359,6 +15373,7 @@ Council4 currently supports **17,018 of 32,501 cards eligible for paper support 
 - Trueheart Duelist
 - Trufflesnout
 - Trumpet Blast
+- Trumpeting Carnosaur
 - Trumpeting Gnarr
 - Trumpeting Herd
 - Trusted Pegasus
@@ -16201,6 +16216,7 @@ Council4 currently supports **17,018 of 32,501 cards eligible for paper support 
 - Waker of Waves
 - Waking Nightmare
 - Walk the Plank
+- Walk with the Ancestors
 - Walker
 - Walker of the Grove
 - Walking Atlas

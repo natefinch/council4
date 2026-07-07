@@ -262,7 +262,8 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 			return "", err
 		}
 		return r.renderPlayerWinsGame(value)
-	case game.PrimitiveInvestigate, game.PrimitiveProliferate, game.PrimitiveManifest:
+	case game.PrimitiveInvestigate, game.PrimitiveProliferate, game.PrimitiveManifest,
+		game.PrimitiveDiscoverCards:
 		return r.renderStandalonePrimitive(ctx, primitive)
 	case game.PrimitiveAmass:
 		value, err := assertPrimitive[game.Amass](primitive)
