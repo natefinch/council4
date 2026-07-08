@@ -49,16 +49,6 @@ func newRatchetFieldMedic() *game.CardDef {
 						},
 					},
 					Content: game.Mode{
-						Targets: []game.TargetSpec{
-							game.TargetSpec{
-								MinTargets: 1,
-								MaxTargets: 1,
-								Constraint: "target artifact card with mana value less than or equal to the amount of life you gained this turn from your graveyard",
-								Allow:      game.TargetAllowCard,
-								TargetZone: zone.Graveyard,
-								Selection:  opt.Val(game.Selection{RequiredTypes: []types.Card{types.Artifact}, Controller: game.ControllerYou, ManaValueDynamic: opt.Val(game.ManaValueDynamicBound{Kind: game.DynamicAmountLifeGainedThisTurn, Multiplier: 1})}),
-							},
-						},
 						Sequence: []game.Instruction{
 							{
 								Primitive: game.Transform{
@@ -68,9 +58,29 @@ func newRatchetFieldMedic() *game.CardDef {
 								PublishResult: game.ResultKey("if-you-do"),
 							},
 							{
-								Primitive: game.PutOnBattlefield{
-									Source:      game.CardBattlefieldSource(game.CardReference{Kind: game.CardReferenceTarget}),
-									EntryTapped: true,
+								Primitive: game.CreateReflexiveTrigger{
+									Trigger: game.ReflexiveTriggerDef{
+										Content: game.Mode{
+											Targets: []game.TargetSpec{
+												game.TargetSpec{
+													MinTargets: 1,
+													MaxTargets: 1,
+													Constraint: "target artifact card with mana value less than or equal to the amount of life you gained this turn from your graveyard",
+													Allow:      game.TargetAllowCard,
+													TargetZone: zone.Graveyard,
+													Selection:  opt.Val(game.Selection{RequiredTypes: []types.Card{types.Artifact}, Controller: game.ControllerYou, ManaValueDynamic: opt.Val(game.ManaValueDynamicBound{Kind: game.DynamicAmountLifeGainedThisTurn, Multiplier: 1})}),
+												},
+											},
+											Sequence: []game.Instruction{
+												{
+													Primitive: game.PutOnBattlefield{
+														Source:      game.CardBattlefieldSource(game.CardReference{Kind: game.CardReferenceTarget}),
+														EntryTapped: true,
+													},
+												},
+											},
+										}.Ability(),
+									},
 								},
 								ResultGate: opt.Val(game.InstructionResultGate{
 									Key:       "if-you-do",
