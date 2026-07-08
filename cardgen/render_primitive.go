@@ -167,6 +167,24 @@ func (r Renderer) renderCreateDelayedTrigger(ctx *renderCtx, value game.CreateDe
 	}), nil
 }
 
+// renderCreateReflexiveTrigger renders a reflexive-trigger instruction (CR
+// 603.11): the enabling action publishes its result, and this instruction — gated
+// on that success — puts a reflexive triggered ability carrying the deferred
+// consequence on the stack, its targets chosen then. The body is rendered exactly
+// like any ability content, so its target selection resolves after the enabling
+// action rather than up front.
+func (r Renderer) renderCreateReflexiveTrigger(ctx *renderCtx, value game.CreateReflexiveTrigger) (string, error) {
+	content, err := r.renderAbilityContent(ctx, value.Trigger.Content)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.CreateReflexiveTrigger", []string{
+		fmt.Sprintf("Trigger: %s,", structLit("game.ReflexiveTriggerDef", []string{
+			fmt.Sprintf("Content: %s,", content),
+		})),
+	}), nil
+}
+
 func (r Renderer) renderPutOnBattlefield(ctx *renderCtx, value game.PutOnBattlefield) (string, error) {
 	var fields []string
 	if len(value.Sources) > 0 {

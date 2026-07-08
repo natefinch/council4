@@ -197,7 +197,7 @@ func triggerPatternToZone(pattern game.TriggerPattern) zone.Type {
 	return zone.None
 }
 
-func lowerContent(
+func lowerContentDispatch(
 	cardName string,
 	ctx contentCtx,
 	syntax *parser.Ability,

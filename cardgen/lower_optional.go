@@ -1037,6 +1037,13 @@ type optionalFlowPlan struct {
 	// controller decides each one separately. It is mutually exclusive with the
 	// enabled/bareIndex shapes.
 	independentOptional bool
+	// reflexive marks the enabled "you may X. When you do, Y" shape whose gate is
+	// a reflexive "When you do," preamble (CR 603.11) rather than an immediate
+	// "If you do," rider. When set, lowering repackages the gated consequence
+	// (gateIndex..elseIndex) into a CreateReflexiveTrigger whose content targets
+	// are chosen after the enabling action, instead of resolving it inline with
+	// up-front targets. It is only ever set together with enabled.
+	reflexive bool
 }
 
 // marksOptional reports whether the optional flow marks the instruction produced
@@ -1316,6 +1323,7 @@ func planOptionalFlow(content compiler.AbilityContent) (optionalFlowPlan, bool) 
 		elseIndex:          elseIndex,
 		elseGateCondition:  elseGateCondition,
 		extraOptionalIndex: extraOptional,
+		reflexive:          content.Conditions[gateCondition].Reflexive,
 	}, true
 }
 
