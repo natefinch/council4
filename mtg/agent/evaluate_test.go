@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/rules"
 )
@@ -111,6 +112,71 @@ func TestEvaluateDeployingANoncreatureIsNotALoss(t *testing.T) {
 		t.Fatalf("deploying a noncreature enchantment lowered the evaluation: "+
 			"onBoard=%v inHand=%v; casting a noncreature must not look like a loss",
 			evalOf(onBoard, game.Player1), evalOf(inHand, game.Player1))
+	}
+}
+
+func TestEvaluateLifeIsConcave(t *testing.T) {
+	// A point of life is worth more when a player is low than when they are high:
+	// gaining life from 5 to 6 must raise the evaluation more than gaining it from
+	// 39 to 40. A strong player spends life freely while healthy and fights for
+	// every point when low, so the curve must be concave, not linear.
+	eval := func(life int) float64 {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		g.Players[game.Player1].Life = life
+		return evalOf(g, game.Player1)
+	}
+
+	marginalWhenLow := eval(6) - eval(5)
+	marginalWhenHigh := eval(40) - eval(39)
+	if marginalWhenLow <= marginalWhenHigh {
+		t.Fatalf("life is not concave: a point at low life (%v) should be worth more "+
+			"than a point at high life (%v)", marginalWhenLow, marginalWhenHigh)
+	}
+}
+
+func TestEvaluateRewardsRacingAKillableOpponent(t *testing.T) {
+	// A position where an opponent is near death should score higher for me than
+	// one where every opponent is healthy, so search commits to finishing a kill
+	// instead of durdling to a draw. The wounded opponent is NOT the strongest
+	// (Player3 has the biggest board), so this isolates the closing reward from
+	// the "my power minus the strongest opponent" core: only being close to a kill
+	// can raise the score here.
+	healthy := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addObservedPermanent(healthy, game.Player3, creatureCardDef("Wurm", 8, 8))
+
+	racing := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addObservedPermanent(racing, game.Player3, creatureCardDef("Wurm", 8, 8))
+	racing.Players[game.Player2].Life = 3
+
+	if evalOf(racing, game.Player1) <= evalOf(healthy, game.Player1) {
+		t.Fatalf("an opponent at 3 life did not improve my evaluation: "+
+			"racing=%v healthy=%v; the agent should value closing on a killable player",
+			evalOf(racing, game.Player1), evalOf(healthy, game.Player1))
+	}
+}
+
+func TestEvaluateRacingCountsPoisonAndCommanderDamage(t *testing.T) {
+	// Life is not the only clock: an opponent one hit from a poison or
+	// commander-damage loss is just as killable, and a strong player finishes them
+	// on whichever clock is furthest along. Both must register as closing progress.
+	baseline := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addObservedPermanent(baseline, game.Player3, creatureCardDef("Wurm", 8, 8))
+	base := evalOf(baseline, game.Player1)
+
+	poisoned := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addObservedPermanent(poisoned, game.Player3, creatureCardDef("Wurm", 8, 8))
+	poisoned.Players[game.Player2].PoisonCounters = 9
+	if evalOf(poisoned, game.Player1) <= base {
+		t.Fatalf("an opponent at 9 poison did not improve my evaluation: poisoned=%v base=%v",
+			evalOf(poisoned, game.Player1), base)
+	}
+
+	commanderDamaged := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addObservedPermanent(commanderDamaged, game.Player3, creatureCardDef("Wurm", 8, 8))
+	commanderDamaged.Players[game.Player2].CommanderDamage = map[id.ID]int{commanderDamaged.IDGen.Next(): 20}
+	if evalOf(commanderDamaged, game.Player1) <= base {
+		t.Fatalf("an opponent at 20 commander damage did not improve my evaluation: cmdr=%v base=%v",
+			evalOf(commanderDamaged, game.Player1), base)
 	}
 }
 
