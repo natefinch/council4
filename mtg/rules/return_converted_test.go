@@ -3,6 +3,7 @@ package rules
 import (
 	"testing"
 
+	cardh "github.com/natefinch/council4/mtg/cards/h"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -43,6 +44,40 @@ func TestReturnConvertedDiesTriggerEntersBackFace(t *testing.T) {
 	}
 	if got := effectivePower(g, returned); got != 5 {
 		t.Fatalf("effective power = %d, want 5 from converted back face", got)
+	}
+}
+
+// TestHarvestHandDiesReturnsTransformedBackFace drives the real curated card
+// Harvest Hand // Scrounged Scythe end-to-end: its "return it to the battlefield
+// transformed" dies trigger must return the card on its back face (the Scrounged
+// Scythe Equipment), which the parser fix for "transformed" now enables.
+func TestHarvestHandDiesReturnsTransformedBackFace(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	cardID := addCardInstance(g, game.Player1, cardh.HarvestHand)
+	permanent := &game.Permanent{
+		ObjectID:       g.IDGen.Next(),
+		CardInstanceID: cardID,
+		Owner:          game.Player1,
+		Controller:     game.Player1,
+		Face:           game.FaceFront,
+	}
+	g.Battlefield = append(g.Battlefield, permanent)
+
+	if _, ok := destroyPermanent(g, permanent.ObjectID); !ok {
+		t.Fatal("destroyPermanent() = false, want the front-face creature to die")
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("putTriggeredAbilitiesOnStack() = false, want the dies trigger")
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	returned := permanentForCard(g, cardID)
+	if returned == nil {
+		t.Fatal("Harvest Hand was not returned to the battlefield")
+	}
+	if returned.Face != game.FaceBack || !returned.Transformed {
+		t.Fatalf("returned face/transformed = %v/%v, want back/true (Scrounged Scythe)", returned.Face, returned.Transformed)
 	}
 }
 

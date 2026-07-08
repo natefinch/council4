@@ -4168,9 +4168,10 @@ func lowerDelayedBlinkReturn(
 	}
 	exile.ExileLinkedKey = key
 	put := game.PutOnBattlefield{
-		Source:        game.LinkedBattlefieldSource(key),
-		EntryTapped:   returnEffect.EntersTapped,
-		EntryCounters: entryCounters,
+		Source:           game.LinkedBattlefieldSource(key),
+		EntryTapped:      returnEffect.EntersTapped,
+		EntryTransformed: returnEffect.EntersTransformed,
+		EntryCounters:    entryCounters,
 	}
 	if returnEffect.UnderYourControl {
 		put.Recipient = opt.Val(game.ControllerReference())
@@ -4288,9 +4289,10 @@ func lowerImmediateBlinkReturn(
 	}
 	exile.ExileLinkedKey = key
 	put := game.PutOnBattlefield{
-		Source:        game.LinkedBattlefieldSource(key),
-		EntryTapped:   returnEffect.EntersTapped,
-		EntryCounters: entryCounters,
+		Source:           game.LinkedBattlefieldSource(key),
+		EntryTapped:      returnEffect.EntersTapped,
+		EntryTransformed: returnEffect.EntersTransformed,
+		EntryCounters:    entryCounters,
 	}
 	if returnEffect.UnderYourControl {
 		put.Recipient = opt.Val(game.ControllerReference())
