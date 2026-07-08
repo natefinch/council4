@@ -2560,6 +2560,16 @@ func (p CreateDelayedTrigger) validatePrimitive(targets []TargetSpec, checkTarge
 	return nil
 }
 
+func (p CreateReflexiveTrigger) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if len(p.Trigger.Content.Modes) == 0 {
+		return errors.New("reflexive trigger requires content")
+	}
+	if p.Trigger.Content.IsModal() {
+		return errors.New("reflexive trigger content must not be modal")
+	}
+	return nil
+}
+
 func (p CreateReplacement) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if p.Replacement == nil {
 		return errors.New("create replacement requires a replacement")

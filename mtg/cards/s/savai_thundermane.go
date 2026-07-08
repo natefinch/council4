@@ -42,15 +42,6 @@ func newSavaiThundermane() *game.CardDef {
 						},
 					},
 					Content: game.Mode{
-						Targets: []game.TargetSpec{
-							game.TargetSpec{
-								MinTargets: 1,
-								MaxTargets: 1,
-								Constraint: "target creature",
-								Allow:      game.TargetAllowPermanent,
-								Selection:  opt.Val(game.Selection{RequiredTypesAny: []types.Card{types.Creature}}),
-							},
-						},
 						Sequence: []game.Instruction{
 							{
 								Primitive: game.Pay{
@@ -64,20 +55,35 @@ func newSavaiThundermane() *game.CardDef {
 								PublishResult: game.ResultKey("controller-paid"),
 							},
 							{
-								Primitive: game.Damage{
-									Amount:       game.Fixed(2),
-									Recipient:    game.AnyTargetDamageRecipient(0),
-									DamageSource: opt.Val(game.SourcePermanentReference()),
-								},
-								ResultGate: opt.Val(game.InstructionResultGate{
-									Key:       "controller-paid",
-									Succeeded: game.TriTrue,
-								}),
-							},
-							{
-								Primitive: game.GainLife{
-									Amount: game.Fixed(2),
-									Player: game.ControllerReference(),
+								Primitive: game.CreateReflexiveTrigger{
+									Trigger: game.ReflexiveTriggerDef{
+										Content: game.Mode{
+											Targets: []game.TargetSpec{
+												game.TargetSpec{
+													MinTargets: 1,
+													MaxTargets: 1,
+													Constraint: "target creature",
+													Allow:      game.TargetAllowPermanent,
+													Selection:  opt.Val(game.Selection{RequiredTypesAny: []types.Card{types.Creature}}),
+												},
+											},
+											Sequence: []game.Instruction{
+												{
+													Primitive: game.Damage{
+														Amount:       game.Fixed(2),
+														Recipient:    game.AnyTargetDamageRecipient(0),
+														DamageSource: opt.Val(game.SourcePermanentReference()),
+													},
+												},
+												{
+													Primitive: game.GainLife{
+														Amount: game.Fixed(2),
+														Player: game.ControllerReference(),
+													},
+												},
+											},
+										}.Ability(),
+									},
 								},
 								ResultGate: opt.Val(game.InstructionResultGate{
 									Key:       "controller-paid",

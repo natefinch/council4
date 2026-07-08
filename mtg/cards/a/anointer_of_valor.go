@@ -60,10 +60,20 @@ func newAnointerOfValor() *game.CardDef {
 								PublishResult: game.ResultKey("controller-paid"),
 							},
 							{
-								Primitive: game.AddCounter{
-									Amount:      game.Fixed(1),
-									Object:      game.EventPermanentReference(),
-									CounterKind: counter.PlusOnePlusOne,
+								Primitive: game.CreateReflexiveTrigger{
+									Trigger: game.ReflexiveTriggerDef{
+										Content: game.Mode{
+											Sequence: []game.Instruction{
+												{
+													Primitive: game.AddCounter{
+														Amount:      game.Fixed(1),
+														Object:      game.EventPermanentReference(),
+														CounterKind: counter.PlusOnePlusOne,
+													},
+												},
+											},
+										}.Ability(),
+									},
 								},
 								ResultGate: opt.Val(game.InstructionResultGate{
 									Key:       "controller-paid",

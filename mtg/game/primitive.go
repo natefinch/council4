@@ -187,10 +187,18 @@ const (
 	// each permanent exiled this way, its controller draws a card." (King
 	// Solomon's Frogs).
 	PrimitiveDrawForEachExiled
+	// PrimitiveCreateReflexiveTrigger puts a reflexive triggered ability
+	// (CR 603.11) on the stack: "When you do, <effect>." following an optional
+	// enabling action in the same resolution. Unlike CreateDelayedTrigger (which
+	// is timed or event-based), the reflexive trigger is queued immediately when
+	// the enabling action was performed and put on the stack the next time a
+	// player would receive priority, with its targets chosen then — after the
+	// enabling action has resolved (game.CreateReflexiveTrigger).
+	PrimitiveCreateReflexiveTrigger
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveDrawForEachExiled) + 1
+const primitiveKindCount = int(PrimitiveCreateReflexiveTrigger) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -1724,6 +1732,25 @@ type CreateEmblem struct {
 // CreateDelayedTrigger schedules a delayed triggered ability.
 type CreateDelayedTrigger struct {
 	Trigger DelayedTriggerDef
+}
+
+// CreateReflexiveTrigger puts a reflexive triggered ability on the stack
+// (CR 603.11). It backs "When you do, <effect>." following an optional enabling
+// action in the same resolution. The enclosing instruction is gated on the
+// enabling action's published result, so the primitive runs (queues the
+// reflexive trigger) only when the enabling action was performed. The trigger is
+// put on the stack the next time a player would receive priority, with its
+// targets chosen then — after the enabling action has resolved. This differs
+// from CreateDelayedTrigger, which waits for a future timing or game event.
+type CreateReflexiveTrigger struct {
+	Trigger ReflexiveTriggerDef
+}
+
+// ReflexiveTriggerDef is the card-definition-side data for a reflexive triggered
+// ability. Its Content is put on the stack as an ordinary triggered ability with
+// its own targets, chosen when the trigger is put on the stack.
+type ReflexiveTriggerDef struct {
+	Content AbilityContent
 }
 
 // CreateReplacement creates a replacement effect that applies to a future event.

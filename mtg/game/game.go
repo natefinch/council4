@@ -93,6 +93,11 @@ type Game struct {
 	// timing condition such as the next end step.
 	DelayedTriggers []DelayedTrigger
 
+	// PendingReflexiveTriggers are reflexive triggered abilities (CR 603.11) that
+	// have been queued by an enabling action and are waiting to be put on the
+	// stack the next time triggered abilities are gathered.
+	PendingReflexiveTriggers []ReflexiveTrigger
+
 	// PreventionShields are runtime damage-prevention replacement effects.
 	PreventionShields []PreventionShield
 

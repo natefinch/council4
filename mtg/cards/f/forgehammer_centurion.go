@@ -71,15 +71,6 @@ func newForgehammerCenturion() *game.CardDef {
 						},
 					},
 					Content: game.Mode{
-						Targets: []game.TargetSpec{
-							game.TargetSpec{
-								MinTargets: 1,
-								MaxTargets: 1,
-								Constraint: "target creature",
-								Allow:      game.TargetAllowPermanent,
-								Selection:  opt.Val(game.Selection{RequiredTypesAny: []types.Card{types.Creature}}),
-							},
-						},
 						Sequence: []game.Instruction{
 							{
 								Primitive: game.RemoveCounter{
@@ -91,14 +82,33 @@ func newForgehammerCenturion() *game.CardDef {
 								PublishResult: game.ResultKey("if-you-do"),
 							},
 							{
-								Primitive: game.ApplyRule{
-									Object: opt.Val(game.TargetPermanentReference(0)),
-									RuleEffects: []game.RuleEffect{
-										game.RuleEffect{
-											Kind: game.RuleEffectCantBlock,
-										},
+								Primitive: game.CreateReflexiveTrigger{
+									Trigger: game.ReflexiveTriggerDef{
+										Content: game.Mode{
+											Targets: []game.TargetSpec{
+												game.TargetSpec{
+													MinTargets: 1,
+													MaxTargets: 1,
+													Constraint: "target creature",
+													Allow:      game.TargetAllowPermanent,
+													Selection:  opt.Val(game.Selection{RequiredTypesAny: []types.Card{types.Creature}}),
+												},
+											},
+											Sequence: []game.Instruction{
+												{
+													Primitive: game.ApplyRule{
+														Object: opt.Val(game.TargetPermanentReference(0)),
+														RuleEffects: []game.RuleEffect{
+															game.RuleEffect{
+																Kind: game.RuleEffectCantBlock,
+															},
+														},
+														Duration: game.DurationThisTurn,
+													},
+												},
+											},
+										}.Ability(),
 									},
-									Duration: game.DurationThisTurn,
 								},
 								ResultGate: opt.Val(game.InstructionResultGate{
 									Key:       "if-you-do",

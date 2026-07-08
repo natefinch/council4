@@ -84,16 +84,6 @@ func newTerraHeraldOfHope() *game.CardDef {
 						},
 					},
 					Content: game.Mode{
-						Targets: []game.TargetSpec{
-							game.TargetSpec{
-								MinTargets: 1,
-								MaxTargets: 1,
-								Constraint: "target creature card with power 3 or less from your graveyard",
-								Allow:      game.TargetAllowCard,
-								TargetZone: zone.Graveyard,
-								Selection:  opt.Val(game.Selection{RequiredTypes: []types.Card{types.Creature}, Controller: game.ControllerYou, Power: opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 3})}),
-							},
-						},
 						Sequence: []game.Instruction{
 							{
 								Primitive: game.Pay{
@@ -107,9 +97,29 @@ func newTerraHeraldOfHope() *game.CardDef {
 								PublishResult: game.ResultKey("controller-paid"),
 							},
 							{
-								Primitive: game.PutOnBattlefield{
-									Source:      game.CardBattlefieldSource(game.CardReference{Kind: game.CardReferenceTarget}),
-									EntryTapped: true,
+								Primitive: game.CreateReflexiveTrigger{
+									Trigger: game.ReflexiveTriggerDef{
+										Content: game.Mode{
+											Targets: []game.TargetSpec{
+												game.TargetSpec{
+													MinTargets: 1,
+													MaxTargets: 1,
+													Constraint: "target creature card with power 3 or less from your graveyard",
+													Allow:      game.TargetAllowCard,
+													TargetZone: zone.Graveyard,
+													Selection:  opt.Val(game.Selection{RequiredTypes: []types.Card{types.Creature}, Controller: game.ControllerYou, Power: opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 3})}),
+												},
+											},
+											Sequence: []game.Instruction{
+												{
+													Primitive: game.PutOnBattlefield{
+														Source:      game.CardBattlefieldSource(game.CardReference{Kind: game.CardReferenceTarget}),
+														EntryTapped: true,
+													},
+												},
+											},
+										}.Ability(),
+									},
 								},
 								ResultGate: opt.Val(game.InstructionResultGate{
 									Key:       "controller-paid",

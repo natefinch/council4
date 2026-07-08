@@ -130,11 +130,13 @@ func TestLowerOptionalIfYouDontElseBranch(t *testing.T) {
 	_ = loseLife
 }
 
-// TestLowerReflexiveWhenYouDoGatesOnOptional verifies that the reflexive
-// "When you do," preamble following a "you may" optional action lowers to the
-// same result-published / result-gated shape as the equivalent "If you do,"
-// rider: the optional action publishes its result and the trailing effect is
-// gated on that action having been taken.
+// TestLowerReflexiveWhenYouDoGatesOnOptional verifies that a non-targeted
+// reflexive "When you do," following a "you may" optional action lowers to the
+// reflexive-trigger model (CR 603.11): the optional action publishes its result
+// and the trailing effect is repackaged into a CreateReflexiveTrigger gated on
+// that action having been taken. The reflexive body carries the effect so it is
+// put on the stack after the enabling action resolves, rather than resolving
+// inline.
 func TestLowerReflexiveWhenYouDoGatesOnOptional(t *testing.T) {
 	t.Parallel()
 	sequence := lowerSpellSequence(t, "Reflexive Flow Test",
@@ -152,15 +154,32 @@ func TestLowerReflexiveWhenYouDoGatesOnOptional(t *testing.T) {
 	if discard.PublishResult != optionalIfYouDoResultKey {
 		t.Fatalf("instruction[0].PublishResult = %q, want %q", discard.PublishResult, optionalIfYouDoResultKey)
 	}
-	draw := sequence[1]
-	if _, ok := draw.Primitive.(game.Draw); !ok {
-		t.Fatalf("instruction[1] = %T, want game.Draw", draw.Primitive)
+	reflexive, ok := sequence[1].Primitive.(game.CreateReflexiveTrigger)
+	if !ok {
+		t.Fatalf("instruction[1] = %T, want game.CreateReflexiveTrigger", sequence[1].Primitive)
 	}
-	if !draw.ResultGate.Exists {
+	if !sequence[1].ResultGate.Exists {
 		t.Fatal("instruction[1].ResultGate missing")
 	}
-	if gate := draw.ResultGate.Val; gate.Key != optionalIfYouDoResultKey || gate.Succeeded != game.TriTrue {
+	if gate := sequence[1].ResultGate.Val; gate.Key != optionalIfYouDoResultKey || gate.Succeeded != game.TriTrue {
 		t.Fatalf("instruction[1].ResultGate = %#v, want succeeded gate on %q", gate, optionalIfYouDoResultKey)
+	}
+	body := reflexive.Trigger.Content
+	if len(body.Modes) != 1 {
+		t.Fatalf("reflexive content modes = %d, want 1", len(body.Modes))
+	}
+	mode := body.Modes[0]
+	if len(mode.Targets) != 0 {
+		t.Fatalf("reflexive mode targets = %#v, want none (non-targeted reflexive)", mode.Targets)
+	}
+	if len(mode.Sequence) != 1 {
+		t.Fatalf("reflexive mode sequence = %#v, want one instruction", mode.Sequence)
+	}
+	if _, ok := mode.Sequence[0].Primitive.(game.Draw); !ok {
+		t.Fatalf("reflexive body instruction[0] = %T, want game.Draw", mode.Sequence[0].Primitive)
+	}
+	if mode.Sequence[0].ResultGate.Exists {
+		t.Fatalf("reflexive body instruction[0] must not carry the enabling gate: %#v", mode.Sequence[0].ResultGate)
 	}
 }
 
@@ -180,6 +199,56 @@ func TestLowerReflexiveWhenYouDoAfterMandatoryNotGated(t *testing.T) {
 		if instr.Optional || instr.PublishResult != "" || instr.ResultGate.Exists {
 			t.Fatalf("instruction[%d] must carry no optional-flow envelope: %#v", i, instr)
 		}
+	}
+}
+
+// TestLowerReflexiveWhenYouDoTargetChosenInBody verifies that a TARGETED
+// reflexive "When you do, <targeted effect>" does not emit its target up front
+// as a spell/ability target. Instead the target moves into the reflexive
+// trigger's body so it is chosen when the reflexive trigger is put on the stack
+// (CR 603.11), after the enabling action resolves. This is the fix for
+// Eden-style cards whose enabling action changes the target's legal pool.
+func TestLowerReflexiveWhenYouDoTargetChosenInBody(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Reflexive Target Test",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "You may sacrifice a creature. When you do, return target creature card from your graveyard to your hand.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not found")
+	}
+	if len(face.SpellAbility.Val.Modes) != 1 {
+		t.Fatalf("modes = %#v, want one", face.SpellAbility.Val.Modes)
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 0 {
+		t.Fatalf("outer mode targets = %#v, want none (target chosen at reflexive-trigger time, not up front)", mode.Targets)
+	}
+	if err := game.ValidateInstructionSequence(mode.Sequence, mode.Targets); err != nil {
+		t.Fatalf("invalid instruction sequence: %v", err)
+	}
+	if len(mode.Sequence) != 2 {
+		t.Fatalf("sequence = %#v, want two instructions (sacrifice, reflexive trigger)", mode.Sequence)
+	}
+	if !mode.Sequence[0].Optional || mode.Sequence[0].PublishResult != optionalIfYouDoResultKey {
+		t.Fatalf("instruction[0] must be the optional enabling action publishing %q: %#v", optionalIfYouDoResultKey, mode.Sequence[0])
+	}
+	reflexive, ok := mode.Sequence[1].Primitive.(game.CreateReflexiveTrigger)
+	if !ok {
+		t.Fatalf("instruction[1] = %T, want game.CreateReflexiveTrigger", mode.Sequence[1].Primitive)
+	}
+	if gate := mode.Sequence[1].ResultGate; !gate.Exists ||
+		gate.Val.Key != optionalIfYouDoResultKey || gate.Val.Succeeded != game.TriTrue {
+		t.Fatalf("reflexive trigger must be gated on the enabling result: %#v", mode.Sequence[1].ResultGate)
+	}
+	body := reflexive.Trigger.Content
+	if len(body.Modes) != 1 {
+		t.Fatalf("reflexive content modes = %d, want 1", len(body.Modes))
+	}
+	if len(body.Modes[0].Targets) == 0 {
+		t.Fatal("reflexive body carries no target; the target must be chosen inside the reflexive trigger")
 	}
 }
 

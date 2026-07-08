@@ -631,6 +631,12 @@ func (r Renderer) renderPrimitiveTail(ctx *renderCtx, primitive game.Primitive) 
 			return "", err
 		}
 		return r.renderCreateDelayedTrigger(ctx, value)
+	case game.PrimitiveCreateReflexiveTrigger:
+		value, err := assertPrimitive[game.CreateReflexiveTrigger](primitive)
+		if err != nil {
+			return "", err
+		}
+		return r.renderCreateReflexiveTrigger(ctx, value)
 	case game.PrimitiveCreateReplacement:
 		value, err := assertPrimitive[game.CreateReplacement](primitive)
 		if err != nil {

@@ -443,6 +443,14 @@ type ConditionClause struct {
 	// negated ObjectMatches whose positive form means "has at least one counter
 	// of that kind"). The compiler flips Condition.Negated when this is set.
 	Negated bool `json:",omitempty"`
+
+	// Reflexive marks a "When you do," reflexive-trigger preamble (CR 603.11)
+	// following an optional enabling action, as distinct from an immediate "If
+	// you do," rider. Both lower through the same prior-instruction-accepted gate
+	// (Intro stays ConditionIntroIf), but a reflexive clause routes its
+	// consequence to a reflexive triggered ability whose targets are chosen after
+	// the enabling action, rather than resolving inline with up-front targets.
+	Reflexive bool `json:",omitempty"`
 }
 
 // ConditionControlComparison describes a cross-player control-count comparison
@@ -520,6 +528,11 @@ func parseConditionClauses(tokens []shared.Token, atoms Atoms) []ConditionClause
 		end := conditionClauseEnd(tokens, i)
 		if clause, ok := parseConditionClause(tokens[i:end], width, intro, atoms); ok {
 			clause.Span = shared.SpanOf(tokens[i:end])
+			// Mark a reflexive "When you do," gate so the compiler and lowering
+			// route its consequence to a reflexive triggered ability. The clause
+			// keeps ConditionIntroIf (its predicate and gate wiring are shared
+			// with "If you do,"); only the reflexive routing differs.
+			clause.Reflexive = isReflexiveWhenYouDoIntro(tokens, i)
 			clauses = append(clauses, clause)
 		}
 		i = end - 1
@@ -649,12 +662,14 @@ func conditionIntroAt(tokens []shared.Token, index int) (kind ConditionIntroKind
 		return ConditionIntroAsLongAs, 1
 	case isReflexiveWhenYouDoIntro(tokens, index):
 		// The reflexive "When you do," preamble gates its trailing effect on the
-		// just-performed optional action having been taken, exactly like an "If
-		// you do," rider. Oracle text uses the reflexive trigger form when the
-		// dependent effect chooses a new target; modelling it as the same
-		// prior-instruction-accepted gate lets the existing optional-flow path
-		// lower it. The "when" introducer alone is consumed; the "you do" body
-		// is recognized as the prior-instruction-accepted predicate.
+		// just-performed optional action having been taken, sharing the
+		// prior-instruction-accepted predicate and gate wiring of an "If you do,"
+		// rider. The reflexive form is marked separately (ConditionClause.Reflexive
+		// via isReflexiveWhenYouDoIntro) so the compiler and lowering can route the
+		// consequence to a reflexive triggered ability (CR 603.11) whose targets
+		// are chosen after the enabling action, rather than resolving inline with
+		// up-front targets. The "when" introducer alone is consumed; the "you do"
+		// body is recognized as the prior-instruction-accepted predicate.
 		return ConditionIntroIf, 1
 	default:
 		return ConditionIntroUnknown, 0
