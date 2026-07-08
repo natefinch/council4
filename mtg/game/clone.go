@@ -91,6 +91,7 @@ func cloneReflexiveTriggers(triggers []ReflexiveTrigger) []ReflexiveTrigger {
 	for i := range clone {
 		clone[i].CapturedTargetControllerLKI = cloneComparableMap(clone[i].CapturedTargetControllerLKI)
 		clone[i].CapturedTargetManaValueLKI = cloneComparableMap(clone[i].CapturedTargetManaValueLKI)
+		clone[i].TriggerEvent = cloneEvent(clone[i].TriggerEvent)
 	}
 	return clone
 }

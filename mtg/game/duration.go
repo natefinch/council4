@@ -215,4 +215,11 @@ type ReflexiveTrigger struct {
 	// CapturedObjectID carries a permanent frozen from the creating ability so
 	// the reflexive content can act on it after the creating resolution ends.
 	CapturedObjectID id.ID
+	// TriggerEvent and HasTriggerEvent carry the triggering event of the ability
+	// that created this reflexive trigger, so the reflexive content can resolve
+	// event-relative references ("that creature", "that card") and event-derived
+	// amounts against the same event once the reflexive ability is put on the
+	// stack, exactly as the creating triggered ability would have inline.
+	TriggerEvent    Event
+	HasTriggerEvent bool
 }

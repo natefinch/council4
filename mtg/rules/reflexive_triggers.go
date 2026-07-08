@@ -24,6 +24,8 @@ func queueReflexiveTrigger(g *game.Game, obj *game.StackObject, def *game.Reflex
 		Ability:                     game.TriggeredAbility{Content: def.Content},
 		CapturedTargetControllerLKI: clonePlayerIDMap(obj.TargetControllerLKI),
 		CapturedTargetManaValueLKI:  cloneIntMap(obj.TargetManaValueLKI),
+		TriggerEvent:                obj.TriggerEvent,
+		HasTriggerEvent:             obj.HasTriggerEvent,
 	})
 	return true
 }
@@ -50,6 +52,8 @@ func drainReadyReflexiveTriggers(g *game.Game) []pendingTriggeredAbility {
 			sourceCardID:                trigger.SourceID,
 			sourceToken:                 trigger.SourceTokenDef,
 			inline:                      &ability,
+			event:                       trigger.TriggerEvent,
+			hasEvent:                    trigger.HasTriggerEvent,
 			capturedTargetControllerLKI: clonePlayerIDMap(trigger.CapturedTargetControllerLKI),
 			capturedTargetManaValueLKI:  cloneIntMap(trigger.CapturedTargetManaValueLKI),
 			capturedObjectID:            trigger.CapturedObjectID,
