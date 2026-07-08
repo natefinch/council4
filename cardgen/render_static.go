@@ -750,6 +750,15 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 		}
 		fields = append(fields, fmt.Sprintf("PermanentTypes: %s,", permanentTypes))
 	}
+	if effect.ExileCounterFilter.Exists {
+		counterKind, err := renderCounterKind(effect.ExileCounterFilter.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importCounter)
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("ExileCounterFilter: opt.Val(%s),", counterKind))
+	}
 	if !effect.AffectedSelection.Empty() {
 		selection, err := r.renderSelection(ctx, effect.AffectedSelection)
 		if err != nil {

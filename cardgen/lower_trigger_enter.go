@@ -244,12 +244,16 @@ func lowerEventCardEffect(ctx contentCtx) (game.AbilityContent, bool) {
 			},
 		}}}.Ability(), true
 	case compiler.EffectExile:
+		move := game.MoveCard{
+			Card:        eventCard,
+			FromZone:    zone.Graveyard,
+			Destination: zone.Exile,
+		}
+		if effect.CounterKindKnown {
+			move.Counter = opt.Val(effect.CounterKind)
+		}
 		return game.Mode{Sequence: []game.Instruction{{
-			Primitive: game.MoveCard{
-				Card:        eventCard,
-				FromZone:    zone.Graveyard,
-				Destination: zone.Exile,
-			},
+			Primitive: move,
 		}}}.Ability(), true
 	default:
 		return game.AbilityContent{}, false

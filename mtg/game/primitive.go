@@ -1141,6 +1141,13 @@ type MoveCard struct {
 	FromZone          zone.Type
 	Destination       zone.Type
 	DestinationBottom bool
+	// Counter names a named marker counter placed on the moved card when
+	// Destination is the exile zone ("exile it with a croak counter on it.",
+	// Grolnok, the Omnivore). The counter is recorded in Game.ExileCounters so
+	// the source's paired play/cast/return ability can later select "cards ... in
+	// exile with <name> counters on them". It is unset for every move that places
+	// no counter, and meaningful only for the single-card exile form.
+	Counter opt.V[counter.Kind]
 }
 
 // MoveCommander moves Player's commander(s) from the command zone to

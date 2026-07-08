@@ -1183,6 +1183,9 @@ func handleMoveCard(r *effectResolver, prim game.MoveCard) effectResolved {
 		return res
 	}
 	res.succeeded = moveCardBetweenZonesWithPlacement(r.game, card.Owner, cardID, fromZone, prim.Destination, prim.DestinationBottom)
+	if res.succeeded && prim.Counter.Exists && prim.Destination == zone.Exile {
+		r.game.AddExileCounter(cardID, prim.Counter.Val, 1)
+	}
 	return res
 }
 

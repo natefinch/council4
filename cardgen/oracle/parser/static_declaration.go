@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -175,6 +176,13 @@ const (
 	// permission is self-scoped to the source card and may carry an optional "as
 	// long as <condition>" gate.
 	StaticDeclarationPlayerRuleCastThisFromExile StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleCastThisFromExile"
+	// StaticDeclarationPlayerRulePlayAndCastFromExileWithCounter grants the
+	// controller a continuous permission to play land cards and cast spells from
+	// among the cards they own in exile that carry a named marker counter ("You
+	// may play lands and cast spells from among cards you own in exile with croak
+	// counters on them.", Grolnok, the Omnivore). ExileCounter names the required
+	// counter so the runtime restricts the permission to exiled cards bearing it.
+	StaticDeclarationPlayerRulePlayAndCastFromExileWithCounter StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRulePlayAndCastFromExileWithCounter"
 	// StaticDeclarationPlayerRuleLookAtTopCardAnyTime lets the controller look at
 	// the top card of their library at any time ("You may look at the top card of
 	// your library any time.", Bolas's Citadel, Vizier of the Menagerie, Sphinx of
@@ -579,6 +587,13 @@ type StaticDeclarationSyntax struct {
 	PlayerRule          StaticDeclarationPlayerRuleKind `json:",omitempty"`
 	AttackTaxGeneric    int                             `json:",omitempty"`
 	AdditionalLandPlays int                             `json:",omitempty"`
+
+	// ExileCounter names the marker counter a
+	// StaticDeclarationPlayerRulePlayAndCastFromExileWithCounter declaration
+	// requires on the exiled cards its play/cast permission covers ("... in exile
+	// with croak counters on them.", Grolnok, the Omnivore). It is the zero value
+	// for every other declaration kind.
+	ExileCounter counter.Kind `json:"-"`
 
 	// Per-creature attack-tax payload (Baird, Archon of Absolution, Sphere of
 	// Safety, Collective Restraint): AttackTaxAmountKind selects how the
@@ -2201,6 +2216,7 @@ var staticPlayerRuleParsers = []staticPlayerRuleParser{
 	parseStaticAdditionalLandPlaysDeclaration,
 	parseStaticEachPlayerAdditionalLandPlaysDeclaration,
 	parseStaticPlayLandsFromGraveyardDeclaration,
+	parseStaticPlayAndCastFromExileWithCounterDeclaration,
 	parseStaticPlayLandsFromLibraryTopDeclaration,
 	parseStaticPlayWithTopCardRevealedDeclaration,
 	parseStaticCastSpellsFromLibraryTopDeclaration,
@@ -2517,6 +2533,53 @@ func parseStaticPlayLandsFromGraveyardDeclaration(tokens []shared.Token) (Static
 			CardFilter: StaticDeclarationCardFilterLand,
 		},
 		PlayerRule: StaticDeclarationPlayerRulePlayLandsFromGraveyard,
+	}, true
+}
+
+// parseStaticPlayAndCastFromExileWithCounterDeclaration recognizes the
+// controller-scoped continuous permission to play land cards and cast spells
+// from among the cards the controller owns in exile that carry a named marker
+// counter ("You may play lands and cast spells from among cards you own in exile
+// with croak counters on them.", Grolnok, the Omnivore). The counter name is read
+// text-blind between "with" and the "counters" noun; any named marker counter is
+// accepted, so the permission generalizes across cards. The "you may" permission
+// is folded into an unconditional allowance; the controller still chooses whether
+// to play or cast such a card.
+func parseStaticPlayAndCastFromExileWithCounterDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if len(tokens) < 20 || tokens[len(tokens)-1].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	if !staticWordsAt(tokens, 0, "you", "may", "play", "lands", "and", "cast", "spells",
+		"from", "among", "cards", "you", "own", "in", "exile", "with") {
+		return StaticDeclarationSyntax{}, false
+	}
+	counterIndex := -1
+	for i := 16; i < len(tokens); i++ {
+		if equalWord(tokens[i], "counters") {
+			counterIndex = i
+			break
+		}
+	}
+	if counterIndex < 0 {
+		return StaticDeclarationSyntax{}, false
+	}
+	kind, span, ok := counterNameBefore(tokens, counterIndex)
+	if !ok || span.Start.Offset != tokens[15].Span.Start.Offset {
+		return StaticDeclarationSyntax{}, false
+	}
+	if counterIndex+4 != len(tokens) || !staticWordsAt(tokens, counterIndex+1, "on", "them") {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:          StaticDeclarationPlayerRule,
+		Span:          shared.SpanOf(tokens),
+		OperationSpan: shared.SpanOf(tokens[1 : counterIndex+3]),
+		Subject: StaticDeclarationSubject{
+			Kind: StaticDeclarationSubjectController,
+			Span: tokens[0].Span,
+		},
+		PlayerRule:   StaticDeclarationPlayerRulePlayAndCastFromExileWithCounter,
+		ExileCounter: kind,
 	}, true
 }
 

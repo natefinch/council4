@@ -319,6 +319,15 @@ func (r Renderer) renderMoveCard(ctx *renderCtx, value game.MoveCard) (string, e
 	if value.DestinationBottom {
 		fields = append(fields, "DestinationBottom: true,")
 	}
+	if value.Counter.Exists {
+		kind, err := renderCounterKind(value.Counter.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importCounter)
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("Counter: opt.Val(%s),", kind))
+	}
 	return structLit("game.MoveCard", fields), nil
 }
 
