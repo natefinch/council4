@@ -47,8 +47,12 @@ func TestStarscreamCombatDamageMonarchGate(t *testing.T) {
 	starscream := newStarscreamSeekerLeader(g, game.Player1)
 
 	dealPlayerDamage(g, starscream.ObjectID, starscream.ObjectID, game.Player1, game.Player2, 2, true)
-	// The NoMonarch gate fails, so no become-monarch trigger goes on the stack.
-	engine.putTriggeredAbilitiesOnStack(g)
+	// The NoMonarch intervening condition fails while a monarch exists, so the
+	// become-monarch trigger must not even be placed on the stack.
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("become-monarch trigger was placed despite an existing monarch (NoMonarch gate failed)")
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
 
 	if g.Players[game.Player2].IsMonarch {
 		t.Fatal("opponent became monarch despite an existing monarch")
