@@ -629,6 +629,9 @@ func lowerTriggeredAbilityKind(
 		if len(ability.Content.Effects[i].TokenCopyGrantKeywords) != 0 {
 			spans = append(spans, ability.Content.Effects[i].TokenCopyGrantRiderSpan)
 		}
+		if ability.Content.Effects[i].KeywordGrantChoiceAtRandom {
+			spans = append(spans, ability.Content.Effects[i].KeywordChoiceAtRandomPreludeSpan)
+		}
 		if ability.Content.Effects[i].ReturnAsEnchantment {
 			spans = append(spans, ability.Content.Effects[i].ReturnAsEnchantmentRiderSpan)
 		}

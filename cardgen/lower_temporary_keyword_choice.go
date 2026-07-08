@@ -49,6 +49,7 @@ func keywordChoiceGrantContent(
 	object game.ObjectReference,
 	target opt.V[game.TargetSpec],
 	duration game.EffectDuration,
+	randomModes bool,
 ) (game.AbilityContent, *shared.Diagnostic) {
 	if len(keywords) < 2 || len(abilities) != 0 {
 		return game.AbilityContent{}, &shared.Diagnostic{
@@ -58,9 +59,10 @@ func keywordChoiceGrantContent(
 		}
 	}
 	content := game.AbilityContent{
-		Modes:    keywordChoiceGrantModes(keywords, object, duration),
-		MinModes: 1,
-		MaxModes: 1,
+		Modes:       keywordChoiceGrantModes(keywords, object, duration),
+		MinModes:    1,
+		MaxModes:    1,
+		RandomModes: randomModes,
 	}
 	if target.Exists {
 		content.SharedTargets = []game.TargetSpec{target.Val}
@@ -85,7 +87,16 @@ func lowerTemporaryKeywordChoiceGrant(
 	duration game.EffectDuration,
 	unsupported func() (game.AbilityContent, *shared.Diagnostic),
 ) (game.AbilityContent, *shared.Diagnostic) {
+	randomModes := effect.KeywordGrantChoiceAtRandom
 	if targetSubject {
+		// An at-random keyword choice selects its mode with the game's random
+		// source, which the runtime honors only for a modal body with no shared
+		// target; the two-sentence at-random construction only ever names the
+		// source, so a targeted subject fails closed rather than emitting an
+		// unselectable shared-target random modal.
+		if randomModes {
+			return unsupported()
+		}
 		spec, ok := permanentTargetSpec(ctx.content.Targets[0])
 		if !ok {
 			return unsupported()
@@ -96,6 +107,7 @@ func lowerTemporaryKeywordChoiceGrant(
 			game.TargetPermanentReference(0),
 			opt.Val(spec),
 			duration,
+			randomModes,
 		)
 	}
 	object, ok := continuousReferenceObject(ctx.content.References[0], effect, true)
@@ -108,5 +120,6 @@ func lowerTemporaryKeywordChoiceGrant(
 		object,
 		opt.V[game.TargetSpec]{},
 		duration,
+		randomModes,
 	)
 }

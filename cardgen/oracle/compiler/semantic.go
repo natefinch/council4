@@ -2510,6 +2510,17 @@ type CompiledEffect struct {
 	// rather than a conjunctive grant of every listed keyword. Lowering keys on
 	// it to emit a choose-one keyword grant instead of granting all keywords.
 	KeywordGrantChoice bool
+	// KeywordGrantChoiceAtRandom marks a KeywordGrantChoice grant whose one
+	// chosen keyword is selected at random rather than by the controller (the
+	// two-sentence "choose <keyword> or <keyword> at random. <source> gains that
+	// ability until end of turn." construction). Lowering keys on it to emit an
+	// at-random modal keyword grant instead of a controller-chosen one.
+	KeywordGrantChoiceAtRandom bool
+	// KeywordChoiceAtRandomPreludeSpan covers the folded "choose <keyword> or
+	// <keyword> at random." prelude sentence so lowering widens the trigger body
+	// span to cover the listed keywords. It is the zero span for every effect
+	// that is not an at-random keyword-choice grant.
+	KeywordChoiceAtRandomPreludeSpan shared.Span
 	// RevealUntilThenPut carries the parser's typed marker for the closed
 	// "reveal from the top of a library until a <type> card, then put those
 	// cards into <zone>" sequence. It is set on each of the three effects of

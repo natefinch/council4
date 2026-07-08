@@ -411,6 +411,7 @@ func emitSentenceResolvingSyntax(
 		legacyEffects -= foldedLegacy
 		currentEffects -= foldedEffects
 	}
+	creditChooseKeywordAtRandomGrant(sentences, atoms)
 	if currentEffects == 1 && unrecognizedSibling {
 		for i := range sentences {
 			for j := range sentences[i].Effects {
