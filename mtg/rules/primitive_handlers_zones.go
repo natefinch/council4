@@ -1183,7 +1183,11 @@ func handleMoveCard(r *effectResolver, prim game.MoveCard) effectResolved {
 		return res
 	}
 	res.succeeded = moveCardBetweenZonesWithPlacement(r.game, card.Owner, cardID, fromZone, prim.Destination, prim.DestinationBottom)
-	if res.succeeded && prim.Counter.Exists && prim.Destination == zone.Exile {
+	// Place the named exile counter only if the card actually landed in exile: a
+	// CR 614/903.9 replacement or commander redirect can send an exile-bound move
+	// elsewhere while still succeeding, and gating on the intended Destination
+	// would orphan a counter on a card that never reached exile.
+	if res.succeeded && prim.Counter.Exists && r.game.Players[card.Owner].Exile.Contains(cardID) {
 		r.game.AddExileCounter(cardID, prim.Counter.Val, 1)
 	}
 	return res
