@@ -36,7 +36,7 @@ func parseTriggerClause(source string, tokens []shared.Token, cardName string) *
 	case TriggerIntroductionAt:
 		clause.PhaseStep = parsePhaseStepTriggerClause(clauseTokens[1:])
 	case TriggerIntroductionWhen, TriggerIntroductionWhenever:
-		clause.PlayerEvent = parsePlayerEventTriggerClause(clauseTokens[1:], clause.Introduction.Kind)
+		clause.PlayerEvent = parsePlayerEventTriggerClause(clauseTokens[1:], clause.Introduction.Kind, cardName)
 	default:
 	}
 	return clause
@@ -339,7 +339,7 @@ func parseTriggerPlayerSelector(tokens []shared.Token) triggerPlayerSelectorPars
 	}
 }
 
-func parsePlayerEventTriggerClause(tokens []shared.Token, introduction TriggerIntroductionKind) *PlayerEventTriggerClause {
+func parsePlayerEventTriggerClause(tokens []shared.Token, introduction TriggerIntroductionKind, cardName string) *PlayerEventTriggerClause {
 	parsedPlayer := parseTriggerPlayerSelector(tokens)
 	if !parsedPlayer.ok || parsedPlayer.form != triggerPlayerSelectorSubject {
 		return nil
@@ -348,7 +348,7 @@ func parsePlayerEventTriggerClause(tokens []shared.Token, introduction TriggerIn
 	if !ok {
 		return nil
 	}
-	modifiers, ok := parsePlayerEventModifiers(rest, action.Kind, parsedPlayer.player.Kind)
+	modifiers, ok := parsePlayerEventModifiers(rest, action.Kind, parsedPlayer.player.Kind, cardName)
 	if !ok ||
 		(modifiers.occurrence.Kind == PlayerEventOccurrenceAny &&
 			introduction != TriggerIntroductionWhenever &&
@@ -414,6 +414,12 @@ func parsePlayerEventAction(
 			Span: shared.SpanOf(tokens[:3]),
 		}, tokens[3:], true
 	}
+	if verbMatches(tokens[0], "play", "plays") {
+		return PlayerEventAction{
+			Kind: PlayerEventActionPlay,
+			Span: shared.SpanOf(tokens[:1]),
+		}, tokens[1:], true
+	}
 	for _, form := range []struct {
 		kind       PlayerEventActionKind
 		second     string
@@ -466,13 +472,14 @@ func parsePlayerEventModifiers(
 	tokens []shared.Token,
 	action PlayerEventActionKind,
 	player TriggerPlayerSelectorKind,
+	cardName string,
 ) (playerEventModifiers, bool) {
 	card := PlayerEventCard{Kind: PlayerEventCardNone}
 	occurrence := PlayerEventOccurrence{Kind: PlayerEventOccurrenceAny}
 	turnRelation := TriggerCastTurnRelationNone
 	rest := tokens
 	if playerEventActionHasCard(action) {
-		parsed := parsePlayerEventCard(rest, action, player)
+		parsed := parsePlayerEventCard(rest, action, player, cardName)
 		if !parsed.ok {
 			return playerEventModifiers{}, false
 		}
@@ -627,8 +634,23 @@ func parsePlayerEventCard(
 	tokens []shared.Token,
 	action PlayerEventActionKind,
 	player TriggerPlayerSelectorKind,
+	cardName string,
 ) playerEventCardParse {
 	occurrence := PlayerEventOccurrence{Kind: PlayerEventOccurrenceAny}
+	if action == PlayerEventActionPlay {
+		if rest, ok := cutPlayerEventExiledWithSource(tokens, cardName); ok {
+			return playerEventCardParse{
+				card: PlayerEventCard{
+					Kind: PlayerEventCardExiledWithSource,
+					Span: shared.SpanOf(tokens[:len(tokens)-len(rest)]),
+				},
+				occurrence: occurrence,
+				remainder:  rest,
+				ok:         true,
+			}
+		}
+		return playerEventCardParse{}
+	}
 	if rest, filter, ok := cutPlayerEventCardNoun(tokens, action, "a", "card"); ok {
 		return playerEventCardParse{
 			card: PlayerEventCard{
@@ -711,6 +733,29 @@ func parsePlayerEventCard(
 		remainder: tokens[5:],
 		ok:        true,
 	}
+}
+
+// cutPlayerEventExiledWithSource recognizes the self-referential player-event
+// card object "a card exiled with <this permanent>" (Prowl, Stoic Strategist),
+// whose trailing name is the ability's own source. It returns the tokens after
+// the object, or false when the object is absent or names a different
+// permanent, so an unrelated "plays ..." trigger stays unrecognized.
+func cutPlayerEventExiledWithSource(tokens []shared.Token, cardName string) ([]shared.Token, bool) {
+	after, ok := cutSyntaxWords(tokens, "a", "card", "exiled", "with")
+	if !ok || len(after) == 0 {
+		return nil, false
+	}
+	for _, span := range collectSelfNameSpans(after, cardName, false) {
+		if span.Start.Offset != after[0].Span.Start.Offset {
+			continue
+		}
+		end := 0
+		for end < len(after) && after[end].Span.Start.Offset < span.End.Offset {
+			end++
+		}
+		return after[end:], true
+	}
+	return nil, false
 }
 
 // playerEventCardFilter holds the card-type filter parsed from a player-event
@@ -883,7 +928,8 @@ func playerEventActionHasCard(action PlayerEventActionKind) bool {
 	case PlayerEventActionDraw,
 		PlayerEventActionDiscard,
 		PlayerEventActionCycle,
-		PlayerEventActionCycleOrDiscard:
+		PlayerEventActionCycleOrDiscard,
+		PlayerEventActionPlay:
 		return true
 	default:
 		return false
