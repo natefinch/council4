@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/rules"
 )
 
@@ -80,6 +82,35 @@ func TestEvaluateRewardsLife(t *testing.T) {
 	if evalOf(high, game.Player1) <= evalOf(low, game.Player1) {
 		t.Fatalf("more life did not raise the evaluation: life10=%v life40=%v",
 			evalOf(low, game.Player1), evalOf(high, game.Player1))
+	}
+}
+
+func TestEvaluateDeployingANoncreatureIsNotALoss(t *testing.T) {
+	// A noncreature permanent — a ramp aura, an anthem, an artifact engine — is
+	// the realized form of the card that made it, so casting it must not LOWER the
+	// searcher's own evaluation. When a noncreature on the board was valued far
+	// below the card it came from, one-ply search saw deploying any enchantment or
+	// artifact as a net loss and refused to develop them, only creatures — measured
+	// to make the search agent decline ramp auras and engines it should be casting.
+	// So a noncreature on the battlefield must be worth at least the same card held.
+	def := &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Green),
+		CardFace: game.CardFace{
+			Name:  "Wild Growth",
+			Types: []types.Card{types.Enchantment},
+		},
+	}
+
+	inHand := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addObservedHandCard(inHand, game.Player1, def)
+
+	onBoard := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addObservedPermanent(onBoard, game.Player1, def)
+
+	if evalOf(onBoard, game.Player1) < evalOf(inHand, game.Player1) {
+		t.Fatalf("deploying a noncreature enchantment lowered the evaluation: "+
+			"onBoard=%v inHand=%v; casting a noncreature must not look like a loss",
+			evalOf(onBoard, game.Player1), evalOf(inHand, game.Player1))
 	}
 }
 

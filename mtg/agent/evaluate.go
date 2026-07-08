@@ -34,10 +34,15 @@ const (
 	// evalManaSource values one mana-producing permanent — the tempo/development
 	// axis (§4.2): more available mana means more and bigger plays sooner.
 	evalManaSource = 1.5
-	// evalPermanentBase is the floor value of a noncreature, non-mana permanent
-	// (an enchantment, an artifact engine), so board development still registers
-	// even when the permanent's payoff is not modeled.
-	evalPermanentBase = 0.5
+	// evalPermanentBase is the value of a noncreature permanent (a land, a mana
+	// rock, an enchantment, an artifact engine). A permanent is the realized form
+	// of the card that made it, so it is worth about a card in hand
+	// (evalCardInHand) — otherwise casting a noncreature would net a loss (a token
+	// board value minus the card spent), and one-ply search would never develop
+	// a ramp aura, an anthem, or an engine, only creatures. Its specific payoff is
+	// left to the rollout policy's per-card score (the search prior); this is the
+	// floor that keeps deploying it from looking bad.
+	evalPermanentBase = 2.0
 	// evalCommanderOnBoard rewards having the commander in play, the recurring
 	// engine or threat most Commander decks are built around (§1.2).
 	evalCommanderOnBoard = 4.0
@@ -126,18 +131,21 @@ func playerPower(obs rules.PlayerObservation, playerID game.PlayerID) float64 {
 
 // permanentPower values one permanent as board presence: a creature by its
 // tapped-agnostic board value (evasion- and keyword-aware, via
-// permanentBoardValue), any other permanent by a small base, plus a development
-// bonus for a mana source (a rock, dork, or land). It ignores tapped state
-// because a position's value looks across turns, where a creature that is
-// momentarily tapped — for example one that just attacked — untaps before it
-// matters again.
+// permanentBoardValue), plus a development bonus if it also produces mana (a mana
+// dork); any noncreature permanent by evalPermanentBase, the value of a realized
+// card. It ignores tapped state because a position's value looks across turns,
+// where a creature that is momentarily tapped — for example one that just
+// attacked — untaps before it matters again. A noncreature that produces mana (a
+// land or rock) is already covered by evalPermanentBase, which equals a land's
+// previous base-plus-mana value, so noncreature mana sources and other
+// noncreatures are valued alike; their specific payoff is the search prior's job.
 func permanentPower(permanent rules.PermanentView) float64 {
-	power := evalPermanentBase
 	if isCreaturePermanent(permanent) {
-		power = permanentBoardValue(permanent)
+		power := permanentBoardValue(permanent)
+		if permanent.ProducesMana {
+			power += evalManaSource
+		}
+		return power
 	}
-	if permanent.ProducesMana {
-		power += evalManaSource
-	}
-	return power
+	return evalPermanentBase
 }
