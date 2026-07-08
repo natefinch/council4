@@ -235,7 +235,8 @@ func exactEffectSyntaxTail(effect *EffectSyntax) bool {
 			exactSourceNextUntapStepSyntax(effect) ||
 			exactPriorSubjectNextUntapStepSyntax(effect)
 	case EffectTransform:
-		return exactDirectTargetEffectSyntax(effect, "Transform")
+		return exactDirectTargetEffectSyntax(effect, "Transform") ||
+			exactTransformSelfEffectSyntax(effect)
 	case EffectGoad:
 		return exactDirectTargetEffectSyntax(effect, "Goad") ||
 			exactBackReferenceEffectSyntax(effect, "Goad") ||
@@ -403,6 +404,24 @@ func exactSelfSacrificeEffectSyntax(effect *EffectSyntax) bool {
 		return false
 	}
 	return strings.EqualFold(exactEffectClauseText(effect), "Sacrifice "+object+".")
+}
+
+// exactTransformSelfEffectSyntax recognizes the source permanent transforming
+// itself by self-reference — "Transform this creature.", "Transform <this card's
+// name>." (CR 701.28). The target form ("Transform target creature.") is handled
+// by exactDirectTargetEffectSyntax.
+func exactTransformSelfEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Context != EffectContextController ||
+		len(effect.Targets) != 0 ||
+		effect.Duration != EffectDurationNone ||
+		effect.Negated {
+		return false
+	}
+	object, ok := exactSelfSubjectReferenceText(effect.References)
+	if !ok {
+		return false
+	}
+	return strings.EqualFold(exactEffectClauseText(effect), "Transform "+object+".")
 }
 
 func exactSacrificeChoiceEffectSyntax(effect *EffectSyntax) bool {
