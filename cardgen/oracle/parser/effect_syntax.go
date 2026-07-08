@@ -3816,33 +3816,47 @@ func parseAdditionalCombatPhaseEffect(sentence Sentence, tokens []shared.Token) 
 		}
 		words = append(words, token)
 	}
-	verbToken, additionalMain, ok := matchAdditionalCombatPhaseWords(words)
+	match, ok := matchAdditionalCombatPhaseWords(words)
 	if !ok {
 		return nil, false
 	}
 	return []EffectSyntax{{
-		Kind:                  EffectAdditionalCombatPhase,
-		Span:                  sentence.Span,
-		ClauseSpan:            sentence.Span,
-		VerbSpan:              verbToken.Span,
-		Text:                  sentence.Text,
-		Tokens:                append([]shared.Token(nil), tokens...),
-		Context:               EffectContextController,
-		AdditionalCombatPhase: true,
-		AdditionalMainPhase:   additionalMain,
-		Exact:                 true,
+		Kind:                     EffectAdditionalCombatPhase,
+		Span:                     sentence.Span,
+		ClauseSpan:               sentence.Span,
+		VerbSpan:                 match.verb.Span,
+		Text:                     sentence.Text,
+		Tokens:                   append([]shared.Token(nil), tokens...),
+		Context:                  EffectContextController,
+		AdditionalCombatPhase:    !match.beginning,
+		AdditionalMainPhase:      match.additionalMain,
+		AdditionalBeginningPhase: match.beginning,
+		Exact:                    true,
 	}}, true
 }
 
+// additionalPhaseMatch reports a parsed extra-phase clause: the "there is" verb
+// token, whether an additional main phase follows, and whether the inserted phase
+// is a beginning phase (as opposed to a combat phase).
+type additionalPhaseMatch struct {
+	verb           shared.Token
+	additionalMain bool
+	beginning      bool
+}
+
 // matchAdditionalCombatPhaseWords matches the punctuation-stripped words of an
-// additional-combat-phase clause in either order and reports the "there is"
-// verb token and whether an additional main phase follows. It fails closed for
-// any other wording.
-func matchAdditionalCombatPhaseWords(words []shared.Token) (verb shared.Token, additionalMain bool, ok bool) {
+// extra-phase clause in either order. It fails closed for any other wording.
+func matchAdditionalCombatPhaseWords(words []shared.Token) (additionalPhaseMatch, bool) {
 	if verb, main, ok := matchLeadingAdditionalCombatPhaseWords(words); ok {
-		return verb, main, true
+		return additionalPhaseMatch{verb: verb, additionalMain: main}, true
 	}
-	return matchTrailingAdditionalCombatPhaseWords(words)
+	if verb, main, ok := matchTrailingAdditionalCombatPhaseWords(words); ok {
+		return additionalPhaseMatch{verb: verb, additionalMain: main}, true
+	}
+	if verb, ok := matchTrailingAdditionalBeginningPhaseWords(words); ok {
+		return additionalPhaseMatch{verb: verb, beginning: true}, true
+	}
+	return additionalPhaseMatch{}, false
 }
 
 // matchLeadingAdditionalCombatPhaseWords matches "after this [main|combat] phase
@@ -3909,6 +3923,31 @@ func matchAdditionalMainPhaseTail(words []shared.Token) (additionalMain bool, ok
 		return false, false
 	}
 	return true, true
+}
+
+// matchTrailingAdditionalBeginningPhaseWords matches "there is an additional
+// beginning phase after this [phase|one]" (also accepting the "there's"
+// contraction), the extra-beginning-phase insertion printed by Sphinx of the
+// Second Sun, Temple of Atropos, and Cyclonus, Cybertronian Fighter. A beginning
+// phase is never followed by an additional main phase, so no "followed by" tail
+// is accepted; any trailing token fails closed.
+func matchTrailingAdditionalBeginningPhaseWords(words []shared.Token) (verb shared.Token, ok bool) {
+	if len(words) == 0 {
+		return shared.Token{}, false
+	}
+	verb = words[0]
+	rest, ok := cutTokenPrefix(words, "there's", "an", "additional", "beginning", "phase")
+	if !ok {
+		rest, ok = cutTokenPrefix(words, "there", "is", "an", "additional", "beginning", "phase")
+	}
+	if !ok {
+		return shared.Token{}, false
+	}
+	rest, ok = cutTokenPrefix(rest, "after", "this")
+	if !ok || len(rest) != 1 || (!equalWord(rest[0], "phase") && !equalWord(rest[0], "one")) {
+		return shared.Token{}, false
+	}
+	return verb, true
 }
 
 // parseRollDieEffect recognizes "roll a d<N>" (CR 706), the die-roll mechanic

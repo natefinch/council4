@@ -287,9 +287,12 @@ const (
 	// EffectAdditionalCombatPhase models the extra-phase-insertion effect "After
 	// this [main] phase, there is an additional combat phase[ followed by an
 	// additional main phase]." (Aggravated Assault, Aurelia the Warleader, World
-	// at War, Combat Celebrant). It inserts an additional combat phase into the
-	// current turn, optionally followed by an additional main phase.
-	// AdditionalCombatPhase and AdditionalMainPhase carry which phases are added.
+	// at War, Combat Celebrant) and the "there is an additional beginning phase
+	// after this phase." form (Sphinx of the Second Sun, Temple of Atropos,
+	// Cyclonus, Cybertronian Fighter). It inserts an additional combat phase into
+	// the current turn (optionally followed by an additional main phase) or an
+	// additional beginning phase. AdditionalCombatPhase, AdditionalMainPhase, and
+	// AdditionalBeginningPhase carry which phases are added.
 	EffectAdditionalCombatPhase EffectKind = "EffectAdditionalCombatPhase"
 	// EffectLookAtHand models the private hand-inspection effect "Look at target
 	// player's hand." (Gitaxian Probe, Peek, Telepathy-adjacent). The source's
@@ -2953,6 +2956,13 @@ type EffectSyntax struct {
 	// AdditionalMainPhase is set only together with AdditionalCombatPhase.
 	AdditionalCombatPhase bool `json:",omitempty"`
 	AdditionalMainPhase   bool `json:",omitempty"`
+	// AdditionalBeginningPhase reports a "there is an additional beginning phase
+	// after this phase." effect (Sphinx of the Second Sun, Temple of Atropos,
+	// Cyclonus, Cybertronian Fighter): it inserts an extra beginning phase (untap,
+	// upkeep, and draw steps) into the current turn. It is false for every other
+	// effect and never set together with AdditionalCombatPhase or
+	// AdditionalMainPhase.
+	AdditionalBeginningPhase bool `json:",omitempty"`
 	// DieSides is the number of faces of the die rolled by an EffectRollDie
 	// effect ("roll a d20" sets DieSides to 20). It is zero for every other
 	// effect kind.

@@ -58,15 +58,19 @@ func (e *Engine) runTurn(g *game.Game, agents [game.NumPlayers]PlayerAgent) (log
 
 // runExtraPhases drains the additional phases queued onto the turn by
 // extra-phase effects ("After this main phase, there is an additional combat
-// phase followed by an additional main phase." — Aggravated Assault). Queued
-// phases run in order after the postcombat main phase; a queued main phase that
-// re-activates the source re-queues more phases, so the loop continues until the
-// queue empties (the extra-combat combo, CR 505.5 / 506.2).
+// phase followed by an additional main phase." — Aggravated Assault; "there is
+// an additional beginning phase after this phase." — Sphinx of the Second Sun,
+// Cyclonus, Cybertronian Fighter). Queued phases run in order after the
+// postcombat main phase; a queued main phase that re-activates the source
+// re-queues more phases, so the loop continues until the queue empties (the
+// extra-combat combo, CR 505.5 / 506.2).
 func (e *Engine) runExtraPhases(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
 	for len(g.Turn.ExtraPhases) > 0 {
 		phase := g.Turn.ExtraPhases[0]
 		g.Turn.ExtraPhases = g.Turn.ExtraPhases[1:]
 		switch phase {
+		case game.PhaseBeginning:
+			e.runBeginningPhase(g, agents, log)
 		case game.PhaseCombat:
 			e.runCombatPhase(g, agents, log)
 		case game.PhasePrecombatMain, game.PhasePostcombatMain:

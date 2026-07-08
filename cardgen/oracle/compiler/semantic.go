@@ -2910,6 +2910,13 @@ type CompiledEffect struct {
 	// set only together with AdditionalCombatPhase.
 	AdditionalCombatPhase bool
 	AdditionalMainPhase   bool
+	// AdditionalBeginningPhase mirrors the parser flag for a "there is an
+	// additional beginning phase after this phase." effect (Sphinx of the Second
+	// Sun, Temple of Atropos, Cyclonus, Cybertronian Fighter): the effect inserts
+	// an extra beginning phase into the current turn. It is false for every other
+	// effect and never set together with AdditionalCombatPhase or
+	// AdditionalMainPhase.
+	AdditionalBeginningPhase bool
 	// DieSides is the number of faces of the die rolled by an EffectRollDie
 	// effect ("roll a d20" sets DieSides to 20). It is zero for every other
 	// effect kind.
