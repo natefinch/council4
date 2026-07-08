@@ -93,6 +93,13 @@ func compileTriggerSelection(syntax parser.TriggerSelection) (TriggerSelection, 
 	selection.RequiredCounter = syntax.RequiredCounter
 	selection.Modified = syntax.Modified
 	selection.Commander = syntax.Commander
+	for i := range syntax.AnyOf {
+		alternative, ok := compileTriggerSelection(syntax.AnyOf[i])
+		if !ok {
+			return TriggerSelection{}, false
+		}
+		selection.AnyOf = append(selection.AnyOf, alternative)
+	}
 	return selection, true
 }
 

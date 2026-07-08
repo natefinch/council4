@@ -3,8 +3,10 @@ package cardgen
 import (
 	"testing"
 
+	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -94,5 +96,38 @@ func TestLowerTriggerSubjectUnknownCounterFailsClosed(t *testing.T) {
 	}
 	if len(diagnostics) == 0 {
 		t.Fatal("diagnostics = 0, want the unrecognized counter kind to fail closed")
+	}
+}
+
+// TestLowerTriggerSubjectTypeSubtypeUnion proves a triggered ability whose
+// subject unions a card type with a subtype ("creature or Vehicle") lowers onto
+// Selection.AnyOf, the sole disjunction the runtime honors, with one alternative
+// per member. A conjunctive RequiredTypesAny cannot express a type-or-subtype
+// mix, so the union must fan out into AnyOf alternatives.
+func TestLowerTriggerSubjectTypeSubtypeUnion(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Union Warden",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human Soldier",
+		OracleText: "Whenever another creature or Vehicle you control enters, draw a card.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
+	}
+	selection := face.TriggeredAbilities[0].Trigger.Pattern.SubjectSelection
+	if len(selection.AnyOf) != 2 {
+		t.Fatalf("subject AnyOf = %d alternatives, want 2 (%#v)", len(selection.AnyOf), selection)
+	}
+	if len(selection.AnyOf[0].RequiredTypesAny) != 1 || selection.AnyOf[0].RequiredTypesAny[0] != types.Creature {
+		t.Fatalf("AnyOf[0] = %#v, want RequiredTypesAny=[Creature]", selection.AnyOf[0])
+	}
+	if len(selection.AnyOf[1].SubtypesAny) != 1 || selection.AnyOf[1].SubtypesAny[0] != types.Vehicle {
+		t.Fatalf("AnyOf[1] = %#v, want SubtypesAny=[Vehicle]", selection.AnyOf[1])
+	}
+	if got := face.TriggeredAbilities[0].Trigger.Pattern.Controller; got != game.TriggerControllerYou {
+		t.Fatalf("trigger controller = %v, want TriggerControllerYou", got)
 	}
 }

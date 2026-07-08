@@ -263,6 +263,11 @@ type TriggerSelection struct {
 	// deals combat damage to a player", Archivist of Gondor). It lowers to
 	// Selection.MatchCommander.
 	Commander bool
+	// AnyOf is a disjunction of alternative selections; the subject matches when
+	// it satisfies at least one alternative ("creature or Vehicle"). The other
+	// fields remain conjunctive requirements shared by every alternative. It
+	// lowers to Selection.AnyOf.
+	AnyOf []TriggerSelection
 }
 
 // TriggerPattern is a source-spanned semantic description of a representable
