@@ -228,6 +228,7 @@ var Cards = []*game.CardDef{
 	Stand,
 	StarlightSnare,
 	StarlitMantle,
+	StarscreamPowerHungry,
 	StasisCocoon,
 	StaticSnare,
 	StationMonitor,
