@@ -3826,6 +3826,7 @@ func tokenCreatureKeyword(k KeywordKind) bool {
 		KeywordHaste, KeywordHexproof, KeywordIndestructible, KeywordLifelink,
 		KeywordMenace, KeywordReach, KeywordTrample, KeywordVigilance,
 		KeywordDefender, KeywordShroud, KeywordWither, KeywordInfect, KeywordProwess, KeywordToxic,
+		KeywordDecayed,
 		KeywordLandwalk, KeywordPlainswalk, KeywordIslandwalk, KeywordSwampwalk,
 		KeywordMountainwalk, KeywordForestwalk, KeywordDesertwalk, KeywordNonbasicLandwalk:
 		return true

@@ -21,6 +21,51 @@ func addSturdyCombatCreature(g *game.Game, controller game.PlayerID) *game.Perma
 	}})
 }
 
+// TestDelayedAtEndOfCombatSacrificesToken verifies a token's own end-of-combat
+// delayed self-sacrifice resolves through SourcePermanentReference (which
+// resolves against the permanent's ObjectID). Tokens have CardInstanceID == 0,
+// so a SourceCardPermanentReference would silently fail to resolve and leave the
+// token on the battlefield; this backs the decayed keyword's attack-sacrifice
+// half, which is only ever granted to created tokens.
+func TestDelayedAtEndOfCombatSacrificesToken(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	token := &game.Permanent{
+		ObjectID:   g.IDGen.Next(),
+		Owner:      game.Player1,
+		Controller: game.Player1,
+		Token:      true,
+		TokenDef: &game.CardDef{CardFace: game.CardFace{
+			Name:      "Zombie",
+			Types:     []types.Card{types.Creature},
+			Power:     opt.Val(game.PT{Value: 2}),
+			Toughness: opt.Val(game.PT{Value: 2}),
+		}},
+	}
+	g.Battlefield = append(g.Battlefield, token)
+	if !scheduleDelayedTrigger(g, &game.StackObject{
+		Kind:       game.StackTriggeredAbility,
+		SourceID:   token.ObjectID,
+		Controller: game.Player1,
+	}, &game.DelayedTriggerDef{
+		Timing: game.DelayedAtEndOfCombat,
+		Content: game.Mode{
+			Sequence: []game.Instruction{{Primitive: game.Sacrifice{Object: game.SourcePermanentReference()}}},
+		}.Ability(),
+	}) {
+		t.Fatal("scheduleDelayedTrigger failed")
+	}
+
+	engine.runCombatPhase(g, allFirstLegalAgents(), &TurnLog{})
+
+	if len(g.DelayedTriggers) != 0 {
+		t.Fatalf("delayed triggers after end of combat = %d, want 0", len(g.DelayedTriggers))
+	}
+	if _, ok := permanentByObjectID(g, token.ObjectID); ok {
+		t.Fatal("decayed token was not sacrificed at end of combat")
+	}
+}
+
 // TestDelayedAtEndOfCombatCapturedEventPermanentDestroyed verifies the basilisk
 // "deals combat damage to a creature, destroy that creature at end of combat"
 // idiom: the creature named by the triggering event permanent is frozen at
