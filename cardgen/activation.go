@@ -108,13 +108,17 @@ func lowerActivationShell(
 		// The "Max speed" ability word (CR 702.179, the Start your engines! speed
 		// subsystem) gates activation on the controller having maximum speed. It
 		// imposes no timing of its own, so reject any Max speed ability that also
-		// declares an explicit timing or rules-text condition, or that does not
-		// function from the battlefield, so unexpected shapes stay unsupported.
-		if timing != game.NoTimingRestriction || activationCondition.Exists || zoneOfFunction != zone.Battlefield {
+		// declares an explicit timing or rules-text condition. The
+		// ControllerHasMaxSpeed condition is evaluated against the controlling
+		// player (not the source permanent), so it functions from the battlefield
+		// or from the graveyard (e.g. "Max speed — {3}, Exile this card from your
+		// graveyard: Draw a card.").
+		if timing != game.NoTimingRestriction || activationCondition.Exists ||
+			(zoneOfFunction != zone.Battlefield && zoneOfFunction != zone.Graveyard) {
 			return loweredActivationShell{}, activationDiagnostic(
 				original,
 				"unsupported Max speed ability",
-				"the executable source backend supports only a battlefield Max speed ability with no other activation restriction",
+				"the executable source backend supports only a battlefield or graveyard Max speed ability with no other activation restriction",
 			)
 		}
 		activationCondition = opt.Val(game.MaxSpeedActivationCondition())
