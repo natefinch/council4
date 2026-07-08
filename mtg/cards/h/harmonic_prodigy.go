@@ -17,7 +17,7 @@ import (
 //
 //	Prowess (Whenever you cast a noncreature spell, this creature gets +1/+1 until end of turn.)
 //	If a triggered ability of a Shaman or another Wizard you control triggers, that ability triggers an additional time.
-var HarmonicProdigy = newHarmonicProdigy()
+var HarmonicProdigy = newHarmonicProdigy
 
 func newHarmonicProdigy() *game.CardDef {
 	return &game.CardDef{

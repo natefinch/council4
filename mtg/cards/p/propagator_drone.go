@@ -20,7 +20,7 @@ import (
 //	Devoid (This card has no color.)
 //	Creature tokens you control have evolve. (They have "Whenever a creature you control enters, if it has greater power or toughness than this token, put a +1/+1 counter on this token." They see this creature enter.)
 //	{3}{G}: Create a 0/1 colorless Eldrazi Spawn creature token with "Sacrifice this token: Add {C}."
-var PropagatorDrone = newPropagatorDrone()
+var PropagatorDrone = newPropagatorDrone
 
 func newPropagatorDrone() *game.CardDef {
 	return &game.CardDef{

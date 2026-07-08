@@ -2,18 +2,19 @@
 
 package z
 
-import "github.com/natefinch/council4/mtg/game"
+import "github.com/natefinch/council4/mtg/cards/cardset"
 
-// Cards lists all card definitions in this package.
-var Cards = []*game.CardDef{
-	ZadaSCommando,
-	ZanarkandAncientMetropolis,
-	ZebraUnicorn,
-	ZektarShrineExpedition,
-	ZephyrSpirit,
-	ZhangHeWeiGeneral,
-	ZhouYuChiefCommander,
-	ZhugeJinWuStrategist,
-	ZulaportChainmage,
-	ZulaportEnforcer,
+// Cards lists all card definitions in this package, each paired with a
+// constructor so the registry can build them lazily.
+var Cards = []cardset.Entry{
+	{Name: "Zada's Commando", New: ZadaSCommando},
+	{Name: "Zanarkand, Ancient Metropolis", New: ZanarkandAncientMetropolis},
+	{Name: "Zebra Unicorn", New: ZebraUnicorn},
+	{Name: "Zektar Shrine Expedition", New: ZektarShrineExpedition},
+	{Name: "Zephyr Spirit", New: ZephyrSpirit},
+	{Name: "Zhang He, Wei General", New: ZhangHeWeiGeneral},
+	{Name: "Zhou Yu, Chief Commander", New: ZhouYuChiefCommander},
+	{Name: "Zhuge Jin, Wu Strategist", New: ZhugeJinWuStrategist},
+	{Name: "Zulaport Chainmage", New: ZulaportChainmage},
+	{Name: "Zulaport Enforcer", New: ZulaportEnforcer},
 }

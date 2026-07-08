@@ -18,7 +18,7 @@ import (
 //
 //	{T}: This creature deals 1 damage to target creature with flying.
 //	Whenever this creature deals damage to a creature, tap that creature and it doesn't untap during its controller's next untap step.
-var MatsuTribeSniper = newMatsuTribeSniper()
+var MatsuTribeSniper = newMatsuTribeSniper
 
 func newMatsuTribeSniper() *game.CardDef {
 	return &game.CardDef{

@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Target opponent discards a card at random, then discards a card.
-var Stupor = newStupor()
+var Stupor = newStupor
 
 func newStupor() *game.CardDef {
 	return &game.CardDef{

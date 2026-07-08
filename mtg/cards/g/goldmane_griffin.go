@@ -18,7 +18,7 @@ import (
 //
 //	Flying, vigilance
 //	When this creature enters, you may search your library and/or graveyard for a card named Ajani, Inspiring Leader, reveal it, and put it into your hand. If you search your library this way, shuffle.
-var GoldmaneGriffin = newGoldmaneGriffin()
+var GoldmaneGriffin = newGoldmaneGriffin
 
 func newGoldmaneGriffin() *game.CardDef {
 	return &game.CardDef{

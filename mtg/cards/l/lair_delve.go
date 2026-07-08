@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Reveal the top two cards of your library. Put all creature and land cards revealed this way into your hand and the rest on the bottom of your library in any order.
-var LairDelve = newLairDelve()
+var LairDelve = newLairDelve
 
 func newLairDelve() *game.CardDef {
 	return &game.CardDef{

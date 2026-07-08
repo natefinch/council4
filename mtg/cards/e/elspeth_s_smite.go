@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Elspeth's Smite deals 3 damage to target attacking or blocking creature. If that creature would die this turn, exile it instead.
-var ElspethSSmite = newElspethSSmite()
+var ElspethSSmite = newElspethSSmite
 
 func newElspethSSmite() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 //	Flash
 //	Flying, lifelink
 //	When this creature enters, destroy target creature an opponent controls that was dealt damage this turn.
-var RooftopAssassin = newRooftopAssassin()
+var RooftopAssassin = newRooftopAssassin
 
 func newRooftopAssassin() *game.CardDef {
 	return &game.CardDef{

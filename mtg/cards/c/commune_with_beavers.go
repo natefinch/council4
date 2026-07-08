@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Look at the top three cards of your library. You may reveal an artifact, creature, or land card from among them and put it into your hand. Put the rest on the bottom of your library in any order.
-var CommuneWithBeavers = newCommuneWithBeavers()
+var CommuneWithBeavers = newCommuneWithBeavers
 
 func newCommuneWithBeavers() *game.CardDef {
 	return &game.CardDef{

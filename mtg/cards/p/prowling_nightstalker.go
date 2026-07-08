@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	This creature can't be blocked except by black creatures.
-var ProwlingNightstalker = newProwlingNightstalker()
+var ProwlingNightstalker = newProwlingNightstalker
 
 func newProwlingNightstalker() *game.CardDef {
 	return &game.CardDef{

@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Prevent all combat damage that would be dealt this turn. You gain 1 life for each attacking creature.
-var Respite = newRespite()
+var Respite = newRespite
 
 func newRespite() *game.CardDef {
 	return &game.CardDef{

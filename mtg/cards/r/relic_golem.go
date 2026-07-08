@@ -18,7 +18,7 @@ import (
 //
 //	This creature can't attack or block unless an opponent has eight or more cards in their graveyard.
 //	{2}, {T}: Target player mills two cards. (They put the top two cards of their library into their graveyard.)
-var RelicGolem = newRelicGolem()
+var RelicGolem = newRelicGolem
 
 func newRelicGolem() *game.CardDef {
 	return &game.CardDef{

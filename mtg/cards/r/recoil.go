@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Return target permanent to its owner's hand. Then that player discards a card.
-var Recoil = newRecoil()
+var Recoil = newRecoil
 
 func newRecoil() *game.CardDef {
 	return &game.CardDef{

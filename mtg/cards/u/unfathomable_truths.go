@@ -18,7 +18,7 @@ import (
 //
 //	Devoid (This card has no color.)
 //	Draw three cards and create a 0/1 colorless Eldrazi Spawn creature token with "Sacrifice this token: Add {C}."
-var UnfathomableTruths = newUnfathomableTruths()
+var UnfathomableTruths = newUnfathomableTruths
 
 func newUnfathomableTruths() *game.CardDef {
 	return &game.CardDef{

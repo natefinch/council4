@@ -20,7 +20,7 @@ import (
 //	Whenever a Dragon you control enters, put a gold counter on this artifact.
 //	{T}, Remove a gold counter from this artifact: Draw a card.
 //	{T}: Add one mana of any color.
-var DragonSHoard = newDragonSHoard()
+var DragonSHoard = newDragonSHoard
 
 func newDragonSHoard() *game.CardDef {
 	return &game.CardDef{

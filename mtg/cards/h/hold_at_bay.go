@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Prevent the next 7 damage that would be dealt to any target this turn.
-var HoldAtBay = newHoldAtBay()
+var HoldAtBay = newHoldAtBay
 
 func newHoldAtBay() *game.CardDef {
 	return &game.CardDef{

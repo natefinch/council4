@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Mill seven cards. At the beginning of the next end step, exile seven cards from your graveyard.
-var FalseMemories = newFalseMemories()
+var FalseMemories = newFalseMemories
 
 func newFalseMemories() *game.CardDef {
 	return &game.CardDef{

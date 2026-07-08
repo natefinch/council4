@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	This creature gets +2/+0 for each other Goblin you control.
-var BoneclubBerserker = newBoneclubBerserker()
+var BoneclubBerserker = newBoneclubBerserker
 
 func newBoneclubBerserker() *game.CardDef {
 	return &game.CardDef{

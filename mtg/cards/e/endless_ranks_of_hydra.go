@@ -18,7 +18,7 @@ import (
 //
 //	For each opponent, you create a 2/1 black Villain creature token with menace.
 //	Whenever your commander enters or attacks, you may pay {1}{B}. If you do, return this card from your graveyard to your hand.
-var EndlessRanksOfHYDRA = newEndlessRanksOfHYDRA()
+var EndlessRanksOfHYDRA = newEndlessRanksOfHYDRA
 
 func newEndlessRanksOfHYDRA() *game.CardDef {
 	return &game.CardDef{

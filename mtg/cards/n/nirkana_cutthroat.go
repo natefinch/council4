@@ -23,7 +23,7 @@ import (
 //	LEVEL 3+
 //	5/4
 //	First strike, deathtouch
-var NirkanaCutthroat = newNirkanaCutthroat()
+var NirkanaCutthroat = newNirkanaCutthroat
 
 func newNirkanaCutthroat() *game.CardDef {
 	return &game.CardDef{

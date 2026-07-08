@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{1}{B}, Sacrifice this creature: Exile up to two target cards from a single graveyard.
-var FamishedGhoul = newFamishedGhoul()
+var FamishedGhoul = newFamishedGhoul
 
 func newFamishedGhoul() *game.CardDef {
 	return &game.CardDef{

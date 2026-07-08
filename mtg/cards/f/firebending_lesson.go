@@ -17,7 +17,7 @@ import (
 //
 //	Kicker {4} (You may pay an additional {4} as you cast this spell.)
 //	Firebending Lesson deals 2 damage to target creature. If this spell was kicked, it deals 5 damage to that creature instead.
-var FirebendingLesson = newFirebendingLesson()
+var FirebendingLesson = newFirebendingLesson
 
 func newFirebendingLesson() *game.CardDef {
 	return &game.CardDef{

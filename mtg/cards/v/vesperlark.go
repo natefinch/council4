@@ -20,7 +20,7 @@ import (
 //	Flying
 //	When this creature leaves the battlefield, return target creature card with power 1 or less from your graveyard to the battlefield.
 //	Evoke {1}{W} (You may cast this spell for its evoke cost. If you do, it's sacrificed when it enters.)
-var Vesperlark = newVesperlark()
+var Vesperlark = newVesperlark
 
 func newVesperlark() *game.CardDef {
 	return &game.CardDef{

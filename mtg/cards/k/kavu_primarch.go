@@ -19,7 +19,7 @@ import (
 //	Kicker {4} (You may pay an additional {4} as you cast this spell.)
 //	Convoke (Your creatures can help cast this spell. Each creature you tap while casting this spell pays for {1} or one mana of that creature's color.)
 //	If this creature was kicked, it enters with four +1/+1 counters on it.
-var KavuPrimarch = newKavuPrimarch()
+var KavuPrimarch = newKavuPrimarch
 
 func newKavuPrimarch() *game.CardDef {
 	return &game.CardDef{

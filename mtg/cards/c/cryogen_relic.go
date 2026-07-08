@@ -19,7 +19,7 @@ import (
 //
 //	When this artifact enters or leaves the battlefield, draw a card.
 //	{1}{U}, Sacrifice this artifact: Put a stun counter on up to one target tapped creature. (If a permanent with a stun counter would become untapped, remove one from it instead.)
-var CryogenRelic = newCryogenRelic()
+var CryogenRelic = newCryogenRelic
 
 func newCryogenRelic() *game.CardDef {
 	return &game.CardDef{

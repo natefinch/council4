@@ -19,7 +19,7 @@ import (
 //
 //	Landfall — Whenever a land you control enters, you may put a quest counter on this enchantment.
 //	Remove three quest counters from this enchantment and sacrifice it: You gain 8 life.
-var SunspringExpedition = newSunspringExpedition()
+var SunspringExpedition = newSunspringExpedition
 
 func newSunspringExpedition() *game.CardDef {
 	return &game.CardDef{

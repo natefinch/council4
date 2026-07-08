@@ -18,7 +18,7 @@ import (
 //	Choose one or both —
 //	• Target Human creature you control gets +1/+1 and gains indestructible until end of turn.
 //	• Target non-Human creature you control gets +1/+1 and gains indestructible until end of turn.
-var FightAsOne = newFightAsOne()
+var FightAsOne = newFightAsOne
 
 func newFightAsOne() *game.CardDef {
 	return &game.CardDef{

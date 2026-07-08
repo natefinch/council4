@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Return target creature card from your graveyard to your hand. Target player sacrifices a creature of their choice.
-var GraveExchange = newGraveExchange()
+var GraveExchange = newGraveExchange
 
 func newGraveExchange() *game.CardDef {
 	return &game.CardDef{

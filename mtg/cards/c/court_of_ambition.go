@@ -17,7 +17,7 @@ import (
 //
 //	When this enchantment enters, you become the monarch.
 //	At the beginning of your upkeep, each opponent loses 3 life unless they discard a card. If you're the monarch, instead each opponent loses 6 life unless they discard two cards.
-var CourtOfAmbition = newCourtOfAmbition()
+var CourtOfAmbition = newCourtOfAmbition
 
 func newCourtOfAmbition() *game.CardDef {
 	return &game.CardDef{

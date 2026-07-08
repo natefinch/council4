@@ -18,7 +18,7 @@ import (
 //	Equipped creature gets +1/+1 and has vigilance.
 //	Whenever equipped creature attacks, look at the top six cards of your library. You may reveal a card that shares a creature type with that creature from among them and put it into your hand. Put the rest on the bottom of your library in a random order.
 //	Equip {1}
-var ConjurerSMantle = newConjurerSMantle()
+var ConjurerSMantle = newConjurerSMantle
 
 func newConjurerSMantle() *game.CardDef {
 	return &game.CardDef{

@@ -19,7 +19,7 @@ import (
 //	Flying
 //	{1}{U}: Target creature an opponent controls attacks this turn if able.
 //	{1}{B}, {T}: Attacking creatures get -1/-1 until end of turn.
-var ShipwreckSinger = newShipwreckSinger()
+var ShipwreckSinger = newShipwreckSinger
 
 func newShipwreckSinger() *game.CardDef {
 	return &game.CardDef{

@@ -19,7 +19,7 @@ import (
 //	When this Aura enters, tap enchanted creature.
 //	Enchanted creature doesn't untap during its controller's untap step.
 //	At the beginning of your upkeep, sacrifice this Aura unless you pay {U}.
-var Thirst = newThirst()
+var Thirst = newThirst
 
 func newThirst() *game.CardDef {
 	return &game.CardDef{

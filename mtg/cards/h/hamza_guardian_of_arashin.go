@@ -18,7 +18,7 @@ import (
 //
 //	This spell costs {1} less to cast for each creature you control with a +1/+1 counter on it.
 //	Creature spells you cast cost {1} less to cast for each creature you control with a +1/+1 counter on it.
-var HamzaGuardianOfArashin = newHamzaGuardianOfArashin()
+var HamzaGuardianOfArashin = newHamzaGuardianOfArashin
 
 func newHamzaGuardianOfArashin() *game.CardDef {
 	return &game.CardDef{

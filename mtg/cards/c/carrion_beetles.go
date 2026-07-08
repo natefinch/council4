@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{2}{B}, {T}: Exile up to three target cards from a single graveyard.
-var CarrionBeetles = newCarrionBeetles()
+var CarrionBeetles = newCarrionBeetles
 
 func newCarrionBeetles() *game.CardDef {
 	return &game.CardDef{

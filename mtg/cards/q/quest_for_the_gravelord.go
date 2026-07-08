@@ -19,7 +19,7 @@ import (
 //
 //	Whenever a creature dies, you may put a quest counter on this enchantment.
 //	Remove three quest counters from this enchantment and sacrifice it: Create a 5/5 black Zombie Giant creature token.
-var QuestForTheGravelord = newQuestForTheGravelord()
+var QuestForTheGravelord = newQuestForTheGravelord
 
 func newQuestForTheGravelord() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 //
 //	When Malcator enters, create a 3/3 colorless Phyrexian Golem artifact creature token.
 //	At the beginning of your end step, if three or more artifacts entered the battlefield under your control this turn, create a 3/3 colorless Phyrexian Golem artifact creature token.
-var MalcatorPurityOverseer = newMalcatorPurityOverseer()
+var MalcatorPurityOverseer = newMalcatorPurityOverseer
 
 func newMalcatorPurityOverseer() *game.CardDef {
 	return &game.CardDef{

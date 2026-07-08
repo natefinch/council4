@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{1}: Prevent the next 1 damage that would be dealt to this creature this turn.
-var ReveredElder = newReveredElder()
+var ReveredElder = newReveredElder
 
 func newReveredElder() *game.CardDef {
 	return &game.CardDef{

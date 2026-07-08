@@ -18,7 +18,7 @@ import (
 //	Flying, trample
 //	This creature attacks each combat if able.
 //	Whenever this creature deals damage, you lose that much life.
-var EmberwildeCaliph = newEmberwildeCaliph()
+var EmberwildeCaliph = newEmberwildeCaliph
 
 func newEmberwildeCaliph() *game.CardDef {
 	return &game.CardDef{

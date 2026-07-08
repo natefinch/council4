@@ -18,7 +18,7 @@ import (
 // Oracle text:
 //
 //	Cohort — {T}, Tap an untapped Ally you control: Put a +1/+1 counter on each creature you control.
-var MundaSVanguard = newMundaSVanguard()
+var MundaSVanguard = newMundaSVanguard
 
 func newMundaSVanguard() *game.CardDef {
 	return &game.CardDef{

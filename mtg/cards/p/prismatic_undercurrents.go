@@ -18,7 +18,7 @@ import (
 //
 //	Vivid — When this enchantment enters, search your library for up to X basic land cards, where X is the number of colors among permanents you control. Reveal those cards, put them into your hand, then shuffle.
 //	You may play an additional land on each of your turns.
-var PrismaticUndercurrents = newPrismaticUndercurrents()
+var PrismaticUndercurrents = newPrismaticUndercurrents
 
 func newPrismaticUndercurrents() *game.CardDef {
 	return &game.CardDef{

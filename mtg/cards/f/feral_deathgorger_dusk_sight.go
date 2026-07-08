@@ -20,7 +20,7 @@ import (
 //
 //	Flying, deathtouch
 //	When this creature enters, exile up to two target cards from a single graveyard.
-var FeralDeathgorger = newFeralDeathgorger()
+var FeralDeathgorger = newFeralDeathgorger
 
 func newFeralDeathgorger() *game.CardDef {
 	return &game.CardDef{

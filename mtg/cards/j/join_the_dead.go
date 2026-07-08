@@ -18,7 +18,7 @@ import (
 //
 //	Target creature gets -5/-5 until end of turn.
 //	Descend 4 — That creature gets -10/-10 until end of turn instead if there are four or more permanent cards in your graveyard.
-var JoinTheDead = newJoinTheDead()
+var JoinTheDead = newJoinTheDead
 
 func newJoinTheDead() *game.CardDef {
 	return &game.CardDef{

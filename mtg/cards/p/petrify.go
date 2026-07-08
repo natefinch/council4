@@ -17,7 +17,7 @@ import (
 //
 //	Enchant artifact or creature
 //	Enchanted permanent can't attack or block, and its activated abilities can't be activated.
-var Petrify = newPetrify()
+var Petrify = newPetrify
 
 func newPetrify() *game.CardDef {
 	return &game.CardDef{

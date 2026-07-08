@@ -17,7 +17,7 @@ import (
 //
 //	Trample
 //	Whenever this creature attacks, it gets +3/+0 until end of turn for each other attacking Beast.
-var ShaleskinBruiser = newShaleskinBruiser()
+var ShaleskinBruiser = newShaleskinBruiser
 
 func newShaleskinBruiser() *game.CardDef {
 	return &game.CardDef{

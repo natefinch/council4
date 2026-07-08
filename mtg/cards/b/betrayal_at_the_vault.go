@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Target creature you control deals damage equal to its power to each of two other target creatures.
-var BetrayalAtTheVault = newBetrayalAtTheVault()
+var BetrayalAtTheVault = newBetrayalAtTheVault
 
 func newBetrayalAtTheVault() *game.CardDef {
 	return &game.CardDef{

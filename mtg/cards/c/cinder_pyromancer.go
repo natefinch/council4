@@ -18,7 +18,7 @@ import (
 //
 //	{T}: This creature deals 1 damage to target player or planeswalker.
 //	Whenever you cast a red spell, you may untap this creature.
-var CinderPyromancer = newCinderPyromancer()
+var CinderPyromancer = newCinderPyromancer
 
 func newCinderPyromancer() *game.CardDef {
 	return &game.CardDef{

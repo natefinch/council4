@@ -18,7 +18,7 @@ import (
 //
 //	Tap another untapped creature you control: Tyvar gains indestructible until end of turn. Tap it.
 //	{3}{G}{G}: Creatures you control get +X/+X until end of turn, where X is the greatest power among creatures you control.
-var TyvarThePummeler = newTyvarThePummeler()
+var TyvarThePummeler = newTyvarThePummeler
 
 func newTyvarThePummeler() *game.CardDef {
 	return &game.CardDef{

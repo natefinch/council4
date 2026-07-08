@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Descend 4 — As long as there are four or more permanent cards in your graveyard, this creature gets +1/+1 and has lifelink.
-var EchoOfDusk = newEchoOfDusk()
+var EchoOfDusk = newEchoOfDusk
 
 func newEchoOfDusk() *game.CardDef {
 	return &game.CardDef{

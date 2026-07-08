@@ -17,7 +17,7 @@ import (
 //
 //	Kicker {5} (You may pay an additional {5} as you cast this spell.)
 //	Roil Eruption deals 3 damage to any target. If this spell was kicked, it deals 5 damage instead.
-var RoilEruption = newRoilEruption()
+var RoilEruption = newRoilEruption
 
 func newRoilEruption() *game.CardDef {
 	return &game.CardDef{

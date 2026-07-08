@@ -19,7 +19,7 @@ import (
 //
 //	Trample
 //	Descend 4 — Whenever this creature attacks, if there are four or more permanent cards in your graveyard, put a +1/+1 counter on target creature.
-var MalametVeteran = newMalametVeteran()
+var MalametVeteran = newMalametVeteran
 
 func newMalametVeteran() *game.CardDef {
 	return &game.CardDef{

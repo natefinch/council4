@@ -18,7 +18,7 @@ import (
 //
 //	Flying, vigilance
 //	{T}: Add {U}. Spend this mana only to cast an artifact spell or activate an ability of an artifact source.
-var OakenSiren = newOakenSiren()
+var OakenSiren = newOakenSiren
 
 func newOakenSiren() *game.CardDef {
 	return &game.CardDef{

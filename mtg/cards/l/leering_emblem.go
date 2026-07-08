@@ -16,7 +16,7 @@ import (
 //
 //	Whenever you cast a spell, equipped creature gets +2/+2 until end of turn.
 //	Equip {2}
-var LeeringEmblem = newLeeringEmblem()
+var LeeringEmblem = newLeeringEmblem
 
 func newLeeringEmblem() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{R}, {T}, Sacrifice a Goblin: Red creatures get +1/+1 until end of turn.
-var GoblinSoothsayer = newGoblinSoothsayer()
+var GoblinSoothsayer = newGoblinSoothsayer
 
 func newGoblinSoothsayer() *game.CardDef {
 	return &game.CardDef{

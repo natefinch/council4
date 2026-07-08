@@ -18,7 +18,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, you may search your library for a creature card with mana value 6 or greater, reveal it, put it into your hand, then shuffle.
-var FierceEmpath = newFierceEmpath()
+var FierceEmpath = newFierceEmpath
 
 func newFierceEmpath() *game.CardDef {
 	return &game.CardDef{

@@ -20,7 +20,7 @@ import (
 //	Intimidate (This creature can't be blocked except by artifact creatures and/or creatures that share a color with it.)
 //	{1}{B}, Sacrifice another creature: Put two +1/+1 counters on this creature.
 //	When this creature dies, create an X/X black Horror creature token, where X is this creature's power.
-var FleshCarver = newFleshCarver()
+var FleshCarver = newFleshCarver
 
 func newFleshCarver() *game.CardDef {
 	return &game.CardDef{

@@ -19,7 +19,7 @@ import (
 //	Enchant creature
 //	When this Aura enters, enchanted creature gains first strike until end of turn.
 //	Enchanted creature gets +1/+0.
-var MilitaryDiscipline = newMilitaryDiscipline()
+var MilitaryDiscipline = newMilitaryDiscipline
 
 func newMilitaryDiscipline() *game.CardDef {
 	return &game.CardDef{

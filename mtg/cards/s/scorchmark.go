@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Scorchmark deals 2 damage to target creature. If that creature would die this turn, exile it instead.
-var Scorchmark = newScorchmark()
+var Scorchmark = newScorchmark
 
 func newScorchmark() *game.CardDef {
 	return &game.CardDef{

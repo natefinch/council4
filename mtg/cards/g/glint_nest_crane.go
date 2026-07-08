@@ -17,7 +17,7 @@ import (
 //
 //	Flying
 //	When this creature enters, look at the top four cards of your library. You may reveal an artifact card from among them and put it into your hand. Put the rest on the bottom of your library in any order.
-var GlintNestCrane = newGlintNestCrane()
+var GlintNestCrane = newGlintNestCrane
 
 func newGlintNestCrane() *game.CardDef {
 	return &game.CardDef{

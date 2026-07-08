@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature becomes tapped, you may pay {1}{U}. If you do, return target permanent to its owner's hand.
-var Surgespanner = newSurgespanner()
+var Surgespanner = newSurgespanner
 
 func newSurgespanner() *game.CardDef {
 	return &game.CardDef{

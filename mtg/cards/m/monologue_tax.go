@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Whenever an opponent casts their second spell each turn, you create a Treasure token.
-var MonologueTax = newMonologueTax()
+var MonologueTax = newMonologueTax
 
 func newMonologueTax() *game.CardDef {
 	return &game.CardDef{

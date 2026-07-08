@@ -18,7 +18,7 @@ import (
 //	Flash (You may cast this spell any time you could cast an instant.)
 //	Defender
 //	This creature can block an additional creature each combat.
-var ForiysianInterceptor = newForiysianInterceptor()
+var ForiysianInterceptor = newForiysianInterceptor
 
 func newForiysianInterceptor() *game.CardDef {
 	return &game.CardDef{

@@ -19,7 +19,7 @@ import (
 //
 //	At the beginning of your upkeep, you may put a verse counter on this enchantment.
 //	Sacrifice this enchantment: Target creature gets +X/+X until end of turn, where X is the number of verse counters on this enchantment.
-var WarDance = newWarDance()
+var WarDance = newWarDance
 
 func newWarDance() *game.CardDef {
 	return &game.CardDef{

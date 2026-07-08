@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Until end of turn, target land becomes a 3/3 creature that's still a land.
-var AnimateLand = newAnimateLand()
+var AnimateLand = newAnimateLand
 
 func newAnimateLand() *game.CardDef {
 	return &game.CardDef{

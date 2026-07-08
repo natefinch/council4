@@ -22,7 +22,7 @@ import (
 //	This creature gets +3/+0 as long as it has three or more oil counters on it.
 //	{T}: Add one mana of any color.
 //	Whenever this creature becomes tapped, exile target card from a graveyard and put an oil counter on this creature.
-var ArmoredScrapgorger = newArmoredScrapgorger()
+var ArmoredScrapgorger = newArmoredScrapgorger
 
 func newArmoredScrapgorger() *game.CardDef {
 	return &game.CardDef{

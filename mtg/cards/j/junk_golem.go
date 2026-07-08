@@ -19,7 +19,7 @@ import (
 //	This creature enters with three +1/+1 counters on it.
 //	At the beginning of your upkeep, sacrifice this creature unless you remove a +1/+1 counter from it.
 //	{1}, Discard a card: Put a +1/+1 counter on this creature.
-var JunkGolem = newJunkGolem()
+var JunkGolem = newJunkGolem
 
 func newJunkGolem() *game.CardDef {
 	return &game.CardDef{

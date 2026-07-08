@@ -17,7 +17,7 @@ import (
 //
 //	Flash
 //	When this creature enters, target creature an opponent controls gets -2/-2 until end of turn. Remove all counters from that creature.
-var BlitzLeech = newBlitzLeech()
+var BlitzLeech = newBlitzLeech
 
 func newBlitzLeech() *game.CardDef {
 	return &game.CardDef{

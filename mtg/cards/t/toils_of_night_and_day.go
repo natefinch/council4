@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	You may tap or untap target permanent, then you may tap or untap another target permanent.
-var ToilsOfNightAndDay = newToilsOfNightAndDay()
+var ToilsOfNightAndDay = newToilsOfNightAndDay
 
 func newToilsOfNightAndDay() *game.CardDef {
 	return &game.CardDef{

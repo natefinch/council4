@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Whenever you gain life, you may put that many +1/+1 counters on each creature you control. Do this only once each turn.
-var NykthosParagon = newNykthosParagon()
+var NykthosParagon = newNykthosParagon
 
 func newNykthosParagon() *game.CardDef {
 	return &game.CardDef{

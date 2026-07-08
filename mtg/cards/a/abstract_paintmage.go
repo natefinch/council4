@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	At the beginning of your first main phase, add {U}{R}. Spend this mana only to cast instant and sorcery spells.
-var AbstractPaintmage = newAbstractPaintmage()
+var AbstractPaintmage = newAbstractPaintmage
 
 func newAbstractPaintmage() *game.CardDef {
 	return &game.CardDef{

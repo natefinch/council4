@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Exile target attacking creature.
-var Order = newOrder()
+var Order = newOrder
 
 func newOrder() *game.CardDef {
 	return &game.CardDef{

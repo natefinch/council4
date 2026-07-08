@@ -10,7 +10,7 @@ import (
 )
 
 // RazorfinAbolisher is the card definition for Razorfin Abolisher.
-var RazorfinAbolisher = newRazorfinAbolisher()
+var RazorfinAbolisher = newRazorfinAbolisher
 
 func newRazorfinAbolisher() *game.CardDef {
 	return &game.CardDef{

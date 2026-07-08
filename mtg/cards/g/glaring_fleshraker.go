@@ -17,7 +17,7 @@ import (
 //
 //	Whenever you cast a colorless spell, create a 0/1 colorless Eldrazi Spawn creature token with "Sacrifice this token: Add {C}."
 //	Whenever another colorless creature you control enters, this creature deals 1 damage to each opponent.
-var GlaringFleshraker = newGlaringFleshraker()
+var GlaringFleshraker = newGlaringFleshraker
 
 func newGlaringFleshraker() *game.CardDef {
 	return &game.CardDef{

@@ -9,7 +9,7 @@ import (
 )
 
 // VedalkenDismisser is the card definition for Vedalken Dismisser.
-var VedalkenDismisser = newVedalkenDismisser()
+var VedalkenDismisser = newVedalkenDismisser
 
 func newVedalkenDismisser() *game.CardDef {
 	return &game.CardDef{

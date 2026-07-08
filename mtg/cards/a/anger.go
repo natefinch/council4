@@ -19,52 +19,54 @@ import (
 //
 //	Haste
 //	As long as this card is in your graveyard and you control a Mountain, creatures you control have haste.
-var Anger = &game.CardDef{
-	ColorIdentity: color.NewIdentity(color.Red),
-	CardFace: game.CardFace{
-		Name: "Anger",
-		ManaCost: opt.Val(cost.Mana{
-			cost.O(3),
-			cost.R,
-		}),
-		Colors:    []color.Color{color.Red},
-		Types:     []types.Card{types.Creature},
-		Subtypes:  []types.Sub{types.Incarnation},
-		Power:     opt.Val(game.PT{Value: 2}),
-		Toughness: opt.Val(game.PT{Value: 2}),
-		OracleText: `
+var Anger = func() *game.CardDef {
+	return &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Red),
+		CardFace: game.CardFace{
+			Name: "Anger",
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(3),
+				cost.R,
+			}),
+			Colors:    []color.Color{color.Red},
+			Types:     []types.Card{types.Creature},
+			Subtypes:  []types.Sub{types.Incarnation},
+			Power:     opt.Val(game.PT{Value: 2}),
+			Toughness: opt.Val(game.PT{Value: 2}),
+			OracleText: `
 			Haste
 			As long as this card is in your graveyard and you control a Mountain, creatures you control have haste.
 		`,
-		StaticAbilities: []game.StaticAbility{
-			game.HasteStaticBody,
-			{
-				Text: `
+			StaticAbilities: []game.StaticAbility{
+				game.HasteStaticBody,
+				{
+					Text: `
 					As long as this card is in your graveyard and you control a Mountain, creatures you control have haste.
 				`,
-				Condition: opt.Val(game.Condition{
-					ControlsMatching: opt.Val(game.SelectionCount{
-						Selection: game.Selection{
-							SubtypesAny: []types.Sub{
-								types.Mountain,
+					Condition: opt.Val(game.Condition{
+						ControlsMatching: opt.Val(game.SelectionCount{
+							Selection: game.Selection{
+								SubtypesAny: []types.Sub{
+									types.Mountain,
+								},
 							},
-						},
-					}),
-				}),
-				ZoneOfFunction: zone.Graveyard,
-				ContinuousEffects: []game.ContinuousEffect{
-					{
-						Layer: game.LayerAbility,
-						Group: game.BattlefieldGroup(game.Selection{
-							RequiredTypes: []types.Card{types.Creature},
-							Controller:    game.ControllerYou,
 						}),
-						AddKeywords: []game.Keyword{
-							game.Haste,
+					}),
+					ZoneOfFunction: zone.Graveyard,
+					ContinuousEffects: []game.ContinuousEffect{
+						{
+							Layer: game.LayerAbility,
+							Group: game.BattlefieldGroup(game.Selection{
+								RequiredTypes: []types.Card{types.Creature},
+								Controller:    game.ControllerYou,
+							}),
+							AddKeywords: []game.Keyword{
+								game.Haste,
+							},
 						},
 					},
 				},
 			},
 		},
-	},
+	}
 }

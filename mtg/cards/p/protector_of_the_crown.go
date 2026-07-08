@@ -17,7 +17,7 @@ import (
 //
 //	When this creature enters, you become the monarch.
 //	All damage that would be dealt to you is dealt to this creature instead.
-var ProtectorOfTheCrown = newProtectorOfTheCrown()
+var ProtectorOfTheCrown = newProtectorOfTheCrown
 
 func newProtectorOfTheCrown() *game.CardDef {
 	return &game.CardDef{

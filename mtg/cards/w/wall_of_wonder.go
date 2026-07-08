@@ -18,7 +18,7 @@ import (
 //
 //	Defender (This creature can't attack.)
 //	{2}{U}{U}: This creature gets +4/-4 until end of turn and can attack this turn as though it didn't have defender.
-var WallOfWonder = newWallOfWonder()
+var WallOfWonder = newWallOfWonder
 
 func newWallOfWonder() *game.CardDef {
 	return &game.CardDef{

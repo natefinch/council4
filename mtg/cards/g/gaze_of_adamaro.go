@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Gaze of Adamaro deals damage to target player equal to the number of cards in that player's hand.
-var GazeOfAdamaro = newGazeOfAdamaro()
+var GazeOfAdamaro = newGazeOfAdamaro
 
 func newGazeOfAdamaro() *game.CardDef {
 	return &game.CardDef{

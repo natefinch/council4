@@ -18,7 +18,7 @@ import (
 //	When this Equipment enters, create a 1/1 colorless Thopter artifact creature token with flying, then attach this Equipment to it.
 //	Equipped creature gets +1/+0.
 //	Equip {2}
-var BarbedSpike = newBarbedSpike()
+var BarbedSpike = newBarbedSpike
 
 func newBarbedSpike() *game.CardDef {
 	return &game.CardDef{

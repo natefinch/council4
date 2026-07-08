@@ -18,7 +18,7 @@ import (
 //
 //	At the beginning of your upkeep, this enchantment deals 1 damage to you.
 //	Whenever a creature is put into an opponent's graveyard from the battlefield, you gain life equal to its toughness.
-var GrimFeast = newGrimFeast()
+var GrimFeast = newGrimFeast
 
 func newGrimFeast() *game.CardDef {
 	return &game.CardDef{

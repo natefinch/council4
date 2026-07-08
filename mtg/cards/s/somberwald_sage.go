@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{T}: Add three mana of any one color. Spend this mana only to cast creature spells.
-var SomberwaldSage = newSomberwaldSage()
+var SomberwaldSage = newSomberwaldSage
 
 func newSomberwaldSage() *game.CardDef {
 	return &game.CardDef{

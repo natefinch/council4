@@ -17,7 +17,7 @@ import (
 //
 //	When this creature enters, you become the monarch.
 //	Whenever you become the monarch, target player sacrifices a creature of their choice.
-var CustodiLich = newCustodiLich()
+var CustodiLich = newCustodiLich
 
 func newCustodiLich() *game.CardDef {
 	return &game.CardDef{

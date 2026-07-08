@@ -18,7 +18,7 @@ import (
 //	Enchant creature
 //	Enchanted creature has "Whenever this creature deals combat damage to a player, draw a card."
 //	As long as enchanted creature is legendary, it gets +1/+1 and has ward {1}. (Whenever enchanted creature becomes the target of a spell or ability an opponent controls, counter it unless that player pays {1}.)
-var CombatResearch = newCombatResearch()
+var CombatResearch = newCombatResearch
 
 func newCombatResearch() *game.CardDef {
 	return &game.CardDef{

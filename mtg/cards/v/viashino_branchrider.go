@@ -21,7 +21,7 @@ import (
 //	Haste
 //	If this creature was kicked, it enters with two +1/+1 counters on it.
 //	{2}{R}: This creature gets +2/+0 until end of turn.
-var ViashinoBranchrider = newViashinoBranchrider()
+var ViashinoBranchrider = newViashinoBranchrider
 
 func newViashinoBranchrider() *game.CardDef {
 	return &game.CardDef{

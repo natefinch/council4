@@ -17,7 +17,7 @@ import (
 //
 //	Flying
 //	At the beginning of each of your postcombat main phases, there is an additional beginning phase after this phase. (The beginning phase includes the untap, upkeep, and draw steps.)
-var SphinxOfTheSecondSun = newSphinxOfTheSecondSun()
+var SphinxOfTheSecondSun = newSphinxOfTheSecondSun
 
 func newSphinxOfTheSecondSun() *game.CardDef {
 	return &game.CardDef{

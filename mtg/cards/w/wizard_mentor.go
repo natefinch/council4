@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{T}: Return this creature and target creature you control to their owner's hand.
-var WizardMentor = newWizardMentor()
+var WizardMentor = newWizardMentor
 
 func newWizardMentor() *game.CardDef {
 	return &game.CardDef{

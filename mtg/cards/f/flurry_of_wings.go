@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Create X 1/1 white Bird Soldier creature tokens with flying, where X is the number of attacking creatures.
-var FlurryOfWings = newFlurryOfWings()
+var FlurryOfWings = newFlurryOfWings
 
 func newFlurryOfWings() *game.CardDef {
 	return &game.CardDef{

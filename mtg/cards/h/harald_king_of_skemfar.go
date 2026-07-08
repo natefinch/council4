@@ -17,7 +17,7 @@ import (
 //
 //	Menace (This creature can't be blocked except by two or more creatures.)
 //	When Harald enters, look at the top five cards of your library. You may reveal an Elf, Warrior, or Tyvar card from among them and put it into your hand. Put the rest on the bottom of your library in a random order.
-var HaraldKingOfSkemfar = newHaraldKingOfSkemfar()
+var HaraldKingOfSkemfar = newHaraldKingOfSkemfar
 
 func newHaraldKingOfSkemfar() *game.CardDef {
 	return &game.CardDef{

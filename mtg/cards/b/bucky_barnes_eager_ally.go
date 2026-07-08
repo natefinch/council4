@@ -17,7 +17,7 @@ import (
 //
 //	Vigilance
 //	When Bucky Barnes dies, look at the top four cards of your library. You may reveal an Equipment, Hero, or Soldier card from among them and put it into your hand. Put the rest on the bottom of your library in a random order.
-var BuckyBarnesEagerAlly = newBuckyBarnesEagerAlly()
+var BuckyBarnesEagerAlly = newBuckyBarnesEagerAlly
 
 func newBuckyBarnesEagerAlly() *game.CardDef {
 	return &game.CardDef{

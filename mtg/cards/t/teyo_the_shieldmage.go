@@ -17,7 +17,7 @@ import (
 //
 //	You have hexproof. (You can't be the target of spells or abilities your opponents control.)
 //	−2: Create a 0/3 white Wall creature token with defender.
-var TeyoTheShieldmage = newTeyoTheShieldmage()
+var TeyoTheShieldmage = newTeyoTheShieldmage
 
 func newTeyoTheShieldmage() *game.CardDef {
 	return &game.CardDef{

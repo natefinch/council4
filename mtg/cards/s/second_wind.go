@@ -19,7 +19,7 @@ import (
 //	Enchant creature
 //	{T}: Tap enchanted creature.
 //	{T}: Untap enchanted creature.
-var SecondWind = newSecondWind()
+var SecondWind = newSecondWind
 
 func newSecondWind() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 //
 //	Whenever one or more artifact and/or creature cards leave your graveyard, you gain 1 life.
 //	When this enchantment enters, mill four cards. You may put an artifact, creature, or land card from among the milled cards into your hand. (To mill four cards, put the top four cards of your library into your graveyard.)
-var DredgerSInsight = newDredgerSInsight()
+var DredgerSInsight = newDredgerSInsight
 
 func newDredgerSInsight() *game.CardDef {
 	return &game.CardDef{

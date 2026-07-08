@@ -17,7 +17,7 @@ import (
 //
 //	When this creature enters, create a Food token. (It's an artifact with "{2}, {T}, Sacrifice this token: You gain 3 life.")
 //	Whenever you gain life for the first time during each of your turns, create a 1/1 white Cat creature token.
-var CatCollector = newCatCollector()
+var CatCollector = newCatCollector
 
 func newCatCollector() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 //
 //	When this creature enters, draw a card.
 //	Descend 4 — This creature has flying as long as there are four or more permanent cards in your graveyard.
-var DidactEcho = newDidactEcho()
+var DidactEcho = newDidactEcho
 
 func newDidactEcho() *game.CardDef {
 	return &game.CardDef{

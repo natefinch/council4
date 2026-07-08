@@ -17,7 +17,7 @@ import (
 //
 //	Each opponent can't draw more than one card each turn.
 //	−2: Look at the top four cards of your library. You may reveal a noncreature, nonland card from among them and put it into your hand. Put the rest on the bottom of your library in a random order.
-var NarsetParterOfVeils = newNarsetParterOfVeils()
+var NarsetParterOfVeils = newNarsetParterOfVeils
 
 func newNarsetParterOfVeils() *game.CardDef {
 	return &game.CardDef{

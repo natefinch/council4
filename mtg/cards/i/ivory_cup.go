@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever a player casts a white spell, you may pay {1}. If you do, you gain 1 life.
-var IvoryCup = newIvoryCup()
+var IvoryCup = newIvoryCup
 
 func newIvoryCup() *game.CardDef {
 	return &game.CardDef{

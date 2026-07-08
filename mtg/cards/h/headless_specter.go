@@ -17,7 +17,7 @@ import (
 //
 //	Flying
 //	Hellbent — Whenever this creature deals combat damage to a player, if you have no cards in hand, that player discards a card at random.
-var HeadlessSpecter = newHeadlessSpecter()
+var HeadlessSpecter = newHeadlessSpecter
 
 func newHeadlessSpecter() *game.CardDef {
 	return &game.CardDef{

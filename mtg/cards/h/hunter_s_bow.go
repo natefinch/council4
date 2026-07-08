@@ -18,7 +18,7 @@ import (
 //	When this Equipment enters, attach it to target creature you control. That creature deals damage equal to its power to up to one target creature you don't control.
 //	Equipped creature has reach and ward {2}.
 //	Equip {1}
-var HunterSBow = newHunterSBow()
+var HunterSBow = newHunterSBow
 
 func newHunterSBow() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 //
 //	This spell costs {1} less to cast if you control a Kithkin.
 //	When this creature enters, draw a card.
-var MistmeadowCouncil = newMistmeadowCouncil()
+var MistmeadowCouncil = newMistmeadowCouncil
 
 func newMistmeadowCouncil() *game.CardDef {
 	return &game.CardDef{

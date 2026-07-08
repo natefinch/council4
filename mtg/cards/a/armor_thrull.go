@@ -18,7 +18,7 @@ import (
 // Oracle text:
 //
 //	{T}, Sacrifice this creature: Put a +1/+2 counter on target creature.
-var ArmorThrull = newArmorThrull()
+var ArmorThrull = newArmorThrull
 
 func newArmorThrull() *game.CardDef {
 	return &game.CardDef{

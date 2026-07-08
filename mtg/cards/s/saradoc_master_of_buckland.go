@@ -19,7 +19,7 @@ import (
 //
 //	Whenever Saradoc or another nontoken creature you control with power 2 or less enters, create a 1/1 white Halfling creature token.
 //	Tap two other untapped Halflings you control: Saradoc gets +2/+0 and gains lifelink until end of turn.
-var SaradocMasterOfBuckland = newSaradocMasterOfBuckland()
+var SaradocMasterOfBuckland = newSaradocMasterOfBuckland
 
 func newSaradocMasterOfBuckland() *game.CardDef {
 	return &game.CardDef{

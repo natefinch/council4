@@ -18,7 +18,7 @@ import (
 //
 //	When this artifact enters, surveil 1.
 //	{3}{W}, {T}, Exile two creature cards from your graveyard, Sacrifice this artifact: An opponent chooses one of the exiled cards. You put that card on the bottom of your library and return the other to the battlefield tapped. You become the monarch.
-var CoinOfFate = newCoinOfFate()
+var CoinOfFate = newCoinOfFate
 
 func newCoinOfFate() *game.CardDef {
 	return &game.CardDef{

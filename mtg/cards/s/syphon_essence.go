@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Counter target creature or planeswalker spell. Create a Blood token. (It's an artifact with "{1}, {T}, Discard a card, Sacrifice this token: Draw a card.")
-var SyphonEssence = newSyphonEssence()
+var SyphonEssence = newSyphonEssence
 
 func newSyphonEssence() *game.CardDef {
 	return &game.CardDef{

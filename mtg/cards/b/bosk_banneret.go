@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Treefolk spells and Shaman spells you cast cost {1} less to cast.
-var BoskBanneret = newBoskBanneret()
+var BoskBanneret = newBoskBanneret
 
 func newBoskBanneret() *game.CardDef {
 	return &game.CardDef{

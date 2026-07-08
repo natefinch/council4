@@ -17,7 +17,7 @@ import (
 //
 //	Flying
 //	If a triggered ability of another Elemental you control triggers, it triggers an additional time.
-var TwinflameTravelers = newTwinflameTravelers()
+var TwinflameTravelers = newTwinflameTravelers
 
 func newTwinflameTravelers() *game.CardDef {
 	return &game.CardDef{

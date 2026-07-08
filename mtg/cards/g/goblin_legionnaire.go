@@ -18,7 +18,7 @@ import (
 //
 //	{R}, Sacrifice this creature: It deals 2 damage to any target.
 //	{W}, Sacrifice this creature: Prevent the next 2 damage that would be dealt to any target this turn.
-var GoblinLegionnaire = newGoblinLegionnaire()
+var GoblinLegionnaire = newGoblinLegionnaire
 
 func newGoblinLegionnaire() *game.CardDef {
 	return &game.CardDef{

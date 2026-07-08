@@ -21,7 +21,7 @@ import (
 //	Devoid (This card has no color.)
 //	{1}{G}: Adapt 1. (If this creature has no +1/+1 counters on it, put a +1/+1 counter on it.)
 //	Whenever one or more +1/+1 counters are put on this creature, you may create a 0/1 colorless Eldrazi Spawn creature token with "Sacrifice this token: Add {C}."
-var BaskingBroodscale = newBaskingBroodscale()
+var BaskingBroodscale = newBaskingBroodscale
 
 func newBaskingBroodscale() *game.CardDef {
 	return &game.CardDef{

@@ -19,7 +19,7 @@ import (
 //	Enchant creature
 //	When this Aura enters, enchanted creature gains first strike until end of turn.
 //	Enchanted creature gets +2/+0.
-var AspectOfManticore = newAspectOfManticore()
+var AspectOfManticore = newAspectOfManticore
 
 func newAspectOfManticore() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 //
 //	Whenever this creature attacks, defending player mills half their library, rounded up.
 //	Unearth {1}{U}{U}{U} ({1}{U}{U}{U}: Return this card from your graveyard to the battlefield. It gains haste. Exile it at the beginning of the next end step or if it would leave the battlefield. Unearth only as a sorcery.)
-var TerisianMindbreaker = newTerisianMindbreaker()
+var TerisianMindbreaker = newTerisianMindbreaker
 
 func newTerisianMindbreaker() *game.CardDef {
 	return &game.CardDef{

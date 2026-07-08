@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{T}: This creature deals 1 damage to any target. Activate only during your turn, before attackers are declared.
-var WuLongbowman = newWuLongbowman()
+var WuLongbowman = newWuLongbowman
 
 func newWuLongbowman() *game.CardDef {
 	return &game.CardDef{

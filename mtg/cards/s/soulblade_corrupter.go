@@ -19,7 +19,7 @@ import (
 //	Partner with Soulblade Renewer (When this creature enters, target player may put Soulblade Renewer into their hand from their library, then shuffle.)
 //	Deathtouch
 //	Whenever a creature with a +1/+1 counter on it attacks one of your opponents, that creature gains deathtouch until end of turn.
-var SoulbladeCorrupter = newSoulbladeCorrupter()
+var SoulbladeCorrupter = newSoulbladeCorrupter
 
 func newSoulbladeCorrupter() *game.CardDef {
 	return &game.CardDef{

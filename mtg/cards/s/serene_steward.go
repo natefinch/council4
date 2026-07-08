@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Whenever you gain life, you may pay {W}. If you do, put a +1/+1 counter on target creature.
-var SereneSteward = newSereneSteward()
+var SereneSteward = newSereneSteward
 
 func newSereneSteward() *game.CardDef {
 	return &game.CardDef{

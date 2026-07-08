@@ -18,7 +18,7 @@ import (
 //	Storm (When you cast this spell, copy it for each spell cast before it this turn. You may choose new targets for the copies. Copies become tokens.)
 //	Enchant creature you control
 //	Enchanted creature gets +1/+1 for each enchantment you control.
-var TempestTechnique = newTempestTechnique()
+var TempestTechnique = newTempestTechnique
 
 func newTempestTechnique() *game.CardDef {
 	return &game.CardDef{

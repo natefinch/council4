@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Sacrifice this creature: Return target legendary creature card from your graveyard to the battlefield. Activate only during your turn, before attackers are declared.
-var LoyalRetainers = newLoyalRetainers()
+var LoyalRetainers = newLoyalRetainers
 
 func newLoyalRetainers() *game.CardDef {
 	return &game.CardDef{

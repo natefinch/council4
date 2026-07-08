@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Until end of turn, double target creature's power and it gains first strike.
-var LegionLeadership = newLegionLeadership()
+var LegionLeadership = newLegionLeadership
 
 func newLegionLeadership() *game.CardDef {
 	return &game.CardDef{

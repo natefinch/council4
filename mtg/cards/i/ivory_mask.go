@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	You have shroud. (You can't be the target of spells or abilities.)
-var IvoryMask = newIvoryMask()
+var IvoryMask = newIvoryMask
 
 func newIvoryMask() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 //	Woman Who Walked the Earth — When Martha Jones enters, investigate. (Create a Clue token. It's an artifact with "{2}, Sacrifice this token: Draw a card.")
 //	Whenever you sacrifice a Clue, Martha Jones and up to one other target creature can't be blocked this turn.
 //	Doctor's companion (You can have two commanders if the other is the Doctor.)
-var MarthaJones = newMarthaJones()
+var MarthaJones = newMarthaJones
 
 func newMarthaJones() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 //	Enchant creature
 //	Enchanted creature gets +3/+3 and attacks each combat if able.
 //	When enchanted creature dies, this Aura deals 3 damage to that creature's controller.
-var ImpendingDoom = newImpendingDoom()
+var ImpendingDoom = newImpendingDoom
 
 func newImpendingDoom() *game.CardDef {
 	return &game.CardDef{

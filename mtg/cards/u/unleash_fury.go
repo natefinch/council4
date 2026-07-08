@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Double the power of target creature until end of turn.
-var UnleashFury = newUnleashFury()
+var UnleashFury = newUnleashFury
 
 func newUnleashFury() *game.CardDef {
 	return &game.CardDef{

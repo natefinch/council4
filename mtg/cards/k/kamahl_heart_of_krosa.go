@@ -19,7 +19,7 @@ import (
 //	At the beginning of combat on your turn, creatures you control get +3/+3 and gain trample until end of turn.
 //	{1}{G}: Until end of turn, target land you control becomes a 1/1 Elemental creature with vigilance, indestructible, and haste. It's still a land.
 //	Partner (You can have two commanders if both have partner.)
-var KamahlHeartOfKrosa = newKamahlHeartOfKrosa()
+var KamahlHeartOfKrosa = newKamahlHeartOfKrosa
 
 func newKamahlHeartOfKrosa() *game.CardDef {
 	return &game.CardDef{

@@ -16,7 +16,7 @@ import (
 //
 //	Defender (This creature can't attack.)
 //	When this creature blocks, return it to its owner's hand at end of combat. (Return it only if it's on the battlefield.)
-var WallOfJunk = newWallOfJunk()
+var WallOfJunk = newWallOfJunk
 
 func newWallOfJunk() *game.CardDef {
 	return &game.CardDef{

@@ -19,7 +19,7 @@ import (
 //	Kicker {3} (You may pay an additional {3} as you cast this spell.)
 //	If this creature was kicked, it enters with two +1/+1 counters on it.
 //	This creature can't be blocked.
-var AetherFigment = newAetherFigment()
+var AetherFigment = newAetherFigment
 
 func newAetherFigment() *game.CardDef {
 	return &game.CardDef{

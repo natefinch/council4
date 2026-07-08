@@ -18,7 +18,7 @@ import (
 //
 //	When this creature enters, you get {E}{E} (two energy counters).
 //	Whenever this creature attacks, you may pay {E}{E}. If you do, put a +1/+1 counter on it.
-var ThrivingGrubs = newThrivingGrubs()
+var ThrivingGrubs = newThrivingGrubs
 
 func newThrivingGrubs() *game.CardDef {
 	return &game.CardDef{

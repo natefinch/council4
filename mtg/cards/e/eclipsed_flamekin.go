@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, look at the top four cards of your library. You may reveal an Elemental, Island, or Mountain card from among them and put it into your hand. Put the rest on the bottom of your library in a random order.
-var EclipsedFlamekin = newEclipsedFlamekin()
+var EclipsedFlamekin = newEclipsedFlamekin
 
 func newEclipsedFlamekin() *game.CardDef {
 	return &game.CardDef{

@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Destroy target non-Merfolk creature.
-var WalkThePlank = newWalkThePlank()
+var WalkThePlank = newWalkThePlank
 
 func newWalkThePlank() *game.CardDef {
 	return &game.CardDef{

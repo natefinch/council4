@@ -18,7 +18,7 @@ import (
 //
 //	{T}: Add {W}.
 //	{W}, {T}: Prevent the next 2 damage that would be dealt to target legendary creature this turn.
-var EiganjoCastle = newEiganjoCastle()
+var EiganjoCastle = newEiganjoCastle
 
 func newEiganjoCastle() *game.CardDef {
 	return &game.CardDef{

@@ -20,7 +20,7 @@ import (
 //
 //	This land enters tapped with two depletion counters on it.
 //	{T}, Remove a depletion counter from this land: Add {U}{U}. If there are no depletion counters on this land, sacrifice it.
-var SaprazzanSkerry = newSaprazzanSkerry()
+var SaprazzanSkerry = newSaprazzanSkerry
 
 func newSaprazzanSkerry() *game.CardDef {
 	return &game.CardDef{

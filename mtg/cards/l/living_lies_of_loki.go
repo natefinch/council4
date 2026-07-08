@@ -17,7 +17,7 @@ import (
 //
 //	This creature gets +1/+0 for each other Illusion you control.
 //	When this creature dies, draw a card.
-var LivingLiesOfLoki = newLivingLiesOfLoki()
+var LivingLiesOfLoki = newLivingLiesOfLoki
 
 func newLivingLiesOfLoki() *game.CardDef {
 	return &game.CardDef{

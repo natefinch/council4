@@ -18,7 +18,7 @@ import (
 //
 //	Flash
 //	When this creature enters, you may cast target instant card from your graveyard without paying its mana cost. If that spell would be put into your graveyard, exile it instead.
-var TorrentialGearhulk = newTorrentialGearhulk()
+var TorrentialGearhulk = newTorrentialGearhulk
 
 func newTorrentialGearhulk() *game.CardDef {
 	return &game.CardDef{

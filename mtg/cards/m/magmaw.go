@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{1}, Sacrifice a nonland permanent: This creature deals 1 damage to any target.
-var Magmaw = newMagmaw()
+var Magmaw = newMagmaw
 
 func newMagmaw() *game.CardDef {
 	return &game.CardDef{

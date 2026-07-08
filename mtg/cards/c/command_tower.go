@@ -13,40 +13,42 @@ import (
 // Oracle text:
 //
 //	{T}: Add one mana of any color in your commander's color identity.
-var CommandTower = &game.CardDef{
-	CardFace: game.CardFace{
-		Name:  "Command Tower",
-		Types: []types.Card{types.Land},
-		OracleText: `
+var CommandTower = func() *game.CardDef {
+	return &game.CardDef{
+		CardFace: game.CardFace{
+			Name:  "Command Tower",
+			Types: []types.Card{types.Land},
+			OracleText: `
 			{T}: Add one mana of any color in your commander's color identity.
 		`,
-		ManaAbilities: []game.ManaAbility{
-			{
-				Text: `
+			ManaAbilities: []game.ManaAbility{
+				{
+					Text: `
 					{T}: Add one mana of any color in your commander's color identity.
 				`,
-				AdditionalCosts: cost.Tap,
-				Content: game.Mode{
-					Sequence: []game.Instruction{
-						{
-							Primitive: game.Choose{
-								Choice: game.ResolutionChoice{
-									Kind:        game.ResolutionChoiceMana,
-									Prompt:      "Choose a color in your commander's color identity",
-									ColorSource: game.ResolutionChoiceColorSourceCommanderIdentity,
+					AdditionalCosts: cost.Tap,
+					Content: game.Mode{
+						Sequence: []game.Instruction{
+							{
+								Primitive: game.Choose{
+									Choice: game.ResolutionChoice{
+										Kind:        game.ResolutionChoiceMana,
+										Prompt:      "Choose a color in your commander's color identity",
+										ColorSource: game.ResolutionChoiceColorSourceCommanderIdentity,
+									},
+									PublishChoice: game.ChoiceKey("command-tower-color"),
 								},
-								PublishChoice: game.ChoiceKey("command-tower-color"),
+							},
+							{
+								Primitive: game.AddMana{
+									Amount:     game.Fixed(1),
+									ChoiceFrom: game.ChoiceKey("command-tower-color"),
+								},
 							},
 						},
-						{
-							Primitive: game.AddMana{
-								Amount:     game.Fixed(1),
-								ChoiceFrom: game.ChoiceKey("command-tower-color"),
-							},
-						},
-					},
-				}.Ability(),
+					}.Ability(),
+				},
 			},
 		},
-	},
+	}
 }

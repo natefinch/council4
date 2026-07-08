@@ -19,7 +19,7 @@ import (
 //
 //	Whenever a creature you control deals combat damage, put a blaze counter on this enchantment.
 //	Remove five blaze counters from this enchantment: It deals 5 damage to any target.
-var FiveAlarmFire = newFiveAlarmFire()
+var FiveAlarmFire = newFiveAlarmFire
 
 func newFiveAlarmFire() *game.CardDef {
 	return &game.CardDef{

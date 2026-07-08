@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Pay 1 life: Prevent the next 1 damage that would be dealt to this creature this turn.
-var EtherealChampion = newEtherealChampion()
+var EtherealChampion = newEtherealChampion
 
 func newEtherealChampion() *game.CardDef {
 	return &game.CardDef{

@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	{4}, {T}: The next time a source of your choice would deal damage to you this turn, prevent that damage.
-var PentagramOfTheAges = newPentagramOfTheAges()
+var PentagramOfTheAges = newPentagramOfTheAges
 
 func newPentagramOfTheAges() *game.CardDef {
 	return &game.CardDef{

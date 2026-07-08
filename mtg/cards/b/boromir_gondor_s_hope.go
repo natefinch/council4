@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever Boromir enters or attacks, look at the top six cards of your library. You may reveal a Human or artifact card from among them and put it into your hand. Put the rest on the bottom of your library in a random order.
-var BoromirGondorSHope = newBoromirGondorSHope()
+var BoromirGondorSHope = newBoromirGondorSHope
 
 func newBoromirGondorSHope() *game.CardDef {
 	return &game.CardDef{

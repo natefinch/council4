@@ -18,7 +18,7 @@ import (
 //
 //	Whenever Ant-Man attacks, you may pay {1}. When you do, put a +1/+1 counter on target creature.
 //	Whenever you put a +1/+1 counter on a creature, create a 1/1 green Insect creature token. This ability triggers only once each turn.
-var AntManColonyCommander = newAntManColonyCommander()
+var AntManColonyCommander = newAntManColonyCommander
 
 func newAntManColonyCommander() *game.CardDef {
 	return &game.CardDef{

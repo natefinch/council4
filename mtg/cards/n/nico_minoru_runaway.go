@@ -18,7 +18,7 @@ import (
 //
 //	Whenever you cast a spell from anywhere other than your hand, Nico Minoru deals 2 damage to each opponent.
 //	{2}{R}, {T}, Discard a card: Exile cards from the top of your library until you exile a nonland card. You may cast that card without paying its mana cost.
-var NicoMinoruRunaway = newNicoMinoruRunaway()
+var NicoMinoruRunaway = newNicoMinoruRunaway
 
 func newNicoMinoruRunaway() *game.CardDef {
 	return &game.CardDef{

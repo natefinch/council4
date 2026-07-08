@@ -15,7 +15,7 @@ func newMBakuGame(t *testing.T) (g *game.Game, engine *Engine, attacker *game.Pe
 	t.Helper()
 	g = game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine = NewEngine(nil)
-	addCombatPermanent(g, game.Player1, cardm.MBakuJabariChieftain)
+	addCombatPermanent(g, game.Player1, cardm.MBakuJabariChieftain())
 	attacker = addCombatCreaturePermanentWithPower(g, game.Player1, 3)
 	g.Turn.Phase = game.PhaseCombat
 	g.Turn.Step = game.StepDeclareAttackers

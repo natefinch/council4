@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Reveal the top five cards of your library and separate them into two piles. An opponent chooses one of those piles. Put that pile into your hand and the other into your graveyard.
-var SteamAugury = newSteamAugury()
+var SteamAugury = newSteamAugury
 
 func newSteamAugury() *game.CardDef {
 	return &game.CardDef{

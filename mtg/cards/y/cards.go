@@ -2,15 +2,16 @@
 
 package y
 
-import "github.com/natefinch/council4/mtg/game"
+import "github.com/natefinch/council4/mtg/cards/cardset"
 
-// Cards lists all card definitions in this package.
-var Cards = []*game.CardDef{
-	YanlingSHarbinger,
-	YavimayaIconoclast,
-	YouAreAlreadyDead,
-	YouComeToARiver,
-	YouMeetInATavern,
-	YouReNotAlone,
-	YuanShaoSInfantry,
+// Cards lists all card definitions in this package, each paired with a
+// constructor so the registry can build them lazily.
+var Cards = []cardset.Entry{
+	{Name: "Yanling's Harbinger", New: YanlingSHarbinger},
+	{Name: "Yavimaya Iconoclast", New: YavimayaIconoclast},
+	{Name: "You Are Already Dead", New: YouAreAlreadyDead},
+	{Name: "You Come to a River", New: YouComeToARiver},
+	{Name: "You Meet in a Tavern", New: YouMeetInATavern},
+	{Name: "You're Not Alone", New: YouReNotAlone},
+	{Name: "Yuan Shao's Infantry", New: YuanShaoSInfantry},
 }

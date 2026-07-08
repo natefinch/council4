@@ -18,7 +18,7 @@ import (
 //	Equipped creature gets +0/+2 and has vigilance.
 //	Whenever equipped creature blocks a creature, that creature doesn't untap during its controller's next untap step.
 //	Equip {2}
-var ShieldOfTheRighteous = newShieldOfTheRighteous()
+var ShieldOfTheRighteous = newShieldOfTheRighteous
 
 func newShieldOfTheRighteous() *game.CardDef {
 	return &game.CardDef{

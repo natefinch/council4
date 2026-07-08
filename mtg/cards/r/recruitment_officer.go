@@ -18,7 +18,7 @@ import (
 // Oracle text:
 //
 //	{3}{W}: Look at the top four cards of your library. You may reveal a creature card with mana value 3 or less from among them and put it into your hand. Put the rest on the bottom of your library in a random order.
-var RecruitmentOfficer = newRecruitmentOfficer()
+var RecruitmentOfficer = newRecruitmentOfficer
 
 func newRecruitmentOfficer() *game.CardDef {
 	return &game.CardDef{

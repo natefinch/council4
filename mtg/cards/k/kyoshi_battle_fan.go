@@ -18,7 +18,7 @@ import (
 //	When this Equipment enters, create a 1/1 white Ally creature token, then attach this Equipment to it.
 //	Equipped creature gets +1/+0.
 //	Equip {2} ({2}: Attach to target creature you control. Equip only as a sorcery.)
-var KyoshiBattleFan = newKyoshiBattleFan()
+var KyoshiBattleFan = newKyoshiBattleFan
 
 func newKyoshiBattleFan() *game.CardDef {
 	return &game.CardDef{

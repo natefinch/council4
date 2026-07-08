@@ -17,7 +17,7 @@ import (
 //
 //	Prevent the next 1 damage that would be dealt to any target this turn.
 //	Draw a card.
-var Bandage = newBandage()
+var Bandage = newBandage
 
 func newBandage() *game.CardDef {
 	return &game.CardDef{

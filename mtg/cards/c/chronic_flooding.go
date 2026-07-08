@@ -17,7 +17,7 @@ import (
 //
 //	Enchant land
 //	Whenever enchanted land becomes tapped, its controller mills three cards.
-var ChronicFlooding = newChronicFlooding()
+var ChronicFlooding = newChronicFlooding
 
 func newChronicFlooding() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 //
 //	Flying
 //	When this creature enters, return two target lands you control to their owner's hand.
-var SeaDrake = newSeaDrake()
+var SeaDrake = newSeaDrake
 
 func newSeaDrake() *game.CardDef {
 	return &game.CardDef{

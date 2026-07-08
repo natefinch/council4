@@ -18,7 +18,7 @@ import (
 //
 //	Defender (This creature can't attack.)
 //	{T}: Prevent the next 1 damage that would be dealt to any target this turn.
-var BenevolentAncestor = newBenevolentAncestor()
+var BenevolentAncestor = newBenevolentAncestor
 
 func newBenevolentAncestor() *game.CardDef {
 	return &game.CardDef{

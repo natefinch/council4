@@ -18,7 +18,7 @@ import (
 //	Enchant creature
 //	Enchanted creature gets +2/+2 and has trample.
 //	Whenever enchanted creature deals damage, you gain that much life.
-var ArmadilloCloak = newArmadilloCloak()
+var ArmadilloCloak = newArmadilloCloak
 
 func newArmadilloCloak() *game.CardDef {
 	return &game.CardDef{

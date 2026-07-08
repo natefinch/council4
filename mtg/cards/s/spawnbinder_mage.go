@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Cohort — {T}, Tap an untapped Ally you control: Tap target creature.
-var SpawnbinderMage = newSpawnbinderMage()
+var SpawnbinderMage = newSpawnbinderMage
 
 func newSpawnbinderMage() *game.CardDef {
 	return &game.CardDef{

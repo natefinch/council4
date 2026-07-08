@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{T}: Return this creature and another target creature to their owners' hands. Activate only during your turn, before attackers are declared.
-var CoastalWizard = newCoastalWizard()
+var CoastalWizard = newCoastalWizard
 
 func newCoastalWizard() *game.CardDef {
 	return &game.CardDef{

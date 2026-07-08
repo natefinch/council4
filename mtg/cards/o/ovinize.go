@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Until end of turn, target creature loses all abilities and has base power and toughness 0/1.
-var Ovinize = newOvinize()
+var Ovinize = newOvinize
 
 func newOvinize() *game.CardDef {
 	return &game.CardDef{

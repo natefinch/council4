@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Create an X/X green Ooze creature token, where X is the greatest power among creatures you control.
-var MimingSlime = newMimingSlime()
+var MimingSlime = newMimingSlime
 
 func newMimingSlime() *game.CardDef {
 	return &game.CardDef{

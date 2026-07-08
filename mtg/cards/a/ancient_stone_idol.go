@@ -18,7 +18,7 @@ import (
 //	This spell costs {1} less to cast for each attacking creature.
 //	Trample
 //	When this creature dies, create a 6/12 colorless Construct artifact creature token with trample.
-var AncientStoneIdol = newAncientStoneIdol()
+var AncientStoneIdol = newAncientStoneIdol
 
 func newAncientStoneIdol() *game.CardDef {
 	return &game.CardDef{

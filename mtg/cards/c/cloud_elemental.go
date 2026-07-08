@@ -17,7 +17,7 @@ import (
 //
 //	Flying
 //	This creature can block only creatures with flying.
-var CloudElemental = newCloudElemental()
+var CloudElemental = newCloudElemental
 
 func newCloudElemental() *game.CardDef {
 	return &game.CardDef{

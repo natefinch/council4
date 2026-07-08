@@ -19,7 +19,7 @@ import (
 //
 //	Swampwalk (This creature can't be blocked as long as defending player controls a Swamp.)
 //	{T}: Add {B}{B}{B}{B}. Target opponent gains control of this creature. (Activate only as an instant.)
-var WitchEngine = newWitchEngine()
+var WitchEngine = newWitchEngine
 
 func newWitchEngine() *game.CardDef {
 	return &game.CardDef{

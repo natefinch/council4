@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, sacrifice it unless you sacrifice two Swamps.
-var MoldDemon = newMoldDemon()
+var MoldDemon = newMoldDemon
 
 func newMoldDemon() *game.CardDef {
 	return &game.CardDef{

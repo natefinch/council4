@@ -18,7 +18,7 @@ import (
 //
 //	{T}: Target creature gets +1/+1 until end of turn.
 //	Whenever you cast a spell, you may untap this creature.
-var LeoninBattlemage = newLeoninBattlemage()
+var LeoninBattlemage = newLeoninBattlemage
 
 func newLeoninBattlemage() *game.CardDef {
 	return &game.CardDef{

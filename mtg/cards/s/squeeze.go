@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Sorcery spells cost {3} more to cast.
-var Squeeze = newSqueeze()
+var Squeeze = newSqueeze
 
 func newSqueeze() *game.CardDef {
 	return &game.CardDef{

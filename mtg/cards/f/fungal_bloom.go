@@ -18,7 +18,7 @@ import (
 // Oracle text:
 //
 //	{G}{G}: Put a spore counter on target Fungus.
-var FungalBloom = newFungalBloom()
+var FungalBloom = newFungalBloom
 
 func newFungalBloom() *game.CardDef {
 	return &game.CardDef{

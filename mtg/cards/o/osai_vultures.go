@@ -20,7 +20,7 @@ import (
 //	Flying
 //	At the beginning of each end step, if a creature died this turn, put a carrion counter on this creature.
 //	Remove two carrion counters from this creature: This creature gets +1/+1 until end of turn.
-var OsaiVultures = newOsaiVultures()
+var OsaiVultures = newOsaiVultures
 
 func newOsaiVultures() *game.CardDef {
 	return &game.CardDef{

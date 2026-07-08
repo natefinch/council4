@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Target land becomes a 3/3 Elemental creature with flying until end of turn. It's still a land.
-var Hydroform = newHydroform()
+var Hydroform = newHydroform
 
 func newHydroform() *game.CardDef {
 	return &game.CardDef{

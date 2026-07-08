@@ -8,7 +8,7 @@ import (
 )
 
 // SynodCenturion is the card definition for Synod Centurion.
-var SynodCenturion = newSynodCenturion()
+var SynodCenturion = newSynodCenturion
 
 func newSynodCenturion() *game.CardDef {
 	return &game.CardDef{

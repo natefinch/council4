@@ -18,7 +18,7 @@ import (
 //	Choose one or both —
 //	• Create a token that's a copy of target artifact.
 //	• Create a token that's a copy of target creature, except it's an artifact in addition to its other types.
-var SaheeliSArtistry = newSaheeliSArtistry()
+var SaheeliSArtistry = newSaheeliSArtistry
 
 func newSaheeliSArtistry() *game.CardDef {
 	return &game.CardDef{

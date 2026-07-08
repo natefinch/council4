@@ -17,7 +17,7 @@ import (
 //
 //	When this artifact enters, draw a card.
 //	{1}, {T}, Sacrifice this artifact: Target creature can't attack or block this turn.
-var AlchemistSVial = newAlchemistSVial()
+var AlchemistSVial = newAlchemistSVial
 
 func newAlchemistSVial() *game.CardDef {
 	return &game.CardDef{

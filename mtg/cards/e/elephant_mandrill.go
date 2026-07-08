@@ -18,7 +18,7 @@ import (
 //	Reach
 //	When this creature enters, each player creates a Food token. (It's an artifact with "{2}, {T}, Sacrifice this token: You gain 3 life.")
 //	At the beginning of combat on your turn, this creature gets +1/+1 until end of turn for each artifact your opponents control.
-var ElephantMandrill = newElephantMandrill()
+var ElephantMandrill = newElephantMandrill
 
 func newElephantMandrill() *game.CardDef {
 	return &game.CardDef{

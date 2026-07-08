@@ -22,7 +22,7 @@ import (
 //	{G/U}: This creature gains shroud until end of turn. (It can't be the target of spells or abilities.)
 //	Whenever you cast a green spell, remove a -1/-1 counter from this creature.
 //	Whenever you cast a blue spell, remove a -1/-1 counter from this creature.
-var SturdyHatchling = newSturdyHatchling()
+var SturdyHatchling = newSturdyHatchling
 
 func newSturdyHatchling() *game.CardDef {
 	return &game.CardDef{

@@ -19,7 +19,7 @@ import (
 //	Enchant creature
 //	Enchanted creature gets +1/+1 and has protection from enchantments. This effect doesn't remove this Aura.
 //	Sacrifice this Aura: Destroy target enchantment.
-var TattooWard = newTattooWard()
+var TattooWard = newTattooWard
 
 func newTattooWard() *game.CardDef {
 	return &game.CardDef{

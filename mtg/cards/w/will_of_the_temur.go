@@ -18,7 +18,7 @@ import (
 //	Choose one. If you control a commander as you cast this spell, you may choose both instead.
 //	• Create a token that's a copy of target permanent, except it's a 4/4 Dragon creature with flying in addition to its other types.
 //	• Target player draws cards equal to the greatest mana value among permanents you control.
-var WillOfTheTemur = newWillOfTheTemur()
+var WillOfTheTemur = newWillOfTheTemur
 
 func newWillOfTheTemur() *game.CardDef {
 	return &game.CardDef{

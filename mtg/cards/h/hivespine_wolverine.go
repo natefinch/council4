@@ -20,7 +20,7 @@ import (
 //	• Put a +1/+1 counter on target creature you control.
 //	• This creature fights target creature token.
 //	• Destroy target artifact or enchantment.
-var HivespineWolverine = newHivespineWolverine()
+var HivespineWolverine = newHivespineWolverine
 
 func newHivespineWolverine() *game.CardDef {
 	return &game.CardDef{

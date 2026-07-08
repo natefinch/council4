@@ -18,7 +18,7 @@ import (
 //	Reach (This creature can block creatures with flying.)
 //	Other Elf creatures you control get +1/+1.
 //	Whenever Dwynen attacks, you gain 1 life for each attacking Elf you control.
-var DwynenGiltLeafDaen = newDwynenGiltLeafDaen()
+var DwynenGiltLeafDaen = newDwynenGiltLeafDaen
 
 func newDwynenGiltLeafDaen() *game.CardDef {
 	return &game.CardDef{

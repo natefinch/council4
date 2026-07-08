@@ -12,7 +12,7 @@ import (
 // Starscream deals combat damage to a player, if there is no monarch, that
 // player becomes the monarch." trigger runs through the real engine path.
 func newStarscreamSeekerLeader(g *game.Game, controller game.PlayerID) *game.Permanent {
-	permanent := addCombatPermanent(g, controller, cards.StarscreamPowerHungry)
+	permanent := addCombatPermanent(g, controller, cards.StarscreamPowerHungry())
 	permanent.Face = game.FaceBack
 	permanent.Transformed = true
 	return permanent

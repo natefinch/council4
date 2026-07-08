@@ -18,7 +18,7 @@ import (
 //	This spell costs {1} less to cast if you control a Zombie.
 //	Tap target creature. It doesn't untap during its controller's next untap step.
 //	Draw a card.
-var ChillOfTheGrave = newChillOfTheGrave()
+var ChillOfTheGrave = newChillOfTheGrave
 
 func newChillOfTheGrave() *game.CardDef {
 	return &game.CardDef{

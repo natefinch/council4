@@ -17,7 +17,7 @@ import (
 //
 //	Whenever this creature is dealt damage, you lose that much life.
 //	Morph {1}{B}{B} (You may cast this card face down as a 2/2 creature for {3}. Turn it face up any time for its morph cost.)
-var ThrashingMudspawn = newThrashingMudspawn()
+var ThrashingMudspawn = newThrashingMudspawn
 
 func newThrashingMudspawn() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 //
 //	Other artifact creatures you control have haste.
 //	Whenever one or more artifact creatures you control attack, Alibou deals X damage to any target and you scry X, where X is the number of tapped artifacts you control.
-var AlibouAncientWitness = newAlibouAncientWitness()
+var AlibouAncientWitness = newAlibouAncientWitness
 
 func newAlibouAncientWitness() *game.CardDef {
 	return &game.CardDef{

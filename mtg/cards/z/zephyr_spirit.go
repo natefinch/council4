@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	When this creature blocks, return it to its owner's hand.
-var ZephyrSpirit = newZephyrSpirit()
+var ZephyrSpirit = newZephyrSpirit
 
 func newZephyrSpirit() *game.CardDef {
 	return &game.CardDef{

@@ -19,7 +19,7 @@ import (
 //	When this enchantment enters, you become the monarch.
 //	At the beginning of your end step, if you're the monarch, return up to one target creature card from your graveyard to your hand.
 //	Whenever a creature you control dies, each opponent loses 1 life and you gain 1 life.
-var GraveVenerations = newGraveVenerations()
+var GraveVenerations = newGraveVenerations
 
 func newGraveVenerations() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Target player mills half their library, rounded down.
-var Traumatize = newTraumatize()
+var Traumatize = newTraumatize
 
 func newTraumatize() *game.CardDef {
 	return &game.CardDef{

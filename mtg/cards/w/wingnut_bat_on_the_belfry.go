@@ -17,7 +17,7 @@ import (
 //
 //	Alliance — Whenever another creature you control enters, Wingnut gains your choice of flying, menace, or haste until end of turn.
 //	Whenever Wingnut attacks, each other attacking creature gets +1/+0 until end of turn.
-var WingnutBatOnTheBelfry = newWingnutBatOnTheBelfry()
+var WingnutBatOnTheBelfry = newWingnutBatOnTheBelfry
 
 func newWingnutBatOnTheBelfry() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{T}: Target creature you control gets +2/+0 until end of turn. Activate only during your turn, before attackers are declared.
-var XunYuWeiAdvisor = newXunYuWeiAdvisor()
+var XunYuWeiAdvisor = newXunYuWeiAdvisor
 
 func newXunYuWeiAdvisor() *game.CardDef {
 	return &game.CardDef{

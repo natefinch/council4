@@ -18,7 +18,7 @@ import (
 //
 //	Whenever an opponent casts a black spell, you may pay {G}{G}. If you do, you draw a card.
 //	{G}{G}: Return this enchantment to its owner's hand.
-var FreyaliseSCharm = newFreyaliseSCharm()
+var FreyaliseSCharm = newFreyaliseSCharm
 
 func newFreyaliseSCharm() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 //
 //	Flying
 //	When this creature enters, look at the top three cards of your library. You may reveal an artifact card from among them and put it into your hand. Put the rest on the bottom of your library in any order.
-var FaerieMechanist = newFaerieMechanist()
+var FaerieMechanist = newFaerieMechanist
 
 func newFaerieMechanist() *game.CardDef {
 	return &game.CardDef{

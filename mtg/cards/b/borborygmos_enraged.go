@@ -19,7 +19,7 @@ import (
 //	Trample
 //	Whenever Borborygmos Enraged deals combat damage to a player, reveal the top three cards of your library. Put all land cards revealed this way into your hand and the rest into your graveyard.
 //	Discard a land card: Borborygmos Enraged deals 3 damage to any target.
-var BorborygmosEnraged = newBorborygmosEnraged()
+var BorborygmosEnraged = newBorborygmosEnraged
 
 func newBorborygmosEnraged() *game.CardDef {
 	return &game.CardDef{

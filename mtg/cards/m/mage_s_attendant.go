@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, create a 1/1 blue Wizard creature token with "{1}, Sacrifice this token: Counter target noncreature spell unless its controller pays {1}."
-var MageSAttendant = newMageSAttendant()
+var MageSAttendant = newMageSAttendant
 
 func newMageSAttendant() *game.CardDef {
 	return &game.CardDef{

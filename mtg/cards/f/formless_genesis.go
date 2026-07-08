@@ -19,7 +19,7 @@ import (
 //	Changeling (This card is every creature type.)
 //	Create an X/X colorless Shapeshifter creature token with changeling and deathtouch, where X is the number of land cards in your graveyard.
 //	Retrace (You may cast this card from your graveyard by discarding a land card in addition to paying its other costs.)
-var FormlessGenesis = newFormlessGenesis()
+var FormlessGenesis = newFormlessGenesis
 
 func newFormlessGenesis() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 //
 //	At the beginning of each upkeep, if you lost life last turn, put a +1/+1 counter on this creature.
 //	When this creature dies, you gain life equal to its toughness.
-var PaladinOfAtonement = newPaladinOfAtonement()
+var PaladinOfAtonement = newPaladinOfAtonement
 
 func newPaladinOfAtonement() *game.CardDef {
 	return &game.CardDef{

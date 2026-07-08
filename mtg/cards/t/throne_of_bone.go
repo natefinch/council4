@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever a player casts a black spell, you may pay {1}. If you do, you gain 1 life.
-var ThroneOfBone = newThroneOfBone()
+var ThroneOfBone = newThroneOfBone
 
 func newThroneOfBone() *game.CardDef {
 	return &game.CardDef{

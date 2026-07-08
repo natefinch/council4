@@ -20,7 +20,7 @@ import (
 //
 //	This land enters tapped with two depletion counters on it.
 //	{T}, Remove a depletion counter from this land: Add {W}{W}. If there are no depletion counters on this land, sacrifice it.
-var RemoteFarm = newRemoteFarm()
+var RemoteFarm = newRemoteFarm
 
 func newRemoteFarm() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Vigilance
-var RealmCloakedGiant = newRealmCloakedGiant()
+var RealmCloakedGiant = newRealmCloakedGiant
 
 func newRealmCloakedGiant() *game.CardDef {
 	return &game.CardDef{

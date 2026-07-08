@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Draw a card for each attacking creature.
-var KeepWatch = newKeepWatch()
+var KeepWatch = newKeepWatch
 
 func newKeepWatch() *game.CardDef {
 	return &game.CardDef{

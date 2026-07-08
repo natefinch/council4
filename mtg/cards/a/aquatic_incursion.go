@@ -18,7 +18,7 @@ import (
 //
 //	When this enchantment enters, create two 1/1 blue Merfolk creature tokens with hexproof. (They can't be the targets of spells or abilities your opponents control.)
 //	{3}{U}: Target Merfolk can't be blocked this turn.
-var AquaticIncursion = newAquaticIncursion()
+var AquaticIncursion = newAquaticIncursion
 
 func newAquaticIncursion() *game.CardDef {
 	return &game.CardDef{

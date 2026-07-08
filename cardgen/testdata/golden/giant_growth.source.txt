@@ -13,7 +13,7 @@ import (
 // Oracle text:
 //
 //	Target creature gets +3/+3 until end of turn.
-var GiantGrowth = newGiantGrowth()
+var GiantGrowth = newGiantGrowth
 
 func newGiantGrowth() *game.CardDef {
 	return &game.CardDef{

@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Cosmotronic Wave deals 1 damage to each creature your opponents control. Creatures your opponents control can't block this turn.
-var CosmotronicWave = newCosmotronicWave()
+var CosmotronicWave = newCosmotronicWave
 
 func newCosmotronicWave() *game.CardDef {
 	return &game.CardDef{

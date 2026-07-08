@@ -17,7 +17,7 @@ import (
 //
 //	Islandwalk (This creature can't be blocked as long as defending player controls an Island.)
 //	Merfolk spells and Wizard spells you cast cost {1} less to cast.
-var StonybrookBanneret = newStonybrookBanneret()
+var StonybrookBanneret = newStonybrookBanneret
 
 func newStonybrookBanneret() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 //
 //	Enchant land
 //	Enchanted land has "{T}: Prevent the next 1 damage that would be dealt to any target this turn."
-var FloweringField = newFloweringField()
+var FloweringField = newFloweringField
 
 func newFloweringField() *game.CardDef {
 	return &game.CardDef{

@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Target opponent loses 1 life for each attacking creature you control. You gain that much life.
-var FoulTongueShriek = newFoulTongueShriek()
+var FoulTongueShriek = newFoulTongueShriek
 
 func newFoulTongueShriek() *game.CardDef {
 	return &game.CardDef{

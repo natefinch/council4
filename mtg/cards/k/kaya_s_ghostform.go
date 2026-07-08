@@ -18,7 +18,7 @@ import (
 //
 //	Enchant creature or planeswalker you control
 //	When enchanted permanent dies or is put into exile, return that card to the battlefield under your control.
-var KayaSGhostform = newKayaSGhostform()
+var KayaSGhostform = newKayaSGhostform
 
 func newKayaSGhostform() *game.CardDef {
 	return &game.CardDef{

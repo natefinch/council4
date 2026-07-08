@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature attacks, if another creature entered the battlefield under your control this turn, this creature gains flying until end of turn.
-var WaterspoutWarden = newWaterspoutWarden()
+var WaterspoutWarden = newWaterspoutWarden
 
 func newWaterspoutWarden() *game.CardDef {
 	return &game.CardDef{

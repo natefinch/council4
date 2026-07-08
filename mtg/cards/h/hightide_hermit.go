@@ -20,7 +20,7 @@ import (
 //	Defender
 //	When this creature enters, you get {E}{E}{E}{E} (four energy counters).
 //	Pay {E}{E}: This creature can attack this turn as though it didn't have defender.
-var HightideHermit = newHightideHermit()
+var HightideHermit = newHightideHermit
 
 func newHightideHermit() *game.CardDef {
 	return &game.CardDef{

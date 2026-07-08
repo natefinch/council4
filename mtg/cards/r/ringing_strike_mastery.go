@@ -20,7 +20,7 @@ import (
 //	When this Aura enters, tap enchanted creature.
 //	Enchanted creature doesn't untap during its controller's untap step.
 //	Enchanted creature has "{5}: Untap this creature."
-var RingingStrikeMastery = newRingingStrikeMastery()
+var RingingStrikeMastery = newRingingStrikeMastery
 
 func newRingingStrikeMastery() *game.CardDef {
 	return &game.CardDef{

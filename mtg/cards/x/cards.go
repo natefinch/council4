@@ -2,12 +2,13 @@
 
 package x
 
-import "github.com/natefinch/council4/mtg/game"
+import "github.com/natefinch/council4/mtg/cards/cardset"
 
-// Cards lists all card definitions in this package.
-var Cards = []*game.CardDef{
-	X23DeadlyWeapon,
-	XerexStrobeKnight,
-	XiahouDunTheOneEyed,
-	XunYuWeiAdvisor,
+// Cards lists all card definitions in this package, each paired with a
+// constructor so the registry can build them lazily.
+var Cards = []cardset.Entry{
+	{Name: "X-23, Deadly Weapon", New: X23DeadlyWeapon},
+	{Name: "Xerex Strobe-Knight", New: XerexStrobeKnight},
+	{Name: "Xiahou Dun, the One-Eyed", New: XiahouDunTheOneEyed},
+	{Name: "Xun Yu, Wei Advisor", New: XunYuWeiAdvisor},
 }

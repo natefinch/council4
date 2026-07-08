@@ -20,7 +20,7 @@ import (
 //	When this creature enters, choose one —
 //	• Put two +1/+1 counters on target creature you control.
 //	• You gain 4 life.
-var ApothecaryStomper = newApothecaryStomper()
+var ApothecaryStomper = newApothecaryStomper
 
 func newApothecaryStomper() *game.CardDef {
 	return &game.CardDef{

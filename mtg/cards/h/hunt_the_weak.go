@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Put a +1/+1 counter on target creature you control. Then that creature fights target creature you don't control. (Each deals damage equal to its power to the other.)
-var HuntTheWeak = newHuntTheWeak()
+var HuntTheWeak = newHuntTheWeak
 
 func newHuntTheWeak() *game.CardDef {
 	return &game.CardDef{

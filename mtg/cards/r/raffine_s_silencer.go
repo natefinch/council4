@@ -17,7 +17,7 @@ import (
 //
 //	When this creature enters, it connives. (Draw a card, then discard a card. If you discarded a nonland card, put a +1/+1 counter on this creature.)
 //	When this creature dies, target creature an opponent controls gets -X/-X until end of turn, where X is this creature's power.
-var RaffineSSilencer = newRaffineSSilencer()
+var RaffineSSilencer = newRaffineSSilencer
 
 func newRaffineSSilencer() *game.CardDef {
 	return &game.CardDef{

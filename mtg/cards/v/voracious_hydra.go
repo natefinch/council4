@@ -21,7 +21,7 @@ import (
 //	When this creature enters, choose one —
 //	• Double the number of +1/+1 counters on this creature.
 //	• This creature fights target creature you don't control.
-var VoraciousHydra = newVoraciousHydra()
+var VoraciousHydra = newVoraciousHydra
 
 func newVoraciousHydra() *game.CardDef {
 	return &game.CardDef{

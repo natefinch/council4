@@ -20,7 +20,7 @@ import (
 //	Kicker {1}{W} (You may pay an additional {1}{W} as you cast this spell.)
 //	Lifelink (Damage dealt by this creature also causes you to gain that much life.)
 //	When this creature enters, if it was kicked, return target nonland permanent card with mana value 2 or less from your graveyard to the battlefield.
-var SunBlessedHealer = newSunBlessedHealer()
+var SunBlessedHealer = newSunBlessedHealer
 
 func newSunBlessedHealer() *game.CardDef {
 	return &game.CardDef{

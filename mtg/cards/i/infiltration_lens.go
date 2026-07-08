@@ -66,4 +66,4 @@ var InfiltrationLens = func() *game.CardDef {
 		game.EquipActivatedAbility(cost.Mana{cost.O(1)}),
 	)
 	return card
-}()
+}

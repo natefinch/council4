@@ -19,7 +19,7 @@ import (
 //	Devoid (This card has no color.)
 //	When you cast this spell, tap up to one target creature and put a stun counter on it. (If a permanent with a stun counter would become untapped, remove one from it instead.)
 //	Reach
-var PetrifyingMeddler = newPetrifyingMeddler()
+var PetrifyingMeddler = newPetrifyingMeddler
 
 func newPetrifyingMeddler() *game.CardDef {
 	return &game.CardDef{

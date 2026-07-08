@@ -17,7 +17,7 @@ import (
 //
 //	Draw three cards.
 //	Adamant — If at least three blue mana was spent to cast this spell, scry 3.
-var UnexplainedVision = newUnexplainedVision()
+var UnexplainedVision = newUnexplainedVision
 
 func newUnexplainedVision() *game.CardDef {
 	return &game.CardDef{

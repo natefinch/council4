@@ -17,7 +17,7 @@ import (
 //
 //	Flying
 //	This creature can block only creatures with flying.
-var Vaporkin = newVaporkin()
+var Vaporkin = newVaporkin
 
 func newVaporkin() *game.CardDef {
 	return &game.CardDef{

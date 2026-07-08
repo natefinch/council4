@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Adamant — If at least three white mana was spent to cast this spell, this creature enters with a +1/+1 counter on it.
-var ArdenvalePaladin = newArdenvalePaladin()
+var ArdenvalePaladin = newArdenvalePaladin
 
 func newArdenvalePaladin() *game.CardDef {
 	return &game.CardDef{

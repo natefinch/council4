@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, distribute three +1/+1 counters among one, two, or three target creatures.
-var WurmskinForger = newWurmskinForger()
+var WurmskinForger = newWurmskinForger
 
 func newWurmskinForger() *game.CardDef {
 	return &game.CardDef{

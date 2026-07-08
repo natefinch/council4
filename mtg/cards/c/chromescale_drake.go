@@ -18,7 +18,7 @@ import (
 //	Affinity for artifacts (This spell costs {1} less to cast for each artifact you control.)
 //	Flying
 //	When this creature enters, reveal the top three cards of your library. Put all artifact cards revealed this way into your hand and the rest into your graveyard.
-var ChromescaleDrake = newChromescaleDrake()
+var ChromescaleDrake = newChromescaleDrake
 
 func newChromescaleDrake() *game.CardDef {
 	return &game.CardDef{

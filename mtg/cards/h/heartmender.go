@@ -19,7 +19,7 @@ import (
 //
 //	At the beginning of your upkeep, remove a -1/-1 counter from each creature you control.
 //	Persist (When this creature dies, if it had no -1/-1 counters on it, return it to the battlefield under its owner's control with a -1/-1 counter on it.)
-var Heartmender = newHeartmender()
+var Heartmender = newHeartmender
 
 func newHeartmender() *game.CardDef {
 	return &game.CardDef{

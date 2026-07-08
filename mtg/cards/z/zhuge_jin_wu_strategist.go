@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{T}: Target creature can't be blocked this turn. Activate only during your turn, before attackers are declared.
-var ZhugeJinWuStrategist = newZhugeJinWuStrategist()
+var ZhugeJinWuStrategist = newZhugeJinWuStrategist
 
 func newZhugeJinWuStrategist() *game.CardDef {
 	return &game.CardDef{

@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever a Sliver deals combat damage to a player, its controller may draw a card.
-var SynapseSliver = newSynapseSliver()
+var SynapseSliver = newSynapseSliver
 
 func newSynapseSliver() *game.CardDef {
 	return &game.CardDef{

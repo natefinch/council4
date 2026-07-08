@@ -18,7 +18,7 @@ import (
 //	Fear (This creature can't be blocked except by artifact creatures and/or black creatures.)
 //	When this creature enters, destroy target nonartifact, nonblack creature.
 //	Evoke {1}{B} (You may cast this spell for its evoke cost. If you do, it's sacrificed when it enters.)
-var Shriekmaw = newShriekmaw()
+var Shriekmaw = newShriekmaw
 
 func newShriekmaw() *game.CardDef {
 	return &game.CardDef{

@@ -19,7 +19,7 @@ import (
 //	First strike
 //	Whenever this creature deals combat damage to a player, that player discards a card at random.
 //	{B}: Regenerate this creature.
-var RakdosRingleader = newRakdosRingleader()
+var RakdosRingleader = newRakdosRingleader
 
 func newRakdosRingleader() *game.CardDef {
 	return &game.CardDef{

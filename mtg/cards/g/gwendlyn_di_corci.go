@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{T}: Target player discards a card at random. Activate only during your turn.
-var GwendlynDiCorci = newGwendlynDiCorci()
+var GwendlynDiCorci = newGwendlynDiCorci
 
 func newGwendlynDiCorci() *game.CardDef {
 	return &game.CardDef{

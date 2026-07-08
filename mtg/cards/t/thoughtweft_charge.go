@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Target creature gets +3/+3 until end of turn. If a creature entered the battlefield under your control this turn, draw a card.
-var ThoughtweftCharge = newThoughtweftCharge()
+var ThoughtweftCharge = newThoughtweftCharge
 
 func newThoughtweftCharge() *game.CardDef {
 	return &game.CardDef{

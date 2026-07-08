@@ -19,7 +19,7 @@ import (
 //	Flying
 //	This creature can block only creatures with flying.
 //	Tap two untapped Spirits you control: Tap target creature you don't control.
-var Shacklegeist = newShacklegeist()
+var Shacklegeist = newShacklegeist
 
 func newShacklegeist() *game.CardDef {
 	return &game.CardDef{

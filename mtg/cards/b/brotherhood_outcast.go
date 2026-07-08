@@ -21,7 +21,7 @@ import (
 //	When this creature enters, choose one —
 //	• Return target Aura or Equipment card with mana value 3 or less from your graveyard to the battlefield.
 //	• Put a shield counter on target creature. (If it would be dealt damage or destroyed, remove a shield counter from it instead.)
-var BrotherhoodOutcast = newBrotherhoodOutcast()
+var BrotherhoodOutcast = newBrotherhoodOutcast
 
 func newBrotherhoodOutcast() *game.CardDef {
 	return &game.CardDef{

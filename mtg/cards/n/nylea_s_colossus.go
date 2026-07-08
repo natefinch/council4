@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Constellation — Whenever this creature or another enchantment you control enters, double target creature's power and toughness until end of turn.
-var NyleaSColossus = newNyleaSColossus()
+var NyleaSColossus = newNyleaSColossus
 
 func newNyleaSColossus() *game.CardDef {
 	return &game.CardDef{

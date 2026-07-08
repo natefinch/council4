@@ -15,7 +15,7 @@ import (
 // Oracle text:
 //
 //	Noncreature spells cost {1} more to cast.
-var ThornOfAmethyst = newThornOfAmethyst()
+var ThornOfAmethyst = newThornOfAmethyst
 
 func newThornOfAmethyst() *game.CardDef {
 	return &game.CardDef{

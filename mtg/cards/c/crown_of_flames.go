@@ -19,7 +19,7 @@ import (
 //	Enchant creature
 //	{R}: Enchanted creature gets +1/+0 until end of turn.
 //	{R}: Return this Aura to its owner's hand.
-var CrownOfFlames = newCrownOfFlames()
+var CrownOfFlames = newCrownOfFlames
 
 func newCrownOfFlames() *game.CardDef {
 	return &game.CardDef{

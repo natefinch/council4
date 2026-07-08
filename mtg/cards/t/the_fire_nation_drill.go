@@ -21,7 +21,7 @@ import (
 //	When The Fire Nation Drill enters, you may tap it. When you do, destroy target creature with power 4 or less.
 //	{1}: Permanents your opponents control lose hexproof and indestructible until end of turn.
 //	Crew 2
-var TheFireNationDrill = newTheFireNationDrill()
+var TheFireNationDrill = newTheFireNationDrill
 
 func newTheFireNationDrill() *game.CardDef {
 	return &game.CardDef{

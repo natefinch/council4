@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	When this creature dies, you may pay {2}. If you do, return another target creature card from your graveyard to your hand.
-var CarrionThrash = newCarrionThrash()
+var CarrionThrash = newCarrionThrash
 
 func newCarrionThrash() *game.CardDef {
 	return &game.CardDef{

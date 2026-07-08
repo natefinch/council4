@@ -18,7 +18,7 @@ import (
 //
 //	At the beginning of your upkeep, sacrifice this creature unless you pay {W}{W}.
 //	{W}: The next time a source of your choice would deal damage to you this turn, prevent that damage.
-var HaazdaShieldMate = newHaazdaShieldMate()
+var HaazdaShieldMate = newHaazdaShieldMate
 
 func newHaazdaShieldMate() *game.CardDef {
 	return &game.CardDef{

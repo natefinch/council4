@@ -15,7 +15,7 @@ import (
 // Oracle text:
 //
 //	Whenever a creature dies, this artifact deals 2 damage to that creature's controller.
-var DingusStaff = newDingusStaff()
+var DingusStaff = newDingusStaff
 
 func newDingusStaff() *game.CardDef {
 	return &game.CardDef{

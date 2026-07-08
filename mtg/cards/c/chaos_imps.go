@@ -20,7 +20,7 @@ import (
 //	Flying
 //	Unleash (You may have this creature enter with a +1/+1 counter on it. It can't block as long as it has a +1/+1 counter on it.)
 //	This creature has trample as long as it has a +1/+1 counter on it.
-var ChaosImps = newChaosImps()
+var ChaosImps = newChaosImps
 
 func newChaosImps() *game.CardDef {
 	return &game.CardDef{

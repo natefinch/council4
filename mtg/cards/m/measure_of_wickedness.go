@@ -18,7 +18,7 @@ import (
 //
 //	At the beginning of your end step, sacrifice this enchantment and you lose 8 life.
 //	Whenever another card is put into your graveyard from anywhere, target opponent gains control of this enchantment.
-var MeasureOfWickedness = newMeasureOfWickedness()
+var MeasureOfWickedness = newMeasureOfWickedness
 
 func newMeasureOfWickedness() *game.CardDef {
 	return &game.CardDef{

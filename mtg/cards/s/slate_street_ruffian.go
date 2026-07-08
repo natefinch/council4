@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature becomes blocked, defending player discards a card.
-var SlateStreetRuffian = newSlateStreetRuffian()
+var SlateStreetRuffian = newSlateStreetRuffian
 
 func newSlateStreetRuffian() *game.CardDef {
 	return &game.CardDef{

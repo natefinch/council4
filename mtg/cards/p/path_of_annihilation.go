@@ -21,7 +21,7 @@ import (
 //	When this enchantment enters, create two 0/1 colorless Eldrazi Spawn creature tokens with "Sacrifice this token: Add {C}."
 //	Eldrazi you control have "{T}: Add one mana of any color."
 //	Whenever you cast a creature spell with mana value 7 or greater, you gain 4 life.
-var PathOfAnnihilation = newPathOfAnnihilation()
+var PathOfAnnihilation = newPathOfAnnihilation
 
 func newPathOfAnnihilation() *game.CardDef {
 	return &game.CardDef{

@@ -19,7 +19,7 @@ import (
 //	• All creatures get -2/-0 until end of turn.
 //	• Tap target creature.
 //	• Prevent the next 1 damage that would be dealt to any target this turn.
-var IvoryCharm = newIvoryCharm()
+var IvoryCharm = newIvoryCharm
 
 func newIvoryCharm() *game.CardDef {
 	return &game.CardDef{

@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature attacks, defending player mills ten cards.
-var NemesisOfReason = newNemesisOfReason()
+var NemesisOfReason = newNemesisOfReason
 
 func newNemesisOfReason() *game.CardDef {
 	return &game.CardDef{

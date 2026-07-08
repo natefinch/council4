@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Scorching Dragonfire deals 3 damage to target creature or planeswalker. If that creature or planeswalker would die this turn, exile it instead.
-var ScorchingDragonfire = newScorchingDragonfire()
+var ScorchingDragonfire = newScorchingDragonfire
 
 func newScorchingDragonfire() *game.CardDef {
 	return &game.CardDef{

@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, other Mercenary creatures get +1/+1 until end of turn.
-var PhyrexianDriver = newPhyrexianDriver()
+var PhyrexianDriver = newPhyrexianDriver
 
 func newPhyrexianDriver() *game.CardDef {
 	return &game.CardDef{

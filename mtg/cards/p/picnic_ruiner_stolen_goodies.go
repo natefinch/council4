@@ -19,7 +19,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature attacks while you control a creature with power 4 or greater, this creature gains double strike until end of turn.
-var PicnicRuiner = newPicnicRuiner()
+var PicnicRuiner = newPicnicRuiner
 
 func newPicnicRuiner() *game.CardDef {
 	return &game.CardDef{

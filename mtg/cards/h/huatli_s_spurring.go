@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Target creature gets +2/+0 until end of turn. If you control a Huatli planeswalker, that creature gets +4/+0 until end of turn instead.
-var HuatliSSpurring = newHuatliSSpurring()
+var HuatliSSpurring = newHuatliSSpurring
 
 func newHuatliSSpurring() *game.CardDef {
 	return &game.CardDef{

@@ -20,7 +20,7 @@ import (
 //	• Cure Wounds — You gain 2 life.
 //	• Dispel Magic — Destroy target enchantment.
 //	• Gentle Repose — Exile target card from a graveyard.
-var DawnbringerCleric = newDawnbringerCleric()
+var DawnbringerCleric = newDawnbringerCleric
 
 func newDawnbringerCleric() *game.CardDef {
 	return &game.CardDef{

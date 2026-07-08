@@ -18,7 +18,7 @@ import (
 //	Each creature you control assigns combat damage equal to its toughness rather than its power.
 //	Whenever Rasaad yn Bashir attacks, if you have the initiative, double the toughness of each creature you control until end of turn.
 //	Choose a Background (You can have a Background as a second commander.)
-var RasaadYnBashir = newRasaadYnBashir()
+var RasaadYnBashir = newRasaadYnBashir
 
 func newRasaadYnBashir() *game.CardDef {
 	return &game.CardDef{

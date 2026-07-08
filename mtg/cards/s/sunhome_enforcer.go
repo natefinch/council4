@@ -18,7 +18,7 @@ import (
 //
 //	Whenever this creature deals combat damage, you gain that much life.
 //	{1}{R}: This creature gets +1/+0 until end of turn.
-var SunhomeEnforcer = newSunhomeEnforcer()
+var SunhomeEnforcer = newSunhomeEnforcer
 
 func newSunhomeEnforcer() *game.CardDef {
 	return &game.CardDef{

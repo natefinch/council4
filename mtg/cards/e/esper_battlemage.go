@@ -18,7 +18,7 @@ import (
 //
 //	{W}, {T}: Prevent the next 2 damage that would be dealt to you this turn.
 //	{B}, {T}: Target creature gets -1/-1 until end of turn.
-var EsperBattlemage = newEsperBattlemage()
+var EsperBattlemage = newEsperBattlemage
 
 func newEsperBattlemage() *game.CardDef {
 	return &game.CardDef{

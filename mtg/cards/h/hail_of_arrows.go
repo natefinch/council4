@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Hail of Arrows deals X damage divided as you choose among any number of target attacking creatures.
-var HailOfArrows = newHailOfArrows()
+var HailOfArrows = newHailOfArrows
 
 func newHailOfArrows() *game.CardDef {
 	return &game.CardDef{

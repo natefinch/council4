@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, sacrifice it unless you sacrifice three Forests.
-var PrimevalForce = newPrimevalForce()
+var PrimevalForce = newPrimevalForce
 
 func newPrimevalForce() *game.CardDef {
 	return &game.CardDef{

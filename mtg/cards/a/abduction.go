@@ -19,7 +19,7 @@ import (
 //	When this Aura enters, untap enchanted creature.
 //	You control enchanted creature.
 //	When enchanted creature dies, return that card to the battlefield under its owner's control.
-var Abduction = newAbduction()
+var Abduction = newAbduction
 
 func newAbduction() *game.CardDef {
 	return &game.CardDef{

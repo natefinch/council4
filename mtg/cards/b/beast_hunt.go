@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Reveal the top three cards of your library. Put all creature cards revealed this way into your hand and the rest into your graveyard.
-var BeastHunt = newBeastHunt()
+var BeastHunt = newBeastHunt
 
 func newBeastHunt() *game.CardDef {
 	return &game.CardDef{

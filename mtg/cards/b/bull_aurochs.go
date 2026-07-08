@@ -17,7 +17,7 @@ import (
 //
 //	Trample
 //	Whenever this creature attacks, it gets +1/+0 until end of turn for each other attacking Aurochs.
-var BullAurochs = newBullAurochs()
+var BullAurochs = newBullAurochs
 
 func newBullAurochs() *game.CardDef {
 	return &game.CardDef{

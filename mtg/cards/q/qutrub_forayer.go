@@ -19,7 +19,7 @@ import (
 //	When this creature enters, choose one —
 //	• Destroy target creature that was dealt damage this turn.
 //	• Exile up to two target cards from a single graveyard.
-var QutrubForayer = newQutrubForayer()
+var QutrubForayer = newQutrubForayer
 
 func newQutrubForayer() *game.CardDef {
 	return &game.CardDef{

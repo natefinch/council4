@@ -19,7 +19,7 @@ import (
 //	Trample, toxic 1
 //	Whenever one or more creatures you control deal combat damage to one or more players, proliferate.
 //	Corrupted — At the beginning of your end step, if an opponent has three or more poison counters, draw a card, then you may put a land card from your hand onto the battlefield.
-var ContaminantGrafter = newContaminantGrafter()
+var ContaminantGrafter = newContaminantGrafter
 
 func newContaminantGrafter() *game.CardDef {
 	return &game.CardDef{

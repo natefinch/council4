@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	You have shroud. (You can't be the target of spells or abilities.)
-var TrueBeliever = newTrueBeliever()
+var TrueBeliever = newTrueBeliever
 
 func newTrueBeliever() *game.CardDef {
 	return &game.CardDef{

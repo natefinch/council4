@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Pay 2 life: Prevent the next 1 damage that would be dealt to target creature this turn.
-var MartyrsTomb = newMartyrsTomb()
+var MartyrsTomb = newMartyrsTomb
 
 func newMartyrsTomb() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 //
 //	Haste
 //	When Casey Jones enters, look at the top four cards of your library. You may reveal an artifact card from among them and put it into your hand. Put the rest on the bottom of your library in a random order.
-var CaseyJonesJuryRigJusticiar = newCaseyJonesJuryRigJusticiar()
+var CaseyJonesJuryRigJusticiar = newCaseyJonesJuryRigJusticiar
 
 func newCaseyJonesJuryRigJusticiar() *game.CardDef {
 	return &game.CardDef{

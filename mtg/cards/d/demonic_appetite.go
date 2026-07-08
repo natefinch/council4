@@ -18,7 +18,7 @@ import (
 //	Enchant creature you control
 //	Enchanted creature gets +3/+3.
 //	At the beginning of your upkeep, sacrifice a creature.
-var DemonicAppetite = newDemonicAppetite()
+var DemonicAppetite = newDemonicAppetite
 
 func newDemonicAppetite() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 //
 //	This creature can block an additional creature each combat.
 //	Embalm {2}{W} ({2}{W}, Exile this card from your graveyard: Create a token that's a copy of it, except it's a white Zombie Human Warrior with no mana cost. Embalm only as a sorcery.)
-var TrueheartDuelist = newTrueheartDuelist()
+var TrueheartDuelist = newTrueheartDuelist
 
 func newTrueheartDuelist() *game.CardDef {
 	return &game.CardDef{

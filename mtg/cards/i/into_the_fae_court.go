@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Draw three cards. Create a 1/1 blue Faerie creature token with flying and "This token can block only creatures with flying."
-var IntoTheFaeCourt = newIntoTheFaeCourt()
+var IntoTheFaeCourt = newIntoTheFaeCourt
 
 func newIntoTheFaeCourt() *game.CardDef {
 	return &game.CardDef{

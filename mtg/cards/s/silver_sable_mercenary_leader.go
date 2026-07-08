@@ -10,7 +10,7 @@ import (
 )
 
 // SilverSableMercenaryLeader is the card definition for Silver Sable, Mercenary Leader.
-var SilverSableMercenaryLeader = newSilverSableMercenaryLeader()
+var SilverSableMercenaryLeader = newSilverSableMercenaryLeader
 
 func newSilverSableMercenaryLeader() *game.CardDef {
 	return &game.CardDef{

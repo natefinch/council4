@@ -17,7 +17,7 @@ import (
 //
 //	Enchant creature
 //	Whenever enchanted creature deals damage, you gain that much life.
-var VampiricLink = newVampiricLink()
+var VampiricLink = newVampiricLink
 
 func newVampiricLink() *game.CardDef {
 	return &game.CardDef{

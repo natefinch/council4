@@ -17,7 +17,7 @@ import (
 //
 //	Flying
 //	Whenever this creature attacks, look at the top four cards of your library. You may reveal a Cleric card, a Rogue card, a Warrior card, and/or a Wizard card from among them and put those cards into your hand. Put the rest on the bottom of your library in a random order.
-var HarperRecruiter = newHarperRecruiter()
+var HarperRecruiter = newHarperRecruiter
 
 func newHarperRecruiter() *game.CardDef {
 	return &game.CardDef{

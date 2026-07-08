@@ -21,7 +21,7 @@ import (
 //	This creature enters with four -1/-1 counters on it.
 //	Whenever you cast a red spell, remove a -1/-1 counter from this creature.
 //	Whenever you cast a white spell, remove a -1/-1 counter from this creature.
-var BelligerentHatchling = newBelligerentHatchling()
+var BelligerentHatchling = newBelligerentHatchling
 
 func newBelligerentHatchling() *game.CardDef {
 	return &game.CardDef{

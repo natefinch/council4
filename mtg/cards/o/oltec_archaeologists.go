@@ -19,7 +19,7 @@ import (
 //	When this creature enters, choose one —
 //	• Return target artifact card from your graveyard to your hand.
 //	• Scry 3. (Look at the top three cards of your library, then put any number of them on the bottom and the rest on top in any order.)
-var OltecArchaeologists = newOltecArchaeologists()
+var OltecArchaeologists = newOltecArchaeologists
 
 func newOltecArchaeologists() *game.CardDef {
 	return &game.CardDef{

@@ -19,7 +19,7 @@ import (
 //	Enchant creature
 //	Enchanted creature gets +1/+1.
 //	Sacrifice this Aura: Enchanted creature gets +3/+3 until end of turn.
-var BriarShield = newBriarShield()
+var BriarShield = newBriarShield
 
 func newBriarShield() *game.CardDef {
 	return &game.CardDef{

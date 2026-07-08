@@ -15,7 +15,7 @@ import (
 // Oracle text:
 //
 //	{T}: Prevent the next 1 damage that would be dealt to target creature this turn.
-var Oasis = newOasis()
+var Oasis = newOasis
 
 func newOasis() *game.CardDef {
 	return &game.CardDef{

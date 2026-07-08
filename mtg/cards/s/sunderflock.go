@@ -18,7 +18,7 @@ import (
 //	This spell costs {X} less to cast, where X is the greatest mana value among Elementals you control.
 //	Flying
 //	When this creature enters, if you cast it, return all non-Elemental creatures to their owners' hands.
-var Sunderflock = newSunderflock()
+var Sunderflock = newSunderflock
 
 func newSunderflock() *game.CardDef {
 	return &game.CardDef{

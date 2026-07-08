@@ -15,7 +15,7 @@ import (
 // Oracle text:
 //
 //	Each player sacrifices all permanents they control that are one or more colors.
-var AllIsDust = newAllIsDust()
+var AllIsDust = newAllIsDust
 
 func newAllIsDust() *game.CardDef {
 	return &game.CardDef{

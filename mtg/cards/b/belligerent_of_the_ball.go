@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Celebration — At the beginning of combat on your turn, if two or more nonland permanents entered the battlefield under your control this turn, target creature you control gets +1/+0 and gains menace until end of turn. (It can't be blocked except by two or more creatures.)
-var BelligerentOfTheBall = newBelligerentOfTheBall()
+var BelligerentOfTheBall = newBelligerentOfTheBall
 
 func newBelligerentOfTheBall() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 //
 //	Vigilance, haste
 //	Valiant — Whenever this creature becomes the target of a spell or ability you control for the first time each turn, put a +1/+1 counter on it.
-var SeedglaiveMentor = newSeedglaiveMentor()
+var SeedglaiveMentor = newSeedglaiveMentor
 
 func newSeedglaiveMentor() *game.CardDef {
 	return &game.CardDef{

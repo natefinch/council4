@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Noncreature spells cost {1} more to cast.
-var Glowrider = newGlowrider()
+var Glowrider = newGlowrider
 
 func newGlowrider() *game.CardDef {
 	return &game.CardDef{

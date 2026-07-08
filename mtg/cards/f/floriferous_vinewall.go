@@ -17,7 +17,7 @@ import (
 //
 //	Defender
 //	When this creature enters, look at the top six cards of your library. You may reveal a land card from among them and put it into your hand. Put the rest on the bottom of your library in a random order.
-var FloriferousVinewall = newFloriferousVinewall()
+var FloriferousVinewall = newFloriferousVinewall
 
 func newFloriferousVinewall() *game.CardDef {
 	return &game.CardDef{

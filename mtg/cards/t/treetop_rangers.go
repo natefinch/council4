@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	This creature can't be blocked except by creatures with flying.
-var TreetopRangers = newTreetopRangers()
+var TreetopRangers = newTreetopRangers
 
 func newTreetopRangers() *game.CardDef {
 	return &game.CardDef{

@@ -19,7 +19,7 @@ import (
 //	Flying
 //	Whenever Gwaihir attacks, target attacking creature gains flying until end of turn.
 //	At the beginning of each end step, if you gained 3 or more life this turn, create a 3/3 white Bird creature token with flying and "Whenever this token attacks, target attacking creature gains flying until end of turn."
-var GwaihirGreatestOfTheEagles = newGwaihirGreatestOfTheEagles()
+var GwaihirGreatestOfTheEagles = newGwaihirGreatestOfTheEagles
 
 func newGwaihirGreatestOfTheEagles() *game.CardDef {
 	return &game.CardDef{

@@ -10,7 +10,7 @@ import (
 )
 
 // EternalIsolation is the card definition for Eternal Isolation.
-var EternalIsolation = newEternalIsolation()
+var EternalIsolation = newEternalIsolation
 
 func newEternalIsolation() *game.CardDef {
 	return &game.CardDef{

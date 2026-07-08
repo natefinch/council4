@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, you may search your library and/or graveyard for a card named Sorin, Vampire Lord, reveal it, and put it into your hand. If you search your library this way, shuffle.
-var SorinSGuide = newSorinSGuide()
+var SorinSGuide = newSorinSGuide
 
 func newSorinSGuide() *game.CardDef {
 	return &game.CardDef{

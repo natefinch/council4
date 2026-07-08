@@ -19,7 +19,7 @@ import (
 //	Enchant creature you control
 //	Enchanted creature gets +2/+0.
 //	{R}, Sacrifice this Aura: This Aura deals 2 damage to any target.
-var InfernoFist = newInfernoFist()
+var InfernoFist = newInfernoFist
 
 func newInfernoFist() *game.CardDef {
 	return &game.CardDef{

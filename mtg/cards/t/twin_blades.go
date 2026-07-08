@@ -19,7 +19,7 @@ import (
 //	When this Equipment enters, attach it to target creature you control. That creature gains double strike until end of turn.
 //	Equipped creature gets +1/+1.
 //	Equip {2} ({2}: Attach to target creature you control. Equip only as a sorcery.)
-var TwinBlades = newTwinBlades()
+var TwinBlades = newTwinBlades
 
 func newTwinBlades() *game.CardDef {
 	return &game.CardDef{

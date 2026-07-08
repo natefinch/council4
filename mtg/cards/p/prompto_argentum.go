@@ -19,7 +19,7 @@ import (
 //
 //	Haste
 //	Selfie Shot — Whenever you cast a noncreature spell, if at least four mana was spent to cast it, create a Treasure token.
-var PromptoArgentum = newPromptoArgentum()
+var PromptoArgentum = newPromptoArgentum
 
 func newPromptoArgentum() *game.CardDef {
 	return &game.CardDef{

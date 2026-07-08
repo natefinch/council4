@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Divine Retribution deals damage to target attacking creature equal to the number of attacking creatures.
-var DivineRetribution = newDivineRetribution()
+var DivineRetribution = newDivineRetribution
 
 func newDivineRetribution() *game.CardDef {
 	return &game.CardDef{

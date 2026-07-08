@@ -9,7 +9,7 @@ import (
 )
 
 // Whimwader is the card definition for Whimwader.
-var Whimwader = newWhimwader()
+var Whimwader = newWhimwader
 
 func newWhimwader() *game.CardDef {
 	return &game.CardDef{

@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, it connives. (Draw a card, then discard a card. If you discarded a nonland card, put a +1/+1 counter on this creature.)
-var RaffineSInformant = newRaffineSInformant()
+var RaffineSInformant = newRaffineSInformant
 
 func newRaffineSInformant() *game.CardDef {
 	return &game.CardDef{

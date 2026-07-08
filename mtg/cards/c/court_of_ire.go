@@ -17,7 +17,7 @@ import (
 //
 //	When this enchantment enters, you become the monarch.
 //	At the beginning of your upkeep, this enchantment deals 2 damage to any target. If you're the monarch, it deals 7 damage instead.
-var CourtOfIre = newCourtOfIre()
+var CourtOfIre = newCourtOfIre
 
 func newCourtOfIre() *game.CardDef {
 	return &game.CardDef{

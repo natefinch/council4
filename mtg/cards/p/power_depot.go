@@ -19,7 +19,7 @@ import (
 //	{T}: Add {C}.
 //	{T}: Add one mana of any color. Spend this mana only to cast artifact spells or activate abilities of artifacts.
 //	Modular 1
-var PowerDepot = newPowerDepot()
+var PowerDepot = newPowerDepot
 
 func newPowerDepot() *game.CardDef {
 	return &game.CardDef{

@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Destroy all non-Aura enchantments.
-var TranquilDomain = newTranquilDomain()
+var TranquilDomain = newTranquilDomain
 
 func newTranquilDomain() *game.CardDef {
 	return &game.CardDef{

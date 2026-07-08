@@ -17,7 +17,7 @@ import (
 //
 //	First strike
 //	Whenever a creature dealt damage by this creature this turn dies, you gain life equal to that creature's toughness.
-var AbattoirGhoul = newAbattoirGhoul()
+var AbattoirGhoul = newAbattoirGhoul
 
 func newAbattoirGhoul() *game.CardDef {
 	return &game.CardDef{

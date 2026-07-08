@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{T}: Target creature gets +2/+2 until end of turn. Activate only during your turn, before attackers are declared.
-var SternMarshal = newSternMarshal()
+var SternMarshal = newSternMarshal
 
 func newSternMarshal() *game.CardDef {
 	return &game.CardDef{

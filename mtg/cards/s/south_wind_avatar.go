@@ -18,7 +18,7 @@ import (
 //	Deathtouch
 //	Whenever another creature you control dies, you gain life equal to its toughness.
 //	Whenever you gain life, each opponent loses 1 life.
-var SouthWindAvatar = newSouthWindAvatar()
+var SouthWindAvatar = newSouthWindAvatar
 
 func newSouthWindAvatar() *game.CardDef {
 	return &game.CardDef{

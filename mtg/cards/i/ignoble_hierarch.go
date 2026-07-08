@@ -44,4 +44,4 @@ var IgnobleHierarch = func() *game.CardDef {
 
 	card.ManaAbilities = append(card.ManaAbilities, game.TapManaChoiceAbility(mana.B, mana.R, mana.G))
 	return card
-}()
+}

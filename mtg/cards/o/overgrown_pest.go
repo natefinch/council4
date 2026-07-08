@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, look at the top five cards of your library. You may reveal a land or double-faced card from among them and put that card into your hand. Put the rest on the bottom of your library in a random order.
-var OvergrownPest = newOvergrownPest()
+var OvergrownPest = newOvergrownPest
 
 func newOvergrownPest() *game.CardDef {
 	return &game.CardDef{

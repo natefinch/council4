@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature attacks while you control a token, this creature gets +2/+0 until end of turn.
-var SeasonedWarrenguard = newSeasonedWarrenguard()
+var SeasonedWarrenguard = newSeasonedWarrenguard
 
 func newSeasonedWarrenguard() *game.CardDef {
 	return &game.CardDef{

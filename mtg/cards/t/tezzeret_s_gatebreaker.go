@@ -18,7 +18,7 @@ import (
 //
 //	When this artifact enters, look at the top five cards of your library. You may reveal a blue or artifact card from among them and put it into your hand. Put the rest on the bottom of your library in a random order.
 //	{5}{U}, {T}, Sacrifice this artifact: Creatures you control can't be blocked this turn.
-var TezzeretSGatebreaker = newTezzeretSGatebreaker()
+var TezzeretSGatebreaker = newTezzeretSGatebreaker
 
 func newTezzeretSGatebreaker() *game.CardDef {
 	return &game.CardDef{

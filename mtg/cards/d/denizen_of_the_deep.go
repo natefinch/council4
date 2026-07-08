@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, return each other creature you control to its owner's hand.
-var DenizenOfTheDeep = newDenizenOfTheDeep()
+var DenizenOfTheDeep = newDenizenOfTheDeep
 
 func newDenizenOfTheDeep() *game.CardDef {
 	return &game.CardDef{

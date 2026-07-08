@@ -19,7 +19,7 @@ import (
 //	Kicker {4} (You may pay an additional {4} as you cast this spell.)
 //	This creature can't block.
 //	If this creature was kicked, it enters with a +1/+1 counter on it.
-var KavuAggressor = newKavuAggressor()
+var KavuAggressor = newKavuAggressor
 
 func newKavuAggressor() *game.CardDef {
 	return &game.CardDef{

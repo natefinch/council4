@@ -18,7 +18,7 @@ import (
 //
 //	At the beginning of your upkeep, put a -1/-1 counter on this creature.
 //	Whenever you cast a noncreature spell, remove a -1/-1 counter from this creature.
-var Magmaroth = newMagmaroth()
+var Magmaroth = newMagmaroth
 
 func newMagmaroth() *game.CardDef {
 	return &game.CardDef{

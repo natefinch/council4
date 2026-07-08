@@ -20,7 +20,7 @@ import (
 //	When this Vehicle enters, create a 0/0 blue Alien creature token. Put a +1/+1 counter on it.
 //	Whenever this Vehicle attacks, proliferate. (Choose any number of permanents and/or players, then give each another counter of each kind already there.)
 //	Crew 2
-var ReconCraftTheta = newReconCraftTheta()
+var ReconCraftTheta = newReconCraftTheta
 
 func newReconCraftTheta() *game.CardDef {
 	return &game.CardDef{

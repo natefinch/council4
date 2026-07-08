@@ -18,7 +18,7 @@ import (
 //
 //	Whenever you draw your second card each turn, create a 1/1 blue Merfolk creature token.
 //	{U}, {T}: Target Merfolk can't be blocked this turn.
-var DaughterOfTheDeep = newDaughterOfTheDeep()
+var DaughterOfTheDeep = newDaughterOfTheDeep
 
 func newDaughterOfTheDeep() *game.CardDef {
 	return &game.CardDef{

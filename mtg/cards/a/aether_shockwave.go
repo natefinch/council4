@@ -18,7 +18,7 @@ import (
 //	Choose one —
 //	• Tap all Spirits.
 //	• Tap all non-Spirit creatures.
-var AetherShockwave = newAetherShockwave()
+var AetherShockwave = newAetherShockwave
 
 func newAetherShockwave() *game.CardDef {
 	return &game.CardDef{

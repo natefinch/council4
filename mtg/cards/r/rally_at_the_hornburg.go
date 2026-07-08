@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Create two 1/1 white Human Soldier creature tokens. Humans you control gain haste until end of turn.
-var RallyAtTheHornburg = newRallyAtTheHornburg()
+var RallyAtTheHornburg = newRallyAtTheHornburg
 
 func newRallyAtTheHornburg() *game.CardDef {
 	return &game.CardDef{

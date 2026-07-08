@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Ozai's Cruelty deals 2 damage to target player. That player discards two cards.
-var OzaiSCruelty = newOzaiSCruelty()
+var OzaiSCruelty = newOzaiSCruelty
 
 func newOzaiSCruelty() *game.CardDef {
 	return &game.CardDef{

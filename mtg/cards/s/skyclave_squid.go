@@ -17,7 +17,7 @@ import (
 //
 //	Defender
 //	Landfall — Whenever a land you control enters, this creature can attack this turn as though it didn't have defender.
-var SkyclaveSquid = newSkyclaveSquid()
+var SkyclaveSquid = newSkyclaveSquid
 
 func newSkyclaveSquid() *game.CardDef {
 	return &game.CardDef{

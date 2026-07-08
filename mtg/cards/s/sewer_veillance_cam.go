@@ -19,7 +19,7 @@ import (
 //	Flash
 //	When this artifact enters or leaves the battlefield, you may tap or untap target creature.
 //	{3}{U}, Sacrifice this artifact: Draw two cards.
-var SewerVeillanceCam = newSewerVeillanceCam()
+var SewerVeillanceCam = newSewerVeillanceCam
 
 func newSewerVeillanceCam() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	At the beginning of your end step, if you're the monarch, put a +1/+1 counter on this creature.
-var ThroneWarden = newThroneWarden()
+var ThroneWarden = newThroneWarden
 
 func newThroneWarden() *game.CardDef {
 	return &game.CardDef{

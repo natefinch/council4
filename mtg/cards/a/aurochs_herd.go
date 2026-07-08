@@ -19,7 +19,7 @@ import (
 //	Trample
 //	When this creature enters, you may search your library for an Aurochs card, reveal it, put it into your hand, then shuffle.
 //	Whenever this creature attacks, it gets +1/+0 until end of turn for each other attacking Aurochs.
-var AurochsHerd = newAurochsHerd()
+var AurochsHerd = newAurochsHerd
 
 func newAurochsHerd() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 //
 //	{X}, {T}, Sacrifice this artifact: Create an X/X colorless Golem artifact creature token. Activate only as a sorcery.
 //	Unearth {2}{G} ({2}{G}: Return this card from your graveyard to the battlefield. Exile it at the beginning of the next end step or if it would leave the battlefield. Unearth only as a sorcery.)
-var MaskOfTheJadecrafter = newMaskOfTheJadecrafter()
+var MaskOfTheJadecrafter = newMaskOfTheJadecrafter
 
 func newMaskOfTheJadecrafter() *game.CardDef {
 	return &game.CardDef{

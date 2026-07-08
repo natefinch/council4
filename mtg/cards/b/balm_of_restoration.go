@@ -18,7 +18,7 @@ import (
 //	{1}, {T}, Sacrifice this artifact: Choose one —
 //	• You gain 2 life.
 //	• Prevent the next 2 damage that would be dealt to any target this turn.
-var BalmOfRestoration = newBalmOfRestoration()
+var BalmOfRestoration = newBalmOfRestoration
 
 func newBalmOfRestoration() *game.CardDef {
 	return &game.CardDef{

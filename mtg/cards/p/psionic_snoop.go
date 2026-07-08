@@ -17,7 +17,7 @@ import (
 //
 //	Flash
 //	When this creature enters, it connives. (Draw a card, then discard a card. If you discarded a nonland card, put a +1/+1 counter on this creature.)
-var PsionicSnoop = newPsionicSnoop()
+var PsionicSnoop = newPsionicSnoop
 
 func newPsionicSnoop() *game.CardDef {
 	return &game.CardDef{

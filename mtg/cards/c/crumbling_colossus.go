@@ -16,7 +16,7 @@ import (
 //
 //	Trample (This creature can deal excess combat damage to the player or planeswalker it's attacking.)
 //	When this creature attacks, sacrifice it at end of combat.
-var CrumblingColossus = newCrumblingColossus()
+var CrumblingColossus = newCrumblingColossus
 
 func newCrumblingColossus() *game.CardDef {
 	return &game.CardDef{

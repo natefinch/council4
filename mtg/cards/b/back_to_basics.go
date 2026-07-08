@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Nonbasic lands don't untap during their controllers' untap steps.
-var BackToBasics = newBackToBasics()
+var BackToBasics = newBackToBasics
 
 func newBackToBasics() *game.CardDef {
 	return &game.CardDef{

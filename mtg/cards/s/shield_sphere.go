@@ -17,7 +17,7 @@ import (
 //
 //	Defender
 //	Whenever this creature blocks, put a -0/-1 counter on it.
-var ShieldSphere = newShieldSphere()
+var ShieldSphere = newShieldSphere
 
 func newShieldSphere() *game.CardDef {
 	return &game.CardDef{

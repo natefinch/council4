@@ -19,7 +19,7 @@ import (
 //	{T}, Discard a card: Create a 1/1 black and green Pest creature token with "When this token dies, you gain 1 life."
 //	{1}, {T}: Each opponent mills cards equal to the amount of life you gained this turn.
 //	{4}, {T}: Exile four target cards from a single graveyard. Draw a card.
-var PestilentCauldron = newPestilentCauldron()
+var PestilentCauldron = newPestilentCauldron
 
 func newPestilentCauldron() *game.CardDef {
 	return &game.CardDef{

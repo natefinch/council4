@@ -19,7 +19,7 @@ import (
 //
 //	Menace (This creature can't be blocked except by two or more creatures.)
 //	When this creature enters, you may cast target instant or sorcery card with mana value 3 or less from your graveyard without paying its mana cost. If that spell would be put into your graveyard, exile it instead.
-var GoblinDarkDwellers = newGoblinDarkDwellers()
+var GoblinDarkDwellers = newGoblinDarkDwellers
 
 func newGoblinDarkDwellers() *game.CardDef {
 	return &game.CardDef{

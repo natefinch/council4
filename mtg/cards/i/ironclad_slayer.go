@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, you may return target Aura or Equipment card from your graveyard to your hand.
-var IroncladSlayer = newIroncladSlayer()
+var IroncladSlayer = newIroncladSlayer
 
 func newIroncladSlayer() *game.CardDef {
 	return &game.CardDef{

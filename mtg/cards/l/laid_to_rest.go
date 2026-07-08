@@ -18,7 +18,7 @@ import (
 //
 //	Whenever a Human you control dies, draw a card.
 //	Whenever a creature you control with a +1/+1 counter on it dies, you gain 2 life.
-var LaidToRest = newLaidToRest()
+var LaidToRest = newLaidToRest
 
 func newLaidToRest() *game.CardDef {
 	return &game.CardDef{

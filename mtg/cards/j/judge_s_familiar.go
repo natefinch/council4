@@ -19,7 +19,7 @@ import (
 //
 //	Flying
 //	Sacrifice this creature: Counter target instant or sorcery spell unless its controller pays {1}.
-var JudgeSFamiliar = newJudgeSFamiliar()
+var JudgeSFamiliar = newJudgeSFamiliar
 
 func newJudgeSFamiliar() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 //
 //	This creature can block an additional creature each combat.
 //	Afterlife 1 (When this creature dies, create a 1/1 white and black Spirit creature token with flying.)
-var KnightOfSorrows = newKnightOfSorrows()
+var KnightOfSorrows = newKnightOfSorrows
 
 func newKnightOfSorrows() *game.CardDef {
 	return &game.CardDef{

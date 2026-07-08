@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{2}{B}, {T}: Destroy target creature that was dealt damage this turn.
-var WitchSMist = newWitchSMist()
+var WitchSMist = newWitchSMist
 
 func newWitchSMist() *game.CardDef {
 	return &game.CardDef{

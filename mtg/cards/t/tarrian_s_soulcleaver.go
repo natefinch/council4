@@ -19,7 +19,7 @@ import (
 //	Equipped creature has vigilance.
 //	Whenever another artifact or creature is put into a graveyard from the battlefield, put a +1/+1 counter on equipped creature.
 //	Equip {2}
-var TarrianSSoulcleaver = newTarrianSSoulcleaver()
+var TarrianSSoulcleaver = newTarrianSSoulcleaver
 
 func newTarrianSSoulcleaver() *game.CardDef {
 	return &game.CardDef{

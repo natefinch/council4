@@ -19,7 +19,7 @@ import (
 //	Enchant land
 //	When this Aura enters, create a 2/2 white Knight creature token with vigilance.
 //	Enchanted land has "{T}: Prevent the next 1 damage that would be dealt to you this turn."
-var SecurityBlockade = newSecurityBlockade()
+var SecurityBlockade = newSecurityBlockade
 
 func newSecurityBlockade() *game.CardDef {
 	return &game.CardDef{

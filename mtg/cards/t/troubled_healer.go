@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Sacrifice a land: Prevent the next 2 damage that would be dealt to any target this turn.
-var TroubledHealer = newTroubledHealer()
+var TroubledHealer = newTroubledHealer
 
 func newTroubledHealer() *game.CardDef {
 	return &game.CardDef{

@@ -19,7 +19,7 @@ import (
 //	Double strike (This creature deals both first-strike and regular combat damage.)
 //	When this creature enters, you get {E}{E} (two energy counters).
 //	Whenever this creature attacks, you may pay {E}{E}. If you do, put a +1/+1 counter on it.
-var ScrapperChampion = newScrapperChampion()
+var ScrapperChampion = newScrapperChampion
 
 func newScrapperChampion() *game.CardDef {
 	return &game.CardDef{

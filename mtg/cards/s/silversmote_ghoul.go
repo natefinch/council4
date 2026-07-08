@@ -19,7 +19,7 @@ import (
 //
 //	At the beginning of your end step, if you gained 3 or more life this turn, return this card from your graveyard to the battlefield tapped.
 //	{1}{B}, Sacrifice this creature: Draw a card.
-var SilversmoteGhoul = newSilversmoteGhoul()
+var SilversmoteGhoul = newSilversmoteGhoul
 
 func newSilversmoteGhoul() *game.CardDef {
 	return &game.CardDef{

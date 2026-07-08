@@ -18,7 +18,7 @@ import (
 //
 //	Sacrifice this creature: Regenerate target creature.
 //	{W}{W}, {T}, Sacrifice this creature: Counter target spell that targets an enchantment.
-var VigilantMartyr = newVigilantMartyr()
+var VigilantMartyr = newVigilantMartyr
 
 func newVigilantMartyr() *game.CardDef {
 	return &game.CardDef{

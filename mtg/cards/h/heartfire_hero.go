@@ -18,7 +18,7 @@ import (
 //
 //	Valiant — Whenever this creature becomes the target of a spell or ability you control for the first time each turn, put a +1/+1 counter on it.
 //	When this creature dies, it deals damage equal to its power to each opponent.
-var HeartfireHero = newHeartfireHero()
+var HeartfireHero = newHeartfireHero
 
 func newHeartfireHero() *game.CardDef {
 	return &game.CardDef{

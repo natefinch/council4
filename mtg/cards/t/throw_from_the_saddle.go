@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Target creature you control gets +1/+1 until end of turn. Put a +1/+1 counter on it instead if it's a Mount. Then it deals damage equal to its power to target creature you don't control.
-var ThrowFromTheSaddle = newThrowFromTheSaddle()
+var ThrowFromTheSaddle = newThrowFromTheSaddle
 
 func newThrowFromTheSaddle() *game.CardDef {
 	return &game.CardDef{

@@ -19,7 +19,7 @@ import (
 //
 //	When this enchantment enters, you become the monarch.
 //	At the beginning of your upkeep, return target permanent card with mana value 3 or less from your graveyard to your hand. If you're the monarch, return that permanent card to the battlefield instead.
-var CourtOfArdenvale = newCourtOfArdenvale()
+var CourtOfArdenvale = newCourtOfArdenvale
 
 func newCourtOfArdenvale() *game.CardDef {
 	return &game.CardDef{

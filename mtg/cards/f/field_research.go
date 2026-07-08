@@ -17,7 +17,7 @@ import (
 //
 //	Kicker {2}{U} (You may pay an additional {2}{U} as you cast this spell.)
 //	Draw two cards. If this spell was kicked, draw three cards instead.
-var FieldResearch = newFieldResearch()
+var FieldResearch = newFieldResearch
 
 func newFieldResearch() *game.CardDef {
 	return &game.CardDef{

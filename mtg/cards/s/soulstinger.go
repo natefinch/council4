@@ -18,7 +18,7 @@ import (
 //
 //	When this creature enters, put two -1/-1 counters on target creature you control.
 //	When this creature dies, you may put a -1/-1 counter on target creature for each -1/-1 counter on this creature.
-var Soulstinger = newSoulstinger()
+var Soulstinger = newSoulstinger
 
 func newSoulstinger() *game.CardDef {
 	return &game.CardDef{

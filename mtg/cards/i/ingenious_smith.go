@@ -18,7 +18,7 @@ import (
 //
 //	When this creature enters, look at the top four cards of your library. You may reveal an artifact card from among them and put it into your hand. Put the rest on the bottom of your library in a random order.
 //	Whenever one or more artifacts you control enter, put a +1/+1 counter on this creature. This ability triggers only once each turn.
-var IngeniousSmith = newIngeniousSmith()
+var IngeniousSmith = newIngeniousSmith
 
 func newIngeniousSmith() *game.CardDef {
 	return &game.CardDef{

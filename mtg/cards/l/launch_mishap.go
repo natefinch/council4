@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Counter target creature or planeswalker spell. Create a 1/1 colorless Thopter artifact creature token with flying.
-var LaunchMishap = newLaunchMishap()
+var LaunchMishap = newLaunchMishap
 
 func newLaunchMishap() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 //
 //	Nick Valentine can't be blocked except by artifact creatures.
 //	Whenever Nick Valentine or another artifact creature you control dies, you may investigate. (To investigate, create a Clue token. It's an artifact with "{2}, Sacrifice this token: Draw a card.")
-var NickValentinePrivateEye = newNickValentinePrivateEye()
+var NickValentinePrivateEye = newNickValentinePrivateEye
 
 func newNickValentinePrivateEye() *game.CardDef {
 	return &game.CardDef{

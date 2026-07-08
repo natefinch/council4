@@ -20,68 +20,70 @@ import (
 //
 // The second ability is modeled as two independent color choices from {B, R},
 // which covers the three legal outputs: {B}{B}, {B}{R}, and {R}{R}.
-var GravenCairns = &game.CardDef{
-	ColorIdentity: color.NewIdentity(color.Black, color.Red),
-	CardFace: game.CardFace{
-		Name:  "Graven Cairns",
-		Types: []types.Card{types.Land},
-		OracleText: `
+var GravenCairns = func() *game.CardDef {
+	return &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Black, color.Red),
+		CardFace: game.CardFace{
+			Name:  "Graven Cairns",
+			Types: []types.Card{types.Land},
+			OracleText: `
 			{T}: Add {C}.
 			{B/R}, {T}: Add {B}{B}, {B}{R}, or {R}{R}.
 		`,
-		ManaAbilities: []game.ManaAbility{
-			game.TapManaAbility(mana.C),
-			{
-				Text: `
+			ManaAbilities: []game.ManaAbility{
+				game.TapManaAbility(mana.C),
+				{
+					Text: `
 					{B/R}, {T}: Add {B}{B}, {B}{R}, or {R}{R}.
 				`,
-				ManaCost: opt.Val(cost.Mana{
-					cost.HybridMana(mana.B, mana.R),
-				}),
-				AdditionalCosts: cost.Tap,
-				Content: game.Mode{
-					Sequence: []game.Instruction{
-						{
-							Primitive: game.Choose{
-								Choice: game.ResolutionChoice{
-									Kind:   game.ResolutionChoiceMana,
-									Prompt: "Choose first mana color ({B} or {R})",
-									Colors: []mana.Color{
-										mana.B,
-										mana.R,
+					ManaCost: opt.Val(cost.Mana{
+						cost.HybridMana(mana.B, mana.R),
+					}),
+					AdditionalCosts: cost.Tap,
+					Content: game.Mode{
+						Sequence: []game.Instruction{
+							{
+								Primitive: game.Choose{
+									Choice: game.ResolutionChoice{
+										Kind:   game.ResolutionChoiceMana,
+										Prompt: "Choose first mana color ({B} or {R})",
+										Colors: []mana.Color{
+											mana.B,
+											mana.R,
+										},
 									},
+									PublishChoice: game.ChoiceKey("graven-cairns-color-1"),
 								},
-								PublishChoice: game.ChoiceKey("graven-cairns-color-1"),
 							},
-						},
-						{
-							Primitive: game.AddMana{
-								Amount:     game.Fixed(1),
-								ChoiceFrom: game.ChoiceKey("graven-cairns-color-1"),
+							{
+								Primitive: game.AddMana{
+									Amount:     game.Fixed(1),
+									ChoiceFrom: game.ChoiceKey("graven-cairns-color-1"),
+								},
 							},
-						},
-						{
-							Primitive: game.Choose{
-								Choice: game.ResolutionChoice{
-									Kind:   game.ResolutionChoiceMana,
-									Prompt: "Choose second mana color ({B} or {R})",
-									Colors: []mana.Color{
-										mana.B,
-										mana.R,
+							{
+								Primitive: game.Choose{
+									Choice: game.ResolutionChoice{
+										Kind:   game.ResolutionChoiceMana,
+										Prompt: "Choose second mana color ({B} or {R})",
+										Colors: []mana.Color{
+											mana.B,
+											mana.R,
+										},
 									},
+									PublishChoice: game.ChoiceKey("graven-cairns-color-2"),
 								},
-								PublishChoice: game.ChoiceKey("graven-cairns-color-2"),
+							},
+							{
+								Primitive: game.AddMana{
+									Amount:     game.Fixed(1),
+									ChoiceFrom: game.ChoiceKey("graven-cairns-color-2"),
+								},
 							},
 						},
-						{
-							Primitive: game.AddMana{
-								Amount:     game.Fixed(1),
-								ChoiceFrom: game.ChoiceKey("graven-cairns-color-2"),
-							},
-						},
-					},
-				}.Ability(),
+					}.Ability(),
+				},
 			},
 		},
-	},
+	}
 }

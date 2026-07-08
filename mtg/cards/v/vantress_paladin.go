@@ -18,7 +18,7 @@ import (
 //
 //	Flying
 //	Adamant — If at least three blue mana was spent to cast this spell, this creature enters with a +1/+1 counter on it.
-var VantressPaladin = newVantressPaladin()
+var VantressPaladin = newVantressPaladin
 
 func newVantressPaladin() *game.CardDef {
 	return &game.CardDef{

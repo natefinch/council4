@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever a player cycles a card, you may exile target creature. If you do, return that card to the battlefield under its owner's control at the beginning of the next end step.
-var AstralSlide = newAstralSlide()
+var AstralSlide = newAstralSlide
 
 func newAstralSlide() *game.CardDef {
 	return &game.CardDef{

@@ -20,7 +20,7 @@ import (
 //	As this Aura enters, choose a color.
 //	Enchanted creature has protection from the chosen color. This effect doesn't remove this Aura.
 //	{W}: Return this Aura to its owner's hand.
-var FlickeringWard = newFlickeringWard()
+var FlickeringWard = newFlickeringWard
 
 func newFlickeringWard() *game.CardDef {
 	return &game.CardDef{

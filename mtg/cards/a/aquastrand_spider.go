@@ -11,7 +11,7 @@ import (
 )
 
 // AquastrandSpider is the card definition for Aquastrand Spider.
-var AquastrandSpider = newAquastrandSpider()
+var AquastrandSpider = newAquastrandSpider
 
 func newAquastrandSpider() *game.CardDef {
 	return &game.CardDef{

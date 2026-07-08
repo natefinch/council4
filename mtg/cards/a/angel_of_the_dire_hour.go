@@ -18,7 +18,7 @@ import (
 //	Flash
 //	Flying
 //	When this creature enters, if you cast it from your hand, exile all attacking creatures.
-var AngelOfTheDireHour = newAngelOfTheDireHour()
+var AngelOfTheDireHour = newAngelOfTheDireHour
 
 func newAngelOfTheDireHour() *game.CardDef {
 	return &game.CardDef{

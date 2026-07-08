@@ -17,7 +17,7 @@ import (
 //
 //	Whenever this creature or equipped creature deals combat damage to a player, draw a card.
 //	Reconfigure {2} ({2}: Attach to target creature you control; or unattach from a creature. Reconfigure only as a sorcery. While attached, this isn't a creature.)
-var AcquisitionOctopus = newAcquisitionOctopus()
+var AcquisitionOctopus = newAcquisitionOctopus
 
 func newAcquisitionOctopus() *game.CardDef {
 	return &game.CardDef{

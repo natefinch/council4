@@ -18,7 +18,7 @@ import (
 //	Prowess (Whenever you cast a noncreature spell, this creature gets +1/+1 until end of turn.)
 //	Other creatures you control have prowess. (If a creature has multiple instances of prowess, each triggers separately.)
 //	Whenever you cast a noncreature spell, target creature you control can't be blocked this turn.
-var BriaRiptideRogue = newBriaRiptideRogue()
+var BriaRiptideRogue = newBriaRiptideRogue
 
 func newBriaRiptideRogue() *game.CardDef {
 	return &game.CardDef{

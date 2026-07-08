@@ -18,7 +18,7 @@ import (
 //
 //	At the beginning of each player's upkeep, if that player has no cards in hand, you draw a card and you lose 1 life.
 //	Madness {1}{B} (If you discard this card, discard it into exile. When you do, cast it for its madness cost or put it into your graveyard.)
-var AsylumVisitor = newAsylumVisitor()
+var AsylumVisitor = newAsylumVisitor
 
 func newAsylumVisitor() *game.CardDef {
 	return &game.CardDef{

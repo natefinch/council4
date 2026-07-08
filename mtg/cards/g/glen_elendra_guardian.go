@@ -21,7 +21,7 @@ import (
 //	Flying
 //	This creature enters with a -1/-1 counter on it.
 //	{1}{U}, Remove a counter from this creature: Counter target noncreature spell. Its controller draws a card.
-var GlenElendraGuardian = newGlenElendraGuardian()
+var GlenElendraGuardian = newGlenElendraGuardian
 
 func newGlenElendraGuardian() *game.CardDef {
 	return &game.CardDef{

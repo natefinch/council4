@@ -20,7 +20,7 @@ import (
 //	• This creature gets +1/+1 until end of turn.
 //	• Exile this creature. Return it to the battlefield under its owner's control at the beginning of the next end step.
 //	• Scry 1.
-var DjinnOfTheFountain = newDjinnOfTheFountain()
+var DjinnOfTheFountain = newDjinnOfTheFountain
 
 func newDjinnOfTheFountain() *game.CardDef {
 	return &game.CardDef{

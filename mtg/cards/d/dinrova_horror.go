@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, return target permanent to its owner's hand, then that player discards a card.
-var DinrovaHorror = newDinrovaHorror()
+var DinrovaHorror = newDinrovaHorror
 
 func newDinrovaHorror() *game.CardDef {
 	return &game.CardDef{

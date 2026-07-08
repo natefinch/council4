@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Whenever a creature dies, you may have this enchantment deal damage to target player equal to the number of cards in that player's hand.
-var ViciousShadows = newViciousShadows()
+var ViciousShadows = newViciousShadows
 
 func newViciousShadows() *game.CardDef {
 	return &game.CardDef{

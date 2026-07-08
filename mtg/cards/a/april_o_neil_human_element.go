@@ -18,7 +18,7 @@ import (
 // Oracle text:
 //
 //	Whenever a player casts an artifact, instant, or sorcery spell, you create a Mutagen token. (It's an artifact with "{1}, {T}, Sacrifice this token: Put a +1/+1 counter on target creature. Activate only as a sorcery.")
-var AprilONeilHumanElement = newAprilONeilHumanElement()
+var AprilONeilHumanElement = newAprilONeilHumanElement
 
 func newAprilONeilHumanElement() *game.CardDef {
 	return &game.CardDef{

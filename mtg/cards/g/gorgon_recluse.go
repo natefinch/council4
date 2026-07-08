@@ -17,7 +17,7 @@ import (
 //
 //	Whenever this creature blocks or becomes blocked by a nonblack creature, destroy that creature at end of combat.
 //	Madness {B}{B} (If you discard this card, discard it into exile. When you do, cast it for its madness cost or put it into your graveyard.)
-var GorgonRecluse = newGorgonRecluse()
+var GorgonRecluse = newGorgonRecluse
 
 func newGorgonRecluse() *game.CardDef {
 	return &game.CardDef{

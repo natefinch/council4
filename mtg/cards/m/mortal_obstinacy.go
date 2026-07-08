@@ -18,7 +18,7 @@ import (
 //	Enchant creature you control
 //	Enchanted creature gets +1/+1.
 //	Whenever enchanted creature deals combat damage to a player, you may sacrifice this Aura. If you do, destroy target enchantment.
-var MortalObstinacy = newMortalObstinacy()
+var MortalObstinacy = newMortalObstinacy
 
 func newMortalObstinacy() *game.CardDef {
 	return &game.CardDef{

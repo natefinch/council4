@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Cohort — {T}, Tap an untapped Ally you control: Target opponent loses 2 life.
-var ZulaportChainmage = newZulaportChainmage()
+var ZulaportChainmage = newZulaportChainmage
 
 func newZulaportChainmage() *game.CardDef {
 	return &game.CardDef{

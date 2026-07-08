@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever you cast a creature spell, you may pay {1}. If you do, return target creature to its owner's hand.
-var Equilibrium = newEquilibrium()
+var Equilibrium = newEquilibrium
 
 func newEquilibrium() *game.CardDef {
 	return &game.CardDef{

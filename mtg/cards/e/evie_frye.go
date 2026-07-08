@@ -18,7 +18,7 @@ import (
 //
 //	Partner with Jacob Frye (When this creature enters, target player may put Jacob into their hand from their library, then shuffle.)
 //	{1}, {T}: Draw a card, then discard a card. When you discard a creature card this way, target creature you control can't be blocked this turn.
-var EvieFrye = newEvieFrye()
+var EvieFrye = newEvieFrye
 
 func newEvieFrye() *game.CardDef {
 	return &game.CardDef{

@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Target player discards two cards at random.
-var HymnToTourach = newHymnToTourach()
+var HymnToTourach = newHymnToTourach
 
 func newHymnToTourach() *game.CardDef {
 	return &game.CardDef{

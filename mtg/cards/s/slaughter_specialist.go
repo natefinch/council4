@@ -18,7 +18,7 @@ import (
 //
 //	When this creature enters, each opponent creates a 1/1 white Human creature token.
 //	Whenever a creature an opponent controls dies, put a +1/+1 counter on this creature.
-var SlaughterSpecialist = newSlaughterSpecialist()
+var SlaughterSpecialist = newSlaughterSpecialist
 
 func newSlaughterSpecialist() *game.CardDef {
 	return &game.CardDef{

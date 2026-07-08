@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Whenever a creature you control with a +1/+1 counter on it dies, draw a card.
-var MeltstriderEulogist = newMeltstriderEulogist()
+var MeltstriderEulogist = newMeltstriderEulogist
 
 func newMeltstriderEulogist() *game.CardDef {
 	return &game.CardDef{

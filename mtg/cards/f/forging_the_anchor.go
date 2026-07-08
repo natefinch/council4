@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Look at the top five cards of your library. You may reveal any number of artifact cards from among them and put the revealed cards into your hand. Put the rest on the bottom of your library in a random order.
-var ForgingTheAnchor = newForgingTheAnchor()
+var ForgingTheAnchor = newForgingTheAnchor
 
 func newForgingTheAnchor() *game.CardDef {
 	return &game.CardDef{

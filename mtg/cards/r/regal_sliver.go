@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Sliver creatures you control have "When this creature enters, Slivers you control get +1/+1 until end of turn if you're the monarch. Otherwise, you become the monarch."
-var RegalSliver = newRegalSliver()
+var RegalSliver = newRegalSliver
 
 func newRegalSliver() *game.CardDef {
 	return &game.CardDef{

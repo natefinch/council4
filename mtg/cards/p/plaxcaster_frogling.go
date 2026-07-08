@@ -11,7 +11,7 @@ import (
 )
 
 // PlaxcasterFrogling is the card definition for Plaxcaster Frogling.
-var PlaxcasterFrogling = newPlaxcasterFrogling()
+var PlaxcasterFrogling = newPlaxcasterFrogling
 
 func newPlaxcasterFrogling() *game.CardDef {
 	return &game.CardDef{

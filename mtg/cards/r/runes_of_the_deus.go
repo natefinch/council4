@@ -19,7 +19,7 @@ import (
 //	Enchant creature
 //	As long as enchanted creature is red, it gets +1/+1 and has double strike. (It deals both first-strike and regular combat damage.)
 //	As long as enchanted creature is green, it gets +1/+1 and has trample.
-var RunesOfTheDeus = newRunesOfTheDeus()
+var RunesOfTheDeus = newRunesOfTheDeus
 
 func newRunesOfTheDeus() *game.CardDef {
 	return &game.CardDef{

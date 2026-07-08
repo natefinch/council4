@@ -19,7 +19,7 @@ import (
 //	Deathtouch
 //	When this creature enters or is turned face up, target creature gains indestructible until end of turn.
 //	Disguise {4}{B/G}{B/G} (You may cast this card face down for {3} as a 2/2 creature with ward {2}. Turn it face up any time for its disguise cost.)
-var RakishScoundrel = newRakishScoundrel()
+var RakishScoundrel = newRakishScoundrel
 
 func newRakishScoundrel() *game.CardDef {
 	return &game.CardDef{

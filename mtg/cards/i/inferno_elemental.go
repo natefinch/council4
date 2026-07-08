@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature blocks or becomes blocked by a creature, this creature deals 3 damage to that creature.
-var InfernoElemental = newInfernoElemental()
+var InfernoElemental = newInfernoElemental
 
 func newInfernoElemental() *game.CardDef {
 	return &game.CardDef{

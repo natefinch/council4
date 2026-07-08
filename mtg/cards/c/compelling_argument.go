@@ -17,7 +17,7 @@ import (
 //
 //	Target player mills five cards.
 //	Cycling {U} ({U}, Discard this card: Draw a card.)
-var CompellingArgument = newCompellingArgument()
+var CompellingArgument = newCompellingArgument
 
 func newCompellingArgument() *game.CardDef {
 	return &game.CardDef{

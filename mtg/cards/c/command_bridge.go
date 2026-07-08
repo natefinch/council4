@@ -17,7 +17,7 @@ import (
 //	This land enters tapped.
 //	When this land enters, sacrifice it unless you tap an untapped permanent you control.
 //	{T}: Add one mana of any color.
-var CommandBridge = newCommandBridge()
+var CommandBridge = newCommandBridge
 
 func newCommandBridge() *game.CardDef {
 	return &game.CardDef{

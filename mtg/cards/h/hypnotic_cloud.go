@@ -17,7 +17,7 @@ import (
 //
 //	Kicker {4} (You may pay an additional {4} as you cast this spell.)
 //	Target player discards a card. If this spell was kicked, that player discards three cards instead.
-var HypnoticCloud = newHypnoticCloud()
+var HypnoticCloud = newHypnoticCloud
 
 func newHypnoticCloud() *game.CardDef {
 	return &game.CardDef{

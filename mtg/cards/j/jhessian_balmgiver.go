@@ -18,7 +18,7 @@ import (
 //
 //	{T}: Prevent the next 1 damage that would be dealt to any target this turn.
 //	{T}: Target creature can't be blocked this turn.
-var JhessianBalmgiver = newJhessianBalmgiver()
+var JhessianBalmgiver = newJhessianBalmgiver
 
 func newJhessianBalmgiver() *game.CardDef {
 	return &game.CardDef{

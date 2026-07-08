@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{1}, {T}: Return this creature and target green or blue creature you control to their owner's hand.
-var SnowHound = newSnowHound()
+var SnowHound = newSnowHound
 
 func newSnowHound() *game.CardDef {
 	return &game.CardDef{

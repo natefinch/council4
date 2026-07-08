@@ -18,7 +18,7 @@ import (
 //
 //	Mentor (Whenever this creature attacks, put a +1/+1 counter on target attacking creature with lesser power.)
 //	This creature can't attack or block alone.
-var WojekBodyguard = newWojekBodyguard()
+var WojekBodyguard = newWojekBodyguard
 
 func newWojekBodyguard() *game.CardDef {
 	return &game.CardDef{

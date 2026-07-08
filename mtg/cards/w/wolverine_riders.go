@@ -17,7 +17,7 @@ import (
 //
 //	At the beginning of each upkeep, create a 1/1 green Elf Warrior creature token.
 //	Whenever another Elf you control enters, you gain life equal to its toughness.
-var WolverineRiders = newWolverineRiders()
+var WolverineRiders = newWolverineRiders
 
 func newWolverineRiders() *game.CardDef {
 	return &game.CardDef{

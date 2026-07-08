@@ -20,7 +20,7 @@ import (
 //	Flying
 //	Whenever a creature dealt damage by this creature this turn dies, put a +1/+1 counter on this creature.
 //	{1}{R}: This creature deals 1 damage to target creature.
-var VampiricDragon = newVampiricDragon()
+var VampiricDragon = newVampiricDragon
 
 func newVampiricDragon() *game.CardDef {
 	return &game.CardDef{

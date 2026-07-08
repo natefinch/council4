@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Magecraft — Whenever you cast or copy an instant or sorcery spell, this creature gains your choice of flying or lifelink until end of turn.
-var SilverquillPledgemage = newSilverquillPledgemage()
+var SilverquillPledgemage = newSilverquillPledgemage
 
 func newSilverquillPledgemage() *game.CardDef {
 	return &game.CardDef{

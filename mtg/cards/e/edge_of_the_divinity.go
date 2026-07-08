@@ -19,7 +19,7 @@ import (
 //	Enchant creature
 //	As long as enchanted creature is white, it gets +1/+2.
 //	As long as enchanted creature is black, it gets +2/+1.
-var EdgeOfTheDivinity = newEdgeOfTheDivinity()
+var EdgeOfTheDivinity = newEdgeOfTheDivinity
 
 func newEdgeOfTheDivinity() *game.CardDef {
 	return &game.CardDef{

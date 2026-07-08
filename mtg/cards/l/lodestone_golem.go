@@ -15,7 +15,7 @@ import (
 // Oracle text:
 //
 //	Nonartifact spells cost {1} more to cast.
-var LodestoneGolem = newLodestoneGolem()
+var LodestoneGolem = newLodestoneGolem
 
 func newLodestoneGolem() *game.CardDef {
 	return &game.CardDef{

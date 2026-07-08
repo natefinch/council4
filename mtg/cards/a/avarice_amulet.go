@@ -17,7 +17,7 @@ import (
 //	Equipped creature gets +2/+0 and has vigilance and "At the beginning of your upkeep, draw a card."
 //	Whenever equipped creature dies, target opponent gains control of this Equipment.
 //	Equip {2} ({2}: Attach to target creature you control. Equip only as a sorcery.)
-var AvariceAmulet = newAvariceAmulet()
+var AvariceAmulet = newAvariceAmulet
 
 func newAvariceAmulet() *game.CardDef {
 	return &game.CardDef{

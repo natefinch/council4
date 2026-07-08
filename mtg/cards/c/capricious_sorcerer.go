@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{T}: This creature deals 1 damage to any target. Activate only during your turn, before attackers are declared.
-var CapriciousSorcerer = newCapriciousSorcerer()
+var CapriciousSorcerer = newCapriciousSorcerer
 
 func newCapriciousSorcerer() *game.CardDef {
 	return &game.CardDef{

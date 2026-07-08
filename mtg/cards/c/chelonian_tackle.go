@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Target creature you control gets +0/+10 until end of turn. Then it fights up to one target creature an opponent controls. (Each deals damage equal to its power to the other.)
-var ChelonianTackle = newChelonianTackle()
+var ChelonianTackle = newChelonianTackle
 
 func newChelonianTackle() *game.CardDef {
 	return &game.CardDef{

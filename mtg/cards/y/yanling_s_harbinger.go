@@ -18,7 +18,7 @@ import (
 //
 //	Flying
 //	When this creature enters, you may search your library and/or graveyard for a card named Mu Yanling, Celestial Wind, reveal it, and put it into your hand. If you search your library this way, shuffle.
-var YanlingSHarbinger = newYanlingSHarbinger()
+var YanlingSHarbinger = newYanlingSHarbinger
 
 func newYanlingSHarbinger() *game.CardDef {
 	return &game.CardDef{

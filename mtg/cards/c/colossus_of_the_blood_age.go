@@ -17,7 +17,7 @@ import (
 //
 //	When this creature enters, it deals 3 damage to each opponent and you gain 3 life.
 //	When this creature dies, discard any number of cards, then draw that many cards plus one.
-var ColossusOfTheBloodAge = newColossusOfTheBloodAge()
+var ColossusOfTheBloodAge = newColossusOfTheBloodAge
 
 func newColossusOfTheBloodAge() *game.CardDef {
 	return &game.CardDef{

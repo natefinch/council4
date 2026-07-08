@@ -18,7 +18,7 @@ import (
 //	This land enters tapped.
 //	When this land enters, sacrifice it unless you return an untapped Plains you control to its owner's hand.
 //	{T}: Add {C}{W}.
-var Karoo = newKaroo()
+var Karoo = newKaroo
 
 func newKaroo() *game.CardDef {
 	return &game.CardDef{

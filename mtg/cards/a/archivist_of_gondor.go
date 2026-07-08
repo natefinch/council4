@@ -17,7 +17,7 @@ import (
 //
 //	When your commander deals combat damage to a player, if there is no monarch, you become the monarch.
 //	At the beginning of the monarch's end step, that player draws a card.
-var ArchivistOfGondor = newArchivistOfGondor()
+var ArchivistOfGondor = newArchivistOfGondor
 
 func newArchivistOfGondor() *game.CardDef {
 	return &game.CardDef{

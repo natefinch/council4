@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature attacks while you control a creature with power 4 or greater, this creature gets +1/+0 and gains menace until end of turn. (It can't be blocked except by two or more creatures.)
-var CourageousGoblin = newCourageousGoblin()
+var CourageousGoblin = newCourageousGoblin
 
 func newCourageousGoblin() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 //
 //	Destroy target creature that was dealt damage this turn.
 //	Draw a card.
-var MirrodinAvenged = newMirrodinAvenged()
+var MirrodinAvenged = newMirrodinAvenged
 
 func newMirrodinAvenged() *game.CardDef {
 	return &game.CardDef{

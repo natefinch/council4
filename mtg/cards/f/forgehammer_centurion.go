@@ -19,7 +19,7 @@ import (
 //
 //	Whenever another creature or artifact you control is put into a graveyard from the battlefield, put an oil counter on this creature.
 //	Whenever this creature attacks, you may remove two oil counters from it. When you do, target creature can't block this turn.
-var ForgehammerCenturion = newForgehammerCenturion()
+var ForgehammerCenturion = newForgehammerCenturion
 
 func newForgehammerCenturion() *game.CardDef {
 	return &game.CardDef{

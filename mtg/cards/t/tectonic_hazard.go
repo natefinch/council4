@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Tectonic Hazard deals 1 damage to each opponent and each creature they control.
-var TectonicHazard = newTectonicHazard()
+var TectonicHazard = newTectonicHazard
 
 func newTectonicHazard() *game.CardDef {
 	return &game.CardDef{

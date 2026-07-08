@@ -18,7 +18,7 @@ import (
 //
 //	This creature enters with a +1/+1 counter on it.
 //	When this creature dies, put X +1/+1 counters on target creature you control, where X is the number of +1/+1 counters on this creature.
-var ServantOfTheScale = newServantOfTheScale()
+var ServantOfTheScale = newServantOfTheScale
 
 func newServantOfTheScale() *game.CardDef {
 	return &game.CardDef{

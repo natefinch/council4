@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature attacks, you may pay {2}{W}. When you do, tap target creature.
-var ThousandMoonsCrackshot = newThousandMoonsCrackshot()
+var ThousandMoonsCrackshot = newThousandMoonsCrackshot
 
 func newThousandMoonsCrackshot() *game.CardDef {
 	return &game.CardDef{

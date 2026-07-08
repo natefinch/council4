@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Put target creature card from a graveyard onto the battlefield under your control. Proliferate. (Choose any number of permanents and/or players, then give each another counter of each kind already there.)
-var VatEmergence = newVatEmergence()
+var VatEmergence = newVatEmergence
 
 func newVatEmergence() *game.CardDef {
 	return &game.CardDef{

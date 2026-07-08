@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{2}{B}, {T}: Exile up to three target cards from a single graveyard.
-var RagDealer = newRagDealer()
+var RagDealer = newRagDealer
 
 func newRagDealer() *game.CardDef {
 	return &game.CardDef{

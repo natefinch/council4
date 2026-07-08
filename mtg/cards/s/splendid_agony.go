@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Distribute two -1/-1 counters among one or two target creatures.
-var SplendidAgony = newSplendidAgony()
+var SplendidAgony = newSplendidAgony
 
 func newSplendidAgony() *game.CardDef {
 	return &game.CardDef{

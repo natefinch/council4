@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Create a 2/2 green Wolf creature token for each Forest you control.
-var HowlOfTheNightPack = newHowlOfTheNightPack()
+var HowlOfTheNightPack = newHowlOfTheNightPack
 
 func newHowlOfTheNightPack() *game.CardDef {
 	return &game.CardDef{

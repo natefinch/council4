@@ -18,7 +18,7 @@ import (
 //	This land enters tapped.
 //	When this land enters, sacrifice it unless you return an untapped Mountain you control to its owner's hand.
 //	{T}: Add {C}{R}.
-var DormantVolcano = newDormantVolcano()
+var DormantVolcano = newDormantVolcano
 
 func newDormantVolcano() *game.CardDef {
 	return &game.CardDef{

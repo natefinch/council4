@@ -19,7 +19,7 @@ import (
 //	Enchant creature
 //	Enchanted creature can't attack or block.
 //	{3}{W}{W}, Sacrifice this Aura: Exile enchanted creature.
-var ChokingRestraints = newChokingRestraints()
+var ChokingRestraints = newChokingRestraints
 
 func newChokingRestraints() *game.CardDef {
 	return &game.CardDef{

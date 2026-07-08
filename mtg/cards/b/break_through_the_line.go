@@ -18,7 +18,7 @@ import (
 // Oracle text:
 //
 //	{R}: Target creature with power 2 or less gains haste until end of turn and can't be blocked this turn.
-var BreakThroughTheLine = newBreakThroughTheLine()
+var BreakThroughTheLine = newBreakThroughTheLine
 
 func newBreakThroughTheLine() *game.CardDef {
 	return &game.CardDef{

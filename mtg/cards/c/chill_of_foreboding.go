@@ -17,7 +17,7 @@ import (
 //
 //	Each player mills five cards.
 //	Flashback {7}{U} (You may cast this card from your graveyard for its flashback cost. Then exile it.)
-var ChillOfForeboding = newChillOfForeboding()
+var ChillOfForeboding = newChillOfForeboding
 
 func newChillOfForeboding() *game.CardDef {
 	return &game.CardDef{

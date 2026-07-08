@@ -13,7 +13,7 @@ import (
 // Oracle text:
 //
 //	Destroy target artifact or enchantment.
-var Naturalize = newNaturalize()
+var Naturalize = newNaturalize
 
 func newNaturalize() *game.CardDef {
 	return &game.CardDef{

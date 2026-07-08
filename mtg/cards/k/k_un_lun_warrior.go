@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, you may sacrifice an artifact or discard a card. If you do, draw a card.
-var KUnLunWarrior = newKUnLunWarrior()
+var KUnLunWarrior = newKUnLunWarrior
 
 func newKUnLunWarrior() *game.CardDef {
 	return &game.CardDef{

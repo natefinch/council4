@@ -19,7 +19,7 @@ import (
 //	Enchant creature you control
 //	When this Aura enters, exile target nonland permanent an opponent controls until this Aura leaves the battlefield.
 //	Enchanted creature has ward {2}. (Whenever it becomes the target of a spell or ability an opponent controls, counter it unless that player pays {2}.)
-var ChainsOfCustody = newChainsOfCustody()
+var ChainsOfCustody = newChainsOfCustody
 
 func newChainsOfCustody() *game.CardDef {
 	return &game.CardDef{

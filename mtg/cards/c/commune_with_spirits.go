@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Look at the top four cards of your library. You may reveal an enchantment or land card from among them and put it into your hand. Put the rest on the bottom of your library in a random order.
-var CommuneWithSpirits = newCommuneWithSpirits()
+var CommuneWithSpirits = newCommuneWithSpirits
 
 func newCommuneWithSpirits() *game.CardDef {
 	return &game.CardDef{

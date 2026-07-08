@@ -18,7 +18,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, you may search your library for an instant or sorcery card with mana value 1, reveal it, put it into your hand, then shuffle.
-var Micromancer = newMicromancer()
+var Micromancer = newMicromancer
 
 func newMicromancer() *game.CardDef {
 	return &game.CardDef{

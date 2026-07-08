@@ -20,7 +20,7 @@ import (
 //	Whenever a creature with a -1/-1 counter on it dies, draw a card.
 //	{1}{B}{R}: Put a -1/-1 counter on another target creature.
 //	When The Scorpion God dies, return it to its owner's hand at the beginning of the next end step.
-var TheScorpionGod = newTheScorpionGod()
+var TheScorpionGod = newTheScorpionGod
 
 func newTheScorpionGod() *game.CardDef {
 	return &game.CardDef{

@@ -19,7 +19,7 @@ import (
 //	Flash
 //	Flying
 //	Whenever this creature or another Bird you control enters, exile up to one target creature you control without flying. Return it to the battlefield under its owner's control with a flying counter on it at the beginning of the next end step.
-var SalvationSwan = newSalvationSwan()
+var SalvationSwan = newSalvationSwan
 
 func newSalvationSwan() *game.CardDef {
 	return &game.CardDef{

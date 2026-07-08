@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Immolating Gyre deals X damage to each creature and planeswalker you don't control, where X is the number of instant and sorcery cards in your graveyard.
-var ImmolatingGyre = newImmolatingGyre()
+var ImmolatingGyre = newImmolatingGyre
 
 func newImmolatingGyre() *game.CardDef {
 	return &game.CardDef{

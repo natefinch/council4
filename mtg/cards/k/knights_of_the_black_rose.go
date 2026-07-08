@@ -17,7 +17,7 @@ import (
 //
 //	When this creature enters, you become the monarch.
 //	Whenever an opponent becomes the monarch, if you were the monarch as the turn began, that player loses 2 life and you gain 2 life.
-var KnightsOfTheBlackRose = newKnightsOfTheBlackRose()
+var KnightsOfTheBlackRose = newKnightsOfTheBlackRose
 
 func newKnightsOfTheBlackRose() *game.CardDef {
 	return &game.CardDef{

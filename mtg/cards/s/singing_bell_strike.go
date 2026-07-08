@@ -20,7 +20,7 @@ import (
 //	When this Aura enters, tap enchanted creature.
 //	Enchanted creature doesn't untap during its controller's untap step.
 //	Enchanted creature has "{6}: Untap this creature."
-var SingingBellStrike = newSingingBellStrike()
+var SingingBellStrike = newSingingBellStrike
 
 func newSingingBellStrike() *game.CardDef {
 	return &game.CardDef{

@@ -19,7 +19,7 @@ import (
 // Oracle text:
 //
 //	Return target creature card with mana value 3 or less from your graveyard to the battlefield. Put a flying counter on it. It's a Spirit in addition to its other types.
-var CallASurpriseWitness = newCallASurpriseWitness()
+var CallASurpriseWitness = newCallASurpriseWitness
 
 func newCallASurpriseWitness() *game.CardDef {
 	return &game.CardDef{

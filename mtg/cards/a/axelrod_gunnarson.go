@@ -17,7 +17,7 @@ import (
 //
 //	Trample
 //	Whenever a creature dealt damage by Axelrod Gunnarson this turn dies, you gain 1 life and Axelrod Gunnarson deals 1 damage to target player or planeswalker.
-var AxelrodGunnarson = newAxelrodGunnarson()
+var AxelrodGunnarson = newAxelrodGunnarson
 
 func newAxelrodGunnarson() *game.CardDef {
 	return &game.CardDef{

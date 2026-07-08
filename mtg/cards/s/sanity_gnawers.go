@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, target player discards a card at random.
-var SanityGnawers = newSanityGnawers()
+var SanityGnawers = newSanityGnawers
 
 func newSanityGnawers() *game.CardDef {
 	return &game.CardDef{

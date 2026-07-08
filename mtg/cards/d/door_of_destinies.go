@@ -18,7 +18,7 @@ import (
 //	As this artifact enters, choose a creature type.
 //	Whenever you cast a spell of the chosen type, put a charge counter on this artifact.
 //	Creatures you control of the chosen type get +1/+1 for each charge counter on this artifact.
-var DoorOfDestinies = newDoorOfDestinies()
+var DoorOfDestinies = newDoorOfDestinies
 
 func newDoorOfDestinies() *game.CardDef {
 	return &game.CardDef{

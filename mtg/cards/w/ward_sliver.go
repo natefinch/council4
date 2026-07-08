@@ -17,7 +17,7 @@ import (
 //
 //	As this creature enters, choose a color.
 //	All Slivers have protection from the chosen color.
-var WardSliver = newWardSliver()
+var WardSliver = newWardSliver
 
 func newWardSliver() *game.CardDef {
 	return &game.CardDef{

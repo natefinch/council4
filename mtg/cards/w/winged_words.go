@@ -17,7 +17,7 @@ import (
 //
 //	This spell costs {1} less to cast if you control a creature with flying.
 //	Draw two cards.
-var WingedWords = newWingedWords()
+var WingedWords = newWingedWords
 
 func newWingedWords() *game.CardDef {
 	return &game.CardDef{

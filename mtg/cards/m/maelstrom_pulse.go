@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Destroy target nonland permanent and all other permanents with the same name as that permanent.
-var MaelstromPulse = newMaelstromPulse()
+var MaelstromPulse = newMaelstromPulse
 
 func newMaelstromPulse() *game.CardDef {
 	return &game.CardDef{

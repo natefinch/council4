@@ -19,7 +19,7 @@ import (
 //	Enchant creature
 //	Enchanted creature can't attack or block.
 //	{4}{W}: Exile enchanted creature. Create a Blood token. (It's an artifact with "{1}, {T}, Discard a card, Sacrifice this token: Draw a card.")
-var SigardaSImprisonment = newSigardaSImprisonment()
+var SigardaSImprisonment = newSigardaSImprisonment
 
 func newSigardaSImprisonment() *game.CardDef {
 	return &game.CardDef{

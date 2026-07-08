@@ -20,7 +20,7 @@ import (
 //	When this Aura enters, tap enchanted permanent.
 //	Enchanted permanent doesn't untap during its controller's untap step.
 //	Enchanted permanent has "Discard two artifact cards: Untap this permanent."
-var PsychicOverload = newPsychicOverload()
+var PsychicOverload = newPsychicOverload
 
 func newPsychicOverload() *game.CardDef {
 	return &game.CardDef{

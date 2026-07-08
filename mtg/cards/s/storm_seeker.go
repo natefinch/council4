@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Storm Seeker deals damage to target player equal to the number of cards in that player's hand.
-var StormSeeker = newStormSeeker()
+var StormSeeker = newStormSeeker
 
 func newStormSeeker() *game.CardDef {
 	return &game.CardDef{

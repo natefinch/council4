@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	As long as this creature is equipped, it has menace. (It can't be blocked except by two or more creatures.)
-var ArmoryVeteran = newArmoryVeteran()
+var ArmoryVeteran = newArmoryVeteran
 
 func newArmoryVeteran() *game.CardDef {
 	return &game.CardDef{

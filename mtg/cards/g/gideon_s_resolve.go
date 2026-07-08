@@ -18,7 +18,7 @@ import (
 //
 //	When this enchantment enters, you may search your library and/or graveyard for a card named Gideon, Martial Paragon, reveal it, and put it into your hand. If you search your library this way, shuffle.
 //	Creatures you control get +1/+1.
-var GideonSResolve = newGideonSResolve()
+var GideonSResolve = newGideonSResolve
 
 func newGideonSResolve() *game.CardDef {
 	return &game.CardDef{

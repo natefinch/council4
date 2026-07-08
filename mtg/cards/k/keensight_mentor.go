@@ -19,7 +19,7 @@ import (
 //
 //	When this creature enters, put a vigilance counter on target non-Human creature you control.
 //	{1}{W}, {T}: Put a +1/+1 counter on each creature you control with vigilance.
-var KeensightMentor = newKeensightMentor()
+var KeensightMentor = newKeensightMentor
 
 func newKeensightMentor() *game.CardDef {
 	return &game.CardDef{

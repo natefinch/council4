@@ -17,19 +17,21 @@ import (
 // Oracle text:
 //
 //	Search your library for a Forest card, put that card onto the battlefield, then shuffle.
-var NatureSLore = &game.CardDef{
-	ColorIdentity: color.NewIdentity(color.Green),
-	CardFace: game.CardFace{
-		Name: "Nature's Lore",
-		ManaCost: opt.Val(cost.Mana{
-			cost.O(1),
-			cost.G,
-		}),
-		Colors: []color.Color{color.Green},
-		Types:  []types.Card{types.Sorcery},
-		OracleText: `
+var NatureSLore = func() *game.CardDef {
+	return &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Green),
+		CardFace: game.CardFace{
+			Name: "Nature's Lore",
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(1),
+				cost.G,
+			}),
+			Colors: []color.Color{color.Green},
+			Types:  []types.Card{types.Sorcery},
+			OracleText: `
 			Search your library for a Forest card, put that card onto the battlefield, then shuffle.
 		`,
-		SpellAbility: opt.Val(common.RampLand{SubTypes: []types.Sub{types.Forest}}.Ability()),
-	},
+			SpellAbility: opt.Val(common.RampLand{SubTypes: []types.Sub{types.Forest}}.Ability()),
+		},
+	}
 }

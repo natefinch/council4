@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Target creature gets +2/+2 until end of turn. You gain 1 life for each attacking creature you control.
-var TakeHeart = newTakeHeart()
+var TakeHeart = newTakeHeart
 
 func newTakeHeart() *game.CardDef {
 	return &game.CardDef{

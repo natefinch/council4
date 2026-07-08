@@ -18,7 +18,7 @@ import (
 //
 //	Put any number of target creature cards from your graveyard on top of your library.
 //	Draw a card.
-var FootbottomFeast = newFootbottomFeast()
+var FootbottomFeast = newFootbottomFeast
 
 func newFootbottomFeast() *game.CardDef {
 	return &game.CardDef{

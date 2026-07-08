@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Look at the top four cards of your library. You may reveal a creature card and/or a land card from among them and put the revealed cards into your hand. Put the rest on the bottom of your library in any order.
-var GiftOfTheGargantuan = newGiftOfTheGargantuan()
+var GiftOfTheGargantuan = newGiftOfTheGargantuan
 
 func newGiftOfTheGargantuan() *game.CardDef {
 	return &game.CardDef{

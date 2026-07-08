@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	If a source an opponent controls would deal damage to you, prevent 1 of that damage.
-var ProtectionOfTheHekma = newProtectionOfTheHekma()
+var ProtectionOfTheHekma = newProtectionOfTheHekma
 
 func newProtectionOfTheHekma() *game.CardDef {
 	return &game.CardDef{

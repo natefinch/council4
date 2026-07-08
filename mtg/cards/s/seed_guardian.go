@@ -18,7 +18,7 @@ import (
 //
 //	Reach
 //	When this creature dies, create an X/X green Elemental creature token, where X is the number of creature cards in your graveyard.
-var SeedGuardian = newSeedGuardian()
+var SeedGuardian = newSeedGuardian
 
 func newSeedGuardian() *game.CardDef {
 	return &game.CardDef{

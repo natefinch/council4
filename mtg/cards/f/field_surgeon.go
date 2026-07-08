@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Tap an untapped creature you control: Prevent the next 1 damage that would be dealt to target creature this turn.
-var FieldSurgeon = newFieldSurgeon()
+var FieldSurgeon = newFieldSurgeon
 
 func newFieldSurgeon() *game.CardDef {
 	return &game.CardDef{

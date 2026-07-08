@@ -21,7 +21,7 @@ import (
 //	I — You may sacrifice a creature. When you do, this Saga deals 3 damage to any target.
 //	II — Each player discards a card.
 //	III — Return target creature card from your graveyard to the battlefield. Put a +1/+1 counter on it. It gains haste until your next turn.
-var KardurSViciousReturn = newKardurSViciousReturn()
+var KardurSViciousReturn = newKardurSViciousReturn
 
 func newKardurSViciousReturn() *game.CardDef {
 	return &game.CardDef{

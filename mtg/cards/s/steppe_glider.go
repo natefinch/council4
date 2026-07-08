@@ -11,7 +11,7 @@ import (
 )
 
 // SteppeGlider is the card definition for Steppe Glider.
-var SteppeGlider = newSteppeGlider()
+var SteppeGlider = newSteppeGlider
 
 func newSteppeGlider() *game.CardDef {
 	return &game.CardDef{

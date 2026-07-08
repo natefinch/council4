@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{1}, {T}, Tap another untapped creature you control: Tap target creature an opponent controls.
-var WanderbrineTrapper = newWanderbrineTrapper()
+var WanderbrineTrapper = newWanderbrineTrapper
 
 func newWanderbrineTrapper() *game.CardDef {
 	return &game.CardDef{

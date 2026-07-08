@@ -16,52 +16,54 @@ import (
 //
 //	{T}: Add {C}.
 //	{T}: Add {R} or {G}. This land deals 1 damage to you.
-var KarplusanForest = &game.CardDef{
-	ColorIdentity: color.NewIdentity(color.Green, color.Red),
-	CardFace: game.CardFace{
-		Name:  "Karplusan Forest",
-		Types: []types.Card{types.Land},
-		OracleText: `
+var KarplusanForest = func() *game.CardDef {
+	return &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Green, color.Red),
+		CardFace: game.CardFace{
+			Name:  "Karplusan Forest",
+			Types: []types.Card{types.Land},
+			OracleText: `
 			{T}: Add {C}.
 			{T}: Add {R} or {G}. This land deals 1 damage to you.
 		`,
-		ManaAbilities: []game.ManaAbility{
-			game.TapManaAbility(mana.C),
-			{
-				Text: `
+			ManaAbilities: []game.ManaAbility{
+				game.TapManaAbility(mana.C),
+				{
+					Text: `
 					{T}: Add {R} or {G}. This land deals 1 damage to you.
 				`,
-				AdditionalCosts: cost.Tap,
-				Content: game.Mode{
-					Sequence: []game.Instruction{
-						{
-							Primitive: game.Choose{
-								Choice: game.ResolutionChoice{
-									Kind:   game.ResolutionChoiceMana,
-									Prompt: "Choose {R} or {G}",
-									Colors: []mana.Color{
-										mana.R,
-										mana.G,
+					AdditionalCosts: cost.Tap,
+					Content: game.Mode{
+						Sequence: []game.Instruction{
+							{
+								Primitive: game.Choose{
+									Choice: game.ResolutionChoice{
+										Kind:   game.ResolutionChoiceMana,
+										Prompt: "Choose {R} or {G}",
+										Colors: []mana.Color{
+											mana.R,
+											mana.G,
+										},
 									},
+									PublishChoice: game.ChoiceKey("karplusan-forest-color"),
 								},
-								PublishChoice: game.ChoiceKey("karplusan-forest-color"),
+							},
+							{
+								Primitive: game.AddMana{
+									Amount:     game.Fixed(1),
+									ChoiceFrom: game.ChoiceKey("karplusan-forest-color"),
+								},
+							},
+							{
+								Primitive: game.Damage{
+									Amount:    game.Fixed(1),
+									Recipient: game.PlayerDamageRecipient(game.ControllerReference()),
+								},
 							},
 						},
-						{
-							Primitive: game.AddMana{
-								Amount:     game.Fixed(1),
-								ChoiceFrom: game.ChoiceKey("karplusan-forest-color"),
-							},
-						},
-						{
-							Primitive: game.Damage{
-								Amount:    game.Fixed(1),
-								Recipient: game.PlayerDamageRecipient(game.ControllerReference()),
-							},
-						},
-					},
-				}.Ability(),
+					}.Ability(),
+				},
 			},
 		},
-	},
+	}
 }

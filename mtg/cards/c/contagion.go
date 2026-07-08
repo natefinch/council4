@@ -19,7 +19,7 @@ import (
 //
 //	You may pay 1 life and exile a black card from your hand rather than pay this spell's mana cost.
 //	Distribute two -2/-1 counters among one or two target creatures.
-var Contagion = newContagion()
+var Contagion = newContagion
 
 func newContagion() *game.CardDef {
 	return &game.CardDef{

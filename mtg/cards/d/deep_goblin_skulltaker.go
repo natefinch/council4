@@ -19,7 +19,7 @@ import (
 //
 //	Menace
 //	At the beginning of your end step, if you descended this turn, put a +1/+1 counter on this creature. (You descended if a permanent card was put into your graveyard from anywhere.)
-var DeepGoblinSkulltaker = newDeepGoblinSkulltaker()
+var DeepGoblinSkulltaker = newDeepGoblinSkulltaker
 
 func newDeepGoblinSkulltaker() *game.CardDef {
 	return &game.CardDef{

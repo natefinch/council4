@@ -17,7 +17,7 @@ import (
 //
 //	Flying, vigilance
 //	When Kaalia enters, look at the top six cards of your library. You may reveal an Angel card, a Demon card, and/or a Dragon card from among them and put them into your hand. Put the rest on the bottom of your library in a random order.
-var KaaliaZenithSeeker = newKaaliaZenithSeeker()
+var KaaliaZenithSeeker = newKaaliaZenithSeeker
 
 func newKaaliaZenithSeeker() *game.CardDef {
 	return &game.CardDef{

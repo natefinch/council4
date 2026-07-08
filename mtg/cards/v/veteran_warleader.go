@@ -18,7 +18,7 @@ import (
 //
 //	Veteran Warleader's power and toughness are each equal to the number of creatures you control.
 //	Tap another untapped Ally you control: This creature gains your choice of first strike, vigilance, or trample until end of turn.
-var VeteranWarleader = newVeteranWarleader()
+var VeteranWarleader = newVeteranWarleader
 
 func newVeteranWarleader() *game.CardDef {
 	return &game.CardDef{

@@ -10,7 +10,7 @@ import (
 )
 
 // KingCrab is the card definition for King Crab.
-var KingCrab = newKingCrab()
+var KingCrab = newKingCrab
 
 func newKingCrab() *game.CardDef {
 	return &game.CardDef{

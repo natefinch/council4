@@ -20,7 +20,7 @@ import (
 //	{T}: Add {G}.
 //	{2}{G}{G}{G}: This artifact becomes a 5/3 green Treefolk artifact creature with trample until end of turn.
 //	When this artifact is put into a graveyard from the battlefield, if it was a creature, return this card to its owner's hand.
-var WeatherseedTotem = newWeatherseedTotem()
+var WeatherseedTotem = newWeatherseedTotem
 
 func newWeatherseedTotem() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 //
 //	Defender
 //	Whenever this creature blocks a creature, that creature doesn't untap during its controller's next untap step.
-var WallOfFrost = newWallOfFrost()
+var WallOfFrost = newWallOfFrost
 
 func newWallOfFrost() *game.CardDef {
 	return &game.CardDef{

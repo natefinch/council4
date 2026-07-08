@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Green creatures you control gain forestwalk until end of turn. (They can't be blocked as long as defending player controls a Forest.)
-var NatureSCloak = newNatureSCloak()
+var NatureSCloak = newNatureSCloak
 
 func newNatureSCloak() *game.CardDef {
 	return &game.CardDef{

@@ -15,7 +15,7 @@ import (
 // Oracle text:
 //
 //	{T}: Add {C}{C}{C}. Spend this mana only to cast artifact spells.
-var MishraSWorkshop = newMishraSWorkshop()
+var MishraSWorkshop = newMishraSWorkshop
 
 func newMishraSWorkshop() *game.CardDef {
 	return &game.CardDef{

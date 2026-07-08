@@ -20,7 +20,7 @@ import (
 //	This spell can't be countered.
 //	Hexproof, haste
 //	If this creature was kicked, it enters with four +1/+1 counters on it.
-var CragplateBaloth = newCragplateBaloth()
+var CragplateBaloth = newCragplateBaloth
 
 func newCragplateBaloth() *game.CardDef {
 	return &game.CardDef{

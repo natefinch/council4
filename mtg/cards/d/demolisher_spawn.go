@@ -18,7 +18,7 @@ import (
 //
 //	Trample, haste
 //	Delirium — Whenever this creature attacks, if there are four or more card types among cards in your graveyard, other attacking creatures get +4/+4 until end of turn.
-var DemolisherSpawn = newDemolisherSpawn()
+var DemolisherSpawn = newDemolisherSpawn
 
 func newDemolisherSpawn() *game.CardDef {
 	return &game.CardDef{

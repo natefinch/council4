@@ -17,7 +17,7 @@ import (
 //
 //	Flying
 //	When this creature enters, sacrifice it unless you return another creature you control to its owner's hand.
-var FaerieImpostor = newFaerieImpostor()
+var FaerieImpostor = newFaerieImpostor
 
 func newFaerieImpostor() *game.CardDef {
 	return &game.CardDef{

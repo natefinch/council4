@@ -17,7 +17,7 @@ import (
 //
 //	Flying
 //	Skyswarm — At the beginning of your end step, if a creature entered the battlefield under your control this turn, create a 1/1 blue Tyranid Gargoyle creature token with flying.
-var GargoyleFlock = newGargoyleFlock()
+var GargoyleFlock = newGargoyleFlock
 
 func newGargoyleFlock() *game.CardDef {
 	return &game.CardDef{

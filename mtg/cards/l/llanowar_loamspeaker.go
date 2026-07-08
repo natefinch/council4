@@ -19,7 +19,7 @@ import (
 //
 //	{T}: Add one mana of any color.
 //	{T}: Target land you control becomes a 3/3 Elemental creature with haste until end of turn. It's still a land. Activate only as a sorcery.
-var LlanowarLoamspeaker = newLlanowarLoamspeaker()
+var LlanowarLoamspeaker = newLlanowarLoamspeaker
 
 func newLlanowarLoamspeaker() *game.CardDef {
 	return &game.CardDef{

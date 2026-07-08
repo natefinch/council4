@@ -9,7 +9,7 @@ import (
 )
 
 // GorillaPack is the card definition for Gorilla Pack.
-var GorillaPack = newGorillaPack()
+var GorillaPack = newGorillaPack
 
 func newGorillaPack() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 // Oracle text:
 //
 //	Revolt — When this creature enters, if a permanent left the battlefield under your control this turn, add {G}{G}.
-var HiddenHerbalists = newHiddenHerbalists()
+var HiddenHerbalists = newHiddenHerbalists
 
 func newHiddenHerbalists() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{T}, Sacrifice this artifact: Put X +0/+1 counters on target creature, where X is that creature's mana value.
-var LivingArmor = newLivingArmor()
+var LivingArmor = newLivingArmor
 
 func newLivingArmor() *game.CardDef {
 	return &game.CardDef{

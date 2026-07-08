@@ -19,7 +19,7 @@ import (
 //	Enchant creature you control
 //	Whenever enchanted creature deals damage, you gain that much life.
 //	When this Aura is put into a graveyard from the battlefield, return it to its owner's hand.
-var SpiritLoop = newSpiritLoop()
+var SpiritLoop = newSpiritLoop
 
 func newSpiritLoop() *game.CardDef {
 	return &game.CardDef{

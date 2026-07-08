@@ -17,7 +17,7 @@ import (
 //
 //	Flying
 //	This creature can block only creatures with flying.
-var WanderlightSpirit = newWanderlightSpirit()
+var WanderlightSpirit = newWanderlightSpirit
 
 func newWanderlightSpirit() *game.CardDef {
 	return &game.CardDef{

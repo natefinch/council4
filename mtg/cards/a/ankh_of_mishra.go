@@ -15,7 +15,7 @@ import (
 // Oracle text:
 //
 //	Whenever a land enters, this artifact deals 2 damage to that land's controller.
-var AnkhOfMishra = newAnkhOfMishra()
+var AnkhOfMishra = newAnkhOfMishra
 
 func newAnkhOfMishra() *game.CardDef {
 	return &game.CardDef{

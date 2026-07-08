@@ -13,7 +13,7 @@ import (
 // Oracle text:
 //
 //	Destroy target creature.
-var Murder = newMurder()
+var Murder = newMurder
 
 func newMurder() *game.CardDef {
 	return &game.CardDef{

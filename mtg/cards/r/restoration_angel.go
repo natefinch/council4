@@ -18,7 +18,7 @@ import (
 //	Flash
 //	Flying
 //	When this creature enters, you may exile target non-Angel creature you control, then return that card to the battlefield under your control.
-var RestorationAngel = newRestorationAngel()
+var RestorationAngel = newRestorationAngel
 
 func newRestorationAngel() *game.CardDef {
 	return &game.CardDef{

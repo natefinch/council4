@@ -19,7 +19,7 @@ import (
 //	Enchant creature
 //	Enchanted creature has first strike.
 //	{1}{B}: Enchanted creature gets +2/+2 until end of turn.
-var ShadowLance = newShadowLance()
+var ShadowLance = newShadowLance
 
 func newShadowLance() *game.CardDef {
 	return &game.CardDef{

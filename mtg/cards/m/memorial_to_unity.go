@@ -19,7 +19,7 @@ import (
 //	This land enters tapped.
 //	{T}: Add {G}.
 //	{2}{G}, {T}, Sacrifice this land: Look at the top five cards of your library. You may reveal a creature card from among them and put it into your hand. Then put the rest on the bottom of your library in a random order.
-var MemorialToUnity = newMemorialToUnity()
+var MemorialToUnity = newMemorialToUnity
 
 func newMemorialToUnity() *game.CardDef {
 	return &game.CardDef{

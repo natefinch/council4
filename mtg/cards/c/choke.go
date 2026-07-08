@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Islands don't untap during their controllers' untap steps.
-var Choke = newChoke()
+var Choke = newChoke
 
 func newChoke() *game.CardDef {
 	return &game.CardDef{

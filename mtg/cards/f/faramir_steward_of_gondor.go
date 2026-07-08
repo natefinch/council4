@@ -18,7 +18,7 @@ import (
 //
 //	Whenever a legendary creature you control with mana value 4 or greater enters, you become the monarch.
 //	At the beginning of your end step, if you're the monarch, create two 1/1 white Human Soldier creature tokens.
-var FaramirStewardOfGondor = newFaramirStewardOfGondor()
+var FaramirStewardOfGondor = newFaramirStewardOfGondor
 
 func newFaramirStewardOfGondor() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 //	Flying
 //	As this creature enters, choose a color.
 //	This creature has protection from the chosen color.
-var VoiceOfAll = newVoiceOfAll()
+var VoiceOfAll = newVoiceOfAll
 
 func newVoiceOfAll() *game.CardDef {
 	return &game.CardDef{

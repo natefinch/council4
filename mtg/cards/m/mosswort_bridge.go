@@ -21,7 +21,7 @@ import (
 //	This land enters tapped.
 //	{T}: Add {G}.
 //	{G}, {T}: You may play the exiled card without paying its mana cost if creatures you control have total power 10 or greater.
-var MosswortBridge = newMosswortBridge()
+var MosswortBridge = newMosswortBridge
 
 func newMosswortBridge() *game.CardDef {
 	return &game.CardDef{

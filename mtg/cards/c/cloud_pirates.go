@@ -17,7 +17,7 @@ import (
 //
 //	Flying
 //	This creature can block only creatures with flying.
-var CloudPirates = newCloudPirates()
+var CloudPirates = newCloudPirates
 
 func newCloudPirates() *game.CardDef {
 	return &game.CardDef{

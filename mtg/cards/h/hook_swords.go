@@ -19,7 +19,7 @@ import (
 //	When this Equipment enters, create a 1/1 white Ally creature token, then attach this Equipment to it.
 //	During your turn, equipped creature gets +1/+1 and has first strike.
 //	Equip {3}
-var HookSwords = newHookSwords()
+var HookSwords = newHookSwords
 
 func newHookSwords() *game.CardDef {
 	return &game.CardDef{

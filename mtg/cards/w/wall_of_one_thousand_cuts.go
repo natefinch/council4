@@ -18,7 +18,7 @@ import (
 //
 //	Defender, flying
 //	{W}: This creature can attack this turn as though it didn't have defender.
-var WallOfOneThousandCuts = newWallOfOneThousandCuts()
+var WallOfOneThousandCuts = newWallOfOneThousandCuts
 
 func newWallOfOneThousandCuts() *game.CardDef {
 	return &game.CardDef{

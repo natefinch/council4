@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, sacrifice it unless you sacrifice a Forest.
-var PlantElemental = newPlantElemental()
+var PlantElemental = newPlantElemental
 
 func newPlantElemental() *game.CardDef {
 	return &game.CardDef{

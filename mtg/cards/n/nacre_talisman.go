@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever a player casts a white spell, you may pay {3}. If you do, untap target permanent.
-var NacreTalisman = newNacreTalisman()
+var NacreTalisman = newNacreTalisman
 
 func newNacreTalisman() *game.CardDef {
 	return &game.CardDef{

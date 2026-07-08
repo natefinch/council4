@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	{3}, {T}: Prevent the next 2 damage that would be dealt to you this turn.
-var Conservator = newConservator()
+var Conservator = newConservator
 
 func newConservator() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 //
 //	Whenever a creature you control with power 2 or less attacks, it gains skulk until end of turn. (It can't be blocked by creatures with greater power.)
 //	Whenever a creature with power 4 or greater attacks you, its controller loses 2 life and you gain 2 life.
-var MacCreadyLamplightMayor = newMacCreadyLamplightMayor()
+var MacCreadyLamplightMayor = newMacCreadyLamplightMayor
 
 func newMacCreadyLamplightMayor() *game.CardDef {
 	return &game.CardDef{

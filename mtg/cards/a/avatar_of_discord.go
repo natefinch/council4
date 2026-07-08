@@ -20,7 +20,7 @@ import (
 //	({B/R} can be paid with either {B} or {R}.)
 //	Flying
 //	When this creature enters, sacrifice it unless you discard two cards.
-var AvatarOfDiscord = newAvatarOfDiscord()
+var AvatarOfDiscord = newAvatarOfDiscord
 
 func newAvatarOfDiscord() *game.CardDef {
 	return &game.CardDef{

@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	You gain 4 life. If a creature died this turn, you gain 8 life instead.
-var LifeGoesOn = newLifeGoesOn()
+var LifeGoesOn = newLifeGoesOn
 
 func newLifeGoesOn() *game.CardDef {
 	return &game.CardDef{

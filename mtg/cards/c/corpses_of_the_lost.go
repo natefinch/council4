@@ -19,7 +19,7 @@ import (
 //	Skeletons you control get +1/+0 and have haste.
 //	When this enchantment enters, create a 2/2 black Skeleton Pirate creature token.
 //	At the beginning of your end step, if you descended this turn, you may pay 1 life. If you do, return this enchantment to its owner's hand. (You descended if a permanent card was put into your graveyard from anywhere.)
-var CorpsesOfTheLost = newCorpsesOfTheLost()
+var CorpsesOfTheLost = newCorpsesOfTheLost
 
 func newCorpsesOfTheLost() *game.CardDef {
 	return &game.CardDef{

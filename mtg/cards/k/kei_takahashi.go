@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{T}: Prevent the next 2 damage that would be dealt to target creature this turn.
-var KeiTakahashi = newKeiTakahashi()
+var KeiTakahashi = newKeiTakahashi
 
 func newKeiTakahashi() *game.CardDef {
 	return &game.CardDef{

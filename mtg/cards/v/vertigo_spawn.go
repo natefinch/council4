@@ -17,7 +17,7 @@ import (
 //
 //	Defender
 //	Whenever this creature blocks a creature, tap that creature. That creature doesn't untap during its controller's next untap step.
-var VertigoSpawn = newVertigoSpawn()
+var VertigoSpawn = newVertigoSpawn
 
 func newVertigoSpawn() *game.CardDef {
 	return &game.CardDef{

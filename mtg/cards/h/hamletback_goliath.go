@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Whenever another creature enters, you may put X +1/+1 counters on this creature, where X is that creature's power.
-var HamletbackGoliath = newHamletbackGoliath()
+var HamletbackGoliath = newHamletbackGoliath
 
 func newHamletbackGoliath() *game.CardDef {
 	return &game.CardDef{

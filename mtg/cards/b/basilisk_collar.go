@@ -53,4 +53,4 @@ var BasiliskCollar = func() *game.CardDef {
 		game.EquipActivatedAbility(cost.Mana{cost.O(2)}),
 	)
 	return card
-}()
+}

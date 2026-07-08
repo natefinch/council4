@@ -20,7 +20,7 @@ import (
 //	{U}: This creature can't be blocked this turn.
 //	{1}: This creature gets +1/-1 until end of turn.
 //	{1}: This creature gets -1/+1 until end of turn.
-var Aetherling = newAetherling()
+var Aetherling = newAetherling
 
 func newAetherling() *game.CardDef {
 	return &game.CardDef{

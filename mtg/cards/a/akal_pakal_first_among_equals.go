@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	At the beginning of each player's end step, if an artifact entered the battlefield under your control this turn, look at the top two cards of your library. Put one of them into your hand and the other into your graveyard.
-var AkalPakalFirstAmongEquals = newAkalPakalFirstAmongEquals()
+var AkalPakalFirstAmongEquals = newAkalPakalFirstAmongEquals
 
 func newAkalPakalFirstAmongEquals() *game.CardDef {
 	return &game.CardDef{

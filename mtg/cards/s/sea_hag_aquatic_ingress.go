@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, creatures your opponents control get -4/-0 until end of turn.
-var SeaHag = newSeaHag()
+var SeaHag = newSeaHag
 
 func newSeaHag() *game.CardDef {
 	return &game.CardDef{

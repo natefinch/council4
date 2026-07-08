@@ -19,7 +19,7 @@ import (
 //	Flying
 //	When Ezrim enters, investigate twice. (To investigate, create a Clue token. It's an artifact with "{2}, Sacrifice this token: Draw a card.")
 //	{1}, Sacrifice an artifact: Ezrim gains your choice of vigilance, lifelink, or hexproof until end of turn.
-var EzrimAgencyChief = newEzrimAgencyChief()
+var EzrimAgencyChief = newEzrimAgencyChief
 
 func newEzrimAgencyChief() *game.CardDef {
 	return &game.CardDef{

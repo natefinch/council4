@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Destroy target Plains or Island. Cryoclasm deals 3 damage to that land's controller.
-var Cryoclasm = newCryoclasm()
+var Cryoclasm = newCryoclasm
 
 func newCryoclasm() *game.CardDef {
 	return &game.CardDef{

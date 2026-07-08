@@ -19,7 +19,7 @@ import (
 //	When this Equipment enters, create a Junk token. (It's an artifact with "{T}, Sacrifice this token: Exile the top card of your library. You may play that card this turn. Activate only as a sorcery.")
 //	{3}, Sacrifice another artifact: Double equipped creature's power until end of turn.
 //	Equip {1}
-var JunkJet = newJunkJet()
+var JunkJet = newJunkJet
 
 func newJunkJet() *game.CardDef {
 	return &game.CardDef{

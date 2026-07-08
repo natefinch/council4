@@ -18,7 +18,7 @@ import (
 //
 //	When Queen Mother Ramonda enters, you become the monarch.
 //	As long as you're the monarch, creatures with power 2 or less can't attack you.
-var QueenMotherRamonda = newQueenMotherRamonda()
+var QueenMotherRamonda = newQueenMotherRamonda
 
 func newQueenMotherRamonda() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 //
 //	Put any number of target creature cards from your graveyard on top of your library.
 //	Draw a card.
-var ForeverYoung = newForeverYoung()
+var ForeverYoung = newForeverYoung
 
 func newForeverYoung() *game.CardDef {
 	return &game.CardDef{

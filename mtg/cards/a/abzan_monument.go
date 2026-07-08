@@ -18,7 +18,7 @@ import (
 //
 //	When this artifact enters, search your library for a basic Plains, Swamp, or Forest card, reveal it, put it into your hand, then shuffle.
 //	{1}{W}{B}{G}, {T}, Sacrifice this artifact: Create an X/X white Spirit creature token, where X is the greatest toughness among creatures you control. Activate only as a sorcery.
-var AbzanMonument = newAbzanMonument()
+var AbzanMonument = newAbzanMonument
 
 func newAbzanMonument() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 //
 //	Trample (This creature can deal excess combat damage to the player or planeswalker it's attacking.)
 //	When this creature enters, reveal the top four cards of your library. Put all Elf cards revealed this way into your hand and the rest on the bottom of your library in any order.
-var SylvanMessenger = newSylvanMessenger()
+var SylvanMessenger = newSylvanMessenger
 
 func newSylvanMessenger() *game.CardDef {
 	return &game.CardDef{

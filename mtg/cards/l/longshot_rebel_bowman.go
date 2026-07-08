@@ -18,7 +18,7 @@ import (
 //	Reach (This creature can block creatures with flying.)
 //	Noncreature spells you cast cost {1} less to cast.
 //	Whenever you cast a noncreature spell, Longshot deals 2 damage to each opponent.
-var LongshotRebelBowman = newLongshotRebelBowman()
+var LongshotRebelBowman = newLongshotRebelBowman
 
 func newLongshotRebelBowman() *game.CardDef {
 	return &game.CardDef{

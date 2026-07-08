@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Draw three cards. Then discard two cards unless you discard an artifact card.
-var ThirstForKnowledge = newThirstForKnowledge()
+var ThirstForKnowledge = newThirstForKnowledge
 
 func newThirstForKnowledge() *game.CardDef {
 	return &game.CardDef{

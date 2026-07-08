@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, look at the top four cards of your library. You may reveal a Goblin, Swamp, or Mountain card from among them and put it into your hand. Put the rest on the bottom of your library in a random order.
-var EclipsedBoggart = newEclipsedBoggart()
+var EclipsedBoggart = newEclipsedBoggart
 
 func newEclipsedBoggart() *game.CardDef {
 	return &game.CardDef{

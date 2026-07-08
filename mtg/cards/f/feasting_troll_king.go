@@ -19,7 +19,7 @@ import (
 //	Vigilance, trample
 //	When this creature enters, if you cast it from your hand, create three Food tokens. (They're artifacts with "{2}, {T}, Sacrifice this token: You gain 3 life.")
 //	Sacrifice three Foods: Return this card from your graveyard to the battlefield. Activate only during your turn.
-var FeastingTrollKing = newFeastingTrollKing()
+var FeastingTrollKing = newFeastingTrollKing
 
 func newFeastingTrollKing() *game.CardDef {
 	return &game.CardDef{

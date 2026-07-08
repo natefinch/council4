@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Return X target creature cards from your graveyard to your hand. You lose X life.
-var ShatteredCrypt = newShatteredCrypt()
+var ShatteredCrypt = newShatteredCrypt
 
 func newShatteredCrypt() *game.CardDef {
 	return &game.CardDef{

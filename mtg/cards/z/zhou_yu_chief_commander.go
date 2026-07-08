@@ -9,7 +9,7 @@ import (
 )
 
 // ZhouYuChiefCommander is the card definition for Zhou Yu, Chief Commander.
-var ZhouYuChiefCommander = newZhouYuChiefCommander()
+var ZhouYuChiefCommander = newZhouYuChiefCommander
 
 func newZhouYuChiefCommander() *game.CardDef {
 	return &game.CardDef{

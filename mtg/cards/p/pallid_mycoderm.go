@@ -20,7 +20,7 @@ import (
 //	At the beginning of your upkeep, put a spore counter on this creature.
 //	Remove three spore counters from this creature: Create a 1/1 green Saproling creature token.
 //	Sacrifice a Saproling: Each creature you control that's a Fungus or a Saproling gets +1/+1 until end of turn.
-var PallidMycoderm = newPallidMycoderm()
+var PallidMycoderm = newPallidMycoderm
 
 func newPallidMycoderm() *game.CardDef {
 	return &game.CardDef{

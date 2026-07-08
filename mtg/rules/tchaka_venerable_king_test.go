@@ -35,7 +35,7 @@ func stageTchakaGraveyardActivation(g *game.Game) id.ID {
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
 	g.Players[game.Player1].ManaPool.Add(mana.C, 3)
-	return addCardToGraveyard(g, game.Player1, cardt.TChakaVenerableKing)
+	return addCardToGraveyard(g, game.Player1, cardt.TChakaVenerableKing())
 }
 
 // TestTchakaGraveyardBecomeMonarchRequiresCommander proves T'Chaka, Venerable

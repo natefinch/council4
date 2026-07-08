@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	If one or more creature tokens would be created under your control, that many 4/4 white Angel creature tokens with flying and vigilance are created instead.
-var DivineVisitation = newDivineVisitation()
+var DivineVisitation = newDivineVisitation
 
 func newDivineVisitation() *game.CardDef {
 	return &game.CardDef{

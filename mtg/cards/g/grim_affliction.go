@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Put a -1/-1 counter on target creature, then proliferate. (Choose any number of permanents and/or players, then give each another counter of each kind already there.)
-var GrimAffliction = newGrimAffliction()
+var GrimAffliction = newGrimAffliction
 
 func newGrimAffliction() *game.CardDef {
 	return &game.CardDef{

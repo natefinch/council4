@@ -148,4 +148,4 @@ var GigglingSkitterspike = func() *game.CardDef {
 		},
 	)
 	return card
-}()
+}

@@ -19,7 +19,7 @@ import (
 // Oracle text:
 //
 //	When General Leo Cristophe enters, return up to one target creature card with mana value 3 or less from your graveyard to the battlefield. Then put a +1/+1 counter on General Leo Cristophe for each creature you control.
-var GeneralLeoCristophe = newGeneralLeoCristophe()
+var GeneralLeoCristophe = newGeneralLeoCristophe
 
 func newGeneralLeoCristophe() *game.CardDef {
 	return &game.CardDef{

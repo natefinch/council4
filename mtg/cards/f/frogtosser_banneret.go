@@ -17,7 +17,7 @@ import (
 //
 //	Haste
 //	Goblin spells and Rogue spells you cast cost {1} less to cast.
-var FrogtosserBanneret = newFrogtosserBanneret()
+var FrogtosserBanneret = newFrogtosserBanneret
 
 func newFrogtosserBanneret() *game.CardDef {
 	return &game.CardDef{

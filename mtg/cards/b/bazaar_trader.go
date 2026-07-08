@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{T}: Target player gains control of target artifact, creature, or land you control.
-var BazaarTrader = newBazaarTrader()
+var BazaarTrader = newBazaarTrader
 
 func newBazaarTrader() *game.CardDef {
 	return &game.CardDef{

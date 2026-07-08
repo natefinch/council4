@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Each creature assigns combat damage equal to its toughness rather than its power.
-var DoranTheSiegeTower = newDoranTheSiegeTower()
+var DoranTheSiegeTower = newDoranTheSiegeTower
 
 func newDoranTheSiegeTower() *game.CardDef {
 	return &game.CardDef{

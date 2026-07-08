@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	At the beginning of your upkeep, sacrifice this creature unless you sacrifice a Mountain.
-var Lithophage = newLithophage()
+var Lithophage = newLithophage
 
 func newLithophage() *game.CardDef {
 	return &game.CardDef{

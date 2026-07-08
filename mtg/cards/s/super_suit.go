@@ -19,7 +19,7 @@ import (
 //	When this Equipment enters, attach it to target creature you control. Untap that creature.
 //	Equipped creature gets +1/+2.
 //	Equip {2} ({2}: Attach to target creature you control. Equip only as a sorcery.)
-var SuperSuit = newSuperSuit()
+var SuperSuit = newSuperSuit
 
 func newSuperSuit() *game.CardDef {
 	return &game.CardDef{

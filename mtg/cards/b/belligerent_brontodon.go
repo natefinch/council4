@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Each creature you control assigns combat damage equal to its toughness rather than its power.
-var BelligerentBrontodon = newBelligerentBrontodon()
+var BelligerentBrontodon = newBelligerentBrontodon
 
 func newBelligerentBrontodon() *game.CardDef {
 	return &game.CardDef{

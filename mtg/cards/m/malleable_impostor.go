@@ -18,7 +18,7 @@ import (
 //	Flash
 //	Flying
 //	You may have this creature enter as a copy of a creature an opponent controls, except it's a Faerie Shapeshifter in addition to its other types and it has flying.
-var MalleableImpostor = newMalleableImpostor()
+var MalleableImpostor = newMalleableImpostor
 
 func newMalleableImpostor() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{3}{W}, Exile this creature: Exile all creatures. At the beginning of the next end step, return those cards to the battlefield under their owners' control.
-var PlanarGuide = newPlanarGuide()
+var PlanarGuide = newPlanarGuide
 
 func newPlanarGuide() *game.CardDef {
 	return &game.CardDef{

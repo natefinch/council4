@@ -17,7 +17,7 @@ import (
 //
 //	Flying
 //	When this creature enters, it connives. (Draw a card, then discard a card. If you discarded a nonland card, put a +1/+1 counter on this creature.)
-var EchoInspector = newEchoInspector()
+var EchoInspector = newEchoInspector
 
 func newEchoInspector() *game.CardDef {
 	return &game.CardDef{

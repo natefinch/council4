@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Return one or two target creatures to their owners' hands.
-var Counterintelligence = newCounterintelligence()
+var Counterintelligence = newCounterintelligence
 
 func newCounterintelligence() *game.CardDef {
 	return &game.CardDef{

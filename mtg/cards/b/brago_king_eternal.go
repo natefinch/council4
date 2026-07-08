@@ -17,7 +17,7 @@ import (
 //
 //	Flying
 //	Whenever Brago deals combat damage to a player, exile any number of target nonland permanents you control, then return those cards to the battlefield under their owner's control.
-var BragoKingEternal = newBragoKingEternal()
+var BragoKingEternal = newBragoKingEternal
 
 func newBragoKingEternal() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Sacrifice any number of lands, then add that much {C}.
-var ManaSeism = newManaSeism()
+var ManaSeism = newManaSeism
 
 func newManaSeism() *game.CardDef {
 	return &game.CardDef{

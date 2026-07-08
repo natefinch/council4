@@ -18,7 +18,7 @@ import (
 //
 //	Flash
 //	When this creature enters, you may search your library and/or graveyard for a card named Teferi, Timeless Voyager, reveal it, and put it into your hand. If you search your library this way, shuffle.
-var TeferiSWavecaster = newTeferiSWavecaster()
+var TeferiSWavecaster = newTeferiSWavecaster
 
 func newTeferiSWavecaster() *game.CardDef {
 	return &game.CardDef{

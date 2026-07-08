@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, sacrifice it unless you discard a creature card.
-var HiddenHorror = newHiddenHorror()
+var HiddenHorror = newHiddenHorror
 
 func newHiddenHorror() *game.CardDef {
 	return &game.CardDef{

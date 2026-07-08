@@ -17,7 +17,7 @@ import (
 //
 //	Flying (This creature can't be blocked except by creatures with flying or reach.)
 //	This creature can block only creatures with flying.
-var CloudSprite = newCloudSprite()
+var CloudSprite = newCloudSprite
 
 func newCloudSprite() *game.CardDef {
 	return &game.CardDef{

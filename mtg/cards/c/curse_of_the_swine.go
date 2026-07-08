@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Exile X target creatures. For each creature exiled this way, its controller creates a 2/2 green Boar creature token.
-var CurseOfTheSwine = newCurseOfTheSwine()
+var CurseOfTheSwine = newCurseOfTheSwine
 
 func newCurseOfTheSwine() *game.CardDef {
 	return &game.CardDef{

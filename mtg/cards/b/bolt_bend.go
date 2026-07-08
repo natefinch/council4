@@ -18,7 +18,7 @@ import (
 //
 //	This spell costs {3} less to cast if you control a creature with power 4 or greater.
 //	Change the target of target spell or ability with a single target.
-var BoltBend = newBoltBend()
+var BoltBend = newBoltBend
 
 func newBoltBend() *game.CardDef {
 	return &game.CardDef{

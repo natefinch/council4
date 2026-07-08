@@ -18,7 +18,7 @@ import (
 //
 //	Deathtouch (Any amount of damage this deals to a creature is enough to destroy it.)
 //	Whenever a creature you control with deathtouch deals combat damage to a player, that player gets two poison counters. (A player with ten or more poison counters loses the game.)
-var FynnTheFangbearer = newFynnTheFangbearer()
+var FynnTheFangbearer = newFynnTheFangbearer
 
 func newFynnTheFangbearer() *game.CardDef {
 	return &game.CardDef{

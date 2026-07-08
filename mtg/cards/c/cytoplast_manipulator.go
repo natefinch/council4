@@ -11,7 +11,7 @@ import (
 )
 
 // CytoplastManipulator is the card definition for Cytoplast Manipulator.
-var CytoplastManipulator = newCytoplastManipulator()
+var CytoplastManipulator = newCytoplastManipulator
 
 func newCytoplastManipulator() *game.CardDef {
 	return &game.CardDef{

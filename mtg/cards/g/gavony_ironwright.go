@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Fateful hour — As long as you have 5 or less life, other creatures you control get +1/+4.
-var GavonyIronwright = newGavonyIronwright()
+var GavonyIronwright = newGavonyIronwright
 
 func newGavonyIronwright() *game.CardDef {
 	return &game.CardDef{

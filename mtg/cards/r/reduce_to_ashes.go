@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Reduce to Ashes deals 5 damage to target creature. If that creature would die this turn, exile it instead.
-var ReduceToAshes = newReduceToAshes()
+var ReduceToAshes = newReduceToAshes
 
 func newReduceToAshes() *game.CardDef {
 	return &game.CardDef{

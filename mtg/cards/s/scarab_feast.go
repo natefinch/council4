@@ -18,7 +18,7 @@ import (
 //
 //	Exile up to three target cards from a single graveyard.
 //	Cycling {B} ({B}, Discard this card: Draw a card.)
-var ScarabFeast = newScarabFeast()
+var ScarabFeast = newScarabFeast
 
 func newScarabFeast() *game.CardDef {
 	return &game.CardDef{

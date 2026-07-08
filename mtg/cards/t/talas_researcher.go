@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{T}: Draw a card. Activate only during your turn, before attackers are declared.
-var TalasResearcher = newTalasResearcher()
+var TalasResearcher = newTalasResearcher
 
 func newTalasResearcher() *game.CardDef {
 	return &game.CardDef{

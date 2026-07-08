@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, look at the top four cards of your library. You may reveal a Human card from among them and put it into your hand. Put the rest on the bottom of your library in any order.
-var CourageousOutrider = newCourageousOutrider()
+var CourageousOutrider = newCourageousOutrider
 
 func newCourageousOutrider() *game.CardDef {
 	return &game.CardDef{

@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever you cast an artifact spell, you may pay {1}. If you do, you gain 3 life.
-var Lifesmith = newLifesmith()
+var Lifesmith = newLifesmith
 
 func newLifesmith() *game.CardDef {
 	return &game.CardDef{

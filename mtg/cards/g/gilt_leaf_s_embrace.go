@@ -19,7 +19,7 @@ import (
 //	Enchant creature
 //	When this Aura enters, enchanted creature gains trample and indestructible until end of turn. (Damage and effects that say "destroy" don't destroy it. If its toughness is 0 or less, it still dies.)
 //	Enchanted creature gets +2/+0.
-var GiltLeafSEmbrace = newGiltLeafSEmbrace()
+var GiltLeafSEmbrace = newGiltLeafSEmbrace
 
 func newGiltLeafSEmbrace() *game.CardDef {
 	return &game.CardDef{

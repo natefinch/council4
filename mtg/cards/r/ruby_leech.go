@@ -18,7 +18,7 @@ import (
 //
 //	First strike
 //	Red spells you cast cost {R} more to cast.
-var RubyLeech = newRubyLeech()
+var RubyLeech = newRubyLeech
 
 func newRubyLeech() *game.CardDef {
 	return &game.CardDef{

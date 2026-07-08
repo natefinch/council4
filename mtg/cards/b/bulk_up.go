@@ -17,7 +17,7 @@ import (
 //
 //	Double target creature's power until end of turn.
 //	Flashback {4}{R}{R} (You may cast this card from your graveyard for its flashback cost. Then exile it.)
-var BulkUp = newBulkUp()
+var BulkUp = newBulkUp
 
 func newBulkUp() *game.CardDef {
 	return &game.CardDef{

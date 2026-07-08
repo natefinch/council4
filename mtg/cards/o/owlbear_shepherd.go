@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	At the beginning of your end step, if creatures you control have total power 8 or greater, draw a card.
-var OwlbearShepherd = newOwlbearShepherd()
+var OwlbearShepherd = newOwlbearShepherd
 
 func newOwlbearShepherd() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 //
 //	{T}: Add {C}.
 //	{1}, {T}: Target creature gains protection from artifacts until end of turn.
-var TowerOfTheMagistrate = newTowerOfTheMagistrate()
+var TowerOfTheMagistrate = newTowerOfTheMagistrate
 
 func newTowerOfTheMagistrate() *game.CardDef {
 	return &game.CardDef{

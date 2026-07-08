@@ -17,7 +17,7 @@ import (
 //
 //	Flying
 //	This creature can block only creatures with flying.
-var Stratozeppelid = newStratozeppelid()
+var Stratozeppelid = newStratozeppelid
 
 func newStratozeppelid() *game.CardDef {
 	return &game.CardDef{

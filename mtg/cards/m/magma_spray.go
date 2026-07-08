@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Magma Spray deals 2 damage to target creature. If that creature would die this turn, exile it instead.
-var MagmaSpray = newMagmaSpray()
+var MagmaSpray = newMagmaSpray
 
 func newMagmaSpray() *game.CardDef {
 	return &game.CardDef{

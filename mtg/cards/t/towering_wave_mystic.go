@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature deals damage, target player mills that many cards.
-var ToweringWaveMystic = newToweringWaveMystic()
+var ToweringWaveMystic = newToweringWaveMystic
 
 func newToweringWaveMystic() *game.CardDef {
 	return &game.CardDef{

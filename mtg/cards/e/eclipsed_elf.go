@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, look at the top four cards of your library. You may reveal an Elf, Swamp, or Forest card from among them and put it into your hand. Put the rest on the bottom of your library in a random order.
-var EclipsedElf = newEclipsedElf()
+var EclipsedElf = newEclipsedElf
 
 func newEclipsedElf() *game.CardDef {
 	return &game.CardDef{

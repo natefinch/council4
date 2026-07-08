@@ -17,7 +17,7 @@ import (
 //
 //	Counter target spell that targets a creature.
 //	Draw a card.
-var Confound = newConfound()
+var Confound = newConfound
 
 func newConfound() *game.CardDef {
 	return &game.CardDef{

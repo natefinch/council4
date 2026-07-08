@@ -19,7 +19,7 @@ import (
 //	Enchant creature
 //	Enchanted creature gets +2/+2 and has flying.
 //	{R}: Enchanted creature gets +1/+0 until end of turn.
-var ShivSEmbrace = newShivSEmbrace()
+var ShivSEmbrace = newShivSEmbrace
 
 func newShivSEmbrace() *game.CardDef {
 	return &game.CardDef{

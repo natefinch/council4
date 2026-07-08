@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever a creature you control enters, you gain life equal to its toughness.
-var AngelicChorus = newAngelicChorus()
+var AngelicChorus = newAngelicChorus
 
 func newAngelicChorus() *game.CardDef {
 	return &game.CardDef{

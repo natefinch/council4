@@ -9,7 +9,7 @@ import (
 )
 
 // RonomSerpent is the card definition for Ronom Serpent.
-var RonomSerpent = newRonomSerpent()
+var RonomSerpent = newRonomSerpent
 
 func newRonomSerpent() *game.CardDef {
 	return &game.CardDef{

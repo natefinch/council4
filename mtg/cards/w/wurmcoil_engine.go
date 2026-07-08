@@ -16,7 +16,7 @@ import (
 //
 //	Deathtouch, lifelink
 //	When this creature dies, create a 3/3 colorless Phyrexian Wurm artifact creature token with deathtouch and a 3/3 colorless Phyrexian Wurm artifact creature token with lifelink.
-var WurmcoilEngine = newWurmcoilEngine()
+var WurmcoilEngine = newWurmcoilEngine
 
 func newWurmcoilEngine() *game.CardDef {
 	return &game.CardDef{

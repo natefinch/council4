@@ -18,7 +18,7 @@ import (
 //
 //	When this creature enters, return target enchantment creature card from your graveyard to your hand.
 //	{W}, Sacrifice this creature: Return target enchantment creature card from your graveyard to your hand.
-var OdunosRiverTrawler = newOdunosRiverTrawler()
+var OdunosRiverTrawler = newOdunosRiverTrawler
 
 func newOdunosRiverTrawler() *game.CardDef {
 	return &game.CardDef{

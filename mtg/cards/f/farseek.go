@@ -17,21 +17,23 @@ import (
 // Oracle text:
 //
 //	Search your library for a Plains, Island, Swamp, or Mountain card, put it onto the battlefield tapped, then shuffle.
-var Farseek = &game.CardDef{
-	ColorIdentity: color.NewIdentity(color.Green),
-	CardFace: game.CardFace{
-		Name: "Farseek",
-		ManaCost: opt.Val(cost.Mana{
-			cost.O(1),
-			cost.G,
-		}),
-		Colors: []color.Color{color.Green},
-		Types:  []types.Card{types.Sorcery},
-		OracleText: `
+var Farseek = func() *game.CardDef {
+	return &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Green),
+		CardFace: game.CardFace{
+			Name: "Farseek",
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(1),
+				cost.G,
+			}),
+			Colors: []color.Color{color.Green},
+			Types:  []types.Card{types.Sorcery},
+			OracleText: `
 			Search your library for a Plains, Island, Swamp, or Mountain card, put it onto the battlefield tapped, then shuffle.
 		`,
-		SpellAbility: opt.Val(
-			common.RampLand{Tapped: true, SubTypes: []types.Sub{types.Plains, types.Island, types.Swamp, types.Mountain}}.Ability(),
-		),
-	},
+			SpellAbility: opt.Val(
+				common.RampLand{Tapped: true, SubTypes: []types.Sub{types.Plains, types.Island, types.Swamp, types.Mountain}}.Ability(),
+			),
+		},
+	}
 }

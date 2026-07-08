@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, green creatures get -1/-1 until end of turn.
-var RankAndFile = newRankAndFile()
+var RankAndFile = newRankAndFile
 
 func newRankAndFile() *game.CardDef {
 	return &game.CardDef{

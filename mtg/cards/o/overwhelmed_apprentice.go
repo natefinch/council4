@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, each opponent mills two cards. Then you scry 2. (Look at the top two cards of your library, then put any number of them on the bottom and the rest on top in any order.)
-var OverwhelmedApprentice = newOverwhelmedApprentice()
+var OverwhelmedApprentice = newOverwhelmedApprentice
 
 func newOverwhelmedApprentice() *game.CardDef {
 	return &game.CardDef{

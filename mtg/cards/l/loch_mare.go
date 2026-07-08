@@ -20,7 +20,7 @@ import (
 //	This creature enters with three -1/-1 counters on it.
 //	{1}{U}, Remove a counter from this creature: Draw a card.
 //	{2}{U}, Remove two counters from this creature: Tap target creature. Put a stun counter on it. (If a permanent with a stun counter would become untapped, remove one from it instead.)
-var LochMare = newLochMare()
+var LochMare = newLochMare
 
 func newLochMare() *game.CardDef {
 	return &game.CardDef{

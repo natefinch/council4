@@ -19,7 +19,7 @@ import (
 //	When this creature enters, choose one —
 //	• Target creature an opponent controls gets -1/-1 until end of turn.
 //	• Destroy target creature an opponent controls that was dealt damage this turn.
-var DownwindAmbusher = newDownwindAmbusher()
+var DownwindAmbusher = newDownwindAmbusher
 
 func newDownwindAmbusher() *game.CardDef {
 	return &game.CardDef{

@@ -20,7 +20,7 @@ import (
 //	This artifact enters with three arrowhead counters on it.
 //	At the beginning of your upkeep, if there are no arrowhead counters on this artifact, sacrifice it.
 //	{T}, Remove an arrowhead counter from this artifact: Put a -1/-1 counter on target creature.
-var SerratedArrows = newSerratedArrows()
+var SerratedArrows = newSerratedArrows
 
 func newSerratedArrows() *game.CardDef {
 	return &game.CardDef{

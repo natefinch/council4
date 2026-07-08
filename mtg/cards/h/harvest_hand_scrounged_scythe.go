@@ -15,7 +15,7 @@ import (
 // Oracle text:
 //
 //	When this creature dies, return it to the battlefield transformed under your control.
-var HarvestHand = newHarvestHand()
+var HarvestHand = newHarvestHand
 
 func newHarvestHand() *game.CardDef {
 	return &game.CardDef{

@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever a creature you control dies, you gain life equal to that creature's toughness.
-var ProperBurial = newProperBurial()
+var ProperBurial = newProperBurial
 
 func newProperBurial() *game.CardDef {
 	return &game.CardDef{

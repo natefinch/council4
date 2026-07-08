@@ -20,7 +20,7 @@ import (
 //
 //	This land enters tapped.
 //	{T}: Add {U}.
-var JidoorAristocraticCapital = newJidoorAristocraticCapital()
+var JidoorAristocraticCapital = newJidoorAristocraticCapital
 
 func newJidoorAristocraticCapital() *game.CardDef {
 	return &game.CardDef{

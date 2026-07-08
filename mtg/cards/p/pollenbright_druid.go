@@ -19,7 +19,7 @@ import (
 //	When this creature enters, choose one —
 //	• Put a +1/+1 counter on target creature.
 //	• Proliferate. (Choose any number of permanents and/or players, then give each another counter of each kind already there.)
-var PollenbrightDruid = newPollenbrightDruid()
+var PollenbrightDruid = newPollenbrightDruid
 
 func newPollenbrightDruid() *game.CardDef {
 	return &game.CardDef{

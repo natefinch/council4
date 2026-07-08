@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Alliance — Whenever another creature you control enters, target creature other than this creature gets +1/+1 and gains trample until end of turn.
-var ElegantEntourage = newElegantEntourage()
+var ElegantEntourage = newElegantEntourage
 
 func newElegantEntourage() *game.CardDef {
 	return &game.CardDef{

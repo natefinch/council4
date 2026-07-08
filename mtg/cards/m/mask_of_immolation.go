@@ -19,7 +19,7 @@ import (
 //	When this Equipment enters, create a 1/1 red Elemental creature token, then attach this Equipment to it.
 //	Equipped creature has "Sacrifice this creature: It deals 1 damage to any target."
 //	Equip {2} ({2}: Attach to target creature you control. Equip only as a sorcery.)
-var MaskOfImmolation = newMaskOfImmolation()
+var MaskOfImmolation = newMaskOfImmolation
 
 func newMaskOfImmolation() *game.CardDef {
 	return &game.CardDef{

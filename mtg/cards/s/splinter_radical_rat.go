@@ -19,7 +19,7 @@ import (
 //
 //	If a triggered ability of a Ninja creature you control triggers, that ability triggers an additional time.
 //	{1}{U}: Target Ninja can't be blocked this turn.
-var SplinterRadicalRat = newSplinterRadicalRat()
+var SplinterRadicalRat = newSplinterRadicalRat
 
 func newSplinterRadicalRat() *game.CardDef {
 	return &game.CardDef{

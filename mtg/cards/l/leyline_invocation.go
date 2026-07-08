@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Create a 0/0 green and blue Fractal creature token. Put X +1/+1 counters on it, where X is the number of lands you control.
-var LeylineInvocation = newLeylineInvocation()
+var LeylineInvocation = newLeylineInvocation
 
 func newLeylineInvocation() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 //
 //	Flying
 //	When this creature enters, reveal the top five cards of your library. An opponent separates those cards into two piles. Put one pile into your hand and the other into your graveyard.
-var SphinxOfUthuun = newSphinxOfUthuun()
+var SphinxOfUthuun = newSphinxOfUthuun
 
 func newSphinxOfUthuun() *game.CardDef {
 	return &game.CardDef{

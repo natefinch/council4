@@ -17,7 +17,7 @@ import (
 //
 //	Skulk (This creature can't be blocked by creatures with greater power.)
 //	At the beginning of your upkeep, you may discard all the cards in your hand. If you do, draw that many cards.
-var ForgottenCreation = newForgottenCreation()
+var ForgottenCreation = newForgottenCreation
 
 func newForgottenCreation() *game.CardDef {
 	return &game.CardDef{

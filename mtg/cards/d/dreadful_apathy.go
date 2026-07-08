@@ -19,7 +19,7 @@ import (
 //	Enchant creature
 //	Enchanted creature can't attack or block.
 //	{2}{W}: Exile enchanted creature.
-var DreadfulApathy = newDreadfulApathy()
+var DreadfulApathy = newDreadfulApathy
 
 func newDreadfulApathy() *game.CardDef {
 	return &game.CardDef{

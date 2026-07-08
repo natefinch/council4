@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Target creature you control gets +X/+X until end of turn. Then it fights up to one target creature you don't control. (Each deals damage equal to its power to the other.)
-var PrimalMight = newPrimalMight()
+var PrimalMight = newPrimalMight
 
 func newPrimalMight() *game.CardDef {
 	return &game.CardDef{

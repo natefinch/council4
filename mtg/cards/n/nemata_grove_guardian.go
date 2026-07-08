@@ -18,7 +18,7 @@ import (
 //
 //	{2}{G}: Create a 1/1 green Saproling creature token.
 //	Sacrifice a Saproling: Saproling creatures get +1/+1 until end of turn.
-var NemataGroveGuardian = newNemataGroveGuardian()
+var NemataGroveGuardian = newNemataGroveGuardian
 
 func newNemataGroveGuardian() *game.CardDef {
 	return &game.CardDef{

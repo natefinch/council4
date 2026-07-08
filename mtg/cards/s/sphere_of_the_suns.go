@@ -18,7 +18,7 @@ import (
 //
 //	This artifact enters tapped and with three charge counters on it.
 //	{T}, Remove a charge counter from this artifact: Add one mana of any color.
-var SphereOfTheSuns = newSphereOfTheSuns()
+var SphereOfTheSuns = newSphereOfTheSuns
 
 func newSphereOfTheSuns() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 //
 //	Trample
 //	At the beginning of your upkeep, sacrifice this creature unless you sacrifice two lands.
-var CosmicLarva = newCosmicLarva()
+var CosmicLarva = newCosmicLarva
 
 func newCosmicLarva() *game.CardDef {
 	return &game.CardDef{

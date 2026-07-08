@@ -17,7 +17,7 @@ import (
 //
 //	Counter target spell that targets you or a permanent you control.
 //	Draw a card.
-var HinderingLight = newHinderingLight()
+var HinderingLight = newHinderingLight
 
 func newHinderingLight() *game.CardDef {
 	return &game.CardDef{

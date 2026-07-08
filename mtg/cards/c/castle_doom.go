@@ -18,7 +18,7 @@ import (
 //	{T}: Add {C}.
 //	{T}: Add one mana of any color. Spend this mana only to cast an artifact spell.
 //	{3}, {T}, Sacrifice an artifact: Create a 3/3 colorless Robot Villain artifact creature token named Doombot. Activate only as a sorcery.
-var CastleDoom = newCastleDoom()
+var CastleDoom = newCastleDoom
 
 func newCastleDoom() *game.CardDef {
 	return &game.CardDef{

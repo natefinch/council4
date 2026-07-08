@@ -18,7 +18,7 @@ import (
 //
 //	Defender
 //	At the beginning of combat on your turn, if you control a creature with power 4 or greater, this creature gets +1/+0 until end of turn and can attack this turn as though it didn't have defender.
-var TerritorialWitchstalker = newTerritorialWitchstalker()
+var TerritorialWitchstalker = newTerritorialWitchstalker
 
 func newTerritorialWitchstalker() *game.CardDef {
 	return &game.CardDef{

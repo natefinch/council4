@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Metalcraft — Whenever this creature attacks, if you control three or more artifacts, creatures your opponents control lose all abilities and have base power and toughness 1/1 until end of turn.
-var VedalkenHumiliator = newVedalkenHumiliator()
+var VedalkenHumiliator = newVedalkenHumiliator
 
 func newVedalkenHumiliator() *game.CardDef {
 	return &game.CardDef{

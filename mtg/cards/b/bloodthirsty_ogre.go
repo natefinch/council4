@@ -19,7 +19,7 @@ import (
 //
 //	{T}: Put a devotion counter on this creature.
 //	{T}: Target creature gets -X/-X until end of turn, where X is the number of devotion counters on this creature. Activate only if you control a Demon.
-var BloodthirstyOgre = newBloodthirstyOgre()
+var BloodthirstyOgre = newBloodthirstyOgre
 
 func newBloodthirstyOgre() *game.CardDef {
 	return &game.CardDef{

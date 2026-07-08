@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{T}: Add {U}. Spend this mana only to cast an artifact spell or activate an ability.
-var GuidelightOptimizer = newGuidelightOptimizer()
+var GuidelightOptimizer = newGuidelightOptimizer
 
 func newGuidelightOptimizer() *game.CardDef {
 	return &game.CardDef{

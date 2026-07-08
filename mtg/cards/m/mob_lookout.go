@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, target creature you control connives. (Draw a card, then discard a card. If you discarded a nonland card, put a +1/+1 counter on that creature.)
-var MobLookout = newMobLookout()
+var MobLookout = newMobLookout
 
 func newMobLookout() *game.CardDef {
 	return &game.CardDef{

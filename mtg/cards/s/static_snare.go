@@ -19,7 +19,7 @@ import (
 //	Flash
 //	This spell costs {1} less to cast for each attacking creature.
 //	When this enchantment enters, exile target artifact or creature an opponent controls until this enchantment leaves the battlefield.
-var StaticSnare = newStaticSnare()
+var StaticSnare = newStaticSnare
 
 func newStaticSnare() *game.CardDef {
 	return &game.CardDef{

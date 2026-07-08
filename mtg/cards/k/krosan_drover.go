@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Creature spells you cast with mana value 6 or greater cost {2} less to cast.
-var KrosanDrover = newKrosanDrover()
+var KrosanDrover = newKrosanDrover
 
 func newKrosanDrover() *game.CardDef {
 	return &game.CardDef{

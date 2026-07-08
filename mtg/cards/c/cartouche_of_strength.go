@@ -18,7 +18,7 @@ import (
 //	Enchant creature you control
 //	When this Aura enters, you may have enchanted creature fight target creature an opponent controls. (Each deals damage equal to its power to the other.)
 //	Enchanted creature gets +1/+1 and has trample.
-var CartoucheOfStrength = newCartoucheOfStrength()
+var CartoucheOfStrength = newCartoucheOfStrength
 
 func newCartoucheOfStrength() *game.CardDef {
 	return &game.CardDef{

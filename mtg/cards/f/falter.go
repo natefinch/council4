@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Creatures without flying can't block this turn.
-var Falter = newFalter()
+var Falter = newFalter
 
 func newFalter() *game.CardDef {
 	return &game.CardDef{

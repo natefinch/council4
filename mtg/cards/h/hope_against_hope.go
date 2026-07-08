@@ -18,7 +18,7 @@ import (
 //	Enchant creature
 //	Enchanted creature gets +1/+1 for each creature you control.
 //	As long as enchanted creature is a Human, it has first strike.
-var HopeAgainstHope = newHopeAgainstHope()
+var HopeAgainstHope = newHopeAgainstHope
 
 func newHopeAgainstHope() *game.CardDef {
 	return &game.CardDef{

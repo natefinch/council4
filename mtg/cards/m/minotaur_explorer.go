@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, sacrifice it unless you discard a card at random.
-var MinotaurExplorer = newMinotaurExplorer()
+var MinotaurExplorer = newMinotaurExplorer
 
 func newMinotaurExplorer() *game.CardDef {
 	return &game.CardDef{

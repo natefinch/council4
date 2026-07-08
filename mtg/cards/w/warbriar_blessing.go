@@ -18,7 +18,7 @@ import (
 //	Enchant creature you control
 //	When this Aura enters, enchanted creature fights up to one target creature you don't control. (Each deals damage equal to its power to the other.)
 //	Enchanted creature gets +0/+2.
-var WarbriarBlessing = newWarbriarBlessing()
+var WarbriarBlessing = newWarbriarBlessing
 
 func newWarbriarBlessing() *game.CardDef {
 	return &game.CardDef{

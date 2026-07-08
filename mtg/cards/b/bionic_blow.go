@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Target creature you control gets +X/+0 until end of turn. Then it deals damage equal to its power to up to one other target creature.
-var BionicBlow = newBionicBlow()
+var BionicBlow = newBionicBlow
 
 func newBionicBlow() *game.CardDef {
 	return &game.CardDef{

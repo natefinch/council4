@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{T}: Draw a card, then discard a card. Activate only if you've cast a noncreature spell this turn.
-var SeekerOfInsight = newSeekerOfInsight()
+var SeekerOfInsight = newSeekerOfInsight
 
 func newSeekerOfInsight() *game.CardDef {
 	return &game.CardDef{

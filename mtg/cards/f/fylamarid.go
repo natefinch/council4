@@ -19,7 +19,7 @@ import (
 //	Flying
 //	This creature can't be blocked by blue creatures.
 //	{U}: Target creature becomes blue until end of turn.
-var Fylamarid = newFylamarid()
+var Fylamarid = newFylamarid
 
 func newFylamarid() *game.CardDef {
 	return &game.CardDef{

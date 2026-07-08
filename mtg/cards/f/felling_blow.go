@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Put a +1/+1 counter on target creature you control. Then that creature deals damage equal to its power to target creature an opponent controls.
-var FellingBlow = newFellingBlow()
+var FellingBlow = newFellingBlow
 
 func newFellingBlow() *game.CardDef {
 	return &game.CardDef{

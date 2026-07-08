@@ -17,7 +17,7 @@ import (
 //
 //	When this enchantment enters, you become the monarch.
 //	At the beginning of your upkeep, create a 1/1 white Spirit creature token with flying. If you're the monarch, create a 4/4 white Angel creature token with flying instead.
-var CourtOfGrace = newCourtOfGrace()
+var CourtOfGrace = newCourtOfGrace
 
 func newCourtOfGrace() *game.CardDef {
 	return &game.CardDef{

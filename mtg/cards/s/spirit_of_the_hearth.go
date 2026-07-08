@@ -17,7 +17,7 @@ import (
 //
 //	Flying
 //	You have hexproof. (You can't be the target of spells or abilities your opponents control.)
-var SpiritOfTheHearth = newSpiritOfTheHearth()
+var SpiritOfTheHearth = newSpiritOfTheHearth
 
 func newSpiritOfTheHearth() *game.CardDef {
 	return &game.CardDef{

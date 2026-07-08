@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever a creature you control deals combat damage, you gain that much life.
-var NoblePurpose = newNoblePurpose()
+var NoblePurpose = newNoblePurpose
 
 func newNoblePurpose() *game.CardDef {
 	return &game.CardDef{

@@ -19,7 +19,7 @@ import (
 //
 //	Whenever this creature becomes the target of a spell or ability for the first time each turn, put a +1/+1 counter on it.
 //	As long as this creature has three or more +1/+1 counters on it, it has flying.
-var AngelicCub = newAngelicCub()
+var AngelicCub = newAngelicCub
 
 func newAngelicCub() *game.CardDef {
 	return &game.CardDef{

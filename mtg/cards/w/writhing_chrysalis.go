@@ -21,7 +21,7 @@ import (
 //	When you cast this spell, create two 0/1 colorless Eldrazi Spawn creature tokens with "Sacrifice this token: Add {C}."
 //	Reach
 //	Whenever you sacrifice another Eldrazi, put a +1/+1 counter on this creature.
-var WrithingChrysalis = newWrithingChrysalis()
+var WrithingChrysalis = newWrithingChrysalis
 
 func newWrithingChrysalis() *game.CardDef {
 	return &game.CardDef{

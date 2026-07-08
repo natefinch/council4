@@ -17,7 +17,7 @@ import (
 //
 //	Enchant creature
 //	Enchanted creature has protection from black. This effect doesn't remove this Aura.
-var BlackWard = newBlackWard()
+var BlackWard = newBlackWard
 
 func newBlackWard() *game.CardDef {
 	return &game.CardDef{

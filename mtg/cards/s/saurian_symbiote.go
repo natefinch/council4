@@ -20,7 +20,7 @@ import (
 //	When this creature enters, choose one —
 //	• Put a +1/+1 counter on this creature.
 //	• Create a 1/1 green Saproling creature token.
-var SaurianSymbiote = newSaurianSymbiote()
+var SaurianSymbiote = newSaurianSymbiote
 
 func newSaurianSymbiote() *game.CardDef {
 	return &game.CardDef{

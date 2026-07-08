@@ -18,7 +18,7 @@ import (
 //	Menace, prowess (Whenever you cast a noncreature spell, this creature gets +1/+1 until end of turn.)
 //	Other Allies you control have menace and prowess.
 //	Whenever you cast a noncreature spell, create a 1/1 white Ally creature token.
-var SokkaTenaciousTactician = newSokkaTenaciousTactician()
+var SokkaTenaciousTactician = newSokkaTenaciousTactician
 
 func newSokkaTenaciousTactician() *game.CardDef {
 	return &game.CardDef{

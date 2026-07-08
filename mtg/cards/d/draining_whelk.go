@@ -19,7 +19,7 @@ import (
 //	Flash
 //	Flying
 //	When this creature enters, counter target spell. Put X +1/+1 counters on this creature, where X is that spell's mana value.
-var DrainingWhelk = newDrainingWhelk()
+var DrainingWhelk = newDrainingWhelk
 
 func newDrainingWhelk() *game.CardDef {
 	return &game.CardDef{

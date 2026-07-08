@@ -18,7 +18,7 @@ import (
 //	Enchant creature
 //	Enchanted creature gets +3/+3.
 //	As long as enchanted creature is a Human, it has trample.
-var EquestrianSkill = newEquestrianSkill()
+var EquestrianSkill = newEquestrianSkill
 
 func newEquestrianSkill() *game.CardDef {
 	return &game.CardDef{

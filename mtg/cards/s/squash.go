@@ -17,7 +17,7 @@ import (
 //
 //	This spell costs {3} less to cast if you control a Giant.
 //	Squash deals 6 damage to target creature or planeswalker.
-var Squash = newSquash()
+var Squash = newSquash
 
 func newSquash() *game.CardDef {
 	return &game.CardDef{

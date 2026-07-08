@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	This creature gets +1/+1 for each other Squirrel on the battlefield.
-var SquirrelMob = newSquirrelMob()
+var SquirrelMob = newSquirrelMob
 
 func newSquirrelMob() *game.CardDef {
 	return &game.CardDef{

@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever you cast a Spirit or Arcane spell, each other creature you control gets +1/+1 and gains trample until end of turn.
-var KodamaOfTheSouthTree = newKodamaOfTheSouthTree()
+var KodamaOfTheSouthTree = newKodamaOfTheSouthTree
 
 func newKodamaOfTheSouthTree() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	At the beginning of each opponent's upkeep, if that player has two or fewer cards in hand, this creature deals 3 damage to that player.
-var LavabornMuse = newLavabornMuse()
+var LavabornMuse = newLavabornMuse
 
 func newLavabornMuse() *game.CardDef {
 	return &game.CardDef{

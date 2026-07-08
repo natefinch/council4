@@ -19,7 +19,7 @@ import (
 //	At the beginning of combat on your turn, if you've cast a noncreature spell this turn, surveil 1.
 //	{T}: Add {C}.
 //	{1}, {T}: Add one mana of any color.
-var HERBIELovableRobot = newHERBIELovableRobot()
+var HERBIELovableRobot = newHERBIELovableRobot
 
 func newHERBIELovableRobot() *game.CardDef {
 	return &game.CardDef{

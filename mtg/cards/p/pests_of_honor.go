@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Celebration — At the beginning of combat on your turn, if two or more nonland permanents entered the battlefield under your control this turn, put a +1/+1 counter on this creature.
-var PestsOfHonor = newPestsOfHonor()
+var PestsOfHonor = newPestsOfHonor
 
 func newPestsOfHonor() *game.CardDef {
 	return &game.CardDef{

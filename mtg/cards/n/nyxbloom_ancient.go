@@ -17,7 +17,7 @@ import (
 //
 //	Trample
 //	If you tap a permanent for mana, it produces three times as much of that mana instead.
-var NyxbloomAncient = newNyxbloomAncient()
+var NyxbloomAncient = newNyxbloomAncient
 
 func newNyxbloomAncient() *game.CardDef {
 	return &game.CardDef{

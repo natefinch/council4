@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever another Treefolk creature you control enters, you may gain life equal to that creature's toughness.
-var OrchardWarden = newOrchardWarden()
+var OrchardWarden = newOrchardWarden
 
 func newOrchardWarden() *game.CardDef {
 	return &game.CardDef{

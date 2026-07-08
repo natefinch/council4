@@ -20,7 +20,7 @@ import (
 //	• Destroy target artifact or enchantment.
 //	• Look at the top five cards of your library. You may put a land card from among them onto the battlefield tapped. Put the rest on the bottom of your library in a random order.
 //	• You gain 4 life.
-var SilverbackElder = newSilverbackElder()
+var SilverbackElder = newSilverbackElder
 
 func newSilverbackElder() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 //	Kicker {R} (You may pay an additional {R} as you cast this spell.)
 //	Trample
 //	When this creature enters, if it was kicked, it gets +1/+1 and gains haste until end of turn.
-var YavimayaIconoclast = newYavimayaIconoclast()
+var YavimayaIconoclast = newYavimayaIconoclast
 
 func newYavimayaIconoclast() *game.CardDef {
 	return &game.CardDef{

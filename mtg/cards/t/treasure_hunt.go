@@ -17,29 +17,31 @@ import (
 // Oracle text:
 //
 //	Reveal cards from the top of your library until you reveal a nonland card, then put all cards revealed this way into your hand.
-var TreasureHunt = &game.CardDef{
-	ColorIdentity: color.NewIdentity(color.Blue),
-	CardFace: game.CardFace{
-		Name: "Treasure Hunt",
-		ManaCost: opt.Val(cost.Mana{
-			cost.O(1),
-			cost.U,
-		}),
-		Colors: []color.Color{color.Blue},
-		Types:  []types.Card{types.Sorcery},
-		SpellAbility: opt.Val(game.Mode{
-			Sequence: []game.Instruction{
-				{
-					Primitive: game.RevealUntil{
-						Player:      game.ControllerReference(),
-						Until:       game.Selection{ExcludedTypes: []types.Card{types.Land}},
-						Destination: zone.Hand,
+var TreasureHunt = func() *game.CardDef {
+	return &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Blue),
+		CardFace: game.CardFace{
+			Name: "Treasure Hunt",
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(1),
+				cost.U,
+			}),
+			Colors: []color.Color{color.Blue},
+			Types:  []types.Card{types.Sorcery},
+			SpellAbility: opt.Val(game.Mode{
+				Sequence: []game.Instruction{
+					{
+						Primitive: game.RevealUntil{
+							Player:      game.ControllerReference(),
+							Until:       game.Selection{ExcludedTypes: []types.Card{types.Land}},
+							Destination: zone.Hand,
+						},
 					},
 				},
-			},
-		}.Ability()),
-		OracleText: `
+			}.Ability()),
+			OracleText: `
 			Reveal cards from the top of your library until you reveal a nonland card, then put all cards revealed this way into your hand.
 		`,
-	},
+		},
+	}
 }

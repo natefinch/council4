@@ -17,7 +17,7 @@ import (
 //
 //	Defender (This creature can't attack.)
 //	Whenever this creature is dealt combat damage, you gain that much life.
-var WallOfEssence = newWallOfEssence()
+var WallOfEssence = newWallOfEssence
 
 func newWallOfEssence() *game.CardDef {
 	return &game.CardDef{

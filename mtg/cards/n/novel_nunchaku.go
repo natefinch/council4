@@ -18,7 +18,7 @@ import (
 //	When this Equipment enters, attach it to target creature you control. When you do, equipped creature fights up to one target creature an opponent controls. (Each deals damage equal to its power to the other.)
 //	Equipped creature gets +1/+1 and has trample.
 //	Equip {3} ({3}: Attach to target creature you control. Equip only as a sorcery.)
-var NovelNunchaku = newNovelNunchaku()
+var NovelNunchaku = newNovelNunchaku
 
 func newNovelNunchaku() *game.CardDef {
 	return &game.CardDef{

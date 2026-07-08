@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	When this creature dies, if its power was 3 or greater, create a 2/2 black Zombie Berserker creature token.
-var DeathknellBerserker = newDeathknellBerserker()
+var DeathknellBerserker = newDeathknellBerserker
 
 func newDeathknellBerserker() *game.CardDef {
 	return &game.CardDef{

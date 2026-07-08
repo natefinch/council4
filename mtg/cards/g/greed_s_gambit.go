@@ -19,7 +19,7 @@ import (
 //	When this enchantment enters, you draw three cards, gain 6 life, and create three 2/1 black Bat creature tokens with flying.
 //	At the beginning of your end step, you discard a card, lose 2 life, and sacrifice a creature.
 //	When this enchantment leaves the battlefield, you discard three cards, lose 6 life, and sacrifice three creatures.
-var GreedSGambit = newGreedSGambit()
+var GreedSGambit = newGreedSGambit
 
 func newGreedSGambit() *game.CardDef {
 	return &game.CardDef{

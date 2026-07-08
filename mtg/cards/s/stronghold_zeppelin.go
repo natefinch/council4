@@ -17,7 +17,7 @@ import (
 //
 //	Flying
 //	This creature can block only creatures with flying.
-var StrongholdZeppelin = newStrongholdZeppelin()
+var StrongholdZeppelin = newStrongholdZeppelin
 
 func newStrongholdZeppelin() *game.CardDef {
 	return &game.CardDef{

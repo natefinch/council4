@@ -18,7 +18,7 @@ import (
 //	Enchant creature
 //	When this Aura enters, scry 2.
 //	Enchanted creature can't attack or block, and its activated abilities can't be activated.
-var PrisonSentence = newPrisonSentence()
+var PrisonSentence = newPrisonSentence
 
 func newPrisonSentence() *game.CardDef {
 	return &game.CardDef{

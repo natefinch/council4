@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever a player casts a green spell, you may pay {1}. If you do, you gain 1 life.
-var WoodenSphere = newWoodenSphere()
+var WoodenSphere = newWoodenSphere
 
 func newWoodenSphere() *game.CardDef {
 	return &game.CardDef{

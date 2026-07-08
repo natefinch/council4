@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{T}: You gain 1 life. Activate only during your turn, before attackers are declared.
-var ShuFarmer = newShuFarmer()
+var ShuFarmer = newShuFarmer
 
 func newShuFarmer() *game.CardDef {
 	return &game.CardDef{

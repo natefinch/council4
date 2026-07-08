@@ -16,7 +16,7 @@ import (
 //
 //	Landfall — Whenever a land you control enters, equipped creature gets +2/+2 until end of turn.
 //	Equip {1} ({1}: Attach to target creature you control. Equip only as a sorcery.)
-var AdventuringGear = newAdventuringGear()
+var AdventuringGear = newAdventuringGear
 
 func newAdventuringGear() *game.CardDef {
 	return &game.CardDef{

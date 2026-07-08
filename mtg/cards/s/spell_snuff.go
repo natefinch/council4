@@ -18,7 +18,7 @@ import (
 //
 //	Counter target spell.
 //	Fateful hour — If you have 5 or less life, draw a card.
-var SpellSnuff = newSpellSnuff()
+var SpellSnuff = newSpellSnuff
 
 func newSpellSnuff() *game.CardDef {
 	return &game.CardDef{

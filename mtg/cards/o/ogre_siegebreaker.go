@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{2}{B}{R}: Destroy target creature that was dealt damage this turn.
-var OgreSiegebreaker = newOgreSiegebreaker()
+var OgreSiegebreaker = newOgreSiegebreaker
 
 func newOgreSiegebreaker() *game.CardDef {
 	return &game.CardDef{

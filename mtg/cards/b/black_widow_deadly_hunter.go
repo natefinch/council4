@@ -17,7 +17,7 @@ import (
 //
 //	Deathtouch
 //	Whenever a creature you control with deathtouch deals combat damage to a player, you draw a card and lose 1 life.
-var BlackWidowDeadlyHunter = newBlackWidowDeadlyHunter()
+var BlackWidowDeadlyHunter = newBlackWidowDeadlyHunter
 
 func newBlackWidowDeadlyHunter() *game.CardDef {
 	return &game.CardDef{

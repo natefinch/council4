@@ -17,7 +17,7 @@ import (
 //
 //	(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)
 //	When this Siege enters, look at the top five cards of your library. You may reveal a permanent card from among them and put it into your hand. Put the rest on the bottom of your library in a random order.
-var InvasionOfIxalan = newInvasionOfIxalan()
+var InvasionOfIxalan = newInvasionOfIxalan
 
 func newInvasionOfIxalan() *game.CardDef {
 	return &game.CardDef{

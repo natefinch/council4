@@ -14,7 +14,7 @@ import (
 // damage to a player, it connives. Then if Cyclonus's power is 5 or greater,
 // convert it." trigger runs through the real engine path.
 func newCyclonusFront(g *game.Game, controller game.PlayerID) *game.Permanent {
-	return addCombatPermanent(g, controller, cards.CyclonusTheSaboteur)
+	return addCombatPermanent(g, controller, cards.CyclonusTheSaboteur())
 }
 
 // newCyclonusBack puts the real Cyclonus card onto controller's battlefield as
@@ -22,7 +22,7 @@ func newCyclonusFront(g *game.Game, controller game.PlayerID) *game.Permanent {
 // combat damage to a player, convert it. If you do, there is an additional
 // beginning phase after this phase." trigger runs through the real engine path.
 func newCyclonusBack(g *game.Game, controller game.PlayerID) *game.Permanent {
-	permanent := addCombatPermanent(g, controller, cards.CyclonusTheSaboteur)
+	permanent := addCombatPermanent(g, controller, cards.CyclonusTheSaboteur())
 	permanent.Face = game.FaceBack
 	permanent.Transformed = true
 	return permanent

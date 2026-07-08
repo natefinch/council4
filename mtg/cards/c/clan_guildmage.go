@@ -18,7 +18,7 @@ import (
 //
 //	{1}{R}, {T}: Target creature can't block this turn.
 //	{2}{G}, {T}: Target land you control becomes a 4/4 Elemental creature with haste until end of turn. It's still a land.
-var ClanGuildmage = newClanGuildmage()
+var ClanGuildmage = newClanGuildmage
 
 func newClanGuildmage() *game.CardDef {
 	return &game.CardDef{

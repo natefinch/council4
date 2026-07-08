@@ -21,7 +21,7 @@ import (
 //	Choose one —
 //	• Return target creature card from your graveyard to the battlefield with an additional +1/+1 counter on it.
 //	• Return up to two target creature cards with power 2 or less from your graveyard to the battlefield.
-var GracefulRestoration = newGracefulRestoration()
+var GracefulRestoration = newGracefulRestoration
 
 func newGracefulRestoration() *game.CardDef {
 	return &game.CardDef{

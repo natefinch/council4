@@ -18,7 +18,7 @@ import (
 //
 //	Mentor (Whenever this creature attacks, put a +1/+1 counter on target attacking creature with lesser power.)
 //	Whenever a creature you control with a +1/+1 counter on it dies, draw a card.
-var TributaryInstructor = newTributaryInstructor()
+var TributaryInstructor = newTributaryInstructor
 
 func newTributaryInstructor() *game.CardDef {
 	return &game.CardDef{

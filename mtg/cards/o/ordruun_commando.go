@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{W}: Prevent the next 1 damage that would be dealt to this creature this turn.
-var OrdruunCommando = newOrdruunCommando()
+var OrdruunCommando = newOrdruunCommando
 
 func newOrdruunCommando() *game.CardDef {
 	return &game.CardDef{

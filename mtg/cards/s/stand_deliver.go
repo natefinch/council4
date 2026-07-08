@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Prevent the next 2 damage that would be dealt to target creature this turn.
-var Stand = newStand()
+var Stand = newStand
 
 func newStand() *game.CardDef {
 	return &game.CardDef{

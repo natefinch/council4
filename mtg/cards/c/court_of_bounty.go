@@ -18,7 +18,7 @@ import (
 //
 //	When this enchantment enters, you become the monarch.
 //	At the beginning of your upkeep, you may put a land card from your hand onto the battlefield. If you're the monarch, instead you may put a creature or land card from your hand onto the battlefield.
-var CourtOfBounty = newCourtOfBounty()
+var CourtOfBounty = newCourtOfBounty
 
 func newCourtOfBounty() *game.CardDef {
 	return &game.CardDef{

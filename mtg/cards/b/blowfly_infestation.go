@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Whenever a creature dies, if it had a -1/-1 counter on it, put a -1/-1 counter on target creature.
-var BlowflyInfestation = newBlowflyInfestation()
+var BlowflyInfestation = newBlowflyInfestation
 
 func newBlowflyInfestation() *game.CardDef {
 	return &game.CardDef{

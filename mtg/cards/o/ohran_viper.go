@@ -17,7 +17,7 @@ import (
 //
 //	Whenever this creature deals combat damage to a creature, destroy that creature at end of combat.
 //	Whenever this creature deals combat damage to a player, you may draw a card.
-var OhranViper = newOhranViper()
+var OhranViper = newOhranViper
 
 func newOhranViper() *game.CardDef {
 	return &game.CardDef{

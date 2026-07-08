@@ -18,7 +18,7 @@ import (
 //
 //	Flying
 //	Threshold — As long as there are seven or more cards in your graveyard, this creature gets +2/+2 and can't block.
-var ChildhoodHorror = newChildhoodHorror()
+var ChildhoodHorror = newChildhoodHorror
 
 func newChildhoodHorror() *game.CardDef {
 	return &game.CardDef{

@@ -19,7 +19,7 @@ import (
 //	When this Aura enters, tap enchanted permanent.
 //	You control enchanted permanent.
 //	Enchanted permanent doesn't untap during its controller's untap step.
-var TractorBeam = newTractorBeam()
+var TractorBeam = newTractorBeam
 
 func newTractorBeam() *game.CardDef {
 	return &game.CardDef{

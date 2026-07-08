@@ -18,7 +18,7 @@ import (
 //
 //	Put any number of target creature cards from your graveyard on top of your library.
 //	Draw a card.
-var Gravepurge = newGravepurge()
+var Gravepurge = newGravepurge
 
 func newGravepurge() *game.CardDef {
 	return &game.CardDef{

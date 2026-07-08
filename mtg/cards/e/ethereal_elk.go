@@ -18,7 +18,7 @@ import (
 //
 //	Trample
 //	When this creature enters, you may search your library and/or graveyard for a card named Vivien, Nature's Avenger, reveal it, and put it into your hand. If you search your library this way, shuffle.
-var EtherealElk = newEtherealElk()
+var EtherealElk = newEtherealElk
 
 func newEtherealElk() *game.CardDef {
 	return &game.CardDef{

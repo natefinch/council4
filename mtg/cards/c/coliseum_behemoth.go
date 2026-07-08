@@ -19,7 +19,7 @@ import (
 //	When this creature enters, choose one —
 //	• Destroy target artifact or enchantment.
 //	• Draw a card.
-var ColiseumBehemoth = newColiseumBehemoth()
+var ColiseumBehemoth = newColiseumBehemoth
 
 func newColiseumBehemoth() *game.CardDef {
 	return &game.CardDef{

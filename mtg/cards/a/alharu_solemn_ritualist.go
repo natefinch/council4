@@ -19,7 +19,7 @@ import (
 //	When Alharu enters, put a +1/+1 counter on each of up to two other target creatures.
 //	Whenever a nontoken creature you control with a +1/+1 counter on it dies, create a 1/1 white Spirit creature token with flying.
 //	Partner (You can have two commanders if both have partner.)
-var AlharuSolemnRitualist = newAlharuSolemnRitualist()
+var AlharuSolemnRitualist = newAlharuSolemnRitualist
 
 func newAlharuSolemnRitualist() *game.CardDef {
 	return &game.CardDef{

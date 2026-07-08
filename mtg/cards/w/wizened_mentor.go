@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever an opponent activates an ability of a permanent that isn't a mana ability, you create a 1/1 white Zombie creature token. This ability triggers only once each turn.
-var WizenedMentor = newWizenedMentor()
+var WizenedMentor = newWizenedMentor
 
 func newWizenedMentor() *game.CardDef {
 	return &game.CardDef{

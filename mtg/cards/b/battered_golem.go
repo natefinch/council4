@@ -16,7 +16,7 @@ import (
 //
 //	This creature doesn't untap during your untap step.
 //	Whenever an artifact enters, you may untap this creature.
-var BatteredGolem = newBatteredGolem()
+var BatteredGolem = newBatteredGolem
 
 func newBatteredGolem() *game.CardDef {
 	return &game.CardDef{

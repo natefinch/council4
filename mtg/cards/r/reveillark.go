@@ -20,7 +20,7 @@ import (
 //	Flying
 //	When this creature leaves the battlefield, return up to two target creature cards with power 2 or less from your graveyard to the battlefield.
 //	Evoke {5}{W} (You may cast this spell for its evoke cost. If you do, it's sacrificed when it enters.)
-var Reveillark = newReveillark()
+var Reveillark = newReveillark
 
 func newReveillark() *game.CardDef {
 	return &game.CardDef{

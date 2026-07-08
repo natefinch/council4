@@ -20,7 +20,7 @@ import (
 //	When this Equipment enters, roll a d20.
 //	1—9 | Create a 1/1 red Goblin creature token.
 //	10—20 | Create a 1/1 red Goblin creature token, then attach this Equipment to it.
-var GoblinMorningstar = newGoblinMorningstar()
+var GoblinMorningstar = newGoblinMorningstar
 
 func newGoblinMorningstar() *game.CardDef {
 	return &game.CardDef{

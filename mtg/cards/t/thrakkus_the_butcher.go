@@ -17,7 +17,7 @@ import (
 //
 //	Trample
 //	Whenever Thrakkus attacks, double the power of each Dragon you control until end of turn.
-var ThrakkusTheButcher = newThrakkusTheButcher()
+var ThrakkusTheButcher = newThrakkusTheButcher
 
 func newThrakkusTheButcher() *game.CardDef {
 	return &game.CardDef{

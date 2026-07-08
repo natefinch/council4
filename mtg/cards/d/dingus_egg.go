@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever a land is put into a graveyard from the battlefield, this artifact deals 2 damage to that land's controller.
-var DingusEgg = newDingusEgg()
+var DingusEgg = newDingusEgg
 
 func newDingusEgg() *game.CardDef {
 	return &game.CardDef{

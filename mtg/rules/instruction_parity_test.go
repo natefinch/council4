@@ -18,7 +18,7 @@ import (
 func TestLightningBoltInstructionSequenceDealsDamage(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	sourceID := addImplementationSpellToStack(g, game.Player1, cardl.LightningBolt, []game.Target{game.PlayerTarget(game.Player2)})
+	sourceID := addImplementationSpellToStack(g, game.Player1, cardl.LightningBolt(), []game.Target{game.PlayerTarget(game.Player2)})
 	log := TurnLog{}
 
 	engine.resolveTopOfStack(g, &log)
@@ -36,7 +36,7 @@ func TestChaosWarpInstructionSequenceUsesOwnerRevealAndPutOnBattlefield(t *testi
 	engine := NewEngine(nil)
 	target := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Warped Creature", Types: []types.Card{types.Creature}}})
 	target.Controller = game.Player3
-	sourceID := addImplementationSpellToStack(g, game.Player1, cardc.ChaosWarp, []game.Target{game.PermanentTarget(target.ObjectID)})
+	sourceID := addImplementationSpellToStack(g, game.Player1, cardc.ChaosWarp(), []game.Target{game.PermanentTarget(target.ObjectID)})
 	obj, ok := g.Stack.Peek()
 	if !ok {
 		t.Fatal("chaos warp was not put on the stack")
@@ -68,7 +68,7 @@ func TestChaosWarpInstructionSequenceUsesOwnerRevealAndPutOnBattlefield(t *testi
 func TestNeyithFightTriggerInstructionSequenceDrawsCard(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	neyith := addCombatPermanent(g, game.Player1, cardn.NeyithOfTheDireHunt)
+	neyith := addCombatPermanent(g, game.Player1, cardn.NeyithOfTheDireHunt())
 	drawn := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn Card"}})
 	g.Stack.Push(&game.StackObject{
 		ID:           g.IDGen.Next(),
@@ -90,7 +90,7 @@ func TestNeyithFightTriggerInstructionSequenceDrawsCard(t *testing.T) {
 func TestNeyithCombatTriggerInstructionSequencePaysAndAppliesEffects(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	neyith := addCombatPermanent(g, game.Player1, cardn.NeyithOfTheDireHunt)
+	neyith := addCombatPermanent(g, game.Player1, cardn.NeyithOfTheDireHunt())
 	target := addCombatCreaturePermanentWithPower(g, game.Player1, 3)
 	g.Players[game.Player1].ManaPool.Add(mana.R, 3)
 	g.Stack.Push(&game.StackObject{
@@ -163,7 +163,7 @@ func TestActivatedAbilityInstructionSequenceResolves(t *testing.T) {
 func TestEnduringCourageInstructionReturnsAsEnchantment(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	courage := addCombatPermanent(g, game.Player1, carde.EnduringCourage)
+	courage := addCombatPermanent(g, game.Player1, carde.EnduringCourage())
 	if !movePermanentToZone(g, courage, zone.Graveyard) {
 		t.Fatal("could not move Enduring Courage to graveyard")
 	}
@@ -193,7 +193,7 @@ func TestEnduringCourageInstructionReturnsAsEnchantment(t *testing.T) {
 	if !permanentHasType(g, returned, types.Enchantment) {
 		t.Fatal("returned Enduring Courage is not an enchantment")
 	}
-	content := carde.EnduringCourage.TriggeredAbilities[1].Content
+	content := carde.EnduringCourage().TriggeredAbilities[1].Content
 	if content.IsModal() || len(content.Modes) != 1 {
 		t.Fatal("Enduring Courage return ability does not use one non-modal mode")
 	}

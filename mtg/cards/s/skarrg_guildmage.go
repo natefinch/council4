@@ -18,7 +18,7 @@ import (
 //
 //	{R}{G}: Creatures you control gain trample until end of turn.
 //	{1}{R}{G}: Target land you control becomes a 4/4 Elemental creature until end of turn. It's still a land.
-var SkarrgGuildmage = newSkarrgGuildmage()
+var SkarrgGuildmage = newSkarrgGuildmage
 
 func newSkarrgGuildmage() *game.CardDef {
 	return &game.CardDef{

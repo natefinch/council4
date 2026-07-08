@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Double the power and toughness of target creature you control until end of turn. Then it fights up to one target creature an opponent controls. (Each deals damage equal to its power to the other.)
-var DragonclawStrike = newDragonclawStrike()
+var DragonclawStrike = newDragonclawStrike
 
 func newDragonclawStrike() *game.CardDef {
 	return &game.CardDef{

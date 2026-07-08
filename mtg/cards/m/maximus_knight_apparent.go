@@ -21,7 +21,7 @@ import (
 //	Trample
 //	When Maximus enters, you may search your library for an Equipment card with mana value 2, reveal it, put it into your hand, then shuffle.
 //	{1}, Sacrifice an artifact: You get {E}{E} (two energy counters).
-var MaximusKnightApparent = newMaximusKnightApparent()
+var MaximusKnightApparent = newMaximusKnightApparent
 
 func newMaximusKnightApparent() *game.CardDef {
 	return &game.CardDef{

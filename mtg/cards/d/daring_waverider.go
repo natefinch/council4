@@ -18,7 +18,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, you may cast target instant or sorcery card with mana value 4 or less from your graveyard without paying its mana cost. If that spell would be put into your graveyard, exile it instead.
-var DaringWaverider = newDaringWaverider()
+var DaringWaverider = newDaringWaverider
 
 func newDaringWaverider() *game.CardDef {
 	return &game.CardDef{

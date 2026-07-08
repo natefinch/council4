@@ -18,7 +18,7 @@ import (
 // Oracle text:
 //
 //	This creature has flying as long as it has a +1/+1 counter on it.
-var Lightwalker = newLightwalker()
+var Lightwalker = newLightwalker
 
 func newLightwalker() *game.CardDef {
 	return &game.CardDef{

@@ -16,7 +16,7 @@ import (
 //
 //	Spells your opponents cast cost {2} more to cast.
 //	At the beginning of your end step, each opponent loses 1 life.
-var GodPharaohSStatue = newGodPharaohSStatue()
+var GodPharaohSStatue = newGodPharaohSStatue
 
 func newGodPharaohSStatue() *game.CardDef {
 	return &game.CardDef{

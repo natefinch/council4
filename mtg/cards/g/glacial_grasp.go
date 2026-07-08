@@ -17,7 +17,7 @@ import (
 //
 //	Tap target creature. Its controller mills two cards. That creature doesn't untap during its controller's next untap step. (They put the top two cards of their library into their graveyard.)
 //	Draw a card.
-var GlacialGrasp = newGlacialGrasp()
+var GlacialGrasp = newGlacialGrasp
 
 func newGlacialGrasp() *game.CardDef {
 	return &game.CardDef{

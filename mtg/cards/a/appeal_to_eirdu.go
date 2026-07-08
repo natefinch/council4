@@ -17,7 +17,7 @@ import (
 //
 //	Convoke (Your creatures can help cast this spell. Each creature you tap while casting this spell pays for {1} or one mana of that creature's color.)
 //	One or two target creatures each get +2/+1 until end of turn.
-var AppealToEirdu = newAppealToEirdu()
+var AppealToEirdu = newAppealToEirdu
 
 func newAppealToEirdu() *game.CardDef {
 	return &game.CardDef{

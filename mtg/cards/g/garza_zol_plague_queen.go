@@ -19,7 +19,7 @@ import (
 //	Flying, haste
 //	Whenever a creature dealt damage by Garza Zol this turn dies, put a +1/+1 counter on Garza Zol.
 //	Whenever Garza Zol deals combat damage to a player, you may draw a card.
-var GarzaZolPlagueQueen = newGarzaZolPlagueQueen()
+var GarzaZolPlagueQueen = newGarzaZolPlagueQueen
 
 func newGarzaZolPlagueQueen() *game.CardDef {
 	return &game.CardDef{

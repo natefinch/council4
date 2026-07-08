@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	{T}, Sacrifice this artifact: Look at a card at random in target player's hand. You draw a card at the beginning of the next turn's upkeep.
-var UrzaSBauble = newUrzaSBauble()
+var UrzaSBauble = newUrzaSBauble
 
 func newUrzaSBauble() *game.CardDef {
 	return &game.CardDef{

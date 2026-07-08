@@ -19,7 +19,7 @@ import (
 //	• Destroy target artifact.
 //	• Change the target of target spell or ability with a single target.
 //	• One or two target creatures can't block this turn.
-var UntimelyMalfunction = newUntimelyMalfunction()
+var UntimelyMalfunction = newUntimelyMalfunction
 
 func newUntimelyMalfunction() *game.CardDef {
 	return &game.CardDef{

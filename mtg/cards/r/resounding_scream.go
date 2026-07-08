@@ -18,7 +18,7 @@ import (
 //	Target player discards a card at random.
 //	Cycling {5}{U}{B}{R} ({5}{U}{B}{R}, Discard this card: Draw a card.)
 //	When you cycle this card, target player discards two cards at random.
-var ResoundingScream = newResoundingScream()
+var ResoundingScream = newResoundingScream
 
 func newResoundingScream() *game.CardDef {
 	return &game.CardDef{

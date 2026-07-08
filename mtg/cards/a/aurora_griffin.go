@@ -18,7 +18,7 @@ import (
 //
 //	Flying
 //	{W}: Target permanent becomes white until end of turn.
-var AuroraGriffin = newAuroraGriffin()
+var AuroraGriffin = newAuroraGriffin
 
 func newAuroraGriffin() *game.CardDef {
 	return &game.CardDef{

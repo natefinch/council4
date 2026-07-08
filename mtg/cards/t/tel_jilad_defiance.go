@@ -17,7 +17,7 @@ import (
 //
 //	Target creature gains protection from artifacts until end of turn.
 //	Draw a card.
-var TelJiladDefiance = newTelJiladDefiance()
+var TelJiladDefiance = newTelJiladDefiance
 
 func newTelJiladDefiance() *game.CardDef {
 	return &game.CardDef{

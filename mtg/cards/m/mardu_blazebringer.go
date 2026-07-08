@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	When this creature attacks or blocks, sacrifice it at end of combat.
-var MarduBlazebringer = newMarduBlazebringer()
+var MarduBlazebringer = newMarduBlazebringer
 
 func newMarduBlazebringer() *game.CardDef {
 	return &game.CardDef{

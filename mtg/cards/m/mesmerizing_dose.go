@@ -18,7 +18,7 @@ import (
 //	Enchant creature
 //	When this Aura enters, tap enchanted creature, then proliferate. (Choose any number of permanents and/or players, then give each another counter of each kind already there.)
 //	Enchanted creature doesn't untap during its controller's untap step.
-var MesmerizingDose = newMesmerizingDose()
+var MesmerizingDose = newMesmerizingDose
 
 func newMesmerizingDose() *game.CardDef {
 	return &game.CardDef{

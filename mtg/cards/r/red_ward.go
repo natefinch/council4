@@ -17,7 +17,7 @@ import (
 //
 //	Enchant creature
 //	Enchanted creature has protection from red. This effect doesn't remove this Aura.
-var RedWard = newRedWard()
+var RedWard = newRedWard
 
 func newRedWard() *game.CardDef {
 	return &game.CardDef{

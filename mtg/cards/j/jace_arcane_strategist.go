@@ -19,7 +19,7 @@ import (
 //	Whenever you draw your second card each turn, put a +1/+1 counter on target creature you control.
 //	+1: Draw a card.
 //	−7: Creatures you control can't be blocked this turn.
-var JaceArcaneStrategist = newJaceArcaneStrategist()
+var JaceArcaneStrategist = newJaceArcaneStrategist
 
 func newJaceArcaneStrategist() *game.CardDef {
 	return &game.CardDef{

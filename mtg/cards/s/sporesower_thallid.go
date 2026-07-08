@@ -19,7 +19,7 @@ import (
 //
 //	At the beginning of your upkeep, put a spore counter on each Fungus you control.
 //	Remove three spore counters from this creature: Create a 1/1 green Saproling creature token.
-var SporesowerThallid = newSporesowerThallid()
+var SporesowerThallid = newSporesowerThallid
 
 func newSporesowerThallid() *game.CardDef {
 	return &game.CardDef{

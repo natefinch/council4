@@ -17,7 +17,7 @@ import (
 //
 //	When this artifact enters, each opponent sacrifices three creatures of their choice.
 //	At the beginning of your upkeep, put target creature card from a graveyard onto the battlefield under your control. It's a Phyrexian in addition to its other types.
-var PortalToPhyrexia = newPortalToPhyrexia()
+var PortalToPhyrexia = newPortalToPhyrexia
 
 func newPortalToPhyrexia() *game.CardDef {
 	return &game.CardDef{

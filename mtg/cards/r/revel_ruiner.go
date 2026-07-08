@@ -17,7 +17,7 @@ import (
 //
 //	Menace (This creature can't be blocked except by two or more creatures.)
 //	When this creature enters, it connives. (Draw a card, then discard a card. If you discarded a nonland card, put a +1/+1 counter on this creature.)
-var RevelRuiner = newRevelRuiner()
+var RevelRuiner = newRevelRuiner
 
 func newRevelRuiner() *game.CardDef {
 	return &game.CardDef{

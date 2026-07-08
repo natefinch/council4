@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Each player sacrifices four lands of their choice. Wildfire deals 4 damage to each creature.
-var Wildfire = newWildfire()
+var Wildfire = newWildfire
 
 func newWildfire() *game.CardDef {
 	return &game.CardDef{

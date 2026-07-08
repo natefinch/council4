@@ -13,7 +13,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, draw a card.
-var WallOfOmens = newWallOfOmens()
+var WallOfOmens = newWallOfOmens
 
 func newWallOfOmens() *game.CardDef {
 	return &game.CardDef{

@@ -19,7 +19,7 @@ import (
 func newRamondaCombat(t *testing.T) (g *game.Game, small, big *game.Permanent) {
 	t.Helper()
 	g = game.NewGame([game.NumPlayers]game.PlayerConfig{})
-	addCombatPermanent(g, game.Player1, cardq.QueenMotherRamonda)
+	addCombatPermanent(g, game.Player1, cardq.QueenMotherRamonda())
 	small = addCombatCreaturePermanentWithPower(g, game.Player2, 2)
 	big = addCombatCreaturePermanentWithPower(g, game.Player2, 3)
 	g.Turn.Phase = game.PhaseCombat

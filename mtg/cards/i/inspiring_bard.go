@@ -18,7 +18,7 @@ import (
 //	When this creature enters, choose one —
 //	• Bardic Inspiration — Target creature gets +2/+2 until end of turn.
 //	• Song of Rest — You gain 3 life.
-var InspiringBard = newInspiringBard()
+var InspiringBard = newInspiringBard
 
 func newInspiringBard() *game.CardDef {
 	return &game.CardDef{

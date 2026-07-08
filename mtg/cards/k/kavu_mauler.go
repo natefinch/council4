@@ -17,7 +17,7 @@ import (
 //
 //	Trample
 //	Whenever this creature attacks, it gets +1/+1 until end of turn for each other attacking Kavu.
-var KavuMauler = newKavuMauler()
+var KavuMauler = newKavuMauler
 
 func newKavuMauler() *game.CardDef {
 	return &game.CardDef{

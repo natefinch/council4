@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	This creature can block an additional creature each combat.
-var ForiysianBrigade = newForiysianBrigade()
+var ForiysianBrigade = newForiysianBrigade
 
 func newForiysianBrigade() *game.CardDef {
 	return &game.CardDef{

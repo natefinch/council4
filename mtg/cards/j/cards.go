@@ -2,29 +2,30 @@
 
 package j
 
-import "github.com/natefinch/council4/mtg/game"
+import "github.com/natefinch/council4/mtg/cards/cardset"
 
-// Cards lists all card definitions in this package.
-var Cards = []*game.CardDef{
-	JaceArcaneStrategist,
-	JaceBeleren,
-	JaceSPhantasm,
-	JaceSSentinel,
-	JackalFamiliar,
-	JadeLeech,
-	JadziStewardOfFate,
-	JaredCarthalionTrueHeir,
-	JhessianBalmgiver,
-	JidoorAristocraticCapital,
-	JinxedIdol,
-	JinxedRing,
-	JirinaDauntlessGeneral,
-	JoinTheDead,
-	JoragaWarcaller,
-	JudgeSFamiliar,
-	JungleBasin,
-	JuniperOrderRanger,
-	JunkGolem,
-	JunkJet,
-	JaceSTriumph,
+// Cards lists all card definitions in this package, each paired with a
+// constructor so the registry can build them lazily.
+var Cards = []cardset.Entry{
+	{Name: "Jace, Arcane Strategist", New: JaceArcaneStrategist},
+	{Name: "Jace Beleren", New: JaceBeleren},
+	{Name: "Jace's Phantasm", New: JaceSPhantasm},
+	{Name: "Jace's Sentinel", New: JaceSSentinel},
+	{Name: "Jace's Triumph", New: JaceSTriumph},
+	{Name: "Jackal Familiar", New: JackalFamiliar},
+	{Name: "Jade Leech", New: JadeLeech},
+	{Name: "Jadzi, Steward of Fate", New: JadziStewardOfFate},
+	{Name: "Jared Carthalion, True Heir", New: JaredCarthalionTrueHeir},
+	{Name: "Jhessian Balmgiver", New: JhessianBalmgiver},
+	{Name: "Jidoor, Aristocratic Capital", New: JidoorAristocraticCapital},
+	{Name: "Jinxed Idol", New: JinxedIdol},
+	{Name: "Jinxed Ring", New: JinxedRing},
+	{Name: "Jirina, Dauntless General", New: JirinaDauntlessGeneral},
+	{Name: "Join the Dead", New: JoinTheDead},
+	{Name: "Joraga Warcaller", New: JoragaWarcaller},
+	{Name: "Judge's Familiar", New: JudgeSFamiliar},
+	{Name: "Jungle Basin", New: JungleBasin},
+	{Name: "Juniper Order Ranger", New: JuniperOrderRanger},
+	{Name: "Junk Golem", New: JunkGolem},
+	{Name: "Junk Jet", New: JunkJet},
 }

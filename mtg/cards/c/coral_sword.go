@@ -19,7 +19,7 @@ import (
 //	When this Equipment enters, attach it to target creature you control. That creature gains first strike until end of turn.
 //	Equipped creature gets +1/+0.
 //	Equip {1}
-var CoralSword = newCoralSword()
+var CoralSword = newCoralSword
 
 func newCoralSword() *game.CardDef {
 	return &game.CardDef{

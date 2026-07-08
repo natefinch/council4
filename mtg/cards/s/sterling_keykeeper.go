@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{2}, {T}: Tap target non-Mount creature.
-var SterlingKeykeeper = newSterlingKeykeeper()
+var SterlingKeykeeper = newSterlingKeykeeper
 
 func newSterlingKeykeeper() *game.CardDef {
 	return &game.CardDef{

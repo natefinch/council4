@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature attacks, create a 2/2 green Wolf creature token that's tapped and attacking for each creature card in your graveyard.
-var KessigCagebreakers = newKessigCagebreakers()
+var KessigCagebreakers = newKessigCagebreakers
 
 func newKessigCagebreakers() *game.CardDef {
 	return &game.CardDef{

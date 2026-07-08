@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Draw three cards. Then discard two cards unless you discard a creature card.
-var ThirstForIdentity = newThirstForIdentity()
+var ThirstForIdentity = newThirstForIdentity
 
 func newThirstForIdentity() *game.CardDef {
 	return &game.CardDef{

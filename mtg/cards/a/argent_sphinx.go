@@ -18,7 +18,7 @@ import (
 //
 //	Flying
 //	Metalcraft — {U}: Exile this creature. Return it to the battlefield under your control at the beginning of the next end step. Activate only if you control three or more artifacts.
-var ArgentSphinx = newArgentSphinx()
+var ArgentSphinx = newArgentSphinx
 
 func newArgentSphinx() *game.CardDef {
 	return &game.CardDef{

@@ -19,7 +19,7 @@ import (
 //	Enchant artifact or creature
 //	As long as enchanted permanent is a creature, it gets +2/+2 and has menace. (It can't be blocked except by two or more creatures.)
 //	When this Aura leaves the battlefield, create a 2/2 red Spirit creature token with menace.
-var GiftOfWrath = newGiftOfWrath()
+var GiftOfWrath = newGiftOfWrath
 
 func newGiftOfWrath() *game.CardDef {
 	return &game.CardDef{

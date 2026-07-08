@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Feed the Flames deals 5 damage to target creature. If that creature would die this turn, exile it instead.
-var FeedTheFlames = newFeedTheFlames()
+var FeedTheFlames = newFeedTheFlames
 
 func newFeedTheFlames() *game.CardDef {
 	return &game.CardDef{

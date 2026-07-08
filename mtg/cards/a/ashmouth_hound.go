@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature blocks or becomes blocked by a creature, this creature deals 1 damage to that creature.
-var AshmouthHound = newAshmouthHound()
+var AshmouthHound = newAshmouthHound
 
 func newAshmouthHound() *game.CardDef {
 	return &game.CardDef{

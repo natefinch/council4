@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	At the beginning of your upkeep, each player sacrifices a non-Vampire creature of their choice.
-var AnowonTheRuinSage = newAnowonTheRuinSage()
+var AnowonTheRuinSage = newAnowonTheRuinSage
 
 func newAnowonTheRuinSage() *game.CardDef {
 	return &game.CardDef{

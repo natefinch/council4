@@ -18,7 +18,7 @@ import (
 //
 //	Whenever this creature deals combat damage to a creature, tap that creature and it doesn't untap during its controller's next untap step.
 //	{1}{G}: Regenerate this creature.
-var KashiTribeReaver = newKashiTribeReaver()
+var KashiTribeReaver = newKashiTribeReaver
 
 func newKashiTribeReaver() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 //
 //	When Oath of Chandra enters, it deals 3 damage to target creature an opponent controls.
 //	At the beginning of each end step, if a planeswalker entered the battlefield under your control this turn, Oath of Chandra deals 2 damage to each opponent.
-var OathOfChandra = newOathOfChandra()
+var OathOfChandra = newOathOfChandra
 
 func newOathOfChandra() *game.CardDef {
 	return &game.CardDef{

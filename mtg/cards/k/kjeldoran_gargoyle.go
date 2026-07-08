@@ -17,7 +17,7 @@ import (
 //
 //	Flying, first strike
 //	Whenever this creature deals damage, you gain that much life.
-var KjeldoranGargoyle = newKjeldoranGargoyle()
+var KjeldoranGargoyle = newKjeldoranGargoyle
 
 func newKjeldoranGargoyle() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 //
 //	Enchant creature you control
 //	Creatures you control have haste.
-var EmblemOfTheWarmind = newEmblemOfTheWarmind()
+var EmblemOfTheWarmind = newEmblemOfTheWarmind
 
 func newEmblemOfTheWarmind() *game.CardDef {
 	return &game.CardDef{

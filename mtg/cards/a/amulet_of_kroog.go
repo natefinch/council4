@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	{2}, {T}: Prevent the next 1 damage that would be dealt to any target this turn.
-var AmuletOfKroog = newAmuletOfKroog()
+var AmuletOfKroog = newAmuletOfKroog
 
 func newAmuletOfKroog() *game.CardDef {
 	return &game.CardDef{

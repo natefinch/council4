@@ -11,7 +11,7 @@ import (
 )
 
 // SporebackTroll is the card definition for Sporeback Troll.
-var SporebackTroll = newSporebackTroll()
+var SporebackTroll = newSporebackTroll
 
 func newSporebackTroll() *game.CardDef {
 	return &game.CardDef{

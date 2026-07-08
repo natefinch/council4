@@ -19,7 +19,7 @@ import (
 //	Enchant creature
 //	{U}: Tap enchanted creature.
 //	{U}: Untap enchanted creature.
-var FreedFromTheReal = newFreedFromTheReal()
+var FreedFromTheReal = newFreedFromTheReal
 
 func newFreedFromTheReal() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 //
 //	When this enchantment enters, create X 2/2 white Astartes Warrior creature tokens with vigilance.
 //	{X}{2}{W}, Exile this enchantment: Create X 2/2 white Astartes Warrior creature tokens with vigilance. Activate only if you control no creatures and only during your turn.
-var DefendersOfHumanity = newDefendersOfHumanity()
+var DefendersOfHumanity = newDefendersOfHumanity
 
 func newDefendersOfHumanity() *game.CardDef {
 	return &game.CardDef{

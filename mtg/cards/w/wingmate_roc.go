@@ -18,7 +18,7 @@ import (
 //	Flying
 //	Raid — When this creature enters, if you attacked this turn, create a 3/4 white Bird creature token with flying.
 //	Whenever this creature attacks, you gain 1 life for each attacking creature.
-var WingmateRoc = newWingmateRoc()
+var WingmateRoc = newWingmateRoc
 
 func newWingmateRoc() *game.CardDef {
 	return &game.CardDef{

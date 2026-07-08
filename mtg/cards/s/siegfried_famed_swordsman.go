@@ -19,7 +19,7 @@ import (
 //
 //	Menace
 //	When Siegfried enters, mill three cards. Then put X +1/+1 counters on Siegfried, where X is twice the number of creature cards in your graveyard.
-var SiegfriedFamedSwordsman = newSiegfriedFamedSwordsman()
+var SiegfriedFamedSwordsman = newSiegfriedFamedSwordsman
 
 func newSiegfriedFamedSwordsman() *game.CardDef {
 	return &game.CardDef{

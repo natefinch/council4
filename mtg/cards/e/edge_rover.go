@@ -18,7 +18,7 @@ import (
 //
 //	Reach
 //	When this creature dies, each player creates a Lander token. (It's an artifact with "{2}, {T}, Sacrifice this token: Search your library for a basic land card, put it onto the battlefield tapped, then shuffle.")
-var EdgeRover = newEdgeRover()
+var EdgeRover = newEdgeRover
 
 func newEdgeRover() *game.CardDef {
 	return &game.CardDef{

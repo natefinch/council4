@@ -17,7 +17,7 @@ import (
 //
 //	Trample
 //	This creature can block an additional creature each combat.
-var TwoHeadedGiantOfForiys = newTwoHeadedGiantOfForiys()
+var TwoHeadedGiantOfForiys = newTwoHeadedGiantOfForiys
 
 func newTwoHeadedGiantOfForiys() *game.CardDef {
 	return &game.CardDef{

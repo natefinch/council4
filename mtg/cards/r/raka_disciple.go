@@ -18,7 +18,7 @@ import (
 //
 //	{W}, {T}: Prevent the next 1 damage that would be dealt to any target this turn.
 //	{U}, {T}: Target creature gains flying until end of turn.
-var RakaDisciple = newRakaDisciple()
+var RakaDisciple = newRakaDisciple
 
 func newRakaDisciple() *game.CardDef {
 	return &game.CardDef{

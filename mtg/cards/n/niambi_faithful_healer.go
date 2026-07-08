@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	When Niambi enters, you may search your library and/or graveyard for a card named Teferi, Timebender, reveal it, and put it into your hand. If you search your library this way, shuffle.
-var NiambiFaithfulHealer = newNiambiFaithfulHealer()
+var NiambiFaithfulHealer = newNiambiFaithfulHealer
 
 func newNiambiFaithfulHealer() *game.CardDef {
 	return &game.CardDef{

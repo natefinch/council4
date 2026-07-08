@@ -19,7 +19,7 @@ import (
 //	Kicker {2}{G} (You may pay an additional {2}{G} as you cast this spell.)
 //	If this creature was kicked, it enters with two +1/+1 counters on it.
 //	Each creature you control with a +1/+1 counter on it has trample. (It can deal excess combat damage to the player or planeswalker it's attacking.)
-var GnarlidColony = newGnarlidColony()
+var GnarlidColony = newGnarlidColony
 
 func newGnarlidColony() *game.CardDef {
 	return &game.CardDef{

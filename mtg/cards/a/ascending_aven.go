@@ -18,7 +18,7 @@ import (
 //	Flying
 //	This creature can block only creatures with flying.
 //	Morph {2}{U} (You may cast this card face down as a 2/2 creature for {3}. Turn it face up any time for its morph cost.)
-var AscendingAven = newAscendingAven()
+var AscendingAven = newAscendingAven
 
 func newAscendingAven() *game.CardDef {
 	return &game.CardDef{

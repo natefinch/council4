@@ -19,7 +19,7 @@ import (
 //	Enchant creature
 //	Enchanted creature gets +0/+2.
 //	{W}: Enchanted creature gets +0/+1 until end of turn.
-var HolyArmor = newHolyArmor()
+var HolyArmor = newHolyArmor
 
 func newHolyArmor() *game.CardDef {
 	return &game.CardDef{

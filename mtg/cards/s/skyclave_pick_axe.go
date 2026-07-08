@@ -18,7 +18,7 @@ import (
 //	When this Equipment enters, attach it to target creature you control.
 //	Landfall — Whenever a land you control enters, equipped creature gets +2/+2 until end of turn.
 //	Equip {2}{G} ({2}{G}: Attach to target creature you control. Equip only as a sorcery.)
-var SkyclavePickAxe = newSkyclavePickAxe()
+var SkyclavePickAxe = newSkyclavePickAxe
 
 func newSkyclavePickAxe() *game.CardDef {
 	return &game.CardDef{

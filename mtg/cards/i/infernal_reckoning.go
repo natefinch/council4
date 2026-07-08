@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Exile target colorless creature. You gain life equal to its power.
-var InfernalReckoning = newInfernalReckoning()
+var InfernalReckoning = newInfernalReckoning
 
 func newInfernalReckoning() *game.CardDef {
 	return &game.CardDef{

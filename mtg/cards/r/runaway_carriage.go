@@ -16,7 +16,7 @@ import (
 //
 //	Trample
 //	When this creature attacks or blocks, sacrifice it at end of combat.
-var RunawayCarriage = newRunawayCarriage()
+var RunawayCarriage = newRunawayCarriage
 
 func newRunawayCarriage() *game.CardDef {
 	return &game.CardDef{

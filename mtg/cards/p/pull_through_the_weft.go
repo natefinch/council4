@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Return up to two target nonland permanent cards from your graveyard to your hand, then return up to two target land cards from your graveyard to the battlefield tapped.
-var PullThroughTheWeft = newPullThroughTheWeft()
+var PullThroughTheWeft = newPullThroughTheWeft
 
 func newPullThroughTheWeft() *game.CardDef {
 	return &game.CardDef{

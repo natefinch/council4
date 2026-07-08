@@ -19,7 +19,7 @@ import (
 //
 //	When Bilbo enters or leaves the battlefield, the Ring tempts you.
 //	Whenever Bilbo deals combat damage to a player, create a Treasure token.
-var BilboRetiredBurglar = newBilboRetiredBurglar()
+var BilboRetiredBurglar = newBilboRetiredBurglar
 
 func newBilboRetiredBurglar() *game.CardDef {
 	return &game.CardDef{

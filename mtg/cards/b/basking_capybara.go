@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Descend 4 — This creature gets +3/+0 as long as there are four or more permanent cards in your graveyard.
-var BaskingCapybara = newBaskingCapybara()
+var BaskingCapybara = newBaskingCapybara
 
 func newBaskingCapybara() *game.CardDef {
 	return &game.CardDef{

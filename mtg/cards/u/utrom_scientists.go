@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, tap up to one target creature and put a stun counter on it. (If a permanent with a stun counter would become untapped, remove one from it instead.)
-var UtromScientists = newUtromScientists()
+var UtromScientists = newUtromScientists
 
 func newUtromScientists() *game.CardDef {
 	return &game.CardDef{

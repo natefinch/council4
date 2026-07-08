@@ -17,7 +17,7 @@ import (
 //
 //	When you cast this spell, copy it if you control a planeswalker, Cleric, Druid, Shaman, Warlock, or Wizard.
 //	Scry 1, then draw a card.
-var MentorSGuidance = newMentorSGuidance()
+var MentorSGuidance = newMentorSGuidance
 
 func newMentorSGuidance() *game.CardDef {
 	return &game.CardDef{

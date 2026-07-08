@@ -17,105 +17,107 @@ import (
 //
 //	Whenever another creature you control enters, it gets +2/+0 and gains haste until end of turn.
 //	When Enduring Courage dies, if it was a creature, return it to the battlefield under its owner's control. It's an enchantment. (It's not a creature.)
-var EnduringCourage = &game.CardDef{
-	ColorIdentity: color.NewIdentity(color.Red),
-	CardFace: game.CardFace{
-		Name: "Enduring Courage",
-		ManaCost: opt.Val(cost.Mana{
-			cost.O(2),
-			cost.R,
-			cost.R,
-		}),
-		Colors:    []color.Color{color.Red},
-		Types:     []types.Card{types.Enchantment, types.Creature},
-		Subtypes:  []types.Sub{"Dog", "Glimmer"},
-		Power:     opt.Val(game.PT{Value: 3}),
-		Toughness: opt.Val(game.PT{Value: 3}),
-		OracleText: `
+var EnduringCourage = func() *game.CardDef {
+	return &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Red),
+		CardFace: game.CardFace{
+			Name: "Enduring Courage",
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(2),
+				cost.R,
+				cost.R,
+			}),
+			Colors:    []color.Color{color.Red},
+			Types:     []types.Card{types.Enchantment, types.Creature},
+			Subtypes:  []types.Sub{"Dog", "Glimmer"},
+			Power:     opt.Val(game.PT{Value: 3}),
+			Toughness: opt.Val(game.PT{Value: 3}),
+			OracleText: `
 			Whenever another creature you control enters, it gets +2/+0 and gains haste until end of turn.
 			When Enduring Courage dies, if it was a creature, return it to the battlefield under its owner's control. It's an enchantment. (It's not a creature.)
 		`,
-		TriggeredAbilities: []game.TriggeredAbility{
-			{
-				Text: `
+			TriggeredAbilities: []game.TriggeredAbility{
+				{
+					Text: `
 					Whenever another creature you control enters, it gets +2/+0 and gains haste until end of turn.
 				`,
-				Trigger: game.TriggerCondition{
-					Type: game.TriggerWhenever,
-					Pattern: game.TriggerPattern{
-						Event:       game.EventPermanentEnteredBattlefield,
-						Controller:  game.TriggerControllerYou,
-						ExcludeSelf: true,
-						RequirePermanentTypes: []types.Card{
-							types.Creature,
-						},
-					},
-				},
-				Content: game.Mode{
-					Sequence: []game.Instruction{
-						{
-							Primitive: game.ModifyPT{
-								Object:     game.EventPermanentReference(),
-								PowerDelta: game.Fixed(2),
-								Duration:   game.DurationUntilEndOfTurn,
+					Trigger: game.TriggerCondition{
+						Type: game.TriggerWhenever,
+						Pattern: game.TriggerPattern{
+							Event:       game.EventPermanentEnteredBattlefield,
+							Controller:  game.TriggerControllerYou,
+							ExcludeSelf: true,
+							RequirePermanentTypes: []types.Card{
+								types.Creature,
 							},
 						},
-						{
-							Primitive: game.ApplyContinuous{
-								Object: opt.Val(game.EventPermanentReference()),
-								ContinuousEffects: []game.ContinuousEffect{
-									{
-										Layer: game.LayerAbility,
-										AddKeywords: []game.Keyword{
-											game.Haste,
+					},
+					Content: game.Mode{
+						Sequence: []game.Instruction{
+							{
+								Primitive: game.ModifyPT{
+									Object:     game.EventPermanentReference(),
+									PowerDelta: game.Fixed(2),
+									Duration:   game.DurationUntilEndOfTurn,
+								},
+							},
+							{
+								Primitive: game.ApplyContinuous{
+									Object: opt.Val(game.EventPermanentReference()),
+									ContinuousEffects: []game.ContinuousEffect{
+										{
+											Layer: game.LayerAbility,
+											AddKeywords: []game.Keyword{
+												game.Haste,
+											},
 										},
 									},
+									Duration: game.DurationUntilEndOfTurn,
 								},
-								Duration: game.DurationUntilEndOfTurn,
 							},
 						},
-					},
-				}.Ability(),
-			},
-			{
-				Text: `
+					}.Ability(),
+				},
+				{
+					Text: `
 					When Enduring Courage dies, if it was a creature, return it to the battlefield under its owner's control. It's an enchantment.
 				`,
-				Trigger: game.TriggerCondition{
-					Type: game.TriggerWhen,
-					Pattern: game.TriggerPattern{
-						Event:  game.EventPermanentDied,
-						Source: game.TriggerSourceSelf,
-					},
-					InterveningIf: "if it was a creature",
-					InterveningCondition: opt.Val(game.Condition{
-						Text: "if it was a creature",
-						Types: []types.Card{
-							types.Creature,
+					Trigger: game.TriggerCondition{
+						Type: game.TriggerWhen,
+						Pattern: game.TriggerPattern{
+							Event:  game.EventPermanentDied,
+							Source: game.TriggerSourceSelf,
 						},
-						Object: opt.Val(game.EventPermanentReference()),
-					}),
-				},
-				Content: game.Mode{
-					Sequence: []game.Instruction{
-						{
-							Primitive: game.PutOnBattlefield{
-								Source: game.CardBattlefieldSource(game.CardReference{
-									Kind: game.CardReferenceSource,
-								}),
-								ContinuousEffects: []game.ContinuousEffect{
-									{
-										Layer: game.LayerType,
-										RemoveTypes: []types.Card{
-											types.Creature,
+						InterveningIf: "if it was a creature",
+						InterveningCondition: opt.Val(game.Condition{
+							Text: "if it was a creature",
+							Types: []types.Card{
+								types.Creature,
+							},
+							Object: opt.Val(game.EventPermanentReference()),
+						}),
+					},
+					Content: game.Mode{
+						Sequence: []game.Instruction{
+							{
+								Primitive: game.PutOnBattlefield{
+									Source: game.CardBattlefieldSource(game.CardReference{
+										Kind: game.CardReferenceSource,
+									}),
+									ContinuousEffects: []game.ContinuousEffect{
+										{
+											Layer: game.LayerType,
+											RemoveTypes: []types.Card{
+												types.Creature,
+											},
 										},
 									},
 								},
 							},
 						},
-					},
-				}.Ability(),
+					}.Ability(),
+				},
 			},
 		},
-	},
+	}
 }

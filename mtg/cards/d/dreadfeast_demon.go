@@ -17,7 +17,7 @@ import (
 //
 //	Flying
 //	At the beginning of your end step, sacrifice a non-Demon creature. If you do, create a token that's a copy of this creature.
-var DreadfeastDemon = newDreadfeastDemon()
+var DreadfeastDemon = newDreadfeastDemon
 
 func newDreadfeastDemon() *game.CardDef {
 	return &game.CardDef{

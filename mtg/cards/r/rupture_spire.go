@@ -17,7 +17,7 @@ import (
 //	This land enters tapped.
 //	When this land enters, sacrifice it unless you pay {1}.
 //	{T}: Add one mana of any color.
-var RuptureSpire = newRuptureSpire()
+var RuptureSpire = newRuptureSpire
 
 func newRuptureSpire() *game.CardDef {
 	return &game.CardDef{

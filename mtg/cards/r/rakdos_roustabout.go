@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature becomes blocked, it deals 1 damage to the player or planeswalker it's attacking.
-var RakdosRoustabout = newRakdosRoustabout()
+var RakdosRoustabout = newRakdosRoustabout
 
 func newRakdosRoustabout() *game.CardDef {
 	return &game.CardDef{

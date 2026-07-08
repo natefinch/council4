@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Reveal the top four cards of your library. You may put a creature card and/or a land card from among them into your hand. Put the rest into your graveyard.
-var RelentlessPursuit = newRelentlessPursuit()
+var RelentlessPursuit = newRelentlessPursuit
 
 func newRelentlessPursuit() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Fire at Will deals 3 damage divided as you choose among one, two, or three target attacking or blocking creatures.
-var FireAtWill = newFireAtWill()
+var FireAtWill = newFireAtWill
 
 func newFireAtWill() *game.CardDef {
 	return &game.CardDef{

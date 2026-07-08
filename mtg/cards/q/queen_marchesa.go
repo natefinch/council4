@@ -18,7 +18,7 @@ import (
 //	Deathtouch, haste
 //	When Queen Marchesa enters, you become the monarch.
 //	At the beginning of your upkeep, if an opponent is the monarch, create a 1/1 black Assassin creature token with deathtouch and haste.
-var QueenMarchesa = newQueenMarchesa()
+var QueenMarchesa = newQueenMarchesa
 
 func newQueenMarchesa() *game.CardDef {
 	return &game.CardDef{

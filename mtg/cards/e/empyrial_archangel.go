@@ -18,7 +18,7 @@ import (
 //	Flying
 //	Shroud (This creature can't be the target of spells or abilities.)
 //	All damage that would be dealt to you is dealt to this creature instead.
-var EmpyrialArchangel = newEmpyrialArchangel()
+var EmpyrialArchangel = newEmpyrialArchangel
 
 func newEmpyrialArchangel() *game.CardDef {
 	return &game.CardDef{

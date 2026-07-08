@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	This creature can't attack or block alone.
-var EmberBeast = newEmberBeast()
+var EmberBeast = newEmberBeast
 
 func newEmberBeast() *game.CardDef {
 	return &game.CardDef{

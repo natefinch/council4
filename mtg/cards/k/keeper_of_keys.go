@@ -17,7 +17,7 @@ import (
 //
 //	When this creature enters, you become the monarch.
 //	At the beginning of your upkeep, if you're the monarch, creatures you control can't be blocked this turn.
-var KeeperOfKeys = newKeeperOfKeys()
+var KeeperOfKeys = newKeeperOfKeys
 
 func newKeeperOfKeys() *game.CardDef {
 	return &game.CardDef{

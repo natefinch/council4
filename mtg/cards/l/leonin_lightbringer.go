@@ -17,7 +17,7 @@ import (
 //
 //	Ward {2} (Whenever this creature becomes the target of a spell or ability an opponent controls, counter it unless that player pays {2}.)
 //	As long as this creature is equipped, it gets +1/+1.
-var LeoninLightbringer = newLeoninLightbringer()
+var LeoninLightbringer = newLeoninLightbringer
 
 func newLeoninLightbringer() *game.CardDef {
 	return &game.CardDef{

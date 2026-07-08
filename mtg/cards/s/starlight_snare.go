@@ -18,7 +18,7 @@ import (
 //	Enchant creature
 //	When this Aura enters, tap enchanted creature.
 //	Enchanted creature doesn't untap during its controller's untap step.
-var StarlightSnare = newStarlightSnare()
+var StarlightSnare = newStarlightSnare
 
 func newStarlightSnare() *game.CardDef {
 	return &game.CardDef{

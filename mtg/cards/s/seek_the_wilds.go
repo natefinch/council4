@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Look at the top four cards of your library. You may reveal a creature or land card from among them and put it into your hand. Put the rest on the bottom of your library in any order.
-var SeekTheWilds = newSeekTheWilds()
+var SeekTheWilds = newSeekTheWilds
 
 func newSeekTheWilds() *game.CardDef {
 	return &game.CardDef{

@@ -15,7 +15,7 @@ import (
 // Oracle text:
 //
 //	Whenever a permanent becomes untapped, that permanent's controller mills a card.
-var MesmericOrb = newMesmericOrb()
+var MesmericOrb = newMesmericOrb
 
 func newMesmericOrb() *game.CardDef {
 	return &game.CardDef{

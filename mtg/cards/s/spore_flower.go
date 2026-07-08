@@ -19,7 +19,7 @@ import (
 //
 //	At the beginning of your upkeep, put a spore counter on this creature.
 //	Remove three spore counters from this creature: Prevent all combat damage that would be dealt this turn.
-var SporeFlower = newSporeFlower()
+var SporeFlower = newSporeFlower
 
 func newSporeFlower() *game.CardDef {
 	return &game.CardDef{

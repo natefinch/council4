@@ -17,7 +17,7 @@ import (
 //
 //	This spell costs {3} less to cast if you control a creature with menace.
 //	Gain control of target creature until end of turn. Untap that creature. It gains haste until end of turn.
-var TentativeConnection = newTentativeConnection()
+var TentativeConnection = newTentativeConnection
 
 func newTentativeConnection() *game.CardDef {
 	return &game.CardDef{

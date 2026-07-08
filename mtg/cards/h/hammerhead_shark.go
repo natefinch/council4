@@ -9,7 +9,7 @@ import (
 )
 
 // HammerheadShark is the card definition for Hammerhead Shark.
-var HammerheadShark = newHammerheadShark()
+var HammerheadShark = newHammerheadShark
 
 func newHammerheadShark() *game.CardDef {
 	return &game.CardDef{

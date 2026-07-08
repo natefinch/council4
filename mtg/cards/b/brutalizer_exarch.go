@@ -19,7 +19,7 @@ import (
 //	When this creature enters, choose one —
 //	• Search your library for a creature card, reveal it, then shuffle and put that card on top.
 //	• Put target noncreature permanent on the bottom of its owner's library.
-var BrutalizerExarch = newBrutalizerExarch()
+var BrutalizerExarch = newBrutalizerExarch
 
 func newBrutalizerExarch() *game.CardDef {
 	return &game.CardDef{

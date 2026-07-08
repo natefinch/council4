@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Target player mills five cards.
-var TomeScour = newTomeScour()
+var TomeScour = newTomeScour
 
 func newTomeScour() *game.CardDef {
 	return &game.CardDef{

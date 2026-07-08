@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{W}, Sacrifice a creature: Target creature can't attack this turn.
-var MartyredRusalka = newMartyredRusalka()
+var MartyredRusalka = newMartyredRusalka
 
 func newMartyredRusalka() *game.CardDef {
 	return &game.CardDef{

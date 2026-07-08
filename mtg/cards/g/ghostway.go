@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Exile each creature you control. Return those cards to the battlefield under their owner's control at the beginning of the next end step.
-var Ghostway = newGhostway()
+var Ghostway = newGhostway
 
 func newGhostway() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 //
 //	First strike
 //	When this creature enters, reveal the top four cards of your library. Put all Soldier cards revealed this way into your hand and the rest on the bottom of your library in any order.
-var EnlistmentOfficer = newEnlistmentOfficer()
+var EnlistmentOfficer = newEnlistmentOfficer
 
 func newEnlistmentOfficer() *game.CardDef {
 	return &game.CardDef{

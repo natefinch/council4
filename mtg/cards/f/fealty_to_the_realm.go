@@ -19,7 +19,7 @@ import (
 //	When this Aura enters, you become the monarch.
 //	The monarch controls enchanted creature.
 //	Enchanted creature attacks each combat if able and can't attack you.
-var FealtyToTheRealm = newFealtyToTheRealm()
+var FealtyToTheRealm = newFealtyToTheRealm
 
 func newFealtyToTheRealm() *game.CardDef {
 	return &game.CardDef{

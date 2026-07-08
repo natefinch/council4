@@ -19,7 +19,7 @@ import (
 //
 //	Prowess (Whenever you cast a noncreature spell, this creature gets +1/+1 until end of turn.)
 //	Creatures with power less than this creature's power can't block it.
-var ElusiveOtter = newElusiveOtter()
+var ElusiveOtter = newElusiveOtter
 
 func newElusiveOtter() *game.CardDef {
 	return &game.CardDef{

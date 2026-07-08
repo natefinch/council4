@@ -17,7 +17,7 @@ import (
 //
 //	At the beginning of your end step, if there is no monarch, target opponent becomes the monarch.
 //	Whenever a creature attacks one of your opponents, if that player is the monarch, that creature gets +1/+1 and gains trample until end of turn.
-var MBakuJabariChieftain = newMBakuJabariChieftain()
+var MBakuJabariChieftain = newMBakuJabariChieftain
 
 func newMBakuJabariChieftain() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 //
 //	Double strike
 //	Whenever this creature deals combat damage to a player, you may cast target instant or sorcery card from your graveyard without paying its mana cost. If that spell would be put into your graveyard, exile it instead.
-var EfreetFlamepainter = newEfreetFlamepainter()
+var EfreetFlamepainter = newEfreetFlamepainter
 
 func newEfreetFlamepainter() *game.CardDef {
 	return &game.CardDef{

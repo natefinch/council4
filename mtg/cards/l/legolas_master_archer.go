@@ -123,4 +123,4 @@ var LegolasMasterArcher = func() *game.CardDef {
 		},
 	)
 	return card
-}()
+}

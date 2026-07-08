@@ -18,7 +18,7 @@ import (
 //	When this creature enters, choose one —
 //	• Destroy target artifact.
 //	• This creature gains haste until end of turn.
-var IrreverentRevelers = newIrreverentRevelers()
+var IrreverentRevelers = newIrreverentRevelers
 
 func newIrreverentRevelers() *game.CardDef {
 	return &game.CardDef{

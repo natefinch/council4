@@ -19,7 +19,7 @@ import (
 //
 //	Whenever you cast a noncreature spell, put an oil counter on this creature.
 //	As long as this creature has four or more oil counters on it, it gets +2/+0 and can't be blocked.
-var IchorSynthesizer = newIchorSynthesizer()
+var IchorSynthesizer = newIchorSynthesizer
 
 func newIchorSynthesizer() *game.CardDef {
 	return &game.CardDef{

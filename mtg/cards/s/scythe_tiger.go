@@ -17,7 +17,7 @@ import (
 //
 //	Shroud (This creature can't be the target of spells or abilities.)
 //	When this creature enters, sacrifice it unless you sacrifice a land.
-var ScytheTiger = newScytheTiger()
+var ScytheTiger = newScytheTiger
 
 func newScytheTiger() *game.CardDef {
 	return &game.CardDef{

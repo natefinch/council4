@@ -19,7 +19,7 @@ import (
 //	Enchant creature
 //	Enchanted creature has "{T}: Draw a card."
 //	{W}: Enchanted creature gains vigilance until end of turn.
-var OcularHalo = newOcularHalo()
+var OcularHalo = newOcularHalo
 
 func newOcularHalo() *game.CardDef {
 	return &game.CardDef{

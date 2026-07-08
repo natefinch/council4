@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Destroy target enchantment and all other enchantments with the same name as that enchantment.
-var EchoingCalm = newEchoingCalm()
+var EchoingCalm = newEchoingCalm
 
 func newEchoingCalm() *game.CardDef {
 	return &game.CardDef{

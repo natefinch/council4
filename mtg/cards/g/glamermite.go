@@ -20,7 +20,7 @@ import (
 //	When this creature enters, choose one —
 //	• Tap target creature.
 //	• Untap target creature.
-var Glamermite = newGlamermite()
+var Glamermite = newGlamermite
 
 func newGlamermite() *game.CardDef {
 	return &game.CardDef{

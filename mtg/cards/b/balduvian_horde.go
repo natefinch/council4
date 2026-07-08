@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, sacrifice it unless you discard a card at random.
-var BalduvianHorde = newBalduvianHorde()
+var BalduvianHorde = newBalduvianHorde
 
 func newBalduvianHorde() *game.CardDef {
 	return &game.CardDef{

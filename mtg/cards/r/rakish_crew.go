@@ -18,7 +18,7 @@ import (
 //
 //	When this enchantment enters, create a 1/1 red Mercenary creature token with "{T}: Target creature you control gets +1/+0 until end of turn. Activate only as a sorcery."
 //	Whenever an outlaw you control dies, each opponent loses 1 life and you gain 1 life. (Assassins, Mercenaries, Pirates, Rogues, and Warlocks are outlaws.)
-var RakishCrew = newRakishCrew()
+var RakishCrew = newRakishCrew
 
 func newRakishCrew() *game.CardDef {
 	return &game.CardDef{

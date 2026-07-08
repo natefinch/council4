@@ -22,7 +22,7 @@ import (
 //	LEVEL 5+
 //	5/5
 //	First strike
-var CaravanEscort = newCaravanEscort()
+var CaravanEscort = newCaravanEscort
 
 func newCaravanEscort() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 //
 //	Enchant creature
 //	{T}: Enchanted creature gets +2/-2 until end of turn.
-var FlowstoneEmbrace = newFlowstoneEmbrace()
+var FlowstoneEmbrace = newFlowstoneEmbrace
 
 func newFlowstoneEmbrace() *game.CardDef {
 	return &game.CardDef{

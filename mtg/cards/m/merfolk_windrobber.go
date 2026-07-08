@@ -20,7 +20,7 @@ import (
 //	Flying
 //	Whenever this creature deals combat damage to a player, that player mills a card. (They put the top card of their library into their graveyard.)
 //	Sacrifice this creature: Draw a card. Activate only if an opponent has eight or more cards in their graveyard.
-var MerfolkWindrobber = newMerfolkWindrobber()
+var MerfolkWindrobber = newMerfolkWindrobber
 
 func newMerfolkWindrobber() *game.CardDef {
 	return &game.CardDef{

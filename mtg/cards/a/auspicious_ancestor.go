@@ -17,7 +17,7 @@ import (
 //
 //	When this creature dies, you gain 3 life.
 //	Whenever a player casts a white spell, you may pay {1}. If you do, you gain 1 life.
-var AuspiciousAncestor = newAuspiciousAncestor()
+var AuspiciousAncestor = newAuspiciousAncestor
 
 func newAuspiciousAncestor() *game.CardDef {
 	return &game.CardDef{

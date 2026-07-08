@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Cohort — {T}, Tap an untapped Ally you control: You gain 2 life.
-var OnduWarCleric = newOnduWarCleric()
+var OnduWarCleric = newOnduWarCleric
 
 func newOnduWarCleric() *game.CardDef {
 	return &game.CardDef{

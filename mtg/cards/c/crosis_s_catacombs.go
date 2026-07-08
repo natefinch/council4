@@ -17,7 +17,7 @@ import (
 //
 //	When this land enters, sacrifice it unless you return a non-Lair land you control to its owner's hand.
 //	{T}: Add {U}, {B}, or {R}.
-var CrosisSCatacombs = newCrosisSCatacombs()
+var CrosisSCatacombs = newCrosisSCatacombs
 
 func newCrosisSCatacombs() *game.CardDef {
 	return &game.CardDef{

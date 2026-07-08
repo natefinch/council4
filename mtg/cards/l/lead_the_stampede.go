@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Look at the top five cards of your library. You may reveal any number of creature cards from among them and put the revealed cards into your hand. Put the rest on the bottom of your library in any order.
-var LeadTheStampede = newLeadTheStampede()
+var LeadTheStampede = newLeadTheStampede
 
 func newLeadTheStampede() *game.CardDef {
 	return &game.CardDef{

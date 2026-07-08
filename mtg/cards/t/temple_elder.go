@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{T}: You gain 1 life. Activate only during your turn, before attackers are declared.
-var TempleElder = newTempleElder()
+var TempleElder = newTempleElder
 
 func newTempleElder() *game.CardDef {
 	return &game.CardDef{

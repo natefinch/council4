@@ -17,7 +17,7 @@ import (
 //
 //	When this creature enters, you become the monarch.
 //	This creature can't attack unless defending player is the monarch.
-var CrownHunterHireling = newCrownHunterHireling()
+var CrownHunterHireling = newCrownHunterHireling
 
 func newCrownHunterHireling() *game.CardDef {
 	return &game.CardDef{

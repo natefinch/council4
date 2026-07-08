@@ -18,7 +18,7 @@ import (
 //	Enchant creature
 //	Enchanted creature can't attack or block.
 //	When a Vehicle you control attacks, exile enchanted creature.
-var CaughtInTheBrights = newCaughtInTheBrights()
+var CaughtInTheBrights = newCaughtInTheBrights
 
 func newCaughtInTheBrights() *game.CardDef {
 	return &game.CardDef{

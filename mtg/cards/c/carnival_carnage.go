@@ -18,7 +18,7 @@ import (
 // Oracle text:
 //
 //	Carnival deals 1 damage to target creature or planeswalker and 1 damage to that permanent's controller.
-var Carnival = newCarnival()
+var Carnival = newCarnival
 
 func newCarnival() *game.CardDef {
 	return &game.CardDef{

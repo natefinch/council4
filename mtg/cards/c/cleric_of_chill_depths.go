@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature blocks a creature, that creature doesn't untap during its controller's next untap step.
-var ClericOfChillDepths = newClericOfChillDepths()
+var ClericOfChillDepths = newClericOfChillDepths
 
 func newClericOfChillDepths() *game.CardDef {
 	return &game.CardDef{

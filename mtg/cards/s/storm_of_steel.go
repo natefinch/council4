@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Storm of Steel deals 2 damage to each of one or two targets.
-var StormOfSteel = newStormOfSteel()
+var StormOfSteel = newStormOfSteel
 
 func newStormOfSteel() *game.CardDef {
 	return &game.CardDef{

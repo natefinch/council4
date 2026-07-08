@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Return all noncreature, nonland permanents to their owners' hands.
-var FilterOut = newFilterOut()
+var FilterOut = newFilterOut
 
 func newFilterOut() *game.CardDef {
 	return &game.CardDef{

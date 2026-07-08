@@ -20,7 +20,7 @@ import (
 //	• Put two +1/+1 counters on this creature.
 //	• Destroy target artifact or enchantment.
 //	• You gain 4 life.
-var KnightOfAutumn = newKnightOfAutumn()
+var KnightOfAutumn = newKnightOfAutumn
 
 func newKnightOfAutumn() *game.CardDef {
 	return &game.CardDef{

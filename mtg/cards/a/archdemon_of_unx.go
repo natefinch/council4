@@ -17,7 +17,7 @@ import (
 //
 //	Flying, trample
 //	At the beginning of your upkeep, sacrifice a non-Zombie creature, then create a 2/2 black Zombie creature token.
-var ArchdemonOfUnx = newArchdemonOfUnx()
+var ArchdemonOfUnx = newArchdemonOfUnx
 
 func newArchdemonOfUnx() *game.CardDef {
 	return &game.CardDef{

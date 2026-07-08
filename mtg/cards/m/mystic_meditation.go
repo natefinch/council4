@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Draw three cards. Then discard two cards unless you discard a creature card.
-var MysticMeditation = newMysticMeditation()
+var MysticMeditation = newMysticMeditation
 
 func newMysticMeditation() *game.CardDef {
 	return &game.CardDef{

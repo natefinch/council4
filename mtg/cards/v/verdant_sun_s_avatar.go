@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature or another creature you control enters, you gain life equal to that creature's toughness.
-var VerdantSunSAvatar = newVerdantSunSAvatar()
+var VerdantSunSAvatar = newVerdantSunSAvatar
 
 func newVerdantSunSAvatar() *game.CardDef {
 	return &game.CardDef{

@@ -19,7 +19,7 @@ import (
 //	When this creature enters and at the beginning of your upkeep, surveil 1.
 //	Whenever one or more creature cards are put into your graveyard from your library, investigate. (Create a Clue token. It's an artifact with "{2}, Sacrifice this token: Draw a card.")
 //	{2}, Sacrifice a Clue: Return this card from your graveyard to your hand.
-var UnshakableTail = newUnshakableTail()
+var UnshakableTail = newUnshakableTail
 
 func newUnshakableTail() *game.CardDef {
 	return &game.CardDef{

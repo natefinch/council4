@@ -18,7 +18,7 @@ import (
 //
 //	Fear (This creature can't be blocked except by artifact creatures and/or black creatures.)
 //	Threshold — As long as there are seven or more cards in your graveyard, this creature gets +2/+2 and can't block.
-var Frightcrawler = newFrightcrawler()
+var Frightcrawler = newFrightcrawler
 
 func newFrightcrawler() *game.CardDef {
 	return &game.CardDef{

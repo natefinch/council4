@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Commander creatures you own have base power and toughness 10/10 and are Giants in addition to their other types.
-var RaisedByGiants = newRaisedByGiants()
+var RaisedByGiants = newRaisedByGiants
 
 func newRaisedByGiants() *game.CardDef {
 	return &game.CardDef{

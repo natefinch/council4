@@ -18,7 +18,7 @@ import (
 //
 //	When this creature enters, put three -1/-1 counters on target creature you control.
 //	Whenever this creature attacks, remove a -1/-1 counter from it. If you do, you gain 1 life.
-var ExemplarOfStrength = newExemplarOfStrength()
+var ExemplarOfStrength = newExemplarOfStrength
 
 func newExemplarOfStrength() *game.CardDef {
 	return &game.CardDef{

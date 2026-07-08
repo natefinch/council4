@@ -19,7 +19,7 @@ import (
 //	Flying
 //	This creature can block only creatures with flying.
 //	{R}{R}: This creature gets +2/+0 until end of turn and deals 1 damage to you.
-var StormcloudDjinn = newStormcloudDjinn()
+var StormcloudDjinn = newStormcloudDjinn
 
 func newStormcloudDjinn() *game.CardDef {
 	return &game.CardDef{

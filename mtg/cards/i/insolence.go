@@ -17,7 +17,7 @@ import (
 //
 //	Enchant creature
 //	Whenever enchanted creature becomes tapped, this Aura deals 2 damage to that creature's controller.
-var Insolence = newInsolence()
+var Insolence = newInsolence
 
 func newInsolence() *game.CardDef {
 	return &game.CardDef{

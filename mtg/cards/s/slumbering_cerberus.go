@@ -17,7 +17,7 @@ import (
 //
 //	This creature doesn't untap during your untap step.
 //	Morbid — At the beginning of each end step, if a creature died this turn, untap this creature.
-var SlumberingCerberus = newSlumberingCerberus()
+var SlumberingCerberus = newSlumberingCerberus
 
 func newSlumberingCerberus() *game.CardDef {
 	return &game.CardDef{

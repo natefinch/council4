@@ -19,7 +19,7 @@ import (
 //	Flash
 //	Other Merfolk you control get +1/+1.
 //	Sacrifice a Merfolk: Counter target noncreature spell unless its controller pays {1}.
-var VodalianHexcatcher = newVodalianHexcatcher()
+var VodalianHexcatcher = newVodalianHexcatcher
 
 func newVodalianHexcatcher() *game.CardDef {
 	return &game.CardDef{

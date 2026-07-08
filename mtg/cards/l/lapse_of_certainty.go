@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Counter target spell. If that spell is countered this way, put it on top of its owner's library instead of into that player's graveyard.
-var LapseOfCertainty = newLapseOfCertainty()
+var LapseOfCertainty = newLapseOfCertainty
 
 func newLapseOfCertainty() *game.CardDef {
 	return &game.CardDef{

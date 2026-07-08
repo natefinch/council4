@@ -17,7 +17,7 @@ import (
 //
 //	Target multicolored creature gains double strike until end of turn.
 //	Draw a card.
-var PsychoticFury = newPsychoticFury()
+var PsychoticFury = newPsychoticFury
 
 func newPsychoticFury() *game.CardDef {
 	return &game.CardDef{

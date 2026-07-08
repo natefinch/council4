@@ -19,7 +19,7 @@ import (
 //	Enchant creature you control
 //	When this Aura enters, exile target creature an opponent controls until this Aura leaves the battlefield.
 //	Enchanted creature gets +2/+2.
-var FaithUnbroken = newFaithUnbroken()
+var FaithUnbroken = newFaithUnbroken
 
 func newFaithUnbroken() *game.CardDef {
 	return &game.CardDef{

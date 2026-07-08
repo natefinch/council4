@@ -19,7 +19,7 @@ import (
 //
 //	Whenever you commit a crime, put a +1/+1 counter on Vadmir. This ability triggers only once each turn. (Targeting opponents, anything they control, and/or cards in their graveyards is a crime.)
 //	As long as Vadmir has four or more +1/+1 counters on it, it has menace and lifelink.
-var VadmirNewBlood = newVadmirNewBlood()
+var VadmirNewBlood = newVadmirNewBlood
 
 func newVadmirNewBlood() *game.CardDef {
 	return &game.CardDef{

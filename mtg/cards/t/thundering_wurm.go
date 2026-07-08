@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, sacrifice it unless you discard a land card.
-var ThunderingWurm = newThunderingWurm()
+var ThunderingWurm = newThunderingWurm
 
 func newThunderingWurm() *game.CardDef {
 	return &game.CardDef{

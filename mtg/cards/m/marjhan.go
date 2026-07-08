@@ -10,7 +10,7 @@ import (
 )
 
 // Marjhan is the card definition for Marjhan.
-var Marjhan = newMarjhan()
+var Marjhan = newMarjhan
 
 func newMarjhan() *game.CardDef {
 	return &game.CardDef{

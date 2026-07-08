@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	This creature can't attack alone.
-var RagingKronch = newRagingKronch()
+var RagingKronch = newRagingKronch
 
 func newRagingKronch() *game.CardDef {
 	return &game.CardDef{

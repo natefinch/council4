@@ -19,7 +19,7 @@ import (
 //
 //	When this creature enters, put a menace counter on target non-Human creature you control. (It can't be blocked except by two or more creatures.)
 //	{2}{R}, {T}: Put a +1/+1 counter on each creature you control with menace.
-var FrillscareMentor = newFrillscareMentor()
+var FrillscareMentor = newFrillscareMentor
 
 func newFrillscareMentor() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Blitz of the Thunder-Raptor deals damage to target creature or planeswalker equal to the number of instant and sorcery cards in your graveyard. If that creature or planeswalker would die this turn, exile it instead.
-var BlitzOfTheThunderRaptor = newBlitzOfTheThunderRaptor()
+var BlitzOfTheThunderRaptor = newBlitzOfTheThunderRaptor
 
 func newBlitzOfTheThunderRaptor() *game.CardDef {
 	return &game.CardDef{

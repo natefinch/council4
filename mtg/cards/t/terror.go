@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Destroy target nonartifact, nonblack creature. It can't be regenerated.
-var Terror = newTerror()
+var Terror = newTerror
 
 func newTerror() *game.CardDef {
 	return &game.CardDef{

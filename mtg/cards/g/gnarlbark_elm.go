@@ -19,7 +19,7 @@ import (
 //
 //	This creature enters with two -1/-1 counters on it.
 //	{2}{B}, Remove two counters from this creature: Target creature gets -2/-2 until end of turn. Activate only as a sorcery.
-var GnarlbarkElm = newGnarlbarkElm()
+var GnarlbarkElm = newGnarlbarkElm
 
 func newGnarlbarkElm() *game.CardDef {
 	return &game.CardDef{

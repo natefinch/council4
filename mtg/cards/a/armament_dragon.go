@@ -18,7 +18,7 @@ import (
 //
 //	Flying
 //	When this creature enters, distribute three +1/+1 counters among one, two, or three target creatures you control.
-var ArmamentDragon = newArmamentDragon()
+var ArmamentDragon = newArmamentDragon
 
 func newArmamentDragon() *game.CardDef {
 	return &game.CardDef{

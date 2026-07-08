@@ -18,7 +18,7 @@ import (
 //
 //	Flying
 //	{U}, Sacrifice this creature: Counter target spell unless its controller pays {2}.
-var WizardReplica = newWizardReplica()
+var WizardReplica = newWizardReplica
 
 func newWizardReplica() *game.CardDef {
 	return &game.CardDef{

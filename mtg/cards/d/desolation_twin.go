@@ -15,7 +15,7 @@ import (
 // Oracle text:
 //
 //	When you cast this spell, create a 10/10 colorless Eldrazi creature token.
-var DesolationTwin = newDesolationTwin()
+var DesolationTwin = newDesolationTwin
 
 func newDesolationTwin() *game.CardDef {
 	return &game.CardDef{

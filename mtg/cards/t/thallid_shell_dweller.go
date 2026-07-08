@@ -20,7 +20,7 @@ import (
 //	Defender
 //	At the beginning of your upkeep, put a spore counter on this creature.
 //	Remove three spore counters from this creature: Create a 1/1 green Saproling creature token.
-var ThallidShellDweller = newThallidShellDweller()
+var ThallidShellDweller = newThallidShellDweller
 
 func newThallidShellDweller() *game.CardDef {
 	return &game.CardDef{

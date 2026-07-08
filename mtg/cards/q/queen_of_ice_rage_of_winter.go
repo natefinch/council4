@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature deals combat damage to a creature, tap that creature. It doesn't untap during its controller's next untap step.
-var QueenOfIce = newQueenOfIce()
+var QueenOfIce = newQueenOfIce
 
 func newQueenOfIce() *game.CardDef {
 	return &game.CardDef{

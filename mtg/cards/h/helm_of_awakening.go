@@ -15,7 +15,7 @@ import (
 // Oracle text:
 //
 //	Spells cost {1} less to cast.
-var HelmOfAwakening = newHelmOfAwakening()
+var HelmOfAwakening = newHelmOfAwakening
 
 func newHelmOfAwakening() *game.CardDef {
 	return &game.CardDef{

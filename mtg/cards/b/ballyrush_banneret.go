@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Kithkin spells and Soldier spells you cast cost {1} less to cast.
-var BallyrushBanneret = newBallyrushBanneret()
+var BallyrushBanneret = newBallyrushBanneret
 
 func newBallyrushBanneret() *game.CardDef {
 	return &game.CardDef{

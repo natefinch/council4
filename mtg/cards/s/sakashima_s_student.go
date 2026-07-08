@@ -18,7 +18,7 @@ import (
 //
 //	Ninjutsu {1}{U} ({1}{U}, Return an unblocked attacker you control to hand: Put this card onto the battlefield from your hand tapped and attacking.)
 //	You may have this creature enter as a copy of any creature on the battlefield, except it's a Ninja in addition to its other creature types.
-var SakashimaSStudent = newSakashimaSStudent()
+var SakashimaSStudent = newSakashimaSStudent
 
 func newSakashimaSStudent() *game.CardDef {
 	return &game.CardDef{

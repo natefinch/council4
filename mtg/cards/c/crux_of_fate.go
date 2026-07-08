@@ -18,7 +18,7 @@ import (
 //	Choose one —
 //	• Destroy all Dragon creatures.
 //	• Destroy all non-Dragon creatures.
-var CruxOfFate = newCruxOfFate()
+var CruxOfFate = newCruxOfFate
 
 func newCruxOfFate() *game.CardDef {
 	return &game.CardDef{

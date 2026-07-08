@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Descend 4 — This creature gets +2/+0 as long as there are four or more permanent cards in your graveyard.
-var FrilledCaveWurm = newFrilledCaveWurm()
+var FrilledCaveWurm = newFrilledCaveWurm
 
 func newFrilledCaveWurm() *game.CardDef {
 	return &game.CardDef{

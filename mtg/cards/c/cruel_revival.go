@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Destroy target non-Zombie creature. It can't be regenerated. Return up to one target Zombie card from your graveyard to your hand.
-var CruelRevival = newCruelRevival()
+var CruelRevival = newCruelRevival
 
 func newCruelRevival() *game.CardDef {
 	return &game.CardDef{

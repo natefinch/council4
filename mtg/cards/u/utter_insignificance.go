@@ -20,7 +20,7 @@ import (
 //	Enchant creature
 //	Enchanted creature loses all abilities and has base power and toughness 1/1.
 //	{2}{C}: Exile enchanted creature.
-var UtterInsignificance = newUtterInsignificance()
+var UtterInsignificance = newUtterInsignificance
 
 func newUtterInsignificance() *game.CardDef {
 	return &game.CardDef{

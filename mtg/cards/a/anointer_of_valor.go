@@ -18,7 +18,7 @@ import (
 //
 //	Flying
 //	Whenever a creature attacks, you may pay {3}. When you do, put a +1/+1 counter on that creature.
-var AnointerOfValor = newAnointerOfValor()
+var AnointerOfValor = newAnointerOfValor
 
 func newAnointerOfValor() *game.CardDef {
 	return &game.CardDef{

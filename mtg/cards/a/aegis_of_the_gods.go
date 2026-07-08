@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	You have hexproof. (You can't be the target of spells or abilities your opponents control.)
-var AegisOfTheGods = newAegisOfTheGods()
+var AegisOfTheGods = newAegisOfTheGods
 
 func newAegisOfTheGods() *game.CardDef {
 	return &game.CardDef{

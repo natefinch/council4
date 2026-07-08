@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	This creature can't block alone.
-var CravenHulk = newCravenHulk()
+var CravenHulk = newCravenHulk
 
 func newCravenHulk() *game.CardDef {
 	return &game.CardDef{

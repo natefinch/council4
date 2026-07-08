@@ -19,7 +19,7 @@ import (
 //	When this Equipment enters, attach it to target creature you control. That creature gains indestructible until end of turn.
 //	Equipped creature gets +1/+0.
 //	Equip {1} ({1}: Attach to target creature you control. Equip only as a sorcery.)
-var BladedBattleFan = newBladedBattleFan()
+var BladedBattleFan = newBladedBattleFan
 
 func newBladedBattleFan() *game.CardDef {
 	return &game.CardDef{

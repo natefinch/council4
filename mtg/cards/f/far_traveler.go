@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Commander creatures you own have "At the beginning of your end step, exile up to one target tapped creature you control, then return it to the battlefield under its owner's control."
-var FarTraveler = newFarTraveler()
+var FarTraveler = newFarTraveler
 
 func newFarTraveler() *game.CardDef {
 	return &game.CardDef{

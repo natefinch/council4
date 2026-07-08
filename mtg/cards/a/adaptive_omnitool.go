@@ -17,7 +17,7 @@ import (
 //	Equipped creature gets +1/+1 for each artifact you control.
 //	Whenever equipped creature attacks, look at the top six cards of your library. You may reveal an artifact card from among them and put it into your hand. Put the rest on the bottom of your library in a random order.
 //	Equip {3}
-var AdaptiveOmnitool = newAdaptiveOmnitool()
+var AdaptiveOmnitool = newAdaptiveOmnitool
 
 func newAdaptiveOmnitool() *game.CardDef {
 	return &game.CardDef{

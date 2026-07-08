@@ -17,7 +17,7 @@ import (
 //
 //	Haste (This creature can attack and {T} as soon as it comes under your control.)
 //	When this creature enters, reveal the top four cards of your library. Put all Goblin cards revealed this way into your hand and the rest on the bottom of your library in any order.
-var GoblinRingleader = newGoblinRingleader()
+var GoblinRingleader = newGoblinRingleader
 
 func newGoblinRingleader() *game.CardDef {
 	return &game.CardDef{

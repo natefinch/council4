@@ -18,153 +18,155 @@ import (
 //
 //	Whenever one or more creatures you control fight or become blocked, draw a card.
 //	At the beginning of combat on your turn, you may pay {2}{R/G}. If you do, double target creature's power until end of turn. That creature must be blocked this combat if able. ({R/G} can be paid with either {R} or {G}.)
-var NeyithOfTheDireHunt = &game.CardDef{
-	ColorIdentity: color.NewIdentity(color.Green, color.Red),
-	CardFace: game.CardFace{
-		Name: "Neyith of the Dire Hunt",
-		ManaCost: opt.Val(cost.Mana{
-			cost.O(2),
-			cost.G,
-			cost.G,
-		}),
-		Colors:     []color.Color{color.Green},
-		Supertypes: []types.Super{types.Legendary},
-		Types:      []types.Card{types.Creature},
-		Subtypes:   []types.Sub{types.Human, types.Warrior},
-		Power:      opt.Val(game.PT{Value: 3}),
-		Toughness:  opt.Val(game.PT{Value: 3}),
-		OracleText: `
+var NeyithOfTheDireHunt = func() *game.CardDef {
+	return &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Green, color.Red),
+		CardFace: game.CardFace{
+			Name: "Neyith of the Dire Hunt",
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(2),
+				cost.G,
+				cost.G,
+			}),
+			Colors:     []color.Color{color.Green},
+			Supertypes: []types.Super{types.Legendary},
+			Types:      []types.Card{types.Creature},
+			Subtypes:   []types.Sub{types.Human, types.Warrior},
+			Power:      opt.Val(game.PT{Value: 3}),
+			Toughness:  opt.Val(game.PT{Value: 3}),
+			OracleText: `
 			Whenever one or more creatures you control fight or become blocked, draw a card.
 			At the beginning of combat on your turn, you may pay {2}{R/G}. If you do, double target creature's power until end of turn. That creature must be blocked this combat if able. ({R/G} can be paid with either {R} or {G}.)
 		`,
-		TriggeredAbilities: []game.TriggeredAbility{
-			{
-				Text: `
+			TriggeredAbilities: []game.TriggeredAbility{
+				{
+					Text: `
 					Whenever one or more creatures you control fight or become blocked, draw a card.
 				`,
-				Trigger: game.TriggerCondition{
-					Type: game.TriggerWhenever,
-					Pattern: game.TriggerPattern{
-						Event:      game.EventFight,
-						Controller: game.TriggerControllerYou,
-						RequirePermanentTypes: []types.Card{
-							types.Creature,
+					Trigger: game.TriggerCondition{
+						Type: game.TriggerWhenever,
+						Pattern: game.TriggerPattern{
+							Event:      game.EventFight,
+							Controller: game.TriggerControllerYou,
+							RequirePermanentTypes: []types.Card{
+								types.Creature,
+							},
+							OneOrMore: true,
 						},
-						OneOrMore: true,
 					},
-				},
-				Content: game.Mode{
-					Sequence: []game.Instruction{
-						{
-							Primitive: game.Draw{
-								Amount: game.Fixed(1),
-								Player: game.ControllerReference(),
+					Content: game.Mode{
+						Sequence: []game.Instruction{
+							{
+								Primitive: game.Draw{
+									Amount: game.Fixed(1),
+									Player: game.ControllerReference(),
+								},
 							},
 						},
-					},
-				}.Ability(),
-			},
-			{
-				Text: `
+					}.Ability(),
+				},
+				{
+					Text: `
 					Whenever one or more creatures you control fight or become blocked, draw a card.
 				`,
-				Trigger: game.TriggerCondition{
-					Type: game.TriggerWhenever,
-					Pattern: game.TriggerPattern{
-						Event:      game.EventBlockerDeclared,
-						Subject:    game.TriggerSubjectBlockedAttacker,
-						Controller: game.TriggerControllerYou,
-						RequirePermanentTypes: []types.Card{
-							types.Creature,
+					Trigger: game.TriggerCondition{
+						Type: game.TriggerWhenever,
+						Pattern: game.TriggerPattern{
+							Event:      game.EventBlockerDeclared,
+							Subject:    game.TriggerSubjectBlockedAttacker,
+							Controller: game.TriggerControllerYou,
+							RequirePermanentTypes: []types.Card{
+								types.Creature,
+							},
+							OneOrMore: true,
 						},
-						OneOrMore: true,
 					},
-				},
-				Content: game.Mode{
-					Sequence: []game.Instruction{
-						{
-							Primitive: game.Draw{
-								Amount: game.Fixed(1),
-								Player: game.ControllerReference(),
+					Content: game.Mode{
+						Sequence: []game.Instruction{
+							{
+								Primitive: game.Draw{
+									Amount: game.Fixed(1),
+									Player: game.ControllerReference(),
+								},
 							},
 						},
-					},
-				}.Ability(),
-			},
-			{
-				Text: `
+					}.Ability(),
+				},
+				{
+					Text: `
 					At the beginning of combat on your turn, you may pay {2}{R/G}. If you do, double target creature's power until end of turn. That creature must be blocked this combat if able.
 				`,
-				Trigger: game.TriggerCondition{
-					Type: game.TriggerAt,
-					Pattern: game.TriggerPattern{
-						Event:      game.EventBeginningOfStep,
-						Controller: game.TriggerControllerYou,
-						Step:       game.StepBeginningOfCombat,
-					},
-				},
-				Content: game.Mode{
-					Targets: []game.TargetSpec{
-						{
-							MinTargets: 1,
-							MaxTargets: 1,
-							Constraint: "creature",
-							Allow:      game.TargetAllowPermanent,
-							Selection: opt.Val(game.Selection{
-								RequiredTypesAny: []types.Card{
-									types.Creature,
-								},
-							}),
+					Trigger: game.TriggerCondition{
+						Type: game.TriggerAt,
+						Pattern: game.TriggerPattern{
+							Event:      game.EventBeginningOfStep,
+							Controller: game.TriggerControllerYou,
+							Step:       game.StepBeginningOfCombat,
 						},
 					},
-					Sequence: []game.Instruction{
-						{
-							Primitive: game.Pay{
-								Payment: game.ResolutionPayment{
-									Prompt: "Pay {2}{R/G}?",
-									ManaCost: opt.Val(cost.Mana{
-										cost.O(2),
-										cost.HybridMana(mana.R, mana.G),
-									}),
-								},
-							},
-							Optional:      true,
-							PublishResult: game.ResultKey("neyith-combat-pay"),
-						},
-						{
-							Primitive: game.ModifyPT{
-								Object: game.TargetPermanentReference(0),
-								PowerDelta: game.Dynamic(game.DynamicAmount{
-									Kind:   game.DynamicAmountObjectPower,
-									Object: game.TargetPermanentReference(0),
+					Content: game.Mode{
+						Targets: []game.TargetSpec{
+							{
+								MinTargets: 1,
+								MaxTargets: 1,
+								Constraint: "creature",
+								Allow:      game.TargetAllowPermanent,
+								Selection: opt.Val(game.Selection{
+									RequiredTypesAny: []types.Card{
+										types.Creature,
+									},
 								}),
-								Duration: game.DurationUntilEndOfTurn,
 							},
-							ResultGate: opt.Val(game.InstructionResultGate{
-								Key:       game.ResultKey("neyith-combat-pay"),
-								Accepted:  game.TriTrue,
-								Succeeded: game.TriTrue,
-							}),
 						},
-						{
-							Primitive: game.ApplyRule{
-								Object: opt.Val(game.TargetPermanentReference(0)),
-								RuleEffects: []game.RuleEffect{
-									{
-										Kind: game.RuleEffectMustBeBlocked,
+						Sequence: []game.Instruction{
+							{
+								Primitive: game.Pay{
+									Payment: game.ResolutionPayment{
+										Prompt: "Pay {2}{R/G}?",
+										ManaCost: opt.Val(cost.Mana{
+											cost.O(2),
+											cost.HybridMana(mana.R, mana.G),
+										}),
 									},
 								},
-								Duration: game.DurationUntilEndOfTurn,
+								Optional:      true,
+								PublishResult: game.ResultKey("neyith-combat-pay"),
 							},
-							ResultGate: opt.Val(game.InstructionResultGate{
-								Key:       game.ResultKey("neyith-combat-pay"),
-								Accepted:  game.TriTrue,
-								Succeeded: game.TriTrue,
-							}),
+							{
+								Primitive: game.ModifyPT{
+									Object: game.TargetPermanentReference(0),
+									PowerDelta: game.Dynamic(game.DynamicAmount{
+										Kind:   game.DynamicAmountObjectPower,
+										Object: game.TargetPermanentReference(0),
+									}),
+									Duration: game.DurationUntilEndOfTurn,
+								},
+								ResultGate: opt.Val(game.InstructionResultGate{
+									Key:       game.ResultKey("neyith-combat-pay"),
+									Accepted:  game.TriTrue,
+									Succeeded: game.TriTrue,
+								}),
+							},
+							{
+								Primitive: game.ApplyRule{
+									Object: opt.Val(game.TargetPermanentReference(0)),
+									RuleEffects: []game.RuleEffect{
+										{
+											Kind: game.RuleEffectMustBeBlocked,
+										},
+									},
+									Duration: game.DurationUntilEndOfTurn,
+								},
+								ResultGate: opt.Val(game.InstructionResultGate{
+									Key:       game.ResultKey("neyith-combat-pay"),
+									Accepted:  game.TriTrue,
+									Succeeded: game.TriTrue,
+								}),
+							},
 						},
-					},
-				}.Ability(),
+					}.Ability(),
+				},
 			},
 		},
-	},
+	}
 }

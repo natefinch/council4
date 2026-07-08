@@ -17,7 +17,7 @@ import (
 //
 //	Flying
 //	Whenever Numot deals combat damage to a player, you may pay {2}{R}. If you do, destroy up to two target lands.
-var NumotTheDevastator = newNumotTheDevastator()
+var NumotTheDevastator = newNumotTheDevastator
 
 func newNumotTheDevastator() *game.CardDef {
 	return &game.CardDef{

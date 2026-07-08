@@ -20,7 +20,7 @@ import (
 //	At the beginning of your upkeep, put a spore counter on this creature.
 //	Remove three spore counters from this creature: Create a 1/1 green Saproling creature token.
 //	Sacrifice a Saproling: This creature gets +1/+2 until end of turn.
-var ThallidDevourer = newThallidDevourer()
+var ThallidDevourer = newThallidDevourer
 
 func newThallidDevourer() *game.CardDef {
 	return &game.CardDef{

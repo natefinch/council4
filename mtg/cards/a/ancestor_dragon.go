@@ -17,7 +17,7 @@ import (
 //
 //	Flying
 //	Whenever one or more creatures you control attack, you gain 1 life for each attacking creature.
-var AncestorDragon = newAncestorDragon()
+var AncestorDragon = newAncestorDragon
 
 func newAncestorDragon() *game.CardDef {
 	return &game.CardDef{

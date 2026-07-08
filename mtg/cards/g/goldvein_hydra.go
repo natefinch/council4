@@ -19,7 +19,7 @@ import (
 //	Vigilance, trample, haste
 //	This creature enters with X +1/+1 counters on it.
 //	When this creature dies, create a number of tapped Treasure tokens equal to its power.
-var GoldveinHydra = newGoldveinHydra()
+var GoldveinHydra = newGoldveinHydra
 
 func newGoldveinHydra() *game.CardDef {
 	return &game.CardDef{

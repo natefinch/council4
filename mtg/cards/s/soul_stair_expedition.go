@@ -19,7 +19,7 @@ import (
 //
 //	Landfall — Whenever a land you control enters, you may put a quest counter on this enchantment.
 //	Remove three quest counters from this enchantment and sacrifice it: Return up to two target creature cards from your graveyard to your hand.
-var SoulStairExpedition = newSoulStairExpedition()
+var SoulStairExpedition = newSoulStairExpedition
 
 func newSoulStairExpedition() *game.CardDef {
 	return &game.CardDef{

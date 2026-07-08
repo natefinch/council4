@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Target creature you control gets +1/+0 until end of turn. It deals damage equal to its power to up to one target creature an opponent controls.
-var AssertPerfection = newAssertPerfection()
+var AssertPerfection = newAssertPerfection
 
 func newAssertPerfection() *game.CardDef {
 	return &game.CardDef{

@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, if you cast it from your hand, destroy all non-Dinosaur creatures.
-var WakeningSunSAvatar = newWakeningSunSAvatar()
+var WakeningSunSAvatar = newWakeningSunSAvatar
 
 func newWakeningSunSAvatar() *game.CardDef {
 	return &game.CardDef{

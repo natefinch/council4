@@ -19,7 +19,7 @@ import (
 //
 //	At the beginning of your end step, if a face-down creature entered the battlefield under your control this turn, put a +1/+1 counter on this creature.
 //	{T}: Add {G}.
-var TunnelTipster = newTunnelTipster()
+var TunnelTipster = newTunnelTipster
 
 func newTunnelTipster() *game.CardDef {
 	return &game.CardDef{

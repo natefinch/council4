@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Target opponent sacrifices a creature of their choice. If you control a creature with power 4 or greater, you gain 4 life.
-var UndercitySEmbrace = newUndercitySEmbrace()
+var UndercitySEmbrace = newUndercitySEmbrace
 
 func newUndercitySEmbrace() *game.CardDef {
 	return &game.CardDef{

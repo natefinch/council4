@@ -22,7 +22,7 @@ import (
 //	• Target creature can't block this turn.
 //	• Put a +1/+1 counter on equipped creature.
 //	Equip {1}
-var LostJitte = newLostJitte()
+var LostJitte = newLostJitte
 
 func newLostJitte() *game.CardDef {
 	return &game.CardDef{

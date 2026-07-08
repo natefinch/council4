@@ -14,7 +14,7 @@ import (
 // Oracle text:
 //
 //	{T}: Add {G}.
-var LlanowarElves = newLlanowarElves()
+var LlanowarElves = newLlanowarElves
 
 func newLlanowarElves() *game.CardDef {
 	return &game.CardDef{

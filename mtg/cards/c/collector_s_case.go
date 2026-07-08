@@ -19,7 +19,7 @@ import (
 //
 //	When this artifact enters, tap up to one target creature and put two stun counters on it. (If a permanent with a stun counter would become untapped, remove one from it instead.)
 //	{3}{U}, {T}: Tap target creature.
-var CollectorSCase = newCollectorSCase()
+var CollectorSCase = newCollectorSCase
 
 func newCollectorSCase() *game.CardDef {
 	return &game.CardDef{

@@ -19,7 +19,7 @@ import (
 //	Enchant creature
 //	When this Aura enters, enchanted creature gains hexproof until end of turn.
 //	Enchanted creature gets +1/+0 and has flying.
-var FaeFlight = newFaeFlight()
+var FaeFlight = newFaeFlight
 
 func newFaeFlight() *game.CardDef {
 	return &game.CardDef{

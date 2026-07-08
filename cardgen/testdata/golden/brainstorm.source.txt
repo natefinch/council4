@@ -14,7 +14,7 @@ import (
 // Oracle text:
 //
 //	Draw three cards, then put two cards from your hand on top of your library in any order.
-var Brainstorm = newBrainstorm()
+var Brainstorm = newBrainstorm
 
 func newBrainstorm() *game.CardDef {
 	return &game.CardDef{

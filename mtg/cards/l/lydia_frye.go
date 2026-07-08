@@ -18,7 +18,7 @@ import (
 //
 //	Lydia Frye can't be blocked by creatures with power 3 or greater.
 //	At the beginning of your end step, surveil X, where X is the number of tapped Assassins you control. (Look at the top X cards of your library, then put any number of them into your graveyard and the rest on top of your library in any order.)
-var LydiaFrye = newLydiaFrye()
+var LydiaFrye = newLydiaFrye
 
 func newLydiaFrye() *game.CardDef {
 	return &game.CardDef{

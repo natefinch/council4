@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, if you control another Knight, look at the top five cards of your library. You may reveal a Knight, Aura, Equipment, or legendary artifact card from among them and put it into your hand. Put the rest on the bottom of your library in a random order.
-var AcclaimedContender = newAcclaimedContender()
+var AcclaimedContender = newAcclaimedContender
 
 func newAcclaimedContender() *game.CardDef {
 	return &game.CardDef{

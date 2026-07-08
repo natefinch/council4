@@ -19,7 +19,7 @@ import (
 //	Lifelink
 //	If you would gain life, you gain twice that much life instead.
 //	At the beginning of each combat, if you have at least 10 life more than your starting life total, creatures you control get +2/+2 and gain vigilance until end of turn.
-var DoctorStrangeSurgeon = newDoctorStrangeSurgeon()
+var DoctorStrangeSurgeon = newDoctorStrangeSurgeon
 
 func newDoctorStrangeSurgeon() *game.CardDef {
 	return &game.CardDef{

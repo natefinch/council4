@@ -18,7 +18,7 @@ import (
 //	Vigilance, ward {2}
 //	Other Zombies you control have vigilance.
 //	Whenever another legendary creature you control dies, create a token that's a copy of that creature, except it's not legendary and it's a 2/2 black Zombie in addition to its other colors and types.
-var RatadrabikOfUrborg = newRatadrabikOfUrborg()
+var RatadrabikOfUrborg = newRatadrabikOfUrborg
 
 func newRatadrabikOfUrborg() *game.CardDef {
 	return &game.CardDef{

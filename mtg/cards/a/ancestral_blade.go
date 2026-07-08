@@ -18,7 +18,7 @@ import (
 //	When this Equipment enters, create a 1/1 white Soldier creature token, then attach this Equipment to it.
 //	Equipped creature gets +1/+1.
 //	Equip {1} ({1}: Attach to target creature you control. Equip only as a sorcery.)
-var AncestralBlade = newAncestralBlade()
+var AncestralBlade = newAncestralBlade
 
 func newAncestralBlade() *game.CardDef {
 	return &game.CardDef{

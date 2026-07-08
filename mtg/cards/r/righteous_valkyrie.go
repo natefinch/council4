@@ -19,7 +19,7 @@ import (
 //	Flying
 //	Whenever another Angel or Cleric you control enters, you gain life equal to that creature's toughness.
 //	As long as you have at least 7 life more than your starting life total, creatures you control get +2/+2.
-var RighteousValkyrie = newRighteousValkyrie()
+var RighteousValkyrie = newRighteousValkyrie
 
 func newRighteousValkyrie() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 //
 //	First strike
 //	Noncreature spells cost {1} more to cast.
-var ThaliaGuardianOfThraben = newThaliaGuardianOfThraben()
+var ThaliaGuardianOfThraben = newThaliaGuardianOfThraben
 
 func newThaliaGuardianOfThraben() *game.CardDef {
 	return &game.CardDef{

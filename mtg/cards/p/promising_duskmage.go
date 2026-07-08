@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	When this creature dies, if it had a +1/+1 counter on it, draw a card.
-var PromisingDuskmage = newPromisingDuskmage()
+var PromisingDuskmage = newPromisingDuskmage
 
 func newPromisingDuskmage() *game.CardDef {
 	return &game.CardDef{

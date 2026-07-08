@@ -19,7 +19,7 @@ import (
 //
 //	Whenever you draw a card, you may put a hoofprint counter on this enchantment.
 //	{2}{W}, Remove four hoofprint counters from this enchantment: Create a 4/4 white Elemental creature token with flying. Activate only during your turn.
-var HoofprintsOfTheStag = newHoofprintsOfTheStag()
+var HoofprintsOfTheStag = newHoofprintsOfTheStag
 
 func newHoofprintsOfTheStag() *game.CardDef {
 	return &game.CardDef{

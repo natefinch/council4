@@ -19,7 +19,7 @@ import (
 //	Flying
 //	This creature can block only creatures with flying.
 //	{1}{B}: This creature gets +1/+1 until end of turn.
-var BattlefieldPercher = newBattlefieldPercher()
+var BattlefieldPercher = newBattlefieldPercher
 
 func newBattlefieldPercher() *game.CardDef {
 	return &game.CardDef{

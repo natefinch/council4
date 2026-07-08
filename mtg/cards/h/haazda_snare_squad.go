@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature attacks, you may pay {W}. If you do, tap target creature an opponent controls.
-var HaazdaSnareSquad = newHaazdaSnareSquad()
+var HaazdaSnareSquad = newHaazdaSnareSquad
 
 func newHaazdaSnareSquad() *game.CardDef {
 	return &game.CardDef{

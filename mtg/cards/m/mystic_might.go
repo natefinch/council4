@@ -19,7 +19,7 @@ import (
 //	Enchant land you control
 //	Cumulative upkeep {1}{U} (At the beginning of your upkeep, put an age counter on this permanent, then sacrifice it unless you pay its upkeep cost for each age counter on it.)
 //	Enchanted land has "{T}: Target creature gets +2/+2 until end of turn."
-var MysticMight = newMysticMight()
+var MysticMight = newMysticMight
 
 func newMysticMight() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 //	Enchant creature
 //	When this Aura enters, tap enchanted creature.
 //	Enchanted creature gets +20/+20.
-var Colossification = newColossification()
+var Colossification = newColossification
 
 func newColossification() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 //
 //	Flying, menace
 //	Exterminate! — When this creature enters, destroy target creature an opponent controls. That player loses 3 life.
-var DalekDrone = newDalekDrone()
+var DalekDrone = newDalekDrone
 
 func newDalekDrone() *game.CardDef {
 	return &game.CardDef{

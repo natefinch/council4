@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{T}: Add {C}{C}. Spend this mana only to activate abilities of artifacts.
-var SoldeviMachinist = newSoldeviMachinist()
+var SoldeviMachinist = newSoldeviMachinist
 
 func newSoldeviMachinist() *game.CardDef {
 	return &game.CardDef{

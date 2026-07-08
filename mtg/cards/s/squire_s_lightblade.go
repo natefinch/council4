@@ -19,7 +19,7 @@ import (
 //	When this Equipment enters, attach it to target creature you control. That creature gains first strike until end of turn.
 //	Equipped creature gets +1/+0.
 //	Equip {3}
-var SquireSLightblade = newSquireSLightblade()
+var SquireSLightblade = newSquireSLightblade
 
 func newSquireSLightblade() *game.CardDef {
 	return &game.CardDef{

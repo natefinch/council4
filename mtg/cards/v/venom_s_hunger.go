@@ -17,7 +17,7 @@ import (
 //
 //	This spell costs {2} less to cast if you control a Villain.
 //	Destroy target creature. You gain 2 life.
-var VenomSHunger = newVenomSHunger()
+var VenomSHunger = newVenomSHunger
 
 func newVenomSHunger() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 //
 //	{U}, {T}: You may tap or untap another target creature.
 //	Landfall — Whenever a land you control enters, you may untap this creature.
-var TideforceElemental = newTideforceElemental()
+var TideforceElemental = newTideforceElemental
 
 func newTideforceElemental() *game.CardDef {
 	return &game.CardDef{

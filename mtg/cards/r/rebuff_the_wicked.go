@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Counter target spell that targets a permanent you control.
-var RebuffTheWicked = newRebuffTheWicked()
+var RebuffTheWicked = newRebuffTheWicked
 
 func newRebuffTheWicked() *game.CardDef {
 	return &game.CardDef{

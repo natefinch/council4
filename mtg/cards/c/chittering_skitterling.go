@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Corrupted — Sacrifice an artifact or creature: Draw a card. Activate only if an opponent has three or more poison counters and only once each turn.
-var ChitteringSkitterling = newChitteringSkitterling()
+var ChitteringSkitterling = newChitteringSkitterling
 
 func newChitteringSkitterling() *game.CardDef {
 	return &game.CardDef{

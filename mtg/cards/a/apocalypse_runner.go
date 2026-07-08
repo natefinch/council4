@@ -19,7 +19,7 @@ import (
 //
 //	{T}: Target creature you control with power 2 or less gains lifelink until end of turn and can't be blocked this turn.
 //	Crew 3 (Tap any number of creatures you control with total power 3 or more: This Vehicle becomes an artifact creature until end of turn.)
-var ApocalypseRunner = newApocalypseRunner()
+var ApocalypseRunner = newApocalypseRunner
 
 func newApocalypseRunner() *game.CardDef {
 	return &game.CardDef{

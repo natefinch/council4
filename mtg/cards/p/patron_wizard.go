@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Tap an untapped Wizard you control: Counter target spell unless its controller pays {1}.
-var PatronWizard = newPatronWizard()
+var PatronWizard = newPatronWizard
 
 func newPatronWizard() *game.CardDef {
 	return &game.CardDef{

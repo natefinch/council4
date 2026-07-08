@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Creatures without flying can't block this turn.
-var MagmaticChasm = newMagmaticChasm()
+var MagmaticChasm = newMagmaticChasm
 
 func newMagmaticChasm() *game.CardDef {
 	return &game.CardDef{

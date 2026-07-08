@@ -17,7 +17,7 @@ import (
 //
 //	Target opponent discards a card.
 //	Look at the top five cards of your library. You may reveal a black card from among them and put it into your hand. Put the rest on the bottom of your library in a random order.
-var LilianaSSpoils = newLilianaSSpoils()
+var LilianaSSpoils = newLilianaSSpoils
 
 func newLilianaSSpoils() *game.CardDef {
 	return &game.CardDef{

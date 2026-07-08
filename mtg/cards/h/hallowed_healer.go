@@ -19,7 +19,7 @@ import (
 //
 //	{T}: Prevent the next 2 damage that would be dealt to any target this turn.
 //	Threshold — {T}: Prevent the next 4 damage that would be dealt to any target this turn. Activate only if there are seven or more cards in your graveyard.
-var HallowedHealer = newHallowedHealer()
+var HallowedHealer = newHallowedHealer
 
 func newHallowedHealer() *game.CardDef {
 	return &game.CardDef{

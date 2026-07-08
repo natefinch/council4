@@ -18,7 +18,7 @@ import (
 //
 //	First strike
 //	Sacrifice this creature: Put a +2/+2 counter on target Chimera creature. It gains first strike. (This effect lasts indefinitely.)
-var BrassTalonChimera = newBrassTalonChimera()
+var BrassTalonChimera = newBrassTalonChimera
 
 func newBrassTalonChimera() *game.CardDef {
 	return &game.CardDef{

@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Draw four cards. Then discard two cards unless you discard an instant or sorcery card.
-var PracticalResearch = newPracticalResearch()
+var PracticalResearch = newPracticalResearch
 
 func newPracticalResearch() *game.CardDef {
 	return &game.CardDef{

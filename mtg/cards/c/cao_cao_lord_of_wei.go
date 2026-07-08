@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{T}: Target opponent discards two cards. Activate only during your turn, before attackers are declared.
-var CaoCaoLordOfWei = newCaoCaoLordOfWei()
+var CaoCaoLordOfWei = newCaoCaoLordOfWei
 
 func newCaoCaoLordOfWei() *game.CardDef {
 	return &game.CardDef{

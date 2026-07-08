@@ -18,7 +18,7 @@ import (
 //	At the beginning of your upkeep, sacrifice this creature unless you discard a card.
 //	{2}: This creature deals 1 damage to target creature.
 //	{2}: Regenerate this creature.
-var Masticore = newMasticore()
+var Masticore = newMasticore
 
 func newMasticore() *game.CardDef {
 	return &game.CardDef{

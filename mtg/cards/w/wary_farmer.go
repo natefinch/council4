@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	At the beginning of your end step, if another creature entered the battlefield under your control this turn, surveil 1. (Look at the top card of your library. You may put it into your graveyard.)
-var WaryFarmer = newWaryFarmer()
+var WaryFarmer = newWaryFarmer
 
 func newWaryFarmer() *game.CardDef {
 	return &game.CardDef{

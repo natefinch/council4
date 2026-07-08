@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{U}, Sacrifice this creature: Counter target spell that targets a creature you control.
-var HydromorphGuardian = newHydromorphGuardian()
+var HydromorphGuardian = newHydromorphGuardian
 
 func newHydromorphGuardian() *game.CardDef {
 	return &game.CardDef{

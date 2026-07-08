@@ -18,7 +18,7 @@ import (
 //
 //	Enchant creature
 //	{R}: Enchanted creature gets +1/+0 until end of turn.
-var Firebreathing = newFirebreathing()
+var Firebreathing = newFirebreathing
 
 func newFirebreathing() *game.CardDef {
 	return &game.CardDef{

@@ -20,7 +20,7 @@ import (
 //	Whenever you commit a crime, put a loot counter on this artifact. This ability triggers only once each turn. (Targeting opponents, anything they control, and/or cards in their graveyards is a crime.)
 //	{T}: Add one mana of any color.
 //	{2}, {T}, Remove two loot counters from this artifact: Draw a card.
-var BanditSHaul = newBanditSHaul()
+var BanditSHaul = newBanditSHaul
 
 func newBanditSHaul() *game.CardDef {
 	return &game.CardDef{

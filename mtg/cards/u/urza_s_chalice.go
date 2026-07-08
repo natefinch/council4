@@ -15,7 +15,7 @@ import (
 // Oracle text:
 //
 //	Whenever a player casts an artifact spell, you may pay {1}. If you do, you gain 1 life.
-var UrzaSChalice = newUrzaSChalice()
+var UrzaSChalice = newUrzaSChalice
 
 func newUrzaSChalice() *game.CardDef {
 	return &game.CardDef{

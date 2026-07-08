@@ -18,7 +18,7 @@ import (
 //
 //	At the beginning of combat on your turn, you may pay {1}. When you do, put a +1/+1 counter on target creature you control.
 //	Each creature you control with a counter on it has ward {1}. (Whenever it becomes the target of a spell or ability an opponent controls, counter it unless that player pays {1}.)
-var MattMurdockJusticeSeeker = newMattMurdockJusticeSeeker()
+var MattMurdockJusticeSeeker = newMattMurdockJusticeSeeker
 
 func newMattMurdockJusticeSeeker() *game.CardDef {
 	return &game.CardDef{

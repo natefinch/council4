@@ -18,7 +18,7 @@ import (
 //
 //	Devoid (This card has no color.)
 //	{1}: Target colorless creature gains haste until end of turn.
-var ForerunnerOfSlaughter = newForerunnerOfSlaughter()
+var ForerunnerOfSlaughter = newForerunnerOfSlaughter
 
 func newForerunnerOfSlaughter() *game.CardDef {
 	return &game.CardDef{

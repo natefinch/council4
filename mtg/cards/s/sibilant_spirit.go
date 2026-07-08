@@ -17,7 +17,7 @@ import (
 //
 //	Flying
 //	Whenever this creature attacks, defending player may draw a card.
-var SibilantSpirit = newSibilantSpirit()
+var SibilantSpirit = newSibilantSpirit
 
 func newSibilantSpirit() *game.CardDef {
 	return &game.CardDef{

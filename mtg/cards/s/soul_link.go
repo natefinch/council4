@@ -18,7 +18,7 @@ import (
 //	Enchant creature
 //	Whenever enchanted creature deals damage, you gain that much life.
 //	Whenever enchanted creature is dealt damage, you gain that much life.
-var SoulLink = newSoulLink()
+var SoulLink = newSoulLink
 
 func newSoulLink() *game.CardDef {
 	return &game.CardDef{

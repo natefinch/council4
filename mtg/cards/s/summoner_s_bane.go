@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Counter target creature spell. Create a 2/2 blue Illusion creature token.
-var SummonerSBane = newSummonerSBane()
+var SummonerSBane = newSummonerSBane
 
 func newSummonerSBane() *game.CardDef {
 	return &game.CardDef{

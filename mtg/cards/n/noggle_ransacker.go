@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, each player draws two cards, then discards a card at random.
-var NoggleRansacker = newNoggleRansacker()
+var NoggleRansacker = newNoggleRansacker
 
 func newNoggleRansacker() *game.CardDef {
 	return &game.CardDef{

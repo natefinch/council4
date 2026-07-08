@@ -18,7 +18,7 @@ import (
 //	Enchant creature you control
 //	When this Aura enters, it deals 4 damage to target creature or planeswalker an opponent controls.
 //	Enchanted creature gets +1/+1.
-var IroasSBlessing = newIroasSBlessing()
+var IroasSBlessing = newIroasSBlessing
 
 func newIroasSBlessing() *game.CardDef {
 	return &game.CardDef{

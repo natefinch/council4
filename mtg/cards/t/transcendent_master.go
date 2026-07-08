@@ -23,7 +23,7 @@ import (
 //	LEVEL 12+
 //	9/9
 //	Lifelink, indestructible
-var TranscendentMaster = newTranscendentMaster()
+var TranscendentMaster = newTranscendentMaster
 
 func newTranscendentMaster() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 //
 //	Flying, ward {1}
 //	Whenever you attack, target attacking creature connives X, where X is the number of attacking creatures. (Draw X cards, then discard X cards. Put a +1/+1 counter on that creature for each nonland card discarded this way.)
-var RaffineSchemingSeer = newRaffineSchemingSeer()
+var RaffineSchemingSeer = newRaffineSchemingSeer
 
 func newRaffineSchemingSeer() *game.CardDef {
 	return &game.CardDef{

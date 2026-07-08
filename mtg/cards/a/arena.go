@@ -15,70 +15,72 @@ import (
 //
 //	{3}, {T}: Tap target creature you control and target creature of an opponent's
 //	choice they control. Those creatures fight each other.
-var Arena = &game.CardDef{
-	CardFace: game.CardFace{
-		Name:  "Arena",
-		Types: []types.Card{types.Land},
-		OracleText: `
+var Arena = func() *game.CardDef {
+	return &game.CardDef{
+		CardFace: game.CardFace{
+			Name:  "Arena",
+			Types: []types.Card{types.Land},
+			OracleText: `
 			{3}, {T}: Tap target creature you control and target creature of an opponent's choice they control. Those creatures fight each other. (Each deals damage equal to its power to the other.)
 		`,
-		ActivatedAbilities: []game.ActivatedAbility{
-			{
-				Text: `
+			ActivatedAbilities: []game.ActivatedAbility{
+				{
+					Text: `
 					{3}, {T}: Tap target creature you control and target creature of an opponent's choice they control. Those creatures fight each other.
 				`,
-				ManaCost: opt.Val(cost.Mana{
-					cost.O(3),
-				}),
-				AdditionalCosts: cost.Tap,
-				Content: game.Mode{
-					Targets: []game.TargetSpec{
-						{
-							MinTargets: 1,
-							MaxTargets: 1,
-							Constraint: "creature you control",
-							Allow:      game.TargetAllowPermanent,
-							Selection: opt.Val(game.Selection{
-								RequiredTypesAny: []types.Card{
-									types.Creature,
+					ManaCost: opt.Val(cost.Mana{
+						cost.O(3),
+					}),
+					AdditionalCosts: cost.Tap,
+					Content: game.Mode{
+						Targets: []game.TargetSpec{
+							{
+								MinTargets: 1,
+								MaxTargets: 1,
+								Constraint: "creature you control",
+								Allow:      game.TargetAllowPermanent,
+								Selection: opt.Val(game.Selection{
+									RequiredTypesAny: []types.Card{
+										types.Creature,
+									},
+									Controller: game.ControllerYou,
+								}),
+							},
+							{
+								MinTargets: 1,
+								MaxTargets: 1,
+								Constraint: "creature of an opponent's choice they control",
+								Allow:      game.TargetAllowPermanent,
+								Selection: opt.Val(game.Selection{
+									RequiredTypesAny: []types.Card{
+										types.Creature,
+									},
+									Controller: game.ControllerYou,
+								}),
+								Chooser: game.TargetChooserOpponent,
+							},
+						},
+						Sequence: []game.Instruction{
+							{
+								Primitive: game.Tap{
+									Object: game.TargetPermanentReference(0),
 								},
-								Controller: game.ControllerYou,
-							}),
-						},
-						{
-							MinTargets: 1,
-							MaxTargets: 1,
-							Constraint: "creature of an opponent's choice they control",
-							Allow:      game.TargetAllowPermanent,
-							Selection: opt.Val(game.Selection{
-								RequiredTypesAny: []types.Card{
-									types.Creature,
+							},
+							{
+								Primitive: game.Tap{
+									Object: game.TargetPermanentReference(1),
 								},
-								Controller: game.ControllerYou,
-							}),
-							Chooser: game.TargetChooserOpponent,
-						},
-					},
-					Sequence: []game.Instruction{
-						{
-							Primitive: game.Tap{
-								Object: game.TargetPermanentReference(0),
+							},
+							{
+								Primitive: game.Fight{
+									Object:        game.TargetPermanentReference(0),
+									RelatedObject: game.TargetPermanentReference(1),
+								},
 							},
 						},
-						{
-							Primitive: game.Tap{
-								Object: game.TargetPermanentReference(1),
-							},
-						},
-						{
-							Primitive: game.Fight{
-								Object:        game.TargetPermanentReference(0),
-								RelatedObject: game.TargetPermanentReference(1),
-							},
-						},
-					},
-				}.Ability(),
+					}.Ability(),
+				},
 			},
 		},
-	},
+	}
 }

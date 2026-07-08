@@ -19,7 +19,7 @@ import (
 //	Enchant creature you control
 //	When this Aura enters, you may put a -1/-1 counter on target creature.
 //	Enchanted creature gets +1/+1 and has lifelink.
-var CartoucheOfAmbition = newCartoucheOfAmbition()
+var CartoucheOfAmbition = newCartoucheOfAmbition
 
 func newCartoucheOfAmbition() *game.CardDef {
 	return &game.CardDef{

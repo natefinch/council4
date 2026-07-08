@@ -18,7 +18,7 @@ import (
 //	Hideaway 4 (When this land enters, look at the top four cards of your library, exile one face down, then put the rest on the bottom in a random order.)
 //	{T}: Add {C}.
 //	{2}, {T}: You may play the exiled card without paying its mana cost if you control four or more legendary creatures.
-var CliveSHideaway = newCliveSHideaway()
+var CliveSHideaway = newCliveSHideaway
 
 func newCliveSHideaway() *game.CardDef {
 	return &game.CardDef{

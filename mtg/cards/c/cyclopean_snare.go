@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	{3}, {T}: Tap target creature, then return this artifact to its owner's hand.
-var CyclopeanSnare = newCyclopeanSnare()
+var CyclopeanSnare = newCyclopeanSnare
 
 func newCyclopeanSnare() *game.CardDef {
 	return &game.CardDef{

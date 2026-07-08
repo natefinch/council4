@@ -18,7 +18,7 @@ import (
 //
 //	Put two +1/+1 counters on target creature.
 //	Look at the top five cards of your library. You may reveal a white card from among them and put it into your hand. Put the rest on the bottom of your library in a random order.
-var AjaniSInfluence = newAjaniSInfluence()
+var AjaniSInfluence = newAjaniSInfluence
 
 func newAjaniSInfluence() *game.CardDef {
 	return &game.CardDef{

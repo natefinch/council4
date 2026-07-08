@@ -18,7 +18,7 @@ import (
 //
 //	Vigilance
 //	Coven — At the beginning of combat on your turn, if you control three or more creatures with different powers, creatures you control gain indestructible until end of turn.
-var StalwartPathlighter = newStalwartPathlighter()
+var StalwartPathlighter = newStalwartPathlighter
 
 func newStalwartPathlighter() *game.CardDef {
 	return &game.CardDef{

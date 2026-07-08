@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Valiant — Whenever this creature becomes the target of a spell or ability you control for the first time each turn, you may discard a card. If you do, draw a card.
-var WhiskerquillScribe = newWhiskerquillScribe()
+var WhiskerquillScribe = newWhiskerquillScribe
 
 func newWhiskerquillScribe() *game.CardDef {
 	return &game.CardDef{

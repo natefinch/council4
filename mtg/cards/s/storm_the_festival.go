@@ -19,7 +19,7 @@ import (
 //
 //	Look at the top five cards of your library. You may put up to two permanent cards with mana value 5 or less from among them onto the battlefield. Put the rest on the bottom of your library in a random order.
 //	Flashback {7}{G}{G}{G} (You may cast this card from your graveyard for its flashback cost. Then exile it.)
-var StormTheFestival = newStormTheFestival()
+var StormTheFestival = newStormTheFestival
 
 func newStormTheFestival() *game.CardDef {
 	return &game.CardDef{

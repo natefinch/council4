@@ -17,7 +17,7 @@ import (
 //
 //	At the beginning of your upkeep, sacrifice this enchantment unless you tap an untapped creature you control.
 //	Creatures can't attack you unless their controller pays {2} for each creature they control that's attacking you.
-var KoskunFalls = newKoskunFalls()
+var KoskunFalls = newKoskunFalls
 
 func newKoskunFalls() *game.CardDef {
 	return &game.CardDef{

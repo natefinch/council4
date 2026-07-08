@@ -17,7 +17,7 @@ import (
 //
 //	Kicker {4} (You may pay an additional {4} as you cast this spell.)
 //	Create two 1/1 green Saproling creature tokens. If this spell was kicked, create four of those tokens instead.
-var SaprolingMigration = newSaprolingMigration()
+var SaprolingMigration = newSaprolingMigration
 
 func newSaprolingMigration() *game.CardDef {
 	return &game.CardDef{

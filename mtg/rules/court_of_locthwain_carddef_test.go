@@ -19,7 +19,7 @@ import (
 // the one the monarch free cast reads.
 func locthwainUpkeepSequence(t *testing.T) []game.Instruction {
 	t.Helper()
-	card := cardc.CourtOfLocthwain
+	card := cardc.CourtOfLocthwain()
 	if len(card.TriggeredAbilities) != 2 {
 		t.Fatalf("Court of Locthwain has %d triggered abilities, want 2", len(card.TriggeredAbilities))
 	}

@@ -18,7 +18,7 @@ import (
 //
 //	{T}: Prevent the next 1 damage that would be dealt to any target this turn.
 //	{T}: This creature deals 1 damage to any target.
-var SamiteArcher = newSamiteArcher()
+var SamiteArcher = newSamiteArcher
 
 func newSamiteArcher() *game.CardDef {
 	return &game.CardDef{

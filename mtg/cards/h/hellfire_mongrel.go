@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	At the beginning of each opponent's upkeep, if that player has two or fewer cards in hand, this creature deals 2 damage to that player.
-var HellfireMongrel = newHellfireMongrel()
+var HellfireMongrel = newHellfireMongrel
 
 func newHellfireMongrel() *game.CardDef {
 	return &game.CardDef{

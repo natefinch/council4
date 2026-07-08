@@ -19,7 +19,7 @@ import (
 //
 //	At the beginning of your upkeep, put a spore counter on this creature.
 //	Remove three spore counters from this creature: It deals 1 damage to any target.
-var ThornThallid = newThornThallid()
+var ThornThallid = newThornThallid
 
 func newThornThallid() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Create a tapped 2/2 black Zombie creature token for each instant and sorcery card in your graveyard.
-var RiseFromTheTides = newRiseFromTheTides()
+var RiseFromTheTides = newRiseFromTheTides
 
 func newRiseFromTheTides() *game.CardDef {
 	return &game.CardDef{

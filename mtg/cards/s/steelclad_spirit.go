@@ -17,7 +17,7 @@ import (
 //
 //	Defender
 //	Whenever an enchantment you control enters, this creature can attack this turn as though it didn't have defender.
-var SteelcladSpirit = newSteelcladSpirit()
+var SteelcladSpirit = newSteelcladSpirit
 
 func newSteelcladSpirit() *game.CardDef {
 	return &game.CardDef{

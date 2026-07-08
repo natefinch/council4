@@ -19,7 +19,7 @@ import (
 //	Trample
 //	At the beginning of your end step, each player creates a 1/1 green Plant creature token.
 //	Whenever a creature token dies, put a +1/+1 counter on Grismold.
-var GrismoldTheDreadsower = newGrismoldTheDreadsower()
+var GrismoldTheDreadsower = newGrismoldTheDreadsower
 
 func newGrismoldTheDreadsower() *game.CardDef {
 	return &game.CardDef{

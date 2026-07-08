@@ -16,7 +16,7 @@ import (
 //
 //	Flying, vigilance, trample
 //	When this creature dies, create a 3/3 colorless Golem artifact creature token with flying, a 3/3 colorless Golem artifact creature token with vigilance, and a 3/3 colorless Golem artifact creature token with trample.
-var TriplicateTitan = newTriplicateTitan()
+var TriplicateTitan = newTriplicateTitan
 
 func newTriplicateTitan() *game.CardDef {
 	return &game.CardDef{

@@ -19,7 +19,7 @@ import (
 //	(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)
 //	I, II — Mill three cards. Then you may exile a creature or enchantment card from your graveyard. If you do, create a 2/2 black Zombie creature token.
 //	III — You gain X life and scry X, where X is the number of Zombies you control.
-var TymaretCallsTheDead = newTymaretCallsTheDead()
+var TymaretCallsTheDead = newTymaretCallsTheDead
 
 func newTymaretCallsTheDead() *game.CardDef {
 	return &game.CardDef{

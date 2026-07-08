@@ -18,7 +18,7 @@ import (
 //	First strike (This creature deals combat damage before creatures without first strike.)
 //	At the beginning of your upkeep, sacrifice this creature unless you discard a card.
 //	At the beginning of your draw step, you may have this creature deal 3 damage to target creature.
-var RazormaneMasticore = newRazormaneMasticore()
+var RazormaneMasticore = newRazormaneMasticore
 
 func newRazormaneMasticore() *game.CardDef {
 	return &game.CardDef{

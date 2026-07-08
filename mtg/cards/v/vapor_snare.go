@@ -18,7 +18,7 @@ import (
 //	Enchant creature
 //	You control enchanted creature.
 //	At the beginning of your upkeep, sacrifice this Aura unless you return a land you control to its owner's hand.
-var VaporSnare = newVaporSnare()
+var VaporSnare = newVaporSnare
 
 func newVaporSnare() *game.CardDef {
 	return &game.CardDef{

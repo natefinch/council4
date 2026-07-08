@@ -11,7 +11,7 @@ import (
 )
 
 // TemperedVeteran is the card definition for Tempered Veteran.
-var TemperedVeteran = newTemperedVeteran()
+var TemperedVeteran = newTemperedVeteran
 
 func newTemperedVeteran() *game.CardDef {
 	return &game.CardDef{

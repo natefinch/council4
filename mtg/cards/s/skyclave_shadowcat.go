@@ -19,7 +19,7 @@ import (
 //
 //	{1}{B}, Sacrifice another creature: Put a +1/+1 counter on this creature.
 //	Whenever a creature you control with a +1/+1 counter on it dies, draw a card.
-var SkyclaveShadowcat = newSkyclaveShadowcat()
+var SkyclaveShadowcat = newSkyclaveShadowcat
 
 func newSkyclaveShadowcat() *game.CardDef {
 	return &game.CardDef{

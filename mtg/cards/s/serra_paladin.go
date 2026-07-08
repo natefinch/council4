@@ -18,7 +18,7 @@ import (
 //
 //	{T}: Prevent the next 1 damage that would be dealt to any target this turn.
 //	{1}{W}{W}, {T}: Target creature gains vigilance until end of turn.
-var SerraPaladin = newSerraPaladin()
+var SerraPaladin = newSerraPaladin
 
 func newSerraPaladin() *game.CardDef {
 	return &game.CardDef{

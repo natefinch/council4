@@ -18,7 +18,7 @@ import (
 //
 //	Flying, vigilance
 //	{T}: Create a 2/2 white and blue Knight creature token with vigilance. Activate only if you've cast two or more spells this turn.
-var XerexStrobeKnight = newXerexStrobeKnight()
+var XerexStrobeKnight = newXerexStrobeKnight
 
 func newXerexStrobeKnight() *game.CardDef {
 	return &game.CardDef{

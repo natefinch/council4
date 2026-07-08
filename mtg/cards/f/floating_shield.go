@@ -20,7 +20,7 @@ import (
 //	As this Aura enters, choose a color.
 //	Enchanted creature has protection from the chosen color. This effect doesn't remove this Aura.
 //	Sacrifice this Aura: Target creature gains protection from the chosen color until end of turn.
-var FloatingShield = newFloatingShield()
+var FloatingShield = newFloatingShield
 
 func newFloatingShield() *game.CardDef {
 	return &game.CardDef{

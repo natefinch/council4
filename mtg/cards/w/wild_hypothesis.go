@@ -18,7 +18,7 @@ import (
 //
 //	Create a 0/0 green and blue Fractal creature token. Put X +1/+1 counters on it.
 //	Surveil 2. (Look at the top two cards of your library, then put any number of them into your graveyard and the rest on top of your library in any order.)
-var WildHypothesis = newWildHypothesis()
+var WildHypothesis = newWildHypothesis
 
 func newWildHypothesis() *game.CardDef {
 	return &game.CardDef{

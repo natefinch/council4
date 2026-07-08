@@ -16,7 +16,7 @@ import (
 //
 //	{T}: Add {C}.
 //	{2}, {T}: Add X mana of any one color, where X is the number of other Gates you control.
-var BaldurSGate = newBaldurSGate()
+var BaldurSGate = newBaldurSGate
 
 func newBaldurSGate() *game.CardDef {
 	return &game.CardDef{

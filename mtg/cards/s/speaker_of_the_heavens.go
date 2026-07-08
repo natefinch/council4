@@ -19,7 +19,7 @@ import (
 //
 //	Vigilance, lifelink (Attacking doesn't cause this creature to tap. Damage dealt by this creature also causes you to gain that much life.)
 //	{T}: Create a 4/4 white Angel creature token with flying. Activate only if you have at least 7 life more than your starting life total and only as a sorcery.
-var SpeakerOfTheHeavens = newSpeakerOfTheHeavens()
+var SpeakerOfTheHeavens = newSpeakerOfTheHeavens
 
 func newSpeakerOfTheHeavens() *game.CardDef {
 	return &game.CardDef{

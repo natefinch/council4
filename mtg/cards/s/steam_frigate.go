@@ -9,7 +9,7 @@ import (
 )
 
 // SteamFrigate is the card definition for Steam Frigate.
-var SteamFrigate = newSteamFrigate()
+var SteamFrigate = newSteamFrigate
 
 func newSteamFrigate() *game.CardDef {
 	return &game.CardDef{

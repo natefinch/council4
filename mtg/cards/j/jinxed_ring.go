@@ -17,7 +17,7 @@ import (
 //
 //	Whenever a nontoken permanent is put into your graveyard from the battlefield, this artifact deals 1 damage to you.
 //	Sacrifice a creature: Target opponent gains control of this artifact. (This effect lasts indefinitely.)
-var JinxedRing = newJinxedRing()
+var JinxedRing = newJinxedRing
 
 func newJinxedRing() *game.CardDef {
 	return &game.CardDef{

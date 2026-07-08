@@ -19,7 +19,7 @@ import (
 //
 //	When this creature enters, return target nonland permanent card with mana value 2 or less from your graveyard to your hand.
 //	Flurry — Whenever you cast your second spell each turn, tap target creature an opponent controls.
-var WayspeakerBodyguard = newWayspeakerBodyguard()
+var WayspeakerBodyguard = newWayspeakerBodyguard
 
 func newWayspeakerBodyguard() *game.CardDef {
 	return &game.CardDef{

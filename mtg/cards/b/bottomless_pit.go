@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	At the beginning of each player's upkeep, that player discards a card at random.
-var BottomlessPit = newBottomlessPit()
+var BottomlessPit = newBottomlessPit
 
 func newBottomlessPit() *game.CardDef {
 	return &game.CardDef{

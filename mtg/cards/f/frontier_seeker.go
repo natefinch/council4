@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, look at the top five cards of your library. You may reveal a Mount creature card or a Plains card from among them and put it into your hand. Put the rest on the bottom of your library in a random order.
-var FrontierSeeker = newFrontierSeeker()
+var FrontierSeeker = newFrontierSeeker
 
 func newFrontierSeeker() *game.CardDef {
 	return &game.CardDef{

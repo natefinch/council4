@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever a green creature dies, its controller discards a card.
-var Bereavement = newBereavement()
+var Bereavement = newBereavement
 
 func newBereavement() *game.CardDef {
 	return &game.CardDef{

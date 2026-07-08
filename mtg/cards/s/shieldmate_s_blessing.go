@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Prevent the next 3 damage that would be dealt to any target this turn.
-var ShieldmateSBlessing = newShieldmateSBlessing()
+var ShieldmateSBlessing = newShieldmateSBlessing
 
 func newShieldmateSBlessing() *game.CardDef {
 	return &game.CardDef{

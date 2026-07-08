@@ -18,7 +18,7 @@ import (
 //	Flying
 //	Whenever this creature is dealt damage, you gain that much life.
 //	Soulshift 6 (When this creature dies, you may return target Spirit card with mana value 6 or less from your graveyard to your hand.)
-var KamiOfTheHonoredDead = newKamiOfTheHonoredDead()
+var KamiOfTheHonoredDead = newKamiOfTheHonoredDead
 
 func newKamiOfTheHonoredDead() *game.CardDef {
 	return &game.CardDef{

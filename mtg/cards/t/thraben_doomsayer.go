@@ -19,7 +19,7 @@ import (
 //
 //	{T}: Create a 1/1 white Human creature token.
 //	Fateful hour — As long as you have 5 or less life, other creatures you control get +2/+2.
-var ThrabenDoomsayer = newThrabenDoomsayer()
+var ThrabenDoomsayer = newThrabenDoomsayer
 
 func newThrabenDoomsayer() *game.CardDef {
 	return &game.CardDef{

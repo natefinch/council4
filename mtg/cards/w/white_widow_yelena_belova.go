@@ -18,7 +18,7 @@ import (
 //
 //	Deathtouch
 //	Whenever a creature you control with deathtouch deals combat damage to a player, put a +1/+1 counter on it.
-var WhiteWidowYelenaBelova = newWhiteWidowYelenaBelova()
+var WhiteWidowYelenaBelova = newWhiteWidowYelenaBelova
 
 func newWhiteWidowYelenaBelova() *game.CardDef {
 	return &game.CardDef{

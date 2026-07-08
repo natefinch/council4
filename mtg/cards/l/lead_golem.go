@@ -15,7 +15,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature attacks, it doesn't untap during its controller's next untap step.
-var LeadGolem = newLeadGolem()
+var LeadGolem = newLeadGolem
 
 func newLeadGolem() *game.CardDef {
 	return &game.CardDef{

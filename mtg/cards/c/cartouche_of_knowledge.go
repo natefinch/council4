@@ -18,7 +18,7 @@ import (
 //	Enchant creature you control
 //	When this Aura enters, draw a card.
 //	Enchanted creature gets +1/+1 and has flying.
-var CartoucheOfKnowledge = newCartoucheOfKnowledge()
+var CartoucheOfKnowledge = newCartoucheOfKnowledge
 
 func newCartoucheOfKnowledge() *game.CardDef {
 	return &game.CardDef{

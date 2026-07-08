@@ -17,7 +17,7 @@ import (
 //
 //	Affinity for artifacts (This spell costs {1} less to cast for each artifact you control.)
 //	Look at the top seven cards of your library. You may reveal up to two artifact cards from among them and put them into your hand. Put the rest on the bottom of your library in a random order.
-var RealityHeist = newRealityHeist()
+var RealityHeist = newRealityHeist
 
 func newRealityHeist() *game.CardDef {
 	return &game.CardDef{

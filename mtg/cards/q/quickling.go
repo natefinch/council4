@@ -18,7 +18,7 @@ import (
 //	Flash (You may cast this spell any time you could cast an instant.)
 //	Flying
 //	When this creature enters, sacrifice it unless you return another creature you control to its owner's hand.
-var Quickling = newQuickling()
+var Quickling = newQuickling
 
 func newQuickling() *game.CardDef {
 	return &game.CardDef{

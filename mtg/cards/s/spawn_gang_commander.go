@@ -20,7 +20,7 @@ import (
 //	Devoid (This card has no color.)
 //	When you cast this spell, create three 0/1 colorless Eldrazi Spawn creature tokens with "Sacrifice this token: Add {C}."
 //	{1}{C}, Sacrifice an Eldrazi: This creature deals 2 damage to any target.
-var SpawnGangCommander = newSpawnGangCommander()
+var SpawnGangCommander = newSpawnGangCommander
 
 func newSpawnGangCommander() *game.CardDef {
 	return &game.CardDef{

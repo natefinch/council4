@@ -19,7 +19,7 @@ import (
 //
 //	When this creature enters, put a lifelink counter on target non-Human creature you control.
 //	{1}{B}, {T}: Put a +1/+1 counter on each creature you control with lifelink.
-var DuskfangMentor = newDuskfangMentor()
+var DuskfangMentor = newDuskfangMentor
 
 func newDuskfangMentor() *game.CardDef {
 	return &game.CardDef{

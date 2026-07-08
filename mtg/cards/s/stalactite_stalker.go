@@ -20,7 +20,7 @@ import (
 //	Menace
 //	At the beginning of your end step, if you descended this turn, put a +1/+1 counter on this creature. (You descended if a permanent card was put into your graveyard from anywhere.)
 //	{2}{B}, Sacrifice this creature: Target creature gets -X/-X until end of turn, where X is this creature's power.
-var StalactiteStalker = newStalactiteStalker()
+var StalactiteStalker = newStalactiteStalker
 
 func newStalactiteStalker() *game.CardDef {
 	return &game.CardDef{

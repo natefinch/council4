@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Target creature gets +2/+2 until end of turn. If you control three or more creatures, it gets +4/+4 until end of turn instead.
-var YouReNotAlone = newYouReNotAlone()
+var YouReNotAlone = newYouReNotAlone
 
 func newYouReNotAlone() *game.CardDef {
 	return &game.CardDef{

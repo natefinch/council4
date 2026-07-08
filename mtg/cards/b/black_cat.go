@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	When this creature dies, target opponent discards a card at random.
-var BlackCat = newBlackCat()
+var BlackCat = newBlackCat
 
 func newBlackCat() *game.CardDef {
 	return &game.CardDef{

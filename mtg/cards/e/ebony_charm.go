@@ -20,7 +20,7 @@ import (
 //	• Target opponent loses 1 life and you gain 1 life.
 //	• Exile up to three target cards from a single graveyard.
 //	• Target creature gains fear until end of turn. (It can't be blocked except by artifact creatures and/or black creatures.)
-var EbonyCharm = newEbonyCharm()
+var EbonyCharm = newEbonyCharm
 
 func newEbonyCharm() *game.CardDef {
 	return &game.CardDef{

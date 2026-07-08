@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	As long as there are two or more instant and/or sorcery cards in your graveyard, this creature gets +1/+0 and has haste. (It can attack and {T} as soon as it comes under your control.)
-var GhituLavarunner = newGhituLavarunner()
+var GhituLavarunner = newGhituLavarunner
 
 func newGhituLavarunner() *game.CardDef {
 	return &game.CardDef{

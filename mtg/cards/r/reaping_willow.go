@@ -22,7 +22,7 @@ import (
 //	Lifelink
 //	This creature enters with two -1/-1 counters on it.
 //	{1}{W/B}, Remove two counters from this creature: Return target creature card with mana value 3 or less from your graveyard to the battlefield. Activate only as a sorcery.
-var ReapingWillow = newReapingWillow()
+var ReapingWillow = newReapingWillow
 
 func newReapingWillow() *game.CardDef {
 	return &game.CardDef{

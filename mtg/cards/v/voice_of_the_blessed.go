@@ -20,7 +20,7 @@ import (
 //	Whenever you gain life, put a +1/+1 counter on this creature.
 //	As long as this creature has four or more +1/+1 counters on it, it has flying and vigilance.
 //	As long as this creature has ten or more +1/+1 counters on it, it has indestructible.
-var VoiceOfTheBlessed = newVoiceOfTheBlessed()
+var VoiceOfTheBlessed = newVoiceOfTheBlessed
 
 func newVoiceOfTheBlessed() *game.CardDef {
 	return &game.CardDef{

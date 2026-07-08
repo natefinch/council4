@@ -9,7 +9,7 @@ import (
 )
 
 // Disempower is the card definition for Disempower.
-var Disempower = newDisempower()
+var Disempower = newDisempower
 
 func newDisempower() *game.CardDef {
 	return &game.CardDef{

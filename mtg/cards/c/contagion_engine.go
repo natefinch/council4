@@ -18,7 +18,7 @@ import (
 //
 //	When this artifact enters, put a -1/-1 counter on each creature target player controls.
 //	{4}, {T}: Proliferate twice. (Choose any number of permanents and/or players, then give each another counter of each kind already there. Then do it again.)
-var ContagionEngine = newContagionEngine()
+var ContagionEngine = newContagionEngine
 
 func newContagionEngine() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 //
 //	When Okoye enters, you become the monarch.
 //	At the beginning of combat on your turn, put a +1/+1 counter on target creature. Whenever that creature attacks the monarch this turn, it gains double strike and trample until end of turn.
-var OkoyeMightyAndAdored = newOkoyeMightyAndAdored()
+var OkoyeMightyAndAdored = newOkoyeMightyAndAdored
 
 func newOkoyeMightyAndAdored() *game.CardDef {
 	return &game.CardDef{

@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Prevent the next 4 damage that would be dealt to any target this turn.
-var MendingHands = newMendingHands()
+var MendingHands = newMendingHands
 
 func newMendingHands() *game.CardDef {
 	return &game.CardDef{

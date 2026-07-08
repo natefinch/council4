@@ -18,7 +18,7 @@ import (
 //
 //	Menace
 //	Whenever you gain life, you may pay {B}. If you do, return target creature card from your graveyard to your hand.
-var VeinwitchCoven = newVeinwitchCoven()
+var VeinwitchCoven = newVeinwitchCoven
 
 func newVeinwitchCoven() *game.CardDef {
 	return &game.CardDef{

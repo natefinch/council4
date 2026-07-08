@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Whenever a creature you control with power 2 or less attacks, this enchantment deals 1 damage to the player or planeswalker that creature is attacking.
-var RaidBombardment = newRaidBombardment()
+var RaidBombardment = newRaidBombardment
 
 func newRaidBombardment() *game.CardDef {
 	return &game.CardDef{

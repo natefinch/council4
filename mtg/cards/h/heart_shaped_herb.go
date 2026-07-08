@@ -18,7 +18,7 @@ import (
 //
 //	If a source an opponent controls would deal damage to you, prevent 1 of that damage.
 //	{2}, {T}, Sacrifice this artifact: You may sacrifice a creature. If you do, return that card to the battlefield under its owner's control with three +1/+1 counters on it and you become the monarch.
-var HeartShapedHerb = newHeartShapedHerb()
+var HeartShapedHerb = newHeartShapedHerb
 
 func newHeartShapedHerb() *game.CardDef {
 	return &game.CardDef{

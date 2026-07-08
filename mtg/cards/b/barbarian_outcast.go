@@ -9,7 +9,7 @@ import (
 )
 
 // BarbarianOutcast is the card definition for Barbarian Outcast.
-var BarbarianOutcast = newBarbarianOutcast()
+var BarbarianOutcast = newBarbarianOutcast
 
 func newBarbarianOutcast() *game.CardDef {
 	return &game.CardDef{

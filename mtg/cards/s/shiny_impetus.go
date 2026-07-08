@@ -19,7 +19,7 @@ import (
 //	Enchant creature
 //	Enchanted creature gets +2/+2 and is goaded. (It attacks each combat if able and attacks a player other than you if able.)
 //	Whenever enchanted creature attacks, you create a Treasure token. (It's an artifact with "{T}, Sacrifice this token: Add one mana of any color.")
-var ShinyImpetus = newShinyImpetus()
+var ShinyImpetus = newShinyImpetus
 
 func newShinyImpetus() *game.CardDef {
 	return &game.CardDef{

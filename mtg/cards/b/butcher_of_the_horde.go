@@ -18,7 +18,7 @@ import (
 //
 //	Flying
 //	Sacrifice another creature: This creature gains your choice of vigilance, lifelink, or haste until end of turn.
-var ButcherOfTheHorde = newButcherOfTheHorde()
+var ButcherOfTheHorde = newButcherOfTheHorde
 
 func newButcherOfTheHorde() *game.CardDef {
 	return &game.CardDef{

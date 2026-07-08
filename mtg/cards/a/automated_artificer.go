@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	{T}: Add {C}. Spend this mana only to activate an ability or cast an artifact spell.
-var AutomatedArtificer = newAutomatedArtificer()
+var AutomatedArtificer = newAutomatedArtificer
 
 func newAutomatedArtificer() *game.CardDef {
 	return &game.CardDef{

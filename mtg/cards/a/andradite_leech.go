@@ -19,7 +19,7 @@ import (
 //
 //	Black spells you cast cost {B} more to cast.
 //	{B}: This creature gets +1/+1 until end of turn.
-var AndraditeLeech = newAndraditeLeech()
+var AndraditeLeech = newAndraditeLeech
 
 func newAndraditeLeech() *game.CardDef {
 	return &game.CardDef{

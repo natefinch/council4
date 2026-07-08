@@ -18,7 +18,7 @@ import (
 //
 //	Exile up to three target cards from a single graveyard.
 //	Cycling {2} ({2}, Discard this card: Draw a card.)
-var RapidDecay = newRapidDecay()
+var RapidDecay = newRapidDecay
 
 func newRapidDecay() *game.CardDef {
 	return &game.CardDef{

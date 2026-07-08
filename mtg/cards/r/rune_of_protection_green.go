@@ -18,7 +18,7 @@ import (
 //
 //	{W}: The next time a green source of your choice would deal damage to you this turn, prevent that damage.
 //	Cycling {2} ({2}, Discard this card: Draw a card.)
-var RuneOfProtectionGreen = newRuneOfProtectionGreen()
+var RuneOfProtectionGreen = newRuneOfProtectionGreen
 
 func newRuneOfProtectionGreen() *game.CardDef {
 	return &game.CardDef{

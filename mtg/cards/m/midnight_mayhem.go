@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Create three 1/1 red Gremlin creature tokens. Gremlins you control gain menace, lifelink, and haste until end of turn. (A creature with menace can't be blocked except by two or more creatures.)
-var MidnightMayhem = newMidnightMayhem()
+var MidnightMayhem = newMidnightMayhem
 
 func newMidnightMayhem() *game.CardDef {
 	return &game.CardDef{

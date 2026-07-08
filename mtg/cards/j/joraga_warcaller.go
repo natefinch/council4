@@ -19,7 +19,7 @@ import (
 //	Multikicker {1}{G} (You may pay an additional {1}{G} any number of times as you cast this spell.)
 //	This creature enters with a +1/+1 counter on it for each time it was kicked.
 //	Other Elf creatures you control get +1/+1 for each +1/+1 counter on this creature.
-var JoragaWarcaller = newJoragaWarcaller()
+var JoragaWarcaller = newJoragaWarcaller
 
 func newJoragaWarcaller() *game.CardDef {
 	return &game.CardDef{

@@ -19,7 +19,7 @@ import (
 //	Kicker {2}{R} (You may pay an additional {2}{R} as you cast this spell.)
 //	Flying
 //	When this creature enters, if it was kicked, it deals X damage to any target, where X is the number of attacking creatures.
-var CleavingSkyrider = newCleavingSkyrider()
+var CleavingSkyrider = newCleavingSkyrider
 
 func newCleavingSkyrider() *game.CardDef {
 	return &game.CardDef{

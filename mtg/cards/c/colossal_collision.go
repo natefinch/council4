@@ -19,7 +19,7 @@ import (
 //
 //	Put a +1/+1 counter on target creature you control. Then that creature deals damage equal to its power to target creature an opponent controls.
 //	Basic landcycling {2} ({2}, Discard this card: Search your library for a basic land card, reveal it, put it into your hand, then shuffle.)
-var ColossalCollision = newColossalCollision()
+var ColossalCollision = newColossalCollision
 
 func newColossalCollision() *game.CardDef {
 	return &game.CardDef{

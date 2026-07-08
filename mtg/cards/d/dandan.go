@@ -9,7 +9,7 @@ import (
 )
 
 // Dandân is the card definition for Dandân.
-var Dandân = newDandân()
+var Dandân = newDandân
 
 func newDandân() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 //	This spell costs {2} less to cast if an opponent controls a green permanent.
 //	Deathtouch
 //	Whenever this creature deals combat damage to a player, draw a card.
-var OakhameAdversary = newOakhameAdversary()
+var OakhameAdversary = newOakhameAdversary
 
 func newOakhameAdversary() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 //	Trample
 //	When this creature enters, create a number of Food tokens equal to the number of opponents you have. (Food tokens are artifacts with "{2}, {T}, Sacrifice this token: You gain 3 life.")
 //	{1}{G}, Sacrifice another nonland permanent: This creature gets +2/+2 until end of turn.
-var GluttonousTroll = newGluttonousTroll()
+var GluttonousTroll = newGluttonousTroll
 
 func newGluttonousTroll() *game.CardDef {
 	return &game.CardDef{

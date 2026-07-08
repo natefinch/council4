@@ -19,7 +19,7 @@ import (
 //
 //	Trample
 //	Whenever this creature enters or attacks, mill five cards. You may put a creature card and/or a land card from among them into your hand.
-var SludgeTitan = newSludgeTitan()
+var SludgeTitan = newSludgeTitan
 
 func newSludgeTitan() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Create X tapped 2/1 white and black Inkling creature tokens with flying. If X is 6 or more, destroy all noncreature, nonland permanents.
-var BlotOutTheSky = newBlotOutTheSky()
+var BlotOutTheSky = newBlotOutTheSky
 
 func newBlotOutTheSky() *game.CardDef {
 	return &game.CardDef{

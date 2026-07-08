@@ -19,7 +19,7 @@ import (
 //
 //	Target player draws two cards and loses 2 life.
 //	Fuse (You may cast one or both halves of this card from your hand.)
-var Toil = newToil()
+var Toil = newToil
 
 func newToil() *game.CardDef {
 	return &game.CardDef{

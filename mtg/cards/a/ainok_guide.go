@@ -20,7 +20,7 @@ import (
 //	When this creature enters, choose one —
 //	• Put a +1/+1 counter on this creature.
 //	• Search your library for a basic land card, reveal it, then shuffle and put that card on top.
-var AinokGuide = newAinokGuide()
+var AinokGuide = newAinokGuide
 
 func newAinokGuide() *game.CardDef {
 	return &game.CardDef{

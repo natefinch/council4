@@ -18,7 +18,7 @@ import (
 //
 //	Flying
 //	When this creature enters, exile up to two target cards from a single graveyard.
-var GriffnautTracker = newGriffnautTracker()
+var GriffnautTracker = newGriffnautTracker
 
 func newGriffnautTracker() *game.CardDef {
 	return &game.CardDef{

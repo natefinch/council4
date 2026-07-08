@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature deals damage, you gain that much life.
-var ZebraUnicorn = newZebraUnicorn()
+var ZebraUnicorn = newZebraUnicorn
 
 func newZebraUnicorn() *game.CardDef {
 	return &game.CardDef{

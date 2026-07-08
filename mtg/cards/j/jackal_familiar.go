@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	This creature can't attack or block alone.
-var JackalFamiliar = newJackalFamiliar()
+var JackalFamiliar = newJackalFamiliar
 
 func newJackalFamiliar() *game.CardDef {
 	return &game.CardDef{

@@ -19,7 +19,7 @@ import (
 //	This creature enters with a +1/+1 counter on it.
 //	At the beginning of your upkeep, you may put a +1/+1 counter on this creature.
 //	When this creature attacks or blocks, destroy it at end of combat.
-var Vebulid = newVebulid()
+var Vebulid = newVebulid
 
 func newVebulid() *game.CardDef {
 	return &game.CardDef{

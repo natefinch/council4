@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Return target nonland permanent to its owner's hand. Then that player discards a card if you control a Zombie.
-var CompellingDeterrence = newCompellingDeterrence()
+var CompellingDeterrence = newCompellingDeterrence
 
 func newCompellingDeterrence() *game.CardDef {
 	return &game.CardDef{

@@ -19,7 +19,7 @@ import (
 //	Enchant creature
 //	Enchanted creature gets +2/+0.
 //	At the beginning of the upkeep of enchanted creature's controller, put a -0/-1 counter on that creature.
-var EssenceFlare = newEssenceFlare()
+var EssenceFlare = newEssenceFlare
 
 func newEssenceFlare() *game.CardDef {
 	return &game.CardDef{

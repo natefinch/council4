@@ -18,7 +18,7 @@ import (
 //
 //	Delirium — This spell costs {2} less to cast if there are four or more card types among cards in your graveyard.
 //	Flying
-var DuskFeaster = newDuskFeaster()
+var DuskFeaster = newDuskFeaster
 
 func newDuskFeaster() *game.CardDef {
 	return &game.CardDef{

@@ -9,7 +9,7 @@ import (
 )
 
 // ChocoboKnights is the card definition for Chocobo Knights.
-var ChocoboKnights = newChocoboKnights()
+var ChocoboKnights = newChocoboKnights
 
 func newChocoboKnights() *game.CardDef {
 	return &game.CardDef{

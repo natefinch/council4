@@ -18,7 +18,7 @@ import (
 //
 //	When this enchantment enters, exile target nonland permanent an opponent controls until this enchantment leaves the battlefield.
 //	When this enchantment enters, create a 1/1 red Mercenary creature token with "{T}: Target creature you control gets +1/+0 until end of turn. Activate only as a sorcery."
-var LassoedByTheLaw = newLassoedByTheLaw()
+var LassoedByTheLaw = newLassoedByTheLaw
 
 func newLassoedByTheLaw() *game.CardDef {
 	return &game.CardDef{

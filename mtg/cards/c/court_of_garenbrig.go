@@ -18,7 +18,7 @@ import (
 //
 //	When this enchantment enters, you become the monarch.
 //	At the beginning of your upkeep, distribute two +1/+1 counters among up to two target creatures. Then if you're the monarch, double the number of +1/+1 counters on each creature you control.
-var CourtOfGarenbrig = newCourtOfGarenbrig()
+var CourtOfGarenbrig = newCourtOfGarenbrig
 
 func newCourtOfGarenbrig() *game.CardDef {
 	return &game.CardDef{

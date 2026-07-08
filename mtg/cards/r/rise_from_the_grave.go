@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Put target creature card from a graveyard onto the battlefield under your control. That creature is a black Zombie in addition to its other colors and types.
-var RiseFromTheGrave = newRiseFromTheGrave()
+var RiseFromTheGrave = newRiseFromTheGrave
 
 func newRiseFromTheGrave() *game.CardDef {
 	return &game.CardDef{

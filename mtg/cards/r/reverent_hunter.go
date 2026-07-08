@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, put a number of +1/+1 counters on it equal to your devotion to green. (Each {G} in the mana costs of permanents you control counts toward your devotion to green.)
-var ReverentHunter = newReverentHunter()
+var ReverentHunter = newReverentHunter
 
 func newReverentHunter() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{1}: This creature gains your choice of flying, deathtouch, or lifelink until end of turn.
-var AssassinInitiate = newAssassinInitiate()
+var AssassinInitiate = newAssassinInitiate
 
 func newAssassinInitiate() *game.CardDef {
 	return &game.CardDef{

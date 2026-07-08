@@ -15,7 +15,7 @@ import (
 // Oracle text:
 //
 //	As long as this creature is enchanted, it gets +2/+2 and has flying, first strike, and trample.
-var ThranGolem = newThranGolem()
+var ThranGolem = newThranGolem
 
 func newThranGolem() *game.CardDef {
 	return &game.CardDef{

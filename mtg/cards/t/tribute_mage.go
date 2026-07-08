@@ -18,7 +18,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, you may search your library for an artifact card with mana value 2, reveal that card, put it into your hand, then shuffle.
-var TributeMage = newTributeMage()
+var TributeMage = newTributeMage
 
 func newTributeMage() *game.CardDef {
 	return &game.CardDef{

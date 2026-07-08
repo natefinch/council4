@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Commander creatures you own have "Whenever an artifact or creature you control is put into a graveyard from the battlefield, each opponent loses 1 life."
-var AgentOfTheIronThrone = newAgentOfTheIronThrone()
+var AgentOfTheIronThrone = newAgentOfTheIronThrone
 
 func newAgentOfTheIronThrone() *game.CardDef {
 	return &game.CardDef{

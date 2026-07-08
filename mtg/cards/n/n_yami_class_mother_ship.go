@@ -18,7 +18,7 @@ import (
 //	Flying, vigilance, haste
 //	Whenever this Vehicle deals combat damage to a player, look at the top card of your library. If it's a permanent card, you may put it onto the battlefield. If you don't put it onto the battlefield, put it into your hand.
 //	Crew 3
-var NYamiClassMotherShip = newNYamiClassMotherShip()
+var NYamiClassMotherShip = newNYamiClassMotherShip
 
 func newNYamiClassMotherShip() *game.CardDef {
 	return &game.CardDef{

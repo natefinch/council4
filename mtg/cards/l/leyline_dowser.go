@@ -17,7 +17,7 @@ import (
 //
 //	{1}, {T}: Mill a card. You may put an instant or sorcery card milled this way into your hand.
 //	Tap an untapped legendary creature you control: Untap this artifact.
-var LeylineDowser = newLeylineDowser()
+var LeylineDowser = newLeylineDowser
 
 func newLeylineDowser() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, you may return target artifact creature card from your graveyard to your hand.
-var MoriokScavenger = newMoriokScavenger()
+var MoriokScavenger = newMoriokScavenger
 
 func newMoriokScavenger() *game.CardDef {
 	return &game.CardDef{

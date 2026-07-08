@@ -18,7 +18,7 @@ import (
 //
 //	Defender
 //	{B}, Tap another untapped creature you control: This creature gets +1/+1 until end of turn.
-var BlackOakOfOdunos = newBlackOakOfOdunos()
+var BlackOakOfOdunos = newBlackOakOfOdunos
 
 func newBlackOakOfOdunos() *game.CardDef {
 	return &game.CardDef{

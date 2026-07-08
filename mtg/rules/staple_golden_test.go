@@ -100,7 +100,7 @@ func stapleCases() []stapleCase {
 func buildBoltKillsCreature(t *testing.T, s *scenario) stapleSetup {
 	t.Helper()
 	bear := s.permanent(game.Player2, stapleCreature("Grizzly Bears", 2, 2))
-	boltID := s.hand(game.Player1, cardl.LightningBolt)
+	boltID := s.hand(game.Player1, cardl.LightningBolt())
 	addMana(s, game.Player1, mana.R, 1)
 	target := bear.permanent().ObjectID
 	return stapleSetup{
@@ -117,7 +117,7 @@ func buildBoltKillsCreature(t *testing.T, s *scenario) stapleSetup {
 
 func buildBoltBurnsOpponent(t *testing.T, s *scenario) stapleSetup {
 	t.Helper()
-	boltID := s.hand(game.Player1, cardl.LightningBolt)
+	boltID := s.hand(game.Player1, cardl.LightningBolt())
 	addMana(s, game.Player1, mana.R, 1)
 	return stapleSetup{
 		caster:  game.Player1,
@@ -134,7 +134,7 @@ func buildBeastWithin(t *testing.T, s *scenario) stapleSetup {
 		Name:  "Forest",
 		Types: []types.Card{types.Land},
 	}})
-	spellID := s.hand(game.Player1, cardb.BeastWithin)
+	spellID := s.hand(game.Player1, cardb.BeastWithin())
 	addMana(s, game.Player1, mana.G, 1)
 	addMana(s, game.Player1, mana.C, 2)
 	target := land.permanent().ObjectID
@@ -155,7 +155,7 @@ func buildChandrasIgnition(t *testing.T, s *scenario) stapleSetup {
 	bomber := s.permanent(game.Player1, stapleCreature("Hellkite", 5, 5))
 	smallA := s.permanent(game.Player2, stapleCreature("Goblin", 1, 1))
 	smallB := s.permanent(game.Player3, stapleCreature("Soldier", 2, 2))
-	spellID := s.hand(game.Player1, cardc.ChandraSIgnition)
+	spellID := s.hand(game.Player1, cardc.ChandraSIgnition())
 	addMana(s, game.Player1, mana.R, 2)
 	addMana(s, game.Player1, mana.C, 3)
 	target := bomber.permanent().ObjectID
@@ -181,7 +181,7 @@ func buildRampantGrowth(t *testing.T, s *scenario) stapleSetup {
 		Types:      []types.Card{types.Land},
 		Subtypes:   []types.Sub{types.Forest},
 	}})
-	spellID := s.hand(game.Player1, cardr.RampantGrowth)
+	spellID := s.hand(game.Player1, cardr.RampantGrowth())
 	addMana(s, game.Player1, mana.G, 1)
 	addMana(s, game.Player1, mana.C, 1)
 	agents := allPassAgents()

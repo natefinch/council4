@@ -18,7 +18,7 @@ import (
 //
 //	Undergrowth — This spell costs {1} less to cast for each creature card in your graveyard.
 //	When this creature enters, return target land card from your graveyard to the battlefield.
-var Molderhulk = newMolderhulk()
+var Molderhulk = newMolderhulk
 
 func newMolderhulk() *game.CardDef {
 	return &game.CardDef{

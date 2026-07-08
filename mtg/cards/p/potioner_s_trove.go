@@ -18,7 +18,7 @@ import (
 //
 //	{T}: Add one mana of any color.
 //	{T}: You gain 2 life. Activate only if you've cast an instant or sorcery spell this turn.
-var PotionerSTrove = newPotionerSTrove()
+var PotionerSTrove = newPotionerSTrove
 
 func newPotionerSTrove() *game.CardDef {
 	return &game.CardDef{

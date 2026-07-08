@@ -17,7 +17,7 @@ import (
 //
 //	Enchant creature (Target a creature as you cast this. This card enters attached to that creature.)
 //	Enchanted creature gets +1/+1 and can't be blocked except by creatures with flying.
-var TreetopBracers = newTreetopBracers()
+var TreetopBracers = newTreetopBracers
 
 func newTreetopBracers() *game.CardDef {
 	return &game.CardDef{

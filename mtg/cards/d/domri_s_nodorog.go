@@ -18,7 +18,7 @@ import (
 //
 //	Trample
 //	When this creature enters, you may search your library and/or graveyard for a card named Domri, City Smasher, reveal it, and put it into your hand. If you search your library this way, shuffle.
-var DomriSNodorog = newDomriSNodorog()
+var DomriSNodorog = newDomriSNodorog
 
 func newDomriSNodorog() *game.CardDef {
 	return &game.CardDef{

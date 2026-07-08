@@ -20,7 +20,7 @@ import (
 //	Flying
 //	This creature can't attack or block unless it has five or more +1/+1 counters on it.
 //	Whenever a creature attacks you or a planeswalker you control, put a +1/+1 counter on this creature.
-var SlumberingDragon = newSlumberingDragon()
+var SlumberingDragon = newSlumberingDragon
 
 func newSlumberingDragon() *game.CardDef {
 	return &game.CardDef{

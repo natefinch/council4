@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Target opponent discards a card at random.
-var MindKnives = newMindKnives()
+var MindKnives = newMindKnives
 
 func newMindKnives() *game.CardDef {
 	return &game.CardDef{

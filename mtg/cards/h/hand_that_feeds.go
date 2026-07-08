@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Delirium — Whenever this creature attacks while there are four or more card types among cards in your graveyard, it gets +2/+0 and gains menace until end of turn. (It can't be blocked except by two or more creatures.)
-var HandThatFeeds = newHandThatFeeds()
+var HandThatFeeds = newHandThatFeeds
 
 func newHandThatFeeds() *game.CardDef {
 	return &game.CardDef{

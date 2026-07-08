@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Target creature you control gets +2/+2 until end of turn. It fights up to one target creature you don't control. (Each deals damage equal to its power to the other.)
-var BridgeworksBattle = newBridgeworksBattle()
+var BridgeworksBattle = newBridgeworksBattle
 
 func newBridgeworksBattle() *game.CardDef {
 	return &game.CardDef{

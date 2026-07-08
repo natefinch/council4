@@ -17,7 +17,7 @@ import (
 //
 //	{T}, Sacrifice a creature: This artifact deals 1 damage to any target.
 //	Whenever a creature enters, you may untap this artifact.
-var BlastingStation = newBlastingStation()
+var BlastingStation = newBlastingStation
 
 func newBlastingStation() *game.CardDef {
 	return &game.CardDef{

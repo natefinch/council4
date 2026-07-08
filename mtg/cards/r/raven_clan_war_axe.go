@@ -19,7 +19,7 @@ import (
 //	When this Equipment enters, you may search your library and/or graveyard for a card named Eivor, Battle-Ready, reveal it, and put it into your hand. If you search your library this way, shuffle.
 //	Equipped creature gets +2/+0 and has trample.
 //	Equip {2}
-var RavenClanWarAxe = newRavenClanWarAxe()
+var RavenClanWarAxe = newRavenClanWarAxe
 
 func newRavenClanWarAxe() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 //
 //	Flying
 //	This creature can block only creatures with flying.
-var RishadanAirship = newRishadanAirship()
+var RishadanAirship = newRishadanAirship
 
 func newRishadanAirship() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 //
 //	Flying
 //	Whenever this creature blocks or becomes blocked by a creature, destroy that creature at end of combat.
-var VenomousDragonfly = newVenomousDragonfly()
+var VenomousDragonfly = newVenomousDragonfly
 
 func newVenomousDragonfly() *game.CardDef {
 	return &game.CardDef{

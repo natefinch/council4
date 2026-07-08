@@ -17,7 +17,7 @@ import (
 //	Equipped creature has first strike.
 //	As long as equipped creature is a Human, it gets +1/+1.
 //	Equip {1}
-var SharpenedPitchfork = newSharpenedPitchfork()
+var SharpenedPitchfork = newSharpenedPitchfork
 
 func newSharpenedPitchfork() *game.CardDef {
 	return &game.CardDef{

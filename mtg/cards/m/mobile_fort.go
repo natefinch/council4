@@ -17,7 +17,7 @@ import (
 //
 //	Defender (This creature can't attack.)
 //	{3}: This creature gets +3/-1 until end of turn and can attack this turn as though it didn't have defender. Activate only once each turn.
-var MobileFort = newMobileFort()
+var MobileFort = newMobileFort
 
 func newMobileFort() *game.CardDef {
 	return &game.CardDef{

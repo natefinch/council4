@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	When this artifact enters or is put into a graveyard from the battlefield, you may search your library for a basic land card, reveal it, put it into your hand, then shuffle.
-var MycosynthWellspring = newMycosynthWellspring()
+var MycosynthWellspring = newMycosynthWellspring
 
 func newMycosynthWellspring() *game.CardDef {
 	return &game.CardDef{

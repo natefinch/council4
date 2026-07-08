@@ -17,7 +17,7 @@ import (
 //
 //	Shadow (This creature can block or be blocked by only creatures with shadow.)
 //	Whenever this creature attacks and isn't blocked, you may sacrifice it. If you do, defending player discards three cards.
-var DauthiMindripper = newDauthiMindripper()
+var DauthiMindripper = newDauthiMindripper
 
 func newDauthiMindripper() *game.CardDef {
 	return &game.CardDef{

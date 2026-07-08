@@ -17,7 +17,7 @@ import (
 //
 //	Affinity for artifacts (This spell costs {1} less to cast for each artifact you control.)
 //	When this creature attacks or blocks, return it to its owner's hand at end of combat. (Return it only if it's on the battlefield.)
-var QuicksilverBehemoth = newQuicksilverBehemoth()
+var QuicksilverBehemoth = newQuicksilverBehemoth
 
 func newQuicksilverBehemoth() *game.CardDef {
 	return &game.CardDef{

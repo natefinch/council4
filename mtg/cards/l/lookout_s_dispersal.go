@@ -17,7 +17,7 @@ import (
 //
 //	This spell costs {1} less to cast if you control a Pirate.
 //	Counter target spell unless its controller pays {4}.
-var LookoutSDispersal = newLookoutSDispersal()
+var LookoutSDispersal = newLookoutSDispersal
 
 func newLookoutSDispersal() *game.CardDef {
 	return &game.CardDef{

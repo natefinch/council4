@@ -16,52 +16,54 @@ import (
 //
 //	{T}: Add {C}.
 //	{T}: Add {B} or {G}. This land deals 1 damage to you.
-var LlanowarWastes = &game.CardDef{
-	ColorIdentity: color.NewIdentity(color.Black, color.Green),
-	CardFace: game.CardFace{
-		Name:  "Llanowar Wastes",
-		Types: []types.Card{types.Land},
-		OracleText: `
+var LlanowarWastes = func() *game.CardDef {
+	return &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Black, color.Green),
+		CardFace: game.CardFace{
+			Name:  "Llanowar Wastes",
+			Types: []types.Card{types.Land},
+			OracleText: `
 			{T}: Add {C}.
 			{T}: Add {B} or {G}. This land deals 1 damage to you.
 		`,
-		ManaAbilities: []game.ManaAbility{
-			game.TapManaAbility(mana.C),
-			{
-				Text: `
+			ManaAbilities: []game.ManaAbility{
+				game.TapManaAbility(mana.C),
+				{
+					Text: `
 					{T}: Add {B} or {G}. This land deals 1 damage to you.
 				`,
-				AdditionalCosts: cost.Tap,
-				Content: game.Mode{
-					Sequence: []game.Instruction{
-						{
-							Primitive: game.Choose{
-								Choice: game.ResolutionChoice{
-									Kind:   game.ResolutionChoiceMana,
-									Prompt: "Choose {B} or {G}",
-									Colors: []mana.Color{
-										mana.B,
-										mana.G,
+					AdditionalCosts: cost.Tap,
+					Content: game.Mode{
+						Sequence: []game.Instruction{
+							{
+								Primitive: game.Choose{
+									Choice: game.ResolutionChoice{
+										Kind:   game.ResolutionChoiceMana,
+										Prompt: "Choose {B} or {G}",
+										Colors: []mana.Color{
+											mana.B,
+											mana.G,
+										},
 									},
+									PublishChoice: game.ChoiceKey("llanowar-wastes-color"),
 								},
-								PublishChoice: game.ChoiceKey("llanowar-wastes-color"),
+							},
+							{
+								Primitive: game.AddMana{
+									Amount:     game.Fixed(1),
+									ChoiceFrom: game.ChoiceKey("llanowar-wastes-color"),
+								},
+							},
+							{
+								Primitive: game.Damage{
+									Amount:    game.Fixed(1),
+									Recipient: game.PlayerDamageRecipient(game.ControllerReference()),
+								},
 							},
 						},
-						{
-							Primitive: game.AddMana{
-								Amount:     game.Fixed(1),
-								ChoiceFrom: game.ChoiceKey("llanowar-wastes-color"),
-							},
-						},
-						{
-							Primitive: game.Damage{
-								Amount:    game.Fixed(1),
-								Recipient: game.PlayerDamageRecipient(game.ControllerReference()),
-							},
-						},
-					},
-				}.Ability(),
+					}.Ability(),
+				},
 			},
 		},
-	},
+	}
 }

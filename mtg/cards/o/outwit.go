@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Counter target spell that targets a player.
-var Outwit = newOutwit()
+var Outwit = newOutwit
 
 func newOutwit() *game.CardDef {
 	return &game.CardDef{

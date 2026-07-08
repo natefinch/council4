@@ -15,7 +15,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature becomes blocked, defending player mills three cards.
-var FlintGolem = newFlintGolem()
+var FlintGolem = newFlintGolem
 
 func newFlintGolem() *game.CardDef {
 	return &game.CardDef{

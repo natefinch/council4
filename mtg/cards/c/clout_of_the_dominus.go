@@ -19,7 +19,7 @@ import (
 //	Enchant creature
 //	As long as enchanted creature is blue, it gets +1/+1 and has shroud. (It can't be the target of spells or abilities.)
 //	As long as enchanted creature is red, it gets +1/+1 and has haste.
-var CloutOfTheDominus = newCloutOfTheDominus()
+var CloutOfTheDominus = newCloutOfTheDominus
 
 func newCloutOfTheDominus() *game.CardDef {
 	return &game.CardDef{

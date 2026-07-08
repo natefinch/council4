@@ -18,7 +18,7 @@ import (
 //
 //	Trample
 //	Channel — {2}{G}, Discard this card: Search your library for a basic land card, put it onto the battlefield tapped, then shuffle.
-var GreaterTanuki = newGreaterTanuki()
+var GreaterTanuki = newGreaterTanuki
 
 func newGreaterTanuki() *game.CardDef {
 	return &game.CardDef{

@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Target player discards a card at random.
-var SpecterSWail = newSpecterSWail()
+var SpecterSWail = newSpecterSWail
 
 func newSpecterSWail() *game.CardDef {
 	return &game.CardDef{

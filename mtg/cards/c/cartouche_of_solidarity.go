@@ -18,7 +18,7 @@ import (
 //	Enchant creature you control
 //	When this Aura enters, create a 1/1 white Warrior creature token with vigilance.
 //	Enchanted creature gets +1/+1 and has first strike. (It deals combat damage before creatures without first strike.)
-var CartoucheOfSolidarity = newCartoucheOfSolidarity()
+var CartoucheOfSolidarity = newCartoucheOfSolidarity
 
 func newCartoucheOfSolidarity() *game.CardDef {
 	return &game.CardDef{

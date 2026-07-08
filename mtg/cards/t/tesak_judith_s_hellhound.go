@@ -20,7 +20,7 @@ import (
 //	Other Dogs you control have unleash.
 //	Creatures you control with counters on them have haste.
 //	Whenever Tesak attacks, add {R} for each attacking creature.
-var TesakJudithSHellhound = newTesakJudithSHellhound()
+var TesakJudithSHellhound = newTesakJudithSHellhound
 
 func newTesakJudithSHellhound() *game.CardDef {
 	return &game.CardDef{

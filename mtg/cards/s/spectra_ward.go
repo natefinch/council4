@@ -17,7 +17,7 @@ import (
 //
 //	Enchant creature
 //	Enchanted creature gets +2/+2 and has protection from each color. This effect doesn't remove Auras. (It can't be blocked, targeted, or dealt damage by anything that's white, blue, black, red, or green.)
-var SpectraWard = newSpectraWard()
+var SpectraWard = newSpectraWard
 
 func newSpectraWard() *game.CardDef {
 	return &game.CardDef{

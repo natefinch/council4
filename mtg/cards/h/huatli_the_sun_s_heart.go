@@ -18,7 +18,7 @@ import (
 //
 //	Each creature you control assigns combat damage equal to its toughness rather than its power.
 //	−3: You gain life equal to the greatest toughness among creatures you control.
-var HuatliTheSunSHeart = newHuatliTheSunSHeart()
+var HuatliTheSunSHeart = newHuatliTheSunSHeart
 
 func newHuatliTheSunSHeart() *game.CardDef {
 	return &game.CardDef{

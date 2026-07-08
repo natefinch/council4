@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Exile up to three target cards from a single graveyard.
-var Decompose = newDecompose()
+var Decompose = newDecompose
 
 func newDecompose() *game.CardDef {
 	return &game.CardDef{

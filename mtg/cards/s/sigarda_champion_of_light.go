@@ -19,7 +19,7 @@ import (
 //	Flying, trample
 //	Humans you control get +1/+1.
 //	Coven — Whenever Sigarda attacks, if you control three or more creatures with different powers, look at the top five cards of your library. You may reveal a Human creature card from among them and put it into your hand. Put the rest on the bottom of your library in a random order.
-var SigardaChampionOfLight = newSigardaChampionOfLight()
+var SigardaChampionOfLight = newSigardaChampionOfLight
 
 func newSigardaChampionOfLight() *game.CardDef {
 	return &game.CardDef{

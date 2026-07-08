@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	At the beginning of each opponent's upkeep, if that player has seven or more cards in hand, this artifact deals 4 damage to that player.
-var EbonyOwlNetsuke = newEbonyOwlNetsuke()
+var EbonyOwlNetsuke = newEbonyOwlNetsuke
 
 func newEbonyOwlNetsuke() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 //	Haste
 //	Prowess (Whenever you cast a noncreature spell, this creature gets +1/+1 until end of turn.)
 //	Valiant — Whenever this creature becomes the target of a spell or ability you control for the first time each turn, exile the top card of your library. Until end of turn, you may play that card.
-var EmberheartChallenger = newEmberheartChallenger()
+var EmberheartChallenger = newEmberheartChallenger
 
 func newEmberheartChallenger() *game.CardDef {
 	return &game.CardDef{

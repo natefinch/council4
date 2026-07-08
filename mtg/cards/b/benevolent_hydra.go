@@ -20,7 +20,7 @@ import (
 //	This creature enters with X +1/+1 counters on it.
 //	If one or more +1/+1 counters would be put on another creature you control, that many plus one +1/+1 counters are put on it instead.
 //	{T}, Remove a +1/+1 counter from this creature: Put a +1/+1 counter on another target creature you control.
-var BenevolentHydra = newBenevolentHydra()
+var BenevolentHydra = newBenevolentHydra
 
 func newBenevolentHydra() *game.CardDef {
 	return &game.CardDef{

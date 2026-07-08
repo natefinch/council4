@@ -17,7 +17,7 @@ import (
 //
 //	Kicker {5} (You may pay an additional {5} as you cast this spell.)
 //	Create a token that's a copy of target creature. If this spell was kicked, create five of those tokens instead.
-var RiteOfReplication = newRiteOfReplication()
+var RiteOfReplication = newRiteOfReplication
 
 func newRiteOfReplication() *game.CardDef {
 	return &game.CardDef{

@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, look at the top three cards of your library. You may reveal an instant or sorcery card from among them and put it into your hand. Put the rest on the bottom of your library in any order.
-var AugurOfBolas = newAugurOfBolas()
+var AugurOfBolas = newAugurOfBolas
 
 func newAugurOfBolas() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 //
 //	Whenever this creature deals combat damage to a creature, tap that creature and it doesn't untap during its controller's next untap step.
 //	{G}: This creature gains reach until end of turn. (It can block creatures with flying.)
-var MatsuTribeBirdstalker = newMatsuTribeBirdstalker()
+var MatsuTribeBirdstalker = newMatsuTribeBirdstalker
 
 func newMatsuTribeBirdstalker() *game.CardDef {
 	return &game.CardDef{

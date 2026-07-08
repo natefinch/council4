@@ -15,7 +15,7 @@ import (
 // Oracle text:
 //
 //	If a source would deal damage to you, prevent 1 of that damage.
-var UrzaSArmor = newUrzaSArmor()
+var UrzaSArmor = newUrzaSArmor
 
 func newUrzaSArmor() *game.CardDef {
 	return &game.CardDef{

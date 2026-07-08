@@ -17,7 +17,7 @@ import (
 //
 //	Kicker {R} (You may pay an additional {R} as you cast this spell.)
 //	When this creature enters, if it was kicked, creatures you control get +1/+0 and gain haste until end of turn.
-var GoblinBushwhacker = newGoblinBushwhacker()
+var GoblinBushwhacker = newGoblinBushwhacker
 
 func newGoblinBushwhacker() *game.CardDef {
 	return &game.CardDef{

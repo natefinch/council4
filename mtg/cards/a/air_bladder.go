@@ -18,7 +18,7 @@ import (
 //	Enchant creature
 //	Enchanted creature has flying.
 //	Enchanted creature can block only creatures with flying.
-var AirBladder = newAirBladder()
+var AirBladder = newAirBladder
 
 func newAirBladder() *game.CardDef {
 	return &game.CardDef{

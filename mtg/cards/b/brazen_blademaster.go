@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature attacks while you control two or more artifacts, it gets +2/+1 until end of turn.
-var BrazenBlademaster = newBrazenBlademaster()
+var BrazenBlademaster = newBrazenBlademaster
 
 func newBrazenBlademaster() *game.CardDef {
 	return &game.CardDef{

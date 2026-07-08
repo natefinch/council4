@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	As long as this creature is equipped, it gets +1/+1 and has vigilance.
-var LeoninDenGuard = newLeoninDenGuard()
+var LeoninDenGuard = newLeoninDenGuard
 
 func newLeoninDenGuard() *game.CardDef {
 	return &game.CardDef{

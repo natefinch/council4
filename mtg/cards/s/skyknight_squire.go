@@ -19,7 +19,7 @@ import (
 //
 //	Whenever another creature you control enters, put a +1/+1 counter on this creature.
 //	As long as this creature has three or more +1/+1 counters on it, it has flying and is a Knight in addition to its other types.
-var SkyknightSquire = newSkyknightSquire()
+var SkyknightSquire = newSkyknightSquire
 
 func newSkyknightSquire() *game.CardDef {
 	return &game.CardDef{

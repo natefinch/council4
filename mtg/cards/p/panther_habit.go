@@ -16,7 +16,7 @@ import (
 //
 //	If equipped creature would be dealt damage, prevent that damage and put that many +1/+1 counters on it.
 //	Equip {2}
-var PantherHabit = newPantherHabit()
+var PantherHabit = newPantherHabit
 
 func newPantherHabit() *game.CardDef {
 	return &game.CardDef{

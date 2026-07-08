@@ -20,7 +20,7 @@ import (
 //	This creature enters with four healing counters on it.
 //	Remove a healing counter from this creature: Prevent the next 1 damage that would be dealt to this creature this turn.
 //	{2}{W}: Put a healing counter on this creature.
-var UrsineFylgja = newUrsineFylgja()
+var UrsineFylgja = newUrsineFylgja
 
 func newUrsineFylgja() *game.CardDef {
 	return &game.CardDef{

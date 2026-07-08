@@ -124,4 +124,4 @@ var GimliSRecklessMight = func() *game.CardDef {
 		},
 	)
 	return card
-}()
+}

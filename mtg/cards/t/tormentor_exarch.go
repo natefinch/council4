@@ -18,7 +18,7 @@ import (
 //	When this creature enters, choose one —
 //	• Target creature gets +2/+0 until end of turn.
 //	• Target creature gets -0/-2 until end of turn.
-var TormentorExarch = newTormentorExarch()
+var TormentorExarch = newTormentorExarch
 
 func newTormentorExarch() *game.CardDef {
 	return &game.CardDef{

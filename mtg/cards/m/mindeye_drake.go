@@ -17,7 +17,7 @@ import (
 //
 //	Flying
 //	When this creature dies, target player mills five cards.
-var MindeyeDrake = newMindeyeDrake()
+var MindeyeDrake = newMindeyeDrake
 
 func newMindeyeDrake() *game.CardDef {
 	return &game.CardDef{

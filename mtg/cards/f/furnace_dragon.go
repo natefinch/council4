@@ -18,7 +18,7 @@ import (
 //	Affinity for artifacts (This spell costs {1} less to cast for each artifact you control.)
 //	Flying
 //	When this creature enters, if you cast it from your hand, exile all artifacts.
-var FurnaceDragon = newFurnaceDragon()
+var FurnaceDragon = newFurnaceDragon
 
 func newFurnaceDragon() *game.CardDef {
 	return &game.CardDef{

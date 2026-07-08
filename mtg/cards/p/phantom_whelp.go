@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	When this creature attacks or blocks, return it to its owner's hand at end of combat. (Return it only if it's on the battlefield.)
-var PhantomWhelp = newPhantomWhelp()
+var PhantomWhelp = newPhantomWhelp
 
 func newPhantomWhelp() *game.CardDef {
 	return &game.CardDef{

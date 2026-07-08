@@ -18,7 +18,7 @@ import (
 // Oracle text:
 //
 //	At the beginning of your end step, if you descended this turn, create a Treasure token. (You descended if a permanent card was put into your graveyard from anywhere.)
-var EnterprisingScallywag = newEnterprisingScallywag()
+var EnterprisingScallywag = newEnterprisingScallywag
 
 func newEnterprisingScallywag() *game.CardDef {
 	return &game.CardDef{

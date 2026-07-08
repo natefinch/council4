@@ -20,7 +20,7 @@ import (
 //	Kicker {3} (You may pay an additional {3} as you cast this spell.)
 //	{B}: Regenerate this creature.
 //	If this creature was kicked, it enters with a +1/+1 counter on it.
-var UrborgSkeleton = newUrborgSkeleton()
+var UrborgSkeleton = newUrborgSkeleton
 
 func newUrborgSkeleton() *game.CardDef {
 	return &game.CardDef{

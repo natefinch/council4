@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters or leaves the battlefield, create a Food token. (It's an artifact with "{2}, {T}, Sacrifice this token: You gain 3 life.")
-var BrandywineFarmer = newBrandywineFarmer()
+var BrandywineFarmer = newBrandywineFarmer
 
 func newBrandywineFarmer() *game.CardDef {
 	return &game.CardDef{

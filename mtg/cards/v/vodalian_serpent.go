@@ -10,7 +10,7 @@ import (
 )
 
 // VodalianSerpent is the card definition for Vodalian Serpent.
-var VodalianSerpent = newVodalianSerpent()
+var VodalianSerpent = newVodalianSerpent
 
 func newVodalianSerpent() *game.CardDef {
 	return &game.CardDef{

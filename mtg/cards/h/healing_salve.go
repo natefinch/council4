@@ -18,7 +18,7 @@ import (
 //	Choose one —
 //	• Target player gains 3 life.
 //	• Prevent the next 3 damage that would be dealt to any target this turn.
-var HealingSalve = newHealingSalve()
+var HealingSalve = newHealingSalve
 
 func newHealingSalve() *game.CardDef {
 	return &game.CardDef{

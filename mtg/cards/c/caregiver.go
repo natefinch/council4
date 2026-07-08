@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{W}, Sacrifice a creature: Prevent the next 1 damage that would be dealt to any target this turn.
-var Caregiver = newCaregiver()
+var Caregiver = newCaregiver
 
 func newCaregiver() *game.CardDef {
 	return &game.CardDef{

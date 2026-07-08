@@ -15,7 +15,7 @@ import (
 // Oracle text:
 //
 //	This creature can't attack alone.
-var BondedConstruct = newBondedConstruct()
+var BondedConstruct = newBondedConstruct
 
 func newBondedConstruct() *game.CardDef {
 	return &game.CardDef{

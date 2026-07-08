@@ -18,7 +18,7 @@ import (
 //	Defender (This creature can't attack.)
 //	Flying
 //	When this creature blocks, sacrifice it at end of combat.
-var StoicEphemera = newStoicEphemera()
+var StoicEphemera = newStoicEphemera
 
 func newStoicEphemera() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 //
 //	Flying
 //	{R}: Each creature you control gets +1/+0 until end of turn.
-var MoonveilDragon = newMoonveilDragon()
+var MoonveilDragon = newMoonveilDragon
 
 func newMoonveilDragon() *game.CardDef {
 	return &game.CardDef{

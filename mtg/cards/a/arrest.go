@@ -17,7 +17,7 @@ import (
 //
 //	Enchant creature
 //	Enchanted creature can't attack or block, and its activated abilities can't be activated.
-var Arrest = newArrest()
+var Arrest = newArrest
 
 func newArrest() *game.CardDef {
 	return &game.CardDef{

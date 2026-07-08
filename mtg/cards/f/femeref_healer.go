@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{T}: Prevent the next 1 damage that would be dealt to any target this turn.
-var FemerefHealer = newFemerefHealer()
+var FemerefHealer = newFemerefHealer
 
 func newFemerefHealer() *game.CardDef {
 	return &game.CardDef{

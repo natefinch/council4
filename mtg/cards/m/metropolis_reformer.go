@@ -18,7 +18,7 @@ import (
 //	Flying, vigilance
 //	You have hexproof.
 //	Whenever this creature is dealt damage, you gain that much life.
-var MetropolisReformer = newMetropolisReformer()
+var MetropolisReformer = newMetropolisReformer
 
 func newMetropolisReformer() *game.CardDef {
 	return &game.CardDef{

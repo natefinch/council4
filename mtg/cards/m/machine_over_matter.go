@@ -17,7 +17,7 @@ import (
 //
 //	This spell costs {1} less to cast if you control an artifact creature.
 //	Return target nonland permanent to its owner's hand.
-var MachineOverMatter = newMachineOverMatter()
+var MachineOverMatter = newMachineOverMatter
 
 func newMachineOverMatter() *game.CardDef {
 	return &game.CardDef{

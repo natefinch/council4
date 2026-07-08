@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature becomes blocked by a creature, this creature deals 1 damage to that creature.
-var KolaghanAspirant = newKolaghanAspirant()
+var KolaghanAspirant = newKolaghanAspirant
 
 func newKolaghanAspirant() *game.CardDef {
 	return &game.CardDef{

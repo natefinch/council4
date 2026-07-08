@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Sacrifice all creatures you control, then create that many 4/4 red Hellion creature tokens.
-var HellionEruption = newHellionEruption()
+var HellionEruption = newHellionEruption
 
 func newHellionEruption() *game.CardDef {
 	return &game.CardDef{

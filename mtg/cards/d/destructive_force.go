@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Each player sacrifices five lands of their choice. Destructive Force deals 5 damage to each creature.
-var DestructiveForce = newDestructiveForce()
+var DestructiveForce = newDestructiveForce
 
 func newDestructiveForce() *game.CardDef {
 	return &game.CardDef{

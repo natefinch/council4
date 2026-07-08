@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	If a white source would deal damage to you, prevent 2 of that damage.
-var SphereOfTruth = newSphereOfTruth()
+var SphereOfTruth = newSphereOfTruth
 
 func newSphereOfTruth() *game.CardDef {
 	return &game.CardDef{

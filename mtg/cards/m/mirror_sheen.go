@@ -18,7 +18,7 @@ import (
 // Oracle text:
 //
 //	{1}{U/R}{U/R}: Copy target instant or sorcery spell that targets you. You may choose new targets for the copy.
-var MirrorSheen = newMirrorSheen()
+var MirrorSheen = newMirrorSheen
 
 func newMirrorSheen() *game.CardDef {
 	return &game.CardDef{

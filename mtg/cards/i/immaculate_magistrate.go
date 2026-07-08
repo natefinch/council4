@@ -18,7 +18,7 @@ import (
 // Oracle text:
 //
 //	{T}: Put a +1/+1 counter on target creature for each Elf you control.
-var ImmaculateMagistrate = newImmaculateMagistrate()
+var ImmaculateMagistrate = newImmaculateMagistrate
 
 func newImmaculateMagistrate() *game.CardDef {
 	return &game.CardDef{

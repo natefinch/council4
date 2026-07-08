@@ -13,7 +13,7 @@ import (
 // Oracle text:
 //
 //	When this land enters, sacrifice it. When you do, search your library for a basic Mountain, Forest, or Plains card, put it onto the battlefield tapped, then shuffle and you gain 1 life.
-var CabarettiCourtyard = newCabarettiCourtyard()
+var CabarettiCourtyard = newCabarettiCourtyard
 
 func newCabarettiCourtyard() *game.CardDef {
 	return &game.CardDef{

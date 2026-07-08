@@ -18,7 +18,7 @@ import (
 //	Menace
 //	Whenever a creature you control deals combat damage to a player, you gain life equal to that creature's toughness.
 //	Partner (You can have two commanders if both have partner.)
-var IkraShidiqiTheUsurper = newIkraShidiqiTheUsurper()
+var IkraShidiqiTheUsurper = newIkraShidiqiTheUsurper
 
 func newIkraShidiqiTheUsurper() *game.CardDef {
 	return &game.CardDef{

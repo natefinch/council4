@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, sacrifice it unless you discard a creature card.
-var MercenaryKnight = newMercenaryKnight()
+var MercenaryKnight = newMercenaryKnight
 
 func newMercenaryKnight() *game.CardDef {
 	return &game.CardDef{

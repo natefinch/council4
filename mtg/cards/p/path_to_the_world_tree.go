@@ -18,7 +18,7 @@ import (
 //
 //	When this enchantment enters, search your library for a basic land card, reveal it, put it into your hand, then shuffle.
 //	{2}{W}{U}{B}{R}{G}, Sacrifice this enchantment: You gain 2 life and draw two cards. Target opponent loses 2 life. This enchantment deals 2 damage to up to one target creature. You create a 2/2 green Bear creature token.
-var PathToTheWorldTree = newPathToTheWorldTree()
+var PathToTheWorldTree = newPathToTheWorldTree
 
 func newPathToTheWorldTree() *game.CardDef {
 	return &game.CardDef{

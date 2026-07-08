@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Aerial Volley deals 3 damage divided as you choose among one, two, or three target creatures with flying.
-var AerialVolley = newAerialVolley()
+var AerialVolley = newAerialVolley
 
 func newAerialVolley() *game.CardDef {
 	return &game.CardDef{

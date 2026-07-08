@@ -17,7 +17,7 @@ import (
 //
 //	This creature can't attack alone.
 //	Whenever this creature attacks, untap target creature.
-var MilitiaRallier = newMilitiaRallier()
+var MilitiaRallier = newMilitiaRallier
 
 func newMilitiaRallier() *game.CardDef {
 	return &game.CardDef{

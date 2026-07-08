@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Put a +1/+1 counter on target creature you control. Then it fights target creature an opponent controls. When the creature an opponent controls dies this turn, if you control your commander, you become the monarch.
-var FightForTheThrone = newFightForTheThrone()
+var FightForTheThrone = newFightForTheThrone
 
 func newFightForTheThrone() *game.CardDef {
 	return &game.CardDef{

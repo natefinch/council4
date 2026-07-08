@@ -17,7 +17,7 @@ import (
 //
 //	Infusion — When you cast this spell, copy it if you gained life this turn. You may choose new targets for the copy.
 //	Target creature gets +2/+4 until end of turn.
-var LumaretSFavor = newLumaretSFavor()
+var LumaretSFavor = newLumaretSFavor
 
 func newLumaretSFavor() *game.CardDef {
 	return &game.CardDef{

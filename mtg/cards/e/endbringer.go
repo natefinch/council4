@@ -19,7 +19,7 @@ import (
 //	{T}: This creature deals 1 damage to any target.
 //	{C}, {T}: Target creature can't attack or block this turn.
 //	{C}{C}, {T}: Draw a card.
-var Endbringer = newEndbringer()
+var Endbringer = newEndbringer
 
 func newEndbringer() *game.CardDef {
 	return &game.CardDef{

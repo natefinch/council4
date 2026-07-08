@@ -18,7 +18,7 @@ import (
 //
 //	Create five 1/1 white Human creature tokens. If this spell was cast from a graveyard, create ten of those tokens instead.
 //	Flashback {7}{W}{W} (You may cast this card from your graveyard for its flashback cost. Then exile it.)
-var IncreasingDevotion = newIncreasingDevotion()
+var IncreasingDevotion = newIncreasingDevotion
 
 func newIncreasingDevotion() *game.CardDef {
 	return &game.CardDef{

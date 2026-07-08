@@ -18,7 +18,7 @@ import (
 // Oracle text:
 //
 //	Create a 0/0 green and blue Fractal creature token. Put X +1/+1 counters on it.
-var FractalSummoning = newFractalSummoning()
+var FractalSummoning = newFractalSummoning
 
 func newFractalSummoning() *game.CardDef {
 	return &game.CardDef{

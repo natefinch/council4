@@ -13,7 +13,7 @@ import (
 // Oracle text:
 //
 //	Counter target spell.
-var Counterspell = newCounterspell()
+var Counterspell = newCounterspell
 
 func newCounterspell() *game.CardDef {
 	return &game.CardDef{

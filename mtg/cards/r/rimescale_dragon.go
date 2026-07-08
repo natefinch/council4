@@ -20,7 +20,7 @@ import (
 //	Flying
 //	{2}{S}: Tap target creature and put an ice counter on it. ({S} can be paid with one mana from a snow source.)
 //	Creatures with ice counters on them don't untap during their controllers' untap steps.
-var RimescaleDragon = newRimescaleDragon()
+var RimescaleDragon = newRimescaleDragon
 
 func newRimescaleDragon() *game.CardDef {
 	return &game.CardDef{

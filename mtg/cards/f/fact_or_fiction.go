@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Reveal the top five cards of your library. An opponent separates those cards into two piles. Put one pile into your hand and the other into your graveyard.
-var FactOrFiction = newFactOrFiction()
+var FactOrFiction = newFactOrFiction
 
 func newFactOrFiction() *game.CardDef {
 	return &game.CardDef{

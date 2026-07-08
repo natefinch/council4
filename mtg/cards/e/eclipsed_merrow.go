@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, look at the top four cards of your library. You may reveal a Merfolk, Plains, or Island card from among them and put it into your hand. Put the rest on the bottom of your library in a random order.
-var EclipsedMerrow = newEclipsedMerrow()
+var EclipsedMerrow = newEclipsedMerrow
 
 func newEclipsedMerrow() *game.CardDef {
 	return &game.CardDef{

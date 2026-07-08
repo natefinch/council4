@@ -17,7 +17,7 @@ import (
 //
 //	Flying (This creature can't be blocked except by creatures with flying or reach.)
 //	This creature can block only creatures with flying.
-var WelkinTern = newWelkinTern()
+var WelkinTern = newWelkinTern
 
 func newWelkinTern() *game.CardDef {
 	return &game.CardDef{

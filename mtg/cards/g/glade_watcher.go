@@ -19,7 +19,7 @@ import (
 //
 //	Defender
 //	Formidable — {G}: This creature can attack this turn as though it didn't have defender. Activate only if creatures you control have total power 8 or greater.
-var GladeWatcher = newGladeWatcher()
+var GladeWatcher = newGladeWatcher
 
 func newGladeWatcher() *game.CardDef {
 	return &game.CardDef{

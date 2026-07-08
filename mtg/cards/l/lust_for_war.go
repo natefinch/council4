@@ -18,7 +18,7 @@ import (
 //	Enchant creature
 //	Whenever enchanted creature becomes tapped, this Aura deals 3 damage to that creature's controller.
 //	Enchanted creature attacks each combat if able.
-var LustForWar = newLustForWar()
+var LustForWar = newLustForWar
 
 func newLustForWar() *game.CardDef {
 	return &game.CardDef{

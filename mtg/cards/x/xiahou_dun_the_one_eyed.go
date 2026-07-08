@@ -18,7 +18,7 @@ import (
 //
 //	Horsemanship (This creature can't be blocked except by creatures with horsemanship.)
 //	Sacrifice Xiahou Dun: Return target black card from your graveyard to your hand. Activate only during your turn, before attackers are declared.
-var XiahouDunTheOneEyed = newXiahouDunTheOneEyed()
+var XiahouDunTheOneEyed = newXiahouDunTheOneEyed
 
 func newXiahouDunTheOneEyed() *game.CardDef {
 	return &game.CardDef{

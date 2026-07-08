@@ -18,7 +18,7 @@ import (
 //	Enchant creature
 //	When this Aura enters, tap enchanted creature.
 //	Enchanted creature doesn't untap during its controller's untap step.
-var ContainmentProtocol = newContainmentProtocol()
+var ContainmentProtocol = newContainmentProtocol
 
 func newContainmentProtocol() *game.CardDef {
 	return &game.CardDef{

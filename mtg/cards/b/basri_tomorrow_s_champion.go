@@ -19,7 +19,7 @@ import (
 //	{W}, {T}, Exert Basri: Create a 1/1 white Cat creature token with lifelink. (An exerted creature won't untap during your next untap step.)
 //	Cycling {2}{W} ({2}{W}, Discard this card: Draw a card.)
 //	When you cycle this card, Cats you control gain hexproof and indestructible until end of turn.
-var BasriTomorrowSChampion = newBasriTomorrowSChampion()
+var BasriTomorrowSChampion = newBasriTomorrowSChampion
 
 func newBasriTomorrowSChampion() *game.CardDef {
 	return &game.CardDef{

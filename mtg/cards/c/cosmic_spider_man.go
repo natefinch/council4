@@ -17,7 +17,7 @@ import (
 //
 //	Flying, first strike, trample, lifelink, haste
 //	At the beginning of combat on your turn, other Spiders you control gain flying, first strike, trample, lifelink, and haste until end of turn.
-var CosmicSpiderMan = newCosmicSpiderMan()
+var CosmicSpiderMan = newCosmicSpiderMan
 
 func newCosmicSpiderMan() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 //
 //	Kicker {B} (You may pay an additional {B} as you cast this spell.)
 //	When this creature enters, if it was kicked, creatures you control gain menace until end of turn. (A creature with menace can't be blocked except by two or more creatures.)
-var BogBadger = newBogBadger()
+var BogBadger = newBogBadger
 
 func newBogBadger() *game.CardDef {
 	return &game.CardDef{

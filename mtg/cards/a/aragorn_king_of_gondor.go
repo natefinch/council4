@@ -18,7 +18,7 @@ import (
 //	Vigilance, lifelink
 //	When Aragorn enters, you become the monarch.
 //	Whenever Aragorn attacks, up to one target creature can't block this turn. If you're the monarch, creatures can't block this turn.
-var AragornKingOfGondor = newAragornKingOfGondor()
+var AragornKingOfGondor = newAragornKingOfGondor
 
 func newAragornKingOfGondor() *game.CardDef {
 	return &game.CardDef{

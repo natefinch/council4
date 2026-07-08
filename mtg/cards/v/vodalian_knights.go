@@ -10,7 +10,7 @@ import (
 )
 
 // VodalianKnights is the card definition for Vodalian Knights.
-var VodalianKnights = newVodalianKnights()
+var VodalianKnights = newVodalianKnights
 
 func newVodalianKnights() *game.CardDef {
 	return &game.CardDef{

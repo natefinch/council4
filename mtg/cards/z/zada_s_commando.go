@@ -18,7 +18,7 @@ import (
 //
 //	First strike
 //	Cohort — {T}, Tap an untapped Ally you control: This creature deals 1 damage to target opponent or planeswalker.
-var ZadaSCommando = newZadaSCommando()
+var ZadaSCommando = newZadaSCommando
 
 func newZadaSCommando() *game.CardDef {
 	return &game.CardDef{

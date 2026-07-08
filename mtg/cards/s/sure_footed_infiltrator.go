@@ -18,7 +18,7 @@ import (
 //
 //	Tap another untapped Rogue you control: This creature can't be blocked this turn.
 //	Whenever this creature deals combat damage to a player, draw a card.
-var SureFootedInfiltrator = newSureFootedInfiltrator()
+var SureFootedInfiltrator = newSureFootedInfiltrator
 
 func newSureFootedInfiltrator() *game.CardDef {
 	return &game.CardDef{

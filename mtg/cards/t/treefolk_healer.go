@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{2}{W}, {T}: Prevent the next 2 damage that would be dealt to any target this turn.
-var TreefolkHealer = newTreefolkHealer()
+var TreefolkHealer = newTreefolkHealer
 
 func newTreefolkHealer() *game.CardDef {
 	return &game.CardDef{

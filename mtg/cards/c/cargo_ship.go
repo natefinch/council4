@@ -19,7 +19,7 @@ import (
 //	Flying, vigilance
 //	{T}: Add {C}. Spend this mana only to cast an artifact spell or activate an ability of an artifact source.
 //	Crew 1 (Tap any number of creatures you control with total power 1 or more: This Vehicle becomes an artifact creature until end of turn.)
-var CargoShip = newCargoShip()
+var CargoShip = newCargoShip
 
 func newCargoShip() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 //
 //	As this enchantment enters, choose a creature type.
 //	Creatures of the chosen type have shroud. (They can't be the targets of spells or abilities.)
-var SteelyResolve = newSteelyResolve()
+var SteelyResolve = newSteelyResolve
 
 func newSteelyResolve() *game.CardDef {
 	return &game.CardDef{

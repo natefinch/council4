@@ -18,7 +18,7 @@ import (
 //	At the beginning of your upkeep, sacrifice this creature unless you discard a card.
 //	{4}, Exile a creature card from your graveyard: This creature deals 4 damage to any target.
 //	{2}: Regenerate this creature.
-var MoltenTailMasticore = newMoltenTailMasticore()
+var MoltenTailMasticore = newMoltenTailMasticore
 
 func newMoltenTailMasticore() *game.CardDef {
 	return &game.CardDef{

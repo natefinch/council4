@@ -17,7 +17,7 @@ import (
 //	This land enters tapped.
 //	When this land enters, sacrifice it unless you pay {1}.
 //	{T}: Add one mana of any color.
-var GatewayPlaza = newGatewayPlaza()
+var GatewayPlaza = newGatewayPlaza
 
 func newGatewayPlaza() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 //	Choose one —
 //	• Draw four cards.
 //	• Splatter Technique deals 4 damage to each creature and planeswalker.
-var SplatterTechnique = newSplatterTechnique()
+var SplatterTechnique = newSplatterTechnique
 
 func newSplatterTechnique() *game.CardDef {
 	return &game.CardDef{

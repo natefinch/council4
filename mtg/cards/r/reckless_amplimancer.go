@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{4}{G}: Double this creature's power and toughness until end of turn.
-var RecklessAmplimancer = newRecklessAmplimancer()
+var RecklessAmplimancer = newRecklessAmplimancer
 
 func newRecklessAmplimancer() *game.CardDef {
 	return &game.CardDef{

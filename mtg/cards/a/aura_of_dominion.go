@@ -18,7 +18,7 @@ import (
 //
 //	Enchant creature
 //	{1}, Tap an untapped creature you control: Untap enchanted creature.
-var AuraOfDominion = newAuraOfDominion()
+var AuraOfDominion = newAuraOfDominion
 
 func newAuraOfDominion() *game.CardDef {
 	return &game.CardDef{

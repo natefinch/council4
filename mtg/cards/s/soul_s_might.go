@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Put X +1/+1 counters on target creature, where X is that creature's power.
-var SoulSMight = newSoulSMight()
+var SoulSMight = newSoulSMight
 
 func newSoulSMight() *game.CardDef {
 	return &game.CardDef{

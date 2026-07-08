@@ -17,7 +17,7 @@ import (
 //
 //	Kicker {4} (You may pay an additional {4} as you cast this spell.)
 //	Shivan Fire deals 2 damage to target creature. If this spell was kicked, it deals 4 damage instead.
-var ShivanFire = newShivanFire()
+var ShivanFire = newShivanFire
 
 func newShivanFire() *game.CardDef {
 	return &game.CardDef{

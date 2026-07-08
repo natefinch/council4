@@ -17,7 +17,7 @@ import (
 //
 //	Deathtouch
 //	At the beginning of your end step, if a creature died this turn, target creature you control connives. (Draw a card, then discard a card. If you discarded a nonland card, put a +1/+1 counter on that creature.)
-var ScorpionSeethingStriker = newScorpionSeethingStriker()
+var ScorpionSeethingStriker = newScorpionSeethingStriker
 
 func newScorpionSeethingStriker() *game.CardDef {
 	return &game.CardDef{

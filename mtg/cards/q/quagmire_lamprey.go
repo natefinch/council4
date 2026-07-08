@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature becomes blocked by a creature, put a -1/-1 counter on that creature.
-var QuagmireLamprey = newQuagmireLamprey()
+var QuagmireLamprey = newQuagmireLamprey
 
 func newQuagmireLamprey() *game.CardDef {
 	return &game.CardDef{

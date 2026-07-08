@@ -17,7 +17,7 @@ import (
 //
 //	Flying (This creature can't be blocked except by creatures with flying or reach.)
 //	When this creature attacks or blocks, sacrifice it at end of combat.
-var FogElemental = newFogElemental()
+var FogElemental = newFogElemental
 
 func newFogElemental() *game.CardDef {
 	return &game.CardDef{

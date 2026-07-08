@@ -18,7 +18,7 @@ import (
 //
 //	{W}, Sacrifice this creature: Prevent the next 3 damage that would be dealt to any target this turn.
 //	Whenever you cast a multicolored spell, you may return this card from your graveyard to your hand.
-var AuroraEidolon = newAuroraEidolon()
+var AuroraEidolon = newAuroraEidolon
 
 func newAuroraEidolon() *game.CardDef {
 	return &game.CardDef{

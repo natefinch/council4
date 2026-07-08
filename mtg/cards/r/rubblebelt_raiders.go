@@ -18,7 +18,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature attacks, put a +1/+1 counter on it for each attacking creature you control.
-var RubblebeltRaiders = newRubblebeltRaiders()
+var RubblebeltRaiders = newRubblebeltRaiders
 
 func newRubblebeltRaiders() *game.CardDef {
 	return &game.CardDef{

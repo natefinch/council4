@@ -9,7 +9,7 @@ import (
 )
 
 // SlipstreamEel is the card definition for Slipstream Eel.
-var SlipstreamEel = newSlipstreamEel()
+var SlipstreamEel = newSlipstreamEel
 
 func newSlipstreamEel() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 //
 //	Flying
 //	Whenever this creature enters or attacks, target opponent sacrifices a creature or planeswalker of their choice, discards a card, and loses 3 life. You draw a card and gain 3 life.
-var ArchonOfCruelty = newArchonOfCruelty()
+var ArchonOfCruelty = newArchonOfCruelty
 
 func newArchonOfCruelty() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 //
 //	Prevent the next 3 damage that would be dealt to any target this turn.
 //	Draw a card.
-var Withstand = newWithstand()
+var Withstand = newWithstand
 
 func newWithstand() *game.CardDef {
 	return &game.CardDef{

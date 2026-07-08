@@ -9,7 +9,7 @@ import (
 )
 
 // VenomousVines is the card definition for Venomous Vines.
-var VenomousVines = newVenomousVines()
+var VenomousVines = newVenomousVines
 
 func newVenomousVines() *game.CardDef {
 	return &game.CardDef{

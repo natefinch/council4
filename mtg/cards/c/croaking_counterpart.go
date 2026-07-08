@@ -17,7 +17,7 @@ import (
 //
 //	Create a token that's a copy of target non-Frog creature, except it's a 1/1 green Frog.
 //	Flashback {3}{G}{U} (You may cast this card from your graveyard for its flashback cost. Then exile it.)
-var CroakingCounterpart = newCroakingCounterpart()
+var CroakingCounterpart = newCroakingCounterpart
 
 func newCroakingCounterpart() *game.CardDef {
 	return &game.CardDef{
