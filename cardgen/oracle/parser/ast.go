@@ -1070,6 +1070,12 @@ const (
 	PlayerEventActionSearchLibrary  PlayerEventActionKind = "PlayerEventActionSearchLibrary"
 	PlayerEventActionCommitCrime    PlayerEventActionKind = "PlayerEventActionCommitCrime"
 	PlayerEventActionBecomeMonarch  PlayerEventActionKind = "PlayerEventActionBecomeMonarch"
+
+	// PlayerEventActionPlay is the "plays a card" event, recognized only for the
+	// self-referential "plays a card exiled with <this permanent>" object
+	// (Prowl, Stoic Strategist). A player playing (casting or playing as a land)
+	// a card that a linked-exile source put into exile.
+	PlayerEventActionPlay PlayerEventActionKind = "PlayerEventActionPlay"
 )
 
 // PlayerEventAction is a source-spanned player-event action.
@@ -1092,6 +1098,11 @@ const (
 	// PlayerEventCardThis is the self-referential card object "this card",
 	// naming the ability's own source ("When you cycle this card", CR 702.29e).
 	PlayerEventCardThis PlayerEventCardKind = "PlayerEventCardThis"
+
+	// PlayerEventCardExiledWithSource is the self-referential card object "a card
+	// exiled with <this permanent>" (Prowl, Stoic Strategist), naming any card a
+	// linked-exile ability of the source permanent placed into exile.
+	PlayerEventCardExiledWithSource PlayerEventCardKind = "PlayerEventCardExiledWithSource"
 )
 
 // PlayerEventCard is a source-spanned player-event card-object modifier.

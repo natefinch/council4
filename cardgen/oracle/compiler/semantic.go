@@ -924,6 +924,12 @@ const (
 	// a failed result (CR 608.2c). It backs Blitzwing, Cruel Tormentor's
 	// end-step convert. Added last so existing kinds keep their wire values.
 	ConditionPredicateNoLifeLostThisWay
+	// ConditionPredicateSourceAbilityResolutionOrdinalThisTurn is satisfied when
+	// the resolving triggered ability has resolved exactly Threshold times this
+	// turn, counting the current resolution ("if this is the second time this
+	// ability has resolved this turn"; Prowl, Pursuit Vehicle). Added last so
+	// existing kinds keep their wire values.
+	ConditionPredicateSourceAbilityResolutionOrdinalThisTurn
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard
@@ -1941,6 +1947,10 @@ const (
 	// monarch" (Garland, Royal Kidnapper). The gain-control effect expires when
 	// the triggering player who became the monarch is no longer the monarch.
 	DurationForAsLongAsThatPlayerIsMonarch
+	// DurationForAsLongAsExiled matches "for as long as that card remains
+	// exiled" (Prowl, Stoic Strategist). The owner-scoped play permission
+	// expires when the exiled card leaves exile.
+	DurationForAsLongAsExiled
 )
 
 // StaticSubjectKind identifies the group affected by a static continuous effect.

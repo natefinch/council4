@@ -80,6 +80,15 @@ func triggerMatchesEventForController(g *game.Game, source *game.Permanent, sour
 		!slices.Contains(event.ProducedManaColors, pattern.RequireProducedManaColor) {
 		return false
 	}
+	if pattern.PlaysLinkedExileCard != "" {
+		if source == nil || event.CardID == 0 {
+			return false
+		}
+		key := game.LinkedObjectKey{SourceID: source.CardInstanceID, LinkID: string(pattern.PlaysLinkedExileCard)}
+		if !cardInLinkedObjectPool(g, key, event.CardID) {
+			return false
+		}
+	}
 
 	var sourceObjectID id.ID
 	if source != nil {

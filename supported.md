@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,141 of 32,501 cards eligible for paper support (52.7%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,149 of 32,501 cards eligible for paper support (52.8%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -4342,6 +4342,7 @@ Council4 currently supports **17,141 of 32,501 cards eligible for paper support 
 - Ellie, Vengeful Hunter
 - Elmar, Ulvenwald Informant
 - Eloise, Nephalia Sleuth
+- Elrond, Lord of Rivendell
 - Elsha, Threefold Master
 - Elspeth Conquers Death
 - Elspeth's Devotee
@@ -7101,6 +7102,7 @@ Council4 currently supports **17,141 of 32,501 cards eligible for paper support 
 - Hydra
 - Hydra
 - Hydra
+- HYDRA Assault Robot
 - HYDRA Disintegrator
 - HYDRA Infiltration
 - HYDRA Troopers
@@ -9530,6 +9532,7 @@ Council4 currently supports **17,141 of 32,501 cards eligible for paper support 
 - Mox Ruby
 - Mox Sapphire
 - Mr. Orfeo, the Boulder
+- Ms. Bumbleflower
 - Mtenda Griffin
 - Mtenda Herder
 - Muck Rats
@@ -10985,6 +10988,7 @@ Council4 currently supports **17,141 of 32,501 cards eligible for paper support 
 - Proven Combatant
 - Proven Combatant
 - Prowess of the Fair
+- Prowl, Stoic Strategist // Prowl, Pursuit Vehicle
 - Prowler, Clawed Thief
 - Prowler, Misguided Mentor
 - Prowling Caracal
@@ -12010,6 +12014,7 @@ Council4 currently supports **17,141 of 32,501 cards eligible for paper support 
 - Rumbling Slum
 - Rummaging Goblin
 - Rummaging Wizard
+- Rumor Gatherer
 - Run Aground
 - Run Amok
 - Runaway Boulder
@@ -13568,6 +13573,7 @@ Council4 currently supports **17,141 of 32,501 cards eligible for paper support 
 - Soulsurge Elemental
 - Soulsworn Jury
 - Soured Springs
+- South Pole Voyager
 - South Wind Avatar
 - Southern Air Temple
 - Southern Elephant
@@ -14627,6 +14633,7 @@ Council4 currently supports **17,141 of 32,501 cards eligible for paper support 
 - Tangleroot
 - Tanglespan Lookout
 - Tangletrap
+- Tannuk, Memorial Ensign
 - Tanufel Rimespeaker
 - Taoist Hermit
 - Tapestry of the Ages
@@ -14679,6 +14686,7 @@ Council4 currently supports **17,141 of 32,501 cards eligible for paper support 
 - Teeming Dragonstorm
 - Teetering Peaks
 - Teeterpeak Ambusher
+- Teething Wurmlet
 - Teferi's Ageless Insight
 - Teferi's Honor Guard
 - Teferi's Protection

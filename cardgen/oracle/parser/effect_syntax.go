@@ -1138,7 +1138,10 @@ func targetOwnsCounterQualifierReference(target TargetSyntax, ref Reference) boo
 // dropped: it is the counter-conditional mana multiplier rider's condition
 // (Incubation Druid's "If this creature has a +1/+1 counter on it, add three
 // mana of that type instead."), whose "has" verb would otherwise seed a spurious
-// keyword-grant effect from the gate. The condition clause itself is recognized
+// keyword-grant effect from the gate. A leading "If this is the Nth time this
+// ability has resolved this turn, ..." gate (Prowl, Pursuit Vehicle) is dropped
+// for the same reason: its "has resolved this turn" wording would otherwise seed
+// a spurious keyword-grant effect. The condition clause itself is recognized
 // separately, so removing it here only affects subject and effect-verb
 // recognition of the gated body.
 func stripLeadingConditionClause(tokens []shared.Token, atoms Atoms) []shared.Token {
@@ -1155,6 +1158,9 @@ func stripLeadingConditionClause(tokens []shared.Token, atoms Atoms) []shared.To
 		return tokens[end+1:]
 	case ConditionIntroIf:
 		if _, ok := recognizeSourceCounterStateCondition(tokens[introWidth:end], atoms); ok {
+			return tokens[end+1:]
+		}
+		if _, ok := recognizeSourceAbilityResolutionOrdinalCondition(tokens[introWidth:end], atoms); ok {
 			return tokens[end+1:]
 		}
 	default:
@@ -1265,6 +1271,9 @@ func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) 
 		func() ([]EffectSyntax, bool) { return parseCastAsThoughFlashEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parsePlayFromLibraryTopEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parsePlayExiledCardEffect(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) {
+			return parseOwnerPlayWhileExiledEffect(sentence, tokens, atoms)
+		},
 		func() ([]EffectSyntax, bool) { return parsePlayThatCardEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseAdditionalCombatPhaseEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseRollDieEffect(sentence, tokens) },

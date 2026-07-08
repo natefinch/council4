@@ -725,6 +725,15 @@ type RuleEffect struct {
 	CastFace       opt.V[FaceIndex]
 	ExpiresFor     PlayerID
 
+	// AffectToOwner, on a RuleEffectPlayFromZone permission, scopes the permission
+	// to the owner of AffectedCardID rather than to AffectedPlayer relative to the
+	// controller ("its owner may play it", Prowl, Stoic Strategist). The owner may
+	// be an opponent of the effect's controller, which no controller-relative
+	// PlayerRelation can express, so the rules layer resolves the affected player
+	// by AffectedCardID's ownership when this is set. It is false for every other
+	// kind.
+	AffectToOwner bool
+
 	// SpendAnyMana, on a RuleEffectPlayFromZone permission, lets the affected
 	// player spend mana of any type to cast the permitted card ("mana of any
 	// type can be spent to cast it.", Court of Locthwain, Court of the Grim

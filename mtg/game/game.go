@@ -224,6 +224,14 @@ type Game struct {
 	// the current turn for abilities with MaxTriggersPerTurn.
 	TriggeredAbilitiesThisTurn map[TriggeredAbilityUse]int
 
+	// ResolvedTriggeredAbilitiesThisTurn records, per triggered ability, how many
+	// times it has resolved during the current turn. A triggered ability that
+	// gates a consequence on its own per-turn resolution count ("if this is the
+	// second time this ability has resolved this turn"; Prowl, Pursuit Vehicle)
+	// increments its entry as it begins resolving, so the gate reads the count
+	// including the current resolution. It is reset when the turn advances.
+	ResolvedTriggeredAbilitiesThisTurn map[TriggeredAbilityUse]int
+
 	// IDGen generates unique IDs for game objects.
 	IDGen id.Generator
 
@@ -304,25 +312,26 @@ func NewGameWithRand(configs [NumPlayers]PlayerConfig, rng *rand.Rand) *Game {
 		panic("nil rng")
 	}
 	g := &Game{
-		CardInstances:              make(map[id.ID]*CardInstance),
-		CommanderIDs:               make(map[id.ID]bool),
-		SuspendedCards:             make(map[id.ID]SuspendedCard),
-		ReboundCards:               make(map[id.ID]ReboundCard),
-		AdventureCards:             make(map[id.ID]bool),
-		PlottedCards:               make(map[id.ID]int),
-		ForetoldCards:              make(map[id.ID]int),
-		ExileCounters:              make(map[id.ID]counter.Set),
-		LastKnownInformation:       make(map[id.ID]ObjectSnapshot),
-		LinkedObjects:              make(map[LinkedObjectKey][]LinkedObjectRef),
-		SkippedSteps:               make(map[PlayerID]map[Step]int),
-		TurnOrder:                  NewTurnOrder(),
-		FailedDraws:                make(map[PlayerID]bool),
-		MarkedToLoseGame:           make(map[PlayerID]bool),
-		StateTriggerLatches:        make(map[StateTriggerKey]bool),
-		ActivatedAbilitiesThisTurn: make(map[ActivatedAbilityUse]bool),
-		AbilityActivationsThisTurn: make(map[ActivatedAbilityUse]int),
-		TriggeredAbilitiesThisTurn: make(map[TriggeredAbilityUse]int),
-		EventTurnStarts:            []int{0},
+		CardInstances:                      make(map[id.ID]*CardInstance),
+		CommanderIDs:                       make(map[id.ID]bool),
+		SuspendedCards:                     make(map[id.ID]SuspendedCard),
+		ReboundCards:                       make(map[id.ID]ReboundCard),
+		AdventureCards:                     make(map[id.ID]bool),
+		PlottedCards:                       make(map[id.ID]int),
+		ForetoldCards:                      make(map[id.ID]int),
+		ExileCounters:                      make(map[id.ID]counter.Set),
+		LastKnownInformation:               make(map[id.ID]ObjectSnapshot),
+		LinkedObjects:                      make(map[LinkedObjectKey][]LinkedObjectRef),
+		SkippedSteps:                       make(map[PlayerID]map[Step]int),
+		TurnOrder:                          NewTurnOrder(),
+		FailedDraws:                        make(map[PlayerID]bool),
+		MarkedToLoseGame:                   make(map[PlayerID]bool),
+		StateTriggerLatches:                make(map[StateTriggerKey]bool),
+		ActivatedAbilitiesThisTurn:         make(map[ActivatedAbilityUse]bool),
+		AbilityActivationsThisTurn:         make(map[ActivatedAbilityUse]int),
+		TriggeredAbilitiesThisTurn:         make(map[TriggeredAbilityUse]int),
+		ResolvedTriggeredAbilitiesThisTurn: make(map[TriggeredAbilityUse]int),
+		EventTurnStarts:                    []int{0},
 		Turn: TurnState{
 			TurnNumber:           1,
 			ActivePlayer:         Player1,

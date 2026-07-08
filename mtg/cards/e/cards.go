@@ -30,6 +30,7 @@ var Cards = []cardset.Entry{
 	{Name: "Elder Pine of Jukai", New: ElderPineOfJukai},
 	{Name: "Elegant Entourage", New: ElegantEntourage},
 	{Name: "Elephant-Mandrill", New: ElephantMandrill},
+	{Name: "Elrond, Lord of Rivendell", New: ElrondLordOfRivendell},
 	{Name: "Elspeth's Devotee", New: ElspethSDevotee},
 	{Name: "Elspeth's Smite", New: ElspethSSmite},
 	{Name: "Elusive Otter", New: ElusiveOtter},

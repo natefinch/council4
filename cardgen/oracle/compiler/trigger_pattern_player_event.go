@@ -49,6 +49,7 @@ func compilePlayerEventTriggerPattern(
 	}
 	pattern.PlayerEventOrdinalThisTurn = modifiers.ordinal
 	pattern.ExcludeFirstDrawInDrawStep = modifiers.exceptFirstDrawInDrawStep
+	pattern.PlaysExiledWithSource = modifiers.playsExiledWithSource
 	pattern.CardSelection = modifiers.cardSelection
 	pattern.CastDuringTurn = turn
 	return pattern
@@ -76,6 +77,8 @@ func compilePlayerEventAction(action parser.PlayerEventActionKind) (TriggerEvent
 		return TriggerEventCrimeCommitted, true
 	case parser.PlayerEventActionBecomeMonarch:
 		return TriggerEventBecameMonarch, true
+	case parser.PlayerEventActionPlay:
+		return TriggerEventCardPlayedFromExile, true
 	default:
 		return TriggerEventUnknown, false
 	}
@@ -100,6 +103,7 @@ type compiledPlayerEventModifiers struct {
 	oneOrMore                 bool
 	excludeSelf               bool
 	self                      bool
+	playsExiledWithSource     bool
 	ordinal                   int
 	exceptFirstDrawInDrawStep bool
 	cardSelection             TriggerSelection
@@ -121,6 +125,7 @@ func compilePlayerEventModifiers(
 		oneOrMore:                 compiledCard.oneOrMore,
 		excludeSelf:               compiledCard.excludeSelf,
 		self:                      compiledCard.self,
+		playsExiledWithSource:     compiledCard.playsExiledWithSource,
 		ordinal:                   ordinal,
 		exceptFirstDrawInDrawStep: exceptFirstDrawInDrawStep,
 		cardSelection:             compiledCard.cardSelection,
@@ -129,11 +134,12 @@ func compilePlayerEventModifiers(
 }
 
 type compiledPlayerEventCard struct {
-	oneOrMore     bool
-	excludeSelf   bool
-	self          bool
-	cardSelection TriggerSelection
-	ok            bool
+	oneOrMore             bool
+	excludeSelf           bool
+	self                  bool
+	playsExiledWithSource bool
+	cardSelection         TriggerSelection
+	ok                    bool
 }
 
 func compilePlayerEventCard(action parser.PlayerEventActionKind, card parser.PlayerEventCard) compiledPlayerEventCard {
@@ -159,6 +165,9 @@ func compilePlayerEventCard(action parser.PlayerEventActionKind, card parser.Pla
 		ok := action == parser.PlayerEventActionCycle ||
 			action == parser.PlayerEventActionCycleOrDiscard
 		return compiledPlayerEventCard{self: ok, ok: ok}
+	case parser.PlayerEventCardExiledWithSource:
+		ok := action == parser.PlayerEventActionPlay
+		return compiledPlayerEventCard{playsExiledWithSource: ok, ok: ok}
 	default:
 		return compiledPlayerEventCard{}
 	}
@@ -324,7 +333,8 @@ func playerEventActionHasCard(action parser.PlayerEventActionKind) bool {
 	case parser.PlayerEventActionDraw,
 		parser.PlayerEventActionDiscard,
 		parser.PlayerEventActionCycle,
-		parser.PlayerEventActionCycleOrDiscard:
+		parser.PlayerEventActionCycleOrDiscard,
+		parser.PlayerEventActionPlay:
 		return true
 	default:
 		return false

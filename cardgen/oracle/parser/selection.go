@@ -151,6 +151,15 @@ type TriggerSelection struct {
 	// to the creature subtype the trigger's source permanent chose as it entered.
 	// It compiles to the runtime Selection.SubtypeFromSourceEntryChoice predicate.
 	SubtypeFromEntryChoice bool `json:",omitempty"`
+
+	// AnyOf records a disjunction of alternative selections, matching when the
+	// subject satisfies at least one alternative ("creature or Vehicle", a mixed
+	// card-type-or-subtype union the flat RequiredTypesAny/SubtypesAny fields
+	// cannot express because those AND across categories). The other fields on
+	// this selection remain common conjunctive requirements shared by every
+	// alternative (the controller, tapped state, and excluded-self relation). It
+	// compiles to Selection.AnyOf.
+	AnyOf []TriggerSelection `json:",omitempty"`
 }
 
 func parseTriggerSelection(tokens []shared.Token) (TriggerSelection, bool) {
@@ -391,6 +400,20 @@ func parseTriggerSelectionAlternativeNouns(words []string, selection TriggerSele
 	}
 	leftSub, leftSubOK := recognizeSubtypePhrase(words[0])
 	rightSub, rightSubOK := recognizeSubtypePhrase(words[2])
+	if leftOK && rightSubOK {
+		selection.AnyOf = []TriggerSelection{
+			{RequiredTypesAny: []TriggerCardType{left}},
+			{SubtypesAny: []TriggerSubtype{rightSub}},
+		}
+		return selection, true
+	}
+	if rightOK && leftSubOK {
+		selection.AnyOf = []TriggerSelection{
+			{SubtypesAny: []TriggerSubtype{leftSub}},
+			{RequiredTypesAny: []TriggerCardType{right}},
+		}
+		return selection, true
+	}
 	if leftOK || rightOK || !leftSubOK || !rightSubOK {
 		return TriggerSelection{}, false
 	}

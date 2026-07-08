@@ -3,6 +3,7 @@ package rules
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // pushSpellToStack pushes obj onto the stack and emits the standard spell
@@ -31,10 +32,30 @@ func pushSpellToStack(g *game.Game, obj *game.StackObject, castEvent game.Event)
 func emitSpellCastEvents(g *game.Game, obj *game.StackObject, castEvent game.Event) {
 	consumeNextSpellCantBeCounteredEffects(g, obj)
 	emitTargetEvents(g, obj)
+	fromZone := castEvent.FromZone
+	castCardID := castEvent.CardID
+	castPlayer := castEvent.Controller
 	castEvent = emitZoneChangeEvent(g, castEvent)
 	castEvent.Kind = game.EventSpellCast
 	castEvent.PlayerEventOrdinalThisTurn = nextSpellCastOrdinalThisTurn(g, castEvent.Controller)
 	emitEvent(g, castEvent)
+	emitCardPlayedFromExileEvent(g, castPlayer, castCardID, fromZone)
+}
+
+// emitCardPlayedFromExileEvent emits EventCardPlayedFromExile when a card was
+// played (cast or played as a land) from exile, so "whenever a player plays a
+// card exiled with this" triggers (Prowl, Stoic Strategist) can fire. It is a
+// no-op for plays from any other zone.
+func emitCardPlayedFromExileEvent(g *game.Game, player game.PlayerID, cardID id.ID, fromZone zone.Type) {
+	if fromZone != zone.Exile || cardID == 0 {
+		return
+	}
+	emitEvent(g, game.Event{
+		Kind:       game.EventCardPlayedFromExile,
+		Controller: player,
+		Player:     player,
+		CardID:     cardID,
+	})
 }
 
 // consumeNextSpellCantBeCounteredEffects applies and consumes any

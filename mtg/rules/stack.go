@@ -284,6 +284,12 @@ func (e *Engine) resolveTriggeredAbilityBodyWithChoices(g *game.Game, obj *game.
 	if body.Optional && !e.chooseMay(g, agents, obj.Controller, "Apply optional triggered ability?", log) {
 		return "declined"
 	}
+	if body.CountsResolutionsThisTurn {
+		if g.ResolvedTriggeredAbilitiesThisTurn == nil {
+			g.ResolvedTriggeredAbilitiesThisTurn = make(map[game.TriggeredAbilityUse]int)
+		}
+		g.ResolvedTriggeredAbilitiesThisTurn[game.TriggeredAbilityUse{SourceID: obj.SourceID, AbilityIndex: obj.AbilityIndex}]++
+	}
 	e.resolveAbilityContentWithChoices(g, obj, body.Content, agents, log)
 	return "resolved"
 }

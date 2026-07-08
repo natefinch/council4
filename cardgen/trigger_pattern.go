@@ -149,6 +149,12 @@ func lowerTriggerPattern(pattern *compiler.TriggerPattern) (game.TriggerPattern,
 	if pattern.DyingDamagedBySource && event != game.EventPermanentDied {
 		return game.TriggerPattern{}, false
 	}
+	if pattern.PlaysExiledWithSource != (event == game.EventCardPlayedFromExile) {
+		return game.TriggerPattern{}, false
+	}
+	if pattern.PlaysExiledWithSource {
+		result.PlaysLinkedExileCard = selfExileLinkKey
+	}
 	if pattern.ClassBecameLevel > 0 && event != game.EventClassLevelGained {
 		return game.TriggerPattern{}, false
 	}
@@ -386,6 +392,8 @@ func lowerTriggerEvent(event compiler.TriggerEvent) (game.EventKind, bool) {
 		return game.EventCrimeCommitted, true
 	case compiler.TriggerEventBecameMonarch:
 		return game.EventBecameMonarch, true
+	case compiler.TriggerEventCardPlayedFromExile:
+		return game.EventCardPlayedFromExile, true
 	default:
 		return game.EventUnknown, false
 	}
@@ -550,6 +558,13 @@ func lowerTriggerSelection(selection compiler.TriggerSelection) (game.Selection,
 	result.Controller = controller
 	result.MatchModified = selection.Modified
 	result.MatchCommander = selection.Commander
+	for i := range selection.AnyOf {
+		alternative, ok := lowerTriggerSelection(selection.AnyOf[i])
+		if !ok {
+			return game.Selection{}, false
+		}
+		result.AnyOf = append(result.AnyOf, alternative)
+	}
 	return result, true
 }
 

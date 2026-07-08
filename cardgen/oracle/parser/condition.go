@@ -122,6 +122,12 @@ const (
 	ConditionPredicateTriggeringPlayerHandSizeAtMost                   ConditionPredicateKind = "ConditionPredicateTriggeringPlayerHandSizeAtMost"
 	ConditionPredicateTriggeringPlayerHandSizeAtLeast                  ConditionPredicateKind = "ConditionPredicateTriggeringPlayerHandSizeAtLeast"
 	ConditionPredicateLandEnteredThisTurnOrControlsBasic               ConditionPredicateKind = "ConditionPredicateLandEnteredThisTurnOrControlsBasic"
+	// ConditionPredicateSourceAbilityResolutionOrdinalThisTurn matches "this is
+	// the Nth time this ability has resolved this turn" (Prowl, Pursuit
+	// Vehicle). Threshold carries the ordinal N. It gates a consequence on the
+	// resolving triggered ability's per-turn resolution count reaching exactly N,
+	// counting the current resolution.
+	ConditionPredicateSourceAbilityResolutionOrdinalThisTurn ConditionPredicateKind = "ConditionPredicateSourceAbilityResolutionOrdinalThisTurn"
 	// ConditionPredicateDefendingPlayerDoesNotPay is the failure gate of an
 	// attack-triggered defending-player optional-payment sequence ("defending
 	// player may pay {N}. If that player doesn't, <consequence>."). It is the
@@ -796,6 +802,7 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		recognizeCreatedTokenMatchCondition,
 		recognizeSharesCreatureTypeCondition,
 		recognizeControllerDesignationCondition,
+		recognizeSourceAbilityResolutionOrdinalCondition,
 	} {
 		if clause, ok := recognize(body, atoms); ok {
 			return clause, true

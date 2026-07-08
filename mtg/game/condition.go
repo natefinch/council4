@@ -238,6 +238,16 @@ type Condition struct {
 	// fixing, holding on either half. It reads the source's enter history and the
 	// controller's basic-land board state.
 	LandEnteredThisTurnOrControlsBasicLand bool
+
+	// SourceAbilityResolutionOrdinalThisTurn is satisfied when the resolving
+	// triggered ability has resolved exactly this many times during the current
+	// turn, counting the current resolution ("if this is the second time this
+	// ability has resolved this turn"; Prowl, Pursuit Vehicle). It reads the
+	// resolving stack object's (source, ability) resolution tally from
+	// Game.ResolvedTriggeredAbilitiesThisTurn, which the ability increments as it
+	// begins resolving, and is meaningful only while a triggered ability is
+	// resolving. Zero disables the predicate.
+	SourceAbilityResolutionOrdinalThisTurn int
 }
 
 // ColorManaSpendThreshold names a single color and the minimum number of mana of
@@ -328,7 +338,8 @@ func (c *Condition) Empty() bool {
 		!c.SourceControllerTurn &&
 		c.SpellColorManaSpent.Count == 0 &&
 		c.SpellSameColorManaSpentAtLeast == 0 &&
-		!c.LandEnteredThisTurnOrControlsBasicLand
+		!c.LandEnteredThisTurnOrControlsBasicLand &&
+		c.SourceAbilityResolutionOrdinalThisTurn == 0
 }
 
 // EventHistoryWindow selects which turn's event log an EventHistoryCondition

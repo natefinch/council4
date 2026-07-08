@@ -81,12 +81,19 @@ const (
 	// to the monarch, so "whenever you/an opponent become(s) the monarch"
 	// triggers fire. Controller and Player identify the new monarch.
 	EventBecameMonarch
+	// EventCardPlayedFromExile marks a player playing a card (casting it as a
+	// spell or playing it as a land) from exile. It is emitted once per card
+	// played from exile so "whenever a player plays a card exiled with this"
+	// triggers can fire when the played card belongs to their source-keyed
+	// linked-exile pool (Prowl, Stoic Strategist). Player identifies the player
+	// who played the card and CardID identifies the card.
+	EventCardPlayedFromExile
 )
 
 // EventKindCount is the number of EventKind values, including EventUnknown. It
 // is appended at the end of the const block so existing wire values are
 // preserved; new kinds must be added immediately before this sentinel.
-const EventKindCount = int(EventBecameMonarch) + 1
+const EventKindCount = int(EventCardPlayedFromExile) + 1
 
 // DamageRecipientKind identifies what received damage. Values are flags so a
 // trigger pattern can match either kind.

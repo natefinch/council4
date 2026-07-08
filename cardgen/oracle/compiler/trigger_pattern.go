@@ -59,6 +59,10 @@ const (
 	// player who was not already the monarch takes the crown, whether by a
 	// designation effect or by dealing combat damage to the monarch.
 	TriggerEventBecameMonarch
+	// TriggerEventCardPlayedFromExile is the "plays a card exiled with <this
+	// permanent>" event (Prowl, Stoic Strategist): a player casts or plays as a
+	// land a card that a linked-exile ability of the source placed into exile.
+	TriggerEventCardPlayedFromExile
 )
 
 // TriggerCastTurn restricts a spell-cast pattern by whose turn the spell was
@@ -263,6 +267,11 @@ type TriggerSelection struct {
 	// deals combat damage to a player", Archivist of Gondor). It lowers to
 	// Selection.MatchCommander.
 	Commander bool
+	// AnyOf is a disjunction of alternative selections; the subject matches when
+	// it satisfies at least one alternative ("creature or Vehicle"). The other
+	// fields remain conjunctive requirements shared by every alternative. It
+	// lowers to Selection.AnyOf.
+	AnyOf []TriggerSelection
 }
 
 // TriggerPattern is a source-spanned semantic description of a representable
@@ -353,6 +362,11 @@ type TriggerPattern struct {
 	RequireHistoric            bool
 	ExcludeManaAbility         bool
 	PlayerEventOrdinalThisTurn int
+	// PlaysExiledWithSource marks a player-event pattern whose card object is "a
+	// card exiled with <this permanent>" (Prowl, Stoic Strategist): the event
+	// fires when any player plays a card the source's linked-exile ability put
+	// into exile. It is only valid with Event == TriggerEventCardPlayedFromExile.
+	PlaysExiledWithSource bool
 	// MatchSpellCopy widens a spell-cast pattern to also match spell-copy
 	// events ("Whenever you cast or copy ...", magecraft).
 	MatchSpellCopy bool

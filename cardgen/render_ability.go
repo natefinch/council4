@@ -581,6 +581,9 @@ func (r Renderer) renderTriggeredAbility(ctx *renderCtx, ability *game.Triggered
 	if ability.MaxTriggersPerTurn != 0 {
 		fields = append(fields, fmt.Sprintf("MaxTriggersPerTurn: %d,", ability.MaxTriggersPerTurn))
 	}
+	if ability.CountsResolutionsThisTurn {
+		fields = append(fields, "CountsResolutionsThisTurn: true,")
+	}
 	content, err := r.renderAbilityContent(ctx, ability.Content)
 	if err != nil {
 		return "", err
@@ -757,6 +760,7 @@ func (r Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatt
 		(pattern.DyingDamagedBySource && pattern.Event != game.EventPermanentDied) ||
 		(pattern.ExcludeFirstDrawInDrawStep && pattern.Event != game.EventCardDrawn) ||
 		(pattern.ClassBecameLevel > 0 && pattern.Event != game.EventClassLevelGained) ||
+		(pattern.PlaysLinkedExileCard != "" && pattern.Event != game.EventCardPlayedFromExile) ||
 		(pattern.AttackerCountAtLeast != 0 &&
 			(pattern.Event != game.EventAttackerDeclared || pattern.AttackAlone || pattern.AttackerCountAtLeast < 2 ||
 				(!pattern.OneOrMore && pattern.Source != game.TriggerSourceSelf))) {
@@ -987,6 +991,9 @@ func renderTriggerPatternFlagFields(ctx *renderCtx, pattern *game.TriggerPattern
 			return nil, err
 		}
 		fields = append(fields, fmt.Sprintf("AttackRecipient: %s,", recipient))
+	}
+	if pattern.PlaysLinkedExileCard != "" {
+		fields = append(fields, fmt.Sprintf("PlaysLinkedExileCard: game.LinkedKey(%q),", string(pattern.PlaysLinkedExileCard)))
 	}
 	return fields, nil
 }

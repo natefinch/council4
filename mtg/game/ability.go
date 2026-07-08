@@ -1054,6 +1054,15 @@ type TriggerPattern struct {
 	// whose source is this ability's source and whose damaged permanent is the
 	// dying permanent. It is only valid with Event == EventPermanentDied.
 	DyingDamagedBySource bool
+
+	// PlaysLinkedExileCard matches an EventCardPlayedFromExile whose played card
+	// belongs to this source's linked-exile pool named by this key ("Whenever a
+	// player plays a card exiled with this", Prowl, Stoic Strategist). The pool is
+	// keyed by the trigger source's card identity and this link key, matching how
+	// the source's ExilePermanentForPlay published the exiled cards. It is empty
+	// for every other pattern; a non-empty value is only valid with
+	// Event == EventCardPlayedFromExile.
+	PlaysLinkedExileCard LinkedKey
 }
 
 // TriggerTurnRelation restricts a trigger by whose turn the triggering event

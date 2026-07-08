@@ -1415,6 +1415,53 @@ func handleExileForPlay(r *effectResolver, prim game.ExileForPlay) effectResolve
 	return res
 }
 
+// handleExilePermanentForPlay exiles the target permanent from the battlefield
+// and grants that card's owner permission to play it from exile for as long as
+// it remains exiled (Prowl, Stoic Strategist). The permission is a
+// DurationPermanent RuleEffectPlayFromZone: persistsWhileCardExiled keeps it
+// active while the card stays in exile and drops it once the card leaves,
+// matching "for as long as that card remains exiled". AffectToOwner scopes the
+// permission to the exiled card's owner, who may be an opponent of the resolving
+// controller. When LinkedKey is set the exiled card is remembered under the
+// source-keyed linked set so a paired "whenever a player plays a card exiled
+// with this" trigger recognizes its provenance.
+func handleExilePermanentForPlay(r *effectResolver, prim game.ExilePermanentForPlay) effectResolved {
+	res := effectResolved{accepted: true}
+	targets := r.resolveObjectGroup(prim.Object, game.GroupReference{})
+	if !targets.resolved || len(targets.permanents) == 0 {
+		return res
+	}
+	permanent := targets.permanents[0]
+	cardID := permanent.CardInstanceID
+	owner := permanent.Owner
+	if !movePermanentToZone(r.game, permanent, zone.Exile) {
+		return res
+	}
+	if cardID == 0 {
+		res.succeeded = true
+		return res
+	}
+	r.game.RuleEffects = append(r.game.RuleEffects, game.RuleEffect{
+		ID:             r.game.IDGen.Next(),
+		Kind:           game.RuleEffectPlayFromZone,
+		Controller:     r.obj.Controller,
+		SourceCardID:   r.obj.SourceCardID,
+		SourceObjectID: r.obj.SourceID,
+		AffectedPlayer: game.PlayerYou,
+		AffectToOwner:  true,
+		Duration:       game.DurationPermanent,
+		CreatedTurn:    r.game.Turn.TurnNumber,
+		CastFromZone:   zone.Exile,
+		AffectedCardID: cardID,
+		ExpiresFor:     owner,
+	})
+	if prim.LinkedKey != "" {
+		rememberLinkedObject(r.game, linkedObjectSourceKey(r.game, r.obj, string(prim.LinkedKey)), game.LinkedObjectRef{CardID: cardID})
+	}
+	res.succeeded = true
+	return res
+}
+
 // exileForPlayCardID resolves which card an ExileForPlay exiles. In the default
 // mode it reads prim.Card and confirms it rests in FromZone. In SelectFromBatch
 // mode it gathers the triggering batch's cards still in FromZone ("one of them"

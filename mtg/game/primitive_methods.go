@@ -334,6 +334,9 @@ func (GrantCastPermission) Kind() PrimitiveKind { return PrimitiveGrantCastPermi
 // Kind implements Primitive for ExileForPlay.
 func (ExileForPlay) Kind() PrimitiveKind { return PrimitiveExileForPlay }
 
+// Kind implements Primitive for ExilePermanentForPlay.
+func (ExilePermanentForPlay) Kind() PrimitiveKind { return PrimitiveExilePermanentForPlay }
+
 // Kind implements Primitive for HideawayExile.
 func (HideawayExile) Kind() PrimitiveKind { return PrimitiveHideawayExile }
 
@@ -458,6 +461,7 @@ func (MoveCard) isPrimitive()                             {}
 func (MoveCommander) isPrimitive()                        {}
 func (GrantCastPermission) isPrimitive()                  {}
 func (ExileForPlay) isPrimitive()                         {}
+func (ExilePermanentForPlay) isPrimitive()                {}
 func (HideawayExile) isPrimitive()                        {}
 func (PlayHideawayCard) isPrimitive()                     {}
 func (ChooseNewTargets) isPrimitive()                     {}
@@ -743,6 +747,9 @@ func (p GrantCastPermission) instructionRefs() primitiveRefs {
 }
 func (p ExileForPlay) instructionRefs() primitiveRefs {
 	return cardReferenceRefs(p.Card)
+}
+func (p ExilePermanentForPlay) instructionRefs() primitiveRefs {
+	return primitiveRefs{publishesLinked: p.LinkedKey}
 }
 func (p HideawayExile) instructionRefs() primitiveRefs {
 	return quantityRefs(p.Amount)
