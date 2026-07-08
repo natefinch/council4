@@ -84,6 +84,9 @@ func (r Renderer) renderCreateReplacementEffect(ctx *renderCtx, replacement game
 		ctx.need(importZone)
 		fields = append(fields, fmt.Sprintf("ReplaceToZone: %s,", replaceZone))
 	}
+	if replacement.AffectedObjectMustBeCreature {
+		fields = append(fields, "AffectedObjectMustBeCreature: true,")
+	}
 	if len(replacement.EntersWithCounters) > 0 {
 		placements, placeErr := r.renderCounterPlacements(ctx, replacement.EntersWithCounters)
 		if placeErr != nil {

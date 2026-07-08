@@ -1813,8 +1813,15 @@ type EffectSyntax struct {
 	CardSource     EffectCardSourceKind `json:",omitempty"`
 	// RequirePermanentCard gates a linked-card effect on the referenced card
 	// being a permanent card.
-	RequirePermanentCard bool               `json:",omitempty"`
-	Duration             EffectDurationKind `json:",omitempty"`
+	RequirePermanentCard bool `json:",omitempty"`
+	// ExileDieSubjectDamagedCreature marks an EffectExileIfWouldDieThisTurn rider
+	// whose subject is "a creature dealt damage this way" rather than the
+	// demonstrative "that creature" (Yamabushi's Flame, Demonfire, Pillar of
+	// Flame, ...). It scopes the would-die exile to the spell's single damaged
+	// target only when that target is a creature, so an "any target" burn spell
+	// that instead kills a player or planeswalker does not exile it.
+	ExileDieSubjectDamagedCreature bool               `json:",omitempty"`
+	Duration                       EffectDurationKind `json:",omitempty"`
 	// CantCastSpellsAllPlayers reports that an EffectCantCastSpells clause
 	// affects every player ("Players can't cast spells this turn.") rather than
 	// only the controller's opponents ("Your opponents can't cast spells this
