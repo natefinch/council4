@@ -174,6 +174,7 @@ var Cards = []*game.CardDef{
 	Cursecatcher,
 	CursedMonstrosity,
 	CutTheEarthlyBond,
+	CyclonusTheSaboteur,
 	CyclopeanSnare,
 	CytoplastManipulator,
 	CytospawnShambler,
