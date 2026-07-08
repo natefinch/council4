@@ -48,6 +48,7 @@ var simplePredicateMap = map[parser.ConditionPredicateKind]ConditionPredicate{
 	parser.ConditionPredicatePriorInstructionNotAccepted:                      ConditionPredicatePriorInstructionNotAccepted,
 	parser.ConditionPredicatePriorInstructionAccepted:                         ConditionPredicatePriorInstructionAccepted,
 	parser.ConditionPredicateDestroyedThisWay:                                 ConditionPredicateDestroyedThisWay,
+	parser.ConditionPredicateNoLifeLostThisWay:                                ConditionPredicateNoLifeLostThisWay,
 	parser.ConditionPredicateEventPlayerDoesNotPay:                            ConditionPredicateEventPlayerDoesNotPay,
 	parser.ConditionPredicateDefendingPlayerDoesNotPay:                        ConditionPredicateDefendingPlayerDoesNotPay,
 	parser.ConditionPredicateControllerCounterPlacement:                       ConditionPredicateControllerCounterPlacement,

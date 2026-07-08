@@ -917,6 +917,13 @@ const (
 	// defending-player counterpart of ConditionPredicateEventPlayerDoesNotPay,
 	// satisfied when the offered payment is declined (Shrouded Serpent).
 	ConditionPredicateDefendingPlayerDoesNotPay
+	// ConditionPredicateNoLifeLostThisWay is satisfied when the immediately
+	// preceding lose-life effect caused no life loss ("if no life is lost this
+	// way"). It is the failure complement of the "if you do" resolving-success
+	// gate: the gated effect runs only when the prior lose-life effect published
+	// a failed result (CR 608.2c). It backs Blitzwing, Cruel Tormentor's
+	// end-step convert. Added last so existing kinds keep their wire values.
+	ConditionPredicateNoLifeLostThisWay
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard

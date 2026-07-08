@@ -54,6 +54,7 @@ const (
 	ConditionPredicatePriorInstructionNotAccepted                      ConditionPredicateKind = "ConditionPredicatePriorInstructionNotAccepted"
 	ConditionPredicatePriorInstructionAccepted                         ConditionPredicateKind = "ConditionPredicatePriorInstructionAccepted"
 	ConditionPredicateDestroyedThisWay                                 ConditionPredicateKind = "ConditionPredicateDestroyedThisWay"
+	ConditionPredicateNoLifeLostThisWay                                ConditionPredicateKind = "ConditionPredicateNoLifeLostThisWay"
 	ConditionPredicateEventPlayerDoesNotPay                            ConditionPredicateKind = "ConditionPredicateEventPlayerDoesNotPay"
 	ConditionPredicateCounterPlacementOnControlledCreature             ConditionPredicateKind = "ConditionPredicateCounterPlacementOnControlledCreature"
 	ConditionPredicateCounterPlacementOnSelf                           ConditionPredicateKind = "ConditionPredicateCounterPlacementOnSelf"
@@ -756,6 +757,7 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		recognizeControlsGreatestPowerCondition,
 		recognizeControlsGreatestToughnessCondition,
 		recognizeDestroyedThisWayCondition,
+		recognizeNoLifeLostThisWayCondition,
 		recognizeTargetObjectMatchCondition,
 		recognizeEventSubjectCondition,
 		recognizeSourceSaddledCondition,
@@ -1039,6 +1041,20 @@ func recognizeDestroyedThisWayCondition(body []shared.Token, _ Atoms) (Condition
 		return ConditionClause{}, false
 	}
 	return ConditionClause{Predicate: ConditionPredicateDestroyedThisWay}, true
+}
+
+// recognizeNoLifeLostThisWayCondition matches the negated resolving-success gate
+// "no life is lost this way" that follows a preceding lose-life effect, as in
+// Blitzwing, Cruel Tormentor's "target opponent loses life equal to the life
+// that player lost this turn. If no life is lost this way, convert Blitzwing."
+// It is the failure complement of the "if you do" resolving-success gate: the
+// gated effect runs only when the immediately preceding lose-life effect caused
+// no life loss (CR 608.2c). It fails closed on any other wording.
+func recognizeNoLifeLostThisWayCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
+	if tokenWordsEqual(body, "no", "life", "is", "lost", "this", "way") {
+		return ConditionClause{Predicate: ConditionPredicateNoLifeLostThisWay}, true
+	}
+	return ConditionClause{}, false
 }
 
 // recognizeCastTimingCondition handles the Addendum cast-timing gate "you cast
