@@ -99,9 +99,10 @@ func selfBlinkPutOnBattlefield(
 	entryCounters []game.CounterPlacement,
 ) game.PutOnBattlefield {
 	put := game.PutOnBattlefield{
-		Source:        game.LinkedBattlefieldSource(key),
-		EntryTapped:   returnEffect.EntersTapped,
-		EntryCounters: entryCounters,
+		Source:           game.LinkedBattlefieldSource(key),
+		EntryTapped:      returnEffect.EntersTapped,
+		EntryTransformed: returnEffect.EntersTransformed,
+		EntryCounters:    entryCounters,
 	}
 	if returnEffect.UnderYourControl {
 		put.Recipient = opt.Val(game.ControllerReference())

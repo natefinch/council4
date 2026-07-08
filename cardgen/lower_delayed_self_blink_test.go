@@ -75,6 +75,24 @@ func TestLowerDelayedSelfBlinkUnderOwnersControl(t *testing.T) {
 	}
 }
 
+// TestLowerDelayedSelfBlinkTransformed confirms a delayed self-blink whose return
+// rider says "transformed" (a transforming double-faced card, e.g. the Kamigawa
+// Saga chapter "Exile this Saga, then return it to the battlefield transformed")
+// carries EntryTransformed so the card returns on its back face rather than front.
+func TestLowerDelayedSelfBlinkTransformed(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Transformed Self Blink",
+		Layout:     "transform",
+		TypeLine:   "Creature",
+		OracleText: "{2}: Exile this creature. Return it to the battlefield transformed under its owner's control at the beginning of the next end step.",
+	})
+	_, put := delayedSelfBlinkInstructions(t, face.ActivatedAbilities[0].Content.Modes[0])
+	if !put.EntryTransformed {
+		t.Fatalf("put = %#v, want EntryTransformed (returned on back face)", put)
+	}
+}
+
 func TestLowerDelayedSelfBlinkTapped(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{

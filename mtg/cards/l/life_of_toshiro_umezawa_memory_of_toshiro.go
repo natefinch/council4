@@ -118,8 +118,9 @@ func newLifeOfToshiroUmezawa() *game.CardDef {
 							},
 							{
 								Primitive: game.PutOnBattlefield{
-									Source:    game.LinkedBattlefieldSource(game.LinkedKey("self-blink")),
-									Recipient: opt.Val(game.ControllerReference()),
+									Source:           game.LinkedBattlefieldSource(game.LinkedKey("self-blink")),
+									Recipient:        opt.Val(game.ControllerReference()),
+									EntryTransformed: true,
 								},
 							},
 						},
