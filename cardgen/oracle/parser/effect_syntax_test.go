@@ -1754,6 +1754,8 @@ func TestParseResolvingEffectKinds(t *testing.T) {
 		{"Tap target creature.", EffectTap},
 		{"Untap target creature.", EffectUntap},
 		{"Transform target creature.", EffectTransform},
+		{"Convert Blaster.", EffectTransform},
+		{"Convert it.", EffectTransform},
 	}
 	for _, test := range tests {
 		t.Run(test.source, func(t *testing.T) {
