@@ -1702,44 +1702,7 @@ func (v *cardDefValidator) validateReplacementEffect(faceName, path string, repl
 func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern *TriggerPattern) {
 	if !pattern.SubjectSelection.Empty() {
 		v.validateSelection(faceName, appendPath(path, "SubjectSelection"), pattern.SubjectSelection)
-		unsupported := pattern.SubjectSelection
-		unsupported.RequiredTypes = nil
-		unsupported.RequiredTypesAny = nil
-		unsupported.ExcludedTypes = nil
-		unsupported.Supertypes = nil
-		unsupported.SubtypesAny = nil
-		unsupported.ExcludedSubtype = ""
-		unsupported.ColorsAny = nil
-		unsupported.ExcludedColors = nil
-		unsupported.Colorless = false
-		unsupported.Multicolored = false
-		unsupported.Controller = ControllerAny
-		unsupported.Tapped = TriAny
-		unsupported.CombatState = CombatStateAny
-		unsupported.Keyword = KeywordNone
-		unsupported.ExcludedKeyword = KeywordNone
-		unsupported.ManaValue.Exists = false
-		unsupported.Power.Exists = false
-		unsupported.Toughness.Exists = false
-		unsupported.NonToken = false
-		unsupported.TokenOnly = false
-		unsupported.SubtypeChoice = SubtypeChoiceWithoutEntry(unsupported.SubtypeChoice)
-		if eventExposesSubjectCounters(pattern.Event) {
-			// The subject is a battlefield permanent (or, for a death, its
-			// last-known snapshot), so the runtime can read its counters to
-			// honor a "with a [<kind>] counter on it" subject filter.
-			unsupported.MatchCounter = false
-			unsupported.RequiredCounter = 0
-			unsupported.MatchAnyCounter = false
-		}
-		if eventExposesSubjectCommander(pattern.Event) {
-			// The subject is an identifiable battlefield permanent, so the
-			// runtime can read whether its card is a commander to honor a "your
-			// commander" subject filter (Nakia, Wakandan Operative: "Whenever
-			// your commander enters, ...").
-			unsupported.MatchCommander = false
-		}
-		if !unsupported.Empty() {
+		if !triggerSubjectSelectionResidue(pattern.SubjectSelection, pattern.Event).Empty() {
 			v.add(faceName, appendPath(path, "SubjectSelection"), CardDefIssueInvalidSelection, "trigger subject Selection uses predicates unavailable from event data")
 		}
 		if len(pattern.RequirePermanentTypes) > 0 || len(pattern.ExcludePermanentTypes) > 0 || pattern.RequireNonToken {
@@ -1955,6 +1918,70 @@ func eventExposesSubjectCounters(event EventKind) bool {
 // readable, its commander identity is too.
 func eventExposesSubjectCommander(event EventKind) bool {
 	return eventExposesSubjectCounters(event)
+}
+
+// triggerSubjectSelectionResidue returns the trigger subject Selection with every
+// predicate the runtime can satisfy from the event's subject cleared, leaving
+// only the predicates that are unavailable. A caller treats an empty residue as a
+// fully supported subject filter. The runtime reads the subject permanent's card
+// characteristics (types, subtypes, supertypes, colors), controller, tapped and
+// combat state, keywords, mana value, and power/toughness for every subject
+// event, plus its counters and commander identity for the battlefield-subject
+// events. A type-or-subtype disjunction (Selection.AnyOf, "another creature or
+// Vehicle you control enters") stays supported when every alternative is itself
+// supported, since the runtime matches each alternative against the same readable
+// characteristics.
+func triggerSubjectSelectionResidue(selection Selection, event EventKind) Selection {
+	residue := selection
+	residue.RequiredTypes = nil
+	residue.RequiredTypesAny = nil
+	residue.ExcludedTypes = nil
+	residue.Supertypes = nil
+	residue.SubtypesAny = nil
+	residue.ExcludedSubtype = ""
+	residue.ColorsAny = nil
+	residue.ExcludedColors = nil
+	residue.Colorless = false
+	residue.Multicolored = false
+	residue.Controller = ControllerAny
+	residue.Tapped = TriAny
+	residue.CombatState = CombatStateAny
+	residue.Keyword = KeywordNone
+	residue.ExcludedKeyword = KeywordNone
+	residue.ManaValue.Exists = false
+	residue.Power.Exists = false
+	residue.Toughness.Exists = false
+	residue.NonToken = false
+	residue.TokenOnly = false
+	residue.SubtypeChoice = SubtypeChoiceWithoutEntry(residue.SubtypeChoice)
+	if eventExposesSubjectCounters(event) {
+		// The subject is a battlefield permanent (or, for a death, its
+		// last-known snapshot), so the runtime can read its counters to honor a
+		// "with a [<kind>] counter on it" subject filter.
+		residue.MatchCounter = false
+		residue.RequiredCounter = 0
+		residue.MatchAnyCounter = false
+	}
+	if eventExposesSubjectCommander(event) {
+		// The subject is an identifiable battlefield permanent, so the runtime
+		// can read whether its card is a commander to honor a "your commander"
+		// subject filter (Nakia, Wakandan Operative: "Whenever your commander
+		// enters, ...").
+		residue.MatchCommander = false
+	}
+	if len(residue.AnyOf) > 0 {
+		supported := true
+		for i := range residue.AnyOf {
+			if !triggerSubjectSelectionResidue(residue.AnyOf[i], event).Empty() {
+				supported = false
+				break
+			}
+		}
+		if supported {
+			residue.AnyOf = nil
+		}
+	}
+	return residue
 }
 
 // validateAttackerCountRelations checks the attacker-count combat relations.

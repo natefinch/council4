@@ -581,6 +581,9 @@ func (r Renderer) renderTriggeredAbility(ctx *renderCtx, ability *game.Triggered
 	if ability.MaxTriggersPerTurn != 0 {
 		fields = append(fields, fmt.Sprintf("MaxTriggersPerTurn: %d,", ability.MaxTriggersPerTurn))
 	}
+	if ability.CountsResolutionsThisTurn {
+		fields = append(fields, "CountsResolutionsThisTurn: true,")
+	}
 	content, err := r.renderAbilityContent(ctx, ability.Content)
 	if err != nil {
 		return "", err
