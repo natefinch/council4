@@ -784,6 +784,9 @@ func renderAddExtraPhases(value game.AddExtraPhases) string {
 	if value.Main {
 		fields = append(fields, "Main: true,")
 	}
+	if value.Beginning {
+		fields = append(fields, "Beginning: true,")
+	}
 	return structLit("game.AddExtraPhases", fields)
 }
 

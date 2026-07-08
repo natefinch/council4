@@ -694,16 +694,18 @@ func lowerAdditionalLandPlays(ctx contentCtx) (game.AbilityContent, *shared.Diag
 
 // lowerAdditionalCombatPhase lowers the extra-phase-insertion effect "After this
 // [main] phase, there is an additional combat phase[ followed by an additional
-// main phase]." (Aggravated Assault, Aurelia the Warleader, World at War) to an
-// AddExtraPhases primitive that queues the extra phases onto the current turn.
-// It reads only the typed AdditionalCombatPhase / AdditionalMainPhase flags and
+// main phase]." (Aggravated Assault, Aurelia the Warleader, World at War) and
+// the "there is an additional beginning phase after this phase." form (Sphinx of
+// the Second Sun, Cyclonus, Cybertronian Fighter) to an AddExtraPhases primitive
+// that queues the extra phases onto the current turn. It reads only the typed
+// AdditionalCombatPhase / AdditionalMainPhase / AdditionalBeginningPhase flags and
 // fails closed for any target, reference, condition, keyword, mode, amount,
 // duration, or negation so only the bare extra-phase clause lowers.
 func lowerAdditionalCombatPhase(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
 	if !effect.Exact ||
 		effect.Negated ||
-		!effect.AdditionalCombatPhase ||
+		(!effect.AdditionalCombatPhase && !effect.AdditionalBeginningPhase) ||
 		effect.Amount.Known ||
 		effect.Duration != compiler.DurationNone ||
 		len(ctx.content.Targets) != 0 ||
@@ -713,14 +715,15 @@ func lowerAdditionalCombatPhase(ctx contentCtx) (game.AbilityContent, *shared.Di
 		len(ctx.content.Modes) != 0 {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
-			"unsupported additional combat phase effect",
-			"the executable source backend supports only the exact additional combat phase insertion this turn",
+			"unsupported additional phase effect",
+			"the executable source backend supports only the exact additional combat or beginning phase insertion this turn",
 		)
 	}
 	return game.Mode{Sequence: []game.Instruction{{
 		Primitive: game.AddExtraPhases{
-			Combat: effect.AdditionalCombatPhase,
-			Main:   effect.AdditionalMainPhase,
+			Combat:    effect.AdditionalCombatPhase,
+			Main:      effect.AdditionalMainPhase,
+			Beginning: effect.AdditionalBeginningPhase,
 		},
 	}}}.Ability(), nil
 }

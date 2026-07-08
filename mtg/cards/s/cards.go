@@ -195,6 +195,7 @@ var Cards = []*game.CardDef{
 	SphereOfTheSuns,
 	SphereOfTruth,
 	SphinxMindbreaker,
+	SphinxOfTheSecondSun,
 	SphinxOfUthuun,
 	SpiderSpawning,
 	SpikeTailedCeratops,

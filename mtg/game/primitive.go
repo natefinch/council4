@@ -1810,12 +1810,16 @@ type PreventDamage struct {
 // AddExtraPhases inserts additional phases into the current turn (CR 505.5,
 // 506.2). It models "After this main phase, there is an additional combat
 // phase[ followed by an additional main phase]." (Aggravated Assault, Aurelia
-// the Warleader, World at War, Combat Celebrant). Combat queues an extra combat
-// phase; Main queues an extra main phase after it. The runtime appends the
+// the Warleader, World at War, Combat Celebrant) and "there is an additional
+// beginning phase after this phase." (Sphinx of the Second Sun, Temple of
+// Atropos, Cyclonus, Cybertronian Fighter). Combat queues an extra combat
+// phase; Main queues an extra main phase after it; Beginning queues an extra
+// beginning phase (untap, upkeep, and draw steps). The runtime appends the
 // queued phases to TurnState.ExtraPhases, which the turn loop drains in order.
 type AddExtraPhases struct {
-	Combat bool
-	Main   bool
+	Combat    bool
+	Main      bool
+	Beginning bool
 }
 
 // RollDie rolls a single fair die with Sides faces and publishes the rolled

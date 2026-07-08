@@ -567,6 +567,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				ReturnAsEnchantmentRiderSpan:           syntax.ReturnAsEnchantmentRiderSpan,
 				AdditionalCombatPhase:                  syntax.AdditionalCombatPhase,
 				AdditionalMainPhase:                    syntax.AdditionalMainPhase,
+				AdditionalBeginningPhase:               syntax.AdditionalBeginningPhase,
 				DieSides:                               syntax.DieSides,
 			})
 		}

@@ -1556,6 +1556,9 @@ func handleSkipStep(r *effectResolver, prim game.SkipStep) effectResolved {
 }
 
 func handleAddExtraPhases(r *effectResolver, prim game.AddExtraPhases) effectResolved {
+	if prim.Beginning {
+		r.game.Turn.ExtraPhases = append(r.game.Turn.ExtraPhases, game.PhaseBeginning)
+	}
 	if prim.Combat {
 		r.game.Turn.ExtraPhases = append(r.game.Turn.ExtraPhases, game.PhaseCombat)
 	}
