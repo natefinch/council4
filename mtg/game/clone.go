@@ -5,6 +5,7 @@ import (
 	"math/rand/v2"
 	"slices"
 
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 )
 
@@ -46,6 +47,7 @@ func (g *Game) Clone() *Game {
 		AdventureCards:             cloneComparableMap(g.AdventureCards),
 		PlottedCards:               cloneComparableMap(g.PlottedCards),
 		ForetoldCards:              cloneComparableMap(g.ForetoldCards),
+		ExileCounters:              cloneMapFunc(g.ExileCounters, cloneCounterSet),
 		LastKnownInformation:       cloneMapFunc(g.LastKnownInformation, cloneObjectSnapshot),
 		LinkedObjects:              cloneLinkedObjects(g.LinkedObjects),
 		Turn:                       cloneTurnState(g.Turn),
@@ -149,6 +151,12 @@ func cloneMapFunc[K comparable, V any](m map[K]V, clone func(V) V) map[K]V {
 		out[k] = clone(v)
 	}
 	return out
+}
+
+// cloneCounterSet deep-copies a counter set value so the cloned game shares no
+// counter map state with the original.
+func cloneCounterSet(s counter.Set) counter.Set {
+	return s.Clone()
 }
 
 // clonePtrMap returns a new map whose pointer values are deep-copied by clone.

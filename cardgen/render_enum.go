@@ -367,6 +367,14 @@ func renderCounterKind(kind counter.Kind) (string, error) {
 		return "counter.Coin", nil
 	case counter.Depletion:
 		return "counter.Depletion", nil
+	case counter.Croak:
+		return "counter.Croak", nil
+	case counter.Void:
+		return "counter.Void", nil
+	case counter.Intel:
+		return "counter.Intel", nil
+	case counter.Collection:
+		return "counter.Collection", nil
 	default:
 		return "", fmt.Errorf("render: unsupported counter kind %d", kind)
 	}

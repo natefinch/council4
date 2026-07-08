@@ -160,6 +160,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitSourceSpellCostReductionConditional(document.Abilities)
 	emitStaticDeclarations(document.Abilities)
 	stripCastThisFromExileEffectSemantics(document.Abilities)
+	stripPlayAndCastFromExileWithCounterEffectSemantics(document.Abilities)
 	stripLifeForColoredManaEffectSemantics(document.Abilities)
 	stripLifeForCommanderTaxEffectSemantics(document.Abilities)
 	stripGroupDoesntUntapEffectSemantics(document.Abilities)
@@ -209,6 +210,39 @@ func stripCastThisFromExileEffectSemantics(abilities []Ability) {
 func abilityHasCastThisFromExileDeclaration(ability *Ability) bool {
 	for i := range ability.StaticDeclarations {
 		if ability.StaticDeclarations[i].PlayerRule == StaticDeclarationPlayerRuleCastThisFromExile {
+			return true
+		}
+	}
+	return false
+}
+
+// stripPlayAndCastFromExileWithCounterEffectSemantics suppresses the
+// resolving-effect reading of "You may play lands and cast spells from among
+// cards you own in exile with <counter> counters on them." (Grolnok, the
+// Omnivore). Because "cast" and the "exile" zone noun are also effect verbs, the
+// resolving-syntax scanner mis-reads the sentence as cast and exile effects and
+// leaves a "them" semantic reference, all of which block the text-blind
+// compiler's empty-content recognition of the player rule. When the static idiom
+// is recognized, the static declaration owns the whole sentence, so its competing
+// effect, target, and reference syntax is cleared.
+func stripPlayAndCastFromExileWithCounterEffectSemantics(abilities []Ability) {
+	for i := range abilities {
+		ability := &abilities[i]
+		if !abilityHasPlayAndCastFromExileWithCounterDeclaration(ability) {
+			continue
+		}
+		for j := range ability.Sentences {
+			sentence := &ability.Sentences[j]
+			sentence.Effects = nil
+			sentence.Targets = nil
+			sentence.LegacyEffects = false
+		}
+	}
+}
+
+func abilityHasPlayAndCastFromExileWithCounterDeclaration(ability *Ability) bool {
+	for i := range ability.StaticDeclarations {
+		if ability.StaticDeclarations[i].PlayerRule == StaticDeclarationPlayerRulePlayAndCastFromExileWithCounter {
 			return true
 		}
 	}

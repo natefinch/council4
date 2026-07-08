@@ -72,6 +72,10 @@ func (a *Ability) computeSemanticReferences() []Reference {
 // surface as a dangling semantic reference that would block the text-blind
 // compiler's empty-content recognition of the player rule.
 func staticDeclarationConsumesReferences(declaration *StaticDeclarationSyntax) bool {
+	if declaration.Kind == StaticDeclarationPlayerRule &&
+		declaration.PlayerRule == StaticDeclarationPlayerRulePlayAndCastFromExileWithCounter {
+		return true
+	}
 	return declaration.Kind == StaticDeclarationPlayerRule &&
 		declaration.Subject.Kind == StaticDeclarationSubjectEachPlayer
 }

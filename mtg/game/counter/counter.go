@@ -106,11 +106,15 @@ const (
 	Ice        // Ice counter (Iceberg)
 	Coin       // Coin counter (Noble's Purse)
 	Depletion  // Depletion counter (Hickory Woodlot)
+	Croak      // Croak counter (Grolnok, the Omnivore)
+	Void       // Void counter (Dauthi Voidwalker, Sphere of Annihilation)
+	Intel      // Intel counter (Flamewar, Streetwise Operative)
+	Collection // Collection counter (Evelyn, the Covetous, Charitable Levy)
 )
 
 // Valid reports whether k is a recognized counter kind.
 func (k Kind) Valid() bool {
-	return k >= PlusOnePlusOne && k <= Depletion
+	return k >= PlusOnePlusOne && k <= Collection
 }
 
 // PlayerOnly reports whether k may be placed only on players.
@@ -284,6 +288,14 @@ func (k Kind) String() string {
 		return "coin"
 	case Depletion:
 		return "depletion"
+	case Croak:
+		return "croak"
+	case Void:
+		return "void"
+	case Intel:
+		return "intel"
+	case Collection:
+		return "collection"
 	default:
 		return "unknown"
 	}

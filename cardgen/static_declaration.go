@@ -1140,6 +1140,27 @@ func appendStaticPlayerRuleDeclaration(body *game.StaticAbility, declaration com
 			AffectedSource: true,
 		})
 		return true
+	case compiler.StaticPlayerRulePlayAndCastFromExileWithCounter:
+		if !declaration.Player.ExileCounter.Valid() {
+			return false
+		}
+		filter := opt.Val(declaration.Player.ExileCounter)
+		body.RuleEffects = append(body.RuleEffects,
+			game.RuleEffect{
+				Kind:               game.RuleEffectPlayLandsFromZone,
+				AffectedPlayer:     game.PlayerYou,
+				CastFromZone:       zone.Exile,
+				PermanentTypes:     []types.Card{types.Land},
+				ExileCounterFilter: filter,
+			},
+			game.RuleEffect{
+				Kind:               game.RuleEffectCastSpellsFromZone,
+				AffectedPlayer:     game.PlayerYou,
+				CastFromZone:       zone.Exile,
+				ExileCounterFilter: filter,
+			},
+		)
+		return true
 	default:
 		return false
 	}

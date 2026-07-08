@@ -3,6 +3,7 @@ package game
 import (
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -939,4 +940,13 @@ type RuleEffect struct {
 	// mana instead.", Mana Reflection, 2; Nyxbloom Ancient, 3). It is at least 2
 	// for that kind and unused (zero) for every other kind.
 	ManaProductionMultiplier int
+
+	// ExileCounterFilter narrows a RuleEffectPlayLandsFromZone or
+	// RuleEffectCastSpellsFromZone permission whose CastFromZone is the exile zone
+	// to cards carrying the named marker counter it holds ("... from among cards
+	// you own in exile with croak counters on them.", Grolnok, the Omnivore). The
+	// rules layer only permits playing or casting an exiled card that has at least
+	// one such counter recorded in Game.ExileCounters. It is unset for every
+	// permission with no exile-counter filter.
+	ExileCounterFilter opt.V[counter.Kind]
 }

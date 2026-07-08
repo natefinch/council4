@@ -648,6 +648,7 @@ const (
 	StaticPlayerRuleCastThisFromGraveyard
 	StaticPlayerRuleLookAtTopCardAnyTime
 	StaticPlayerRuleCastThisFromExile
+	StaticPlayerRulePlayAndCastFromExileWithCounter
 	StaticPlayerRuleLifeForColoredMana
 	StaticPlayerRuleLifeForCommanderTax
 	StaticPlayerRuleSkipDrawStep
@@ -690,6 +691,12 @@ type StaticPlayerRuleDeclaration struct {
 	// StaticPlayerRuleLifeForColoredMana rule ("For each {B} in a cost, ...",
 	// K'rrik). It is empty for every other kind.
 	ManaColor mana.Color
+
+	// ExileCounter names the marker counter a
+	// StaticPlayerRulePlayAndCastFromExileWithCounter rule requires on the exiled
+	// cards its play/cast permission covers ("... in exile with croak counters on
+	// them.", Grolnok, the Omnivore). It is the zero value for every other kind.
+	ExileCounter counter.Kind
 }
 
 // StaticCardAbilityGrantDeclaration grants a keyword ability to cards in a
@@ -4643,6 +4650,10 @@ var staticPlayerRuleSpecs = map[parser.StaticDeclarationPlayerRuleKind]staticPla
 		kind:           StaticPlayerRuleCastThisFromExile,
 		matchesContent: castThisFromGraveyardStaticPlayerRuleContent,
 	},
+	parser.StaticDeclarationPlayerRulePlayAndCastFromExileWithCounter: {
+		kind:           StaticPlayerRulePlayAndCastFromExileWithCounter,
+		matchesContent: emptyStaticPlayerRuleContent,
+	},
 	parser.StaticDeclarationPlayerRuleLookAtTopCardAnyTime: {
 		kind:           StaticPlayerRuleLookAtTopCardAnyTime,
 		matchesContent: emptyStaticPlayerRuleContent,
@@ -4710,6 +4721,13 @@ func recognizeStaticPlayerRuleDeclaration(ability CompiledAbility, statics []par
 		}
 		condition = compiledCondition
 	}
+	if spec.kind == StaticPlayerRulePlayAndCastFromExileWithCounter {
+		if !node.ExileCounter.Valid() {
+			return StaticDeclaration{}, false
+		}
+	} else if node.ExileCounter != 0 {
+		return StaticDeclaration{}, false
+	}
 	return StaticDeclaration{
 		Kind:          StaticDeclarationPlayerRule,
 		Span:          node.Span,
@@ -4726,6 +4744,7 @@ func recognizeStaticPlayerRuleDeclaration(ability CompiledAbility, statics []par
 			CastChosenCreatureType: node.CastChosenCreatureType,
 			CastPayLifeManaValue:   node.CastPayLifeManaValue,
 			ManaColor:              node.ManaColor,
+			ExileCounter:           node.ExileCounter,
 		},
 	}, true
 }

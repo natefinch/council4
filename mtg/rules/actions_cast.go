@@ -677,7 +677,8 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 			return false
 		}
 	case zone.Exile:
-		hasRulePermission := canCastFromZoneByRuleEffect(g, playerID, cardID, sourceZone, face)
+		hasRulePermission := canCastFromZoneByRuleEffect(g, playerID, cardID, sourceZone, face) ||
+			canCastSpellsFromZoneByRuleEffect(g, playerID, cardID, sourceZone, face)
 		freeLinkedExile := face == game.FaceFront && castLinkedExileForFree(g, playerID, cardID)
 		if !g.AdventureCards[cardID] && !hasRulePermission && !plotted && !foretold && !freeLinkedExile {
 			return false
