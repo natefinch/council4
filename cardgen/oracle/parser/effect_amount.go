@@ -671,7 +671,7 @@ func parseCreateForEachAmount(kind EffectKind, context EffectContextKind, tokenP
 		subject.plural != prefix.plural {
 		return EffectAmountSyntax{}, false
 	}
-	if pre[subject.end].Kind != shared.Comma {
+	if subject.end >= len(pre) || pre[subject.end].Kind != shared.Comma {
 		return EffectAmountSyntax{}, false
 	}
 	// The distributive may name the creating player explicitly ("For each
