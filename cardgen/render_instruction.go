@@ -283,6 +283,12 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 			return "", err
 		}
 		return r.renderAdapt(ctx, value)
+	case game.PrimitiveMonstrosity:
+		value, err := assertPrimitive[game.Monstrosity](primitive)
+		if err != nil {
+			return "", err
+		}
+		return r.renderMonstrosity(ctx, value)
 	case game.PrimitiveConnive:
 		value, err := assertPrimitive[game.Connive](primitive)
 		if err != nil {

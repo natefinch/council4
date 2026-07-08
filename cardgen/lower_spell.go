@@ -1852,6 +1852,8 @@ func lowerImmediateSingleEffectSpell(
 		return lowerRenownContent(ctx, syntax)
 	case compiler.EffectAdapt:
 		return lowerAdaptContent(ctx, syntax)
+	case compiler.EffectMonstrosity:
+		return lowerMonstrosityContent(ctx, syntax)
 	case compiler.EffectConnive:
 		return lowerConniveContent(ctx)
 	case compiler.EffectProliferate:

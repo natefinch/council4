@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,111 of 32,501 cards eligible for paper support (52.6%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,126 of 32,501 cards eligible for paper support (52.7%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -5180,6 +5180,7 @@ Council4 currently supports **17,111 of 32,501 cards eligible for paper support 
 - Fledgling Osprey
 - Fleet Swallower
 - Fleet-Footed Monk
+- Fleetfeather Cockatrice
 - Fleetfeather Sandals
 - Fleetfoot Dancer
 - Fleetfoot Panther
@@ -5925,6 +5926,7 @@ Council4 currently supports **17,111 of 32,501 cards eligible for paper support 
 - Glistening Oil
 - Glistening Sphere
 - Glister Bairn
+- Glitch Ghost Surveyor
 - Glitterfang
 - Glittering Massif
 - Glittermonger
@@ -5946,6 +5948,7 @@ Council4 currently supports **17,111 of 32,501 cards eligible for paper support 
 - Glowing Anemone
 - Glowrider
 - Glowstone Recluse
+- Gluttonous Cyclops
 - Gluttonous Guest
 - Gluttonous Slime
 - Gluttonous Slug
@@ -6084,6 +6087,7 @@ Council4 currently supports **17,111 of 32,501 cards eligible for paper support 
 - Goblin Spy
 - Goblin Striker
 - Goblin Surprise
+- Goblin Surveyor
 - Goblin Swine-Rider
 - Goblin Taskmaster
 - Goblin Tomb Raider
@@ -7176,6 +7180,7 @@ Council4 currently supports **17,111 of 32,501 cards eligible for paper support 
 - Ikra Shidiqi, the Usurper
 - Il Mheg Pixie
 - Ill-Gotten Inheritance
+- Ill-Tempered Cyclops
 - Illegitimate Business
 - Illness in the Ranks
 - Illuminate History
@@ -8299,6 +8304,7 @@ Council4 currently supports **17,111 of 32,501 cards eligible for paper support 
 - Leonin Snarecaster
 - Leonin Squire
 - Leonin Sun Standard
+- Leonin Surveyor
 - Leonin Vanguard
 - Leonin Warleader
 - Leopard-Spotted Jiao
@@ -8578,6 +8584,7 @@ Council4 currently supports **17,111 of 32,501 cards eligible for paper support 
 - Loxodon Restorer
 - Loxodon Sergeant
 - Loxodon Stalwart
+- Loxodon Surveyor
 - Loxodon Warhammer
 - Loxodon Wayfarer
 - Loyal Apprentice
@@ -9565,6 +9572,7 @@ Council4 currently supports **17,111 of 32,501 cards eligible for paper support 
 - Mutant
 - Mutant
 - Mutant Chain Reaction
+- Mutant Surveyor
 - Mutant Town
 - Mutant Town Musicians
 - Mutant's Prey
@@ -9745,6 +9753,7 @@ Council4 currently supports **17,111 of 32,501 cards eligible for paper support 
 - Nephalia Seakite
 - Nephalia Smuggler
 - Nervous Gardener
+- Nessian Asp
 - Nessian Courser
 - Nessian Demolok
 - Nessian Hornbeetle
@@ -9754,6 +9763,7 @@ Council4 currently supports **17,111 of 32,501 cards eligible for paper support 
 - Nest Robber
 - Nested Ghoul
 - Nested Shambler
+- Nesting Bot
 - Nesting Grounds
 - Nesting Wurm
 - Netcaster Spider
@@ -11145,6 +11155,7 @@ Council4 currently supports **17,111 of 32,501 cards eligible for paper support 
 - Raccoon Rallier
 - Racecourse Fury
 - Racers' Ring
+- Racers' Scoreboard
 - Rack and Ruin
 - Radagast, Wizard of Wilds
 - Radha, Coalition Warlord
@@ -11343,6 +11354,7 @@ Council4 currently supports **17,111 of 32,501 cards eligible for paper support 
 - Ravenous Giant
 - Ravenous Harpy
 - Ravenous Intruder
+- Ravenous Leucrocota
 - Ravenous Lindwurm
 - Ravenous Rats
 - Ravenous Robots
@@ -13942,6 +13954,7 @@ Council4 currently supports **17,111 of 32,501 cards eligible for paper support 
 - Starnheim Memento
 - Starry-Eyed Skyrider
 - Starscape Cleric
+- Starscream, Power Hungry // Starscream, Seeker Leader
 - Starstorm
 - Start from Scratch
 - Starting Column
@@ -14445,6 +14458,7 @@ Council4 currently supports **17,111 of 32,501 cards eligible for paper support 
 - Swiftfoot Boots
 - Swiftgear Drake
 - Swiftwater Cliffs
+- Swiftwing Assailant
 - Swirling Sandstorm
 - Swirling Torrent
 - Swooping Lookout
@@ -16299,6 +16313,7 @@ Council4 currently supports **17,111 of 32,501 cards eligible for paper support 
 - Walking Ballista
 - Walking Corpse
 - Walking Dead
+- Walking Sarcophagus
 - Walking Wall
 - Wall
 - Wall

@@ -928,6 +928,17 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Abili
 	if compiled.Kind != AbilityStatic {
 		return
 	}
+	// The "Max speed" ability word (CR 702.179, the Start your engines! speed
+	// subsystem) only gates the static on its controller having maximum speed; it
+	// is not part of the declaration's shape. Recognize the body as if unlabeled
+	// so the keyword-grant and power/toughness recognizers (which reject any
+	// ability-word shell) still see it, then restore the word so the executable
+	// lowering can apply the ControllerHasMaxSpeed condition.
+	if compiled.AbilityWord == "Max speed" {
+		savedWord := compiled.AbilityWord
+		compiled.AbilityWord = ""
+		defer func() { compiled.AbilityWord = savedWord }()
+	}
 	statics := syntax.StaticDeclarations
 	if declarations, ok := recognizeTypedStaticRuleDeclarations(*compiled, syntax); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: declarations}
@@ -1452,6 +1463,7 @@ func recognizedStaticAbilityWord(word string) bool {
 		"Domain",
 		"Ferocious",
 		"Hellbent",
+		"Max speed",
 		"Metalcraft",
 		"Threshold",
 		"Unlock Ability":

@@ -239,6 +239,13 @@ const (
 	// counter) subsumes the printed "if this creature has no +1/+1 counters on
 	// it" reminder, so the lowered action is the bare keyword action.
 	EffectAdapt EffectKind = "EffectAdapt"
+	// EffectMonstrosity models the monstrosity keyword action (CR 701.32) written
+	// out as an activated ability's effect ("Monstrosity N."): if the source
+	// creature isn't monstrous, the controller puts N +1/+1 counters on it and it
+	// becomes monstrous. Amount holds N. The runtime guard (it skips an
+	// already-monstrous permanent) subsumes the printed "if this creature isn't
+	// monstrous" intervening-if, so the expanded action is the bare keyword.
+	EffectMonstrosity EffectKind = "EffectMonstrosity"
 	// EffectConnive models the connive keyword action (CR 702.154): the
 	// conniving permanent's controller draws N cards, then discards N cards, and
 	// for each nonland card discarded this way a +1/+1 counter is placed on that
