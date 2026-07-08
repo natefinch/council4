@@ -32,6 +32,7 @@ var Cards = []*game.CardDef{
 	RapidDecay,
 	RasaadYnBashir,
 	RatadrabikOfUrborg,
+	RatchetFieldMedic,
 	RathiDragon,
 	RattlebackApothecary,
 	RavenClanWarAxe,

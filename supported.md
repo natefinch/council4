@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,107 of 32,501 cards eligible for paper support (52.6%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,111 of 32,501 cards eligible for paper support (52.6%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -4349,6 +4349,7 @@ Council4 currently supports **17,107 of 32,501 cards eligible for paper support 
 - Elusive Krasis
 - Elusive Otter // Grove's Bounty
 - Elusive Spellfist
+- Elusive Tormentor // Insidious Mist
 - Elven Ambush
 - Elven Cache
 - Elven Chorus
@@ -11308,6 +11309,7 @@ Council4 currently supports **17,107 of 32,501 cards eligible for paper support 
 - Ratadrabik of Urborg
 - Ratcatcher
 - Ratcatcher Trainee // Pest Problem
+- Ratchet, Field Medic // Ratchet, Rescue Racer
 - Rath's Edge
 - Rathi Dragon
 - Rathi Fiend
@@ -15678,6 +15680,7 @@ Council4 currently supports **17,107 of 32,501 cards eligible for paper support 
 - Unholy Officiant
 - Unholy Strength
 - Unifying Theory
+- Uninvited Geist // Unimpeded Trespasser
 - Union of the Third Path
 - United Front
 - Universal Automaton
@@ -16072,6 +16075,7 @@ Council4 currently supports **17,107 of 32,501 cards eligible for paper support 
 - Village Pillagers
 - Village Rites
 - Villain
+- Vincent Valentine // Galian Beast
 - Vindicate
 - Vindictive Vampire
 - Vine Dryad

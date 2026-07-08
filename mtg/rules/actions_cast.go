@@ -266,6 +266,7 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		consumeCastLinkedExileForFreePermission(g, freeLinkedExilePermissionID)
 	}
 	obj.Evoked = !cast.Overloaded && evokeAlternativeChosen(spellDef, prefs.AlternativeIndex)
+	obj.Converted = !cast.Overloaded && convertedAlternativeChosen(spellDef, prefs.AlternativeIndex)
 	obj.Flashback = paymentResult.CastPermission == payment.SpellCastPermissionFlashback
 	obj.AdditionalCostsPaid = paymentResult.AdditionalCostsPaid
 	obj.ColorsOfManaSpentToCast = distinctManaColorsSpent(paymentResult.PoolSpend)

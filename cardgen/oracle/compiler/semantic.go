@@ -2331,6 +2331,11 @@ type CompiledEffect struct {
 	Destination        parser.EffectDestinationPosition
 	EntersTapped       bool
 	EntersTappedSelf   bool
+	// EntersTransformed mirrors the parser's Transformers "converted" return
+	// rider ("return it to the battlefield converted", CR 712): the returned
+	// transforming double-faced card enters as its back face. It is false for the
+	// plain untransformed return.
+	EntersTransformed bool
 	// GroupEntryModification mirrors the parser's typed static group
 	// entry-modification payload: the enters-tapped-group form (Authority of the
 	// Consuls) and the enters-with-counters-group form (Tayam, Luminous Enigma).

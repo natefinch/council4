@@ -235,6 +235,11 @@ const (
 	// AlternativeMechanicEvoke marks the Evoke cast (CR 702.74), which lets the
 	// resulting permanent be sacrificed by its evoke-sacrifice trigger.
 	AlternativeMechanicEvoke
+	// AlternativeMechanicMoreThanMeetsTheEye marks the Transformers "More Than
+	// Meets the Eye" cast (CR 712): the front face is cast for the alternative
+	// cost, and the resulting permanent enters the battlefield converted, as its
+	// back face.
+	AlternativeMechanicMoreThanMeetsTheEye
 )
 
 // AlternativeCondition identifies a condition that must be true to select an

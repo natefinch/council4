@@ -596,8 +596,13 @@ type PutOnBattlefield struct {
 	Recipient         opt.V[PlayerReference]
 	ContinuousEffects []ContinuousEffect
 	EntryTapped       bool
-	EntryCounters     []CounterPlacement
-	PublishLinked     LinkedKey
+	// EntryTransformed makes a transforming double-faced card enter the
+	// battlefield converted, as its back face, backing "return it to the
+	// battlefield converted" (CR 712). It is honored only for a transforming
+	// double-faced card entering from its front face and is ignored otherwise.
+	EntryTransformed bool
+	EntryCounters    []CounterPlacement
+	PublishLinked    LinkedKey
 	// LinkedReturnZones is the ordered set of non-battlefield zones a
 	// LinkedBattlefieldSource return may pull its linked card from. nil means
 	// exile-only, the default for exile-until and blink returns (Palace Jailer,

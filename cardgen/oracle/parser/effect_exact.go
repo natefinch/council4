@@ -236,7 +236,9 @@ func exactEffectSyntaxTail(effect *EffectSyntax) bool {
 			exactPriorSubjectNextUntapStepSyntax(effect)
 	case EffectTransform:
 		return exactDirectTargetEffectSyntax(effect, "Transform") ||
-			exactTransformSelfEffectSyntax(effect)
+			exactTransformSelfEffectSyntax(effect) ||
+			exactDirectPronounEffectSyntax(effect, "Transform it.") ||
+			exactDirectPronounEffectSyntax(effect, "Convert it.")
 	case EffectGoad:
 		return exactDirectTargetEffectSyntax(effect, "Goad") ||
 			exactBackReferenceEffectSyntax(effect, "Goad") ||
@@ -248,6 +250,31 @@ func exactEffectSyntaxTail(effect *EffectSyntax) bool {
 	default:
 		return false
 	}
+}
+
+// exactTransformSelfEffectSyntax recognizes a transform/convert keyword action
+// applied to the ability's own source permanent, named either by the card's own
+// name ("Convert Blaster.", "Transform Docent of Perfection.") or by a
+// demonstrative self-reference ("Convert this creature.", "Transform this
+// permanent."). "convert" is the Transformers-flavored spelling of the transform
+// keyword action, so both verbs reconstruct the same self-directed effect. The
+// target form ("Transform target creature.") is handled by
+// exactDirectTargetEffectSyntax; the "it" pronoun form is handled by the pronoun
+// recognizers.
+func exactTransformSelfEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Context != EffectContextController ||
+		len(effect.Targets) != 0 ||
+		effect.Duration != EffectDurationNone ||
+		effect.Negated {
+		return false
+	}
+	object, ok := exactSelfSubjectReferenceText(effect.References)
+	if !ok {
+		return false
+	}
+	text := exactEffectClauseText(effect)
+	return strings.EqualFold(text, "Transform "+object+".") ||
+		strings.EqualFold(text, "Convert "+object+".")
 }
 
 func exactOptionalControllerShuffleEffectSyntax(effect *EffectSyntax) bool {
@@ -404,24 +431,6 @@ func exactSelfSacrificeEffectSyntax(effect *EffectSyntax) bool {
 		return false
 	}
 	return strings.EqualFold(exactEffectClauseText(effect), "Sacrifice "+object+".")
-}
-
-// exactTransformSelfEffectSyntax recognizes the source permanent transforming
-// itself by self-reference — "Transform this creature.", "Transform <this card's
-// name>." (CR 701.28). The target form ("Transform target creature.") is handled
-// by exactDirectTargetEffectSyntax.
-func exactTransformSelfEffectSyntax(effect *EffectSyntax) bool {
-	if effect.Context != EffectContextController ||
-		len(effect.Targets) != 0 ||
-		effect.Duration != EffectDurationNone ||
-		effect.Negated {
-		return false
-	}
-	object, ok := exactSelfSubjectReferenceText(effect.References)
-	if !ok {
-		return false
-	}
-	return strings.EqualFold(exactEffectClauseText(effect), "Transform "+object+".")
 }
 
 func exactSacrificeChoiceEffectSyntax(effect *EffectSyntax) bool {

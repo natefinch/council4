@@ -2343,8 +2343,9 @@ func handleTransform(r *effectResolver, prim game.Transform) effectResolved {
 
 func battlefieldEntryOptions(prim game.PutOnBattlefield) permanentCreationOptions {
 	return permanentCreationOptions{
-		ForceTapped: prim.EntryTapped,
-		Counters:    prim.EntryCounters,
+		ForceTapped:       prim.EntryTapped,
+		EntersTransformed: prim.EntryTransformed,
+		Counters:          prim.EntryCounters,
 	}
 }
 

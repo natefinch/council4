@@ -207,7 +207,8 @@ func lowerEventCardEffect(ctx contentCtx) (game.AbilityContent, bool) {
 	case compiler.EffectReturn:
 		if effect.ToZone == zone.Battlefield {
 			put := game.PutOnBattlefield{
-				Source: game.CardBattlefieldSource(eventCard),
+				Source:           game.CardBattlefieldSource(eventCard),
+				EntryTransformed: effect.EntersTransformed,
 			}
 			if effect.ReturnAsEnchantment {
 				put.ContinuousEffects = []game.ContinuousEffect{{

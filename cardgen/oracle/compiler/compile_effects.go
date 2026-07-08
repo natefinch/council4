@@ -368,6 +368,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				Destination:                  syntax.Destination,
 				EntersTapped:                 syntax.EntersTapped,
 				EntersTappedSelf:             syntax.EntersTappedSelf,
+				EntersTransformed:            syntax.EntersTransformed,
 				GroupEntryModification:       compileGroupEntryModification(syntax.GroupEntryModification),
 				EntersColorChoice:            syntax.EntersColorChoice,
 				EntersColorChoiceExclude:     syntax.EntersColorChoiceExclude,

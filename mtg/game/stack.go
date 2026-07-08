@@ -132,6 +132,11 @@ type StackObject struct {
 	// (CR 702.74); the resulting permanent is sacrificed when it enters.
 	Evoked bool
 
+	// Converted is true if this spell was cast for its "More Than Meets the Eye"
+	// alternative cost (CR 712); the resulting permanent enters the battlefield
+	// converted, as its back face.
+	Converted bool
+
 	// Mutate records an alternative-cost creature spell and the permanent it
 	// will merge with.
 	Mutate         bool

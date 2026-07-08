@@ -1820,7 +1820,11 @@ func effectWordKind(token shared.Token) EffectKind {
 		return EffectGoad
 	case "untap", "untaps":
 		return EffectUntap
-	case "transform", "transforms":
+	// "convert"/"converts" is the Transformers-flavored name for the transform
+	// keyword action (CR 701.30): it flips a transforming double-faced permanent
+	// to its other face. The adjective "converted" (as in "converted mana cost"
+	// or "cast this card converted") is a different word and does not match here.
+	case "transform", "transforms", "convert", "converts":
 		return EffectTransform
 	default:
 		return EffectUnknown

@@ -41,6 +41,12 @@ type permanentCreationOptions struct {
 	Counters          []game.CounterPlacement
 	SimultaneousID    id.ID
 	XValue            int
+	// EntersTransformed makes a transforming double-faced card enter the
+	// battlefield converted (as its back face), backing the Transformers "More
+	// Than Meets the Eye" alternative cast and "return it to the battlefield
+	// converted" (CR 712). It is honored only for a transforming double-faced
+	// card entering from its front face; every other permanent ignores it.
+	EntersTransformed bool
 	// ColorsOfManaSpentToCast carries the number of distinct colors of mana
 	// spent to cast the spell that is resolving into this permanent, so a
 	// Converge enters-with-counters replacement ("for each color of mana spent
@@ -65,6 +71,13 @@ type permanentCreationOptions struct {
 // exists, and the entering event then lets "when/whenever this enters" abilities
 // trigger (CR 603.6a).
 func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.CardInstance, controller game.PlayerID, fromZone zone.Type, face game.FaceIndex, continuous []game.ContinuousEffect, options permanentCreationOptions, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (*game.Permanent, bool) {
+	enteringTransformed := false
+	if options.EntersTransformed && face == game.FaceFront &&
+		card != nil && card.Def != nil &&
+		card.Def.IsTransformingDoubleFaced() && card.Def.Back.Exists {
+		face = game.FaceBack
+		enteringTransformed = true
+	}
 	faceDef, ok := cardFaceDef(card, face)
 	if !ok {
 		return nil, false
@@ -79,6 +92,7 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 		Owner:          card.Owner,
 		Controller:     controller,
 		Face:           face,
+		Transformed:    enteringTransformed,
 		SummoningSick:  entersSummoningSick(faceDef),
 		Prepared:       faceDef.EntersPrepared,
 	}

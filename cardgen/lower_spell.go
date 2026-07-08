@@ -1567,7 +1567,8 @@ func lowerReferencedPermanentEffect(ctx contentCtx) (game.AbilityContent, bool) 
 			}
 			if ctx.content.Effects[0].Kind != compiler.EffectTap &&
 				ctx.content.Effects[0].Kind != compiler.EffectUntap &&
-				ctx.content.Effects[0].Kind != compiler.EffectRemoveFromCombat {
+				ctx.content.Effects[0].Kind != compiler.EffectRemoveFromCombat &&
+				ctx.content.Effects[0].Kind != compiler.EffectTransform {
 				return game.AbilityContent{}, false
 			}
 			hasDirectObject = true
@@ -1606,6 +1607,8 @@ func lowerReferencedPermanentEffect(ctx contentCtx) (game.AbilityContent, bool) 
 		primitive = game.RemoveFromCombat{Object: object}
 	case compiler.EffectGoad:
 		primitive = game.Goad{Object: object}
+	case compiler.EffectTransform:
+		primitive = game.Transform{Object: object}
 	case compiler.EffectSacrifice:
 		primitive = game.Sacrifice{Object: object}
 	case compiler.EffectReturn:
@@ -1775,6 +1778,7 @@ func lowerBackReferencedReanimation(ctx contentCtx) (game.AbilityContent, bool) 
 	instruction, ok := graveyardReturnInstruction(card, graveyardReturnDestination{
 		Zone:             zone.Battlefield,
 		EntryTapped:      effect.EntersTapped,
+		EntryTransformed: effect.EntersTransformed,
 		UnderYourControl: effect.UnderYourControl,
 	})
 	if !ok {
