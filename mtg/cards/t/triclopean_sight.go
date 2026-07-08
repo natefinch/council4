@@ -19,7 +19,7 @@ import (
 //	Enchant creature
 //	When this Aura enters, untap enchanted creature.
 //	Enchanted creature gets +1/+1 and has vigilance.
-var TriclopeanSight = newTriclopeanSight()
+var TriclopeanSight = newTriclopeanSight
 
 func newTriclopeanSight() *game.CardDef {
 	return &game.CardDef{

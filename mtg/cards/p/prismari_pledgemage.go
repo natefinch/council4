@@ -18,7 +18,7 @@ import (
 //
 //	Defender
 //	Magecraft — Whenever you cast or copy an instant or sorcery spell, this creature can attack this turn as though it didn't have defender.
-var PrismariPledgemage = newPrismariPledgemage()
+var PrismariPledgemage = newPrismariPledgemage
 
 func newPrismariPledgemage() *game.CardDef {
 	return &game.CardDef{

@@ -19,7 +19,7 @@ import (
 //
 //	Deathtouch
 //	This creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)
-var VastlandsScavenger = newVastlandsScavenger()
+var VastlandsScavenger = newVastlandsScavenger
 
 func newVastlandsScavenger() *game.CardDef {
 	return &game.CardDef{

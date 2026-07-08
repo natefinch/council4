@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever a player casts a blue spell, you may pay {3}. If you do, untap target permanent.
-var LapisLazuliTalisman = newLapisLazuliTalisman()
+var LapisLazuliTalisman = newLapisLazuliTalisman
 
 func newLapisLazuliTalisman() *game.CardDef {
 	return &game.CardDef{

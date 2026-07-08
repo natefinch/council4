@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever your commander enters or attacks, look at the top six cards of your library. You may reveal a legendary creature card from among them and put it into your hand. Put the rest on the bottom of your library in a random order.
-var SearchForDagger = newSearchForDagger()
+var SearchForDagger = newSearchForDagger
 
 func newSearchForDagger() *game.CardDef {
 	return &game.CardDef{

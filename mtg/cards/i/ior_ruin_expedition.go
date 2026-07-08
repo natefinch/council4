@@ -19,7 +19,7 @@ import (
 //
 //	Landfall — Whenever a land you control enters, you may put a quest counter on this enchantment.
 //	Remove three quest counters from this enchantment and sacrifice it: Draw two cards.
-var IorRuinExpedition = newIorRuinExpedition()
+var IorRuinExpedition = newIorRuinExpedition
 
 func newIorRuinExpedition() *game.CardDef {
 	return &game.CardDef{

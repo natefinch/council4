@@ -20,7 +20,7 @@ import (
 //	When this creature enters, choose one —
 //	• Put a +1/+1 counter on this creature.
 //	• Return target artifact or enchantment card from your graveyard to your hand.
-var TrustyRetriever = newTrustyRetriever()
+var TrustyRetriever = newTrustyRetriever
 
 func newTrustyRetriever() *game.CardDef {
 	return &game.CardDef{

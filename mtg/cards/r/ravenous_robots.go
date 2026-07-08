@@ -10,7 +10,7 @@ import (
 )
 
 // RavenousRobots is the card definition for Ravenous Robots.
-var RavenousRobots = newRavenousRobots()
+var RavenousRobots = newRavenousRobots
 
 func newRavenousRobots() *game.CardDef {
 	return &game.CardDef{

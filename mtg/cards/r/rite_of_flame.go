@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Add {R}{R}, then add {R} for each card named Rite of Flame in each graveyard.
-var RiteOfFlame = newRiteOfFlame()
+var RiteOfFlame = newRiteOfFlame
 
 func newRiteOfFlame() *game.CardDef {
 	return &game.CardDef{

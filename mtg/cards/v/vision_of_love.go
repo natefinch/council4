@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	You may sacrifice an artifact or discard a card. If you do, draw two cards.
-var VisionOfLove = newVisionOfLove()
+var VisionOfLove = newVisionOfLove
 
 func newVisionOfLove() *game.CardDef {
 	return &game.CardDef{

@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, you may sacrifice a creature or discard a creature card. If you do, draw a card.
-var CryptLurker = newCryptLurker()
+var CryptLurker = newCryptLurker
 
 func newCryptLurker() *game.CardDef {
 	return &game.CardDef{

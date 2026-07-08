@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Crushing Pain deals 6 damage to target creature that was dealt damage this turn.
-var CrushingPain = newCrushingPain()
+var CrushingPain = newCrushingPain
 
 func newCrushingPain() *game.CardDef {
 	return &game.CardDef{

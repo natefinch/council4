@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Target creature gets -5/-5 until end of turn. If that creature would die this turn, exile it instead.
-var ObNixilisSCruelty = newObNixilisSCruelty()
+var ObNixilisSCruelty = newObNixilisSCruelty
 
 func newObNixilisSCruelty() *game.CardDef {
 	return &game.CardDef{

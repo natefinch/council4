@@ -18,7 +18,7 @@ import (
 //
 //	When Denethor enters, scry 2.
 //	{3}{R}, {T}, Sacrifice Denethor: Target player becomes the monarch. Denethor deals 3 damage to any target.
-var DenethorStoneSeer = newDenethorStoneSeer()
+var DenethorStoneSeer = newDenethorStoneSeer
 
 func newDenethorStoneSeer() *game.CardDef {
 	return &game.CardDef{

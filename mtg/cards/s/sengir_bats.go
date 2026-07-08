@@ -18,7 +18,7 @@ import (
 //
 //	Flying
 //	Whenever a creature dealt damage by this creature this turn dies, put a +1/+1 counter on this creature.
-var SengirBats = newSengirBats()
+var SengirBats = newSengirBats
 
 func newSengirBats() *game.CardDef {
 	return &game.CardDef{

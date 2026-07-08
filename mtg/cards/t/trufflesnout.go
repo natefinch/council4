@@ -19,7 +19,7 @@ import (
 //	When this creature enters, choose one —
 //	• Put a +1/+1 counter on this creature.
 //	• You gain 4 life.
-var Trufflesnout = newTrufflesnout()
+var Trufflesnout = newTrufflesnout
 
 func newTrufflesnout() *game.CardDef {
 	return &game.CardDef{

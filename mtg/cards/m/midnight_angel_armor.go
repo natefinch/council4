@@ -18,7 +18,7 @@ import (
 //	When this Equipment enters, create a 1/1 white Soldier creature token, then attach this Equipment to it.
 //	Equipped creature gets +3/+3 and has flying and vigilance.
 //	Equip {3}
-var MidnightAngelArmor = newMidnightAngelArmor()
+var MidnightAngelArmor = newMidnightAngelArmor
 
 func newMidnightAngelArmor() *game.CardDef {
 	return &game.CardDef{

@@ -19,7 +19,7 @@ import (
 //
 //	This creature enters with two -1/-1 counters on it.
 //	{1}{W}, Remove a counter from this creature: Target creature gains indestructible until end of turn. Activate only as a sorcery. (Damage and effects that say "destroy" don't destroy it. If its toughness is 0 or less, it still dies.)
-var BurdenedStoneback = newBurdenedStoneback()
+var BurdenedStoneback = newBurdenedStoneback
 
 func newBurdenedStoneback() *game.CardDef {
 	return &game.CardDef{

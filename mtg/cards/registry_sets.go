@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/cards/a"
 	"github.com/natefinch/council4/mtg/cards/b"
 	"github.com/natefinch/council4/mtg/cards/c"
+	"github.com/natefinch/council4/mtg/cards/cardset"
 	"github.com/natefinch/council4/mtg/cards/d"
 	"github.com/natefinch/council4/mtg/cards/e"
 	"github.com/natefinch/council4/mtg/cards/f"
@@ -29,13 +30,12 @@ import (
 	"github.com/natefinch/council4/mtg/cards/x"
 	"github.com/natefinch/council4/mtg/cards/y"
 	"github.com/natefinch/council4/mtg/cards/z"
-	"github.com/natefinch/council4/mtg/game"
 )
 
-// defaultCardSets returns the Cards slice from every committed letter
+// defaultCardSets returns the Cards entries from every committed letter
 // sub-package, in alphabetical order.
-func defaultCardSets() [][]*game.CardDef {
-	return [][]*game.CardDef{
+func defaultCardSets() [][]cardset.Entry {
+	return [][]cardset.Entry{
 		a.Cards,
 		b.Cards,
 		c.Cards,

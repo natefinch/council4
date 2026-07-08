@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	White creatures get +2/+0 until end of turn.
-var ValorousCharge = newValorousCharge()
+var ValorousCharge = newValorousCharge
 
 func newValorousCharge() *game.CardDef {
 	return &game.CardDef{

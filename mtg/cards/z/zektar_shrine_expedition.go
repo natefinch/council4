@@ -19,7 +19,7 @@ import (
 //
 //	Landfall — Whenever a land you control enters, you may put a quest counter on this enchantment.
 //	Remove three quest counters from this enchantment and sacrifice it: Create a 7/1 red Elemental creature token with trample and haste. Exile it at the beginning of the next end step.
-var ZektarShrineExpedition = newZektarShrineExpedition()
+var ZektarShrineExpedition = newZektarShrineExpedition
 
 func newZektarShrineExpedition() *game.CardDef {
 	return &game.CardDef{

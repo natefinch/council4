@@ -18,7 +18,7 @@ import (
 //	Enchant creature
 //	When this Aura enters, tap enchanted creature.
 //	Enchanted creature doesn't untap during its controller's untap step.
-var SleepParalysis = newSleepParalysis()
+var SleepParalysis = newSleepParalysis
 
 func newSleepParalysis() *game.CardDef {
 	return &game.CardDef{

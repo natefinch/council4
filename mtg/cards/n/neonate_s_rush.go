@@ -17,7 +17,7 @@ import (
 //
 //	This spell costs {1} less to cast if you control a Vampire.
 //	Neonate's Rush deals 1 damage to target creature and 1 damage to its controller. Draw a card.
-var NeonateSRush = newNeonateSRush()
+var NeonateSRush = newNeonateSRush
 
 func newNeonateSRush() *game.CardDef {
 	return &game.CardDef{

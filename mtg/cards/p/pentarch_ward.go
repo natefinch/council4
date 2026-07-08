@@ -19,7 +19,7 @@ import (
 //	As this Aura enters, choose a color.
 //	When this Aura enters, draw a card.
 //	Enchanted creature has protection from the chosen color. This effect doesn't remove this Aura.
-var PentarchWard = newPentarchWard()
+var PentarchWard = newPentarchWard
 
 func newPentarchWard() *game.CardDef {
 	return &game.CardDef{

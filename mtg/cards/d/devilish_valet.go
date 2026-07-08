@@ -17,7 +17,7 @@ import (
 //
 //	Trample, haste
 //	Alliance — Whenever another creature you control enters, double this creature's power until end of turn.
-var DevilishValet = newDevilishValet()
+var DevilishValet = newDevilishValet
 
 func newDevilishValet() *game.CardDef {
 	return &game.CardDef{

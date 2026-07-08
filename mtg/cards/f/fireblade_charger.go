@@ -17,7 +17,7 @@ import (
 //
 //	As long as this creature is equipped, it has haste.
 //	When this creature dies, it deals damage equal to its power to any target.
-var FirebladeCharger = newFirebladeCharger()
+var FirebladeCharger = newFirebladeCharger
 
 func newFirebladeCharger() *game.CardDef {
 	return &game.CardDef{

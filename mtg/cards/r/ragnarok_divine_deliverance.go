@@ -16,7 +16,7 @@ import (
 //
 //	Vigilance, menace, trample, reach, haste
 //	When Ragnarok dies, destroy target permanent and return target nonlegendary permanent card from your graveyard to the battlefield.
-var RagnarokDivineDeliverance = newRagnarokDivineDeliverance()
+var RagnarokDivineDeliverance = newRagnarokDivineDeliverance
 
 func newRagnarokDivineDeliverance() *game.CardDef {
 	return &game.CardDef{

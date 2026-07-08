@@ -17,7 +17,7 @@ import (
 //
 //	When Jared Carthalion enters, target opponent becomes the monarch. You can't become the monarch this turn.
 //	If damage would be dealt to Jared Carthalion while you're the monarch, prevent that damage and put that many +1/+1 counters on it.
-var JaredCarthalionTrueHeir = newJaredCarthalionTrueHeir()
+var JaredCarthalionTrueHeir = newJaredCarthalionTrueHeir
 
 func newJaredCarthalionTrueHeir() *game.CardDef {
 	return &game.CardDef{

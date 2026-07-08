@@ -20,7 +20,7 @@ import (
 //	Haste (This creature can attack and {T} as soon as it comes under your control.)
 //	Whenever Ruby attacks while you control a creature with power 4 or greater, Ruby gets +2/+2 until end of turn.
 //	{T}: Add {R} or {G}.
-var RubyDaringTracker = newRubyDaringTracker()
+var RubyDaringTracker = newRubyDaringTracker
 
 func newRubyDaringTracker() *game.CardDef {
 	return &game.CardDef{

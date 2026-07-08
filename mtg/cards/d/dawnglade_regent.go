@@ -17,7 +17,7 @@ import (
 //
 //	When this creature enters, you become the monarch.
 //	As long as you're the monarch, permanents you control have hexproof.
-var DawngladeRegent = newDawngladeRegent()
+var DawngladeRegent = newDawngladeRegent
 
 func newDawngladeRegent() *game.CardDef {
 	return &game.CardDef{

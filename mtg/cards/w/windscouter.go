@@ -17,7 +17,7 @@ import (
 //
 //	Flying
 //	When this creature attacks or blocks, return it to its owner's hand at end of combat. (Return it only if it's on the battlefield.)
-var Windscouter = newWindscouter()
+var Windscouter = newWindscouter
 
 func newWindscouter() *game.CardDef {
 	return &game.CardDef{

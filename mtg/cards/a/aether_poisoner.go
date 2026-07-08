@@ -19,7 +19,7 @@ import (
 //	Deathtouch (Any amount of damage this deals to a creature is enough to destroy it.)
 //	When this creature enters, you get {E}{E} (two energy counters).
 //	Whenever this creature attacks, you may pay {E}{E}. If you do, create a 1/1 colorless Servo artifact creature token.
-var AetherPoisoner = newAetherPoisoner()
+var AetherPoisoner = newAetherPoisoner
 
 func newAetherPoisoner() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 //
 //	Flying
 //	This creature can't attack or block alone.
-var LoyalPegasus = newLoyalPegasus()
+var LoyalPegasus = newLoyalPegasus
 
 func newLoyalPegasus() *game.CardDef {
 	return &game.CardDef{

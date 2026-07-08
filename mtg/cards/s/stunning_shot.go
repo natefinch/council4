@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Put two +1/+1 counters on up to one target creature you control. Tap up to one target creature an opponent controls and put a stun counter on it. (If a permanent with a stun counter would become untapped, remove one from it instead.)
-var StunningShot = newStunningShot()
+var StunningShot = newStunningShot
 
 func newStunningShot() *game.CardDef {
 	return &game.CardDef{

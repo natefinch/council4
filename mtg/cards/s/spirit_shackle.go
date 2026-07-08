@@ -18,7 +18,7 @@ import (
 //
 //	Enchant creature
 //	Whenever enchanted creature becomes tapped, put a -0/-2 counter on it.
-var SpiritShackle = newSpiritShackle()
+var SpiritShackle = newSpiritShackle
 
 func newSpiritShackle() *game.CardDef {
 	return &game.CardDef{

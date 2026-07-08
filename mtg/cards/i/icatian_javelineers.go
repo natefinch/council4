@@ -19,7 +19,7 @@ import (
 //
 //	This creature enters with a javelin counter on it.
 //	{T}, Remove a javelin counter from this creature: It deals 1 damage to any target.
-var IcatianJavelineers = newIcatianJavelineers()
+var IcatianJavelineers = newIcatianJavelineers
 
 func newIcatianJavelineers() *game.CardDef {
 	return &game.CardDef{

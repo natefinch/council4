@@ -19,7 +19,7 @@ import (
 //
 //	Jadzi enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)
 //	When Jadzi enters, draw two cards, then discard two cards.
-var JadziStewardOfFate = newJadziStewardOfFate()
+var JadziStewardOfFate = newJadziStewardOfFate
 
 func newJadziStewardOfFate() *game.CardDef {
 	return &game.CardDef{

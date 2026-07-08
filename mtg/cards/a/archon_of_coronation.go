@@ -18,7 +18,7 @@ import (
 //	Flying
 //	When this creature enters, you become the monarch.
 //	As long as you're the monarch, damage doesn't cause you to lose life. (When a creature deals combat damage to you, its controller still becomes the monarch.)
-var ArchonOfCoronation = newArchonOfCoronation()
+var ArchonOfCoronation = newArchonOfCoronation
 
 func newArchonOfCoronation() *game.CardDef {
 	return &game.CardDef{

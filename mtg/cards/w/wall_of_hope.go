@@ -17,7 +17,7 @@ import (
 //
 //	Defender (This creature can't attack.)
 //	Whenever this creature is dealt damage, you gain that much life.
-var WallOfHope = newWallOfHope()
+var WallOfHope = newWallOfHope
 
 func newWallOfHope() *game.CardDef {
 	return &game.CardDef{

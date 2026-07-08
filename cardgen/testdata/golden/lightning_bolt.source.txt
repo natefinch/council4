@@ -13,7 +13,7 @@ import (
 // Oracle text:
 //
 //	Lightning Bolt deals 3 damage to any target.
-var LightningBolt = newLightningBolt()
+var LightningBolt = newLightningBolt
 
 func newLightningBolt() *game.CardDef {
 	return &game.CardDef{

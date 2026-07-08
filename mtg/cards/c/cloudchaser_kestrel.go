@@ -19,7 +19,7 @@ import (
 //	Flying
 //	When this creature enters, destroy target enchantment.
 //	{W}: Target permanent becomes white until end of turn.
-var CloudchaserKestrel = newCloudchaserKestrel()
+var CloudchaserKestrel = newCloudchaserKestrel
 
 func newCloudchaserKestrel() *game.CardDef {
 	return &game.CardDef{

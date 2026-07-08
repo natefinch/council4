@@ -18,7 +18,7 @@ import (
 //	Each opponent mills fourteen cards.
 //	Cycling {1}{U} ({1}{U}, Discard this card: Draw a card.)
 //	When you cycle this card, each opponent mills four cards.
-var FracturedSanity = newFracturedSanity()
+var FracturedSanity = newFracturedSanity
 
 func newFracturedSanity() *game.CardDef {
 	return &game.CardDef{

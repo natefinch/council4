@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{2}{R}: Target creature attacks this turn if able.
-var HecklingFiends = newHecklingFiends()
+var HecklingFiends = newHecklingFiends
 
 func newHecklingFiends() *game.CardDef {
 	return &game.CardDef{

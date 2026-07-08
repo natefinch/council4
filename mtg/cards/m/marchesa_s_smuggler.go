@@ -18,7 +18,7 @@ import (
 //
 //	Dethrone (Whenever this creature attacks the player with the most life or tied for most life, put a +1/+1 counter on it.)
 //	{1}{U}{R}: Target creature you control gains haste until end of turn and can't be blocked this turn.
-var MarchesaSSmuggler = newMarchesaSSmuggler()
+var MarchesaSSmuggler = newMarchesaSSmuggler
 
 func newMarchesaSSmuggler() *game.CardDef {
 	return &game.CardDef{

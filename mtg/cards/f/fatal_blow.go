@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Destroy target creature that was dealt damage this turn. It can't be regenerated.
-var FatalBlow = newFatalBlow()
+var FatalBlow = newFatalBlow
 
 func newFatalBlow() *game.CardDef {
 	return &game.CardDef{

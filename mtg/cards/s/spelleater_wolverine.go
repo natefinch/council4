@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	This creature has double strike as long as there are three or more instant and/or sorcery cards in your graveyard.
-var SpelleaterWolverine = newSpelleaterWolverine()
+var SpelleaterWolverine = newSpelleaterWolverine
 
 func newSpelleaterWolverine() *game.CardDef {
 	return &game.CardDef{

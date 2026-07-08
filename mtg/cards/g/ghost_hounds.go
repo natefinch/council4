@@ -17,7 +17,7 @@ import (
 //
 //	Vigilance
 //	Whenever this creature blocks or becomes blocked by a white creature, this creature gains first strike until end of turn.
-var GhostHounds = newGhostHounds()
+var GhostHounds = newGhostHounds
 
 func newGhostHounds() *game.CardDef {
 	return &game.CardDef{

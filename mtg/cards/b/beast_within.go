@@ -17,46 +17,48 @@ import (
 // Oracle text:
 //
 //	Destroy target permanent. Its controller creates a 3/3 green Beast creature token.
-var BeastWithin = &game.CardDef{
-	ColorIdentity: color.NewIdentity(color.Green),
-	CardFace: game.CardFace{
-		Name: "Beast Within",
-		ManaCost: opt.Val(cost.Mana{
-			cost.O(2),
-			cost.G,
-		}),
-		Colors: []color.Color{color.Green},
-		Types:  []types.Card{types.Instant},
-		OracleText: `
+var BeastWithin = func() *game.CardDef {
+	return &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Green),
+		CardFace: game.CardFace{
+			Name: "Beast Within",
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(2),
+				cost.G,
+			}),
+			Colors: []color.Color{color.Green},
+			Types:  []types.Card{types.Instant},
+			OracleText: `
 			Destroy target permanent. Its controller creates a 3/3 green Beast creature token.
 		`,
-		SpellAbility: opt.Val(
-			game.Mode{
-				Targets: []game.TargetSpec{
-					{
-						MinTargets: 1,
-						MaxTargets: 1,
-						Constraint: "permanent",
-						Allow:      game.TargetAllowPermanent,
-					},
-				},
-				Sequence: []game.Instruction{
-					{
-						Primitive: game.Destroy{
-							Object: game.TargetPermanentReference(0),
+			SpellAbility: opt.Val(
+				game.Mode{
+					Targets: []game.TargetSpec{
+						{
+							MinTargets: 1,
+							MaxTargets: 1,
+							Constraint: "permanent",
+							Allow:      game.TargetAllowPermanent,
 						},
 					},
-					{
-						Primitive: game.CreateToken{
-							Amount:    game.Fixed(1),
-							Source:    game.TokenDef(beastWithinToken),
-							Recipient: opt.Val(game.ObjectControllerReference(game.TargetPermanentReference(0))),
+					Sequence: []game.Instruction{
+						{
+							Primitive: game.Destroy{
+								Object: game.TargetPermanentReference(0),
+							},
+						},
+						{
+							Primitive: game.CreateToken{
+								Amount:    game.Fixed(1),
+								Source:    game.TokenDef(beastWithinToken),
+								Recipient: opt.Val(game.ObjectControllerReference(game.TargetPermanentReference(0))),
+							},
 						},
 					},
-				},
-			}.Ability(),
-		),
-	},
+				}.Ability(),
+			),
+		},
+	}
 }
 
 var beastWithinToken = &game.CardDef{

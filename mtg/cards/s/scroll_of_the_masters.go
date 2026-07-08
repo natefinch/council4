@@ -18,7 +18,7 @@ import (
 //
 //	Whenever you cast a noncreature spell, put a lore counter on this artifact.
 //	{3}, {T}: Target creature you control gets +1/+1 until end of turn for each lore counter on this artifact.
-var ScrollOfTheMasters = newScrollOfTheMasters()
+var ScrollOfTheMasters = newScrollOfTheMasters
 
 func newScrollOfTheMasters() *game.CardDef {
 	return &game.CardDef{

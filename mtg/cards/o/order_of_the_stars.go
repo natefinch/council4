@@ -18,7 +18,7 @@ import (
 //	Defender (This creature can't attack.)
 //	As this creature enters, choose a color.
 //	This creature has protection from the chosen color.
-var OrderOfTheStars = newOrderOfTheStars()
+var OrderOfTheStars = newOrderOfTheStars
 
 func newOrderOfTheStars() *game.CardDef {
 	return &game.CardDef{

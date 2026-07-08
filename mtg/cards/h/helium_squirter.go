@@ -11,7 +11,7 @@ import (
 )
 
 // HeliumSquirter is the card definition for Helium Squirter.
-var HeliumSquirter = newHeliumSquirter()
+var HeliumSquirter = newHeliumSquirter
 
 func newHeliumSquirter() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 //
 //	Flying
 //	Whenever you cast a historic spell, return target nonland permanent card from your graveyard to the battlefield. It gains haste. Exile it at the beginning of the next end step. If it would leave the battlefield, exile it instead of putting it anywhere else. (Artifacts, legendaries, and Sagas are historic.)
-var MoiraAndTeshar = newMoiraAndTeshar()
+var MoiraAndTeshar = newMoiraAndTeshar
 
 func newMoiraAndTeshar() *game.CardDef {
 	return &game.CardDef{

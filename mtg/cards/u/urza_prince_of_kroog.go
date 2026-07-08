@@ -18,7 +18,7 @@ import (
 //
 //	Artifact creatures you control get +2/+2.
 //	{6}: Create a token that's a copy of target artifact you control, except it's a 1/1 Soldier creature in addition to its other types.
-var UrzaPrinceOfKroog = newUrzaPrinceOfKroog()
+var UrzaPrinceOfKroog = newUrzaPrinceOfKroog
 
 func newUrzaPrinceOfKroog() *game.CardDef {
 	return &game.CardDef{

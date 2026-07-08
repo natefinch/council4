@@ -19,7 +19,7 @@ import (
 //	Enchant creature
 //	Enchanted creature gets +2/+2.
 //	{1}{W}, Exile this card from your graveyard: Return another target Aura or Equipment card from your graveyard to your hand.
-var SpectralSteel = newSpectralSteel()
+var SpectralSteel = newSpectralSteel
 
 func newSpectralSteel() *game.CardDef {
 	return &game.CardDef{

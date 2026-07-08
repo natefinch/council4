@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	When this creature dies, create a 1/1 red Mercenary creature token with "{T}: Target creature you control gets +1/+0 until end of turn. Activate only as a sorcery."
-var NezumiLinkbreaker = newNezumiLinkbreaker()
+var NezumiLinkbreaker = newNezumiLinkbreaker
 
 func newNezumiLinkbreaker() *game.CardDef {
 	return &game.CardDef{

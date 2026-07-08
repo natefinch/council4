@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever you cast a creature spell this turn, draw a card.
-var GlimpseOfNature = newGlimpseOfNature()
+var GlimpseOfNature = newGlimpseOfNature
 
 func newGlimpseOfNature() *game.CardDef {
 	return &game.CardDef{

@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever a creature deals combat damage to one of your opponents, its controller may draw a card.
-var EdricSpymasterOfTrest = newEdricSpymasterOfTrest()
+var EdricSpymasterOfTrest = newEdricSpymasterOfTrest
 
 func newEdricSpymasterOfTrest() *game.CardDef {
 	return &game.CardDef{

@@ -19,7 +19,7 @@ import (
 //	Enchant creature
 //	As long as enchanted creature is black, it gets +1/+1 and has wither. (It deals damage to creatures in the form of -1/-1 counters.)
 //	As long as enchanted creature is red, it gets +1/+1 and has first strike.
-var FistsOfTheDemigod = newFistsOfTheDemigod()
+var FistsOfTheDemigod = newFistsOfTheDemigod
 
 func newFistsOfTheDemigod() *game.CardDef {
 	return &game.CardDef{

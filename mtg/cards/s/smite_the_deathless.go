@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Smite the Deathless deals 3 damage to target creature. That creature loses indestructible until end of turn. If that creature would die this turn, exile it instead.
-var SmiteTheDeathless = newSmiteTheDeathless()
+var SmiteTheDeathless = newSmiteTheDeathless
 
 func newSmiteTheDeathless() *game.CardDef {
 	return &game.CardDef{

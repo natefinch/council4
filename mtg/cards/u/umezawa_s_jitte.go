@@ -22,7 +22,7 @@ import (
 //	• Target creature gets -1/-1 until end of turn.
 //	• You gain 2 life.
 //	Equip {2}
-var UmezawaSJitte = newUmezawaSJitte()
+var UmezawaSJitte = newUmezawaSJitte
 
 func newUmezawaSJitte() *game.CardDef {
 	return &game.CardDef{

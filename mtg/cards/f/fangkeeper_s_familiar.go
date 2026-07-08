@@ -20,7 +20,7 @@ import (
 //	• You gain 3 life and surveil 3. (Look at the top three cards of your library, then put any number of them into your graveyard and the rest on top of your library in any order.)
 //	• Destroy target enchantment.
 //	• Counter target creature spell.
-var FangkeeperSFamiliar = newFangkeeperSFamiliar()
+var FangkeeperSFamiliar = newFangkeeperSFamiliar
 
 func newFangkeeperSFamiliar() *game.CardDef {
 	return &game.CardDef{

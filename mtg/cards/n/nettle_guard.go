@@ -18,7 +18,7 @@ import (
 //
 //	Valiant — Whenever this creature becomes the target of a spell or ability you control for the first time each turn, it gets +0/+2 until end of turn.
 //	{1}, Sacrifice this creature: Destroy target artifact or enchantment.
-var NettleGuard = newNettleGuard()
+var NettleGuard = newNettleGuard
 
 func newNettleGuard() *game.CardDef {
 	return &game.CardDef{

@@ -107,4 +107,4 @@ var Fiendlash = func() *game.CardDef {
 		game.EquipActivatedAbility(cost.Mana{cost.O(2), cost.R}),
 	)
 	return card
-}()
+}

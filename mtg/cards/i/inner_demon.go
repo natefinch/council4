@@ -18,7 +18,7 @@ import (
 //	Enchant creature
 //	Enchanted creature gets +2/+2, has flying, and is a Demon in addition to its other types.
 //	When this Aura enters, all non-Demon creatures get -2/-2 until end of turn.
-var InnerDemon = newInnerDemon()
+var InnerDemon = newInnerDemon
 
 func newInnerDemon() *game.CardDef {
 	return &game.CardDef{

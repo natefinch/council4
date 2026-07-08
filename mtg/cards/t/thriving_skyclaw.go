@@ -19,7 +19,7 @@ import (
 //	Flying
 //	When this creature enters, you get {E}{E}{E} (three energy counters).
 //	Whenever this creature attacks, you may pay {E}{E}{E}. If you do, put a +1/+1 counter on it.
-var ThrivingSkyclaw = newThrivingSkyclaw()
+var ThrivingSkyclaw = newThrivingSkyclaw
 
 func newThrivingSkyclaw() *game.CardDef {
 	return &game.CardDef{

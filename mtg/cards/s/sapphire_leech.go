@@ -18,7 +18,7 @@ import (
 //
 //	Flying
 //	Blue spells you cast cost {U} more to cast.
-var SapphireLeech = newSapphireLeech()
+var SapphireLeech = newSapphireLeech
 
 func newSapphireLeech() *game.CardDef {
 	return &game.CardDef{

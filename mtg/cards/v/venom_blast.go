@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Put two +1/+1 counters on target creature you control. It deals damage equal to its power to up to one other target creature.
-var VenomBlast = newVenomBlast()
+var VenomBlast = newVenomBlast
 
 func newVenomBlast() *game.CardDef {
 	return &game.CardDef{

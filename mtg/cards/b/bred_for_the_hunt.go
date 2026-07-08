@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Whenever a creature you control with a +1/+1 counter on it deals combat damage to a player, you may draw a card.
-var BredForTheHunt = newBredForTheHunt()
+var BredForTheHunt = newBredForTheHunt
 
 func newBredForTheHunt() *game.CardDef {
 	return &game.CardDef{

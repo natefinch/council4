@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Sacrifice this creature: It deals 1 damage to any target. Activate only during your turn, before attackers are declared.
-var GoblinFirestarter = newGoblinFirestarter()
+var GoblinFirestarter = newGoblinFirestarter
 
 func newGoblinFirestarter() *game.CardDef {
 	return &game.CardDef{

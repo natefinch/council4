@@ -20,7 +20,7 @@ import (
 //	When this creature enters, choose one —
 //	• Destroy up to one target artifact.
 //	• Sacrifice an artifact. If you do, put two +1/+1 counters on this creature.
-var GearbaneOrangutan = newGearbaneOrangutan()
+var GearbaneOrangutan = newGearbaneOrangutan
 
 func newGearbaneOrangutan() *game.CardDef {
 	return &game.CardDef{

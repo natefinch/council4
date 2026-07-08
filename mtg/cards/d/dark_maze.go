@@ -18,7 +18,7 @@ import (
 //
 //	Defender (This creature can't attack.)
 //	{0}: This creature can attack this turn as though it didn't have defender. Exile it at the beginning of the next end step.
-var DarkMaze = newDarkMaze()
+var DarkMaze = newDarkMaze
 
 func newDarkMaze() *game.CardDef {
 	return &game.CardDef{

@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	At the beginning of your end step, each player loses 4 life unless they sacrifice a nontoken creature of their choice.
-var BellowingMauler = newBellowingMauler()
+var BellowingMauler = newBellowingMauler
 
 func newBellowingMauler() *game.CardDef {
 	return &game.CardDef{

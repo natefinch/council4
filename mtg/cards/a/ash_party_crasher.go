@@ -18,7 +18,7 @@ import (
 //
 //	Haste
 //	Celebration — Whenever Ash attacks, if two or more nonland permanents entered the battlefield under your control this turn, put a +1/+1 counter on Ash.
-var AshPartyCrasher = newAshPartyCrasher()
+var AshPartyCrasher = newAshPartyCrasher
 
 func newAshPartyCrasher() *game.CardDef {
 	return &game.CardDef{

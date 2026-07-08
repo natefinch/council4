@@ -18,7 +18,7 @@ import (
 //
 //	Defender (This creature can't attack.)
 //	{W}: This creature can attack this turn as though it didn't have defender.
-var MirrorWall = newMirrorWall()
+var MirrorWall = newMirrorWall
 
 func newMirrorWall() *game.CardDef {
 	return &game.CardDef{

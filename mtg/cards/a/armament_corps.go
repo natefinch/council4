@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, distribute two +1/+1 counters among one or two target creatures you control.
-var ArmamentCorps = newArmamentCorps()
+var ArmamentCorps = newArmamentCorps
 
 func newArmamentCorps() *game.CardDef {
 	return &game.CardDef{

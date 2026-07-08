@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, sacrifice it unless you sacrifice a Forest.
-var RogueElephant = newRogueElephant()
+var RogueElephant = newRogueElephant
 
 func newRogueElephant() *game.CardDef {
 	return &game.CardDef{

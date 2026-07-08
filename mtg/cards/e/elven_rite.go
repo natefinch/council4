@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Distribute two +1/+1 counters among one or two target creatures.
-var ElvenRite = newElvenRite()
+var ElvenRite = newElvenRite
 
 func newElvenRite() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 //
 //	Flash
 //	Valiant — Whenever this creature becomes the target of a spell or ability you control for the first time each turn, tap target creature an opponent controls.
-var MouseTrapper = newMouseTrapper()
+var MouseTrapper = newMouseTrapper
 
 func newMouseTrapper() *game.CardDef {
 	return &game.CardDef{

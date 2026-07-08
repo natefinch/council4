@@ -2,19 +2,20 @@
 
 package q
 
-import "github.com/natefinch/council4/mtg/game"
+import "github.com/natefinch/council4/mtg/cards/cardset"
 
-// Cards lists all card definitions in this package.
-var Cards = []*game.CardDef{
-	QuandrixApprentice,
-	QuagmireLamprey,
-	QueenMarchesa,
-	QueenMotherRamonda,
-	QueenOfIce,
-	QuestForTheGemblades,
-	QuestForTheGravelord,
-	QuickDrawDagger,
-	Quickling,
-	QuicksilverBehemoth,
-	QutrubForayer,
+// Cards lists all card definitions in this package, each paired with a
+// constructor so the registry can build them lazily.
+var Cards = []cardset.Entry{
+	{Name: "Quagmire Lamprey", New: QuagmireLamprey},
+	{Name: "Quandrix Apprentice", New: QuandrixApprentice},
+	{Name: "Queen Marchesa", New: QueenMarchesa},
+	{Name: "Queen Mother Ramonda", New: QueenMotherRamonda},
+	{Name: "Queen of Ice", New: QueenOfIce},
+	{Name: "Quest for the Gemblades", New: QuestForTheGemblades},
+	{Name: "Quest for the Gravelord", New: QuestForTheGravelord},
+	{Name: "Quick-Draw Dagger", New: QuickDrawDagger},
+	{Name: "Quickling", New: Quickling},
+	{Name: "Quicksilver Behemoth", New: QuicksilverBehemoth},
+	{Name: "Qutrub Forayer", New: QutrubForayer},
 }

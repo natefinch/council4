@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Destroy target land and all other lands with the same name as that land.
-var WakeOfDestruction = newWakeOfDestruction()
+var WakeOfDestruction = newWakeOfDestruction
 
 func newWakeOfDestruction() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 //
 //	Flying
 //	When this creature enters, sacrifice it unless you return an artifact you control to its owner's hand.
-var GlintHawk = newGlintHawk()
+var GlintHawk = newGlintHawk
 
 func newGlintHawk() *game.CardDef {
 	return &game.CardDef{

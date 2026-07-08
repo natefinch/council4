@@ -18,7 +18,7 @@ import (
 //
 //	Kicker {4} (You may pay an additional {4} as you cast this spell.)
 //	If this creature was kicked, it enters with three +1/+1 counters on it.
-var BalothGorger = newBalothGorger()
+var BalothGorger = newBalothGorger
 
 func newBalothGorger() *game.CardDef {
 	return &game.CardDef{

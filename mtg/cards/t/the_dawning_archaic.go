@@ -18,7 +18,7 @@ import (
 //	This spell costs {1} less to cast for each instant and sorcery card in your graveyard.
 //	Reach
 //	Whenever The Dawning Archaic attacks, you may cast target instant or sorcery card from your graveyard without paying its mana cost. If that spell would be put into your graveyard, exile it instead.
-var TheDawningArchaic = newTheDawningArchaic()
+var TheDawningArchaic = newTheDawningArchaic
 
 func newTheDawningArchaic() *game.CardDef {
 	return &game.CardDef{

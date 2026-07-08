@@ -19,7 +19,7 @@ import (
 //	Enchant creature
 //	Enchanted creature gets +3/+3.
 //	At the beginning of the upkeep of enchanted creature's controller, put a -1/-1 counter on that creature.
-var UnstableMutation = newUnstableMutation()
+var UnstableMutation = newUnstableMutation
 
 func newUnstableMutation() *game.CardDef {
 	return &game.CardDef{

@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature deals damage to a creature, destroy that creature at end of combat.
-var LowlandBasilisk = newLowlandBasilisk()
+var LowlandBasilisk = newLowlandBasilisk
 
 func newLowlandBasilisk() *game.CardDef {
 	return &game.CardDef{

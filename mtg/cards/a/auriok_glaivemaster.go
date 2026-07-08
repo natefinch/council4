@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	As long as this creature is equipped, it gets +1/+1 and has first strike.
-var AuriokGlaivemaster = newAuriokGlaivemaster()
+var AuriokGlaivemaster = newAuriokGlaivemaster
 
 func newAuriokGlaivemaster() *game.CardDef {
 	return &game.CardDef{

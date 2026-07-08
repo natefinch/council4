@@ -18,7 +18,7 @@ import (
 //
 //	{G}, Sacrifice this artifact: Until end of turn, target land becomes a 3/3 creature that's still a land.
 //	{1}, Sacrifice this artifact: Draw a card.
-var LifesparkSpellbomb = newLifesparkSpellbomb()
+var LifesparkSpellbomb = newLifesparkSpellbomb
 
 func newLifesparkSpellbomb() *game.CardDef {
 	return &game.CardDef{

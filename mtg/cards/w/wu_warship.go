@@ -9,7 +9,7 @@ import (
 )
 
 // WuWarship is the card definition for Wu Warship.
-var WuWarship = newWuWarship()
+var WuWarship = newWuWarship
 
 func newWuWarship() *game.CardDef {
 	return &game.CardDef{

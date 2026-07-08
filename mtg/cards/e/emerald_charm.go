@@ -19,7 +19,7 @@ import (
 //	• Untap target permanent.
 //	• Destroy target non-Aura enchantment.
 //	• Target creature loses flying until end of turn.
-var EmeraldCharm = newEmeraldCharm()
+var EmeraldCharm = newEmeraldCharm
 
 func newEmeraldCharm() *game.CardDef {
 	return &game.CardDef{

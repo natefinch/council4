@@ -18,7 +18,7 @@ import (
 //
 //	Flying
 //	{T}: Prevent the next 2 damage that would be dealt to any target this turn.
-var AvenRedeemer = newAvenRedeemer()
+var AvenRedeemer = newAvenRedeemer
 
 func newAvenRedeemer() *game.CardDef {
 	return &game.CardDef{

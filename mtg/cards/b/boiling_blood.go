@@ -17,7 +17,7 @@ import (
 //
 //	Target creature attacks this turn if able.
 //	Draw a card.
-var BoilingBlood = newBoilingBlood()
+var BoilingBlood = newBoilingBlood
 
 func newBoilingBlood() *game.CardDef {
 	return &game.CardDef{

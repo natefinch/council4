@@ -18,7 +18,7 @@ import (
 //
 //	{G}: Target land becomes a 1/1 creature until end of turn. It's still a land.
 //	{2}{G}{G}{G}: Creatures you control get +3/+3 and gain trample until end of turn.
-var KamahlFistOfKrosa = newKamahlFistOfKrosa()
+var KamahlFistOfKrosa = newKamahlFistOfKrosa
 
 func newKamahlFistOfKrosa() *game.CardDef {
 	return &game.CardDef{

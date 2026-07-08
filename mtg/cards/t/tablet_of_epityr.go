@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever an artifact you control is put into a graveyard from the battlefield, you may pay {1}. If you do, you gain 1 life.
-var TabletOfEpityr = newTabletOfEpityr()
+var TabletOfEpityr = newTabletOfEpityr
 
 func newTabletOfEpityr() *game.CardDef {
 	return &game.CardDef{

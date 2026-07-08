@@ -20,7 +20,7 @@ import (
 //	At the beginning of your upkeep, put a spore counter on this creature.
 //	Remove three spore counters from this creature: Create a 1/1 green Saproling creature token.
 //	{1}, Sacrifice a Saproling: Draw a card.
-var PsychotropeThallid = newPsychotropeThallid()
+var PsychotropeThallid = newPsychotropeThallid
 
 func newPsychotropeThallid() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{T}: Put target creature card from your graveyard on top of your library. Activate only during your turn, before attackers are declared.
-var HuaTuoHonoredPhysician = newHuaTuoHonoredPhysician()
+var HuaTuoHonoredPhysician = newHuaTuoHonoredPhysician
 
 func newHuaTuoHonoredPhysician() *game.CardDef {
 	return &game.CardDef{

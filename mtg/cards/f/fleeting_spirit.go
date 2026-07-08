@@ -18,7 +18,7 @@ import (
 //
 //	{W}, Exile three cards from your graveyard: This creature gains first strike until end of turn.
 //	Discard a card: Exile this creature. Return it to the battlefield under its owner's control at the beginning of the next end step.
-var FleetingSpirit = newFleetingSpirit()
+var FleetingSpirit = newFleetingSpirit
 
 func newFleetingSpirit() *game.CardDef {
 	return &game.CardDef{

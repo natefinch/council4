@@ -17,7 +17,7 @@ import (
 //
 //	Metalcraft — This spell costs {1} less to cast if you control three or more artifacts.
 //	Counter target spell.
-var StoicRebuttal = newStoicRebuttal()
+var StoicRebuttal = newStoicRebuttal
 
 func newStoicRebuttal() *game.CardDef {
 	return &game.CardDef{

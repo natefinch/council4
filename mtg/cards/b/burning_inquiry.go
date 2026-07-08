@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Each player draws three cards, then discards three cards at random.
-var BurningInquiry = newBurningInquiry()
+var BurningInquiry = newBurningInquiry
 
 func newBurningInquiry() *game.CardDef {
 	return &game.CardDef{

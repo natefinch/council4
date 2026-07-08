@@ -20,7 +20,7 @@ import (
 //	Menace (This creature can't be blocked except by two or more creatures.)
 //	This creature can block an additional creature each combat.
 //	{1}{R}: This creature gets +2/+0 until end of turn.
-var TwoHeadedDragon = newTwoHeadedDragon()
+var TwoHeadedDragon = newTwoHeadedDragon
 
 func newTwoHeadedDragon() *game.CardDef {
 	return &game.CardDef{

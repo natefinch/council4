@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever you cast your second spell each turn, create a 1/1 colorless Drone artifact creature token with flying and "This token can block only creatures with flying."
-var StationMonitor = newStationMonitor()
+var StationMonitor = newStationMonitor
 
 func newStationMonitor() *game.CardDef {
 	return &game.CardDef{

@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	At the beginning of each opponent's upkeep, if that player has five or more cards in hand, this artifact deals 2 damage to that player.
-var MisersCage = newMisersCage()
+var MisersCage = newMisersCage
 
 func newMisersCage() *game.CardDef {
 	return &game.CardDef{

@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature becomes blocked, defending player discards a card.
-var AlleyGrifters = newAlleyGrifters()
+var AlleyGrifters = newAlleyGrifters
 
 func newAlleyGrifters() *game.CardDef {
 	return &game.CardDef{

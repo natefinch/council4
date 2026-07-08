@@ -17,7 +17,7 @@ import (
 //
 //	When this enchantment enters, you become the monarch.
 //	At the beginning of your upkeep, exile the top card of target opponent's library. You may play that card for as long as it remains exiled, and mana of any type can be spent to cast it. If you're the monarch, until end of turn, you may cast a spell from among cards exiled with this enchantment without paying its mana cost.
-var CourtOfLocthwain = newCourtOfLocthwain()
+var CourtOfLocthwain = newCourtOfLocthwain
 
 func newCourtOfLocthwain() *game.CardDef {
 	return &game.CardDef{

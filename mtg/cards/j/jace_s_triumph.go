@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Draw two cards. If you control a Jace planeswalker, draw three cards instead.
-var JaceSTriumph = newJaceSTriumph()
+var JaceSTriumph = newJaceSTriumph
 
 func newJaceSTriumph() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Valiant — Whenever this creature becomes the target of a spell or ability you control for the first time each turn, it gets +1/+0 and gains first strike until end of turn. Scry 1. (Look at the top card of your library. You may put that card on the bottom.)
-var VeteranGuardmouse = newVeteranGuardmouse()
+var VeteranGuardmouse = newVeteranGuardmouse
 
 func newVeteranGuardmouse() *game.CardDef {
 	return &game.CardDef{

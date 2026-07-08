@@ -19,7 +19,7 @@ import (
 //	+1: Put a loyalty counter on Huatli for each creature you control.
 //	−1: Target creature gets +X/+X until end of turn, where X is the number of creatures you control.
 //	−8: You get an emblem with "Whenever a creature you control enters, you may draw a card."
-var HuatliRadiantChampion = newHuatliRadiantChampion()
+var HuatliRadiantChampion = newHuatliRadiantChampion
 
 func newHuatliRadiantChampion() *game.CardDef {
 	return &game.CardDef{

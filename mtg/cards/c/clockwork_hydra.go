@@ -19,7 +19,7 @@ import (
 //	This creature enters with four +1/+1 counters on it.
 //	Whenever this creature attacks or blocks, remove a +1/+1 counter from it. If you do, it deals 1 damage to any target.
 //	{T}: Put a +1/+1 counter on this creature.
-var ClockworkHydra = newClockworkHydra()
+var ClockworkHydra = newClockworkHydra
 
 func newClockworkHydra() *game.CardDef {
 	return &game.CardDef{

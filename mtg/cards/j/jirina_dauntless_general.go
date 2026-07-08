@@ -18,7 +18,7 @@ import (
 //
 //	When Jirina enters, exile target player's graveyard.
 //	Sacrifice Jirina: Humans you control gain hexproof and indestructible until end of turn.
-var JirinaDauntlessGeneral = newJirinaDauntlessGeneral()
+var JirinaDauntlessGeneral = newJirinaDauntlessGeneral
 
 func newJirinaDauntlessGeneral() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 //	When this creature enters, choose one —
 //	• This creature gains haste until end of turn.
 //	• Destroy target artifact or enchantment.
-var RavenousSailback = newRavenousSailback()
+var RavenousSailback = newRavenousSailback
 
 func newRavenousSailback() *game.CardDef {
 	return &game.CardDef{

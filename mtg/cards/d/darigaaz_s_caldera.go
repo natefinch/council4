@@ -17,7 +17,7 @@ import (
 //
 //	When this land enters, sacrifice it unless you return a non-Lair land you control to its owner's hand.
 //	{T}: Add {B}, {R}, or {G}.
-var DarigaazSCaldera = newDarigaazSCaldera()
+var DarigaazSCaldera = newDarigaazSCaldera
 
 func newDarigaazSCaldera() *game.CardDef {
 	return &game.CardDef{

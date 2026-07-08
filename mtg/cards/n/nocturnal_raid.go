@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Black creatures get +2/+0 until end of turn.
-var NocturnalRaid = newNocturnalRaid()
+var NocturnalRaid = newNocturnalRaid
 
 func newNocturnalRaid() *game.CardDef {
 	return &game.CardDef{

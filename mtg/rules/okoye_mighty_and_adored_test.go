@@ -45,7 +45,7 @@ func newOkoyeCombat(t *testing.T) (g *game.Game, engine *Engine, creature *game.
 	t.Helper()
 	g = game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine = NewEngine(nil)
-	addCombatPermanent(g, game.Player1, cardo.OkoyeMightyAndAdored)
+	addCombatPermanent(g, game.Player1, cardo.OkoyeMightyAndAdored())
 	creature = addCombatCreaturePermanentWithPower(g, game.Player1, 2)
 	g.Turn.Phase = game.PhaseCombat
 	g.Turn.Step = game.StepBeginningOfCombat
@@ -224,7 +224,7 @@ func addCombatTokenCreaturePermanent(g *game.Game, controller game.PlayerID, pow
 func TestOkoyeCounteredTokenCreatureAttackingMonarchGainsKeywords(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	addCombatPermanent(g, game.Player1, cardo.OkoyeMightyAndAdored)
+	addCombatPermanent(g, game.Player1, cardo.OkoyeMightyAndAdored())
 	token := addCombatTokenCreaturePermanent(g, game.Player1, 2)
 	g.Turn.Phase = game.PhaseCombat
 	g.Turn.Step = game.StepBeginningOfCombat

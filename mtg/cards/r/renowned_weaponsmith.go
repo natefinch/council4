@@ -19,7 +19,7 @@ import (
 //
 //	{T}: Add {C}{C}. Spend this mana only to cast artifact spells or activate abilities of artifacts.
 //	{U}, {T}: Search your library for a card named Heart-Piercer Bow or Vial of Dragonfire, reveal it, put it into your hand, then shuffle.
-var RenownedWeaponsmith = newRenownedWeaponsmith()
+var RenownedWeaponsmith = newRenownedWeaponsmith
 
 func newRenownedWeaponsmith() *game.CardDef {
 	return &game.CardDef{

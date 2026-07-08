@@ -19,7 +19,7 @@ import (
 //	When this Equipment enters, attach it to target creature you control. That creature gains wither until end of turn. (It deals damage to creatures in the form of -1/-1 counters.)
 //	Equipped creature gets +1/+2.
 //	Equip {2}
-var BarbedBloodletter = newBarbedBloodletter()
+var BarbedBloodletter = newBarbedBloodletter
 
 func newBarbedBloodletter() *game.CardDef {
 	return &game.CardDef{

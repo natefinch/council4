@@ -18,7 +18,7 @@ import (
 //	Flying
 //	When this Vehicle enters, it deals X damage to up to one target creature, where X is twice the number of Vehicles you control.
 //	Crew 2 (Tap any number of creatures you control with total power 2 or more: This Vehicle becomes an artifact creature until end of turn.)
-var SkyCycle = newSkyCycle()
+var SkyCycle = newSkyCycle
 
 func newSkyCycle() *game.CardDef {
 	return &game.CardDef{

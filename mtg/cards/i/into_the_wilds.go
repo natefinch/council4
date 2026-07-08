@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	At the beginning of your upkeep, look at the top card of your library. If it's a land card, you may put it onto the battlefield.
-var IntoTheWilds = newIntoTheWilds()
+var IntoTheWilds = newIntoTheWilds
 
 func newIntoTheWilds() *game.CardDef {
 	return &game.CardDef{

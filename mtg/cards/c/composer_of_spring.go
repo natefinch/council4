@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Constellation — Whenever an enchantment you control enters, you may put a land card from your hand onto the battlefield tapped. If you control six or more enchantments, instead you may put a creature or land card from your hand onto the battlefield tapped.
-var ComposerOfSpring = newComposerOfSpring()
+var ComposerOfSpring = newComposerOfSpring
 
 func newComposerOfSpring() *game.CardDef {
 	return &game.CardDef{

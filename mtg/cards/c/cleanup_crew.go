@@ -21,7 +21,7 @@ import (
 //	• Destroy target enchantment.
 //	• Exile target card from a graveyard.
 //	• You gain 4 life.
-var CleanupCrew = newCleanupCrew()
+var CleanupCrew = newCleanupCrew
 
 func newCleanupCrew() *game.CardDef {
 	return &game.CardDef{

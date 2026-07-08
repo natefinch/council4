@@ -18,7 +18,7 @@ import (
 //
 //	{T}: Add one mana of any color.
 //	{1}, {T}, Tap another untapped artifact you control: Draw a card, then discard a card.
-var NetworkTerminal = newNetworkTerminal()
+var NetworkTerminal = newNetworkTerminal
 
 func newNetworkTerminal() *game.CardDef {
 	return &game.CardDef{

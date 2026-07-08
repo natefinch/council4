@@ -18,7 +18,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, you may search your library for an artifact card with mana value 3, reveal it, put it into your hand, then shuffle.
-var TrophyMage = newTrophyMage()
+var TrophyMage = newTrophyMage
 
 func newTrophyMage() *game.CardDef {
 	return &game.CardDef{

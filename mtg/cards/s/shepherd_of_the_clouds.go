@@ -19,7 +19,7 @@ import (
 //
 //	Flying, vigilance
 //	When this creature enters, return target permanent card with mana value 3 or less from your graveyard to your hand. Return that card to the battlefield instead if you control a Mount.
-var ShepherdOfTheClouds = newShepherdOfTheClouds()
+var ShepherdOfTheClouds = newShepherdOfTheClouds
 
 func newShepherdOfTheClouds() *game.CardDef {
 	return &game.CardDef{

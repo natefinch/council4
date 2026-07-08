@@ -15,7 +15,7 @@ import (
 // Oracle text:
 //
 //	This creature can block an additional creature each combat.
-var NightMarketGuard = newNightMarketGuard()
+var NightMarketGuard = newNightMarketGuard
 
 func newNightMarketGuard() *game.CardDef {
 	return &game.CardDef{

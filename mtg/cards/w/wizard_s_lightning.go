@@ -17,7 +17,7 @@ import (
 //
 //	This spell costs {2} less to cast if you control a Wizard.
 //	Wizard's Lightning deals 3 damage to any target.
-var WizardSLightning = newWizardSLightning()
+var WizardSLightning = newWizardSLightning
 
 func newWizardSLightning() *game.CardDef {
 	return &game.CardDef{

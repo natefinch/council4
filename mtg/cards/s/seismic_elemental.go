@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, creatures without flying can't block this turn.
-var SeismicElemental = newSeismicElemental()
+var SeismicElemental = newSeismicElemental
 
 func newSeismicElemental() *game.CardDef {
 	return &game.CardDef{

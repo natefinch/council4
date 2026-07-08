@@ -17,7 +17,7 @@ import (
 //	Flying
 //	Whenever Weatherlight deals combat damage to a player, look at the top five cards of your library. You may reveal a historic card from among them and put it into your hand. Put the rest on the bottom of your library in a random order. (Artifacts, legendaries, and Sagas are historic.)
 //	Crew 3
-var Weatherlight = newWeatherlight()
+var Weatherlight = newWeatherlight
 
 func newWeatherlight() *game.CardDef {
 	return &game.CardDef{

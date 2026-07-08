@@ -17,7 +17,7 @@ import (
 //
 //	At the beginning of your upkeep, this artifact deals 2 damage to you.
 //	Sacrifice a creature: Target opponent gains control of this artifact.
-var JinxedIdol = newJinxedIdol()
+var JinxedIdol = newJinxedIdol
 
 func newJinxedIdol() *game.CardDef {
 	return &game.CardDef{

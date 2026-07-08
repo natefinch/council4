@@ -17,7 +17,7 @@ import (
 //
 //	As this enchantment enters, choose a creature type.
 //	All creatures of the chosen type get -1/-1.
-var EngineeredPlague = newEngineeredPlague()
+var EngineeredPlague = newEngineeredPlague
 
 func newEngineeredPlague() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 // Oracle text:
 //
 //	This creature has trample as long as it has a +1/+1 counter on it.
-var BalothPup = newBalothPup()
+var BalothPup = newBalothPup
 
 func newBalothPup() *game.CardDef {
 	return &game.CardDef{

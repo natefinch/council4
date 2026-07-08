@@ -10,7 +10,7 @@ import (
 )
 
 // MutantSPrey is the card definition for Mutant's Prey.
-var MutantSPrey = newMutantSPrey()
+var MutantSPrey = newMutantSPrey
 
 func newMutantSPrey() *game.CardDef {
 	return &game.CardDef{

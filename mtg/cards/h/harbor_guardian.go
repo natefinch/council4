@@ -17,7 +17,7 @@ import (
 //
 //	Reach (This creature can block creatures with flying.)
 //	Whenever this creature attacks, defending player may draw a card.
-var HarborGuardian = newHarborGuardian()
+var HarborGuardian = newHarborGuardian
 
 func newHarborGuardian() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 //	This spell costs {2} less to cast if you control a creature with flying.
 //	Return target nonland permanent you don't control to its owner's hand.
 //	Draw a card.
-var GustOfWind = newGustOfWind()
+var GustOfWind = newGustOfWind
 
 func newGustOfWind() *game.CardDef {
 	return &game.CardDef{

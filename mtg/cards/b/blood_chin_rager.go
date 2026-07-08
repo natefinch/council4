@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature attacks, Warrior creatures you control gain menace until end of turn. (They can't be blocked except by two or more creatures.)
-var BloodChinRager = newBloodChinRager()
+var BloodChinRager = newBloodChinRager
 
 func newBloodChinRager() *game.CardDef {
 	return &game.CardDef{

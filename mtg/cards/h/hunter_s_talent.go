@@ -254,4 +254,4 @@ var HunterSTalent = func() *game.CardDef {
 		},
 	)
 	return card
-}()
+}

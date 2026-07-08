@@ -18,7 +18,7 @@ import (
 //	When this Equipment enters, create a 2/2 colorless Robot artifact creature token and attach this Equipment to it.
 //	Equipped creature gets +1/+2 and has flying.
 //	Equip {3} ({3}: Attach to target creature you control. Equip only as a sorcery.)
-var AuxiliaryBoosters = newAuxiliaryBoosters()
+var AuxiliaryBoosters = newAuxiliaryBoosters
 
 func newAuxiliaryBoosters() *game.CardDef {
 	return &game.CardDef{

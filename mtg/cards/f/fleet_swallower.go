@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature attacks, target player mills half their library, rounded up.
-var FleetSwallower = newFleetSwallower()
+var FleetSwallower = newFleetSwallower
 
 func newFleetSwallower() *game.CardDef {
 	return &game.CardDef{

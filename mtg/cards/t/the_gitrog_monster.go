@@ -20,7 +20,7 @@ import (
 //	At the beginning of your upkeep, sacrifice The Gitrog Monster unless you sacrifice a land.
 //	You may play an additional land on each of your turns.
 //	Whenever one or more land cards are put into your graveyard from anywhere, draw a card.
-var TheGitrogMonster = newTheGitrogMonster()
+var TheGitrogMonster = newTheGitrogMonster
 
 func newTheGitrogMonster() *game.CardDef {
 	return &game.CardDef{

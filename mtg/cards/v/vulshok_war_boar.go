@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, sacrifice it unless you sacrifice an artifact.
-var VulshokWarBoar = newVulshokWarBoar()
+var VulshokWarBoar = newVulshokWarBoar
 
 func newVulshokWarBoar() *game.CardDef {
 	return &game.CardDef{

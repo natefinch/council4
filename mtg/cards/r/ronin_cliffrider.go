@@ -17,7 +17,7 @@ import (
 //
 //	Bushido 1 (Whenever this creature blocks or becomes blocked, it gets +1/+1 until end of turn.)
 //	Whenever this creature attacks, you may have it deal 1 damage to each creature defending player controls.
-var RoninCliffrider = newRoninCliffrider()
+var RoninCliffrider = newRoninCliffrider
 
 func newRoninCliffrider() *game.CardDef {
 	return &game.CardDef{

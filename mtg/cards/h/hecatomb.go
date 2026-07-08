@@ -18,7 +18,7 @@ import (
 //
 //	When this enchantment enters, sacrifice this enchantment unless you sacrifice four creatures.
 //	Tap an untapped Swamp you control: This enchantment deals 1 damage to any target.
-var Hecatomb = newHecatomb()
+var Hecatomb = newHecatomb
 
 func newHecatomb() *game.CardDef {
 	return &game.CardDef{

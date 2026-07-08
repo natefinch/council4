@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{T}: Add two mana of any one color. Spend this mana only to cast artifact spells or activate abilities of artifacts.
-var VedalkenEngineer = newVedalkenEngineer()
+var VedalkenEngineer = newVedalkenEngineer
 
 func newVedalkenEngineer() *game.CardDef {
 	return &game.CardDef{

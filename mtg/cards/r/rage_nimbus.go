@@ -18,7 +18,7 @@ import (
 //
 //	Defender, flying
 //	{1}{R}: Target creature attacks this turn if able.
-var RageNimbus = newRageNimbus()
+var RageNimbus = newRageNimbus
 
 func newRageNimbus() *game.CardDef {
 	return &game.CardDef{

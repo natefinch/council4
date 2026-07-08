@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{T}: Prevent the next 2 damage that would be dealt to any target this turn.
-var SanctumCustodian = newSanctumCustodian()
+var SanctumCustodian = newSanctumCustodian
 
 func newSanctumCustodian() *game.CardDef {
 	return &game.CardDef{

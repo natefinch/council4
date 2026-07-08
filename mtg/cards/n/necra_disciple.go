@@ -19,7 +19,7 @@ import (
 //
 //	{G}, {T}: Add one mana of any color.
 //	{W}, {T}: Prevent the next 1 damage that would be dealt to any target this turn.
-var NecraDisciple = newNecraDisciple()
+var NecraDisciple = newNecraDisciple
 
 func newNecraDisciple() *game.CardDef {
 	return &game.CardDef{

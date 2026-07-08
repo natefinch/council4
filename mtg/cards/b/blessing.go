@@ -18,7 +18,7 @@ import (
 //
 //	Enchant creature
 //	{W}: Enchanted creature gets +1/+1 until end of turn.
-var Blessing = newBlessing()
+var Blessing = newBlessing
 
 func newBlessing() *game.CardDef {
 	return &game.CardDef{

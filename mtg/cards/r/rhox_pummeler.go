@@ -19,7 +19,7 @@ import (
 //
 //	This creature enters with a shield counter on it. (If it would be dealt damage or destroyed, remove a shield counter from it instead.)
 //	This creature has trample as long as it has a shield counter on it.
-var RhoxPummeler = newRhoxPummeler()
+var RhoxPummeler = newRhoxPummeler
 
 func newRhoxPummeler() *game.CardDef {
 	return &game.CardDef{

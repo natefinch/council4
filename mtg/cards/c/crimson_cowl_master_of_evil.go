@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever one or more nontoken Villains you control attack a player, you create a 2/1 black Villain creature token with menace. (It can't be blocked except by two or more creatures.)
-var CrimsonCowlMasterOfEvil = newCrimsonCowlMasterOfEvil()
+var CrimsonCowlMasterOfEvil = newCrimsonCowlMasterOfEvil
 
 func newCrimsonCowlMasterOfEvil() *game.CardDef {
 	return &game.CardDef{

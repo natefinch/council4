@@ -17,7 +17,7 @@ import (
 //
 //	Flying, vigilance, ward {2}
 //	Shiva's Aid — When Hraesvelgr enters and whenever you cast a noncreature spell, target creature gets +1/+0 until end of turn and can't be blocked this turn.
-var HraesvelgrOfTheFirstBrood = newHraesvelgrOfTheFirstBrood()
+var HraesvelgrOfTheFirstBrood = newHraesvelgrOfTheFirstBrood
 
 func newHraesvelgrOfTheFirstBrood() *game.CardDef {
 	return &game.CardDef{

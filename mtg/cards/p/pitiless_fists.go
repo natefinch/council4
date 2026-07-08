@@ -18,7 +18,7 @@ import (
 //	Enchant creature you control
 //	When this Aura enters, enchanted creature fights up to one target creature an opponent controls. (Each deals damage equal to its power to the other.)
 //	Enchanted creature gets +2/+2.
-var PitilessFists = newPitilessFists()
+var PitilessFists = newPitilessFists
 
 func newPitilessFists() *game.CardDef {
 	return &game.CardDef{

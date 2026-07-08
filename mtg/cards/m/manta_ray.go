@@ -9,7 +9,7 @@ import (
 )
 
 // MantaRay is the card definition for Manta Ray.
-var MantaRay = newMantaRay()
+var MantaRay = newMantaRay
 
 func newMantaRay() *game.CardDef {
 	return &game.CardDef{

@@ -20,7 +20,7 @@ import (
 //	Menace, lifelink
 //	{1}, Sacrifice another creature: Surveil 1. (Look at the top card of your library. You may put that card into your graveyard.)
 //	At the beginning of your end step, if there are five or more mana values among cards in your graveyard, you may pay 2 life. If you do, draw a card.
-var SanguineSpy = newSanguineSpy()
+var SanguineSpy = newSanguineSpy
 
 func newSanguineSpy() *game.CardDef {
 	return &game.CardDef{

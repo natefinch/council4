@@ -17,7 +17,7 @@ import (
 //
 //	Flying
 //	At the beginning of your upkeep, sacrifice Chisei unless you remove a counter from a permanent you control.
-var ChiseiHeartOfOceans = newChiseiHeartOfOceans()
+var ChiseiHeartOfOceans = newChiseiHeartOfOceans
 
 func newChiseiHeartOfOceans() *game.CardDef {
 	return &game.CardDef{

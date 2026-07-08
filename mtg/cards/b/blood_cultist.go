@@ -19,7 +19,7 @@ import (
 //
 //	{T}: This creature deals 1 damage to target creature.
 //	Whenever a creature dealt damage by this creature this turn dies, put a +1/+1 counter on this creature.
-var BloodCultist = newBloodCultist()
+var BloodCultist = newBloodCultist
 
 func newBloodCultist() *game.CardDef {
 	return &game.CardDef{

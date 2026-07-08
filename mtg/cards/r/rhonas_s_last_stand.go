@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Create a 5/4 green Snake creature token. Lands you control don't untap during your next untap step.
-var RhonasSLastStand = newRhonasSLastStand()
+var RhonasSLastStand = newRhonasSLastStand
 
 func newRhonasSLastStand() *game.CardDef {
 	return &game.CardDef{

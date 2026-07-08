@@ -19,7 +19,7 @@ import (
 //	{T}: Add {C}.
 //	{T}: Add {W}. Spend this mana only to cast a creature spell.
 //	{1}{W}, {T}, Sacrifice this land: Look at the top six cards of your library. You may reveal a Bat, Bird, Mouse, or Rabbit card from among them and put it into your hand. Put the rest on the bottom of your library in a random order.
-var LupinflowerVillage = newLupinflowerVillage()
+var LupinflowerVillage = newLupinflowerVillage
 
 func newLupinflowerVillage() *game.CardDef {
 	return &game.CardDef{

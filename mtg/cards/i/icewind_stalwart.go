@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Protection Fighting Style — When this creature enters, exile up to one target non-Warrior creature you control, then return it to the battlefield under its owner's control.
-var IcewindStalwart = newIcewindStalwart()
+var IcewindStalwart = newIcewindStalwart
 
 func newIcewindStalwart() *game.CardDef {
 	return &game.CardDef{

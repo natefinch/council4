@@ -17,74 +17,76 @@ import (
 //
 //	{T}: Add {C}.
 //	{R/G}, {T}: Add {R}{R}, {R}{G}, or {G}{G}.
-var FireLitThicket = &game.CardDef{
-	ColorIdentity: color.NewIdentity(color.Green, color.Red),
-	CardFace: game.CardFace{
-		Name:  "Fire-Lit Thicket",
-		Types: []types.Card{types.Land},
-		OracleText: `
+var FireLitThicket = func() *game.CardDef {
+	return &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Green, color.Red),
+		CardFace: game.CardFace{
+			Name:  "Fire-Lit Thicket",
+			Types: []types.Card{types.Land},
+			OracleText: `
 			{T}: Add {C}.
 			{R/G}, {T}: Add {R}{R}, {R}{G}, or {G}{G}.
 		`,
-		ManaAbilities: []game.ManaAbility{
-			game.TapManaAbility(mana.C),
-			{
-				Text: `
+			ManaAbilities: []game.ManaAbility{
+				game.TapManaAbility(mana.C),
+				{
+					Text: `
 					{R/G}, {T}: Add {R}{R}, {R}{G}, or {G}{G}.
 				`,
-				ManaCost: opt.Val(cost.Mana{
-					cost.HybridMana(mana.R, mana.G),
-				}),
-				AdditionalCosts: cost.Tap,
-				Content: game.AbilityContent{
-					Modes: []game.Mode{
-						game.Mode{
-							Text: "Add {R}{R}.",
-							Sequence: []game.Instruction{
-								{
-									Primitive: game.AddMana{
-										Amount:    game.Fixed(1),
-										ManaColor: mana.R,
+					ManaCost: opt.Val(cost.Mana{
+						cost.HybridMana(mana.R, mana.G),
+					}),
+					AdditionalCosts: cost.Tap,
+					Content: game.AbilityContent{
+						Modes: []game.Mode{
+							game.Mode{
+								Text: "Add {R}{R}.",
+								Sequence: []game.Instruction{
+									{
+										Primitive: game.AddMana{
+											Amount:    game.Fixed(1),
+											ManaColor: mana.R,
+										},
 									},
-								},
-								{
-									Primitive: game.AddMana{
-										Amount:    game.Fixed(1),
-										ManaColor: mana.R,
-									},
-								},
-							},
-						},
-						game.Mode{
-							Text: "Add {R}{G}.",
-							Sequence: []game.Instruction{
-								{
-									Primitive: game.AddMana{
-										Amount:    game.Fixed(1),
-										ManaColor: mana.R,
-									},
-								},
-								{
-									Primitive: game.AddMana{
-										Amount:    game.Fixed(1),
-										ManaColor: mana.G,
+									{
+										Primitive: game.AddMana{
+											Amount:    game.Fixed(1),
+											ManaColor: mana.R,
+										},
 									},
 								},
 							},
-						},
-						game.Mode{
-							Text: "Add {G}{G}.",
-							Sequence: []game.Instruction{
-								{
-									Primitive: game.AddMana{
-										Amount:    game.Fixed(1),
-										ManaColor: mana.G,
+							game.Mode{
+								Text: "Add {R}{G}.",
+								Sequence: []game.Instruction{
+									{
+										Primitive: game.AddMana{
+											Amount:    game.Fixed(1),
+											ManaColor: mana.R,
+										},
+									},
+									{
+										Primitive: game.AddMana{
+											Amount:    game.Fixed(1),
+											ManaColor: mana.G,
+										},
 									},
 								},
-								{
-									Primitive: game.AddMana{
-										Amount:    game.Fixed(1),
-										ManaColor: mana.G,
+							},
+							game.Mode{
+								Text: "Add {G}{G}.",
+								Sequence: []game.Instruction{
+									{
+										Primitive: game.AddMana{
+											Amount:    game.Fixed(1),
+											ManaColor: mana.G,
+										},
+									},
+									{
+										Primitive: game.AddMana{
+											Amount:    game.Fixed(1),
+											ManaColor: mana.G,
+										},
 									},
 								},
 							},
@@ -93,5 +95,5 @@ var FireLitThicket = &game.CardDef{
 				},
 			},
 		},
-	},
+	}
 }

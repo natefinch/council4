@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{T}: Destroy target tapped creature. Activate only during your turn, before attackers are declared.
-var SteamCatapult = newSteamCatapult()
+var SteamCatapult = newSteamCatapult
 
 func newSteamCatapult() *game.CardDef {
 	return &game.CardDef{

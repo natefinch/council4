@@ -17,7 +17,7 @@ import (
 //
 //	If this card is in your opening hand, you may begin the game with it on the battlefield.
 //	You have hexproof. (You can't be the target of spells or abilities your opponents control.)
-var LeylineOfSanctity = newLeylineOfSanctity()
+var LeylineOfSanctity = newLeylineOfSanctity
 
 func newLeylineOfSanctity() *game.CardDef {
 	return &game.CardDef{

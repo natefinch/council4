@@ -15,7 +15,7 @@ import (
 // Oracle text:
 //
 //	When this artifact enters or is put into a graveyard from the battlefield, create a 1/1 colorless Servo artifact creature token.
-var ServoSchematic = newServoSchematic()
+var ServoSchematic = newServoSchematic
 
 func newServoSchematic() *game.CardDef {
 	return &game.CardDef{

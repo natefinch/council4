@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Mill five cards. You may put a permanent card from among the cards milled this way into your hand. (To mill a card, put the top card of your library into your graveyard.)
-var WastefulHarvest = newWastefulHarvest()
+var WastefulHarvest = newWastefulHarvest
 
 func newWastefulHarvest() *game.CardDef {
 	return &game.CardDef{

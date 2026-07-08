@@ -17,7 +17,7 @@ import (
 //
 //	Double strike
 //	Whenever this creature becomes the target of a spell you control, it connives. (Draw a card, then discard a card. If you discarded a nonland card, put a +1/+1 counter on this creature.)
-var IlluminatorVirtuoso = newIlluminatorVirtuoso()
+var IlluminatorVirtuoso = newIlluminatorVirtuoso
 
 func newIlluminatorVirtuoso() *game.CardDef {
 	return &game.CardDef{

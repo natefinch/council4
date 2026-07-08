@@ -18,7 +18,7 @@ import (
 //
 //	{1}{G}, Sacrifice a land: Create two 1/1 green Squirrel creature tokens.
 //	{1}{G}, Sacrifice a land: Squirrel creatures get +1/+1 until end of turn.
-var SquirrelWrangler = newSquirrelWrangler()
+var SquirrelWrangler = newSquirrelWrangler
 
 func newSquirrelWrangler() *game.CardDef {
 	return &game.CardDef{

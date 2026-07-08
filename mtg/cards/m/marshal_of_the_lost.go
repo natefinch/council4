@@ -17,7 +17,7 @@ import (
 //
 //	Deathtouch
 //	Whenever you attack, target creature gets +X/+X until end of turn, where X is the number of attacking creatures.
-var MarshalOfTheLost = newMarshalOfTheLost()
+var MarshalOfTheLost = newMarshalOfTheLost
 
 func newMarshalOfTheLost() *game.CardDef {
 	return &game.CardDef{

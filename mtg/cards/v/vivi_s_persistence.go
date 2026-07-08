@@ -18,7 +18,7 @@ import (
 //
 //	Create a 0/1 black Wizard creature token with "Whenever you cast a noncreature spell, this token deals 1 damage to each opponent."
 //	Whenever your commander enters or attacks, you may pay {2}. If you do, return this card from your graveyard to your hand.
-var ViviSPersistence = newViviSPersistence()
+var ViviSPersistence = newViviSPersistence
 
 func newViviSPersistence() *game.CardDef {
 	return &game.CardDef{

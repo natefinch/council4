@@ -19,7 +19,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, create a 0/0 green and blue Fractal creature token. Put X +1/+1 counters on it, where X is the number of cards in your hand.
-var ManifestationSage = newManifestationSage()
+var ManifestationSage = newManifestationSage
 
 func newManifestationSage() *game.CardDef {
 	return &game.CardDef{

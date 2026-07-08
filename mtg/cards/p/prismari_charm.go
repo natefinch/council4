@@ -19,7 +19,7 @@ import (
 //	• Surveil 2, then draw a card.
 //	• Prismari Charm deals 1 damage to each of one or two targets.
 //	• Return target nonland permanent to its owner's hand.
-var PrismariCharm = newPrismariCharm()
+var PrismariCharm = newPrismariCharm
 
 func newPrismariCharm() *game.CardDef {
 	return &game.CardDef{

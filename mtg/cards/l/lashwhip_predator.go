@@ -17,7 +17,7 @@ import (
 //
 //	This spell costs {2} less to cast if your opponents control three or more creatures.
 //	Reach
-var LashwhipPredator = newLashwhipPredator()
+var LashwhipPredator = newLashwhipPredator
 
 func newLashwhipPredator() *game.CardDef {
 	return &game.CardDef{

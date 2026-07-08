@@ -17,7 +17,7 @@ import (
 //
 //	This spell costs {2} less to cast if you control a Vehicle.
 //	Truck Toss deals 4 damage to any target.
-var TruckToss = newTruckToss()
+var TruckToss = newTruckToss
 
 func newTruckToss() *game.CardDef {
 	return &game.CardDef{

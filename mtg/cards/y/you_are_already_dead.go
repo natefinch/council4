@@ -17,7 +17,7 @@ import (
 //
 //	Destroy target creature that was dealt damage this turn.
 //	Draw a card.
-var YouAreAlreadyDead = newYouAreAlreadyDead()
+var YouAreAlreadyDead = newYouAreAlreadyDead
 
 func newYouAreAlreadyDead() *game.CardDef {
 	return &game.CardDef{

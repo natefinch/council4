@@ -17,7 +17,7 @@ import (
 //
 //	Flying
 //	Whenever this creature deals damage, you gain that much life.
-var WarriorAngel = newWarriorAngel()
+var WarriorAngel = newWarriorAngel
 
 func newWarriorAngel() *game.CardDef {
 	return &game.CardDef{

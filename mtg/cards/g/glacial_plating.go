@@ -19,7 +19,7 @@ import (
 //	Enchant creature
 //	Cumulative upkeep {S} (At the beginning of your upkeep, put an age counter on this permanent, then sacrifice it unless you pay its upkeep cost for each age counter on it. {S} can be paid with one mana from a snow source.)
 //	Enchanted creature gets +3/+3 for each age counter on this Aura.
-var GlacialPlating = newGlacialPlating()
+var GlacialPlating = newGlacialPlating
 
 func newGlacialPlating() *game.CardDef {
 	return &game.CardDef{

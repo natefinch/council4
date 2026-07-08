@@ -17,7 +17,7 @@ import (
 //
 //	Enchant land
 //	Whenever enchanted land becomes tapped, this Aura deals 2 damage to that land's controller.
-var PsychicVenom = newPsychicVenom()
+var PsychicVenom = newPsychicVenom
 
 func newPsychicVenom() *game.CardDef {
 	return &game.CardDef{

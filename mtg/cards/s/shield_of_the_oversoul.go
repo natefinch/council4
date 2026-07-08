@@ -19,7 +19,7 @@ import (
 //	Enchant creature
 //	As long as enchanted creature is green, it gets +1/+1 and has indestructible. (Damage and effects that say "destroy" don't destroy it. If its toughness is 0 or less, it still dies.)
 //	As long as enchanted creature is white, it gets +1/+1 and has flying.
-var ShieldOfTheOversoul = newShieldOfTheOversoul()
+var ShieldOfTheOversoul = newShieldOfTheOversoul
 
 func newShieldOfTheOversoul() *game.CardDef {
 	return &game.CardDef{

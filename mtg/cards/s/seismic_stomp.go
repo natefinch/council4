@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Creatures without flying can't block this turn.
-var SeismicStomp = newSeismicStomp()
+var SeismicStomp = newSeismicStomp
 
 func newSeismicStomp() *game.CardDef {
 	return &game.CardDef{

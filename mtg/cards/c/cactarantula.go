@@ -18,7 +18,7 @@ import (
 //	This spell costs {1} less to cast if you control a Desert.
 //	Reach
 //	Whenever this creature becomes the target of a spell or ability an opponent controls, you may draw a card.
-var Cactarantula = newCactarantula()
+var Cactarantula = newCactarantula
 
 func newCactarantula() *game.CardDef {
 	return &game.CardDef{

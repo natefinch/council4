@@ -20,7 +20,7 @@ import (
 //	Haste
 //	{1}, {T}: Add {U}{B}{R}. Spend this mana only to cast instant and/or sorcery spells.
 //	When Cormela dies, return up to one target instant or sorcery card from your graveyard to your hand.
-var CormelaGlamourThief = newCormelaGlamourThief()
+var CormelaGlamourThief = newCormelaGlamourThief
 
 func newCormelaGlamourThief() *game.CardDef {
 	return &game.CardDef{

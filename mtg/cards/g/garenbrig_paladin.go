@@ -18,7 +18,7 @@ import (
 //
 //	Adamant — If at least three green mana was spent to cast this spell, this creature enters with a +1/+1 counter on it.
 //	This creature can't be blocked by creatures with power 2 or less.
-var GarenbrigPaladin = newGarenbrigPaladin()
+var GarenbrigPaladin = newGarenbrigPaladin
 
 func newGarenbrigPaladin() *game.CardDef {
 	return &game.CardDef{

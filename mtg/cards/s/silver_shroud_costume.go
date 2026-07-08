@@ -18,7 +18,7 @@ import (
 //	When this Equipment enters, attach it to target creature you control. That creature gains shroud until end of turn. (It can't be the target of spells or abilities.)
 //	Equipped creature can't be blocked.
 //	Equip {3}
-var SilverShroudCostume = newSilverShroudCostume()
+var SilverShroudCostume = newSilverShroudCostume
 
 func newSilverShroudCostume() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	At the beginning of each opponent's upkeep, if that player has one or fewer cards in hand, they lose 3 life.
-var ShriekingAffliction = newShriekingAffliction()
+var ShriekingAffliction = newShriekingAffliction
 
 func newShriekingAffliction() *game.CardDef {
 	return &game.CardDef{

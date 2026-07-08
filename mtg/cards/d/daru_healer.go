@@ -18,7 +18,7 @@ import (
 //
 //	{T}: Prevent the next 1 damage that would be dealt to any target this turn.
 //	Morph {W} (You may cast this card face down as a 2/2 creature for {3}. Turn it face up any time for its morph cost.)
-var DaruHealer = newDaruHealer()
+var DaruHealer = newDaruHealer
 
 func newDaruHealer() *game.CardDef {
 	return &game.CardDef{

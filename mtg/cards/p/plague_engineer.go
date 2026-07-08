@@ -18,7 +18,7 @@ import (
 //	Deathtouch
 //	As this creature enters, choose a creature type.
 //	Creatures of the chosen type your opponents control get -1/-1.
-var PlagueEngineer = newPlagueEngineer()
+var PlagueEngineer = newPlagueEngineer
 
 func newPlagueEngineer() *game.CardDef {
 	return &game.CardDef{

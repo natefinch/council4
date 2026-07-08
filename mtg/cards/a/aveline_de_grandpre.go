@@ -19,7 +19,7 @@ import (
 //	Deathtouch
 //	Whenever a creature you control with deathtouch deals combat damage to a player, put that many +1/+1 counters on that creature.
 //	Disguise {B}{G} (You may cast this card face down for {3} as a 2/2 creature with ward {2}. Turn it face up any time for its disguise cost.)
-var AvelineDeGrandpré = newAvelineDeGrandpré()
+var AvelineDeGrandpré = newAvelineDeGrandpré
 
 func newAvelineDeGrandpré() *game.CardDef {
 	return &game.CardDef{

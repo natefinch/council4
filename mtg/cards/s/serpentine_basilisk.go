@@ -17,7 +17,7 @@ import (
 //
 //	Whenever this creature deals combat damage to a creature, destroy that creature at end of combat.
 //	Morph {1}{G}{G} (You may cast this card face down as a 2/2 creature for {3}. Turn it face up any time for its morph cost.)
-var SerpentineBasilisk = newSerpentineBasilisk()
+var SerpentineBasilisk = newSerpentineBasilisk
 
 func newSerpentineBasilisk() *game.CardDef {
 	return &game.CardDef{

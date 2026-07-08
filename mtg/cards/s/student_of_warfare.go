@@ -23,7 +23,7 @@ import (
 //	LEVEL 7+
 //	4/4
 //	Double strike
-var StudentOfWarfare = newStudentOfWarfare()
+var StudentOfWarfare = newStudentOfWarfare
 
 func newStudentOfWarfare() *game.CardDef {
 	return &game.CardDef{

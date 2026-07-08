@@ -19,7 +19,7 @@ import (
 //	Vigilance
 //	When this creature enters, you get {E}{E} (two energy counters).
 //	Whenever this creature attacks, you may pay {E}{E}. If you do, create a 1/1 colorless Servo artifact creature token.
-var AetherInspector = newAetherInspector()
+var AetherInspector = newAetherInspector
 
 func newAetherInspector() *game.CardDef {
 	return &game.CardDef{

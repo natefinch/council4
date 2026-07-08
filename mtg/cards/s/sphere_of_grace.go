@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	If a black source would deal damage to you, prevent 2 of that damage.
-var SphereOfGrace = newSphereOfGrace()
+var SphereOfGrace = newSphereOfGrace
 
 func newSphereOfGrace() *game.CardDef {
 	return &game.CardDef{

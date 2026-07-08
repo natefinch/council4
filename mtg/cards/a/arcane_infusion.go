@@ -17,7 +17,7 @@ import (
 //
 //	Look at the top four cards of your library. You may reveal an instant or sorcery card from among them and put it into your hand. Put the rest on the bottom of your library in a random order.
 //	Flashback {3}{U}{R} (You may cast this card from your graveyard for its flashback cost. Then exile it.)
-var ArcaneInfusion = newArcaneInfusion()
+var ArcaneInfusion = newArcaneInfusion
 
 func newArcaneInfusion() *game.CardDef {
 	return &game.CardDef{

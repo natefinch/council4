@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	When this creature dies, look at the top five cards of your library. You may reveal a creature card with power 2 or less from among them and put it into your hand. Put the rest on the bottom of your library in a random order.
-var LivingPhone = newLivingPhone()
+var LivingPhone = newLivingPhone
 
 func newLivingPhone() *game.CardDef {
 	return &game.CardDef{

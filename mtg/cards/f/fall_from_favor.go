@@ -18,7 +18,7 @@ import (
 //	Enchant creature
 //	When this Aura enters, tap enchanted creature and you become the monarch.
 //	Enchanted creature doesn't untap during its controller's untap step unless that player is the monarch.
-var FallFromFavor = newFallFromFavor()
+var FallFromFavor = newFallFromFavor
 
 func newFallFromFavor() *game.CardDef {
 	return &game.CardDef{

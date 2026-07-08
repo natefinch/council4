@@ -19,7 +19,7 @@ import (
 //
 //	When you unlock this door, tap up to one target creature and put two stun counters on it. (If a permanent with a stun counter would become untapped, remove one from it instead.)
 //	(You may cast either half. That door unlocks on the battlefield. As a sorcery, you may pay the mana cost of a locked door to unlock it.)
-var MeatLocker = newMeatLocker()
+var MeatLocker = newMeatLocker
 
 func newMeatLocker() *game.CardDef {
 	return &game.CardDef{

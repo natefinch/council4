@@ -18,7 +18,7 @@ import (
 //
 //	Put any number of target creature cards from your graveyard on top of your library.
 //	Draw a card at the beginning of the next turn's upkeep.
-var BoneHarvest = newBoneHarvest()
+var BoneHarvest = newBoneHarvest
 
 func newBoneHarvest() *game.CardDef {
 	return &game.CardDef{

@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature attacks or blocks while you control a Dinosaur, this creature gets +1/+1 until end of turn.
-var BurningSunCavalry = newBurningSunCavalry()
+var BurningSunCavalry = newBurningSunCavalry
 
 func newBurningSunCavalry() *game.CardDef {
 	return &game.CardDef{

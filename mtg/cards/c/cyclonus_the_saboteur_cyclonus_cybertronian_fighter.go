@@ -19,7 +19,7 @@ import (
 //	More Than Meets the Eye {5}{U}{B} (You may cast this card converted for {5}{U}{B}.)
 //	Flying
 //	Whenever Cyclonus deals combat damage to a player, it connives. Then if Cyclonus's power is 5 or greater, convert it. (To have a creature connive, draw a card, then discard a card. If you discarded a nonland card, put a +1/+1 counter on that creature.)
-var CyclonusTheSaboteur = newCyclonusTheSaboteur()
+var CyclonusTheSaboteur = newCyclonusTheSaboteur
 
 func newCyclonusTheSaboteur() *game.CardDef {
 	return &game.CardDef{

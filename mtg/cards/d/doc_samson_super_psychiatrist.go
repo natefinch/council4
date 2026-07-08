@@ -18,7 +18,7 @@ import (
 //
 //	If you would put one or more counters on a permanent you control, put that many plus one of each of those kinds of counters on that permanent instead.
 //	{T}: Add X mana of any one color, where X is Doc Samson's power.
-var DocSamsonSuperPsychiatrist = newDocSamsonSuperPsychiatrist()
+var DocSamsonSuperPsychiatrist = newDocSamsonSuperPsychiatrist
 
 func newDocSamsonSuperPsychiatrist() *game.CardDef {
 	return &game.CardDef{

@@ -18,55 +18,57 @@ import (
 //
 //	Flying
 //	When this creature enters, target player reveals cards from the top of their library until they reveal a land card, then puts those cards into their graveyard.
-var BalustradeSpy = &game.CardDef{
-	ColorIdentity: color.NewIdentity(color.Black),
-	CardFace: game.CardFace{
-		Name: "Balustrade Spy",
-		ManaCost: opt.Val(cost.Mana{
-			cost.O(3),
-			cost.B,
-		}),
-		Colors:    []color.Color{color.Black},
-		Types:     []types.Card{types.Creature},
-		Subtypes:  []types.Sub{types.Vampire, types.Rogue},
-		Power:     opt.Val(game.PT{Value: 2}),
-		Toughness: opt.Val(game.PT{Value: 3}),
-		StaticAbilities: []game.StaticAbility{
-			game.FlyingStaticBody,
-		},
-		TriggeredAbilities: []game.TriggeredAbility{
-			game.TriggeredAbility{
-				Trigger: game.TriggerCondition{
-					Type: game.TriggerWhen,
-					Pattern: game.TriggerPattern{
-						Event:  game.EventPermanentEnteredBattlefield,
-						Source: game.TriggerSourceSelf,
-					},
-				},
-				Content: game.Mode{
-					Targets: []game.TargetSpec{
-						game.TargetSpec{
-							MinTargets: 1,
-							MaxTargets: 1,
-							Constraint: "target player",
-							Allow:      game.TargetAllowPlayer,
+var BalustradeSpy = func() *game.CardDef {
+	return &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Black),
+		CardFace: game.CardFace{
+			Name: "Balustrade Spy",
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(3),
+				cost.B,
+			}),
+			Colors:    []color.Color{color.Black},
+			Types:     []types.Card{types.Creature},
+			Subtypes:  []types.Sub{types.Vampire, types.Rogue},
+			Power:     opt.Val(game.PT{Value: 2}),
+			Toughness: opt.Val(game.PT{Value: 3}),
+			StaticAbilities: []game.StaticAbility{
+				game.FlyingStaticBody,
+			},
+			TriggeredAbilities: []game.TriggeredAbility{
+				game.TriggeredAbility{
+					Trigger: game.TriggerCondition{
+						Type: game.TriggerWhen,
+						Pattern: game.TriggerPattern{
+							Event:  game.EventPermanentEnteredBattlefield,
+							Source: game.TriggerSourceSelf,
 						},
 					},
-					Sequence: []game.Instruction{
-						{
-							Primitive: game.RevealUntil{
-								Player:      game.TargetPlayerReference(0),
-								Until:       game.Selection{RequiredTypes: []types.Card{types.Land}},
-								Destination: zone.Graveyard,
+					Content: game.Mode{
+						Targets: []game.TargetSpec{
+							game.TargetSpec{
+								MinTargets: 1,
+								MaxTargets: 1,
+								Constraint: "target player",
+								Allow:      game.TargetAllowPlayer,
 							},
 						},
-					},
-				}.Ability(),
+						Sequence: []game.Instruction{
+							{
+								Primitive: game.RevealUntil{
+									Player:      game.TargetPlayerReference(0),
+									Until:       game.Selection{RequiredTypes: []types.Card{types.Land}},
+									Destination: zone.Graveyard,
+								},
+							},
+						},
+					}.Ability(),
+				},
 			},
-		},
-		OracleText: `
+			OracleText: `
 			Flying
 			When this creature enters, target player reveals cards from the top of their library until they reveal a land card, then puts those cards into their graveyard.
 		`,
-	},
+		},
+	}
 }

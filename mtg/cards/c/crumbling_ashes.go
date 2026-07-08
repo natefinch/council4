@@ -10,7 +10,7 @@ import (
 )
 
 // CrumblingAshes is the card definition for Crumbling Ashes.
-var CrumblingAshes = newCrumblingAshes()
+var CrumblingAshes = newCrumblingAshes
 
 func newCrumblingAshes() *game.CardDef {
 	return &game.CardDef{

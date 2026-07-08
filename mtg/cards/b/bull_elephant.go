@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, sacrifice it unless you return two Forests you control to their owner's hand.
-var BullElephant = newBullElephant()
+var BullElephant = newBullElephant
 
 func newBullElephant() *game.CardDef {
 	return &game.CardDef{

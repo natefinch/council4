@@ -18,7 +18,7 @@ import (
 //
 //	Lifelink
 //	When this creature enters, you may return target Vampire or Wizard creature card from your graveyard to the battlefield.
-var BloodlineNecromancer = newBloodlineNecromancer()
+var BloodlineNecromancer = newBloodlineNecromancer
 
 func newBloodlineNecromancer() *game.CardDef {
 	return &game.CardDef{

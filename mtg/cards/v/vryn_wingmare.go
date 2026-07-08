@@ -17,7 +17,7 @@ import (
 //
 //	Flying
 //	Noncreature spells cost {1} more to cast.
-var VrynWingmare = newVrynWingmare()
+var VrynWingmare = newVrynWingmare
 
 func newVrynWingmare() *game.CardDef {
 	return &game.CardDef{

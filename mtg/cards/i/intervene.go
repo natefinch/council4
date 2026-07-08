@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Counter target spell that targets a creature.
-var Intervene = newIntervene()
+var Intervene = newIntervene
 
 func newIntervene() *game.CardDef {
 	return &game.CardDef{

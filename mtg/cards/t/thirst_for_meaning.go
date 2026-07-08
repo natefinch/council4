@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Draw three cards. Then discard two cards unless you discard an enchantment card.
-var ThirstForMeaning = newThirstForMeaning()
+var ThirstForMeaning = newThirstForMeaning
 
 func newThirstForMeaning() *game.CardDef {
 	return &game.CardDef{

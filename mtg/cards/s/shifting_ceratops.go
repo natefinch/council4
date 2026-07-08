@@ -19,7 +19,7 @@ import (
 //	This spell can't be countered.
 //	Protection from blue (This creature can't be blocked, targeted, dealt damage, enchanted, or equipped by anything blue.)
 //	{G}: This creature gains your choice of reach, trample, or haste until end of turn.
-var ShiftingCeratops = newShiftingCeratops()
+var ShiftingCeratops = newShiftingCeratops
 
 func newShiftingCeratops() *game.CardDef {
 	return &game.CardDef{

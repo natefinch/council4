@@ -19,7 +19,7 @@ import (
 //	Enchant creature
 //	As this Aura enters, choose a color.
 //	Enchanted creature has protection from the chosen color. This effect doesn't remove Auras and Equipment you control that are already attached to it.
-var BenevolentBlessing = newBenevolentBlessing()
+var BenevolentBlessing = newBenevolentBlessing
 
 func newBenevolentBlessing() *game.CardDef {
 	return &game.CardDef{

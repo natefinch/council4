@@ -17,7 +17,7 @@ import (
 //
 //	Other Detectives you control get +1/+1.
 //	Whenever you draw your second card each turn, target Detective can't be blocked this turn.
-var PrivateEye = newPrivateEye()
+var PrivateEye = newPrivateEye
 
 func newPrivateEye() *game.CardDef {
 	return &game.CardDef{

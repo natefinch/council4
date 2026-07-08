@@ -19,7 +19,7 @@ import (
 //	I — This Saga deals 2 damage to each creature and each opponent.
 //	II — Discard any number of cards, then draw that many cards.
 //	III — Create a 4/4 red Dragon creature token with flying.
-var TheElderDragonWar = newTheElderDragonWar()
+var TheElderDragonWar = newTheElderDragonWar
 
 func newTheElderDragonWar() *game.CardDef {
 	return &game.CardDef{

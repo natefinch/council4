@@ -336,10 +336,10 @@ func TestCompileCorpusDisambiguatesPathAndIdentifierCollisions(t *testing.T) {
 		if !wantedPaths[result.relative] {
 			t.Fatalf("relative path = %q", result.relative)
 		}
-		if result.card.OracleID == "oracle-one" && !strings.Contains(result.source, "var SameName =") {
+		if result.card.OracleID == "oracle-one" && !strings.Contains(result.source, "var SameName = newSameName") {
 			t.Fatalf("canonical source lacks stable identifier:\n%s", result.source)
 		}
-		if result.card.OracleID == "oracle-two" && !strings.Contains(result.source, "var SameNameScryfalloracletwo =") {
+		if result.card.OracleID == "oracle-two" && !strings.Contains(result.source, "var SameNameScryfalloracletwo = newSameNameScryfalloracletwo") {
 			t.Fatalf("colliding source lacks disambiguated identifier:\n%s", result.source)
 		}
 		if !strings.Contains(result.source, `"Same Name"`) {
@@ -360,7 +360,7 @@ func TestCompileCorpusCategorizesTokensByOracleIdentity(t *testing.T) {
 		t.Fatal(err)
 	}
 	wanted := map[string]string{
-		filepath.Join("b", "bear.go"):                                            "var Bear =",
+		filepath.Join("b", "bear.go"):                                            "var Bear = newBear",
 		filepath.Join("tokens", "b", "bear_11111111111111111111111111111111.go"): "var BearToken11111111111111111111111111111111 =",
 		filepath.Join("tokens", "b", "bear_22222222222222222222222222222222.go"): "var BearToken22222222222222222222222222222222 =",
 	}

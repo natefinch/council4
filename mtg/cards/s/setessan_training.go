@@ -18,7 +18,7 @@ import (
 //	Enchant creature you control
 //	When this Aura enters, draw a card.
 //	Enchanted creature gets +1/+0 and has trample. (It can deal excess combat damage to the player or planeswalker it's attacking.)
-var SetessanTraining = newSetessanTraining()
+var SetessanTraining = newSetessanTraining
 
 func newSetessanTraining() *game.CardDef {
 	return &game.CardDef{

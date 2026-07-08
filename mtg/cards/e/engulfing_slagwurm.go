@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature blocks or becomes blocked by a creature, destroy that creature. You gain life equal to that creature's toughness.
-var EngulfingSlagwurm = newEngulfingSlagwurm()
+var EngulfingSlagwurm = newEngulfingSlagwurm
 
 func newEngulfingSlagwurm() *game.CardDef {
 	return &game.CardDef{

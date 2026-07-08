@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Target creature gets -13/-13 until end of turn. If that creature would die this turn, exile it instead.
-var BleedDry = newBleedDry()
+var BleedDry = newBleedDry
 
 func newBleedDry() *game.CardDef {
 	return &game.CardDef{

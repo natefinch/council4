@@ -19,7 +19,7 @@ import (
 //	Enchant artifact or creature
 //	As long as enchanted permanent is a creature, it gets +3/+3 and has reach.
 //	Channel — {1}{G}, Discard this card: Target creature gets +3/+3 and gains reach until end of turn.
-var FavorOfJukai = newFavorOfJukai()
+var FavorOfJukai = newFavorOfJukai
 
 func newFavorOfJukai() *game.CardDef {
 	return &game.CardDef{

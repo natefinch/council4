@@ -17,7 +17,7 @@ import (
 //
 //	Target land becomes a 3/3 creature until end of turn. It's still a land.
 //	Draw a card.
-var Vivify = newVivify()
+var Vivify = newVivify
 
 func newVivify() *game.CardDef {
 	return &game.CardDef{

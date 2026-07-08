@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	As long as you control a Jace planeswalker, this creature gets +1/+0 and can't be blocked.
-var JaceSSentinel = newJaceSSentinel()
+var JaceSSentinel = newJaceSSentinel
 
 func newJaceSSentinel() *game.CardDef {
 	return &game.CardDef{

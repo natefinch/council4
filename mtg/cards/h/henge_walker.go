@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Adamant — If at least three mana of the same color was spent to cast this spell, this creature enters with a +1/+1 counter on it.
-var HengeWalker = newHengeWalker()
+var HengeWalker = newHengeWalker
 
 func newHengeWalker() *game.CardDef {
 	return &game.CardDef{

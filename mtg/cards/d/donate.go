@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Target player gains control of target permanent you control.
-var Donate = newDonate()
+var Donate = newDonate
 
 func newDonate() *game.CardDef {
 	return &game.CardDef{

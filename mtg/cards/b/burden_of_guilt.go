@@ -18,7 +18,7 @@ import (
 //
 //	Enchant creature
 //	{1}: Tap enchanted creature.
-var BurdenOfGuilt = newBurdenOfGuilt()
+var BurdenOfGuilt = newBurdenOfGuilt
 
 func newBurdenOfGuilt() *game.CardDef {
 	return &game.CardDef{

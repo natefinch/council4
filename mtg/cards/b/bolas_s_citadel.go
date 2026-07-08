@@ -19,7 +19,7 @@ import (
 //	You may look at the top card of your library any time.
 //	You may play lands and cast spells from the top of your library. If you cast a spell this way, pay life equal to its mana value rather than pay its mana cost.
 //	{T}, Sacrifice ten nonland permanents: Each opponent loses 10 life.
-var BolasSCitadel = newBolasSCitadel()
+var BolasSCitadel = newBolasSCitadel
 
 func newBolasSCitadel() *game.CardDef {
 	return &game.CardDef{

@@ -16,7 +16,7 @@ import (
 //
 //	Whenever this Vehicle attacks, untap another target artifact or creature you control.
 //	Crew 2 (Tap any number of creatures you control with total power 2 or more: This Vehicle becomes an artifact creature until end of turn.)
-var MobileGarrison = newMobileGarrison()
+var MobileGarrison = newMobileGarrison
 
 func newMobileGarrison() *game.CardDef {
 	return &game.CardDef{

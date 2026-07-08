@@ -9,7 +9,7 @@ import (
 )
 
 // EtherealWhiskergill is the card definition for Ethereal Whiskergill.
-var EtherealWhiskergill = newEtherealWhiskergill()
+var EtherealWhiskergill = newEtherealWhiskergill
 
 func newEtherealWhiskergill() *game.CardDef {
 	return &game.CardDef{

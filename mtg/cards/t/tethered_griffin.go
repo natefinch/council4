@@ -9,7 +9,7 @@ import (
 )
 
 // TetheredGriffin is the card definition for Tethered Griffin.
-var TetheredGriffin = newTetheredGriffin()
+var TetheredGriffin = newTetheredGriffin
 
 func newTetheredGriffin() *game.CardDef {
 	return &game.CardDef{

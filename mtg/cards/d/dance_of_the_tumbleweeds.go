@@ -19,7 +19,7 @@ import (
 //	Spree (Choose one or more additional costs.)
 //	+ {1} — Search your library for a basic land card or a Desert card, put it onto the battlefield, then shuffle.
 //	+ {3} — Create an X/X green Elemental creature token, where X is the number of lands you control.
-var DanceOfTheTumbleweeds = newDanceOfTheTumbleweeds()
+var DanceOfTheTumbleweeds = newDanceOfTheTumbleweeds
 
 func newDanceOfTheTumbleweeds() *game.CardDef {
 	return &game.CardDef{

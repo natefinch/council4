@@ -17,7 +17,7 @@ import (
 //
 //	Protection from blue (This creature can't be blocked, targeted, dealt damage, or enchanted by anything blue.)
 //	Whenever this creature attacks, it gets +2/+0 until end of turn for each other attacking Goblin.
-var GoblinPiledriver = newGoblinPiledriver()
+var GoblinPiledriver = newGoblinPiledriver
 
 func newGoblinPiledriver() *game.CardDef {
 	return &game.CardDef{

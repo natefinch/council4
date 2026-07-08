@@ -20,7 +20,7 @@ import (
 //	This artifact enters with two +1/+1 counters on it.
 //	Whenever a creature you control with a +1/+1 counter on it dies, put a +1/+1 counter on this artifact.
 //	{T}: Move a +1/+1 counter from this artifact onto target creature. Activate only as a sorcery.
-var ExplorerSCache = newExplorerSCache()
+var ExplorerSCache = newExplorerSCache
 
 func newExplorerSCache() *game.CardDef {
 	return &game.CardDef{

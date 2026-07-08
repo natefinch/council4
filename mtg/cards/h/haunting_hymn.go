@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Target player discards two cards. If you cast this spell during your main phase, that player discards four cards instead.
-var HauntingHymn = newHauntingHymn()
+var HauntingHymn = newHauntingHymn
 
 func newHauntingHymn() *game.CardDef {
 	return &game.CardDef{

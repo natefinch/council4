@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{5}: Creatures you control get +1/+1 until end of turn. Soldiers you control gain vigilance until end of turn.
-var TheHowlingCommandos = newTheHowlingCommandos()
+var TheHowlingCommandos = newTheHowlingCommandos
 
 func newTheHowlingCommandos() *game.CardDef {
 	return &game.CardDef{

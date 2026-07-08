@@ -20,7 +20,7 @@ import (
 //	Flying
 //	Whenever a creature an opponent controls dies, you create a Blood token. (It's an artifact with "{1}, {T}, Discard a card, Sacrifice this token: Draw a card.")
 //	Whenever you sacrifice an artifact, put a +1/+1 counter on this creature and you gain 1 life.
-var MoonstoneEulogist = newMoonstoneEulogist()
+var MoonstoneEulogist = newMoonstoneEulogist
 
 func newMoonstoneEulogist() *game.CardDef {
 	return &game.CardDef{

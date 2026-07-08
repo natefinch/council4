@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Cleric creatures have vigilance.
-var AkromaSDevoted = newAkromaSDevoted()
+var AkromaSDevoted = newAkromaSDevoted
 
 func newAkromaSDevoted() *game.CardDef {
 	return &game.CardDef{

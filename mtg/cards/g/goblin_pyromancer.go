@@ -17,7 +17,7 @@ import (
 //
 //	When this creature enters, Goblin creatures get +3/+0 until end of turn.
 //	At the beginning of the end step, destroy all Goblins.
-var GoblinPyromancer = newGoblinPyromancer()
+var GoblinPyromancer = newGoblinPyromancer
 
 func newGoblinPyromancer() *game.CardDef {
 	return &game.CardDef{

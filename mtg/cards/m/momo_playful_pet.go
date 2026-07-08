@@ -22,7 +22,7 @@ import (
 //	• Create a Food token. (It's an artifact with "{2}, {T}, Sacrifice this token: You gain 3 life.")
 //	• Put a +1/+1 counter on target creature you control.
 //	• Scry 2.
-var MomoPlayfulPet = newMomoPlayfulPet()
+var MomoPlayfulPet = newMomoPlayfulPet
 
 func newMomoPlayfulPet() *game.CardDef {
 	return &game.CardDef{

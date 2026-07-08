@@ -20,7 +20,7 @@ import (
 //	Flying
 //	Whenever a creature dealt damage by Baron Sengir this turn dies, put a +2/+2 counter on Baron Sengir.
 //	{T}: Regenerate another target Vampire.
-var BaronSengir = newBaronSengir()
+var BaronSengir = newBaronSengir
 
 func newBaronSengir() *game.CardDef {
 	return &game.CardDef{

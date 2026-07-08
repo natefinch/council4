@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	At the beginning of your end step, if a creature died this turn, create a tapped token that's a copy of this creature.
-var CompySwarm = newCompySwarm()
+var CompySwarm = newCompySwarm
 
 func newCompySwarm() *game.CardDef {
 	return &game.CardDef{

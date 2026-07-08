@@ -11,7 +11,7 @@ import (
 )
 
 // OllenbockEscort is the card definition for Ollenbock Escort.
-var OllenbockEscort = newOllenbockEscort()
+var OllenbockEscort = newOllenbockEscort
 
 func newOllenbockEscort() *game.CardDef {
 	return &game.CardDef{

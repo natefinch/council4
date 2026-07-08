@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Tap an untapped Cleric you control: Prevent the next 2 damage that would be dealt to any target this turn.
-var MasterApothecary = newMasterApothecary()
+var MasterApothecary = newMasterApothecary
 
 func newMasterApothecary() *game.CardDef {
 	return &game.CardDef{

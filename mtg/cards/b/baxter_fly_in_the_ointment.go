@@ -10,7 +10,7 @@ import (
 )
 
 // BaxterFlyInTheOintment is the card definition for Baxter, Fly in the Ointment.
-var BaxterFlyInTheOintment = newBaxterFlyInTheOintment()
+var BaxterFlyInTheOintment = newBaxterFlyInTheOintment
 
 func newBaxterFlyInTheOintment() *game.CardDef {
 	return &game.CardDef{

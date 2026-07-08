@@ -20,7 +20,7 @@ import (
 //	Flying, vigilance
 //	Whenever this creature or another nontoken creature you control enters, create a 1/1 red Mercenary creature token with "{T}: Target creature you control gets +1/+0 until end of turn. Activate only as a sorcery."
 //	Whenever this creature attacks, if its power is 6 or greater, draw a card.
-var AngelicSellSword = newAngelicSellSword()
+var AngelicSellSword = newAngelicSellSword
 
 func newAngelicSellSword() *game.CardDef {
 	return &game.CardDef{

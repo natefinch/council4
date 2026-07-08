@@ -17,7 +17,7 @@ import (
 //
 //	Whenever you cast a Spirit or Arcane spell, reveal the top three cards of your library. Put all land cards revealed this way into your hand and the rest on the bottom of your library in any order.
 //	Soulshift 2 (When this creature dies, you may return target Spirit card with mana value 2 or less from your graveyard to your hand.)
-var ElderPineOfJukai = newElderPineOfJukai()
+var ElderPineOfJukai = newElderPineOfJukai
 
 func newElderPineOfJukai() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 //
 //	Flash
 //	When this creature enters, tap target creature an opponent controls. It loses all abilities until end of turn.
-var MerfolkTrickster = newMerfolkTrickster()
+var MerfolkTrickster = newMerfolkTrickster
 
 func newMerfolkTrickster() *game.CardDef {
 	return &game.CardDef{

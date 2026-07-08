@@ -19,7 +19,7 @@ import (
 //	When this creature enters, choose one —
 //	• Create a 1/1 green and white Citizen creature token.
 //	• Create a Treasure token. (It's an artifact with "{T}, Sacrifice this token: Add one mana of any color.")
-var ExhibitionMagician = newExhibitionMagician()
+var ExhibitionMagician = newExhibitionMagician
 
 func newExhibitionMagician() *game.CardDef {
 	return &game.CardDef{

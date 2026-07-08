@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Destroy all creatures. Lands you control don't untap during your next untap step.
-var BontuSLastReckoning = newBontuSLastReckoning()
+var BontuSLastReckoning = newBontuSLastReckoning
 
 func newBontuSLastReckoning() *game.CardDef {
 	return &game.CardDef{

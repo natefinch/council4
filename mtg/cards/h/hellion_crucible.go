@@ -20,7 +20,7 @@ import (
 //	{T}: Add {C}.
 //	{1}{R}, {T}: Put a pressure counter on this land.
 //	{1}{R}, {T}, Remove two pressure counters from this land and sacrifice it: Create a 4/4 red Hellion creature token with haste. (It can attack and {T} as soon as it comes under your control.)
-var HellionCrucible = newHellionCrucible()
+var HellionCrucible = newHellionCrucible
 
 func newHellionCrucible() *game.CardDef {
 	return &game.CardDef{

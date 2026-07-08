@@ -17,7 +17,7 @@ import (
 //
 //	Look at the top three cards of your library. You may reveal a creature card from among them and put it into your hand. Put the rest into your graveyard.
 //	Flashback {2}{G} (You may cast this card from your graveyard for its flashback cost. Then exile it.)
-var TappingAtTheWindow = newTappingAtTheWindow()
+var TappingAtTheWindow = newTappingAtTheWindow
 
 func newTappingAtTheWindow() *game.CardDef {
 	return &game.CardDef{

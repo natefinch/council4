@@ -22,7 +22,7 @@ import (
 //	• Target creature gets -1/-1 until end of turn.
 //	• You gain 2 life.
 //	III — Exile this Saga, then return it to the battlefield transformed under your control.
-var LifeOfToshiroUmezawa = newLifeOfToshiroUmezawa()
+var LifeOfToshiroUmezawa = newLifeOfToshiroUmezawa
 
 func newLifeOfToshiroUmezawa() *game.CardDef {
 	return &game.CardDef{

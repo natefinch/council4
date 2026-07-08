@@ -18,7 +18,7 @@ import (
 //
 //	Flying
 //	Whenever Teneb deals combat damage to a player, you may pay {2}{B}. If you do, put target creature card from a graveyard onto the battlefield under your control.
-var TenebTheHarvester = newTenebTheHarvester()
+var TenebTheHarvester = newTenebTheHarvester
 
 func newTenebTheHarvester() *game.CardDef {
 	return &game.CardDef{

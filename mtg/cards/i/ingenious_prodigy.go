@@ -20,7 +20,7 @@ import (
 //	Skulk (This creature can't be blocked by creatures with greater power.)
 //	This creature enters with X +1/+1 counters on it.
 //	At the beginning of your upkeep, if this creature has one or more +1/+1 counters on it, you may remove a +1/+1 counter from it. If you do, draw a card.
-var IngeniousProdigy = newIngeniousProdigy()
+var IngeniousProdigy = newIngeniousProdigy
 
 func newIngeniousProdigy() *game.CardDef {
 	return &game.CardDef{

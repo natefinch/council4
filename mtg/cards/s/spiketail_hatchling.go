@@ -18,7 +18,7 @@ import (
 //
 //	Flying (This creature can't be blocked except by creatures with flying or reach.)
 //	Sacrifice this creature: Counter target spell unless its controller pays {1}.
-var SpiketailHatchling = newSpiketailHatchling()
+var SpiketailHatchling = newSpiketailHatchling
 
 func newSpiketailHatchling() *game.CardDef {
 	return &game.CardDef{

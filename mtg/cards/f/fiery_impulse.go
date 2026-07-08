@@ -17,7 +17,7 @@ import (
 //
 //	Fiery Impulse deals 2 damage to target creature.
 //	Spell mastery — If there are two or more instant and/or sorcery cards in your graveyard, Fiery Impulse deals 3 damage instead.
-var FieryImpulse = newFieryImpulse()
+var FieryImpulse = newFieryImpulse
 
 func newFieryImpulse() *game.CardDef {
 	return &game.CardDef{

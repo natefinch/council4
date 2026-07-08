@@ -20,7 +20,7 @@ import (
 //	Magecraft — Whenever you cast or copy an instant or sorcery spell, put a book counter on this artifact.
 //	{T}, Remove a book counter from this artifact: Add {C}.
 //	{3}, {T}, Remove three book counters from this artifact: Draw a card.
-var SpellSatchel = newSpellSatchel()
+var SpellSatchel = newSpellSatchel
 
 func newSpellSatchel() *game.CardDef {
 	return &game.CardDef{

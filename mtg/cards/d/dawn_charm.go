@@ -19,7 +19,7 @@ import (
 //	• Prevent all combat damage that would be dealt this turn.
 //	• Regenerate target creature.
 //	• Counter target spell that targets you.
-var DawnCharm = newDawnCharm()
+var DawnCharm = newDawnCharm
 
 func newDawnCharm() *game.CardDef {
 	return &game.CardDef{

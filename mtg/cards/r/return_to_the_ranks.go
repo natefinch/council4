@@ -19,7 +19,7 @@ import (
 //
 //	Convoke (Your creatures can help cast this spell. Each creature you tap while casting this spell pays for {1} or one mana of that creature's color.)
 //	Return X target creature cards with mana value 2 or less from your graveyard to the battlefield.
-var ReturnToTheRanks = newReturnToTheRanks()
+var ReturnToTheRanks = newReturnToTheRanks
 
 func newReturnToTheRanks() *game.CardDef {
 	return &game.CardDef{

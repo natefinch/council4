@@ -180,13 +180,13 @@ import (
 )
 
 func TestRTLandSemantic(t *testing.T) {
-	if RTLand.CardFace.Name != "RT Land" {
-		t.Fatalf("name = %%q", RTLand.CardFace.Name)
+	if RTLand().CardFace.Name != "RT Land" {
+		t.Fatalf("name = %%q", RTLand().CardFace.Name)
 	}
-	if len(RTLand.CardFace.ManaAbilities) != 1 {
-		t.Fatalf("mana abilities = %%d", len(RTLand.CardFace.ManaAbilities))
+	if len(RTLand().CardFace.ManaAbilities) != 1 {
+		t.Fatalf("mana abilities = %%d", len(RTLand().CardFace.ManaAbilities))
 	}
-	prim := RTLand.CardFace.ManaAbilities[0].Content.Modes[0].Sequence[0].Primitive
+	prim := RTLand().CardFace.ManaAbilities[0].Content.Modes[0].Sequence[0].Primitive
 	add, ok := prim.(game.AddMana)
 	if !ok {
 		t.Fatalf("primitive type = %%T", prim)
@@ -197,10 +197,10 @@ func TestRTLandSemantic(t *testing.T) {
 }
 
 func TestRTBearSemantic(t *testing.T) {
-	if len(RTBear.CardFace.StaticAbilities) != 2 {
-		t.Fatalf("static abilities = %%d", len(RTBear.CardFace.StaticAbilities))
+	if len(RTBear().CardFace.StaticAbilities) != 2 {
+		t.Fatalf("static abilities = %%d", len(RTBear().CardFace.StaticAbilities))
 	}
-	keywords := RTBear.CardFace.StaticAbilities[0].KeywordAbilities
+	keywords := RTBear().CardFace.StaticAbilities[0].KeywordAbilities
 	if len(keywords) != 1 {
 		t.Fatalf("keyword abilities = %%d", len(keywords))
 	}
@@ -211,10 +211,10 @@ func TestRTBearSemantic(t *testing.T) {
 }
 
 func TestRTBoltSemantic(t *testing.T) {
-	if !RTBolt.CardFace.SpellAbility.Exists {
+	if !RTBolt().CardFace.SpellAbility.Exists {
 		t.Fatal("spell ability missing")
 	}
-	mode := RTBolt.CardFace.SpellAbility.Val.Modes[0]
+	mode := RTBolt().CardFace.SpellAbility.Val.Modes[0]
 	if len(mode.Targets) != 1 {
 		t.Fatalf("targets = %%d", len(mode.Targets))
 	}

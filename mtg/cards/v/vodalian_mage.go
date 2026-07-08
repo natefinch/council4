@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{U}, {T}: Counter target spell unless its controller pays {1}.
-var VodalianMage = newVodalianMage()
+var VodalianMage = newVodalianMage
 
 func newVodalianMage() *game.CardDef {
 	return &game.CardDef{

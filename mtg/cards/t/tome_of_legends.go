@@ -19,7 +19,7 @@ import (
 //	This artifact enters with a page counter on it.
 //	Whenever your commander enters or attacks, put a page counter on this artifact.
 //	{1}, {T}, Remove a page counter from this artifact: Draw a card.
-var TomeOfLegends = newTomeOfLegends()
+var TomeOfLegends = newTomeOfLegends
 
 func newTomeOfLegends() *game.CardDef {
 	return &game.CardDef{

@@ -19,7 +19,7 @@ import (
 //	Flash
 //	Flying, vigilance
 //	This creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)
-var SkycoachConductor = newSkycoachConductor()
+var SkycoachConductor = newSkycoachConductor
 
 func newSkycoachConductor() *game.CardDef {
 	return &game.CardDef{

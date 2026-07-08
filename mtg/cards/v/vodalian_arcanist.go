@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{T}: Add {C}. Spend this mana only to cast an instant or sorcery spell.
-var VodalianArcanist = newVodalianArcanist()
+var VodalianArcanist = newVodalianArcanist
 
 func newVodalianArcanist() *game.CardDef {
 	return &game.CardDef{

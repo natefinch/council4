@@ -18,7 +18,7 @@ import (
 //	Flash
 //	Enchant creature
 //	Enchanted creature can't attack or block, and its activated abilities can't be activated.
-var LawmageSBinding = newLawmageSBinding()
+var LawmageSBinding = newLawmageSBinding
 
 func newLawmageSBinding() *game.CardDef {
 	return &game.CardDef{

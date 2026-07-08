@@ -17,7 +17,7 @@ import (
 //
 //	Flying
 //	Whenever this creature attacks, defending player discards a card.
-var ShriekingSpecter = newShriekingSpecter()
+var ShriekingSpecter = newShriekingSpecter
 
 func newShriekingSpecter() *game.CardDef {
 	return &game.CardDef{

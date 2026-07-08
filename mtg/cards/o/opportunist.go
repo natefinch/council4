@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{T}: This creature deals 1 damage to target creature that was dealt damage this turn.
-var Opportunist = newOpportunist()
+var Opportunist = newOpportunist
 
 func newOpportunist() *game.CardDef {
 	return &game.CardDef{

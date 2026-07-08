@@ -13,7 +13,7 @@ import (
 // Oracle text:
 //
 //	When this land enters, sacrifice it. When you do, search your library for a basic Forest, Plains, or Island card, put it onto the battlefield tapped, then shuffle and you gain 1 life.
-var BrokersHideout = newBrokersHideout()
+var BrokersHideout = newBrokersHideout
 
 func newBrokersHideout() *game.CardDef {
 	return &game.CardDef{

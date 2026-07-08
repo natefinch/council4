@@ -19,7 +19,7 @@ import (
 //	Kicker {3} (You may pay an additional {3} as you cast this spell.)
 //	Menace (This creature can't be blocked except by two or more creatures.)
 //	If this creature was kicked, it enters with two +1/+1 counters on it.
-var StrongholdConfessor = newStrongholdConfessor()
+var StrongholdConfessor = newStrongholdConfessor
 
 func newStrongholdConfessor() *game.CardDef {
 	return &game.CardDef{

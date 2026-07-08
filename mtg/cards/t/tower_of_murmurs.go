@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	{8}, {T}: Target player mills eight cards.
-var TowerOfMurmurs = newTowerOfMurmurs()
+var TowerOfMurmurs = newTowerOfMurmurs
 
 func newTowerOfMurmurs() *game.CardDef {
 	return &game.CardDef{

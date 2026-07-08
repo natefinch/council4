@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Destroy target artifact or land. Creatures without flying can't block this turn.
-var FireOfOrthanc = newFireOfOrthanc()
+var FireOfOrthanc = newFireOfOrthanc
 
 func newFireOfOrthanc() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 //
 //	Kicker {1}{U} (You may pay an additional {1}{U} as you cast this spell.)
 //	When this creature enters, if it was kicked, look at the top three cards of your library. Put one of them into your hand and the rest on the bottom of your library in any order.
-var VineshaperProdigy = newVineshaperProdigy()
+var VineshaperProdigy = newVineshaperProdigy
 
 func newVineshaperProdigy() *game.CardDef {
 	return &game.CardDef{

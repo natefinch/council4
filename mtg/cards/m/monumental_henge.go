@@ -19,7 +19,7 @@ import (
 //	This land enters tapped unless you control a Plains.
 //	{T}: Add {W}.
 //	{2}{W}{W}, {T}: Look at the top five cards of your library. You may reveal a historic card from among them and put it into your hand. Put the rest on the bottom of your library in a random order. (Artifacts, legendaries, and Sagas are historic.)
-var MonumentalHenge = newMonumentalHenge()
+var MonumentalHenge = newMonumentalHenge
 
 func newMonumentalHenge() *game.CardDef {
 	return &game.CardDef{

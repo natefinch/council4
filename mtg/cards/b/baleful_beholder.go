@@ -18,7 +18,7 @@ import (
 //	When this creature enters, choose one —
 //	• Antimagic Cone — Each opponent sacrifices an enchantment of their choice.
 //	• Fear Ray — Creatures you control gain menace until end of turn. (A creature with menace can't be blocked except by two or more creatures.)
-var BalefulBeholder = newBalefulBeholder()
+var BalefulBeholder = newBalefulBeholder
 
 func newBalefulBeholder() *game.CardDef {
 	return &game.CardDef{

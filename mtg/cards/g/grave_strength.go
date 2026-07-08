@@ -18,7 +18,7 @@ import (
 // Oracle text:
 //
 //	Choose target creature. Mill three cards, then put a +1/+1 counter on that creature for each creature card in your graveyard. (To mill three cards, put the top three cards of your library into your graveyard.)
-var GraveStrength = newGraveStrength()
+var GraveStrength = newGraveStrength
 
 func newGraveStrength() *game.CardDef {
 	return &game.CardDef{

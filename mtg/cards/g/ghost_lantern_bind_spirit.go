@@ -20,7 +20,7 @@ import (
 //
 //	Whenever a creature you control dies, put a +1/+1 counter on equipped creature.
 //	Equip {1}
-var GhostLantern = newGhostLantern()
+var GhostLantern = newGhostLantern
 
 func newGhostLantern() *game.CardDef {
 	return &game.CardDef{

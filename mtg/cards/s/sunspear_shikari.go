@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	As long as this creature is equipped, it has first strike and lifelink. (It deals combat damage before creatures without first strike. Damage dealt by it also causes you to gain that much life.)
-var SunspearShikari = newSunspearShikari()
+var SunspearShikari = newSunspearShikari
 
 func newSunspearShikari() *game.CardDef {
 	return &game.CardDef{

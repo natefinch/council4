@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	This creature can't be blocked except by creatures with defender.
-var NoggleBandit = newNoggleBandit()
+var NoggleBandit = newNoggleBandit
 
 func newNoggleBandit() *game.CardDef {
 	return &game.CardDef{

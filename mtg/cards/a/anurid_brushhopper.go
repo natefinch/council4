@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Discard two cards: Exile this creature. Return it to the battlefield under its owner's control at the beginning of the next end step.
-var AnuridBrushhopper = newAnuridBrushhopper()
+var AnuridBrushhopper = newAnuridBrushhopper
 
 func newAnuridBrushhopper() *game.CardDef {
 	return &game.CardDef{

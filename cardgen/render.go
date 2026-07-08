@@ -350,7 +350,7 @@ func (r Renderer) writeCardDef(
 	if r.IdentifierSuffix != "" {
 		_, _ = fmt.Fprintf(b, "\n// %s is the card definition for %s.\n", varName, def.Name)
 	}
-	writeCardDefBuilderOpen(b, varName)
+	writeCardDefBuilderOpen(b, varName, isTokenLayout(layout))
 	if cols := def.ColorIdentity.Colors(); len(cols) > 0 {
 		ctx.need(importColor)
 		colorLits, err := colorValueLiterals(cols)
@@ -391,7 +391,7 @@ func (r Renderer) writeCardDef(
 // token def is a plain creature face (name, types, subtypes, colors, P/T) with no
 // abilities, referenced by a CreateToken primitive via game.TokenDef.
 func (r Renderer) writeTokenDefVar(b *strings.Builder, ctx *renderCtx, entry tokenDefEntry) error {
-	writeCardDefBuilderOpen(b, entry.varName)
+	writeCardDefBuilderOpen(b, entry.varName, true)
 	_, _ = b.WriteString("\tCardFace: game.CardFace{\n")
 	if err := r.writeFaceFields(b, ctx, &entry.def.CardFace, "\t\t", tokenFaceHints(entry.def)); err != nil {
 		return err
@@ -401,23 +401,42 @@ func (r Renderer) writeTokenDefVar(b *strings.Builder, ctx *renderCtx, entry tok
 	return nil
 }
 
-// writeCardDefBuilderOpen emits the opening of a CardDef package var whose
-// construction is wrapped in a dedicated builder function, e.g.
+// writeCardDefBuilderOpen emits a card's builder function and the package-level
+// var that registers it.
 //
-//	var SaberAnts = newSaberAnts()
+// A card's var holds the builder as a value, not its result (eager is false), so
+// the CardDef is built only when the registry or a caller invokes it — the whole
+// corpus stays out of memory until a card is looked up — while the exported var
+// keeps the card referenceable by identifier:
 //
-//	func newSaberAnts() *game.CardDef {
+//	var LightningBolt = newLightningBolt
+//
+//	func newLightningBolt() *game.CardDef {
+//		return &game.CardDef{
+//
+// A token def's var holds the built CardDef (eager is true), because a card
+// builder references the token by pointer to make it:
+//
+//	var saberAntsToken = newSaberAntsToken()
+//
+//	func newSaberAntsToken() *game.CardDef {
 //		return &game.CardDef{
 //
 // Wrapping each CardDef literal in its own function keeps the package-level
-// variable initializer (and thus the compiler-synthesized package init
-// function) tiny: it holds only a call, not the whole literal. This avoids the
-// WebAssembly backend's per-function limit ("function too big: init exceeds
-// 65536 blocks"), which the full generated corpus otherwise hits when a letter
-// package's many CardDef literals are inlined into one package init.
-func writeCardDefBuilderOpen(b *strings.Builder, varName string) {
+// initializer (and thus the compiler-synthesized package init function) tiny: it
+// holds only a function value (a card) or a single call (a token), never the
+// literal. This avoids the WebAssembly backend's per-function limit ("function
+// too big: init exceeds 65536 blocks"), which the full generated corpus otherwise
+// hits when a letter package's many CardDef literals are inlined into one package
+// init, and — because a card's var is not called at init — keeps the whole corpus
+// out of memory until a card is looked up.
+func writeCardDefBuilderOpen(b *strings.Builder, varName string, eager bool) {
 	builder := cardDefBuilderName(varName)
-	_, _ = fmt.Fprintf(b, "var %s = %s()\n\n", varName, builder)
+	if eager {
+		_, _ = fmt.Fprintf(b, "var %s = %s()\n\n", varName, builder)
+	} else {
+		_, _ = fmt.Fprintf(b, "var %s = %s\n\n", varName, builder)
+	}
 	_, _ = fmt.Fprintf(b, "func %s() *game.CardDef {\n", builder)
 	_, _ = b.WriteString("\treturn &game.CardDef{\n")
 }
@@ -426,6 +445,13 @@ func writeCardDefBuilderOpen(b *strings.Builder, varName string) {
 // writeCardDefBuilderOpen.
 func writeCardDefBuilderClose(b *strings.Builder) {
 	_, _ = b.WriteString("}\n}\n")
+}
+
+// isTokenLayout reports whether a card layout denotes a playable token identity
+// card (which the tokens/ package lists as an eager var) rather than a real card
+// (which the card registry builds lazily and so needs no package-level var).
+func isTokenLayout(layout string) bool {
+	return layout == "token" || layout == "double_faced_token"
 }
 
 // cardDefBuilderName returns the unexported builder-function name for a CardDef
@@ -470,7 +496,7 @@ func (r Renderer) writeReversibleFaceDef(b *strings.Builder, ctx *renderCtx, def
 	if r.IdentifierSuffix != "" {
 		_, _ = fmt.Fprintf(b, "\n// %s is the card definition for %s.\n", varName, def.Name)
 	}
-	writeCardDefBuilderOpen(b, varName)
+	writeCardDefBuilderOpen(b, varName, isTokenLayout(layout))
 	if cols := def.ColorIdentity.Colors(); len(cols) > 0 {
 		ctx.need(importColor)
 		colorLits, err := colorValueLiterals(cols)

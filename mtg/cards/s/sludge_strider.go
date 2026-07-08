@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Whenever another artifact you control enters or leaves the battlefield, you may pay {1}. If you do, target player loses 1 life and you gain 1 life.
-var SludgeStrider = newSludgeStrider()
+var SludgeStrider = newSludgeStrider
 
 func newSludgeStrider() *game.CardDef {
 	return &game.CardDef{

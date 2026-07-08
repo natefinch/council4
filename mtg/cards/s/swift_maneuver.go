@@ -17,7 +17,7 @@ import (
 //
 //	Prevent the next 2 damage that would be dealt to any target this turn.
 //	Draw a card at the beginning of the next turn's upkeep.
-var SwiftManeuver = newSwiftManeuver()
+var SwiftManeuver = newSwiftManeuver
 
 func newSwiftManeuver() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 //
 //	{2}{B}: Regenerate this creature.
 //	Whenever this creature becomes blocked, defending player discards a card at random.
-var CorruptOfficial = newCorruptOfficial()
+var CorruptOfficial = newCorruptOfficial
 
 func newCorruptOfficial() *game.CardDef {
 	return &game.CardDef{

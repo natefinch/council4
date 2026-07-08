@@ -19,7 +19,7 @@ import (
 //
 //	When The Reaper enters, put a -1/-1 counter on each of up to two target creatures.
 //	Whenever a creature an opponent controls with a -1/-1 counter on it dies, you may put that card onto the battlefield under your control. Do this only once each turn.
-var TheReaperKingNoMore = newTheReaperKingNoMore()
+var TheReaperKingNoMore = newTheReaperKingNoMore
 
 func newTheReaperKingNoMore() *game.CardDef {
 	return &game.CardDef{

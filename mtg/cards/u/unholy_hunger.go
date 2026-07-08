@@ -17,7 +17,7 @@ import (
 //
 //	Destroy target creature.
 //	Spell mastery — If there are two or more instant and/or sorcery cards in your graveyard, you gain 2 life.
-var UnholyHunger = newUnholyHunger()
+var UnholyHunger = newUnholyHunger
 
 func newUnholyHunger() *game.CardDef {
 	return &game.CardDef{

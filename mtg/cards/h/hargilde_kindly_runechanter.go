@@ -18,7 +18,7 @@ import (
 //
 //	{T}: Add {C}{C}. Spend this mana only to cast artifact spells or activate abilities of artifacts.
 //	Partner—Friends forever (You can have two commanders if both have this ability.)
-var HargildeKindlyRunechanter = newHargildeKindlyRunechanter()
+var HargildeKindlyRunechanter = newHargildeKindlyRunechanter
 
 func newHargildeKindlyRunechanter() *game.CardDef {
 	return &game.CardDef{

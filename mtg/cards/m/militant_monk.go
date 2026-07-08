@@ -18,7 +18,7 @@ import (
 //
 //	Vigilance
 //	{T}: Prevent the next 1 damage that would be dealt to any target this turn.
-var MilitantMonk = newMilitantMonk()
+var MilitantMonk = newMilitantMonk
 
 func newMilitantMonk() *game.CardDef {
 	return &game.CardDef{

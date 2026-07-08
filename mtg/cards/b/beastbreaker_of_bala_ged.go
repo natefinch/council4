@@ -22,7 +22,7 @@ import (
 //	LEVEL 4+
 //	6/6
 //	Trample
-var BeastbreakerOfBalaGed = newBeastbreakerOfBalaGed()
+var BeastbreakerOfBalaGed = newBeastbreakerOfBalaGed
 
 func newBeastbreakerOfBalaGed() *game.CardDef {
 	return &game.CardDef{

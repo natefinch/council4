@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Counter target spell that targets a permanent you control.
-var TurnAside = newTurnAside()
+var TurnAside = newTurnAside
 
 func newTurnAside() *game.CardDef {
 	return &game.CardDef{

@@ -20,7 +20,7 @@ import (
 //	Trample
 //	When this creature enters, put a +1/+1 counter on it for each card in your hand. If you do, discard your hand.
 //	When this creature leaves the battlefield, draw a card for each +1/+1 counter on it.
-var ThoughtGorger = newThoughtGorger()
+var ThoughtGorger = newThoughtGorger
 
 func newThoughtGorger() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 //
 //	Flying
 //	When this creature enters, each opponent mills ten cards.
-var SphinxMindbreaker = newSphinxMindbreaker()
+var SphinxMindbreaker = newSphinxMindbreaker
 
 func newSphinxMindbreaker() *game.CardDef {
 	return &game.CardDef{

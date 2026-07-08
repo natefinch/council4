@@ -94,4 +94,4 @@ var FiresOfYavimaya = func() *game.CardDef {
 		},
 	)
 	return card
-}()
+}

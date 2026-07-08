@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	End the Festivities deals 1 damage to each opponent and each creature and planeswalker they control.
-var EndTheFestivities = newEndTheFestivities()
+var EndTheFestivities = newEndTheFestivities
 
 func newEndTheFestivities() *game.CardDef {
 	return &game.CardDef{

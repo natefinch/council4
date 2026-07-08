@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{T}: Target creature other than this creature has base power and toughness 0/2 until end of turn.
-var SorceressQueen = newSorceressQueen()
+var SorceressQueen = newSorceressQueen
 
 func newSorceressQueen() *game.CardDef {
 	return &game.CardDef{

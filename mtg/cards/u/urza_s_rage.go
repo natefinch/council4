@@ -18,7 +18,7 @@ import (
 //	Kicker {8}{R} (You may pay an additional {8}{R} as you cast this spell.)
 //	This spell can't be countered.
 //	Urza's Rage deals 3 damage to any target. If this spell was kicked, instead it deals 10 damage to that permanent or player and the damage can't be prevented.
-var UrzaSRage = newUrzaSRage()
+var UrzaSRage = newUrzaSRage
 
 func newUrzaSRage() *game.CardDef {
 	return &game.CardDef{

@@ -43,4 +43,4 @@ var BirdsOfParadise = func() *game.CardDef {
 
 	card.ManaAbilities = []game.ManaAbility{game.TapManaChoiceAbility(mana.W, mana.U, mana.B, mana.R, mana.G)}
 	return card
-}()
+}

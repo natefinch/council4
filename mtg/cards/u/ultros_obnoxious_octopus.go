@@ -19,7 +19,7 @@ import (
 //
 //	Whenever you cast a noncreature spell, if at least four mana was spent to cast it, tap target creature an opponent controls and put a stun counter on it. (If a permanent with a stun counter would become untapped, remove one from it instead.)
 //	Whenever you cast a noncreature spell, if at least eight mana was spent to cast it, put eight +1/+1 counters on Ultros.
-var UltrosObnoxiousOctopus = newUltrosObnoxiousOctopus()
+var UltrosObnoxiousOctopus = newUltrosObnoxiousOctopus
 
 func newUltrosObnoxiousOctopus() *game.CardDef {
 	return &game.CardDef{

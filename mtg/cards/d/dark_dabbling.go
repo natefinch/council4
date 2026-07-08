@@ -17,7 +17,7 @@ import (
 //
 //	Regenerate target creature. Draw a card. (The next time the creature would be destroyed this turn, instead tap it, remove it from combat, and heal all damage on it.)
 //	Spell mastery — If there are two or more instant and/or sorcery cards in your graveyard, also regenerate each other creature you control.
-var DarkDabbling = newDarkDabbling()
+var DarkDabbling = newDarkDabbling
 
 func newDarkDabbling() *game.CardDef {
 	return &game.CardDef{

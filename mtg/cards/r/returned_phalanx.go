@@ -18,7 +18,7 @@ import (
 //
 //	Defender
 //	{1}{U}: This creature can attack this turn as though it didn't have defender.
-var ReturnedPhalanx = newReturnedPhalanx()
+var ReturnedPhalanx = newReturnedPhalanx
 
 func newReturnedPhalanx() *game.CardDef {
 	return &game.CardDef{

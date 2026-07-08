@@ -18,7 +18,7 @@ import (
 // Oracle text:
 //
 //	Commander creatures you own have "{2}, Sacrifice an artifact: Put a +1/+1 counter on this creature and draw a card."
-var ClanCrafter = newClanCrafter()
+var ClanCrafter = newClanCrafter
 
 func newClanCrafter() *game.CardDef {
 	return &game.CardDef{

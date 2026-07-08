@@ -21,7 +21,7 @@ import (
 //	• Put a +1/+1 counter on another target creature.
 //	• Create a Food token. (It's an artifact with "{2}, {T}, Sacrifice this token: You gain 3 life.")
 //	• Create a Treasure token. (It's an artifact with "{T}, Sacrifice this token: Add one mana of any color.")
-var GaladrielGiftGiver = newGaladrielGiftGiver()
+var GaladrielGiftGiver = newGaladrielGiftGiver
 
 func newGaladrielGiftGiver() *game.CardDef {
 	return &game.CardDef{

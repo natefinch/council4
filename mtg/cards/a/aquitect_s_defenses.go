@@ -19,7 +19,7 @@ import (
 //	Enchant creature you control
 //	When this Aura enters, enchanted creature gains hexproof until end of turn. (It can't be the target of spells or abilities your opponents control.)
 //	Enchanted creature gets +1/+2.
-var AquitectSDefenses = newAquitectSDefenses()
+var AquitectSDefenses = newAquitectSDefenses
 
 func newAquitectSDefenses() *game.CardDef {
 	return &game.CardDef{

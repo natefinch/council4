@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature attacks, sacrifice it unless you sacrifice an Island.
-var ThingFromTheDeep = newThingFromTheDeep()
+var ThingFromTheDeep = newThingFromTheDeep
 
 func newThingFromTheDeep() *game.CardDef {
 	return &game.CardDef{

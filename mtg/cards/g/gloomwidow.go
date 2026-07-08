@@ -17,7 +17,7 @@ import (
 //
 //	Reach
 //	This creature can block only creatures with flying.
-var Gloomwidow = newGloomwidow()
+var Gloomwidow = newGloomwidow
 
 func newGloomwidow() *game.CardDef {
 	return &game.CardDef{

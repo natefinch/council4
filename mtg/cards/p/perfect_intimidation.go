@@ -19,7 +19,7 @@ import (
 //	Choose one or both —
 //	• Target opponent exiles two cards from their hand.
 //	• Remove all counters from target creature.
-var PerfectIntimidation = newPerfectIntimidation()
+var PerfectIntimidation = newPerfectIntimidation
 
 func newPerfectIntimidation() *game.CardDef {
 	return &game.CardDef{

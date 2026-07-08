@@ -17,7 +17,7 @@ import (
 //
 //	Horsemanship (This creature can't be blocked except by creatures with horsemanship.)
 //	Whenever Zhang He attacks, each other creature you control gets +1/+0 until end of turn.
-var ZhangHeWeiGeneral = newZhangHeWeiGeneral()
+var ZhangHeWeiGeneral = newZhangHeWeiGeneral
 
 func newZhangHeWeiGeneral() *game.CardDef {
 	return &game.CardDef{

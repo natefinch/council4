@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Counter target creature spell. Create a 1/1 blue Spirit creature token with flying.
-var GeistSnatch = newGeistSnatch()
+var GeistSnatch = newGeistSnatch
 
 func newGeistSnatch() *game.CardDef {
 	return &game.CardDef{

@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	At the beginning of each opponent's upkeep, if that player has two or fewer cards in hand, this artifact deals 2 damage to that player.
-var PaupersCage = newPaupersCage()
+var PaupersCage = newPaupersCage
 
 func newPaupersCage() *game.CardDef {
 	return &game.CardDef{

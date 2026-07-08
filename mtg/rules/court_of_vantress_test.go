@@ -110,7 +110,7 @@ func setupVantressUpkeep(monarch bool) vantressUpkeepSetup {
 	setup := vantressUpkeepSetup{
 		game:        g,
 		engine:      engine,
-		vantress:    addCombatPermanent(g, game.Player1, cardc.CourtOfVantress),
+		vantress:    addCombatPermanent(g, game.Player1, cardc.CourtOfVantress()),
 		artifact:    addCombatPermanent(g, game.Player1, vantressArtifactTarget()),
 		enchantment: addCombatPermanent(g, game.Player1, vantressEnchantmentTarget()),
 	}

@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Gain control of target creature until end of turn. Untap that creature. It gets +X/+0 and gains haste until end of turn.
-var UnwillingRecruit = newUnwillingRecruit()
+var UnwillingRecruit = newUnwillingRecruit
 
 func newUnwillingRecruit() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 //	Flying
 //	Non-Archon creatures have base power and toughness 3/3.
 //	When this creature enters, create two 1/1 white Human creature tokens.
-var HarmoniousArchon = newHarmoniousArchon()
+var HarmoniousArchon = newHarmoniousArchon
 
 func newHarmoniousArchon() *game.CardDef {
 	return &game.CardDef{

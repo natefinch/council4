@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Target player mills ten cards.
-var GlimpseTheUnthinkable = newGlimpseTheUnthinkable()
+var GlimpseTheUnthinkable = newGlimpseTheUnthinkable
 
 func newGlimpseTheUnthinkable() *game.CardDef {
 	return &game.CardDef{

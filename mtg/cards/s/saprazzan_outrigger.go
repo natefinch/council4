@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	When this creature attacks or blocks, put it on top of its owner's library at end of combat.
-var SaprazzanOutrigger = newSaprazzanOutrigger()
+var SaprazzanOutrigger = newSaprazzanOutrigger
 
 func newSaprazzanOutrigger() *game.CardDef {
 	return &game.CardDef{

@@ -20,7 +20,7 @@ import (
 //	Whenever a Frog you control attacks, mill three cards.
 //	Whenever a permanent card is put into your graveyard from your library, exile it with a croak counter on it.
 //	You may play lands and cast spells from among cards you own in exile with croak counters on them.
-var GrolnokTheOmnivore = newGrolnokTheOmnivore()
+var GrolnokTheOmnivore = newGrolnokTheOmnivore
 
 func newGrolnokTheOmnivore() *game.CardDef {
 	return &game.CardDef{

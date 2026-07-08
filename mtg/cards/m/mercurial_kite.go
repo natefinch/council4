@@ -17,7 +17,7 @@ import (
 //
 //	Flying
 //	Whenever this creature deals combat damage to a creature, tap that creature. That creature doesn't untap during its controller's next untap step.
-var MercurialKite = newMercurialKite()
+var MercurialKite = newMercurialKite
 
 func newMercurialKite() *game.CardDef {
 	return &game.CardDef{

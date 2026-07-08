@@ -17,7 +17,7 @@ import (
 //
 //	Enchant creature you control
 //	When enchanted creature dies, create X 1/1 white Soldier creature tokens, where X is its power.
-var MurderInvestigation = newMurderInvestigation()
+var MurderInvestigation = newMurderInvestigation
 
 func newMurderInvestigation() *game.CardDef {
 	return &game.CardDef{

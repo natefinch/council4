@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever a creature attacks you or a planeswalker you control, that creature's controller loses 1 life and you gain 1 life.
-var RevengeOfRavens = newRevengeOfRavens()
+var RevengeOfRavens = newRevengeOfRavens
 
 func newRevengeOfRavens() *game.CardDef {
 	return &game.CardDef{

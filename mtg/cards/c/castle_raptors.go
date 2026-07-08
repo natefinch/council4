@@ -17,7 +17,7 @@ import (
 //
 //	Flying
 //	As long as this creature is untapped, it gets +0/+2.
-var CastleRaptors = newCastleRaptors()
+var CastleRaptors = newCastleRaptors
 
 func newCastleRaptors() *game.CardDef {
 	return &game.CardDef{

@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Deft Dismissal deals 3 damage divided as you choose among one, two, or three target attacking or blocking creatures.
-var DeftDismissal = newDeftDismissal()
+var DeftDismissal = newDeftDismissal
 
 func newDeftDismissal() *game.CardDef {
 	return &game.CardDef{

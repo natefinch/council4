@@ -18,7 +18,7 @@ import (
 //
 //	Vigilance
 //	Coven — At the beginning of combat on your turn, if you control three or more creatures with different powers, creatures you control get +1/+0 until end of turn.
-var DawnhartWardens = newDawnhartWardens()
+var DawnhartWardens = newDawnhartWardens
 
 func newDawnhartWardens() *game.CardDef {
 	return &game.CardDef{

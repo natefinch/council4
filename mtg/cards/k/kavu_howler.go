@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, reveal the top four cards of your library. Put all Kavu cards revealed this way into your hand and the rest on the bottom of your library in any order.
-var KavuHowler = newKavuHowler()
+var KavuHowler = newKavuHowler
 
 func newKavuHowler() *game.CardDef {
 	return &game.CardDef{

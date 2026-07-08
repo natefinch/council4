@@ -18,7 +18,7 @@ import (
 //	This artifact enters tapped.
 //	{T}: Add {C}.
 //	{T}: Add one mana of any color. Spend this mana only to cast a multicolored spell.
-var ObsidianObelisk = newObsidianObelisk()
+var ObsidianObelisk = newObsidianObelisk
 
 func newObsidianObelisk() *game.CardDef {
 	return &game.CardDef{

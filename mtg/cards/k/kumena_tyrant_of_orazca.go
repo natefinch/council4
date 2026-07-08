@@ -20,7 +20,7 @@ import (
 //	Tap another untapped Merfolk you control: Kumena can't be blocked this turn.
 //	Tap three untapped Merfolk you control: Draw a card.
 //	Tap five untapped Merfolk you control: Put a +1/+1 counter on each Merfolk you control.
-var KumenaTyrantOfOrazca = newKumenaTyrantOfOrazca()
+var KumenaTyrantOfOrazca = newKumenaTyrantOfOrazca
 
 func newKumenaTyrantOfOrazca() *game.CardDef {
 	return &game.CardDef{

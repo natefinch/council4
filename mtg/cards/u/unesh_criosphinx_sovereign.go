@@ -19,7 +19,7 @@ import (
 //	Flying
 //	Sphinx spells you cast cost {2} less to cast.
 //	Whenever Unesh or another Sphinx you control enters, reveal the top four cards of your library. An opponent separates those cards into two piles. Put one pile into your hand and the other into your graveyard.
-var UneshCriosphinxSovereign = newUneshCriosphinxSovereign()
+var UneshCriosphinxSovereign = newUneshCriosphinxSovereign
 
 func newUneshCriosphinxSovereign() *game.CardDef {
 	return &game.CardDef{

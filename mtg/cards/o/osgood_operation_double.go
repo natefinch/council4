@@ -20,7 +20,7 @@ import (
 //	When you cast this spell, create a token that's a copy of it, except it isn't legendary.
 //	{T}: Add {C}. Spend this mana only to cast an artifact spell or activate an ability of an artifact.
 //	Paradox — Whenever you cast a spell from anywhere other than your hand, investigate. (Create a Clue token. It's an artifact with "{2}, Sacrifice this token: Draw a card.")
-var OsgoodOperationDouble = newOsgoodOperationDouble()
+var OsgoodOperationDouble = newOsgoodOperationDouble
 
 func newOsgoodOperationDouble() *game.CardDef {
 	return &game.CardDef{

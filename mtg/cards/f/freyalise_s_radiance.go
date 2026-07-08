@@ -17,7 +17,7 @@ import (
 //
 //	Cumulative upkeep {2} (At the beginning of your upkeep, put an age counter on this permanent, then sacrifice it unless you pay its upkeep cost for each age counter on it.)
 //	Snow permanents don't untap during their controllers' untap steps.
-var FreyaliseSRadiance = newFreyaliseSRadiance()
+var FreyaliseSRadiance = newFreyaliseSRadiance
 
 func newFreyaliseSRadiance() *game.CardDef {
 	return &game.CardDef{

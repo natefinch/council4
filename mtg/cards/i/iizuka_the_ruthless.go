@@ -18,7 +18,7 @@ import (
 //
 //	Bushido 2 (Whenever this creature blocks or becomes blocked, it gets +2/+2 until end of turn.)
 //	{2}{R}, Sacrifice a Samurai: Samurai creatures you control gain double strike until end of turn.
-var IizukaTheRuthless = newIizukaTheRuthless()
+var IizukaTheRuthless = newIizukaTheRuthless
 
 func newIizukaTheRuthless() *game.CardDef {
 	return &game.CardDef{

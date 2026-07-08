@@ -18,7 +18,7 @@ import (
 //	+1: Create a 3/3 green Beast creature token.
 //	−3: Draw cards equal to the greatest power among creatures you control.
 //	−6: Create a 6/6 green Wurm creature token for each land you control.
-var GarrukPrimalHunter = newGarrukPrimalHunter()
+var GarrukPrimalHunter = newGarrukPrimalHunter
 
 func newGarrukPrimalHunter() *game.CardDef {
 	return &game.CardDef{

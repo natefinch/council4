@@ -21,7 +21,7 @@ import (
 //	When this creature enters, choose one —
 //	• Puff Piece — Put a +1/+1 counter on each of up to two target creatures.
 //	• Investigative Journalism — Return target creature card with mana value 2 or less from your graveyard to your hand.
-var DailyBugleReporters = newDailyBugleReporters()
+var DailyBugleReporters = newDailyBugleReporters
 
 func newDailyBugleReporters() *game.CardDef {
 	return &game.CardDef{

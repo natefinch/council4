@@ -14,7 +14,7 @@ import (
 // Oracle text:
 //
 //	Create two 1/1 white Soldier creature tokens.
-var RaiseTheAlarm = newRaiseTheAlarm()
+var RaiseTheAlarm = newRaiseTheAlarm
 
 func newRaiseTheAlarm() *game.CardDef {
 	return &game.CardDef{

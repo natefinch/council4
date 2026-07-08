@@ -17,7 +17,7 @@ import (
 //
 //	Corrupted — This spell costs {2} less to cast if an opponent has three or more poison counters.
 //	Draw two cards.
-var DistortedCuriosity = newDistortedCuriosity()
+var DistortedCuriosity = newDistortedCuriosity
 
 func newDistortedCuriosity() *game.CardDef {
 	return &game.CardDef{

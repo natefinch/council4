@@ -18,7 +18,7 @@ import (
 //	Flying
 //	Spirits you control get +1/+1 for each time you've cast your commander from the command zone this game.
 //	Whenever a Spirit you control enters, you may pay {2}{W}. If you do, return this card from your graveyard to the battlefield.
-var VanguardOfTheRestless = newVanguardOfTheRestless()
+var VanguardOfTheRestless = newVanguardOfTheRestless
 
 func newVanguardOfTheRestless() *game.CardDef {
 	return &game.CardDef{

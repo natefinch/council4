@@ -17,7 +17,7 @@ import (
 //
 //	Defender
 //	{T}: Prevent the next 1 damage that would be dealt to you this turn.
-var ReinforcedBulwark = newReinforcedBulwark()
+var ReinforcedBulwark = newReinforcedBulwark
 
 func newReinforcedBulwark() *game.CardDef {
 	return &game.CardDef{

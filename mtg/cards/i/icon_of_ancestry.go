@@ -18,7 +18,7 @@ import (
 //	As this artifact enters, choose a creature type.
 //	Creatures you control of the chosen type get +1/+1.
 //	{3}, {T}: Look at the top three cards of your library. You may reveal a creature card of the chosen type from among them and put it into your hand. Put the rest on the bottom of your library in a random order.
-var IconOfAncestry = newIconOfAncestry()
+var IconOfAncestry = newIconOfAncestry
 
 func newIconOfAncestry() *game.CardDef {
 	return &game.CardDef{

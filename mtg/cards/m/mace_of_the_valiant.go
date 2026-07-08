@@ -19,7 +19,7 @@ import (
 //	Equipped creature gets +1/+1 for each charge counter on this Equipment and has vigilance. (Attacking doesn't cause it to tap.)
 //	Whenever a creature you control enters, put a charge counter on this Equipment.
 //	Equip {3}
-var MaceOfTheValiant = newMaceOfTheValiant()
+var MaceOfTheValiant = newMaceOfTheValiant
 
 func newMaceOfTheValiant() *game.CardDef {
 	return &game.CardDef{

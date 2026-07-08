@@ -19,7 +19,7 @@ import (
 //
 //	This creature enters with two -1/-1 counters on it.
 //	{1}{R}, Remove a counter from this creature: Target creature can't block this turn. Activate only as a sorcery.
-var BramblebackBrute = newBramblebackBrute()
+var BramblebackBrute = newBramblebackBrute
 
 func newBramblebackBrute() *game.CardDef {
 	return &game.CardDef{

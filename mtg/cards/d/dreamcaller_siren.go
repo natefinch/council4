@@ -19,7 +19,7 @@ import (
 //	Flying
 //	This creature can block only creatures with flying.
 //	When this creature enters, if you control another Pirate, tap up to two target nonland permanents.
-var DreamcallerSiren = newDreamcallerSiren()
+var DreamcallerSiren = newDreamcallerSiren
 
 func newDreamcallerSiren() *game.CardDef {
 	return &game.CardDef{

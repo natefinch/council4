@@ -18,7 +18,7 @@ import (
 //
 //	Delirium — This spell costs {2} less to cast if there are four or more card types among cards in your graveyard.
 //	Draw three cards.
-var ScourTheLaboratory = newScourTheLaboratory()
+var ScourTheLaboratory = newScourTheLaboratory
 
 func newScourTheLaboratory() *game.CardDef {
 	return &game.CardDef{

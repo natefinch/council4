@@ -19,7 +19,7 @@ import (
 //	When this creature enters, choose one —
 //	• Untap target permanent you control.
 //	• Tap target permanent an opponent controls.
-var DeceiverExarch = newDeceiverExarch()
+var DeceiverExarch = newDeceiverExarch
 
 func newDeceiverExarch() *game.CardDef {
 	return &game.CardDef{

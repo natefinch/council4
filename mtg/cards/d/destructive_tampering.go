@@ -18,7 +18,7 @@ import (
 //	Choose one —
 //	• Destroy target artifact.
 //	• Creatures without flying can't block this turn.
-var DestructiveTampering = newDestructiveTampering()
+var DestructiveTampering = newDestructiveTampering
 
 func newDestructiveTampering() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 //	Menace
 //	Whenever you discard one or more cards, create that many tapped 2/2 black Zombie creature tokens.
 //	Crew 2
-var CryptcallerChariot = newCryptcallerChariot()
+var CryptcallerChariot = newCryptcallerChariot
 
 func newCryptcallerChariot() *game.CardDef {
 	return &game.CardDef{

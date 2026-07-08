@@ -19,7 +19,7 @@ import (
 //	Grakmaw enters with three +1/+1 counters on it.
 //	Whenever another creature you control dies, if it had a +1/+1 counter on it, put a +1/+1 counter on Grakmaw.
 //	When Grakmaw dies, create an X/X black and green Hydra creature token, where X is the number of +1/+1 counters on Grakmaw.
-var GrakmawSkyclaveRavager = newGrakmawSkyclaveRavager()
+var GrakmawSkyclaveRavager = newGrakmawSkyclaveRavager
 
 func newGrakmawSkyclaveRavager() *game.CardDef {
 	return &game.CardDef{

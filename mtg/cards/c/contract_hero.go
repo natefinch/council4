@@ -18,7 +18,7 @@ import (
 //
 //	When this creature enters, create a Treasure token. (It's an artifact with "{T}, Sacrifice this token: Add one mana of any color.")
 //	Whenever this creature attacks, you may sacrifice an artifact or discard a card. If you do, this creature gets +2/+0 until end of turn.
-var ContractHero = newContractHero()
+var ContractHero = newContractHero
 
 func newContractHero() *game.CardDef {
 	return &game.CardDef{

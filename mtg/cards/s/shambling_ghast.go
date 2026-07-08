@@ -19,7 +19,7 @@ import (
 //	When this creature dies, choose one —
 //	• Target creature an opponent controls gets -1/-1 until end of turn.
 //	• Create a Treasure token. (It's an artifact with "{T}, Sacrifice this token: Add one mana of any color.")
-var ShamblingGhast = newShamblingGhast()
+var ShamblingGhast = newShamblingGhast
 
 func newShamblingGhast() *game.CardDef {
 	return &game.CardDef{

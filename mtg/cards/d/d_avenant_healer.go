@@ -18,7 +18,7 @@ import (
 //
 //	{T}: This creature deals 1 damage to target attacking or blocking creature.
 //	{T}: Prevent the next 1 damage that would be dealt to any target this turn.
-var DAvenantHealer = newDAvenantHealer()
+var DAvenantHealer = newDAvenantHealer
 
 func newDAvenantHealer() *game.CardDef {
 	return &game.CardDef{

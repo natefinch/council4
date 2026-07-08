@@ -18,7 +18,7 @@ import (
 //
 //	Soldier creatures have vigilance.
 //	{2}{W}: Create a 1/1 white Soldier creature token.
-var Mobilization = newMobilization()
+var Mobilization = newMobilization
 
 func newMobilization() *game.CardDef {
 	return &game.CardDef{

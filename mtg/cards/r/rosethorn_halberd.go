@@ -18,7 +18,7 @@ import (
 //	When this Equipment enters, attach it to target non-Human creature you control.
 //	Equipped creature gets +2/+1.
 //	Equip {5} ({5}: Attach to target creature you control. Equip only as a sorcery.)
-var RosethornHalberd = newRosethornHalberd()
+var RosethornHalberd = newRosethornHalberd
 
 func newRosethornHalberd() *game.CardDef {
 	return &game.CardDef{

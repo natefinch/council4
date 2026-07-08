@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, sacrifice it unless you discard a land card.
-var FallowWurm = newFallowWurm()
+var FallowWurm = newFallowWurm
 
 func newFallowWurm() *game.CardDef {
 	return &game.CardDef{

@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	At the beginning of each player's upkeep, that player sacrifices a non-Elf creature of their choice.
-var RuthlessWinnower = newRuthlessWinnower()
+var RuthlessWinnower = newRuthlessWinnower
 
 func newRuthlessWinnower() *game.CardDef {
 	return &game.CardDef{

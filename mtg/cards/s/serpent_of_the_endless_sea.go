@@ -9,7 +9,7 @@ import (
 )
 
 // SerpentOfTheEndlessSea is the card definition for Serpent of the Endless Sea.
-var SerpentOfTheEndlessSea = newSerpentOfTheEndlessSea()
+var SerpentOfTheEndlessSea = newSerpentOfTheEndlessSea
 
 func newSerpentOfTheEndlessSea() *game.CardDef {
 	return &game.CardDef{

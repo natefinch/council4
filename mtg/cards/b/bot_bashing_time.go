@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Bot Bashing Time deals 6 damage to target creature. If that creature would die this turn, exile it instead.
-var BotBashingTime = newBotBashingTime()
+var BotBashingTime = newBotBashingTime
 
 func newBotBashingTime() *game.CardDef {
 	return &game.CardDef{

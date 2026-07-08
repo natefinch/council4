@@ -16,7 +16,7 @@ import (
 //
 //	When this enchantment enters, create a number of Food tokens equal to the number of opponents you have. (They're artifacts with "{2}, {T}, Sacrifice this token: You gain 3 life.")
 //	At the beginning of your end step, you may pay {2} and sacrifice a token. If you do, create a 4/4 green Rhino Warrior creature token.
-var KillerService = newKillerService()
+var KillerService = newKillerService
 
 func newKillerService() *game.CardDef {
 	return &game.CardDef{

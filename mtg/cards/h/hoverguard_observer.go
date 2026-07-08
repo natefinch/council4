@@ -17,7 +17,7 @@ import (
 //
 //	Flying
 //	This creature can block only creatures with flying.
-var HoverguardObserver = newHoverguardObserver()
+var HoverguardObserver = newHoverguardObserver
 
 func newHoverguardObserver() *game.CardDef {
 	return &game.CardDef{

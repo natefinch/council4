@@ -17,7 +17,7 @@ import (
 //
 //	Flying
 //	This creature can block only creatures with flying.
-var LongFinnedSkywhale = newLongFinnedSkywhale()
+var LongFinnedSkywhale = newLongFinnedSkywhale
 
 func newLongFinnedSkywhale() *game.CardDef {
 	return &game.CardDef{

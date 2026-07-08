@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{T}: Draw two cards. Target opponent gains control of this creature. Activate only during your turn.
-var HumbleDefector = newHumbleDefector()
+var HumbleDefector = newHumbleDefector
 
 func newHumbleDefector() *game.CardDef {
 	return &game.CardDef{

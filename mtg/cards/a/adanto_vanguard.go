@@ -18,7 +18,7 @@ import (
 //
 //	As long as this creature is attacking, it gets +2/+0.
 //	Pay 4 life: This creature gains indestructible until end of turn. (Damage and effects that say "destroy" don't destroy it.)
-var AdantoVanguard = newAdantoVanguard()
+var AdantoVanguard = newAdantoVanguard
 
 func newAdantoVanguard() *game.CardDef {
 	return &game.CardDef{

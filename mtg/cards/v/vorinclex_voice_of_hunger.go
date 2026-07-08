@@ -18,7 +18,7 @@ import (
 //	Trample
 //	Whenever you tap a land for mana, add one mana of any type that land produced.
 //	Whenever an opponent taps a land for mana, that land doesn't untap during its controller's next untap step.
-var VorinclexVoiceOfHunger = newVorinclexVoiceOfHunger()
+var VorinclexVoiceOfHunger = newVorinclexVoiceOfHunger
 
 func newVorinclexVoiceOfHunger() *game.CardDef {
 	return &game.CardDef{

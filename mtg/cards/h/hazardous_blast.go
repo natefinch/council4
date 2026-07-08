@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Hazardous Blast deals 1 damage to each creature your opponents control. Creatures your opponents control can't block this turn.
-var HazardousBlast = newHazardousBlast()
+var HazardousBlast = newHazardousBlast
 
 func newHazardousBlast() *game.CardDef {
 	return &game.CardDef{

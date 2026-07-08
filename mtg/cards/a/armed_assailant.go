@@ -17,7 +17,7 @@ import (
 //
 //	Deathtouch
 //	As long as this creature is equipped, it gets +2/+0 and has menace. (It can't be blocked except by two or more creatures.)
-var ArmedAssailant = newArmedAssailant()
+var ArmedAssailant = newArmedAssailant
 
 func newArmedAssailant() *game.CardDef {
 	return &game.CardDef{

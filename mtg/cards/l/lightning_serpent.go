@@ -19,7 +19,7 @@ import (
 //	Trample, haste
 //	This creature enters with X +1/+0 counters on it.
 //	At the beginning of the end step, sacrifice this creature.
-var LightningSerpent = newLightningSerpent()
+var LightningSerpent = newLightningSerpent
 
 func newLightningSerpent() *game.CardDef {
 	return &game.CardDef{

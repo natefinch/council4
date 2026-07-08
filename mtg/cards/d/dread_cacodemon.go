@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, if you cast it from your hand, destroy all creatures your opponents control, then tap all other creatures you control.
-var DreadCacodemon = newDreadCacodemon()
+var DreadCacodemon = newDreadCacodemon
 
 func newDreadCacodemon() *game.CardDef {
 	return &game.CardDef{

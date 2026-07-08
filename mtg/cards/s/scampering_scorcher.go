@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, create two 1/1 red Elemental creature tokens. Elementals you control gain haste until end of turn. (They can attack and {T} this turn.)
-var ScamperingScorcher = newScamperingScorcher()
+var ScamperingScorcher = newScamperingScorcher
 
 func newScamperingScorcher() *game.CardDef {
 	return &game.CardDef{

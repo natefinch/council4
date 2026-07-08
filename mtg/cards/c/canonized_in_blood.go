@@ -19,7 +19,7 @@ import (
 //
 //	At the beginning of your end step, if you descended this turn, put a +1/+1 counter on target creature you control. (You descended if a permanent card was put into your graveyard from anywhere.)
 //	{5}{B}{B}, Sacrifice this enchantment: Create a 4/3 white and black Vampire Demon creature token with flying.
-var CanonizedInBlood = newCanonizedInBlood()
+var CanonizedInBlood = newCanonizedInBlood
 
 func newCanonizedInBlood() *game.CardDef {
 	return &game.CardDef{

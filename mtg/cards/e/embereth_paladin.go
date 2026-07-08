@@ -18,7 +18,7 @@ import (
 //
 //	Haste
 //	Adamant — If at least three red mana was spent to cast this spell, this creature enters with a +1/+1 counter on it.
-var EmberethPaladin = newEmberethPaladin()
+var EmberethPaladin = newEmberethPaladin
 
 func newEmberethPaladin() *game.CardDef {
 	return &game.CardDef{

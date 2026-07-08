@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature attacks and isn't blocked, you may sacrifice it. If you do, defending player discards three cards.
-var MindstabThrull = newMindstabThrull()
+var MindstabThrull = newMindstabThrull
 
 func newMindstabThrull() *game.CardDef {
 	return &game.CardDef{

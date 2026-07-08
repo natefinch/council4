@@ -18,7 +18,7 @@ import (
 //
 //	Trample
 //	When this creature enters or dies, return up to one target Aura or Equipment card from your graveyard to your hand.
-var SuperMutantScavenger = newSuperMutantScavenger()
+var SuperMutantScavenger = newSuperMutantScavenger
 
 func newSuperMutantScavenger() *game.CardDef {
 	return &game.CardDef{

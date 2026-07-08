@@ -18,7 +18,7 @@ import (
 //	Enchant creature
 //	When this Aura enters, if you control a token, tap enchanted creature, then scry 2.
 //	Enchanted creature doesn't untap during its controller's untap step.
-var SoShiny = newSoShiny()
+var SoShiny = newSoShiny
 
 func newSoShiny() *game.CardDef {
 	return &game.CardDef{

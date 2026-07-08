@@ -17,7 +17,7 @@ import (
 //
 //	Haste
 //	Whenever this creature attacks, look at the top six cards of your library. You may reveal a Dragon card from among them and put it into your hand. Put the rest on the bottom of your library in a random order.
-var KolaghanWarmonger = newKolaghanWarmonger()
+var KolaghanWarmonger = newKolaghanWarmonger
 
 func newKolaghanWarmonger() *game.CardDef {
 	return &game.CardDef{

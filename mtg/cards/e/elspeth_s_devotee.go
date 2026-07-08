@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, you may search your library and/or graveyard for a card named Elspeth, Undaunted Hero, reveal it, and put it into your hand. If you search your library this way, shuffle.
-var ElspethSDevotee = newElspethSDevotee()
+var ElspethSDevotee = newElspethSDevotee
 
 func newElspethSDevotee() *game.CardDef {
 	return &game.CardDef{

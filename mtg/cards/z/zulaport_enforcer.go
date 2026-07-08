@@ -22,7 +22,7 @@ import (
 //	LEVEL 3+
 //	5/5
 //	This creature can't be blocked except by black creatures.
-var ZulaportEnforcer = newZulaportEnforcer()
+var ZulaportEnforcer = newZulaportEnforcer
 
 func newZulaportEnforcer() *game.CardDef {
 	return &game.CardDef{

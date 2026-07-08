@@ -19,7 +19,7 @@ import (
 //	When this creature enters, choose one —
 //	• Put a +1/+1 counter on this creature.
 //	• Destroy target creature that was dealt damage this turn.
-var HoodedAssassin = newHoodedAssassin()
+var HoodedAssassin = newHoodedAssassin
 
 func newHoodedAssassin() *game.CardDef {
 	return &game.CardDef{

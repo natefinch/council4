@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	{2}: Prevent the next 1 damage that would be dealt to you this turn.
-var ShieldOfTheAges = newShieldOfTheAges()
+var ShieldOfTheAges = newShieldOfTheAges
 
 func newShieldOfTheAges() *game.CardDef {
 	return &game.CardDef{

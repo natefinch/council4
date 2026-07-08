@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Return target creature card from your graveyard to the battlefield. It gains haste until your next turn.
-var BondOfRevival = newBondOfRevival()
+var BondOfRevival = newBondOfRevival
 
 func newBondOfRevival() *game.CardDef {
 	return &game.CardDef{

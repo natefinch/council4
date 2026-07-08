@@ -18,7 +18,7 @@ import (
 //
 //	Investigate. If this spell was cast from a graveyard, investigate twice instead. (Create a Clue token. It's an artifact with "{2}, Sacrifice this token: Draw a card.")
 //	Flashback {3}{U}
-var SecretsOfTheKey = newSecretsOfTheKey()
+var SecretsOfTheKey = newSecretsOfTheKey
 
 func newSecretsOfTheKey() *game.CardDef {
 	return &game.CardDef{

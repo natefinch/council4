@@ -15,7 +15,7 @@ import (
 // Oracle text:
 //
 //	Whenever a creature dies, you may pay {1}. If you do, you gain 1 life.
-var SoulNet = newSoulNet()
+var SoulNet = newSoulNet
 
 func newSoulNet() *game.CardDef {
 	return &game.CardDef{

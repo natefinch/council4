@@ -18,7 +18,7 @@ import (
 // Oracle text:
 //
 //	Target creature you control gets +1/+0 until end of turn. It fights target creature an opponent controls. When excess damage is dealt to the creature an opponent controls this way, destroy up to one target noncreature artifact with mana value 3 or less.
-var RhinoSRampage = newRhinoSRampage()
+var RhinoSRampage = newRhinoSRampage
 
 func newRhinoSRampage() *game.CardDef {
 	return &game.CardDef{

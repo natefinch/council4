@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, you may search your library and/or graveyard for a card named Huatli, Dinosaur Knight, reveal it, then put it into your hand. If you searched your library this way, shuffle.
-var SunBlessedMount = newSunBlessedMount()
+var SunBlessedMount = newSunBlessedMount
 
 func newSunBlessedMount() *game.CardDef {
 	return &game.CardDef{

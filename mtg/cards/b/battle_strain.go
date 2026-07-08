@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever a creature blocks, this enchantment deals 1 damage to that creature's controller.
-var BattleStrain = newBattleStrain()
+var BattleStrain = newBattleStrain
 
 func newBattleStrain() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 //
 //	Trample (This creature can deal excess combat damage to the player or planeswalker it's attacking.)
 //	This creature can block an additional creature each combat.
-var GhastbarkTwins = newGhastbarkTwins()
+var GhastbarkTwins = newGhastbarkTwins
 
 func newGhastbarkTwins() *game.CardDef {
 	return &game.CardDef{

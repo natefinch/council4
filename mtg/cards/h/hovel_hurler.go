@@ -20,7 +20,7 @@ import (
 //
 //	This creature enters with two -1/-1 counters on it.
 //	{R/W}{R/W}, Remove a counter from this creature: Another target creature you control gets +1/+0 and gains flying until end of turn. Activate only as a sorcery.
-var HovelHurler = newHovelHurler()
+var HovelHurler = newHovelHurler
 
 func newHovelHurler() *game.CardDef {
 	return &game.CardDef{

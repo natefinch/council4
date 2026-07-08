@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Red spells cost {2} more to cast.
-var Chill = newChill()
+var Chill = newChill
 
 func newChill() *game.CardDef {
 	return &game.CardDef{

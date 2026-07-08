@@ -18,7 +18,7 @@ import (
 //
 //	Reach
 //	Whenever you commit a crime, look at the top five cards of your library. You may put a land card from among them onto the battlefield tapped. Put the rest on the bottom of your library in a random order. This ability triggers only once each turn. (Targeting opponents, anything they control, and/or cards in their graveyards is a crime.)
-var FreestriderLookout = newFreestriderLookout()
+var FreestriderLookout = newFreestriderLookout
 
 func newFreestriderLookout() *game.CardDef {
 	return &game.CardDef{

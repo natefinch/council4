@@ -17,7 +17,7 @@ import (
 //
 //	Flying
 //	When this creature enters, return up to one target non-Spirit creature to its owner's hand.
-var RoamingGhostlight = newRoamingGhostlight()
+var RoamingGhostlight = newRoamingGhostlight
 
 func newRoamingGhostlight() *game.CardDef {
 	return &game.CardDef{

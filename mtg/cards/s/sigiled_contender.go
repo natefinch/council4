@@ -18,7 +18,7 @@ import (
 // Oracle text:
 //
 //	This creature has lifelink as long as it has a +1/+1 counter on it. (Damage dealt by this creature also causes you to gain that much life.)
-var SigiledContender = newSigiledContender()
+var SigiledContender = newSigiledContender
 
 func newSigiledContender() *game.CardDef {
 	return &game.CardDef{

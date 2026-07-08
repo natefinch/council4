@@ -18,7 +18,7 @@ import (
 //	When this creature enters, choose one —
 //	• Disintegration Ray — Destroy target enchantment an opponent controls. You lose life equal to its mana value.
 //	• Death Ray — Creatures you control gain deathtouch until end of turn.
-var GhastlyDeathTyrant = newGhastlyDeathTyrant()
+var GhastlyDeathTyrant = newGhastlyDeathTyrant
 
 func newGhastlyDeathTyrant() *game.CardDef {
 	return &game.CardDef{

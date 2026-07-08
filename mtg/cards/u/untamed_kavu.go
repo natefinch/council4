@@ -19,7 +19,7 @@ import (
 //	Kicker {3} (You may pay an additional {3} as you cast this spell.)
 //	Vigilance, trample
 //	If this creature was kicked, it enters with three +1/+1 counters on it.
-var UntamedKavu = newUntamedKavu()
+var UntamedKavu = newUntamedKavu
 
 func newUntamedKavu() *game.CardDef {
 	return &game.CardDef{

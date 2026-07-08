@@ -19,7 +19,7 @@ import (
 //	Equipped creature gets +2/+2 and has protection from red and from white.
 //	Whenever equipped creature deals combat damage to a player, this Equipment deals damage to that player equal to the number of cards in their hand and you gain 1 life for each card in your hand.
 //	Equip {2}
-var SwordOfWarAndPeace = newSwordOfWarAndPeace()
+var SwordOfWarAndPeace = newSwordOfWarAndPeace
 
 func newSwordOfWarAndPeace() *game.CardDef {
 	return &game.CardDef{

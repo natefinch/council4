@@ -19,7 +19,7 @@ import (
 //	Enchant creature
 //	Enchanted creature has indestructible and is goaded. (It attacks each combat if able and attacks a player other than you if able.)
 //	{1}{W}: Exile enchanted creature.
-var RedemptionArc = newRedemptionArc()
+var RedemptionArc = newRedemptionArc
 
 func newRedemptionArc() *game.CardDef {
 	return &game.CardDef{

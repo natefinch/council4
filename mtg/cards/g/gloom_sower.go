@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature becomes blocked by a creature, that creature's controller loses 2 life and you gain 2 life.
-var GloomSower = newGloomSower()
+var GloomSower = newGloomSower
 
 func newGloomSower() *game.CardDef {
 	return &game.CardDef{

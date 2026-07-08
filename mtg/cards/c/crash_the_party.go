@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Create a tapped 4/4 green Rhino Warrior creature token for each tapped creature you control.
-var CrashTheParty = newCrashTheParty()
+var CrashTheParty = newCrashTheParty
 
 func newCrashTheParty() *game.CardDef {
 	return &game.CardDef{

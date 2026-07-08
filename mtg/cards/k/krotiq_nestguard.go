@@ -18,7 +18,7 @@ import (
 //
 //	Defender
 //	{2}{G}: This creature can attack this turn as though it didn't have defender.
-var KrotiqNestguard = newKrotiqNestguard()
+var KrotiqNestguard = newKrotiqNestguard
 
 func newKrotiqNestguard() *game.CardDef {
 	return &game.CardDef{

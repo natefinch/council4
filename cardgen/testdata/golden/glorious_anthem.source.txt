@@ -12,7 +12,7 @@ import (
 // Oracle text:
 //
 //	Creatures you control get +1/+1.
-var GloriousAnthem = newGloriousAnthem()
+var GloriousAnthem = newGloriousAnthem
 
 func newGloriousAnthem() *game.CardDef {
 	return &game.CardDef{

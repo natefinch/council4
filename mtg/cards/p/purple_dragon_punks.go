@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{T}: Add {R}. Spend this mana only to cast an artifact spell or to activate an ability.
-var PurpleDragonPunks = newPurpleDragonPunks()
+var PurpleDragonPunks = newPurpleDragonPunks
 
 func newPurpleDragonPunks() *game.CardDef {
 	return &game.CardDef{

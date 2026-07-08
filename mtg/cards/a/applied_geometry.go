@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Create a token that's a copy of target non-Aura permanent you control, except it's a 0/0 Fractal creature in addition to its other types. Put six +1/+1 counters on it.
-var AppliedGeometry = newAppliedGeometry()
+var AppliedGeometry = newAppliedGeometry
 
 func newAppliedGeometry() *game.CardDef {
 	return &game.CardDef{

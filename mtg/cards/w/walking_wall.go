@@ -17,7 +17,7 @@ import (
 //
 //	Defender
 //	{3}: This creature gets +3/-1 until end of turn and can attack this turn as though it didn't have defender. Activate only once each turn.
-var WalkingWall = newWalkingWall()
+var WalkingWall = newWalkingWall
 
 func newWalkingWall() *game.CardDef {
 	return &game.CardDef{

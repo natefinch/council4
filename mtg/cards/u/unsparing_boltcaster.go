@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, it deals 5 damage to target creature an opponent controls that was dealt damage this turn.
-var UnsparingBoltcaster = newUnsparingBoltcaster()
+var UnsparingBoltcaster = newUnsparingBoltcaster
 
 func newUnsparingBoltcaster() *game.CardDef {
 	return &game.CardDef{

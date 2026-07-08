@@ -18,7 +18,7 @@ import (
 // Oracle text:
 //
 //	Narset's Rebuke deals 5 damage to target creature. Add {U}{R}{W}. If that creature would die this turn, exile it instead.
-var NarsetSRebuke = newNarsetSRebuke()
+var NarsetSRebuke = newNarsetSRebuke
 
 func newNarsetSRebuke() *game.CardDef {
 	return &game.CardDef{

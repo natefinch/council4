@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Search your library for up to X basic land cards, where X is the number of lands you control, put them onto the battlefield tapped, then shuffle.
-var BoundlessRealms = newBoundlessRealms()
+var BoundlessRealms = newBoundlessRealms
 
 func newBoundlessRealms() *game.CardDef {
 	return &game.CardDef{

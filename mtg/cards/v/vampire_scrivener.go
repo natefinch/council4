@@ -19,7 +19,7 @@ import (
 //	Flying
 //	Whenever you gain life during your turn, put a +1/+1 counter on this creature.
 //	Whenever you lose life during your turn, put a +1/+1 counter on this creature.
-var VampireScrivener = newVampireScrivener()
+var VampireScrivener = newVampireScrivener
 
 func newVampireScrivener() *game.CardDef {
 	return &game.CardDef{

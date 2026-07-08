@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	When this creature attacks or blocks, destroy it at end of combat.
-var CeremonialGuard = newCeremonialGuard()
+var CeremonialGuard = newCeremonialGuard
 
 func newCeremonialGuard() *game.CardDef {
 	return &game.CardDef{

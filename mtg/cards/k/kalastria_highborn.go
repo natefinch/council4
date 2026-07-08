@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature or another Vampire you control dies, you may pay {B}. If you do, target player loses 2 life and you gain 2 life.
-var KalastriaHighborn = newKalastriaHighborn()
+var KalastriaHighborn = newKalastriaHighborn
 
 func newKalastriaHighborn() *game.CardDef {
 	return &game.CardDef{

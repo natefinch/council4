@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Create an X/X green Ooze creature token.
-var SlimeMolding = newSlimeMolding()
+var SlimeMolding = newSlimeMolding
 
 func newSlimeMolding() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 //
 //	Flying
 //	Sacrifice this creature: Put a +2/+2 counter on target Chimera creature. It gains flying. (This effect lasts indefinitely.)
-var TinWingChimera = newTinWingChimera()
+var TinWingChimera = newTinWingChimera
 
 func newTinWingChimera() *game.CardDef {
 	return &game.CardDef{

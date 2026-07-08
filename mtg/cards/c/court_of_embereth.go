@@ -17,7 +17,7 @@ import (
 //
 //	When this enchantment enters, you become the monarch.
 //	At the beginning of your upkeep, create a 3/1 red Knight creature token. Then if you're the monarch, this enchantment deals X damage to each opponent, where X is the number of creatures you control.
-var CourtOfEmbereth = newCourtOfEmbereth()
+var CourtOfEmbereth = newCourtOfEmbereth
 
 func newCourtOfEmbereth() *game.CardDef {
 	return &game.CardDef{

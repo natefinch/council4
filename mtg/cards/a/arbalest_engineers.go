@@ -21,7 +21,7 @@ import (
 //	• This creature deals 1 damage to any target.
 //	• Put a +1/+1 counter on target creature. It gains trample and haste until end of turn.
 //	• Create a tapped Powerstone token. (It's an artifact with "{T}: Add {C}. This mana can't be spent to cast a nonartifact spell.")
-var ArbalestEngineers = newArbalestEngineers()
+var ArbalestEngineers = newArbalestEngineers
 
 func newArbalestEngineers() *game.CardDef {
 	return &game.CardDef{

@@ -17,64 +17,66 @@ import (
 // Oracle text:
 //
 //	Target creature you control deals damage equal to its power to each other creature and each opponent.
-var ChandraSIgnition = &game.CardDef{
-	ColorIdentity: color.NewIdentity(color.Red),
-	CardFace: game.CardFace{
-		Name: "Chandra's Ignition",
-		ManaCost: opt.Val(cost.Mana{
-			cost.O(3),
-			cost.R,
-			cost.R,
-		}),
-		Colors: []color.Color{color.Red},
-		Types:  []types.Card{types.Sorcery},
-		OracleText: `
+var ChandraSIgnition = func() *game.CardDef {
+	return &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Red),
+		CardFace: game.CardFace{
+			Name: "Chandra's Ignition",
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(3),
+				cost.R,
+				cost.R,
+			}),
+			Colors: []color.Color{color.Red},
+			Types:  []types.Card{types.Sorcery},
+			OracleText: `
 			Target creature you control deals damage equal to its power to each other creature and each opponent.
 		`,
-		SpellAbility: opt.Val(
-			game.Mode{
-				Targets: []game.TargetSpec{
-					{
-						MinTargets: 1,
-						MaxTargets: 1,
-						Constraint: "creature you control",
-						Allow:      game.TargetAllowPermanent,
-						Selection: opt.Val(game.Selection{
-							RequiredTypesAny: []types.Card{
-								types.Creature,
+			SpellAbility: opt.Val(
+				game.Mode{
+					Targets: []game.TargetSpec{
+						{
+							MinTargets: 1,
+							MaxTargets: 1,
+							Constraint: "creature you control",
+							Allow:      game.TargetAllowPermanent,
+							Selection: opt.Val(game.Selection{
+								RequiredTypesAny: []types.Card{
+									types.Creature,
+								},
+								Controller: game.ControllerYou,
+							}),
+						},
+					},
+					Sequence: []game.Instruction{
+						{
+							Primitive: game.Damage{
+								Amount: game.Dynamic(game.DynamicAmount{
+									Kind:   game.DynamicAmountTargetPower,
+									Object: game.TargetPermanentReference(0),
+								}),
+								Recipient: game.GroupDamageRecipient(game.BattlefieldGroupExcluding(
+									game.Selection{RequiredTypes: []types.Card{types.Creature}},
+									game.TargetPermanentReference(0),
+								)),
+								DamageSource: opt.Val(game.TargetPermanentReference(0)),
 							},
-							Controller: game.ControllerYou,
-						}),
-					},
-				},
-				Sequence: []game.Instruction{
-					{
-						Primitive: game.Damage{
-							Amount: game.Dynamic(game.DynamicAmount{
-								Kind:   game.DynamicAmountTargetPower,
-								Object: game.TargetPermanentReference(0),
-							}),
-							Recipient: game.GroupDamageRecipient(game.BattlefieldGroupExcluding(
-								game.Selection{RequiredTypes: []types.Card{types.Creature}},
-								game.TargetPermanentReference(0),
-							)),
-							DamageSource: opt.Val(game.TargetPermanentReference(0)),
+							Description: "deals damage equal to its power to each other creature",
 						},
-						Description: "deals damage equal to its power to each other creature",
-					},
-					{
-						Primitive: game.Damage{
-							Amount: game.Dynamic(game.DynamicAmount{
-								Kind:   game.DynamicAmountTargetPower,
-								Object: game.TargetPermanentReference(0),
-							}),
-							Recipient:    game.PlayerGroupDamageRecipient(game.OpponentsReference()),
-							DamageSource: opt.Val(game.TargetPermanentReference(0)),
+						{
+							Primitive: game.Damage{
+								Amount: game.Dynamic(game.DynamicAmount{
+									Kind:   game.DynamicAmountTargetPower,
+									Object: game.TargetPermanentReference(0),
+								}),
+								Recipient:    game.PlayerGroupDamageRecipient(game.OpponentsReference()),
+								DamageSource: opt.Val(game.TargetPermanentReference(0)),
+							},
+							Description: "deals damage equal to its power to each opponent",
 						},
-						Description: "deals damage equal to its power to each opponent",
 					},
-				},
-			}.Ability(),
-		),
-	},
+				}.Ability(),
+			),
+		},
+	}
 }

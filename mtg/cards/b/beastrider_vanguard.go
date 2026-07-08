@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{4}{G}: Look at the top three cards of your library. You may reveal a permanent card from among them and put it into your hand. Put the rest on the bottom of your library in any order.
-var BeastriderVanguard = newBeastriderVanguard()
+var BeastriderVanguard = newBeastriderVanguard
 
 func newBeastriderVanguard() *game.CardDef {
 	return &game.CardDef{

@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever you cycle a card, you may pay {2}. When you do, this creature deals 2 damage to target creature and you gain 2 life.
-var SavaiThundermane = newSavaiThundermane()
+var SavaiThundermane = newSavaiThundermane
 
 func newSavaiThundermane() *game.CardDef {
 	return &game.CardDef{

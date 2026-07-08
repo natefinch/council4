@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Target creature gains flying until end of turn. If you control a white permanent, return View from Above to its owner's hand.
-var ViewFromAbove = newViewFromAbove()
+var ViewFromAbove = newViewFromAbove
 
 func newViewFromAbove() *game.CardDef {
 	return &game.CardDef{

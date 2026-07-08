@@ -17,7 +17,7 @@ import (
 //
 //	{T}, Sacrifice an artifact: Target player mills three cards.
 //	Whenever an artifact enters, you may untap this artifact.
-var GrindingStation = newGrindingStation()
+var GrindingStation = newGrindingStation
 
 func newGrindingStation() *game.CardDef {
 	return &game.CardDef{

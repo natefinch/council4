@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Commander creatures you own have "{1}, Sacrifice another creature or an artifact: This creature deals 1 damage to any target."
-var StreetUrchin = newStreetUrchin()
+var StreetUrchin = newStreetUrchin
 
 func newStreetUrchin() *game.CardDef {
 	return &game.CardDef{

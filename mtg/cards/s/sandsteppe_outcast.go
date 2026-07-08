@@ -19,7 +19,7 @@ import (
 //	When this creature enters, choose one —
 //	• Put a +1/+1 counter on this creature.
 //	• Create a 1/1 white Spirit creature token with flying.
-var SandsteppeOutcast = newSandsteppeOutcast()
+var SandsteppeOutcast = newSandsteppeOutcast
 
 func newSandsteppeOutcast() *game.CardDef {
 	return &game.CardDef{

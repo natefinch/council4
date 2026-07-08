@@ -15,7 +15,7 @@ import (
 // Oracle text:
 //
 //	When this artifact enters or is put into a graveyard from the battlefield, draw a card.
-var IchorWellspring = newIchorWellspring()
+var IchorWellspring = newIchorWellspring
 
 func newIchorWellspring() *game.CardDef {
 	return &game.CardDef{

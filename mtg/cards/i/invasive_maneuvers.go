@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Invasive Maneuvers deals 3 damage to target creature. It deals 5 damage instead if you control a Spacecraft.
-var InvasiveManeuvers = newInvasiveManeuvers()
+var InvasiveManeuvers = newInvasiveManeuvers
 
 func newInvasiveManeuvers() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 //
 //	When this land enters, sacrifice it unless you return a non-Lair land you control to its owner's hand.
 //	{T}: Add {G}, {W}, or {U}.
-var TrevaSRuins = newTrevaSRuins()
+var TrevaSRuins = newTrevaSRuins
 
 func newTrevaSRuins() *game.CardDef {
 	return &game.CardDef{

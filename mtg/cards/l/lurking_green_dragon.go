@@ -9,7 +9,7 @@ import (
 )
 
 // LurkingGreenDragon is the card definition for Lurking Green Dragon.
-var LurkingGreenDragon = newLurkingGreenDragon()
+var LurkingGreenDragon = newLurkingGreenDragon
 
 func newLurkingGreenDragon() *game.CardDef {
 	return &game.CardDef{

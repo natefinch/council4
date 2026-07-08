@@ -18,7 +18,7 @@ import (
 //
 //	Domain — Create a 3/3 green Beast creature token for each basic land type among lands you control.
 //	{1}{G}, Discard this card: Search your library for a basic land card, reveal it, put it into your hand, then shuffle. You gain 3 life.
-var HerdMigration = newHerdMigration()
+var HerdMigration = newHerdMigration
 
 func newHerdMigration() *game.CardDef {
 	return &game.CardDef{

@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Target opponent mills seven cards.
-var MindSculpt = newMindSculpt()
+var MindSculpt = newMindSculpt
 
 func newMindSculpt() *game.CardDef {
 	return &game.CardDef{

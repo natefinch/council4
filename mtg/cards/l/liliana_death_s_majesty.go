@@ -19,7 +19,7 @@ import (
 //	+1: Create a 2/2 black Zombie creature token. Mill two cards.
 //	−3: Return target creature card from your graveyard to the battlefield. That creature is a black Zombie in addition to its other colors and types.
 //	−7: Destroy all non-Zombie creatures.
-var LilianaDeathSMajesty = newLilianaDeathSMajesty()
+var LilianaDeathSMajesty = newLilianaDeathSMajesty
 
 func newLilianaDeathSMajesty() *game.CardDef {
 	return &game.CardDef{

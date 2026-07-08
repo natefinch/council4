@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever you attack, double target creature's power until end of turn.
-var MrOrfeoTheBoulder = newMrOrfeoTheBoulder()
+var MrOrfeoTheBoulder = newMrOrfeoTheBoulder
 
 func newMrOrfeoTheBoulder() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 // Oracle text:
 //
 //	Undergrowth — This creature enters with a number of +1/+1 counters on it equal to the number of creature cards in your graveyard.
-var RhizomeLurcher = newRhizomeLurcher()
+var RhizomeLurcher = newRhizomeLurcher
 
 func newRhizomeLurcher() *game.CardDef {
 	return &game.CardDef{

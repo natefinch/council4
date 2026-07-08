@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{2}: This creature becomes colorless until end of turn.
-var RagingSpirit = newRagingSpirit()
+var RagingSpirit = newRagingSpirit
 
 func newRagingSpirit() *game.CardDef {
 	return &game.CardDef{

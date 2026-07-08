@@ -11,7 +11,7 @@ import (
 )
 
 // ExpandingOoze is the card definition for Expanding Ooze.
-var ExpandingOoze = newExpandingOoze()
+var ExpandingOoze = newExpandingOoze
 
 func newExpandingOoze() *game.CardDef {
 	return &game.CardDef{

@@ -17,62 +17,64 @@ import (
 // Oracle text:
 //
 //	Revolt — When this creature enters, if a permanent left the battlefield under your control this turn, target creature an opponent controls gets -3/-3 until end of turn.
-var VengefulRebel = &game.CardDef{
-	ColorIdentity: color.NewIdentity(color.Black),
-	CardFace: game.CardFace{
-		Name: "Vengeful Rebel",
-		ManaCost: opt.Val(cost.Mana{
-			cost.O(2),
-			cost.B,
-		}),
-		Colors:    []color.Color{color.Black},
-		Types:     []types.Card{types.Creature},
-		Subtypes:  []types.Sub{types.Aetherborn, types.Warrior},
-		Power:     opt.Val(game.PT{Value: 3}),
-		Toughness: opt.Val(game.PT{Value: 2}),
-		TriggeredAbilities: []game.TriggeredAbility{
-			game.TriggeredAbility{
-				Trigger: game.TriggerCondition{
-					Type: game.TriggerWhen,
-					Pattern: game.TriggerPattern{
-						Event:  game.EventPermanentEnteredBattlefield,
-						Source: game.TriggerSourceSelf,
-					},
-					InterveningIf: "if a permanent left the battlefield under your control this turn",
-					InterveningCondition: opt.Val(game.Condition{
-						EventHistory: opt.Val(game.EventHistoryCondition{Pattern: game.TriggerPattern{
-							Event:         game.EventZoneChanged,
-							Controller:    game.TriggerControllerYou,
-							MatchFromZone: true,
-							FromZone:      zone.Battlefield,
-						}, Window: game.EventHistoryCurrentTurn}),
-					}),
-				},
-				Content: game.Mode{
-					Targets: []game.TargetSpec{
-						game.TargetSpec{
-							MinTargets: 1,
-							MaxTargets: 1,
-							Constraint: "target creature an opponent controls",
-							Allow:      game.TargetAllowPermanent,
-							Selection:  opt.Val(game.Selection{RequiredTypesAny: []types.Card{types.Creature}, Controller: game.ControllerOpponent}),
+var VengefulRebel = func() *game.CardDef {
+	return &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Black),
+		CardFace: game.CardFace{
+			Name: "Vengeful Rebel",
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(2),
+				cost.B,
+			}),
+			Colors:    []color.Color{color.Black},
+			Types:     []types.Card{types.Creature},
+			Subtypes:  []types.Sub{types.Aetherborn, types.Warrior},
+			Power:     opt.Val(game.PT{Value: 3}),
+			Toughness: opt.Val(game.PT{Value: 2}),
+			TriggeredAbilities: []game.TriggeredAbility{
+				game.TriggeredAbility{
+					Trigger: game.TriggerCondition{
+						Type: game.TriggerWhen,
+						Pattern: game.TriggerPattern{
+							Event:  game.EventPermanentEnteredBattlefield,
+							Source: game.TriggerSourceSelf,
 						},
+						InterveningIf: "if a permanent left the battlefield under your control this turn",
+						InterveningCondition: opt.Val(game.Condition{
+							EventHistory: opt.Val(game.EventHistoryCondition{Pattern: game.TriggerPattern{
+								Event:         game.EventZoneChanged,
+								Controller:    game.TriggerControllerYou,
+								MatchFromZone: true,
+								FromZone:      zone.Battlefield,
+							}, Window: game.EventHistoryCurrentTurn}),
+						}),
 					},
-					Sequence: []game.Instruction{
-						{
-							Primitive: game.ModifyPT{
-								Object:         game.TargetPermanentReference(0),
-								PowerDelta:     game.Fixed(-3),
-								ToughnessDelta: game.Fixed(-3),
-								Duration:       game.DurationUntilEndOfTurn,
+					Content: game.Mode{
+						Targets: []game.TargetSpec{
+							game.TargetSpec{
+								MinTargets: 1,
+								MaxTargets: 1,
+								Constraint: "target creature an opponent controls",
+								Allow:      game.TargetAllowPermanent,
+								Selection:  opt.Val(game.Selection{RequiredTypesAny: []types.Card{types.Creature}, Controller: game.ControllerOpponent}),
 							},
 						},
-					},
-				}.Ability(),
+						Sequence: []game.Instruction{
+							{
+								Primitive: game.ModifyPT{
+									Object:         game.TargetPermanentReference(0),
+									PowerDelta:     game.Fixed(-3),
+									ToughnessDelta: game.Fixed(-3),
+									Duration:       game.DurationUntilEndOfTurn,
+								},
+							},
+						},
+					}.Ability(),
+				},
 			},
-		},
-		OracleText: `
+			OracleText: `
 			Revolt — When this creature enters, if a permanent left the battlefield under your control this turn, target creature an opponent controls gets -3/-3 until end of turn.
 		`,
-	},
+		},
+	}
 }

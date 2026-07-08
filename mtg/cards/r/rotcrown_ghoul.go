@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	When this creature dies, target player mills five cards.
-var RotcrownGhoul = newRotcrownGhoul()
+var RotcrownGhoul = newRotcrownGhoul
 
 func newRotcrownGhoul() *game.CardDef {
 	return &game.CardDef{

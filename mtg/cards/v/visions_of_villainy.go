@@ -17,7 +17,7 @@ import (
 //
 //	This spell costs {1} less to cast if you control a Villain.
 //	You draw two cards and lose 2 life.
-var VisionsOfVillainy = newVisionsOfVillainy()
+var VisionsOfVillainy = newVisionsOfVillainy
 
 func newVisionsOfVillainy() *game.CardDef {
 	return &game.CardDef{

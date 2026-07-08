@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever you cast your second spell each turn, exile cards from the top of your library until you exile a nonland card. You may cast that card without paying its mana cost.
-var WandaSVision = newWandaSVision()
+var WandaSVision = newWandaSVision
 
 func newWandaSVision() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 //
 //	Flash
 //	When this creature enters, you may search your library and/or graveyard for a card named Ashiok, Sculptor of Fears, reveal it, and put it into your hand. If you search your library this way, shuffle.
-var AshiokSForerunner = newAshiokSForerunner()
+var AshiokSForerunner = newAshiokSForerunner
 
 func newAshiokSForerunner() *game.CardDef {
 	return &game.CardDef{

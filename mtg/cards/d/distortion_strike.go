@@ -17,7 +17,7 @@ import (
 //
 //	Target creature gets +1/+0 until end of turn and can't be blocked this turn.
 //	Rebound (If you cast this spell from your hand, exile it as it resolves. At the beginning of your next upkeep, you may cast this card from exile without paying its mana cost.)
-var DistortionStrike = newDistortionStrike()
+var DistortionStrike = newDistortionStrike
 
 func newDistortionStrike() *game.CardDef {
 	return &game.CardDef{

@@ -105,4 +105,4 @@ var KusariGama = func() *game.CardDef {
 		game.EquipActivatedAbility(cost.Mana{cost.O(3)}),
 	)
 	return card
-}()
+}

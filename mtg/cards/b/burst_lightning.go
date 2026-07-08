@@ -17,7 +17,7 @@ import (
 //
 //	Kicker {4} (You may pay an additional {4} as you cast this spell.)
 //	Burst Lightning deals 2 damage to any target. If this spell was kicked, it deals 4 damage instead.
-var BurstLightning = newBurstLightning()
+var BurstLightning = newBurstLightning
 
 func newBurstLightning() *game.CardDef {
 	return &game.CardDef{

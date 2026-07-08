@@ -17,7 +17,7 @@ import (
 //	As this creature enters, choose a creature type.
 //	When this creature enters, reveal the top four cards of your library. Put all creature cards of the chosen type revealed this way into your hand and the rest on the bottom of your library in any order.
 //	Creatures of the chosen type get +1/+1.
-var BrassHerald = newBrassHerald()
+var BrassHerald = newBrassHerald
 
 func newBrassHerald() *game.CardDef {
 	return &game.CardDef{

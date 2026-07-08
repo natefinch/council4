@@ -19,7 +19,7 @@ import (
 //	Kicker {2} (You may pay an additional {2} as you cast this spell.)
 //	Vigilance
 //	If this creature was kicked, it enters with a +1/+1 counter on it.
-var ArdentSoldier = newArdentSoldier()
+var ArdentSoldier = newArdentSoldier
 
 func newArdentSoldier() *game.CardDef {
 	return &game.CardDef{

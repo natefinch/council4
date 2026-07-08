@@ -19,7 +19,7 @@ import (
 //	If you control two or more other lands, this land enters tapped.
 //	{T}: Add {W}.
 //	{4}{W}: This land becomes a 3/4 white Dragon creature with flying until end of turn. It's still a land.
-var CaveOfTheFrostDragon = newCaveOfTheFrostDragon()
+var CaveOfTheFrostDragon = newCaveOfTheFrostDragon
 
 func newCaveOfTheFrostDragon() *game.CardDef {
 	return &game.CardDef{

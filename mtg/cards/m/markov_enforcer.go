@@ -18,7 +18,7 @@ import (
 //
 //	Whenever this creature or another Vampire you control enters, this creature fights up to one target creature an opponent controls.
 //	Whenever a creature dealt damage by this creature this turn dies, create a Blood token. (It's an artifact with "{1}, {T}, Discard a card, Sacrifice this token: Draw a card.")
-var MarkovEnforcer = newMarkovEnforcer()
+var MarkovEnforcer = newMarkovEnforcer
 
 func newMarkovEnforcer() *game.CardDef {
 	return &game.CardDef{

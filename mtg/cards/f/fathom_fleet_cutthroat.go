@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, destroy target creature an opponent controls that was dealt damage this turn.
-var FathomFleetCutthroat = newFathomFleetCutthroat()
+var FathomFleetCutthroat = newFathomFleetCutthroat
 
 func newFathomFleetCutthroat() *game.CardDef {
 	return &game.CardDef{

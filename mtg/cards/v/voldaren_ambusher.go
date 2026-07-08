@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, if an opponent lost life this turn, it deals X damage to up to one target creature or planeswalker, where X is the number of Vampires you control.
-var VoldarenAmbusher = newVoldarenAmbusher()
+var VoldarenAmbusher = newVoldarenAmbusher
 
 func newVoldarenAmbusher() *game.CardDef {
 	return &game.CardDef{

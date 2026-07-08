@@ -22,7 +22,7 @@ import (
 //	LEVEL 5+
 //	6/6
 //	Islandwalk (This creature can't be blocked as long as defending player controls an Island.)
-var HalimarWavewatch = newHalimarWavewatch()
+var HalimarWavewatch = newHalimarWavewatch
 
 func newHalimarWavewatch() *game.CardDef {
 	return &game.CardDef{

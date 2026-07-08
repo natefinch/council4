@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Commander creatures you own have "Whenever this creature attacks, it gains double strike until end of turn."
-var FlamingFist = newFlamingFist()
+var FlamingFist = newFlamingFist
 
 func newFlamingFist() *game.CardDef {
 	return &game.CardDef{

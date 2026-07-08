@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Chandra's Revolution deals 4 damage to target creature. Tap target land. That land doesn't untap during its controller's next untap step.
-var ChandraSRevolution = newChandraSRevolution()
+var ChandraSRevolution = newChandraSRevolution
 
 func newChandraSRevolution() *game.CardDef {
 	return &game.CardDef{

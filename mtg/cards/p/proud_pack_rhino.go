@@ -19,7 +19,7 @@ import (
 //	When this creature enters, choose one —
 //	• Put a shield counter on target permanent. (If it would be dealt damage or destroyed, remove a shield counter from it instead.)
 //	• Proliferate. (Choose any number of permanents and/or players, then give each another counter of each kind already there.)
-var ProudPackRhino = newProudPackRhino()
+var ProudPackRhino = newProudPackRhino
 
 func newProudPackRhino() *game.CardDef {
 	return &game.CardDef{

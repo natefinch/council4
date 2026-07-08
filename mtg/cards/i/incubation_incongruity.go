@@ -18,7 +18,7 @@ import (
 // Oracle text:
 //
 //	Look at the top five cards of your library. You may reveal a creature card from among them and put it into your hand. Put the rest on the bottom of your library in a random order.
-var Incubation = newIncubation()
+var Incubation = newIncubation
 
 func newIncubation() *game.CardDef {
 	return &game.CardDef{

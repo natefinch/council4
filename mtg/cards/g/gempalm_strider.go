@@ -17,7 +17,7 @@ import (
 //
 //	Cycling {2}{G}{G} ({2}{G}{G}, Discard this card: Draw a card.)
 //	When you cycle this card, Elf creatures get +2/+2 until end of turn.
-var GempalmStrider = newGempalmStrider()
+var GempalmStrider = newGempalmStrider
 
 func newGempalmStrider() *game.CardDef {
 	return &game.CardDef{

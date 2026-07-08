@@ -19,7 +19,7 @@ import (
 //	When you cast this spell, you may return target Angel or Human creature card from your graveyard to the battlefield.
 //	Flying, vigilance
 //	(Melds with Gisela, the Broken Blade.)
-var BrunaTheFadingLight = newBrunaTheFadingLight()
+var BrunaTheFadingLight = newBrunaTheFadingLight
 
 func newBrunaTheFadingLight() *game.CardDef {
 	return &game.CardDef{

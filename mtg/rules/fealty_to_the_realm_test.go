@@ -19,7 +19,7 @@ func attachFealtyToCreature(t *testing.T) (g *game.Game, creature, aura *game.Pe
 	t.Helper()
 	g = game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	creature = addCombatCreaturePermanentWithPower(g, game.Player2, 3)
-	aura = addCombatPermanent(g, game.Player1, cardf.FealtyToTheRealm)
+	aura = addCombatPermanent(g, game.Player1, cardf.FealtyToTheRealm())
 	if !attachPermanent(g, aura, creature) {
 		t.Fatal("attachPermanent(Fealty to the Realm, creature) = false")
 	}

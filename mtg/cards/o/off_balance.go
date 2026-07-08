@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Target creature can't attack or block this turn.
-var OffBalance = newOffBalance()
+var OffBalance = newOffBalance
 
 func newOffBalance() *game.CardDef {
 	return &game.CardDef{

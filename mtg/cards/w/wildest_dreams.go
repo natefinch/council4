@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Return X target cards from your graveyard to your hand. Exile Wildest Dreams.
-var WildestDreams = newWildestDreams()
+var WildestDreams = newWildestDreams
 
 func newWildestDreams() *game.CardDef {
 	return &game.CardDef{

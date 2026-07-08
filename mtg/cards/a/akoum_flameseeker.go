@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Cohort — {T}, Tap an untapped Ally you control: Discard a card. If you do, draw a card.
-var AkoumFlameseeker = newAkoumFlameseeker()
+var AkoumFlameseeker = newAkoumFlameseeker
 
 func newAkoumFlameseeker() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 //
 //	Mutate {G}{U} (If you cast this spell for its mutate cost, put it over or under target non-Human creature you own. They mutate into the creature on top plus all abilities from under it.)
 //	{1}, {T}: Look at the top card of your library. If it's a land card, you may put it onto the battlefield. If you don't put the card onto the battlefield, put it into your hand.
-var Parcelbeast = newParcelbeast()
+var Parcelbeast = newParcelbeast
 
 func newParcelbeast() *game.CardDef {
 	return &game.CardDef{

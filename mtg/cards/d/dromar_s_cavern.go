@@ -17,7 +17,7 @@ import (
 //
 //	When this land enters, sacrifice it unless you return a non-Lair land you control to its owner's hand.
 //	{T}: Add {W}, {U}, or {B}.
-var DromarSCavern = newDromarSCavern()
+var DromarSCavern = newDromarSCavern
 
 func newDromarSCavern() *game.CardDef {
 	return &game.CardDef{

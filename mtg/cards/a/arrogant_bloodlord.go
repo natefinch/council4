@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature blocks or becomes blocked by a creature with power 1 or less, destroy this creature at end of combat.
-var ArrogantBloodlord = newArrogantBloodlord()
+var ArrogantBloodlord = newArrogantBloodlord
 
 func newArrogantBloodlord() *game.CardDef {
 	return &game.CardDef{

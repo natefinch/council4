@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature attacks, if you control eight or more lands, creatures you control get +2/+2 until end of turn.
-var KyoshiWarriorExemplars = newKyoshiWarriorExemplars()
+var KyoshiWarriorExemplars = newKyoshiWarriorExemplars
 
 func newKyoshiWarriorExemplars() *game.CardDef {
 	return &game.CardDef{

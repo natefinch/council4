@@ -41,4 +41,4 @@ var DeathcapGlade = func() *game.CardDef {
 	)
 	card.ManaAbilities = append(card.ManaAbilities, game.TapManaChoiceAbility(mana.B, mana.G))
 	return card
-}()
+}

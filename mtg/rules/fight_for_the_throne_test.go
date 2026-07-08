@@ -44,7 +44,7 @@ func addCreatureWithPT(g *game.Game, controller game.PlayerID, power, toughness 
 // trigger is scheduled bound to opp.
 func castFightForThrone(t *testing.T, g *game.Game, engine *Engine, mine, opp *game.Permanent) {
 	t.Helper()
-	addImplementationSpellToStack(g, game.Player1, cardf.FightForTheThrone, []game.Target{
+	addImplementationSpellToStack(g, game.Player1, cardf.FightForTheThrone(), []game.Target{
 		game.PermanentTarget(mine.ObjectID),
 		game.PermanentTarget(opp.ObjectID),
 	})

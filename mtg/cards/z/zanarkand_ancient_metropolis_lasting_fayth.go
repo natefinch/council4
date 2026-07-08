@@ -20,7 +20,7 @@ import (
 //
 //	This land enters tapped.
 //	{T}: Add {G}.
-var ZanarkandAncientMetropolis = newZanarkandAncientMetropolis()
+var ZanarkandAncientMetropolis = newZanarkandAncientMetropolis
 
 func newZanarkandAncientMetropolis() *game.CardDef {
 	return &game.CardDef{

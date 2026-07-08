@@ -18,7 +18,7 @@ import (
 //	Choose one —
 //	• Consuming Bonfire deals 4 damage to target non-Elemental creature.
 //	• Consuming Bonfire deals 7 damage to target Treefolk creature.
-var ConsumingBonfire = newConsumingBonfire()
+var ConsumingBonfire = newConsumingBonfire
 
 func newConsumingBonfire() *game.CardDef {
 	return &game.CardDef{

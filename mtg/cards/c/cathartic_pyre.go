@@ -18,7 +18,7 @@ import (
 //	Choose one —
 //	• Cathartic Pyre deals 3 damage to target creature or planeswalker.
 //	• Discard up to two cards, then draw that many cards.
-var CatharticPyre = newCatharticPyre()
+var CatharticPyre = newCatharticPyre
 
 func newCatharticPyre() *game.CardDef {
 	return &game.CardDef{

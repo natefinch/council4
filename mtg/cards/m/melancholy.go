@@ -19,7 +19,7 @@ import (
 //	When this Aura enters, tap enchanted creature.
 //	Enchanted creature doesn't untap during its controller's untap step.
 //	At the beginning of your upkeep, sacrifice this Aura unless you pay {B}.
-var Melancholy = newMelancholy()
+var Melancholy = newMelancholy
 
 func newMelancholy() *game.CardDef {
 	return &game.CardDef{

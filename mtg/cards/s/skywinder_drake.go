@@ -17,7 +17,7 @@ import (
 //
 //	Flying
 //	This creature can block only creatures with flying.
-var SkywinderDrake = newSkywinderDrake()
+var SkywinderDrake = newSkywinderDrake
 
 func newSkywinderDrake() *game.CardDef {
 	return &game.CardDef{

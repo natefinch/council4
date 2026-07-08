@@ -17,7 +17,7 @@ import (
 //	Equipped creature gets +1/+1.
 //	As long as equipped creature is a Human or an Angel, it has vigilance.
 //	Equip {2} ({2}: Attach to target creature you control. Equip only as a sorcery.)
-var BladedBracers = newBladedBracers()
+var BladedBracers = newBladedBracers
 
 func newBladedBracers() *game.CardDef {
 	return &game.CardDef{

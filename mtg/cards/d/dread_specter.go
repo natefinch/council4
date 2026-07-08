@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature blocks or becomes blocked by a nonblack creature, destroy that creature at end of combat.
-var DreadSpecter = newDreadSpecter()
+var DreadSpecter = newDreadSpecter
 
 func newDreadSpecter() *game.CardDef {
 	return &game.CardDef{

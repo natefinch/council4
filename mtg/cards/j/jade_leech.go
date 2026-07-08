@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Green spells you cast cost {G} more to cast.
-var JadeLeech = newJadeLeech()
+var JadeLeech = newJadeLeech
 
 func newJadeLeech() *game.CardDef {
 	return &game.CardDef{

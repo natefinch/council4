@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{T}, Sacrifice another Orc or Goblin: Other Orc creatures get +1/+1 until end of turn.
-var OrcGeneral = newOrcGeneral()
+var OrcGeneral = newOrcGeneral
 
 func newOrcGeneral() *game.CardDef {
 	return &game.CardDef{

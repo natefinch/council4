@@ -19,7 +19,7 @@ import (
 //
 //	When this creature enters, if an opponent controls more lands than you, search your library for a Desert card, put it onto the battlefield tapped, then shuffle.
 //	Whenever one or more land cards are put into your graveyard from anywhere, create a 1/1 red, green, and white Sand Warrior creature token. This ability triggers only once each turn.
-var SandScout = newSandScout()
+var SandScout = newSandScout
 
 func newSandScout() *game.CardDef {
 	return &game.CardDef{

@@ -19,7 +19,7 @@ import (
 //	Flying
 //	Whenever you draw a card, if you're the monarch, target opponent loses 2 life.
 //	Whenever one or more creatures deal combat damage to you, convert Starscream.
-var StarscreamPowerHungry = newStarscreamPowerHungry()
+var StarscreamPowerHungry = newStarscreamPowerHungry
 
 func newStarscreamPowerHungry() *game.CardDef {
 	return &game.CardDef{

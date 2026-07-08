@@ -18,7 +18,7 @@ import (
 //
 //	Flying
 //	Sacrifice this creature: Counter target spell unless its controller pays {2}.
-var SpiketailDrakeling = newSpiketailDrakeling()
+var SpiketailDrakeling = newSpiketailDrakeling
 
 func newSpiketailDrakeling() *game.CardDef {
 	return &game.CardDef{

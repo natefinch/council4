@@ -18,7 +18,7 @@ import (
 //	Enchant creature
 //	Enchanted creature gets +1/+1 and is goaded. (It attacks each combat if able and attacks a player other than you if able.)
 //	Whenever enchanted creature attacks, you draw a card and lose 1 life.
-var CoerciveImpetus = newCoerciveImpetus()
+var CoerciveImpetus = newCoerciveImpetus
 
 func newCoerciveImpetus() *game.CardDef {
 	return &game.CardDef{

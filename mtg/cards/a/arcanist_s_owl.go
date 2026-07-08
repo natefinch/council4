@@ -18,7 +18,7 @@ import (
 //
 //	Flying
 //	When this creature enters, look at the top four cards of your library. You may reveal an artifact or enchantment card from among them and put it into your hand. Put the rest on the bottom of your library in a random order.
-var ArcanistSOwl = newArcanistSOwl()
+var ArcanistSOwl = newArcanistSOwl
 
 func newArcanistSOwl() *game.CardDef {
 	return &game.CardDef{

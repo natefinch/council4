@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	{2}, {T}: Draw a card. Activate only if you've cast a noncreature spell this turn.
-var TapestryOfTheAges = newTapestryOfTheAges()
+var TapestryOfTheAges = newTapestryOfTheAges
 
 func newTapestryOfTheAges() *game.CardDef {
 	return &game.CardDef{

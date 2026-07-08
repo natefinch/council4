@@ -18,7 +18,7 @@ import (
 //
 //	Flying
 //	{U}, Sacrifice this creature: Counter target spell that targets a creature you control.
-var HydromorphGull = newHydromorphGull()
+var HydromorphGull = newHydromorphGull
 
 func newHydromorphGull() *game.CardDef {
 	return &game.CardDef{

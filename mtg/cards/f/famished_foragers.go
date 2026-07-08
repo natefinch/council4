@@ -19,7 +19,7 @@ import (
 //
 //	When this creature enters, if an opponent lost life this turn, add {R}{R}{R}.
 //	{2}{R}, Discard a card: Draw a card.
-var FamishedForagers = newFamishedForagers()
+var FamishedForagers = newFamishedForagers
 
 func newFamishedForagers() *game.CardDef {
 	return &game.CardDef{

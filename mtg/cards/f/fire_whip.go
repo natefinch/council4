@@ -19,7 +19,7 @@ import (
 //	Enchant creature you control
 //	Enchanted creature has "{T}: This creature deals 1 damage to any target."
 //	Sacrifice this Aura: It deals 1 damage to any target.
-var FireWhip = newFireWhip()
+var FireWhip = newFireWhip
 
 func newFireWhip() *game.CardDef {
 	return &game.CardDef{

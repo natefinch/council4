@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{T}: Prevent the next 3 damage that would be dealt to any target this turn.
-var OrimSamiteHealer = newOrimSamiteHealer()
+var OrimSamiteHealer = newOrimSamiteHealer
 
 func newOrimSamiteHealer() *game.CardDef {
 	return &game.CardDef{

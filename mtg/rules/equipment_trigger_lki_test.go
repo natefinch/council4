@@ -36,7 +36,7 @@ func TestFiendlashTriggerUsesLKIAfterLethalDamage(t *testing.T) {
 
 	// Power 4, toughness 3: dealt 3 damage → lethal; power stored in LKI.
 	// Fiendlash adds +2/+0, so effective power = 6, toughness = 3.
-	fiendlash := addCombatPermanent(g, game.Player1, cardf.Fiendlash)
+	fiendlash := addCombatPermanent(g, game.Player1, cardf.Fiendlash())
 	creature := addEquippedCreature(g, game.Player1, 4, 3, fiendlash)
 	creatureObjectID := creature.ObjectID
 	// Effective power includes Fiendlash's +2/+0 static ability.
@@ -105,7 +105,7 @@ func TestBlazingSunsteelTriggerUsesLKIAfterLethalDamage(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 
-	sunsteel := addCombatPermanent(g, game.Player1, cardb.BlazingSunsteel)
+	sunsteel := addCombatPermanent(g, game.Player1, cardb.BlazingSunsteel())
 	creature := addEquippedCreature(g, game.Player1, 3, 3, sunsteel)
 	creatureObjectID := creature.ObjectID
 	eventDamageAmount := 5

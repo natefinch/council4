@@ -19,7 +19,7 @@ import (
 //	Enchant creature
 //	Enchanted creature can't attack or block.
 //	{5}, Sacrifice this Aura: Exile enchanted creature. Create a 1/1 white Ally creature token. Activate only during your turn.
-var PathToRedemption = newPathToRedemption()
+var PathToRedemption = newPathToRedemption
 
 func newPathToRedemption() *game.CardDef {
 	return &game.CardDef{

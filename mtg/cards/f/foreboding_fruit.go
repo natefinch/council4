@@ -17,7 +17,7 @@ import (
 //
 //	Target player draws two cards and loses 2 life.
 //	Adamant — If at least three black mana was spent to cast this spell, create a Food token. (It's an artifact with "{2}, {T}, Sacrifice this token: You gain 3 life.")
-var ForebodingFruit = newForebodingFruit()
+var ForebodingFruit = newForebodingFruit
 
 func newForebodingFruit() *game.CardDef {
 	return &game.CardDef{

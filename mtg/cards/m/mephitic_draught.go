@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	When this artifact enters or is put into a graveyard from the battlefield, you draw a card and you lose 1 life.
-var MephiticDraught = newMephiticDraught()
+var MephiticDraught = newMephiticDraught
 
 func newMephiticDraught() *game.CardDef {
 	return &game.CardDef{

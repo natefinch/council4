@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{T}: Target creature can't attack or block this turn.
-var ThundersongTrumpeter = newThundersongTrumpeter()
+var ThundersongTrumpeter = newThundersongTrumpeter
 
 func newThundersongTrumpeter() *game.CardDef {
 	return &game.CardDef{

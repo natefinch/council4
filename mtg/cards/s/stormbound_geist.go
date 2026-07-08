@@ -18,7 +18,7 @@ import (
 //	Flying
 //	This creature can block only creatures with flying.
 //	Undying (When this creature dies, if it had no +1/+1 counters on it, return it to the battlefield under its owner's control with a +1/+1 counter on it.)
-var StormboundGeist = newStormboundGeist()
+var StormboundGeist = newStormboundGeist
 
 func newStormboundGeist() *game.CardDef {
 	return &game.CardDef{

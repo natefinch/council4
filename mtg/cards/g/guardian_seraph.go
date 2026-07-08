@@ -17,7 +17,7 @@ import (
 //
 //	Flying
 //	If a source an opponent controls would deal damage to you, prevent 1 of that damage.
-var GuardianSeraph = newGuardianSeraph()
+var GuardianSeraph = newGuardianSeraph
 
 func newGuardianSeraph() *game.CardDef {
 	return &game.CardDef{

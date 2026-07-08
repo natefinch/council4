@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Destroy target land. Creatures without flying can't block this turn.
-var TectonicRift = newTectonicRift()
+var TectonicRift = newTectonicRift
 
 func newTectonicRift() *game.CardDef {
 	return &game.CardDef{

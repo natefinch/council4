@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Obliterating Bolt deals 4 damage to target creature or planeswalker. If that creature or planeswalker would die this turn, exile it instead.
-var ObliteratingBolt = newObliteratingBolt()
+var ObliteratingBolt = newObliteratingBolt
 
 func newObliteratingBolt() *game.CardDef {
 	return &game.CardDef{

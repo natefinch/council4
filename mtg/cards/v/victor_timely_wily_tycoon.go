@@ -18,7 +18,7 @@ import (
 // Oracle text:
 //
 //	When Victor Timely enters, you may cast target artifact, instant, or sorcery card with mana value 4 or less from your graveyard without paying its mana cost. If that spell would be put into your graveyard, exile it instead.
-var VictorTimelyWilyTycoon = newVictorTimelyWilyTycoon()
+var VictorTimelyWilyTycoon = newVictorTimelyWilyTycoon
 
 func newVictorTimelyWilyTycoon() *game.CardDef {
 	return &game.CardDef{

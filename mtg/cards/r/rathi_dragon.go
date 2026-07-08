@@ -17,7 +17,7 @@ import (
 //
 //	Flying (This creature can't be blocked except by creatures with flying or reach.)
 //	When this creature enters, sacrifice it unless you sacrifice two Mountains.
-var RathiDragon = newRathiDragon()
+var RathiDragon = newRathiDragon
 
 func newRathiDragon() *game.CardDef {
 	return &game.CardDef{

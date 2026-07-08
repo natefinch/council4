@@ -19,7 +19,7 @@ import (
 //
 //	Flying, vigilance
 //	When this creature enters, put up to one target noncreature, nonland card from your graveyard on top of your library.
-var MonasteryMessenger = newMonasteryMessenger()
+var MonasteryMessenger = newMonasteryMessenger
 
 func newMonasteryMessenger() *game.CardDef {
 	return &game.CardDef{

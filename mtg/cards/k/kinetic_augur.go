@@ -18,7 +18,7 @@ import (
 //	Trample (This creature can deal excess combat damage to the player or planeswalker it's attacking.)
 //	Kinetic Augur's power is equal to the number of instant and sorcery cards in your graveyard.
 //	When this creature enters, discard up to two cards, then draw that many cards.
-var KineticAugur = newKineticAugur()
+var KineticAugur = newKineticAugur
 
 func newKineticAugur() *game.CardDef {
 	return &game.CardDef{

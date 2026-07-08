@@ -18,7 +18,7 @@ import (
 //
 //	When this creature enters, put a +1/+1 counter on target creature.
 //	Whenever a creature you control with a +1/+1 counter on it attacks, each opponent loses 1 life and you gain 1 life.
-var TenuredInkcaster = newTenuredInkcaster()
+var TenuredInkcaster = newTenuredInkcaster
 
 func newTenuredInkcaster() *game.CardDef {
 	return &game.CardDef{

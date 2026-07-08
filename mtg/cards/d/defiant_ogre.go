@@ -19,7 +19,7 @@ import (
 //	When this creature enters, choose one —
 //	• Put a +1/+1 counter on this creature.
 //	• Destroy target artifact.
-var DefiantOgre = newDefiantOgre()
+var DefiantOgre = newDefiantOgre
 
 func newDefiantOgre() *game.CardDef {
 	return &game.CardDef{

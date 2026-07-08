@@ -18,7 +18,7 @@ import (
 //
 //	{W}, Discard a card: Prevent the next 3 damage that would be dealt to any target this turn.
 //	{W}, Sacrifice this enchantment: Prevent the next 3 damage that would be dealt to any target this turn.
-var Hypochondria = newHypochondria()
+var Hypochondria = newHypochondria
 
 func newHypochondria() *game.CardDef {
 	return &game.CardDef{

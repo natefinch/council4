@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Cohort — {T}, Tap an untapped Ally you control: Create a tapped 2/2 black Zombie creature token.
-var DranaSChosen = newDranaSChosen()
+var DranaSChosen = newDranaSChosen
 
 func newDranaSChosen() *game.CardDef {
 	return &game.CardDef{

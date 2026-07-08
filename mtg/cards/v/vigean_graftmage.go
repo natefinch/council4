@@ -11,7 +11,7 @@ import (
 )
 
 // VigeanGraftmage is the card definition for Vigean Graftmage.
-var VigeanGraftmage = newVigeanGraftmage()
+var VigeanGraftmage = newVigeanGraftmage
 
 func newVigeanGraftmage() *game.CardDef {
 	return &game.CardDef{

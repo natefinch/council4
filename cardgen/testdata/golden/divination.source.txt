@@ -13,7 +13,7 @@ import (
 // Oracle text:
 //
 //	Draw two cards.
-var Divination = newDivination()
+var Divination = newDivination
 
 func newDivination() *game.CardDef {
 	return &game.CardDef{

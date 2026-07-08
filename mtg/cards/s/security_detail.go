@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{W}{W}: Create a 1/1 white Soldier creature token. Activate only if you control no creatures and only once each turn.
-var SecurityDetail = newSecurityDetail()
+var SecurityDetail = newSecurityDetail
 
 func newSecurityDetail() *game.CardDef {
 	return &game.CardDef{

@@ -54,7 +54,7 @@ func TestReturnConvertedDiesTriggerEntersBackFace(t *testing.T) {
 func TestHarvestHandDiesReturnsTransformedBackFace(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	cardID := addCardInstance(g, game.Player1, cardh.HarvestHand)
+	cardID := addCardInstance(g, game.Player1, cardh.HarvestHand())
 	permanent := &game.Permanent{
 		ObjectID:       g.IDGen.Next(),
 		CardInstanceID: cardID,

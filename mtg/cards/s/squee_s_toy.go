@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	{T}: Prevent the next 1 damage that would be dealt to target creature this turn.
-var SqueeSToy = newSqueeSToy()
+var SqueeSToy = newSqueeSToy
 
 func newSqueeSToy() *game.CardDef {
 	return &game.CardDef{

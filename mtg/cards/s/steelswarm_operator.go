@@ -19,7 +19,7 @@ import (
 //	Flying
 //	{T}: Add {U}. Spend this mana only to cast an artifact spell.
 //	{T}: Add {U}{U}. Spend this mana only to activate abilities of artifact sources.
-var SteelswarmOperator = newSteelswarmOperator()
+var SteelswarmOperator = newSteelswarmOperator
 
 func newSteelswarmOperator() *game.CardDef {
 	return &game.CardDef{

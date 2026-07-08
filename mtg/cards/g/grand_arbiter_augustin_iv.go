@@ -18,7 +18,7 @@ import (
 //	White spells you cast cost {1} less to cast.
 //	Blue spells you cast cost {1} less to cast.
 //	Spells your opponents cast cost {1} more to cast.
-var GrandArbiterAugustinIV = newGrandArbiterAugustinIV()
+var GrandArbiterAugustinIV = newGrandArbiterAugustinIV
 
 func newGrandArbiterAugustinIV() *game.CardDef {
 	return &game.CardDef{

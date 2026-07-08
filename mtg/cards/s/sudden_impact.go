@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Sudden Impact deals damage to target player equal to the number of cards in that player's hand.
-var SuddenImpact = newSuddenImpact()
+var SuddenImpact = newSuddenImpact
 
 func newSuddenImpact() *game.CardDef {
 	return &game.CardDef{

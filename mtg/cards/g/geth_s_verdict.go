@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Target player sacrifices a creature of their choice and loses 1 life.
-var GethSVerdict = newGethSVerdict()
+var GethSVerdict = newGethSVerdict
 
 func newGethSVerdict() *game.CardDef {
 	return &game.CardDef{

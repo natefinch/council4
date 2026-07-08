@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	During your turn, spells you cast cost {1} less to cast for each creature you control with power 4 or greater.
-var TemurBattlecrier = newTemurBattlecrier()
+var TemurBattlecrier = newTemurBattlecrier
 
 func newTemurBattlecrier() *game.CardDef {
 	return &game.CardDef{

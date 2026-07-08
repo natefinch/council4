@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Destroy target Mountain. Peak Eruption deals 3 damage to that land's controller.
-var PeakEruption = newPeakEruption()
+var PeakEruption = newPeakEruption
 
 func newPeakEruption() *game.CardDef {
 	return &game.CardDef{

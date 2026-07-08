@@ -17,7 +17,7 @@ import (
 //	Equipped creature gets +1/+1.
 //	Whenever equipped creature blocks or becomes blocked by a creature, that creature loses all abilities until end of turn.
 //	Equip {1} ({1}: Attach to target creature you control. Equip only as a sorcery.)
-var BarrowBlade = newBarrowBlade()
+var BarrowBlade = newBarrowBlade
 
 func newBarrowBlade() *game.CardDef {
 	return &game.CardDef{

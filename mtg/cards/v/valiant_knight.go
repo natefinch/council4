@@ -18,7 +18,7 @@ import (
 //
 //	Other Knights you control get +1/+1.
 //	{3}{W}{W}: Knights you control gain double strike until end of turn.
-var ValiantKnight = newValiantKnight()
+var ValiantKnight = newValiantKnight
 
 func newValiantKnight() *game.CardDef {
 	return &game.CardDef{

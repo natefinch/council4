@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	White spells you cast cost {W} more to cast.
-var AlabasterLeech = newAlabasterLeech()
+var AlabasterLeech = newAlabasterLeech
 
 func newAlabasterLeech() *game.CardDef {
 	return &game.CardDef{

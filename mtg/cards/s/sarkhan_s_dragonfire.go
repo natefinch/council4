@@ -17,7 +17,7 @@ import (
 //
 //	Sarkhan's Dragonfire deals 3 damage to any target.
 //	Look at the top five cards of your library. You may reveal a red card from among them and put it into your hand. Put the rest on the bottom of your library in a random order.
-var SarkhanSDragonfire = newSarkhanSDragonfire()
+var SarkhanSDragonfire = newSarkhanSDragonfire
 
 func newSarkhanSDragonfire() *game.CardDef {
 	return &game.CardDef{

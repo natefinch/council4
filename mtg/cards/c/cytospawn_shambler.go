@@ -11,7 +11,7 @@ import (
 )
 
 // CytospawnShambler is the card definition for Cytospawn Shambler.
-var CytospawnShambler = newCytospawnShambler()
+var CytospawnShambler = newCytospawnShambler
 
 func newCytospawnShambler() *game.CardDef {
 	return &game.CardDef{

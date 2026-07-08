@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{1}, {T}: Tap target non-Human creature.
-var SigardianPriest = newSigardianPriest()
+var SigardianPriest = newSigardianPriest
 
 func newSigardianPriest() *game.CardDef {
 	return &game.CardDef{

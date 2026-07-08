@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Roil's Retribution deals 5 damage divided as you choose among any number of target attacking or blocking creatures.
-var RoilSRetribution = newRoilSRetribution()
+var RoilSRetribution = newRoilSRetribution
 
 func newRoilSRetribution() *game.CardDef {
 	return &game.CardDef{

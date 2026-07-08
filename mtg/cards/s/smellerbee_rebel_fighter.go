@@ -18,7 +18,7 @@ import (
 //	First strike
 //	Other creatures you control have haste.
 //	Whenever Smellerbee attacks, you may discard your hand. If you do, draw cards equal to the number of attacking creatures.
-var SmellerbeeRebelFighter = newSmellerbeeRebelFighter()
+var SmellerbeeRebelFighter = newSmellerbeeRebelFighter
 
 func newSmellerbeeRebelFighter() *game.CardDef {
 	return &game.CardDef{

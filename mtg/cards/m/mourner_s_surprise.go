@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Return up to one target creature card from your graveyard to your hand. Create a 1/1 red Mercenary creature token with "{T}: Target creature you control gets +1/+0 until end of turn. Activate only as a sorcery."
-var MournerSSurprise = newMournerSSurprise()
+var MournerSSurprise = newMournerSSurprise
 
 func newMournerSSurprise() *game.CardDef {
 	return &game.CardDef{

@@ -47,4 +47,4 @@ var CinderGlade = func() *game.CardDef {
 		}),
 	)
 	return card
-}()
+}

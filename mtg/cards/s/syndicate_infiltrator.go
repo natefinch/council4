@@ -18,7 +18,7 @@ import (
 //
 //	Flying
 //	As long as there are five or more mana values among cards in your graveyard, this creature gets +2/+2.
-var SyndicateInfiltrator = newSyndicateInfiltrator()
+var SyndicateInfiltrator = newSyndicateInfiltrator
 
 func newSyndicateInfiltrator() *game.CardDef {
 	return &game.CardDef{

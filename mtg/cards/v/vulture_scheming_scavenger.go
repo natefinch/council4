@@ -18,7 +18,7 @@ import (
 //
 //	Flying
 //	Whenever Vulture attacks, other Villains you control gain flying until end of turn.
-var VultureSchemingScavenger = newVultureSchemingScavenger()
+var VultureSchemingScavenger = newVultureSchemingScavenger
 
 func newVultureSchemingScavenger() *game.CardDef {
 	return &game.CardDef{

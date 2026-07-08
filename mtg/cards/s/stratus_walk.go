@@ -19,7 +19,7 @@ import (
 //	When this Aura enters, draw a card.
 //	Enchanted creature has flying. (It can't be blocked except by creatures with flying or reach.)
 //	Enchanted creature can block only creatures with flying.
-var StratusWalk = newStratusWalk()
+var StratusWalk = newStratusWalk
 
 func newStratusWalk() *game.CardDef {
 	return &game.CardDef{

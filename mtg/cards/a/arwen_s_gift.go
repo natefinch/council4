@@ -17,7 +17,7 @@ import (
 //
 //	This spell costs {1} less to cast if you control two or more legendary creatures.
 //	Scry 2, then draw two cards.
-var ArwenSGift = newArwenSGift()
+var ArwenSGift = newArwenSGift
 
 func newArwenSGift() *game.CardDef {
 	return &game.CardDef{

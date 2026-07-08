@@ -19,7 +19,7 @@ import (
 //	When this creature enters, choose one —
 //	• Target creature gets +2/+2 and gains vigilance until end of turn.
 //	• Proliferate. (Choose any number of permanents and/or players, then give each another counter of each kind already there.)
-var AdaptiveSporesinger = newAdaptiveSporesinger()
+var AdaptiveSporesinger = newAdaptiveSporesinger
 
 func newAdaptiveSporesinger() *game.CardDef {
 	return &game.CardDef{

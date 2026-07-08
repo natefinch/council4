@@ -19,7 +19,7 @@ import (
 //	Enchant creature you control
 //	When this Aura enters, exile target nonland permanent an opponent controls until this Aura leaves the battlefield.
 //	Enchanted creature gets +1/+0 and has lifelink and ward {2}.
-var ShelteredByGhosts = newShelteredByGhosts()
+var ShelteredByGhosts = newShelteredByGhosts
 
 func newShelteredByGhosts() *game.CardDef {
 	return &game.CardDef{

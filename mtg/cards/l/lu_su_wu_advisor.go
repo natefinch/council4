@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{T}: Draw a card. Activate only during your turn, before attackers are declared.
-var LuSuWuAdvisor = newLuSuWuAdvisor()
+var LuSuWuAdvisor = newLuSuWuAdvisor
 
 func newLuSuWuAdvisor() *game.CardDef {
 	return &game.CardDef{

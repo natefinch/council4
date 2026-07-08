@@ -19,7 +19,7 @@ import (
 //
 //	Trance — At the beginning of combat on your turn, mill two cards. Terra gains flying until end of turn.
 //	Whenever Terra deals combat damage to a player, you may pay {2}. When you do, return target creature card with power 3 or less from your graveyard to the battlefield tapped.
-var TerraHeraldOfHope = newTerraHeraldOfHope()
+var TerraHeraldOfHope = newTerraHeraldOfHope
 
 func newTerraHeraldOfHope() *game.CardDef {
 	return &game.CardDef{

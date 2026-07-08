@@ -18,7 +18,7 @@ import (
 //
 //	Deathtouch
 //	Descend 4 — Whenever this creature attacks, if there are four or more permanent cards in your graveyard, you draw a card and you lose 1 life.
-var StingingCaveCrawler = newStingingCaveCrawler()
+var StingingCaveCrawler = newStingingCaveCrawler
 
 func newStingingCaveCrawler() *game.CardDef {
 	return &game.CardDef{

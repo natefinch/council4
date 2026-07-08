@@ -19,7 +19,7 @@ import (
 //	When this creature enters, choose one —
 //	• Return up to one target Ninja or Rogue creature card from your graveyard to your hand.
 //	• Put target creature card from your graveyard on top of your library.
-var KamiOfRestlessShadows = newKamiOfRestlessShadows()
+var KamiOfRestlessShadows = newKamiOfRestlessShadows
 
 func newKamiOfRestlessShadows() *game.CardDef {
 	return &game.CardDef{

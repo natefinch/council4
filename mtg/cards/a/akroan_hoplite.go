@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature attacks, it gets +X/+0 until end of turn, where X is the number of attacking creatures you control.
-var AkroanHoplite = newAkroanHoplite()
+var AkroanHoplite = newAkroanHoplite
 
 func newAkroanHoplite() *game.CardDef {
 	return &game.CardDef{

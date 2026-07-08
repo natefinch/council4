@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Create X 1/1 red Mercenary creature tokens with "{T}: Target creature you control gets +1/+0 until end of turn. Activate only as a sorcery."
-var FormAPosse = newFormAPosse()
+var FormAPosse = newFormAPosse
 
 func newFormAPosse() *game.CardDef {
 	return &game.CardDef{

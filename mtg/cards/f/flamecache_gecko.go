@@ -19,7 +19,7 @@ import (
 //
 //	When this creature enters, if an opponent lost life this turn, add {B}{R}.
 //	{1}{R}, Discard a card: Draw a card.
-var FlamecacheGecko = newFlamecacheGecko()
+var FlamecacheGecko = newFlamecacheGecko
 
 func newFlamecacheGecko() *game.CardDef {
 	return &game.CardDef{

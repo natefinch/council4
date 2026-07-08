@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature attacks, each player creates a Treasure token. (It's an artifact with "{T}, Sacrifice this token: Add one mana of any color.")
-var MarchingDuodrone = newMarchingDuodrone()
+var MarchingDuodrone = newMarchingDuodrone
 
 func newMarchingDuodrone() *game.CardDef {
 	return &game.CardDef{

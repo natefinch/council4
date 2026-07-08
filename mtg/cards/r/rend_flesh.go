@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Destroy target non-Spirit creature.
-var RendFlesh = newRendFlesh()
+var RendFlesh = newRendFlesh
 
 func newRendFlesh() *game.CardDef {
 	return &game.CardDef{

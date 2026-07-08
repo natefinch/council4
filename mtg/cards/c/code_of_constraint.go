@@ -18,7 +18,7 @@ import (
 //	Target creature gets -4/-0 until end of turn.
 //	Draw a card.
 //	Addendum — If you cast this spell during your main phase, tap that creature and it doesn't untap during its controller's next untap step.
-var CodeOfConstraint = newCodeOfConstraint()
+var CodeOfConstraint = newCodeOfConstraint
 
 func newCodeOfConstraint() *game.CardDef {
 	return &game.CardDef{

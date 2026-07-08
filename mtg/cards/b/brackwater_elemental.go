@@ -17,7 +17,7 @@ import (
 //
 //	When this creature attacks or blocks, sacrifice it at the beginning of the next end step.
 //	Unearth {2}{U} ({2}{U}: Return this card from your graveyard to the battlefield. It gains haste. Exile it at the beginning of the next end step or if it would leave the battlefield. Unearth only as a sorcery.)
-var BrackwaterElemental = newBrackwaterElemental()
+var BrackwaterElemental = newBrackwaterElemental
 
 func newBrackwaterElemental() *game.CardDef {
 	return &game.CardDef{

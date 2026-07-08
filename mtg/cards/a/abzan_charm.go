@@ -21,7 +21,7 @@ import (
 //	• Exile target creature with power 3 or greater.
 //	• You draw two cards and you lose 2 life.
 //	• Distribute two +1/+1 counters among one or two target creatures.
-var AbzanCharm = newAbzanCharm()
+var AbzanCharm = newAbzanCharm
 
 func newAbzanCharm() *game.CardDef {
 	return &game.CardDef{

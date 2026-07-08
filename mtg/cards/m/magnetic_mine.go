@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever another artifact is put into a graveyard from the battlefield, this artifact deals 2 damage to that artifact's controller.
-var MagneticMine = newMagneticMine()
+var MagneticMine = newMagneticMine
 
 func newMagneticMine() *game.CardDef {
 	return &game.CardDef{

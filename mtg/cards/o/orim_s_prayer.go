@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever one or more creatures attack you, you gain 1 life for each attacking creature.
-var OrimSPrayer = newOrimSPrayer()
+var OrimSPrayer = newOrimSPrayer
 
 func newOrimSPrayer() *game.CardDef {
 	return &game.CardDef{

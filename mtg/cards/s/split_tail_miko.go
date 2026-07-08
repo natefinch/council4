@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{W}, {T}: Prevent the next 2 damage that would be dealt to any target this turn.
-var SplitTailMiko = newSplitTailMiko()
+var SplitTailMiko = newSplitTailMiko
 
 func newSplitTailMiko() *game.CardDef {
 	return &game.CardDef{

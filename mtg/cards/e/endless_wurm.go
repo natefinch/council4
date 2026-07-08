@@ -17,7 +17,7 @@ import (
 //
 //	Trample
 //	At the beginning of your upkeep, sacrifice this creature unless you sacrifice an enchantment.
-var EndlessWurm = newEndlessWurm()
+var EndlessWurm = newEndlessWurm
 
 func newEndlessWurm() *game.CardDef {
 	return &game.CardDef{

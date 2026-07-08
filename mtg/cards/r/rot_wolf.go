@@ -17,7 +17,7 @@ import (
 //
 //	Infect (This creature deals damage to creatures in the form of -1/-1 counters and to players in the form of poison counters.)
 //	Whenever a creature dealt damage by Rot Wolf this turn dies, you may draw a card.
-var RotWolf = newRotWolf()
+var RotWolf = newRotWolf
 
 func newRotWolf() *game.CardDef {
 	return &game.CardDef{

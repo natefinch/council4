@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	As long as you control eight or more lands, this creature gets +1/+0 and can't be blocked.
-var VortexRunner = newVortexRunner()
+var VortexRunner = newVortexRunner
 
 func newVortexRunner() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{2}: This creature becomes colorless until end of turn.
-var AncientKavu = newAncientKavu()
+var AncientKavu = newAncientKavu
 
 func newAncientKavu() *game.CardDef {
 	return &game.CardDef{

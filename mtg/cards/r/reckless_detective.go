@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature attacks, you may sacrifice an artifact or discard a card. If you do, draw a card and this creature gets +2/+0 until end of turn.
-var RecklessDetective = newRecklessDetective()
+var RecklessDetective = newRecklessDetective
 
 func newRecklessDetective() *game.CardDef {
 	return &game.CardDef{

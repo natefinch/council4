@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever a player casts a blue spell, you may pay {1}. If you do, you gain 1 life.
-var CrystalRod = newCrystalRod()
+var CrystalRod = newCrystalRod
 
 func newCrystalRod() *game.CardDef {
 	return &game.CardDef{

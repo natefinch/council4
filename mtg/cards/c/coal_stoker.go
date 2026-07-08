@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, if you cast it from your hand, add {R}{R}{R}.
-var CoalStoker = newCoalStoker()
+var CoalStoker = newCoalStoker
 
 func newCoalStoker() *game.CardDef {
 	return &game.CardDef{

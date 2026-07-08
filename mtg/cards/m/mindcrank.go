@@ -15,7 +15,7 @@ import (
 // Oracle text:
 //
 //	Whenever an opponent loses life, that player mills that many cards. (Damage causes loss of life.)
-var Mindcrank = newMindcrank()
+var Mindcrank = newMindcrank
 
 func newMindcrank() *game.CardDef {
 	return &game.CardDef{

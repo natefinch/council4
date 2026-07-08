@@ -18,7 +18,7 @@ import (
 //
 //	Vigilance, trample, haste
 //	Whenever Rhino attacks, if you've cast a spell with mana value 4 or greater this turn, draw a card.
-var RhinoBarrelingBrute = newRhinoBarrelingBrute()
+var RhinoBarrelingBrute = newRhinoBarrelingBrute
 
 func newRhinoBarrelingBrute() *game.CardDef {
 	return &game.CardDef{

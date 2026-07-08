@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature attacks, it gets +1/+1 until end of turn for each other attacking Pirate.
-var DireFleetCaptain = newDireFleetCaptain()
+var DireFleetCaptain = newDireFleetCaptain
 
 func newDireFleetCaptain() *game.CardDef {
 	return &game.CardDef{

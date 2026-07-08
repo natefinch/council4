@@ -19,7 +19,7 @@ import (
 //	When this creature enters, choose one —
 //	• Smash the Chest — Destroy target artifact.
 //	• Pry It Open — Create a Treasure token. (It's an artifact with "{T}, Sacrifice this token: Add one mana of any color.")
-var PlunderingBarbarian = newPlunderingBarbarian()
+var PlunderingBarbarian = newPlunderingBarbarian
 
 func newPlunderingBarbarian() *game.CardDef {
 	return &game.CardDef{

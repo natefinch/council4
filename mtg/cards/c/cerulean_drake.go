@@ -19,7 +19,7 @@ import (
 //	Flying
 //	Protection from red (This creature can't be blocked, targeted, dealt damage, enchanted, or equipped by anything red.)
 //	Sacrifice this creature: Counter target spell that targets you.
-var CeruleanDrake = newCeruleanDrake()
+var CeruleanDrake = newCeruleanDrake
 
 func newCeruleanDrake() *game.CardDef {
 	return &game.CardDef{

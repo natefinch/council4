@@ -18,7 +18,7 @@ import (
 // Oracle text:
 //
 //	Counter target spell. Create a Mutagen token. (It's an artifact with "{1}, {T}, Sacrifice this token: Put a +1/+1 counter on target creature. Activate only as a sorcery.")
-var OozeSpill = newOozeSpill()
+var OozeSpill = newOozeSpill
 
 func newOozeSpill() *game.CardDef {
 	return &game.CardDef{

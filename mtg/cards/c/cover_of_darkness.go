@@ -17,7 +17,7 @@ import (
 //
 //	As this enchantment enters, choose a creature type.
 //	Creatures of the chosen type have fear. (They can't be blocked except by artifact creatures and/or black creatures.)
-var CoverOfDarkness = newCoverOfDarkness()
+var CoverOfDarkness = newCoverOfDarkness
 
 func newCoverOfDarkness() *game.CardDef {
 	return &game.CardDef{

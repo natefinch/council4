@@ -18,7 +18,7 @@ import (
 //	Choose one —
 //	• You gain 6 life.
 //	• Prevent the next 6 damage that would be dealt to target creature this turn.
-var Recuperate = newRecuperate()
+var Recuperate = newRecuperate
 
 func newRecuperate() *game.CardDef {
 	return &game.CardDef{

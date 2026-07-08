@@ -18,7 +18,7 @@ import (
 //
 //	{T}: Return target noncreature artifact card with mana value 1 or less from your graveyard to the battlefield.
 //	Whenever a creature dies, you may untap this artifact.
-var SalvagingStation = newSalvagingStation()
+var SalvagingStation = newSalvagingStation
 
 func newSalvagingStation() *game.CardDef {
 	return &game.CardDef{

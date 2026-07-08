@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Search your library for up to X basic land cards, where X is the number of tapped creatures you control, put those cards onto the battlefield tapped, then shuffle.
-var HarvestSeason = newHarvestSeason()
+var HarvestSeason = newHarvestSeason
 
 func newHarvestSeason() *game.CardDef {
 	return &game.CardDef{

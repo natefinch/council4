@@ -19,7 +19,7 @@ import (
 //
 //	Whenever you put one or more +1/+1 counters on a creature you control, put a supply counter on this enchantment.
 //	{2}, Remove a supply counter from this enchantment: Draw a card.
-var StockingThePantry = newStockingThePantry()
+var StockingThePantry = newStockingThePantry
 
 func newStockingThePantry() *game.CardDef {
 	return &game.CardDef{

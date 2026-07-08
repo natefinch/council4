@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	As long as this creature is equipped, it gets +0/+2.
-var DwarfholdChampion = newDwarfholdChampion()
+var DwarfholdChampion = newDwarfholdChampion
 
 func newDwarfholdChampion() *game.CardDef {
 	return &game.CardDef{

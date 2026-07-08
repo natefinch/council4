@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	All Sliver creatures get +1/+1 for each other Sliver on the battlefield.
-var SliverLegion = newSliverLegion()
+var SliverLegion = newSliverLegion
 
 func newSliverLegion() *game.CardDef {
 	return &game.CardDef{

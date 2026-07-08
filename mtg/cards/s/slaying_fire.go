@@ -17,7 +17,7 @@ import (
 //
 //	Slaying Fire deals 3 damage to any target.
 //	Adamant — If at least three red mana was spent to cast this spell, it deals 4 damage instead.
-var SlayingFire = newSlayingFire()
+var SlayingFire = newSlayingFire
 
 func newSlayingFire() *game.CardDef {
 	return &game.CardDef{

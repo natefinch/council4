@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature is dealt combat damage, you gain that much life.
-var PiousWarrior = newPiousWarrior()
+var PiousWarrior = newPiousWarrior
 
 func newPiousWarrior() *game.CardDef {
 	return &game.CardDef{

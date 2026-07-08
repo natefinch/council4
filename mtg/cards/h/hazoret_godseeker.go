@@ -143,4 +143,4 @@ var HazoretGodseeker = func() *game.CardDef {
 	},
 	)
 	return card
-}()
+}

@@ -9,7 +9,7 @@ import (
 )
 
 // TimeEbb is the card definition for Time Ebb.
-var TimeEbb = newTimeEbb()
+var TimeEbb = newTimeEbb
 
 func newTimeEbb() *game.CardDef {
 	return &game.CardDef{

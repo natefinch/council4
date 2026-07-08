@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Whenever you cycle or discard a card, you may pay {1}. If you do, put a -1/-1 counter on target creature.
-var RuthlessSniper = newRuthlessSniper()
+var RuthlessSniper = newRuthlessSniper
 
 func newRuthlessSniper() *game.CardDef {
 	return &game.CardDef{

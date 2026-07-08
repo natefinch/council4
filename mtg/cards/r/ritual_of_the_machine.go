@@ -17,7 +17,7 @@ import (
 //
 //	As an additional cost to cast this spell, sacrifice a creature.
 //	Gain control of target nonartifact, nonblack creature.
-var RitualOfTheMachine = newRitualOfTheMachine()
+var RitualOfTheMachine = newRitualOfTheMachine
 
 func newRitualOfTheMachine() *game.CardDef {
 	return &game.CardDef{

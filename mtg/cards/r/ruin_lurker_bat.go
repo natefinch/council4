@@ -18,7 +18,7 @@ import (
 //
 //	Flying, lifelink
 //	At the beginning of your end step, if you descended this turn, scry 1. (You descended if a permanent card was put into your graveyard from anywhere.)
-var RuinLurkerBat = newRuinLurkerBat()
+var RuinLurkerBat = newRuinLurkerBat
 
 func newRuinLurkerBat() *game.CardDef {
 	return &game.CardDef{

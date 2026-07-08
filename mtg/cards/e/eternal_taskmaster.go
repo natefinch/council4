@@ -18,7 +18,7 @@ import (
 //
 //	This creature enters tapped.
 //	Whenever this creature attacks, you may pay {2}{B}. If you do, return target creature card from your graveyard to your hand.
-var EternalTaskmaster = newEternalTaskmaster()
+var EternalTaskmaster = newEternalTaskmaster
 
 func newEternalTaskmaster() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 // Oracle text:
 //
 //	Descend 4 — When this creature enters, if there are four or more permanent cards in your graveyard, return target permanent card from your graveyard to your hand.
-var CoatiScavenger = newCoatiScavenger()
+var CoatiScavenger = newCoatiScavenger
 
 func newCoatiScavenger() *game.CardDef {
 	return &game.CardDef{

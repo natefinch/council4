@@ -18,7 +18,7 @@ import (
 //
 //	{T}: Add {U}. Spend this mana only to cast an instant or sorcery spell.
 //	{1}, {T}: Add one mana of any color. Spend this mana only to cast an instant or sorcery spell.
-var HydroChanneler = newHydroChanneler()
+var HydroChanneler = newHydroChanneler
 
 func newHydroChanneler() *game.CardDef {
 	return &game.CardDef{

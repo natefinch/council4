@@ -30,7 +30,7 @@ func ksfArtifactDef(name string, manaValue int) *game.CardDef {
 // event carries EnterWasCast). It returns the resolved permanent.
 func castKingSolomonSFrogs(t *testing.T, g *game.Game, engine *Engine) *game.Permanent {
 	t.Helper()
-	frogsID := addCardToHand(g, game.Player1, cardk.KingSolomonSFrogs)
+	frogsID := addCardToHand(g, game.Player1, cardk.KingSolomonSFrogs())
 	for range 4 {
 		addBasicLandPermanent(g, game.Player1, types.Plains)
 	}
@@ -157,7 +157,7 @@ func TestKingSolomonSFrogsCastGateSkipsWhenNotCast(t *testing.T) {
 
 	relic := addCombatPermanent(g, game.Player2, ksfArtifactDef("Big Relic", 3))
 	reward := addCardToLibrary(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Reward"}})
-	frogs := addCombatPermanent(g, game.Player1, cardk.KingSolomonSFrogs)
+	frogs := addCombatPermanent(g, game.Player1, cardk.KingSolomonSFrogs())
 	// Put onto the battlefield: the enter event carries no cast information.
 	emitEvent(g, game.Event{
 		Kind:        game.EventPermanentEnteredBattlefield,
@@ -187,7 +187,7 @@ func TestKingSolomonSFrogsBecomeMonarchAbility(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 
-	frogs := addCombatPermanent(g, game.Player1, cardk.KingSolomonSFrogs)
+	frogs := addCombatPermanent(g, game.Player1, cardk.KingSolomonSFrogs())
 	for range 3 {
 		addBasicLandPermanent(g, game.Player1, types.Plains)
 	}

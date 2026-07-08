@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Target creature you control gets +2/+1 until end of turn. Each other creature you control gets +1/+1 until end of turn.
-var PhalanxTactics = newPhalanxTactics()
+var PhalanxTactics = newPhalanxTactics
 
 func newPhalanxTactics() *game.CardDef {
 	return &game.CardDef{

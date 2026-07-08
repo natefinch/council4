@@ -19,7 +19,7 @@ import (
 //
 //	When this creature enters, put a trample counter on target non-Human creature you control.
 //	{2}{G}, {T}: Put a +1/+1 counter on each creature you control with trample.
-var HornbashMentor = newHornbashMentor()
+var HornbashMentor = newHornbashMentor
 
 func newHornbashMentor() *game.CardDef {
 	return &game.CardDef{

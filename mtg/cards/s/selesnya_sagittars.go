@@ -17,7 +17,7 @@ import (
 //
 //	Reach (This creature can block creatures with flying.)
 //	This creature can block an additional creature each combat.
-var SelesnyaSagittars = newSelesnyaSagittars()
+var SelesnyaSagittars = newSelesnyaSagittars
 
 func newSelesnyaSagittars() *game.CardDef {
 	return &game.CardDef{

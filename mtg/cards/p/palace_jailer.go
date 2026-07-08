@@ -17,7 +17,7 @@ import (
 //
 //	When this creature enters, you become the monarch.
 //	When this creature enters, exile target creature an opponent controls until an opponent becomes the monarch.
-var PalaceJailer = newPalaceJailer()
+var PalaceJailer = newPalaceJailer
 
 func newPalaceJailer() *game.CardDef {
 	return &game.CardDef{

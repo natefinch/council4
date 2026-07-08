@@ -18,7 +18,7 @@ import (
 //
 //	Create a 1/2 green Spider creature token with reach for each creature card in your graveyard.
 //	Flashback {6}{B} (You may cast this card from your graveyard for its flashback cost. Then exile it.)
-var SpiderSpawning = newSpiderSpawning()
+var SpiderSpawning = newSpiderSpawning
 
 func newSpiderSpawning() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 //
 //	When this artifact enters or leaves the battlefield, exile the top card of your library. Until end of turn, you may play that card.
 //	{2}{R}, Sacrifice this artifact: Create a 2/2 white Samurai creature token with vigilance. Activate only as a sorcery.
-var ExperimentalSynthesizer = newExperimentalSynthesizer()
+var ExperimentalSynthesizer = newExperimentalSynthesizer
 
 func newExperimentalSynthesizer() *game.CardDef {
 	return &game.CardDef{

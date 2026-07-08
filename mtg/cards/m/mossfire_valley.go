@@ -16,40 +16,42 @@ import (
 // Oracle text:
 //
 //	{1}, {T}: Add {R}{G}.
-var MossfireValley = &game.CardDef{
-	ColorIdentity: color.NewIdentity(color.Green, color.Red),
-	CardFace: game.CardFace{
-		Name:  "Mossfire Valley",
-		Types: []types.Card{types.Land},
-		OracleText: `
+var MossfireValley = func() *game.CardDef {
+	return &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Green, color.Red),
+		CardFace: game.CardFace{
+			Name:  "Mossfire Valley",
+			Types: []types.Card{types.Land},
+			OracleText: `
 			{1}, {T}: Add {R}{G}.
 		`,
-		ManaAbilities: []game.ManaAbility{
-			{
-				Text: `
+			ManaAbilities: []game.ManaAbility{
+				{
+					Text: `
 					{1}, {T}: Add {R}{G}.
 				`,
-				ManaCost: opt.Val(cost.Mana{
-					cost.O(1),
-				}),
-				AdditionalCosts: cost.Tap,
-				Content: game.Mode{
-					Sequence: []game.Instruction{
-						{
-							Primitive: game.AddMana{
-								Amount:    game.Fixed(1),
-								ManaColor: mana.R,
+					ManaCost: opt.Val(cost.Mana{
+						cost.O(1),
+					}),
+					AdditionalCosts: cost.Tap,
+					Content: game.Mode{
+						Sequence: []game.Instruction{
+							{
+								Primitive: game.AddMana{
+									Amount:    game.Fixed(1),
+									ManaColor: mana.R,
+								},
+							},
+							{
+								Primitive: game.AddMana{
+									Amount:    game.Fixed(1),
+									ManaColor: mana.G,
+								},
 							},
 						},
-						{
-							Primitive: game.AddMana{
-								Amount:    game.Fixed(1),
-								ManaColor: mana.G,
-							},
-						},
-					},
-				}.Ability(),
+					}.Ability(),
+				},
 			},
 		},
-	},
+	}
 }

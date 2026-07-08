@@ -10,7 +10,7 @@ import (
 )
 
 // Nevermaker is the card definition for Nevermaker.
-var Nevermaker = newNevermaker()
+var Nevermaker = newNevermaker
 
 func newNevermaker() *game.CardDef {
 	return &game.CardDef{

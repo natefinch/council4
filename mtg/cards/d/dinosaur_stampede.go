@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Attacking creatures get +2/+0 until end of turn. Dinosaurs you control gain trample until end of turn.
-var DinosaurStampede = newDinosaurStampede()
+var DinosaurStampede = newDinosaurStampede
 
 func newDinosaurStampede() *game.CardDef {
 	return &game.CardDef{

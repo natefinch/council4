@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{T}, Sacrifice a Goblin: Goblin creatures get +2/+0 until end of turn.
-var GoblinLookout = newGoblinLookout()
+var GoblinLookout = newGoblinLookout
 
 func newGoblinLookout() *game.CardDef {
 	return &game.CardDef{

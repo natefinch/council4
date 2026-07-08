@@ -18,7 +18,7 @@ import (
 //
 //	Whenever you cast your second spell each turn, exile the top card of your library. Until the end of your next turn, you may play that card.
 //	{T}: Copy target instant or sorcery spell you control. You may choose new targets for the copy. Activate only if you've cast three or more spells this turn.
-var StellaLeeWildCard = newStellaLeeWildCard()
+var StellaLeeWildCard = newStellaLeeWildCard
 
 func newStellaLeeWildCard() *game.CardDef {
 	return &game.CardDef{

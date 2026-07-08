@@ -19,7 +19,7 @@ import (
 //	Enchant creature
 //	When this Aura enters, tap enchanted creature.
 //	Enchanted creature doesn't untap during its controller's untap step.
-var CaptureSphere = newCaptureSphere()
+var CaptureSphere = newCaptureSphere
 
 func newCaptureSphere() *game.CardDef {
 	return &game.CardDef{

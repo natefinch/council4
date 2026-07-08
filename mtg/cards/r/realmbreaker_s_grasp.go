@@ -17,7 +17,7 @@ import (
 //
 //	Enchant artifact or creature
 //	Enchanted permanent can't attack or block, and its activated abilities can't be activated unless they're mana abilities.
-var RealmbreakerSGrasp = newRealmbreakerSGrasp()
+var RealmbreakerSGrasp = newRealmbreakerSGrasp
 
 func newRealmbreakerSGrasp() *game.CardDef {
 	return &game.CardDef{

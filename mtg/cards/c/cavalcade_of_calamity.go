@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Whenever a creature you control with power 1 or less attacks, this enchantment deals 1 damage to the player or planeswalker that creature is attacking.
-var CavalcadeOfCalamity = newCavalcadeOfCalamity()
+var CavalcadeOfCalamity = newCavalcadeOfCalamity
 
 func newCavalcadeOfCalamity() *game.CardDef {
 	return &game.CardDef{

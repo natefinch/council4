@@ -17,7 +17,7 @@ import (
 //
 //	Kicker {6} (You may pay an additional {6} as you cast this spell.)
 //	Create six 1/1 white Kor Soldier creature tokens. If this spell was kicked, create twelve of those tokens instead.
-var ConquerorSPledge = newConquerorSPledge()
+var ConquerorSPledge = newConquerorSPledge
 
 func newConquerorSPledge() *game.CardDef {
 	return &game.CardDef{

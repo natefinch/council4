@@ -18,7 +18,7 @@ import (
 //
 //	This spell costs {1} less to cast if you control a Turtle.
 //	Put a +1/+1 counter on target creature you control. It gains trample, hexproof, and indestructible until end of turn.
-var SavedByTheShell = newSavedByTheShell()
+var SavedByTheShell = newSavedByTheShell
 
 func newSavedByTheShell() *game.CardDef {
 	return &game.CardDef{

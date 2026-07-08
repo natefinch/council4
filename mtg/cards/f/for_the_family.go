@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Target creature gets +2/+2 until end of turn. If you control four or more creatures, that creature gets +4/+4 until end of turn instead.
-var ForTheFamily = newForTheFamily()
+var ForTheFamily = newForTheFamily
 
 func newForTheFamily() *game.CardDef {
 	return &game.CardDef{

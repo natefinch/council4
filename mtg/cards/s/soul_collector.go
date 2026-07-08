@@ -18,7 +18,7 @@ import (
 //	Flying
 //	Whenever a creature dealt damage by this creature this turn dies, return that card to the battlefield under your control.
 //	Morph {B}{B}{B} (You may cast this card face down as a 2/2 creature for {3}. Turn it face up any time for its morph cost.)
-var SoulCollector = newSoulCollector()
+var SoulCollector = newSoulCollector
 
 func newSoulCollector() *game.CardDef {
 	return &game.CardDef{

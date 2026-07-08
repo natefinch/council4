@@ -18,7 +18,7 @@ import (
 // Oracle text:
 //
 //	This creature has reach as long as it has a +1/+1 counter on it. (It can block creatures with flying.)
-var AinokArtillerist = newAinokArtillerist()
+var AinokArtillerist = newAinokArtillerist
 
 func newAinokArtillerist() *game.CardDef {
 	return &game.CardDef{

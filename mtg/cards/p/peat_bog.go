@@ -20,7 +20,7 @@ import (
 //
 //	This land enters tapped with two depletion counters on it.
 //	{T}, Remove a depletion counter from this land: Add {B}{B}. If there are no depletion counters on this land, sacrifice it.
-var PeatBog = newPeatBog()
+var PeatBog = newPeatBog
 
 func newPeatBog() *game.CardDef {
 	return &game.CardDef{

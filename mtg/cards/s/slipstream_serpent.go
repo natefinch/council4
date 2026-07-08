@@ -9,7 +9,7 @@ import (
 )
 
 // SlipstreamSerpent is the card definition for Slipstream Serpent.
-var SlipstreamSerpent = newSlipstreamSerpent()
+var SlipstreamSerpent = newSlipstreamSerpent
 
 func newSlipstreamSerpent() *game.CardDef {
 	return &game.CardDef{

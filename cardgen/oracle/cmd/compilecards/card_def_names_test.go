@@ -13,7 +13,7 @@ func TestCardDefNamesRecognizesBuilderFunctions(t *testing.T) {
 
 import "github.com/natefinch/council4/mtg/game"
 
-var SaberAnts = newSaberAnts()
+var SaberAnts = newSaberAnts
 
 func newSaberAnts() *game.CardDef {
 	return &game.CardDef{}
@@ -25,7 +25,11 @@ func newSaberAntsToken() *game.CardDef {
 	return &game.CardDef{}
 }
 
-var LegacyLiteral = &game.CardDef{}
+var GiantSpider = newGiantSpider
+
+func newGiantSpider() *game.CardDef {
+	return &game.CardDef{}
+}
 `
 	file, err := parser.ParseFile(token.NewFileSet(), "a.go", source, 0)
 	if err != nil {
@@ -33,7 +37,8 @@ var LegacyLiteral = &game.CardDef{}
 	}
 	got := cardDefNames(file)
 	slices.Sort(got)
-	want := []string{"LegacyLiteral", "SaberAnts"}
+	// Card builders are returned; the token builder (referenced by a call) is not.
+	want := []string{"newGiantSpider", "newSaberAnts"}
 	if !slices.Equal(got, want) {
 		t.Fatalf("cardDefNames = %v, want %v", got, want)
 	}

@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	This creature can't be blocked except by black creatures.
-var DreadWarlock = newDreadWarlock()
+var DreadWarlock = newDreadWarlock
 
 func newDreadWarlock() *game.CardDef {
 	return &game.CardDef{

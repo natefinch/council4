@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Target creature gets +2/+2 until end of turn. You may remove a -1/-1 counter from it.
-var ShedWeakness = newShedWeakness()
+var ShedWeakness = newShedWeakness
 
 func newShedWeakness() *game.CardDef {
 	return &game.CardDef{

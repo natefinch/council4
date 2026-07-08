@@ -18,7 +18,7 @@ import (
 //	Enchant creature
 //	Enchanted creature gets +2/+2 and is goaded. (It attacks each combat if able and attacks a player other than you if able.)
 //	Whenever enchanted creature attacks, its controller loses 2 life and you gain 2 life.
-var ParasiticImpetus = newParasiticImpetus()
+var ParasiticImpetus = newParasiticImpetus
 
 func newParasiticImpetus() *game.CardDef {
 	return &game.CardDef{

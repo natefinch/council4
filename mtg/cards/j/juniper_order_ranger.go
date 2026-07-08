@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Whenever another creature you control enters, put a +1/+1 counter on that creature and a +1/+1 counter on this creature.
-var JuniperOrderRanger = newJuniperOrderRanger()
+var JuniperOrderRanger = newJuniperOrderRanger
 
 func newJuniperOrderRanger() *game.CardDef {
 	return &game.CardDef{

@@ -19,7 +19,7 @@ import (
 func newSpearCombat(t *testing.T) (g *game.Game, spear, attacker *game.Permanent) {
 	t.Helper()
 	g = game.NewGame([game.NumPlayers]game.PlayerConfig{})
-	spear = addCombatPermanent(g, game.Player1, cardt.TheSpearOfBashenga)
+	spear = addCombatPermanent(g, game.Player1, cardt.TheSpearOfBashenga())
 	attacker = addCombatCreaturePermanentWithPower(g, game.Player1, 3)
 	if !attachPermanent(g, spear, attacker) {
 		t.Fatal("attachPermanent(spear, attacker) = false")
@@ -35,7 +35,7 @@ func newSpearCombat(t *testing.T) (g *game.Game, spear, attacker *game.Permanent
 // Bashenga's "attacks the monarch" triggered ability (index 1).
 func spearDestroyTargetSpec(t *testing.T) game.TargetSpec {
 	t.Helper()
-	content := cardt.TheSpearOfBashenga.TriggeredAbilities[1].Content
+	content := cardt.TheSpearOfBashenga().TriggeredAbilities[1].Content
 	if len(content.Modes) != 1 || len(content.Modes[0].Targets) != 1 {
 		t.Fatalf("unexpected Spear ability 3 shape: %+v", content)
 	}
@@ -181,7 +181,7 @@ func TestTheSpearOfBashengaTargetLegality(t *testing.T) {
 
 	spec := spearDestroyTargetSpec(t)
 	candidates := targetCandidatesForSpecChosenBy(
-		g, game.Player1, game.Player1, cardt.TheSpearOfBashenga, spear.ObjectID, attackEvent, &spec)
+		g, game.Player1, game.Player1, cardt.TheSpearOfBashenga(), spear.ObjectID, attackEvent, &spec)
 
 	if !slices.Contains(candidates, game.PermanentTarget(tappedNonland.ObjectID)) {
 		t.Fatalf("candidates = %+v, want the monarch's tapped nonland permanent", candidates)

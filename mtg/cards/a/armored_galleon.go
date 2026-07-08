@@ -9,7 +9,7 @@ import (
 )
 
 // ArmoredGalleon is the card definition for Armored Galleon.
-var ArmoredGalleon = newArmoredGalleon()
+var ArmoredGalleon = newArmoredGalleon
 
 func newArmoredGalleon() *game.CardDef {
 	return &game.CardDef{

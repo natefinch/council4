@@ -9,7 +9,7 @@ import (
 )
 
 // RedCliffsArmada is the card definition for Red Cliffs Armada.
-var RedCliffsArmada = newRedCliffsArmada()
+var RedCliffsArmada = newRedCliffsArmada
 
 func newRedCliffsArmada() *game.CardDef {
 	return &game.CardDef{

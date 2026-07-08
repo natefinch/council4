@@ -19,7 +19,7 @@ import (
 //
 //	Hunters for Hire — Whenever a creature you control deals combat damage to a player, put a quest counter on it.
 //	{1}, Remove a quest counter from a permanent you control: Create a Junk token. (It's an artifact with "{T}, Sacrifice this token: Exile the top card of your library. You may play that card this turn. Activate only as a sorcery.")
-var DuchessWaywardTavernkeep = newDuchessWaywardTavernkeep()
+var DuchessWaywardTavernkeep = newDuchessWaywardTavernkeep
 
 func newDuchessWaywardTavernkeep() *game.CardDef {
 	return &game.CardDef{

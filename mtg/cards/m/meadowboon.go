@@ -19,7 +19,7 @@ import (
 //
 //	When this creature leaves the battlefield, put a +1/+1 counter on each creature target player controls.
 //	Evoke {3}{W} (You may cast this spell for its evoke cost. If you do, it's sacrificed when it enters.)
-var Meadowboon = newMeadowboon()
+var Meadowboon = newMeadowboon
 
 func newMeadowboon() *game.CardDef {
 	return &game.CardDef{

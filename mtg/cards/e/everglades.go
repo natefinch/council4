@@ -18,7 +18,7 @@ import (
 //	This land enters tapped.
 //	When this land enters, sacrifice it unless you return an untapped Swamp you control to its owner's hand.
 //	{T}: Add {C}{B}.
-var Everglades = newEverglades()
+var Everglades = newEverglades
 
 func newEverglades() *game.CardDef {
 	return &game.CardDef{

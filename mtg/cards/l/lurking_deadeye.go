@@ -17,7 +17,7 @@ import (
 //
 //	Flash
 //	When this creature enters, destroy target creature that was dealt damage this turn.
-var LurkingDeadeye = newLurkingDeadeye()
+var LurkingDeadeye = newLurkingDeadeye
 
 func newLurkingDeadeye() *game.CardDef {
 	return &game.CardDef{

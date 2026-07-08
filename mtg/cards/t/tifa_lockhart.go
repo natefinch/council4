@@ -17,7 +17,7 @@ import (
 //
 //	Trample
 //	Landfall — Whenever a land you control enters, double Tifa Lockhart's power until end of turn.
-var TifaLockhart = newTifaLockhart()
+var TifaLockhart = newTifaLockhart
 
 func newTifaLockhart() *game.CardDef {
 	return &game.CardDef{

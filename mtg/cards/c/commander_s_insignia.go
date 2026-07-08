@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Creatures you control get +1/+1 for each time you've cast your commander from the command zone this game.
-var CommanderSInsignia = newCommanderSInsignia()
+var CommanderSInsignia = newCommanderSInsignia
 
 func newCommanderSInsignia() *game.CardDef {
 	return &game.CardDef{

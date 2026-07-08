@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Instant and sorcery spells cost {2} less to cast.
-var ArcaneMelee = newArcaneMelee()
+var ArcaneMelee = newArcaneMelee
 
 func newArcaneMelee() *game.CardDef {
 	return &game.CardDef{

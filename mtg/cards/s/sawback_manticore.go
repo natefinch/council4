@@ -18,7 +18,7 @@ import (
 //
 //	{4}: This creature gains flying until end of turn.
 //	{1}: This creature deals 2 damage to target attacking or blocking creature. Activate only if this creature is attacking or blocking and only once each turn.
-var SawbackManticore = newSawbackManticore()
+var SawbackManticore = newSawbackManticore
 
 func newSawbackManticore() *game.CardDef {
 	return &game.CardDef{

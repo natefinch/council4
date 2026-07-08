@@ -18,7 +18,7 @@ import (
 //
 //	Enchant Mountain you control
 //	When this Aura enters, exile target creature an opponent controls until this Aura leaves the battlefield. (That creature returns under its owner's control.)
-var ChainedToTheRocks = newChainedToTheRocks()
+var ChainedToTheRocks = newChainedToTheRocks
 
 func newChainedToTheRocks() *game.CardDef {
 	return &game.CardDef{

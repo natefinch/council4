@@ -18,7 +18,7 @@ import (
 //
 //	Whenever a nontoken creature you control enters, you may pay {W}. If you do, create a 1/1 white Spirit creature token with flying.
 //	{1}{W}, Sacrifice a Spirit: Target non-Spirit creature gains indestructible until end of turn. (Damage and effects that say "destroy" don't destroy it.)
-var SpiritBonds = newSpiritBonds()
+var SpiritBonds = newSpiritBonds
 
 func newSpiritBonds() *game.CardDef {
 	return &game.CardDef{

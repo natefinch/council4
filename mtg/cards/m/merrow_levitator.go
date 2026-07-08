@@ -18,7 +18,7 @@ import (
 //
 //	{T}: Target creature gains flying until end of turn.
 //	Whenever you cast a blue spell, you may untap this creature.
-var MerrowLevitator = newMerrowLevitator()
+var MerrowLevitator = newMerrowLevitator
 
 func newMerrowLevitator() *game.CardDef {
 	return &game.CardDef{

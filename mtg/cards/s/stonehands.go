@@ -19,7 +19,7 @@ import (
 //	Enchant creature
 //	Enchanted creature gets +0/+2.
 //	{R}: Enchanted creature gets +1/+0 until end of turn.
-var Stonehands = newStonehands()
+var Stonehands = newStonehands
 
 func newStonehands() *game.CardDef {
 	return &game.CardDef{

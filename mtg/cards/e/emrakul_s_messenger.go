@@ -19,7 +19,7 @@ import (
 //	Devoid (This card has no color.)
 //	Flying
 //	Whenever you draw your second card each turn, create a 0/1 colorless Eldrazi Spawn creature token with "Sacrifice this token: Add {C}."
-var EmrakulSMessenger = newEmrakulSMessenger()
+var EmrakulSMessenger = newEmrakulSMessenger
 
 func newEmrakulSMessenger() *game.CardDef {
 	return &game.CardDef{

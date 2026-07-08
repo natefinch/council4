@@ -17,7 +17,7 @@ import (
 //
 //	This spell costs {1} less to cast if you control a Wizard.
 //	Draw three cards.
-var ArcaneEpiphany = newArcaneEpiphany()
+var ArcaneEpiphany = newArcaneEpiphany
 
 func newArcaneEpiphany() *game.CardDef {
 	return &game.CardDef{

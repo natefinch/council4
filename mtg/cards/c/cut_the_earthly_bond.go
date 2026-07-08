@@ -9,7 +9,7 @@ import (
 )
 
 // CutTheEarthlyBond is the card definition for Cut the Earthly Bond.
-var CutTheEarthlyBond = newCutTheEarthlyBond()
+var CutTheEarthlyBond = newCutTheEarthlyBond
 
 func newCutTheEarthlyBond() *game.CardDef {
 	return &game.CardDef{

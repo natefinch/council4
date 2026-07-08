@@ -20,7 +20,7 @@ import (
 //	I — Create three 1/1 white Spirit creature tokens.
 //	II — Distribute three +1/+1 counters among one, two, or three target creatures you control.
 //	III — Creatures you control gain trample and lifelink until end of turn.
-var RevivalOfTheAncestors = newRevivalOfTheAncestors()
+var RevivalOfTheAncestors = newRevivalOfTheAncestors
 
 func newRevivalOfTheAncestors() *game.CardDef {
 	return &game.CardDef{

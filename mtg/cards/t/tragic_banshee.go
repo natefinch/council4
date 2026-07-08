@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Morbid — When this creature enters, target creature an opponent controls gets -1/-1 until end of turn. If a creature died this turn, that creature gets -13/-13 until end of turn instead.
-var TragicBanshee = newTragicBanshee()
+var TragicBanshee = newTragicBanshee
 
 func newTragicBanshee() *game.CardDef {
 	return &game.CardDef{

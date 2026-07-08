@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Target creature you control gets +1/+0 until end of turn. It fights target creature you don't control.
-var SwiftKick = newSwiftKick()
+var SwiftKick = newSwiftKick
 
 func newSwiftKick() *game.CardDef {
 	return &game.CardDef{

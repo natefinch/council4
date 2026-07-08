@@ -18,7 +18,7 @@ import (
 //	This Vehicle has haste as long as you control a Mount.
 //	Whenever this Vehicle attacks, look at the top card of your library. If it's a land card, you may put it onto the battlefield tapped.
 //	Crew 2 (Tap any number of creatures you control with total power 2 or more: This Vehicle becomes an artifact creature until end of turn.)
-var MobileHomestead = newMobileHomestead()
+var MobileHomestead = newMobileHomestead
 
 func newMobileHomestead() *game.CardDef {
 	return &game.CardDef{

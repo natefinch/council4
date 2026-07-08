@@ -18,7 +18,7 @@ import (
 //	Enchant artifact or creature
 //	When this Aura enters, tap enchanted permanent.
 //	Enchanted permanent doesn't untap during its controller's untap step.
-var Malfunction = newMalfunction()
+var Malfunction = newMalfunction
 
 func newMalfunction() *game.CardDef {
 	return &game.CardDef{

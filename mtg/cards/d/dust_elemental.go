@@ -18,7 +18,7 @@ import (
 //	Flash (You may cast this spell any time you could cast an instant.)
 //	Flying; fear (This creature can't be blocked except by artifact creatures and/or black creatures.)
 //	When this creature enters, return three creatures you control to their owner's hand.
-var DustElemental = newDustElemental()
+var DustElemental = newDustElemental
 
 func newDustElemental() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{T}: Counter target spell unless its controller pays {1}.
-var DisruptiveStudent = newDisruptiveStudent()
+var DisruptiveStudent = newDisruptiveStudent
 
 func newDisruptiveStudent() *game.CardDef {
 	return &game.CardDef{

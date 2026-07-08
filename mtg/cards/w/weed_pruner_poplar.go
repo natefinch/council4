@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	At the beginning of your upkeep, target creature other than this creature gets -1/-1 until end of turn.
-var WeedPrunerPoplar = newWeedPrunerPoplar()
+var WeedPrunerPoplar = newWeedPrunerPoplar
 
 func newWeedPrunerPoplar() *game.CardDef {
 	return &game.CardDef{

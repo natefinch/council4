@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature becomes blocked by a creature, destroy that creature.
-var SylvanBasilisk = newSylvanBasilisk()
+var SylvanBasilisk = newSylvanBasilisk
 
 func newSylvanBasilisk() *game.CardDef {
 	return &game.CardDef{

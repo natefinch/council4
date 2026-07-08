@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Create an X/X black and green Spirit Warrior creature token, where X is the greatest toughness among creatures you control.
-var KinTreeInvocation = newKinTreeInvocation()
+var KinTreeInvocation = newKinTreeInvocation
 
 func newKinTreeInvocation() *game.CardDef {
 	return &game.CardDef{

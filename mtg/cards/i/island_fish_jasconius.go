@@ -9,7 +9,7 @@ import (
 )
 
 // IslandFishJasconius is the card definition for Island Fish Jasconius.
-var IslandFishJasconius = newIslandFishJasconius()
+var IslandFishJasconius = newIslandFishJasconius
 
 func newIslandFishJasconius() *game.CardDef {
 	return &game.CardDef{

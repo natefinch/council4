@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Destroy target artifact and all other artifacts with the same name as that artifact.
-var EchoingRuin = newEchoingRuin()
+var EchoingRuin = newEchoingRuin
 
 func newEchoingRuin() *game.CardDef {
 	return &game.CardDef{

@@ -23,7 +23,7 @@ import (
 //	LEVEL 4+
 //	3/10
 //	Vigilance
-var IkiralOutrider = newIkiralOutrider()
+var IkiralOutrider = newIkiralOutrider
 
 func newIkiralOutrider() *game.CardDef {
 	return &game.CardDef{

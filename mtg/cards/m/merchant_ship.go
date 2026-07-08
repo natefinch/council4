@@ -9,7 +9,7 @@ import (
 )
 
 // MerchantShip is the card definition for Merchant Ship.
-var MerchantShip = newMerchantShip()
+var MerchantShip = newMerchantShip
 
 func newMerchantShip() *game.CardDef {
 	return &game.CardDef{

@@ -20,7 +20,7 @@ import (
 //	When this creature enters, choose one —
 //	• Put a +1/+1 counter on this creature.
 //	• Return target creature to its owner's hand.
-var AvenSurveyor = newAvenSurveyor()
+var AvenSurveyor = newAvenSurveyor
 
 func newAvenSurveyor() *game.CardDef {
 	return &game.CardDef{

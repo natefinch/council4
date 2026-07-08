@@ -18,7 +18,7 @@ import (
 //
 //	{T}: This creature deals 1 damage to any target.
 //	Whenever you cast an instant or sorcery spell, you may untap this creature.
-var Gelectrode = newGelectrode()
+var Gelectrode = newGelectrode
 
 func newGelectrode() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Burn the Accursed deals 5 damage to target creature and 2 damage to that creature's controller. If that creature would die this turn, exile it instead.
-var BurnTheAccursed = newBurnTheAccursed()
+var BurnTheAccursed = newBurnTheAccursed
 
 func newBurnTheAccursed() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 //
 //	Flying
 //	Morbid — At the beginning of each end step, if a creature died this turn, destroy target non-Demon creature.
-var ReaperFromTheAbyss = newReaperFromTheAbyss()
+var ReaperFromTheAbyss = newReaperFromTheAbyss
 
 func newReaperFromTheAbyss() *game.CardDef {
 	return &game.CardDef{

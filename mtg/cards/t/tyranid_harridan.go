@@ -17,7 +17,7 @@ import (
 //
 //	Flying, ward {4}
 //	Shrieking Gargoyles — Whenever this creature or another Tyranid you control deals combat damage to a player, create a 1/1 blue Tyranid Gargoyle creature token with flying.
-var TyranidHarridan = newTyranidHarridan()
+var TyranidHarridan = newTyranidHarridan
 
 func newTyranidHarridan() *game.CardDef {
 	return &game.CardDef{

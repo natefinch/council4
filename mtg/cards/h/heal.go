@@ -17,7 +17,7 @@ import (
 //
 //	Prevent the next 1 damage that would be dealt to any target this turn.
 //	Draw a card at the beginning of the next turn's upkeep.
-var Heal = newHeal()
+var Heal = newHeal
 
 func newHeal() *game.CardDef {
 	return &game.CardDef{

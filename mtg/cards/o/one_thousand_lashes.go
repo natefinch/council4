@@ -18,7 +18,7 @@ import (
 //	Enchant creature
 //	Enchanted creature can't attack or block, and its activated abilities can't be activated.
 //	At the beginning of the upkeep of enchanted creature's controller, that player loses 1 life.
-var OneThousandLashes = newOneThousandLashes()
+var OneThousandLashes = newOneThousandLashes
 
 func newOneThousandLashes() *game.CardDef {
 	return &game.CardDef{

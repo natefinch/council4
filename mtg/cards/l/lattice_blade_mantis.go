@@ -18,7 +18,7 @@ import (
 //
 //	This creature enters with two oil counters on it.
 //	Whenever this creature attacks, you may remove an oil counter from it. If you do, untap it and it gets +1/+1 until end of turn.
-var LatticeBladeMantis = newLatticeBladeMantis()
+var LatticeBladeMantis = newLatticeBladeMantis
 
 func newLatticeBladeMantis() *game.CardDef {
 	return &game.CardDef{

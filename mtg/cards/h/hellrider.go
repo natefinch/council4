@@ -17,7 +17,7 @@ import (
 //
 //	Haste
 //	Whenever a creature you control attacks, this creature deals 1 damage to the player or planeswalker it's attacking.
-var Hellrider = newHellrider()
+var Hellrider = newHellrider
 
 func newHellrider() *game.CardDef {
 	return &game.CardDef{

@@ -20,7 +20,7 @@ import (
 //	Flying, lifelink
 //	Whenever The Haunt of Hightower attacks, defending player discards a card.
 //	Whenever a card is put into an opponent's graveyard from anywhere, put a +1/+1 counter on The Haunt of Hightower.
-var TheHauntOfHightower = newTheHauntOfHightower()
+var TheHauntOfHightower = newTheHauntOfHightower
 
 func newTheHauntOfHightower() *game.CardDef {
 	return &game.CardDef{

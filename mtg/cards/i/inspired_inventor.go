@@ -20,7 +20,7 @@ import (
 //	• You get {E}{E}{E} (three energy counters).
 //	• Put a +1/+1 counter on target creature.
 //	• Create a 1/1 colorless Servo artifact creature token.
-var InspiredInventor = newInspiredInventor()
+var InspiredInventor = newInspiredInventor
 
 func newInspiredInventor() *game.CardDef {
 	return &game.CardDef{

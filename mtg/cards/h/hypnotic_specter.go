@@ -17,7 +17,7 @@ import (
 //
 //	Flying
 //	Whenever this creature deals damage to an opponent, that player discards a card at random.
-var HypnoticSpecter = newHypnoticSpecter()
+var HypnoticSpecter = newHypnoticSpecter
 
 func newHypnoticSpecter() *game.CardDef {
 	return &game.CardDef{

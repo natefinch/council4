@@ -18,7 +18,7 @@ import (
 //
 //	When this artifact enters or leaves the battlefield, create a 1/1 colorless Robot artifact creature token.
 //	{4}{R}, Sacrifice this artifact: It deals 3 damage to target creature.
-var MouserFoundry = newMouserFoundry()
+var MouserFoundry = newMouserFoundry
 
 func newMouserFoundry() *game.CardDef {
 	return &game.CardDef{

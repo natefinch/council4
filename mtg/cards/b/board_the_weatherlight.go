@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Look at the top five cards of your library. You may reveal a historic card from among them and put it into your hand. Put the rest on the bottom of your library in a random order. (Artifacts, legendaries, and Sagas are historic.)
-var BoardTheWeatherlight = newBoardTheWeatherlight()
+var BoardTheWeatherlight = newBoardTheWeatherlight
 
 func newBoardTheWeatherlight() *game.CardDef {
 	return &game.CardDef{

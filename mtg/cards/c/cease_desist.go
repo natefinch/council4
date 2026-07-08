@@ -19,7 +19,7 @@ import (
 // Oracle text:
 //
 //	Exile up to two target cards from a single graveyard. Target player gains 2 life and draws a card.
-var Cease = newCease()
+var Cease = newCease
 
 func newCease() *game.CardDef {
 	return &game.CardDef{

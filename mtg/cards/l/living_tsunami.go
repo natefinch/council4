@@ -17,7 +17,7 @@ import (
 //
 //	Flying
 //	At the beginning of your upkeep, sacrifice this creature unless you return a land you control to its owner's hand.
-var LivingTsunami = newLivingTsunami()
+var LivingTsunami = newLivingTsunami
 
 func newLivingTsunami() *game.CardDef {
 	return &game.CardDef{

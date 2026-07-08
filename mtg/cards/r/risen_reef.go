@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature or another Elemental you control enters, look at the top card of your library. If it's a land card, you may put it onto the battlefield tapped. If you don't put the card onto the battlefield, put it into your hand.
-var RisenReef = newRisenReef()
+var RisenReef = newRisenReef
 
 func newRisenReef() *game.CardDef {
 	return &game.CardDef{

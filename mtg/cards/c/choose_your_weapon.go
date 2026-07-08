@@ -18,7 +18,7 @@ import (
 //	Choose one —
 //	• Two-Weapon Fighting — Double target creature's power and toughness until end of turn.
 //	• Archery — This spell deals 5 damage to target creature with flying.
-var ChooseYourWeapon = newChooseYourWeapon()
+var ChooseYourWeapon = newChooseYourWeapon
 
 func newChooseYourWeapon() *game.CardDef {
 	return &game.CardDef{

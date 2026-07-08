@@ -20,7 +20,7 @@ import (
 //	Flash
 //	When King Solomon's Frogs enters, if you cast it, for each opponent, exile up to one target permanent that player controls with mana value 3 or greater. For each permanent exiled this way, its controller draws a card.
 //	{3}, {T}, Exile King Solomon's Frogs: You become the monarch.
-var KingSolomonSFrogs = newKingSolomonSFrogs()
+var KingSolomonSFrogs = newKingSolomonSFrogs
 
 func newKingSolomonSFrogs() *game.CardDef {
 	return &game.CardDef{

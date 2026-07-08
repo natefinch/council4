@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature is dealt damage, you lose that much life.
-var FilthyCur = newFilthyCur()
+var FilthyCur = newFilthyCur
 
 func newFilthyCur() *game.CardDef {
 	return &game.CardDef{

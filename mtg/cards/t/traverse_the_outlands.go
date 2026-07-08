@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Search your library for up to X basic land cards, where X is the greatest power among creatures you control. Put those cards onto the battlefield tapped, then shuffle.
-var TraverseTheOutlands = newTraverseTheOutlands()
+var TraverseTheOutlands = newTraverseTheOutlands
 
 func newTraverseTheOutlands() *game.CardDef {
 	return &game.CardDef{

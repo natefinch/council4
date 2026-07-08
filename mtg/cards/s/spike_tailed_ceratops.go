@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	This creature can block an additional creature each combat.
-var SpikeTailedCeratops = newSpikeTailedCeratops()
+var SpikeTailedCeratops = newSpikeTailedCeratops
 
 func newSpikeTailedCeratops() *game.CardDef {
 	return &game.CardDef{

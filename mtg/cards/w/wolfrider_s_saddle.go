@@ -18,7 +18,7 @@ import (
 //	When this Equipment enters, create a 2/2 green Wolf creature token, then attach this Equipment to it.
 //	Equipped creature gets +1/+1 and can't be blocked by more than one creature.
 //	Equip {3} ({3}: Attach to target creature you control. Equip only as a sorcery.)
-var WolfriderSSaddle = newWolfriderSSaddle()
+var WolfriderSSaddle = newWolfriderSSaddle
 
 func newWolfriderSSaddle() *game.CardDef {
 	return &game.CardDef{

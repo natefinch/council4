@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	If a green source would deal damage to you, prevent 2 of that damage.
-var SphereOfDuty = newSphereOfDuty()
+var SphereOfDuty = newSphereOfDuty
 
 func newSphereOfDuty() *game.CardDef {
 	return &game.CardDef{

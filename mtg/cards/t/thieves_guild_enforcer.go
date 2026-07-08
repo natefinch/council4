@@ -19,7 +19,7 @@ import (
 //	Flash
 //	Whenever this creature or another Rogue you control enters, each opponent mills two cards.
 //	As long as an opponent has eight or more cards in their graveyard, this creature gets +2/+1 and has deathtouch.
-var ThievesGuildEnforcer = newThievesGuildEnforcer()
+var ThievesGuildEnforcer = newThievesGuildEnforcer
 
 func newThievesGuildEnforcer() *game.CardDef {
 	return &game.CardDef{

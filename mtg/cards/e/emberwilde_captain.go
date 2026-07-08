@@ -18,7 +18,7 @@ import (
 //
 //	When this creature enters, you become the monarch.
 //	Whenever an opponent attacks you while you're the monarch, this creature deals damage to that player equal to the number of cards in their hand.
-var EmberwildeCaptain = newEmberwildeCaptain()
+var EmberwildeCaptain = newEmberwildeCaptain
 
 func newEmberwildeCaptain() *game.CardDef {
 	return &game.CardDef{

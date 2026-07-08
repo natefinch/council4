@@ -17,7 +17,7 @@ import (
 //
 //	Hero spells you cast cost {1} less to cast.
 //	Whenever you attack, look at the top four cards of your library. You may reveal a Hero card from among them and put that card into your hand. Put the rest on the bottom of your library in a random order.
-var DirectorNickFury = newDirectorNickFury()
+var DirectorNickFury = newDirectorNickFury
 
 func newDirectorNickFury() *game.CardDef {
 	return &game.CardDef{

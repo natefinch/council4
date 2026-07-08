@@ -18,7 +18,7 @@ import (
 //	Flying
 //	Whenever this creature deals damage, you gain that much life.
 //	Morph {2}{W}{W} (You may cast this card face down as a 2/2 creature for {3}. Turn it face up any time for its morph cost.)
-var ExaltedAngel = newExaltedAngel()
+var ExaltedAngel = newExaltedAngel
 
 func newExaltedAngel() *game.CardDef {
 	return &game.CardDef{

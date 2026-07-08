@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Target opponent gains control of target permanent you control.
-var HarmlessOffering = newHarmlessOffering()
+var HarmlessOffering = newHarmlessOffering
 
 func newHarmlessOffering() *game.CardDef {
 	return &game.CardDef{

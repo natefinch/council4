@@ -18,7 +18,7 @@ import (
 //
 //	Flying, trample
 //	Whenever Ureni enters or attacks, look at the top eight cards of your library. You may put a Dragon creature card from among them onto the battlefield. Put the rest on the bottom of your library in a random order.
-var UreniOfTheUnwritten = newUreniOfTheUnwritten()
+var UreniOfTheUnwritten = newUreniOfTheUnwritten
 
 func newUreniOfTheUnwritten() *game.CardDef {
 	return &game.CardDef{

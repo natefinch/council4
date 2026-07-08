@@ -20,7 +20,7 @@ import (
 //	Flying
 //	Whenever you cast a Wizard spell, you may untap this creature.
 //	{T}: Draw a card, then discard a card.
-var InspiredSprite = newInspiredSprite()
+var InspiredSprite = newInspiredSprite
 
 func newInspiredSprite() *game.CardDef {
 	return &game.CardDef{

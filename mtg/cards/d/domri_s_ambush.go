@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Put a +1/+1 counter on target creature you control. Then that creature deals damage equal to its power to target creature or planeswalker you don't control.
-var DomriSAmbush = newDomriSAmbush()
+var DomriSAmbush = newDomriSAmbush
 
 func newDomriSAmbush() *game.CardDef {
 	return &game.CardDef{

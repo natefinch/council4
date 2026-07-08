@@ -86,4 +86,4 @@ var KessigWolfRun = func() *game.CardDef {
 		},
 	)
 	return card
-}()
+}

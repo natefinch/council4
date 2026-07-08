@@ -17,7 +17,7 @@ import (
 //
 //	Create X 2/2 red Human Knight creature tokens with trample and haste.
 //	Whenever one or more creatures you control deal combat damage to one or more players this turn, you become the monarch.
-var ForthEorlingas = newForthEorlingas()
+var ForthEorlingas = newForthEorlingas
 
 func newForthEorlingas() *game.CardDef {
 	return &game.CardDef{

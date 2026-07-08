@@ -18,7 +18,7 @@ import (
 //	Choose one or both —
 //	• Counter target spell.
 //	• Tap one or two target creatures.
-var AmazingAcrobatics = newAmazingAcrobatics()
+var AmazingAcrobatics = newAmazingAcrobatics
 
 func newAmazingAcrobatics() *game.CardDef {
 	return &game.CardDef{

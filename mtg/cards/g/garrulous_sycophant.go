@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	At the beginning of your end step, if you're the monarch, each opponent loses 1 life and you gain 1 life.
-var GarrulousSycophant = newGarrulousSycophant()
+var GarrulousSycophant = newGarrulousSycophant
 
 func newGarrulousSycophant() *game.CardDef {
 	return &game.CardDef{

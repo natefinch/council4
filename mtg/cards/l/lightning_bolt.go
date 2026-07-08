@@ -16,34 +16,36 @@ import (
 // Oracle text:
 //
 //	Lightning Bolt deals 3 damage to any target.
-var LightningBolt = &game.CardDef{
-	ColorIdentity: color.NewIdentity(color.Red),
-	CardFace: game.CardFace{
-		Name: "Lightning Bolt",
-		ManaCost: opt.Val(cost.Mana{
-			cost.R,
-		}),
-		Colors: []color.Color{color.Red},
-		Types:  []types.Card{types.Instant},
-		OracleText: `
+var LightningBolt = func() *game.CardDef {
+	return &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Red),
+		CardFace: game.CardFace{
+			Name: "Lightning Bolt",
+			ManaCost: opt.Val(cost.Mana{
+				cost.R,
+			}),
+			Colors: []color.Color{color.Red},
+			Types:  []types.Card{types.Instant},
+			OracleText: `
 			Lightning Bolt deals 3 damage to any target.
 		`,
-		SpellAbility: opt.Val(game.Mode{
-			Targets: []game.TargetSpec{
-				{
-					MinTargets: 1,
-					MaxTargets: 1,
-					Constraint: "any target",
-				},
-			},
-			Sequence: []game.Instruction{
-				{
-					Primitive: game.Damage{
-						Amount:    game.Fixed(3),
-						Recipient: game.AnyTargetDamageRecipient(0),
+			SpellAbility: opt.Val(game.Mode{
+				Targets: []game.TargetSpec{
+					{
+						MinTargets: 1,
+						MaxTargets: 1,
+						Constraint: "any target",
 					},
 				},
-			},
-		}.Ability()),
-	},
+				Sequence: []game.Instruction{
+					{
+						Primitive: game.Damage{
+							Amount:    game.Fixed(3),
+							Recipient: game.AnyTargetDamageRecipient(0),
+						},
+					},
+				},
+			}.Ability()),
+		},
+	}
 }

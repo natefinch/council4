@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Heroic — Whenever you cast a spell that targets this creature, look at the top three cards of your library. You may reveal an enchantment card from among them and put it into your hand. Put the rest on the bottom of your library in any order.
-var MeletisAstronomer = newMeletisAstronomer()
+var MeletisAstronomer = newMeletisAstronomer
 
 func newMeletisAstronomer() *game.CardDef {
 	return &game.CardDef{

@@ -19,7 +19,7 @@ import (
 //
 //	Landfall — Whenever a land you control enters, you may put a quest counter on this enchantment.
 //	Remove three quest counters from this enchantment and sacrifice it: Search your library for up to two basic land cards, put them onto the battlefield tapped, then shuffle.
-var KhalniHeartExpedition = newKhalniHeartExpedition()
+var KhalniHeartExpedition = newKhalniHeartExpedition
 
 func newKhalniHeartExpedition() *game.CardDef {
 	return &game.CardDef{

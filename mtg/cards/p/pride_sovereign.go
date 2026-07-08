@@ -18,7 +18,7 @@ import (
 //
 //	This creature gets +1/+1 for each other Cat you control.
 //	{W}, {T}, Exert this creature: Create two 1/1 white Cat creature tokens with lifelink. (An exerted creature won't untap during your next untap step.)
-var PrideSovereign = newPrideSovereign()
+var PrideSovereign = newPrideSovereign
 
 func newPrideSovereign() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 //
 //	Destroy target nonartifact, nonblack creature. It can't be regenerated.
 //	Cycling {2} ({2}, Discard this card: Draw a card.)
-var Expunge = newExpunge()
+var Expunge = newExpunge
 
 func newExpunge() *game.CardDef {
 	return &game.CardDef{

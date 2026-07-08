@@ -22,7 +22,7 @@ import (
 //	• Target player gains 5 life.
 //	• Create a 4/4 green Rhino Warrior creature token.
 //	• Put a shield counter on a creature you control.
-var TitanOfIndustry = newTitanOfIndustry()
+var TitanOfIndustry = newTitanOfIndustry
 
 func newTitanOfIndustry() *game.CardDef {
 	return &game.CardDef{

@@ -19,7 +19,7 @@ import (
 //	Flash
 //	Flying
 //	This creature can block only creatures with flying.
-var BrazenBorrower = newBrazenBorrower()
+var BrazenBorrower = newBrazenBorrower
 
 func newBrazenBorrower() *game.CardDef {
 	return &game.CardDef{

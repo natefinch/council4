@@ -18,7 +18,7 @@ import (
 //	This land enters tapped.
 //	When this land enters, sacrifice it unless you return an untapped Forest you control to its owner's hand.
 //	{T}: Add {C}{G}.
-var JungleBasin = newJungleBasin()
+var JungleBasin = newJungleBasin
 
 func newJungleBasin() *game.CardDef {
 	return &game.CardDef{

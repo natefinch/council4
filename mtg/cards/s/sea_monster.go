@@ -9,7 +9,7 @@ import (
 )
 
 // SeaMonster is the card definition for Sea Monster.
-var SeaMonster = newSeaMonster()
+var SeaMonster = newSeaMonster
 
 func newSeaMonster() *game.CardDef {
 	return &game.CardDef{

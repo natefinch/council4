@@ -19,7 +19,7 @@ import (
 //
 //	At the beginning of your upkeep, put a spore counter on this creature.
 //	Remove three spore counters from this creature: Regenerate this creature.
-var FeralThallid = newFeralThallid()
+var FeralThallid = newFeralThallid
 
 func newFeralThallid() *game.CardDef {
 	return &game.CardDef{

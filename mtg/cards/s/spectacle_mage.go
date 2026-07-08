@@ -18,7 +18,7 @@ import (
 //
 //	Flying
 //	Instant and sorcery spells you cast with mana value 5 or greater cost {1} less to cast.
-var SpectacleMage = newSpectacleMage()
+var SpectacleMage = newSpectacleMage
 
 func newSpectacleMage() *game.CardDef {
 	return &game.CardDef{

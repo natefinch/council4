@@ -17,7 +17,7 @@ import (
 //
 //	Vigilance
 //	When this creature dies, look at the top five cards of your library. You may reveal a creature card from among them and put it into your hand. Put the rest on the bottom of your library in a random order.
-var BrazenUpstart = newBrazenUpstart()
+var BrazenUpstart = newBrazenUpstart
 
 func newBrazenUpstart() *game.CardDef {
 	return &game.CardDef{

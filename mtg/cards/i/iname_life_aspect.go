@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	When Iname dies, you may exile it. If you do, return any number of target Spirit cards from your graveyard to your hand.
-var InameLifeAspect = newInameLifeAspect()
+var InameLifeAspect = newInameLifeAspect
 
 func newInameLifeAspect() *game.CardDef {
 	return &game.CardDef{

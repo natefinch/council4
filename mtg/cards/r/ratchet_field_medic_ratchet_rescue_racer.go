@@ -19,7 +19,7 @@ import (
 //	More Than Meets the Eye {1}{W} (You may cast this card converted for {1}{W}.)
 //	Lifelink
 //	Whenever you gain life, you may convert Ratchet. When you do, return target artifact card with mana value less than or equal to the amount of life you gained this turn from your graveyard to the battlefield tapped.
-var RatchetFieldMedic = newRatchetFieldMedic()
+var RatchetFieldMedic = newRatchetFieldMedic
 
 func newRatchetFieldMedic() *game.CardDef {
 	return &game.CardDef{

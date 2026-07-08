@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Raid — When this creature enters, if you attacked this turn, add {R}{W}{B}.
-var MarduWarshrieker = newMarduWarshrieker()
+var MarduWarshrieker = newMarduWarshrieker
 
 func newMarduWarshrieker() *game.CardDef {
 	return &game.CardDef{

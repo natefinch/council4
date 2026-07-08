@@ -20,7 +20,7 @@ import (
 //	Enchant creature
 //	{R}: Enchanted creature gets +1/+0 until end of turn.
 //	{R}: Return this Aura to its owner's hand.
-var GhituFirebreathing = newGhituFirebreathing()
+var GhituFirebreathing = newGhituFirebreathing
 
 func newGhituFirebreathing() *game.CardDef {
 	return &game.CardDef{

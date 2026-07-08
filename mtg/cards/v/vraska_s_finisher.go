@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, destroy target creature or planeswalker an opponent controls that was dealt damage this turn.
-var VraskaSFinisher = newVraskaSFinisher()
+var VraskaSFinisher = newVraskaSFinisher
 
 func newVraskaSFinisher() *game.CardDef {
 	return &game.CardDef{

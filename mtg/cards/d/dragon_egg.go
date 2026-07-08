@@ -18,7 +18,7 @@ import (
 //
 //	Defender
 //	When this creature dies, create a 2/2 red Dragon creature token with flying and "{R}: This token gets +1/+0 until end of turn."
-var DragonEgg = newDragonEgg()
+var DragonEgg = newDragonEgg
 
 func newDragonEgg() *game.CardDef {
 	return &game.CardDef{

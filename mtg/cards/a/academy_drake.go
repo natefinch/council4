@@ -19,7 +19,7 @@ import (
 //	Kicker {4} (You may pay an additional {4} as you cast this spell.)
 //	Flying
 //	If this creature was kicked, it enters with two +1/+1 counters on it.
-var AcademyDrake = newAcademyDrake()
+var AcademyDrake = newAcademyDrake
 
 func newAcademyDrake() *game.CardDef {
 	return &game.CardDef{

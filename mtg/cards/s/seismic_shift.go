@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Destroy target land. Up to two target creatures can't block this turn.
-var SeismicShift = newSeismicShift()
+var SeismicShift = newSeismicShift
 
 func newSeismicShift() *game.CardDef {
 	return &game.CardDef{

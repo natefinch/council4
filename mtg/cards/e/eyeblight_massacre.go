@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Non-Elf creatures get -2/-2 until end of turn.
-var EyeblightMassacre = newEyeblightMassacre()
+var EyeblightMassacre = newEyeblightMassacre
 
 func newEyeblightMassacre() *game.CardDef {
 	return &game.CardDef{

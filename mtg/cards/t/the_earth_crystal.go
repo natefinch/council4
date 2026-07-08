@@ -20,7 +20,7 @@ import (
 //	Green spells you cast cost {1} less to cast.
 //	If one or more +1/+1 counters would be put on a creature you control, twice that many +1/+1 counters are put on that creature instead.
 //	{4}{G}{G}, {T}: Distribute two +1/+1 counters among one or two target creatures you control.
-var TheEarthCrystal = newTheEarthCrystal()
+var TheEarthCrystal = newTheEarthCrystal
 
 func newTheEarthCrystal() *game.CardDef {
 	return &game.CardDef{

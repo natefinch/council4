@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature attacks, creatures with defender can't block this turn.
-var GoblinLocksmith = newGoblinLocksmith()
+var GoblinLocksmith = newGoblinLocksmith
 
 func newGoblinLocksmith() *game.CardDef {
 	return &game.CardDef{

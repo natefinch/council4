@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature blocks or becomes blocked by a nonblack creature, destroy that creature at end of combat.
-var Deathgazer = newDeathgazer()
+var Deathgazer = newDeathgazer
 
 func newDeathgazer() *game.CardDef {
 	return &game.CardDef{

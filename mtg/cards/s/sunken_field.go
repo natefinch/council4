@@ -18,7 +18,7 @@ import (
 //
 //	Enchant land
 //	Enchanted land has "{T}: Counter target spell unless its controller pays {1}."
-var SunkenField = newSunkenField()
+var SunkenField = newSunkenField
 
 func newSunkenField() *game.CardDef {
 	return &game.CardDef{

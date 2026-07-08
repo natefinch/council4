@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature blocks or becomes blocked by a creature, destroy that creature at end of combat.
-var TangleAsp = newTangleAsp()
+var TangleAsp = newTangleAsp
 
 func newTangleAsp() *game.CardDef {
 	return &game.CardDef{

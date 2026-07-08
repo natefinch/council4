@@ -40,4 +40,4 @@ var DragonskullSummit = func() *game.CardDef {
 	)
 	card.ManaAbilities = append(card.ManaAbilities, game.TapManaChoiceAbility(mana.B, mana.R))
 	return card
-}()
+}

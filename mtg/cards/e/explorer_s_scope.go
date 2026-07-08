@@ -17,7 +17,7 @@ import (
 //
 //	Whenever equipped creature attacks, look at the top card of your library. If it's a land card, you may put it onto the battlefield tapped.
 //	Equip {1} ({1}: Attach to target creature you control. Equip only as a sorcery.)
-var ExplorerSScope = newExplorerSScope()
+var ExplorerSScope = newExplorerSScope
 
 func newExplorerSScope() *game.CardDef {
 	return &game.CardDef{

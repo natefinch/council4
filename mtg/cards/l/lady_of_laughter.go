@@ -17,7 +17,7 @@ import (
 //
 //	Flying
 //	Celebration — At the beginning of your end step, if two or more nonland permanents entered the battlefield under your control this turn, draw a card.
-var LadyOfLaughter = newLadyOfLaughter()
+var LadyOfLaughter = newLadyOfLaughter
 
 func newLadyOfLaughter() *game.CardDef {
 	return &game.CardDef{

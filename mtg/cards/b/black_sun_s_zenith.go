@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Put X -1/-1 counters on each creature. Shuffle Black Sun's Zenith into its owner's library.
-var BlackSunSZenith = newBlackSunSZenith()
+var BlackSunSZenith = newBlackSunSZenith
 
 func newBlackSunSZenith() *game.CardDef {
 	return &game.CardDef{

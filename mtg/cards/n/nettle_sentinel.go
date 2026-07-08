@@ -17,7 +17,7 @@ import (
 //
 //	This creature doesn't untap during your untap step.
 //	Whenever you cast a green spell, you may untap this creature.
-var NettleSentinel = newNettleSentinel()
+var NettleSentinel = newNettleSentinel
 
 func newNettleSentinel() *game.CardDef {
 	return &game.CardDef{

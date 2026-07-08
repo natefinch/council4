@@ -18,7 +18,7 @@ import (
 //
 //	Trample
 //	Sacrifice this creature: Put a +2/+2 counter on target Chimera creature. It gains trample. (This effect lasts indefinitely.)
-var LeadBellyChimera = newLeadBellyChimera()
+var LeadBellyChimera = newLeadBellyChimera
 
 func newLeadBellyChimera() *game.CardDef {
 	return &game.CardDef{

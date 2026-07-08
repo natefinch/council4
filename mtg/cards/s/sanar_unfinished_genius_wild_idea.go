@@ -20,7 +20,7 @@ import (
 //
 //	Sanar enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)
 //	{T}: Create a Treasure token. Activate only if you've cast an instant or sorcery spell this turn.
-var SanarUnfinishedGenius = newSanarUnfinishedGenius()
+var SanarUnfinishedGenius = newSanarUnfinishedGenius
 
 func newSanarUnfinishedGenius() *game.CardDef {
 	return &game.CardDef{

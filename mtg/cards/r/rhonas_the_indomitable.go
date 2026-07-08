@@ -134,4 +134,4 @@ var RhonasTheIndomitable = func() *game.CardDef {
 		},
 	)
 	return card
-}()
+}

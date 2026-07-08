@@ -20,7 +20,7 @@ import (
 //	At the beginning of your upkeep, put a spore counter on this creature.
 //	Remove three spore counters from this creature: Create a 1/1 green Saproling creature token.
 //	Sacrifice a Saproling: You gain 2 life.
-var Mycologist = newMycologist()
+var Mycologist = newMycologist
 
 func newMycologist() *game.CardDef {
 	return &game.CardDef{

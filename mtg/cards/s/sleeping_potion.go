@@ -19,7 +19,7 @@ import (
 //	When this Aura enters, tap enchanted creature.
 //	Enchanted creature doesn't untap during its controller's untap step.
 //	When enchanted creature becomes the target of a spell or ability, sacrifice this Aura.
-var SleepingPotion = newSleepingPotion()
+var SleepingPotion = newSleepingPotion
 
 func newSleepingPotion() *game.CardDef {
 	return &game.CardDef{

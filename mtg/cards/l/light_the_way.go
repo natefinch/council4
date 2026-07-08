@@ -19,7 +19,7 @@ import (
 //	Choose one —
 //	• Put a +1/+1 counter on target creature or Vehicle. Untap it.
 //	• Return target permanent you control to its owner's hand.
-var LightTheWay = newLightTheWay()
+var LightTheWay = newLightTheWay
 
 func newLightTheWay() *game.CardDef {
 	return &game.CardDef{

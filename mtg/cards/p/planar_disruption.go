@@ -17,7 +17,7 @@ import (
 //
 //	Enchant artifact, creature, or planeswalker
 //	Enchanted permanent can't attack or block, and its activated abilities can't be activated.
-var PlanarDisruption = newPlanarDisruption()
+var PlanarDisruption = newPlanarDisruption
 
 func newPlanarDisruption() *game.CardDef {
 	return &game.CardDef{

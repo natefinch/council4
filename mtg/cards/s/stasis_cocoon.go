@@ -17,7 +17,7 @@ import (
 //
 //	Enchant artifact
 //	Enchanted artifact can't attack or block, and its activated abilities can't be activated.
-var StasisCocoon = newStasisCocoon()
+var StasisCocoon = newStasisCocoon
 
 func newStasisCocoon() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 //	This land enters tapped.
 //	When this land enters, sacrifice it unless you return an untapped Island you control to its owner's hand.
 //	{T}: Add {C}{U}.
-var CoralAtoll = newCoralAtoll()
+var CoralAtoll = newCoralAtoll
 
 func newCoralAtoll() *game.CardDef {
 	return &game.CardDef{

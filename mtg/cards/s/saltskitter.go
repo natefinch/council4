@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever another creature enters, exile this creature. Return this creature to the battlefield under its owner's control at the beginning of the next end step.
-var Saltskitter = newSaltskitter()
+var Saltskitter = newSaltskitter
 
 func newSaltskitter() *game.CardDef {
 	return &game.CardDef{

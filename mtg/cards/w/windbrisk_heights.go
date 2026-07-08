@@ -20,7 +20,7 @@ import (
 //	This land enters tapped.
 //	{T}: Add {W}.
 //	{W}, {T}: You may play the exiled card without paying its mana cost if you attacked with three or more creatures this turn.
-var WindbriskHeights = newWindbriskHeights()
+var WindbriskHeights = newWindbriskHeights
 
 func newWindbriskHeights() *game.CardDef {
 	return &game.CardDef{

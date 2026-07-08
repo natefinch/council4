@@ -18,7 +18,7 @@ import (
 //	When Garland enters, target opponent becomes the monarch.
 //	Whenever an opponent becomes the monarch, gain control of target creature that player controls for as long as they're the monarch.
 //	Creatures you control but don't own get +2/+2 and can't be sacrificed.
-var GarlandRoyalKidnapper = newGarlandRoyalKidnapper()
+var GarlandRoyalKidnapper = newGarlandRoyalKidnapper
 
 func newGarlandRoyalKidnapper() *game.CardDef {
 	return &game.CardDef{

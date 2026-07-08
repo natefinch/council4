@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	One or two target creatures each get +2/+1 until end of turn.
-var HeartsOnFire = newHeartsOnFire()
+var HeartsOnFire = newHeartsOnFire
 
 func newHeartsOnFire() *game.CardDef {
 	return &game.CardDef{

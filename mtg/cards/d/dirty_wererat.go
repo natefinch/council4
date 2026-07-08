@@ -19,7 +19,7 @@ import (
 //
 //	{B}, Discard a card: Regenerate this creature.
 //	Threshold — As long as there are seven or more cards in your graveyard, this creature gets +2/+2 and can't block.
-var DirtyWererat = newDirtyWererat()
+var DirtyWererat = newDirtyWererat
 
 func newDirtyWererat() *game.CardDef {
 	return &game.CardDef{

@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	This creature can't attack or block alone.
-var BondedHorncrest = newBondedHorncrest()
+var BondedHorncrest = newBondedHorncrest
 
 func newBondedHorncrest() *game.CardDef {
 	return &game.CardDef{

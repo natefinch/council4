@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Create a token that's a copy of target artifact or creature you control, except it's an artifact in addition to its other types. It gains haste until end of turn. Sacrifice it at the beginning of the next end step.
-var MoltenDuplication = newMoltenDuplication()
+var MoltenDuplication = newMoltenDuplication
 
 func newMoltenDuplication() *game.CardDef {
 	return &game.CardDef{

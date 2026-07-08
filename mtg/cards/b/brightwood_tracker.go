@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{5}{G}, {T}: Look at the top four cards of your library. You may reveal a creature card from among them and put it into your hand. Put the rest on the bottom of your library in a random order.
-var BrightwoodTracker = newBrightwoodTracker()
+var BrightwoodTracker = newBrightwoodTracker
 
 func newBrightwoodTracker() *game.CardDef {
 	return &game.CardDef{

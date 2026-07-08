@@ -19,7 +19,7 @@ import (
 //	Kicker {3}{B} (You may pay an additional {3}{B} as you cast this spell.)
 //	Flying, lifelink
 //	If this creature was kicked, it enters with two +1/+1 counters on it.
-var GhastlyGloomhunter = newGhastlyGloomhunter()
+var GhastlyGloomhunter = newGhastlyGloomhunter
 
 func newGhastlyGloomhunter() *game.CardDef {
 	return &game.CardDef{

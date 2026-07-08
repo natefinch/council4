@@ -19,7 +19,7 @@ import (
 //	Indestructible (Damage and effects that say "destroy" don't destroy this creature.)
 //	Whenever this creature attacks, put a +1/+1 counter on it.
 //	Whenever a creature dealt damage by this creature this turn dies, put a +1/+1 counter on this creature.
-var PredatorOoze = newPredatorOoze()
+var PredatorOoze = newPredatorOoze
 
 func newPredatorOoze() *game.CardDef {
 	return &game.CardDef{

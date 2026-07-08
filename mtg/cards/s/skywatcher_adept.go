@@ -23,7 +23,7 @@ import (
 //	LEVEL 3+
 //	4/2
 //	Flying
-var SkywatcherAdept = newSkywatcherAdept()
+var SkywatcherAdept = newSkywatcherAdept
 
 func newSkywatcherAdept() *game.CardDef {
 	return &game.CardDef{

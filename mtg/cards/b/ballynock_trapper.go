@@ -18,7 +18,7 @@ import (
 //
 //	{T}: Tap target creature.
 //	Whenever you cast a white spell, you may untap this creature.
-var BallynockTrapper = newBallynockTrapper()
+var BallynockTrapper = newBallynockTrapper
 
 func newBallynockTrapper() *game.CardDef {
 	return &game.CardDef{

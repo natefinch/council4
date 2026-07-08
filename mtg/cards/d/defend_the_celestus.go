@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Distribute three +1/+1 counters among one, two, or three target creatures you control.
-var DefendTheCelestus = newDefendTheCelestus()
+var DefendTheCelestus = newDefendTheCelestus
 
 func newDefendTheCelestus() *game.CardDef {
 	return &game.CardDef{

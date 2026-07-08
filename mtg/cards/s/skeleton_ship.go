@@ -11,7 +11,7 @@ import (
 )
 
 // SkeletonShip is the card definition for Skeleton Ship.
-var SkeletonShip = newSkeletonShip()
+var SkeletonShip = newSkeletonShip
 
 func newSkeletonShip() *game.CardDef {
 	return &game.CardDef{

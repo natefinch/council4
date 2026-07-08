@@ -18,7 +18,7 @@ import (
 //	Enchant artifact or creature you control
 //	When this Aura enters, destroy target creature or planeswalker an opponent controls.
 //	As long as enchanted permanent is a creature, it gets +1/+1.
-var TwistedEmbrace = newTwistedEmbrace()
+var TwistedEmbrace = newTwistedEmbrace
 
 func newTwistedEmbrace() *game.CardDef {
 	return &game.CardDef{

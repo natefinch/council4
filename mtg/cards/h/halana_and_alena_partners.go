@@ -111,4 +111,4 @@ var HalanaAndAlenaPartners = func() *game.CardDef {
 		},
 	)
 	return card
-}()
+}

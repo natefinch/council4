@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	If an artifact would deal damage to you, prevent 1 of that damage.
-var SphereOfPurity = newSphereOfPurity()
+var SphereOfPurity = newSphereOfPurity
 
 func newSphereOfPurity() *game.CardDef {
 	return &game.CardDef{

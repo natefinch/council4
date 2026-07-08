@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{T}: Prevent the next 1 damage that would be dealt to any target this turn.
-var ClergyEnVec = newClergyEnVec()
+var ClergyEnVec = newClergyEnVec
 
 func newClergyEnVec() *game.CardDef {
 	return &game.CardDef{

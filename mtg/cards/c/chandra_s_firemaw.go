@@ -18,7 +18,7 @@ import (
 //
 //	Haste
 //	When this creature enters, you may search your library and/or graveyard for a card named Chandra, Flame's Catalyst, reveal it, and put it into your hand. If you search your library this way, shuffle.
-var ChandraSFiremaw = newChandraSFiremaw()
+var ChandraSFiremaw = newChandraSFiremaw
 
 func newChandraSFiremaw() *game.CardDef {
 	return &game.CardDef{

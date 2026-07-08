@@ -19,7 +19,7 @@ import (
 //
 //	When this creature enters, put a flying counter on target non-Human creature you control.
 //	{2}{U}, {T}: Put a +1/+1 counter on each creature you control with flying.
-var WingspanMentor = newWingspanMentor()
+var WingspanMentor = newWingspanMentor
 
 func newWingspanMentor() *game.CardDef {
 	return &game.CardDef{

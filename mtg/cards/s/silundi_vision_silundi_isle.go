@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Look at the top six cards of your library. You may reveal an instant or sorcery card from among them and put it into your hand. Put the rest on the bottom of your library in a random order.
-var SilundiVision = newSilundiVision()
+var SilundiVision = newSilundiVision
 
 func newSilundiVision() *game.CardDef {
 	return &game.CardDef{

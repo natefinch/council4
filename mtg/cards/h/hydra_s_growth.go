@@ -19,7 +19,7 @@ import (
 //	Enchant creature
 //	When this Aura enters, put a +1/+1 counter on enchanted creature.
 //	At the beginning of your upkeep, double the number of +1/+1 counters on enchanted creature.
-var HydraSGrowth = newHydraSGrowth()
+var HydraSGrowth = newHydraSGrowth
 
 func newHydraSGrowth() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, mill three cards, then put a +1/+1 counter on this creature for each creature card in your graveyard. (To mill three cards, put the top three cards of your library into your graveyard.)
-var MoldgrafMillipede = newMoldgrafMillipede()
+var MoldgrafMillipede = newMoldgrafMillipede
 
 func newMoldgrafMillipede() *game.CardDef {
 	return &game.CardDef{

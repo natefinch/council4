@@ -17,7 +17,7 @@ import (
 //
 //	Kicker {1}{R} (You may pay an additional {1}{R} as you cast this spell.)
 //	When this creature enters, if it was kicked, it gains haste until end of turn.
-var ScorchRider = newScorchRider()
+var ScorchRider = newScorchRider
 
 func newScorchRider() *game.CardDef {
 	return &game.CardDef{

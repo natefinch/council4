@@ -17,7 +17,7 @@ import (
 //	Equipped creature gets +3/+0.
 //	As long as equipped creature is a Human, it has lifelink.
 //	Equip {3}
-var ButcherSCleaver = newButcherSCleaver()
+var ButcherSCleaver = newButcherSCleaver
 
 func newButcherSCleaver() *game.CardDef {
 	return &game.CardDef{

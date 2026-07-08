@@ -17,7 +17,7 @@ import (
 //
 //	Nonland permanents don't untap during their controllers' untap steps.
 //	At the beginning of your upkeep, you lose 2 life.
-var Embargo = newEmbargo()
+var Embargo = newEmbargo
 
 func newEmbargo() *game.CardDef {
 	return &game.CardDef{

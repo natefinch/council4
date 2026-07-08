@@ -17,7 +17,7 @@ import (
 //
 //	Hexproof (This creature can't be the target of spells or abilities your opponents control.)
 //	This creature can't be blocked except by creatures with flying.
-var SilhanaLedgewalker = newSilhanaLedgewalker()
+var SilhanaLedgewalker = newSilhanaLedgewalker
 
 func newSilhanaLedgewalker() *game.CardDef {
 	return &game.CardDef{

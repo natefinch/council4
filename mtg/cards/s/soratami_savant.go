@@ -18,7 +18,7 @@ import (
 //
 //	Flying
 //	{3}, Return a land you control to its owner's hand: Counter target spell unless its controller pays {3}.
-var SoratamiSavant = newSoratamiSavant()
+var SoratamiSavant = newSoratamiSavant
 
 func newSoratamiSavant() *game.CardDef {
 	return &game.CardDef{

@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Target creature you control gets +2/+2 until end of turn. It fights target creature you don't control. (Each deals damage equal to its power to the other.)
-var SavageSmash = newSavageSmash()
+var SavageSmash = newSavageSmash
 
 func newSavageSmash() *game.CardDef {
 	return &game.CardDef{

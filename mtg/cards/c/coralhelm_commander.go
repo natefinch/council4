@@ -24,7 +24,7 @@ import (
 //	4/4
 //	Flying
 //	Other Merfolk creatures you control get +1/+1.
-var CoralhelmCommander = newCoralhelmCommander()
+var CoralhelmCommander = newCoralhelmCommander
 
 func newCoralhelmCommander() *game.CardDef {
 	return &game.CardDef{

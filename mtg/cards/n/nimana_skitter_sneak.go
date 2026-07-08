@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	As long as an opponent has eight or more cards in their graveyard, this creature gets +1/+0 and has menace. (It can't be blocked except by two or more creatures.)
-var NimanaSkitterSneak = newNimanaSkitterSneak()
+var NimanaSkitterSneak = newNimanaSkitterSneak
 
 func newNimanaSkitterSneak() *game.CardDef {
 	return &game.CardDef{

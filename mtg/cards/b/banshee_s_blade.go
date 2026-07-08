@@ -18,7 +18,7 @@ import (
 //	Equipped creature gets +1/+1 for each charge counter on this Equipment.
 //	Whenever equipped creature deals combat damage, put a charge counter on this Equipment.
 //	Equip {2} ({2}: Attach to target creature you control. Equip only as a sorcery.)
-var BansheeSBlade = newBansheeSBlade()
+var BansheeSBlade = newBansheeSBlade
 
 func newBansheeSBlade() *game.CardDef {
 	return &game.CardDef{

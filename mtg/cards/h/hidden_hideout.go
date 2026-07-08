@@ -9,7 +9,7 @@ import (
 )
 
 // HiddenHideout is the card definition for Hidden Hideout.
-var HiddenHideout = newHiddenHideout()
+var HiddenHideout = newHiddenHideout
 
 func newHiddenHideout() *game.CardDef {
 	return &game.CardDef{

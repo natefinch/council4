@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{1}{G}: Return target basic land card from your graveyard to your hand.
-var Groundskeeper = newGroundskeeper()
+var Groundskeeper = newGroundskeeper
 
 func newGroundskeeper() *game.CardDef {
 	return &game.CardDef{

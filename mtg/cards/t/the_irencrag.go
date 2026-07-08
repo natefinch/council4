@@ -17,7 +17,7 @@ import (
 //
 //	{T}: Add {C}.
 //	Whenever a legendary creature you control enters, you may have The Irencrag become a legendary Equipment artifact named Everflame, Heroes' Legacy. If you do, it gains equip {3} and "Equipped creature gets +3/+3" and loses all other abilities.
-var TheIrencrag = newTheIrencrag()
+var TheIrencrag = newTheIrencrag
 
 func newTheIrencrag() *game.CardDef {
 	return &game.CardDef{

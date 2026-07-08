@@ -18,7 +18,7 @@ import (
 //
 //	This artifact enters with three wish counters on it.
 //	{5}, {T}, Remove a wish counter from this artifact: Search your library for a card, put that card into your hand, then shuffle.
-var RingOfThreeWishes = newRingOfThreeWishes()
+var RingOfThreeWishes = newRingOfThreeWishes
 
 func newRingOfThreeWishes() *game.CardDef {
 	return &game.CardDef{

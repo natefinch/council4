@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Reveal the top five cards of your library. You may put a creature card and/or an enchantment card from among them into your hand. Put the rest into your graveyard.
-var BenefactionOfRhonas = newBenefactionOfRhonas()
+var BenefactionOfRhonas = newBenefactionOfRhonas
 
 func newBenefactionOfRhonas() *game.CardDef {
 	return &game.CardDef{

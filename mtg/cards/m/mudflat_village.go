@@ -19,7 +19,7 @@ import (
 //	{T}: Add {C}.
 //	{T}: Add {B}. Spend this mana only to cast a creature spell.
 //	{1}{B}, {T}, Sacrifice this land: Return target Bat, Lizard, Rat, or Squirrel card from your graveyard to your hand.
-var MudflatVillage = newMudflatVillage()
+var MudflatVillage = newMudflatVillage
 
 func newMudflatVillage() *game.CardDef {
 	return &game.CardDef{

@@ -20,7 +20,7 @@ import (
 //	When Embercleave enters, attach it to target creature you control.
 //	Equipped creature gets +1/+1 and has double strike and trample.
 //	Equip {3}
-var Embercleave = newEmbercleave()
+var Embercleave = newEmbercleave
 
 func newEmbercleave() *game.CardDef {
 	return &game.CardDef{

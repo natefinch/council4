@@ -19,7 +19,7 @@ import (
 //	When this Equipment enters, attach it to target creature you control. That creature gains hexproof and indestructible until end of turn.
 //	Equipped creature gets +2/+0 and has flying.
 //	Equip {3}{W} ({3}{W}: Attach to target creature you control. Equip only as a sorcery.)
-var CelestialArmor = newCelestialArmor()
+var CelestialArmor = newCelestialArmor
 
 func newCelestialArmor() *game.CardDef {
 	return &game.CardDef{

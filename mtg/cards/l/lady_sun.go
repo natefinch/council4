@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{T}: Return Lady Sun and another target creature to their owners' hands. Activate only during your turn, before attackers are declared.
-var LadySun = newLadySun()
+var LadySun = newLadySun
 
 func newLadySun() *game.CardDef {
 	return &game.CardDef{

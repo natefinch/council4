@@ -17,7 +17,7 @@ import (
 //
 //	Colorless spells you cast with mana value 7 or greater cost {1} less to cast.
 //	Other colorless creatures you control get +1/+1.
-var ItThatHeraldsTheEnd = newItThatHeraldsTheEnd()
+var ItThatHeraldsTheEnd = newItThatHeraldsTheEnd
 
 func newItThatHeraldsTheEnd() *game.CardDef {
 	return &game.CardDef{

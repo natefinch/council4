@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Target creature gets +0/+X until end of turn, where X is its mana value.
-var GreatDefender = newGreatDefender()
+var GreatDefender = newGreatDefender
 
 func newGreatDefender() *game.CardDef {
 	return &game.CardDef{

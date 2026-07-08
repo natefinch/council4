@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, look at the top five cards of your library. You may put a land card from among them onto the battlefield tapped. Put the rest on the bottom of your library in a random order.
-var ElvishRejuvenator = newElvishRejuvenator()
+var ElvishRejuvenator = newElvishRejuvenator
 
 func newElvishRejuvenator() *game.CardDef {
 	return &game.CardDef{

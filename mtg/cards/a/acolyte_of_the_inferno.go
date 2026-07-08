@@ -17,7 +17,7 @@ import (
 //
 //	Renown 1 (When this creature deals combat damage to a player, if it isn't renowned, put a +1/+1 counter on it and it becomes renowned.)
 //	Whenever this creature becomes blocked by a creature, it deals 2 damage to that creature.
-var AcolyteOfTheInferno = newAcolyteOfTheInferno()
+var AcolyteOfTheInferno = newAcolyteOfTheInferno
 
 func newAcolyteOfTheInferno() *game.CardDef {
 	return &game.CardDef{

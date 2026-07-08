@@ -18,7 +18,7 @@ import (
 //
 //	When this creature enters, create a 1/1 red Mercenary creature token with "{T}: Target creature you control gets +1/+0 until end of turn. Activate only as a sorcery."
 //	{2}, Sacrifice a token: This creature gains indestructible until end of turn. Tap it. (Damage and effects that say "destroy" don't destroy it.)
-var ProsperityTycoon = newProsperityTycoon()
+var ProsperityTycoon = newProsperityTycoon
 
 func newProsperityTycoon() *game.CardDef {
 	return &game.CardDef{

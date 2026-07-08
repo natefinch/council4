@@ -19,7 +19,7 @@ import (
 //
 //	{T}: Prevent the next 1 damage that would be dealt to any target this turn.
 //	Put a -1/-1 counter on this creature: Untap this creature.
-var BarrentonMedic = newBarrentonMedic()
+var BarrentonMedic = newBarrentonMedic
 
 func newBarrentonMedic() *game.CardDef {
 	return &game.CardDef{

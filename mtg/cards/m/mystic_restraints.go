@@ -19,7 +19,7 @@ import (
 //	Enchant creature
 //	When this Aura enters, tap enchanted creature.
 //	Enchanted creature doesn't untap during its controller's untap step.
-var MysticRestraints = newMysticRestraints()
+var MysticRestraints = newMysticRestraints
 
 func newMysticRestraints() *game.CardDef {
 	return &game.CardDef{

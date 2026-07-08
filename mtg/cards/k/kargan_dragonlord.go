@@ -25,7 +25,7 @@ import (
 //	8/8
 //	Flying, trample
 //	{R}: This creature gets +1/+0 until end of turn.
-var KarganDragonlord = newKarganDragonlord()
+var KarganDragonlord = newKarganDragonlord
 
 func newKarganDragonlord() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Puncturing Blow deals 5 damage to target creature. If that creature would die this turn, exile it instead.
-var PuncturingBlow = newPuncturingBlow()
+var PuncturingBlow = newPuncturingBlow
 
 func newPuncturingBlow() *game.CardDef {
 	return &game.CardDef{

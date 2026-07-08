@@ -19,7 +19,7 @@ import (
 //
 //	This artifact enters tapped and with three coin counters on it.
 //	{T}, Remove a coin counter from this artifact: Create a Treasure token. (It's an artifact with "{T}, Sacrifice this token: Add one mana of any color.")
-var NobleSPurse = newNobleSPurse()
+var NobleSPurse = newNobleSPurse
 
 func newNobleSPurse() *game.CardDef {
 	return &game.CardDef{

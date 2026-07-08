@@ -19,7 +19,7 @@ import (
 //	Flying
 //	Each other Rogue creature you control enters with an additional +1/+1 counter on it.
 //	Whenever a creature you control with a +1/+1 counter on it deals combat damage to a player, that player discards a card.
-var OonaSBlackguard = newOonaSBlackguard()
+var OonaSBlackguard = newOonaSBlackguard
 
 func newOonaSBlackguard() *game.CardDef {
 	return &game.CardDef{

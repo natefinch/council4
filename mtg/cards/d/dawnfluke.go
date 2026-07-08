@@ -18,7 +18,7 @@ import (
 //	Flash
 //	When this creature enters, prevent the next 3 damage that would be dealt to any target this turn.
 //	Evoke {W} (You may cast this spell for its evoke cost. If you do, it's sacrificed when it enters.)
-var Dawnfluke = newDawnfluke()
+var Dawnfluke = newDawnfluke
 
 func newDawnfluke() *game.CardDef {
 	return &game.CardDef{

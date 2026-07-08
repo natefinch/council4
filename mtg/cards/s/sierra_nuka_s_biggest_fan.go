@@ -18,7 +18,7 @@ import (
 //
 //	The Nuka-Cola Challenge — Whenever one or more creatures you control deal combat damage to a player, put a quest counter on Sierra and create a Food token.
 //	Whenever you sacrifice a Food, target creature you control gets +X/+X until end of turn, where X is the number of quest counters on Sierra.
-var SierraNukaSBiggestFan = newSierraNukaSBiggestFan()
+var SierraNukaSBiggestFan = newSierraNukaSBiggestFan
 
 func newSierraNukaSBiggestFan() *game.CardDef {
 	return &game.CardDef{

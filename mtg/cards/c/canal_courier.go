@@ -17,7 +17,7 @@ import (
 //
 //	When this creature enters, you become the monarch.
 //	Whenever this creature and another creature attack different players, this creature can't be blocked this combat.
-var CanalCourier = newCanalCourier()
+var CanalCourier = newCanalCourier
 
 func newCanalCourier() *game.CardDef {
 	return &game.CardDef{

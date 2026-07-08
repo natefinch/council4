@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature is dealt damage, each opponent gains that much life.
-var Grollub = newGrollub()
+var Grollub = newGrollub
 
 func newGrollub() *game.CardDef {
 	return &game.CardDef{

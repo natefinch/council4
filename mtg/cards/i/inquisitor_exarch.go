@@ -18,7 +18,7 @@ import (
 //	When this creature enters, choose one —
 //	• You gain 2 life.
 //	• Target opponent loses 2 life.
-var InquisitorExarch = newInquisitorExarch()
+var InquisitorExarch = newInquisitorExarch
 
 func newInquisitorExarch() *game.CardDef {
 	return &game.CardDef{

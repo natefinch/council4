@@ -17,7 +17,7 @@ import (
 //
 //	When this enchantment enters, you become the monarch.
 //	At the beginning of your upkeep, any number of target players each mill two cards. If you're the monarch, each of those players mills ten cards instead. (To mill a card, a player puts the top card of their library into their graveyard.)
-var CourtOfCunning = newCourtOfCunning()
+var CourtOfCunning = newCourtOfCunning
 
 func newCourtOfCunning() *game.CardDef {
 	return &game.CardDef{

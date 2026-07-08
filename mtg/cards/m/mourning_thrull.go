@@ -19,7 +19,7 @@ import (
 //	({W/B} can be paid with either {W} or {B}.)
 //	Flying
 //	Whenever this creature deals damage, you gain that much life.
-var MourningThrull = newMourningThrull()
+var MourningThrull = newMourningThrull
 
 func newMourningThrull() *game.CardDef {
 	return &game.CardDef{

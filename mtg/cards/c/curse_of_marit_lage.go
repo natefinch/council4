@@ -17,7 +17,7 @@ import (
 //
 //	When this enchantment enters, tap all Islands.
 //	Islands don't untap during their controllers' untap steps.
-var CurseOfMaritLage = newCurseOfMaritLage()
+var CurseOfMaritLage = newCurseOfMaritLage
 
 func newCurseOfMaritLage() *game.CardDef {
 	return &game.CardDef{

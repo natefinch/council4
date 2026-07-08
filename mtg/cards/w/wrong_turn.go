@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Target opponent gains control of target creature. (If an attacking or blocking creature changes controllers, it's removed from combat.)
-var WrongTurn = newWrongTurn()
+var WrongTurn = newWrongTurn
 
 func newWrongTurn() *game.CardDef {
 	return &game.CardDef{

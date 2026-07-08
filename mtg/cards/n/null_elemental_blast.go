@@ -17,7 +17,7 @@ import (
 //	Choose one —
 //	• Counter target multicolored spell.
 //	• Destroy target multicolored permanent.
-var NullElementalBlast = newNullElementalBlast()
+var NullElementalBlast = newNullElementalBlast
 
 func newNullElementalBlast() *game.CardDef {
 	return &game.CardDef{

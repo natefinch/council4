@@ -19,7 +19,7 @@ import (
 //
 //	Defender
 //	{2}{W}, {T}: Tap target creature. You may put a stun counter on it. If you do, put a stun counter on this creature. (If a permanent with a stun counter would become untapped, remove one from it instead.)
-var SanctuaryWall = newSanctuaryWall()
+var SanctuaryWall = newSanctuaryWall
 
 func newSanctuaryWall() *game.CardDef {
 	return &game.CardDef{

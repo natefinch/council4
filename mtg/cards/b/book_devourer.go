@@ -17,7 +17,7 @@ import (
 //
 //	Trample
 //	Whenever this creature deals combat damage to a player, you may discard all the cards in your hand. If you do, draw that many cards.
-var BookDevourer = newBookDevourer()
+var BookDevourer = newBookDevourer
 
 func newBookDevourer() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 //	Enchant creature you control
 //	When this Aura enters, target creature can't block this turn.
 //	Enchanted creature gets +1/+1 and has haste. (It can attack and {T} no matter when it came under your control.)
-var CartoucheOfZeal = newCartoucheOfZeal()
+var CartoucheOfZeal = newCartoucheOfZeal
 
 func newCartoucheOfZeal() *game.CardDef {
 	return &game.CardDef{

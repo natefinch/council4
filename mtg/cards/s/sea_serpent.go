@@ -9,7 +9,7 @@ import (
 )
 
 // SeaSerpent is the card definition for Sea Serpent.
-var SeaSerpent = newSeaSerpent()
+var SeaSerpent = newSeaSerpent
 
 func newSeaSerpent() *game.CardDef {
 	return &game.CardDef{

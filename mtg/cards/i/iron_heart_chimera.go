@@ -18,7 +18,7 @@ import (
 //
 //	Vigilance
 //	Sacrifice this creature: Put a +2/+2 counter on target Chimera creature. It gains vigilance. (This effect lasts indefinitely.)
-var IronHeartChimera = newIronHeartChimera()
+var IronHeartChimera = newIronHeartChimera
 
 func newIronHeartChimera() *game.CardDef {
 	return &game.CardDef{

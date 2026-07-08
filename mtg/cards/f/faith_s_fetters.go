@@ -18,7 +18,7 @@ import (
 //	Enchant permanent
 //	When this Aura enters, you gain 4 life.
 //	Enchanted permanent can't attack or block, and its activated abilities can't be activated unless they're mana abilities.
-var FaithSFetters = newFaithSFetters()
+var FaithSFetters = newFaithSFetters
 
 func newFaithSFetters() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 //
 //	Return target nonland permanent to its owner's hand. Draw a card.
 //	Adamant — If at least three blue mana was spent to cast this spell, create a Food token. (It's an artifact with "{2}, {T}, Sacrifice this token: You gain 3 life.")
-var TurnIntoAPumpkin = newTurnIntoAPumpkin()
+var TurnIntoAPumpkin = newTurnIntoAPumpkin
 
 func newTurnIntoAPumpkin() *game.CardDef {
 	return &game.CardDef{

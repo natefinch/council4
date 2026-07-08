@@ -19,7 +19,7 @@ import (
 //	• Create a 1/1 white Bird creature token with flying.
 //	• Return another target nonland permanent to its owner's hand.
 //	• Draw a card.
-var AetherChanneler = newAetherChanneler()
+var AetherChanneler = newAetherChanneler
 
 func newAetherChanneler() *game.CardDef {
 	return &game.CardDef{

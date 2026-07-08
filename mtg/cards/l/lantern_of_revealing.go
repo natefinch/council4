@@ -18,7 +18,7 @@ import (
 //
 //	{T}: Add one mana of any color.
 //	{4}, {T}: Look at the top card of your library. If it's a land card, you may put it onto the battlefield tapped. If you don't put the card onto the battlefield, you may put it on the bottom of your library.
-var LanternOfRevealing = newLanternOfRevealing()
+var LanternOfRevealing = newLanternOfRevealing
 
 func newLanternOfRevealing() *game.CardDef {
 	return &game.CardDef{

@@ -10,7 +10,7 @@ import (
 )
 
 // RamsesOverdark is the card definition for Ramses Overdark.
-var RamsesOverdark = newRamsesOverdark()
+var RamsesOverdark = newRamsesOverdark
 
 func newRamsesOverdark() *game.CardDef {
 	return &game.CardDef{

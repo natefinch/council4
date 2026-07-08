@@ -20,7 +20,7 @@ import (
 //	When Kura dies, choose one —
 //	• Search your library for up to three land cards, reveal them, put them into your hand, then shuffle.
 //	• Create an X/X green Spirit creature token, where X is the number of lands you control.
-var KuraTheBoundlessSky = newKuraTheBoundlessSky()
+var KuraTheBoundlessSky = newKuraTheBoundlessSky
 
 func newKuraTheBoundlessSky() *game.CardDef {
 	return &game.CardDef{

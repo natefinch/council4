@@ -18,7 +18,7 @@ import (
 //	Choose one —
 //	• Form a Party — Look at the top five cards of your library. You may reveal any number of creature cards from among them and put them into your hand. Put the rest on the bottom of your library in a random order.
 //	• Start a Brawl — Creatures you control get +2/+2 until end of turn.
-var YouMeetInATavern = newYouMeetInATavern()
+var YouMeetInATavern = newYouMeetInATavern
 
 func newYouMeetInATavern() *game.CardDef {
 	return &game.CardDef{

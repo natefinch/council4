@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Gain control of target creature until end of turn. Untap that creature. Until end of turn, it gets +2/+0 and gains haste.
-var TraitorousInstinct = newTraitorousInstinct()
+var TraitorousInstinct = newTraitorousInstinct
 
 func newTraitorousInstinct() *game.CardDef {
 	return &game.CardDef{

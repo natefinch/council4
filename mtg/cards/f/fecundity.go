@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever a creature dies, that creature's controller may draw a card.
-var Fecundity = newFecundity()
+var Fecundity = newFecundity
 
 func newFecundity() *game.CardDef {
 	return &game.CardDef{

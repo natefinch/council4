@@ -19,7 +19,7 @@ import (
 //	Enchant creature
 //	When this Aura enters, if there are five or more cards in your graveyard, tap enchanted creature.
 //	Enchanted creature doesn't untap during its controller's untap step.
-var LockedInTheCemetery = newLockedInTheCemetery()
+var LockedInTheCemetery = newLockedInTheCemetery
 
 func newLockedInTheCemetery() *game.CardDef {
 	return &game.CardDef{

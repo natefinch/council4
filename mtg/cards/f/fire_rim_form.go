@@ -19,7 +19,7 @@ import (
 //	Enchant creature
 //	When this Aura enters, enchanted creature gains first strike until end of turn.
 //	Enchanted creature gets +2/+0.
-var FireRimForm = newFireRimForm()
+var FireRimForm = newFireRimForm
 
 func newFireRimForm() *game.CardDef {
 	return &game.CardDef{

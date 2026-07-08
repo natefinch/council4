@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	At the beginning of your end step, if you descended this turn, create a 1/1 black Fungus creature token with "This token can't block." (You descended if a permanent card was put into your graveyard from anywhere.)
-var BroodrageMycoid = newBroodrageMycoid()
+var BroodrageMycoid = newBroodrageMycoid
 
 func newBroodrageMycoid() *game.CardDef {
 	return &game.CardDef{

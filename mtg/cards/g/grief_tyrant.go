@@ -19,7 +19,7 @@ import (
 //
 //	This creature enters with four -1/-1 counters on it.
 //	When this creature dies, put a -1/-1 counter on target creature for each -1/-1 counter on this creature.
-var GriefTyrant = newGriefTyrant()
+var GriefTyrant = newGriefTyrant
 
 func newGriefTyrant() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 //
 //	Flying
 //	Whenever this creature becomes the target of a spell or ability, sacrifice it unless you discard a land card.
-var CursedMonstrosity = newCursedMonstrosity()
+var CursedMonstrosity = newCursedMonstrosity
 
 func newCursedMonstrosity() *game.CardDef {
 	return &game.CardDef{

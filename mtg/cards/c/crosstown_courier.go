@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature deals combat damage to a player, that player mills that many cards.
-var CrosstownCourier = newCrosstownCourier()
+var CrosstownCourier = newCrosstownCourier
 
 func newCrosstownCourier() *game.CardDef {
 	return &game.CardDef{

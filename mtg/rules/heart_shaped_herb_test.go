@@ -61,7 +61,7 @@ func newHerbGame(t *testing.T) (*game.Game, *Engine, *game.Permanent) {
 	t.Helper()
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	herb := addCombatPermanent(g, game.Player1, cardh.HeartShapedHerb)
+	herb := addCombatPermanent(g, game.Player1, cardh.HeartShapedHerb())
 	addBasicLandPermanent(g, game.Player1, types.Island)
 	addBasicLandPermanent(g, game.Player1, types.Island)
 	g.Turn.Phase = game.PhasePrecombatMain
@@ -177,7 +177,7 @@ func TestHeartShapedHerbDeclineSacrificeDoesNothingAfterCost(t *testing.T) {
 // leaves the controller's own sources unaffected.
 func TestHeartShapedHerbPreventsOneDamageFromOpponentSource(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
-	addReplacementPermanent(t, g, game.Player1, cardh.HeartShapedHerb)
+	addReplacementPermanent(t, g, game.Player1, cardh.HeartShapedHerb())
 	opponentSource := addColoredSourceCard(g, game.Player2, color.Red)
 	ownSource := addColoredSourceCard(g, game.Player1, color.Red)
 

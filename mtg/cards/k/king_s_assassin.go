@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{T}: Destroy target tapped creature. Activate only during your turn, before attackers are declared.
-var KingSAssassin = newKingSAssassin()
+var KingSAssassin = newKingSAssassin
 
 func newKingSAssassin() *game.CardDef {
 	return &game.CardDef{

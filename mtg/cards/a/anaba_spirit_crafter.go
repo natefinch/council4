@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Minotaur creatures get +1/+0.
-var AnabaSpiritCrafter = newAnabaSpiritCrafter()
+var AnabaSpiritCrafter = newAnabaSpiritCrafter
 
 func newAnabaSpiritCrafter() *game.CardDef {
 	return &game.CardDef{

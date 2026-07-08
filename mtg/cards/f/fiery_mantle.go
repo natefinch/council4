@@ -19,7 +19,7 @@ import (
 //	Enchant creature
 //	{R}: Enchanted creature gets +1/+0 until end of turn.
 //	When this Aura is put into a graveyard from the battlefield, return it to its owner's hand.
-var FieryMantle = newFieryMantle()
+var FieryMantle = newFieryMantle
 
 func newFieryMantle() *game.CardDef {
 	return &game.CardDef{

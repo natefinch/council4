@@ -18,7 +18,7 @@ import (
 //	Devoid (This card has no color.)
 //	This spell costs {2} less to cast if an opponent controls a multicolored permanent.
 //	Ghostfire Slice deals 4 damage to any target.
-var GhostfireSlice = newGhostfireSlice()
+var GhostfireSlice = newGhostfireSlice
 
 func newGhostfireSlice() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 //
 //	Flying
 //	Corrupted — Whenever this creature attacks, if an opponent has three or more poison counters, creatures you control get +1/+1 until end of turn.
-var IncisorGlider = newIncisorGlider()
+var IncisorGlider = newIncisorGlider
 
 func newIncisorGlider() *game.CardDef {
 	return &game.CardDef{

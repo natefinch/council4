@@ -18,7 +18,7 @@ import (
 //
 //	Vigilance
 //	When this creature enters, you may search your library and/or graveyard for a card named Garruk, Savage Herald, reveal it, and put it into your hand. If you search your library this way, shuffle.
-var GarrukSWarsteed = newGarrukSWarsteed()
+var GarrukSWarsteed = newGarrukSWarsteed
 
 func newGarrukSWarsteed() *game.CardDef {
 	return &game.CardDef{

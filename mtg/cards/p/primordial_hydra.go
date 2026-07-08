@@ -20,7 +20,7 @@ import (
 //	This creature enters with X +1/+1 counters on it.
 //	At the beginning of your upkeep, double the number of +1/+1 counters on this creature.
 //	This creature has trample as long as it has ten or more +1/+1 counters on it.
-var PrimordialHydra = newPrimordialHydra()
+var PrimordialHydra = newPrimordialHydra
 
 func newPrimordialHydra() *game.CardDef {
 	return &game.CardDef{

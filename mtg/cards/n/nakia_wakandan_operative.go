@@ -20,7 +20,7 @@ import (
 //	Reach
 //	Whenever your commander enters, you become the monarch.
 //	{2}, {T}: Put two +1/+1 counters on target creature or Vehicle. Activate only as a sorcery.
-var NakiaWakandanOperative = newNakiaWakandanOperative()
+var NakiaWakandanOperative = newNakiaWakandanOperative
 
 func newNakiaWakandanOperative() *game.CardDef {
 	return &game.CardDef{

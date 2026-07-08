@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever a player casts a green spell, you may pay {3}. If you do, untap target permanent.
-var MalachiteTalisman = newMalachiteTalisman()
+var MalachiteTalisman = newMalachiteTalisman
 
 func newMalachiteTalisman() *game.CardDef {
 	return &game.CardDef{

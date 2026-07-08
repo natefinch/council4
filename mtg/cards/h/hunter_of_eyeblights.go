@@ -11,7 +11,7 @@ import (
 )
 
 // HunterOfEyeblights is the card definition for Hunter of Eyeblights.
-var HunterOfEyeblights = newHunterOfEyeblights()
+var HunterOfEyeblights = newHunterOfEyeblights
 
 func newHunterOfEyeblights() *game.CardDef {
 	return &game.CardDef{

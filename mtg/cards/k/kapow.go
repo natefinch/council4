@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Put a +1/+1 counter on target creature you control. It fights target creature an opponent controls. (Each deals damage equal to its power to the other.)
-var Kapow = newKapow()
+var Kapow = newKapow
 
 func newKapow() *game.CardDef {
 	return &game.CardDef{

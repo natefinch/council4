@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{T}: Target opponent discards a card. Activate only during your turn, before attackers are declared.
-var CunningAdvisor = newCunningAdvisor()
+var CunningAdvisor = newCunningAdvisor
 
 func newCunningAdvisor() *game.CardDef {
 	return &game.CardDef{

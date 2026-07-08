@@ -19,7 +19,7 @@ import (
 //	Equipped creature gets +2/+2 and has protection from white and from blue.
 //	Whenever equipped creature deals combat damage to a player, put a +1/+1 counter on a creature you control, then proliferate. (Choose any number of permanents and/or players, then give each another counter of each kind already there.)
 //	Equip {2}
-var SwordOfTruthAndJustice = newSwordOfTruthAndJustice()
+var SwordOfTruthAndJustice = newSwordOfTruthAndJustice
 
 func newSwordOfTruthAndJustice() *game.CardDef {
 	return &game.CardDef{

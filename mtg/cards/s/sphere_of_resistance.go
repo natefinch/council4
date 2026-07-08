@@ -15,7 +15,7 @@ import (
 // Oracle text:
 //
 //	Spells cost {1} more to cast.
-var SphereOfResistance = newSphereOfResistance()
+var SphereOfResistance = newSphereOfResistance
 
 func newSphereOfResistance() *game.CardDef {
 	return &game.CardDef{

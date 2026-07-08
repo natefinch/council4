@@ -18,7 +18,7 @@ import (
 //	As an additional cost to cast this spell, sacrifice a nonland permanent.
 //	Exile target nonland permanent.
 //	Flashback {2}{W}{B} (You may cast this card from your graveyard for its flashback cost and any additional costs. Then exile it.)
-var RiteOfOblivion = newRiteOfOblivion()
+var RiteOfOblivion = newRiteOfOblivion
 
 func newRiteOfOblivion() *game.CardDef {
 	return &game.CardDef{

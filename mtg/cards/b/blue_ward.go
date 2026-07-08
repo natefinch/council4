@@ -17,7 +17,7 @@ import (
 //
 //	Enchant creature
 //	Enchanted creature has protection from blue. This effect doesn't remove this Aura.
-var BlueWard = newBlueWard()
+var BlueWard = newBlueWard
 
 func newBlueWard() *game.CardDef {
 	return &game.CardDef{

@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever you cast a noncreature spell, this creature gets +1/+0 until end of turn, then scry 1.
-var BurningProphet = newBurningProphet()
+var BurningProphet = newBurningProphet
 
 func newBurningProphet() *game.CardDef {
 	return &game.CardDef{

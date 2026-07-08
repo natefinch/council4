@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever you put one or more -1/-1 counters on a creature, create that many 1/1 black Insect creature tokens.
-var NestOfScarabs = newNestOfScarabs()
+var NestOfScarabs = newNestOfScarabs
 
 func newNestOfScarabs() *game.CardDef {
 	return &game.CardDef{

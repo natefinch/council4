@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever a creature attacks you or a planeswalker you control, that creature's controller mills two cards.
-var Riddlekeeper = newRiddlekeeper()
+var Riddlekeeper = newRiddlekeeper
 
 func newRiddlekeeper() *game.CardDef {
 	return &game.CardDef{

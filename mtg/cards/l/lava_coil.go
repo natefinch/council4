@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Lava Coil deals 4 damage to target creature. If that creature would die this turn, exile it instead.
-var LavaCoil = newLavaCoil()
+var LavaCoil = newLavaCoil
 
 func newLavaCoil() *game.CardDef {
 	return &game.CardDef{

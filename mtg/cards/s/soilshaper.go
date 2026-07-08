@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever you cast a Spirit or Arcane spell, target land becomes a 3/3 creature until end of turn. It's still a land.
-var Soilshaper = newSoilshaper()
+var Soilshaper = newSoilshaper
 
 func newSoilshaper() *game.CardDef {
 	return &game.CardDef{

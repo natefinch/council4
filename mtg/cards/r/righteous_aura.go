@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{W}, Pay 2 life: The next time a source of your choice would deal damage to you this turn, prevent that damage.
-var RighteousAura = newRighteousAura()
+var RighteousAura = newRighteousAura
 
 func newRighteousAura() *game.CardDef {
 	return &game.CardDef{

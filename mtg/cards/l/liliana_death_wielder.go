@@ -11,7 +11,7 @@ import (
 )
 
 // LilianaDeathWielder is the card definition for Liliana, Death Wielder.
-var LilianaDeathWielder = newLilianaDeathWielder()
+var LilianaDeathWielder = newLilianaDeathWielder
 
 func newLilianaDeathWielder() *game.CardDef {
 	return &game.CardDef{

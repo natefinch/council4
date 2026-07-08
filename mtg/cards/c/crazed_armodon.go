@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{G}: This creature gets +3/+0 and gains trample until end of turn. Destroy this creature at the beginning of the next end step. Activate only once each turn.
-var CrazedArmodon = newCrazedArmodon()
+var CrazedArmodon = newCrazedArmodon
 
 func newCrazedArmodon() *game.CardDef {
 	return &game.CardDef{

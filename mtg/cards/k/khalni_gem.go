@@ -17,7 +17,7 @@ import (
 //
 //	When this artifact enters, return two lands you control to their owner's hand.
 //	{T}: Add two mana of any one color.
-var KhalniGem = newKhalniGem()
+var KhalniGem = newKhalniGem
 
 func newKhalniGem() *game.CardDef {
 	return &game.CardDef{

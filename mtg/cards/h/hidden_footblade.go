@@ -19,7 +19,7 @@ import (
 //	When this Equipment enters, attach it to target creature you control. That creature gains first strike until end of turn.
 //	Equipped creature gets +1/+0 and has haste.
 //	Equip {2} ({2}: Attach to target creature you control. Equip only as a sorcery.)
-var HiddenFootblade = newHiddenFootblade()
+var HiddenFootblade = newHiddenFootblade
 
 func newHiddenFootblade() *game.CardDef {
 	return &game.CardDef{

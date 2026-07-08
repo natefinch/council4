@@ -17,7 +17,7 @@ import (
 //
 //	Defender
 //	Whenever you cast an instant or sorcery spell, this creature gets +3/+0 until end of turn and can attack this turn as though it didn't have defender.
-var NivixCyclops = newNivixCyclops()
+var NivixCyclops = newNivixCyclops
 
 func newNivixCyclops() *game.CardDef {
 	return &game.CardDef{

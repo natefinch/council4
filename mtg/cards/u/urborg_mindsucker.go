@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{B}, Sacrifice this creature: Target opponent discards a card at random. Activate only as a sorcery.
-var UrborgMindsucker = newUrborgMindsucker()
+var UrborgMindsucker = newUrborgMindsucker
 
 func newUrborgMindsucker() *game.CardDef {
 	return &game.CardDef{

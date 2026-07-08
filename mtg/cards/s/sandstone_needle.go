@@ -20,7 +20,7 @@ import (
 //
 //	This land enters tapped with two depletion counters on it.
 //	{T}, Remove a depletion counter from this land: Add {R}{R}. If there are no depletion counters on this land, sacrifice it.
-var SandstoneNeedle = newSandstoneNeedle()
+var SandstoneNeedle = newSandstoneNeedle
 
 func newSandstoneNeedle() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 //
 //	Flying
 //	{U}, Sacrifice this creature: Counter target instant or sorcery spell unless its controller pays {3}.
-var DiversionUnit = newDiversionUnit()
+var DiversionUnit = newDiversionUnit
 
 func newDiversionUnit() *game.CardDef {
 	return &game.CardDef{

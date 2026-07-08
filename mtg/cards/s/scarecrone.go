@@ -17,7 +17,7 @@ import (
 //
 //	{1}, Sacrifice a Scarecrow: Draw a card.
 //	{4}, {T}: Return target artifact creature card from your graveyard to the battlefield.
-var Scarecrone = newScarecrone()
+var Scarecrone = newScarecrone
 
 func newScarecrone() *game.CardDef {
 	return &game.CardDef{

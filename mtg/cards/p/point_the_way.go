@@ -18,7 +18,7 @@ import (
 //
 //	Start your engines! (If you have no speed, it starts at 1. It increases once on each of your turns when an opponent loses life. Max speed is 4.)
 //	{3}{G}, Sacrifice this enchantment: Search your library for up to X basic land cards, where X is your speed. Put those cards onto the battlefield tapped, then shuffle.
-var PointTheWay = newPointTheWay()
+var PointTheWay = newPointTheWay
 
 func newPointTheWay() *game.CardDef {
 	return &game.CardDef{

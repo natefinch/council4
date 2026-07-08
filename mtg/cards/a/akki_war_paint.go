@@ -17,7 +17,7 @@ import (
 //
 //	Enchant artifact or creature
 //	As long as enchanted permanent is a creature, it gets +2/+1.
-var AkkiWarPaint = newAkkiWarPaint()
+var AkkiWarPaint = newAkkiWarPaint
 
 func newAkkiWarPaint() *game.CardDef {
 	return &game.CardDef{

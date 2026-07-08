@@ -69,7 +69,9 @@ func assertFaceAbilitiesHaveBodies(t *testing.T, faceName string, face *game.Car
 func registeredCards() []*game.CardDef {
 	var all []*game.CardDef
 	for _, set := range cards.DefaultCardSets() {
-		all = append(all, set...)
+		for _, entry := range set {
+			all = append(all, entry.New())
+		}
 	}
 	return all
 }

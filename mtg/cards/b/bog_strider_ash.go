@@ -17,7 +17,7 @@ import (
 //
 //	Swampwalk (This creature can't be blocked as long as defending player controls a Swamp.)
 //	Whenever a player casts a Goblin spell, you may pay {G}. If you do, you gain 2 life.
-var BogStriderAsh = newBogStriderAsh()
+var BogStriderAsh = newBogStriderAsh
 
 func newBogStriderAsh() *game.CardDef {
 	return &game.CardDef{

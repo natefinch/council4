@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Creatures you control get +2/+1 until end of turn. Warrior creatures you control gain lifelink until end of turn. (Damage dealt by those Warriors also causes their controller to gain that much life.)
-var RushOfBattle = newRushOfBattle()
+var RushOfBattle = newRushOfBattle
 
 func newRushOfBattle() *game.CardDef {
 	return &game.CardDef{

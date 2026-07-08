@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Look at the top five cards of your library. You may reveal a colorless card from among them and put it into your hand. Then put the rest on the bottom of your library in any order.
-var AncientStirrings = newAncientStirrings()
+var AncientStirrings = newAncientStirrings
 
 func newAncientStirrings() *game.CardDef {
 	return &game.CardDef{

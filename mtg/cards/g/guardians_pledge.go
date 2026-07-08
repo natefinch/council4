@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	White creatures you control get +2/+2 until end of turn.
-var GuardiansPledge = newGuardiansPledge()
+var GuardiansPledge = newGuardiansPledge
 
 func newGuardiansPledge() *game.CardDef {
 	return &game.CardDef{

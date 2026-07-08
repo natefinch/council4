@@ -20,7 +20,7 @@ import (
 //	Haste
 //	This creature has trample as long as it has a -1/-1 counter on it.
 //	Persist (When this creature dies, if it had no -1/-1 counters on it, return it to the battlefield under its owner's control with a -1/-1 counter on it.)
-var Thunderblust = newThunderblust()
+var Thunderblust = newThunderblust
 
 func newThunderblust() *game.CardDef {
 	return &game.CardDef{

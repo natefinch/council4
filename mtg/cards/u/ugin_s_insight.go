@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Scry X, where X is the greatest mana value among permanents you control, then draw three cards.
-var UginSInsight = newUginSInsight()
+var UginSInsight = newUginSInsight
 
 func newUginSInsight() *game.CardDef {
 	return &game.CardDef{

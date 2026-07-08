@@ -20,7 +20,7 @@ import (
 //	When you cast this spell, exile target artifact, enchantment, or land.
 //	Reach
 //	{2}{C}, Sacrifice a land: Return this card from your graveyard to your hand. ({C} represents colorless mana.)
-var WorldBreaker = newWorldBreaker()
+var WorldBreaker = newWorldBreaker
 
 func newWorldBreaker() *game.CardDef {
 	return &game.CardDef{

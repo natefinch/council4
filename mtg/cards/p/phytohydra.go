@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	If damage would be dealt to this creature, put that many +1/+1 counters on it instead.
-var Phytohydra = newPhytohydra()
+var Phytohydra = newPhytohydra
 
 func newPhytohydra() *game.CardDef {
 	return &game.CardDef{

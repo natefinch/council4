@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Counter target creature spell. You create a Treasure token. (It's an artifact with "{T}, Sacrifice this token: Add one mana of any color.")
-var Hornswoggle = newHornswoggle()
+var Hornswoggle = newHornswoggle
 
 func newHornswoggle() *game.CardDef {
 	return &game.CardDef{

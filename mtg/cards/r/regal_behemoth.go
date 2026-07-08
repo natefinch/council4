@@ -19,7 +19,7 @@ import (
 //	Trample
 //	When this creature enters, you become the monarch.
 //	Whenever you tap a land for mana while you're the monarch, add an additional one mana of any color.
-var RegalBehemoth = newRegalBehemoth()
+var RegalBehemoth = newRegalBehemoth
 
 func newRegalBehemoth() *game.CardDef {
 	return &game.CardDef{

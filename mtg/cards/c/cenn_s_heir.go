@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature attacks, it gets +1/+1 until end of turn for each other attacking Kithkin.
-var CennSHeir = newCennSHeir()
+var CennSHeir = newCennSHeir
 
 func newCennSHeir() *game.CardDef {
 	return &game.CardDef{

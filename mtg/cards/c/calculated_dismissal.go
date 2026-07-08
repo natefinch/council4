@@ -17,7 +17,7 @@ import (
 //
 //	Counter target spell unless its controller pays {3}.
 //	Spell mastery — If there are two or more instant and/or sorcery cards in your graveyard, scry 2. (To scry 2, look at the top two cards of your library, then put any number of them on the bottom and the rest on top in any order.)
-var CalculatedDismissal = newCalculatedDismissal()
+var CalculatedDismissal = newCalculatedDismissal
 
 func newCalculatedDismissal() *game.CardDef {
 	return &game.CardDef{

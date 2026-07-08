@@ -18,7 +18,7 @@ import (
 //	Flash
 //	Flying
 //	When this creature enters, destroy target creature an opponent controls that was dealt damage this turn.
-var StingbladeAssassin = newStingbladeAssassin()
+var StingbladeAssassin = newStingbladeAssassin
 
 func newStingbladeAssassin() *game.CardDef {
 	return &game.CardDef{

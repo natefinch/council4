@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Whenever another Mutant you control enters, put a +1/+1 counter on that creature and a +1/+1 counter on X-23.
-var X23DeadlyWeapon = newX23DeadlyWeapon()
+var X23DeadlyWeapon = newX23DeadlyWeapon
 
 func newX23DeadlyWeapon() *game.CardDef {
 	return &game.CardDef{

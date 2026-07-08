@@ -19,7 +19,7 @@ import (
 //
 //	When this artifact enters, you may search your library and/or graveyard for a card named Nicol Bolas, the Deceiver, reveal it, and put it into your hand. If you search your library this way, shuffle.
 //	{T}: Add {U}, {B}, or {R}.
-var VisageOfBolas = newVisageOfBolas()
+var VisageOfBolas = newVisageOfBolas
 
 func newVisageOfBolas() *game.CardDef {
 	return &game.CardDef{

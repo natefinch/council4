@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Look at the top five cards of your library. You may reveal a Dinosaur or land card from among them and put it into your hand. Put the rest on the bottom of your library in any order.
-var CommuneWithDinosaurs = newCommuneWithDinosaurs()
+var CommuneWithDinosaurs = newCommuneWithDinosaurs
 
 func newCommuneWithDinosaurs() *game.CardDef {
 	return &game.CardDef{

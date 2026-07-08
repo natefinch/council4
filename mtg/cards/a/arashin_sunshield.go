@@ -18,7 +18,7 @@ import (
 //
 //	When this creature enters, exile up to two target cards from a single graveyard.
 //	{W}, {T}: Tap target creature.
-var ArashinSunshield = newArashinSunshield()
+var ArashinSunshield = newArashinSunshield
 
 func newArashinSunshield() *game.CardDef {
 	return &game.CardDef{

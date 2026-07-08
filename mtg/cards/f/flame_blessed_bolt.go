@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Flame-Blessed Bolt deals 2 damage to target creature or planeswalker. If that creature or planeswalker would die this turn, exile it instead.
-var FlameBlessedBolt = newFlameBlessedBolt()
+var FlameBlessedBolt = newFlameBlessedBolt
 
 func newFlameBlessedBolt() *game.CardDef {
 	return &game.CardDef{

@@ -9,7 +9,7 @@ import (
 )
 
 // BantCharm is the card definition for Bant Charm.
-var BantCharm = newBantCharm()
+var BantCharm = newBantCharm
 
 func newBantCharm() *game.CardDef {
 	return &game.CardDef{

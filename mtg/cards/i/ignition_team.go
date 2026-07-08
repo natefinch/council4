@@ -19,7 +19,7 @@ import (
 //
 //	This creature enters with X +1/+1 counters on it, where X is the number of tapped lands on the battlefield.
 //	{2}{R}, Remove a +1/+1 counter from this creature: Target land becomes a 4/4 red Elemental creature until end of turn. It's still a land.
-var IgnitionTeam = newIgnitionTeam()
+var IgnitionTeam = newIgnitionTeam
 
 func newIgnitionTeam() *game.CardDef {
 	return &game.CardDef{

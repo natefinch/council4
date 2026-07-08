@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	If a red source would deal damage to you, prevent 2 of that damage.
-var SphereOfLaw = newSphereOfLaw()
+var SphereOfLaw = newSphereOfLaw
 
 func newSphereOfLaw() *game.CardDef {
 	return &game.CardDef{

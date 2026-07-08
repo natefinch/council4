@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	If a blue source would deal damage to you, prevent 2 of that damage.
-var SphereOfReason = newSphereOfReason()
+var SphereOfReason = newSphereOfReason
 
 func newSphereOfReason() *game.CardDef {
 	return &game.CardDef{

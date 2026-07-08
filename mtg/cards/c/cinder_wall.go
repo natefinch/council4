@@ -17,7 +17,7 @@ import (
 //
 //	Defender
 //	When this creature blocks, destroy it at end of combat.
-var CinderWall = newCinderWall()
+var CinderWall = newCinderWall
 
 func newCinderWall() *game.CardDef {
 	return &game.CardDef{

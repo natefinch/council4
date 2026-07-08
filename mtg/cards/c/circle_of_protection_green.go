@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{1}: The next time a green source of your choice would deal damage to you this turn, prevent that damage.
-var CircleOfProtectionGreen = newCircleOfProtectionGreen()
+var CircleOfProtectionGreen = newCircleOfProtectionGreen
 
 func newCircleOfProtectionGreen() *game.CardDef {
 	return &game.CardDef{

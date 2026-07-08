@@ -15,7 +15,7 @@ import (
 // Oracle text:
 //
 //	Creature spells cost {2} more to cast.
-var FerozSBan = newFerozSBan()
+var FerozSBan = newFerozSBan
 
 func newFerozSBan() *game.CardDef {
 	return &game.CardDef{

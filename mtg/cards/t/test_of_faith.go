@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Prevent the next 3 damage that would be dealt to target creature this turn. For each 1 damage prevented this way, put a +1/+1 counter on that creature.
-var TestOfFaith = newTestOfFaith()
+var TestOfFaith = newTestOfFaith
 
 func newTestOfFaith() *game.CardDef {
 	return &game.CardDef{

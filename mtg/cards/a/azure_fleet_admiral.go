@@ -17,7 +17,7 @@ import (
 //
 //	When this creature enters, you become the monarch.
 //	This creature can't be blocked by creatures the monarch controls.
-var AzureFleetAdmiral = newAzureFleetAdmiral()
+var AzureFleetAdmiral = newAzureFleetAdmiral
 
 func newAzureFleetAdmiral() *game.CardDef {
 	return &game.CardDef{

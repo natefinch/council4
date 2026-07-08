@@ -18,7 +18,7 @@ import (
 //	Enchant artifact or creature
 //	When this Aura enters, create a 1/1 white Soldier creature token.
 //	Enchanted permanent can't attack or block, and its activated abilities can't be activated.
-var SecureDetention = newSecureDetention()
+var SecureDetention = newSecureDetention
 
 func newSecureDetention() *game.CardDef {
 	return &game.CardDef{

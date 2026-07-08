@@ -17,7 +17,7 @@ import (
 //
 //	This spell costs {2} less to cast if you control a Dragon.
 //	Draw three cards.
-var DraconicLore = newDraconicLore()
+var DraconicLore = newDraconicLore
 
 func newDraconicLore() *game.CardDef {
 	return &game.CardDef{

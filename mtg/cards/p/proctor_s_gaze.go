@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Return up to one target nonland permanent to its owner's hand. Search your library for a basic land card, put it onto the battlefield tapped, then shuffle.
-var ProctorSGaze = newProctorSGaze()
+var ProctorSGaze = newProctorSGaze
 
 func newProctorSGaze() *game.CardDef {
 	return &game.CardDef{

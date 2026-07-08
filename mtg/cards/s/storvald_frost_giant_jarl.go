@@ -20,7 +20,7 @@ import (
 //	Whenever Storvald enters or attacks, choose one or both —
 //	• Target creature has base power and toughness 7/7 until end of turn.
 //	• Target creature has base power and toughness 1/1 until end of turn.
-var StorvaldFrostGiantJarl = newStorvaldFrostGiantJarl()
+var StorvaldFrostGiantJarl = newStorvaldFrostGiantJarl
 
 func newStorvaldFrostGiantJarl() *game.CardDef {
 	return &game.CardDef{

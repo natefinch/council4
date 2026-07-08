@@ -19,7 +19,7 @@ import (
 //	Flying
 //	Ward—Pay 2 life.
 //	When this creature enters, remove all counters from up to one target creature.
-var PurgingStormbrood = newPurgingStormbrood()
+var PurgingStormbrood = newPurgingStormbrood
 
 func newPurgingStormbrood() *game.CardDef {
 	return &game.CardDef{

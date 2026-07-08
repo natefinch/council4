@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{T}: Prevent the next 4 damage that would be dealt to any target this turn.
-var MasterHealer = newMasterHealer()
+var MasterHealer = newMasterHealer
 
 func newMasterHealer() *game.CardDef {
 	return &game.CardDef{

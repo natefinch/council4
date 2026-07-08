@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, sacrifice it unless you discard a card at random.
-var PillagingHorde = newPillagingHorde()
+var PillagingHorde = newPillagingHorde
 
 func newPillagingHorde() *game.CardDef {
 	return &game.CardDef{

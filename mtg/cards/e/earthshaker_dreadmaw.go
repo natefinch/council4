@@ -17,7 +17,7 @@ import (
 //
 //	Trample
 //	When this creature enters, draw a card for each other Dinosaur you control.
-var EarthshakerDreadmaw = newEarthshakerDreadmaw()
+var EarthshakerDreadmaw = newEarthshakerDreadmaw
 
 func newEarthshakerDreadmaw() *game.CardDef {
 	return &game.CardDef{

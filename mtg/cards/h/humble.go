@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Until end of turn, target creature loses all abilities and has base power and toughness 0/1.
-var Humble = newHumble()
+var Humble = newHumble
 
 func newHumble() *game.CardDef {
 	return &game.CardDef{

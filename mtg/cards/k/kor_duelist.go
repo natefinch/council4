@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	As long as this creature is equipped, it has double strike. (It deals both first-strike and regular combat damage.)
-var KorDuelist = newKorDuelist()
+var KorDuelist = newKorDuelist
 
 func newKorDuelist() *game.CardDef {
 	return &game.CardDef{

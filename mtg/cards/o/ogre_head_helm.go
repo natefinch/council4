@@ -18,7 +18,7 @@ import (
 //	Equipped creature gets +2/+2.
 //	Whenever this creature or equipped creature deals combat damage to a player, you may sacrifice it. If you do, discard your hand, then draw three cards.
 //	Reconfigure {3} ({3}: Attach to target creature you control; or unattach from a creature. Reconfigure only as a sorcery. While attached, this isn't a creature.)
-var OgreHeadHelm = newOgreHeadHelm()
+var OgreHeadHelm = newOgreHeadHelm
 
 func newOgreHeadHelm() *game.CardDef {
 	return &game.CardDef{

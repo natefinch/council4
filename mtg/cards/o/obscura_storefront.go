@@ -13,7 +13,7 @@ import (
 // Oracle text:
 //
 //	When this land enters, sacrifice it. When you do, search your library for a basic Plains, Island, or Swamp card, put it onto the battlefield tapped, then shuffle and you gain 1 life.
-var ObscuraStorefront = newObscuraStorefront()
+var ObscuraStorefront = newObscuraStorefront
 
 func newObscuraStorefront() *game.CardDef {
 	return &game.CardDef{

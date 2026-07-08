@@ -9,7 +9,7 @@ import (
 )
 
 // DeepSeaSerpent is the card definition for Deep-Sea Serpent.
-var DeepSeaSerpent = newDeepSeaSerpent()
+var DeepSeaSerpent = newDeepSeaSerpent
 
 func newDeepSeaSerpent() *game.CardDef {
 	return &game.CardDef{

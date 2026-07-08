@@ -13,7 +13,7 @@ import (
 //
 //	(Start the game with this conspiracy face up in the command zone.)
 //	Each creature you control assigns combat damage equal to its toughness rather than its power.
-var WeightAdvantage = newWeightAdvantage()
+var WeightAdvantage = newWeightAdvantage
 
 func newWeightAdvantage() *game.CardDef {
 	return &game.CardDef{

@@ -19,7 +19,7 @@ import (
 //	Flying
 //	Ward—Pay 2 life.
 //	Whenever an opponent loses life for the first time during each of their turns, put a +1/+1 counter on Valgavoth and draw a card.
-var ValgavothHarrowerOfSouls = newValgavothHarrowerOfSouls()
+var ValgavothHarrowerOfSouls = newValgavothHarrowerOfSouls
 
 func newValgavothHarrowerOfSouls() *game.CardDef {
 	return &game.CardDef{

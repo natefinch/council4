@@ -17,7 +17,7 @@ import (
 //
 //	Enchant creature or planeswalker
 //	Enchanted permanent can't attack or block, and its activated abilities can't be activated.
-var NahiriSBinding = newNahiriSBinding()
+var NahiriSBinding = newNahiriSBinding
 
 func newNahiriSBinding() *game.CardDef {
 	return &game.CardDef{

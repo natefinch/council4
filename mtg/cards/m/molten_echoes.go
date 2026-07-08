@@ -17,7 +17,7 @@ import (
 //
 //	As this enchantment enters, choose a creature type.
 //	Whenever a nontoken creature you control of the chosen type enters, create a token that's a copy of that creature. That token gains haste. Exile it at the beginning of the next end step.
-var MoltenEchoes = newMoltenEchoes()
+var MoltenEchoes = newMoltenEchoes
 
 func newMoltenEchoes() *game.CardDef {
 	return &game.CardDef{

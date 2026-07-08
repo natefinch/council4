@@ -18,7 +18,7 @@ import (
 //
 //	Flying (This creature can't be blocked except by creatures with flying or reach.)
 //	Noncreature spells you cast cost {1} less to cast.
-var IronLadYoungAvenger = newIronLadYoungAvenger()
+var IronLadYoungAvenger = newIronLadYoungAvenger
 
 func newIronLadYoungAvenger() *game.CardDef {
 	return &game.CardDef{

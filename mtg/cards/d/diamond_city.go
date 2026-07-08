@@ -19,7 +19,7 @@ import (
 //	This land enters with a shield counter on it. (If it would be dealt damage or destroyed, remove a shield counter from it instead.)
 //	{T}: Add {C}.
 //	{T}: Move a shield counter from this land onto target creature. Activate only if two or more creatures entered the battlefield under your control this turn.
-var DiamondCity = newDiamondCity()
+var DiamondCity = newDiamondCity
 
 func newDiamondCity() *game.CardDef {
 	return &game.CardDef{

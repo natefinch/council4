@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, you may search your library and/or graveyard for a card named Rowan, Fearless Sparkmage, reveal it, and put it into your hand. If you search your library this way, shuffle.
-var RowanSStalwarts = newRowanSStalwarts()
+var RowanSStalwarts = newRowanSStalwarts
 
 func newRowanSStalwarts() *game.CardDef {
 	return &game.CardDef{

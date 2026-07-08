@@ -20,7 +20,7 @@ import (
 //	Protection from white
 //	Whenever an opponent discards a card, put a +1/+1 counter on Tourach.
 //	When Tourach enters, if it was kicked, target opponent discards two cards at random.
-var TourachDreadCantor = newTourachDreadCantor()
+var TourachDreadCantor = newTourachDreadCantor
 
 func newTourachDreadCantor() *game.CardDef {
 	return &game.CardDef{

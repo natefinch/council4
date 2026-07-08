@@ -18,7 +18,7 @@ import (
 //
 //	Whenever Haliya enters or attacks, put a +1/+1 counter on target creature you control.
 //	Whenever one or more creatures you control with +1/+1 counters on them deal combat damage to a player, draw a card.
-var HaliyaAscendantCadet = newHaliyaAscendantCadet()
+var HaliyaAscendantCadet = newHaliyaAscendantCadet
 
 func newHaliyaAscendantCadet() *game.CardDef {
 	return &game.CardDef{

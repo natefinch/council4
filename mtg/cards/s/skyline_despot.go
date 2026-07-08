@@ -18,7 +18,7 @@ import (
 //	Flying
 //	When this creature enters, you become the monarch.
 //	At the beginning of your upkeep, if you're the monarch, create a 5/5 red Dragon creature token with flying.
-var SkylineDespot = newSkylineDespot()
+var SkylineDespot = newSkylineDespot
 
 func newSkylineDespot() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 //
 //	Trample
 //	When this creature enters, distribute four +1/+1 counters among any number of target creatures you control.
-var VerdurousGearhulk = newVerdurousGearhulk()
+var VerdurousGearhulk = newVerdurousGearhulk
 
 func newVerdurousGearhulk() *game.CardDef {
 	return &game.CardDef{

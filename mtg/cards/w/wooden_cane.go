@@ -18,7 +18,7 @@ import (
 //	When this Equipment enters, create a 2/2 red Mutant creature token, then attach this Equipment to it.
 //	Equipped creature gets +2/+1.
 //	Equip {3} ({3}: Attach to target creature you control. Equip only as a sorcery.)
-var WoodenCane = newWoodenCane()
+var WoodenCane = newWoodenCane
 
 func newWoodenCane() *game.CardDef {
 	return &game.CardDef{

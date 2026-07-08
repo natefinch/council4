@@ -18,7 +18,7 @@ import (
 //
 //	First strike
 //	Sacrifice this creature: Remove all counters from target permanent.
-var VampireHexmage = newVampireHexmage()
+var VampireHexmage = newVampireHexmage
 
 func newVampireHexmage() *game.CardDef {
 	return &game.CardDef{

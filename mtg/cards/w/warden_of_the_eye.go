@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, return target noncreature, nonland card from your graveyard to your hand.
-var WardenOfTheEye = newWardenOfTheEye()
+var WardenOfTheEye = newWardenOfTheEye
 
 func newWardenOfTheEye() *game.CardDef {
 	return &game.CardDef{

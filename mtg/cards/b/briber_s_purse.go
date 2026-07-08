@@ -18,7 +18,7 @@ import (
 //
 //	This artifact enters with X gem counters on it.
 //	{1}, {T}, Remove a gem counter from this artifact: Target creature can't attack or block this turn.
-var BriberSPurse = newBriberSPurse()
+var BriberSPurse = newBriberSPurse
 
 func newBriberSPurse() *game.CardDef {
 	return &game.CardDef{

@@ -20,7 +20,7 @@ import (
 //	Vigilance, prowess (Whenever you cast a noncreature spell, this creature gets +1/+1 until end of turn.)
 //	Whenever this creature deals combat damage to a player, put that many incubation counters on it.
 //	Remove three incubation counters from this creature: Create a 2/2 blue Drake creature token with flying.
-var DrakeHatcher = newDrakeHatcher()
+var DrakeHatcher = newDrakeHatcher
 
 func newDrakeHatcher() *game.CardDef {
 	return &game.CardDef{

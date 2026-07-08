@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	This creature can't attack or block alone.
-var MoggFlunkies = newMoggFlunkies()
+var MoggFlunkies = newMoggFlunkies
 
 func newMoggFlunkies() *game.CardDef {
 	return &game.CardDef{

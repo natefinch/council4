@@ -17,7 +17,7 @@ import (
 //
 //	Flying
 //	When this creature enters, destroy target creature that was dealt damage this turn.
-var FinalStingFaerie = newFinalStingFaerie()
+var FinalStingFaerie = newFinalStingFaerie
 
 func newFinalStingFaerie() *game.CardDef {
 	return &game.CardDef{

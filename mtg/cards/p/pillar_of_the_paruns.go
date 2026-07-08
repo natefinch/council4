@@ -15,7 +15,7 @@ import (
 // Oracle text:
 //
 //	{T}: Add one mana of any color. Spend this mana only to cast a multicolored spell.
-var PillarOfTheParuns = newPillarOfTheParuns()
+var PillarOfTheParuns = newPillarOfTheParuns
 
 func newPillarOfTheParuns() *game.CardDef {
 	return &game.CardDef{

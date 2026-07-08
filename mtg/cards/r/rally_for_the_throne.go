@@ -17,7 +17,7 @@ import (
 //
 //	Create two 1/1 white Human creature tokens.
 //	Adamant — If at least three white mana was spent to cast this spell, you gain 1 life for each creature you control.
-var RallyForTheThrone = newRallyForTheThrone()
+var RallyForTheThrone = newRallyForTheThrone
 
 func newRallyForTheThrone() *game.CardDef {
 	return &game.CardDef{

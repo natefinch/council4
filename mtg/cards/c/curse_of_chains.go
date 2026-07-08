@@ -18,7 +18,7 @@ import (
 //
 //	Enchant creature
 //	At the beginning of each upkeep, tap enchanted creature.
-var CurseOfChains = newCurseOfChains()
+var CurseOfChains = newCurseOfChains
 
 func newCurseOfChains() *game.CardDef {
 	return &game.CardDef{

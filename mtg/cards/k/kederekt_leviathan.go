@@ -17,7 +17,7 @@ import (
 //
 //	When this creature enters, return all other nonland permanents to their owners' hands.
 //	Unearth {6}{U} ({6}{U}: Return this card from your graveyard to the battlefield. It gains haste. Exile it at the beginning of the next end step or if it would leave the battlefield. Unearth only as a sorcery.)
-var KederektLeviathan = newKederektLeviathan()
+var KederektLeviathan = newKederektLeviathan
 
 func newKederektLeviathan() *game.CardDef {
 	return &game.CardDef{

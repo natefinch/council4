@@ -20,7 +20,7 @@ import (
 //	When this artifact enters, create a 1/1 white Spirit creature token with flying.
 //	Whenever you create one or more creature tokens, put a story counter on this artifact.
 //	{W}, {T}, Remove a story counter from this artifact: Draw a card.
-var StaffOfTheStoryteller = newStaffOfTheStoryteller()
+var StaffOfTheStoryteller = newStaffOfTheStoryteller
 
 func newStaffOfTheStoryteller() *game.CardDef {
 	return &game.CardDef{

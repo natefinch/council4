@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Destroy target non-Elf creature.
-var EyeblightSEnding = newEyeblightSEnding()
+var EyeblightSEnding = newEyeblightSEnding
 
 func newEyeblightSEnding() *game.CardDef {
 	return &game.CardDef{

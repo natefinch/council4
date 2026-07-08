@@ -18,7 +18,7 @@ import (
 // Oracle text:
 //
 //	You may cast target instant or sorcery card from an opponent's graveyard without paying its mana cost.
-var MemoryPlunder = newMemoryPlunder()
+var MemoryPlunder = newMemoryPlunder
 
 func newMemoryPlunder() *game.CardDef {
 	return &game.CardDef{

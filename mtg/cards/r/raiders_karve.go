@@ -17,7 +17,7 @@ import (
 //
 //	Whenever this Vehicle attacks, look at the top card of your library. If it's a land card, you may put it onto the battlefield tapped.
 //	Crew 3 (Tap any number of creatures you control with total power 3 or more: This Vehicle becomes an artifact creature until end of turn.)
-var RaidersKarve = newRaidersKarve()
+var RaidersKarve = newRaidersKarve
 
 func newRaidersKarve() *game.CardDef {
 	return &game.CardDef{

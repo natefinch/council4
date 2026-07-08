@@ -19,7 +19,7 @@ import (
 //
 //	Put a +1/+1 counter on target creature. Put two +1/+1 counters on that creature instead if a creature left the battlefield under your control this turn.
 //	Draw a card.
-var ThatSRoughBuddy = newThatSRoughBuddy()
+var ThatSRoughBuddy = newThatSRoughBuddy
 
 func newThatSRoughBuddy() *game.CardDef {
 	return &game.CardDef{

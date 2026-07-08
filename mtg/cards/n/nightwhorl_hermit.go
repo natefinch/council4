@@ -18,7 +18,7 @@ import (
 //
 //	Vigilance
 //	Threshold — As long as there are seven or more cards in your graveyard, this creature gets +1/+0 and can't be blocked.
-var NightwhorlHermit = newNightwhorlHermit()
+var NightwhorlHermit = newNightwhorlHermit
 
 func newNightwhorlHermit() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 //
 //	When this land enters, sacrifice it unless you return a non-Lair land you control to its owner's hand.
 //	{T}: Add {R}, {G}, or {W}.
-var RithSGrove = newRithSGrove()
+var RithSGrove = newRithSGrove
 
 func newRithSGrove() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 //	Flash
 //	Flying
 //	Tail Spikes — When this creature enters, destroy target creature an opponent controls that was dealt damage this turn.
-var Manticore = newManticore()
+var Manticore = newManticore
 
 func newManticore() *game.CardDef {
 	return &game.CardDef{

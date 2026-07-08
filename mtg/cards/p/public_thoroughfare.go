@@ -17,7 +17,7 @@ import (
 //	This land enters tapped.
 //	When this land enters, sacrifice it unless you tap an untapped artifact or land you control.
 //	{T}: Add one mana of any color.
-var PublicThoroughfare = newPublicThoroughfare()
+var PublicThoroughfare = newPublicThoroughfare
 
 func newPublicThoroughfare() *game.CardDef {
 	return &game.CardDef{

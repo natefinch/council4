@@ -18,7 +18,7 @@ import (
 //
 //	When this creature enters, mill two cards. (Put the top two cards of your library into your graveyard.)
 //	As long as there are five or more mana values among cards in your graveyard, this creature gets +1/+1 and has lifelink.
-var SnoopingNewsie = newSnoopingNewsie()
+var SnoopingNewsie = newSnoopingNewsie
 
 func newSnoopingNewsie() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Exile target creature. At the beginning of the next end step, return that card to the battlefield under its owner's control with a +1/+1 counter on it.
-var OtherworldlyJourney = newOtherworldlyJourney()
+var OtherworldlyJourney = newOtherworldlyJourney
 
 func newOtherworldlyJourney() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 //
 //	Trample
 //	This creature gets +4/+4 for each other Giant you control.
-var BorderlandBehemoth = newBorderlandBehemoth()
+var BorderlandBehemoth = newBorderlandBehemoth
 
 func newBorderlandBehemoth() *game.CardDef {
 	return &game.CardDef{

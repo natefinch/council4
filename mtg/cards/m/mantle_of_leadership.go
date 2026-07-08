@@ -18,7 +18,7 @@ import (
 //	Flash (You may cast this spell any time you could cast an instant.)
 //	Enchant creature
 //	Whenever a creature enters, enchanted creature gets +2/+2 until end of turn.
-var MantleOfLeadership = newMantleOfLeadership()
+var MantleOfLeadership = newMantleOfLeadership
 
 func newMantleOfLeadership() *game.CardDef {
 	return &game.CardDef{

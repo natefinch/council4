@@ -17,7 +17,7 @@ import (
 //
 //	Whenever you're dealt damage, put that many charge counters on this artifact.
 //	At the beginning of each upkeep, you may remove a charge counter from this artifact. If you do, you gain 1 life.
-var SunDroplet = newSunDroplet()
+var SunDroplet = newSunDroplet
 
 func newSunDroplet() *game.CardDef {
 	return &game.CardDef{

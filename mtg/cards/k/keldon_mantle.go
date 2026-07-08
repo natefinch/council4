@@ -20,7 +20,7 @@ import (
 //	{B}: Regenerate enchanted creature.
 //	{R}: Enchanted creature gets +1/+0 until end of turn.
 //	{G}: Enchanted creature gains trample until end of turn.
-var KeldonMantle = newKeldonMantle()
+var KeldonMantle = newKeldonMantle
 
 func newKeldonMantle() *game.CardDef {
 	return &game.CardDef{

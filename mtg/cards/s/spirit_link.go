@@ -17,7 +17,7 @@ import (
 //
 //	Enchant creature (Target a creature as you cast this. This card enters attached to that creature.)
 //	Whenever enchanted creature deals damage, you gain that much life.
-var SpiritLink = newSpiritLink()
+var SpiritLink = newSpiritLink
 
 func newSpiritLink() *game.CardDef {
 	return &game.CardDef{

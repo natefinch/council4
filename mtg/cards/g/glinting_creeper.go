@@ -18,7 +18,7 @@ import (
 //
 //	Converge — This creature enters with two +1/+1 counters on it for each color of mana spent to cast it.
 //	This creature can't be blocked by creatures with power 2 or less.
-var GlintingCreeper = newGlintingCreeper()
+var GlintingCreeper = newGlintingCreeper
 
 func newGlintingCreeper() *game.CardDef {
 	return &game.CardDef{

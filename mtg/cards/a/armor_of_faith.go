@@ -19,7 +19,7 @@ import (
 //	Enchant creature
 //	Enchanted creature gets +1/+1.
 //	{W}: Enchanted creature gets +0/+1 until end of turn.
-var ArmorOfFaith = newArmorOfFaith()
+var ArmorOfFaith = newArmorOfFaith
 
 func newArmorOfFaith() *game.CardDef {
 	return &game.CardDef{

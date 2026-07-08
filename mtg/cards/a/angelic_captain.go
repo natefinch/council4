@@ -17,7 +17,7 @@ import (
 //
 //	Flying
 //	Whenever this creature attacks, it gets +1/+1 until end of turn for each other attacking Ally.
-var AngelicCaptain = newAngelicCaptain()
+var AngelicCaptain = newAngelicCaptain
 
 func newAngelicCaptain() *game.CardDef {
 	return &game.CardDef{

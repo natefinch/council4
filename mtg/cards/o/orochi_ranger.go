@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature deals combat damage to a creature, tap that creature and it doesn't untap during its controller's next untap step.
-var OrochiRanger = newOrochiRanger()
+var OrochiRanger = newOrochiRanger
 
 func newOrochiRanger() *game.CardDef {
 	return &game.CardDef{

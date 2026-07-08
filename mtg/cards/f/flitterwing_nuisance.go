@@ -20,7 +20,7 @@ import (
 //	Flying
 //	This creature enters with a -1/-1 counter on it.
 //	{2}{U}, Remove a counter from this creature: Whenever a creature you control deals combat damage to a player or planeswalker this turn, draw a card.
-var FlitterwingNuisance = newFlitterwingNuisance()
+var FlitterwingNuisance = newFlitterwingNuisance
 
 func newFlitterwingNuisance() *game.CardDef {
 	return &game.CardDef{

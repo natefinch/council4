@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Surveil X, where X is the number of artifacts you control. Then draw three cards. (To surveil X, look at the top X cards of your library, then put any number of them into your graveyard and the rest on top of your library in any order.)
-var CerebralDownload = newCerebralDownload()
+var CerebralDownload = newCerebralDownload
 
 func newCerebralDownload() *game.CardDef {
 	return &game.CardDef{

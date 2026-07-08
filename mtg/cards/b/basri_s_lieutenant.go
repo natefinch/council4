@@ -19,7 +19,7 @@ import (
 //	Vigilance, protection from multicolored
 //	When this creature enters, put a +1/+1 counter on target creature you control.
 //	Whenever this creature or another creature you control dies, if it had a +1/+1 counter on it, create a 2/2 white Knight creature token with vigilance.
-var BasriSLieutenant = newBasriSLieutenant()
+var BasriSLieutenant = newBasriSLieutenant
 
 func newBasriSLieutenant() *game.CardDef {
 	return &game.CardDef{

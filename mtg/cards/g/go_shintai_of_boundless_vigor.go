@@ -18,7 +18,7 @@ import (
 //
 //	Trample
 //	At the beginning of your end step, you may pay {1}. When you do, put a +1/+1 counter on target Shrine for each Shrine you control.
-var GoShintaiOfBoundlessVigor = newGoShintaiOfBoundlessVigor()
+var GoShintaiOfBoundlessVigor = newGoShintaiOfBoundlessVigor
 
 func newGoShintaiOfBoundlessVigor() *game.CardDef {
 	return &game.CardDef{

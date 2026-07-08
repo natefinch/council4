@@ -13,7 +13,7 @@ import (
 // Oracle text:
 //
 //	When this land enters, sacrifice it. When you do, search your library for a basic Swamp, Mountain, or Forest card, put it onto the battlefield tapped, then shuffle and you gain 1 life.
-var RiveteersOverlook = newRiveteersOverlook()
+var RiveteersOverlook = newRiveteersOverlook
 
 func newRiveteersOverlook() *game.CardDef {
 	return &game.CardDef{

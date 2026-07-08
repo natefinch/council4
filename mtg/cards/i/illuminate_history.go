@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Discard any number of cards, then draw that many cards. Then if there are seven or more cards in your graveyard, create a 3/2 red and white Spirit creature token.
-var IlluminateHistory = newIlluminateHistory()
+var IlluminateHistory = newIlluminateHistory
 
 func newIlluminateHistory() *game.CardDef {
 	return &game.CardDef{

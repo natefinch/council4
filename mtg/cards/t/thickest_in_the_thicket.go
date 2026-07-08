@@ -18,7 +18,7 @@ import (
 //
 //	When this enchantment enters, put X +1/+1 counters on target creature, where X is that creature's power.
 //	At the beginning of your end step, draw two cards if you control the creature with the greatest power or tied for the greatest power.
-var ThickestInTheThicket = newThickestInTheThicket()
+var ThickestInTheThicket = newThickestInTheThicket
 
 func newThickestInTheThicket() *game.CardDef {
 	return &game.CardDef{

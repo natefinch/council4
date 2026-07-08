@@ -18,7 +18,7 @@ import (
 //	Whenever you gain life, put a charge counter on Excalibur II.
 //	Equipped creature gets +1/+1 for each charge counter on Excalibur II.
 //	Equip {3}
-var ExcaliburII = newExcaliburII()
+var ExcaliburII = newExcaliburII
 
 func newExcaliburII() *game.CardDef {
 	return &game.CardDef{

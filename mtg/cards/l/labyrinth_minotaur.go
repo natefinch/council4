@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature blocks a creature, that creature doesn't untap during its controller's next untap step.
-var LabyrinthMinotaur = newLabyrinthMinotaur()
+var LabyrinthMinotaur = newLabyrinthMinotaur
 
 func newLabyrinthMinotaur() *game.CardDef {
 	return &game.CardDef{

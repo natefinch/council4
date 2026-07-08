@@ -19,7 +19,7 @@ import (
 //
 //	Whenever a creature you control deals combat damage to a creature, you may put a quest counter on this enchantment.
 //	Remove a quest counter from this enchantment and sacrifice it: Put four +1/+1 counters on target creature.
-var QuestForTheGemblades = newQuestForTheGemblades()
+var QuestForTheGemblades = newQuestForTheGemblades
 
 func newQuestForTheGemblades() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 //
 //	Put any number of target artifact cards from your graveyard on top of your library.
 //	Draw a card.
-var FranticSalvage = newFranticSalvage()
+var FranticSalvage = newFranticSalvage
 
 func newFranticSalvage() *game.CardDef {
 	return &game.CardDef{

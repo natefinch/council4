@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Sacrifice this creature: Counter target instant or sorcery spell unless its controller pays {1}.
-var Cursecatcher = newCursecatcher()
+var Cursecatcher = newCursecatcher
 
 func newCursecatcher() *game.CardDef {
 	return &game.CardDef{

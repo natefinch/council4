@@ -18,7 +18,7 @@ import (
 //	+2: Each player draws a card.
 //	−1: Target player draws a card.
 //	−10: Target player mills twenty cards.
-var JaceBeleren = newJaceBeleren()
+var JaceBeleren = newJaceBeleren
 
 func newJaceBeleren() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, you may search your library for an artifact card with mana value 6 or greater, reveal it, put it into your hand, then shuffle.
-var TreasureMage = newTreasureMage()
+var TreasureMage = newTreasureMage
 
 func newTreasureMage() *game.CardDef {
 	return &game.CardDef{

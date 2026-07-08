@@ -21,7 +21,7 @@ import (
 //	Wither (This deals damage to creatures in the form of -1/-1 counters.)
 //	Whenever you cast a black spell, remove a -1/-1 counter from this creature.
 //	Whenever you cast a green spell, remove a -1/-1 counter from this creature.
-var NoxiousHatchling = newNoxiousHatchling()
+var NoxiousHatchling = newNoxiousHatchling
 
 func newNoxiousHatchling() *game.CardDef {
 	return &game.CardDef{

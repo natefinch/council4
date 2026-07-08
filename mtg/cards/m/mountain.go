@@ -14,18 +14,20 @@ import (
 // Oracle text:
 //
 //	({T}: Add {R}.)
-var Mountain = &game.CardDef{
-	ColorIdentity: color.NewIdentity(color.Red),
-	CardFace: game.CardFace{
-		Name:       "Mountain",
-		Supertypes: []types.Super{types.Basic},
-		Types:      []types.Card{types.Land},
-		Subtypes:   []types.Sub{types.Mountain},
-		OracleText: `
+var Mountain = func() *game.CardDef {
+	return &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Red),
+		CardFace: game.CardFace{
+			Name:       "Mountain",
+			Supertypes: []types.Super{types.Basic},
+			Types:      []types.Card{types.Land},
+			Subtypes:   []types.Sub{types.Mountain},
+			OracleText: `
 			({T}: Add {R}.)
 		`,
-		ManaAbilities: []game.ManaAbility{
-			game.TapManaAbility(mana.R),
+			ManaAbilities: []game.ManaAbility{
+				game.TapManaAbility(mana.R),
+			},
 		},
-	},
+	}
 }

@@ -19,7 +19,7 @@ import (
 //	Enchant creature
 //	When this Aura enters, if it was kicked, tap enchanted creature.
 //	Enchanted creature doesn't untap during its controller's untap step.
-var BubbleSnare = newBubbleSnare()
+var BubbleSnare = newBubbleSnare
 
 func newBubbleSnare() *game.CardDef {
 	return &game.CardDef{

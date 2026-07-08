@@ -19,7 +19,7 @@ import (
 //	Flying
 //	Annihilator 1 (Whenever this creature attacks, defending player sacrifices a permanent of their choice.)
 //	Evoke {2}{U} (You may cast this spell for its evoke cost. If you do, it's sacrificed when it enters.)
-var Nulldrifter = newNulldrifter()
+var Nulldrifter = newNulldrifter
 
 func newNulldrifter() *game.CardDef {
 	return &game.CardDef{

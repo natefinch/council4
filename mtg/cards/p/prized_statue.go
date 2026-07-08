@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	When this artifact enters or is put into a graveyard from the battlefield, create a Treasure token. (It's an artifact with "{T}, Sacrifice this token: Add one mana of any color.")
-var PrizedStatue = newPrizedStatue()
+var PrizedStatue = newPrizedStatue
 
 func newPrizedStatue() *game.CardDef {
 	return &game.CardDef{

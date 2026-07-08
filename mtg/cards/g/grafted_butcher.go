@@ -19,7 +19,7 @@ import (
 //	When this creature enters, Phyrexians you control gain menace until end of turn.
 //	Other Phyrexians you control get +1/+1.
 //	{3}{B}, Sacrifice an artifact or creature: Return this card from your graveyard to the battlefield. Activate only as a sorcery.
-var GraftedButcher = newGraftedButcher()
+var GraftedButcher = newGraftedButcher
 
 func newGraftedButcher() *game.CardDef {
 	return &game.CardDef{

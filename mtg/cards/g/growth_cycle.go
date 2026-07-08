@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Target creature gets +3/+3 until end of turn. It gets an additional +2/+2 until end of turn for each card named Growth Cycle in your graveyard.
-var GrowthCycle = newGrowthCycle()
+var GrowthCycle = newGrowthCycle
 
 func newGrowthCycle() *game.CardDef {
 	return &game.CardDef{

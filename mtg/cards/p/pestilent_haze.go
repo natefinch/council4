@@ -19,7 +19,7 @@ import (
 //	Choose one —
 //	• All creatures get -2/-2 until end of turn.
 //	• Remove two loyalty counters from each planeswalker.
-var PestilentHaze = newPestilentHaze()
+var PestilentHaze = newPestilentHaze
 
 func newPestilentHaze() *game.CardDef {
 	return &game.CardDef{

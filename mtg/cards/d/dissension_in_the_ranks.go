@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Target blocking creature fights another target blocking creature.
-var DissensionInTheRanks = newDissensionInTheRanks()
+var DissensionInTheRanks = newDissensionInTheRanks
 
 func newDissensionInTheRanks() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 //	First strike
 //	When this creature enters or is turned face up, another target creature you control gets +3/+0 until end of turn.
 //	Morph {2}{U}{R}{W} (You may cast this card face down as a 2/2 creature for {3}. Turn it face up any time for its morph cost.)
-var EfreetWeaponmaster = newEfreetWeaponmaster()
+var EfreetWeaponmaster = newEfreetWeaponmaster
 
 func newEfreetWeaponmaster() *game.CardDef {
 	return &game.CardDef{

@@ -9,7 +9,7 @@ import (
 )
 
 // Griptide is the card definition for Griptide.
-var Griptide = newGriptide()
+var Griptide = newGriptide
 
 func newGriptide() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 //
 //	Menace (This creature can't be blocked except by two or more creatures.)
 //	Adamant — If at least three black mana was spent to cast this spell, this creature enters with a +1/+1 counter on it.
-var LocthwainPaladin = newLocthwainPaladin()
+var LocthwainPaladin = newLocthwainPaladin
 
 func newLocthwainPaladin() *game.CardDef {
 	return &game.CardDef{

@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Exile any number of target creatures you control. Return those cards to the battlefield under their owner's control at the beginning of the next end step.
-var EerieInterlude = newEerieInterlude()
+var EerieInterlude = newEerieInterlude
 
 func newEerieInterlude() *game.CardDef {
 	return &game.CardDef{

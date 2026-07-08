@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	{7}: Create a token that's a copy of target artifact. That token gains haste. Exile it at the beginning of the next end step.
-var CogworkAssembler = newCogworkAssembler()
+var CogworkAssembler = newCogworkAssembler
 
 func newCogworkAssembler() *game.CardDef {
 	return &game.CardDef{

@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature attacks, it deals 1 damage to the player or planeswalker it's attacking.
-var ScorchSpitter = newScorchSpitter()
+var ScorchSpitter = newScorchSpitter
 
 func newScorchSpitter() *game.CardDef {
 	return &game.CardDef{

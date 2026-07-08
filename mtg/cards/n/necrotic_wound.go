@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Undergrowth — Target creature gets -X/-X until end of turn, where X is the number of creature cards in your graveyard. If that creature would die this turn, exile it instead.
-var NecroticWound = newNecroticWound()
+var NecroticWound = newNecroticWound
 
 func newNecroticWound() *game.CardDef {
 	return &game.CardDef{

@@ -19,7 +19,7 @@ import (
 //	Kicker {3} (You may pay an additional {3} as you cast this spell.)
 //	Reach (This creature can block creatures with flying.)
 //	If this creature was kicked, it enters with a +1/+1 counter on it.
-var PincerSpider = newPincerSpider()
+var PincerSpider = newPincerSpider
 
 func newPincerSpider() *game.CardDef {
 	return &game.CardDef{

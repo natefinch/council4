@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Skeletonize deals 3 damage to target creature. When a creature dealt damage this way dies this turn, create a 1/1 black Skeleton creature token with "{B}: Regenerate this token."
-var Skeletonize = newSkeletonize()
+var Skeletonize = newSkeletonize
 
 func newSkeletonize() *game.CardDef {
 	return &game.CardDef{

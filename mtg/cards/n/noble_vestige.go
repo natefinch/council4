@@ -18,7 +18,7 @@ import (
 //
 //	Flying
 //	{T}: Prevent the next 1 damage that would be dealt to target player or planeswalker this turn.
-var NobleVestige = newNobleVestige()
+var NobleVestige = newNobleVestige
 
 func newNobleVestige() *game.CardDef {
 	return &game.CardDef{

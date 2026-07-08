@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{W}, {T}, Discard a card: Target creature can't attack this turn.
-var NetterEnDal = newNetterEnDal()
+var NetterEnDal = newNetterEnDal
 
 func newNetterEnDal() *game.CardDef {
 	return &game.CardDef{

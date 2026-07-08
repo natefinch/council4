@@ -18,7 +18,7 @@ import (
 //	Enchant creature you control
 //	When this Aura enters, target opponent discards two cards.
 //	Enchanted creature has lifelink.
-var AspectOfLamprey = newAspectOfLamprey()
+var AspectOfLamprey = newAspectOfLamprey
 
 func newAspectOfLamprey() *game.CardDef {
 	return &game.CardDef{

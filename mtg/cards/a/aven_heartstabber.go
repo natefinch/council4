@@ -19,7 +19,7 @@ import (
 //	Flying
 //	As long as there are five or more mana values among cards in your graveyard, this creature gets +2/+2 and has deathtouch.
 //	When this creature dies, mill two cards, then draw a card.
-var AvenHeartstabber = newAvenHeartstabber()
+var AvenHeartstabber = newAvenHeartstabber
 
 func newAvenHeartstabber() *game.CardDef {
 	return &game.CardDef{

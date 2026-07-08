@@ -18,7 +18,7 @@ import (
 //
 //	This creature enters with two -1/-1 counters on it.
 //	Whenever another creature you control dies, surveil 1, then remove a -1/-1 counter from this creature. (To surveil 1, look at the top card of your library. You may put it into your graveyard.)
-var HeirloomAuntie = newHeirloomAuntie()
+var HeirloomAuntie = newHeirloomAuntie
 
 func newHeirloomAuntie() *game.CardDef {
 	return &game.CardDef{

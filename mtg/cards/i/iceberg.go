@@ -21,7 +21,7 @@ import (
 //	This enchantment enters with X ice counters on it.
 //	{3}: Put an ice counter on this enchantment.
 //	Remove an ice counter from this enchantment: Add {C}.
-var Iceberg = newIceberg()
+var Iceberg = newIceberg
 
 func newIceberg() *game.CardDef {
 	return &game.CardDef{

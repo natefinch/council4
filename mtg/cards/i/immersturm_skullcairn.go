@@ -19,7 +19,7 @@ import (
 //	This land enters tapped.
 //	{T}: Add {B}.
 //	{1}{B}{R}{R}, {T}, Sacrifice this land: It deals 3 damage to target player. That player discards a card. Activate only as a sorcery.
-var ImmersturmSkullcairn = newImmersturmSkullcairn()
+var ImmersturmSkullcairn = newImmersturmSkullcairn
 
 func newImmersturmSkullcairn() *game.CardDef {
 	return &game.CardDef{

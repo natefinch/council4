@@ -20,7 +20,7 @@ import (
 //	Kicker {R} (You may pay an additional {R} as you cast this spell.)
 //	Menace
 //	When this creature enters, if it was kicked, return target creature card with mana value 3 or less from your graveyard to the battlefield. It gains haste. Sacrifice it at the beginning of the next end step.
-var BalduvianAtrocity = newBalduvianAtrocity()
+var BalduvianAtrocity = newBalduvianAtrocity
 
 func newBalduvianAtrocity() *game.CardDef {
 	return &game.CardDef{

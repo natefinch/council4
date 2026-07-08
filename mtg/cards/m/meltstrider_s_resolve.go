@@ -18,7 +18,7 @@ import (
 //	Enchant creature you control
 //	When this Aura enters, enchanted creature fights up to one target creature an opponent controls. (Each deals damage equal to its power to the other.)
 //	Enchanted creature gets +0/+2 and can't be blocked by more than one creature.
-var MeltstriderSResolve = newMeltstriderSResolve()
+var MeltstriderSResolve = newMeltstriderSResolve
 
 func newMeltstriderSResolve() *game.CardDef {
 	return &game.CardDef{

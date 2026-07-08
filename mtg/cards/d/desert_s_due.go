@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Target creature gets -2/-2 until end of turn. It gets an additional -1/-1 until end of turn for each Desert you control.
-var DesertSDue = newDesertSDue()
+var DesertSDue = newDesertSDue
 
 func newDesertSDue() *game.CardDef {
 	return &game.CardDef{

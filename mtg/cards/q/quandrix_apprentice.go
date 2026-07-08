@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Magecraft — Whenever you cast or copy an instant or sorcery spell, look at the top three cards of your library. You may reveal a land card from among them and put that card into your hand. Put the rest on the bottom of your library in any order.
-var QuandrixApprentice = newQuandrixApprentice()
+var QuandrixApprentice = newQuandrixApprentice
 
 func newQuandrixApprentice() *game.CardDef {
 	return &game.CardDef{

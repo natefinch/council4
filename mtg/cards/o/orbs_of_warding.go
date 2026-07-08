@@ -16,7 +16,7 @@ import (
 //
 //	You have hexproof. (You can't be the target of spells or abilities your opponents control.)
 //	If a creature would deal damage to you, prevent 1 of that damage.
-var OrbsOfWarding = newOrbsOfWarding()
+var OrbsOfWarding = newOrbsOfWarding
 
 func newOrbsOfWarding() *game.CardDef {
 	return &game.CardDef{

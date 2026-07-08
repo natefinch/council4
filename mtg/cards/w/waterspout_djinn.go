@@ -17,7 +17,7 @@ import (
 //
 //	Flying
 //	At the beginning of your upkeep, sacrifice this creature unless you return an untapped Island you control to its owner's hand.
-var WaterspoutDjinn = newWaterspoutDjinn()
+var WaterspoutDjinn = newWaterspoutDjinn
 
 func newWaterspoutDjinn() *game.CardDef {
 	return &game.CardDef{

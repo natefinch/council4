@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever a player casts a red spell, you may pay {3}. If you do, untap target permanent.
-var HematiteTalisman = newHematiteTalisman()
+var HematiteTalisman = newHematiteTalisman
 
 func newHematiteTalisman() *game.CardDef {
 	return &game.CardDef{

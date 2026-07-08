@@ -9,7 +9,7 @@ import (
 )
 
 // EmperorCrocodile is the card definition for Emperor Crocodile.
-var EmperorCrocodile = newEmperorCrocodile()
+var EmperorCrocodile = newEmperorCrocodile
 
 func newEmperorCrocodile() *game.CardDef {
 	return &game.CardDef{

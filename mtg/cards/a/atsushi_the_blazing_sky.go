@@ -20,7 +20,7 @@ import (
 //	When Atsushi dies, choose one —
 //	• Exile the top two cards of your library. Until the end of your next turn, you may play those cards.
 //	• Create three Treasure tokens.
-var AtsushiTheBlazingSky = newAtsushiTheBlazingSky()
+var AtsushiTheBlazingSky = newAtsushiTheBlazingSky
 
 func newAtsushiTheBlazingSky() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{T}: You may put a green creature card from your hand onto the battlefield. Activate only during your turn, before attackers are declared.
-var NorwoodPriestess = newNorwoodPriestess()
+var NorwoodPriestess = newNorwoodPriestess
 
 func newNorwoodPriestess() *game.CardDef {
 	return &game.CardDef{

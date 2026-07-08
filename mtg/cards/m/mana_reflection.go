@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	If you tap a permanent for mana, it produces twice as much of that mana instead.
-var ManaReflection = newManaReflection()
+var ManaReflection = newManaReflection
 
 func newManaReflection() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 //
 //	Gain control of target creature until end of turn. Untap that creature. It gets +2/+0 and gains haste until end of turn.
 //	Madness {3}{R} (If you discard this card, discard it into exile. When you do, cast it for its madness cost or put it into your graveyard.)
-var MalevolentWhispers = newMalevolentWhispers()
+var MalevolentWhispers = newMalevolentWhispers
 
 func newMalevolentWhispers() *game.CardDef {
 	return &game.CardDef{

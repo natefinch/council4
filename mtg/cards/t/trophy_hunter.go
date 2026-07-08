@@ -19,7 +19,7 @@ import (
 //
 //	{1}{G}: This creature deals 1 damage to target creature with flying.
 //	Whenever a creature with flying dealt damage by this creature this turn dies, put a +1/+1 counter on this creature.
-var TrophyHunter = newTrophyHunter()
+var TrophyHunter = newTrophyHunter
 
 func newTrophyHunter() *game.CardDef {
 	return &game.CardDef{

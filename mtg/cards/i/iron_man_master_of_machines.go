@@ -18,7 +18,7 @@ import (
 //	Flying, vigilance
 //	Iron Man gets +1/+0 for each other artifact you control.
 //	Whenever Iron Man attacks, if an artifact entered the battlefield under your control this turn, draw a card.
-var IronManMasterOfMachines = newIronManMasterOfMachines()
+var IronManMasterOfMachines = newIronManMasterOfMachines
 
 func newIronManMasterOfMachines() *game.CardDef {
 	return &game.CardDef{

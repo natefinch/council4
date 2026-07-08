@@ -10,7 +10,7 @@ import (
 )
 
 // PirateShip is the card definition for Pirate Ship.
-var PirateShip = newPirateShip()
+var PirateShip = newPirateShip
 
 func newPirateShip() *game.CardDef {
 	return &game.CardDef{

@@ -19,7 +19,7 @@ import (
 //	When Flash Thompson enters, choose one or both —
 //	• Heckle — Tap target creature.
 //	• Hero Worship — Untap target creature.
-var FlashThompsonSpiderFan = newFlashThompsonSpiderFan()
+var FlashThompsonSpiderFan = newFlashThompsonSpiderFan
 
 func newFlashThompsonSpiderFan() *game.CardDef {
 	return &game.CardDef{

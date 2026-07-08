@@ -19,7 +19,7 @@ import (
 //	When this Equipment enters, attach it to target creature you control. That creature gains hexproof until end of turn. (It can't be the target of spells or abilities your opponents control.)
 //	Equipped creature gets +1/+2.
 //	Equip {3}
-var IllvoiLightJammer = newIllvoiLightJammer()
+var IllvoiLightJammer = newIllvoiLightJammer
 
 func newIllvoiLightJammer() *game.CardDef {
 	return &game.CardDef{

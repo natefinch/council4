@@ -9,7 +9,7 @@ import (
 )
 
 // BogSerpent is the card definition for Bog Serpent.
-var BogSerpent = newBogSerpent()
+var BogSerpent = newBogSerpent
 
 func newBogSerpent() *game.CardDef {
 	return &game.CardDef{

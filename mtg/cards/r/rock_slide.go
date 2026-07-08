@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Rock Slide deals X damage divided as you choose among any number of target attacking or blocking creatures without flying.
-var RockSlide = newRockSlide()
+var RockSlide = newRockSlide
 
 func newRockSlide() *game.CardDef {
 	return &game.CardDef{

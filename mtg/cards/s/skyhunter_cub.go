@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	As long as this creature is equipped, it gets +1/+1 and has flying.
-var SkyhunterCub = newSkyhunterCub()
+var SkyhunterCub = newSkyhunterCub
 
 func newSkyhunterCub() *game.CardDef {
 	return &game.CardDef{

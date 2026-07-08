@@ -13,7 +13,7 @@ import (
 // Oracle text:
 //
 //	Shock deals 2 damage to any target.
-var Shock = newShock()
+var Shock = newShock
 
 func newShock() *game.CardDef {
 	return &game.CardDef{

@@ -20,7 +20,7 @@ import (
 //	+1: Up to one target creature you control can't be blocked this turn. Draw a card, then discard a card.
 //	−2: Create a 2/1 blue Ninja creature token.
 //	−9: You get an emblem with "Whenever a player casts a spell, you create a 2/1 blue Ninja creature token."
-var KaitoCunningInfiltrator = newKaitoCunningInfiltrator()
+var KaitoCunningInfiltrator = newKaitoCunningInfiltrator
 
 func newKaitoCunningInfiltrator() *game.CardDef {
 	return &game.CardDef{

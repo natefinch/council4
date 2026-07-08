@@ -18,7 +18,7 @@ import (
 //	Enchant creature
 //	Enchanted creature gets +2/+2 and is goaded. (It attacks each combat if able and attacks a player other than you if able.)
 //	Whenever enchanted creature attacks, you scry 2.
-var PsychicImpetus = newPsychicImpetus()
+var PsychicImpetus = newPsychicImpetus
 
 func newPsychicImpetus() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 //
 //	When this creature enters, reveal the top four cards of your library. Put all Zombie cards revealed this way into your hand and the rest on the bottom of your library in any order.
 //	{1}{B}: Regenerate this creature.
-var GraveDefiler = newGraveDefiler()
+var GraveDefiler = newGraveDefiler
 
 func newGraveDefiler() *game.CardDef {
 	return &game.CardDef{

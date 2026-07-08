@@ -18,7 +18,7 @@ import (
 //
 //	When this creature enters or is turned face up, create a 1/1 colorless Thopter artifact creature token with flying.
 //	Disguise {U/R}{U/R} (You may cast this card face down for {3} as a 2/2 creature with ward {2}. Turn it face up any time for its disguise cost.)
-var GadgetTechnician = newGadgetTechnician()
+var GadgetTechnician = newGadgetTechnician
 
 func newGadgetTechnician() *game.CardDef {
 	return &game.CardDef{

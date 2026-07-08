@@ -15,7 +15,7 @@ import (
 // Oracle text:
 //
 //	{T}: Prodigal Sorcerer deals 1 damage to any target.
-var ProdigalSorcerer = newProdigalSorcerer()
+var ProdigalSorcerer = newProdigalSorcerer
 
 func newProdigalSorcerer() *game.CardDef {
 	return &game.CardDef{

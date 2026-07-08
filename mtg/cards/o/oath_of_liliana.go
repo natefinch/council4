@@ -17,7 +17,7 @@ import (
 //
 //	When Oath of Liliana enters, each opponent sacrifices a creature of their choice.
 //	At the beginning of each end step, if a planeswalker entered the battlefield under your control this turn, create a 2/2 black Zombie creature token.
-var OathOfLiliana = newOathOfLiliana()
+var OathOfLiliana = newOathOfLiliana
 
 func newOathOfLiliana() *game.CardDef {
 	return &game.CardDef{

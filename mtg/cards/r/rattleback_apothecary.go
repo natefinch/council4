@@ -17,7 +17,7 @@ import (
 //
 //	Deathtouch
 //	Whenever you commit a crime, target creature you control gains your choice of menace or lifelink until end of turn. (Targeting opponents, anything they control, and/or cards in their graveyards is a crime.)
-var RattlebackApothecary = newRattlebackApothecary()
+var RattlebackApothecary = newRattlebackApothecary
 
 func newRattlebackApothecary() *game.CardDef {
 	return &game.CardDef{

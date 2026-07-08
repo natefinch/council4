@@ -18,7 +18,7 @@ import (
 //	Choose one —
 //	• Fight the Current — Return target nonland permanent to its owner's hand.
 //	• Find a Crossing — Target creature gets +1/+0 until end of turn and can't be blocked this turn.
-var YouComeToARiver = newYouComeToARiver()
+var YouComeToARiver = newYouComeToARiver
 
 func newYouComeToARiver() *game.CardDef {
 	return &game.CardDef{

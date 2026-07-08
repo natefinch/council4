@@ -18,7 +18,7 @@ import (
 //	Choose one or both —
 //	• Double target creature's power and toughness until end of turn.
 //	• Target creature you control fights target creature an opponent controls.
-var EpicFight = newEpicFight()
+var EpicFight = newEpicFight
 
 func newEpicFight() *game.CardDef {
 	return &game.CardDef{

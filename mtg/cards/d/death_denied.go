@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Return X target creature cards from your graveyard to your hand.
-var DeathDenied = newDeathDenied()
+var DeathDenied = newDeathDenied
 
 func newDeathDenied() *game.CardDef {
 	return &game.CardDef{

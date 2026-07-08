@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Distribute four +1/+1 counters among up to four target creatures you control. Creatures you control gain vigilance and trample until end of turn.
-var StormTheSeedcore = newStormTheSeedcore()
+var StormTheSeedcore = newStormTheSeedcore
 
 func newStormTheSeedcore() *game.CardDef {
 	return &game.CardDef{

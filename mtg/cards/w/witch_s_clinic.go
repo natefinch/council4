@@ -10,7 +10,7 @@ import (
 )
 
 // WitchSClinic is the card definition for Witch's Clinic.
-var WitchSClinic = newWitchSClinic()
+var WitchSClinic = newWitchSClinic
 
 func newWitchSClinic() *game.CardDef {
 	return &game.CardDef{

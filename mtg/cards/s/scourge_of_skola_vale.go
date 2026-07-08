@@ -20,7 +20,7 @@ import (
 //	Trample
 //	This creature enters with two +1/+1 counters on it.
 //	{T}, Sacrifice another creature: Put a number of +1/+1 counters on this creature equal to the sacrificed creature's toughness.
-var ScourgeOfSkolaVale = newScourgeOfSkolaVale()
+var ScourgeOfSkolaVale = newScourgeOfSkolaVale
 
 func newScourgeOfSkolaVale() *game.CardDef {
 	return &game.CardDef{

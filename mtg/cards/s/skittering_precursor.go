@@ -19,7 +19,7 @@ import (
 //	Devoid (This card has no color.)
 //	Menace
 //	Whenever you sacrifice a nontoken permanent, create a 0/1 colorless Eldrazi Spawn creature token with "Sacrifice this token: Add {C}."
-var SkitteringPrecursor = newSkitteringPrecursor()
+var SkitteringPrecursor = newSkitteringPrecursor
 
 func newSkitteringPrecursor() *game.CardDef {
 	return &game.CardDef{

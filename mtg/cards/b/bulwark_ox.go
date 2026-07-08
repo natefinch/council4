@@ -11,7 +11,7 @@ import (
 )
 
 // BulwarkOx is the card definition for Bulwark Ox.
-var BulwarkOx = newBulwarkOx()
+var BulwarkOx = newBulwarkOx
 
 func newBulwarkOx() *game.CardDef {
 	return &game.CardDef{

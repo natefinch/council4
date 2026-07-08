@@ -19,7 +19,7 @@ import (
 //	Kicker {1}{G} (You may pay an additional {1}{G} as you cast this spell.)
 //	Flying
 //	If this creature was kicked, it enters with two +1/+1 counters on it.
-var ShalaiSAcolyte = newShalaiSAcolyte()
+var ShalaiSAcolyte = newShalaiSAcolyte
 
 func newShalaiSAcolyte() *game.CardDef {
 	return &game.CardDef{

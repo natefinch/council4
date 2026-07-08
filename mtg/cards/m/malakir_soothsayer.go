@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Cohort — {T}, Tap an untapped Ally you control: You draw a card and you lose 1 life.
-var MalakirSoothsayer = newMalakirSoothsayer()
+var MalakirSoothsayer = newMalakirSoothsayer
 
 func newMalakirSoothsayer() *game.CardDef {
 	return &game.CardDef{

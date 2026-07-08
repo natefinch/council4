@@ -19,7 +19,7 @@ import (
 //
 //	Whenever a creature an opponent controls becomes tapped, put a palliation counter on this enchantment.
 //	Remove a palliation counter from this enchantment: Prevent the next 1 damage that would be dealt to you this turn.
-var PalliationAccord = newPalliationAccord()
+var PalliationAccord = newPalliationAccord
 
 func newPalliationAccord() *game.CardDef {
 	return &game.CardDef{

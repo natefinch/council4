@@ -18,7 +18,7 @@ import (
 //
 //	Enchant land you control
 //	Enchanted land has "{T}: Prevent the next 1 damage that would be dealt to any target this turn."
-var HotSprings = newHotSprings()
+var HotSprings = newHotSprings
 
 func newHotSprings() *game.CardDef {
 	return &game.CardDef{

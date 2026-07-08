@@ -17,7 +17,7 @@ import (
 //
 //	Cycling {2}{W} ({2}{W}, Discard this card: Draw a card.)
 //	When you cycle this card, Soldier creatures get +1/+1 and gain first strike until end of turn.
-var GempalmAvenger = newGempalmAvenger()
+var GempalmAvenger = newGempalmAvenger
 
 func newGempalmAvenger() *game.CardDef {
 	return &game.CardDef{

@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Target green creature you control gets +2/+2 until end of turn. It fights target green creature an opponent controls.
-var HuntTheHunter = newHuntTheHunter()
+var HuntTheHunter = newHuntTheHunter
 
 func newHuntTheHunter() *game.CardDef {
 	return &game.CardDef{

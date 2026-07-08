@@ -18,7 +18,7 @@ import (
 //
 //	Flanking (Whenever a creature without flanking blocks this creature, the blocking creature gets -1/-1 until end of turn.)
 //	{2}: This creature becomes colorless until end of turn.
-var BlazingBladeAskari = newBlazingBladeAskari()
+var BlazingBladeAskari = newBlazingBladeAskari
 
 func newBlazingBladeAskari() *game.CardDef {
 	return &game.CardDef{

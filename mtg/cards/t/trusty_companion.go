@@ -17,7 +17,7 @@ import (
 //
 //	Vigilance
 //	This creature can't attack alone.
-var TrustyCompanion = newTrustyCompanion()
+var TrustyCompanion = newTrustyCompanion
 
 func newTrustyCompanion() *game.CardDef {
 	return &game.CardDef{

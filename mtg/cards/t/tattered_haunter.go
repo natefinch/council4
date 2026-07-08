@@ -17,7 +17,7 @@ import (
 //
 //	Flying
 //	This creature can block only creatures with flying.
-var TatteredHaunter = newTatteredHaunter()
+var TatteredHaunter = newTatteredHaunter
 
 func newTatteredHaunter() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 //
 //	Flying
 //	This creature gets +4/+4 as long as an opponent has ten or more cards in their graveyard.
-var JaceSPhantasm = newJaceSPhantasm()
+var JaceSPhantasm = newJaceSPhantasm
 
 func newJaceSPhantasm() *game.CardDef {
 	return &game.CardDef{

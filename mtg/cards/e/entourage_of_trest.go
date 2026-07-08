@@ -17,7 +17,7 @@ import (
 //
 //	When this creature enters, you become the monarch.
 //	This creature can block an additional creature each combat as long as you're the monarch.
-var EntourageOfTrest = newEntourageOfTrest()
+var EntourageOfTrest = newEntourageOfTrest
 
 func newEntourageOfTrest() *game.CardDef {
 	return &game.CardDef{

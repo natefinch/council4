@@ -17,7 +17,7 @@ import (
 //	Flash
 //	All creatures have shroud. (They can't be the targets of spells or abilities.)
 //	At the beginning of your upkeep, sacrifice this artifact. When you do, target creature you control can't be blocked this turn.
-var SmokeBomb = newSmokeBomb()
+var SmokeBomb = newSmokeBomb
 
 func newSmokeBomb() *game.CardDef {
 	return &game.CardDef{

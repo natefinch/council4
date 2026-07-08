@@ -20,7 +20,7 @@ import (
 //	Flying
 //	As long as an opponent has eight or more cards in their graveyard, Rogues you control get +1/+0.
 //	Whenever one or more Rogues you control attack, each opponent mills two cards.
-var SoaringThoughtThief = newSoaringThoughtThief()
+var SoaringThoughtThief = newSoaringThoughtThief
 
 func newSoaringThoughtThief() *game.CardDef {
 	return &game.CardDef{

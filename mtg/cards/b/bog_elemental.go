@@ -17,7 +17,7 @@ import (
 //
 //	Protection from white
 //	At the beginning of your upkeep, sacrifice this creature unless you sacrifice a land.
-var BogElemental = newBogElemental()
+var BogElemental = newBogElemental
 
 func newBogElemental() *game.CardDef {
 	return &game.CardDef{

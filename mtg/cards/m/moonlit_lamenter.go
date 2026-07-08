@@ -19,7 +19,7 @@ import (
 //
 //	This creature enters with a -1/-1 counter on it.
 //	{1}{W}, Remove a counter from this creature: Draw a card. Activate only as a sorcery.
-var MoonlitLamenter = newMoonlitLamenter()
+var MoonlitLamenter = newMoonlitLamenter
 
 func newMoonlitLamenter() *game.CardDef {
 	return &game.CardDef{

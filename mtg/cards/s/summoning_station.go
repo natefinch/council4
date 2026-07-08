@@ -17,7 +17,7 @@ import (
 //
 //	{T}: Create a 2/2 colorless Pincher creature token.
 //	Whenever an artifact is put into a graveyard from the battlefield, you may untap this artifact.
-var SummoningStation = newSummoningStation()
+var SummoningStation = newSummoningStation
 
 func newSummoningStation() *game.CardDef {
 	return &game.CardDef{

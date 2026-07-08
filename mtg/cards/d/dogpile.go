@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Dogpile deals damage to any target equal to the number of attacking creatures you control.
-var Dogpile = newDogpile()
+var Dogpile = newDogpile
 
 func newDogpile() *game.CardDef {
 	return &game.CardDef{

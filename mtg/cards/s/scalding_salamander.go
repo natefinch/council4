@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature attacks, you may have it deal 1 damage to each creature without flying defending player controls.
-var ScaldingSalamander = newScaldingSalamander()
+var ScaldingSalamander = newScaldingSalamander
 
 func newScaldingSalamander() *game.CardDef {
 	return &game.CardDef{

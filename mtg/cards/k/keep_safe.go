@@ -17,7 +17,7 @@ import (
 //
 //	Counter target spell that targets a permanent you control.
 //	Draw a card.
-var KeepSafe = newKeepSafe()
+var KeepSafe = newKeepSafe
 
 func newKeepSafe() *game.CardDef {
 	return &game.CardDef{

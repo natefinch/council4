@@ -17,7 +17,7 @@ import (
 //	Equipped creature gets +1/+1 for each creature you control.
 //	When a legendary creature you control enters, if there is no monarch, you become the monarch.
 //	Equip {4}. This ability costs {3} less to activate if you're the monarch.
-var CrownOfGondor = newCrownOfGondor()
+var CrownOfGondor = newCrownOfGondor
 
 func newCrownOfGondor() *game.CardDef {
 	return &game.CardDef{

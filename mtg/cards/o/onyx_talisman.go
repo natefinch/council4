@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever a player casts a black spell, you may pay {3}. If you do, untap target permanent.
-var OnyxTalisman = newOnyxTalisman()
+var OnyxTalisman = newOnyxTalisman
 
 func newOnyxTalisman() *game.CardDef {
 	return &game.CardDef{

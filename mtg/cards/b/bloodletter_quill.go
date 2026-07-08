@@ -19,7 +19,7 @@ import (
 //
 //	{2}, {T}, Put a blood counter on this artifact: Draw a card, then you lose 1 life for each blood counter on this artifact.
 //	{U}{B}: Remove a blood counter from this artifact.
-var BloodletterQuill = newBloodletterQuill()
+var BloodletterQuill = newBloodletterQuill
 
 func newBloodletterQuill() *game.CardDef {
 	return &game.CardDef{

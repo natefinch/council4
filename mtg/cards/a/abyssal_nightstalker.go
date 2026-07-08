@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature attacks and isn't blocked, defending player discards a card.
-var AbyssalNightstalker = newAbyssalNightstalker()
+var AbyssalNightstalker = newAbyssalNightstalker
 
 func newAbyssalNightstalker() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 //
 //	When you cast this spell, you may return target creature card from your graveyard to the battlefield.
 //	Annihilator 2 (Whenever this creature attacks, defending player sacrifices two permanents of their choice.)
-var ArtisanOfKozilek = newArtisanOfKozilek()
+var ArtisanOfKozilek = newArtisanOfKozilek
 
 func newArtisanOfKozilek() *game.CardDef {
 	return &game.CardDef{

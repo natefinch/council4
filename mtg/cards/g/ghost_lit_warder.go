@@ -18,7 +18,7 @@ import (
 //
 //	{3}{U}, {T}: Counter target spell unless its controller pays {2}.
 //	Channel — {3}{U}, Discard this card: Counter target spell unless its controller pays {4}.
-var GhostLitWarder = newGhostLitWarder()
+var GhostLitWarder = newGhostLitWarder
 
 func newGhostLitWarder() *game.CardDef {
 	return &game.CardDef{

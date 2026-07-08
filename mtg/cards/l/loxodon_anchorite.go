@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	{T}: Prevent the next 2 damage that would be dealt to any target this turn.
-var LoxodonAnchorite = newLoxodonAnchorite()
+var LoxodonAnchorite = newLoxodonAnchorite
 
 func newLoxodonAnchorite() *game.CardDef {
 	return &game.CardDef{

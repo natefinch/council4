@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	When this creature enters, you may tap it. If you do, proliferate. (Choose any number of permanents and/or players, then give each another counter of each kind already there.)
-var GitaxianAnatomist = newGitaxianAnatomist()
+var GitaxianAnatomist = newGitaxianAnatomist
 
 func newGitaxianAnatomist() *game.CardDef {
 	return &game.CardDef{

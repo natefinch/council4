@@ -16,7 +16,7 @@ import (
 //
 //	Equipped creature can block an additional creature each combat.
 //	Equip {1}
-var EchoCirclet = newEchoCirclet()
+var EchoCirclet = newEchoCirclet
 
 func newEchoCirclet() *game.CardDef {
 	return &game.CardDef{

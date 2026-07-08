@@ -19,7 +19,7 @@ import (
 //	Equipped creature gets +2/+2 and has vigilance.
 //	Whenever equipped creature attacks the monarch, destroy target tapped nonland permanent that player controls.
 //	Equip {2}
-var TheSpearOfBashenga = newTheSpearOfBashenga()
+var TheSpearOfBashenga = newTheSpearOfBashenga
 
 func newTheSpearOfBashenga() *game.CardDef {
 	return &game.CardDef{

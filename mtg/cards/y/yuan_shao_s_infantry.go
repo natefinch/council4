@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature attacks alone, this creature can't be blocked this combat.
-var YuanShaoSInfantry = newYuanShaoSInfantry()
+var YuanShaoSInfantry = newYuanShaoSInfantry
 
 func newYuanShaoSInfantry() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 //
 //	Flying
 //	When this creature enters, reveal the top three cards of your library. Put all Island cards revealed this way into your hand and the rest on the bottom of your library in any order.
-var MerfolkWayfinder = newMerfolkWayfinder()
+var MerfolkWayfinder = newMerfolkWayfinder
 
 func newMerfolkWayfinder() *game.CardDef {
 	return &game.CardDef{

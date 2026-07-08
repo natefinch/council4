@@ -18,7 +18,7 @@ import (
 //
 //	When Kyoshi Island Plaza enters, search your library for up to X basic land cards, where X is the number of Shrines you control. Put those cards onto the battlefield tapped, then shuffle.
 //	Whenever another Shrine you control enters, search your library for a basic land card, put it onto the battlefield tapped, then shuffle.
-var KyoshiIslandPlaza = newKyoshiIslandPlaza()
+var KyoshiIslandPlaza = newKyoshiIslandPlaza
 
 func newKyoshiIslandPlaza() *game.CardDef {
 	return &game.CardDef{

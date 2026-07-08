@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	At the beginning of your end step, return up to one target Eldrazi creature card from your graveyard to your hand. Create two 1/1 colorless Eldrazi Scion creature tokens with "Sacrifice this token: Add {C}."
-var SpawnbedProtector = newSpawnbedProtector()
+var SpawnbedProtector = newSpawnbedProtector
 
 func newSpawnbedProtector() *game.CardDef {
 	return &game.CardDef{

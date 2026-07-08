@@ -18,7 +18,7 @@ import (
 //
 //	Tap another untapped Rogue you control: This creature gains deathtouch until end of turn.
 //	Whenever this creature deals combat damage to a player, that player mills three cards. (They put the top three cards of their library into their graveyard.)
-var ShadowStinger = newShadowStinger()
+var ShadowStinger = newShadowStinger
 
 func newShadowStinger() *game.CardDef {
 	return &game.CardDef{

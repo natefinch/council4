@@ -17,7 +17,7 @@ import (
 //
 //	First strike
 //	When this creature enters, it deals 1 damage to each opponent and each creature and planeswalker they control.
-var GoblinChainwhirler = newGoblinChainwhirler()
+var GoblinChainwhirler = newGoblinChainwhirler
 
 func newGoblinChainwhirler() *game.CardDef {
 	return &game.CardDef{

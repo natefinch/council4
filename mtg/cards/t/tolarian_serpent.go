@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	At the beginning of your upkeep, mill seven cards.
-var TolarianSerpent = newTolarianSerpent()
+var TolarianSerpent = newTolarianSerpent
 
 func newTolarianSerpent() *game.CardDef {
 	return &game.CardDef{

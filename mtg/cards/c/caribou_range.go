@@ -19,7 +19,7 @@ import (
 //	Enchant land you control
 //	Enchanted land has "{W}{W}, {T}: Create a 0/1 white Caribou creature token."
 //	Sacrifice a Caribou token: You gain 1 life.
-var CaribouRange = newCaribouRange()
+var CaribouRange = newCaribouRange
 
 func newCaribouRange() *game.CardDef {
 	return &game.CardDef{

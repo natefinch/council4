@@ -16,57 +16,59 @@ import (
 // Oracle text:
 //
 //	The owner of target permanent shuffles it into their library, then reveals the top card of their library. If it's a permanent card, they put it onto the battlefield.
-var ChaosWarp = &game.CardDef{
-	ColorIdentity: color.NewIdentity(color.Red),
-	CardFace: game.CardFace{
-		Name: "Chaos Warp",
-		ManaCost: opt.Val(cost.Mana{
-			cost.O(2),
-			cost.R,
-		}),
-		Colors: []color.Color{color.Red},
-		Types:  []types.Card{types.Instant},
-		OracleText: `
+var ChaosWarp = func() *game.CardDef {
+	return &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Red),
+		CardFace: game.CardFace{
+			Name: "Chaos Warp",
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(2),
+				cost.R,
+			}),
+			Colors: []color.Color{color.Red},
+			Types:  []types.Card{types.Instant},
+			OracleText: `
 			The owner of target permanent shuffles it into their library, then reveals the top card of their library. If it's a permanent card, they put it onto the battlefield.
 		`,
-		SpellAbility: opt.Val(
-			game.Mode{
-				Targets: []game.TargetSpec{
-					{
-						MinTargets: 1,
-						MaxTargets: 1,
-						Constraint: "permanent",
-						Allow:      game.TargetAllowPermanent,
-					},
-				},
-				Sequence: []game.Instruction{
-					{
-						Primitive: game.ShufflePermanentIntoLibrary{
-							Object: game.TargetPermanentReference(0),
+			SpellAbility: opt.Val(
+				game.Mode{
+					Targets: []game.TargetSpec{
+						{
+							MinTargets: 1,
+							MaxTargets: 1,
+							Constraint: "permanent",
+							Allow:      game.TargetAllowPermanent,
 						},
 					},
-					{
-						Primitive: game.Reveal{
-							Amount:        game.Fixed(1),
-							Player:        game.ObjectOwnerReference(game.TargetPermanentReference(0)),
-							PublishLinked: game.LinkedKey("chaos-warp-revealed"),
-						},
-					},
-					{
-						Primitive: game.PutOnBattlefield{
-							Source:    game.LinkedBattlefieldSource(game.LinkedKey("chaos-warp-revealed")),
-							Recipient: opt.Val(game.ObjectOwnerReference(game.TargetPermanentReference(0))),
-						},
-						CardCondition: opt.Val(game.CardSelection{
-							Card: game.CardReference{
-								Kind:   game.CardReferenceLinked,
-								LinkID: "chaos-warp-revealed",
+					Sequence: []game.Instruction{
+						{
+							Primitive: game.ShufflePermanentIntoLibrary{
+								Object: game.TargetPermanentReference(0),
 							},
-							Selection: game.Selection{RequirePermanentCard: true},
-						}),
+						},
+						{
+							Primitive: game.Reveal{
+								Amount:        game.Fixed(1),
+								Player:        game.ObjectOwnerReference(game.TargetPermanentReference(0)),
+								PublishLinked: game.LinkedKey("chaos-warp-revealed"),
+							},
+						},
+						{
+							Primitive: game.PutOnBattlefield{
+								Source:    game.LinkedBattlefieldSource(game.LinkedKey("chaos-warp-revealed")),
+								Recipient: opt.Val(game.ObjectOwnerReference(game.TargetPermanentReference(0))),
+							},
+							CardCondition: opt.Val(game.CardSelection{
+								Card: game.CardReference{
+									Kind:   game.CardReferenceLinked,
+									LinkID: "chaos-warp-revealed",
+								},
+								Selection: game.Selection{RequirePermanentCard: true},
+							}),
+						},
 					},
-				},
-			}.Ability(),
-		),
-	},
+				}.Ability(),
+			),
+		},
+	}
 }

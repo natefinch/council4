@@ -23,7 +23,7 @@ import (
 //	LEVEL 4+
 //	4/4
 //	Flying, vigilance
-var KnightOfCliffhaven = newKnightOfCliffhaven()
+var KnightOfCliffhaven = newKnightOfCliffhaven
 
 func newKnightOfCliffhaven() *game.CardDef {
 	return &game.CardDef{

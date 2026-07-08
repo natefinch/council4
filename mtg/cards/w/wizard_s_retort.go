@@ -17,7 +17,7 @@ import (
 //
 //	This spell costs {1} less to cast if you control a Wizard.
 //	Counter target spell.
-var WizardSRetort = newWizardSRetort()
+var WizardSRetort = newWizardSRetort
 
 func newWizardSRetort() *game.CardDef {
 	return &game.CardDef{

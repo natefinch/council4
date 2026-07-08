@@ -17,7 +17,7 @@ import (
 //
 //	This spell costs {1} less to cast if you control a Wizard.
 //	When this creature enters, return target creature an opponent controls to its owner's hand.
-var AcademyJourneymage = newAcademyJourneymage()
+var AcademyJourneymage = newAcademyJourneymage
 
 func newAcademyJourneymage() *game.CardDef {
 	return &game.CardDef{

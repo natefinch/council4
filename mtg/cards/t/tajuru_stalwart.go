@@ -17,27 +17,29 @@ import (
 // Oracle text:
 //
 //	Converge — This creature enters with a +1/+1 counter on it for each color of mana spent to cast it.
-var TajuruStalwart = &game.CardDef{
-	ColorIdentity: color.NewIdentity(color.Green),
-	CardFace: game.CardFace{
-		Name: "Tajuru Stalwart",
-		ManaCost: opt.Val(cost.Mana{
-			cost.O(2),
-			cost.G,
-		}),
-		Colors:    []color.Color{color.Green},
-		Types:     []types.Card{types.Creature},
-		Subtypes:  []types.Sub{types.Elf, types.Scout, types.Ally},
-		Power:     opt.Val(game.PT{Value: 0}),
-		Toughness: opt.Val(game.PT{Value: 1}),
-		ReplacementAbilities: []game.ReplacementAbility{
-			game.EntersWithCountersReplacement("Converge — This creature enters with a +1/+1 counter on it for each color of mana spent to cast it.", game.CounterPlacement{Kind: counter.PlusOnePlusOne, Dynamic: opt.Val(&game.DynamicAmount{
-				Kind:       game.DynamicAmountColorsOfManaSpentToCast,
-				Multiplier: 1,
-			})}),
-		},
-		OracleText: `
+var TajuruStalwart = func() *game.CardDef {
+	return &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Green),
+		CardFace: game.CardFace{
+			Name: "Tajuru Stalwart",
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(2),
+				cost.G,
+			}),
+			Colors:    []color.Color{color.Green},
+			Types:     []types.Card{types.Creature},
+			Subtypes:  []types.Sub{types.Elf, types.Scout, types.Ally},
+			Power:     opt.Val(game.PT{Value: 0}),
+			Toughness: opt.Val(game.PT{Value: 1}),
+			ReplacementAbilities: []game.ReplacementAbility{
+				game.EntersWithCountersReplacement("Converge — This creature enters with a +1/+1 counter on it for each color of mana spent to cast it.", game.CounterPlacement{Kind: counter.PlusOnePlusOne, Dynamic: opt.Val(&game.DynamicAmount{
+					Kind:       game.DynamicAmountColorsOfManaSpentToCast,
+					Multiplier: 1,
+				})}),
+			},
+			OracleText: `
 			Converge — This creature enters with a +1/+1 counter on it for each color of mana spent to cast it.
 		`,
-	},
+		},
+	}
 }

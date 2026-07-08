@@ -18,7 +18,7 @@ import (
 //
 //	Flying, ward {2}
 //	{1}{W}{U}: Exile another target creature or artifact you control. Return it to the battlefield under its owner's control at the beginning of the next end step.
-var AbueloAncestralEcho = newAbueloAncestralEcho()
+var AbueloAncestralEcho = newAbueloAncestralEcho
 
 func newAbueloAncestralEcho() *game.CardDef {
 	return &game.CardDef{

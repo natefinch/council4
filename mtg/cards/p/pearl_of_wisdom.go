@@ -17,7 +17,7 @@ import (
 //
 //	This spell costs {1} less to cast if you control an Otter.
 //	Draw two cards.
-var PearlOfWisdom = newPearlOfWisdom()
+var PearlOfWisdom = newPearlOfWisdom
 
 func newPearlOfWisdom() *game.CardDef {
 	return &game.CardDef{

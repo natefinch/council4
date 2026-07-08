@@ -19,7 +19,7 @@ import (
 //	Menace (This creature can't be blocked except by two or more creatures.)
 //	This creature gets +3/+0 as long as an opponent has eight or more cards in their graveyard.
 //	Whenever this creature attacks or blocks, each player mills a card.
-var TenuredOilcaster = newTenuredOilcaster()
+var TenuredOilcaster = newTenuredOilcaster
 
 func newTenuredOilcaster() *game.CardDef {
 	return &game.CardDef{

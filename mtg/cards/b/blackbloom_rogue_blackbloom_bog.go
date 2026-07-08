@@ -19,7 +19,7 @@ import (
 //
 //	Menace (This creature can't be blocked except by two or more creatures.)
 //	This creature gets +3/+0 as long as an opponent has eight or more cards in their graveyard.
-var BlackbloomRogue = newBlackbloomRogue()
+var BlackbloomRogue = newBlackbloomRogue
 
 func newBlackbloomRogue() *game.CardDef {
 	return &game.CardDef{

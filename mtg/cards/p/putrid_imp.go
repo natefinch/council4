@@ -19,7 +19,7 @@ import (
 //
 //	Discard a card: This creature gains flying until end of turn.
 //	Threshold — As long as there are seven or more cards in your graveyard, this creature gets +1/+1 and can't block.
-var PutridImp = newPutridImp()
+var PutridImp = newPutridImp
 
 func newPutridImp() *game.CardDef {
 	return &game.CardDef{

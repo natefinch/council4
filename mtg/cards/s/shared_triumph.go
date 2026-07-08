@@ -17,7 +17,7 @@ import (
 //
 //	As this enchantment enters, choose a creature type.
 //	Creatures of the chosen type get +1/+1.
-var SharedTriumph = newSharedTriumph()
+var SharedTriumph = newSharedTriumph
 
 func newSharedTriumph() *game.CardDef {
 	return &game.CardDef{

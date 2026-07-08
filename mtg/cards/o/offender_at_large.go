@@ -17,7 +17,7 @@ import (
 //
 //	Disguise {4}{R} (You may cast this card face down for {3} as a 2/2 creature with ward {2}. Turn it face up any time for its disguise cost.)
 //	When this creature enters or is turned face up, up to one target creature gets +2/+0 until end of turn.
-var OffenderAtLarge = newOffenderAtLarge()
+var OffenderAtLarge = newOffenderAtLarge
 
 func newOffenderAtLarge() *game.CardDef {
 	return &game.CardDef{

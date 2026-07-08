@@ -17,7 +17,7 @@ import (
 //
 //	Enchant Giant you control
 //	When this Aura enters, gain control of target nonland permanent for as long as this Aura remains on the battlefield.
-var GiantSGrasp = newGiantSGrasp()
+var GiantSGrasp = newGiantSGrasp
 
 func newGiantSGrasp() *game.CardDef {
 	return &game.CardDef{

@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Frost Bite deals 2 damage to target creature or planeswalker. If you control three or more snow permanents, it deals 3 damage instead.
-var FrostBite = newFrostBite()
+var FrostBite = newFrostBite
 
 func newFrostBite() *game.CardDef {
 	return &game.CardDef{

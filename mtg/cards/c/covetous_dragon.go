@@ -9,7 +9,7 @@ import (
 )
 
 // CovetousDragon is the card definition for Covetous Dragon.
-var CovetousDragon = newCovetousDragon()
+var CovetousDragon = newCovetousDragon
 
 func newCovetousDragon() *game.CardDef {
 	return &game.CardDef{

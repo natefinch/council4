@@ -17,7 +17,7 @@ import (
 //
 //	This creature enters tapped.
 //	Life Drain — Whenever a creature dealt damage by this creature this turn dies, create a tapped 2/2 black Zombie creature token and exile that card.
-var Wight = newWight()
+var Wight = newWight
 
 func newWight() *game.CardDef {
 	return &game.CardDef{

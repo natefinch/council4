@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature or another Zombie enters, all non-Zombie creatures get -1/-1 until end of turn.
-var NoxiousGhoul = newNoxiousGhoul()
+var NoxiousGhoul = newNoxiousGhoul
 
 func newNoxiousGhoul() *game.CardDef {
 	return &game.CardDef{

@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Look at the top five cards of your library. You may reveal a creature card from among them and put it into your hand. Put the rest on the bottom of your library in any order.
-var CommuneWithNature = newCommuneWithNature()
+var CommuneWithNature = newCommuneWithNature
 
 func newCommuneWithNature() *game.CardDef {
 	return &game.CardDef{

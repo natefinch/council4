@@ -18,7 +18,7 @@ import (
 //
 //	Wither (This deals damage to creatures in the form of -1/-1 counters.)
 //	Whenever a creature an opponent controls with a -1/-1 counter on it dies, you may return that card to the battlefield under your control.
-var Necroskitter = newNecroskitter()
+var Necroskitter = newNecroskitter
 
 func newNecroskitter() *game.CardDef {
 	return &game.CardDef{

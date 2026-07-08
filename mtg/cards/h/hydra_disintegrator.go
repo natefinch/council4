@@ -18,7 +18,7 @@ import (
 //	When this Equipment enters, create a 2/1 black Villain creature token with menace, then attach this Equipment to it. (A creature with menace can't be blocked except by two or more creatures.)
 //	Equipped creature gets +3/+3.
 //	Equip {4} ({4}: Attach to target creature you control. Equip only as a sorcery.)
-var HYDRADisintegrator = newHYDRADisintegrator()
+var HYDRADisintegrator = newHYDRADisintegrator
 
 func newHYDRADisintegrator() *game.CardDef {
 	return &game.CardDef{

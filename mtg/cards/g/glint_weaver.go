@@ -18,7 +18,7 @@ import (
 //
 //	Reach
 //	When this creature enters, distribute three +1/+1 counters among one, two, or three target creatures, then you gain life equal to the greatest toughness among creatures you control.
-var GlintWeaver = newGlintWeaver()
+var GlintWeaver = newGlintWeaver
 
 func newGlintWeaver() *game.CardDef {
 	return &game.CardDef{

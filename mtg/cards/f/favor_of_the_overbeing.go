@@ -19,7 +19,7 @@ import (
 //	Enchant creature
 //	As long as enchanted creature is green, it gets +1/+1 and has vigilance.
 //	As long as enchanted creature is blue, it gets +1/+1 and has flying.
-var FavorOfTheOverbeing = newFavorOfTheOverbeing()
+var FavorOfTheOverbeing = newFavorOfTheOverbeing
 
 func newFavorOfTheOverbeing() *game.CardDef {
 	return &game.CardDef{

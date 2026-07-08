@@ -17,7 +17,7 @@ import (
 //
 //	Enchant land
 //	Enchanted land has "At the beginning of your upkeep, you may pay {W}{W}. If you do, you gain 1 life."
-var Farmstead = newFarmstead()
+var Farmstead = newFarmstead
 
 func newFarmstead() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature attacks or blocks, sacrifice it unless you exile a card from your graveyard.
-var RottingGiant = newRottingGiant()
+var RottingGiant = newRottingGiant
 
 func newRottingGiant() *game.CardDef {
 	return &game.CardDef{

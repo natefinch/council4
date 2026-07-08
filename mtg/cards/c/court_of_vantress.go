@@ -17,7 +17,7 @@ import (
 //
 //	When this enchantment enters, you become the monarch.
 //	At the beginning of your upkeep, choose up to one other target enchantment or artifact. If you're the monarch, you may create a token that's a copy of it. If you're not the monarch, you may have this enchantment become a copy of it, except it has this ability.
-var CourtOfVantress = newCourtOfVantress()
+var CourtOfVantress = newCourtOfVantress
 
 func newCourtOfVantress() *game.CardDef {
 	return &game.CardDef{

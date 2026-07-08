@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Create a 1/1 white Ally creature token. Put a +1/+1 counter on it for each creature your opponents control.
-var MatchTheOdds = newMatchTheOdds()
+var MatchTheOdds = newMatchTheOdds
 
 func newMatchTheOdds() *game.CardDef {
 	return &game.CardDef{

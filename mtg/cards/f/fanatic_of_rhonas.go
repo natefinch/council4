@@ -84,4 +84,4 @@ var FanaticOfRhonas = func() *game.CardDef {
 		),
 	)
 	return card
-}()
+}

@@ -17,7 +17,7 @@ import (
 //
 //	Trample
 //	Whenever a creature an opponent controls dies, Gimli deals 1 damage to that creature's controller.
-var GimliCounterOfKills = newGimliCounterOfKills()
+var GimliCounterOfKills = newGimliCounterOfKills
 
 func newGimliCounterOfKills() *game.CardDef {
 	return &game.CardDef{

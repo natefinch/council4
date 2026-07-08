@@ -18,7 +18,7 @@ import (
 //
 //	{2}{G}, {T}: Create a 1/1 colorless Servo artifact creature token.
 //	{4}{G}, {T}: Create an X/X colorless Construct artifact creature token, where X is the number of creatures you control.
-var OviyaPashiriSageLifecrafter = newOviyaPashiriSageLifecrafter()
+var OviyaPashiriSageLifecrafter = newOviyaPashiriSageLifecrafter
 
 func newOviyaPashiriSageLifecrafter() *game.CardDef {
 	return &game.CardDef{

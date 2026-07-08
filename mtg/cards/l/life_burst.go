@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Target player gains 4 life, then gains 4 life for each card named Life Burst in each graveyard.
-var LifeBurst = newLifeBurst()
+var LifeBurst = newLifeBurst
 
 func newLifeBurst() *game.CardDef {
 	return &game.CardDef{

@@ -18,7 +18,7 @@ import (
 //
 //	(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)
 //	When this Siege enters, return target nonbattle permanent card from your graveyard to the battlefield.
-var InvasionOfTolvada = newInvasionOfTolvada()
+var InvasionOfTolvada = newInvasionOfTolvada
 
 func newInvasionOfTolvada() *game.CardDef {
 	return &game.CardDef{

@@ -19,7 +19,7 @@ import (
 //
 //	Haste
 //	Undergrowth — This creature enters with a +1/+1 counter on it for each creature card in your graveyard.
-var GolgariRaiders = newGolgariRaiders()
+var GolgariRaiders = newGolgariRaiders
 
 func newGolgariRaiders() *game.CardDef {
 	return &game.CardDef{

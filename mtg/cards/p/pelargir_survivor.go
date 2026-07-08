@@ -19,7 +19,7 @@ import (
 //
 //	{T}: Add one mana of any color. Spend this mana only to cast an instant or sorcery spell.
 //	{5}{U}, {T}: Target player mills three cards. (They put the top three cards of their library into their graveyard.)
-var PelargirSurvivor = newPelargirSurvivor()
+var PelargirSurvivor = newPelargirSurvivor
 
 func newPelargirSurvivor() *game.CardDef {
 	return &game.CardDef{

@@ -17,7 +17,7 @@ import (
 // Oracle text:
 //
 //	Black spells you cast cost {B} more to cast.
-var Derelor = newDerelor()
+var Derelor = newDerelor
 
 func newDerelor() *game.CardDef {
 	return &game.CardDef{

@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever Ashe attacks, look at the top five cards of your library. You may reveal an artifact card from among them and put it into your hand. Put the rest on the bottom of your library in a random order.
-var AshePrincessOfDalmasca = newAshePrincessOfDalmasca()
+var AshePrincessOfDalmasca = newAshePrincessOfDalmasca
 
 func newAshePrincessOfDalmasca() *game.CardDef {
 	return &game.CardDef{

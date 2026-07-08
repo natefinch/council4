@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature attacks, it gets +1/+0 until end of turn for each other attacking creature.
-var RampagingClassmate = newRampagingClassmate()
+var RampagingClassmate = newRampagingClassmate
 
 func newRampagingClassmate() *game.CardDef {
 	return &game.CardDef{

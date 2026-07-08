@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Whenever this creature deals damage, you gain that much life.
-var HornedCheetah = newHornedCheetah()
+var HornedCheetah = newHornedCheetah
 
 func newHornedCheetah() *game.CardDef {
 	return &game.CardDef{

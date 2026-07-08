@@ -16,7 +16,7 @@ import (
 // Oracle text:
 //
 //	Reveal the top four cards of your library. Put all land cards revealed this way into your hand and the rest into your graveyard.
-var Mulch = newMulch()
+var Mulch = newMulch
 
 func newMulch() *game.CardDef {
 	return &game.CardDef{

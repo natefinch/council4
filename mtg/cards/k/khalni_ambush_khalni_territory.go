@@ -87,4 +87,4 @@ var KhalniAmbush = func() *game.CardDef {
 
 	card.Back = opt.Val(back)
 	return card
-}()
+}

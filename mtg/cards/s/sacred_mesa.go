@@ -18,7 +18,7 @@ import (
 //
 //	At the beginning of your upkeep, sacrifice this enchantment unless you sacrifice a Pegasus.
 //	{1}{W}: Create a 1/1 white Pegasus creature token with flying.
-var SacredMesa = newSacredMesa()
+var SacredMesa = newSacredMesa
 
 func newSacredMesa() *game.CardDef {
 	return &game.CardDef{
