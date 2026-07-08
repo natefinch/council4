@@ -61,9 +61,48 @@ func parseZoneChangeTriggerEventClause(
 				)
 			}
 		}
+		if subject.permanentNoun &&
+			zoneChangeAdmitsNonPermanentCards(parsed.change.zone) &&
+			len(clause.Subject.Selection.RequiredTypes) == 0 &&
+			len(clause.Subject.Selection.RequiredTypesAny) == 0 {
+			clause.Subject.Selection.RequiredTypesAny = append(
+				clause.Subject.Selection.RequiredTypesAny,
+				triggerPermanentCardTypes...,
+			)
+		}
 		return clause
 	}
 	return nil
+}
+
+// triggerPermanentCardTypes is the expansion of a "permanent card" trigger
+// subject: the card types a permanent card can have (CR 110.4a). It mirrors the
+// permanentCardTypes list used by battlefield card-type conditions.
+var triggerPermanentCardTypes = []TriggerCardType{
+	TriggerCardTypeArtifact,
+	TriggerCardTypeBattle,
+	TriggerCardTypeCreature,
+	TriggerCardTypeEnchantment,
+	TriggerCardTypeLand,
+	TriggerCardTypePlaneswalker,
+}
+
+// zoneChangeAdmitsNonPermanentCards reports whether the zone change can move a
+// non-permanent card, which is when a "permanent card" subject actually narrows
+// the selection. A source or destination that is the battlefield guarantees the
+// object is a permanent (only permanents exist there), so the permanent-type
+// restriction is redundant and is not applied, preserving the prior output for
+// battlefield-origin and enters-the-battlefield triggers. Non-battlefield or
+// unconstrained ("from anywhere") sources can hold instants and sorceries, so
+// the restriction is applied.
+func zoneChangeAdmitsNonPermanentCards(z TriggerEventZoneContext) bool {
+	if z.MatchToZone && z.ToZone.Kind == TriggerEventZoneBattlefield {
+		return false
+	}
+	if z.MatchFromZone && !z.ExcludeFromZone && z.FromZone.Kind == TriggerEventZoneBattlefield {
+		return false
+	}
+	return true
 }
 
 type parsedZoneChange struct {
@@ -555,6 +594,16 @@ func parseZoneChangeSubject(
 	if len(remaining) == 0 {
 		return zoneSubjectResult{}
 	}
+	// A "permanent [card]" subject imposes a permanent-card-type restriction that
+	// only bites in non-battlefield source zones (a library or graveyard can hold
+	// instant and sorcery cards). The caller expands it to the permanent-type
+	// union when the zone change admits non-permanent cards; here we only record
+	// that the noun was "permanent" so the base selection stays an any-card
+	// selection, identical to the prior output for battlefield-origin triggers.
+	result.permanentNoun = tokenWordsEqual(remaining, "permanent") ||
+		tokenWordsEqual(remaining, "permanents") ||
+		tokenWordsEqual(remaining, "permanent", "card") ||
+		tokenWordsEqual(remaining, "permanent", "cards")
 	if tokenWordsEqual(remaining, "card") || tokenWordsEqual(remaining, "cards") {
 		// A bare "card"/"cards" subject imposes no type restriction, so it
 		// resolves to an any-card selection that the runtime matches without a

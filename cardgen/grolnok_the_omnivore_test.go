@@ -9,11 +9,13 @@ import (
 // with a named counter, then play/cast cards in exile with that counter"
 // mechanic on Grolnok, the Omnivore. The library-to-graveyard trigger "exile it
 // with a croak counter on it" lowers to a MoveCard into exile carrying a Croak
-// counter rider, and the static "You may play lands and cast spells from among
-// cards you own in exile with croak counters on them." lowers to a paired
-// RuleEffectPlayLandsFromZone (lands only) and RuleEffectCastSpellsFromZone over
-// the exile zone, each filtered by an ExileCounterFilter of counter.Croak. The
-// whole card lowers without diagnostics.
+// counter rider; its "a permanent card" subject types to the permanent-card
+// union (excluding instant/sorcery) because the source zone is the library. The
+// static "You may play lands and cast spells from among cards you own in exile
+// with croak counters on them." lowers to a paired RuleEffectPlayLandsFromZone
+// (lands only) and RuleEffectCastSpellsFromZone over the exile zone, each
+// filtered by an ExileCounterFilter of counter.Croak. The whole card lowers
+// without diagnostics.
 func TestGenerateExecutableCardSourceGrolnokTheOmnivore(t *testing.T) {
 	t.Parallel()
 	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
@@ -35,6 +37,7 @@ func TestGenerateExecutableCardSourceGrolnokTheOmnivore(t *testing.T) {
 		"Primitive: game.MoveCard{",
 		"Destination: zone.Exile,",
 		"Counter:     opt.Val(counter.Croak),",
+		"SubjectSelection: game.Selection{RequiredTypesAny: []types.Card{types.Artifact, types.Battle, types.Creature, types.Enchantment, types.Land, types.Planeswalker}}",
 		"Kind:               game.RuleEffectPlayLandsFromZone,",
 		"PermanentTypes:     []types.Card{types.Land},",
 		"Kind:               game.RuleEffectCastSpellsFromZone,",

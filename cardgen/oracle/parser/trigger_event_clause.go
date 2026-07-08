@@ -97,6 +97,7 @@ type zoneSubjectResult struct {
 	oneOrMore        bool
 	selfOrAnother    bool
 	dealtDamageBySrc bool
+	permanentNoun    bool
 	ok               bool
 }
 
