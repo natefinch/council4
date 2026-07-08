@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,039 of 32,501 cards eligible for paper support (52.4%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,048 of 32,501 cards eligible for paper support (52.5%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1590,6 +1590,7 @@ Council4 currently supports **17,039 of 32,501 cards eligible for paper support 
 - Bloodsworn Steward
 - Bloodtallow Candle
 - Bloodthirsty Aerialist
+- Bloodthirsty Blade
 - Bloodthirsty Conqueror
 - Bloodthirsty Ogre
 - Bloodthorn Taunter
@@ -2962,6 +2963,7 @@ Council4 currently supports **17,039 of 32,501 cards eligible for paper support 
 - Cragcrown Pathway // Timbercrown Pathway
 - Cragflame
 - Cragplate Baloth
+- Cranial Plating
 - Crash and Burn
 - Crash of Rhino Beetles
 - Crash of Rhinos
@@ -5307,6 +5309,7 @@ Council4 currently supports **17,039 of 32,501 cards eligible for paper support 
 - Forced Worship
 - Forceful Denial
 - Forcemage Advocate
+- Forebear's Blade
 - Foreboding Fruit
 - Foreboding Landscape
 - Foreboding Ruins
@@ -6614,6 +6617,7 @@ Council4 currently supports **17,039 of 32,501 cards eligible for paper support 
 - Healer of the Pride
 - Healer's Flock
 - Healer's Hawk
+- Healer's Headdress
 - Healing Hands
 - Healing Leaves
 - Healing Salve
@@ -6903,6 +6907,7 @@ Council4 currently supports **17,039 of 32,501 cards eligible for paper support 
 - Horn of Valhalla // Ysgard's Call
 - Hornbash Mentor
 - Horned Cheetah
+- Horned Helm
 - Horned Kavu
 - Horned Sliver
 - Horned Stoneseeker
@@ -8764,6 +8769,7 @@ Council4 currently supports **17,039 of 32,501 cards eligible for paper support 
 - Mantis Rider
 - Mantle of Leadership
 - Mantle of the Wolf
+- Mantle of Tides
 - Mantle of Webs
 - Many Partings
 - Map
@@ -9730,6 +9736,7 @@ Council4 currently supports **17,039 of 32,501 cards eligible for paper support 
 - Neurok Invisimancer
 - Neurok Prodigy
 - Neurok Replica
+- Neurok Stealthsuit
 - Neutralize
 - Neutralizing Blast
 - Neva, Stalked by Nightmares
@@ -13511,6 +13518,7 @@ Council4 currently supports **17,039 of 32,501 cards eligible for paper support 
 - Sparkhunter Masticore
 - Sparkmage Apprentice
 - Sparktongue Dragon
+- Sparring Collar
 - Sparring Construct
 - Sparring Mummy
 - Spartan Veteran
@@ -13889,6 +13897,7 @@ Council4 currently supports **17,039 of 32,501 cards eligible for paper support 
 - Starting Column
 - Startled Relic Sloth
 - Starved Rusalka
+- Stasis Cell
 - Stasis Cocoon
 - Stasis Snare
 - Static Net
