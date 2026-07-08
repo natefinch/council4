@@ -9,21 +9,22 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 )
 
-// lowerAttachSpell lowers "attach it/that <Equipment> to target <permanent> you
-// control" — the enters-the-battlefield auto-attach trigger of Equipment such as
-// Mithril Coat ("attach it ...") and Hammer of Nazahn ("Whenever ~ or another
-// Equipment you control enters, you may attach that Equipment ..."). The
-// entering Equipment is attached to the single chosen target without paying an
-// Equip cost. The attachment object is whatever the back-reference denotes: the
-// source permanent for a self-only trigger, or the triggering event permanent
-// when "another Equipment you control" can enter. It fails closed for any other
-// attach shape.
+// lowerAttachSpell lowers "attach it/that/this <Equipment> to target <permanent>
+// you control" — the enters-the-battlefield auto-attach trigger of Equipment such
+// as Mithril Coat ("attach it ...") and Hammer of Nazahn ("Whenever ~ or another
+// Equipment you control enters, you may attach that Equipment ..."), and the
+// activated "{cost}: Attach this Equipment to target creature you control."
+// ability (Horned Helm). The Equipment is attached to the single chosen target
+// without paying an Equip cost. The attachment object is whatever the
+// back-reference denotes: the source permanent for a self ("this"/"it"/"that")
+// reference, or the triggering event permanent when "another Equipment you
+// control" can enter. It fails closed for any other attach shape.
 func lowerAttachSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported attach effect",
-			"the executable source backend supports only \"attach it/that <Equipment> to target <permanent> you control\" attaching the entering or source permanent",
+			"the executable source backend supports only \"attach it/that/this <Equipment> to target <permanent> you control\" attaching the entering or source permanent",
 		)
 	}
 	// lowerAttachSpell is reached only through the EffectAttach arm of
@@ -70,11 +71,12 @@ func lowerAttachSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) 
 }
 
 // attachReferencesEnteringObject reports whether the effect's only reference
-// names the entering Equipment, either as the pronoun "it" or as the
-// demonstrative "that <Equipment>". The compiler binds either wording to the
-// source permanent (a self-only enters trigger) or to the triggering event
-// permanent ("another Equipment you control enters"); both denote the Equipment
-// being attached.
+// names the Equipment being attached, as the pronoun "it", the demonstrative
+// "that <Equipment>", or the self-reference "this <Equipment>". The compiler
+// binds "it"/"that" to the source permanent (a self enters trigger) or to the
+// triggering event permanent ("another Equipment you control enters"), and
+// "this <Equipment>" always to the source permanent (an activated attach
+// ability); every form denotes the Equipment being attached.
 func attachReferencesEnteringObject(references []compiler.CompiledReference) bool {
 	if len(references) != 1 {
 		return false
@@ -87,5 +89,7 @@ func attachReferencesEnteringObject(references []compiler.CompiledReference) boo
 	itPronoun := reference.Kind == compiler.ReferencePronoun &&
 		reference.Pronoun == compiler.ReferencePronounIt
 	thatObject := reference.Kind == compiler.ReferenceThatObject
-	return itPronoun || thatObject
+	thisObject := reference.Kind == compiler.ReferenceThisObject &&
+		reference.Binding == compiler.ReferenceBindingSource
+	return itPronoun || thatObject || thisObject
 }

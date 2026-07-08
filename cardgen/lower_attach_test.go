@@ -41,6 +41,43 @@ func TestLowerMithrilCoatAttachTrigger(t *testing.T) {
 	}
 }
 
+// TestLowerActivatedAttachThisEquipment verifies the activated ability
+// "{cost}: Attach this Equipment to target creature you control." (Horned Helm)
+// lowers to an Attach primitive attaching the source permanent (the Equipment
+// itself) to the single chosen target.
+func TestLowerActivatedAttachThisEquipment(t *testing.T) {
+	card := &ScryfallCard{
+		Name:       "Horned Helm",
+		Layout:     "normal",
+		TypeLine:   "Artifact — Equipment",
+		OracleText: "Equipped creature gets +1/+1 and has trample.\n{G}{G}: Attach this Equipment to target creature you control.\nEquip {1}",
+	}
+	face := lowerSingleFace(t, card)
+	var attach game.Attach
+	found := false
+	for _, ability := range face.ActivatedAbilities {
+		if len(ability.Content.Modes) != 1 || len(ability.Content.Modes[0].Sequence) != 1 {
+			continue
+		}
+		if a, ok := ability.Content.Modes[0].Sequence[0].Primitive.(game.Attach); ok {
+			attach = a
+			found = true
+			if len(ability.Content.Modes[0].Targets) != 1 {
+				t.Fatalf("attach ability targets = %+v, want one target", ability.Content.Modes[0].Targets)
+			}
+		}
+	}
+	if !found {
+		t.Fatalf("no activated Attach ability found in %+v", face.ActivatedAbilities)
+	}
+	if attach.Attachment.Kind() != game.ObjectReferenceSourcePermanent {
+		t.Fatalf("attachment reference = %v, want source permanent", attach.Attachment.Kind())
+	}
+	if attach.Target.Kind() != game.ObjectReferenceTargetPermanent || attach.Target.TargetIndex() != 0 {
+		t.Fatalf("target reference = %v idx %d, want target permanent 0", attach.Target.Kind(), attach.Target.TargetIndex())
+	}
+}
+
 // TestLowerOptionalAttachTrigger verifies the optional "you may attach it"
 // variant lowers to a single optional Attach instruction.
 func TestLowerOptionalAttachTrigger(t *testing.T) {
