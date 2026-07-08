@@ -2579,20 +2579,22 @@ func parseDieThisTurnExileReplacement(sentence Sentence, tokens []shared.Token, 
 		return nil, false
 	}
 	return []EffectSyntax{{
-		Kind:       EffectExileIfWouldDieThisTurn,
-		Context:    EffectContextController,
-		Span:       shared.SpanOf(tokens),
-		ClauseSpan: shared.SpanOf(tokens),
-		Text:       sentence.Text,
-		Tokens:     append([]shared.Token(nil), tokens...),
-		References: referencesInSpan(atoms, shared.SpanOf(tokens)),
-		Exact:      true,
+		Kind:                           EffectExileIfWouldDieThisTurn,
+		Context:                        EffectContextController,
+		Span:                           shared.SpanOf(tokens),
+		ClauseSpan:                     shared.SpanOf(tokens),
+		Text:                           sentence.Text,
+		Tokens:                         append([]shared.Token(nil), tokens...),
+		References:                     referencesInSpan(atoms, shared.SpanOf(tokens)),
+		ExileDieSubjectDamagedCreature: dieThisTurnExileDamagedCreatureSubject(tokens[1:]),
+		Exact:                          true,
 	}}, true
 }
 
 // matchDieThisTurnExileReplacement reports whether tokens spell the would-die
 // exile rider "If <subject> would die this turn, exile it instead." where the
-// subject is "that creature", "that creature or planeswalker", or "it".
+// subject is "that creature", "that creature or planeswalker", "it", or "a
+// creature dealt damage this way".
 func matchDieThisTurnExileReplacement(tokens []shared.Token) bool {
 	if len(tokens) < 9 || tokens[len(tokens)-1].Kind != shared.Period || !equalWord(tokens[0], "if") {
 		return false
@@ -2614,13 +2616,17 @@ func matchDieThisTurnExileReplacement(tokens []shared.Token) bool {
 
 // dieThisTurnExileSubjectWidth reports the token width of the subject that opens
 // a would-die exile rider ("it" → 1, "that creature" → 2, "that creature or
-// planeswalker" → 4), or 0 when tokens do not begin with such a subject.
+// planeswalker" → 4, "a creature dealt damage this way" → 6), or 0 when tokens do
+// not begin with such a subject.
 func dieThisTurnExileSubjectWidth(tokens []shared.Token) int {
 	if len(tokens) == 0 {
 		return 0
 	}
 	if equalWord(tokens[0], "it") {
 		return 1
+	}
+	if dieThisTurnExileDamagedCreatureSubject(tokens) {
+		return 6
 	}
 	if len(tokens) >= 4 && tokenWordsEqual(tokens[:4], "that", "creature", "or", "planeswalker") {
 		return 4
@@ -2629,6 +2635,14 @@ func dieThisTurnExileSubjectWidth(tokens []shared.Token) int {
 		return 2
 	}
 	return 0
+}
+
+// dieThisTurnExileDamagedCreatureSubject reports whether tokens open with the
+// subject "a creature dealt damage this way", the burn-spell wording that scopes
+// the would-die exile to a damaged creature (Yamabushi's Flame, Demonfire).
+func dieThisTurnExileDamagedCreatureSubject(tokens []shared.Token) bool {
+	return len(tokens) >= 6 &&
+		tokenWordsEqual(tokens[:6], "a", "creature", "dealt", "damage", "this", "way")
 }
 
 // parseLifeLossReplacement recognizes the life-loss replacement "If an opponent

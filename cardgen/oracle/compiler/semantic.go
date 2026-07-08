@@ -2068,13 +2068,17 @@ type CompiledEffect struct {
 	Player               parser.EffectPlayerKind
 	CardSource           parser.EffectCardSourceKind
 	RequirePermanentCard bool
-	References           []CompiledReference
-	SubjectReferences    []CompiledReference
-	Targets              []CompiledTarget
-	SubjectTargets       []CompiledTarget
-	Duration             DurationKind
-	DelayedTiming        game.DelayedTriggerTiming
-	Selector             CompiledSelector
+	// ExileDieSubjectDamagedCreature marks an EffectExileIfWouldDieThisTurn rider
+	// whose subject is "a creature dealt damage this way": the would-die exile is
+	// scoped to the spell's single damaged target only when it is a creature.
+	ExileDieSubjectDamagedCreature bool
+	References                     []CompiledReference
+	SubjectReferences              []CompiledReference
+	Targets                        []CompiledTarget
+	SubjectTargets                 []CompiledTarget
+	Duration                       DurationKind
+	DelayedTiming                  game.DelayedTriggerTiming
+	Selector                       CompiledSelector
 	// DamageRecipient bundles the primary-recipient descriptors of a deal-damage
 	// effect (dual-recipient groups, each-source group, and referenced-player
 	// reference) into one typed payload. Its zero value denotes a single-target

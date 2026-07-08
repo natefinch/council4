@@ -1611,6 +1611,17 @@ func replacementEffectMatchesEventWithSource(g *game.Game, replacement *game.Rep
 	if replacement.AffectedObjectID != 0 && replacement.AffectedObjectID != event.PermanentID {
 		return false
 	}
+	if replacement.AffectedObjectMustBeCreature {
+		// The gate must reflect the dying permanent's effective type at death,
+		// including token creatures (which carry no card instance) and animated
+		// lands, so resolve the still-present permanent rather than reading the
+		// printed card types via event.CardID. The replacement is bound to this
+		// object and evaluated before the battlefield move, so it resolves here.
+		permanent, ok := permanentByObjectID(g, event.PermanentID)
+		if !ok || !permanentHasType(g, permanent, types.Creature) {
+			return false
+		}
+	}
 	if replacement.AffectedCardID != 0 && replacement.AffectedCardID != event.CardID {
 		return false
 	}

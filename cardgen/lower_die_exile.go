@@ -62,12 +62,13 @@ func lowerDamageDieToExileSpellAbilities(cardName string, compilation compiler.C
 		Object:   game.TargetPermanentReference(0),
 		Duration: game.DurationThisTurn,
 		Replacement: &game.ReplacementEffect{
-			MatchEvent:    game.EventZoneChanged,
-			MatchFromZone: true,
-			FromZone:      zone.Battlefield,
-			MatchToZone:   true,
-			ToZone:        zone.Graveyard,
-			ReplaceToZone: zone.Exile,
+			MatchEvent:                   game.EventZoneChanged,
+			MatchFromZone:                true,
+			FromZone:                     zone.Battlefield,
+			MatchToZone:                  true,
+			ToZone:                       zone.Graveyard,
+			ReplaceToZone:                zone.Exile,
+			AffectedObjectMustBeCreature: exile.ExileDieSubjectDamagedCreature,
 		},
 	}
 	spell.Modes[0].Sequence = append(spell.Modes[0].Sequence, game.Instruction{Primitive: create})
@@ -76,10 +77,18 @@ func lowerDamageDieToExileSpellAbilities(cardName string, compilation compiler.C
 
 // isDieToExileReplacementEffect reports whether effect is the exact would-die
 // exile rider "If that creature [or planeswalker] would die this turn, exile it
-// instead." whose subject binds to the spell's single target.
+// instead." whose subject binds to the spell's single target, or the burn
+// variant "If a creature dealt damage this way would die this turn, exile it
+// instead." whose "it" denotes the spell's single damaged target when it is a
+// creature (ExileDieSubjectDamagedCreature).
 func isDieToExileReplacementEffect(effect *compiler.CompiledEffect) bool {
-	return effect.Kind == compiler.EffectExileIfWouldDieThisTurn &&
-		effect.Exact &&
-		!effect.Negated &&
-		referencesBindTo(effect.References, compiler.ReferenceBindingTarget, 0)
+	if effect.Kind != compiler.EffectExileIfWouldDieThisTurn ||
+		effect.Negated ||
+		!effect.Exact {
+		return false
+	}
+	if effect.ExileDieSubjectDamagedCreature {
+		return true
+	}
+	return referencesBindTo(effect.References, compiler.ReferenceBindingTarget, 0)
 }

@@ -615,6 +615,16 @@ type ReplacementEffect struct {
 	// other filters alone.
 	AffectedObjectID id.ID
 
+	// AffectedObjectMustBeCreature further restricts an AffectedObjectID-bound
+	// zone-change redirect to events whose moving permanent is a creature. It
+	// backs the "a creature dealt damage this way would die this turn, exile it
+	// instead." burn rider (Yamabushi's Flame, Demonfire) bound to an "any
+	// target" spell's single target: the redirect must not exile a player or
+	// planeswalker that the same spell killed. It is false for the "that
+	// creature [or planeswalker]" rider, which targets a creature (or a
+	// deliberately-included planeswalker) and needs no creature gate.
+	AffectedObjectMustBeCreature bool
+
 	// AffectedCardID restricts the replacement to events about the permanent
 	// created when a single card instance enters the battlefield, identified by
 	// the card's stable instance ID. A permanent spell gains a fresh object ID as

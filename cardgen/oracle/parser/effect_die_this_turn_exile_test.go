@@ -37,22 +37,30 @@ func TestParseDieThisTurnExileReplacement(t *testing.T) {
 	}
 }
 
-// TestParseDieThisTurnExileReplacementRejectsGroupSubject verifies the rider
-// recognizer fails closed for the group "a creature dealt damage this way"
-// subject, which the single-target replacement cannot bind, so it does not
-// masquerade as the single-target form.
-func TestParseDieThisTurnExileReplacementRejectsGroupSubject(t *testing.T) {
+// TestParseDieThisTurnExileReplacementDamagedCreatureSubject verifies the rider
+// recognizer accepts the "a creature dealt damage this way" burn subject
+// (Yamabushi's Flame, Demonfire) and marks it with ExileDieSubjectDamagedCreature.
+// The parser owns the wording; the single-target binding feasibility (rejecting
+// the mass "each creature" form) is enforced by the lowering, covered by
+// TestLowerDieToExileRequiresSingleTarget.
+func TestParseDieThisTurnExileReplacementDamagedCreatureSubject(t *testing.T) {
 	t.Parallel()
-	source := "Anger of the Gods deals 3 damage to each creature. " +
+	source := "Yamabushi's Flame deals 3 damage to any target. " +
 		"If a creature dealt damage this way would die this turn, exile it instead."
-	document, _ := Parse(source, Context{InstantOrSorcery: true})
-	for _, ability := range document.Abilities {
-		for _, sentence := range ability.Sentences {
-			for _, effect := range sentence.Effects {
-				if effect.Kind == EffectExileIfWouldDieThisTurn {
-					t.Fatal("group subject must not match the single-target die-this-turn rider")
-				}
-			}
-		}
+	document, diagnostics := Parse(source, Context{InstantOrSorcery: true})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v, want none", diagnostics)
+	}
+	sentences := document.Abilities[0].Sentences
+	rider := sentences[len(sentences)-1]
+	if len(rider.Effects) != 1 {
+		t.Fatalf("rider effects = %#v, want one", rider.Effects)
+	}
+	effect := rider.Effects[0]
+	if effect.Kind != EffectExileIfWouldDieThisTurn || !effect.Exact {
+		t.Fatalf("effect = %v exact=%v, want exact EffectExileIfWouldDieThisTurn", effect.Kind, effect.Exact)
+	}
+	if !effect.ExileDieSubjectDamagedCreature {
+		t.Fatal("damaged-creature subject must set ExileDieSubjectDamagedCreature")
 	}
 }
