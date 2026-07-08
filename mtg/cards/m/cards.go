@@ -134,6 +134,7 @@ var Cards = []cardset.Entry{
 	{Name: "Mouse Trapper", New: MouseTrapper},
 	{Name: "Mouser Foundry", New: MouserFoundry},
 	{Name: "Mr. Orfeo, the Boulder", New: MrOrfeoTheBoulder},
+	{Name: "Ms. Bumbleflower", New: MsBumbleflower},
 	{Name: "Mudflat Village", New: MudflatVillage},
 	{Name: "Mulch", New: Mulch},
 	{Name: "Munda's Vanguard", New: MundaSVanguard},

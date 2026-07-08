@@ -180,6 +180,7 @@ var Cards = []cardset.Entry{
 	{Name: "Soul Stair Expedition", New: SoulStairExpedition},
 	{Name: "Soulblade Corrupter", New: SoulbladeCorrupter},
 	{Name: "Soulstinger", New: Soulstinger},
+	{Name: "South Pole Voyager", New: SouthPoleVoyager},
 	{Name: "South Wind Avatar", New: SouthWindAvatar},
 	{Name: "Spawn-Gang Commander", New: SpawnGangCommander},
 	{Name: "Spawnbed Protector", New: SpawnbedProtector},

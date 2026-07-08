@@ -118,6 +118,7 @@ var Cards = []cardset.Entry{
 	{Name: "Ruby, Daring Tracker", New: RubyDaringTracker},
 	{Name: "Ruby Leech", New: RubyLeech},
 	{Name: "Ruin-Lurker Bat", New: RuinLurkerBat},
+	{Name: "Rumor Gatherer", New: RumorGatherer},
 	{Name: "Runaway Carriage", New: RunawayCarriage},
 	{Name: "Rune of Protection: Black", New: RuneOfProtectionBlack},
 	{Name: "Rune of Protection: Blue", New: RuneOfProtectionBlue},
