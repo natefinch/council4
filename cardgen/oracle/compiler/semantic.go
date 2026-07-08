@@ -1201,6 +1201,13 @@ type CompiledCondition struct {
 	// color for the same-color form, which compares the largest single-color
 	// tally instead of a named color.
 	ManaSpentColor color.Color
+
+	// Reflexive marks a prior-instruction-accepted gate that comes from a
+	// reflexive "When you do," preamble (CR 603.11) rather than an immediate "If
+	// you do," rider. Lowering reads this flag to route the gated consequence to
+	// a reflexive triggered ability whose targets are chosen after the enabling
+	// action, instead of resolving it inline with up-front targets.
+	Reflexive bool
 }
 
 // TargetCardinality is an inclusive target count range.

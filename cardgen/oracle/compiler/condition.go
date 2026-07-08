@@ -25,6 +25,11 @@ func recognizeCondition(
 		return
 	}
 	if condition.ClauseIndex >= 0 {
+		// A reflexive "When you do," gate shares the prior-instruction-accepted
+		// predicate with "If you do,"; carry the parser's reflexive marker onto
+		// the compiled condition so lowering can route the gated consequence to a
+		// reflexive triggered ability.
+		condition.Reflexive = clauses[condition.ClauseIndex].Reflexive
 		compileConditionClause(condition, &clauses[condition.ClauseIndex])
 	}
 }
