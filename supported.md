@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,047 of 32,501 cards eligible for paper support (52.5%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,055 of 32,501 cards eligible for paper support (52.5%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -3039,6 +3039,7 @@ Council4 currently supports **17,047 of 32,501 cards eligible for paper support 
 - Crowd Favorites
 - Crowd of Cinders
 - Crowd's Favor
+- Crowded Crypt
 - Crown of Flames
 - Crown of Gondor
 - Crown of Skemfar
@@ -3668,6 +3669,7 @@ Council4 currently supports **17,047 of 32,501 cards eligible for paper support 
 - Diregraf Captain
 - Diregraf Colossus
 - Diregraf Ghoul
+- Diregraf Horde
 - Diresight
 - Dirge Bat
 - Dirge of Dread
@@ -4757,6 +4759,7 @@ Council4 currently supports **17,047 of 32,501 cards eligible for paper support 
 - Faithful Watchdog
 - Faithless Looting
 - Faithless Salvaging
+- Falcon Abomination
 - Falcon and Redwing
 - Falcon's Wing Harness
 - Falconer Adept
@@ -5738,6 +5741,7 @@ Council4 currently supports **17,047 of 32,501 cards eligible for paper support 
 - Ghoulcaller's Bell
 - Ghoulcaller's Chant
 - Ghoulflesh
+- Ghoulish Procession
 - Ghoulsteed
 - Ghoultree
 - Giant
@@ -6826,6 +6830,7 @@ Council4 currently supports **17,047 of 32,501 cards eligible for paper support 
 - Hoard Robber
 - Hoarding Ogre
 - Hobblefiend
+- Hobbling Zombie
 - Hobgoblin Dragoon
 - Hobgoblin, Mantled Marauder
 - Hold at Bay
@@ -9852,6 +9857,7 @@ Council4 currently supports **17,047 of 32,501 cards eligible for paper support 
 - Nivix Guildmage
 - No Escape
 - No Mercy
+- No Way Out
 - No-Dachi
 - Nobilis of War
 - Noble Elephant
@@ -11877,6 +11883,7 @@ Council4 currently supports **17,047 of 32,501 cards eligible for paper support 
 - Rotlung Reanimator
 - Rotted Hulk
 - Rotted Hystrix
+- Rotten Reunion
 - Rottenheart Ghoul
 - Rotting Fensnake
 - Rotting Giant
@@ -13894,6 +13901,7 @@ Council4 currently supports **17,047 of 32,501 cards eligible for paper support 
 - Starstorm
 - Start from Scratch
 - Starting Column
+- Startle
 - Startled Relic Sloth
 - Starved Rusalka
 - Stasis Cell
