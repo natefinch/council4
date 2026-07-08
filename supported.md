@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,120 of 32,501 cards eligible for paper support (52.7%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,121 of 32,501 cards eligible for paper support (52.7%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -13949,6 +13949,7 @@ Council4 currently supports **17,120 of 32,501 cards eligible for paper support 
 - Starnheim Memento
 - Starry-Eyed Skyrider
 - Starscape Cleric
+- Starscream, Power Hungry // Starscream, Seeker Leader
 - Starstorm
 - Start from Scratch
 - Starting Column

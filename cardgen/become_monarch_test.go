@@ -67,7 +67,44 @@ func TestGenerateTargetPlayerBecomesMonarch(t *testing.T) {
 	}
 }
 
-// TestGenerateOathOfEorlChapterMonarch proves the Oath of Eorl target card
+// TestGenerateThatPlayerBecomesMonarchCombatDamage proves the triggered
+// event-player form "Whenever <source> deals combat damage to a player, if there
+// is no monarch, that player becomes the monarch." (Starscream, Seeker Leader)
+// lowers to a BecomeMonarch primitive whose player reads the combat-damaged
+// event player, gated by the NoMonarch intervening condition on the
+// combat-damage-to-a-player trigger.
+func TestGenerateThatPlayerBecomesMonarchCombatDamage(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Seeker",
+		Layout:     "normal",
+		TypeLine:   "Artifact Creature — Robot",
+		ManaCost:   "{3}{B}",
+		OracleText: "Whenever Test Seeker deals combat damage to a player, if there is no monarch, that player becomes the monarch.",
+		Power:      new("2"),
+		Toughness:  new("3"),
+	}
+	face := lowerSingleFace(t, card)
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
+	}
+	ability := face.TriggeredAbilities[0]
+	pattern := ability.Trigger.Pattern
+	if pattern.Event != game.EventDamageDealt ||
+		!pattern.RequireCombatDamage ||
+		pattern.DamageRecipient != game.DamageRecipientPlayer {
+		t.Fatalf("trigger pattern = %#v, want combat-damage-to-a-player", pattern)
+	}
+	if !ability.Trigger.InterveningCondition.Exists ||
+		!ability.Trigger.InterveningCondition.Val.NoMonarch {
+		t.Fatalf("intervening condition = %#v, want NoMonarch gate", ability.Trigger.InterveningCondition)
+	}
+	prim := becomeMonarchPrimitive(t, ability.Content)
+	if prim.Player.Kind() != game.PlayerReferenceEventPlayer {
+		t.Fatalf("player reference = %v, want event player", prim.Player.Kind())
+	}
+}
+
 // generates and its chapter III lowers the "You become the monarch." sub-effect
 // to a BecomeMonarch primitive after the indestructible-counter placement.
 func TestGenerateOathOfEorlChapterMonarch(t *testing.T) {
