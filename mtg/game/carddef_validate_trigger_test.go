@@ -346,6 +346,53 @@ func TestValidateCardDefAllowsTokenOnlyTriggerSubject(t *testing.T) {
 	}
 }
 
+func TestValidateCardDefAllowsUnionTriggerSubject(t *testing.T) {
+	card := &CardDef{CardFace: CardFace{
+		Name:       "Union Watcher",
+		OracleText: "Whenever another creature or Vehicle you control enters, put a +1/+1 counter on this creature.",
+		TriggeredAbilities: []TriggeredAbility{{
+			Content: Mode{}.Ability(),
+			Trigger: TriggerCondition{Pattern: TriggerPattern{
+				Event:       EventPermanentEnteredBattlefield,
+				Controller:  TriggerControllerYou,
+				ExcludeSelf: true,
+				SubjectSelection: Selection{AnyOf: []Selection{
+					{RequiredTypesAny: []types.Card{types.Creature}},
+					{SubtypesAny: []types.Sub{types.Sub("Vehicle")}},
+				}},
+			}},
+		}},
+	}}
+
+	issues := ValidateCardDef(card)
+	if hasCardDefIssue(issues, CardDefIssueInvalidSelection) {
+		t.Fatalf("issues = %+v, want type-or-subtype union trigger subject accepted", issues)
+	}
+}
+
+func TestValidateCardDefRejectsUnionTriggerSubjectWithUnavailablePredicate(t *testing.T) {
+	card := &CardDef{CardFace: CardFace{
+		Name:       "Bad Union Watcher",
+		OracleText: "Whenever a creature or a permanent that entered this turn enters, draw a card.",
+		TriggeredAbilities: []TriggeredAbility{{
+			Content: Mode{}.Ability(),
+			Trigger: TriggerCondition{Pattern: TriggerPattern{
+				Event:      EventPermanentEnteredBattlefield,
+				Controller: TriggerControllerYou,
+				SubjectSelection: Selection{AnyOf: []Selection{
+					{RequiredTypesAny: []types.Card{types.Creature}},
+					{EnteredThisTurn: true},
+				}},
+			}},
+		}},
+	}}
+
+	issues := ValidateCardDef(card)
+	if !hasCardDefIssue(issues, CardDefIssueInvalidSelection) {
+		t.Fatalf("issues = %+v, want union with an unavailable alternative rejected", issues)
+	}
+}
+
 func TestValidateCardDefAllowsSubjectSelectionOrSelfTrigger(t *testing.T) {
 	card := &CardDef{CardFace: CardFace{
 		Name:       "Ally Watcher",

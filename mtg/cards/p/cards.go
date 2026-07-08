@@ -80,6 +80,7 @@ var Cards = []cardset.Entry{
 	{Name: "Protection of the Hekma", New: ProtectionOfTheHekma},
 	{Name: "Protector of the Crown", New: ProtectorOfTheCrown},
 	{Name: "Proud Pack-Rhino", New: ProudPackRhino},
+	{Name: "Prowl, Stoic Strategist", New: ProwlStoicStrategist},
 	{Name: "Prowling Nightstalker", New: ProwlingNightstalker},
 	{Name: "Psionic Snoop", New: PsionicSnoop},
 	{Name: "Psychic Impetus", New: PsychicImpetus},
