@@ -843,6 +843,15 @@ func lowerExecutableAbility(
 	ability compiler.CompiledAbility,
 	syntax *parser.Ability,
 ) (abilityLowering, *shared.Diagnostic) {
+	if ability.Kind == compiler.AbilityStatic && isMaxSpeedAbilityWord(ability.AbilityWord) {
+		stripped := ability
+		stripped.AbilityWord = ""
+		lowered, diagnostic := lowerExecutableAbility(cardName, saga, creatureSubtypes, stripped, syntax)
+		if diagnostic != nil {
+			return abilityLowering{}, diagnostic
+		}
+		return gateStaticOnMaxSpeed(lowered, ability)
+	}
 	if lowered, handled, diagnostic := lowerExecutableAbilitySpecialCase(cardName, creatureSubtypes, ability, syntax); handled {
 		return lowered, diagnostic
 	}
