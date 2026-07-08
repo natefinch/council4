@@ -47,6 +47,7 @@ func (e *Engine) applyPlayLandFaceFromZoneWithChoices(g *game.Game, playerID gam
 		return false
 	}
 	g.Turn.LandsPlayedThisTurn++
+	emitCardPlayedFromExileEvent(g, playerID, cardID, sourceZone)
 	return true
 }
 

@@ -1180,6 +1180,21 @@ func playerRelationMatches(sourceController, candidate game.PlayerID, relation g
 	}
 }
 
+// ruleEffectAffectsPlayer reports whether a play/cast-from-zone permission
+// authorizes candidate. It resolves the owner-scoped permission Prowl, Stoic
+// Strategist grants ("its owner may play it"): when AffectToOwner is set, only
+// the owner of the exiled card AffectedCardID is authorized, which may be an
+// opponent of the effect's controller. Every other permission stays
+// controller-relative through playerRelationMatches, so this is a no-op for
+// existing effects.
+func ruleEffectAffectsPlayer(g *game.Game, effect *game.RuleEffect, candidate game.PlayerID) bool {
+	if effect.AffectToOwner {
+		card, ok := g.GetCardInstance(effect.AffectedCardID)
+		return ok && card.Owner == candidate
+	}
+	return playerRelationMatches(effect.Controller, candidate, effect.AffectedPlayer)
+}
+
 func playerRuleEffectActive(g *game.Game, playerID game.PlayerID, kind game.RuleEffectKind) bool {
 	effects := activeRuleEffects(g)
 	for i := range effects {
@@ -1474,7 +1489,7 @@ func hasCastFromZoneRuleEffect(g *game.Game, playerID game.PlayerID, cardID id.I
 			effect.CastFromZone != sourceZone {
 			continue
 		}
-		if !playerRelationMatches(effect.Controller, playerID, effect.AffectedPlayer) {
+		if !ruleEffectAffectsPlayer(g, effect, playerID) {
 			continue
 		}
 		if effect.AffectedCardID != 0 && effect.AffectedCardID != cardID {
@@ -1587,7 +1602,7 @@ func canPlayLandFromZoneByRuleEffect(g *game.Game, playerID game.PlayerID, cardI
 	for i := range effects {
 		effect := &effects[i]
 		if effect.CastFromZone != sourceZone ||
-			!playerRelationMatches(effect.Controller, playerID, effect.AffectedPlayer) {
+			!ruleEffectAffectsPlayer(g, effect, playerID) {
 			continue
 		}
 		switch effect.Kind {

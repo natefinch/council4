@@ -2078,6 +2078,10 @@ func (p ExileForPlay) validatePrimitive([]TargetSpec, bool) error {
 	return nil
 }
 
+func (p ExilePermanentForPlay) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	return validateObjectReference(p.Object, targets, checkTargets)
+}
+
 func (p Sacrifice) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if p.Object.Kind() == ObjectReferenceNone {
 		return nil

@@ -420,6 +420,21 @@ func (Renderer) renderExileForPlay(ctx *renderCtx, value game.ExileForPlay) (str
 	return structLit("game.ExileForPlay", fields), nil
 }
 
+// renderExilePermanentForPlay renders an ExilePermanentForPlay primitive: the
+// target permanent reference and, when set, the source-keyed linked set the
+// exiled card joins (Prowl, Stoic Strategist).
+func (r Renderer) renderExilePermanentForPlay(value game.ExilePermanentForPlay) (string, error) {
+	object, err := r.renderObjectReference(value.Object)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{fmt.Sprintf("Object: %s,", object)}
+	if value.LinkedKey != "" {
+		fields = append(fields, fmt.Sprintf("LinkedKey: game.LinkedKey(%q),", string(value.LinkedKey)))
+	}
+	return structLit("game.ExilePermanentForPlay", fields), nil
+}
+
 func (r Renderer) renderImpulseExile(ctx *renderCtx, value game.ImpulseExile) (string, error) {
 	player, err := r.renderPlayerReference(value.Player)
 	if err != nil {

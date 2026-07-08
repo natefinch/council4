@@ -195,10 +195,17 @@ const (
 	// player would receive priority, with its targets chosen then — after the
 	// enabling action has resolved (game.CreateReflexiveTrigger).
 	PrimitiveCreateReflexiveTrigger
+
+	// PrimitiveExilePermanentForPlay exiles a target permanent from the
+	// battlefield and grants that card's owner permission to play it from exile
+	// for as long as it remains exiled ("exile up to one other target tapped
+	// creature or Vehicle. For as long as that card remains exiled, its owner may
+	// play it.", Prowl, Stoic Strategist).
+	PrimitiveExilePermanentForPlay
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveCreateReflexiveTrigger) + 1
+const primitiveKindCount = int(PrimitiveExilePermanentForPlay) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -1187,6 +1194,22 @@ type ExileForPlay struct {
 	Duration        EffectDuration
 	Cast            bool
 	SelectFromBatch bool
+}
+
+// ExilePermanentForPlay exiles a target permanent from the battlefield and
+// grants that card's owner permission to play it from exile for as long as it
+// remains exiled ("exile up to one other target tapped creature or Vehicle. For
+// as long as that card remains exiled, its owner may play it.", Prowl, Stoic
+// Strategist). The owner scope is what distinguishes it from ExileForPlay, whose
+// permission binds to the resolving controller: here the exiled card's owner —
+// who may be an opponent — gains the permission. Each exiled card is remembered
+// under LinkedKey, keyed by the source permanent, so a paired "whenever a player
+// plays a card exiled with this" trigger can recognize that provenance. Object
+// selects up to one target permanent, so an unresolved or absent target exiles
+// nothing.
+type ExilePermanentForPlay struct {
+	Object    ObjectReference
+	LinkedKey LinkedKey
 }
 
 // Sacrifice sacrifices the referenced permanent. When no object is set, the
