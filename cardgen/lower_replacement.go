@@ -45,10 +45,20 @@ func lowerPreventDamageToCountersReplacement(
 		return unsupported("the executable source backend supports only a single prevent-and-add-counters effect")
 	}
 	effect := ability.Content.Effects[0]
-	if effect.Kind != compiler.EffectPut ||
-		!effect.CounterKindKnown || effect.CounterKind != counter.PlusOnePlusOne ||
-		effect.Amount.DynamicKind == compiler.DynamicAmountNone {
-		return unsupported("the executable source backend supports only the 'put that many +1/+1 counters' prevention effect")
+	if !effect.CounterKindKnown || effect.CounterKind != counter.PlusOnePlusOne {
+		return unsupported("the executable source backend supports only the 'put that many +1/+1 counters' or 'remove a +1/+1 counter' prevention effect")
+	}
+	removeCounter := effect.Kind == compiler.EffectRemoveCounter
+	switch {
+	case effect.Kind == compiler.EffectPut && effect.Amount.DynamicKind != compiler.DynamicAmountNone:
+		// "prevent that damage and put that many +1/+1 counters on it." — a
+		// dynamic count equal to the prevented damage.
+	case removeCounter && effect.Amount.DynamicKind == compiler.DynamicAmountNone &&
+		effect.Amount.Known && effect.Amount.Value == 1:
+		// "prevent that damage. Remove a +1/+1 counter from this creature." — the
+		// Phantom mechanic, a single fixed counter removal per prevented event.
+	default:
+		return unsupported("the executable source backend supports only the 'put that many +1/+1 counters' or 'remove a +1/+1 counter' prevention effect")
 	}
 	selection := ability.Content.Conditions[0].Selection
 	if selection.DamageRecipientAttached == selection.DamageRecipientSelf {
@@ -57,6 +67,13 @@ func lowerPreventDamageToCountersReplacement(
 	gate := opt.V[game.Condition]{}
 	if selection.DamageRecipientMonarchGate {
 		gate = opt.Val(game.Condition{ControllerIsMonarch: true})
+	}
+	if removeCounter {
+		return game.DamagePreventionRemovesCounterReplacement(
+			ability.Text,
+			selection.DamageRecipientAttached,
+			gate,
+		), true, nil
 	}
 	return game.DamagePreventionToPlusOneCountersReplacement(
 		ability.Text,
@@ -510,6 +527,16 @@ func replacementSourceSpans(ability compiler.CompiledAbility, replacementAbility
 		for i := range ability.Content.References {
 			spans = append(spans, ability.Content.References[i].Span)
 		}
+	}
+	// The Phantom prevent-damage-and-remove-a-counter replacement ("If damage
+	// would be dealt to this creature, prevent that damage. Remove a +1/+1
+	// counter from this creature.") splits into two sentences, so the
+	// remove-counter effect span covers only the second sentence. Cover the whole
+	// ability so the leading condition and "prevent that damage" sentence are
+	// accounted for; the counters-added form keeps its single all-encompassing
+	// effect span unchanged.
+	if replacementAbility != nil && replacementAbility.Replacement.DamagePreventedRemovesPlusOneCounter {
+		spans = append(spans, ability.Span)
 	}
 	return spans
 }

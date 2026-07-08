@@ -180,8 +180,18 @@ func (r Renderer) renderDamagePreventionToCountersReplacement(ctx *renderCtx, ab
 		}
 		condition = fmt.Sprintf("opt.Val(%s)", rendered)
 	}
-	return fmt.Sprintf("game.DamagePreventionToPlusOneCountersReplacement(%q, %t, %s)",
-		ability.Text, replacement.DamageRecipientAttached, condition), nil
+	return fmt.Sprintf("%s(%q, %t, %s)",
+		damagePreventionReplacementFunc(replacement), ability.Text, replacement.DamageRecipientAttached, condition), nil
+}
+
+// damagePreventionReplacementFunc names the constructor for a prevent-all
+// damage replacement: the Phantom "remove a +1/+1 counter" form or the default
+// "put that many +1/+1 counters" form.
+func damagePreventionReplacementFunc(replacement game.ReplacementEffect) string {
+	if replacement.DamagePreventedRemovesPlusOneCounter {
+		return "game.DamagePreventionRemovesCounterReplacement"
+	}
+	return "game.DamagePreventionToPlusOneCountersReplacement"
 }
 
 // renderLifeModifierReplacement renders the life-gain and life-loss

@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,128 of 32,501 cards eligible for paper support (52.7%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,135 of 32,501 cards eligible for paper support (52.7%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -10544,12 +10544,19 @@ Council4 currently supports **17,128 of 32,501 cards eligible for paper support 
 - Phantasmal Shieldback
 - Phantatog
 - Phantom Beast
+- Phantom Centaur
+- Phantom Flock
 - Phantom General
 - Phantom Interference
 - Phantom Monster
+- Phantom Nantuko
 - Phantom Ninja
+- Phantom Nishoba
+- Phantom Nomad
+- Phantom Tiger
 - Phantom Warrior
 - Phantom Whelp
+- Phantom Wurm
 - Pharagax Giant
 - Pharaoh Rama-Tut
 - Pharika's Chosen

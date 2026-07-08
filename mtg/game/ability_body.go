@@ -838,6 +838,32 @@ func DamagePreventionToPlusOneCountersReplacement(text string, recipientAttached
 	return ReplacementAbility{Text: text, Replacement: replacement}
 }
 
+// DamagePreventionRemovesCounterReplacement builds the continuous static
+// replacement "If damage would be dealt to <recipient>, prevent that damage.
+// Remove a +1/+1 counter from this creature." (the Phantom mechanic: Phantom
+// Nantuko, Phantom Tiger, Phantom Centaur). A single +1/+1 counter is removed
+// per prevented damage event, independent of the damage amount. The recipient is
+// the replacement's own source permanent when recipientAttached is false, or the
+// permanent it is attached to when true. condition gates the prevention; pass an
+// empty opt.V for an ungated prevention.
+func DamagePreventionRemovesCounterReplacement(text string, recipientAttached bool, condition opt.V[Condition]) ReplacementAbility {
+	replacement := ReplacementEffect{
+		Description:                          text,
+		MatchEvent:                           EventDamageDealt,
+		ControllerFilter:                     TriggerControllerAny,
+		DamagePreventAll:                     true,
+		DamagePreventedRemovesPlusOneCounter: true,
+		Duration:                             DurationPermanent,
+		Condition:                            condition,
+	}
+	if recipientAttached {
+		replacement.DamageRecipientAttached = true
+	} else {
+		replacement.DamageRecipientSelf = true
+	}
+	return ReplacementAbility{Text: text, Replacement: replacement}
+}
+
 // LifeGainReplacement creates a persistent replacement that modifies life the
 // controller would gain by multiplying it and then adding a fixed amount (CR
 // 614), backing wordings such as "you gain twice that much life instead" and

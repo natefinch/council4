@@ -349,6 +349,13 @@ type ReplacementEffect struct {
 	// prevention's recipient permanent after a DamagePreventAll event ("... and
 	// put that many +1/+1 counters on it."). It is false for a plain prevention.
 	DamagePreventedBecomesPlusOneCounters bool
+	// DamagePreventedRemovesPlusOneCounter removes a single +1/+1 counter from the
+	// prevention's recipient permanent after a DamagePreventAll event ("... prevent
+	// that damage. Remove a +1/+1 counter from this creature.", the Phantom
+	// mechanic). Exactly one counter is removed per prevented damage event,
+	// independent of the damage amount; it does nothing when no +1/+1 counter is
+	// present. It is false for a plain prevention.
+	DamagePreventedRemovesPlusOneCounter bool
 	// DamageRecipientSelf scopes a DamagePreventAll prevention to the
 	// replacement's own source permanent ("If damage would be dealt to
 	// <this permanent>, ..."). Registration sets AffectedObjectID to the source.

@@ -120,6 +120,16 @@ type Permanent struct {
 	// cleanup step alongside MarkedDamage.
 	MarkedDeathtouchDamage bool
 
+	// DamagePreventionCounterRemovedThisStep records whether a
+	// DamagePreventedRemovesPlusOneCounter replacement (the Phantom mechanic)
+	// has already removed a +1/+1 counter from this permanent during the
+	// current combat damage step. Combat damage from multiple sources is dealt
+	// simultaneously (CR 510.2), so a Phantom blocked by several creatures has
+	// all of that damage prevented but loses only one counter total. The flag
+	// is reset at the start of each combat damage pass; it is never consulted
+	// for noncombat damage, where each source is a separate event.
+	DamagePreventionCounterRemovedThisStep bool
+
 	// TemporaryPowerModifier and TemporaryToughnessModifier are additive
 	// until-end-of-turn P/T changes. They are cleared during cleanup.
 	TemporaryPowerModifier     int
