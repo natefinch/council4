@@ -178,6 +178,14 @@ const (
 	// on a turn after it was plotted. Appended at the end of the enum so existing
 	// keyword ordinals are unchanged.
 	Plot
+	// LivingMetal (CR 702.176) is printed on the Universes-Beyond Transformers
+	// Vehicles: "Living metal (During your turn, this Vehicle is also a
+	// creature.)" It is a static ability that adds the creature card type to its
+	// own permanent while its controller is the active player, modeled by
+	// LivingMetalStaticBody. The keyword itself is carried so
+	// HasKeyword(LivingMetal) reports true. Appended at the end of the enum so
+	// existing keyword ordinals are unchanged.
+	LivingMetal
 )
 
 // Reusable StaticAbilityBody templates for non-parameterized keyword abilities.
@@ -397,6 +405,24 @@ var (
 	// cost, and the exile-on-resolution are supplied by the rules layer when it
 	// detects this keyword on a card in its owner's graveyard.
 	JumpStartStaticBody = simpleKeywordStaticBody("Jump-start", JumpStart)
+
+	// LivingMetalStaticBody is the reusable StaticAbility for living metal (CR
+	// 702.176): "During your turn, this Vehicle is also a creature." It adds the
+	// creature card type to its own permanent at the type layer while the
+	// controller is the active player, and carries the LivingMetal keyword so
+	// HasKeyword(LivingMetal) reports true.
+	LivingMetalStaticBody = StaticAbility{
+		Text:             "Living metal",
+		KeywordAbilities: []KeywordAbility{SimpleKeyword{Kind: LivingMetal}},
+		Condition:        opt.Val(Condition{SourceControllerTurn: true}),
+		ContinuousEffects: []ContinuousEffect{
+			{
+				Layer:          LayerType,
+				AffectedSource: true,
+				AddTypes:       []types.Card{types.Creature},
+			},
+		},
+	}
 )
 
 func simpleKeywordStaticBody(text string, keyword Keyword) StaticAbility {

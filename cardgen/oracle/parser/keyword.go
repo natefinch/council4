@@ -63,6 +63,7 @@ const (
 	KeywordKicker           KeywordKind = "KeywordKicker"
 	KeywordLifelink         KeywordKind = "KeywordLifelink"
 	KeywordLivingWeapon     KeywordKind = "KeywordLivingWeapon"
+	KeywordLivingMetal      KeywordKind = "KeywordLivingMetal"
 	KeywordMadness          KeywordKind = "KeywordMadness"
 	KeywordMenace           KeywordKind = "KeywordMenace"
 	KeywordMorph            KeywordKind = "KeywordMorph"
@@ -236,6 +237,7 @@ var keywordNames = map[KeywordKind]string{
 	KeywordKicker:            "Kicker",
 	KeywordLifelink:          "Lifelink",
 	KeywordLivingWeapon:      "Living weapon",
+	KeywordLivingMetal:       "Living metal",
 	KeywordMadness:           "Madness",
 	KeywordMenace:            "Menace",
 	KeywordMorph:             "Morph",
@@ -330,6 +332,7 @@ var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordFirstStrike, Words: []string{"first", "strike"}},
 	{Kind: KeywordCumulativeUpkeep, Words: []string{"cumulative", "upkeep"}},
 	{Kind: KeywordLivingWeapon, Words: []string{"living", "weapon"}},
+	{Kind: KeywordLivingMetal, Words: []string{"living", "metal"}},
 	{Kind: KeywordReadAhead, Words: []string{"read", "ahead"}},
 	{Kind: KeywordSplitSecond, Words: []string{"split", "second"}},
 	{Kind: KeywordPartnerWith, Words: []string{"partner", "with"}},
