@@ -24,6 +24,26 @@ func (o PlayerObservation) ScorableActivatedAbility(act action.Action) (eval.Sco
 	return eval.ScorableAbilityOfModes(body, payload.ChosenModes), true
 }
 
+// IsManaAbilityActivation reports whether the action activates a mana ability —
+// one that only adds mana (CR 605.1). An agent scores activating one standalone
+// at or below passing: mana is spent through the payment system as it pays for a
+// spell or ability, so activating a mana ability on its own merely floats mana
+// that empties at end of step. It matters especially for a mana-neutral ability
+// that pays for itself (Skyshroud Elf, "{1}: Add {R} or {W}"), which would
+// otherwise be activated without end, spinning the priority loop.
+func (o PlayerObservation) IsManaAbilityActivation(act action.Action) bool {
+	payload, ok := act.ActivateAbilityPayload()
+	if !ok {
+		return false
+	}
+	_, body, ok := activatedAbilitySource(o.g, o.Player, payload.SourceID, payload.AbilityIndex)
+	if !ok {
+		return false
+	}
+	_, isMana := body.(*game.ManaAbility)
+	return isMana
+}
+
 // RepeatedFreeActivation reports whether act re-activates, this turn, an ability
 // that costs nothing to activate — no mana after its announced X, and no
 // additional cost such as tapping or sacrificing — and has already been activated
