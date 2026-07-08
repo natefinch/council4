@@ -179,8 +179,8 @@ func (r referenceResolver) object(ref game.ObjectReference) (resolvedObjectRefer
 		}
 		return resolvedObjectReference{}, false
 	case game.ObjectReferenceEventPermanent:
-		if r.obj != nil && r.obj.HasTriggerEvent && r.obj.TriggerEvent.PermanentID != 0 {
-			return resolvePermanentOrLastKnown(r.g, r.obj.TriggerEvent.PermanentID)
+		if permanentID, ok := triggerEventPermanentID(r.obj); ok {
+			return resolvePermanentOrLastKnown(r.g, permanentID)
 		}
 		return resolvedObjectReference{}, false
 	case game.ObjectReferenceEventRelatedPermanent:
@@ -270,6 +270,28 @@ func defendingPlayerEvent(kind game.EventKind) bool {
 	default:
 		return false
 	}
+}
+
+// triggerEventPermanentID resolves an ObjectReferenceEventPermanent ("it") to the
+// permanent the trigger event is about. For most events this is the event's
+// PermanentID (the permanent that entered, left, was damaged, attacked, or
+// blocked). A damage event dealt to a player carries no damaged permanent, so
+// the event permanent is instead the damage source (SourceObjectID); this lets
+// "it" on a "Whenever ~ deals combat damage to a player, ..." trigger resolve to
+// the damage source, as Cyclonus, the Saboteur's connive and Cyclonus,
+// Cybertronian Fighter's convert require.
+func triggerEventPermanentID(obj *game.StackObject) (id.ID, bool) {
+	if obj == nil || !obj.HasTriggerEvent {
+		return 0, false
+	}
+	event := obj.TriggerEvent
+	if event.PermanentID != 0 {
+		return event.PermanentID, true
+	}
+	if event.Kind == game.EventDamageDealt && event.SourceObjectID != 0 {
+		return event.SourceObjectID, true
+	}
+	return 0, false
 }
 
 func triggeringEventPlayer(event game.Event) (game.PlayerID, bool) {
@@ -686,10 +708,7 @@ func (r referenceResolver) objectIdentityID(ref game.ObjectReference) (id.ID, bo
 		}
 		return r.obj.SourceID, true
 	case game.ObjectReferenceEventPermanent:
-		if r.obj != nil && r.obj.HasTriggerEvent && r.obj.TriggerEvent.PermanentID != 0 {
-			return r.obj.TriggerEvent.PermanentID, true
-		}
-		return 0, false
+		return triggerEventPermanentID(r.obj)
 	case game.ObjectReferenceEventRelatedPermanent:
 		if r.obj != nil && r.obj.HasTriggerEvent && r.obj.TriggerEvent.RelatedPermanentID != 0 {
 			return r.obj.TriggerEvent.RelatedPermanentID, true
