@@ -32,7 +32,11 @@ import (
 // (DestroyForEachPlayer, ExileForEachPlayer, CreateTokenForEachDestroyed): their
 // per-opponent player-relative choices and linked-set payoffs are not modeled by
 // the single-target atom heuristic.
-const knownPrimitiveCount = 117
+//
+// CreateReflexiveTrigger is value-neutral (no atom), matching CreateDelayedTrigger:
+// the value lives in the reflexive ability's own content, which is scored when
+// that content resolves, not in the primitive that puts it on the stack.
+const knownPrimitiveCount = 118
 
 // TestPrimitiveCountIsReconciled keeps a newly added resolution primitive from
 // silently falling through the translator: adding one trips this guard so its

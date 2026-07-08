@@ -34,6 +34,7 @@ func (g *Game) Clone() *Game {
 		Stack:                      cloneStack(g.Stack),
 		ContinuousEffects:          cloneSlicePtr(g.ContinuousEffects, fixupContinuousEffect),
 		DelayedTriggers:            cloneDelayedTriggers(g.DelayedTriggers),
+		PendingReflexiveTriggers:   cloneReflexiveTriggers(g.PendingReflexiveTriggers),
 		PreventionShields:          cloneSlice(g.PreventionShields),
 		ReplacementDecisions:       cloneSliceFunc(g.ReplacementDecisions, cloneReplacementDecision),
 		ReplacementEffects:         cloneSlicePtr(g.ReplacementEffects, fixupReplacementEffect),
@@ -77,6 +78,15 @@ func (g *Game) Clone() *Game {
 }
 
 func cloneDelayedTriggers(triggers []DelayedTrigger) []DelayedTrigger {
+	clone := slices.Clone(triggers)
+	for i := range clone {
+		clone[i].CapturedTargetControllerLKI = cloneComparableMap(clone[i].CapturedTargetControllerLKI)
+		clone[i].CapturedTargetManaValueLKI = cloneComparableMap(clone[i].CapturedTargetManaValueLKI)
+	}
+	return clone
+}
+
+func cloneReflexiveTriggers(triggers []ReflexiveTrigger) []ReflexiveTrigger {
 	clone := slices.Clone(triggers)
 	for i := range clone {
 		clone[i].CapturedTargetControllerLKI = cloneComparableMap(clone[i].CapturedTargetControllerLKI)

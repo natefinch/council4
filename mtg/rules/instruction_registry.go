@@ -150,6 +150,7 @@ func newPrimitiveRegistry() *primitiveRegistry {
 	registerPrimitiveHandler(reg, handleSkipStep)
 	registerPrimitiveHandler(reg, handleCreateEmblem)
 	registerPrimitiveHandler(reg, handleCreateDelayedTrigger)
+	registerPrimitiveHandler(reg, handleCreateReflexiveTrigger)
 	registerPrimitiveHandler(reg, handleCreateReplacement)
 	registerPrimitiveHandler(reg, handlePreventDamage)
 	registerPrimitiveHandler(reg, handleMoveCard)

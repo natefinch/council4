@@ -194,3 +194,25 @@ type DelayedTrigger struct {
 	// ObjectReferenceCapturedObject finds nothing and does nothing.
 	CapturedObjectID id.ID
 }
+
+// ReflexiveTrigger is a runtime reflexive triggered ability (CR 603.11) queued
+// when an enabling action was performed. It is put on the stack the next time a
+// player would receive priority, with its targets chosen then. Unlike a
+// DelayedTrigger it has no timing or event window: it is always ready to be put
+// on the stack the first time triggered abilities are gathered after it is
+// queued (which is immediately after the enabling ability finishes resolving).
+type ReflexiveTrigger struct {
+	SourceID       id.ID
+	SourceObjectID id.ID
+	SourceTokenDef *CardDef
+	Controller     PlayerID
+	Ability        TriggeredAbility
+	// CapturedTargetControllerLKI and CapturedTargetManaValueLKI preserve
+	// target-derived player and mana-value references captured from the spell or
+	// ability that created this reflexive trigger, mirroring DelayedTrigger.
+	CapturedTargetControllerLKI map[int]PlayerID
+	CapturedTargetManaValueLKI  map[int]int
+	// CapturedObjectID carries a permanent frozen from the creating ability so
+	// the reflexive content can act on it after the creating resolution ends.
+	CapturedObjectID id.ID
+}

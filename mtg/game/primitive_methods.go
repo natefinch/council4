@@ -296,6 +296,9 @@ func (CreateEmblem) Kind() PrimitiveKind { return PrimitiveCreateEmblem }
 // Kind implements Primitive for CreateDelayedTrigger.
 func (CreateDelayedTrigger) Kind() PrimitiveKind { return PrimitiveCreateDelayedTrigger }
 
+// Kind implements Primitive for CreateReflexiveTrigger.
+func (CreateReflexiveTrigger) Kind() PrimitiveKind { return PrimitiveCreateReflexiveTrigger }
+
 // Kind implements Primitive for CreateReplacement.
 func (CreateReplacement) Kind() PrimitiveKind { return PrimitiveCreateReplacement }
 
@@ -448,6 +451,7 @@ func (ShuffleSpellIntoLibrary) isPrimitive()              {}
 func (SkipStep) isPrimitive()                             {}
 func (CreateEmblem) isPrimitive()                         {}
 func (CreateDelayedTrigger) isPrimitive()                 {}
+func (CreateReflexiveTrigger) isPrimitive()               {}
 func (CreateReplacement) isPrimitive()                    {}
 func (PreventDamage) isPrimitive()                        {}
 func (MoveCard) isPrimitive()                             {}
@@ -708,8 +712,9 @@ func (p CreateDelayedTrigger) instructionRefs() primitiveRefs {
 	}
 	return primitiveRefs{}
 }
-func (p CreateReplacement) instructionRefs() primitiveRefs { return objectReferenceRefs(p.Object) }
-func (p PreventDamage) instructionRefs() primitiveRefs     { return quantityRefs(p.Amount) }
+func (CreateReflexiveTrigger) instructionRefs() primitiveRefs { return primitiveRefs{} }
+func (p CreateReplacement) instructionRefs() primitiveRefs    { return objectReferenceRefs(p.Object) }
+func (p PreventDamage) instructionRefs() primitiveRefs        { return quantityRefs(p.Amount) }
 func (p MoveCard) instructionRefs() primitiveRefs {
 	if p.Player.Kind() != PlayerReferenceNone {
 		return quantityRefs(p.Amount)

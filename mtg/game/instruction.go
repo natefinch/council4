@@ -192,6 +192,17 @@ func validateInstructionSequenceWithLinked(
 				return fmt.Errorf("instruction[%d]: %w", i, err)
 			}
 		}
+		if reflexive, ok := instr.Primitive.(CreateReflexiveTrigger); ok {
+			if err := validateNestedAbilityContent(
+				reflexive.Trigger.Content,
+				publishedLinked,
+				targets,
+				checkTargets,
+				siblingLinked,
+			); err != nil {
+				return fmt.Errorf("instruction[%d]: %w", i, err)
+			}
+		}
 		if instr.ResultGate.Exists {
 			key := instr.ResultGate.Val.Key
 			if key != "" {

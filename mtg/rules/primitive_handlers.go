@@ -1585,6 +1585,10 @@ func handleCreateDelayedTrigger(r *effectResolver, prim game.CreateDelayedTrigge
 	return effectResolved{accepted: true, succeeded: scheduleDelayedTrigger(r.game, r.obj, &prim.Trigger)}
 }
 
+func handleCreateReflexiveTrigger(r *effectResolver, prim game.CreateReflexiveTrigger) effectResolved {
+	return effectResolved{accepted: true, succeeded: queueReflexiveTrigger(r.game, r.obj, &prim.Trigger)}
+}
+
 func handleCreateReplacement(r *effectResolver, prim game.CreateReplacement) effectResolved {
 	replacement := *prim.Replacement
 	replacement.ID = r.game.IDGen.Next()

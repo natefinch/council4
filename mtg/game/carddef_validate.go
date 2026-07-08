@@ -752,6 +752,16 @@ func (v *cardDefValidator) validateInstructionSequence(
 				targets,
 			)
 		}
+		if reflexive, ok := seq[i].Primitive.(CreateReflexiveTrigger); ok {
+			v.validateAbilityContentWithLinked(
+				faceName,
+				appendPath(instructionPath, "Primitive.Trigger.Content"),
+				reflexive.Trigger.Content,
+				nil,
+				publishedLinked,
+				targets,
+			)
+		}
 		if emblem, ok := seq[i].Primitive.(CreateEmblem); ok {
 			for j, ability := range emblem.EmblemAbilities {
 				v.validateAbilityBody(
