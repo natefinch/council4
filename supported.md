@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,121 of 32,501 cards eligible for paper support (52.7%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,126 of 32,501 cards eligible for paper support (52.7%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -5180,6 +5180,7 @@ Council4 currently supports **17,121 of 32,501 cards eligible for paper support 
 - Fledgling Osprey
 - Fleet Swallower
 - Fleet-Footed Monk
+- Fleetfeather Cockatrice
 - Fleetfeather Sandals
 - Fleetfoot Dancer
 - Fleetfoot Panther
@@ -5947,6 +5948,7 @@ Council4 currently supports **17,121 of 32,501 cards eligible for paper support 
 - Glowing Anemone
 - Glowrider
 - Glowstone Recluse
+- Gluttonous Cyclops
 - Gluttonous Guest
 - Gluttonous Slime
 - Gluttonous Slug
@@ -7178,6 +7180,7 @@ Council4 currently supports **17,121 of 32,501 cards eligible for paper support 
 - Ikra Shidiqi, the Usurper
 - Il Mheg Pixie
 - Ill-Gotten Inheritance
+- Ill-Tempered Cyclops
 - Illegitimate Business
 - Illness in the Ranks
 - Illuminate History
@@ -9750,6 +9753,7 @@ Council4 currently supports **17,121 of 32,501 cards eligible for paper support 
 - Nephalia Seakite
 - Nephalia Smuggler
 - Nervous Gardener
+- Nessian Asp
 - Nessian Courser
 - Nessian Demolok
 - Nessian Hornbeetle
@@ -11350,6 +11354,7 @@ Council4 currently supports **17,121 of 32,501 cards eligible for paper support 
 - Ravenous Giant
 - Ravenous Harpy
 - Ravenous Intruder
+- Ravenous Leucrocota
 - Ravenous Lindwurm
 - Ravenous Rats
 - Ravenous Robots
