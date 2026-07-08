@@ -118,7 +118,10 @@ func (s Searcher) searchAttackers(sim rules.Simulator, world *game.Game, me game
 		if !ok {
 			continue
 		}
-		if value := Evaluate(rules.NewObservation(resolved, me)); value > bestValue {
+		resolved.BeginStaticSourceFrame()
+		value := Evaluate(rules.NewObservation(resolved, me))
+		resolved.EndStaticSourceFrame()
+		if value > bestValue {
 			bestValue = value
 			best = legal[i]
 		}
@@ -199,6 +202,12 @@ func (s Searcher) searchBestAction(sim rules.Simulator, world *game.Game, me gam
 		// A forced decision (typically only Pass): nothing to search.
 		return legal[0]
 	}
+	// Reading the live world to pre-rank candidates and score the policy prior
+	// scans the battlefield's static-ability sources repeatedly; a frame builds
+	// them once for the whole decision. The world is only read here (each candidate
+	// is applied to a clone), so the frame stays valid.
+	world.BeginStaticSourceFrame()
+	defer world.EndStaticSourceFrame()
 	candidates := s.candidateActions(world, me, legal)
 	applyPolicies := s.uniformPolicies()
 	resolvePolicies := s.resolvePolicies(me)
@@ -253,12 +262,19 @@ func containsPass(actions []action.Action) bool {
 // opponents respond, then evaluate the resulting position for me. An action that
 // turns out to be illegal in the determinized world scores as the worst option
 // so it is never chosen over a real play.
+//
+// The evaluation runs inside a static-source frame so that reading every
+// permanent's effective characteristics builds the battlefield's static-ability
+// sources once and memoizes each permanent's values, rather than rebuilding them
+// per permanent — the dominant cost of evaluating a large real-deck board.
 func (Searcher) actionValue(sim rules.Simulator, world *game.Game, me game.PlayerID, act action.Action, applyPolicies, resolvePolicies [game.NumPlayers]rules.PlayerAgent) float64 {
 	afterAction, ok := sim.Apply(world, me, act, applyPolicies)
 	if !ok {
 		return math.Inf(-1)
 	}
 	resolved := sim.ResolvePriority(afterAction, resolvePolicies)
+	resolved.BeginStaticSourceFrame()
+	defer resolved.EndStaticSourceFrame()
 	return Evaluate(rules.NewObservation(resolved, me))
 }
 
