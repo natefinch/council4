@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,048 of 32,501 cards eligible for paper support (52.5%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,047 of 32,501 cards eligible for paper support (52.5%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -4737,7 +4737,6 @@ Council4 currently supports **17,048 of 32,501 cards eligible for paper support 
 - Faerie Rogue
 - Faerie Rogue
 - Faerie Seer
-- Faerie Slumber Party
 - Faerie Snoop
 - Faerie Spy
 - Faerie Swarm

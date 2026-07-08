@@ -650,10 +650,13 @@ func parseDynamicEffectAmount(tokens []shared.Token, atoms Atoms) (amount Effect
 // "a ... token" and models a fixed single token; this types the iterator as a
 // dynamic count (the for-each subject) with the create clause's single token as
 // the per-iteration multiplier, so the lowerer creates one token per counted
-// object. It returns false unless the effect is a single-token controller
-// creature-token create (tokenPTKnown) whose pre-verb tokens are exactly a
-// recognized "for each <count subject>," prefix; in particular it never retypes
-// a copy-of-target token create, which carries no fixed power/toughness.
+// object. The prefix may end with an optional "you" subject ("For each
+// opponent, you create ...") as well as the bare imperative ("For each
+// opponent, create ..."); both name the same controller effect. It returns
+// false unless the effect is a single-token controller creature-token create
+// (tokenPTKnown) whose pre-verb tokens are exactly a recognized "for each
+// <count subject>,[ you]" prefix; in particular it never retypes a
+// copy-of-target token create, which carries no fixed power/toughness.
 func parseCreateForEachAmount(kind EffectKind, context EffectContextKind, tokenPTKnown bool, pre []shared.Token, clauseAmount EffectAmountSyntax, atoms Atoms) (EffectAmountSyntax, bool) {
 	if kind != EffectCreate || context != EffectContextController || !tokenPTKnown ||
 		!clauseAmount.Known || clauseAmount.Value != 1 {
@@ -668,7 +671,21 @@ func parseCreateForEachAmount(kind EffectKind, context EffectContextKind, tokenP
 		subject.plural != prefix.plural {
 		return EffectAmountSyntax{}, false
 	}
-	if subject.end != len(pre)-1 || pre[subject.end].Kind != shared.Comma {
+	if subject.end >= len(pre) || pre[subject.end].Kind != shared.Comma {
+		return EffectAmountSyntax{}, false
+	}
+	// The distributive may name the creating player explicitly ("For each
+	// opponent, you create ...", Endless Ranks of HYDRA) or leave the imperative
+	// bare ("For each opponent, create ...", Adeline, Resplendent Cathar). Both
+	// wordings describe the identical controller effect, so tolerate an optional
+	// "you" subject between the distributive comma and the create verb; any other
+	// trailing token means the pre-verb run is not a bare "for each <count>,"
+	// prefix and stays unrecognized.
+	rest := subject.end + 1
+	if rest < len(pre) && equalWord(pre[rest], "you") {
+		rest++
+	}
+	if rest != len(pre) {
 		return EffectAmountSyntax{}, false
 	}
 	amount := subject.amount
