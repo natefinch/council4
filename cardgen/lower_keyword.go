@@ -306,6 +306,12 @@ func lowerKeywordDispatch(
 		}
 		return spectacleLowering, true, nil
 	}
+	if mtmteLowering, ok, diag := lowerMoreThanMeetsTheEyeAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return mtmteLowering, true, nil
+	}
 	if dredgeAbility, ok, diag := lowerDredgeAbility(ability, syntax); ok {
 		if diag != nil {
 			return abilityLowering{}, true, diag
@@ -1429,6 +1435,49 @@ func lowerSpectacleAbility(
 			Label:     "Spectacle",
 			ManaCost:  opt.Val(manaCost),
 			Condition: cost.AlternativeConditionOpponentLostLifeThisTurn,
+		}},
+		consumed:    semanticConsumption{keywords: 1},
+		sourceSpans: keywordSpans(ability, syntax),
+	}, true, nil
+}
+
+// lowerMoreThanMeetsTheEyeAbility lowers the Transformers "More Than Meets the
+// Eye" keyword (CR 712): "More Than Meets the Eye <cost>" lets the card be cast
+// for that cost, and the resulting permanent enters converted, as its back face.
+// It produces a single alternative cost carrying the More Than Meets the Eye
+// mechanic, which the rules layer reads to make the permanent enter transformed.
+// Only the exact keyword with a fixed mana cost and no other rules text is
+// supported; anything else fails closed.
+func lowerMoreThanMeetsTheEyeAbility(
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (abilityLowering, bool, *shared.Diagnostic) {
+	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordMoreThanMeetsTheEye {
+		return abilityLowering{}, false, nil
+	}
+	keyword := ability.Content.Keywords[0]
+	manaCost, fixed := fixedKeywordManaCost(keyword)
+	if !fixed ||
+		(ability.Kind != compiler.AbilityStatic && ability.Kind != compiler.AbilitySpell) ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.References) != 0 ||
+		ability.AbilityWord != "" ||
+		!keywordOnlyCovered(syntax, keyword) {
+		return abilityLowering{}, true, executableDiagnostic(
+			ability,
+			"unsupported More Than Meets the Eye ability",
+			"the executable source backend supports only exact More Than Meets the Eye with a fixed mana cost",
+		)
+	}
+	return abilityLowering{
+		alternativeCosts: []cost.Alternative{{
+			Label:    "More Than Meets the Eye",
+			Mechanic: cost.AlternativeMechanicMoreThanMeetsTheEye,
+			ManaCost: opt.Val(manaCost),
 		}},
 		consumed:    semanticConsumption{keywords: 1},
 		sourceSpans: keywordSpans(ability, syntax),

@@ -387,6 +387,8 @@ func (r Renderer) renderAlternativeCosts(ctx *renderCtx, alternatives []cost.Alt
 			fields = append(fields, "Mechanic: cost.AlternativeMechanicEscape,")
 		case cost.AlternativeMechanicEvoke:
 			fields = append(fields, "Mechanic: cost.AlternativeMechanicEvoke,")
+		case cost.AlternativeMechanicMoreThanMeetsTheEye:
+			fields = append(fields, "Mechanic: cost.AlternativeMechanicMoreThanMeetsTheEye,")
 		default:
 			return "", fmt.Errorf("render: unsupported alternative-cost mechanic %d", alternative.Mechanic)
 		}
