@@ -79,15 +79,6 @@ func newTheFireNationDrill() *game.CardDef {
 						},
 					},
 					Content: game.Mode{
-						Targets: []game.TargetSpec{
-							game.TargetSpec{
-								MinTargets: 1,
-								MaxTargets: 1,
-								Constraint: "target creature with power 4 or less",
-								Allow:      game.TargetAllowPermanent,
-								Selection:  opt.Val(game.Selection{RequiredTypesAny: []types.Card{types.Creature}, Power: opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 4})}),
-							},
-						},
 						Sequence: []game.Instruction{
 							{
 								Primitive: game.Tap{
@@ -97,8 +88,27 @@ func newTheFireNationDrill() *game.CardDef {
 								PublishResult: game.ResultKey("if-you-do"),
 							},
 							{
-								Primitive: game.Destroy{
-									Object: game.TargetPermanentReference(0),
+								Primitive: game.CreateReflexiveTrigger{
+									Trigger: game.ReflexiveTriggerDef{
+										Content: game.Mode{
+											Targets: []game.TargetSpec{
+												game.TargetSpec{
+													MinTargets: 1,
+													MaxTargets: 1,
+													Constraint: "target creature with power 4 or less",
+													Allow:      game.TargetAllowPermanent,
+													Selection:  opt.Val(game.Selection{RequiredTypesAny: []types.Card{types.Creature}, Power: opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 4})}),
+												},
+											},
+											Sequence: []game.Instruction{
+												{
+													Primitive: game.Destroy{
+														Object: game.TargetPermanentReference(0),
+													},
+												},
+											},
+										}.Ability(),
+									},
 								},
 								ResultGate: opt.Val(game.InstructionResultGate{
 									Key:       "if-you-do",

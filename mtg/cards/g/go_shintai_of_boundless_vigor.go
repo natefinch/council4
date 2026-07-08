@@ -49,15 +49,6 @@ func newGoShintaiOfBoundlessVigor() *game.CardDef {
 						},
 					},
 					Content: game.Mode{
-						Targets: []game.TargetSpec{
-							game.TargetSpec{
-								MinTargets: 1,
-								MaxTargets: 1,
-								Constraint: "target Shrine",
-								Allow:      game.TargetAllowPermanent,
-								Selection:  opt.Val(game.Selection{SubtypesAny: []types.Sub{types.Sub("Shrine")}}),
-							},
-						},
 						Sequence: []game.Instruction{
 							{
 								Primitive: game.Pay{
@@ -71,14 +62,33 @@ func newGoShintaiOfBoundlessVigor() *game.CardDef {
 								PublishResult: game.ResultKey("controller-paid"),
 							},
 							{
-								Primitive: game.AddCounter{
-									Amount: game.Dynamic(game.DynamicAmount{
-										Kind:       game.DynamicAmountCountSelector,
-										Multiplier: 1,
-										Group:      game.BattlefieldGroup(game.Selection{SubtypesAny: []types.Sub{types.Sub("Shrine")}, Controller: game.ControllerYou}),
-									}),
-									Object:      game.TargetPermanentReference(0),
-									CounterKind: counter.PlusOnePlusOne,
+								Primitive: game.CreateReflexiveTrigger{
+									Trigger: game.ReflexiveTriggerDef{
+										Content: game.Mode{
+											Targets: []game.TargetSpec{
+												game.TargetSpec{
+													MinTargets: 1,
+													MaxTargets: 1,
+													Constraint: "target Shrine",
+													Allow:      game.TargetAllowPermanent,
+													Selection:  opt.Val(game.Selection{SubtypesAny: []types.Sub{types.Sub("Shrine")}}),
+												},
+											},
+											Sequence: []game.Instruction{
+												{
+													Primitive: game.AddCounter{
+														Amount: game.Dynamic(game.DynamicAmount{
+															Kind:       game.DynamicAmountCountSelector,
+															Multiplier: 1,
+															Group:      game.BattlefieldGroup(game.Selection{SubtypesAny: []types.Sub{types.Sub("Shrine")}, Controller: game.ControllerYou}),
+														}),
+														Object:      game.TargetPermanentReference(0),
+														CounterKind: counter.PlusOnePlusOne,
+													},
+												},
+											},
+										}.Ability(),
+									},
 								},
 								ResultGate: opt.Val(game.InstructionResultGate{
 									Key:       "controller-paid",

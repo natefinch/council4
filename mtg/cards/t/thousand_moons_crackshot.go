@@ -42,15 +42,6 @@ func newThousandMoonsCrackshot() *game.CardDef {
 						},
 					},
 					Content: game.Mode{
-						Targets: []game.TargetSpec{
-							game.TargetSpec{
-								MinTargets: 1,
-								MaxTargets: 1,
-								Constraint: "target creature",
-								Allow:      game.TargetAllowPermanent,
-								Selection:  opt.Val(game.Selection{RequiredTypesAny: []types.Card{types.Creature}}),
-							},
-						},
 						Sequence: []game.Instruction{
 							{
 								Primitive: game.Pay{
@@ -65,8 +56,27 @@ func newThousandMoonsCrackshot() *game.CardDef {
 								PublishResult: game.ResultKey("controller-paid"),
 							},
 							{
-								Primitive: game.Tap{
-									Object: game.TargetPermanentReference(0),
+								Primitive: game.CreateReflexiveTrigger{
+									Trigger: game.ReflexiveTriggerDef{
+										Content: game.Mode{
+											Targets: []game.TargetSpec{
+												game.TargetSpec{
+													MinTargets: 1,
+													MaxTargets: 1,
+													Constraint: "target creature",
+													Allow:      game.TargetAllowPermanent,
+													Selection:  opt.Val(game.Selection{RequiredTypesAny: []types.Card{types.Creature}}),
+												},
+											},
+											Sequence: []game.Instruction{
+												{
+													Primitive: game.Tap{
+														Object: game.TargetPermanentReference(0),
+													},
+												},
+											},
+										}.Ability(),
+									},
 								},
 								ResultGate: opt.Val(game.InstructionResultGate{
 									Key:       "controller-paid",

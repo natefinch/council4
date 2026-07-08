@@ -41,14 +41,6 @@ func newKardurSViciousReturn() *game.CardDef {
 					Text:     "I — You may sacrifice a creature. When you do, this Saga deals 3 damage to any target.",
 					Chapters: []int{1},
 					Content: game.Mode{
-						Targets: []game.TargetSpec{
-							game.TargetSpec{
-								MinTargets: 1,
-								MaxTargets: 1,
-								Constraint: "any target",
-								Allow:      game.TargetAllowPermanent | game.TargetAllowPlayer,
-							},
-						},
 						Sequence: []game.Instruction{
 							{
 								Primitive: game.SacrificePermanents{
@@ -60,10 +52,28 @@ func newKardurSViciousReturn() *game.CardDef {
 								PublishResult: game.ResultKey("if-you-do"),
 							},
 							{
-								Primitive: game.Damage{
-									Amount:       game.Fixed(3),
-									Recipient:    game.AnyTargetDamageRecipient(0),
-									DamageSource: opt.Val(game.SourcePermanentReference()),
+								Primitive: game.CreateReflexiveTrigger{
+									Trigger: game.ReflexiveTriggerDef{
+										Content: game.Mode{
+											Targets: []game.TargetSpec{
+												game.TargetSpec{
+													MinTargets: 1,
+													MaxTargets: 1,
+													Constraint: "any target",
+													Allow:      game.TargetAllowPermanent | game.TargetAllowPlayer,
+												},
+											},
+											Sequence: []game.Instruction{
+												{
+													Primitive: game.Damage{
+														Amount:       game.Fixed(3),
+														Recipient:    game.AnyTargetDamageRecipient(0),
+														DamageSource: opt.Val(game.SourcePermanentReference()),
+													},
+												},
+											},
+										}.Ability(),
+									},
 								},
 								ResultGate: opt.Val(game.InstructionResultGate{
 									Key:       "if-you-do",
