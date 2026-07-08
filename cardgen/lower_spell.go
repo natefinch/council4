@@ -1860,6 +1860,8 @@ func lowerImmediateSingleEffectSpell(
 		})
 	case compiler.EffectExplore:
 		return lowerExploreSpell(ctx)
+	case compiler.EffectTransform:
+		return lowerTransformSelfSpell(ctx)
 	case compiler.EffectManifest, compiler.EffectManifestDread, compiler.EffectCloak:
 		return lowerManifestSpell(ctx)
 	case compiler.EffectRegenerate:

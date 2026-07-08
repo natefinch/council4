@@ -1677,6 +1677,12 @@ func (r Renderer) renderObjectPrimitive(primitive game.Primitive) (string, error
 			return "", err
 		}
 		typeName, object = "game.RemoveFromCombat", value.Object
+	case game.PrimitiveTransform:
+		value, err := assertPrimitive[game.Transform](primitive)
+		if err != nil {
+			return "", err
+		}
+		typeName, object = "game.Transform", value.Object
 	default:
 		return "", fmt.Errorf("render: unsupported object primitive kind %d", primitive.Kind())
 	}
