@@ -794,6 +794,10 @@ func validStaticRuleSyntax(rule StaticRuleSyntax) bool {
 			rule.Operation.Voice == StaticRuleVoiceActive &&
 			len(rule.Qualifiers) == 0) ||
 			(rule.Constraint.Kind == StaticRuleConstraintProhibition &&
+				rule.Operation.Kind == StaticRuleOperationAttack &&
+				rule.Operation.Voice == StaticRuleVoiceActive &&
+				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierDefenderYouDirect)) ||
+			(rule.Constraint.Kind == StaticRuleConstraintProhibition &&
 				rule.Operation.Kind == StaticRuleOperationUntap &&
 				rule.Operation.Voice == StaticRuleVoiceActive &&
 				len(rule.Qualifiers) == 0) ||
@@ -801,6 +805,11 @@ func validStaticRuleSyntax(rule StaticRuleSyntax) bool {
 			validGroupMustAttackRule(rule)
 	case StaticRuleSubjectOpponentControlledCreatures:
 		return validGroupMustAttackRule(rule)
+	case StaticRuleSubjectControlledNotOwnedCreatures:
+		return rule.Constraint.Kind == StaticRuleConstraintProhibition &&
+			rule.Operation.Kind == StaticRuleOperationSacrifice &&
+			rule.Operation.Voice == StaticRuleVoicePassive &&
+			len(rule.Qualifiers) == 0
 	default:
 		return false
 	}
@@ -873,6 +882,7 @@ func validCreatureStaticRuleOperation(rule StaticRuleSyntax) bool {
 			rule.Operation.Voice == StaticRuleVoiceActive &&
 			(len(rule.Qualifiers) == 0 ||
 				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierDefenderYou) ||
+				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierDefenderYouDirect) ||
 				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierAlone))) ||
 		(rule.Constraint.Kind == StaticRuleConstraintProhibition &&
 			rule.Operation.Kind == StaticRuleOperationAttackOrBlock &&

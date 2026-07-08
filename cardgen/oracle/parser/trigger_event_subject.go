@@ -35,6 +35,15 @@ func parsePermanentEventSubject(tokens []shared.Token, plural bool, atoms Atoms)
 		result.ok = true
 		return result
 	}
+	if commander, controller, ok := parseCommanderEventSubject(remaining); ok {
+		if subtypeFromEntryChoice {
+			return permanentSubjectResult{}
+		}
+		result.controller = controller
+		result.subject = commander
+		result.ok = true
+		return result
+	}
 	var relationsOK bool
 	remaining, result.controller, relationsOK = stripControllerSuffix(remaining)
 	if !relationsOK {
@@ -79,6 +88,21 @@ func parsePermanentEventSubject(tokens []shared.Token, plural bool, atoms Atoms)
 	return result
 }
 
+// parseCommanderEventSubject recognizes the commander subject "your
+// commander"/"your commanders" (Archivist of Gondor), the possessive form that
+// names the controller's commander. It yields a Selection whose Commander flag
+// compiles to Selection.MatchCommander, controlled by "you".
+func parseCommanderEventSubject(tokens []shared.Token) (TriggerEventSubject, TriggerController, bool) {
+	if !tokenWordsEqual(tokens, "your", "commander") && !tokenWordsEqual(tokens, "your", "commanders") {
+		return TriggerEventSubject{}, ControllerAny, false
+	}
+	return TriggerEventSubject{
+		Kind:      TriggerEventSubjectSelection,
+		Span:      shared.SpanOf(tokens),
+		Selection: TriggerSelection{Commander: true},
+	}, ControllerYou, true
+}
+
 func stripControllerSuffix(tokens []shared.Token) ([]shared.Token, TriggerController, bool) {
 	for _, relation := range []struct {
 		words      []string
@@ -116,6 +140,13 @@ func parseAttackRecipient(tokens []shared.Token) (TriggerEventAttackRecipient, T
 		}, player, true
 	case syntaxWordsEqual(tokens, "a", "player"):
 		player := playerSelectorFromKind(TriggerPlayerSelectorAny, shared.SpanOf(tokens))
+		return TriggerEventAttackRecipient{
+			Kind:   TriggerEventAttackRecipientPlayer,
+			Span:   shared.SpanOf(tokens),
+			Player: player,
+		}, player, true
+	case syntaxWordsEqual(tokens, "the", "monarch"):
+		player := playerSelectorFromKind(TriggerPlayerSelectorMonarch, shared.SpanOf(tokens))
 		return TriggerEventAttackRecipient{
 			Kind:   TriggerEventAttackRecipientPlayer,
 			Span:   shared.SpanOf(tokens),

@@ -7,53 +7,86 @@ import (
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
-// TestAttackingCreaturesYouControlGroupKeywordGrantSnapshots verifies the
+// TestTriggeringAttackersGroupKeywordGrantBindsDeclaredAttackers verifies the
 // runtime shape produced for "Whenever one or more creatures you control attack,
 // they gain <keyword> until end of turn." (Angelic Guardian): an ApplyContinuous
-// granting a keyword to the "attacking creatures you control" group. It confirms
-// only the attacking creatures the resolving player controls gain the keyword
-// (not their non-attacking creatures nor an opponent's attackers), and that the
-// affected set is snapshotted at resolution (CR 611.2c) so a creature keeps the
-// keyword after it leaves combat.
-func TestAttackingCreaturesYouControlGroupKeywordGrantSnapshots(t *testing.T) {
+// granting a keyword to the TriggeringAttackers group. It binds the creatures
+// declared as attackers in the triggering attack (the trigger event's
+// simultaneous batch), filtered to the ability controller — not the current set
+// of attacking creatures. It confirms:
+//   - each declared attacker the resolving player controls gains the keyword;
+//   - an opponent's creature in the same batch is excluded (Controller: You);
+//   - a declared attacker removed from combat before resolution still gains it
+//     (the affected set is the declared batch, snapshotted at resolution);
+//   - a creature you control that is attacking but was not part of the
+//     triggering declaration (a later, separate attack) is not included.
+func TestTriggeringAttackersGroupKeywordGrantBindsDeclaredAttackers(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
-	engine := NewEngine(nil)
-	myAttacker := makeCreaturePermanent(g, game.Player1, "My Attacker")
-	myBencher := makeCreaturePermanent(g, game.Player1, "My Bencher")
-	opponentAttacker := makeCreaturePermanent(g, game.Player2, "Opponent Attacker")
-	g.Combat = &game.CombatState{Attackers: []game.AttackDeclaration{
-		{Attacker: myAttacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
-		{Attacker: opponentAttacker.ObjectID, Target: game.AttackTarget{Player: game.Player1}},
-	}}
-	addEffectSpellToStack(g, game.Player1, game.ApplyContinuous{
+	declaredFirst := makeCreaturePermanent(g, game.Player1, "Declared First")
+	declaredSecond := makeCreaturePermanent(g, game.Player1, "Declared Second")
+	leftCombat := makeCreaturePermanent(g, game.Player1, "Left Combat")
+	opponentInBatch := makeCreaturePermanent(g, game.Player2, "Opponent Attacker")
+	lateAttacker := makeCreaturePermanent(g, game.Player1, "Late Attacker")
+
+	// The triggering attack: three of the controller's creatures and an opponent
+	// creature are declared as attackers simultaneously.
+	batchID := g.IDGen.Next()
+	for _, permanent := range []*game.Permanent{declaredFirst, declaredSecond, leftCombat, opponentInBatch} {
+		emitEvent(g, game.Event{
+			Kind:           game.EventAttackerDeclared,
+			PermanentID:    permanent.ObjectID,
+			Controller:     permanent.Controller,
+			SimultaneousID: batchID,
+		})
+	}
+	// A separate, later attack declaration that did not trigger this ability.
+	emitEvent(g, game.Event{
+		Kind:           game.EventAttackerDeclared,
+		PermanentID:    lateAttacker.ObjectID,
+		Controller:     game.Player1,
+		SimultaneousID: g.IDGen.Next(),
+	})
+
+	obj := &game.StackObject{
+		ID:              g.IDGen.Next(),
+		Kind:            game.StackTriggeredAbility,
+		Controller:      game.Player1,
+		HasTriggerEvent: true,
+		TriggerEvent: game.Event{
+			Kind:           game.EventAttackerDeclared,
+			PermanentID:    declaredFirst.ObjectID,
+			Controller:     game.Player1,
+			SimultaneousID: batchID,
+		},
+	}
+	r := &effectResolver{engine: NewEngine(nil), game: g, obj: obj, agents: [game.NumPlayers]PlayerAgent{}, log: &TurnLog{}}
+
+	resolved := handleApplyContinuous(r, game.ApplyContinuous{
 		ContinuousEffects: []game.ContinuousEffect{{
 			Layer: game.LayerAbility,
-			Group: game.BattlefieldGroup(game.Selection{
+			Group: game.TriggeringAttackersGroup(game.Selection{
 				RequiredTypes: []types.Card{types.Creature},
 				Controller:    game.ControllerYou,
-				CombatState:   game.CombatStateAttacking,
 			}),
 			AddKeywords: []game.Keyword{game.Indestructible},
 		}},
 		Duration: game.DurationUntilEndOfTurn,
-	}, nil)
-
-	engine.resolveTopOfStack(g, &TurnLog{})
-
-	if !hasKeyword(g, myAttacker, game.Indestructible) {
-		t.Fatal("attacking creature you control did not gain indestructible")
-	}
-	if hasKeyword(g, myBencher, game.Indestructible) {
-		t.Fatal("non-attacking creature you control gained indestructible")
-	}
-	if hasKeyword(g, opponentAttacker, game.Indestructible) {
-		t.Fatal("opponent's attacking creature gained indestructible")
+	})
+	if !resolved.succeeded {
+		t.Fatal("ApplyContinuous over the triggering attackers did not apply")
 	}
 
-	// The affected set is locked at resolution, so leaving combat does not end
-	// the grant.
-	g.Combat.Attackers = nil
-	if !hasKeyword(g, myAttacker, game.Indestructible) {
-		t.Fatal("indestructible ended when the creature left combat; group was not snapshotted")
+	if !hasKeyword(g, declaredFirst, game.Indestructible) ||
+		!hasKeyword(g, declaredSecond, game.Indestructible) {
+		t.Fatal("a declared attacker you control did not gain indestructible")
+	}
+	if !hasKeyword(g, leftCombat, game.Indestructible) {
+		t.Fatal("a declared attacker that left combat lost the grant; the declared batch was not bound")
+	}
+	if hasKeyword(g, opponentInBatch, game.Indestructible) {
+		t.Fatal("an opponent's attacker in the batch gained indestructible")
+	}
+	if hasKeyword(g, lateAttacker, game.Indestructible) {
+		t.Fatal("a creature attacking from a separate declaration gained indestructible")
 	}
 }

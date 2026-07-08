@@ -484,6 +484,8 @@ func renderTriggerPlayer(player game.TriggerPlayerFilter) (string, error) {
 		return "game.TriggerPlayerYou", nil
 	case game.TriggerPlayerOpponent:
 		return "game.TriggerPlayerOpponent", nil
+	case game.TriggerPlayerMonarch:
+		return "game.TriggerPlayerMonarch", nil
 	default:
 		return "", fmt.Errorf("render: unsupported trigger player filter %d", player)
 	}
@@ -613,6 +615,8 @@ func renderDuration(duration game.EffectDuration) (string, error) {
 		return "game.DurationForAsLongAsYouControlSource", nil
 	case game.DurationForAsLongAsControlledCreatureEnchanted:
 		return "game.DurationForAsLongAsControlledCreatureEnchanted", nil
+	case game.DurationForAsLongAsPlayerIsMonarch:
+		return "game.DurationForAsLongAsPlayerIsMonarch", nil
 	default:
 		return "", fmt.Errorf("render: unsupported effect duration %d", duration)
 	}

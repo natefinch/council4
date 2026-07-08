@@ -110,6 +110,14 @@ type ContinuousEffect struct {
 	CreatedTurn    int
 	ExpiresFor     PlayerID
 
+	// ExpiresForRef binds ExpiresFor to a player resolved at application time,
+	// used by DurationForAsLongAsPlayerIsMonarch to bind the duration to the
+	// triggering player who became the monarch ("... for as long as they're the
+	// monarch."). The runtime resolves it once when the effect is created and
+	// stores the result in ExpiresFor; it is the ExpiresFor analogue of
+	// NewControllerRef.
+	ExpiresForRef opt.V[PlayerReference]
+
 	AffectedObjectID id.ID
 	AffectedSource   bool
 	Group            GroupReference
@@ -127,6 +135,17 @@ type ContinuousEffect struct {
 	// created and stores the result in NewController; it is mutually exclusive
 	// with the NewController sentinel.
 	NewControllerRef opt.V[PlayerReference]
+
+	// NewControllerIsMonarch binds a LayerControl effect's new controller to
+	// whoever currently holds the monarch designation, re-evaluated every time
+	// control is computed ("The monarch controls enchanted creature.", Fealty to
+	// the Realm). Unlike NewController/NewControllerRef, which fix the controller
+	// once, this flag makes control follow the crown: while a monarch exists the
+	// affected object is controlled by the monarch, and when no player is the
+	// monarch the effect makes no change and the object keeps its normal
+	// controller (CR 720). It requires the control layer and is mutually
+	// exclusive with NewController and NewControllerRef.
+	NewControllerIsMonarch bool
 
 	TextFrom string
 	TextTo   string

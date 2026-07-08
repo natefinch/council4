@@ -557,6 +557,8 @@ func (v *cardDefValidator) validateKeywordAbility(faceName, path string, ability
 		v.validateManaKeywordCost(faceName, path, keyword.Cost)
 	case PlotKeyword:
 		v.validateManaKeywordCost(faceName, path, keyword.Cost)
+	case ForetellKeyword:
+		v.validateManaKeywordCost(faceName, path, keyword.Cost)
 	case MorphKeyword:
 		v.validateManaKeywordCost(faceName, path, keyword.Cost)
 	case DisguiseKeyword:
@@ -1019,6 +1021,14 @@ func (v *cardDefValidator) validateContinuousEffect(faceName, path string, conti
 		}
 		v.validatePlayerRef(faceName, appendPath(path, "NewControllerRef"), continuous.NewControllerRef.Val, targets)
 	}
+	if continuous.NewControllerIsMonarch {
+		if continuous.NewController.Exists || continuous.NewControllerRef.Exists {
+			v.add(faceName, appendPath(path, "NewControllerIsMonarch"), CardDefIssueInvalidReference, "continuous effect sets NewControllerIsMonarch together with NewController or NewControllerRef")
+		}
+		if continuous.Layer != LayerControl {
+			v.add(faceName, appendPath(path, "Layer"), CardDefIssueInvalidAbilityBody, "NewControllerIsMonarch requires the control layer")
+		}
+	}
 	if !continuous.Group.Empty() {
 		v.validateGroupRef(faceName, appendPath(path, "Group"), continuous.Group, targets)
 	}
@@ -1167,6 +1177,16 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		}
 		if effect.TopCardOnly && effect.CastFromZone != zone.Library {
 			v.add(faceName, appendPath(path, "TopCardOnly"), CardDefIssueInvalidRuleEffect, "top-card-only cast permission requires the library source zone")
+		}
+	case RuleEffectCastLinkedExileForFree:
+		if effect.AffectedPlayer == PlayerAny {
+			v.add(faceName, appendPath(path, "AffectedPlayer"), CardDefIssueInvalidRuleEffect, "linked-exile free-cast permission must set affected player")
+		}
+		if effect.AffectedSource || effect.AffectedAttached || effect.AffectedObjectID != 0 {
+			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "linked-exile free-cast permission cannot affect a permanent")
+		}
+		if effect.ExiledLinkKey == "" {
+			v.add(faceName, appendPath(path, "ExiledLinkKey"), CardDefIssueInvalidRuleEffect, "linked-exile free-cast permission requires a linked-exile key")
 		}
 	case RuleEffectPlayerProtection:
 		if effect.AffectedPlayer == PlayerAny {
@@ -1702,6 +1722,13 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 			unsupported.RequiredCounter = 0
 			unsupported.MatchAnyCounter = false
 		}
+		if eventExposesSubjectCommander(pattern.Event) {
+			// The subject is an identifiable battlefield permanent, so the
+			// runtime can read whether its card is a commander to honor a "your
+			// commander" subject filter (Nakia, Wakandan Operative: "Whenever
+			// your commander enters, ...").
+			unsupported.MatchCommander = false
+		}
 		if !unsupported.Empty() {
 			v.add(faceName, appendPath(path, "SubjectSelection"), CardDefIssueInvalidSelection, "trigger subject Selection uses predicates unavailable from event data")
 		}
@@ -1774,6 +1801,22 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 		}
 		if pattern.Source != TriggerSourceAny || pattern.Subject != TriggerSubjectDefault || !pattern.DamageSourceSelection.Empty() {
 			v.add(faceName, appendPath(path, "DamageSourceCaptured"), CardDefIssueInvalidSelection, "DamageSourceCaptured must not be combined with a damage-source filter")
+		}
+	}
+	if pattern.AttackerCaptured {
+		if pattern.Event != EventAttackerDeclared {
+			v.add(faceName, appendPath(path, "AttackerCaptured"), CardDefIssueInvalidSelection, "AttackerCaptured requires an attacker-declared event")
+		}
+		if pattern.Source != TriggerSourceAny || pattern.Subject != TriggerSubjectDefault {
+			v.add(faceName, appendPath(path, "AttackerCaptured"), CardDefIssueInvalidSelection, "AttackerCaptured must not be combined with an attacker source filter")
+		}
+	}
+	if pattern.DyingObjectCaptured {
+		if pattern.Event != EventPermanentDied {
+			v.add(faceName, appendPath(path, "DyingObjectCaptured"), CardDefIssueInvalidSelection, "DyingObjectCaptured requires a permanent-died event")
+		}
+		if pattern.Source != TriggerSourceAny || pattern.Subject != TriggerSubjectDefault {
+			v.add(faceName, appendPath(path, "DyingObjectCaptured"), CardDefIssueInvalidSelection, "DyingObjectCaptured must not be combined with a dying source filter")
 		}
 	}
 	if pattern.OneOrMorePerAttackTarget && (!pattern.OneOrMore || pattern.Event != EventAttackerDeclared) {
@@ -1892,6 +1935,16 @@ func eventExposesSubjectCounters(event EventKind) bool {
 	default:
 		return false
 	}
+}
+
+// eventExposesSubjectCommander reports whether a trigger event identifies a
+// specific battlefield permanent (or last-known snapshot) as its subject, so the
+// runtime can read whether that permanent's card is a commander to honor a "your
+// commander" subject filter. It shares the battlefield-subject event set with
+// eventExposesSubjectCounters: whenever the subject permanent's counters are
+// readable, its commander identity is too.
+func eventExposesSubjectCommander(event EventKind) bool {
+	return eventExposesSubjectCounters(event)
 }
 
 // validateAttackerCountRelations checks the attacker-count combat relations.

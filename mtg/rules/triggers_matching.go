@@ -15,8 +15,8 @@ import (
 // stack (CR 603.3d, which uses the casting target rules of CR 601.2c). It returns
 // ok=false when the ability has targets but no legal set of targets can be
 // chosen, so the caller removes the ability from the stack (CR 603.3d).
-func (e *Engine) triggerTargets(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, ability *game.TriggeredAbility, chosenModes []int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]game.Target, bool) {
-	result := targetChoicesForBodyFromSourceObjectWithModes(g, controller, source, sourceObjectID, ability, chosenModes)
+func (e *Engine) triggerTargets(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, triggerEvent game.Event, ability *game.TriggeredAbility, chosenModes []int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]game.Target, bool) {
+	result := targetChoicesForBodyFromSourceObjectWithModes(g, controller, source, sourceObjectID, triggerEvent, ability, chosenModes)
 	switch result.kind {
 	case targetNoLegalChoices, targetInvalidSpec:
 		return nil, false
@@ -104,7 +104,7 @@ func triggerMatchesEventForController(g *game.Game, source *game.Permanent, sour
 	if pattern.ExcludeSelf && triggerSourceMatches(g, source, game.TriggerSourceSelf, pattern.Subject, event) {
 		return false
 	}
-	if !triggerPlayerMatches(sourceController, pattern.Player, event.Player) {
+	if !triggerPlayerMatches(g, sourceController, pattern.Player, event.Player) {
 		return false
 	}
 	if !pattern.StepPlayerSourceAttachedSelection.Empty() &&
@@ -745,7 +745,7 @@ func spellTargetsPattern(g *game.Game, controller game.PlayerID, allow game.Targ
 		Selection: opt.Val(selection),
 	}
 	for _, target := range obj.Targets {
-		if targetMatchesSpec(g, controller, 0, &spec, target) {
+		if targetMatchesSpec(g, controller, 0, game.Event{}, &spec, target) {
 			return true
 		}
 	}
@@ -774,12 +774,15 @@ func dyingPermanentDamagedBySource(g *game.Game, source *game.Permanent, event g
 	return false
 }
 
-func triggerPlayerMatches(sourceController game.PlayerID, filter game.TriggerPlayerFilter, eventPlayer game.PlayerID) bool {
+func triggerPlayerMatches(g *game.Game, sourceController game.PlayerID, filter game.TriggerPlayerFilter, eventPlayer game.PlayerID) bool {
 	switch filter {
 	case game.TriggerPlayerYou:
 		return eventPlayer == sourceController
 	case game.TriggerPlayerOpponent:
 		return eventPlayer != sourceController && eventPlayer >= 0 && eventPlayer < game.NumPlayers
+	case game.TriggerPlayerMonarch:
+		monarch := livingMonarch(g)
+		return monarch.Exists && monarch.Val == eventPlayer
 	default:
 		return true
 	}

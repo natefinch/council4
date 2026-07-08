@@ -122,6 +122,27 @@ func (r Renderer) renderCreateDelayedTrigger(ctx *renderCtx, value game.CreateDe
 			}
 			triggerFields = append(triggerFields, fmt.Sprintf("DamageSourceObject: opt.Val(%s),", object))
 		}
+		if value.Trigger.CapturedAttackerObject.Exists {
+			object, err := r.renderObjectReference(value.Trigger.CapturedAttackerObject.Val)
+			if err != nil {
+				return "", err
+			}
+			triggerFields = append(triggerFields, fmt.Sprintf("CapturedAttackerObject: opt.Val(%s),", object))
+		}
+		if value.Trigger.CapturedDyingObject.Exists {
+			object, err := r.renderObjectReference(value.Trigger.CapturedDyingObject.Val)
+			if err != nil {
+				return "", err
+			}
+			triggerFields = append(triggerFields, fmt.Sprintf("CapturedDyingObject: opt.Val(%s),", object))
+		}
+		if value.Trigger.InterveningCondition.Exists {
+			condition, err := r.renderControllerControlsCondition(ctx, &value.Trigger.InterveningCondition.Val, "delayed trigger intervening")
+			if err != nil {
+				return "", err
+			}
+			triggerFields = append(triggerFields, fmt.Sprintf("InterveningCondition: opt.Val(%s),", condition))
+		}
 	} else {
 		timing, err := renderDelayedTriggerTiming(value.Trigger.Timing)
 		if err != nil {
@@ -196,6 +217,18 @@ func (r Renderer) renderPutOnBattlefield(ctx *renderCtx, value game.PutOnBattlef
 	}
 	if value.PublishLinked != "" {
 		fields = append(fields, fmt.Sprintf("PublishLinked: game.LinkedKey(%q),", string(value.PublishLinked)))
+	}
+	if len(value.LinkedReturnZones) > 0 {
+		zones := make([]string, len(value.LinkedReturnZones))
+		for i, z := range value.LinkedReturnZones {
+			rendered, err := renderZone(z)
+			if err != nil {
+				return "", err
+			}
+			zones[i] = rendered
+		}
+		ctx.need(importZone)
+		fields = append(fields, fmt.Sprintf("LinkedReturnZones: []zone.Type{%s},", strings.Join(zones, ", ")))
 	}
 	return structLit("game.PutOnBattlefield", fields), nil
 }
@@ -367,11 +400,26 @@ func (r Renderer) renderImpulseExile(ctx *renderCtx, value game.ImpulseExile) (s
 	if err != nil {
 		return "", err
 	}
-	return structLit("game.ImpulseExile", []string{
+	return structLit("game.ImpulseExile", impulseExileFields(player, amount, duration, value)), nil
+}
+
+// impulseExileFields renders the ImpulseExile struct fields, appending the
+// any-type-mana rider and the source-keyed linked set only when Court of
+// Locthwain's play permission sets them, so every other impulse exile renders
+// unchanged.
+func impulseExileFields(player, amount, duration string, value game.ImpulseExile) []string {
+	fields := []string{
 		fmt.Sprintf("Player: %s,", player),
 		fmt.Sprintf("Amount: %s,", amount),
 		fmt.Sprintf("Duration: %s,", duration),
-	}), nil
+	}
+	if value.SpendAnyMana {
+		fields = append(fields, "SpendAnyMana: true,")
+	}
+	if value.PublishLinked != "" {
+		fields = append(fields, fmt.Sprintf("PublishLinked: game.LinkedKey(%q),", string(value.PublishLinked)))
+	}
+	return fields
 }
 
 func (r Renderer) renderExileLibraryUntilNonlandCast(value game.ExileLibraryUntilNonlandCast) (string, error) {
@@ -491,6 +539,9 @@ func (r Renderer) renderAddCounter(ctx *renderCtx, value *game.AddCounter) (stri
 	}
 	if value.DoubleKind {
 		fields = append(fields, "DoubleKind: true,")
+	}
+	if value.PublishLinked != "" {
+		fields = append(fields, fmt.Sprintf("PublishLinked: game.LinkedKey(%q),", string(value.PublishLinked)))
 	}
 	return structLit("game.AddCounter", fields), nil
 }
@@ -1105,6 +1156,14 @@ func (r Renderer) renderBecomeMonarch(value game.BecomeMonarch) (string, error) 
 	return structLit("game.BecomeMonarch", []string{fmt.Sprintf("Player: %s,", rendered)}), nil
 }
 
+func (r Renderer) renderCantBecomeMonarch(value game.CantBecomeMonarch) (string, error) {
+	rendered, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.CantBecomeMonarch", []string{fmt.Sprintf("Player: %s,", rendered)}), nil
+}
+
 func (r Renderer) renderRingTempts(value game.RingTempts) (string, error) {
 	rendered, err := r.renderPlayerReference(value.Player)
 	if err != nil {
@@ -1221,6 +1280,16 @@ func (r Renderer) renderStandalonePrimitive(ctx *renderCtx, primitive game.Primi
 			return "", err
 		}
 		return structLit("game.Proliferate", []string{fmt.Sprintf("Amount: %s,", amount)}), nil
+	case game.PrimitiveDiscoverCards:
+		value, err := assertPrimitive[game.DiscoverCards](primitive)
+		if err != nil {
+			return "", err
+		}
+		amount, err := r.renderQuantity(ctx, value.Amount)
+		if err != nil {
+			return "", err
+		}
+		return structLit("game.DiscoverCards", []string{fmt.Sprintf("Amount: %s,", amount)}), nil
 	case game.PrimitiveManifest:
 		value, err := assertPrimitive[game.Manifest](primitive)
 		if err != nil {
@@ -1442,6 +1511,12 @@ func (r Renderer) renderObjectOrGroupPrimitive(ctx *renderCtx, primitive game.Pr
 			return "", err
 		}
 		return r.renderObjectOrGroup(ctx, "game.Regenerate", value.Object, value.Group)
+	case game.PrimitiveGoad:
+		value, err := assertPrimitive[game.Goad](primitive)
+		if err != nil {
+			return "", err
+		}
+		return r.renderObjectOrGroup(ctx, "game.Goad", value.Object, value.Group)
 	default:
 		return "", fmt.Errorf("render: unsupported object or group primitive kind %d", primitive.Kind())
 	}

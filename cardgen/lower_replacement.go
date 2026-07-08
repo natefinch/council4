@@ -15,6 +15,56 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
+// lowerPreventDamageToCountersReplacement lowers the continuous static "If
+// <permanent> would be dealt damage, prevent that damage and put that many
+// +1/+1 counters on it." (Panther Habit, Jared Carthalion, Anti-Venom) into a
+// DamagePreventionToPlusOneCountersReplacement. The damaged permanent is the
+// ability's own source or the permanent it is attached to; the runtime prevents
+// the whole event and adds that many +1/+1 counters to the recipient.
+func lowerPreventDamageToCountersReplacement(
+	ability compiler.CompiledAbility,
+) (game.ReplacementAbility, bool, *shared.Diagnostic) {
+	if ability.Kind != compiler.AbilityReplacement ||
+		len(ability.Content.Conditions) != 1 ||
+		ability.Content.Conditions[0].Predicate != compiler.ConditionPredicateDamageWouldBeDealtToPermanent {
+		return game.ReplacementAbility{}, false, nil
+	}
+	unsupported := func(detail string) (game.ReplacementAbility, bool, *shared.Diagnostic) {
+		return game.ReplacementAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported damage prevention replacement",
+			detail,
+		)
+	}
+	if ability.Cost != nil || ability.Trigger != nil || ability.Optional ||
+		len(ability.Content.Targets) != 0 || len(ability.Content.Keywords) != 0 ||
+		len(ability.Content.Modes) != 0 {
+		return unsupported("the executable source backend supports only exact prevent-damage-to-counters replacements")
+	}
+	if len(ability.Content.Effects) != 1 {
+		return unsupported("the executable source backend supports only a single prevent-and-add-counters effect")
+	}
+	effect := ability.Content.Effects[0]
+	if effect.Kind != compiler.EffectPut ||
+		!effect.CounterKindKnown || effect.CounterKind != counter.PlusOnePlusOne ||
+		effect.Amount.DynamicKind == compiler.DynamicAmountNone {
+		return unsupported("the executable source backend supports only the 'put that many +1/+1 counters' prevention effect")
+	}
+	selection := ability.Content.Conditions[0].Selection
+	if selection.DamageRecipientAttached == selection.DamageRecipientSelf {
+		return unsupported("the executable source backend supports only a self or attached prevent-damage recipient")
+	}
+	gate := opt.V[game.Condition]{}
+	if selection.DamageRecipientMonarchGate {
+		gate = opt.Val(game.Condition{ControllerIsMonarch: true})
+	}
+	return game.DamagePreventionToPlusOneCountersReplacement(
+		ability.Text,
+		selection.DamageRecipientAttached,
+		gate,
+	), true, nil
+}
+
 func lowerReplacementAbility(ability compiler.CompiledAbility) (abilityLowering, *shared.Diagnostic) {
 	if hasOptionalResolvingEffect(ability.Content.Effects) {
 		if replacementAbility, ok := lowerOptionalEntryPayment(ability); ok {
@@ -36,6 +86,9 @@ func lowerReplacementAbility(ability compiler.CompiledAbility) (abilityLowering,
 			"unsupported optional replacement effect",
 			"the executable source backend does not yet lower optional replacement effects",
 		)
+	}
+	if replacementAbility, handled, diagnostic := lowerPreventDamageToCountersReplacement(ability); handled || diagnostic != nil {
+		return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
 	}
 	if replacementAbility, handled, diagnostic := lowerDamagePreventionReplacement(ability); handled || diagnostic != nil {
 		return replacementAbilityLowering(ability, &replacementAbility, diagnostic)

@@ -30,14 +30,15 @@ func (e *Engine) applyPlayLandFaceFromZoneWithChoices(g *game.Game, playerID gam
 	}
 
 	player := g.Players[playerID]
-	card, ok := landCardInstanceFaceFromZone(g, player, cardID, sourceZone, face)
+	sourcePlayer := castSourcePlayer(g, player, cardID, sourceZone)
+	card, ok := landCardInstanceFaceFromZone(g, sourcePlayer, cardID, sourceZone, face)
 	if !ok {
 		return false
 	}
 	if sourceZone != zone.Hand && !canPlayLandFromZoneByRuleEffect(g, playerID, cardID, sourceZone) {
 		return false
 	}
-	source, ok := playerCardsInZone(player, sourceZone)
+	source, ok := playerCardsInZone(sourcePlayer, sourceZone)
 	if !ok || !source.Remove(cardID) {
 		return false
 	}
@@ -92,6 +93,29 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 	// plotted marks a plotted card being cast from exile (CR 718): it is cast
 	// without paying its mana cost. It must be read before the card leaves exile.
 	plotted := sourceZone == zone.Exile && cast.Face == game.FaceFront && cardIsPlottedInExile(g, card.ID)
+	// foretold marks a foretold card being cast from exile (CR 702.144): it is
+	// cast for its foretell cost rather than its mana cost. It must be read before
+	// the card leaves exile.
+	foretold := sourceZone == zone.Exile && cast.Face == game.FaceFront && cardIsForetoldInExile(g, card.ID)
+	// freeLinkedExile marks a card cast for free from the pool of cards exiled
+	// under this source ("cast a spell from among cards exiled with this
+	// enchantment without paying its mana cost.", Court of Locthwain). The
+	// permission is a one-shot, so it is read before the card leaves exile and
+	// remembered so it can be consumed once the spell is cast.
+	var freeLinkedExilePermissionID id.ID
+	freeLinkedExile := false
+	if !plotted && !foretold && sourceZone == zone.Exile && cast.Face == game.FaceFront {
+		if permission, permOK := castLinkedExileForFreePermission(g, playerID, card.ID); permOK {
+			freeLinkedExile = true
+			freeLinkedExilePermissionID = permission.ID
+		}
+	}
+	// spendAnyMana marks a card cast from exile under a play permission that lets
+	// mana of any type pay its cost ("mana of any type can be spent to cast it.",
+	// Court of Locthwain). It replaces the mana cost with an all-generic cost of
+	// the same size. It never combines with the free-cast paths above.
+	spendAnyMana := !plotted && !foretold && !freeLinkedExile && sourceZone == zone.Exile &&
+		castFromZoneAllowsAnyMana(g, playerID, card.ID, sourceZone, cast.Face)
 
 	// CR 601.2a: proposing a cast first moves the card from its source zone to
 	// the stack as the topmost object. Doing this before the spell's costs are
@@ -114,7 +138,7 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		SourceZone:                    sourceZone,
 		CastDuringControllerMainPhase: playerID == g.Turn.ActivePlayer && g.Turn.IsMainPhase(),
 	}
-	if !removeCastSourceCard(g, player, cast.CardID, sourceZone) {
+	if !removeCastSourceCard(g, castSourcePlayer(g, player, cast.CardID, sourceZone), cast.CardID, sourceZone) {
 		return false
 	}
 	g.Stack.Push(obj)
@@ -166,6 +190,32 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 			agents,
 			log,
 		)
+	case freeLinkedExile:
+		emptyMana := cost.Mana{}
+		prefs = e.paymentPreferencesForCostFromSource(
+			g,
+			playerID,
+			&emptyMana,
+			spellDef.AdditionalCosts,
+			cast.XValue,
+			card.ID,
+			sourceZone,
+			agents,
+			log,
+		)
+	case spendAnyMana:
+		anyManaCost := anyManaSymbols(spellDef.ManaCost)
+		prefs = e.paymentPreferencesForCostFromSource(
+			g,
+			playerID,
+			&anyManaCost,
+			spellDef.AdditionalCosts,
+			cast.XValue,
+			card.ID,
+			sourceZone,
+			agents,
+			log,
+		)
 	default:
 		prefs = e.paymentPreferencesForSpellFromZone(g, playerID, card.ID, sourceZone, cast.Face, spellDef, cast.XValue, agents, log)
 	}
@@ -191,6 +241,12 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		request.Alternative = opt.Val(payLifeManaValueAlternativeCost(spellDef, cast.XValue))
 	case plotted:
 		request.Alternative = opt.Val(freeCastAlternativeCost())
+	case foretold:
+		request.Alternative = opt.Val(foretellAlternativeCost(spellDef))
+	case freeLinkedExile:
+		request.Alternative = opt.Val(freeCastAlternativeCost())
+	case spendAnyMana:
+		request.Alternative = opt.Val(anyManaAlternativeCost(spellDef))
 	default:
 		// No alternative cost; the spell is cast for its normal mana cost.
 	}
@@ -200,11 +256,14 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		// so the proposal is undone — take the spell back off the stack and
 		// return the card to the zone it was cast from.
 		g.Stack.RemoveByID(obj.ID)
-		restoreCastSourceCard(player, cast.CardID, sourceZone)
+		restoreCastSourceCard(castSourcePlayer(g, player, cast.CardID, sourceZone), cast.CardID, sourceZone)
 		return false
 	}
 	if sourceZone == zone.Command && player.CommanderInstanceID == cast.CardID {
 		player.CommanderCastCount++
+	}
+	if freeLinkedExile {
+		consumeCastLinkedExileForFreePermission(g, freeLinkedExilePermissionID)
 	}
 	obj.Evoked = !cast.Overloaded && evokeAlternativeChosen(spellDef, prefs.AlternativeIndex)
 	obj.Flashback = paymentResult.CastPermission == payment.SpellCastPermissionFlashback
@@ -271,7 +330,7 @@ func (e *Engine) applyMutateCastWithChoices(g *game.Game, playerID game.PlayerID
 		MutateTargetID: cast.MutateTargetID,
 		SourceZone:     sourceZone,
 	}
-	if !removeCastSourceCard(g, player, cast.CardID, sourceZone) {
+	if !removeCastSourceCard(g, castSourcePlayer(g, player, cast.CardID, sourceZone), cast.CardID, sourceZone) {
 		return false
 	}
 	g.Stack.Push(obj)
@@ -289,7 +348,7 @@ func (e *Engine) applyMutateCastWithChoices(g *game.Game, playerID game.PlayerID
 	if !ok {
 		// CR 728: undo the proposal when costs can't be paid.
 		g.Stack.RemoveByID(obj.ID)
-		restoreCastSourceCard(player, cast.CardID, sourceZone)
+		restoreCastSourceCard(castSourcePlayer(g, player, cast.CardID, sourceZone), cast.CardID, sourceZone)
 		return false
 	}
 	if sourceZone == zone.Command && player.CommanderInstanceID == cast.CardID {
@@ -323,7 +382,7 @@ func canCastMutateSpell(g *game.Game, playerID game.PlayerID, cardID id.ID, sour
 	}
 	player := g.Players[playerID]
 	card, ok := g.GetCardInstance(cardID)
-	if !ok || !castSourceContains(player, cardID, sourceZone) {
+	if !ok || !castSourceContains(castSourcePlayer(g, player, cardID, sourceZone), cardID, sourceZone) {
 		return false
 	}
 	switch sourceZone {
@@ -594,7 +653,7 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 	}
 	player := g.Players[playerID]
 	card, ok := g.GetCardInstance(cardID)
-	if !ok || !castSourceContains(player, cardID, sourceZone) {
+	if !ok || !castSourceContains(castSourcePlayer(g, player, cardID, sourceZone), cardID, sourceZone) {
 		return false
 	}
 	spellDef, ok := cardFaceDef(card, face)
@@ -605,6 +664,7 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 		return false
 	}
 	plotted := sourceZone == zone.Exile && face == game.FaceFront && cardIsPlottedInExile(g, cardID)
+	foretold := sourceZone == zone.Exile && face == game.FaceFront && cardIsForetoldInExile(g, cardID)
 	switch sourceZone {
 	case zone.Command:
 		if player.CommanderInstanceID != cardID {
@@ -617,10 +677,11 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 		}
 	case zone.Exile:
 		hasRulePermission := canCastFromZoneByRuleEffect(g, playerID, cardID, sourceZone, face)
-		if !g.AdventureCards[cardID] && !hasRulePermission && !plotted {
+		freeLinkedExile := face == game.FaceFront && castLinkedExileForFree(g, playerID, cardID)
+		if !g.AdventureCards[cardID] && !hasRulePermission && !plotted && !foretold && !freeLinkedExile {
 			return false
 		}
-		if g.AdventureCards[cardID] && !hasRulePermission && !plotted && face != game.FaceFront {
+		if g.AdventureCards[cardID] && !hasRulePermission && !plotted && !foretold && !freeLinkedExile && face != game.FaceFront {
 			return false
 		}
 	case zone.Library:
@@ -688,6 +749,12 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 		request.Alternative = opt.Val(payLifeManaValueAlternativeCost(spellDef, xValue))
 	case plotted:
 		request.Alternative = opt.Val(freeCastAlternativeCost())
+	case foretold:
+		request.Alternative = opt.Val(foretellAlternativeCost(spellDef))
+	case sourceZone == zone.Exile && face == game.FaceFront && castLinkedExileForFree(g, playerID, card.ID):
+		request.Alternative = opt.Val(freeCastAlternativeCost())
+	case sourceZone == zone.Exile && castFromZoneAllowsAnyMana(g, playerID, card.ID, sourceZone, face):
+		request.Alternative = opt.Val(anyManaAlternativeCost(spellDef))
 	default:
 		// No alternative cost; the spell is cast for its normal mana cost.
 	}
@@ -708,6 +775,53 @@ func freeCastAlternativeCost() cost.Alternative {
 	return cost.Alternative{
 		Label:    "Without paying its mana cost",
 		ManaCost: opt.Val(cost.Mana{}),
+	}
+}
+
+// foretellAlternativeCost is the alternative cost of casting a foretold card from
+// exile for its foretell cost rather than its mana cost (CR 702.144). It replaces
+// the mana cost with the card's Foretell cost; a card reaching this path always
+// has a Foretell keyword, so a missing cost falls back to an empty (free) cost.
+func foretellAlternativeCost(card *game.CardDef) cost.Alternative {
+	foretellCost, _ := card.ForetellCost()
+	return cost.Alternative{
+		Label:    "Foretell",
+		ManaCost: opt.Val(append(cost.Mana(nil), foretellCost...)),
+	}
+}
+
+// anyManaSymbols rewrites a mana cost so mana of any type may pay it ("mana of
+// any type can be spent to cast it.", Court of Locthwain): each colored,
+// colorless, hybrid, or Twobrid symbol becomes one generic mana, and Phyrexian
+// symbols keep their pay-2-life option as a generic Phyrexian symbol. Generic,
+// variable, snow, and already-generic Phyrexian symbols are unchanged, so the
+// cost keeps its size but loses every color restriction.
+func anyManaSymbols(manaCost opt.V[cost.Mana]) cost.Mana {
+	if !manaCost.Exists {
+		return cost.Mana{}
+	}
+	rewritten := make(cost.Mana, 0, len(manaCost.Val))
+	for _, symbol := range manaCost.Val {
+		switch symbol.Kind {
+		case cost.ColoredSymbol, cost.ColorlessSymbol, cost.HybridSymbol, cost.TwobridSymbol:
+			rewritten = append(rewritten, cost.O(1))
+		case cost.PhyrexianSymbol:
+			rewritten = append(rewritten, cost.PhyrexianGeneric(1))
+		default:
+			rewritten = append(rewritten, symbol)
+		}
+	}
+	return rewritten
+}
+
+// anyManaAlternativeCost is the alternative cost of a card cast from exile under
+// a play permission whose SpendAnyMana flag lets mana of any type pay its cost
+// (Court of Locthwain). The printed mana cost is replaced by its all-generic
+// rewrite; the spell's own additional costs are appended by the payment planner.
+func anyManaAlternativeCost(spellDef *game.CardDef) cost.Alternative {
+	return cost.Alternative{
+		Label:    "Spend mana of any type",
+		ManaCost: opt.Val(anyManaSymbols(spellDef.ManaCost)),
 	}
 }
 
@@ -751,6 +865,10 @@ func legalCastFacesForZone(g *game.Game, playerID game.PlayerID, card *game.Card
 				faces = append(faces, face)
 				continue
 			}
+			if sourceZone == zone.Exile && face == game.FaceFront && cardIsForetoldInExile(g, card.ID) {
+				faces = append(faces, face)
+				continue
+			}
 			if canCastFromZoneByRuleEffect(g, playerID, card.ID, sourceZone, face) {
 				faces = append(faces, face)
 			}
@@ -767,6 +885,91 @@ func legalCastFacesForZone(g *game.Game, playerID game.PlayerID, card *game.Card
 		return faces
 	}
 	return card.Def.LegalCastFaces()
+}
+
+// castSourcePlayer returns the player whose zone physically holds the card being
+// played or cast from sourceZone. A player plays or casts from their own hand,
+// graveyard, library, or command zone, but exile is a shared zone: a card exiled
+// from another player's library — e.g. a card Court of Locthwain exiled from an
+// opponent's library — rests in its owner's exile bucket even though a different
+// player is permitted to play or cast it. Resolving the owner keeps the
+// containment, removal, and restore steps pointed at the bucket that actually
+// holds the card. For every other card the owner is the actor, so this changes
+// nothing.
+func castSourcePlayer(g *game.Game, caster *game.Player, cardID id.ID, sourceZone zone.Type) *game.Player {
+	if sourceZone != zone.Exile {
+		return caster
+	}
+	card, ok := g.GetCardInstance(cardID)
+	if !ok {
+		return caster
+	}
+	if owner := g.Players[card.Owner]; owner != nil {
+		return owner
+	}
+	return caster
+}
+
+// foreignExileCastableCards returns the cards resting in another player's exile
+// bucket that playerID currently holds an active permission to play or cast. A
+// card Court of Locthwain exiled from an opponent's library lives in that
+// opponent's exile bucket even though the controller may play it (for as long as
+// it remains exiled) or, while monarch, free-cast it from the accumulated pool.
+// The action enumerators scan the acting player's own exile bucket directly, so
+// this surfaces only the cross-player cards those scans would otherwise miss.
+//
+// It gathers the affected card of every active RuleEffectPlayFromZone /
+// RuleEffectCastFromZone whose exile permission reaches playerID, plus the
+// linked-exile pool of every active RuleEffectCastLinkedExileForFree the player
+// controls (the monarch-gated free cast — the effect only exists while the gate
+// is satisfied). Cards already in playerID's own exile are omitted, cards no
+// longer in exile are skipped, and each card is returned at most once. The
+// result is empty for any player who holds no such cross-player exile
+// permission, so it adds nothing to enumeration for every other card.
+func foreignExileCastableCards(g *game.Game, playerID game.PlayerID) []id.ID {
+	own, ok := playerByID(g, playerID)
+	if !ok {
+		return nil
+	}
+	var cards []id.ID
+	seen := make(map[id.ID]struct{})
+	consider := func(cardID id.ID) {
+		if cardID == 0 || own.Exile.Contains(cardID) {
+			return
+		}
+		if _, dup := seen[cardID]; dup {
+			return
+		}
+		if z, ok := cardZone(g, cardID); !ok || z != zone.Exile {
+			return
+		}
+		seen[cardID] = struct{}{}
+		cards = append(cards, cardID)
+	}
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if !playerRelationMatches(effect.Controller, playerID, effect.AffectedPlayer) {
+			continue
+		}
+		switch effect.Kind {
+		case game.RuleEffectPlayFromZone, game.RuleEffectCastFromZone:
+			if effect.CastFromZone == zone.Exile {
+				consider(effect.AffectedCardID)
+			}
+		case game.RuleEffectCastLinkedExileForFree:
+			if effect.ExiledLinkKey == "" {
+				continue
+			}
+			key := game.LinkedObjectKey{SourceID: effect.SourceCardID, LinkID: string(effect.ExiledLinkKey)}
+			for _, ref := range linkedObjects(g, key) {
+				consider(ref.CardID)
+			}
+		default:
+			continue
+		}
+	}
+	return cards
 }
 
 func castSourceContains(player *game.Player, cardID id.ID, sourceZone zone.Type) bool {

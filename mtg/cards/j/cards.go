@@ -13,6 +13,7 @@ var Cards = []*game.CardDef{
 	JackalFamiliar,
 	JadeLeech,
 	JadziStewardOfFate,
+	JaredCarthalionTrueHeir,
 	JhessianBalmgiver,
 	JidoorAristocraticCapital,
 	JinxedIdol,

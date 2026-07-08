@@ -68,7 +68,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 	case EffectDig:
 		return exactDigLookEffectSyntax(effect)
 	case EffectDraw:
-		return exactCardCountEffectSyntax(effect, "Draw", "draws", true)
+		return exactCardCountEffectSyntax(effect, "Draw", "draws", true) ||
+			exactDrawForEachExiledThisWayEffectSyntax(effect)
 	case EffectEnterTapped:
 		return exactLegacyFixedAmountSyntax(effect) ||
 			effect.GroupEntryModification.Kind != GroupEntryModificationNone
@@ -78,6 +79,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 			exactExileUntilSourceLeavesEffectSyntax(effect) ||
 			exactExileUntilOpponentBecomesMonarchEffectSyntax(effect) ||
 			exactExileForEachPlayerUntilLeavesEffectSyntax(effect) ||
+			exactExileForEachOpponentEffectSyntax(effect) ||
 			exactExileTopOfLibrarySyntax(effect) ||
 			exactExileEntireHandEffectSyntax(effect) ||
 			exactExileAttachedEffectSyntax(effect) ||
@@ -106,6 +108,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 			exactGiveControlEffectSyntax(effect)
 	case EffectBecomeMonarch:
 		return exactBecomeMonarchEffectSyntax(effect)
+	case EffectCantBecomeMonarch:
+		return exactCantBecomeMonarchEffectSyntax(effect)
 	case EffectInvestigate:
 		return exactStandaloneActionEffectSyntax(effect, "Investigate")
 	case EffectAmass:
@@ -151,6 +155,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 			exactDistributeCountersEffectSyntax(effect)
 	case EffectProliferate:
 		return exactStandaloneActionEffectSyntax(effect, "Proliferate")
+	case EffectDiscover:
+		return exactDiscoverEffectSyntax(effect)
 	case EffectRemoveCounter:
 		return exactRemoveCounterEffectSyntax(effect) || exactRemoveAllCountersEffectSyntax(effect)
 	case EffectRegenerate:
@@ -227,6 +233,11 @@ func exactEffectSyntaxTail(effect *EffectSyntax) bool {
 			exactPriorSubjectNextUntapStepSyntax(effect)
 	case EffectTransform:
 		return exactDirectTargetEffectSyntax(effect, "Transform")
+	case EffectGoad:
+		return exactDirectTargetEffectSyntax(effect, "Goad") ||
+			exactBackReferenceEffectSyntax(effect, "Goad") ||
+			exactMassEffectSyntax(effect, "Goad all ") ||
+			exactMassEachEffectSyntax(effect, "Goad each ")
 	case EffectRemoveFromCombat:
 		return exactRemoveFromCombatEffectSyntax(effect) ||
 			exactRemoveFromCombatSelfEffectSyntax(effect)
@@ -4013,6 +4024,8 @@ func exactGainControlEffectSyntax(effect *EffectSyntax) bool {
 		return exactGainControlBattlefieldSourceDuration(text, prefix)
 	case EffectDurationWhileControlledCreatureEnchanted:
 		return strings.EqualFold(text, prefix+" for as long as that creature is enchanted.")
+	case EffectDurationWhileThatPlayerIsMonarch:
+		return strings.EqualFold(text, prefix+" for as long as they're the monarch.")
 	default:
 		return false
 	}
@@ -4347,6 +4360,19 @@ func exactStandaloneActionEffectSyntax(effect *EffectSyntax, verb string) bool {
 	amount := effectAmountSourceText(effect)
 	return strings.EqualFold(text, fmt.Sprintf("%s %s.", verb, amount)) ||
 		strings.EqualFold(text, fmt.Sprintf("%s %s times.", verb, amount))
+}
+
+// exactDiscoverEffectSyntax reconstructs a discover keyword-action clause
+// ("Discover N.") and compares it byte-for-byte. Discover takes a fixed
+// mana-value threshold of at least one, so variable or dynamic amount forms fail
+// closed.
+func exactDiscoverEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Context != EffectContextController ||
+		!effect.Amount.Known || effect.Amount.Value < 1 {
+		return false
+	}
+	amount := effectAmountSourceText(effect)
+	return strings.EqualFold(exactEffectClauseText(effect), fmt.Sprintf("Discover %s.", amount))
 }
 
 // exactAmassEffectSyntax reconstructs an amass keyword-action clause ("Amass
@@ -4992,6 +5018,13 @@ func exactCounterPlacementEffectSyntax(effect *EffectSyntax) bool {
 		} else {
 			return false
 		}
+	case len(effect.Targets) == 1 && exactCounterUnionTargetSyntax(effect.Targets[0]):
+		// A bare "<card type> or <subtype>" disjunction target ("target creature
+		// or Vehicle") is a mixed type+subtype union the shared single-permanent
+		// target path leaves fail-closed; only the counter placement verb lowers
+		// it (via permanentUnionTargetSpec), so it is recognized here locally
+		// rather than by flipping the shared target exactness for every verb.
+		objects = append(objects, effect.Targets[0].Text)
 	case len(effect.Targets) == 0:
 		if effect.CounterRecipientAttached {
 			// The attached recipient is "enchanted creature" (Aura) or
@@ -5063,6 +5096,22 @@ func counterPlacementTargetIsPlayerControls(target TargetSyntax) bool {
 	return target.Cardinality.Min == 1 && target.Cardinality.Max == 1 &&
 		!target.Selection.Other &&
 		target.Selection.Controller == SelectionControllerAny
+}
+
+// exactCounterUnionTargetSyntax reports whether a counter-placement target is a
+// bare "<card type> or <subtype>" disjunction ("target creature or Vehicle")
+// that round-trips to its canonical Oracle text. The shared single-permanent
+// target path leaves these mixed type+subtype unions fail-closed because only
+// the counter placement verb lowers them (via permanentUnionTargetSpec); this
+// local recognizer opens exactly that verb without flipping the shared target
+// exactness for the other single-object verbs (exile, destroy, tap, return).
+// It accepts only a single-object union, so every multi-target or "up to one"
+// wording keeps failing the text-blind round-trip.
+func exactCounterUnionTargetSyntax(target TargetSyntax) bool {
+	if target.Cardinality.Min != 1 || target.Cardinality.Max != 1 {
+		return false
+	}
+	return exactBareUnionTargetSyntax(target.Text, target.Selection)
 }
 
 // counterPlacementTargetPlayerControlsObject reconstructs the recipient phrase

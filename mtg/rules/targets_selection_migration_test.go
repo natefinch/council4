@@ -50,7 +50,7 @@ func TestPermanentTargetLegalityFlowsThroughSelection(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := targetMatchesSpec(g, game.Player1, 0, &spec, game.PermanentTarget(tc.permanent.ObjectID))
+			got := targetMatchesSpec(g, game.Player1, 0, game.Event{}, &spec, game.PermanentTarget(tc.permanent.ObjectID))
 			if got != tc.want {
 				t.Fatalf("targetMatchesSpec(%s) = %t, want %t", tc.name, got, tc.want)
 			}
@@ -102,7 +102,7 @@ func TestSelectionTargetPreservesHexproofAndProtection(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			targets := []game.Target{game.PermanentTarget(tc.permanent.ObjectID)}
-			got := targetsMatchSpecSlice(g, game.Player1, redSource, 0, &spec, targets)
+			got := targetsMatchSpecSlice(g, game.Player1, redSource, 0, game.Event{}, &spec, targets)
 			if got != tc.want {
 				t.Fatalf("targetsMatchSpecSlice(%s) = %t, want %t", tc.name, got, tc.want)
 			}

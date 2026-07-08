@@ -339,6 +339,26 @@ type ReplacementEffect struct {
 	DamageRecipientController      bool
 	DamageSourceControllerOpponent bool
 
+	// DamagePreventAll prevents all of a matching damage event ("If damage would
+	// be dealt to <permanent>, prevent that damage ...", Jared Carthalion,
+	// Panther Habit, Anti-Venom). Unlike DamagePreventAmount it caps the whole
+	// event rather than a fixed number, and it registers/matches independently of
+	// the additive and multiplicative damage replacements.
+	DamagePreventAll bool
+	// DamagePreventedBecomesPlusOneCounters puts that many +1/+1 counters on the
+	// prevention's recipient permanent after a DamagePreventAll event ("... and
+	// put that many +1/+1 counters on it."). It is false for a plain prevention.
+	DamagePreventedBecomesPlusOneCounters bool
+	// DamageRecipientSelf scopes a DamagePreventAll prevention to the
+	// replacement's own source permanent ("If damage would be dealt to
+	// <this permanent>, ..."). Registration sets AffectedObjectID to the source.
+	DamageRecipientSelf bool
+	// DamageRecipientAttached scopes a DamagePreventAll prevention to the permanent
+	// the replacement's source is attached to ("If equipped creature would be
+	// dealt damage, ...", Panther Habit). Registration sets AffectedObjectID to
+	// the attached permanent.
+	DamageRecipientAttached bool
+
 	// LifeGainMultiplier multiplies a single "you would gain life" event by the
 	// replacement's controller before the life is gained (CR 614), backing "If
 	// you would gain life, you gain twice that much life instead." (Boon

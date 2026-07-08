@@ -23,6 +23,7 @@ const (
 	ActionActivateAbility
 	ActionSuspendCard
 	ActionPlotCard
+	ActionForetellCard
 	ActionCastFaceDown
 	ActionTurnFaceUp
 	ActionDeclareAttackers
@@ -38,6 +39,7 @@ type Action struct {
 	activateAbility  ActivateAbilityAction
 	suspendCard      SuspendCardAction
 	plotCard         PlotCardAction
+	foretellCard     ForetellCardAction
 	castFaceDown     CastFaceDownAction
 	turnFaceUp       TurnFaceUpAction
 	declareAttackers DeclareAttackersAction
@@ -85,6 +87,13 @@ type SuspendCardAction struct {
 // the plot cost and exiling the card so it may be cast from exile without paying
 // its mana cost on a later turn.
 type PlotCardAction struct {
+	CardID id.ID
+}
+
+// ForetellCardAction is the payload for foretelling a card from hand
+// (CR 702.144): paying a fixed {2} and exiling the card face down so it may be
+// cast from exile for its foretell cost on a later turn.
+type ForetellCardAction struct {
 	CardID id.ID
 }
 
@@ -275,6 +284,14 @@ func PlotCard(cardID id.ID) Action {
 	}
 }
 
+// ForetellCard creates an action to foretell a card from hand (CR 702.144).
+func ForetellCard(cardID id.ID) Action {
+	return Action{
+		Kind:         ActionForetellCard,
+		foretellCard: ForetellCardAction{CardID: cardID},
+	}
+}
+
 // CastFaceDown creates an action to cast a card face-down via Morph or Disguise.
 func CastFaceDown(cardID id.ID, face game.FaceIndex, kind game.FaceDownKind) Action {
 	return Action{
@@ -362,6 +379,15 @@ func (a Action) PlotCardPayload() (PlotCardAction, bool) {
 		return PlotCardAction{}, false
 	}
 	return a.plotCard, true
+}
+
+// ForetellCardPayload returns the foretell-card payload when this action
+// foretells a card.
+func (a Action) ForetellCardPayload() (ForetellCardAction, bool) {
+	if a.Kind != ActionForetellCard {
+		return ForetellCardAction{}, false
+	}
+	return a.foretellCard, true
 }
 
 // CastFaceDownPayload returns the face-down cast payload when this action casts
@@ -479,6 +505,10 @@ func (a Action) Validate() error {
 		if a.plotCard.CardID == 0 {
 			return errors.New("plot card action missing card ID")
 		}
+	case ActionForetellCard:
+		if a.foretellCard.CardID == 0 {
+			return errors.New("foretell card action missing card ID")
+		}
 	case ActionCastFaceDown:
 		if a.castFaceDown.CardID == 0 {
 			return errors.New("cast face-down action missing card ID")
@@ -523,6 +553,9 @@ func (a Action) validatePayloadIsolation() error {
 	}
 	if a.Kind != ActionPlotCard && !plotCardActionEmpty(a.plotCard) {
 		return fmt.Errorf("action kind %d includes plot card payload", a.Kind)
+	}
+	if a.Kind != ActionForetellCard && !foretellCardActionEmpty(a.foretellCard) {
+		return fmt.Errorf("action kind %d includes foretell card payload", a.Kind)
 	}
 	if a.Kind != ActionCastFaceDown && !castFaceDownActionEmpty(a.castFaceDown) {
 		return fmt.Errorf("action kind %d includes cast face-down payload", a.Kind)
@@ -570,6 +603,10 @@ func suspendCardActionEmpty(a SuspendCardAction) bool {
 }
 
 func plotCardActionEmpty(a PlotCardAction) bool {
+	return a.CardID == 0
+}
+
+func foretellCardActionEmpty(a ForetellCardAction) bool {
 	return a.CardID == 0
 }
 

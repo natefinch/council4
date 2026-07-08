@@ -312,6 +312,9 @@ func (e *Engine) chooseSacrificePermanentsForPlayer(g *game.Game, resolver refer
 		if !resolver.permanentMatchesGroupSelection(&sel, nil, permanent) {
 			continue
 		}
+		if permanentCantBeSacrificed(g, permanent) {
+			continue
+		}
 		candidates = append(candidates, permanent)
 	}
 	if len(candidates) == 0 || amount <= 0 {
@@ -355,6 +358,9 @@ func (e *Engine) chooseAnyNumberToSacrificeForPlayer(g *game.Game, resolver refe
 			continue
 		}
 		if !resolver.permanentMatchesGroupSelection(&sel, nil, permanent) {
+			continue
+		}
+		if permanentCantBeSacrificed(g, permanent) {
 			continue
 		}
 		candidates = append(candidates, permanent)
@@ -463,6 +469,7 @@ func registerPermanentReplacementEffects(g *game.Game, permanent *game.Permanent
 			replacement.DrawCardMultiplier <= 1 &&
 			replacement.DrawCardDigLook <= 0 &&
 			!replacement.DrawFromEmptyLibraryWins &&
+			!replacement.DamagePreventAll &&
 			!replacement.ContinuousZoneRedirect {
 			continue
 		}
@@ -475,6 +482,13 @@ func registerPermanentReplacementEffects(g *game.Game, permanent *game.Permanent
 		if replacement.CounterRecipientSelf {
 			replacement.AffectedObjectID = permanent.ObjectID
 		}
+		if replacement.DamageRecipientSelf {
+			replacement.AffectedObjectID = permanent.ObjectID
+		}
+		// DamageRecipientAttached is scoped dynamically: the Equipment/Aura enters
+		// unattached and attaches later without re-registration, so AffectedObjectID
+		// is left unset here and the damage-replacement match resolves the recipient
+		// from the source's current AttachedTo (matchingDamageReplacementEffects).
 		g.ReplacementEffects = append(g.ReplacementEffects, replacement)
 	}
 }
@@ -518,7 +532,32 @@ func permanentLinkedObjectRef(permanent *game.Permanent) game.LinkedObjectRef {
 	return game.LinkedObjectRef{ObjectID: permanent.ObjectID, CardID: permanent.CardInstanceID}
 }
 
-func returnLinkedExiledObjects(e *Engine, g *game.Game, obj *game.StackObject, linkID string, controllerOverride opt.V[game.PlayerID], options permanentCreationOptions, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+// permanentObjectBindingRef returns a linked-object ref that preserves the
+// permanent's ObjectID even for a token (CardInstanceID == 0), so an
+// object-identity binding survives for a token permanent. Unlike
+// permanentLinkedObjectRef, it does not require a card instance because its
+// consumers resolve the captured permanent by ObjectID: the
+// AddCounter.PublishLinked attacker binding resolves it while it remains on the
+// battlefield, and the distributive removal payoffs (ExileForEachOpponent's draw,
+// DestroyForEachPlayer's and RemoveTargetsForToken's per-controller token) resolve
+// its last-known controller by ObjectID after it has left. A token has a stable
+// ObjectID that is never reused, so all these bindings stay correct.
+func permanentObjectBindingRef(permanent *game.Permanent) game.LinkedObjectRef {
+	return game.LinkedObjectRef{ObjectID: permanent.ObjectID, CardID: permanent.CardInstanceID}
+}
+
+// returnLinkedNonBattlefieldObjects returns every linked object recorded under
+// linkID from the first of returnZones that currently holds it. Each object is
+// matched by its last-known-object snapshot so a stale reference can never
+// resurrect a different card that happens to reuse the card id.
+//
+// returnZones scopes which zones a return may consult, which is a correctness
+// requirement rather than an optimization: an exile-until or blink return
+// (Palace Jailer, Oblivion Ring) passes {zone.Exile} only and must do nothing
+// once its card has left exile — even if a same-id card now sits in the owner's
+// graveyard — whereas a sacrifice-then-return effect (Heart-Shaped Herb) passes
+// {zone.Graveyard} to return the card it just put there.
+func returnLinkedNonBattlefieldObjects(e *Engine, g *game.Game, obj *game.StackObject, linkID string, returnZones []zone.Type, controllerOverride opt.V[game.PlayerID], options permanentCreationOptions, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
 	key := linkedObjectSourceKey(g, obj, linkID)
 	returned := false
 	for _, ref := range linkedObjects(g, key) {
@@ -530,17 +569,43 @@ func returnLinkedExiledObjects(e *Engine, g *game.Game, obj *game.StackObject, l
 			continue
 		}
 		owner, ok := playerByID(g, card.Owner)
-		if !ok || !owner.Exile.Remove(ref.CardID) {
+		if !ok {
+			continue
+		}
+		fromZone, ok := removeLinkedCardFromZones(owner, ref.CardID, returnZones)
+		if !ok {
 			continue
 		}
 		controller := card.Owner
 		if controllerOverride.Exists {
 			controller = controllerOverride.Val
 		}
-		if _, ok := createCardPermanentFaceWithOptions(e, g, card, controller, zone.Exile, game.FaceFront, nil, options, agents, log); ok {
+		if _, ok := createCardPermanentFaceWithOptions(e, g, card, controller, fromZone, game.FaceFront, nil, options, agents, log); ok {
 			returned = true
 		}
 	}
 	clearLinkedObjects(g, key)
 	return returned
+}
+
+// removeLinkedCardFromZones removes cardID from the first of zones that holds it
+// and reports that zone so the re-entry uses the correct origin for CR 603/614
+// zone-change events. It only consults the given zones, so a caller that permits
+// exile alone never reanimates a card that has moved on to the graveyard.
+func removeLinkedCardFromZones(owner *game.Player, cardID id.ID, zones []zone.Type) (zone.Type, bool) {
+	for _, z := range zones {
+		switch z {
+		case zone.Exile:
+			if owner.Exile.Remove(cardID) {
+				return zone.Exile, true
+			}
+		case zone.Graveyard:
+			if owner.Graveyard.Remove(cardID) {
+				return zone.Graveyard, true
+			}
+		default:
+			// Other zones cannot back a linked-source return; skip them.
+		}
+	}
+	return zone.None, false
 }

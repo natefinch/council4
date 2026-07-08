@@ -193,6 +193,17 @@ func (r Renderer) renderContinuousEffect(ctx *renderCtx, effect *game.Continuous
 		ctx.need(importOpt)
 		fields = append(fields, fmt.Sprintf("NewControllerRef: opt.Val(%s),", rendered))
 	}
+	if effect.Layer == game.LayerControl && effect.NewControllerIsMonarch {
+		fields = append(fields, "NewControllerIsMonarch: true,")
+	}
+	if effect.ExpiresForRef.Exists {
+		rendered, err := r.renderPlayerReference(effect.ExpiresForRef.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("ExpiresForRef: opt.Val(%s),", rendered))
+	}
 	if effect.AffectedSource {
 		fields = append(fields, "AffectedSource: true,")
 	}
@@ -599,6 +610,9 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 			return "", err
 		}
 		fields = append(fields, fmt.Sprintf("DefendingPlayer: %s,", player))
+		if effect.DefendingPlayerDirectOnly {
+			fields = append(fields, "DefendingPlayerDirectOnly: true,")
+		}
 	}
 	if !effect.CardSelection.Empty() {
 		selection, err := r.renderSelection(ctx, effect.CardSelection)
@@ -800,6 +814,9 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 		}
 		fields = append(fields, fmt.Sprintf("SpellSubtypes: %s,", spellSubtypes))
 	}
+	if effect.ExiledLinkKey != "" {
+		fields = append(fields, fmt.Sprintf("ExiledLinkKey: game.LinkedKey(%q),", string(effect.ExiledLinkKey)))
+	}
 	if effect.RestrictedDuringControllerTurn {
 		fields = append(fields, "RestrictedDuringControllerTurn: true,")
 	}
@@ -984,6 +1001,10 @@ func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
 		return "game.RuleEffectCastLimitPerTurn", nil
 	case game.RuleEffectGoaded:
 		return "game.RuleEffectGoaded", nil
+	case game.RuleEffectCantBeSacrificed:
+		return "game.RuleEffectCantBeSacrificed", nil
+	case game.RuleEffectCastLinkedExileForFree:
+		return "game.RuleEffectCastLinkedExileForFree", nil
 	default:
 		return "", fmt.Errorf("render: unsupported rule effect kind %d", kind)
 	}

@@ -103,6 +103,7 @@ const (
 	PrimitiveShuffleGraveyardIntoLibrary
 	PrimitiveGroupSelfPowerDamage
 	PrimitiveBecomeMonarch
+	PrimitiveCantBecomeMonarch
 	PrimitiveRingTempts
 	PrimitiveVote
 	PrimitiveExileEntireHand
@@ -158,10 +159,38 @@ const (
 	// controller-relative pool, then destroys every chosen permanent
 	// simultaneously (game.EachPlayerChooseDestroy).
 	PrimitiveEachPlayerChooseDestroy
+	// PrimitivePlayerMayPayGenericOrRule offers a referenced player the option to
+	// pay a generic mana amount and, when they decline or cannot pay, installs a
+	// set of rule effects on that player's permanents for a duration
+	// (game.PlayerMayPayGenericOrRule). It models the "that opponent may pay {X},
+	// where X is the number of cards in their hand. If they don't, they can't
+	// attack you this combat." punisher (Champions of Minas Tirith).
+	PrimitivePlayerMayPayGenericOrRule
+	// PrimitivePartitionExiledCostCards disposes of the cards exiled to pay the
+	// resolving ability's cost: one player chooses one card, which goes to the
+	// bottom (or top) of its owner's library, and every other exiled card
+	// returns to the battlefield under the controller's control, optionally
+	// tapped (game.PartitionExiledCostCards). It models "An opponent chooses one
+	// of the exiled cards. You put that card on the bottom of your library and
+	// return the other to the battlefield tapped." (Coin of Fate).
+	PrimitivePartitionExiledCostCards
+	// PrimitiveExileForEachOpponent walks each opponent of the resolving
+	// controller and, for each, has Chooser exile up to one permanent that
+	// opponent controls matching Selection, publishing each exiled permanent
+	// under LinkedKey (game.ExileForEachOpponent). It models "for each opponent,
+	// exile up to one target permanent that player controls ..." (King Solomon's
+	// Frogs).
+	PrimitiveExileForEachOpponent
+	// PrimitiveDrawForEachExiled has each linked exiled permanent's last-known
+	// controller draw one card, consuming the LinkedKey a sibling
+	// ExileForEachOpponent published (game.DrawForEachExiled). It models "For
+	// each permanent exiled this way, its controller draws a card." (King
+	// Solomon's Frogs).
+	PrimitiveDrawForEachExiled
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveEachPlayerChooseDestroy) + 1
+const primitiveKindCount = int(PrimitiveDrawForEachExiled) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -403,6 +432,11 @@ type AddCounter struct {
 	// Group, never an Object, AllKinds, ChooseOne, KindChoices, or Distribute. The
 	// single-object and one-target forms use a dynamic ObjectCounters Amount.
 	DoubleKind bool
+	// PublishLinked, when set, remembers the single permanent the counters were
+	// placed on under this key so a later linked effect (such as a delayed
+	// attacker-declared trigger that binds to that creature) can resolve it. It is
+	// set only with a single Object, never a Group.
+	PublishLinked LinkedKey
 }
 
 // AddPlayerCounter places counters on a referenced player or group of players.
@@ -468,6 +502,20 @@ type ApplyContinuous struct {
 // ApplyRule creates rule effects for a target (or globally).
 type ApplyRule struct {
 	Object      opt.V[ObjectReference]
+	RuleEffects []RuleEffect
+	Duration    EffectDuration
+}
+
+// PlayerMayPayGenericOrRule offers Player the option to pay a generic mana
+// amount. When Player declines or cannot pay, it installs RuleEffects on that
+// player's permanents for Duration. It models the "that opponent may pay {X},
+// where X is the number of cards in their hand. If they don't, they can't
+// attack you this combat." punisher (Champions of Minas Tirith), where Amount
+// is the payer's hand size and RuleEffects prohibit that player's creatures
+// from attacking the resolving controller.
+type PlayerMayPayGenericOrRule struct {
+	Player      PlayerReference
+	Amount      Quantity
 	RuleEffects []RuleEffect
 	Duration    EffectDuration
 }
@@ -542,6 +590,24 @@ type PutOnBattlefield struct {
 	EntryTapped       bool
 	EntryCounters     []CounterPlacement
 	PublishLinked     LinkedKey
+	// LinkedReturnZones is the ordered set of non-battlefield zones a
+	// LinkedBattlefieldSource return may pull its linked card from. nil means
+	// exile-only, the default for exile-until and blink returns (Palace Jailer,
+	// Oblivion Ring), which must return the card only while it remains the same
+	// object in exile and do nothing once it has left. A sacrifice-then-return
+	// effect that put the card into the graveyard sets {zone.Graveyard} so it
+	// returns that card from the graveyard.
+	LinkedReturnZones []zone.Type
+}
+
+// LinkedReturnZonesOrExile returns the ordered non-battlefield zones a
+// LinkedBattlefieldSource return may pull its linked card from, defaulting to
+// exile-only when unset.
+func (p PutOnBattlefield) LinkedReturnZonesOrExile() []zone.Type {
+	if len(p.LinkedReturnZones) == 0 {
+		return []zone.Type{zone.Exile}
+	}
+	return p.LinkedReturnZones
 }
 
 // CreateToken creates one or more tokens. EntryTapped makes every created token
@@ -613,6 +679,24 @@ type PutLinkedExiledCardsInLibrary struct {
 	Bottom    bool
 }
 
+// PartitionExiledCostCards disposes of the cards exiled to pay the resolving
+// ability's activation cost by having one player choose a single card ("that
+// card") and routing it and the remaining cards to two destinations. When
+// ChooserOpponent is set, the next opponent of the ability's controller in turn
+// order chooses; otherwise the controller chooses. The chosen card goes to the
+// bottom of its owner's library when ChosenToLibraryBottom is set (top
+// otherwise); every other exiled card returns to the battlefield under the
+// controller's control, tapped when OtherEntersTapped is set. It backs "An
+// opponent chooses one of the exiled cards. You put that card on the bottom of
+// your library and return the other to the battlefield tapped." (Coin of Fate),
+// reading the resolving object's cost-exiled card IDs. Only cards still in exile
+// are considered, so a card that already moved is skipped.
+type PartitionExiledCostCards struct {
+	ChooserOpponent       bool
+	ChosenToLibraryBottom bool
+	OtherEntersTapped     bool
+}
+
 // StartEngines starts engine effects for a player.
 type StartEngines struct {
 	Player PlayerReference
@@ -623,6 +707,14 @@ type StartEngines struct {
 // it applies this primitive. It backs "you become the monarch" and "target
 // player becomes the monarch".
 type BecomeMonarch struct {
+	Player PlayerReference
+}
+
+// CantBecomeMonarch blocks the referenced player from becoming the monarch for
+// the rest of the turn ("You can't become the monarch this turn.", Jared
+// Carthalion). The runtime sets a per-turn flag the monarch-designation code
+// honors; it is cleared as the next turn begins.
+type CantBecomeMonarch struct {
 	Player PlayerReference
 }
 
@@ -876,6 +968,33 @@ type EachPlayerChooseDestroy struct {
 // the link after resolving. LinkedKey must be set and Source must be valid.
 type CreateTokenForEachDestroyed struct {
 	Source    TokenSource
+	LinkedKey LinkedKey
+}
+
+// ExileForEachOpponent walks each opponent of the resolving controller and, for
+// each, has Chooser pick up to one permanent that opponent controls matching
+// Selection and exiles it permanently, remembering each exiled permanent under
+// LinkedKey keyed by the source permanent. It models the distributive enters
+// trigger "for each opponent, exile up to one target permanent that player
+// controls with mana value 3 or greater." (King Solomon's Frogs). Each
+// opponent's permanents are an independent candidate pool, so the trigger exiles
+// at most one per opponent. Unlike ExileForEachPlayer this is a plain exile with
+// no return link; the linked set is recorded only so a paired DrawForEachExiled
+// payoff can iterate the exiled permanents and read each one's last-known
+// controller. LinkedKey must be set; the exiled permanents are otherwise
+// unrecoverable for the draw payoff.
+type ExileForEachOpponent struct {
+	Chooser   PlayerReference
+	Selection Selection
+	LinkedKey LinkedKey
+}
+
+// DrawForEachExiled has each permanent a sibling ExileForEachOpponent recorded
+// under LinkedKey draw one card for that permanent's last-known controller. It
+// models the per-controller payoff "For each permanent exiled this way, its
+// controller draws a card." (King Solomon's Frogs). It consumes and clears the
+// link after resolving. LinkedKey must be set.
+type DrawForEachExiled struct {
 	LinkedKey LinkedKey
 }
 
@@ -1434,11 +1553,24 @@ type RevealTopPartition struct {
 }
 
 // ImpulseExile exiles cards from the top of a player's library and lets the
-// resolving controller play those cards for a bounded duration.
+// resolving controller play those cards for a bounded duration. Player is
+// usually the resolving controller ("exile the top card of your library"), but
+// may resolve to a target opponent so the controller plays the top card of an
+// opponent's library ("exile the top card of target opponent's library ... You
+// may play that card for as long as it remains exiled", Court of Locthwain).
 type ImpulseExile struct {
 	Player   PlayerReference
 	Amount   Quantity
 	Duration EffectDuration
+	// SpendAnyMana, when set, lets the controller spend mana of any type to cast
+	// the exiled cards ("mana of any type can be spent to cast it.", Court of
+	// Locthwain). It carries onto the RuleEffectPlayFromZone permission.
+	SpendAnyMana bool
+	// PublishLinked, when set, remembers each exiled card under this source-keyed
+	// linked set so a later ability can act on "cards exiled with this ..." (Court
+	// of Locthwain's monarch free-cast reads the accumulated pool). It is empty
+	// when the exiled cards need not be tracked.
+	PublishLinked LinkedKey
 }
 
 // ExileLibraryUntilNonlandCast exiles cards from the top of Player's library one
@@ -1506,9 +1638,10 @@ type Manifest struct {
 	PublishLinked LinkedKey
 }
 
-// Goad goads the referenced creature.
+// Goad goads the referenced creature, or every creature in the referenced group.
 type Goad struct {
 	Object ObjectReference
+	Group  GroupReference
 }
 
 // RemoveCounter removes counters from one referenced permanent or every permanent in a referenced group.

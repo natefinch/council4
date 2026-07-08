@@ -242,9 +242,33 @@ func stackStaticRuleEffects(g *game.Game) []game.RuleEffect {
 	return effects
 }
 
+// persistsWhileCardExiled reports whether effect is a lasting permission to play
+// or cast a specific card "for as long as it remains exiled" (Court of
+// Locthwain). Such a permission is created by a resolved ability, not a static
+// ability, so it persists independent of its source permanent: it remains active
+// as long as the affected card is still in exile, even if the source leaves the
+// battlefield or changes controllers (CR 610.3b). Ordinary DurationPermanent
+// effects, by contrast, end when their source leaves the battlefield.
+func persistsWhileCardExiled(g *game.Game, effect *game.RuleEffect) bool {
+	if effect == nil ||
+		effect.Duration != game.DurationPermanent ||
+		effect.AffectedCardID == 0 ||
+		effect.CastFromZone != zone.Exile {
+		return false
+	}
+	if effect.Kind != game.RuleEffectPlayFromZone && effect.Kind != game.RuleEffectCastFromZone {
+		return false
+	}
+	z, ok := cardZone(g, effect.AffectedCardID)
+	return ok && z == zone.Exile
+}
+
 func ruleEffectSourceStillApplies(g *game.Game, effect *game.RuleEffect) bool {
 	if effect == nil {
 		return false
+	}
+	if persistsWhileCardExiled(g, effect) {
+		return true
 	}
 	if effect.Duration != game.DurationPermanent || effect.SourceObjectID == 0 {
 		return true
@@ -256,6 +280,9 @@ func ruleEffectSourceStillApplies(g *game.Game, effect *game.RuleEffect) bool {
 func ruleEffectSourceIsActive(g *game.Game, effect *game.RuleEffect) bool {
 	if !ruleEffectSourceStillApplies(g, effect) {
 		return false
+	}
+	if persistsWhileCardExiled(g, effect) {
+		return true
 	}
 	if effect.Duration != game.DurationPermanent || effect.SourceObjectID == 0 {
 		return true
@@ -648,6 +675,12 @@ func ruleEffectProhibitsAttack(g *game.Game, attacker *game.Permanent, target *g
 		}
 		if effect.DefendingPlayer != game.PlayerAny {
 			if target == nil {
+				continue
+			}
+			if effect.DefendingPlayerDirectOnly && !target.IsPlayerAttack() {
+				// "Can't attack you" restricts direct attacks on the defending
+				// player only; a planeswalker or battle that player controls is a
+				// distinct attack target (CR 508.1) and stays attackable.
 				continue
 			}
 			if !playerRelationMatches(effect.Controller, target.Player, effect.DefendingPlayer) {
@@ -1159,6 +1192,25 @@ func playerRuleEffectActive(g *game.Game, playerID game.PlayerID, kind game.Rule
 	return false
 }
 
+// permanentCantBeSacrificed reports whether an active RuleEffectCantBeSacrificed
+// protects permanent from being sacrificed ("Creatures you control but don't own
+// ... can't be sacrificed."). It matches whether the sacrifice would be a cost
+// or an effect, so a protected permanent is never a legal sacrifice.
+func permanentCantBeSacrificed(g *game.Game, permanent *game.Permanent) bool {
+	if permanent == nil {
+		return false
+	}
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind == game.RuleEffectCantBeSacrificed &&
+			ruleEffectMatchesPermanent(g, effect, permanent) {
+			return true
+		}
+	}
+	return false
+}
+
 // playerDamageRedirectPermanent returns the permanent an active
 // RuleEffectRedirectDamageToSource redirects the given player's damage to ("All
 // damage that would be dealt to you is dealt to this creature instead." —
@@ -1440,6 +1492,96 @@ func hasCastFromZoneRuleEffect(g *game.Game, playerID game.PlayerID, cardID id.I
 	return false
 }
 
+// castFromZoneAllowsAnyMana reports whether an active RuleEffectPlayFromZone
+// permission lets playerID spend mana of any type to cast cardID from sourceZone
+// ("mana of any type can be spent to cast it.", Court of Locthwain). It mirrors
+// hasCastFromZoneRuleEffect's matching and additionally requires the SpendAnyMana
+// flag.
+func castFromZoneAllowsAnyMana(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex) bool {
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind != game.RuleEffectPlayFromZone || !effect.SpendAnyMana ||
+			effect.CastFromZone != sourceZone {
+			continue
+		}
+		if !playerRelationMatches(effect.Controller, playerID, effect.AffectedPlayer) {
+			continue
+		}
+		if effect.AffectedCardID != 0 && effect.AffectedCardID != cardID {
+			continue
+		}
+		if effect.CastFace.Exists && effect.CastFace.Val != face {
+			continue
+		}
+		return true
+	}
+	return false
+}
+
+// castLinkedExileForFreePermission returns the active
+// RuleEffectCastLinkedExileForFree permission, if any, that lets playerID cast
+// cardID from exile without paying its mana cost ("cast a spell from among cards
+// exiled with this enchantment without paying its mana cost.", Court of
+// Locthwain). It matches the affected player and requires cardID to belong to
+// the source-keyed linked-exile pool the effect names.
+func castLinkedExileForFreePermission(g *game.Game, playerID game.PlayerID, cardID id.ID) (game.RuleEffect, bool) {
+	if cardID == 0 {
+		return game.RuleEffect{}, false
+	}
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind != game.RuleEffectCastLinkedExileForFree || effect.ExiledLinkKey == "" {
+			continue
+		}
+		if !playerRelationMatches(effect.Controller, playerID, effect.AffectedPlayer) {
+			continue
+		}
+		key := game.LinkedObjectKey{SourceID: effect.SourceCardID, LinkID: string(effect.ExiledLinkKey)}
+		if cardInLinkedObjectPool(g, key, cardID) {
+			return *effect, true
+		}
+	}
+	return game.RuleEffect{}, false
+}
+
+// castLinkedExileForFree reports whether an active RuleEffectCastLinkedExileForFree
+// permission lets playerID cast cardID from exile without paying its mana cost.
+func castLinkedExileForFree(g *game.Game, playerID game.PlayerID, cardID id.ID) bool {
+	_, ok := castLinkedExileForFreePermission(g, playerID, cardID)
+	return ok
+}
+
+// cardInLinkedObjectPool reports whether cardID was remembered in the linked
+// object set keyed by key.
+func cardInLinkedObjectPool(g *game.Game, key game.LinkedObjectKey, cardID id.ID) bool {
+	for _, ref := range linkedObjects(g, key) {
+		if ref.CardID == cardID {
+			return true
+		}
+	}
+	return false
+}
+
+// consumeCastLinkedExileForFreePermission removes the one-shot
+// RuleEffectCastLinkedExileForFree permission identified by effectID after its
+// player casts a spell under it, matching the singular "cast a spell". It is a
+// no-op when effectID is zero or the effect is no longer present.
+func consumeCastLinkedExileForFreePermission(g *game.Game, effectID id.ID) {
+	if effectID == 0 || len(g.RuleEffects) == 0 {
+		return
+	}
+	kept := g.RuleEffects[:0]
+	for i := range g.RuleEffects {
+		if g.RuleEffects[i].ID == effectID && g.RuleEffects[i].Kind == game.RuleEffectCastLinkedExileForFree {
+			continue
+		}
+		kept = append(kept, g.RuleEffects[i])
+	}
+	g.RuleEffects = kept
+}
+
 func canPlayLandFromZoneByRuleEffect(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type) bool {
 	effects := activeRuleEffects(g)
 	for i := range effects {
@@ -1608,7 +1750,7 @@ func castableZonesForPlayer(g *game.Game, playerID game.PlayerID) []zone.Type {
 			if !ok {
 				continue
 			}
-			if g.AdventureCards[cardID] || cardIsPlottedInExile(g, cardID) || slices.ContainsFunc(card.Def.LegalCastFaces(), func(face game.FaceIndex) bool {
+			if g.AdventureCards[cardID] || cardIsPlottedInExile(g, cardID) || cardIsForetoldInExile(g, cardID) || slices.ContainsFunc(card.Def.LegalCastFaces(), func(face game.FaceIndex) bool {
 				return canCastFromZoneByRuleEffect(g, playerID, cardID, zone.Exile, face)
 			}) {
 				zones = append(zones, zone.Exile)
@@ -1623,6 +1765,9 @@ func castableZonesForPlayer(g *game.Game, playerID game.PlayerID) []zone.Type {
 				zones = append(zones, zone.Library)
 			}
 		}
+	}
+	if !slices.Contains(zones, zone.Exile) && len(foreignExileCastableCards(g, playerID)) > 0 {
+		zones = append(zones, zone.Exile)
 	}
 	return slices.Compact(zones)
 }

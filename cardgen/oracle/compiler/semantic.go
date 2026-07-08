@@ -582,6 +582,7 @@ const (
 	ConditionPredicateCounterPlacementOnSelf
 	ConditionPredicateControllerCounterPlacement
 	ConditionPredicateDamageByControlledSource
+	ConditionPredicateDamageWouldBeDealtToPermanent
 	ConditionPredicateTokenCreationUnderController
 	ConditionPredicateSourceWouldDie
 	ConditionPredicateSourceWouldGoToGraveyard
@@ -1057,6 +1058,14 @@ type ConditionSelection struct {
 	// static damage-prevention statics.
 	DamageRecipientController      bool
 	DamageSourceControllerOpponent bool
+	// DamageRecipientSelf and DamageRecipientAttached qualify a
+	// ConditionPredicateDamageWouldBeDealtToPermanent clause: the damaged
+	// permanent is the ability's own source or the permanent it is attached to.
+	DamageRecipientSelf     bool
+	DamageRecipientAttached bool
+	// DamageRecipientMonarchGate marks a DamageWouldBeDealtToPermanent clause
+	// gated by "... while you're the monarch" (Jared Carthalion).
+	DamageRecipientMonarchGate bool
 	// AnyCounter requires the matched permanent to carry at least one counter of
 	// any kind ("if this permanent has counters on it").
 	AnyCounter bool
@@ -1249,6 +1258,16 @@ const (
 	ControllerYou
 	ControllerOpponent
 	ControllerNotYou
+	// ControllerThatPlayer restricts a target to permanents controlled by the
+	// triggering event's player ("target creature that player controls",
+	// Garland, Royal Kidnapper). The lowering maps it to the runtime
+	// Selection.ControlledByEventPlayer predicate.
+	ControllerThatPlayer
+	// ControllerDefendingPlayer restricts a target to permanents controlled by
+	// the defending player of the triggering attack ("goad target creature
+	// defending player controls", Coveted Peacock). The lowering maps it to the
+	// runtime Selection.ControlledByDefendingPlayer predicate.
+	ControllerDefendingPlayer
 )
 
 // CompiledSelector is a conservative semantic summary of a noun phrase.
@@ -1693,6 +1712,7 @@ const (
 	// last so existing kinds keep their wire values.
 	EffectRemoveCounter
 	EffectBecomeMonarch
+	EffectCantBecomeMonarch
 	// EffectDelayedTrigger creates an event-based delayed triggered ability that
 	// fires on a matching game event within a bounded window ("Whenever you cast
 	// a spell this turn, ...", Showdown of the Skalds; "When you next cast a
@@ -1855,6 +1875,11 @@ const (
 	// your library onto the battlefield face down as a 2/2 creature with ward
 	// {2}. Added last so existing kinds keep their wire values.
 	EffectCloak
+	// EffectGoad is the goad keyword action (CR 701.38): the goaded creature
+	// attacks each combat if able and attacks a player other than its
+	// controller if able, until that player's next turn. Added last so existing
+	// kinds keep their wire values.
+	EffectGoad
 )
 
 // DurationKind identifies common continuous-effect durations.
@@ -1891,6 +1916,10 @@ const (
 	// bounded play window Inti, Seneschal of the Sun grants its impulse-exiled
 	// card. The effect expires at the controller's next end step.
 	DurationUntilYourNextEndStep
+	// DurationForAsLongAsThatPlayerIsMonarch matches "for as long as they're the
+	// monarch" (Garland, Royal Kidnapper). The gain-control effect expires when
+	// the triggering player who became the monarch is no longer the monarch.
+	DurationForAsLongAsThatPlayerIsMonarch
 )
 
 // StaticSubjectKind identifies the group affected by a static continuous effect.
@@ -1967,6 +1996,13 @@ const (
 	// Starry-Eyed Skyrider). The token state rides the affected group alongside
 	// the attacking combat state.
 	StaticSubjectControlledAttackingCreatureTokens
+	// StaticSubjectControlledNotOwnedCreatures names the creatures the source's
+	// controller controls but does not own ("Creatures you control but don't own
+	// get +2/+2 and can't be sacrificed.", Garland, Royal Kidnapper). Its group is
+	// the controller-permanents domain narrowed to creatures, and its selection
+	// carries the owner-not-controller filter. Added last so existing subjects keep
+	// their wire values.
+	StaticSubjectControlledNotOwnedCreatures
 )
 
 // CompiledDamageRecipient bundles the primary-recipient descriptors of a
@@ -2112,6 +2148,18 @@ type CompiledEffect struct {
 	// deals combat damage to a player this turn, ..."). It is meaningful only
 	// when Kind is EffectDelayedTrigger.
 	DelayedTriggerBindDamageSource bool
+	// DelayedTriggerBindAttacker records that an EffectDelayedTrigger's
+	// attacker-declared event binds to the permanent an earlier clause in the
+	// same resolution acted on ("... target creature ... Whenever that creature
+	// attacks the monarch this turn, ..."). It is meaningful only when Kind is
+	// EffectDelayedTrigger.
+	DelayedTriggerBindAttacker bool
+	// DelayedTriggerBindDyingObject records that an EffectDelayedTrigger's
+	// permanent-died event binds to the permanent an earlier clause in the same
+	// resolution acted on ("... target creature an opponent controls ... When the
+	// creature an opponent controls dies this turn, ..."). It is meaningful only
+	// when Kind is EffectDelayedTrigger.
+	DelayedTriggerBindDyingObject bool
 	// TokenName is a created creature token's explicit Oracle name ("named Koma's
 	// Coil"), captured verbatim from source. It is empty when the token is named
 	// only by its subtypes.
@@ -2470,6 +2518,16 @@ type CompiledEffect struct {
 	// credit its tokens toward source coverage. It is set only on the Put effect
 	// of a recognized pile-split sequence.
 	PileSplitMiddleSpan shared.Span
+	// ExiledCardSplitOpponentChooses reports that a recognized "An opponent
+	// chooses one of the exiled cards." antecedent names an opponent as the
+	// chooser of the cost-exiled card this put effect disposes of (Coin of Fate).
+	// It is set only on the put effect of a recognized exiled-card opponent-choice
+	// disposal; lowering reads it to synthesize the opponent's choice.
+	ExiledCardSplitOpponentChooses bool
+	// ExiledCardChoiceRiderSpan covers the zero-effect antecedent "An opponent
+	// chooses one of the exiled cards." so lowering can credit its tokens toward
+	// source coverage. It is set only when ExiledCardSplitOpponentChooses is true.
+	ExiledCardChoiceRiderSpan shared.Span
 	// SourceSpellCostReduction and SourceSpellCostReductionAmount carry the typed
 	// source-scoped cast cost reduction recognized by the parser ("This spell
 	// costs {N} less to cast for each <countable battlefield object>"). Amount
@@ -2670,6 +2728,19 @@ type CompiledEffect struct {
 	// lowering creates one token for each creature a sibling variable-target exile
 	// removed, controlled by that creature's controller.
 	CreateTokenForEachExiledThisWay bool
+	// ExileForEachOpponent carries the parser-recognized distributive enters
+	// exile clause "for each opponent, exile up to one target permanent that
+	// player controls with mana value 3 or greater." (King Solomon's Frogs)
+	// through the text-blind compiler boundary so lowering exiles up to one
+	// permanent each opponent controls and links each exiled permanent for the
+	// paired draw payoff.
+	ExileForEachOpponent bool
+	// DrawForEachExiledThisWay carries the parser-recognized per-controller
+	// payoff "For each permanent exiled this way, its controller draws a card."
+	// (King Solomon's Frogs) through the text-blind compiler boundary so lowering
+	// draws one card for each permanent a sibling ExileForEachOpponent exiled,
+	// for that permanent's last-known controller.
+	DrawForEachExiledThisWay bool
 	// to the mana value of the exiled card." (The Aesir Escape Valhalla) through
 	// the text-blind compiler boundary so lowering scales the placement by the
 	// linked exiled card's mana value.

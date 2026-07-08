@@ -329,6 +329,8 @@ func (r Renderer) renderGroupReference(ctx *renderCtx, group game.GroupReference
 			return "", err
 		}
 		return fmt.Sprintf("game.SameNamePermanentGroup(%s, %s)", renderedAnchor, selection), nil
+	case game.GroupDomainTriggeringAttackers:
+		return fmt.Sprintf("game.TriggeringAttackersGroup(%s)", selection), nil
 	default:
 		return "", fmt.Errorf("render: unsupported group reference domain %d", group.Domain())
 	}
@@ -506,6 +508,15 @@ func (Renderer) renderSelection(ctx *renderCtx, selection game.Selection) (strin
 	}
 	if selection.DealtDamageThisTurn {
 		fields = append(fields, "DealtDamageThisTurn: true,")
+	}
+	if selection.OwnerNotController {
+		fields = append(fields, "OwnerNotController: true,")
+	}
+	if selection.ControlledByEventPlayer {
+		fields = append(fields, "ControlledByEventPlayer: true,")
+	}
+	if selection.ControlledByDefendingPlayer {
+		fields = append(fields, "ControlledByDefendingPlayer: true,")
 	}
 	if selection.RequirePermanentCard {
 		fields = append(fields, "RequirePermanentCard: true,")

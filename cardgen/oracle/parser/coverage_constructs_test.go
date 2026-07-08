@@ -47,9 +47,9 @@ func TestAbilityCoverageDelayedTriggerPreambleIsComplete(t *testing.T) {
 // TestAbilityCoverageConstructSpansDoNotOverCredit guards that a recognized
 // construct span never completes an ability whose effect verb itself is
 // unrepresented: the coordinated type list "creature or artifact" is credited,
-// but the unknown "Goad" effect leaves its verb and target uncovered.
+// but the unknown "Frobnicate" effect leaves its verb and target uncovered.
 func TestAbilityCoverageConstructSpansDoNotOverCredit(t *testing.T) {
-	report := AbilityCoverage(firstAbility(t, "Goad target creature or artifact.", Context{InstantOrSorcery: true}))
+	report := AbilityCoverage(firstAbility(t, "Frobnicate target creature or artifact.", Context{InstantOrSorcery: true}))
 	if report.Complete {
 		t.Fatal("unknown effect with a coordinated type list reported complete")
 	}
@@ -74,7 +74,7 @@ func TestAbilityCoverageNonClosedTriggerPreambleStaysIncomplete(t *testing.T) {
 // ability fails closed.
 func TestAbilityCoverageForEachPrefixWithoutExactClauseStaysIncomplete(t *testing.T) {
 	report := AbilityCoverage(firstAbility(t,
-		"Whenever this creature attacks, for each token you control, goad target creature.",
+		"Whenever this creature attacks, for each token you control, frobnicate target creature.",
 		Context{}))
 	if report.Complete {
 		t.Fatal("for-each prefix without an exact owning clause reported complete")

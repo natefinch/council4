@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -153,4 +154,183 @@ func lowerDelayedCombatDamageDrawTrigger(
 		DamageSourceObject: opt.Val(object),
 	}}
 	return modify, game.Mode{Sequence: []game.Instruction{{Primitive: delayed}}}.Ability(), true
+}
+
+// lowerDelayedAttacksMonarchGrant lowers a captured-object attacks-the-monarch
+// rider clause ("... put a +1/+1 counter on target creature ... Whenever that
+// creature attacks the monarch this turn, it gains double strike and trample
+// until end of turn.") into the publishing counter placement and a
+// CreateDelayedTrigger whose attacker-declared event binds to that same
+// permanent. The prior clause must be an AddCounter placing a +1/+1 counter on
+// the shared target; this lowerer publishes that permanent under a linked key
+// and rebinds the inner self-form attacks-the-monarch pattern to the captured
+// object so the trigger fires only when that specific permanent attacks the
+// monarch. It mirrors lowerDelayedCombatDamageDrawTrigger and fails closed on
+// any other shape.
+func lowerDelayedAttacksMonarchGrant(
+	effectIndex int,
+	ctx contentCtx,
+	sequence []game.Instruction,
+) (game.AddCounter, game.AbilityContent, bool) {
+	if effectIndex == 0 ||
+		len(sequence) != effectIndex ||
+		len(ctx.content.Effects) != 1 ||
+		ctx.content.Effects[0].Kind != compiler.EffectDelayedTrigger ||
+		!ctx.content.Effects[0].DelayedTriggerBindAttacker ||
+		ctx.content.Effects[0].DelayedTriggerAbility == nil ||
+		ctx.content.Effects[0].Negated ||
+		ctx.optional ||
+		!referencesBindTo(ctx.content.References, compiler.ReferenceBindingTarget, 0) {
+		return game.AddCounter{}, game.AbilityContent{}, false
+	}
+	previous := sequence[effectIndex-1].Primitive
+	if previous.Kind() != game.PrimitiveAddCounter {
+		return game.AddCounter{}, game.AbilityContent{}, false
+	}
+	add, ok := previous.(game.AddCounter)
+	if !ok ||
+		add.Object.Kind() != game.ObjectReferenceTargetPermanent ||
+		add.CounterKind != counter.PlusOnePlusOne ||
+		add.PublishLinked != "" ||
+		!add.Group.Empty() {
+		return game.AddCounter{}, game.AbilityContent{}, false
+	}
+	triggered, ok := lowerDelayedTriggerInner(ctx.content.Effects[0].DelayedTriggerAbility)
+	if !ok {
+		return game.AddCounter{}, game.AbilityContent{}, false
+	}
+	pattern := triggered.Trigger.Pattern
+	if pattern.Event != game.EventAttackerDeclared ||
+		pattern.Source != game.TriggerSourceSelf ||
+		pattern.Player != game.TriggerPlayerMonarch ||
+		pattern.AttackRecipient != game.AttackRecipientPlayer ||
+		pattern.AttackerCaptured ||
+		pattern.AttackAlone {
+		return game.AddCounter{}, game.AbilityContent{}, false
+	}
+	pattern.Source = game.TriggerSourceAny
+	pattern.Subject = game.TriggerSubjectDefault
+	pattern.AttackerCaptured = true
+	consumed := ctx
+	consumed.content.References = nil
+	consumed.content.Targets = nil
+	if consumed.content.Unconsumed() {
+		return game.AddCounter{}, game.AbilityContent{}, false
+	}
+	key := game.LinkedKey(fmt.Sprintf("delayed-target-%d", effectIndex))
+	object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
+		TargetLinkedKey: key,
+	})
+	if !ok {
+		return game.AddCounter{}, game.AbilityContent{}, false
+	}
+	add.PublishLinked = key
+	delayed := game.CreateDelayedTrigger{Trigger: game.DelayedTriggerDef{
+		EventPattern:           opt.Val(pattern),
+		Window:                 game.DelayedWindowThisTurn,
+		Content:                triggered.Content,
+		CapturedAttackerObject: opt.Val(object),
+	}}
+	return add, game.Mode{Sequence: []game.Instruction{{Primitive: delayed}}}.Ability(), true
+}
+
+// lowerDelayedDiesInner compiles and lowers the nested "When this creature dies,
+// if <condition>, <effect>" ability of a captured-object permanent-died delayed
+// trigger, returning the plain triggered ability whose pattern, intervening
+// condition, and content the delayed trigger reuses. Unlike
+// lowerDelayedTriggerInner it keeps an intervening-if condition (the delayed
+// trigger carries it via DelayedTriggerDef.InterveningCondition), but it still
+// fails closed on optional, keyword-ability, or per-turn-limit machinery
+// DelayedTriggerDef cannot model.
+func lowerDelayedDiesInner(granted *parser.StaticGrantedAbilitySyntax) (game.TriggeredAbility, bool) {
+	innerDocument, innerDiags := granted.Inner()
+	if len(innerDiags) != 0 {
+		return game.TriggeredAbility{}, false
+	}
+	innerComp, compilerDiags := compiler.Compile(innerDocument, compiler.Context{})
+	if len(compilerDiags) != 0 ||
+		len(innerComp.Abilities) != 1 ||
+		len(innerComp.Syntax.Abilities) != 1 {
+		return game.TriggeredAbility{}, false
+	}
+	lowered, diagnostic := lowerExecutableAbility("", false, nil, innerComp.Abilities[0], &innerComp.Syntax.Abilities[0])
+	if diagnostic != nil || !lowered.triggeredAbility.Exists {
+		return game.TriggeredAbility{}, false
+	}
+	triggered := lowered.triggeredAbility.Val
+	if triggered.Optional ||
+		triggered.MaxTriggersPerTurn != 0 ||
+		len(triggered.KeywordAbilities) != 0 {
+		return game.TriggeredAbility{}, false
+	}
+	return triggered, true
+}
+
+// lowerDelayedCommanderMonarchDiesTrigger lowers a captured-object
+// permanent-died rider clause ("... it fights target creature an opponent
+// controls. When the creature an opponent controls dies this turn, if you
+// control your commander, you become the monarch.") into a CreateDelayedTrigger
+// whose permanent-died event binds to the creature the immediately preceding
+// fight put in harm's way -- the fight's second (opponent's) target. The prior
+// clause must be a Fight whose RelatedObject is that target permanent; the
+// delayed trigger reuses that target reference as its captured dying object, so
+// no publishing rewrite of the fight is needed (the target reference already
+// resolves at schedule time). The inner self-form permanent-died pattern is
+// rebound to the captured object and its "if you control your commander"
+// intervening condition is carried onto the delayed trigger. It mirrors
+// lowerDelayedAttacksMonarchGrant and fails closed on any other shape.
+func lowerDelayedCommanderMonarchDiesTrigger(
+	effectIndex int,
+	ctx contentCtx,
+	sequence []game.Instruction,
+) (game.AbilityContent, bool) {
+	if effectIndex == 0 ||
+		len(sequence) != effectIndex ||
+		len(ctx.content.Effects) != 1 ||
+		ctx.content.Effects[0].Kind != compiler.EffectDelayedTrigger ||
+		!ctx.content.Effects[0].DelayedTriggerBindDyingObject ||
+		ctx.content.Effects[0].DelayedTriggerAbility == nil ||
+		ctx.content.Effects[0].Negated ||
+		ctx.optional ||
+		len(ctx.content.References) != 0 {
+		return game.AbilityContent{}, false
+	}
+	previous := sequence[effectIndex-1].Primitive
+	if previous.Kind() != game.PrimitiveFight {
+		return game.AbilityContent{}, false
+	}
+	fight, ok := previous.(game.Fight)
+	if !ok || fight.RelatedObject.Kind() != game.ObjectReferenceTargetPermanent {
+		return game.AbilityContent{}, false
+	}
+	triggered, ok := lowerDelayedDiesInner(ctx.content.Effects[0].DelayedTriggerAbility)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	if !triggered.Trigger.InterveningCondition.Exists {
+		return game.AbilityContent{}, false
+	}
+	pattern := triggered.Trigger.Pattern
+	if pattern.Event != game.EventPermanentDied ||
+		pattern.Source != game.TriggerSourceSelf ||
+		pattern.DyingObjectCaptured {
+		return game.AbilityContent{}, false
+	}
+	pattern.Source = game.TriggerSourceAny
+	pattern.Subject = game.TriggerSubjectDefault
+	pattern.DyingObjectCaptured = true
+	consumed := ctx
+	consumed.content.References = nil
+	consumed.content.Targets = nil
+	if consumed.content.Unconsumed() {
+		return game.AbilityContent{}, false
+	}
+	delayed := game.CreateDelayedTrigger{Trigger: game.DelayedTriggerDef{
+		EventPattern:         opt.Val(pattern),
+		Window:               game.DelayedWindowThisTurn,
+		Content:              triggered.Content,
+		CapturedDyingObject:  opt.Val(fight.RelatedObject),
+		InterveningCondition: triggered.Trigger.InterveningCondition,
+	}}
+	return game.Mode{Sequence: []game.Instruction{{Primitive: delayed}}}.Ability(), true
 }

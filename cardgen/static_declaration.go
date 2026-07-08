@@ -540,6 +540,11 @@ func lowerStaticContinuousDeclaration(declaration compiler.StaticDeclaration) (g
 			return game.ContinuousEffect{}, false
 		}
 		effect.NewController = opt.Val(game.Player1)
+	case compiler.StaticContinuousChangeControlToMonarch:
+		if layer != game.LayerControl {
+			return game.ContinuousEffect{}, false
+		}
+		effect.NewControllerIsMonarch = true
 	case compiler.StaticContinuousSetBasePowerToughness:
 		if layer != game.LayerPowerToughnessSet {
 			return game.ContinuousEffect{}, false
@@ -936,7 +941,7 @@ func lowerControlledGroupRuleSelection(group compiler.StaticGroupReference) ([]t
 func staticRuleDomain(kind compiler.StaticRuleKind) compiler.StaticRuleDomain {
 	switch kind {
 	case compiler.StaticRuleCantAttack, compiler.StaticRuleMustAttack, compiler.StaticRuleCantAttackYou,
-		compiler.StaticRuleCantAttackAlone:
+		compiler.StaticRuleCantAttackYouDirect, compiler.StaticRuleCantAttackAlone:
 		return compiler.StaticRuleDomainAttack
 	case compiler.StaticRuleCantBlock, compiler.StaticRuleCantBeBlocked, compiler.StaticRuleMustBeBlocked,
 		compiler.StaticRuleCantBeBlockedByMoreThanOne, compiler.StaticRuleCantBeBlockedByCreaturesWith,
@@ -961,6 +966,8 @@ func staticRuleDomain(kind compiler.StaticRuleKind) compiler.StaticRuleDomain {
 		return compiler.StaticRuleDomainCombatDamage
 	case compiler.StaticRuleGoaded:
 		return compiler.StaticRuleDomainGoad
+	case compiler.StaticRuleCantBeSacrificed:
+		return compiler.StaticRuleDomainSacrifice
 	case compiler.StaticRuleAdditionalTriggerForChosenCreatureType:
 		return compiler.StaticRuleDomainTrigger
 	default:
@@ -1551,6 +1558,10 @@ func lowerStaticRuleEffects(kind compiler.StaticRuleKind) ([]game.RuleEffect, bo
 		return []game.RuleEffect{
 			{Kind: game.RuleEffectCantAttack, DefendingPlayer: game.PlayerYou},
 		}, true
+	case compiler.StaticRuleCantAttackYouDirect:
+		return []game.RuleEffect{
+			{Kind: game.RuleEffectCantAttack, DefendingPlayer: game.PlayerYou, DefendingPlayerDirectOnly: true},
+		}, true
 	case compiler.StaticRuleCanBlockAdditional:
 		return []game.RuleEffect{
 			{Kind: game.RuleEffectCanBlockAdditional, AdditionalBlockCount: 1},
@@ -1604,6 +1615,8 @@ func lowerStaticRuleKind(kind compiler.StaticRuleKind) (game.RuleEffectKind, boo
 		return game.RuleEffectAdditionalTriggerForChosenCreatureType, true
 	case compiler.StaticRuleGoaded:
 		return game.RuleEffectGoaded, true
+	case compiler.StaticRuleCantBeSacrificed:
+		return game.RuleEffectCantBeSacrificed, true
 	default:
 		return game.RuleEffectNone, false
 	}

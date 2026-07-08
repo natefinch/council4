@@ -286,6 +286,13 @@ const (
 	// one of the recorded exempt types. The counts and exempt types travel on
 	// the compiled ability so lowering stays free of Oracle wording.
 	ExactSequenceDrawThenDiscardUnlessType
+	// ExactSequencePayHandSizeOrCantAttack is the triggered body "that opponent
+	// may pay {X}, where X is the number of cards in their hand. If they don't,
+	// they can't attack you this combat." (Champions of Minas Tirith): the
+	// triggering opponent may pay generic mana equal to their hand size; on
+	// non-payment their creatures can't attack the source's controller for the
+	// rest of that combat. The whole body is fixed, so it carries no extra data.
+	ExactSequencePayHandSizeOrCantAttack
 )
 
 // LookAtTopBattlefieldElse identifies the trailing fallback disposition of an
@@ -990,6 +997,7 @@ const (
 	TriggerPlayerSelectorAny                TriggerPlayerSelectorKind = "TriggerPlayerSelectorAny"
 	TriggerPlayerSelectorYou                TriggerPlayerSelectorKind = "TriggerPlayerSelectorYou"
 	TriggerPlayerSelectorOpponent           TriggerPlayerSelectorKind = "TriggerPlayerSelectorOpponent"
+	TriggerPlayerSelectorMonarch            TriggerPlayerSelectorKind = "TriggerPlayerSelectorMonarch"
 	TriggerPlayerSelectorSourceController   TriggerPlayerSelectorKind = "TriggerPlayerSelectorSourceController"
 	TriggerPlayerSelectorAttachedController TriggerPlayerSelectorKind = "TriggerPlayerSelectorAttachedController"
 )
@@ -1185,6 +1193,12 @@ type Sentence struct {
 	// Reference and coverage scans treat its tokens as belonging to the folded
 	// pile-split rather than as an unrecognized sibling.
 	PileSplitRider bool `json:",omitempty"`
+	// ExiledCardChoiceRider reports that this sentence is the credited zero-effect
+	// antecedent "An opponent chooses one of the exiled cards." folded onto a
+	// following put/return disposal (Coin of Fate). Reference and coverage scans
+	// treat its tokens as belonging to that disposal rather than as an
+	// unrecognized sibling.
+	ExiledCardChoiceRider bool `json:",omitempty"`
 	// RemoveAuraRider reports that this sentence is the credited inert "This
 	// effect doesn't remove this Aura." clarification folded onto a preceding
 	// protection (or other continuous) keyword grant on an Aura. The clause only
@@ -1207,6 +1221,7 @@ func sentenceIsCreditedRider(s *Sentence) bool {
 		s.CopyChooseNewTargetsRider ||
 		s.PlayFromTopPayLifeRider ||
 		s.PileSplitRider ||
+		s.ExiledCardChoiceRider ||
 		s.RemoveAuraRider
 }
 
@@ -1258,6 +1273,12 @@ const (
 	// the compiler reads. It backs the mass don't-untap restriction for land and
 	// permanent groups.
 	StaticRuleSubjectBattlefieldPermanents StaticRuleSubjectKind = "StaticRuleSubjectBattlefieldPermanents"
+	// StaticRuleSubjectControlledNotOwnedCreatures scopes a static rule to the
+	// creatures the source's controller controls but does not own ("Creatures you
+	// control but don't own ... can't be sacrificed.", Garland, Royal Kidnapper).
+	// The compiler maps it to the controller-permanents affected group whose
+	// affected-permanent Selection carries the owner-not-controller filter.
+	StaticRuleSubjectControlledNotOwnedCreatures StaticRuleSubjectKind = "StaticRuleSubjectControlledNotOwnedCreatures"
 )
 
 // StaticRuleBlockedObjectKind identifies the protected object an active "can't
@@ -1335,6 +1356,11 @@ const (
 	// always pairs with a requirement constraint and active voice and carries no
 	// qualifier.
 	StaticRuleOperationGoaded StaticRuleOperationKind = "StaticRuleOperationGoaded"
+	// StaticRuleOperationSacrifice is the sacrifice prohibition printed as
+	// "<subject> can't be sacrificed." (Garland, Royal Kidnapper): the affected
+	// permanents can't be sacrificed by any player. It always pairs with a
+	// prohibition constraint and passive voice and carries no qualifier.
+	StaticRuleOperationSacrifice StaticRuleOperationKind = "StaticRuleOperationSacrifice"
 )
 
 // StaticRuleVoice identifies the grammatical role the subject has in an
@@ -1360,6 +1386,11 @@ const (
 	// controller and their planeswalkers ("can't attack you or planeswalkers
 	// you control").
 	StaticRuleQualifierDefenderYou StaticRuleQualifierKind = "StaticRuleQualifierDefenderYou"
+	// StaticRuleQualifierDefenderYouDirect restricts an attack prohibition to the
+	// controller as a direct target only ("can't attack you"), leaving the
+	// controller's planeswalkers and battles attackable (CR 508.1). Fealty to the
+	// Realm's enchanted creature "can't attack you" (the Aura's controller).
+	StaticRuleQualifierDefenderYouDirect StaticRuleQualifierKind = "StaticRuleQualifierDefenderYouDirect"
 	// StaticRuleQualifierByMoreThanOne bounds a "can't be blocked" prohibition
 	// to the exceptional case "by more than one creature".
 	StaticRuleQualifierByMoreThanOne StaticRuleQualifierKind = "StaticRuleQualifierByMoreThanOne"

@@ -750,6 +750,8 @@ func (r Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatt
 			pattern.Event != game.EventSpellCast) ||
 		(pattern.RequireCombatDamage && pattern.RequireNonCombatDamage) ||
 		(pattern.AttackAlone && pattern.Event != game.EventAttackerDeclared) ||
+		(pattern.AttackerCaptured && pattern.Event != game.EventAttackerDeclared) ||
+		(pattern.DyingObjectCaptured && pattern.Event != game.EventPermanentDied) ||
 		(pattern.AttackWhileSaddled && pattern.Event != game.EventAttackerDeclared) ||
 		(pattern.AttacksDifferentPlayerThanAnother && pattern.Event != game.EventAttackerDeclared) ||
 		(pattern.DyingDamagedBySource && pattern.Event != game.EventPermanentDied) ||
@@ -944,6 +946,12 @@ func renderTriggerPatternFlagFields(ctx *renderCtx, pattern *game.TriggerPattern
 	}
 	if pattern.AttackAlone {
 		fields = append(fields, "AttackAlone: true,")
+	}
+	if pattern.AttackerCaptured {
+		fields = append(fields, "AttackerCaptured: true,")
+	}
+	if pattern.DyingObjectCaptured {
+		fields = append(fields, "DyingObjectCaptured: true,")
 	}
 	if pattern.AttackWhileSaddled {
 		fields = append(fields, "AttackWhileSaddled: true,")

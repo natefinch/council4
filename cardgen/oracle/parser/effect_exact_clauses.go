@@ -1479,6 +1479,14 @@ func exactBecomeMonarchEffectSyntax(effect *EffectSyntax) bool {
 		strings.EqualFold(text, effect.Targets[0].Text+" becomes the monarch.")
 }
 
+// exactCantBecomeMonarchEffectSyntax recognizes the controller-scoped temporary
+// prohibition "You can't become the monarch this turn." (Jared Carthalion). Any
+// other subject or wording leaves the clause non-exact so lowering fails closed.
+func exactCantBecomeMonarchEffectSyntax(effect *EffectSyntax) bool {
+	return len(effect.Targets) == 0 &&
+		strings.EqualFold(exactEffectClauseText(effect), "You can't become the monarch this turn.")
+}
+
 // exactMultiDistinctTargetEffectSyntax recognizes a verb applied to two or more
 // distinct single targets, each named by its own "target <noun>" clause:
 // "Destroy target artifact, target creature, target enchantment, and target

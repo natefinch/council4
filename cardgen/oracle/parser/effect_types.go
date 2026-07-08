@@ -40,7 +40,9 @@ const (
 	EffectFight                     EffectKind = "EffectFight"
 	EffectGain                      EffectKind = "EffectGain"
 	EffectGainControl               EffectKind = "EffectGainControl"
+	EffectGoad                      EffectKind = "EffectGoad"
 	EffectBecomeMonarch             EffectKind = "EffectBecomeMonarch"
+	EffectCantBecomeMonarch         EffectKind = "EffectCantBecomeMonarch"
 	EffectGrantKeyword              EffectKind = "EffectGrantKeyword"
 	EffectInvestigate               EffectKind = "EffectInvestigate"
 	EffectImpulseExile              EffectKind = "EffectImpulseExile"
@@ -576,6 +578,11 @@ const (
 	// attachment-dependent wording "for as long as that creature is enchanted".
 	// The effect expires when the affected creature is no longer enchanted.
 	EffectDurationWhileControlledCreatureEnchanted EffectDurationKind = "EffectDurationWhileControlledCreatureEnchanted"
+	// EffectDurationWhileThatPlayerIsMonarch matches "for as long as they're the
+	// monarch" (Garland, Royal Kidnapper), the gain-control duration that lasts
+	// while the triggering player remains the monarch. The effect expires when
+	// that player is no longer the monarch.
+	EffectDurationWhileThatPlayerIsMonarch EffectDurationKind = "EffectDurationWhileThatPlayerIsMonarch"
 )
 
 // SpellCostCasterKind names which player's spells a resolving spell cost
@@ -1407,6 +1414,16 @@ const (
 	SelectionControllerYou      SelectionController = "SelectionControllerYou"
 	SelectionControllerOpponent SelectionController = "SelectionControllerOpponent"
 	SelectionControllerNotYou   SelectionController = "SelectionControllerNotYou"
+	// SelectionControllerDefendingPlayer restricts the selection to permanents
+	// controlled by the defending player of the triggering attack ("defending
+	// player controls").
+	SelectionControllerDefendingPlayer SelectionController = "SelectionControllerDefendingPlayer"
+	// SelectionControllerThatPlayer marks a target controlled by the triggering
+	// event's player ("target creature that player controls", Garland, Royal
+	// Kidnapper, where "that player" is the opponent who became the monarch). It
+	// is assigned only by the narrow gain-control monarch recognizer, so no other
+	// card's "that player controls" wording is retyped.
+	SelectionControllerThatPlayer SelectionController = "SelectionControllerThatPlayer"
 )
 
 // SelectionKind identifies the broad object selected by a phrase.
@@ -1975,6 +1992,23 @@ type EffectSyntax struct {
 	// pattern's source to the captured object. It is meaningful only when Kind is
 	// EffectDelayedTrigger.
 	DelayedTriggerBindDamageSource bool `json:",omitempty"`
+	// DelayedTriggerBindAttacker records that an EffectDelayedTrigger's
+	// attacker-declared event binds to the permanent an earlier clause in the
+	// same resolution acted on, named here by a back-reference ("... target
+	// creature ... Whenever that creature attacks the monarch this turn, ...").
+	// The inner ability is reparsed in the self ("this creature") form so it
+	// carries the attacker-declared pattern; lowering rebinds that pattern to the
+	// captured object. It is meaningful only when Kind is EffectDelayedTrigger.
+	DelayedTriggerBindAttacker bool `json:",omitempty"`
+	// DelayedTriggerBindDyingObject records that an EffectDelayedTrigger's
+	// permanent-died event binds to the permanent an earlier clause in the same
+	// resolution acted on, named here by a definite description ("... target
+	// creature an opponent controls ... When the creature an opponent controls
+	// dies this turn, ..."). The inner ability is reparsed in the self ("this
+	// creature") form so it carries the permanent-died pattern; lowering rebinds
+	// that pattern to the captured object (the second fight target). It is
+	// meaningful only when Kind is EffectDelayedTrigger.
+	DelayedTriggerBindDyingObject bool `json:",omitempty"`
 	// TokenKeywords lists every creature keyword a created token enters with, in
 	// source order ("with menace and reach" -> [Menace, Reach]). The first
 	// keyword is also recorded on Selection.Keyword (a "with <keyword>" selector
@@ -2565,10 +2599,21 @@ type EffectSyntax struct {
 	// separates those cards into two piles." / "An opponent chooses one of those
 	// piles.") so the lowerer can credit its tokens toward source coverage. It is
 	// set only on the Put effect of a recognized pile-split sequence.
-	PileSplitMiddleSpan     shared.Span `json:"-"`
-	RequiresOrderedLowering bool        `json:",omitempty"`
-	HasUnrecognizedSibling  bool        `json:",omitempty"`
-	UnsupportedDetail       string      `json:",omitempty"`
+	PileSplitMiddleSpan shared.Span `json:"-"`
+	// ExiledCardSplitOpponentChooses reports that a recognized "An opponent
+	// chooses one of the exiled cards." antecedent names an opponent as the
+	// chooser of the cost-exiled card this put effect disposes of (Coin of Fate).
+	// It is set only on the put effect of a recognized exiled-card opponent-choice
+	// disposal; lowering reads it to synthesize the opponent's choice.
+	ExiledCardSplitOpponentChooses bool `json:",omitempty"`
+	// ExiledCardChoiceRiderSpan covers the zero-effect antecedent "An opponent
+	// chooses one of the exiled cards." so the lowerer can credit its tokens
+	// toward source coverage. It is set only when ExiledCardSplitOpponentChooses
+	// is true.
+	ExiledCardChoiceRiderSpan shared.Span `json:"-"`
+	RequiresOrderedLowering   bool        `json:",omitempty"`
+	HasUnrecognizedSibling    bool        `json:",omitempty"`
+	UnsupportedDetail         string      `json:",omitempty"`
 	// Order is the effect's dense source-order rank (of Span); VerbOrder is the
 	// rank of VerbSpan. Downstream stages compare these ranks to order effects
 	// and bind references to effect verbs without inspecting byte offsets.
@@ -2732,6 +2777,19 @@ type EffectSyntax struct {
 	// its controller create one token, so the count is one per exiled creature
 	// rather than a multiplier on the create.
 	CreateTokenForEachExiledThisWay bool `json:",omitempty"`
+	// ExileForEachOpponent marks the exact distributive enters clause "for each
+	// opponent, exile up to one target permanent that player controls with mana
+	// value 3 or greater." (King Solomon's Frogs). Each opponent's permanents are
+	// an independent "up to one" pool; the "that player" reference is the
+	// distributive anchor rather than a target. A paired DrawForEachExiledThisWay
+	// clause draws a card for each permanent exiled this way.
+	ExileForEachOpponent bool `json:",omitempty"`
+	// DrawForEachExiledThisWay marks the exact per-controller payoff "For each
+	// permanent exiled this way, its controller draws a card." (King Solomon's
+	// Frogs). It pairs with a preceding ExileForEachOpponent clause: each
+	// permanent exiled this way has its controller draw one card, so the count is
+	// one per exiled permanent rather than a multiplier on the draw.
+	DrawForEachExiledThisWay bool `json:",omitempty"`
 	// ReturnExiledCard marks the explicit O-Ring leaves-the-battlefield clause
 	// "return the exiled card to the battlefield under its owner's control."
 	// (Oblivion Ring, Journey to Nowhere, Fiend Hunter). The returned card is the
@@ -3201,6 +3259,12 @@ const (
 	EffectStaticSubjectOtherControlledArtifactCreatures EffectStaticSubjectKind = "EffectStaticSubjectOtherControlledArtifactCreatures"
 	EffectStaticSubjectControlledNontokenCreatures      EffectStaticSubjectKind = "EffectStaticSubjectControlledNontokenCreatures"
 	EffectStaticSubjectOtherControlledNontokenCreatures EffectStaticSubjectKind = "EffectStaticSubjectOtherControlledNontokenCreatures"
+	// EffectStaticSubjectControlledNotOwnedCreatures names the creatures a player
+	// controls but does not own ("Creatures you control but don't own get +2/+2
+	// and can't be sacrificed.", Garland, Royal Kidnapper). The group is the
+	// controller's permanents narrowed to creatures whose owner is a different
+	// player; the compiler marks the affected selection with OwnerNotController.
+	EffectStaticSubjectControlledNotOwnedCreatures EffectStaticSubjectKind = "EffectStaticSubjectControlledNotOwnedCreatures"
 
 	// EffectStaticSubjectControlledCreatureSubtypeTokens and its "other" sibling
 	// name the controlled creature tokens carrying a named creature subtype

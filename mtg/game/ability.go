@@ -760,6 +760,10 @@ const (
 	TriggerPlayerAny TriggerPlayerFilter = iota
 	TriggerPlayerYou
 	TriggerPlayerOpponent
+	// TriggerPlayerMonarch matches an event whose affected player is the current
+	// monarch ("At the beginning of the monarch's end step, ...", Archivist of
+	// Gondor).
+	TriggerPlayerMonarch
 )
 
 // AttackRecipientKind identifies what an attacker was declared against.
@@ -891,6 +895,25 @@ type TriggerPattern struct {
 	// attacks alone, i.e. the only attacking creature in the combat ("attacks
 	// alone", CR 508). It is only valid with Event == EventAttackerDeclared.
 	AttackAlone bool
+	// AttackerCaptured restricts an EventAttackerDeclared pattern to the specific
+	// attacker captured when the trigger was created, rather than by a static
+	// source filter. It is the attack analog of DamageSourceCaptured: it is only
+	// meaningful on an event-based delayed trigger whose DelayedTriggerDef carries
+	// a CapturedAttackerObject reference; the delayed-trigger matcher resolves
+	// that reference at schedule time and enforces the captured attacker identity
+	// ("... target creature ... Whenever that creature attacks the monarch this
+	// turn, ..."). It must not be combined with a Source filter or Subject.
+	AttackerCaptured bool
+	// DyingObjectCaptured restricts an EventPermanentDied pattern to the specific
+	// permanent captured when the trigger was created, rather than by a static
+	// source filter. It is the death analog of DamageSourceCaptured and
+	// AttackerCaptured: it is only meaningful on an event-based delayed trigger
+	// whose DelayedTriggerDef carries a CapturedDyingObject reference; the
+	// delayed-trigger matcher resolves that reference at schedule time and
+	// enforces the captured dying permanent's identity ("... target creature an
+	// opponent controls ... When the creature an opponent controls dies this
+	// turn, ..."). It must not be combined with a Source filter or Subject.
+	DyingObjectCaptured bool
 	// AttackerCountAtLeast restricts a controller-scoped EventAttackerDeclared
 	// trigger to combats where at least this many creatures are attacking
 	// ("attack with two or more creatures"). Zero imposes no minimum; a positive

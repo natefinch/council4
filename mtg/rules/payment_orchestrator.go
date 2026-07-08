@@ -48,21 +48,31 @@ func (o paymentOrchestratorType) buildAbilityCostPlan(g *game.Game, req payment.
 	return o.planner(g).BuildAbilityCostPlan(req)
 }
 
+// abilityCostPayment carries the identities of objects and cards consumed to pay
+// an ability's activation cost so the caller can record them on the resolving
+// stack object: the object IDs of permanents sacrificed and the card-instance
+// IDs of cards exiled from a zone.
+type abilityCostPayment struct {
+	sacrificedIDs []id.ID
+	exiledIDs     []id.ID
+}
+
 // payAbilityCosts pays all ability costs described by req. Paying an ability cost
 // is never a spell cast, so any tagged mana-spend rider units it consumes are
 // dropped without firing, keeping rider provenance exact for later payments. It
-// returns the object IDs of any permanents sacrificed as a cost so the caller
-// can record them on the resolving stack object.
-func (o paymentOrchestratorType) payAbilityCosts(g *game.Game, req payment.AbilityRequest) ([]id.ID, bool) {
+// returns the object IDs of any permanents sacrificed and the card-instance IDs
+// of any cards exiled as a cost so the caller can record them on the resolving
+// stack object.
+func (o paymentOrchestratorType) payAbilityCosts(g *game.Game, req payment.AbilityRequest) (abilityCostPayment, bool) {
 	before, hasRiders := manaSpendRiderSnapshot(g, req.PlayerID)
-	poolSpend, sacrificedIDs, ok := o.planner(g).PayAbilityCosts(req)
+	paid, ok := o.planner(g).PayAbilityCosts(req)
 	if !ok {
-		return nil, false
+		return abilityCostPayment{}, false
 	}
 	if hasRiders {
-		consumeManaSpendRidersForPayment(g, req.PlayerID, req.Source, before, poolSpend)
+		consumeManaSpendRidersForPayment(g, req.PlayerID, req.Source, before, paid.PoolSpend)
 	}
-	return sacrificedIDs, true
+	return abilityCostPayment{sacrificedIDs: paid.SacrificedIDs, exiledIDs: paid.ExiledIDs}, true
 }
 
 // canPayGenericCost reports whether the player can pay the mana cost described by req.

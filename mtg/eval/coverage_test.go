@@ -18,7 +18,21 @@ import (
 // sibling distributive removals DestroyForEachPlayer and ExileForEachPlayer:
 // its per-player player-relative choices are not modeled by the single-target
 // atom heuristic.
-const knownPrimitiveCount = 112
+//
+// CantBecomeMonarch is value-neutral (no atom): the monarchy restriction has no
+// measurable card/life/board effect, matching BecomeMonarch.
+//
+// PlayerMayPayGenericOrRule is value-neutral (no atom): its outcome is either an
+// optional mana payment or an installed combat rule restriction, neither of
+// which the single-target card/life/board atom heuristic models, matching Pay
+// and ApplyRule.
+//
+// ExileForEachOpponent and DrawForEachExiled are value-neutral (no atom),
+// matching the sibling distributive removals and per-controller payoffs
+// (DestroyForEachPlayer, ExileForEachPlayer, CreateTokenForEachDestroyed): their
+// per-opponent player-relative choices and linked-set payoffs are not modeled by
+// the single-target atom heuristic.
+const knownPrimitiveCount = 117
 
 // TestPrimitiveCountIsReconciled keeps a newly added resolution primitive from
 // silently falling through the translator: adding one trips this guard so its

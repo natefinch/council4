@@ -10,6 +10,7 @@ var Cards = []*game.CardDef{
 	GaladhrimBow,
 	GarenbrigPaladin,
 	GargoyleFlock,
+	GarlandRoyalKidnapper,
 	GarrukCallerOfBeasts,
 	GarrukPrimalHunter,
 	GarrukSWarsteed,

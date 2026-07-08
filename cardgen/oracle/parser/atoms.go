@@ -557,8 +557,13 @@ const (
 	// different verbatim phrasing, so the byte-exact recipient reconstruction can
 	// rebuild it while lowering treats both as the opponent controller.
 	ControllerRelationEachOpponentControls ControllerRelation = "ControllerRelationEachOpponentControls"
-	ControllerRelationYouOwn               ControllerRelation = "ControllerRelationYouOwn"
-	ControllerRelationOpponentOwns         ControllerRelation = "ControllerRelationOpponentOwns"
+	// ControllerRelationDefendingPlayerControls is the combat wording "defending
+	// player controls" ("goad target creature defending player controls",
+	// Coveted Peacock). It denotes the set of permanents controlled by the
+	// defending player of the triggering attack.
+	ControllerRelationDefendingPlayerControls ControllerRelation = "ControllerRelationDefendingPlayerControls"
+	ControllerRelationYouOwn                  ControllerRelation = "ControllerRelationYouOwn"
+	ControllerRelationOpponentOwns            ControllerRelation = "ControllerRelationOpponentOwns"
 )
 
 // SingularNounForms returns the candidate singular spellings for a possibly

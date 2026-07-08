@@ -47,6 +47,7 @@ var Cards = []*game.CardDef{
 	VisionOfLove,
 	VisionsOfVillainy,
 	VitasporeThallid,
+	ViviSPersistence,
 	VivienReid,
 	Vivify,
 	VodalianArcanist,

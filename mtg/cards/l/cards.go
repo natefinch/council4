@@ -38,6 +38,7 @@ var Cards = []*game.CardDef{
 	LifecraftCavalry,
 	Lifesmith,
 	LifesparkSpellbomb,
+	LightTheWay,
 	LightningBolt,
 	LightningSerpent,
 	Lightwalker,

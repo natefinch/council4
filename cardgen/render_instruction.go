@@ -262,7 +262,8 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 			return "", err
 		}
 		return r.renderPlayerWinsGame(value)
-	case game.PrimitiveInvestigate, game.PrimitiveProliferate, game.PrimitiveManifest:
+	case game.PrimitiveInvestigate, game.PrimitiveProliferate, game.PrimitiveManifest,
+		game.PrimitiveDiscoverCards:
 		return r.renderStandalonePrimitive(ctx, primitive)
 	case game.PrimitiveAmass:
 		value, err := assertPrimitive[game.Amass](primitive)
@@ -302,7 +303,7 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 		return r.renderDigPrimitive(ctx, value)
 	case game.PrimitiveDestroy, game.PrimitiveBounce, game.PrimitiveUntap,
 		game.PrimitiveTap, game.PrimitiveTapOrUntap, game.PrimitiveExile, game.PrimitivePhaseOut,
-		game.PrimitiveRegenerate, game.PrimitiveSkipNextUntap:
+		game.PrimitiveRegenerate, game.PrimitiveSkipNextUntap, game.PrimitiveGoad:
 		return r.renderObjectOrGroupPrimitive(ctx, primitive)
 	case game.PrimitiveExplore,
 		game.PrimitiveCounterObject, game.PrimitiveSacrifice,
@@ -382,6 +383,18 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 			return "", err
 		}
 		return r.renderCreateTokenForEachDestroyed(ctx, value)
+	case game.PrimitiveExileForEachOpponent:
+		value, err := assertPrimitive[game.ExileForEachOpponent](primitive)
+		if err != nil {
+			return "", err
+		}
+		return r.renderExileForEachOpponent(ctx, value)
+	case game.PrimitiveDrawForEachExiled:
+		value, err := assertPrimitive[game.DrawForEachExiled](primitive)
+		if err != nil {
+			return "", err
+		}
+		return r.renderDrawForEachExiled(value)
 	case game.PrimitiveRemoveTargetsForToken:
 		value, err := assertPrimitive[game.RemoveTargetsForToken](primitive)
 		if err != nil {
@@ -641,6 +654,12 @@ func (r Renderer) renderPrimitiveTail(ctx *renderCtx, primitive game.Primitive) 
 			return "", err
 		}
 		return r.renderApplyRulePrimitive(ctx, value)
+	case game.PrimitivePlayerMayPayGenericOrRule:
+		value, err := assertPrimitive[game.PlayerMayPayGenericOrRule](primitive)
+		if err != nil {
+			return "", err
+		}
+		return r.renderPlayerMayPayGenericOrRule(ctx, value)
 	case game.PrimitiveSacrificePermanents:
 		value, err := assertPrimitive[game.SacrificePermanents](primitive)
 		if err != nil {
@@ -713,6 +732,12 @@ func (r Renderer) renderPrimitiveTail(ctx *renderCtx, primitive game.Primitive) 
 			return "", err
 		}
 		return r.renderBecomeMonarch(value)
+	case game.PrimitiveCantBecomeMonarch:
+		value, err := assertPrimitive[game.CantBecomeMonarch](primitive)
+		if err != nil {
+			return "", err
+		}
+		return r.renderCantBecomeMonarch(value)
 	case game.PrimitiveRingTempts:
 		value, err := assertPrimitive[game.RingTempts](primitive)
 		if err != nil {
@@ -725,6 +750,12 @@ func (r Renderer) renderPrimitiveTail(ctx *renderCtx, primitive game.Primitive) 
 			return "", err
 		}
 		return renderVote(value), nil
+	case game.PrimitivePartitionExiledCostCards:
+		value, err := assertPrimitive[game.PartitionExiledCostCards](primitive)
+		if err != nil {
+			return "", err
+		}
+		return renderPartitionExiledCostCards(value), nil
 	default:
 		return "", fmt.Errorf("render: unsupported primitive kind %d", primitive.Kind())
 	}
@@ -757,6 +788,20 @@ func renderVote(value game.Vote) string {
 		options[i] = fmt.Sprintf("%q,", option)
 	}
 	return structLit("game.Vote", []string{sliceField("Options", "string", options)})
+}
+
+func renderPartitionExiledCostCards(value game.PartitionExiledCostCards) string {
+	var fields []string
+	if value.ChooserOpponent {
+		fields = append(fields, "ChooserOpponent: true,")
+	}
+	if value.ChosenToLibraryBottom {
+		fields = append(fields, "ChosenToLibraryBottom: true,")
+	}
+	if value.OtherEntersTapped {
+		fields = append(fields, "OtherEntersTapped: true,")
+	}
+	return structLit("game.PartitionExiledCostCards", fields)
 }
 
 func (r Renderer) renderCardSelection(ctx *renderCtx, condition game.CardSelection) (string, error) {
@@ -911,6 +956,28 @@ func (r Renderer) renderCreateTokenForEachDestroyed(ctx *renderCtx, value game.C
 	}
 	return structLit("game.CreateTokenForEachDestroyed", []string{
 		fmt.Sprintf("Source: %s,", source),
+		fmt.Sprintf("LinkedKey: game.LinkedKey(%q),", string(value.LinkedKey)),
+	}), nil
+}
+
+func (r Renderer) renderExileForEachOpponent(ctx *renderCtx, value game.ExileForEachOpponent) (string, error) {
+	chooser, err := r.renderPlayerReference(value.Chooser)
+	if err != nil {
+		return "", err
+	}
+	selection, err := r.renderSelection(ctx, value.Selection)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.ExileForEachOpponent", []string{
+		fmt.Sprintf("Chooser: %s,", chooser),
+		fmt.Sprintf("Selection: %s,", selection),
+		fmt.Sprintf("LinkedKey: game.LinkedKey(%q),", string(value.LinkedKey)),
+	}), nil
+}
+
+func (Renderer) renderDrawForEachExiled(value game.DrawForEachExiled) (string, error) {
+	return structLit("game.DrawForEachExiled", []string{
 		fmt.Sprintf("LinkedKey: game.LinkedKey(%q),", string(value.LinkedKey)),
 	}), nil
 }
@@ -1441,4 +1508,37 @@ func (r Renderer) renderApplyRulePrimitive(ctx *renderCtx, value game.ApplyRule)
 	}
 	fields = append(fields, fmt.Sprintf("Duration: %s,", duration))
 	return structLit("game.ApplyRule", fields), nil
+}
+
+// renderPlayerMayPayGenericOrRule renders a PlayerMayPayGenericOrRule
+// instruction: the payer, the generic mana amount, the rule effects installed on
+// non-payment, and their duration.
+func (r Renderer) renderPlayerMayPayGenericOrRule(ctx *renderCtx, value game.PlayerMayPayGenericOrRule) (string, error) {
+	player, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	amount, err := r.renderQuantity(ctx, value.Amount)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{
+		fmt.Sprintf("Player: %s,", player),
+		fmt.Sprintf("Amount: %s,", amount),
+	}
+	ruleEffects := make([]string, 0, len(value.RuleEffects))
+	for i := range value.RuleEffects {
+		eff, err := r.renderRuleEffect(ctx, &value.RuleEffects[i])
+		if err != nil {
+			return "", err
+		}
+		ruleEffects = append(ruleEffects, eff+",")
+	}
+	fields = append(fields, sliceField("RuleEffects", "game.RuleEffect", ruleEffects))
+	duration, err := renderDuration(value.Duration)
+	if err != nil {
+		return "", err
+	}
+	fields = append(fields, fmt.Sprintf("Duration: %s,", duration))
+	return structLit("game.PlayerMayPayGenericOrRule", fields), nil
 }

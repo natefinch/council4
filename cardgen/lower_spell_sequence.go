@@ -76,6 +76,9 @@ func lowerOrderedSequenceSpecialCase(
 	if content, ok := lowerOptionalSacrificeScaledReward(ctx); ok {
 		return content, nil, true
 	}
+	if content, ok := lowerOptionalSacrificeReturnWithCounters(ctx); ok {
+		return content, nil, true
+	}
 	if content, ok := lowerSacrificeThenCountSequence(ctx); ok {
 		return content, nil, true
 	}
@@ -125,6 +128,9 @@ func lowerOrderedSequenceSpecialCase(
 		return content, nil, true
 	}
 	if content, ok := lowerConditionalDamageAmountReplacementSequence(ctx); ok {
+		return content, nil, true
+	}
+	if content, ok := lowerMonarchExiledCardSplitSequence(ctx); ok {
 		return content, nil, true
 	}
 	for _, target := range ctx.content.Targets {
@@ -3225,6 +3231,13 @@ func lowerDelayedSequenceClause(
 	}
 	if modify, delayed, ok := lowerDelayedCombatDamageDrawTrigger(effectIndex, ctx, sequence); ok {
 		sequence[len(sequence)-1].Primitive = modify
+		return delayed, true, false
+	}
+	if add, delayed, ok := lowerDelayedAttacksMonarchGrant(effectIndex, ctx, sequence); ok {
+		sequence[len(sequence)-1].Primitive = add
+		return delayed, true, false
+	}
+	if delayed, ok := lowerDelayedCommanderMonarchDiesTrigger(effectIndex, ctx, sequence); ok {
 		return delayed, true, false
 	}
 	if publisher, delayed, ok := lowerDelayedTargetExile(effectIndex, ctx, sequence); ok {

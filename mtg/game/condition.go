@@ -189,6 +189,16 @@ type Condition struct {
 	// of every player.
 	NoMonarch bool
 
+	// EventDefendingPlayerIsMonarch is satisfied when the defending player of the
+	// triggering attack event ("that player") currently holds the monarch (CR
+	// 720), as in "Whenever a creature attacks one of your opponents, if that
+	// player is the monarch, ..." (M'Baku, Jabari Chieftain). It reads the
+	// triggering event's defending player (Event.Player) and the live monarch
+	// designation, so it is meaningful only in a trigger context whose bound
+	// event is an attacker-declared event. It is false when no event is bound or
+	// the defending player is not the living monarch.
+	EventDefendingPlayerIsMonarch bool
+
 	// ControllerHasInitiative is satisfied when the context controller has the
 	// initiative (CR 720), as in "At the beginning of your end step, if you have
 	// the initiative, ...". It reads the controller's live HasInitiative flag.
@@ -312,6 +322,7 @@ func (c *Condition) Empty() bool {
 		!c.ControllerWasMonarchAtTurnStart &&
 		!c.AnOpponentIsMonarch &&
 		!c.NoMonarch &&
+		!c.EventDefendingPlayerIsMonarch &&
 		!c.ControllerHasInitiative &&
 		!c.ControllerHasCityBlessing &&
 		!c.SourceControllerTurn &&

@@ -412,6 +412,8 @@ func lowerTriggerPlayer(player compiler.TriggerPlayerRelation) (game.TriggerPlay
 		return game.TriggerPlayerYou, true
 	case compiler.TriggerPlayerOpponent:
 		return game.TriggerPlayerOpponent, true
+	case compiler.TriggerPlayerMonarch:
+		return game.TriggerPlayerMonarch, true
 	default:
 		return game.TriggerPlayerAny, false
 	}
@@ -547,6 +549,7 @@ func lowerTriggerSelection(selection compiler.TriggerSelection) (game.Selection,
 	result.RequiredTypesAny = selection.RequiredTypesAny
 	result.Controller = controller
 	result.MatchModified = selection.Modified
+	result.MatchCommander = selection.Commander
 	return result, true
 }
 

@@ -62,7 +62,7 @@ func auraCanAttachToPermanent(g *game.Game, aura, target *game.Permanent) bool {
 	if spec.Allow != game.TargetAllowUnspecified && spec.Allow&game.TargetAllowPermanent == 0 {
 		return false
 	}
-	return permanentTargetMatchesSpec(g, effectiveController(g, aura), aura.ObjectID, &spec, target.ObjectID)
+	return permanentTargetMatchesSpec(g, effectiveController(g, aura), aura.ObjectID, game.Event{}, &spec, target.ObjectID)
 }
 
 func isAuraPermanent(g *game.Game, permanent *game.Permanent) bool {

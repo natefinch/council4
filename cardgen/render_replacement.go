@@ -158,7 +158,30 @@ func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.Replace
 		}
 		return replacement, nil
 	}
+	if ability.Replacement.DamagePreventAll {
+		return r.renderDamagePreventionToCountersReplacement(ctx, ability)
+	}
 	return "", fmt.Errorf("render: unsupported replacement ability %q", ability.Text)
+}
+
+// renderDamagePreventionToCountersReplacement renders the continuous static "If
+// <permanent> would be dealt damage, prevent that damage and put that many
+// +1/+1 counters on it." into a game.DamagePreventionToPlusOneCountersReplacement
+// call carrying the attached-vs-self recipient and the optional gating condition.
+func (r Renderer) renderDamagePreventionToCountersReplacement(ctx *renderCtx, ability *game.ReplacementAbility) (string, error) {
+	replacement := ability.Replacement
+	ctx.need(importOpt)
+	condition := "opt.V[game.Condition]{}"
+	if replacement.Condition.Exists {
+		cond := replacement.Condition.Val
+		rendered, err := r.renderControllerControlsCondition(ctx, &cond, "prevent-damage-to-counters replacement")
+		if err != nil {
+			return "", err
+		}
+		condition = fmt.Sprintf("opt.Val(%s)", rendered)
+	}
+	return fmt.Sprintf("game.DamagePreventionToPlusOneCountersReplacement(%q, %t, %s)",
+		ability.Text, replacement.DamageRecipientAttached, condition), nil
 }
 
 // renderLifeModifierReplacement renders the life-gain and life-loss
@@ -1013,6 +1036,10 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 	}
 	if cond.NoMonarch {
 		fields = append(fields, "NoMonarch: true,")
+		hasPredicate = true
+	}
+	if cond.EventDefendingPlayerIsMonarch {
+		fields = append(fields, "EventDefendingPlayerIsMonarch: true,")
 		hasPredicate = true
 	}
 	if cond.ControllerHasInitiative {

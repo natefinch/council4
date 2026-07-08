@@ -33,6 +33,9 @@ func emitResolvingSyntax(abilities []Ability) {
 		if recognizeDrawThenDiscardUnlessSequence(&abilities[i]) {
 			continue
 		}
+		if recognizePayHandSizeOrCantAttackSequence(&abilities[i]) {
+			continue
+		}
 		emitSentenceResolvingSyntax(
 			abilities[i].Sentences,
 			abilities[i].Atoms,
@@ -336,6 +339,7 @@ func emitSentenceResolvingSyntax(
 	var chooseColorCandidates []int
 	var enchantmentReturnCandidates []int
 	var pileSplitMiddleCandidates []int
+	var exiledCardChoiceCandidates []int
 	for i := range sentences {
 		if sentences[i].StaticRule != nil ||
 			sourceCostReduction != nil && sentences[i].Span == sourceCostReduction.Span ||
@@ -352,6 +356,8 @@ func emitSentenceResolvingSyntax(
 		sentences[i].Effects = parseEffects(sentences[i], tokens, atoms)
 		recognizeTargetOpponentHandManaSentence(&sentences[i])
 		recognizeLookAtTargetPlayerHandSentence(&sentences[i])
+		recognizeGainControlThatPlayerMonarchSentence(&sentences[i])
+		recognizeDestroyTappedNonlandThatPlayerControlsSentence(&sentences[i])
 		reconcileRetargetSentenceTargets(&sentences[i])
 		collapseManaSpendRiderSentence(&sentences[i], tokens)
 		currentEffects += len(sentences[i].Effects)
@@ -367,6 +373,8 @@ func emitSentenceResolvingSyntax(
 				enchantmentReturnCandidates = append(enchantmentReturnCandidates, i)
 			case isPileSplitMiddleTokens(tokens):
 				pileSplitMiddleCandidates = append(pileSplitMiddleCandidates, i)
+			case isExiledCardOpponentChoiceWords(normalizedWords(tokens)):
+				exiledCardChoiceCandidates = append(exiledCardChoiceCandidates, i)
 			case isChooseTargetPreambleTokens(tokens) && len(sentences[i].Targets) > 0:
 				// A bare "Choose [another] target <object>." preamble declares a
 				// target consumed by a following effect's "it" pronoun and emits
@@ -382,6 +390,9 @@ func emitSentenceResolvingSyntax(
 	recognizeRevealTopPartitionSequence(sentences)
 	recognizeRevealChooseHandDiscardSequence(sentences)
 	if len(pileSplitMiddleCandidates) > 0 && !recognizePileSplitSequence(sentences) {
+		unrecognizedSibling = true
+	}
+	if len(exiledCardChoiceCandidates) > 0 && !recognizeExiledCardOpponentChoiceSplit(sentences) {
 		unrecognizedSibling = true
 	}
 	creditConjoinedCopyChooseNewTargetsRider(sentences)
@@ -1217,6 +1228,9 @@ func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) 
 		func() ([]EffectSyntax, bool) { return parseDevourEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseTributeEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseBecomeCopyEffect(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) {
+			return parseHaveBecomeCopyOfReferenceEffect(sentence, tokens, atoms)
+		},
 		func() ([]EffectSyntax, bool) { return parsePolymorphEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseSetBasePowerToughnessEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseAnimateSelfEffect(sentence, tokens, atoms) },
@@ -2901,6 +2915,91 @@ func recognizeLookAtTargetPlayerHandSentence(sentence *Sentence) {
 	sentence.Effects[0].Targets = []TargetSyntax{target}
 	sentence.Effects[0].Context = EffectContextTarget
 	sentence.Effects[0].Exact = true
+}
+
+// recognizeGainControlThatPlayerMonarchSentence types the target of the
+// gain-control monarch ability "gain control of target creature that player
+// controls for as long as they're the monarch." (Garland, Royal Kidnapper).
+// The generic target parser leaves the "that player controls" controller clause
+// untyped because "that player" is a triggering-event reference rather than a
+// board relation; without the controller relation the target does not
+// reconstruct and the gain-control clause never becomes exact. This retypes the
+// creature target's controller to SelectionControllerThatPlayer so it round-trips
+// and lowers to the runtime "controlled by the event player" restriction. It is
+// gated on the monarch-bound gain-control duration, which is unique to this
+// card, so no other "that player controls" wording is affected.
+func recognizeGainControlThatPlayerMonarchSentence(sentence *Sentence) {
+	if len(sentence.Effects) != 1 || len(sentence.Targets) != 1 {
+		return
+	}
+	effect := &sentence.Effects[0]
+	if effect.Kind != EffectGainControl ||
+		effect.Context != EffectContextController ||
+		effect.Duration != EffectDurationWhileThatPlayerIsMonarch ||
+		len(effect.Targets) != 1 {
+		return
+	}
+	target := effect.Targets[0]
+	if !strings.EqualFold(target.Text, "target creature that player controls") {
+		return
+	}
+	// The generic target parser wipes the selection to bare Span/Text because the
+	// "that player controls" controller clause is an unrecognized qualifier.
+	// Rebuild the creature selection with the event-player controller relation so
+	// the target round-trips and lowers to the controlled-by-event-player
+	// restriction.
+	target.Selection = SelectionSyntax{
+		Span:       target.Selection.Span,
+		Text:       target.Selection.Text,
+		Kind:       SelectionCreature,
+		Controller: SelectionControllerThatPlayer,
+	}
+	target.Exact = exactSinglePermanentTargetSyntax(target.Text, target.Selection)
+	if !target.Exact {
+		return
+	}
+	sentence.Targets[0] = target
+	effect.Targets[0] = target
+	effect.Exact = exactEffectSyntax(effect)
+}
+
+// recognizeDestroyTappedNonlandThatPlayerControlsSentence rebuilds the destroy
+// target "target tapped nonland permanent that player controls" (The Spear of
+// Bashenga's attack trigger). The generic target parser wipes the selection to
+// bare Span/Text because the "that player controls" controller clause is an
+// unrecognized qualifier, leaving the destroy effect non-exact. This narrow
+// recognizer restores the tapped, nonland permanent selection with the
+// event-player controller relation so the target round-trips and lowers to the
+// controlled-by-defending-player restriction on the attack trigger. It fires
+// only on the exact single-target destroy wording, so every other target is
+// left untouched and keeps failing the text-blind round-trip.
+func recognizeDestroyTappedNonlandThatPlayerControlsSentence(sentence *Sentence) {
+	if len(sentence.Effects) != 1 || len(sentence.Targets) != 1 {
+		return
+	}
+	effect := &sentence.Effects[0]
+	if effect.Kind != EffectDestroy || len(effect.Targets) != 1 {
+		return
+	}
+	target := effect.Targets[0]
+	if !strings.EqualFold(target.Text, "target tapped nonland permanent that player controls") {
+		return
+	}
+	target.Selection = SelectionSyntax{
+		Span:          target.Selection.Span,
+		Text:          target.Selection.Text,
+		Kind:          SelectionPermanent,
+		Tapped:        true,
+		ExcludedTypes: []CardType{CardTypeLand},
+		Controller:    SelectionControllerThatPlayer,
+	}
+	target.Exact = exactSinglePermanentTargetSyntax(target.Text, target.Selection)
+	if !target.Exact {
+		return
+	}
+	sentence.Targets[0] = target
+	effect.Targets[0] = target
+	effect.Exact = exactEffectSyntax(effect)
 }
 
 // recognizeDynamicCountMana types an add-mana body whose produced amount scales
@@ -6107,6 +6206,91 @@ func parseBecomeCopyEffect(sentence Sentence, tokens []shared.Token, atoms Atoms
 		BecomeCopyUntilEndOfTurn:     untilEndOfTurn,
 		BecomeCopyRetainsThisAbility: retainAbility,
 		BecomeCopyAddKeywords:        addKeywords,
+	}
+	return []EffectSyntax{effect}, true
+}
+
+// parseHaveBecomeCopyOfReferenceEffect recognizes the resolving optional
+// construction "have this <permanent> become a copy of it" whose copied object
+// is the pronoun "it" — a permanent chosen earlier in the same ability and
+// referenced here — rather than a target named in this clause (Court of
+// Vantress: "you may have this enchantment become a copy of it, except it has
+// this ability."). It consumes any leading "If <condition>," gate and the "you
+// may" permission so the whole sentence yields a single optional EffectBecomeCopy
+// instead of falling through to per-clause parsing, which otherwise misreads
+// "have ... become" and "it has this ability" as keyword grants. Only the
+// "except it has this ability" copiable rider (RetainsThisAbility) is accepted;
+// any other rider, a copied object that is not the bare pronoun "it", or a
+// subject that is not "this <permanent>" fails closed.
+func parseHaveBecomeCopyOfReferenceEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	body := semanticEffectTokens(tokens)
+	if len(body) < 2 || body[len(body)-1].Kind != shared.Period {
+		return nil, false
+	}
+	inner := body[:len(body)-1]
+	// Strip a leading "If <condition>," gate; the condition is scanned
+	// independently at the ability level and gates this effect by span.
+	if kind, _ := conditionIntroAt(inner, 0); kind == ConditionIntroIf {
+		if end := conditionClauseEnd(inner, 0); end < len(inner) && inner[end].Kind == shared.Comma {
+			inner = inner[end+1:]
+		}
+	}
+	// Strip the "you may" permission and record the effect as optional.
+	var optional bool
+	var optionalSpan shared.Span
+	if len(inner) >= 2 && equalWord(inner[0], "you") && equalWord(inner[1], "may") {
+		optional = true
+		optionalSpan = shared.Span{Start: inner[0].Span.Start, End: inner[1].Span.End}
+		inner = inner[2:]
+	}
+	// Require "have this <noun...> become a copy of it".
+	rest, ok := cutTokenPrefix(inner, "have", "this")
+	if !ok {
+		return nil, false
+	}
+	becomeIndex := -1
+	for i := range len(rest) {
+		if rest[i].Kind == shared.Comma {
+			return nil, false
+		}
+		if equalWord(rest[i], "become") {
+			becomeIndex = i
+			break
+		}
+	}
+	if becomeIndex <= 0 { // at least one noun word must sit between "this" and "become"
+		return nil, false
+	}
+	afterCopy, ok := cutTokenPrefix(rest[becomeIndex+1:], "a", "copy", "of", "it")
+	if !ok {
+		return nil, false
+	}
+	var retainAbility bool
+	// Optional trailing ", except it has this ability" copiable rider.
+	if len(afterCopy) > 0 {
+		if afterCopy[0].Kind != shared.Comma {
+			return nil, false
+		}
+		exceptRest, ok := cutTokenPrefix(afterCopy[1:], "except")
+		if !ok {
+			return nil, false
+		}
+		retain, keywords, ok := parseBecomeCopyRider(exceptRest, atoms)
+		if !ok || !retain || len(keywords) != 0 {
+			return nil, false
+		}
+		retainAbility = true
+	}
+	effect := EffectSyntax{
+		Kind:                         EffectBecomeCopy,
+		Context:                      EffectContextController,
+		Span:                         sentence.Span,
+		ClauseSpan:                   sentence.Span,
+		Text:                         sentence.Text,
+		Tokens:                       append([]shared.Token(nil), body...),
+		Optional:                     optional,
+		OptionalSpan:                 optionalSpan,
+		BecomeCopyRetainsThisAbility: retainAbility,
 	}
 	return []EffectSyntax{effect}, true
 }

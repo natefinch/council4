@@ -74,6 +74,7 @@ func emitZoneChangeEvent(g *game.Game, event game.Event) game.Event {
 		delete(g.AdventureCards, event.CardID)
 		delete(g.SuspendedCards, event.CardID)
 		delete(g.PlottedCards, event.CardID)
+		delete(g.ForetoldCards, event.CardID)
 	}
 	if event.CardID != 0 && event.FromZone != event.ToZone {
 		clearCardCastPermissions(g, event.CardID, event.FromZone)

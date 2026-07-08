@@ -342,6 +342,9 @@ func (p StartEngines) validateCapturedTargetControllerReferences(targets []Targe
 func (p BecomeMonarch) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
 	return validateCapturedTargetControllerReference(p.Player, targets, checkTargets)
 }
+func (p CantBecomeMonarch) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	return validateCapturedTargetControllerReference(p.Player, targets, checkTargets)
+}
 
 func (p SetClassLevel) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
 	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
@@ -989,6 +992,9 @@ func (p AddCounter) validatePrimitive(targets []TargetSpec, checkTargets bool) e
 		if p.Object.Kind() != ObjectReferenceNone {
 			return errors.New("add counter requires exactly one of Object or Group")
 		}
+		if p.PublishLinked != "" {
+			return errors.New("add counter PublishLinked requires a single object, not a group")
+		}
 		return validateGroupReference(p.Group, targets, checkTargets)
 	}
 	if err := validateObjectReference(p.Object, targets, checkTargets); err != nil {
@@ -1144,6 +1150,27 @@ func (p ApplyRule) validatePrimitive(targets []TargetSpec, checkTargets bool) er
 	}
 	if p.Object.Exists {
 		return validateObjectReference(p.Object.Val, targets, checkTargets)
+	}
+	return nil
+}
+
+func (p PlayerMayPayGenericOrRule) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.Player.Kind() == PlayerReferenceNone {
+		return errors.New("pay-or-rule instruction requires a payer")
+	}
+	if err := validatePlayerReference(p.Player, targets, checkTargets); err != nil {
+		return err
+	}
+	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
+		return err
+	}
+	if len(p.RuleEffects) == 0 {
+		return errors.New("pay-or-rule instruction has no rule effects")
+	}
+	for i := range p.RuleEffects {
+		if !p.RuleEffects[i].Kind.Valid() {
+			return errors.New("pay-or-rule instruction has an unsupported rule effect kind")
+		}
 	}
 	return nil
 }
@@ -1526,6 +1553,23 @@ func (p CreateTokenForEachDestroyed) validatePrimitive([]TargetSpec, bool) error
 	return nil
 }
 
+func (p ExileForEachOpponent) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.LinkedKey == "" {
+		return errors.New("exile for each opponent requires a linked key")
+	}
+	if err := firstProblem(p.Selection.Validate()); err != nil {
+		return err
+	}
+	return validatePlayerReference(p.Chooser, targets, checkTargets)
+}
+
+func (p DrawForEachExiled) validatePrimitive([]TargetSpec, bool) error {
+	if p.LinkedKey == "" {
+		return errors.New("draw for each exiled requires a linked key")
+	}
+	return nil
+}
+
 func (p RemoveTargetsForToken) validatePrimitive([]TargetSpec, bool) error {
 	if p.LinkedKey == "" {
 		return errors.New("remove targets for token requires a linked key")
@@ -1674,6 +1718,16 @@ func (p StartEngines) validatePrimitive(targets []TargetSpec, checkTargets bool)
 
 func (p BecomeMonarch) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+func (p CantBecomeMonarch) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
+// validatePrimitive implements Primitive for PartitionExiledCostCards. It reads
+// the resolving object's cost-exiled card IDs and consults no targets, so it has
+// nothing to validate against the ability's target specs.
+func (PartitionExiledCostCards) validatePrimitive([]TargetSpec, bool) error {
+	return nil
 }
 
 func (p SetClassLevel) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
@@ -2327,8 +2381,9 @@ func (p ImpulseExile) validatePrimitive(targets []TargetSpec, checkTargets bool)
 		return errors.New("ImpulseExile requires a positive number of cards")
 	}
 	if p.Duration != DurationThisTurn && p.Duration != DurationUntilEndOfTurn &&
-		p.Duration != DurationUntilEndOfYourNextTurn && p.Duration != DurationUntilYourNextEndStep {
-		return errors.New("ImpulseExile requires a this-turn, until-end-of-turn, until-end-of-your-next-turn, or until-your-next-end-step play window")
+		p.Duration != DurationUntilEndOfYourNextTurn && p.Duration != DurationUntilYourNextEndStep &&
+		p.Duration != DurationPermanent {
+		return errors.New("ImpulseExile requires a this-turn, until-end-of-turn, until-end-of-your-next-turn, until-your-next-end-step, or for-as-long-as-exiled play window")
 	}
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
@@ -2375,7 +2430,7 @@ func (p Manifest) validatePrimitive(targets []TargetSpec, checkTargets bool) err
 }
 
 func (p Goad) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
-	return validateObjectReference(p.Object, targets, checkTargets)
+	return validateMassObjectOrGroup(p.Object, p.Group, targets, checkTargets)
 }
 
 func (p RemoveCounter) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
@@ -2481,6 +2536,26 @@ func (p CreateDelayedTrigger) validatePrimitive(targets []TargetSpec, checkTarge
 		}
 	} else if p.Trigger.EventPattern.Exists && p.Trigger.EventPattern.Val.DamageSourceCaptured {
 		return errors.New("delayed trigger DamageSourceCaptured pattern requires a DamageSourceObject")
+	}
+	if p.Trigger.CapturedAttackerObject.Exists {
+		if !p.Trigger.EventPattern.Exists || !p.Trigger.EventPattern.Val.AttackerCaptured {
+			return errors.New("delayed trigger CapturedAttackerObject requires an AttackerCaptured event pattern")
+		}
+		if err := validateObjectReference(p.Trigger.CapturedAttackerObject.Val, targets, checkTargets); err != nil {
+			return err
+		}
+	} else if p.Trigger.EventPattern.Exists && p.Trigger.EventPattern.Val.AttackerCaptured {
+		return errors.New("delayed trigger AttackerCaptured pattern requires a CapturedAttackerObject")
+	}
+	if p.Trigger.CapturedDyingObject.Exists {
+		if !p.Trigger.EventPattern.Exists || !p.Trigger.EventPattern.Val.DyingObjectCaptured {
+			return errors.New("delayed trigger CapturedDyingObject requires a DyingObjectCaptured event pattern")
+		}
+		if err := validateObjectReference(p.Trigger.CapturedDyingObject.Val, targets, checkTargets); err != nil {
+			return err
+		}
+	} else if p.Trigger.EventPattern.Exists && p.Trigger.EventPattern.Val.DyingObjectCaptured {
+		return errors.New("delayed trigger DyingObjectCaptured pattern requires a CapturedDyingObject")
 	}
 	return nil
 }

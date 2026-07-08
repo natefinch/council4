@@ -44,6 +44,7 @@ func (g *Game) Clone() *Game {
 		ReboundCards:               cloneComparableMap(g.ReboundCards),
 		AdventureCards:             cloneComparableMap(g.AdventureCards),
 		PlottedCards:               cloneComparableMap(g.PlottedCards),
+		ForetoldCards:              cloneComparableMap(g.ForetoldCards),
 		LastKnownInformation:       cloneMapFunc(g.LastKnownInformation, cloneObjectSnapshot),
 		LinkedObjects:              cloneLinkedObjects(g.LinkedObjects),
 		Turn:                       cloneTurnState(g.Turn),
@@ -211,6 +212,7 @@ func cloneStackObject(o *StackObject) *StackObject {
 	})
 	clone.AdditionalCostsPaid = cloneSlice(o.AdditionalCostsPaid)
 	clone.SacrificedAsCostIDs = cloneSlice(o.SacrificedAsCostIDs)
+	clone.ExiledAsCostIDs = cloneSlice(o.ExiledAsCostIDs)
 	clone.GainsKeywordsUntilEndOfTurn = cloneSlice(o.GainsKeywordsUntilEndOfTurn)
 	clone.ResolvedAmounts = cloneComparableMap(o.ResolvedAmounts)
 	clone.ResolvedExcessDamage = cloneComparableMap(o.ResolvedExcessDamage)

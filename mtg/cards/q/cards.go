@@ -9,6 +9,7 @@ var Cards = []*game.CardDef{
 	QuandrixApprentice,
 	QuagmireLamprey,
 	QueenMarchesa,
+	QueenMotherRamonda,
 	QueenOfIce,
 	QuestForTheGemblades,
 	QuestForTheGravelord,

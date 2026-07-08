@@ -95,6 +95,11 @@ type Player struct {
 	// extra card at end step).
 	IsMonarch bool
 
+	// CantBecomeMonarchThisTurn blocks this player from becoming the monarch for
+	// the rest of the turn ("You can't become the monarch this turn.", Jared
+	// Carthalion). It is cleared as each turn begins.
+	CantBecomeMonarchThisTurn bool
+
 	// HasInitiative is true if this player has the initiative (dungeon
 	// mechanic).
 	HasInitiative bool

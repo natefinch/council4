@@ -228,6 +228,12 @@ func lowerContent(
 	if content, ok := lowerPonderSequence(ctx); ok {
 		return content, nil
 	}
+	if content, ok := lowerCourtOfLocthwainUpkeep(ctx); ok {
+		return content, nil
+	}
+	if content, ok := lowerCourtOfVantressUpkeep(ctx); ok {
+		return content, nil
+	}
 	if content, ok := lowerCounterThenNextTurnUpkeepDraws(ctx); ok {
 		return content, nil
 	}
@@ -314,6 +320,9 @@ func lowerContent(
 			return content, nil
 		}
 		if content, ok := lowerDestroyForEachPlayerTokenChainContent(ctx); ok {
+			return content, nil
+		}
+		if content, ok := lowerExileForEachOpponentDrawChainContent(ctx); ok {
 			return content, nil
 		}
 		if content, ok := lowerRemovalVariableTargetsForEachTokenContent(ctx); ok {
@@ -1595,6 +1604,8 @@ func lowerReferencedPermanentEffect(ctx contentCtx) (game.AbilityContent, bool) 
 		primitive = game.Untap{Object: object}
 	case compiler.EffectRemoveFromCombat:
 		primitive = game.RemoveFromCombat{Object: object}
+	case compiler.EffectGoad:
+		primitive = game.Goad{Object: object}
 	case compiler.EffectSacrifice:
 		primitive = game.Sacrifice{Object: object}
 	case compiler.EffectReturn:
@@ -1827,6 +1838,8 @@ func lowerImmediateSingleEffectSpell(
 		return lowerGainPlayerCounterSpell(ctx, syntax)
 	case compiler.EffectBecomeMonarch:
 		return lowerBecomeMonarchSpell(ctx)
+	case compiler.EffectCantBecomeMonarch:
+		return lowerCantBecomeMonarchSpell(ctx)
 	case compiler.EffectRingTempts:
 		return lowerRingTemptsSpell(ctx)
 	case compiler.EffectAmass:
@@ -1840,6 +1853,10 @@ func lowerImmediateSingleEffectSpell(
 	case compiler.EffectProliferate:
 		return lowerExactPrimitiveSpell(ctx, syntax, "proliferate", func(amount game.Quantity) game.Primitive {
 			return game.Proliferate{Amount: amount}
+		})
+	case compiler.EffectDiscover:
+		return lowerExactPrimitiveSpell(ctx, syntax, "discover", func(amount game.Quantity) game.Primitive {
+			return game.DiscoverCards{Amount: amount}
 		})
 	case compiler.EffectExplore:
 		return lowerExploreSpell(ctx)
@@ -1895,6 +1912,12 @@ func lowerImmediateSingleEffectSpell(
 	case compiler.EffectRemoveFromCombat:
 		return lowerFixedPermanentTargetSpell(ctx, "remove from combat", func(object game.ObjectReference) game.Primitive {
 			return game.RemoveFromCombat{Object: object}
+		})
+	case compiler.EffectGoad:
+		return lowerMassOrSinglePermanentSpell(ctx, "goad", func(group game.GroupReference) game.Primitive {
+			return game.Goad{Group: group}
+		}, func(object game.ObjectReference) game.Primitive {
+			return game.Goad{Object: object}
 		})
 	case compiler.EffectExile:
 		if len(ctx.content.Effects) == 1 &&

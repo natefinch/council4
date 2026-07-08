@@ -28,10 +28,10 @@ func TestExcludedKeywordTargetSpecRejectsKeywordBearer(t *testing.T) {
 		}),
 	}
 
-	if !permanentTargetMatchesSpec(g, game.Player1, 0, &spec, grounded.ObjectID) {
+	if !permanentTargetMatchesSpec(g, game.Player1, 0, game.Event{}, &spec, grounded.ObjectID) {
 		t.Fatal("grounded creature is not a legal target, want legal")
 	}
-	if permanentTargetMatchesSpec(g, game.Player1, 0, &spec, flyer.ObjectID) {
+	if permanentTargetMatchesSpec(g, game.Player1, 0, game.Event{}, &spec, flyer.ObjectID) {
 		t.Fatal("flyer is a legal target for a without-flying spec, want illegal")
 	}
 }

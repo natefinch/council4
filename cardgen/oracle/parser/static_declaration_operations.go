@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"slices"
 	"strconv"
 	"strings"
 
@@ -187,6 +188,9 @@ func parseStaticSubjectDeclarations(
 	}
 	operations, ok := parseStaticOperations(opTokens, verbStart, subject, atoms)
 	if !ok {
+		return nil, false
+	}
+	if !staticDirectYouProhibitionWellFormed(operations) {
 		return nil, false
 	}
 	span := shared.SpanOf(tokens)
@@ -705,10 +709,12 @@ func staticSubtypeControlledCreaturesProhibitionSubject(tokens []shared.Token, a
 // block.") when it precedes a prohibition verb ("can't"/"cannot"). Unlike
 // staticControlledCreaturesProhibitionSubject the group is every creature on the
 // battlefield, so a leading "creatures you control" routes to the controlled
-// path instead. It supports an optional trailing source-relative power filter
-// ("with power greater/less than <source>'s power"), attaching the recognized
-// predicate to the returned all-creatures subject. It returns the group subject
-// and the index of the prohibition verb.
+// path instead. It supports an optional trailing power filter: the
+// source-relative "with power greater/less than <source>'s power" form, or the
+// single-characteristic numeric "with power N or less/greater" form (Queen
+// Mother Ramonda's "creatures with power 2 or less can't attack you."). Any
+// other qualifier fails closed. It returns the group subject and the index of
+// the prohibition verb.
 func staticBattlefieldCreaturesProhibitionSubject(tokens []shared.Token, atoms Atoms) (EffectStaticSubjectSyntax, int, bool) {
 	if !staticWordsAt(tokens, 0, "creatures") || staticWordsAt(tokens, 1, "you", "control") {
 		return EffectStaticSubjectSyntax{}, 0, false
@@ -716,11 +722,20 @@ func staticBattlefieldCreaturesProhibitionSubject(tokens []shared.Token, atoms A
 	subject := EffectStaticSubjectSyntax{Kind: EffectStaticSubjectAllCreatures}
 	idx := 1
 	if match, ok := controlledGroupProhibitionPowerToughnessQualifier(tokens, idx, atoms); ok {
-		if !match.powerLessThanSource && !match.powerGreaterThanSource {
+		switch {
+		case match.powerLessThanSource || match.powerGreaterThanSource:
+			subject.PowerLessThanSource = match.powerLessThanSource
+			subject.PowerGreaterThanSource = match.powerGreaterThanSource
+		case match.matchPower && !match.matchToughness && !match.powerOrToughness:
+			// The single-characteristic numeric bound "with power N or less"
+			// scopes the every-creature group by a fixed power comparison
+			// (Queen Mother Ramonda's "creatures with power 2 or less can't
+			// attack you.").
+			subject.Power = match.power
+			subject.MatchPower = match.matchPower
+		default:
 			return EffectStaticSubjectSyntax{}, 0, false
 		}
-		subject.PowerLessThanSource = match.powerLessThanSource
-		subject.PowerGreaterThanSource = match.powerGreaterThanSource
 		idx = match.end
 	}
 	if !staticWordsAt(tokens, idx, "can't") && !staticWordsAt(tokens, idx, "cannot") {
@@ -1933,6 +1948,9 @@ func parseStaticProhibitionRuleOperation(
 		if qualifier, qualifierNext, ok := parseStaticDefenderYouQualifier(tokens, next, end); ok {
 			qualifiers = append(qualifiers, qualifier)
 			next = qualifierNext
+		} else if qualifier, qualifierNext, ok := parseStaticDefenderYouDirectQualifier(tokens, next, end, subject); ok {
+			qualifiers = append(qualifiers, qualifier)
+			next = qualifierNext
 		}
 		return staticRuleOperation(tokens, index, next, subject, constraint, StaticRuleOperation{
 			Kind:  StaticRuleOperationAttack,
@@ -1993,6 +2011,13 @@ func parseStaticProhibitionRuleOperation(
 			Span:  shared.SpanOf(tokens[verb : verb+2]),
 		}, nil)
 	}
+	if staticWordsAt(tokens, verb, "be", "sacrificed") {
+		return staticRuleOperation(tokens, index, verb+2, subject, constraint, StaticRuleOperation{
+			Kind:  StaticRuleOperationSacrifice,
+			Voice: StaticRuleVoicePassive,
+			Span:  shared.SpanOf(tokens[verb : verb+2]),
+		}, nil)
+	}
 	if staticWordsAt(tokens, verb, "transform") {
 		return staticRuleOperation(tokens, index, verb+1, subject, constraint, StaticRuleOperation{
 			Kind:  StaticRuleOperationTransform,
@@ -2014,6 +2039,63 @@ func parseStaticDefenderYouQualifier(tokens []shared.Token, start, end int) (Sta
 		Kind: StaticRuleQualifierDefenderYou,
 		Span: shared.SpanOf(tokens[start : start+5]),
 	}, start + 5, true
+}
+
+// staticDirectYouProhibitionWellFormed reports whether a bare "can't attack you"
+// attack prohibition (StaticRuleQualifierDefenderYouDirect) appears only inside a
+// rule-only compound. The direct-only defender restriction is supported for the
+// forced-attack Aura clause "Enchanted creature attacks each combat if able and
+// can't attack you." (Fealty to the Realm), whose operations are all combat
+// rules. Composing it with a power/toughness, keyword, or characteristic
+// operation ("... gets +2/+2 and can't attack you.") is a near-miss that must
+// fail the whole declaration closed rather than silently drop the qualifier.
+func staticDirectYouProhibitionWellFormed(operations []StaticDeclarationSyntax) bool {
+	if !slices.ContainsFunc(operations, staticOperationHasDirectYouQualifier) {
+		return true
+	}
+	for i := range operations {
+		if operations[i].Kind != StaticDeclarationRule {
+			return false
+		}
+	}
+	return true
+}
+
+// staticOperationHasDirectYouQualifier reports whether operation is an attack
+// prohibition carrying the bare direct-only "you" defender restriction.
+func staticOperationHasDirectYouQualifier(operation StaticDeclarationSyntax) bool {
+	if operation.Kind != StaticDeclarationRule {
+		return false
+	}
+	for _, qualifier := range operation.Rule.Qualifiers {
+		if qualifier.Kind == StaticRuleQualifierDefenderYouDirect {
+			return true
+		}
+	}
+	return false
+}
+
+// parseStaticDefenderYouDirectQualifier consumes the bare defender restriction
+// "you" that scopes an attack prohibition to the source's controller as a direct
+// target only ("Enchanted creature ... can't attack you.", Fealty to the Realm;
+// "creatures with power 2 or less can't attack you.", Queen Mother Ramonda),
+// leaving the controller's planeswalkers and battles attackable (CR 508.1). It is
+// gated to the enchanted-object subject and the every-creature battlefield group
+// so the near-miss group forms that lack a defender restriction remain
+// unrecognized and unchanged.
+func parseStaticDefenderYouDirectQualifier(tokens []shared.Token, start, end int, subject StaticDeclarationSubject) (StaticRuleQualifier, int, bool) {
+	if subject.Kind != StaticDeclarationSubjectGroup ||
+		(subject.Group.Kind != EffectStaticSubjectAttachedObject &&
+			subject.Group.Kind != EffectStaticSubjectAllCreatures) {
+		return StaticRuleQualifier{}, 0, false
+	}
+	if start >= end || !staticWordsAt(tokens, start, "you") {
+		return StaticRuleQualifier{}, 0, false
+	}
+	return StaticRuleQualifier{
+		Kind: StaticRuleQualifierDefenderYouDirect,
+		Span: tokens[start].Span,
+	}, start + 1, true
 }
 
 // parseStaticByMoreThanOneQualifier consumes the bounded block exception "by
@@ -2150,6 +2232,7 @@ func staticRuleSubjectKindAllowed(subject StaticDeclarationSubject) bool {
 	case StaticDeclarationSubjectGroup:
 		return subject.Group.Kind == EffectStaticSubjectAttachedObject ||
 			subject.Group.Kind == EffectStaticSubjectControlledCreatures ||
+			subject.Group.Kind == EffectStaticSubjectControlledNotOwnedCreatures ||
 			subject.Group.Kind == EffectStaticSubjectControlledCreatureSubtype ||
 			subject.Group.Kind == EffectStaticSubjectOpponentControlledCreatures ||
 			subject.Group.Kind == EffectStaticSubjectAllCreatures ||
@@ -2200,6 +2283,10 @@ func staticRuleSubjectForDeclaration(subject StaticDeclarationSubject, operation
 		case EffectStaticSubjectControlledCreatureSubtype:
 			if operation.Kind == StaticRuleOperationTransform && operation.Voice == StaticRuleVoiceActive {
 				return StaticRuleSubject{Kind: StaticRuleSubjectControlledCreatures, Span: subject.Span}, true
+			}
+		case EffectStaticSubjectControlledNotOwnedCreatures:
+			if operation.Kind == StaticRuleOperationSacrifice && operation.Voice == StaticRuleVoicePassive {
+				return StaticRuleSubject{Kind: StaticRuleSubjectControlledNotOwnedCreatures, Span: subject.Span}, true
 			}
 		case EffectStaticSubjectOpponentControlledCreatures:
 			if operation.Kind == StaticRuleOperationAttack && operation.Voice == StaticRuleVoiceActive {

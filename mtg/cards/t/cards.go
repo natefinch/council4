@@ -6,6 +6,7 @@ import "github.com/natefinch/council4/mtg/game"
 
 // Cards lists all card definitions in this package.
 var Cards = []*game.CardDef{
+	TChakaVenerableKing,
 	TabletOfEpityr,
 	TaigamSStrike,
 	TajuruStalwart,
@@ -55,6 +56,7 @@ var Cards = []*game.CardDef{
 	TheIrencrag,
 	TheReaperKingNoMore,
 	TheScorpionGod,
+	TheSpearOfBashenga,
 	ThickestInTheThicket,
 	ThievesGuildEnforcer,
 	ThingFromTheDeep,
@@ -91,6 +93,7 @@ var Cards = []*game.CardDef{
 	Toil,
 	ToilsOfNightAndDay,
 	TolarianSerpent,
+	TomeOfLegends,
 	TomeScour,
 	TorrentialGearhulk,
 	TourachDreadCantor,

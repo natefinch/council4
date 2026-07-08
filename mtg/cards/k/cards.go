@@ -41,6 +41,7 @@ var Cards = []*game.CardDef{
 	KinTreeInvocation,
 	KingCrab,
 	KingSAssassin,
+	KingSolomonSFrogs,
 	KitesailApprentice,
 	KineticAugur,
 	KithkinHealer,

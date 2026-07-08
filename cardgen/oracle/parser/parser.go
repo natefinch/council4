@@ -1071,6 +1071,15 @@ func damagePreventionStaticWording(words []string) bool {
 			return true
 		}
 	}
+	// The passive "<permanent> would be dealt damage, prevent ..." form (Panther
+	// Habit, Jared Carthalion) protects a permanent recipient rather than the
+	// controller.
+	for i := 0; i+3 < len(words); i++ {
+		if words[i] == "would" && words[i+1] == "be" && words[i+2] == "dealt" &&
+			(words[i+3] == "damage" || words[i+3] == "to") {
+			return true
+		}
+	}
 	return false
 }
 

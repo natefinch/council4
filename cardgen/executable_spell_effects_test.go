@@ -739,6 +739,27 @@ func TestGenerateExecutableCardSourceProliferate(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceDiscover(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Discover",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Discover 4.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "Primitive: game.DiscoverCards{") ||
+		!strings.Contains(source, "Amount: game.Fixed(4)") {
+		t.Fatalf("source missing DiscoverCards primitive:\n%s", source)
+	}
+}
+
 func TestGenerateExecutableCardSourceFixedCounterSpell(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

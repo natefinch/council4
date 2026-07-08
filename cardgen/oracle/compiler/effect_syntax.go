@@ -309,6 +309,8 @@ func compileStaticSubjectKind(kind parser.EffectStaticSubjectKind) StaticSubject
 		return StaticSubjectOtherControlledArtifactCreatures
 	case parser.EffectStaticSubjectControlledNontokenCreatures:
 		return StaticSubjectControlledNontokenCreatures
+	case parser.EffectStaticSubjectControlledNotOwnedCreatures:
+		return StaticSubjectControlledNotOwnedCreatures
 	case parser.EffectStaticSubjectControlledCreatureSubtypeTokens:
 		return StaticSubjectControlledCreatureSubtypeTokens
 	case parser.EffectStaticSubjectOtherControlledCreatureSubtypeTokens:
@@ -445,6 +447,10 @@ func compileSelectionController(controller parser.SelectionController) Controlle
 		return ControllerOpponent
 	case parser.SelectionControllerNotYou:
 		return ControllerNotYou
+	case parser.SelectionControllerThatPlayer:
+		return ControllerThatPlayer
+	case parser.SelectionControllerDefendingPlayer:
+		return ControllerDefendingPlayer
 	default:
 		return ControllerAny
 	}
@@ -504,6 +510,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectGainControl
 	case parser.EffectBecomeMonarch:
 		return EffectBecomeMonarch
+	case parser.EffectCantBecomeMonarch:
+		return EffectCantBecomeMonarch
 	case parser.EffectRingTempts:
 		return EffectRingTempts
 	case parser.EffectGrantKeyword:
@@ -648,6 +656,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectShuffle
 	case parser.EffectTap:
 		return EffectTap
+	case parser.EffectGoad:
+		return EffectGoad
 	case parser.EffectTapOrUntap:
 		return EffectTapOrUntap
 	case parser.EffectUntap:
@@ -681,6 +691,8 @@ func compileEffectDuration(duration parser.EffectDurationKind) DurationKind {
 		return DurationForAsLongAsYouControlSource
 	case parser.EffectDurationWhileControlledCreatureEnchanted:
 		return DurationForAsLongAsControlledCreatureEnchanted
+	case parser.EffectDurationWhileThatPlayerIsMonarch:
+		return DurationForAsLongAsThatPlayerIsMonarch
 	default:
 		return DurationNone
 	}

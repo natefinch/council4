@@ -394,7 +394,7 @@ func appendSentenceConnectorSpan(spans []shared.Span, tokens []shared.Token) []s
 // next recognized effect verbs or the sentence edges, so a clause that produced no
 // effect verb is absorbed into a neighbor's ownership. The credited span is always
 // clipped backward to the top-level boundary before the verb so a leading
-// unrepresented clause ("Goad target creature and draw a card") is not absorbed.
+// unrepresented clause ("Frobnicate target creature and draw a card") is not absorbed.
 // The forward extent is kept whole only when the effect round-tripped exactly:
 // an exact effect consumed every token after its verb (a compound object, mana
 // list, or keyword list joined by internal "and"/","/"or"), whereas an inexact
@@ -443,7 +443,7 @@ func effectCreditSpan(tokens []shared.Token, effect *EffectSyntax, fullForward b
 // clauses, matching the boundaries resolvingClauseStart and resolvingClauseEnd use
 // to segment effects. A recognized effect credits only the tight clause around its
 // own verb, clipped to the nearest such boundary in both directions, so a sibling
-// clause that produced no effect ("Goad target creature, then draw a card") leaves
+// clause that produced no effect ("Frobnicate target creature, then draw a card") leaves
 // its tokens uncovered instead of being absorbed into the neighbor effect's span.
 func effectClauseBoundary(token shared.Token) bool {
 	return token.Kind == shared.Comma || token.Kind == shared.Semicolon ||

@@ -36,7 +36,7 @@ func TestBodyTargetsRejectMissingModalChoice(t *testing.T) {
 		},
 	}
 
-	result := targetChoicesForBodyFromSourceObjectWithModes(nil, game.Player1, nil, 0, body, nil)
+	result := targetChoicesForBodyFromSourceObjectWithModes(nil, game.Player1, nil, 0, game.Event{}, body, nil)
 	if result.kind != targetInvalidSpec {
 		t.Fatalf("target choice kind = %v, want targetInvalidSpec", result.kind)
 	}
@@ -224,7 +224,7 @@ func TestOptionalPermanentTargetAllowsTargetOrNoTarget(t *testing.T) {
 func TestOptionalTargetWithNoCandidatesHasSingleNoTargetChoice(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 
-	result := targetChoicesForSpecs(g, game.Player1, nil, 0, []game.TargetSpec{
+	result := targetChoicesForSpecs(g, game.Player1, nil, 0, game.Event{}, []game.TargetSpec{
 		{MinTargets: 0, MaxTargets: 2, Constraint: "creature"},
 	})
 

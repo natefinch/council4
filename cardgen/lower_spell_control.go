@@ -353,6 +353,8 @@ func lowerSingleControlSpell(
 		duration = game.DurationForAsLongAsYouControlSource
 	case compiler.DurationForAsLongAsControlledCreatureEnchanted:
 		duration = game.DurationForAsLongAsControlledCreatureEnchanted
+	case compiler.DurationForAsLongAsThatPlayerIsMonarch:
+		duration = game.DurationForAsLongAsPlayerIsMonarch
 	default:
 		return unsupported()
 	}
@@ -361,10 +363,17 @@ func lowerSingleControlSpell(
 	// as that creature is enchanted") may carry a single back-reference to the
 	// source or the controlled creature. The duration enum already encodes the
 	// boundary, so the reference needs no lowering action of its own; accept it
-	// for these durations only. Every other duration requires no references.
+	// for these durations only. The monarch duration ("for as long as they're
+	// the monarch") likewise carries the "that player" reference the target's
+	// controlled-by-event-player restriction already consumes. Every other
+	// duration requires no references.
 	switch duration {
 	case game.DurationForAsLongAsControlledCreatureEnchanted:
 		if len(ctx.content.References) != 0 && !referencesTargetZero(ctx.content.References) {
+			return unsupported()
+		}
+	case game.DurationForAsLongAsPlayerIsMonarch:
+		if !referencesTargetZero(ctx.content.References) {
 			return unsupported()
 		}
 	case game.DurationForAsLongAsSourceOnBattlefield, game.DurationForAsLongAsYouControlSource:
@@ -376,16 +385,23 @@ func lowerSingleControlSpell(
 			return unsupported()
 		}
 	}
+	continuousEffect := game.ContinuousEffect{
+		Layer:         game.LayerControl,
+		NewController: opt.Val(game.Player1),
+	}
+	// The monarch duration binds its expiry to the player who became the
+	// monarch — the triggering event player — resolved when the continuous
+	// effect is created.
+	if duration == game.DurationForAsLongAsPlayerIsMonarch {
+		continuousEffect.ExpiresForRef = opt.Val(game.EventPlayerReference())
+	}
 	return game.Mode{
 		Targets: []game.TargetSpec{targetSpec},
 		Sequence: []game.Instruction{{
 			Primitive: game.ApplyContinuous{
-				Object: opt.Val(game.TargetPermanentReference(0)),
-				ContinuousEffects: []game.ContinuousEffect{{
-					Layer:         game.LayerControl,
-					NewController: opt.Val(game.Player1),
-				}},
-				Duration: duration,
+				Object:            opt.Val(game.TargetPermanentReference(0)),
+				ContinuousEffects: []game.ContinuousEffect{continuousEffect},
+				Duration:          duration,
 			},
 		}},
 	}.Ability(), nil

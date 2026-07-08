@@ -417,6 +417,8 @@ func (r referenceResolver) groupMembers(ref game.GroupReference) []id.ID {
 		return r.battlefieldGroupMembers(ref)
 	case game.GroupDomainSameName:
 		return r.sameNameGroupMembers(ref)
+	case game.GroupDomainTriggeringAttackers:
+		return r.triggeringAttackersGroupMembers(ref)
 	default:
 		return []id.ID{}
 	}
@@ -456,6 +458,63 @@ func (r referenceResolver) battlefieldGroupMembers(ref game.GroupReference) []id
 		members = append(members, permanent.ObjectID)
 	}
 	return members
+}
+
+// triggeringAttackersGroupMembers enumerates the creatures declared as attackers
+// in the attack that triggered the resolving ability, narrowed by the group's
+// Selection. It reconstructs the declared-attacker set from the resolving
+// ability's trigger event: an EventAttackerDeclared trigger coalesces its
+// simultaneous batch into a single trigger and retains the first matching event
+// (game.TriggerPattern.OneOrMore), so the attackers are the permanents named by
+// every EventAttackerDeclared event sharing the trigger event's SimultaneousID
+// (or the single triggering event when unbatched). Binding the declared
+// attackers rather than re-querying the board excludes a creature that started
+// attacking after the declaration and still includes a declared attacker that
+// left combat before resolution. It fails closed when the resolving ability has
+// no attacker-declared trigger event.
+func (r referenceResolver) triggeringAttackersGroupMembers(ref game.GroupReference) []id.ID {
+	if r.obj == nil || !r.obj.HasTriggerEvent || r.obj.TriggerEvent.Kind != game.EventAttackerDeclared {
+		return []id.ID{}
+	}
+	sel := ref.Selection()
+	source, _ := r.sourcePermanent()
+	members := make([]id.ID, 0)
+	for _, objectID := range triggeringAttackerObjectIDs(r.g, r.obj.TriggerEvent) {
+		permanent, ok := permanentByObjectID(r.g, objectID)
+		if !ok {
+			continue
+		}
+		if !r.permanentMatchesGroupSelection(&sel, source, permanent) {
+			continue
+		}
+		members = append(members, objectID)
+	}
+	return members
+}
+
+// triggeringAttackerObjectIDs returns the object IDs of the creatures declared
+// as attackers in the trigger's simultaneous batch, in declaration order. An
+// unbatched trigger (SimultaneousID zero) yields its single attacker.
+func triggeringAttackerObjectIDs(g *game.Game, trigger game.Event) []id.ID {
+	if trigger.SimultaneousID == 0 {
+		if trigger.PermanentID == 0 {
+			return nil
+		}
+		return []id.ID{trigger.PermanentID}
+	}
+	var ids []id.ID
+	seen := make(map[id.ID]bool)
+	for _, event := range g.Events {
+		if event.Kind != game.EventAttackerDeclared ||
+			event.SimultaneousID != trigger.SimultaneousID ||
+			event.PermanentID == 0 ||
+			seen[event.PermanentID] {
+			continue
+		}
+		seen[event.PermanentID] = true
+		ids = append(ids, event.PermanentID)
+	}
+	return ids
 }
 
 // sameNameGroupMembers enumerates every battlefield permanent whose name equals

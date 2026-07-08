@@ -6,7 +6,6 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/cost"
-	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -223,13 +222,9 @@ func (e *Engine) applyTurnFaceUpWithChoices(g *game.Game, playerID game.PlayerID
 	if !paymentOrch.payGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: &manaCost, Prefs: prefs}) {
 		return false
 	}
-	kind := permanent.FaceDownKind
 	permanent.Face = permanent.FaceDownFace
 	permanent.FaceDown = false
 	permanent.FaceDownKind = game.FaceDownNone
-	if kind == game.FaceDownDisguise {
-		permanent.Counters.Add(counter.Shield, 1)
-	}
 	emitFaceDownRevealEvent(g, permanent)
 	emitEvent(g, game.Event{
 		Kind:        game.EventPermanentTurnedFaceUp,

@@ -272,6 +272,15 @@ func matchSelection(s *selectionSubject, sel *game.Selection) bool {
 	if sel.DealtDamageThisTurn && !s.dealtDamageThisTurn() {
 		return false
 	}
+	if sel.OwnerNotController && !s.ownerDiffersFromController() {
+		return false
+	}
+	if sel.ControlledByEventPlayer && !s.controlledByEventPlayer() {
+		return false
+	}
+	if sel.ControlledByDefendingPlayer && !s.controlledByDefendingPlayer() {
+		return false
+	}
 	return true
 }
 
@@ -666,6 +675,56 @@ func (s *selectionSubject) dealtDamageThisTurn() bool {
 		return permanentDealtDamageThisTurn(s.g, s.event.PermanentID)
 	}
 	return false
+}
+
+// ownerDiffersFromController reports whether the subject permanent's owner is a
+// different player than its effective controller ("creatures you control but
+// don't own"). Only on-battlefield permanents have a distinct controller; every
+// other subject never matches.
+func (s *selectionSubject) ownerDiffersFromController() bool {
+	if s.kind != subjectPermanent || s.permanent == nil {
+		return false
+	}
+	return s.permanent.Owner != effectiveController(s.g, s.permanent)
+}
+
+// controlledByEventPlayer reports whether the subject permanent is controlled by
+// the player of the resolving ability's triggering event ("target creature that
+// player controls", Garland, Royal Kidnapper, where "that player" is the
+// opponent who just became the monarch). The event player is read from the
+// subject's captured triggering event, which the trigger target-choice path and
+// the resolution recheck thread in (a triggered ability chooses its targets
+// before its stack object exists, so the event cannot be recovered from the
+// stack). Only a battlefield permanent has a controller, and only a triggered
+// selection carries an event player, so every other case fails closed.
+func (s *selectionSubject) controlledByEventPlayer() bool {
+	if s.kind != subjectPermanent || s.permanent == nil {
+		return false
+	}
+	eventPlayer, ok := triggeringEventPlayer(s.event)
+	if !ok {
+		return false
+	}
+	return effectiveController(s.g, s.permanent) == eventPlayer
+}
+
+// controlledByDefendingPlayer reports whether the permanent is controlled by the
+// defending player of the subject's captured triggering attack ("target tapped
+// nonland permanent that player controls", The Spear of Bashenga, where "that
+// player" is the monarch attacked by the equipped creature). The defending
+// player is read from the attack event's Player field, gated on an attack event
+// that populates it (defendingPlayerEvent), because an attack records the
+// attacker separately in the event player. Only a battlefield permanent has a
+// controller, and only a triggered selection whose event is an attack carries a
+// defending player, so every other case fails closed.
+func (s *selectionSubject) controlledByDefendingPlayer() bool {
+	if s.kind != subjectPermanent || s.permanent == nil {
+		return false
+	}
+	if !defendingPlayerEvent(s.event.Kind) {
+		return false
+	}
+	return effectiveController(s.g, s.permanent) == s.event.Player
 }
 
 // modified reports whether the permanent is modified: it carries one or more

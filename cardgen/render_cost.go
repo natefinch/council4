@@ -247,6 +247,13 @@ func (r Renderer) renderKeywordAbility(ctx *renderCtx, keyword game.KeywordAbili
 		}
 		return fmt.Sprintf("game.PlotKeyword{Cost: %s}", plotCost), nil
 	}
+	if foretell, ok := keyword.(game.ForetellKeyword); ok {
+		foretellCost, err := r.renderManaCost(ctx, foretell.Cost)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.ForetellKeyword{Cost: %s}", foretellCost), nil
+	}
 	if morph, ok := keyword.(game.MorphKeyword); ok {
 		morphCost, err := r.renderManaCost(ctx, morph.Cost)
 		if err != nil {

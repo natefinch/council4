@@ -136,7 +136,7 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 		tapExclusions = append(tapExclusions, permanent.ObjectID)
 	}
 	prefs := e.paymentPreferencesForCost(g, playerID, manaCostPtr(manaCost), additionalCosts, activate.XValue, agents, log, tapExclusions...)
-	sacrificedAsCostIDs, ok := paymentOrch.payAbilityCosts(g, payment.AbilityRequest{
+	costPaid, ok := paymentOrch.payAbilityCosts(g, payment.AbilityRequest{
 		PlayerID:         playerID,
 		Source:           permanent,
 		ManaCost:         manaCost,
@@ -164,7 +164,8 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 		TargetCounts:        targetCounts,
 		ChosenModes:         append([]int(nil), activate.ChosenModes...),
 		XValue:              activate.XValue,
-		SacrificedAsCostIDs: sacrificedAsCostIDs,
+		SacrificedAsCostIDs: costPaid.sacrificedIDs,
+		ExiledAsCostIDs:     costPaid.exiledIDs,
 	}
 	if activatedOK {
 		obj.InlineActivated = activatedBody
@@ -282,7 +283,7 @@ func (e *Engine) applyGraveyardAbilityWithChoices(g *game.Game, playerID game.Pl
 		return false
 	}
 	prefs := e.paymentPreferencesForCostFromSource(g, playerID, manaCostPtr(ability.ManaCost), abilityAdditionalCosts(ability.AdditionalCosts), activate.XValue, card.ID, zone.Graveyard, agents, log)
-	sacrificedAsCostIDs, ok := paymentOrch.payAbilityCosts(g, payment.AbilityRequest{
+	costPaid, ok := paymentOrch.payAbilityCosts(g, payment.AbilityRequest{
 		PlayerID:         playerID,
 		SourceCardID:     card.ID,
 		SourceZone:       zone.Graveyard,
@@ -308,7 +309,8 @@ func (e *Engine) applyGraveyardAbilityWithChoices(g *game.Game, playerID game.Pl
 		TargetCounts:        targetCounts,
 		ChosenModes:         append([]int(nil), activate.ChosenModes...),
 		XValue:              activate.XValue,
-		SacrificedAsCostIDs: sacrificedAsCostIDs,
+		SacrificedAsCostIDs: costPaid.sacrificedIDs,
+		ExiledAsCostIDs:     costPaid.exiledIDs,
 	}
 	pushAbilityToStack(g, obj)
 	emitAbilityActivatedEvent(g, obj, 0, false)

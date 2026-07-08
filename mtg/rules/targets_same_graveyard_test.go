@@ -41,7 +41,7 @@ func TestSameGraveyardSpecRejectsCrossGraveyardCombination(t *testing.T) {
 		Types: []types.Card{types.Instant},
 	}})
 
-	result := targetChoicesForSpecs(g, game.Player1, &game.CardDef{}, 0, []game.TargetSpec{sameGraveyardSpec(2)})
+	result := targetChoicesForSpecs(g, game.Player1, &game.CardDef{}, 0, game.Event{}, []game.TargetSpec{sameGraveyardSpec(2)})
 	if result.kind != targetLegalChoicesFound {
 		t.Fatalf("result kind = %v, want targetLegalChoicesFound", result.kind)
 	}

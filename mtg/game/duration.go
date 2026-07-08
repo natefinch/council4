@@ -39,6 +39,14 @@ const (
 	// as the combat phase is torn down, before the following phases. Added last so
 	// existing durations keep their wire values.
 	DurationUntilEndOfCombat
+	// DurationForAsLongAsPlayerIsMonarch expires when the player bound in
+	// ExpiresFor is no longer the monarch ("gain control of target creature that
+	// player controls for as long as they're the monarch.", Garland, Royal
+	// Kidnapper). The bound player is the one whose becoming the monarch created
+	// the effect; when a different player takes the crown, or no player is the
+	// monarch, the effect ends. Added last so existing durations keep their wire
+	// values.
+	DurationForAsLongAsPlayerIsMonarch
 )
 
 // DelayedTriggerTiming describes when a delayed triggered ability should fire.
@@ -99,6 +107,32 @@ type DelayedTriggerDef struct {
 	// turn, ..."). It is only valid with EventPattern whose DamageSourceCaptured
 	// flag is set.
 	DamageSourceObject opt.V[ObjectReference]
+	// CapturedAttackerObject, when present, binds an EventPattern
+	// attacker-declared delayed trigger to the specific permanent this object
+	// reference resolves to at schedule time (the creature an earlier clause in
+	// the same resolution targeted and published as a linked object). The
+	// scheduled trigger fires only when that captured permanent is declared as an
+	// attacker ("... target creature ... Whenever that creature attacks the
+	// monarch this turn, ..."). It is the attack analog of DamageSourceObject and
+	// is only valid with an EventPattern whose AttackerCaptured flag is set.
+	CapturedAttackerObject opt.V[ObjectReference]
+	// CapturedDyingObject, when present, binds an EventPattern permanent-died
+	// delayed trigger to the specific permanent this object reference resolves to
+	// at schedule time (the creature an earlier clause in the same resolution
+	// targeted). The scheduled trigger fires only when that captured permanent
+	// dies ("... target creature an opponent controls ... When the creature an
+	// opponent controls dies this turn, ..."). It is the death analog of
+	// DamageSourceObject and CapturedAttackerObject and is only valid with an
+	// EventPattern whose DyingObjectCaptured flag is set.
+	CapturedDyingObject opt.V[ObjectReference]
+	// InterveningCondition, when present, gates an EventPattern delayed trigger on
+	// an intervening-if condition re-checked both when the captured event fires
+	// and when the scheduled ability resolves ("... When the creature an opponent
+	// controls dies this turn, if you control your commander, you become the
+	// monarch."). The condition is carried onto the scheduled ability's trigger so
+	// the ordinary intervening-if machinery evaluates it against the delayed
+	// trigger's controller. It is only valid with an EventPattern.
+	InterveningCondition opt.V[Condition]
 	// CapturedObject, when present, freezes the permanent this object reference
 	// resolves to against the creating ability's triggering event at schedule
 	// time, storing its object ID on the scheduled trigger so the trigger's
@@ -140,6 +174,18 @@ type DelayedTrigger struct {
 	// ability's DamageSourceObject reference when the trigger is scheduled. Zero
 	// means the captured permanent was already gone, so the trigger never fires.
 	BoundDamageSourceObjectID id.ID
+	// BoundAttackerObjectID restricts an EventPattern attacker-declared delayed
+	// trigger whose pattern sets AttackerCaptured to events whose attacker is
+	// this captured permanent. It is resolved from the creating ability's
+	// CapturedAttackerObject reference when the trigger is scheduled. Zero means
+	// the captured permanent was already gone, so the trigger never fires.
+	BoundAttackerObjectID id.ID
+	// BoundDyingObjectID restricts an EventPattern permanent-died delayed trigger
+	// whose pattern sets DyingObjectCaptured to events whose dying permanent is
+	// this captured permanent. It is resolved from the creating ability's
+	// CapturedDyingObject reference when the trigger is scheduled. Zero means the
+	// captured permanent was already gone, so the trigger never fires.
+	BoundDyingObjectID id.ID
 	// CapturedObjectID is the concrete permanent frozen from the creating
 	// ability's CapturedObject reference at schedule time, carried into the
 	// fired trigger's content so it can act on the combat creature after the

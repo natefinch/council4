@@ -74,7 +74,11 @@ func handleDestroyForEachPlayer(r *effectResolver, prim game.DestroyForEachPlaye
 		if !chosen {
 			continue
 		}
-		linkedRef := permanentLinkedObjectRef(permanent)
+		// permanentObjectBindingRef preserves the ObjectID even for a token
+		// (CardInstanceID == 0) so the paired CreateTokenForEachDestroyed still
+		// mints a token for a destroyed token permanent's controller;
+		// permanentLinkedObjectRef would drop tokens and silently skip the payoff.
+		linkedRef := permanentObjectBindingRef(permanent)
 		if _, destroyed := destroyPermanentInBatch(r.game, permanent.ObjectID, 0, false); destroyed {
 			rememberLinkedObject(r.game, key, linkedRef)
 			res.succeeded = true

@@ -288,6 +288,12 @@ func lowerKeywordDispatch(
 		}
 		return keywordStaticLowering(&plotAbility, ability, syntax), true, nil
 	}
+	if foretellAbility, ok, diag := lowerForetellAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordStaticLowering(&foretellAbility, ability, syntax), true, nil
+	}
 	if evokeLowering, ok, diag := lowerEvokeAbility(ability, syntax); ok {
 		if diag != nil {
 			return abilityLowering{}, true, diag
@@ -1306,6 +1312,43 @@ func lowerPlotAbility(
 	}, true, nil
 }
 
+// lowerForetellAbility lowers the Foretell keyword (CR 702.144) into a
+// game.ForetellKeyword static ability carrying the foretell mana cost. Only the
+// exact keyword with a fixed mana cost and no other rules text on the ability is
+// supported; any other shape fails closed. The rules layer reads
+// game.ForetellKeyword to offer the foretell special action (exile face down from
+// hand for {2}) and the later cast from exile for the foretell cost.
+func lowerForetellAbility(
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (game.StaticAbility, bool, *shared.Diagnostic) {
+	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordForetell {
+		return game.StaticAbility{}, false, nil
+	}
+	keyword := ability.Content.Keywords[0]
+	manaCost, fixed := fixedKeywordManaCost(keyword)
+	if !fixed ||
+		(ability.Kind != compiler.AbilityStatic && ability.Kind != compiler.AbilitySpell) ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.References) != 0 ||
+		ability.AbilityWord != "" ||
+		!keywordOnlyCovered(syntax, keyword) {
+		return game.StaticAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Foretell ability",
+			"the executable source backend supports only exact Foretell with a fixed mana cost",
+		)
+	}
+	return game.StaticAbility{
+		Text:             keyword.Name + " " + keyword.Parameter,
+		KeywordAbilities: []game.KeywordAbility{game.ForetellKeyword{Cost: manaCost}},
+	}, true, nil
+}
+
 // lowerEvokeAbility lowers the Evoke keyword (CR 702.74) into two lowered
 // pieces: an "Evoke" alternative spell cost the payment machinery auto-offers at
 // cast, and the canonical evoke-sacrifice triggered ability that sacrifices the
@@ -2011,6 +2054,12 @@ func lowerParameterizedStaticKeyword(keyword compiler.CompiledKeyword) (game.Sta
 			return game.StaticAbility{}, false
 		}
 		body.KeywordAbilities = []game.KeywordAbility{game.PlotKeyword{Cost: manaCost}}
+	case parser.KeywordForetell:
+		manaCost, ok := fixedKeywordManaCost(keyword)
+		if !ok {
+			return game.StaticAbility{}, false
+		}
+		body.KeywordAbilities = []game.KeywordAbility{game.ForetellKeyword{Cost: manaCost}}
 	case parser.KeywordMorph:
 		manaCost, ok := fixedKeywordManaCost(keyword)
 		if !ok {

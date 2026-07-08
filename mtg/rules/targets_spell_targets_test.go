@@ -44,7 +44,7 @@ func TestStackSpellTargetCandidatesRespectSpellTargetTypeRequirement(t *testing.
 	}})
 	source := counterTargetSpell(&spec)
 
-	candidates := targetCandidatesForSpecChosenBy(g, game.Player1, game.Player1, source, 0, &spec)
+	candidates := targetCandidatesForSpecChosenBy(g, game.Player1, game.Player1, source, 0, game.Event{}, &spec)
 
 	if !slices.Contains(candidates, game.StackObjectTarget(atCreature.ID)) {
 		t.Fatalf("candidates = %+v, want spell targeting a creature %d", candidates, atCreature.ID)
@@ -71,7 +71,7 @@ func TestStackSpellTargetCandidatesRespectControllerRelation(t *testing.T) {
 	source := counterTargetSpell(&spec)
 
 	// The counter's controller is Player1, so "you control" means Player1.
-	candidates := targetCandidatesForSpecChosenBy(g, game.Player1, game.Player1, source, 0, &spec)
+	candidates := targetCandidatesForSpecChosenBy(g, game.Player1, game.Player1, source, 0, game.Event{}, &spec)
 
 	if !slices.Contains(candidates, game.StackObjectTarget(atMine.ID)) {
 		t.Fatalf("candidates = %+v, want spell targeting a permanent the counter's controller owns", candidates)
@@ -95,7 +95,7 @@ func TestStackSpellTargetCandidatesRespectPlayerRequirement(t *testing.T) {
 	}})
 	source := counterTargetSpell(&spec)
 
-	candidates := targetCandidatesForSpecChosenBy(g, game.Player1, game.Player1, source, 0, &spec)
+	candidates := targetCandidatesForSpecChosenBy(g, game.Player1, game.Player1, source, 0, game.Event{}, &spec)
 
 	if !slices.Contains(candidates, game.StackObjectTarget(atPlayer.ID)) {
 		t.Fatalf("candidates = %+v, want spell targeting a player %d", candidates, atPlayer.ID)
@@ -119,7 +119,7 @@ func TestStackSpellTargetCandidatesRespectYouPlayerRelation(t *testing.T) {
 	source := counterTargetSpell(&spec)
 
 	// "you" resolves to the counter's controller, Player1.
-	candidates := targetCandidatesForSpecChosenBy(g, game.Player1, game.Player1, source, 0, &spec)
+	candidates := targetCandidatesForSpecChosenBy(g, game.Player1, game.Player1, source, 0, game.Event{}, &spec)
 
 	if !slices.Contains(candidates, game.StackObjectTarget(atYou.ID)) {
 		t.Fatalf("candidates = %+v, want spell targeting the counter's controller", candidates)

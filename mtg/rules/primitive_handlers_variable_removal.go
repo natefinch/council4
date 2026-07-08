@@ -33,7 +33,11 @@ func handleRemoveTargetsForToken(r *effectResolver, prim game.RemoveTargetsForTo
 			}
 		}
 		removing = append(removing, permanent)
-		refs = append(refs, permanentLinkedObjectRef(permanent))
+		// permanentObjectBindingRef preserves the ObjectID even for a token
+		// (CardInstanceID == 0) so the paired CreateTokenForEachDestroyed still
+		// mints a token for a removed token permanent's controller;
+		// permanentLinkedObjectRef would drop tokens and silently skip the payoff.
+		refs = append(refs, permanentObjectBindingRef(permanent))
 	}
 	destination := zone.Graveyard
 	if prim.Exile {

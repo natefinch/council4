@@ -54,6 +54,12 @@ func (CreateTokenForEachDestroyed) Kind() PrimitiveKind {
 	return PrimitiveCreateTokenForEachDestroyed
 }
 
+// Kind implements Primitive for ExileForEachOpponent.
+func (ExileForEachOpponent) Kind() PrimitiveKind { return PrimitiveExileForEachOpponent }
+
+// Kind implements Primitive for DrawForEachExiled.
+func (DrawForEachExiled) Kind() PrimitiveKind { return PrimitiveDrawForEachExiled }
+
 // Kind implements Primitive for RemoveTargetsForToken.
 func (RemoveTargetsForToken) Kind() PrimitiveKind { return PrimitiveRemoveTargetsForToken }
 
@@ -87,6 +93,9 @@ func (ApplyContinuous) Kind() PrimitiveKind { return PrimitiveApplyContinuous }
 // Kind implements Primitive for ApplyRule.
 func (ApplyRule) Kind() PrimitiveKind { return PrimitiveApplyRule }
 
+// Kind implements Primitive for PlayerMayPayGenericOrRule.
+func (PlayerMayPayGenericOrRule) Kind() PrimitiveKind { return PrimitivePlayerMayPayGenericOrRule }
+
 // Kind implements Primitive for ModifyPT.
 func (ModifyPT) Kind() PrimitiveKind { return PrimitiveModifyPT }
 
@@ -119,6 +128,12 @@ func (StartEngines) Kind() PrimitiveKind { return PrimitiveStartEngines }
 
 // Kind implements Primitive for BecomeMonarch.
 func (BecomeMonarch) Kind() PrimitiveKind { return PrimitiveBecomeMonarch }
+
+// Kind implements Primitive for PartitionExiledCostCards.
+func (PartitionExiledCostCards) Kind() PrimitiveKind { return PrimitivePartitionExiledCostCards }
+
+// Kind implements Primitive for CantBecomeMonarch.
+func (CantBecomeMonarch) Kind() PrimitiveKind { return PrimitiveCantBecomeMonarch }
 
 // Kind implements Primitive for SetClassLevel.
 func (SetClassLevel) Kind() PrimitiveKind { return PrimitiveSetClassLevel }
@@ -353,6 +368,8 @@ func (ReturnLinkedExiledCardsToBattlefield) isPrimitive() {}
 func (DestroyForEachPlayer) isPrimitive()                 {}
 func (EachPlayerChooseDestroy) isPrimitive()              {}
 func (CreateTokenForEachDestroyed) isPrimitive()          {}
+func (ExileForEachOpponent) isPrimitive()                 {}
+func (DrawForEachExiled) isPrimitive()                    {}
 func (RemoveTargetsForToken) isPrimitive()                {}
 func (CastForFree) isPrimitive()                          {}
 func (ChooseFromZone) isPrimitive()                       {}
@@ -364,6 +381,7 @@ func (AddPlayerCounter) isPrimitive()                     {}
 func (MoveCounters) isPrimitive()                         {}
 func (ApplyContinuous) isPrimitive()                      {}
 func (ApplyRule) isPrimitive()                            {}
+func (PlayerMayPayGenericOrRule) isPrimitive()            {}
 func (ModifyPT) isPrimitive()                             {}
 func (Fight) isPrimitive()                                {}
 func (Tap) isPrimitive()                                  {}
@@ -375,6 +393,8 @@ func (CreateToken) isPrimitive()                          {}
 func (ShufflePermanentIntoLibrary) isPrimitive()          {}
 func (StartEngines) isPrimitive()                         {}
 func (BecomeMonarch) isPrimitive()                        {}
+func (CantBecomeMonarch) isPrimitive()                    {}
+func (PartitionExiledCostCards) isPrimitive()             {}
 func (SetClassLevel) isPrimitive()                        {}
 func (Monstrosity) isPrimitive()                          {}
 func (DiscoverCards) isPrimitive()                        {}
@@ -471,8 +491,12 @@ func (p Discard) instructionRefs() primitiveRefs {
 	refs.publishesLinked = p.PublishLinked
 	return refs
 }
-func (Destroy) instructionRefs() primitiveRefs      { return primitiveRefs{} }
-func (p AddCounter) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
+func (Destroy) instructionRefs() primitiveRefs { return primitiveRefs{} }
+func (p AddCounter) instructionRefs() primitiveRefs {
+	refs := quantityRefs(p.Amount)
+	refs.publishesLinked = p.PublishLinked
+	return refs
+}
 func (p AddPlayerCounter) instructionRefs() primitiveRefs {
 	return quantityRefs(p.Amount)
 }
@@ -483,6 +507,10 @@ func (p ApplyContinuous) instructionRefs() primitiveRefs {
 	return refs
 }
 func (ApplyRule) instructionRefs() primitiveRefs { return primitiveRefs{} }
+
+func (p PlayerMayPayGenericOrRule) instructionRefs() primitiveRefs {
+	return quantityRefs(p.Amount)
+}
 
 func (p ModifyPT) instructionRefs() primitiveRefs {
 	refs := mergePrimitiveRefs(objectReferenceRefs(p.Object), quantityRefs(p.PowerDelta))
@@ -507,6 +535,8 @@ func (p CreateToken) instructionRefs() primitiveRefs {
 func (ShufflePermanentIntoLibrary) instructionRefs() primitiveRefs { return primitiveRefs{} }
 func (StartEngines) instructionRefs() primitiveRefs                { return primitiveRefs{} }
 func (BecomeMonarch) instructionRefs() primitiveRefs               { return primitiveRefs{} }
+func (CantBecomeMonarch) instructionRefs() primitiveRefs           { return primitiveRefs{} }
+func (PartitionExiledCostCards) instructionRefs() primitiveRefs    { return primitiveRefs{} }
 func (p SetClassLevel) instructionRefs() primitiveRefs             { return quantityRefs(p.Amount) }
 func (p Monstrosity) instructionRefs() primitiveRefs               { return quantityRefs(p.Amount) }
 func (p DiscoverCards) instructionRefs() primitiveRefs             { return quantityRefs(p.Amount) }
@@ -583,6 +613,12 @@ func (EachPlayerChooseDestroy) instructionRefs() primitiveRefs {
 func (p CreateTokenForEachDestroyed) instructionRefs() primitiveRefs {
 	return primitiveRefs{consumesLinked: []LinkedKey{p.LinkedKey}}
 }
+func (p ExileForEachOpponent) instructionRefs() primitiveRefs {
+	return primitiveRefs{publishesLinked: p.LinkedKey}
+}
+func (p DrawForEachExiled) instructionRefs() primitiveRefs {
+	return primitiveRefs{consumesLinked: []LinkedKey{p.LinkedKey}}
+}
 func (p RemoveTargetsForToken) instructionRefs() primitiveRefs {
 	return primitiveRefs{publishesLinked: p.LinkedKey}
 }
@@ -623,16 +659,21 @@ func (p Mill) instructionRefs() primitiveRefs {
 func (p ExileTopOfLibrary) instructionRefs() primitiveRefs {
 	return quantityRefs(p.Amount)
 }
-func (PutHandOnLibraryThenDraw) instructionRefs() primitiveRefs     { return primitiveRefs{} }
-func (DiscardThenDraw) instructionRefs() primitiveRefs              { return primitiveRefs{} }
-func (DiscardUnlessType) instructionRefs() primitiveRefs            { return primitiveRefs{} }
-func (RevealUntil) instructionRefs() primitiveRefs                  { return primitiveRefs{} }
-func (p Scry) instructionRefs() primitiveRefs                       { return quantityRefs(p.Amount) }
-func (p Surveil) instructionRefs() primitiveRefs                    { return quantityRefs(p.Amount) }
-func (p Dig) instructionRefs() primitiveRefs                        { return quantityRefs(p.Look) }
-func (p PileSplit) instructionRefs() primitiveRefs                  { return quantityRefs(p.Amount) }
-func (p RevealTopPartition) instructionRefs() primitiveRefs         { return quantityRefs(p.Amount) }
-func (p ImpulseExile) instructionRefs() primitiveRefs               { return quantityRefs(p.Amount) }
+func (PutHandOnLibraryThenDraw) instructionRefs() primitiveRefs { return primitiveRefs{} }
+func (DiscardThenDraw) instructionRefs() primitiveRefs          { return primitiveRefs{} }
+func (DiscardUnlessType) instructionRefs() primitiveRefs        { return primitiveRefs{} }
+func (RevealUntil) instructionRefs() primitiveRefs              { return primitiveRefs{} }
+func (p Scry) instructionRefs() primitiveRefs                   { return quantityRefs(p.Amount) }
+func (p Surveil) instructionRefs() primitiveRefs                { return quantityRefs(p.Amount) }
+func (p Dig) instructionRefs() primitiveRefs                    { return quantityRefs(p.Look) }
+func (p PileSplit) instructionRefs() primitiveRefs              { return quantityRefs(p.Amount) }
+func (p RevealTopPartition) instructionRefs() primitiveRefs     { return quantityRefs(p.Amount) }
+func (p ImpulseExile) instructionRefs() primitiveRefs {
+	refs := quantityRefs(p.Amount)
+	refs.publishesLinked = p.PublishLinked
+	return refs
+}
+
 func (ExileLibraryUntilNonlandCast) instructionRefs() primitiveRefs { return primitiveRefs{} }
 func (p Investigate) instructionRefs() primitiveRefs                { return quantityRefs(p.Amount) }
 func (p Proliferate) instructionRefs() primitiveRefs                { return quantityRefs(p.Amount) }
@@ -656,10 +697,16 @@ func (ShuffleSpellIntoLibrary) instructionRefs() primitiveRefs { return primitiv
 func (SkipStep) instructionRefs() primitiveRefs                { return primitiveRefs{} }
 func (CreateEmblem) instructionRefs() primitiveRefs            { return primitiveRefs{} }
 func (p CreateDelayedTrigger) instructionRefs() primitiveRefs {
-	if !p.Trigger.DamageSourceObject.Exists {
-		return primitiveRefs{}
+	if p.Trigger.DamageSourceObject.Exists {
+		return objectReferenceRefs(p.Trigger.DamageSourceObject.Val)
 	}
-	return objectReferenceRefs(p.Trigger.DamageSourceObject.Val)
+	if p.Trigger.CapturedAttackerObject.Exists {
+		return objectReferenceRefs(p.Trigger.CapturedAttackerObject.Val)
+	}
+	if p.Trigger.CapturedDyingObject.Exists {
+		return objectReferenceRefs(p.Trigger.CapturedDyingObject.Val)
+	}
+	return primitiveRefs{}
 }
 func (p CreateReplacement) instructionRefs() primitiveRefs { return objectReferenceRefs(p.Object) }
 func (p PreventDamage) instructionRefs() primitiveRefs     { return quantityRefs(p.Amount) }

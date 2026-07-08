@@ -87,6 +87,9 @@ var simplePredicateMap = map[parser.ConditionPredicateKind]ConditionPredicate{
 func compileConditionClause(condition *CompiledCondition, clause *parser.ConditionClause) {
 	if predicate, ok := simplePredicateMap[clause.Predicate]; ok {
 		condition.Predicate = predicate
+		if clause.Negated {
+			condition.Negated = !condition.Negated
+		}
 		return
 	}
 	switch clause.Predicate {
@@ -252,6 +255,13 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 			return
 		}
 		condition.Predicate = ConditionPredicateDamageByControlledSource
+		condition.Selection = selection
+	case parser.ConditionPredicateDamageWouldBeDealtToPermanent:
+		selection, ok := compileConditionSelection(clause.Selection)
+		if !ok {
+			return
+		}
+		condition.Predicate = ConditionPredicateDamageWouldBeDealtToPermanent
 		condition.Selection = selection
 	case parser.ConditionPredicateSourceWouldDie:
 		condition.Predicate = ConditionPredicateSourceWouldDie
@@ -445,6 +455,9 @@ func compileConditionSelection(syntax parser.ConditionSelection) (ConditionSelec
 	selection.DamageSourceAnyController = syntax.DamageSourceAnyController
 	selection.DamageRecipientController = syntax.DamageRecipientController
 	selection.DamageSourceControllerOpponent = syntax.DamageSourceControllerOpponent
+	selection.DamageRecipientSelf = syntax.DamageRecipientSelf
+	selection.DamageRecipientAttached = syntax.DamageRecipientAttached
+	selection.DamageRecipientMonarchGate = syntax.DamageRecipientMonarchGate
 	selection.AnyCounter = syntax.AnyCounter
 	selection.CounterKind = syntax.CounterKind
 	selection.CounterKindKnown = syntax.CounterKindKnown
