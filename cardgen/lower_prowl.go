@@ -113,10 +113,9 @@ func exilePermanentForPlayTargetSpec(target compiler.CompiledTarget) (game.Targe
 		return game.TargetSpec{}, false
 	}
 	selection := built.Selection.Val
-	switch {
-	case tapped:
+	if tapped {
 		selection.Tapped = game.TriTrue
-	case untapped:
+	} else if untapped {
 		selection.Tapped = game.TriFalse
 	}
 	if excludeSource {

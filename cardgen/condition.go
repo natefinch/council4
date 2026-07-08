@@ -383,19 +383,18 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 			compiler.ConditionPredicateSourceNotSaddled,
 			compiler.ConditionPredicateControlsGreatestPowerCreature,
 			compiler.ConditionPredicateControlsGreatestToughnessCreature,
-			compiler.ConditionPredicateControllerControlsNamed:
-			return ctx == conditionContextEffectGate
-		case compiler.ConditionPredicateFirstCombatPhaseOfTurn:
-			return ctx == conditionContextEffectGate ||
-				ctx == conditionContextInterveningTrigger
-		case compiler.ConditionPredicateSourceAbilityResolutionOrdinalThisTurn:
+			compiler.ConditionPredicateControllerControlsNamed,
 			// "If this is the second time this ability has resolved this turn,
 			// convert Prowl." gates the trailing effect of a resolving triggered
 			// ability on that ability's own per-turn resolution count. The runtime
 			// reads the resolving stack object's tally, which is available only
 			// while the triggered ability resolves, so it is confined to the
 			// per-effect sequence gate.
+			compiler.ConditionPredicateSourceAbilityResolutionOrdinalThisTurn:
 			return ctx == conditionContextEffectGate
+		case compiler.ConditionPredicateFirstCombatPhaseOfTurn:
+			return ctx == conditionContextEffectGate ||
+				ctx == conditionContextInterveningTrigger
 		case compiler.ConditionPredicateControllerTurn:
 			// The "During your turn," self-static gate and the "If it's your
 			// turn," per-effect sequence gate (the Fated cycle) both read the
