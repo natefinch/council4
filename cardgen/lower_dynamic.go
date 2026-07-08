@@ -153,6 +153,19 @@ func lowerDynamicAmountKind(amount compiler.CompiledAmount, object game.ObjectRe
 		dynamic.Kind = game.DynamicAmountLifeLostThisTurn
 	case compiler.DynamicAmountLifeGainedThisTurn:
 		dynamic.Kind = game.DynamicAmountLifeGainedThisTurn
+	case compiler.DynamicAmountReferencedPlayerLifeLostThisTurn:
+		// "equal to the life that player lost this turn" reads the life the
+		// player named by "that player" lost this turn. That player co-refers
+		// with the recipient of the life loss, so the amount defaults to the
+		// triggering event player and a life-spell lowering whose recipient is a
+		// chosen target rebinds it with rebindRecipientLifeChangedAmount.
+		player := game.EventPlayerReference()
+		dynamic.Kind = game.DynamicAmountLifeLostThisTurn
+		dynamic.Player = &player
+	case compiler.DynamicAmountReferencedPlayerLifeGainedThisTurn:
+		player := game.EventPlayerReference()
+		dynamic.Kind = game.DynamicAmountLifeGainedThisTurn
+		dynamic.Player = &player
 	case compiler.DynamicAmountTriggeringPlayerHandSize:
 		// "... equal to the number of cards in that player's hand" counts the hand
 		// of the player the effect refers to with "that player"/"their". That
@@ -729,6 +742,26 @@ func rebindRecipientHandSizeAmount(amount game.Quantity, recipient game.PlayerRe
 	updated := dyn.Val
 	updated.Player = &recipient
 	return game.Dynamic(updated)
+}
+
+// rebindRecipientLifeChangedAmount retargets a "the life that player lost/gained
+// this turn" amount from its default triggering-event-player subject to
+// recipient. "That player" co-refers with the player whose life the effect
+// changes, so when a life-spell lowering targets a chosen player, recipient (the
+// target player) counts its own life change this turn ("target opponent loses
+// life equal to the life that player lost this turn", Blitzwing, Cruel
+// Tormentor). Every other amount — including a controller-scoped life-changed
+// count that carries no Player — is returned unchanged.
+func rebindRecipientLifeChangedAmount(dynamic game.DynamicAmount, recipient game.PlayerReference) game.DynamicAmount {
+	if dynamic.Player == nil ||
+		dynamic.Player.Kind() != game.PlayerReferenceEventPlayer ||
+		(dynamic.Kind != game.DynamicAmountLifeLostThisTurn &&
+			dynamic.Kind != game.DynamicAmountLifeGainedThisTurn) {
+		return dynamic
+	}
+	updated := dynamic
+	updated.Player = &recipient
+	return updated
 }
 
 func exactDamageAmountReferences(amount compiler.CompiledAmount, references []compiler.CompiledReference) bool {

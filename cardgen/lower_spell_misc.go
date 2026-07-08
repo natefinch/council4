@@ -66,6 +66,18 @@ func lowerFixedLifeSpell(
 			amount = game.Dynamic(dynamic)
 			break
 		}
+		if referencedPlayerLifeChangedKind(effect.Amount.DynamicKind) {
+			dynamic, ok := referencedPlayerLifeChangedLifeAmount(ctx, effect)
+			if !ok {
+				return game.AbilityContent{}, contentDiagnostic(
+					ctx,
+					"unsupported life spell",
+					"the executable source backend supports only exact supported life changes",
+				)
+			}
+			amount = game.Dynamic(dynamic)
+			break
+		}
 		dynamic, ok := lowerDynamicAmount(effect.Amount, game.SourcePermanentReference())
 		sourceCounterReferences := effect.Amount.DynamicKind == compiler.DynamicAmountSourceCounterCount &&
 			singleSelfReference(ctx.content.References)
@@ -217,6 +229,39 @@ func lifeSourcePowerAmount(ctx contentCtx, effect compiler.CompiledEffect) (game
 		return game.DynamicAmount{}, false
 	}
 	return lowerDynamicAmount(effect.Amount, object)
+}
+
+// referencedPlayerLifeChangedKind reports whether kind is one of the referenced-
+// player life-changed-this-turn amounts ("the life that player lost/gained this
+// turn"), whose subject is the effect's referenced/target player rather than the
+// controller.
+func referencedPlayerLifeChangedKind(kind compiler.DynamicAmountKind) bool {
+	return kind == compiler.DynamicAmountReferencedPlayerLifeLostThisTurn ||
+		kind == compiler.DynamicAmountReferencedPlayerLifeGainedThisTurn
+}
+
+// referencedPlayerLifeChangedLifeAmount lowers "target player loses/gains life
+// equal to the life that player lost/gained this turn", binding the count to the
+// single targeted player. "That player" co-refers with the sole target, so its
+// span-matched reference is consumed here and the amount reads the target
+// player's life change this turn (Blitzwing, Cruel Tormentor). It fails closed
+// on any other subject, target count, or referent layout.
+func referencedPlayerLifeChangedLifeAmount(ctx contentCtx, effect compiler.CompiledEffect) (game.DynamicAmount, bool) {
+	if effect.Context != parser.EffectContextTarget ||
+		len(ctx.content.Targets) != 1 ||
+		len(ctx.content.References) != 1 {
+		return game.DynamicAmount{}, false
+	}
+	reference := ctx.content.References[0]
+	if reference.Kind != compiler.ReferenceThatPlayer ||
+		reference.Span != effect.Amount.ReferenceSpan {
+		return game.DynamicAmount{}, false
+	}
+	dynamic, ok := lowerDynamicAmount(effect.Amount, game.SourcePermanentReference())
+	if !ok {
+		return game.DynamicAmount{}, false
+	}
+	return rebindRecipientLifeChangedAmount(dynamic, game.TargetPlayerReference(0)), true
 }
 
 // referencedSourceOrEventPowerObject returns the object whose power or toughness

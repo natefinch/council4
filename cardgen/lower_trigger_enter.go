@@ -553,6 +553,17 @@ func triggerBodySpan(
 			bodySpan.End = effects[i].TokenCopyGrantRiderSpan.End
 		}
 	}
+	// A folded "choose <keyword> or <keyword> at random." prelude sits in a
+	// sentence before the "<source> gains that ability until end of turn." grant,
+	// so widen the body span to cover its prelude span; otherwise the listed
+	// keywords fall outside the body and the keyword-span reconciliation rejects
+	// the trigger body.
+	for i := range effects {
+		if effects[i].KeywordGrantChoiceAtRandom &&
+			effects[i].KeywordChoiceAtRandomPreludeSpan.Start.Offset < bodySpan.Start.Offset {
+			bodySpan.Start = effects[i].KeywordChoiceAtRandomPreludeSpan.Start
+		}
+	}
 	return bodySpan
 }
 

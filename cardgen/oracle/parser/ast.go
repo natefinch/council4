@@ -1206,6 +1206,13 @@ type Sentence struct {
 	// performs, so reference and coverage scans treat its tokens as belonging to
 	// the grant rather than as an unrecognized sibling.
 	RemoveAuraRider bool `json:",omitempty"`
+	// KeywordChoiceAtRandomPrelude reports that this sentence is the credited
+	// "choose <keyword> or <keyword> at random." prelude folded onto a following
+	// "<source> gains that ability until end of turn." keyword-choice grant
+	// (Blitzwing, Adaptive Assailant). Reference and coverage scans treat its
+	// keyword and structural tokens as belonging to that grant rather than as an
+	// unrecognized sibling.
+	KeywordChoiceAtRandomPrelude bool `json:",omitempty"`
 }
 
 // sentenceIsCreditedRider reports whether the sentence has been folded onto a

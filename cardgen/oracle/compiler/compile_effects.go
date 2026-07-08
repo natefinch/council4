@@ -471,6 +471,8 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				Payment:                                compileEffectPayment(syntax.Payment),
 				Exact:                                  syntax.Exact,
 				KeywordGrantChoice:                     syntax.KeywordGrantChoice,
+				KeywordGrantChoiceAtRandom:             syntax.KeywordGrantChoiceAtRandom,
+				KeywordChoiceAtRandomPreludeSpan:       syntax.KeywordChoiceAtRandomPreludeSpan,
 				RevealUntilThenPut:                     syntax.RevealUntilThenPut,
 				RevealTopPartition:                     syntax.RevealTopPartition,
 				RevealPartitionRemainder:               syntax.RevealPartitionRemainder,

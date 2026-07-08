@@ -903,6 +903,17 @@ const (
 	// Restless). It is controller-scoped and carries no in-text referent. Added
 	// last so existing kinds keep their values.
 	EffectDynamicAmountCommanderCastCount EffectDynamicAmountKind = "EffectDynamicAmountCommanderCastCount"
+	// EffectDynamicAmountReferencedPlayerLifeLostThisTurn is the total life the
+	// player named by "that player" has lost so far this turn ("target opponent
+	// loses life equal to the life that player lost this turn", Blitzwing, Cruel
+	// Tormentor). EffectDynamicAmountReferencedPlayerLifeGainedThisTurn is the
+	// life-gained sibling. Unlike the controller-scoped LifeLostThisTurn family,
+	// "that player" co-refers with the effect's referenced player, so the subject
+	// attaches that player's span in ReferenceSpan and the lowering binds the
+	// count to the referenced/target player. Added last so existing kinds keep
+	// their values.
+	EffectDynamicAmountReferencedPlayerLifeLostThisTurn   EffectDynamicAmountKind = "EffectDynamicAmountReferencedPlayerLifeLostThisTurn"
+	EffectDynamicAmountReferencedPlayerLifeGainedThisTurn EffectDynamicAmountKind = "EffectDynamicAmountReferencedPlayerLifeGainedThisTurn"
 )
 
 // EffectDynamicAmountForm identifies how a dynamic amount is introduced.
@@ -2568,6 +2579,22 @@ type EffectSyntax struct {
 	// grant instead of granting every listed keyword. It is set only for gain
 	// effects whose body is a recognized disjunctive keyword list.
 	KeywordGrantChoice bool `json:",omitempty"`
+	// KeywordGrantChoiceAtRandom marks a KeywordGrantChoice grant whose one chosen
+	// keyword is selected at random rather than by the controller. It backs the
+	// two-sentence "choose <keyword> or <keyword> at random. <source> gains that
+	// ability until end of turn." construction (Blitzwing, Adaptive Assailant),
+	// where the first sentence lists the candidate keywords and picks one at
+	// random and the second grants "that ability" (the chosen keyword) to the
+	// source. Lowering reads it to emit an at-random modal keyword grant.
+	KeywordGrantChoiceAtRandom bool `json:",omitempty"`
+	// KeywordChoiceAtRandomPreludeSpan is the source span of the leading "choose
+	// <keyword> or <keyword> at random." sentence folded onto a
+	// KeywordGrantChoiceAtRandom grant. The candidate keywords live in that
+	// prelude sentence, ahead of the grant clause, so lowering widens the trigger
+	// body span to cover it; otherwise the keywords fall outside the body and the
+	// keyword-span reconciliation rejects the trigger. It is the zero span for
+	// every effect that is not an at-random keyword-choice grant.
+	KeywordChoiceAtRandomPreludeSpan shared.Span `json:"-"`
 	// RevealUntilThenPut marks each effect of the recognized closed "reveal
 	// cards from the top of <library> until <player> reveal a <type> card, then
 	// put those cards into <zone>" sequence. The parser keeps the three-effect

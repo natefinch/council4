@@ -1037,6 +1037,22 @@ type optionalFlowPlan struct {
 	// controller decides each one separately. It is mutually exclusive with the
 	// enabled/bareIndex shapes.
 	independentOptional bool
+	// gateOnFailure inverts the affirmative gate so the gated tail runs when the
+	// publishing effect FAILED rather than succeeded ("if no life is lost this
+	// way, convert" — Blitzwing, Cruel Tormentor). It applies Succeeded: TriFalse
+	// to the gated instructions instead of the default TriTrue. It is meaningful
+	// only for the mandatory no-life-lost flow; every other flow leaves it false.
+	gateOnFailure bool
+}
+
+// gateSucceeded reports the TriState the affirmative gate requires of the
+// publishing effect's result: TriFalse for the inverted no-life-lost flow,
+// TriTrue for every ordinary "if you do" flow.
+func (p optionalFlowPlan) gateSucceeded() game.TriState {
+	if p.gateOnFailure {
+		return game.TriFalse
+	}
+	return game.TriTrue
 }
 
 // marksOptional reports whether the optional flow marks the instruction produced
@@ -1114,6 +1130,9 @@ func planOptionalFlow(content compiler.AbilityContent) (optionalFlowPlan, bool) 
 	}
 	if optionalIndex == -1 {
 		if plan, ok, handled := planMandatoryIfYouDoFlow(content); handled {
+			return plan, ok
+		}
+		if plan, ok, handled := planMandatoryNoLifeLostFlow(content); handled {
 			return plan, ok
 		}
 		return optionalFlowPlan{bareIndex: -1, elseIndex: -1, elseGateCondition: -1, extraOptionalIndex: -1}, true
@@ -1480,8 +1499,86 @@ func planMandatoryIfYouDoFlow(content compiler.AbilityContent) (plan optionalFlo
 	}, true, true
 }
 
-// applyGatedOptionalFlow wires the single instruction produced by a nested
-// "you may Y" effect that follows an "If you do" gate ("you may X. If you do,
+// planMandatoryNoLifeLostFlow detects the mandatory negated resolving-success
+// gate "X loses life ... If no life is lost this way, Y." (Blitzwing, Cruel
+// Tormentor). The leading lose-life effect publishes whether it caused any life
+// loss and the trailing gated effect resolves only when it did not — the failure
+// complement of the "if you do" gate handled by planMandatoryIfYouDoFlow, wired
+// as an inverted affirmative gate (gateOnFailure) so the tail is gated on
+// Succeeded: TriFalse.
+//
+// handled is false when the sequence carries no "no life is lost this way" gate,
+// so the caller proceeds with normal ungated lowering. When the gate is present
+// but does not form a supported pair (its publisher is not a plain mandatory
+// lose-life effect immediately before a single gated tail), it returns
+// handled=true with ok=false so the caller fails closed.
+func planMandatoryNoLifeLostFlow(content compiler.AbilityContent) (plan optionalFlowPlan, ok bool, handled bool) {
+	gateCondition := -1
+	for ci := range content.Conditions {
+		condition := content.Conditions[ci]
+		if condition.Predicate != compiler.ConditionPredicateNoLifeLostThisWay {
+			continue
+		}
+		if gateCondition != -1 ||
+			condition.Kind != compiler.ConditionIf ||
+			condition.Negated ||
+			condition.Intervening {
+			return optionalFlowPlan{}, false, true
+		}
+		gateCondition = ci
+	}
+	if gateCondition == -1 {
+		return optionalFlowPlan{}, false, false
+	}
+	gateConditionOrder := content.Conditions[gateCondition].Order
+	gateIndex := -1
+	for i := range content.Effects {
+		if content.Effects[i].Order.Contains(gateConditionOrder) {
+			gateIndex = i
+			break
+		}
+	}
+	if gateIndex <= 0 {
+		return optionalFlowPlan{}, false, true
+	}
+	publishIndex := gateIndex - 1
+	// The publishing effect must be a plain mandatory lose-life effect: "no life
+	// is lost this way" reports the resolving success of a preceding life loss,
+	// so any other publisher shape is not the printed antecedent and fails closed.
+	if content.Effects[publishIndex].Kind != compiler.EffectLose ||
+		content.Effects[publishIndex].Optional ||
+		content.Effects[publishIndex].Negated ||
+		content.Effects[publishIndex].DelayedTiming != 0 ||
+		content.Effects[publishIndex].Order.Contains(gateConditionOrder) {
+		return optionalFlowPlan{}, false, true
+	}
+	// Every effect from the gate index onward must belong to the single gated
+	// clause and be a plain mandatory effect, mirroring planMandatoryIfYouDoFlow's
+	// contiguous-tail requirement so an independent ungated effect cannot silently
+	// resolve as though gated.
+	for i := gateIndex; i < len(content.Effects); i++ {
+		effect := content.Effects[i]
+		if effect.Optional ||
+			effect.Negated ||
+			effect.DelayedTiming != 0 ||
+			!effect.Order.Contains(gateConditionOrder) {
+			return optionalFlowPlan{}, false, true
+		}
+	}
+	return optionalFlowPlan{
+		enabled:                true,
+		optionalIndex:          publishIndex,
+		gateIndex:              gateIndex,
+		gateCondition:          gateCondition,
+		bareIndex:              -1,
+		elseIndex:              -1,
+		elseGateCondition:      -1,
+		publishWithoutOptional: true,
+		extraOptionalIndex:     -1,
+		gateOnFailure:          true,
+	}, true, true
+}
+
 // you may Y"): it is gated on X having succeeded (ResultGate TriTrue) and is
 // itself Optional so the engine asks the controller whether to perform Y only
 // when X happened. The runtime evaluates the result gate before the optional
@@ -1611,7 +1708,7 @@ func applyOptionalFlowEnvelope(plan optionalFlowPlan, i int, sequence []game.Ins
 				if !applyGatedOptionalFlow(sequence) {
 					return "structural — gated optional not single-instruction", false
 				}
-			} else if !applyOptionalFlowGate(sequence, game.TriTrue) {
+			} else if !applyOptionalFlowGate(sequence, plan.gateSucceeded()) {
 				return "structural — if-you-do gate not applicable", false
 			}
 		}

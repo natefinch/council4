@@ -2173,7 +2173,7 @@ func lowerPermanentKeywordGrantSpell(ctx contentCtx) (game.AbilityContent, *shar
 		if duration != game.DurationPermanent {
 			return unsupported()
 		}
-		return keywordChoiceGrantContent(keywords, abilities, object, target, game.DurationPermanent)
+		return keywordChoiceGrantContent(keywords, abilities, object, target, game.DurationPermanent, false)
 	}
 	mode := game.Mode{
 		Sequence: []game.Instruction{{

@@ -74,6 +74,7 @@ var Cards = []cardset.Entry{
 	{Name: "Blessing", New: Blessing},
 	{Name: "Blitz Leech", New: BlitzLeech},
 	{Name: "Blitz of the Thunder-Raptor", New: BlitzOfTheThunderRaptor},
+	{Name: "Blitzwing, Cruel Tormentor", New: BlitzwingCruelTormentor},
 	{Name: "Blood-Chin Rager", New: BloodChinRager},
 	{Name: "Blood Cultist", New: BloodCultist},
 	{Name: "Bloodletter Quill", New: BloodletterQuill},

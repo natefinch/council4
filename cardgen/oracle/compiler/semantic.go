@@ -917,6 +917,13 @@ const (
 	// defending-player counterpart of ConditionPredicateEventPlayerDoesNotPay,
 	// satisfied when the offered payment is declined (Shrouded Serpent).
 	ConditionPredicateDefendingPlayerDoesNotPay
+	// ConditionPredicateNoLifeLostThisWay is satisfied when the immediately
+	// preceding lose-life effect caused no life loss ("if no life is lost this
+	// way"). It is the failure complement of the "if you do" resolving-success
+	// gate: the gated effect runs only when the prior lose-life effect published
+	// a failed result (CR 608.2c). It backs Blitzwing, Cruel Tormentor's
+	// end-step convert. Added last so existing kinds keep their wire values.
+	ConditionPredicateNoLifeLostThisWay
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard
@@ -2503,6 +2510,17 @@ type CompiledEffect struct {
 	// rather than a conjunctive grant of every listed keyword. Lowering keys on
 	// it to emit a choose-one keyword grant instead of granting all keywords.
 	KeywordGrantChoice bool
+	// KeywordGrantChoiceAtRandom marks a KeywordGrantChoice grant whose one
+	// chosen keyword is selected at random rather than by the controller (the
+	// two-sentence "choose <keyword> or <keyword> at random. <source> gains that
+	// ability until end of turn." construction). Lowering keys on it to emit an
+	// at-random modal keyword grant instead of a controller-chosen one.
+	KeywordGrantChoiceAtRandom bool
+	// KeywordChoiceAtRandomPreludeSpan covers the folded "choose <keyword> or
+	// <keyword> at random." prelude sentence so lowering widens the trigger body
+	// span to cover the listed keywords. It is the zero span for every effect
+	// that is not an at-random keyword-choice grant.
+	KeywordChoiceAtRandomPreludeSpan shared.Span
 	// RevealUntilThenPut carries the parser's typed marker for the closed
 	// "reveal from the top of a library until a <type> card, then put those
 	// cards into <zone>" sequence. It is set on each of the three effects of
@@ -3546,6 +3564,16 @@ const (
 	// Restless); lowering reads the controller's commander cast count. Added last
 	// so existing kinds keep their wire values.
 	DynamicAmountCommanderCastCount
+	// DynamicAmountReferencedPlayerLifeLostThisTurn is the total life the player
+	// named by "that player" lost so far this turn ("target opponent loses life
+	// equal to the life that player lost this turn", Blitzwing, Cruel Tormentor).
+	// DynamicAmountReferencedPlayerLifeGainedThisTurn is the life-gained sibling.
+	// Unlike the controller-scoped DynamicAmountLifeLostThisTurn family, "that
+	// player" co-refers with the effect's referenced/target player, so lowering
+	// binds the count to that player. Added last so existing kinds keep their
+	// wire values.
+	DynamicAmountReferencedPlayerLifeLostThisTurn
+	DynamicAmountReferencedPlayerLifeGainedThisTurn
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.

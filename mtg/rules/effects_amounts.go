@@ -157,7 +157,9 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj opt.V[*game.StackObject], c
 		}
 	case game.DynamicAmountSpellsCastThisTurn, game.DynamicAmountLifeLostThisTurn,
 		game.DynamicAmountLifeGainedThisTurn, game.DynamicAmountCardsDrawnThisTurn:
-		amount = turnEventDynamicAmount(g, controller, dynamic.Kind)
+		if player, ok := resolveTurnEventPlayer(g, obj, controller, dynamic.Player); ok {
+			amount = turnEventDynamicAmount(g, player, dynamic.Kind)
+		}
 	case game.DynamicAmountCardsNamedSourceInGraveyards:
 		amount = countCardsNamedSourceInAllGraveyards(g, obj.Val)
 	case game.DynamicAmountCardsNamedSourceInControllerGraveyard:
@@ -237,6 +239,25 @@ func blockingCreaturesBeyondFirst(g *game.Game, obj *game.StackObject) int {
 		return 0
 	}
 	return blockers - 1
+}
+
+// resolveTurnEventPlayer resolves the player whose turn-event totals a
+// referenced-player amount reads. A nil reference (the common controller-scoped
+// case) resolves to controller. A non-nil reference — set only by the "the life
+// that player lost/gained this turn" family — resolves against the resolving
+// stack object, matching the player the effect targets. It returns ok=false when
+// a non-controller reference cannot be resolved without a stack object.
+func resolveTurnEventPlayer(g *game.Game, obj opt.V[*game.StackObject], controller game.PlayerID, ref *game.PlayerReference) (game.PlayerID, bool) {
+	if ref == nil {
+		return controller, true
+	}
+	if obj.Exists {
+		return resolvePlayerReference(g, obj.Val, *ref)
+	}
+	if ref.Kind() == game.PlayerReferenceController {
+		return controller, true
+	}
+	return 0, false
 }
 
 // turnEventDynamicAmount dispatches the controller-scoped amounts derived from
