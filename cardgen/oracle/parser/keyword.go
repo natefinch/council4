@@ -30,6 +30,7 @@ const (
 	KeywordCumulativeUpkeep KeywordKind = "KeywordCumulativeUpkeep"
 	KeywordCycling          KeywordKind = "KeywordCycling"
 	KeywordDeathtouch       KeywordKind = "KeywordDeathtouch"
+	KeywordDecayed          KeywordKind = "KeywordDecayed"
 	KeywordDefender         KeywordKind = "KeywordDefender"
 	KeywordDelve            KeywordKind = "KeywordDelve"
 	KeywordDevoid           KeywordKind = "KeywordDevoid"
@@ -201,6 +202,7 @@ var keywordNames = map[KeywordKind]string{
 	KeywordCumulativeUpkeep:  "Cumulative upkeep",
 	KeywordCycling:           "Cycling",
 	KeywordDeathtouch:        "Deathtouch",
+	KeywordDecayed:           "Decayed",
 	KeywordDefender:          "Defender",
 	KeywordDelve:             "Delve",
 	KeywordDevoid:            "Devoid",
@@ -344,6 +346,7 @@ var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordConvoke, Words: []string{"convoke"}},
 	{Kind: KeywordCycling, Words: []string{"cycling"}},
 	{Kind: KeywordDeathtouch, Words: []string{"deathtouch"}},
+	{Kind: KeywordDecayed, Words: []string{"decayed"}},
 	{Kind: KeywordDefender, Words: []string{"defender"}},
 	{Kind: KeywordDelve, Words: []string{"delve"}},
 	{Kind: KeywordDevoid, Words: []string{"devoid"}},

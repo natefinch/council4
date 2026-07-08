@@ -35,6 +35,61 @@ func TestLowerMultiColorMultiSubtypeToken(t *testing.T) {
 	}
 }
 
+// TestLowerCreateDecayedToken verifies that "create a ... token with decayed"
+// synthesizes a token carrying decayed's two halves (CR 702.148): a can't-block
+// static (RuleEffectCantBlock on the source) and an attack-triggered delayed
+// end-of-combat self-sacrifice.
+func TestLowerCreateDecayedToken(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Decayed Maker",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Create a 2/2 black Zombie creature token with decayed.",
+		Colors:     []string{"B"},
+	})
+	create, ok := face.SpellAbility.Val.Modes[0].Sequence[0].Primitive.(game.CreateToken)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.CreateToken", face.SpellAbility.Val.Modes[0].Sequence[0].Primitive)
+	}
+	def, _ := create.Source.TokenDefRef()
+	cantBlock := false
+	for _, static := range def.StaticAbilities {
+		for _, rule := range static.RuleEffects {
+			if rule.Kind == game.RuleEffectCantBlock && rule.AffectedSource {
+				cantBlock = true
+			}
+		}
+	}
+	if !cantBlock {
+		t.Fatalf("decayed token missing can't-block static: %+v", def.StaticAbilities)
+	}
+	if len(def.TriggeredAbilities) != 1 {
+		t.Fatalf("decayed token triggered abilities = %d, want 1", len(def.TriggeredAbilities))
+	}
+	trigger := def.TriggeredAbilities[0]
+	if trigger.Trigger.Pattern.Event != game.EventAttackerDeclared {
+		t.Fatalf("decayed trigger event = %v, want EventAttackerDeclared", trigger.Trigger.Pattern.Event)
+	}
+	delayed, ok := trigger.Content.Modes[0].Sequence[0].Primitive.(game.CreateDelayedTrigger)
+	if !ok {
+		t.Fatalf("decayed trigger primitive = %T, want game.CreateDelayedTrigger", trigger.Content.Modes[0].Sequence[0].Primitive)
+	}
+	if delayed.Trigger.Timing != game.DelayedAtEndOfCombat {
+		t.Fatalf("decayed delayed timing = %v, want DelayedAtEndOfCombat", delayed.Trigger.Timing)
+	}
+	sac, ok := delayed.Trigger.Content.Modes[0].Sequence[0].Primitive.(game.Sacrifice)
+	if !ok {
+		t.Fatalf("decayed delayed primitive = %T, want game.Sacrifice", delayed.Trigger.Content.Modes[0].Sequence[0].Primitive)
+	}
+	// A token has CardInstanceID == 0, so the self-sacrifice must reference the
+	// permanent by ObjectID (SourcePermanentReference); a card-based reference
+	// would fail to resolve and never sacrifice the token.
+	if sac.Object.Kind() != game.ObjectReferenceSourcePermanent {
+		t.Fatalf("decayed sacrifice object kind = %v, want ObjectReferenceSourcePermanent", sac.Object.Kind())
+	}
+}
+
 func TestLowerCreateMapTokenSource(t *testing.T) {
 	t.Parallel()
 	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{

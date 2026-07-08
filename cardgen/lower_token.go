@@ -839,6 +839,11 @@ func synthesizeCreatureTokenDef(effect *compiler.CompiledEffect, extraKeywords [
 			def.StaticAbilities = append(def.StaticAbilities, body)
 			continue
 		}
+		if keyword == parser.KeywordDecayed {
+			def.StaticAbilities = append(def.StaticAbilities, game.CantBlockStaticBody)
+			def.TriggeredAbilities = append(def.TriggeredAbilities, decayedSacrificeTrigger())
+			continue
+		}
 		static, ok := keywordStaticBodies[keyword]
 		if !ok {
 			return nil, false
@@ -851,6 +856,40 @@ func synthesizeCreatureTokenDef(effect *compiler.CompiledEffect, extraKeywords [
 		}
 	}
 	return def, true
+}
+
+// decayedSacrificeTrigger is the attack-triggered ability the Decayed keyword
+// (CR 702.148) grants a created token: "When this token attacks, sacrifice it at
+// end of combat." It schedules a delayed end-of-combat sacrifice of the token,
+// mirroring the delayed-disposal shape cards like Fog Elemental use. Decayed's
+// other half — "This creature can't block." — is added separately as
+// game.CantBlockStaticBody.
+func decayedSacrificeTrigger() game.TriggeredAbility {
+	return game.TriggeredAbility{
+		Trigger: game.TriggerCondition{
+			Type: game.TriggerWhen,
+			Pattern: game.TriggerPattern{
+				Event:  game.EventAttackerDeclared,
+				Source: game.TriggerSourceSelf,
+			},
+		},
+		Content: game.Mode{
+			Sequence: []game.Instruction{{
+				Primitive: game.CreateDelayedTrigger{
+					Trigger: game.DelayedTriggerDef{
+						Timing: game.DelayedAtEndOfCombat,
+						Content: game.Mode{
+							Sequence: []game.Instruction{{
+								Primitive: game.Sacrifice{
+									Object: game.SourcePermanentReference(),
+								},
+							}},
+						}.Ability(),
+					},
+				},
+			}},
+		}.Ability(),
+	}
 }
 
 // toxicTokenStaticBody builds the typed static-ability body granting a created
