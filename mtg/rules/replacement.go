@@ -128,6 +128,9 @@ func applyDamageModifications(g *game.Game, event damageEvent) int {
 					if replacement.DamagePreventedBecomesPlusOneCounters && event.permanent != nil {
 						addCountersToPermanentControlledBy(g, replacement.Controller, event.permanent, counter.PlusOnePlusOne, prevented)
 					}
+					if replacement.DamagePreventedRemovesPlusOneCounter && event.permanent != nil {
+						removePreventionPlusOneCounter(event.permanent, event.combatDamage)
+					}
 				}
 				continue
 			}
@@ -151,7 +154,25 @@ func applyDamageModifications(g *game.Game, event damageEvent) int {
 	return amount
 }
 
-// damageEventProtected reports whether the damage event's recipient has protection
+// removePreventionPlusOneCounter removes a single +1/+1 counter from a permanent
+// whose damage was prevented by a DamagePreventedRemovesPlusOneCounter
+// replacement (the Phantom mechanic). Combat damage from multiple sources is
+// dealt simultaneously (CR 510.2), so a Phantom that is gang-blocked has all of
+// that damage prevented but loses only one counter total: the first combat-damage
+// event of a step removes a counter and latches DamagePreventionCounterRemovedThisStep
+// (reset at the start of each combat damage pass), and later combat events in the
+// same step remove nothing. Each noncombat damage source is a separate event, so
+// it always removes a counter.
+func removePreventionPlusOneCounter(permanent *game.Permanent, combatDamage bool) {
+	if combatDamage {
+		if permanent.DamagePreventionCounterRemovedThisStep {
+			return
+		}
+		permanent.DamagePreventionCounterRemovedThisStep = true
+	}
+	permanent.Counters.Remove(counter.PlusOnePlusOne, 1)
+}
+
 // from the source, which prevents all of the damage (CR 702.16e).
 func damageEventProtected(g *game.Game, event damageEvent) bool {
 	if event.permanent != nil {

@@ -772,6 +772,13 @@ func (combatEngine) resolveDamagePass(g *game.Game, pass combatDamagePass, log *
 		return
 	}
 	eventStart := len(g.Events)
+	// Combat damage in this pass is dealt simultaneously (CR 510.2). Reset the
+	// per-step Phantom counter-removal latch so a gang-blocked Phantom loses at
+	// most one +1/+1 counter this pass (each pass is a separate step, so a
+	// double-strike attacker can still cost two counters across both passes).
+	for _, permanent := range g.Battlefield {
+		permanent.DamagePreventionCounterRemovedThisStep = false
+	}
 	blockerMap := blockersByAttacker(g)
 	blockerDamage := blockerCombatDamageAssignments(g, blockerMap, pass)
 	for _, declaration := range g.Combat.Attackers {
