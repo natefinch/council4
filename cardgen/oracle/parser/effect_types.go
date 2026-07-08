@@ -2277,7 +2277,12 @@ type EffectSyntax struct {
 	Destination        EffectDestinationPosition `json:",omitempty"`
 	EntersTapped       bool                      `json:",omitempty"`
 	EntersTappedSelf   bool                      `json:",omitempty"`
-	EntersWithCounters bool                      `json:",omitempty"`
+	// EntersTransformed reports the Transformers "converted" rider on a
+	// return-to-battlefield effect ("return it to the battlefield converted",
+	// CR 712): the returned transforming double-faced card enters as its back
+	// face. It is false for the plain untransformed return.
+	EntersTransformed  bool `json:",omitempty"`
+	EntersWithCounters bool `json:",omitempty"`
 	// GroupEntryModification carries the static "group enters modified"
 	// replacement families behind one typed operation discriminator: the
 	// enters-tapped-group form ("Creatures your opponents control enter tapped.",

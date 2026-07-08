@@ -226,6 +226,9 @@ func (r Renderer) renderPutOnBattlefield(ctx *renderCtx, value game.PutOnBattlef
 	if value.EntryTapped {
 		fields = append(fields, "EntryTapped: true,")
 	}
+	if value.EntryTransformed {
+		fields = append(fields, "EntryTransformed: true,")
+	}
 	if len(value.EntryCounters) > 0 {
 		counters, err := r.renderCounterPlacements(ctx, value.EntryCounters)
 		if err != nil {

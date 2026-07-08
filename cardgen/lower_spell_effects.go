@@ -38,6 +38,7 @@ func plainGraveyardReturn(effect compiler.CompiledEffect) bool {
 type graveyardReturnDestination struct {
 	Zone              zone.Type
 	EntryTapped       bool
+	EntryTransformed  bool
 	UnderYourControl  bool
 	DestinationBottom bool
 	EntryCounters     []game.CounterPlacement
@@ -66,9 +67,10 @@ func graveyardReturnInstruction(card game.CardReference, dest graveyardReturnDes
 		}}, true
 	case zone.Battlefield:
 		put := game.PutOnBattlefield{
-			Source:        game.CardBattlefieldSource(card),
-			EntryTapped:   dest.EntryTapped,
-			EntryCounters: dest.EntryCounters,
+			Source:           game.CardBattlefieldSource(card),
+			EntryTapped:      dest.EntryTapped,
+			EntryTransformed: dest.EntryTransformed,
+			EntryCounters:    dest.EntryCounters,
 		}
 		if dest.UnderYourControl {
 			put.Recipient = opt.Val(game.ControllerReference())
@@ -98,7 +100,7 @@ func lowerSelfCardGraveyardReturn(ctx contentCtx) (game.AbilityContent, bool) {
 	if !ok {
 		return game.AbilityContent{}, false
 	}
-	dest := graveyardReturnDestination{Zone: effect.ToZone, EntryTapped: effect.EntersTapped}
+	dest := graveyardReturnDestination{Zone: effect.ToZone, EntryTapped: effect.EntersTapped, EntryTransformed: effect.EntersTransformed}
 	switch effect.ToZone {
 	case zone.Hand:
 		if effect.EntersTapped || effect.CounterKindKnown || effect.Amount.Known {
@@ -378,6 +380,7 @@ func lowerTargetedGraveyardReturn(ctx contentCtx) (game.AbilityContent, bool) {
 	dest := graveyardReturnDestination{
 		Zone:             effect.ToZone,
 		EntryTapped:      effect.EntersTapped,
+		EntryTransformed: effect.EntersTransformed,
 		UnderYourControl: effect.UnderYourControl,
 	}
 	switch effect.ToZone {

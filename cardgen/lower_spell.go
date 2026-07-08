@@ -1778,6 +1778,7 @@ func lowerBackReferencedReanimation(ctx contentCtx) (game.AbilityContent, bool) 
 	instruction, ok := graveyardReturnInstruction(card, graveyardReturnDestination{
 		Zone:             zone.Battlefield,
 		EntryTapped:      effect.EntersTapped,
+		EntryTransformed: effect.EntersTransformed,
 		UnderYourControl: effect.UnderYourControl,
 	})
 	if !ok {
