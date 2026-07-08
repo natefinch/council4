@@ -695,6 +695,8 @@ func compileEffectDuration(duration parser.EffectDurationKind) DurationKind {
 		return DurationForAsLongAsControlledCreatureEnchanted
 	case parser.EffectDurationWhileThatPlayerIsMonarch:
 		return DurationForAsLongAsThatPlayerIsMonarch
+	case parser.EffectDurationWhileExiled:
+		return DurationForAsLongAsExiled
 	default:
 		return DurationNone
 	}

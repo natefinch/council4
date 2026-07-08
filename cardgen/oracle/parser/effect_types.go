@@ -593,6 +593,11 @@ const (
 	// while the triggering player remains the monarch. The effect expires when
 	// that player is no longer the monarch.
 	EffectDurationWhileThatPlayerIsMonarch EffectDurationKind = "EffectDurationWhileThatPlayerIsMonarch"
+	// EffectDurationWhileExiled matches "for as long as that card remains
+	// exiled", the play-permission window Prowl, Stoic Strategist grants the
+	// owner of a card it exiles from the battlefield. The permission expires
+	// when the exiled card leaves exile.
+	EffectDurationWhileExiled EffectDurationKind = "EffectDurationWhileExiled"
 )
 
 // SpellCostCasterKind names which player's spells a resolving spell cost

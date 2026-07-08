@@ -1947,6 +1947,10 @@ const (
 	// monarch" (Garland, Royal Kidnapper). The gain-control effect expires when
 	// the triggering player who became the monarch is no longer the monarch.
 	DurationForAsLongAsThatPlayerIsMonarch
+	// DurationForAsLongAsExiled matches "for as long as that card remains
+	// exiled" (Prowl, Stoic Strategist). The owner-scoped play permission
+	// expires when the exiled card leaves exile.
+	DurationForAsLongAsExiled
 )
 
 // StaticSubjectKind identifies the group affected by a static continuous effect.
