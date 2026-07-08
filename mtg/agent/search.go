@@ -157,6 +157,7 @@ func (s Searcher) searchAcrossWorlds(ctx rules.SearchContext, first *game.Game, 
 	applyPolicies := s.uniformPolicies()
 	resolvePolicies := s.resolvePolicies(me)
 	candidates := s.candidateActions(first, me, legal)
+	obs := rules.NewObservation(first, me)
 
 	best := candidates[0]
 	bestValue := math.Inf(-1)
@@ -165,13 +166,26 @@ func (s Searcher) searchAcrossWorlds(ctx rules.SearchContext, first *game.Game, 
 		for _, world := range worlds {
 			total += s.actionValue(sim, world, me, candidates[i], applyPolicies, resolvePolicies)
 		}
-		if average := total / float64(len(worlds)); average > bestValue {
+		average := total/float64(len(worlds)) + searchPolicyPriorWeight*s.Rollout.ScoreAction(obs, candidates[i])
+		if average > bestValue {
 			bestValue = average
 			best = candidates[i]
 		}
 	}
 	return best
 }
+
+// searchPolicyPriorWeight scales the rollout policy's per-action score when it is
+// added to a candidate's evaluated position value. The position value (Evaluate)
+// dominates when it clearly separates candidates, but on the many decisions where
+// it does not — playing a land nets about zero (the mana source gained cancels
+// the card spent from hand), tapping a land for mana is neutral (a tapped source
+// still counts), a small spell barely registers — a value-only search picks
+// arbitrarily. The rollout policy's tuned score then breaks the near-tie toward
+// the sound play (develop mana, do not float it, cast the better spell), the way
+// a policy prior guides a value search. It is deliberately small so a real
+// position difference still overrides the prior.
+const searchPolicyPriorWeight = 0.01
 
 // searchBestAction is the search core, separated from the SearchContext so it can
 // be driven directly in tests with a Simulator and a constructed world. It plays
@@ -188,11 +202,13 @@ func (s Searcher) searchBestAction(sim rules.Simulator, world *game.Game, me gam
 	candidates := s.candidateActions(world, me, legal)
 	applyPolicies := s.uniformPolicies()
 	resolvePolicies := s.resolvePolicies(me)
+	obs := rules.NewObservation(world, me)
 
 	best := candidates[0]
 	bestValue := math.Inf(-1)
 	for i := range candidates {
-		value := s.actionValue(sim, world, me, candidates[i], applyPolicies, resolvePolicies)
+		value := s.actionValue(sim, world, me, candidates[i], applyPolicies, resolvePolicies) +
+			searchPolicyPriorWeight*s.Rollout.ScoreAction(obs, candidates[i])
 		if value > bestValue {
 			bestValue = value
 			best = candidates[i]
