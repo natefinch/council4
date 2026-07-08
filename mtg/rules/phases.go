@@ -341,6 +341,7 @@ func (*Engine) advanceToNextTurn(g *game.Game) {
 	g.ActivatedAbilitiesThisTurn = make(map[game.ActivatedAbilityUse]bool)
 	g.AbilityActivationsThisTurn = make(map[game.ActivatedAbilityUse]int)
 	g.TriggeredAbilitiesThisTurn = make(map[game.TriggeredAbilityUse]int)
+	g.ResolvedTriggeredAbilitiesThisTurn = make(map[game.TriggeredAbilityUse]int)
 	g.Combat = nil
 	markCurrentTurnEventStart(g)
 }

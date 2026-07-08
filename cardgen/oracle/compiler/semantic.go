@@ -924,6 +924,12 @@ const (
 	// a failed result (CR 608.2c). It backs Blitzwing, Cruel Tormentor's
 	// end-step convert. Added last so existing kinds keep their wire values.
 	ConditionPredicateNoLifeLostThisWay
+	// ConditionPredicateSourceAbilityResolutionOrdinalThisTurn is satisfied when
+	// the resolving triggered ability has resolved exactly Threshold times this
+	// turn, counting the current resolution ("if this is the second time this
+	// ability has resolved this turn"; Prowl, Pursuit Vehicle). Added last so
+	// existing kinds keep their wire values.
+	ConditionPredicateSourceAbilityResolutionOrdinalThisTurn
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard

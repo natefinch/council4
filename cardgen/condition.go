@@ -205,6 +205,8 @@ func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringC
 		result.FirstCombatPhaseOfTurn = true
 	case compiler.ConditionPredicateControllerTurn:
 		result.SourceControllerTurn = true
+	case compiler.ConditionPredicateSourceAbilityResolutionOrdinalThisTurn:
+		result.SourceAbilityResolutionOrdinalThisTurn = condition.Threshold
 	case compiler.ConditionPredicateControlsGreatestPowerCreature:
 		result.ControllerControlsGreatestPowerCreature = true
 	case compiler.ConditionPredicateControlsGreatestToughnessCreature:
@@ -386,6 +388,14 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 		case compiler.ConditionPredicateFirstCombatPhaseOfTurn:
 			return ctx == conditionContextEffectGate ||
 				ctx == conditionContextInterveningTrigger
+		case compiler.ConditionPredicateSourceAbilityResolutionOrdinalThisTurn:
+			// "If this is the second time this ability has resolved this turn,
+			// convert Prowl." gates the trailing effect of a resolving triggered
+			// ability on that ability's own per-turn resolution count. The runtime
+			// reads the resolving stack object's tally, which is available only
+			// while the triggered ability resolves, so it is confined to the
+			// per-effect sequence gate.
+			return ctx == conditionContextEffectGate
 		case compiler.ConditionPredicateControllerTurn:
 			// The "During your turn," self-static gate and the "If it's your
 			// turn," per-effect sequence gate (the Fated cycle) both read the
@@ -798,4 +808,22 @@ func lowerEventHistoryWindow(window compiler.ConditionEventHistoryWindow) (game.
 	default:
 		return game.EventHistoryCurrentTurn, false
 	}
+}
+
+// abilityContentGatesOnResolutionCount reports whether any instruction in the
+// content is gated by the per-turn resolution-count predicate ("if this is the
+// second time this ability has resolved this turn"; Prowl, Pursuit Vehicle). It
+// lets the lowerer flag the enclosing triggered ability so the runtime tallies
+// the ability's resolutions.
+func abilityContentGatesOnResolutionCount(content *game.AbilityContent) bool {
+	for i := range content.Modes {
+		for j := range content.Modes[i].Sequence {
+			condition := content.Modes[i].Sequence[j].Condition
+			if condition.Exists && condition.Val.Condition.Exists &&
+				condition.Val.Condition.Val.SourceAbilityResolutionOrdinalThisTurn > 0 {
+				return true
+			}
+		}
+	}
+	return false
 }

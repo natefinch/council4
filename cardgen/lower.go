@@ -389,7 +389,11 @@ func appendSimpleLoweredAbilities(result *loweredFaceAbilities, lowered *ability
 		result.LoyaltyAbilities = append(result.LoyaltyAbilities, lowered.loyaltyAbility.Val)
 	}
 	if lowered.triggeredAbility.Exists {
-		result.TriggeredAbilities = append(result.TriggeredAbilities, lowered.triggeredAbility.Val)
+		ability := lowered.triggeredAbility.Val
+		if abilityContentGatesOnResolutionCount(&ability.Content) {
+			ability.CountsResolutionsThisTurn = true
+		}
+		result.TriggeredAbilities = append(result.TriggeredAbilities, ability)
 	}
 	if lowered.chapterAbility.Exists {
 		result.ChapterAbilities = append(result.ChapterAbilities, lowered.chapterAbility.Val)

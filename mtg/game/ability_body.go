@@ -108,6 +108,13 @@ type TriggeredAbility struct {
 	Trigger            TriggerCondition
 	Optional           bool
 	MaxTriggersPerTurn int
+	// CountsResolutionsThisTurn marks a triggered ability that tallies its own
+	// per-turn resolution count so a consequence can gate on it ("if this is the
+	// second time this ability has resolved this turn"; Prowl, Pursuit Vehicle).
+	// When set, the ability increments Game.ResolvedTriggeredAbilitiesThisTurn as
+	// it begins resolving. It is false for the abilities that never read the
+	// tally, keeping the map empty for the common case.
+	CountsResolutionsThisTurn bool
 	// KeywordAbilities lists keyword abilities carried by this triggered ability,
 	// e.g. WardKeyword for ward triggers. Rules use it for keyword dispatch without
 	// inspecting Content.

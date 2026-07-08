@@ -123,6 +123,9 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 	case parser.ConditionPredicateSpellXAtLeast:
 		condition.Predicate = ConditionPredicateSpellXAtLeast
 		condition.Threshold = clause.Threshold
+	case parser.ConditionPredicateSourceAbilityResolutionOrdinalThisTurn:
+		condition.Predicate = ConditionPredicateSourceAbilityResolutionOrdinalThisTurn
+		condition.Threshold = clause.Threshold
 	case parser.ConditionPredicateColoredManaSpentToCastAtLeast:
 		manaColor := compileTriggerColor(clause.ManaSpentColor)
 		if manaColor == "" {
