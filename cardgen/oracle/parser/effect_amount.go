@@ -950,6 +950,9 @@ func parseDynamicAmountSubjectHelper(tokens []shared.Token, start int, atoms Ato
 	if subject, ok := parseDynamicSpellsCastThisTurnSubject(tokens, start); ok {
 		return subject, true
 	}
+	if subject, ok := parseDynamicReferencedPlayerLifeChangedThisTurnSubject(tokens, start); ok {
+		return subject, true
+	}
 	if subject, ok := parseDynamicLifeChangedThisTurnSubject(tokens, start); ok {
 		return subject, true
 	}
@@ -1299,6 +1302,56 @@ func parseDynamicLifeChangedThisTurnSubject(tokens []shared.Token, start int) (d
 	}
 	return dynamicAmountSubject{
 		amount: EffectAmountSyntax{DynamicKind: kind},
+		end:    idx,
+	}, true
+}
+
+// parseDynamicReferencedPlayerLifeChangedThisTurnSubject recognizes the life a
+// referenced player gained or lost so far this turn as a dynamic amount subject
+// ("the (amount of )?life that player (gained|lost) this turn"). Unlike the
+// controller-scoped parseDynamicLifeChangedThisTurnSubject "you" form, the
+// subject is the player named by "that player", so it attaches that player's
+// two-token span in ReferenceSpan and the lowering binds the count to the
+// referenced/target player (Blitzwing, Cruel Tormentor: "target opponent loses
+// life equal to the life that player lost this turn"). It fails closed on any
+// other wording.
+func parseDynamicReferencedPlayerLifeChangedThisTurnSubject(tokens []shared.Token, start int) (dynamicAmountSubject, bool) {
+	if !effectWordsAt(tokens, start, "the") {
+		return dynamicAmountSubject{}, false
+	}
+	idx := start + 1
+	switch {
+	case effectWordsAt(tokens, idx, "amount", "of", "life"):
+		idx += 3
+	case effectWordsAt(tokens, idx, "life"):
+		idx++
+	default:
+		return dynamicAmountSubject{}, false
+	}
+	if !effectWordsAt(tokens, idx, "that", "player") {
+		return dynamicAmountSubject{}, false
+	}
+	referenceSpan := shared.SpanOf(tokens[idx : idx+2])
+	idx += 2
+	var kind EffectDynamicAmountKind
+	switch {
+	case effectWordsAt(tokens, idx, "lost"):
+		kind = EffectDynamicAmountReferencedPlayerLifeLostThisTurn
+	case effectWordsAt(tokens, idx, "gained"):
+		kind = EffectDynamicAmountReferencedPlayerLifeGainedThisTurn
+	default:
+		return dynamicAmountSubject{}, false
+	}
+	idx++
+	if !effectWordsAt(tokens, idx, "this", "turn") {
+		return dynamicAmountSubject{}, false
+	}
+	idx += 2
+	if !dynamicAmountBoundary(tokens, idx) {
+		return dynamicAmountSubject{}, false
+	}
+	return dynamicAmountSubject{
+		amount: EffectAmountSyntax{DynamicKind: kind, ReferenceSpan: referenceSpan},
 		end:    idx,
 	}, true
 }

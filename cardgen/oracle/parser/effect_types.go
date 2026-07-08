@@ -903,6 +903,17 @@ const (
 	// Restless). It is controller-scoped and carries no in-text referent. Added
 	// last so existing kinds keep their values.
 	EffectDynamicAmountCommanderCastCount EffectDynamicAmountKind = "EffectDynamicAmountCommanderCastCount"
+	// EffectDynamicAmountReferencedPlayerLifeLostThisTurn is the total life the
+	// player named by "that player" has lost so far this turn ("target opponent
+	// loses life equal to the life that player lost this turn", Blitzwing, Cruel
+	// Tormentor). EffectDynamicAmountReferencedPlayerLifeGainedThisTurn is the
+	// life-gained sibling. Unlike the controller-scoped LifeLostThisTurn family,
+	// "that player" co-refers with the effect's referenced player, so the subject
+	// attaches that player's span in ReferenceSpan and the lowering binds the
+	// count to the referenced/target player. Added last so existing kinds keep
+	// their values.
+	EffectDynamicAmountReferencedPlayerLifeLostThisTurn   EffectDynamicAmountKind = "EffectDynamicAmountReferencedPlayerLifeLostThisTurn"
+	EffectDynamicAmountReferencedPlayerLifeGainedThisTurn EffectDynamicAmountKind = "EffectDynamicAmountReferencedPlayerLifeGainedThisTurn"
 )
 
 // EffectDynamicAmountForm identifies how a dynamic amount is introduced.

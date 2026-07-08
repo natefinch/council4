@@ -3553,6 +3553,16 @@ const (
 	// Restless); lowering reads the controller's commander cast count. Added last
 	// so existing kinds keep their wire values.
 	DynamicAmountCommanderCastCount
+	// DynamicAmountReferencedPlayerLifeLostThisTurn is the total life the player
+	// named by "that player" lost so far this turn ("target opponent loses life
+	// equal to the life that player lost this turn", Blitzwing, Cruel Tormentor).
+	// DynamicAmountReferencedPlayerLifeGainedThisTurn is the life-gained sibling.
+	// Unlike the controller-scoped DynamicAmountLifeLostThisTurn family, "that
+	// player" co-refers with the effect's referenced/target player, so lowering
+	// binds the count to that player. Added last so existing kinds keep their
+	// wire values.
+	DynamicAmountReferencedPlayerLifeLostThisTurn
+	DynamicAmountReferencedPlayerLifeGainedThisTurn
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.
