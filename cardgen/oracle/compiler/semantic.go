@@ -1887,6 +1887,13 @@ const (
 	// controller if able, until that player's next turn. Added last so existing
 	// kinds keep their wire values.
 	EffectGoad
+	// EffectMonstrosity is the monstrosity keyword action (CR 701.32) written out
+	// as an activated ability effect ("Monstrosity N."): if the source creature
+	// isn't monstrous, it gets N +1/+1 counters and becomes monstrous. It lowers
+	// to a game.Monstrosity primitive scoped to the source permanent; the runtime
+	// guard subsumes the printed "if this creature isn't monstrous" reminder.
+	// Added last so existing kinds keep their wire values.
+	EffectMonstrosity
 )
 
 // DurationKind identifies common continuous-effect durations.

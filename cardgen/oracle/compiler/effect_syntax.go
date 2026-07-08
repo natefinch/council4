@@ -566,6 +566,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectRenown
 	case parser.EffectAdapt:
 		return EffectAdapt
+	case parser.EffectMonstrosity:
+		return EffectMonstrosity
 	case parser.EffectConnive:
 		return EffectConnive
 	case parser.EffectDevour:

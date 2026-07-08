@@ -1392,6 +1392,23 @@ func (r Renderer) renderAdapt(ctx *renderCtx, value game.Adapt) (string, error) 
 	}), nil
 }
 
+// renderMonstrosity renders a Monstrosity primitive, emitting the source
+// permanent reference and the fixed +1/+1 counter count.
+func (r Renderer) renderMonstrosity(ctx *renderCtx, value game.Monstrosity) (string, error) {
+	object, err := r.renderObjectReference(value.Object)
+	if err != nil {
+		return "", err
+	}
+	amount, err := r.renderQuantity(ctx, value.Amount)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.Monstrosity", []string{
+		fmt.Sprintf("Object: %s,", object),
+		fmt.Sprintf("Amount: %s,", amount),
+	}), nil
+}
+
 // renderConnive renders a Connive primitive, emitting the conniving permanent's
 // object reference, the drawing/discarding player reference, and the fixed
 // connive count.

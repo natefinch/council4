@@ -121,6 +121,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return exactStandaloneActionEffectSyntax(effect, "renown")
 	case EffectAdapt:
 		return exactStandaloneActionEffectSyntax(effect, "Adapt")
+	case EffectMonstrosity:
+		return exactStandaloneActionEffectSyntax(effect, "Monstrosity")
 	case EffectConnive:
 		return exactConniveEffectSyntax(effect)
 	case EffectLose:

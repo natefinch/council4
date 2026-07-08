@@ -2362,6 +2362,26 @@ func lowerAdaptContent(
 	)
 }
 
+// lowerMonstrosityContent lowers the monstrosity keyword action written out as an
+// activated ability effect ("Monstrosity N."). It produces a game.Monstrosity
+// primitive targeting the source permanent and carrying the fixed counter count.
+// The runtime guard adds the counters and sets the permanent monstrous only when
+// it isn't already monstrous, subsuming the printed "if this creature isn't
+// monstrous" reminder.
+func lowerMonstrosityContent(
+	ctx contentCtx,
+	syntax *parser.Ability,
+) (game.AbilityContent, *shared.Diagnostic) {
+	return lowerExactPrimitiveSpell(
+		ctx,
+		syntax,
+		"monstrosity",
+		func(amount game.Quantity) game.Primitive {
+			return game.Monstrosity{Object: game.SourcePermanentReference(), Amount: amount}
+		},
+	)
+}
+
 // lowerConniveContent lowers connive for the source permanent, one exact target,
 // or one referenced permanent. The conniving permanent's controller draws and
 // discards, and that permanent receives the counters. A bare "connives" is one;
