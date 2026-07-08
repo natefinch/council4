@@ -171,3 +171,124 @@ func TestApplyPlayLandFromExileWithoutCounterRejected(t *testing.T) {
 		t.Fatal("exiled land without a croak counter was playable through the action path")
 	}
 }
+
+// grolnokOmnivorePermanent gives playerID a battlefield permanent carrying
+// Grolnok, the Omnivore's paired abilities: the play/cast-from-exile static and
+// the "whenever a permanent card is put into your graveyard from your library,
+// exile it with a croak counter on it" trigger, whose subject is filtered to the
+// permanent card types so instants and sorceries are excluded.
+func grolnokOmnivorePermanent(g *game.Game, playerID game.PlayerID) *game.Permanent {
+	return addCombatPermanent(g, playerID, &game.CardDef{CardFace: game.CardFace{
+		Name: "Grolnok, the Omnivore",
+		StaticAbilities: []game.StaticAbility{{
+			RuleEffects: []game.RuleEffect{
+				{
+					Kind:               game.RuleEffectPlayLandsFromZone,
+					AffectedPlayer:     game.PlayerYou,
+					CastFromZone:       zone.Exile,
+					PermanentTypes:     []types.Card{types.Land},
+					ExileCounterFilter: opt.Val(counter.Croak),
+				},
+				{
+					Kind:               game.RuleEffectCastSpellsFromZone,
+					AffectedPlayer:     game.PlayerYou,
+					CastFromZone:       zone.Exile,
+					ExileCounterFilter: opt.Val(counter.Croak),
+				},
+			},
+		}},
+		TriggeredAbilities: []game.TriggeredAbility{{
+			Trigger: game.TriggerCondition{
+				Type: game.TriggerWhenever,
+				Pattern: game.TriggerPattern{
+					Event:         game.EventZoneChanged,
+					Player:        game.TriggerPlayerYou,
+					MatchFromZone: true,
+					FromZone:      zone.Library,
+					MatchToZone:   true,
+					ToZone:        zone.Graveyard,
+					SubjectSelection: game.Selection{RequiredTypesAny: []types.Card{
+						types.Artifact, types.Battle, types.Creature,
+						types.Enchantment, types.Land, types.Planeswalker,
+					}},
+				},
+			},
+			Content: game.Mode{
+				Sequence: []game.Instruction{{
+					Primitive: game.MoveCard{
+						Card:        game.CardReference{Kind: game.CardReferenceEvent},
+						FromZone:    zone.Graveyard,
+						Destination: zone.Exile,
+						Counter:     opt.Val(counter.Croak),
+					},
+				}},
+			}.Ability(),
+		}},
+	}})
+}
+
+// TestGrolnokTriggerExilesMilledPermanentWithCroak drives Grolnok's trigger
+// end-to-end: a permanent card put into its owner's graveyard from their library
+// fires the trigger, which exiles it with a croak counter, and the play/cast
+// static then reaches it as a spell castable from exile.
+func TestGrolnokTriggerExilesMilledPermanentWithCroak(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	grolnokOmnivorePermanent(g, game.Player1)
+	creatureID := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name: "Milled Frog", Types: []types.Card{types.Creature}}})
+
+	g.TriggerEventCursor = len(g.Events)
+	if !moveCardBetweenZones(g, game.Player1, creatureID, zone.Library, zone.Graveyard) {
+		t.Fatal("could not move the creature from library to graveyard")
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("milling a permanent card did not fire Grolnok's exile trigger")
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if !g.Players[game.Player1].Exile.Contains(creatureID) {
+		t.Fatal("milled permanent was not exiled by Grolnok's trigger")
+	}
+	if !g.HasExileCounter(creatureID, counter.Croak) {
+		t.Fatal("exiled permanent is missing the croak counter placed by the trigger")
+	}
+	if !canCastSpellsFromZoneByRuleEffect(g, game.Player1, creatureID, zone.Exile, game.FaceFront) {
+		t.Fatal("croak-countered permanent in exile is not castable despite Grolnok's static")
+	}
+}
+
+// TestGrolnokTriggerIgnoresMilledInstantAndSorcery verifies the permanent-typed
+// subject filter: instants and sorceries put into the graveyard from the library
+// do not fire Grolnok's trigger and are never exiled.
+func TestGrolnokTriggerIgnoresMilledInstantAndSorcery(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		cardType types.Card
+	}{
+		{"instant", types.Instant},
+		{"sorcery", types.Sorcery},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+			engine := NewEngine(nil)
+			grolnokOmnivorePermanent(g, game.Player1)
+			cardID := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+				Name: "Milled Spell", Types: []types.Card{tc.cardType}}})
+
+			g.TriggerEventCursor = len(g.Events)
+			if !moveCardBetweenZones(g, game.Player1, cardID, zone.Library, zone.Graveyard) {
+				t.Fatal("could not move the card from library to graveyard")
+			}
+			if engine.putTriggeredAbilitiesOnStack(g) {
+				t.Fatalf("milling a %s wrongly fired Grolnok's permanent-only exile trigger", tc.name)
+			}
+			if !g.Players[game.Player1].Graveyard.Contains(cardID) {
+				t.Fatalf("milled %s left the graveyard despite the trigger not firing", tc.name)
+			}
+			if g.Players[game.Player1].Exile.Contains(cardID) {
+				t.Fatalf("milled %s was exiled even though it is not a permanent card", tc.name)
+			}
+		})
+	}
+}

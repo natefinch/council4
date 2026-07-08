@@ -104,6 +104,7 @@ var Cards = []*game.CardDef{
 	Griptide,
 	GrismoldTheDreadsower,
 	Grollub,
+	GrolnokTheOmnivore,
 	Groundskeeper,
 	GrowthCycle,
 	GuardianProject,
