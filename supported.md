@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,126 of 32,501 cards eligible for paper support (52.7%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,128 of 32,501 cards eligible for paper support (52.7%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -3171,6 +3171,7 @@ Council4 currently supports **17,126 of 32,501 cards eligible for paper support 
 - Cyan, Vengeful Samurai
 - Cycle of Renewal
 - Cyclonic Rift
+- Cyclonus, the Saboteur // Cyclonus, Cybertronian Fighter
 - Cyclopean Mummy
 - Cyclopean Snare
 - Cyclops Electromancer
@@ -13659,6 +13660,7 @@ Council4 currently supports **17,126 of 32,501 cards eligible for paper support 
 - Sphinx of Jwar Isle
 - Sphinx of Magosi
 - Sphinx of New Prahv
+- Sphinx of the Second Sun
 - Sphinx of the Steel Wind
 - Sphinx of Uthuun
 - Sphinx Sovereign
