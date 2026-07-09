@@ -38,6 +38,7 @@ var Cards = []cardset.Entry{
 	{Name: "Tenured Oilcaster", New: TenuredOilcaster},
 	{Name: "Terisian Mindbreaker", New: TerisianMindbreaker},
 	{Name: "Terra, Herald of Hope", New: TerraHeraldOfHope},
+	{Name: "Terrarion", New: Terrarion},
 	{Name: "Territorial Witchstalker", New: TerritorialWitchstalker},
 	{Name: "Terror", New: Terror},
 	{Name: "Tesak, Judith's Hellhound", New: TesakJudithSHellhound},

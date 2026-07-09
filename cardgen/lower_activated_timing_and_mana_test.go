@@ -617,17 +617,18 @@ func TestLowerManaAbilityTypedSacrifice(t *testing.T) {
 	}
 }
 
-// TestLowerManaAbilityRejectsComplexBody verifies that mana abilities with body
-// patterns outside the three supported shapes (fixed, choice, any-color) are
-// rejected. "Three mana in any combination" requires Amount > 1 with a
-// repeated-choice mechanism that is not yet supported.
+// TestLowerManaAbilityRejectsComplexBody verifies that a mana ability whose
+// body is outside the supported shapes still fails closed. Freely-split "add N
+// mana in any combination of <colors>" bodies over basic colors are now
+// supported (Goblin Clearcutter), but a combination that offers colorless {C}
+// is not modeled, so it must be rejected rather than lowered to a wrong output.
 func TestLowerManaAbilityRejectsComplexBody(t *testing.T) {
 	t.Parallel()
 	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
 		Name:       "Test Goblin",
 		Layout:     "normal",
 		TypeLine:   "Creature — Goblin",
-		OracleText: "{T}, Sacrifice a Forest: Add three mana in any combination of {R} and/or {G}.",
+		OracleText: "{T}, Sacrifice a Forest: Add three mana in any combination of {R}, {G}, and/or {C}.",
 		Power:      new("2"),
 		Toughness:  new("2"),
 	}, "t")

@@ -69,6 +69,7 @@ var Cards = []cardset.Entry{
 	{Name: "Primordial Hydra", New: PrimordialHydra},
 	{Name: "Prismari Charm", New: PrismariCharm},
 	{Name: "Prismari Pledgemage", New: PrismariPledgemage},
+	{Name: "Prismatic Geoscope", New: PrismaticGeoscope},
 	{Name: "Prismatic Undercurrents", New: PrismaticUndercurrents},
 	{Name: "Prison Sentence", New: PrisonSentence},
 	{Name: "Private Eye", New: PrivateEye},

@@ -2288,6 +2288,13 @@ func (r Renderer) renderAddMana(ctx *renderCtx, value *game.AddMana) (string, er
 		}
 		fields = append(fields, fmt.Sprintf("ManaColor: %s,", colorLiteral))
 	}
+	if len(value.CombinationColors) > 0 {
+		colorsLiteral, err := renderManaColorSlice(ctx, value.CombinationColors)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("CombinationColors: %s,", colorsLiteral))
+	}
 	if value.ChoiceFrom != "" {
 		fields = append(fields, fmt.Sprintf("ChoiceFrom: game.ChoiceKey(%q),", string(value.ChoiceFrom)))
 	}

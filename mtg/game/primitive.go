@@ -415,6 +415,16 @@ type AddMana struct {
 	// colors are recomputed at resolution as the union of the matching
 	// permanents' colors; an empty set produces no mana (CR 202.2, 605).
 	EachControlledColor *Selection
+	// CombinationColors, when non-empty, makes this instruction produce Amount
+	// mana distributed freely by the recipient among these colors ("add three
+	// mana in any combination of {R} and/or {G}", Goblin Clearcutter; "add two
+	// mana in any combination of colors", Manamorphose). Each of the Amount mana
+	// is independently one of these colors, chosen by the recipient at
+	// resolution (CR 106.1b), so a color may receive any share from zero up to
+	// the whole amount. It holds two or more distinct basic colors and is
+	// mutually exclusive with ManaColor, ChoiceFrom, EntryChoiceFrom,
+	// EachControlledColor, and SpendRider. Amount may be fixed or dynamic.
+	CombinationColors []mana.Color
 }
 
 // AddCounter places counters on a referenced permanent.

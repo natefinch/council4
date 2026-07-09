@@ -287,6 +287,18 @@ func parseEffectMana(kind EffectKind, tokens []shared.Token, connected bool) Eff
 			return EffectManaSyntax{Span: shared.SpanOf(body), AnyColor: true, AnyColorCount: count}
 		}
 	}
+	if len(body) >= 7 && effectWordsAt(body, 1, "mana", "in", "any", "combination", "of") {
+		if count, ok := manaAnyOneColorCount(body[0]); ok {
+			if colors, ok := combinationManaColorList(body[6:]); ok {
+				return EffectManaSyntax{
+					Span:              shared.SpanOf(body),
+					Combination:       true,
+					CombinationColors: colors,
+					CombinationCount:  count,
+				}
+			}
+		}
+	}
 	if len(body) == 10 &&
 		effectWordsAt(body, 0, "an", "amount", "of") &&
 		body[3].Kind == shared.Symbol &&
@@ -451,6 +463,51 @@ func manaAnyOneColorCount(token shared.Token) (int, bool) {
 		return 0, false
 	}
 	return count, true
+}
+
+// combinationManaColorList parses the color list of an "in any combination of
+// <colors>" body. The single word "colors" denotes all five basic colors in
+// WUBRG order (Manamorphose, Cascading Cataracts); otherwise the tokens are a
+// list of basic color symbols joined by commas and/or "and"/"or"/"/"
+// connectives ("{R} and/or {G}", Goblin Clearcutter). It requires two or more
+// distinct basic colors and rejects colorless ({C}) and any adjacent symbols,
+// so an unmodeled wording fails closed.
+func combinationManaColorList(tokens []shared.Token) ([]mana.Color, bool) {
+	if len(tokens) == 1 && equalWord(tokens[0], "colors") {
+		return []mana.Color{mana.W, mana.U, mana.B, mana.R, mana.G}, true
+	}
+	var colors []mana.Color
+	seen := make(map[mana.Color]bool, len(tokens))
+	prevSymbol := false
+	started := false
+	for _, token := range tokens {
+		switch {
+		case token.Kind == shared.Symbol:
+			if prevSymbol {
+				return nil, false
+			}
+			color, ok := effectManaColor(token.Text)
+			if !ok || color == mana.C || seen[color] {
+				return nil, false
+			}
+			colors = append(colors, color)
+			seen[color] = true
+			prevSymbol = true
+			started = true
+		case token.Kind == shared.Comma, token.Kind == shared.Slash,
+			equalWord(token, "and"), equalWord(token, "or"):
+			if !started {
+				return nil, false
+			}
+			prevSymbol = false
+		default:
+			return nil, false
+		}
+	}
+	if !prevSymbol || len(colors) < 2 {
+		return nil, false
+	}
+	return colors, true
 }
 
 // effectManaColors maps every add-mana symbol to its typed basic mana color. It

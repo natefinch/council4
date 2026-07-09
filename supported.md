@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,211 of 32,501 cards eligible for paper support (53.0%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,221 of 32,501 cards eligible for paper support (53.0%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2015,6 +2015,7 @@ Council4 currently supports **17,211 of 32,501 cards eligible for paper support 
 - Burning-Yard Trainer
 - Burnished Hart
 - Burnout
+- Burnt Offering
 - Burr Grafter
 - Burrenton Shield-Bearers
 - Burrog Banemaker
@@ -2209,6 +2210,7 @@ Council4 currently supports **17,211 of 32,501 cards eligible for paper support 
 - Cartouche of Zeal
 - Carven Caryatid
 - Cascade Bluffs
+- Cascading Cataracts
 - Casey Jones, Back Alley Brute
 - Casey Jones, Jury-Rig Justiciar
 - Casey Jones, Vigilante
@@ -2858,6 +2860,7 @@ Council4 currently supports **17,211 of 32,501 cards eligible for paper support 
 - Control of the Court
 - Convalescence
 - Convalescent Care
+- Conversion Apparatus
 - Conversion Chamber
 - Conviction
 - Convolute
@@ -2922,6 +2925,7 @@ Council4 currently supports **17,211 of 32,501 cards eligible for paper support 
 - Corsair Captain
 - Coruscation Mage
 - Cosi's Ravager
+- Cosmic Crucible
 - Cosmic Epiphany
 - Cosmic Hunger
 - Cosmic Larva
@@ -6049,6 +6053,7 @@ Council4 currently supports **17,211 of 32,501 cards eligible for paper support 
 - Goblin Chariot
 - Goblin Chieftain
 - Goblin Chirurgeon
+- Goblin Clearcutter
 - Goblin Commando
 - Goblin Construct
 - Goblin Dark-Dwellers
@@ -8828,6 +8833,7 @@ Council4 currently supports **17,211 of 32,501 cards eligible for paper support 
 - Managorger Hydra
 - Manakin
 - Manalith
+- Manamorphose
 - Manaweft Sliver
 - Mandible Justiciar
 - Mandibular Kite
@@ -10261,6 +10267,7 @@ Council4 currently supports **17,211 of 32,501 cards eligible for paper support 
 - Orcish Bowmasters
 - Orcish Cannonade
 - Orcish Cannoneers
+- Orcish Lumberjack
 - Orcish Mechanics
 - Orcish Oriflamme
 - Orcish Siegemaster
@@ -10958,6 +10965,7 @@ Council4 currently supports **17,211 of 32,501 cards eligible for paper support 
 - Prismari Charm
 - Prismari Command
 - Prismari Pledgemage
+- Prismatic Geoscope
 - Prismatic Lens
 - Prismatic Omen
 - Prismatic Undercurrents
@@ -11596,6 +11604,7 @@ Council4 currently supports **17,211 of 32,501 cards eligible for paper support 
 - Relic Barrier
 - Relic Golem
 - Relic of Legends
+- Relic of Sauron
 - Relic Putrescence
 - Relic Sloth
 - Reliquary Dragon
@@ -14843,6 +14852,7 @@ Council4 currently supports **17,211 of 32,501 cards eligible for paper support 
 - Terramorph
 - Terramorphic Expanse
 - Terrapact Intimidator
+- Terrarion
 - Terrasymbiosis
 - Terrian, World Tyrant
 - Territorial Baloth
