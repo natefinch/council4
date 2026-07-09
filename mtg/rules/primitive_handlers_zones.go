@@ -534,6 +534,17 @@ func handleCreateToken(r *effectResolver, prim game.CreateToken) effectResolved 
 	}
 	if prim.PublishLinked != "" {
 		key := linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked))
+		// Drop any tokens a prior resolution published under this key before
+		// remembering this resolution's tokens, so a later "it" reference binds
+		// to the tokens created now rather than to a stale entry. The key is
+		// source-and-link scoped, hence constant across repeated activations of
+		// the same ability, and a sacrificed token lingers in last-known
+		// information; without clearing, a repeatable "create a token ... it ...
+		// at the beginning of the next end step" (Feldon of the Third Path)
+		// would resolve the dead first token and leak the new one. This mirrors
+		// the other single-binding publish sites (handleLookAtLibraryTop) that
+		// clear before remembering.
+		clearLinkedObjects(r.game, key)
 		for _, permanent := range created {
 			rememberLinkedObject(r.game, key, game.LinkedObjectRef{ObjectID: permanent.ObjectID, CardID: permanent.CardInstanceID})
 		}

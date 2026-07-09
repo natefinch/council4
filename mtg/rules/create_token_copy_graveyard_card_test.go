@@ -128,3 +128,89 @@ func TestCreateCopyTokenOfGraveyardCard(t *testing.T) {
 func hasType(def *game.CardDef, cardType types.Card) bool {
 	return slices.Contains(def.Types, cardType)
 }
+
+// countGraveyardCopyTokens returns how many Feldon-style copy tokens (copies of
+// the "Shivan Dragon" graveyard card) are on the battlefield.
+func countGraveyardCopyTokens(g *game.Game) int {
+	count := 0
+	for _, permanent := range g.Battlefield {
+		if permanent.Token && permanent.TokenDef != nil && permanent.TokenDef.Name == "Shivan Dragon" {
+			count++
+		}
+	}
+	return count
+}
+
+// TestCreateCopyTokenOfGraveyardCardTwiceSacrificesBoth exercises the repeatable
+// Feldon of the Third Path activation. Each activation creates a copy token and
+// binds a delayed "Sacrifice it at the beginning of the next end step" to it via
+// a source-and-link-scoped linked reference that is constant across activations.
+// After the first end-step sacrifice the dead token lingers in last-known
+// information, so the second activation must rebind the link to the new token;
+// otherwise the delayed sacrifice resolves the dead first token and leaks the
+// second copy. This is the regression the clear-before-publish fix prevents.
+func TestCreateCopyTokenOfGraveyardCardTwiceSacrificesBoth(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	feldon := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Feldon of the Third Path",
+		Types: []types.Card{types.Creature},
+	}})
+	cardID := addCardToGraveyard(g, game.Player1, feldonGraveyardCreature())
+
+	// activate builds the resolver for one activation of Feldon's ability. Every
+	// activation shares Feldon's source identity, so the published link key is
+	// the same across activations — exactly the condition that made the leak
+	// possible.
+	activate := func() *effectResolver {
+		obj := &game.StackObject{
+			ID:           g.IDGen.Next(),
+			Kind:         game.StackActivatedAbility,
+			Controller:   game.Player1,
+			SourceID:     feldon.ObjectID,
+			SourceCardID: feldon.CardInstanceID,
+			Targets:      []game.Target{{Kind: game.TargetCard, CardID: cardID}},
+		}
+		return &effectResolver{engine: NewEngine(nil), game: g, obj: obj, log: &TurnLog{}}
+	}
+
+	createToken := game.CreateToken{
+		Amount: game.Fixed(1),
+		Source: game.TokenCopyOf(game.TokenCopySpec{
+			Source:      game.TokenCopySourceObject,
+			Object:      game.TargetCardReference(0),
+			AddTypes:    []types.Card{types.Artifact},
+			AddKeywords: []game.Keyword{game.Haste},
+		}),
+		PublishLinked: game.LinkedKey("delayed-sacrifice-1"),
+	}
+	sacrifice := game.Sacrifice{Object: game.LinkedObjectReference("delayed-sacrifice-1")}
+
+	// First activation, then its end-step delayed sacrifice.
+	r1 := activate()
+	if !handleCreateToken(r1, createToken).succeeded {
+		t.Fatal("first activation did not create a copy token")
+	}
+	if got := countGraveyardCopyTokens(g); got != 1 {
+		t.Fatalf("after first activation, copy tokens = %d, want 1", got)
+	}
+	handleSacrifice(r1, sacrifice)
+	if got := countGraveyardCopyTokens(g); got != 0 {
+		t.Fatalf("first end-step sacrifice left %d copy token(s), want 0", got)
+	}
+
+	// Second activation, then its end-step delayed sacrifice. The delayed
+	// sacrifice must bind to the freshly-created token rather than no-op on the
+	// dead first token's last-known information.
+	r2 := activate()
+	if !handleCreateToken(r2, createToken).succeeded {
+		t.Fatal("second activation did not create a copy token")
+	}
+	if got := countGraveyardCopyTokens(g); got != 1 {
+		t.Fatalf("after second activation, copy tokens = %d, want 1", got)
+	}
+	handleSacrifice(r2, sacrifice)
+	if got := countGraveyardCopyTokens(g); got != 0 {
+		t.Fatalf("second end-step sacrifice leaked %d copy token(s): the delayed sacrifice must bind to the new token, not the dead first token", got)
+	}
+}
