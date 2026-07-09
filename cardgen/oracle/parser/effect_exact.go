@@ -217,7 +217,8 @@ func exactEffectSyntaxTail(effect *EffectSyntax) bool {
 		return exactOptionalControllerShuffleEffectSyntax(effect) ||
 			exactSourceSpellShuffleIntoLibrarySyntax(effect) ||
 			exactControllerGraveyardShuffleIntoLibrarySyntax(effect) ||
-			exactTargetPlayerGraveyardShuffleIntoLibrarySyntax(effect)
+			exactTargetPlayerGraveyardShuffleIntoLibrarySyntax(effect) ||
+			exactSelfShuffleIntoOwnerLibrarySyntax(effect)
 	case EffectTap:
 		return exactDirectTargetEffectSyntax(effect, "Tap") ||
 			exactDirectReferenceEffectSyntax(effect, "Tap") ||
@@ -322,6 +323,19 @@ func exactTargetPlayerGraveyardShuffleIntoLibrarySyntax(effect *EffectSyntax) bo
 	}
 	want := effect.Targets[0].Text + " shuffles their graveyard into their library."
 	return strings.EqualFold(exactEffectClauseText(effect), want)
+}
+
+// exactSelfShuffleIntoOwnerLibrarySyntax recognizes "Shuffle it into its owner's
+// library." (and the "You may shuffle it into its owner's library." optional
+// form, whose "you may" the clause text drops), the dies / put-into-graveyard
+// self-recursion tail (Alabaster Dragon, Serra Avatar, Worldspine Wurm, Dread).
+// The "it"/"its owner's" both name the triggering permanent; lowering binds the
+// shuffle to that permanent, whose card the runtime moves from the graveyard.
+func exactSelfShuffleIntoOwnerLibrarySyntax(effect *EffectSyntax) bool {
+	if effect.Context != EffectContextController || effect.ToZone != zone.Library {
+		return false
+	}
+	return strings.EqualFold(exactEffectClauseText(effect), "Shuffle it into its owner's library.")
 }
 
 func exactLibraryTopReorderEffectSyntax(effect *EffectSyntax) bool {
