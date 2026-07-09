@@ -71,6 +71,7 @@ var Cards = []cardset.Entry{
 	{Name: "Go-Shintai of Boundless Vigor", New: GoShintaiOfBoundlessVigor},
 	{Name: "Goblin Bushwhacker", New: GoblinBushwhacker},
 	{Name: "Goblin Chainwhirler", New: GoblinChainwhirler},
+	{Name: "Goblin Clearcutter", New: GoblinClearcutter},
 	{Name: "Goblin Dark-Dwellers", New: GoblinDarkDwellers},
 	{Name: "Goblin Firestarter", New: GoblinFirestarter},
 	{Name: "Goblin Legionnaire", New: GoblinLegionnaire},

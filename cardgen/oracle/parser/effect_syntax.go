@@ -3178,7 +3178,64 @@ func recognizeDynamicCountMana(effect *EffectSyntax) bool {
 		recognizeChosenColorSourceCounterMana(effect) ||
 		recognizeSourceCounterCountMana(effect) ||
 		recognizeSingleColorDynamicMana(effect) ||
+		recognizeCombinationDynamicMana(effect) ||
 		recognizeAnyOneColorDynamicMana(effect)
+}
+
+// recognizeCombinationDynamicMana types the add-mana body "X mana in any
+// combination of <colors>" (or "an amount of mana in any combination of
+// <colors>") whose quantity is a dynamic amount already typed onto
+// effect.Amount by parseEffectAmount ("where X is <dynamic>" or "equal to
+// <dynamic>"). Axebane Guardian ("Add X mana in any combination of colors,
+// where X is the number of creatures you control with defender.") and Burnt
+// Offering ("Add X mana in any combination of {B} and/or {R}, where X is the
+// sacrificed creature's mana value.") are the canonical cards. The body itself
+// is left unrecognized by parseEffectMana because the trailing amount phrase
+// trips its fixed-count parsing. This credits the freely-split combination
+// output when the body matches exactly and a dynamic amount is present, so the
+// lowerer can produce that many mana split among the colors. It fails closed
+// when no dynamic amount is present.
+func recognizeCombinationDynamicMana(effect *EffectSyntax) bool {
+	if effect.Kind != EffectAddMana ||
+		effect.Amount.DynamicKind == EffectDynamicAmountNone {
+		return false
+	}
+	switch effect.Amount.DynamicForm {
+	case EffectDynamicAmountFormWhereX, EffectDynamicAmountFormEqual:
+	default:
+		return false
+	}
+	body := manaBodyBeforeAmount(effect)
+	for len(body) > 0 && body[len(body)-1].Kind == shared.Comma {
+		body = body[:len(body)-1]
+	}
+	colors, ok := combinationDynamicManaBody(body)
+	if !ok {
+		return false
+	}
+	effect.Mana = EffectManaSyntax{
+		Span:               shared.SpanOf(body),
+		Combination:        true,
+		CombinationColors:  colors,
+		CombinationDynamic: true,
+	}
+	return true
+}
+
+// combinationDynamicManaBody parses the leading add-mana phrase of a dynamic-
+// amount combination output: "X mana in any combination of <colors>" or "an
+// amount of mana in any combination of <colors>". It returns the split colors
+// when the body matches exactly.
+func combinationDynamicManaBody(body []shared.Token) ([]mana.Color, bool) {
+	switch {
+	case len(body) >= 7 && equalWord(body[0], "x") &&
+		effectWordsAt(body, 1, "mana", "in", "any", "combination", "of"):
+		return combinationManaColorList(body[6:])
+	case len(body) >= 9 &&
+		effectWordsAt(body, 0, "an", "amount", "of", "mana", "in", "any", "combination", "of"):
+		return combinationManaColorList(body[8:])
+	}
+	return nil, false
 }
 
 // recognizeCardsNamedSelfInGraveyardsMana types an "Add <mana> for each card
@@ -5922,7 +5979,7 @@ func legacyExactManaBody(effect *EffectSyntax, sentence Sentence) bool {
 	if !direct && !optionalController {
 		return false
 	}
-	return effect.Mana.AnyColor || effect.Mana.CommanderIdentity || effect.Mana.LandsProduce || effect.Mana.FilterPair || effect.Mana.ColorsAmongControlled || len(effect.Mana.Symbols) != 0
+	return effect.Mana.AnyColor || effect.Mana.CommanderIdentity || effect.Mana.LandsProduce || effect.Mana.FilterPair || effect.Mana.ColorsAmongControlled || effect.Mana.Combination || len(effect.Mana.Symbols) != 0
 }
 
 func effectWithinCondition(tokens []shared.Token, index int) bool {

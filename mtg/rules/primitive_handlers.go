@@ -162,6 +162,18 @@ func handleAddMana(r *effectResolver, prim game.AddMana) effectResolved {
 		}
 		return res
 	}
+	if len(prim.CombinationColors) != 0 {
+		snow := stackObjectSourceIsSnow(r.game, r.obj)
+		for _, c := range r.combinationManaAllocation(recipientID, prim.CombinationColors, res.amount) {
+			if snow {
+				player.ManaPool.AddSnow(c, 1)
+			} else {
+				player.ManaPool.Add(c, 1)
+			}
+			res.succeeded = true
+		}
+		return res
+	}
 	manaColor := prim.ManaColor
 	if choice, ok := linkedResolutionChoice(r.obj, string(prim.ChoiceFrom)); ok && choice.Kind == game.ResolutionChoiceMana {
 		manaColor = choice.Color
@@ -371,6 +383,62 @@ func (r *effectResolver) allocateCounters(total int, targets []dividedDamageTarg
 		}
 	}
 	return allocations
+}
+
+// combinationManaAllocation asks the recipient of an "add N mana in any
+// combination of <colors>" effect to split the produced mana freely among the
+// offered colors and returns one color per mana unit produced. Unlike counter
+// and damage division, a color may receive zero, so the request uses the
+// ChoiceManaCombination kind whose validity check permits empty shares. A
+// non-positive amount produces no mana; a single-color set is added directly
+// without a decision.
+func (r *effectResolver) combinationManaAllocation(recipientID game.PlayerID, colors []mana.Color, amount int) []mana.Color {
+	if amount <= 0 || len(colors) == 0 {
+		return nil
+	}
+	if len(colors) == 1 {
+		result := make([]mana.Color, amount)
+		for i := range result {
+			result[i] = colors[0]
+		}
+		return result
+	}
+	options := make([]game.ChoiceOption, len(colors))
+	for i, c := range colors {
+		options[i] = game.ChoiceOption{Index: i, Label: string(c)}
+	}
+	request := game.ChoiceRequest{
+		Kind:             game.ChoiceManaCombination,
+		Player:           recipientID,
+		Prompt:           "Distribute the mana among the offered colors.",
+		Options:          options,
+		MinChoices:       amount,
+		MaxChoices:       amount,
+		DefaultSelection: defaultManaCombination(amount, len(colors)),
+	}
+	selected := r.engine.chooseChoice(r.game, r.agents, request, r.log)
+	result := make([]mana.Color, 0, amount)
+	for _, index := range selected {
+		if index >= 0 && index < len(colors) {
+			result = append(result, colors[index])
+		}
+	}
+	return result
+}
+
+// defaultManaCombination spreads total mana round-robin across n colors so the
+// engine has a valid ChoiceManaCombination fallback when no agent answers. The
+// selection is a length-total multiset of color indices; round-robin keeps it
+// deterministic without assuming every color receives a share.
+func defaultManaCombination(total, n int) []int {
+	if total <= 0 || n <= 0 {
+		return nil
+	}
+	selected := make([]int, total)
+	for i := range selected {
+		selected[i] = i % n
+	}
+	return selected
 }
 
 // chooseCounterKindToPlace resolves which counter kind an "Put a <X> counter or a

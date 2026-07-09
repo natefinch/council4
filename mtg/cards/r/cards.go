@@ -62,6 +62,7 @@ var Cards = []cardset.Entry{
 	{Name: "Reinforced Bulwark", New: ReinforcedBulwark},
 	{Name: "Relentless Pursuit", New: RelentlessPursuit},
 	{Name: "Relic Golem", New: RelicGolem},
+	{Name: "Relic of Sauron", New: RelicOfSauron},
 	{Name: "Remand", New: Remand},
 	{Name: "Remote Farm", New: RemoteFarm},
 	{Name: "Rend Flesh", New: RendFlesh},

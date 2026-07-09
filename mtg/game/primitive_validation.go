@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
@@ -800,6 +801,39 @@ func (p AddMana) validatePrimitive(targets []TargetSpec, checkTargets bool) erro
 		if err := validateManaSpendRider(p.SpendRider.Val); err != nil {
 			return err
 		}
+	}
+	if len(p.CombinationColors) != 0 {
+		if err := validateManaCombinationColors(p); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// validateManaCombinationColors enforces the invariants of an AddMana whose
+// produced mana is split freely among a fixed color set. The colors must be two
+// or more distinct basic colors, and the combination shape is mutually exclusive
+// with every other color-selection mechanism (a fixed color, a linked or
+// entry-time color choice, the each-controlled-color union, and spend riders).
+func validateManaCombinationColors(p AddMana) error {
+	if p.ManaColor != "" || p.ChoiceFrom != "" || p.EntryChoiceFrom != "" ||
+		p.EachControlledColor != nil || p.SpendRider.Exists {
+		return errors.New("combination add mana cannot combine with ManaColor, ChoiceFrom, EntryChoiceFrom, EachControlledColor, or SpendRider")
+	}
+	if len(p.CombinationColors) < 2 {
+		return errors.New("combination add mana requires at least two colors")
+	}
+	seen := make(map[mana.Color]bool, len(p.CombinationColors))
+	for _, c := range p.CombinationColors {
+		switch c {
+		case mana.W, mana.U, mana.B, mana.R, mana.G, mana.C:
+		default:
+			return errors.New("combination add mana has an invalid mana color")
+		}
+		if seen[c] {
+			return errors.New("combination add mana has a duplicate mana color")
+		}
+		seen[c] = true
 	}
 	return nil
 }

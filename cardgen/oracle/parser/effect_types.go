@@ -1134,6 +1134,31 @@ type EffectManaSyntax struct {
 	// types the triggering land produced on that tap, recomputed at resolution
 	// from the triggering tap rather than from a fixed color or the battlefield.
 	TriggerLandProducedType bool `json:",omitempty"`
+	// Combination reports the body "<N> mana in any combination of <colors>"
+	// (Goblin Clearcutter: "Add three mana in any combination of {R} and/or
+	// {G}."; Manamorphose: "Add two mana in any combination of colors.";
+	// Cascading Cataracts: "Add five mana in any combination of colors."). The
+	// produced mana is split freely among CombinationColors — each of the N mana
+	// is independently one of those colors, chosen at resolution. The trailing
+	// word "colors" denotes all five basic colors; a "{C1} and/or {C2} ..."
+	// list names an explicit subset. CombinationCount holds the fixed cardinal N
+	// (>= 2); CombinationDynamic instead pairs the combination with a dynamic
+	// amount carried by EffectSyntax.Amount ("X mana in any combination of
+	// colors, where X is ...", Axebane Guardian).
+	Combination bool `json:",omitempty"`
+	// CombinationColors are the typed basic colors a Combination body splits its
+	// mana among, in WUBRG order. It is set together with Combination.
+	CombinationColors []mana.Color `json:"-"`
+	// CombinationCount is the fixed cardinal amount N (>= 2) of a Combination
+	// body whose amount is a printed number ("Add three mana in any combination
+	// of {R} and/or {G}."). It is zero when CombinationDynamic is set.
+	CombinationCount int `json:",omitempty"`
+	// CombinationDynamic reports a Combination body whose amount is a dynamic
+	// value carried by EffectSyntax.Amount ("X mana in any combination of
+	// colors, where X is the number of creatures you control with defender.",
+	// Axebane Guardian) rather than a fixed cardinal. It is mutually exclusive
+	// with CombinationCount.
+	CombinationDynamic bool `json:",omitempty"`
 }
 
 // ManaLandsProduceScope identifies which battlefield lands' producible colors

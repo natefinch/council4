@@ -3132,6 +3132,16 @@ type CompiledEffectMana struct {
 	// land produced" mana-doubler body (Mirari's Wake, Zendikar Resurgent). See
 	// parser.EffectManaSyntax.TriggerLandProducedType.
 	TriggerLandProducedType bool
+	// Combination, CombinationColors, CombinationCount, and CombinationDynamic
+	// mirror the parser's "<N> mana in any combination of <colors>" body (Goblin
+	// Clearcutter, Manamorphose, Cascading Cataracts). The produced mana is split
+	// freely among CombinationColors; CombinationCount holds a fixed cardinal
+	// amount (>= 2) while CombinationDynamic instead pairs the split with the
+	// effect's dynamic Amount. See parser.EffectManaSyntax.Combination.
+	Combination        bool
+	CombinationColors  []mana.Color
+	CombinationCount   int
+	CombinationDynamic bool
 }
 
 // CompiledEffectPayment is a typed resolution payment embedded in an effect.

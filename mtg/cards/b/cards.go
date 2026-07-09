@@ -140,6 +140,7 @@ var Cards = []cardset.Entry{
 	{Name: "Burning Inquiry", New: BurningInquiry},
 	{Name: "Burning Prophet", New: BurningProphet},
 	{Name: "Burning Sun Cavalry", New: BurningSunCavalry},
+	{Name: "Burnt Offering", New: BurntOffering},
 	{Name: "Burst Lightning", New: BurstLightning},
 	{Name: "Bushwhack", New: Bushwhack},
 	{Name: "Butcher of the Horde", New: ButcherOfTheHorde},

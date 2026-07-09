@@ -780,6 +780,9 @@ func lowerAddManaContent(ctx contentCtx) (game.AbilityContent, *shared.Diagnosti
 	if content, ok := lowerAnyOneColorDynamicMana(ctx); ok {
 		return content, nil
 	}
+	if content, ok := lowerCombinationDynamicMana(ctx); ok {
+		return content, nil
+	}
 	if content, ok := lowerReferencedControllerAddMana(ctx); ok {
 		return content, nil
 	}
@@ -1184,6 +1187,58 @@ func lowerAnyOneColorDynamicMana(ctx contentCtx) (game.AbilityContent, bool) {
 	return game.TapManaChosenColorDynamicAbility("", dynamic).Content, true
 }
 
+// lowerCombinationDynamicMana lowers an "Add X mana in any combination of
+// <colors>" body whose amount is a dynamic quantity (Axebane Guardian: "Add X
+// mana in any combination of colors, where X is the number of creatures you
+// control with defender."). The produced mana is split freely among the colors
+// by the recipient, so the AddMana carries the color set and a dynamic amount.
+// It accepts only the recognized combination-dynamic parser shape with a
+// lowerable dynamic amount and no unsupported facets; any other shape fails
+// closed so an unmodeled wording cannot lower to a mislabeled ability.
+func lowerCombinationDynamicMana(ctx contentCtx) (game.AbilityContent, bool) {
+	if ctx.optional ||
+		len(ctx.content.Effects) != 1 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		(len(ctx.content.References) != 0 && !singleSelfReference(ctx.content.References)) {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if !effect.Exact ||
+		effect.Negated ||
+		effect.Optional ||
+		effect.DelayedTiming != 0 ||
+		effect.Duration != compiler.DurationNone ||
+		effect.Context != parser.EffectContextController ||
+		!effect.Mana.Combination ||
+		!effect.Mana.CombinationDynamic {
+		return game.AbilityContent{}, false
+	}
+	dynamic, ok := lowerDynamicAmount(effect.Amount, game.SourcePermanentReference())
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	return combinationManaContent(effect.Mana.CombinationColors, game.Dynamic(dynamic))
+}
+
+// combinationManaContent builds AbilityContent that adds `amount` mana split
+// freely among `colors` via a single AddMana instruction. It fails closed when
+// fewer than two colors are offered so a malformed combination body cannot lower
+// to a mislabeled ability.
+func combinationManaContent(colors []mana.Color, amount game.Quantity) (game.AbilityContent, bool) {
+	if len(colors) < 2 {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{{Primitive: game.AddMana{
+			Amount:            amount,
+			CombinationColors: append([]mana.Color(nil), colors...),
+		}}},
+	}.Ability(), true
+}
+
 // lowerTriggerLandProducedMana lowers the mana-doubler body of a tapped-for-mana
 // trigger that adds "one mana of any type that land produced" (Mirari's Wake,
 // Zendikar Resurgent). The "that land" pronoun binds to the triggering permanent
@@ -1341,6 +1396,12 @@ func lowerReferencedPlayerAddMana(ctx contentCtx) (game.AbilityContent, bool) {
 func typedManaEffectContent(effect compiler.CompiledEffectMana) (game.AbilityContent, bool) {
 	if effect.TriggerLandProducedType {
 		return game.TriggerLandProducedManaContent(), true
+	}
+	if effect.Combination {
+		if effect.CombinationDynamic || effect.CombinationCount < 2 {
+			return game.AbilityContent{}, false
+		}
+		return combinationManaContent(effect.CombinationColors, game.Fixed(effect.CombinationCount))
 	}
 	if effect.FilterPair {
 		if len(effect.FilterColors) != 2 {

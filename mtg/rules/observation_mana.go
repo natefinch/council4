@@ -74,6 +74,11 @@ func addInstructionManaColors(primitive game.Primitive, entryChoices map[game.Ch
 		if c, ok := manaColor(add.ManaColor); ok {
 			found.add(c)
 		}
+		for _, mc := range add.CombinationColors {
+			if c, ok := manaColor(mc); ok {
+				found.add(c)
+			}
+		}
 		if add.EntryChoiceFrom != "" {
 			if result, ok := entryChoices[add.EntryChoiceFrom]; ok {
 				if c, ok := manaColor(result.Color); ok {
@@ -184,6 +189,9 @@ func instructionProducesColorless(primitive game.Primitive, entryChoices map[gam
 			return false
 		}
 		if add.ManaColor == mana.C {
+			return true
+		}
+		if slices.Contains(add.CombinationColors, mana.C) {
 			return true
 		}
 		if add.EntryChoiceFrom != "" {

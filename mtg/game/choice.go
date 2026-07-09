@@ -73,6 +73,17 @@ const (
 	// pile); the returned selection is the single option index of the kept pile.
 	// MinChoices and MaxChoices both equal one.
 	ChoicePileChoose
+	// ChoiceManaCombination asks the recipient of an "add <N> mana in any
+	// combination of <colors>" effect (Manamorphose, Goblin Clearcutter,
+	// Cascading Cataracts) to split the produced mana freely among the offered
+	// colors. Each option corresponds to one offered color; the returned
+	// selection lists option indices with repetition, so the number of times an
+	// option appears equals the mana produced of that color. MinChoices and
+	// MaxChoices both equal the total amount. Unlike ChoiceDamageAllocation and
+	// ChoiceCounterAllocation, a color may receive zero (RRR, RRG, RGG, and GGG
+	// are all legal splits of three mana among {R} and {G}), so every unit is
+	// distributed but no color is guaranteed a share.
+	ChoiceManaCombination
 )
 
 // ChoiceCardInfo carries the public characteristics of a card or permanent that
