@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,210 of 32,501 cards eligible for paper support (53.0%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,211 of 32,501 cards eligible for paper support (53.0%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -7300,6 +7300,7 @@ Council4 currently supports **17,210 of 32,501 cards eligible for paper support 
 - Improvised Club
 - Improvised Weaponry
 - Impulse
+- In Garruk's Wake
 - In Oketra's Name
 - In the Presence of Ages
 - In the Web of War
