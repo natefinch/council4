@@ -3285,6 +3285,16 @@ const (
 	// are untapped. The per-creature mana cost lives in ManaCost and the folded
 	// creature filter travels on the consequence effect's Selection.
 	EffectPaymentFormPerChosenCreature EffectPaymentForm = "EffectPaymentFormPerChosenCreature"
+	// EffectPaymentFormMayPayVariableUpTo is the "you may pay {X}, where X is less
+	// than or equal to <triggering amount>. If you do, <effect scaled by X>."
+	// offer (Well of Lost Dreams' "you may pay {X}, where X is less than or equal
+	// to the amount of life you gained. If you do, draw X cards."): the controller
+	// chooses X between zero and the triggering quantity, pays that much generic
+	// mana, and the chosen X scales the folded consequence. The bound rides in
+	// GenericManaAmount; the {X} per-unit cost is implicit, so ManaCost stays
+	// empty. Downstream lowering models it as a bounded PayRepeatedly whose
+	// published count is X.
+	EffectPaymentFormMayPayVariableUpTo EffectPaymentForm = "EffectPaymentFormMayPayVariableUpTo"
 )
 
 // EffectPaymentSyntax is a source-spanned typed resolution payment.

@@ -55,6 +55,7 @@ func emitResolvingSyntax(abilities []Ability) {
 		recognizeEventPlayerOptionalPaymentAffirmativeSequence(&abilities[i])
 		recognizeDefendingPlayerOptionalPaymentSequence(&abilities[i])
 		recognizeEventPlayerPerCreatureUntapPayment(&abilities[i])
+		recognizeControllerVariablePayScaledDraw(&abilities[i])
 		recognizeControllerMandatoryPaymentSequence(&abilities[i])
 		recognizeEventPlayerOptionalActionGate(&abilities[i])
 		recognizeNonControllerMayHaveActionGate(&abilities[i])

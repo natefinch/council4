@@ -1003,14 +1003,20 @@ func handlePay(r *effectResolver, prim game.Pay) effectResolved {
 	return effectResolved{accepted: accepted, succeeded: succeeded}
 }
 
-// maxResolutionPayRepeatCount bounds how many times a PayRepeatedly cost may be
-// paid in one resolution, matching the Multikicker enumeration cap so a free or
-// fully-affordable cost cannot iterate without limit.
+// maxResolutionPayRepeatCount bounds how many times an unbounded PayRepeatedly
+// cost may be paid in one resolution, matching the Multikicker enumeration cap so
+// a free or fully-affordable cost cannot iterate without limit. A PayRepeatedly
+// carrying a MaxCount instead caps at that rules-derived bound, which is itself a
+// finite triggering quantity.
 const maxResolutionPayRepeatCount = 20
 
 func handlePayRepeatedly(r *effectResolver, prim game.PayRepeatedly) effectResolved {
+	limit := maxResolutionPayRepeatCount
+	if prim.MaxCount.Exists && prim.MaxCount.Val != nil {
+		limit = max(0, dynamicAmountValue(r.game, r.obj, stackObjectController(r.obj), *prim.MaxCount.Val))
+	}
 	count := 0
-	for count < maxResolutionPayRepeatCount {
+	for count < limit {
 		payment := prim.Payment
 		if payment.Prompt == "" {
 			payment.Prompt = prim.Prompt

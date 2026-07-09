@@ -1834,6 +1834,9 @@ func (p PayRepeatedly) validatePrimitive(targets []TargetSpec, checkTargets bool
 	if p.PublishCount == "" {
 		return errors.New("PayRepeatedly requires a published count key")
 	}
+	if p.MaxCount.Exists && p.MaxCount.Val == nil {
+		return errors.New("PayRepeatedly MaxCount is set but nil")
+	}
 	return validateResolutionPayment(p.Payment, targets, checkTargets)
 }
 
