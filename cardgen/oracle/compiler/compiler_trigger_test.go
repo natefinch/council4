@@ -4,6 +4,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -45,6 +46,36 @@ func TestCompileTriggeredAbilityWithInternalEventComma(t *testing.T) {
 	}
 	if len(ability.Content.Effects) != 1 || ability.Content.Effects[0].Kind != EffectDraw {
 		t.Fatalf("effects = %#v", ability.Content.Effects)
+	}
+}
+
+// TestCompileCastTriggerFewerThanSelfCounterInterveningIf verifies Runaway
+// Steam-Kin's intervening-if "if this creature has fewer than three +1/+1
+// counters on it" compiles onto the source-bound object-match predicate with the
+// strict upper bound threaded through as CounterCountLessThan, leaving the
+// inclusive minimum zero so the two thresholds stay mutually exclusive.
+func TestCompileCastTriggerFewerThanSelfCounterInterveningIf(t *testing.T) {
+	t.Parallel()
+	source := "Whenever you cast a red spell, if this creature has fewer than three +1/+1 counters on it, put a +1/+1 counter on this creature."
+	compilation, diagnostics := compileSource(source, pipelineContext{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	ability := compilation.Abilities[0]
+	if ability.Trigger == nil || ability.Trigger.Condition == nil {
+		t.Fatalf("trigger = %#v", ability.Trigger)
+	}
+	condition := ability.Trigger.Condition
+	if condition.Predicate != ConditionPredicateObjectMatches ||
+		condition.ObjectBinding != ReferenceBindingSource {
+		t.Fatalf("condition = %#v, want source object-match", condition)
+	}
+	selection := condition.Selection
+	if !selection.CounterKindKnown ||
+		selection.CounterKind != counter.PlusOnePlusOne ||
+		selection.CounterCountLessThan != 3 ||
+		selection.CounterCountAtLeast != 0 {
+		t.Fatalf("selection = %#v, want +1/+1 count < 3", selection)
 	}
 }
 

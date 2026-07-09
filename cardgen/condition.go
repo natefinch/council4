@@ -589,7 +589,11 @@ func lowerConditionSelection(selection compiler.ConditionSelection) (game.Select
 	}
 	if selection.CounterKindKnown {
 		result.RequiredCounter = selection.CounterKind
-		result.RequiredCounterCount = opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: selection.CounterCountAtLeast})
+		if selection.CounterCountLessThan > 0 {
+			result.RequiredCounterCount = opt.Val(compare.Int{Op: compare.LessThan, Value: selection.CounterCountLessThan})
+		} else {
+			result.RequiredCounterCount = opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: selection.CounterCountAtLeast})
+		}
 	}
 	if selection.MatchPowerAtLeast {
 		result.Power = opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: selection.PowerAtLeast})

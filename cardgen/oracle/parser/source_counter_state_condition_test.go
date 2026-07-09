@@ -44,3 +44,30 @@ func TestParseSingularSelfCounterStateCondition(t *testing.T) {
 		t.Fatalf("selection = %#v, want +1/+1 count >= 1", clause.Selection)
 	}
 }
+
+// self-counter condition "this creature has fewer than three +1/+1 counters on
+// it" parses to one source object-match clause carrying a strict upper bound of
+// three, the intervening-if gate Runaway Steam-Kin reads to stop growing at three
+// +1/+1 counters. The strict bound sets CounterCountLessThan and leaves the
+// inclusive minimum zero so the two thresholds stay mutually exclusive.
+func TestParseFewerThanSelfCounterStateCondition(t *testing.T) {
+	t.Parallel()
+	for _, wording := range []string{
+		"this creature has fewer than three +1/+1 counters on it",
+		"this creature has less than three +1/+1 counters on it",
+	} {
+		clause := parseSingleConditionClause(t, wording)
+		if clause.Predicate != ConditionPredicateObjectMatches {
+			t.Fatalf("%q predicate = %v, want object-matches", wording, clause.Predicate)
+		}
+		if clause.ObjectBinding != ConditionObjectBindingSource {
+			t.Fatalf("%q object binding = %v, want source", wording, clause.ObjectBinding)
+		}
+		if !clause.Selection.CounterKindKnown ||
+			clause.Selection.CounterKind != counter.PlusOnePlusOne ||
+			clause.Selection.CounterCountLessThan != 3 ||
+			clause.Selection.CounterCountAtLeast != 0 {
+			t.Fatalf("%q selection = %#v, want +1/+1 count < 3", wording, clause.Selection)
+		}
+	}
+}

@@ -723,6 +723,35 @@ func TestConditionSourceHasAnyCounter(t *testing.T) {
 	}
 }
 
+// TestConditionSourceFewerThanThreeCounters verifies Runaway Steam-Kin's
+// intervening-if gate "if this creature has fewer than three +1/+1 counters on
+// it": the source-bound object-match condition with a strict upper bound holds
+// while the source carries zero, one, or two +1/+1 counters and fails once it
+// reaches three, the point the creature stops growing.
+func TestConditionSourceFewerThanThreeCounters(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Runaway Steam-Kin",
+		Types: []types.Card{types.Creature}},
+	})
+	condition := opt.Val(game.Condition{
+		Object: opt.Val(game.SourcePermanentReference()),
+		ObjectMatches: opt.Val(game.Selection{
+			RequiredCounter:      counter.PlusOnePlusOne,
+			RequiredCounterCount: opt.Val(compare.Int{Op: compare.LessThan, Value: 3}),
+		}),
+	})
+	ctx := conditionContext{controller: game.Player1, source: source}
+	for count := range 3 {
+		if !conditionSatisfied(g, ctx, condition) {
+			t.Fatalf("with %d +1/+1 counters the fewer-than-three gate should hold", count)
+		}
+		source.Counters.Add(counter.PlusOnePlusOne, 1)
+	}
+	if conditionSatisfied(g, ctx, condition) {
+		t.Fatal("with three +1/+1 counters the fewer-than-three gate must fail")
+	}
+}
+
 // TestConditionLandEnteredThisTurnOrControlsBasic verifies the disjunctive land
 // activation gate ("Activate only if this land entered this turn or if you
 // control a basic land.") holds when the controller already controls a basic
