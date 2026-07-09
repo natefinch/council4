@@ -634,6 +634,66 @@ func lowerControllerGraveyardShuffleIntoLibrary(ctx contentCtx) (game.AbilityCon
 	}}}.Ability(), true
 }
 
+// lowerTargetPlayerGraveyardShuffleIntoLibrary lowers "Target player shuffles
+// their graveyard into their library." (Reminisce, Clear the Mind, Learn from
+// the Past, Thran Foundry, Cranial Archive) to a shuffle-graveyard-into-library
+// instruction naming the targeted player. The two "their" possessives ("their
+// graveyard", "their library") both co-refer with the target player, so every
+// residual reference must be a Target-bound "their" pronoun; the possessives are
+// consumed here. Any other subject, zone, negation, optionality, condition,
+// keyword, or mode fails closed.
+func lowerTargetPlayerGraveyardShuffleIntoLibrary(ctx contentCtx) (game.AbilityContent, bool) {
+	// Invariant: reached only from the EffectShuffle arm of
+	// lowerImmediateSingleEffectSpell, whose every entry path narrows content to
+	// exactly one effect.
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf("lowerTargetPlayerGraveyardShuffleIntoLibrary: expected single effect in single-effect context, got %d", len(ctx.content.Effects)))
+	}
+	effect := &ctx.content.Effects[0]
+	if !effect.Exact ||
+		effect.Negated ||
+		effect.Optional ||
+		effect.Duration != compiler.DurationNone ||
+		effect.Context != parser.EffectContextTarget ||
+		effect.FromZone != zone.Graveyard ||
+		effect.ToZone != zone.Library ||
+		len(ctx.content.Targets) != 1 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		!allReferencesTargetPlayerPossessive(ctx.content.References) {
+		return game.AbilityContent{}, false
+	}
+	spec, ok := playerTargetSpec(ctx.content.Targets[0])
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Targets: []game.TargetSpec{spec},
+		Sequence: []game.Instruction{{
+			Primitive: game.ShuffleGraveyardIntoLibrary{Player: game.TargetPlayerReference(0)},
+		}},
+	}.Ability(), true
+}
+
+// allReferencesTargetPlayerPossessive reports whether every residual reference is
+// a "their" possessive bound to the effect's player target, as produced by the
+// two "their" possessives of "target player shuffles their graveyard into their
+// library." It requires at least one such reference so a shape carrying no
+// possessive back-reference to the target player fails closed.
+func allReferencesTargetPlayerPossessive(references []compiler.CompiledReference) bool {
+	if len(references) == 0 {
+		return false
+	}
+	for i := range references {
+		if references[i].Binding != compiler.ReferenceBindingTarget ||
+			references[i].Pronoun != compiler.ReferencePronounTheir {
+			return false
+		}
+	}
+	return true
+}
+
 func lowerPlayerRuleEffect(ctx contentCtx, kind game.RuleEffectKind) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
 	keywordsValid := len(ctx.content.Keywords) == 0

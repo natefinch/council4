@@ -2003,10 +2003,13 @@ func lowerImmediateSingleEffectSpell(
 		if content, ok := lowerControllerGraveyardShuffleIntoLibrary(ctx); ok {
 			return content, nil
 		}
+		if content, ok := lowerTargetPlayerGraveyardShuffleIntoLibrary(ctx); ok {
+			return content, nil
+		}
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported shuffle effect",
-			"the executable source backend supports only a source-spell shuffle into its owner's library or a controller graveyard shuffle into library",
+			"the executable source backend supports only a source-spell shuffle into its owner's library, a controller graveyard shuffle into library, or a target player shuffling their graveyard into their library",
 		)
 	case compiler.EffectReturn:
 		return lowerReturnSpell(ctx)
