@@ -55,6 +55,7 @@ var Cards = []cardset.Entry{
 	{Name: "Bereavement", New: Bereavement},
 	{Name: "Betrayal at the Vault", New: BetrayalAtTheVault},
 	{Name: "Bilbo, Retired Burglar", New: BilboRetiredBurglar},
+	{Name: "Bile Blight", New: BileBlight},
 	{Name: "Bionic Blow", New: BionicBlow},
 	{Name: "Birds of Paradise", New: BirdsOfParadise},
 	{Name: "Bite Down", New: BiteDown},

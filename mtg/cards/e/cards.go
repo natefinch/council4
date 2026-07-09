@@ -14,6 +14,8 @@ var Cards = []cardset.Entry{
 	{Name: "Echo Inspector", New: EchoInspector},
 	{Name: "Echo of Dusk", New: EchoOfDusk},
 	{Name: "Echoing Calm", New: EchoingCalm},
+	{Name: "Echoing Courage", New: EchoingCourage},
+	{Name: "Echoing Decay", New: EchoingDecay},
 	{Name: "Echoing Ruin", New: EchoingRuin},
 	{Name: "Eclipsed Boggart", New: EclipsedBoggart},
 	{Name: "Eclipsed Elf", New: EclipsedElf},

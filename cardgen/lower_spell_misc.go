@@ -412,8 +412,7 @@ func lowerSameNameDestroySpell(ctx contentCtx, preventRegeneration bool) (game.A
 	if len(ctx.content.Targets) != 1 {
 		return game.AbilityContent{}, false
 	}
-	group := ctx.content.Targets[0].Selector.SameNameGroup
-	if group == nil {
+	if ctx.content.Targets[0].Selector.SameNameGroup == nil {
 		return game.AbilityContent{}, false
 	}
 	if len(ctx.content.Conditions) != 0 ||
@@ -422,18 +421,12 @@ func lowerSameNameDestroySpell(ctx contentCtx, preventRegeneration bool) (game.A
 		ctx.content.Effects[0].Negated ||
 		!ctx.content.Effects[0].Exact ||
 		ctx.content.Effects[0].Context != parser.EffectContextController ||
-		!sameNameDestroyReferencesSupported(ctx.content.References) {
+		!sameNameGroupBackReferencesSupported(ctx.content.References) {
 		return game.AbilityContent{}, false
 	}
-	cleaned := ctx.content.Targets[0]
-	cleaned.Selector.SameNameGroup = nil
-	spec, ok := permanentTargetSpec(cleaned)
+	spec, groupSelection, ok := sameNameGroupTargetSpec(ctx.content.Targets[0])
 	if !ok {
 		return game.AbilityContent{}, false
-	}
-	groupSelection := game.Selection{}
-	if len(group.GroupTypes) > 0 {
-		groupSelection.RequiredTypes = append([]types.Card(nil), group.GroupTypes...)
 	}
 	return game.Mode{
 		Targets: []game.TargetSpec{spec},
@@ -449,21 +442,6 @@ func lowerSameNameDestroySpell(ctx contentCtx, preventRegeneration bool) (game.A
 			},
 		},
 	}.Ability(), true
-}
-
-// sameNameDestroyReferencesSupported reports whether every reference in a
-// same-name destroy body is the tolerated "that <noun>" back-reference that binds
-// to the chosen target. The destroy instruction reads the target through the
-// group anchor, so the back-reference carries no additional runtime meaning; any
-// other reference shape is rejected.
-func sameNameDestroyReferencesSupported(references []compiler.CompiledReference) bool {
-	for i := range references {
-		if references[i].Kind != compiler.ReferenceThatObject ||
-			references[i].Binding != compiler.ReferenceBindingTarget {
-			return false
-		}
-	}
-	return true
 }
 
 func lowerFixedExileSpell(
