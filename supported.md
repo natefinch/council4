@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,258 of 32,501 cards eligible for paper support (53.1%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,260 of 32,501 cards eligible for paper support (53.1%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -5765,6 +5765,7 @@ Council4 currently supports **17,258 of 32,501 cards eligible for paper support 
 - Geyserfield Stalker
 - Ghalma's Warden
 - Ghalta, Primal Hunger
+- Ghalta, Stampede Tyrant
 - Ghastbark Twins
 - Ghastly Death Tyrant
 - Ghastly Gloomhunter
@@ -8268,6 +8269,7 @@ Council4 currently supports **17,258 of 32,501 cards eligible for paper support 
 - Last Caress
 - Last Gasp
 - Last Kiss
+- Last March of the Ents
 - Last Word
 - Lat-Nam Adept
 - Latch Seeker
