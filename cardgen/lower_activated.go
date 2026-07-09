@@ -197,6 +197,9 @@ func lowerActivatedAbilityKind(
 		if len(ability.Content.Effects[i].TokenCopyGrantKeywords) != 0 {
 			spans = append(spans, ability.Content.Effects[i].TokenCopyGrantRiderSpan)
 		}
+		if ability.Content.Effects[i].TokenGrantedAbilityRiderSpan != (shared.Span{}) {
+			spans = append(spans, ability.Content.Effects[i].TokenGrantedAbilityRiderSpan)
+		}
 		if ability.Content.Effects[i].ExiledCardSplitOpponentChooses {
 			spans = append(spans, ability.Content.Effects[i].ExiledCardChoiceRiderSpan)
 		}
@@ -332,6 +335,9 @@ func lowerLoyaltyAbility(
 		}
 		if len(ability.Content.Effects[i].TokenCopyGrantKeywords) != 0 {
 			spans = append(spans, ability.Content.Effects[i].TokenCopyGrantRiderSpan)
+		}
+		if ability.Content.Effects[i].TokenGrantedAbilityRiderSpan != (shared.Span{}) {
+			spans = append(spans, ability.Content.Effects[i].TokenGrantedAbilityRiderSpan)
 		}
 	}
 	for _, target := range ability.Content.Targets {

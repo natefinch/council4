@@ -357,6 +357,10 @@ func appendEffectSpans(spans []shared.Span, sentences []Sentence) []shared.Span 
 			spans = append(spans, sentence.Span)
 			continue
 		}
+		if sentence.TokenGrantedAbilityRider {
+			spans = append(spans, sentence.Span)
+			continue
+		}
 		if sentence.KeywordChoiceAtRandomPrelude {
 			spans = append(spans, sentence.Span)
 			continue

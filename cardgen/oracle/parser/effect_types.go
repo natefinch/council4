@@ -2144,6 +2144,12 @@ type EffectSyntax struct {
 	// <keyword>." rider sentence so lowering credits its tokens toward source
 	// coverage. It is set only when TokenCopyGrantKeywords is non-empty.
 	TokenCopyGrantRiderSpan shared.Span `json:"-"`
+	// TokenGrantedAbilityRiderSpan covers the folded "It has \"<ability>\"." /
+	// "They have \"<ability>\"." rider sentence attached to this create-token
+	// effect, so lowering credits its tokens toward source coverage. It is set
+	// only when the granted ability came from a trailing rider sentence rather
+	// than an inline "token with \"<ability>\"" clause.
+	TokenGrantedAbilityRiderSpan shared.Span `json:"-"`
 	// TokenCopyOverride reports a copy-token characteristic-overriding "except"
 	// exception ("except it's a 1/1 green Frog", "except it's an artifact in
 	// addition to its other types"). When set, the created token copies its

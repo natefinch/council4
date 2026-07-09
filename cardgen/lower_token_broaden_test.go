@@ -63,6 +63,82 @@ func TestLowerTokenWithGrantedDeathTrigger(t *testing.T) {
 	}
 }
 
+// TestLowerTokenTrailingItHasGrantedAbility verifies a token whose granted
+// ability is supplied by a trailing "It has \"...\"." sentence (the Eldrazi Scion
+// cycle: "Create a 1/1 colorless Eldrazi Scion creature token. It has \"Sacrifice
+// this token: Add {C}.\"") folds that rider onto the create and attaches the
+// mana ability to the synthesized token definition.
+func TestLowerTokenTrailingItHasGrantedAbility(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Scion Maker",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		Colors:     []string{"G"},
+		OracleText: "Create a 1/1 colorless Eldrazi Scion creature token. It has \"Sacrifice this token: Add {C}.\"",
+	})
+	create := createTokenPrimitive(t, face)
+	def, ok := create.Source.TokenDefRef()
+	if !ok {
+		t.Fatal("token source is not a token definition")
+	}
+	if def.Name != "Eldrazi Scion" {
+		t.Fatalf("token name = %q, want Eldrazi Scion", def.Name)
+	}
+	if len(def.ManaAbilities) != 1 {
+		t.Fatalf("granted mana abilities = %d, want 1", len(def.ManaAbilities))
+	}
+}
+
+// TestLowerTokenTrailingTheyHaveGrantedAbility verifies the plural back-reference
+// "They have \"...\"." on a multiple-token create ("Create two 1/1 ... Eldrazi
+// Scion creature tokens. They have \"Sacrifice this token: Add {C}.\"", Call the
+// Scions) folds identically.
+func TestLowerTokenTrailingTheyHaveGrantedAbility(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Scion Caller",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		Colors:     []string{"G"},
+		OracleText: "Create two 1/1 colorless Eldrazi Scion creature tokens. They have \"Sacrifice this token: Add {C}.\"",
+	})
+	create := createTokenPrimitive(t, face)
+	def, ok := create.Source.TokenDefRef()
+	if !ok {
+		t.Fatal("token source is not a token definition")
+	}
+	if len(def.ManaAbilities) != 1 {
+		t.Fatalf("granted mana abilities = %d, want 1", len(def.ManaAbilities))
+	}
+}
+
+// TestLowerTokenTrailingGrantWithExtraContentFailsClosed verifies the trailing
+// "It has \"...\"" rider folder is exact: a rider sentence carrying anything
+// beyond the single quoted ability — a keyword ("It has trample and \"...\"") or
+// a trailing qualifier ("It has \"...\" until end of turn") — is not folded, so
+// the surplus is never silently dropped and the card fails closed.
+func TestLowerTokenTrailingGrantWithExtraContentFailsClosed(t *testing.T) {
+	t.Parallel()
+	for _, oracle := range []string{
+		"Create a 1/1 colorless Eldrazi Scion creature token. It has trample and \"Sacrifice this token: Add {C}.\"",
+		"Create a 1/1 colorless Eldrazi Scion creature token. It has \"Sacrifice this token: Add {C}\" until end of turn.",
+	} {
+		_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+			Name:       "Test Extra Content Token",
+			Layout:     "normal",
+			TypeLine:   "Sorcery",
+			OracleText: oracle,
+		}, "t")
+		if err != nil {
+			t.Fatalf("generate(%q): %v", oracle, err)
+		}
+		if len(diagnostics) == 0 {
+			t.Fatalf("GenerateExecutableCardSource(%q) lowered; want fail closed", oracle)
+		}
+	}
+}
+
 // TestLowerTokenGrantedAbilityWithKeyword verifies the text-blind lowering
 // composes a token that combines a printed keyword with a trailing quoted
 // granted ability, emitting both the keyword's static body and the granted

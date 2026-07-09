@@ -2138,6 +2138,11 @@ type CompiledEffect struct {
 	// the pipeline. Lowering compiles its inner document and attaches the runtime
 	// ability to the token's definition. It is nil for tokens with no such rider.
 	TokenGrantedAbility *parser.StaticGrantedAbilitySyntax
+	// TokenGrantedAbilityRiderSpan covers the trailing "It has \"...\"." / "They
+	// have \"...\"." rider sentence that supplied TokenGrantedAbility, so lowering
+	// credits its tokens toward source coverage. It is the zero span when the
+	// granted ability came from an inline "token with \"...\"" clause instead.
+	TokenGrantedAbilityRiderSpan shared.Span
 	// GainGrantedAbility is the quoted ability a resolving ability grant confers
 	// on its subject ("This creature gains \"Whenever this creature deals combat
 	// damage to a player, that player loses the game.\""), parsed once through the

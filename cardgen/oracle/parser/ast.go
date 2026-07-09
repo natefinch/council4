@@ -1181,6 +1181,13 @@ type Sentence struct {
 	// effect. Reference and coverage scans treat its tokens as belonging to that
 	// create effect rather than as an unrecognized sibling.
 	TokenCopyGrantRider bool `json:",omitempty"`
+	// TokenGrantedAbilityRider reports that this sentence is a credited "It has
+	// \"<ability>\"." / "They have \"<ability>\"." rider folded onto a preceding
+	// create-token effect (the Eldrazi Scion cycle: "Create a 1/1 ... token. It
+	// has \"Sacrifice this token: Add {C}.\""). The quoted ability is attached to
+	// the create effect; reference and coverage scans credit the sentence to that
+	// create rather than flagging it as an unrecognized sibling.
+	TokenGrantedAbilityRider bool `json:",omitempty"`
 	// ReturnAsEnchantmentRider reports that this sentence is a credited "It's an
 	// enchantment." rider folded onto a preceding return-to-battlefield effect
 	// (the Enduring enchantment-creature cycle). Reference and coverage scans
@@ -1240,7 +1247,8 @@ func sentenceIsCreditedRider(s *Sentence) bool {
 		s.PlayFromTopPayLifeRider ||
 		s.PileSplitRider ||
 		s.ExiledCardChoiceRider ||
-		s.RemoveAuraRider
+		s.RemoveAuraRider ||
+		s.TokenGrantedAbilityRider
 }
 
 // StaticRuleSubjectKind identifies the source object constrained by a simple
