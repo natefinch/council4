@@ -239,6 +239,9 @@ func matchSelection(s *selectionSubject, sel *game.Selection) bool {
 	if sel.MatchCommander && !s.isCommander() {
 		return false
 	}
+	if sel.MatchGoaded && !s.goaded() {
+		return false
+	}
 	if sel.MatchEnchanted && !s.enchanted() {
 		return false
 	}
@@ -760,6 +763,17 @@ func (s *selectionSubject) enchanted() bool {
 func (s *selectionSubject) equipped() bool {
 	if permanent, ok := s.attachmentSubjectPermanent(); ok {
 		return permanentIsEquipped(s.g, permanent)
+	}
+	return false
+}
+
+// goaded reports whether the subject permanent is goaded right now, by either a
+// turn-limited goad (the goad keyword action) or an active continuous
+// RuleEffectGoaded contribution (CR 701.38). Only battlefield and event
+// permanents can be goaded; other subjects never match.
+func (s *selectionSubject) goaded() bool {
+	if permanent, ok := s.attachmentSubjectPermanent(); ok {
+		return isGoadedNow(s.g, permanent)
 	}
 	return false
 }

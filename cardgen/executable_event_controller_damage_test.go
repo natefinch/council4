@@ -51,6 +51,52 @@ func TestGenerateExecutableCardSourceEventPermanentControllerDamage(t *testing.T
 	}
 }
 
+// TestGenerateExecutableCardSourceEventPermanentControllerDamageEventSource
+// covers the variant where the damage SOURCE is the triggering permanent itself
+// rather than the ability's own source: "it deals N damage to its controller".
+// Here "it" is the event permanent (the creature that attacked or died) and
+// "its controller" is that same permanent's controller, so the source lowers to
+// EventPermanentReference() instead of SourcePermanentReference() (Vengeful
+// Ancestor's "Whenever a goaded creature attacks" ability, and the Smoke
+// Blessing token's death trigger).
+func TestGenerateExecutableCardSourceEventPermanentControllerDamageEventSource(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name     string
+		typeLine string
+		oracle   string
+	}{
+		// Attack trigger: the attacking creature deals to its own controller.
+		{"Test Attack Sting", "Enchantment", "Whenever a creature attacks, it deals 1 damage to its controller."},
+		// Death trigger: the creature that died deals to its own controller,
+		// resolved via last-known information (the Smoke Blessing shape).
+		{"Test Death Sting", "Enchantment", "Whenever a creature dies, it deals 1 damage to its controller."},
+	} {
+		source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+			Name:       tc.name,
+			Layout:     "normal",
+			ManaCost:   "{2}",
+			TypeLine:   tc.typeLine,
+			OracleText: tc.oracle,
+		}, "t")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(diagnostics) != 0 {
+			t.Fatalf("%q: diagnostics = %#v", tc.oracle, diagnostics)
+		}
+		for _, want := range []string{
+			"Primitive: game.Damage{",
+			"Recipient:    game.PlayerDamageRecipient(game.ObjectControllerReference(game.EventPermanentReference()))",
+			"DamageSource: opt.Val(game.EventPermanentReference())",
+		} {
+			if !strings.Contains(source, want) {
+				t.Fatalf("%q: source missing %q:\n%s", tc.oracle, want, source)
+			}
+		}
+	}
+}
+
 // TestGenerateExecutableCardSourceEventPermanentControllerDamageRejections keeps
 // the controller-recipient path fail-closed: an unsupported trailing condition
 // leaves the effect to the standard damage paths, which emit their own
