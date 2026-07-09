@@ -59,6 +59,7 @@ var Cards = []cardset.Entry{
 	{Name: "Amazing Acrobatics", New: AmazingAcrobatics},
 	{Name: "Amulet of Kroog", New: AmuletOfKroog},
 	{Name: "Anaba Spirit Crafter", New: AnabaSpiritCrafter},
+	{Name: "Anathemancer", New: Anathemancer},
 	{Name: "Ancestor Dragon", New: AncestorDragon},
 	{Name: "Ancestral Blade", New: AncestralBlade},
 	{Name: "Ancient Kavu", New: AncientKavu},

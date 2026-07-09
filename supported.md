@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,156 of 32,501 cards eligible for paper support (52.8%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,158 of 32,501 cards eligible for paper support (52.8%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -401,6 +401,7 @@ Council4 currently supports **17,156 of 32,501 cards eligible for paper support 
 - Anaconda
 - Anarchist
 - Anarchy
+- Anathemancer
 - Anax and Cymede
 - Ancestor Dragon
 - Ancestor's Chosen
@@ -7681,6 +7682,7 @@ Council4 currently supports **17,156 of 32,501 cards eligible for paper support 
 - Joust Through
 - Jousting Dummy
 - Joven
+- Jovial Evil
 - Joyous Respite
 - Judge Magister Gabranth
 - Judge of Currents

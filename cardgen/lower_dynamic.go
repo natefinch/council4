@@ -67,6 +67,26 @@ func lowerDynamicAmountKind(amount compiler.CompiledAmount, object game.ObjectRe
 		if dynamic, ok := dynamicCardZoneAmount(amount.Selector(), amount.Multiplier); ok {
 			return dynamic, true
 		}
+		if selector := amount.Selector(); selector.Controller == compiler.ControllerThatPlayer {
+			// "the number of nonbasic lands that player controls"
+			// (Anathemancer) counts the permanents a referenced player
+			// controls. The selection's own controller filter is the group
+			// domain's job, so strip it to Any before projecting the
+			// characteristic predicate and scope the count to the triggering
+			// event player, the default subject a damage-to-target-player
+			// rebind (rebindRecipientControlledCountAmount) retargets to the
+			// chosen player. This mirrors the "cards in that player's hand"
+			// hand-size default.
+			stripped := selector
+			stripped.Controller = compiler.ControllerAny
+			selection, ok := dynamicAmountSelection(stripped)
+			if !ok {
+				return game.DynamicAmount{}, false
+			}
+			dynamic.Kind = game.DynamicAmountCountSelector
+			dynamic.Group = game.PlayerControlledGroup(game.EventPlayerReference(), selection)
+			return dynamic, true
+		}
 		selection, ok := dynamicAmountSelection(amount.Selector())
 		if !ok {
 			return game.DynamicAmount{}, false
@@ -294,15 +314,16 @@ func dynamicAmountSelection(selector compiler.CompiledSelector) (game.Selection,
 }
 
 // dynamicAmountSelectionMask drops the canonical dimensions a battlefield count
-// group never carries: the excluded supertype, kind-agnostic counter, "aren't of
-// the chosen type" exclusion, conjunctive type set, and per-object token state.
-// It fails closed on a source-relative power comparison (a count group has no
-// source permanent to compare against, so the predecessor projector rejected
-// that filter rather than dropping it) and on a historic disjunction, which a
-// battlefield count cannot represent through the count lowering and must not
-// silently drop.
+// group never carries: the kind-agnostic counter, "aren't of the chosen type"
+// exclusion, conjunctive type set, and per-object token state. It honors the
+// excluded supertype ("the number of nonbasic lands that player controls",
+// Anathemancer), which the engine's battlefield count applies through
+// Selection.ExcludedSupertype. It fails closed on a source-relative power
+// comparison (a count group has no source permanent to compare against, so the
+// predecessor projector rejected that filter rather than dropping it) and on a
+// historic disjunction, which a battlefield count cannot represent through the
+// count lowering and must not silently drop.
 var dynamicAmountSelectionMask = SelectionMask{}.Ignoring(
-	DimExcludedSupertype,
 	DimMatchAnyCounter,
 	DimSubtypeChoiceExcluded,
 	DimConjunctiveTypes,
@@ -744,7 +765,60 @@ func rebindRecipientHandSizeAmount(amount game.Quantity, recipient game.PlayerRe
 	return game.Dynamic(updated)
 }
 
-// rebindRecipientLifeChangedAmount retargets a "the life that player lost/gained
+// rebindRecipientControlledCountAmount retargets a "the number of <permanents>
+// that player controls" damage amount from its default triggering-event-player
+// subject to recipient. The amount counts the permanents the referenced player
+// controls; lowerDynamicAmountKind anchors that count group to the triggering
+// event player, which is correct only when the damage recipient is the event
+// player. When the damage instead targets a chosen player ("~ deals damage to
+// target player equal to the number of nonbasic lands that player controls.",
+// Anathemancer), "that player" co-refers with that target, so recipient (the
+// target player) counts its own permanents. It rebuilds the player-controlled
+// count group anchored to recipient. Every other amount — including a
+// controller-scoped "the number of lands you control" count on the battlefield
+// domain, which carries no player anchor — is returned unchanged.
+func rebindRecipientControlledCountAmount(amount game.Quantity, recipient game.PlayerReference) game.Quantity {
+	dyn := amount.DynamicAmount()
+	if !dyn.Exists || dyn.Val.Kind != game.DynamicAmountCountSelector {
+		return amount
+	}
+	anchor, ok := dyn.Val.Group.PlayerAnchor()
+	if !ok || anchor.Kind() != game.PlayerReferenceEventPlayer {
+		return amount
+	}
+	updated := dyn.Val
+	updated.Group = game.PlayerControlledGroup(recipient, dyn.Val.Group.Selection())
+	return game.Dynamic(updated)
+}
+
+// dropControlledCountThatPlayerReferences removes the redundant ThatPlayer
+// reference a "the number of <permanents> that player controls" damage amount
+// leaves behind. The count subject's "that player" co-refers with the damage's
+// target player and is modeled entirely by the count group's player anchor
+// (rebound to the target by rebindRecipientControlledCountAmount), so the
+// standalone reference carries no additional binding the damage lowering
+// consumes. It is dropped only for a ControllerThatPlayer count amount and only
+// for a ThatPlayer reference bound to the target; every other reference set is
+// returned unchanged, so unrelated damage spells stay byte-identical.
+func dropControlledCountThatPlayerReferences(
+	references []compiler.CompiledReference,
+	amount compiler.CompiledAmount,
+) []compiler.CompiledReference {
+	if amount.DynamicKind != compiler.DynamicAmountCount ||
+		amount.Selector().Controller != compiler.ControllerThatPlayer {
+		return references
+	}
+	filtered := make([]compiler.CompiledReference, 0, len(references))
+	for _, reference := range references {
+		if reference.Kind == compiler.ReferenceThatPlayer &&
+			reference.Binding == compiler.ReferenceBindingTarget {
+			continue
+		}
+		filtered = append(filtered, reference)
+	}
+	return filtered
+}
+
 // this turn" amount from its default triggering-event-player subject to
 // recipient. "That player" co-refers with the player whose life the effect
 // changes, so when a life-spell lowering targets a chosen player, recipient (the
