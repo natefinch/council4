@@ -1130,10 +1130,7 @@ func (r Renderer) renderPlayerAmountPrimitive(ctx *renderCtx, primitive game.Pri
 		if err != nil {
 			return "", err
 		}
-		if value.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
-			return r.renderAmountPlayerGroup(ctx, "game.ExileTopOfLibrary", value.Amount, value.PlayerGroup)
-		}
-		typeName, amount, player = "game.ExileTopOfLibrary", value.Amount, value.Player
+		return r.renderExileTopOfLibrary(ctx, value)
 	case game.PrimitiveScry:
 		value, err := assertPrimitive[game.Scry](primitive)
 		if err != nil {
@@ -1871,6 +1868,41 @@ func (r Renderer) renderAmountPlayerGroup(
 		fmt.Sprintf("Amount: %s,", renderedAmount),
 		fmt.Sprintf("PlayerGroup: %s,", renderedGroup),
 	}), nil
+}
+
+// renderExileTopOfLibrary renders an ExileTopOfLibrary primitive, preserving the
+// optional named exile counter the shared amount/player renderers drop. Without
+// a counter it renders byte-identically to the shared amount/player(-group)
+// renderer (Counter omitted when unset).
+func (r Renderer) renderExileTopOfLibrary(ctx *renderCtx, value game.ExileTopOfLibrary) (string, error) {
+	renderedAmount, err := r.renderQuantity(ctx, value.Amount)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{fmt.Sprintf("Amount: %s,", renderedAmount)}
+	if value.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
+		renderedGroup, err := renderPlayerGroupReference(value.PlayerGroup)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("PlayerGroup: %s,", renderedGroup))
+	} else {
+		player, err := r.renderPlayerReference(value.Player)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Player: %s,", player))
+	}
+	if value.Counter.Exists {
+		kind, err := renderCounterKind(value.Counter.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importCounter)
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("Counter: opt.Val(%s),", kind))
+	}
+	return structLit("game.ExileTopOfLibrary", fields), nil
 }
 
 // renderDiscardAmountPlayer renders a single-player discard, preserving the

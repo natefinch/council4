@@ -1982,14 +1982,14 @@ func handleExileTopOfLibrary(r *effectResolver, prim game.ExileTopOfLibrary) eff
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
 	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
 		for _, playerID := range playersInAPNAPOrder(r.game, r.playerGroupMembers(prim.PlayerGroup)) {
-			exileTopOfLibraryCards(r.game, playerID, res.amount)
+			exileTopOfLibraryCards(r.game, playerID, res.amount, prim.Counter)
 		}
 		res.succeeded = res.amount > 0
 		return res
 	}
 	playerID, ok := r.resolvePlayer(prim.Player)
 	if ok {
-		exileTopOfLibraryCards(r.game, playerID, res.amount)
+		exileTopOfLibraryCards(r.game, playerID, res.amount, prim.Counter)
 		res.succeeded = res.amount > 0
 	}
 	return res

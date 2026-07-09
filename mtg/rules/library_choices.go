@@ -112,7 +112,7 @@ func revealedCardMatches(g *game.Game, playerID game.PlayerID, cardID id.ID, unt
 	}, &until)
 }
 
-func exileTopOfLibraryCards(g *game.Game, playerID game.PlayerID, amount int) {
+func exileTopOfLibraryCards(g *game.Game, playerID game.PlayerID, amount int, counterKind opt.V[counter.Kind]) {
 	player, ok := playerByID(g, playerID)
 	if !ok || amount <= 0 {
 		return
@@ -133,6 +133,13 @@ func exileTopOfLibraryCards(g *game.Game, playerID game.PlayerID, amount int) {
 			return
 		}
 		destinationCards.Add(cardID)
+		// Place the named exile counter only when the card actually landed in
+		// exile: a CR 614/903.9 replacement or commander redirect can divert the
+		// move to the command zone, and gating on the intended destination would
+		// orphan a counter on a card that never reached exile.
+		if counterKind.Exists && destination == zone.Exile {
+			g.AddExileCounter(cardID, counterKind.Val, 1)
+		}
 		emitZoneChangeEvent(g, game.Event{
 			Player:   playerID,
 			CardID:   cardID,

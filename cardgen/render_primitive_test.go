@@ -126,6 +126,53 @@ func TestRenderNamedCounterPrimitives(t *testing.T) {
 	}
 }
 
+func TestRenderExileTopOfLibraryPrimitive(t *testing.T) {
+	t.Parallel()
+	// Without a counter the primitive renders byte-identically to the shared
+	// amount/player-group renderer; the named exile counter appends a Counter
+	// field and requests the counter and opt imports.
+	plain, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.ExileTopOfLibrary{
+		Amount:      game.Fixed(1),
+		PlayerGroup: game.AllPlayersReference(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(plain, "Counter:") {
+		t.Fatalf("counterless exile-top rendered a Counter field:\n%s", plain)
+	}
+	for _, want := range []string{"game.ExileTopOfLibrary", "Amount: game.Fixed(1)", "PlayerGroup: game.AllPlayersReference()"} {
+		if !strings.Contains(plain, want) {
+			t.Fatalf("rendered exile-top missing %q:\n%s", want, plain)
+		}
+	}
+
+	ctx := newRenderCtx()
+	withCounter, err := (Renderer{}).renderPrimitive(ctx, game.ExileTopOfLibrary{
+		Amount:      game.Fixed(1),
+		PlayerGroup: game.AllPlayersReference(),
+		Counter:     opt.Val(counter.Collection),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"game.ExileTopOfLibrary",
+		"PlayerGroup: game.AllPlayersReference()",
+		"Counter: opt.Val(counter.Collection)",
+	} {
+		if !strings.Contains(withCounter, want) {
+			t.Fatalf("rendered exile-top-with-counter missing %q:\n%s", want, withCounter)
+		}
+	}
+	if _, ok := ctx.imports[importCounter]; !ok {
+		t.Fatal("exile-top with counter did not request counter import")
+	}
+	if _, ok := ctx.imports[importOpt]; !ok {
+		t.Fatal("exile-top with counter did not request opt import")
+	}
+}
+
 func TestRenderExplorePrimitive(t *testing.T) {
 	t.Parallel()
 	rendered, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.Explore{

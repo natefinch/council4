@@ -698,6 +698,39 @@ func TestGenerateExecutableCardSourceExileTopOfLibrary(t *testing.T) {
 	}
 }
 
+// TestGenerateExecutableCardSourceExileTopOfLibraryCounter proves the
+// "with a <kind> counter on it" rider lowers onto the ExileTopOfLibrary
+// primitive's Counter field and, on an each-player scope, exiles from every
+// player's library (Evelyn, the Covetous ETB shape).
+func TestGenerateExecutableCardSourceExileTopOfLibraryCounter(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Exile Top Counter",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Exile the top card of each player's library with a collection counter on it.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, want := range []string{
+		"Primitive: game.ExileTopOfLibrary{",
+		"PlayerGroup: game.AllPlayersReference()",
+		"opt.Val(counter.Collection)",
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("source missing %q:\n%s", want, source)
+		}
+	}
+	if !strings.Contains(source, "Counter:") {
+		t.Fatalf("source missing exile counter field:\n%s", source)
+	}
+}
+
 func TestGenerateExecutableCardSourceInvestigate(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

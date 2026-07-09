@@ -1435,6 +1435,13 @@ type ExileTopOfLibrary struct {
 	Amount      Quantity
 	Player      PlayerReference      // single player; zero if PlayerGroup is set
 	PlayerGroup PlayerGroupReference // opponents or all players; zero if Player is set
+	// Counter names a named marker counter placed on each card exiled this way
+	// once it reaches exile ("exile the top card of each player's library with a
+	// collection counter on it.", Evelyn, the Covetous). The counter is recorded
+	// in Game.ExileCounters, mirroring MoveCard.Counter, so the source's paired
+	// play/cast-from-exile ability can later select "a card ... in exile with a
+	// <name> counter on it". It is unset for every exile that places no counter.
+	Counter opt.V[counter.Kind]
 }
 
 // RevealUntil reveals cards from the top of a referenced player's library one at

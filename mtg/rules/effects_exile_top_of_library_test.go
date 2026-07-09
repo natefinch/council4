@@ -4,6 +4,9 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/opt"
 )
 
 // TestExileTopOfLibraryControllerExilesTopCard proves a controller-scoped
@@ -30,8 +33,35 @@ func TestExileTopOfLibraryControllerExilesTopCard(t *testing.T) {
 	}
 }
 
-// TestExileTopOfLibraryGroupExilesForEveryPlayer proves "each player exiles the
-// top two cards" moves cards from every player's library to their exile zone.
+// TestExileTopOfLibraryGroupPlacesNamedCounter proves the Counter field places
+// one named marker counter on each exiled card across every player's library,
+// recorded in Game.ExileCounters (Evelyn, the Covetous collection counters).
+func TestExileTopOfLibraryGroupPlacesNamedCounter(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addEffectSpellToStack(g, game.Player1, game.ExileTopOfLibrary{
+		Amount:      game.Fixed(1),
+		PlayerGroup: game.AllPlayersReference(),
+		Counter:     opt.Val(counter.Collection),
+	}, nil)
+	topIDs := make(map[game.PlayerID]id.ID)
+	for _, playerID := range []game.PlayerID{game.Player1, game.Player2, game.Player3, game.Player4} {
+		addCardToLibrary(g, playerID, &game.CardDef{CardFace: game.CardFace{Name: "Bottom"}})
+		topIDs[playerID] = addCardToLibrary(g, playerID, &game.CardDef{CardFace: game.CardFace{Name: "Top"}})
+	}
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	for playerID, cardID := range topIDs {
+		if !g.Players[playerID].Exile.Contains(cardID) {
+			t.Fatalf("player %d top card not exiled", playerID)
+		}
+		if !g.HasExileCounter(cardID, counter.Collection) {
+			t.Fatalf("player %d exiled card missing collection counter", playerID)
+		}
+	}
+}
 func TestExileTopOfLibraryGroupExilesForEveryPlayer(t *testing.T) {
 	t.Parallel()
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
