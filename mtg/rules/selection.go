@@ -209,6 +209,16 @@ func matchSelection(s *selectionSubject, sel *game.Selection) bool {
 			return false
 		}
 	}
+	if sel.ManaValueLessThanEventPermanent {
+		manaValue, ok := s.manaValue()
+		if !ok {
+			return false
+		}
+		bound, ok := s.eventPermanentManaValue()
+		if !ok || manaValue >= bound {
+			return false
+		}
+	}
 	if sel.Toughness.Exists {
 		toughness, ok := s.toughness()
 		if !ok || !sel.Toughness.Val.Matches(toughness) {
@@ -1038,6 +1048,20 @@ func (s *selectionSubject) eventPermanentCardDef() (*game.CardDef, bool) {
 		return nil, false
 	}
 	return card.Def.FaceDef(s.event.Face)
+}
+
+// eventPermanentManaValue reads the mana value of the triggering event's
+// permanent — the creature that died (Orah, Skyclave Hierophant) or the artifact
+// put into a graveyard (Scrap Trawler) — from its card or token definition (CR
+// 202.3, CR 608.2h). It backs the Selection.ManaValueLessThanEventPermanent
+// bound. Outside a triggered resolution, or when the event names no permanent,
+// it reports no value so the bound fails closed rather than matching every card.
+func (s *selectionSubject) eventPermanentManaValue() (int, bool) {
+	def, ok := s.eventPermanentCardDef()
+	if !ok {
+		return 0, false
+	}
+	return def.ManaValue(), true
 }
 
 func (s *selectionSubject) controllerMatches(relation game.ControllerRelation) bool {

@@ -336,6 +336,20 @@ type Selection struct {
 	// attack resolution there is no defending player, so the predicate matches
 	// nothing. Placed at the end so the bool joins no existing cluster's packing.
 	ControlledByDefendingPlayer bool
+
+	// ManaValueLessThanEventPermanent requires the matched card's mana value to
+	// be strictly less than the mana value of the triggering event's permanent —
+	// the creature that died ("return target Cleric card with lesser mana value
+	// from your graveyard to the battlefield", Orah, Skyclave Hierophant) or the
+	// artifact put into a graveyard ("return to your hand target artifact card in
+	// your graveyard with lesser mana value", Scrap Trawler). It is the
+	// mana-value, event-relative sibling of PowerLessThanSource: the bound reads
+	// the triggering event's permanent through last-known information (CR
+	// 608.2h), not the ability's source, so a card returned by a self-or-subtype
+	// dies trigger is compared to whichever permanent died. Outside a triggered
+	// resolution, or when the event names no permanent, the bound matches
+	// nothing. Placed at the end so the bool joins no existing cluster's packing.
+	ManaValueLessThanEventPermanent bool
 }
 
 // ManaValueDynamicBound bounds a card's mana value by a controller-relative
@@ -401,7 +415,8 @@ func (s Selection) Empty() bool {
 		!s.DealtDamageThisTurn &&
 		!s.OwnerNotController &&
 		!s.ControlledByEventPlayer &&
-		!s.ControlledByDefendingPlayer
+		!s.ControlledByDefendingPlayer &&
+		!s.ManaValueLessThanEventPermanent
 }
 
 // Validate reports structural contradictions in the Selection that represent

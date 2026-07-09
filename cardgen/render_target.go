@@ -501,6 +501,9 @@ func (Renderer) renderSelection(ctx *renderCtx, selection game.Selection) (strin
 	if selection.PowerGreaterThanSource {
 		fields = append(fields, "PowerGreaterThanSource: true,")
 	}
+	if selection.ManaValueLessThanEventPermanent {
+		fields = append(fields, "ManaValueLessThanEventPermanent: true,")
+	}
 	if selection.NonToken {
 		fields = append(fields, "NonToken: true,")
 	}

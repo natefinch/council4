@@ -1716,6 +1716,17 @@ type SelectionSyntax struct {
 	// Selection.PowerGreaterThanSource.
 	PowerLessThanSource    bool `json:",omitempty"`
 	PowerGreaterThanSource bool `json:",omitempty"`
+	// ManaValueLessThanEventPermanent records a trailing "with lesser mana value"
+	// relative clause on a graveyard-return card target ("return target Cleric
+	// card with lesser mana value from your graveyard to the battlefield", Orah,
+	// Skyclave Hierophant), restricting the match to cards whose mana value is
+	// strictly less than the triggering event permanent's mana value — the
+	// creature or artifact whose death fired the ability. It is the event-relative
+	// mana-value analogue of PowerLessThanSource: it carries no fixed comparison
+	// and lowers to Selection.ManaValueLessThanEventPermanent. It is recognized
+	// only for the bare "lesser mana value" wording; "equal or lesser mana value"
+	// (a ≤ bound) and "greater mana value" stay unrecognized so they fail closed.
+	ManaValueLessThanEventPermanent bool `json:",omitempty"`
 	// NameUniqueAmongControlled records a trailing "that doesn't have the same
 	// name as another permanent you control" relative clause (Yenna, Redtooth
 	// Regent), restricting the match to a permanent whose name differs from every

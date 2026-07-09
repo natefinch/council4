@@ -101,6 +101,7 @@ var Cards = []cardset.Entry{
 	{Name: "Rite of Replication", New: RiteOfReplication},
 	{Name: "Rith's Grove", New: RithSGrove},
 	{Name: "Ritual of the Machine", New: RitualOfTheMachine},
+	{Name: "Riveteers Ascendancy", New: RiveteersAscendancy},
 	{Name: "Riveteers Overlook", New: RiveteersOverlook},
 	{Name: "Roaming Ghostlight", New: RoamingGhostlight},
 	{Name: "Rock Slide", New: RockSlide},

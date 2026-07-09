@@ -3408,6 +3408,22 @@ func parseSelectionNumbers(tokens []shared.Token, atoms Atoms, selection *Select
 				selection.ManaValueDynamic = kind
 				continue
 			}
+			if i >= 1 && equalWord(tokens[i-1], "lesser") &&
+				(i < 2 || !equalWord(tokens[i-2], "or")) &&
+				!equalWord(tokens[i+2], "than") {
+				// "with lesser mana value" compares the match to the triggering
+				// event permanent's mana value — the creature that died (Orah,
+				// Skyclave Hierophant) — not a fixed number. Record the relative
+				// qualifier and skip the fixed-comparison parse. The "or" guard
+				// excludes "equal or lesser mana value" (a ≤ bound), which stays
+				// unrecognized so it fails closed rather than dropping to strict.
+				// The "than" guard excludes the explicit "lesser mana value than
+				// <object>" comparison used by seek/cascade/library effects (a
+				// bound relative to a named card, not the event permanent), which
+				// this event-relative flag must not silently absorb.
+				selection.ManaValueLessThanEventPermanent = true
+				continue
+			}
 			comparison, ok := parseSelectionNumberComparison(tokens[i+2:], atoms)
 			if !ok {
 				return false
