@@ -2068,6 +2068,14 @@ const (
 	// carries the owner-not-controller filter. Added last so existing subjects keep
 	// their wire values.
 	StaticSubjectControlledNotOwnedCreatures
+	// StaticSubjectOtherControlledUntappedCreatures names the untapped creatures
+	// the controller controls other than the source ("Other untapped creatures you
+	// control have hexproof.", Saryth, the Viper's Fang). Its group is the
+	// controller-permanents domain narrowed to creatures with the untapped tap
+	// state and the source excluded; it is the untapped-state sibling of
+	// StaticSubjectOtherControlledTappedCreatures. Added last so existing subjects
+	// keep their wire values.
+	StaticSubjectOtherControlledUntappedCreatures
 )
 
 // CompiledDamageRecipient bundles the primary-recipient descriptors of a

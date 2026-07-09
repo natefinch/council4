@@ -3416,6 +3416,14 @@ const (
 	EffectStaticSubjectControlledUntappedCreatures       EffectStaticSubjectKind = "EffectStaticSubjectControlledUntappedCreatures"
 	EffectStaticSubjectControlledModifiedCreatures       EffectStaticSubjectKind = "EffectStaticSubjectControlledModifiedCreatures"
 	EffectStaticSubjectOtherControlledTappedCreatures    EffectStaticSubjectKind = "EffectStaticSubjectOtherControlledTappedCreatures"
+	// EffectStaticSubjectOtherControlledUntappedCreatures names the untapped
+	// creatures the controller controls other than the source ("Other untapped
+	// creatures you control have hexproof.", Saryth, the Viper's Fang; "Other
+	// untapped creatures you control get +0/+1.", Augusta, Dean of Order). It is
+	// the untapped-state, source-excluding sibling of the existing tapped form
+	// EffectStaticSubjectOtherControlledTappedCreatures; the compiler marks the
+	// affected selection with the untapped tap state and excludes the source.
+	EffectStaticSubjectOtherControlledUntappedCreatures EffectStaticSubjectKind = "EffectStaticSubjectOtherControlledUntappedCreatures"
 
 	EffectStaticSubjectControlledArtifactCreatures      EffectStaticSubjectKind = "EffectStaticSubjectControlledArtifactCreatures"
 	EffectStaticSubjectOtherControlledArtifactCreatures EffectStaticSubjectKind = "EffectStaticSubjectOtherControlledArtifactCreatures"

@@ -4319,10 +4319,11 @@ func parseBattlefieldCreatureGroupSubject(tokens []shared.Token, atoms Atoms) (E
 // supertype), "Nonlegendary creatures you control get/have ..." (the excluded
 // Legendary supertype), "Untapped creatures you control get/have ..." (untapped
 // state), "Modified creatures you control get/have ..." (modified: a counter,
-// Aura, or Equipment), and "Other tapped creatures you control get/have ..."
-// (tapped state excluding the source). It returns the typed subject, or false so
-// callers fall through to the bare grammar. It fails closed for "Tapped"
-// battlefield-wide forms that have no Selection representation.
+// Aura, or Equipment), "Other tapped creatures you control get/have ..."
+// (tapped state excluding the source), and "Other untapped creatures you control
+// get/have ..." (untapped state excluding the source). It returns the typed
+// subject, or false so callers fall through to the bare grammar. It fails closed
+// for "Tapped" battlefield-wide forms that have no Selection representation.
 // parseChosenTypeControlledCreatureGroupSubject recognizes the chosen-type
 // anthem group subjects "[Other] creatures you control of the chosen type
 // get/have/gain ...", the affected group of cards that buff only the controlled
@@ -4418,6 +4419,9 @@ func parseFilteredControlledCreatureGroupSubject(tokens []shared.Token) (EffectS
 	case len(tokens) >= 6 && effectWordsAt(tokens, 0, "other", "tapped", "creatures", "you", "control") &&
 		(equalWord(tokens[5], "get") || equalWord(tokens[5], "have")):
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectOtherControlledTappedCreatures, Span: shared.SpanOf(tokens[:5])}, true
+	case len(tokens) >= 6 && effectWordsAt(tokens, 0, "other", "untapped", "creatures", "you", "control") &&
+		(equalWord(tokens[5], "get") || equalWord(tokens[5], "have")):
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectOtherControlledUntappedCreatures, Span: shared.SpanOf(tokens[:5])}, true
 	default:
 	}
 	return EffectStaticSubjectSyntax{}, false

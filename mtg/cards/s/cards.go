@@ -29,6 +29,7 @@ var Cards = []cardset.Entry{
 	{Name: "Saproling Migration", New: SaprolingMigration},
 	{Name: "Saradoc, Master of Buckland", New: SaradocMasterOfBuckland},
 	{Name: "Sarkhan's Dragonfire", New: SarkhanSDragonfire},
+	{Name: "Saryth, the Viper's Fang", New: SarythTheViperSFang},
 	{Name: "Saurian Symbiote", New: SaurianSymbiote},
 	{Name: "Savage Smash", New: SavageSmash},
 	{Name: "Savage Thallid", New: SavageThallid},

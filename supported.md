@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,231 of 32,501 cards eligible for paper support (53.0%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,232 of 32,501 cards eligible for paper support (53.0%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -12309,6 +12309,7 @@ Council4 currently supports **17,231 of 32,501 cards eligible for paper support 
 - Saruli Gatekeepers
 - Saruman the White
 - Saruman's Trickery
+- Saryth, the Viper's Fang
 - Satyr
 - Satyr
 - Satyr
