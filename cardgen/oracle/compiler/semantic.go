@@ -2947,6 +2947,13 @@ type CompiledEffect struct {
 	// whose possessive subject is the source's attached permanent ("equipped
 	// creature's"/"enchanted creature's"), lowering to SourceAttachedPermanentReference.
 	SubjectSourceAttached bool
+	// CoordinatedSourceSubject mirrors the parser flag: a power/toughness pump
+	// whose subject coordinates the source permanent with a controlled creature
+	// group ("Alandra and Drakes you control each get +X/+X …"). StaticSubject
+	// carries the group's source-EXCLUDING variant; lowering pumps the source once
+	// through a ModifyPT instruction and every other group member through the
+	// excluding continuous effect.
+	CoordinatedSourceSubject bool
 	// DoubleSourceCounters mirrors the parser flag for an EffectDouble whose
 	// object is "the number of <kind> counters on <self>" (Mossborn Hydra).
 	// Lowering reads it together with DoubleSourceCounterKind to emit a dynamic

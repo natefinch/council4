@@ -3015,6 +3015,17 @@ type EffectSyntax struct {
 	// "equipped creature" subject is a StaticSubject handled separately — so it
 	// lowers to the source-attached permanent through continuousSubjectMode.
 	SubjectSourceAttached bool `json:",omitempty"`
+	// CoordinatedSourceSubject marks a resolving power/toughness pump whose subject
+	// coordinates the source permanent with a controlled creature group ("Alandra
+	// and Drakes you control each get +X/+X until end of turn, where X is the
+	// number of cards in your hand.", Alandra, Sky Dreamer). The group rides in
+	// StaticSubject as the source-EXCLUDING variant of the parsed group (e.g.
+	// "Drakes you control" becomes EffectStaticSubjectOtherControlledCreatureSubtype)
+	// so lowering pumps the source once through a ModifyPT instruction and every
+	// other group member through an excluding continuous effect, never
+	// double-pumping the source. Only the "<self> and <group> each get <p>/<t>"
+	// coordinated shape sets it.
+	CoordinatedSourceSubject bool `json:",omitempty"`
 	// DoubleSourceCounters marks an EffectDouble whose object is "the number of
 	// <kind> counters on <self>" ("double the number of +1/+1 counters on this
 	// creature", Mossborn Hydra). The source permanent gains additional counters

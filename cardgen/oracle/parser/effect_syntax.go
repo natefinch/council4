@@ -1487,6 +1487,20 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		if loseGameObject(kind, clause) {
 			kind = EffectLoseGame
 		}
+		// A coordinated "<self> and <group> each get <p>/<t> …" pump names the
+		// source permanent alongside a controlled creature group (Alandra, Sky
+		// Dreamer). effectSubjectStart drops the leading "<self> and", so the
+		// generic static-subject scan sees only the trailing group and gives up
+		// (Kind==None). Recognize the coordinated subject here, record the group as
+		// its source-excluding variant, and flag CoordinatedSourceSubject so
+		// lowering pumps the source separately from the excluding group.
+		coordinatedSource := false
+		if kind == EffectModifyPT && staticSubject.Kind == EffectStaticSubjectNone {
+			if coordinated, ok := parseCoordinatedSelfGroupSubject(subjectTokens, atoms); ok {
+				staticSubject = coordinated
+				coordinatedSource = true
+			}
+		}
 		entersColorChoice, entersColorChoiceExclude := entersColorChoiceSyntax(kind, clause)
 		doublePower, doubleToughness := false, false
 		doubleSourceCounters := false
@@ -1727,6 +1741,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			CanAttackDefenderSpan:    canAttackDefenderSpan,
 			TokenChoice:              parseTokenChoice(kind, clause),
 			StaticSubject:            staticSubject,
+			CoordinatedSourceSubject: coordinatedSource,
 			SubjectSourceAttached:    resolvingAttachedPossessiveSubject(ownership, staticSubject),
 			DoublePower:              doublePower,
 			DoubleToughness:          doubleToughness,

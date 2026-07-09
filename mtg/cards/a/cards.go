@@ -52,6 +52,7 @@ var Cards = []cardset.Entry{
 	{Name: "Alabaster Leech", New: AlabasterLeech},
 	{Name: "Alabaster Wall", New: AlabasterWall},
 	{Name: "Alaborn Veteran", New: AlabornVeteran},
+	{Name: "Alandra, Sky Dreamer", New: AlandraSkyDreamer},
 	{Name: "Alchemist's Vial", New: AlchemistSVial},
 	{Name: "Alela, Cunning Conqueror", New: AlelaCunningConqueror},
 	{Name: "Alharu, Solemn Ritualist", New: AlharuSolemnRitualist},
