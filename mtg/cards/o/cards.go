@@ -17,6 +17,7 @@ var Cards = []cardset.Entry{
 	{Name: "Obscura Storefront", New: ObscuraStorefront},
 	{Name: "Obsidian Obelisk", New: ObsidianObelisk},
 	{Name: "Ocular Halo", New: OcularHalo},
+	{Name: "Odric, Lunarch Marshal", New: OdricLunarchMarshal},
 	{Name: "Odunos River Trawler", New: OdunosRiverTrawler},
 	{Name: "Off Balance", New: OffBalance},
 	{Name: "Offender at Large", New: OffenderAtLarge},

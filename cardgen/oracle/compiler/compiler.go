@@ -96,6 +96,11 @@ func compileAbility(
 	compiled.PartnerWith = ability.PartnerWith != nil
 	compiled.ChooseABackground = ability.ChooseABackground != nil
 	compiled.Partner = ability.Partner != nil
+	if ability.KeywordShareGrant != nil {
+		compiled.KeywordShare = &CompiledKeywordShare{
+			Keywords: slices.Clone(ability.KeywordShareGrant.Keywords),
+		}
+	}
 	if ability.Modal != nil {
 		for i := range ability.Modal.Options {
 			compiledMode, modeDiagnostics := compileMode(&ability.Modal.Options[i], context)
@@ -193,6 +198,7 @@ func compileAbility(
 		!compiled.PartnerWith &&
 		!compiled.ChooseABackground &&
 		!compiled.Partner &&
+		compiled.KeywordShare == nil &&
 		len(compiled.Content.Effects) == 0 && len(compiled.Content.Keywords) == 0 &&
 		!legacyEffectsPresent(ability.Sentences) &&
 		(compiled.Static == nil || len(compiled.Static.Declarations) == 0) {

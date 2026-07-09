@@ -86,6 +86,9 @@ func lowerAtTrigger(
 			"the executable source backend does not support this intervening-if condition",
 		)
 	}
+	if ability.KeywordShare != nil {
+		return lowerKeywordShareTrigger(ability, pattern)
+	}
 	if ability.ExactSequence == compiler.ExactSequenceChosenTypeLibraryTopToHand {
 		return lowerChosenTypeLibraryTopTrigger(ability, &pattern, intervening)
 	}
@@ -718,6 +721,14 @@ func (lowering *abilityLowering) complete(
 		// card source. The recognizer recorded the consumed flip and branch
 		// sentence spans (card coordinates), which cover the whole coin-flip body.
 		if syntax.CoinFlip != nil && spanCovered(span, syntax.CoinFlip.Spans) {
+			continue
+		}
+		// A recognized keyword share (Odric, Lunarch Marshal) clears its body's
+		// effect, keyword, and condition semantics in favor of the typed shared
+		// keyword list, so the compiled content carries no spans for the body. The
+		// recognizer recorded the consumed sentence spans, which cover the whole
+		// construct body after the trigger clause.
+		if syntax.KeywordShareGrant != nil && spanCovered(span, syntax.KeywordShareGrant.Spans) {
 			continue
 		}
 		return false

@@ -208,6 +208,17 @@ type Ability struct {
 	// the consumed sentences' effects so the construct lowers to a single
 	// EachPlayerChooseDestroy interaction over the shared candidate pool.
 	EachPlayerChooseDestroy *EachPlayerChooseDestroyClause `json:",omitempty"`
+	// KeywordShareGrant is the recognized team keyword-sharing construct
+	// (Odric, Lunarch Marshal): a phase/step trigger whose body is "creatures you
+	// control gain <KW> until end of turn if a creature you control has <KW>",
+	// optionally extended by "The same is true for <KW>, ..., and <KW>." across a
+	// fixed list of simple keywords. It is nil for abilities without the exact
+	// shape. Like CoinFlip and Vote, the recognizer folds the construct onto a
+	// typed clause and sheds the consumed sentences' effects, keyword, and
+	// condition semantics so the construct lowers to one gated group grant per
+	// keyword rather than through the per-effect condition path the compiler does
+	// not model.
+	KeywordShareGrant *KeywordShareGrantClause `json:",omitempty"`
 	// ReadAheadSacrificeChapter is the final lore chapter named by a recognized
 	// "Read ahead" reminder ("Sacrifice after <chapter>"), or 0 when the reminder
 	// omits the sacrifice clause. The chapter is a typed semantic value derived
