@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,197 of 32,501 cards eligible for paper support (52.9%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,205 of 32,501 cards eligible for paper support (52.9%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -3324,6 +3324,7 @@ Council4 currently supports **17,197 of 32,501 cards eligible for paper support 
 - Dauthi Mindripper
 - Dauthi Slayer
 - Dauthi Trapper
+- Dauthi Voidwalker
 - Davriel's Shadowfugue
 - Dawn Charm
 - Dawn Gryff
@@ -5099,6 +5100,7 @@ Council4 currently supports **17,197 of 32,501 cards eligible for paper support 
 - Fire Tempest
 - Fire Urchin
 - Fire Whip
+- Fire-Belly Changeling
 - Fire-Field Ogre
 - Fire-Lit Thicket
 - Fire-Omen Crane
@@ -10625,6 +10627,7 @@ Council4 currently supports **17,197 of 32,501 cards eligible for paper support 
 - Phyrexian Altar
 - Phyrexian Archivist
 - Phyrexian Arena
+- Phyrexian Battleflies
 - Phyrexian Beast
 - Phyrexian Beast
 - Phyrexian Broodlings
@@ -10739,6 +10742,7 @@ Council4 currently supports **17,197 of 32,501 cards eligible for paper support 
 - Pirate's Prize
 - Pistus Strike
 - Pit Fight
+- Pit Imp
 - Pit Raptor
 - Pit Scorpion
 - Pit Spawn
@@ -11987,6 +11991,7 @@ Council4 currently supports **17,197 of 32,501 cards eligible for paper support 
 - Rot Shambler
 - Rot Wolf
 - Rotcrown Ghoul
+- Roterothopter
 - Rotlung Reanimator
 - Rotted Hulk
 - Rotted Hystrix
@@ -12743,6 +12748,7 @@ Council4 currently supports **17,197 of 32,501 cards eligible for paper support 
 - Severed Legion
 - Severed Strands
 - Sevinne's Reclamation
+- Sewer Rats
 - Sewer Shambler
 - Sewer-veillance Cam
 - Sewerdreg
@@ -13570,6 +13576,7 @@ Council4 currently supports **17,197 of 32,501 cards eligible for paper support 
 - Soul Collector
 - Soul Enervation
 - Soul Feast
+- Soul Kiss
 - Soul Link
 - Soul Manipulation
 - Soul Net
@@ -15917,6 +15924,7 @@ Council4 currently supports **17,197 of 32,501 cards eligible for paper support 
 - Vampire
 - Vampire // Treasure
 - Vampire Aristocrat
+- Vampire Bats
 - Vampire Champion
 - Vampire Cutthroat
 - Vampire Demon
