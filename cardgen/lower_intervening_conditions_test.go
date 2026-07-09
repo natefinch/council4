@@ -9,7 +9,9 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/compare"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -560,6 +562,53 @@ func TestLowerHadCountersInterveningConditionUsesSharedTriggerSlot(t *testing.T)
 	if trigger.InterveningIf != "if it had counters on it" ||
 		!trigger.InterveningIfEventPermanentHadCounters {
 		t.Fatalf("trigger = %+v, want had-counters intervening-if", trigger)
+	}
+}
+
+// TestLowerCastTriggerFewerThanSelfCounterInterveningIf verifies Runaway
+// Steam-Kin's "Whenever you cast a red spell, if this creature has fewer than
+// three +1/+1 counters on it, ..." trigger lowers the strict upper-bound
+// intervening-if onto the shared source-bound object-match slot. The condition
+// must bind the source permanent and require fewer than three +1/+1 counters
+// (compare.LessThan), the gate that stops the creature growing past three.
+func TestLowerCastTriggerFewerThanSelfCounterInterveningIf(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Steam Elemental",
+		Layout:     "normal",
+		TypeLine:   "Creature — Elemental",
+		OracleText: "Whenever you cast a red spell, if this creature has fewer than three +1/+1 counters on it, put a +1/+1 counter on this creature.",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
+	}
+	trigger := face.TriggeredAbilities[0].Trigger
+	if trigger.Pattern.Event != game.EventSpellCast ||
+		trigger.Pattern.Controller != game.TriggerControllerYou {
+		t.Fatalf("trigger pattern = %+v, want you-cast spell-cast", trigger.Pattern)
+	}
+	if !slices.Equal(trigger.Pattern.CardSelection.ColorsAny, []color.Color{color.Red}) {
+		t.Fatalf("card selection = %+v, want red", trigger.Pattern.CardSelection)
+	}
+	if !trigger.InterveningCondition.Exists {
+		t.Fatalf("trigger = %+v, want structured intervening condition", trigger)
+	}
+	condition := trigger.InterveningCondition.Val
+	if !condition.Object.Exists || condition.Object.Val != game.SourcePermanentReference() {
+		t.Fatalf("condition = %+v, want source-bound object", condition)
+	}
+	if !condition.ObjectMatches.Exists {
+		t.Fatalf("condition = %+v, want object-match selection", condition)
+	}
+	selection := condition.ObjectMatches.Val
+	if selection.RequiredCounter != counter.PlusOnePlusOne {
+		t.Fatalf("selection = %+v, want +1/+1 required counter", selection)
+	}
+	want := compare.Int{Op: compare.LessThan, Value: 3}
+	if !selection.RequiredCounterCount.Exists || selection.RequiredCounterCount.Val != want {
+		t.Fatalf("required counter count = %+v, want %+v", selection.RequiredCounterCount, want)
 	}
 }
 

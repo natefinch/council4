@@ -341,14 +341,18 @@ type ConditionSelection struct {
 	// companion to a named-counter requirement.
 	AnyCounter bool `json:",omitempty"`
 
-	// CounterKind, CounterKindKnown, and CounterCountAtLeast express a
-	// named-counter-count threshold the matched permanent must satisfy ("has
-	// seven or more quest counters on it"). CounterKindKnown marks the kind
-	// present; CounterCountAtLeast carries the minimum count. The compiler maps
-	// these onto the runtime counter-count selection predicate text-blind.
-	CounterKind         counter.Kind `json:",omitempty"`
-	CounterKindKnown    bool         `json:",omitempty"`
-	CounterCountAtLeast int          `json:",omitempty"`
+	// CounterKind, CounterKindKnown, CounterCountAtLeast, and CounterCountLessThan
+	// express a named-counter-count threshold the matched permanent must satisfy
+	// ("has seven or more quest counters on it", "has fewer than three +1/+1
+	// counters on it"). CounterKindKnown marks the kind present; CounterCountAtLeast
+	// carries an inclusive minimum count (>=) and CounterCountLessThan carries an
+	// exclusive maximum count (<). At most one bound is set; a zero
+	// CounterCountLessThan means the at-least bound applies. The compiler maps these
+	// onto the runtime counter-count selection predicate text-blind.
+	CounterKind          counter.Kind `json:",omitempty"`
+	CounterKindKnown     bool         `json:",omitempty"`
+	CounterCountAtLeast  int          `json:",omitempty"`
+	CounterCountLessThan int          `json:",omitempty"`
 }
 
 // ConditionClause is composable typed syntax for a supported condition. The
@@ -1845,10 +1849,12 @@ func recognizeSourceCounterStateCondition(body []shared.Token, atoms Atoms) (Con
 // sourceCounterCountSelection recognizes a kind-specific source counter-state
 // body. It accepts the named-counter-count threshold "has <n> or more <kind>
 // counters on it" ("As long as ~ has seven or more quest counters on it, ...",
-// the Ascension cycle) and the singular kind-specific presence "has a <kind>
-// counter on it" ("If this creature has a +1/+1 counter on it, ...", Incubation
-// Druid), which means one or more counters of that kind. It returns a Selection
-// carrying the counter kind and minimum count.
+// the Ascension cycle), the strict upper-bound "has fewer than <n> <kind>
+// counters on it" ("if this creature has fewer than three +1/+1 counters on
+// it, ...", Runaway Steam-Kin), and the singular kind-specific presence "has a
+// <kind> counter on it" ("If this creature has a +1/+1 counter on it, ...",
+// Incubation Druid), which means one or more counters of that kind. It returns a
+// Selection carrying the counter kind and the recognized count bound.
 func sourceCounterCountSelection(rest []shared.Token, atoms Atoms) (ConditionSelection, bool) {
 	after, ok := cutTokenPrefix(rest, "has")
 	if !ok {
@@ -1858,7 +1864,7 @@ func sourceCounterCountSelection(rest []shared.Token, atoms Atoms) (ConditionSel
 	if !ok {
 		return ConditionSelection{}, false
 	}
-	atLeast, ok := sourceCounterThreshold(after)
+	atLeast, lessThan, ok := sourceCounterThreshold(after)
 	if !ok {
 		return ConditionSelection{}, false
 	}
@@ -1867,30 +1873,55 @@ func sourceCounterCountSelection(rest []shared.Token, atoms Atoms) (ConditionSel
 		return ConditionSelection{}, false
 	}
 	return ConditionSelection{
-		CounterKind:         kind,
-		CounterKindKnown:    true,
-		CounterCountAtLeast: atLeast,
+		CounterKind:          kind,
+		CounterKindKnown:     true,
+		CounterCountAtLeast:  atLeast,
+		CounterCountLessThan: lessThan,
 	}, true
 }
 
-// sourceCounterThreshold reads the minimum count of a kind-specific source
+// sourceCounterThreshold reads the count bound of a kind-specific source
 // counter-state body whose tokens follow "has" and precede "on it". It accepts
-// the plural threshold "<n> or more <kind> counters" (n or more of that kind)
-// and the singular presence "a <kind> counter" (one or more of that kind). It
+// the plural inclusive threshold "<n> or more <kind> counters" (n or more of
+// that kind), the plural strict upper bound "fewer than <n> <kind> counters" /
+// "less than <n> <kind> counters" (fewer than n of that kind), and the singular
+// presence "a <kind> counter" (one or more of that kind). It returns the
+// inclusive minimum and exclusive maximum, exactly one of which is non-zero, and
 // fails closed on any other shape.
-func sourceCounterThreshold(after []shared.Token) (int, bool) {
+func sourceCounterThreshold(after []shared.Token) (atLeast int, lessThan int, ok bool) {
 	if tokenSuffixWord(after, "counters") {
+		if value, _, ok := parseLeadingLessThanCount(after); ok {
+			return 0, value, true
+		}
 		count, _, ok := parseLeadingCount(after)
 		if !ok || count.Comparison != ConditionComparisonAtLeast {
-			return 0, false
+			return 0, 0, false
 		}
-		return count.Value, true
+		return count.Value, 0, true
 	}
 	if tokenSuffixWord(after, "counter") &&
 		startsWithWord(after, "a", "an") {
-		return 1, true
+		return 1, 0, true
 	}
-	return 0, false
+	return 0, 0, false
+}
+
+// parseLeadingLessThanCount parses a leading "fewer than <n>" or "less than <n>"
+// strict upper-bound count, returning the exclusive bound and the remaining
+// tokens. It fails closed on any other shape.
+func parseLeadingLessThanCount(tokens []shared.Token) (int, []shared.Token, bool) {
+	rest, ok := cutTokenPrefix(tokens, "fewer", "than")
+	if !ok {
+		rest, ok = cutTokenPrefix(tokens, "less", "than")
+	}
+	if !ok || len(rest) == 0 {
+		return 0, nil, false
+	}
+	value, ok := conditionNumberValue(rest[0])
+	if !ok {
+		return 0, nil, false
+	}
+	return value, rest[1:], true
 }
 
 // recognizeSourceNoCounterCondition matches the negated source counter-state

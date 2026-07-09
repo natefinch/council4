@@ -82,6 +82,22 @@ func TestLowerConditionSelectionRoutesThroughCanonicalProjector(t *testing.T) {
 			wantOK: true,
 		},
 		{
+			// Runaway Steam-Kin's strict upper bound "fewer than three +1/+1
+			// counters on it" maps the named-counter threshold onto compare.LessThan
+			// rather than the inclusive GreaterOrEqual the at-least form uses.
+			name: "named-counter strict upper bound",
+			selection: compiler.ConditionSelection{
+				CounterKind:          counter.PlusOnePlusOne,
+				CounterKindKnown:     true,
+				CounterCountLessThan: 3,
+			},
+			want: game.Selection{
+				RequiredCounter:      counter.PlusOnePlusOne,
+				RequiredCounterCount: opt.Val(compare.Int{Op: compare.LessThan, Value: 3}),
+			},
+			wantOK: true,
+		},
+		{
 			name: "bare power-at-least without flag fails closed",
 			selection: compiler.ConditionSelection{
 				PowerAtLeast: 4,

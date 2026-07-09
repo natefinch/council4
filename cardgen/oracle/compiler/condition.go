@@ -471,6 +471,7 @@ func compileConditionSelection(syntax parser.ConditionSelection) (ConditionSelec
 	selection.CounterKind = syntax.CounterKind
 	selection.CounterKindKnown = syntax.CounterKindKnown
 	selection.CounterCountAtLeast = syntax.CounterCountAtLeast
+	selection.CounterCountLessThan = syntax.CounterCountLessThan
 	return selection, true
 }
 
