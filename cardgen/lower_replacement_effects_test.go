@@ -2019,6 +2019,89 @@ func TestLowerGraveyardRedirectReplacement(t *testing.T) {
 			if gotBattlefieldOnly != test.fromBattlefieldOnly {
 				t.Fatalf("from-battlefield-only = %v, want %v", gotBattlefieldOnly, test.fromBattlefieldOnly)
 			}
+			// A counterless redirect (Leyline of the Void) carries no exile
+			// counter rider.
+			if replacement.RedirectCounter.Exists {
+				t.Fatalf("counterless redirect carries a RedirectCounter = %v", replacement.RedirectCounter)
+			}
 		})
+	}
+}
+
+// TestLowerGraveyardRedirectExileWithCounterReplacement covers the named-counter
+// rider on a graveyard-redirect replacement ("If a card would be put into an
+// opponent's graveyard from anywhere, instead exile it with a void counter on
+// it." — Dauthi Voidwalker). The leading-"instead" exile effect carries a void
+// counter that lowers onto the redirect's RedirectCounter, preserving the
+// opponent owner scope.
+func TestLowerGraveyardRedirectExileWithCounterReplacement(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Voidwalker",
+		Layout:     "normal",
+		TypeLine:   "Creature — Dauthi Rogue",
+		OracleText: "If a card would be put into an opponent's graveyard from anywhere, instead exile it with a void counter on it.",
+	})
+	if len(face.ReplacementAbilities) != 1 {
+		t.Fatalf("got %d replacement abilities, want 1", len(face.ReplacementAbilities))
+	}
+	replacement := face.ReplacementAbilities[0].Replacement
+	if !replacement.ContinuousZoneRedirect {
+		t.Fatalf("replacement is not a continuous graveyard redirect: %#v", replacement)
+	}
+	if replacement.ReplaceToZone != zone.Exile || replacement.ToZone != zone.Graveyard || !replacement.MatchToZone {
+		t.Fatalf("replacement zones = %#v, want exile-instead-of-graveyard", replacement)
+	}
+	if replacement.RedirectOwnerFilter != game.TriggerControllerOpponent {
+		t.Fatalf("owner filter = %v, want Opponent", replacement.RedirectOwnerFilter)
+	}
+	if !replacement.RedirectCounter.Exists || replacement.RedirectCounter.Val != counter.Void {
+		t.Fatalf("redirect counter = %#v, want void", replacement.RedirectCounter)
+	}
+}
+
+// TestGenerateGraveyardRedirectExileWithCounterReplacementSource asserts that the
+// named-counter redirect renders the with-counter constructor variant carrying
+// the void counter, while a counterless redirect keeps the plain constructor.
+func TestGenerateGraveyardRedirectExileWithCounterReplacementSource(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Voidwalker",
+		Layout:     "normal",
+		ManaCost:   "{B}{B}",
+		TypeLine:   "Creature — Dauthi Rogue",
+		OracleText: "If a card would be put into an opponent's graveyard from anywhere, instead exile it with a void counter on it.",
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+	}
+	want := `game.GraveyardRedirectExileWithCounterReplacement("If a card would be put into an opponent's graveyard from anywhere, instead exile it with a void counter on it.", game.TriggerControllerOpponent, game.TriggerControllerAny, false, counter.Void)`
+	if !strings.Contains(source, want) {
+		t.Fatalf("source missing %q:\n%s", want, source)
+	}
+	if _, err := goparser.ParseFile(token.NewFileSet(), "generated.go", source, goparser.AllErrors); err != nil {
+		t.Fatalf("generated source does not parse: %v\n%s", err, source)
+	}
+
+	plain, plainDiags, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Plain Void",
+		Layout:     "normal",
+		TypeLine:   "Enchantment",
+		OracleText: "If a card would be put into a graveyard from anywhere, exile it instead.",
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(plainDiags) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", plainDiags)
+	}
+	if strings.Contains(plain, "GraveyardRedirectExileWithCounterReplacement") {
+		t.Fatalf("counterless redirect rendered the with-counter constructor:\n%s", plain)
+	}
+	if !strings.Contains(plain, "game.GraveyardRedirectReplacement(") {
+		t.Fatalf("counterless redirect missing the plain constructor:\n%s", plain)
 	}
 }

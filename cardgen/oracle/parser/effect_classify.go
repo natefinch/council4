@@ -51,9 +51,18 @@ func resolvingClauseStart(tokens []shared.Token, indices []int, effectIndex int)
 // marker ("If <condition>, instead <effect>"), where the alternative effect
 // replaces the immediately preceding effect when the condition holds. It is
 // distinguished from the trailing "... instead." form by requiring the word to
-// sit immediately after a comma and not be the final clause token, so an
-// ordinary trailing replacement is never matched here.
+// sit immediately after a comma, or to open the effect's ownership tokens when
+// the preceding clause boundary (the condition's comma) has already been
+// stripped ("... , instead exile it ..." whose effect clause begins at
+// "instead"). It never treats a final trailing "instead" as a leading marker, so
+// an ordinary trailing replacement is never matched here.
 func leadingInsteadReplacement(tokens []shared.Token) (EffectReplacementSyntax, bool) {
+	if len(tokens) > 1 && equalWord(tokens[0], "instead") {
+		return EffectReplacementSyntax{
+			Kind: EffectReplacementInstead,
+			Span: tokens[0].Span,
+		}, true
+	}
 	for i := 1; i < len(tokens)-1; i++ {
 		if tokens[i-1].Kind == shared.Comma && equalWord(tokens[i], "instead") {
 			return EffectReplacementSyntax{

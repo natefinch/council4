@@ -724,9 +724,23 @@ func (Renderer) renderGraveyardRedirectReplacement(ctx *renderCtx, ability *game
 	if err != nil {
 		return "", err
 	}
+	// A named-counter redirect ("instead exile it with a void counter on it." —
+	// Dauthi Voidwalker) emits the with-counter constructor variant; counterless
+	// redirects (Leyline of the Void) keep the plain constructor byte-for-byte.
+	constructor := "GraveyardRedirectReplacement"
+	counterArg := ""
+	if replacement.RedirectCounter.Exists {
+		kind, err := renderCounterKind(replacement.RedirectCounter.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importCounter)
+		constructor = "GraveyardRedirectExileWithCounterReplacement"
+		counterArg = ", " + kind
+	}
 	if len(replacement.RedirectTypeFilter) == 0 {
-		return fmt.Sprintf("game.GraveyardRedirectReplacement(%q, %s, %s, %t)",
-			ability.Text, controller, controlFilter, fromBattlefieldOnly), nil
+		return fmt.Sprintf("game.%s(%q, %s, %s, %t%s)",
+			constructor, ability.Text, controller, controlFilter, fromBattlefieldOnly, counterArg), nil
 	}
 	ctx.need(importTypes)
 	typeLiterals := make([]string, 0, len(replacement.RedirectTypeFilter))
@@ -737,8 +751,8 @@ func (Renderer) renderGraveyardRedirectReplacement(ctx *renderCtx, ability *game
 		}
 		typeLiterals = append(typeLiterals, literal)
 	}
-	return fmt.Sprintf("game.GraveyardRedirectReplacement(%q, %s, %s, %t, %s)",
-		ability.Text, controller, controlFilter, fromBattlefieldOnly, strings.Join(typeLiterals, ", ")), nil
+	return fmt.Sprintf("game.%s(%q, %s, %s, %t%s, %s)",
+		constructor, ability.Text, controller, controlFilter, fromBattlefieldOnly, counterArg, strings.Join(typeLiterals, ", ")), nil
 }
 
 func renderZoneDestinationReplacement(ctx *renderCtx, ability *game.ReplacementAbility) (string, error) {

@@ -282,6 +282,12 @@ type zoneChangeReplacementResult struct {
 	destination        zone.Type
 	shuffleIntoLibrary bool
 	revealSource       bool
+	// exileCounter is the named counter a ContinuousZoneRedirect places on the
+	// card once it reaches exile ("instead exile it with a void counter on it."
+	// — Dauthi Voidwalker). It is present only when the applied redirect sends
+	// the card to exile and carries a RedirectCounter; callers place it with
+	// placeRedirectExileCounter after the card lands.
+	exileCounter opt.V[counter.Kind]
 }
 
 func replacementZoneChangeDestination(g *game.Game, event game.Event) zone.Type {
@@ -317,7 +323,32 @@ func replacementZoneChange(g *game.Game, event game.Event) zoneChangeReplacement
 		result.destination = replacement.ReplaceToZone
 		result.shuffleIntoLibrary = replacement.ShuffleIntoLibrary && result.destination == zone.Library
 		result.revealSource = result.revealSource || replacement.RevealSource
+		// A named-counter redirect ("instead exile it with a void counter on
+		// it.") places its counter only when the applied replacement actually
+		// exiles the card; a later replacement that diverts it elsewhere clears
+		// the pending counter, mirroring the shuffleIntoLibrary rider above.
+		if replacement.RedirectCounter.Exists && result.destination == zone.Exile {
+			result.exileCounter = replacement.RedirectCounter
+		} else {
+			result.exileCounter = opt.V[counter.Kind]{}
+		}
 	}
+}
+
+// placeRedirectExileCounter places the named counter a ContinuousZoneRedirect
+// carries on cardID once the card has landed in ownerID's exile, mirroring the
+// MoveCard.Counter exile rider (handleMoveCard). It gates on the card actually
+// being in exile so a further redirect that diverted the move never orphans a
+// counter, and is a no-op when the redirect placed no counter.
+func placeRedirectExileCounter(g *game.Game, ownerID game.PlayerID, cardID id.ID, result zoneChangeReplacementResult) {
+	if !result.exileCounter.Exists || cardID == 0 {
+		return
+	}
+	owner, ok := playerByID(g, ownerID)
+	if !ok || !owner.Exile.Contains(cardID) {
+		return
+	}
+	g.AddExileCounter(cardID, result.exileCounter.Val, 1)
 }
 
 // replacementTokenCreationTypes applies token-type replacement effects (Academy

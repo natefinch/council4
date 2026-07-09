@@ -207,6 +207,17 @@ func GraveyardRedirectReplacement(text string, ownerFilter, controlFilter Trigge
 	return ReplacementAbility{Text: text, Replacement: replacement}
 }
 
+// GraveyardRedirectExileWithCounterReplacement is the named-counter variant of
+// GraveyardRedirectReplacement: a card the redirect exiles is exiled with one
+// counter of counterKind on it ("If a card would be put into an opponent's
+// graveyard from anywhere, instead exile it with a void counter on it." —
+// Dauthi Voidwalker). Every other parameter matches GraveyardRedirectReplacement.
+func GraveyardRedirectExileWithCounterReplacement(text string, ownerFilter, controlFilter TriggerControllerFilter, fromBattlefieldOnly bool, counterKind counter.Kind, cardTypes ...types.Card) ReplacementAbility {
+	ability := GraveyardRedirectReplacement(text, ownerFilter, controlFilter, fromBattlefieldOnly, cardTypes...)
+	ability.Replacement.RedirectCounter = opt.Val(counterKind)
+	return ability
+}
+
 // EntersTappedIfReplacement creates a conditional "enters tapped" replacement.
 func EntersTappedIfReplacement(text string, condition *Condition) ReplacementAbility {
 	replacement := etbReplacement(text)

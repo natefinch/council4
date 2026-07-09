@@ -425,6 +425,7 @@ func applyPreparedPermanentZoneMove(g *game.Game, move *preparedPermanentZoneMov
 	} else {
 		destinationCards.Add(removed.CardInstanceID)
 		shuffleLibraryIfRequested(g, destinationCards, move.actualDestination, move.replacement.shuffleIntoLibrary)
+		placeRedirectExileCounter(g, removed.Owner, removed.CardInstanceID, move.replacement)
 		emitPermanentLeaveEvents(g, removed, move.event.Controller, move.actualDestination, move.event.SimultaneousID)
 	}
 	for _, component := range move.componentMoves {
@@ -629,6 +630,7 @@ func moveCardBetweenZonesAfterReplacement(
 		to.Add(cardID)
 	}
 	shuffleLibraryIfRequested(g, to, destination, replacement.shuffleIntoLibrary)
+	placeRedirectExileCounter(g, zoneOwner, cardID, replacement)
 	emitZoneChangeEvent(g, game.Event{
 		Player:         playerID,
 		CardID:         cardID,

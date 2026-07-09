@@ -808,6 +808,7 @@ func moveAdventureSpellToExile(g *game.Game, obj *game.StackObject, card *game.C
 	revealZoneReplacementSource(g, event, replacement.revealSource)
 	destinationCards.Add(card.ID)
 	shuffleLibraryIfRequested(g, destinationCards, destination, replacement.shuffleIntoLibrary)
+	placeRedirectExileCounter(g, card.Owner, card.ID, replacement)
 	if destination == zone.Exile {
 		if g.AdventureCards == nil {
 			g.AdventureCards = make(map[id.ID]bool)
@@ -889,6 +890,7 @@ func moveStackCardToZone(g *game.Game, obj *game.StackObject, card *game.CardIns
 	revealZoneReplacementSource(g, event, replacement.revealSource)
 	destinationCards.Add(card.ID)
 	shuffleLibraryIfRequested(g, destinationCards, destination, replacement.shuffleIntoLibrary || forceShuffle)
+	placeRedirectExileCounter(g, card.Owner, card.ID, replacement)
 	event = game.Event{
 		SourceID:      card.ID,
 		StackObjectID: stackObjectID(obj),

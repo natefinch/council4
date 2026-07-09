@@ -678,6 +678,25 @@ func lowerGraveyardRedirectReplacement(
 	if !ok {
 		return unsupported("the executable source backend does not support this graveyard-redirect control scope")
 	}
+	// "instead exile it with a void counter on it." (Dauthi Voidwalker) places a
+	// named counter on the redirected card as it is exiled. The counter rides
+	// the exile effect itself (the same effect selfZoneReplacementDestination
+	// matched), whose "on it" binds the counter to the exiled card. It must not
+	// be read from a trailing effect that places counters elsewhere ("instead
+	// exile it and put ... +1/+1 counters ... on this creature.", Ravenous
+	// Slime), whose exile effect carries no counter and whose self-counter
+	// effect is a separate, unmodeled effect.
+	exileEffect, hasExile := graveyardRedirectExileEffect(ability.Content.Effects)
+	if hasExile && exileEffect.CounterKindKnown {
+		return game.GraveyardRedirectExileWithCounterReplacement(
+			ability.Text,
+			ownerFilter,
+			controlFilter,
+			condition.GraveyardFromBattlefieldOnly,
+			exileEffect.CounterKind,
+			condition.GraveyardSubjectTypesAny...,
+		), true, nil
+	}
 	return game.GraveyardRedirectReplacement(
 		ability.Text,
 		ownerFilter,
@@ -1346,6 +1365,23 @@ func selfZoneReplacementDestination(effects []compiler.CompiledEffect) (zone.Typ
 		}
 	}
 	return zone.None, false
+}
+
+// graveyardRedirectExileEffect returns the exile effect that a graveyard-redirect
+// replacement applies (the first "instead"-marked EffectExile), so its optional
+// named-counter rider can be read from the effect whose "on it" binds the counter
+// to the exiled card. It mirrors selfZoneReplacementDestination's traversal.
+func graveyardRedirectExileEffect(effects []compiler.CompiledEffect) (compiler.CompiledEffect, bool) {
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Replacement.Kind == parser.EffectReplacementNone {
+			continue
+		}
+		if effect.Kind == compiler.EffectExile {
+			return *effect, true
+		}
+	}
+	return compiler.CompiledEffect{}, false
 }
 
 func lowerEntersWithCountersReplacement(
