@@ -323,7 +323,8 @@ const (
 )
 
 // StaticDeclarationCastZoneKind identifies a non-hand zone that a cast-zone
-// restriction forbids the affected players from casting spells out of.
+// restriction forbids the affected players from casting spells out of, or that a
+// cast-cost modifier scopes its discount to.
 type StaticDeclarationCastZoneKind string
 
 // Static declaration cast-zone restriction zones recognized by the parser.
@@ -332,6 +333,12 @@ const (
 	StaticDeclarationCastZoneLibrary   StaticDeclarationCastZoneKind = "StaticDeclarationCastZoneLibrary"
 	StaticDeclarationCastZoneExile     StaticDeclarationCastZoneKind = "StaticDeclarationCastZoneExile"
 	StaticDeclarationCastZoneCommand   StaticDeclarationCastZoneKind = "StaticDeclarationCastZoneCommand"
+	// StaticDeclarationCastZoneNonHand scopes a cast-cost modifier to spells cast
+	// from any zone other than the caster's hand ("Spells you cast from anywhere
+	// other than your hand cost {N} less to cast.", Sage of the Beyond). Lowering
+	// expands it to the concrete non-hand cast zones (graveyard, exile, library,
+	// and command).
+	StaticDeclarationCastZoneNonHand StaticDeclarationCastZoneKind = "StaticDeclarationCastZoneNonHand"
 )
 
 // StaticDeclarationEnterFilterKind identifies which entering cards an
@@ -3213,13 +3220,15 @@ func parseStaticAbilityCostSetDeclaration(
 }
 
 // parseStaticSpellCostModifierDeclaration recognizes the static cast-cost
-// modifier "[<filter>] spells you cast cost {N} less/more to cast." where the
-// optional leading filter constrains the affected spells. The filter combines an
-// optional leading color word (one of the five colors or colorless) with an
-// optional single card-type word, an "instant and sorcery" pair, or a subtype
-// list joined by "and" ("Aura and Equipment"). A color word may precede a card
-// type ("Black creature spells"). The affected group is always the static
-// ability's controller's spells.
+// modifier "[<filter>] spells you cast [from <zone>] cost {N} less/more to cast."
+// where the optional leading filter constrains the affected spells. The filter
+// combines an optional leading color word (one of the five colors or colorless)
+// with an optional single card-type word, an "instant and sorcery" pair, or a
+// subtype list joined by "and" ("Aura and Equipment"). A color word may precede
+// a card type ("Black creature spells"). An optional cast-zone scope narrows the
+// discount to spells cast "from your graveyard" or "from anywhere other than your
+// hand"; any other zone wording fails closed. The affected group is always the
+// static ability's controller's spells.
 func parseStaticSpellCostModifierDeclaration(tokens []shared.Token, atoms Atoms) (StaticDeclarationSyntax, bool) {
 	if len(tokens) == 0 || tokens[len(tokens)-1].Kind != shared.Period {
 		return StaticDeclarationSyntax{}, false
@@ -3285,9 +3294,24 @@ func parseStaticSpellCostModifierDeclaration(tokens []shared.Token, atoms Atoms)
 		caster = StaticDeclarationSpellCasterAny
 	}
 	var castZone StaticDeclarationCastZoneKind
-	if staticWordsAt(rest, 0, "from", "your", "graveyard") {
+	switch {
+	case staticWordsAt(rest, 0, "from", "your", "graveyard"):
 		castZone = StaticDeclarationCastZoneGraveyard
 		rest = rest[3:]
+	case staticWordsAt(rest, 0, "from", "anywhere", "other", "than"):
+		// "from anywhere other than your hand" scopes the discount to every
+		// non-hand cast zone. Any other complement fails closed rather than
+		// silently dropping the zone scope.
+		index := 4
+		if index < len(rest) && (equalWord(rest[index], "your") || equalWord(rest[index], "their")) {
+			index++
+		}
+		if index >= len(rest) || (!equalWord(rest[index], "hand") && !equalWord(rest[index], "hands")) {
+			return StaticDeclarationSyntax{}, false
+		}
+		castZone = StaticDeclarationCastZoneNonHand
+		rest = rest[index+1:]
+	default:
 	}
 	powerAtLeast, next, ok := staticSpellPowerThreshold(rest)
 	if !ok {

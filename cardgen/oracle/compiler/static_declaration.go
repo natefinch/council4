@@ -566,9 +566,12 @@ type StaticCostModifierDeclaration struct {
 	ExcludedSpellTypes []types.Card
 
 	// SourceZone constrains a spell cost modifier to spells being cast from a
-	// single zone ("Spells you cast from your graveyard cost {N} less to cast.").
-	// The empty kind applies no zone filter, so the modifier affects spells cast
-	// from any zone. It combines with the card-type, color, and subtype filters.
+	// single zone ("Spells you cast from your graveyard cost {N} less to cast.")
+	// or, via the StaticDeclarationCastZoneNonHand marker, to spells cast from any
+	// zone other than the caster's hand ("Spells you cast from anywhere other than
+	// your hand cost {N} less to cast.", Sage of the Beyond). The empty kind
+	// applies no zone filter, so the modifier affects spells cast from any zone.
+	// It combines with the card-type, color, and subtype filters.
 	SourceZone parser.StaticDeclarationCastZoneKind
 
 	// MinPower constrains a spell cost modifier to spells whose base printed

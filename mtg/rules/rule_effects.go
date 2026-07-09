@@ -1406,9 +1406,14 @@ func spellCostModifierMatchesTargets(modifier game.CostModifier, sourceObjectID 
 
 // spellCostModifierMatchesZone reports whether a spell cost modifier's optional
 // source-zone filter admits a spell being cast from sourceZone. A modifier with
-// no SourceZone filter applies regardless of the casting zone; one with a filter
-// applies only when the spell is cast from exactly that zone.
+// no zone filter applies regardless of the casting zone. A SourceZones set
+// (generalizing "Spells you cast from anywhere other than your hand ...") admits
+// only spells cast from one of its listed zones. Otherwise a single-zone
+// SourceZone applies only when the spell is cast from exactly that zone.
 func spellCostModifierMatchesZone(modifier game.CostModifier, sourceZone zone.Type) bool {
+	if len(modifier.SourceZones) > 0 {
+		return slices.Contains(modifier.SourceZones, sourceZone)
+	}
 	return !modifier.SourceZone.Exists || modifier.SourceZone.Val == sourceZone
 }
 

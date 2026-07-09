@@ -246,6 +246,27 @@ func TestLowerStaticSpellCostModifierGraveyardZone(t *testing.T) {
 	}
 }
 
+func TestLowerStaticSpellCostModifierNonHandZone(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Beyond Reducer",
+		Layout:     "normal",
+		TypeLine:   "Artifact",
+		OracleText: "Spells you cast from anywhere other than your hand cost {2} less to cast.",
+	})
+	if len(face.StaticAbilities) != 1 || len(face.StaticAbilities[0].Body.RuleEffects) != 1 {
+		t.Fatalf("static abilities = %#v, want one non-hand-zone cost effect", face.StaticAbilities)
+	}
+	modifier := face.StaticAbilities[0].Body.RuleEffects[0].CostModifier
+	if modifier.Kind != game.CostModifierSpell ||
+		!modifier.CardSelection.Empty() ||
+		modifier.GenericReduction != 2 ||
+		modifier.SourceZone.Exists ||
+		!slices.Equal(modifier.SourceZones, []zone.Type{zone.Graveyard, zone.Exile, zone.Library, zone.Command}) {
+		t.Fatalf("modifier = %#v, want non-hand-scoped {2} reduction", modifier)
+	}
+}
+
 func TestLowerStaticSpellCostModifierPowerThreshold(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
@@ -371,7 +392,8 @@ func TestLowerStaticSpellCostModifierRejectsUnsupported(t *testing.T) {
 		"leading condition":      "During turns other than yours, spells you cast cost {1} less to cast.",
 		"colorless mana cost":    "Black spells you cast cost {C} more to cast.",
 		"colored cost reduction": "Black spells you cast cost {B} less to cast.",
-		"unsupported zone":       "Spells you cast from anywhere other than your hand cost {2} less to cast.",
+		"unsupported zone":       "Spells you cast from your library cost {1} less to cast.",
+		"unsupported zone list":  "Spells you cast from your graveyard or from exile cost {2} less to cast.",
 	}
 	for name, source := range sources {
 		t.Run(name, func(t *testing.T) {

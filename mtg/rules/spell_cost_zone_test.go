@@ -65,4 +65,53 @@ func TestSpellCostModifierMatchesZone(t *testing.T) {
 	if !spellCostModifierMatchesZone(unscoped, zone.Hand) || !spellCostModifierMatchesZone(unscoped, zone.Graveyard) {
 		t.Fatal("unscoped modifier should match any zone")
 	}
+	nonHand := game.CostModifier{
+		Kind:        game.CostModifierSpell,
+		SourceZones: []zone.Type{zone.Graveyard, zone.Exile, zone.Library, zone.Command},
+	}
+	for _, z := range []zone.Type{zone.Graveyard, zone.Exile, zone.Library, zone.Command} {
+		if !spellCostModifierMatchesZone(nonHand, z) {
+			t.Fatalf("non-hand-scoped modifier rejected a %v cast", z)
+		}
+	}
+	if spellCostModifierMatchesZone(nonHand, zone.Hand) {
+		t.Fatal("non-hand-scoped modifier matched a hand cast")
+	}
+}
+
+// nonHandSpellReductionEffect models the active rule effect cardgen emits for
+// "Spells you cast from anywhere other than your hand cost {N} less to cast."
+// (Sage of the Beyond): a controller spell cost modifier scoped to the non-hand
+// cast zones.
+func nonHandSpellReductionEffect(g *game.Game, reduction int) game.RuleEffect {
+	return game.RuleEffect{
+		ID:             g.IDGen.Next(),
+		Kind:           game.RuleEffectCostModifier,
+		Controller:     game.Player1,
+		AffectedPlayer: game.PlayerYou,
+		CostModifier: game.CostModifier{
+			Kind:             game.CostModifierSpell,
+			SourceZones:      []zone.Type{zone.Graveyard, zone.Exile, zone.Library, zone.Command},
+			GenericReduction: reduction,
+		},
+	}
+}
+
+func TestSpellCostModifierNonHandZoneAppliesOnlyOutsideHand(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	g.RuleEffects = append(g.RuleEffects, nonHandSpellReductionEffect(g, 2))
+	card := &game.CardDef{CardFace: game.CardFace{
+		Name:     "Test Spell",
+		Types:    []types.Card{types.Sorcery},
+		ManaCost: opt.Val(cost.Mana{cost.O(4)}),
+	}}
+
+	for _, z := range []zone.Type{zone.Exile, zone.Graveyard, zone.Library, zone.Command} {
+		if got := spellGenericReductionFromZone(g, card, z); got != 2 {
+			t.Fatalf("reduction casting from %v = %d, want 2", z, got)
+		}
+	}
+	if got := spellGenericReductionFromZone(g, card, zone.Hand); got != 0 {
+		t.Fatalf("reduction casting from hand = %d, want 0", got)
+	}
 }

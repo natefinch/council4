@@ -117,6 +117,18 @@ type CostModifier struct {
 	// CostModifierSpell and combines with the CardSelection card filter.
 	SourceZone opt.V[zone.Type]
 
+	// SourceZones generalizes SourceZone to a set: when non-empty it constrains a
+	// spell cost modifier to spells being cast from any one of the listed zones
+	// ("Spells you cast from anywhere other than your hand cost {N} less to
+	// cast.", Sage of the Beyond, which expands to the non-hand cast zones
+	// graveyard, exile, library, and command). The modifier applies only when the
+	// spell is cast from one of these zones. It is mutually exclusive with the
+	// single-zone SourceZone option and, like it, is meaningful only on a
+	// CostModifierSpell and combines with the CardSelection card filter. It is a
+	// slice so CostModifier stays a plain value; nil and empty are equivalent and
+	// impose no zone filter.
+	SourceZones []zone.Type
+
 	// TargetsSource constrains a spell cost modifier to spells that target the
 	// permanent whose static ability carries the modifier ("Spells your
 	// opponents cast that target this creature cost {2} more to cast.", Boreal
