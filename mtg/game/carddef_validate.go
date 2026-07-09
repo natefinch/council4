@@ -1920,6 +1920,22 @@ func eventExposesSubjectCommander(event EventKind) bool {
 	return eventExposesSubjectCounters(event)
 }
 
+// eventExposesSubjectGoaded reports whether a trigger event's subject is a live
+// battlefield permanent whose goad status the runtime can read to honor a
+// "goaded" subject filter ("Whenever a goaded creature attacks", Vengeful
+// Ancestor). Goad is a property of a permanent on the battlefield (CR 701.38),
+// so events whose subject has already left the battlefield — a death or
+// sacrifice, which expose only a last-known snapshot without live goad status —
+// are excluded and those filters fail closed.
+func eventExposesSubjectGoaded(event EventKind) bool {
+	switch event {
+	case EventPermanentDied, EventPermanentSacrificed:
+		return false
+	default:
+		return eventExposesSubjectCounters(event)
+	}
+}
+
 // triggerSubjectSelectionResidue returns the trigger subject Selection with every
 // predicate the runtime can satisfy from the event's subject cleared, leaving
 // only the predicates that are unavailable. A caller treats an empty residue as a
@@ -1968,6 +1984,12 @@ func triggerSubjectSelectionResidue(selection Selection, event EventKind) Select
 		// subject filter (Nakia, Wakandan Operative: "Whenever your commander
 		// enters, ...").
 		residue.MatchCommander = false
+	}
+	if eventExposesSubjectGoaded(event) {
+		// The subject is a live battlefield permanent, so the runtime can read
+		// whether it is goaded to honor a "goaded" subject filter (Vengeful
+		// Ancestor: "Whenever a goaded creature attacks, ...").
+		residue.MatchGoaded = false
 	}
 	if len(residue.AnyOf) > 0 {
 		supported := true

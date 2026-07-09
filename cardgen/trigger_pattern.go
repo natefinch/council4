@@ -558,6 +558,7 @@ func lowerTriggerSelection(selection compiler.TriggerSelection) (game.Selection,
 	result.Controller = controller
 	result.MatchModified = selection.Modified
 	result.MatchCommander = selection.Commander
+	result.MatchGoaded = selection.Goaded
 	for i := range selection.AnyOf {
 		alternative, ok := lowerTriggerSelection(selection.AnyOf[i])
 		if !ok {

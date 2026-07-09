@@ -13,15 +13,19 @@ import (
 // controls (or owns) the permanent that fired the trigger, as in "Whenever a
 // land enters, this artifact deals 2 damage to that land's controller." (Ankh of
 // Mishra), "Whenever a creature dies, this artifact deals 2 damage to that
-// creature's controller." (Dingus Staff), or "Whenever a creature blocks, this
-// enchantment deals 1 damage to that creature's controller." (Heat of Battle).
+// creature's controller." (Dingus Staff), "Whenever a creature blocks, this
+// enchantment deals 1 damage to that creature's controller." (Heat of Battle),
+// or "Whenever a goaded creature attacks, it deals 1 damage to its controller."
+// (Vengeful Ancestor).
 //
-// The recipient reference is the "that <noun>'s"/"its" object whose binding
-// resolves to the triggering event's permanent (ReferenceBindingEventPermanent);
-// the damage recipient is the controller or owner of that permanent. The damage
-// subject (the source) is the ability's own permanent ("this artifact", "it"
-// bound to the source, or the card's own name). The amount is a fixed value
-// (>= 1) or X.
+// The recipient reference is the possessive "that <noun>'s"/"its" object whose
+// binding resolves to the triggering event's permanent
+// (ReferenceBindingEventPermanent); the damage recipient is the controller or
+// owner of that permanent. The damage subject (the source) is the ability's own
+// permanent ("this artifact" or the card's own name), a bare "it" bound to the
+// source, or a bare "it" bound to that same triggering event permanent (Vengeful
+// Ancestor, where the goaded attacker both fires the trigger and deals the
+// damage). The amount is a fixed value (>= 1) or X.
 //
 // It returns ok=false for every shape outside that template — a recipient that is
 // not the event-bound controller/owner, a recipient that is the resolving source
@@ -121,9 +125,13 @@ func soleEventPermanentRecipientReference(
 	return recipient, found
 }
 
-// eventPermanentRecipientReference reports whether reference is the
+// eventPermanentRecipientReference reports whether reference is the possessive
 // "that <noun>'s"/"its" antecedent bound to the triggering event's permanent that
-// can name a damage recipient's controller or owner.
+// names a damage recipient's controller or owner. A controller/owner recipient
+// antecedent is always possessive, so a bare "it" (ReferencePronounIt) is not
+// matched: that pronoun names the damage source ("it deals N damage to its
+// controller", Vengeful Ancestor) and is retained by
+// damageSourceReferencesExcludingRecipient.
 func eventPermanentRecipientReference(reference compiler.CompiledReference) bool {
 	if reference.Binding != compiler.ReferenceBindingEventPermanent {
 		return false
@@ -132,8 +140,7 @@ func eventPermanentRecipientReference(reference compiler.CompiledReference) bool
 	case compiler.ReferenceThatObject:
 		return true
 	case compiler.ReferencePronoun:
-		return reference.Pronoun == compiler.ReferencePronounIts ||
-			reference.Pronoun == compiler.ReferencePronounIt
+		return reference.Pronoun == compiler.ReferencePronounIts
 	default:
 		return false
 	}

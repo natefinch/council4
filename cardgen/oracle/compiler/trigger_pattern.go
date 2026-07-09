@@ -267,6 +267,10 @@ type TriggerSelection struct {
 	// deals combat damage to a player", Archivist of Gondor). It lowers to
 	// Selection.MatchCommander.
 	Commander bool
+	// Goaded requires the matched permanent to be goaded right now (CR 701.38,
+	// "Whenever a goaded creature attacks", Vengeful Ancestor). It lowers to
+	// Selection.MatchGoaded.
+	Goaded bool
 	// AnyOf is a disjunction of alternative selections; the subject matches when
 	// it satisfies at least one alternative ("creature or Vehicle"). The other
 	// fields remain conjunctive requirements shared by every alternative. It

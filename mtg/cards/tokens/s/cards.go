@@ -37,6 +37,7 @@ var Cards = []*game.CardDef{
 	SliverArmyToken5118bcdd9f894a19b18a2257b3b0be0d,
 	SliverToken9ac81d752bec46ab84e12fc893d45219,
 	SlugTokendfa4ad2d3ef24863a9d7340d8ca8d3d9,
+	SmokeBlessingToken92796d48fe2a4b629d9c14b445406261,
 	SnailToken50c2fc3edc2d43c4b2e5d0d72889e61b,
 	SnakeToken814a99c80b6444928c9f088915a970a6,
 	SnakeToken8929b481c5c44233884fabbbcb54b0b7,

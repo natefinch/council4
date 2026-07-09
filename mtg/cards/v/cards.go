@@ -26,6 +26,7 @@ var Cards = []cardset.Entry{
 	{Name: "Vedalken Engineer", New: VedalkenEngineer},
 	{Name: "Vedalken Humiliator", New: VedalkenHumiliator},
 	{Name: "Veinwitch Coven", New: VeinwitchCoven},
+	{Name: "Vengeful Ancestor", New: VengefulAncestor},
 	{Name: "Vengeful Rebel", New: VengefulRebel},
 	{Name: "Venom Blast", New: VenomBlast},
 	{Name: "Venom's Hunger", New: VenomSHunger},

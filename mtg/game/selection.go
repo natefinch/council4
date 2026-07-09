@@ -187,6 +187,12 @@ type Selection struct {
 	// matches. Placed beside MatchModified to pack into the bool cluster.
 	MatchCommander bool
 
+	// MatchGoaded, when true, requires the matched permanent to be goaded right
+	// now ("Whenever a goaded creature attacks", Vengeful Ancestor; CR 701.38).
+	// A non-battlefield subject never matches. Placed beside MatchModified to
+	// pack into the bool cluster.
+	MatchGoaded bool
+
 	// MatchEnchanted requires the matched permanent to have one or more Auras
 	// attached to it ("as long as this creature is enchanted"); MatchEquipped
 	// requires one or more Equipment attached to it ("as long as this creature
@@ -378,6 +384,7 @@ func (s Selection) Empty() bool {
 		!s.EnteredThisTurn &&
 		!s.MatchModified &&
 		!s.MatchCommander &&
+		!s.MatchGoaded &&
 		!s.MatchEnchanted &&
 		!s.MatchEquipped &&
 		s.ColorChoice == ColorChoiceNone &&

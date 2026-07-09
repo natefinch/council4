@@ -146,6 +146,11 @@ type TriggerSelection struct {
 	// commander; it compiles to Selection.MatchCommander.
 	Commander bool `json:",omitempty"`
 
+	// Goaded records a "goaded" subject qualifier ("Whenever a goaded creature
+	// attacks", Vengeful Ancestor): the matched permanent must be goaded right
+	// now (CR 701.38). It compiles to Selection.MatchGoaded.
+	Goaded bool `json:",omitempty"`
+
 	// SubtypeFromEntryChoice records a trailing "of the chosen type" qualifier
 	// ("a creature you control of the chosen type"), tying the matched permanent
 	// to the creature subtype the trigger's source permanent chose as it entered.
@@ -339,6 +344,8 @@ func consumeTriggerSelectionModifiers(words []string, selection *TriggerSelectio
 			selection.CombatState = TriggerSelectionBlocking
 		case "modified":
 			selection.Modified = true
+		case "goaded":
+			selection.Goaded = true
 		default:
 			return words
 		}
