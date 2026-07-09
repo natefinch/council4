@@ -3114,6 +3114,16 @@ type EffectSyntax struct {
 	// up to all) rather than "all" of them. It is meaningful only when
 	// SacrificeThenCount is set and is false otherwise.
 	SacrificeAnyNumber bool `json:",omitempty"`
+	// RequireSourceTrample marks an excess-damage-to-controller redirect
+	// (EffectDynamicAmountExcessDamageDealtThisWay) that applies only when the
+	// damage source has trample ("If the creature you control has trample, excess
+	// damage is dealt to that creature's controller instead." — Ram Through). The
+	// unconditional Flame Spill form ("Excess damage is dealt to that creature's
+	// controller instead.") leaves it false. Lowering gates the excess redirect on
+	// the source having trample and emits a plain (non-redirecting) damage branch
+	// otherwise. It is meaningful only when Amount.DynamicKind is
+	// EffectDynamicAmountExcessDamageDealtThisWay.
+	RequireSourceTrample bool `json:",omitempty"`
 }
 
 // ManaSpendConditionKind identifies the exact spend condition of a mana-spend

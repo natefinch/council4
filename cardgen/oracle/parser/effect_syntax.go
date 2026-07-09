@@ -2798,6 +2798,11 @@ func parseExcessDamageToControllerEffect(sentence Sentence, tokens []shared.Toke
 	if n := len(clause); n > 0 && clause[n-1].Kind == shared.Period {
 		clause = clause[:n-1]
 	}
+	requireSourceTrample := false
+	if rest, ok := stripSourceTrampleExcessPrefix(clause); ok {
+		clause = rest
+		requireSourceTrample = true
+	}
 	if len(clause) < 7 ||
 		!effectWordsAt(clause, 0, "excess", "damage", "is", "dealt", "to") ||
 		!equalWord(clause[len(clause)-1], "instead") {
@@ -2810,18 +2815,41 @@ func parseExcessDamageToControllerEffect(sentence Sentence, tokens []shared.Toke
 	}
 	synthesized := append([]shared.Token{clause[1], clause[4]}, recipient...)
 	return []EffectSyntax{{
-		Kind:            EffectDealDamage,
-		Context:         EffectContextSource,
-		Span:            shared.SpanOf(tokens),
-		VerbSpan:        clause[3].Span,
-		ClauseSpan:      shared.SpanOf(tokens),
-		Text:            sentence.Text,
-		Tokens:          synthesized,
-		Amount:          EffectAmountSyntax{DynamicKind: EffectDynamicAmountExcessDamageDealtThisWay, Multiplier: 1},
-		DamageRecipient: DamageRecipientSyntax{Reference: role},
-		References:      referencesInSpan(atoms, shared.SpanOf(recipient)),
-		Exact:           true,
+		Kind:                 EffectDealDamage,
+		Context:              EffectContextSource,
+		Span:                 shared.SpanOf(tokens),
+		VerbSpan:             clause[3].Span,
+		ClauseSpan:           shared.SpanOf(tokens),
+		Text:                 sentence.Text,
+		Tokens:               synthesized,
+		Amount:               EffectAmountSyntax{DynamicKind: EffectDynamicAmountExcessDamageDealtThisWay, Multiplier: 1},
+		DamageRecipient:      DamageRecipientSyntax{Reference: role},
+		References:           referencesInSpan(atoms, shared.SpanOf(recipient)),
+		RequireSourceTrample: requireSourceTrample,
+		Exact:                true,
 	}}, true
+}
+
+// stripSourceTrampleExcessPrefix removes a leading "If the creature you control
+// has trample," gate from an excess-damage-to-controller clause, returning the
+// remaining "excess damage is dealt to ... instead" tokens and ok=true. It is
+// the conditional Ram Through form ("... If the creature you control has
+// trample, excess damage is dealt to that creature's controller instead."); the
+// unconditional Flame Spill form has no such prefix and is left unchanged
+// (ok=false). Lowering reads the RequireSourceTrample marker the caller sets to
+// gate the excess redirect on the source having trample.
+func stripSourceTrampleExcessPrefix(clause []shared.Token) ([]shared.Token, bool) {
+	prefix := []string{"if", "the", "creature", "you", "control", "has", "trample"}
+	if len(clause) < len(prefix)+1 {
+		return clause, false
+	}
+	if !effectWordsAt(clause, 0, prefix...) {
+		return clause, false
+	}
+	if clause[len(prefix)].Kind != shared.Comma {
+		return clause, false
+	}
+	return clause[len(prefix)+1:], true
 }
 
 // matchLifeLossReplacement reports the comma index separating the would-lose
