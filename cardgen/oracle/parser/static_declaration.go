@@ -595,6 +595,21 @@ type StaticDeclarationSyntax struct {
 	// for every other declaration kind.
 	ExileCounter counter.Kind `json:"-"`
 
+	// ExilePlayOncePerTurn, ExilePlayExiledByControlledAbility, and
+	// ExilePlaySpendAnyColorMana carry the optional riders of a
+	// StaticDeclarationPlayerRulePlayAndCastFromExileWithCounter declaration
+	// spelled as "play a card from exile" ("Once each turn, you may play a card
+	// from exile with a collection counter on it if it was exiled by an ability
+	// you controlled, and you may spend mana as though it were mana of any color to
+	// cast it.", Evelyn, the Covetous): a once-per-turn use cap, a provenance
+	// filter restricting the permission to cards the controller's own ability
+	// exiled, and an any-color mana permission for casting. Each is independent, so
+	// wordings that carry only some of the riders lower correctly. They are false
+	// for every other declaration kind.
+	ExilePlayOncePerTurn               bool `json:",omitempty"`
+	ExilePlayExiledByControlledAbility bool `json:",omitempty"`
+	ExilePlaySpendAnyColorMana         bool `json:",omitempty"`
+
 	// Per-creature attack-tax payload (Baird, Archon of Absolution, Sphere of
 	// Safety, Collective Restraint): AttackTaxAmountKind selects how the
 	// per-attacker generic amount is derived (a fixed AttackTaxGeneric, the
@@ -767,6 +782,7 @@ func emitStaticDeclarations(abilities []Ability) {
 		if len(declarations) > 0 {
 			ability.StaticDeclarations = declarations
 			dropControllerTurnConditionsNativelyConsumed(ability, declarations)
+			dropExilePlayProvenanceConditionNativelyConsumed(ability, declarations)
 			foldStaticCastFromTopPayLifeRider(ability, declarations)
 			foldStaticSkipDrawStep(ability, declarations)
 			foldStaticDamageDoesntCauseLifeLoss(ability, declarations)
@@ -812,6 +828,41 @@ func dropControllerTurnConditionsNativelyConsumed(ability *Ability, declarations
 		keptClauses = append(keptClauses, clause)
 	}
 	ability.ConditionClauses = keptClauses
+}
+
+// dropExilePlayProvenanceConditionNativelyConsumed removes the "if it was exiled
+// by an ability you controlled" condition the generic scanner emits when a
+// play-a-card-from-exile-with-counter declaration already captured that
+// provenance clause as its ExilePlayExiledByControlledAbility rider (Evelyn, the
+// Covetous). The declaration owns the whole sentence text-blind, so dropping the
+// boundary and its segment keeps the provenance clause from surfacing as a
+// static-wide "if" gate the compiler would preserve as an unlowered condition.
+func dropExilePlayProvenanceConditionNativelyConsumed(ability *Ability, declarations []StaticDeclarationSyntax) {
+	var consuming []shared.Span
+	for i := range declarations {
+		if declarations[i].ExilePlayExiledByControlledAbility {
+			consuming = append(consuming, declarations[i].Span)
+		}
+	}
+	if len(consuming) == 0 {
+		return
+	}
+	keptBoundaries := ability.ConditionBoundaries[:0]
+	for _, boundary := range ability.ConditionBoundaries {
+		if boundary.Kind == ConditionIntroIf && positionWithinAnySpan(boundary.Start, consuming) {
+			continue
+		}
+		keptBoundaries = append(keptBoundaries, boundary)
+	}
+	ability.ConditionBoundaries = keptBoundaries
+	keptSegments := ability.ConditionSegments[:0]
+	for _, segment := range ability.ConditionSegments {
+		if segment.Kind == ConditionIntroIf && spanCoveredByAny(segment.Span, consuming) {
+			continue
+		}
+		keptSegments = append(keptSegments, segment)
+	}
+	ability.ConditionSegments = keptSegments
 }
 
 func positionWithinAnySpan(pos shared.Position, spans []shared.Span) bool {
@@ -2217,6 +2268,7 @@ var staticPlayerRuleParsers = []staticPlayerRuleParser{
 	parseStaticEachPlayerAdditionalLandPlaysDeclaration,
 	parseStaticPlayLandsFromGraveyardDeclaration,
 	parseStaticPlayAndCastFromExileWithCounterDeclaration,
+	parseStaticPlayCardFromExileWithCounterDeclaration,
 	parseStaticPlayLandsFromLibraryTopDeclaration,
 	parseStaticPlayWithTopCardRevealedDeclaration,
 	parseStaticCastSpellsFromLibraryTopDeclaration,
@@ -2580,6 +2632,93 @@ func parseStaticPlayAndCastFromExileWithCounterDeclaration(tokens []shared.Token
 		},
 		PlayerRule:   StaticDeclarationPlayerRulePlayAndCastFromExileWithCounter,
 		ExileCounter: kind,
+	}, true
+}
+
+// parseStaticPlayCardFromExileWithCounterDeclaration recognizes the
+// controller-scoped continuous permission to play a card from exile that carries
+// a named marker counter, spelled "you may play a card from exile with a
+// <counter> counter on it" ("Once each turn, you may play a card from exile with
+// a collection counter on it if it was exiled by an ability you controlled, and
+// you may spend mana as though it were mana of any color to cast it.", Evelyn, the
+// Covetous). The counter name is read text-blind between the "with a/an" article
+// and the "counter" noun, so any named marker counter is accepted. Three optional
+// riders are captured as independent typed flags: a leading "Once each turn,"
+// (ExilePlayOncePerTurn), an "if it was exiled by an ability you controlled"
+// provenance clause (ExilePlayExiledByControlledAbility), and a trailing "and you
+// may spend mana as though it were mana of any color to cast it" permission
+// (ExilePlaySpendAnyColorMana). Because each rider maps to its own flag, wordings
+// that carry only some of them lower correctly. The declaration reuses the
+// play-and-cast-from-exile-with-counter player rule; the "you may" permission is
+// folded into an allowance the controller may exercise.
+func parseStaticPlayCardFromExileWithCounterDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if len(tokens) == 0 || tokens[len(tokens)-1].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	coreStart := 0
+	oncePerTurn := false
+	if staticWordsAt(tokens, 0, "once", "each", "turn") && len(tokens) > 3 && tokens[3].Kind == shared.Comma {
+		oncePerTurn = true
+		coreStart = 4
+	}
+	if !staticWordsAt(tokens, coreStart, "you", "may", "play", "a", "card", "from", "exile", "with") {
+		return StaticDeclarationSyntax{}, false
+	}
+	articleIndex := coreStart + 8
+	if articleIndex >= len(tokens) || (!equalWord(tokens[articleIndex], "a") && !equalWord(tokens[articleIndex], "an")) {
+		return StaticDeclarationSyntax{}, false
+	}
+	nameStart := articleIndex + 1
+	counterIndex := -1
+	for i := nameStart; i < len(tokens); i++ {
+		if equalWord(tokens[i], "counter") || equalWord(tokens[i], "counters") {
+			counterIndex = i
+			break
+		}
+	}
+	if counterIndex <= nameStart {
+		return StaticDeclarationSyntax{}, false
+	}
+	kind, span, ok := counterNameBefore(tokens, counterIndex)
+	if !ok || span.Start.Offset != tokens[nameStart].Span.Start.Offset {
+		return StaticDeclarationSyntax{}, false
+	}
+	if counterIndex+2 >= len(tokens) || !equalWord(tokens[counterIndex+1], "on") ||
+		(!equalWord(tokens[counterIndex+2], "it") && !equalWord(tokens[counterIndex+2], "them")) {
+		return StaticDeclarationSyntax{}, false
+	}
+	pos := counterIndex + 3
+	exiledByControlled := false
+	if staticWordsAt(tokens, pos, "if", "it", "was", "exiled", "by", "an", "ability", "you", "controlled") {
+		exiledByControlled = true
+		pos += 9
+	}
+	spendAnyColor := false
+	anyColorStart := pos
+	if pos < len(tokens) && tokens[pos].Kind == shared.Comma && equalWord(tokens[pos+1], "and") {
+		anyColorStart = pos + 2
+	}
+	if staticWordsAt(tokens, anyColorStart, "you", "may", "spend", "mana", "as", "though",
+		"it", "were", "mana", "of", "any", "color", "to", "cast", "it") {
+		spendAnyColor = true
+		pos = anyColorStart + 15
+	}
+	if pos != len(tokens)-1 || tokens[pos].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:          StaticDeclarationPlayerRule,
+		Span:          shared.SpanOf(tokens),
+		OperationSpan: shared.SpanOf(tokens[coreStart : counterIndex+3]),
+		Subject: StaticDeclarationSubject{
+			Kind: StaticDeclarationSubjectController,
+			Span: tokens[coreStart].Span,
+		},
+		PlayerRule:                         StaticDeclarationPlayerRulePlayAndCastFromExileWithCounter,
+		ExileCounter:                       kind,
+		ExilePlayOncePerTurn:               oncePerTurn,
+		ExilePlayExiledByControlledAbility: exiledByControlled,
+		ExilePlaySpendAnyColorMana:         spendAnyColor,
 	}, true
 }
 

@@ -63,12 +63,40 @@ func exileTopOfLibraryAmount(effect *EffectSyntax) (int, EffectContextKind, bool
 	}
 	clause := exactEffectClauseText(effect)
 	for _, candidate := range candidates {
-		want := candidate.subject + "the top " + noun + " of " + candidate.possessive + " library."
-		if strings.EqualFold(clause, want) {
+		base := candidate.subject + "the top " + noun + " of " + candidate.possessive + " library"
+		if strings.EqualFold(clause, base+".") {
 			return amount, candidate.ownerContext, true
+		}
+		// A trailing "with a <kind> counter on it/them" rider places one named
+		// marker counter on each exiled card ("exile the top card of each
+		// player's library with a collection counter on it.", Evelyn, the
+		// Covetous). The counter kind is captured text-blind in the effect's
+		// CounterKind/CounterKnown fields; lowering reads it onto the
+		// ExileTopOfLibrary primitive. Only the single-counter placement form is
+		// recognized, so multi-counter riders fall through and fail closed.
+		if effect.CounterKnown {
+			for _, suffix := range exileTopCounterSuffixes(effect.CounterKind.String()) {
+				if strings.EqualFold(clause, base+suffix) {
+					return amount, candidate.ownerContext, true
+				}
+			}
 		}
 	}
 	return 0, "", false
+}
+
+// exileTopCounterSuffixes reconstructs the recognized "with a <kind> counter on
+// it/them" placement riders for an exile-top clause, covering both indefinite
+// articles and both card-count pronouns so the recognizer generalizes across
+// counter kinds and singular/plural exile counts.
+func exileTopCounterSuffixes(kind string) []string {
+	suffixes := make([]string, 0, 4)
+	for _, article := range []string{"a", "an"} {
+		for _, pronoun := range []string{"it", "them"} {
+			suffixes = append(suffixes, " with "+article+" "+kind+" counter on "+pronoun+".")
+		}
+	}
+	return suffixes
 }
 
 // exileTopOfLibraryCandidates returns the recognized "Exile the top card of

@@ -48,6 +48,7 @@ func (g *Game) Clone() *Game {
 		PlottedCards:                       cloneComparableMap(g.PlottedCards),
 		ForetoldCards:                      cloneComparableMap(g.ForetoldCards),
 		ExileCounters:                      cloneMapFunc(g.ExileCounters, cloneCounterSet),
+		ExileCounterExiledBy:               cloneComparableMap(g.ExileCounterExiledBy),
 		LastKnownInformation:               cloneMapFunc(g.LastKnownInformation, cloneObjectSnapshot),
 		LinkedObjects:                      cloneLinkedObjects(g.LinkedObjects),
 		Turn:                               cloneTurnState(g.Turn),
@@ -64,6 +65,7 @@ func (g *Game) Clone() *Game {
 		FiredManaSpendRiders:               cloneSlice(g.FiredManaSpendRiders),
 		ActivatedAbilitiesThisTurn:         cloneComparableMap(g.ActivatedAbilitiesThisTurn),
 		AbilityActivationsThisTurn:         cloneComparableMap(g.AbilityActivationsThisTurn),
+		ExilePlayPermissionUsedThisTurn:    cloneComparableMap(g.ExilePlayPermissionUsedThisTurn),
 		TriggeredAbilitiesThisTurn:         cloneComparableMap(g.TriggeredAbilitiesThisTurn),
 		ResolvedTriggeredAbilitiesThisTurn: cloneComparableMap(g.ResolvedTriggeredAbilitiesThisTurn),
 	}

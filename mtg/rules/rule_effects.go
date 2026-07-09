@@ -1507,12 +1507,18 @@ func hasCastFromZoneRuleEffect(g *game.Game, playerID game.PlayerID, cardID id.I
 	return false
 }
 
-// castFromZoneAllowsAnyMana reports whether an active RuleEffectPlayFromZone
-// permission lets playerID spend mana of any type to cast cardID from sourceZone
-// ("mana of any type can be spent to cast it.", Court of Locthwain). It mirrors
-// hasCastFromZoneRuleEffect's matching and additionally requires the SpendAnyMana
-// flag.
+// castFromZoneAllowsAnyMana reports whether an active play/cast-from-zone
+// permission lets playerID spend mana of any color to cast cardID from
+// sourceZone ("mana of any type can be spent to cast it.", Court of Locthwain;
+// "you may spend mana as though it were mana of any color to cast it.", Evelyn,
+// the Covetous). A RuleEffectPlayFromZone permission carries the flag on the
+// self-scoped card grant; a RuleEffectCastSpellsFromZone permission carries it on
+// the group cast grant, in which case the full CastSpellsFromZone match (including
+// its exile-counter, provenance, and once-per-turn filters) must also hold.
 func castFromZoneAllowsAnyMana(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex) bool {
+	if effect, ok := matchingCastSpellsFromZoneEffect(g, playerID, cardID, sourceZone, face); ok && effect.SpendAnyMana {
+		return true
+	}
 	effects := activeRuleEffects(g)
 	for i := range effects {
 		effect := &effects[i]
@@ -1597,7 +1603,51 @@ func consumeCastLinkedExileForFreePermission(g *game.Game, effectID id.ID) {
 	g.RuleEffects = kept
 }
 
+// exileCounterPermissionBlocked reports whether the provenance or once-per-turn
+// riders on an exile-counter play/cast permission (Evelyn, the Covetous) forbid
+// using it for cardID right now. The provenance rider
+// (ExileCounterExiledByController) requires cardID to have been exiled by an
+// ability the permission's controller controlled; the OncePerTurn rider blocks
+// the permission once its source permanent has already played or cast a card
+// this turn. Both riders are false for every ordinary play/cast-from-zone
+// permission, so this is a no-op for them.
+func exileCounterPermissionBlocked(g *game.Game, effect *game.RuleEffect, cardID id.ID) bool {
+	if effect.ExileCounterExiledByController && !g.ExileCounterExiledByController(cardID, effect.Controller) {
+		return true
+	}
+	if effect.OncePerTurn && g.ExilePlayPermissionUsedThisTurn[effect.SourceObjectID] {
+		return true
+	}
+	return false
+}
+
+// recordExilePlayPermissionUse marks a once-per-turn play/cast-from-exile
+// permission as used this turn, keyed by its source permanent so a source that
+// grants both a land-play and a spell-cast permission spends the single shared
+// use (Evelyn, the Covetous). It is a no-op for a permission with no per-turn cap
+// or an unset source, so callers can invoke it unconditionally after a play or
+// cast authorized by an exile-counter permission.
+func recordExilePlayPermissionUse(g *game.Game, effect game.RuleEffect) {
+	if !effect.OncePerTurn || effect.SourceObjectID == 0 {
+		return
+	}
+	if g.ExilePlayPermissionUsedThisTurn == nil {
+		g.ExilePlayPermissionUsedThisTurn = make(map[game.ObjectID]bool)
+	}
+	g.ExilePlayPermissionUsedThisTurn[effect.SourceObjectID] = true
+}
+
 func canPlayLandFromZoneByRuleEffect(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type) bool {
+	_, ok := matchingPlayLandFromZoneEffect(g, playerID, cardID, sourceZone)
+	return ok
+}
+
+// matchingPlayLandFromZoneEffect returns the first continuous play-from-zone
+// permission that lets playerID play cardID as a land from sourceZone, applying
+// the same TopCardOnly, exile-counter, provenance, and once-per-turn filters as
+// canPlayLandFromZoneByRuleEffect. Callers record a once-per-turn use against the
+// returned effect after the land is actually played.
+func matchingPlayLandFromZoneEffect(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type) (game.RuleEffect, bool) {
 	effects := activeRuleEffects(g)
 	for i := range effects {
 		effect := &effects[i]
@@ -1608,7 +1658,7 @@ func canPlayLandFromZoneByRuleEffect(g *game.Game, playerID game.PlayerID, cardI
 		switch effect.Kind {
 		case game.RuleEffectPlayFromZone:
 			if effect.AffectedCardID == cardID {
-				return true
+				return *effect, true
 			}
 		case game.RuleEffectPlayLandsFromZone:
 			if effect.TopCardOnly && !cardIsTopOfLibrary(g, playerID, cardID) {
@@ -1617,12 +1667,15 @@ func canPlayLandFromZoneByRuleEffect(g *game.Game, playerID game.PlayerID, cardI
 			if effect.ExileCounterFilter.Exists && !g.HasExileCounter(cardID, effect.ExileCounterFilter.Val) {
 				continue
 			}
-			return true
+			if exileCounterPermissionBlocked(g, effect, cardID) {
+				continue
+			}
+			return *effect, true
 		default:
 			continue
 		}
 	}
-	return false
+	return game.RuleEffect{}, false
 }
 
 // canCastSpellsFromZoneByRuleEffect reports whether a continuous
@@ -1660,6 +1713,9 @@ func matchingCastSpellsFromZoneEffect(g *game.Game, playerID game.PlayerID, card
 			continue
 		}
 		if effect.ExileCounterFilter.Exists && !g.HasExileCounter(cardID, effect.ExileCounterFilter.Val) {
+			continue
+		}
+		if exileCounterPermissionBlocked(g, effect, cardID) {
 			continue
 		}
 		if effect.SpellChosenSubtypeFrom != "" && !cardMatchesSourceEntryChosenSubtype(g, effect, faceDef) {

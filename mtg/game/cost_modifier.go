@@ -958,4 +958,22 @@ type RuleEffect struct {
 	// one such counter recorded in Game.ExileCounters. It is unset for every
 	// permission with no exile-counter filter.
 	ExileCounterFilter opt.V[counter.Kind]
+
+	// ExileCounterExiledByController narrows a RuleEffectPlayLandsFromZone or
+	// RuleEffectCastSpellsFromZone exile-counter permission to cards that were
+	// exiled by an ability the effect's controller controlled ("... if it was
+	// exiled by an ability you controlled", Evelyn, the Covetous). The rules layer
+	// checks the exiling controller recorded in Game.ExileCounterExiledBy, so one
+	// player's permission can't reach cards another player's ability exiled with
+	// the same counter kind. It is false for every permission with no provenance
+	// filter and is meaningful only alongside ExileCounterFilter.
+	ExileCounterExiledByController bool
+
+	// OncePerTurn caps a RuleEffectPlayLandsFromZone or RuleEffectCastSpellsFromZone
+	// permission to one use per turn per source permanent ("Once each turn, you may
+	// play a card from exile ...", Evelyn, the Covetous). A source that grants both
+	// a land-play and a spell-cast permission shares the single per-turn use, keyed
+	// by SourceObjectID in Game.ExilePlayPermissionUsedThisTurn. It is false for
+	// every permission with no per-turn cap.
+	OncePerTurn bool
 }

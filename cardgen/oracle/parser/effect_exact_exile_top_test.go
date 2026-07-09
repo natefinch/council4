@@ -1,6 +1,10 @@
 package parser
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/natefinch/council4/mtg/game/counter"
+)
 
 // exileTopEffect parses a single exile sentence and returns its resolving
 // effect for inspection of the exile-top-of-library recognizer.
@@ -72,6 +76,42 @@ func TestExactExileTopOfLibraryControllerEachLibraryScope(t *testing.T) {
 		}
 		if effect.Context != c.want {
 			t.Errorf("exileTopEffect(%q).Context = %q, want %q", c.source, effect.Context, c.want)
+		}
+	}
+}
+
+// TestExactExileTopOfLibraryCounterRider proves the "with a <kind> counter on
+// it/them" rider is recognized as a top-of-library exile that places one named
+// marker counter on each exiled card, capturing the counter kind text-blind for
+// lowering onto the ExileTopOfLibrary primitive (Evelyn, the Covetous).
+func TestExactExileTopOfLibraryCounterRider(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		source string
+		amount int
+		scope  EffectContextKind
+	}{
+		{"Exile the top card of each player's library with a collection counter on it.", 1, EffectContextEachPlayer},
+		{"Exile the top card of your library with a collection counter on it.", 1, EffectContextController},
+		{"Exile the top card of each opponent's library with a collection counter on it.", 1, EffectContextEachOpponent},
+		{"Exile the top two cards of each player's library with a collection counter on them.", 2, EffectContextEachPlayer},
+	}
+	for _, c := range cases {
+		effect := exileTopEffect(t, c.source)
+		if effect.CardSource != EffectCardSourceTopOfPlayerLibrary {
+			t.Errorf("exileTopEffect(%q).CardSource = %q, want %q",
+				c.source, effect.CardSource, EffectCardSourceTopOfPlayerLibrary)
+		}
+		if effect.Context != c.scope {
+			t.Errorf("exileTopEffect(%q).Context = %q, want %q", c.source, effect.Context, c.scope)
+		}
+		if !effect.Amount.Known || effect.Amount.Value != c.amount {
+			t.Errorf("exileTopEffect(%q).Amount = %+v, want known %d",
+				c.source, effect.Amount, c.amount)
+		}
+		if !effect.CounterKnown || effect.CounterKind != counter.Collection {
+			t.Errorf("exileTopEffect(%q) counter = (known %t, %v), want (true, %v)",
+				c.source, effect.CounterKnown, effect.CounterKind, counter.Collection)
 		}
 	}
 }

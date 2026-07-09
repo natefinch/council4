@@ -9,6 +9,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/compare"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
@@ -1933,11 +1934,21 @@ func lowerImmediateSingleEffectSpell(
 	case compiler.EffectExile:
 		if len(ctx.content.Effects) == 1 &&
 			ctx.content.Effects[0].CardSource == parser.EffectCardSourceTopOfPlayerLibrary {
+			var exileCounter opt.V[counter.Kind]
+			if e := ctx.content.Effects[0]; e.CounterKindKnown {
+				exileCounter = opt.Val(e.CounterKind)
+				// The "with a <kind> counter on it" rider leaves a dangling
+				// back-reference to the exiled cards ("it"); the counter placement
+				// is intrinsic to the ExileTopOfLibrary primitive, so consume that
+				// reference before the generic fixed-count lowering, which rejects
+				// any unhandled residual reference.
+				ctx.content.References = nil
+			}
 			return lowerFixedCardCountPlayerSpell(
 				ctx, syntax, "exile", "exiles", false, func(amount game.Quantity, player game.PlayerReference) game.Primitive {
-					return game.ExileTopOfLibrary{Amount: amount, Player: player}
+					return game.ExileTopOfLibrary{Amount: amount, Player: player, Counter: exileCounter}
 				}, func(amount game.Quantity, group game.PlayerGroupReference) game.Primitive {
-					return game.ExileTopOfLibrary{Amount: amount, PlayerGroup: group}
+					return game.ExileTopOfLibrary{Amount: amount, PlayerGroup: group, Counter: exileCounter}
 				},
 			)
 		}

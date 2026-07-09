@@ -759,6 +759,15 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 		ctx.need(importOpt)
 		fields = append(fields, fmt.Sprintf("ExileCounterFilter: opt.Val(%s),", counterKind))
 	}
+	if effect.ExileCounterExiledByController {
+		fields = append(fields, "ExileCounterExiledByController: true,")
+	}
+	if effect.OncePerTurn {
+		fields = append(fields, "OncePerTurn: true,")
+	}
+	if effect.SpendAnyMana {
+		fields = append(fields, "SpendAnyMana: true,")
+	}
 	if !effect.AffectedSelection.Empty() {
 		selection, err := r.renderSelection(ctx, effect.AffectedSelection)
 		if err != nil {

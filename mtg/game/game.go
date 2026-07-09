@@ -153,6 +153,15 @@ type Game struct {
 	// card becomes a new object with no counters (CR 400.7).
 	ExileCounters map[id.ID]counter.Set
 
+	// ExileCounterExiledBy records, for each card that carries a named exile
+	// marker counter, the player who controlled the ability that exiled it. It
+	// lets a paired play/cast-from-exile permission filter to cards "exiled by an
+	// ability you controlled" (Evelyn, the Covetous), which matters in multiplayer
+	// where the same counter kind can be placed by different players' abilities
+	// (collection counters: Evelyn, Charitable Levy). The entry is set alongside
+	// the ExileCounters entry and removed when the card leaves exile.
+	ExileCounterExiledBy map[id.ID]PlayerID
+
 	// LastKnownInformation stores snapshots for objects that have moved zones.
 	LastKnownInformation map[id.ID]ObjectSnapshot
 
@@ -219,6 +228,14 @@ type Game struct {
 	// {0}, a tapped-out "{X}" ability at X = 0). It is reset each turn like
 	// ActivatedAbilitiesThisTurn.
 	AbilityActivationsThisTurn map[ActivatedAbilityUse]int
+
+	// ExilePlayPermissionUsedThisTurn records, keyed by the source permanent's
+	// object ID, which once-per-turn play/cast-from-exile permissions have already
+	// been used this turn ("Once each turn, you may play a card from exile ...",
+	// Evelyn, the Covetous). A single Evelyn grants a land-play and a spell-cast
+	// rule effect that share this source key, so playing a land or casting a spell
+	// under it consumes the one shared per-turn use. It is reset each turn.
+	ExilePlayPermissionUsedThisTurn map[id.ID]bool
 
 	// TriggeredAbilitiesThisTurn records triggered ability trigger counts during
 	// the current turn for abilities with MaxTriggersPerTurn.
@@ -320,6 +337,7 @@ func NewGameWithRand(configs [NumPlayers]PlayerConfig, rng *rand.Rand) *Game {
 		PlottedCards:                       make(map[id.ID]int),
 		ForetoldCards:                      make(map[id.ID]int),
 		ExileCounters:                      make(map[id.ID]counter.Set),
+		ExileCounterExiledBy:               make(map[id.ID]PlayerID),
 		LastKnownInformation:               make(map[id.ID]ObjectSnapshot),
 		LinkedObjects:                      make(map[LinkedObjectKey][]LinkedObjectRef),
 		SkippedSteps:                       make(map[PlayerID]map[Step]int),
@@ -429,6 +447,30 @@ func (g *Game) AddExileCounter(cardID id.ID, kind counter.Kind, n int) {
 	set := g.ExileCounters[cardID]
 	set.Add(kind, n)
 	g.ExileCounters[cardID] = set
+}
+
+// AddExileCounterFromController places n counters of the given named kind on the
+// exiled card identified by cardID and records exiledBy as the controller of the
+// ability that exiled it, so a paired play/cast-from-exile permission can later
+// filter to cards "exiled by an ability you controlled" (Evelyn, the Covetous).
+// Both records are cleared together when the card leaves exile.
+func (g *Game) AddExileCounterFromController(cardID id.ID, kind counter.Kind, n int, exiledBy PlayerID) {
+	if n <= 0 {
+		return
+	}
+	g.AddExileCounter(cardID, kind, n)
+	if g.ExileCounterExiledBy == nil {
+		g.ExileCounterExiledBy = make(map[id.ID]PlayerID)
+	}
+	g.ExileCounterExiledBy[cardID] = exiledBy
+}
+
+// ExileCounterExiledByController reports whether the exiled card identified by
+// cardID carries a named marker counter recorded as exiled by controller, i.e.
+// exiled by an ability that player controlled.
+func (g *Game) ExileCounterExiledByController(cardID id.ID, controller PlayerID) bool {
+	exiledBy, ok := g.ExileCounterExiledBy[cardID]
+	return ok && exiledBy == controller
 }
 
 // ExileCounterCount returns how many counters of the given kind rest on the

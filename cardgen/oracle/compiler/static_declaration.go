@@ -697,6 +697,20 @@ type StaticPlayerRuleDeclaration struct {
 	// cards its play/cast permission covers ("... in exile with croak counters on
 	// them.", Grolnok, the Omnivore). It is the zero value for every other kind.
 	ExileCounter counter.Kind
+
+	// ExilePlayOncePerTurn, ExilePlayExiledByControlledAbility, and
+	// ExilePlaySpendAnyColorMana carry the optional riders of a
+	// StaticPlayerRulePlayAndCastFromExileWithCounter rule spelled "play a card
+	// from exile" ("Once each turn, you may play a card from exile with a
+	// collection counter on it if it was exiled by an ability you controlled, and
+	// you may spend mana as though it were mana of any color to cast it.", Evelyn,
+	// the Covetous): a once-per-turn use cap, a provenance filter restricting the
+	// permission to cards the controller's own ability exiled, and an any-color
+	// mana permission for casting. Each is independent. They are false for every
+	// other kind.
+	ExilePlayOncePerTurn               bool
+	ExilePlayExiledByControlledAbility bool
+	ExilePlaySpendAnyColorMana         bool
 }
 
 // StaticCardAbilityGrantDeclaration grants a keyword ability to cards in a
@@ -4725,7 +4739,10 @@ func recognizeStaticPlayerRuleDeclaration(ability CompiledAbility, statics []par
 		if !node.ExileCounter.Valid() {
 			return StaticDeclaration{}, false
 		}
-	} else if node.ExileCounter != 0 {
+	} else if node.ExileCounter != 0 ||
+		node.ExilePlayOncePerTurn ||
+		node.ExilePlayExiledByControlledAbility ||
+		node.ExilePlaySpendAnyColorMana {
 		return StaticDeclaration{}, false
 	}
 	return StaticDeclaration{
@@ -4734,17 +4751,20 @@ func recognizeStaticPlayerRuleDeclaration(ability CompiledAbility, statics []par
 		OperationSpan: node.OperationSpan,
 		Condition:     condition,
 		Player: &StaticPlayerRuleDeclaration{
-			Kind:                   spec.kind,
-			AttackTaxGeneric:       node.AttackTaxGeneric,
-			AdditionalLandPlays:    node.AdditionalLandPlays,
-			AffectsAllPlayers:      node.Subject.Kind == parser.StaticDeclarationSubjectEachPlayer,
-			SpellTypes:             spellTypes,
-			CastColorless:          node.CastColorless,
-			AlsoPlayLands:          node.AlsoPlayLands,
-			CastChosenCreatureType: node.CastChosenCreatureType,
-			CastPayLifeManaValue:   node.CastPayLifeManaValue,
-			ManaColor:              node.ManaColor,
-			ExileCounter:           node.ExileCounter,
+			Kind:                               spec.kind,
+			AttackTaxGeneric:                   node.AttackTaxGeneric,
+			AdditionalLandPlays:                node.AdditionalLandPlays,
+			AffectsAllPlayers:                  node.Subject.Kind == parser.StaticDeclarationSubjectEachPlayer,
+			SpellTypes:                         spellTypes,
+			CastColorless:                      node.CastColorless,
+			AlsoPlayLands:                      node.AlsoPlayLands,
+			CastChosenCreatureType:             node.CastChosenCreatureType,
+			CastPayLifeManaValue:               node.CastPayLifeManaValue,
+			ManaColor:                          node.ManaColor,
+			ExileCounter:                       node.ExileCounter,
+			ExilePlayOncePerTurn:               node.ExilePlayOncePerTurn,
+			ExilePlayExiledByControlledAbility: node.ExilePlayExiledByControlledAbility,
+			ExilePlaySpendAnyColorMana:         node.ExilePlaySpendAnyColorMana,
 		},
 	}, true
 }
