@@ -1647,6 +1647,11 @@ func lowerMassOrSinglePermanentSpell(
 			Sequence: []game.Instruction{{Primitive: groupPrimitive(group)}},
 		}.Ability(), nil
 	}
+	if group, ok := eventPlayerControlledMassGroup(ctx); ok {
+		return game.Mode{
+			Sequence: []game.Instruction{{Primitive: groupPrimitive(group)}},
+		}.Ability(), nil
+	}
 	if object, ok := lowerSourceAttachedTapUntapObject(ctx); ok {
 		return game.Mode{
 			Sequence: []game.Instruction{{Primitive: objectPrimitive(object)}},
@@ -1888,6 +1893,70 @@ func exactMassGroup(ctx contentCtx) (game.GroupReference, bool) {
 		return game.GroupReference{}, false
 	}
 	return game.BattlefieldGroup(selection), true
+}
+
+// eventPlayerControlledMassGroup resolves a mass tap/untap/goad whose group is
+// scoped to the triggering event's player ("tap all lands that player controls",
+// Nature's Will). The compiler records "that player" as a ReferenceThatPlayer
+// bound to ReferenceBindingEventPlayer and leaves the selector's controller
+// unconstrained (ControllerAny), because the "that player controls" suffix is a
+// separate reference rather than part of the round-tripped mass phrase, so the
+// effect is inexact and exactMassGroup fails closed on the surviving reference.
+// This projector consumes that single event-player reference and emits a
+// PlayerControlledGroup keyed on EventPlayerReference(), which at runtime resolves
+// through the triggering event's authoritative player subject — the combat-damage
+// recipient for a "deals combat damage to a player" trigger. It mirrors the group
+// lowerEventPlayerPerCreatureUntapPayment already builds for the per-creature
+// untap payment family.
+//
+// It fails closed for every other shape: any target, condition, mode, or keyword;
+// an optional offer; a negated, optional, or non-controller effect; a non-"all"
+// selector; a selector carrying an explicit controller; or any reference other
+// than the lone event-player "that player". A spell-context "that player" (a
+// chosen opponent, not an event player) is never bound to
+// ReferenceBindingEventPlayer, so this path cannot fire for it.
+func eventPlayerControlledMassGroup(ctx contentCtx) (game.GroupReference, bool) {
+	if len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		ctx.optional {
+		return game.GroupReference{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if effect.Negated ||
+		effect.Optional ||
+		effect.Context != parser.EffectContextController ||
+		!effect.Selector.All ||
+		effect.Selector.Controller != compiler.ControllerAny {
+		return game.GroupReference{}, false
+	}
+	if !eventPlayerReferenceOnly(ctx.content.References) {
+		return game.GroupReference{}, false
+	}
+	selection, ok := massGroupSelection(effect.Selector)
+	if !ok {
+		return game.GroupReference{}, false
+	}
+	group := game.PlayerControlledGroup(game.EventPlayerReference(), selection)
+	if len(group.Validate()) != 0 {
+		return game.GroupReference{}, false
+	}
+	return group, true
+}
+
+// eventPlayerReferenceOnly reports whether the content carries exactly the single
+// "that player" demonstrative bound to the triggering event's player and no other
+// reference. That reference is the group's controller anchor, consumed by the
+// PlayerControlledGroup the caller builds, so it is the only reference the
+// event-player mass group tolerates; any other reference (or none) fails closed.
+func eventPlayerReferenceOnly(references []compiler.CompiledReference) bool {
+	if len(references) != 1 {
+		return false
+	}
+	reference := references[0]
+	return reference.Kind == compiler.ReferenceThatPlayer &&
+		reference.Binding == compiler.ReferenceBindingEventPlayer
 }
 
 // massCounterQualifierReferencesOnly reports whether every reference is the
