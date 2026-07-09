@@ -3311,7 +3311,7 @@ func exactCreateCopyTokenEffectSyntax(effect *EffectSyntax) bool {
 		effect.Negated ||
 		!createCopyTokenCountKnown(effect) ||
 		len(effect.Targets) != 1 ||
-		!effect.Targets[0].Exact {
+		(!effect.Targets[0].Exact && !copyTokenGraveyardCardTarget(&effect.Targets[0])) {
 		return false
 	}
 	base, rider, ok := copyTokenExceptModifier(effect, exactEffectClauseText(effect))
@@ -3329,6 +3329,17 @@ func exactCreateCopyTokenEffectSyntax(effect *EffectSyntax) bool {
 		applyCopyTokenOverride(effect, *rider.override)
 	}
 	return true
+}
+
+// copyTokenGraveyardCardTarget reports whether target names a creature card in a
+// graveyard, the copy source of "Create a token that's a copy of target creature
+// card in your graveyard" (Feldon of the Third Path). Unlike a battlefield
+// permanent target (Exact), a graveyard-card target does not round-trip through
+// the permanent-target reconstruction, so it is recognized here by its zone. The
+// enclosing clause still round-trips byte-for-byte because
+// createCopyTokenClauseMatches compares against the verbatim target text.
+func copyTokenGraveyardCardTarget(target *TargetSyntax) bool {
+	return target.Selection.Zone == zone.Graveyard
 }
 
 // createCopyTokenCountKnown reports whether the effect creates a fixed, positive

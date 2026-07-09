@@ -2083,6 +2083,12 @@ func (v *cardDefValidator) validateObjectRefBounds(faceName, path string, ref Ob
 	switch ref.Kind() {
 	case ObjectReferenceTargetPermanent, ObjectReferenceTargetStackObject, ObjectReferenceTargetObject:
 		v.validateTargetIndex(faceName, path, ref.TargetIndex(), targets, "object reference target")
+	case ObjectReferenceTargetCard:
+		v.validateTargetIndex(faceName, path, ref.TargetIndex(), targets, "object reference target card")
+		if specIndex, ok := targetSpecForSlot(targets, ref.TargetIndex()); ok &&
+			targetSpecAllowedKinds(&targets[specIndex]) != TargetAllowCard {
+			v.add(faceName, path, CardDefIssueInvalidReference, "target card reference requires a card target")
+		}
 	case ObjectReferenceTargetAttachedPermanent:
 		v.validateTargetIndex(faceName, path, ref.TargetIndex(), targets, "attached permanent reference target")
 	default:

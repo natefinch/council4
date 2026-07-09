@@ -4089,6 +4089,27 @@ func publishLinkedTargetPermanent(primitive game.Primitive, key game.LinkedKey) 
 		put.PublishLinked = key
 		return put, true
 	}
+	// A copy-token entry whose blueprint is a graveyard card ("Create a token
+	// that's a copy of target creature card in your graveyard", Feldon of the
+	// Third Path) produces one fresh token that a later "It gains <keyword>." or
+	// "Sacrifice it" clause must name. The token is not the targeted card (a
+	// card in a graveyard is not a permanent a target reference can resolve), so
+	// it publishes the created token under key. Only the graveyard-card copy
+	// source takes this path: a battlefield-permanent copy ("copy of target
+	// artifact or creature you control", Molten Duplication) binds "it" directly
+	// to that target permanent, so it is left unlinked and unchanged.
+	if primitive.Kind() == game.PrimitiveCreateToken {
+		create, ok := primitive.(game.CreateToken)
+		if !ok || create.PublishLinked != "" {
+			return nil, false
+		}
+		copySpec, ok := create.Source.TokenCopy()
+		if !ok || copySpec.Object.Kind() != game.ObjectReferenceTargetCard {
+			return nil, false
+		}
+		create.PublishLinked = key
+		return create, true
+	}
 	return nil, false
 }
 
