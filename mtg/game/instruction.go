@@ -84,6 +84,20 @@ type Instruction struct {
 	// OptionalActor (which names a single decider).
 	OptionalActorGroup opt.V[PlayerGroupReference]
 
+	// TemptingOffer turns an Optional + OptionalActorGroup instruction into the
+	// "Tempting offer" ability-word idiom (Tempt with Vengeance and the rest of
+	// the Tempt cycle): the controller performs the primitive once as a base,
+	// then every member of the referenced group (each opponent) is offered it in
+	// turn, and for each accepting member the controller performs the primitive
+	// again as a reward. The primitive references the acting player with
+	// GroupOfferMemberReference(), which the runtime binds to the controller for
+	// the base and reward resolutions and to each accepting member for that
+	// member's own resolution — modeling "you do X; each opponent may do X for
+	// themselves; for each opponent who does, you do X again." PublishResult
+	// reports accepted=true when at least one member accepted. It is meaningful
+	// only when Optional is true and OptionalActorGroup is set.
+	TemptingOffer bool
+
 	// PublishResult publishes this instruction's result under the given key so that
 	// downstream instructions can reference it via ResultGate.
 	PublishResult ResultKey

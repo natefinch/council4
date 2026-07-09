@@ -165,6 +165,9 @@ func (r Renderer) renderInstruction(ctx *renderCtx, instruction *game.Instructio
 		ctx.need(importOpt)
 		fields = append(fields, fmt.Sprintf("OptionalActorGroup: opt.Val(%s),", group))
 	}
+	if instruction.TemptingOffer {
+		fields = append(fields, "TemptingOffer: true,")
+	}
 	if instruction.PublishResult != "" {
 		fields = append(fields, fmt.Sprintf("PublishResult: game.ResultKey(%q),", string(instruction.PublishResult)))
 	}

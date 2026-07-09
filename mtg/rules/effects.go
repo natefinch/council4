@@ -210,6 +210,10 @@ func (r *effectResolver) resolveInstruction(instr *game.Instruction) {
 		panic("rules: nil instruction primitive")
 	}
 	if instr.Optional && instr.OptionalActorGroup.Exists {
+		if instr.TemptingOffer {
+			r.resolveTemptingOffer(instr)
+			return
+		}
 		r.resolveGroupOffer(instr)
 		return
 	}
@@ -279,6 +283,58 @@ func (r *effectResolver) resolveGroupOffer(instr *game.Instruction) {
 		r.groupOfferMember = opt.Val(member)
 		res := handler(r, instr.Primitive)
 		if res.succeeded {
+			anySucceeded = true
+		}
+	}
+	if instr.PublishResult != "" {
+		recordResultKey(r.obj, instr.PublishResult, effectResolved{accepted: anyAccepted, succeeded: anySucceeded})
+	}
+}
+
+// resolveTemptingOffer resolves the "Tempting offer" ability-word idiom (the
+// Tempt cycle). The controller performs the primitive once as a base ("you do
+// X"), then every member of the offered group is asked in turn ("each opponent
+// may do X for themselves"), and for each accepting member the controller
+// performs the primitive one additional time ("for each opponent who does, you
+// do X again"). The primitive addresses the acting player through
+// GroupOfferMemberReference(): the runtime binds it to the controller for the
+// base and reward resolutions and to each accepting member for that member's own
+// resolution. PublishResult reports accepted=true when at least one member
+// accepted.
+func (r *effectResolver) resolveTemptingOffer(instr *game.Instruction) {
+	controller := stackObjectController(r.obj)
+	members := newReferenceResolver(r.game, r.obj).playerGroup(instr.OptionalActorGroup.Val)
+	kind := instr.Primitive.Kind()
+	handler := globalPrimitiveRegistry().dispatch(kind)
+	prev := r.currentInstruction
+	r.currentInstruction = instr
+	prevMember := r.groupOfferMember
+	defer func() {
+		r.currentInstruction = prev
+		r.groupOfferMember = prevMember
+	}()
+	// Base: the controller performs the effect for themselves.
+	r.groupOfferMember = opt.Val(controller)
+	base := handler(r, instr.Primitive)
+	anyAccepted := false
+	anySucceeded := base.succeeded
+	acceptors := 0
+	// Each member of the group is offered the effect for themselves.
+	for _, member := range members {
+		if !r.engine.chooseMay(r.game, r.agents, member, "Apply optional effect?", r.log) {
+			continue
+		}
+		anyAccepted = true
+		acceptors++
+		r.groupOfferMember = opt.Val(member)
+		if res := handler(r, instr.Primitive); res.succeeded {
+			anySucceeded = true
+		}
+	}
+	// For each accepting member, the controller performs the effect again.
+	for range acceptors {
+		r.groupOfferMember = opt.Val(controller)
+		if res := handler(r, instr.Primitive); res.succeeded {
 			anySucceeded = true
 		}
 	}

@@ -705,6 +705,14 @@ func (v *cardDefValidator) validateInstructionSequence(
 				v.add(faceName, appendPath(instructionPath, "OptionalActorGroup"), CardDefIssueInvalidAbilityBody, problem)
 			}
 		}
+		if seq[i].TemptingOffer {
+			if !seq[i].Optional {
+				v.add(faceName, instructionPath, CardDefIssueInvalidAbilityBody, "TemptingOffer set on a non-optional instruction")
+			}
+			if !seq[i].OptionalActorGroup.Exists {
+				v.add(faceName, instructionPath, CardDefIssueInvalidAbilityBody, "TemptingOffer requires OptionalActorGroup")
+			}
+		}
 		effectCondition := seq[i].Condition
 		if effectCondition.Exists && effectCondition.Val.Condition.Exists {
 			condition := effectCondition.Val.Condition.Val
