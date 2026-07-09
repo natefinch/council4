@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,206 of 32,501 cards eligible for paper support (52.9%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,208 of 32,501 cards eligible for paper support (52.9%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -13409,6 +13409,7 @@ Council4 currently supports **17,206 of 32,501 cards eligible for paper support 
 - Smitten Swordmaster // Curry Favor
 - Smog Elemental
 - Smogsteed Rider
+- Smoke Blessing
 - Smoke Bomb
 - Smokespew Invoker
 - Smolder Initiate
@@ -16038,6 +16039,7 @@ Council4 currently supports **17,206 of 32,501 cards eligible for paper support 
 - Venerated Rotpriest
 - Vengeance
 - Vengeant Vampire
+- Vengeful Ancestor
 - Vengeful Bloodwitch
 - Vengeful Creeper
 - Vengeful Dead
