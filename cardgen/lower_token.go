@@ -72,8 +72,21 @@ func lowerCreateTokenSpellLinked(ctx contentCtx, publishLinked game.LinkedKey) (
 	if group, ok := createTokenRecipientGroup(effect.Context); ok {
 		return lowerCreateTokenGroupRecipient(ctx, &effect, group, publishLinked, extraKeywords, keywordsOK)
 	}
+	// "You create X ... tokens, where X is the number of <permanents> that
+	// player controls." (Curious Herd) enters the tokens under the spell's
+	// controller yet targets a chosen player to scope the count. The lone
+	// target names that player and the "that player" count reference co-refers
+	// with it; the count is the token-count mirror of Anathemancer's damage.
+	// Recognize this shape so the target is admitted and the count group is
+	// rebound from its default event-player anchor to the target player. Every
+	// other controller-recipient token spell carries no target and no
+	// reference, so this leaves them byte-identical.
+	controlledCountTarget := controllerRecipient &&
+		controlledCountThatPlayerTokenAmount(&effect) &&
+		len(ctx.content.Targets) == 1 &&
+		singleThatPlayerTargetReference(ctx.content.References)
 	expectedTargets := 0
-	if targetRecipient {
+	if targetRecipient || controlledCountTarget {
 		expectedTargets = 1
 	}
 	// Every caller guarantees the sole effect is an EffectCreate: lower_spell.go:1820
@@ -102,6 +115,14 @@ func lowerCreateTokenSpellLinked(ctx contentCtx, publishLinked game.LinkedKey) (
 	amountReferencesObject := effect.Amount.DynamicKind == compiler.DynamicAmountSourceCounterCount ||
 		effect.Amount.DynamicKind == compiler.DynamicAmountSourcePower
 	switch {
+	case controlledCountTarget:
+		// The tokens enter under the spell's controller ("You create ..."), so
+		// recipient stays unset; only the count is scoped to the target player.
+		spec, ok := playerTargetSpec(ctx.content.Targets[0])
+		if !ok {
+			return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+		}
+		targets = []game.TargetSpec{spec}
 	case controllerRecipient:
 		if amountReferencesObject {
 			if len(ctx.content.References) != 1 {
@@ -158,6 +179,18 @@ func lowerCreateTokenSpellLinked(ctx contentCtx, publishLinked game.LinkedKey) (
 	if !ok {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
+	if controlledCountTarget {
+		// The count group lowers anchored to the triggering event player by
+		// default; rebind it to the chosen target player so it counts that
+		// player's permanents. Fail closed if the amount was not that
+		// rebindable count group, so a token count that could not be scoped to
+		// the target never silently counts the wrong player's permanents.
+		rebound, ok := scopeControlledCountToTarget(amount, game.TargetPlayerReference(0))
+		if !ok {
+			return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+		}
+		amount = rebound
+	}
 	return game.Mode{
 		Targets: targets,
 		Sequence: []game.Instruction{{
@@ -173,6 +206,30 @@ func lowerCreateTokenSpellLinked(ctx contentCtx, publishLinked game.LinkedKey) (
 			},
 		}},
 	}.Ability(), nil
+}
+
+// controlledCountThatPlayerTokenAmount reports whether a create-token effect's
+// count is "the number of <permanents> that player controls" (Curious Herd), the
+// token-count mirror of the Anathemancer damage amount. Such a count scopes the
+// number of tokens created to the permanents a chosen player controls; the
+// player is the spell's lone target, named again by a "that player" reference.
+// Every other amount — a fixed count, the spell's X, a battlefield or "you
+// control" count — returns false so those token spells stay byte-identical.
+func controlledCountThatPlayerTokenAmount(effect *compiler.CompiledEffect) bool {
+	return effect.Amount.DynamicKind == compiler.DynamicAmountCount &&
+		effect.Amount.Selector().Controller == compiler.ControllerThatPlayer
+}
+
+// singleThatPlayerTargetReference reports whether references is exactly one "that
+// player" reference bound to the spell's target, the reference a "... that player
+// controls" token count leaves behind (Curious Herd). It co-refers with the lone
+// player target and is modeled entirely by the count group's player anchor
+// (rebound to the target), so it carries no binding the token lowering consumes
+// separately.
+func singleThatPlayerTargetReference(references []compiler.CompiledReference) bool {
+	return len(references) == 1 &&
+		references[0].Kind == compiler.ReferenceThatPlayer &&
+		references[0].Binding == compiler.ReferenceBindingTarget
 }
 
 // lowerMultiTokenCreate lowers a multi-token create effect ("Create a 1/1 green

@@ -184,6 +184,7 @@ var Cards = []cardset.Entry{
 	{Name: "Crystal Rod", New: CrystalRod},
 	{Name: "Crystalline Crawler", New: CrystallineCrawler},
 	{Name: "Cunning Advisor", New: CunningAdvisor},
+	{Name: "Curious Herd", New: CuriousHerd},
 	{Name: "Curse of Chains", New: CurseOfChains},
 	{Name: "Curse of Marit Lage", New: CurseOfMaritLage},
 	{Name: "Curse of the Swine", New: CurseOfTheSwine},

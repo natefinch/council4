@@ -797,6 +797,30 @@ func rebindRecipientControlledCountAmount(amount game.Quantity, recipient game.P
 	return game.Dynamic(updated)
 }
 
+// scopeControlledCountToTarget rebinds a "the number of <permanents> that player
+// controls" token count from its default triggering-event-player anchor to the
+// chosen target player, reporting whether the amount was that rebindable count
+// group. A "You create X ... tokens, where X is the number of artifacts that
+// player controls." spell (Curious Herd) creates one token per permanent the
+// lone target controls; the count lowers anchored to the event player
+// (lowerDynamicAmountKind's ControllerThatPlayer default), so it must be rebound
+// to the target. It reuses rebindRecipientControlledCountAmount and then verifies
+// the anchor is the target player, failing closed (ok=false) for any amount that
+// is not an event-player-anchored count group so a token count that could not be
+// scoped to the target never silently counts the wrong player's permanents.
+func scopeControlledCountToTarget(amount game.Quantity, target game.PlayerReference) (game.Quantity, bool) {
+	rebound := rebindRecipientControlledCountAmount(amount, target)
+	dyn := rebound.DynamicAmount()
+	if !dyn.Exists || dyn.Val.Kind != game.DynamicAmountCountSelector {
+		return game.Quantity{}, false
+	}
+	anchor, ok := dyn.Val.Group.PlayerAnchor()
+	if !ok || anchor.Kind() != game.PlayerReferenceTargetPlayer || anchor.TargetIndex() != target.TargetIndex() {
+		return game.Quantity{}, false
+	}
+	return rebound, true
+}
+
 // dropControlledCountThatPlayerReferences removes the redundant ThatPlayer
 // reference a "the number of <permanents> that player controls" damage amount
 // leaves behind. The count subject's "that player" co-refers with the damage's
