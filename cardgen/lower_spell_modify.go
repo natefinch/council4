@@ -1815,6 +1815,9 @@ func lowerFixedModifyPTSpell(
 	if effect.StaticSubject != compiler.StaticSubjectNone {
 		return lowerFixedGroupModifyPTSpell(ctx, effect)
 	}
+	if content, ok := lowerSameNameGroupModifyPTSpell(ctx); ok {
+		return content, nil
+	}
 	if content, ok := lowerSourcePowerModifyPTSpell(ctx); ok {
 		return content, nil
 	}
