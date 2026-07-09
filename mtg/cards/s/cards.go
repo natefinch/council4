@@ -130,7 +130,6 @@ var Cards = []cardset.Entry{
 	{Name: "Skalla Wolf", New: SkallaWolf},
 	{Name: "Skarrg Guildmage", New: SkarrgGuildmage},
 	{Name: "Skeleton Ship", New: SkeletonShip},
-	{Name: "Skeletonize", New: Skeletonize},
 	{Name: "Skewer Slinger", New: SkewerSlinger},
 	{Name: "Skittering Precursor", New: SkitteringPrecursor},
 	{Name: "Sky Cycle", New: SkyCycle},

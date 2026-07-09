@@ -246,12 +246,17 @@ func capturedDyingObjectID(g *game.Game, obj *game.StackObject, def *game.Delaye
 }
 
 // drainReadyEventDelayedTriggers fires event-based delayed triggers whose stored
-// event pattern matches one of the freshly emitted events, reusing the ordinary
-// triggered-ability matcher bound to the trigger's stored controller. A one-shot
-// trigger ("the next time you cast ...") is removed once it fires; a repeating
-// trigger ("whenever you cast ... this turn") stays until its window ends. Each
-// trigger fires at most once per drain even if several matching events occurred,
-// retaining the first matching event as its triggering event.
+// event pattern matches the freshly emitted events, reusing the ordinary
+// triggered-ability matcher bound to the trigger's stored controller. Like an
+// ordinary triggered ability (CR 603.2, one instance per matching event), a
+// per-object repeating trigger ("whenever a creature dies this turn") fires once
+// per matching event, so several creatures dying simultaneously fire it once
+// each; the trigger stays until its window ends. A "one or more ... this turn"
+// (OneOrMore) trigger instead fires once per simultaneous batch (CR 603.3e),
+// matching how ordinary triggers coalesce OneOrMore pendings. A one-shot trigger
+// ("the next time you cast ...") fires at most once and is then removed, even if
+// several events match in the same drain; if none match it is retained to catch a
+// later event.
 func drainReadyEventDelayedTriggers(g *game.Game, events []game.Event) []pendingTriggeredAbility {
 	if len(g.DelayedTriggers) == 0 || len(events) == 0 {
 		return nil
@@ -264,34 +269,68 @@ func drainReadyEventDelayedTriggers(g *game.Game, events []game.Event) []pending
 			remaining = append(remaining, *trigger)
 			continue
 		}
-		matched, matchEvent := matchEventDelayedTrigger(g, trigger, events)
-		if !matched {
+		matchEvents := matchEventDelayedTriggerEvents(g, trigger, events)
+		if len(matchEvents) == 0 {
 			remaining = append(remaining, *trigger)
 			continue
 		}
-		// An intervening-if condition is re-checked as the captured event fires
-		// (CR 603.4). When it fails the ability does not trigger, so the delayed
-		// trigger is retained unfired ("... if you control your commander, ...").
-		if trigger.Ability.Trigger.InterveningCondition.Exists {
-			source, _ := permanentByObjectID(g, trigger.SourceObjectID)
-			if !triggerInterveningIf(g, source, trigger.Controller, &trigger.Ability.Trigger, &matchEvent) {
-				remaining = append(remaining, *trigger)
-				continue
+		pattern := trigger.EventPattern.Val
+		fired := false
+		seenOneOrMoreBatch := make(map[triggerBatchKey]bool)
+		for j := range matchEvents {
+			matchEvent := matchEvents[j]
+			// A "one or more ... this turn" delayed trigger fires once per
+			// simultaneous batch, not once per event (CR 603.3e), mirroring how
+			// ordinary triggered abilities coalesce OneOrMore pendings sharing a
+			// SimultaneousID (coalescePendingTriggeredAbilities). Per-object
+			// patterns keep the per-event fan-out below; SimultaneousID 0 and
+			// distinct SimultaneousIDs remain separate firings.
+			if pattern.OneOrMore && matchEvent.SimultaneousID != 0 {
+				key := triggerBatchKey{
+					sourceID:     trigger.SourceObjectID,
+					controller:   trigger.Controller,
+					event:        matchEvent.Kind,
+					simultaneous: matchEvent.SimultaneousID,
+				}
+				if pattern.OneOrMorePerAttackTarget {
+					key.attackTarget = matchEvent.AttackTarget
+				}
+				if seenOneOrMoreBatch[key] {
+					continue
+				}
+				seenOneOrMoreBatch[key] = true
+			}
+			// An intervening-if condition is re-checked as each captured event
+			// fires (CR 603.4). When it fails the ability does not trigger for
+			// that event ("... if you control your commander, ...").
+			if trigger.Ability.Trigger.InterveningCondition.Exists {
+				source, _ := permanentByObjectID(g, trigger.SourceObjectID)
+				if !triggerInterveningIf(g, source, trigger.Controller, &trigger.Ability.Trigger, &matchEvent) {
+					continue
+				}
+			}
+			ability := trigger.Ability
+			pending = append(pending, pendingTriggeredAbility{
+				controller:                  trigger.Controller,
+				sourceID:                    trigger.SourceObjectID,
+				sourceCardID:                trigger.SourceID,
+				sourceToken:                 trigger.SourceTokenDef,
+				inline:                      &ability,
+				event:                       matchEvent,
+				hasEvent:                    true,
+				capturedTargetControllerLKI: clonePlayerIDMap(trigger.CapturedTargetControllerLKI),
+				capturedTargetManaValueLKI:  cloneIntMap(trigger.CapturedTargetManaValueLKI),
+			})
+			fired = true
+			// A one-shot delayed trigger fires only once even when several
+			// matching events occur simultaneously.
+			if trigger.OneShot {
+				break
 			}
 		}
-		ability := trigger.Ability
-		pending = append(pending, pendingTriggeredAbility{
-			controller:                  trigger.Controller,
-			sourceID:                    trigger.SourceObjectID,
-			sourceCardID:                trigger.SourceID,
-			sourceToken:                 trigger.SourceTokenDef,
-			inline:                      &ability,
-			event:                       matchEvent,
-			hasEvent:                    true,
-			capturedTargetControllerLKI: clonePlayerIDMap(trigger.CapturedTargetControllerLKI),
-			capturedTargetManaValueLKI:  cloneIntMap(trigger.CapturedTargetManaValueLKI),
-		})
-		if !trigger.OneShot {
+		// A repeating trigger stays until its window ends; a one-shot trigger is
+		// retained only if it did not fire, so it can still catch a later event.
+		if !trigger.OneShot || !fired {
 			remaining = append(remaining, *trigger)
 		}
 	}
@@ -299,15 +338,18 @@ func drainReadyEventDelayedTriggers(g *game.Game, events []game.Event) []pending
 	return pending
 }
 
-// matchEventDelayedTrigger reports whether any freshly emitted event satisfies an
-// event-based delayed trigger's pattern, returning the first match. The trigger's
-// stored controller drives controller-relative pattern filters so "you cast a
-// spell" stays bound to the trigger's controller regardless of the creating
-// permanent's current state. The source permanent, when still present, supplies
-// object identity for self-referential filters.
-func matchEventDelayedTrigger(g *game.Game, trigger *game.DelayedTrigger, events []game.Event) (bool, game.Event) {
+// matchEventDelayedTriggerEvents returns every freshly emitted event that
+// satisfies an event-based delayed trigger's pattern, in emission order. The
+// trigger's stored controller drives controller-relative pattern filters so "you
+// cast a spell" stays bound to the trigger's controller regardless of the
+// creating permanent's current state. The source permanent, when still present,
+// supplies object identity for self-referential filters. Returning all matches
+// lets the caller fire the trigger once per matching event, as an ordinary
+// triggered ability would.
+func matchEventDelayedTriggerEvents(g *game.Game, trigger *game.DelayedTrigger, events []game.Event) []game.Event {
 	pattern := trigger.EventPattern.Val
 	source, _ := permanentByObjectID(g, trigger.SourceObjectID)
+	var matched []game.Event
 	for i := range events {
 		if pattern.DamageSourceCaptured &&
 			(trigger.BoundDamageSourceObjectID == 0 ||
@@ -325,10 +367,10 @@ func matchEventDelayedTrigger(g *game.Game, trigger *game.DelayedTrigger, events
 			continue
 		}
 		if triggerMatchesEventForController(g, source, trigger.Controller, &pattern, events[i]) {
-			return true, events[i]
+			matched = append(matched, events[i])
 		}
 	}
-	return false, game.Event{}
+	return matched
 }
 
 // expireEventDelayedTriggers removes event-based delayed triggers whose

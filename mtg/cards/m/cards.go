@@ -46,6 +46,7 @@ var Cards = []cardset.Entry{
 	{Name: "Martyrs' Tomb", New: MartyrsTomb},
 	{Name: "Mask of Immolation", New: MaskOfImmolation},
 	{Name: "Mask of the Jadecrafter", New: MaskOfTheJadecrafter},
+	{Name: "Massacre Girl", New: MassacreGirl},
 	{Name: "Master Apothecary", New: MasterApothecary},
 	{Name: "Master Healer", New: MasterHealer},
 	{Name: "Master Piandao", New: MasterPiandao},

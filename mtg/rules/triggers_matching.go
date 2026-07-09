@@ -276,6 +276,14 @@ func patternMatchesEventKind(pattern *game.TriggerPattern, kind game.EventKind) 
 }
 
 func triggerCombatPatternMatches(g *game.Game, viewer game.PlayerID, source *game.Permanent, pattern *game.TriggerPattern, event game.Event) bool {
+	// A delayed trigger created by a spell or a permanent that has since left the
+	// battlefield ("whenever one or more creatures you control deal combat damage
+	// ... this turn") matches with a nil source, so self-referential filters fall
+	// back to a zero object id, the same no-self sentinel other matchers pass.
+	var selfObjectID id.ID
+	if source != nil {
+		selfObjectID = source.ObjectID
+	}
 	if pattern.DamageRecipient != game.DamageRecipientNone && pattern.DamageRecipient&event.DamageRecipient == 0 {
 		return false
 	}
@@ -302,23 +310,23 @@ func triggerCombatPatternMatches(g *game.Game, viewer game.PlayerID, source *gam
 	if pattern.AttacksDifferentPlayerThanAnother && !attacksDifferentPlayerThanAnother(g, source, event) {
 		return false
 	}
-	if pattern.AttackWhileSaddled && !source.Saddled {
+	if pattern.AttackWhileSaddled && (source == nil || !source.Saddled) {
 		return false
 	}
 	if !pattern.DamageRecipientSelection.Empty() &&
 		event.DamageRecipient == game.DamageRecipientPermanent &&
-		!triggerSelectionMatches(g, viewer, event, event.PermanentID, &pattern.DamageRecipientSelection, source.ObjectID) {
+		!triggerSelectionMatches(g, viewer, event, event.PermanentID, &pattern.DamageRecipientSelection, selfObjectID) {
 		return false
 	}
 	if !pattern.DamageSourceSelection.Empty() &&
-		!triggerSelectionMatches(g, viewer, event, event.SourceObjectID, &pattern.DamageSourceSelection, source.ObjectID) {
+		!triggerSelectionMatches(g, viewer, event, event.SourceObjectID, &pattern.DamageSourceSelection, selfObjectID) {
 		if !pattern.DamageSourceSelectionOrSelf ||
 			!triggerSourceMatches(g, source, game.TriggerSourceSelf, game.TriggerSubjectDamageSource, event) {
 			return false
 		}
 	}
 	if !pattern.RelatedSubjectSelection.Empty() &&
-		!triggerSelectionMatches(g, viewer, event, event.RelatedPermanentID, &pattern.RelatedSubjectSelection, source.ObjectID) {
+		!triggerSelectionMatches(g, viewer, event, event.RelatedPermanentID, &pattern.RelatedSubjectSelection, selfObjectID) {
 		return false
 	}
 	if pattern.DamageRecipientCombatState == game.CombatStateAny {

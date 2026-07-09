@@ -69,6 +69,7 @@ var Cards = []cardset.Entry{
 	{Name: "Gluttonous Troll", New: GluttonousTroll},
 	{Name: "Gnarlbark Elm", New: GnarlbarkElm},
 	{Name: "Gnarlid Colony", New: GnarlidColony},
+	{Name: "Gnawing Crescendo", New: GnawingCrescendo},
 	{Name: "Go-Shintai of Boundless Vigor", New: GoShintaiOfBoundlessVigor},
 	{Name: "Goblin Bushwhacker", New: GoblinBushwhacker},
 	{Name: "Goblin Chainwhirler", New: GoblinChainwhirler},
