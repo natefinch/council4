@@ -10124,6 +10124,7 @@ Council4 currently supports **17,249 of 32,501 cards eligible for paper support 
 - Oculus
 - Odious Trow
 - Odric's Outrider
+- Odric, Lunarch Marshal
 - Odunos River Trawler
 - Odylic Wraith
 - Of Herbs and Stewed Rabbit

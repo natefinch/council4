@@ -156,6 +156,20 @@ type CompiledAbility struct {
 	// (CR 702.124a, 702.124f). Its content is otherwise empty; lowering emits the
 	// inert partner static keyword.
 	Partner bool
+	// KeywordShare carries the recognized team keyword-sharing construct (Odric,
+	// Lunarch Marshal), or nil when this paragraph is not one. Its content is
+	// otherwise empty; lowering emits one gated continuous group grant per shared
+	// keyword under the paragraph's phase/step trigger.
+	KeywordShare *CompiledKeywordShare
+}
+
+// CompiledKeywordShare is the runtime-typed team keyword-sharing construct: the
+// ordered list of shared keyword kinds a phase/step trigger grants to all the
+// controller's creatures, each gated on the controller controlling a creature
+// that already has that keyword. The compiler carries only the typed keyword
+// kinds; lowering maps each to its runtime keyword and gate.
+type CompiledKeywordShare struct {
+	Keywords []parser.KeywordKind
 }
 
 // CompiledLevelBand is a leveler card's "LEVEL lo-hi" / "LEVEL lo+" band
