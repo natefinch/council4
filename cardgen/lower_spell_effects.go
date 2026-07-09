@@ -2894,7 +2894,7 @@ func preventDamageObject(ctx contentCtx) (game.ObjectReference, *game.TargetSpec
 	switch {
 	case len(ctx.content.Targets) == 1:
 		if !targetCardinalityIsOne(ctx.content.Targets[0]) ||
-			!referencesAreRedundantSoleTargetBackReferences(ctx.content.References) {
+			!referencesAreRedundantSoleTargetBackReferences(ctx.content.References, ctx.content.Targets) {
 			return game.ObjectReference{}, nil, false
 		}
 		targetSpec, ok := permanentTargetSpec(ctx.content.Targets[0])

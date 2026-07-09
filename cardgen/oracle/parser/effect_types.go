@@ -2604,7 +2604,19 @@ type EffectSyntax struct {
 	// enters action; any trailing "if <condition>" gate is parsed separately as
 	// the ability's activation condition. It is false for every other effect.
 	PlayHideawayExiledCard bool `json:",omitempty"`
-	Negated                bool `json:",omitempty"`
+	// ImpulseCast reports that an impulse-exile play-permission clause grants
+	// permission to *cast* the exiled card ("you may cast that card") rather than
+	// to *play* it ("you may play that card"). It restricts the temporary
+	// permission to casting the card as a spell (a land cannot be played), and is
+	// meaningful only when Kind is EffectImpulseExile.
+	ImpulseCast bool `json:",omitempty"`
+	// ImpulseSpendAnyColor reports that an impulse-exile play-permission clause
+	// carries the any-color rider "and you may spend mana as though it were mana
+	// of any color to cast that spell." (Grenzo, Havoc Raiser). It lets the
+	// caster spend mana of any type to cast the exiled card, and is meaningful
+	// only when Kind is EffectImpulseExile.
+	ImpulseSpendAnyColor bool `json:",omitempty"`
+	Negated              bool `json:",omitempty"`
 	// FallbackOnInability marks an effect whose subject is a "who can't" relative
 	// clause ("Each player who can't discards a card."): it applies only to
 	// players who couldn't satisfy the immediately preceding required action. It

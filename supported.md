@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,227 of 32,501 cards eligible for paper support (53.0%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,231 of 32,501 cards eligible for paper support (53.0%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -307,6 +307,7 @@ Council4 currently supports **17,227 of 32,501 cards eligible for paper support 
 - Alchemist's Greeting
 - Alchemist's Vial
 - Alela, Artful Provocateur
+- Alela, Cunning Conqueror
 - Alert Shu Infantry
 - Alesha's Legacy
 - Alexi's Cloak
@@ -6369,6 +6370,7 @@ Council4 currently supports **17,227 of 32,501 cards eligible for paper support 
 - Gremlin
 - Grendel, Spawn of Knull
 - Grenzo's Cutthroat
+- Grenzo, Havoc Raiser
 - Greta, Sweettooth Scourge
 - Gretchen Titchwillow
 - Grey Havens Navigator
@@ -10855,6 +10857,7 @@ Council4 currently supports **17,227 of 32,501 cards eligible for paper support 
 - Pongify
 - Ponyback Brigade
 - Popular Egotist
+- Popular Entertainer
 - Porcelain Legionnaire
 - Pore Over the Pages
 - Port of Karfell
@@ -11119,6 +11122,7 @@ Council4 currently supports **17,227 of 32,501 cards eligible for paper support 
 - Putrid Goblin
 - Putrid Imp
 - Putrid Leech
+- Putrid Warrior
 - Pygmy Allosaurus
 - Pygmy Kavu
 - Pygmy Pyrosaur

@@ -454,6 +454,7 @@ func emitSentenceResolvingSyntax(
 		recognizeLookAtTargetPlayerHandSentence(&sentences[i])
 		recognizeGainControlThatPlayerMonarchSentence(&sentences[i])
 		recognizeDestroyTappedNonlandThatPlayerControlsSentence(&sentences[i])
+		recognizeGoadThatPlayerControlsSentence(&sentences[i])
 		reconcileRetargetSentenceTargets(&sentences[i])
 		collapseManaSpendRiderSentence(&sentences[i], tokens)
 		currentEffects += len(sentences[i].Effects)
@@ -2938,31 +2939,33 @@ func recognizeImpulseExileSequence(sentences []Sentence) bool {
 	if len(sentences) != 2 {
 		return false
 	}
-	amount, variableX, ok := matchImpulseExileClause(strings.TrimSpace(sentences[0].Text))
+	exile, ok := matchImpulseExileClause(strings.TrimSpace(sentences[0].Text))
 	if !ok {
 		return false
 	}
 	// "the top X cards" agrees with the plural play-permission demonstratives
 	// ("those cards"/"them"), so resolve the object phrase as a plural.
-	objectAmount := amount
-	if variableX {
+	objectAmount := exile.amount
+	if exile.variableX {
 		objectAmount = 2
 	}
-	duration, ok := matchImpulsePlayPermissionClause(strings.TrimSpace(sentences[1].Text), objectAmount)
+	perm, ok := matchImpulsePlayPermissionClause(strings.TrimSpace(sentences[1].Text), objectAmount)
 	if !ok {
 		return false
 	}
 	span := shared.Span{Start: sentences[0].Span.Start, End: sentences[1].Span.End}
 	sentences[0].Effects = []EffectSyntax{{
-		Kind:       EffectImpulseExile,
-		Context:    EffectContextController,
-		Span:       span,
-		ClauseSpan: span,
-		Text:       sentences[0].Text + " " + sentences[1].Text,
-		Tokens:     append(append([]shared.Token(nil), sentences[0].Tokens...), sentences[1].Tokens...),
-		Amount:     EffectAmountSyntax{Value: amount, Known: !variableX, VariableX: variableX},
-		Duration:   duration,
-		Exact:      true,
+		Kind:                 EffectImpulseExile,
+		Context:              exile.owner,
+		Span:                 span,
+		ClauseSpan:           span,
+		Text:                 sentences[0].Text + " " + sentences[1].Text,
+		Tokens:               append(append([]shared.Token(nil), sentences[0].Tokens...), sentences[1].Tokens...),
+		Amount:               EffectAmountSyntax{Value: exile.amount, Known: !exile.variableX, VariableX: exile.variableX},
+		Duration:             perm.duration,
+		ImpulseCast:          perm.cast,
+		ImpulseSpendAnyColor: perm.spendAnyColor,
+		Exact:                true,
 	}}
 	return true
 }
@@ -2975,30 +2978,63 @@ func isReminderSentence(sentence Sentence) bool {
 	return strings.HasPrefix(text, "(") && strings.HasSuffix(text, ")")
 }
 
+// impulseExileClause holds the parsed shape of an impulse exile's first
+// sentence: the number of cards exiled, whether that count is the spell's {X},
+// and the library owner's effect context.
+type impulseExileClause struct {
+	amount    int
+	variableX bool
+	owner     EffectContextKind
+}
+
 // matchImpulseExileClause recognizes "Exile the top card of your library." and
 // its counted plural "Exile the top <N> cards of your library." (N a cardinal
-// word two..ten) or variable "Exile the top X cards of your library." It returns
-// the fixed number of cards exiled and whether the count is the spell's {X}.
-func matchImpulseExileClause(text string) (amount int, variableX bool, ok bool) {
-	if strings.EqualFold(text, "Exile the top card of your library.") {
-		return 1, false, true
+// word two..ten) or variable "Exile the top X cards of your library." It also
+// recognizes the same shapes scoped to "that player's library" — the library of
+// the player identified by the triggering event ("Exile the top card of that
+// player's library.", Grenzo, Havoc Raiser). It returns the fixed number of
+// cards exiled, whether the count is the spell's {X}, and the library owner's
+// effect context (EffectContextController for "your library",
+// EffectContextEventPlayer for "that player's library").
+func matchImpulseExileClause(text string) (impulseExileClause, bool) {
+	for _, lib := range []struct {
+		phrase string
+		owner  EffectContextKind
+	}{
+		{"your library", EffectContextController},
+		{"that player's library", EffectContextEventPlayer},
+	} {
+		if strings.EqualFold(text, "Exile the top card of "+lib.phrase+".") {
+			return impulseExileClause{amount: 1, owner: lib.owner}, true
+		}
+		prefix := "Exile the top "
+		suffix := " cards of " + lib.phrase + "."
+		if len(text) <= len(prefix)+len(suffix) ||
+			!strings.EqualFold(text[:len(prefix)], prefix) ||
+			!strings.EqualFold(text[len(text)-len(suffix):], suffix) {
+			continue
+		}
+		middle := text[len(prefix) : len(text)-len(suffix)]
+		if middle == "X" {
+			return impulseExileClause{variableX: true, owner: lib.owner}, true
+		}
+		count, cok := CardinalWordValue(middle)
+		if !cok || count < 2 {
+			continue
+		}
+		return impulseExileClause{amount: count, owner: lib.owner}, true
 	}
-	const prefix = "Exile the top "
-	const suffix = " cards of your library."
-	if len(text) <= len(prefix)+len(suffix) ||
-		!strings.EqualFold(text[:len(prefix)], prefix) ||
-		!strings.EqualFold(text[len(text)-len(suffix):], suffix) {
-		return 0, false, false
-	}
-	middle := text[len(prefix) : len(text)-len(suffix)]
-	if middle == "X" {
-		return 0, true, true
-	}
-	count, ok := CardinalWordValue(middle)
-	if !ok || count < 2 {
-		return 0, false, false
-	}
-	return count, false, true
+	return impulseExileClause{}, false
+}
+
+// impulsePermissionClause holds the parsed shape of an impulse exile's
+// play/cast permission sentence: the play window, whether the permission is
+// cast-only ("cast" rather than "play"), and whether the single-card any-color
+// cast rider is present.
+type impulsePermissionClause struct {
+	duration      EffectDurationKind
+	cast          bool
+	spendAnyColor bool
 }
 
 // matchImpulsePlayPermissionClause recognizes the temporary play-permission
@@ -3007,22 +3043,55 @@ func matchImpulseExileClause(text string) (amount int, variableX bool, ok bool) 
 // the "until the end of your next turn" variants, and the "until your next end
 // step" variants (Inti, Seneschal of the Sun), where <object> agrees in number
 // with the count exiled ("it"/"that card" for a single card, "them"/"those
-// cards" for several). It returns the play window.
-func matchImpulsePlayPermissionClause(text string, amount int) (EffectDurationKind, bool) {
+// cards" for several). It also recognizes the "cast" variants ("you may cast
+// <object>") and, for a single card, the trailing any-color rider "and you may
+// spend mana as though it were mana of any color to cast that spell." (Grenzo,
+// Havoc Raiser). It returns the play window, whether the permission is cast-only
+// ("cast" rather than "play"), and whether the any-color rider is present.
+func matchImpulsePlayPermissionClause(text string, amount int) (impulsePermissionClause, bool) {
 	for _, object := range impulsePlayObjects(amount) {
-		switch {
-		case strings.EqualFold(text, "You may play "+object+" this turn."):
-			return EffectDurationThisTurn, true
-		case strings.EqualFold(text, "You may play "+object+" until end of turn."),
-			strings.EqualFold(text, "Until end of turn, you may play "+object+"."):
-			return EffectDurationUntilEndOfTurn, true
-		case strings.EqualFold(text, "You may play "+object+" until the end of your next turn."),
-			strings.EqualFold(text, "Until the end of your next turn, you may play "+object+"."):
-			return EffectDurationUntilEndOfYourNextTurn, true
-		case strings.EqualFold(text, "You may play "+object+" until your next end step."),
-			strings.EqualFold(text, "Until your next end step, you may play "+object+"."):
-			return EffectDurationUntilYourNextEndStep, true
+		if window, wok := matchImpulsePermissionWindow(text, "play", object); wok {
+			return impulsePermissionClause{duration: window}, true
 		}
+	}
+	for _, object := range impulsePlayObjects(amount) {
+		if window, wok := matchImpulsePermissionWindow(text, "cast", object); wok {
+			return impulsePermissionClause{duration: window, cast: true}, true
+		}
+	}
+	// A single exiled card may carry the any-color cast rider, spending mana of
+	// any type to cast the exiled spell. The rider trails the cast permission
+	// within the same sentence, so strip it and rematch the cast window.
+	const rider = " and you may spend mana as though it were mana of any color to cast that spell."
+	if amount == 1 && len(text) > len(rider) && strings.EqualFold(text[len(text)-len(rider):], rider) {
+		base := text[:len(text)-len(rider)] + "."
+		for _, object := range impulsePlayObjects(amount) {
+			if window, wok := matchImpulsePermissionWindow(base, "cast", object); wok {
+				return impulsePermissionClause{duration: window, cast: true, spendAnyColor: true}, true
+			}
+		}
+	}
+	return impulsePermissionClause{}, false
+}
+
+// matchImpulsePermissionWindow matches a single impulse permission sentence for
+// the given verb ("play" or "cast") and back-reference object, returning the
+// play window it names. The window forms are identical across verbs: a trailing
+// "this turn", trailing or leading "until end of turn", "until the end of your
+// next turn", and "until your next end step".
+func matchImpulsePermissionWindow(text, verb, object string) (EffectDurationKind, bool) {
+	switch {
+	case strings.EqualFold(text, "You may "+verb+" "+object+" this turn."):
+		return EffectDurationThisTurn, true
+	case strings.EqualFold(text, "You may "+verb+" "+object+" until end of turn."),
+		strings.EqualFold(text, "Until end of turn, you may "+verb+" "+object+"."):
+		return EffectDurationUntilEndOfTurn, true
+	case strings.EqualFold(text, "You may "+verb+" "+object+" until the end of your next turn."),
+		strings.EqualFold(text, "Until the end of your next turn, you may "+verb+" "+object+"."):
+		return EffectDurationUntilEndOfYourNextTurn, true
+	case strings.EqualFold(text, "You may "+verb+" "+object+" until your next end step."),
+		strings.EqualFold(text, "Until your next end step, you may "+verb+" "+object+"."):
+		return EffectDurationUntilYourNextEndStep, true
 	}
 	return EffectDurationNone, false
 }
@@ -3179,6 +3248,53 @@ func recognizeDestroyTappedNonlandThatPlayerControlsSentence(sentence *Sentence)
 		Tapped:        true,
 		ExcludedTypes: []CardType{CardTypeLand},
 		Controller:    SelectionControllerThatPlayer,
+	}
+	target.Exact = exactSinglePermanentTargetSyntax(target.Text, target.Selection)
+	if !target.Exact {
+		return
+	}
+	sentence.Targets[0] = target
+	effect.Targets[0] = target
+	effect.Exact = exactEffectSyntax(effect)
+}
+
+// recognizeGoadThatPlayerControlsSentence rebuilds the goad target "target
+// creature that player controls" (Grenzo, Havoc Raiser's combat-damage modal
+// option; Alela, Cunning Conqueror's combat-damage trigger). The generic target
+// parser leaves the "that player controls" controller clause untyped because
+// "that player" is a triggering-event reference rather than a board relation, so
+// the goad target does not reconstruct and the goad never becomes exact. This
+// narrow recognizer restores the creature selection with the event-player
+// controller relation so the target round-trips and lowers to the
+// controlled-by-event-player restriction. It fires only on the exact single-goad
+// wording, so every other "that player controls" construction (for-each-player
+// groups, mass effects, conditions) is left untouched.
+func recognizeGoadThatPlayerControlsSentence(sentence *Sentence) {
+	if len(sentence.Effects) != 1 || len(sentence.Targets) != 1 {
+		return
+	}
+	effect := &sentence.Effects[0]
+	if effect.Kind != EffectGoad || len(effect.Targets) != 1 {
+		return
+	}
+	target := effect.Targets[0]
+	if !strings.EqualFold(target.Text, "target creature that player controls") {
+		return
+	}
+	// Fire only when the goad verb opens the effect clause. A leading
+	// distributive such as "for each opponent, goad target creature that player
+	// controls" (Frenzied Gorespawn) parses as one goad effect over a single
+	// "that player controls" target, but its per-opponent iteration is not
+	// modeled here; requiring the verb at the clause start leaves that
+	// construction — and any other clause with leading text — failing closed.
+	if effect.VerbSpan.Start.Offset != effect.ClauseSpan.Start.Offset {
+		return
+	}
+	target.Selection = SelectionSyntax{
+		Span:       target.Selection.Span,
+		Text:       target.Selection.Text,
+		Kind:       SelectionCreature,
+		Controller: SelectionControllerThatPlayer,
 	}
 	target.Exact = exactSinglePermanentTargetSyntax(target.Text, target.Selection)
 	if !target.Exact {

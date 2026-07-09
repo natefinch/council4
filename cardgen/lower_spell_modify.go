@@ -3559,7 +3559,7 @@ func hasNoFixedPermanentSpellModifiers(ctx contentCtx) bool {
 		len(ctx.content.Conditions) == 0 &&
 		len(ctx.content.Keywords) == 0 &&
 		len(ctx.content.Modes) == 0 &&
-		referencesAreRedundantSoleTargetBackReferences(ctx.content.References)
+		referencesAreRedundantSoleTargetBackReferences(ctx.content.References, ctx.content.Targets)
 }
 
 // referencesAreRedundantSoleTargetBackReferences reports whether every reference
@@ -3571,8 +3571,20 @@ func hasNoFixedPermanentSpellModifiers(ctx contentCtx) bool {
 // creature. ... exile that creature."), where the back-reference is materialized
 // as the clause's inherited target. Possessive pronouns (its/their) name a
 // different object (the target's controller/owner) and so are rejected.
-func referencesAreRedundantSoleTargetBackReferences(references []compiler.CompiledReference) bool {
+func referencesAreRedundantSoleTargetBackReferences(references []compiler.CompiledReference, targets []compiler.CompiledTarget) bool {
+	thatPlayerTarget := targetsHaveThatPlayerController(targets)
 	for _, reference := range references {
+		// A "that player" reference emitted by a "target <noun> that player
+		// controls" controller clause is redundant with the target's
+		// ControllerThatPlayer restriction, which already scopes the target to
+		// the event player's permanents. It names no independent object, so it is
+		// consumed by the controller relation and the fixed single-target
+		// lowering can ignore it. The binding the compiler assigns it (event
+		// player standalone, or the co-referenced target inside a modal option)
+		// is immaterial because the reference carries no effect of its own.
+		if thatPlayerTarget && reference.Kind == compiler.ReferenceThatPlayer {
+			continue
+		}
 		if reference.Binding != compiler.ReferenceBindingTarget || reference.Occurrence != 0 {
 			return false
 		}
@@ -3587,6 +3599,19 @@ func referencesAreRedundantSoleTargetBackReferences(references []compiler.Compil
 		}
 	}
 	return true
+}
+
+// targetsHaveThatPlayerController reports whether any target restricts to
+// permanents the triggering event's player controls ("that player controls").
+// The controller relation subsumes the "that player" reference the same clause
+// emits, so the fixed single-target lowering treats that reference as redundant.
+func targetsHaveThatPlayerController(targets []compiler.CompiledTarget) bool {
+	for i := range targets {
+		if targets[i].Selector.Controller == compiler.ControllerThatPlayer {
+			return true
+		}
+	}
+	return false
 }
 
 func lowerFixedCardCountPlayerSpell(
