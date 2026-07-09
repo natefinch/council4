@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
 
 // graveyardRedirectCounterPermanent registers a Dauthi Voidwalker-style
@@ -85,5 +86,58 @@ func TestGraveyardRedirectCounterExilesDyingPermanentWithCounter(t *testing.T) {
 	}
 	if !g.HasExileCounter(permanent.CardInstanceID, counter.Void) {
 		t.Fatal("redirect exiled the dying permanent without a void counter")
+	}
+}
+
+// TestGraveyardRedirectCounterExilesDiscardedOpponentCardWithCounter drives a
+// real discard through discardCardFromHandInBatch (an opponent discarding while
+// the redirect is in play, e.g. Dauthi Voidwalker vs. a Mind Rot). "From
+// anywhere" covers hand-to-graveyard discards, so the card must be exiled with a
+// void counter and therefore be selectable by Dauthi's {T}, Sacrifice ability.
+func TestGraveyardRedirectCounterExilesDiscardedOpponentCardWithCounter(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	graveyardRedirectCounterPermanent(g, game.Player1, counter.Void)
+
+	discarded := addCardToHand(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Discarded"}})
+	if !discardCardFromHand(g, game.Player2, discarded) {
+		t.Fatal("discardCardFromHand() = false, want true")
+	}
+	if g.Players[game.Player2].Graveyard.Contains(discarded) {
+		t.Fatal("redirect did not keep the discarded card out of the graveyard")
+	}
+	if !g.Players[game.Player2].Exile.Contains(discarded) {
+		t.Fatal("redirect did not exile the discarded card")
+	}
+	if !g.HasExileCounter(discarded, counter.Void) {
+		t.Fatal("redirect exiled the discarded card without a void counter")
+	}
+
+	// The discarded card now bears a void counter, so Dauthi's activated ability
+	// must offer it and grant its controller a free-play permission bound to it.
+	log := resolvePlayChosenExiledCard(t, g, game.PlayChosenExiledCard{
+		Player:                game.ControllerReference(),
+		Zone:                  zone.Exile,
+		OwnerScope:            game.PlayerOpponent,
+		Counter:               opt.Val(counter.Void),
+		Duration:              game.DurationThisTurn,
+		WithoutPayingManaCost: true,
+	}, [game.NumPlayers]PlayerAgent{
+		game.Player1: &choiceOnlyAgent{choices: [][]int{{0}}},
+	})
+	if len(log.Choices) != 1 {
+		t.Fatalf("choices = %+v, want exactly one resolution choice", log.Choices)
+	}
+	if got := len(log.Choices[0].Request.Options); got != 1 {
+		t.Fatalf("choice options = %d, want 1 (the discarded void-countered card)", got)
+	}
+	effect, ok := playFromZoneRuleEffect(g, discarded)
+	if !ok {
+		t.Fatal("Dauthi's ability granted no play permission for the discarded card")
+	}
+	if !effect.WithoutPayingManaCost {
+		t.Fatal("granted permission is not flagged without paying its mana cost")
+	}
+	if !castFromZoneWithoutPayingManaCost(g, game.Player1, discarded, zone.Exile, game.FaceFront) {
+		t.Fatal("controller should be able to play the discarded card without paying its mana cost")
 	}
 }
