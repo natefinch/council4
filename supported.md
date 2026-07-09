@@ -3508,6 +3508,7 @@ Council4 currently supports **17,241 of 32,501 cards eligible for paper support 
 - Defile
 - Defiled Crypt // Cadaver Lab
 - Defiling Daemogoth
+- Deflecting Palm
 - Deflecting Swat
 - Deflection
 - Deft Dismissal

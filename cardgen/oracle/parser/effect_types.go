@@ -1993,6 +1993,13 @@ type EffectSyntax struct {
 	// source of any color ("a source of your choice"); a single color restricts
 	// the shield to that color ("a white source of your choice").
 	PreventDamageSourceColors []Color `json:",omitempty"`
+	// PreventDamageRedirectToSourceController marks a PreventDamageNextFromSource
+	// clause that carries the folded Deflecting Palm redirect rider ("If damage is
+	// prevented this way, Deflecting Palm deals that much damage to that source's
+	// controller."). When set, the one-shot shield deals the amount it prevents
+	// back to the prevented source's controller. It is only set alongside
+	// PreventDamageNextFromSource by foldPreventNextSourceRedirect.
+	PreventDamageRedirectToSourceController bool `json:",omitempty"`
 	// SpellsCantBeCounteredNextOnly reports that an EffectSpellsCantBeCountered
 	// clause limits the buff to the single next spell the controller casts ("The
 	// next spell you cast this turn can't be countered.") rather than every spell

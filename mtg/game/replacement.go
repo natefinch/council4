@@ -50,20 +50,28 @@ type ConditionalCounterPlacement struct {
 // is set the shield prevents a single qualifying event and then expires (the
 // "next time ... prevent that damage" shields). SourceColors, when non-empty,
 // restricts the shield to damage from a source of one of the listed colors.
+//
+// When RedirectToSourceController is set, a one-shot shield deals the amount it
+// prevents to the prevented source's controller, as damage from the card
+// identified by RedirectSourceID controlled by Controller ("If damage is
+// prevented this way, Deflecting Palm deals that much damage to that source's
+// controller.").
 type PreventionShield struct {
-	ID                id.ID
-	Controller        PlayerID
-	Player            PlayerID
-	PermanentID       id.ID
-	SourcePermanentID id.ID
-	SourceColors      []color.Color
-	Amount            int
-	All               bool
-	CombatOnly        bool
-	Global            bool
-	OneShot           bool
-	Duration          EffectDuration
-	CreatedTurn       int
+	ID                         id.ID
+	Controller                 PlayerID
+	Player                     PlayerID
+	PermanentID                id.ID
+	SourcePermanentID          id.ID
+	RedirectSourceID           id.ID
+	SourceColors               []color.Color
+	Amount                     int
+	All                        bool
+	CombatOnly                 bool
+	Global                     bool
+	OneShot                    bool
+	RedirectToSourceController bool
+	Duration                   EffectDuration
+	CreatedTurn                int
 }
 
 // ReplacementDecision records deterministic ordering for competing replacement

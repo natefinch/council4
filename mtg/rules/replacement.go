@@ -61,6 +61,7 @@ func applyDamageModifications(g *game.Game, event damageEvent) int {
 	chooser := replacementDecisionPlayer(g, event)
 	appliedReplacements := make(map[id.ID]bool)
 	amount := event.amount
+	var redirects []preventionRedirect
 	for amount > 0 {
 		event.amount = amount
 		shieldIndices := applicablePreventionShieldIndices(g, event)
@@ -107,6 +108,17 @@ func applyDamageModifications(g *game.Game, event damageEvent) int {
 				shield.Amount = 0
 			}
 			amount -= prevented
+			if prevented > 0 && shield.RedirectToSourceController {
+				// Defer the redirect until this event's prevention is fully
+				// resolved: the shield deals the prevented amount back to the
+				// prevented source's controller as a new damage event.
+				redirects = append(redirects, preventionRedirect{
+					sourceID:   shield.RedirectSourceID,
+					controller: shield.Controller,
+					player:     event.controller,
+					amount:     prevented,
+				})
+			}
 			g.PreventionShields = compactPreventionShields(g.PreventionShields)
 			if prevented > 0 {
 				emitDamagePreventedEvent(g, event, prevented)
@@ -151,7 +163,25 @@ func applyDamageModifications(g *game.Game, event damageEvent) int {
 			}
 		}
 	}
+	// Deal any deferred redirects (Deflecting Palm) after the prevented event is
+	// fully resolved. Each redirect is a new damage event dealt as the shield's
+	// source to the prevented source's controller, so it can itself be modified
+	// by that player's own prevention and replacement effects.
+	for _, redirect := range redirects {
+		dealPlayerDamage(g, redirect.sourceID, 0, redirect.controller, redirect.player, redirect.amount, false)
+	}
 	return amount
+}
+
+// preventionRedirect records a pending Deflecting Palm redirect: after a
+// RedirectToSourceController shield prevents an amount of damage, its source
+// (controller) deals that amount back to the prevented source's controller
+// (player).
+type preventionRedirect struct {
+	sourceID   id.ID
+	controller game.PlayerID
+	player     game.PlayerID
+	amount     int
 }
 
 // removePreventionPlusOneCounter removes a single +1/+1 counter from a permanent
@@ -1896,16 +1926,23 @@ func createPreventionShield(g *game.Game, obj *game.StackObject, amount int, pri
 		return false
 	}
 	shield := game.PreventionShield{
-		ID:           g.IDGen.Next(),
-		Controller:   obj.Controller,
-		Amount:       amount,
-		All:          prim.All,
-		CombatOnly:   prim.CombatOnly,
-		Global:       prim.Global,
-		OneShot:      prim.OneShot,
-		SourceColors: append([]color.Color(nil), prim.SourceColors...),
-		Duration:     effectDurationOrDefault(duration, game.DurationUntilEndOfTurn),
-		CreatedTurn:  g.Turn.TurnNumber,
+		ID:                         g.IDGen.Next(),
+		Controller:                 obj.Controller,
+		Amount:                     amount,
+		All:                        prim.All,
+		CombatOnly:                 prim.CombatOnly,
+		Global:                     prim.Global,
+		OneShot:                    prim.OneShot,
+		RedirectToSourceController: prim.RedirectPreventedToSourceController,
+		SourceColors:               append([]color.Color(nil), prim.SourceColors...),
+		Duration:                   effectDurationOrDefault(duration, game.DurationUntilEndOfTurn),
+		CreatedTurn:                g.Turn.TurnNumber,
+	}
+	if prim.RedirectPreventedToSourceController {
+		// The redirect deals damage as the shield's own source (the spell that
+		// created it), which has left the stack by the time the shield prevents,
+		// so capture its card identity now.
+		shield.RedirectSourceID = obj.SourceID
 	}
 	if prim.Global {
 		g.PreventionShields = append(g.PreventionShields, shield)

@@ -2653,6 +2653,14 @@ func (p PreventDamage) validatePrimitive(targets []TargetSpec, checkTargets bool
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err
 	}
+	if p.RedirectPreventedToSourceController {
+		if !p.OneShot || !p.All {
+			return errors.New("redirect-to-source-controller prevent damage requires OneShot and All")
+		}
+		if p.Player.Kind() != PlayerReferenceController {
+			return errors.New("redirect-to-source-controller prevent damage requires the controller as the prevented player")
+		}
+	}
 	hasObject := p.Object.Kind() != ObjectReferenceNone
 	hasPlayer := p.Player.Kind() != PlayerReferenceNone
 	_, hasAnyTarget := p.AnyTarget.AnyTargetObjectReference()
