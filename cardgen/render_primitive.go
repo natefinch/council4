@@ -2456,6 +2456,9 @@ func (r Renderer) renderPreventDamage(ctx *renderCtx, value game.PreventDamage) 
 		}
 		fields = append(fields, fmt.Sprintf("SourceColors: %s,", colors))
 	}
+	if value.RedirectPreventedToSourceController {
+		fields = append(fields, "RedirectPreventedToSourceController: true,")
+	}
 	return structLit("game.PreventDamage", fields), nil
 }
 

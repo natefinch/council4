@@ -2927,6 +2927,12 @@ type CompiledEffect struct {
 	// filter; an empty slice matches a source of any color.
 	PreventDamageNextFromSource bool
 	PreventDamageSourceColors   []color.Color
+	// PreventDamageRedirectToSourceController mirrors the parser flag for the
+	// Deflecting Palm redirect rider ("If damage is prevented this way, Deflecting
+	// Palm deals that much damage to that source's controller."), folded onto the
+	// one-shot next-from-source shield. It is only set alongside
+	// PreventDamageNextFromSource.
+	PreventDamageRedirectToSourceController bool
 	// SpellsCantBeCounteredNextOnly mirrors the parser flag for an
 	// EffectSpellsCantBeCountered clause that limits the buff to the single next
 	// spell the controller casts rather than every spell cast this turn.

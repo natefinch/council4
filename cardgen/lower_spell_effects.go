@@ -2832,10 +2832,11 @@ func lowerPreventDamageSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagn
 			return unsupported()
 		}
 		mode := game.Mode{Sequence: []game.Instruction{{Primitive: game.PreventDamage{
-			Player:       game.ControllerReference(),
-			SourceColors: append([]color.Color(nil), effect.PreventDamageSourceColors...),
-			All:          true,
-			OneShot:      true,
+			Player:                              game.ControllerReference(),
+			SourceColors:                        append([]color.Color(nil), effect.PreventDamageSourceColors...),
+			All:                                 true,
+			OneShot:                             true,
+			RedirectPreventedToSourceController: effect.PreventDamageRedirectToSourceController,
 		}}}}
 		return mode.Ability(), nil
 	}

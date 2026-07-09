@@ -1889,17 +1889,24 @@ type CreateReplacement struct {
 // when non-empty, restricts the shield to damage from a source of one of the
 // listed colors ("a white source of your choice"); an empty slice matches a
 // source of any color.
+//
+// RedirectPreventedToSourceController makes a one-shot shield deal the amount it
+// prevents to the prevented source's controller, with the shield's own source as
+// the damage source ("If damage is prevented this way, Deflecting Palm deals that
+// much damage to that source's controller."). It is only valid alongside OneShot
+// and All (the whole prevented event is redirected).
 type PreventDamage struct {
-	Amount       Quantity
-	Object       ObjectReference
-	Player       PlayerReference
-	AnyTarget    DamageRecipient
-	SourceColors []color.Color
-	All          bool
-	CombatOnly   bool
-	BySource     bool
-	Global       bool
-	OneShot      bool
+	Amount                              Quantity
+	Object                              ObjectReference
+	Player                              PlayerReference
+	AnyTarget                           DamageRecipient
+	SourceColors                        []color.Color
+	All                                 bool
+	CombatOnly                          bool
+	BySource                            bool
+	Global                              bool
+	OneShot                             bool
+	RedirectPreventedToSourceController bool
 }
 
 // AddExtraPhases inserts additional phases into the current turn (CR 505.5,
