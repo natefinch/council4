@@ -1613,6 +1613,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			ToZone:                   toZone,
 			Destination:              parseEffectDestination(ownership),
 			EntersTapped:             effectWordsAtAny(ownership, "battlefield", "tapped"),
+			EntersAttacking:          effectWordsAtAny(ownership, "battlefield", "attacking"),
 			EntersTransformed:        effectWordsAtAny(ownership, "battlefield", "converted") || effectWordsAtAny(ownership, "battlefield", "transformed"),
 			EntersTappedSelf:         entersTappedSelfSyntax(kind, clause),
 			EntersColorChoice:        entersColorChoice,

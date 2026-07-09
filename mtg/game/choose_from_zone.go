@@ -175,6 +175,15 @@ type ChooseRiders struct {
 	// ChooseSplitDestination grouping it applies to the primary slot only.
 	EntersTapped bool
 
+	// EntersAttacking puts each card entering the battlefield onto the
+	// battlefield attacking (CR 508.4), the "tapped and attacking" rider of a
+	// "put a creature card from your hand onto the battlefield tapped and
+	// attacking" effect. It is meaningful only for a battlefield Destination and
+	// composes with EntersTapped. Like a created attacking token, it is a no-op
+	// outside a combat in which the choosing player is the attacking player: the
+	// card simply enters without attacking.
+	EntersAttacking bool
+
 	// EntryCounters places counters on each card entering the battlefield, the
 	// "enters with N counters" rider. It is meaningful only for a battlefield
 	// Destination.

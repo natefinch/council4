@@ -2359,6 +2359,10 @@ type CompiledEffect struct {
 	Destination        parser.EffectDestinationPosition
 	EntersTapped       bool
 	EntersTappedSelf   bool
+	// EntersAttacking mirrors the parser's "attacking" put rider ("put ... onto
+	// the battlefield tapped and attacking"): the entered permanent is put onto
+	// the battlefield attacking (CR 508.4).
+	EntersAttacking bool
 	// EntersTransformed mirrors the parser's Transformers "converted" return
 	// rider ("return it to the battlefield converted", CR 712): the returned
 	// transforming double-faced card enters as its back face. It is false for the

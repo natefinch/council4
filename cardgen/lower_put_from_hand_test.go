@@ -60,6 +60,42 @@ func TestLowerMandatoryPutLandFromHand(t *testing.T) {
 	}
 }
 
+func TestLowerPutFromHandTappedAndAttacking(t *testing.T) {
+	t.Parallel()
+	// Preeminent Captain shape: a self-attack trigger whose optional resolving
+	// effect puts a creature card from hand onto the battlefield tapped and
+	// attacking (CR 508.4).
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Captain",
+		Layout:     "normal",
+		TypeLine:   "Creature — Kithkin Soldier",
+		OracleText: "Whenever this creature attacks, you may put a Soldier creature card from your hand onto the battlefield tapped and attacking.",
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
+	}
+	if !face.TriggeredAbilities[0].Optional {
+		t.Fatal("triggered ability is not optional (the \"you may\" wrapper was lost)")
+	}
+	mode := face.TriggeredAbilities[0].Content.Modes[0]
+	if len(mode.Sequence) != 1 {
+		t.Fatalf("sequence = %#v, want single put-from-hand", mode.Sequence)
+	}
+	put, ok := mode.Sequence[0].Primitive.(game.ChooseFromZone)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.ChooseFromZone", mode.Sequence[0].Primitive)
+	}
+	if !put.Riders.EntersTapped {
+		t.Fatal("put-from-hand did not carry the \"tapped\" entry rider")
+	}
+	if !put.Riders.EntersAttacking {
+		t.Fatal("put-from-hand did not carry the \"attacking\" entry rider")
+	}
+	if len(put.Filter.RequiredTypes) != 1 || put.Filter.RequiredTypes[0] != types.Creature {
+		t.Fatalf("selection = %#v, want creature card", put.Filter)
+	}
+}
+
 func TestPutFromHandFailsClosedForLibrarySource(t *testing.T) {
 	t.Parallel()
 	lowerSingleFaceExpectingUnsupported(t, &ScryfallCard{

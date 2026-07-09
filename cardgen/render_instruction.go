@@ -1102,6 +1102,9 @@ func (Renderer) renderChooseRiders(ctx *renderCtx, riders game.ChooseRiders) (st
 	if riders.EntersTapped {
 		fields = append(fields, "EntersTapped: true,")
 	}
+	if riders.EntersAttacking {
+		fields = append(fields, "EntersAttacking: true,")
+	}
 	if riders.UnderOwnerControl {
 		fields = append(fields, "UnderOwnerControl: true,")
 	}

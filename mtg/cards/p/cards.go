@@ -60,6 +60,7 @@ var Cards = []cardset.Entry{
 	{Name: "Power Depot", New: PowerDepot},
 	{Name: "Practical Research", New: PracticalResearch},
 	{Name: "Predator Ooze", New: PredatorOoze},
+	{Name: "Preeminent Captain", New: PreeminentCaptain},
 	{Name: "Prickly Pair", New: PricklyPair},
 	{Name: "Pride Sovereign", New: PrideSovereign},
 	{Name: "Primal Might", New: PrimalMight},

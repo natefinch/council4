@@ -2310,6 +2310,10 @@ type EffectSyntax struct {
 	Destination        EffectDestinationPosition `json:",omitempty"`
 	EntersTapped       bool                      `json:",omitempty"`
 	EntersTappedSelf   bool                      `json:",omitempty"`
+	// EntersAttacking reports the "attacking" rider on a put-onto-the-battlefield
+	// slot ("put ... onto the battlefield tapped and attacking"): the entered
+	// permanent is put onto the battlefield attacking (CR 508.4).
+	EntersAttacking bool `json:",omitempty"`
 	// EntersTransformed reports the Transformers "converted" rider on a
 	// return-to-battlefield effect ("return it to the battlefield converted",
 	// CR 712): the returned transforming double-faced card enters as its back

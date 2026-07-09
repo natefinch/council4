@@ -8,6 +8,7 @@ import "github.com/natefinch/council4/mtg/cards/cardset"
 // constructor so the registry can build them lazily.
 var Cards = []cardset.Entry{
 	{Name: "K'un-Lun Warrior", New: KUnLunWarrior},
+	{Name: "Kaalia of the Vast", New: KaaliaOfTheVast},
 	{Name: "Kaalia, Zenith Seeker", New: KaaliaZenithSeeker},
 	{Name: "Kaito, Cunning Infiltrator", New: KaitoCunningInfiltrator},
 	{Name: "Kalastria Highborn", New: KalastriaHighborn},

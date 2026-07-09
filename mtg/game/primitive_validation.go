@@ -1471,6 +1471,14 @@ func (p ChooseFromZone) validatePrimitive(targets []TargetSpec, checkTargets boo
 	if p.Riders.EntersTapped && p.Destination.Zone != zone.Battlefield {
 		return errors.New("choose from zone tapped entry requires a battlefield destination")
 	}
+	if p.Riders.EntersAttacking {
+		if p.Destination.Zone != zone.Battlefield {
+			return errors.New("choose from zone attacking entry requires a battlefield destination")
+		}
+		if p.Riders.FaceDown {
+			return errors.New("choose from zone attacking entry cannot enter face down")
+		}
+	}
 	if p.Riders.MaxTotalManaValue.Exists {
 		if p.Destination.Zone != zone.Battlefield {
 			return errors.New("choose from zone total mana value cap requires a battlefield destination")

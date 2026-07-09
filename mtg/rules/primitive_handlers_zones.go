@@ -2511,6 +2511,18 @@ func (r *effectResolver) putResolvedCardsOnBattlefieldValue(
 	continuousEffects []game.ContinuousEffect,
 	options permanentCreationOptions,
 ) bool {
+	return len(r.putResolvedCardsOnBattlefieldCollecting(resolved, continuousEffects, options)) > 0
+}
+
+// putResolvedCardsOnBattlefieldCollecting is the collecting form of
+// putResolvedCardsOnBattlefieldValue: it returns the permanents that entered so
+// a caller can act on them (declaring them attacking for a "put ... onto the
+// battlefield tapped and attacking" effect).
+func (r *effectResolver) putResolvedCardsOnBattlefieldCollecting(
+	resolved []resolvedBattlefieldCard,
+	continuousEffects []game.ContinuousEffect,
+	options permanentCreationOptions,
+) []*game.Permanent {
 	if len(resolved) > 1 {
 		options.SimultaneousID = r.game.IDGen.Next()
 	}
@@ -2578,7 +2590,11 @@ func (r *effectResolver) putResolvedCardsOnBattlefieldValue(
 		entries = append(entries, entry)
 	}
 	commitSimultaneousCardPermanentEntries(r.game, entries)
-	return len(entries) > 0
+	permanents := make([]*game.Permanent, 0, len(entries))
+	for i := range entries {
+		permanents = append(permanents, entries[i].permanent)
+	}
+	return permanents
 }
 
 func (r *effectResolver) putResolvedCardOnBattlefieldValue(
