@@ -25,6 +25,7 @@ var Cards = []cardset.Entry{
 	{Name: "Immersturm Skullcairn", New: ImmersturmSkullcairn},
 	{Name: "Immolating Gyre", New: ImmolatingGyre},
 	{Name: "Impending Doom", New: ImpendingDoom},
+	{Name: "In Garruk's Wake", New: InGarrukSWake},
 	{Name: "In the Presence of Ages", New: InThePresenceOfAges},
 	{Name: "Iname, Life Aspect", New: InameLifeAspect},
 	{Name: "Incisor Glider", New: IncisorGlider},

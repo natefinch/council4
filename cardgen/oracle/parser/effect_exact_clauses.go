@@ -2184,10 +2184,11 @@ func exactMassEffectSyntax(effect *EffectSyntax, prefix string) bool {
 // exactMassPluralGroupPhrase validates a plural "all <group>" mass phrase against
 // the typed selection, accepting every group shape the mass-effect machinery
 // models: the bare group noun, a single qualifying or excluded creature subtype,
-// and the chosen-type or counter qualifiers stripped to a base group first. It is
-// the shared validator for every plural mass form (destroy, exile, regenerate,
-// tap, untap, and the mass return below) so each verb recognizes the same set of
-// group wordings rather than maintaining its own narrower subset.
+// the distributed type-union wording, and the chosen-type or counter qualifiers
+// stripped to a base group first. It is the shared validator for every plural
+// mass form (destroy, exile, regenerate, tap, untap, and the mass return below)
+// so each verb recognizes the same set of group wordings rather than maintaining
+// its own narrower subset.
 func exactMassPluralGroupPhrase(selection *SelectionSyntax, phrase string) bool {
 	if base, ok := massChosenTypeBasePhrase(selection, phrase); ok {
 		return exactMassGroupPhrase(selection, base)
@@ -2195,7 +2196,92 @@ func exactMassPluralGroupPhrase(selection *SelectionSyntax, phrase string) bool 
 	if base, ok := massCounterBasePhrase(selection, phrase); ok {
 		return exactMassGroupPhrase(selection, base) || exactMassSubtypePhrase(selection, base) || exactMassExcludedSubtypePhrase(selection, base)
 	}
-	return exactMassGroupPhrase(selection, phrase) || exactMassSubtypePhrase(selection, phrase) || exactMassExcludedSubtypePhrase(selection, phrase)
+	return exactMassGroupPhrase(selection, phrase) ||
+		exactMassDistributedUnionPhrase(selection, phrase) ||
+		exactMassSubtypePhrase(selection, phrase) ||
+		exactMassExcludedSubtypePhrase(selection, phrase)
+}
+
+// exactMassDistributedUnionPhrase recognizes the distributed type-union wording of
+// a mass group, where the trailing controller clause repeats on every conjoined
+// permanent noun ("Destroy all creatures you don't control and all planeswalkers
+// you don't control.", In Garruk's Wake). It is semantically identical to the
+// canonical shared-suffix union "creatures and planeswalkers you don't control"
+// that exactMassGroupPhrase already validates: both lower to one RequiredTypesAny
+// union under a single controller relation. It collapses the distributed wording
+// to that canonical phrase and delegates to exactMassGroupPhrase, so the typed
+// selection is verified through the same selectionPhrase round-trip and a
+// distributed form is accepted exactly when its canonical equivalent would be.
+// The collapse rejects a wording whose halves carry different (or missing)
+// controller clauses, so a mismatched-per-half source — which the parser merges
+// into a single lossy controller relation — never reconstructs and fails closed.
+func exactMassDistributedUnionPhrase(selection *SelectionSyntax, phrase string) bool {
+	canonical, ok := collapseDistributedUnionPhrase(phrase)
+	if !ok {
+		return false
+	}
+	return exactMassGroupPhrase(selection, canonical)
+}
+
+// massControllerSuffixClauses are the trailing controller clauses a mass group
+// noun may carry, ordered so the more specific "you don't control" is stripped
+// before the shorter "you control". They mirror the suffixes
+// massGroupPhraseTextShape strips from a whole phrase.
+var massControllerSuffixClauses = []string{" you don't control", " your opponents control", " you control"}
+
+// collapseDistributedUnionPhrase rewrites the distributed union wording
+// "<noun1> <ctrl> and all <noun2> <ctrl> [and all <noun3> <ctrl>]" — where the
+// same controller clause repeats on every conjoined type noun (In Garruk's Wake:
+// "creatures you don't control and all planeswalkers you don't control") — into
+// the canonical shared-suffix union "<noun1> and <noun2> [and <noun3>] <ctrl>"
+// that exactMassGroupPhrase verifies against the typed selection. It requires two
+// or more members joined by " and all " and an identical trailing controller
+// clause on every member (all present, or all absent). A member whose controller
+// clause differs, or that reduces to an empty noun head, fails closed so a
+// mismatched-per-half wording is never collapsed to a single controller.
+func collapseDistributedUnionPhrase(phrase string) (string, bool) {
+	parts := strings.Split(phrase, " and all ")
+	if len(parts) < 2 {
+		return "", false
+	}
+	head, controller, ok := splitMassControllerSuffixClause(parts[0])
+	if !ok {
+		return "", false
+	}
+	nouns := make([]string, 0, len(parts))
+	nouns = append(nouns, head)
+	for _, part := range parts[1:] {
+		partHead, partController, ok := splitMassControllerSuffixClause(part)
+		if !ok || partController != controller {
+			return "", false
+		}
+		nouns = append(nouns, partHead)
+	}
+	canonical := strings.Join(nouns, " and ")
+	if controller != "" {
+		canonical += " " + controller
+	}
+	return canonical, true
+}
+
+// splitMassControllerSuffixClause separates a mass group member into its bare
+// noun head and trailing controller clause ("creatures you don't control" ->
+// "creatures", "you don't control"). A member with no recognized controller
+// clause yields the whole member as the head and an empty clause. It fails closed
+// when stripping the controller clause leaves an empty head.
+func splitMassControllerSuffixClause(member string) (head, controller string, ok bool) {
+	for _, suffix := range massControllerSuffixClauses {
+		if remainder, found := strings.CutSuffix(member, suffix); found {
+			if remainder == "" {
+				return "", "", false
+			}
+			return remainder, suffix[1:], true
+		}
+	}
+	if member == "" {
+		return "", "", false
+	}
+	return member, "", true
 }
 
 // massChosenTypeBasePhrase strips a trailing chosen-type qualifier ("of the
