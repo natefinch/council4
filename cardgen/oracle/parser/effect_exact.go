@@ -216,7 +216,8 @@ func exactEffectSyntaxTail(effect *EffectSyntax) bool {
 	case EffectShuffle:
 		return exactOptionalControllerShuffleEffectSyntax(effect) ||
 			exactSourceSpellShuffleIntoLibrarySyntax(effect) ||
-			exactControllerGraveyardShuffleIntoLibrarySyntax(effect)
+			exactControllerGraveyardShuffleIntoLibrarySyntax(effect) ||
+			exactTargetPlayerGraveyardShuffleIntoLibrarySyntax(effect)
 	case EffectTap:
 		return exactDirectTargetEffectSyntax(effect, "Tap") ||
 			exactDirectReferenceEffectSyntax(effect, "Tap") ||
@@ -300,6 +301,27 @@ func exactControllerGraveyardShuffleIntoLibrarySyntax(effect *EffectSyntax) bool
 		return false
 	}
 	return strings.EqualFold(exactEffectClauseText(effect), "Shuffle your graveyard into your library.")
+}
+
+// exactTargetPlayerGraveyardShuffleIntoLibrarySyntax recognizes "Target player
+// shuffles their graveyard into their library." (Reminisce, Clear the Mind,
+// Learn from the Past, Thran Foundry, Cranial Archive) and the "Target opponent"
+// variant: a single-target, non-optional graveyard shuffle whose graveyard
+// source is carried by FromZone. The subject text is taken from the target so
+// both "player" and "opponent" round-trip, and the two "their" possessives
+// co-refer with that target player.
+func exactTargetPlayerGraveyardShuffleIntoLibrarySyntax(effect *EffectSyntax) bool {
+	if effect.Context != EffectContextTarget || effect.Optional {
+		return false
+	}
+	if effect.FromZone != zone.Graveyard || effect.ToZone != zone.Library {
+		return false
+	}
+	if len(effect.Targets) != 1 {
+		return false
+	}
+	want := effect.Targets[0].Text + " shuffles their graveyard into their library."
+	return strings.EqualFold(exactEffectClauseText(effect), want)
 }
 
 func exactLibraryTopReorderEffectSyntax(effect *EffectSyntax) bool {
