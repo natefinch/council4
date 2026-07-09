@@ -107,6 +107,73 @@ func spellTargetCountsMatchX(g *game.Game, controller game.PlayerID, card *game.
 	return true
 }
 
+// spellTargetsSatisfyManaValueX reports whether every target chosen for a
+// ManaValueAtMostX spec of the spell has mana value at most the spell's chosen X
+// ("target creature with mana value X or less", Dominate). The Selection matcher
+// is X-blind, so announcement over-generates every creature and this check
+// enforces the X-derived upper bound at cast time (CR 601.2c). Spells without a
+// ManaValueAtMostX spec are unaffected.
+func spellTargetsSatisfyManaValueX(g *game.Game, controller game.PlayerID, card *game.CardDef, chosenModes []int, targets []game.Target, xValue int) bool {
+	specs := spellTargetSpecs(card, chosenModes)
+	requiresMatch := false
+	for i := range specs {
+		if specs[i].ManaValueAtMostX {
+			requiresMatch = true
+			break
+		}
+	}
+	if !requiresMatch {
+		return true
+	}
+	counts, ok := spellTargetCounts(g, controller, card, chosenModes, targets)
+	if !ok {
+		return false
+	}
+	targetIndex := 0
+	for i := range specs {
+		count := 0
+		if i < len(counts) {
+			count = counts[i]
+		}
+		if targetIndex+count > len(targets) {
+			return false
+		}
+		slice := targets[targetIndex : targetIndex+count]
+		targetIndex += count
+		if !specs[i].ManaValueAtMostX {
+			continue
+		}
+		for j := range slice {
+			if !targetManaValueAtMost(g, slice[j], xValue) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+// targetManaValueAtMost reports whether a permanent target's mana value is at
+// most bound. Only permanent targets carry a mana value, so any other target
+// kind, or a permanent whose card definition is unavailable, fails closed: a
+// ManaValueAtMostX bound never silently admits an object it cannot measure. It
+// reads mana value the same way the Selection matcher does (permanentCardDef →
+// ManaValue), so the X-derived bound and a fixed Selection.ManaValue bound treat
+// tokens, copies, and face-down permanents identically.
+func targetManaValueAtMost(g *game.Game, target game.Target, bound int) bool {
+	if target.Kind != game.TargetPermanent {
+		return false
+	}
+	permanent, ok := permanentByObjectID(g, target.PermanentID)
+	if !ok {
+		return false
+	}
+	def, ok := permanentCardDef(g, permanent)
+	if !ok {
+		return false
+	}
+	return def.ManaValue() <= bound
+}
+
 func bodyTargetCounts(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, body game.Ability, targets []game.Target) ([]int, bool) {
 	return bodyTargetCountsWithModes(g, controller, source, sourceObjectID, game.Event{}, body, nil, targets)
 }
@@ -286,7 +353,8 @@ func stackObjectHasAnyLegalTargetsForSpecs(g *game.Game, source *game.CardDef, s
 		spec := normalizeTargetSpec(&specs[specIndex])
 		for range counts[specIndex] {
 			target := targets[targetIndex]
-			if targetLegalForSpecAtResolution(g, obj.Controller, source, sourceObjectID, triggerEvent, &spec, target) {
+			if targetLegalForSpecAtResolution(g, obj.Controller, source, sourceObjectID, triggerEvent, &spec, target) &&
+				(!spec.ManaValueAtMostX || targetManaValueAtMost(g, target, obj.XValue)) {
 				anyLegal = true
 			} else {
 				targets[targetIndex] = game.DeferredTargetFrom(target)

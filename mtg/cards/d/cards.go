@@ -77,6 +77,7 @@ var Cards = []cardset.Entry{
 	{Name: "Doc Samson, Super Psychiatrist", New: DocSamsonSuperPsychiatrist},
 	{Name: "Doctor Strange, Surgeon", New: DoctorStrangeSurgeon},
 	{Name: "Dogpile", New: Dogpile},
+	{Name: "Dominate", New: Dominate},
 	{Name: "Domri, Anarch of Bolas", New: DomriAnarchOfBolas},
 	{Name: "Domri's Ambush", New: DomriSAmbush},
 	{Name: "Domri's Nodorog", New: DomriSNodorog},

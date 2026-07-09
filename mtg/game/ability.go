@@ -1580,6 +1580,16 @@ type TargetSpec struct {
 	// MinTargets/MaxTargets.
 	CountEqualsX bool
 
+	// ManaValueAtMostX requires every object chosen for this spec to have mana
+	// value less than or equal to the spell's chosen X ("target creature with
+	// mana value X or less", Dominate). The Selection matcher is X-blind, so the
+	// bound is enforced against the resolving object's X at announcement
+	// (spellTargetsSatisfyManaValueX) and re-checked at resolution (CR 608.2b),
+	// following the CountEqualsX precedent. Announcement over-generates every
+	// creature and the cast is legal only for targets whose mana value fits the
+	// chosen X. The default false imposes no X-derived mana value bound.
+	ManaValueAtMostX bool
+
 	// SameGraveyard requires every card chosen for this spec to lie in one and
 	// the same graveyard ("Exile up to three target cards from a single
 	// graveyard"). A card in a graveyard is always in its owner's graveyard
