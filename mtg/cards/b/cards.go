@@ -53,6 +53,7 @@ var Cards = []cardset.Entry{
 	{Name: "Benevolent Blessing", New: BenevolentBlessing},
 	{Name: "Benevolent Hydra", New: BenevolentHydra},
 	{Name: "Bereavement", New: Bereavement},
+	{Name: "Beseech the Queen", New: BeseechTheQueen},
 	{Name: "Betrayal at the Vault", New: BetrayalAtTheVault},
 	{Name: "Bilbo, Retired Burglar", New: BilboRetiredBurglar},
 	{Name: "Bile Blight", New: BileBlight},

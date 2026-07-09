@@ -230,6 +230,10 @@ func compileTypedSelection(syntax parser.SelectionSyntax) CompiledSelector {
 	}
 	selector.SpellTargetRestrictions = compileSpellTargetRestrictions(syntax.SpellTargetRestrictions)
 	selector.SameNameGroup = compileSameNameGroup(syntax.SameNameGroup)
+	if syntax.ManaValueDynamicCount != nil {
+		amount := compileTypedAmount(*syntax.ManaValueDynamicCount)
+		selector.ManaValueDynamicCount = &amount
+	}
 	for _, cardType := range syntax.SourceTypes {
 		if value, ok := runtimeCardTypeFromParser(cardType); ok {
 			appendSelectorSourceType(&selector, value)

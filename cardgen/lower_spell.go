@@ -1259,6 +1259,23 @@ func searchSpecForSelector(selector compiler.CompiledSelector) (game.SearchSpec,
 			filter.ManaValue = opt.Val(selector.ManaValue)
 		}
 	}
+	if selector.ManaValueDynamic != compiler.DynamicAmountNone {
+		// A turn-event life-total dynamic bound is modeled only for graveyard-card
+		// targets, not library searches; fail closed rather than dropping it so no
+		// search silently widens its mana-value bound.
+		return game.SearchSpec{}, false
+	}
+	if selector.ManaValueDynamicCount != nil {
+		// "with mana value less than or equal to the number of lands you control"
+		// (Beseech the Queen) bounds the searched card's mana value by a
+		// controlled-permanent count evaluated as the search resolves. It lowers
+		// to the runtime Selection.ManaValueDynamic predicate.
+		bound, ok := lowerManaValueDynamicCountBound(*selector.ManaValueDynamicCount)
+		if !ok {
+			return game.SearchSpec{}, false
+		}
+		filter.ManaValueDynamic = opt.Val(bound)
+	}
 	if selector.MatchPower {
 		switch selector.Power.Op {
 		case compare.LessOrEqual, compare.GreaterOrEqual:
@@ -1326,6 +1343,8 @@ func searchSpecForAlternatives(selector compiler.CompiledSelector) (game.SearchS
 		selector.RequiredName != "" ||
 		selector.BasicLandType ||
 		selector.MatchManaValue ||
+		selector.ManaValueDynamic != compiler.DynamicAmountNone ||
+		selector.ManaValueDynamicCount != nil ||
 		selector.MatchPower ||
 		selector.MatchToughness {
 		return game.SearchSpec{}, false

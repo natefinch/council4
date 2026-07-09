@@ -134,7 +134,7 @@ func selectionPhraseRepresentable(selection SelectionSyntax) bool {
 	if selection.Zone != zone.None {
 		return false
 	}
-	if selection.ManaValueDynamic != "" || selection.RequiredName != "" {
+	if selection.ManaValueDynamic != "" || selection.ManaValueDynamicCount != nil || selection.RequiredName != "" {
 		return false
 	}
 	if len(selection.SubtypesAny) != 0 || len(selection.ExcludedSubtypes) != 0 ||

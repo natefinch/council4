@@ -1793,6 +1793,57 @@ func parseDynamicCountSubject(tokens []shared.Token, start int, atoms Atoms) (dy
 	return parseDynamicSelectionCountSubject(tokens, start, atoms)
 }
 
+// searchClauseManaValueDynamicCount finds a "mana value less than or equal to
+// the number of <count subject>" filter within a library-search clause and
+// returns the counted-subject amount together with the byte offset of the "mana"
+// token, so the caller can scope the searched-card Selection and the search
+// count away from the bound's count phrase (whose noun and "you control" suffix
+// would otherwise fold into the searched card's own filter). It fails closed
+// when the clause carries no such bound.
+func searchClauseManaValueDynamicCount(tokens []shared.Token, atoms Atoms) (EffectAmountSyntax, int, bool) {
+	for i := range tokens {
+		if i+2 < len(tokens) && effectWordsAt(tokens, i, "mana", "value") {
+			if amount, _, ok := parseSelectionManaValueDynamicCount(tokens, i+2, atoms); ok {
+				return amount, tokens[i].Span.Start.Offset, true
+			}
+		}
+	}
+	return EffectAmountSyntax{}, 0, false
+}
+
+// parseSelectionManaValueDynamicCount recognizes the "less than or equal to the
+// number of <count subject>" upper bound following "mana value" in a library
+// search filter ("card with mana value less than or equal to the number of lands
+// you control" — Beseech the Queen), returning the counted-subject amount and
+// the token index just past the count subject. It reuses the dynamic-count
+// subject parser, so only a count phrase the amount machinery already models is
+// accepted, and it carries a multiplier of one for the count. The count phrase
+// text is captured verbatim so the search filter reconstruction stays
+// byte-exact. Every other operator or operand fails closed so the fixed,
+// X-derived, and life-total bounds keep their own paths.
+func parseSelectionManaValueDynamicCount(tokens []shared.Token, start int, atoms Atoms) (EffectAmountSyntax, int, bool) {
+	if !effectWordsAt(tokens, start, "less", "than", "or", "equal", "to") {
+		return EffectAmountSyntax{}, 0, false
+	}
+	countStart := start + 5
+	if !effectWordsAt(tokens, countStart, "the", "number", "of") {
+		return EffectAmountSyntax{}, 0, false
+	}
+	subjectStart := countStart + 3
+	if subjectStart >= len(tokens) {
+		return EffectAmountSyntax{}, 0, false
+	}
+	subject, ok := parseDynamicCountSubject(tokens, subjectStart, atoms)
+	if !ok || !subject.count {
+		return EffectAmountSyntax{}, 0, false
+	}
+	amount := subject.amount
+	amount.Multiplier = 1
+	amount.Span = shared.SpanOf(tokens[countStart:subject.end])
+	amount.Text = joinedEffectText(tokens[countStart:subject.end])
+	return amount, subject.end, true
+}
+
 // parseDynamicAttackingCreatureCountSubject recognizes the "[other] attacking
 // <creature-noun-or-subtype>" count subject of an attack-triggered self-pump
 // scaled by the attacking force ("for each other attacking Goblin", Goblin

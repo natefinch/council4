@@ -1305,6 +1305,7 @@ Council4 currently supports **17,225 of 32,501 cards eligible for paper support 
 - Beregond of the Guard
 - Berserkers of Blood Ridge
 - Berserkers' Onslaught
+- Beseech the Queen
 - Beskir Shieldmate
 - Bespoke Bō
 - Bessie, the Doctor's Roadster

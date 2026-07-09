@@ -1680,6 +1680,14 @@ type SelectionSyntax struct {
 	// EffectDynamicAmountLifeGainedThisTurn; the empty value means no dynamic
 	// bound.
 	ManaValueDynamic EffectDynamicAmountKind `json:",omitempty"`
+	// ManaValueDynamicCount records a "with mana value less than or equal to the
+	// number of <permanents> you control" bound (Beseech the Queen — number of
+	// lands you control), whose upper bound is a controlled-permanent count
+	// rather than a fixed number. It carries the counted-subject amount (a
+	// dynamic count). It is set only on a library-search filter selection, whose
+	// reconstruction renders it; every other selection context fails closed. Nil
+	// means no count-based dynamic bound.
+	ManaValueDynamicCount *EffectAmountSyntax `json:",omitempty"`
 	// RequiredName carries the verbatim card name of a "named <Name>" selector
 	// qualifier ("a card named Trustworthy Scout"). It is captured from the
 	// source tokens after "named" so the byte-exact search reconstruction can

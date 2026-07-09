@@ -1511,7 +1511,26 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		}
 		tokenPower, tokenToughness, tokenPTKnown := parseTokenPowerToughness(kind, clause)
 		tokenPTVariableX := parseTokenPTVariableX(kind, clause)
-		amount := parseEffectAmount(kind, clause, atoms)
+		// A library search whose filter carries a dynamic controlled-permanent
+		// mana-value bound ("a card with mana value less than or equal to the
+		// number of lands you control", Beseech the Queen) embeds a count subject
+		// whose noun and "you control" suffix would fold into both the search
+		// count and the searched card's own filter. Detect the bound so the amount
+		// and Selection parses can be scoped before it, and record it separately.
+		var searchMVDynamicCount *EffectAmountSyntax
+		searchMVDynamicCountManaOffset := -1
+		if kind == EffectSearch {
+			if count, manaOffset, ok := searchClauseManaValueDynamicCount(clause, atoms); ok {
+				captured := count
+				searchMVDynamicCount = &captured
+				searchMVDynamicCountManaOffset = manaOffset
+			}
+		}
+		amountClause := clause
+		if searchMVDynamicCount != nil {
+			amountClause = tokensBeforeOffset(clause, searchMVDynamicCountManaOffset)
+		}
+		amount := parseEffectAmount(kind, amountClause, atoms)
 		if forEach, ok := parseCreateForEachAmount(kind, context, tokenPTKnown, tokens[ownershipStart:tokenIndex], amount, atoms); ok {
 			amount = forEach
 		}
@@ -1585,11 +1604,26 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			// phrase so the count subject's noun ("lands", "creatures") does not
 			// fold into the searched card's filter.
 			selectionClause = tokensBeforeOffset(clause, amount.Span.Start.Offset)
+		case kind == EffectSearch && searchMVDynamicCount != nil:
+			// "Search your library for a card with mana value less than or equal
+			// to the number of lands you control" carries a dynamic
+			// controlled-permanent mana-value bound whose count subject ("lands
+			// you control") would otherwise fold its type and controller into the
+			// searched card's own filter. Scope the searched-card Selection to the
+			// tokens before the "mana value ..." bound; the bound rides on the
+			// Selection's ManaValueDynamicCount field, set after parseSelection.
+			selectionClause = tokensBeforeOffset(clause, searchMVDynamicCountManaOffset)
 		default:
 		}
 		eachSourceDamageGroup, eachSourceDamageRecipient := eachSourceDamageSyntax(kind, tokens[ownershipStart:tokenIndex], clause, amount, atoms)
 		fallbackOnInability := effectFallbackOnInability(tokens, ownershipStart, tokenIndex)
 		effectSelection := parseSelection(selectionClause, atoms)
+		if searchMVDynamicCount != nil {
+			// The dynamic controlled-permanent mana-value bound was scoped out of
+			// the searched-card Selection above; record it on its own field so the
+			// search filter reconstruction and lowering can model it.
+			effectSelection.ManaValueDynamicCount = searchMVDynamicCount
+		}
 		// A group selection naming a creature conjoined with one other permanent
 		// type ("each artifact creature you control") records both card types in
 		// RequiredTypesAny with no conjunctive marker, exactly as a target does.
