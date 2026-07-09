@@ -1514,6 +1514,9 @@ func lowerExecutableAbilitySpecialCase(
 	ability compiler.CompiledAbility,
 	syntax *parser.Ability,
 ) (abilityLowering, bool, *shared.Diagnostic) {
+	if lowered, handled, diagnostic := lowerTemptingOfferAbility(ability, syntax); handled {
+		return lowered, true, diagnostic
+	}
 	if len(ability.Content.Modes) > 0 &&
 		ability.Kind != compiler.AbilityActivated &&
 		ability.Kind != compiler.AbilityTriggered &&
