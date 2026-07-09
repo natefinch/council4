@@ -30,6 +30,7 @@ var Cards = []cardset.Entry{
 	{Name: "General Leo Cristophe", New: GeneralLeoCristophe},
 	{Name: "Geralf's Mindcrusher", New: GeralfSMindcrusher},
 	{Name: "Geth's Verdict", New: GethSVerdict},
+	{Name: "Ghalta, Stampede Tyrant", New: GhaltaStampedeTyrant},
 	{Name: "Ghastbark Twins", New: GhastbarkTwins},
 	{Name: "Ghastly Death Tyrant", New: GhastlyDeathTyrant},
 	{Name: "Ghastly Gloomhunter", New: GhastlyGloomhunter},

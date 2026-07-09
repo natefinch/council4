@@ -17,6 +17,7 @@ var Cards = []cardset.Entry{
 	{Name: "Lapse of Certainty", New: LapseOfCertainty},
 	{Name: "Lashwhip Predator", New: LashwhipPredator},
 	{Name: "Lassoed by the Law", New: LassoedByTheLaw},
+	{Name: "Last March of the Ents", New: LastMarchOfTheEnts},
 	{Name: "Lattice-Blade Mantis", New: LatticeBladeMantis},
 	{Name: "Launch Mishap", New: LaunchMishap},
 	{Name: "Lava Coil", New: LavaCoil},

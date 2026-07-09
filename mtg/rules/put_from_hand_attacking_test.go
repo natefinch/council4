@@ -16,6 +16,7 @@ func putCreatureFromHandAttackingInstruction() *game.Instruction {
 			game.Fixed(1),
 			true, // tapped
 			true, // attacking
+			false,
 		),
 	}
 }

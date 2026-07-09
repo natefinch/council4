@@ -189,20 +189,24 @@ func lowerPutTargetOnLibrary(ctx contentCtx) (game.AbilityContent, bool) {
 // lowerPutFromHandSpell lowers "put a <filter> card from your hand onto the
 // battlefield" — a ramp / cheat-into-play effect (Growth Spiral's "you may put a
 // land card from your hand onto the battlefield", Dramatic Entrance, Elvish
-// Pioneer, ...). It produces one game.ChooseFromZone instruction that has the
-// controller choose one matching card from their own hand and put it onto the
-// battlefield. A "you may" wrapper is carried by the enclosing instruction's
-// Optional flag, applied by the optional-flow machinery after this lowers, so
-// this path lowers only the mandatory core.
+// Pioneer, ...) — and the "put any number of <filter> cards from your hand onto
+// the battlefield" mass form (Ghalta, Stampede Tyrant; Last March of the Ents).
+// It produces one game.ChooseFromZone instruction that has the controller choose
+// matching cards from their own hand and put them onto the battlefield: exactly
+// one card for the singular form, or any number (none up to all matching) for the
+// "any number of" form. A "you may" wrapper is carried by the enclosing
+// instruction's Optional flag, applied by the optional-flow machinery after this
+// lowers, so this path lowers only the mandatory core.
 //
 // It is card-name-blind and fails closed (ok=false) on any shape it does not
 // fully model — references or targets, a non-hand source or non-battlefield
-// destination, a selector qualifier it cannot express, or an amount other than
-// exactly one card — so an unmodeled wording falls through to the generic put
-// path's diagnostic rather than lowering to a silently-wrong instruction. An
-// "enters tapped" rider ("onto the battlefield tapped") is honored and carried
-// through to the produced instruction, as is the "attacking" rider ("onto the
-// battlefield tapped and attacking", CR 508.4).
+// destination, a selector qualifier it cannot express, or an amount that is
+// neither exactly one card nor the unbounded "any number of" form — so an
+// unmodeled wording falls through to the generic put path's diagnostic rather
+// than lowering to a silently-wrong instruction. An "enters tapped" rider ("onto
+// the battlefield tapped") is honored and carried through to the produced
+// instruction, as is the "attacking" rider ("onto the battlefield tapped and
+// attacking", CR 508.4).
 func lowerPutFromHandSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	if len(ctx.content.Targets) != 0 ||
 		len(ctx.content.References) != 0 {
@@ -250,7 +254,18 @@ func lowerPutFromHandSpell(ctx contentCtx) (game.AbilityContent, bool) {
 		selector.Untapped {
 		return game.AbilityContent{}, false
 	}
-	if !effect.Amount.Known ||
+	// The amount is either the unbounded "any number of" form or exactly one
+	// card; every other bound (a range, a variable X, a dynamic count, or any
+	// fixed count other than one) fails closed.
+	anyNumber := effect.Amount.AnyNumber
+	if anyNumber {
+		if effect.Amount.Known ||
+			effect.Amount.RangeKnown ||
+			effect.Amount.VariableX ||
+			effect.Amount.DynamicKind != 0 {
+			return game.AbilityContent{}, false
+		}
+	} else if !effect.Amount.Known ||
 		effect.Amount.RangeKnown ||
 		effect.Amount.VariableX ||
 		effect.Amount.DynamicKind != 0 ||
@@ -268,6 +283,7 @@ func lowerPutFromHandSpell(ctx contentCtx) (game.AbilityContent, bool) {
 			game.Fixed(1),
 			effect.EntersTapped,
 			effect.EntersAttacking,
+			anyNumber,
 		),
 	}}}.Ability(), true
 }
