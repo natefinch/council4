@@ -305,6 +305,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				TokenKeywords:                   append([]parser.KeywordKind(nil), syntax.TokenKeywords...),
 				TokenToxic:                      syntax.TokenToxic,
 				TokenGrantedAbility:             syntax.TokenGrantedAbility,
+				TokenGrantedAbilityRiderSpan:    syntax.TokenGrantedAbilityRiderSpan,
 				GainGrantedAbility:              syntax.GainGrantedAbility,
 				EmblemAbilities:                 syntax.EmblemAbilities,
 				DelayedTriggerAbility:           syntax.DelayedTriggerAbility,

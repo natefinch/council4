@@ -112,34 +112,130 @@ func attachTokenGrantedAbilities(ability *Ability) {
 	}
 	for q := range ability.Quoted {
 		quoted := ability.Quoted[q]
-		effect := createEffectContainingSpan(ability, quoted.Span)
-		if effect == nil || effect.TokenGrantedAbility != nil {
+		if effect := createEffectContainingSpan(ability, quoted.Span); effect != nil {
+			attachTokenGrantedAbilityToEffect(effect, quoted)
 			continue
 		}
-		granted, ok := parseStaticGrantedAbility(quoted)
-		if !ok {
-			continue
+		// A trailing "It has \"<ability>\"." / "They have \"<ability>\"." sentence
+		// grants the ability to the token created by a preceding create-token
+		// effect (the Eldrazi Scion cycle). Fold that rider sentence onto the
+		// create so it lowers as a single token-with-ability creation rather than
+		// an ordered sequence with an unsupported sibling.
+		if effect, sentenceIdx := trailingTokenGrantCreateEffect(ability, quoted.Span); effect != nil {
+			// Record the rider span before attaching so the exactness
+			// reconstruction treats the granted ability as a trailing rider rather
+			// than an inline "with \"...\"" clause; restore the prior value if the
+			// attach fails so a create that already carries a grant is unchanged.
+			priorRiderSpan := effect.TokenGrantedAbilityRiderSpan
+			effect.TokenGrantedAbilityRiderSpan = ability.Sentences[sentenceIdx].Span
+			if attachTokenGrantedAbilityToEffect(effect, quoted) {
+				ability.Sentences[sentenceIdx].Effects = nil
+				ability.Sentences[sentenceIdx].TokenGrantedAbilityRider = true
+				// With the rider folded the create is a standalone effect again;
+				// drop the ordered-lowering flag the multi-effect ability set so
+				// the single-token-creation path lowers it (mirrors the die-exile
+				// residual reset).
+				if abilityEffectCount(ability) == 1 {
+					effect.RequiresOrderedLowering = false
+				}
+			} else {
+				effect.TokenGrantedAbilityRiderSpan = priorRiderSpan
+			}
 		}
-		// A quoted triggered ability ("When this token dies, ...") or activated
-		// ability, including a mana ability ("{T}: Add {C}", "Sacrifice this
-		// token: Add {C}"), attaches to the created token; the lowerer compiles
-		// the inner body and appends the resulting triggered, activated, or mana
-		// ability to the token definition. A quoted static ability ("This token
-		// can't block.") attaches the same way and the lowerer appends the
-		// resulting static ability to the token definition. The create
-		// reconstructs only when the rider is an ability the downstream layers
-		// handle; a rider whose static body the lowerer cannot represent fails
-		// closed there rather than here.
-		if len(granted.document.Abilities) != 1 ||
-			(granted.document.Abilities[0].Kind != AbilityTriggered &&
-				granted.document.Abilities[0].Kind != AbilityActivated &&
-				granted.document.Abilities[0].Kind != AbilityStatic) {
-			continue
-		}
-		stored := granted
-		effect.TokenGrantedAbility = &stored
-		effect.Exact = exactEffectSyntax(effect)
 	}
+}
+
+// attachTokenGrantedAbilityToEffect parses a quoted triggered, activated, mana,
+// or static ability and attaches it to a create-token effect, re-evaluating the
+// effect's exactness. It reports whether the ability was attached; a body that
+// fails to parse or is not one of those ability kinds is left unattached so the
+// create fails closed.
+func attachTokenGrantedAbilityToEffect(effect *EffectSyntax, quoted Delimited) bool {
+	if effect.TokenGrantedAbility != nil {
+		return false
+	}
+	granted, ok := parseStaticGrantedAbility(quoted)
+	if !ok {
+		return false
+	}
+	// A quoted triggered ability ("When this token dies, ...") or activated
+	// ability, including a mana ability ("{T}: Add {C}", "Sacrifice this token:
+	// Add {C}"), attaches to the created token; the lowerer compiles the inner
+	// body and appends the resulting triggered, activated, or mana ability to the
+	// token definition. A quoted static ability ("This token can't block.")
+	// attaches the same way. A rider whose body the lowerer cannot represent
+	// fails closed there rather than here.
+	if len(granted.document.Abilities) != 1 ||
+		(granted.document.Abilities[0].Kind != AbilityTriggered &&
+			granted.document.Abilities[0].Kind != AbilityActivated &&
+			granted.document.Abilities[0].Kind != AbilityStatic) {
+		return false
+	}
+	stored := granted
+	effect.TokenGrantedAbility = &stored
+	effect.Exact = exactEffectSyntax(effect)
+	return true
+}
+
+// trailingTokenGrantCreateEffect returns the lone create-token effect a trailing
+// "It has \"<ability>\"." / "They have \"<ability>\"." rider sentence (the one
+// containing span) grants to, along with that sentence's index. It reports nil
+// when the span's sentence is not such a continuation, or when the ability holds
+// zero or more than one create-token effect before it, so anything ambiguous
+// fails closed.
+func trailingTokenGrantCreateEffect(ability *Ability, span shared.Span) (*EffectSyntax, int) {
+	sentenceIdx := -1
+	for i := range ability.Sentences {
+		s := &ability.Sentences[i]
+		if span.Start.Offset >= s.Span.Start.Offset && span.End.Offset <= s.Span.End.Offset {
+			sentenceIdx = i
+			break
+		}
+	}
+	if sentenceIdx < 0 || !sentenceOpensTokenGrantContinuation(&ability.Sentences[sentenceIdx]) {
+		return nil, -1
+	}
+	var create *EffectSyntax
+	for i := 0; i < sentenceIdx; i++ {
+		for j := range ability.Sentences[i].Effects {
+			effect := &ability.Sentences[i].Effects[j]
+			if effect.Kind != EffectCreate {
+				continue
+			}
+			if create != nil {
+				return nil, -1
+			}
+			create = effect
+		}
+	}
+	return create, sentenceIdx
+}
+
+// sentenceOpensTokenGrantContinuation reports whether the sentence is exactly the
+// created-token back-reference "It has \"<ability>\"." or "They have
+// \"<ability>\"." that grants a single quoted ability to a just-created token.
+// semanticEffectTokens strips the quoted ability and the trailing period, so an
+// exact grant leaves exactly the two opener tokens; any extra content (a keyword
+// as in "It has trample and \"...\"", a trailing "until end of turn", or a second
+// quoted ability) leaves more and is rejected, so the card fails closed rather
+// than silently dropping the surplus when the rider sentence is folded.
+func sentenceOpensTokenGrantContinuation(s *Sentence) bool {
+	tokens := semanticEffectTokens(s.Tokens)
+	if len(tokens) != 2 {
+		return false
+	}
+	return (equalWord(tokens[0], "it") && equalWord(tokens[1], "has")) ||
+		(equalWord(tokens[0], "they") && equalWord(tokens[1], "have"))
+}
+
+// abilityEffectCount returns the number of effects remaining across the ability's
+// sentences.
+func abilityEffectCount(ability *Ability) int {
+	count := 0
+	for i := range ability.Sentences {
+		count += len(ability.Sentences[i].Effects)
+	}
+	return count
 }
 
 // attachGainGrantedAbilities binds each quoted ability captured on the ability

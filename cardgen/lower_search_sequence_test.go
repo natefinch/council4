@@ -85,7 +85,7 @@ func TestLowerSearchThenTrailingSequenceFailsClosed(t *testing.T) {
 		{
 			name:       "trailing reference to found card",
 			typeLine:   "Sorcery",
-			oracleText: "Search your library for a basic land card, put it onto the battlefield tapped, then shuffle. Create a 0/1 colorless Eldrazi Spawn creature token. It has \"Sacrifice this token: Add {C}.\"",
+			oracleText: "Search your library for a creature card, put it onto the battlefield, then shuffle. It gains haste until end of turn.",
 		},
 		{
 			name:       "activated land search with trailing effect",

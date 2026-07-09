@@ -2742,9 +2742,12 @@ func creatureTokenSpecBody(effect *EffectSyntax) (func(countWord, noun string) s
 	// keyword rider the connector is the bare "with" the granted ability follows;
 	// with a keyword rider the granted ability is the final item of the
 	// "with <keyword>[, <keyword>], and \"...\"" list, so the connector is the
-	// "and"/", and" that joins it to the keyword words.
+	// "and"/", and" that joins it to the keyword words. A granted ability supplied
+	// by a trailing "It has \"...\"" / "They have \"...\"" rider sentence
+	// (TokenGrantedAbilityRiderSpan set) is not part of this clause at all, so no
+	// connector is reconstructed here; the rider sentence is credited separately.
 	grantedPart := ""
-	if effect.TokenGrantedAbility != nil {
+	if effect.TokenGrantedAbility != nil && effect.TokenGrantedAbilityRiderSpan == (shared.Span{}) {
 		if len(effect.TokenKeywords) == 0 {
 			grantedPart = " with"
 		} else {
