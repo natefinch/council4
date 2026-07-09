@@ -579,6 +579,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				AdditionalMainPhase:                    syntax.AdditionalMainPhase,
 				AdditionalBeginningPhase:               syntax.AdditionalBeginningPhase,
 				DieSides:                               syntax.DieSides,
+				RequireSourceTrample:                   syntax.RequireSourceTrample,
 			})
 		}
 	}

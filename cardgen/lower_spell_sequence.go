@@ -937,6 +937,9 @@ func lowerCombinedSequenceShapes(cardName string, ctx contentCtx, syntax *parser
 	if content, ok := lowerExcessDamageToControllerSpell(ctx); ok {
 		return content, true
 	}
+	if content, ok := lowerSourcePowerBiteTrampleExcessRedirect(ctx); ok {
+		return content, true
+	}
 	if content, ok := lowerGroupLinkedLifeSpell(ctx); ok {
 		return content, true
 	}
@@ -4589,7 +4592,161 @@ func lowerExcessDamageToControllerSpell(ctx contentCtx) (game.AbilityContent, bo
 	}.Ability(), true
 }
 
-// lowerGroupLinkedLifeSpell handles linked two-effect patterns of the form
+// lowerSourcePowerBiteTrampleExcessRedirect lowers Ram Through's conditional
+// bite with trample overflow: "Target creature you control deals damage equal to
+// its power to target creature you don't control. If the creature you control has
+// trample, excess damage is dealt to that creature's controller instead."
+//
+// The dealer (the "you control" target) deals its power in damage to the
+// recipient (the "you don't control" target). If the dealer has trample, damage
+// beyond what is lethal to the recipient is redirected to the recipient's
+// controller (CR 702.19e trample-style overflow); without trample the recipient
+// takes the whole amount and any overflow is wasted. The two behaviors are two
+// mutually exclusive Damage instructions gated on the dealer having trample: the
+// redirecting branch carries an ExcessRecipient and fires when the dealer has
+// trample, and the plain branch fires otherwise, so exactly one resolves and one
+// damage event is dealt. The parser folds the conditional rider into one
+// excess-redirect effect marked RequireSourceTrample and clears the ability's
+// stray trample condition and keyword. It fails closed for every other shape.
+func lowerSourcePowerBiteTrampleExcessRedirect(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 2 ||
+		ctx.content.Effects[0].Kind != compiler.EffectDealDamage ||
+		ctx.content.Effects[1].Kind != compiler.EffectDealDamage ||
+		ctx.content.Effects[0].Negated || ctx.content.Effects[1].Negated ||
+		ctx.content.Effects[0].Divided || ctx.content.Effects[1].Divided ||
+		ctx.content.Effects[0].RequireSourceTrample ||
+		!ctx.content.Effects[1].RequireSourceTrample ||
+		!ctx.content.Effects[0].Exact ||
+		ctx.content.Effects[0].Context != parser.EffectContextTarget ||
+		ctx.content.Effects[0].Amount.DynamicKind != compiler.DynamicAmountSourcePower ||
+		ctx.content.Effects[0].DamageRecipient.Reference != parser.DamageRecipientReferenceNone ||
+		len(ctx.content.Effects[0].DamageRecipient.GroupSelectors) != 0 ||
+		len(ctx.content.Effects[0].DamageRiders) != 0 ||
+		ctx.content.Effects[1].Amount.DynamicKind != compiler.DynamicAmountExcessDamageDealtThisWay ||
+		len(ctx.content.Effects[1].DamageRiders) != 0 ||
+		len(ctx.content.Targets) != 2 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(abilityKeywordsExcludingSelectorPredicates(ctx.content)) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, false
+	}
+	recipientKind := ctx.content.Effects[1].DamageRecipient.Reference
+	if recipientKind != parser.DamageRecipientReferenceController &&
+		recipientKind != parser.DamageRecipientReferenceOwner {
+		return game.AbilityContent{}, false
+	}
+	// The dealer is the "its power" pronoun's target; the bite recipient is the
+	// other target.
+	sourceIdx, ok := sourcePowerBiteDealerIndex(ctx.content.Effects[0])
+	if !ok || sourceIdx < 0 || sourceIdx >= len(ctx.content.Targets) {
+		return game.AbilityContent{}, false
+	}
+	recipientIdx := 1 - sourceIdx
+	if ctx.content.Targets[sourceIdx].Cardinality.Min != 1 ||
+		ctx.content.Targets[sourceIdx].Cardinality.Max != 1 ||
+		ctx.content.Targets[recipientIdx].Cardinality.Min != 1 ||
+		ctx.content.Targets[recipientIdx].Cardinality.Max != 1 {
+		return game.AbilityContent{}, false
+	}
+	// "that creature's controller" must be the bite recipient's controller/owner,
+	// not the dealer's, so the excess overflows onto the damaged creature's side.
+	redirectIdx, ok := referencedRecipientTargetIndex(ctx.content.Effects[1])
+	if !ok || redirectIdx != recipientIdx {
+		return game.AbilityContent{}, false
+	}
+	sourceRef := game.TargetPermanentReference(sourceIdx)
+	dynamic, ok := lowerDynamicAmount(ctx.content.Effects[0].Amount, sourceRef)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	sourceSpec, ok := damageTargetSpec(ctx.content.Targets[sourceIdx])
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	recipientSpec, ok := damageTargetSpec(ctx.content.Targets[recipientIdx])
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	var redirect game.PlayerReference
+	switch recipientKind {
+	case parser.DamageRecipientReferenceController:
+		redirect = game.ObjectControllerReference(game.TargetPermanentReference(recipientIdx))
+	case parser.DamageRecipientReferenceOwner:
+		redirect = game.ObjectOwnerReference(game.TargetPermanentReference(recipientIdx))
+	default:
+		return game.AbilityContent{}, false
+	}
+	specs := make([]game.TargetSpec, 2)
+	specs[sourceIdx] = sourceSpec
+	specs[recipientIdx] = recipientSpec
+	bite := game.Damage{
+		Amount:       game.Dynamic(dynamic),
+		Recipient:    game.AnyTargetDamageRecipient(recipientIdx),
+		DamageSource: opt.Val(sourceRef),
+	}
+	redirecting := bite
+	redirecting.ExcessRecipient = game.PlayerDamageRecipient(redirect)
+	trampleGate := opt.Val(game.EffectCondition{
+		Condition: opt.Val(game.Condition{
+			Object:        opt.Val(sourceRef),
+			ObjectMatches: opt.Val(game.Selection{Keyword: game.Trample}),
+		}),
+	})
+	noTrampleGate := opt.Val(game.EffectCondition{
+		Condition: opt.Val(game.Condition{
+			Negate:        true,
+			Object:        opt.Val(sourceRef),
+			ObjectMatches: opt.Val(game.Selection{Keyword: game.Trample}),
+		}),
+	})
+	return game.Mode{
+		Targets: specs,
+		Sequence: []game.Instruction{
+			{Primitive: redirecting, Condition: trampleGate},
+			{Primitive: bite, Condition: noTrampleGate},
+		},
+	}.Ability(), true
+}
+
+// sourcePowerBiteDealerIndex returns the target index of the dealer in a
+// source-power bite ("... deals damage equal to its power to ..."): the target
+// the effect's "its power" pronoun resolves to. It matches the pronoun by span
+// against the effect's amount reference, mirroring lowerSourcePowerDamageSpell,
+// and fails closed when no such reference is present.
+func sourcePowerBiteDealerIndex(effect compiler.CompiledEffect) (int, bool) {
+	for i := range effect.References {
+		ref := effect.References[i]
+		if ref.Kind == compiler.ReferencePronoun &&
+			ref.Pronoun == compiler.ReferencePronounIts &&
+			ref.Binding == compiler.ReferenceBindingTarget &&
+			ref.Span == effect.Amount.ReferenceSpan {
+			return ref.Occurrence, true
+		}
+	}
+	return 0, false
+}
+
+// referencedRecipientTargetIndex returns the target index the effect's sole
+// target-bound reference resolves to (the "that creature's" object of an
+// excess-redirect rider). It fails closed when the effect carries no such
+// reference or more than one.
+func referencedRecipientTargetIndex(effect compiler.CompiledEffect) (int, bool) {
+	index := -1
+	for i := range effect.References {
+		if effect.References[i].Binding != compiler.ReferenceBindingTarget {
+			continue
+		}
+		if index != -1 {
+			return 0, false
+		}
+		index = effect.References[i].Occurrence
+	}
+	if index < 0 {
+		return 0, false
+	}
+	return index, true
+}
+
 // "Each opponent loses N life and you gain [N | that much] life."
 // It emits LoseLife with PublishResult "life-change" followed by GainLife.
 // For "that much", the GainLife amount uses DynamicAmountPreviousEffectResult.

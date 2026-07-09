@@ -3015,6 +3015,12 @@ type CompiledEffect struct {
 	VoteArm             bool
 	VoteArmOption       int
 	VoteArmTieInclusive bool
+	// RequireSourceTrample marks an excess-damage-to-controller redirect
+	// (DynamicAmountExcessDamageDealtThisWay) that applies only when the damage
+	// source has trample (Ram Through). Lowering gates the excess redirect on the
+	// source having trample and emits a plain damage branch otherwise. It is
+	// meaningful only when Amount.DynamicKind is DynamicAmountExcessDamageDealtThisWay.
+	RequireSourceTrample bool
 }
 
 // EntersTappedGroup reports the enters-tapped-group form of a static group
