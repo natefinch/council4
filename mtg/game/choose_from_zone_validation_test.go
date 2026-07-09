@@ -58,11 +58,11 @@ func TestChooseFromZoneFamilyValidation(t *testing.T) {
 		},
 		{
 			name: "put from hand accepts a fixed positive amount",
-			prim: PutFromHandChoice(ControllerReference(), Selection{}, Fixed(1), false),
+			prim: PutFromHandChoice(ControllerReference(), Selection{}, Fixed(1), false, false),
 		},
 		{
 			name:    "put from hand rejects a non-positive amount",
-			prim:    PutFromHandChoice(ControllerReference(), Selection{}, Fixed(0), false),
+			prim:    PutFromHandChoice(ControllerReference(), Selection{}, Fixed(0), false, false),
 			wantErr: "choose from zone requires a fixed positive amount",
 		},
 		{

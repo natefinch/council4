@@ -57,8 +57,9 @@ func ExileFromGraveyardChoice(player PlayerReference, selection Selection, amoun
 // PutFromHandChoice builds the envelope for "put a <filter> card from your hand
 // onto the battlefield": the resolving player chooses up to amount matching hand
 // cards and each enters the battlefield under that player's control, tapped when
-// entersTapped is set.
-func PutFromHandChoice(player PlayerReference, selection Selection, amount Quantity, entersTapped bool) ChooseFromZone {
+// entersTapped is set and attacking when entersAttacking is set (CR 508.4, the
+// "tapped and attacking" rider).
+func PutFromHandChoice(player PlayerReference, selection Selection, amount Quantity, entersTapped, entersAttacking bool) ChooseFromZone {
 	return ChooseFromZone{
 		Player:      player,
 		SourceZone:  zone.Hand,
@@ -66,7 +67,7 @@ func PutFromHandChoice(player PlayerReference, selection Selection, amount Quant
 		Quantity:    amount,
 		Count:       ChooseExactly,
 		Destination: ChooseDestination{Zone: zone.Battlefield},
-		Riders:      ChooseRiders{EntersTapped: entersTapped},
+		Riders:      ChooseRiders{EntersTapped: entersTapped, EntersAttacking: entersAttacking},
 		Prompt:      "Choose a card to put onto the battlefield",
 	}
 }

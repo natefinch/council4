@@ -201,7 +201,8 @@ func lowerPutTargetOnLibrary(ctx contentCtx) (game.AbilityContent, bool) {
 // exactly one card — so an unmodeled wording falls through to the generic put
 // path's diagnostic rather than lowering to a silently-wrong instruction. An
 // "enters tapped" rider ("onto the battlefield tapped") is honored and carried
-// through to the produced instruction.
+// through to the produced instruction, as is the "attacking" rider ("onto the
+// battlefield tapped and attacking", CR 508.4).
 func lowerPutFromHandSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	if len(ctx.content.Targets) != 0 ||
 		len(ctx.content.References) != 0 {
@@ -232,12 +233,18 @@ func lowerPutFromHandSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	// than a selection qualifier and is not a blocker; cardSelectionForSelector
 	// ignores Tapped, so the produced selection stays correct either way.
 	tappedSelection := selector.Tapped && !effect.EntersTapped
+	// The parser likewise reflects the trailing "attacking" entry rider of "onto
+	// the battlefield tapped and attacking" into the selector's Attacking flag as
+	// well as setting EntersAttacking. A card chosen from hand is never already
+	// attacking, so when EntersAttacking is set the selector's Attacking is that
+	// same entry rider rather than a selection qualifier and is not a blocker.
+	attackingSelection := selector.Attacking && !effect.EntersAttacking
 	if selector.Zone != zone.Hand ||
 		selector.Controller != compiler.ControllerAny ||
 		selector.All ||
 		selector.Another ||
 		selector.Other ||
-		selector.Attacking ||
+		attackingSelection ||
 		selector.Blocking ||
 		tappedSelection ||
 		selector.Untapped {
@@ -260,6 +267,7 @@ func lowerPutFromHandSpell(ctx contentCtx) (game.AbilityContent, bool) {
 			selection,
 			game.Fixed(1),
 			effect.EntersTapped,
+			effect.EntersAttacking,
 		),
 	}}}.Ability(), true
 }

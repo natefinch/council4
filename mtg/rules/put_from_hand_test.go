@@ -27,6 +27,7 @@ func putLandFromHandInstruction() *game.Instruction {
 			game.Selection{RequiredTypes: []types.Card{types.Land}},
 			game.Fixed(1),
 			false,
+			false,
 		),
 	}
 }

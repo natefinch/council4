@@ -72,6 +72,10 @@ func chooseFromZoneSupported(env game.ChooseFromZone) bool {
 			return false
 		}
 	}
+	if env.Riders.EntersAttacking &&
+		(env.Destination.Zone != zone.Battlefield || env.Riders.FaceDown) {
+		return false
+	}
 	return true
 }
 
@@ -382,10 +386,14 @@ func (r *effectResolver) chooseFromZoneEnterBattlefield(env game.ChooseFromZone,
 		})
 		r.chooseFromZonePublish(env, cardID)
 	}
-	return r.putResolvedCardsOnBattlefieldValue(resolved, nil, permanentCreationOptions{
+	permanents := r.putResolvedCardsOnBattlefieldCollecting(resolved, nil, permanentCreationOptions{
 		ForceTapped: tapped,
 		Counters:    env.Riders.EntryCounters,
 	})
+	if env.Riders.EntersAttacking && len(permanents) > 0 {
+		declareCreatedTokensAttacking(r.engine, r.game, playerID, permanents, r.agents, r.log)
+	}
+	return len(permanents) > 0
 }
 
 // chooseFromZonePublish remembers a moved card under the PublishLinked key when
