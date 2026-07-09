@@ -14,6 +14,7 @@ func TestParsePredefinedTokenName(t *testing.T) {
 	}{
 		{"Create a Mutavault token.", "Mutavault", false},
 		{"Create a tapped Mutavault token.", "Mutavault", true},
+		{"Create a Tarmogoyf token.", "Tarmogoyf", false},
 	} {
 		document, diagnostics := Parse(tc.source, Context{})
 		if len(diagnostics) != 0 {

@@ -193,6 +193,7 @@ func parseTokenKeywordToxic(kind EffectKind, tokens []shared.Token, atoms Atoms)
 // the canonical token name.
 var predefinedTokenNames = map[string]string{
 	"mutavault": "Mutavault",
+	"tarmogoyf": "Tarmogoyf",
 }
 
 // parsePredefinedTokenName captures a created predefined named token's name from

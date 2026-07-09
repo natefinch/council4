@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,152 of 32,501 cards eligible for paper support (52.8%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,154 of 32,501 cards eligible for paper support (52.8%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -3693,6 +3693,7 @@ Council4 currently supports **17,152 of 32,501 cards eligible for paper support 
 - Dirgur Island Dragon // Skimming Strike
 - Dirtwater Wraith
 - Dirty Wererat
+- Disa the Restless
 - Disallow
 - Disappearing Act
 - Discerning Peddler
@@ -14648,6 +14649,7 @@ Council4 currently supports **17,152 of 32,501 cards eligible for paper support 
 - Tarkir Duneshaper // Burnished Dunestomper
 - Tarmogoyf
 - Tarmogoyf
+- Tarmogoyf Nest
 - Tarnished Citadel
 - Tarpan
 - Tarrian's Soulcleaver

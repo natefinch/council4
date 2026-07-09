@@ -60,6 +60,7 @@ var Cards = []cardset.Entry{
 	{Name: "Dire Fleet Captain", New: DireFleetCaptain},
 	{Name: "Director Nick Fury", New: DirectorNickFury},
 	{Name: "Dirty Wererat", New: DirtyWererat},
+	{Name: "Disa the Restless", New: DisaTheRestless},
 	{Name: "Disempower", New: Disempower},
 	{Name: "Disruptive Pitmage", New: DisruptivePitmage},
 	{Name: "Disruptive Student", New: DisruptiveStudent},

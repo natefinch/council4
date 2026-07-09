@@ -10,6 +10,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
@@ -1042,6 +1043,8 @@ func synthesizePredefinedTokenDef(effect *compiler.CompiledEffect) (*game.CardDe
 	switch effect.TokenPredefinedName {
 	case "Mutavault":
 		return mutavaultTokenDef(), true
+	case "Tarmogoyf":
+		return tarmogoyfTokenDef(), true
 	default:
 		return nil, false
 	}
@@ -1082,6 +1085,33 @@ func mutavaultTokenDef() *game.CardDef {
 					},
 				}}}.Ability(),
 			}},
+		},
+	}
+}
+
+// tarmogoyfTokenDef builds the Tarmogoyf token: a green Lhurgoyf creature with
+// mana cost {1}{G} and the characteristic-defining ability "Tarmogoyf's power is
+// equal to the number of card types among cards in all graveyards and its
+// toughness is equal to that number plus 1." The create clause carries only the
+// name, so the token's full definition is fixed here, mirroring the printed
+// token's characteristics. The CDA rides the DynamicPower/DynamicToughness slots
+// (with a +1 toughness offset) over a printed "*"/"*" base, the same modeling the
+// real Tarmogoyf card lowers to.
+func tarmogoyfTokenDef() *game.CardDef {
+	return &game.CardDef{
+		CardFace: game.CardFace{
+			Name: "Tarmogoyf",
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(1),
+				cost.G,
+			}),
+			Colors:           []color.Color{color.Green},
+			Types:            []types.Card{types.Creature},
+			Subtypes:         []types.Sub{types.Lhurgoyf},
+			Power:            opt.Val(game.PT{IsStar: true}),
+			Toughness:        opt.Val(game.PT{IsStar: true}),
+			DynamicPower:     opt.Val(game.DynamicValue{Kind: game.DynamicValueCardTypesAmongAllGraveyards}),
+			DynamicToughness: opt.Val(game.DynamicValue{Kind: game.DynamicValueCardTypesAmongAllGraveyards, Offset: 1}),
 		},
 	}
 }
