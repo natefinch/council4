@@ -202,10 +202,18 @@ const (
 	// creature or Vehicle. For as long as that card remains exiled, its owner may
 	// play it.", Prowl, Stoic Strategist).
 	PrimitiveExilePermanentForPlay
+
+	// PrimitivePlayChosenExiledCard has the resolving controller choose one card
+	// in exile that a scoped player owns and that bears a named exile counter,
+	// then grants the controller permission to play the chosen card for a bounded
+	// duration, optionally without paying its mana cost ("Choose an exiled card an
+	// opponent owns with a void counter on it. You may play it this turn without
+	// paying its mana cost.", Dauthi Voidwalker).
+	PrimitivePlayChosenExiledCard
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveExilePermanentForPlay) + 1
+const primitiveKindCount = int(PrimitivePlayChosenExiledCard) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -1210,6 +1218,30 @@ type ExileForPlay struct {
 type ExilePermanentForPlay struct {
 	Object    ObjectReference
 	LinkedKey LinkedKey
+}
+
+// PlayChosenExiledCard has Player choose one card resting in Zone that is owned
+// by a player matching OwnerScope (evaluated relative to Player) and, when
+// Counter is set, bears at least one Counter-kind exile marker counter, then
+// grants Player permission to play that chosen card for Duration. When
+// WithoutPayingManaCost is set the chosen card's spell is cast without paying its
+// mana cost (a played land has no mana cost regardless). It models the
+// resolution-time "Choose an exiled card an opponent owns with a <kind> counter
+// on it. You may play it this turn without paying its mana cost." activated
+// ability (Dauthi Voidwalker).
+//
+// The choice is mandatory when at least one eligible card exists; the granted
+// permission is optional to use. With no eligible card the effect is a legal
+// no-op. The chosen card commonly rests in an opponent's exile bucket, and the
+// granted per-card RuleEffectPlayFromZone authorizes Player through the ordinary
+// cross-player exile play/cast machinery.
+type PlayChosenExiledCard struct {
+	Player                PlayerReference
+	Zone                  zone.Type
+	OwnerScope            PlayerRelation
+	Counter               opt.V[counter.Kind]
+	Duration              EffectDuration
+	WithoutPayingManaCost bool
 }
 
 // Sacrifice sacrifices the referenced permanent. When no object is set, the

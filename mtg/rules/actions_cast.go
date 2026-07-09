@@ -138,6 +138,15 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 	spendAnyMana := !plotted && !foretold && !freeLinkedExile && sourceZone == zone.Exile &&
 		castFromZoneAllowsAnyMana(g, playerID, card.ID, sourceZone, cast.Face)
 
+	// freePlayFromZone marks a card cast from exile under a per-card
+	// RuleEffectPlayFromZone that lets the controller play it without paying its
+	// mana cost ("You may play it this turn without paying its mana cost.", Dauthi
+	// Voidwalker). Like the other free-cast paths it replaces the mana cost with an
+	// empty payment; it never combines with the paths above.
+	freePlayFromZone := !plotted && !foretold && !freeLinkedExile && !spendAnyMana &&
+		sourceZone == zone.Exile &&
+		castFromZoneWithoutPayingManaCost(g, playerID, card.ID, sourceZone, cast.Face)
+
 	// CR 601.2a: proposing a cast first moves the card from its source zone to
 	// the stack as the topmost object. Doing this before the spell's costs are
 	// determined and paid (CR 601.2f-h) is what makes it impossible for a cost
@@ -224,6 +233,19 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 			agents,
 			log,
 		)
+	case freePlayFromZone:
+		emptyMana := cost.Mana{}
+		prefs = e.paymentPreferencesForCostFromSource(
+			g,
+			playerID,
+			&emptyMana,
+			spellDef.AdditionalCosts,
+			cast.XValue,
+			card.ID,
+			sourceZone,
+			agents,
+			log,
+		)
 	case spendAnyMana:
 		anyManaCost := anyManaSymbols(spellDef.ManaCost)
 		prefs = e.paymentPreferencesForCostFromSource(
@@ -265,6 +287,8 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 	case foretold:
 		request.Alternative = opt.Val(foretellAlternativeCost(spellDef))
 	case freeLinkedExile:
+		request.Alternative = opt.Val(freeCastAlternativeCost())
+	case freePlayFromZone:
 		request.Alternative = opt.Val(freeCastAlternativeCost())
 	case spendAnyMana:
 		request.Alternative = opt.Val(anyManaAlternativeCost(spellDef))
@@ -776,6 +800,8 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 	case foretold:
 		request.Alternative = opt.Val(foretellAlternativeCost(spellDef))
 	case sourceZone == zone.Exile && face == game.FaceFront && castLinkedExileForFree(g, playerID, card.ID):
+		request.Alternative = opt.Val(freeCastAlternativeCost())
+	case sourceZone == zone.Exile && castFromZoneWithoutPayingManaCost(g, playerID, card.ID, sourceZone, face):
 		request.Alternative = opt.Val(freeCastAlternativeCost())
 	case sourceZone == zone.Exile && castFromZoneAllowsAnyMana(g, playerID, card.ID, sourceZone, face):
 		request.Alternative = opt.Val(anyManaAlternativeCost(spellDef))

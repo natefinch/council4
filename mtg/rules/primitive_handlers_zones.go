@@ -1462,7 +1462,83 @@ func handleExilePermanentForPlay(r *effectResolver, prim game.ExilePermanentForP
 	return res
 }
 
-// exileForPlayCardID resolves which card an ExileForPlay exiles. In the default
+// handlePlayChosenExiledCard has the resolving controller choose one card in
+// exile owned by a player matching OwnerScope (evaluated relative to the
+// controller) and, when Counter is set, bearing that named exile marker counter,
+// then grants the controller a per-card RuleEffectPlayFromZone so it may play the
+// chosen card for prim.Duration (Dauthi Voidwalker: "Choose an exiled card an
+// opponent owns with a void counter on it. You may play it this turn without
+// paying its mana cost."). The chosen card commonly rests in an opponent's exile
+// bucket; foreignExileCastableCards surfaces it to the controller and
+// castSourcePlayer keeps zone containment pointed at the owner. When
+// WithoutPayingManaCost is set the granted permission casts the chosen card's
+// spell for free; a played land has no mana cost regardless. With no eligible
+// card the effect is a legal no-op.
+func handlePlayChosenExiledCard(r *effectResolver, prim game.PlayChosenExiledCard) effectResolved {
+	res := effectResolved{accepted: true}
+	you, ok := r.resolvePlayer(prim.Player)
+	if !ok {
+		return res
+	}
+	var candidates []id.ID
+	for pid := game.PlayerID(0); int(pid) < game.NumPlayers; pid++ {
+		if !playerRelationMatches(you, pid, prim.OwnerScope) {
+			continue
+		}
+		owner, ok := playerByID(r.game, pid)
+		if !ok {
+			continue
+		}
+		for _, cardID := range owner.Exile.All() {
+			if prim.Counter.Exists && !r.game.HasExileCounter(cardID, prim.Counter.Val) {
+				continue
+			}
+			candidates = append(candidates, cardID)
+		}
+	}
+	if len(candidates) == 0 {
+		return res
+	}
+	chosen, ok := r.choosePlayChosenExiledCard(candidates)
+	if !ok {
+		return res
+	}
+	r.game.RuleEffects = append(r.game.RuleEffects, game.RuleEffect{
+		ID:                    r.game.IDGen.Next(),
+		Kind:                  game.RuleEffectPlayFromZone,
+		Controller:            r.obj.Controller,
+		SourceCardID:          r.obj.SourceCardID,
+		SourceObjectID:        r.obj.SourceID,
+		AffectedPlayer:        game.PlayerYou,
+		Duration:              prim.Duration,
+		CreatedTurn:           r.game.Turn.TurnNumber,
+		CastFromZone:          prim.Zone,
+		AffectedCardID:        chosen,
+		WithoutPayingManaCost: prim.WithoutPayingManaCost,
+		ExpiresFor:            r.obj.Controller,
+	})
+	res.succeeded = true
+	return res
+}
+
+// choosePlayChosenExiledCard asks the resolving controller which eligible exiled
+// card to play. The choice is mandatory once at least one card qualifies.
+func (r *effectResolver) choosePlayChosenExiledCard(candidates []id.ID) (id.ID, bool) {
+	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
+		Kind:             game.ChoiceResolution,
+		Player:           r.obj.Controller,
+		Prompt:           "Choose an exiled card to play",
+		Options:          chooseFromZoneOptions(r.game, candidates),
+		MinChoices:       1,
+		MaxChoices:       1,
+		DefaultSelection: []int{0},
+	}, r.log)
+	if len(selected) == 1 && selected[0] >= 0 && selected[0] < len(candidates) {
+		return candidates[selected[0]], true
+	}
+	return 0, false
+}
+
 // mode it reads prim.Card and confirms it rests in FromZone. In SelectFromBatch
 // mode it gathers the triggering batch's cards still in FromZone ("one of them"
 // over a "discard one or more cards" batch) and has the resolving controller

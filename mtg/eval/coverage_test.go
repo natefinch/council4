@@ -40,7 +40,7 @@ import (
 // ExilePermanentForPlay carries the EffectPermanentRemoved atom, matching Exile
 // and Bounce: it is a targeted permanent removal whose owner-play grant is not
 // modeled by the single-target atom heuristic.
-const knownPrimitiveCount = 119
+const knownPrimitiveCount = 120
 
 // TestPrimitiveCountIsReconciled keeps a newly added resolution primitive from
 // silently falling through the translator: adding one trips this guard so its

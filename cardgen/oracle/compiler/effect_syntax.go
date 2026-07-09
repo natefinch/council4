@@ -474,6 +474,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectCantBlock
 	case parser.EffectCast:
 		return EffectCast
+	case parser.EffectChooseExiledCard:
+		return EffectChooseExiledCard
 	case parser.EffectCounter:
 		return EffectCounter
 	case parser.EffectCopyStackObject:
