@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,241 of 32,501 cards eligible for paper support (53.0%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,248 of 32,501 cards eligible for paper support (53.1%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2598,6 +2598,7 @@ Council4 currently supports **17,241 of 32,501 cards eligible for paper support 
 - Clear
 - Clear a Path
 - Clear Shot
+- Clear the Mind
 - Clear the Stage
 - Clearwater Pathway // Murkwater Pathway
 - Cleaver Riot
@@ -8318,6 +8319,7 @@ Council4 currently supports **17,241 of 32,501 cards eligible for paper support 
 - Leaping Ambush
 - Leaping Lizard
 - Leaping Master
+- Learn from the Past
 - Leatherback Baloth
 - Leatherhead, Iron Gator
 - Leave in the Dust
@@ -10949,6 +10951,7 @@ Council4 currently supports **17,241 of 32,501 cards eligible for paper support 
 - Primal Bellow
 - Primal Boost
 - Primal Cocoon
+- Primal Command
 - Primal Druid
 - Primal Forcemage
 - Primal Frenzy
@@ -11192,6 +11195,7 @@ Council4 currently supports **17,241 of 32,501 cards eligible for paper support 
 - Queen's Bay Soldier
 - Queen's Commission
 - Quench
+- Quest for Ancient Secrets
 - Quest for the Gemblades
 - Quest for the Goblin Lord
 - Quest for the Gravelord
@@ -11630,6 +11634,7 @@ Council4 currently supports **17,241 of 32,501 cards eligible for paper support 
 - Relm's Sketching
 - Remand
 - Remember the Fallen
+- Reminisce
 - Remnant Elemental
 - Remorseful Cleric
 - Remote Farm
@@ -15107,6 +15112,7 @@ Council4 currently supports **17,241 of 32,501 cards eligible for paper support 
 - Thragtusk
 - Thrakkus the Butcher
 - Thran Dynamo
+- Thran Foundry
 - Thran Golem
 - Thran Quarry
 - Thran Temporal Gateway
