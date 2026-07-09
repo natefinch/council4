@@ -1068,6 +1068,13 @@ func TestCompileStaticGroupAnthemSubjects(t *testing.T) {
 			tapState:      StaticTapStateTapped,
 			excludeSource: true,
 		},
+		"other controlled untapped creatures": {
+			source:        "Other untapped creatures you control have hexproof.",
+			domain:        StaticGroupSourceControllerPermanents,
+			requireType:   []types.Card{types.Creature},
+			tapState:      StaticTapStateUntapped,
+			excludeSource: true,
+		},
 		"battlefield color creatures": {
 			source:      "White creatures get +1/+1.",
 			domain:      StaticGroupBattlefield,

@@ -3861,6 +3861,11 @@ func staticGroupForSubject(subject StaticSubjectKind, span shared.Span, subtype 
 		group.Selection.RequiredTypes = []types.Card{types.Creature}
 		group.Selection.TapState = StaticTapStateTapped
 		group.ExcludeSource = true
+	case StaticSubjectOtherControlledUntappedCreatures:
+		group.Domain = StaticGroupSourceControllerPermanents
+		group.Selection.RequiredTypes = []types.Card{types.Creature}
+		group.Selection.TapState = StaticTapStateUntapped
+		group.ExcludeSource = true
 	case StaticSubjectControlledArtifactCreatures:
 		group.Domain = StaticGroupSourceControllerPermanents
 		group.Selection.RequiredTypes = []types.Card{types.Artifact, types.Creature}

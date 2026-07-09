@@ -752,6 +752,12 @@ func TestLowerStaticFilteredCreatureGroupAnthem(t *testing.T) {
 			tapped:     game.TriTrue,
 			excluded:   true,
 		},
+		"other controlled untapped creatures": {
+			oracleText: "Other untapped creatures you control get +1/+1.",
+			domain:     game.GroupDomainObjectControlled,
+			tapped:     game.TriFalse,
+			excluded:   true,
+		},
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
