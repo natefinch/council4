@@ -375,7 +375,7 @@ func canActivateHandManaAbility(g *game.Game, playerID game.PlayerID, cardID id.
 		return false
 	}
 	if !activatedAbilityTimingAllows(g, playerID, body.Timing) ||
-		activatedAbilityUsedThisTurn(g, cardID, abilityIndex, body.Timing) {
+		activatedAbilityUsedThisTurn(g, cardID, abilityIndex, body.Timing, 0) {
 		return false
 	}
 	if !activationConditionSatisfied(g, playerID, nil, body.ActivationCondition) {
@@ -479,7 +479,7 @@ func canActivateEquipAbilityWithModes(g *game.Game, playerID game.PlayerID, perm
 	if !bodyAttachesLikeEquip(body) && body.Timing != game.SorceryOnly {
 		return false
 	}
-	if !isSorcerySpeed(g, playerID) || abilityHasNonTapAdditionalCosts(body.AdditionalCosts) || activatedAbilityUsedThisTurn(g, permanent.ObjectID, abilityIndex, body.Timing) {
+	if !isSorcerySpeed(g, playerID) || abilityHasNonTapAdditionalCosts(body.AdditionalCosts) || activatedAbilityUsedThisTurn(g, permanent.ObjectID, abilityIndex, body.Timing, body.MaxActivationsPerTurn) {
 		return false
 	}
 	if !activationConditionSatisfied(g, playerID, permanent, body.ActivationCondition) {
@@ -515,7 +515,7 @@ func canActivateGeneralAbilityWithModes(g *game.Game, playerID game.PlayerID, pe
 	if bodyAttachesLikeEquip(body) || !bodyFunctionsOnBattlefield(body) {
 		return false
 	}
-	if !activatedAbilityTimingAllows(g, playerID, body.Timing) || activatedAbilityUsedThisTurn(g, permanent.ObjectID, abilityIndex, body.Timing) {
+	if !activatedAbilityTimingAllows(g, playerID, body.Timing) || activatedAbilityUsedThisTurn(g, permanent.ObjectID, abilityIndex, body.Timing, body.MaxActivationsPerTurn) {
 		return false
 	}
 	if !activationConditionSatisfied(g, playerID, permanent, body.ActivationCondition) {
@@ -577,7 +577,7 @@ func canActivateHandAbilityWithModes(g *game.Game, playerID game.PlayerID, cardI
 		return false
 	}
 	if !activatedAbilityTimingAllows(g, playerID, body.Timing) ||
-		activatedAbilityUsedThisTurn(g, cardID, abilityIndex, body.Timing) {
+		activatedAbilityUsedThisTurn(g, cardID, abilityIndex, body.Timing, body.MaxActivationsPerTurn) {
 		return false
 	}
 	if !activationConditionSatisfied(g, playerID, nil, body.ActivationCondition) {
@@ -606,7 +606,7 @@ func canActivateGraveyardAbilityWithModes(g *game.Game, playerID game.PlayerID, 
 	if game.BodyFunctionZone(body) != zone.Graveyard {
 		return false
 	}
-	if !activatedAbilityTimingAllows(g, playerID, body.Timing) || activatedAbilityUsedThisTurn(g, cardID, abilityIndex, body.Timing) {
+	if !activatedAbilityTimingAllows(g, playerID, body.Timing) || activatedAbilityUsedThisTurn(g, cardID, abilityIndex, body.Timing, body.MaxActivationsPerTurn) {
 		return false
 	}
 	if !activationConditionSatisfied(g, playerID, nil, body.ActivationCondition) {
@@ -653,7 +653,7 @@ func canActivateManaAbility(g *game.Game, playerID game.PlayerID, permanent *gam
 		return false
 	}
 	if !activatedAbilityTimingAllows(g, playerID, body.Timing) ||
-		activatedAbilityUsedThisTurn(g, permanent.ObjectID, abilityIndex, body.Timing) {
+		activatedAbilityUsedThisTurn(g, permanent.ObjectID, abilityIndex, body.Timing, 0) {
 		return false
 	}
 	if !activationConditionSatisfied(g, playerID, permanent, body.ActivationCondition) {
@@ -890,14 +890,15 @@ func turnBeforeAttackersDeclared(turn game.TurnState) bool {
 	}
 }
 
-func activatedAbilityUsedThisTurn(g *game.Game, sourceID id.ID, abilityIndex int, timing game.TimingRestriction) bool {
+func activatedAbilityUsedThisTurn(g *game.Game, sourceID id.ID, abilityIndex int, timing game.TimingRestriction, maxPerTurn int) bool {
+	use := game.ActivatedAbilityUse{SourceID: sourceID, AbilityIndex: abilityIndex}
+	if maxPerTurn > 0 && g.AbilityActivationsThisTurn[use] >= maxPerTurn {
+		return true
+	}
 	if !abilityHasOncePerTurnRestriction(timing) {
 		return false
 	}
-	return g.ActivatedAbilitiesThisTurn[game.ActivatedAbilityUse{
-		SourceID:     sourceID,
-		AbilityIndex: abilityIndex,
-	}]
+	return g.ActivatedAbilitiesThisTurn[use]
 }
 
 func recordActivatedAbilityUse(g *game.Game, sourceID id.ID, abilityIndex int, timing game.TimingRestriction) {

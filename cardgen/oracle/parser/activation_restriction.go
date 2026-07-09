@@ -60,7 +60,13 @@ func parseActivationRestriction(tokens []shared.Token) ([]ActivationRestriction,
 	if len(tokens) > 0 && tokens[len(tokens)-1].Kind == shared.Period {
 		tokens = tokens[:len(tokens)-1]
 	}
-	if len(tokens) < 2 || !syntaxWordsEqual(tokens[:2], "activate", "only") {
+	if len(tokens) < 2 || !equalWord(tokens[0], "activate") {
+		return nil, false
+	}
+	if restriction, ok := parseActivateNoMoreThanRestriction(tokens, fullSpan); ok {
+		return []ActivationRestriction{restriction}, true
+	}
+	if !equalWord(tokens[1], "only") {
 		return nil, false
 	}
 	if len(tokens) == 2 {
@@ -77,6 +83,62 @@ func parseActivationRestriction(tokens []shared.Token) ([]ActivationRestriction,
 		restrictions = append(restrictions, restriction)
 	}
 	return restrictions, true
+}
+
+// parseActivateNoMoreThanRestriction recognizes "Activate [this ability/it/them]
+// no more than <count> each turn." (Pit Imp, Manaforge Cinder), returning a
+// frequency restriction that caps activations at the parsed count. It returns
+// ok=false for any other opening so the "Activate only …" path is tried instead.
+func parseActivateNoMoreThanRestriction(tokens []shared.Token, fullSpan shared.Span) (ActivationRestriction, bool) {
+	rest := tokens[1:]
+	if trimmed, ok := cutSyntaxWords(rest, "this", "ability"); ok {
+		rest = trimmed
+	} else if trimmed, ok := cutSyntaxWords(rest, "it"); ok {
+		rest = trimmed
+	} else if trimmed, ok := cutSyntaxWords(rest, "them"); ok {
+		rest = trimmed
+	}
+	rest, ok := cutSyntaxWords(rest, "no", "more", "than")
+	if !ok {
+		return ActivationRestriction{}, false
+	}
+	count, rest, ok := parseActivationAtMostCount(rest)
+	if !ok {
+		return ActivationRestriction{}, false
+	}
+	period, ok := parseActivationFrequencyPeriod(rest)
+	if !ok {
+		return ActivationRestriction{}, false
+	}
+	return ActivationRestriction{
+		Kind: ActivationRestrictionFrequency,
+		Span: fullSpan,
+		Frequency: ActivationFrequencyRestriction{
+			Span:   fullSpan,
+			Count:  count,
+			Period: period,
+		},
+	}, true
+}
+
+// parseActivationAtMostCount parses the "<N> times" / "twice" / "once" count of a
+// "no more than …" cap into an ActivationFrequencyCountAtMost with Value N.
+func parseActivationAtMostCount(tokens []shared.Token) (ActivationFrequencyCount, []shared.Token, bool) {
+	if len(tokens) == 0 {
+		return ActivationFrequencyCount{}, nil, false
+	}
+	if equalWord(tokens[0], "once") {
+		return ActivationFrequencyCount{Kind: ActivationFrequencyCountAtMost, Value: 1, Span: tokens[0].Span}, tokens[1:], true
+	}
+	if equalWord(tokens[0], "twice") {
+		return ActivationFrequencyCount{Kind: ActivationFrequencyCountAtMost, Value: 2, Span: tokens[0].Span}, tokens[1:], true
+	}
+	if len(tokens) >= 2 && equalWord(tokens[1], "times") {
+		if n, ok := CardinalWordValue(tokens[0].Text); ok && n >= 1 {
+			return ActivationFrequencyCount{Kind: ActivationFrequencyCountAtMost, Value: n, Span: shared.SpanOf(tokens[:2])}, tokens[2:], true
+		}
+	}
+	return ActivationFrequencyCount{}, nil, false
 }
 
 // parseConditionalActivationRestriction handles an "Activate only if

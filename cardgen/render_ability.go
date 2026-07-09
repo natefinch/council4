@@ -131,6 +131,9 @@ func (r Renderer) renderActivatedAbility(ctx *renderCtx, ability *game.Activated
 		}
 		fields = append(fields, fmt.Sprintf("Timing: %s,", timing))
 	}
+	if ability.MaxActivationsPerTurn > 0 {
+		fields = append(fields, fmt.Sprintf("MaxActivationsPerTurn: %d,", ability.MaxActivationsPerTurn))
+	}
 	if len(ability.KeywordAbilities) > 0 {
 		elements := make([]string, 0, len(ability.KeywordAbilities))
 		for _, keyword := range ability.KeywordAbilities {

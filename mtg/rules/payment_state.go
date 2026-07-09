@@ -113,7 +113,7 @@ func (s *rulesPaymentState) ActivationConditionSatisfied(playerID game.PlayerID,
 
 func (s *rulesPaymentState) ManaAbilityTimingAllowed(playerID game.PlayerID, permanent *game.Permanent, abilityIndex int, timing game.TimingRestriction) bool {
 	return activatedAbilityTimingAllows(s.g, playerID, timing) &&
-		!activatedAbilityUsedThisTurn(s.g, permanent.ObjectID, abilityIndex, timing)
+		!activatedAbilityUsedThisTurn(s.g, permanent.ObjectID, abilityIndex, timing, 0)
 }
 
 func (s *rulesPaymentState) PermanentByObjectID(objectID id.ID) (*game.Permanent, bool) {

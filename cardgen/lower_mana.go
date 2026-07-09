@@ -153,6 +153,18 @@ func lowerManaAbility(
 	ability compiler.CompiledAbility,
 	syntax *parser.Ability,
 ) (game.ManaAbility, *shared.Diagnostic) {
+	if ability.MaxActivationsPerTurn > 0 {
+		// A mana ability's per-turn activation cap ("Activate no more than three
+		// times each turn.", Manaforge Cinder) is not enforced on the mana-payment
+		// path (mana abilities used to pay a cost do not increment the per-ability
+		// activation counter), so lowering it would silently ignore the cap. Fail
+		// closed until that path counts activations.
+		return game.ManaAbility{}, executableDiagnostic(
+			ability,
+			"unsupported activation restriction",
+			"the executable source backend does not enforce a per-turn activation cap on mana abilities",
+		)
+	}
 	if len(ability.Content.Modes) != 0 {
 		return game.ManaAbility{}, executableDiagnostic(
 			ability,

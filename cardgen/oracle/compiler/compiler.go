@@ -120,6 +120,10 @@ func compileAbility(
 		compiled.ActivationTiming = timing
 		compiled.ActivationTimingSpan = timingSpan
 	}
+	if maxPerTurn, maxSpan := compileActivationMaxPerTurn(ability.ActivationRestrictions); maxPerTurn > 0 {
+		compiled.MaxActivationsPerTurn = maxPerTurn
+		compiled.MaxActivationsPerTurnSpan = maxSpan
+	}
 	if kind == AbilityTriggered && ability.Optional {
 		compiled.Optional = true
 		compiled.OptionalSpan = ability.OptionalSpan
@@ -340,6 +344,22 @@ func compileActivationTiming(kind AbilityKind, restrictions []parser.ActivationR
 	return ActivationTimingUnsupported, span
 }
 
+// compileActivationMaxPerTurn returns the per-turn activation cap N from an
+// "Activate no more than N times each turn." restriction, plus its source span,
+// or (0, zero span) when the ability carries no such cap.
+func compileActivationMaxPerTurn(restrictions []parser.ActivationRestriction) (int, shared.Span) {
+	for i := range restrictions {
+		frequency := restrictions[i].Frequency
+		if restrictions[i].Kind == parser.ActivationRestrictionFrequency &&
+			frequency.Count.Kind == parser.ActivationFrequencyCountAtMost &&
+			frequency.Period.Kind == parser.ActivationFrequencyPeriodTurn &&
+			frequency.Count.Value > 0 {
+			return frequency.Count.Value, restrictions[i].Span
+		}
+	}
+	return 0, shared.Span{}
+}
+
 func compileActivationRestriction(restriction *parser.ActivationRestriction) ActivationTimingKind {
 	switch restriction.Kind {
 	case parser.ActivationRestrictionSorceryTiming:
@@ -350,6 +370,13 @@ func compileActivationRestriction(restriction *parser.ActivationRestriction) Act
 		if restriction.Frequency.Count.Kind == parser.ActivationFrequencyCountOnce &&
 			restriction.Frequency.Period.Kind == parser.ActivationFrequencyPeriodTurn {
 			return ActivationTimingOncePerTurn
+		}
+		if restriction.Frequency.Count.Kind == parser.ActivationFrequencyCountAtMost &&
+			restriction.Frequency.Period.Kind == parser.ActivationFrequencyPeriodTurn {
+			// A "no more than N times each turn" cap is enforced through
+			// MaxActivationsPerTurn (compileActivationMaxPerTurn), not the timing
+			// channel, so it imposes no timing restriction.
+			return ActivationTimingNone
 		}
 	case parser.ActivationRestrictionPhaseStep:
 		if restriction.PhaseStep.Name.Kind == parser.PhaseStepNameCombat &&

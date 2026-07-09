@@ -186,6 +186,9 @@ func lowerActivatedAbilityKind(
 	if ability.ActivationTiming != compiler.ActivationTimingNone {
 		spans = append(spans, ability.ActivationTimingSpan)
 	}
+	if ability.MaxActivationsPerTurn > 0 {
+		spans = append(spans, ability.MaxActivationsPerTurnSpan)
+	}
 	if ability.SourceAbilityCostReduction != nil {
 		spans = append(spans, ability.SourceAbilityCostReduction.Span)
 	}
@@ -705,14 +708,15 @@ func lowerActivatedAbility(
 	}
 
 	result := game.ActivatedAbility{
-		Text:                shell.text,
-		ManaCost:            shell.manaCost,
-		AdditionalCosts:     shell.additionalCosts,
-		CostModifiers:       shell.costModifiers,
-		ZoneOfFunction:      shell.zoneOfFunction,
-		Timing:              shell.timing,
-		ActivationCondition: shell.activationCondition,
-		Content:             shell.content,
+		Text:                  shell.text,
+		ManaCost:              shell.manaCost,
+		AdditionalCosts:       shell.additionalCosts,
+		CostModifiers:         shell.costModifiers,
+		ZoneOfFunction:        shell.zoneOfFunction,
+		Timing:                shell.timing,
+		MaxActivationsPerTurn: ability.MaxActivationsPerTurn,
+		ActivationCondition:   shell.activationCondition,
+		Content:               shell.content,
 	}
 	return result, nil
 }
