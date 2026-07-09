@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,249 of 32,501 cards eligible for paper support (53.1%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,255 of 32,501 cards eligible for paper support (53.1%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -287,6 +287,7 @@ Council4 currently supports **17,249 of 32,501 cards eligible for paper support 
 - Aku Djinn
 - Akul the Unrepentant
 - Al Bhed Salvagers
+- Alabaster Dragon
 - Alabaster Host Intercessor
 - Alabaster Host Sanctifier
 - Alabaster Kirin
@@ -448,6 +449,7 @@ Council4 currently supports **17,249 of 32,501 cards eligible for paper support 
 - Angel of Despair
 - Angel of Finality
 - Angel of Flight Alabaster
+- Angel of Fury
 - Angel of Glory's Rise
 - Angel of Invention
 - Angel of Light
@@ -2287,6 +2289,7 @@ Council4 currently supports **17,249 of 32,501 cards eligible for paper support 
 - Caustic Tar
 - Cautious Survivor
 - Cavalcade of Calamity
+- Cavalier of Gales
 - Cavalier of Night
 - Cavalry Drillmaster
 - Cave of Temptation
@@ -3957,6 +3960,7 @@ Council4 currently supports **17,249 of 32,501 cards eligible for paper support 
 - Drastic Revelation
 - Draugr Recruiter
 - Drawn from Dreams
+- Dread
 - Dread Cacodemon
 - Dread Drone
 - Dread Linnorm // Scale Deflection
@@ -12739,6 +12743,7 @@ Council4 currently supports **17,249 of 32,501 cards eligible for paper support 
 - Serra Advocate
 - Serra Angel
 - Serra Ascendant
+- Serra Avatar
 - Serra Aviary
 - Serra Disciple
 - Serra Paladin
@@ -16991,6 +16996,7 @@ Council4 currently supports **17,249 of 32,501 cards eligible for paper support 
 - World-Weary
 - Worldly Tutor
 - Worldsoul Colossus
+- Worldspine Wurm
 - Worldwalker Helm
 - Worm
 - Worm Harvest
