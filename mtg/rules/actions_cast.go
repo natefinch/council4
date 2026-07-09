@@ -35,8 +35,13 @@ func (e *Engine) applyPlayLandFaceFromZoneWithChoices(g *game.Game, playerID gam
 	if !ok {
 		return false
 	}
-	if sourceZone != zone.Hand && !canPlayLandFromZoneByRuleEffect(g, playerID, cardID, sourceZone) {
-		return false
+	var landPermission game.RuleEffect
+	if sourceZone != zone.Hand {
+		permission, ok := matchingPlayLandFromZoneEffect(g, playerID, cardID, sourceZone)
+		if !ok {
+			return false
+		}
+		landPermission = permission
 	}
 	source, ok := playerCardsInZone(sourcePlayer, sourceZone)
 	if !ok || !source.Remove(cardID) {
@@ -47,6 +52,9 @@ func (e *Engine) applyPlayLandFaceFromZoneWithChoices(g *game.Game, playerID gam
 		return false
 	}
 	g.Turn.LandsPlayedThisTurn++
+	if sourceZone != zone.Hand {
+		recordExilePlayPermissionUse(g, landPermission)
+	}
 	emitCardPlayedFromExileEvent(g, playerID, cardID, sourceZone)
 	return true
 }
@@ -109,6 +117,18 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		if permission, permOK := castLinkedExileForFreePermission(g, playerID, card.ID); permOK {
 			freeLinkedExile = true
 			freeLinkedExilePermissionID = permission.ID
+		}
+	}
+	// exilePlayPermission captures the play/cast-from-exile permission authorizing
+	// this cast, if any, so a once-per-turn permission's shared per-turn use can be
+	// recorded once the spell is successfully put on the stack ("Once each turn,
+	// you may play a card from exile ...", Evelyn, the Covetous). It is read before
+	// the card leaves exile because the permission's exile-counter filter no longer
+	// matches once the card moves.
+	var exilePlayPermission game.RuleEffect
+	if sourceZone == zone.Exile {
+		if permission, permOK := matchingCastSpellsFromZoneEffect(g, playerID, card.ID, sourceZone, cast.Face); permOK {
+			exilePlayPermission = permission
 		}
 	}
 	// spendAnyMana marks a card cast from exile under a play permission that lets
@@ -266,6 +286,7 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 	if freeLinkedExile {
 		consumeCastLinkedExileForFreePermission(g, freeLinkedExilePermissionID)
 	}
+	recordExilePlayPermissionUse(g, exilePlayPermission)
 	obj.Evoked = !cast.Overloaded && evokeAlternativeChosen(spellDef, prefs.AlternativeIndex)
 	obj.Converted = !cast.Overloaded && convertedAlternativeChosen(spellDef, prefs.AlternativeIndex)
 	obj.Flashback = paymentResult.CastPermission == payment.SpellCastPermissionFlashback
