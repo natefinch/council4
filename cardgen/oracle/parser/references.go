@@ -22,6 +22,13 @@ const (
 	ReferenceThatPlayer  ReferenceKind = "ReferenceThatPlayer"
 	ReferencePronoun     ReferenceKind = "ReferencePronoun"
 	ReferenceChosenCards ReferenceKind = "ReferenceChosenCards"
+	// ReferenceDiedCreature is the explicit "the creature that died" wording,
+	// the triggering creature of a dies trigger named by last-known information
+	// (Death's Presence). It is distinct from the demonstrative
+	// ReferenceThatObject because it never names a target creature; it always
+	// binds to the event permanent, so the compiler must not treat it as a
+	// target antecedent the way it does for "that creature".
+	ReferenceDiedCreature ReferenceKind = "ReferenceDiedCreature"
 )
 
 // PronounKind identifies the exact grammatical pronoun carried by a reference.
@@ -134,6 +141,28 @@ func collectReferences(tokens []shared.Token, cardName string, legendary bool) [
 	}
 	for i := 0; i < len(tokens); i++ {
 		switch {
+		case i+3 < len(tokens) &&
+			equalWord(tokens[i], "the") && equalWord(tokens[i+1], "creature") &&
+			equalWord(tokens[i+2], "that") && equalWord(tokens[i+3], "died") &&
+			i >= 2 && equalWord(tokens[i-1], "of") &&
+			(equalWord(tokens[i-2], "power") || equalWord(tokens[i-2], "toughness") ||
+				(equalWord(tokens[i-2], "value") && i >= 3 && equalWord(tokens[i-3], "mana"))):
+			// "the creature that died" names the triggering creature of a dies
+			// trigger, recognized only as the object of the "the power/toughness/
+			// mana value of" characteristic amount (Death's Presence). The span
+			// matches that amount's ReferenceSpan, so the referent binds to the
+			// event permanent and the runtime reads the dead creature's last-known
+			// characteristic. Scoping detection to the characteristic-of context
+			// leaves the comparison wording "lesser mana value than the creature
+			// that died" (Death's Oasis) untouched.
+			phrase := tokens[i : i+4]
+			references = append(references, Reference{
+				Kind:   ReferenceDiedCreature,
+				Span:   shared.SpanOf(phrase),
+				Tokens: phrase,
+				Text:   joinTokens(phrase),
+			})
+			i += 3
 		case i+2 < len(tokens) &&
 			equalWord(tokens[i], "the") &&
 			equalWord(tokens[i+1], "chosen") &&

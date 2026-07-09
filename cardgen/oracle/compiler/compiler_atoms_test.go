@@ -262,12 +262,13 @@ func TestCompileReferencesFollowsTypedAtoms(t *testing.T) {
 func TestCompileReferenceKindMapping(t *testing.T) {
 	t.Parallel()
 	cases := map[parser.ReferenceKind]ReferenceKind{
-		parser.ReferenceSelfName:   ReferenceSelfName,
-		parser.ReferenceThisObject: ReferenceThisObject,
-		parser.ReferenceThatObject: ReferenceThatObject,
-		parser.ReferenceThatPlayer: ReferenceThatPlayer,
-		parser.ReferencePronoun:    ReferencePronoun,
-		parser.ReferenceUnknown:    ReferenceUnknown,
+		parser.ReferenceSelfName:     ReferenceSelfName,
+		parser.ReferenceThisObject:   ReferenceThisObject,
+		parser.ReferenceThatObject:   ReferenceThatObject,
+		parser.ReferenceThatPlayer:   ReferenceThatPlayer,
+		parser.ReferencePronoun:      ReferencePronoun,
+		parser.ReferenceDiedCreature: ReferenceDiedCreature,
+		parser.ReferenceUnknown:      ReferenceUnknown,
 	}
 	for atom, want := range cases {
 		if got := compileReferenceKind(atom); got != want {

@@ -196,6 +196,18 @@ func TestLowerDynamicCounterAmountObjectReferences(t *testing.T) {
 			wantAmountObj: game.EventPermanentReference(),
 		},
 		{
+			name: "target creature dies event power",
+			card: ScryfallCard{
+				Name:       "Death's Presence",
+				Layout:     "normal",
+				TypeLine:   "Enchantment",
+				OracleText: "Whenever a creature you control dies, put X +1/+1 counters on target creature you control, where X is the power of the creature that died.",
+			},
+			wantObject:    game.TargetPermanentReference(0),
+			wantAmount:    game.DynamicAmountObjectPower,
+			wantAmountObj: game.EventPermanentReference(),
+		},
+		{
 			name: "target spell mana value",
 			card: ScryfallCard{
 				Name:       "Draining Whelk",

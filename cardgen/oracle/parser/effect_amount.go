@@ -960,6 +960,9 @@ func parseDynamicAmountSubjectHelper(tokens []shared.Token, start int, atoms Ato
 	if subject, ok := parseSacrificedCreatureCharacteristic(tokens, start); ok {
 		return subject, true
 	}
+	if subject, ok := parseEventCreatureDiedCharacteristic(tokens, start); ok {
+		return subject, true
+	}
 	return dynamicAmountSubject{}, false
 }
 
@@ -1178,6 +1181,42 @@ func parseSacrificedCreatureCharacteristic(tokens []shared.Token, start int) (dy
 	default:
 		return dynamicAmountSubject{}, false
 	}
+}
+
+// parseEventCreatureDiedCharacteristic recognizes "the power of the creature
+// that died" and its toughness and mana-value siblings, the referenced-object
+// characteristic amount a "put X counters" clause on a dies trigger reads
+// (Death's Presence: "put X +1/+1 counters on target creature you control,
+// where X is the power of the creature that died"). "the creature that died"
+// names the triggering creature; collectReferences reports the identical span
+// so the amount binds to the event permanent, and the runtime reads the dead
+// creature's characteristic from last-known information (CR 603.10, CR 608.2h).
+// It fails closed for any object phrase other than the exact "the creature that
+// died", so unrelated "the power of ..." wordings stay unrecognized.
+func parseEventCreatureDiedCharacteristic(tokens []shared.Token, start int) (dynamicAmountSubject, bool) {
+	var kind EffectDynamicAmountKind
+	var charEnd int
+	switch {
+	case effectWordsAt(tokens, start, "the", "power", "of"):
+		kind, charEnd = EffectDynamicAmountSourcePower, start+3
+	case effectWordsAt(tokens, start, "the", "toughness", "of"):
+		kind, charEnd = EffectDynamicAmountSourceToughness, start+3
+	case effectWordsAt(tokens, start, "the", "mana", "value", "of"):
+		kind, charEnd = EffectDynamicAmountSourceManaValue, start+4
+	default:
+		return dynamicAmountSubject{}, false
+	}
+	if !effectWordsAt(tokens, charEnd, "the", "creature", "that", "died") {
+		return dynamicAmountSubject{}, false
+	}
+	refEnd := charEnd + 4
+	if !dynamicAmountBoundary(tokens, refEnd) {
+		return dynamicAmountSubject{}, false
+	}
+	return dynamicAmountSubject{
+		amount: EffectAmountSyntax{DynamicKind: kind, ReferenceSpan: shared.SpanOf(tokens[charEnd:refEnd])},
+		end:    refEnd,
+	}, true
 }
 
 // parseDynamicDevotionSubject recognizes "your devotion to <color>" and the

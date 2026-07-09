@@ -27,6 +27,7 @@ var Cards = []cardset.Entry{
 	{Name: "Dawnhart Wardens", New: DawnhartWardens},
 	{Name: "Deadeye Harpooner", New: DeadeyeHarpooner},
 	{Name: "Death Denied", New: DeathDenied},
+	{Name: "Death's Presence", New: DeathSPresence},
 	{Name: "Deathcap Glade", New: DeathcapGlade},
 	{Name: "Deathgazer", New: Deathgazer},
 	{Name: "Deathknell Berserker", New: DeathknellBerserker},

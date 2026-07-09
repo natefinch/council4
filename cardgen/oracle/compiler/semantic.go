@@ -3725,6 +3725,11 @@ const (
 	ReferenceThatObject
 	ReferenceThatPlayer
 	ReferenceChosenCards
+	// ReferenceDiedCreature is the explicit "the creature that died" wording, the
+	// triggering creature of a dies trigger. Unlike the demonstrative
+	// ReferenceThatObject it never names a target, so bindReferences binds it
+	// straight to the event permanent rather than a target antecedent.
+	ReferenceDiedCreature
 )
 
 // ReferenceBinding identifies the intended referent of a reference occurrence.

@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,158 of 32,501 cards eligible for paper support (52.8%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,194 of 32,501 cards eligible for paper support (52.9%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -957,6 +957,7 @@ Council4 currently supports **17,158 of 32,501 cards eligible for paper support 
 - Awaken the Bear
 - Awaken the Honored Dead
 - Awakening
+- Awakening Zone
 - Axebane Beast
 - Axebane Stag
 - Axegrinder Giant
@@ -1364,6 +1365,7 @@ Council4 currently supports **17,158 of 32,501 cards eligible for paper support 
 - Birnin Zana Plaza
 - Birthday Escape
 - Birthing Boughs
+- Birthing Hulk
 - Bishop of Rebirth
 - Bishop of the Bloodstained
 - Bishop of Wings
@@ -1503,6 +1505,7 @@ Council4 currently supports **17,158 of 32,501 cards eligible for paper support 
 - Blistering Barrier
 - Blistering Dieflyn
 - Blistering Firecat
+- Blisterpod
 - Blisterspit Gremlin
 - Blisterstick Shaman
 - Blitz Leech
@@ -1937,6 +1940,8 @@ Council4 currently supports **17,158 of 32,501 cards eligible for paper support 
 - Bronze Walrus
 - Bronzebeak Moa
 - Bronzeplate Boar
+- Brood Butcher
+- Brood Monitor
 - Brood Weaver
 - Broodhatch Nantuko
 - Broodhunter Wurm
@@ -2084,6 +2089,7 @@ Council4 currently supports **17,158 of 32,501 cards eligible for paper support 
 - Call the Bloodline
 - Call the Cavalry
 - Call the Gatewatch
+- Call the Scions
 - Call the Skybreaker
 - Call to Glory
 - Call to Heel
@@ -2179,6 +2185,7 @@ Council4 currently supports **17,158 of 32,501 cards eligible for paper support 
 - Carnivorous Moss-Beast
 - Carnivorous Plant
 - Carrier Pigeons
+- Carrier Thrall
 - Carrion
 - Carrion Ants
 - Carrion Beetles
@@ -2237,6 +2244,7 @@ Council4 currently supports **17,158 of 32,501 cards eligible for paper support 
 - Cat-Gator
 - Cat-Owl
 - Catacomb Crocodile
+- Catacomb Sifter
 - Catacomb Slug
 - Catalog
 - Catalyst Elemental
@@ -2894,6 +2902,7 @@ Council4 currently supports **17,158 of 32,501 cards eligible for paper support 
 - Corpse Connoisseur
 - Corpse Hauler
 - Corpse Knight
+- Corpsehatch
 - Corpsejack Menace
 - Corpses of the Lost
 - Corridor Monitor
@@ -3217,6 +3226,7 @@ Council4 currently supports **17,158 of 32,501 cards eligible for paper support 
 - Dampening Pulse
 - Dance of Shadows
 - Dance of the Tumbleweeds
+- Dance with Devils
 - Dancing Scimitar
 - Dandân
 - Dangerous Wager
@@ -3386,6 +3396,7 @@ Council4 currently supports **17,158 of 32,501 cards eligible for paper support 
 - Death Ward
 - Death Wind
 - Death's Duet
+- Death's Presence
 - Death's-Head Buzzard
 - Death-Hood Cobra
 - Death-Priest of Myrkul
@@ -3595,6 +3606,7 @@ Council4 currently supports **17,158 of 32,501 cards eligible for paper support 
 - Devil
 - Devil Dinosaur
 - Devilish Valet
+- Devils' Playground
 - Devilthorn Fox
 - Devkarin Dissident
 - Devoted Druid
@@ -3931,6 +3943,7 @@ Council4 currently supports **17,158 of 32,501 cards eligible for paper support 
 - Draugr Recruiter
 - Drawn from Dreams
 - Dread Cacodemon
+- Dread Drone
 - Dread Linnorm // Scale Deflection
 - Dread of Night
 - Dread Presence
@@ -4254,6 +4267,7 @@ Council4 currently supports **17,158 of 32,501 cards eligible for paper support 
 - Eldrazi Horror
 - Eldrazi Ravager
 - Eldrazi Scion
+- Eldrazi Skyspawner
 - Eldrazi Spawn
 - Electric Eel
 - Electric Revelation
@@ -4450,6 +4464,7 @@ Council4 currently supports **17,158 of 32,501 cards eligible for paper support 
 - Empyrial Archangel
 - Empyrial Armor
 - Empyrial Plate
+- Emrakul's Hatcher
 - Emrakul's Messenger
 - Emry, Lurker of the Loch
 - Enatu Golem
@@ -4579,6 +4594,7 @@ Council4 currently supports **17,158 of 32,501 cards eligible for paper support 
 - Essence Depleter
 - Essence Drain
 - Essence Extraction
+- Essence Feed
 - Essence Flare
 - Essence Flux
 - Essence Fracture
@@ -4722,6 +4738,7 @@ Council4 currently supports **17,158 of 32,501 cards eligible for paper support 
 - Eyeblight Cullers
 - Eyeblight Massacre
 - Eyeblight's Ending
+- Eyeless Watcher
 - Eyes of the Beholder
 - Eyes of the Watcher
 - Eyes of the Wisent
@@ -5475,6 +5492,7 @@ Council4 currently supports **17,158 of 32,501 cards eligible for paper support 
 - Frogmite
 - Frogtosser Banneret
 - Frolicking Familiar // Blow Off Steam
+- From Beyond
 - Frondland Felidar
 - Frontier Bivouac
 - Frontier Guide
@@ -6143,6 +6161,7 @@ Council4 currently supports **17,158 of 32,501 cards eligible for paper support 
 - Goldmaw Champion
 - Goldmeadow Dodger
 - Goldmeadow Harrier
+- Goldmeadow Lookout
 - Goldmeadow Nomad
 - Goldmire Bridge
 - Goldnight Commander
@@ -6409,6 +6428,7 @@ Council4 currently supports **17,158 of 32,501 cards eligible for paper support 
 - Grovetender Druids
 - Growing Rites of Itlimoc // Itlimoc, Cradle of the Sun
 - Growth Cycle
+- Growth Spasm
 - Growth Spiral
 - Growth-Chamber Guardian
 - Gruesome Deformity
@@ -7288,6 +7308,7 @@ Council4 currently supports **17,158 of 32,501 cards eligible for paper support 
 - Incubation Druid
 - Incubation Sac
 - Incubator // Phyrexian
+- Incubator Drone
 - Incurable Ogre
 - Incursion Specialist
 - Indatha Crystal
@@ -8073,6 +8094,7 @@ Council4 currently supports **17,158 of 32,501 cards eligible for paper support 
 - Koth's Courier
 - Kothophed, Soul Hoarder
 - Kozilek's Channeler
+- Kozilek's Predator
 - Kozilek's Sentinel
 - Kozilek's Shrieker
 - Kozilek's Translator
@@ -8484,6 +8506,7 @@ Council4 currently supports **17,158 of 32,501 cards eligible for paper support 
 - Llanowar Envoy
 - Llanowar Knight
 - Llanowar Loamspeaker
+- Llanowar Mentor
 - Llanowar Reborn
 - Llanowar Scout
 - Llanowar Sentinel
@@ -8743,6 +8766,7 @@ Council4 currently supports **17,158 of 32,501 cards eligible for paper support 
 - Majestic Heliopterus
 - Major Teroh
 - Make a Stand
+- Make Mischief
 - Make Obsolete
 - Make Your Move
 - Makeshift Battalion
@@ -9774,6 +9798,7 @@ Council4 currently supports **17,158 of 32,501 cards eligible for paper support 
 - Nessian Hornbeetle
 - Nessian Wanderer
 - Nessian Wilds Ravager
+- Nest Invader
 - Nest of Scarabs
 - Nest Robber
 - Nested Ghoul
@@ -10457,6 +10482,7 @@ Council4 currently supports **17,158 of 32,501 cards eligible for paper support 
 - Paupers' Cage
 - Pause for Reflection
 - Pavel Maliki
+- Pawn of Ulamog
 - Pawpatch Formation
 - Peace and Quiet
 - Peace of Mind
@@ -11324,6 +11350,7 @@ Council4 currently supports **17,158 of 32,501 cards eligible for paper support 
 - Ransack the Lab
 - Ransom Note
 - Rapacious Dragon
+- Rapacious One
 - Raph's Bravado
 - Raphael, Tough Turtle
 - Rapid Decay
@@ -11732,6 +11759,7 @@ Council4 currently supports **17,158 of 32,501 cards eligible for paper support 
 - Rib Cage Spider
 - Ribbons of the Reikai
 - Ribskiff
+- Ribtruss Roaster
 - Rictus Robber
 - Riddlekeeper
 - Riddlemaster Sphinx
@@ -12368,6 +12396,7 @@ Council4 currently supports **17,158 of 32,501 cards eligible for paper support 
 - Scion of the Swarm
 - Scion of the Wild
 - Scion of Ugin
+- Scion Summoner
 - Scolding Administrator
 - Scorch Rider
 - Scorch Spitter
@@ -12653,6 +12682,7 @@ Council4 currently supports **17,158 of 32,501 cards eligible for paper support 
 - Sergeant John Benton
 - Sergeant-at-Arms
 - Serpent Assassin
+- Serpent Generator
 - Serpent of the Endless Sea
 - Serpent Skin
 - Serpent Warrior
@@ -12982,6 +13012,7 @@ Council4 currently supports **17,158 of 32,501 cards eligible for paper support 
 - Sierra, Nuka's Biggest Fan
 - Sif's Spearmaster
 - Sift
+- Sifter of Skulls
 - Sigarda's Aid
 - Sigarda's Imprisonment
 - Sigarda's Summons
@@ -13156,6 +13187,7 @@ Council4 currently supports **17,158 of 32,501 cards eligible for paper support 
 - Skirk Marauder
 - Skirk Outrider
 - Skirk Prospector
+- Skirk Ridge Exhumer
 - Skirmish Rhino
 - Skirsdag Cultist
 - Skirsdag Flayer
@@ -13165,6 +13197,7 @@ Council4 currently supports **17,158 of 32,501 cards eligible for paper support 
 - Skitter Eel
 - Skitter of Lizards
 - Skittering Heartstopper
+- Skittering Invasion
 - Skittering Precursor
 - Skittering Surveyor
 - Skitterskin
@@ -13619,6 +13652,8 @@ Council4 currently supports **17,158 of 32,501 cards eligible for paper support 
 - Spawn-Gang Commander
 - Spawnbed Protector
 - Spawnbinder Mage
+- Spawning Bed
+- Spawning Breath
 - Spawning Grounds
 - Spawning Pit
 - Spawnwrithe
@@ -15450,6 +15485,7 @@ Council4 currently supports **17,158 of 32,501 cards eligible for paper support 
 - Triplicate Titan
 - Triskaidekaphile
 - Triskelavite
+- Triskelavus
 - Triskelion
 - Triton Cavalry
 - Triton Fortune Hunter

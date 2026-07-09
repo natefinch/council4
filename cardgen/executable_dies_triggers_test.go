@@ -241,6 +241,39 @@ func TestGenerateExecutableCardSourceDynamicSelfDiesDamage(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceDiesEventPowerCounters(t *testing.T) {
+	t.Parallel()
+	// Death's Presence: "put X +1/+1 counters on target creature you control,
+	// where X is the power of the creature that died." The counted amount reads
+	// the dying creature (the event permanent) through last-known information,
+	// while the counters land on the chosen target.
+	card := &ScryfallCard{
+		Name:       "Test Presence",
+		Layout:     "normal",
+		TypeLine:   "Enchantment",
+		OracleText: "Whenever a creature you control dies, put X +1/+1 counters on target creature you control, where X is the power of the creature that died.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.EventPermanentDied",
+		"game.AddCounter{",
+		"game.DynamicAmountObjectPower",
+		"game.EventPermanentReference()",
+		"game.TargetPermanentReference(0)",
+		"counter.PlusOnePlusOne",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceDynamicCountDamage(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
