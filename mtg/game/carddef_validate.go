@@ -1446,6 +1446,19 @@ func (v *cardDefValidator) validateCostModifier(faceName, path string, modifier 
 			v.add(faceName, appendPath(path, "SourceZone"), CardDefIssueInvalidRuleEffect, "source-zone cost modifiers require a real zone")
 		}
 	}
+	if len(modifier.SourceZones) > 0 {
+		if modifier.Kind != CostModifierSpell {
+			v.add(faceName, appendPath(path, "SourceZones"), CardDefIssueInvalidRuleEffect, "source-zone cost modifiers must be spell modifiers")
+		}
+		if modifier.SourceZone.Exists {
+			v.add(faceName, appendPath(path, "SourceZones"), CardDefIssueInvalidRuleEffect, "cost modifier cannot set both SourceZone and SourceZones")
+		}
+		for _, z := range modifier.SourceZones {
+			if z == zone.None {
+				v.add(faceName, appendPath(path, "SourceZones"), CardDefIssueInvalidRuleEffect, "source-zone cost modifiers require real zones")
+			}
+		}
+	}
 	if modifier.TargetsSource && modifier.Kind != CostModifierSpell {
 		v.add(faceName, appendPath(path, "TargetsSource"), CardDefIssueInvalidRuleEffect, "targets-source cost modifiers must be spell modifiers")
 	}

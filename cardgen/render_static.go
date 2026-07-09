@@ -1089,6 +1089,13 @@ func (r Renderer) renderCostModifier(ctx *renderCtx, modifier game.CostModifier)
 		}
 		fields = append(fields, fmt.Sprintf("SourceZone: opt.Val(%s),", zoneLit))
 	}
+	if len(modifier.SourceZones) > 0 {
+		zoneFields, err := renderRuleEffectZoneField(ctx, "SourceZones", modifier.SourceZones)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, zoneFields...)
+	}
 	if modifier.TargetsSource {
 		fields = append(fields, "TargetsSource: true,")
 	}

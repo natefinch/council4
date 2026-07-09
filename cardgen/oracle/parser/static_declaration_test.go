@@ -1727,6 +1727,13 @@ func TestParseStaticSpellCostModifierDeclarationMeaning(t *testing.T) {
 			castZone:  StaticDeclarationCastZoneGraveyard,
 			amount:    1,
 		},
+		"non-hand zone reduction": {
+			source:    "Spells you cast from anywhere other than your hand cost {2} less to cast.",
+			modifier:  StaticDeclarationCostModifierSpellReduction,
+			spellType: StaticDeclarationSpellTypeAll,
+			castZone:  StaticDeclarationCastZoneNonHand,
+			amount:    2,
+		},
 		"creature power threshold reduction": {
 			source:       "Creature spells you cast with power 4 or greater cost {2} less to cast.",
 			modifier:     StaticDeclarationCostModifierSpellReduction,
@@ -1861,13 +1868,14 @@ func TestParseStaticSpellCostModifierColoredFailsClosed(t *testing.T) {
 
 // TestParseStaticSpellCostModifierZoneFailsClosed checks that cast-cost
 // reductions scoped to a zone the parser does not recognize (anything other than
-// "from your graveyard") fail closed rather than parsing as an unscoped modifier.
+// "from your graveyard" or "from anywhere other than your hand") fail closed
+// rather than parsing as an unscoped modifier.
 func TestParseStaticSpellCostModifierZoneFailsClosed(t *testing.T) {
 	t.Parallel()
 	sources := []string{
-		"Spells you cast from anywhere other than your hand cost {2} less to cast.",
 		"Spells you cast from your library cost {1} less to cast.",
 		"Spells you cast from exile cost {1} less to cast.",
+		"Spells you cast from your graveyard or from exile cost {2} less to cast.",
 	}
 	for _, source := range sources {
 		t.Run(source, func(t *testing.T) {

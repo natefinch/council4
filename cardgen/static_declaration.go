@@ -1266,7 +1266,7 @@ func appendStaticOpponentActionRestrictionDeclaration(body *game.StaticAbility, 
 // prohibition.
 func lowerCastFromZones(restriction *compiler.StaticOpponentActionRestrictionDeclaration) ([]zone.Type, bool) {
 	if restriction.CastOnlyFromHand {
-		return []zone.Type{zone.Graveyard, zone.Exile, zone.Library, zone.Command}, true
+		return nonHandCastZones(), true
 	}
 	if len(restriction.CastFromZones) == 0 {
 		return nil, true
@@ -1280,6 +1280,15 @@ func lowerCastFromZones(restriction *compiler.StaticOpponentActionRestrictionDec
 		zones = append(zones, mapped)
 	}
 	return zones, true
+}
+
+// nonHandCastZones lists the concrete cast zones a spell can be cast from other
+// than the hand: the graveyard, exile, library, and command zone. It is the
+// runtime expansion of "anywhere other than your/their hand[s]" for both the
+// cast prohibition (RuleEffectCantCastFromZones) and the cast-cost discount
+// (CostModifier.SourceZones, Sage of the Beyond).
+func nonHandCastZones() []zone.Type {
+	return []zone.Type{zone.Graveyard, zone.Exile, zone.Library, zone.Command}
 }
 
 // lowerCastFromZone maps a single parser cast-zone kind onto its runtime zone.
@@ -1808,11 +1817,15 @@ func appendStaticSpellCostModifierDeclaration(body *game.StaticAbility, declarat
 		TargetsSource:    cost.TargetsSource,
 	}
 	if cost.SourceZone != "" {
-		castZone, ok := lowerCastFromZone(cost.SourceZone)
-		if !ok {
-			return false
+		if cost.SourceZone == parser.StaticDeclarationCastZoneNonHand {
+			base.SourceZones = nonHandCastZones()
+		} else {
+			castZone, ok := lowerCastFromZone(cost.SourceZone)
+			if !ok {
+				return false
+			}
+			base.SourceZone = opt.Val(castZone)
 		}
-		base.SourceZone = opt.Val(castZone)
 	}
 	if cost.ChosenSubtypeFromEntryChoice {
 		base.ChosenSubtypeFromEntryChoice = true
