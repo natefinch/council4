@@ -252,6 +252,18 @@ const (
 	// and zero for a player with no commander. Added last so existing kinds keep
 	// their wire values.
 	DynamicAmountCommanderCastCount
+	// DynamicAmountBlockingCreatures is the number of creatures blocking the
+	// permanent named by Object, read from the current combat's block
+	// declarations as the effect resolves (CR 509.1, CR 608.2c). Unlike
+	// DynamicAmountBlockingCreaturesBeyondFirst, which reads the resolving
+	// ability's source and drops the first blocker for Rampage, this counts every
+	// blocker of the pumped permanent (Object), so it is correct whether the
+	// pumped creature is the source itself ("Whenever this creature becomes
+	// blocked, it gets +2/+2 … for each creature blocking it" — Rabid Elephant)
+	// or the triggering permanent ("Whenever a Beast becomes blocked, it gets …"
+	// — Berserk Murlodont). It is zero when combat is not active or the permanent
+	// is unblocked. Added last so existing kinds keep their wire values.
+	DynamicAmountBlockingCreatures
 )
 
 // DynamicAmount describes an effect amount determined as the effect resolves

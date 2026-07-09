@@ -1747,6 +1747,65 @@ func lowerSharedCreatureTypePumpSpell(ctx contentCtx) (game.AbilityContent, bool
 	}.Ability(), true
 }
 
+// lowerBlockingCreaturesPumpSpell lowers an exact until-end-of-turn pump whose
+// "for each" amount counts the creatures blocking the affected permanent
+// ("Whenever this creature becomes blocked, it gets +2/+2 until end of turn for
+// each creature blocking it.", Rabid Elephant; "Whenever a Beast becomes
+// blocked, it gets +1/+1 until end of turn for each creature blocking it.",
+// Berserk Murlodont). The "blocking it" referent and the pumped subject both
+// name the affected permanent, so the referent reference is split off by the
+// amount's span and the pump addresses the remaining subject reference (the
+// source or the triggering permanent). The blocker count is evaluated relative
+// to the pumped permanent as the ability resolves, so the dynamic amount binds
+// its count object to the pumped permanent. It fails closed for any other shape
+// so unsupported wordings stay rejected.
+func lowerBlockingCreaturesPumpSpell(ctx contentCtx) (game.AbilityContent, bool) {
+	effect := ctx.content.Effects[0]
+	if effect.Amount.DynamicKind != compiler.DynamicAmountCreaturesBlockingSource ||
+		effect.Amount.DynamicForm != compiler.DynamicAmountForEach ||
+		!effect.Exact ||
+		effect.Negated ||
+		effect.Duration != compiler.DurationUntilEndOfTurn ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		!dynamicModifyPTFormValid(&effect) {
+		return game.AbilityContent{}, false
+	}
+	referent, subjects, ok := sourcePowerReferences(&effect)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	switch referent.Binding {
+	case compiler.ReferenceBindingEventPermanent,
+		compiler.ReferenceBindingSource,
+		compiler.ReferenceBindingTarget:
+	default:
+		return game.AbilityContent{}, false
+	}
+	pumped, targets, ok := sourcePowerPumpTarget(ctx, &effect, subjects)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	dynamic, ok := lowerDynamicAmount(effect.Amount, pumped)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	powerDelta := dynamicSignedQuantity(&dynamic, effect.PowerDelta)
+	toughnessDelta := dynamicSignedQuantity(&dynamic, effect.ToughnessDelta)
+	return game.Mode{
+		Targets: targets,
+		Sequence: []game.Instruction{{
+			Primitive: game.ModifyPT{
+				Object:         pumped,
+				PowerDelta:     powerDelta,
+				ToughnessDelta: toughnessDelta,
+				Duration:       game.DurationUntilEndOfTurn,
+			},
+		}},
+	}.Ability(), true
+}
+
 // and the target spec it declares, given the effect's non-power subject
 // references. A single creature target with no subject reference pumps the target
 // slot; no target with a single source, triggering-permanent, or prior-target
@@ -1822,6 +1881,9 @@ func lowerFixedModifyPTSpell(
 		return content, nil
 	}
 	if content, ok := lowerSharedCreatureTypePumpSpell(ctx); ok {
+		return content, nil
+	}
+	if content, ok := lowerBlockingCreaturesPumpSpell(ctx); ok {
 		return content, nil
 	}
 	if len(ctx.content.Targets) == 0 &&

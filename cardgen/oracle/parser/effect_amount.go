@@ -2103,6 +2103,24 @@ func parseDynamicObjectNounCountSubject(tokens []shared.Token, start int, atoms 
 		return dynamicAmountSubject{}, false
 	}
 	plural := strings.HasSuffix(strings.ToLower(tokens[nounStart].Text), "s")
+	if noun == ObjectNounCreature && effectWordsAt(tokens, nounStart+1, "blocking", "it") &&
+		dynamicAmountBoundary(tokens, nounStart+3) {
+		// "creature blocking it" counts the creatures blocking the just-blocked
+		// permanent that receives the pump ("it"). It is a combat-state amount
+		// read from the current block declarations, not a board count, so it is
+		// recognized here before the generic "you control"/"on the battlefield"
+		// board-count noun handling. The "it" referent names the pumped
+		// permanent; its span is carried in ReferenceSpan so the pump lowerer
+		// splits it from the pumped subject reference, mirroring the "shares a
+		// creature type with it" count.
+		return dynamicAmountSubject{
+			amount: EffectAmountSyntax{
+				DynamicKind:   EffectDynamicAmountCreaturesBlockingSource,
+				ReferenceSpan: tokens[nounStart+2].Span,
+			},
+			end: nounStart + 3, count: true, plural: plural,
+		}, true
+	}
 	if noun == ObjectNounOpponent {
 		end := nounStart + 1
 		if effectWordsAt(tokens, end, "you", "attacked", "this", "combat") &&

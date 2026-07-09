@@ -169,6 +169,12 @@ func lowerDynamicAmountKind(amount compiler.CompiledAmount, object game.ObjectRe
 		dynamic.Kind = game.DynamicAmountTimesKicked
 	case compiler.DynamicAmountOpponentsAttackedThisCombat:
 		dynamic.Kind = game.DynamicAmountOpponentsAttackedThisCombat
+	case compiler.DynamicAmountCreaturesBlockingSource:
+		if len(object.Validate()) != 0 {
+			return game.DynamicAmount{}, false
+		}
+		dynamic.Kind = game.DynamicAmountBlockingCreatures
+		dynamic.Object = object
 	case compiler.DynamicAmountLifeLostThisTurn:
 		dynamic.Kind = game.DynamicAmountLifeLostThisTurn
 	case compiler.DynamicAmountLifeGainedThisTurn:

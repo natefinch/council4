@@ -155,6 +155,13 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj opt.V[*game.StackObject], c
 			choice.Kind == game.ResolutionChoiceNumber {
 			amount = choice.Number
 		}
+	case game.DynamicAmountBlockingCreatures:
+		if !obj.Exists {
+			break
+		}
+		if resolved, ok := resolveObjectReference(g, obj.Val, dynamic.Object); ok && resolved.permanent != nil {
+			amount = blockingCreaturesOf(g, resolved.permanent.ObjectID)
+		}
 	case game.DynamicAmountSpellsCastThisTurn, game.DynamicAmountLifeLostThisTurn,
 		game.DynamicAmountLifeGainedThisTurn, game.DynamicAmountCardsDrawnThisTurn:
 		if player, ok := resolveTurnEventPlayer(g, obj, controller, dynamic.Player); ok {
@@ -239,6 +246,24 @@ func blockingCreaturesBeyondFirst(g *game.Game, obj *game.StackObject) int {
 		return 0
 	}
 	return blockers - 1
+}
+
+// blockingCreaturesOf counts every creature blocking the given permanent, read
+// from the current combat's block declarations (CR 509.1, CR 608.2c). It is zero
+// when combat is not active. Unlike blockingCreaturesBeyondFirst, which drops the
+// first blocker for Rampage, it counts all blockers, backing the "+N/+N until end
+// of turn for each creature blocking it" pump (Rabid Elephant, Gang of Elk).
+func blockingCreaturesOf(g *game.Game, permanentID game.ObjectID) int {
+	if g.Combat == nil {
+		return 0
+	}
+	blockers := 0
+	for _, block := range g.Combat.Blockers {
+		if block.Blocking == permanentID {
+			blockers++
+		}
+	}
+	return blockers
 }
 
 // resolveTurnEventPlayer resolves the player whose turn-event totals a
