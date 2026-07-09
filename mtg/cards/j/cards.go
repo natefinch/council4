@@ -23,6 +23,7 @@ var Cards = []cardset.Entry{
 	{Name: "Jirina, Dauntless General", New: JirinaDauntlessGeneral},
 	{Name: "Join the Dead", New: JoinTheDead},
 	{Name: "Joraga Warcaller", New: JoragaWarcaller},
+	{Name: "Jovial Evil", New: JovialEvil},
 	{Name: "Judge's Familiar", New: JudgeSFamiliar},
 	{Name: "Jungle Basin", New: JungleBasin},
 	{Name: "Juniper Order Ranger", New: JuniperOrderRanger},

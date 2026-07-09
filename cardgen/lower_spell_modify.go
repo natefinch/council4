@@ -215,6 +215,18 @@ func groupDynamicDamageAmount(amount compiler.CompiledAmount) (game.Quantity, bo
 	if !groupWideDynamicAmountKind(amount.DynamicKind) {
 		return game.Quantity{}, false
 	}
+	// A "that player controls" count ("deals damage to each player equal to
+	// twice the number of nonbasic lands that player controls", Price of
+	// Progress) is a per-recipient count: each recipient counts the permanents
+	// it controls. The group damage path resolves a single shared amount for
+	// every recipient, so it cannot express a per-recipient count and stays
+	// fail-closed. Single-target "that player controls" damage (Anathemancer,
+	// Jovial Evil) is handled by lowerFixedDamageSpell, which binds the count to
+	// the one target player.
+	if amount.DynamicKind == compiler.DynamicAmountCount &&
+		amount.Selector().Controller == compiler.ControllerThatPlayer {
+		return game.Quantity{}, false
+	}
 	dynamic, ok := lowerDynamicAmount(amount, game.SourcePermanentReference())
 	if !ok {
 		return game.Quantity{}, false
@@ -470,6 +482,15 @@ func lowerFixedDamageSpell(
 	// own source reference (references[0]), so exclude the trailing rider
 	// reference from them; it is validated separately by the rider lowering.
 	sourceReferences := ctx.content.References
+	// A "that player controls" count amount ("equal to the number of nonbasic
+	// lands that player controls", Anathemancer) leaves a ThatPlayer reference
+	// co-referring with the damage's target player. The lowered count group
+	// already carries that controller (rebindRecipientControlledCountAmount
+	// binds it to the target player), so this reference is redundant. Drop it
+	// before the exact source/amount reference checks, which admit only the
+	// single damage-source reference for a count amount, exactly as the
+	// controller-scoped "the number of X you control" count already does.
+	sourceReferences = dropControlledCountThatPlayerReferences(sourceReferences, effect.Amount)
 	if _, ok := parser.TargetControllerDamageRider(effect.DamageRiders); ok {
 		if len(sourceReferences) != 2 ||
 			sourceReferences[1].Binding != compiler.ReferenceBindingTarget {
@@ -492,7 +513,7 @@ func lowerFixedDamageSpell(
 	}
 
 	damage := game.Damage{
-		Amount:    rebindRecipientHandSizeAmount(amount, game.TargetPlayerReference(0)),
+		Amount:    rebindRecipientControlledCountAmount(rebindRecipientHandSizeAmount(amount, game.TargetPlayerReference(0)), game.TargetPlayerReference(0)),
 		Recipient: game.AnyTargetDamageRecipient(0),
 	}
 	damage.DamageSource = primaryDamageSource(ctx.content.References)

@@ -2213,6 +2213,25 @@ func parseDynamicSelectionCountSubject(tokens []shared.Token, start int, atoms A
 			end:    subjectEnd, count: true, plural: plural,
 		}, true
 	}
+	// A "that player controls" suffix scopes the count to the permanents a
+	// referenced player controls ("the number of nonbasic lands that player
+	// controls", Anathemancer), the counting mirror of the "you control" and
+	// "your opponents control" controller suffixes above. The suffix names a
+	// player the surrounding effect targets, so scope the selection to the
+	// noun-phrase tokens alone and record the ThatPlayer controller directly;
+	// scanning "that player controls" through parseSelection would fold its
+	// "player" noun into the count subject's own filter.
+	if effectWordsAt(tokens, end, "that", "player", "controls") && dynamicAmountBoundary(tokens, end+3) {
+		selection := buildDynamicCountSelection(tokens, start, end, atoms)
+		if selection.Zone != zone.None || !dynamicCountSelectionTypesFaithful(selection) {
+			return dynamicAmountSubject{}, false
+		}
+		selection.Controller = SelectionControllerThatPlayer
+		return dynamicAmountSubject{
+			amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountCount, Selection: &selection},
+			end:    end + 3, count: true, plural: plural,
+		}, true
+	}
 	for _, zoneSuffix := range []struct {
 		words []string
 		kind  zone.Type
@@ -2283,6 +2302,9 @@ func isDynamicCountSelectionToken(token shared.Token, atoms Atoms) bool {
 		return qualifier == ColorQualifierColorless || qualifier == ColorQualifierMulticolored
 	}
 	if _, ok := atoms.SupertypeAt(token.Span); ok {
+		return true
+	}
+	if _, ok := atoms.ExcludedSupertypeAt(token.Span); ok {
 		return true
 	}
 	if _, ok := atoms.SubtypeAt(token.Span); ok {
