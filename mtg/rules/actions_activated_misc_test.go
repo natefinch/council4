@@ -192,6 +192,46 @@ func TestOncePerTurnActivatedAbilityIsTrackedAndResets(t *testing.T) {
 	}
 }
 
+func TestMaxActivationsPerTurnCapsActivations(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, activatedAbilityPermanent(&game.ActivatedAbility{
+		MaxActivationsPerTurn: 2,
+		Content: game.Mode{
+			Sequence: []game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}},
+		}.Ability(),
+	}))
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	act := action.ActivateAbility(source.ObjectID, 0, nil, 0)
+
+	// Two activations are allowed.
+	if !engine.applyAction(g, game.Player1, act) {
+		t.Fatal("first activation failed")
+	}
+	engine.resolveTopOfStack(g, nil)
+	if !containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("ability should remain legal after 1 of 2 activations")
+	}
+	if !engine.applyAction(g, game.Player1, act) {
+		t.Fatal("second activation failed")
+	}
+	engine.resolveTopOfStack(g, nil)
+	if containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("ability should be illegal after reaching the twice-per-turn cap")
+	}
+
+	// The cap resets next turn.
+	engine.advanceToNextTurn(g)
+	g.Turn.ActivePlayer = game.Player1
+	g.Turn.PriorityPlayer = game.Player1
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	if !containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("twice-per-turn cap did not reset on the next turn")
+	}
+}
+
 func TestDuringUpkeepActivatedAbilityRequiresControllersUpkeep(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

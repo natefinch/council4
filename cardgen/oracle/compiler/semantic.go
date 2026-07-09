@@ -102,12 +102,17 @@ type CompiledAbility struct {
 	// of ExactSequenceDrawThenDiscardUnlessType: the cards drawn first, then the
 	// cards discarded unless an exempt-type card (in ExactSequenceLookAtTopTypes)
 	// is discarded instead. Both are zero for every other exact sequence.
-	ExactSequenceDrawCount     uint8
-	ExactSequenceDiscardCount  uint8
-	Span                       shared.Span
-	Text                       string
-	ActivationTiming           ActivationTimingKind
-	ActivationTimingSpan       shared.Span
+	ExactSequenceDrawCount    uint8
+	ExactSequenceDiscardCount uint8
+	Span                      shared.Span
+	Text                      string
+	ActivationTiming          ActivationTimingKind
+	ActivationTimingSpan      shared.Span
+	// MaxActivationsPerTurn caps activations per turn ("Activate no more than
+	// twice each turn."). Zero means no cap. MaxActivationsPerTurnSpan covers the
+	// recognized restriction sentence for source coverage.
+	MaxActivationsPerTurn      int
+	MaxActivationsPerTurnSpan  shared.Span
 	ActivationZone             zone.Type
 	AbilityWord                string
 	Chapters                   []int

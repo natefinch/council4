@@ -67,15 +67,21 @@ func (m *AbilityContent) IsModal() bool {
 
 // ActivatedAbility is a non-mana, non-loyalty activated ability.
 type ActivatedAbility struct {
-	Text                string
-	ManaCost            opt.V[cost.Mana]
-	AdditionalCosts     []cost.Additional
-	AlternativeCosts    []cost.Alternative
-	CostModifiers       []CostModifier
-	ZoneOfFunction      zone.Type
-	Timing              TimingRestriction
-	ActivationCondition opt.V[Condition]
-	Content             AbilityContent
+	Text             string
+	ManaCost         opt.V[cost.Mana]
+	AdditionalCosts  []cost.Additional
+	AlternativeCosts []cost.Alternative
+	CostModifiers    []CostModifier
+	ZoneOfFunction   zone.Type
+	Timing           TimingRestriction
+	// MaxActivationsPerTurn caps how many times this ability may be activated
+	// each turn ("Activate no more than twice each turn."). Zero means no cap. It
+	// is distinct from the Timing OncePerTurn restriction, which is recorded
+	// separately; a positive cap is enforced against the per-ability activation
+	// count regardless of timing.
+	MaxActivationsPerTurn int
+	ActivationCondition   opt.V[Condition]
+	Content               AbilityContent
 	// KeywordAbilities lists keyword abilities carried by this activation, e.g.
 	// EquipKeyword for equip activations. Rules use it for keyword dispatch and
 	// cost routing without inspecting Content.

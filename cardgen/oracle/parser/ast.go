@@ -389,6 +389,9 @@ type ActivationFrequencyCountKind string
 const (
 	ActivationFrequencyCountUnknown ActivationFrequencyCountKind = ""
 	ActivationFrequencyCountOnce    ActivationFrequencyCountKind = "ActivationFrequencyCountOnce"
+	// ActivationFrequencyCountAtMost is the "no more than <N> times each turn"
+	// cap (Value holds N), as opposed to the "only once each turn" form.
+	ActivationFrequencyCountAtMost ActivationFrequencyCountKind = "ActivationFrequencyCountAtMost"
 )
 
 // ActivationFrequencyPeriodKind identifies the period over which a frequency
@@ -404,7 +407,10 @@ const (
 // ActivationFrequencyCount is a source-spanned activation count.
 type ActivationFrequencyCount struct {
 	Kind ActivationFrequencyCountKind `json:",omitempty"`
-	Span shared.Span                  `json:"-"`
+	// Value is the cap N for an ActivationFrequencyCountAtMost count. It is zero
+	// for the once form.
+	Value int         `json:",omitempty"`
+	Span  shared.Span `json:"-"`
 }
 
 // ActivationFrequencyPeriod is a source-spanned activation period.
