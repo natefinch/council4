@@ -1057,6 +1057,14 @@ func analyzeSearchClause(effect *EffectSyntax) searchClauseAnalysis {
 		}
 		riderText = rider
 	}
+	if effect.Selection.ManaValueDynamicCount != nil {
+		numericRiders++
+		rider, ok := searchManaValueDynamicCountRider(*effect.Selection.ManaValueDynamicCount)
+		if !ok {
+			return searchClauseAnalysis{detail: unsupportedSearchFilterDetail(rest), sharedSubtype: false, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
+		}
+		riderText = rider
+	}
 	if effect.Selection.MatchPower {
 		numericRiders++
 		rider, ok := searchCharacteristicRider("power", effect.Selection.Power)
@@ -1499,6 +1507,18 @@ func searchManaValueRider(sel SelectionSyntax) (string, bool) {
 	default:
 		return "", false
 	}
+}
+
+// searchManaValueDynamicCountRider reconstructs the "with mana value less than
+// or equal to the number of <count subject>" filter rider from the parsed
+// counted-subject amount (Beseech the Queen — "the number of lands you
+// control"). The count phrase is reproduced verbatim from the parsed amount text
+// so the reconstruction stays byte-exact; an empty amount text fails closed.
+func searchManaValueDynamicCountRider(amount EffectAmountSyntax) (string, bool) {
+	if amount.Text == "" {
+		return "", false
+	}
+	return " with mana value less than or equal to " + amount.Text, true
 }
 
 // searchCharacteristicRider reconstructs a "with <characteristic> N or less" or

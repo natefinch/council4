@@ -581,6 +581,13 @@ func renderSelectionComparisons(ctx *renderCtx, selection game.Selection) ([]str
 		if selection.ManaValueDynamic.Val.Addend != 0 {
 			boundFields = append(boundFields, fmt.Sprintf("Addend: %d", selection.ManaValueDynamic.Val.Addend))
 		}
+		if group := selection.ManaValueDynamic.Val.Group; group != nil {
+			rendered, err := (Renderer{}).renderGroupReference(ctx, *group)
+			if err != nil {
+				return nil, err
+			}
+			boundFields = append(boundFields, fmt.Sprintf("Group: game.GroupRef(%s)", rendered))
+		}
 		fields = append(fields, fmt.Sprintf("ManaValueDynamic: opt.Val(game.ManaValueDynamicBound{%s}),", strings.Join(boundFields, ", ")))
 	}
 	if selection.MatchCounter {

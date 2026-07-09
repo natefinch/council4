@@ -493,6 +493,27 @@ func lowerManaValueDynamicBound(kind compiler.DynamicAmountKind) (game.ManaValue
 	}
 }
 
+// lowerManaValueDynamicCountBound builds a runtime ManaValueDynamicBound from a
+// compiled controlled-permanent count amount ("with mana value less than or
+// equal to the number of lands you control", Beseech the Queen). It reuses the
+// dynamic-count amount lowering so the counted group projects through the same
+// path as every other permanent count, then keeps only the battlefield
+// group-count form the runtime predicate models; any other lowered amount
+// (a zone count, a life total, a source characteristic) fails closed so no path
+// silently widens the bound.
+func lowerManaValueDynamicCountBound(amount compiler.CompiledAmount) (game.ManaValueDynamicBound, bool) {
+	dynamic, ok := lowerDynamicAmount(amount, game.ObjectReference{})
+	if !ok || dynamic.Kind != game.DynamicAmountCountSelector || dynamic.Group.Empty() {
+		return game.ManaValueDynamicBound{}, false
+	}
+	return game.ManaValueDynamicBound{
+		Kind:       dynamic.Kind,
+		Multiplier: dynamic.Multiplier,
+		Addend:     dynamic.Addend,
+		Group:      game.GroupRef(dynamic.Group),
+	}, true
+}
+
 // DO-NOT-COPY(filter): projects card-zone (graveyard/hand/library/exile)
 // selections, including the bare "a card" (SelectorCard) noun and a zone
 // filter, which the battlefield-only canonical projector fails closed on by
@@ -604,6 +625,13 @@ func cardSelectionForSelector(selector compiler.CompiledSelector) (game.Selectio
 	}
 	if selector.ManaValueDynamic != compiler.DynamicAmountNone {
 		bound, ok := lowerManaValueDynamicBound(selector.ManaValueDynamic)
+		if !ok {
+			return game.Selection{}, false
+		}
+		selection.ManaValueDynamic = opt.Val(bound)
+	}
+	if selector.ManaValueDynamicCount != nil {
+		bound, ok := lowerManaValueDynamicCountBound(*selector.ManaValueDynamicCount)
 		if !ok {
 			return game.Selection{}, false
 		}

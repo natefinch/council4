@@ -298,15 +298,22 @@ func matchSelection(s *selectionSubject, sel *game.Selection) bool {
 }
 
 // dynamicManaValueBound evaluates the controller-relative upper bound for a
-// Selection.ManaValueDynamic predicate (CR 608.2c). It supports only the
-// turn-event life totals, applying the amount's multiplier and addend; any other
-// dynamic amount fails closed so a card-definition bug never silently widens the
-// bound.
+// Selection.ManaValueDynamic predicate (CR 608.2c). It supports the turn-event
+// life totals and a controlled-permanent count ("the number of lands you
+// control", Beseech the Queen), applying the amount's multiplier and addend; any
+// other dynamic amount fails closed so a card-definition bug never silently
+// widens the bound.
 func dynamicManaValueBound(g *game.Game, controller game.PlayerID, bound game.ManaValueDynamicBound) (int, bool) {
 	switch bound.Kind {
 	case game.DynamicAmountLifeLostThisTurn, game.DynamicAmountLifeGainedThisTurn:
 		multiplier := max(bound.Multiplier, 1)
 		return turnEventDynamicAmount(g, controller, bound.Kind)*multiplier + bound.Addend, true
+	case game.DynamicAmountCountSelector:
+		if bound.Group == nil || bound.Group.Empty() {
+			return 0, false
+		}
+		multiplier := max(bound.Multiplier, 1)
+		return countPermanentsMatchingGroup(g, nil, controller, *bound.Group)*multiplier + bound.Addend, true
 	default:
 		return 0, false
 	}

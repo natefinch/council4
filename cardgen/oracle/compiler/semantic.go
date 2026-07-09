@@ -1337,12 +1337,20 @@ type CompiledSelector struct {
 	// runtime Selection.ManaValueDynamic predicate. DynamicAmountNone means no
 	// dynamic bound.
 	ManaValueDynamic DynamicAmountKind
-	Power            compare.Int
-	MatchPower       bool
-	Toughness        compare.Int
-	MatchToughness   bool
-	Colorless        bool
-	Multicolored     bool
+	// ManaValueDynamicCount records a "with mana value less than or equal to the
+	// number of <permanents> you control" bound (Beseech the Queen — number of
+	// lands you control), whose upper bound is a controlled-permanent count
+	// rather than a fixed number. It carries the counted-subject amount and is
+	// mutually exclusive with ManaValueDynamic (life totals); it lowers to the
+	// runtime Selection.ManaValueDynamic predicate with a DynamicAmountCountSelector
+	// group. Nil means no count-based dynamic bound.
+	ManaValueDynamicCount *CompiledAmount
+	Power                 compare.Int
+	MatchPower            bool
+	Toughness             compare.Int
+	MatchToughness        bool
+	Colorless             bool
+	Multicolored          bool
 	// Colored records a "one or more colors" qualifier ("permanents ... that are
 	// one or more colors", All Is Dust). It is the complement of Colorless and
 	// lowers to Selection.Colored.

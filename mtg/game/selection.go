@@ -353,14 +353,23 @@ type Selection struct {
 }
 
 // ManaValueDynamicBound bounds a card's mana value by a controller-relative
-// value computed as the predicate is evaluated rather than a fixed number. Only
-// the turn-event life totals are modeled and the comparison is always
-// less-than-or-equal; Multiplier and Addend scale and shift the evaluated amount
-// (CR 608.2c). It backs Selection.ManaValueDynamic.
+// value computed as the predicate is evaluated rather than a fixed number. The
+// comparison is always less-than-or-equal; Multiplier and Addend scale and
+// shift the evaluated amount (CR 608.2c). It backs Selection.ManaValueDynamic.
+// Two amount families are modeled: the turn-event life totals
+// (DynamicAmountLifeLostThisTurn, DynamicAmountLifeGainedThisTurn — Betor,
+// Ancestor's Voice) which need no group, and a battlefield permanent count
+// (DynamicAmountCountSelector — "the number of lands you control", Beseech the
+// Queen) whose Group narrows which permanents are counted.
 type ManaValueDynamicBound struct {
 	Kind       DynamicAmountKind
 	Multiplier int
 	Addend     int
+	// Group narrows the permanents counted by a DynamicAmountCountSelector
+	// bound ("with mana value less than or equal to the number of lands you
+	// control", Beseech the Queen). It is nil for the turn-event life totals,
+	// which need no group. Held by pointer to keep Selection a finite type.
+	Group *GroupReference
 }
 
 // Empty reports whether the Selection carries no active predicate and therefore
@@ -478,6 +487,15 @@ func (s Selection) Validate() []string {
 	if s.ManaValueDynamic.Exists {
 		switch s.ManaValueDynamic.Val.Kind {
 		case DynamicAmountLifeLostThisTurn, DynamicAmountLifeGainedThisTurn:
+			if s.ManaValueDynamic.Val.Group != nil {
+				problems = append(problems, "dynamic mana-value life-total bound must not set a group")
+			}
+		case DynamicAmountCountSelector:
+			if s.ManaValueDynamic.Val.Group == nil || s.ManaValueDynamic.Val.Group.Empty() {
+				problems = append(problems, "dynamic mana-value count bound requires a group")
+			} else {
+				problems = append(problems, s.ManaValueDynamic.Val.Group.Validate()...)
+			}
 		default:
 			problems = append(problems, fmt.Sprintf("dynamic mana-value bound uses unsupported amount %v", s.ManaValueDynamic.Val.Kind))
 		}
