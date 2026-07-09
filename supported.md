@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,194 of 32,501 cards eligible for paper support (52.9%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,197 of 32,501 cards eligible for paper support (52.9%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1327,6 +1327,7 @@ Council4 currently supports **17,194 of 32,501 cards eligible for paper support 
 - Bigfin Bouncer
 - Bighorner Rancher
 - Bilbo, Retired Burglar
+- Bile Blight
 - Bile Urchin
 - Bile-Vial Boggart
 - Bilious Skulldweller
@@ -4204,6 +4205,8 @@ Council4 currently supports **17,194 of 32,501 cards eligible for paper support 
 - Echo of Dusk
 - Echo Tracer
 - Echoing Calm
+- Echoing Courage
+- Echoing Decay
 - Echoing Ruin
 - Eclipsed Boggart
 - Eclipsed Elf
