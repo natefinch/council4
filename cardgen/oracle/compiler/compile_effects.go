@@ -582,6 +582,8 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				AdditionalBeginningPhase:               syntax.AdditionalBeginningPhase,
 				DieSides:                               syntax.DieSides,
 				RequireSourceTrample:                   syntax.RequireSourceTrample,
+				FlashSpellTypes:                        compileFlashSpellTypes(syntax.FlashSpellType),
+				FlashSpellSubtypes:                     append([]types.Sub(nil), syntax.FlashSpellSubtypes...),
 			})
 		}
 	}

@@ -66,9 +66,56 @@ func TestPlayerCanCastAsThoughFlashHonorsFilters(t *testing.T) {
 	}
 }
 
-// TestCanCastAtCurrentTimingAllowsSorceryWithFlashPermission proves the timing
-// permission lets a sorcery-speed card be cast at instant speed, while leaving
-// it sorcery-speed for a player without the permission.
+// TestApplyRuleGrantsSorceryFlashTimingForTurn proves that resolving the
+// activated ability's lowered ApplyRule (Alchemist's Refuge:
+// "{G}{U}, {T}: You may cast spells this turn as though they had flash.") lets the
+// controller cast a sorcery-speed spell at instant speed for the rest of the turn,
+// while an unfiltered creature filter would not have matched. The permission is
+// created by resolving the primitive rather than a static ability, exercising the
+// handleApplyRule → createRuleEffectTemplates path.
+func TestApplyRuleGrantsSorceryFlashTimingForTurn(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	// Make it not the controller's main phase with an empty stack, so sorcery
+	// speed is otherwise unavailable to them.
+	g.Turn.ActivePlayer = game.Player2
+	sorcery := &game.CardDef{CardFace: game.CardFace{
+		Name:  "Test Sorcery",
+		Types: []types.Card{types.Sorcery},
+	}}
+	if canCastAtCurrentTiming(g, game.Player1, sorcery) {
+		t.Fatal("sorcery castable at instant speed before activating the ability")
+	}
+
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Test Alchemist's Refuge",
+		Types: []types.Card{types.Land},
+	}})
+	obj := &game.StackObject{
+		ID:         g.IDGen.Next(),
+		Kind:       game.StackActivatedAbility,
+		Controller: game.Player1,
+		SourceID:   source.ObjectID,
+	}
+	r := &effectResolver{engine: NewEngine(nil), game: g, obj: obj, log: &TurnLog{}}
+
+	resolved := handleApplyRule(r, game.ApplyRule{
+		RuleEffects: []game.RuleEffect{{
+			Kind:           game.RuleEffectCastSpellsAsThoughFlash,
+			AffectedPlayer: game.PlayerYou,
+		}},
+		Duration: game.DurationThisTurn,
+	})
+	if !resolved.succeeded {
+		t.Fatal("handleApplyRule did not create the flash-timing rule effect")
+	}
+
+	if !canCastAtCurrentTiming(g, game.Player1, sorcery) {
+		t.Fatal("activating the ability did not allow casting a sorcery at instant speed")
+	}
+	if canCastAtCurrentTiming(g, game.Player2, sorcery) {
+		t.Fatal("the controller's activated permission leaked to an opponent")
+	}
+}
 func TestCanCastAtCurrentTimingAllowsSorceryWithFlashPermission(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	// Make it not the active player's main phase with an empty stack, so sorcery

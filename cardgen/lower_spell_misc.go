@@ -2,6 +2,7 @@ package cardgen
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
@@ -752,14 +753,16 @@ func lowerAdditionalCombatPhase(ctx contentCtx) (game.AbilityContent, *shared.Di
 }
 
 // lowerCastAsThoughFlash lowers the controller-scoped timing permission "You may
-// cast spells this turn as though they had flash." to an ApplyRule that lets the
-// controller cast spells at instant speed for the rest of the turn. Like
+// cast [<filter>] spells this turn as though they had flash." to an ApplyRule
+// that lets the controller cast spells at instant speed for the rest of the turn.
+// The optional card-type ("creature spells", Winding Canyons) or subtype ("Aura
+// and Equipment spells") filter narrows the grant the same way the static form
+// does, carried onto the rule effect's SpellTypes/SpellSubtypes. Like
 // lowerAdditionalLandPlays the "may" is a permission, not a resolving choice, so
 // it is modeled as an unconditional turn-scoped allowance. The parser's exact
-// nine-word match fixes the wording, so the inherent "flash" keyword and
-// "they"/"spells" references in the same sentence are expected; only targets,
-// conditions, modes, an amount, a negation, or a non-controller scope fail
-// closed.
+// match fixes the wording, so the inherent "flash" keyword and "they"/"spells"
+// references in the same sentence are expected; only targets, conditions, modes,
+// an amount, a negation, or a non-controller scope fail closed.
 func lowerCastAsThoughFlash(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
 	if !effect.Exact ||
@@ -781,6 +784,8 @@ func lowerCastAsThoughFlash(ctx contentCtx) (game.AbilityContent, *shared.Diagno
 			RuleEffects: []game.RuleEffect{{
 				Kind:           game.RuleEffectCastSpellsAsThoughFlash,
 				AffectedPlayer: game.PlayerYou,
+				SpellTypes:     slices.Clone(effect.FlashSpellTypes),
+				SpellSubtypes:  slices.Clone(effect.FlashSpellSubtypes),
 			}},
 			Duration: game.DurationThisTurn,
 		},

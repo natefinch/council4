@@ -309,16 +309,27 @@ func TestParseSharedCreatureTypeAnthemAmount(t *testing.T) {
 func TestParseCastAsThoughFlashEffect(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		source string
-		flash  bool
+		source    string
+		flash     bool
+		spellType StaticDeclarationSpellTypeKind
+		subtypes  []types.Sub
 	}{
 		// The exact controller-scoped, turn-scoped timing permission is recognized
-		// as a single non-optional effect (Borne Upon a Wind, Emergence Zone).
-		{"You may cast spells this turn as though they had flash.", true},
-		{"Cast spells this turn as though they had flash.", true},
+		// as a single non-optional effect (Borne Upon a Wind, Emergence Zone,
+		// Alchemist's Refuge). An absent filter grants the permission for every
+		// spell.
+		{source: "You may cast spells this turn as though they had flash.", flash: true},
+		{source: "Cast spells this turn as though they had flash.", flash: true},
+		// An optional card-type filter narrows the grant (Winding Canyons's
+		// "creature spells", Complete the Circuit's "sorcery spells").
+		{source: "You may cast creature spells this turn as though they had flash.", flash: true, spellType: StaticDeclarationSpellTypeCreature},
+		{source: "You may cast sorcery spells this turn as though they had flash.", flash: true, spellType: StaticDeclarationSpellTypeSorcery},
+		{source: "You may cast instant and sorcery spells this turn as though they had flash.", flash: true, spellType: StaticDeclarationSpellTypeInstantOrSorcery},
+		// A subtype list narrows the grant the same way the static form does.
+		{source: "You may cast Aura and Equipment spells this turn as though they had flash.", flash: true, subtypes: []types.Sub{types.Sub("Aura"), types.Sub("Equipment")}},
 		// Variant wordings fail closed and flow through the generic effect parser.
-		{"You may cast a spell this turn as though it had flash.", false},
-		{"You may cast spells as though they had flash.", false},
+		{source: "You may cast a spell this turn as though it had flash.", flash: false},
+		{source: "You may cast spells as though they had flash.", flash: false},
 	}
 	for _, test := range tests {
 		t.Run(test.source, func(t *testing.T) {
@@ -329,8 +340,17 @@ func TestParseCastAsThoughFlashEffect(t *testing.T) {
 			if gotFlash != test.flash {
 				t.Fatalf("recognized flash permission = %v, want %v (effects=%#v)", gotFlash, test.flash, effects)
 			}
-			if gotFlash && effects[0].Optional {
+			if !gotFlash {
+				return
+			}
+			if effects[0].Optional {
 				t.Fatal("flash permission should be unconditional, got Optional=true")
+			}
+			if effects[0].FlashSpellType != test.spellType {
+				t.Fatalf("flash spell type = %q, want %q", effects[0].FlashSpellType, test.spellType)
+			}
+			if !slices.Equal(effects[0].FlashSpellSubtypes, test.subtypes) {
+				t.Fatalf("flash subtypes = %#v, want %#v", effects[0].FlashSpellSubtypes, test.subtypes)
 			}
 		})
 	}

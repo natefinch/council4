@@ -1,6 +1,7 @@
 package compiler
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/natefinch/council4/cardgen/oracle/parser"
@@ -748,4 +749,51 @@ func assertDynamicEffectAmount(t *testing.T, effects []CompiledEffect, kind Effe
 		}
 	}
 	t.Fatalf("effects = %#v, missing %v", effects, kind)
+}
+
+// TestCompileCastAsThoughFlashFilters proves the this-turn timing permission
+// compiles with the optional card-type and subtype filters populated on the
+// CompiledEffect, and leaves them empty for the unfiltered grant.
+func TestCompileCastAsThoughFlashFilters(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name      string
+		source    string
+		spellType []types.Card
+		subtypes  []types.Sub
+	}{
+		{
+			name:   "unfiltered",
+			source: "You may cast spells this turn as though they had flash.",
+		},
+		{
+			name:      "creature filter",
+			source:    "You may cast creature spells this turn as though they had flash.",
+			spellType: []types.Card{types.Creature},
+		},
+		{
+			name:     "subtype filter",
+			source:   "You may cast Aura and Equipment spells this turn as though they had flash.",
+			subtypes: []types.Sub{types.Sub("Aura"), types.Sub("Equipment")},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := compileSource(test.source, pipelineContext{InstantOrSorcery: true})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			effects := compilation.Abilities[0].Content.Effects
+			if len(effects) != 1 || effects[0].Kind != EffectCastAsThoughFlash {
+				t.Fatalf("effects = %#v, want a single EffectCastAsThoughFlash", effects)
+			}
+			if !slices.Equal(effects[0].FlashSpellTypes, test.spellType) {
+				t.Fatalf("flash spell types = %#v, want %#v", effects[0].FlashSpellTypes, test.spellType)
+			}
+			if !slices.Equal(effects[0].FlashSpellSubtypes, test.subtypes) {
+				t.Fatalf("flash spell subtypes = %#v, want %#v", effects[0].FlashSpellSubtypes, test.subtypes)
+			}
+		})
+	}
 }

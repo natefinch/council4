@@ -4248,6 +4248,18 @@ func staticSpellTypeCardTypes(filter parser.StaticDeclarationSpellTypeKind) ([]t
 	}
 }
 
+// compileFlashSpellTypes maps the parser's optional EffectCastAsThoughFlash
+// card-type filter onto its resolved card types. An empty filter
+// (StaticDeclarationSpellTypeAll) yields nil, granting the permission for every
+// spell. The parser only produces recognized filter kinds — an unrecognized
+// filter leaves the clause unconsumed and the card unsupported — so every value
+// reaching here maps successfully; an unmapped value still yields nil (all
+// spells) only in the unreachable default.
+func compileFlashSpellTypes(filter parser.StaticDeclarationSpellTypeKind) []types.Card {
+	cardTypes, _ := staticSpellTypeCardTypes(filter)
+	return cardTypes
+}
+
 // staticSpellColorMatch maps a closed spell-color filter onto a runtime color
 // match. It returns the matched color, whether a color filter is present, and
 // false for an unrecognized filter. The colorless filter yields the empty-color

@@ -1365,7 +1365,7 @@ func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) 
 		func() ([]EffectSyntax, bool) { return parsePhaseOutEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseMassReanimationExchangeEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseAdditionalLandPlaysEffect(sentence, tokens, atoms) },
-		func() ([]EffectSyntax, bool) { return parseCastAsThoughFlashEffect(sentence, tokens) },
+		func() ([]EffectSyntax, bool) { return parseCastAsThoughFlashEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parsePlayFromLibraryTopEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parsePlayExiledCardEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) {
@@ -4100,12 +4100,16 @@ func massReanimationExchangeWords(tokens []shared.Token) ([]shared.Token, bool) 
 // forced to play the extra land). The static "on each of your turns" form is a
 // separate static ability and is not matched here.
 // parseCastAsThoughFlashEffect recognizes the controller-scoped, turn-scoped
-// timing permission "You may cast spells this turn as though they had flash."
-// (Borne Upon a Wind, Emergence Zone). The leading "you may" is a permission,
-// not a resolving choice, so the effect is modeled unconditionally (like
-// parseAdditionalLandPlaysEffect) rather than as an optional cast effect. Any
-// other wording fails closed and flows through the generic effect parser.
-func parseCastAsThoughFlashEffect(sentence Sentence, tokens []shared.Token) ([]EffectSyntax, bool) {
+// timing permission "You may cast [<filter>] spells this turn as though they had
+// flash." (Borne Upon a Wind, Emergence Zone, Alchemist's Refuge; the filtered
+// "creature spells" form is Winding Canyons). <filter> is an optional card-type
+// filter ("creature", "sorcery", "instant and sorcery") or a subtype list ("Aura
+// and Equipment"), reusing the static "cast as though flash" filter grammar; an
+// absent filter grants the permission for every spell. The leading "you may" is a
+// permission, not a resolving choice, so the effect is modeled unconditionally
+// (like parseAdditionalLandPlaysEffect) rather than as an optional cast effect.
+// Any other wording fails closed and flows through the generic effect parser.
+func parseCastAsThoughFlashEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
 	words := make([]shared.Token, 0, len(tokens))
 	for _, token := range tokens {
 		if token.Kind == shared.Period {
@@ -4116,30 +4120,46 @@ func parseCastAsThoughFlashEffect(sentence Sentence, tokens []shared.Token) ([]E
 	if len(words) >= 2 && equalWord(words[0], "you") && equalWord(words[1], "may") {
 		words = words[2:]
 	}
-	if len(words) != 9 || !equalWord(words[0], "cast") {
+	if len(words) < 1 || !equalWord(words[0], "cast") {
 		return nil, false
 	}
 	castToken := words[0]
-	if !equalWord(words[1], "spells") ||
-		!equalWord(words[2], "this") ||
-		!equalWord(words[3], "turn") ||
-		!equalWord(words[4], "as") ||
-		!equalWord(words[5], "though") ||
-		!equalWord(words[6], "they") ||
-		!equalWord(words[7], "had") ||
-		!equalWord(words[8], "flash") {
+	rest := words[1:]
+	spellType := StaticDeclarationSpellTypeAll
+	var subtypes []types.Sub
+	if subs, next, ok := staticSpellSubtypeFilter(rest, atoms); ok {
+		subtypes = subs
+		rest = next
+	} else {
+		var ok bool
+		spellType, rest, ok = staticSpellTypeFilter(rest)
+		if !ok {
+			return nil, false
+		}
+	}
+	if len(rest) != 8 ||
+		!equalWord(rest[0], "spells") ||
+		!equalWord(rest[1], "this") ||
+		!equalWord(rest[2], "turn") ||
+		!equalWord(rest[3], "as") ||
+		!equalWord(rest[4], "though") ||
+		!equalWord(rest[5], "they") ||
+		!equalWord(rest[6], "had") ||
+		!equalWord(rest[7], "flash") {
 		return nil, false
 	}
 	return []EffectSyntax{{
-		Kind:       EffectCastAsThoughFlash,
-		Span:       sentence.Span,
-		ClauseSpan: sentence.Span,
-		VerbSpan:   castToken.Span,
-		Text:       sentence.Text,
-		Tokens:     append([]shared.Token(nil), tokens...),
-		Context:    EffectContextController,
-		Duration:   EffectDurationThisTurn,
-		Exact:      true,
+		Kind:               EffectCastAsThoughFlash,
+		Span:               sentence.Span,
+		ClauseSpan:         sentence.Span,
+		VerbSpan:           castToken.Span,
+		Text:               sentence.Text,
+		Tokens:             append([]shared.Token(nil), tokens...),
+		Context:            EffectContextController,
+		Duration:           EffectDurationThisTurn,
+		Exact:              true,
+		FlashSpellType:     spellType,
+		FlashSpellSubtypes: subtypes,
 	}}, true
 }
 

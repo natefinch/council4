@@ -3144,6 +3144,18 @@ type EffectSyntax struct {
 	// otherwise. It is meaningful only when Amount.DynamicKind is
 	// EffectDynamicAmountExcessDamageDealtThisWay.
 	RequireSourceTrample bool `json:",omitempty"`
+	// FlashSpellType optionally narrows an EffectCastAsThoughFlash grant to a
+	// single card-type filter ("You may cast creature spells this turn as though
+	// they had flash.", Winding Canyons). An empty value
+	// (StaticDeclarationSpellTypeAll) grants the permission for every spell. It
+	// mirrors the static "You may cast [<filter>] spells as though they had
+	// flash." filter and is mutually exclusive with FlashSpellSubtypes.
+	FlashSpellType StaticDeclarationSpellTypeKind `json:",omitempty"`
+	// FlashSpellSubtypes optionally narrows an EffectCastAsThoughFlash grant to a
+	// subtype list ("You may cast Aura and Equipment spells this turn as though
+	// they had flash."). It is nil when no subtype filter is present and is
+	// mutually exclusive with FlashSpellType.
+	FlashSpellSubtypes []types.Sub `json:",omitempty"`
 }
 
 // ManaSpendConditionKind identifies the exact spend condition of a mana-spend

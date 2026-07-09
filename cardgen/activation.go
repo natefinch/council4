@@ -303,6 +303,9 @@ func activationReferencesSupported(content compiler.AbilityContent) bool {
 		if reorderInternalReference(content.Effects, reference) {
 			continue
 		}
+		if castAsThoughFlashInternalReference(content.Effects, reference) {
+			continue
+		}
 		if reference.Binding == compiler.ReferenceBindingUnsupported ||
 			reference.Binding == compiler.ReferenceBindingAmbiguous {
 			return false
@@ -328,6 +331,30 @@ func reorderInternalReference(effects []compiler.CompiledEffect, reference compi
 	}
 	for i := range effects {
 		if effects[i].Kind == compiler.EffectReorderLibraryTop &&
+			spanCovered(reference.Span, []shared.Span{effects[i].Span}) {
+			return true
+		}
+	}
+	return false
+}
+
+// castAsThoughFlashInternalReference reports whether reference is the "they"
+// pronoun internal to a self-contained "You may cast spells this turn as though
+// they had flash." (EffectCastAsThoughFlash) effect. The parser's exact match
+// fixes the wording, so the pronoun refers to the spells being cast and is
+// consumed by lowerCastAsThoughFlash; it is not a bound reference the activation
+// backend must resolve to an external antecedent. Without this the pronoun is
+// classified Ambiguous whenever the activation body has no source antecedent to
+// bind it to (Alchemist's Refuge's "{G}{U}, {T}:" cost, unlike Emergence Zone's
+// "Sacrifice this land" cost), which would otherwise reject the whole ability.
+func castAsThoughFlashInternalReference(effects []compiler.CompiledEffect, reference compiler.CompiledReference) bool {
+	if reference.Kind != compiler.ReferencePronoun ||
+		reference.Pronoun != compiler.ReferencePronounThey {
+		return false
+	}
+	for i := range effects {
+		if effects[i].Kind == compiler.EffectCastAsThoughFlash &&
+			effects[i].Exact &&
 			spanCovered(reference.Span, []shared.Span{effects[i].Span}) {
 			return true
 		}

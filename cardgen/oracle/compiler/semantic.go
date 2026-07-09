@@ -3048,6 +3048,17 @@ type CompiledEffect struct {
 	// source having trample and emits a plain damage branch otherwise. It is
 	// meaningful only when Amount.DynamicKind is DynamicAmountExcessDamageDealtThisWay.
 	RequireSourceTrample bool
+	// FlashSpellTypes optionally narrows an EffectCastAsThoughFlash grant to
+	// spells of these card types ("You may cast creature spells this turn as
+	// though they had flash.", Winding Canyons). Nil grants the permission for
+	// every spell. It is populated from the parser's FlashSpellType filter and is
+	// mutually exclusive with FlashSpellSubtypes.
+	FlashSpellTypes []types.Card
+	// FlashSpellSubtypes optionally narrows an EffectCastAsThoughFlash grant to
+	// spells of these subtypes ("You may cast Aura and Equipment spells this turn
+	// as though they had flash."). Nil when no subtype filter is present. It is
+	// mutually exclusive with FlashSpellTypes.
+	FlashSpellSubtypes []types.Sub
 }
 
 // EntersTappedGroup reports the enters-tapped-group form of a static group
