@@ -249,11 +249,14 @@ func capturedDyingObjectID(g *game.Game, obj *game.StackObject, def *game.Delaye
 // event pattern matches the freshly emitted events, reusing the ordinary
 // triggered-ability matcher bound to the trigger's stored controller. Like an
 // ordinary triggered ability (CR 603.2, one instance per matching event), a
-// repeating trigger ("whenever a creature dies this turn") fires once per
-// matching event, so several creatures dying simultaneously fire it once each;
-// the trigger stays until its window ends. A one-shot trigger ("the next time
-// you cast ...") fires at most once and is then removed, even if several events
-// match in the same drain; if none match it is retained to catch a later event.
+// per-object repeating trigger ("whenever a creature dies this turn") fires once
+// per matching event, so several creatures dying simultaneously fire it once
+// each; the trigger stays until its window ends. A "one or more ... this turn"
+// (OneOrMore) trigger instead fires once per simultaneous batch (CR 603.3e),
+// matching how ordinary triggers coalesce OneOrMore pendings. A one-shot trigger
+// ("the next time you cast ...") fires at most once and is then removed, even if
+// several events match in the same drain; if none match it is retained to catch a
+// later event.
 func drainReadyEventDelayedTriggers(g *game.Game, events []game.Event) []pendingTriggeredAbility {
 	if len(g.DelayedTriggers) == 0 || len(events) == 0 {
 		return nil
@@ -271,9 +274,32 @@ func drainReadyEventDelayedTriggers(g *game.Game, events []game.Event) []pending
 			remaining = append(remaining, *trigger)
 			continue
 		}
+		pattern := trigger.EventPattern.Val
 		fired := false
+		seenOneOrMoreBatch := make(map[triggerBatchKey]bool)
 		for j := range matchEvents {
 			matchEvent := matchEvents[j]
+			// A "one or more ... this turn" delayed trigger fires once per
+			// simultaneous batch, not once per event (CR 603.3e), mirroring how
+			// ordinary triggered abilities coalesce OneOrMore pendings sharing a
+			// SimultaneousID (coalescePendingTriggeredAbilities). Per-object
+			// patterns keep the per-event fan-out below; SimultaneousID 0 and
+			// distinct SimultaneousIDs remain separate firings.
+			if pattern.OneOrMore && matchEvent.SimultaneousID != 0 {
+				key := triggerBatchKey{
+					sourceID:     trigger.SourceObjectID,
+					controller:   trigger.Controller,
+					event:        matchEvent.Kind,
+					simultaneous: matchEvent.SimultaneousID,
+				}
+				if pattern.OneOrMorePerAttackTarget {
+					key.attackTarget = matchEvent.AttackTarget
+				}
+				if seenOneOrMoreBatch[key] {
+					continue
+				}
+				seenOneOrMoreBatch[key] = true
+			}
 			// An intervening-if condition is re-checked as each captured event
 			// fires (CR 603.4). When it fails the ability does not trigger for
 			// that event ("... if you control your commander, ...").
