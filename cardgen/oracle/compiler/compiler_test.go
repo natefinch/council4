@@ -337,6 +337,7 @@ func TestCompileReferencesBindsConservativeAntecedents(t *testing.T) {
 		{"they in combat damage to player trigger", "Whenever this creature deals combat damage to a player, they draw a card.", []ReferenceBinding{ReferenceBindingSource, ReferenceBindingEventPlayer}},
 		{"their in combat damage to player trigger", "Whenever this creature deals combat damage to a player, exile a card from their hand.", []ReferenceBinding{ReferenceBindingSource, ReferenceBindingEventPlayer}},
 		{"their possessive keeps target antecedent", "Whenever you cast a spell, target opponent exiles a card from their hand.", []ReferenceBinding{ReferenceBindingTarget}},
+		{"died-creature amount binds event permanent", "Whenever a creature you control dies, put X +1/+1 counters on target creature you control, where X is the power of the creature that died.", []ReferenceBinding{ReferenceBindingEventPermanent}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

@@ -186,6 +186,8 @@ func compileReferenceKind(kind parser.ReferenceKind) ReferenceKind {
 		return ReferencePronoun
 	case parser.ReferenceChosenCards:
 		return ReferenceChosenCards
+	case parser.ReferenceDiedCreature:
+		return ReferenceDiedCreature
 	default:
 		return ReferenceUnknown
 	}

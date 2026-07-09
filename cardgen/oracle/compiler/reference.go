@@ -31,6 +31,22 @@ func bindReferences(
 				reference.Binding = ReferenceBindingUnsupported
 			}
 			continue
+		case ReferenceDiedCreature:
+			// "the creature that died" names the triggering creature of a dies
+			// trigger through last-known information. It binds to the event
+			// permanent directly, ahead of any target antecedent, so a "put X
+			// counters on target creature ... where X is the power of the creature
+			// that died" clause reads the dead creature's power, not the target's
+			// (Death's Presence). It fails closed outside a dies trigger body.
+			if trigger != nil &&
+				reference.Order.Start >= trigger.Order.Start &&
+				!trigger.Pattern.OneOrMore &&
+				trigger.Pattern.Event == TriggerEventPermanentDied {
+				reference.Binding = ReferenceBindingEventPermanent
+			} else {
+				reference.Binding = ReferenceBindingUnsupported
+			}
+			continue
 		case ReferencePronoun, ReferenceThatObject, ReferenceThatPlayer:
 		default:
 			reference.Binding = ReferenceBindingUnsupported
