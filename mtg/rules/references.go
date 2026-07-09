@@ -195,6 +195,18 @@ func (r referenceResolver) object(ref game.ObjectReference) (resolvedObjectRefer
 		return resolvedObjectReference{}, false
 	case game.ObjectReferenceTargetObject:
 		return r.targetObject(ref.TargetIndex())
+	case game.ObjectReferenceTargetCard:
+		cardID, ok := targetCardID(r.obj, ref.TargetIndex())
+		if !ok {
+			return resolvedObjectReference{}, false
+		}
+		if _, ok := r.g.GetCardInstance(cardID); !ok {
+			return resolvedObjectReference{}, false
+		}
+		return resolvedObjectReference{snapshot: game.ObjectSnapshot{
+			CardID: cardID,
+			Face:   game.FaceFront,
+		}}, true
 	case game.ObjectReferenceSacrificedCost:
 		if r.obj == nil || len(r.obj.SacrificedAsCostIDs) == 0 {
 			return resolvedObjectReference{}, false
@@ -827,4 +839,18 @@ func targetPermanentObjectID(obj *game.StackObject, targetIndex int) (id.ID, boo
 		return 0, false
 	}
 	return target.PermanentID, true
+}
+
+// targetCardID returns the chosen card ID for a card target slot, such as a
+// creature card selected in a graveyard. It backs ObjectReferenceTargetCard,
+// which names that card as the blueprint of a copy token.
+func targetCardID(obj *game.StackObject, targetIndex int) (id.ID, bool) {
+	if obj == nil || targetIndex < 0 || targetIndex >= len(obj.Targets) {
+		return 0, false
+	}
+	target := obj.Targets[targetIndex]
+	if target.Kind != game.TargetCard {
+		return 0, false
+	}
+	return target.CardID, true
 }

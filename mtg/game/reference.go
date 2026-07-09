@@ -66,6 +66,13 @@ const (
 	// across the delay because the original combat event is gone when the
 	// trigger fires.
 	ObjectReferenceCapturedObject
+	// ObjectReferenceTargetCard references the card chosen for a card target
+	// slot (a card in a zone such as a graveyard), addressed by the spec index.
+	// Unlike ObjectReferenceTargetPermanent it resolves to a card object rather
+	// than a battlefield permanent, so it can name a graveyard card as the
+	// blueprint of a copy token ("Create a token that's a copy of target
+	// creature card in your graveyard", Feldon of the Third Path).
+	ObjectReferenceTargetCard
 )
 
 // ObjectReference describes how a rules effect finds an object at resolution.
@@ -111,6 +118,13 @@ func CapturedTargetStackObjectReference(targetIndex int) ObjectReference {
 // targetIndex regardless of whether it is a permanent or a stack object.
 func TargetObjectReference(targetIndex int) ObjectReference {
 	return ObjectReference{kind: ObjectReferenceTargetObject, targetIndex: targetIndex}
+}
+
+// TargetCardReference references the card chosen for the card target slot at
+// targetIndex (a card in a zone such as a graveyard). It resolves to that card
+// object so a copy-token effect can use the chosen card as its blueprint.
+func TargetCardReference(targetIndex int) ObjectReference {
+	return ObjectReference{kind: ObjectReferenceTargetCard, targetIndex: targetIndex}
 }
 
 // SourcePermanentReference references the source permanent of the resolving stack
@@ -255,6 +269,13 @@ func (r ObjectReference) Validate() []string {
 		}
 		if r.targetIndex < 0 {
 			return []string{"target object reference must not use a negative TargetIndex"}
+		}
+	case ObjectReferenceTargetCard:
+		if r.linkID != "" {
+			return []string{"target card reference must not set LinkID"}
+		}
+		if r.targetIndex < 0 {
+			return []string{"target card reference must not use a negative TargetIndex"}
 		}
 	case ObjectReferenceSacrificedCost:
 		if r.targetIndex != 0 || r.linkID != "" {

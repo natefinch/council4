@@ -34,6 +34,7 @@ var Cards = []cardset.Entry{
 	{Name: "Feasting Troll King", New: FeastingTrollKing},
 	{Name: "Fecundity", New: Fecundity},
 	{Name: "Feed the Flames", New: FeedTheFlames},
+	{Name: "Feldon of the Third Path", New: FeldonOfTheThirdPath},
 	{Name: "Felling Blow", New: FellingBlow},
 	{Name: "Femeref Healer", New: FemerefHealer},
 	{Name: "Feral Deathgorger", New: FeralDeathgorger},

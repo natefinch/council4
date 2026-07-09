@@ -438,11 +438,11 @@ func lowerCreateCopyTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Dia
 		len(ctx.content.Modes) != 0 {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
-	targetSpec, ok := permanentTargetSpec(ctx.content.Targets[0])
+	targetSpec, copySource, ok := copyTokenTargetSpecAndSource(ctx.content.Targets[0])
 	if !ok {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
-	spec, ok := tokenCopyModifiers(&effect, game.TargetPermanentReference(0))
+	spec, ok := tokenCopyModifiers(&effect, copySource)
 	if !ok {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
@@ -460,6 +460,28 @@ func lowerCreateCopyTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Dia
 			},
 		}},
 	}.Ability(), nil
+}
+
+// copyTokenTargetSpecAndSource builds the target spec and copy source reference
+// for a "copy of target <object>" clause. A battlefield-permanent target copies
+// the chosen permanent (TargetPermanentReference); a graveyard-card target
+// ("copy of target creature card in your graveyard", Feldon of the Third Path)
+// copies the printed characteristics of the chosen card
+// (TargetCardReference) via the card-in-zone target spec. It returns false when
+// the target is neither shape so the copy-token lowering fails closed.
+func copyTokenTargetSpecAndSource(target compiler.CompiledTarget) (game.TargetSpec, game.ObjectReference, bool) {
+	if target.Selector.Zone == zone.Graveyard {
+		spec, ok := cardInZoneTargetSpec(target, zone.Graveyard)
+		if !ok {
+			return game.TargetSpec{}, game.ObjectReference{}, false
+		}
+		return spec, game.TargetCardReference(0), true
+	}
+	spec, ok := permanentTargetSpec(target)
+	if !ok {
+		return game.TargetSpec{}, game.ObjectReference{}, false
+	}
+	return spec, game.TargetPermanentReference(0), true
 }
 
 // lowerCreateCopyTokenReferenceSpell lowers "Create a token that's a copy of
