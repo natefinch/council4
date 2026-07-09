@@ -1371,6 +1371,9 @@ func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) 
 			return parseOwnerPlayWhileExiledEffect(sentence, tokens, atoms)
 		},
 		func() ([]EffectSyntax, bool) { return parsePlayThatCardEffect(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) {
+			return parseChooseExiledCardEffect(sentence, tokens, atoms)
+		},
 		func() ([]EffectSyntax, bool) { return parseAdditionalCombatPhaseEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseRollDieEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseRingTemptsEffect(sentence, tokens) },

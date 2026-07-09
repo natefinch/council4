@@ -2090,6 +2090,20 @@ func (p ExilePermanentForPlay) validatePrimitive(targets []TargetSpec, checkTarg
 	return validateObjectReference(p.Object, targets, checkTargets)
 }
 
+func (p PlayChosenExiledCard) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := validatePlayerReference(p.Player, targets, checkTargets); err != nil {
+		return err
+	}
+	if p.Zone != zone.Exile {
+		return errors.New("PlayChosenExiledCard requires exile as its source zone")
+	}
+	if p.Duration != DurationThisTurn && p.Duration != DurationUntilEndOfTurn &&
+		p.Duration != DurationUntilEndOfYourNextTurn && p.Duration != DurationUntilYourNextEndStep {
+		return errors.New("PlayChosenExiledCard requires a this-turn, until-end-of-turn, until-end-of-your-next-turn, or until-your-next-end-step play window")
+	}
+	return nil
+}
+
 func (p Sacrifice) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if p.Object.Kind() == ObjectReferenceNone {
 		return nil

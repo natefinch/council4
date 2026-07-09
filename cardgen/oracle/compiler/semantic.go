@@ -1912,6 +1912,16 @@ const (
 	// guard subsumes the printed "if this creature isn't monstrous" reminder.
 	// Added last so existing kinds keep their wire values.
 	EffectMonstrosity
+	// EffectChooseExiledCard is the resolution-time choice "Choose an exiled card
+	// an opponent owns with a <kind> counter on it." (Dauthi Voidwalker): the
+	// resolving controller picks one card resting in exile that a scoped player
+	// owns and that bears the named exile marker counter. It carries the source
+	// zone (FromZone = Exile), the owner scope (ChooseExiledCardOwnerOpponent),
+	// and the marker-counter filter (CounterKind/CounterKindKnown). It pairs at
+	// lowering with a following EffectPlay back-reference into a single
+	// PlayChosenExiledCard primitive and never lowers on its own. Added last so
+	// existing kinds keep their wire values.
+	EffectChooseExiledCard
 )
 
 // DurationKind identifies common continuous-effect durations.
@@ -2284,6 +2294,13 @@ type CompiledEffect struct {
 	Details           *CompiledEffectDetails
 	CounterKind       counter.Kind
 	CounterKindKnown  bool
+	// ChooseExiledCardOwnerOpponent scopes an EffectChooseExiledCard choice to
+	// cards owned by an opponent of the resolving controller ("Choose an exiled
+	// card an opponent owns ...", Dauthi Voidwalker). Lowering maps it to the
+	// PlayChosenExiledCard primitive's PlayerOpponent owner scope; it is false for
+	// every other effect, and any unrecognized owner wording leaves it false so
+	// the choice fails closed rather than silently widening the scope.
+	ChooseExiledCardOwnerOpponent bool
 	// CounterKindChoices lists the counter kinds a placement effect lets the
 	// resolving controller choose between ("a +1/+1 counter or a loyalty counter
 	// on it.", Elspeth Conquers Death chapter III). It holds two or more distinct

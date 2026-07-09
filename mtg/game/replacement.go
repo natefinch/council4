@@ -605,6 +605,15 @@ type ReplacementEffect struct {
 	// ContinuousZoneRedirect is true, and applies in addition to RedirectOwnerFilter.
 	RedirectControlFilter TriggerControllerFilter
 
+	// RedirectCounter is the named counter placed on a card a
+	// ContinuousZoneRedirect exiles ("instead exile it with a void counter on
+	// it." — Dauthi Voidwalker). It is only meaningful when
+	// ContinuousZoneRedirect is true and ReplaceToZone is zone.Exile; the
+	// runtime places one counter of this kind on the redirected card once it
+	// reaches exile, mirroring the MoveCard.Counter exile rider. It is absent
+	// for redirects that place no counter (Leyline of the Void).
+	RedirectCounter opt.V[counter.Kind]
+
 	// AffectedObjectID restricts the replacement to events about a single
 	// permanent identified by its object ID. When non-zero, the replacement
 	// matches only an event whose moving permanent is exactly this object,

@@ -518,6 +518,9 @@ func lowerOptionalContent(
 	if content, ok := lowerExileForPlay(ctx); ok {
 		return content, nil
 	}
+	if content, ok := lowerPlayChosenExiledCard(ctx); ok {
+		return content, nil
+	}
 	if content, ok := lowerExileLibraryUntilNonlandCast(ctx); ok {
 		return content, nil
 	}

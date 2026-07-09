@@ -30,6 +30,16 @@ func parsePlayThatCardEffect(sentence Sentence, tokens []shared.Token, atoms Ato
 	if !ok {
 		return nil, false
 	}
+	// A trailing "without paying its mana cost" makes the granted play a free
+	// cast ("You may play it this turn without paying its mana cost.", Dauthi
+	// Voidwalker). It sits after the play window, so it is stripped before the
+	// duration is matched; the rider lowers onto the play effect. A played land
+	// has no mana cost, so the flag only affects a spell cast of the card.
+	freeCast := false
+	if trimmed, cutOK := cutTokenSuffix(after, "without", "paying", "its", "mana", "cost"); cutOK {
+		after = trimmed
+		freeCast = true
+	}
 	duration, ok := matchPlayPermissionDurationWords(after, leadingDuration)
 	if !ok {
 		return nil, false
@@ -40,15 +50,16 @@ func parsePlayThatCardEffect(sentence Sentence, tokens []shared.Token, atoms Ato
 		return nil, false
 	}
 	return []EffectSyntax{{
-		Kind:       EffectPlay,
-		Span:       sentence.Span,
-		ClauseSpan: sentence.Span,
-		VerbSpan:   verbSpan,
-		Text:       sentence.Text,
-		Tokens:     append([]shared.Token(nil), tokens...),
-		Context:    EffectContextController,
-		Duration:   duration,
-		Optional:   true,
+		Kind:                      EffectPlay,
+		Span:                      sentence.Span,
+		ClauseSpan:                sentence.Span,
+		VerbSpan:                  verbSpan,
+		Text:                      sentence.Text,
+		Tokens:                    append([]shared.Token(nil), tokens...),
+		Context:                   EffectContextController,
+		Duration:                  duration,
+		Optional:                  true,
+		CastWithoutPayingManaCost: freeCast,
 		OptionalSpan: shared.Span{
 			Start: words[0].Span.Start,
 			End:   words[1].Span.End,
@@ -122,4 +133,19 @@ func matchPlayPermissionDurationWords(words []shared.Token, leadingDuration Effe
 	default:
 		return EffectDurationNone, false
 	}
+}
+
+// cutTokenSuffix removes a trailing run of words from tokens, returning the
+// tokens before it. It reports false when the tokens do not end with the words.
+func cutTokenSuffix(tokens []shared.Token, words ...string) ([]shared.Token, bool) {
+	if len(tokens) < len(words) {
+		return nil, false
+	}
+	offset := len(tokens) - len(words)
+	for i, word := range words {
+		if !equalWord(tokens[offset+i], word) {
+			return nil, false
+		}
+	}
+	return tokens[:offset], true
 }

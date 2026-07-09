@@ -444,6 +444,15 @@ const (
 	// The "until end of turn" duration is required. The "the color of your
 	// choice" form, which needs a resolution-time color choice, fails closed.
 	EffectBecomeColor EffectKind = "EffectBecomeColor"
+	// EffectChooseExiledCard models the resolution-time choice "Choose an exiled
+	// card an opponent owns with a <kind> counter on it." (Dauthi Voidwalker):
+	// the resolving controller picks one card resting in exile that a scoped
+	// player owns and that bears the named exile marker counter. It carries the
+	// source zone (Exile), the owner scope (an opponent), and the marker counter
+	// filter (ChooseExiledCardCounter/ChooseExiledCardCounterKnown). It is paired
+	// at lowering with a following EffectPlay back-reference into a single
+	// choose-then-play-from-exile primitive, so it never lowers on its own.
+	EffectChooseExiledCard EffectKind = "EffectChooseExiledCard"
 )
 
 // DigSourceKind identifies how an impulse "Put N <source> into your hand ..."
@@ -2215,6 +2224,14 @@ type EffectSyntax struct {
 	// kinds and is set only when CounterKnown is false because no single kind is
 	// fixed. Lowering emits a controller kind choice.
 	CounterKindChoices []counter.Kind `json:",omitempty"`
+	// ChooseExiledCardOwnerOpponent scopes an EffectChooseExiledCard choice to
+	// cards owned by an opponent of the resolving controller ("Choose an exiled
+	// card an opponent owns ...", Dauthi Voidwalker). It is set only for the
+	// recognized "an opponent owns" owner phrase; any other owner wording leaves
+	// it false so lowering fails closed rather than silently widening the scope.
+	// The counter filter rides the shared CounterKind/CounterKnown fields and the
+	// source zone rides FromZone (Exile).
+	ChooseExiledCardOwnerOpponent bool `json:",omitempty"`
 	// CounterRecipientAttached reports that a counter-placement effect places its
 	// counters on the permanent the source is attached to ("... on enchanted
 	// creature", "... on equipped creature"), the Aura or Equipment recipient the

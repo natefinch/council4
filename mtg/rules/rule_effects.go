@@ -1540,7 +1540,35 @@ func castFromZoneAllowsAnyMana(g *game.Game, playerID game.PlayerID, cardID id.I
 	return false
 }
 
-// castLinkedExileForFreePermission returns the active
+// castFromZoneWithoutPayingManaCost reports whether an active per-card
+// RuleEffectPlayFromZone permission lets playerID cast cardID from sourceZone
+// without paying its mana cost ("You may play it this turn without paying its
+// mana cost.", Dauthi Voidwalker). The flag rides the self-scoped card grant that
+// handlePlayChosenExiledCard emits; a played land has no mana cost, so this only
+// affects the spell cast. It is false for every paying play-from-exile grant
+// (ImpulseExile, Prowl), leaving their casts to pay normally.
+func castFromZoneWithoutPayingManaCost(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex) bool {
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind != game.RuleEffectPlayFromZone || !effect.WithoutPayingManaCost ||
+			effect.CastFromZone != sourceZone {
+			continue
+		}
+		if !ruleEffectAffectsPlayer(g, effect, playerID) {
+			continue
+		}
+		if effect.AffectedCardID != 0 && effect.AffectedCardID != cardID {
+			continue
+		}
+		if effect.CastFace.Exists && effect.CastFace.Val != face {
+			continue
+		}
+		return true
+	}
+	return false
+}
+
 // RuleEffectCastLinkedExileForFree permission, if any, that lets playerID cast
 // cardID from exile without paying its mana cost ("cast a spell from among cards
 // exiled with this enchantment without paying its mana cost.", Court of

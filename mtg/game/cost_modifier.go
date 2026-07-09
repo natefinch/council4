@@ -959,6 +959,15 @@ type RuleEffect struct {
 	// permission with no exile-counter filter.
 	ExileCounterFilter opt.V[counter.Kind]
 
+	// WithoutPayingManaCost, on a per-card RuleEffectPlayFromZone permission, lets
+	// the affected player cast AffectedCardID's spell without paying its mana cost
+	// ("You may play it this turn without paying its mana cost.", Dauthi
+	// Voidwalker). A land played under the same permission has no mana cost, so the
+	// flag only affects the spell cast. The rules layer casts the permitted card
+	// under a free alternative cost. It is false for every other kind, including
+	// the paying ImpulseExile and Prowl play-from-exile grants.
+	WithoutPayingManaCost bool
+
 	// ExileCounterExiledByController narrows a RuleEffectPlayLandsFromZone or
 	// RuleEffectCastSpellsFromZone exile-counter permission to cards that were
 	// exiled by an ability the effect's controller controlled ("... if it was

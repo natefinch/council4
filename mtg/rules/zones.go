@@ -425,6 +425,7 @@ func applyPreparedPermanentZoneMove(g *game.Game, move *preparedPermanentZoneMov
 	} else {
 		destinationCards.Add(removed.CardInstanceID)
 		shuffleLibraryIfRequested(g, destinationCards, move.actualDestination, move.replacement.shuffleIntoLibrary)
+		placeRedirectExileCounter(g, removed.Owner, removed.CardInstanceID, move.replacement)
 		emitPermanentLeaveEvents(g, removed, move.event.Controller, move.actualDestination, move.event.SimultaneousID)
 	}
 	for _, component := range move.componentMoves {
@@ -629,6 +630,7 @@ func moveCardBetweenZonesAfterReplacement(
 		to.Add(cardID)
 	}
 	shuffleLibraryIfRequested(g, to, destination, replacement.shuffleIntoLibrary)
+	placeRedirectExileCounter(g, zoneOwner, cardID, replacement)
 	emitZoneChangeEvent(g, game.Event{
 		Player:         playerID,
 		CardID:         cardID,
@@ -693,6 +695,7 @@ func discardCardFromHandInBatch(g *game.Game, playerID game.PlayerID, cardID, si
 	destination := zone.Graveyard
 	shuffleIntoLibrary := false
 	revealSource := false
+	var replacement zoneChangeReplacementResult
 	event := game.Event{}
 	if cardOK {
 		if _, ok := madnessCostForCard(cardFaceOrDefault(card, game.FaceFront)); ok {
@@ -707,7 +710,7 @@ func discardCardFromHandInBatch(g *game.Game, playerID game.PlayerID, cardID, si
 			ToZone:         destination,
 			SimultaneousID: simultaneousID,
 		}
-		replacement := replacementZoneChange(g, event)
+		replacement = replacementZoneChange(g, event)
 		destination = replacement.destination
 		destination = commanderReplacementDestination(g, card.ID, destination)
 		shuffleIntoLibrary = replacement.shuffleIntoLibrary
@@ -724,6 +727,7 @@ func discardCardFromHandInBatch(g *game.Game, playerID game.PlayerID, cardID, si
 	revealZoneReplacementSource(g, event, revealSource)
 	destinationCards.Add(cardID)
 	shuffleLibraryIfRequested(g, destinationCards, destination, shuffleIntoLibrary)
+	placeRedirectExileCounter(g, zoneOwner, cardID, replacement)
 	event = game.Event{
 		Player:         playerID,
 		CardID:         cardID,

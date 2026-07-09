@@ -435,6 +435,48 @@ func (r Renderer) renderExilePermanentForPlay(value game.ExilePermanentForPlay) 
 	return structLit("game.ExilePermanentForPlay", fields), nil
 }
 
+// renderPlayChosenExiledCard renders a PlayChosenExiledCard primitive: the
+// choosing player, the source zone, the owner scope, the optional marker-counter
+// filter, the play window, and the free-cast rider (Dauthi Voidwalker).
+func (r Renderer) renderPlayChosenExiledCard(ctx *renderCtx, value game.PlayChosenExiledCard) (string, error) {
+	player, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	zoneLit, err := renderZone(value.Zone)
+	if err != nil {
+		return "", err
+	}
+	scope, err := renderPlayerRelation(value.OwnerScope)
+	if err != nil {
+		return "", err
+	}
+	duration, err := renderDuration(value.Duration)
+	if err != nil {
+		return "", err
+	}
+	ctx.need(importZone)
+	fields := []string{
+		fmt.Sprintf("Player: %s,", player),
+		fmt.Sprintf("Zone: %s,", zoneLit),
+		fmt.Sprintf("OwnerScope: %s,", scope),
+	}
+	if value.Counter.Exists {
+		kind, err := renderCounterKind(value.Counter.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importCounter)
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("Counter: opt.Val(%s),", kind))
+	}
+	fields = append(fields, fmt.Sprintf("Duration: %s,", duration))
+	if value.WithoutPayingManaCost {
+		fields = append(fields, "WithoutPayingManaCost: true,")
+	}
+	return structLit("game.PlayChosenExiledCard", fields), nil
+}
+
 func (r Renderer) renderImpulseExile(ctx *renderCtx, value game.ImpulseExile) (string, error) {
 	player, err := r.renderPlayerReference(value.Player)
 	if err != nil {
