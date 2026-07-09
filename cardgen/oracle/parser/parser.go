@@ -183,7 +183,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitReminderInner(document.Abilities)
 	emitSourceOrder(document.Abilities)
 	stripConditionalModalHeaderSemantics(document.Abilities)
-	emitDelayedTriggerEffects(document.Abilities, context.InstantOrSorcery)
+	emitDelayedTriggerEffects(document.Abilities, context.CardName, context.Legendary, context.InstantOrSorcery)
 	return document, diagnostics
 }
 

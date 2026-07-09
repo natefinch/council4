@@ -16,13 +16,14 @@ import (
 // delayed trigger. Rewriting fails closed: an ability the recognizer does not
 // match, or whose stripped body does not reparse to exactly one triggered
 // ability, is left untouched.
-func emitDelayedTriggerEffects(abilities []Ability, instantOrSorcery bool) {
+func emitDelayedTriggerEffects(abilities []Ability, cardName string, legendary, instantOrSorcery bool) {
 	for i := range abilities {
 		rewriteDelayedTriggerAbility(&abilities[i])
 		rewriteCapturedCombatDamageDelayedTrigger(&abilities[i])
 		rewriteCapturedAttacksMonarchDelayedTrigger(&abilities[i])
 		rewriteCapturedDiesMonarchDelayedTrigger(&abilities[i])
 		rewriteSpellTriggeredThisTurnDelayedAbility(&abilities[i], instantOrSorcery)
+		rewriteGeneralDeathDelayedTrigger(&abilities[i], cardName, legendary)
 	}
 }
 
@@ -628,7 +629,18 @@ func delayedTriggerInnerText(text string) (inner string, oneShot bool, ok bool) 
 // text rather than a quoted token, and requires exactly one triggered ability so
 // any other shape fails closed.
 func parseDelayedTriggerAbility(text string) (StaticGrantedAbilitySyntax, bool) {
-	document, diagnostics := Parse(text, Context{})
+	return parseDelayedTriggerAbilityWithContext(text, "", false)
+}
+
+// parseDelayedTriggerAbilityWithContext reparses the reconstructed inner ability
+// text with the source card's own name (and legendary flag) supplied, so a
+// nested body that names the source for self-exclusion ("each creature other
+// than Massacre Girl gets -1/-1 until end of turn") resolves through the same
+// self-name atoms the outer parse uses. It otherwise mirrors
+// parseDelayedTriggerAbility and requires exactly one triggered ability so any
+// other shape fails closed.
+func parseDelayedTriggerAbilityWithContext(text, cardName string, legendary bool) (StaticGrantedAbilitySyntax, bool) {
+	document, diagnostics := Parse(text, Context{CardName: cardName, Legendary: legendary})
 	if len(document.Abilities) != 1 ||
 		document.Abilities[0].Kind != AbilityTriggered {
 		return StaticGrantedAbilitySyntax{}, false
@@ -638,4 +650,133 @@ func parseDelayedTriggerAbility(text string) (StaticGrantedAbilitySyntax, bool) 
 		document:    document,
 		diagnostics: diagnostics,
 	}, true
+}
+
+// rewriteGeneralDeathDelayedTrigger rewrites every sentence whose leading clause
+// is an indefinite "Whenever a creature <filter> dies this turn, <body>" delayed
+// preamble into one EffectDelayedTrigger carrying the sentence reparsed as a
+// nested permanent-died triggered ability with its turn window stripped (Death
+// Frenzy: "Whenever a creature dies this turn, you gain 1 life."; Massacre Girl:
+// "Whenever a creature dies this turn, each creature other than Massacre Girl
+// gets -1/-1 until end of turn."). Unlike the captured "that/the creature dies"
+// riders, the indefinite "a creature" subject repeats on every creature death,
+// so the delayed trigger reuses the reparsed indefinite permanent-died pattern
+// directly. The rewriter always fails closed on the general-death family: a
+// preamble whose body does not reparse to exactly one triggered ability, or a
+// death preamble gated by a leading condition ("If this spell was kicked,
+// whenever a creature you control dies this turn, ...", Warhost's Frenzy), is
+// still converted to a delayed-trigger effect with no nested ability so lowering
+// rejects it rather than dropping the preamble and running the body immediately.
+func rewriteGeneralDeathDelayedTrigger(ability *Ability, cardName string, legendary bool) {
+	for si := range ability.Sentences {
+		sentence := &ability.Sentences[si]
+		if sentenceHasDelayedTriggerEffect(sentence) {
+			continue
+		}
+		tokens := semanticEffectTokens(sentence.Tokens)
+		segStart, ok := generalDeathDelayedSegment(tokens)
+		if !ok {
+			continue
+		}
+		effect := EffectSyntax{
+			Kind:       EffectDelayedTrigger,
+			Span:       sentence.Span,
+			VerbSpan:   sentence.Span,
+			ClauseSpan: sentence.Span,
+			Text:       sentence.Text,
+		}
+		if segStart == 0 {
+			if inner, ok := deathDelayedInnerText(sentence.Text); ok {
+				if granted, ok := parseDelayedTriggerAbilityWithContext(inner, cardName, legendary); ok {
+					effect.DelayedTriggerAbility = &granted
+				}
+			}
+		}
+		sentence.Effects = []EffectSyntax{effect}
+		sentence.Targets = nil
+		sentence.LegacyEffects = false
+		stripConditionsInSpan(ability, sentence.Span)
+	}
+}
+
+// sentenceHasDelayedTriggerEffect reports whether a sentence already carries an
+// EffectDelayedTrigger effect, so a sentence a captured-object rider rewriter
+// already converted is left untouched by the general-death rewriter.
+func sentenceHasDelayedTriggerEffect(sentence *Sentence) bool {
+	for i := range sentence.Effects {
+		if sentence.Effects[i].Kind == EffectDelayedTrigger {
+			return true
+		}
+	}
+	return false
+}
+
+// generalDeathDelayedSegment reports the token index at which the first
+// top-level "when/whenever a/an <filter> dies this turn" delayed-death preamble
+// segment begins, and whether one exists. A segment beginning at index 0 is an
+// unconditional delayed trigger; a later index marks a death preamble gated by a
+// preceding clause the backend cannot model as an unconditional delayed trigger.
+func generalDeathDelayedSegment(tokens []shared.Token) (int, bool) {
+	start := 0
+	for start < len(tokens) {
+		comma := shared.TopLevelIndex(tokens[start:], shared.Comma)
+		if comma < 0 {
+			return 0, false
+		}
+		segment := tokens[start : start+comma]
+		if isDelayedThisTurnPreamble(segment) && leadMentionsGeneralDies(segment) {
+			return start, true
+		}
+		start += comma + 1
+	}
+	return 0, false
+}
+
+// leadMentionsGeneralDies reports whether a delayed-trigger preamble names an
+// indefinite creature ("a"/"an" ...) dying, the general repeating permanent-died
+// shape the general-death rewriter converts. It distinguishes the indefinite
+// subject from the captured "that/the/this creature" forms other rewriters bind,
+// so this rewriter never touches a captured single-object rider.
+func leadMentionsGeneralDies(lead []shared.Token) bool {
+	if len(lead) < 2 || (!equalWord(lead[1], "a") && !equalWord(lead[1], "an")) {
+		return false
+	}
+	for i := range lead {
+		if equalWord(lead[i], "dies") || equalWord(lead[i], "die") {
+			return true
+		}
+	}
+	return false
+}
+
+// deathDelayedInnerText reconstructs the nested triggered-ability source of a
+// general-death "this turn" delayed preamble by stripping the turn window and
+// normalizing a "When" introducer to "Whenever" so the result is an ordinary
+// repeating permanent-died triggered ability ("Whenever a creature dies this
+// turn, you gain 1 life." -> "Whenever a creature dies, you gain 1 life."). The
+// delayed trigger reuses only the inner trigger pattern and body, so normalizing
+// "When" to "Whenever" preserves the matched event. It fails closed on any other
+// preamble shape.
+func deathDelayedInnerText(text string) (inner string, ok bool) {
+	trimmed := strings.TrimSpace(text)
+	comma := strings.Index(trimmed, ",")
+	if comma <= 0 {
+		return "", false
+	}
+	preamble := strings.TrimSpace(trimmed[:comma])
+	body := trimmed[comma:]
+	lowered := strings.ToLower(preamble)
+	if !strings.HasSuffix(lowered, "this turn") {
+		return "", false
+	}
+	preamble = strings.TrimSpace(preamble[:len(preamble)-len("this turn")])
+	lowered = strings.ToLower(preamble)
+	switch {
+	case strings.HasPrefix(lowered, "whenever "):
+	case strings.HasPrefix(lowered, "when "):
+		preamble = "Whenever " + preamble[len("when "):]
+	default:
+		return "", false
+	}
+	return strings.TrimSpace(preamble) + body, true
 }

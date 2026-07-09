@@ -3661,8 +3661,35 @@ func stripLeadingDesignationConditionClause(tokens []shared.Token) []shared.Toke
 	return tokens[end+1:]
 }
 
+// parseEachCreatureOtherThanSelfSubject recognizes the singular distributive
+// "each creature other than <source name> <verb> ..." group subject (Massacre
+// Girl: "each creature other than Massacre Girl gets -1/-1 until end of turn"),
+// which names every creature on the battlefield except the source. The excluded
+// object must be the card's own name, matched through the atom self-name spans so
+// the parser owns the name spelling. It maps to the same source-excluding
+// all-creatures group as "all other creatures". It returns the zero subject for
+// any other shape.
+func parseEachCreatureOtherThanSelfSubject(tokens []shared.Token, atoms Atoms) (EffectStaticSubjectSyntax, bool) {
+	if len(tokens) < 6 || !effectWordsAt(tokens, 0, "each", "creature", "other", "than") {
+		return EffectStaticSubjectSyntax{}, false
+	}
+	nameTokens := tokens[4:]
+	span, found := atoms.SelfNameSpanStartingAt(nameTokens[0].Span)
+	if !found {
+		return EffectStaticSubjectSyntax{}, false
+	}
+	nameLen := tokenCountForSpan(nameTokens, span)
+	if nameLen == 0 || 4+nameLen >= len(tokens) || !staticGroupVerbSingular(tokens[4+nameLen]) {
+		return EffectStaticSubjectSyntax{}, false
+	}
+	return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectAllOtherCreatures, Span: shared.SpanOf(tokens[:4+nameLen])}, true
+}
+
 func parseEffectStaticSubject(tokens []shared.Token, atoms Atoms) EffectStaticSubjectSyntax {
 	if subject, ok := parseCombatRestrictionGroupSubject(tokens); ok {
+		return subject
+	}
+	if subject, ok := parseEachCreatureOtherThanSelfSubject(tokens, atoms); ok {
 		return subject
 	}
 	if subject, ok := parseChosenColorControlledGroupSubject(tokens, atoms); ok {
@@ -3720,6 +3747,13 @@ func parseEffectStaticSubject(tokens []shared.Token, atoms Atoms) EffectStaticSu
 		// "All creatures get ..." does, but with the singular "each creature" noun
 		// and verb. It maps to the same all-creatures group.
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectAllCreatures, Span: shared.SpanOf(tokens[:2])}
+	case len(tokens) >= 4 && effectWordsAt(tokens, 0, "each", "other", "creature") &&
+		staticGroupVerbSingular(tokens[3]):
+		// "Each other creature gets ..." is the singular distributive wording for
+		// the same source-excluding group as "All other creatures get ..." (Massacre
+		// Girl's enters ability). The controlled "each other creature you control"
+		// form is recognized earlier, so this reaches only the battlefield-wide group.
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectAllOtherCreatures, Span: shared.SpanOf(tokens[:3])}
 	case len(tokens) >= 3 && effectWordsAt(tokens, 0, "attacking", "creatures") &&
 		staticGroupVerb(tokens[2]):
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectAttackingCreatures, Span: shared.SpanOf(tokens[:2])}
