@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,238 of 32,501 cards eligible for paper support (53.0%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,240 of 32,501 cards eligible for paper support (53.0%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -3166,6 +3166,7 @@ Council4 currently supports **17,238 of 32,501 cards eligible for paper support 
 - Curious Altisaur
 - Curious Cadaver
 - Curious Farm Animals
+- Curious Herd
 - Curious Homunculus // Voracious Reader
 - Curious Inquiry
 - Curious Pair // Treats to Share
@@ -16686,6 +16687,7 @@ Council4 currently supports **17,238 of 32,501 cards eligible for paper support 
 - Welkin Tern
 - Well of Discovery
 - Well of Life
+- Well of Lost Dreams
 - Well Rested
 - Wellwisher
 - Werebear
