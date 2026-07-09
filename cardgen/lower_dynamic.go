@@ -1266,9 +1266,14 @@ func permanentTargetSpecAllowingUnbounded(target compiler.CompiledTarget, allowU
 	applyAttachmentTargetSelection(&selection, target.Selector)
 	if target.Selector.MatchManaValue {
 		if target.Selector.ManaValueX {
-			return game.TargetSpec{}, false
+			// "mana value X or less" bounds the target by the spell's chosen {X},
+			// which the X-blind Selection matcher cannot express. Record the bound
+			// on the spec; the runtime enforces mana value <= X at announcement
+			// (spellTargetsSatisfyManaValueX) and re-checks it at resolution.
+			spec.ManaValueAtMostX = true
+		} else {
+			selection.ManaValue = opt.Val(target.Selector.ManaValue)
 		}
-		selection.ManaValue = opt.Val(target.Selector.ManaValue)
 	}
 	if target.Selector.MatchPower {
 		selection.Power = opt.Val(target.Selector.Power)

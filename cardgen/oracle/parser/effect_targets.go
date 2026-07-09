@@ -1399,7 +1399,7 @@ func powerToughnessPrefixWords(selection SelectionSyntax) ([]string, bool) {
 func permanentNumericQualifierWords(selection SelectionSyntax) ([]string, bool) {
 	var clauses [][]string
 	if selection.MatchManaValue {
-		clause, ok := comparisonClauseWords("mana value", selection.ManaValue)
+		clause, ok := manaValueClauseWords(selection)
 		if !ok {
 			return nil, false
 		}
@@ -1464,6 +1464,22 @@ func comparisonClauseWords(qualifier string, comparison compare.Int) ([]string, 
 	default:
 		return nil, false
 	}
+}
+
+// manaValueClauseWords renders a permanent target's "mana value" comparison. When
+// the selection carries a spell-X-derived bound it reproduces the "mana value X or
+// less" spelling that parseSelectionNumbers recognizes, rather than the fixed
+// comparison over the placeholder value 0, so the text-blind round-trip stays
+// byte-exact. Only the "X or less" phrasing is recognized, so any other X-bounded
+// operator fails closed.
+func manaValueClauseWords(selection SelectionSyntax) ([]string, bool) {
+	if selection.ManaValueX {
+		if selection.ManaValue.Op != compare.LessOrEqual {
+			return nil, false
+		}
+		return []string{"mana value", "X", "or", "less"}, true
+	}
+	return comparisonClauseWords("mana value", selection.ManaValue)
 }
 
 // exactTypeUnionTargetSyntax recognizes a permanent target whose only restriction
@@ -2050,9 +2066,13 @@ func exactExcludedSubtypeTargetSyntax(text string, selection SelectionSyntax) bo
 
 func targetSelectionHasUnsupportedQualifier(tokens []shared.Token, atoms Atoms) bool {
 	dynStart, dynEnd, hasDyn := selectionManaValueDynamicSpan(tokens)
+	xStart, xEnd, hasX := selectionManaValueXSpan(tokens)
 	counterStart, counterEnd, hasCounter := selectionCounterQualifierSpan(tokens)
 	for idx, token := range tokens {
 		if hasDyn && idx >= dynStart && idx < dynEnd {
+			continue
+		}
+		if hasX && idx >= xStart && idx < xEnd {
 			continue
 		}
 		if hasCounter && idx >= counterStart && idx < counterEnd {
@@ -3525,6 +3545,21 @@ func selectionManaValueDynamicSpan(tokens []shared.Token) (start, end int, ok bo
 			if _, end, ok := parseSelectionManaValueDynamic(tokens, i+2); ok {
 				return i, end, true
 			}
+		}
+	}
+	return 0, 0, false
+}
+
+// selectionManaValueXSpan reports the token span of a "mana value X or less"
+// rider, so the unsupported-qualifier gate treats the spell-X placeholder token
+// as a recognized qualifier rather than rejecting the whole selection. Only the
+// "X or less" spelling parseSelectionNumbers records is matched. It returns the
+// half-open [start, end) index range over tokens.
+func selectionManaValueXSpan(tokens []shared.Token) (start, end int, ok bool) {
+	for i := range tokens {
+		if i+4 < len(tokens) && effectWordsAt(tokens, i, "mana", "value") &&
+			equalWord(tokens[i+2], "X") && equalWord(tokens[i+3], "or") && equalWord(tokens[i+4], "less") {
+			return i, i + 5, true
 		}
 	}
 	return 0, 0, false
