@@ -28,6 +28,7 @@ func putLandFromHandInstruction() *game.Instruction {
 			game.Fixed(1),
 			false,
 			false,
+			false,
 		),
 	}
 }
