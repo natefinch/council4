@@ -501,6 +501,7 @@ func (r referenceResolver) triggeringAttackersGroupMembers(ref game.GroupReferen
 	}
 	sel := ref.Selection()
 	source, _ := r.sourcePermanent()
+	defenderFilter := ref.AttackedDefenderFilter()
 	members := make([]id.ID, 0)
 	for _, objectID := range triggeringAttackerObjectIDs(r.g, r.obj.TriggerEvent) {
 		permanent, ok := permanentByObjectID(r.g, objectID)
@@ -510,9 +511,41 @@ func (r referenceResolver) triggeringAttackersGroupMembers(ref game.GroupReferen
 		if !r.permanentMatchesGroupSelection(&sel, source, permanent) {
 			continue
 		}
+		if defenderFilter != game.TriggerControllerAny {
+			defendingPlayer, ok := triggeringAttackerDefendingPlayer(r.g, r.obj.TriggerEvent, objectID)
+			if !ok || !triggerControllerMatches(r.obj.Controller, defenderFilter, defendingPlayer) {
+				continue
+			}
+		}
 		members = append(members, objectID)
 	}
 	return members
+}
+
+// triggeringAttackerDefendingPlayer returns the player an attacker was declared
+// against in the trigger's simultaneous batch, read from the stored
+// EventAttackerDeclared events (which record the defending player in Player, even
+// when a planeswalker or battle was the direct target). Reading the declaration
+// rather than re-deriving it from live combat keeps a declared attacker that has
+// since left combat classified by its original defender, matching the
+// declared-batch snapshot the group binds. It reports false when no declaration
+// for the attacker is found.
+func triggeringAttackerDefendingPlayer(g *game.Game, trigger game.Event, attackerObjectID id.ID) (game.PlayerID, bool) {
+	if trigger.SimultaneousID == 0 {
+		if trigger.PermanentID == attackerObjectID {
+			return trigger.Player, true
+		}
+		return 0, false
+	}
+	for i := range g.Events {
+		event := &g.Events[i]
+		if event.Kind == game.EventAttackerDeclared &&
+			event.SimultaneousID == trigger.SimultaneousID &&
+			event.PermanentID == attackerObjectID {
+			return event.Player, true
+		}
+	}
+	return 0, false
 }
 
 // triggeringAttackerObjectIDs returns the object IDs of the creatures declared

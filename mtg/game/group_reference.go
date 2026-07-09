@@ -66,6 +66,13 @@ type GroupReference struct {
 	anchor       opt.V[ObjectReference]
 	playerAnchor opt.V[PlayerReference]
 	exclude      opt.V[ObjectReference]
+	// attackedDefenderFilter narrows a GroupDomainTriggeringAttackers group to the
+	// declared attackers whose defending player relates to the resolving ability's
+	// controller as given ("one or more creatures attack one of your opponents",
+	// Frontier Warmonger → TriggerControllerOpponent). TriggerControllerAny (the
+	// zero value) imposes no defender restriction, so a plain triggering-attackers
+	// group keeps its prior behavior.
+	attackedDefenderFilter TriggerControllerFilter
 }
 
 // BattlefieldGroup matches every battlefield permanent satisfying selection.
@@ -134,6 +141,19 @@ func TriggeringAttackersGroup(selection Selection) GroupReference {
 	return GroupReference{domain: GroupDomainTriggeringAttackers, selection: selection}
 }
 
+// TriggeringAttackersAgainstDefenderGroup is TriggeringAttackersGroup further
+// narrowed to the declared attackers whose defending player relates to the
+// resolving ability's controller by defenderFilter ("one or more creatures
+// attack one of your opponents or a planeswalker they control, those creatures
+// gain menace", Frontier Warmonger → TriggerControllerOpponent).
+func TriggeringAttackersAgainstDefenderGroup(selection Selection, defenderFilter TriggerControllerFilter) GroupReference {
+	return GroupReference{
+		domain:                 GroupDomainTriggeringAttackers,
+		selection:              selection,
+		attackedDefenderFilter: defenderFilter,
+	}
+}
+
 // Domain reports the candidate domain the group draws from.
 func (r GroupReference) Domain() GroupReferenceDomain { return r.domain }
 
@@ -143,11 +163,18 @@ func (r GroupReference) Empty() bool {
 		r.selection.Empty() &&
 		!r.anchor.Exists &&
 		!r.playerAnchor.Exists &&
-		!r.exclude.Exists
+		!r.exclude.Exists &&
+		r.attackedDefenderFilter == TriggerControllerAny
 }
 
 // Selection returns the characteristic predicate that narrows the domain.
 func (r GroupReference) Selection() Selection { return r.selection }
+
+// AttackedDefenderFilter returns the defending-player restriction applied to a
+// triggering-attackers group, or TriggerControllerAny when unrestricted.
+func (r GroupReference) AttackedDefenderFilter() TriggerControllerFilter {
+	return r.attackedDefenderFilter
+}
 
 // Anchor returns the object the domain is defined relative to, if any.
 func (r GroupReference) Anchor() (ObjectReference, bool) {
@@ -230,6 +257,9 @@ func (r GroupReference) Validate() []string {
 	}
 	if r.exclude.Exists {
 		problems = appendPrefixed(problems, "exclude", r.exclude.Val.Validate())
+	}
+	if r.attackedDefenderFilter != TriggerControllerAny && r.domain != GroupDomainTriggeringAttackers {
+		problems = append(problems, "only a triggering-attackers group may set a defender filter")
 	}
 	problems = append(problems, r.selection.Validate()...)
 	return problems

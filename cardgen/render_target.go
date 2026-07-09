@@ -330,6 +330,13 @@ func (r Renderer) renderGroupReference(ctx *renderCtx, group game.GroupReference
 		}
 		return fmt.Sprintf("game.SameNamePermanentGroup(%s, %s)", renderedAnchor, selection), nil
 	case game.GroupDomainTriggeringAttackers:
+		if filter := group.AttackedDefenderFilter(); filter != game.TriggerControllerAny {
+			defender, err := renderTriggerController(filter)
+			if err != nil {
+				return "", err
+			}
+			return fmt.Sprintf("game.TriggeringAttackersAgainstDefenderGroup(%s, %s)", selection, defender), nil
+		}
 		return fmt.Sprintf("game.TriggeringAttackersGroup(%s)", selection), nil
 	default:
 		return "", fmt.Errorf("render: unsupported group reference domain %d", group.Domain())
