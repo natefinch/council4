@@ -53,3 +53,47 @@ func TestGenerateExecutablePredefinedMutavaultToken(t *testing.T) {
 		}
 	}
 }
+
+// TestGenerateExecutablePredefinedTarmogoyfToken exercises the predefined
+// named-token generator for the Tarmogoyf token created by Disa the Restless: a
+// green Lhurgoyf creature whose characteristic-defining ability sets its power to
+// the number of card types among cards in all graveyards and its toughness to
+// that number plus 1. The create clause carries only the name, so the token's
+// full definition — its color, subtype, printed "*"/"*", and CDA
+// DynamicPower/DynamicToughness — is fixed in lowering, reusing the same modeling
+// the real Tarmogoyf card lowers to.
+func TestGenerateExecutablePredefinedTarmogoyfToken(t *testing.T) {
+	t.Parallel()
+	power, toughness := "3", "3"
+	card := &ScryfallCard{
+		Name:       "Test Tarmogoyf Maker",
+		Layout:     "normal",
+		ManaCost:   "{1}{G}",
+		TypeLine:   "Creature — Human Scout",
+		Power:      &power,
+		Toughness:  &toughness,
+		OracleText: "When this creature enters, create a Tarmogoyf token.",
+		Colors:     []string{"G"},
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Primitive: game.CreateToken{",
+		"game.TokenDef(",
+		`Name: "Tarmogoyf",`,
+		"[]color.Color{color.Green}",
+		"[]types.Sub{types.Lhurgoyf}",
+		"game.PT{IsStar: true}",
+		"game.DynamicValue{Kind: game.DynamicValueCardTypesAmongAllGraveyards}",
+		"game.DynamicValue{Kind: game.DynamicValueCardTypesAmongAllGraveyards, Offset: 1}",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}

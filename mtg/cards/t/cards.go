@@ -17,6 +17,7 @@ var Cards = []cardset.Entry{
 	{Name: "Tannuk, Memorial Ensign", New: TannukMemorialEnsign},
 	{Name: "Tapestry of the Ages", New: TapestryOfTheAges},
 	{Name: "Tapping at the Window", New: TappingAtTheWindow},
+	{Name: "Tarmogoyf Nest", New: TarmogoyfNest},
 	{Name: "Tarrian's Soulcleaver", New: TarrianSSoulcleaver},
 	{Name: "Tattered Haunter", New: TatteredHaunter},
 	{Name: "Tattoo Ward", New: TattooWard},
