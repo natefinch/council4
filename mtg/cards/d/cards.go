@@ -20,6 +20,7 @@ var Cards = []cardset.Entry{
 	{Name: "Daru Healer", New: DaruHealer},
 	{Name: "Daughter of the Deep", New: DaughterOfTheDeep},
 	{Name: "Dauthi Mindripper", New: DauthiMindripper},
+	{Name: "Dauthi Voidwalker", New: DauthiVoidwalker},
 	{Name: "Dawn Charm", New: DawnCharm},
 	{Name: "Dawnbringer Cleric", New: DawnbringerCleric},
 	{Name: "Dawnfluke", New: Dawnfluke},
