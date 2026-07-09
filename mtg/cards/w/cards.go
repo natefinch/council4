@@ -40,6 +40,7 @@ var Cards = []cardset.Entry{
 	{Name: "Weed-Pruner Poplar", New: WeedPrunerPoplar},
 	{Name: "Weight Advantage", New: WeightAdvantage},
 	{Name: "Welkin Tern", New: WelkinTern},
+	{Name: "Well of Lost Dreams", New: WellOfLostDreams},
 	{Name: "Whimwader", New: Whimwader},
 	{Name: "Whiskerquill Scribe", New: WhiskerquillScribe},
 	{Name: "White Ward", New: WhiteWard},

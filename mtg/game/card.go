@@ -711,6 +711,10 @@ func clonePrimitive(primitive Primitive) Primitive {
 		return value
 	case PayRepeatedly:
 		value.Payment = cloneResolutionPayment(value.Payment)
+		if value.MaxCount.Exists && value.MaxCount.Val != nil {
+			dynamic := cloneDynamicAmount(value.MaxCount.Val)
+			value.MaxCount.Val = &dynamic
+		}
 		return value
 	case PutOnBattlefield:
 		value.Sources = slices.Clone(value.Sources)

@@ -839,10 +839,19 @@ type Pay struct {
 // published when the controller never pays, which lets a gated reflexive payoff
 // resolve to nothing. The loop is bounded by an internal cap so a free or
 // fully-affordable cost cannot iterate without limit.
+//
+// MaxCount, when set, bounds the number of payments to a rules-derived amount
+// evaluated as the instruction resolves (negative values are treated as zero).
+// It backs "pay {X}, where X is less than or equal to <triggering amount>"
+// (Well of Lost Dreams' "pay {X}, where X is less than or equal to the amount of
+// life you gained"): the per-unit cost is offered up to that many times so the
+// published count is the chosen X, never exceeding the triggering quantity. When
+// MaxCount is absent the loop uses only the internal cap.
 type PayRepeatedly struct {
 	Payment      ResolutionPayment
 	PublishCount ResultKey
 	Prompt       string
+	MaxCount     opt.V[*DynamicAmount]
 }
 
 // Choose makes a resolution-time choice and publishes it via PublishChoice.

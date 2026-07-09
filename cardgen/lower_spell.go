@@ -259,6 +259,9 @@ func lowerContentDispatch(
 	if content, ok := lowerEventPlayerPerCreatureUntapPayment(cardName, ctx, syntax); ok {
 		return content, nil
 	}
+	if content, ok := lowerControllerVariablePayScaledDraw(cardName, ctx, syntax); ok {
+		return content, nil
+	}
 	if content, ok := lowerNonControllerOptionalEdictGate(cardName, ctx, syntax); ok {
 		return content, nil
 	}
