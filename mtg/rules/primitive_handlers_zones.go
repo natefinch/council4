@@ -2356,9 +2356,13 @@ func handleImpulseExile(r *effectResolver, prim game.ImpulseExile) effectResolve
 		if !ok || !moveCardBetweenZonesInBatch(r.game, playerID, cardID, zone.Library, zone.Exile, false, simultaneousID) {
 			continue
 		}
+		kind := game.RuleEffectPlayFromZone
+		if prim.Cast {
+			kind = game.RuleEffectCastFromZone
+		}
 		r.game.RuleEffects = append(r.game.RuleEffects, game.RuleEffect{
 			ID:             r.game.IDGen.Next(),
-			Kind:           game.RuleEffectPlayFromZone,
+			Kind:           kind,
 			Controller:     r.obj.Controller,
 			SourceCardID:   r.obj.SourceCardID,
 			SourceObjectID: r.obj.SourceID,

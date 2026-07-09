@@ -494,8 +494,8 @@ func (r Renderer) renderImpulseExile(ctx *renderCtx, value game.ImpulseExile) (s
 }
 
 // impulseExileFields renders the ImpulseExile struct fields, appending the
-// any-type-mana rider and the source-keyed linked set only when Court of
-// Locthwain's play permission sets them, so every other impulse exile renders
+// cast-only permission, the any-type-mana rider, and the source-keyed linked set
+// only when the play permission sets them, so every other impulse exile renders
 // unchanged.
 func impulseExileFields(player, amount, duration string, value game.ImpulseExile) []string {
 	fields := []string{
@@ -505,6 +505,9 @@ func impulseExileFields(player, amount, duration string, value game.ImpulseExile
 	}
 	if value.SpendAnyMana {
 		fields = append(fields, "SpendAnyMana: true,")
+	}
+	if value.Cast {
+		fields = append(fields, "Cast: true,")
 	}
 	if value.PublishLinked != "" {
 		fields = append(fields, fmt.Sprintf("PublishLinked: game.LinkedKey(%q),", string(value.PublishLinked)))

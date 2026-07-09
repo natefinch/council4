@@ -434,6 +434,8 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				CastAsAdventure:           syntax.CastAsAdventure,
 				CastWithoutPayingManaCost: syntax.CastWithoutPayingManaCost,
 				PlayHideawayExiledCard:    syntax.PlayHideawayExiledCard,
+				ImpulseCast:               syntax.ImpulseCast,
+				ImpulseSpendAnyColor:      syntax.ImpulseSpendAnyColor,
 				Negated:                   syntax.Negated,
 				FallbackOnInability:       syntax.FallbackOnInability,
 				Optional:                  syntax.Optional,

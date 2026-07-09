@@ -2549,7 +2549,18 @@ type CompiledEffect struct {
 	// primitive gated by the ability's activation condition; it is false for
 	// every other effect.
 	PlayHideawayExiledCard bool
-	Negated                bool
+	// ImpulseCast mirrors the parser flag marking an impulse-exile play
+	// permission that grants casting the exiled card ("you may cast that card")
+	// rather than playing it. Lowering reads it to grant cast-only permission; it
+	// is false for every other effect.
+	ImpulseCast bool
+	// ImpulseSpendAnyColor mirrors the parser flag marking an impulse-exile play
+	// permission carrying the any-color rider "and you may spend mana as though
+	// it were mana of any color to cast that spell." (Grenzo, Havoc Raiser).
+	// Lowering reads it to set the exiled cast's spend-any-mana permission; it is
+	// false for every other effect.
+	ImpulseSpendAnyColor bool
+	Negated              bool
 	// FallbackOnInability mirrors the parser flag for a "who can't" relative
 	// clause effect ("Each player who can't discards a card."): it applies only
 	// to players who couldn't satisfy the immediately preceding required action.

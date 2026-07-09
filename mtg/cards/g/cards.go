@@ -103,6 +103,7 @@ var Cards = []cardset.Entry{
 	{Name: "Greed's Gambit", New: GreedSGambit},
 	{Name: "Green Ward", New: GreenWard},
 	{Name: "Greenwheel Liberator", New: GreenwheelLiberator},
+	{Name: "Grenzo, Havoc Raiser", New: GrenzoHavocRaiser},
 	{Name: "Grief Tyrant", New: GriefTyrant},
 	{Name: "Griffnaut Tracker", New: GriffnautTracker},
 	{Name: "Grim Affliction", New: GrimAffliction},

@@ -117,6 +117,27 @@ func lowerLifeDamageTrigger(
 		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability",
 			"the executable source backend does not support this semantic life or damage trigger condition")
 	}
+	// A modal "choose one —" body routes through the shared modal-content
+	// lowering, exactly like spell-cast and permanent-zone-change triggers; each
+	// mode lowers as an independent already-supported effect and the runtime
+	// presents the modes when the ability resolves.
+	if modalTriggerBody(ability) {
+		content, diagnostic := lowerModalTriggerBody(cardName, ability, syntax, pattern.Event)
+		if diagnostic != nil {
+			return game.TriggeredAbility{}, diagnostic
+		}
+		return game.TriggeredAbility{
+			Text: ability.Text,
+			Trigger: game.TriggerCondition{
+				Type:                 triggerType,
+				Pattern:              pattern,
+				InterveningIf:        interveningIfText(ability.Trigger),
+				InterveningCondition: intervening,
+			},
+			Optional: ability.Optional,
+			Content:  content,
+		}, nil
+	}
 	if triggerContentUnsupported(ability) {
 		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability effect",
 			"the executable source backend does not support this life or damage trigger body")

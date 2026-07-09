@@ -1511,10 +1511,12 @@ func hasCastFromZoneRuleEffect(g *game.Game, playerID game.PlayerID, cardID id.I
 // permission lets playerID spend mana of any color to cast cardID from
 // sourceZone ("mana of any type can be spent to cast it.", Court of Locthwain;
 // "you may spend mana as though it were mana of any color to cast it.", Evelyn,
-// the Covetous). A RuleEffectPlayFromZone permission carries the flag on the
-// self-scoped card grant; a RuleEffectCastSpellsFromZone permission carries it on
-// the group cast grant, in which case the full CastSpellsFromZone match (including
-// its exile-counter, provenance, and once-per-turn filters) must also hold.
+// the Covetous; "you may spend mana as though it were mana of any color to cast
+// that spell.", Grenzo, Havoc Raiser). A per-card RuleEffectPlayFromZone or
+// RuleEffectCastFromZone permission carries the flag on the self-scoped card
+// grant; a RuleEffectCastSpellsFromZone permission carries it on the group cast
+// grant, in which case the full CastSpellsFromZone match (including its
+// exile-counter, provenance, and once-per-turn filters) must also hold.
 func castFromZoneAllowsAnyMana(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex) bool {
 	if effect, ok := matchingCastSpellsFromZoneEffect(g, playerID, cardID, sourceZone, face); ok && effect.SpendAnyMana {
 		return true
@@ -1522,7 +1524,8 @@ func castFromZoneAllowsAnyMana(g *game.Game, playerID game.PlayerID, cardID id.I
 	effects := activeRuleEffects(g)
 	for i := range effects {
 		effect := &effects[i]
-		if effect.Kind != game.RuleEffectPlayFromZone || !effect.SpendAnyMana ||
+		if (effect.Kind != game.RuleEffectPlayFromZone && effect.Kind != game.RuleEffectCastFromZone) ||
+			!effect.SpendAnyMana ||
 			effect.CastFromZone != sourceZone {
 			continue
 		}

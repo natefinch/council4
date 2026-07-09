@@ -632,10 +632,11 @@ func probeStrippedOptionalReason(cardName string, ctx contentCtx, syntax *parser
 func lowerImpulseExileContent(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
 	duration, ok := lowerImpulseExileDuration(effect.Duration)
+	libraryOwner, ownerOK := lowerImpulseExileLibraryOwner(effect.Context)
 	if ctx.optional ||
 		!effect.Exact ||
 		effect.Negated ||
-		effect.Context != parser.EffectContextController ||
+		!ownerOK ||
 		!ok ||
 		(!effect.Amount.Known && !effect.Amount.VariableX) ||
 		(effect.Amount.Known && effect.Amount.Value < 1) ||
@@ -651,10 +652,27 @@ func lowerImpulseExileContent(ctx contentCtx) (game.AbilityContent, *shared.Diag
 		amount = game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX})
 	}
 	return game.Mode{Sequence: []game.Instruction{{Primitive: game.ImpulseExile{
-		Player:   game.ControllerReference(),
-		Amount:   amount,
-		Duration: duration,
+		Player:       libraryOwner,
+		Amount:       amount,
+		Duration:     duration,
+		Cast:         effect.ImpulseCast,
+		SpendAnyMana: effect.ImpulseSpendAnyColor,
 	}}}}.Ability(), nil
+}
+
+// lowerImpulseExileLibraryOwner maps the impulse-exile library owner context to
+// its runtime player reference. "your library" exiles from the controller's
+// library; "that player's library" exiles from the triggering event player's
+// library (Grenzo, Havoc Raiser). Any other context fails closed.
+func lowerImpulseExileLibraryOwner(context parser.EffectContextKind) (game.PlayerReference, bool) {
+	switch context {
+	case parser.EffectContextController:
+		return game.ControllerReference(), true
+	case parser.EffectContextEventPlayer:
+		return game.EventPlayerReference(), true
+	default:
+		return game.PlayerReference{}, false
+	}
 }
 
 // lowerImpulseExileDuration maps the supported impulse play windows to their

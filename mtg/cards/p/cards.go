@@ -56,6 +56,7 @@ var Cards = []cardset.Entry{
 	{Name: "Point the Way", New: PointTheWay},
 	{Name: "Pollenbright Druid", New: PollenbrightDruid},
 	{Name: "Ponyback Brigade", New: PonybackBrigade},
+	{Name: "Popular Entertainer", New: PopularEntertainer},
 	{Name: "Portal to Phyrexia", New: PortalToPhyrexia},
 	{Name: "Potioner's Trove", New: PotionerSTrove},
 	{Name: "Power Depot", New: PowerDepot},
@@ -97,4 +98,5 @@ var Cards = []cardset.Entry{
 	{Name: "Purging Stormbrood", New: PurgingStormbrood},
 	{Name: "Purple Dragon Punks", New: PurpleDragonPunks},
 	{Name: "Putrid Imp", New: PutridImp},
+	{Name: "Putrid Warrior", New: PutridWarrior},
 }

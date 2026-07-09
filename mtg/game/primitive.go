@@ -1658,6 +1658,13 @@ type ImpulseExile struct {
 	// the exiled cards ("mana of any type can be spent to cast it.", Court of
 	// Locthwain). It carries onto the RuleEffectPlayFromZone permission.
 	SpendAnyMana bool
+	// Cast, when set, grants permission to *cast* the exiled cards ("you may cast
+	// that card", Grenzo, Havoc Raiser) rather than to *play* them. A cast-only
+	// grant lets the controller cast an exiled card as a spell but not play an
+	// exiled land, so the handler emits a RuleEffectCastFromZone permission
+	// instead of the play-permitting RuleEffectPlayFromZone. It is false for the
+	// ordinary "you may play" impulse.
+	Cast bool
 	// PublishLinked, when set, remembers each exiled card under this source-keyed
 	// linked set so a later ability can act on "cards exiled with this ..." (Court
 	// of Locthwain's monarch free-cast reads the accumulated pool). It is empty
