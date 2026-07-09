@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,208 of 32,501 cards eligible for paper support (52.9%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,210 of 32,501 cards eligible for paper support (53.0%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -126,6 +126,7 @@ Council4 currently supports **17,208 of 32,501 cards eligible for paper support 
 - Aegis Automaton
 - Aegis of the Gods
 - Aegis of the Heavens
+- Aegis of the Meek
 - Aegis Sculptor
 - Aegis Turtle
 - Aeolipile
@@ -10516,6 +10517,7 @@ Council4 currently supports **17,208 of 32,501 cards eligible for paper support 
 - Peggy Carter, Secret Agent
 - Pelakka Wurm
 - Pelargir Survivor
+- Pendelhaven
 - Pendrell Drake
 - Pendulum of Patterns
 - Pennon Blade

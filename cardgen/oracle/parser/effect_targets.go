@@ -180,6 +180,7 @@ func parseTargets(tokens []shared.Token, atoms Atoms) []TargetSyntax {
 		if conjunctiveTypeTarget(selection) {
 			selection.ConjunctiveTypes = true
 		}
+		applyLeadingPowerToughnessPrefix(selectionTokens, &selection)
 		exact := exactRuntimeTargetSyntax(targetTokens, cardinality, selection)
 		if possessivePTTarget {
 			exact = true
@@ -194,6 +195,57 @@ func parseTargets(tokens []shared.Token, atoms Atoms) []TargetSyntax {
 		})
 	}
 	return targets
+}
+
+// applyLeadingPowerToughnessPrefix records a leading "N/M" power/toughness prefix
+// on a single-creature target's noun phrase ("target 1/1 creature", Pendelhaven,
+// Aegis of the Meek) as an exact current-power and current-toughness filter. The
+// prefix must be a bare integer/slash/integer at the very start of the noun
+// phrase followed by the noun, the selection must resolve to a plain creature,
+// and it must carry no other numeric power/toughness qualifier, so any richer or
+// ambiguous wording keeps failing closed. The shared MatchPower/MatchToughness
+// comparisons carry the semantics for lowering; PowerToughnessPrefix records the
+// leading-prefix spelling so byte-exact reconstruction renders "N/M creature"
+// rather than "creature with power N and toughness M".
+func applyLeadingPowerToughnessPrefix(tokens []shared.Token, selection *SelectionSyntax) {
+	if selection.Kind != SelectionCreature ||
+		selection.MatchPower || selection.MatchToughness ||
+		selection.PowerLessThanSource || selection.PowerGreaterThanSource ||
+		len(selection.Alternatives) != 0 {
+		return
+	}
+	power, toughness, ok := leadingPowerToughnessPrefixValues(tokens)
+	if !ok {
+		return
+	}
+	selection.Power = compare.Int{Op: compare.Equal, Value: power}
+	selection.MatchPower = true
+	selection.Toughness = compare.Int{Op: compare.Equal, Value: toughness}
+	selection.MatchToughness = true
+	selection.PowerToughnessPrefix = true
+}
+
+// leadingPowerToughnessPrefixValues reports a leading "N/M" power/toughness prefix
+// at the very start of a permanent noun phrase, returning the two non-negative
+// values. It matches only a bare integer, slash, integer triple followed by at
+// least one more token (the noun), so a standalone "1/1" or a mid-phrase slash
+// never triggers.
+func leadingPowerToughnessPrefixValues(tokens []shared.Token) (power, toughness int, ok bool) {
+	if len(tokens) < 4 ||
+		tokens[0].Kind != shared.Integer ||
+		tokens[1].Kind != shared.Slash ||
+		tokens[2].Kind != shared.Integer {
+		return 0, 0, false
+	}
+	power, err := strconv.Atoi(tokens[0].Text)
+	if err != nil {
+		return 0, 0, false
+	}
+	toughness, err = strconv.Atoi(tokens[2].Text)
+	if err != nil {
+		return 0, 0, false
+	}
+	return power, toughness, true
 }
 
 func splitSelectionPossessivePowerToughnessTail(tokens []shared.Token) ([]shared.Token, bool) {
@@ -1102,7 +1154,12 @@ func permanentSelectionQualifierWords(selection SelectionSyntax) ([]string, bool
 	if !ok {
 		return nil, false
 	}
-	words := make([]string, 0, len(attachmentWords)+len(combatWords))
+	prefixWords, ok := powerToughnessPrefixWords(selection)
+	if !ok {
+		return nil, false
+	}
+	words := make([]string, 0, len(prefixWords)+len(attachmentWords)+len(combatWords))
+	words = append(words, prefixWords...)
 	words = append(words, attachmentWords...)
 	words = append(words, combatWords...)
 	if len(selection.Supertypes) == 1 {
@@ -1318,6 +1375,22 @@ func permanentKeywordQualifierWords(selection SelectionSyntax) ([]string, bool) 
 	return []string{"with", word}, true
 }
 
+// powerToughnessPrefixWords reconstructs a leading "N/M" power/toughness prefix
+// ("target 1/1 creature") from an exact power-and-toughness selection. It returns
+// no words when the selection carries no such prefix, and fails closed unless
+// both comparisons are present and exact, so only the printed "N/M" spelling
+// round-trips and any other shape keeps failing the text-blind check.
+func powerToughnessPrefixWords(selection SelectionSyntax) ([]string, bool) {
+	if !selection.PowerToughnessPrefix {
+		return nil, true
+	}
+	if !selection.MatchPower || !selection.MatchToughness ||
+		selection.Power.Op != compare.Equal || selection.Toughness.Op != compare.Equal {
+		return nil, false
+	}
+	return []string{strconv.Itoa(selection.Power.Value) + "/" + strconv.Itoa(selection.Toughness.Value)}, true
+}
+
 // permanentNumericQualifierWords reconstructs the "with mana value"/"with
 // power"/"with toughness" clause of a permanent target. It returns no words when
 // the selection carries no mana value, power, or toughness comparison, and fails
@@ -1332,14 +1405,17 @@ func permanentNumericQualifierWords(selection SelectionSyntax) ([]string, bool) 
 		}
 		clauses = append(clauses, clause)
 	}
-	if selection.MatchPower {
+	// A leading "N/M" power/toughness prefix renders before the noun via
+	// powerToughnessPrefixWords, not as a trailing "with power N and toughness M"
+	// clause, so skip both comparisons here when the prefix spelling is recorded.
+	if selection.MatchPower && !selection.PowerToughnessPrefix {
 		clause, ok := comparisonClauseWords("power", selection.Power)
 		if !ok {
 			return nil, false
 		}
 		clauses = append(clauses, clause)
 	}
-	if selection.MatchToughness {
+	if selection.MatchToughness && !selection.PowerToughnessPrefix {
 		clause, ok := comparisonClauseWords("toughness", selection.Toughness)
 		if !ok {
 			return nil, false
