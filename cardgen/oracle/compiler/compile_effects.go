@@ -477,6 +477,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 					CombinationDynamic:       syntax.Mana.CombinationDynamic,
 				},
 				Replacement:                             syntax.Replacement,
+				CoordinatedSourceSubject:                syntax.CoordinatedSourceSubject,
 				Payment:                                 compileEffectPayment(syntax.Payment),
 				Exact:                                   syntax.Exact,
 				KeywordGrantChoice:                      syntax.KeywordGrantChoice,

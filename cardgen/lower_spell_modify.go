@@ -2424,8 +2424,15 @@ func lowerFixedGroupModifyPTSpell(
 			"the executable source backend supports exact fixed group power/toughness changes and linked all-creatures -X/-X until end of turn",
 		)
 	}
+	// A coordinated "<self> and <group> each get <p>/<t>" pump (Alandra, Sky
+	// Dreamer) carries exactly one source-binding reference for the "<self>"
+	// permanent; every other group pump carries none.
+	allowedReferences := 0
+	if effect.CoordinatedSourceSubject {
+		allowedReferences = 1
+	}
 	if len(ctx.content.Targets) != 0 ||
-		len(ctx.content.References) != 0 ||
+		len(ctx.content.References) != allowedReferences ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||
@@ -2442,14 +2449,36 @@ func lowerFixedGroupModifyPTSpell(
 	if !ok {
 		return unsupported()
 	}
-	return game.Mode{
-		Sequence: []game.Instruction{{
-			Primitive: game.ApplyContinuous{
-				ContinuousEffects: []game.ContinuousEffect{continuous},
-				Duration:          game.DurationUntilEndOfTurn,
+	var sequence []game.Instruction
+	if effect.CoordinatedSourceSubject {
+		// StaticSubject is the group's source-EXCLUDING variant, so the ApplyContinuous
+		// below already skips the source. Pump the source permanent once on its own
+		// through a ModifyPT instruction sharing the group's dynamic quantity, so the
+		// coordinated "<self> and <group>" subject is fully represented without
+		// double-pumping the source.
+		if ctx.content.References[0].Binding != compiler.ReferenceBindingSource {
+			return unsupported()
+		}
+		power, toughness, ok := referencedModifyPTQuantities(effect, game.SourcePermanentReference())
+		if !ok {
+			return unsupported()
+		}
+		sequence = append(sequence, game.Instruction{
+			Primitive: game.ModifyPT{
+				Object:         game.SourcePermanentReference(),
+				PowerDelta:     power,
+				ToughnessDelta: toughness,
+				Duration:       game.DurationUntilEndOfTurn,
 			},
-		}},
-	}.Ability(), nil
+		})
+	}
+	sequence = append(sequence, game.Instruction{
+		Primitive: game.ApplyContinuous{
+			ContinuousEffects: []game.ContinuousEffect{continuous},
+			Duration:          game.DurationUntilEndOfTurn,
+		},
+	})
+	return game.Mode{Sequence: sequence}.Ability(), nil
 }
 
 // groupModifyPTContinuousEffect builds the LayerPowerToughnessModify continuous
