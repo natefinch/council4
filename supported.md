@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,232 of 32,501 cards eligible for paper support (53.0%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,238 of 32,501 cards eligible for paper support (53.0%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1304,6 +1304,7 @@ Council4 currently supports **17,232 of 32,501 cards eligible for paper support 
 - Bequeathal
 - Bereavement
 - Beregond of the Guard
+- Berserk Murlodont
 - Berserkers of Blood Ridge
 - Berserkers' Onslaught
 - Beseech the Queen
@@ -4394,6 +4395,7 @@ Council4 currently supports **17,232 of 32,501 cards eligible for paper support 
 - Elvish Archers
 - Elvish Archivist
 - Elvish Bard
+- Elvish Berserker
 - Elvish Champion
 - Elvish Clancaller
 - Elvish Doomsayer
@@ -5646,6 +5648,7 @@ Council4 currently supports **17,232 of 32,501 cards eligible for paper support 
 - Ganax, Astral Hunter
 - Gandalf's Sanction
 - Gang of Devils
+- Gang of Elk
 - Gangly Stompling
 - Gangrenous Goliath
 - Garenbrig Carver // Shield's Might
@@ -5717,6 +5720,7 @@ Council4 currently supports **17,232 of 32,501 cards eligible for paper support 
 - General Kreat, the Boltbringer
 - General Kudro of Drannith
 - General Leo Cristophe
+- General Marhault Elsdragon
 - General Thunderbolt Ross
 - General Traag, Heart of Stone
 - Generator Servant
@@ -11225,6 +11229,7 @@ Council4 currently supports **17,232 of 32,501 cards eligible for paper support 
 - Rabbit Response
 - Rabid Bite
 - Rabid Bloodsucker
+- Rabid Elephant
 - Rabid Gnaw
 - Rabid Rats
 - Rabid Wolverines
@@ -13677,6 +13682,7 @@ Council4 currently supports **17,232 of 32,501 cards eligible for paper support 
 - Sparktongue Dragon
 - Sparring Collar
 - Sparring Construct
+- Sparring Golem
 - Sparring Mummy
 - Spartan Veteran
 - Spatial Contortion

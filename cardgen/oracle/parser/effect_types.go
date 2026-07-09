@@ -928,6 +928,16 @@ const (
 	// their values.
 	EffectDynamicAmountReferencedPlayerLifeLostThisTurn   EffectDynamicAmountKind = "EffectDynamicAmountReferencedPlayerLifeLostThisTurn"
 	EffectDynamicAmountReferencedPlayerLifeGainedThisTurn EffectDynamicAmountKind = "EffectDynamicAmountReferencedPlayerLifeGainedThisTurn"
+	// EffectDynamicAmountCreaturesBlockingSource is the number of creatures
+	// blocking the permanent the amount is evaluated for ("for each creature
+	// blocking it" — Rabid Elephant, Gang of Elk, Sparring Golem). The "it"
+	// names the just-blocked permanent that receives the pump, so the subject
+	// attaches that permanent's referent through the enclosing pump's object; it
+	// is read from the current combat's block declarations as the ability
+	// resolves. It carries no in-text count noun beyond "creature" and is a
+	// combat-state amount, not a board count. Added last so existing kinds keep
+	// their values.
+	EffectDynamicAmountCreaturesBlockingSource EffectDynamicAmountKind = "EffectDynamicAmountCreaturesBlockingSource"
 )
 
 // EffectDynamicAmountForm identifies how a dynamic amount is introduced.

@@ -3669,6 +3669,14 @@ const (
 	// wire values.
 	DynamicAmountReferencedPlayerLifeLostThisTurn
 	DynamicAmountReferencedPlayerLifeGainedThisTurn
+	// DynamicAmountCreaturesBlockingSource is the number of creatures blocking
+	// the permanent the amount is evaluated for ("for each creature blocking it"
+	// — Rabid Elephant, Gang of Elk, Sparring Golem, Elvish Berserker). The "it"
+	// names the just-blocked permanent that receives the pump, so lowering binds
+	// the count to that pump's object; the runtime reads the current combat's
+	// block declarations. It is a combat-state amount, not a board count. Added
+	// last so existing kinds keep their wire values.
+	DynamicAmountCreaturesBlockingSource
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.
