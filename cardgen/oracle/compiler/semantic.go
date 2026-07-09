@@ -1428,6 +1428,14 @@ type CompiledSelector struct {
 	// Selection.PowerLessThanSource / Selection.PowerGreaterThanSource.
 	PowerLessThanSource    bool
 	PowerGreaterThanSource bool
+	// ManaValueLessThanEventPermanent requires each matched card's mana value to
+	// be strictly less than the triggering event permanent's mana value ("return
+	// target Cleric card with lesser mana value from your graveyard", Orah,
+	// Skyclave Hierophant, where the bound is the creature that died). It is the
+	// event-relative mana-value analogue of PowerLessThanSource: the bound reads
+	// the triggering event's permanent, not the ability's source, and lowers to
+	// Selection.ManaValueLessThanEventPermanent.
+	ManaValueLessThanEventPermanent bool
 	// NameUniqueAmongControlled requires the matched permanent's name to differ
 	// from every other permanent its controller controls ("target enchantment
 	// you control that doesn't have the same name as another permanent you

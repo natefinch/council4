@@ -13,6 +13,7 @@ var Cards = []cardset.Entry{
 	{Name: "Jace's Sentinel", New: JaceSSentinel},
 	{Name: "Jace's Triumph", New: JaceSTriumph},
 	{Name: "Jackal Familiar", New: JackalFamiliar},
+	{Name: "Jackdaw Savior", New: JackdawSavior},
 	{Name: "Jade Leech", New: JadeLeech},
 	{Name: "Jadzi, Steward of Fate", New: JadziStewardOfFate},
 	{Name: "Jared Carthalion, True Heir", New: JaredCarthalionTrueHeir},

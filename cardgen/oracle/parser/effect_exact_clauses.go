@@ -1329,12 +1329,14 @@ func serialList(words []string, conjunction string) string {
 // graveyardNumericQualifier renders the single optional numeric qualifier a
 // graveyard-card selection may carry after its noun: the fixed " with mana value
 // N or less", the dynamic life-total mana-value bound (Betor, Ancestor's Voice),
-// or a fixed " with power/toughness N or less/greater" characteristic bound
-// (Dusk // Dawn's "creature cards with power 2 or less", Reveillark). Printed
-// cards carry at most one such qualifier, so it fails closed when more than one
-// is set rather than guessing their order, and fails closed for any comparison
-// operator the canonical Oracle wording does not use. The empty string is
-// returned (ok=true) when the selection carries no numeric qualifier.
+// the event-relative " with lesser mana value" bound (Orah, Skyclave
+// Hierophant), or a fixed " with power/toughness N or less/greater"
+// characteristic bound (Dusk // Dawn's "creature cards with power 2 or less",
+// Reveillark). Printed cards carry at most one such qualifier, so it fails closed
+// when more than one is set rather than guessing their order, and fails closed
+// for any comparison operator the canonical Oracle wording does not use. The
+// empty string is returned (ok=true) when the selection carries no numeric
+// qualifier.
 func graveyardNumericQualifier(sel SelectionSyntax) (string, bool) {
 	clauses := 0
 	qualifier := ""
@@ -1352,6 +1354,10 @@ func graveyardNumericQualifier(sel SelectionSyntax) (string, bool) {
 			return "", false
 		}
 		qualifier = clause
+		clauses++
+	}
+	if sel.ManaValueLessThanEventPermanent {
+		qualifier = " with lesser mana value"
 		clauses++
 	}
 	if sel.MatchPower {

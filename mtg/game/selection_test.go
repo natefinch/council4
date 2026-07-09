@@ -44,3 +44,16 @@ func TestSelectionRejectsColorCardinalityContradictions(t *testing.T) {
 		})
 	}
 }
+
+// TestSelectionEmptyDetectsManaValueLessThanEventPermanent ensures the
+// event-relative "with lesser mana value" bound counts as a non-empty selection
+// so a target carrying only that predicate still routes through the runtime
+// matcher rather than being skipped as an empty filter.
+func TestSelectionEmptyDetectsManaValueLessThanEventPermanent(t *testing.T) {
+	if !(Selection{}).Empty() {
+		t.Fatal("a zero Selection must be empty")
+	}
+	if (Selection{ManaValueLessThanEventPermanent: true}).Empty() {
+		t.Fatal("a Selection carrying only ManaValueLessThanEventPermanent must not be empty")
+	}
+}

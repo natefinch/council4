@@ -1382,11 +1382,14 @@ func permanentUnionTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, 
 // exactly. Subtypes, supertypes, colors, excluded colors, the colorless and
 // multicolored color shapes, a recognized keyword, mana value, power, and
 // toughness comparisons all map onto the Selection, so only zone restrictions,
-// the historic qualifier, and same-name grouping (which the Selection cannot
-// express) stay rejected, keeping unsupported wordings closed.
+// the historic qualifier, the event-relative mana-value bound (modeled only on
+// the graveyard-return card target, not on battlefield permanents), and
+// same-name grouping (which the Selection cannot express) stay rejected, keeping
+// unsupported wordings closed.
 func selectorHasUnsupportedPermanentFilters(selector compiler.CompiledSelector) bool {
 	return selector.Zone != zone.None ||
 		selector.Historic ||
+		selector.ManaValueLessThanEventPermanent ||
 		selector.SameNameGroup != nil
 }
 

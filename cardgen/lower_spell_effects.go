@@ -373,9 +373,24 @@ func lowerTargetedGraveyardReturn(ctx contentCtx) (game.AbilityContent, bool) {
 	if !effect.Exact && !counterRider {
 		return game.AbilityContent{}, false
 	}
-	targetSpec, ok := cardInZoneTargetSpec(ctx.content.Targets[0], zone.Graveyard)
+	// A "with lesser mana value" bound on the target is event-relative (the mana
+	// value of the creature that died), which cardSelectionForSelector fails
+	// closed on because a card-zone selection cannot compare to a source
+	// permanent. Strip it from a selector copy so the base target spec builds,
+	// then reapply it onto the resulting Selection here — the only path that
+	// carries the triggering event to the runtime matcher — mirroring the total
+	// mana-value reanimation lowering's strip-then-model pattern.
+	target := ctx.content.Targets[0]
+	manaValueLessThanEventPermanent := target.Selector.ManaValueLessThanEventPermanent
+	target.Selector.ManaValueLessThanEventPermanent = false
+	targetSpec, ok := cardInZoneTargetSpec(target, zone.Graveyard)
 	if !ok {
 		return game.AbilityContent{}, false
+	}
+	if manaValueLessThanEventPermanent {
+		selection := targetSpec.Selection.Val
+		selection.ManaValueLessThanEventPermanent = true
+		targetSpec.Selection = opt.Val(selection)
 	}
 	dest := graveyardReturnDestination{
 		Zone:             effect.ToZone,
@@ -484,11 +499,15 @@ func lowerManaValueDynamicBound(kind compiler.DynamicAmountKind) (game.ManaValue
 // design; prefer SelectionForSelectorMasked for new code. (retire: #1393)
 func cardSelectionForSelector(selector compiler.CompiledSelector) (game.Selection, bool) {
 	if selector.PowerLessThanSource || selector.PowerGreaterThanSource ||
+		selector.ManaValueLessThanEventPermanent ||
 		selectorHasCounterQualifier(selector) ||
 		selectorHasAttachmentQualifier(selector) {
 		// Source-relative power and battlefield-counter predicates apply only to
 		// permanents; a card-zone selection cannot honor them, so reject them
-		// rather than silently dropping the filter.
+		// rather than silently dropping the filter. The event-relative mana-value
+		// bound ("with lesser mana value") is likewise rejected here: only the
+		// graveyard-return target lowering, which threads the triggering event to
+		// the runtime, strips it before this call and reapplies it afterward.
 		return game.Selection{}, false
 	}
 	selection := game.Selection{
