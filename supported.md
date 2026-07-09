@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,221 of 32,501 cards eligible for paper support (53.0%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,224 of 32,501 cards eligible for paper support (53.0%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -7610,6 +7610,7 @@ Council4 currently supports **17,221 of 32,501 cards eligible for paper support 
 - Jace, Arcane Strategist
 - Jackal Familiar
 - Jackdaw
+- Jackdaw Savior
 - Jackhammer
 - Jacques le Vert
 - Jaddi Offshoot
@@ -10245,6 +10246,7 @@ Council4 currently supports **17,221 of 32,501 cards eligible for paper support 
 - Oracle of Nectars
 - Oracle's Insight
 - Oracle's Restoration
+- Orah, Skyclave Hierophant
 - Oran-Rief Invoker
 - Oran-Rief Ooze
 - Oran-Rief Recluse
@@ -11895,6 +11897,7 @@ Council4 currently supports **17,221 of 32,501 cards eligible for paper support 
 - Riverpyre Verge
 - Riverwheel Aerialists
 - Riverwise Augur
+- Riveteers Ascendancy
 - Riveteers Initiate
 - Riveteers Overlook
 - Rix Maadi, Dungeon Palace
