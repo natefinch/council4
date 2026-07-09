@@ -16,6 +16,7 @@ var Cards = []cardset.Entry{
 	{Name: "Narset's Rebuke", New: NarsetSRebuke},
 	{Name: "Nature's Cloak", New: NatureSCloak},
 	{Name: "Nature's Lore", New: NatureSLore},
+	{Name: "Nature's Will", New: NatureSWill},
 	{Name: "Necra Disciple", New: NecraDisciple},
 	{Name: "Necroskitter", New: Necroskitter},
 	{Name: "Necrotic Wound", New: NecroticWound},
