@@ -26,6 +26,7 @@ var Cards = []cardset.Entry{
 	{Name: "Adventuring Gear", New: AdventuringGear},
 	{Name: "Adventurous Impulse", New: AdventurousImpulse},
 	{Name: "Aegis of the Gods", New: AegisOfTheGods},
+	{Name: "Aegis of the Meek", New: AegisOfTheMeek},
 	{Name: "Aerial Volley", New: AerialVolley},
 	{Name: "Aether Channeler", New: AetherChanneler},
 	{Name: "Aether Chaser", New: AetherChaser},

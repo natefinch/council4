@@ -26,6 +26,7 @@ var Cards = []cardset.Entry{
 	{Name: "Peat Bog", New: PeatBog},
 	{Name: "Peer Through Depths", New: PeerThroughDepths},
 	{Name: "Pelargir Survivor", New: PelargirSurvivor},
+	{Name: "Pendelhaven", New: Pendelhaven},
 	{Name: "Pentagram of the Ages", New: PentagramOfTheAges},
 	{Name: "Pentarch Ward", New: PentarchWard},
 	{Name: "Perfect Intimidation", New: PerfectIntimidation},

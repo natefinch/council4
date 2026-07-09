@@ -1557,6 +1557,14 @@ type SelectionSyntax struct {
 	MatchManaValue bool `json:",omitempty"`
 	MatchPower     bool `json:",omitempty"`
 	MatchToughness bool `json:",omitempty"`
+	// PowerToughnessPrefix records that the power and toughness comparisons were
+	// spelled as a leading "N/M" power/toughness prefix on the noun ("target 1/1
+	// creature", Pendelhaven) rather than as trailing "with power N and toughness
+	// M" qualifiers. Both MatchPower and MatchToughness are set with exact
+	// (compare.Equal) bounds when it is true. It only affects byte-exact
+	// reconstruction, which renders the "N/M" prefix instead of the "with"
+	// clauses; lowering reads the shared Power/Toughness comparisons either way.
+	PowerToughnessPrefix bool `json:",omitempty"`
 	// MatchTotalManaValue records whether the paired TotalManaValue comparison is
 	// active. Unlike MatchManaValue, which bounds each matched card's own mana
 	// value, this bounds the combined mana value of the whole chosen set ("Return
