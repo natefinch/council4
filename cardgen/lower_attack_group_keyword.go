@@ -30,9 +30,24 @@ func lowerAttackGroupKeywordGrant(
 	if optional {
 		return game.AbilityContent{}, false
 	}
-	if pattern.Event != game.EventAttackerDeclared ||
-		pattern.Controller != game.TriggerControllerYou ||
-		!pattern.OneOrMore {
+	if pattern.Event != game.EventAttackerDeclared || !pattern.OneOrMore {
+		return game.AbilityContent{}, false
+	}
+	// "they"/"those creatures" denotes the attackers that caused the trigger. Two
+	// shapes are supported: attackers you control attacking anything (Angelic
+	// Guardian), and any attackers attacking one of your opponents or a
+	// planeswalker they control (Frontier Warmonger), where the group is scoped by
+	// the defending player rather than the attacker's controller.
+	var attackerController game.ControllerRelation
+	var defenderFilter game.TriggerControllerFilter
+	switch {
+	case pattern.Controller == game.TriggerControllerYou:
+		attackerController = game.ControllerYou
+		defenderFilter = game.TriggerControllerAny
+	case pattern.Controller == game.TriggerControllerAny && pattern.Player == game.TriggerPlayerOpponent:
+		attackerController = game.ControllerAny
+		defenderFilter = game.TriggerControllerOpponent
+	default:
 		return game.AbilityContent{}, false
 	}
 	if len(content.Effects) != 1 ||
@@ -60,10 +75,14 @@ func lowerAttackGroupKeywordGrant(
 	if !ok || (len(keywords) == 0 && len(abilities) == 0) {
 		return game.AbilityContent{}, false
 	}
-	group := game.TriggeringAttackersGroup(game.Selection{
+	selection := game.Selection{
 		RequiredTypes: []types.Card{types.Creature},
-		Controller:    game.ControllerYou,
-	})
+		Controller:    attackerController,
+	}
+	group := game.TriggeringAttackersGroup(selection)
+	if defenderFilter != game.TriggerControllerAny {
+		group = game.TriggeringAttackersAgainstDefenderGroup(selection, defenderFilter)
+	}
 	return game.Mode{
 		Sequence: []game.Instruction{{
 			Primitive: game.ApplyContinuous{

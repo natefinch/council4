@@ -68,6 +68,54 @@ func TestLowerAttackTriggerGroupKeywordGrant(t *testing.T) {
 	if _, excludes := effect.Group.Exclusion(); excludes {
 		t.Fatal("triggering attackers you control must not exclude the source")
 	}
+	if effect.Group.AttackedDefenderFilter() != game.TriggerControllerAny {
+		t.Fatal("controller-scoped attack grant must not carry a defender filter")
+	}
+}
+
+// TestLowerFrontierWarmongerAttackOpponentGroupKeywordGrant verifies that
+// "Whenever one or more creatures attack one of your opponents or a planeswalker
+// they control, those creatures gain menace until end of turn." (Frontier
+// Warmonger) lowers to an ApplyContinuous over a triggering-attackers group that
+// is scoped to attackers of any controller whose defending player is an opponent.
+func TestLowerFrontierWarmongerAttackOpponentGroupKeywordGrant(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Frontier Warmonger",
+		Layout:     "normal",
+		ManaCost:   "{2}{R}",
+		TypeLine:   "Creature — Human Warrior",
+		OracleText: "Whenever one or more creatures attack one of your opponents or a planeswalker they control, those creatures gain menace until end of turn.",
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
+	}
+	triggered := face.TriggeredAbilities[0]
+	pattern := triggered.Trigger.Pattern
+	if pattern.Event != game.EventAttackerDeclared ||
+		pattern.Controller != game.TriggerControllerAny ||
+		pattern.Player != game.TriggerPlayerOpponent ||
+		!pattern.OneOrMore {
+		t.Fatalf("trigger pattern = %+v, want any-attacker attack against an opponent", pattern)
+	}
+	apply, ok := triggered.Content.Modes[0].Sequence[0].Primitive.(game.ApplyContinuous)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.ApplyContinuous", triggered.Content.Modes[0].Sequence[0].Primitive)
+	}
+	effect := apply.ContinuousEffects[0]
+	if len(effect.AddKeywords) != 1 || effect.AddKeywords[0] != game.Menace {
+		t.Fatalf("keywords = %v, want [Menace]", effect.AddKeywords)
+	}
+	selection := effect.Group.Selection()
+	if effect.Group.Domain() != game.GroupDomainTriggeringAttackers ||
+		selection.Controller != game.ControllerAny ||
+		len(selection.RequiredTypes) != 1 ||
+		selection.RequiredTypes[0] != types.Creature {
+		t.Fatalf("selection = %+v (domain %v), want any-controller triggering attackers", selection, effect.Group.Domain())
+	}
+	if effect.Group.AttackedDefenderFilter() != game.TriggerControllerOpponent {
+		t.Fatalf("defender filter = %v, want TriggerControllerOpponent", effect.Group.AttackedDefenderFilter())
+	}
 }
 
 // TestLowerAttackTriggerGroupKeywordGrantFailsClosed verifies the attack-group

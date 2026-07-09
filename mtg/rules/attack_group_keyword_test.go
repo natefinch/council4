@@ -4,10 +4,90 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
-// TestTriggeringAttackersGroupKeywordGrantBindsDeclaredAttackers verifies the
+// TestTriggeringAttackersAgainstDefenderGroupScopesToOpponents verifies the
+// recipient-scoped group produced for "Whenever one or more creatures attack one
+// of your opponents or a planeswalker they control, those creatures gain menace
+// until end of turn." (Frontier Warmonger). "Those creatures" is the declared
+// attackers whose defending player is an opponent of the ability's controller, so
+// in multiplayer an attacker declared against the controller itself (part of the
+// same simultaneous batch) is excluded, while attackers against two different
+// opponents are both included.
+func TestTriggeringAttackersAgainstDefenderGroupScopesToOpponents(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	vsOpponent := makeCreaturePermanent(g, game.Player2, "Attacks Opponent Two")
+	vsController := makeCreaturePermanent(g, game.Player2, "Attacks the Controller")
+	vsOtherOpponent := makeCreaturePermanent(g, game.Player3, "Attacks Opponent Three")
+
+	// One simultaneous declaration in which Player2/Player3 attack Player1 (the
+	// ability's controller), Player3, and Player2 respectively.
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{
+			{Attacker: vsOpponent.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+			{Attacker: vsController.ObjectID, Target: game.AttackTarget{Player: game.Player1}},
+			{Attacker: vsOtherOpponent.ObjectID, Target: game.AttackTarget{Player: game.Player3}},
+		},
+	}
+	batchID := g.IDGen.Next()
+	defenders := map[id.ID]game.PlayerID{
+		vsOpponent.ObjectID:      game.Player2,
+		vsController.ObjectID:    game.Player1,
+		vsOtherOpponent.ObjectID: game.Player3,
+	}
+	for _, permanent := range []*game.Permanent{vsOpponent, vsController, vsOtherOpponent} {
+		emitEvent(g, game.Event{
+			Kind:           game.EventAttackerDeclared,
+			PermanentID:    permanent.ObjectID,
+			Controller:     permanent.Controller,
+			Player:         defenders[permanent.ObjectID],
+			SimultaneousID: batchID,
+		})
+	}
+
+	obj := &game.StackObject{
+		ID:              g.IDGen.Next(),
+		Kind:            game.StackTriggeredAbility,
+		Controller:      game.Player1,
+		HasTriggerEvent: true,
+		TriggerEvent: game.Event{
+			Kind:           game.EventAttackerDeclared,
+			PermanentID:    vsOpponent.ObjectID,
+			Controller:     game.Player2,
+			Player:         game.Player2,
+			SimultaneousID: batchID,
+		},
+	}
+	r := &effectResolver{engine: NewEngine(nil), game: g, obj: obj, agents: [game.NumPlayers]PlayerAgent{}, log: &TurnLog{}}
+
+	resolved := handleApplyContinuous(r, game.ApplyContinuous{
+		ContinuousEffects: []game.ContinuousEffect{{
+			Layer: game.LayerAbility,
+			Group: game.TriggeringAttackersAgainstDefenderGroup(
+				game.Selection{RequiredTypes: []types.Card{types.Creature}},
+				game.TriggerControllerOpponent,
+			),
+			AddKeywords: []game.Keyword{game.Menace},
+		}},
+		Duration: game.DurationUntilEndOfTurn,
+	})
+	if !resolved.succeeded {
+		t.Fatal("ApplyContinuous over the opponent-attacking attackers did not apply")
+	}
+
+	if !hasKeyword(g, vsOpponent, game.Menace) {
+		t.Fatal("an attacker against an opponent did not gain menace")
+	}
+	if !hasKeyword(g, vsOtherOpponent, game.Menace) {
+		t.Fatal("an attacker against a second opponent did not gain menace")
+	}
+	if hasKeyword(g, vsController, game.Menace) {
+		t.Fatal("an attacker against the ability's controller wrongly gained menace")
+	}
+}
+
 // runtime shape produced for "Whenever one or more creatures you control attack,
 // they gain <keyword> until end of turn." (Angelic Guardian): an ApplyContinuous
 // granting a keyword to the TriggeringAttackers group. It binds the creatures

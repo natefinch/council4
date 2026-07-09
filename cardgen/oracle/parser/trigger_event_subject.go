@@ -179,6 +179,17 @@ func parseAttackRecipient(tokens []shared.Token) (TriggerEventAttackRecipient, T
 				Controller:    ControllerYou,
 			},
 		}, player, true
+	case syntaxWordsEqual(tokens, "one", "of", "your", "opponents", "or", "a", "planeswalker", "they", "control"):
+		player := playerSelectorFromKind(TriggerPlayerSelectorOpponent, shared.SpanOf(tokens))
+		return TriggerEventAttackRecipient{
+			Kind:   TriggerEventAttackRecipientPlayer | TriggerEventAttackRecipientPlaneswalker,
+			Span:   shared.SpanOf(tokens),
+			Player: player,
+			Selection: TriggerSelection{
+				RequiredTypes: []TriggerCardType{TriggerCardTypePlaneswalker},
+				Controller:    ControllerOpponent,
+			},
+		}, player, true
 	case syntaxWordsEqual(tokens, "you", "or", "a", "battle", "you", "protect"):
 		player := playerSelectorFromKind(TriggerPlayerSelectorYou, tokens[0].Span)
 		return TriggerEventAttackRecipient{
