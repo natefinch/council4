@@ -745,12 +745,43 @@ func resolvingTriggerPattern(g *game.Game, obj *game.StackObject) (*game.Trigger
 
 func handleShufflePermanentIntoLibrary(r *effectResolver, prim game.ShufflePermanentIntoLibrary) effectResolved {
 	res := effectResolved{accepted: true}
-	permanent, ok := r.resolveObject(prim.Object)
+	resolved, ok := resolveObjectReference(r.game, r.obj, prim.Object)
 	if !ok {
 		return res
 	}
-	owner := permanent.Owner
-	if !movePermanentToZone(r.game, permanent, zone.Library) {
+	if resolved.permanent != nil {
+		owner := resolved.permanent.Owner
+		if !movePermanentToZone(r.game, resolved.permanent, zone.Library) {
+			return res
+		}
+		if player, ok := playerByID(r.game, owner); ok {
+			player.Library.Shuffle(r.engine.rng)
+		}
+		res.succeeded = true
+		return res
+	}
+	// The permanent has left the battlefield: a dies / put-into-graveyard
+	// trigger's "Shuffle it into its owner's library." resolves after the object
+	// became a card in the graveyard, so its last-known snapshot names the card
+	// to move. Shuffle that card from wherever it now is into its owner's
+	// library. A token snapshot carries no card and ceases to exist, so it moves
+	// nothing (CR 111.7).
+	cardID := resolved.snapshot.CardID
+	if cardID == 0 {
+		return res
+	}
+	owner := resolved.snapshot.Owner
+	current, ok := cardZone(r.game, cardID)
+	if !ok || current != zone.Graveyard {
+		// The card only remains this ability's object while it stays in the
+		// graveyard it went to on death (CR 400.7). If it left in response to the
+		// trigger — an opponent exiling it, the owner returning it to hand — it is
+		// a new object the ability no longer tracks, so shuffle nothing rather
+		// than dragging it out of its new zone. This lets the documented response
+		// (exile it from the graveyard before it is shuffled) work.
+		return res
+	}
+	if !moveCardBetweenZones(r.game, owner, cardID, current, zone.Library) {
 		return res
 	}
 	if player, ok := playerByID(r.game, owner); ok {

@@ -2006,6 +2006,9 @@ func lowerImmediateSingleEffectSpell(
 		if content, ok := lowerTargetPlayerGraveyardShuffleIntoLibrary(ctx); ok {
 			return content, nil
 		}
+		if content, ok := lowerEventPermanentShuffleIntoLibrary(ctx); ok {
+			return content, nil
+		}
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported shuffle effect",

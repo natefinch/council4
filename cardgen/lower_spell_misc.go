@@ -694,6 +694,57 @@ func allReferencesTargetPlayerPossessive(references []compiler.CompiledReference
 	return true
 }
 
+// lowerEventPermanentShuffleIntoLibrary lowers the dies / put-into-graveyard
+// self-recursion "Shuffle it into its owner's library." (Alabaster Dragon, Serra
+// Avatar, Worldspine Wurm, Dread) to a ShufflePermanentIntoLibrary naming the
+// triggering permanent. The "it"/"its owner's" both bind to the triggering
+// permanent, whose card the runtime moves from the graveyard into its owner's
+// library. The optional "you may" form and any other subject, zone, or rider
+// fail closed.
+func lowerEventPermanentShuffleIntoLibrary(ctx contentCtx) (game.AbilityContent, bool) {
+	// Invariant: reached only from the EffectShuffle arm of
+	// lowerImmediateSingleEffectSpell, whose every entry path narrows content to
+	// exactly one effect.
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf("lowerEventPermanentShuffleIntoLibrary: expected single effect in single-effect context, got %d", len(ctx.content.Effects)))
+	}
+	effect := &ctx.content.Effects[0]
+	if !effect.Exact ||
+		effect.Negated ||
+		effect.Optional ||
+		ctx.optional ||
+		effect.Duration != compiler.DurationNone ||
+		effect.Context != parser.EffectContextController ||
+		effect.ToZone != zone.Library ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		!allReferencesEventPermanent(ctx.content.References) {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{Sequence: []game.Instruction{{
+		Primitive: game.ShufflePermanentIntoLibrary{Object: game.EventPermanentReference()},
+	}}}.Ability(), true
+}
+
+// allReferencesEventPermanent reports whether every residual reference binds to
+// the triggering permanent, as produced by the "it" and "its owner's"
+// back-references of "Shuffle it into its owner's library." It requires at least
+// one such reference so a shape carrying no back-reference to the triggering
+// permanent fails closed.
+func allReferencesEventPermanent(references []compiler.CompiledReference) bool {
+	if len(references) == 0 {
+		return false
+	}
+	for i := range references {
+		if references[i].Binding != compiler.ReferenceBindingEventPermanent {
+			return false
+		}
+	}
+	return true
+}
+
 func lowerPlayerRuleEffect(ctx contentCtx, kind game.RuleEffectKind) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
 	keywordsValid := len(ctx.content.Keywords) == 0
