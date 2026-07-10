@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,276 of 32,501 cards eligible for paper support (53.2%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,291 of 32,501 cards eligible for paper support (53.2%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -131,6 +131,7 @@ Council4 currently supports **17,276 of 32,501 cards eligible for paper support 
 - Aegis Turtle
 - Aeolipile
 - Aerathi Berserker
+- Aerial Assault
 - Aerial Boost
 - Aerial Caravan
 - Aerial Engineer
@@ -310,6 +311,7 @@ Council4 currently supports **17,276 of 32,501 cards eligible for paper support 
 - Alchemist's Vial
 - Alela, Artful Provocateur
 - Alela, Cunning Conqueror
+- Alert Heedbonder
 - Alert Shu Infantry
 - Alesha's Legacy
 - Alexi's Cloak
@@ -932,6 +934,7 @@ Council4 currently supports **17,276 of 32,501 cards eligible for paper support 
 - Aven Fleetwing
 - Aven Flock
 - Aven Fogbringer
+- Aven Gagglemaster
 - Aven Heartstabber
 - Aven Initiate
 - Aven Initiate
@@ -964,6 +967,7 @@ Council4 currently supports **17,276 of 32,501 cards eligible for paper support 
 - Awakening
 - Awakening Zone
 - Axebane Beast
+- Axebane Guardian
 - Axebane Stag
 - Axegrinder Giant
 - Axelrod Gunnarson
@@ -1868,6 +1872,7 @@ Council4 currently supports **17,276 of 32,501 cards eligible for paper support 
 - Brazen Blademaster
 - Brazen Borrower // Petty Theft
 - Brazen Buccaneers
+- Brazen Collector
 - Brazen Freebooter
 - Brazen Scourge
 - Brazen Upstart
@@ -2895,6 +2900,7 @@ Council4 currently supports **17,276 of 32,501 cards eligible for paper support 
 - Copy Land
 - Coral Atoll
 - Coral Barrier
+- Coral Colony
 - Coral Commando
 - Coral Eel
 - Coral Helm
@@ -3855,6 +3861,7 @@ Council4 currently supports **17,276 of 32,501 cards eligible for paper support 
 - Doomwake Giant
 - Door of Destinies
 - Door to Nothingness
+- Doorkeeper
 - Doran, the Siege Tower
 - Dormant Volcano
 - Dosan's Oldest Chant
@@ -6278,6 +6285,7 @@ Council4 currently supports **17,276 of 32,501 cards eligible for paper support 
 - Grand Coliseum
 - Grand Crescendo
 - Grand Entryway // Elegant Rotunda
+- Grand Warlord Radha
 - Grandmother Sengir
 - Granger Guildmage
 - Granite Gargoyle
@@ -10389,6 +10397,7 @@ Council4 currently supports **17,276 of 32,501 cards eligible for paper support 
 - Overflowing Basin
 - Overflowing Insight
 - Overgrown Armasaur
+- Overgrown Battlement
 - Overgrown Estate
 - Overgrown Farmland
 - Overgrown Pest
@@ -11274,6 +11283,7 @@ Council4 currently supports **17,276 of 32,501 cards eligible for paper support 
 - Radiant Grove
 - Radiant Summit
 - Radiant's Judgment
+- Radiant, Archangel
 - Radical Idea
 - Radioactive Man
 - Radjan Spirit
@@ -12231,6 +12241,7 @@ Council4 currently supports **17,276 of 32,501 cards eligible for paper support 
 - Sakashima's Student
 - Sakura-Tribe Elder
 - Sakura-Tribe Scout
+- Sakura-Tribe Springcaller
 - Salamander Warrior
 - Salivating Gremlins
 - Sally Sparrow
@@ -12375,6 +12386,7 @@ Council4 currently supports **17,276 of 32,501 cards eligible for paper support 
 - Savage Surge
 - Savage Thallid
 - Savage Twister
+- Savage Ventmaw
 - Savageborn Hydra
 - Savai Crystal
 - Savai Sabertooth
@@ -13311,6 +13323,7 @@ Council4 currently supports **17,276 of 32,501 cards eligible for paper support 
 - Skyblinder Staff
 - Skybox Ferry
 - Skybridge Towers
+- Skycat Sovereign
 - Skyclave Cleric // Skyclave Basilica
 - Skyclave Geopede
 - Skyclave Pick-Axe
@@ -14375,6 +14388,7 @@ Council4 currently supports **17,276 of 32,501 cards eligible for paper support 
 - Sturdy Shield
 - Sturmgeist
 - Su-Chi
+- Su-Chi Cave Guard
 - Subjugator Angel
 - Sublime Archangel
 - Sublime Epiphany
@@ -16133,6 +16147,7 @@ Council4 currently supports **17,276 of 32,501 cards eligible for paper support 
 - Venser's Journal
 - Venser's Sliver
 - Venser, Shaper Savant
+- Vent Sentinel
 - Verdant Automaton
 - Verdant Catacombs
 - Verdant Eidolon
