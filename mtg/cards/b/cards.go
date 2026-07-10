@@ -117,6 +117,7 @@ var Cards = []cardset.Entry{
 	{Name: "Brass-Talon Chimera", New: BrassTalonChimera},
 	{Name: "Brazen Blademaster", New: BrazenBlademaster},
 	{Name: "Brazen Borrower", New: BrazenBorrower},
+	{Name: "Brazen Collector", New: BrazenCollector},
 	{Name: "Brazen Upstart", New: BrazenUpstart},
 	{Name: "Break Through the Line", New: BreakThroughTheLine},
 	{Name: "Bred for the Hunt", New: BredForTheHunt},

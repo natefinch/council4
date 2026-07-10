@@ -751,7 +751,54 @@ func attachManaSpendRider(content *game.AbilityContent, rider game.ManaSpendRide
 	return true
 }
 
+// lowerAddManaContent lowers a single add-mana ability body to executable
+// content. It first delegates to lowerAddManaContentInner for the mana shape,
+// then, when the parser folded the "Until end of turn, you don't lose this mana
+// as steps and phases end." rider onto the effect, tags every produced add-mana
+// instruction so the runtime keeps that mana across step and phase boundaries
+// until the normal end-of-turn cleanup. It fails closed when the rider is
+// present but the lowered content is not a plain add-mana sequence that can carry
+// the flag, so an unmodeled mana shape cannot silently drop the rider.
 func lowerAddManaContent(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	content, diagnostic := lowerAddManaContentInner(ctx)
+	if diagnostic != nil {
+		return game.AbilityContent{}, diagnostic
+	}
+	if ctx.content.Effects[0].Mana.PersistUntilEndOfTurn && !markManaPersistUntilEndOfTurn(&content) {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported mana effect",
+			"the persist-until-end-of-turn rider requires an exact add-mana instruction to tag",
+		)
+	}
+	return content, nil
+}
+
+// markManaPersistUntilEndOfTurn sets PersistUntilEndOfTurn on every add-mana
+// instruction in content's single mode so each produced unit survives step and
+// phase boundaries until end-of-turn cleanup. It reports false (fail closed)
+// when content is not a single mode whose entire sequence is add-mana
+// instructions, so the rider cannot ride onto content it cannot fully tag.
+func markManaPersistUntilEndOfTurn(content *game.AbilityContent) bool {
+	if len(content.Modes) != 1 {
+		return false
+	}
+	seq := content.Modes[0].Sequence
+	if len(seq) == 0 {
+		return false
+	}
+	for i := range seq {
+		add, ok := seq[i].Primitive.(game.AddMana)
+		if !ok {
+			return false
+		}
+		add.PersistUntilEndOfTurn = true
+		seq[i].Primitive = add
+	}
+	return true
+}
+
+func lowerAddManaContentInner(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
 	if content, ok := lowerTriggerLandProducedMana(ctx); ok {
 		return content, nil

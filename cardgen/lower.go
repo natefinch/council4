@@ -929,6 +929,9 @@ func lowerExecutableAbility(
 			if ability.Content.Effects[i].PreventRegeneration {
 				spans = append(spans, ability.Content.Effects[i].RegenerationRiderSpan)
 			}
+			if ability.Content.Effects[i].Mana.PersistUntilEndOfTurn {
+				spans = append(spans, ability.Content.Effects[i].PersistUntilEndOfTurnRiderSpan)
+			}
 			if ability.Content.Effects[i].HandChoiceDiscard.Present {
 				spans = append(spans, ability.Content.Effects[i].HandChoiceDiscard.ChooseSpan)
 			}

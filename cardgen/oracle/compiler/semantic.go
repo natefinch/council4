@@ -2698,6 +2698,11 @@ type CompiledEffect struct {
 	// lowering can credit its tokens toward source coverage.
 	PreventRegeneration   bool
 	RegenerationRiderSpan shared.Span
+	// PersistUntilEndOfTurnRiderSpan covers the cross-sentence "Until end of
+	// turn, you don't lose this mana as steps and phases end" rider folded onto
+	// an add-mana effect (Grand Warlord Radha) so lowering can credit its tokens
+	// toward source coverage. It is set only when Mana.PersistUntilEndOfTurn is.
+	PersistUntilEndOfTurnRiderSpan shared.Span
 	// CopyMayChooseNewTargets reports a copy-stack-object effect carrying the
 	// optional "You may choose new targets for the copy[ies]." rider.
 	// CopyChooseNewTargetsRiderSpan covers the rider sentence so lowering can
@@ -3210,6 +3215,11 @@ type CompiledEffectMana struct {
 	CombinationColors  []mana.Color
 	CombinationCount   int
 	CombinationDynamic bool
+	// PersistUntilEndOfTurn mirrors the parser's cross-sentence "Until end of
+	// turn, you don't lose this mana as steps and phases end" rider (Grand
+	// Warlord Radha): the produced mana does not empty as steps and phases end
+	// for the rest of the turn. See parser.EffectManaSyntax.PersistUntilEndOfTurn.
+	PersistUntilEndOfTurn bool
 }
 
 // CompiledEffectPayment is a typed resolution payment embedded in an effect.

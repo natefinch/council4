@@ -1248,6 +1248,12 @@ type Sentence struct {
 	// keyword and structural tokens as belonging to that grant rather than as an
 	// unrecognized sibling.
 	KeywordChoiceAtRandomPrelude bool `json:",omitempty"`
+	// PersistentManaRider reports that this sentence is a credited "Until end of
+	// turn, you don't lose this mana as steps and phases end." rider folded onto
+	// a preceding add-mana effect (Grand Warlord Radha). Reference and coverage
+	// scans treat its "this mana" pronoun and tokens as belonging to that
+	// add-mana rather than as an unrecognized sibling.
+	PersistentManaRider bool `json:",omitempty"`
 }
 
 // sentenceIsCreditedRider reports whether the sentence has been folded onto a
@@ -1265,7 +1271,8 @@ func sentenceIsCreditedRider(s *Sentence) bool {
 		s.PileSplitRider ||
 		s.ExiledCardChoiceRider ||
 		s.RemoveAuraRider ||
-		s.TokenGrantedAbilityRider
+		s.TokenGrantedAbilityRider ||
+		s.PersistentManaRider
 }
 
 // StaticRuleSubjectKind identifies the source object constrained by a simple

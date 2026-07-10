@@ -51,6 +51,7 @@ var Cards = []cardset.Entry{
 	{Name: "Osgood, Operation Double", New: OsgoodOperationDouble},
 	{Name: "Otherworldly Journey", New: OtherworldlyJourney},
 	{Name: "Outwit", New: Outwit},
+	{Name: "Overgrown Battlement", New: OvergrownBattlement},
 	{Name: "Overgrown Pest", New: OvergrownPest},
 	{Name: "Overwhelmed Apprentice", New: OverwhelmedApprentice},
 	{Name: "Ovinize", New: Ovinize},

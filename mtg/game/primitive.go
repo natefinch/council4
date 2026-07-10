@@ -425,6 +425,13 @@ type AddMana struct {
 	// mutually exclusive with ManaColor, ChoiceFrom, EntryChoiceFrom,
 	// EachControlledColor, and SpendRider. Amount may be fixed or dynamic.
 	CombinationColors []mana.Color
+	// PersistUntilEndOfTurn, when set, makes the mana produced by this
+	// instruction not empty as steps and phases end for the rest of the turn
+	// (the CR 500.4 exception used by "Until end of turn, you don't lose this
+	// mana as steps and phases end", Grand Warlord Radha). The mana is added to
+	// the recipient's pool as persistent mana (Pool.AddPersistent); it is
+	// released at end-of-turn cleanup so it empties normally thereafter.
+	PersistUntilEndOfTurn bool
 }
 
 // AddCounter places counters on a referenced permanent.

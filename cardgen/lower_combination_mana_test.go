@@ -99,25 +99,39 @@ func TestLowerDynamicCombinationMana(t *testing.T) {
 	}
 }
 
-// TestLowerCombinationManaRadhaFailsClosed pins Grand Warlord Radha fail-closed:
-// its "add that much mana in any combination of {R} and/or {G}" uses an
-// unmodeled attacker-count amount and its "you don't lose this mana as steps and
-// phases end" rider is unmodeled, so the card must not generate.
-func TestLowerCombinationManaRadhaFailsClosed(t *testing.T) {
+// TestLowerCombinationManaRadhaGenerates proves Grand Warlord Radha now
+// generates with correct semantics: its "add that much mana in any combination
+// of {R} and/or {G}" lowers to a single AddMana whose amount is the attacking-
+// creatures-you-control count and whose color set is {R},{G}, and its "Until end
+// of turn, you don't lose this mana as steps and phases end" rider folds onto
+// that AddMana as PersistUntilEndOfTurn.
+func TestLowerCombinationManaRadhaGenerates(t *testing.T) {
 	t.Parallel()
-	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
-		Name:     "Grand Warlord Radha",
-		Layout:   "normal",
-		TypeLine: "Legendary Creature — Elf Warrior",
-		ManaCost: "{2}{R}{G}",
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:      "Grand Warlord Radha",
+		Layout:    "normal",
+		TypeLine:  "Legendary Creature — Elf Warrior",
+		ManaCost:  "{2}{R}{G}",
+		Power:     new("3"),
+		Toughness: new("4"),
 		OracleText: "Haste\n" +
 			"Whenever one or more creatures you control attack, add that much mana in any combination of {R} and/or {G}. " +
 			"Until end of turn, you don't lose this mana as steps and phases end.",
-	}, "x")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
 	}
-	if len(diagnostics) == 0 {
-		t.Fatal("Radha unexpectedly generated; it must stay fail-closed")
+	add := combinationManaAddInstruction(t, face.TriggeredAbilities[0].Content.Modes[0].Sequence)
+	if !add.Amount.IsDynamic() {
+		t.Fatalf("amount = %#v, want dynamic", add.Amount)
+	}
+	if dynamic := add.Amount.DynamicAmount().Val; dynamic.Kind != game.DynamicAmountCountSelector {
+		t.Fatalf("dynamic amount kind = %v, want count selector", dynamic.Kind)
+	}
+	if !slices.Equal(add.CombinationColors, []mana.Color{mana.R, mana.G}) {
+		t.Fatalf("colors = %v, want [R G]", add.CombinationColors)
+	}
+	if !add.PersistUntilEndOfTurn {
+		t.Fatal("PersistUntilEndOfTurn = false, want true (persist rider folded onto the add-mana)")
 	}
 }

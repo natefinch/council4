@@ -2162,17 +2162,12 @@ func parseDynamicObjectNounCountSubject(tokens []shared.Token, start int, atoms 
 		chosenType := false
 		chosenResolutionType := false
 		if !dynamicAmountBoundary(tokens, subjectEnd) {
-			if match, ok := counterQualifierKind(tokens, subjectEnd); ok && dynamicAmountBoundary(tokens, match.End) {
-				subjectEnd, selectionEnd = match.End, match.End
-			} else if cEnd, ok := dynamicCharacteristicQualifierEnd(tokens, subjectEnd, atoms); ok && dynamicAmountBoundary(tokens, cEnd) {
-				subjectEnd, selectionEnd = cEnd, cEnd
-			} else if cEnd, ok := chosenTypeQualifierEnd(tokens, subjectEnd); ok && dynamicAmountBoundary(tokens, cEnd) {
-				subjectEnd, chosenType = cEnd, true
-			} else if cEnd, ok := thatTypeQualifierEnd(tokens, subjectEnd); ok && dynamicAmountBoundary(tokens, cEnd) {
-				subjectEnd, chosenResolutionType = cEnd, true
-			} else {
+			qualified, ok := resolveDynamicCountSubjectQualifier(tokens, subjectEnd, atoms)
+			if !ok {
 				continue
 			}
+			subjectEnd, selectionEnd = qualified.subjectEnd, qualified.selectionEnd
+			chosenType, chosenResolutionType = qualified.subtypeFromEntryChoice, qualified.subtypeFromChosenType
 		}
 		selection := parseSelection(tokens[start:selectionEnd], atoms)
 		selection.SubtypeFromEntryChoice = chosenType
@@ -2183,6 +2178,43 @@ func parseDynamicObjectNounCountSubject(tokens []shared.Token, start int, atoms 
 		}, true
 	}
 	return dynamicAmountSubject{}, false
+}
+
+// dynamicCountSubjectQualifier describes how a trailing qualifier extends a
+// "<noun> you control"/"on the battlefield" count subject. subjectEnd is the
+// token index past the qualifier and selectionEnd is the token index up to which
+// parseSelection reads: counter, characteristic, and keyword qualifiers are part
+// of the selection filter, whereas chosen-/that-type qualifiers are recorded as
+// the subtypeFromEntryChoice and subtypeFromChosenType flags instead.
+type dynamicCountSubjectQualifier struct {
+	subjectEnd             int
+	selectionEnd           int
+	subtypeFromEntryChoice bool
+	subtypeFromChosenType  bool
+}
+
+// resolveDynamicCountSubjectQualifier matches the trailing qualifier that can
+// follow a count subject scope ("... you control with defender", "... you
+// control with a +1/+1 counter", "... you control of the chosen type", etc.),
+// returning how it extends the subject and selection spans. It fails closed when
+// no supported qualifier ends at a dynamic-amount boundary.
+func resolveDynamicCountSubjectQualifier(tokens []shared.Token, subjectEnd int, atoms Atoms) (dynamicCountSubjectQualifier, bool) {
+	if match, ok := counterQualifierKind(tokens, subjectEnd); ok && dynamicAmountBoundary(tokens, match.End) {
+		return dynamicCountSubjectQualifier{subjectEnd: match.End, selectionEnd: match.End}, true
+	}
+	if cEnd, ok := dynamicCharacteristicQualifierEnd(tokens, subjectEnd, atoms); ok && dynamicAmountBoundary(tokens, cEnd) {
+		return dynamicCountSubjectQualifier{subjectEnd: cEnd, selectionEnd: cEnd}, true
+	}
+	if kEnd, ok := dynamicKeywordQualifierEnd(tokens, subjectEnd); ok && dynamicAmountBoundary(tokens, kEnd) {
+		return dynamicCountSubjectQualifier{subjectEnd: kEnd, selectionEnd: kEnd}, true
+	}
+	if cEnd, ok := chosenTypeQualifierEnd(tokens, subjectEnd); ok && dynamicAmountBoundary(tokens, cEnd) {
+		return dynamicCountSubjectQualifier{subjectEnd: cEnd, selectionEnd: subjectEnd, subtypeFromEntryChoice: true}, true
+	}
+	if cEnd, ok := thatTypeQualifierEnd(tokens, subjectEnd); ok && dynamicAmountBoundary(tokens, cEnd) {
+		return dynamicCountSubjectQualifier{subjectEnd: cEnd, selectionEnd: subjectEnd, subtypeFromChosenType: true}, true
+	}
+	return dynamicCountSubjectQualifier{}, false
 }
 
 // parseOpponentControllingCountSubject recognizes the per-opponent control
@@ -2262,6 +2294,25 @@ func dynamicCharacteristicQualifierEnd(tokens []shared.Token, start int, atoms A
 		}
 	}
 	return 0, false
+}
+
+// dynamicKeywordQualifierEnd recognizes a trailing "with <keyword>" qualifier on
+// a count subject ("the number of creatures you control with defender", Axebane
+// Guardian) and returns the token index just past it. The keyword name is the
+// same "with <keyword>" selector parseSelection records as Selection.Keyword, so
+// the count selection carries the keyword filter the runtime honors, mirroring
+// the power, toughness, and mana-value comparisons dynamicCharacteristicQualifierEnd
+// already understands. It fails closed on the excluded "without <keyword>" form
+// and on any non-keyword "with" qualifier so those keep their own handling.
+func dynamicKeywordQualifierEnd(tokens []shared.Token, start int) (int, bool) {
+	if !effectWordsAt(tokens, start, "with") {
+		return 0, false
+	}
+	kind, width, ok := recognizeKeywordNameAt(tokens, start+1)
+	if !ok || kind == KeywordUnknown {
+		return 0, false
+	}
+	return start + 1 + width, true
 }
 
 // chosenTypeQualifierEnd recognizes a trailing "of the chosen type" qualifier on
