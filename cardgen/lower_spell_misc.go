@@ -32,7 +32,11 @@ func lowerFixedLifeSpell(
 		)
 	}
 	amount := game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX})
+	halfLife := effect.Amount.DynamicKind == compiler.DynamicAmountHalfPlayerLife
 	switch {
+	case halfLife:
+		// The amount is half the losing player's life, so it reads the recipient
+		// resolved below; leave a placeholder and rebuild it once playerRef is set.
 	case effect.Amount.Known:
 		amount = game.Fixed(effect.Amount.Value)
 	case triggeringEventQuantityKind(effect.Amount.DynamicKind):
@@ -106,7 +110,7 @@ func lowerFixedLifeSpell(
 			"the executable source backend supports only exact fixed life changes",
 		)
 	}
-	if len(ctx.content.Targets) == 0 {
+	if !halfLife && len(ctx.content.Targets) == 0 {
 		switch effect.Context {
 		case parser.EffectContextEachOpponent, parser.EffectContextEachOtherPlayer:
 			return game.Mode{
@@ -206,6 +210,17 @@ func lowerFixedLifeSpell(
 			"unsupported life spell",
 			"the executable source backend supports only exact fixed life changes",
 		)
+	}
+	if halfLife {
+		// Rebuild the amount now that the losing player is resolved: half that
+		// player's life, rounded per the printed "rounded up"/"rounded down".
+		recipient := playerRef
+		amount = game.Dynamic(game.DynamicAmount{
+			Kind:    game.DynamicAmountPlayerLife,
+			Player:  &recipient,
+			Divisor: 2,
+			RoundUp: effect.Amount.RoundUp,
+		})
 	}
 	return game.Mode{
 		Targets: targets,

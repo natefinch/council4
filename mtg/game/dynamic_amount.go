@@ -264,6 +264,14 @@ const (
 	// — Berserk Murlodont). It is zero when combat is not active or the permanent
 	// is unblocked. Added last so existing kinds keep their wire values.
 	DynamicAmountBlockingCreatures
+	// DynamicAmountPlayerLife is the current life total of the player named by
+	// Player, read as the effect resolves (CR 608.2c). Divisor and RoundUp halve
+	// it for the "loses half their life, rounded up" family (Quietus Spike, Virtus
+	// the Veiled, Scytheclaw): lowering sets Player to the losing player, Divisor
+	// to 2, and RoundUp per the printed rounding. It backs a player-life amount,
+	// unlike the controller-only DynamicAmountControllerLife. Added last so
+	// existing kinds keep their wire values.
+	DynamicAmountPlayerLife
 )
 
 // DynamicAmount describes an effect amount determined as the effect resolves

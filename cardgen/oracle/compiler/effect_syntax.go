@@ -857,6 +857,8 @@ func compileDynamicAmountKind(kind parser.EffectDynamicAmountKind) DynamicAmount
 		return DynamicAmountCardsNamedSelfInControllerGraveyard
 	case parser.EffectDynamicAmountHalfPlayerLibrary:
 		return DynamicAmountHalfPlayerLibrary
+	case parser.EffectDynamicAmountHalfPlayerLife:
+		return DynamicAmountHalfPlayerLife
 	case parser.EffectDynamicAmountCommanderCastCount:
 		return DynamicAmountCommanderCastCount
 	default:

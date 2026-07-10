@@ -938,6 +938,14 @@ const (
 	// combat-state amount, not a board count. Added last so existing kinds keep
 	// their values.
 	EffectDynamicAmountCreaturesBlockingSource EffectDynamicAmountKind = "EffectDynamicAmountCreaturesBlockingSource"
+	// EffectDynamicAmountHalfPlayerLife is half the life total of the player who
+	// loses the life, rounded up or down per the amount's RoundUp flag ("that
+	// player loses half their life, rounded up" — Quietus Spike, Virtus the
+	// Veiled, Scytheclaw). The "their" possessive names the losing player (the
+	// effect's subject), so the life counted is that same player's, halved as the
+	// effect resolves (CR 107.4). It carries no in-text referent and is recognized
+	// only on life-loss effects. Added last so existing kinds keep their values.
+	EffectDynamicAmountHalfPlayerLife EffectDynamicAmountKind = "EffectDynamicAmountHalfPlayerLife"
 )
 
 // EffectDynamicAmountForm identifies how a dynamic amount is introduced.
@@ -954,6 +962,11 @@ const (
 	// rather than a counted "cards" plural, so its exact reconstruction appends
 	// the amount phrase directly after the subject verb with no "cards" noun.
 	EffectDynamicAmountFormHalfLibrary EffectDynamicAmountForm = "EffectDynamicAmountFormHalfLibrary"
+	// EffectDynamicAmountFormHalfLife introduces the "half their life, rounded
+	// up/down" life-loss amount, whose noun is the losing player's life rather
+	// than a counted plural, so its exact reconstruction appends the amount
+	// phrase directly after the subject verb, mirroring the half-library form.
+	EffectDynamicAmountFormHalfLife EffectDynamicAmountForm = "EffectDynamicAmountFormHalfLife"
 )
 
 // EffectAmountSyntax is a fixed or rules-derived source-spanned amount.
