@@ -64,8 +64,19 @@ func scoreActivateAbility(obs rules.PlayerObservation, act action.Action, person
 	}
 	targets := activationTargets(act)
 	dynamicEstimate := dynamicEstimateFor(activationXValue(act))
-	return activationEffectValue(obs, targets, ability.Effect, personality, dynamicEstimate) -
+	value := activationEffectValue(obs, targets, ability.Effect, personality, dynamicEstimate) -
 		activationCostValue(obs, ability.Costs, dynamicEstimate)
+	if obs.IsCyclingActivation(act) && obs.DiscardingTriggersOwnAbility() {
+		// Cycling is card-neutral on its own, but here discarding the cycled card
+		// triggers a payoff the player controls (Captain Howler's pump, Brallin's or
+		// Glint-Horn Buccaneer's damage). That makes it a real play, so lift it to an
+		// ordinary activation score: the search then keeps it as a candidate instead
+		// of pruning it as idle churn, and its Evaluate weighs the actual resulting
+		// board (the pumped attacker, the damage dealt). The payoff's magnitude is
+		// left to that position evaluation rather than estimated here.
+		value += scoreActivate
+	}
+	return value
 }
 
 func activationTargets(act action.Action) []game.Target {

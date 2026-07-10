@@ -36,6 +36,45 @@ func (o PlayerObservation) ScorableActivatedAbility(act action.Action) (eval.Sco
 	return eval.ScorableAbility{}, false
 }
 
+// IsCyclingActivation reports whether act activates a cycling ability from the
+// observing player's hand.
+func (o PlayerObservation) IsCyclingActivation(act action.Action) bool {
+	payload, ok := act.ActivateAbilityPayload()
+	if !ok {
+		return false
+	}
+	_, body, ok := handActivatedAbilitySource(o.g, o.Player, payload.SourceID, payload.AbilityIndex)
+	return ok && game.BodyHasKeyword(&body, game.Cycling)
+}
+
+// DiscardingTriggersOwnAbility reports whether the observing player discarding a
+// card would trigger one of their own permanents' abilities — a "whenever you
+// discard" payoff such as Captain Howler (pump a creature and draw on its combat
+// damage), Brallin, or Glint-Horn Buccaneer (damage each opponent). An agent uses
+// it to know that discarding (through cycling, looting, or a discard cost)
+// advances a plan rather than idly churning cards, so the action's value must
+// account for the payoff: without a payoff cycling is card-neutral, but with one
+// it is a real play the search should keep and evaluate on the resulting board
+// (CR 603.2).
+func (o PlayerObservation) DiscardingTriggersOwnAbility() bool {
+	for _, permanent := range o.g.Battlefield {
+		if !activeBattlefieldPermanent(permanent) || effectiveController(o.g, permanent) != o.Player {
+			continue
+		}
+		for _, body := range permanentEffectiveAbilities(o.g, permanent) {
+			triggered, ok := body.(*game.TriggeredAbility)
+			if !ok {
+				continue
+			}
+			pattern := triggered.Trigger.Pattern
+			if pattern.Event == game.EventCardDiscarded && pattern.Player == game.TriggerPlayerYou {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // IsManaAbilityActivation reports whether the action activates a mana ability —
 // one that only adds mana (CR 605.1). An agent scores activating one standalone
 // at or below passing: mana is spent through the payment system as it pays for a
