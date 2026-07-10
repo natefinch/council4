@@ -39,6 +39,9 @@ const (
 	// spell's mana cost. The discards are carried as typed cost components on the
 	// ability's CostSyntax, like every other non-mana cost.
 	SpellAlternativeCostDiscard
+	// SpellAlternativeCostBorderpost is "{1}, return a basic land you control"
+	// rather than the spell's printed mana cost.
+	SpellAlternativeCostBorderpost
 )
 
 // SpellAlternativeCostCondition identifies a condition on an alternative spell cost.
@@ -64,7 +67,7 @@ type SpellAlternativeCost struct {
 	ReplaceTargetWithEach bool
 }
 
-func spellAlternativeCostClause(body []shared.Token) (*SpellAlternativeCost, *Cost, bool) {
+func spellAlternativeCostClause(source string, body []shared.Token) (*SpellAlternativeCost, *Cost, bool) {
 	if alternative, ok := overloadAlternativeCostClause(body); ok {
 		return alternative, nil, true
 	}
@@ -74,10 +77,14 @@ func spellAlternativeCostClause(body []shared.Token) (*SpellAlternativeCost, *Co
 	if alternative, discardCost, ok := discardAlternativeCostClause(body); ok {
 		return alternative, discardCost, true
 	}
+	if alternative, returnCost, ok := borderpostAlternativeCostClause(source, body); ok {
+		return alternative, returnCost, true
+	}
 	words := []string{
 		"if", "you", "control", "a", "commander", "you", "may", "cast",
 		"this", "spell", "without", "paying", "its", "mana", "cost",
 	}
+
 	if len(body) != len(words)+2 {
 		return nil, nil, false
 	}
@@ -112,6 +119,47 @@ func spellAlternativeCostClause(body []shared.Token) (*SpellAlternativeCost, *Co
 		Condition:             SpellAlternativeCostConditionControlsCommander,
 		WithoutPayingManaCost: true,
 	}, nil, true
+}
+
+func borderpostAlternativeCostClause(source string, body []shared.Token) (*SpellAlternativeCost, *Cost, bool) {
+	const text = "You may pay {1} and return a basic land you control to its owner's hand rather than pay this spell's mana cost."
+	if !strings.EqualFold(strings.TrimSpace(joinedEffectText(body)), text) {
+		return nil, nil, false
+	}
+	rather := -1
+	for i := range body {
+		if effectWordsAt(body, i, "rather", "than", "pay") {
+			rather = i
+			break
+		}
+	}
+	if rather <= 5 {
+		return nil, nil, false
+	}
+	returnPhrase := phraseFromTokens(source, body[5:rather])
+	parsed := Cost{
+		Span: returnPhrase.Span,
+		Text: returnPhrase.Text,
+		Components: []CostComponent{{
+			Kind:             CostComponentReturn,
+			Span:             returnPhrase.Span,
+			Text:             returnPhrase.Text,
+			Amount:           "a",
+			Object:           "a basic land you control to its owner's hand",
+			AmountValue:      1,
+			AmountKnown:      true,
+			ObjectNoun:       ObjectNounLand,
+			ObjectSupertype:  types.Basic,
+			SupertypeKnown:   true,
+			ObjectController: ControllerRelationYouControl,
+			ToZone:           zone.Hand,
+		}},
+	}
+	return &SpellAlternativeCost{
+		Span:     shared.SpanOf(body),
+		Kind:     SpellAlternativeCostBorderpost,
+		ManaCost: cost.Mana{cost.O(1)},
+	}, &parsed, true
 }
 
 // flashbackAlternativeCostClause recognizes the em-dash Flashback form

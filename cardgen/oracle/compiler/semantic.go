@@ -230,6 +230,7 @@ const (
 	// spell's printed mana cost. The discards are carried as typed cost
 	// components on the ability's CompiledCost.
 	AlternativeCostDiscard
+	AlternativeCostBorderpost
 )
 
 // CompiledAlternativeCost is text-independent semantic data for an optional

@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,347 of 32,501 cards eligible for paper support (53.4%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,352 of 32,501 cards eligible for paper support (53.4%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -5076,6 +5076,7 @@ Council4 currently supports **17,347 of 32,501 cards eligible for paper support 
 - Field of the Dead
 - Field Research
 - Field Surgeon
+- Fieldmist Borderpost
 - Fields of Strife
 - Fiend Artisan
 - Fiend Binder
@@ -5180,6 +5181,7 @@ Council4 currently supports **17,347 of 32,501 cards eligible for paper support 
 - Fireshrieker
 - Fireslinger
 - Firestorm Hellkite
+- Firewild Borderpost
 - Firewing Phoenix
 - Firja, Judge of Valor
 - First Mate Ragavan
@@ -9432,6 +9434,7 @@ Council4 currently supports **17,347 of 32,501 cards eligible for paper support 
 - Mists of Littjara
 - Mistvault Bridge
 - Mistveil Plains
+- Mistvein Borderpost
 - Mistwalker
 - Misty Palms Oasis
 - Misty Rainforest
@@ -16162,6 +16165,7 @@ Council4 currently supports **17,347 of 32,501 cards eligible for paper support 
 - Veilborn Ghoul
 - Veiled Shade
 - Vein Ripper
+- Veinfire Borderpost
 - Veinwitch Coven
 - Vela the Night-Clad
 - Veldrane of Sengir
@@ -16887,6 +16891,7 @@ Council4 currently supports **17,347 of 32,501 cards eligible for paper support 
 - Wilderness Hypnotist
 - Wilderness Reclamation
 - Wildest Dreams
+- Wildfield Borderpost
 - Wildfire
 - Wildfire Awakener
 - Wildfire Emissary
