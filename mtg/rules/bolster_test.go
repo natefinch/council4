@@ -178,3 +178,64 @@ func TestBolsterChosenCreatureDelayedConvertFiresForBoundCreature(t *testing.T) 
 		t.Fatalf("Optimus face/transformed = %v/%v, want front/false (converted from its back face)", optimus.Face, optimus.Transformed)
 	}
 }
+
+// TestBolsterChosenLinkedReferenceRebindsOnEachResolution proves the back-face
+// trigger rebinds "the chosen creature" every time it resolves rather than
+// leaking the first-ever choice. The chosen-creature link key is constant for a
+// given Optimus, so a second attack must clear the prior linked creature before
+// recording the new one; otherwise the trample grant and the delayed convert
+// keep resolving the stale first creature and the second attacker silently gains
+// nothing and can never convert Optimus. This is the CR 701.37 counterpart of
+// the #2872 clear-before-remember fix and fails without the clearLinkedObjects
+// call in handleBolster.
+func TestBolsterChosenLinkedReferenceRebindsOnEachResolution(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	g.Turn.ActivePlayer = game.Player1
+	engine := NewEngine(nil)
+	optimus := newOptimusBack(g, game.Player1)
+	// first is the least-toughness creature on the first attack; after it gains
+	// two +1/+1 counters it becomes taller than second, so the second attack
+	// must choose second instead.
+	first := addCreatureWithPowerToughness(g, game.Player1, 2, 1)
+	second := addCreatureWithPowerToughness(g, game.Player1, 2, 2)
+
+	content := cards.OptimusPrimeHero().Back.Val.TriggeredAbilities[0].Content
+
+	engine.resolveAbilityContentWithChoices(g, optimusObject(g, optimus), content, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+	if first.Counters.Get(counter.PlusOnePlusOne) != 2 {
+		t.Fatalf("first attack did not bolster the least-toughness creature: counters = %d, want 2", first.Counters.Get(counter.PlusOnePlusOne))
+	}
+
+	engine.resolveAbilityContentWithChoices(g, optimusObject(g, optimus), content, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+	if second.Counters.Get(counter.PlusOnePlusOne) != 2 {
+		t.Fatalf("second attack did not bolster the now-least-toughness creature: counters = %d, want 2", second.Counters.Get(counter.PlusOnePlusOne))
+	}
+
+	// The second attack's rider must bind to the second creature, not the first.
+	if !hasKeyword(g, second, game.Trample) {
+		t.Fatal("second attack's chosen creature did not gain trample (linked reference did not rebind to the new creature)")
+	}
+
+	if len(g.DelayedTriggers) != 2 {
+		t.Fatalf("delayed triggers = %d, want 2 (one per attack)", len(g.DelayedTriggers))
+	}
+
+	// Combat damage from the second attacker must fire the convert scheduled by
+	// the second attack; on the un-cleared code that delayed trigger stays bound
+	// to the stale first creature and never fires.
+	emitEvent(g, game.Event{
+		Kind:            game.EventDamageDealt,
+		SourceObjectID:  second.ObjectID,
+		CombatDamage:    true,
+		DamageRecipient: game.DamageRecipientPlayer,
+		Player:          game.Player2,
+	})
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("second attacker's combat damage did not fire the convert trigger (delayed trigger bound to the stale first creature)")
+	}
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+	if optimus.Face != game.FaceFront || optimus.Transformed {
+		t.Fatalf("Optimus face/transformed = %v/%v, want front/false (converted by the second attacker)", optimus.Face, optimus.Transformed)
+	}
+}

@@ -551,11 +551,9 @@ func handleBolster(r *effectResolver, prim game.Bolster) effectResolved {
 		res.succeeded = true
 	}
 	if prim.PublishLinked != "" {
-		rememberLinkedObject(
-			r.game,
-			linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked)),
-			permanentObjectBindingRef(chosen),
-		)
+		key := linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked))
+		clearLinkedObjects(r.game, key)
+		rememberLinkedObject(r.game, key, permanentObjectBindingRef(chosen))
 	}
 	return res
 }
