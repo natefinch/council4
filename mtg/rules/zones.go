@@ -114,6 +114,10 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 		xValue:            options.XValue,
 		kickCount:         options.KickCount,
 		kickerPaid:        options.KickerPaid,
+		wasCast:           options.WasCast,
+		castController:    options.CastController,
+		hasCastController: options.HasCastController,
+		castFromZone:      options.CastFromZone,
 		colorsOfManaSpent: options.ColorsOfManaSpentToCast,
 		manaSpentByColor:  options.ManaSpentByColorToCast,
 	}, g, permanent, fromZone)
@@ -196,6 +200,10 @@ func prepareCardPermanentFaceForSimultaneousEntry(
 		xValue:            options.XValue,
 		kickCount:         options.KickCount,
 		kickerPaid:        options.KickerPaid,
+		wasCast:           options.WasCast,
+		castController:    options.CastController,
+		hasCastController: options.HasCastController,
+		castFromZone:      options.CastFromZone,
 		colorsOfManaSpent: options.ColorsOfManaSpentToCast,
 		manaSpentByColor:  options.ManaSpentByColorToCast,
 	}, g, permanent, fromZone)
@@ -290,9 +298,13 @@ func createCardPermanentFaceDownWithChoices(e *Engine, g *game.Game, card *game.
 		SummoningSick:  true,
 	}
 	applyEnterBattlefieldReplacementEffects(enterBattlefieldContext{
-		engine: e,
-		agents: agents,
-		log:    log,
+		engine:            e,
+		agents:            agents,
+		log:               log,
+		wasCast:           wasCast,
+		castController:    controller,
+		hasCastController: wasCast,
+		castFromZone:      fromZone,
 	}, g, permanent, fromZone)
 	g.Battlefield = append(g.Battlefield, permanent)
 	event := game.Event{

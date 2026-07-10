@@ -24,6 +24,10 @@ type enterBattlefieldContext struct {
 	xValue            int
 	kickCount         int
 	kickerPaid        bool
+	wasCast           bool
+	castController    game.PlayerID
+	hasCastController bool
+	castFromZone      zone.Type
 	colorsOfManaSpent int
 	manaSpentByColor  map[color.Color]int
 }
@@ -575,16 +579,20 @@ func revealZoneReplacementSource(g *game.Game, event game.Event, reveal bool) {
 // order does not change the result); the choice point is recorded for the log.
 func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *game.Game, permanent *game.Permanent, fromZone zone.Type) {
 	event := game.Event{
-		Kind:        game.EventPermanentEnteredBattlefield,
-		Controller:  effectiveController(g, permanent),
-		Player:      permanent.Owner,
-		CardID:      permanent.CardInstanceID,
-		PermanentID: permanent.ObjectID,
-		TokenName:   permanentTokenName(permanent),
-		TokenDef:    permanent.TokenDef,
-		KickerPaid:  ctx.kickerPaid,
-		FromZone:    fromZone,
-		ToZone:      zone.Battlefield,
+		Kind:                   game.EventPermanentEnteredBattlefield,
+		Controller:             effectiveController(g, permanent),
+		Player:                 permanent.Owner,
+		CardID:                 permanent.CardInstanceID,
+		PermanentID:            permanent.ObjectID,
+		TokenName:              permanentTokenName(permanent),
+		TokenDef:               permanent.TokenDef,
+		KickerPaid:             ctx.kickerPaid,
+		EnterWasCast:           ctx.wasCast,
+		EnterCastController:    ctx.castController,
+		EnterHasCastController: ctx.hasCastController,
+		EnterCastFromZone:      ctx.castFromZone,
+		FromZone:               fromZone,
+		ToZone:                 zone.Battlefield,
 	}
 	var staticMatches []game.ReplacementEffect
 	if !permanent.FaceDown {

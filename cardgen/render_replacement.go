@@ -1132,6 +1132,10 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 		fields = append(fields, "EventPermanentWasKicked: true,")
 		hasPredicate = true
 	}
+	if cond.EventPermanentWasCastFromControllerHand {
+		fields = append(fields, "EventPermanentWasCastFromControllerHand: true,")
+		hasPredicate = true
+	}
 	if cond.SpellColorManaSpent.Count > 0 {
 		colorLiteral, err := colorValueToLiteral(cond.SpellColorManaSpent.Color)
 		if err != nil {
