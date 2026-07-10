@@ -39,6 +39,7 @@ const (
 	StaticDeclarationOpponentEnteringTriggerSuppression
 	StaticDeclarationCreatureAttackTax
 	StaticDeclarationManaProductionMultiplier
+	StaticDeclarationCombatDamagePrevention
 )
 
 // StaticDeclarationBlocker identifies exact static wording whose declaration
@@ -767,11 +768,14 @@ type StaticEnterBattlefieldRestrictionDeclaration struct {
 }
 
 // StaticSpellUncounterableDeclaration makes a group of the controller's spells
-// uncounterable ("[<type>] spells you control can't be countered."). SpellTypes
-// is the disjunction of card types the affected spells must include; an empty
-// SpellTypes affects every spell the controller casts.
+// uncounterable ("[<filter>] spells you control can't be countered."). SpellTypes
+// is the disjunction of card types the affected spells must include; SpellSubtypes
+// is the disjunction of creature subtypes the affected spells must include ("Human
+// spells you control can't be countered."). Empty filters affect every spell the
+// controller casts.
 type StaticSpellUncounterableDeclaration struct {
-	SpellTypes []types.Card
+	SpellTypes    []types.Card
+	SpellSubtypes []types.Sub
 }
 
 // StaticEnteringTriggerMultiplierDeclaration makes a triggered ability of a
@@ -804,6 +808,15 @@ type StaticUntapStepDeclaration struct {
 type StaticCastAsThoughFlashDeclaration struct {
 	SpellTypes    []types.Card
 	SpellSubtypes []types.Sub
+}
+
+// StaticCombatDamagePreventionDeclaration prevents all combat damage that would
+// be dealt to a group of permanents ("Prevent all combat damage that would be
+// dealt to attacking Humans you control.", Goldbug). Recipient is the compiled
+// selector describing which permanents the continuous prevention protects; its
+// controller relation is resolved relative to the ability's controller.
+type StaticCombatDamagePreventionDeclaration struct {
+	Recipient CompiledSelector
 }
 
 // StaticPerTurnLimitOperation identifies which per-turn player action a
@@ -864,6 +877,7 @@ type StaticDeclaration struct {
 	OpponentEnteringSuppression *StaticOpponentEnteringTriggerSuppressionDeclaration
 	CreatureAttackTax           *StaticCreatureAttackTaxDeclaration
 	ManaProductionMultiplier    *StaticManaProductionMultiplierDeclaration
+	CombatDamagePrevention      *StaticCombatDamagePreventionDeclaration
 }
 
 // StaticCreatureAttackTaxAmountKind identifies how a per-creature attack-tax
@@ -1133,6 +1147,10 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Abili
 		return
 	}
 	if declaration, ok := recognizeStaticCastAsThoughFlashDeclaration(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
+		return
+	}
+	if declaration, ok := recognizeStaticCombatDamagePreventionDeclaration(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
 		return
 	}
@@ -5068,7 +5086,8 @@ func recognizeStaticSpellUncounterableDeclaration(ability CompiledAbility, stati
 			Domain: StaticGroupControllerSpells,
 		},
 		SpellUncounterable: &StaticSpellUncounterableDeclaration{
-			SpellTypes: spellTypes,
+			SpellTypes:    spellTypes,
+			SpellSubtypes: node.UncounterableSpellSubtypes,
 		},
 	}, true
 }
@@ -5105,6 +5124,35 @@ func recognizeStaticCastAsThoughFlashDeclaration(ability CompiledAbility, static
 		CastAsThoughFlash: &StaticCastAsThoughFlashDeclaration{
 			SpellTypes:    spellTypes,
 			SpellSubtypes: node.FlashSpellSubtypes,
+		},
+	}, true
+}
+
+// recognizeStaticCombatDamagePreventionDeclaration maps the parser-owned "Prevent
+// all combat damage that would be dealt to <group>." syntax onto its closed
+// semantic payload. The recipient group is compiled with the shared typed
+// selection compiler so any permanent filter it recognizes (subtype, attacking,
+// controller relation) carries through; cardgen fails closed when the recipient
+// cannot be lowered to a runtime selection.
+func recognizeStaticCombatDamagePreventionDeclaration(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) (StaticDeclaration, bool) {
+	if !staticSyntaxKindsAre(statics, parser.StaticDeclarationCombatDamagePrevention) {
+		return StaticDeclaration{}, false
+	}
+	if ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Keywords) != 0 ||
+		ability.AbilityWord != "" {
+		return StaticDeclaration{}, false
+	}
+	node := statics[0]
+	return StaticDeclaration{
+		Kind:          StaticDeclarationCombatDamagePrevention,
+		Span:          node.Span,
+		OperationSpan: node.OperationSpan,
+		CombatDamagePrevention: &StaticCombatDamagePreventionDeclaration{
+			Recipient: compileTypedSelection(node.PreventionRecipient),
 		},
 	}, true
 }

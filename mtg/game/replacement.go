@@ -374,6 +374,18 @@ type ReplacementEffect struct {
 	// the attached permanent.
 	DamageRecipientAttached bool
 
+	// DamageCombatOnly restricts a damage prevention to combat damage ("Prevent
+	// all combat damage that would be dealt to ...", Goldbug). It is false for a
+	// prevention that applies to all damage.
+	DamageCombatOnly bool
+	// DamageRecipientSelection scopes a DamagePreventAll prevention to a group of
+	// recipient permanents matching this canonical Selection, matched through the
+	// shared matchSelection so the recipient filter reads the same vocabulary as
+	// targets and triggers ("attacking Humans you control"). The Selection's
+	// controller relation is resolved relative to the replacement's controller. It
+	// is nil for a prevention with a fixed self/attached/player recipient scope.
+	DamageRecipientSelection *Selection
+
 	// LifeGainMultiplier multiplies a single "you would gain life" event by the
 	// replacement's controller before the life is gained (CR 614), backing "If
 	// you would gain life, you gain twice that much life instead." (Boon

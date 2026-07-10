@@ -797,6 +797,19 @@ func parseAttackBlockTriggerEventClause(
 				}
 			}
 		}
+		if alongside, ok := attackerSelectionFromAlongsideSuffix(tokens[:index]); ok && index+1 == len(tokens) {
+			subject := parsePermanentEventSubject(alongside.subjectTokens, false, atoms)
+			if subject.ok && !subject.oneOrMore && !subject.excludeSelf &&
+				subject.subject.Kind == TriggerEventSubjectSelf {
+				return &TriggerEventClause{
+					Kind:                      TriggerEventKindAttack,
+					Subject:                   subject.subject,
+					Controller:                subject.controller,
+					AttacksAlongsideSelection: alongside.selection,
+					AttacksAlongsideCount:     alongside.count,
+				}
+			}
+		}
 		subject := parsePermanentEventSubject(tokens[:index], true, atoms)
 		if !subject.ok {
 			return nil
@@ -908,4 +921,48 @@ func attackerCountFromOtherCreaturesSuffix(tokens []shared.Token) ([]shared.Toke
 		return nil, 0, false
 	}
 	return tokens[:len(tokens)-suffixLen], others + 1, true
+}
+
+// alongsideAttackers holds the parsed pieces of an "and at least <N>
+// <selection>" attack infix: the subject tokens that precede it, the selection
+// describing the other attackers, and the minimum count N.
+type alongsideAttackers struct {
+	subjectTokens []shared.Token
+	selection     TriggerSelection
+	count         int
+}
+
+// attackerSelectionFromAlongsideSuffix recognizes the infix "<subject> and at
+// least <N> <selection>" that precedes the "attack" verb and returns the subject
+// tokens, the parsed selection describing the other attackers, and the minimum
+// count N ("Goldbug and at least one Human attack"). The <selection> tokens are
+// parsed with the shared trigger-selection parser, so any creature filter it
+// supports (subtype, type, color) works. It fails closed when the "and at least
+// <cardinal>" prefix is absent, the cardinal is out of range, or the selection
+// does not parse.
+func attackerSelectionFromAlongsideSuffix(tokens []shared.Token) (alongsideAttackers, bool) {
+	best := -1
+	for start := 0; start+3 <= len(tokens); start++ {
+		if equalWord(tokens[start], "and") &&
+			equalWord(tokens[start+1], "at") &&
+			equalWord(tokens[start+2], "least") {
+			best = start
+		}
+	}
+	if best <= 0 || best+3 >= len(tokens) {
+		return alongsideAttackers{}, false
+	}
+	count, ok := CardinalWordValue(tokens[best+3].Text)
+	if !ok || count < 1 {
+		return alongsideAttackers{}, false
+	}
+	selectionTokens := tokens[best+4:]
+	if len(selectionTokens) > 0 && equalWord(selectionTokens[0], "other") {
+		selectionTokens = selectionTokens[1:]
+	}
+	selection, ok := parseTriggerSelection(selectionTokens)
+	if !ok {
+		return alongsideAttackers{}, false
+	}
+	return alongsideAttackers{subjectTokens: tokens[:best], selection: selection, count: count}, true
 }

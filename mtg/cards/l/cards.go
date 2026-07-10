@@ -64,6 +64,7 @@ var Cards = []cardset.Entry{
 	{Name: "Longshot, Rebel Bowman", New: LongshotRebelBowman},
 	{Name: "Lookout's Dispersal", New: LookoutSDispersal},
 	{Name: "Lord Dregg, Insect Invader", New: LordDreggInsectInvader},
+	{Name: "Losheel, Clockwork Scholar", New: LosheelClockworkScholar},
 	{Name: "Lost Jitte", New: LostJitte},
 	{Name: "Lowland Basilisk", New: LowlandBasilisk},
 	{Name: "Loxodon Anchorite", New: LoxodonAnchorite},

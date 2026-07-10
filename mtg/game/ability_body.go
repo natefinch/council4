@@ -837,6 +837,27 @@ func DamagePreventionReplacement(text string, spec *DamagePreventionSpec) Replac
 	}
 }
 
+// CombatDamagePreventionToGroupReplacement builds the continuous static
+// prevention "Prevent all combat damage that would be dealt to <group>."
+// (Goldbug, Humanity's Ally). The recipient group is described by a canonical
+// Selection matched relative to the replacement's controller, so a "you control"
+// filter resolves against the controller. It prevents the whole matching combat
+// damage event rather than a fixed amount.
+func CombatDamagePreventionToGroupReplacement(text string, recipient Selection) ReplacementAbility {
+	return ReplacementAbility{
+		Text: text,
+		Replacement: ReplacementEffect{
+			Description:              text,
+			MatchEvent:               EventDamageDealt,
+			ControllerFilter:         TriggerControllerAny,
+			DamagePreventAll:         true,
+			DamageCombatOnly:         true,
+			DamageRecipientSelection: &recipient,
+			Duration:                 DurationPermanent,
+		},
+	}
+}
+
 // DamagePreventionToPlusOneCountersReplacement builds the continuous static
 // replacement "If damage would be dealt to <recipient>, prevent that damage and
 // put that many +1/+1 counters on it." (Jared Carthalion, Panther Habit,

@@ -51,6 +51,7 @@ const (
 	StaticDeclarationOpponentEnteringTriggerSuppression   StaticDeclarationKind = "StaticDeclarationOpponentEnteringTriggerSuppression"
 	StaticDeclarationCreatureAttackTax                    StaticDeclarationKind = "StaticDeclarationCreatureAttackTax"
 	StaticDeclarationManaProductionMultiplier             StaticDeclarationKind = "StaticDeclarationManaProductionMultiplier"
+	StaticDeclarationCombatDamagePrevention               StaticDeclarationKind = "StaticDeclarationCombatDamagePrevention"
 )
 
 // StaticAttackTaxAmountKind identifies how a per-creature attack-tax declaration
@@ -736,6 +737,16 @@ type StaticDeclarationSyntax struct {
 	// had flash.").
 	FlashSpellType     StaticDeclarationSpellTypeKind `json:",omitempty"`
 	FlashSpellSubtypes []types.Sub                    `json:"-"`
+	// UncounterableSpellSubtypes carries the optional subtype filter of a
+	// StaticDeclarationSpellUncounterable declaration ("Human spells you control
+	// can't be countered."). An empty slice with SpellType affects spells by card
+	// type only ("Creature spells you control can't be countered.").
+	UncounterableSpellSubtypes []types.Sub `json:"-"`
+	// PreventionRecipient carries the recipient group of a
+	// StaticDeclarationCombatDamagePrevention declaration ("Prevent all combat
+	// damage that would be dealt to attacking Humans you control."). It is the
+	// parsed selection describing which permanents the prevention protects.
+	PreventionRecipient SelectionSyntax `json:"-"`
 	// Enchanted-type-change payload: a removal Aura whose continuous effect sets
 	// the enchanted permanent's card types and creature subtypes (CardTypes,
 	// Subtypes, SET), optionally makes it colorless (BecomeColorless), optionally
@@ -1251,7 +1262,10 @@ func parseStaticDeclarations(tokens []shared.Token, quoted []Delimited, atoms At
 	if declaration, ok := parseStaticCastAsThoughFlashDeclaration(tokens, atoms); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
-	if declaration, ok := parseStaticSpellUncounterableDeclaration(tokens); ok {
+	if declaration, ok := parseStaticSpellUncounterableDeclaration(tokens, atoms); ok {
+		return []StaticDeclarationSyntax{declaration}
+	}
+	if declaration, ok := parseStaticCombatDamagePreventionDeclaration(tokens, atoms); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseStaticUntapDuringOtherUntapStepDeclaration(tokens); ok {
@@ -3936,19 +3950,29 @@ func parseStaticCastAsThoughFlashDeclaration(tokens []shared.Token, atoms Atoms)
 }
 
 // parseStaticSpellUncounterableDeclaration recognizes the static
-// "[<type filter>] spells you control can't be countered." (Rhythm of the
+// "[<filter>] spells you control can't be countered." (Rhythm of the
 // Wild, Prowling Serpopard, Cavern-style grants). The optional leading filter
-// constrains the affected spells to a single card type; a bare "Spells you
-// control ..." affects every spell the controller casts. Color filters and the
-// instant-and-sorcery filter fail closed because the runtime counter check
-// matches only the spell's card types.
-func parseStaticSpellUncounterableDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+// constrains the affected spells to a single card type ("Creature") or a
+// subtype list ("Human"); a bare "Spells you control ..." affects every spell
+// the controller casts. Color filters and the instant-and-sorcery filter fail
+// closed because the runtime counter check matches only the spell's card types
+// and subtypes.
+func parseStaticSpellUncounterableDeclaration(tokens []shared.Token, atoms Atoms) (StaticDeclarationSyntax, bool) {
 	if len(tokens) == 0 || tokens[len(tokens)-1].Kind != shared.Period {
 		return StaticDeclarationSyntax{}, false
 	}
-	spellType, rest, ok := staticSpellTypeFilter(tokens)
-	if !ok || spellType == StaticDeclarationSpellTypeInstantOrSorcery {
-		return StaticDeclarationSyntax{}, false
+	spellType := StaticDeclarationSpellTypeAll
+	rest := tokens
+	var subtypes []types.Sub
+	if subs, next, ok := staticSpellSubtypeFilter(tokens, atoms); ok {
+		subtypes = subs
+		rest = next
+	} else {
+		var ok bool
+		spellType, rest, ok = staticSpellTypeFilter(tokens)
+		if !ok || spellType == StaticDeclarationSpellTypeInstantOrSorcery {
+			return StaticDeclarationSyntax{}, false
+		}
 	}
 	if len(rest) != 7 ||
 		!staticWordsAt(rest, 0, "spells", "you", "control") ||
@@ -3958,10 +3982,66 @@ func parseStaticSpellUncounterableDeclaration(tokens []shared.Token) (StaticDecl
 		return StaticDeclarationSyntax{}, false
 	}
 	return StaticDeclarationSyntax{
-		Kind:          StaticDeclarationSpellUncounterable,
-		Span:          shared.SpanOf(tokens),
-		OperationSpan: shared.SpanOf(rest[3:6]),
-		SpellType:     spellType,
+		Kind:                       StaticDeclarationSpellUncounterable,
+		Span:                       shared.SpanOf(tokens),
+		OperationSpan:              shared.SpanOf(rest[3:6]),
+		SpellType:                  spellType,
+		UncounterableSpellSubtypes: subtypes,
+	}, true
+}
+
+// parseStaticCombatDamagePreventionDeclaration recognizes the continuous static
+// prevention "Prevent all combat damage that would be dealt to <group>."
+// (Goldbug, Humanity's Ally; Dolmen Gate), where <group> is a controller-scoped
+// permanent selection ("attacking Humans you control", "attacking creatures you
+// control"). It models a forward, TO-only, continuous prevention aimed at a
+// controlled group. To stay correct it fails closed for wordings this mechanic
+// does not model: a trailing "this turn" (the one-shot combat-damage shield owned
+// by the effect parser), a "dealt by" direction or any "by" source filter (the
+// two-way and source-scoped shields, e.g. Fog Bank, Armored Transport), and
+// back-reference or attached recipients that carry no controller relation ("this
+// creature", "equipped creature", Guard Gomazoa, General's Kabuto). The required
+// controller relation is the property that distinguishes a well-defined continuous
+// group from those singular self/attached preventions; the recipient tokens are
+// parsed with the shared selection parser so any permanent filter it recognizes
+// works.
+func parseStaticCombatDamagePreventionDeclaration(tokens []shared.Token, atoms Atoms) (StaticDeclarationSyntax, bool) {
+	if len(tokens) == 0 || tokens[len(tokens)-1].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	body := tokens[:len(tokens)-1]
+	prefix := []string{"prevent", "all", "combat", "damage", "that", "would", "be", "dealt", "to"}
+	if len(body) <= len(prefix) {
+		return StaticDeclarationSyntax{}, false
+	}
+	for i, want := range prefix {
+		if !equalWord(body[i], want) {
+			return StaticDeclarationSyntax{}, false
+		}
+	}
+	recipientTokens := body[len(prefix):]
+	if len(recipientTokens) >= 2 &&
+		equalWord(recipientTokens[len(recipientTokens)-2], "this") &&
+		equalWord(recipientTokens[len(recipientTokens)-1], "turn") {
+		return StaticDeclarationSyntax{}, false
+	}
+	for _, token := range recipientTokens {
+		if equalWord(token, "by") {
+			return StaticDeclarationSyntax{}, false
+		}
+	}
+	recipient := parseSelection(recipientTokens, atoms)
+	if recipient.Controller == SelectionControllerAny {
+		return StaticDeclarationSyntax{}, false
+	}
+	if conjunctiveTypeTarget(recipient) {
+		recipient.ConjunctiveTypes = true
+	}
+	return StaticDeclarationSyntax{
+		Kind:                StaticDeclarationCombatDamagePrevention,
+		Span:                shared.SpanOf(tokens),
+		OperationSpan:       shared.SpanOf(body[0:4]),
+		PreventionRecipient: recipient,
 	}, true
 }
 

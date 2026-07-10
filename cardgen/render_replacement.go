@@ -158,10 +158,25 @@ func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.Replace
 		}
 		return replacement, nil
 	}
+	if ability.Replacement.DamageRecipientSelection != nil {
+		return r.renderCombatDamagePreventionToGroupReplacement(ctx, ability)
+	}
 	if ability.Replacement.DamagePreventAll {
 		return r.renderDamagePreventionToCountersReplacement(ctx, ability)
 	}
 	return "", fmt.Errorf("render: unsupported replacement ability %q", ability.Text)
+}
+
+// renderCombatDamagePreventionToGroupReplacement renders the continuous static
+// "Prevent all combat damage that would be dealt to <group>." (Goldbug,
+// Humanity's Ally) into a game.CombatDamagePreventionToGroupReplacement call
+// carrying the recipient group selection.
+func (r Renderer) renderCombatDamagePreventionToGroupReplacement(ctx *renderCtx, ability *game.ReplacementAbility) (string, error) {
+	selection, err := r.renderSelection(ctx, *ability.Replacement.DamageRecipientSelection)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("game.CombatDamagePreventionToGroupReplacement(%q, %s)", ability.Text, selection), nil
 }
 
 // renderDamagePreventionToCountersReplacement renders the continuous static "If

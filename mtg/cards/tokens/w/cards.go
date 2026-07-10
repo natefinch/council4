@@ -17,6 +17,7 @@ var Cards = []*game.CardDef{
 	WarriorToken62c8ce284653432a94015066743f6d90,
 	WarriorToken6a880a0f0a9845059c279821be3e4818,
 	WarriorToken7217090ae4204c17ad47f92cc3ae9190,
+	WarriorTokenb7fc2167531344e8abbfa999fba79a93,
 	WaspTokene0a4cf1857ca47e5b7b0c26975601660,
 	WeirdToken9c56763e460342909e9f25f5eea8f4a5,
 	WeirdTokena00aa3a1d93d4e069a756f8efe48c6ef,

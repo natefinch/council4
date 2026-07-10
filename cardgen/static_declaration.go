@@ -34,6 +34,10 @@ func lowerStaticDeclarations(
 		return lowered, true, diagnostic
 	}
 
+	if lowered, ok, diagnostic := lowerStaticCombatDamageGroupPrevention(ability, syntax); ok {
+		return lowered, true, diagnostic
+	}
+
 	if ability.Cost != nil ||
 		ability.Trigger != nil ||
 		len(ability.Content.Modes) != 0 ||
@@ -270,6 +274,67 @@ func lowerStaticCharacteristicPowerToughness(
 	return lowering, true, nil
 }
 
+// lowerStaticCombatDamageGroupPrevention lowers the continuous static "Prevent
+// all combat damage that would be dealt to <group>." (Goldbug, Humanity's Ally)
+// onto a replacement ability rather than a static value, mirroring the dedicated
+// early-return used for characteristic-setting statics. It fails closed with a
+// diagnostic when the recipient selection cannot be lowered to a runtime
+// Selection, so an unrepresentable group leaves the card unsupported instead of
+// producing a wrong effect.
+func lowerStaticCombatDamageGroupPrevention(
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (abilityLowering, bool, *shared.Diagnostic) {
+	declarations := ability.Static.Declarations
+	if len(declarations) != 1 || declarations[0].Kind != compiler.StaticDeclarationCombatDamagePrevention {
+		return abilityLowering{}, false, nil
+	}
+	declaration := declarations[0]
+	if ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		!rulesFreeAbilityWordLabel(ability.AbilityWord) {
+		return abilityLowering{}, true, staticDeclarationDiagnostic(
+			ability,
+			"unsupported static declaration shell",
+			"the recognized static declarations require an otherwise empty static ability shell",
+		)
+	}
+	if !staticDeclarationPayloadValid(declaration) || declaration.Condition != nil {
+		return abilityLowering{}, true, staticDeclarationDiagnostic(
+			ability,
+			"unsupported static declaration operation",
+			"the recognized static declaration operation is not representable by the runtime static-value vocabulary",
+		)
+	}
+	recipient, ok := SelectionForSelector(declaration.CombatDamagePrevention.Recipient)
+	if !ok {
+		return abilityLowering{}, true, staticDeclarationDiagnostic(
+			ability,
+			"unsupported static declaration group",
+			"the combat-damage prevention recipient group is not representable by the runtime selection vocabulary",
+		)
+	}
+	spans := make([]shared.Span, 0, 1+len(syntax.Reminders))
+	spans = append(spans, declaration.Span)
+	for _, reminder := range syntax.Reminders {
+		spans = append(spans, reminder.Span)
+	}
+	lowering := abilityLowering{
+		replacementAbility: opt.Val(game.CombatDamagePreventionToGroupReplacement(ability.Text, recipient)),
+		consumed: semanticConsumption{
+			conditions:   len(ability.Content.Conditions),
+			effects:      len(ability.Content.Effects),
+			keywords:     len(ability.Content.Keywords),
+			references:   len(ability.Content.References),
+			declarations: len(declarations),
+		},
+		sourceSpans: spans,
+	}
+	return lowering, true, nil
+}
+
 func lowerStaticDeclarationBlocker(ability compiler.CompiledAbility) *shared.Diagnostic {
 	if ability.Static == nil {
 		return nil
@@ -397,6 +462,9 @@ func staticDeclarationPayloadValid(declaration compiler.StaticDeclaration) bool 
 	if declaration.ManaProductionMultiplier != nil {
 		payloads++
 	}
+	if declaration.CombatDamagePrevention != nil {
+		payloads++
+	}
 	if payloads != 1 {
 		return false
 	}
@@ -443,6 +511,8 @@ func staticDeclarationPayloadValid(declaration compiler.StaticDeclaration) bool 
 		return declaration.CreatureAttackTax != nil
 	case compiler.StaticDeclarationManaProductionMultiplier:
 		return declaration.ManaProductionMultiplier != nil
+	case compiler.StaticDeclarationCombatDamagePrevention:
+		return declaration.CombatDamagePrevention != nil
 	default:
 		return false
 	}
@@ -1360,6 +1430,7 @@ func appendStaticSpellUncounterableDeclaration(body *game.StaticAbility, declara
 		Kind:               game.RuleEffectCantBeCountered,
 		AffectedController: game.ControllerYou,
 		SpellTypes:         spellTypes,
+		SpellSubtypes:      slices.Clone(declaration.SpellUncounterable.SpellSubtypes),
 	})
 	return true
 }

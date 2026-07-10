@@ -1035,6 +1035,18 @@ type TriggerPattern struct {
 	// CR 702.166). It is only valid with Event == EventAttackerDeclared.
 	AttackWhileSaddled bool
 
+	// AttacksAlongsideSelection restricts an EventAttackerDeclared trigger to
+	// combats where the ability's source is attacking and at least
+	// AttacksAlongsideCount other attacking creatures match this Selection
+	// ("Whenever this creature and at least one Human attack", Goldbug). The
+	// count excludes the source itself. It is only valid with
+	// Event == EventAttackerDeclared and Source == TriggerSourceSelf, and only
+	// when AttacksAlongsideCount is positive.
+	AttacksAlongsideSelection Selection
+	// AttacksAlongsideCount is the minimum number of other attacking creatures
+	// matching AttacksAlongsideSelection. Zero disables the restriction.
+	AttacksAlongsideCount int
+
 	// CastDuringTurn restricts an EventSpellCast trigger by whose turn the spell
 	// was cast on, relative to the ability's controller ("Whenever you cast a
 	// spell during your turn" / "during an opponent's turn"). TriggerTurnAny

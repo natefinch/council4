@@ -358,6 +358,14 @@ type TriggerPattern struct {
 	// pattern to combats with at least this many attacking creatures. Zero
 	// imposes no minimum.
 	AttackerCountAtLeast int
+	// AttacksAlongsideSelection restricts a self-source attacker-declared pattern
+	// to combats where at least AttacksAlongsideCount other attacking creatures
+	// match this selection ("Whenever this creature and at least one Human
+	// attack", Goldbug). It is only set with a positive AttacksAlongsideCount.
+	AttacksAlongsideSelection TriggerSelection
+	// AttacksAlongsideCount is the minimum number of other attacking creatures
+	// matching AttacksAlongsideSelection. Zero imposes no such restriction.
+	AttacksAlongsideCount int
 
 	ExcludeSelf                bool
 	OneOrMore                  bool
