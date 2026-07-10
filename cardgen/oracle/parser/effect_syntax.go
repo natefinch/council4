@@ -4124,16 +4124,35 @@ func parseGroupPhaseOutEffect(sentence Sentence, tokens []shared.Token, atoms At
 	}}, true
 }
 
-// parsePhaseOutEffect recognizes the singular-subject "<subject> phases out."
-// effect (CR 702.26), such as "This creature phases out." (Blink Dog) and
-// "Target creature phases out." The plural mass form "All permanents you control
-// phase out." is handled separately by parseGroupPhaseOutEffect; this recognizer
-// keys on the singular "phases out" verb that closes the sentence, so the two
-// never overlap. The subject's self reference or target is scanned by the shared
-// reference and target passes, so the recognizer only identifies the verb and
-// covers the sentence; lowering fails closed for any subject it cannot represent.
+// parsePhaseOutEffect recognizes the subject-final phase-out effect (CR 702.26)
+// whose sentence closes with the "phases out" verb (singular subject, "This
+// creature phases out." — Blink Dog, "Target creature phases out.") or the "phase
+// out" verb (plural subject, "Any number of target nonland permanents you control
+// phase out." — Clever Concealment, "Up to one target creature phases out." —
+// Talon Gates of Madara). The mass form "All permanents you control phase out." is
+// handled first by parseGroupPhaseOutEffect, so the two never overlap. The
+// subject's self reference or target(s) are scanned by the shared reference and
+// target passes; the recognizer only identifies the verb and covers the sentence.
+// The phase-out action is always the resolving controller's, with the subject as
+// the affected permanent, so it is a controller-context effect (like a verb-first
+// "Destroy target creature."); lowering fails closed for any subject or target it
+// cannot represent.
 func parsePhaseOutEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
-	if !sentenceClosesWithPhasesOut(tokens) {
+	plural, ok := sentenceClosesWithPhaseOutVerb(tokens)
+	if !ok {
+		return nil, false
+	}
+	// The plural "phase out" verb takes a plural subject that is either the exact
+	// mass group ("All permanents you control phase out.", owned by
+	// parseGroupPhaseOutEffect ahead of this recognizer) or one or more chosen
+	// targets ("Any number of target nonland permanents you control phase out.",
+	// "Up to X target creatures phase out."). Requiring a "target" token for the
+	// plural verb keeps this recognizer off compound or reference-subject plural
+	// sentences ("... phase in and all creatures with phasing phase out.", Time
+	// and Tide) that no phase-out lowering can represent and that would otherwise
+	// lower lossily through the mass path. The singular "phases out" verb keeps
+	// its broader single-subject and source reach unchanged.
+	if plural && !tokensContainWord(tokens, "target") && !tokensContainWord(tokens, "targets") {
 		return nil, false
 	}
 	return []EffectSyntax{{
@@ -4142,20 +4161,47 @@ func parsePhaseOutEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) 
 		ClauseSpan: sentence.Span,
 		Text:       sentence.Text,
 		Tokens:     append([]shared.Token(nil), tokens...),
+		Context:    EffectContextController,
 		Selection:  parseSelection(tokens, atoms),
 		Exact:      true,
 	}}, true
 }
 
-// sentenceClosesWithPhasesOut reports whether the sentence's meaningful tokens
-// end with the singular "phases out" verb immediately before the closing period.
-// It requires a subject before the verb so the bare verb alone never matches.
-func sentenceClosesWithPhasesOut(tokens []shared.Token) bool {
+// sentenceClosesWithPhaseOutVerb reports whether the sentence's meaningful tokens
+// end with the phase-out verb immediately before the closing period, and whether
+// that verb is the plural "phase out" (plural subject) rather than the singular
+// "phases out" (single-permanent subject). It requires a subject before the verb
+// so the bare verb alone never matches, and rejects the "... can't phase out" /
+// "... cannot phase out" restriction whose verb is negated rather than performed.
+func sentenceClosesWithPhaseOutVerb(tokens []shared.Token) (plural bool, ok bool) {
 	period := shared.TopLevelIndex(tokens, shared.Period)
 	if period < 3 {
-		return false
+		return false, false
 	}
-	return equalWord(tokens[period-2], "phases") && equalWord(tokens[period-1], "out")
+	if !equalWord(tokens[period-1], "out") {
+		return false, false
+	}
+	if equalWord(tokens[period-3], "can't") || equalWord(tokens[period-3], "cannot") {
+		return false, false
+	}
+	switch {
+	case equalWord(tokens[period-2], "phases"):
+		return false, true
+	case equalWord(tokens[period-2], "phase"):
+		return true, true
+	default:
+		return false, false
+	}
+}
+
+// tokensContainWord reports whether any word token equals word (case-insensitive).
+func tokensContainWord(tokens []shared.Token, word string) bool {
+	for i := range tokens {
+		if equalWord(tokens[i], word) {
+			return true
+		}
+	}
+	return false
 }
 
 // parseMassReanimationExchangeEffect recognizes the symmetric mass-reanimation

@@ -29,6 +29,16 @@ func parseTargets(tokens []shared.Token, atoms Atoms) []TargetSyntax {
 			case i >= 3 && effectWordsAt(tokens, i-3, "any", "number", "of"):
 				start = i - 3
 				cardinality = TargetCardinalitySyntax{Min: 0, Max: 99}
+			case i >= 4 && effectWordsAt(tokens, i-4, "any", "number", "of") &&
+				(equalWord(tokens[i-1], "other") || equalWord(tokens[i-1], "another")):
+				// "any number of other target creatures you control" (Guardian of
+				// Faith) / "any number of another target ...": the "other"/"another"
+				// distinctness qualifier sits between "of" and "target", so the
+				// plain "any number of" case above (which requires "of" immediately
+				// before "target") misses it. Capture the whole unbounded count
+				// including the distinctness word in the noun phrase.
+				start = i - 4
+				cardinality = TargetCardinalitySyntax{Min: 0, Max: 99}
 			case i >= 4 && effectWordsAt(tokens, i-4, "up", "to") &&
 				(effectWordsAt(tokens, i-1, "another") || effectWordsAt(tokens, i-1, "other")):
 				start = i - 4
@@ -2282,6 +2292,7 @@ func targetSyntaxEnd(tokens []shared.Token, atoms Atoms, start int) int {
 			(end > start && cantAttackThisTurnVerbAt(tokens, end)) ||
 			(end > start && mustAttackTargetVerbAt(tokens, end)) ||
 			(end > start && negatedNextUntapStepVerbAt(tokens, end)) ||
+			(end > start && phasesOutVerbAt(tokens, end)) ||
 			(end > start && equalWord(token, "each") && end+1 < len(tokens) && effectWordKind(tokens[end+1]) != EffectUnknown) ||
 			(equalWord(token, "until") && end+1 < len(tokens)) ||
 			(equalWord(token, "this") && end+1 < len(tokens) && equalWord(tokens[end+1], "turn") &&

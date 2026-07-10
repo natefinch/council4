@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,391 of 32,501 cards eligible for paper support (53.5%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,396 of 32,501 cards eligible for paper support (53.5%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2630,6 +2630,7 @@ Council4 currently supports **17,391 of 32,501 cards eligible for paper support 
 - Cleric
 - Cleric of Chill Depths
 - Cleric of Life's Bond
+- Clever Concealment
 - Clever Impersonator
 - Clever Lumimancer
 - Clickslither
@@ -6540,6 +6541,7 @@ Council4 currently supports **17,391 of 32,501 cards eligible for paper support 
 - Guardian Kirin
 - Guardian Lions
 - Guardian of Cloverdell
+- Guardian of Faith
 - Guardian of Ghirapur
 - Guardian of Pilgrims
 - Guardian of Solitude
@@ -6735,6 +6737,7 @@ Council4 currently supports **17,391 of 32,501 cards eligible for paper support 
 - Hawkeye, Bowslinger
 - Hawkeye, Clint Barton
 - Hawkeye, Trick Shot
+- Haystack
 - Haywire Mite
 - Hazardous Blast
 - Haze of Pollen
@@ -11599,6 +11602,7 @@ Council4 currently supports **17,391 of 32,501 cards eligible for paper support 
 - Reality Anchor
 - Reality Heist
 - Reality Hemorrhage
+- Reality Ripple
 - Reality Shift
 - Realm-Cloaked Giant // Cast Off
 - Realmbreaker's Grasp
@@ -16439,6 +16443,7 @@ Council4 currently supports **17,391 of 32,501 cards eligible for paper support 
 - Vodalian Arcanist
 - Vodalian Hexcatcher
 - Vodalian Hypnotist
+- Vodalian Illusionist
 - Vodalian Knights
 - Vodalian Mage
 - Vodalian Merchant

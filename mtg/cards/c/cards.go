@@ -84,6 +84,7 @@ var Cards = []cardset.Entry{
 	{Name: "Cleaving Skyrider", New: CleavingSkyrider},
 	{Name: "Clergy en-Vec", New: ClergyEnVec},
 	{Name: "Cleric of Chill Depths", New: ClericOfChillDepths},
+	{Name: "Clever Concealment", New: CleverConcealment},
 	{Name: "Clive's Hideaway", New: CliveSHideaway},
 	{Name: "Clockwork Hydra", New: ClockworkHydra},
 	{Name: "Cloud Djinn", New: CloudDjinn},

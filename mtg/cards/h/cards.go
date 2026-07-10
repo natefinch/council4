@@ -32,6 +32,7 @@ var Cards = []cardset.Entry{
 	{Name: "Harvest Season", New: HarvestSeason},
 	{Name: "Haunted Ridge", New: HauntedRidge},
 	{Name: "Haunting Hymn", New: HauntingHymn},
+	{Name: "Haystack", New: Haystack},
 	{Name: "Hazardous Blast", New: HazardousBlast},
 	{Name: "Hazoret, Godseeker", New: HazoretGodseeker},
 	{Name: "Headless Specter", New: HeadlessSpecter},

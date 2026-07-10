@@ -56,6 +56,7 @@ var Cards = []cardset.Entry{
 	{Name: "Vivify", New: Vivify},
 	{Name: "Vodalian Arcanist", New: VodalianArcanist},
 	{Name: "Vodalian Hexcatcher", New: VodalianHexcatcher},
+	{Name: "Vodalian Illusionist", New: VodalianIllusionist},
 	{Name: "Vodalian Knights", New: VodalianKnights},
 	{Name: "Vodalian Mage", New: VodalianMage},
 	{Name: "Vodalian Serpent", New: VodalianSerpent},
