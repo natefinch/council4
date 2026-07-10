@@ -107,3 +107,26 @@ func (s Simulator) ResolveCombatWithAttackers(g *game.Game, playerID game.Player
 	ce.resolveCombatAfterAttackers(clone, policies, &TurnLog{})
 	return clone, true
 }
+
+// PlayForward returns a Clone of g in which the active player's current turn is
+// finished — from the phase after the one whose priority the caller has already
+// resolved — and then turns further full turns are played out, all driven by
+// policies. It lets a search agent value a candidate action by the position a
+// round or more later, after opponents have taken their turns (attacking the
+// board it built, punishing an overcommitment, or facing the interaction it held
+// up), rather than only the immediate result a one-ply evaluation sees. The
+// original g is never modified.
+//
+// g must be at a main phase (precombat or postcombat main): those are the only
+// phases whose priority resolving leaves nothing of the phase left to replay, so
+// resuming from the next phase is exact. A beginning or combat phase has further
+// steps (draw, blockers, damage) that must not be skipped, and callers evaluate
+// those decisions without looking ahead.
+func (s Simulator) PlayForward(g *game.Game, policies [game.NumPlayers]PlayerAgent, turns int) *game.Game {
+	clone := g.Clone()
+	s.engine.finishCurrentTurn(clone, policies)
+	for i := 0; i < turns && !clone.IsGameOver(); i++ {
+		s.engine.runTurn(clone, policies)
+	}
+	return clone
+}
