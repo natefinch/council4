@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,267 of 32,501 cards eligible for paper support (53.1%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,272 of 32,501 cards eligible for paper support (53.1%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -3646,6 +3646,7 @@ Council4 currently supports **17,267 of 32,501 cards eligible for paper support 
 - Devout Lightcaster
 - Devout Monk
 - Devout Witness
+- Dewdrop Spy
 - Dhund Operative
 - Diabolic Edict
 - Diabolic Intent
@@ -9137,6 +9138,7 @@ Council4 currently supports **17,267 of 32,501 cards eligible for paper support 
 - Merfolk Looter
 - Merfolk Mesmerist
 - Merfolk Mistbinder
+- Merfolk Observer
 - Merfolk of the Depths
 - Merfolk of the Pearl Trident
 - Merfolk Pupil
@@ -9506,6 +9508,7 @@ Council4 currently supports **17,267 of 32,501 cards eligible for paper support 
 - Moonlit Lamenter
 - Moonlit Strider
 - Moonlit Wake
+- Moonring Island
 - Moonrise Cleric
 - Moonshaker Cavalry
 - Moonsilver Spear
@@ -12029,6 +12032,7 @@ Council4 currently supports **17,267 of 32,501 cards eligible for paper support 
 - Rootwater Diver
 - Rootwater Hunter
 - Rootwater Matriarch
+- Rootwater Mystic
 - Rope
 - Rorix Bladewing
 - Rosa, Resolute White Mage
@@ -12217,6 +12221,7 @@ Council4 currently supports **17,267 of 32,501 cards eligible for paper support 
 - Sagu Wildling // Roost Seek
 - Saheeli Rai
 - Saheeli's Artistry
+- Saheeli's Silverwing
 - Sai, Master Thopterist
 - Said // Done
 - Sailor of Means
