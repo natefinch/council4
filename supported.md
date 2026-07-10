@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,343 of 32,501 cards eligible for paper support (53.4%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,347 of 32,501 cards eligible for paper support (53.4%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2649,11 +2649,15 @@ Council4 currently supports **17,343 of 32,501 cards eligible for paper support 
 - Cloaked Siren
 - Cloakwood Swarmkeeper
 - Clock of Omens
+- Clockwork Beetle
+- Clockwork Condor
+- Clockwork Dragon
 - Clockwork Drawbridge
 - Clockwork Fox
 - Clockwork Gnomes
 - Clockwork Hydra
 - Clockwork Percussionist
+- Clockwork Vorrac
 - Cloistered Youth // Unholy Fiend
 - Clone
 - Close Quarters

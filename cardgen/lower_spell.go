@@ -1433,6 +1433,9 @@ func lowerDelayedSingleEffectSpell(
 	effect := ctx.content.Effects[0]
 	ctx.content.Effects[0].DelayedTiming = 0
 
+	if content, ok := lowerDelayedSelfRemoveCounter(ctx, effect.DelayedTiming); ok {
+		return content, nil
+	}
 	if content, ok := lowerDelayedCapturedCombatDisposal(ctx, effect.DelayedTiming); ok {
 		return content, nil
 	}
