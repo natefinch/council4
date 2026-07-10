@@ -533,6 +533,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				CounteredSpellExileReplacement:          syntax.CounteredSpellExileReplacement,
 				CounteredSpellDestinationReplacement:    syntax.CounteredSpellDestinationReplacement,
 				CounterTriggeringStackObject:            syntax.CounterTriggeringStackObject,
+				ShuffleEachPlayerGraveyardIntoLibrary:   syntax.ShuffleEachPlayerGraveyardIntoLibrary,
 				ExileUntilSourceLeaves:                  syntax.ExileUntilSourceLeaves,
 				ExileUntilOpponentBecomesMonarch:        syntax.ExileUntilOpponentBecomesMonarch,
 				ReturnExiledCard:                        syntax.ReturnExiledCard,

@@ -691,6 +691,31 @@ func lowerTargetPlayerGraveyardShuffleIntoLibrary(ctx contentCtx) (game.AbilityC
 	}.Ability(), true
 }
 
+func lowerEachPlayerGraveyardShuffleIntoLibrary(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 1 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.References) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.Keywords) != 0 {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if !effect.Exact ||
+		effect.Negated ||
+		effect.Optional ||
+		effect.Duration != compiler.DurationNone ||
+		effect.Context != parser.EffectContextEachPlayer ||
+		effect.FromZone != zone.Graveyard ||
+		effect.ToZone != zone.Library ||
+		!effect.ShuffleEachPlayerGraveyardIntoLibrary {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{Sequence: []game.Instruction{{
+		Primitive: game.ShuffleGraveyardIntoLibrary{PlayerGroup: game.AllPlayersReference()},
+	}}}.Ability(), true
+}
+
 // allReferencesTargetPlayerPossessive reports whether every residual reference is
 // a "their" possessive bound to the effect's player target, as produced by the
 // two "their" possessives of "target player shuffles their graveyard into their

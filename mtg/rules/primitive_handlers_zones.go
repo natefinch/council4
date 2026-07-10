@@ -122,20 +122,31 @@ func handleShuffleLibrary(r *effectResolver, prim game.ShuffleLibrary) effectRes
 // shuffle rules the library is shuffled even when no cards moved.
 func handleShuffleGraveyardIntoLibrary(r *effectResolver, prim game.ShuffleGraveyardIntoLibrary) effectResolved {
 	res := effectResolved{accepted: true}
+	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
+		for _, playerID := range playersInAPNAPOrder(r.game, r.playerGroupMembers(prim.PlayerGroup)) {
+			shufflePlayerGraveyardIntoLibrary(r, playerID)
+		}
+		res.succeeded = true
+		return res
+	}
 	playerID, ok := r.resolvePlayer(prim.Player)
 	if !ok {
 		return res
 	}
+	res.succeeded = shufflePlayerGraveyardIntoLibrary(r, playerID)
+	return res
+}
+
+func shufflePlayerGraveyardIntoLibrary(r *effectResolver, playerID game.PlayerID) bool {
 	player, ok := playerByID(r.game, playerID)
 	if !ok {
-		return res
+		return false
 	}
 	for _, cardID := range player.Graveyard.All() {
 		moveCardBetweenZones(r.game, playerID, cardID, zone.Graveyard, zone.Library)
 	}
 	player.Library.Shuffle(r.engine.rng)
-	res.succeeded = true
-	return res
+	return true
 }
 
 // handleLookAtHand resolves a "look at target player's hand" effect. Looking at

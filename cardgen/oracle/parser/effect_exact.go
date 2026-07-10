@@ -220,6 +220,7 @@ func exactEffectSyntaxTail(effect *EffectSyntax) bool {
 			exactSourceSpellShuffleIntoLibrarySyntax(effect) ||
 			exactControllerGraveyardShuffleIntoLibrarySyntax(effect) ||
 			exactTargetPlayerGraveyardShuffleIntoLibrarySyntax(effect) ||
+			exactEachPlayerGraveyardShuffleIntoLibrarySyntax(effect) ||
 			exactSelfShuffleIntoOwnerLibrarySyntax(effect)
 	case EffectTap:
 		return exactDirectTargetEffectSyntax(effect, "Tap") ||
@@ -357,6 +358,19 @@ func exactTargetPlayerGraveyardShuffleIntoLibrarySyntax(effect *EffectSyntax) bo
 	}
 	want := effect.Targets[0].Text + " shuffles their graveyard into their library."
 	return strings.EqualFold(exactEffectClauseText(effect), want)
+}
+
+func exactEachPlayerGraveyardShuffleIntoLibrarySyntax(effect *EffectSyntax) bool {
+	if effect.Context != EffectContextEachPlayer ||
+		effect.Optional ||
+		effect.FromZone != zone.Graveyard ||
+		effect.ToZone != zone.Library ||
+		len(effect.Targets) != 0 ||
+		!strings.EqualFold(exactEffectClauseText(effect), "Each player shuffles their graveyard into their library.") {
+		return false
+	}
+	effect.ShuffleEachPlayerGraveyardIntoLibrary = true
+	return true
 }
 
 // exactSelfShuffleIntoOwnerLibrarySyntax recognizes "Shuffle it into its owner's

@@ -69,6 +69,9 @@ func (a *Ability) computeSemanticReferences() []Reference {
 				effect.Amount.DynamicKind == EffectDynamicAmountHalfPlayerLife {
 				tokens = tokensOutsideParserSpan(tokens, effect.Amount.Span)
 			}
+			if effect.ShuffleEachPlayerGraveyardIntoLibrary {
+				tokens = tokensOutsideParserSpan(tokens, effect.Span)
+			}
 		}
 	}
 	return a.Atoms.ReferencesWithin(tokens)

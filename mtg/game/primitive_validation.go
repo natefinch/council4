@@ -757,6 +757,12 @@ func (p ShuffleLibrary) validatePrimitive(targets []TargetSpec, checkTargets boo
 }
 
 func (p ShuffleGraveyardIntoLibrary) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := validateMassPlayerOrGroup("ShuffleGraveyardIntoLibrary", p.Player, p.PlayerGroup); err != nil {
+		return err
+	}
+	if p.PlayerGroup.Kind != PlayerGroupReferenceNone {
+		return validatePlayerGroupReference(p.PlayerGroup)
+	}
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 

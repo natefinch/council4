@@ -1273,6 +1273,15 @@ func (r Renderer) renderShuffleLibrary(value game.ShuffleLibrary) (string, error
 }
 
 func (r Renderer) renderShuffleGraveyardIntoLibrary(value game.ShuffleGraveyardIntoLibrary) (string, error) {
+	if value.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
+		group, err := renderPlayerGroupReference(value.PlayerGroup)
+		if err != nil {
+			return "", err
+		}
+		return structLit("game.ShuffleGraveyardIntoLibrary", []string{
+			fmt.Sprintf("PlayerGroup: %s,", group),
+		}), nil
+	}
 	player, err := r.renderPlayerReference(value.Player)
 	if err != nil {
 		return "", err

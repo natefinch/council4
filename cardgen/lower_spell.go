@@ -2042,6 +2042,9 @@ func lowerImmediateSingleEffectSpell(
 		if content, ok := lowerTargetPlayerGraveyardShuffleIntoLibrary(ctx); ok {
 			return content, nil
 		}
+		if content, ok := lowerEachPlayerGraveyardShuffleIntoLibrary(ctx); ok {
+			return content, nil
+		}
 		if content, ok := lowerEventPermanentShuffleIntoLibrary(ctx); ok {
 			return content, nil
 		}
