@@ -7,6 +7,7 @@ import "github.com/natefinch/council4/mtg/cards/cardset"
 // Cards lists all card definitions in this package, each paired with a
 // constructor so the registry can build them lazily.
 var Cards = []cardset.Entry{
+	{Name: "Ram Through", New: RAMThrough},
 	{Name: "Raffine's Informant", New: RaffineSInformant},
 	{Name: "Raffine's Silencer", New: RaffineSSilencer},
 	{Name: "Raffine, Scheming Seer", New: RaffineSchemingSeer},
@@ -131,6 +132,7 @@ var Cards = []cardset.Entry{
 	{Name: "Runes of the Deus", New: RunesOfTheDeus},
 	{Name: "Rupture Spire", New: RuptureSpire},
 	{Name: "Rush of Battle", New: RushOfBattle},
+	{Name: "Rustspore Ram", New: RustsporeRAM},
 	{Name: "Ruthless Predation", New: RuthlessPredation},
 	{Name: "Ruthless Sniper", New: RuthlessSniper},
 	{Name: "Ruthless Winnower", New: RuthlessWinnower},

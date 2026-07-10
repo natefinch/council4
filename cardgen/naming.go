@@ -6,6 +6,7 @@ import (
 	"slices"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 )
 
 // GeneratedCardIdentity describes the Go identity and location of one generated
@@ -73,24 +74,65 @@ func normalizedOracleUUID(id string) (string, error) {
 	return strings.Join(parts, ""), nil
 }
 
-// CardNameToVarName converts a card name to a Go exported variable name.
+// varNameInitialisms lists whole card-name words that Go naming conventions
+// render entirely in capitals. staticcheck's ST1003 and revive's var-naming rule
+// both treat these as initialisms and reject the mixed-case spelling, so a card
+// named "Ram Through" must generate `var RAMThrough`, not `var RamThrough`, for
+// the generated identifier to be simultaneously byte-identical to a curated file
+// and lint-clean. Matching happens on whole words only (CardNameToVarName splits
+// the name on non-alphanumeric runes first), which mirrors the linters'
+// word-boundary rule: the standalone token "Ram" is rewritten while "Ramunap",
+// "Rampage", and "Bramble" are left untouched.
+//
+// Keep this set conservative. Add an entry only when it belongs to the linters'
+// common-initialism sets AND appears as a standalone word in a card name, so the
+// generator never diverges from what the linters demand. "SIP" ("Sip of
+// Hemlock") is the next known candidate but is intentionally excluded here; its
+// card is generated, so adding it belongs to its own change. See issue #2892.
+var varNameInitialisms = map[string]bool{
+	"RAM": true,
+}
+
+// CardNameToVarName converts a card name to a Go exported variable name. Each
+// maximal run of letters and digits becomes one capitalized word; a word that
+// spells a known initialism (see varNameInitialisms) is rendered in all capitals
+// so generated identifiers match what staticcheck's ST1003 and revive's
+// var-naming rule require. A name that begins with a digit run is prefixed with
+// "Card" to keep the identifier a valid, exported Go name.
 func CardNameToVarName(name string) string {
 	var b strings.Builder
-	capitalize := true
-	for _, r := range name {
-		if !unicode.IsLetter(r) && !unicode.IsDigit(r) {
-			capitalize = true
+	appendWord := func(word string) {
+		if word == "" {
+			return
+		}
+		if b.Len() == 0 {
+			if r, _ := utf8.DecodeRuneInString(word); unicode.IsDigit(r) {
+				_, _ = b.WriteString("Card")
+			}
+		}
+		if varNameInitialisms[strings.ToUpper(word)] {
+			_, _ = b.WriteString(strings.ToUpper(word))
+			return
+		}
+		r, size := utf8.DecodeRuneInString(word)
+		_, _ = b.WriteRune(unicode.ToUpper(r))
+		_, _ = b.WriteString(word[size:])
+	}
+	start := -1
+	for i, r := range name {
+		if unicode.IsLetter(r) || unicode.IsDigit(r) {
+			if start < 0 {
+				start = i
+			}
 			continue
 		}
-		if b.Len() == 0 && unicode.IsDigit(r) {
-			_, _ = b.WriteString("Card")
+		if start >= 0 {
+			appendWord(name[start:i])
+			start = -1
 		}
-		if capitalize {
-			_, _ = b.WriteRune(unicode.ToUpper(r))
-			capitalize = false
-		} else {
-			_, _ = b.WriteRune(r)
-		}
+	}
+	if start >= 0 {
+		appendWord(name[start:])
 	}
 	return b.String()
 }

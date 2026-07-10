@@ -18,6 +18,7 @@ var Cards = []cardset.Entry{
 	{Name: "Garruk's Warsteed", New: GarrukSWarsteed},
 	{Name: "Garrulous Sycophant", New: GarrulousSycophant},
 	{Name: "Garza Zol, Plague Queen", New: GarzaZolPlagueQueen},
+	{Name: "Gatebreaker Ram", New: GatebreakerRAM},
 	{Name: "Gateway Plaza", New: GatewayPlaza},
 	{Name: "Gathering Place", New: GatheringPlace},
 	{Name: "Gavony Ironwright", New: GavonyIronwright},
