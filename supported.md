@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,266 of 32,501 cards eligible for paper support (53.1%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,267 of 32,501 cards eligible for paper support (53.1%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1635,6 +1635,7 @@ Council4 currently supports **17,266 of 32,501 cards eligible for paper support 
 - Blue Horror
 - Blue Marvel, Adam Brashear
 - Blue Scarab
+- Blue Sun's Twilight
 - Blue Sun's Zenith
 - Blue Ward
 - Blunt the Assault
