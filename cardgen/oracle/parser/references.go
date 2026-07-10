@@ -175,6 +175,24 @@ func collectReferences(tokens []shared.Token, cardName string, legendary bool) [
 				Text:   joinTokens(phrase),
 			})
 			i += 2
+		case i+2 < len(tokens) &&
+			equalWord(tokens[i], "the") &&
+			equalWord(tokens[i+1], "chosen") &&
+			referenceObjectNoun(tokens[i+2]):
+			// "the chosen creature" names the permanent a preceding keyword action
+			// chose (a bolster picks a creature with the least toughness among
+			// creatures you control). It reads like "that creature", so it flows
+			// through the ReferenceThatObject binding that resolves to the prior
+			// instruction's chosen permanent ("... bolster 2. The chosen creature
+			// gains trample until end of turn.", Optimus Prime, Autobot Leader).
+			phrase := tokens[i : i+3]
+			references = append(references, Reference{
+				Kind:   ReferenceThatObject,
+				Span:   shared.SpanOf(phrase),
+				Tokens: phrase,
+				Text:   joinTokens(phrase),
+			})
+			i += 2
 		case i+1 < len(tokens) &&
 			equalWord(tokens[i], "this") &&
 			strings.EqualFold(tokens[i+1].Text, "creature's"):

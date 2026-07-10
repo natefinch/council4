@@ -217,10 +217,13 @@ const (
 	// Veteran). It is the return companion to the exile-with-named-counter
 	// substrate (game.ReturnExiledCardsWithCounter).
 	PrimitiveReturnExiledCardsWithCounter
+
+	// PrimitiveBolster performs the bolster keyword action (game.Bolster).
+	PrimitiveBolster
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveReturnExiledCardsWithCounter) + 1
+const primitiveKindCount = int(PrimitiveBolster) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -811,6 +814,19 @@ type Renown struct {
 type Adapt struct {
 	Object ObjectReference
 	Amount Quantity
+}
+
+// Bolster performs the bolster keyword action (CR 701.37): the controller
+// chooses a creature with the least toughness among creatures they control,
+// then puts Amount +1/+1 counters on that creature. If several creatures are
+// tied for the least toughness, the controller chooses one of them; if the
+// controller controls no creatures, nothing happens. When PublishLinked is set,
+// the chosen creature is remembered under that key so a later linked effect
+// (such as "the chosen creature gains trample" or a delayed trigger watching
+// that creature deal combat damage) can resolve it.
+type Bolster struct {
+	Amount        Quantity
+	PublishLinked LinkedKey
 }
 
 // Connive performs the connive keyword action (CR 702.154): the controller of

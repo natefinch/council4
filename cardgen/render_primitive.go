@@ -1427,6 +1427,21 @@ func (r Renderer) renderAmass(ctx *renderCtx, value game.Amass) (string, error) 
 	return structLit("game.Amass", fields), nil
 }
 
+// renderBolster renders a Bolster primitive, emitting its fixed +1/+1 counter
+// count and, when present, the linked key under which the chosen creature is
+// published for a later linked effect.
+func (r Renderer) renderBolster(ctx *renderCtx, value game.Bolster) (string, error) {
+	amount, err := r.renderQuantity(ctx, value.Amount)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{fmt.Sprintf("Amount: %s,", amount)}
+	if value.PublishLinked != "" {
+		fields = append(fields, fmt.Sprintf("PublishLinked: game.LinkedKey(%q),", string(value.PublishLinked)))
+	}
+	return structLit("game.Bolster", fields), nil
+}
+
 // renderRenown renders a Renown primitive, emitting the renowned-permanent
 // reference and the fixed +1/+1 counter count.
 func (r Renderer) renderRenown(ctx *renderCtx, value game.Renown) (string, error) {

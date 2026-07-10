@@ -527,6 +527,105 @@ func handleAmass(r *effectResolver, prim game.Amass) effectResolved {
 	return res
 }
 
+// handleBolster performs the bolster keyword action (CR 701.37): among creatures
+// the resolving controller controls, it chooses one with the least toughness
+// (the controller breaks a tie) and places Amount +1/+1 counters on it. It does
+// nothing when the controller controls no creatures. When PublishLinked is set,
+// the chosen creature is recorded under that key so a later linked effect can
+// resolve it.
+func handleBolster(r *effectResolver, prim game.Bolster) effectResolved {
+	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
+	if res.amount <= 0 {
+		return res
+	}
+	controller := stackObjectController(r.obj)
+	candidates := leastToughnessControlledCreatures(r, controller)
+	if len(candidates) == 0 {
+		return res
+	}
+	chosen, ok := r.chooseOnePermanentAmong(candidates, "Choose a creature with the least toughness")
+	if !ok {
+		return res
+	}
+	if addCountersToPermanentControlledBy(r.game, controller, chosen, counter.PlusOnePlusOne, res.amount) {
+		res.succeeded = true
+	}
+	if prim.PublishLinked != "" {
+		rememberLinkedObject(
+			r.game,
+			linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked)),
+			permanentObjectBindingRef(chosen),
+		)
+	}
+	return res
+}
+
+// leastToughnessControlledCreatures returns every creature controller controls
+// tied for the least effective toughness, the candidate set a bolster chooses
+// from. Permanents without a defined toughness are excluded.
+func leastToughnessControlledCreatures(r *effectResolver, controller game.PlayerID) []*game.Permanent {
+	creatures := r.groupPermanents(game.BattlefieldGroup(game.Selection{
+		RequiredTypes: []types.Card{types.Creature},
+		Controller:    game.ControllerYou,
+	}))
+	least := 0
+	haveLeast := false
+	for _, permanent := range creatures {
+		toughness, ok := effectiveToughness(r.game, permanent)
+		if !ok {
+			continue
+		}
+		if !haveLeast || toughness < least {
+			least = toughness
+			haveLeast = true
+		}
+	}
+	if !haveLeast {
+		return nil
+	}
+	candidates := make([]*game.Permanent, 0, len(creatures))
+	for _, permanent := range creatures {
+		toughness, ok := effectiveToughness(r.game, permanent)
+		if ok && toughness == least {
+			candidates = append(candidates, permanent)
+		}
+	}
+	return candidates
+}
+
+// chooseOnePermanentAmong asks the resolving controller to choose exactly one
+// permanent from candidates, mirroring chooseOneGroupPermanent but over a
+// pre-narrowed slice (such as the least-toughness creatures a bolster selects
+// among).
+func (r *effectResolver) chooseOnePermanentAmong(candidates []*game.Permanent, prompt string) (*game.Permanent, bool) {
+	if len(candidates) == 0 {
+		return nil, false
+	}
+	options := make([]game.ChoiceOption, len(candidates))
+	for i, permanent := range candidates {
+		options[i] = game.ChoiceOption{
+			Index: i,
+			Label: permanentChoiceLabel(r.game, permanent),
+			Card:  permanentChoiceInfo(r.game, permanent),
+		}
+	}
+	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
+		Kind:             game.ChoiceResolution,
+		Player:           r.obj.Controller,
+		Prompt:           prompt,
+		Options:          options,
+		MinChoices:       1,
+		MaxChoices:       1,
+		DefaultSelection: firstChoiceIndices(1),
+	}, r.log)
+	for _, idx := range selected {
+		if idx >= 0 && idx < len(candidates) {
+			return candidates[idx], true
+		}
+	}
+	return nil, false
+}
+
 // firstControlledArmy returns the first Army permanent on the battlefield
 // controlled by controller, or nil when the player controls no Army.
 func firstControlledArmy(g *game.Game, controller game.PlayerID) *game.Permanent {

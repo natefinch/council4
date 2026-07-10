@@ -299,6 +299,15 @@ func priorInstructionAntecedent(reference CompiledReference, effects []CompiledE
 		!effects[current].Order.Contains(reference.Order) {
 		return current, true
 	}
+	// "The chosen creature" / "that creature" immediately after a bolster reads
+	// as the subject of the following clause ("... bolster N. The chosen creature
+	// gains ..."), so the nearest preceding verb (the bolster) is the antecedent
+	// itself. Bind straight to it, mirroring the token-creation case: bolster
+	// selects a creature the later clause acts on.
+	if effects[current].Kind == EffectBolster && reference.Kind == ReferenceThatObject &&
+		!effects[current].Order.Contains(reference.Order) {
+		return current, true
+	}
 	prior := -1
 	for i := range effects {
 		effect := &effects[i]
@@ -318,6 +327,14 @@ func priorInstructionAntecedent(reference CompiledReference, effects []CompiledE
 	switch effects[prior].Kind {
 	case EffectDig, EffectExile, EffectManifestDread, EffectReveal, EffectSearch:
 		return prior, true
+	case EffectBolster:
+		// "that creature" after a bolster and its chosen-creature rider ("...
+		// bolster N. The chosen creature gains ... When that creature deals combat
+		// damage to a player this turn, ...") names the bolstered creature.
+		if reference.Kind == ReferenceThatObject {
+			return prior, true
+		}
+		return 0, false
 	case EffectPut, EffectReturn:
 		effect := effects[prior]
 		if reference.Kind == ReferenceThatObject &&

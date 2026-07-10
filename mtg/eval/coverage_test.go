@@ -40,7 +40,11 @@ import (
 // ExilePermanentForPlay carries the EffectPermanentRemoved atom, matching Exile
 // and Bounce: it is a targeted permanent removal whose owner-play grant is not
 // modeled by the single-target atom heuristic.
-const knownPrimitiveCount = 121
+//
+// Bolster carries the EffectCounterAdded atom, matching Monstrosity: it puts
+// +1/+1 counters on the controller's least-toughness creature (CR 701.37), a
+// board-boosting counter placement.
+const knownPrimitiveCount = 122
 
 // TestPrimitiveCountIsReconciled keeps a newly added resolution primitive from
 // silently falling through the translator: adding one trips this guard so its

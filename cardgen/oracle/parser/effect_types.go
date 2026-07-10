@@ -226,6 +226,12 @@ const (
 	// Army they control, first creating a 0/0 black Army creature token of the
 	// named subtype (AmassSubtype) if they control no Army. Amount holds N.
 	EffectAmass EffectKind = "EffectAmass"
+	// EffectBolster models the bolster keyword action (CR 701.37): "Bolster N".
+	// The controller chooses a creature with the least toughness among creatures
+	// they control (breaking a tie themselves) and puts N +1/+1 counters on it.
+	// Amount holds N. The parenthetical reminder is stripped, so the semantic
+	// clause is the bare "Bolster N".
+	EffectBolster EffectKind = "EffectBolster"
 	// EffectRenown models the renown keyword action that the printed "Renown N"
 	// keyword expands to (CR 702.111): the source permanent gets N +1/+1 counters
 	// and becomes renowned, applied only once. Amount holds N. The runtime guard
