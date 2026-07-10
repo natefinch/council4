@@ -125,6 +125,16 @@ type StackObject struct {
 	// "for each time it was kicked" amounts as the spell resolves.
 	KickerCount int
 
+	// GiftPromised is true if this spell's Gift keyword action promised a gift to
+	// an opponent as it was cast (CR 702.171). It gates the spell's "if the gift
+	// was promised" clauses and drives the gift delivery on resolution. A copy of
+	// a promised spell inherits the promise to the same opponent (CR 707.10).
+	GiftPromised bool
+
+	// GiftRecipient is the opponent promised the gift when GiftPromised is true.
+	// The gift is delivered to this player before the spell's other effects.
+	GiftRecipient PlayerID
+
 	// Overloaded is true if this spell was cast for its overload cost.
 	Overloaded bool
 

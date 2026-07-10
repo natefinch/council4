@@ -88,6 +88,7 @@ const (
 	ConditionPredicateSourceTributeNotPaid                             ConditionPredicateKind = "ConditionPredicateSourceTributeNotPaid"
 	ConditionPredicateControllerControlsCommander                      ConditionPredicateKind = "ConditionPredicateControllerControlsCommander"
 	ConditionPredicateSpellWasKicked                                   ConditionPredicateKind = "ConditionPredicateSpellWasKicked"
+	ConditionPredicateGiftPromised                                     ConditionPredicateKind = "ConditionPredicateGiftPromised"
 	ConditionPredicateSpellWasCastFromGraveyard                        ConditionPredicateKind = "ConditionPredicateSpellWasCastFromGraveyard"
 	ConditionPredicateSourceSaddled                                    ConditionPredicateKind = "ConditionPredicateSourceSaddled"
 	ConditionPredicateSourceNotSaddled                                 ConditionPredicateKind = "ConditionPredicateSourceNotSaddled"
@@ -1142,6 +1143,12 @@ func recognizeCastTimingCondition(body []shared.Token, _ Atoms) (ConditionClause
 	}
 	if tokenWordsEqual(body, "this", "spell", "was", "kicked") {
 		return ConditionClause{Predicate: ConditionPredicateSpellWasKicked}, true
+	}
+	if tokenWordsEqual(body, "the", "gift", "was", "promised") {
+		return ConditionClause{Predicate: ConditionPredicateGiftPromised}, true
+	}
+	if tokenWordsEqual(body, "the", "gift", "wasn't", "promised") {
+		return ConditionClause{Predicate: ConditionPredicateGiftPromised, Negated: true}, true
 	}
 	if tokenWordsEqual(body, "this", "spell", "was", "cast", "from", "a", "graveyard") {
 		return ConditionClause{Predicate: ConditionPredicateSpellWasCastFromGraveyard}, true

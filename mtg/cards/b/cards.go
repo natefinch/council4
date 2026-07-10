@@ -83,6 +83,7 @@ var Cards = []cardset.Entry{
 	{Name: "Bloodletter Quill", New: BloodletterQuill},
 	{Name: "Bloodline Necromancer", New: BloodlineNecromancer},
 	{Name: "Bloodthirsty Ogre", New: BloodthirstyOgre},
+	{Name: "Blooming Blast", New: BloomingBlast},
 	{Name: "Blot Out the Sky", New: BlotOutTheSky},
 	{Name: "Blowfly Infestation", New: BlowflyInfestation},
 	{Name: "Blue Sun's Twilight", New: BlueSunSTwilight},

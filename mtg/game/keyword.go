@@ -115,6 +115,21 @@ type MadnessKeyword struct {
 	Cost cost.Mana
 }
 
+// GiftKeyword is the Gift keyword action (CR 702.171, Murders at Karlov Manor).
+// As the spell is cast its controller may promise the gift to an opponent; if
+// promised, that opponent receives the gift before the spell's other effects and
+// the spell's "if the gift was promised" clauses apply.
+type GiftKeyword struct {
+	// Delivery is the single-instruction content that gives the promised opponent
+	// their gift before the spell's other effects: the opponent draws a card
+	// ("Gift a card"), or creates a Food, Treasure, or tapped Fish token ("Gift a
+	// Food"/"Gift a Treasure"/"Gift a tapped Fish"). It resolves only when the
+	// gift was promised, targeting the promised opponent via
+	// GiftRecipientReference. It reuses the ordinary resolving-effect machinery,
+	// so the delivery is a normal Draw or CreateToken instruction.
+	Delivery AbilityContent
+}
+
 // FlashbackKeyword parameterizes Flashback alternative casting costs.
 type FlashbackKeyword struct {
 	Cost cost.Mana
@@ -230,6 +245,7 @@ func (NinjutsuKeyword) isKeywordAbility()         {}
 func (OutlastKeyword) isKeywordAbility()          {}
 func (MutateKeyword) isKeywordAbility()           {}
 func (KickerKeyword) isKeywordAbility()           {}
+func (GiftKeyword) isKeywordAbility()             {}
 func (MadnessKeyword) isKeywordAbility()          {}
 func (FlashbackKeyword) isKeywordAbility()        {}
 func (PlotKeyword) isKeywordAbility()             {}
@@ -265,6 +281,7 @@ func (NinjutsuKeyword) keyword() Keyword   { return Ninjutsu }
 func (OutlastKeyword) keyword() Keyword    { return Outlast }
 func (MutateKeyword) keyword() Keyword     { return Mutate }
 func (KickerKeyword) keyword() Keyword     { return Kicker }
+func (GiftKeyword) keyword() Keyword       { return Gift }
 func (MadnessKeyword) keyword() Keyword    { return Madness }
 func (FlashbackKeyword) keyword() Keyword  { return Flashback }
 func (PlotKeyword) keyword() Keyword       { return Plot }
@@ -328,6 +345,10 @@ func (ability MutateKeyword) cloneKeywordAbility() KeywordAbility {
 func (ability KickerKeyword) cloneKeywordAbility() KeywordAbility {
 	ability.Cost = append(cost.Mana(nil), ability.Cost...)
 	ability.BonusContent = cloneAbilityContent(ability.BonusContent)
+	return ability
+}
+func (ability GiftKeyword) cloneKeywordAbility() KeywordAbility {
+	ability.Delivery = cloneAbilityContent(ability.Delivery)
 	return ability
 }
 func (ability MadnessKeyword) cloneKeywordAbility() KeywordAbility {

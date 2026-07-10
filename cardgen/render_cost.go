@@ -138,6 +138,8 @@ func (r Renderer) renderPlayerReference(reference game.PlayerReference) (string,
 		return "game.GroupOfferMemberReference()", nil
 	case game.PlayerReferenceAffectedTargetController:
 		return fmt.Sprintf("game.AffectedTargetControllerReference(%d)", reference.TargetIndex()), nil
+	case game.PlayerReferenceGiftRecipient:
+		return "game.GiftRecipientReference()", nil
 	default:
 		return "", fmt.Errorf("render: unsupported player reference kind %d", reference.Kind())
 	}
@@ -227,6 +229,13 @@ func (r Renderer) renderKeywordAbility(ctx *renderCtx, keyword game.KeywordAbili
 			return fmt.Sprintf("game.KickerKeyword{Cost: %s, Multi: true}", kickerCost), nil
 		}
 		return fmt.Sprintf("game.KickerKeyword{Cost: %s}", kickerCost), nil
+	}
+	if gift, ok := keyword.(game.GiftKeyword); ok {
+		delivery, err := r.renderAbilityContent(ctx, gift.Delivery)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.GiftKeyword{Delivery: %s}", delivery), nil
 	}
 	if madness, ok := keyword.(game.MadnessKeyword); ok {
 		madnessCost, err := r.renderManaCost(ctx, madness.Cost)

@@ -168,6 +168,8 @@ func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringC
 		result.CastDuringControllerMainPhase = true
 	case compiler.ConditionPredicateSpellWasKicked:
 		result.SpellWasKicked = true
+	case compiler.ConditionPredicateGiftPromised:
+		result.GiftPromised = true
 	case compiler.ConditionPredicateEventSubjectWasKicked:
 		result.EventPermanentWasKicked = true
 	case compiler.ConditionPredicateEventSubjectWasCastFromControllerHand:
@@ -378,6 +380,7 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 				ctx == conditionContextEffectGate
 		case compiler.ConditionPredicateCastDuringControllerMainPhase,
 			compiler.ConditionPredicateSpellWasKicked,
+			compiler.ConditionPredicateGiftPromised,
 			compiler.ConditionPredicateSpellWasCastFromGraveyard,
 			compiler.ConditionPredicateSpellXAtLeast,
 			compiler.ConditionPredicateColoredManaSpentToCastAtLeast,

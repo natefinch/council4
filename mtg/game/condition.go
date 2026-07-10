@@ -111,6 +111,15 @@ type Condition struct {
 	// stack object's captured kicker-paid state and is false for copies.
 	SpellWasKicked bool
 
+	// GiftPromised is satisfied when the resolving spell's Gift keyword action
+	// promised a gift to an opponent as it was cast ("if the gift was promised,
+	// ..."; CR 702.171). It is evaluated against the resolving stack object's
+	// captured gift-promised state. Unlike the kicker gate, a copy of a promised
+	// spell is itself promised to the same opponent (CR 707.10), so this holds
+	// for copies too. When Condition.Negate is set it matches the "if the gift
+	// wasn't promised" penalty clause.
+	GiftPromised bool
+
 	// EventPermanentWasKicked is satisfied when the permanent named by the
 	// triggering or entering event was kicked ("If this creature was kicked, it
 	// enters with N +1/+1 counters on it." — the kicker enters-with-counters
@@ -328,6 +337,7 @@ func (c *Condition) Empty() bool {
 		!c.EventHistory.Exists &&
 		!c.ControllerControlsCommander &&
 		!c.SpellWasKicked &&
+		!c.GiftPromised &&
 		!c.EventPermanentWasKicked &&
 		!c.EventPermanentWasCastFromControllerHand &&
 		c.ControllerGraveyardCardOfTypeCountAtLeast == 0 &&

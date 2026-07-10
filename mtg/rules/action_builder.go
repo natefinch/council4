@@ -52,6 +52,12 @@ func (b actionBuilderType) castKickedSpell(cardID id.ID, sourceZone zone.Type, f
 	return b.mustBuild(action.CastKickedSpellFaceFromZone(cardID, sourceZone, face, targets, xValue, modes))
 }
 
+// castGiftSpell builds a CastSpell action that promises the spell's Gift keyword
+// action to recipient (CR 702.171).
+func (b actionBuilderType) castGiftSpell(cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, modes []int, recipient game.PlayerID) action.Action {
+	return b.mustBuild(action.CastGiftSpellFaceFromZone(cardID, sourceZone, face, targets, xValue, modes, recipient))
+}
+
 // castMultikickedSpell builds a CastSpell action whose Multikicker cost is paid
 // kickerCount times.
 func (b actionBuilderType) castMultikickedSpell(cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, modes []int, kickerCount int) action.Action {

@@ -551,6 +551,12 @@ func (v *cardDefValidator) validateKeywordAbility(faceName, path string, ability
 		if len(keyword.BonusContent.Modes) > 0 {
 			v.validateAbilityContent(faceName, appendPath(path, "BonusContent"), keyword.BonusContent, targets)
 		}
+	case GiftKeyword:
+		if len(keyword.Delivery.Modes) == 0 {
+			v.add(faceName, appendPath(path, "Delivery"), CardDefIssueInvalidKeywordAbility, "gift keyword requires delivery content")
+		} else {
+			v.validateAbilityContent(faceName, appendPath(path, "Delivery"), keyword.Delivery, targets)
+		}
 	case MadnessKeyword:
 		v.validateManaKeywordCost(faceName, path, keyword.Cost)
 	case FlashbackKeyword:

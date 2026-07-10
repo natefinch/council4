@@ -52,6 +52,7 @@ const (
 	KeywordFlashback        KeywordKind = "KeywordFlashback"
 	KeywordFlying           KeywordKind = "KeywordFlying"
 	KeywordForetell         KeywordKind = "KeywordForetell"
+	KeywordGift             KeywordKind = "KeywordGift"
 	KeywordHaste            KeywordKind = "KeywordHaste"
 	KeywordHexproof         KeywordKind = "KeywordHexproof"
 	KeywordHorsemanship     KeywordKind = "KeywordHorsemanship"
@@ -240,6 +241,7 @@ var keywordNames = map[KeywordKind]string{
 	KeywordFlashback:           "Flashback",
 	KeywordFlying:              "Flying",
 	KeywordForetell:            "Foretell",
+	KeywordGift:                "Gift",
 	KeywordHaste:               "Haste",
 	KeywordHexproof:            "Hexproof",
 	KeywordHorsemanship:        "Horsemanship",
@@ -387,6 +389,7 @@ var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordFlashback, Words: []string{"flashback"}},
 	{Kind: KeywordFlying, Words: []string{"flying"}},
 	{Kind: KeywordForetell, Words: []string{"foretell"}},
+	{Kind: KeywordGift, Words: []string{"gift"}},
 	{Kind: KeywordHaste, Words: []string{"haste"}},
 	{Kind: KeywordHexproof, Words: []string{"hexproof"}},
 	{Kind: KeywordHorsemanship, Words: []string{"horsemanship"}},
@@ -466,6 +469,22 @@ const (
 	KeywordParameterEnchantTarget KeywordParameterKind = "KeywordParameterEnchantTarget"
 	KeywordParameterChampion      KeywordParameterKind = "KeywordParameterChampion"
 	KeywordParameterProtection    KeywordParameterKind = "KeywordParameterProtection"
+	KeywordParameterGift          KeywordParameterKind = "KeywordParameterGift"
+)
+
+// GiftKind identifies the typed gift promised by a Gift keyword action (CR
+// 702.171). The parser maps the printed gift wording ("Gift a card", "Gift a
+// Food", "Gift a Treasure", "Gift a tapped Fish") to one of these kinds; the
+// compiler and lowering are text-blind and consume only the kind.
+type GiftKind string
+
+// Typed gift kinds.
+const (
+	GiftKindNone       GiftKind = ""
+	GiftKindCard       GiftKind = "GiftKindCard"
+	GiftKindFood       GiftKind = "GiftKindFood"
+	GiftKindTreasure   GiftKind = "GiftKindTreasure"
+	GiftKindTappedFish GiftKind = "GiftKindTappedFish"
 )
 
 // ProtectionParameter is the composable typed predicate following "Protection
@@ -519,6 +538,7 @@ type keywordParameterDetails struct {
 	Integer       int                 `json:",omitempty"`
 	EnchantTarget EnchantPredicate    `json:",omitzero"`
 	Protection    ProtectionParameter `json:",omitzero"`
+	Gift          GiftKind            `json:",omitempty"`
 }
 
 // KeywordParameter is source-spanned typed syntax for one keyword parameter.
@@ -586,6 +606,17 @@ func NewProtectionKeywordParameter(span shared.Span, text string, protection Pro
 	}
 }
 
+// NewGiftKeywordParameter constructs a typed gift parameter naming the promised
+// gift of a Gift keyword action (CR 702.171).
+func NewGiftKeywordParameter(span shared.Span, kind GiftKind, text string) KeywordParameter {
+	return KeywordParameter{
+		Kind:    KeywordParameterGift,
+		Span:    span,
+		Text:    text,
+		details: &keywordParameterDetails{Gift: kind},
+	}
+}
+
 // ManaCost returns a copy of the typed mana-cost parameter.
 func (p KeywordParameter) ManaCost() cost.Mana {
 	if p.details == nil {
@@ -616,6 +647,14 @@ func (p KeywordParameter) Protection() ProtectionParameter {
 		return ProtectionParameter{}
 	}
 	return cloneProtectionParameter(p.details.Protection)
+}
+
+// Gift returns the typed gift kind of a Gift keyword parameter.
+func (p KeywordParameter) Gift() GiftKind {
+	if p.details == nil {
+		return GiftKindNone
+	}
+	return p.details.Gift
 }
 
 // Keyword is one source-spanned recognized keyword and its typed parameter.
@@ -1596,6 +1635,26 @@ func scanKeywords(tokens []shared.Token, atoms Atoms) []Keyword {
 		if kind == KeywordFlash && i > 0 && equalWord(tokens[i-1], "had") {
 			continue
 		}
+		// The Gift keyword action names its promised gift ("Gift a card", "Gift a
+		// Food", "Gift a Treasure", "Gift a tapped Fish"; CR 702.171). The bare
+		// word "gift" also appears in the per-effect condition "the gift was
+		// promised", so the keyword is recognized only when a typed gift
+		// parameter follows; otherwise the word is left for the condition parser.
+		if kind == KeywordGift {
+			parameter, giftEnd, ok := parseGiftKeywordParameter(tokens, i+width)
+			if !ok {
+				continue
+			}
+			keywords = append(keywords, Keyword{
+				Kind:      KeywordGift,
+				NameSpan:  nameSpan,
+				Span:      shared.SpanOf(tokens[i:giftEnd]),
+				Text:      joinTokens(tokens[i:giftEnd]),
+				Parameter: parameter,
+			})
+			i = giftEnd - 1
+			continue
+		}
 		end := i + width
 		var equipRestriction *KeywordEquipRestriction
 		if kind == KeywordEquip {
@@ -1688,7 +1747,38 @@ func parseKeywordParameter(
 	return KeywordParameter{}, start
 }
 
-// parseEquipRestriction recognizes the quality words of a restricted Equip
+// parseGiftKeywordParameter recognizes the typed gift a Gift keyword action
+// promises (CR 702.171): "a card" (the opponent draws a card), "a Food", "a
+// Treasure", or "a tapped Fish" (a tapped 1/1 blue Fish creature token). It
+// returns ok=false when no recognized gift form follows, so the bare word
+// "gift" in the per-effect condition "the gift was promised" is never mistaken
+// for the keyword and an unsupported gift form stays unsupported.
+func parseGiftKeywordParameter(tokens []shared.Token, start int) (KeywordParameter, int, bool) {
+	i := start
+	if i >= len(tokens) || (!equalWord(tokens[i], "a") && !equalWord(tokens[i], "an")) {
+		return KeywordParameter{}, start, false
+	}
+	i++
+	if i >= len(tokens) {
+		return KeywordParameter{}, start, false
+	}
+	giftParam := func(kind GiftKind, end int) (KeywordParameter, int, bool) {
+		span := shared.SpanOf(tokens[start:end])
+		return NewGiftKeywordParameter(span, kind, joinTokens(tokens[start:end])), end, true
+	}
+	switch {
+	case equalWord(tokens[i], "card"):
+		return giftParam(GiftKindCard, i+1)
+	case equalWord(tokens[i], "Food"):
+		return giftParam(GiftKindFood, i+1)
+	case equalWord(tokens[i], "Treasure"):
+		return giftParam(GiftKindTreasure, i+1)
+	case equalWord(tokens[i], "tapped") && i+1 < len(tokens) && equalWord(tokens[i+1], "Fish"):
+		return giftParam(GiftKindTappedFish, i+2)
+	}
+	return KeywordParameter{}, start, false
+}
+
 // ability ("Equip legendary creature {3}", "Equip Knight {2}", "Equip Shaman,
 // Warlock, or Wizard {2}") between the Equip keyword and its mana cost. It
 // consumes supertype, subtype, and the implied "creature" card-type words (plus
