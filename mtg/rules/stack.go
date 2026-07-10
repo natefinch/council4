@@ -587,6 +587,7 @@ func (e *Engine) resolvePermanentSpellWithChoices(g *game.Game, obj *game.StackO
 			KickerPaid:              obj.KickerPaid,
 			KickCount:               obj.KickerCount,
 			Evoked:                  obj.Evoked,
+			Dashed:                  obj.Dashed,
 			EntersTransformed:       obj.Converted,
 			WasCast:                 !obj.Copy,
 			CastController:          obj.Controller,

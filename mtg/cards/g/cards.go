@@ -77,6 +77,7 @@ var Cards = []cardset.Entry{
 	{Name: "Goblin Clearcutter", New: GoblinClearcutter},
 	{Name: "Goblin Dark-Dwellers", New: GoblinDarkDwellers},
 	{Name: "Goblin Firestarter", New: GoblinFirestarter},
+	{Name: "Goblin Heelcutter", New: GoblinHeelcutter},
 	{Name: "Goblin Legionnaire", New: GoblinLegionnaire},
 	{Name: "Goblin Locksmith", New: GoblinLocksmith},
 	{Name: "Goblin Lookout", New: GoblinLookout},

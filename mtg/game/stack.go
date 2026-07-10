@@ -137,6 +137,11 @@ type StackObject struct {
 	// converted, as its back face.
 	Converted bool
 
+	// Dashed is true if this spell was cast for its Dash alternative cost
+	// (CR 702.109); the resulting permanent gains haste and is returned to its
+	// owner's hand at the beginning of the next end step.
+	Dashed bool
+
 	// Mutate records an alternative-cost creature spell and the permanent it
 	// will merge with.
 	Mutate         bool

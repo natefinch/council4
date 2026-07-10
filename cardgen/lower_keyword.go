@@ -312,6 +312,12 @@ func lowerKeywordDispatch(
 		}
 		return mtmteLowering, true, nil
 	}
+	if dashLowering, ok, diag := lowerDashAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return dashLowering, true, nil
+	}
 	if dredgeAbility, ok, diag := lowerDredgeAbility(ability, syntax); ok {
 		if diag != nil {
 			return abilityLowering{}, true, diag
@@ -1392,6 +1398,49 @@ func lowerEvokeAbility(
 		alternativeCosts: []cost.Alternative{{
 			Label:    "Evoke",
 			Mechanic: cost.AlternativeMechanicEvoke,
+			ManaCost: opt.Val(manaCost),
+		}},
+		consumed:    semanticConsumption{keywords: 1},
+		sourceSpans: keywordSpans(ability, syntax),
+	}, true, nil
+}
+
+// lowerDashAbility lowers the Dash keyword (CR 702.109) into two lowered pieces:
+// a "Dash" alternative spell cost the payment machinery auto-offers at cast, and
+// the canonical Dash consequence triggered ability that grants the creature
+// haste and returns it to its owner's hand at the beginning of the next end step
+// when it entered from a dashed cast. Only the exact keyword with a fixed mana
+// cost and no other rules text is supported; anything else fails closed.
+func lowerDashAbility(
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (abilityLowering, bool, *shared.Diagnostic) {
+	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordDash {
+		return abilityLowering{}, false, nil
+	}
+	keyword := ability.Content.Keywords[0]
+	manaCost, fixed := fixedKeywordManaCost(keyword)
+	if !fixed ||
+		(ability.Kind != compiler.AbilityStatic && ability.Kind != compiler.AbilitySpell) ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.References) != 0 ||
+		ability.AbilityWord != "" ||
+		!keywordOnlyCovered(syntax, keyword) {
+		return abilityLowering{}, true, executableDiagnostic(
+			ability,
+			"unsupported Dash ability",
+			"the executable source backend supports only exact Dash with a fixed mana cost",
+		)
+	}
+	return abilityLowering{
+		triggeredAbility: opt.Val(game.DashTriggeredAbility()),
+		alternativeCosts: []cost.Alternative{{
+			Label:    "Dash",
+			Mechanic: cost.AlternativeMechanicDash,
 			ManaCost: opt.Val(manaCost),
 		}},
 		consumed:    semanticConsumption{keywords: 1},

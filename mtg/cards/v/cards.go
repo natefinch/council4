@@ -21,6 +21,7 @@ var Cards = []cardset.Entry{
 	{Name: "Vaporkin", New: Vaporkin},
 	{Name: "Vastlands Scavenger", New: VastlandsScavenger},
 	{Name: "Vat Emergence", New: VatEmergence},
+	{Name: "Vaultbreaker", New: Vaultbreaker},
 	{Name: "Vebulid", New: Vebulid},
 	{Name: "Vedalken Dismisser", New: VedalkenDismisser},
 	{Name: "Vedalken Engineer", New: VedalkenEngineer},

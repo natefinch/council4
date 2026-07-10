@@ -30,10 +30,15 @@ func createCardPermanentFaceWithContinuous(e *Engine, g *game.Game, card *game.C
 }
 
 type permanentCreationOptions struct {
-	ForceTapped       bool
-	KickerPaid        bool
-	KickCount         int
-	Evoked            bool
+	ForceTapped bool
+	KickerPaid  bool
+	KickCount   int
+	Evoked      bool
+	// Dashed makes the entering permanent record that its spell was cast for its
+	// Dash alternative cost (CR 702.109), feeding the Dash trigger's intervening
+	// "if its dash cost was paid" condition. It is false for every permanent that
+	// did not enter from a dashed cast.
+	Dashed            bool
 	WasCast           bool
 	CastController    game.PlayerID
 	HasCastController bool
@@ -139,6 +144,7 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 		Face:                   face,
 		KickerPaid:             options.KickerPaid,
 		EnterEvoked:            options.Evoked,
+		EnterDashed:            options.Dashed,
 		EnterWasCast:           options.WasCast,
 		EnterCastController:    options.CastController,
 		EnterHasCastController: options.HasCastController,
@@ -246,6 +252,7 @@ func commitSimultaneousCardPermanentEntries(g *game.Game, entries []preparedCard
 			Face:                   permanent.Face,
 			KickerPaid:             entry.options.KickerPaid,
 			EnterEvoked:            entry.options.Evoked,
+			EnterDashed:            entry.options.Dashed,
 			EnterWasCast:           entry.options.WasCast,
 			EnterCastController:    entry.options.CastController,
 			EnterHasCastController: entry.options.HasCastController,

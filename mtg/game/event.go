@@ -202,6 +202,11 @@ type Event struct {
 	// sacrifice trigger's intervening "if its evoke cost was paid" condition.
 	EnterEvoked bool
 
+	// EnterDashed records whether an entering permanent resulted from a spell
+	// cast for its Dash alternative cost (CR 702.109). It feeds the Dash
+	// trigger's intervening "if its dash cost was paid" condition.
+	EnterDashed bool
+
 	// EnterWasCast records whether a permanent entered from resolving a cast,
 	// non-copy spell.
 	EnterWasCast bool

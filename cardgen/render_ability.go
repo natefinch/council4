@@ -572,6 +572,9 @@ func (r Renderer) renderTriggeredAbility(ctx *renderCtx, ability *game.Triggered
 	if reflect.DeepEqual(*ability, game.EvokeSacrificeTriggeredAbility()) {
 		return "game.EvokeSacrificeTriggeredAbility()", nil
 	}
+	if reflect.DeepEqual(*ability, game.DashTriggeredAbility()) {
+		return "game.DashTriggeredAbility()", nil
+	}
 	var fields []string
 	trigger, err := r.renderTriggerCondition(ctx, &ability.Trigger)
 	if err != nil {
@@ -681,6 +684,9 @@ func (r Renderer) renderTriggerCondition(ctx *renderCtx, trigger *game.TriggerCo
 	}
 	if trigger.InterveningIfEventPermanentWasEvoked {
 		fields = append(fields, "InterveningIfEventPermanentWasEvoked: true,")
+	}
+	if trigger.InterveningIfEventPermanentWasDashed {
+		fields = append(fields, "InterveningIfEventPermanentWasDashed: true,")
 	}
 	if trigger.InterveningIfEventPermanentWasCastByController {
 		fields = append(fields, "InterveningIfEventPermanentWasCastByController: true,")
