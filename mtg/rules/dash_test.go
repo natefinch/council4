@@ -8,6 +8,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -110,5 +111,64 @@ func TestNormalCastDoesNotDash(t *testing.T) {
 	}
 	if g.Players[game.Player1].Hand.Contains(spellID) {
 		t.Fatal("normally cast creature was returned to its owner's hand, want it on the battlefield")
+	}
+}
+
+// TestDashReturnBindsToDashedObjectNotCard proves the delayed end-step return
+// tracks the specific dashed object (CR 702.109a), not the card. When the
+// dashed object leaves the battlefield and the same card re-enters as a new,
+// undashed object before the end step (reanimation, blink, or a hard recast),
+// the stale delayed trigger must no-op instead of wrongly bouncing the new
+// object. Binding the return to SourceCardPermanentReference (by card identity)
+// regresses this; binding it to SourcePermanentReference (by object identity)
+// fixes it.
+func TestDashReturnBindsToDashedObjectNotCard(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	spellID := addCardToHand(g, game.Player1, dashTestCreature())
+	g.Players[game.Player1].ManaPool.Add(mana.C, 1)
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: evokeCostAgent{costLabel: "Dash"}}
+	if !engine.applyActionWithChoices(g, game.Player1, action.CastSpell(spellID, nil, 0, nil), agents, &TurnLog{}) {
+		t.Fatal("dash cast failed")
+	}
+	resolveStackWithTriggers(engine, g, agents)
+
+	dashedObject := permanentForCard(g, spellID)
+	if dashedObject == nil {
+		t.Fatal("dashed creature is not on the battlefield after resolution")
+	}
+	dashedObjectID := dashedObject.ObjectID
+
+	// The dashed object O1 leaves the battlefield to the graveyard, then the same
+	// card re-enters as a distinct, undashed object O2 (as if reanimated) before
+	// the end step.
+	if !movePermanentToZone(g, dashedObject, zone.Graveyard) {
+		t.Fatal("failed to move the dashed object off the battlefield")
+	}
+	reentered := &game.Permanent{
+		ObjectID:       g.IDGen.Next(),
+		CardInstanceID: spellID,
+		Owner:          game.Player1,
+		Controller:     game.Player1,
+	}
+	g.Battlefield = append(g.Battlefield, reentered)
+	if reentered.ObjectID == dashedObjectID {
+		t.Fatal("re-entered object reused the dashed object's ID; test cannot distinguish them")
+	}
+
+	g.Turn.Step = game.StepEnd
+	emitBeginningOfStepEvent(g, game.StepEnd)
+	engine.putTriggeredAbilitiesOnStackWithChoices(g, agents, &TurnLog{})
+	resolveStackWithTriggers(engine, g, agents)
+
+	survivor := permanentForCard(g, spellID)
+	if survivor == nil || survivor.ObjectID != reentered.ObjectID {
+		t.Fatal("re-entered object was returned to hand; the dashed return must track the dashed object, not the card")
+	}
+	if g.Players[game.Player1].Hand.Contains(spellID) {
+		t.Fatal("re-entered object was wrongly returned to its owner's hand at the end step")
 	}
 }
