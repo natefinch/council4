@@ -236,3 +236,84 @@ func TestGraveyardRedirectCounterExilesDiscardedOpponentCardWithCounter(t *testi
 		t.Fatal("controller should be able to play the discarded card without paying its mana cost")
 	}
 }
+
+// TestGraveyardRedirectCounterExilesPileSplitLosingPileWithCounter drives a real
+// Fact-or-Fiction pile split through the engine while an opponent controls the
+// redirect (e.g. Dauthi Voidwalker vs. a Fact or Fiction cast). "From anywhere"
+// covers the losing pile's library-to-graveyard move, so those cards must be
+// exiled with a void counter instead of reaching the graveyard, and therefore be
+// selectable by Dauthi's {T}, Sacrifice ability.
+func TestGraveyardRedirectCounterExilesPileSplitLosingPileWithCounter(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	graveyardRedirectCounterPermanent(g, game.Player1, counter.Void)
+
+	// Player2 casts Fact or Fiction; its losing pile heads to Player2's graveyard,
+	// which Player1's Dauthi (an opponent of Player2) redirects to exile.
+	// Add bottom-to-top: c1 deepest, c3 top. peekLibrary is top-first: [c3,c2,c1].
+	c1 := addCardToLibrary(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Deep"}})
+	c2 := addCardToLibrary(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Middle"}})
+	c3 := addCardToLibrary(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Top"}})
+	prim := game.PileSplit{
+		Player:            game.ControllerReference(),
+		Amount:            game.Fixed(3),
+		SeparatorOpponent: true,
+		ChooserOpponent:   false,
+		Kept:              zone.Hand,
+		Other:             zone.Graveyard,
+	}
+	log := TurnLog{}
+	agents := [game.NumPlayers]PlayerAgent{
+		// The separating opponent (Player3, next after Player2) puts c3 into the
+		// first pile; the controller (Player2) keeps the second pile {c2,c1}, so
+		// the first pile {c3} is the losing pile bound for the graveyard.
+		game.Player3: &choiceOnlyAgent{choices: [][]int{{0}}},
+		game.Player2: &choiceOnlyAgent{choices: [][]int{{1}}},
+	}
+	if !engine.pileSplitCards(g, agents, &log, game.Player2, 3, prim) {
+		t.Fatal("pileSplitCards() = false, want true")
+	}
+
+	player := g.Players[game.Player2]
+	if !player.Hand.Contains(c2) || !player.Hand.Contains(c1) {
+		t.Fatal("pile split did not put the kept pile into hand")
+	}
+	if player.Graveyard.Contains(c3) {
+		t.Fatal("redirect did not keep the losing pile out of the graveyard")
+	}
+	if !player.Exile.Contains(c3) {
+		t.Fatal("redirect did not exile the losing pile")
+	}
+	if !g.HasExileCounter(c3, counter.Void) {
+		t.Fatal("redirect exiled the losing pile without a void counter")
+	}
+
+	// The exiled losing-pile card bears a void counter, so Dauthi's controller
+	// (Player1) must be offered it and granted a free-play permission bound to it.
+	playLog := resolvePlayChosenExiledCard(t, g, game.PlayChosenExiledCard{
+		Player:                game.ControllerReference(),
+		Zone:                  zone.Exile,
+		OwnerScope:            game.PlayerOpponent,
+		Counter:               opt.Val(counter.Void),
+		Duration:              game.DurationThisTurn,
+		WithoutPayingManaCost: true,
+	}, [game.NumPlayers]PlayerAgent{
+		game.Player1: &choiceOnlyAgent{choices: [][]int{{0}}},
+	})
+	if len(playLog.Choices) != 1 {
+		t.Fatalf("choices = %+v, want exactly one resolution choice", playLog.Choices)
+	}
+	if got := len(playLog.Choices[0].Request.Options); got != 1 {
+		t.Fatalf("choice options = %d, want 1 (the exiled void-countered pile card)", got)
+	}
+	effect, ok := playFromZoneRuleEffect(g, c3)
+	if !ok {
+		t.Fatal("Dauthi's ability granted no play permission for the exiled pile card")
+	}
+	if !effect.WithoutPayingManaCost {
+		t.Fatal("granted permission is not flagged without paying its mana cost")
+	}
+	if !castFromZoneWithoutPayingManaCost(g, game.Player1, c3, zone.Exile, game.FaceFront) {
+		t.Fatal("controller should be able to play the exiled pile card without paying its mana cost")
+	}
+}
