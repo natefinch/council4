@@ -433,6 +433,18 @@ func (f *CardFace) KickerKeyword() (KickerKeyword, bool) {
 	return KickerKeyword{}, false
 }
 
+// GiftKeyword returns the first Gift keyword on any static ability of this face.
+func (f *CardFace) GiftKeyword() (GiftKeyword, bool) {
+	for i := range f.StaticAbilities {
+		if ka, ok := BodyKeywordAbility(&f.StaticAbilities[i], Gift); ok {
+			if gift, ok := ka.(GiftKeyword); ok {
+				return gift, true
+			}
+		}
+	}
+	return GiftKeyword{}, false
+}
+
 // MutateCost returns the first Mutate cost on this face.
 func (f *CardFace) MutateCost() (cost.Mana, bool) {
 	for i := range f.StaticAbilities {

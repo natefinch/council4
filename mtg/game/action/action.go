@@ -66,6 +66,11 @@ type CastSpellAction struct {
 	Overloaded     bool
 	Mutate         bool
 	MutateTargetID id.ID
+	// GiftPromised records that the spell's Gift keyword action promised a gift
+	// to GiftRecipient as it was cast (CR 702.171).
+	GiftPromised bool
+	// GiftRecipient is the opponent promised the gift when GiftPromised is set.
+	GiftRecipient game.PlayerID
 }
 
 // ActivateAbilityAction is the payload for activating an ability.
@@ -182,6 +187,21 @@ func CastSpellFaceFromZone(cardID id.ID, sourceZone zone.Type, face game.FaceInd
 // CastKickedSpell creates an action to cast a spell with kicker paid.
 func CastKickedSpell(cardID id.ID, targets []game.Target, xValue int, chosenModes []int) Action {
 	return CastKickedSpellFromZone(cardID, zone.Hand, targets, xValue, chosenModes)
+}
+
+// CastGiftSpellFaceFromZone creates an action to cast a specific printed face
+// from a specific source zone with a gift promised to recipient (CR 702.171).
+func CastGiftSpellFaceFromZone(cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int, recipient game.PlayerID) Action {
+	action := CastSpellFaceFromZone(cardID, sourceZone, face, targets, xValue, chosenModes)
+	action.castSpell.GiftPromised = true
+	action.castSpell.GiftRecipient = recipient
+	return action
+}
+
+// CastGiftSpell creates an action to cast a spell from hand promising a gift to
+// recipient.
+func CastGiftSpell(cardID id.ID, targets []game.Target, xValue int, chosenModes []int, recipient game.PlayerID) Action {
+	return CastGiftSpellFaceFromZone(cardID, zone.Hand, game.FaceFront, targets, xValue, chosenModes, recipient)
 }
 
 // CastKickedSpellFromZone creates an action to cast a spell from a specific zone
@@ -482,6 +502,9 @@ func (a Action) Validate() error {
 		if a.castSpell.Overloaded && a.castSpell.Mutate {
 			return errors.New("overload cannot be combined with another alternative cast")
 		}
+		if a.castSpell.GiftPromised && (a.castSpell.Overloaded || a.castSpell.Mutate) {
+			return errors.New("gift promise cannot be combined with another alternative cast")
+		}
 	case ActionActivateAbility:
 		if a.activateAbility.SourceID == 0 {
 			return errors.New("activate ability action missing source ID")
@@ -586,7 +609,9 @@ func castSpellActionEmpty(a CastSpellAction) bool {
 		!a.KickerPaid &&
 		!a.Overloaded &&
 		!a.Mutate &&
-		a.MutateTargetID == 0
+		a.MutateTargetID == 0 &&
+		!a.GiftPromised &&
+		a.GiftRecipient == 0
 }
 
 func activateAbilityActionEmpty(a ActivateAbilityAction) bool {

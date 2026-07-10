@@ -186,6 +186,17 @@ const (
 	// HasKeyword(LivingMetal) reports true. Appended at the end of the enum so
 	// existing keyword ordinals are unchanged.
 	LivingMetal
+	// Gift (CR 702.171, Murders at Karlov Manor) is a keyword action printed on
+	// some instants and sorceries: "Gift a <thing> (You may promise an opponent a
+	// gift as you cast this spell. If you do, they <receive the gift> before its
+	// other effects.)" As the spell is cast its controller may promise the gift
+	// to an opponent; if promised, that opponent receives the gift before the
+	// spell's other effects and the spell's "if the gift was promised" clauses
+	// apply. It is modeled by GiftKeyword, which carries the delivery content; the
+	// rules layer offers the promise at cast time, records it on the resolving
+	// spell, and resolves the delivery to the promised opponent. Appended at the
+	// end of the enum so existing keyword ordinals are unchanged.
+	Gift
 )
 
 // Reusable StaticAbilityBody templates for non-parameterized keyword abilities.

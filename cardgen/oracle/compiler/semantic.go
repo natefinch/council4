@@ -730,6 +730,12 @@ const (
 	// kicked ("if this spell was kicked, ... instead"). It gates the kicked
 	// effect variant against the spell's kicker-paid cast context.
 	ConditionPredicateSpellWasKicked
+	// ConditionPredicateGiftPromised is satisfied when the resolving spell's Gift
+	// keyword action promised a gift to an opponent as it was cast ("if the gift
+	// was promised, ..."; CR 702.171). It gates the promoted effect variant
+	// against the spell's gift-promised cast context; its negation gates the "if
+	// the gift wasn't promised" penalty clause.
+	ConditionPredicateGiftPromised
 	// ConditionPredicateSpellWasCastFromGraveyard is satisfied when the resolving
 	// spell was cast from a graveyard ("if this spell was cast from a graveyard,
 	// ..."). It gates a per-effect branch against the spell's source zone and is
@@ -3886,6 +3892,10 @@ type CompiledKeyword struct {
 	EnchantTarget   CompiledEnchantTarget
 	Protection      game.ProtectionKeyword
 	ProtectionKnown bool
+	// Gift is the typed gift a Gift keyword action promises (CR 702.171), or
+	// GiftKindNone when the keyword is not Gift. Lowering maps it to the delivery
+	// content given to the promised opponent (draw a card / create a token).
+	Gift parser.GiftKind
 	// EquipRestriction is the typed quality restriction of a restricted Equip
 	// ability, or nil for an unrestricted Equip. It is set only when the parser
 	// recognized every restriction word, so an unsupported restriction fails

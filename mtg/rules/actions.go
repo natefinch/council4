@@ -251,6 +251,11 @@ func (e *Engine) legalCastActions(g *game.Game, playerID game.PlayerID) []action
 						for _, targets := range targetResult.choices {
 							if e.canCastSpellFaceFromZoneWithKicker(g, playerID, cardID, sourceZone, face, targets, xValue, modes, false) {
 								actions = append(actions, actionBuild.castSpell(cardID, sourceZone, face, targets, xValue, modes))
+								if spellHasGift(spellDef) {
+									for _, opponent := range aliveOpponents(g, playerID) {
+										actions = append(actions, actionBuild.castGiftSpell(cardID, sourceZone, face, targets, xValue, modes, opponent))
+									}
+								}
 							}
 							if spellHasMultikicker(spellDef) {
 								actions = e.appendMultikickedCastActions(g, playerID, actions, actionBuild, cardID, sourceZone, face, targets, xValue, modes)
@@ -314,6 +319,11 @@ func (e *Engine) legalCommanderCastActions(g *game.Game, playerID game.PlayerID)
 				for _, targets := range targetResult.choices {
 					if e.canCastSpellFaceFromZoneWithKicker(g, playerID, card.ID, zone.Command, face, targets, xValue, modes, false) {
 						actions = append(actions, actionBuild.castSpell(card.ID, zone.Command, face, targets, xValue, modes))
+						if spellHasGift(spellDef) {
+							for _, opponent := range aliveOpponents(g, playerID) {
+								actions = append(actions, actionBuild.castGiftSpell(card.ID, zone.Command, face, targets, xValue, modes, opponent))
+							}
+						}
 					}
 					if spellHasMultikicker(spellDef) {
 						actions = e.appendMultikickedCastActions(g, playerID, actions, actionBuild, card.ID, zone.Command, face, targets, xValue, modes)

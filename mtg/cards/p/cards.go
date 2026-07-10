@@ -17,6 +17,7 @@ var Cards = []cardset.Entry{
 	{Name: "Paradox Surveyor", New: ParadoxSurveyor},
 	{Name: "Parasitic Impetus", New: ParasiticImpetus},
 	{Name: "Parcelbeast", New: Parcelbeast},
+	{Name: "Parting Gust", New: PartingGust},
 	{Name: "Path of Annihilation", New: PathOfAnnihilation},
 	{Name: "Path to Redemption", New: PathToRedemption},
 	{Name: "Path to the World Tree", New: PathToTheWorldTree},

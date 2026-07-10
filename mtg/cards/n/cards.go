@@ -46,6 +46,7 @@ var Cards = []cardset.Entry{
 	{Name: "Noble Purpose", New: NoblePurpose},
 	{Name: "Noble's Purse", New: NobleSPurse},
 	{Name: "Noble Vestige", New: NobleVestige},
+	{Name: "Nocturnal Hunger", New: NocturnalHunger},
 	{Name: "Nocturnal Raid", New: NocturnalRaid},
 	{Name: "Noggle Bandit", New: NoggleBandit},
 	{Name: "Noggle Ransacker", New: NoggleRansacker},

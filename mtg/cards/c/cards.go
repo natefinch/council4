@@ -175,6 +175,7 @@ var Cards = []cardset.Entry{
 	{Name: "Crown of Flames", New: CrownOfFlames},
 	{Name: "Crown of Gondor", New: CrownOfGondor},
 	{Name: "Cruel Revival", New: CruelRevival},
+	{Name: "Crumb and Get It", New: CrumbAndGetIt},
 	{Name: "Crumbling Ashes", New: CrumblingAshes},
 	{Name: "Crumbling Colossus", New: CrumblingColossus},
 	{Name: "Crushing Pain", New: CrushingPain},

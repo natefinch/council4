@@ -67,6 +67,7 @@ var simplePredicateMap = map[parser.ConditionPredicateKind]ConditionPredicate{
 	parser.ConditionPredicateSourceTributeNotPaid:                             ConditionPredicateSourceTributeNotPaid,
 	parser.ConditionPredicateControllerControlsCommander:                      ConditionPredicateControllerControlsCommander,
 	parser.ConditionPredicateSpellWasKicked:                                   ConditionPredicateSpellWasKicked,
+	parser.ConditionPredicateGiftPromised:                                     ConditionPredicateGiftPromised,
 	parser.ConditionPredicateSpellWasCastFromGraveyard:                        ConditionPredicateSpellWasCastFromGraveyard,
 	parser.ConditionPredicateSourceSaddled:                                    ConditionPredicateSourceSaddled,
 	parser.ConditionPredicateSourceNotSaddled:                                 ConditionPredicateSourceNotSaddled,

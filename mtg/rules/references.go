@@ -268,6 +268,10 @@ func (r referenceResolver) player(ref game.PlayerReference) (game.PlayerID, bool
 		if r.obj.HasTriggerEvent && defendingPlayerEvent(r.obj.TriggerEvent.Kind) {
 			playerID, ok = r.obj.TriggerEvent.Player, true
 		}
+	case game.PlayerReferenceGiftRecipient:
+		if r.obj.GiftPromised {
+			playerID, ok = r.obj.GiftRecipient, true
+		}
 	default:
 		return 0, false
 	}
