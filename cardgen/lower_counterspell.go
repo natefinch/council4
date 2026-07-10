@@ -8,6 +8,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -1235,9 +1236,13 @@ func lowerCounterUnlessPaysSpell(ctx contentCtx) (game.AbilityContent, bool) {
 		return game.AbilityContent{}, false
 	}
 	payment := ctx.content.Effects[0].Payment
+	// "pays {X}" (Clash of Wills, Martyr of Frost) pays a generic amount equal to
+	// the resolving spell or ability's own X, evaluated as the payment resolves.
+	// Any other variable-symbol cost stays unsupported.
+	variableX := len(payment.ManaCost) == 1 && payment.ManaCost[0].Kind == cost.VariableSymbol
 	if payment.Payer != parser.EffectPaymentPayerTargetController ||
 		len(payment.ManaCost) == 0 ||
-		manaCostHasVariableSymbol(payment.ManaCost) ||
+		(manaCostHasVariableSymbol(payment.ManaCost) && !variableX) ||
 		ctx.content.Conditions[0].Predicate != compiler.ConditionPredicateTargetControllerDoesNotPay {
 		return game.AbilityContent{}, false
 	}
@@ -1247,11 +1252,20 @@ func lowerCounterUnlessPaysSpell(ctx contentCtx) (game.AbilityContent, bool) {
 		return game.AbilityContent{}, false
 	}
 	resolutionPayment := game.ResolutionPayment{
-		Prompt:   "Pay " + payment.ManaCost.String() + "?",
-		Payer:    opt.Val(game.ObjectControllerReference(game.TargetStackObjectReference(0))),
-		ManaCost: opt.Val(slices.Clone(payment.ManaCost)),
+		Prompt: "Pay " + payment.ManaCost.String() + "?",
+		Payer:  opt.Val(game.ObjectControllerReference(game.TargetStackObjectReference(0))),
+	}
+	switch {
+	case variableX:
+		x := game.DynamicAmount{Kind: game.DynamicAmountX}
+		resolutionPayment.DynamicGenericManaCost = opt.Val(&x)
+	default:
+		resolutionPayment.ManaCost = opt.Val(slices.Clone(payment.ManaCost))
 	}
 	if payment.GenericManaAmount.DynamicKind != compiler.DynamicAmountNone {
+		if variableX {
+			return game.AbilityContent{}, false
+		}
 		multiplier, ok := lowerDynamicAmount(payment.GenericManaAmount, game.SourcePermanentReference())
 		if !ok {
 			return game.AbilityContent{}, false
