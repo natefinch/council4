@@ -1522,6 +1522,12 @@ type ExileTopOfLibrary struct {
 	// play/cast-from-exile ability can later select "a card ... in exile with a
 	// <name> counter on it". It is unset for every exile that places no counter.
 	Counter opt.V[counter.Kind]
+	// FaceDown exiles each card face down ("exile that many cards from the top of
+	// your library face down.", Flamewar, Streetwise Operative). A face-down card
+	// in exile hides its identity from every observer (CR 713); the zone records
+	// the face-down state and clears it when the card leaves exile. It is false
+	// for the ordinary face-up exile.
+	FaceDown bool
 }
 
 // RevealUntil reveals cards from the top of a referenced player's library one at

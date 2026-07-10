@@ -1947,6 +1947,9 @@ func (r Renderer) renderExileTopOfLibrary(ctx *renderCtx, value game.ExileTopOfL
 		ctx.need(importOpt)
 		fields = append(fields, fmt.Sprintf("Counter: opt.Val(%s),", kind))
 	}
+	if value.FaceDown {
+		fields = append(fields, "FaceDown: true,")
+	}
 	return structLit("game.ExileTopOfLibrary", fields), nil
 }
 

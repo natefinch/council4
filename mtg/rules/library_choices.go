@@ -144,7 +144,7 @@ func revealedCardMatches(g *game.Game, playerID game.PlayerID, cardID id.ID, unt
 	}, &until)
 }
 
-func exileTopOfLibraryCards(g *game.Game, playerID game.PlayerID, amount int, counterKind opt.V[counter.Kind], exiledBy game.PlayerID) {
+func exileTopOfLibraryCards(g *game.Game, playerID game.PlayerID, amount int, counterKind opt.V[counter.Kind], exiledBy game.PlayerID, faceDown bool) {
 	player, ok := playerByID(g, playerID)
 	if !ok || amount <= 0 {
 		return
@@ -173,6 +173,13 @@ func exileTopOfLibraryCards(g *game.Game, playerID game.PlayerID, amount int, co
 		// permission can filter to cards "exiled by an ability you controlled".
 		if counterKind.Exists && destination == zone.Exile {
 			g.AddExileCounterFromController(cardID, counterKind.Val, 1, exiledBy)
+		}
+		// A face-down exile hides the card's identity from every observer. The
+		// zone records the face-down state (cleared automatically when the card
+		// leaves the zone); the command-zone redirect never applies here because
+		// only a card's owner's exile is a valid face-down destination.
+		if faceDown && destination == zone.Exile {
+			destinationCards.SetFaceDown(cardID, true)
 		}
 		emitZoneChangeEvent(g, game.Event{
 			Player:   playerID,

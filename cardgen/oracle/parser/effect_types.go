@@ -1927,6 +1927,11 @@ type EffectSyntax struct {
 	Tokens         []shared.Token       `json:"-"`
 	Player         EffectPlayerKind     `json:",omitempty"`
 	CardSource     EffectCardSourceKind `json:",omitempty"`
+	// FaceDown marks a card-source effect that exiles its cards face down
+	// ("exile that many cards from the top of your library face down.", Flamewar,
+	// Streetwise Operative). It is meaningful only for a top-of-library exile card
+	// source, where lowering threads it onto the ExileTopOfLibrary primitive.
+	FaceDown bool `json:",omitempty"`
 	// RequirePermanentCard gates a linked-card effect on the referenced card
 	// being a permanent card.
 	RequirePermanentCard bool `json:",omitempty"`

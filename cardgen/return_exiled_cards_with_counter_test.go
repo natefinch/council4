@@ -10,8 +10,8 @@ import (
 // to a single ReturnExiledCardsWithCounter primitive scoped to the controller
 // and filtered by the named marker counter the parser read text-blind. The card
 // is synthetic (not a curated card): it isolates the front-face return mechanism
-// on a normal-layout permanent so it generates cleanly, which the transform
-// Flamewar cannot because its back face is still unsupported.
+// on a normal-layout permanent, complementing TestGenerateExecutableFlamewar-
+// BothFaces, which exercises the same mechanism inside the full transform card.
 func TestGenerateExecutableReturnExiledCardsWithCounter(t *testing.T) {
 	t.Parallel()
 	power := "2"

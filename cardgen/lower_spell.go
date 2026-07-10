@@ -1992,11 +1992,16 @@ func lowerImmediateSingleEffectSpell(
 				// any unhandled residual reference.
 				ctx.content.References = nil
 			}
+			faceDown := ctx.content.Effects[0].FaceDown
+			// allowDynamic threads a "that many" triggering-event amount (e.g. the
+			// combat damage just dealt) into the exile count; fixed-count exile-top
+			// cards are unaffected because a Known amount always lowers to
+			// game.Fixed regardless of this flag.
 			return lowerFixedCardCountPlayerSpell(
-				ctx, syntax, "exile", "exiles", false, func(amount game.Quantity, player game.PlayerReference) game.Primitive {
-					return game.ExileTopOfLibrary{Amount: amount, Player: player, Counter: exileCounter}
+				ctx, syntax, "exile", "exiles", true, func(amount game.Quantity, player game.PlayerReference) game.Primitive {
+					return game.ExileTopOfLibrary{Amount: amount, Player: player, Counter: exileCounter, FaceDown: faceDown}
 				}, func(amount game.Quantity, group game.PlayerGroupReference) game.Primitive {
-					return game.ExileTopOfLibrary{Amount: amount, PlayerGroup: group, Counter: exileCounter}
+					return game.ExileTopOfLibrary{Amount: amount, PlayerGroup: group, Counter: exileCounter, FaceDown: faceDown}
 				},
 			)
 		}

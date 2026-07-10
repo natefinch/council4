@@ -2140,16 +2140,20 @@ type CompiledGroupEntryModification struct {
 // it. Multiple effects may refer to the same sentence when instructions are
 // coordinated.
 type CompiledEffect struct {
-	Kind                 EffectKind
-	Context              parser.EffectContextKind
-	Connection           parser.EffectConnectionKind
-	ConnectionSpan       shared.Span
-	Span                 shared.Span
-	ClauseSpan           shared.Span
-	Text                 string
-	VerbSpan             shared.Span
-	Player               parser.EffectPlayerKind
-	CardSource           parser.EffectCardSourceKind
+	Kind           EffectKind
+	Context        parser.EffectContextKind
+	Connection     parser.EffectConnectionKind
+	ConnectionSpan shared.Span
+	Span           shared.Span
+	ClauseSpan     shared.Span
+	Text           string
+	VerbSpan       shared.Span
+	Player         parser.EffectPlayerKind
+	CardSource     parser.EffectCardSourceKind
+	// FaceDown mirrors EffectSyntax.FaceDown: a top-of-library exile card source
+	// that exiles its cards face down. Lowering threads it onto the
+	// ExileTopOfLibrary primitive; it is false for every face-up exile.
+	FaceDown             bool
 	RequirePermanentCard bool
 	// ExileDieSubjectDamagedCreature marks an EffectExileIfWouldDieThisTurn rider
 	// whose subject is "a creature dealt damage this way": the would-die exile is
