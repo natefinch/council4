@@ -145,9 +145,10 @@ type TurnState struct {
 	// current turn by extra-phase effects ("After this main phase, there is
 	// an additional combat phase followed by an additional main phase." —
 	// Aggravated Assault, Aurelia, World at War). The turn loop drains the
-	// queue after the postcombat main phase, running each queued phase in
-	// order; a queued phase that re-activates the source re-queues more
-	// phases, so the combo loop continues until the queue empties.
+	// queue after each base phase, running each queued phase in order
+	// immediately after the phase during which it was queued (CR 500.7); a
+	// queued phase that re-activates the source re-queues more phases, so the
+	// combo loop continues until the queue empties.
 	ExtraPhases []Phase
 
 	// CombatPhasesThisTurn counts how many combat phases have begun this turn,
