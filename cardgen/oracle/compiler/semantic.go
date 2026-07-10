@@ -2833,6 +2833,9 @@ type CompiledEffect struct {
 	// CounterTriggeringStackObject mirrors the parser-owned exact
 	// "Counter that spell or ability." reference form.
 	CounterTriggeringStackObject bool
+	// ShuffleEachPlayerGraveyardIntoLibrary mirrors the parser-owned exact
+	// symmetric graveyard shuffle.
+	ShuffleEachPlayerGraveyardIntoLibrary bool
 	// ExileUntilSourceLeaves carries the parser-recognized O-Ring exile clause
 	// "exile <target> until <this permanent> leaves the battlefield." through the
 	// text-blind compiler boundary so lowering links the exile to the source.

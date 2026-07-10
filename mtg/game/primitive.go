@@ -326,7 +326,8 @@ type ShuffleLibrary struct {
 // graveyard into your library", The Mending of Dominaria). The library is
 // shuffled even when the graveyard is empty (CR 701.x shuffle).
 type ShuffleGraveyardIntoLibrary struct {
-	Player PlayerReference
+	Player      PlayerReference
+	PlayerGroup PlayerGroupReference
 }
 
 // LookAtHand lets the source's controller privately look at a referenced
