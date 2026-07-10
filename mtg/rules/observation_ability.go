@@ -4,24 +4,36 @@ import (
 	"github.com/natefinch/council4/mtg/eval"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
+	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // ScorableActivatedAbility returns the value-oriented summary of the ability the
 // action activates, so an agent can score it by cost and effect instead of the
 // engine's execution primitives. The boolean is false when the action is not an
-// ability activation or the ability cannot be resolved (for example a hand- or
-// graveyard-activated ability), in which case the caller should fall back to its
-// default scoring.
+// ability activation or the ability cannot be resolved to a scorable summary, in
+// which case the caller should fall back to its default scoring.
 func (o PlayerObservation) ScorableActivatedAbility(act action.Action) (eval.ScorableAbility, bool) {
 	payload, ok := act.ActivateAbilityPayload()
 	if !ok {
 		return eval.ScorableAbility{}, false
 	}
-	_, body, ok := activatedAbilitySource(o.g, o.Player, payload.SourceID, payload.AbilityIndex)
-	if !ok {
-		return eval.ScorableAbility{}, false
+	if _, body, ok := activatedAbilitySource(o.g, o.Player, payload.SourceID, payload.AbilityIndex); ok {
+		return eval.ScorableAbilityOfModes(body, payload.ChosenModes), true
 	}
-	return eval.ScorableAbilityOfModes(body, payload.ChosenModes), true
+	// Cycling is activated from the hand, not the battlefield, so it is not found
+	// above. Score it on its merits: it draws a card but discards the card being
+	// cycled, a cost the ability body does not carry because the engine applies the
+	// discard specially (applyCyclingAbilityWithChoices). Without that discard cost
+	// cycling reads as free card draw, and the agent cycles its whole hand away
+	// instead of keeping cards to develop a game plan and win. Other hand-activated
+	// abilities keep the caller's default score.
+	if _, body, ok := handActivatedAbilitySource(o.g, o.Player, payload.SourceID, payload.AbilityIndex); ok && game.BodyHasKeyword(&body, game.Cycling) {
+		summary := eval.ScorableAbilityOfModes(&body, payload.ChosenModes)
+		summary.Costs = append(summary.Costs, cost.Additional{Kind: cost.AdditionalDiscard, Amount: 1, Source: zone.Hand})
+		return summary, true
+	}
+	return eval.ScorableAbility{}, false
 }
 
 // IsManaAbilityActivation reports whether the action activates a mana ability —
