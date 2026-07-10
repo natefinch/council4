@@ -1051,6 +1051,9 @@ func lowerSpellAlternativeCost(cardName string, ability compiler.CompiledAbility
 	if ability.AlternativeCost != nil && ability.AlternativeCost.Kind == compiler.AlternativeCostDiscard {
 		return lowerDiscardAlternativeCost(cardName, ability)
 	}
+	if ability.AlternativeCost != nil && ability.AlternativeCost.Kind == compiler.AlternativeCostBorderpost {
+		return lowerBorderpostAlternativeCost(cardName, ability)
+	}
 	if ability.AlternativeCost == nil ||
 		(ability.AlternativeCost.Kind != compiler.AlternativeCostUnknown &&
 			ability.AlternativeCost.Kind != compiler.AlternativeCostCommander) ||
@@ -1068,6 +1071,7 @@ func lowerSpellAlternativeCost(cardName string, ability compiler.CompiledAbility
 			"the executable source backend could not recognize the spell's alternative cost",
 		)
 	}
+
 	return abilityLowering{
 		alternativeCosts: []cost.Alternative{{
 			Label:     "Cast without paying mana cost",
@@ -1075,6 +1079,45 @@ func lowerSpellAlternativeCost(cardName string, ability compiler.CompiledAbility
 		}},
 		consumed: semanticConsumption{
 			alternativeCost: true,
+			references:      len(ability.Content.References),
+		},
+		sourceSpans: []shared.Span{ability.Span},
+	}, nil
+}
+
+func lowerBorderpostAlternativeCost(cardName string, ability compiler.CompiledAbility) (abilityLowering, *shared.Diagnostic) {
+	if ability.AlternativeCost == nil ||
+		len(ability.AlternativeCost.ManaCost) == 0 ||
+		ability.Cost == nil ||
+		len(ability.Cost.Components) != 1 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Keywords) != 0 ||
+		len(ability.Content.Modes) != 0 {
+		return abilityLowering{}, executableDiagnostic(
+			ability,
+			"unsupported alternative spell cost",
+			"the executable source backend could not recognize the Borderpost alternative cost",
+		)
+	}
+	additional, ok := lowerActivatedAdditionalCost(cardName, ability.Cost.Components[0])
+	if !ok || additional.Kind != cost.AdditionalReturnToHand {
+		return abilityLowering{}, executableDiagnostic(
+			ability,
+			"unsupported alternative spell cost",
+			"the executable source backend could not lower the Borderpost return cost",
+		)
+	}
+	return abilityLowering{
+		alternativeCosts: []cost.Alternative{{
+			Label:           "Pay {1} and return a basic land",
+			ManaCost:        opt.Val(slices.Clone(ability.AlternativeCost.ManaCost)),
+			AdditionalCosts: []cost.Additional{additional},
+		}},
+		consumed: semanticConsumption{
+			alternativeCost: true,
+			cost:            true,
 			references:      len(ability.Content.References),
 		},
 		sourceSpans: []shared.Span{ability.Span},

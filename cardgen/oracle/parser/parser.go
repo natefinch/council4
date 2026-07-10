@@ -564,7 +564,7 @@ func parseAbility(
 		}
 	}
 	if ability.Kind != AbilityChapter && ability.costPhrase == nil {
-		if alternative, alternativeCost, ok := spellAlternativeCostClause(body); ok {
+		if alternative, alternativeCost, ok := spellAlternativeCostClause(source, body); ok {
 			ability.Kind = AbilitySpellAlternativeCost
 			ability.AlternativeCost = alternative
 			if alternativeCost != nil {

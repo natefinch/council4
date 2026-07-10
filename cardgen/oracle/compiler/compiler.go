@@ -311,6 +311,8 @@ func compileAlternativeCostKind(kind parser.SpellAlternativeCostKind) Alternativ
 		return AlternativeCostEscape
 	case parser.SpellAlternativeCostDiscard:
 		return AlternativeCostDiscard
+	case parser.SpellAlternativeCostBorderpost:
+		return AlternativeCostBorderpost
 	default:
 		return AlternativeCostUnknown
 	}
