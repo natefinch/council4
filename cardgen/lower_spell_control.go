@@ -33,12 +33,26 @@ func lowerControlSpellSequence(
 		)
 	}
 
-	if len(ctx.content.Conditions) != 0 || len(ctx.content.Modes) != 0 {
+	if len(ctx.content.Modes) != 0 {
 		return unsupported()
 	}
 	if len(ctx.content.Targets) != 1 {
 		return unsupported()
 	}
+
+	// A gain-control sequence may carry a supported ability-level condition that
+	// gates a follow-on effect ("If X is 5 or more, create a token that's a copy
+	// of that creature."). Match each condition to the follow-on effect whose
+	// clause span contains it and lower it as an effect gate through the shared
+	// per-effect condition path, exactly as lowerOrderedEffectSequence does. The
+	// gain-control effect itself is never gated: a condition matched to it (or,
+	// in Pattern B, to the leading untap) is left unapplied and fails the
+	// consumed-condition count check below, so the sequence stays fail-closed.
+	effectConditions, _, ok := matchSequenceEffectConditions(ctx.content.Effects, ctx.content.Conditions)
+	if !ok {
+		return unsupported()
+	}
+	consumedConditions := 0
 
 	// Detect Pattern B: Untap first, GainControl second (same sentence span).
 	isPatternB := len(ctx.content.Effects) >= 2 &&
@@ -120,7 +134,12 @@ func lowerControlSpellSequence(
 			if !ok {
 				return unsupported()
 			}
-			sequence = append(sequence, game.Instruction{Primitive: prim})
+			instruction := game.Instruction{Primitive: prim}
+			if gate, gated := effectConditions[i]; gated {
+				instruction.Condition = opt.Val(gate)
+				consumedConditions++
+			}
+			sequence = append(sequence, instruction)
 			for _, r := range effAbility.content.References {
 				consumedRefSpans[r.Span] = true
 			}
@@ -139,7 +158,12 @@ func lowerControlSpellSequence(
 			if !ok {
 				return unsupported()
 			}
-			sequence = append(sequence, game.Instruction{Primitive: prim})
+			instruction := game.Instruction{Primitive: prim}
+			if gate, gated := effectConditions[i]; gated {
+				instruction.Condition = opt.Val(gate)
+				consumedConditions++
+			}
+			sequence = append(sequence, instruction)
 			for _, r := range effAbility.content.References {
 				consumedRefSpans[r.Span] = true
 			}
@@ -151,7 +175,8 @@ func lowerControlSpellSequence(
 
 	if consumedTargets != len(ctx.content.Targets) ||
 		len(consumedKwSpans) != len(ctx.content.Keywords) ||
-		len(consumedRefSpans) != len(ctx.content.References) {
+		len(consumedRefSpans) != len(ctx.content.References) ||
+		consumedConditions != len(effectConditions) {
 		return unsupported()
 	}
 
@@ -251,6 +276,34 @@ func lowerControlSequenceFollowOn(
 		}, true
 
 	default:
+		// Copy-token back-reference: "create a token that's a copy of that
+		// creature." The token copies the gain-control target in slot 0; the
+		// leading "that creature" reference binds that target. Delegate to the
+		// shared copy-token lowerer — the same path Yenna and Molten Duplication
+		// use for "a copy of it/target <permanent>" — and clear the ability-level
+		// condition inherited from the parent gain-control context (the sequence
+		// applies it as an effect gate on the produced instruction). A standalone
+		// token creation ("Create a Blood token.") carries no reference and falls
+		// through unchanged to the standalone handling below.
+		if effect.Kind == compiler.EffectCreate &&
+			len(ctx.content.Targets) == 0 &&
+			len(ctx.content.References) != 0 &&
+			referencesBindTo(ctx.content.References[:1], compiler.ReferenceBindingTarget, 0) {
+			createCtx := ctx
+			createCtx.content.Conditions = nil
+			content, diag := lowerCreateTokenSpellLinked(createCtx, "")
+			if diag != nil {
+				return nil, false
+			}
+			if len(content.SharedTargets) != 0 ||
+				content.IsModal() ||
+				len(content.Modes) != 1 ||
+				len(content.Modes[0].Targets) != 0 ||
+				len(content.Modes[0].Sequence) != 1 {
+				return nil, false
+			}
+			return content.Modes[0].Sequence[0].Primitive, true
+		}
 		// Standalone effect with no back-references (e.g. Scry).
 		if len(ctx.content.References) != 0 || len(ctx.content.Targets) != 0 {
 			return nil, false
