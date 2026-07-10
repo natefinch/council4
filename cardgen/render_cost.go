@@ -762,6 +762,8 @@ func renderDynamicAmountKind(kind game.DynamicAmountKind) (string, error) {
 		return "game.DynamicAmountBlockingCreatures", nil
 	case game.DynamicAmountPlayerLife:
 		return "game.DynamicAmountPlayerLife", nil
+	case game.DynamicAmountPartySize:
+		return "game.DynamicAmountPartySize", nil
 	case game.DynamicAmountSpellTargetCount:
 		return "game.DynamicAmountSpellTargetCount", nil
 	default:

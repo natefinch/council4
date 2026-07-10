@@ -162,13 +162,29 @@ func TestLowerTargetPlayerDrainGreatestPower(t *testing.T) {
 	}
 }
 
-// TestLowerDrainFailsClosed verifies drains that should not lower keep failing
-// the round-trip: mismatched fixed amounts and an unparsed "where X is ..."
-// definition (which leaves the gain clause non-exact) both stay unsupported.
+func TestLowerPartyDrain(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Malakir Blood-Priest",
+		Layout:     "normal",
+		TypeLine:   "Creature — Vampire Cleric",
+		OracleText: "When this creature enters, each opponent loses X life and you gain X life, where X is the number of creatures in your party.",
+	})
+	lose, gain := drainInstructions(t, face.TriggeredAbilities[0].Content)
+	if lose.Amount != gain.Amount {
+		t.Fatalf("lose amount %+v != gain amount %+v", lose.Amount, gain.Amount)
+	}
+	dynamic := lose.Amount.DynamicAmount()
+	if !dynamic.Exists || dynamic.Val.Kind != game.DynamicAmountPartySize {
+		t.Fatalf("amount = %+v, want party size", lose.Amount)
+	}
+}
+
+// TestLowerDrainFailsClosed verifies an unparsed dynamic drain stays
+// unsupported rather than losing its amount definition.
 func TestLowerDrainFailsClosed(t *testing.T) {
 	t.Parallel()
 	tests := []string{
-		"When this creature enters, each opponent loses X life and you gain X life, where X is the number of creatures in your party.",
 		"When this creature enters, each opponent loses X life and you gain X life, where X is the number of times this creature has mutated.",
 	}
 	for _, oracleText := range tests {

@@ -3773,6 +3773,9 @@ const (
 	// (target/event player); lowering reads that player's life. Added last so
 	// existing kinds keep their wire values.
 	DynamicAmountHalfPlayerLife
+	// DynamicAmountPartySize is the controller's maximum filled party roles
+	// (Cleric, Rogue, Warrior, Wizard), one role per creature.
+	DynamicAmountPartySize
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.

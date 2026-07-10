@@ -71,7 +71,8 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj opt.V[*game.StackObject], c
 	case game.DynamicAmountControllerLife, game.DynamicAmountControllerHandSize,
 		game.DynamicAmountControllerGraveyardSize, game.DynamicAmountControllerBasicLandTypeCount,
 		game.DynamicAmountOpponentCount, game.DynamicAmountOpponentsAttackedThisCombat,
-		game.DynamicAmountControllerSpeed, game.DynamicAmountCommanderCastCount:
+		game.DynamicAmountControllerSpeed, game.DynamicAmountCommanderCastCount,
+		game.DynamicAmountPartySize:
 		amount = controllerAggregateAmount(g, controller, dynamic, before)
 	case game.DynamicAmountOpponentControllingCount:
 		for _, opponent := range aliveOpponents(g, controller) {
@@ -393,9 +394,67 @@ func controllerAggregateAmount(g *game.Game, controller game.PlayerID, dynamic g
 		if player, ok := playerByID(g, controller); ok {
 			return player.Speed
 		}
+	case game.DynamicAmountPartySize:
+		return controllerPartySize(g, controller)
 	default:
 	}
 	return 0
+}
+
+func controllerPartySize(g *game.Game, controller game.PlayerID) int {
+	const (
+		cleric = 1 << iota
+		rogue
+		warrior
+		wizard
+	)
+	reachable := [16]bool{0: true}
+	for _, permanent := range g.Battlefield {
+		if permanent.PhasedOut ||
+			effectiveController(g, permanent) != controller ||
+			!permanentHasType(g, permanent, types.Creature) {
+			continue
+		}
+		roles := 0
+		if permanentHasSubtype(g, permanent, types.Cleric) {
+			roles |= cleric
+		}
+		if permanentHasSubtype(g, permanent, types.Rogue) {
+			roles |= rogue
+		}
+		if permanentHasSubtype(g, permanent, types.Warrior) {
+			roles |= warrior
+		}
+		if permanentHasSubtype(g, permanent, types.Wizard) {
+			roles |= wizard
+		}
+		next := reachable
+		for mask, ok := range reachable {
+			if !ok {
+				continue
+			}
+			for role := 1; role <= wizard; role <<= 1 {
+				if roles&role != 0 && mask&role == 0 {
+					next[mask|role] = true
+				}
+			}
+		}
+		reachable = next
+	}
+	maximum := 0
+	for mask, ok := range reachable {
+		if !ok {
+			continue
+		}
+		size := 0
+		for value := mask; value != 0; value &= value - 1 {
+			size++
+		}
+		if size > maximum {
+			maximum = size
+		}
+	}
+	return maximum
 }
 
 // opponentsAttackedThisCombat counts the distinct opponents of controller being

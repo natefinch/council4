@@ -2122,6 +2122,16 @@ func parseDynamicObjectNounCountSubject(tokens []shared.Token, start int, atoms 
 		return dynamicAmountSubject{}, false
 	}
 	plural := strings.HasSuffix(strings.ToLower(tokens[nounStart].Text), "s")
+	if noun == ObjectNounCreature &&
+		effectWordsAt(tokens, nounStart+1, "in", "your", "party") &&
+		dynamicAmountBoundary(tokens, nounStart+4) {
+		return dynamicAmountSubject{
+			amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountPartySize},
+			end:    nounStart + 4,
+			count:  true,
+			plural: plural,
+		}, true
+	}
 	if noun == ObjectNounCreature && effectWordsAt(tokens, nounStart+1, "blocking", "it") &&
 		dynamicAmountBoundary(tokens, nounStart+3) {
 		// "creature blocking it" counts the creatures blocking the just-blocked

@@ -28,17 +28,22 @@ func emitSourceSpellCostReduction(abilities []Ability) {
 		if effect.Kind != EffectCast || effect.Context != EffectContextSource {
 			continue
 		}
-		if effect.Amount.DynamicKind != EffectDynamicAmountCount ||
+		party := effect.Amount.DynamicKind == EffectDynamicAmountPartySize
+		if effect.Amount.DynamicKind != EffectDynamicAmountCount && !party ||
 			effect.Amount.DynamicForm != EffectDynamicAmountFormForEach ||
 			effect.Amount.Multiplier != 1 ||
-			effect.Amount.Selection == nil {
+			!party && effect.Amount.Selection == nil {
 			continue
 		}
 		amount, ok := sourceSpellCostReductionAmount(sourceSpellCostBodyTokens(ability), ability.Atoms)
 		if !ok {
 			continue
 		}
-		effect.SourceSpellCostReduction = true
+		if party {
+			effect.SourceSpellCostReductionDynamic = true
+		} else {
+			effect.SourceSpellCostReduction = true
+		}
 		effect.SourceSpellCostReductionAmount = amount
 	}
 }
@@ -292,6 +297,9 @@ func sourceSpellCostReductionAmount(tokens []shared.Token, atoms Atoms) (int, bo
 	}
 	if subject.end != len(tokens)-1 {
 		return 0, false
+	}
+	if subject.amount.DynamicKind == EffectDynamicAmountPartySize {
+		return amount, true
 	}
 	if subject.amount.DynamicKind != EffectDynamicAmountCount || subject.amount.Selection == nil {
 		return 0, false

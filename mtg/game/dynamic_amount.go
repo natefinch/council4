@@ -282,6 +282,10 @@ const (
 	// spell-cast trigger or when the cast spell has left the stack. Added last so
 	// existing kinds keep their wire values.
 	DynamicAmountSpellTargetCount
+	// DynamicAmountPartySize is the controller's maximum filled party roles
+	// among Cleric, Rogue, Warrior, and Wizard creatures they control, with each
+	// creature filling at most one role (CR 700.8).
+	DynamicAmountPartySize
 )
 
 // DynamicAmount describes an effect amount determined as the effect resolves
