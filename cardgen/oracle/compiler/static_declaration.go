@@ -418,6 +418,15 @@ type StaticGroupReference struct {
 	Domain        StaticGroupDomain
 	Selection     StaticSelection
 	ExcludeSource bool
+	// SelectorOverride carries a fully compiled selector for a group whose union
+	// (AnyOf) shape the flat StaticSelection cannot express ("nontoken artifact
+	// creatures and Vehicles you control"). When set, lowering projects it
+	// through the shared SelectionForSelector machinery — which already lowers a
+	// selector's Alternatives to Selection.AnyOf — instead of the flat
+	// StaticSelection, and reads controller and exclude-source directly from the
+	// self-contained selection. Domain, Selection, and ExcludeSource are ignored
+	// when it is present.
+	SelectorOverride *CompiledSelector
 }
 
 // StaticContinuousDeclaration is one layer-preserving characteristic change.
@@ -3136,6 +3145,7 @@ func staticQuotedAbilityGrantDeclaration(span shared.Span, group StaticGroupRefe
 func staticSubjectsEquivalent(a, b parser.StaticDeclarationSubject) bool {
 	return a.Kind == b.Kind &&
 		a.CardFilter == b.CardFilter &&
+		a.GroupSelection == b.GroupSelection &&
 		a.Group.Kind == b.Group.Kind &&
 		a.Group.Subtype == b.Group.Subtype &&
 		a.Group.SubtypeKnown == b.Group.SubtypeKnown &&
@@ -3153,6 +3163,9 @@ func staticGroupForParserSubject(subject parser.StaticDeclarationSubject) (Stati
 		parser.StaticDeclarationSubjectSourceNamed:
 		return StaticGroupReference{Span: subject.Span, Domain: StaticGroupSource}, true
 	case parser.StaticDeclarationSubjectGroup:
+		if subject.GroupSelection != nil {
+			return staticGroupForSelectionUnion(subject)
+		}
 		kind := compileStaticSubjectKind(subject.Group.Kind)
 		if kind == StaticSubjectNone {
 			return StaticGroupReference{}, false
@@ -3195,8 +3208,22 @@ func staticGroupForParserSubject(subject parser.StaticDeclarationSubject) (Stati
 	}
 }
 
-// staticBasePowerToughnessDeclaration builds a base power/toughness setting
-// declaration from the typed parser payload.
+// staticGroupForSelectionUnion maps a quoted-ability-grant subject that carries a
+// full parsed selection (a controlled union the enumerated vocabulary cannot
+// express, "nontoken artifact creatures and Vehicles you control") onto a group
+// reference driven by a compiled selector override. It compiles the selection
+// through the same compileTypedSelection path every other selection context uses,
+// so the union's alternatives, controller, non-token qualifier, and "other"
+// exclude-source flag all reach lowering intact. It fails closed for anything
+// that is not a genuine you-control union so it never widens the enumerated path.
+func staticGroupForSelectionUnion(subject parser.StaticDeclarationSubject) (StaticGroupReference, bool) {
+	selector := compileTypedSelection(*subject.GroupSelection)
+	if selector.Controller != ControllerYou || len(selector.Alternatives) < 2 {
+		return StaticGroupReference{}, false
+	}
+	return StaticGroupReference{Span: subject.Span, SelectorOverride: &selector}, true
+}
+
 func staticBasePowerToughnessDeclaration(span shared.Span, node *parser.StaticDeclarationSyntax, group StaticGroupReference, condition *CompiledCondition) StaticDeclaration {
 	return StaticDeclaration{
 		Kind:          StaticDeclarationContinuous,

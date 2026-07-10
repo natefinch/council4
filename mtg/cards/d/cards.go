@@ -105,6 +105,7 @@ var Cards = []cardset.Entry{
 	{Name: "Dreadfeast Demon", New: DreadfeastDemon},
 	{Name: "Dreadful Apathy", New: DreadfulApathy},
 	{Name: "Dreamcaller Siren", New: DreamcallerSiren},
+	{Name: "Dreamdrinker Vampire", New: DreamdrinkerVampire},
 	{Name: "Dredger's Insight", New: DredgerSInsight},
 	{Name: "Dromar's Cavern", New: DromarSCavern},
 	{Name: "Dromoka Captain", New: DromokaCaptain},

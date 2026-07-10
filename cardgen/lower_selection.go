@@ -220,14 +220,17 @@ func SelectionForSelectorMasked(selector compiler.CompiledSelector, mask Selecti
 		selection.AnyOf = append(selection.AnyOf, lowered)
 	}
 
-	if len(selection.RequiredTypesAny) == 0 {
+	if len(selection.RequiredTypesAny) == 0 && len(selection.AnyOf) == 0 {
 		if requiredType, ok := massGroupRequiredType(selector.Kind); ok {
 			selection.RequiredTypes = []types.Card{requiredType}
-		} else if selector.Kind == compiler.SelectorUnknown {
+		} else if selector.Kind == compiler.SelectorUnknown || selector.Kind == compiler.SelectorCard {
 			// A bare subtype noun ("Destroy all Islands.") selects any permanent
 			// carrying that subtype with no card-type restriction; the subtype
-			// filter supplies the constraint. Without one, an unrecognized noun
-			// has no representable predicate and fails closed.
+			// filter supplies the constraint. A disjunction side whose only
+			// dimension is a subtype ("... or Vehicle") is normalized to the
+			// SelectorCard kind, so it lowers through the same subtype-only rule.
+			// Without a subtype, an unrecognized or bare-card noun has no
+			// representable permanent predicate and fails closed.
 			if len(selection.SubtypesAny) == 0 {
 				return game.Selection{}, false
 			}

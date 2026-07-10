@@ -36,6 +36,9 @@ func objectIndex(p game.Primitive) (int, bool) {
 	if v, ok := p.(game.AddCounter); ok {
 		return v.Object.TargetIndex(), true
 	}
+	if v, ok := p.(game.MoveCounters); ok {
+		return v.Object.TargetIndex(), true
+	}
 	if v, ok := p.(game.ModifyPT); ok {
 		return v.Object.TargetIndex(), true
 	}
@@ -134,6 +137,9 @@ func targetBearingPrimitives() []targetBearingPrimitive {
 	cards := []targetBearingPrimitive{
 		objectPrimitive("Destroy", func() game.Primitive { return game.Destroy{Object: obj()} }),
 		objectPrimitive("AddCounter", func() game.Primitive { return game.AddCounter{Object: obj()} }),
+		objectPrimitive("MoveCounters", func() game.Primitive {
+			return game.MoveCounters{Object: obj(), Source: game.CounterSourceSpec{Kind: game.CounterSourceSelf}}
+		}),
 		objectPrimitive("ModifyPT", func() game.Primitive { return game.ModifyPT{Object: obj()} }),
 		objectPrimitive("Fight", func() game.Primitive { return game.Fight{Object: obj(), RelatedObject: obj()} }),
 		objectPrimitive("Tap", func() game.Primitive { return game.Tap{Object: obj()} }),

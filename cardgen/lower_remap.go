@@ -140,6 +140,30 @@ func transformPrimitiveTargetIndices(primitive game.Primitive, transform targetI
 		value.Player, ok = transformPlayerReference(value.Player, transform)
 		return value, ok
 	}
+	if value, ok := primitive.(game.MoveCounters); ok {
+		value.Object, ok = transformObjectReference(value.Object, transform)
+		if !ok {
+			return nil, false
+		}
+		if value.Source.Kind == game.CounterSourceTarget {
+			value.Source.Object, ok = transformObjectReference(value.Source.Object, transform)
+			if !ok {
+				return nil, false
+			}
+		}
+		value.Amount, ok = transformQuantity(value.Amount, transform)
+		if !ok {
+			return nil, false
+		}
+		if value.Group != nil {
+			group, ok := transformGroupReference(*value.Group, transform)
+			if !ok {
+				return nil, false
+			}
+			value.Group = &group
+		}
+		return value, true
+	}
 	if value, ok := primitive.(game.ModifyPT); ok {
 		value.Object, ok = transformObjectReference(value.Object, transform)
 		return value, ok

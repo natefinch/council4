@@ -24,7 +24,7 @@ func TestExpandModularKeyword(t *testing.T) {
 			if !containsLine(got, wantStatic) {
 				t.Fatalf("expandModularKeyword(%q) = %q, want a line %q", test.source, got, wantStatic)
 			}
-			if !strings.Contains(got, "When this creature dies, you may move all counters from this creature onto target artifact creature.") {
+			if !strings.Contains(got, "When this creature dies, you may move all +1/+1 counters from this creature onto target artifact creature.") {
 				t.Fatalf("expandModularKeyword(%q) = %q, want the dies-trigger ability", test.source, got)
 			}
 		})

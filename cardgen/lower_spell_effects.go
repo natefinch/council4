@@ -1541,9 +1541,38 @@ func lowerMoveCountersSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagno
 		Object: game.TargetPermanentReference(0),
 		Source: game.CounterSourceSpec{Kind: game.CounterSourceSelf},
 	}
-	if effect.MoveCountersAll {
+	switch {
+	case effect.MoveCountersAll:
 		move.AllKinds = true
-	} else {
+	case effect.MoveCountersAllOfKind:
+		// "Move all +1/+1 counters from <self> onto <target>." moves every counter
+		// of one named kind (CR 702.44 Modular). The amount is the source's own
+		// count of that kind, read through DynamicAmountObjectCounters so the
+		// runtime moves min(available, available) = all of them, using last-known
+		// information when the source has already left the battlefield (the Modular
+		// dies-trigger resolves from the graveyard).
+		if !effect.CounterKindKnown ||
+			!compiler.CounterKindPlacementSupported(effect.CounterKind) ||
+			effect.CounterKind.PlayerOnly() {
+			return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
+		}
+		move.CounterKind = effect.CounterKind
+		move.Amount = game.Dynamic(game.DynamicAmount{
+			Kind:        game.DynamicAmountObjectCounters,
+			CounterKind: effect.CounterKind,
+			Object:      game.SourcePermanentReference(),
+		})
+	case effect.Amount.VariableX:
+		// The variable-count form moves the ability's chosen {X} +1/+1 counters;
+		// the runtime resolves the dynamic amount and moves min(available, X).
+		if !effect.CounterKindKnown ||
+			!compiler.CounterKindPlacementSupported(effect.CounterKind) ||
+			effect.CounterKind.PlayerOnly() {
+			return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
+		}
+		move.Amount = game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX})
+		move.CounterKind = effect.CounterKind
+	default:
 		if !effect.CounterKindKnown ||
 			!compiler.CounterKindPlacementSupported(effect.CounterKind) ||
 			effect.CounterKind.PlayerOnly() ||

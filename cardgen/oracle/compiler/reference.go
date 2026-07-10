@@ -87,19 +87,29 @@ func bindReferences(
 			reference.Binding = ReferenceBindingSource
 			continue
 		}
-		// In a self-source cycle trigger ("When you cycle this card, it deals 1
-		// damage to each opponent.", CR 702.29e) the cycled card is the ability's
-		// own source, so the object pronoun "it"/"that card" in the body names
-		// the source. This is scoped to the self-source cycle event, which has no
-		// event permanent of its own, so it never reinterprets other triggers.
+		// In a self-source trigger whose event names the source permanent as its
+		// own subject — "When you cycle this card, it deals 1 damage to each
+		// opponent." (cycle, CR 702.29e) or "Whenever you put one or more +1/+1
+		// counters on this creature, convert it." (counters placed on the source)
+		// — the object pronoun "it"/"that card" in the body names that source.
+		// These events have no distinct event permanent of their own (the source
+		// is the subject), so the rule never reinterprets triggers that carry a
+		// separate triggering permanent. It binds the source only as a fallback:
+		// a nearer target ("... tap target creature ...  That creature doesn't
+		// untap ...") or prior-instruction result ("... search your library for a
+		// card ..., reveal it ...") is the better antecedent and still wins.
 		if trigger != nil &&
 			trigger.Pattern.Source == TriggerSourceSelf &&
-			trigger.Pattern.Event == TriggerEventCycled &&
+			selfSubjectPronounTriggerEvent(trigger.Pattern.Event) &&
 			reference.Order.Start >= trigger.Order.Start &&
 			(reference.Kind == ReferenceThatObject ||
 				(reference.Kind == ReferencePronoun && reference.Pronoun == ReferencePronounIt)) {
-			reference.Binding = ReferenceBindingSource
-			continue
+			_, priorOK := priorInstructionAntecedent(*reference, effects)
+			_, targetOK, targetAmbiguous := targetAntecedent(*reference, targets)
+			if !priorOK && !targetOK && !targetAmbiguous {
+				reference.Binding = ReferenceBindingSource
+				continue
+			}
 		}
 		if prior, ok := priorInstructionAntecedent(*reference, effects); ok {
 			if precedingSourceReferenceAfter(
@@ -120,6 +130,26 @@ func bindReferences(
 			triggerPatternBindsThatPlayer(&trigger.Pattern) {
 			reference.Binding = ReferenceBindingEventPlayer
 			continue
+		}
+		// A non-triggered ability's object pronoun "it" names the source when the
+		// source permanent is its nearest preceding referent, even if an earlier
+		// clause established a target. In "... onto another target artifact. ...
+		// If Blaster has no +1/+1 counters on it, convert it." the final "it" is
+		// Blaster — the nearer subject of its own conditional sentence — not the
+		// target artifact two clauses back. Binding to the nearer source is the
+		// correct antecedent and, for the transform keyword action that only ever
+		// applies to the source, the only sound referent. Restricted to the object
+		// pronoun "it" so the demonstrative and possessive forms keep their
+		// conservative target bindings, and to non-triggered abilities so trigger
+		// event bindings are untouched.
+		if trigger == nil &&
+			reference.Kind == ReferencePronoun &&
+			reference.Pronoun == ReferencePronounIt {
+			if start, ok := closestPrecedingTargetStart(*reference, targets); ok &&
+				precedingSourceReferenceAfter(bound[:i], reference.Order, start) {
+				reference.Binding = ReferenceBindingSource
+				continue
+			}
 		}
 		if occurrence, ok, ambiguous := targetAntecedent(*reference, targets); ok || ambiguous {
 			if ambiguous {
@@ -448,6 +478,43 @@ func chosenCardsTargetAntecedent(reference CompiledReference, targets []Compiled
 
 func precedingSourceReference(references []CompiledReference, order shared.SourceOrder) bool {
 	return precedingSourceReferenceAfter(references, order, 0)
+}
+
+// selfSubjectPronounTriggerEvent reports whether a self-source trigger event
+// names the source permanent as its own subject, with no distinct triggering
+// permanent, so that an object pronoun in the body resolves to the source. It
+// backs the self-source object-pronoun binding rule: the cycle event (the cycled
+// card is the source) and the counters-added event (the counters are placed on
+// the source). Events that carry a separate triggering permanent are excluded so
+// their bodies keep event-permanent bindings.
+func selfSubjectPronounTriggerEvent(event TriggerEvent) bool {
+	switch event {
+	case TriggerEventCycled, TriggerEventCountersAdded:
+		return true
+	default:
+		return false
+	}
+}
+
+// closestPrecedingTargetStart returns the source-order start of the nearest
+// target declared before the reference, reporting false when no target precedes
+// it. It mirrors targetAntecedent's closest-preceding-target search so a pronoun
+// tiebreak can compare a competing source reference's position against the same
+// target the target antecedent would otherwise bind.
+func closestPrecedingTargetStart(reference CompiledReference, targets []CompiledTarget) (int, bool) {
+	closest := -1
+	for i, target := range targets {
+		if target.Order.Start >= reference.Order.Start {
+			continue
+		}
+		if closest < 0 || target.Order.Start > targets[closest].Order.Start {
+			closest = i
+		}
+	}
+	if closest < 0 {
+		return 0, false
+	}
+	return targets[closest].Order.Start, true
 }
 
 func precedingSourceReferenceAfter(references []CompiledReference, order shared.SourceOrder, after int) bool {

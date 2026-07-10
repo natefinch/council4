@@ -1763,6 +1763,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			CounterRecipientAttached: counterRecipientAttached(kind, counterKnown, clause),
 			FightSubjectAttached:     fightSubjectAttached(kind, tokens[ownershipStart:tokenIndex]),
 			MoveCountersAll:          kind == EffectMoveCounters && moveAllCountersClause(clause),
+			MoveCountersAllOfKind:    kind == EffectMoveCounters && counterKnown && moveAllOfKindCountersClause(clause),
 			RemoveCountersAll:        kind == EffectRemoveCounter && removeAllCountersClause(clause),
 			MoveCountersDistribute:   kind == EffectMoveCounters && moveCountersDistributeClause(clause),
 			MoveThoseCounters:        kind == EffectPut && moveThoseCountersClause(clause),
@@ -7835,6 +7836,18 @@ func fightSubjectAttached(kind EffectKind, subject []shared.Token) bool {
 // keeps MoveCountersAll false and lowers through its named-kind path.
 func moveAllCountersClause(clause []shared.Token) bool {
 	return effectHasTokenWords(clause, "all", "counters")
+}
+
+// moveAllOfKindCountersClause reports the kind-specific mass form "move all
+// <kind> counters", where every counter of one named kind moves but other kinds
+// stay behind ("move all +1/+1 counters from this creature onto target artifact
+// creature.", CR 702.44 Modular). It anchors on the "all" quantifier while the
+// caller requires a recognized counter kind, so the kind-agnostic "all counters"
+// run (adjacent, MoveCountersAll) and the fixed-count named-kind move ("a +1/+1
+// counter") keep it false. The exact matcher re-validates the full clause, so a
+// stray "all" elsewhere cannot admit an unrepresentable move.
+func moveAllOfKindCountersClause(clause []shared.Token) bool {
+	return effectHasTokenWords(clause, "all") && !effectHasTokenWords(clause, "all", "counters")
 }
 
 // moveCountersDistributeClause reports the "move any number of <kind> counters

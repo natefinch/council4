@@ -229,7 +229,9 @@ func parseStaticQuotedAbilityGrantDeclarations(
 		return nil, false
 	}
 	subject, verbStart, ok := parseStaticDeclarationSubject(opTokens, atoms)
-	if !ok || !staticQuotedGrantSubjectSupported(subject) {
+	if unionSubject, unionVerbStart, unionOK := parseStaticUnionGroupSubject(opTokens, atoms); unionOK {
+		subject, verbStart = unionSubject, unionVerbStart
+	} else if !ok || !staticQuotedGrantSubjectSupported(subject) {
 		return nil, false
 	}
 	leadingEnd, ok := staticQuotedGrantLeadingEnd(opTokens, verbStart)
@@ -292,7 +294,41 @@ func staticQuotedGrantSubjectSupported(subject StaticDeclarationSubject) bool {
 	}
 }
 
-// staticQuotedGrantLeadingEnd returns the exclusive end index of the leading
+// parseStaticUnionGroupSubject recognizes a quoted-ability-grant subject that
+// names a controlled-permanent group whose union shape the enumerated subject
+// vocabulary cannot express ("Other nontoken artifact creatures and Vehicles you
+// control have ..."). It parses the subject phrase — every token before the
+// trailing "have"/"has" linking verb the quoted-text removal leaves at the end —
+// through the shared selection recognizer and accepts it only when the result is
+// a genuine controlled union (a "you control" group carrying two or more
+// alternatives). Non-union subjects are left to the enumerated path so this
+// fallback never changes how an already-supported grant subject lowers. The
+// carried selection rides StaticDeclarationSubject.GroupSelection, which the
+// compiler projects through the shared CompiledSelector machinery.
+func parseStaticUnionGroupSubject(opTokens []shared.Token, atoms Atoms) (StaticDeclarationSubject, int, bool) {
+	n := len(opTokens)
+	if n < 2 {
+		return StaticDeclarationSubject{}, 0, false
+	}
+	if !equalWord(opTokens[n-1], "have") && !equalWord(opTokens[n-1], "has") {
+		return StaticDeclarationSubject{}, 0, false
+	}
+	verbStart := n - 1
+	subjectTokens := opTokens[:verbStart]
+	if len(subjectTokens) == 0 {
+		return StaticDeclarationSubject{}, 0, false
+	}
+	selection := parseSelection(subjectTokens, atoms)
+	if selection.Controller != SelectionControllerYou || len(selection.Alternatives) < 2 {
+		return StaticDeclarationSubject{}, 0, false
+	}
+	return StaticDeclarationSubject{
+		Kind:           StaticDeclarationSubjectGroup,
+		Span:           shared.SpanOf(subjectTokens),
+		GroupSelection: &selection,
+	}, verbStart, true
+}
+
 // power/toughness and keyword operations that precede the quoted ability grant,
 // stripping the dangling connector ("and", "has", or "have") the quoted-text
 // removal leaves behind. It fails closed when the residual body does not end in

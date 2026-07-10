@@ -80,9 +80,14 @@ func newPowerDepot() *game.CardDef {
 						Sequence: []game.Instruction{
 							{
 								Primitive: game.MoveCounters{
-									Object:   game.TargetPermanentReference(0),
-									Source:   game.CounterSourceSpec{Kind: game.CounterSourceSelf},
-									AllKinds: true,
+									Amount: game.Dynamic(game.DynamicAmount{
+										Kind:        game.DynamicAmountObjectCounters,
+										CounterKind: counter.PlusOnePlusOne,
+										Object:      game.SourcePermanentReference(),
+									}),
+									Object:      game.TargetPermanentReference(0),
+									CounterKind: counter.PlusOnePlusOne,
+									Source:      game.CounterSourceSpec{Kind: game.CounterSourceSelf},
 								},
 							},
 						},

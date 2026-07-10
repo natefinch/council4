@@ -1164,7 +1164,7 @@ func expandModularKeyword(source string) string {
 			continue
 		}
 		lines[i] = "This creature enters with " + counters + " on it.\n" +
-			"When this creature dies, you may move all counters from this creature " +
+			"When this creature dies, you may move all +1/+1 counters from this creature " +
 			"onto target artifact creature."
 		changed = true
 	}
@@ -1174,10 +1174,125 @@ func expandModularKeyword(source string) string {
 	return strings.Join(lines, "\n")
 }
 
-// graftLineRank reports the rank N of a line that is exactly the printed
-// "Graft N" keyword, optionally followed only by its parenthesized reminder
-// text. Lines that merely contain the word elsewhere or that pair it with other
-// rules text are left untouched.
+// groupModularSubject reports the group subject and rank N of a printed
+// "<subject> have modular N" / "<subject> has modular N" line, optionally
+// followed only by its parenthesized reminder text. Only the group-granted form
+// qualifies; the self-form "Modular N" keyword and unrelated text return false so
+// they are left for expandModularKeyword and the normal pipeline.
+func groupModularSubject(line string) (subject string, rank int, ok bool) {
+	trimmed := strings.TrimSpace(line)
+	for _, verb := range []string{" have modular ", " has modular "} {
+		before, rest, found := strings.Cut(trimmed, verb)
+		if !found {
+			continue
+		}
+		subject = strings.TrimSpace(before)
+		digits := 0
+		for digits < len(rest) && rest[digits] >= '0' && rest[digits] <= '9' {
+			digits++
+		}
+		if digits == 0 {
+			return "", 0, false
+		}
+		value, err := strconv.Atoi(rest[:digits])
+		if err != nil || value <= 0 {
+			return "", 0, false
+		}
+		tail := strings.TrimSpace(rest[digits:])
+		if !strings.HasPrefix(tail, ".") {
+			return "", 0, false
+		}
+		reminder := strings.TrimSpace(tail[1:])
+		if reminder != "" && (!strings.HasPrefix(reminder, "(") || !strings.HasSuffix(reminder, ")")) {
+			return "", 0, false
+		}
+		return subject, value, true
+	}
+	return "", 0, false
+}
+
+// groupModularUnionSubject rewrites a coordinated group subject joined by "and"
+// into the equivalent disjunctive ("or") subject that the selection pipeline
+// lowers as a union, distributing a shared leading "nontoken" qualifier onto the
+// second noun so both members carry it. "X and Y have Z" and "X or Y have Z" name
+// the same group when granting a shared ability, so the rewrite is meaning
+// preserving. It fails closed for any subject that is not a single-"and"
+// controlled group.
+func groupModularUnionSubject(subject string) (string, bool) {
+	const suffix = " you control"
+	if !strings.HasSuffix(subject, suffix) {
+		return "", false
+	}
+	core := strings.TrimSuffix(subject, suffix)
+	parts := strings.Split(core, " and ")
+	if len(parts) != 2 {
+		return "", false
+	}
+	left, right := strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1])
+	if left == "" || right == "" {
+		return "", false
+	}
+	if subjectContainsWord(left, "nontoken") && !subjectContainsWord(right, "nontoken") {
+		right = "nontoken " + right
+	}
+	return left + " or " + right + suffix, true
+}
+
+// subjectContainsWord reports whether text contains word as a whole,
+// punctuation-trimmed lexeme, case-insensitively.
+func subjectContainsWord(text, word string) bool {
+	for field := range strings.FieldsSeq(text) {
+		if strings.EqualFold(strings.Trim(field, ",."), word) {
+			return true
+		}
+	}
+	return false
+}
+
+// lowerFirstASCIILetter lowercases only a leading ASCII capital so a sentence
+// subject can be spliced mid-sentence ("Other …" → "other …").
+func lowerFirstASCIILetter(text string) string {
+	if text == "" {
+		return text
+	}
+	if b := text[0]; b >= 'A' && b <= 'Z' {
+		return string(b-'A'+'a') + text[1:]
+	}
+	return text
+}
+
+// expandGroupModularKeyword rewrites a printed "<group> have modular N" line —
+// the group-granted form of Modular carried by cards like Blaster, Combat DJ —
+// into the two abilities it grants each member: entering with an additional
+// +1/+1 counter, and the Modular dies-trigger that moves its counters onto a
+// target artifact creature. Like the self-form expandModularKeyword this is a
+// parser-owned wording substitution, letting the standard enters-with-counters
+// and quoted-ability-grant pipelines lower it. Only rank 1 is expanded because
+// the group enters-with-counters static spells a single additional counter;
+// other ranks and non-group subjects are left untouched.
+func expandGroupModularKeyword(source string) string {
+	lines := strings.Split(source, "\n")
+	changed := false
+	for i, line := range lines {
+		subject, rank, ok := groupModularSubject(line)
+		if !ok || rank != 1 {
+			continue
+		}
+		unionSubject, ok := groupModularUnionSubject(subject)
+		if !ok {
+			continue
+		}
+		lines[i] = "Each " + lowerFirstASCIILetter(unionSubject) +
+			" enters with an additional +1/+1 counter on it.\n" +
+			unionSubject + ` have "When this creature dies, you may move all ` +
+			`+1/+1 counters from this creature onto target artifact creature."`
+		changed = true
+	}
+	if !changed {
+		return source
+	}
+	return strings.Join(lines, "\n")
+}
 func graftLineRank(line string) (int, bool) {
 	const prefix = "Graft "
 	trimmed := strings.TrimSpace(line)

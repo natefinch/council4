@@ -2433,6 +2433,12 @@ type CompiledEffect struct {
 	// counter on the source regardless of kind. It is false for a specific-kind
 	// move, whose kind is in CounterKind / CounterKindKnown.
 	MoveCountersAll bool
+	// MoveCountersAllOfKind carries the parser's kind-specific mass form "move all
+	// <kind> counters from <source> onto <target>" through to lowering, which
+	// moves every counter of the single named kind (CounterKind / CounterKindKnown)
+	// while leaving other kinds behind (CR 702.44 Modular). It is false for the
+	// kind-agnostic "all counters" form (MoveCountersAll) and the fixed-count move.
+	MoveCountersAllOfKind bool
 	// RemoveCountersAll carries the parser's kind-agnostic "remove all counters"
 	// form of an EffectRemoveCounter effect through to lowering, which removes
 	// every counter on the object regardless of kind. It is false for a fixed or
