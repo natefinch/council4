@@ -80,14 +80,38 @@ func preferenceFallbackAllowed(prefs *Preferences, hadPreference bool) bool {
 	return hadPreference && !prefs.StrictReplay
 }
 
+// withCastingReserved adds the card being cast (castingCardID, or nothing when
+// zero) to a card-cost's reserved set of already-committed cards, so a
+// hand/graveyard card cost never selects it. A spell moves from its zone to the
+// stack as the first step of being cast (CR 601.2a), before its costs are paid,
+// so it cannot itself pay a card cost drawn from that zone — even though it is
+// still in the zone when this plan is built to check the cast's legality. Passing
+// zero (every ability activation, whose source object does not move) leaves the
+// reserved set unchanged.
+func withCastingReserved(reserved []id.ID, castingCardID id.ID) []id.ID {
+	if castingCardID == 0 {
+		return reserved
+	}
+	return append(append([]id.ID(nil), reserved...), castingCardID)
+}
+
+// withCastingReservedSelections is withCastingReserved for the card-zone
+// selection form used by exile, evidence, and reveal costs.
+func withCastingReservedSelections(reserved []cardZoneSelection, castingCardID id.ID, z zone.Type) []cardZoneSelection {
+	if castingCardID == 0 {
+		return reserved
+	}
+	return append(append([]cardZoneSelection(nil), reserved...), cardZoneSelection{cardID: castingCardID, zone: z})
+}
+
 //nolint:maintidx // Centralized cost dispatch keeps cross-cost reservation checks in one place.
-func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []cost.Additional, xValue int, prefs *Preferences, source *game.Permanent, sourceCardID id.ID, sourceZone zone.Type, tapReservations ...*game.Permanent) (additionalCostPlan, bool) {
+func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []cost.Additional, xValue int, prefs *Preferences, source *game.Permanent, sourceCardID id.ID, sourceZone zone.Type, castingCardID id.ID, tapReservations ...*game.Permanent) (additionalCostPlan, bool) {
 	if costsHaveChoiceGroup(costs) {
-		concrete, ok := resolveAdditionalCostChoices(s, playerID, costs, xValue, prefs, source, sourceCardID, sourceZone, tapReservations...)
+		concrete, ok := resolveAdditionalCostChoices(s, playerID, costs, xValue, prefs, source, sourceCardID, sourceZone, castingCardID, tapReservations...)
 		if !ok {
 			return additionalCostPlan{player: playerID, sourceCardID: sourceCardID}, false
 		}
-		return buildAdditionalCostPlanForCosts(s, playerID, concrete, xValue, prefs, source, sourceCardID, sourceZone, tapReservations...)
+		return buildAdditionalCostPlanForCosts(s, playerID, concrete, xValue, prefs, source, sourceCardID, sourceZone, castingCardID, tapReservations...)
 	}
 	plan := additionalCostPlan{player: playerID, sourceCardID: sourceCardID}
 	reservedTapPermanents := append([]*game.Permanent(nil), tapReservations...)
@@ -189,9 +213,10 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 				return plan, false
 			}
 			hadPreference := prefs != nil && len(prefs.EvidenceChoices) > 0
-			chosen := preferredEvidenceCards(s, playerID, amount, plannedEvidenceCards(plan), costs[i+1:], xValue, sourceCardID, sourceZone, prefs)
+			reserved := withCastingReservedSelections(plannedEvidenceCards(plan), castingCardID, sourceZone)
+			chosen := preferredEvidenceCards(s, playerID, amount, reserved, costs[i+1:], xValue, sourceCardID, sourceZone, prefs)
 			if len(chosen) == 0 && preferenceFallbackAllowed(prefs, hadPreference) {
-				chosen = chooseEvidenceCards(s, playerID, amount, plannedEvidenceCards(plan), costs[i+1:], xValue, sourceCardID, sourceZone)
+				chosen = chooseEvidenceCards(s, playerID, amount, reserved, costs[i+1:], xValue, sourceCardID, sourceZone)
 			}
 			if len(chosen) == 0 {
 				return plan, false
@@ -273,7 +298,16 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 		case cost.AdditionalDiscard:
 			if additional.Random {
 				player, ok := s.Player(playerID)
-				if !ok || player.Hand.Size()-len(plan.discards)-plan.randomDiscardAmount < amount {
+				if !ok {
+					return plan, false
+				}
+				available := player.Hand.Size() - len(plan.discards) - plan.randomDiscardAmount
+				if castingCardID != 0 && player.Hand.Contains(castingCardID) {
+					// A spell being cast has left the hand for the stack (CR 601.2a),
+					// so it is not among the cards available to discard at random.
+					available--
+				}
+				if available < amount {
 					return plan, false
 				}
 				plan.randomDiscardAmount += amount
@@ -281,9 +315,10 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 				continue
 			}
 			hadPreference := prefs != nil && len(prefs.DiscardChoices) > 0
-			chosen := preferredDiscardCards(s, playerID, additional, amount, plan.discards, prefs)
+			reserved := withCastingReserved(plan.discards, castingCardID)
+			chosen := preferredDiscardCards(s, playerID, additional, amount, reserved, prefs)
 			if len(chosen) != amount && preferenceFallbackAllowed(prefs, hadPreference) {
-				chosen = chooseDiscardCards(s, playerID, additional, amount, plan.discards)
+				chosen = chooseDiscardCards(s, playerID, additional, amount, reserved)
 			}
 			if len(chosen) != amount {
 				return plan, false
@@ -306,10 +341,11 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 			plan.paid = append(plan.paid, AdditionalCostText(additional))
 		case cost.AdditionalExile:
 			hadPreference := prefs != nil && len(prefs.ExileChoices) > 0
+			reserved := withCastingReservedSelections(plannedEvidenceCards(plan), castingCardID, sourceZone)
 			if additional.TotalManaValueAtLeast > 0 {
-				chosen := preferredThresholdExileCards(s, playerID, additional, plannedEvidenceCards(plan), costs[i+1:], xValue, sourceCardID, sourceZone, prefs)
+				chosen := preferredThresholdExileCards(s, playerID, additional, reserved, costs[i+1:], xValue, sourceCardID, sourceZone, prefs)
 				if len(chosen) == 0 && preferenceFallbackAllowed(prefs, hadPreference) {
-					chosen = chooseThresholdExileCards(s, playerID, additional, plannedEvidenceCards(plan), costs[i+1:], xValue, sourceCardID, sourceZone)
+					chosen = chooseThresholdExileCards(s, playerID, additional, reserved, costs[i+1:], xValue, sourceCardID, sourceZone)
 				}
 				if len(chosen) == 0 {
 					return plan, false
@@ -318,9 +354,9 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 				plan.paid = append(plan.paid, AdditionalCostText(additional))
 				continue
 			}
-			chosen := preferredExileCards(s, playerID, additional, amount, plannedEvidenceCards(plan), costs[i+1:], xValue, sourceCardID, sourceZone, prefs)
+			chosen := preferredExileCards(s, playerID, additional, amount, reserved, costs[i+1:], xValue, sourceCardID, sourceZone, prefs)
 			if len(chosen) != amount && preferenceFallbackAllowed(prefs, hadPreference) {
-				chosen = chooseExileCards(s, playerID, additional, amount, plannedEvidenceCards(plan), costs[i+1:], xValue, sourceCardID, sourceZone)
+				chosen = chooseExileCards(s, playerID, additional, amount, reserved, costs[i+1:], xValue, sourceCardID, sourceZone)
 			}
 			if len(chosen) != amount {
 				return plan, false
@@ -333,9 +369,10 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 				continue
 			}
 			hadPreference := prefs != nil && len(prefs.RevealChoices) > 0
-			chosen := preferredRevealCards(s, playerID, additional, amount, plan.reveals, prefs)
+			reserved := withCastingReservedSelections(plan.reveals, castingCardID, sourceZone)
+			chosen := preferredRevealCards(s, playerID, additional, amount, reserved, prefs)
 			if len(chosen) != amount && preferenceFallbackAllowed(prefs, hadPreference) {
-				chosen = chooseRevealCards(s, playerID, additional, amount, plan.reveals)
+				chosen = chooseRevealCards(s, playerID, additional, amount, reserved)
 			}
 			if len(chosen) != amount {
 				return plan, false
@@ -392,7 +429,7 @@ func costsHaveChoiceGroup(costs []cost.Additional) bool {
 // (ChoiceGroup zero) are kept; for each choice group the first alternative that
 // is payable in context is selected. It fails closed when any group has no
 // payable alternative.
-func resolveAdditionalCostChoices(s State, playerID game.PlayerID, costs []cost.Additional, xValue int, prefs *Preferences, source *game.Permanent, sourceCardID id.ID, sourceZone zone.Type, tapReservations ...*game.Permanent) ([]cost.Additional, bool) {
+func resolveAdditionalCostChoices(s State, playerID game.PlayerID, costs []cost.Additional, xValue int, prefs *Preferences, source *game.Permanent, sourceCardID id.ID, sourceZone zone.Type, castingCardID id.ID, tapReservations ...*game.Permanent) ([]cost.Additional, bool) {
 	concrete := make([]cost.Additional, 0, len(costs))
 	var groups []uint8
 	for _, additional := range costs {
@@ -413,7 +450,7 @@ func resolveAdditionalCostChoices(s State, playerID game.PlayerID, costs []cost.
 			member := additional
 			member.ChoiceGroup = 0
 			trial := append(append([]cost.Additional(nil), concrete...), member)
-			if _, ok := buildAdditionalCostPlanForCosts(s, playerID, trial, xValue, prefs, source, sourceCardID, sourceZone, tapReservations...); ok {
+			if _, ok := buildAdditionalCostPlanForCosts(s, playerID, trial, xValue, prefs, source, sourceCardID, sourceZone, castingCardID, tapReservations...); ok {
 				concrete = append(concrete, member)
 				picked = true
 				break

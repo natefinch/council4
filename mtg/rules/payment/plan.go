@@ -170,7 +170,7 @@ func buildAbilityCostPlan(s State, req AbilityRequest) (abilityCostPlan, bool) {
 		sourceCardID = req.Source.CardInstanceID
 		sourceZone = zone.Battlefield
 	}
-	additional, ok := buildAdditionalCostPlanForCosts(s, req.PlayerID, req.AdditionalCosts, req.XValue, clonePreferences(req.Prefs), req.Source, sourceCardID, sourceZone)
+	additional, ok := buildAdditionalCostPlanForCosts(s, req.PlayerID, req.AdditionalCosts, req.XValue, clonePreferences(req.Prefs), req.Source, sourceCardID, sourceZone, 0)
 	if !ok {
 		return plan, false
 	}
@@ -195,7 +195,7 @@ func retryAbilityCostPlanAvoidingManaTapConflict(s State, req AbilityRequest, so
 	if !ok {
 		return additionalCostPlan{}, paymentPlan{}, false
 	}
-	additional, ok := buildAdditionalCostPlanForCosts(s, req.PlayerID, req.AdditionalCosts, req.XValue, tapRetryPreferences(req.Prefs), req.Source, sourceCardID, sourceZone, paymentPlanTappedPermanents(manaPlan)...)
+	additional, ok := buildAdditionalCostPlanForCosts(s, req.PlayerID, req.AdditionalCosts, req.XValue, tapRetryPreferences(req.Prefs), req.Source, sourceCardID, sourceZone, 0, paymentPlanTappedPermanents(manaPlan)...)
 	if !ok {
 		return additionalCostPlan{}, paymentPlan{}, false
 	}
@@ -359,7 +359,7 @@ func payGenericCost(s State, req GenericRequest) (poolSpend map[mana.Unit]int, o
 
 func buildGenericCostPlan(s State, req GenericRequest) (spellCostPlan, bool) {
 	plan := spellCostPlan{}
-	additional, ok := buildAdditionalCostPlanForCosts(s, req.PlayerID, req.AdditionalCosts, req.XValue, clonePreferences(req.Prefs), nil, req.SourceCardID, zone.None)
+	additional, ok := buildAdditionalCostPlanForCosts(s, req.PlayerID, req.AdditionalCosts, req.XValue, clonePreferences(req.Prefs), nil, req.SourceCardID, zone.None, 0)
 	if !ok {
 		return plan, false
 	}
@@ -383,7 +383,7 @@ func retryGenericCostPlanAvoidingManaTapConflict(s State, req GenericRequest, pr
 	if !ok {
 		return additionalCostPlan{}, paymentPlan{}, false
 	}
-	additional, ok := buildAdditionalCostPlanForCosts(s, req.PlayerID, req.AdditionalCosts, req.XValue, tapRetryPreferences(req.Prefs), nil, req.SourceCardID, zone.None, paymentPlanTappedPermanents(manaPlan)...)
+	additional, ok := buildAdditionalCostPlanForCosts(s, req.PlayerID, req.AdditionalCosts, req.XValue, tapRetryPreferences(req.Prefs), nil, req.SourceCardID, zone.None, 0, paymentPlanTappedPermanents(manaPlan)...)
 	if !ok {
 		return additionalCostPlan{}, paymentPlan{}, false
 	}
@@ -401,7 +401,7 @@ func buildSpellCostPlanForOption(s State, playerID game.PlayerID, cardID id.ID, 
 		xValue != 0 && !costHasVariableMana(option.manaCost) && !additionalCostsUseX(option.additionalCosts) {
 		return plan, false
 	}
-	additional, ok := buildAdditionalCostPlanForCosts(s, playerID, option.additionalCosts, xValue, clonePreferences(prefs), nil, cardID, sourceZone)
+	additional, ok := buildAdditionalCostPlanForCosts(s, playerID, option.additionalCosts, xValue, clonePreferences(prefs), nil, cardID, sourceZone, cardID)
 	if !ok {
 		return plan, false
 	}
@@ -425,7 +425,7 @@ func retrySpellCostPlanAvoidingManaTapConflict(s State, playerID game.PlayerID, 
 	if !ok {
 		return additionalCostPlan{}, paymentPlan{}, false
 	}
-	additional, ok := buildAdditionalCostPlanForCosts(s, playerID, option.additionalCosts, xValue, tapRetryPreferences(prefs), nil, cardID, sourceZone, paymentPlanTappedPermanents(manaPlan)...)
+	additional, ok := buildAdditionalCostPlanForCosts(s, playerID, option.additionalCosts, xValue, tapRetryPreferences(prefs), nil, cardID, sourceZone, cardID, paymentPlanTappedPermanents(manaPlan)...)
 	if !ok {
 		return additionalCostPlan{}, paymentPlan{}, false
 	}
