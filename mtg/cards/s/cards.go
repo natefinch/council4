@@ -134,6 +134,7 @@ var Cards = []cardset.Entry{
 	{Name: "Silverback Elder", New: SilverbackElder},
 	{Name: "Silverquill Pledgemage", New: SilverquillPledgemage},
 	{Name: "Silversmote Ghoul", New: SilversmoteGhoul},
+	{Name: "Simic Basilisk", New: SimicBasilisk},
 	{Name: "Singing Bell Strike", New: SingingBellStrike},
 	{Name: "Skalla Wolf", New: SkallaWolf},
 	{Name: "Skarrg Guildmage", New: SkarrgGuildmage},

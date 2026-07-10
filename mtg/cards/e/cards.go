@@ -37,6 +37,7 @@ var Cards = []cardset.Entry{
 	{Name: "Elrond, Lord of Rivendell", New: ElrondLordOfRivendell},
 	{Name: "Elspeth's Devotee", New: ElspethSDevotee},
 	{Name: "Elspeth's Smite", New: ElspethSSmite},
+	{Name: "Elspeth, Storm Slayer", New: ElspethStormSlayer},
 	{Name: "Elusive Otter", New: ElusiveOtter},
 	{Name: "Elven Rite", New: ElvenRite},
 	{Name: "Elvish Farmer", New: ElvishFarmer},

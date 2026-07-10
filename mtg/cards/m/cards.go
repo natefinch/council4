@@ -20,6 +20,7 @@ var Cards = []cardset.Entry{
 	{Name: "Magmaw", New: Magmaw},
 	{Name: "Magnetic Mine", New: MagneticMine},
 	{Name: "Malachite Talisman", New: MalachiteTalisman},
+	{Name: "Malakir Rebirth", New: MalakirRebirth},
 	{Name: "Malakir Soothsayer", New: MalakirSoothsayer},
 	{Name: "Malamet Battle Glyph", New: MalametBattleGlyph},
 	{Name: "Malamet Veteran", New: MalametVeteran},

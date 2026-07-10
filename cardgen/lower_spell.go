@@ -2156,11 +2156,12 @@ func lowerImmediateSingleEffectSpellTail(
 	}
 }
 
-// lowerGainSpellEffect lowers an EffectGain body: either a temporary keyword
-// grant, a life-gain effect, or an unsupported keyword/ability grant.
+// lowerGainSpellEffect lowers an EffectGain body: either a temporary keyword or
+// quoted-ability grant, a life-gain effect, or an unsupported keyword/ability
+// grant.
 func lowerGainSpellEffect(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
-	if len(ctx.content.Keywords) != 0 &&
-		temporaryKeywordDuration(ctx.content.Effects[0].Duration) {
+	if temporaryKeywordDuration(ctx.content.Effects[0].Duration) &&
+		(len(ctx.content.Keywords) != 0 || ctx.content.Effects[0].GainGrantedAbility != nil) {
 		return lowerTemporaryKeywordSpell(ctx)
 	}
 	if len(ctx.content.Keywords) != 0 {
