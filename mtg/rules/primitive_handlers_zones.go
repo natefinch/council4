@@ -493,11 +493,30 @@ func handlePutOnBattlefield(r *effectResolver, prim game.PutOnBattlefield) effec
 	return res
 }
 
+// tokenAmountUnset reports whether a CreateToken's Amount is the zero/unset
+// Quantity — a plain "create a token" with no explicit or dynamic count. Only
+// that unset default is floored up to a single token; an explicit fixed amount
+// or a dynamic amount that resolves to <= 0 honors the 0 and creates no tokens.
+func tokenAmountUnset(q game.Quantity) bool {
+	return !q.IsDynamic() && q.Value() == 0
+}
+
 func handleCreateToken(r *effectResolver, prim game.CreateToken) effectResolved {
-	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
-	if res.amount <= 0 {
-		res.amount = 1
+	amount := r.quantity(prim.Amount)
+	if amount < 1 {
+		// A plain "create a token" carries no explicit or dynamic count (the
+		// zero-value Quantity); default it to a single token. But a dynamic or
+		// explicit amount that legitimately resolves to <= 0 must honor that and
+		// create no tokens — Curious Herd ("create X 3/3 Beasts, where X is the
+		// number of artifacts that player controls") targeting a player with 0
+		// artifacts, or Tempt with Vengeance at X=0, create zero, not one.
+		if tokenAmountUnset(prim.Amount) {
+			amount = 1
+		} else {
+			amount = 0
+		}
 	}
+	res := effectResolved{accepted: true, amount: amount}
 	if prim.RecipientGroup.Kind != game.PlayerGroupReferenceNone {
 		return r.createTokenForGroup(prim, res.amount)
 	}
