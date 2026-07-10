@@ -87,6 +87,10 @@ func lowerTriggerPattern(pattern *compiler.TriggerPattern) (game.TriggerPattern,
 	if !ok {
 		return game.TriggerPattern{}, false
 	}
+	alongsideSelection, ok := lowerTriggerSelection(pattern.AttacksAlongsideSelection)
+	if !ok {
+		return game.TriggerPattern{}, false
+	}
 	damageRecipient, ok := lowerTriggerDamageRecipient(pattern.DamageRecipient)
 	if !ok {
 		return game.TriggerPattern{}, false
@@ -132,6 +136,8 @@ func lowerTriggerPattern(pattern *compiler.TriggerPattern) (game.TriggerPattern,
 		AttackWhileSaddled:                pattern.AttackWhileSaddled,
 		AttacksDifferentPlayerThanAnother: pattern.AttacksDifferentPlayerThanAnother,
 		AttackerCountAtLeast:              pattern.AttackerCountAtLeast,
+		AttacksAlongsideSelection:         alongsideSelection,
+		AttacksAlongsideCount:             pattern.AttacksAlongsideCount,
 		RequireKickerPaid:                 pattern.RequireKickerPaid,
 		RequireHistoric:                   pattern.RequireHistoric,
 		ExcludeManaAbility:                pattern.ExcludeManaAbility,

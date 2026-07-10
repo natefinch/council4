@@ -885,6 +885,14 @@ type TriggerEventClause struct {
 	// where the controller attacks with at least this many creatures ("attack
 	// with two or more creatures"). Zero imposes no minimum.
 	AttackerCountAtLeast int `json:",omitempty"`
+	// AttacksAlongsideSelection restricts a self-source attack clause to combats
+	// where at least AttacksAlongsideCount other attacking creatures match this
+	// selection ("Whenever this creature and at least one Human attack",
+	// Goldbug). It is only set together with a positive AttacksAlongsideCount.
+	AttacksAlongsideSelection TriggerSelection `json:",omitzero"`
+	// AttacksAlongsideCount is the minimum number of other attacking creatures
+	// matching AttacksAlongsideSelection. Zero imposes no such restriction.
+	AttacksAlongsideCount int `json:",omitempty"`
 	// MatchCopy is set on a spell-cast clause whose "cast or copy" wording also
 	// matches spell copies (CR 707, magecraft).
 	MatchCopy bool `json:",omitempty"`

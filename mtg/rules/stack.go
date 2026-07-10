@@ -463,6 +463,9 @@ func spellCantBeCounteredByEffects(obj *game.StackObject, spellDef *game.CardDef
 		if !spellTypesMatch(spellDef, effect.SpellTypes) {
 			continue
 		}
+		if len(effect.SpellSubtypes) != 0 && !spellDef.HasAnySubtype(effect.SpellSubtypes...) {
+			continue
+		}
 		return true
 	}
 	return false

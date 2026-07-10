@@ -172,6 +172,7 @@ var Cards = []cardset.Entry{
 	{Name: "So Shiny", New: SoShiny},
 	{Name: "Soaring Thought-Thief", New: SoaringThoughtThief},
 	{Name: "Soilshaper", New: Soilshaper},
+	{Name: "Sokka, Lateral Strategist", New: SokkaLateralStrategist},
 	{Name: "Sokka, Tenacious Tactician", New: SokkaTenaciousTactician},
 	{Name: "Soldevi Machinist", New: SoldeviMachinist},
 	{Name: "Solemn Recruit", New: SolemnRecruit},

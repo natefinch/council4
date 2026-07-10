@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,314 of 32,501 cards eligible for paper support (53.3%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,321 of 32,501 cards eligible for paper support (53.3%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -3845,6 +3845,7 @@ Council4 currently supports **17,314 of 32,501 cards eligible for paper support 
 - Dogged Pursuit
 - Dogpile
 - Dokuchi Shadow-Walker
+- Dolmen Gate
 - Dominate
 - Dominus of Fealty
 - Domri's Ambush
@@ -6202,6 +6203,7 @@ Council4 currently supports **17,314 of 32,501 cards eligible for paper support 
 - Gold Myr
 - Gold Pan
 - Gold-Forged Sentinel
+- Goldbug, Humanity's Ally // Goldbug, Scrappy Scout
 - Golden Bear
 - Golden Egg
 - Golden Hind
@@ -7537,6 +7539,7 @@ Council4 currently supports **17,314 of 32,501 cards eligible for paper support 
 - Invasion of Kaladesh // Aetherwing, Golden-Scale Flagship
 - Invasion of Kamigawa // Rooftop Saboteurs
 - Invasion of Karsus // Refraction Elemental
+- Invasion of Kylem // Valor's Reach Tag Team
 - Invasion of Moag // Bloomwielder Dryads
 - Invasion of Shandalar // Leyline Surge
 - Invasion of Tolvada // The Broken Sky
@@ -8647,6 +8650,7 @@ Council4 currently supports **17,314 of 32,501 cards eligible for paper support 
 - Los Diablos Missile Base
 - Lose Calm
 - Lose Hope
+- Losheel, Clockwork Scholar
 - Lossarnach Captain
 - Lost in a Labyrinth
 - Lost in the Mist
@@ -10462,6 +10466,7 @@ Council4 currently supports **17,314 of 32,501 cards eligible for paper support 
 - Painful Lesson
 - Painted Bluffs
 - Painter's Studio // Defaced Gallery
+- Paired Tactician
 - Palace Familiar
 - Palace Jailer
 - Palace Sentinels
@@ -13579,6 +13584,7 @@ Council4 currently supports **17,314 of 32,501 cards eligible for paper support 
 - Sokenzan Smelter
 - Sokenzan Spellblade
 - Sokka's Sword Training
+- Sokka, Lateral Strategist
 - Sokka, Tenacious Tactician
 - Sokka, Wolf Cove's Protector
 - Sol Grail
@@ -16632,6 +16638,7 @@ Council4 currently supports **17,314 of 32,501 cards eligible for paper support 
 - Warren Soultrader
 - Warren Warleader
 - Warren-Scourge Elf
+- Warrior
 - Warrior
 - Warrior
 - Warrior

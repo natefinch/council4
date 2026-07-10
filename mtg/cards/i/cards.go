@@ -48,6 +48,7 @@ var Cards = []cardset.Entry{
 	{Name: "Into the Fae Court", New: IntoTheFaeCourt},
 	{Name: "Into the Wilds", New: IntoTheWilds},
 	{Name: "Invasion of Ixalan", New: InvasionOfIxalan},
+	{Name: "Invasion of Kylem", New: InvasionOfKylem},
 	{Name: "Invasion of Tolvada", New: InvasionOfTolvada},
 	{Name: "Invasive Maneuvers", New: InvasiveManeuvers},
 	{Name: "Ior Ruin Expedition", New: IorRuinExpedition},

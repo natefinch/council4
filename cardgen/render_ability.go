@@ -760,6 +760,8 @@ func (r Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatt
 		(pattern.DyingObjectCaptured && pattern.Event != game.EventPermanentDied) ||
 		(pattern.AttackWhileSaddled && pattern.Event != game.EventAttackerDeclared) ||
 		(pattern.AttacksDifferentPlayerThanAnother && pattern.Event != game.EventAttackerDeclared) ||
+		(pattern.AttacksAlongsideCount != 0 &&
+			(pattern.Event != game.EventAttackerDeclared || pattern.AttacksAlongsideSelection.Empty())) ||
 		(pattern.DyingDamagedBySource && pattern.Event != game.EventPermanentDied) ||
 		(pattern.ExcludeFirstDrawInDrawStep && pattern.Event != game.EventCardDrawn) ||
 		(pattern.ClassBecameLevel > 0 && pattern.Event != game.EventClassLevelGained) ||
@@ -972,6 +974,9 @@ func renderTriggerPatternFlagFields(ctx *renderCtx, pattern *game.TriggerPattern
 	if pattern.AttackerCountAtLeast != 0 {
 		fields = append(fields, fmt.Sprintf("AttackerCountAtLeast: %d,", pattern.AttackerCountAtLeast))
 	}
+	if pattern.AttacksAlongsideCount != 0 {
+		fields = append(fields, fmt.Sprintf("AttacksAlongsideCount: %d,", pattern.AttacksAlongsideCount))
+	}
 	if pattern.MatchCounterKind {
 		kindFields, err := renderTriggerPatternCounterKind(ctx, pattern)
 		if err != nil {
@@ -1039,6 +1044,13 @@ func renderTriggerPatternSelectionFields(ctx *renderCtx, pattern *game.TriggerPa
 			return nil, err
 		}
 		fields = append(fields, attackFields...)
+	}
+	if !pattern.AttacksAlongsideSelection.Empty() {
+		alongsideFields, err := renderTriggerPatternSelection(ctx, "AttacksAlongsideSelection", pattern.AttacksAlongsideSelection)
+		if err != nil {
+			return nil, err
+		}
+		fields = append(fields, alongsideFields...)
 	}
 	if !pattern.DamageSourceSelection.Empty() {
 		sourceFields, err := renderTriggerPatternSelection(ctx, "DamageSourceSelection", pattern.DamageSourceSelection)

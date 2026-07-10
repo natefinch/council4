@@ -1452,6 +1452,12 @@ func matchingDamageReplacementEffects(g *game.Game, event damageEvent, applied m
 		if replacement.DamageNoncombatOnly && event.combatDamage {
 			continue
 		}
+		if replacement.DamageCombatOnly && !event.combatDamage {
+			continue
+		}
+		if replacement.DamageRecipientSelection != nil && !damageRecipientMatchesSelection(g, event, replacement) {
+			continue
+		}
 		if replacement.DamageRecipientOpponent && !damageRecipientIsOpponent(g, event, replacement) {
 			continue
 		}
@@ -1489,6 +1495,29 @@ func damageRecipientIsSourceAttached(g *game.Game, event damageEvent, replacemen
 		return false
 	}
 	return source.AttachedTo.Val == event.permanent.ObjectID
+}
+
+// damageRecipientMatchesSelection reports whether the damage event's recipient
+// permanent satisfies the replacement's DamageRecipientSelection, matched through
+// the shared matchSelection with "you" resolved to the replacement's controller
+// so a "you control" recipient filter reads correctly ("attacking Humans you
+// control", Goldbug). Damage dealt to a player rather than a permanent never
+// matches a permanent-recipient selection.
+func damageRecipientMatchesSelection(g *game.Game, event damageEvent, replacement *game.ReplacementEffect) bool {
+	if event.permanent == nil {
+		return false
+	}
+	values := effectivePermanentValues(g, event.permanent)
+	subject := selectionSubject{
+		kind:           subjectPermanent,
+		g:              g,
+		permanent:      event.permanent,
+		values:         &values,
+		controller:     effectiveController(g, event.permanent),
+		viewer:         replacementCurrentController(g, replacement),
+		sourceObjectID: replacement.SourceObjectID,
+	}
+	return matchSelection(&subject, replacement.DamageRecipientSelection)
 }
 
 func damageRecipientIsOpponent(g *game.Game, event damageEvent, replacement *game.ReplacementEffect) bool {

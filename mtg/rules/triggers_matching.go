@@ -310,6 +310,9 @@ func triggerCombatPatternMatches(g *game.Game, viewer game.PlayerID, source *gam
 	if pattern.AttacksDifferentPlayerThanAnother && !attacksDifferentPlayerThanAnother(g, source, event) {
 		return false
 	}
+	if pattern.AttacksAlongsideCount > 0 && !attacksAlongsideSelection(g, viewer, source, pattern, event) {
+		return false
+	}
 	if pattern.AttackWhileSaddled && (source == nil || !source.Saddled) {
 		return false
 	}
@@ -481,6 +484,31 @@ func attacksDifferentPlayerThanAnother(g *game.Game, source *game.Permanent, eve
 		}
 	}
 	return false
+}
+
+// attacksAlongsideSelection reports whether, in the current combat, the ability's
+// source is attacking and at least pattern.AttacksAlongsideCount other attacking
+// creatures match pattern.AttacksAlongsideSelection ("Whenever this creature and
+// at least one Human attack", Goldbug). The count excludes the source itself. The
+// full attacker declaration is recorded in g.Combat.Attackers before any
+// attacker-declared event is processed, so the count is authoritative when the
+// source's own attack triggers.
+func attacksAlongsideSelection(g *game.Game, viewer game.PlayerID, source *game.Permanent, pattern *game.TriggerPattern, event game.Event) bool {
+	if event.Kind != game.EventAttackerDeclared || g.Combat == nil || source == nil {
+		return false
+	}
+	sourceAttacking := false
+	matches := 0
+	for _, declaration := range g.Combat.Attackers {
+		if declaration.Attacker == source.ObjectID {
+			sourceAttacking = true
+			continue
+		}
+		if triggerSelectionMatches(g, viewer, event, declaration.Attacker, &pattern.AttacksAlongsideSelection, source.ObjectID) {
+			matches++
+		}
+	}
+	return sourceAttacking && matches >= pattern.AttacksAlongsideCount
 }
 
 func attackRecipientMatches(filter game.AttackRecipientKind, event game.Event) bool {
