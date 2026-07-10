@@ -274,6 +274,12 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 			return "", err
 		}
 		return r.renderAmass(ctx, value)
+	case game.PrimitiveBolster:
+		value, err := assertPrimitive[game.Bolster](primitive)
+		if err != nil {
+			return "", err
+		}
+		return r.renderBolster(ctx, value)
 	case game.PrimitiveRenown:
 		value, err := assertPrimitive[game.Renown](primitive)
 		if err != nil {

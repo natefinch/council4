@@ -2403,6 +2403,26 @@ func gainPlayerCounterRecipient(
 	}
 }
 
+// lowerBolsterContent lowers the bolster keyword action ("Bolster N.") to a
+// game.Bolster primitive carrying the fixed +1/+1 counter count. The runtime
+// chooses a creature with the least toughness among creatures the controller
+// controls and places the counters on it, subsuming the printed reminder. When
+// bolster leads a sequence whose later clause references the chosen creature,
+// the sequence lowerer rewrites this primitive to publish it under a linked key.
+func lowerBolsterContent(
+	ctx contentCtx,
+	syntax *parser.Ability,
+) (game.AbilityContent, *shared.Diagnostic) {
+	return lowerExactPrimitiveSpell(
+		ctx,
+		syntax,
+		"bolster",
+		func(amount game.Quantity) game.Primitive {
+			return game.Bolster{Amount: amount}
+		},
+	)
+}
+
 // lowerAmassContent lowers a single amass keyword-action effect ("Amass Orcs N"
 // / "Amass Zombies N" / "Amass N") to a game.Amass primitive carrying the fixed
 // count and the named Army subtype recognized by the parser.

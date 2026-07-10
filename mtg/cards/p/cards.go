@@ -44,6 +44,7 @@ var Cards = []cardset.Entry{
 	{Name: "Pillaging Horde", New: PillagingHorde},
 	{Name: "Pillar of the Paruns", New: PillarOfTheParuns},
 	{Name: "Pincer Spider", New: PincerSpider},
+	{Name: "Pinion Feast", New: PinionFeast},
 	{Name: "Pious Warrior", New: PiousWarrior},
 	{Name: "Pirate Ship", New: PirateShip},
 	{Name: "Pitiless Fists", New: PitilessFists},

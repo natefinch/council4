@@ -1970,6 +1970,14 @@ const (
 	// counter substrate and lowers on its own to a single mass return. Added last
 	// so existing kinds keep their wire values.
 	EffectReturnExiledCardsWithCounter
+	// EffectBolster is the bolster keyword action (CR 701.37) written out as an
+	// ability effect ("Bolster N."): the controller chooses a creature with the
+	// least toughness among creatures they control and puts N +1/+1 counters on
+	// it. It lowers to a game.Bolster primitive; the chosen creature may be
+	// published under a linked key so a later effect (such as "the chosen
+	// creature gains trample" or a delayed trigger watching it) can resolve it.
+	// Added last so existing kinds keep their wire values.
+	EffectBolster
 )
 
 // DurationKind identifies common continuous-effect durations.

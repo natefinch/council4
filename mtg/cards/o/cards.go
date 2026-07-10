@@ -35,6 +35,7 @@ var Cards = []cardset.Entry{
 	{Name: "Ooze Spill", New: OozeSpill},
 	{Name: "Opera Love Song", New: OperaLoveSong},
 	{Name: "Opportunist", New: Opportunist},
+	{Name: "Optimus Prime, Hero", New: OptimusPrimeHero},
 	{Name: "Orah, Skyclave Hierophant", New: OrahSkyclaveHierophant},
 	{Name: "Orbs of Warding", New: OrbsOfWarding},
 	{Name: "Orc General", New: OrcGeneral},

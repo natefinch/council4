@@ -142,6 +142,10 @@ func appendPrimitiveAtoms(atoms []EffectAtom, primitive game.Primitive) []Effect
 		// Monstrosity puts +1/+1 counters on the controller's own creature and
 		// makes it monstrous (CR 701.33) — board-boosting counters.
 		return append(atoms, quantityAtom(EffectCounterAdded, p.Amount, AffectedUnknown))
+	case game.Bolster:
+		// Bolster puts +1/+1 counters on the controller's creature with the least
+		// toughness (CR 701.37) — board-boosting counters, matching Monstrosity.
+		return append(atoms, quantityAtom(EffectCounterAdded, p.Amount, AffectedUnknown))
 	case game.AddMana:
 		return append(atoms, quantityAtom(EffectManaAdded, p.Amount, AffectedYou))
 	case game.CreateToken:

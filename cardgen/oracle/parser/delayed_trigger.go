@@ -19,7 +19,7 @@ import (
 func emitDelayedTriggerEffects(abilities []Ability, cardName string, legendary, instantOrSorcery bool) {
 	for i := range abilities {
 		rewriteDelayedTriggerAbility(&abilities[i])
-		rewriteCapturedCombatDamageDelayedTrigger(&abilities[i])
+		rewriteCapturedCombatDamageDelayedTrigger(&abilities[i], cardName, legendary)
 		rewriteCapturedAttacksMonarchDelayedTrigger(&abilities[i])
 		rewriteCapturedDiesMonarchDelayedTrigger(&abilities[i])
 		rewriteSpellTriggeredThisTurnDelayedAbility(&abilities[i], instantOrSorcery)
@@ -98,7 +98,7 @@ func rewriteSpellTriggeredThisTurnDelayedAbility(ability *Ability, instantOrSorc
 // still resolves to the antecedent target. It fails closed: any ability whose
 // trailing sentence the recognizer does not match, or whose reparsed self-form
 // is not exactly one triggered ability, is left unchanged.
-func rewriteCapturedCombatDamageDelayedTrigger(ability *Ability) {
+func rewriteCapturedCombatDamageDelayedTrigger(ability *Ability, cardName string, legendary bool) {
 	if len(ability.Sentences) < 2 {
 		return
 	}
@@ -116,7 +116,7 @@ func rewriteCapturedCombatDamageDelayedTrigger(ability *Ability) {
 	if !ok {
 		return
 	}
-	granted, ok := parseDelayedTriggerAbility(inner)
+	granted, ok := parseDelayedTriggerAbilityWithContext(inner, cardName, legendary)
 	if !ok {
 		return
 	}

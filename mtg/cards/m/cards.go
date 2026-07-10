@@ -34,6 +34,7 @@ var Cards = []cardset.Entry{
 	{Name: "Manta Ray", New: MantaRay},
 	{Name: "Manticore", New: Manticore},
 	{Name: "Mantle of Leadership", New: MantleOfLeadership},
+	{Name: "Map the Wastes", New: MapTheWastes},
 	{Name: "Marchesa's Smuggler", New: MarchesaSSmuggler},
 	{Name: "Marching Duodrone", New: MarchingDuodrone},
 	{Name: "Mardu Blazebringer", New: MarduBlazebringer},

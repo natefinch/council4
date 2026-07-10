@@ -117,6 +117,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return exactStandaloneActionEffectSyntax(effect, "Investigate")
 	case EffectAmass:
 		return exactAmassEffectSyntax(effect)
+	case EffectBolster:
+		return exactStandaloneActionEffectSyntax(effect, "Bolster")
 	case EffectRenown:
 		return exactStandaloneActionEffectSyntax(effect, "renown")
 	case EffectAdapt:

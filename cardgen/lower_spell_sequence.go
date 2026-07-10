@@ -109,6 +109,9 @@ func lowerOrderedSequenceSpecialCase(
 	if content, ok := lowerSelfBlinkSequence(ctx); ok {
 		return content, nil, true
 	}
+	if content, ok := lowerBolsterChosenCreatureSequence(ctx); ok {
+		return content, nil, true
+	}
 	if content, ok := lowerDelayedSelfBlinkSequence(ctx); ok {
 		return content, nil, true
 	}
@@ -4256,6 +4259,166 @@ func lowerDelayedBlinkReturn(
 		Content: game.Mode{Sequence: []game.Instruction{{Primitive: put}}}.Ability(),
 	}}
 	return exile, game.Mode{Sequence: []game.Instruction{{Primitive: delayed}}}.Ability(), true
+}
+
+// lowerBolsterChosenCreatureSequence lowers the bolster attack rider that pairs a
+// bolster with a grant to and a delayed combat-damage trigger watching the
+// chosen creature ("Bolster N. The chosen creature gains <keywords> until end of
+// turn. When that creature deals combat damage to a player this turn, <body>.",
+// Optimus Prime, Autobot Leader). Bolster chooses a creature the controller
+// controls; both riders reference that same chosen creature, which bolster
+// publishes under one linked key. The grant applies its keywords until end of
+// turn and the delayed trigger fires only on combat damage that specific creature
+// deals to a player, running the reparsed rider body (a convert/transform). It
+// reuses the temporary-keyword partition, the referenced-keyword-grant duration
+// map, and the captured-object combat-damage trigger lowering, and fails closed
+// on any shape it does not fully model.
+func lowerBolsterChosenCreatureSequence(ctx contentCtx) (game.AbilityContent, bool) {
+	effects := ctx.content.Effects
+	if len(effects) != 3 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		ctx.optional {
+		return game.AbilityContent{}, false
+	}
+	bolster, ok := bolsterLeadInstruction(effects[0])
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	key := game.LinkedKey("bolster-chosen")
+	bolster.PublishLinked = key
+	grant, ok := lowerBolsterChosenKeywordGrant(ctx, effects[1], key)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	delayed, ok := lowerBolsterChosenDelayedTrigger(effects[2], key)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{Sequence: []game.Instruction{
+		{Primitive: bolster},
+		{Primitive: grant},
+		{Primitive: delayed},
+	}}.Ability(), true
+}
+
+// bolsterLeadInstruction returns the game.Bolster for a leading exact "Bolster N"
+// clause with a fixed count of at least one, or false for any other effect.
+func bolsterLeadInstruction(effect compiler.CompiledEffect) (game.Bolster, bool) {
+	if effect.Kind != compiler.EffectBolster ||
+		!effect.Exact ||
+		effect.Negated ||
+		effect.Context != parser.EffectContextController ||
+		!effect.Amount.Known ||
+		effect.Amount.Value < 1 {
+		return game.Bolster{}, false
+	}
+	return game.Bolster{Amount: game.Fixed(effect.Amount.Value)}, true
+}
+
+// lowerBolsterChosenKeywordGrant lowers the "The chosen creature gains <keywords>
+// until end of turn" rider into an ApplyContinuous bound to the bolstered
+// creature published under key. The grant's keywords must be temporary static
+// keywords and its bounded duration must map through the referenced-keyword-grant
+// duration table; the reference must resolve to the leading bolster's result.
+func lowerBolsterChosenKeywordGrant(ctx contentCtx, effect compiler.CompiledEffect, key game.LinkedKey) (game.ApplyContinuous, bool) {
+	if effect.Kind != compiler.EffectGain ||
+		!effect.Exact ||
+		effect.Negated ||
+		effect.KeywordGrantChoice ||
+		effect.Context != parser.EffectContextReferencedObject ||
+		effect.StaticSubject != compiler.StaticSubjectNone ||
+		len(ctx.content.Keywords) == 0 {
+		return game.ApplyContinuous{}, false
+	}
+	duration, ok := sequentialReferencedKeywordGrantDuration(effect.Duration)
+	if !ok {
+		return game.ApplyContinuous{}, false
+	}
+	keywords, abilities, ok := partitionTemporaryKeywords(ctx.content.Keywords)
+	if !ok {
+		return game.ApplyContinuous{}, false
+	}
+	object, ok := lowerBolsterChosenReference(effect.References, key)
+	if !ok {
+		return game.ApplyContinuous{}, false
+	}
+	return game.ApplyContinuous{
+		Object: opt.Val(object),
+		ContinuousEffects: []game.ContinuousEffect{{
+			Layer:        game.LayerAbility,
+			AddKeywords:  keywords,
+			AddAbilities: abilities,
+		}},
+		Duration: duration,
+	}, true
+}
+
+// lowerBolsterChosenDelayedTrigger lowers the "When that creature deals combat
+// damage to a player this turn, <body>" rider into a CreateDelayedTrigger whose
+// combat-damage event binds to the bolstered creature published under key. It
+// mirrors lowerDelayedCombatDamageDrawTrigger's captured-object rebinding but
+// takes its captured permanent from the leading bolster's published result
+// rather than a rewritten target pump.
+func lowerBolsterChosenDelayedTrigger(effect compiler.CompiledEffect, key game.LinkedKey) (game.CreateDelayedTrigger, bool) {
+	if effect.Kind != compiler.EffectDelayedTrigger ||
+		!effect.DelayedTriggerBindDamageSource ||
+		effect.DelayedTriggerAbility == nil ||
+		effect.Negated {
+		return game.CreateDelayedTrigger{}, false
+	}
+	object, ok := lowerBolsterChosenReference(effect.References, key)
+	if !ok {
+		return game.CreateDelayedTrigger{}, false
+	}
+	triggered, ok := lowerDelayedTriggerInner(effect.DelayedTriggerAbility)
+	if !ok {
+		return game.CreateDelayedTrigger{}, false
+	}
+	pattern := triggered.Trigger.Pattern
+	if pattern.Event != game.EventDamageDealt ||
+		!pattern.RequireCombatDamage ||
+		pattern.Source != game.TriggerSourceSelf ||
+		pattern.DamageSourceCaptured ||
+		!pattern.DamageSourceSelection.Empty() {
+		return game.CreateDelayedTrigger{}, false
+	}
+	pattern.Source = game.TriggerSourceAny
+	pattern.Subject = game.TriggerSubjectDefault
+	pattern.DamageSourceCaptured = true
+	return game.CreateDelayedTrigger{Trigger: game.DelayedTriggerDef{
+		EventPattern:       opt.Val(pattern),
+		Window:             game.DelayedWindowThisTurn,
+		Content:            triggered.Content,
+		DamageSourceObject: opt.Val(object),
+	}}, true
+}
+
+// lowerBolsterChosenReference resolves the "the chosen creature" / "that
+// creature" reference bound to the leading bolster's result to the linked object
+// bolster published under key. A rider clause may carry other references (the
+// delayed trigger body's own source reference); this selects the lone
+// prior-instruction-result reference and fails closed on ambiguity or absence.
+func lowerBolsterChosenReference(references []compiler.CompiledReference, key game.LinkedKey) (game.ObjectReference, bool) {
+	var chosen *compiler.CompiledReference
+	for i := range references {
+		if references[i].Binding != compiler.ReferenceBindingPriorInstructionResult ||
+			references[i].PriorInstruction != 0 {
+			continue
+		}
+		if chosen != nil {
+			return game.ObjectReference{}, false
+		}
+		chosen = &references[i]
+	}
+	if chosen == nil {
+		return game.ObjectReference{}, false
+	}
+	return lowerObjectReference(*chosen, referenceLoweringContext{
+		PriorInstruction: 0,
+		PriorLinkedKey:   key,
+	})
 }
 
 // lowerSelfBlinkSequence lowers the self-blink "Exile this creature, then return

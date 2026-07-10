@@ -70,6 +70,7 @@ var Cards = []cardset.Entry{
 	{Name: "Hold at Bay", New: HoldAtBay},
 	{Name: "Hollowborn Barghest", New: HollowbornBarghest},
 	{Name: "Holy Armor", New: HolyArmor},
+	{Name: "Honor's Reward", New: HonorSReward},
 	{Name: "Hooded Assassin", New: HoodedAssassin},
 	{Name: "Hoofprints of the Stag", New: HoofprintsOfTheStag},
 	{Name: "Hook Swords", New: HookSwords},

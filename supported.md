@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,295 of 32,501 cards eligible for paper support (53.2%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,313 of 32,501 cards eligible for paper support (53.3%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -45,6 +45,7 @@ Council4 currently supports **17,295 of 32,501 cards eligible for paper support 
 - Abyssal Nightstalker
 - Abyssal Nocturnus
 - Abyssal Specter
+- Abzan Advantage
 - Abzan Ascendancy
 - Abzan Banner
 - Abzan Battle Priest
@@ -55,6 +56,7 @@ Council4 currently supports **17,295 of 32,501 cards eligible for paper support 
 - Abzan Guide
 - Abzan Kin-Guard
 - Abzan Monument
+- Abzan Skycaptain
 - Academy Drake
 - Academy Journeymage
 - Academy Manufactor
@@ -405,6 +407,7 @@ Council4 currently supports **17,295 of 32,501 cards eligible for paper support 
 - Anaba Shaman
 - Anaba Spirit Crafter
 - Anaconda
+- Anafenza, Kin-Tree Spirit
 - Anarchist
 - Anarchy
 - Anathemancer
@@ -947,6 +950,7 @@ Council4 currently supports **17,295 of 32,501 cards eligible for paper support 
 - Aven Smokeweaver
 - Aven Squire
 - Aven Surveyor
+- Aven Tactician
 - Aven Trooper
 - Aven Wind Guide
 - Aven Wind Guide
@@ -2071,6 +2075,7 @@ Council4 currently supports **17,295 of 32,501 cards eligible for paper support 
 - Cabaretti Courtyard
 - Cabaretti Initiate
 - Cache Raiders
+- Cached Defenses
 - Cackling Counterpart
 - Cackling Fiend
 - Cackling Flames
@@ -4041,9 +4046,12 @@ Council4 currently supports **17,295 of 32,501 cards eligible for paper support 
 - Dromar's Attendant
 - Dromar's Cavern
 - Dromar's Charm
+- Dromoka Captain
 - Dromoka Dunecaster
 - Dromoka Monument
 - Dromoka Warrior
+- Dromoka's Gift
+- Dromoka, the Eternal
 - Dromosaur
 - Drone
 - Drone
@@ -4234,6 +4242,7 @@ Council4 currently supports **17,295 of 32,501 cards eligible for paper support 
 - Echo Inspector
 - Echo of Dusk
 - Echo Tracer
+- Echoes of the Kin Tree
 - Echoing Calm
 - Echoing Courage
 - Echoing Decay
@@ -4384,6 +4393,7 @@ Council4 currently supports **17,295 of 32,501 cards eligible for paper support 
 - Elite Instructor
 - Elite Interceptor // Rejoinder
 - Elite Javelineer
+- Elite Scaleguard
 - Elite Skirmisher
 - Elite Vanguard
 - Elixir of Vitality
@@ -4526,6 +4536,7 @@ Council4 currently supports **17,295 of 32,501 cards eligible for paper support 
 - Enduring Innocence
 - Enduring Scalelord
 - Enduring Tenacity
+- Enduring Victory
 - Enduring Vitality
 - Enemy of the Guildpact
 - Energizer
@@ -6972,6 +6983,7 @@ Council4 currently supports **17,295 of 32,501 cards eligible for paper support 
 - Honor of the Pure
 - Honor the God-Pharaoh
 - Honor Troll
+- Honor's Reward
 - Honor-Worn Shaku
 - Honorbound Page // Forum's Favor
 - Honored Crop-Captain
@@ -8901,6 +8913,7 @@ Council4 currently supports **17,295 of 32,501 cards eligible for paper support 
 - Mantle of Webs
 - Many Partings
 - Map
+- Map the Wastes
 - Maraleaf Pixie
 - Marang River Prowler
 - Marang River Regent // Coil and Catch
@@ -10282,6 +10295,7 @@ Council4 currently supports **17,295 of 32,501 cards eligible for paper support 
 - Oppression
 - Oppressive Will
 - Opt
+- Optimus Prime, Hero // Optimus Prime, Autobot Leader
 - Opulent Palace
 - Oracle of Mul Daya
 - Oracle of Nectars
@@ -10772,6 +10786,7 @@ Council4 currently supports **17,295 of 32,501 cards eligible for paper support 
 - Pincher Beetles
 - Pine Barrens
 - Pinecrest Ridge
+- Pinion Feast
 - Pinnacle Monk // Mystic Peak
 - Pinnacle of Rage
 - Pious Evangel // Wayward Disciple
@@ -12301,10 +12316,13 @@ Council4 currently supports **17,295 of 32,501 cards eligible for paper support 
 - Sandbar Merfolk
 - Sandbar Serpent
 - Sandblast
+- Sandcrafter Mage
 - Sands of Delirium
 - Sandsower
 - Sandsteppe Citadel
+- Sandsteppe Mastodon
 - Sandsteppe Outcast
+- Sandsteppe Scavenger
 - Sandstone Bridge
 - Sandstone Needle
 - Sandstone Warrior

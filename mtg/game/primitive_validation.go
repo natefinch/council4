@@ -363,6 +363,10 @@ func (p Amass) validateCapturedTargetControllerReferences(targets []TargetSpec, 
 	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
 }
 
+func (p Bolster) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+}
+
 func (p Renown) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
 	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
 }
@@ -1801,6 +1805,10 @@ func (p DiscoverCards) validatePrimitive(targets []TargetSpec, checkTargets bool
 }
 
 func (p Amass) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	return validateQuantity(p.Amount, targets, checkTargets)
+}
+
+func (p Bolster) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	return validateQuantity(p.Amount, targets, checkTargets)
 }
 

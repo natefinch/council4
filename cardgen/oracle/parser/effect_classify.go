@@ -1805,6 +1805,8 @@ func effectWordKind(token shared.Token) EffectKind {
 		return EffectAddMana
 	case "amass":
 		return EffectAmass
+	case "bolster", "bolsters":
+		return EffectBolster
 	case "renown":
 		return EffectRenown
 	case "monstrosity":

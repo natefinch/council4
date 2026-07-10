@@ -283,6 +283,9 @@ func (Renown) Kind() PrimitiveKind { return PrimitiveRenown }
 // Kind implements Primitive for Adapt.
 func (Adapt) Kind() PrimitiveKind { return PrimitiveAdapt }
 
+// Kind implements Primitive for Bolster.
+func (Bolster) Kind() PrimitiveKind { return PrimitiveBolster }
+
 // Kind implements Primitive for Connive.
 func (Connive) Kind() PrimitiveKind { return PrimitiveConnive }
 
@@ -457,6 +460,7 @@ func (BecomeCopy) isPrimitive()                           {}
 func (Amass) isPrimitive()                                {}
 func (Renown) isPrimitive()                               {}
 func (Adapt) isPrimitive()                                {}
+func (Bolster) isPrimitive()                              {}
 func (Connive) isPrimitive()                              {}
 func (BecomeSaddled) isPrimitive()                        {}
 func (ShuffleSpellIntoLibrary) isPrimitive()              {}
@@ -717,6 +721,11 @@ func (BecomeSaddled) instructionRefs() primitiveRefs           { return primitiv
 func (ShuffleSpellIntoLibrary) instructionRefs() primitiveRefs { return primitiveRefs{} }
 func (SkipStep) instructionRefs() primitiveRefs                { return primitiveRefs{} }
 func (CreateEmblem) instructionRefs() primitiveRefs            { return primitiveRefs{} }
+func (p Bolster) instructionRefs() primitiveRefs {
+	refs := quantityRefs(p.Amount)
+	refs.publishesLinked = p.PublishLinked
+	return refs
+}
 func (p CreateDelayedTrigger) instructionRefs() primitiveRefs {
 	if p.Trigger.DamageSourceObject.Exists {
 		return objectReferenceRefs(p.Trigger.DamageSourceObject.Val)
