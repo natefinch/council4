@@ -1460,6 +1460,17 @@ func exactCounterEffectSyntax(effect *EffectSyntax) bool {
 		effect.CounterTriggeringStackObject = true
 		return true
 	}
+	if len(effect.Targets) == 0 &&
+		effect.Context == EffectContextController &&
+		effect.Payment.Payer == EffectPaymentPayerTargetController &&
+		len(effect.Payment.ManaCost) > 0 &&
+		strings.EqualFold(
+			exactEffectClauseText(effect),
+			"Counter that spell or ability unless its controller pays "+effect.Payment.ManaCost.String()+".",
+		) {
+		effect.CounterTriggeringStackObject = true
+		return true
+	}
 	return len(effect.Targets) == 1 &&
 		effect.Targets[0].Exact &&
 		effect.Payment.Payer == EffectPaymentPayerTargetController &&
