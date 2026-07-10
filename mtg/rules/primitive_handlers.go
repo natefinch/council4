@@ -744,11 +744,21 @@ func handleApplyContinuous(r *effectResolver, prim game.ApplyContinuous) effectR
 	effects := r.resolveChosenColorProtection(prim.ContinuousEffects)
 	res.succeeded = applyTypedContinuousEffects(r.game, r.obj, permanent, effects, prim.Duration)
 	if prim.PublishLinked != "" && permanent != nil {
-		rememberLinkedObject(
-			r.game,
-			linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked)),
-			permanentLinkedObjectRef(permanent),
-		)
+		// This publish path records exactly one permanent (the multi-permanent
+		// ChooseFrom path returned above), so clear any permanent a prior
+		// resolution published under this source-and-link-scoped key before
+		// remembering this resolution's permanent. The key is constant across
+		// repeated same-turn activations, so without clearing a repeatable
+		// "target creature gains ... until end of turn. Sacrifice it at the
+		// beginning of the next end step." (Krovikan Elementalist) or a
+		// per-spell reanimation (Moira and Teshar) would leave the key holding
+		// [obj1, obj2]; the schedule-time capture resolves the first entry, so
+		// every activation captures obj1 and the later permanent leaks. Mirrors
+		// the other single-binding publish sites (handleCreateToken,
+		// handlePutOnBattlefield) that clear before remembering.
+		key := linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked))
+		clearLinkedObjects(r.game, key)
+		rememberLinkedObject(r.game, key, permanentLinkedObjectRef(permanent))
 	}
 	return res
 }
@@ -869,11 +879,14 @@ func handleModifyPT(r *effectResolver, prim game.ModifyPT) effectResolved {
 	toughnessDelta := r.quantityForPermanent(prim.ToughnessDelta, permanent)
 	r.game.ContinuousEffects = append(r.game.ContinuousEffects, untilEndOfTurnPTContinuousEffect(r.game, r.obj, permanent, powerDelta, toughnessDelta))
 	if prim.PublishLinked != "" {
-		rememberLinkedObject(
-			r.game,
-			linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked)),
-			permanentLinkedObjectRef(permanent),
-		)
+		// Records exactly one permanent, so clear any permanent a prior
+		// resolution published under this source-and-link-scoped key before
+		// remembering this one; see handleApplyContinuous for why single-binding
+		// publish sites must clear so each same-turn activation's schedule-time
+		// capture binds to the permanent this activation acted on.
+		key := linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked))
+		clearLinkedObjects(r.game, key)
+		rememberLinkedObject(r.game, key, permanentLinkedObjectRef(permanent))
 	}
 	res.succeeded = true
 	return res
