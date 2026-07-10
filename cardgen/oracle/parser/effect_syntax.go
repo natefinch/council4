@@ -453,6 +453,7 @@ func emitSentenceResolvingSyntax(
 		sentences[i].Effects = parseEffects(sentences[i], tokens, atoms)
 		recognizeTargetOpponentHandManaSentence(&sentences[i])
 		recognizeLookAtTargetPlayerHandSentence(&sentences[i])
+		recognizeLookAtTargetPlayerLibrarySentence(&sentences[i])
 		recognizeGainControlThatPlayerMonarchSentence(&sentences[i])
 		recognizeDestroyTappedNonlandThatPlayerControlsSentence(&sentences[i])
 		recognizeGoadThatPlayerControlsSentence(&sentences[i])
@@ -3192,7 +3193,43 @@ func recognizeLookAtTargetPlayerHandSentence(sentence *Sentence) {
 	sentence.Effects[0].Exact = true
 }
 
-// recognizeGainControlThatPlayerMonarchSentence types the target of the
+// recognizeLookAtTargetPlayerLibrarySentence rewrites the manufactured possessive
+// target of a "Look at the top card of target <player>'s library." effect into a
+// clean runtime player target, mirroring recognizeLookAtTargetPlayerHandSentence.
+// The generic target parser spans the whole "target player's library" phrase with
+// an untyped selection, which the player-target lowering cannot consume; this
+// retypes it to a "target player" (or "target opponent") selection so lowering can
+// emit a single player target and read that player's library. The controller
+// "your library" form carries no target and is left untouched. The parser owns
+// this wording; the rewrite only fires once the effect is classified
+// EffectLookAtLibraryTop.
+func recognizeLookAtTargetPlayerLibrarySentence(sentence *Sentence) {
+	if len(sentence.Effects) != 1 ||
+		sentence.Effects[0].Kind != EffectLookAtLibraryTop ||
+		len(sentence.Targets) != 1 {
+		return
+	}
+	lower := strings.ToLower(sentence.Targets[0].Text)
+	if !strings.HasPrefix(lower, "target ") {
+		return
+	}
+	selection := SelectionSyntax{Kind: SelectionPlayer}
+	text := "target player"
+	if strings.Contains(lower, "opponent") {
+		selection = SelectionSyntax{Kind: SelectionOpponent}
+		text = "target opponent"
+	}
+	target := sentence.Targets[0]
+	target.Cardinality = TargetCardinalitySyntax{Min: 1, Max: 1}
+	target.Selection = selection
+	target.Text = text
+	target.Exact = true
+	sentence.Targets[0] = target
+	sentence.Effects[0].Targets = []TargetSyntax{target}
+	sentence.Effects[0].Context = EffectContextTarget
+	sentence.Effects[0].Exact = true
+}
+
 // gain-control monarch ability "gain control of target creature that player
 // controls for as long as they're the monarch." (Garland, Royal Kidnapper).
 // The generic target parser leaves the "that player controls" controller clause

@@ -91,8 +91,8 @@ func handleLookAtLibraryTop(r *effectResolver, prim game.LookAtLibraryTop) effec
 	rememberLinkedObject(r.game, key, game.LinkedObjectRef{CardID: cardID})
 	r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
 		Kind:       game.ChoiceResolution,
-		Player:     playerID,
-		Prompt:     "Look at the top card of your library",
+		Player:     r.obj.Controller,
+		Prompt:     "Look at the top card of the library",
 		Subject:    cardChoiceInfo(r.game, cardID),
 		MinChoices: 0,
 		MaxChoices: 0,
