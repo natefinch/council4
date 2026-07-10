@@ -2935,6 +2935,10 @@ type EffectSyntax struct {
 	// to the zone named by ToZone and Destination. The redirect zone other than
 	// exile is the only difference from CounteredSpellExileReplacement.
 	CounteredSpellDestinationReplacement bool `json:",omitempty"`
+	// CounterTriggeringStackObject marks the exact reference-form counter
+	// "Counter that spell or ability." in a trigger body. It distinguishes the
+	// triggering stack object from the event permanent that was targeted.
+	CounterTriggeringStackObject bool `json:",omitempty"`
 	// ExileUntilSourceLeaves marks the exact O-Ring exile clause "exile <target>
 	// until <this permanent> leaves the battlefield." (Banisher Priest, Banishing
 	// Light, Journey to Nowhere-style enchantments). The exiled permanent is

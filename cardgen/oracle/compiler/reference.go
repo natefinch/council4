@@ -53,6 +53,15 @@ func bindReferences(
 			continue
 		}
 
+		if trigger != nil &&
+			reference.Kind == ReferenceThatObject &&
+			reference.Order.Start >= trigger.Order.Start &&
+			trigger.Pattern.Event == TriggerEventObjectBecameTarget &&
+			referenceInsideTriggeringStackCounter(*reference, effects) {
+			reference.Binding = ReferenceBindingEventStackObject
+			continue
+		}
+
 		// "that creature" in a combat block trigger body names the other creature
 		// in the combat, the event's related permanent ("Whenever this creature
 		// blocks or becomes blocked by a creature, ~ deals N damage to that
@@ -530,6 +539,19 @@ func triggerReferenceBindsEventCard(
 // "copy that spell" copy the spell that was cast.
 func triggerEventBindsStackObject(event TriggerEvent) bool {
 	return event == TriggerEventSpellCast
+}
+
+// referenceInsideTriggeringStackCounter reports whether a demonstrative belongs
+// to the parser-typed "counter that spell or ability" effect. The parser owns
+// that wording; binding consumes only this typed effect marker.
+func referenceInsideTriggeringStackCounter(reference CompiledReference, effects []CompiledEffect) bool {
+	for i := range effects {
+		if effects[i].CounterTriggeringStackObject &&
+			effects[i].Order.Contains(reference.Order) {
+			return true
+		}
+	}
+	return false
 }
 
 // triggerEventBindsPlayer reports whether the trigger event has an authoritative

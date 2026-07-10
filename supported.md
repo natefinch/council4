@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,330 of 32,501 cards eligible for paper support (53.3%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,335 of 32,501 cards eligible for paper support (53.3%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -6034,6 +6034,8 @@ Council4 currently supports **17,330 of 32,501 cards eligible for paper support 
 - Gluttonous Slug
 - Gluttonous Troll
 - Gluttonous Zombie
+- Glyph Keeper
+- Glyph Keeper
 - Glóin, Dwarf Emissary
 - Gnarlback Rhino
 - Gnarlbark Elm
@@ -7726,6 +7728,7 @@ Council4 currently supports **17,330 of 32,501 cards eligible for paper support 
 - Jeskai Windscout
 - Jet Medallion
 - Jetmir's Garden
+- Jetting Glasskite
 - Jewel Thief
 - Jewel-Eyed Cobra
 - Jeweled Torque
@@ -8013,6 +8016,7 @@ Council4 currently supports **17,330 of 32,501 cards eligible for paper support 
 - Kiora's Dambreaker
 - Kiora's Follower
 - Kiora, Behemoth Beckoner
+- Kira, Great Glass-Spinner
 - Kird Ape
 - Kird Chieftain
 - Kiri-Onna
@@ -13001,6 +13005,7 @@ Council4 currently supports **17,330 of 32,501 cards eligible for paper support 
 - Shimmercreep
 - Shimmerdrift Vale
 - Shimmering Barrier
+- Shimmering Glasskite
 - Shimmering Grotto
 - Shimmering Wings
 - Shimmerscale Drake

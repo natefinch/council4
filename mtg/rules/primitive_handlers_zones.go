@@ -1937,10 +1937,26 @@ func (r *effectResolver) applyPunisherForPlayer(prim game.PunisherEachLoseLife, 
 }
 
 func handleCounterObject(r *effectResolver, prim game.CounterObject) effectResolved {
-	if prim.Object.Kind() != game.ObjectReferenceTargetStackObject {
+	switch prim.Object.Kind() {
+	case game.ObjectReferenceTargetStackObject:
+		return effectResolved{accepted: true, succeeded: counterTargetStackObject(r.game, r.obj, prim.Object.TargetIndex(), prim.ExileInstead, prim.Destination)}
+	case game.ObjectReferenceEventStackObject:
+		stackObjectID, ok := copyStackObjectSourceID(r.obj, prim.Object)
+		if !ok {
+			return effectResolved{accepted: true}
+		}
+		target, ok := stackObjectByID(r.game, stackObjectID)
+		if !ok {
+			return effectResolved{accepted: true}
+		}
+		if prim.ExileInstead {
+			target.ExileOnResolution = true
+		}
+		target.CounteredDestination = prim.Destination
+		return effectResolved{accepted: true, succeeded: counterStackObject(r.game, stackObjectID)}
+	default:
 		return effectResolved{accepted: true}
 	}
-	return effectResolved{accepted: true, succeeded: counterTargetStackObject(r.game, r.obj, prim.Object.TargetIndex(), prim.ExileInstead, prim.Destination)}
 }
 
 func handleChooseNewTargets(r *effectResolver, prim game.ChooseNewTargets) effectResolved {
