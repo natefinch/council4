@@ -90,6 +90,7 @@ var Cards = []cardset.Entry{
 	{Name: "Bog Elemental", New: BogElemental},
 	{Name: "Bog Serpent", New: BogSerpent},
 	{Name: "Bog-Strider Ash", New: BogStriderAsh},
+	{Name: "Boggart Ram-Gang", New: BoggartRAMGang},
 	{Name: "Boiling Blood", New: BoilingBlood},
 	{Name: "Bolas's Citadel", New: BolasSCitadel},
 	{Name: "Bolt Bend", New: BoltBend},

@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,259 of 32,501 cards eligible for paper support (53.1%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,266 of 32,501 cards eligible for paper support (53.1%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -3085,6 +3085,7 @@ Council4 currently supports **17,259 of 32,501 cards eligible for paper support 
 - Crucible of Fire
 - Crucible of Worlds
 - Crude Rampart
+- Cruel Bargain
 - Cruel Celebrant
 - Cruel Edict
 - Cruel Finality
@@ -4212,6 +4213,7 @@ Council4 currently supports **17,259 of 32,501 cards eligible for paper support 
 - Ebon Dragon
 - Ebon Drake
 - Ebon Stronghold
+- Ebonblade Reaper
 - Ebony Charm
 - Ebony Horse
 - Ebony Owl Netsuke
@@ -7367,6 +7369,7 @@ Council4 currently supports **17,259 of 32,501 cards eligible for paper support 
 - Infectious Horror
 - Infectious Host
 - Infectious Inquiry
+- Infernal Contract
 - Infernal Grasp
 - Infernal Idol
 - Infernal Pet
@@ -11223,6 +11226,7 @@ Council4 currently supports **17,259 of 32,501 cards eligible for paper support 
 - Quicksilver, Pietro Maximoff
 - Quicksmith Genius
 - Quiet Purity
+- Quietus Spike
 - Quill-Blade Laureate // Twofold Intent
 - Quill-Slinger Boggart
 - Quilled Charger
@@ -11264,6 +11268,7 @@ Council4 currently supports **17,259 of 32,501 cards eligible for paper support 
 - Radiant Summit
 - Radiant's Judgment
 - Radical Idea
+- Radioactive Man
 - Radjan Spirit
 - Radstorm
 - Raffine's Informant
@@ -12549,6 +12554,7 @@ Council4 currently supports **17,259 of 32,501 cards eligible for paper support 
 - Scuzzback Scrapper
 - Scythe Leopard
 - Scythe Tiger
+- Scytheclaw
 - Sea Drake
 - Sea Eagle
 - Sea Gate
@@ -16258,6 +16264,7 @@ Council4 currently supports **17,259 of 32,501 cards eligible for paper support 
 - Virtue's Ruin
 - Virtuous Charge
 - Virtuous Variant
+- Virtus the Veiled
 - Virulent Emissary
 - Virulent Plague
 - Virulent Silencer

@@ -145,6 +145,15 @@ func TestCardNameToVarName(t *testing.T) {
 		{"Serra Angel", "SerraAngel"},
 		{"+2 Mace", "Card2Mace"},
 		{"99 Problems", "Card99Problems"},
+		{"Ram Through", "RAMThrough"},
+		{"Boggart Ram-Gang", "BoggartRAMGang"},
+		{"Gatebreaker Ram", "GatebreakerRAM"},
+		{"Nyx-Fleece Ram", "NyxFleeceRAM"},
+		{"Rustspore Ram", "RustsporeRAM"},
+		{"Ramunap Ruins", "RamunapRuins"},
+		{"Rampaging Baloths", "RampagingBaloths"},
+		{"Bramblewood Paragon", "BramblewoodParagon"},
+		{"HYDRA Assault Robot", "HYDRAAssaultRobot"},
 	}
 
 	for _, tt := range tests {
