@@ -247,6 +247,10 @@ const (
 	// cost, and the resulting permanent enters the battlefield converted, as its
 	// back face.
 	AlternativeMechanicMoreThanMeetsTheEye
+	// AlternativeMechanicDash marks the Dash cast (CR 702.109): the creature
+	// spell is cast for its dash cost, the resulting permanent gains haste, and
+	// it is returned to its owner's hand at the beginning of the next end step.
+	AlternativeMechanicDash
 )
 
 // AlternativeCondition identifies a condition that must be true to select an

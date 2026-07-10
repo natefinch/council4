@@ -699,6 +699,11 @@ type TriggerCondition struct {
 	// The entering permanent event preserves whether the spell was cast for its
 	// Evoke alternative cost for both trigger-time and resolution-time checks.
 	InterveningIfEventPermanentWasEvoked bool
+	// InterveningIfEventPermanentWasDashed is true for the Dash trigger's
+	// intervening "if its dash cost was paid" condition (CR 702.109). The
+	// entering permanent event preserves whether the spell was cast for its Dash
+	// alternative cost for both trigger-time and resolution-time checks.
+	InterveningIfEventPermanentWasDashed bool
 	// InterveningIfEventPermanentWasCastByController is true for "if you cast
 	// it" and additionally requires the trigger controller to be the caster.
 	InterveningIfEventPermanentWasCastByController bool

@@ -195,6 +195,13 @@ const (
 	// Parameter exactly like Evoke. It is appended at the end so the existing
 	// keyword block stays aligned.
 	KeywordMoreThanMeetsTheEye KeywordKind = "KeywordMoreThanMeetsTheEye"
+	// KeywordDash is the Dash alternative-cost keyword (CR 702.109): "Dash
+	// <cost>" lets the creature spell be cast for its dash cost rather than its
+	// mana cost; if it is, the creature gains haste and is returned to its
+	// owner's hand at the beginning of the next end step. The mana cost is
+	// carried by Parameter exactly like Evoke. It is appended at the end so the
+	// existing keyword block stays aligned.
+	KeywordDash KeywordKind = "KeywordDash"
 )
 
 var keywordNames = map[KeywordKind]string{
@@ -306,6 +313,7 @@ var keywordNames = map[KeywordKind]string{
 	KeywordFuse:                "Fuse",
 	KeywordPartnerWith:         "Partner with",
 	KeywordChooseABackground:   "Choose a Background",
+	KeywordDash:                "Dash",
 }
 
 // String returns the parser-owned canonical keyword name.
@@ -442,6 +450,7 @@ var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordForestwalk, Words: []string{"forestwalk"}},
 	{Kind: KeywordDesertwalk, Words: []string{"desertwalk"}},
 	{Kind: KeywordSpectacle, Words: []string{"spectacle"}},
+	{Kind: KeywordDash, Words: []string{"dash"}},
 	{Kind: KeywordStartEngines, Words: []string{"start", "your", "engines"}},
 	{Kind: KeywordFuse, Words: []string{"fuse"}},
 }

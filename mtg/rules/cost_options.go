@@ -31,6 +31,18 @@ func convertedAlternativeChosen(card *game.CardDef, alternativeIndex int) bool {
 	return card.AlternativeCosts[index].Mechanic == cost.AlternativeMechanicMoreThanMeetsTheEye
 }
 
+// dashAlternativeChosen reports whether the spell cost option selected by the
+// payment preferences is the spell's Dash alternative cost. The normal cost is
+// option index 0 and each alternative cost is option index i+1 into the face's
+// AlternativeCosts, so index-1 selects the chosen alternative.
+func dashAlternativeChosen(card *game.CardDef, alternativeIndex int) bool {
+	index := alternativeIndex - 1
+	if card == nil || index < 0 || index >= len(card.AlternativeCosts) {
+		return false
+	}
+	return card.AlternativeCosts[index].Mechanic == cost.AlternativeMechanicDash
+}
+
 func manaCostPtr(manaCost opt.V[cost.Mana]) *cost.Mana {
 	if !manaCost.Exists {
 		return nil

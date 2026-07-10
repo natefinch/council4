@@ -734,6 +734,53 @@ func EvokeSacrificeTriggeredAbility() TriggeredAbility {
 	}
 }
 
+// DashTriggeredAbility builds the canonical Dash consequence trigger
+// (CR 702.109): "When this creature enters, if its dash cost was paid, it gains
+// haste. Return it to its owner's hand at the beginning of the next end step."
+// The intervening-if gates the ability on the spell having been cast for its
+// Dash alternative cost, preserved on the entering permanent event. When it
+// resolves it grants the source haste for as long as it remains on the
+// battlefield and schedules a delayed end-step trigger that returns that same
+// object to its owner's hand. Both the haste grant and the delayed return bind
+// to the object via SourcePermanentReference, so the return no-ops if that
+// object has already left the battlefield (CR 702.109a returns the specific
+// permanent, not any later object the same card becomes).
+func DashTriggeredAbility() TriggeredAbility {
+	return TriggeredAbility{
+		Text: "When this creature enters, if its dash cost was paid, it gains haste. Return it to its owner's hand at the beginning of the next end step.",
+		Trigger: TriggerCondition{
+			Type: TriggerWhen,
+			Pattern: TriggerPattern{
+				Event:  EventPermanentEnteredBattlefield,
+				Source: TriggerSourceSelf,
+			},
+			InterveningIfEventPermanentWasDashed: true,
+		},
+		Content: Mode{
+			Sequence: []Instruction{
+				{
+					Primitive: ApplyContinuous{
+						Object: opt.Val(SourcePermanentReference()),
+						ContinuousEffects: []ContinuousEffect{{
+							Layer:       LayerAbility,
+							AddKeywords: []Keyword{Haste},
+						}},
+						Duration: DurationForAsLongAsSourceOnBattlefield,
+					},
+				},
+				{
+					Primitive: CreateDelayedTrigger{Trigger: DelayedTriggerDef{
+						Timing: DelayedAtBeginningOfNextEndStep,
+						Content: Mode{Sequence: []Instruction{{
+							Primitive: Bounce{Object: SourcePermanentReference()},
+						}}}.Ability(),
+					}},
+				},
+			},
+		}.Ability(),
+	}
+}
+
 // RampageTriggeredAbility builds the canonical Rampage N triggered ability
 // (CR 702.23): "Whenever this creature becomes blocked, it gets +N/+N until end
 // of turn for each creature blocking it beyond the first." The +N/+N delta is a

@@ -123,6 +123,7 @@ var Cards = []cardset.Entry{
 	{Name: "Treasure Hunt", New: TreasureHunt},
 	{Name: "Treasure Mage", New: TreasureMage},
 	{Name: "Treefolk Healer", New: TreefolkHealer},
+	{Name: "Treetop Ambusher", New: TreetopAmbusher},
 	{Name: "Treetop Bracers", New: TreetopBracers},
 	{Name: "Treetop Rangers", New: TreetopRangers},
 	{Name: "Treetop Scout", New: TreetopScout},
