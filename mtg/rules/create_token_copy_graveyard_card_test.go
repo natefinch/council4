@@ -214,3 +214,118 @@ func TestCreateCopyTokenOfGraveyardCardTwiceSacrificesBoth(t *testing.T) {
 		t.Fatalf("second end-step sacrifice leaked %d copy token(s): the delayed sacrifice must bind to the new token, not the dead first token", got)
 	}
 }
+
+// feldonSameTurnHarness sets up Feldon and a graveyard blueprint, then returns an
+// activate function that performs one same-turn activation: create the copy token
+// (publishing it under the constant, source-and-link-scoped key) and schedule the
+// delayed "Sacrifice it at the beginning of the next end step" trigger described
+// by def. Every activation shares Feldon's source identity, so the published link
+// key is constant across activations — the condition that makes the same-turn
+// leak possible when the delayed sacrifice re-resolves that key at the end step.
+func feldonSameTurnHarness(t *testing.T, def *game.DelayedTriggerDef) (*game.Game, *Engine, func()) {
+	t.Helper()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	feldon := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Feldon of the Third Path",
+		Types: []types.Card{types.Creature},
+	}})
+	cardID := addCardToGraveyard(g, game.Player1, feldonGraveyardCreature())
+
+	createToken := game.CreateToken{
+		Amount: game.Fixed(1),
+		Source: game.TokenCopyOf(game.TokenCopySpec{
+			Source:      game.TokenCopySourceObject,
+			Object:      game.TargetCardReference(0),
+			AddTypes:    []types.Card{types.Artifact},
+			AddKeywords: []game.Keyword{game.Haste},
+		}),
+		PublishLinked: game.LinkedKey("delayed-sacrifice-1"),
+	}
+
+	activate := func() {
+		obj := &game.StackObject{
+			ID:           g.IDGen.Next(),
+			Kind:         game.StackActivatedAbility,
+			Controller:   game.Player1,
+			SourceID:     feldon.ObjectID,
+			SourceCardID: feldon.CardInstanceID,
+			Targets:      []game.Target{{Kind: game.TargetCard, CardID: cardID}},
+		}
+		r := &effectResolver{engine: engine, game: g, obj: obj, log: &TurnLog{}}
+		if !handleCreateToken(r, createToken).succeeded {
+			t.Fatal("same-turn activation did not create a copy token")
+		}
+		if !scheduleDelayedTrigger(g, obj, def) {
+			t.Fatal("scheduleDelayedTrigger failed")
+		}
+	}
+	return g, engine, activate
+}
+
+// TestCreateCopyTokenOfGraveyardCardTwiceSameTurnSacrificesBoth exercises two
+// Feldon of the Third Path activations in a single turn (Feldon untapped past its
+// {T} cost by an untapper), before any end step. This is the leak PR #2870 could
+// not reach: both activations publish under the same constant link key, so a
+// single delayed sacrifice that re-resolves that key at the end step would find
+// only the most-recently published token. The lowering now freezes each
+// activation's own token to a concrete id at schedule time (CapturedObject +
+// ObjectReferenceCapturedObject), so both delayed sacrifices target their own
+// token and neither leaks.
+func TestCreateCopyTokenOfGraveyardCardTwiceSameTurnSacrificesBoth(t *testing.T) {
+	t.Parallel()
+	g, engine, activate := feldonSameTurnHarness(t, &game.DelayedTriggerDef{
+		Timing:         game.DelayedAtBeginningOfNextEndStep,
+		CapturedObject: opt.Val(game.LinkedObjectReference("delayed-sacrifice-1")),
+		Content: game.Mode{
+			Sequence: []game.Instruction{{Primitive: game.Sacrifice{Object: game.CapturedObjectReference()}}},
+		}.Ability(),
+	})
+
+	activate()
+	activate()
+	if got := countGraveyardCopyTokens(g); got != 2 {
+		t.Fatalf("after two same-turn activations, copy tokens = %d, want 2", got)
+	}
+	if got := len(g.DelayedTriggers); got != 2 {
+		t.Fatalf("scheduled delayed triggers = %d, want 2", got)
+	}
+
+	engine.runEndingPhase(g, [game.NumPlayers]PlayerAgent{})
+
+	if got := countGraveyardCopyTokens(g); got != 0 {
+		t.Fatalf("same-turn end step left %d copy token(s), want 0: each activation's delayed sacrifice must target its own captured token", got)
+	}
+}
+
+// TestCreateCopyTokenOfGraveyardCardTwiceSameTurnConstantKeyLeaks is a
+// characterization test pinning the pre-fix lowering's defect: when the delayed
+// sacrifice re-resolves the constant, source-scoped link key at the end step
+// (Object: LinkedObjectReference, with no per-trigger capture) two same-turn
+// activations leak exactly one token. Creating the second token clears the shared
+// key and republishes it as the only linked object, so both end-step sacrifices
+// resolve the second token and the first is never sacrificed. This is the
+// behavior the CapturedObject lowering change replaces; if a future change makes
+// the constant-key shape stop leaking, this test should be revisited alongside
+// the lowering.
+func TestCreateCopyTokenOfGraveyardCardTwiceSameTurnConstantKeyLeaks(t *testing.T) {
+	t.Parallel()
+	g, engine, activate := feldonSameTurnHarness(t, &game.DelayedTriggerDef{
+		Timing: game.DelayedAtBeginningOfNextEndStep,
+		Content: game.Mode{
+			Sequence: []game.Instruction{{Primitive: game.Sacrifice{Object: game.LinkedObjectReference("delayed-sacrifice-1")}}},
+		}.Ability(),
+	})
+
+	activate()
+	activate()
+	if got := countGraveyardCopyTokens(g); got != 2 {
+		t.Fatalf("after two same-turn activations, copy tokens = %d, want 2", got)
+	}
+
+	engine.runEndingPhase(g, [game.NumPlayers]PlayerAgent{})
+
+	if got := countGraveyardCopyTokens(g); got != 1 {
+		t.Fatalf("constant-key same-turn end step left %d copy token(s), want 1 leaked: both delayed sacrifices resolve the constant key to the second token, leaving the first", got)
+	}
+}

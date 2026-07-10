@@ -85,12 +85,13 @@ func newMoiraAndTeshar() *game.CardDef {
 							{
 								Primitive: game.CreateDelayedTrigger{
 									Trigger: game.DelayedTriggerDef{
-										Timing: game.DelayedAtBeginningOfNextEndStep,
+										Timing:         game.DelayedAtBeginningOfNextEndStep,
+										CapturedObject: opt.Val(game.LinkedObjectReference("delayed-exile-2")),
 										Content: game.Mode{
 											Sequence: []game.Instruction{
 												{
 													Primitive: game.Exile{
-														Object: game.LinkedObjectReference("delayed-exile-2"),
+														Object: game.CapturedObjectReference(),
 													},
 												},
 											},

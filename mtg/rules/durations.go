@@ -167,11 +167,15 @@ func scheduleDelayedTrigger(g *game.Game, obj *game.StackObject, def *game.Delay
 
 // capturedObjectID freezes the permanent a fixed-phase delayed trigger binds to
 // from the creating ability's CapturedObject reference, resolving it against the
-// creating ability's triggering event at schedule time. It backs delayed "at end
-// of combat" disposal of the creature involved in combat ("destroy that creature
-// at end of combat"), where the original combat event is gone once the trigger
-// fires, so the blocked or damaged creature must be captured now. It returns
-// zero when the definition carries no such reference or the creature cannot be
+// creating ability's context at schedule time. It backs delayed "at end of
+// combat" disposal of the creature involved in combat ("destroy that creature at
+// end of combat"), where the original combat event is gone once the trigger
+// fires, so the blocked or damaged creature must be captured now, and delayed
+// disposal of a permanent an earlier clause in the same resolution published
+// under a linked key ("Create a token ... Sacrifice it at the beginning of the
+// next end step.", Feldon of the Third Path), where the reference is that linked
+// object so each activation captures the permanent it created. It returns zero
+// when the definition carries no such reference or the permanent cannot be
 // identified, in which case the trigger's content finds nothing and does nothing.
 func capturedObjectID(g *game.Game, obj *game.StackObject, def *game.DelayedTriggerDef) id.ID {
 	if !def.CapturedObject.Exists {
