@@ -27,6 +27,7 @@ func compileCostComponent(component parser.CostComponent) CostComponent {
 		AmountValue:           component.AmountValue,
 		AmountKnown:           component.AmountKnown,
 		AmountFromX:           component.AmountFromX,
+		AmountOneOrMore:       component.AmountOneOrMore,
 		ObjectSupertype:       component.ObjectSupertype,
 		SupertypeKnown:        component.SupertypeKnown,
 		ObjectController:      compilerControllerRelation(component.ObjectController),

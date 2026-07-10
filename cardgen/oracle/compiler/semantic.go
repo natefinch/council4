@@ -405,9 +405,17 @@ type CostComponent struct {
 	Amount string
 	Object string
 
-	AmountValue     int
-	AmountKnown     bool
-	AmountFromX     bool
+	AmountValue int
+	AmountKnown bool
+	AmountFromX bool
+
+	// AmountOneOrMore reports a player-chosen "one or more" cost amount, where
+	// the payer removes at least one of the named object. The chosen count is
+	// announced as the ability's X (AmountFromX is also set); lowering carries
+	// it onto an X-driven additional cost and the payment enumeration requires
+	// at least one.
+	AmountOneOrMore bool
+
 	ObjectKind      SelectorKind
 	ObjectType      types.Card
 	ObjectTypeKnown bool

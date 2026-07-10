@@ -415,6 +415,9 @@ func renderAdditional(ctx *renderCtx, additional cost.Additional) (string, error
 	if additional.AmountFromX {
 		fields = append(fields, "AmountFromX: true,")
 	}
+	if additional.AmountAtLeastOne {
+		fields = append(fields, "AmountAtLeastOne: true,")
+	}
 	if additional.AmountDynamic != cost.AdditionalDynamicAmountNone {
 		dynamic, err := renderAdditionalDynamicAmount(additional.AmountDynamic)
 		if err != nil {
@@ -759,6 +762,8 @@ func renderDynamicAmountKind(kind game.DynamicAmountKind) (string, error) {
 		return "game.DynamicAmountBlockingCreatures", nil
 	case game.DynamicAmountPlayerLife:
 		return "game.DynamicAmountPlayerLife", nil
+	case game.DynamicAmountSpellTargetCount:
+		return "game.DynamicAmountSpellTargetCount", nil
 	default:
 		return "", fmt.Errorf("render: unsupported dynamic amount kind %d", kind)
 	}

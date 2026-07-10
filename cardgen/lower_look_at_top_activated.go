@@ -22,6 +22,7 @@ func lowerActivatedBodyContent(
 	bodyContent compiler.AbilityContent,
 	bodySyntax *parser.Ability,
 	bodyText string,
+	variableCounterRemovalCost bool,
 ) (game.AbilityContent, *shared.Diagnostic) {
 	if ability.ExactSequence == compiler.ExactSequenceConditionalLookAtTopBattlefield &&
 		len(ability.ExactSequenceLookAtTopTypes) > 0 {
@@ -30,5 +31,12 @@ func lowerActivatedBodyContent(
 			Sequence: conditionalLookAtTopBattlefieldSequence(ability),
 		}.Ability(), nil
 	}
-	return lowerAbilityContent(cardName, ability.Kind, bodyContent, false, bodySyntax)
+	ctx := contentCtx{
+		text:                       bodySyntax.Text,
+		span:                       bodySyntax.Span,
+		content:                    bodyContent,
+		enclosingKind:              ability.Kind,
+		variableCounterRemovalCost: variableCounterRemovalCost,
+	}
+	return lowerContent(cardName, ctx, bodySyntax)
 }

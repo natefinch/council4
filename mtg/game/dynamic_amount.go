@@ -272,6 +272,16 @@ const (
 	// unlike the controller-only DynamicAmountControllerLife. Added last so
 	// existing kinds keep their wire values.
 	DynamicAmountPlayerLife
+	// DynamicAmountSpellTargetCount is the number of targets of the triggering
+	// spell-cast event's spell that match Selection, counted as the ability
+	// resolves. It backs the "that many" anaphor of a "Whenever you cast a spell
+	// that targets one or more <selection>, put that many +1/+1 counters on
+	// <self>" trigger (Arcee, Acrobatic Coupe): Selection is the same permanent
+	// pattern the trigger's SpellTargetPattern matched, so the count is the
+	// number of the spell's targets the trigger keyed on. It is zero outside a
+	// spell-cast trigger or when the cast spell has left the stack. Added last so
+	// existing kinds keep their wire values.
+	DynamicAmountSpellTargetCount
 )
 
 // DynamicAmount describes an effect amount determined as the effect resolves

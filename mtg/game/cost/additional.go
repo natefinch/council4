@@ -83,6 +83,13 @@ type Additional struct {
 	// AmountFromX uses the announced X value as the required amount.
 	AmountFromX bool
 
+	// AmountAtLeastOne marks an AmountFromX cost whose announced count is the
+	// player's "one or more" choice, so the payer must remove at least one, as
+	// required by "Remove one or more +1/+1 counters from <this permanent>"
+	// (Arcee, Sharpshooter). It restricts the activation's legal X values to
+	// one or more; without it AmountFromX permits an announced X of zero.
+	AmountAtLeastOne bool
+
 	// AmountDynamic, when not AdditionalDynamicAmountNone, names a rules-derived
 	// amount the payment planner resolves against live game state. It takes
 	// precedence over Amount and AmountFromX for the cost's required count.

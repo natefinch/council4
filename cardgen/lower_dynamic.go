@@ -709,6 +709,13 @@ func triggeringEventQuantityKind(kind compiler.DynamicAmountKind) bool {
 // contexts the anaphor has no source and stays rejected (ok=false).
 func lowerTriggeringEventQuantityAmount(ctx contentCtx, amount compiler.CompiledAmount) (game.DynamicAmount, bool) {
 	multiplier := max(amount.Multiplier, 1)
+	if ctx.variableCounterRemovalCost {
+		// An activated ability whose cost removes a player-chosen "one or more"
+		// number of counters announces that count as X, so its "that much"/"that
+		// many" body anaphor is the number of counters removed (DynamicAmountX).
+		// It has no triggering event to read a quantity from.
+		return game.DynamicAmount{Kind: game.DynamicAmountX, Multiplier: multiplier}, true
+	}
 	switch ctx.triggerCardCountEvent {
 	case game.EventCardDrawn, game.EventCardDiscarded, game.EventCycled:
 		return game.DynamicAmount{Kind: game.DynamicAmountEventCardCount, Multiplier: multiplier}, true

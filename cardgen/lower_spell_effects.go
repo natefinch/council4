@@ -1442,6 +1442,9 @@ func lowerTriggeringEventQuantity(
 	ctx contentCtx,
 	amount compiler.CompiledAmount,
 ) (game.DynamicAmount, bool) {
+	if dynamic, ok := lowerSpellTargetCountAmount(ctx, amount); ok {
+		return dynamic, true
+	}
 	if dynamic, ok := lowerEventCombatDamageAmount(ctx, amount); ok {
 		return dynamic, true
 	}
@@ -1455,6 +1458,25 @@ func lowerTriggeringEventQuantity(
 		return dynamic, true
 	}
 	return game.DynamicAmount{}, false
+}
+
+// lowerSpellTargetCountAmount lowers a "that many" anaphor into a
+// DynamicAmountSpellTargetCount inside a spell-cast trigger that filtered on the
+// spell's targets ("Whenever you cast a spell that targets one or more creatures
+// or Vehicles you control, put that many +1/+1 counters on Arcee"). It carries
+// the trigger's SpellTargetPattern selection onto the amount so the runtime
+// counts exactly the targets the trigger keyed on. It fails closed outside a
+// spell-cast trigger or when the trigger has no such target pattern.
+func lowerSpellTargetCountAmount(ctx contentCtx, amount compiler.CompiledAmount) (game.DynamicAmount, bool) {
+	if ctx.triggerEvent != game.EventSpellCast || !ctx.spellTargetPattern.Exists {
+		return game.DynamicAmount{}, false
+	}
+	selection := ctx.spellTargetPattern.Val
+	return game.DynamicAmount{
+		Kind:       game.DynamicAmountSpellTargetCount,
+		Multiplier: max(amount.Multiplier, 1),
+		Selection:  &selection,
+	}, true
 }
 
 // placement applies. A single recognized, placeable kind yields no choice list; a

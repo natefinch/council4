@@ -135,6 +135,12 @@ func parseSpellTargetSelection(tokens []shared.Token) (TriggerSelection, bool) {
 	switch {
 	case equalWord(tokens[0], "a"), equalWord(tokens[0], "an"):
 		tokens = tokens[1:]
+	case len(tokens) >= 4 && equalWord(tokens[0], "one") && equalWord(tokens[1], "or") && equalWord(tokens[2], "more"):
+		// "that targets one or more creatures or Vehicles you control" (Arcee,
+		// Acrobatic Coupe) restricts the trigger to spells targeting at least one
+		// matching permanent, the same match semantics as the singular "a"
+		// article; the "that many" body anaphor counts the matching targets.
+		tokens = tokens[3:]
 	default:
 		return TriggerSelection{}, false
 	}
