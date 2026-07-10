@@ -119,6 +119,13 @@ type Condition struct {
 	// permanent, and is false when no such event is in context.
 	EventPermanentWasKicked bool
 
+	// EventPermanentWasCastFromControllerHand is satisfied when the entering
+	// permanent was cast by the condition controller from that player's hand
+	// ("enters with a divinity counter on it if you cast it from your hand" —
+	// the original Myojin cycle). It is evaluated against the entering event's
+	// captured cast controller and source zone.
+	EventPermanentWasCastFromControllerHand bool
+
 	// ControllerGraveyardCardOfTypeCountAtLeast requires the context controller's
 	// graveyard to hold at least this many cards of ControllerGraveyardCountCardType
 	// ("if twenty or more creature cards are in your graveyard", Mortal Combat).
@@ -322,6 +329,7 @@ func (c *Condition) Empty() bool {
 		!c.ControllerControlsCommander &&
 		!c.SpellWasKicked &&
 		!c.EventPermanentWasKicked &&
+		!c.EventPermanentWasCastFromControllerHand &&
 		c.ControllerGraveyardCardOfTypeCountAtLeast == 0 &&
 		c.ControllerGraveyardInstantOrSorceryCountAtLeast == 0 &&
 		len(c.ControllerControlsNamed) == 0 &&

@@ -558,7 +558,7 @@ func lowerEntersTappedReplacement(
 	if replacement, ok := lowerOptionalEntryPayment(ability); ok {
 		return replacement, nil
 	}
-	if !entersTappedReplacementEffectsSupported(ability) ||
+	if !entersReplacementEffectsSupported(ability) ||
 		ability.Content.Effects[0].Kind != compiler.EffectEnterTapped ||
 		len(ability.Content.Targets) != 0 ||
 		len(ability.Content.Keywords) != 0 ||
@@ -1400,7 +1400,7 @@ func lowerEntersWithCountersReplacement(
 	if ability.Content.Effects[0].EntersWithCountersGroup() {
 		return lowerGroupEntersWithCountersReplacement(ability, unsupported)
 	}
-	if len(ability.Content.Effects) != 1 ||
+	if !entersReplacementEffectsSupported(ability) ||
 		len(ability.Content.Targets) != 0 ||
 		len(ability.Content.Keywords) != 0 ||
 		len(ability.Content.Modes) != 0 ||
@@ -1510,13 +1510,19 @@ func selfEntersWithCountersReferences(references []compiler.CompiledReference, e
 	if len(references) == 3 && hasManaSpentToCastCondition(conditions) {
 		return true
 	}
-	// A kicker gate that names the source by "this <type>" ("If this creature was
-	// kicked, it enters with N +1/+1 counters on it." — the Invasion kicker
-	// cycle) adds a third self reference for that named subject inside the gate.
-	// Only the bare "enters with N counters on it" form (effect.EntersWithCounters)
-	// is accepted; a combined "... and with <keyword>" clause is not represented
-	// here and must stay unsupported.
-	return len(references) == 3 && effect.EntersWithCounters && hasEventSubjectKickedCondition(conditions)
+	// A kicker or cast-from-hand gate that names the source ("If this creature was
+	// kicked, ..." / "... if you cast it from your hand") adds a third self
+	// reference for the subject inside the gate.
+	// The bare form may carry EntersWithCounters or, for a trailing condition,
+	// only a known counter kind. A combined "... and with <keyword>" clause is
+	// rejected earlier because the replacement carries compiled keywords.
+	if len(references) != 3 {
+		return false
+	}
+	return effect.EntersWithCounters && hasEventSubjectKickedCondition(conditions) ||
+		effect.CounterKindKnown &&
+			!effect.EntersWithCountersKeywordRider &&
+			hasEventSubjectCastFromControllerHandCondition(conditions)
 }
 
 // hasEventSubjectKickedCondition reports whether any condition is the
@@ -1526,6 +1532,18 @@ func selfEntersWithCountersReferences(references []compiler.CompiledReference, e
 func hasEventSubjectKickedCondition(conditions []compiler.CompiledCondition) bool {
 	for i := range conditions {
 		if conditions[i].Predicate == compiler.ConditionPredicateEventSubjectWasKicked {
+			return true
+		}
+	}
+	return false
+}
+
+// hasEventSubjectCastFromControllerHandCondition reports whether any condition
+// is the event-subject cast-from-controller-hand gate used by the original
+// Myojin cycle.
+func hasEventSubjectCastFromControllerHandCondition(conditions []compiler.CompiledCondition) bool {
+	for i := range conditions {
+		if conditions[i].Predicate == compiler.ConditionPredicateEventSubjectWasCastFromControllerHand {
 			return true
 		}
 	}
@@ -1990,7 +2008,12 @@ func contentKeywordsAreCopyRiders(keywords []compiler.CompiledKeyword, riders []
 	return true
 }
 
-func entersTappedReplacementEffectsSupported(ability compiler.CompiledAbility) bool {
+// entersReplacementEffectsSupported accepts either one replacement effect or
+// additional effects whose verbs are fully contained by the replacement's sole
+// condition. The latter are condition grammar artifacts ("if you cast it from
+// your hand") rather than independent instructions and must not block an
+// otherwise exact entry replacement.
+func entersReplacementEffectsSupported(ability compiler.CompiledAbility) bool {
 	if len(ability.Content.Effects) == 0 {
 		return false
 	}

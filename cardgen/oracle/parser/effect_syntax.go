@@ -453,6 +453,7 @@ func emitSentenceResolvingSyntax(
 		sentences[i].LegacyEffects = count > 0
 		sentences[i].Targets = parseTargets(tokens, atoms)
 		sentences[i].Effects = parseEffects(sentences[i], tokens, atoms)
+		recognizeEntersWithCountersKeywordRiderSentence(&sentences[i])
 		recognizeTargetOpponentHandManaSentence(&sentences[i])
 		recognizeLookAtTargetPlayerHandSentence(&sentences[i])
 		recognizeLookAtTargetPlayerLibrarySentence(&sentences[i])
@@ -3196,6 +3197,40 @@ func recognizeLookAtTargetPlayerHandSentence(sentence *Sentence) {
 	sentence.Effects[0].Targets = []TargetSyntax{target}
 	sentence.Effects[0].Context = EffectContextTarget
 	sentence.Effects[0].Exact = true
+}
+
+// recognizeEntersWithCountersKeywordRiderSentence marks the combined entry
+// clause "enters with N counters on it and with <keyword>". The effect-level
+// clause ends before the rider, so this sentence post-pass owns the complete
+// wording and records a typed fail-closed marker for lowering.
+func recognizeEntersWithCountersKeywordRiderSentence(sentence *Sentence) {
+	if len(sentence.Effects) == 0 {
+		return
+	}
+	effectIndex := -1
+	for i := range sentence.Effects {
+		if sentence.Effects[i].Kind == EffectEnterTapped &&
+			sentence.Effects[i].CounterKnown {
+			effectIndex = i
+			break
+		}
+	}
+	if effectIndex < 0 {
+		return
+	}
+	hasCounter := false
+	for i := range sentence.Tokens {
+		if equalWord(sentence.Tokens[i], "counter") ||
+			equalWord(sentence.Tokens[i], "counters") {
+			hasCounter = true
+		}
+		if hasCounter && i+1 < len(sentence.Tokens) &&
+			equalWord(sentence.Tokens[i], "and") &&
+			equalWord(sentence.Tokens[i+1], "with") {
+			sentence.Effects[effectIndex].EntersWithCountersKeywordRider = true
+			return
+		}
+	}
 }
 
 // recognizeLookAtTargetPlayerLibrarySentence rewrites the manufactured possessive
@@ -6352,6 +6387,7 @@ func entersWithCountersSyntax(kind EffectKind, clause []shared.Token) bool {
 		clause[len(clause)-1].Text != "." {
 		return false
 	}
+
 	for _, token := range clause[1 : len(clause)-3] {
 		if equalWord(token, "counter") || equalWord(token, "counters") {
 			return true

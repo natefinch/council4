@@ -2484,6 +2484,9 @@ type CompiledEffect struct {
 	EntersColorChoiceExclude mana.Color
 	EntersTypeChoice         bool
 	EntersWithCounters       bool
+	// EntersWithCountersKeywordRider mirrors the parser-owned marker for the
+	// unsupported combined "enters with counters ... and with <keyword>" form.
+	EntersWithCountersKeywordRider bool
 	// EntersDevour mirrors the parser's Devour as-enters replacement flag and
 	// EntersDevourMultiplier its per-sacrificed-permanent +1/+1 counter count.
 	// EntersDevourType and EntersDevourSubtype carry the typed-variant sacrifice

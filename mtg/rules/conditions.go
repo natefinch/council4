@@ -9,6 +9,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -204,6 +205,14 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	}
 	if cond.EventPermanentWasKicked {
 		matches = matches && ctx.event != nil && ctx.event.KickerPaid
+	}
+	if cond.EventPermanentWasCastFromControllerHand {
+		matches = matches &&
+			ctx.event != nil &&
+			ctx.event.EnterWasCast &&
+			ctx.event.EnterHasCastController &&
+			ctx.event.EnterCastController == ctx.controller &&
+			ctx.event.EnterCastFromZone == zone.Hand
 	}
 	if cond.SpellColorManaSpent.Count > 0 {
 		matches = matches && ctx.obj != nil && !ctx.obj.Copy &&

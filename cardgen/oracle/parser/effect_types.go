@@ -2452,6 +2452,11 @@ type EffectSyntax struct {
 	// face. It is false for the plain untransformed return.
 	EntersTransformed  bool `json:",omitempty"`
 	EntersWithCounters bool `json:",omitempty"`
+	// EntersWithCountersKeywordRider records the combined entry clause
+	// "enters with N counters on it and with <keyword>". The executable entry
+	// replacement cannot represent the keyword half, so lowering uses this typed
+	// marker to fail closed rather than silently dropping it.
+	EntersWithCountersKeywordRider bool `json:",omitempty"`
 	// GroupEntryModification carries the static "group enters modified"
 	// replacement families behind one typed operation discriminator: the
 	// enters-tapped-group form ("Creatures your opponents control enter tapped.",

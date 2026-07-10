@@ -170,6 +170,8 @@ func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringC
 		result.SpellWasKicked = true
 	case compiler.ConditionPredicateEventSubjectWasKicked:
 		result.EventPermanentWasKicked = true
+	case compiler.ConditionPredicateEventSubjectWasCastFromControllerHand:
+		result.EventPermanentWasCastFromControllerHand = true
 	case compiler.ConditionPredicateColoredManaSpentToCastAtLeast:
 		if condition.ManaSpentColor == "" || condition.Threshold <= 0 {
 			return game.Condition{}, false
@@ -335,6 +337,7 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 			compiler.ConditionPredicateColoredManaSpentToCastAtLeast,
 			compiler.ConditionPredicateSameColorManaSpentToCastAtLeast,
 			compiler.ConditionPredicateEventSubjectWasKicked,
+			compiler.ConditionPredicateEventSubjectWasCastFromControllerHand,
 			compiler.ConditionPredicateEventHistory:
 			return true
 		default:
