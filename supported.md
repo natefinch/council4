@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,353 of 32,501 cards eligible for paper support (53.4%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,374 of 32,501 cards eligible for paper support (53.5%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1452,6 +1452,7 @@ Council4 currently supports **17,353 of 32,501 cards eligible for paper support 
 - Blasphemous Act
 - Blasted Landscape
 - Blaster Mage
+- Blaster, Combat DJ // Blaster, Morale Booster
 - Blasting Station
 - Blaze
 - Blazemire Verge
@@ -1573,7 +1574,6 @@ Council4 currently supports **17,353 of 32,501 cards eligible for paper support 
 - Bloodbraid Challenger
 - Bloodbraid Elf
 - Bloodbriar
-- Bloodchief's Thirst
 - Bloodcrazed Neonate
 - Bloodcrazed Socialite
 - Bloodcurdling Scream
@@ -2228,6 +2228,7 @@ Council4 currently supports **17,353 of 32,501 cards eligible for paper support 
 - Cartouche of Zeal
 - Carven Caryatid
 - Cascade Bluffs
+- Cascade Seer
 - Cascading Cataracts
 - Casey Jones, Back Alley Brute
 - Casey Jones, Jury-Rig Justiciar
@@ -3406,6 +3407,7 @@ Council4 currently supports **17,353 of 32,501 cards eligible for paper support 
 - Deadeye Rig-Hauler
 - Deadeye Tormentor
 - Deadeye Tracker
+- Deadly Alliance
 - Deadly Derision
 - Deadly Dispute
 - Deadly Insect
@@ -3976,6 +3978,7 @@ Council4 currently supports **17,353 of 32,501 cards eligible for paper support 
 - Dramatic Reversal
 - Drana's Chosen
 - Drana's Emissary
+- Drana's Silencer
 - Drana, Liberator of Malakir
 - Drannith Healer
 - Drannith Magistrate
@@ -4019,6 +4022,7 @@ Council4 currently supports **17,353 of 32,501 cards eligible for paper support 
 - Dream Twist
 - Dreamcaller Siren
 - Dreamcatcher
+- Dreamdrinker Vampire
 - Dreampod Druid
 - Dreamroot Cascade
 - Dreams of Laguna
@@ -4502,6 +4506,7 @@ Council4 currently supports **17,353 of 32,501 cards eligible for paper support 
 - Emergency Eject
 - Emergency Weld
 - Emeria Angel
+- Emeria Captain
 - Emeria, the Sky Ruin
 - Emissary of Sunrise
 - Emissary of the Sleepless
@@ -6479,6 +6484,7 @@ Council4 currently supports **17,353 of 32,501 cards eligible for paper support 
 - Grizzly Bears
 - Grollub
 - Grolnok, the Omnivore
+- Grotag Bug-Catcher
 - Grotag Night-Runner
 - Grotag Siege-Runner
 - Grotag Thrasher
@@ -7778,6 +7784,7 @@ Council4 currently supports **17,353 of 32,501 cards eligible for paper support 
 - Jorubai Murk Lurker
 - Josu Vess, Lich Knight
 - Journey to Nowhere
+- Journey to Oblivion
 - Journeyer's Kite
 - Joust Through
 - Jousting Dummy
@@ -7834,6 +7841,7 @@ Council4 currently supports **17,353 of 32,501 cards eligible for paper support 
 - Kaalia of the Vast
 - Kaalia, Zenith Seeker
 - Kabira Crossroads
+- Kabira Outrider
 - Kabira Takedown // Kabira Plateau
 - Kabira Vindicator
 - Kabuto Moth
@@ -8113,6 +8121,7 @@ Council4 currently supports **17,353 of 32,501 cards eligible for paper support 
 - Knight Watch
 - Knight's Pledge
 - Knight-Captain of Eos
+- Knighted Myr
 - Knightfisher
 - Knighthood
 - Knightly Valor
@@ -8223,6 +8232,7 @@ Council4 currently supports **17,353 of 32,501 cards eligible for paper support 
 - Krosan Grip
 - Krosan Groundshaker
 - Krosan Restorer
+- Krosan Tusker
 - Krosan Verge
 - Krosan Warchief
 - Krosan Wayfarer
@@ -8867,6 +8877,7 @@ Council4 currently supports **17,353 of 32,501 cards eligible for paper support 
 - Malach of the Dawn
 - Malachite Golem
 - Malachite Talisman
+- Malakir Blood-Priest
 - Malakir Bloodwitch
 - Malakir Cullblade
 - Malakir Familiar
@@ -8887,6 +8898,7 @@ Council4 currently supports **17,353 of 32,501 cards eligible for paper support 
 - Mammoth Growth
 - Mammoth Spider
 - Man-o'-War
+- Mana Bloom
 - Mana Chains
 - Mana Confluence
 - Mana Cylix
@@ -11080,7 +11092,6 @@ Council4 currently supports **17,353 of 32,501 cards eligible for paper support 
 - Prized Unicorn
 - Prizefight
 - Prizefighter Construct
-- Probe
 - Proctor's Gaze
 - Prodigal Pyromancer
 - Prodigal Sorcerer
@@ -11510,6 +11521,7 @@ Council4 currently supports **17,353 of 32,501 cards eligible for paper support 
 - Raugrin Triome
 - Ravage
 - Ravaged Highlands
+- Ravager's Mace
 - Ravages of War
 - Ravaging Horde
 - Raven Clan War-Axe
@@ -12633,6 +12645,7 @@ Council4 currently supports **17,353 of 32,501 cards eligible for paper support 
 - Sea Eagle
 - Sea Gate
 - Sea Gate Banneret
+- Sea Gate Colossus
 - Sea Gate Loremaster
 - Sea Gate Oracle
 - Sea Gate Restoration // Sea Gate, Reborn
@@ -12969,6 +12982,7 @@ Council4 currently supports **17,353 of 32,501 cards eligible for paper support 
 - Shattergang Brothers
 - Shattering Blow
 - Shatterskull Giant
+- Shatterskull Minotaur
 - Shatterskull Recruit
 - Shatterstorm
 - Shauku's Minion
@@ -12979,6 +12993,7 @@ Council4 currently supports **17,353 of 32,501 cards eligible for paper support 
 - Sheep
 - Shefet Archfiend
 - Shefet Dunes
+- Shefet Monitor
 - Shell Skulkin
 - Shelob's Ambush
 - Shelter
@@ -12993,6 +13008,7 @@ Council4 currently supports **17,353 of 32,501 cards eligible for paper support 
 - Sheoldred's Restoration
 - Sheoldred, the Apocalypse
 - Sheoldred, Whispering One
+- Shepherd of Heroes
 - Shepherd of Rot
 - Shepherd of the Clouds
 - Shepherd of the Cosmos
@@ -13290,6 +13306,7 @@ Council4 currently supports **17,353 of 32,501 cards eligible for paper support 
 - Skarrg Goliath
 - Skarrg Guildmage
 - Skarrg, the Rage Pits
+- Skarrgan Hellkite
 - Skarrgan Pit-Skulk
 - Skarrgan Skybreaker
 - Skateboard
@@ -14027,6 +14044,7 @@ Council4 currently supports **17,353 of 32,501 cards eligible for paper support 
 - Splinterfright
 - Split Up
 - Split-Tail Miko
+- Spoils of Adventure
 - Spontaneous Artist
 - Spontaneous Combustion
 - Spontaneous Flight
@@ -14392,6 +14410,7 @@ Council4 currently supports **17,353 of 32,501 cards eligible for paper support 
 - Strength of Cedars
 - Strength of Isolation
 - Strength of Lunacy
+- Strength of Solidarity
 - Strength of the Harvest // Haven of the Harvest
 - Strength of the Pack
 - Strength of Unity
@@ -14862,6 +14881,7 @@ Council4 currently supports **17,353 of 32,501 cards eligible for paper support 
 - Tayam, Luminous Enigma
 - Tazeem Raptor
 - Tazeem Roilmage
+- Tazri, Beacon of Unity
 - TCRI Building
 - Teacher's Pest
 - Team Avatar
@@ -15295,6 +15315,7 @@ Council4 currently supports **17,353 of 32,501 cards eligible for paper support 
 - Thundering Falls
 - Thundering Giant
 - Thundering Rebuke
+- Thundering Sparkmage
 - Thundering Spineback
 - Thundering Tanadon
 - Thundering Wurm
