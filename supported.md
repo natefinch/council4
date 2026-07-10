@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,340 of 32,501 cards eligible for paper support (53.4%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,341 of 32,501 cards eligible for paper support (53.4%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -9436,6 +9436,7 @@ Council4 currently supports **17,340 of 32,501 cards eligible for paper support 
 - MJ, Rising Star
 - Mjölnir's Might
 - Mm'menon, Uthros Exile
+- Mnemonic Nexus
 - Mnemonic Sphere
 - Mnemonic Wall
 - Moan of the Unhallowed
