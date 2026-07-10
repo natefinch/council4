@@ -41,6 +41,16 @@ type Searcher struct {
 	// deciding against one unlucky sample. Zero or one searches a single sampled
 	// world. Higher values play more robustly at a proportional cost.
 	Determinizations int
+
+	// Lookahead is how many further full turns a candidate is rolled forward
+	// through — opponents taking their turns via the rollout policy — before the
+	// position is evaluated, so the agent sees a play's consequences on later
+	// turns rather than only its immediate result (whether the board it built gets
+	// attacked or wrathed, whether interaction it held up answers a threat). It
+	// applies only to main-phase decisions, the sequencing choices where looking
+	// ahead matters; zero evaluates the immediate position (a one-ply search).
+	// Rolling forward is expensive, so a small horizon (one round) is typical.
+	Lookahead int
 }
 
 // Compile-time checks that a Searcher drives every engine decision point and is
@@ -190,6 +200,15 @@ func (s Searcher) searchAcrossWorlds(ctx rules.SearchContext, first *game.Game, 
 // position difference still overrides the prior.
 const searchPolicyPriorWeight = 0.01
 
+// deepSearchWidth is how many top candidates, ranked by the cheap one-ply value,
+// get rolled forward when Lookahead is set. Rolling a candidate forward is
+// several times the cost of a one-ply evaluation, so rolling every candidate
+// forward multiplies a decision's cost past the point of being playable in the
+// browser. A strong play almost always ranks near the top on the immediate
+// position too, so evaluating only the most promising handful deeply keeps nearly
+// all of the benefit at a fraction of the cost.
+const deepSearchWidth = 3
+
 // searchBestAction is the search core, separated from the SearchContext so it can
 // be driven directly in tests with a Simulator and a constructed world. It plays
 // the highest-scoring action, breaking ties toward the earlier action in the
@@ -212,15 +231,53 @@ func (s Searcher) searchBestAction(sim rules.Simulator, world *game.Game, me gam
 	applyPolicies := s.uniformPolicies()
 	resolvePolicies := s.resolvePolicies(me)
 	obs := rules.NewObservation(world, me)
+	priorOf := func(a action.Action) float64 {
+		return searchPolicyPriorWeight * s.Rollout.ScoreAction(obs, a)
+	}
 
-	best := candidates[0]
-	bestValue := math.Inf(-1)
+	if s.Lookahead <= 0 {
+		best := candidates[0]
+		bestValue := math.Inf(-1)
+		for i := range candidates {
+			value := s.actionValue(sim, world, me, candidates[i], applyPolicies, resolvePolicies) + priorOf(candidates[i])
+			if value > bestValue {
+				bestValue = value
+				best = candidates[i]
+			}
+		}
+		return best
+	}
+
+	// Deeper search: rank every candidate by the cheap one-ply value, then roll
+	// only the most promising few forward and choose among those by the deeper
+	// value. Two stages bound the cost of the expensive forward roll to a handful
+	// of candidates while still letting a play's later consequences decide between
+	// the plausible choices.
+	type scoredAction struct {
+		action  action.Action
+		shallow float64
+	}
+	shortlist := make([]scoredAction, len(candidates))
 	for i := range candidates {
-		value := s.actionValue(sim, world, me, candidates[i], applyPolicies, resolvePolicies) +
-			searchPolicyPriorWeight*s.Rollout.ScoreAction(obs, candidates[i])
+		shortlist[i] = scoredAction{
+			action:  candidates[i],
+			shallow: s.actionValue(sim, world, me, candidates[i], applyPolicies, resolvePolicies) + priorOf(candidates[i]),
+		}
+	}
+	slices.SortStableFunc(shortlist, func(a, b scoredAction) int {
+		return cmp.Compare(b.shallow, a.shallow)
+	})
+	if len(shortlist) > deepSearchWidth {
+		shortlist = shortlist[:deepSearchWidth]
+	}
+
+	best := shortlist[0].action
+	bestValue := math.Inf(-1)
+	for i := range shortlist {
+		value := s.deepActionValue(sim, world, me, shortlist[i].action, applyPolicies, resolvePolicies) + priorOf(shortlist[i].action)
 		if value > bestValue {
 			bestValue = value
-			best = candidates[i]
+			best = shortlist[i].action
 		}
 	}
 	return best
@@ -257,25 +314,64 @@ func containsPass(actions []action.Action) bool {
 	return false
 }
 
-// actionValue scores one candidate action: apply it to the world (resolving the
-// searcher's own action choices with the rollout policy), let it resolve while
-// opponents respond, then evaluate the resulting position for me. An action that
-// turns out to be illegal in the determinized world scores as the worst option
-// so it is never chosen over a real play.
-//
-// The evaluation runs inside a static-source frame so that reading every
-// permanent's effective characteristics builds the battlefield's static-ability
-// sources once and memoizes each permanent's values, rather than rebuilding them
-// per permanent — the dominant cost of evaluating a large real-deck board.
-func (Searcher) actionValue(sim rules.Simulator, world *game.Game, me game.PlayerID, act action.Action, applyPolicies, resolvePolicies [game.NumPlayers]rules.PlayerAgent) float64 {
-	afterAction, ok := sim.Apply(world, me, act, applyPolicies)
+// actionValue scores one candidate action one ply deep: apply it to the world
+// (resolving the searcher's own action choices with the rollout policy), let it
+// resolve while opponents respond, then evaluate the resulting position for me.
+// An action that turns out to be illegal in the determinized world scores as the
+// worst option so it is never chosen over a real play.
+func (s Searcher) actionValue(sim rules.Simulator, world *game.Game, me game.PlayerID, act action.Action, applyPolicies, resolvePolicies [game.NumPlayers]rules.PlayerAgent) float64 {
+	resolved, ok := s.resolveCandidate(sim, world, me, act, applyPolicies, resolvePolicies)
 	if !ok {
 		return math.Inf(-1)
 	}
-	resolved := sim.ResolvePriority(afterAction, resolvePolicies)
-	resolved.BeginStaticSourceFrame()
-	defer resolved.EndStaticSourceFrame()
-	return Evaluate(rules.NewObservation(resolved, me))
+	return evaluateForSeat(resolved, me)
+}
+
+// deepActionValue scores a candidate by rolling the position it produces forward
+// through the rest of this turn and the next Lookahead turns — opponents
+// responding via the rollout policy — before evaluating it, so the score
+// reflects a play's later consequences (whether the board it builds is attacked
+// or answered, whether interaction it holds up gets to matter) rather than only
+// its immediate result. Rolling forward resumes from the phase after the one
+// whose priority just resolved, which is exact only for a main phase, so off a
+// main phase (or with no Lookahead) this is the one-ply actionValue.
+func (s Searcher) deepActionValue(sim rules.Simulator, world *game.Game, me game.PlayerID, act action.Action, applyPolicies, resolvePolicies [game.NumPlayers]rules.PlayerAgent) float64 {
+	resolved, ok := s.resolveCandidate(sim, world, me, act, applyPolicies, resolvePolicies)
+	if !ok {
+		return math.Inf(-1)
+	}
+	if s.Lookahead > 0 && isMainPhase(resolved.Turn.Phase) {
+		resolved = sim.PlayForward(resolved, s.uniformPolicies(), s.Lookahead)
+	}
+	return evaluateForSeat(resolved, me)
+}
+
+// resolveCandidate applies a candidate action to a clone of the world and
+// resolves the priority that follows, returning the resulting position. The
+// second result is false when the action is illegal in this determinized world.
+func (Searcher) resolveCandidate(sim rules.Simulator, world *game.Game, me game.PlayerID, act action.Action, applyPolicies, resolvePolicies [game.NumPlayers]rules.PlayerAgent) (*game.Game, bool) {
+	afterAction, ok := sim.Apply(world, me, act, applyPolicies)
+	if !ok {
+		return nil, false
+	}
+	return sim.ResolvePriority(afterAction, resolvePolicies), true
+}
+
+// evaluateForSeat scores a resolved position for the seat. The evaluation runs
+// inside a static-source frame so that reading every permanent's effective
+// characteristics builds the battlefield's static-ability sources once and
+// memoizes each permanent's values, rather than rebuilding them per permanent —
+// the dominant cost of evaluating a large real-deck board.
+func evaluateForSeat(g *game.Game, me game.PlayerID) float64 {
+	g.BeginStaticSourceFrame()
+	defer g.EndStaticSourceFrame()
+	return Evaluate(rules.NewObservation(g, me))
+}
+
+// isMainPhase reports whether phase is a main phase, the only phase a search
+// rollout can resume past (see rules.Simulator.PlayForward).
+func isMainPhase(phase game.Phase) bool {
+	return phase == game.PhasePrecombatMain || phase == game.PhasePostcombatMain
 }
 
 // uniformPolicies drives every seat with the rollout policy. It is used while a

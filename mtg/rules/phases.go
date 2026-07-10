@@ -30,42 +30,76 @@ func (e *Engine) runTurn(g *game.Game, agents [game.NumPlayers]PlayerAgent) (log
 	if g.IsGameOver() {
 		return log
 	}
-	e.runExtraPhases(g, agents, &log)
-	if g.IsGameOver() {
-		return log
-	}
-	e.runMainPhase(g, agents, game.PhasePrecombatMain, &log)
-	recordManaDevelopment(g, &log)
-	if g.IsGameOver() {
-		return log
-	}
-	e.runExtraPhases(g, agents, &log)
-	if g.IsGameOver() {
-		return log
-	}
-	e.runCombatPhase(g, agents, &log)
-	if g.IsGameOver() {
-		return log
-	}
-	e.runExtraPhases(g, agents, &log)
-	if g.IsGameOver() {
-		return log
-	}
-	e.runMainPhase(g, agents, game.PhasePostcombatMain, &log)
-	if g.IsGameOver() {
-		return log
-	}
-	e.runExtraPhases(g, agents, &log)
-	if g.IsGameOver() {
-		return log
-	}
-	e.runEndingPhaseWithLog(g, agents, &log)
-	if g.IsGameOver() {
-		return log
-	}
-	e.advanceToNextTurn(g)
+	e.runTurnFromPhase(g, agents, &log, game.PhasePrecombatMain)
 
 	return log
+}
+
+// runTurnFromPhase plays the active player's turn from phase `from` onward and
+// then advances to the next turn, skipping any earlier phase (whose priority the
+// caller has already resolved). runTurn plays a whole turn; a search rollout
+// resumes a turn it interrupted at a main phase (see Simulator.PlayForward). The
+// beginning phase, which has steps a caller cannot cleanly resume past (untap,
+// upkeep, draw), is only ever run by runTurn itself, so `from` is always a main
+// phase or later.
+func (e *Engine) runTurnFromPhase(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, from game.Phase) {
+	// Extra phases queued by the phase immediately before `from` run before the
+	// next regular phase (CR 500.8). For a whole turn that preceding phase is the
+	// beginning phase; for a resumed search rollout it is the main phase whose
+	// priority the caller already resolved.
+	e.runExtraPhases(g, agents, log)
+	if g.IsGameOver() {
+		return
+	}
+	if from <= game.PhasePrecombatMain {
+		e.runMainPhase(g, agents, game.PhasePrecombatMain, log)
+		recordManaDevelopment(g, log)
+		if g.IsGameOver() {
+			return
+		}
+		e.runExtraPhases(g, agents, log)
+		if g.IsGameOver() {
+			return
+		}
+	}
+	if from <= game.PhaseCombat {
+		e.runCombatPhase(g, agents, log)
+		if g.IsGameOver() {
+			return
+		}
+		e.runExtraPhases(g, agents, log)
+		if g.IsGameOver() {
+			return
+		}
+	}
+	if from <= game.PhasePostcombatMain {
+		e.runMainPhase(g, agents, game.PhasePostcombatMain, log)
+		if g.IsGameOver() {
+			return
+		}
+		e.runExtraPhases(g, agents, log)
+		if g.IsGameOver() {
+			return
+		}
+	}
+	e.runEndingPhaseWithLog(g, agents, log)
+	if g.IsGameOver() {
+		return
+	}
+	e.advanceToNextTurn(g)
+}
+
+// finishCurrentTurn plays the active player's turn to its end from the phase
+// after the current one — the caller having already resolved the current phase's
+// priority — and advances to the next turn. It is used by a search rollout that
+// interrupted a turn at a main phase to evaluate a candidate action; the agents
+// drive any choices the tail of the turn requires (blockers, discards, triggers).
+func (e *Engine) finishCurrentTurn(g *game.Game, agents [game.NumPlayers]PlayerAgent) {
+	log := TurnLog{TurnNumber: g.Turn.TurnNumber, ActivePlayer: g.Turn.ActivePlayer}
+	e.setReplacementChoiceContext(g, agents, &log)
+	defer g.ClearChoiceContext()
+	// The current phase's priority has resolved, so resume from the next phase.
+	e.runTurnFromPhase(g, agents, &log, g.Turn.Phase+1)
 }
 
 // runExtraPhases drains the additional phases queued onto the turn by

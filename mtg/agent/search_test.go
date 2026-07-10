@@ -36,6 +36,26 @@ func TestSearcherDevelopsBoardOverPassing(t *testing.T) {
 	}
 }
 
+// TestDeepSearcherDevelopsBoardOverPassing exercises the two-stage lookahead path
+// (shortlist by the one-ply value, then roll the shortlist forward) end to end: a
+// searcher with Lookahead set still deploys its creature rather than passing, so
+// rolling the position forward does not break basic competence.
+func TestDeepSearcherDevelopsBoardOverPassing(t *testing.T) {
+	e := searchTestEngine()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addObservedHandCard(g, game.Player1, creatureWithCost("Bear", 3, 3, 0))
+	setAgentMainPhasePriority(g, game.Player1)
+
+	sim := e.Simulator()
+	legal := sim.LegalActions(g, game.Player1)
+	searcher := Searcher{Rollout: GenericStrategy{}, Lookahead: 1}
+
+	chosen := searcher.searchBestAction(sim, g, game.Player1, legal)
+	if chosen.Kind != action.ActionCastSpell {
+		t.Fatalf("deep searcher chose %v, want to cast the creature", chosen.Kind)
+	}
+}
+
 func TestSearcherPrefersBiggerThreat(t *testing.T) {
 	e := searchTestEngine()
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
