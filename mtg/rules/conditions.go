@@ -842,7 +842,16 @@ func playersControlMatchingSelection(g *game.Game, ctx conditionContext, control
 			distinctNames[values.name] = true
 		}
 		if count >= want && !control.DistinctNames.Exists {
-			if !control.TotalPower.Exists || control.TotalPower.Val.Matches(totalPower) {
+			if !control.TotalPower.Exists {
+				return true
+			}
+			// Only a lower-bound total-power comparison is monotonic in the
+			// running sum: once it matches it stays matched as more permanents
+			// are counted, so an early match is final. An upper-bound comparison
+			// ("total power N or less") can be satisfied by a partial sum yet
+			// fail once every matching permanent is counted, so it must fall
+			// through to the post-loop check.
+			if totalPowerLowerBound(control.TotalPower.Val) && control.TotalPower.Val.Matches(totalPower) {
 				return true
 			}
 		}
@@ -857,6 +866,15 @@ func playersControlMatchingSelection(g *game.Game, ctx conditionContext, control
 		return false
 	}
 	return control.TotalPower.Exists || control.DistinctNames.Exists
+}
+
+// totalPowerLowerBound reports whether a total-power comparison is a lower bound
+// (">= n" or "> n"). A lower bound is monotonic in the running sum used by
+// playersControlMatchingSelection, so an early match while iterating the
+// battlefield is final. Upper-bound and exact comparisons are not, so their
+// callers must count every matching permanent before concluding.
+func totalPowerLowerBound(c compare.Int) bool {
+	return c.Op == compare.GreaterOrEqual || c.Op == compare.GreaterThan
 }
 
 // countPlayerMatchingSelection counts permanents matching sel controlled by the

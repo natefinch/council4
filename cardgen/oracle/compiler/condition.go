@@ -457,6 +457,8 @@ func compileConditionSelection(syntax parser.ConditionSelection) (ConditionSelec
 	selection.MatchPowerAtLeast = syntax.MatchPowerAtLeast
 	selection.TotalPowerAtLeast = syntax.TotalPowerAtLeast
 	selection.MatchTotalPowerAtLeast = syntax.MatchTotalPowerAtLeast
+	selection.TotalPowerAtMost = syntax.TotalPowerAtMost
+	selection.MatchTotalPowerAtMost = syntax.MatchTotalPowerAtMost
 	selection.DistinctNamesAtLeast = syntax.DistinctNamesAtLeast
 	selection.MatchDistinctNamesAtLeast = syntax.MatchDistinctNamesAtLeast
 	selection.DamageRecipientOpponent = syntax.DamageRecipientOpponent

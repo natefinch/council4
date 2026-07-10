@@ -3289,7 +3289,42 @@ func lowerDelayedSequenceClause(
 	if content, ok := lowerThatMuchLifeBackref(ctx, effectIndex, sequence); ok {
 		return content, true, false
 	}
+	if content, ok := lowerDelayedSelfTimingClause(ctx); ok {
+		return content, true, false
+	}
 	return game.AbilityContent{}, false, false
+}
+
+// lowerDelayedSelfTimingClause lowers a fixed-phase, timing-based delayed clause
+// whose body acts on the ability's own source permanent — "convert Ultra Magnus
+// at end of combat" (Ultra Magnus, Tactician), the delayed self-transform an
+// attack trigger schedules for the end of that combat. It reuses
+// lowerDelayedSelfPrimitive to lower the self-directed body (transform, exile,
+// sacrifice, ...) and wraps it in a CreateDelayedTrigger scheduled for the
+// effect's fixed phase, mirroring lowerDelayedSingleEffectSpell but inside an
+// ordered sequence so an optional "you may X. If you do, <delayed body>." tail
+// can gate the scheduling on the optional effect's result. It fails closed for a
+// targeted, negated, or non-self-directed clause, which falls through to the
+// caller's normal clause lowering.
+func lowerDelayedSelfTimingClause(ctx contentCtx) (game.AbilityContent, bool) {
+	effect := ctx.content.Effects[0]
+	if effect.DelayedTiming == 0 ||
+		effect.Negated ||
+		len(ctx.content.Targets) != 0 {
+		return game.AbilityContent{}, false
+	}
+	timing := effect.DelayedTiming
+	primitive, ok := lowerDelayedSelfPrimitive(ctx)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	body := game.Mode{Sequence: []game.Instruction{{Primitive: primitive}}}.Ability()
+	return game.Mode{Sequence: []game.Instruction{{Primitive: game.CreateDelayedTrigger{
+		Trigger: game.DelayedTriggerDef{
+			Timing:  timing,
+			Content: body,
+		},
+	}}}}.Ability(), true
 }
 
 type characteristicLifeRiderLowering struct {

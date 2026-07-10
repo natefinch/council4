@@ -1073,6 +1073,11 @@ type ConditionSelection struct {
 	// power <n> or greater" qualifier. MatchTotalPowerAtLeast marks it present.
 	TotalPowerAtLeast      int
 	MatchTotalPowerAtLeast bool
+	// TotalPowerAtMost is the collective-power ceiling for a "have total power
+	// <n> or less" qualifier, the upper-bound counterpart of TotalPowerAtLeast.
+	// MatchTotalPowerAtMost marks it present.
+	TotalPowerAtMost      int
+	MatchTotalPowerAtMost bool
 	// DistinctNamesAtLeast is the distinct-name threshold for a "with different
 	// names" qualifier. MatchDistinctNamesAtLeast marks it present.
 	DistinctNamesAtLeast      int

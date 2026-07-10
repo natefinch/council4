@@ -4330,19 +4330,19 @@ func parseBattlefieldCreatureGroupSubject(tokens []shared.Token, atoms Atoms) (E
 	switch {
 	case len(tokens) >= 5 && effectWordsAt(tokens, 0, "attacking", "creatures") &&
 		effectWordsAt(tokens, 2, "you", "control") &&
-		(equalWord(tokens[4], "get") || equalWord(tokens[4], "have")):
+		staticGroupVerb(tokens[4]):
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledAttackingCreatures, Span: shared.SpanOf(tokens[:4])}, true
 	case len(tokens) >= 6 && effectWordsAt(tokens, 0, "attacking", "creature", "tokens") &&
 		effectWordsAt(tokens, 3, "you", "control") &&
-		(equalWord(tokens[5], "get") || equalWord(tokens[5], "have")):
+		staticGroupVerb(tokens[5]):
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledAttackingCreatureTokens, Span: shared.SpanOf(tokens[:5])}, true
 	case len(tokens) >= 5 && effectWordsAt(tokens, 0, "attacking", "tokens") &&
 		effectWordsAt(tokens, 2, "you", "control") &&
-		(equalWord(tokens[4], "get") || equalWord(tokens[4], "have")):
+		staticGroupVerb(tokens[4]):
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledAttackingCreatureTokens, Span: shared.SpanOf(tokens[:4])}, true
 	case len(tokens) >= 5 && equalWord(tokens[0], "attacking") &&
 		effectWordsAt(tokens, 2, "you", "control") &&
-		(equalWord(tokens[4], "get") || equalWord(tokens[4], "have")):
+		staticGroupVerb(tokens[4]):
 		if value, ok := subtypeAt(1); ok {
 			return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledAttackingCreatureSubtype, Span: shared.SpanOf(tokens[:4]), Subtype: value, SubtypeText: tokens[1].Text, SubtypeKnown: true, SubtypesAny: []types.Sub{value}}, true
 		}

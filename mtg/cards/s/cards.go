@@ -281,6 +281,7 @@ var Cards = []cardset.Entry{
 	{Name: "Sturdy Hatchling", New: SturdyHatchling},
 	{Name: "Su-Chi Cave Guard", New: SuChiCaveGuard},
 	{Name: "Sudden Impact", New: SuddenImpact},
+	{Name: "Suki, Kyoshi Captain", New: SukiKyoshiCaptain},
 	{Name: "Sumala Woodshaper", New: SumalaWoodshaper},
 	{Name: "Summoner's Bane", New: SummonerSBane},
 	{Name: "Summoning Station", New: SummoningStation},

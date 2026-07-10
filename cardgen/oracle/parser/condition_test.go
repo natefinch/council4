@@ -826,6 +826,51 @@ func TestParseConditionControlsTotalPower(t *testing.T) {
 	}
 }
 
+// TestParseConditionControlsTotalPowerAtMost covers the upper-bound total-power
+// qualifier ("N or less"), the counterpart the total-power condition recognizer
+// gained alongside the "N or greater" lower bound. No currently supported card
+// uses it, but the recognizer is general so a future card ("If those creatures
+// have total power N or less, ...") lowers without a bespoke path.
+func TestParseConditionControlsTotalPowerAtMost(t *testing.T) {
+	t.Parallel()
+	clause := parseSingleConditionClause(t, "creatures you control have total power 8 or less")
+	if clause.Predicate != ConditionPredicateControls {
+		t.Fatalf("clause = %#v, want controls predicate", clause)
+	}
+	if clause.Scope != ConditionControlScopeController {
+		t.Fatalf("clause = %#v, want controller scope", clause)
+	}
+	selection := clause.Selection
+	if !slices.Equal(selection.RequiredTypes, []TriggerCardType{TriggerCardTypeCreature}) {
+		t.Fatalf("selection = %#v, want creature type", selection)
+	}
+	if !selection.MatchTotalPowerAtMost || selection.TotalPowerAtMost != 8 {
+		t.Fatalf("selection = %#v, want total power at most 8", selection)
+	}
+	if selection.MatchTotalPowerAtLeast {
+		t.Fatalf("selection = %#v, upper bound must not set the lower-bound qualifier", selection)
+	}
+}
+
+// TestParseConditionThoseCreaturesTotalPower covers the anaphoric subject the
+// total-power recognizer resolves to the attacking creatures bound by the
+// trigger ("those creatures"), the form Ultra Magnus, Armored Carrier uses to
+// gate its convert on the just-granted attackers' combined power.
+func TestParseConditionThoseCreaturesTotalPower(t *testing.T) {
+	t.Parallel()
+	clause := parseSingleConditionClause(t, "those creatures have total power 8 or greater")
+	if clause.Predicate != ConditionPredicateControls {
+		t.Fatalf("clause = %#v, want controls predicate", clause)
+	}
+	selection := clause.Selection
+	if selection.CombatState != ConditionCombatAttacking {
+		t.Fatalf("selection = %#v, want attacking combat state", selection)
+	}
+	if !selection.MatchTotalPowerAtLeast || selection.TotalPowerAtLeast != 8 {
+		t.Fatalf("selection = %#v, want total power 8", selection)
+	}
+}
+
 // TestParseConditionControlComparison covers cross-player control-count
 // comparison conditions ("an opponent controls more lands than you" and its
 // variants). The parser must record which player scope is on each side of the
@@ -948,7 +993,6 @@ func TestParseConditionTotalPowerNearMissFailsClosed(t *testing.T) {
 	// scope, comparison polarity, or noun, so the parser must emit no clause.
 	conditions := []string{
 		"creatures your opponents control have total power 8 or greater",
-		"creatures you control have total power 8 or less",
 		"creatures you control have total toughness 8 or greater",
 		"creatures you control have power 8 or greater",
 	}
