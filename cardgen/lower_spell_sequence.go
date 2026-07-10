@@ -160,6 +160,65 @@ func lowerOrderedSequenceSpecialCase(
 	return game.AbilityContent{}, nil, false
 }
 
+// collapseCausativeHavePairs folds each optional causative "you may have
+// <subject> <action> ..." pair — a purely structural EffectGrantKeyword carrying
+// the resolving optionality followed by its same-sentence action effect — into
+// the single action effect marked Optional. The parser models the causative
+// "have"/"has" as an EffectGrantKeyword that grants no keyword of its own and
+// shares the action effect's sentence span; lowerOptionalHaveEffect collapses the
+// standalone two-effect form of this shape, and this applies the same collapse
+// inside a longer ordered sequence ("... you may have that player gain control of
+// Slicer until end of turn. If you do, ...", Slicer, Hired Muscle) so the action
+// becomes the sequence's optional gate source rather than a mandatory effect
+// wedged between the optional marker and the gated tail. Sequences that do not
+// open with a causative-have pair are returned unchanged, so every currently
+// lowered sequence is unaffected.
+func collapseCausativeHavePairs(
+	effects []compiler.CompiledEffect,
+	keywords []compiler.CompiledKeyword,
+) []compiler.CompiledEffect {
+	collapsed := make([]compiler.CompiledEffect, 0, len(effects))
+	for i := 0; i < len(effects); i++ {
+		if i+1 < len(effects) && causativeHaveMarker(effects[i], effects[i+1], keywords) {
+			action := effects[i+1]
+			action.Optional = true
+			action.OptionalSpan = effects[i].OptionalSpan
+			// The action carried RequiresOrderedLowering only because the ability
+			// had the structural "have" sibling; as the folded optional effect it
+			// lowers through the ordinary single-effect clause path.
+			action.RequiresOrderedLowering = false
+			collapsed = append(collapsed, action)
+			i++
+			continue
+		}
+		collapsed = append(collapsed, effects[i])
+	}
+	return collapsed
+}
+
+// causativeHaveMarker reports whether have is the purely structural causative
+// "you may have <subject> ..." EffectGrantKeyword immediately preceding its
+// same-sentence action effect. It mirrors the structural markers
+// lowerOptionalHaveEffect requires: a controller-subject optional grant whose
+// optionality opens the sentence ("you may") and whose "have"/"has" verb sits
+// after the sentence start (a subject stands between), carrying no keyword of its
+// own, followed by a non-negated, non-delayed action sharing the same sentence
+// span. A grant that carries its own keyword, or any effect that is not this
+// causative pair, is left untouched.
+func causativeHaveMarker(have, action compiler.CompiledEffect, keywords []compiler.CompiledKeyword) bool {
+	return have.Kind == compiler.EffectGrantKeyword &&
+		have.Optional &&
+		!have.Negated &&
+		have.DelayedTiming == 0 &&
+		have.Context == parser.EffectContextController &&
+		have.OptionalSpan.Start == have.Span.Start &&
+		have.VerbSpan.Start.Offset > have.Span.Start.Offset &&
+		len(keywordsWithinSpan(keywords, have.ClauseSpan)) == 0 &&
+		action.Span == have.Span &&
+		!action.Negated &&
+		action.DelayedTiming == 0
+}
+
 func lowerOrderedEffectSequence(
 	cardName string,
 	ctx contentCtx,
@@ -179,6 +238,12 @@ func lowerOrderedEffectSequence(
 	// targeted players (Court of Cunning). The flag propagates to each clause's
 	// context through lowerSequenceClauseContent.
 	ctx.hasTargetedPlayers = sequenceHasPlayerGroupTarget(ctx.content.Targets)
+	// Fold each leading optional causative "you may have <subject> <action>" pair
+	// into the single action effect marked Optional before optional-flow planning,
+	// so the action (not the structural "have" marker) is the sequence's optional
+	// gate source. Sequences that do not open with this causative shape are
+	// returned unchanged.
+	ctx.content.Effects = collapseCausativeHavePairs(ctx.content.Effects, ctx.content.Keywords)
 	// Resolving optionality ("you may X. If you do, Y") is realized by marking
 	// the optional effect's instruction Optional + PublishResult and gating the
 	// "if you do" effect on that result. planOptionalFlow fails closed unless the

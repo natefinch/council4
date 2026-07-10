@@ -1107,6 +1107,26 @@ func withinAsThoughDidntHaveDefenderTail(tokens []shared.Token, index int) bool 
 	return false
 }
 
+// cantBeSacrificedThisTurnVerbAt reports whether the temporary prohibition
+// "can't be sacrificed this turn" / "cannot be sacrificed this turn" begins at
+// index. It anchors the temporary can't-be-sacrificed resolving effect ("... it
+// can't be sacrificed this turn.", Slicer, Hired Muscle) on the negated
+// "can't"/"cannot" so the subject is the permanent scanned before it. The "this
+// turn" tail distinguishes this resolving, until-end-of-turn effect from the
+// continuous static prohibition ("Creatures you control but don't own ... can't
+// be sacrificed.", Garland, Royal Kidnapper) that carries no turn duration, so
+// that keeps flowing through the static-declaration path. The exactness
+// recognizer reconstructs the full clause, so any other wording still fails
+// closed.
+func cantBeSacrificedThisTurnVerbAt(tokens []shared.Token, index int) bool {
+	return (equalWord(tokens[index], "can't") || equalWord(tokens[index], "cannot")) &&
+		index+4 < len(tokens) &&
+		equalWord(tokens[index+1], "be") &&
+		equalWord(tokens[index+2], "sacrificed") &&
+		equalWord(tokens[index+3], "this") &&
+		equalWord(tokens[index+4], "turn")
+}
+
 // cantBlockThisTurnVerbAt reports whether the temporary prohibition "can't block
 // this turn" / "cannot block this turn" begins at index. It anchors the
 // temporary can't-block resolving effect ("Target creature can't block this
@@ -1535,6 +1555,8 @@ func effectKindAt(tokens []shared.Token, index int) EffectKind {
 		return EffectCanAttackAsThoughDefender
 	case cantBeBlockedThisTurnVerbAt(tokens, index):
 		return EffectCantBeBlocked
+	case cantBeSacrificedThisTurnVerbAt(tokens, index):
+		return EffectCantBeSacrificed
 	case cantBlockThisTurnVerbAt(tokens, index):
 		return EffectCantBlock
 	case cantAttackOrBlockThisTurnVerbAt(tokens, index):

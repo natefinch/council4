@@ -8,7 +8,79 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// lowerControlSpellSequence lowers an ordered effect sequence whose first
+// lowerGiveControlToEventPlayerSpell lowers the give-control form whose recipient
+// is the triggering event's player and whose object is the ability's own source
+// permanent, for the turn ("you may have that player gain control of Slicer until
+// end of turn", Slicer, Hired Muscle, gated by the sequence's optional flow). The
+// new controller is the player who triggered the ability — the opponent whose
+// upkeep it is — resolved at application time through
+// NewControllerRef = EventPlayerReference(); the given permanent is the source.
+// It fails closed unless the effect is exactly the source-object, event-player-
+// recipient, until-end-of-turn shape carrying no targets, keywords, conditions,
+// or modes and exactly the source and event-player references.
+func lowerGiveControlToEventPlayerSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	return game.Mode{
+		Sequence: []game.Instruction{{
+			Primitive: game.ApplyContinuous{
+				Object: opt.Val(game.SourcePermanentReference()),
+				ContinuousEffects: []game.ContinuousEffect{{
+					Layer:            game.LayerControl,
+					NewControllerRef: opt.Val(game.EventPlayerReference()),
+				}},
+				Duration: game.DurationUntilEndOfTurn,
+			},
+		}},
+	}.Ability(), nil
+}
+
+// givesControlOfSourceToEventPlayer reports whether the content is exactly "have
+// that player gain control of <source> until end of turn": a single
+// until-end-of-turn gain-control effect resolved in the triggering player's
+// context, referencing only the ability's own source (the given object) and the
+// event player (the control recipient), with no targets, keywords, conditions, or
+// modes layered on. Only this exact shape is lowered by
+// lowerGiveControlToEventPlayerSpell; any other referenced-player control text
+// falls through to the ordinary unsupported gain-control diagnostic.
+func givesControlOfSourceToEventPlayer(ctx contentCtx) bool {
+	effect := ctx.content.Effects[0]
+	if effect.Context != parser.EffectContextReferencedPlayer {
+		return false
+	}
+	if effect.Negated ||
+		effect.DelayedTiming != 0 ||
+		effect.Duration != compiler.DurationUntilEndOfTurn ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return false
+	}
+	return referencesSourceAndEventPlayer(ctx.content.References)
+}
+
+// referencesSourceAndEventPlayer reports whether references are exactly the
+// ability's own source permanent (the given object, "Slicer") and the triggering
+// event's player (the control recipient, "that player"). Both are consumed by the
+// give-control-to-event-player lowering: the source binds the given object and
+// the event player binds NewControllerRef, so no reference is left dropped.
+func referencesSourceAndEventPlayer(references []compiler.CompiledReference) bool {
+	if len(references) != 2 {
+		return false
+	}
+	source, eventPlayer := 0, 0
+	for _, reference := range references {
+		switch reference.Binding {
+		case compiler.ReferenceBindingSource:
+			source++
+		case compiler.ReferenceBindingEventPlayer:
+			eventPlayer++
+		default:
+			return false
+		}
+	}
+	return source == 1 && eventPlayer == 1
+}
+
 // effect (or second, after an initial Untap) is EffectGainControl.  It handles
 // two oracle text patterns atomically:
 //
@@ -373,6 +445,9 @@ func lowerSingleControlSpell(
 			"unsupported gain-control spell",
 			"the executable source backend supports only exact gain-control of one target permanent",
 		)
+	}
+	if givesControlOfSourceToEventPlayer(ctx) {
+		return lowerGiveControlToEventPlayerSpell(ctx)
 	}
 	if len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Conditions) != 0 ||

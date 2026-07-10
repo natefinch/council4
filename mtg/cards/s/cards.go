@@ -156,6 +156,7 @@ var Cards = []cardset.Entry{
 	{Name: "Sleep Magic", New: SleepMagic},
 	{Name: "Sleep Paralysis", New: SleepParalysis},
 	{Name: "Sleeping Potion", New: SleepingPotion},
+	{Name: "Slicer, Hired Muscle", New: SlicerHiredMuscle},
 	{Name: "Slime Molding", New: SlimeMolding},
 	{Name: "Slipstream Eel", New: SlipstreamEel},
 	{Name: "Slipstream Serpent", New: SlipstreamSerpent},

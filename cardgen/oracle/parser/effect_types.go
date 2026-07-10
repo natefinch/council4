@@ -23,6 +23,7 @@ const (
 	EffectCantAttack                EffectKind = "EffectCantAttack"
 	EffectCantAttackOrBlock         EffectKind = "EffectCantAttackOrBlock"
 	EffectCantBeBlocked             EffectKind = "EffectCantBeBlocked"
+	EffectCantBeSacrificed          EffectKind = "EffectCantBeSacrificed"
 	EffectCantBlock                 EffectKind = "EffectCantBlock"
 	EffectCast                      EffectKind = "EffectCast"
 	EffectCounter                   EffectKind = "EffectCounter"
