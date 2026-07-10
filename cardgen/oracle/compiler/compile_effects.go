@@ -361,6 +361,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				TapAttached:                   syntax.TapAttached,
 				UntapAttached:                 syntax.UntapAttached,
 				MoveCountersAll:               syntax.MoveCountersAll,
+				MoveCountersAllOfKind:         syntax.MoveCountersAllOfKind,
 				RemoveCountersAll:             syntax.RemoveCountersAll,
 				MoveCountersDistribute:        syntax.MoveCountersDistribute,
 				MoveThoseCounters:             syntax.MoveThoseCounters,

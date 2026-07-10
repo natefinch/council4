@@ -360,6 +360,14 @@ type StaticDeclarationSubject struct {
 	Span       shared.Span                     `json:"-"`
 	Group      EffectStaticSubjectSyntax       `json:",omitzero"`
 	CardFilter StaticDeclarationCardFilterKind `json:",omitempty"`
+	// GroupSelection carries a full parsed selection for a controlled-permanent
+	// group whose shape the enumerated Group vocabulary cannot express, most
+	// notably a union of alternatives ("nontoken artifact creatures and Vehicles
+	// you control"). When set, the subject Kind is StaticDeclarationSubjectGroup
+	// and downstream layers project this selection through the shared
+	// CompiledSelector machinery instead of the enumerated Group. It is
+	// parser-internal, so it is excluded from serialization.
+	GroupSelection *SelectionSyntax `json:"-"`
 }
 
 // StaticGrantedManaAbilitySyntax is one typed activated mana ability quoted by

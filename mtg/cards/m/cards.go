@@ -27,6 +27,7 @@ var Cards = []cardset.Entry{
 	{Name: "Malevolent Whispers", New: MalevolentWhispers},
 	{Name: "Malfunction", New: Malfunction},
 	{Name: "Malleable Impostor", New: MalleableImpostor},
+	{Name: "Mana Bloom", New: ManaBloom},
 	{Name: "Mana Reflection", New: ManaReflection},
 	{Name: "Mana Seism", New: ManaSeism},
 	{Name: "Manamorphose", New: Manamorphose},

@@ -417,7 +417,18 @@ func buildCounterTriggerEventClause(
 		}
 	}
 	subject := parsePermanentEventSubject(subjectTokens, false, atoms)
-	if !subject.ok || subject.subject.Kind != TriggerEventSubjectSelection {
+	if !subject.ok {
+		return nil
+	}
+	if subject.subject.Kind == TriggerEventSubjectSelf {
+		return &TriggerEventClause{
+			Kind:      TriggerEventKindCounterAdded,
+			Subject:   subject.subject,
+			Counter:   eventCounter,
+			OneOrMore: oneOrMore,
+		}
+	}
+	if subject.subject.Kind != TriggerEventSubjectSelection {
 		return nil
 	}
 	return &TriggerEventClause{

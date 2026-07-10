@@ -2403,6 +2403,14 @@ type EffectSyntax struct {
 	// target creature."). It is false for a specific-kind move ("Move a +1/+1
 	// counter ..."), whose kind is carried in CounterKind / CounterKnown.
 	MoveCountersAll bool `json:",omitempty"`
+	// MoveCountersAllOfKind reports the kind-specific mass form "move all <kind>
+	// counters from <source> onto <target>" of an EffectMoveCounters effect, where
+	// every counter of the single named kind moves to the destination but counters
+	// of other kinds stay behind ("move all +1/+1 counters from this creature onto
+	// target artifact creature.", CR 702.44 Modular). The kind is carried in
+	// CounterKind / CounterKnown; it is false for the kind-agnostic "all counters"
+	// form (MoveCountersAll) and the fixed-count named-kind move.
+	MoveCountersAllOfKind bool `json:",omitempty"`
 	// RemoveCountersAll reports the kind-agnostic "remove all counters" form of an
 	// EffectRemoveCounter effect, where every counter on the object is removed
 	// regardless of kind ("Remove all counters from target permanent.", Vampire

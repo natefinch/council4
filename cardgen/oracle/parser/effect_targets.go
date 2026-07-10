@@ -3164,6 +3164,7 @@ func disjunctSelectionSide(tokens []shared.Token, atoms Atoms) (SelectionSyntax,
 	side := SelectionSyntax{
 		Kind:               parsed.Kind,
 		RequiredTypesAny:   parsed.RequiredTypesAny,
+		ConjunctiveTypes:   parsed.ConjunctiveTypes || conjunctiveTypeTarget(parsed),
 		ExcludedTypes:      parsed.ExcludedTypes,
 		Supertypes:         parsed.Supertypes,
 		ExcludedSupertypes: parsed.ExcludedSupertypes,

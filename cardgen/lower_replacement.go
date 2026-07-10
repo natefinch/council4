@@ -1638,13 +1638,22 @@ func lowerGroupEntersWithCountersRecipient(selector compiler.CompiledSelector) (
 		selector.MatchManaValue || selector.MatchPower || selector.MatchToughness ||
 		selector.BasicLandType || selector.PlayerOrPlaneswalker ||
 		selector.SubtypeFromChosenType ||
-		len(selector.Alternatives) != 0 || selector.Zone != zone.None {
+		selector.Zone != zone.None {
 		return nil, false
 	}
-	if _, ok := groupEntersWithCountersRequiredType(selector); !ok {
+	mask := groupEntersWithCountersRecipientMask
+	if len(selector.Alternatives) > 0 {
+		// A union recipient ("each other nontoken artifact creature or Vehicle
+		// you control") carries its card-type constraints on the alternatives,
+		// so the parent kind is unknown and the single-recipient required-type
+		// check does not apply. The conjunctive "artifact creature" member must
+		// keep its all-of type set, which the single-recipient mask drops, so
+		// the union path honors the conjunctive-type dimension instead.
+		mask = groupEntersWithCountersUnionRecipientMask
+	} else if _, ok := groupEntersWithCountersRequiredType(selector); !ok {
 		return nil, false
 	}
-	selection, ok := SelectionForSelectorMasked(selector, groupEntersWithCountersRecipientMask)
+	selection, ok := SelectionForSelectorMasked(selector, mask)
 	if !ok {
 		return nil, false
 	}
@@ -1663,6 +1672,21 @@ var groupEntersWithCountersRecipientMask = SelectionMask{}.Ignoring(
 	DimMatchAnyCounter,
 	DimSubtypeChoiceExcluded,
 	DimConjunctiveTypes,
+	DimHistoric,
+).Rejecting(
+	DimPowerVsSource,
+	DimRequiredName,
+)
+
+// groupEntersWithCountersUnionRecipientMask handles a union recipient ("each
+// other nontoken artifact creature or Vehicle you control"). It mirrors the
+// single-recipient mask but preserves DimConjunctiveTypes so the conjunctive
+// "artifact creature" alternative keeps its full all-of type set instead of
+// collapsing to a single card type.
+var groupEntersWithCountersUnionRecipientMask = SelectionMask{}.Ignoring(
+	DimExcludedSupertype,
+	DimMatchAnyCounter,
+	DimSubtypeChoiceExcluded,
 	DimHistoric,
 ).Rejecting(
 	DimPowerVsSource,

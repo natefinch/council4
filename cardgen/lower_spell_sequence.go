@@ -560,6 +560,14 @@ func lowerOrderedEffectSequence(
 		// modeled (linked object).
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — payoff amount references a non-target permanent")
 	}
+	if sequenceHasKickerContingentRequiredTarget(targets, sequence) {
+		// A required target used only by a kicker-gated effect (Jilt's "if this
+		// spell was kicked, it deals 2 damage to another target creature") is
+		// contingent on paying the kicker, but the TargetSpec carries no kicker
+		// gate, so the engine would require the target even when unkicked. Fail
+		// closed until targets contingent on an additional cost are modeled.
+		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — target contingent on kicker cost not modeled")
+	}
 	return game.Mode{Targets: targets, Sequence: sequence}.Ability(), nil
 }
 
@@ -615,6 +623,92 @@ func targetSlotIsPlayerOnly(targets []game.TargetSpec, index int) bool {
 			return targets[i].Allow == game.TargetAllowPlayer
 		}
 		cumulative += width
+	}
+	return false
+}
+
+// objectIndexToTargetSlot maps an object-domain target index (the cumulative
+// position across target-slot widths that TargetPermanentReference and friends
+// carry) back to its TargetSpec slice slot, mirroring the width accumulation in
+// targetSlotIsPlayerOnly. It reports false for an index past the last slot.
+func objectIndexToTargetSlot(targets []game.TargetSpec, index int) (int, bool) {
+	if index < 0 {
+		return 0, false
+	}
+	cumulative := 0
+	for i := range targets {
+		width := max(targets[i].MaxTargets, 1)
+		if index < cumulative+width {
+			return i, true
+		}
+		cumulative += width
+	}
+	return 0, false
+}
+
+// instructionGatedOnKicker reports whether an instruction resolves only when the
+// spell was kicked, i.e. it is gated on the positive "if this spell was kicked"
+// condition. A negated gate ("if this spell wasn't kicked") fires when unkicked,
+// so it does not make a referenced target contingent on the kicker and is
+// excluded here.
+func instructionGatedOnKicker(instr game.Instruction) bool {
+	if !instr.Condition.Exists {
+		return false
+	}
+	cond := instr.Condition.Val.Condition
+	return cond.Exists && cond.Val.SpellWasKicked && !cond.Val.Negate
+}
+
+// sequenceHasKickerContingentRequiredTarget reports whether a required target
+// slot (MinTargets >= 1) is referenced only by kicker-gated instructions. Such a
+// target is contingent on paying the kicker (CR 601.2c: a target is only chosen
+// if the condition that adds it is met), but the lowered TargetSpec carries no
+// kicker gate, so the engine would require the target at cast even when the spell
+// is not kicked — illegal for Jilt-style "if this spell was kicked, it deals N to
+// another target creature." Modeling a target contingent on an additional cost is
+// unsupported, so the sequence fails closed rather than emit the always-required
+// approximation. The check is conservative: it analyzes only object-domain target
+// references (bailing on card-target references or any primitive the target-index
+// walker cannot express) so it never spuriously rejects a supported card.
+func sequenceHasKickerContingentRequiredTarget(targets []game.TargetSpec, sequence []game.Instruction) bool {
+	referenced := make([]bool, len(targets))
+	ungated := make([]bool, len(targets))
+	kickerGated := make([]bool, len(targets))
+	for _, instr := range sequence {
+		kicker := instructionGatedOnKicker(instr)
+		slots := map[int]bool{}
+		sawCard := false
+		record := func(kind targetIndexKind, idx int) (int, bool) {
+			if kind == targetIndexObject {
+				slots[idx] = true
+			} else {
+				sawCard = true
+			}
+			return idx, true
+		}
+		if _, ok := transformPrimitiveTargetIndices(instr.Primitive, record); !ok || sawCard {
+			return false
+		}
+		for objIndex := range slots {
+			slot, ok := objectIndexToTargetSlot(targets, objIndex)
+			if !ok {
+				return false
+			}
+			referenced[slot] = true
+			if kicker {
+				kickerGated[slot] = true
+			} else {
+				ungated[slot] = true
+			}
+		}
+	}
+	for i := range targets {
+		if targets[i].MinTargets < 1 {
+			continue
+		}
+		if referenced[i] && kickerGated[i] && !ungated[i] {
+			return true
+		}
 	}
 	return false
 }

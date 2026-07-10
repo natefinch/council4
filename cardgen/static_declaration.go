@@ -2099,6 +2099,13 @@ type loweredStaticGroupReference struct {
 }
 
 func lowerStaticGroupReference(reference compiler.StaticGroupReference) (loweredStaticGroupReference, bool) {
+	if reference.SelectorOverride != nil {
+		selection, ok := SelectionForSelectorMasked(*reference.SelectorOverride, SelectionMask{}.Rejecting(DimRequiredName))
+		if !ok {
+			return loweredStaticGroupReference{}, false
+		}
+		return loweredStaticGroupReference{Group: game.BattlefieldGroup(selection)}, true
+	}
 	selection, ok := lowerStaticSelection(reference.Selection)
 	if !ok {
 		return loweredStaticGroupReference{}, false

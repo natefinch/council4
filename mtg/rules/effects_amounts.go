@@ -1048,6 +1048,24 @@ func effectCounterSource(g *game.Game, obj *game.StackObject, source game.Counte
 		if permanent, ok := permanentByObjectID(g, obj.SourceID); ok {
 			return cloneCounters(permanent.Counters), permanent, true
 		}
+		// A dies-trigger that moves the source's own counters (CR 702.44 Modular;
+		// Power Depot) resolves after the source has already left the battlefield,
+		// so it reads the counters from the source's last-known information (CR
+		// 603.10, CR 608.2h). This fallback is scoped to that case: it applies only
+		// when this ability triggered on its own source's death. Every other
+		// CounterSourceSelf effect — graft's "Whenever another creature enters, move
+		// a +1/+1 counter from this creature onto it." and the "{T}: move a counter
+		// from this permanent" activated abilities (Explorer's Cache, Diamond City) —
+		// moves nothing once its source is gone, because those counters ceased to
+		// exist (CR 121.5). The nil permanent tells the caller there is no live
+		// source to remove the moved counters from.
+		if obj.HasTriggerEvent &&
+			obj.TriggerEvent.Kind == game.EventPermanentDied &&
+			obj.TriggerEvent.PermanentID == obj.SourceID {
+			if snapshot, ok := lastKnownObject(g, obj.SourceID); ok {
+				return cloneCounters(snapshot.Counters), nil, true
+			}
+		}
 	default:
 	}
 	return counter.Set{}, nil, false

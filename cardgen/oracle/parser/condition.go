@@ -1840,6 +1840,14 @@ func recognizeSourceCounterStateCondition(body []shared.Token, atoms Atoms) (Con
 			Selection:     selection,
 		}, true
 	}
+	if selection, ok := sourceNoCounterSelection(rest, atoms); ok {
+		return ConditionClause{
+			Predicate:     ConditionPredicateObjectMatches,
+			ObjectBinding: ConditionObjectBindingSource,
+			Selection:     selection,
+			Negated:       true,
+		}, true
+	}
 	if !tokenWordsEqual(rest, "has", "counters", "on", "it") &&
 		!tokenWordsEqual(rest, "has", "a", "counter", "on", "it") {
 		return ConditionClause{}, false
@@ -1848,6 +1856,41 @@ func recognizeSourceCounterStateCondition(body []shared.Token, atoms Atoms) (Con
 		Predicate:     ConditionPredicateObjectMatches,
 		ObjectBinding: ConditionObjectBindingSource,
 		Selection:     ConditionSelection{AnyCounter: true},
+	}, true
+}
+
+// sourceNoCounterSelection recognizes the negated source counter-state body
+// "has no <kind> counters on it" ("If this creature has no +1/+1 counters on
+// it, ...", the self-referential counterpart of the depletion taplands' "there
+// are no <kind> counters on this <type>") and the kind-agnostic "has no counters
+// on it". For the kind-specific form it returns a Selection carrying the counter
+// kind with a minimum count of 1, so the caller's negated ObjectMatches clause
+// means "does NOT have >= 1 counter of kind" = "has zero counters of kind"; the
+// kind-agnostic form returns the any-counter presence flag whose negation means
+// "has no counters of any kind".
+func sourceNoCounterSelection(rest []shared.Token, atoms Atoms) (ConditionSelection, bool) {
+	after, ok := cutTokenPrefix(rest, "has", "no")
+	if !ok {
+		return ConditionSelection{}, false
+	}
+	after, ok = stripTokenSuffix(after, "on", "it")
+	if !ok {
+		return ConditionSelection{}, false
+	}
+	if tokenWordsEqual(after, "counters") {
+		return ConditionSelection{AnyCounter: true}, true
+	}
+	if !tokenSuffixWord(after, "counters") {
+		return ConditionSelection{}, false
+	}
+	kind, _, ok := atoms.CounterIn(shared.SpanOf(after))
+	if !ok {
+		return ConditionSelection{}, false
+	}
+	return ConditionSelection{
+		CounterKind:         kind,
+		CounterKindKnown:    true,
+		CounterCountAtLeast: 1,
 	}, true
 }
 

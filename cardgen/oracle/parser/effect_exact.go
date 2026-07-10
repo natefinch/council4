@@ -4887,6 +4887,34 @@ func exactMoveCountersEffectSyntax(effect *EffectSyntax) bool {
 			fmt.Sprintf("Move all counters from %s onto %s.", source, dest),
 		)
 	}
+	// The kind-specific mass form ("Move all +1/+1 counters from <self> onto
+	// <target>.") moves every counter of one recognized kind, reusing the same
+	// self-source, single-target shape as the fixed and X forms but with the "all"
+	// quantifier and a plural counter noun.
+	if effect.MoveCountersAllOfKind {
+		if !effect.CounterKnown {
+			return false
+		}
+		return strings.EqualFold(
+			text,
+			fmt.Sprintf("Move all %s counters from %s onto %s.",
+				effect.CounterKind.String(), source, dest),
+		)
+	}
+	// The variable-count form ("Move X +1/+1 counters from <self> onto <target>.")
+	// moves the ability's chosen {X} counters of one recognized kind, reusing the
+	// same self-source, single-target shape as the fixed form but with a plural
+	// counter noun and the X amount word.
+	if effect.Amount.VariableX {
+		if !effect.CounterKnown {
+			return false
+		}
+		return strings.EqualFold(
+			text,
+			fmt.Sprintf("Move %s %s counters from %s onto %s.",
+				effectAmountSourceText(effect), effect.CounterKind.String(), source, dest),
+		)
+	}
 	if !effect.CounterKnown || !effect.Amount.Known || effect.Amount.Value != 1 {
 		return false
 	}
