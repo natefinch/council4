@@ -30,12 +30,24 @@ func (e *Engine) runTurn(g *game.Game, agents [game.NumPlayers]PlayerAgent) (log
 	if g.IsGameOver() {
 		return log
 	}
+	e.runExtraPhases(g, agents, &log)
+	if g.IsGameOver() {
+		return log
+	}
 	e.runMainPhase(g, agents, game.PhasePrecombatMain, &log)
 	recordManaDevelopment(g, &log)
 	if g.IsGameOver() {
 		return log
 	}
+	e.runExtraPhases(g, agents, &log)
+	if g.IsGameOver() {
+		return log
+	}
 	e.runCombatPhase(g, agents, &log)
+	if g.IsGameOver() {
+		return log
+	}
+	e.runExtraPhases(g, agents, &log)
 	if g.IsGameOver() {
 		return log
 	}
@@ -60,10 +72,15 @@ func (e *Engine) runTurn(g *game.Game, agents [game.NumPlayers]PlayerAgent) (log
 // extra-phase effects ("After this main phase, there is an additional combat
 // phase followed by an additional main phase." — Aggravated Assault; "there is
 // an additional beginning phase after this phase." — Sphinx of the Second Sun,
-// Cyclonus, Cybertronian Fighter). Queued phases run in order after the
-// postcombat main phase; a queued main phase that re-activates the source
-// re-queues more phases, so the loop continues until the queue empties (the
-// extra-combat combo, CR 505.5 / 506.2).
+// Cyclonus, Cybertronian Fighter). It is called after each base phase, so a
+// queued phase runs immediately after the phase during which it was queued
+// (CR 500.7): an "after this phase" effect that resolves during combat (Éomer,
+// Marshal of Rohan; Cyclonus) runs before the postcombat main phase, while an
+// effect that resolves during the postcombat main phase (Sphinx, Aggravated
+// Assault) runs after it. Because each call empties the queue, calls after
+// phases that queued nothing are no-ops. A queued main phase that re-activates
+// the source re-queues more phases, so the loop continues until the queue empties
+// (the extra-combat combo, CR 505.5 / 506.2).
 func (e *Engine) runExtraPhases(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
 	for len(g.Turn.ExtraPhases) > 0 {
 		phase := g.Turn.ExtraPhases[0]
