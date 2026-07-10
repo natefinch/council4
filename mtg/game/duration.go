@@ -134,13 +134,19 @@ type DelayedTriggerDef struct {
 	// trigger's controller. It is only valid with an EventPattern.
 	InterveningCondition opt.V[Condition]
 	// CapturedObject, when present, freezes the permanent this object reference
-	// resolves to against the creating ability's triggering event at schedule
-	// time, storing its object ID on the scheduled trigger so the trigger's
-	// content can act on it once the original event is gone. It backs delayed
-	// "at end of combat" disposal of the creature involved in combat ("destroy
-	// that creature at end of combat"), where CapturedObject is the event or
-	// event-related permanent and the content references
-	// ObjectReferenceCapturedObject. It is only valid with a fixed-phase Timing.
+	// resolves to at schedule time, storing its object ID on the scheduled
+	// trigger so the trigger's content can act on it once the reference's basis
+	// is gone. It backs two shapes. In delayed "at end of combat" disposal of the
+	// creature involved in combat ("destroy that creature at end of combat"),
+	// CapturedObject is the event or event-related permanent, resolved against the
+	// creating ability's triggering event. In delayed disposal of a permanent an
+	// earlier clause in the same resolution created or acted on and published
+	// under a linked key ("Create a token ... Sacrifice it at the beginning of the
+	// next end step.", Feldon of the Third Path), CapturedObject is a linked-object
+	// reference, so each activation captures the object it published rather than
+	// re-resolving one shared, source-scoped link key when the trigger fires. In
+	// both cases the content references ObjectReferenceCapturedObject. It is only
+	// valid with a fixed-phase Timing.
 	CapturedObject opt.V[ObjectReference]
 }
 

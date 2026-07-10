@@ -68,12 +68,13 @@ func newFeldonOfTheThirdPath() *game.CardDef {
 							{
 								Primitive: game.CreateDelayedTrigger{
 									Trigger: game.DelayedTriggerDef{
-										Timing: game.DelayedAtBeginningOfNextEndStep,
+										Timing:         game.DelayedAtBeginningOfNextEndStep,
+										CapturedObject: opt.Val(game.LinkedObjectReference("delayed-sacrifice-1")),
 										Content: game.Mode{
 											Sequence: []game.Instruction{
 												{
 													Primitive: game.Sacrifice{
-														Object: game.LinkedObjectReference("delayed-sacrifice-1"),
+														Object: game.CapturedObjectReference(),
 													},
 												},
 											},

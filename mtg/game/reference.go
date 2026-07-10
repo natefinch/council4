@@ -58,13 +58,17 @@ const (
 	ObjectReferenceAllTargetPermanents
 	// ObjectReferenceCapturedObject references the permanent captured at
 	// schedule time by the delayed trigger this content belongs to, resolved
-	// from the creating ability's triggering event (its event or event-related
-	// permanent) and frozen to a concrete object ID. It backs the "at end of
-	// combat" combat-creature disposal family (Tangle Asp, Serpentine Basilisk),
-	// where "Whenever this creature blocks or becomes blocked by a creature,
-	// destroy that creature at end of combat" must remember the blocked creature
-	// across the delay because the original combat event is gone when the
-	// trigger fires.
+	// from the creating ability's context (its triggering event, or a linked
+	// object an earlier clause published) and frozen to a concrete object ID. It
+	// backs the "at end of combat" combat-creature disposal family (Tangle Asp,
+	// Serpentine Basilisk), where "Whenever this creature blocks or becomes
+	// blocked by a creature, destroy that creature at end of combat" must remember
+	// the blocked creature across the delay because the original combat event is
+	// gone when the trigger fires. It also backs delayed disposal of a permanent
+	// an earlier clause created or acted on and published under a linked key
+	// ("Create a token ... Sacrifice it at the beginning of the next end step.",
+	// Feldon of the Third Path), where per-activation capture keeps several
+	// same-turn activations from all resolving one shared, source-scoped link key.
 	ObjectReferenceCapturedObject
 	// ObjectReferenceTargetCard references the card chosen for a card target
 	// slot (a card in a zone such as a graveyard), addressed by the spec index.
@@ -199,9 +203,11 @@ func AllTargetPermanentsReference(specIndex int) ObjectReference {
 
 // CapturedObjectReference references the permanent captured at schedule time by
 // the enclosing delayed trigger, frozen to a concrete object ID from the
-// creating ability's triggering event. It backs delayed "at end of combat"
-// disposal of the creature involved in combat ("destroy that creature at end of
-// combat").
+// creating ability's context (its triggering event, or a linked object an
+// earlier clause published). It backs delayed "at end of combat" disposal of the
+// creature involved in combat ("destroy that creature at end of combat") and
+// delayed disposal of a per-activation created or acted-on permanent ("Create a
+// token ... Sacrifice it at the beginning of the next end step.").
 func CapturedObjectReference() ObjectReference {
 	return ObjectReference{kind: ObjectReferenceCapturedObject}
 }

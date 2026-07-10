@@ -113,11 +113,14 @@ func TestLowerActivatedAbilitySequenceWithDelayedTargetSacrifice(t *testing.T) {
 	if !ok || delayed.Trigger.Timing != game.DelayedAtBeginningOfNextEndStep {
 		t.Fatalf("second primitive = %#v, want delayed end-step trigger", mode.Sequence[1].Primitive)
 	}
+	if !delayed.Trigger.CapturedObject.Exists ||
+		delayed.Trigger.CapturedObject.Val.Kind() != game.ObjectReferenceLinkedObject ||
+		delayed.Trigger.CapturedObject.Val.LinkID() != string(apply.PublishLinked) {
+		t.Fatalf("delayed trigger CapturedObject = %#v, want linked-object capture of %q", delayed.Trigger.CapturedObject, apply.PublishLinked)
+	}
 	sacrifice, ok := delayed.Trigger.Content.Modes[0].Sequence[0].Primitive.(game.Sacrifice)
-	if !ok ||
-		sacrifice.Object.Kind() != game.ObjectReferenceLinkedObject ||
-		sacrifice.Object.LinkID() != string(apply.PublishLinked) {
-		t.Fatalf("delayed sacrifice = %#v, want linked object sacrifice", delayed.Trigger.Content.Modes[0].Sequence[0].Primitive)
+	if !ok || sacrifice.Object.Kind() != game.ObjectReferenceCapturedObject {
+		t.Fatalf("delayed sacrifice = %#v, want captured-object sacrifice", delayed.Trigger.Content.Modes[0].Sequence[0].Primitive)
 	}
 }
 

@@ -3629,12 +3629,16 @@ func reanimationManaValueAntecedent(effects []compiler.CompiledEffect, effectInd
 }
 
 // lowerDelayedTargetSacrifice lowers a delayed "sacrifice it at the beginning of
-// the next end step" clause that refers to the permanent targeted by the
-// immediately preceding effect (e.g. "Target creature you control gains flying
-// until end of turn. Sacrifice it at the beginning of the next end step."). The
-// preceding instruction publishes the resolved target under a linked key and the
-// delayed trigger sacrifices that linked object, so the captured permanent is
-// sacrificed rather than the source. It returns the rewritten publishing
+// the next end step" clause that refers to the permanent an immediately preceding
+// effect acted on or created (e.g. "Target creature you control gains flying until
+// end of turn. Sacrifice it at the beginning of the next end step.", or the copy
+// token of Feldon of the Third Path). The preceding instruction publishes that
+// permanent under a linked key; the delayed trigger freezes the linked object to a
+// concrete object id at schedule time (CapturedObject) and sacrifices the captured
+// object through ObjectReferenceCapturedObject. Capturing per trigger rather than
+// re-resolving the shared, source-scoped link key at the end step lets several
+// same-turn activations each dispose of their own published permanent instead of
+// all resolving the single most-recent one. It returns the rewritten publishing
 // primitive and the delayed-trigger content, or false to fail closed.
 func lowerDelayedTargetSacrifice(
 	effectIndex int,
@@ -3673,9 +3677,10 @@ func lowerDelayedTargetSacrifice(
 		return nil, game.AbilityContent{}, false
 	}
 	delayed := game.CreateDelayedTrigger{Trigger: game.DelayedTriggerDef{
-		Timing: game.DelayedAtBeginningOfNextEndStep,
+		Timing:         game.DelayedAtBeginningOfNextEndStep,
+		CapturedObject: opt.Val(object),
 		Content: game.Mode{Sequence: []game.Instruction{{Primitive: game.Sacrifice{
-			Object: object,
+			Object: game.CapturedObjectReference(),
 		}}}}.Ability(),
 	}}
 	return publisher, game.Mode{Sequence: []game.Instruction{{Primitive: delayed}}}.Ability(), true
@@ -3699,9 +3704,13 @@ func isDelayedTargetExileEffect(effect *compiler.CompiledEffect) bool {
 // end step." clause that exiles the permanent an earlier clause put onto the
 // battlefield or pumped. It captures that permanent under a linked key (rewriting
 // the earlier publishing instruction) and schedules a delayed end-step trigger
-// that exiles the linked object, mirroring lowerDelayedTargetSacrifice. It
-// returns ok=false (so the caller lowers the clause normally) for any shape it
-// cannot link, preserving existing behavior for unlinkable predecessors.
+// that freezes the linked object to a concrete object id at schedule time
+// (CapturedObject) and exiles the captured object, mirroring
+// lowerDelayedTargetSacrifice. Per-trigger capture, rather than re-resolving the
+// shared source-scoped link key at the end step, lets several same-turn
+// activations each exile their own published permanent. It returns ok=false (so
+// the caller lowers the clause normally) for any shape it cannot link, preserving
+// existing behavior for unlinkable predecessors.
 func lowerDelayedTargetExile(
 	effectIndex int,
 	ctx contentCtx,
@@ -3739,9 +3748,10 @@ func lowerDelayedTargetExile(
 		return nil, game.AbilityContent{}, false
 	}
 	delayed := game.CreateDelayedTrigger{Trigger: game.DelayedTriggerDef{
-		Timing: game.DelayedAtBeginningOfNextEndStep,
+		Timing:         game.DelayedAtBeginningOfNextEndStep,
+		CapturedObject: opt.Val(object),
 		Content: game.Mode{Sequence: []game.Instruction{{Primitive: game.Exile{
-			Object: object,
+			Object: game.CapturedObjectReference(),
 		}}}}.Ability(),
 	}}
 	return publisher, game.Mode{Sequence: []game.Instruction{{Primitive: delayed}}}.Ability(), true
