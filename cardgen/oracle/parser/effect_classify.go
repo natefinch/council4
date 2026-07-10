@@ -1212,6 +1212,24 @@ func negatedNextUntapStepVerbAt(tokens []shared.Token, index int) bool {
 		equalWord(tokens[index+1], "untap")
 }
 
+// phasesOutVerbAt reports whether the token at index begins the subject-final
+// phase-out verb "phases out" (singular subject) or "phase out" (plural subject)
+// that closes a leading target subject ("Target creature phases out.", "Any
+// number of target nonland permanents you control phase out."). Neither "phase"
+// nor "phases" is a forward effect word, so target scanning would otherwise
+// absorb the verb into the target noun phrase and corrupt the selection. Breaking
+// here keeps the target phrase clean so it reconstructs exactly. A preceding
+// "can't"/"cannot" marks the restriction "... can't phase out" rather than the
+// phase-out action, so it is left for that clause to consume.
+func phasesOutVerbAt(tokens []shared.Token, index int) bool {
+	if index > 0 && (equalWord(tokens[index-1], "can't") || equalWord(tokens[index-1], "cannot")) {
+		return false
+	}
+	return (equalWord(tokens[index], "phases") || equalWord(tokens[index], "phase")) &&
+		index+1 < len(tokens) &&
+		equalWord(tokens[index+1], "out")
+}
+
 // pastCastCountPhraseAt reports whether the "cast" verb at index is the past
 // participle inside a "spell[s] you've cast this turn" / "...you have cast this
 // turn" count phrase rather than a casting effect. The storm-counter dynamic

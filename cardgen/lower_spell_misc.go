@@ -1829,13 +1829,17 @@ func lowerSourceAttachedTapUntapObject(ctx contentCtx) (game.ObjectReference, bo
 }
 
 // lowerPhaseOutSpell lowers the "phases out"/"phase out" family (CR 702.26) into
-// a single PhaseOut instruction. It supports three recipients, each reusing the
-// existing phase-out runtime:
+// PhaseOut instructions. It supports four recipients, each reusing the existing
+// phase-out runtime:
 //
 //   - every permanent in an exact mass group ("All permanents you control phase
 //     out.", Teferi's Protection's effect shape);
-//   - a chosen target permanent ("Target creature phases out.", with any
-//     supported target restriction), including multi-target forms; and
+//   - one or more chosen target permanents ("Target creature phases out.", "Up to
+//     one target creature phases out.", with any supported target restriction),
+//     unrolled to one PhaseOut per fixed/bounded slot;
+//   - any number of chosen target permanents ("Any number of target nonland
+//     permanents you control phase out.", Clever Concealment), captured by the
+//     all-target-permanents reference so one PhaseOut phases the whole group; and
 //   - the ability's own source ("This creature phases out." / "This permanent
 //     phases out." / "<CardName> phases out."), which lowers to the source
 //     permanent reference and needs no target.
@@ -1849,6 +1853,9 @@ func lowerPhaseOutSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic
 		}.Ability(), nil
 	}
 	if len(ctx.content.Targets) > 0 {
+		if content, ok := lowerAnyNumberTargetPhaseOut(ctx); ok {
+			return content, nil
+		}
 		return lowerFixedPermanentTargetSpell(ctx, "Phase out", func(object game.ObjectReference) game.Primitive {
 			return game.PhaseOut{Object: object}
 		})
@@ -1863,6 +1870,48 @@ func lowerPhaseOutSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic
 		"unsupported phase out effect",
 		"the executable source backend supports only exact phase out of one target, source, or mass group",
 	)
+}
+
+// lowerAnyNumberTargetPhaseOut lowers the unbounded "any number of target
+// <filter> ... phase out" form (Clever Concealment, and Guardian of Faith's "any
+// number of other target creatures you control" variant) into a single PhaseOut
+// over every chosen target permanent. The unbounded "any
+// number of" count (Min 0, Max 99) cannot unroll one instruction per sentinel
+// slot, so it phases the whole target spec out with the all-target-permanents
+// reference, mirroring the group-blink exile. Every bounded or single-target
+// cardinality, and every non-controller, negated, optional, conditional, modal,
+// or reference-carrying shape, fails closed so the per-slot fixed-target path
+// keeps ownership of them.
+func lowerAnyNumberTargetPhaseOut(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Targets) != 1 || len(ctx.content.Effects) != 1 {
+		return game.AbilityContent{}, false
+	}
+	target := ctx.content.Targets[0]
+	if !targetCardinalityIsUnbounded(target) {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if effect.Negated ||
+		effect.Optional ||
+		!effect.Exact ||
+		effect.Context != parser.EffectContextController ||
+		ctx.optional ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.References) != 0 {
+		return game.AbilityContent{}, false
+	}
+	targetSpec, ok := permanentTargetSpecAllowingUnbounded(target, true)
+	if !ok || targetSpec.MaxTargets < 1 {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Targets: []game.TargetSpec{targetSpec},
+		Sequence: []game.Instruction{{
+			Primitive: game.PhaseOut{Object: game.AllTargetPermanentsReference(0)},
+		}},
+	}.Ability(), true
 }
 
 // lowerSourcePhaseOutObject resolves the non-target phase-out recipient: the

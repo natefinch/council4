@@ -44,6 +44,7 @@ var Cards = []cardset.Entry{
 	{Name: "Razorfin Abolisher", New: RazorfinAbolisher},
 	{Name: "Razormane Masticore", New: RazormaneMasticore},
 	{Name: "Reality Heist", New: RealityHeist},
+	{Name: "Reality Ripple", New: RealityRipple},
 	{Name: "Realm-Cloaked Giant", New: RealmCloakedGiant},
 	{Name: "Realmbreaker's Grasp", New: RealmbreakerSGrasp},
 	{Name: "Reaper from the Abyss", New: ReaperFromTheAbyss},

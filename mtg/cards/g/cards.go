@@ -121,6 +121,7 @@ var Cards = []cardset.Entry{
 	{Name: "Grolnok, the Omnivore", New: GrolnokTheOmnivore},
 	{Name: "Groundskeeper", New: Groundskeeper},
 	{Name: "Growth Cycle", New: GrowthCycle},
+	{Name: "Guardian of Faith", New: GuardianOfFaith},
 	{Name: "Guardian Project", New: GuardianProject},
 	{Name: "Guardian Seraph", New: GuardianSeraph},
 	{Name: "Guardians' Pledge", New: GuardiansPledge},
