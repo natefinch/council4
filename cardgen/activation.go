@@ -303,6 +303,9 @@ func activationReferencesSupported(content compiler.AbilityContent) bool {
 		if reorderInternalReference(content.Effects, reference) {
 			continue
 		}
+		if returnExiledCardsWithCounterInternalReference(content.Effects, reference) {
+			continue
+		}
 		if reference.Binding == compiler.ReferenceBindingUnsupported ||
 			reference.Binding == compiler.ReferenceBindingAmbiguous {
 			return false
@@ -328,6 +331,26 @@ func reorderInternalReference(effects []compiler.CompiledEffect, reference compi
 	}
 	for i := range effects {
 		if effects[i].Kind == compiler.EffectReorderLibraryTop &&
+			spanCovered(reference.Span, []shared.Span{effects[i].Span}) {
+			return true
+		}
+	}
+	return false
+}
+
+// returnExiledCardsWithCounterInternalReference reports whether reference is the
+// "them" pronoun internal to a self-contained "Put all exiled cards you own with
+// <kind> counters on them into your hand." (EffectReturnExiledCardsWithCounter)
+// effect. The pronoun refers to the exiled cards the effect returns and is
+// consumed by the mass-return lowering, so it is not a bound reference the
+// activation backend must resolve to an external antecedent.
+func returnExiledCardsWithCounterInternalReference(effects []compiler.CompiledEffect, reference compiler.CompiledReference) bool {
+	if reference.Kind != compiler.ReferencePronoun ||
+		reference.Pronoun != compiler.ReferencePronounThem {
+		return false
+	}
+	for i := range effects {
+		if effects[i].Kind == compiler.EffectReturnExiledCardsWithCounter &&
 			spanCovered(reference.Span, []shared.Span{effects[i].Span}) {
 			return true
 		}

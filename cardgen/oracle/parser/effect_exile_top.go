@@ -9,6 +9,9 @@ import "strings"
 // controller-actor "exile the top card of each player's/opponent's library."
 // shapes, records the library-owner player scope in the effect context.
 func parseExileTopOfLibrary(effect *EffectSyntax) {
+	if parseExileThatManyTopOfLibrary(effect) {
+		return
+	}
 	amount, ownerContext, ok := exileTopOfLibraryAmount(effect)
 	if !ok {
 		return
@@ -16,6 +19,40 @@ func parseExileTopOfLibrary(effect *EffectSyntax) {
 	effect.CardSource = EffectCardSourceTopOfPlayerLibrary
 	effect.Context = ownerContext
 	effect.Amount = EffectAmountSyntax{Span: effect.Amount.Span, Value: amount, Known: true}
+}
+
+// parseExileThatManyTopOfLibrary recognizes the dynamic controller-scoped "exile
+// that many cards from the top of your library[ face down]." effect, marking it
+// as a top-of-library card source (like the fixed-count form) while preserving
+// the "that many" triggering-event amount that parseEffectAmount typed onto the
+// effect. The optional trailing "face down" sets FaceDown so lowering exiles the
+// cards face down. The amount is only meaningful inside a measuring trigger; the
+// parser records the generic triggering-event kind and lowering fails it closed
+// elsewhere. It reports whether it recognized the clause.
+func parseExileThatManyTopOfLibrary(effect *EffectSyntax) bool {
+	if effect.Kind != EffectExile ||
+		effect.Negated ||
+		effect.Optional ||
+		effect.Additional ||
+		len(effect.Targets) > 0 ||
+		effect.Context != EffectContextController ||
+		effect.CounterKnown ||
+		effect.Amount.DynamicKind != EffectDynamicAmountTriggeringCombatDamage {
+		return false
+	}
+	clause := exactEffectClauseText(effect)
+	const base = "Exile that many cards from the top of your library"
+	faceDown := false
+	switch {
+	case strings.EqualFold(clause, base+"."):
+	case strings.EqualFold(clause, base+" face down."):
+		faceDown = true
+	default:
+		return false
+	}
+	effect.CardSource = EffectCardSourceTopOfPlayerLibrary
+	effect.FaceDown = faceDown
+	return true
 }
 
 // exileTopCandidate is one recognized "Exile the top card of <possessive>

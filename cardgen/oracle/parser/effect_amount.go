@@ -487,6 +487,25 @@ func parseEffectAmount(kind EffectKind, tokens []shared.Token, atoms Atoms) Effe
 			}
 		}
 	}
+	if kind == EffectExile {
+		// "exile that many cards from the top of your library" in a triggered
+		// ability exiles a count equal to the quantity the trigger measured
+		// ("Whenever ~ deals combat damage to a player, exile that many cards from
+		// the top of your library face down." — Flamewar, Streetwise Operative).
+		// The parser cannot see the trigger, so it records a generic
+		// triggering-event amount that lowering resolves per event kind
+		// (lowerTriggeringEventQuantityAmount), failing closed outside a measuring
+		// trigger.
+		for i := 0; i+2 < len(tokens); i++ {
+			if equalWord(tokens[i], "that") && equalWord(tokens[i+1], "many") && equalWord(tokens[i+2], "cards") {
+				return EffectAmountSyntax{
+					Span:        shared.SpanOf(tokens[i : i+2]),
+					Text:        joinedEffectText(tokens[i : i+2]),
+					DynamicKind: EffectDynamicAmountTriggeringCombatDamage,
+				}
+			}
+		}
+	}
 	if kind == EffectPut {
 		// "put that many <kind> counters" in a triggered ability reads the
 		// quantity the trigger measured ("Whenever you discard one or more cards,

@@ -162,6 +162,12 @@ func lowerOrderedEffectSequence(
 	ctx contentCtx,
 	syntax *parser.Ability,
 ) (game.AbilityContent, *shared.Diagnostic) {
+	// Fold an "exile ... top of your library. Put a <name> counter on each of
+	// them." pair into a single counter-bearing exile before any sequence
+	// handling: the exile primitive places the named counter on every exiled
+	// card intrinsically, so the follow-up placement clause is fully absorbed and
+	// the remaining effects (e.g. a trailing "Convert") lower normally.
+	ctx, _ = foldExileTopNamedCounterSequence(ctx)
 	if content, diagnostic, handled := lowerOrderedSequenceSpecialCase(cardName, ctx, syntax); handled {
 		return content, diagnostic
 	}

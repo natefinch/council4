@@ -210,10 +210,17 @@ const (
 	// opponent owns with a void counter on it. You may play it this turn without
 	// paying its mana cost.", Dauthi Voidwalker).
 	PrimitivePlayChosenExiledCard
+
+	// PrimitiveReturnExiledCardsWithCounter returns every card Player owns in
+	// exile that bears a named marker counter to Player's hand ("Put all exiled
+	// cards you own with intel counters on them into your hand.", Flamewar, Brash
+	// Veteran). It is the return companion to the exile-with-named-counter
+	// substrate (game.ReturnExiledCardsWithCounter).
+	PrimitiveReturnExiledCardsWithCounter
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitivePlayChosenExiledCard) + 1
+const primitiveKindCount = int(PrimitiveReturnExiledCardsWithCounter) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -929,6 +936,21 @@ type ReturnExiledCardsToHand struct {
 	LinkedKey LinkedKey
 }
 
+// ReturnExiledCardsWithCounter moves every card that Player owns in the exile
+// zone bearing at least one Counter-kind named marker counter to Player's hand
+// ("Put all exiled cards you own with intel counters on them into your hand.",
+// Flamewar, Brash Veteran). It is the return companion to the exile-with-named-
+// counter substrate: the counters recorded in Game.ExileCounters when the cards
+// were exiled select exactly which cards return, so any card that uses a named
+// marker counter (croak, intel, void, collection, ...) benefits without the
+// primitive naming a specific counter. Cards without the counter, and cards
+// owned by other players, are unaffected; an empty result is a legal no-op. The
+// counters are cleared as the cards leave exile.
+type ReturnExiledCardsWithCounter struct {
+	Player  PlayerReference
+	Counter counter.Kind
+}
+
 // ExileForEachPlayer walks every player in the game and, for each, has Chooser
 // pick up to one permanent that player controls matching Selection and exiles
 // it, remembering each chosen permanent under LinkedKey (an exile-until-leaves
@@ -1500,6 +1522,12 @@ type ExileTopOfLibrary struct {
 	// play/cast-from-exile ability can later select "a card ... in exile with a
 	// <name> counter on it". It is unset for every exile that places no counter.
 	Counter opt.V[counter.Kind]
+	// FaceDown exiles each card face down ("exile that many cards from the top of
+	// your library face down.", Flamewar, Streetwise Operative). A face-down card
+	// in exile hides its identity from every observer (CR 713); the zone records
+	// the face-down state and clears it when the card leaves exile. It is false
+	// for the ordinary face-up exile.
+	FaceDown bool
 }
 
 // RevealUntil reveals cards from the top of a referenced player's library one at

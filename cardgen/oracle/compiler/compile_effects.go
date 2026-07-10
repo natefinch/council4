@@ -278,6 +278,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				VerbSpan:                       syntax.VerbSpan,
 				Player:                         syntax.Player,
 				CardSource:                     syntax.CardSource,
+				FaceDown:                       syntax.FaceDown,
 				RequirePermanentCard:           syntax.RequirePermanentCard,
 				ExileDieSubjectDamagedCreature: syntax.ExileDieSubjectDamagedCreature,
 				References:                     compileTypedReferences(syntax.References),

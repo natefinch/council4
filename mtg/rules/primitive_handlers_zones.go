@@ -1600,6 +1600,39 @@ func (r *effectResolver) choosePlayChosenExiledCard(candidates []id.ID) (id.ID, 
 	return 0, false
 }
 
+// handleReturnExiledCardsWithCounter moves every card the resolving player owns
+// in exile that bears prim.Counter to that player's hand ("Put all exiled cards
+// you own with intel counters on them into your hand.", Flamewar, Brash
+// Veteran). Exile is stored per owner, so iterating the resolved player's own
+// exile zone yields exactly the cards they own; the named marker counter
+// recorded when each card was exiled selects which of those return. Cards owned
+// by other players and cards without the counter are left untouched, and an
+// empty result is a legal no-op. Each returned card's exile counters are cleared
+// as it leaves exile.
+func handleReturnExiledCardsWithCounter(r *effectResolver, prim game.ReturnExiledCardsWithCounter) effectResolved {
+	res := effectResolved{accepted: true}
+	you, ok := r.resolvePlayer(prim.Player)
+	if !ok {
+		return res
+	}
+	owner, ok := playerByID(r.game, you)
+	if !ok {
+		return res
+	}
+	var candidates []id.ID
+	for _, cardID := range owner.Exile.All() {
+		if r.game.HasExileCounter(cardID, prim.Counter) {
+			candidates = append(candidates, cardID)
+		}
+	}
+	for _, cardID := range candidates {
+		if moveCardBetweenZonesWithPlacement(r.game, you, cardID, zone.Exile, zone.Hand, false) {
+			res.succeeded = true
+		}
+	}
+	return res
+}
+
 // mode it reads prim.Card and confirms it rests in FromZone. In SelectFromBatch
 // mode it gathers the triggering batch's cards still in FromZone ("one of them"
 // over a "discard one or more cards" batch) and has the resolving controller
@@ -2119,14 +2152,14 @@ func handleExileTopOfLibrary(r *effectResolver, prim game.ExileTopOfLibrary) eff
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
 	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
 		for _, playerID := range playersInAPNAPOrder(r.game, r.playerGroupMembers(prim.PlayerGroup)) {
-			exileTopOfLibraryCards(r.game, playerID, res.amount, prim.Counter, r.obj.Controller)
+			exileTopOfLibraryCards(r.game, playerID, res.amount, prim.Counter, r.obj.Controller, prim.FaceDown)
 		}
 		res.succeeded = res.amount > 0
 		return res
 	}
 	playerID, ok := r.resolvePlayer(prim.Player)
 	if ok {
-		exileTopOfLibraryCards(r.game, playerID, res.amount, prim.Counter, r.obj.Controller)
+		exileTopOfLibraryCards(r.game, playerID, res.amount, prim.Counter, r.obj.Controller, prim.FaceDown)
 		res.succeeded = res.amount > 0
 	}
 	return res

@@ -161,6 +161,12 @@ func appendPrimitiveAtoms(atoms []EffectAtom, primitive game.Primitive) []Effect
 		// their hand (every revealed card matching the filter), so the gain is
 		// dynamic card advantage for that player.
 		return append(atoms, EffectAtom{Kind: EffectCardsDrawn, IsDynamic: true, Affected: affectedFromPlayer(p.Player)})
+	case game.ReturnExiledCardsWithCounter:
+		// The player returns every exiled card they own bearing the named marker
+		// counter to their hand — an indeterminate, accumulating set — so the
+		// gain is dynamic card advantage for that player, matching how the other
+		// "unknown number of cards into hand" primitives are valued.
+		return append(atoms, EffectAtom{Kind: EffectCardsDrawn, IsDynamic: true, Affected: affectedFromPlayer(p.Player)})
 	default:
 		return atoms
 	}

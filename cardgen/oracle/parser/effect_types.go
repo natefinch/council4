@@ -453,6 +453,14 @@ const (
 	// at lowering with a following EffectPlay back-reference into a single
 	// choose-then-play-from-exile primitive, so it never lowers on its own.
 	EffectChooseExiledCard EffectKind = "EffectChooseExiledCard"
+	// EffectReturnExiledCardsWithCounter models "Put all exiled cards you own
+	// with <kind> counters on them into your hand." (Flamewar, Brash Veteran):
+	// every card the controller owns in exile that bears the named marker counter
+	// returns to the controller's hand. It carries the source zone (Exile), the
+	// destination zone (Hand), and the marker counter filter (on the shared
+	// CounterKind/CounterKnown fields). It is the return companion to the exile-
+	// with-named-counter substrate and lowers on its own to a single mass return.
+	EffectReturnExiledCardsWithCounter EffectKind = "EffectReturnExiledCardsWithCounter"
 )
 
 // DigSourceKind identifies how an impulse "Put N <source> into your hand ..."
@@ -1919,6 +1927,11 @@ type EffectSyntax struct {
 	Tokens         []shared.Token       `json:"-"`
 	Player         EffectPlayerKind     `json:",omitempty"`
 	CardSource     EffectCardSourceKind `json:",omitempty"`
+	// FaceDown marks a card-source effect that exiles its cards face down
+	// ("exile that many cards from the top of your library face down.", Flamewar,
+	// Streetwise Operative). It is meaningful only for a top-of-library exile card
+	// source, where lowering threads it onto the ExileTopOfLibrary primitive.
+	FaceDown bool `json:",omitempty"`
 	// RequirePermanentCard gates a linked-card effect on the referenced card
 	// being a permanent card.
 	RequirePermanentCard bool `json:",omitempty"`

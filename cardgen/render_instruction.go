@@ -357,6 +357,12 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 			return "", err
 		}
 		return r.renderReturnExiledCardsToHand(value)
+	case game.PrimitiveReturnExiledCardsWithCounter:
+		value, err := assertPrimitive[game.ReturnExiledCardsWithCounter](primitive)
+		if err != nil {
+			return "", err
+		}
+		return r.renderReturnExiledCardsWithCounter(ctx, value)
 	case game.PrimitiveExileForEachPlayer:
 		value, err := assertPrimitive[game.ExileForEachPlayer](primitive)
 		if err != nil {
@@ -899,6 +905,22 @@ func (r Renderer) renderExileEntireHand(value game.ExileEntireHand) (string, err
 func (Renderer) renderReturnExiledCardsToHand(value game.ReturnExiledCardsToHand) (string, error) {
 	return structLit("game.ReturnExiledCardsToHand", []string{
 		fmt.Sprintf("LinkedKey: game.LinkedKey(%q),", string(value.LinkedKey)),
+	}), nil
+}
+
+func (r Renderer) renderReturnExiledCardsWithCounter(ctx *renderCtx, value game.ReturnExiledCardsWithCounter) (string, error) {
+	player, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	kind, err := renderCounterKind(value.Counter)
+	if err != nil {
+		return "", err
+	}
+	ctx.need(importCounter)
+	return structLit("game.ReturnExiledCardsWithCounter", []string{
+		fmt.Sprintf("Player: %s,", player),
+		fmt.Sprintf("Counter: %s,", kind),
 	}), nil
 }
 

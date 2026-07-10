@@ -1955,6 +1955,16 @@ const (
 	// PlayChosenExiledCard primitive and never lowers on its own. Added last so
 	// existing kinds keep their wire values.
 	EffectChooseExiledCard
+	// EffectReturnExiledCardsWithCounter is the resolution-time mass return "Put
+	// all exiled cards you own with <kind> counters on them into your hand."
+	// (Flamewar, Brash Veteran): every card the resolving controller owns in
+	// exile that bears the named marker counter returns to that controller's
+	// hand. It carries the source zone (FromZone = Exile), the destination zone
+	// (ToZone = Hand), and the marker-counter filter (CounterKind/
+	// CounterKindKnown). It is the return companion to the exile-with-named-
+	// counter substrate and lowers on its own to a single mass return. Added last
+	// so existing kinds keep their wire values.
+	EffectReturnExiledCardsWithCounter
 )
 
 // DurationKind identifies common continuous-effect durations.
@@ -2130,16 +2140,20 @@ type CompiledGroupEntryModification struct {
 // it. Multiple effects may refer to the same sentence when instructions are
 // coordinated.
 type CompiledEffect struct {
-	Kind                 EffectKind
-	Context              parser.EffectContextKind
-	Connection           parser.EffectConnectionKind
-	ConnectionSpan       shared.Span
-	Span                 shared.Span
-	ClauseSpan           shared.Span
-	Text                 string
-	VerbSpan             shared.Span
-	Player               parser.EffectPlayerKind
-	CardSource           parser.EffectCardSourceKind
+	Kind           EffectKind
+	Context        parser.EffectContextKind
+	Connection     parser.EffectConnectionKind
+	ConnectionSpan shared.Span
+	Span           shared.Span
+	ClauseSpan     shared.Span
+	Text           string
+	VerbSpan       shared.Span
+	Player         parser.EffectPlayerKind
+	CardSource     parser.EffectCardSourceKind
+	// FaceDown mirrors EffectSyntax.FaceDown: a top-of-library exile card source
+	// that exiles its cards face down. Lowering threads it onto the
+	// ExileTopOfLibrary primitive; it is false for every face-up exile.
+	FaceDown             bool
 	RequirePermanentCard bool
 	// ExileDieSubjectDamagedCreature marks an EffectExileIfWouldDieThisTurn rider
 	// whose subject is "a creature dealt damage this way": the would-die exile is

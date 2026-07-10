@@ -103,6 +103,7 @@ func newPrimitiveRegistry() *primitiveRegistry {
 	registerPrimitiveHandler(reg, handleExile)
 	registerPrimitiveHandler(reg, handleExileEntireHand)
 	registerPrimitiveHandler(reg, handleReturnExiledCardsToHand)
+	registerPrimitiveHandler(reg, handleReturnExiledCardsWithCounter)
 	registerPrimitiveHandler(reg, handleExileForEachPlayer)
 	registerPrimitiveHandler(reg, handleChampionExile)
 	registerPrimitiveHandler(reg, handleReturnLinkedExiledCardsToBattlefield)
