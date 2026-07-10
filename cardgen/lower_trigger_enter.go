@@ -762,15 +762,20 @@ func prepareTriggerBody(
 	bodySyntax.Tokens = bodyTokens
 	if ability.Optional {
 		if len(ability.Content.Effects) != 1 {
-			// A multi-effect optional body ("you may X. If you do, Y") keeps its
-			// resolving optionality inside the body so the shared content
-			// lowering wires the optional first instruction and its result gate.
-			// The trigger fires unconditionally; only its first instruction is
-			// optional. Intervening-condition bodies are not composed this way.
-			if hasInterveningCondition {
-				return preparedTriggerBody{}, false
+			if !optionalUntapRemoveFromCombatBody(ability.Content) {
+				// A multi-effect optional body ("you may X. If you do, Y") keeps
+				// its resolving optionality inside the body so the shared content
+				// lowering wires the optional first instruction and result gate.
+				// The trigger fires unconditionally; only its first instruction
+				// is optional. Intervening-condition bodies are not composed this
+				// way.
+				if hasInterveningCondition {
+					return preparedTriggerBody{}, false
+				}
+				triggerOptional = false
 			}
-			triggerOptional = false
+			// Otherwise the single "you may" governs both coordinated effects:
+			// keep the trigger optional and lower two mandatory instructions.
 		} else {
 			effect := body.Content.Effects[0]
 			switch {

@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,335 of 32,501 cards eligible for paper support (53.3%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,340 of 32,501 cards eligible for paper support (53.4%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -6552,6 +6552,11 @@ Council4 currently supports **17,335 of 32,501 cards eligible for paper support 
 - Guru Pathik
 - Gust of Wind
 - Gust-Skimmer
+- Gustcloak Harrier
+- Gustcloak Runner
+- Gustcloak Savior
+- Gustcloak Sentinel
+- Gustcloak Skirmisher
 - Gut Shot
 - Gutless Ghoul
 - Gutter Skulk
