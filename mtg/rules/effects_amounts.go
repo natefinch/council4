@@ -104,6 +104,14 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj opt.V[*game.StackObject], c
 		if dynamic.Player != nil && dynamic.Selection != nil {
 			amount = countCardsInZoneMatchingSelection(g, obj, controller, *dynamic.Player, dynamic.CardZone, *dynamic.Selection)
 		}
+	case game.DynamicAmountPlayerLife:
+		if dynamic.Player != nil && obj.Exists {
+			if playerID, ok := resolvePlayerReference(g, obj.Val, *dynamic.Player); ok {
+				if player, ok := playerByID(g, playerID); ok {
+					amount = player.Life
+				}
+			}
+		}
 	case game.DynamicAmountPreviousEffectResult:
 		key := dynamicResultKey(dynamic)
 		if obj.Exists && key != "" {

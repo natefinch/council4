@@ -1852,6 +1852,9 @@ func finalizeParsedEffect(effect *EffectSyntax, sentence Sentence, atoms Atoms) 
 	if recognizeMillHalfLibrary(effect) {
 		effect.Exact = exactEffectSyntax(effect)
 	}
+	if recognizeLoseHalfLife(effect) {
+		effect.Exact = exactEffectSyntax(effect)
+	}
 	if recognizeEachColorAmongControlledMana(effect, atoms) {
 		effect.Exact = true
 	}
@@ -3360,6 +3363,41 @@ func recognizeMillHalfLibrary(effect *EffectSyntax) bool {
 			RoundUp:     equalWord(effect.Tokens[i+5], "up"),
 		}
 		effect.Selection = SelectionSyntax{Kind: SelectionCard, Text: effect.Selection.Text}
+		return true
+	}
+	return false
+}
+
+// recognizeLoseHalfLife types the "loses half their life, rounded up/down"
+// amount on a life-loss effect (Quietus Spike, Virtus the Veiled, Scytheclaw,
+// Radioactive Man). The amount is half the losing player's life, counted as the
+// effect resolves and rounded up or down per the trailing "rounded up"/"rounded
+// down" word (CR 107.4). The losing player is the effect's own subject, so the
+// possessive "their"/"your" names no free referent, mirroring
+// recognizeMillHalfLibrary. It matches only the exact six-token "half
+// <their|your> life , rounded <up|down>" run on a life-loss effect; every other
+// life amount is left untouched.
+func recognizeLoseHalfLife(effect *EffectSyntax) bool {
+	if effect.Kind != EffectLose {
+		return false
+	}
+	for i := 0; i+5 < len(effect.Tokens); i++ {
+		if !equalWord(effect.Tokens[i], "half") ||
+			(!equalWord(effect.Tokens[i+1], "their") && !equalWord(effect.Tokens[i+1], "your")) ||
+			!equalWord(effect.Tokens[i+2], "life") ||
+			effect.Tokens[i+3].Kind != shared.Comma ||
+			!equalWord(effect.Tokens[i+4], "rounded") ||
+			(!equalWord(effect.Tokens[i+5], "down") && !equalWord(effect.Tokens[i+5], "up")) {
+			continue
+		}
+		matched := effect.Tokens[i : i+6]
+		effect.Amount = EffectAmountSyntax{
+			Span:        shared.SpanOf(matched),
+			Text:        joinedEffectText(matched),
+			DynamicKind: EffectDynamicAmountHalfPlayerLife,
+			DynamicForm: EffectDynamicAmountFormHalfLife,
+			RoundUp:     equalWord(effect.Tokens[i+5], "up"),
+		}
 		return true
 	}
 	return false

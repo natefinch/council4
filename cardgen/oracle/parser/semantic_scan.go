@@ -60,6 +60,15 @@ func (a *Ability) computeSemanticReferences() []Reference {
 				effect.Amount.DynamicKind == EffectDynamicAmountHalfPlayerLibrary {
 				tokens = tokensOutsideParserSpan(tokens, effect.Amount.Span)
 			}
+			// "<player> loses half their life, rounded up/down" owns its possessive
+			// "their"/"your": the losing player is the effect's own subject, so the
+			// pronoun names no free referent. Remove the amount's span before
+			// reference scanning so it does not surface as a dangling semantic
+			// reference that would block the single-player life-loss lowering.
+			if effect.Kind == EffectLose &&
+				effect.Amount.DynamicKind == EffectDynamicAmountHalfPlayerLife {
+				tokens = tokensOutsideParserSpan(tokens, effect.Amount.Span)
+			}
 		}
 	}
 	return a.Atoms.ReferencesWithin(tokens)

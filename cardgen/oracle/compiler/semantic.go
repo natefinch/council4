@@ -3704,6 +3704,13 @@ const (
 	// block declarations. It is a combat-state amount, not a board count. Added
 	// last so existing kinds keep their wire values.
 	DynamicAmountCreaturesBlockingSource
+	// DynamicAmountHalfPlayerLife is half the life total of the player who loses
+	// the life, rounded up or down per CompiledAmount.RoundUp ("that player loses
+	// half their life, rounded up" — Quietus Spike, Virtus the Veiled,
+	// Scytheclaw; CR 107.4). The losing player is the effect's subject
+	// (target/event player); lowering reads that player's life. Added last so
+	// existing kinds keep their wire values.
+	DynamicAmountHalfPlayerLife
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.

@@ -4544,6 +4544,12 @@ func exactAmountEffectText(text, prefix, noun string, amount EffectAmountSyntax,
 		return strings.EqualFold(text, fmt.Sprintf("%s %d %s %s.", prefix, amount.Multiplier, noun, amount.Text))
 	case EffectDynamicAmountFormWhereX:
 		return strings.EqualFold(text, fmt.Sprintf("%s X %s, %s.", prefix, noun, amount.Text))
+	case EffectDynamicAmountFormHalfLife:
+		// The half-life amount's noun is the losing player's life, carried whole in
+		// amount.Text ("half their life, rounded up"), so the clause reconstructs as
+		// the bare subject verb followed by that phrase: "That player loses half
+		// their life, rounded up."
+		return strings.EqualFold(text, fmt.Sprintf("%s %s.", prefix, amount.Text))
 	default:
 		return false
 	}
