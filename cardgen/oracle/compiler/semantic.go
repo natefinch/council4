@@ -1987,6 +1987,13 @@ const (
 	// creature gains trample" or a delayed trigger watching it) can resolve it.
 	// Added last so existing kinds keep their wire values.
 	EffectBolster
+	// EffectCantBeSacrificed is the temporary sacrifice-protection resolving
+	// effect "<referenced object> can't be sacrificed this turn." (Slicer, Hired
+	// Muscle: "... it can't be sacrificed this turn."): the back-referenced
+	// permanent can't be sacrificed until end of turn. It lowers to a this-turn
+	// ApplyRule installing a RuleEffectCantBeSacrificed on the source permanent.
+	// Added last so existing kinds keep their wire values.
+	EffectCantBeSacrificed
 )
 
 // DurationKind identifies common continuous-effect durations.

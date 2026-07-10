@@ -24,6 +24,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return exactCantBeBlockedEffectSyntax(effect)
 	case EffectCantBlock:
 		return exactCantBlockEffectSyntax(effect)
+	case EffectCantBeSacrificed:
+		return exactCantBeSacrificedEffectSyntax(effect)
 	case EffectCantAttack:
 		return exactCantAttackEffectSyntax(effect)
 	case EffectCantAttackOrBlock:
@@ -2643,6 +2645,32 @@ func exactGroupCantBlockEffectSyntax(effect *EffectSyntax) bool {
 	}
 	subjectText := joinedEffectText(subject)
 	return strings.EqualFold(exactEffectClauseText(effect), subjectText+" can't block this turn.")
+}
+
+// exactCantBeSacrificedEffectSyntax recognizes the temporary sacrifice-protection
+// resolving effect "<referenced object> can't be sacrificed this turn." (Slicer,
+// Hired Muscle: "... it can't be sacrificed this turn.") that shields a
+// back-referenced permanent from being sacrificed until end of turn. The subject
+// is a demonstrative back-reference ("it" or "that <object>") introduced by a
+// preceding clause or the triggering event; the clause is reconstructed
+// byte-exactly from that reference's own text, so every deviation (a different
+// duration, a targeted or group subject, an added rider) fails closed and the
+// continuous static "can't be sacrificed" prohibition keeps flowing through the
+// static-declaration path.
+func exactCantBeSacrificedEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Duration != EffectDurationThisTurn ||
+		effect.Optional ||
+		effect.Context != EffectContextReferencedObject {
+		return false
+	}
+	object, ok := exactBackReferenceObjectText(effect.References)
+	if !ok {
+		return false
+	}
+	return strings.EqualFold(
+		exactEffectClauseText(effect),
+		object+" can't be sacrificed this turn.",
+	)
 }
 
 // exactCantAttackEffectSyntax recognizes the temporary combat-restriction
