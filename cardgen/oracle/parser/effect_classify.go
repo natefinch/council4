@@ -1953,9 +1953,24 @@ func lookAtTopCardAnyTimeInstruction(tokens []shared.Token) bool {
 // privately sees the top card once as the ability resolves, conveying hidden
 // information without moving the card.
 func lookAtLibraryTopInstruction(tokens []shared.Token) bool {
-	return len(tokens) == 9 &&
-		effectWordsAt(tokens, 0, "look", "at", "the", "top", "card", "of", "your", "library") &&
-		tokens[8].Kind == shared.Period
+	n := len(tokens)
+	if n < 9 || tokens[n-1].Kind != shared.Period || !equalWord(tokens[n-2], "library") {
+		return false
+	}
+	if !effectWordsAt(tokens, 0, "look", "at", "the", "top", "card", "of") {
+		return false
+	}
+	// The library owner sits between "of" and "library": "your" (the controller,
+	// Kinship's leading peek) or the possessive "target player's"/"target
+	// opponent's"/"that player's" (Merfolk Observer, Dewdrop Spy, Saheeli's
+	// Silverwing), where the controller peeks another player's library.
+	owner := tokens[6 : n-2]
+	if len(owner) == 1 && equalWord(owner[0], "your") {
+		return true
+	}
+	return len(owner) == 2 &&
+		(strings.EqualFold(owner[1].Text, "player's") || strings.EqualFold(owner[1].Text, "opponent's")) &&
+		(equalWord(owner[0], "target") || equalWord(owner[0], "that"))
 }
 
 // chooseNewTargetsVerbAt reports whether a retarget effect ("[You may] choose

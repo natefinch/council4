@@ -2116,6 +2116,55 @@ func lowerLookAtHandSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnost
 	}.Ability(), nil
 }
 
+// lookAtTargetLibraryTopKey links the peeked top card so the LookAtLibraryTop
+// primitive satisfies its PublishLinked invariant. The standalone "look at the
+// top card of target player's library." effect has no follow-up "that card"
+// reference, so nothing consumes the link; it is local to a single resolution.
+const lookAtTargetLibraryTopKey = game.LinkedKey("look-at-target-library-top")
+
+// lowerLookAtLibraryTopSpell lowers "Look at the top card of target player's
+// library." to a single player-targeted LookAtLibraryTop primitive (Merfolk
+// Observer, Dewdrop Spy, Rootwater Mystic). The parser retypes the possessive
+// library phrase into a clean "target player"/"target opponent" target
+// (recognizeLookAtTargetPlayerLibrarySentence), so this reads only the typed
+// target and rejects any other shape (riders, conditions, keywords, modes,
+// references). The runtime shows the peeked card to the ability's controller.
+func lowerLookAtLibraryTopSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported look-at-library spell",
+			"the executable source backend supports only looking at the top card of one target player's library",
+		)
+	}
+	if len(ctx.content.Targets) != 1 ||
+		!effect.Exact ||
+		effect.Negated ||
+		effect.Optional ||
+		ctx.optional ||
+		effect.Context != parser.EffectContextTarget ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.References) != 0 {
+		return unsupported()
+	}
+	targetSpec, ok := playerTargetSpec(ctx.content.Targets[0])
+	if !ok {
+		return unsupported()
+	}
+	return game.Mode{
+		Targets: []game.TargetSpec{targetSpec},
+		Sequence: []game.Instruction{{
+			Primitive: game.LookAtLibraryTop{
+				Player:        game.TargetPlayerReference(0),
+				PublishLinked: lookAtTargetLibraryTopKey,
+			},
+		}},
+	}.Ability(), nil
+}
+
 // fightAnotherKind selects how a fight target's "another" determiner lowers.
 type fightAnotherKind int
 
