@@ -57,7 +57,7 @@ func referenceGroupIDs(g *game.Game, obj *game.StackObject, source *game.Permane
 				kind:      subjectPermanent,
 				g:         g,
 				permanent: permanent,
-				values:    &values,
+				values:    values,
 				viewer:    controller,
 			}
 			if selection.Controller != game.ControllerAny {
@@ -161,6 +161,27 @@ func TestGroupMembersExceptTargetUsesPrimitiveTargetIndex(t *testing.T) {
 	want := []id.ID{first.ObjectID, third.ObjectID}
 	if !slices.Equal(got, want) {
 		t.Fatalf("groupMembers excluding target 1 = %v, want %v", got, want)
+	}
+}
+
+func TestReferenceResolverWithControllerAndSource(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatCreaturePermanent(g, game.Player2, 2, 2)
+	resolver := newReferenceResolverWithControllerAndSource(g, game.Player2, source)
+
+	controller, ok := resolver.player(game.ControllerReference())
+	if !ok || controller != game.Player2 {
+		t.Fatalf("controller = %v, %v; want Player2, true", controller, ok)
+	}
+	resolvedSource, ok := resolver.object(game.SourcePermanentReference())
+	if !ok || resolvedSource.permanent != source {
+		t.Fatalf("source = %+v, %v; want %p, true", resolvedSource, ok, source)
+	}
+	if _, ok := resolver.object(game.TargetPermanentReference(0)); ok {
+		t.Fatal("target permanent resolved without a stack object")
+	}
+	if _, ok := resolver.object(game.TargetStackObjectReference(0)); ok {
+		t.Fatal("target stack object resolved without a stack object")
 	}
 }
 

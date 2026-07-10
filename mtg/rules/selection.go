@@ -41,7 +41,7 @@ type selectionSubject struct {
 	// already-computed effective or base value set so hot paths stay
 	// allocation-free.
 	permanent *game.Permanent
-	values    *permanentEffectiveValues
+	values    permanentEffectiveValues
 
 	// controller is the subject's resolved controller for ControllerRelation
 	// checks; viewer is the player that "you" is relative to.
@@ -547,11 +547,11 @@ func (s *selectionSubject) colorCount() int {
 
 func (s *selectionSubject) hasKeyword(keyword game.Keyword) bool {
 	if s.kind == subjectPermanent {
-		return s.values.keywords[keyword]
+		return s.values.keywords.has(keyword)
 	}
 	if s.kind == subjectEventPermanent {
 		if values, ok := s.eventPermanentValues(); ok {
-			return values.keywords[keyword]
+			return values.keywords.has(keyword)
 		}
 		if def, ok := s.eventPermanentCardDef(); ok {
 			return def.HasKeyword(keyword)
@@ -1024,9 +1024,9 @@ func (s *selectionSubject) eventPermanentValues() (permanentEffectiveValues, boo
 	if !ok {
 		return permanentEffectiveValues{}, false
 	}
-	keywords := make(map[game.Keyword]bool, len(snapshot.Keywords))
+	var keywords keywordSet
 	for _, keyword := range snapshot.Keywords {
-		keywords[keyword] = true
+		keywords.set(keyword, true)
 	}
 	return permanentEffectiveValues{
 		name:        snapshot.Name,

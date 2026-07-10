@@ -314,12 +314,13 @@ func (o PlayerObservation) cardViews(z *zone.Zone) []CardView {
 
 func (o PlayerObservation) permanentView(permanent *game.Permanent) PermanentView {
 	values := effectivePermanentValues(o.g, permanent)
-	keywords := make(map[game.Keyword]bool, len(values.keywords))
-	for keyword, present := range values.keywords {
-		if present {
-			keywords[keyword] = true
+	var keywords map[game.Keyword]bool
+	values.keywords.each(func(keyword game.Keyword) {
+		if keywords == nil {
+			keywords = make(map[game.Keyword]bool)
 		}
-	}
+		keywords[keyword] = true
+	})
 	producesMana, producesColors := abilitiesManaProduction(values.abilities, permanent.EntryChoices, commanderIdentityColors(o.g, effectiveController(o.g, permanent)))
 	return PermanentView{
 		ObjectID:       permanent.ObjectID,

@@ -1526,7 +1526,7 @@ func damageRecipientMatchesSelection(g *game.Game, event damageEvent, replacemen
 		kind:           subjectPermanent,
 		g:              g,
 		permanent:      event.permanent,
-		values:         &values,
+		values:         values,
 		controller:     effectiveController(g, event.permanent),
 		viewer:         replacementCurrentController(g, replacement),
 		sourceObjectID: replacement.SourceObjectID,
@@ -1689,7 +1689,7 @@ func permanentMatchesReplacementSelectionFromSource(g *game.Game, permanent *gam
 		kind:           subjectPermanent,
 		g:              g,
 		permanent:      permanent,
-		values:         &values,
+		values:         values,
 		sourceObjectID: sourceObjectID,
 	}
 	return matchSelection(&subject, sel)
@@ -2310,7 +2310,7 @@ func permanentProtectedFromChars(g *game.Game, permanent *game.Permanent, source
 	// Check the effective keyword map first: if Protection was removed via
 	// RemoveKeywords (e.g., "loses all abilities"), it will be false here even
 	// though the ability body may still appear in values.abilities.
-	if !values.keywords[game.Protection] {
+	if !values.keywords.has(game.Protection) {
 		return false
 	}
 	for i := range values.abilities {

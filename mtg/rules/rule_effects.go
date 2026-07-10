@@ -79,10 +79,10 @@ func activeRuleEffects(g *game.Game) []game.RuleEffect {
 			effects = append(effects, g.RuleEffects[i])
 		}
 	}
-	effects = append(effects, staticRuleEffects(g)...)
-	effects = append(effects, stackStaticRuleEffects(g)...)
-	effects = append(effects, graveyardStaticRuleEffects(g)...)
-	effects = append(effects, exileStaticRuleEffects(g)...)
+	effects = appendStaticRuleEffects(effects, g)
+	effects = appendStackStaticRuleEffects(effects, g)
+	effects = appendGraveyardStaticRuleEffects(effects, g)
+	effects = appendExileStaticRuleEffects(effects, g)
 	if fc != nil {
 		// Clip so a caller that appends reallocates instead of writing into the
 		// shared backing array.
@@ -94,14 +94,17 @@ func activeRuleEffects(g *game.Game) []game.RuleEffect {
 }
 
 func staticRuleEffects(g *game.Game) []game.RuleEffect {
-	var effects []game.RuleEffect
+	return appendStaticRuleEffects(nil, g)
+}
+
+func appendStaticRuleEffects(effects []game.RuleEffect, g *game.Game) []game.RuleEffect {
 	for _, source := range g.Battlefield {
 		if source.PhasedOut {
 			continue
 		}
 		visitPermanentStaticAbilityComponents(g, source, func(component permanentAbilityComponent) {
-			for i := range component.card.StaticAbilities {
-				body := &component.card.StaticAbilities[i]
+			for i := range component.face.StaticAbilities {
+				body := &component.face.StaticAbilities[i]
 				if len(body.RuleEffects) == 0 || !bodyFunctionsOnBattlefield(body) {
 					continue
 				}
@@ -139,7 +142,10 @@ func staticRuleEffects(g *game.Game) []game.RuleEffect {
 // graveyard owner; a source-affecting permission self-scopes to the graveyard
 // card itself so it grants permission only to cast that card.
 func graveyardStaticRuleEffects(g *game.Game) []game.RuleEffect {
-	var effects []game.RuleEffect
+	return appendGraveyardStaticRuleEffects(nil, g)
+}
+
+func appendGraveyardStaticRuleEffects(effects []game.RuleEffect, g *game.Game) []game.RuleEffect {
 	for owner := range game.PlayerID(game.NumPlayers) {
 		player := g.Players[owner]
 		for _, cardID := range player.Graveyard.All() {
@@ -176,7 +182,10 @@ func graveyardStaticRuleEffects(g *game.Game) []game.RuleEffect {
 // exile owner; a source-affecting permission self-scopes to the exiled card
 // itself so it grants permission only to cast that card.
 func exileStaticRuleEffects(g *game.Game) []game.RuleEffect {
-	var effects []game.RuleEffect
+	return appendExileStaticRuleEffects(nil, g)
+}
+
+func appendExileStaticRuleEffects(effects []game.RuleEffect, g *game.Game) []game.RuleEffect {
 	for owner := range game.PlayerID(game.NumPlayers) {
 		player := g.Players[owner]
 		for _, cardID := range player.Exile.All() {
@@ -208,7 +217,10 @@ func exileStaticRuleEffects(g *game.Game) []game.RuleEffect {
 }
 
 func stackStaticRuleEffects(g *game.Game) []game.RuleEffect {
-	var effects []game.RuleEffect
+	return appendStackStaticRuleEffects(nil, g)
+}
+
+func appendStackStaticRuleEffects(effects []game.RuleEffect, g *game.Game) []game.RuleEffect {
 	for _, source := range g.Stack.Objects() {
 		if source.Kind != game.StackSpell {
 			continue
@@ -734,7 +746,7 @@ func defendingPlayerControlsSelection(g *game.Game, effect *game.RuleEffect, def
 			kind:           subjectPermanent,
 			g:              g,
 			permanent:      permanent,
-			values:         &values,
+			values:         values,
 			viewer:         effect.Controller,
 			sourceObjectID: effect.SourceObjectID,
 		}
@@ -865,7 +877,7 @@ func ruleEffectBlockedSelectionMatches(g *game.Game, effect *game.RuleEffect, at
 		kind:           subjectPermanent,
 		g:              g,
 		permanent:      attacker,
-		values:         &values,
+		values:         values,
 		viewer:         effect.Controller,
 		sourceObjectID: effect.SourceObjectID,
 	}
@@ -1146,7 +1158,7 @@ func ruleEffectAffectedSelectionMatches(g *game.Game, effect *game.RuleEffect, p
 		kind:           subjectPermanent,
 		g:              g,
 		permanent:      permanent,
-		values:         &values,
+		values:         values,
 		viewer:         effect.Controller,
 		sourceObjectID: effect.SourceObjectID,
 	}

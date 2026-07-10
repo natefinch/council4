@@ -3,8 +3,6 @@ package rules
 import (
 	"maps"
 
-	"slices"
-
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
@@ -74,13 +72,10 @@ func cloneChoiceResults(choices map[game.ChoiceKey]game.ResolutionChoiceResult) 
 }
 
 func effectiveKeywords(values permanentEffectiveValues) []game.Keyword {
-	keywords := make([]game.Keyword, 0, len(values.keywords))
-	for keyword, present := range values.keywords {
-		if present {
-			keywords = append(keywords, keyword)
-		}
-	}
-	slices.Sort(keywords)
+	var keywords []game.Keyword
+	values.keywords.each(func(keyword game.Keyword) {
+		keywords = append(keywords, keyword)
+	})
 	return keywords
 }
 

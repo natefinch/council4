@@ -325,7 +325,7 @@ func controlledPermanentColors(g *game.Game, playerID game.PlayerID, selection *
 			kind:       subjectPermanent,
 			g:          g,
 			permanent:  permanent,
-			values:     &values,
+			values:     values,
 			viewer:     playerID,
 			controller: effectiveController(g, permanent),
 		}

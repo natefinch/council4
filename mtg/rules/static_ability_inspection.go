@@ -2,12 +2,12 @@ package rules
 
 import "github.com/natefinch/council4/mtg/game"
 
-func staticAbilityCardHasLayer(card *game.CardDef, onBattlefield bool, layer game.ContinuousLayer) bool {
-	if card == nil {
+func staticAbilityCardHasLayer(face *game.CardFace, onBattlefield bool, layer game.ContinuousLayer) bool {
+	if face == nil {
 		return false
 	}
-	for i := range card.StaticAbilities {
-		body := &card.StaticAbilities[i]
+	for i := range face.StaticAbilities {
+		body := &face.StaticAbilities[i]
 		if !staticAbilityFunctionsInZone(body, onBattlefield) {
 			continue
 		}
@@ -18,12 +18,12 @@ func staticAbilityCardHasLayer(card *game.CardDef, onBattlefield bool, layer gam
 	return false
 }
 
-func staticAbilityCardHasContinuousEffects(card *game.CardDef, onBattlefield bool) bool {
-	if card == nil {
+func staticAbilityCardHasContinuousEffects(face *game.CardFace, onBattlefield bool) bool {
+	if face == nil {
 		return false
 	}
-	for i := range card.StaticAbilities {
-		body := &card.StaticAbilities[i]
+	for i := range face.StaticAbilities {
+		body := &face.StaticAbilities[i]
 		if staticAbilityFunctionsInZone(body, onBattlefield) && len(body.ContinuousEffects) > 0 {
 			return true
 		}

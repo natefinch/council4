@@ -96,6 +96,32 @@ func TestCardDefAlternateFaceAdventure(t *testing.T) {
 	}
 }
 
+func TestCardDefFaceDefView(t *testing.T) {
+	card := &CardDef{
+		CardFace: CardFace{Name: "Front", Types: []types.Card{types.Creature}},
+		Back: opt.Val(CardFace{
+			Name:  "Back",
+			Types: []types.Card{types.Land},
+		}),
+	}
+
+	front, ok := card.FaceDefView(FaceFront)
+	if !ok || front != card {
+		t.Fatalf("FaceDefView(FaceFront) = %p, %v; want original card %p", front, ok, card)
+	}
+	back, ok := card.FaceDefView(FaceBack)
+	if !ok {
+		t.Fatal("FaceDefView(FaceBack) = false, want true")
+	}
+	if back.Name != "Back" || !back.HasType(types.Land) {
+		t.Fatalf("FaceDefView(FaceBack) = %+v, want Back land", back)
+	}
+	backFace, ok := card.FaceView(FaceBack)
+	if !ok || backFace != &card.Back.Val {
+		t.Fatalf("FaceView(FaceBack) = %p, %v; want stored back face %p", backFace, ok, &card.Back.Val)
+	}
+}
+
 func TestCardDefAlternateFaceAbsent(t *testing.T) {
 	card := &CardDef{CardFace: CardFace{Name: "Ordinary Bear"}}
 

@@ -106,7 +106,7 @@ func stackObjectManaValue(g *game.Game, obj *game.StackObject) (int, bool) {
 }
 
 func effectStackObjectID(obj *game.StackObject, targetIndex int) (id.ID, bool) {
-	if targetIndex < 0 || targetIndex >= len(obj.Targets) {
+	if obj == nil || targetIndex < 0 || targetIndex >= len(obj.Targets) {
 		return 0, false
 	}
 	target := obj.Targets[targetIndex]

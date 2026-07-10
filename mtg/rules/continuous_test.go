@@ -586,9 +586,28 @@ func TestOrderContinuousEffectsLoopWaitsForExternalDependencyOfAnyMember(t *test
 	for i := range ordered {
 		gotIDs[i] = ordered[i].ID
 	}
+
 	want := []id.ID{4, 1, 2}
 	if !slices.Equal(gotIDs, want) {
 		t.Fatalf("ordered effect IDs = %v, want %v (loop waits for external dependency D, then A,B in timestamp order)", gotIDs, want)
+	}
+}
+
+func TestKeywordSetSupportsKeywordsAcrossWords(t *testing.T) {
+	var set keywordSet
+	set.set(game.Flying, true)
+	set.set(game.LivingMetal, true)
+
+	if !set.has(game.Flying) || !set.has(game.LivingMetal) {
+		t.Fatalf("keyword set = %v, want Flying and LivingMetal", set)
+	}
+	set.set(game.Flying, false)
+	if set.has(game.Flying) || !set.has(game.LivingMetal) {
+		t.Fatalf("keyword set after removing Flying = %v, want only LivingMetal", set)
+	}
+	set.clear()
+	if set.has(game.LivingMetal) {
+		t.Fatalf("keyword set after clear = %v, want empty", set)
 	}
 }
 
