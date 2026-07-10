@@ -89,6 +89,101 @@ func TestGraveyardRedirectCounterExilesDyingPermanentWithCounter(t *testing.T) {
 	}
 }
 
+// TestGraveyardRedirectCounterExilesMilledOpponentCardWithCounter drives a real
+// mill through millCards (an opponent milling while the redirect is in play, e.g.
+// Dauthi Voidwalker vs. a mill spell). "From anywhere" covers library-to-
+// graveyard mills, so the milled card must be exiled with a void counter instead
+// of reaching the graveyard, and therefore be selectable by Dauthi's {T},
+// Sacrifice ability.
+func TestGraveyardRedirectCounterExilesMilledOpponentCardWithCounter(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	graveyardRedirectCounterPermanent(g, game.Player1, counter.Void)
+
+	milledCard := addCardToLibrary(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Milled"}})
+	if got := millCards(g, game.Player2, 1); len(got) != 0 {
+		t.Fatalf("millCards() = %v, want no cards reaching the graveyard", got)
+	}
+	if g.Players[game.Player2].Graveyard.Contains(milledCard) {
+		t.Fatal("redirect did not keep the milled card out of the graveyard")
+	}
+	if !g.Players[game.Player2].Exile.Contains(milledCard) {
+		t.Fatal("redirect did not exile the milled card")
+	}
+	if !g.HasExileCounter(milledCard, counter.Void) {
+		t.Fatal("redirect exiled the milled card without a void counter")
+	}
+
+	// The milled card now bears a void counter, so Dauthi's activated ability
+	// must offer it and grant its controller a free-play permission bound to it.
+	log := resolvePlayChosenExiledCard(t, g, game.PlayChosenExiledCard{
+		Player:                game.ControllerReference(),
+		Zone:                  zone.Exile,
+		OwnerScope:            game.PlayerOpponent,
+		Counter:               opt.Val(counter.Void),
+		Duration:              game.DurationThisTurn,
+		WithoutPayingManaCost: true,
+	}, [game.NumPlayers]PlayerAgent{
+		game.Player1: &choiceOnlyAgent{choices: [][]int{{0}}},
+	})
+	if len(log.Choices) != 1 {
+		t.Fatalf("choices = %+v, want exactly one resolution choice", log.Choices)
+	}
+	if got := len(log.Choices[0].Request.Options); got != 1 {
+		t.Fatalf("choice options = %d, want 1 (the milled void-countered card)", got)
+	}
+	effect, ok := playFromZoneRuleEffect(g, milledCard)
+	if !ok {
+		t.Fatal("Dauthi's ability granted no play permission for the milled card")
+	}
+	if !effect.WithoutPayingManaCost {
+		t.Fatal("granted permission is not flagged without paying its mana cost")
+	}
+	if !castFromZoneWithoutPayingManaCost(g, game.Player1, milledCard, zone.Exile, game.FaceFront) {
+		t.Fatal("controller should be able to play the milled card without paying its mana cost")
+	}
+}
+
+// TestGraveyardRedirectCounterLeavesControllerSelfMillUntouched confirms the
+// opponent scope for mill: the redirect's own controller milling their own
+// library is unaffected — the card reaches the controller's graveyard normally
+// and never receives a counter.
+func TestGraveyardRedirectCounterLeavesControllerSelfMillUntouched(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	graveyardRedirectCounterPermanent(g, game.Player1, counter.Void)
+
+	ownCard := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "My Milled"}})
+	if got := millCards(g, game.Player1, 1); len(got) != 1 || got[0] != ownCard {
+		t.Fatalf("millCards() = %v, want [%d]", got, ownCard)
+	}
+	if !g.Players[game.Player1].Graveyard.Contains(ownCard) {
+		t.Fatal("opponent-scoped redirect wrongly diverted the controller's own milled card")
+	}
+	if g.Players[game.Player1].Exile.Contains(ownCard) {
+		t.Fatal("opponent-scoped redirect wrongly exiled the controller's own milled card")
+	}
+	if g.HasExileCounter(ownCard, counter.Void) {
+		t.Fatal("opponent-scoped redirect placed a counter on the controller's own milled card")
+	}
+}
+
+// TestMillWithoutRedirectReachesGraveyard verifies mill's default behavior is
+// unchanged when no graveyard-redirect replacement is active: the milled card
+// reaches its owner's graveyard and is reported as milled.
+func TestMillWithoutRedirectReachesGraveyard(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+
+	milledCard := addCardToLibrary(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Milled"}})
+	if got := millCards(g, game.Player2, 1); len(got) != 1 || got[0] != milledCard {
+		t.Fatalf("millCards() = %v, want [%d]", got, milledCard)
+	}
+	if !g.Players[game.Player2].Graveyard.Contains(milledCard) {
+		t.Fatal("mill without a redirect did not put the card into the graveyard")
+	}
+	if g.Players[game.Player2].Exile.Contains(milledCard) {
+		t.Fatal("mill without a redirect wrongly exiled the card")
+	}
+}
+
 // TestGraveyardRedirectCounterExilesDiscardedOpponentCardWithCounter drives a
 // real discard through discardCardFromHandInBatch (an opponent discarding while
 // the redirect is in play, e.g. Dauthi Voidwalker vs. a Mind Rot). "From
