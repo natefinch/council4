@@ -32,6 +32,7 @@ var Cards = []cardset.Entry{
 	{Name: "Venom's Hunger", New: VenomSHunger},
 	{Name: "Venomous Dragonfly", New: VenomousDragonfly},
 	{Name: "Venomous Vines", New: VenomousVines},
+	{Name: "Vent Sentinel", New: VentSentinel},
 	{Name: "Verdant Sun's Avatar", New: VerdantSunSAvatar},
 	{Name: "Verdurous Gearhulk", New: VerdurousGearhulk},
 	{Name: "Vertigo Spawn", New: VertigoSpawn},

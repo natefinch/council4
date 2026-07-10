@@ -641,6 +641,9 @@ func lowerTriggeredAbilityKind(
 		if ability.Content.Effects[i].ReturnAsEnchantment {
 			spans = append(spans, ability.Content.Effects[i].ReturnAsEnchantmentRiderSpan)
 		}
+		if ability.Content.Effects[i].Mana.PersistUntilEndOfTurn {
+			spans = append(spans, ability.Content.Effects[i].PersistUntilEndOfTurnRiderSpan)
+		}
 		if ability.Content.Effects[i].PlayFromTopPayLife {
 			spans = append(spans, ability.Content.Effects[i].PlayFromTopPayLifeRiderSpan)
 		}

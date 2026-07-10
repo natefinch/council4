@@ -9,6 +9,15 @@ import (
 // simple color-count APIs.
 type Pool struct {
 	mana map[Unit]int
+	// persist records the subset of mana that does not empty as steps and phases
+	// end (the CR 500.4 exception used by "Until end of turn, you don't lose this
+	// mana as steps and phases end", Grand Warlord Radha). Empty restores the
+	// pool to this reserved mana instead of clearing it; spending reconciles it so
+	// spent persistent mana does not reappear on the next Empty; ClearPersistent
+	// drops the reservation at end-of-turn cleanup so the following Empty removes
+	// it (CR 514.2). It is nil for pools that never received persistent mana, in
+	// which case Empty clears the pool exactly as before.
+	persist map[Unit]int
 	// spent is the running total of mana removed from this pool to pay costs.
 	// It is never reset by Empty (emptying discards unspent mana, which is not
 	// spent), so a caller can measure mana spent over a span by differencing it.
@@ -26,6 +35,9 @@ func (p *Pool) Clone() Pool {
 	clone := Pool{spent: p.spent}
 	if p.mana != nil {
 		clone.mana = maps.Clone(p.mana)
+	}
+	if p.persist != nil {
+		clone.persist = maps.Clone(p.persist)
 	}
 	return clone
 }
@@ -49,6 +61,32 @@ func (p *Pool) AddUnit(unit Unit, amount int) {
 		p.mana = make(map[Unit]int)
 	}
 	p.mana[unit] += amount
+}
+
+// AddPersistent adds mana of the given color that does not empty as steps and
+// phases end (CR 500.4 exception). See Pool.persist.
+func (p *Pool) AddPersistent(c Color, amount int) {
+	p.AddPersistentUnit(Unit{Color: c}, amount)
+}
+
+// AddPersistentSnow adds snow mana of the given color that does not empty as
+// steps and phases end (CR 500.4 exception). See Pool.persist.
+func (p *Pool) AddPersistentSnow(c Color, amount int) {
+	p.AddPersistentUnit(Unit{Color: c, Snow: true}, amount)
+}
+
+// AddPersistentUnit adds mana units that do not empty as steps and phases end.
+// The units are spendable like any other mana, but Empty preserves them until
+// ClearPersistent is called at end-of-turn cleanup. See Pool.persist.
+func (p *Pool) AddPersistentUnit(unit Unit, amount int) {
+	if amount <= 0 {
+		return
+	}
+	p.AddUnit(unit, amount)
+	if p.persist == nil {
+		p.persist = make(map[Unit]int)
+	}
+	p.persist[unit] += amount
 }
 
 // Amount returns the amount of mana of the given color in the pool.
@@ -144,6 +182,9 @@ func (p *Pool) SpendMatching(amount int, matches func(Unit) bool) bool {
 		remaining -= spent
 		if p.mana[unit] == 0 {
 			delete(p.mana, unit)
+			delete(p.persist, unit)
+		} else if p.persist != nil && p.persist[unit] > p.mana[unit] {
+			p.persist[unit] = p.mana[unit]
 		}
 	}
 	p.spent += amount
@@ -166,9 +207,24 @@ func (p *Pool) Total() int {
 	return total
 }
 
-// Empty removes all mana from the pool.
+// Empty removes all mana from the pool, except mana reserved by AddPersistent
+// that has not yet been released by ClearPersistent (CR 500.4 exception). For a
+// pool that never received persistent mana this clears the pool entirely, as
+// before.
 func (p *Pool) Empty() {
-	p.mana = make(map[Unit]int)
+	if len(p.persist) == 0 {
+		p.mana = make(map[Unit]int)
+		return
+	}
+	p.mana = maps.Clone(p.persist)
+}
+
+// ClearPersistent releases any mana reservation created by AddPersistent so the
+// next Empty removes it. It models the "until end of turn" duration expiring at
+// end-of-turn cleanup (CR 514.2), after which the reserved mana empties like any
+// other mana as the following step or phase ends.
+func (p *Pool) ClearPersistent() {
+	p.persist = nil
 }
 
 // IsEmpty reports whether the pool has no mana.

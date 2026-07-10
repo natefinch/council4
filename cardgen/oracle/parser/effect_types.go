@@ -1182,6 +1182,14 @@ type EffectManaSyntax struct {
 	// Axebane Guardian) rather than a fixed cardinal. It is mutually exclusive
 	// with CombinationCount.
 	CombinationDynamic bool `json:",omitempty"`
+	// PersistUntilEndOfTurn reports the trailing rider "Until end of turn, you
+	// don't lose this mana as steps and phases end." folded onto the add-mana
+	// body (Grand Warlord Radha, Photon). The produced mana is not emptied from
+	// the pool as steps and phases end for the rest of the turn; it is removed
+	// only by the normal end-of-turn cleanup (CR 500.4). It rides on any
+	// recognized add-mana output, so a body whose mana is otherwise unsupported
+	// still fails closed.
+	PersistUntilEndOfTurn bool `json:",omitempty"`
 }
 
 // ManaLandsProduceScope identifies which battlefield lands' producible colors
@@ -2810,6 +2818,11 @@ type EffectSyntax struct {
 	// lowerer can credit them toward source coverage. It is set only when
 	// PreventRegeneration is true.
 	RegenerationRiderSpan shared.Span `json:"-"`
+	// PersistUntilEndOfTurnRiderSpan covers the "Until end of turn, you don't
+	// lose this mana as steps and phases end" rider sentence folded onto an
+	// add-mana effect (Grand Warlord Radha) so the lowerer can credit its tokens
+	// toward source coverage. It is set only when Mana.PersistUntilEndOfTurn is.
+	PersistUntilEndOfTurnRiderSpan shared.Span `json:"-"`
 	// CopyMayChooseNewTargets reports that a copy-stack-object effect is
 	// followed by the optional "You may choose new targets for the copy[ies]."
 	// rider. The rider is a separate sentence whose "the copy" subject denotes

@@ -99,3 +99,51 @@ func TestPoolCloneCopiesSpent(t *testing.T) {
 		t.Fatalf("clone Spent() = %d, want 2", got)
 	}
 }
+
+func TestPoolPersistentManaSurvivesEmptyUntilCleared(t *testing.T) {
+	pool := NewPool()
+	pool.Add(R, 2)           // ordinary mana
+	pool.AddPersistent(R, 3) // persistent mana
+
+	if got := pool.Amount(R); got != 5 {
+		t.Fatalf("red mana after adds = %d, want 5", got)
+	}
+
+	// A step or phase ending empties the pool; persistent mana is preserved.
+	pool.Empty()
+	if got := pool.Amount(R); got != 3 {
+		t.Fatalf("red mana after Empty = %d, want 3 (only persistent survives)", got)
+	}
+
+	// Persistent mana survives repeated boundaries within the turn.
+	pool.Empty()
+	if got := pool.Amount(R); got != 3 {
+		t.Fatalf("red mana after second Empty = %d, want 3", got)
+	}
+
+	// End-of-turn cleanup releases the reservation, so the next Empty removes it.
+	pool.ClearPersistent()
+	pool.Empty()
+	if got := pool.Total(); got != 0 {
+		t.Fatalf("total mana after ClearPersistent + Empty = %d, want 0", got)
+	}
+}
+
+func TestPoolSpentPersistentManaDoesNotResurrectOnEmpty(t *testing.T) {
+	pool := NewPool()
+	pool.AddPersistent(R, 3)
+
+	if !pool.Spend(R, 2) {
+		t.Fatal("Spend(R, 2) = false, want true")
+	}
+	if got := pool.Amount(R); got != 1 {
+		t.Fatalf("red mana after spending 2 = %d, want 1", got)
+	}
+
+	// The single remaining unit is still persistent; the two spent units must not
+	// reappear when the pool empties.
+	pool.Empty()
+	if got := pool.Amount(R); got != 1 {
+		t.Fatalf("red mana after Empty = %d, want 1 (spent persistent mana must not resurrect)", got)
+	}
+}

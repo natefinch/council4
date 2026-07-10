@@ -64,6 +64,8 @@ func emitResolvingSyntax(abilities []Ability) {
 		recognizePayRepeatedlyAnimateSequence(&abilities[i])
 		foldAnimateSelfStillSentence(&abilities[i])
 		foldAnimateTargetStillSentence(&abilities[i])
+		recognizeThatMuchCombinationMana(&abilities[i])
+		foldPersistentManaRider(&abilities[i])
 		if abilities[i].DiceTable != nil {
 			for k := range abilities[i].DiceTable.Rows {
 				row := &abilities[i].DiceTable.Rows[k]

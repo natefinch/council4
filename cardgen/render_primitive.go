@@ -2320,6 +2320,9 @@ func (r Renderer) renderAddMana(ctx *renderCtx, value *game.AddMana) (string, er
 		ctx.need(importOpt)
 		fields = append(fields, fmt.Sprintf("Player: opt.Val(%s),", playerRef))
 	}
+	if value.PersistUntilEndOfTurn {
+		fields = append(fields, "PersistUntilEndOfTurn: true,")
+	}
 	return structLit("game.AddMana", fields), nil
 }
 

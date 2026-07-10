@@ -147,17 +147,25 @@ func handleAddMana(r *effectResolver, prim game.AddMana) effectResolved {
 	if !ok || player.Eliminated {
 		return res
 	}
+	addToPool := func(c mana.Color, amount int, snow bool) {
+		switch {
+		case prim.PersistUntilEndOfTurn && snow:
+			player.ManaPool.AddPersistentSnow(c, amount)
+		case prim.PersistUntilEndOfTurn:
+			player.ManaPool.AddPersistent(c, amount)
+		case snow:
+			player.ManaPool.AddSnow(c, amount)
+		default:
+			player.ManaPool.Add(c, amount)
+		}
+	}
 	if multiplier := tappedForManaProductionMultiplier(r.game, r.obj, recipientID); multiplier > 1 {
 		res.amount *= multiplier
 	}
 	if prim.EachControlledColor != nil {
 		snow := stackObjectSourceIsSnow(r.game, r.obj)
 		for _, c := range controlledPermanentColors(r.game, recipientID, prim.EachControlledColor) {
-			if snow {
-				player.ManaPool.AddSnow(c, res.amount)
-			} else {
-				player.ManaPool.Add(c, res.amount)
-			}
+			addToPool(c, res.amount, snow)
 			res.succeeded = true
 		}
 		return res
@@ -165,11 +173,7 @@ func handleAddMana(r *effectResolver, prim game.AddMana) effectResolved {
 	if len(prim.CombinationColors) != 0 {
 		snow := stackObjectSourceIsSnow(r.game, r.obj)
 		for _, c := range r.combinationManaAllocation(recipientID, prim.CombinationColors, res.amount) {
-			if snow {
-				player.ManaPool.AddSnow(c, 1)
-			} else {
-				player.ManaPool.Add(c, 1)
-			}
+			addToPool(c, 1, snow)
 			res.succeeded = true
 		}
 		return res
@@ -196,11 +200,7 @@ func handleAddMana(r *effectResolver, prim game.AddMana) effectResolved {
 		}
 	}
 	snow := stackObjectSourceIsSnow(r.game, r.obj)
-	if snow {
-		player.ManaPool.AddSnow(manaColor, res.amount)
-	} else {
-		player.ManaPool.Add(manaColor, res.amount)
-	}
+	addToPool(manaColor, res.amount, snow)
 	if prim.SpendRider.Exists {
 		unit := mana.Unit{Color: manaColor, Snow: snow}
 		for i := 0; i < res.amount; i++ {

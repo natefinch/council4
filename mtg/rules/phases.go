@@ -308,6 +308,7 @@ func (e *Engine) runEndingPhaseWithLog(g *game.Game, agents [game.NumPlayers]Pla
 	expireReplacementEffects(g)
 	expireRuleEffects(g)
 	e.applyStateBasedActionsWithLog(g, log)
+	clearPersistentMana(g)
 	emptyManaPools(g)
 	g.Combat = nil
 }
@@ -383,5 +384,16 @@ func emptyManaPools(g *game.Game) {
 	for _, player := range g.Players {
 		player.ManaPool.Empty()
 		player.ManaRiders = nil
+	}
+}
+
+// clearPersistentMana releases every player's until-end-of-turn mana reservation
+// (Pool.AddPersistent) at end-of-turn cleanup, so the reserved mana empties like
+// any other mana as the following step or phase ends (CR 500.4 exception ending,
+// CR 514.2). It is called during the cleanup step immediately before
+// emptyManaPools; for pools that never received persistent mana it is a no-op.
+func clearPersistentMana(g *game.Game) {
+	for _, player := range g.Players {
+		player.ManaPool.ClearPersistent()
 	}
 }

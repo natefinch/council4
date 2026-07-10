@@ -95,6 +95,7 @@ var Cards = []cardset.Entry{
 	{Name: "Grafted Butcher", New: GraftedButcher},
 	{Name: "Grakmaw, Skyclave Ravager", New: GrakmawSkyclaveRavager},
 	{Name: "Grand Arbiter Augustin IV", New: GrandArbiterAugustinIV},
+	{Name: "Grand Warlord Radha", New: GrandWarlordRadha},
 	{Name: "Grave Defiler", New: GraveDefiler},
 	{Name: "Grave Exchange", New: GraveExchange},
 	{Name: "Grave Strength", New: GraveStrength},

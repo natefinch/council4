@@ -132,6 +132,7 @@ var Cards = []cardset.Entry{
 	{Name: "Conversion Apparatus", New: ConversionApparatus},
 	{Name: "Cooped Up", New: CoopedUp},
 	{Name: "Coral Atoll", New: CoralAtoll},
+	{Name: "Coral Colony", New: CoralColony},
 	{Name: "Coral Sword", New: CoralSword},
 	{Name: "Coralhelm Commander", New: CoralhelmCommander},
 	{Name: "Cormela, Glamour Thief", New: CormelaGlamourThief},
