@@ -32,6 +32,11 @@ func (ExileEntireHand) Kind() PrimitiveKind { return PrimitiveExileEntireHand }
 // Kind implements Primitive for ReturnExiledCardsToHand.
 func (ReturnExiledCardsToHand) Kind() PrimitiveKind { return PrimitiveReturnExiledCardsToHand }
 
+// Kind implements Primitive for ReturnExiledCardsWithCounter.
+func (ReturnExiledCardsWithCounter) Kind() PrimitiveKind {
+	return PrimitiveReturnExiledCardsWithCounter
+}
+
 // Kind implements Primitive for ExileForEachPlayer.
 func (ExileForEachPlayer) Kind() PrimitiveKind { return PrimitiveExileForEachPlayer }
 
@@ -371,6 +376,7 @@ func (LookAtHand) isPrimitive()                           {}
 func (ChooseDiscardFromHand) isPrimitive()                {}
 func (ExileEntireHand) isPrimitive()                      {}
 func (ReturnExiledCardsToHand) isPrimitive()              {}
+func (ReturnExiledCardsWithCounter) isPrimitive()         {}
 func (ExileForEachPlayer) isPrimitive()                   {}
 func (ChampionExile) isPrimitive()                        {}
 func (ReturnLinkedExiledCardsToBattlefield) isPrimitive() {}
@@ -608,6 +614,9 @@ func (p ExileEntireHand) instructionRefs() primitiveRefs {
 }
 func (p ReturnExiledCardsToHand) instructionRefs() primitiveRefs {
 	return primitiveRefs{consumesLinked: []LinkedKey{p.LinkedKey}}
+}
+func (ReturnExiledCardsWithCounter) instructionRefs() primitiveRefs {
+	return primitiveRefs{}
 }
 func (p ExileForEachPlayer) instructionRefs() primitiveRefs {
 	return primitiveRefs{publishesLinked: p.LinkedKey}

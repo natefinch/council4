@@ -1955,6 +1955,16 @@ const (
 	// PlayChosenExiledCard primitive and never lowers on its own. Added last so
 	// existing kinds keep their wire values.
 	EffectChooseExiledCard
+	// EffectReturnExiledCardsWithCounter is the resolution-time mass return "Put
+	// all exiled cards you own with <kind> counters on them into your hand."
+	// (Flamewar, Brash Veteran): every card the resolving controller owns in
+	// exile that bears the named marker counter returns to that controller's
+	// hand. It carries the source zone (FromZone = Exile), the destination zone
+	// (ToZone = Hand), and the marker-counter filter (CounterKind/
+	// CounterKindKnown). It is the return companion to the exile-with-named-
+	// counter substrate and lowers on its own to a single mass return. Added last
+	// so existing kinds keep their wire values.
+	EffectReturnExiledCardsWithCounter
 )
 
 // DurationKind identifies common continuous-effect durations.

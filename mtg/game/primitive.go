@@ -210,10 +210,17 @@ const (
 	// opponent owns with a void counter on it. You may play it this turn without
 	// paying its mana cost.", Dauthi Voidwalker).
 	PrimitivePlayChosenExiledCard
+
+	// PrimitiveReturnExiledCardsWithCounter returns every card Player owns in
+	// exile that bears a named marker counter to Player's hand ("Put all exiled
+	// cards you own with intel counters on them into your hand.", Flamewar, Brash
+	// Veteran). It is the return companion to the exile-with-named-counter
+	// substrate (game.ReturnExiledCardsWithCounter).
+	PrimitiveReturnExiledCardsWithCounter
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitivePlayChosenExiledCard) + 1
+const primitiveKindCount = int(PrimitiveReturnExiledCardsWithCounter) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -927,6 +934,21 @@ type ExileEntireHand struct {
 // in exile are skipped. LinkedKey must be set.
 type ReturnExiledCardsToHand struct {
 	LinkedKey LinkedKey
+}
+
+// ReturnExiledCardsWithCounter moves every card that Player owns in the exile
+// zone bearing at least one Counter-kind named marker counter to Player's hand
+// ("Put all exiled cards you own with intel counters on them into your hand.",
+// Flamewar, Brash Veteran). It is the return companion to the exile-with-named-
+// counter substrate: the counters recorded in Game.ExileCounters when the cards
+// were exiled select exactly which cards return, so any card that uses a named
+// marker counter (croak, intel, void, collection, ...) benefits without the
+// primitive naming a specific counter. Cards without the counter, and cards
+// owned by other players, are unaffected; an empty result is a legal no-op. The
+// counters are cleared as the cards leave exile.
+type ReturnExiledCardsWithCounter struct {
+	Player  PlayerReference
+	Counter counter.Kind
 }
 
 // ExileForEachPlayer walks every player in the game and, for each, has Chooser

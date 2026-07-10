@@ -1538,6 +1538,16 @@ func (p ReturnExiledCardsToHand) validatePrimitive([]TargetSpec, bool) error {
 	return nil
 }
 
+func (p ReturnExiledCardsWithCounter) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if !p.Counter.Valid() {
+		return errors.New("return exiled cards with counter requires a valid counter kind")
+	}
+	if p.Counter.PlayerOnly() {
+		return errors.New("return exiled cards with counter requires a permanent-placeable counter kind")
+	}
+	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
 func (p ExileForEachPlayer) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if p.LinkedKey == "" {
 		return errors.New("exile for each player requires a linked key")

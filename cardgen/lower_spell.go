@@ -385,6 +385,9 @@ func lowerContentDispatch(
 		if content, ok := lowerReturnExiledCardsToHandContent(ctx); ok {
 			return content, nil
 		}
+		if content, ok := lowerReturnExiledCardsWithCounterContent(ctx); ok {
+			return content, nil
+		}
 		if content, ok := lowerBottomLinkedExiledCardsContent(ctx); ok {
 			return content, nil
 		}
