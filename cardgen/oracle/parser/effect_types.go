@@ -961,6 +961,10 @@ const (
 	// effect resolves (CR 107.4). It carries no in-text referent and is recognized
 	// only on life-loss effects. Added last so existing kinds keep their values.
 	EffectDynamicAmountHalfPlayerLife EffectDynamicAmountKind = "EffectDynamicAmountHalfPlayerLife"
+	// EffectDynamicAmountPartySize is the controller's party size: the maximum
+	// number of distinct Cleric, Rogue, Warrior, and Wizard roles filled by
+	// creatures they control, with each creature filling at most one role.
+	EffectDynamicAmountPartySize EffectDynamicAmountKind = "EffectDynamicAmountPartySize"
 )
 
 // EffectDynamicAmountForm identifies how a dynamic amount is introduced.

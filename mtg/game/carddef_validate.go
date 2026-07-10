@@ -1567,6 +1567,7 @@ func dynamicCostReductionKindSupported(kind DynamicAmountKind) bool {
 		DynamicAmountControllerGraveyardSize,
 		DynamicAmountControllerBasicLandTypeCount,
 		DynamicAmountOpponentCount,
+		DynamicAmountPartySize,
 		DynamicAmountDevotion:
 		return true
 	default:

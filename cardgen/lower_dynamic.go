@@ -175,6 +175,8 @@ func lowerDynamicAmountKind(amount compiler.CompiledAmount, object game.ObjectRe
 		}
 		dynamic.Kind = game.DynamicAmountBlockingCreatures
 		dynamic.Object = object
+	case compiler.DynamicAmountPartySize:
+		dynamic.Kind = game.DynamicAmountPartySize
 	case compiler.DynamicAmountLifeLostThisTurn:
 		dynamic.Kind = game.DynamicAmountLifeLostThisTurn
 	case compiler.DynamicAmountLifeGainedThisTurn:
