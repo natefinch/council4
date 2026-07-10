@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,391 of 32,501 cards eligible for paper support (53.5%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,395 of 32,501 cards eligible for paper support (53.5%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1633,6 +1633,7 @@ Council4 currently supports **17,391 of 32,501 cards eligible for paper support 
 - Bloody Betrayal
 - Bloom Hulk
 - Bloom Tender
+- Blooming Blast
 - Blooming Marsh
 - Blooming Stinger
 - Bloomvine Regent // Claim Territory
@@ -3116,6 +3117,7 @@ Council4 currently supports **17,391 of 32,501 cards eligible for paper support 
 - Cruel Truths
 - Cruel Tutor
 - Cruel Witness
+- Crumb and Get It
 - Crumble
 - Crumbling Ashes
 - Crumbling Colossus
@@ -10075,6 +10077,7 @@ Council4 currently supports **17,391 of 32,501 cards eligible for paper support 
 - Noble's Purse
 - Nobody
 - Nocturnal Feeder
+- Nocturnal Hunger
 - Nocturnal Raid
 - Noggle Bandit
 - Noggle Bridgebreaker
@@ -10575,6 +10578,7 @@ Council4 currently supports **17,391 of 32,501 cards eligible for paper support 
 - Parhelion Patrol
 - Parish-Blade Trainee
 - Part the Veil
+- Parting Gust
 - Pashalik Mons
 - Passenger Ferry
 - Passwall Adept
