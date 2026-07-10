@@ -1267,15 +1267,11 @@ func sacrificeChoiceSelection(selector compiler.CompiledSelector) (game.Selectio
 
 func lowerCounterUnlessPaysSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	if len(ctx.content.Effects) != 1 ||
-		len(ctx.content.Targets) != 1 ||
-		ctx.content.Targets[0].Cardinality.Min != 1 ||
-		ctx.content.Targets[0].Cardinality.Max != 1 ||
 		ctx.content.Effects[0].Negated ||
 		!ctx.content.Effects[0].Exact ||
 		len(ctx.content.Conditions) != 1 ||
 		len(ctx.content.Keywords) != 0 ||
-		len(ctx.content.Modes) != 0 ||
-		!referencesBindTo(ctx.content.References, compiler.ReferenceBindingTarget, 0) {
+		len(ctx.content.Modes) != 0 {
 		return game.AbilityContent{}, false
 	}
 	payment := ctx.content.Effects[0].Payment
@@ -1289,14 +1285,13 @@ func lowerCounterUnlessPaysSpell(ctx contentCtx) (game.AbilityContent, bool) {
 		ctx.content.Conditions[0].Predicate != compiler.ConditionPredicateTargetControllerDoesNotPay {
 		return game.AbilityContent{}, false
 	}
-	target := ctx.content.Targets[0]
-	targetSpec, ok := stackSpellTargetSpec(target)
+	object, targets, ok := counterTaxStackObjectReference(ctx)
 	if !ok {
 		return game.AbilityContent{}, false
 	}
 	resolutionPayment := game.ResolutionPayment{
 		Prompt: "Pay " + payment.ManaCost.String() + "?",
-		Payer:  opt.Val(game.ObjectControllerReference(game.TargetStackObjectReference(0))),
+		Payer:  opt.Val(game.ObjectControllerReference(object)),
 	}
 	switch {
 	case variableX:
@@ -1318,14 +1313,14 @@ func lowerCounterUnlessPaysSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	}
 	const resultKey = game.ResultKey("unless-paid")
 	return game.Mode{
-		Targets: []game.TargetSpec{targetSpec},
+		Targets: targets,
 		Sequence: []game.Instruction{
 			{
 				Primitive:     game.Pay{Payment: resolutionPayment},
 				PublishResult: resultKey,
 			},
 			{
-				Primitive: game.CounterObject{Object: game.TargetStackObjectReference(0)},
+				Primitive: game.CounterObject{Object: object},
 				ResultGate: opt.Val(game.InstructionResultGate{
 					Key:       resultKey,
 					Succeeded: game.TriFalse,
@@ -1333,6 +1328,44 @@ func lowerCounterUnlessPaysSpell(ctx contentCtx) (game.AbilityContent, bool) {
 			},
 		},
 	}.Ability(), true
+}
+
+func counterTaxStackObjectReference(ctx contentCtx) (game.ObjectReference, []game.TargetSpec, bool) {
+	switch {
+	case len(ctx.content.Targets) == 1 &&
+		referencesBindTo(ctx.content.References, compiler.ReferenceBindingTarget, 0):
+		target := ctx.content.Targets[0]
+		if target.Cardinality.Min != 1 || target.Cardinality.Max != 1 {
+			return game.ObjectReference{}, nil, false
+		}
+		spec, ok := stackSpellTargetSpec(target)
+		if !ok {
+			return game.ObjectReference{}, nil, false
+		}
+		return game.TargetStackObjectReference(0), []game.TargetSpec{spec}, true
+	case len(ctx.content.Targets) == 0:
+		var object game.ObjectReference
+		eventRefs := 0
+		for i := range ctx.content.References {
+			switch ctx.content.References[i].Binding {
+			case compiler.ReferenceBindingSource:
+			case compiler.ReferenceBindingEventStackObject:
+				eventRefs++
+				if eventRefs == 1 {
+					lowered, ok := lowerObjectReference(ctx.content.References[i], referenceLoweringContext{AllowEvent: true})
+					if !ok || lowered.Kind() != game.ObjectReferenceEventStackObject {
+						return game.ObjectReference{}, nil, false
+					}
+					object = lowered
+				}
+			default:
+				return game.ObjectReference{}, nil, false
+			}
+		}
+		return object, nil, eventRefs >= 1
+	default:
+		return game.ObjectReference{}, nil, false
+	}
 }
 
 func playerTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {

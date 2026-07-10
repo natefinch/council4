@@ -183,6 +183,15 @@ func (r referenceResolver) object(ref game.ObjectReference) (resolvedObjectRefer
 			return resolvePermanentOrLastKnown(r.g, permanentID)
 		}
 		return resolvedObjectReference{}, false
+	case game.ObjectReferenceEventStackObject:
+		if r.obj == nil || !r.obj.HasTriggerEvent || r.obj.TriggerEvent.StackObjectID == 0 {
+			return resolvedObjectReference{}, false
+		}
+		stack, ok := stackObjectByID(r.g, r.obj.TriggerEvent.StackObjectID)
+		if !ok {
+			return resolvedObjectReference{}, false
+		}
+		return resolvedObjectReference{stack: stack}, true
 	case game.ObjectReferenceEventRelatedPermanent:
 		if r.obj != nil && r.obj.HasTriggerEvent && r.obj.TriggerEvent.RelatedPermanentID != 0 {
 			return resolvePermanentOrLastKnown(r.g, r.obj.TriggerEvent.RelatedPermanentID)

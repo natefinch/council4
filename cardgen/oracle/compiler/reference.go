@@ -54,7 +54,10 @@ func bindReferences(
 		}
 
 		if trigger != nil &&
-			reference.Kind == ReferenceThatObject &&
+			(reference.Kind == ReferenceThatObject ||
+				(reference.Kind == ReferencePronoun &&
+					(reference.Pronoun == ReferencePronounIt ||
+						reference.Pronoun == ReferencePronounIts))) &&
 			reference.Order.Start >= trigger.Order.Start &&
 			trigger.Pattern.Event == TriggerEventObjectBecameTarget &&
 			referenceInsideTriggeringStackCounter(*reference, effects) {
