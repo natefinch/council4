@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,374 of 32,501 cards eligible for paper support (53.5%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,391 of 32,501 cards eligible for paper support (53.5%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -316,6 +316,7 @@ Council4 currently supports **17,374 of 32,501 cards eligible for paper support 
 - Alert Heedbonder
 - Alert Shu Infantry
 - Alesha's Legacy
+- Alesha's Vanguard
 - Alexi's Cloak
 - Algae Gharial
 - Alhammarret's Archive
@@ -378,6 +379,7 @@ Council4 currently supports **17,374 of 32,501 cards eligible for paper support 
 - Ambrosia Whiteheart
 - Ambulatory Edifice
 - Ambuscade
+- Ambuscade Shaman
 - Ambush
 - Ambush Gigapede
 - Ambush Krotiq
@@ -6137,6 +6139,7 @@ Council4 currently supports **17,374 of 32,501 cards eligible for paper support 
 - Goblin Glider
 - Goblin Grenade
 - Goblin Grenadiers
+- Goblin Heelcutter
 - Goblin Hero
 - Goblin Instigator
 - Goblin King
@@ -8148,9 +8151,12 @@ Council4 currently supports **17,374 of 32,501 cards eligible for paper support 
 - Koilos Roc
 - Kokusho, the Evening Star
 - Kolaghan Aspirant
+- Kolaghan Forerunners
 - Kolaghan Monument
+- Kolaghan Skirmisher
 - Kolaghan Warmonger
 - Kolaghan's Command
+- Kolaghan, the Storm's Fury
 - Koma's Coil
 - Koma's Faithful
 - Koma, World-Eater
@@ -8499,6 +8505,7 @@ Council4 currently supports **17,374 of 32,501 cards eligible for paper support 
 - Lightfoot Technique
 - Lightless Evangel
 - Lightning Angel
+- Lightning Berserker
 - Lightning Blast
 - Lightning Blow
 - Lightning Bolt
@@ -8980,7 +8987,10 @@ Council4 currently supports **17,374 of 32,501 cards eligible for paper support 
 - Mardu Hordechief
 - Mardu Outrider
 - Mardu Roughrider
+- Mardu Scout
+- Mardu Shadowspear
 - Mardu Skullhunter
+- Mardu Strike Leader
 - Mardu Warshrieker
 - Mardu Woe-Reaper
 - Marhault Elsdragon
@@ -10865,6 +10875,7 @@ Council4 currently supports **17,374 of 32,501 cards eligible for paper support 
 - Pith Driller
 - Pitiless Fists
 - Pitiless Gorgon
+- Pitiless Horde
 - Pitiless Plunderer
 - Pitiless Pontiff
 - Pitiless Vizier
@@ -11621,6 +11632,7 @@ Council4 currently supports **17,374 of 32,501 cards eligible for paper support 
 - Reckless Charge
 - Reckless Detective
 - Reckless Fireweaver
+- Reckless Imp
 - Reckless Impulse
 - Reckless Lackey
 - Reckless Ogre
@@ -11898,6 +11910,7 @@ Council4 currently supports **17,374 of 32,501 cards eligible for paper support 
 - Riddlekeeper
 - Riddlemaster Sphinx
 - Riddlesmith
+- Riders of Rohan
 - Ridge Rannet
 - Ridged Kusite
 - Ridgeline Rager
@@ -12604,6 +12617,7 @@ Council4 currently supports **17,374 of 32,501 cards eligible for paper support 
 - Screaming Phantom
 - Screaming Seahawk
 - Screaming Shield
+- Screamreach Brawler
 - Screams from Within
 - Screams of the Damned
 - Screeching Bat // Stalking Vampire
@@ -14078,6 +14092,7 @@ Council4 currently supports **17,374 of 32,501 cards eligible for paper support 
 - Springmane Cervin
 - Springmantle Cleric
 - Springsage Ritual
+- Sprinting Warbrute
 - Sprite Dragon
 - Sprite Noble
 - Sprout
@@ -15605,6 +15620,7 @@ Council4 currently supports **17,374 of 32,501 cards eligible for paper support 
 - Treefolk Warrior
 - Treeshaker Chimera
 - Treespring Lorian
+- Treetop Ambusher
 - Treetop Bracers
 - Treetop Freedom Fighters
 - Treetop Rangers
@@ -16158,6 +16174,7 @@ Council4 currently supports **17,374 of 32,501 cards eligible for paper support 
 - Vault Robber
 - Vault Skirge
 - Vault Skyward
+- Vaultbreaker
 - Vaultguard Trooper
 - Vebulid
 - Vec Townships
