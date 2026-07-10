@@ -383,37 +383,80 @@ func lowerCounterSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic)
 	}
 	colorGate, hasColorGate := targetColorGateSelection(ctx.content.Conditions)
 	if len(ctx.content.Effects) != 1 ||
-		len(ctx.content.Targets) != 1 ||
-		ctx.content.Targets[0].Cardinality.Min != 1 ||
-		ctx.content.Targets[0].Cardinality.Max != 1 ||
 		ctx.content.Effects[0].Negated ||
 		!ctx.content.Effects[0].Exact ||
 		ctx.content.Effects[0].Context != parser.EffectContextController ||
 		ctx.content.Effects[0].Amount.Known ||
-		len(ctx.content.Conditions) != 0 && !hasColorGate ||
 		len(ctx.content.Keywords) != 0 ||
-		len(ctx.content.Modes) != 0 ||
-		len(ctx.content.References) != 0 {
+		len(ctx.content.Modes) != 0 {
 		return unsupported()
 	}
-	targetSpec, ok := counterTargetSpec(ctx.content.Targets[0])
+	object, targets, ok := counterStackObjectReference(ctx)
 	if !ok {
 		return unsupported()
 	}
+	if len(ctx.content.Conditions) != 0 &&
+		(object.Kind() != game.ObjectReferenceTargetStackObject || !hasColorGate) {
+		return unsupported()
+	}
 	instruction := game.Instruction{
-		Primitive: game.CounterObject{Object: game.TargetStackObjectReference(0)},
+		Primitive: game.CounterObject{Object: object},
 	}
 	if hasColorGate {
 		instruction.Condition = opt.Val(targetColorEffectCondition(
-			game.TargetStackObjectReference(0),
+			object,
 			colorGate,
 			ctx.content.Conditions[0].Text,
 		))
 	}
 	return game.Mode{
-		Targets:  []game.TargetSpec{targetSpec},
+		Targets:  targets,
 		Sequence: []game.Instruction{instruction},
 	}.Ability(), nil
+}
+
+// counterStackObjectReference resolves the spell or ability a counter effect
+// counters. The targeted form names target slot zero; the triggered reference
+// form ("counter that spell or ability") names the stack object that caused the
+// enclosing became-target trigger and needs no target.
+func counterStackObjectReference(ctx contentCtx) (game.ObjectReference, []game.TargetSpec, bool) {
+	switch {
+	case len(ctx.content.Targets) == 1 && len(ctx.content.References) == 0:
+		target := ctx.content.Targets[0]
+		if target.Cardinality.Min != 1 || target.Cardinality.Max != 1 {
+			return game.ObjectReference{}, nil, false
+		}
+		spec, ok := counterTargetSpec(target)
+		if !ok {
+			return game.ObjectReference{}, nil, false
+		}
+		return game.TargetStackObjectReference(0), []game.TargetSpec{spec}, true
+	case len(ctx.content.Targets) == 0:
+		var object game.ObjectReference
+		found := false
+		for i := range ctx.content.References {
+			switch ctx.content.References[i].Binding {
+			case compiler.ReferenceBindingSource:
+				// The enclosing became-target trigger contributes its source
+				// reference; it is not a second counter recipient.
+			case compiler.ReferenceBindingEventStackObject:
+				if found {
+					return game.ObjectReference{}, nil, false
+				}
+				lowered, ok := lowerObjectReference(ctx.content.References[i], referenceLoweringContext{AllowEvent: true})
+				if !ok || lowered.Kind() != game.ObjectReferenceEventStackObject {
+					return game.ObjectReference{}, nil, false
+				}
+				object = lowered
+				found = true
+			default:
+				return game.ObjectReference{}, nil, false
+			}
+		}
+		return object, nil, found
+	default:
+		return game.ObjectReference{}, nil, false
+	}
 }
 
 // lowerCounterThenExileInstead lowers the two-effect counter-and-exile body

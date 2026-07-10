@@ -2258,8 +2258,9 @@ func (p CounterObject) validatePrimitive(targets []TargetSpec, checkTargets bool
 	if err := validateObjectReference(p.Object, targets, checkTargets); err != nil {
 		return err
 	}
-	if p.Object.Kind() != ObjectReferenceTargetStackObject {
-		return errors.New("counter object requires a target stack object reference")
+	if p.Object.Kind() != ObjectReferenceTargetStackObject &&
+		p.Object.Kind() != ObjectReferenceEventStackObject {
+		return errors.New("counter object requires a target or event stack object reference")
 	}
 	if p.ExileInstead && p.Destination != CounteredSpellGraveyard {
 		return errors.New("counter object cannot both exile and redirect a countered spell")
@@ -2268,6 +2269,9 @@ func (p CounterObject) validatePrimitive(targets []TargetSpec, checkTargets bool
 	case CounteredSpellGraveyard, CounteredSpellLibraryTop, CounteredSpellHand:
 	default:
 		return errors.New("counter object has an unknown countered-spell destination")
+	}
+	if p.Object.Kind() == ObjectReferenceEventStackObject {
+		return nil
 	}
 	return validateTargetAllows(p.Object.TargetIndex(), TargetAllowStackObject, targets, checkTargets)
 }

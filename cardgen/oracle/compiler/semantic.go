@@ -2830,6 +2830,9 @@ type CompiledEffect struct {
 	// the text-blind compiler boundary. The redirect zone is read from ToZone and
 	// Destination by the counter lowerer.
 	CounteredSpellDestinationReplacement bool
+	// CounterTriggeringStackObject mirrors the parser-owned exact
+	// "Counter that spell or ability." reference form.
+	CounterTriggeringStackObject bool
 	// ExileUntilSourceLeaves carries the parser-recognized O-Ring exile clause
 	// "exile <target> until <this permanent> leaves the battlefield." through the
 	// text-blind compiler boundary so lowering links the exile to the source.

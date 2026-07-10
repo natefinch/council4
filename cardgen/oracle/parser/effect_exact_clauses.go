@@ -1454,6 +1454,12 @@ func exactCounterEffectSyntax(effect *EffectSyntax) bool {
 	if exactDirectTargetEffectSyntax(effect, "Counter") {
 		return true
 	}
+	if len(effect.Targets) == 0 &&
+		effect.Context == EffectContextController &&
+		strings.EqualFold(exactEffectClauseText(effect), "Counter that spell or ability.") {
+		effect.CounterTriggeringStackObject = true
+		return true
+	}
 	return len(effect.Targets) == 1 &&
 		effect.Targets[0].Exact &&
 		effect.Payment.Payer == EffectPaymentPayerTargetController &&
