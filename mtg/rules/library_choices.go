@@ -11,6 +11,54 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
+// putLibraryCardIntoGraveyard moves cardID — already removed from playerID's
+// library — toward playerID's graveyard, then emits the zone-change event. Every
+// direct library-to-graveyard move (mill, surveil, dig remainder, manifest dread,
+// explore, reveal-until/partition remainder) routes through it so they all honor
+// the same replacement effects the central moveCardBetweenZonesAfterReplacement
+// path applies (zones.go): graveyard-redirect replacements (CR 614; e.g. Dauthi
+// Voidwalker's "If a card would be put into an opponent's graveyard from anywhere,
+// instead exile it with a void counter on it.") and the commander replacement
+// (CR 903.9a). When a redirect exiles the card it places the named exile counter
+// once the card lands. simultaneousID batches simultaneous moves (a mill of
+// several cards); pass 0 for a lone move. It returns the zone the card actually
+// entered and whether the move succeeded.
+func putLibraryCardIntoGraveyard(g *game.Game, playerID game.PlayerID, cardID, simultaneousID id.ID) (zone.Type, bool) {
+	event := game.Event{
+		Kind:           game.EventZoneChanged,
+		Controller:     playerID,
+		Player:         playerID,
+		CardID:         cardID,
+		FromZone:       zone.Library,
+		ToZone:         zone.Graveyard,
+		Amount:         1,
+		SimultaneousID: simultaneousID,
+	}
+	replacement := replacementZoneChange(g, event)
+	destination := commanderReplacementDestination(g, cardID, replacement.destination)
+	zoneOwner := playerID
+	if card, ok := g.GetCardInstance(cardID); destination == zone.Command && ok {
+		zoneOwner = card.Owner
+	}
+	destinationCards, ok := destinationZone(g, zoneOwner, destination)
+	if !ok {
+		return destination, false
+	}
+	revealZoneReplacementSource(g, event, replacement.revealSource)
+	destinationCards.Add(cardID)
+	shuffleLibraryIfRequested(g, destinationCards, destination, replacement.shuffleIntoLibrary)
+	placeRedirectExileCounter(g, zoneOwner, cardID, replacement)
+	emitZoneChangeEvent(g, game.Event{
+		Player:         playerID,
+		CardID:         cardID,
+		FromZone:       zone.Library,
+		ToZone:         destination,
+		Amount:         1,
+		SimultaneousID: simultaneousID,
+	})
+	return destination, true
+}
+
 func millCards(g *game.Game, playerID game.PlayerID, amount int) []id.ID {
 	player, ok := playerByID(g, playerID)
 	if !ok || amount <= 0 {
@@ -24,27 +72,13 @@ func millCards(g *game.Game, playerID game.PlayerID, amount int) []id.ID {
 			return milled
 		}
 		player.Library.Remove(cardID)
-		destination := commanderReplacementDestination(g, cardID, zone.Graveyard)
-		zoneOwner := playerID
-		if card, ok := g.GetCardInstance(cardID); destination == zone.Command && ok {
-			zoneOwner = card.Owner
-		}
-		destinationCards, ok := destinationZone(g, zoneOwner, destination)
+		destination, ok := putLibraryCardIntoGraveyard(g, playerID, cardID, batchID)
 		if !ok {
 			return milled
 		}
-		destinationCards.Add(cardID)
 		if destination == zone.Graveyard {
 			milled = append(milled, cardID)
 		}
-		emitZoneChangeEvent(g, game.Event{
-			Player:         playerID,
-			CardID:         cardID,
-			FromZone:       zone.Library,
-			ToZone:         destination,
-			Amount:         1,
-			SimultaneousID: batchID,
-		})
 	}
 	return milled
 }
@@ -67,26 +101,24 @@ func revealUntilCards(g *game.Game, playerID game.PlayerID, until game.Selection
 		}
 		player.Library.Remove(cardID)
 		matched := revealedCardMatches(g, playerID, cardID, until)
-		dest := destination
 		if destination == zone.Graveyard {
-			dest = commanderReplacementDestination(g, cardID, zone.Graveyard)
+			if _, ok := putLibraryCardIntoGraveyard(g, playerID, cardID, 0); !ok {
+				return
+			}
+		} else {
+			destinationCards, ok := destinationZone(g, playerID, destination)
+			if !ok {
+				return
+			}
+			destinationCards.Add(cardID)
+			emitZoneChangeEvent(g, game.Event{
+				Player:   playerID,
+				CardID:   cardID,
+				FromZone: zone.Library,
+				ToZone:   destination,
+				Amount:   1,
+			})
 		}
-		zoneOwner := playerID
-		if card, ok := g.GetCardInstance(cardID); dest == zone.Command && ok {
-			zoneOwner = card.Owner
-		}
-		destinationCards, ok := destinationZone(g, zoneOwner, dest)
-		if !ok {
-			return
-		}
-		destinationCards.Add(cardID)
-		emitZoneChangeEvent(g, game.Event{
-			Player:   playerID,
-			CardID:   cardID,
-			FromZone: zone.Library,
-			ToZone:   dest,
-			Amount:   1,
-		})
 		if matched {
 			return
 		}
@@ -186,23 +218,7 @@ func (e *Engine) surveilCards(g *game.Game, agents [game.NumPlayers]PlayerAgent,
 		request.Subject = cardChoiceInfo(g, cardID)
 		selected := e.chooseChoice(g, agents, request, log)
 		if len(selected) == 1 && selected[0] == 1 && player.Library.Remove(cardID) {
-			destination := commanderReplacementDestination(g, cardID, zone.Graveyard)
-			zoneOwner := playerID
-			if card, ok := g.GetCardInstance(cardID); destination == zone.Command && ok {
-				zoneOwner = card.Owner
-			}
-			destinationCards, ok := destinationZone(g, zoneOwner, destination)
-			if !ok {
-				continue
-			}
-			destinationCards.Add(cardID)
-			emitZoneChangeEvent(g, game.Event{
-				Player:   playerID,
-				CardID:   cardID,
-				FromZone: zone.Library,
-				ToZone:   destination,
-				Amount:   1,
-			})
+			putLibraryCardIntoGraveyard(g, playerID, cardID, 0)
 		}
 	}
 	emitEvent(g, game.Event{
@@ -311,23 +327,7 @@ func (e *Engine) digCards(g *game.Game, agents [game.NumPlayers]PlayerAgent, log
 			})
 			continue
 		}
-		destination := commanderReplacementDestination(g, cardID, zone.Graveyard)
-		zoneOwner := playerID
-		if card, ok := g.GetCardInstance(cardID); destination == zone.Command && ok {
-			zoneOwner = card.Owner
-		}
-		destinationCards, ok := destinationZone(g, zoneOwner, destination)
-		if !ok {
-			continue
-		}
-		destinationCards.Add(cardID)
-		emitZoneChangeEvent(g, game.Event{
-			Player:   playerID,
-			CardID:   cardID,
-			FromZone: zone.Library,
-			ToZone:   destination,
-			Amount:   1,
-		})
+		putLibraryCardIntoGraveyard(g, playerID, cardID, 0)
 	}
 	return true
 }
@@ -415,23 +415,7 @@ func (e *Engine) manifestDread(g *game.Game, agents [game.NumPlayers]PlayerAgent
 		if !player.Library.Remove(cardID) {
 			continue
 		}
-		destination := commanderReplacementDestination(g, cardID, zone.Graveyard)
-		zoneOwner := playerID
-		if card, ok := g.GetCardInstance(cardID); destination == zone.Command && ok {
-			zoneOwner = card.Owner
-		}
-		destinationCards, ok := destinationZone(g, zoneOwner, destination)
-		if !ok {
-			continue
-		}
-		destinationCards.Add(cardID)
-		emitZoneChangeEvent(g, game.Event{
-			Player:   playerID,
-			CardID:   cardID,
-			FromZone: zone.Library,
-			ToZone:   destination,
-			Amount:   1,
-		})
+		putLibraryCardIntoGraveyard(g, playerID, cardID, 0)
 	}
 	return manifested, true
 }
@@ -697,23 +681,7 @@ func (e *Engine) exploreCreature(
 	addCountersToPermanentControlledBy(g, playerID, creature, counter.PlusOnePlusOne, 1)
 	selected := e.chooseChoice(g, agents, libraryChoiceRequest(game.ChoiceExplore, playerID, "Explore: choose where to put revealed nonland card.", []string{"top", "graveyard"}), log)
 	if len(selected) == 1 && selected[0] == 1 && player.Library.Remove(cardID) {
-		destination := commanderReplacementDestination(g, cardID, zone.Graveyard)
-		zoneOwner := playerID
-		if card, ok := g.GetCardInstance(cardID); destination == zone.Command && ok {
-			zoneOwner = card.Owner
-		}
-		destinationCards, ok := destinationZone(g, zoneOwner, destination)
-		if !ok {
-			return true
-		}
-		destinationCards.Add(cardID)
-		emitZoneChangeEvent(g, game.Event{
-			Player:   playerID,
-			CardID:   cardID,
-			FromZone: zone.Library,
-			ToZone:   destination,
-			Amount:   1,
-		})
+		putLibraryCardIntoGraveyard(g, playerID, cardID, 0)
 	}
 	return true
 }
@@ -774,23 +742,7 @@ func revealTopPartition(g *game.Game, obj *game.StackObject, playerID game.Playe
 			})
 			continue
 		}
-		destination := commanderReplacementDestination(g, cardID, zone.Graveyard)
-		zoneOwner := playerID
-		if destination == zone.Command {
-			zoneOwner = card.Owner
-		}
-		destinationCards, zoneOK := destinationZone(g, zoneOwner, destination)
-		if !zoneOK {
-			continue
-		}
-		destinationCards.Add(cardID)
-		emitZoneChangeEvent(g, game.Event{
-			Player:   playerID,
-			CardID:   cardID,
-			FromZone: zone.Library,
-			ToZone:   destination,
-			Amount:   1,
-		})
+		putLibraryCardIntoGraveyard(g, playerID, cardID, 0)
 	}
 	return true
 }
