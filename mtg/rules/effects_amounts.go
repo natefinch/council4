@@ -130,6 +130,10 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj opt.V[*game.StackObject], c
 		if obj.Exists && obj.Val.HasTriggerEvent {
 			amount = triggerEventCardCount(g, obj.Val.TriggerEvent)
 		}
+	case game.DynamicAmountSpellTargetCount:
+		if obj.Exists && obj.Val.HasTriggerEvent && dynamic.Selection != nil {
+			amount = countSpellTargetsMatching(g, controller, game.TargetAllowPermanent, *dynamic.Selection, obj.Val.TriggerEvent)
+		}
 	case game.DynamicAmountObjectPower:
 		if !obj.Exists {
 			break

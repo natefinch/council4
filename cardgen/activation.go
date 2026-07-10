@@ -208,7 +208,7 @@ func lowerActivationShell(
 		CoinFlip:  syntax.CoinFlip,
 		Vote:      syntax.Vote,
 	}
-	content, diagnostic := lowerActivatedBodyContent(cardName, ability, bodyContent, &bodySyntax, bodyText)
+	content, diagnostic := lowerActivatedBodyContent(cardName, ability, bodyContent, &bodySyntax, bodyText, hasVariableCounterRemovalCost(additionalCosts))
 	if diagnostic != nil {
 		if diagnostic.Summary == "unsupported ability modes" {
 			diagnostic.Summary = "unsupported activation modes"
@@ -399,6 +399,16 @@ func costReferenceDenotesSource(reference compiler.CompiledReference, compiled *
 
 func activationDiagnostic(ability compiler.CompiledAbility, summary, detail string) *shared.Diagnostic {
 	return executableDiagnostic(ability, summary, detail)
+}
+
+// hasVariableCounterRemovalCost reports whether any additional cost removes a
+// player-chosen "one or more" number of counters announced as the ability's X
+// (AdditionalRemoveCounter with AmountAtLeastOne). It lets the body lowering
+// resolve a "that much"/"that many" anaphor to that announced X.
+func hasVariableCounterRemovalCost(additionalCosts []cost.Additional) bool {
+	return slices.ContainsFunc(additionalCosts, func(additional cost.Additional) bool {
+		return additional.Kind == cost.AdditionalRemoveCounter && additional.AmountAtLeastOne
+	})
 }
 
 func lowerActivationZone(activationZone zone.Type) (zone.Type, bool) {

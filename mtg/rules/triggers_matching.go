@@ -750,23 +750,35 @@ func spellTargetsSource(g *game.Game, source *game.Permanent, event game.Event) 
 }
 
 func spellTargetsPattern(g *game.Game, controller game.PlayerID, allow game.TargetAllow, selection game.Selection, event game.Event) bool {
+	return countSpellTargetsMatching(g, controller, allow, selection, event) > 0
+}
+
+// countSpellTargetsMatching counts the targets of the spell named by a
+// spell-cast event that match selection from controller's perspective. It backs
+// both the boolean "targets one or more <selection>" trigger predicate
+// (spellTargetsPattern) and the "that many" DynamicAmountSpellTargetCount amount
+// (Arcee, Acrobatic Coupe), so the amount counts exactly the targets the trigger
+// keyed on. It is zero when the event is not a spell cast or the spell has left
+// the stack.
+func countSpellTargetsMatching(g *game.Game, controller game.PlayerID, allow game.TargetAllow, selection game.Selection, event game.Event) int {
 	if event.Kind != game.EventSpellCast {
-		return false
+		return 0
 	}
 	obj, ok := stackObjectByID(g, event.StackObjectID)
 	if !ok {
-		return false
+		return 0
 	}
 	spec := game.TargetSpec{
 		Allow:     allow,
 		Selection: opt.Val(selection),
 	}
+	count := 0
 	for _, target := range obj.Targets {
 		if targetMatchesSpec(g, controller, 0, game.Event{}, &spec, target) {
-			return true
+			count++
 		}
 	}
-	return false
+	return count
 }
 
 // dyingPermanentDamagedBySource reports whether the permanent that died in the

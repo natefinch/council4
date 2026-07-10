@@ -104,6 +104,7 @@ var Cards = []cardset.Entry{
 	{Name: "Arcane Infusion", New: ArcaneInfusion},
 	{Name: "Arcane Melee", New: ArcaneMelee},
 	{Name: "Arcanist's Owl", New: ArcanistSOwl},
+	{Name: "Arcee, Sharpshooter", New: ArceeSharpshooter},
 	{Name: "Archdemon of Unx", New: ArchdemonOfUnx},
 	{Name: "Archivist of Gondor", New: ArchivistOfGondor},
 	{Name: "Archon of Coronation", New: ArchonOfCoronation},

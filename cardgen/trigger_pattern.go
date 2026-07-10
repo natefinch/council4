@@ -669,8 +669,7 @@ func triggerSelectionSelector(selection compiler.TriggerSelection) (compiler.Com
 // than silently widening trigger coverage. The projection drops the same fields
 // the former predicate round-trip discarded, preserving byte-for-byte behavior.
 func spellTargetSelection(selection game.Selection) (game.Selection, bool) {
-	if len(selection.AnyOf) > 0 ||
-		selection.ExcludedSubtype != "" ||
+	if selection.ExcludedSubtype != "" ||
 		selection.Colorless ||
 		selection.Multicolored ||
 		selection.NonToken ||
@@ -685,7 +684,7 @@ func spellTargetSelection(selection game.Selection) (game.Selection, bool) {
 		selection.ColorChoice != game.ColorChoiceNone {
 		return game.Selection{}, false
 	}
-	return game.Selection{
+	projected := game.Selection{
 		RequiredTypes:     selection.RequiredTypes,
 		RequiredTypesAny:  selection.RequiredTypesAny,
 		ExcludedTypes:     selection.ExcludedTypes,
@@ -704,7 +703,20 @@ func spellTargetSelection(selection game.Selection) (game.Selection, bool) {
 		Power:             selection.Power,
 		Toughness:         selection.Toughness,
 		ExcludeSource:     selection.ExcludeSource,
-	}, true
+	}
+	// A type-or-subtype disjunction ("one or more creatures or Vehicles you
+	// control", Arcee, Acrobatic Coupe) rides Selection.AnyOf, which the flat
+	// type/subtype fields cannot express. Each alternative is projected through
+	// the same gate so an alternative with an unsupported feature still fails
+	// closed rather than silently widening trigger coverage.
+	for i := range selection.AnyOf {
+		alternative, ok := spellTargetSelection(selection.AnyOf[i])
+		if !ok {
+			return game.Selection{}, false
+		}
+		projected.AnyOf = append(projected.AnyOf, alternative)
+	}
+	return projected, true
 }
 
 func lowerTriggerSelectionController(controller compiler.ControllerKind) (game.ControllerRelation, bool) {

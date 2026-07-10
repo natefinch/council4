@@ -233,7 +233,11 @@ func legalXValuesForCostAndAdditional(g *game.Game, playerID game.PlayerID, mana
 		break
 	}
 	var values []int
-	for x := 0; x <= upperBound; x++ {
+	lowerBound := 0
+	if additionalCostsRequirePositiveX(additionalCosts) {
+		lowerBound = 1
+	}
+	for x := lowerBound; x <= upperBound; x++ {
 		if costHasVariableMana(manaCost) && !paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: manaCost, XValue: x}) {
 			break
 		}
@@ -245,6 +249,19 @@ func legalXValuesForCostAndAdditional(g *game.Game, playerID game.PlayerID, mana
 func additionalCostsUseX(additionalCosts []cost.Additional) bool {
 	for _, additional := range additionalCosts {
 		if additional.AmountFromX {
+			return true
+		}
+	}
+	return false
+}
+
+// additionalCostsRequirePositiveX reports whether any additional cost's announced
+// X must be at least one, as required by a "remove one or more counters" cost
+// (AmountAtLeastOne, Arcee, Sharpshooter). Such a cost's X is the player's "one
+// or more" choice, so an announced X of zero is not a legal activation.
+func additionalCostsRequirePositiveX(additionalCosts []cost.Additional) bool {
+	for _, additional := range additionalCosts {
+		if additional.AmountFromX && additional.AmountAtLeastOne {
 			return true
 		}
 	}

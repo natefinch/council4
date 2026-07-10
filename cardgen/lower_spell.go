@@ -75,6 +75,21 @@ type contentCtx struct {
 	// players" that instead names a non-target group ("each opponent. Those
 	// players each discard ...") stays unmatched.
 	hasTargetedPlayers bool
+	// variableCounterRemovalCost reports that the enclosing activated ability's
+	// cost removes a player-chosen "one or more" number of counters announced as
+	// the ability's X ("Remove one or more +1/+1 counters from <self>", Arcee,
+	// Sharpshooter). It lets a "that much"/"that many" body anaphor resolve to
+	// the announced X (DynamicAmountX) — the number of counters removed — since
+	// an activated ability has no triggering event to read the quantity from.
+	variableCounterRemovalCost bool
+	// spellTargetPattern is the enclosing spell-cast trigger's SpellTargetPattern
+	// permanent selection, or absent outside such a trigger. It lets a "that
+	// many" body anaphor resolve to the number of the triggering spell's targets
+	// that match the pattern (DynamicAmountSpellTargetCount), as required by
+	// "Whenever you cast a spell that targets one or more creatures or Vehicles
+	// you control, put that many +1/+1 counters on <self>" (Arcee, Acrobatic
+	// Coupe).
+	spellTargetPattern opt.V[game.Selection]
 }
 
 // contentDiagnostic creates a content-level diagnostic attributed to ctx.span.
@@ -159,6 +174,9 @@ func lowerSequenceClauseContent(
 		triggerToZone:         parent.triggerToZone,
 		selfTrigger:           parent.selfTrigger,
 		hasTargetedPlayers:    parent.hasTargetedPlayers,
+
+		variableCounterRemovalCost: parent.variableCounterRemovalCost,
+		spellTargetPattern:         parent.spellTargetPattern,
 	}
 	return lowerContent(cardName, ctx, bodySyntax)
 }
@@ -185,6 +203,7 @@ func lowerTriggerBodyContent(
 		triggerOneOrMore:      pattern.OneOrMore,
 		triggerToZone:         triggerPatternToZone(pattern),
 		selfTrigger:           pattern.Source == game.TriggerSourceSelf,
+		spellTargetPattern:    pattern.SpellTargetPattern,
 	}
 	return lowerContent(cardName, ctx, bodySyntax)
 }

@@ -87,6 +87,14 @@ type CostComponent struct {
 	AmountKnown bool `json:",omitempty"`
 	AmountFromX bool `json:",omitempty"`
 
+	// AmountOneOrMore reports a player-chosen "one or more" cost amount, where
+	// the payer removes at least one of the named object (currently recognized
+	// only for "Remove one or more <kind> counters from <this permanent>"). The
+	// chosen count is announced as the ability's X, so the amount also sets
+	// AmountFromX; the compiler and lowering carry it onto an X-driven cost and
+	// the payment enumeration requires at least one.
+	AmountOneOrMore bool `json:",omitempty"`
+
 	// ObjectNoun is the recognized object noun, if any. ObjectIsCard reports
 	// that the object is selected as a card (rather than a permanent), which
 	// changes how the compiler maps the noun onto a selector and card type.
@@ -1031,25 +1039,44 @@ func annotateRemoveCounterCostObject(component *CostComponent, object []shared.T
 	if counterIndex < 1 || counterIndex+2 >= len(object) || !equalWord(object[counterIndex+1], "from") {
 		return
 	}
-	kindTokens := object[1:counterIndex]
 	rest := object[counterIndex+2:]
+	if oneOrMoreAmount(object, counterIndex) {
+		annotateRemoveCounterSourceObject(component, shared.Token{}, true, object[3:counterIndex], rest, atoms)
+		return
+	}
+	kindTokens := object[1:counterIndex]
 	if annotateRemoveCounterAmongObject(component, object[0], kindTokens, rest, atoms) {
 		return
 	}
 	if annotateRemoveCounterPermanentObject(component, object[0], kindTokens, rest, atoms) {
 		return
 	}
-	annotateRemoveCounterSourceObject(component, object[0], kindTokens, rest, atoms)
+	annotateRemoveCounterSourceObject(component, object[0], false, kindTokens, rest, atoms)
+}
+
+// oneOrMoreAmount reports that a remove-counter cost object opens with the
+// player-chosen amount phrase "one or more", as in "Remove one or more +1/+1
+// counters from Arcee". It requires the counter word to follow the phrase so at
+// least the bare "one or more counters" form is present.
+func oneOrMoreAmount(object []shared.Token, counterIndex int) bool {
+	return counterIndex >= 3 &&
+		equalWord(object[0], "one") &&
+		equalWord(object[1], "or") &&
+		equalWord(object[2], "more")
 }
 
 // annotateRemoveCounterSourceObject recognizes the single-source cost "Remove N
 // <kind> counters from <this permanent>", which removes the counters from the
 // ability's own source. The counter kind may be named or omitted: a bare "Remove
 // a counter from this creature" removes counters regardless of kind, resolved by
-// the payment planner, and leaves CounterKindKnown false.
-func annotateRemoveCounterSourceObject(component *CostComponent, amount shared.Token, kindTokens, rest []shared.Token, atoms Atoms) {
-	if !costAmountAt(component, amount, atoms, false) ||
-		!costSelfReference(rest, atoms, true) {
+// the payment planner, and leaves CounterKindKnown false. When variable is set
+// the amount is the player-chosen "one or more" phrase: the count is announced
+// as X (AmountFromX) and the payer must remove at least one (AmountOneOrMore).
+func annotateRemoveCounterSourceObject(component *CostComponent, amount shared.Token, variable bool, kindTokens, rest []shared.Token, atoms Atoms) {
+	if !variable && !costAmountAt(component, amount, atoms, false) {
+		return
+	}
+	if !costSelfReference(rest, atoms, true) {
 		return
 	}
 	if len(kindTokens) > 0 {
@@ -1059,6 +1086,10 @@ func annotateRemoveCounterSourceObject(component *CostComponent, amount shared.T
 		}
 		component.CounterKind = kind
 		component.CounterKindKnown = true
+	}
+	if variable {
+		component.AmountFromX = true
+		component.AmountOneOrMore = true
 	}
 	component.SourceSelf = true
 }
