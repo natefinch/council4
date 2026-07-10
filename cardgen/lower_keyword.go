@@ -2175,6 +2175,12 @@ func lowerParameterizedStaticKeyword(keyword compiler.CompiledKeyword) (game.Sta
 			return game.StaticAbility{}, false
 		}
 		body.KeywordAbilities = []game.KeywordAbility{game.ToxicKeyword{Amount: keyword.Integer}}
+	case parser.KeywordGift:
+		delivery, ok := giftDeliveryContent(keyword.Gift)
+		if !ok {
+			return game.StaticAbility{}, false
+		}
+		body.KeywordAbilities = []game.KeywordAbility{game.GiftKeyword{Delivery: delivery}}
 	default:
 		return game.StaticAbility{}, false
 	}
@@ -2191,6 +2197,40 @@ func fixedKeywordManaCost(keyword compiler.CompiledKeyword) (cost.Mana, bool) {
 		}
 	}
 	return slices.Clone(keyword.ManaCost), true
+}
+
+// giftDeliveryContent builds the delivery given to the opponent promised a Gift
+// keyword action (CR 702.171): "Gift a card" draws them a card, and the token
+// gifts create a Food, a Treasure, or a tapped 1/1 blue Fish under their
+// control. The recipient is the resolving spell's captured gift recipient. It
+// fails closed for an unrecognized gift kind so an unsupported gift stays
+// unsupported.
+func giftDeliveryContent(gift parser.GiftKind) (game.AbilityContent, bool) {
+	recipient := game.GiftRecipientReference()
+	tokenDelivery := func(def *game.CardDef, tapped bool) game.AbilityContent {
+		return game.Mode{Sequence: []game.Instruction{{
+			Primitive: game.CreateToken{
+				Amount:      game.Fixed(1),
+				Source:      game.TokenDef(def),
+				Recipient:   opt.Val(recipient),
+				EntryTapped: tapped,
+			},
+		}}}.Ability()
+	}
+	switch gift {
+	case parser.GiftKindCard:
+		return game.Mode{Sequence: []game.Instruction{{
+			Primitive: game.Draw{Amount: game.Fixed(1), Player: recipient},
+		}}}.Ability(), true
+	case parser.GiftKindFood:
+		return tokenDelivery(foodTokenDef(), false), true
+	case parser.GiftKindTreasure:
+		return tokenDelivery(treasureTokenDef(), false), true
+	case parser.GiftKindTappedFish:
+		return tokenDelivery(fishTokenDef(), true), true
+	default:
+		return game.AbilityContent{}, false
+	}
 }
 
 func lowerScavengeAbility(

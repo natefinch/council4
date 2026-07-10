@@ -34,6 +34,11 @@ func (e *Engine) resolveSpellEffectsWithChoices(g *game.Game, obj *game.StackObj
 	if !ok {
 		return
 	}
+	if obj.GiftPromised {
+		if gift, ok := spellGift(spellDef); ok {
+			e.resolveAbilityContentWithChoices(g, obj, gift.Delivery, agents, log)
+		}
+	}
 	e.resolveAbilityContentWithChoices(g, obj, *ability, agents, log)
 	if obj.KickerPaid {
 		if kicker, ok := spellKicker(spellDef); ok {
@@ -127,6 +132,18 @@ func spellKicker(card *game.CardDef) (game.KickerKeyword, bool) {
 		return game.KickerKeyword{}, false
 	}
 	return card.KickerKeyword()
+}
+
+func spellHasGift(card *game.CardDef) bool {
+	_, ok := spellGift(card)
+	return ok
+}
+
+func spellGift(card *game.CardDef) (game.GiftKeyword, bool) {
+	if card == nil {
+		return game.GiftKeyword{}, false
+	}
+	return card.GiftKeyword()
 }
 
 func firstSpellAbility(card *game.CardDef) (*game.AbilityContent, bool) {

@@ -1278,6 +1278,22 @@ func foodTokenDef() *game.CardDef {
 	})
 }
 
+// fishTokenDef builds the 1/1 blue Fish creature token promised by "Gift a
+// tapped Fish" (CR 702.171). The gift creates it tapped via CreateToken's
+// EntryTapped flag; the definition itself is the vanilla creature.
+func fishTokenDef() *game.CardDef {
+	return &game.CardDef{
+		CardFace: game.CardFace{
+			Name:      string(types.Fish),
+			Colors:    []color.Color{color.Blue},
+			Types:     []types.Card{types.Creature},
+			Subtypes:  []types.Sub{types.Fish},
+			Power:     opt.Val(game.PT{Value: 1}),
+			Toughness: opt.Val(game.PT{Value: 1}),
+		},
+	}
+}
+
 // clueTokenDef builds the Clue token: pay two generic mana and sacrifice it to
 // draw a card.
 func clueTokenDef() *game.CardDef {

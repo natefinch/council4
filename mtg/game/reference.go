@@ -355,6 +355,11 @@ const (
 	// Lightning, Chain Stasis, String of Disappearances), where the affected
 	// target's controller may pay and copy the spell.
 	PlayerReferenceAffectedTargetController
+	// PlayerReferenceGiftRecipient references the opponent promised a gift by the
+	// resolving spell's Gift keyword action (CR 702.171). It is valid only in a
+	// gift delivery effect and resolves to the resolving stack object's captured
+	// GiftRecipient when GiftPromised is set.
+	PlayerReferenceGiftRecipient
 )
 
 // PlayerReference describes how a rules effect finds a player at resolution.
@@ -438,6 +443,14 @@ func AffectedTargetControllerReference(targetIndex int) PlayerReference {
 	return PlayerReference{kind: PlayerReferenceAffectedTargetController, targetIndex: targetIndex}
 }
 
+// GiftRecipientReference references the opponent promised a gift by the
+// resolving spell's Gift keyword action (CR 702.171). At runtime it resolves to
+// the resolving stack object's captured GiftRecipient when the gift was
+// promised.
+func GiftRecipientReference() PlayerReference {
+	return PlayerReference{kind: PlayerReferenceGiftRecipient}
+}
+
 // Validate reports structural problems with a PlayerReference that represent
 // card-definition bugs. It checks player-level kind/field consistency and the
 // structure of any nested object reference; target-index bounds depend on the
@@ -492,6 +505,10 @@ func (r PlayerReference) Validate() []string {
 		}
 		if r.targetIndex < 0 {
 			return []string{"affected target controller reference must not use a negative TargetIndex"}
+		}
+	case PlayerReferenceGiftRecipient:
+		if r.targetIndex != 0 || r.object.Exists {
+			return []string{"gift recipient reference must not set TargetIndex or Object"}
 		}
 	default:
 		return []string{fmt.Sprintf("unknown player reference kind %d", r.kind)}
