@@ -91,6 +91,7 @@ var Cards = []cardset.Entry{
 	{Name: "Throne Warden", New: ThroneWarden},
 	{Name: "Throw from the Saddle", New: ThrowFromTheSaddle},
 	{Name: "Thunderblust", New: Thunderblust},
+	{Name: "Thunderhawk Gunship", New: ThunderhawkGunship},
 	{Name: "Thundering Wurm", New: ThunderingWurm},
 	{Name: "Thundersong Trumpeter", New: ThundersongTrumpeter},
 	{Name: "Tidal Courier", New: TidalCourier},

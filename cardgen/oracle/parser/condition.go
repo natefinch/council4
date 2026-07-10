@@ -293,6 +293,11 @@ type ConditionSelection struct {
 	// marks the threshold present so a zero threshold remains expressible.
 	TotalPowerAtLeast      int  `json:",omitempty"`
 	MatchTotalPowerAtLeast bool `json:",omitempty"`
+	// TotalPowerAtMost is the collective-power ceiling for a "have total power
+	// <n> or less" qualifier, the upper-bound counterpart of TotalPowerAtLeast.
+	// MatchTotalPowerAtMost marks it present so a zero ceiling stays expressible.
+	TotalPowerAtMost      int  `json:",omitempty"`
+	MatchTotalPowerAtMost bool `json:",omitempty"`
 	// DistinctNamesAtLeast is the distinct-name threshold for a "with different
 	// names" qualifier, counting how many of the selected permanents have
 	// distinct names rather than the raw permanent total. MatchDistinctNamesAtLeast
@@ -2851,25 +2856,59 @@ func recognizeTotalPowerCondition(body []shared.Token, atoms Atoms) (ConditionCl
 		return ConditionClause{}, false
 	}
 	value, ok := conditionNumberValue(rest[0])
-	if !ok || !equalWord(rest[1], "or") || !equalWord(rest[2], "greater") {
+	if !ok || !equalWord(rest[1], "or") {
 		return ConditionClause{}, false
 	}
-	nounTokens, ok := stripTokenSuffix(body[:haveIndex], "you", "control")
-	if !ok || len(nounTokens) == 0 {
+	var atMost bool
+	switch {
+	case equalWord(rest[2], "greater"):
+	case equalWord(rest[2], "less"):
+		atMost = true
+	default:
 		return ConditionClause{}, false
 	}
-	selection, ok := parseConditionSelection(nounTokens, atoms)
+	selection, ok := totalPowerConditionSubject(body[:haveIndex], atoms)
 	if !ok {
 		return ConditionClause{}, false
 	}
-	selection.TotalPowerAtLeast = value
-	selection.MatchTotalPowerAtLeast = true
+	if atMost {
+		selection.TotalPowerAtMost = value
+		selection.MatchTotalPowerAtMost = true
+	} else {
+		selection.TotalPowerAtLeast = value
+		selection.MatchTotalPowerAtLeast = true
+	}
 	return ConditionClause{
 		Predicate:  ConditionPredicateControls,
 		Scope:      ConditionControlScopeController,
 		Comparison: ConditionComparisonNone,
 		Selection:  selection,
 	}, true
+}
+
+// totalPowerConditionSubject resolves the subject noun phrase of a "<subject>
+// have total power <n> or greater/less" gate into a controller-scoped condition
+// selection. The bound anaphor "those creatures" names the attacking creatures
+// the controller has in combat — the group a preceding attack trigger just
+// affected — so it maps to a controlled attacking-creature selection (Ultra
+// Magnus, Armored Carrier: "If those creatures have total power 8 or greater,
+// convert Ultra Magnus."). Every other subject must carry an explicit "you
+// control" suffix and parse as an ordinary condition selection.
+func totalPowerConditionSubject(nounTokens []shared.Token, atoms Atoms) (ConditionSelection, bool) {
+	if len(nounTokens) == 0 {
+		return ConditionSelection{}, false
+	}
+	if tokenWordsEqual(nounTokens, "those", "creatures") {
+		return ConditionSelection{
+			RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+			CombatState:   ConditionCombatAttacking,
+		}, true
+	}
+	stripped, ok := stripTokenSuffix(nounTokens, "you", "control")
+	if !ok || len(stripped) == 0 {
+		return ConditionSelection{}, false
+	}
+	return parseConditionSelection(stripped, atoms)
 }
 
 // recognizeControlsNamedCondition matches a "you control" gate whose objects

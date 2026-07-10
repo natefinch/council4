@@ -272,13 +272,45 @@ func exactTransformSelfEffectSyntax(effect *EffectSyntax) bool {
 		effect.Negated {
 		return false
 	}
-	object, ok := exactSelfSubjectReferenceText(effect.References)
+	object, ok := exactSelfSubjectReferenceText(effectBodyReferences(effect))
 	if !ok {
 		return false
 	}
 	text := exactEffectClauseText(effect)
 	return strings.EqualFold(text, "Transform "+object+".") ||
 		strings.EqualFold(text, "Convert "+object+".")
+}
+
+// effectBodyReferences returns the effect's references that lie in its own clause
+// body, excluding references inside a leading condition clause. A resolving effect
+// gated by a leading condition ("If those creatures have total power 8 or greater,
+// convert Ultra Magnus.", Ultra Magnus, Armored Carrier) carries the condition's
+// anaphoric pronoun ("those creatures") in its reference list even though that
+// referent belongs to the condition, not the effect body. effectSubjectStart
+// already skips a leading clause's tokens (up to the comma before the effect
+// subject); references before that boundary are the condition's and would
+// otherwise inflate an exact recognizer's reference count. When the effect has no
+// leading clause (subject start at token 0) the full list is returned unchanged,
+// so the common ungated effect keeps its exact-recognition behavior.
+func effectBodyReferences(effect *EffectSyntax) []Reference {
+	verb := slices.IndexFunc(effect.Tokens, func(token shared.Token) bool {
+		return token.Span == effect.VerbSpan
+	})
+	if verb < 0 {
+		return effect.References
+	}
+	start := effectSubjectStart(effect.Tokens, verb, effectSelfNameSpans(effect))
+	if start == 0 || start >= len(effect.Tokens) {
+		return effect.References
+	}
+	bodySpan := shared.SpanOf(effect.Tokens[start:])
+	body := make([]Reference, 0, len(effect.References))
+	for _, reference := range effect.References {
+		if spanCovers(bodySpan, reference.Span) {
+			body = append(body, reference)
+		}
+	}
+	return body
 }
 
 func exactOptionalControllerShuffleEffectSyntax(effect *EffectSyntax) bool {

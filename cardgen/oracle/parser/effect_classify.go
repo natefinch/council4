@@ -1551,6 +1551,8 @@ func effectKindAt(tokens []shared.Token, index int) EffectKind {
 		return EffectUnknown
 	case kind == EffectGrantKeyword && counterPossessionVerbAt(tokens, index):
 		return EffectUnknown
+	case kind == EffectGrantKeyword && totalPowerPossessionVerbAt(tokens, index):
+		return EffectUnknown
 	case kind == EffectEnterTapped && index+1 < len(tokens) && equalWord(tokens[index+1], "prepared"):
 		return EffectEnterPrepared
 	case kind == EffectCast && index > 0 && (equalWord(tokens[index-1], "was") || equalWord(tokens[index-1], "were")):
@@ -2068,6 +2070,17 @@ func counterPossessionVerbAt(tokens []shared.Token, index int) bool {
 		}
 	}
 	return false
+}
+
+// totalPowerPossessionVerbAt reports whether the "have"/"has" verb at index opens
+// a collective-power qualifier "have total power ...". Such a clause is a
+// condition predicate ("If those creatures have total power 8 or greater,
+// convert Ultra Magnus.", Ultra Magnus, Armored Carrier; "If creatures you
+// control have total power 8 or greater, ..."), not a keyword-grant effect, so
+// the effect classifier must not treat it as an effect verb and strand a phantom
+// EffectGrantKeyword when the clause opens a standalone leading condition.
+func totalPowerPossessionVerbAt(tokens []shared.Token, index int) bool {
+	return effectWordsAt(tokens, index+1, "total", "power")
 }
 
 // counterPossessionOpener reports whether token opens a counter-possession object

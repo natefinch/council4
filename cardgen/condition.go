@@ -496,6 +496,11 @@ func lowerConditionSelectionCount(condition compiler.CompiledCondition) (game.Se
 			Op:    compare.GreaterOrEqual,
 			Value: condition.Selection.TotalPowerAtLeast,
 		})
+	} else if condition.Selection.MatchTotalPowerAtMost {
+		result.TotalPower = opt.Val(compare.Int{
+			Op:    compare.LessOrEqual,
+			Value: condition.Selection.TotalPowerAtMost,
+		})
 	}
 	if condition.Selection.MatchDistinctNamesAtLeast {
 		result.DistinctNames = opt.Val(compare.Int{

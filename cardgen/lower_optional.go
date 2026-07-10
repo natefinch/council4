@@ -1216,19 +1216,6 @@ func planOptionalFlow(content compiler.AbilityContent) (optionalFlowPlan, bool) 
 		return optionalFlowPlan{}, false
 	}
 	// Every effect after the optional one belongs to either the single "if you
-	// do" clause or a trailing "Otherwise, <Z>." else branch. The affirmative
-	// clause may govern several and-joined trailing effects ("If you do, draw a
-	// card and put a +1/+1 counter on this creature"), each compiled as its own
-	// effect that structurally contains the gate condition. A trailing run of
-	// "Otherwise"-connected effects forms the else branch: it resolves only when
-	// the controller declined the optional effect, so it does NOT contain the
-	// gate condition and is gated on the optional result having failed instead.
-	// Requiring containment for every non-else trailing effect rejects an
-	// independent tail ("... If you do, Y. Then Z.") whose Z does not contain the
-	// gate condition and would otherwise resolve unconditionally — silently
-	// wrong. A negated, delayed, or independently-optional trailing effect also
-	// leaves the flow unsupported.
-	// Every effect after the optional one belongs to either the single "if you
 	// do" clause or a trailing else branch. The affirmative clause may govern
 	// several and-joined trailing effects ("If you do, draw a card and put a
 	// +1/+1 counter on this creature"), each compiled as its own effect that
@@ -1244,8 +1231,11 @@ func planOptionalFlow(content compiler.AbilityContent) (optionalFlowPlan, bool) 
 	// Requiring affirmative-gate containment for every non-else trailing effect
 	// rejects an independent tail ("... If you do, Y. Then Z.") whose Z does not
 	// contain the gate condition and would otherwise resolve unconditionally —
-	// silently wrong. A negated, delayed, or independently-optional trailing
-	// effect also leaves the flow unsupported.
+	// silently wrong. A negated or independently-optional trailing effect leaves
+	// the flow unsupported. A delayed affirmative consequence ("If you do,
+	// convert Ultra Magnus at end of combat.") is allowed: its
+	// CreateDelayedTrigger is gated on the optional effect's result, so the
+	// delayed trigger is scheduled only when the optional effect succeeded.
 	gateConditionOrder := content.Conditions[gateCondition].Order
 	elseIndex := -1
 	elseGateCondition := -1
@@ -1266,8 +1256,7 @@ func planOptionalFlow(content compiler.AbilityContent) (optionalFlowPlan, bool) 
 	}
 	for i := gateIndex; i < tailEnd; i++ {
 		effect := content.Effects[i]
-		if effect.Negated ||
-			effect.DelayedTiming != 0 {
+		if effect.Negated {
 			return optionalFlowPlan{}, false
 		}
 		// An optional gated effect realizes the nested "you may X. If you do, you

@@ -1480,6 +1480,8 @@ func lowerDelayedSelfPrimitive(ctx contentCtx) (game.Primitive, bool) {
 	switch effect.Kind {
 	case compiler.EffectExile:
 		return game.Exile{Object: sourcePermanent}, true
+	case compiler.EffectTransform:
+		return game.Transform{Object: sourcePermanent}, true
 	case compiler.EffectSacrifice:
 		return game.Sacrifice{Object: sourcePermanent}, true
 	case compiler.EffectDestroy:
