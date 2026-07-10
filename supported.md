@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,292 of 32,501 cards eligible for paper support (53.2%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,295 of 32,501 cards eligible for paper support (53.2%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -14413,6 +14413,7 @@ Council4 currently supports **17,292 of 32,501 cards eligible for paper support 
 - Sudden Strike
 - Suffocating Fumes
 - Sugar Rush
+- Suki, Kyoshi Captain
 - Suki, Kyoshi Warrior
 - Sulfur Elemental
 - Sulfur Falls
@@ -15229,6 +15230,7 @@ Council4 currently supports **17,292 of 32,501 cards eligible for paper support 
 - Thunderclap Wyvern
 - Thundercloud Elemental
 - Thundercloud Shaman
+- Thunderhawk Gunship
 - Thunderhead Gunner
 - Thunderhead Squadron
 - Thundering Broodwagon
@@ -15746,6 +15748,7 @@ Council4 currently supports **17,292 of 32,501 cards eligible for paper support 
 - Ultimate Alliance
 - Ultimecia, Temporal Threat
 - Ultimo, Civilization's End
+- Ultra Magnus, Tactician // Ultra Magnus, Armored Carrier
 - Ultramarines Honour Guard
 - Ultron, Machine Overlord
 - Ultros, Obnoxious Octopus
