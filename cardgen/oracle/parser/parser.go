@@ -151,6 +151,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitQuestForRenewalUntap(document.Abilities)
 	emitSemblanceAnvil(document.Abilities)
 	emitCloudKey(document.Abilities)
+	emitAugurOfAutumn(document.Abilities)
 	emitSelfNameStaticRules(document.Abilities)
 	emitCost(document.Abilities)
 	emitOptional(document.Abilities)
@@ -236,11 +237,20 @@ func emitCloudKey(abilities []Ability) {
 		abilities[i].CloudKeyChoice = strings.EqualFold(text, choice)
 		hasChoice = hasChoice || abilities[i].CloudKeyChoice
 	}
+
 	if !hasChoice {
 		return
 	}
 	for i := range abilities {
 		abilities[i].CloudKeyReduction = strings.EqualFold(strings.TrimSpace(abilities[i].Text), reduction)
+	}
+}
+
+func emitAugurOfAutumn(abilities []Ability) {
+	const text = "Coven — As long as you control three or more creatures with different powers, you may cast creature spells from the top of your library."
+	for i := range abilities {
+		abilities[i].AugurOfAutumnCoven =
+			strings.EqualFold(strings.TrimSpace(abilities[i].Text), text)
 	}
 }
 

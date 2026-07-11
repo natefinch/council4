@@ -10,9 +10,11 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -869,6 +871,33 @@ func lowerExecutableAbility(
 	ability compiler.CompiledAbility,
 	syntax *parser.Ability,
 ) (abilityLowering, *shared.Diagnostic) {
+	if ability.AugurOfAutumnCoven {
+		return abilityLowering{
+			staticAbilities: []loweredStaticAbility{{Body: game.StaticAbility{
+				Text: ability.Text,
+				Condition: opt.Val(game.Condition{Aggregates: []game.AggregateComparison{{
+					Aggregate: game.AggregateControllerCreaturePowerDiversity,
+					Op:        compare.GreaterOrEqual,
+					Value:     3,
+				}}}),
+				RuleEffects: []game.RuleEffect{{
+					Kind:           game.RuleEffectCastSpellsFromZone,
+					AffectedPlayer: game.PlayerYou,
+					CastFromZone:   zone.Library,
+					SpellTypes:     []types.Card{types.Creature},
+					TopCardOnly:    true,
+				}},
+			}}},
+			consumed: semanticConsumption{
+				conditions: len(ability.Content.Conditions),
+				effects:    len(ability.Content.Effects),
+				keywords:   len(ability.Content.Keywords),
+				references: len(ability.Content.References),
+				targets:    len(ability.Content.Targets),
+			},
+			sourceSpans: []shared.Span{ability.Span},
+		}, nil
+	}
 	if ability.CloudKeyChoice {
 		return abilityLowering{
 			replacementAbility: opt.Val(game.EntryCardTypeChoiceReplacement(ability.Text)),
