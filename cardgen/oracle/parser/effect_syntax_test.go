@@ -900,8 +900,12 @@ func TestParseSacrificeChoiceFilterExactness(t *testing.T) {
 		{"Each player sacrifices a nontoken creature of their choice.", true, true, 0},
 		// "creature or planeswalker" card-type union reconstructs (Plaguecrafter).
 		{"Each player sacrifices a creature or planeswalker of their choice.", true, false, 2},
-		// "token" qualifier reconstructs.
-		{"Each player sacrifices a token creature of their choice.", true, false, 0},
+		// A single planeswalker card type reconstructs (Angrath's Rampage,
+		// Sheoldred's Edict).
+		{"Each player sacrifices a planeswalker of their choice.", true, false, 0},
+		// A card-type token names the "token" word last ("creature token";
+		// Gaius van Baelsar, Sheoldred's Edict).
+		{"Each player sacrifices a creature token of their choice.", true, false, 0},
 		// A single excluded card type reconstructs as a "non<type>" prefix.
 		{"Each player sacrifices a nonland permanent of their choice.", true, false, 0},
 		{"Each player sacrifices a noncreature artifact of their choice.", true, false, 0},

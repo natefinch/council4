@@ -106,6 +106,7 @@ var Cards = []cardset.Entry{
 	{Name: "Shed Weakness", New: ShedWeakness},
 	{Name: "Shefet Monitor", New: ShefetMonitor},
 	{Name: "Sheltered by Ghosts", New: ShelteredByGhosts},
+	{Name: "Sheoldred's Edict", New: SheoldredSEdict},
 	{Name: "Shepherd of the Clouds", New: ShepherdOfTheClouds},
 	{Name: "Shield of the Ages", New: ShieldOfTheAges},
 	{Name: "Shield of the Oversoul", New: ShieldOfTheOversoul},

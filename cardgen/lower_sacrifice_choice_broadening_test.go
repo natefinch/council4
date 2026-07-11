@@ -88,3 +88,66 @@ func TestSacrificeChoiceExcludedSubtypeStaysUnsupported(t *testing.T) {
 		OracleText: "Each player sacrifices a non-Zombie non-Vampire creature of their choice.",
 	})
 }
+
+// TestLowerSacrificeChoicePlaneswalker verifies the single-type planeswalker
+// sacrifice noun ("a planeswalker of their choice"; Angrath's Rampage,
+// Sheoldred's Edict) reconstructs exactly and lowers to a SacrificePermanents
+// whose Selection requires the Planeswalker card type.
+func TestLowerSacrificeChoicePlaneswalker(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Rampage",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Target player sacrifices a planeswalker of their choice.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability missing")
+	}
+	sacrifice := firstSacrifice(t, face.SpellAbility.Val.Modes[0].Sequence)
+	if len(sacrifice.Selection.RequiredTypes) != 1 || sacrifice.Selection.RequiredTypes[0] != types.Planeswalker {
+		t.Fatalf("sacrifice required types = %v, want [Planeswalker]", sacrifice.Selection.RequiredTypes)
+	}
+	if sacrifice.Selection.TokenOnly {
+		t.Fatalf("sacrifice selection unexpectedly token-only: %+v", sacrifice.Selection)
+	}
+}
+
+// TestLowerSacrificeChoiceCreatureToken verifies the card-type token sacrifice
+// noun ("a creature token of their choice"; Gaius van Baelsar, Sheoldred's
+// Edict) reconstructs exactly and lowers to a SacrificePermanents whose
+// Selection requires the Creature card type and restricts to tokens.
+func TestLowerSacrificeChoiceCreatureToken(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Gaius",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Each opponent sacrifices a creature token of their choice.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability missing")
+	}
+	sacrifice := firstSacrifice(t, face.SpellAbility.Val.Modes[0].Sequence)
+	if len(sacrifice.Selection.RequiredTypes) != 1 || sacrifice.Selection.RequiredTypes[0] != types.Creature {
+		t.Fatalf("sacrifice required types = %v, want [Creature]", sacrifice.Selection.RequiredTypes)
+	}
+	if !sacrifice.Selection.TokenOnly {
+		t.Fatalf("sacrifice selection = %+v, want token-only", sacrifice.Selection)
+	}
+	if sacrifice.Selection.NonToken {
+		t.Fatalf("sacrifice selection = %+v, want token-only not nontoken", sacrifice.Selection)
+	}
+}
+
+func firstSacrifice(t *testing.T, sequence []game.Instruction) game.SacrificePermanents {
+	t.Helper()
+	if len(sequence) == 0 {
+		t.Fatal("empty instruction sequence")
+	}
+	sacrifice, ok := sequence[0].Primitive.(game.SacrificePermanents)
+	if !ok {
+		t.Fatalf("first primitive = %T, want game.SacrificePermanents", sequence[0].Primitive)
+	}
+	return sacrifice
+}
