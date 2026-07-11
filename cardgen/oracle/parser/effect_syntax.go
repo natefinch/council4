@@ -6900,20 +6900,23 @@ func parseHaveBecomeCopyOfReferenceEffect(sentence Sentence, tokens []shared.Tok
 // and types.", Unctus, Grand Metatect), where one or more leading color words
 // precede the card-type words and the additive tail names "colors and types".
 // The "until end of turn" duration may appear as a leading clause or a trailing
-// phrase, but exactly one of the two; both or neither fail closed. The target
+// phrase, but not both. An absent duration produces a permanent type change.
+// The target
 // selector before "becomes" is left as an ordinary target for the target
 // machinery to extract. Only the additive "in addition to its other [colors
 // and] types" form is recognized; the type-setting form ("becomes a <type>"
-// without "in addition") and the permanent (no-duration) form fail closed so
-// those cards stay unsupported. Each card-type word must be a recognized
-// permanent card type and each color word a recognized color; any other word
-// fails closed.
+// without "in addition") fails closed. Each type word must be a recognized
+// permanent card type or creature subtype and each color word a recognized
+// color; any other word fails closed.
 func parseBecomeTypeEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
 	body := semanticEffectTokens(tokens)
 	if len(body) == 0 || body[len(body)-1].Kind != shared.Period {
 		return nil, false
 	}
 	remaining, leadingDuration := stripLeadingDurationClause(body[:len(body)-1], atoms)
+	if leadingDuration != EffectDurationNone && leadingDuration != EffectDurationUntilEndOfTurn {
+		return nil, false
+	}
 	leadingUntilEndOfTurn := leadingDuration == EffectDurationUntilEndOfTurn
 	words := normalizedWords(remaining)
 	if len(words) < 5 || words[0] != "target" {
@@ -6951,7 +6954,7 @@ func parseBecomeTypeEffect(sentence Sentence, tokens []shared.Token, atoms Atoms
 		trailingUntilEndOfTurn = true
 		rest = rest[:len(rest)-len(duration)]
 	}
-	if leadingUntilEndOfTurn == trailingUntilEndOfTurn {
+	if leadingUntilEndOfTurn && trailingUntilEndOfTurn {
 		return nil, false
 	}
 	additiveTypes := []string{"in", "addition", "to", "its", "other", "types"}
@@ -6985,12 +6988,17 @@ func parseBecomeTypeEffect(sentence Sentence, tokens []shared.Token, atoms Atoms
 		return nil, false
 	}
 	addTypes := make([]types.Card, 0, len(typeWords))
+	addSubtypes := make([]types.Sub, 0, len(typeWords))
 	for _, word := range typeWords {
-		cardType, ok := entersAsCopyAddTypeWord(word)
-		if !ok {
-			return nil, false
+		if cardType, ok := entersAsCopyAddTypeWord(word); ok {
+			addTypes = append(addTypes, cardType)
+			continue
 		}
-		addTypes = append(addTypes, cardType)
+		if subtype, ok := recognizeSubtypePhrase(word); ok {
+			addSubtypes = append(addSubtypes, subtype)
+			continue
+		}
+		return nil, false
 	}
 	effect := EffectSyntax{
 		Kind:                     EffectBecomeType,
@@ -6999,9 +7007,12 @@ func parseBecomeTypeEffect(sentence Sentence, tokens []shared.Token, atoms Atoms
 		ClauseSpan:               sentence.Span,
 		Text:                     sentence.Text,
 		Tokens:                   append([]shared.Token(nil), body...),
+		Targets:                  targetsInSpan(sentence.Targets, sentence.Span),
+		References:               referencesInSpan(atoms, sentence.Span),
 		BecomeTypeAddTypes:       addTypes,
 		BecomeTypeAddColors:      addColors,
-		BecomeTypeUntilEndOfTurn: true,
+		BecomeTypeAddSubtypes:    addSubtypes,
+		BecomeTypeUntilEndOfTurn: leadingUntilEndOfTurn || trailingUntilEndOfTurn,
 	}
 	return []EffectSyntax{effect}, true
 }
