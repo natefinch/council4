@@ -77,6 +77,7 @@ type CompiledAbility struct {
 	SemblanceAnvilReduction                     bool
 	CloudKeyChoice                              bool
 	CloudKeyReduction                           bool
+	AugurOfAutumnCoven                          bool
 	// ExactSequence is a parser-recognized exact multi-instruction resolving
 	// body. When set, the normal target/condition/effect content is empty and
 	// lowering emits the fixed instruction template for the kind. It is declared

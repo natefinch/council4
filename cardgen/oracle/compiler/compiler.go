@@ -40,6 +40,7 @@ func compileAbility(
 		SemblanceAnvilReduction:                     ability.SemblanceAnvilReduction,
 		CloudKeyChoice:                              ability.CloudKeyChoice,
 		CloudKeyReduction:                           ability.CloudKeyReduction,
+		AugurOfAutumnCoven:                          ability.AugurOfAutumnCoven,
 	}
 	if ability.AbilityWord != nil {
 		compiled.AbilityWord = ability.AbilityWord.Label
@@ -220,6 +221,7 @@ func compileAbility(
 		!compiled.SemblanceAnvilReduction &&
 		!compiled.CloudKeyChoice &&
 		!compiled.CloudKeyReduction &&
+		!compiled.AugurOfAutumnCoven &&
 		compiled.KeywordShare == nil &&
 		len(compiled.Content.Effects) == 0 && len(compiled.Content.Keywords) == 0 &&
 		!legacyEffectsPresent(ability.Sentences) &&
