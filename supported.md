@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,477 of 32,501 cards eligible for paper support (53.8%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,486 of 32,501 cards eligible for paper support (53.8%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -634,6 +634,7 @@ Council4 currently supports **17,477 of 32,501 cards eligible for paper support 
 - Arcane Signet
 - Arcane Spyglass
 - Arcane Teachings
+- Arcanis the Omnipotent
 - Arcanist's Owl
 - Arcbound Bruiser
 - Arcbound Condor
@@ -3113,6 +3114,7 @@ Council4 currently supports **17,477 of 32,501 cards eligible for paper support 
 - Crossway Troublemakers
 - Crossway Vampire
 - Crosswinds
+- Crovax the Cursed
 - Crow of Dark Tidings
 - Crowd Favorites
 - Crowd of Cinders
@@ -3263,6 +3265,7 @@ Council4 currently supports **17,477 of 32,501 cards eligible for paper support 
 - Daggerfang Duo
 - Daggermaw Megalodon
 - Daggersail Aeronaut
+- Daghatar the Adamant
 - Dai Li Censor
 - Daily Bugle Newspaper
 - Daily Bugle Reporters
@@ -4655,6 +4658,7 @@ Council4 currently supports **17,477 of 32,501 cards eligible for paper support 
 - Erkenbrand, Lord of Westfold
 - Erode
 - Eroded Canyon
+- Eron the Relentless
 - Errant Doomsayers
 - Erratic Visionary
 - Erstwhile Trooper
@@ -8270,6 +8274,7 @@ Council4 currently supports **17,477 of 32,501 cards eligible for paper support 
 - Krenko's Enforcer
 - Krenko, Mob Boss
 - Krenko, Tin Street Kingpin
+- Kresh the Bloodbraided
 - Kris Mage
 - Kronch Wrangler
 - Krond the Dawn-Clad
@@ -8785,6 +8790,7 @@ Council4 currently supports **17,477 of 32,501 cards eligible for paper support 
 - Lu Xun, Scholar General
 - Lucent Liminid
 - Lucky Offering
+- Lucky the Pizza Dog
 - Luke Cage, Hero for Hire
 - Lull
 - Lullmage's Familiar
@@ -9452,6 +9458,7 @@ Council4 currently supports **17,477 of 32,501 cards eligible for paper support 
 - Mirran Crusader
 - Mirran Mettle
 - Mirran Spy
+- Mirri the Cursed
 - Mirri, Cat Warrior
 - Mirrodin Avenged
 - Mirrodin's Core
@@ -11959,6 +11966,7 @@ Council4 currently supports **17,477 of 32,501 cards eligible for paper support 
 - Rhox Pummeler
 - Rhox Veteran
 - Rhox War Monk
+- Rhys the Exiled
 - Rhystic Study
 - Rhythm of the Wild
 - Rib Cage Spider
@@ -17423,6 +17431,7 @@ Council4 currently supports **17,477 of 32,501 cards eligible for paper support 
 - Zhur-Taa Swine
 - Ziatora's Proving Ground
 - Ziatora, the Incinerator
+- Zo-Zu the Punisher
 - Zodiac Dog
 - Zodiac Goat
 - Zodiac Horse
