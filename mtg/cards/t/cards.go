@@ -8,6 +8,7 @@ import "github.com/natefinch/council4/mtg/cards/cardset"
 // constructor so the registry can build them lazily.
 var Cards = []cardset.Entry{
 	{Name: "T'Chaka, Venerable King", New: TChakaVenerableKing},
+	{Name: "Tabaxi Toucaneers", New: TabaxiToucaneers},
 	{Name: "Tablet of Epityr", New: TabletOfEpityr},
 	{Name: "Taigam's Strike", New: TaigamSStrike},
 	{Name: "Tajuru Stalwart", New: TajuruStalwart},
@@ -96,6 +97,7 @@ var Cards = []cardset.Entry{
 	{Name: "Thunderhawk Gunship", New: ThunderhawkGunship},
 	{Name: "Thundering Wurm", New: ThunderingWurm},
 	{Name: "Thundersong Trumpeter", New: ThundersongTrumpeter},
+	{Name: "Tiamat's Fanatics", New: TiamatSFanatics},
 	{Name: "Tidal Courier", New: TidalCourier},
 	{Name: "Tideforce Elemental", New: TideforceElemental},
 	{Name: "Tifa Lockhart", New: TifaLockhart},

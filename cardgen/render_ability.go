@@ -566,6 +566,9 @@ func (r Renderer) renderTriggeredAbility(ctx *renderCtx, ability *game.Triggered
 	if reflect.DeepEqual(*ability, game.TrainingTriggeredBody) {
 		return "game.TrainingTriggeredBody", nil
 	}
+	if reflect.DeepEqual(*ability, game.MyriadTriggeredBody) {
+		return "game.MyriadTriggeredBody", nil
+	}
 	if reflect.DeepEqual(*ability, game.LivingWeaponTriggeredAbility()) {
 		return "game.LivingWeaponTriggeredAbility()", nil
 	}

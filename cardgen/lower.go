@@ -68,6 +68,7 @@ type abilityLowering struct {
 	manaAbility        opt.V[game.ManaAbility]
 	loyaltyAbility     opt.V[game.LoyaltyAbility]
 	triggeredAbility   opt.V[game.TriggeredAbility]
+	triggeredAbilities []game.TriggeredAbility
 	chapterAbility     opt.V[game.ChapterAbility]
 	replacementAbility opt.V[game.ReplacementAbility]
 	spellAbility       opt.V[game.AbilityContent]
@@ -403,6 +404,12 @@ func appendSimpleLoweredAbilities(result *loweredFaceAbilities, lowered *ability
 	}
 	if lowered.triggeredAbility.Exists {
 		ability := lowered.triggeredAbility.Val
+		if abilityContentGatesOnResolutionCount(&ability.Content) {
+			ability.CountsResolutionsThisTurn = true
+		}
+		result.TriggeredAbilities = append(result.TriggeredAbilities, ability)
+	}
+	for _, ability := range lowered.triggeredAbilities {
 		if abilityContentGatesOnResolutionCount(&ability.Content) {
 			ability.CountsResolutionsThisTurn = true
 		}
@@ -828,7 +835,7 @@ func lowerStaticKeywordLowering(
 	ability compiler.CompiledAbility,
 	syntax *parser.Ability,
 ) (abilityLowering, *shared.Diagnostic) {
-	bodies, diagnostic := lowerKeywordAbility(ability, syntax)
+	bodies, triggered, diagnostic := lowerKeywordAbility(ability, syntax)
 	if diagnostic != nil {
 		return abilityLowering{}, diagnostic
 	}
@@ -845,7 +852,8 @@ func lowerStaticKeywordLowering(
 	}
 	spans = appendKeywordListSemicolonSpans(spans, syntax.Tokens)
 	return abilityLowering{
-		staticAbilities: bodies,
+		staticAbilities:    bodies,
+		triggeredAbilities: triggered,
 		consumed: semanticConsumption{
 			keywords: len(ability.Content.Keywords),
 		},

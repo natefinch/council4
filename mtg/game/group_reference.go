@@ -53,6 +53,15 @@ const (
 	// and a declared attacker that left combat before resolution is still
 	// included. It draws no anchor.
 	GroupDomainTriggeringAttackers
+
+	// GroupDomainCapturedObjects draws from the permanents a delayed trigger
+	// captured at schedule time under its CapturedObjectGroup reference — the
+	// "the tokens" back-reference of "... create a token that's a copy of this
+	// creature ... Exile the tokens at end of combat." (the myriad keyword,
+	// CR 702.116). Membership is the still-on-battlefield permanents named by the
+	// resolving stack object's CapturedObjectIDs. It draws no anchor and sets no
+	// Selection. Appended last so existing domain ordinals are unchanged.
+	GroupDomainCapturedObjects
 )
 
 // GroupReference is pure rules data describing WHERE a mass effect finds a group
@@ -154,6 +163,15 @@ func TriggeringAttackersAgainstDefenderGroup(selection Selection, defenderFilter
 	}
 }
 
+// CapturedObjectsGroup matches the permanents a delayed trigger captured at
+// schedule time under its CapturedObjectGroup reference (the "the tokens"
+// back-reference of the myriad keyword's "Exile the tokens at end of combat.").
+// It draws no anchor and sets no Selection; membership comes from the resolving
+// stack object's captured object IDs.
+func CapturedObjectsGroup() GroupReference {
+	return GroupReference{domain: GroupDomainCapturedObjects}
+}
+
 // Domain reports the candidate domain the group draws from.
 func (r GroupReference) Domain() GroupReferenceDomain { return r.domain }
 
@@ -240,6 +258,16 @@ func (r GroupReference) Validate() []string {
 		}
 		if r.exclude.Exists {
 			problems = append(problems, "triggering-attackers group must not set an exclusion")
+		}
+	case GroupDomainCapturedObjects:
+		if r.anchor.Exists {
+			problems = append(problems, "captured-objects group must not set an anchor object")
+		}
+		if r.exclude.Exists {
+			problems = append(problems, "captured-objects group must not set an exclusion")
+		}
+		if !r.selection.Empty() {
+			problems = append(problems, "captured-objects group must not set a Selection")
 		}
 	case groupDomainNone:
 		problems = append(problems, "group reference has no domain")

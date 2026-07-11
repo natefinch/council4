@@ -276,6 +276,12 @@ type StackObject struct {
 	// triggering combat event is gone ("destroy that creature at end of
 	// combat").
 	CapturedObjectID id.ID
+	// CapturedObjectIDs are the permanents frozen at schedule time by the delayed
+	// trigger that produced this stack object, carried so content referencing
+	// GroupDomainCapturedObjects (CapturedObjectsGroup) can act on the whole set
+	// after the linked key that named them may have been reused ("Exile the
+	// tokens at end of combat.", the myriad keyword).
+	CapturedObjectIDs []id.ID
 }
 
 // Stack represents the game stack — the zone where spells and abilities
