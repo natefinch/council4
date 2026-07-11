@@ -193,6 +193,14 @@ func playerCanPlayLand(g *game.Game, playerID game.PlayerID) bool {
 // noninstant spell only during their main phase while they have priority and the
 // stack is empty (isSorcerySpeed).
 func canCastAtCurrentTiming(g *game.Game, playerID game.PlayerID, card *game.CardDef) bool {
+	for i := range card.StaticAbilities {
+		if !card.StaticAbilities[i].CastOnlyAfterAttackedThisStep {
+			continue
+		}
+		return g.Turn.Step == game.StepDeclareAttackers &&
+			g.Combat != nil &&
+			g.Combat.PlayersAttacked[playerID]
+	}
 	if card.HasType(types.Instant) || card.HasKeyword(game.Flash) {
 		return true
 	}

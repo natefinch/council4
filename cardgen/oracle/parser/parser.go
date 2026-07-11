@@ -146,6 +146,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 		document.Abilities = append(document.Abilities, ability)
 	}
 	emitAtoms(document.Abilities, context.CardName, context.Legendary)
+	emitDeclareAttackersCastRestriction(document.Abilities)
 	emitSelfNameStaticRules(document.Abilities)
 	emitCost(document.Abilities)
 	emitOptional(document.Abilities)
@@ -186,6 +187,14 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	stripConditionalModalHeaderSemantics(document.Abilities)
 	emitDelayedTriggerEffects(document.Abilities, context.CardName, context.Legendary, context.InstantOrSorcery)
 	return document, diagnostics
+}
+
+func emitDeclareAttackersCastRestriction(abilities []Ability) {
+	const text = "Cast this spell only during the declare attackers step and only if you've been attacked this step."
+	for i := range abilities {
+		abilities[i].CastOnlyDuringDeclareAttackersAfterAttacked =
+			strings.EqualFold(strings.TrimSpace(abilities[i].Text), text)
+	}
 }
 
 // stripCastThisFromExileEffectSemantics suppresses the resolving-effect reading

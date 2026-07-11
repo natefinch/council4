@@ -33,6 +33,7 @@ func compileAbility(
 		Kind: kind,
 		Span: ability.Span,
 		Text: ability.Text,
+		CastOnlyDuringDeclareAttackersAfterAttacked: ability.CastOnlyDuringDeclareAttackersAfterAttacked,
 	}
 	if ability.AbilityWord != nil {
 		compiled.AbilityWord = ability.AbilityWord.Label
