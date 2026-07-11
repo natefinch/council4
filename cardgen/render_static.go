@@ -1099,6 +1099,9 @@ func (r Renderer) renderCostModifier(ctx *renderCtx, modifier game.CostModifier)
 	if modifier.TargetsSource {
 		fields = append(fields, "TargetsSource: true,")
 	}
+	if modifier.TargetsTappedCreature {
+		fields = append(fields, "TargetsTappedCreature: true,")
+	}
 	if modifier.AbilityKeyword != game.KeywordNone {
 		keyword, err := renderKeyword(modifier.AbilityKeyword)
 		if err != nil {

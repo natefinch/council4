@@ -119,6 +119,9 @@ type CostModifier struct {
 	// PerObjectReduction and DynamicReduction. An absent option leaves the
 	// reduction ungated.
 	ReductionCondition opt.V[Condition]
+	// TargetsTappedCreature gates a source spell's flat reduction on at least one
+	// chosen target being a tapped creature.
+	TargetsTappedCreature bool
 
 	// SourceZone constrains a spell cost modifier to spells being cast from a
 	// single zone ("Spells you cast from your graveyard cost {N} less to cast.",

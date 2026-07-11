@@ -104,8 +104,15 @@ func sourceSpellCostModifier(ability compiler.CompiledAbility, effect *compiler.
 			return game.CostModifier{}, executableDiagnostic(
 				ability,
 				"unsupported source-spell cost reduction",
-				"a conditional cast cost reduction requires exactly one condition",
+				"a conditional cast cost reduction carries an unexpected condition shape",
 			)
+		}
+		if effect.SourceSpellCostReductionTargetsTappedCreature {
+			return game.CostModifier{
+				Kind:                  game.CostModifierSpell,
+				GenericReduction:      effect.SourceSpellCostReductionAmount,
+				TargetsTappedCreature: true,
+			}, nil
 		}
 		condition, ok := lowerCondition(ability.Content.Conditions[0], conditionContextSpellCostReduction)
 		if !ok {

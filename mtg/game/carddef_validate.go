@@ -1534,6 +1534,17 @@ func (v *cardDefValidator) validateCostModifier(faceName, path string, modifier 
 			v.add(faceName, appendPath(path, "ReductionCondition"), CardDefIssueInvalidRuleEffect, "conditional cost reduction cannot combine with a per-object or dynamic reduction")
 		}
 	}
+	if modifier.TargetsTappedCreature {
+		if modifier.Kind != CostModifierSpell {
+			v.add(faceName, appendPath(path, "TargetsTappedCreature"), CardDefIssueInvalidRuleEffect, "target-state cost reduction requires a spell modifier")
+		}
+		if modifier.GenericReduction <= 0 {
+			v.add(faceName, appendPath(path, "TargetsTappedCreature"), CardDefIssueInvalidRuleEffect, "target-state cost reduction requires a positive generic reduction")
+		}
+		if modifier.ReductionCondition.Exists || modifier.PerObjectReduction > 0 || modifier.DynamicReduction != nil {
+			v.add(faceName, appendPath(path, "TargetsTappedCreature"), CardDefIssueInvalidRuleEffect, "target-state cost reduction cannot combine with another conditional or dynamic reduction")
+		}
+	}
 	v.validateSharedExiledCardTypeReduction(faceName, path, modifier)
 }
 

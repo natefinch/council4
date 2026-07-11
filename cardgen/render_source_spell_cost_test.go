@@ -98,6 +98,18 @@ func TestRenderSourceSpellCostModifier(t *testing.T) {
 				"CountZone: opt.Val(zone.Graveyard),",
 			},
 		},
+		{
+			name: "tapped creature target reduction",
+			modifier: game.CostModifier{
+				Kind:                  game.CostModifierSpell,
+				GenericReduction:      3,
+				TargetsTappedCreature: true,
+			},
+			wantParts: []string{
+				"GenericReduction: 3,",
+				"TargetsTappedCreature: true,",
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

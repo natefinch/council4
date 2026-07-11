@@ -167,7 +167,7 @@ func (s *rulesPaymentState) CostModifiersForSpell(playerID game.PlayerID, card *
 		}
 	}
 	modifiers = append(modifiers, staticCostModifiersForContext(s.g, playerID, card, sourceZone, targets)...)
-	modifiers = append(modifiers, sourceSpellSelfCostModifiers(s.g, playerID, card)...)
+	modifiers = append(modifiers, sourceSpellSelfCostModifiers(s.g, playerID, card, targets)...)
 	return modifiers
 }
 
@@ -186,7 +186,7 @@ func (s *rulesPaymentState) CostModifiersForSpell(playerID game.PlayerID, card *
 // caster now. Generic mana may fall to zero but colored requirements are never
 // touched, because the resolved reduction flows through the shared generic cost
 // modifier path.
-func sourceSpellSelfCostModifiers(g *game.Game, playerID game.PlayerID, card *game.CardDef) []game.CostModifier {
+func sourceSpellSelfCostModifiers(g *game.Game, playerID game.PlayerID, card *game.CardDef, targets []game.Target) []game.CostModifier {
 	if card == nil {
 		return nil
 	}
@@ -218,9 +218,14 @@ func sourceSpellSelfCostModifiers(g *game.Game, playerID game.PlayerID, card *ga
 				if conditionSatisfied(g, conditionContext{controller: playerID}, modifier.ReductionCondition) {
 					reduction = modifier.GenericReduction
 				}
+			case modifier.TargetsTappedCreature:
+				if targetsTappedCreature(g, targets) {
+					reduction = modifier.GenericReduction
+				}
 			default:
 				continue
 			}
+
 			if reduction <= 0 {
 				continue
 			}
@@ -231,6 +236,19 @@ func sourceSpellSelfCostModifiers(g *game.Game, playerID game.PlayerID, card *ga
 		}
 	}
 	return modifiers
+}
+
+func targetsTappedCreature(g *game.Game, targets []game.Target) bool {
+	for _, target := range targets {
+		if target.Kind != game.TargetPermanent {
+			continue
+		}
+		permanent, ok := permanentByObjectID(g, target.PermanentID)
+		if ok && permanent.Tapped && permanentHasType(g, permanent, types.Creature) {
+			return true
+		}
+	}
+	return false
 }
 
 // cardPaysLifeForCommanderTax reports whether the card being cast carries the

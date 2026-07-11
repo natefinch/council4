@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,438 of 32,501 cards eligible for paper support (53.7%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,447 of 32,501 cards eligible for paper support (53.7%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -245,6 +245,7 @@ Council4 currently supports **17,438 of 32,501 cards eligible for paper support 
 - Ajani's Mantra
 - Ajani's Pridemate
 - Ajani's Pridemate
+- Ajani's Response
 - Ajani's Sunstriker
 - Ajani's Welcome
 - Ajani, Adversary of Tyrants
@@ -1071,6 +1072,7 @@ Council4 currently supports **17,438 of 32,501 cards eligible for paper support 
 - Bane Alley Blackguard
 - Banehound
 - Baneslayer Angel
+- Banish from Edoras
 - Banisher Priest
 - Banishing Betrayal
 - Banishing Light
@@ -4936,6 +4938,7 @@ Council4 currently supports **17,438 of 32,501 cards eligible for paper support 
 - Fangren Hunter
 - Fangren Marauder
 - Fangren Pathcutter
+- Fantastic Bounce
 - Fantastic Elasticity
 - Far // Away
 - Far Traveler
@@ -4955,6 +4958,7 @@ Council4 currently supports **17,438 of 32,501 cards eligible for paper support 
 - Fatal Blow
 - Fatal Fumes
 - Fate Forgotten
+- Fate of the Sun-Cryst
 - Fate Transfer
 - Fate Unraveler
 - Fated Conflagration
@@ -6518,6 +6522,7 @@ Council4 currently supports **17,438 of 32,501 cards eligible for paper support 
 - Ground Rift
 - Groundbreaker
 - Groundchuck & Dirtbag
+- Grounded for Life
 - Groundshaker Sliver
 - Groundskeeper
 - Group Project
@@ -6754,6 +6759,7 @@ Council4 currently supports **17,438 of 32,501 cards eligible for paper support 
 - Havoc Sower
 - Hawkeater Moth
 - Hawkeye's Bow
+- Hawkeye's Shot
 - Hawkeye, Bowslinger
 - Hawkeye, Clint Barton
 - Hawkeye, Trick Shot
@@ -8778,6 +8784,7 @@ Council4 currently supports **17,438 of 32,501 cards eligible for paper support 
 - Luminollusk
 - Luminous Angel
 - Luminous Bonds
+- Luminous Rebuke
 - Luminous Wake
 - Lumithread Field
 - Lumra, Bellow of the Woods
@@ -11335,6 +11342,7 @@ Council4 currently supports **17,438 of 32,501 cards eligible for paper support 
 - Quickbeam, Upstart Ent
 - Quickling
 - Quicksand
+- Quicksand Whirlpool
 - Quicksilver Amulet
 - Quicksilver Behemoth
 - Quicksilver Dagger
@@ -12807,6 +12815,7 @@ Council4 currently supports **17,438 of 32,501 cards eligible for paper support 
 - Seize the Day
 - Seize the Initiative
 - Seize the Spoils
+- Seized from Slumber
 - Sejiri Merfolk
 - Sejiri Refuge
 - Sejiri Shelter // Sejiri Glacier
