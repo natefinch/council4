@@ -5,7 +5,9 @@ import (
 
 	cardf "github.com/natefinch/council4/mtg/cards/f"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
 )
 
 // TestFeignDeathGrantsDeathTriggerUntilEndOfTurn proves the temporary
@@ -42,7 +44,61 @@ func TestFeignDeathGrantsDeathTriggerUntilEndOfTurn(t *testing.T) {
 	}
 }
 
-// TestGroupKeywordGrantUntilYourNextTurn proves the group keyword grant with the
+// TestFeignDeathGrantedTriggerReturnsTappedWithCounter drives the real Feign
+// Death card end to end through the dies→trigger→stack→resolve path and proves
+// its granted quoted ability honors the return riders ("return it to the
+// battlefield tapped ... with a +1/+1 counter on it"): after the creature dies
+// and the granted trigger resolves, the returned permanent is tapped and carries
+// one +1/+1 counter. This fails on the earlier rider-dropping lowering (which
+// emitted a bare PutOnBattlefield) and passes once the riders are forwarded.
+func TestFeignDeathGrantedTriggerReturnsTappedWithCounter(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	creatureCardID := addCardInstance(g, game.Player1, vanillaCreatureDef())
+	creature := &game.Permanent{
+		ObjectID:       g.IDGen.Next(),
+		CardInstanceID: creatureCardID,
+		Owner:          game.Player1,
+		Controller:     game.Player1,
+		Face:           game.FaceFront,
+	}
+	g.Battlefield = append(g.Battlefield, creature)
+
+	addImplementationSpellToStack(g, game.Player1, cardf.FeignDeath(),
+		[]game.Target{game.PermanentTarget(creature.ObjectID)})
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if _, ok := destroyPermanent(g, creature.ObjectID); !ok {
+		t.Fatal("destroyPermanent() = false, want the granted creature to die")
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("putTriggeredAbilitiesOnStack() = false, want the granted dies trigger")
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	returned := permanentForCard(g, creatureCardID)
+	if returned == nil {
+		t.Fatal("the granted dies trigger did not return the creature to the battlefield")
+	}
+	if !returned.Tapped {
+		t.Fatal("returned creature is untapped, want tapped (the \"tapped\" rider was dropped)")
+	}
+	if got := returned.Counters.Get(counter.PlusOnePlusOne); got != 1 {
+		t.Fatalf("returned creature +1/+1 counters = %d, want 1 (the counter rider was dropped)", got)
+	}
+}
+
+func vanillaCreatureDef() *game.CardDef {
+	return &game.CardDef{
+		CardFace: game.CardFace{
+			Name:      "Test Bear",
+			Types:     []types.Card{types.Creature},
+			Power:     opt.Val(game.PT{Value: 2}),
+			Toughness: opt.Val(game.PT{Value: 2}),
+		},
+	}
+}
+
 // until-your-next-turn duration (Elspeth, Storm Slayer's "Those creatures gain
 // flying until your next turn."): the keyword is granted to every creature the
 // resolving player controls at resolution — and to no one else — survives the

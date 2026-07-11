@@ -66,7 +66,8 @@ func newMalakirRebirth() *game.CardDef {
 												Sequence: []game.Instruction{
 													{
 														Primitive: game.PutOnBattlefield{
-															Source: game.CardBattlefieldSource(game.CardReference{Kind: game.CardReferenceEvent}),
+															Source:      game.CardBattlefieldSource(game.CardReference{Kind: game.CardReferenceEvent}),
+															EntryTapped: true,
 														},
 													},
 												},

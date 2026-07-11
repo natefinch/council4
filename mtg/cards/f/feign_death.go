@@ -4,6 +4,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -59,7 +60,9 @@ func newFeignDeath() *game.CardDef {
 												Sequence: []game.Instruction{
 													{
 														Primitive: game.PutOnBattlefield{
-															Source: game.CardBattlefieldSource(game.CardReference{Kind: game.CardReferenceEvent}),
+															Source:        game.CardBattlefieldSource(game.CardReference{Kind: game.CardReferenceEvent}),
+															EntryTapped:   true,
+															EntryCounters: []game.CounterPlacement{game.CounterPlacement{Kind: counter.PlusOnePlusOne, Amount: 1}},
 														},
 													},
 												},

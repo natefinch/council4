@@ -229,7 +229,17 @@ func lowerEventCardEffect(ctx contentCtx) (game.AbilityContent, bool) {
 		if effect.ToZone == zone.Battlefield {
 			put := game.PutOnBattlefield{
 				Source:           game.CardBattlefieldSource(eventCard),
+				EntryTapped:      effect.EntersTapped,
 				EntryTransformed: effect.EntersTransformed,
+			}
+			if effect.CounterKindKnown {
+				// Only a fixed +1/+1 counter placement is representable as an
+				// entry-counter rider. Fail closed on any other counter rider so
+				// the return is never emitted with the counter silently dropped.
+				if effect.CounterKind != counter.PlusOnePlusOne || !effect.Amount.Known || effect.Amount.Value < 1 {
+					return game.AbilityContent{}, false
+				}
+				put.EntryCounters = []game.CounterPlacement{{Kind: counter.PlusOnePlusOne, Amount: effect.Amount.Value}}
 			}
 			if effect.ReturnAsEnchantment {
 				put.ContinuousEffects = []game.ContinuousEffect{{
