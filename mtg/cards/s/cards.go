@@ -54,6 +54,7 @@ var Cards = []cardset.Entry{
 	{Name: "Scorpion, Seething Striker", New: ScorpionSeethingStriker},
 	{Name: "Scour the Laboratory", New: ScourTheLaboratory},
 	{Name: "Scourge of Skola Vale", New: ScourgeOfSkolaVale},
+	{Name: "Scrap Trawler", New: ScrapTrawler},
 	{Name: "Scrapper Champion", New: ScrapperChampion},
 	{Name: "Scrapskin Drake", New: ScrapskinDrake},
 	{Name: "Screamreach Brawler", New: ScreamreachBrawler},

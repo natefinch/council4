@@ -186,6 +186,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 			exactControlledCountBounceEffectSyntax(effect) ||
 			exactSelfBounceEffectSyntax(effect) ||
 			exactGraveyardReturnEffectSyntax(effect) ||
+			exactFrontedHandGraveyardReturnEffectSyntax(effect) ||
 			exactChosenCardsBattlefieldReturnEffectSyntax(effect) ||
 			exactReturnExiledCardEffectSyntax(effect) ||
 			exactReturnLinkedExiledToBattlefieldPartialEffectSyntax(effect) ||
