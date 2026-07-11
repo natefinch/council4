@@ -177,6 +177,7 @@ func lowerActivationShell(
 			return effect.Kind == compiler.EffectManaSpendRider && spanCovered(reference.Span, []shared.Span{effect.Span})
 		})
 	})
+	normalizeExactActivationSelfReturnReferences(&bodyContent)
 	if !activationReferencesSupported(bodyContent) {
 		return loweredActivationShell{}, activationDiagnostic(
 			original,
@@ -184,6 +185,7 @@ func lowerActivationShell(
 			"the executable source backend cannot lower every bound reference in this activated ability",
 		)
 	}
+
 	bodySpan := shared.Span{
 		Start: bodyTokens[0].Span.Start,
 		End:   bodyTokens[len(bodyTokens)-1].Span.End,
@@ -246,6 +248,34 @@ func lowerActivationShell(
 	return result, nil
 }
 
+func normalizeExactActivationSelfReturnReferences(content *compiler.AbilityContent) {
+	if content == nil || len(content.Effects) != 1 ||
+		content.Effects[0].Kind != compiler.EffectReturn ||
+		!content.Effects[0].Exact ||
+		content.Effects[0].ToZone != zone.Hand ||
+		len(content.References) == 0 {
+		return
+	}
+	hasSelfName := false
+	for i := range content.References {
+		reference := &content.References[i]
+		switch {
+		case reference.Kind == compiler.ReferenceSelfName:
+			hasSelfName = true
+		case reference.Pronoun == compiler.ReferencePronounIts:
+		default:
+			return
+		}
+	}
+	if !hasSelfName {
+		return
+	}
+	for i := range content.References {
+		content.References[i].Binding = compiler.ReferenceBindingSource
+	}
+	content.Effects[0].References = slices.Clone(content.References)
+}
+
 func isBoastAbilityWord(label string) bool {
 	return strings.EqualFold(label, "Boast")
 }
@@ -292,6 +322,18 @@ func activationReferencesSupported(content compiler.AbilityContent) bool {
 		content.Effects[0].Exact {
 		// The exact timing-permission effect intrinsically owns "you", "spells",
 		// and "they"; its lowerer represents the whole sentence as one rule grant.
+		return true
+	}
+	if len(content.Effects) == 1 &&
+		content.Effects[0].Kind == compiler.EffectReturn &&
+		content.Effects[0].Exact &&
+		content.Effects[0].ToZone == zone.Hand &&
+		len(content.References) > 0 &&
+		!slices.ContainsFunc(content.References, func(reference compiler.CompiledReference) bool {
+			return reference.Binding != compiler.ReferenceBindingSource
+		}) {
+		// Exact self-return effects own both the source-name and possessive
+		// references ("Return Arcanis to its owner's hand.").
 		return true
 	}
 	if _, ok := recognizeConditionalDestination(content); ok {

@@ -75,6 +75,12 @@ func collectReferences(tokens []shared.Token, cardName string, legendary bool) [
 	var references []Reference
 	for _, nameWords := range selfNameReferenceAliases(cardName, legendary) {
 		for i := 0; i+len(nameWords) <= len(tokens); i++ {
+			if len(nameWords) == 1 && i+1 < len(tokens) && equalWord(tokens[i+1], "the") {
+				// A one-word legendary short name followed by "the" begins a
+				// different full proper name (for example, Tuktuk the Returned),
+				// not a reference to the source legend.
+				continue
+			}
 			if i >= 6 {
 				pre := normalizedWords(tokens[i-6 : i])
 				if referenceContainsSequence(pre, "for", "as", "long", "as", "you", "control") {
@@ -601,11 +607,20 @@ func legendaryOfShortName(cardName string) string {
 	if index <= 0 {
 		return ""
 	}
+
 	short := strings.TrimSpace(cardName[:index])
 	if strings.Contains(short, ",") {
 		return ""
 	}
 	return short
+}
+
+func legendaryEpithetShortName(cardName string) string {
+	short, _, ok := strings.Cut(cardName, " the ")
+	if !ok || strings.ContainsAny(short, " ,") {
+		return ""
+	}
+	return strings.TrimSpace(short)
 }
 
 // selfNameReferenceAliases returns the card-name spellings that count as an
@@ -642,6 +657,9 @@ func selfNameReferenceAliases(cardName string, legendary bool) [][]string {
 	}
 	if legendary {
 		if shortName := legendaryOfShortName(cardName); shortName != "" {
+			appendAlias(shortName)
+		}
+		if shortName := legendaryEpithetShortName(cardName); shortName != "" {
 			appendAlias(shortName)
 		}
 	}
