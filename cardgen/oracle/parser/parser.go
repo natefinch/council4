@@ -147,6 +147,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	}
 	emitAtoms(document.Abilities, context.CardName, context.Legendary)
 	emitDeclareAttackersCastRestriction(document.Abilities)
+	emitGoadedOpponentCreaturesCantBlock(document.Abilities)
 	emitSelfNameStaticRules(document.Abilities)
 	emitCost(document.Abilities)
 	emitOptional(document.Abilities)
@@ -193,6 +194,14 @@ func emitDeclareAttackersCastRestriction(abilities []Ability) {
 	const text = "Cast this spell only during the declare attackers step and only if you've been attacked this step."
 	for i := range abilities {
 		abilities[i].CastOnlyDuringDeclareAttackersAfterAttacked =
+			strings.EqualFold(strings.TrimSpace(abilities[i].Text), text)
+	}
+}
+
+func emitGoadedOpponentCreaturesCantBlock(abilities []Ability) {
+	const text = "Goaded creatures your opponents control can't block."
+	for i := range abilities {
+		abilities[i].GoadedOpponentCreaturesCantBlock =
 			strings.EqualFold(strings.TrimSpace(abilities[i].Text), text)
 	}
 }

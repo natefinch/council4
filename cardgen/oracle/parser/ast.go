@@ -115,6 +115,8 @@ type Ability struct {
 	// CastOnlyDuringDeclareAttackersAfterAttacked marks the exact defensive
 	// declare-attackers cast restriction.
 	CastOnlyDuringDeclareAttackersAfterAttacked bool `json:",omitempty"`
+	// GoadedOpponentCreaturesCantBlock marks the exact static restriction.
+	GoadedOpponentCreaturesCantBlock bool `json:",omitempty"`
 	// ExactSequence is a parser-owned, exact-vocabulary resolving sequence.
 	ExactSequence *ExactSequenceSyntax `json:",omitempty"`
 	// Optional reports that a triggered ability's resolving body begins with the
