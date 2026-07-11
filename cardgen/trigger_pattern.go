@@ -400,6 +400,8 @@ func lowerTriggerEvent(event compiler.TriggerEvent) (game.EventKind, bool) {
 		return game.EventBecameMonarch, true
 	case compiler.TriggerEventCardPlayedFromExile:
 		return game.EventCardPlayedFromExile, true
+	case compiler.TriggerEventLandPlayed:
+		return game.EventLandPlayed, true
 	default:
 		return game.EventUnknown, false
 	}

@@ -1150,6 +1150,11 @@ const (
 	// exiled with <this permanent>" (Prowl, Stoic Strategist), naming any card a
 	// linked-exile ability of the source permanent placed into exile.
 	PlayerEventCardExiledWithSource PlayerEventCardKind = "PlayerEventCardExiledWithSource"
+
+	// PlayerEventCardLand is the card object "a land" of a play event
+	// ("Whenever a player/an opponent/you play(s) a land", Burgeoning, Dirtcowl
+	// Wurm, Horn of Greed). It matches the land-play special action (CR 305).
+	PlayerEventCardLand PlayerEventCardKind = "PlayerEventCardLand"
 )
 
 // PlayerEventCard is a source-spanned player-event card-object modifier.

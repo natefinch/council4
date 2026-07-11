@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,489 of 32,501 cards eligible for paper support (53.8%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,492 of 32,501 cards eligible for paper support (53.8%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2024,6 +2024,7 @@ Council4 currently supports **17,489 of 32,501 cards eligible for paper support 
 - Burden of Guilt
 - Burdened Aerialist
 - Burdened Stoneback
+- Burgeoning
 - Burglar Rat
 - Buried Alive
 - Buried in the Garden
@@ -3773,6 +3774,7 @@ Council4 currently supports **17,489 of 32,501 cards eligible for paper support 
 - Dirge Bat
 - Dirge of Dread
 - Dirgur Island Dragon // Skimming Strike
+- Dirtcowl Wurm
 - Dirtwater Wraith
 - Dirty Wererat
 - Disa the Restless
@@ -10593,6 +10595,7 @@ Council4 currently supports **17,489 of 32,501 cards eligible for paper support 
 - Palliation Accord
 - Pallid Mycoderm
 - Pang Tong, "Young Phoenix"
+- Pangosaur
 - Panharmonicon
 - Panic Attack
 - Panic Spellbomb

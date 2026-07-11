@@ -145,6 +145,7 @@ var Cards = []cardset.Entry{
 	{Name: "Bulwark Ox", New: BulwarkOx},
 	{Name: "Burden of Guilt", New: BurdenOfGuilt},
 	{Name: "Burdened Stoneback", New: BurdenedStoneback},
+	{Name: "Burgeoning", New: Burgeoning},
 	{Name: "Burn the Accursed", New: BurnTheAccursed},
 	{Name: "Burning Inquiry", New: BurningInquiry},
 	{Name: "Burning Prophet", New: BurningProphet},

@@ -649,6 +649,17 @@ func parsePlayerEventCard(
 				ok:         true,
 			}
 		}
+		if rest, ok := cutSyntaxWords(tokens, "a", "land"); ok {
+			return playerEventCardParse{
+				card: PlayerEventCard{
+					Kind: PlayerEventCardLand,
+					Span: shared.SpanOf(tokens[:2]),
+				},
+				occurrence: occurrence,
+				remainder:  rest,
+				ok:         true,
+			}
+		}
 		return playerEventCardParse{}
 	}
 	if rest, filter, ok := cutPlayerEventCardNoun(tokens, action, "a", "card"); ok {

@@ -65,6 +65,7 @@ var Cards = []cardset.Entry{
 	{Name: "Dinrova Horror", New: DinrovaHorror},
 	{Name: "Dire Fleet Captain", New: DireFleetCaptain},
 	{Name: "Director Nick Fury", New: DirectorNickFury},
+	{Name: "Dirtcowl Wurm", New: DirtcowlWurm},
 	{Name: "Dirty Wererat", New: DirtyWererat},
 	{Name: "Disa the Restless", New: DisaTheRestless},
 	{Name: "Disempower", New: Disempower},
