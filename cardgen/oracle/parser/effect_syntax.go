@@ -3581,7 +3581,56 @@ func recognizeDynamicCountMana(effect *EffectSyntax) bool {
 		recognizeSourceCounterCountMana(effect) ||
 		recognizeSingleColorDynamicMana(effect) ||
 		recognizeCombinationDynamicMana(effect) ||
+		recognizeChoiceForEachMana(effect) ||
 		recognizeAnyOneColorDynamicMana(effect)
+}
+
+// recognizeChoiceForEachMana types the add-mana body "<color> or <color>[ or
+// ...] for each <count>" (Culling Ritual: "Add {B} or {G} for each permanent
+// destroyed this way."). Each unit of the produced mana is one of the listed
+// colors, chosen independently by the controller, and the number of units is the
+// "for each" dynamic count already typed onto effect.Amount by parseEffectAmount;
+// the leading color-choice body is left unrecognized by parseEffectMana because
+// the trailing count clause trips its fixed-symbol parsing. A per-unit choice
+// repeated over the count is a freely-split combination of those colors, so this
+// records the combination-dynamic output for the lowerer to add that many mana in
+// any combination of them. It fails closed unless the body is a list of two or
+// more distinct basic colors and a "for each" dynamic amount is present, so
+// single-color, colorless, and non-choice bodies keep their own branches.
+func recognizeChoiceForEachMana(effect *EffectSyntax) bool {
+	if effect.Kind != EffectAddMana ||
+		effect.Amount.DynamicKind == EffectDynamicAmountNone ||
+		effect.Amount.DynamicForm != EffectDynamicAmountFormForEach ||
+		effect.Amount.Multiplier < 1 {
+		return false
+	}
+	body := manaBodyBeforeAmount(effect)
+	for len(body) > 0 && body[len(body)-1].Kind == shared.Comma {
+		body = body[:len(body)-1]
+	}
+	if len(body) == 0 || body[0].Kind != shared.Symbol {
+		return false
+	}
+	for _, token := range body {
+		if equalWord(token, "and") {
+			// The choice form ("<color> or <color> for each ...") splits N mana
+			// freely among the colors. "Add {B} and {G} for each ..." instead
+			// means add both colors per count (2N mana), a different effect, so
+			// fail closed rather than reuse the and-tolerant list parser.
+			return false
+		}
+	}
+	colors, ok := combinationManaColorList(body)
+	if !ok {
+		return false
+	}
+	effect.Mana = EffectManaSyntax{
+		Span:               shared.SpanOf(body),
+		Combination:        true,
+		CombinationColors:  colors,
+		CombinationDynamic: true,
+	}
+	return true
 }
 
 // recognizeCombinationDynamicMana types the add-mana body "X mana in any
