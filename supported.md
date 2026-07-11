@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,412 of 32,501 cards eligible for paper support (53.6%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,417 of 32,501 cards eligible for paper support (53.6%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2405,6 +2405,7 @@ Council4 currently supports **17,412 of 32,501 cards eligible for paper support 
 - Champion of Arashin
 - Champion of Dusk
 - Champion of Lambholt
+- Champion of Stray Souls
 - Champion of the Parish
 - Champion of the Perished
 - Champion's Helm
@@ -2908,6 +2909,7 @@ Council4 currently supports **17,412 of 32,501 cards eligible for paper support 
 - Copper Longlegs
 - Copper Myr
 - Copper Tablet
+- Copper-Leaf Angel
 - Copperhoof Vorrac
 - Copperhorn Scout
 - Copperline Gorge
@@ -3646,6 +3648,7 @@ Council4 currently supports **17,412 of 32,501 cards eligible for paper support 
 - Detective
 - Detention Chariot
 - Devastate
+- Devastating Summons
 - Devastation
 - Deviant Glee
 - Devil
@@ -6464,6 +6467,7 @@ Council4 currently supports **17,412 of 32,501 cards eligible for paper support 
 - Grim Flowering
 - Grim Guardian
 - Grim Haruspex
+- Grim Hireling
 - Grim Initiate
 - Grim Lavamancer
 - Grim Monolith
@@ -8228,6 +8232,7 @@ Council4 currently supports **17,412 of 32,501 cards eligible for paper support 
 - Kraul Warrior
 - Kraum, Ludevic's Opus
 - Kraum, Violent Cacophony
+- Krav, the Unredeemed
 - Kraven's Cats
 - Kree Commandos
 - Kree Sentinel
