@@ -350,6 +350,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 					staticSubjectColors(syntax.StaticSubject.Colors, syntax.StaticSubject.Colorless, syntax.StaticSubject.Multicolored, syntax.StaticSubject.ChosenColorFromEntry),
 					staticSubjectKeyword(syntax.StaticSubject.Keyword, syntax.StaticSubject.ExcludedKeyword),
 					staticSubjectCounter(syntax.StaticSubject.CounterRequired, syntax.StaticSubject.CounterKind, syntax.StaticSubject.CounterAny),
+					staticSubjectPower(syntax.StaticSubject.Power, syntax.StaticSubject.MatchPower),
 					syntax.Symbol,
 				),
 				CounterKind:                   syntax.CounterKind,

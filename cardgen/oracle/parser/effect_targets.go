@@ -3757,6 +3757,9 @@ func parseEffectStaticSubject(tokens []shared.Token, atoms Atoms) EffectStaticSu
 	if subject, ok := parseCounterFilteredCreatureGroupSubject(tokens); ok {
 		return subject
 	}
+	if subject, ok := parsePowerFilteredCreatureGroupSubject(tokens, atoms); ok {
+		return subject
+	}
 	if subject, ok := parseControlledCreatureSubtypeTokenGroupSubject(tokens, atoms); ok {
 		return subject
 	}
@@ -4654,6 +4657,48 @@ func parseCounterFilteredCreatureGroupSubject(tokens []shared.Token) (EffectStat
 		return EffectStaticSubjectSyntax{}, false
 	}
 	return subject, true
+}
+
+// parsePowerFilteredCreatureGroupSubject recognizes a controller-creature group
+// constrained by a numeric power comparison: "Each [other] creature you control
+// with power N or greater gets/gains ..." (singular) and "[Other] creatures you
+// control with power N or greater get/gain ..." (plural), plus the "or less" and
+// bare-"N" comparison variants (Goreclaw, Terror of Qal Sisma). It records the
+// power comparison on the subject and covers the qualifier in the subject span so
+// the group phrase round-trips byte-exactly. It fails closed for the source-
+// relative ("power greater than <source>'s power") and disjunctive ("power or
+// toughness") forms, whose numbers do not begin at the comparison slot, so
+// callers fall through to the bare grammar.
+func parsePowerFilteredCreatureGroupSubject(tokens []shared.Token, atoms Atoms) (EffectStaticSubjectSyntax, bool) {
+	head, ok := counterGroupNounPhrase(tokens)
+	if !ok {
+		return EffectStaticSubjectSyntax{}, false
+	}
+	idx := head.next
+	if !effectWordsAt(tokens, idx, "you", "control") {
+		return EffectStaticSubjectSyntax{}, false
+	}
+	idx += 2
+	if !effectWordsAt(tokens, idx, "with", "power") {
+		return EffectStaticSubjectSyntax{}, false
+	}
+	comparison, end, ok := numberComparisonAt(tokens, idx+2, atoms)
+	if !ok {
+		return EffectStaticSubjectSyntax{}, false
+	}
+	if !counterGroupVerbAt(tokens, end, head.singular) {
+		return EffectStaticSubjectSyntax{}, false
+	}
+	groupKind := EffectStaticSubjectControlledCreatures
+	if head.excludeSource {
+		groupKind = EffectStaticSubjectOtherControlledCreatures
+	}
+	return EffectStaticSubjectSyntax{
+		Kind:       groupKind,
+		Span:       shared.SpanOf(tokens[:end]),
+		Power:      comparison,
+		MatchPower: true,
+	}, true
 }
 
 // counterGroupHead is the leading noun phrase of a counter-matters anthem

@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,514 of 32,501 cards eligible for paper support (53.9%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,518 of 32,501 cards eligible for paper support (53.9%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2104,6 +2104,7 @@ Council4 currently supports **17,514 of 32,501 cards eligible for paper support 
 - Cacophodon
 - Cacophony Scamp
 - Cactarantula
+- Cactusfolk Sureshot
 - Cadaver Imp
 - Cadaverous Knight
 - Cadira, Caller of the Small
@@ -6338,6 +6339,7 @@ Council4 currently supports **17,514 of 32,501 cards eligible for paper support 
 - Good-Fortune Unicorn
 - Gore Swine
 - Gore-House Chainwalker
+- Goreclaw, Terror of Qal Sisma
 - Gorehorn Minotaurs
 - Gorehorn Raider
 - Goremand
@@ -6630,6 +6632,7 @@ Council4 currently supports **17,514 of 32,501 cards eligible for paper support 
 - Gustcloak Savior
 - Gustcloak Sentinel
 - Gustcloak Skirmisher
+- Gustrider Exuberant
 - Gut Shot
 - Gutless Ghoul
 - Gutter Skulk
@@ -17152,6 +17155,7 @@ Council4 currently supports **17,514 of 32,501 cards eligible for paper support 
 - Wirewood Symbiote
 - Wisdom of Ages
 - Wishcoin Crab
+- Wispdrinker Vampire
 - Wispmare
 - Wispweaver Angel
 - Wistful Selkie

@@ -93,6 +93,7 @@ var Cards = []cardset.Entry{
 	{Name: "Goldmane Griffin", New: GoldmaneGriffin},
 	{Name: "Goldvein Hydra", New: GoldveinHydra},
 	{Name: "Golgari Raiders", New: GolgariRaiders},
+	{Name: "Goreclaw, Terror of Qal Sisma", New: GoreclawTerrorOfQalSisma},
 	{Name: "Gorgon Recluse", New: GorgonRecluse},
 	{Name: "Gorilla Pack", New: GorillaPack},
 	{Name: "Graceful Restoration", New: GracefulRestoration},
@@ -132,6 +133,7 @@ var Cards = []cardset.Entry{
 	{Name: "Guru Pathik", New: GuruPathik},
 	{Name: "Gush", New: Gush},
 	{Name: "Gust of Wind", New: GustOfWind},
+	{Name: "Gustrider Exuberant", New: GustriderExuberant},
 	{Name: "Gwaihir, Greatest of the Eagles", New: GwaihirGreatestOfTheEagles},
 	{Name: "Gwendlyn Di Corci", New: GwendlynDiCorci},
 }
