@@ -2302,14 +2302,17 @@ func exactTemporaryKeywordChangeSyntax(effect *EffectSyntax, pluralVerb, singula
 	switch effect.Duration {
 	case EffectDurationUntilEndOfTurn:
 	case EffectDurationUntilYourNextTurn:
-		// The "until your next turn" duration is only reconstructed for the
-		// singular referenced-object rider ("It gains haste until your next
-		// turn." on a permanent an earlier sequence clause produced — Bond of
-		// Revival), the one shape the sequential referenced keyword-grant
+		// The "until your next turn" duration is reconstructed for the singular
+		// referenced-object rider ("It gains haste until your next turn." on a
+		// permanent an earlier sequence clause produced — Bond of Revival) and
+		// for the plural "those" group back-reference ("Those creatures gain
+		// flying until your next turn." after a counter clause — Elspeth, Storm
+		// Slayer's 0 ability). Both are shapes the sequential group keyword-grant
 		// lowering threads the duration through. Every other subject context
 		// keeps the until-end-of-turn form, so a grant whose duration the
 		// lowering would silently treat as end-of-turn stays fail-closed here.
-		if effect.Context != EffectContextReferencedObject {
+		if effect.Context != EffectContextReferencedObject &&
+			!exactThoseSubjectReference(effect.SubjectReferences) {
 			return false
 		}
 	default:

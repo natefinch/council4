@@ -14,6 +14,7 @@ var Cards = []cardset.Entry{
 	{Name: "Uncovered Clues", New: UncoveredClues},
 	{Name: "Undercity Informer", New: UndercityInformer},
 	{Name: "Undercity's Embrace", New: UndercitySEmbrace},
+	{Name: "Undying Malice", New: UndyingMalice},
 	{Name: "Unesh, Criosphinx Sovereign", New: UneshCriosphinxSovereign},
 	{Name: "Unexplained Vision", New: UnexplainedVision},
 	{Name: "Unfathomable Truths", New: UnfathomableTruths},

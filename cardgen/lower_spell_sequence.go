@@ -1261,13 +1261,15 @@ func lowerDynamicCountDrawThenGroupKeywordSequence(ctx contentCtx) (game.Ability
 
 // lowerGroupCounterThenGroupKeywordSequence lowers the ordered pair "Put a
 // +1/+1 counter on each creature you control. Those creatures gain <keyword>
-// until end of turn." (Felidar Retreat's second mode). The first clause places
-// a fixed counter on a battlefield group; the second grants a keyword to that
-// same group. As with the draw-count variant, nothing between the two clauses
-// changes the board, so the runtime's group continuous effect snapshots the same
-// members the counter placement affected and "those creatures" resolves to that
-// group. It reuses the counter clause's resolved group for the grant and fails
-// closed for any other shape, non-group recipient, or unsupported keyword.
+// until end of turn." (Felidar Retreat's second mode) and its "until your next
+// turn" variant (Elspeth, Storm Slayer's 0 ability). The first clause places a
+// fixed counter on a battlefield group; the second grants a keyword to that same
+// group for the bounded window the ApplyContinuous machinery expires. As with
+// the draw-count variant, nothing between the two clauses changes the board, so
+// the runtime's group continuous effect snapshots the same members the counter
+// placement affected and "those creatures" resolves to that group. It reuses the
+// counter clause's resolved group for the grant and fails closed for any other
+// shape, non-group recipient, or unsupported keyword.
 func lowerGroupCounterThenGroupKeywordSequence(ctx contentCtx) (game.AbilityContent, bool) {
 	if len(ctx.content.Effects) != 2 ||
 		len(ctx.content.Targets) != 0 ||
@@ -1278,6 +1280,10 @@ func lowerGroupCounterThenGroupKeywordSequence(ctx contentCtx) (game.AbilityCont
 	}
 	counterEffect := ctx.content.Effects[0]
 	keywordEffect := ctx.content.Effects[1]
+	// The group keyword grant lasts either "until end of turn" or "until your
+	// next turn" (Elspeth, Storm Slayer's 0 ability grants flying to the counted
+	// creatures until the controller's next turn); the placed counters persist.
+	duration, durationOK := temporaryContinuousDuration(keywordEffect.Duration)
 	if counterEffect.Kind != compiler.EffectPut ||
 		keywordEffect.Kind != compiler.EffectGain ||
 		!counterEffect.Exact ||
@@ -1292,7 +1298,7 @@ func lowerGroupCounterThenGroupKeywordSequence(ctx contentCtx) (game.AbilityCont
 		counterEffect.CounterKind.PlayerOnly() ||
 		!counterEffect.Amount.Known ||
 		counterEffect.Amount.Value < 1 ||
-		keywordEffect.Duration != compiler.DurationUntilEndOfTurn ||
+		!durationOK ||
 		keywordEffect.StaticSubject != compiler.StaticSubjectNone ||
 		keywordEffect.KeywordGrantChoice ||
 		!groupBackReferenceThose(keywordEffect.SubjectReferences) {
@@ -1320,7 +1326,7 @@ func lowerGroupCounterThenGroupKeywordSequence(ctx contentCtx) (game.AbilityCont
 					AddKeywords:  keywords,
 					AddAbilities: abilities,
 				}},
-				Duration: game.DurationUntilEndOfTurn,
+				Duration: duration,
 			}},
 		},
 	}.Ability(), true

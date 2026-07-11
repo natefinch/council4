@@ -2529,6 +2529,30 @@ func groupModifyPTContinuousEffect(
 	return continuous, true
 }
 
+// temporaryGrantAbilities folds an effect's quoted granted ability ("... gains
+// \"<quoted ability>\" until end of turn.", Malakir Rebirth's front face) into a
+// temporary keyword grant's ability layer, appending it after the keyword-family
+// abilities. It fails closed when the quoted ability cannot be recursively
+// lowered and when the grant confers nothing at all (no keyword and no quoted
+// ability), so an empty or unrenderable grant is never silently emitted.
+func temporaryGrantAbilities(
+	effect *compiler.CompiledEffect,
+	keywords []game.Keyword,
+	abilities []game.Ability,
+) ([]game.Ability, bool) {
+	if effect.GainGrantedAbility != nil {
+		granted, ok := lowerStaticGrantedQuotedAbility(effect.GainGrantedAbility)
+		if !ok {
+			return nil, false
+		}
+		abilities = append(abilities, granted)
+	}
+	if len(keywords) == 0 && len(abilities) == 0 {
+		return nil, false
+	}
+	return abilities, true
+}
+
 func lowerTemporaryKeywordSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
 		return game.AbilityContent{}, contentDiagnostic(
@@ -2591,13 +2615,26 @@ func lowerTemporaryKeywordSpell(ctx contentCtx) (game.AbilityContent, *shared.Di
 		len(ctx.content.References) == 0 &&
 		effect.Context == parser.EffectContextTarget &&
 		temporaryKeywordTarget(ctx.content.Targets[0])
+	// An inherited-target back-reference names a target a prior sentence chose
+	// ("Choose target creature. … Until end of turn, that creature gains
+	// <keyword/ability>." — Malakir Rebirth): the ordered sequence threads that
+	// shared target in as the clause's own target and localizes the "that
+	// creature" reference onto it, so the grant applies to that same target slot.
+	// Routing it through the target subject emits the game.TargetSpec the
+	// ApplyContinuous instruction's target reference needs, which the object
+	// (reference) path would omit.
+	inheritedTargetSubject := len(ctx.content.Targets) == 1 &&
+		len(ctx.content.References) == 1 &&
+		effect.Context == parser.EffectContextReferencedObject &&
+		ctx.content.References[0].Binding == compiler.ReferenceBindingTarget &&
+		temporaryKeywordTarget(ctx.content.Targets[0])
 	referenceSubject := len(ctx.content.Targets) == 0 && len(ctx.content.References) == 1
 	if len(ctx.content.Effects) != 1 ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Modes) != 0 ||
 		effect.Kind != compiler.EffectGain ||
 		!effect.Exact ||
-		(!targetSubject && !referenceSubject) ||
+		(!targetSubject && !inheritedTargetSubject && !referenceSubject) ||
 		effect.Negated ||
 		effect.StaticSubject != compiler.StaticSubjectNone {
 		return unsupported()
@@ -2613,12 +2650,16 @@ func lowerTemporaryKeywordSpell(ctx contentCtx) (game.AbilityContent, *shared.Di
 	if effect.KeywordGrantChoice {
 		return lowerTemporaryKeywordChoiceGrant(ctx, &effect, keywords, abilities, targetSubject, duration, unsupported)
 	}
+	abilities, ok = temporaryGrantAbilities(&effect, keywords, abilities)
+	if !ok {
+		return unsupported()
+	}
 	continuousEffects := []game.ContinuousEffect{{
 		Layer:        game.LayerAbility,
 		AddKeywords:  keywords,
 		AddAbilities: abilities,
 	}}
-	if targetSubject {
+	if targetSubject || inheritedTargetSubject {
 		return continuousTargetMode(ctx.content.Targets[0], continuousEffects, duration, unsupported)
 	}
 	object, ok := continuousReferenceObject(ctx.content.References[0], &effect, true)
@@ -2671,6 +2712,10 @@ func lowerGroupTemporaryKeywordSpell(
 		return unsupported()
 	}
 	keywords, abilities, ok := partitionTemporaryKeywords(ctx.content.Keywords)
+	if !ok {
+		return unsupported()
+	}
+	abilities, ok = temporaryGrantAbilities(&effect, keywords, abilities)
 	if !ok {
 		return unsupported()
 	}

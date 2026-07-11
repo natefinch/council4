@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,400 of 32,501 cards eligible for paper support (53.5%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,407 of 32,501 cards eligible for paper support (53.6%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -4423,6 +4423,7 @@ Council4 currently supports **17,400 of 32,501 cards eligible for paper support 
 - Elspeth Conquers Death
 - Elspeth's Devotee
 - Elspeth's Smite
+- Elspeth, Storm Slayer
 - Elspeth, Sun's Champion
 - Elspeth, Sun's Nemesis
 - Elturgard Ranger
@@ -4902,6 +4903,7 @@ Council4 currently supports **17,400 of 32,501 cards eligible for paper support 
 - Falthis, Shadowcat Familiar
 - Familiar's Ruse
 - Family Reunion
+- Family's Favor
 - Famine
 - Famished Foragers
 - Famished Ghoul
@@ -4999,6 +5001,7 @@ Council4 currently supports **17,400 of 32,501 cards eligible for paper support 
 - Feedback Bolt
 - Feeding Frenzy
 - Feeling of Dread
+- Feign Death
 - Feisty Spikeling
 - Feiyi Snake
 - Feldon of the Third Path
@@ -8758,7 +8761,6 @@ Council4 currently supports **17,400 of 32,501 cards eligible for paper support 
 - Luminollusk
 - Luminous Angel
 - Luminous Bonds
-- Luminous Broodmoth
 - Luminous Wake
 - Lumithread Field
 - Lumra, Bellow of the Woods
@@ -8893,6 +8895,7 @@ Council4 currently supports **17,400 of 32,501 cards eligible for paper support 
 - Malakir Bloodwitch
 - Malakir Cullblade
 - Malakir Familiar
+- Malakir Rebirth // Malakir Mire
 - Malakir Soothsayer
 - Malamet Brawler
 - Malamet Scythe
@@ -13274,6 +13277,7 @@ Council4 currently supports **17,400 of 32,501 cards eligible for paper support 
 - Simian Brawler
 - Simian Simulacrum
 - Simian Spirit Guide
+- Simic Basilisk
 - Simic Charm
 - Simic Cluestone
 - Simic Fluxmage
@@ -15932,6 +15936,7 @@ Council4 currently supports **17,400 of 32,501 cards eligible for paper support 
 - Underworld Hermit
 - Underworld Sentinel
 - Undo
+- Undying Malice
 - Undying Rage
 - Unearth
 - Unearthly Blizzard
@@ -16261,6 +16266,7 @@ Council4 currently supports **17,400 of 32,501 cards eligible for paper support 
 - Verdant Field
 - Verdant Force
 - Verdant Haven
+- Verdant Rebirth
 - Verdant Sun's Avatar
 - Verdigris
 - Verduran Enchantress
@@ -16530,6 +16536,7 @@ Council4 currently supports **17,400 of 32,501 cards eligible for paper support 
 - Vorel of the Hull Clade
 - Vorinclex, Voice of Hunger
 - Vorosh, the Hunter
+- Vorpal Sword
 - Vorrac Battlehorns
 - Vorstclaw
 - Vortex Runner
