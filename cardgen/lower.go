@@ -869,6 +869,49 @@ func lowerExecutableAbility(
 	ability compiler.CompiledAbility,
 	syntax *parser.Ability,
 ) (abilityLowering, *shared.Diagnostic) {
+	if ability.CloudKeyChoice {
+		return abilityLowering{
+			replacementAbility: opt.Val(game.EntryCardTypeChoiceReplacement(ability.Text)),
+			consumed: semanticConsumption{
+				conditions: len(ability.Content.Conditions),
+				effects:    len(ability.Content.Effects),
+				keywords:   len(ability.Content.Keywords),
+				references: len(ability.Content.References),
+				targets:    len(ability.Content.Targets),
+				declarations: func() int {
+					if ability.Static == nil {
+						return 0
+					}
+					return len(ability.Static.Declarations)
+				}(),
+			},
+			sourceSpans: []shared.Span{ability.Span},
+		}, nil
+	}
+	if ability.CloudKeyReduction {
+		return abilityLowering{
+			staticAbilities: []loweredStaticAbility{{Body: game.StaticAbility{
+				Text: ability.Text,
+				RuleEffects: []game.RuleEffect{{
+					Kind:           game.RuleEffectCostModifier,
+					AffectedPlayer: game.PlayerYou,
+					CostModifier: game.CostModifier{
+						Kind:                          game.CostModifierSpell,
+						GenericReduction:              1,
+						ChosenCardTypeFromEntryChoice: true,
+					},
+				}},
+			}}},
+			consumed: semanticConsumption{
+				conditions: len(ability.Content.Conditions),
+				effects:    len(ability.Content.Effects),
+				keywords:   len(ability.Content.Keywords),
+				references: len(ability.Content.References),
+				targets:    len(ability.Content.Targets),
+			},
+			sourceSpans: []shared.Span{ability.Span},
+		}, nil
+	}
 	if ability.SemblanceAnvilImprint {
 		content := game.Mode{Sequence: []game.Instruction{{
 			Optional: true,

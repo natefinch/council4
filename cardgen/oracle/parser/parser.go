@@ -150,6 +150,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitGoadedOpponentCreaturesCantBlock(document.Abilities)
 	emitQuestForRenewalUntap(document.Abilities)
 	emitSemblanceAnvil(document.Abilities)
+	emitCloudKey(document.Abilities)
 	emitSelfNameStaticRules(document.Abilities)
 	emitCost(document.Abilities)
 	emitOptional(document.Abilities)
@@ -223,6 +224,23 @@ func emitSemblanceAnvil(abilities []Ability) {
 		text := strings.TrimSpace(abilities[i].Text)
 		abilities[i].SemblanceAnvilImprint = strings.EqualFold(text, imprint)
 		abilities[i].SemblanceAnvilReduction = strings.EqualFold(text, reduction)
+	}
+}
+
+func emitCloudKey(abilities []Ability) {
+	const choice = "As this artifact enters, choose artifact, creature, enchantment, instant, or sorcery."
+	const reduction = "Spells you cast of the chosen type cost {1} less to cast."
+	hasChoice := false
+	for i := range abilities {
+		text := strings.TrimSpace(abilities[i].Text)
+		abilities[i].CloudKeyChoice = strings.EqualFold(text, choice)
+		hasChoice = hasChoice || abilities[i].CloudKeyChoice
+	}
+	if !hasChoice {
+		return
+	}
+	for i := range abilities {
+		abilities[i].CloudKeyReduction = strings.EqualFold(strings.TrimSpace(abilities[i].Text), reduction)
 	}
 }
 

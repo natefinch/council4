@@ -443,6 +443,9 @@ type ReplacementEffect struct {
 	// is stored on the permanent under EntryTypeChoiceKey for later abilities to
 	// read.
 	EntryTypeChoice bool
+	// EntryCardTypeChoice chooses among a bounded set of card types as the
+	// permanent enters and stores the result under EntryCardTypeChoiceKey.
+	EntryCardTypeChoice bool
 
 	// EntryDevourMultiplier marks a Devour as-enters replacement (CR 702.81) and
 	// carries its per-sacrificed-creature +1/+1 counter count N. As the permanent
@@ -684,6 +687,9 @@ type ReplacementEffect struct {
 // choice is stored on a Permanent's EntryChoices map. Abilities referencing "the
 // chosen type" read the result from this key.
 const EntryTypeChoiceKey = ChoiceKey("oracle-entry-type")
+
+// EntryCardTypeChoiceKey stores an entry-time card-type choice.
+const EntryCardTypeChoiceKey = ChoiceKey("oracle-entry-card-type")
 
 // EntryColorChoiceKey is the ChoiceKey under which an entry-time color choice is
 // stored on a Permanent's EntryChoices map. Mana abilities that add "one mana of

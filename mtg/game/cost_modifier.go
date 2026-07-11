@@ -70,8 +70,9 @@ type CostModifier struct {
 	// spells whose subtype matches the source permanent's entry-time
 	// creature-type choice (see EntryTypeChoiceKey). It is meaningful only on a
 	// CostModifierSpell whose CardSelection matches creatures by card type.
-	ChosenSubtypeFromEntryChoice bool
-	FirstCycleEachTurn           bool
+	ChosenSubtypeFromEntryChoice  bool
+	ChosenCardTypeFromEntryChoice bool
+	FirstCycleEachTurn            bool
 
 	// PerObjectReduction is a dynamic generic cost reduction scoped to spells
 	// ("This spell costs {N} less to cast for each <object>"; "[<filter>] spells

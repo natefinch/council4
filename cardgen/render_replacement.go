@@ -98,6 +98,9 @@ func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.Replace
 	if ability.Replacement.EntryTypeChoice {
 		return fmt.Sprintf("game.EntryTypeChoiceReplacement(%q)", ability.Text), nil
 	}
+	if ability.Replacement.EntryCardTypeChoice {
+		return fmt.Sprintf("game.EntryCardTypeChoiceReplacement(%q)", ability.Text), nil
+	}
 	if ability.Replacement.ContinuousZoneRedirect {
 		return r.renderGraveyardRedirectReplacement(ctx, ability)
 	}

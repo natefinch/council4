@@ -38,6 +38,8 @@ func compileAbility(
 		QuestForRenewalUntap:                        ability.QuestForRenewalUntap,
 		SemblanceAnvilImprint:                       ability.SemblanceAnvilImprint,
 		SemblanceAnvilReduction:                     ability.SemblanceAnvilReduction,
+		CloudKeyChoice:                              ability.CloudKeyChoice,
+		CloudKeyReduction:                           ability.CloudKeyReduction,
 	}
 	if ability.AbilityWord != nil {
 		compiled.AbilityWord = ability.AbilityWord.Label
@@ -216,6 +218,8 @@ func compileAbility(
 		!compiled.QuestForRenewalUntap &&
 		!compiled.SemblanceAnvilImprint &&
 		!compiled.SemblanceAnvilReduction &&
+		!compiled.CloudKeyChoice &&
+		!compiled.CloudKeyReduction &&
 		compiled.KeywordShare == nil &&
 		len(compiled.Content.Effects) == 0 && len(compiled.Content.Keywords) == 0 &&
 		!legacyEffectsPresent(ability.Sentences) &&
