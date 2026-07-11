@@ -42,6 +42,7 @@ var Cards = []cardset.Entry{
 	{Name: "Terrarion", New: Terrarion},
 	{Name: "Territorial Witchstalker", New: TerritorialWitchstalker},
 	{Name: "Terror", New: Terror},
+	{Name: "Terror of the Peaks", New: TerrorOfThePeaks},
 	{Name: "Tesak, Judith's Hellhound", New: TesakJudithSHellhound},
 	{Name: "Test of Faith", New: TestOfFaith},
 	{Name: "Tethered Griffin", New: TetheredGriffin},

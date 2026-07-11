@@ -1869,7 +1869,7 @@ func appendStaticSpellCostModifierDeclaration(body *game.StaticAbility, declarat
 		return appendStaticSpellPerObjectCostModifier(body, declaration)
 	}
 	reduces := cost.GenericReduction != 0
-	increases := cost.GenericIncrease != 0 || len(cost.ColoredIncrease) != 0
+	increases := cost.GenericIncrease != 0 || len(cost.ColoredIncrease) != 0 || cost.LifeIncrease != 0
 	if reduces == increases {
 		return false
 	}
@@ -1885,6 +1885,7 @@ func appendStaticSpellCostModifierDeclaration(body *game.StaticAbility, declarat
 		GenericReduction: cost.GenericReduction,
 		GenericIncrease:  cost.GenericIncrease,
 		ColoredIncrease:  slices.Clone(cost.ColoredIncrease),
+		LifeIncrease:     cost.LifeIncrease,
 		TargetsSource:    cost.TargetsSource,
 	}
 	if cost.SourceZone != "" {

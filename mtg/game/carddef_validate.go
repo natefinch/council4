@@ -1418,6 +1418,12 @@ func (v *cardDefValidator) validateCostModifier(faceName, path string, modifier 
 	if modifier.GenericReduction < 0 {
 		v.add(faceName, appendPath(path, "GenericReduction"), CardDefIssueInvalidRuleEffect, "generic cost reduction cannot be negative")
 	}
+	if modifier.LifeIncrease < 0 {
+		v.add(faceName, appendPath(path, "LifeIncrease"), CardDefIssueInvalidRuleEffect, "life cost increase cannot be negative")
+	}
+	if modifier.LifeIncrease > 0 && modifier.Kind != CostModifierSpell {
+		v.add(faceName, appendPath(path, "LifeIncrease"), CardDefIssueInvalidRuleEffect, "life cost increases must be spell modifiers")
+	}
 	for _, c := range modifier.ColoredIncrease {
 		if modifier.Kind != CostModifierSpell {
 			v.add(faceName, appendPath(path, "ColoredIncrease"), CardDefIssueInvalidRuleEffect, "colored cost increases must be spell modifiers")
