@@ -2656,7 +2656,13 @@ type CompiledEffect struct {
 	Replacement        parser.EffectReplacementSyntax
 	Payment            CompiledEffectPayment
 	Exact              bool
-	// KeywordGrantChoice marks a keyword grant whose listed keywords are a
+	// TapUntapReferenceObjectClean mirrors the parser flag: the tap or untap
+	// effect's clause is exactly "<verb> <object>." for the source or a singular
+	// back-reference, tolerating "you may" optionality and sibling-clause
+	// references. Lowering reads it to admit the self/back-reference tap-down
+	// family while a tap/untap whose clause would drop a trailing unrecognized
+	// conjunct stays unsupported.
+	TapUntapReferenceObjectClean bool
 	// disjunctive runtime choice ("gains banding, first strike, or trample")
 	// rather than a conjunctive grant of every listed keyword. Lowering keys on
 	// it to emit a choose-one keyword grant instead of granting all keywords.

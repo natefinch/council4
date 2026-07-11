@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,408 of 32,501 cards eligible for paper support (53.6%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,410 of 32,501 cards eligible for paper support (53.6%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -890,6 +890,7 @@ Council4 currently supports **17,408 of 32,501 cards eligible for paper support 
 - Aura Shards
 - Auramancer
 - Auratog
+- Aurelia, the Warleader
 - Auriok Bladewarden
 - Auriok Champion
 - Auriok Edgewright
@@ -4973,6 +4974,7 @@ Council4 currently supports **17,408 of 32,501 cards eligible for paper support 
 - Fear of Failed Tests
 - Fear of Isolation
 - Fear of Lost Teeth
+- Fear of Missing Out
 - Fear of Surveillance
 - Fearless Fledgling
 - Fearless Halberdier

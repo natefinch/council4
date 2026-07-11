@@ -71,7 +71,51 @@ func TestLowerAdditionalCombatPhaseCombatOnly(t *testing.T) {
 	}
 }
 
-// TestLowerAdditionalCombatPhaseRaiyuu proves Raiyuu, Storm's Edge lowers its
+// TestLowerAttacksFirstTimeEachTurnExtraCombat proves Aurelia, the Warleader's
+// "Whenever this creature attacks for the first time each turn, untap all
+// creatures you control. After this phase, there is an additional combat phase."
+// triggered ability lowers to a self-scoped attack trigger capped at one trigger
+// per turn, whose body untaps the controller's creatures and queues an extra
+// combat phase. The inline "for the first time each turn" qualifier on the attack
+// event is the wording exercised here.
+func TestLowerAttacksFirstTimeEachTurnExtraCombat(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Warleader",
+		Layout:     "normal",
+		TypeLine:   "Legendary Creature — Angel",
+		ManaCost:   "{2}{R}{R}{W}{W}",
+		OracleText: "Whenever this creature attacks for the first time each turn, untap all creatures you control. After this phase, there is an additional combat phase.",
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
+	}
+	ability := face.TriggeredAbilities[0]
+	if ability.Trigger.Pattern.Event != game.EventAttackerDeclared {
+		t.Fatalf("trigger event = %v, want EventAttackerDeclared", ability.Trigger.Pattern.Event)
+	}
+	if ability.Trigger.Pattern.Source != game.TriggerSourceSelf {
+		t.Fatalf("trigger source = %v, want TriggerSourceSelf", ability.Trigger.Pattern.Source)
+	}
+	if ability.MaxTriggersPerTurn != 1 {
+		t.Fatalf("MaxTriggersPerTurn = %d, want 1", ability.MaxTriggersPerTurn)
+	}
+	seq := ability.Content.Modes[0].Sequence
+	if len(seq) != 2 {
+		t.Fatalf("sequence = %#v, want two instructions", seq)
+	}
+	if _, ok := seq[0].Primitive.(game.Untap); !ok {
+		t.Fatalf("first primitive = %T, want game.Untap", seq[0].Primitive)
+	}
+	extra, ok := seq[1].Primitive.(game.AddExtraPhases)
+	if !ok {
+		t.Fatalf("second primitive = %T, want game.AddExtraPhases", seq[1].Primitive)
+	}
+	if !extra.Combat || extra.Main {
+		t.Fatalf("extra phases = %#v, want Combat only", extra)
+	}
+}
+
 // "untap it. If it's the first combat phase of the turn, there is an additional
 // combat phase after this phase." triggered ability into a two-instruction
 // sequence: an ungated untap of the triggering attacker, followed by an
@@ -112,5 +156,27 @@ func TestLowerAdditionalCombatPhaseRaiyuu(t *testing.T) {
 	}
 	if !seq[1].Condition.Val.Condition.Val.FirstCombatPhaseOfTurn {
 		t.Fatalf("gate condition = %#v, want FirstCombatPhaseOfTurn", seq[1].Condition.Val)
+	}
+}
+
+// TestLowerUntapItAndSubtypeConjunctionFailsClosed proves that an untap clause
+// whose object binding is a conjunction with an unsupported mass-untap-by-subtype
+// conjunct ("untap it and all Samurai you control") fails closed rather than
+// silently dropping the unsupported conjunct and shipping an under-implemented
+// untap of the attacker alone. Mass untap by subtype is unsupported on its own,
+// and folding it into a conjunction must not swallow it. This is the fail-closed
+// shape behind Godo, Bandit Warlord staying unsupported until mass untap by
+// subtype is implemented.
+func TestLowerUntapItAndSubtypeConjunctionFailsClosed(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFaceExpectingUnsupported(t, &ScryfallCard{
+		Name:       "Test Bandit Warlord",
+		Layout:     "normal",
+		TypeLine:   "Legendary Creature — Human Samurai",
+		ManaCost:   "{3}{R}{R}",
+		OracleText: "Whenever this creature attacks for the first time each turn, untap it and all Samurai you control.",
+	})
+	if len(face.TriggeredAbilities) != 0 {
+		t.Fatalf("triggered abilities = %d, want 0 (the dropped Samurai conjunct must fail the untap closed)", len(face.TriggeredAbilities))
 	}
 }

@@ -143,6 +143,7 @@ var Cards = []cardset.Entry{
 	{Name: "Atsushi, the Blazing Sky", New: AtsushiTheBlazingSky},
 	{Name: "Augur of Bolas", New: AugurOfBolas},
 	{Name: "Aura of Dominion", New: AuraOfDominion},
+	{Name: "Aurelia, the Warleader", New: AureliaTheWarleader},
 	{Name: "Auriok Glaivemaster", New: AuriokGlaivemaster},
 	{Name: "Aurochs", New: Aurochs},
 	{Name: "Aurochs Herd", New: AurochsHerd},

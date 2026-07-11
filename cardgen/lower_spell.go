@@ -1598,14 +1598,19 @@ func unsupportedDelayedEffectDiagnostic(ctx contentCtx) *shared.Diagnostic {
 // the source or a singular back-reference. It covers destroy, exile, tap, untap,
 // remove-from-combat, sacrifice, and return-to-hand. A "you may tap/untap
 // <it/this creature>" body carries its optionality at the ability level, leaving
-// the residual clause ("you may untap it") non-exact; that demotion is tolerated
-// for the tap/untap verbs so the self/back-reference tap-down family lowers
-// identically to its mandatory sibling, the engine asking the controller whether
-// to apply it.
+// the residual clause ("you may untap it") non-exact; that demotion, and the
+// analogous demotion when sibling clauses contribute extra references, is
+// tolerated for the tap/untap verbs so the self/back-reference tap-down family
+// lowers identically to its mandatory sibling, the engine asking the controller
+// whether to apply it. The tolerance is gated on the parser's
+// TapUntapReferenceObjectClean flag, which is false when the clause carries a
+// trailing unrecognized conjunct ("untap it and all Samurai you control"); such a
+// tap/untap stays unsupported rather than silently dropping the conjunct.
 func lowerReferencedPermanentEffect(ctx contentCtx) (game.AbilityContent, bool) {
 	exact := ctx.content.Effects[0].Exact
-	if ctx.content.Effects[0].Kind == compiler.EffectUntap ||
-		ctx.content.Effects[0].Kind == compiler.EffectTap {
+	if (ctx.content.Effects[0].Kind == compiler.EffectUntap ||
+		ctx.content.Effects[0].Kind == compiler.EffectTap) &&
+		ctx.content.Effects[0].TapUntapReferenceObjectClean {
 		exact = true
 	}
 	if len(ctx.content.Targets) != 0 ||

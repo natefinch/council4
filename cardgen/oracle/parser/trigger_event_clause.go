@@ -88,6 +88,19 @@ func stripInterveningWhileCondition(tokens []shared.Token, atoms Atoms) []shared
 	return tokens
 }
 
+// cutTrailingFirstTimeEachTurn strips a trailing "for the first time each turn"
+// ordinal qualifier from an event clause's remaining tokens, reporting the span
+// of the recognized qualifier. Event clauses that carry this qualifier (attack,
+// became-target) fold it onto the once-per-turn trigger cap through the shared
+// TriggerEventClause.FirstTimeEachTurn field.
+func cutTrailingFirstTimeEachTurn(tokens []shared.Token) ([]shared.Token, shared.Span, bool) {
+	if !endsWithSyntaxWords(tokens, "for", "the", "first", "time", "each", "turn") {
+		return tokens, shared.Span{}, false
+	}
+	ordinal := tokens[len(tokens)-6:]
+	return tokens[:len(tokens)-6], shared.SpanOf(ordinal), true
+}
+
 type zoneSubjectResult struct {
 	subject          TriggerEventSubject
 	controller       TriggerController

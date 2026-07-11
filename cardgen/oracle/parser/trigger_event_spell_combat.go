@@ -749,23 +749,29 @@ func parseAttackBlockTriggerEventClause(
 			Controller:  subject.controller,
 			ExcludeSelf: subject.excludeSelf,
 		}
-		if index+1 == len(tokens) {
+		suffix := tokens[index+1:]
+		if rest, span, ok := cutTrailingFirstTimeEachTurn(suffix); ok {
+			clause.FirstTimeEachTurn = true
+			clause.FirstTimeEachTurnSpan = span
+			suffix = rest
+		}
+		if len(suffix) == 0 {
 			return clause
 		}
-		if syntaxWordsEqual(tokens[index+1:], "alone") {
+		if syntaxWordsEqual(suffix, "alone") {
 			clause.AttackAlone = true
 			return clause
 		}
-		if syntaxWordsEqual(tokens[index+1:], "and", "isn't", "blocked") ||
-			syntaxWordsEqual(tokens[index+1:], "and", "is", "not", "blocked") {
+		if syntaxWordsEqual(suffix, "and", "isn't", "blocked") ||
+			syntaxWordsEqual(suffix, "and", "is", "not", "blocked") {
 			clause.Kind = TriggerEventKindAttacksUnblocked
 			return clause
 		}
-		if syntaxWordsEqual(tokens[index+1:], "while", "saddled") {
+		if syntaxWordsEqual(suffix, "while", "saddled") {
 			clause.AttackWhileSaddled = true
 			return clause
 		}
-		recipient, player, ok := parseAttackRecipient(tokens[index+1:])
+		recipient, player, ok := parseAttackRecipient(suffix)
 		if !ok {
 			return nil
 		}

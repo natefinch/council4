@@ -710,10 +710,9 @@ func parseBecameTargetTriggerEventClause(
 	cause := tokens[index+4:]
 	firstTimeEachTurn := false
 	var firstTimeSpan shared.Span
-	if endsWithSyntaxWords(cause, "for", "the", "first", "time", "each", "turn") {
-		ordinal := cause[len(cause)-6:]
-		firstTimeSpan = shared.SpanOf(ordinal)
-		cause = cause[:len(cause)-6]
+	if rest, span, ok := cutTrailingFirstTimeEachTurn(cause); ok {
+		firstTimeSpan = span
+		cause = rest
 		firstTimeEachTurn = true
 	}
 	causeController := TriggerEventActorUnknown

@@ -484,6 +484,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				CoordinatedSourceSubject:                syntax.CoordinatedSourceSubject,
 				Payment:                                 compileEffectPayment(syntax.Payment),
 				Exact:                                   syntax.Exact,
+				TapUntapReferenceObjectClean:            syntax.TapUntapReferenceObjectClean,
 				KeywordGrantChoice:                      syntax.KeywordGrantChoice,
 				KeywordGrantChoiceAtRandom:              syntax.KeywordGrantChoiceAtRandom,
 				KeywordChoiceAtRandomPreludeSpan:        syntax.KeywordChoiceAtRandomPreludeSpan,
