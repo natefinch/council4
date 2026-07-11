@@ -525,7 +525,7 @@ func permanentMatchesCostSelection(g *game.Game, permanent *game.Permanent, sel 
 		kind:      subjectPermanent,
 		g:         g,
 		permanent: permanent,
-		values:    &values,
+		values:    values,
 	}
 	if sel.Controller != game.ControllerAny {
 		subject.controller = effectiveController(g, permanent)

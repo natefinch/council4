@@ -81,3 +81,38 @@ Earlier work for context (#717): the static-source frame cache made
 effective-value computation ~14× faster and realistic micro full games ~2×
 faster, and it already limits how often `BodyAt` is called (once per permanent
 per read frame). See PR #724.
+
+### Immutable face views and allocation-free derived-value helpers
+
+Profiling the realistic perf decks found several representation costs that did
+not contribute to game decisions:
+
+- rules queries deep-cloned a complete `CardFace` ability tree when reading a
+  back/alternate face;
+- continuous-effect matching allocated a synthetic `StackObject` per
+  effect/permanent applicability check;
+- every effective-value computation allocated a map for fewer than 128
+  possible keywords;
+- selection matching took the address of local effective-value snapshots,
+  forcing them onto the heap;
+- dependency ordering built dependency-graph working sets even when no effect
+  declared dependencies.
+
+The optimized paths use explicit immutable `CardFace` views, a
+controller-backed reference resolver, a fixed keyword bitset, by-value
+selection snapshots, and a dependency-free ordering fast path. Mutable callers
+retain the existing deep-copy APIs.
+
+One seeded game per agent profile, `GOMAXPROCS=1`, `-benchtime=1x -benchmem`.
+Allocation metrics are the stable comparison; wall time is shown only as a
+directional result on the contended development host.
+
+| Agent | Before B/op | After B/op | Change | Before allocs/op | After allocs/op | Change |
+|-------|------------:|-----------:|-------:|-----------------:|----------------:|-------:|
+| FirstLegal | 71,319,581,232 | 4,221,775,464 | **−94.1%** | 67,579,110 | 34,658,404 | **−48.7%** |
+| Generic | 10,006,704,528 | 1,691,696,104 | **−83.1%** | 8,745,859 | 4,446,333 | **−49.2%** |
+| Search (budget 8) | 54,384,549,344 | 9,654,084,408 | **−82.2%** | 49,702,253 | 29,569,107 | **−40.5%** |
+
+The complete structured `GameResult` for both the Generic and Search benchmark
+games was SHA-256 identical before and after the changes, including every turn,
+action, event, and final state.

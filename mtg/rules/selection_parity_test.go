@@ -169,7 +169,7 @@ func matchConditionFilter(g *game.Game, permanent *game.Permanent, sel game.Sele
 		kind:      subjectPermanent,
 		g:         g,
 		permanent: permanent,
-		values:    &values,
+		values:    values,
 		viewer:    game.Player1,
 		useBase:   useBase,
 	}
@@ -482,7 +482,7 @@ func TestSharedMatcherRichCombination(t *testing.T) {
 	matched := make([]id.ID, 0)
 	for _, permanent := range board.all {
 		values := effectivePermanentValues(g, permanent)
-		subject := selectionSubject{kind: subjectPermanent, g: g, permanent: permanent, values: &values, viewer: game.Player1, clampPower: true}
+		subject := selectionSubject{kind: subjectPermanent, g: g, permanent: permanent, values: values, viewer: game.Player1, clampPower: true}
 		if matchSelection(&subject, &sel) {
 			matched = append(matched, permanent.ObjectID)
 		}
@@ -588,7 +588,7 @@ func matchSelectionForPermanent(g *game.Game, controller game.PlayerID, sel game
 		kind:       subjectPermanent,
 		g:          g,
 		permanent:  permanent,
-		values:     &values,
+		values:     values,
 		viewer:     controller,
 		clampPower: true,
 	}

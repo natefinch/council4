@@ -679,7 +679,7 @@ func resolvedObjectMatchesConditionSelection(
 			kind:      subjectPermanent,
 			g:         g,
 			permanent: resolved.permanent,
-			values:    &values,
+			values:    values,
 			viewer:    ctx.controller,
 		}
 		if selection.Controller != game.ControllerAny {
@@ -827,7 +827,7 @@ func playersControlMatchingSelection(g *game.Game, ctx conditionContext, control
 			kind:      subjectPermanent,
 			g:         g,
 			permanent: permanent,
-			values:    &values,
+			values:    values,
 			viewer:    ctx.controller,
 			useBase:   ctx.useBaseCharacteristics,
 		}
@@ -916,7 +916,7 @@ func countPlayerMatchingSelection(g *game.Game, ctx conditionContext, player gam
 			kind:      subjectPermanent,
 			g:         g,
 			permanent: permanent,
-			values:    &values,
+			values:    values,
 			viewer:    ctx.controller,
 			useBase:   ctx.useBaseCharacteristics,
 		}

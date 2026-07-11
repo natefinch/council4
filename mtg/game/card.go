@@ -189,6 +189,22 @@ func (c *CardDef) Face(index FaceIndex) (CardFace, bool) {
 	}
 }
 
+// FaceView returns a read-only pointer to one printed face without cloning it.
+// Card definitions are immutable, so rules queries can safely retain this
+// pointer. Callers that need an owned value must use Face.
+func (c *CardDef) FaceView(index FaceIndex) (*CardFace, bool) {
+	switch index {
+	case FaceFront:
+		return &c.CardFace, true
+	case FaceBack:
+		return &c.Back.Val, c.Back.Exists
+	case FaceAlternate:
+		return &c.Alternate.Val, c.Alternate.Exists
+	default:
+		return nil, false
+	}
+}
+
 // FaceDef returns a CardDef-shaped copy of one face's characteristics. It is a
 // bridge for rules helpers that still operate on CardDef values.
 func (c *CardDef) FaceDef(index FaceIndex) (*CardDef, bool) {
@@ -197,6 +213,22 @@ func (c *CardDef) FaceDef(index FaceIndex) (*CardDef, bool) {
 		return nil, false
 	}
 	return face.ToCardDef(c), true
+}
+
+// FaceDefView returns a CardDef-shaped read-only view of one face's
+// characteristics. Unlike FaceDef, it shares the immutable face's slices and
+// nested ability data instead of deep-cloning them. Rules queries that only read
+// printed characteristics should use this view; callers that need to mutate the
+// result must use FaceDef.
+func (c *CardDef) FaceDefView(index FaceIndex) (*CardDef, bool) {
+	if index == FaceFront {
+		return c, true
+	}
+	face, ok := c.FaceView(index)
+	if !ok {
+		return nil, false
+	}
+	return &CardDef{CardFace: *face, ColorIdentity: c.ColorIdentity}, true
 }
 
 // AlternateFace returns the alternate face for adventure, split, and prepare layouts.
@@ -222,7 +254,7 @@ func (c *CardDef) FaceIndexes() []FaceIndex {
 // cards cast copies of their spell face from prepared battlefield permanents.
 // Other layouts cast only their front face.
 func (c *CardDef) CanChooseCastFace(index FaceIndex) bool {
-	face, ok := c.Face(index)
+	face, ok := c.FaceView(index)
 	if !ok || face.HasType(types.Land) {
 		return false
 	}
@@ -245,7 +277,7 @@ func (c *CardDef) CanChooseCastFace(index FaceIndex) bool {
 
 // CanChooseLandFace reports whether this face can be played as a land.
 func (c *CardDef) CanChooseLandFace(index FaceIndex) bool {
-	face, ok := c.Face(index)
+	face, ok := c.FaceView(index)
 	if !ok || !face.HasType(types.Land) {
 		return false
 	}

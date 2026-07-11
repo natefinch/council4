@@ -24,6 +24,13 @@ type referenceResolver struct {
 	g   *game.Game
 	obj *game.StackObject
 
+	// controller overrides obj.Controller when controllerFixed is set. Static
+	// continuous effects have a controller and source permanent but no resolving
+	// stack object, so this avoids manufacturing one for every applicability
+	// check.
+	controller      game.PlayerID
+	controllerFixed bool
+
 	// source overrides the stack-derived source permanent when sourceFixed is
 	// set. A nil source with sourceFixed true means "no source permanent".
 	source      *game.Permanent
@@ -40,6 +47,26 @@ func newReferenceResolver(g *game.Game, obj *game.StackObject) referenceResolver
 // source-dependent selectors when the calling context has no source object.
 func newReferenceResolverWithSource(g *game.Game, obj *game.StackObject, source *game.Permanent) referenceResolver {
 	return referenceResolver{g: g, obj: obj, source: source, sourceFixed: true}
+}
+
+func newReferenceResolverWithControllerAndSource(g *game.Game, controller game.PlayerID, source *game.Permanent) referenceResolver {
+	return referenceResolver{
+		g:               g,
+		controller:      controller,
+		controllerFixed: true,
+		source:          source,
+		sourceFixed:     true,
+	}
+}
+
+func (r referenceResolver) resolvingController() game.PlayerID {
+	if r.controllerFixed {
+		return r.controller
+	}
+	if r.obj != nil {
+		return r.obj.Controller
+	}
+	return 0
 }
 
 type resolvedObjectReference struct {
@@ -101,6 +128,9 @@ func (r referenceResolver) object(ref game.ObjectReference) (resolvedObjectRefer
 		}
 		return resolvePermanentOrLastKnown(r.g, objectID)
 	case game.ObjectReferenceTargetStackObject:
+		if r.obj == nil {
+			return resolvedObjectReference{}, false
+		}
 		objectID, ok := effectStackObjectID(r.obj, ref.TargetIndex())
 		if !ok {
 			controller, known := r.obj.TargetControllerLKI[ref.TargetIndex()]
@@ -249,7 +279,7 @@ func (r referenceResolver) player(ref game.PlayerReference) (game.PlayerID, bool
 	var ok bool
 	switch ref.Kind() {
 	case game.PlayerReferenceController:
-		playerID, ok = r.obj.Controller, true
+		playerID, ok = r.resolvingController(), true
 	case game.PlayerReferenceTargetPlayer:
 		playerID, ok = r.targetPlayer(ref.TargetIndex())
 	case game.PlayerReferenceObjectController:
@@ -353,7 +383,7 @@ func triggeringEventPlayer(event game.Event) (game.PlayerID, bool) {
 func (r referenceResolver) playerGroup(ref game.PlayerGroupReference) []game.PlayerID {
 	switch ref.Kind {
 	case game.PlayerGroupReferenceOpponents:
-		return aliveOpponents(r.g, r.obj.Controller)
+		return aliveOpponents(r.g, r.resolvingController())
 	case game.PlayerGroupReferenceAllPlayers:
 		players := make([]game.PlayerID, 0, game.NumPlayers)
 		for _, player := range r.g.Players {
@@ -557,7 +587,7 @@ func (r referenceResolver) triggeringAttackersGroupMembers(ref game.GroupReferen
 		}
 		if defenderFilter != game.TriggerControllerAny {
 			defendingPlayer, ok := triggeringAttackerDefendingPlayer(r.g, r.obj.TriggerEvent, objectID)
-			if !ok || !triggerControllerMatches(r.obj.Controller, defenderFilter, defendingPlayer) {
+			if !ok || !triggerControllerMatches(r.resolvingController(), defenderFilter, defendingPlayer) {
 				continue
 			}
 		}
@@ -750,8 +780,8 @@ func (r referenceResolver) permanentMatchesGroupSelection(sel *game.Selection, s
 		kind:              subjectPermanent,
 		g:                 r.g,
 		permanent:         permanent,
-		values:            &values,
-		viewer:            r.obj.Controller,
+		values:            values,
+		viewer:            r.resolvingController(),
 		resolutionChoices: r.obj.ResolutionChoices,
 	}
 	if sel.Controller != game.ControllerAny {
@@ -863,7 +893,7 @@ func resolveSourcePermanentOrLastKnown(g *game.Game, objectID id.ID) (resolvedOb
 }
 
 func targetPermanentObjectID(obj *game.StackObject, targetIndex int) (id.ID, bool) {
-	if targetIndex < 0 || targetIndex >= len(obj.Targets) {
+	if obj == nil || targetIndex < 0 || targetIndex >= len(obj.Targets) {
 		return 0, false
 	}
 	target := obj.Targets[targetIndex]

@@ -208,6 +208,9 @@ const (
 	// granted ("Equipped creature has myriad."). Appended at the end of the enum
 	// so existing keyword ordinals are unchanged.
 	Myriad
+	// KeywordCount is one greater than the largest real keyword value. It sizes
+	// compact keyword sets; it is not itself a keyword.
+	KeywordCount
 )
 
 // Reusable StaticAbilityBody templates for non-parameterized keyword abilities.

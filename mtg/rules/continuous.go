@@ -48,7 +48,47 @@ type permanentEffectiveValues struct {
 	toughnessOK      bool
 	toughnessPT      *game.PT
 	dynamicToughness *game.DynamicValue
-	keywords         map[game.Keyword]bool
+	keywords         keywordSet
+}
+
+type keywordSet [(int(game.KeywordCount) + 63) / 64]uint64
+
+func (s *keywordSet) set(keyword game.Keyword, present bool) {
+	if keyword <= game.KeywordNone || keyword >= game.KeywordCount {
+		return
+	}
+	word, bit := int(keyword)/64, uint(keyword)%64
+	if present {
+		s[word] |= uint64(1) << bit
+	} else {
+		s[word] &^= uint64(1) << bit
+	}
+}
+
+func (s *keywordSet) has(keyword game.Keyword) bool {
+	if keyword <= game.KeywordNone || keyword >= game.KeywordCount {
+		return false
+	}
+	word, bit := int(keyword)/64, uint(keyword)%64
+	return s[word]&(uint64(1)<<bit) != 0
+}
+
+func (s *keywordSet) clear() {
+	clear(s[:])
+}
+
+func (s *keywordSet) each(yield func(game.Keyword)) {
+	for keyword := game.KeywordNone + 1; keyword < game.KeywordCount; keyword++ {
+		if s.has(keyword) {
+			yield(keyword)
+		}
+	}
+}
+
+func addBodyKeywords(set *keywordSet, body game.Ability) {
+	for _, ability := range game.BodyKeywordAbilities(body) {
+		set.set(game.KeywordAbilityKind(ability), true)
+	}
 }
 
 func effectivePower(g *game.Game, permanent *game.Permanent) int {
@@ -65,7 +105,8 @@ func effectiveToughness(g *game.Game, permanent *game.Permanent) (int, bool) {
 }
 
 func hasKeyword(g *game.Game, permanent *game.Permanent, keyword game.Keyword) bool {
-	return effectivePermanentValues(g, permanent).keywords[keyword]
+	values := effectivePermanentValues(g, permanent)
+	return values.keywords.has(keyword)
 }
 
 func permanentHasType(g *game.Game, permanent *game.Permanent, cardType types.Card) bool {
@@ -223,7 +264,7 @@ func effectivePermanentValues(g *game.Game, permanent *game.Permanent) permanent
 	applyContinuousLayers(g, permanent, &values)
 	applyAddedBasicLandManaAbilities(&values, baseSubtypes)
 	for _, keyword := range keywordCounters(permanent) {
-		values.keywords[keyword] = true
+		values.keywords.set(keyword, true)
 	}
 	if fc != nil {
 		if fc.values == nil {
@@ -240,7 +281,7 @@ func effectivePermanentValues(g *game.Game, permanent *game.Permanent) permanent
 // or copy (CR 613.1). Face-down permanents start as 2/2 creatures with no text,
 // name, subtypes, or mana cost (CR 613.2b, CR 708.2a).
 func basePermanentValues(g *game.Game, permanent *game.Permanent) permanentEffectiveValues {
-	values := permanentEffectiveValues{keywords: make(map[game.Keyword]bool)}
+	values := permanentEffectiveValues{}
 	values.controller = permanent.Controller
 	if permanent.FaceDown {
 		values.types = []types.Card{types.Creature}
@@ -580,7 +621,7 @@ func applyContinuousLayers(g *game.Game, permanent *game.Permanent, values *perm
 	sources := staticAbilitySources(g)
 	counterEffect, hasCounterEffect := counterAndTemporaryEffect(permanent)
 	for _, layer := range continuousLayers {
-		if layer == game.LayerType && values.keywords[game.Changeling] {
+		if layer == game.LayerType && values.keywords.has(game.Changeling) {
 			values.subtypes = append([]types.Sub(nil), types.SubtypesForType(types.Creature)...)
 		}
 		effects := continuousEffectsForLayer(g, permanent, values, layer, sources)
@@ -628,7 +669,7 @@ func permanentValuesBeforeLayer(g *game.Game, permanent *game.Permanent, stop ga
 		if layer == stop {
 			break
 		}
-		if layer == game.LayerType && values.keywords[game.Changeling] {
+		if layer == game.LayerType && values.keywords.has(game.Changeling) {
 			values.subtypes = append([]types.Sub(nil), types.SubtypesForType(types.Creature)...)
 		}
 		effects := continuousEffectsForLayer(g, permanent, &values, layer, sources)
@@ -680,7 +721,7 @@ func continuousEffectsForLayer(g *game.Game, permanent *game.Permanent, values *
 
 type staticAbilitySource struct {
 	permanent  *game.Permanent
-	card       *game.CardDef
+	face       *game.CardFace
 	cardID     id.ID
 	controller game.PlayerID
 	timestamp  game.Timestamp
@@ -689,7 +730,7 @@ type staticAbilitySource struct {
 func staticAbilityContinuousEffectsForLayer(g *game.Game, permanent *game.Permanent, values *permanentEffectiveValues, layer game.ContinuousLayer, sources []staticAbilitySource) []game.ContinuousEffect {
 	var effects []game.ContinuousEffect
 	for _, source := range sources {
-		if !staticAbilityCardHasLayer(source.card, source.permanent != nil, layer) {
+		if !staticAbilityCardHasLayer(source.face, source.permanent != nil, layer) {
 			continue
 		}
 		if source.permanent != nil && layer != game.LayerControl {
@@ -719,12 +760,12 @@ func buildStaticAbilitySources(g *game.Game) []staticAbilitySource {
 			continue
 		}
 		visitPermanentStaticAbilityComponents(g, permanent, func(component permanentAbilityComponent) {
-			if !staticAbilityCardHasContinuousEffects(component.card, true) {
+			if !staticAbilityCardHasContinuousEffects(component.face, true) {
 				return
 			}
 			sources = append(sources, staticAbilitySource{
 				permanent:  permanent,
-				card:       component.card,
+				face:       component.face,
 				cardID:     component.cardID,
 				controller: permanent.Controller,
 				timestamp:  permanent.Timestamp(),
@@ -739,12 +780,12 @@ func buildStaticAbilitySources(g *game.Game) []staticAbilitySource {
 				return true
 			}
 			component, ok := staticAbilityCardInstanceComponent(card, game.FaceFront)
-			if !ok || len(component.card.StaticAbilities) == 0 ||
-				!staticAbilityCardHasContinuousEffects(component.card, false) {
+			if !ok || len(component.face.StaticAbilities) == 0 ||
+				!staticAbilityCardHasContinuousEffects(component.face, false) {
 				return true
 			}
 			sources = append(sources, staticAbilitySource{
-				card:       component.card,
+				face:       component.face,
 				cardID:     card.ID,
 				controller: card.Owner,
 				timestamp:  game.Timestamp(card.ID),
@@ -756,7 +797,7 @@ func buildStaticAbilitySources(g *game.Game) []staticAbilitySource {
 }
 
 type permanentAbilityComponent struct {
-	card   *game.CardDef
+	face   *game.CardFace
 	cardID id.ID
 }
 
@@ -765,7 +806,7 @@ func visitPermanentStaticAbilityComponents(g *game.Game, permanent *game.Permane
 	if !ok {
 		return
 	}
-	if len(component.card.StaticAbilities) > 0 {
+	if len(component.face.StaticAbilities) > 0 {
 		visit(component)
 	}
 	for _, merged := range permanent.MergedCards {
@@ -773,9 +814,9 @@ func visitPermanentStaticAbilityComponents(g *game.Game, permanent *game.Permane
 			continue
 		}
 		if merged.TokenDef != nil {
-			def, ok := merged.TokenDef.FaceDef(merged.Face)
-			if ok && len(def.StaticAbilities) > 0 {
-				visit(permanentAbilityComponent{card: def})
+			face, ok := merged.TokenDef.FaceView(merged.Face)
+			if ok && len(face.StaticAbilities) > 0 {
+				visit(permanentAbilityComponent{face: face})
 			}
 			continue
 		}
@@ -784,7 +825,7 @@ func visitPermanentStaticAbilityComponents(g *game.Game, permanent *game.Permane
 			continue
 		}
 		component, ok := staticAbilityCardInstanceComponent(instance, merged.Face)
-		if ok && len(component.card.StaticAbilities) > 0 {
+		if ok && len(component.face.StaticAbilities) > 0 {
 			visit(component)
 		}
 	}
@@ -792,8 +833,8 @@ func visitPermanentStaticAbilityComponents(g *game.Game, permanent *game.Permane
 
 func staticAbilitySourceContinuousEffects(g *game.Game, source staticAbilitySource, permanent *game.Permanent, values *permanentEffectiveValues, layer game.ContinuousLayer) []game.ContinuousEffect {
 	var effects []game.ContinuousEffect
-	for i := range source.card.StaticAbilities {
-		body := &source.card.StaticAbilities[i]
+	for i := range source.face.StaticAbilities {
+		body := &source.face.StaticAbilities[i]
 		if !staticAbilityFunctionsFromSource(body, source) || !staticAbilityHasEffectForLayer(body, layer) {
 			continue
 		}
@@ -877,39 +918,36 @@ func staticAbilityPermanentComponent(g *game.Game, permanent *game.Permanent) (p
 	if permanent.FaceDown {
 		return permanentAbilityComponent{}, false
 	}
+	var def *game.CardDef
 	if permanent.Token {
-		if permanent.TokenDef == nil {
+		def = permanent.TokenDef
+	} else {
+		card, ok := g.GetCardInstance(permanent.CardInstanceID)
+		if !ok {
 			return permanentAbilityComponent{}, false
 		}
-		if !permanent.TokenDef.Back.Exists && permanent.Face == game.FaceFront {
-			return permanentAbilityComponent{card: permanent.TokenDef}, true
-		}
-		def, ok := permanent.TokenDef.FaceDef(permanent.Face)
-		return permanentAbilityComponent{card: def}, ok
+		def = card.Def
 	}
-	card, ok := g.GetCardInstance(permanent.CardInstanceID)
+	if def == nil {
+		return permanentAbilityComponent{}, false
+	}
+	face, ok := def.FaceView(permanent.Face)
 	if !ok {
 		return permanentAbilityComponent{}, false
 	}
-	if !card.Def.Back.Exists && permanent.Face == game.FaceFront {
-		return permanentAbilityComponent{
-			card:   card.Def,
-			cardID: permanent.CardInstanceID,
-		}, true
+	component := permanentAbilityComponent{face: face}
+	if !permanent.Token {
+		component.cardID = permanent.CardInstanceID
 	}
-	def, ok := card.Def.FaceDef(permanent.Face)
-	return permanentAbilityComponent{
-		card:   def,
-		cardID: permanent.CardInstanceID,
-	}, ok
+	return component, true
 }
 
 func staticAbilityCardInstanceComponent(card *game.CardInstance, face game.FaceIndex) (permanentAbilityComponent, bool) {
 	if card == nil {
 		return permanentAbilityComponent{}, false
 	}
-	def, ok := cardFaceDef(card, face)
-	return permanentAbilityComponent{card: def, cardID: card.ID}, ok
+	faceDef, ok := card.Def.FaceView(face)
+	return permanentAbilityComponent{face: faceDef, cardID: card.ID}, ok
 }
 
 func staticAbilityHasEffectForLayer(body *game.StaticAbility, layer game.ContinuousLayer) bool {
@@ -953,7 +991,7 @@ func continuousEffectApplies(g *game.Game, permanent *game.Permanent, values *pe
 		return false
 	}
 	source, _ := permanentByObjectID(g, effect.SourceObjectID)
-	resolver := newReferenceResolverWithSource(g, &game.StackObject{Controller: effect.Controller}, source)
+	resolver := newReferenceResolverWithControllerAndSource(g, effect.Controller, source)
 	switch effect.Group.Domain() {
 	case game.GroupDomainAttachedObject:
 		anchor, ok := effect.Group.Anchor()
@@ -1012,7 +1050,7 @@ func continuousSelectionApplies(g *game.Game, resolver referenceResolver, group 
 		kind:      subjectPermanent,
 		g:         g,
 		permanent: permanent,
-		values:    values,
+		values:    *values,
 		viewer:    controller,
 	}
 	if sel.Controller != game.ControllerAny {
@@ -1049,6 +1087,16 @@ func orderContinuousEffects(effects []game.ContinuousEffect) []game.ContinuousEf
 		for j := i; j > 0 && compareContinuousEffects(&ordered[j], &ordered[j-1]) < 0; j-- {
 			ordered[j], ordered[j-1] = ordered[j-1], ordered[j]
 		}
+	}
+	hasDependencies := false
+	for i := range ordered {
+		if len(ordered[i].DependsOn) > 0 {
+			hasDependencies = true
+			break
+		}
+	}
+	if !hasDependencies {
+		return ordered
 	}
 	remaining := append([]game.ContinuousEffect(nil), ordered...)
 	result := make([]game.ContinuousEffect, 0, len(ordered))
@@ -1210,17 +1258,17 @@ func applyContinuousEffect(g *game.Game, permanent *game.Permanent, values *perm
 	case game.LayerAbility:
 		if effect.RemoveAllAbilities {
 			values.abilities = nil
-			clear(values.keywords)
+			values.keywords.clear()
 		}
 		for _, body := range effect.AddAbilities {
 			values.abilities = append(values.abilities, body)
-			game.BodyAddKeywordKindsTo(body, values.keywords)
+			addBodyKeywords(&values.keywords, body)
 		}
 		for _, keyword := range effect.RemoveKeywords {
-			values.keywords[keyword] = false
+			values.keywords.set(keyword, false)
 		}
 		for _, keyword := range effect.AddKeywords {
-			values.keywords[keyword] = true
+			values.keywords.set(keyword, true)
 		}
 	case game.LayerPowerToughnessSet:
 		// Layer 7b: effects that set power and/or toughness to a specific value
@@ -1414,17 +1462,13 @@ func applyCounterAndTemporaryValues(permanent *game.Permanent, values *permanent
 }
 
 func rebuildKeywords(permanent *game.Permanent, values *permanentEffectiveValues) {
-	if values.keywords == nil {
-		values.keywords = make(map[game.Keyword]bool)
-	} else {
-		clear(values.keywords)
-	}
+	values.keywords.clear()
 	for _, body := range values.abilities {
 		if static, ok := body.(*game.StaticAbility); ok &&
 			!levelBandKeywordConditionSatisfied(permanent, static.Condition) {
 			continue
 		}
-		game.BodyAddKeywordKindsTo(body, values.keywords)
+		addBodyKeywords(&values.keywords, body)
 	}
 }
 

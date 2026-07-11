@@ -391,7 +391,7 @@ func permanentTargetMatchesSpec(g *game.Game, controller game.PlayerID, sourceOb
 			kind:           subjectPermanent,
 			g:              g,
 			permanent:      permanent,
-			values:         &values,
+			values:         values,
 			viewer:         controller,
 			sourceObjectID: sourceObjectID,
 			event:          triggerEvent,

@@ -8,10 +8,7 @@ import (
 )
 
 func cardFaceDef(card *game.CardInstance, face game.FaceIndex) (*game.CardDef, bool) {
-	if face == game.FaceFront {
-		return card.Def, true
-	}
-	return card.Def.FaceDef(face)
+	return card.Def.FaceDefView(face)
 }
 
 func cardFaceOrDefault(card *game.CardInstance, face game.FaceIndex) *game.CardDef {
@@ -27,10 +24,7 @@ func permanentFaceDef(g *game.Game, permanent *game.Permanent) (*game.CardDef, b
 		if permanent.TokenDef == nil {
 			return nil, false
 		}
-		if permanent.Face == game.FaceFront {
-			return permanent.TokenDef, true
-		}
-		return permanent.TokenDef.FaceDef(permanent.Face)
+		return permanent.TokenDef.FaceDefView(permanent.Face)
 	}
 	card, ok := g.GetCardInstance(permanent.CardInstanceID)
 	if !ok {

@@ -12,7 +12,7 @@ import (
 // blocker.
 func attackerLandwalkUnblockableBy(g *game.Game, attacker, blocker *game.Permanent) bool {
 	values := effectivePermanentValues(g, attacker)
-	if !values.keywords[game.Landwalk] {
+	if !values.keywords.has(game.Landwalk) {
 		return false
 	}
 	defender := effectiveController(g, blocker)

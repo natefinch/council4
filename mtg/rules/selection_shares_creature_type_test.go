@@ -24,7 +24,7 @@ func matchSelectionFromSource(
 		kind:           subjectPermanent,
 		g:              g,
 		permanent:      permanent,
-		values:         &values,
+		values:         values,
 		viewer:         controller,
 		sourceObjectID: sourceObjectID,
 		clampPower:     true,
