@@ -553,7 +553,14 @@ type StaticCostModifierDeclaration struct {
 	// Derelor and the mono-color Leech cycle). Each entry is one basic colored
 	// mana symbol. It is set only when GenericIncrease is zero and the modifier
 	// raises rather than lowers the cost; an empty slice adds no colored mana.
-	ColoredIncrease    []mana.Color
+	ColoredIncrease []mana.Color
+	// LifeIncrease, when positive, is the life a cast-cost tax adds as an
+	// additional cost ("Spells your opponents cast that target this creature
+	// cost an additional 3 life to cast.", Terror of the Peaks). It is set only
+	// on a spell increase; the caster pays that much life on top of the spell's
+	// mana cost. It is mutually exclusive with GenericIncrease and
+	// ColoredIncrease.
+	LifeIncrease       int
 	SetManaCost        string
 	ReplaceManaCost    bool
 	FirstCycleEachTurn bool
@@ -4170,7 +4177,7 @@ func recognizeStaticSpellCostModifierDeclaration(ability CompiledAbility, static
 	if !ok {
 		return StaticDeclaration{}, false
 	}
-	if node.CostReductionAmount <= 0 && len(coloredIncrease) == 0 {
+	if node.CostReductionAmount <= 0 && len(coloredIncrease) == 0 && node.CostIncreaseLife <= 0 {
 		return StaticDeclaration{}, false
 	}
 	if node.SpellCastZone != "" && node.ChosenCreatureType {
@@ -4210,6 +4217,7 @@ func recognizeStaticSpellCostModifierDeclaration(ability CompiledAbility, static
 	case parser.StaticDeclarationCostModifierSpellIncrease:
 		cost.GenericIncrease = node.CostReductionAmount
 		cost.ColoredIncrease = coloredIncrease
+		cost.LifeIncrease = node.CostIncreaseLife
 	case parser.StaticDeclarationCostModifierSpellSharedExiledTypeReduction:
 		cost.SharedExiledCardTypeReduction = node.CostReductionAmount
 	case parser.StaticDeclarationCostModifierSpellPerObjectReduction:

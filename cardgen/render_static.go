@@ -1109,6 +1109,9 @@ func (r Renderer) renderCostModifier(ctx *renderCtx, modifier game.CostModifier)
 	if modifier.GenericIncrease != 0 {
 		fields = append(fields, fmt.Sprintf("GenericIncrease: %d,", modifier.GenericIncrease))
 	}
+	if modifier.LifeIncrease != 0 {
+		fields = append(fields, fmt.Sprintf("LifeIncrease: %d,", modifier.LifeIncrease))
+	}
 	if modifier.GenericReduction != 0 {
 		fields = append(fields, fmt.Sprintf("GenericReduction: %d,", modifier.GenericReduction))
 	}

@@ -514,7 +514,14 @@ type StaticDeclarationSyntax struct {
 	// clause; it is set only with StaticDeclarationCostModifierSpellIncrease. An
 	// empty slice means the increase adds no colored mana.
 	CostIncreaseColors []mana.Color `json:",omitempty"`
-	CostReplacement    string       `json:",omitempty"`
+	// CostIncreaseLife carries the life a cast-cost tax adds as an additional
+	// cost ("Spells your opponents cast that target this creature cost an
+	// additional 3 life to cast.", Terror of the Peaks). It is a positive count
+	// of life set only with StaticDeclarationCostModifierSpellIncrease; the
+	// caster pays that much life on top of the spell's mana cost. A zero value
+	// adds no life tax.
+	CostIncreaseLife int    `json:",omitempty"`
+	CostReplacement  string `json:",omitempty"`
 	// AbilityCostKeyword names the activated-ability keyword whose cost a
 	// StaticDeclarationAbilityCostSet declaration sets ("Equipment you control
 	// have equip {0}." sets the Equip ability cost). CostReplacement carries the
@@ -3359,6 +3366,7 @@ func parseStaticSpellCostModifierDeclaration(tokens []shared.Token, atoms Atoms)
 		CostModifier:               tail.Kind,
 		CostReductionAmount:        tail.Amount,
 		CostIncreaseColors:         tail.IncreaseColors,
+		CostIncreaseLife:           tail.LifeIncrease,
 		SpellType:                  spellType,
 		SpellColor:                 spellColor,
 		SpellSubtypes:              subtypes,
@@ -3418,6 +3426,7 @@ func parseStaticSpellTargetsSourceCostModifier(tokens []shared.Token, atoms Atom
 		CostModifier:        tail.Kind,
 		CostReductionAmount: tail.Amount,
 		CostIncreaseColors:  tail.IncreaseColors,
+		CostIncreaseLife:    tail.LifeIncrease,
 		SpellType:           StaticDeclarationSpellTypeAll,
 		SpellCaster:         caster,
 		SpellTargetsSource:  true,
@@ -3646,6 +3655,7 @@ func parseStaticSpellColorDisjunctionCostModifier(tokens []shared.Token) (Static
 		CostModifier:        tail.Kind,
 		CostReductionAmount: tail.Amount,
 		CostIncreaseColors:  tail.IncreaseColors,
+		CostIncreaseLife:    tail.LifeIncrease,
 		SpellType:           StaticDeclarationSpellTypeAll,
 		SpellColors:         colors,
 	}, true
@@ -3687,6 +3697,7 @@ func parseStaticSpellColorPairCostModifier(tokens []shared.Token) (StaticDeclara
 		CostModifier:        tail.Kind,
 		CostReductionAmount: tail.Amount,
 		CostIncreaseColors:  tail.IncreaseColors,
+		CostIncreaseLife:    tail.LifeIncrease,
 		SpellType:           StaticDeclarationSpellTypeAll,
 		SpellColors:         []StaticDeclarationSpellColorKind{first, second},
 	}, true
@@ -3720,6 +3731,7 @@ func parseStaticSpellColorTypePairCostModifier(tokens []shared.Token) (StaticDec
 		CostModifier:        tail.Kind,
 		CostReductionAmount: tail.Amount,
 		CostIncreaseColors:  tail.IncreaseColors,
+		CostIncreaseLife:    tail.LifeIncrease,
 		SpellType:           match.sharedType,
 		SpellColors:         match.colors,
 		SpellCaster:         caster,
@@ -3876,18 +3888,24 @@ type staticSpellCostTail struct {
 	Kind           StaticDeclarationCostModifierKind
 	Amount         int
 	IncreaseColors []mana.Color
+	LifeIncrease   int
 	OperationSpan  shared.Span
 }
 
-// staticSpellCostModifierTail parses the trailing "cost(s) {N} less/more to
-// cast." of a spell cast-cost modifier. The cost verb is "cost" or "costs" so
-// both the "<color> spells ... cost" and the singular "Each spell ... costs"
-// subjects fit. The cost symbol is a generic {N}, or a single basic colored
-// mana symbol ({W}, {U}, {B}, {R}, or {G}) when the operation is "more"
+// staticSpellCostModifierTail parses the trailing cost clause of a spell
+// cast-cost modifier. It recognizes both the mana form "cost(s) {N} less/more to
+// cast." and the life-tax form "cost(s) an additional N life to cast." (Terror
+// of the Peaks). The cost verb is "cost" or "costs" so both the plural
+// "<filter> spells ... cost" and the singular "Each spell ... costs" subjects
+// fit. In the mana form the cost symbol is a generic {N}, or a single basic
+// colored mana symbol ({W}, {U}, {B}, {R}, or {G}) when the operation is "more"
 // ("Black spells you cast cost {B} more to cast.", Derelor): a colored symbol
 // names a colored mana increase, which only makes sense as a tax, so a colored
 // "less" reduction fails closed.
 func staticSpellCostModifierTail(tokens []shared.Token) (staticSpellCostTail, bool) {
+	if tail, ok := staticSpellCostLifeIncreaseTail(tokens); ok {
+		return tail, true
+	}
 	if len(tokens) != 6 ||
 		(!equalWord(tokens[0], "cost") && !equalWord(tokens[0], "costs")) ||
 		tokens[1].Kind != shared.Symbol ||
@@ -3914,6 +3932,32 @@ func staticSpellCostModifierTail(tokens []shared.Token) (staticSpellCostTail, bo
 		}
 	}
 	return staticSpellCostTail{}, false
+}
+
+// staticSpellCostLifeIncreaseTail parses the life-tax trailing clause "cost(s)
+// an additional N life to cast." of a spell cast-cost modifier ("Spells your
+// opponents cast that target this creature cost an additional 3 life to cast.",
+// Terror of the Peaks). N is a positive integer count of life the caster pays as
+// an additional cost. The cost verb is "cost" or "costs" so both the plural and
+// singular spell subjects fit. Any other shape leaves the clause unconsumed.
+func staticSpellCostLifeIncreaseTail(tokens []shared.Token) (staticSpellCostTail, bool) {
+	if len(tokens) != 8 ||
+		(!equalWord(tokens[0], "cost") && !equalWord(tokens[0], "costs")) ||
+		!staticWordsAt(tokens, 1, "an", "additional") ||
+		tokens[3].Kind != shared.Integer ||
+		!staticWordsAt(tokens, 4, "life", "to", "cast") ||
+		tokens[7].Kind != shared.Period {
+		return staticSpellCostTail{}, false
+	}
+	amount, ok := conditionNumberValue(tokens[3])
+	if !ok || amount <= 0 {
+		return staticSpellCostTail{}, false
+	}
+	return staticSpellCostTail{
+		Kind:          StaticDeclarationCostModifierSpellIncrease,
+		LifeIncrease:  amount,
+		OperationSpan: shared.SpanOf(tokens[0:7]),
+	}, true
 }
 
 // parseStaticCastAsThoughFlashDeclaration recognizes the static timing

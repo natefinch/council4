@@ -48,6 +48,17 @@ type CostModifier struct {
 	SetManaCost     opt.V[cost.Mana]
 	MinimumGeneric  int
 
+	// LifeIncrease, when positive on a CostModifierSpell, adds an additional
+	// "pay N life" cost to each affected spell ("Spells your opponents cast that
+	// target this creature cost an additional 3 life to cast.", Terror of the
+	// Peaks). Unlike GenericIncrease, it is paid in life rather than mana: the
+	// rules layer appends a pay-life additional cost of this many life to the
+	// spell, so the caster must have at least that much life to cast. It is
+	// meaningful only on a CostModifierSpell and combines with the
+	// affected-player caster filter and the TargetsSource predicate. A zero
+	// value adds no life tax.
+	LifeIncrease int
+
 	// LifePayableTaxInstances, when positive on a CostModifierSpell, adds that
 	// many "{2} or 2 life" generic Phyrexian symbols to the spell's cost instead
 	// of plain generic mana. The rules layer sets it for the command-zone

@@ -18,8 +18,29 @@ type costModificationContext struct {
 }
 
 func applyCostModifiers(s State, ctx costModificationContext) spellCostOption {
-	ctx.option.manaCost = applyGenericCostModifiers(ctx.option.manaCost, s.CostModifiersForSpell(ctx.player, ctx.card, ctx.cardID, ctx.sourceZone, ctx.targets))
+	modifiers := s.CostModifiersForSpell(ctx.player, ctx.card, ctx.cardID, ctx.sourceZone, ctx.targets)
+	ctx.option.manaCost = applyGenericCostModifiers(ctx.option.manaCost, modifiers)
+	ctx.option.additionalCosts = appendLifeCostModifiers(ctx.option.additionalCosts, modifiers)
 	return ctx.option
+}
+
+// appendLifeCostModifiers appends the additional life a cast-cost tax imposes
+// on the spell ("Spells your opponents cast that target this creature cost an
+// additional 3 life to cast.", Terror of the Peaks). It sums the LifeIncrease of
+// every applicable modifier into one pay-life additional cost so the payment
+// planner requires the caster to have that much life. No matching modifier
+// leaves the spell's additional costs unchanged.
+func appendLifeCostModifiers(additionalCosts []cost.Additional, modifiers []game.CostModifier) []cost.Additional {
+	life := 0
+	for _, modifier := range modifiers {
+		if modifier.LifeIncrease > 0 {
+			life += modifier.LifeIncrease
+		}
+	}
+	if life == 0 {
+		return additionalCosts
+	}
+	return append(additionalCosts, cost.Additional{Kind: cost.AdditionalPayLife, Amount: life})
 }
 
 func applyGenericCostModifiers(manaCost *cost.Mana, modifiers []game.CostModifier) *cost.Mana {
