@@ -408,6 +408,13 @@ func EntryTypeChoiceReplacement(text string) ReplacementAbility {
 	return ReplacementAbility{Text: text, Replacement: replacement}
 }
 
+// EntryCardTypeChoiceReplacement creates Cloud Key's bounded card-type choice.
+func EntryCardTypeChoiceReplacement(text string) ReplacementAbility {
+	replacement := etbReplacement(text)
+	replacement.EntryCardTypeChoice = true
+	return ReplacementAbility{Text: text, Replacement: replacement}
+}
+
 // DevourReplacement creates the as-enters replacement that the Devour keyword
 // abbreviates (CR 702.81): as this creature enters, its controller may sacrifice
 // any number of other creatures they control, and it enters with multiplier

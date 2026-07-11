@@ -1445,6 +1445,14 @@ func spellCostModifierEffectMatchesCard(g *game.Game, effect *game.RuleEffect, c
 	if !spellCostModifierBaseMatchesCard(g, modifier, card) {
 		return false
 	}
+	if modifier.ChosenCardTypeFromEntryChoice {
+		source, ok := permanentByObjectID(g, effect.SourceObjectID)
+		if !ok || card == nil {
+			return false
+		}
+		choice, ok := source.EntryChoices[game.EntryCardTypeChoiceKey]
+		return ok && choice.Kind == game.ResolutionChoiceCardType && card.HasType(choice.CardType)
+	}
 	if !modifier.ChosenSubtypeFromEntryChoice {
 		return true
 	}
@@ -1460,7 +1468,9 @@ func spellCostModifierEffectMatchesCard(g *game.Game, effect *game.RuleEffect, c
 }
 
 func spellCostModifierMatchesCard(g *game.Game, modifier game.CostModifier, card *game.CardDef) bool {
-	return !modifier.ChosenSubtypeFromEntryChoice && spellCostModifierBaseMatchesCard(g, modifier, card)
+	return !modifier.ChosenSubtypeFromEntryChoice &&
+		!modifier.ChosenCardTypeFromEntryChoice &&
+		spellCostModifierBaseMatchesCard(g, modifier, card)
 }
 
 // spellCostModifierBaseMatchesCard reports whether a spell cost modifier's

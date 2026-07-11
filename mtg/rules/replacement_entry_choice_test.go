@@ -187,6 +187,7 @@ func TestEntryTypeChoiceRecordedOnEntry(t *testing.T) {
 	if len(subtypes) == 0 {
 		t.Fatal("no creature subtypes available to choose from")
 	}
+
 	const pick = 3
 	agents := [game.NumPlayers]PlayerAgent{game.Player1: &choiceOnlyAgent{choices: [][]int{{pick}}}}
 
@@ -218,5 +219,28 @@ func TestEntryTypeChoiceRecordedOnEntry(t *testing.T) {
 	}
 	if !types.KnownSubtypeForType(types.Creature, result.Subtype) {
 		t.Fatalf("recorded entry type %q is not a known creature subtype", result.Subtype)
+	}
+}
+
+func TestEntryCardTypeChoiceRecordedOnEntry(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: &choiceOnlyAgent{choices: [][]int{{0}}}}
+	def := &game.CardDef{CardFace: game.CardFace{
+		Types: []types.Card{types.Artifact},
+		ReplacementAbilities: []game.ReplacementAbility{
+			game.EntryCardTypeChoiceReplacement("choose a card type"),
+		},
+	}}
+	cardID := addCardToHand(g, game.Player1, def)
+	card, _ := g.GetCardInstance(cardID)
+	g.Players[game.Player1].Hand.Remove(cardID)
+	permanent, ok := createCardPermanentWithChoices(engine, g, card, game.Player1, zone.Hand, agents, &TurnLog{})
+	if !ok {
+		t.Fatal("card-type-choice permanent did not enter")
+	}
+	result, ok := permanent.EntryChoices[game.EntryCardTypeChoiceKey]
+	if !ok || result.Kind != game.ResolutionChoiceCardType || result.CardType != types.Artifact {
+		t.Fatalf("entry choice = %#v/%v, want artifact card type", result, ok)
 	}
 }

@@ -1083,6 +1083,9 @@ func (r Renderer) renderCostModifier(ctx *renderCtx, modifier game.CostModifier)
 	if modifier.ChosenSubtypeFromEntryChoice {
 		fields = append(fields, "ChosenSubtypeFromEntryChoice: true,")
 	}
+	if modifier.ChosenCardTypeFromEntryChoice {
+		fields = append(fields, "ChosenCardTypeFromEntryChoice: true,")
+	}
 	if modifier.SourceZone.Exists {
 		ctx.need(importZone)
 		ctx.need(importOpt)

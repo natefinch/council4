@@ -121,6 +121,8 @@ type Ability struct {
 	QuestForRenewalUntap    bool `json:",omitempty"`
 	SemblanceAnvilImprint   bool `json:",omitempty"`
 	SemblanceAnvilReduction bool `json:",omitempty"`
+	CloudKeyChoice          bool `json:",omitempty"`
+	CloudKeyReduction       bool `json:",omitempty"`
 	// ExactSequence is a parser-owned, exact-vocabulary resolving sequence.
 	ExactSequence *ExactSequenceSyntax `json:",omitempty"`
 	// Optional reports that a triggered ability's resolving body begins with the

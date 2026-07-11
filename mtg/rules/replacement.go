@@ -658,6 +658,9 @@ func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *gam
 		if replacement.EntryTypeChoice {
 			applyEntryTypeChoice(ctx, g, permanent, replacement.Controller)
 		}
+		if replacement.EntryCardTypeChoice {
+			applyEntryCardTypeChoice(ctx, g, permanent, replacement.Controller)
+		}
 		if replacement.EntryDevourMultiplier > 0 {
 			applyEntryDevour(ctx, g, permanent, replacement.Controller, replacement.EntryDevourMultiplier, replacement.EntryDevourType, replacement.EntryDevourSubtype)
 		}
@@ -776,6 +779,7 @@ func applyEntryTypeChoice(ctx enterBattlefieldContext, g *game.Game, permanent *
 	if engine == nil {
 		engine = NewEngine(nil)
 	}
+
 	choice := game.ResolutionChoice{
 		Kind:          game.ResolutionChoiceSubtype,
 		Prompt:        "Choose a creature type.",
@@ -789,6 +793,26 @@ func applyEntryTypeChoice(ctx enterBattlefieldContext, g *game.Game, permanent *
 		permanent.EntryChoices = make(map[game.ChoiceKey]game.ResolutionChoiceResult)
 	}
 	permanent.EntryChoices[game.EntryTypeChoiceKey] = result
+}
+
+func applyEntryCardTypeChoice(ctx enterBattlefieldContext, g *game.Game, permanent *game.Permanent, controller game.PlayerID) {
+	engine := ctx.engine
+	if engine == nil {
+		engine = NewEngine(nil)
+	}
+	choice := game.ResolutionChoice{
+		Kind:      game.ResolutionChoiceCardType,
+		Prompt:    "Choose artifact, creature, enchantment, instant, or sorcery.",
+		CardTypes: []types.Card{types.Artifact, types.Creature, types.Enchantment, types.Instant, types.Sorcery},
+	}
+	result, ok := engine.chooseEntryColor(g, ctx.agents, controller, &choice, ctx.log)
+	if !ok {
+		return
+	}
+	if permanent.EntryChoices == nil {
+		permanent.EntryChoices = make(map[game.ChoiceKey]game.ResolutionChoiceResult)
+	}
+	permanent.EntryChoices[game.EntryCardTypeChoiceKey] = result
 }
 
 // applyEntryDevour resolves the Devour keyword for an entering permanent (CR

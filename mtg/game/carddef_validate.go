@@ -188,9 +188,27 @@ func (v *cardDefValidator) validateFace(faceName, path string, face *CardFace) {
 }
 
 func (v *cardDefValidator) validateEntryChoiceDependencies(faceName, path string, face *CardFace) {
+	if !faceProvidesEntryCardTypeChoice(face) {
+		for i := range face.StaticAbilities {
+			for j := range face.StaticAbilities[i].RuleEffects {
+				effect := &face.StaticAbilities[i].RuleEffects[j]
+				if effect.Kind == RuleEffectCostModifier &&
+					effect.CostModifier.ChosenCardTypeFromEntryChoice {
+					v.add(
+						faceName,
+						appendPath(path, fmt.Sprintf("StaticAbilities[%d]", i)),
+						CardDefIssueInvalidAbilityBody,
+						"chosen card-type cost modifier requires an entry-time card-type choice",
+					)
+					return
+				}
+			}
+		}
+	}
 	if faceProvidesEntryTypeChoice(face) {
 		return
 	}
+
 	for i := range face.ManaAbilities {
 		for _, mode := range face.ManaAbilities[i].Content.Modes {
 			for j := range mode.Sequence {
@@ -208,6 +226,7 @@ func (v *cardDefValidator) validateEntryChoiceDependencies(faceName, path string
 				return
 			}
 		}
+
 	}
 	for i := range face.StaticAbilities {
 		for j := range face.StaticAbilities[i].RuleEffects {
@@ -230,6 +249,16 @@ func (v *cardDefValidator) validateEntryChoiceDependencies(faceName, path string
 func faceProvidesEntryTypeChoice(face *CardFace) bool {
 	for i := range face.ReplacementAbilities {
 		if face.ReplacementAbilities[i].Replacement.EntryTypeChoice {
+			return true
+		}
+
+	}
+	return false
+}
+
+func faceProvidesEntryCardTypeChoice(face *CardFace) bool {
+	for i := range face.ReplacementAbilities {
+		if face.ReplacementAbilities[i].Replacement.EntryCardTypeChoice {
 			return true
 		}
 	}
@@ -1482,6 +1511,9 @@ func (v *cardDefValidator) validateCostModifier(faceName, path string, modifier 
 		(modifier.Kind != CostModifierSpell ||
 			!costModifierSelectionMatchesCreatureType(modifier.CardSelection)) {
 		v.add(faceName, appendPath(path, "ChosenSubtypeFromEntryChoice"), CardDefIssueInvalidRuleEffect, "chosen subtype cost modifier must match creature spells from the entry-time creature-type choice")
+	}
+	if modifier.ChosenCardTypeFromEntryChoice && modifier.Kind != CostModifierSpell {
+		v.add(faceName, appendPath(path, "ChosenCardTypeFromEntryChoice"), CardDefIssueInvalidRuleEffect, "chosen card-type cost modifier must be a spell modifier")
 	}
 	if modifier.SourceZone.Exists {
 		if modifier.Kind != CostModifierSpell {
