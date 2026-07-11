@@ -3011,6 +3011,11 @@ type CompiledEffect struct {
 	// clause that prevents every combat damage event this turn with no recipient
 	// or source object.
 	PreventDamageGlobal bool
+	// PreventDamageToController mirrors the parser flag for an EffectPreventDamage
+	// clause that prevents every combat damage event dealt to the controller this
+	// turn ("Prevent all combat damage that would be dealt to you this turn." —
+	// Inkshield). It is the controller-recipient sibling of PreventDamageGlobal.
+	PreventDamageToController bool
 	// PreventDamageNextRecipient mirrors the parser kind for the amount-based
 	// "Prevent the next N damage that would be dealt to <recipient> this turn."
 	// shield, naming the shielded recipient. The prevented amount N rides on the
@@ -3805,6 +3810,12 @@ const (
 	// DynamicAmountPartySize is the controller's maximum filled party roles
 	// (Cleric, Rogue, Warrior, Wizard), one role per creature.
 	DynamicAmountPartySize
+	// DynamicAmountDamagePreventedThisWay is the amount of damage prevented by
+	// the same card's earlier prevention clause ("For each 1 damage prevented
+	// this way, create ..." — Inkshield). Lowering schedules the payoff to
+	// resolve after the prevention has applied and reads the running prevented
+	// total. Added last so existing kinds keep their wire values.
+	DynamicAmountDamagePreventedThisWay
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.

@@ -194,6 +194,10 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj opt.V[*game.StackObject], c
 		}
 	case game.DynamicAmountMaxOf:
 		amount = maxOfDynamicAmounts(g, obj, controller, dynamic.Operands, before)
+	case game.DynamicAmountDamagePreventedThisWay:
+		if obj.Exists {
+			amount = damagePreventedThisWayAmount(g, obj.Val)
+		}
 	default:
 	}
 	multiplier := dynamic.Multiplier
@@ -234,6 +238,27 @@ func sourceDerivedDynamicAmount(g *game.Game, obj opt.V[*game.StackObject], dyna
 	default:
 		return 0
 	}
+}
+
+// damagePreventedThisWayAmount sums the damage prevented by the prevention
+// shields the resolving object's card created, keyed on the shared source card
+// instance (CR 608.2c). It backs the "For each 1 damage prevented this way,
+// create ..." payoff (Inkshield): the create-token effect resolves from a
+// delayed trigger scheduled by the same card, whose source card matches the
+// shields set up by the earlier prevention clause. It is zero when the resolving
+// object has no source card or that card created no shield.
+func damagePreventedThisWayAmount(g *game.Game, obj *game.StackObject) int {
+	sourceID, _ := damageSourceIDs(g, obj)
+	if sourceID == 0 {
+		return 0
+	}
+	total := 0
+	for i := range g.PreventionShields {
+		if g.PreventionShields[i].SourceID == sourceID {
+			total += g.PreventionShields[i].Prevented
+		}
+	}
+	return total
 }
 
 // blockingCreaturesBeyondFirst counts the creatures blocking the resolving

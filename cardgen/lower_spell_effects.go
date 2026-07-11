@@ -2974,6 +2974,21 @@ func lowerPreventDamageSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagn
 		}}}}
 		return mode.Ability(), nil
 	}
+	if effect.PreventDamageToController {
+		if effect.PreventDamageTo ||
+			effect.PreventDamageBy ||
+			effect.PreventDamageGlobal ||
+			len(ctx.content.Targets) != 0 ||
+			len(ctx.content.References) != 0 {
+			return unsupported()
+		}
+		mode := game.Mode{Sequence: []game.Instruction{{Primitive: game.PreventDamage{
+			Player:     game.ControllerReference(),
+			All:        true,
+			CombatOnly: true,
+		}}}}
+		return mode.Ability(), nil
+	}
 	if !effect.PreventDamageTo && !effect.PreventDamageBy {
 		return unsupported()
 	}

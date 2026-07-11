@@ -686,7 +686,7 @@ func parseCreateForEachAmount(kind EffectKind, context EffectContextKind, tokenP
 	if !ok || prefix.form != EffectDynamicAmountFormForEach {
 		return EffectAmountSyntax{}, false
 	}
-	subject, ok := parseDynamicAmountSubject(pre, prefix.start, atoms)
+	subject, ok := parseCreateForEachSubject(pre, prefix.start, atoms)
 	if !ok || !subject.count || subject.count != prefix.count ||
 		subject.plural != prefix.plural {
 		return EffectAmountSyntax{}, false
@@ -714,6 +714,21 @@ func parseCreateForEachAmount(kind EffectKind, context EffectContextKind, tokenP
 	amount.Span = shared.SpanOf(pre[:subject.end])
 	amount.Text = joinedEffectText(pre[:subject.end])
 	return amount, true
+}
+
+// parseCreateForEachSubject extends the shared dynamic-amount subject
+// recognizers with the create-token-only "1 damage prevented this way" payoff
+// count (Inkshield). That amount can be evaluated correctly only after the
+// companion prevention has had a chance to apply, which the create-token lowerer
+// arranges by scheduling the tokens for end of combat. No other effect kind
+// schedules that delay, so the subject stays confined to the create-token
+// for-each path here; every other "for each 1 damage prevented this way" effect
+// (counter placement, life gain) leaves the amount unrecognized and fails closed.
+func parseCreateForEachSubject(tokens []shared.Token, start int, atoms Atoms) (dynamicAmountSubject, bool) {
+	if subject, ok := parseDynamicDamagePreventedThisWaySubject(tokens, start); ok {
+		return subject, true
+	}
+	return parseDynamicAmountSubject(tokens, start, atoms)
 }
 
 func parseDynamicAmountPrefix(tokens []shared.Token, index int, atoms Atoms) (dynamicAmountPrefix, bool) {
@@ -1699,6 +1714,27 @@ func parseDynamicGreatestDiscardedThisWaySubject(tokens []shared.Token, start in
 	return dynamicAmountSubject{
 		amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountGreatestDiscardedThisWay},
 		end:    start + 10,
+	}, true
+}
+
+// parseDynamicDamagePreventedThisWaySubject recognizes "1 damage prevented this
+// way", the amount of damage stopped by a preceding prevention clause in the
+// same spell ("For each 1 damage prevented this way, create ..." — Inkshield).
+// The leading "1" is the fixed per-unit quantity of the standard template, so
+// the subject is a singular count; the lowerer schedules the payoff to resolve
+// after the prevention has applied and reads the running prevented total. It
+// fails closed on any other quantity or trailing text.
+func parseDynamicDamagePreventedThisWaySubject(tokens []shared.Token, start int) (dynamicAmountSubject, bool) {
+	if start >= len(tokens) || tokens[start].Kind != shared.Integer || tokens[start].Text != "1" {
+		return dynamicAmountSubject{}, false
+	}
+	end := start + 1
+	if !effectWordsAt(tokens, end, "damage", "prevented", "this", "way") || !dynamicAmountBoundary(tokens, end+4) {
+		return dynamicAmountSubject{}, false
+	}
+	return dynamicAmountSubject{
+		amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountDamagePreventedThisWay},
+		end:    end + 4, count: true, plural: false,
 	}, true
 }
 

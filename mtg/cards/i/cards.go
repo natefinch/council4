@@ -37,6 +37,7 @@ var Cards = []cardset.Entry{
 	{Name: "Infiltration Lens", New: InfiltrationLens},
 	{Name: "Ingenious Prodigy", New: IngeniousProdigy},
 	{Name: "Ingenious Smith", New: IngeniousSmith},
+	{Name: "Inkshield", New: Inkshield},
 	{Name: "Inner Demon", New: InnerDemon},
 	{Name: "Inquisitor Exarch", New: InquisitorExarch},
 	{Name: "Insectoid Exterminator", New: InsectoidExterminator},

@@ -965,6 +965,13 @@ const (
 	// number of distinct Cleric, Rogue, Warrior, and Wizard roles filled by
 	// creatures they control, with each creature filling at most one role.
 	EffectDynamicAmountPartySize EffectDynamicAmountKind = "EffectDynamicAmountPartySize"
+	// EffectDynamicAmountDamagePreventedThisWay is the amount of damage prevented
+	// by the same card's earlier prevention clause ("For each 1 damage prevented
+	// this way, create ..." — Inkshield). The "this way" possessive names the
+	// prevention set up earlier in the same spell, so the amount carries no
+	// in-text referent; the lowerer schedules the payoff to resolve after the
+	// prevention has applied. Added last so existing kinds keep their values.
+	EffectDynamicAmountDamagePreventedThisWay EffectDynamicAmountKind = "EffectDynamicAmountDamagePreventedThisWay"
 )
 
 // EffectDynamicAmountForm identifies how a dynamic amount is introduced.
@@ -2010,6 +2017,15 @@ type EffectSyntax struct {
 	// Weaver, Holy Day). It is mutually exclusive with PreventDamageTo and
 	// PreventDamageBy.
 	PreventDamageGlobal bool `json:",omitempty"`
+	// PreventDamageToController marks an EffectPreventDamage clause that prevents
+	// all combat damage that would be dealt to the controller this turn ("Prevent
+	// all combat damage that would be dealt to you this turn." — Inkshield). It
+	// is the controller-recipient sibling of PreventDamageGlobal: rather than
+	// shielding every player, it shields only the controller, so a later "for
+	// each 1 damage prevented this way" payoff scales by what this player avoided.
+	// It is mutually exclusive with PreventDamageTo, PreventDamageBy, and
+	// PreventDamageGlobal.
+	PreventDamageToController bool `json:",omitempty"`
 	// PreventDamageNextRecipient marks an EffectPreventDamage clause as the
 	// amount-based "Prevent the next N damage that would be dealt to <recipient>
 	// this turn." shield (Heal, Recuperate, Master Apothecary) and names its

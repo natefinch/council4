@@ -1863,7 +1863,8 @@ func finalizeParsedEffect(effect *EffectSyntax, sentence Sentence, atoms Atoms) 
 	// parser would otherwise round-trip the sentence while silently dropping the
 	// multiplier. Fail the effect closed instead so such cards are not generated
 	// with a wrong fixed amount.
-	if effect.Exact && leadingForEachDamagePreventedThisWay(effect) {
+	if effect.Exact && leadingForEachDamagePreventedThisWay(effect) &&
+		effect.Amount.DynamicKind != EffectDynamicAmountDamagePreventedThisWay {
 		effect.Exact = false
 	}
 	effect.KeywordGrantChoice = keywordGrantIsChoice(effect)
@@ -5233,6 +5234,21 @@ func parsePreventCombatDamageEffect(sentence Sentence, tokens []shared.Token, at
 			Duration:            EffectDurationThisTurn,
 			PreventDamageGlobal: true,
 			Exact:               true,
+		}}, true
+	}
+	if idx+4 == len(words) && equalWord(words[idx], "to") && equalWord(words[idx+1], "you") &&
+		equalWord(words[idx+2], "this") && equalWord(words[idx+3], "turn") {
+		return []EffectSyntax{{
+			Kind:                      EffectPreventDamage,
+			Span:                      sentence.Span,
+			ClauseSpan:                sentence.Span,
+			VerbSpan:                  words[0].Span,
+			Text:                      sentence.Text,
+			Tokens:                    append([]shared.Token(nil), tokens...),
+			Context:                   EffectContextController,
+			Duration:                  EffectDurationThisTurn,
+			PreventDamageToController: true,
+			Exact:                     true,
 		}}, true
 	}
 	preventTo, preventBy := false, false
