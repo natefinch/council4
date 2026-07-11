@@ -15,6 +15,7 @@ var Cards = []cardset.Entry{
 	{Name: "Lantern of Revealing", New: LanternOfRevealing},
 	{Name: "Lapis Lazuli Talisman", New: LapisLazuliTalisman},
 	{Name: "Lapse of Certainty", New: LapseOfCertainty},
+	{Name: "Lashknife", New: Lashknife},
 	{Name: "Lashwhip Predator", New: LashwhipPredator},
 	{Name: "Lassoed by the Law", New: LassoedByTheLaw},
 	{Name: "Last March of the Ents", New: LastMarchOfTheEnts},

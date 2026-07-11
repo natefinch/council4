@@ -62,6 +62,7 @@ var Cards = []cardset.Entry{
 	{Name: "Fire Whip", New: FireWhip},
 	{Name: "Firebending Lesson", New: FirebendingLesson},
 	{Name: "Fireblade Charger", New: FirebladeCharger},
+	{Name: "Fireblast", New: Fireblast},
 	{Name: "Firebreathing", New: Firebreathing},
 	{Name: "Fires of Yavimaya", New: FiresOfYavimaya},
 	{Name: "Fists of the Demigod", New: FistsOfTheDemigod},

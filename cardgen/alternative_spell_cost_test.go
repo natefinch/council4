@@ -691,3 +691,112 @@ func TestLowerFoilDiscardAlternativeCost(t *testing.T) {
 		t.Fatalf("primitive = %#v, want counter object", face.SpellAbility.Val.Modes[0].Sequence[0].Primitive)
 	}
 }
+
+func TestLowerSnuffOutFreeAlternativeCost(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Snuff Out",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		ManaCost:   "{3}{B}{B}",
+		OracleText: "If you control a Swamp, you may pay 4 life rather than pay this spell's mana cost.\nDestroy target nonblack creature. It can't be regenerated.",
+	})
+	if len(face.AlternativeCosts) != 1 {
+		t.Fatalf("alternative costs = %#v, want one", face.AlternativeCosts)
+	}
+	alt := face.AlternativeCosts[0]
+	if alt.ManaCost.Exists {
+		t.Fatalf("free alternative should carry no mana cost: %#v", alt)
+	}
+	if alt.Condition != cost.AlternativeConditionControlsPermanentSubtype ||
+		alt.ConditionSubtype != types.Swamp {
+		t.Fatalf("condition = %v/%q, want controls a Swamp", alt.Condition, alt.ConditionSubtype)
+	}
+	if len(alt.AdditionalCosts) != 1 {
+		t.Fatalf("additional costs = %#v, want a single pay-life cost", alt.AdditionalCosts)
+	}
+	life := alt.AdditionalCosts[0]
+	if life.Kind != cost.AdditionalPayLife || life.Amount != 4 {
+		t.Fatalf("life cost = %#v, want pay 4 life", life)
+	}
+}
+
+func TestLowerFreeAlternativeCostSacrificeConditions(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name          string
+		card          *ScryfallCard
+		wantCondition cost.AlternativeCondition
+		wantSubtypes  cost.SubtypeSet
+		wantAmount    int
+	}{
+		{
+			name: "fireblast unconditionally sacrifices two mountains",
+			card: &ScryfallCard{
+				Name:       "Fireblast",
+				Layout:     "normal",
+				TypeLine:   "Instant",
+				ManaCost:   "{4}{R}{R}",
+				OracleText: "You may sacrifice two Mountains rather than pay this spell's mana cost.\nFireblast deals 4 damage to any target.",
+			},
+			wantCondition: cost.AlternativeConditionNone,
+			wantSubtypes:  cost.SubtypeSet{types.Mountain},
+			wantAmount:    2,
+		},
+		{
+			name: "mine collapse gated by your turn",
+			card: &ScryfallCard{
+				Name:       "Mine Collapse",
+				Layout:     "normal",
+				TypeLine:   "Instant",
+				ManaCost:   "{4}{R}",
+				OracleText: "If it's your turn, you may sacrifice a Mountain rather than pay this spell's mana cost.\nMine Collapse deals 5 damage to target creature or planeswalker.",
+			},
+			wantCondition: cost.AlternativeConditionYourTurn,
+			wantSubtypes:  cost.SubtypeSet{types.Mountain},
+			wantAmount:    1,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, test.card)
+			if len(face.AlternativeCosts) != 1 {
+				t.Fatalf("alternative costs = %#v, want one", face.AlternativeCosts)
+			}
+			alt := face.AlternativeCosts[0]
+			if alt.ManaCost.Exists {
+				t.Fatalf("free alternative should carry no mana cost: %#v", alt)
+			}
+			if alt.Condition != test.wantCondition {
+				t.Fatalf("condition = %v, want %v", alt.Condition, test.wantCondition)
+			}
+			if len(alt.AdditionalCosts) != 1 {
+				t.Fatalf("additional costs = %#v, want a single sacrifice cost", alt.AdditionalCosts)
+			}
+			sacrifice := alt.AdditionalCosts[0]
+			if sacrifice.Kind != cost.AdditionalSacrifice ||
+				sacrifice.Amount != test.wantAmount ||
+				sacrifice.SubtypesAny != test.wantSubtypes {
+				t.Fatalf("sacrifice cost = %#v, want sacrifice %d %v", sacrifice, test.wantAmount, test.wantSubtypes)
+			}
+		})
+	}
+}
+
+func TestLowerFreeAlternativeCostManaOnlyFailsClosed(t *testing.T) {
+	t.Parallel()
+	// A mana-only alternative ("pay {1}{B}") is not a free spell: the free
+	// lowering requires exactly one non-mana payment, so this must fail closed
+	// rather than mislowering into an alternative cost.
+	face := lowerSingleFaceExpectingUnsupported(t, &ScryfallCard{
+		Name:       "Mana Only Alternative",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		ManaCost:   "{3}{B}",
+		OracleText: "You may pay {1}{B} rather than pay this spell's mana cost.\nDestroy target creature.",
+	})
+	if len(face.AlternativeCosts) != 0 {
+		t.Fatalf("mana-only alternative must not lower to a free cost: %#v", face.AlternativeCosts)
+	}
+}

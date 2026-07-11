@@ -170,6 +170,7 @@ var Cards = []cardset.Entry{
 	{Name: "Cowabunga!", New: Cowabunga},
 	{Name: "Cradle of Safety", New: CradleOfSafety},
 	{Name: "Cragplate Baloth", New: CragplateBaloth},
+	{Name: "Crash", New: Crash},
 	{Name: "Crash the Party", New: CrashTheParty},
 	{Name: "Craven Hulk", New: CravenHulk},
 	{Name: "Crazed Armodon", New: CrazedArmodon},

@@ -385,6 +385,14 @@ func (r Renderer) renderAlternativeCosts(ctx *renderCtx, alternatives []cost.Alt
 			fields = append(fields, "Condition: cost.AlternativeConditionControlsCommander,")
 		case cost.AlternativeConditionNotYourTurn:
 			fields = append(fields, "Condition: cost.AlternativeConditionNotYourTurn,")
+		case cost.AlternativeConditionYourTurn:
+			fields = append(fields, "Condition: cost.AlternativeConditionYourTurn,")
+		case cost.AlternativeConditionControlsPermanentSubtype:
+			fields = append(fields,
+				"Condition: cost.AlternativeConditionControlsPermanentSubtype,",
+				fmt.Sprintf("ConditionSubtype: %s,", SubtypeToLiteral(string(alternative.ConditionSubtype), []string{"Land"})),
+			)
+			ctx.need(importTypes)
 		case cost.AlternativeConditionOpponentLostLifeThisTurn:
 			fields = append(fields, "Condition: cost.AlternativeConditionOpponentLostLifeThisTurn,")
 		default:

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
@@ -266,5 +267,97 @@ func TestParsePitchAlternativeCostFailsClosed(t *testing.T) {
 	if alternative := document.Abilities[0].AlternativeCost; alternative != nil &&
 		alternative.Kind == SpellAlternativeCostPitch {
 		t.Fatalf("unexpectedly parsed mana-value pitch as plain pitch: %#v", alternative)
+	}
+}
+
+func TestParseFreeAlternativeSpellCost(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name          string
+		source        string
+		wantCondition SpellAlternativeCostCondition
+		wantSubtype   types.Sub
+		wantComponent CostComponentKind
+		wantAmount    int
+	}{
+		{
+			name:          "snuff out pays life gated by a swamp",
+			source:        "If you control a Swamp, you may pay 4 life rather than pay this spell's mana cost.\nDestroy target nonblack creature. It can't be regenerated.",
+			wantCondition: SpellAlternativeCostConditionControlsSubtype,
+			wantSubtype:   types.Swamp,
+			wantComponent: CostComponentPayLife,
+			wantAmount:    4,
+		},
+		{
+			name:          "fireblast sacrifices two lands unconditionally",
+			source:        "You may sacrifice two Mountains rather than pay this spell's mana cost.\nFireblast deals 4 damage to any target.",
+			wantComponent: CostComponentSacrifice,
+			wantAmount:    2,
+		},
+		{
+			name:          "mine collapse gated by your turn",
+			source:        "If it's your turn, you may sacrifice a Mountain rather than pay this spell's mana cost.\nMine Collapse deals 5 damage to target creature or planeswalker.",
+			wantCondition: SpellAlternativeCostConditionYourTurn,
+			wantComponent: CostComponentSacrifice,
+			wantAmount:    1,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(test.source, Context{InstantOrSorcery: true})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			ability := document.Abilities[0]
+			alternative := ability.AlternativeCost
+			if alternative == nil || alternative.Kind != SpellAlternativeCostFree {
+				t.Fatalf("alternative cost = %#v, want free", alternative)
+			}
+			if alternative.Condition != test.wantCondition {
+				t.Fatalf("free condition = %v, want %v", alternative.Condition, test.wantCondition)
+			}
+			if alternative.ConditionSubtype != test.wantSubtype {
+				t.Fatalf("free condition subtype = %q, want %q", alternative.ConditionSubtype, test.wantSubtype)
+			}
+			if ability.CostSyntax == nil || len(ability.CostSyntax.Components) != 1 {
+				t.Fatalf("free cost syntax = %#v, want exactly one component", ability.CostSyntax)
+			}
+			component := ability.CostSyntax.Components[0]
+			if component.Kind != test.wantComponent || component.AmountValue != test.wantAmount {
+				t.Fatalf("free cost component = %#v, want %v amount %d", component, test.wantComponent, test.wantAmount)
+			}
+		})
+	}
+}
+
+func TestParseFreeAlternativeCostFailsClosed(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		source string
+	}{
+		{
+			// A compound "and" payment splits into multiple components the free
+			// lowering does not model, so it must not parse as a free spell.
+			name:   "compound and payment",
+			source: "You may pay 3 life and sacrifice a creature rather than pay this spell's mana cost.\nDraw a card.",
+		},
+		{
+			// Only basic land control conditions are modeled; anything else must
+			// fail closed rather than silently drop the gate.
+			name:   "unmodeled control condition",
+			source: "If you control an artifact, you may pay 2 life rather than pay this spell's mana cost.\nDraw a card.",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			if alternative := document.Abilities[0].AlternativeCost; alternative != nil &&
+				alternative.Kind == SpellAlternativeCostFree {
+				t.Fatalf("unexpectedly parsed as free alternative cost: %#v", alternative)
+			}
+		})
 	}
 }

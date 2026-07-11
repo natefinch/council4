@@ -165,12 +165,23 @@ func (v *cardDefValidator) validateFace(faceName, path string, face *CardFace) {
 		if alternative.Condition != cost.AlternativeConditionNone &&
 			alternative.Condition != cost.AlternativeConditionControlsCommander &&
 			alternative.Condition != cost.AlternativeConditionNotYourTurn &&
+			alternative.Condition != cost.AlternativeConditionYourTurn &&
+			alternative.Condition != cost.AlternativeConditionControlsPermanentSubtype &&
 			alternative.Condition != cost.AlternativeConditionOpponentLostLifeThisTurn {
 			v.add(
 				faceName,
 				appendPath(path, fmt.Sprintf("AlternativeCosts[%d].Condition", i)),
 				CardDefIssueInvalidAlternativeCost,
 				"alternative cost has an unknown condition",
+			)
+		}
+		if alternative.Condition == cost.AlternativeConditionControlsPermanentSubtype &&
+			alternative.ConditionSubtype == "" {
+			v.add(
+				faceName,
+				appendPath(path, fmt.Sprintf("AlternativeCosts[%d].ConditionSubtype", i)),
+				CardDefIssueInvalidAlternativeCost,
+				"controls-subtype alternative cost has no subtype",
 			)
 		}
 	}

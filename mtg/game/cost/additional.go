@@ -212,6 +212,11 @@ type Alternative struct {
 	ManaCost        opt.V[Mana]
 	AdditionalCosts []Additional
 	Condition       AlternativeCondition
+	// ConditionSubtype is the permanent subtype required by an
+	// AlternativeConditionControlsPermanentSubtype condition, e.g. types.Swamp
+	// for Snuff Out's "If you control a Swamp,". It is unused for every other
+	// condition.
+	ConditionSubtype types.Sub
 	// Mechanic identifies the rules mechanic this alternative grants, so the
 	// rules layer decides Flashback/Escape/Evoke behavior from typed data
 	// rather than the display Label. AlternativeMechanicNone leaves the
@@ -268,4 +273,11 @@ const (
 	// the casting player has lost life so far this turn, backing the Spectacle
 	// keyword (CR 702.107).
 	AlternativeConditionOpponentLostLifeThisTurn
+	// AlternativeConditionYourTurn requires that it is the casting player's turn,
+	// backing free spells gated by "If it's your turn," (Mine Collapse).
+	AlternativeConditionYourTurn
+	// AlternativeConditionControlsPermanentSubtype requires that the casting
+	// player controls a permanent with the alternative's ConditionSubtype,
+	// backing free spells gated by "If you control a Swamp," (Snuff Out).
+	AlternativeConditionControlsPermanentSubtype
 )
