@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,417 of 32,501 cards eligible for paper support (53.6%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,425 of 32,501 cards eligible for paper support (53.6%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -824,6 +824,7 @@ Council4 currently supports **17,417 of 32,501 cards eligible for paper support 
 - Assassin
 - Assassin
 - Assassin
+- Assassin Den
 - Assassin Initiate
 - Assassin's Strike
 - Assassin's Trophy
@@ -5100,6 +5101,7 @@ Council4 currently supports **17,417 of 32,501 cards eligible for paper support 
 - Fiend Artisan
 - Fiend Binder
 - Fiend Hunter
+- Fiendish Duo
 - Fiendlash
 - Fierce Empath
 - Fierce Guardianship
@@ -7898,6 +7900,7 @@ Council4 currently supports **17,417 of 32,501 cards eligible for paper support 
 - Kami of Twisted Reflection
 - Kami of Whispered Hopes
 - Kapow!
+- Kappa Cannoneer
 - Kapsho Kitefins
 - Karakas
 - Karametra's Acolyte
@@ -8804,6 +8807,7 @@ Council4 currently supports **17,417 of 32,501 cards eligible for paper support 
 - Lórien Revealed
 - M'Baku, Jabari Chieftain
 - M.O.D.O.K., Evil Intellect
+- Ma Chao, Western Warrior
 - Maalfeld Twins
 - Mabel's Mettle
 - Macabre Mockery
@@ -11607,6 +11611,7 @@ Council4 currently supports **17,417 of 32,501 cards eligible for paper support 
 - Razortooth Rats
 - Razortrap Gorge
 - Razorverge Thicket
+- Razzle-Dazzler
 - Reach for the Sky
 - Reach of Branches
 - Reach Through Mists
@@ -12326,6 +12331,7 @@ Council4 currently supports **17,417 of 32,501 cards eligible for paper support 
 - Sagu Archer
 - Sagu Mauler
 - Sagu Wildling // Roost Seek
+- Sahagin
 - Saheeli Rai
 - Saheeli's Artistry
 - Saheeli's Silverwing
@@ -13966,6 +13972,7 @@ Council4 currently supports **17,417 of 32,501 cards eligible for paper support 
 - Spike Worker
 - Spike-Tailed Ceratops
 - Spiked Baloth
+- Spiked Corridor // Torture Pit
 - Spiked Ripsaw
 - Spikeshot Elder
 - Spikeshot Goblin
@@ -14249,6 +14256,7 @@ Council4 currently supports **17,417 of 32,501 cards eligible for paper support 
 - Steady Progress
 - Steal Strength
 - Stealer of Secrets
+- Stealth Mission
 - Steam Augury
 - Steam Blast
 - Steam Catapult
