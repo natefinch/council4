@@ -112,6 +112,9 @@ type Ability struct {
 	// AlternativeCost is the typed alternative spell-cost declaration, or nil
 	// when this paragraph does not declare one.
 	AlternativeCost *SpellAlternativeCost `json:",omitempty"`
+	// CastOnlyDuringDeclareAttackersAfterAttacked marks the exact defensive
+	// declare-attackers cast restriction.
+	CastOnlyDuringDeclareAttackersAfterAttacked bool `json:",omitempty"`
 	// ExactSequence is a parser-owned, exact-vocabulary resolving sequence.
 	ExactSequence *ExactSequenceSyntax `json:",omitempty"`
 	// Optional reports that a triggered ability's resolving body begins with the

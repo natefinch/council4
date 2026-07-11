@@ -62,6 +62,9 @@ type CombatState struct {
 	// combat damage steps are not skipped once a creature has attacked. Attackers
 	// itself can shrink as attackers leave combat, so it can't answer this.
 	AttackersDeclared bool
+	// PlayersAttacked records defending players attacked this combat, including
+	// attacks on permanents they control and creatures entering attacking.
+	PlayersAttacked map[PlayerID]bool
 
 	// Blockers lists all declared blockers and which attacker they block.
 	Blockers []BlockDeclaration

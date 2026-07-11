@@ -61,6 +61,9 @@ func TestCreateTokenEntryAttackingDuringCombat(t *testing.T) {
 	if len(g.Combat.Attackers) != 2 {
 		t.Fatalf("attackers = %+v, want the original attacker plus the new token", g.Combat.Attackers)
 	}
+	if !g.Combat.PlayersAttacked[game.Player2] {
+		t.Fatal("defending player was not recorded as attacked")
+	}
 	last := g.Combat.Attackers[len(g.Combat.Attackers)-1]
 	if last.Attacker != token.ObjectID || last.Target.Player != game.Player2 {
 		t.Fatalf("token attack declaration = %+v, want token attacking Player2", last)

@@ -616,6 +616,12 @@ func (ce combatEngine) applyAttackers(g *game.Game, playerID game.PlayerID, decl
 		// combat damage steps run even if those attackers later leave combat.
 		g.Combat.AttackersDeclared = true
 	}
+	if g.Combat.PlayersAttacked == nil {
+		g.Combat.PlayersAttacked = make(map[game.PlayerID]bool)
+	}
+	for _, declaration := range declare.Attackers {
+		g.Combat.PlayersAttacked[declaration.Target.Player] = true
+	}
 	simultaneousID := id.ID(0)
 	if len(declare.Attackers) > 1 {
 		simultaneousID = g.IDGen.Next()

@@ -60,6 +60,9 @@ func (r Renderer) renderStaticAbility(ctx *renderCtx, body *game.StaticAbility, 
 		return fmt.Sprintf("game.DredgeStaticAbility(%d)", count), nil
 	}
 	var fields []string
+	if body.CastOnlyAfterAttackedThisStep {
+		fields = append(fields, "CastOnlyAfterAttackedThisStep: true,")
+	}
 	if body.ZoneOfFunction != zone.None {
 		ctx.need(importZone)
 		zoneLiteral, err := renderZone(body.ZoneOfFunction)

@@ -68,8 +68,9 @@ type Compilation struct {
 // the ability's instruction content (targets, conditions, effects, keywords,
 // references, modes) lives in Content.
 type CompiledAbility struct {
-	Kind     AbilityKind
-	Optional bool
+	Kind                                        AbilityKind
+	Optional                                    bool
+	CastOnlyDuringDeclareAttackersAfterAttacked bool
 	// ExactSequence is a parser-recognized exact multi-instruction resolving
 	// body. When set, the normal target/condition/effect content is empty and
 	// lowering emits the fixed instruction template for the kind. It is declared

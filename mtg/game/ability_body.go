@@ -141,12 +141,15 @@ type ChapterAbility struct {
 
 // StaticAbility is a static ability that functions from a zone.
 type StaticAbility struct {
-	Text              string
-	Condition         opt.V[Condition]
-	ZoneOfFunction    zone.Type
-	KeywordAbilities  []KeywordAbility
-	ContinuousEffects []ContinuousEffect
-	RuleEffects       []RuleEffect
+	Text string
+	// CastOnlyAfterAttackedThisStep restricts the source spell to the declare
+	// attackers step after its caster was attacked during that step.
+	CastOnlyAfterAttackedThisStep bool
+	Condition                     opt.V[Condition]
+	ZoneOfFunction                zone.Type
+	KeywordAbilities              []KeywordAbility
+	ContinuousEffects             []ContinuousEffect
+	RuleEffects                   []RuleEffect
 }
 
 // ReplacementAbility is a replacement/prevention ability on a printed face.
