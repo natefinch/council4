@@ -118,7 +118,9 @@ type Ability struct {
 	// GoadedOpponentCreaturesCantBlock marks the exact static restriction.
 	GoadedOpponentCreaturesCantBlock bool `json:",omitempty"`
 	// QuestForRenewalUntap marks the exact conditional extra-untap rule.
-	QuestForRenewalUntap bool `json:",omitempty"`
+	QuestForRenewalUntap    bool `json:",omitempty"`
+	SemblanceAnvilImprint   bool `json:",omitempty"`
+	SemblanceAnvilReduction bool `json:",omitempty"`
 	// ExactSequence is a parser-owned, exact-vocabulary resolving sequence.
 	ExactSequence *ExactSequenceSyntax `json:",omitempty"`
 	// Optional reports that a triggered ability's resolving body begins with the

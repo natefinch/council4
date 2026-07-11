@@ -167,10 +167,16 @@ type CostModifier struct {
 	// CostModifierSpell supplied by another permanent's static (not
 	// AffectedSource) and pairs with a non-empty ExiledLinkKey.
 	SharedExiledCardTypeReduction int
+	// SharedExiledCardTypeReductionOnce applies the reduction once when at least
+	// one type is shared, rather than once per shared type.
+	SharedExiledCardTypeReductionOnce bool
 	// ExiledLinkKey names the linked-exile set whose exiled cards a
 	// SharedExiledCardTypeReduction reads, keyed by the source permanent's card
 	// identity. It is meaningful only when that reduction is positive.
 	ExiledLinkKey LinkedKey
+	// ExiledLinkObjectScoped reads ExiledLinkKey under the source permanent's
+	// current object identity, so a new incarnation does not inherit an imprint.
+	ExiledLinkObjectScoped bool
 
 	// CardSelection is the canonical card-subject filter for a spell cost
 	// modifier, mirroring how triggers and additional costs describe the card

@@ -1184,8 +1184,14 @@ func (r Renderer) renderCostModifier(ctx *renderCtx, modifier game.CostModifier)
 	if modifier.SharedExiledCardTypeReduction != 0 {
 		fields = append(fields, fmt.Sprintf("SharedExiledCardTypeReduction: %d,", modifier.SharedExiledCardTypeReduction))
 	}
+	if modifier.SharedExiledCardTypeReductionOnce {
+		fields = append(fields, "SharedExiledCardTypeReductionOnce: true,")
+	}
 	if modifier.ExiledLinkKey != "" {
 		fields = append(fields, fmt.Sprintf("ExiledLinkKey: game.LinkedKey(%q),", string(modifier.ExiledLinkKey)))
+	}
+	if modifier.ExiledLinkObjectScoped {
+		fields = append(fields, "ExiledLinkObjectScoped: true,")
 	}
 	return structLit("game.CostModifier", fields), nil
 }

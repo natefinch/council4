@@ -105,6 +105,35 @@ func TestCemeteryProwlerCostReductionCountsSharedExiledTypes(t *testing.T) {
 	}
 }
 
+func TestSharedExiledTypeReductionOnce(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	def := cemeteryProwlerDef()
+	modifier := &def.StaticAbilities[0].RuleEffects[0].CostModifier
+	modifier.SharedExiledCardTypeReduction = 2
+	modifier.SharedExiledCardTypeReductionOnce = true
+	modifier.ExiledLinkObjectScoped = true
+	source := addCombatPermanent(g, game.Player1, def)
+	addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Types: []types.Card{types.Artifact, types.Creature},
+	}})
+	engine := NewEngine(nil)
+	engine.resolveInstructionWithChoices(g, triggeredObjFor(source), &game.Instruction{
+		Primitive: game.ExileFromHandChoice(
+			game.ControllerReference(),
+			game.Selection{ExcludedTypes: []types.Card{types.Land}},
+			game.Fixed(1),
+			game.LinkedKey("exiled-with-source"),
+		),
+	}, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+
+	artifactCreature := &game.CardDef{CardFace: game.CardFace{
+		Types: []types.Card{types.Artifact, types.Creature},
+	}}
+	if got := spellGenericReductionForCaster(g, game.Player1, artifactCreature); got != 2 {
+		t.Fatalf("flat shared-type reduction = %d, want 2", got)
+	}
+}
+
 // TestCemeteryProwlerCostReductionEmptyWithoutExiledCards verifies the discount
 // is zero before the trigger has exiled anything.
 func TestCemeteryProwlerCostReductionEmptyWithoutExiledCards(t *testing.T) {
