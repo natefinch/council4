@@ -2824,6 +2824,9 @@ type CompiledEffect struct {
 	// from the parser so the search lowerer can set SearchSpec.SharedSubtype
 	// without re-reading the search text.
 	SearchSharedSubtype bool
+	// SearchLandElseHand mirrors the parser-owned exact Archdruid's Charm search
+	// mode.
+	SearchLandElseHand bool
 	// SearchDifferentNames carries the "with different names" correlation rider
 	// from the parser so the search lowerer can set SearchSpec.DifferentNames
 	// without re-reading the search text.

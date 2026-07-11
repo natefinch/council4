@@ -2915,6 +2915,9 @@ type EffectSyntax struct {
 	// the runtime requires every found card to share a land subtype with the
 	// others (CR 701.19), modeling Myriad Landscape.
 	SearchSharedSubtype bool `json:",omitempty"`
+	// SearchLandElseHand marks the exact Archdruid's Charm search mode: a found
+	// land enters tapped, otherwise the card goes to hand.
+	SearchLandElseHand bool `json:",omitempty"`
 	// SearchDifferentNames reports the "with different names" correlation rider on
 	// a multi-card library search ("up to three Aura cards with different names").
 	// It is set only on the EffectSearch clause carrying the rider; the runtime

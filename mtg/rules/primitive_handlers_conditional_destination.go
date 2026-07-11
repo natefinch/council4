@@ -24,7 +24,8 @@ func handleConditionalDestinationPlace(r *effectResolver, prim game.ConditionalD
 	}
 	gateHolds := cardConditionPredicateSatisfied(r.game, r.obj, card, prim.CardCondition) &&
 		effectConditionSatisfied(r.game, r.obj, prim.Condition)
-	if gateHolds && r.engine.chooseMay(r.game, r.agents, r.obj.Controller, conditionalDestinationThenPrompt(prim), r.log) {
+	if gateHolds && (prim.ThenMandatory ||
+		r.engine.chooseMay(r.game, r.agents, r.obj.Controller, conditionalDestinationThenPrompt(prim), r.log)) {
 		if prim.Then == zone.None {
 			options := permanentCreationOptions{ForceTapped: prim.EntryTapped}
 			if _, placed := r.putReferencedCardOnBattlefieldValue(prim.Card, game.PlayerReference{}, nil, options); placed {

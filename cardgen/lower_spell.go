@@ -742,6 +742,9 @@ func hasOptionalPaymentResolvingEffect(effects []compiler.CompiledEffect) bool {
 }
 
 func lowerSearchSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	if content, ok := lowerSearchLandConditionalDestination(ctx); ok {
+		return content, nil
+	}
 	unsupported := func(detail string) (game.AbilityContent, *shared.Diagnostic) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
