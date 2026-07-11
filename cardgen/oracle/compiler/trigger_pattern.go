@@ -63,6 +63,11 @@ const (
 	// permanent>" event (Prowl, Stoic Strategist): a player casts or plays as a
 	// land a card that a linked-exile ability of the source placed into exile.
 	TriggerEventCardPlayedFromExile
+	// TriggerEventLandPlayed is the "plays a land" event (Burgeoning, Dirtcowl
+	// Wurm, Horn of Greed): a player plays a land as the land-play special
+	// action (CR 305). It is distinct from TriggerEventCardPlayedFromExile, which
+	// fires only for cards a linked-exile source put into exile.
+	TriggerEventLandPlayed
 )
 
 // TriggerCastTurn restricts a spell-cast pattern by whose turn the spell was

@@ -88,12 +88,22 @@ const (
 	// linked-exile pool (Prowl, Stoic Strategist). Player identifies the player
 	// who played the card and CardID identifies the card.
 	EventCardPlayedFromExile
+	// EventLandPlayed marks a player playing a land as the land-play special
+	// action (CR 305, CR 505.5b), whether the normal land drop for the turn or
+	// an additional land play granted by another effect, and regardless of which
+	// zone the land was played from. It is emitted once each time a land is
+	// played so "whenever a player/an opponent/you play(s) a land" triggers
+	// (Burgeoning, Dirtcowl Wurm, Horn of Greed) fire. It is deliberately not
+	// emitted when an effect puts a land onto the battlefield without playing it.
+	// Controller and Player identify the player who played the land and CardID
+	// identifies the land card.
+	EventLandPlayed
 )
 
 // EventKindCount is the number of EventKind values, including EventUnknown. It
 // is appended at the end of the const block so existing wire values are
 // preserved; new kinds must be added immediately before this sentinel.
-const EventKindCount = int(EventCardPlayedFromExile) + 1
+const EventKindCount = int(EventLandPlayed) + 1
 
 // DamageRecipientKind identifies what received damage. Values are flags so a
 // trigger pattern can match either kind.

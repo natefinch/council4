@@ -13,6 +13,7 @@ var Cards = []cardset.Entry{
 	{Name: "Palliation Accord", New: PalliationAccord},
 	{Name: "Pallid Mycoderm", New: PallidMycoderm},
 	{Name: "Pang Tong, \"Young Phoenix\"", New: PangTongYoungPhoenix},
+	{Name: "Pangosaur", New: Pangosaur},
 	{Name: "Panther Habit", New: PantherHabit},
 	{Name: "Paradox Surveyor", New: ParadoxSurveyor},
 	{Name: "Parasitic Impetus", New: ParasiticImpetus},

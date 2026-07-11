@@ -18,7 +18,7 @@ func compilePlayerEventTriggerPattern(
 	if kind != TriggerWhen && kind != TriggerWhenever {
 		return pattern
 	}
-	event, ok := compilePlayerEventAction(clause.Action.Kind)
+	event, ok := compilePlayerEventAction(clause.Action.Kind, clause.Card.Kind)
 	if !ok {
 		return pattern
 	}
@@ -55,7 +55,7 @@ func compilePlayerEventTriggerPattern(
 	return pattern
 }
 
-func compilePlayerEventAction(action parser.PlayerEventActionKind) (TriggerEvent, bool) {
+func compilePlayerEventAction(action parser.PlayerEventActionKind, card parser.PlayerEventCardKind) (TriggerEvent, bool) {
 	switch action {
 	case parser.PlayerEventActionDraw:
 		return TriggerEventCardDrawn, true
@@ -78,7 +78,16 @@ func compilePlayerEventAction(action parser.PlayerEventActionKind) (TriggerEvent
 	case parser.PlayerEventActionBecomeMonarch:
 		return TriggerEventBecameMonarch, true
 	case parser.PlayerEventActionPlay:
-		return TriggerEventCardPlayedFromExile, true
+		// The play event splits on its card object: "a card exiled with <this>"
+		// keys the linked-exile pool, while "a land" is the land-play action.
+		switch card {
+		case parser.PlayerEventCardExiledWithSource:
+			return TriggerEventCardPlayedFromExile, true
+		case parser.PlayerEventCardLand:
+			return TriggerEventLandPlayed, true
+		default:
+			return TriggerEventUnknown, false
+		}
 	default:
 		return TriggerEventUnknown, false
 	}
@@ -168,6 +177,9 @@ func compilePlayerEventCard(action parser.PlayerEventActionKind, card parser.Pla
 	case parser.PlayerEventCardExiledWithSource:
 		ok := action == parser.PlayerEventActionPlay
 		return compiledPlayerEventCard{playsExiledWithSource: ok, ok: ok}
+	case parser.PlayerEventCardLand:
+		ok := action == parser.PlayerEventActionPlay
+		return compiledPlayerEventCard{ok: ok}
 	default:
 		return compiledPlayerEventCard{}
 	}

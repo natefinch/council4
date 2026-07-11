@@ -56,6 +56,7 @@ func (e *Engine) applyPlayLandFaceFromZoneWithChoices(g *game.Game, playerID gam
 		recordExilePlayPermissionUse(g, landPermission)
 	}
 	emitCardPlayedFromExileEvent(g, playerID, cardID, sourceZone)
+	emitLandPlayedEvent(g, playerID, cardID)
 	return true
 }
 

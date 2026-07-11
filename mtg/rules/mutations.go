@@ -58,6 +58,21 @@ func emitCardPlayedFromExileEvent(g *game.Game, player game.PlayerID, cardID id.
 	})
 }
 
+// emitLandPlayedEvent emits EventLandPlayed when a player plays a land as the
+// land-play special action (CR 305), so "whenever a player/an opponent/you
+// play(s) a land" triggers (Burgeoning, Dirtcowl Wurm, Horn of Greed) fire. It
+// fires for every played land regardless of source zone or which land-play
+// permission allowed it, but not for lands an effect puts onto the battlefield
+// without playing them.
+func emitLandPlayedEvent(g *game.Game, player game.PlayerID, cardID id.ID) {
+	emitEvent(g, game.Event{
+		Kind:       game.EventLandPlayed,
+		Controller: player,
+		Player:     player,
+		CardID:     cardID,
+	})
+}
+
 // consumeNextSpellCantBeCounteredEffects applies and consumes any
 // "The next spell you cast this turn can't be countered." rule effects (Mistrise
 // Village) whose controller and spell-type filter match the spell just cast.
