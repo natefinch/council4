@@ -2532,7 +2532,7 @@ func exactCanAttackAsThoughDefenderEffectSyntax(effect *EffectSyntax) bool {
 
 // exactCantBeBlockedEffectSyntax recognizes the temporary combat-evasion
 // resolving effect "<subject> can't be blocked this turn." that grants the
-// subject creature(s) a "can't be blocked" restriction until end of turn. Three
+// subject creature(s) a "can't be blocked" restriction until end of turn. Four
 // subject shapes are recognized, each reconstructed byte-exactly so every
 // deviation fails closed:
 //
@@ -2540,7 +2540,11 @@ func exactCanAttackAsThoughDefenderEffectSyntax(effect *EffectSyntax) bool {
 //     "Up to one target creature can't be blocked this turn.") with single,
 //     plural, or optional cardinality, like the sibling can't-block recognizer;
 //   - the source itself ("This creature can't be blocked this turn." / the
-//     card's own name), a self grant on an activated ability; and
+//     card's own name), a self grant on an activated ability;
+//   - a demonstrative back-reference ("it" or "that <object>") that names a
+//     permanent introduced by a preceding clause or the triggering event ("...
+//     put a +1/+1 counter on this creature. It can't be blocked this turn.",
+//     Kappa Cannoneer); and
 //   - a prior-subject sequence clause ("... and can't be blocked this turn.")
 //     whose subject noun is inherited from the preceding clause and so carries
 //     only the bare predicate here.
@@ -2575,6 +2579,14 @@ func exactCantBeBlockedEffectSyntax(effect *EffectSyntax) bool {
 	case EffectContextSource:
 		subject, ok := exactSelfSubjectReferenceText(effect.SubjectReferences)
 		return ok && strings.EqualFold(clause, subject+" "+suffix)
+	case EffectContextReferencedObject:
+		// A demonstrative back-reference ("it" or "that <object>") names a
+		// permanent introduced by a preceding clause or the triggering event
+		// ("... put a +1/+1 counter on this creature. It can't be blocked this
+		// turn.", Kappa Cannoneer). The clause is reconstructed byte-exactly from
+		// that reference's own text, so every deviation fails closed.
+		object, ok := exactBackReferenceObjectText(effect.References)
+		return ok && strings.EqualFold(clause, object+" "+suffix)
 	case EffectContextPriorSubject:
 		return strings.EqualFold(clause, suffix)
 	default:

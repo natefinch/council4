@@ -177,6 +177,147 @@ func TestGenerateExecutableCardSourceCantBeBlockedThisTurnSourceAndTarget(t *tes
 	}
 }
 
+// TestGenerateExecutableCardSourceCantBeBlockedThisTurnSourceBackReference covers
+// the "It can't be blocked this turn." back-reference to the source permanent that
+// follows a prior sentence in the same effect (Kappa Cannoneer, Sahagin,
+// Razzle-Dazzler), lowering to an ApplyRule on the source permanent for the turn.
+func TestGenerateExecutableCardSourceCantBeBlockedThisTurnSourceBackReference(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Razzle-Dazzler",
+		Layout:     "normal",
+		ManaCost:   "{1}{U}",
+		TypeLine:   "Creature — Human Wizard",
+		Colors:     []string{"U"},
+		Power:      new("1"),
+		Toughness:  new("2"),
+		OracleText: "Whenever you cast your second spell each turn, put a +1/+1 counter on this creature. It can't be blocked this turn.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "r")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"TriggeredAbilities:",
+		"Primitive: game.ApplyRule{",
+		"Object: opt.Val(game.SourcePermanentReference()),",
+		"Kind: game.RuleEffectCantBeBlocked,",
+		"Duration: game.DurationThisTurn,",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+// TestGenerateExecutableCardSourceCantBeBlockedThisTurnTargetBackReference covers
+// the "That creature can't be blocked this turn." back-reference to a creature
+// targeted by a prior sentence (Stealth Mission, Assassin Den), lowering to an
+// ApplyRule on that same chosen target for the turn.
+func TestGenerateExecutableCardSourceCantBeBlockedThisTurnTargetBackReference(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Stealth Mission",
+		Layout:     "normal",
+		ManaCost:   "{2}{U}",
+		TypeLine:   "Sorcery",
+		Colors:     []string{"U"},
+		OracleText: "Put two +1/+1 counters on target creature you control. That creature can't be blocked this turn.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "s")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		`Constraint: "target creature you control"`,
+		"Primitive: game.ApplyRule{",
+		"Object: opt.Val(game.TargetPermanentReference(0)),",
+		"Kind: game.RuleEffectCantBeBlocked,",
+		"Duration: game.DurationThisTurn,",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+// TestGenerateExecutableCardSourceCantBeBlockedThisCombatEventBackReference covers
+// the "it can't be blocked this combat." back-reference to the event permanent of
+// an "attacks alone" trigger (Ma Chao, Western Warrior), lowering to an ApplyRule
+// on the attacking event permanent for the combat rather than the whole turn.
+func TestGenerateExecutableCardSourceCantBeBlockedThisCombatEventBackReference(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Ma Chao, Western Warrior",
+		Layout:     "normal",
+		ManaCost:   "{3}{R}{R}",
+		TypeLine:   "Legendary Creature — Human Soldier Warrior",
+		Colors:     []string{"R"},
+		Power:      new("3"),
+		Toughness:  new("3"),
+		OracleText: "Horsemanship (This creature can't be blocked except by creatures with horsemanship.)\nWhenever Ma Chao attacks alone, it can't be blocked this combat.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "m")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"TriggeredAbilities:",
+		"Primitive: game.ApplyRule{",
+		"Object: opt.Val(game.EventPermanentReference()),",
+		"Kind: game.RuleEffectCantBeBlocked,",
+		"Duration: game.DurationUntilEndOfCombat,",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+// TestGenerateExecutableCardSourceCantBeBlockedThisTurnBackReferenceFailsClosed
+// ensures the back-reference recognizer does not over-match: each wording deviates
+// from the exact "<back-reference> can't be blocked this turn/combat." restriction,
+// so generation must fail closed with a diagnostic and never lower a can't-be-
+// blocked rule effect.
+func TestGenerateExecutableCardSourceCantBeBlockedThisTurnBackReferenceFailsClosed(t *testing.T) {
+	t.Parallel()
+	rejected := []string{
+		"Put a +1/+1 counter on this creature. It can't be blocked.",
+		"Put a +1/+1 counter on this creature. It can't be blocked until end of turn.",
+		"Put a +1/+1 counter on this creature. It can't be blocked this turn except by Walls.",
+		"Put a +1/+1 counter on target creature you control. That creature can't be blocked this turn unless its controller pays {2}.",
+	}
+	for _, oracle := range rejected {
+		card := &ScryfallCard{
+			Name:       "Test Back-Reference Fail Closed",
+			Layout:     "normal",
+			ManaCost:   "{U}",
+			TypeLine:   "Sorcery",
+			OracleText: oracle,
+			Colors:     []string{"U"},
+		}
+		source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+		if err != nil {
+			t.Fatalf("GenerateExecutableCardSource(%q) err = %v", oracle, err)
+		}
+		if len(diagnostics) == 0 {
+			t.Errorf("GenerateExecutableCardSource(%q) produced no diagnostics, want fail closed", oracle)
+		}
+		if strings.Contains(source, "game.RuleEffectCantBeBlocked") {
+			t.Errorf("GenerateExecutableCardSource(%q) lowered a can't-be-blocked rule effect, want fail closed:\n%s", oracle, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceCantBeBlockedThisTurnFailsClosed(t *testing.T) {
 	t.Parallel()
 	// Each wording deviates from the exact "Target creature can't be blocked this

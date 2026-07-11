@@ -12,16 +12,19 @@ import (
 // lowerCantBeBlockedSpell lowers the temporary combat-evasion effect "<subject>
 // can't be blocked this turn." into ApplyRule instructions that place a
 // RuleEffectCantBeBlocked restriction on each affected creature for the turn
-// (game.DurationThisTurn, removed during cleanup). It accepts the three subject
+// (game.DurationThisTurn, removed during cleanup). It accepts the subject
 // shapes the parser recognizes: a target noun phrase with single, plural, or
 // optional cardinality ("Up to one target creature can't be blocked this
 // turn."), the source itself ("This creature can't be blocked this turn."), a
 // prior-subject sequence clause that inherits the source as its subject ("...
-// and can't be blocked this turn."), and the compound "source and up to one
-// other target creature" subject (Martha Jones), where the source and each
-// chosen target each gain the restriction. Every other recipient, duration,
-// condition, mode, or reference fails closed so the broader "can't be blocked
-// this turn" family stays faithful and bounded.
+// and can't be blocked this turn."), a demonstrative back-reference that names a
+// permanent introduced by a preceding clause or the triggering event ("... put a
+// +1/+1 counter on this creature. It can't be blocked this turn.", Kappa
+// Cannoneer), and the compound "source and up to one other target creature"
+// subject (Martha Jones), where the source and each chosen target each gain the
+// restriction. Every other recipient, duration, condition, mode, or reference
+// fails closed so the broader "can't be blocked this turn" family stays faithful
+// and bounded.
 func lowerCantBeBlockedSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
 		return game.AbilityContent{}, contentDiagnostic(
@@ -56,6 +59,9 @@ func lowerCantBeBlockedSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagn
 		len(ctx.content.Targets) == 0 &&
 		len(ctx.content.References) == 1 &&
 		ctx.content.References[0].Binding == compiler.ReferenceBindingSource
+	referencedObjectSubject := effect.Context == parser.EffectContextReferencedObject &&
+		len(ctx.content.Targets) == 0 &&
+		len(ctx.content.References) == 1
 	sourceAndTargetSubject := effect.Context == parser.EffectContextTarget &&
 		len(ctx.content.Targets) == 1 &&
 		ctx.content.Targets[0].Selector.Kind == compiler.SelectorCreature &&
@@ -116,6 +122,24 @@ func lowerCantBeBlockedSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagn
 		}.Ability(), nil
 	case sourceSubject:
 		object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{AllowSource: true})
+		if !ok {
+			return unsupported()
+		}
+		return game.Mode{
+			Sequence: []game.Instruction{cantBeBlockedInstruction(object, ruleDuration)},
+		}.Ability(), nil
+	case referencedObjectSubject:
+		// "<back-reference> can't be blocked this turn." ("... put a +1/+1
+		// counter on this creature. It can't be blocked this turn.", Kappa
+		// Cannoneer) grants the restriction to the permanent a preceding clause or
+		// the triggering event introduced. The demonstrative "it"/"that <object>"
+		// resolves to that object, which may be the source, the triggering event
+		// permanent, or a prior target; any other binding fails closed.
+		object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
+			AllowSource: true,
+			AllowEvent:  true,
+			AllowTarget: true,
+		})
 		if !ok {
 			return unsupported()
 		}

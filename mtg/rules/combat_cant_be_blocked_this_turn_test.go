@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/opt"
 )
 
 // TestCantBeBlockedThisTurnRejectsEveryBlockerUntilCleanup models the runtime
@@ -39,5 +40,38 @@ func TestCantBeBlockedThisTurnRejectsEveryBlockerUntilCleanup(t *testing.T) {
 		if !canBlockAttacker(g, blocker, attacker) {
 			t.Fatal("can't-be-blocked-this-turn effect still applied after cleanup expiry")
 		}
+	}
+}
+
+// TestApplyRuleSourceCantBeBlockedThisTurnGrantAndExpiry drives the exact
+// instruction the back-reference lowering produces for "... put a +1/+1 counter
+// on this creature. It can't be blocked this turn." (Kappa Cannoneer, Sahagin,
+// Razzle-Dazzler): an ApplyRule whose Object is the source permanent, granting a
+// RuleEffectCantBeBlocked for the turn. Resolving it must make the source
+// unblockable by every legal blocker for the turn, and the grant must lapse once
+// the turn's cleanup expires it, restoring normal blocking.
+func TestApplyRuleSourceCantBeBlockedThisTurnGrantAndExpiry(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatCreaturePermanentWithPower(g, game.Player1, 4)
+	blocker := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	obj := &game.StackObject{Controller: game.Player1, SourceID: source.ObjectID}
+
+	resolveInstruction(engine, g, obj, game.ApplyRule{
+		Object: opt.Val(game.SourcePermanentReference()),
+		RuleEffects: []game.RuleEffect{
+			{Kind: game.RuleEffectCantBeBlocked},
+		},
+		Duration: game.DurationThisTurn,
+	}, nil)
+
+	if canBlockAttacker(g, blocker, source) {
+		t.Fatal("source-granted can't-be-blocked-this-turn effect did not make the source unblockable")
+	}
+
+	expireRuleEffects(g)
+
+	if !canBlockAttacker(g, blocker, source) {
+		t.Fatal("source-granted can't-be-blocked-this-turn effect still applied after cleanup expiry")
 	}
 }
