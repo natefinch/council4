@@ -688,6 +688,7 @@ type ReplacementEffect struct {
 // chosen type" read the result from this key.
 const EntryTypeChoiceKey = ChoiceKey("oracle-entry-type")
 
+// EntryCardTypeChoiceKey stores an entry-time card-type choice.
 const EntryCardTypeChoiceKey = ChoiceKey("oracle-entry-card-type")
 
 // EntryColorChoiceKey is the ChoiceKey under which an entry-time color choice is
