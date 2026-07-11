@@ -483,14 +483,22 @@ func lowerSacrificeCost(_ string, component compiler.CostComponent) (cost.Additi
 			Amount: 1,
 		}, true
 	}
-	if !component.AmountKnown {
-		return cost.Additional{}, false
-	}
 	additional := cost.Additional{
 		Kind:          cost.AdditionalSacrifice,
 		Text:          component.Text,
-		Amount:        component.AmountValue,
 		ExcludeSource: component.ExcludeSource,
+	}
+	// A variable "Sacrifice X <type>" cost (Grim Hireling's "Sacrifice X
+	// Treasures") announces X as the ability's X, so the payer chooses how many
+	// matching permanents to sacrifice and that count feeds an X-scaled effect
+	// (DynamicAmountX). A fixed cost carries its known integer amount.
+	switch {
+	case component.AmountFromX:
+		additional.AmountFromX = true
+	case component.AmountKnown:
+		additional.Amount = component.AmountValue
+	default:
+		return cost.Additional{}, false
 	}
 	if !lowerCostPermanentObject(component, &additional, false) {
 		return cost.Additional{}, false

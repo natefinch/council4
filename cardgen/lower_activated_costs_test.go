@@ -986,6 +986,38 @@ func TestLowerActivatedSacrificeSubtypeAndAnotherCosts(t *testing.T) {
 			},
 		},
 		{
+			name:       "sacrifice variable X subtype",
+			typeLine:   "Creature — Tiefling Rogue",
+			oracleText: "Sacrifice X Treasures: Target creature gets -X/-X until end of turn.",
+			check: func(t *testing.T, additional cost.Additional) {
+				t.Helper()
+				if additional.Kind != cost.AdditionalSacrifice ||
+					!additional.AmountFromX ||
+					additional.Amount != 0 ||
+					additional.AmountAtLeastOne ||
+					additional.SubtypesAny != (cost.SubtypeSet{types.Treasure}) ||
+					additional.ExcludeSource {
+					t.Fatalf("additional cost = %#v, want variable sacrifice X Treasures", additional)
+				}
+			},
+		},
+		{
+			name:       "sacrifice variable X permanent type",
+			typeLine:   "Artifact Creature — Angel",
+			oracleText: "Sacrifice X lands: Put X +1/+1 counters on this creature.",
+			check: func(t *testing.T, additional cost.Additional) {
+				t.Helper()
+				if additional.Kind != cost.AdditionalSacrifice ||
+					!additional.AmountFromX ||
+					additional.Amount != 0 ||
+					!additional.MatchPermanentType ||
+					additional.PermanentType != types.Land ||
+					additional.ExcludeSource {
+					t.Fatalf("additional cost = %#v, want variable sacrifice X lands", additional)
+				}
+			},
+		},
+		{
 			name:       "sacrifice another typed permanent",
 			typeLine:   "Creature — Vampire",
 			oracleText: "Sacrifice another creature: Draw a card.",

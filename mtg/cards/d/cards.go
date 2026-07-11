@@ -54,6 +54,7 @@ var Cards = []cardset.Entry{
 	{Name: "Desolation Twin", New: DesolationTwin},
 	{Name: "Destructive Force", New: DestructiveForce},
 	{Name: "Destructive Tampering", New: DestructiveTampering},
+	{Name: "Devastating Summons", New: DevastatingSummons},
 	{Name: "Devilish Valet", New: DevilishValet},
 	{Name: "Diamond City", New: DiamondCity},
 	{Name: "Didact Echo", New: DidactEcho},

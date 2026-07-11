@@ -422,7 +422,7 @@ func recognizeActivationZone(ability *CompiledAbility) {
 		return
 	}
 	if activationCostUsesSourceFromGraveyard(*ability) ||
-		contentReturnsSourceFromGraveyard(ability.Content) {
+		contentMovesSourceFromGraveyard(ability.Content) {
 		ability.ActivationZone = zone.Graveyard
 	}
 }
@@ -454,10 +454,20 @@ func activationCostUsesSourceFromZone(ability CompiledAbility, sourceZone zone.T
 	return false
 }
 
-func contentReturnsSourceFromGraveyard(content AbilityContent) bool {
+// contentMovesSourceFromGraveyard reports whether the ability's content moves
+// the source card out of the graveyard — either returning it (EffectReturn, as
+// in Feasting Troll King's "Return this card from your graveyard to the
+// battlefield") or putting it elsewhere (EffectPut, as in Champion of Stray
+// Souls' "Put this card from your graveyard on top of your library"). Both make
+// the ability function from the graveyard, so its activation zone is the
+// graveyard rather than the battlefield.
+func contentMovesSourceFromGraveyard(content AbilityContent) bool {
 	for effectIndex := range content.Effects {
 		effect := &content.Effects[effectIndex]
-		if effect.Kind != EffectReturn || effect.FromZone != zone.Graveyard {
+		if effect.Kind != EffectReturn && effect.Kind != EffectPut {
+			continue
+		}
+		if effect.FromZone != zone.Graveyard {
 			continue
 		}
 		for _, reference := range content.References {
@@ -468,7 +478,7 @@ func contentReturnsSourceFromGraveyard(content AbilityContent) bool {
 		}
 	}
 	for _, mode := range content.Modes {
-		if contentReturnsSourceFromGraveyard(mode.Content) {
+		if contentMovesSourceFromGraveyard(mode.Content) {
 			return true
 		}
 	}

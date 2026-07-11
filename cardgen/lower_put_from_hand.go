@@ -48,17 +48,22 @@ func lowerPutEffectSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnosti
 	return lowerCounterPlacementSpell(ctx)
 }
 
-// lowerPutSourceOnLibrary lowers "put this [permanent] on top of its owner's
-// library" — Sensei's Divining Top's "put this artifact on top of its owner's
-// library" — and the corresponding bottom wording, into a single
-// PutPermanentOnLibrary instruction moving the source permanent to the top (or
-// bottom) of its owner's library without shuffling.
+// lowerPutSourceOnLibrary lowers the two self-source "put this <subject> on
+// top of (or the bottom of) a library" shapes into a single instruction:
+//   - The battlefield self-tuck — Sensei's Divining Top's "put this artifact on
+//     top of its owner's library" — lowers to a PutPermanentOnLibrary moving the
+//     source permanent, without shuffling.
+//   - The graveyard recursion — Champion of Stray Souls' "put this card from
+//     your graveyard on top of your library" — lowers to a graveyard -> library
+//     MoveCard on the source card; the ability functions from the graveyard.
 //
-// It is card-name-blind and fails closed on any shape it does not fully model: a
-// destination other than the recognized top/bottom, a non-self subject (every
-// reference must bind to the source, and a "this <type>" reference must be
-// present), targets, an "enters tapped" or under-your-control rider, negation,
-// division, a delayed timing, or a non-instant duration.
+// The two are distinguished purely by the effect's source zone. It is
+// card-name-blind and fails closed on any shape it does not fully model: a
+// destination other than the recognized top/bottom, a source zone other than
+// the battlefield or graveyard, a non-self subject (every reference must bind to
+// the source, and a "this <subject>" reference must be present), targets, an
+// "enters tapped" or under-your-control rider, negation, division, a delayed
+// timing, or a non-instant duration.
 func lowerPutSourceOnLibrary(ctx contentCtx) (game.AbilityContent, bool) {
 	if len(ctx.content.Targets) != 0 {
 		return game.AbilityContent{}, false
@@ -106,12 +111,37 @@ func lowerPutSourceOnLibrary(ctx contentCtx) (game.AbilityContent, bool) {
 	if !sawThis {
 		return game.AbilityContent{}, false
 	}
-	return game.Mode{Sequence: []game.Instruction{{
-		Primitive: game.PutPermanentOnLibrary{
-			Object: game.SourcePermanentReference(),
-			Bottom: bottom,
-		},
-	}}}.Ability(), true
+	// "Put this card from your graveyard on top of (or the bottom of) your
+	// library" is graveyard recursion (Champion of Stray Souls): the source is a
+	// card resting in the graveyard, so the ability functions from the graveyard
+	// and the card moves graveyard -> library. It is distinguished from the
+	// battlefield self-tuck (Sensei's Divining Top's "put this artifact on top of
+	// its owner's library") purely by the graveyard source zone. Any other source
+	// zone is unmodeled and fails closed.
+	switch effect.FromZone {
+	case zone.Graveyard:
+		sourceCard, ok := lowerCardReference(effect.References[0], referenceLoweringContext{AllowSource: true})
+		if !ok {
+			return game.AbilityContent{}, false
+		}
+		instruction, ok := graveyardReturnInstruction(sourceCard, graveyardReturnDestination{
+			Zone:              zone.Library,
+			DestinationBottom: bottom,
+		})
+		if !ok {
+			return game.AbilityContent{}, false
+		}
+		return game.Mode{Sequence: []game.Instruction{instruction}}.Ability(), true
+	case zone.None:
+		return game.Mode{Sequence: []game.Instruction{{
+			Primitive: game.PutPermanentOnLibrary{
+				Object: game.SourcePermanentReference(),
+				Bottom: bottom,
+			},
+		}}}.Ability(), true
+	default:
+		return game.AbilityContent{}, false
+	}
 }
 
 // lowerPutTargetOnLibrary lowers the in-play permanent tuck "put target

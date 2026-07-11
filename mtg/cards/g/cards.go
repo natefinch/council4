@@ -114,6 +114,7 @@ var Cards = []cardset.Entry{
 	{Name: "Griffnaut Tracker", New: GriffnautTracker},
 	{Name: "Grim Affliction", New: GrimAffliction},
 	{Name: "Grim Feast", New: GrimFeast},
+	{Name: "Grim Hireling", New: GrimHireling},
 	{Name: "Grinding Station", New: GrindingStation},
 	{Name: "Griptide", New: Griptide},
 	{Name: "Grismold, the Dreadsower", New: GrismoldTheDreadsower},
