@@ -319,6 +319,7 @@ var Cards = []cardset.Entry{
 	{Name: "Surgespanner", New: Surgespanner},
 	{Name: "Swift Kick", New: SwiftKick},
 	{Name: "Swift Maneuver", New: SwiftManeuver},
+	{Name: "Sword of Forge and Frontier", New: SwordOfForgeAndFrontier},
 	{Name: "Sword of Truth and Justice", New: SwordOfTruthAndJustice},
 	{Name: "Sword of War and Peace", New: SwordOfWarAndPeace},
 	{Name: "Sylvan Basilisk", New: SylvanBasilisk},

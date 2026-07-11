@@ -13,6 +13,7 @@ var Cards = []cardset.Entry{
 	{Name: "Raffine's Silencer", New: RaffineSSilencer},
 	{Name: "Raffine, Scheming Seer", New: RaffineSchemingSeer},
 	{Name: "Rag Dealer", New: RagDealer},
+	{Name: "Ragavan, Nimble Pilferer", New: RagavanNimblePilferer},
 	{Name: "Rage Nimbus", New: RageNimbus},
 	{Name: "Raging Kronch", New: RagingKronch},
 	{Name: "Raging Spirit", New: RagingSpirit},

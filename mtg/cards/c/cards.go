@@ -14,6 +14,7 @@ var Cards = []cardset.Entry{
 	{Name: "Calculated Dismissal", New: CalculatedDismissal},
 	{Name: "Call a Surprise Witness", New: CallASurpriseWitness},
 	{Name: "Caller of the Pack", New: CallerOfThePack},
+	{Name: "Campus Renovation", New: CampusRenovation},
 	{Name: "Canal Courier", New: CanalCourier},
 	{Name: "Canonized in Blood", New: CanonizedInBlood},
 	{Name: "Cao Cao, Lord of Wei", New: CaoCaoLordOfWei},
