@@ -40,6 +40,9 @@ func (r Renderer) renderConditionalDestinationPlace(ctx *renderCtx, value game.C
 	if value.EntryTapped {
 		fields = append(fields, "EntryTapped: true,")
 	}
+	if value.ThenMandatory {
+		fields = append(fields, "ThenMandatory: true,")
+	}
 	if value.Then != zone.None {
 		thenZone, thenErr := renderZone(value.Then)
 		if thenErr != nil {

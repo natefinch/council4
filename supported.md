@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,411 of 32,501 cards eligible for paper support (53.6%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,412 of 32,501 cards eligible for paper support (53.6%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -656,6 +656,7 @@ Council4 currently supports **17,411 of 32,501 cards eligible for paper support 
 - Archangel of Thune
 - Archangel's Light
 - Archdemon of Unx
+- Archdruid's Charm
 - Archenemy's Charm
 - Archers of Qarsi
 - Archers' Parapet

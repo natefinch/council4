@@ -98,12 +98,14 @@ func TestConditionalDestinationPlaceGateHoldsEntersBattlefieldTapped(t *testing.
 	if g.Players[game.Player1].Library.Contains(plains) || g.Players[game.Player1].Hand.Contains(plains) {
 		t.Fatal("revealed card should have left the library and not entered the hand")
 	}
+
 	var found *game.Permanent
 	for _, permanent := range g.Battlefield {
 		if permanent.CardInstanceID == plains {
 			found = permanent
 		}
 	}
+
 	if found == nil {
 		t.Fatal("revealed card did not enter the battlefield")
 	}

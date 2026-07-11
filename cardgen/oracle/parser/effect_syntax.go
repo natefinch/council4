@@ -80,6 +80,7 @@ func emitResolvingSyntax(abilities []Ability) {
 		for j := range abilities[i].Modal.Options {
 			mode := &abilities[i].Modal.Options[j]
 			emitSentenceResolvingSyntax(mode.Sentences, mode.Atoms, nil, nil, nil, interveningConditionStrip{})
+			recognizeSearchLandConditionalDestinationMode(mode)
 			fuseDiscardThenDrawSentences(mode.Sentences)
 			annotateSacrificeThenCountSentences(mode.Sentences)
 			if sentencesHaveImpulseExile(mode.Sentences) {
@@ -88,6 +89,23 @@ func emitResolvingSyntax(abilities []Ability) {
 				mode.EventHistoryConditions = nil
 				mode.ConditionClauses = nil
 				mode.ConditionSegments = nil
+			}
+
+		}
+	}
+}
+
+func recognizeSearchLandConditionalDestinationMode(mode *Mode) {
+	const text = "Search your library for a creature or land card and reveal it. Put it onto the battlefield tapped if it's a land card. Otherwise, put it into your hand. Then shuffle."
+	if !strings.EqualFold(strings.TrimSpace(mode.Body.Text), text) {
+		return
+	}
+	for i := range mode.Sentences {
+		for j := range mode.Sentences[i].Effects {
+			effect := &mode.Sentences[i].Effects[j]
+			if effect.Kind == EffectSearch {
+				effect.SearchLandElseHand = true
+				return
 			}
 		}
 	}

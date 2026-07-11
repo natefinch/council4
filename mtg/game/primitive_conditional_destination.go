@@ -37,6 +37,10 @@ type ConditionalDestinationPlace struct {
 	CardCondition opt.V[CardSelection]
 	Condition     opt.V[EffectCondition]
 	EntryTapped   bool
+	// ThenMandatory performs the matching "then" move without offering a choice.
+	// It backs exact routing text such as "put it onto the battlefield tapped if
+	// it's a land card. Otherwise, put it into your hand."
+	ThenMandatory bool
 	// Then is the destination when the gate holds and the controller accepts.
 	// The zero value (zone.None) keeps the historical battlefield put; any other
 	// non-battlefield zone moves the card there instead. ThenReveal first reveals
