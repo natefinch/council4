@@ -2735,14 +2735,17 @@ type EffectSyntax struct {
 	// on the ability's single typed condition clause, never inspecting the source
 	// text. It is set only when the ability matches that exact shape and carries a
 	// recognized condition clause.
-	SourceSpellCostReductionConditional bool                    `json:",omitempty"`
-	Replacement                         EffectReplacementSyntax `json:",omitzero"`
-	References                          []Reference             `json:",omitempty"`
-	SubjectReferences                   []Reference             `json:",omitempty"`
-	Targets                             []TargetSyntax          `json:",omitempty"`
-	SubjectTargets                      []TargetSyntax          `json:",omitempty"`
-	Payment                             EffectPaymentSyntax     `json:",omitzero"`
-	Exact                               bool                    `json:",omitempty"`
+	SourceSpellCostReductionConditional bool `json:",omitempty"`
+	// SourceSpellCostReductionTargetsTappedCreature marks the exact condition
+	// "if it targets a tapped creature."
+	SourceSpellCostReductionTargetsTappedCreature bool                    `json:",omitempty"`
+	Replacement                                   EffectReplacementSyntax `json:",omitzero"`
+	References                                    []Reference             `json:",omitempty"`
+	SubjectReferences                             []Reference             `json:",omitempty"`
+	Targets                                       []TargetSyntax          `json:",omitempty"`
+	SubjectTargets                                []TargetSyntax          `json:",omitempty"`
+	Payment                                       EffectPaymentSyntax     `json:",omitzero"`
+	Exact                                         bool                    `json:",omitempty"`
 	// TapUntapReferenceObjectClean reports that a tap or untap effect's clause is
 	// exactly "<verb> <object>." naming the source or a singular back-reference
 	// ("Untap it.", "Tap that creature.", "Untap this creature."), tolerating an

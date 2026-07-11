@@ -335,6 +335,12 @@ func TestParseSourceSpellCostReductionConditionalExactness(t *testing.T) {
 			context: Context{InstantOrSorcery: true},
 			amount:  1,
 		},
+		{
+			name:    "targets tapped creature",
+			source:  "This spell costs {3} less to cast if it targets a tapped creature.",
+			context: Context{InstantOrSorcery: true},
+			amount:  3,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -345,6 +351,9 @@ func TestParseSourceSpellCostReductionConditionalExactness(t *testing.T) {
 			}
 			if effect.SourceSpellCostReductionAmount != test.amount {
 				t.Fatalf("reduction amount = %d, want %d", effect.SourceSpellCostReductionAmount, test.amount)
+			}
+			if test.name == "targets tapped creature" && !effect.SourceSpellCostReductionTargetsTappedCreature {
+				t.Fatal("tapped-creature target condition was not typed")
 			}
 		})
 	}

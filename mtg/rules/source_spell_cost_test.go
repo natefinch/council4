@@ -411,3 +411,39 @@ func TestSourceSpellCostReductionConditionalNoReductionWhenUnsatisfied(t *testin
 		t.Fatalf("reduction without controlling a Wizard = %d, want 0", got)
 	}
 }
+
+func TestSourceSpellCostReductionTargetsTappedCreature(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	target := addWizardPermanent(g, game.Player2)
+	card := &game.CardDef{CardFace: game.CardFace{
+		Name:     "Seized from Slumber",
+		Types:    []types.Card{types.Instant},
+		ManaCost: opt.Val(cost.Mana{cost.O(4), cost.W}),
+		StaticAbilities: []game.StaticAbility{{RuleEffects: []game.RuleEffect{{
+			Kind:           game.RuleEffectCostModifier,
+			AffectedSource: true,
+			CostModifier: game.CostModifier{
+				Kind:                  game.CostModifierSpell,
+				GenericReduction:      3,
+				TargetsTappedCreature: true,
+			},
+		}}}},
+	}}
+	state := &rulesPaymentState{g: g}
+	reduction := func() int {
+		total := 0
+		for _, modifier := range state.CostModifiersForSpell(
+			game.Player1, card, 0, zone.Hand, []game.Target{game.PermanentTarget(target.ObjectID)},
+		) {
+			total += modifier.GenericReduction
+		}
+		return total
+	}
+	if got := reduction(); got != 0 {
+		t.Fatalf("untapped target reduction = %d, want 0", got)
+	}
+	target.Tapped = true
+	if got := reduction(); got != 3 {
+		t.Fatalf("tapped target reduction = %d, want 3", got)
+	}
+}

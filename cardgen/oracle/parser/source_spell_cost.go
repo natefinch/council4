@@ -1,6 +1,8 @@
 package parser
 
 import (
+	"strings"
+
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
@@ -100,7 +102,11 @@ func emitSourceSpellCostReductionDynamic(abilities []Ability) {
 func emitSourceSpellCostReductionConditional(abilities []Ability) {
 	for i := range abilities {
 		ability := &abilities[i]
-		if ability.Modal != nil || len(ability.ConditionClauses) == 0 {
+		targetsTappedCreature := strings.HasSuffix(
+			strings.ToLower(strings.TrimSpace(ability.Text)),
+			"if it targets a tapped creature.",
+		)
+		if ability.Modal != nil || len(ability.ConditionClauses) == 0 && !targetsTappedCreature {
 			continue
 		}
 		effect := singleResolvingEffect(ability)
@@ -122,6 +128,7 @@ func emitSourceSpellCostReductionConditional(abilities []Ability) {
 		}
 		effect.SourceSpellCostReductionConditional = true
 		effect.SourceSpellCostReductionAmount = amount
+		effect.SourceSpellCostReductionTargetsTappedCreature = targetsTappedCreature
 	}
 }
 
