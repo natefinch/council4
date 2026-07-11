@@ -460,6 +460,7 @@ func emitSentenceResolvingSyntax(
 	var enchantmentReturnCandidates []int
 	var pileSplitMiddleCandidates []int
 	var exiledCardChoiceCandidates []int
+	var roundUpRiderCandidates []int
 	for i := range sentences {
 		if sentences[i].StaticRule != nil ||
 			sourceCostReduction != nil && sentences[i].Span == sourceCostReduction.Span ||
@@ -498,6 +499,8 @@ func emitSentenceResolvingSyntax(
 				pileSplitMiddleCandidates = append(pileSplitMiddleCandidates, i)
 			case isExiledCardOpponentChoiceWords(normalizedWords(tokens)):
 				exiledCardChoiceCandidates = append(exiledCardChoiceCandidates, i)
+			case isRoundUpEachTimeRiderTokens(tokens):
+				roundUpRiderCandidates = append(roundUpRiderCandidates, i)
 			case isChooseTargetPreambleTokens(tokens) && len(sentences[i].Targets) > 0:
 				// A bare "Choose [another] target <object>." preamble declares a
 				// target consumed by a following effect's "it" pronoun and emits
@@ -548,6 +551,9 @@ func emitSentenceResolvingSyntax(
 	}
 	if len(enchantmentReturnCandidates) > 0 {
 		creditEnchantmentReturnRider(sentences, enchantmentReturnCandidates, unrecognizedSibling)
+	}
+	if len(roundUpRiderCandidates) > 0 {
+		creditRoundUpEachTimeRider(sentences, roundUpRiderCandidates, unrecognizedSibling)
 	}
 	if legacyEffects <= 1 {
 		return
@@ -636,6 +642,68 @@ func creditEnchantmentReturnRider(sentences []Sentence, riderCandidates []int, u
 	for _, index := range riderCandidates {
 		sentences[index].ReturnAsEnchantmentRider = true
 	}
+}
+
+// isRoundUpEachTimeRiderTokens reports whether the sentence tokens are the
+// "Round up each time." rider of a halved-copy create (Saw in Half). It carries
+// no effect of its own; it fixes the halved power/toughness rounding to up.
+func isRoundUpEachTimeRiderTokens(tokens []shared.Token) bool {
+	if !effectWordsAt(tokens, 0, "round", "up", "each", "time") {
+		return false
+	}
+	rest := tokens[4:]
+	for i := range rest {
+		if rest[i].Kind != shared.Period {
+			return false
+		}
+	}
+	return true
+}
+
+// creditRoundUpEachTimeRider folds one or more "Round up each time." rider
+// sentences onto the ability's lone halved-copy create effect, setting its
+// TokenCopyHalvePTRoundUp flag and marking the rider sentences so reference and
+// coverage scans credit them. It credits only when the ability holds exactly one
+// halved-copy create and no other sentence is unrecognized; otherwise the riders
+// stay uncredited and the card fails closed at the lowering coverage check.
+func creditRoundUpEachTimeRider(sentences []Sentence, riderCandidates []int, unrecognizedSibling bool) {
+	if unrecognizedSibling {
+		return
+	}
+	create := loneHalvedCopyEffect(sentences)
+	if create == nil {
+		return
+	}
+	riderSpan := sentences[riderCandidates[0]].Span
+	for _, index := range riderCandidates[1:] {
+		if sentences[index].Span.End.Offset > riderSpan.End.Offset {
+			riderSpan.End = sentences[index].Span.End
+		}
+	}
+	create.TokenCopyHalvePTRoundUp = true
+	create.TokenCopyHalveRoundUpRiderSpan = riderSpan
+	for _, index := range riderCandidates {
+		sentences[index].RoundUpEachTimeRider = true
+	}
+}
+
+// loneHalvedCopyEffect returns the single halved-copy create effect across the
+// sentences, or nil when the sentences hold zero or more than one such effect.
+// Sibling effects of other kinds are permitted and ignored.
+func loneHalvedCopyEffect(sentences []Sentence) *EffectSyntax {
+	var found *EffectSyntax
+	for i := range sentences {
+		for j := range sentences[i].Effects {
+			if !sentences[i].Effects[j].TokenCopyOfReferenceHalvedPT {
+				continue
+			}
+			if found != nil {
+				return nil
+			}
+			found = &sentences[i].Effects[j]
+		}
+	}
+	return found
 }
 
 // loneReturnToBattlefieldEffect returns the single return-to-battlefield effect
@@ -1910,6 +1978,7 @@ func finalizeParsedEffect(effect *EffectSyntax, sentence Sentence, atoms Atoms) 
 	effect.CounterRecipientSingleChoice = effect.Exact && counterPlacementSingleChoiceRecipient(effect)
 	effect.TokenCopyOfTarget = exactCreateCopyTokenEffectSyntax(effect)
 	effect.TokenCopyOfReference = exactCreateCopyTokenReferenceEffectSyntax(effect)
+	effect.TokenCopyOfReferenceHalvedPT = exactCreateCopyTokenHalvedReferenceEffectSyntax(effect)
 	effect.TokenCopyOfTriggeringSet = exactCreateCopyTokenTriggeringSetEffectSyntax(effect)
 	effect.TokenCopyOfAttached = exactCreateCopyTokenAttachedEffectSyntax(effect)
 	effect.RegenerateAttached = effect.Kind == EffectRegenerate && exactRegenerateAttachedEffectSyntax(effect)

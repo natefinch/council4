@@ -91,6 +91,9 @@ func lowerOrderedSequenceSpecialCase(
 	if content, ok := lowerDestroyThenSearchSequence(ctx); ok {
 		return content, nil, true
 	}
+	if content, ok := lowerDiesThisWayCopySequence(ctx); ok {
+		return content, nil, true
+	}
 	if content, ok := lowerSacrificeWithInabilityFallback(ctx); ok {
 		return content, nil, true
 	}

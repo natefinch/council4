@@ -2253,6 +2253,24 @@ type EffectSyntax struct {
 	// has no printed power/toughness of its own. An optional trailing " instead"
 	// (recorded separately in Replacement) is part of the recognized clause.
 	TokenCopyOfReference bool `json:",omitempty"`
+	// TokenCopyOfReferenceHalvedPT reports the linked halved-copy create
+	// "its controller creates <N> tokens that are copies of that creature, except
+	// their power is half that creature's power and their toughness is half that
+	// creature's toughness." (Saw in Half). The copy source is the "that creature"
+	// reference (the preceding destroy's target); each copy's power and toughness
+	// are set to half that creature's last-known power and toughness, rounded up
+	// per the credited "Round up each time." rider (TokenCopyHalvePTRoundUp). The
+	// dies-this-way copy sequence lowering consumes it and otherwise fails closed.
+	TokenCopyOfReferenceHalvedPT bool `json:",omitempty"`
+	// TokenCopyHalvePTRoundUp reports that the credited "Round up each time." rider
+	// folded onto a TokenCopyOfReferenceHalvedPT create, fixing the halved
+	// power/toughness rounding to up. Without it the halved-copy create fails
+	// closed rather than assume a rounding direction.
+	TokenCopyHalvePTRoundUp bool `json:",omitempty"`
+	// TokenCopyHalveRoundUpRiderSpan covers the "Round up each time." rider
+	// sentence folded onto this halved-copy create, so lowering credits the rider
+	// tokens as consumed. It is set together with TokenCopyHalvePTRoundUp.
+	TokenCopyHalveRoundUpRiderSpan shared.Span `json:"-"`
 	// TokenCopyOfAttached reports that the created token is a copy of the
 	// permanent the source is attached to ("Create a token that's a copy of
 	// equipped creature" / "enchanted creature"), as on Equipment and Auras. The

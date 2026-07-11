@@ -54,6 +54,7 @@ const (
 	ConditionPredicatePriorInstructionNotAccepted                      ConditionPredicateKind = "ConditionPredicatePriorInstructionNotAccepted"
 	ConditionPredicatePriorInstructionAccepted                         ConditionPredicateKind = "ConditionPredicatePriorInstructionAccepted"
 	ConditionPredicateDestroyedThisWay                                 ConditionPredicateKind = "ConditionPredicateDestroyedThisWay"
+	ConditionPredicateDiesThisWay                                      ConditionPredicateKind = "ConditionPredicateDiesThisWay"
 	ConditionPredicateNoLifeLostThisWay                                ConditionPredicateKind = "ConditionPredicateNoLifeLostThisWay"
 	ConditionPredicateEventPlayerDoesNotPay                            ConditionPredicateKind = "ConditionPredicateEventPlayerDoesNotPay"
 	ConditionPredicateCounterPlacementOnControlledCreature             ConditionPredicateKind = "ConditionPredicateCounterPlacementOnControlledCreature"
@@ -776,6 +777,7 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		recognizeControlsGreatestPowerCondition,
 		recognizeControlsGreatestToughnessCondition,
 		recognizeDestroyedThisWayCondition,
+		recognizeDiesThisWayCondition,
 		recognizeNoLifeLostThisWayCondition,
 		recognizeTargetObjectMatchCondition,
 		recognizeEventSubjectCondition,
@@ -1061,6 +1063,20 @@ func recognizeDestroyedThisWayCondition(body []shared.Token, _ Atoms) (Condition
 		return ConditionClause{}, false
 	}
 	return ConditionClause{Predicate: ConditionPredicateDestroyedThisWay}, true
+}
+
+// recognizeDiesThisWayCondition matches the linked resolving-success gate "that
+// creature dies this way" that follows a preceding "Destroy target creature."
+// effect (Saw in Half). "That creature" back-references the destroy's target and
+// "dies this way" holds only when that target was actually put into a graveyard
+// from the battlefield by that destruction (CR 700.4, CR 608.2c), so an
+// indestructible or replacement-saved target leaves the gated follow-up
+// unperformed. It fails closed on any other wording.
+func recognizeDiesThisWayCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
+	if tokenWordsEqual(body, "that", "creature", "dies", "this", "way") {
+		return ConditionClause{Predicate: ConditionPredicateDiesThisWay}, true
+	}
+	return ConditionClause{}, false
 }
 
 // recognizeNoLifeLostThisWayCondition matches the negated resolving-success gate

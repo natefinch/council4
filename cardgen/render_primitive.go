@@ -799,6 +799,9 @@ func appendTokenCopyModifierFields(ctx *renderCtx, fields []string, spec game.To
 		ctx.need(importOpt)
 		fields = append(fields, fmt.Sprintf("SetToughness: opt.Val(%s),", renderPTValue(spec.SetToughness.Val)))
 	}
+	if spec.HalvePowerToughnessRoundUp {
+		fields = append(fields, "HalvePowerToughnessRoundUp: true,")
+	}
 	if len(spec.SetColors) != 0 {
 		literal, err := renderColorSlice(ctx, spec.SetColors)
 		if err != nil {
