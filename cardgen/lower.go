@@ -869,6 +869,74 @@ func lowerExecutableAbility(
 	ability compiler.CompiledAbility,
 	syntax *parser.Ability,
 ) (abilityLowering, *shared.Diagnostic) {
+	if ability.SemblanceAnvilImprint {
+		content := game.Mode{Sequence: []game.Instruction{{
+			Optional: true,
+			Primitive: game.ExileFromHandChoice(
+				game.ControllerReference(),
+				game.Selection{ExcludedTypes: []types.Card{types.Land}},
+				game.Fixed(1),
+				exiledWithSourceKey,
+			),
+		}}}.Ability()
+		return abilityLowering{
+			triggeredAbilities: []game.TriggeredAbility{{
+				Text: ability.Text,
+				Trigger: game.TriggerCondition{
+					Type: game.TriggerWhen,
+					Pattern: game.TriggerPattern{
+						Event:  game.EventPermanentEnteredBattlefield,
+						Source: game.TriggerSourceSelf,
+					},
+				},
+				Content: content,
+			}},
+			consumed: semanticConsumption{
+				trigger:    ability.Trigger != nil,
+				optional:   ability.Optional,
+				modes:      len(ability.Content.Modes),
+				conditions: len(ability.Content.Conditions),
+				effects:    len(ability.Content.Effects),
+				keywords:   len(ability.Content.Keywords),
+				references: len(ability.Content.References),
+				targets:    len(ability.Content.Targets),
+			},
+			sourceSpans: []shared.Span{ability.Span},
+		}, nil
+	}
+	if ability.SemblanceAnvilReduction {
+		return abilityLowering{
+			staticAbilities: []loweredStaticAbility{{Body: game.StaticAbility{
+				Text: ability.Text,
+				RuleEffects: []game.RuleEffect{{
+					Kind:           game.RuleEffectCostModifier,
+					AffectedPlayer: game.PlayerYou,
+					CostModifier: game.CostModifier{
+						Kind:                              game.CostModifierSpell,
+						SharedExiledCardTypeReduction:     2,
+						SharedExiledCardTypeReductionOnce: true,
+						ExiledLinkKey:                     exiledWithSourceKey,
+						ExiledLinkObjectScoped:            true,
+					},
+				}},
+			}}},
+			consumed: semanticConsumption{
+				modes:      len(ability.Content.Modes),
+				conditions: len(ability.Content.Conditions),
+				effects:    len(ability.Content.Effects),
+				keywords:   len(ability.Content.Keywords),
+				references: len(ability.Content.References),
+				targets:    len(ability.Content.Targets),
+				declarations: func() int {
+					if ability.Static == nil {
+						return 0
+					}
+					return len(ability.Static.Declarations)
+				}(),
+			},
+			sourceSpans: []shared.Span{ability.Span},
+		}, nil
+	}
 	if ability.QuestForRenewalUntap {
 		return abilityLowering{
 			staticAbilities: []loweredStaticAbility{{Body: game.StaticAbility{

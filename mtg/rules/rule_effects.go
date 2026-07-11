@@ -1362,12 +1362,19 @@ func sharedExiledCardTypeReduction(g *game.Game, sourceObjectID id.ID, modifier 
 	if !ok {
 		return 0
 	}
-	key := game.LinkedObjectKey{SourceID: source.CardInstanceID, LinkID: string(modifier.ExiledLinkKey)}
+	sourceID := source.CardInstanceID
+	if modifier.ExiledLinkObjectScoped {
+		sourceID = sourceObjectID
+	}
+	key := game.LinkedObjectKey{SourceID: sourceID, LinkID: string(modifier.ExiledLinkKey)}
 	shared := 0
 	for cardType := range exiledLinkedCardTypes(g, key) {
 		if card.HasType(cardType) {
 			shared++
 		}
+	}
+	if modifier.SharedExiledCardTypeReductionOnce && shared > 0 {
+		return modifier.SharedExiledCardTypeReduction
 	}
 	return shared * modifier.SharedExiledCardTypeReduction
 }

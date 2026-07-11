@@ -1581,6 +1581,9 @@ func (v *cardDefValidator) validateSharedExiledCardTypeReduction(faceName string
 	if modifier.SharedExiledCardTypeReduction < 0 {
 		v.add(faceName, appendPath(path, "SharedExiledCardTypeReduction"), CardDefIssueInvalidRuleEffect, "shared-exiled-card-type cost reduction cannot be negative")
 	}
+	if modifier.SharedExiledCardTypeReductionOnce && modifier.SharedExiledCardTypeReduction <= 0 {
+		v.add(faceName, appendPath(path, "SharedExiledCardTypeReductionOnce"), CardDefIssueInvalidRuleEffect, "one-shot shared-type reduction requires a positive reduction")
+	}
 	if modifier.SharedExiledCardTypeReduction > 0 {
 		if modifier.Kind != CostModifierSpell {
 			v.add(faceName, appendPath(path, "SharedExiledCardTypeReduction"), CardDefIssueInvalidRuleEffect, "shared-exiled-card-type cost reduction requires a spell modifier")
@@ -1593,6 +1596,9 @@ func (v *cardDefValidator) validateSharedExiledCardTypeReduction(faceName string
 		}
 	} else if modifier.ExiledLinkKey != "" {
 		v.add(faceName, appendPath(path, "ExiledLinkKey"), CardDefIssueInvalidRuleEffect, "linked-exile key requires a shared-exiled-card-type cost reduction")
+	}
+	if modifier.ExiledLinkObjectScoped && modifier.ExiledLinkKey == "" {
+		v.add(faceName, appendPath(path, "ExiledLinkObjectScoped"), CardDefIssueInvalidRuleEffect, "object-scoped exile link requires a link key")
 	}
 }
 

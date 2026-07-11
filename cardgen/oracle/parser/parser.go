@@ -149,6 +149,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitDeclareAttackersCastRestriction(document.Abilities)
 	emitGoadedOpponentCreaturesCantBlock(document.Abilities)
 	emitQuestForRenewalUntap(document.Abilities)
+	emitSemblanceAnvil(document.Abilities)
 	emitSelfNameStaticRules(document.Abilities)
 	emitCost(document.Abilities)
 	emitOptional(document.Abilities)
@@ -212,6 +213,16 @@ func emitQuestForRenewalUntap(abilities []Ability) {
 	for i := range abilities {
 		abilities[i].QuestForRenewalUntap =
 			strings.EqualFold(strings.TrimSpace(abilities[i].Text), text)
+	}
+}
+
+func emitSemblanceAnvil(abilities []Ability) {
+	const imprint = "Imprint — When this artifact enters, you may exile a nonland card from your hand."
+	const reduction = "Spells you cast that share a card type with the exiled card cost {2} less to cast."
+	for i := range abilities {
+		text := strings.TrimSpace(abilities[i].Text)
+		abilities[i].SemblanceAnvilImprint = strings.EqualFold(text, imprint)
+		abilities[i].SemblanceAnvilReduction = strings.EqualFold(text, reduction)
 	}
 }
 
