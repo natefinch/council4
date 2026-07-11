@@ -963,14 +963,15 @@ func lowerDamageReplacement(
 		controller = game.TriggerControllerAny
 	}
 	return game.DamageReplacementFiltered(ability.Text, &game.DamageReplacementSpec{
-		Multiplier:        multiplier,
-		Addend:            addend,
-		SourceColors:      sourceColors,
-		SourceTypes:       sourceTypes,
-		ExcludeSource:     condition.Selection.ExcludeSource,
-		RecipientOpponent: condition.Selection.DamageRecipientOpponent,
-		NoncombatOnly:     condition.Selection.DamageNoncombatOnly,
-		Controller:        controller,
+		Multiplier:                  multiplier,
+		Addend:                      addend,
+		SourceColors:                sourceColors,
+		SourceTypes:                 sourceTypes,
+		ExcludeSource:               condition.Selection.ExcludeSource,
+		RecipientOpponent:           condition.Selection.DamageRecipientOpponent,
+		RecipientOpponentPlayerOnly: condition.Selection.DamageRecipientOpponentPlayerOnly,
+		NoncombatOnly:               condition.Selection.DamageNoncombatOnly,
+		Controller:                  controller,
 	}), true, nil
 }
 

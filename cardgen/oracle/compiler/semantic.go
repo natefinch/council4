@@ -1100,9 +1100,10 @@ type ConditionSelection struct {
 	// DamageRecipientOpponent, DamageNoncombatOnly, and DamageSourceAnyController
 	// qualify a damage-by-controlled-source clause: opponent-only recipient,
 	// noncombat-only damage, and a source controlled by any player respectively.
-	DamageRecipientOpponent   bool
-	DamageNoncombatOnly       bool
-	DamageSourceAnyController bool
+	DamageRecipientOpponent           bool
+	DamageRecipientOpponentPlayerOnly bool
+	DamageNoncombatOnly               bool
+	DamageSourceAnyController         bool
 	// DamageRecipientController restricts a damage-by-source clause to damage
 	// dealt to the source permanent's controller alone ("would deal damage to
 	// you"). DamageSourceControllerOpponent restricts it to a source controlled

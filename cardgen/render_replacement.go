@@ -375,6 +375,7 @@ func renderDamageReplacement(ctx *renderCtx, ability *game.ReplacementAbility) (
 	}
 	if replacement.ControllerFilter == game.TriggerControllerAny ||
 		replacement.DamageRecipientOpponent ||
+		replacement.DamageRecipientOpponentPlayerOnly ||
 		replacement.DamageNoncombatOnly ||
 		len(replacement.DamageSourceTypes) > 0 {
 		return renderFilteredDamageReplacement(ctx, ability)
@@ -427,7 +428,7 @@ func renderFilteredDamageReplacement(ctx *renderCtx, ability *game.ReplacementAb
 			return "", err
 		}
 	}
-	return fmt.Sprintf("game.DamageReplacementFiltered(%q, &game.DamageReplacementSpec{Multiplier: %d, Addend: %d, SourceColors: %s, SourceTypes: %s, ExcludeSource: %t, RecipientOpponent: %t, NoncombatOnly: %t, Controller: %s})",
+	return fmt.Sprintf("game.DamageReplacementFiltered(%q, &game.DamageReplacementSpec{Multiplier: %d, Addend: %d, SourceColors: %s, SourceTypes: %s, ExcludeSource: %t, RecipientOpponent: %t, RecipientOpponentPlayerOnly: %t, NoncombatOnly: %t, Controller: %s})",
 		ability.Text,
 		replacement.DamageMultiplier,
 		replacement.DamageAddend,
@@ -435,6 +436,7 @@ func renderFilteredDamageReplacement(ctx *renderCtx, ability *game.ReplacementAb
 		cardTypes,
 		replacement.DamageExcludeSource,
 		replacement.DamageRecipientOpponent,
+		replacement.DamageRecipientOpponentPlayerOnly,
 		replacement.DamageNoncombatOnly,
 		controller,
 	), nil
