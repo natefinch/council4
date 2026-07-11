@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,519 of 32,501 cards eligible for paper support (53.9%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,524 of 32,501 cards eligible for paper support (53.9%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2144,6 +2144,7 @@ Council4 currently supports **17,519 of 32,501 cards eligible for paper support 
 - Campaign of Vengeance
 - Campus Composer // Aqueous Aria
 - Campus Guide
+- Campus Renovation
 - Canal Courier
 - Canal Monitor
 - Cancel
@@ -6761,6 +6762,7 @@ Council4 currently supports **17,519 of 32,501 cards eligible for paper support 
 - Harvester Troll
 - Harvestguard Alseids
 - Hashep Oasis
+- Haste Magic
 - Hatching Plans
 - Hate Weaver
 - Hateflayer
@@ -7885,6 +7887,7 @@ Council4 currently supports **17,519 of 32,501 cards eligible for paper support 
 - Juniper Order Druid
 - Juniper Order Ranger
 - Juniper Order Rootweaver
+- Junk
 - Junk Diver
 - Junk Golem
 - Junk Jet
@@ -11452,6 +11455,7 @@ Council4 currently supports **17,519 of 32,501 cards eligible for paper support 
 - Rag Dealer
 - Ragamuffyn
 - Ragavan
+- Ragavan, Nimble Pilferer
 - Rage Nimbus
 - Rage Reflection
 - Rage Thrower
@@ -14815,6 +14819,7 @@ Council4 currently supports **17,519 of 32,501 cards eligible for paper support 
 - Sword of Body and Mind
 - Sword of Feast and Famine
 - Sword of Fire and Ice
+- Sword of Forge and Frontier
 - Sword of Kaldra
 - Sword of Light and Shadow
 - Sword of the Animist

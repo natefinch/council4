@@ -124,3 +124,29 @@ func TestParseImpulseExileFailsClosed(t *testing.T) {
 		}
 	}
 }
+
+// TestFoldTrailingImpulseExileFailsClosedOnCondition confirms the trailing
+// impulse-exile fold does not fire when the exile sentence carries a condition,
+// whether leading or trailing. Folding collapses the body to the pure impulse
+// shape whose condition clauses are then stripped, so a gated exile must stay
+// unfolded (and unsupported) rather than generate an ungated impulse.
+func TestFoldTrailingImpulseExileFailsClosedOnCondition(t *testing.T) {
+	t.Parallel()
+	variants := []string{
+		"Draw a card. Exile the top card of your library if you control an artifact. You may play it this turn.",
+		"Draw a card. If you control an artifact, exile the top card of your library. You may play it this turn.",
+		"Draw a card. Exile the top card of your library unless you control an artifact. You may play it this turn.",
+	}
+	for _, source := range variants {
+		document, _ := Parse(source, Context{InstantOrSorcery: true})
+		for _, ability := range document.Abilities {
+			for _, sentence := range ability.Sentences {
+				for _, effect := range sentence.Effects {
+					if effect.Kind == EffectImpulseExile {
+						t.Fatalf("gated exile was folded into an ungated impulse:\n%s", source)
+					}
+				}
+			}
+		}
+	}
+}

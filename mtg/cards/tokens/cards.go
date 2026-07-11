@@ -15,6 +15,7 @@ import (
 	"github.com/natefinch/council4/mtg/cards/tokens/g"
 	"github.com/natefinch/council4/mtg/cards/tokens/h"
 	"github.com/natefinch/council4/mtg/cards/tokens/i"
+	"github.com/natefinch/council4/mtg/cards/tokens/j"
 	"github.com/natefinch/council4/mtg/cards/tokens/k"
 	"github.com/natefinch/council4/mtg/cards/tokens/l"
 	"github.com/natefinch/council4/mtg/cards/tokens/m"
@@ -41,6 +42,7 @@ var Cards = slices.Concat(
 	g.Cards,
 	h.Cards,
 	i.Cards,
+	j.Cards,
 	k.Cards,
 	l.Cards,
 	m.Cards,

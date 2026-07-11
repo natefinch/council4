@@ -537,6 +537,10 @@ func emitSentenceResolvingSyntax(
 		legacyEffects -= foldedLegacy
 		currentEffects -= foldedEffects
 	}
+	if foldedLegacy, foldedEffects, ok := foldTrailingImpulseExile(sentences, atoms); ok {
+		legacyEffects -= foldedLegacy
+		currentEffects -= foldedEffects
+	}
 	creditChooseKeywordAtRandomGrant(sentences, atoms)
 	if currentEffects == 1 && unrecognizedSibling {
 		for i := range sentences {

@@ -1299,6 +1299,14 @@ type Sentence struct {
 	// its tokens as belonging to that create rather than as an unrecognized
 	// sibling.
 	RoundUpEachTimeRider bool `json:",omitempty"`
+	// ImpulseExilePermission reports that this sentence is the credited play/cast
+	// permission ("Until end of turn, you may cast that card.") folded onto a
+	// preceding top-of-library exile to form a single EffectImpulseExile
+	// (foldTrailingImpulseExile). The impulse effect's clause span covers this
+	// sentence, so reference and coverage scans treat its "that card" back
+	// reference and tokens as belonging to that impulse rather than as an
+	// unrecognized sibling.
+	ImpulseExilePermission bool `json:",omitempty"`
 }
 
 // sentenceIsCreditedRider reports whether the sentence has been folded onto a
@@ -1318,7 +1326,8 @@ func sentenceIsCreditedRider(s *Sentence) bool {
 		s.RemoveAuraRider ||
 		s.TokenGrantedAbilityRider ||
 		s.PersistentManaRider ||
-		s.RoundUpEachTimeRider
+		s.RoundUpEachTimeRider ||
+		s.ImpulseExilePermission
 }
 
 // StaticRuleSubjectKind identifies the source object constrained by a simple
