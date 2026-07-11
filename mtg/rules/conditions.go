@@ -38,7 +38,8 @@ func conditionParametersNegative(cond *game.Condition) bool {
 		cond.AnyOpponentControls.Exists && cond.AnyOpponentControls.Val.MinCount < 0 ||
 		cond.OpponentsControl.Exists && cond.OpponentsControl.Val.MinCount < 0 ||
 		cond.SourceLevelCountersAtLeast < 0 ||
-		cond.SourceLevelCountersLessThan < 0
+		cond.SourceLevelCountersLessThan < 0 ||
+		cond.SourceCountersAtLeast < 0
 }
 
 // aggregateValue evaluates a player- or board-derived quantity in the given
@@ -177,6 +178,10 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	}
 	if cond.SourceLevelCountersLessThan > 0 {
 		matches = matches && ctx.source != nil && ctx.source.Counters.Get(counter.Level) < cond.SourceLevelCountersLessThan
+	}
+	if cond.SourceCountersAtLeast > 0 {
+		matches = matches && cond.SourceCounterKindKnown && ctx.source != nil &&
+			ctx.source.Counters.Get(cond.SourceCounterKind) >= cond.SourceCountersAtLeast
 	}
 	if cond.SourceNotMonstrous {
 		matches = matches && ctx.source != nil && !ctx.source.Monstrous

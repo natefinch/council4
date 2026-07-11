@@ -3,6 +3,7 @@ package game
 import (
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/compare"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
@@ -80,7 +81,11 @@ type Condition struct {
 	// predicate.
 	SourceLevelCountersAtLeast  int
 	SourceLevelCountersLessThan int
-	SourceNotMonstrous          bool
+	// SourceCountersAtLeast gates on a named counter kind on the source.
+	SourceCounterKind      counter.Kind
+	SourceCounterKindKnown bool
+	SourceCountersAtLeast  int
+	SourceNotMonstrous     bool
 	// SourceSaddled requires the condition source Mount to be saddled
 	// (CR 702.166), as in "if this creature is saddled". Negate models the
 	// "isn't saddled" wording.
@@ -327,6 +332,7 @@ func (c *Condition) Empty() bool {
 		c.SourceClassLevelLessThan == 0 &&
 		c.SourceLevelCountersAtLeast == 0 &&
 		c.SourceLevelCountersLessThan == 0 &&
+		c.SourceCountersAtLeast == 0 &&
 		!c.SourceNotMonstrous &&
 		!c.SourceSaddled &&
 		!c.SourceTributeNotPaid &&

@@ -1026,6 +1026,21 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 		fields = append(fields, fmt.Sprintf("SourceLevelCountersLessThan: %d,", cond.SourceLevelCountersLessThan))
 		hasPredicate = true
 	}
+	if cond.SourceCountersAtLeast > 0 {
+		if !cond.SourceCounterKindKnown {
+			return "", errors.New("render condition: source counter kind is unknown")
+		}
+		kind, err := renderCounterKind(cond.SourceCounterKind)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields,
+			fmt.Sprintf("SourceCounterKind: %s,", kind),
+			"SourceCounterKindKnown: true,",
+			fmt.Sprintf("SourceCountersAtLeast: %d,", cond.SourceCountersAtLeast),
+		)
+		hasPredicate = true
+	}
 	if cond.AnyOpponentPoisonAtLeast > 0 {
 		fields = append(fields, fmt.Sprintf("AnyOpponentPoisonAtLeast: %d,", cond.AnyOpponentPoisonAtLeast))
 		hasPredicate = true
