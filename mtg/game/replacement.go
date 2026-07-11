@@ -329,9 +329,10 @@ type ReplacementEffect struct {
 	// restricts it to damage dealt to an opponent of the replacement's controller
 	// or a permanent that opponent controls. DamageNoncombatOnly restricts it to
 	// noncombat damage. Each is empty/false when the replacement is unrestricted.
-	DamageSourceTypes       []types.Card
-	DamageRecipientOpponent bool
-	DamageNoncombatOnly     bool
+	DamageSourceTypes                 []types.Card
+	DamageRecipientOpponent           bool
+	DamageRecipientOpponentPlayerOnly bool
+	DamageNoncombatOnly               bool
 
 	// DamagePreventAmount is the fixed amount a continuous static damage
 	// prevention caps from each matching damage event ("prevent N of that

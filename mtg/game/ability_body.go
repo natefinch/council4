@@ -771,14 +771,15 @@ func DamageReplacementExcludingSource(text string, multiplier, addend int, sourc
 // whether it applies only to opponent recipients, and whether it applies only
 // to noncombat damage.
 type DamageReplacementSpec struct {
-	Multiplier        int
-	Addend            int
-	SourceColors      []color.Color
-	SourceTypes       []types.Card
-	ExcludeSource     bool
-	RecipientOpponent bool
-	NoncombatOnly     bool
-	Controller        TriggerControllerFilter
+	Multiplier                  int
+	Addend                      int
+	SourceColors                []color.Color
+	SourceTypes                 []types.Card
+	ExcludeSource               bool
+	RecipientOpponent           bool
+	RecipientOpponentPlayerOnly bool
+	NoncombatOnly               bool
+	Controller                  TriggerControllerFilter
 }
 
 // DamageReplacementFiltered creates a persistent damage replacement (CR 614)
@@ -789,17 +790,18 @@ func DamageReplacementFiltered(text string, spec *DamageReplacementSpec) Replace
 	return ReplacementAbility{
 		Text: text,
 		Replacement: ReplacementEffect{
-			Description:             text,
-			MatchEvent:              EventDamageDealt,
-			ControllerFilter:        spec.Controller,
-			DamageMultiplier:        spec.Multiplier,
-			DamageAddend:            spec.Addend,
-			DamageSourceColors:      append([]color.Color(nil), spec.SourceColors...),
-			DamageSourceTypes:       append([]types.Card(nil), spec.SourceTypes...),
-			DamageExcludeSource:     spec.ExcludeSource,
-			DamageRecipientOpponent: spec.RecipientOpponent,
-			DamageNoncombatOnly:     spec.NoncombatOnly,
-			Duration:                DurationPermanent,
+			Description:                       text,
+			MatchEvent:                        EventDamageDealt,
+			ControllerFilter:                  spec.Controller,
+			DamageMultiplier:                  spec.Multiplier,
+			DamageAddend:                      spec.Addend,
+			DamageSourceColors:                append([]color.Color(nil), spec.SourceColors...),
+			DamageSourceTypes:                 append([]types.Card(nil), spec.SourceTypes...),
+			DamageExcludeSource:               spec.ExcludeSource,
+			DamageRecipientOpponent:           spec.RecipientOpponent,
+			DamageRecipientOpponentPlayerOnly: spec.RecipientOpponentPlayerOnly,
+			DamageNoncombatOnly:               spec.NoncombatOnly,
+			Duration:                          DurationPermanent,
 		},
 	}
 }

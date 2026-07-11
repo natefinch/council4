@@ -1532,6 +1532,9 @@ func damageRecipientIsOpponent(g *game.Game, event damageEvent, replacement *gam
 	controller := replacementCurrentController(g, replacement)
 	var recipient game.PlayerID
 	if event.permanent != nil {
+		if replacement.DamageRecipientOpponentPlayerOnly {
+			return false
+		}
 		recipient = effectiveController(g, event.permanent)
 	} else {
 		recipient = event.player

@@ -314,9 +314,12 @@ type ConditionSelection struct {
 	// noncombat damage. DamageSourceAnyController marks a source carrying no "you
 	// control" qualifier, so the replaced damage may come from any player's
 	// source.
-	DamageRecipientOpponent   bool `json:",omitempty"`
-	DamageNoncombatOnly       bool `json:",omitempty"`
-	DamageSourceAnyController bool `json:",omitempty"`
+	DamageRecipientOpponent bool `json:",omitempty"`
+	// DamageRecipientOpponentPlayerOnly restricts the opponent recipient to the
+	// player, excluding permanents they control.
+	DamageRecipientOpponentPlayerOnly bool `json:",omitempty"`
+	DamageNoncombatOnly               bool `json:",omitempty"`
+	DamageSourceAnyController         bool `json:",omitempty"`
 
 	// DamageRecipientController qualifies a damage-source clause whose recipient
 	// is the source permanent's controller alone ("would deal damage to you",
@@ -2530,9 +2533,11 @@ func recognizeDamageSourceCondition(body []shared.Token, atoms Atoms) (Condition
 	rest = trimmed
 	switch {
 	case tokenWordsEqual(rest, "a", "permanent", "or", "player"):
-	case tokenWordsEqual(rest, "an", "opponent", "or", "a", "permanent", "an", "opponent", "controls"),
+	case tokenWordsEqual(rest, "an", "opponent"),
+		tokenWordsEqual(rest, "an", "opponent", "or", "a", "permanent", "an", "opponent", "controls"),
 		tokenWordsEqual(rest, "an", "opponent", "or", "a", "permanent", "or", "planeswalker", "an", "opponent", "controls"):
 		selection.DamageRecipientOpponent = true
+		selection.DamageRecipientOpponentPlayerOnly = tokenWordsEqual(rest, "an", "opponent")
 	case tokenWordsEqual(rest, "you"):
 		selection.DamageRecipientController = true
 	default:

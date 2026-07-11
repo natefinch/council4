@@ -125,8 +125,35 @@ func TestDamageMultiplierReplacementDoublesPermanentDamage(t *testing.T) {
 	if dealt != 4 {
 		t.Fatalf("damage dealt = %d, want 4", dealt)
 	}
+
 	if target.MarkedDamage != 4 {
 		t.Fatalf("marked damage = %d, want 4", target.MarkedDamage)
+	}
+}
+
+func TestOpponentPlayerOnlyDamageReplacementExcludesPermanents(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	def := &game.CardDef{CardFace: game.CardFace{
+		Name:  "Fiendish Duo",
+		Types: []types.Card{types.Creature},
+		ReplacementAbilities: []game.ReplacementAbility{
+			game.DamageReplacementFiltered("double opponent damage", &game.DamageReplacementSpec{
+				Multiplier:                  2,
+				RecipientOpponent:           true,
+				RecipientOpponentPlayerOnly: true,
+				Controller:                  game.TriggerControllerAny,
+			}),
+		},
+	}}
+	addReplacementPermanent(t, g, game.Player1, def)
+	sourceID := addColoredSourceCard(g, game.Player1, color.Red)
+	target := addCombatCreaturePermanentWithPower(g, game.Player2, 5)
+
+	if dealt := dealPlayerDamage(g, sourceID, 0, game.Player1, game.Player2, 2, false); dealt != 4 {
+		t.Fatalf("player damage = %d, want 4", dealt)
+	}
+	if dealt := dealPermanentDamage(g, sourceID, 0, game.Player1, target, 2, false); dealt != 2 {
+		t.Fatalf("permanent damage = %d, want 2", dealt)
 	}
 }
 

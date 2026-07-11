@@ -463,6 +463,7 @@ func compileConditionSelection(syntax parser.ConditionSelection) (ConditionSelec
 	selection.DistinctNamesAtLeast = syntax.DistinctNamesAtLeast
 	selection.MatchDistinctNamesAtLeast = syntax.MatchDistinctNamesAtLeast
 	selection.DamageRecipientOpponent = syntax.DamageRecipientOpponent
+	selection.DamageRecipientOpponentPlayerOnly = syntax.DamageRecipientOpponentPlayerOnly
 	selection.DamageNoncombatOnly = syntax.DamageNoncombatOnly
 	selection.DamageSourceAnyController = syntax.DamageSourceAnyController
 	selection.DamageRecipientController = syntax.DamageRecipientController
