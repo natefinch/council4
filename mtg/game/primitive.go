@@ -686,6 +686,18 @@ type CreateToken struct {
 	EntryTapped    bool
 	EntryAttacking bool
 
+	// AttackEachOtherOpponent, when set, creates one token for each opponent of
+	// the ability's controller other than the defending player of the attack
+	// that triggered the ability, offering the controller a separate "you may"
+	// for each such opponent and putting each accepted token onto the
+	// battlefield tapped and attacking that opponent (CR 508.4). It backs the
+	// myriad keyword (CR 702.116): "for each opponent other than the defending
+	// player, you may create a token that's a copy of this creature that's
+	// tapped and attacking that player." The recipient of every token is the
+	// controller regardless of which opponent it attacks; Recipient and
+	// RecipientGroup are ignored. It is unset for ordinary token creation.
+	AttackEachOtherOpponent bool
+
 	// Power and Toughness, when set, override the source definition's printed
 	// power and toughness with a dynamic amount evaluated once at creation
 	// ("create an X/X ... token, where X is the amount of life you gained this

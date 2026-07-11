@@ -59,6 +59,7 @@ var Cards = []cardset.Entry{
 	{Name: "Plundering Barbarian", New: PlunderingBarbarian},
 	{Name: "Point the Way", New: PointTheWay},
 	{Name: "Pollenbright Druid", New: PollenbrightDruid},
+	{Name: "Polygoyf", New: Polygoyf},
 	{Name: "Ponyback Brigade", New: PonybackBrigade},
 	{Name: "Popular Entertainer", New: PopularEntertainer},
 	{Name: "Portal to Phyrexia", New: PortalToPhyrexia},

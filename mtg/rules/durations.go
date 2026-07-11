@@ -161,6 +161,7 @@ func scheduleDelayedTrigger(g *game.Game, obj *game.StackObject, def *game.Delay
 		BoundAttackerObjectID:       capturedAttackerObjectID(g, obj, def),
 		BoundDyingObjectID:          capturedDyingObjectID(g, obj, def),
 		CapturedObjectID:            capturedObjectID(g, obj, def),
+		CapturedObjectIDs:           capturedObjectIDs(g, obj, def),
 	})
 	return true
 }
@@ -183,6 +184,32 @@ func capturedObjectID(g *game.Game, obj *game.StackObject, def *game.DelayedTrig
 	}
 	objectID, _ := newReferenceResolver(g, obj).objectIdentityID(def.CapturedObject.Val)
 	return objectID
+}
+
+// capturedObjectIDs freezes every permanent a fixed-phase delayed trigger binds
+// to from the creating ability's CapturedObjectGroup reference, resolving the
+// referenced linked-object key against the creating ability's context at
+// schedule time. It backs delayed disposal of several permanents an earlier
+// clause in the same resolution created and published under one linked key
+// ("... create a token that's a copy of this creature ... Exile the tokens at
+// end of combat.", the myriad keyword CR 702.116). It returns nil when the
+// definition carries no such reference, in which case the trigger's content
+// finds nothing and does nothing.
+func capturedObjectIDs(g *game.Game, obj *game.StackObject, def *game.DelayedTriggerDef) []id.ID {
+	if !def.CapturedObjectGroup.Exists {
+		return nil
+	}
+	reference := def.CapturedObjectGroup.Val
+	if reference.Kind() != game.ObjectReferenceLinkedObject {
+		return nil
+	}
+	var ids []id.ID
+	for _, linked := range linkedObjects(g, linkedObjectSourceKey(g, obj, reference.LinkID())) {
+		if linked.ObjectID != 0 {
+			ids = append(ids, linked.ObjectID)
+		}
+	}
+	return ids
 }
 
 // capturedDamageSourceObjectID resolves the permanent a combat-damage delayed
@@ -425,6 +452,7 @@ func drainReadyDelayedTriggers(g *game.Game, events []game.Event) []pendingTrigg
 			capturedTargetControllerLKI: clonePlayerIDMap(trigger.CapturedTargetControllerLKI),
 			capturedTargetManaValueLKI:  cloneIntMap(trigger.CapturedTargetManaValueLKI),
 			capturedObjectID:            trigger.CapturedObjectID,
+			capturedObjectIDs:           append([]id.ID(nil), trigger.CapturedObjectIDs...),
 		})
 	}
 	g.DelayedTriggers = remaining

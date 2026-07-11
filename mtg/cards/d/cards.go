@@ -10,6 +10,7 @@ var Cards = []cardset.Entry{
 	{Name: "D'Avenant Healer", New: DAvenantHealer},
 	{Name: "Daily Bugle Reporters", New: DailyBugleReporters},
 	{Name: "Dalek Drone", New: DalekDrone},
+	{Name: "Dalek Squadron", New: DalekSquadron},
 	{Name: "Dance of the Tumbleweeds", New: DanceOfTheTumbleweeds},
 	{Name: "Dandân", New: Dandân},
 	{Name: "Darigaaz's Caldera", New: DarigaazSCaldera},

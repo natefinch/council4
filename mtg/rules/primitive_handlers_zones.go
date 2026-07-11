@@ -528,6 +528,9 @@ func handleCreateToken(r *effectResolver, prim game.CreateToken) effectResolved 
 		}
 	}
 	res := effectResolved{accepted: true, amount: amount}
+	if prim.AttackEachOtherOpponent {
+		return r.createTokensAttackingEachOtherOpponent(prim)
+	}
 	if prim.RecipientGroup.Kind != game.PlayerGroupReferenceNone {
 		return r.createTokenForGroup(prim, res.amount)
 	}
@@ -581,6 +584,69 @@ func handleCreateToken(r *effectResolver, prim game.CreateToken) effectResolved 
 	}
 	res.succeeded = res.amount > 0
 	return res
+}
+
+// createTokensAttackingEachOtherOpponent creates one token per opponent of the
+// ability's controller other than the defending player of the attack that
+// triggered the ability, offering a separate "you may" for each and putting each
+// accepted token onto the battlefield tapped and attacking that opponent
+// (CR 508.4). It backs the myriad keyword (CR 702.116): "for each opponent other
+// than the defending player, you may create a token that's a copy of this
+// creature that's tapped and attacking that player." The controller owns every
+// token regardless of which opponent it attacks; opponents are visited in APNAP
+// order for determinism. When PublishLinked is set, every created token is
+// remembered under that key so a paired end-of-combat delayed trigger can exile
+// the whole set. The reported amount is the number of tokens created.
+func (r *effectResolver) createTokensAttackingEachOtherOpponent(prim game.CreateToken) effectResolved {
+	res := effectResolved{accepted: true}
+	controller := r.obj.Controller
+	defender, hasDefender := r.triggerEventDefendingPlayer()
+	opponents := playersInAPNAPOrder(r.game, aliveOpponents(r.game, controller))
+	var created []*game.Permanent
+	for _, opponent := range opponents {
+		if hasDefender && opponent == defender {
+			continue
+		}
+		if !isPlayerAlive(r.game, opponent) {
+			continue
+		}
+		if !r.engine.chooseMay(r.game, r.agents, controller, "Create a token copy attacking another opponent?", r.log) {
+			continue
+		}
+		token, ok := r.typedTokenDefinition(prim.Source)
+		if !ok {
+			continue
+		}
+		tokens, ok := createTokenPermanentsCollectingWithChoices(r.engine, r.game, controller, token, 1, prim.EntryTapped, r.agents, r.log)
+		if !ok {
+			continue
+		}
+		for _, permanent := range tokens {
+			declareTokenAttackingDefender(r.game, controller, permanent, opponent)
+		}
+		created = append(created, tokens...)
+		res.amount += len(tokens)
+	}
+	if prim.PublishLinked != "" {
+		key := linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked))
+		clearLinkedObjects(r.game, key)
+		for _, permanent := range created {
+			rememberLinkedObject(r.game, key, game.LinkedObjectRef{ObjectID: permanent.ObjectID, CardID: permanent.CardInstanceID})
+		}
+	}
+	res.succeeded = res.amount > 0
+	return res
+}
+
+// triggerEventDefendingPlayer reports the defending player of the attack that
+// triggered the resolving ability, when the trigger event carries one (an
+// attacker-declared or becomes-blocked/unblocked event). It backs "other than
+// the defending player" iteration over the myriad creature's opponents.
+func (r *effectResolver) triggerEventDefendingPlayer() (game.PlayerID, bool) {
+	if r.obj == nil || !r.obj.HasTriggerEvent || !defendingPlayerEvent(r.obj.TriggerEvent.Kind) {
+		return 0, false
+	}
+	return r.obj.TriggerEvent.Player, true
 }
 
 // createTokenForGroup creates the token for every player in the primitive's

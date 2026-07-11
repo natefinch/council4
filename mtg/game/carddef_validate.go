@@ -760,6 +760,17 @@ func (v *cardDefValidator) validateInstructionSequence(
 					v.add(faceName, appendPath(instructionPath, "Primitive.Trigger.CapturedObject"), CardDefIssueInvalidAbilityBody, err.Error())
 				}
 			}
+			if delayed.Trigger.CapturedObjectGroup.Exists {
+				if delayed.Trigger.EventPattern.Exists {
+					v.add(faceName, instructionPath, CardDefIssueInvalidAbilityBody, "delayed trigger sets CapturedObjectGroup with EventPattern")
+				}
+				if delayed.Trigger.CapturedObjectGroup.Val.Kind() != ObjectReferenceLinkedObject {
+					v.add(faceName, instructionPath, CardDefIssueInvalidAbilityBody, "delayed trigger CapturedObjectGroup must be a linked-object reference")
+				}
+				if err := firstProblem(delayed.Trigger.CapturedObjectGroup.Val.Validate()); err != nil {
+					v.add(faceName, appendPath(instructionPath, "Primitive.Trigger.CapturedObjectGroup"), CardDefIssueInvalidAbilityBody, err.Error())
+				}
+			}
 			v.validateAbilityContentWithLinked(
 				faceName,
 				appendPath(instructionPath, "Primitive.Trigger.Content"),

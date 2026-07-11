@@ -1492,6 +1492,31 @@ func chooseEntryAttackDefender(e *Engine, g *game.Game, controller game.PlayerID
 	return defenders[selected[0]], true
 }
 
+// declareTokenAttackingDefender puts a freshly created token onto the
+// battlefield attacking a specific defending player (CR 508.4), used for "...
+// token that's tapped and attacking that player." style effects where the
+// defender is fixed by the effect rather than chosen (the myriad keyword, where
+// each per-opponent token attacks that opponent). Like declareCreatedTokensAttacking
+// it is a no-op outside combat or when the token's controller is not the active
+// player, and it emits no attacker-declared event, so "whenever a creature
+// attacks" abilities do not trigger for it. A defender that is no longer alive is
+// skipped, leaving the token on the battlefield without attacking.
+func declareTokenAttackingDefender(g *game.Game, controller game.PlayerID, token *game.Permanent, defender game.PlayerID) {
+	if g.Combat == nil || g.Turn.ActivePlayer != controller || token == nil {
+		return
+	}
+	if !isPlayerAlive(g, defender) {
+		return
+	}
+	g.Combat.Attackers = append(g.Combat.Attackers, game.AttackDeclaration{
+		Attacker: token.ObjectID,
+		Target:   game.AttackTarget{Player: defender},
+	})
+	// CR 508.8: a creature put onto the battlefield attacking counts the same as
+	// a declared attacker for whether the later combat steps are skipped.
+	g.Combat.AttackersDeclared = true
+}
+
 // aliveDefenders filters a defender list down to the players still alive.
 func aliveDefenders(g *game.Game, defenders []game.PlayerID) []game.PlayerID {
 	alive := make([]game.PlayerID, 0, len(defenders))

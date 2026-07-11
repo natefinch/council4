@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,447 of 32,501 cards eligible for paper support (53.7%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,465 of 32,501 cards eligible for paper support (53.7%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1080,6 +1080,7 @@ Council4 currently supports **17,447 of 32,501 cards eligible for paper support 
 - Bankrupt in Blood
 - Banners Raised
 - Banquet Guests
+- Banshee of the Dread Choir
 - Banshee's Blade
 - Bant Battlemage
 - Bant Charm
@@ -1437,6 +1438,7 @@ Council4 currently supports **17,447 of 32,501 cards eligible for paper support 
 - Blade Historian
 - Blade Instructor
 - Blade Juggler
+- Blade of Selves
 - Blade of the Oni
 - Blade of the Sixth Pride
 - Blade Sliver
@@ -1972,6 +1974,7 @@ Council4 currently supports **17,447 of 32,501 cards eligible for paper support 
 - Brood Butcher
 - Brood Monitor
 - Brood Weaver
+- Broodbirth Viper
 - Broodhatch Nantuko
 - Broodhunter Wurm
 - Broodmate Dragon
@@ -2128,6 +2131,7 @@ Council4 currently supports **17,447 of 32,501 cards eligible for paper support 
 - Call to the Feast
 - Call to the Netherworld
 - Caller of Gales
+- Caller of the Pack
 - Callous Dismissal
 - Callous Inspector
 - Calming Verse
@@ -2509,6 +2513,7 @@ Council4 currently supports **17,447 of 32,501 cards eligible for paper support 
 - Chisei, Heart of Oceans
 - Chitinous Cloak
 - Chitinous Graspling
+- Chittering Dispatcher
 - Chittering Harvester
 - Chittering Host
 - Chittering Skitterling
@@ -2817,6 +2822,7 @@ Council4 currently supports **17,447 of 32,501 cards eligible for paper support 
 - Conciliator's Duelist
 - Conclave Cavalier
 - Conclave Equenaut
+- Conclave Evangelist
 - Conclave Guildmage
 - Conclave Mentor
 - Conclave Naturalists
@@ -3268,6 +3274,7 @@ Council4 currently supports **17,447 of 32,501 cards eligible for paper support 
 - Dakmor Sorceress
 - Dalek
 - Dalek Drone
+- Dalek Squadron
 - Damn
 - Damnable Pact
 - Damnation
@@ -6255,6 +6262,7 @@ Council4 currently supports **17,447 of 32,501 cards eligible for paper support 
 - Goldenglow Moth
 - Goldfury Strider
 - Goldhound
+- Goldlust Triad
 - Goldmane Griffin
 - Goldmaw Champion
 - Goldmeadow Dodger
@@ -6886,6 +6894,7 @@ Council4 currently supports **17,447 of 32,501 cards eligible for paper support 
 - Herald of Secret Streams
 - Herald of the Dreadhorde
 - Herald of the Fair
+- Herald of the Host
 - Herald of the Pantheon
 - Herald of the Sun
 - Herald's Horn
@@ -8444,6 +8453,7 @@ Council4 currently supports **17,447 of 32,501 cards eligible for paper support 
 - Legion Guildmage
 - Legion Leadership // Legion Stronghold
 - Legion Lieutenant
+- Legion Loyalty
 - Legion Vanguard
 - Legion's Judgment
 - Legion's Landing // Adanto, the First Fort
@@ -10996,6 +11006,7 @@ Council4 currently supports **17,447 of 32,501 cards eligible for paper support 
 - Polluted Delta
 - Polluted Mire
 - Polukranos Reborn // Polukranos, Engine of Ruin
+- Polygoyf
 - Polyraptor
 - Pond Prophet
 - Ponder
@@ -12684,6 +12695,7 @@ Council4 currently supports **17,447 of 32,501 cards eligible for paper support 
 - Scurrid Colony
 - Scurrilous Sentry
 - Scurry Oak
+- Scurry of Squirrels
 - Scute Mob
 - Scute Swarm
 - Scuttletide
@@ -14564,6 +14576,7 @@ Council4 currently supports **17,447 of 32,501 cards eligible for paper support 
 - Sultai Scavenger
 - Sultai Skullkeeper
 - Sultai Soothsayer
+- Sumala Rumblers
 - Sumala Woodshaper
 - Summary Judgment
 - Summer Bloom
@@ -14817,6 +14830,7 @@ Council4 currently supports **17,447 of 32,501 cards eligible for paper support 
 - Syr Vondam, the Lucent
 - Sythis, Harvest's Hand
 - T'Chaka, Venerable King
+- Tabaxi Toucaneers
 - Tablet of Compleation
 - Tablet of Epityr
 - Tah-Crop Skirmisher
@@ -15396,6 +15410,7 @@ Council4 currently supports **17,447 of 32,501 cards eligible for paper support 
 - Thunderwolf Cavalry
 - Thwip!
 - Théoden, King of Rohan
+- Tiamat's Fanatics
 - Tibalt's Rager
 - Tibor and Lumia
 - Ticked Off
@@ -16731,6 +16746,7 @@ Council4 currently supports **17,447 of 32,501 cards eligible for paper support 
 - Warbeast of Gorgoroth
 - Warbriar Blessing
 - Warchanter of Mogis
+- Warchief Giant
 - Warclamp Mastiff
 - Ward Sliver
 - Warded Battlements
@@ -17129,6 +17145,7 @@ Council4 currently supports **17,447 of 32,501 cards eligible for paper support 
 - Wizard Replica
 - Wizard's Lightning
 - Wizard's Retort
+- Wizards of Thay
 - Wizards' School
 - Wizened Cenn
 - Wizened Mentor
@@ -17250,6 +17267,7 @@ Council4 currently supports **17,447 of 32,501 cards eligible for paper support 
 - Wydwen, the Biting Gale
 - Wylie Duke, Atiin Hero
 - Wyluli Wolf
+- Wyrm's Crossing Patrol
 - X-23, Deadly Weapon
 - Xander's Lounge
 - Xathrid Necromancer

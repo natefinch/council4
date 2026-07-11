@@ -467,9 +467,28 @@ func (r referenceResolver) groupMembers(ref game.GroupReference) []id.ID {
 		return r.sameNameGroupMembers(ref)
 	case game.GroupDomainTriggeringAttackers:
 		return r.triggeringAttackersGroupMembers(ref)
+	case game.GroupDomainCapturedObjects:
+		return r.capturedObjectsGroupMembers()
 	default:
 		return []id.ID{}
 	}
+}
+
+// capturedObjectsGroupMembers enumerates the permanents a delayed trigger froze
+// under its CapturedObjectGroup reference at schedule time, kept on the resolving
+// stack object as CapturedObjectIDs. Members that have left the battlefield since
+// capture are skipped ("Exile the tokens at end of combat.", the myriad keyword).
+func (r referenceResolver) capturedObjectsGroupMembers() []id.ID {
+	if r.obj == nil {
+		return []id.ID{}
+	}
+	members := make([]id.ID, 0, len(r.obj.CapturedObjectIDs))
+	for _, objectID := range r.obj.CapturedObjectIDs {
+		if _, ok := permanentByObjectID(r.g, objectID); ok {
+			members = append(members, objectID)
+		}
+	}
+	return members
 }
 
 func (r referenceResolver) attachedObjectGroupMembers(ref game.GroupReference) []id.ID {

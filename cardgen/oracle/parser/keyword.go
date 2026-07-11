@@ -121,6 +121,7 @@ const (
 	KeywordSoulshift        KeywordKind = "KeywordSoulshift"
 	KeywordRampage          KeywordKind = "KeywordRampage"
 	KeywordTraining         KeywordKind = "KeywordTraining"
+	KeywordMyriad           KeywordKind = "KeywordMyriad"
 	// KeywordSaddle is the Saddle N keyword (Mounts, CR 702.166). Its integer
 	// parameter is the total power of other creatures that must be tapped to
 	// make the Mount saddled until end of turn.
@@ -299,6 +300,7 @@ var keywordNames = map[KeywordKind]string{
 	KeywordSoulshift:           "Soulshift",
 	KeywordRampage:             "Rampage",
 	KeywordTraining:            "Training",
+	KeywordMyriad:              "Myriad",
 	KeywordSaddle:              "Saddle",
 	KeywordCrew:                "Crew",
 	KeywordLandwalk:            "Landwalk",
@@ -441,6 +443,7 @@ var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordSoulshift, Words: []string{"soulshift"}},
 	{Kind: KeywordRampage, Words: []string{"rampage"}},
 	{Kind: KeywordTraining, Words: []string{"training"}},
+	{Kind: KeywordMyriad, Words: []string{"myriad"}},
 	{Kind: KeywordSaddle, Words: []string{"saddle"}},
 	{Kind: KeywordCrew, Words: []string{"crew"}},
 	{Kind: KeywordNonbasicLandwalk, Words: []string{"nonbasic", "landwalk"}},

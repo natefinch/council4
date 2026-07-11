@@ -28,6 +28,7 @@ var Cards = []cardset.Entry{
 	{Name: "Lead the Stampede", New: LeadTheStampede},
 	{Name: "Leering Emblem", New: LeeringEmblem},
 	{Name: "Legion Leadership", New: LegionLeadership},
+	{Name: "Legion Loyalty", New: LegionLoyalty},
 	{Name: "Legolas, Master Archer", New: LegolasMasterArcher},
 	{Name: "Leonin Battlemage", New: LeoninBattlemage},
 	{Name: "Leonin Den-Guard", New: LeoninDenGuard},

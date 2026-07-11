@@ -197,6 +197,17 @@ const (
 	// spell, and resolves the delivery to the promised opponent. Appended at the
 	// end of the enum so existing keyword ordinals are unchanged.
 	Gift
+	// Myriad (CR 702.116) is a creature keyword: "Whenever this creature attacks,
+	// for each opponent other than the defending player, you may create a token
+	// that's a copy of this creature that's tapped and attacking that player or a
+	// planeswalker they control. Exile the tokens at end of combat." It is modeled
+	// by MyriadTriggeredBody, an attack-triggered ability whose content creates,
+	// per other opponent, an optional tapped-and-attacking token copy of the
+	// source and schedules the created tokens to be exiled at end of combat. The
+	// keyword is carried so HasKeyword(Myriad) reports true and so it can be
+	// granted ("Equipped creature has myriad."). Appended at the end of the enum
+	// so existing keyword ordinals are unchanged.
+	Myriad
 )
 
 // Reusable StaticAbilityBody templates for non-parameterized keyword abilities.
@@ -487,7 +498,64 @@ var (
 	// once-per-turn increase on opponent life loss is a built-in rule keyed off
 	// the player's speed, so the ability itself only seeds the starting speed.
 	StartEnginesTriggeredBody = startEnginesTriggeredBody()
+
+	// MyriadTriggeredBody is the canonical triggered ability for myriad
+	// (CR 702.116): "Whenever this creature attacks, for each opponent other than
+	// the defending player, you may create a token that's a copy of this creature
+	// that's tapped and attacking that player or a planeswalker they control.
+	// Exile the tokens at end of combat." The attack trigger creates, per other
+	// opponent, an optional tapped-and-attacking token copy of the source
+	// (AttackEachOtherOpponent), publishes the created tokens under a linked key,
+	// and schedules an end-of-combat delayed trigger that exiles that captured
+	// set. The ability carries the Myriad keyword so HasKeyword(Myriad) reports
+	// true and so it can be granted ("Equipped creature has myriad.").
+	MyriadTriggeredBody = myriadTriggeredBody()
 )
+
+func myriadTriggeredBody() TriggeredAbility {
+	return TriggeredAbility{
+		Text:             "Myriad",
+		KeywordAbilities: []KeywordAbility{SimpleKeyword{Kind: Myriad}},
+		Trigger: TriggerCondition{
+			Type: TriggerWhenever,
+			Pattern: TriggerPattern{
+				Event:  EventAttackerDeclared,
+				Source: TriggerSourceSelf,
+			},
+		},
+		Content: Mode{Sequence: []Instruction{
+			{
+				Primitive: CreateToken{
+					Amount: Fixed(1),
+					Source: TokenCopyOf(TokenCopySpec{
+						Source: TokenCopySourceObject,
+						Object: SourcePermanentReference(),
+					}),
+					EntryTapped:             true,
+					AttackEachOtherOpponent: true,
+					PublishLinked:           LinkedKey("myriad-tokens"),
+				},
+			},
+			{
+				Primitive: CreateDelayedTrigger{
+					Trigger: DelayedTriggerDef{
+						Timing:              DelayedAtEndOfCombat,
+						CapturedObjectGroup: opt.Val(LinkedObjectReference("myriad-tokens")),
+						Content: Mode{
+							Sequence: []Instruction{
+								{
+									Primitive: Exile{
+										Group: CapturedObjectsGroup(),
+									},
+								},
+							},
+						}.Ability(),
+					},
+				},
+			},
+		}}.Ability(),
+	}
+}
 
 func startEnginesTriggeredBody() TriggeredAbility {
 	return TriggeredAbility{

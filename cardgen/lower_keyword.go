@@ -180,6 +180,12 @@ func lowerKeywordDispatch(
 		}
 		return keywordTriggeredLowering(&trainingAbility, ability, syntax), true, nil
 	}
+	if myriadAbility, ok, diag := lowerMyriadAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordTriggeredLowering(&myriadAbility, ability, syntax), true, nil
+	}
 	if livingWeaponAbility, ok, diag := lowerLivingWeaponAbility(ability, syntax); ok {
 		if diag != nil {
 			return abilityLowering{}, true, diag
@@ -570,6 +576,40 @@ func lowerTrainingAbility(
 		)
 	}
 	return game.TrainingTriggeredBody, true, nil
+}
+
+// lowerMyriadAbility lowers a printed Myriad (CR 702.116) keyword to its
+// canonical attacks triggered ability. Myriad is printed with reminder text
+// (stripped before lowering), so the lowering expands the bare keyword to the
+// reusable typed body, which creates a tapped-and-attacking token copy of the
+// creature for each opponent other than the defending player and exiles those
+// tokens at end of combat. It supports only the exact keyword with no other
+// rules text.
+func lowerMyriadAbility(
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (game.TriggeredAbility, bool, *shared.Diagnostic) {
+	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordMyriad {
+		return game.TriggeredAbility{}, false, nil
+	}
+	keyword := ability.Content.Keywords[0]
+	if keyword.ParameterKind != parser.KeywordParameterNone ||
+		(ability.Kind != compiler.AbilityStatic && ability.Kind != compiler.AbilitySpell) ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.References) != 0 ||
+		ability.AbilityWord != "" ||
+		!keywordOnlyCovered(syntax, keyword) {
+		return game.TriggeredAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported "+keyword.Name+" ability",
+			"the executable source backend supports only the exact "+keyword.Name+" keyword",
+		)
+	}
+	return game.MyriadTriggeredBody, true, nil
 }
 
 func lowerFlankingAbility(
@@ -1594,6 +1634,26 @@ func mixedStaticKeywords(keywords []compiler.CompiledKeyword) ([]game.Keyword, b
 	return result, true
 }
 
+// reusableTriggeredKeywordBody lowers a single keyword whose canonical body is a
+// reusable triggered ability rather than a simple keyword enum or a static
+// ability body. Myriad (CR 702.116) is modeled this way: it is granted ("Equipped
+// creature has myriad.", Blade of Selves; "Creatures you control have myriad.",
+// Legion Loyalty) and printed intrinsically alongside other keywords ("Trample,
+// myriad", Elturel Survivors; "Flying, myriad", Battle Angels of Tyr), so the
+// body carries the whole attack-triggered token-copy behavior in both cases. It
+// supports only the bare keyword and fails closed otherwise.
+func reusableTriggeredKeywordBody(keyword compiler.CompiledKeyword) (game.TriggeredAbility, bool) {
+	if keyword.ParameterKind != parser.KeywordParameterNone {
+		return game.TriggeredAbility{}, false
+	}
+	switch keyword.Kind {
+	case parser.KeywordMyriad:
+		return game.MyriadTriggeredBody, true
+	default:
+		return game.TriggeredAbility{}, false
+	}
+}
+
 // partitionTemporaryKeywords splits keyword grants into simple keyword enum
 // values and granted ability bodies. Protection keywords lower to static ability
 // bodies so the grant carries their full characteristics, and the landwalk
@@ -1613,6 +1673,11 @@ func partitionTemporaryKeywords(keywords []compiler.CompiledKeyword) ([]game.Key
 		}
 		simple, ok := simpleStaticKeyword(keyword)
 		if !ok {
+			if triggered, tok := reusableTriggeredKeywordBody(keyword); tok {
+				grant := triggered
+				abilities = append(abilities, &grant)
+				continue
+			}
 			ability, landwalk := grantedLandwalkStaticBody(keyword)
 			if !landwalk {
 				return nil, nil, false
@@ -1894,17 +1959,17 @@ func staticSubjectSubtypeList(effect *compiler.CompiledEffect) ([]types.Sub, boo
 func lowerKeywordAbility(
 	ability compiler.CompiledAbility,
 	syntax *parser.Ability,
-) ([]loweredStaticAbility, *shared.Diagnostic) {
+) ([]loweredStaticAbility, []game.TriggeredAbility, *shared.Diagnostic) {
 	for _, keyword := range ability.Content.Keywords {
 		if keyword.Kind == parser.KeywordDevoid && !syntax.DevoidRecognized {
-			return nil, executableDiagnostic(
+			return nil, nil, executableDiagnostic(
 				ability,
 				"unsupported Devoid ability",
 				"the executable source backend supports only exact \"Devoid (This card has no color.)\" abilities",
 			)
 		}
 		if keyword.Kind == parser.KeywordReadAhead && !syntax.ReadAheadRecognized {
-			return nil, executableDiagnostic(
+			return nil, nil, executableDiagnostic(
 				ability,
 				"unsupported Read ahead ability",
 				"the executable source backend supports only the canonical Read ahead ability and reminder text",
@@ -1912,37 +1977,38 @@ func lowerKeywordAbility(
 		}
 	}
 	if len(ability.Content.Modes) > 0 {
-		return nil, executableDiagnostic(
+		return nil, nil, executableDiagnostic(
 			ability,
 			"unsupported modal ability",
 			"the executable source backend does not yet lower modal abilities",
 		)
 	}
 	if !rulesFreeAbilityWordLabel(ability.AbilityWord) {
-		return nil, executableDiagnostic(
+		return nil, nil, executableDiagnostic(
 			ability,
 			"unsupported ability word",
 			fmt.Sprintf("the executable source backend does not yet lower the %q ability word", ability.AbilityWord),
 		)
 	}
 	if len(ability.Content.Keywords) == 0 {
-		return nil, executableDiagnostic(
+		return nil, nil, executableDiagnostic(
 			ability,
 			"unsupported static ability",
 			"the executable source backend does not yet lower non-keyword static rules text",
 		)
 	}
 	bodies := make([]loweredStaticAbility, 0, len(ability.Content.Keywords))
+	var triggered []game.TriggeredAbility
 	for _, keyword := range ability.Content.Keywords {
 		if keyword.ParameterKind != parser.KeywordParameterNone || keyword.WardCost != nil {
 			if body, ok, diag := lowerParameterizedKeywordToStaticAbility(ability, keyword); ok {
 				if diag != nil {
-					return nil, diag
+					return nil, nil, diag
 				}
 				bodies = append(bodies, loweredStaticAbility{Body: body})
 				continue
 			}
-			return nil, executableDiagnostic(
+			return nil, nil, executableDiagnostic(
 				ability,
 				"unsupported parameterized keyword",
 				fmt.Sprintf(
@@ -1952,24 +2018,28 @@ func lowerKeywordAbility(
 				),
 			)
 		}
-		body, ok := keywordStaticBodies[keyword.Kind]
-		if !ok {
-			return nil, executableDiagnostic(
-				ability,
-				"unsupported keyword ability",
-				fmt.Sprintf(
-					"the executable source backend has no reusable game template for %s",
-					keyword.Name,
-				),
-			)
+		if body, ok := keywordStaticBodies[keyword.Kind]; ok {
+			bodies = append(bodies, body)
+			continue
 		}
-		bodies = append(bodies, body)
+		if body, ok := reusableTriggeredKeywordBody(keyword); ok {
+			triggered = append(triggered, body)
+			continue
+		}
+		return nil, nil, executableDiagnostic(
+			ability,
+			"unsupported keyword ability",
+			fmt.Sprintf(
+				"the executable source backend has no reusable game template for %s",
+				keyword.Name,
+			),
+		)
 	}
 	if len(ability.Content.Targets) > 0 ||
 		len(ability.Content.Conditions) > 0 ||
 		len(ability.Content.Effects) > 0 ||
 		len(ability.Content.References) > 0 {
-		return nil, mixedKeywordDiagnostic(contentCtx{span: ability.Span, content: ability.Content})
+		return nil, nil, mixedKeywordDiagnostic(contentCtx{span: ability.Span, content: ability.Content})
 	}
 	for _, span := range syntax.CoverageSpans() {
 		if (syntax.AbilityWord != nil && span == syntax.AbilityWord.SeparatorSpan) ||
@@ -1979,9 +2049,9 @@ func lowerKeywordAbility(
 			spanIsKeywordListSemicolon(span, syntax.Tokens) {
 			continue
 		}
-		return nil, mixedKeywordDiagnostic(contentCtx{span: ability.Span, content: ability.Content})
+		return nil, nil, mixedKeywordDiagnostic(contentCtx{span: ability.Span, content: ability.Content})
 	}
-	return bodies, nil
+	return bodies, triggered, nil
 }
 
 func rulesFreeAbilityWordLabel(label string) bool {

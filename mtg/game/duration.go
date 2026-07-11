@@ -148,6 +148,18 @@ type DelayedTriggerDef struct {
 	// both cases the content references ObjectReferenceCapturedObject. It is only
 	// valid with a fixed-phase Timing.
 	CapturedObject opt.V[ObjectReference]
+	// CapturedObjectGroup, when present, freezes every permanent published under
+	// the linked-object key this reference names at schedule time, storing their
+	// object IDs on the scheduled trigger so the trigger's content can act on the
+	// whole set once the reference's basis is gone. It is the multi-object analog
+	// of CapturedObject and backs delayed disposal of several permanents an
+	// earlier clause in the same resolution created and published under one
+	// linked key ("... create a token that's a copy of this creature ... Exile
+	// the tokens at end of combat.", the myriad keyword CR 702.116, which creates
+	// one token per other opponent). The content references
+	// GroupDomainCapturedObjects via CapturedObjectsGroup(). It is only valid
+	// with a fixed-phase Timing and a linked-object reference.
+	CapturedObjectGroup opt.V[ObjectReference]
 }
 
 // DelayedTrigger is a runtime delayed triggered ability waiting for its timing
@@ -199,6 +211,14 @@ type DelayedTrigger struct {
 	// means no object was captured, so content that references
 	// ObjectReferenceCapturedObject finds nothing and does nothing.
 	CapturedObjectID id.ID
+	// CapturedObjectIDs are the concrete permanents frozen from the creating
+	// ability's CapturedObjectGroup reference at schedule time, carried into the
+	// fired trigger's content so it can act on the whole set after the linked
+	// key that named them may have been reused ("Exile the tokens at end of
+	// combat.", the myriad keyword). Empty means no objects were captured, so
+	// content referencing GroupDomainCapturedObjects finds nothing and does
+	// nothing.
+	CapturedObjectIDs []id.ID
 }
 
 // ReflexiveTrigger is a runtime reflexive triggered ability (CR 603.11) queued

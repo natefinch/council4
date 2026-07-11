@@ -24,6 +24,7 @@ var Cards = []cardset.Entry{
 	{Name: "Wanted Griffin", New: WantedGriffin},
 	{Name: "War Dance", New: WarDance},
 	{Name: "Warbriar Blessing", New: WarbriarBlessing},
+	{Name: "Warchief Giant", New: WarchiefGiant},
 	{Name: "Ward Sliver", New: WardSliver},
 	{Name: "Warden of the Eye", New: WardenOfTheEye},
 	{Name: "Warrior Angel", New: WarriorAngel},
@@ -66,6 +67,7 @@ var Cards = []cardset.Entry{
 	{Name: "Wizard Replica", New: WizardReplica},
 	{Name: "Wizard's Lightning", New: WizardSLightning},
 	{Name: "Wizard's Retort", New: WizardSRetort},
+	{Name: "Wizards of Thay", New: WizardsOfThay},
 	{Name: "Wizened Mentor", New: WizenedMentor},
 	{Name: "Wojek Bodyguard", New: WojekBodyguard},
 	{Name: "Wolfrider's Saddle", New: WolfriderSSaddle},
@@ -80,4 +82,5 @@ var Cards = []cardset.Entry{
 	{Name: "Wu Warship", New: WuWarship},
 	{Name: "Wurmcoil Engine", New: WurmcoilEngine},
 	{Name: "Wurmskin Forger", New: WurmskinForger},
+	{Name: "Wyrm's Crossing Patrol", New: WyrmSCrossingPatrol},
 }

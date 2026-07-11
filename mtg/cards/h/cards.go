@@ -56,6 +56,7 @@ var Cards = []cardset.Entry{
 	{Name: "Helm of Awakening", New: HelmOfAwakening},
 	{Name: "Hematite Talisman", New: HematiteTalisman},
 	{Name: "Henge Walker", New: HengeWalker},
+	{Name: "Herald of the Host", New: HeraldOfTheHost},
 	{Name: "Herd Migration", New: HerdMigration},
 	{Name: "Heron-Blessed Geist", New: HeronBlessedGeist},
 	{Name: "Hickory Woodlot", New: HickoryWoodlot},

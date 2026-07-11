@@ -831,6 +831,11 @@ func partitionStaticGrantKeywords(keywords []compiler.CompiledKeyword) ([]game.K
 			simpleKeywords = append(simpleKeywords, simple)
 			continue
 		}
+		if triggered, ok := reusableTriggeredKeywordBody(keyword); ok {
+			grant := triggered
+			abilities = append(abilities, &grant)
+			continue
+		}
 		ability, ok := staticGrantedAbilityForKeyword(keyword)
 		if !ok {
 			return nil, nil, false
