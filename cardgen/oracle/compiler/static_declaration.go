@@ -676,6 +676,7 @@ const (
 	StaticPlayerRuleShroud
 	StaticPlayerRuleDamageDoesntCauseLifeLoss
 	StaticPlayerRuleRedirectDamageToSource
+	StaticPlayerRuleActivateAbilitiesAsThoughHaste
 )
 
 // StaticPlayerRuleDeclaration is one player-scoped static rule applied to the
@@ -4690,6 +4691,10 @@ var staticPlayerRuleSpecs = map[parser.StaticDeclarationPlayerRuleKind]staticPla
 		kind:           StaticPlayerRuleRedirectDamageToSource,
 		matchesContent: redirectStaticPlayerRuleContent,
 	},
+	parser.StaticDeclarationPlayerRuleActivateAbilitiesAsThoughHaste: {
+		kind:           StaticPlayerRuleActivateAbilitiesAsThoughHaste,
+		matchesContent: activateAbilitiesAsThoughHasteStaticPlayerRuleContent,
+	},
 	parser.StaticDeclarationPlayerRuleAttackTax: {
 		kind:           StaticPlayerRuleAttackTax,
 		usesAttackTax:  true,
@@ -4861,6 +4866,22 @@ func redirectStaticPlayerRuleContent(content AbilityContent) bool {
 		return true
 	}
 	return len(content.References) == 1 && content.References[0].Kind == ReferenceThisObject
+}
+
+// activateAbilitiesAsThoughHasteStaticPlayerRuleContent accepts the "You may
+// activate abilities of creatures you control as though those creatures had
+// haste." rule, whose fixed wording carries a single "those creatures"
+// demonstrative pronoun reference and no conditions.
+func activateAbilitiesAsThoughHasteStaticPlayerRuleContent(content AbilityContent) bool {
+	if len(content.Conditions) != 0 {
+		return false
+	}
+	if len(content.References) == 0 {
+		return true
+	}
+	return len(content.References) == 1 &&
+		content.References[0].Kind == ReferencePronoun &&
+		content.References[0].Pronoun == ReferencePronounThose
 }
 
 // conditionalStaticPlayerRuleContent allows a player-scoped static rule to carry

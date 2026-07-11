@@ -156,7 +156,8 @@ func paymentManaAbilities(s State, playerID game.PlayerID, permanent *game.Perma
 		if permanent.Tapped != output.untap {
 			continue
 		}
-		if s.PermanentHasType(permanent, types.Creature) && permanent.SummoningSick {
+		if s.PermanentHasType(permanent, types.Creature) && permanent.SummoningSick &&
+			!s.ActivateAbilitiesAsThoughHaste(s.EffectiveController(permanent)) {
 			continue
 		}
 		if !s.ActivationConditionSatisfied(playerID, permanent, body.ActivationCondition) {

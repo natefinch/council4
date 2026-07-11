@@ -1093,6 +1093,12 @@ func appendStaticPlayerRuleDeclaration(body *game.StaticAbility, declaration com
 			AffectedPlayer: game.PlayerYou,
 		})
 		return true
+	case compiler.StaticPlayerRuleActivateAbilitiesAsThoughHaste:
+		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+			Kind:           game.RuleEffectActivateAbilitiesAsThoughHaste,
+			AffectedPlayer: game.PlayerYou,
+		})
+		return true
 	case compiler.StaticPlayerRuleAttackTax:
 		if declaration.Player.AttackTaxGeneric <= 0 {
 			return false
@@ -2171,6 +2177,12 @@ func canonicalStaticDeclarationVarName(declaration compiler.StaticDeclaration) s
 		declaration.Player != nil &&
 		declaration.Player.Kind == compiler.StaticPlayerRuleShroud {
 		return "game.PlayerShroudStaticBody"
+	}
+	if declaration.Kind == compiler.StaticDeclarationPlayerRule &&
+		declaration.Condition == nil &&
+		declaration.Player != nil &&
+		declaration.Player.Kind == compiler.StaticPlayerRuleActivateAbilitiesAsThoughHaste {
+		return "game.ActivateAbilitiesAsThoughHasteStaticBody"
 	}
 	if declaration.Kind == compiler.StaticDeclarationPlayerRule &&
 		declaration.Condition == nil &&

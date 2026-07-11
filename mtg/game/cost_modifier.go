@@ -574,6 +574,18 @@ const (
 	// rules layer removes it once its player casts a spell under it, matching the
 	// singular "a spell". Added last so existing kinds keep their wire values.
 	RuleEffectCastLinkedExileForFree
+	// RuleEffectActivateAbilitiesAsThoughHaste lets the affected player activate
+	// abilities of creatures they control as though those creatures had haste
+	// ("You may activate abilities of creatures you control as though those
+	// creatures had haste.", Thousand-Year Elixir, Shang-Chi, Tyvar). It is a
+	// controller-scoped activation permission: it removes the summoning-sickness
+	// restriction (CR 302.6) that would otherwise stop a creature that hasn't been
+	// under its controller's control continuously since their most recent turn
+	// began from paying a {T} or {Q} cost in one of its own activated abilities
+	// (CR 702.10c). It is an activation permission only — it does not let a
+	// summoning-sick creature attack. AffectedPlayer scopes it to the controller.
+	// Added last so existing kinds keep their wire values.
+	RuleEffectActivateAbilitiesAsThoughHaste
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -637,7 +649,8 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectDamageDoesntCauseLifeLoss,
 		RuleEffectRedirectDamageToSource,
 		RuleEffectCantBeSacrificed,
-		RuleEffectCastLinkedExileForFree:
+		RuleEffectCastLinkedExileForFree,
+		RuleEffectActivateAbilitiesAsThoughHaste:
 		return true
 	default:
 		return false

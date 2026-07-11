@@ -227,6 +227,7 @@ func (fakePaymentState) CanPayLife(game.PlayerID) bool { return true }
 
 func (fakePaymentState) PayLifeForManaColor(game.PlayerID, mana.Color) bool { return false }
 func (fakePaymentState) ManaProductionMultiplier(game.PlayerID) int         { return 1 }
+func (fakePaymentState) ActivateAbilitiesAsThoughHaste(game.PlayerID) bool  { return false }
 
 func (fakePaymentState) ActivePlayer() game.PlayerID { return game.Player1 }
 

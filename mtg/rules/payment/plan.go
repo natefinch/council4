@@ -885,14 +885,27 @@ func canTapForAbility(s State, p *game.Permanent) bool {
 	if p.Tapped {
 		return false
 	}
-	return !s.PermanentHasType(p, types.Creature) || !p.SummoningSick
+	return summoningSicknessAllowsAbilityCost(s, p)
 }
 
 func canUntapForAbility(s State, p *game.Permanent) bool {
 	if !p.Tapped {
 		return false
 	}
-	return !s.PermanentHasType(p, types.Creature) || !p.SummoningSick
+	return summoningSicknessAllowsAbilityCost(s, p)
+}
+
+// summoningSicknessAllowsAbilityCost reports whether a permanent may pay a {T} or
+// {Q} cost in one of its own activated abilities. A creature normally can't while
+// it has been under its controller's control for less than a full turn (CR
+// 302.6), modeled by the summoning-sickness flag, but an active
+// RuleEffectActivateAbilitiesAsThoughHaste its controller controls lifts that
+// restriction (CR 702.10c, Thousand-Year Elixir).
+func summoningSicknessAllowsAbilityCost(s State, p *game.Permanent) bool {
+	if !s.PermanentHasType(p, types.Creature) || !p.SummoningSick {
+		return true
+	}
+	return s.ActivateAbilitiesAsThoughHaste(s.EffectiveController(p))
 }
 
 // tapForAbility taps a permanent as an ability cost. forMana records

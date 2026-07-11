@@ -1635,6 +1635,13 @@ func scanKeywords(tokens []shared.Token, atoms Atoms) []Keyword {
 		if kind == KeywordFlash && i > 0 && equalWord(tokens[i-1], "had") {
 			continue
 		}
+		// "haste" in the activation-permission idiom "as though those creatures
+		// had haste" (or "... it had haste") names the timing reference, not a
+		// granted Haste keyword, so it is parsed by the activate-abilities-as-
+		// though-haste static instead.
+		if kind == KeywordHaste && i > 0 && equalWord(tokens[i-1], "had") {
+			continue
+		}
 		// The Gift keyword action names its promised gift ("Gift a card", "Gift a
 		// Food", "Gift a Treasure", "Gift a tapped Fish"; CR 702.171). The bare
 		// word "gift" also appears in the per-effect condition "the gift was
