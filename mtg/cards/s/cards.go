@@ -319,6 +319,7 @@ var Cards = []cardset.Entry{
 	{Name: "Sword of Truth and Justice", New: SwordOfTruthAndJustice},
 	{Name: "Sword of War and Peace", New: SwordOfWarAndPeace},
 	{Name: "Sylvan Basilisk", New: SylvanBasilisk},
+	{Name: "Sylvan Library", New: SylvanLibrary},
 	{Name: "Sylvan Messenger", New: SylvanMessenger},
 	{Name: "Synapse Sliver", New: SynapseSliver},
 	{Name: "Syndicate Infiltrator", New: SyndicateInfiltrator},

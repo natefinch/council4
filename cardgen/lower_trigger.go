@@ -95,6 +95,9 @@ func lowerAtTrigger(
 	if ability.ExactSequence == compiler.ExactSequencePayHandSizeOrCantAttack {
 		return lowerPayHandSizeOrCantAttackTrigger(ability, &pattern, intervening)
 	}
+	if ability.ExactSequence == compiler.ExactSequenceExtraDrawThenPayLifeOrTop {
+		return lowerExtraDrawPayLifeOrTopTrigger(ability, &pattern, intervening)
+	}
 	if triggerContentUnsupported(ability) {
 		return game.TriggeredAbility{}, executableDiagnostic(
 			ability,
@@ -671,6 +674,9 @@ func lowerTriggeredAbilityKind(
 	spans = appendKeywordSpans(spans, ability.Content.Keywords)
 	if ability.ExactSequence != compiler.ExactSequenceUnknown {
 		spans = append(spans, ability.Content.Span)
+		if ability.Optional {
+			spans = append(spans, ability.OptionalSpan)
+		}
 	}
 	for _, reminder := range syntax.Reminders {
 		spans = append(spans, reminder.Span)

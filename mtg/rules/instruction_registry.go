@@ -178,6 +178,7 @@ func newPrimitiveRegistry() *primitiveRegistry {
 	registerPrimitiveHandler(reg, handleRollDie)
 	registerPrimitiveHandler(reg, handleHideawayExile)
 	registerPrimitiveHandler(reg, handlePlayHideawayCard)
+	registerPrimitiveHandler(reg, handleChooseDrawnPayLifeOrTop)
 	return reg
 }
 

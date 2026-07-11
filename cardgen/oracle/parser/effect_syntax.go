@@ -36,6 +36,9 @@ func emitResolvingSyntax(abilities []Ability) {
 		if recognizePayHandSizeOrCantAttackSequence(&abilities[i]) {
 			continue
 		}
+		if recognizeExtraDrawPayLifeOrTopSequence(&abilities[i]) {
+			continue
+		}
 		emitSentenceResolvingSyntax(
 			abilities[i].Sentences,
 			abilities[i].Atoms,

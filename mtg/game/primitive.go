@@ -220,10 +220,17 @@ const (
 
 	// PrimitiveBolster performs the bolster keyword action (game.Bolster).
 	PrimitiveBolster
+
+	// PrimitiveChooseDrawnPayLifeOrTop has Player choose ChooseCount cards in
+	// their hand that were drawn this turn and, for each chosen card, pay LifeCost
+	// life to keep it or put it on top of their library ("choose two cards in your
+	// hand drawn this turn. For each of those cards, pay 4 life or put the card on
+	// top of your library.", Sylvan Library).
+	PrimitiveChooseDrawnPayLifeOrTop
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveBolster) + 1
+const primitiveKindCount = int(PrimitiveChooseDrawnPayLifeOrTop) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
