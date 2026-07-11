@@ -59,6 +59,7 @@ var Cards = []cardset.Entry{
 	{Name: "Wingmate Roc", New: WingmateRoc},
 	{Name: "Wingnut, Bat on the Belfry", New: WingnutBatOnTheBelfry},
 	{Name: "Wingspan Mentor", New: WingspanMentor},
+	{Name: "Wispdrinker Vampire", New: WispdrinkerVampire},
 	{Name: "Witch Engine", New: WitchEngine},
 	{Name: "Witch's Clinic", New: WitchSClinic},
 	{Name: "Witch's Mist", New: WitchSMist},

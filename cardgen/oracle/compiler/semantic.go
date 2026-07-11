@@ -3382,6 +3382,7 @@ type CompiledEffectDetails struct {
 	StaticSubjectColors  *CompiledStaticSubjectColors
 	StaticSubjectKeyword *CompiledStaticSubjectKeyword
 	StaticSubjectCounter *CompiledStaticSubjectCounter
+	StaticSubjectPower   *CompiledStaticSubjectPower
 	Symbol               string
 }
 
@@ -3430,6 +3431,14 @@ type CompiledStaticSubjectCounter struct {
 	Any  bool
 }
 
+// CompiledStaticSubjectPower preserves a static subject's optional numeric power
+// comparison filter constraining the affected group to members whose power meets
+// the comparison ("Each creature you control with power 4 or greater gets ...",
+// Goreclaw, Terror of Qal Sisma). Comparison is the recognized power bound.
+type CompiledStaticSubjectPower struct {
+	Comparison compare.Int
+}
+
 func staticSubjectType(text string, sub types.Sub, subsAny []types.Sub, known, excluded bool) *CompiledStaticSubjectType {
 	if text == "" && !known {
 		return nil
@@ -3461,11 +3470,18 @@ func staticSubjectCounter(required bool, kind counter.Kind, anyKind bool) *Compi
 	return &CompiledStaticSubjectCounter{Kind: kind, Any: anyKind}
 }
 
-func compiledEffectDetails(staticType *CompiledStaticSubjectType, staticColors *CompiledStaticSubjectColors, staticKeyword *CompiledStaticSubjectKeyword, staticCounter *CompiledStaticSubjectCounter, symbol string) *CompiledEffectDetails {
-	if staticType == nil && staticColors == nil && staticKeyword == nil && staticCounter == nil && symbol == "" {
+func staticSubjectPower(comparison compare.Int, match bool) *CompiledStaticSubjectPower {
+	if !match {
 		return nil
 	}
-	return &CompiledEffectDetails{StaticSubjectType: staticType, StaticSubjectColors: staticColors, StaticSubjectKeyword: staticKeyword, StaticSubjectCounter: staticCounter, Symbol: symbol}
+	return &CompiledStaticSubjectPower{Comparison: comparison}
+}
+
+func compiledEffectDetails(staticType *CompiledStaticSubjectType, staticColors *CompiledStaticSubjectColors, staticKeyword *CompiledStaticSubjectKeyword, staticCounter *CompiledStaticSubjectCounter, staticPower *CompiledStaticSubjectPower, symbol string) *CompiledEffectDetails {
+	if staticType == nil && staticColors == nil && staticKeyword == nil && staticCounter == nil && staticPower == nil && symbol == "" {
+		return nil
+	}
+	return &CompiledEffectDetails{StaticSubjectType: staticType, StaticSubjectColors: staticColors, StaticSubjectKeyword: staticKeyword, StaticSubjectCounter: staticCounter, StaticSubjectPower: staticPower, Symbol: symbol}
 }
 
 // StaticSubjectSubtype returns the printed subtype text on a static subject.
@@ -3554,6 +3570,16 @@ func (e *CompiledEffect) StaticSubjectCounter() (kind counter.Kind, anyKind, pre
 		return 0, false, false
 	}
 	return e.Details.StaticSubjectCounter.Kind, e.Details.StaticSubjectCounter.Any, true
+}
+
+// StaticSubjectPower returns the static subject's optional numeric power
+// comparison filter ("... with power 4 or greater ...") and whether one is
+// present.
+func (e *CompiledEffect) StaticSubjectPower() (comparison compare.Int, present bool) {
+	if e.Details == nil || e.Details.StaticSubjectPower == nil {
+		return compare.Int{}, false
+	}
+	return e.Details.StaticSubjectPower.Comparison, true
 }
 
 // Symbol returns the first mana symbol recognized in this effect.

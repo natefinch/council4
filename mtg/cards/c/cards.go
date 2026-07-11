@@ -10,6 +10,7 @@ var Cards = []cardset.Entry{
 	{Name: "Cabaretti Courtyard", New: CabarettiCourtyard},
 	{Name: "Cached Defenses", New: CachedDefenses},
 	{Name: "Cactarantula", New: Cactarantula},
+	{Name: "Cactusfolk Sureshot", New: CactusfolkSureshot},
 	{Name: "Calculated Dismissal", New: CalculatedDismissal},
 	{Name: "Call a Surprise Witness", New: CallASurpriseWitness},
 	{Name: "Caller of the Pack", New: CallerOfThePack},

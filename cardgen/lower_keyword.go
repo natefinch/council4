@@ -1935,6 +1935,9 @@ func resolvingStaticSubjectBaseSelection(effect *compiler.CompiledEffect) (game.
 			selection.RequiredCounter = kind
 		}
 	}
+	if comparison, present := effect.StaticSubjectPower(); present {
+		selection.Power = opt.Val(comparison)
+	}
 	return selection, true
 }
 
