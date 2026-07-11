@@ -35,6 +35,7 @@ func compileAbility(
 		Text: ability.Text,
 		CastOnlyDuringDeclareAttackersAfterAttacked: ability.CastOnlyDuringDeclareAttackersAfterAttacked,
 		GoadedOpponentCreaturesCantBlock:            ability.GoadedOpponentCreaturesCantBlock,
+		QuestForRenewalUntap:                        ability.QuestForRenewalUntap,
 	}
 	if ability.AbilityWord != nil {
 		compiled.AbilityWord = ability.AbilityWord.Label
@@ -203,6 +204,7 @@ func compileAbility(
 		!compiled.Partner &&
 		!compiled.CastOnlyDuringDeclareAttackersAfterAttacked &&
 		!compiled.GoadedOpponentCreaturesCantBlock &&
+		!compiled.QuestForRenewalUntap &&
 		compiled.KeywordShare == nil &&
 		len(compiled.Content.Effects) == 0 && len(compiled.Content.Keywords) == 0 &&
 		!legacyEffectsPresent(ability.Sentences) &&

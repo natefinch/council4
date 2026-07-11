@@ -11,6 +11,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -868,6 +869,31 @@ func lowerExecutableAbility(
 	ability compiler.CompiledAbility,
 	syntax *parser.Ability,
 ) (abilityLowering, *shared.Diagnostic) {
+	if ability.QuestForRenewalUntap {
+		return abilityLowering{
+			staticAbilities: []loweredStaticAbility{{Body: game.StaticAbility{
+				Text: ability.Text,
+				Condition: opt.Val(game.Condition{
+					SourceCounterKind:      counter.Quest,
+					SourceCounterKindKnown: true,
+					SourceCountersAtLeast:  4,
+				}),
+				RuleEffects: []game.RuleEffect{{
+					Kind:               game.RuleEffectUntapDuringOtherPlayersUntapStep,
+					AffectedController: game.ControllerYou,
+					PermanentTypes:     []types.Card{types.Creature},
+				}},
+			}}},
+			consumed: semanticConsumption{
+				conditions: len(ability.Content.Conditions),
+				effects:    len(ability.Content.Effects),
+				keywords:   len(ability.Content.Keywords),
+				references: len(ability.Content.References),
+				targets:    len(ability.Content.Targets),
+			},
+			sourceSpans: []shared.Span{ability.Span},
+		}, nil
+	}
 	if ability.GoadedOpponentCreaturesCantBlock {
 		return abilityLowering{
 			staticAbilities: []loweredStaticAbility{{Body: game.StaticAbility{

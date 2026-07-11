@@ -148,6 +148,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitAtoms(document.Abilities, context.CardName, context.Legendary)
 	emitDeclareAttackersCastRestriction(document.Abilities)
 	emitGoadedOpponentCreaturesCantBlock(document.Abilities)
+	emitQuestForRenewalUntap(document.Abilities)
 	emitSelfNameStaticRules(document.Abilities)
 	emitCost(document.Abilities)
 	emitOptional(document.Abilities)
@@ -202,6 +203,14 @@ func emitGoadedOpponentCreaturesCantBlock(abilities []Ability) {
 	const text = "Goaded creatures your opponents control can't block."
 	for i := range abilities {
 		abilities[i].GoadedOpponentCreaturesCantBlock =
+			strings.EqualFold(strings.TrimSpace(abilities[i].Text), text)
+	}
+}
+
+func emitQuestForRenewalUntap(abilities []Ability) {
+	const text = "As long as there are four or more quest counters on this enchantment, untap all creatures you control during each other player's untap step."
+	for i := range abilities {
+		abilities[i].QuestForRenewalUntap =
 			strings.EqualFold(strings.TrimSpace(abilities[i].Text), text)
 	}
 }
