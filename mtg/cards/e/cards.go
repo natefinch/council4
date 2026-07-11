@@ -64,6 +64,7 @@ var Cards = []cardset.Entry{
 	{Name: "Engineered Plague", New: EngineeredPlague},
 	{Name: "Engulfing Slagwurm", New: EngulfingSlagwurm},
 	{Name: "Enlistment Officer", New: EnlistmentOfficer},
+	{Name: "Ensnare", New: Ensnare},
 	{Name: "Enterprising Scallywag", New: EnterprisingScallywag},
 	{Name: "Entourage of Trest", New: EntourageOfTrest},
 	{Name: "Epic Confrontation", New: EpicConfrontation},

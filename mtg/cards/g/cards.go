@@ -130,6 +130,7 @@ var Cards = []cardset.Entry{
 	{Name: "Guardians' Pledge", New: GuardiansPledge},
 	{Name: "Guidelight Optimizer", New: GuidelightOptimizer},
 	{Name: "Guru Pathik", New: GuruPathik},
+	{Name: "Gush", New: Gush},
 	{Name: "Gust of Wind", New: GustOfWind},
 	{Name: "Gwaihir, Greatest of the Eagles", New: GwaihirGreatestOfTheEagles},
 	{Name: "Gwendlyn Di Corci", New: GwendlynDiCorci},

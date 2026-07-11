@@ -57,6 +57,7 @@ func compileAbility(
 		compiled.AlternativeCost = &CompiledAlternativeCost{
 			Kind:                  compileAlternativeCostKind(ability.AlternativeCost.Kind),
 			Condition:             compileAlternativeCostCondition(ability.AlternativeCost.Condition),
+			ConditionSubtype:      ability.AlternativeCost.ConditionSubtype,
 			WithoutPayingManaCost: ability.AlternativeCost.WithoutPayingManaCost,
 			ManaCost:              slices.Clone(ability.AlternativeCost.ManaCost),
 			ReplaceTargetWithEach: ability.AlternativeCost.ReplaceTargetWithEach,
@@ -326,6 +327,8 @@ func compileAlternativeCostKind(kind parser.SpellAlternativeCostKind) Alternativ
 		return AlternativeCostDiscard
 	case parser.SpellAlternativeCostBorderpost:
 		return AlternativeCostBorderpost
+	case parser.SpellAlternativeCostFree:
+		return AlternativeCostFree
 	default:
 		return AlternativeCostUnknown
 	}
@@ -337,6 +340,10 @@ func compileAlternativeCostCondition(condition parser.SpellAlternativeCostCondit
 		return AlternativeCostConditionControlsCommander
 	case parser.SpellAlternativeCostConditionNotYourTurn:
 		return AlternativeCostConditionNotYourTurn
+	case parser.SpellAlternativeCostConditionYourTurn:
+		return AlternativeCostConditionYourTurn
+	case parser.SpellAlternativeCostConditionControlsSubtype:
+		return AlternativeCostConditionControlsSubtype
 	default:
 		return AlternativeCostConditionUnknown
 	}

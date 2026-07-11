@@ -100,6 +100,7 @@ var Cards = []cardset.Entry{
 	{Name: "Psychotrope Thallid", New: PsychotropeThallid},
 	{Name: "Public Thoroughfare", New: PublicThoroughfare},
 	{Name: "Pull Through the Weft", New: PullThroughTheWeft},
+	{Name: "Pulverize", New: Pulverize},
 	{Name: "Puncturing Blow", New: PuncturingBlow},
 	{Name: "Purging Stormbrood", New: PurgingStormbrood},
 	{Name: "Purple Dragon Punks", New: PurpleDragonPunks},

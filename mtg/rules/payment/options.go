@@ -89,7 +89,7 @@ func spellCostOptionsForZoneAndKicker(s State, playerID game.PlayerID, card *gam
 				continue
 			}
 		}
-		if !alternativeCostConditionSatisfied(s, playerID, alternative.Condition) {
+		if !alternativeCostConditionSatisfied(s, playerID, alternative) {
 			continue
 		}
 		additional := append([]cost.Additional(nil), requiredAdditional...)
@@ -137,7 +137,7 @@ func spellCostOptionsForRequestWithoutModes(s State, req SpellRequest) []spellCo
 		return nil
 	}
 	alternative := req.Alternative.Val
-	if !alternativeCostConditionSatisfied(s, req.PlayerID, alternative.Condition) {
+	if !alternativeCostConditionSatisfied(s, req.PlayerID, alternative) {
 		return nil
 	}
 	kicker, kickerOK := spellKicker(req.Card)
@@ -243,8 +243,8 @@ func firstNormalPermission(permissions []SpellCastPermission) (SpellCastPermissi
 	return SpellCastPermissionDefault, false
 }
 
-func alternativeCostConditionSatisfied(s State, playerID game.PlayerID, condition cost.AlternativeCondition) bool {
-	switch condition {
+func alternativeCostConditionSatisfied(s State, playerID game.PlayerID, alternative cost.Alternative) bool {
+	switch alternative.Condition {
 	case cost.AlternativeConditionNone:
 		return true
 	case cost.AlternativeConditionControlsCommander:
@@ -256,8 +256,19 @@ func alternativeCostConditionSatisfied(s State, playerID game.PlayerID, conditio
 			}
 		}
 		return false
+	case cost.AlternativeConditionControlsPermanentSubtype:
+		for _, permanent := range s.Battlefield() {
+			if permanent != nil && !permanent.PhasedOut &&
+				s.EffectiveController(permanent) == playerID &&
+				s.PermanentHasSubtype(permanent, alternative.ConditionSubtype) {
+				return true
+			}
+		}
+		return false
 	case cost.AlternativeConditionNotYourTurn:
 		return s.ActivePlayer() != playerID
+	case cost.AlternativeConditionYourTurn:
+		return s.ActivePlayer() == playerID
 	case cost.AlternativeConditionOpponentLostLifeThisTurn:
 		return s.OpponentLostLifeThisTurn(playerID)
 	default:

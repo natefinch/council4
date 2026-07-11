@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,492 of 32,501 cards eligible for paper support (53.8%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,512 of 32,501 cards eligible for paper support (53.9%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -3044,6 +3044,7 @@ Council4 currently supports **17,492 of 32,501 cards eligible for paper support 
 - Cragflame
 - Cragplate Baloth
 - Cranial Plating
+- Crash
 - Crash and Burn
 - Crash of Rhino Beetles
 - Crash of Rhinos
@@ -3329,6 +3330,7 @@ Council4 currently supports **17,492 of 32,501 cards eligible for paper support 
 - Dark Prophecy
 - Dark Remedy
 - Dark Ritual
+- Dark Triumph
 - Dark Withering
 - Dark-Dweller Oracle
 - Darkblast
@@ -3417,6 +3419,7 @@ Council4 currently supports **17,492 of 32,501 cards eligible for paper support 
 - Daybreak Combatants
 - Daydream
 - Daysquad Marshal
+- Daze
 - Dazzling Angel
 - Dazzling Lights
 - Dazzling Ramparts
@@ -3577,6 +3580,7 @@ Council4 currently supports **17,492 of 32,501 cards eligible for paper support 
 - Deliberate
 - Delighted Halfling
 - Delirium Skeins
+- Delraich
 - Delusions of Mediocrity
 - Demand Answers
 - Dematerialize
@@ -3922,6 +3926,7 @@ Council4 currently supports **17,492 of 32,501 cards eligible for paper support 
 - Dovin's Veto
 - Down // Dirty
 - Downdraft
+- Downhill Charge
 - Downpour
 - Downsize
 - Downwind Ambusher
@@ -4614,6 +4619,7 @@ Council4 currently supports **17,492 of 32,501 cards eligible for paper support 
 - Enraged Revolutionary
 - Enslaved Dwarf
 - Enslaved Scout
+- Ensnare
 - Ensouled Scimitar
 - Enter the Enigma
 - Enter the God-Eternals
@@ -5205,6 +5211,7 @@ Council4 currently supports **17,492 of 32,501 cards eligible for paper support 
 - Firebending Lesson
 - Fireblade Artist
 - Fireblade Charger
+- Fireblast
 - Firebolt
 - Fireborn Knight
 - Firebrand Archer
@@ -6613,6 +6620,7 @@ Council4 currently supports **17,492 of 32,501 cards eligible for paper support 
 - Gurmag Rakshasa
 - Gurmag Swiftwing
 - Guru Pathik
+- Gush
 - Gust of Wind
 - Gust-Skimmer
 - Gustcloak Harrier
@@ -8381,6 +8389,7 @@ Council4 currently supports **17,492 of 32,501 cards eligible for paper support 
 - Lash of Malice
 - Lash of the Whip
 - Lash of Thorns
+- Lashknife
 - Lashwhip Predator
 - Lashwrithe
 - Lassoed by the Law
@@ -9415,6 +9424,7 @@ Council4 currently supports **17,492 of 32,501 cards eligible for paper support 
 - Mindwrack Harpy
 - Mindwrack Liege
 - Mine Bearer
+- Mine Collapse
 - Minecart Daredevil // Ride the Rails
 - Miner's Bane
 - Miner's Guidewing
@@ -9545,6 +9555,7 @@ Council4 currently supports **17,492 of 32,501 cards eligible for paper support 
 - Mocking Sprite
 - Mockingbird, Ace Agent
 - Moderation
+- Mogg Alarm
 - Mogg Bombers
 - Mogg Cannon
 - Mogg Fanatic
@@ -10470,6 +10481,7 @@ Council4 currently supports **17,492 of 32,501 cards eligible for paper support 
 - Origin of the Hidden Ones
 - Origin of the Hulk
 - Origin Spellbomb
+- Orim's Cure
 - Orim's Prayer
 - Orim, Samite Healer
 - Ornamental Courage
@@ -11263,6 +11275,7 @@ Council4 currently supports **17,492 of 32,501 cards eligible for paper support 
 - Pulse of Murasa
 - Pulse of the Tangle
 - Pulse Tracker
+- Pulverize
 - Pummeler for Hire
 - Puncture Blast
 - Puncture Bolt
@@ -11526,6 +11539,7 @@ Council4 currently supports **17,492 of 32,501 cards eligible for paper support 
 - Ramosian Commander
 - Ramosian Greatsword
 - Ramosian Lieutenant
+- Ramosian Rally
 - Ramosian Sergeant
 - Ramosian Sky Marshal
 - Rampage of the Valkyries
@@ -12219,6 +12233,7 @@ Council4 currently supports **17,492 of 32,501 cards eligible for paper support 
 - Rotwidow Pack
 - Rough // Tumble
 - Roughshod Mentor
+- Rouse
 - Rousing Read
 - Rover Blades
 - Roving Harper
@@ -12405,6 +12420,7 @@ Council4 currently supports **17,492 of 32,501 cards eligible for paper support 
 - Salvage Scout
 - Salvage Scuttler
 - Salvage Slasher
+- Salvage Titan
 - Salvaged Manaworker
 - Salvager of Secrets
 - Salvaging Station
@@ -13710,6 +13726,7 @@ Council4 currently supports **17,492 of 32,501 cards eligible for paper support 
 - Snowfield Sinkhole
 - Snowhorn Rider
 - Snowmelt Stag
+- Snuff Out
 - So Shiny
 - Soaring Drake
 - Soaring Hope
@@ -15405,6 +15422,7 @@ Council4 currently supports **17,492 of 32,501 cards eligible for paper support 
 - Thunder-Thrash Elder
 - Thunderblust
 - Thunderbolt
+- Thunderclap
 - Thunderclap Wyvern
 - Thundercloud Elemental
 - Thundercloud Shaman
@@ -15432,6 +15450,7 @@ Council4 currently supports **17,492 of 32,501 cards eligible for paper support 
 - Thundersteel Colossus
 - Thundertrap Trainer
 - Thunderwolf Cavalry
+- Thwart
 - Thwip!
 - Théoden, King of Rohan
 - Tiamat's Fanatics
@@ -15440,6 +15459,7 @@ Council4 currently supports **17,492 of 32,501 cards eligible for paper support 
 - Ticked Off
 - Ticket Booth // Tunnel of Hate
 - Ticket Tortoise
+- Tidal Bore
 - Tidal Courier
 - Tidal Force
 - Tidal Kraken

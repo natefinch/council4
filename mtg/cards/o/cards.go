@@ -44,6 +44,7 @@ var Cards = []cardset.Entry{
 	{Name: "Order", New: Order},
 	{Name: "Order of the Stars", New: OrderOfTheStars},
 	{Name: "Ordruun Commando", New: OrdruunCommando},
+	{Name: "Orim's Cure", New: OrimSCure},
 	{Name: "Orim's Prayer", New: OrimSPrayer},
 	{Name: "Orim, Samite Healer", New: OrimSamiteHealer},
 	{Name: "Ornery Goblin", New: OrneryGoblin},

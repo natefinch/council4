@@ -42,6 +42,13 @@ const (
 	// SpellAlternativeCostBorderpost is "{1}, return a basic land you control"
 	// rather than the spell's printed mana cost.
 	SpellAlternativeCostBorderpost
+	// SpellAlternativeCostFree is the "free spell" family: "[If <condition>,] you
+	// may <non-mana payment> rather than pay this spell's mana cost", where the
+	// payment is a single non-mana cost (pay life, sacrifice, tap, return, etc.)
+	// carried through the ability's CostSyntax like every other non-mana cost.
+	// Snuff Out ("If you control a Swamp, you may pay 4 life ...") is the
+	// canonical member.
+	SpellAlternativeCostFree
 )
 
 // SpellAlternativeCostCondition identifies a condition on an alternative spell cost.
@@ -54,6 +61,14 @@ const (
 	// SpellAlternativeCostConditionNotYourTurn gates a pitch alternative cost
 	// behind "If it's not your turn," (Force of Negation).
 	SpellAlternativeCostConditionNotYourTurn
+	// SpellAlternativeCostConditionYourTurn gates a free alternative cost behind
+	// "If it's your turn," (Mine Collapse).
+	SpellAlternativeCostConditionYourTurn
+	// SpellAlternativeCostConditionControlsSubtype gates a free alternative cost
+	// behind "If you control a <subtype>," where the subtype is a basic land
+	// type (Snuff Out's "If you control a Swamp,"). The subtype rides on the
+	// SpellAlternativeCost's ConditionSubtype field.
+	SpellAlternativeCostConditionControlsSubtype
 )
 
 // SpellAlternativeCost is typed syntax for a paragraph that offers an
@@ -62,6 +77,7 @@ type SpellAlternativeCost struct {
 	Span                  shared.Span
 	Kind                  SpellAlternativeCostKind
 	Condition             SpellAlternativeCostCondition
+	ConditionSubtype      types.Sub
 	WithoutPayingManaCost bool
 	ManaCost              cost.Mana
 	ReplaceTargetWithEach bool
@@ -286,6 +302,124 @@ func matchDiscardCardSpec(body []shared.Token, start int) (CostComponent, int, b
 	cursor++
 	component.Span = shared.SpanOf(body[start:cursor])
 	return component, cursor, true
+}
+
+// freeAlternativeCostClause recognizes the "free spell" family: "[If
+// <condition>,] you may <payment> rather than pay this spell's mana cost.",
+// where <payment> is a single non-mana cost. It is the general form behind Snuff
+// Out ("If you control a Swamp, you may pay 4 life ...") and the sacrifice-cost
+// members (Crash, Fireblast, Flare of Malice, ...). The payment tokens are
+// returned as a Phrase so the shared cost machinery (emitCost) types them with
+// atoms, exactly like a Flashback or Ward cost. It fails closed on multi-part
+// payments (any top-level "and", "or", or comma) and on unrecognized leading
+// conditions so a mana-only or compound alternative cost is never mistaken for a
+// free spell.
+func freeAlternativeCostClause(source string, body []shared.Token) (*SpellAlternativeCost, Phrase, bool) {
+	cursor := 0
+	condition := SpellAlternativeCostConditionUnknown
+	conditionSubtype := types.Sub("")
+	switch {
+	case equalWordSequence(body, cursor, "if", "it's", "not", "your", "turn") && commaAt(body, cursor+5):
+		cursor += 6
+		condition = SpellAlternativeCostConditionNotYourTurn
+	case equalWordSequence(body, cursor, "if", "it's", "your", "turn") && commaAt(body, cursor+4):
+		cursor += 5
+		condition = SpellAlternativeCostConditionYourTurn
+	case equalWordSequence(body, cursor, "if", "you", "control"):
+		sub, next, ok := matchControlledBasicLandCondition(body, cursor+3)
+		if !ok {
+			return nil, Phrase{}, false
+		}
+		cursor = next
+		condition = SpellAlternativeCostConditionControlsSubtype
+		conditionSubtype = sub
+	default:
+		// No recognized leading condition: the free cost is ungated and the
+		// cursor stays at the "you may" that must immediately follow.
+	}
+	if !equalWordSequence(body, cursor, "you", "may") {
+		return nil, Phrase{}, false
+	}
+	cursor += 2
+	rather := -1
+	for i := cursor; i+7 <= len(body); i++ {
+		if equalWordSequence(body, i, "rather", "than", "pay", "this", "spell's", "mana", "cost") {
+			rather = i
+			break
+		}
+	}
+	if rather < 0 {
+		return nil, Phrase{}, false
+	}
+	after := body[rather+7:]
+	if len(after) != 1 || after[0].Kind != shared.Period {
+		return nil, Phrase{}, false
+	}
+	payment := body[cursor:rather]
+	if len(payment) == 0 || !singlePartPayment(payment) {
+		return nil, Phrase{}, false
+	}
+	return &SpellAlternativeCost{
+		Span:             shared.SpanOf(body),
+		Kind:             SpellAlternativeCostFree,
+		Condition:        condition,
+		ConditionSubtype: conditionSubtype,
+	}, phraseFromTokens(source, payment), true
+}
+
+// commaAt reports whether the token at index is a comma.
+func commaAt(body []shared.Token, index int) bool {
+	return index >= 0 && index < len(body) && body[index].Kind == shared.Comma
+}
+
+// matchControlledBasicLandCondition parses the "a/an <basic land subtype> ,"
+// tail of a "If you control a Swamp," free-cost condition, returning the matched
+// subtype and the index immediately after the comma.
+func matchControlledBasicLandCondition(body []shared.Token, start int) (types.Sub, int, bool) {
+	cursor := start
+	if cursor >= len(body) || (!equalWord(body[cursor], "a") && !equalWord(body[cursor], "an")) {
+		return "", 0, false
+	}
+	cursor++
+	if cursor >= len(body) || body[cursor].Kind != shared.Word {
+		return "", 0, false
+	}
+	sub, ok := basicLandSubtype(body[cursor].Text)
+	if !ok {
+		return "", 0, false
+	}
+	cursor++
+	if !commaAt(body, cursor) {
+		return "", 0, false
+	}
+	return sub, cursor + 1, true
+}
+
+// basicLandSubtype maps a basic land type word onto its typed subtype.
+func basicLandSubtype(word string) (types.Sub, bool) {
+	switch {
+	case strings.EqualFold(word, "Plains"):
+		return types.Plains, true
+	case strings.EqualFold(word, "Island"):
+		return types.Island, true
+	case strings.EqualFold(word, "Swamp"):
+		return types.Swamp, true
+	case strings.EqualFold(word, "Mountain"):
+		return types.Mountain, true
+	case strings.EqualFold(word, "Forest"):
+		return types.Forest, true
+	default:
+		return "", false
+	}
+}
+
+// singlePartPayment reports that a free alternative cost's payment is a single
+// cost component: it carries no top-level "and", "or", or comma that would split
+// it into multiple components the free-cost lowering does not model.
+func singlePartPayment(payment []shared.Token) bool {
+	return len(splitTopLevelWord(payment, "and")) == 1 &&
+		len(splitTopLevelWord(payment, "or")) == 1 &&
+		shared.TopLevelIndex(payment, shared.Comma) < 0
 }
 
 func overloadAlternativeCostClause(body []shared.Token) (*SpellAlternativeCost, bool) {

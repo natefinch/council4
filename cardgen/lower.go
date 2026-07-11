@@ -1141,6 +1141,9 @@ func lowerSpellAlternativeCost(cardName string, ability compiler.CompiledAbility
 	if ability.AlternativeCost != nil && ability.AlternativeCost.Kind == compiler.AlternativeCostBorderpost {
 		return lowerBorderpostAlternativeCost(cardName, ability)
 	}
+	if ability.AlternativeCost != nil && ability.AlternativeCost.Kind == compiler.AlternativeCostFree {
+		return lowerFreeAlternativeCost(cardName, ability)
+	}
 	if ability.AlternativeCost == nil ||
 		(ability.AlternativeCost.Kind != compiler.AlternativeCostUnknown &&
 			ability.AlternativeCost.Kind != compiler.AlternativeCostCommander) ||
@@ -1342,7 +1345,7 @@ func lowerPitchAlternativeCost(cardName string, ability compiler.CompiledAbility
 		len(ability.Content.Conditions) != 0 ||
 		len(ability.Content.Keywords) != 0 ||
 		len(ability.Content.Modes) != 0
-	condition, conditionOK := lowerAlternativeCostCondition(alternative)
+	condition, _, conditionOK := lowerAlternativeCostCondition(alternative)
 	if unsupported || !conditionOK {
 		return abilityLowering{}, executableDiagnostic(
 			ability,
@@ -1388,7 +1391,7 @@ func lowerDiscardAlternativeCost(cardName string, ability compiler.CompiledAbili
 		len(ability.Content.Conditions) != 0 ||
 		len(ability.Content.Keywords) != 0 ||
 		len(ability.Content.Modes) != 0
-	condition, conditionOK := lowerAlternativeCostCondition(alternative)
+	condition, _, conditionOK := lowerAlternativeCostCondition(alternative)
 	if unsupported || !conditionOK {
 		return abilityLowering{}, executableDiagnostic(
 			ability,
@@ -1417,6 +1420,67 @@ func lowerDiscardAlternativeCost(cardName string, ability compiler.CompiledAbili
 		},
 		sourceSpans: []shared.Span{ability.Span},
 	}, nil
+}
+
+// lowerFreeAlternativeCost lowers the "free spell" family: a no-mana alternative
+// whose single non-mana additional cost (pay life, sacrifice, tap, return, ...)
+// is lowered through the shared cost machinery, optionally gated by a condition
+// ("If you control a Swamp,", "If it's your turn,"). It fails closed when the
+// cost carries mana, is empty, or is not recognized, so a mana-bearing or
+// compound alternative is never mistaken for a free spell.
+func lowerFreeAlternativeCost(cardName string, ability compiler.CompiledAbility) (abilityLowering, *shared.Diagnostic) {
+	alternative := ability.AlternativeCost
+	unsupported := alternative == nil ||
+		alternative.WithoutPayingManaCost ||
+		len(alternative.ManaCost) != 0 ||
+		ability.Cost == nil ||
+		len(ability.Cost.Components) == 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Keywords) != 0 ||
+		len(ability.Content.Modes) != 0
+	condition, conditionSubtype, conditionOK := lowerAlternativeCostCondition(alternative)
+	if unsupported || !conditionOK {
+		return abilityLowering{}, executableDiagnostic(
+			ability,
+			"unsupported alternative spell cost",
+			"the executable source backend could not recognize the spell's alternative cost",
+		)
+	}
+	manaCost, additionalCosts, ok := lowerActivationCostComponents(cardName, ability.Cost)
+	if !ok || len(manaCost) != 0 || len(additionalCosts) != 1 {
+		return abilityLowering{}, executableDiagnostic(
+			ability,
+			"unsupported alternative spell cost",
+			"the executable source backend does not yet lower this free alternative cost",
+		)
+	}
+	return abilityLowering{
+		alternativeCosts: []cost.Alternative{{
+			Label:            freeAlternativeLabel(additionalCosts),
+			AdditionalCosts:  additionalCosts,
+			Condition:        condition,
+			ConditionSubtype: conditionSubtype,
+		}},
+		consumed: semanticConsumption{
+			cost:            true,
+			alternativeCost: true,
+			references:      len(ability.Content.References),
+		},
+		sourceSpans: []shared.Span{ability.Span},
+	}, nil
+}
+
+// freeAlternativeLabel builds the display label for a free alternative cost by
+// capitalizing the payment's own printed cost text (e.g. "pay 4 life" becomes
+// "Pay 4 life", "sacrifice a creature" becomes "Sacrifice a creature").
+func freeAlternativeLabel(additionalCosts []cost.Additional) string {
+	if len(additionalCosts) != 1 || len(additionalCosts[0].Text) == 0 {
+		return "Alternative cost"
+	}
+	text := additionalCosts[0].Text
+	return strings.ToUpper(text[:1]) + text[1:]
 }
 
 // discardAlternativeLabel builds the display label for a discard alternative
@@ -1453,14 +1517,21 @@ func indefiniteArticle(word string) string {
 	}
 }
 
-func lowerAlternativeCostCondition(alternative *compiler.CompiledAlternativeCost) (cost.AlternativeCondition, bool) {
+func lowerAlternativeCostCondition(alternative *compiler.CompiledAlternativeCost) (cost.AlternativeCondition, types.Sub, bool) {
 	switch alternative.Condition {
 	case compiler.AlternativeCostConditionUnknown:
-		return cost.AlternativeConditionNone, true
+		return cost.AlternativeConditionNone, "", true
 	case compiler.AlternativeCostConditionNotYourTurn:
-		return cost.AlternativeConditionNotYourTurn, true
+		return cost.AlternativeConditionNotYourTurn, "", true
+	case compiler.AlternativeCostConditionYourTurn:
+		return cost.AlternativeConditionYourTurn, "", true
+	case compiler.AlternativeCostConditionControlsSubtype:
+		if alternative.ConditionSubtype == "" {
+			return cost.AlternativeConditionNone, "", false
+		}
+		return cost.AlternativeConditionControlsPermanentSubtype, alternative.ConditionSubtype, true
 	default:
-		return cost.AlternativeConditionNone, false
+		return cost.AlternativeConditionNone, "", false
 	}
 }
 

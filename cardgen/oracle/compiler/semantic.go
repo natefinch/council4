@@ -212,6 +212,13 @@ const (
 	// AlternativeCostConditionNotYourTurn gates a pitch alternative cost behind
 	// "If it's not your turn,".
 	AlternativeCostConditionNotYourTurn
+	// AlternativeCostConditionYourTurn gates a free alternative cost behind "If
+	// it's your turn,".
+	AlternativeCostConditionYourTurn
+	// AlternativeCostConditionControlsSubtype gates a free alternative cost
+	// behind "If you control a <subtype>," where the subtype rides on the
+	// CompiledAlternativeCost's ConditionSubtype field.
+	AlternativeCostConditionControlsSubtype
 )
 
 // AlternativeCostKind identifies the semantic rules change attached to an
@@ -241,6 +248,11 @@ const (
 	// components on the ability's CompiledCost.
 	AlternativeCostDiscard
 	AlternativeCostBorderpost
+	// AlternativeCostFree is the "free spell" family: cast the spell by paying a
+	// single non-mana cost (carried on the ability's CompiledCost) rather than
+	// its printed mana cost, optionally gated by a condition. Snuff Out ("If you
+	// control a Swamp, you may pay 4 life ...") is the canonical member.
+	AlternativeCostFree
 )
 
 // CompiledAlternativeCost is text-independent semantic data for an optional
@@ -248,6 +260,7 @@ const (
 type CompiledAlternativeCost struct {
 	Kind                  AlternativeCostKind
 	Condition             AlternativeCostCondition
+	ConditionSubtype      types.Sub
 	WithoutPayingManaCost bool
 	ManaCost              cost.Mana
 	ReplaceTargetWithEach bool

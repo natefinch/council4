@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 func TestCompileCommanderControlledAlternativeSpellCost(t *testing.T) {
@@ -85,5 +86,30 @@ Overload {4}{R} (You may cast this spell for its overload cost. If you do, chang
 		!ability.AlternativeCost.ReplaceTargetWithEach ||
 		!slices.Equal(ability.AlternativeCost.ManaCost, cost.Mana{cost.O(4), cost.R}) {
 		t.Fatalf("alternative cost = %#v", ability.AlternativeCost)
+	}
+}
+
+func TestCompileFreeAlternativeSpellCost(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := compileSource(
+		"If you control a Swamp, you may pay 4 life rather than pay this spell's mana cost.\nDestroy target nonblack creature. It can't be regenerated.",
+		pipelineContext{InstantOrSorcery: true},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	ability := compilation.Abilities[0]
+	if ability.AlternativeCost == nil ||
+		ability.AlternativeCost.Kind != AlternativeCostFree ||
+		ability.AlternativeCost.Condition != AlternativeCostConditionControlsSubtype ||
+		ability.AlternativeCost.ConditionSubtype != types.Swamp ||
+		ability.AlternativeCost.WithoutPayingManaCost {
+		t.Fatalf("alternative cost = %#v", ability.AlternativeCost)
+	}
+	if ability.Cost == nil || len(ability.Cost.Components) != 1 {
+		t.Fatalf("cost = %#v, want one pay-life component", ability.Cost)
+	}
+	if ability.Cost.Components[0].Kind != CostPayLife {
+		t.Fatalf("cost component = %#v, want pay life", ability.Cost.Components[0])
 	}
 }
