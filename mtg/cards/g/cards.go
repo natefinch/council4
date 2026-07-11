@@ -87,6 +87,7 @@ var Cards = []cardset.Entry{
 	{Name: "Goblin Ringleader", New: GoblinRingleader},
 	{Name: "Goblin Soothsayer", New: GoblinSoothsayer},
 	{Name: "God-Pharaoh's Statue", New: GodPharaohSStatue},
+	{Name: "Godo, Bandit Warlord", New: GodoBanditWarlord},
 	{Name: "Goldbug, Humanity's Ally", New: GoldbugHumanitySAlly},
 	{Name: "Goldmane Griffin", New: GoldmaneGriffin},
 	{Name: "Goldvein Hydra", New: GoldveinHydra},

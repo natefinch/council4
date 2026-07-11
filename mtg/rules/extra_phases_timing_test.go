@@ -3,6 +3,7 @@ package rules
 import (
 	"testing"
 
+	aureliacards "github.com/natefinch/council4/mtg/cards/a"
 	sphinxcards "github.com/natefinch/council4/mtg/cards/s"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -155,5 +156,35 @@ func TestSphinxExtraBeginningPhaseRunsAfterPostcombatMain(t *testing.T) {
 	}
 	if phases[len(phases)-1] != game.PhaseEnding {
 		t.Fatalf("final phase = %v, want ending; phases = %v", phases[len(phases)-1], phases)
+	}
+}
+
+// TestAureliaFirstAttackTriggerRunsExtraCombatOncePerTurn fires Aurelia, the
+// Warleader's real "Whenever Aurelia attacks for the first time each turn, untap
+// all creatures you control. After this phase, there is an additional combat
+// phase." trigger through a full turn. Because the inline "for the first time
+// each turn" qualifier caps the trigger at one firing per turn, Aurelia's first
+// attack queues exactly one additional combat phase; her attack during that
+// extra combat does not re-fire the trigger, so exactly two combat phases run
+// (not an unbounded chain). Asserting two combats proves both that the
+// first-attack trigger fired and that the extra combat phase actually ran.
+func TestAureliaFirstAttackTriggerRunsExtraCombatOncePerTurn(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCombatPermanent(g, game.Player1, aureliacards.AureliaTheWarleader())
+	stockLibrary(g, game.Player1, 6)
+
+	log := engine.runTurn(g, allFirstLegalAgents())
+
+	phases := phaseOrder(log)
+	combats := 0
+	for _, phase := range phases {
+		if phase == game.PhaseCombat {
+			combats++
+		}
+	}
+	if combats != 2 {
+		t.Fatalf("combat phases = %d, want 2 (Aurelia's first attack queues exactly one extra combat, capped once per turn); phases = %v",
+			combats, phases)
 	}
 }

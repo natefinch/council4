@@ -32,6 +32,7 @@ var Cards = []cardset.Entry{
 	{Name: "Favor of Jukai", New: FavorOfJukai},
 	{Name: "Favor of the Overbeing", New: FavorOfTheOverbeing},
 	{Name: "Fealty to the Realm", New: FealtyToTheRealm},
+	{Name: "Fear of Missing Out", New: FearOfMissingOut},
 	{Name: "Feasting Troll King", New: FeastingTrollKing},
 	{Name: "Fecundity", New: Fecundity},
 	{Name: "Feed the Flames", New: FeedTheFlames},
