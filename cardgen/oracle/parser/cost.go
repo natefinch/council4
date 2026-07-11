@@ -743,7 +743,11 @@ func annotateSacrificeCostObject(component *CostComponent, object []shared.Token
 		component.AmountKnown = true
 		words = words[1:]
 	} else {
-		if len(words) < 2 || !costAmountAt(component, words[0], atoms, false) {
+		// allowX recognizes the player-chosen variable amount in "Sacrifice X
+		// <type>" (Grim Hireling's "Sacrifice X Treasures"), where X is announced
+		// as the ability's X and drives an X-scaled effect. The count word may
+		// still be a determiner, integer, or cardinal for a fixed sacrifice.
+		if len(words) < 2 || !costAmountAt(component, words[0], atoms, true) {
 			return
 		}
 		words = words[1:]

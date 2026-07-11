@@ -62,6 +62,7 @@ var Cards = []cardset.Entry{
 	{Name: "Kolaghan Warmonger", New: KolaghanWarmonger},
 	{Name: "Kor Duelist", New: KorDuelist},
 	{Name: "Koskun Falls", New: KoskunFalls},
+	{Name: "Krav, the Unredeemed", New: KravTheUnredeemed},
 	{Name: "Krosan Drover", New: KrosanDrover},
 	{Name: "Krosan Tusker", New: KrosanTusker},
 	{Name: "Krotiq Nestguard", New: KrotiqNestguard},

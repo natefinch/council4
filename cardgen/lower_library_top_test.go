@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // TestLowerSenseisDiviningTopEndToEnd verifies the anchor card compiles to a
@@ -80,5 +81,65 @@ func TestLowerPutSourceOnLibraryBottom(t *testing.T) {
 	put, ok := seq[len(seq)-1].Primitive.(game.PutPermanentOnLibrary)
 	if !ok || !put.Bottom || put.Object.Kind() != game.ObjectReferenceSourcePermanent {
 		t.Fatalf("put = %#v", seq[len(seq)-1].Primitive)
+	}
+}
+
+// TestLowerPutSourceFromGraveyardOnLibrary verifies the graveyard-recursion form
+// "put this card from your graveyard on top of your library" (Champion of Stray
+// Souls, Gate Colossus) lowers as graveyard recursion — the ability functions
+// from the graveyard and the source card moves graveyard -> library — rather
+// than as the battlefield self-tuck. The graveyard source zone alone
+// distinguishes it from Sensei's Divining Top's battlefield "put this artifact on
+// top of its owner's library".
+func TestLowerPutSourceFromGraveyardOnLibrary(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		wantBottom bool
+	}{
+		{
+			name:       "top",
+			oracleText: "{5}{B}{B}: Put this card from your graveyard on top of your library.",
+		},
+		{
+			name:       "bottom",
+			oracleText: "{5}{B}{B}: Put this card from your graveyard on the bottom of your library.",
+			wantBottom: true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Graveyard Tuck",
+				Layout:     "normal",
+				TypeLine:   "Creature — Skeleton Warrior",
+				OracleText: test.oracleText,
+				Power:      new("4"),
+				Toughness:  new("4"),
+			})
+			if len(face.ActivatedAbilities) != 1 {
+				t.Fatalf("activated abilities = %d, want 1", len(face.ActivatedAbilities))
+			}
+			ability := face.ActivatedAbilities[0]
+			if ability.ZoneOfFunction != zone.Graveyard {
+				t.Fatalf("zone of function = %v, want Graveyard (recursion functions from the graveyard)", ability.ZoneOfFunction)
+			}
+			seq := ability.Content.Modes[0].Sequence
+			if len(seq) != 1 {
+				t.Fatalf("sequence = %#v, want one instruction", seq)
+			}
+			move, ok := seq[0].Primitive.(game.MoveCard)
+			if !ok {
+				t.Fatalf("primitive = %#v, want game.MoveCard (graveyard -> library), not a battlefield tuck", seq[0].Primitive)
+			}
+			if move.Card.Kind != game.CardReferenceSource ||
+				move.FromZone != zone.Graveyard ||
+				move.Destination != zone.Library ||
+				move.DestinationBottom != test.wantBottom {
+				t.Fatalf("move = %#v, want source card graveyard -> library (bottom=%v)", move, test.wantBottom)
+			}
+		})
 	}
 }
