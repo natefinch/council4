@@ -112,6 +112,12 @@ func applyDamageModifications(g *game.Game, event damageEvent) int {
 				shield.Amount = 0
 			}
 			amount -= prevented
+			// Tally what this shield prevented so a "for each 1 damage prevented
+			// this way" payoff (Inkshield) can read the running total. Recorded
+			// before compaction so the value travels with the retained shield.
+			if prevented > 0 {
+				shield.Prevented += prevented
+			}
 			if prevented > 0 && shield.RedirectToSourceController {
 				// Defer the redirect until this event's prevention is fully
 				// resolved: the shield deals the prevented amount back to the
@@ -1978,6 +1984,10 @@ func createPreventionShield(g *game.Game, obj *game.StackObject, amount int, pri
 		Duration:                   effectDurationOrDefault(duration, game.DurationUntilEndOfTurn),
 		CreatedTurn:                g.Turn.TurnNumber,
 	}
+	// Capture the creating card instance so a later effect of the same card
+	// ("For each 1 damage prevented this way, create ...") can find this shield
+	// and read its Prevented tally after the creating spell has left the stack.
+	shield.SourceID, _ = damageSourceIDs(g, obj)
 	if prim.RedirectPreventedToSourceController {
 		// The redirect deals damage as the shield's own source (the spell that
 		// created it), which has left the stack by the time the shield prevents,

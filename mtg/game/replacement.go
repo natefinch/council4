@@ -72,6 +72,18 @@ type PreventionShield struct {
 	RedirectToSourceController bool
 	Duration                   EffectDuration
 	CreatedTurn                int
+	// SourceID is the card instance that created this shield, captured when the
+	// shield is set up so a later effect of the same card can find its shields
+	// after the creating spell has left the stack. It backs the "for each 1
+	// damage prevented this way" payoff (Inkshield), where a delayed create-token
+	// reads Prevented across the shields this card created.
+	SourceID id.ID
+	// Prevented accumulates the total combat and non-combat damage this shield
+	// has prevented so far. A DynamicAmountDamagePreventedThisWay amount sums it
+	// across the shields sharing the resolving card's SourceID, so a payoff that
+	// scales by "damage prevented this way" reads the running tally. It is zero
+	// for every shield whose card carries no such payoff.
+	Prevented int
 }
 
 // ReplacementDecision records deterministic ordering for competing replacement

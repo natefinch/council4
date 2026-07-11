@@ -191,20 +191,43 @@ func lowerCreateTokenSpellLinked(ctx contentCtx, publishLinked game.LinkedKey) (
 		}
 		amount = rebound
 	}
-	return game.Mode{
-		Targets: targets,
-		Sequence: []game.Instruction{{
-			Primitive: game.CreateToken{
-				Amount:         amount,
-				Source:         game.TokenDef(def),
-				Recipient:      recipient,
-				EntryTapped:    effect.Selector.Tapped,
-				EntryAttacking: effect.Selector.Attacking,
-				Power:          dynamicSize,
-				Toughness:      dynamicSize,
-				PublishLinked:  publishLinked,
+	createToken := game.CreateToken{
+		Amount:         amount,
+		Source:         game.TokenDef(def),
+		Recipient:      recipient,
+		EntryTapped:    effect.Selector.Tapped,
+		EntryAttacking: effect.Selector.Attacking,
+		Power:          dynamicSize,
+		Toughness:      dynamicSize,
+		PublishLinked:  publishLinked,
+	}
+	if effect.Amount.DynamicKind == compiler.DynamicAmountDamagePreventedThisWay {
+		// "For each 1 damage prevented this way, create ..." (Inkshield) creates
+		// tokens for the combat damage the same spell's prevention clause stops.
+		// At this spell's resolution the shield has prevented nothing yet (combat
+		// damage is dealt later this turn), so creating the tokens now would
+		// always make zero. Schedule the creation as a delayed trigger at the
+		// beginning of the next end step, after every combat phase this turn has
+		// resolved, so the shield carries the full turn's prevented tally the
+		// dynamic amount reads. An end-of-combat trigger would fire once at the
+		// first combat's end and miss damage the still-active "this turn" shield
+		// prevents in any later combat. The payoff creates the controller's
+		// tokens with no target, so a targeted or linked form is outside this
+		// shape.
+		if len(targets) != 0 || publishLinked != "" {
+			return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+		}
+		inner := game.Mode{Sequence: []game.Instruction{{Primitive: createToken}}}.Ability()
+		return game.Mode{Sequence: []game.Instruction{{Primitive: game.CreateDelayedTrigger{
+			Trigger: game.DelayedTriggerDef{
+				Timing:  game.DelayedAtBeginningOfNextEndStep,
+				Content: inner,
 			},
-		}},
+		}}}}.Ability(), nil
+	}
+	return game.Mode{
+		Targets:  targets,
+		Sequence: []game.Instruction{{Primitive: createToken}},
 	}.Ability(), nil
 }
 

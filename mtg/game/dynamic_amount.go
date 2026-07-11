@@ -286,6 +286,15 @@ const (
 	// among Cleric, Rogue, Warrior, and Wizard creatures they control, with each
 	// creature filling at most one role (CR 700.8).
 	DynamicAmountPartySize
+	// DynamicAmountDamagePreventedThisWay is the total damage prevented by the
+	// prevention shields the resolving card created ("For each 1 damage prevented
+	// this way, create ..." — Inkshield), summed across the shields sharing the
+	// resolving object's source card as the effect resolves (CR 608.2c). A
+	// create-token payoff scaled by this amount is scheduled to resolve after the
+	// prevention has had a chance to apply (at end of combat), by which point the
+	// shields carry the running Prevented tally. Added last so existing kinds
+	// keep their wire values.
+	DynamicAmountDamagePreventedThisWay
 )
 
 // DynamicAmount describes an effect amount determined as the effect resolves

@@ -841,6 +841,8 @@ func compileDynamicAmountKind(kind parser.EffectDynamicAmountKind) DynamicAmount
 		return DynamicAmountCreaturesBlockingSource
 	case parser.EffectDynamicAmountPartySize:
 		return DynamicAmountPartySize
+	case parser.EffectDynamicAmountDamagePreventedThisWay:
+		return DynamicAmountDamagePreventedThisWay
 	case parser.EffectDynamicAmountTriggeringPlayerHandSize:
 		return DynamicAmountTriggeringPlayerHandSize
 	case parser.EffectDynamicAmountMaxOf:
