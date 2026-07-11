@@ -2826,6 +2826,28 @@ func sameNameBackReferenceNoun(token shared.Token) bool {
 	return ok
 }
 
+// graveyardInPhraseZone reports whether a selection's words locate the chosen
+// card with an "in your graveyard" zone phrase that scanZones does not tag,
+// because the phrase uses the "in" preposition rather than a "from"/"to" zone
+// atom. It accepts the phrase when it ends the noun clause ("target creature
+// card in your graveyard") or when it immediately precedes a trailing "with"
+// qualifier ("target artifact card in your graveyard with lesser mana value",
+// the fronted-destination graveyard return used by Scrap Trawler). Requiring the
+// phrase to sit at the noun clause's tail keeps an embedded count sub-clause
+// ("the number of cards in your graveyard", which is never followed by "with")
+// from being mistaken for the selection's own zone.
+func graveyardInPhraseZone(words []string) bool {
+	for i := 0; i+2 < len(words); i++ {
+		if words[i] != "in" || words[i+1] != "your" || words[i+2] != "graveyard" {
+			continue
+		}
+		if i+3 == len(words) || words[i+3] == "with" {
+			return true
+		}
+	}
+	return false
+}
+
 func parseSelection(tokens []shared.Token, atoms Atoms) SelectionSyntax {
 	if recognized, ok := counterAbilitySelectionSyntax(tokens, shared.SpanOf(tokens), joinedEffectText(tokens)); ok {
 		return recognized
@@ -2917,9 +2939,7 @@ func parseSelection(tokens []shared.Token, atoms Atoms) SelectionSyntax {
 	if selection.Zone == zone.None {
 		selection.Zone = firstZone(atoms, span, ZoneRolePlain)
 	}
-	if selection.Zone == zone.None &&
-		len(words) >= 3 &&
-		slices.Equal(words[len(words)-3:], []string{"in", "your", "graveyard"}) {
+	if selection.Zone == zone.None && graveyardInPhraseZone(words) {
 		selection.Zone = zone.Graveyard
 	}
 	switch {
@@ -3408,6 +3428,24 @@ func (subject *EffectStaticSubjectSyntax) applyCounterQualifier(match counterQua
 
 func parseSelectionNumbers(tokens []shared.Token, atoms Atoms, selection *SelectionSyntax) bool {
 	for i := range tokens {
+		if i+1 < len(tokens) && i+2 >= len(tokens) &&
+			effectWordsAt(tokens, i, "mana", "value") &&
+			i >= 1 && equalWord(tokens[i-1], "lesser") &&
+			(i < 2 || !equalWord(tokens[i-2], "or")) {
+			// "with lesser mana value" as the trailing phrase of a selection —
+			// no comparison words follow "value" — compares the match to the
+			// triggering event permanent's mana value, exactly as the mid-clause
+			// "lesser mana value" branch below does. The fronted-destination
+			// graveyard return ("return to your hand target artifact card in your
+			// graveyard with lesser mana value", Scrap Trawler) places this
+			// qualifier last, so the general "mana value" handling below — which
+			// requires a following comparison token — never reaches it. The "or"
+			// guard excludes "equal or lesser mana value" (a ≤ bound), which
+			// stays unrecognized so it fails closed rather than dropping to
+			// strict.
+			selection.ManaValueLessThanEventPermanent = true
+			continue
+		}
 		if i+2 < len(tokens) && effectWordsAt(tokens, i, "mana", "value") {
 			if i >= 1 && equalWord(tokens[i-1], "total") {
 				// "total mana value N or less" bounds the combined mana value of

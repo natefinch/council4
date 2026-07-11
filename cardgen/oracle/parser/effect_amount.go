@@ -2726,7 +2726,11 @@ func firstZone(atoms Atoms, span shared.Span, role ZoneRole) zone.Type {
 // <zone>" atom. When none exists, a shuffle whose direct object is a graveyard
 // and whose destination is a library ("shuffle your graveyard into your
 // library") draws its source from the graveyard, which carries no "from"
-// preposition and is therefore not tagged as a ZoneRoleFrom atom.
+// preposition and is therefore not tagged as a ZoneRoleFrom atom. A return whose
+// destination is fronted ("return to your hand target artifact card in your
+// graveyard ...", Scrap Trawler) likewise spells its graveyard source with an
+// inline "in <graveyard>" phrase rather than a "from" preposition, so it too
+// carries no ZoneRoleFrom atom and is recovered here.
 func effectFromZone(kind EffectKind, clause []shared.Token, atoms Atoms, span shared.Span, toZone zone.Type) zone.Type {
 	if from := firstZone(atoms, span, ZoneRoleFrom); from != zone.None {
 		return from
@@ -2734,7 +2738,26 @@ func effectFromZone(kind EffectKind, clause []shared.Token, atoms Atoms, span sh
 	if kind == EffectShuffle && toZone == zone.Library && graveyardZonePhrase(clause) {
 		return zone.Graveyard
 	}
+	if kind == EffectReturn && returnGraveyardInPhrase(clause) {
+		return zone.Graveyard
+	}
 	return zone.None
+}
+
+// returnGraveyardInPhrase reports whether a return effect's clause locates the
+// returned card with an "in <graveyard>" phrase rather than the canonical "from
+// <graveyard>" preposition. scanZones tags only "from"/"to" zone atoms, so the
+// fronted-destination wording ("return to your hand target artifact card in your
+// graveyard ...", Scrap Trawler) spells its graveyard source inline on the
+// target noun phrase and carries no ZoneRoleFrom atom. It scans for an "in"
+// preposition immediately followed by a graveyard zone phrase.
+func returnGraveyardInPhrase(clause []shared.Token) bool {
+	for i := range clause {
+		if equalWord(clause[i], "in") && graveyardZonePhrase(clause[i+1:]) {
+			return true
+		}
+	}
+	return false
 }
 
 func firstEffectSymbol(tokens []shared.Token) string {
