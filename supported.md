@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,465 of 32,501 cards eligible for paper support (53.7%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,474 of 32,501 cards eligible for paper support (53.8%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2418,6 +2418,7 @@ Council4 currently supports **17,465 of 32,501 cards eligible for paper support 
 - Champion of the Parish
 - Champion of the Perished
 - Champion's Helm
+- Champion's Victory
 - Champions of Minas Tirith
 - Chance-Met Elves
 - Chancellor of Tales
@@ -3549,6 +3550,7 @@ Council4 currently supports **17,465 of 32,501 cards eligible for paper support 
 - Defiant Khenra
 - Defiant Ogre
 - Defiant Salvager
+- Defiant Stand
 - Defiant Strike
 - Defiant Survivor
 - Defibrillating Current
@@ -4315,6 +4317,7 @@ Council4 currently supports **17,465 of 32,501 cards eligible for paper support 
 - Eiganjo Exemplar
 - Eiganjo Free-Riders
 - Eiganjo, Seat of the Empire
+- Eightfold Maze
 - Eivor, Wolf-Kissed
 - Eject
 - Ekundu Griffin
@@ -7869,6 +7872,7 @@ Council4 currently supports **17,465 of 32,501 cards eligible for paper support 
 - Juntu Stakes
 - Junún Efreet
 - Juri, Master of the Revue
+- Just Fate
 - Just the Wind
 - Justice Strike
 - Juvenile Gloomwidow
@@ -11500,6 +11504,7 @@ Council4 currently supports **17,465 of 32,501 cards eligible for paper support 
 - Rally the Forces
 - Rally the Peasants
 - Rally the Ranks
+- Rally the Troops
 - Ram Through
 - Rambunctious Mutt
 - Ramirez DePietro
@@ -11794,6 +11799,7 @@ Council4 currently supports **17,465 of 32,501 cards eligible for paper support 
 - Remorseful Cleric
 - Remote Farm
 - Remote Isle
+- Remove
 - Remove Soul
 - Rend Flesh
 - Rend Spirit
@@ -12617,6 +12623,7 @@ Council4 currently supports **17,465 of 32,501 cards eligible for paper support 
 - Scorching Missile
 - Scorching Shot
 - Scorching Spear
+- Scorching Winds
 - Scorchmark
 - Scorchwalker
 - Scoria Cat
@@ -15687,6 +15694,7 @@ Council4 currently supports **17,465 of 32,501 cards eligible for paper support 
 - Treespring Lorian
 - Treetop Ambusher
 - Treetop Bracers
+- Treetop Defense
 - Treetop Freedom Fighters
 - Treetop Rangers
 - Treetop Scout
@@ -16787,6 +16795,7 @@ Council4 currently supports **17,465 of 32,501 cards eligible for paper support 
 - Warrior Angel
 - Warrior's Charge
 - Warrior's Honor
+- Warrior's Stand
 - Warriors of Wakanda
 - Warship Scout
 - Warstorm Surge
