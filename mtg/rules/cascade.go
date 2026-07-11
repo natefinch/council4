@@ -2,6 +2,7 @@ package rules
 
 import (
 	"math/rand/v2"
+	"slices"
 
 	"github.com/natefinch/council4/mtg/game/zone"
 
@@ -131,6 +132,70 @@ func bottomExiledCards(g *game.Game, player *game.Player, playerID game.PlayerID
 
 func (e *Engine) castFreeSpellFromExile(g *game.Game, playerID game.PlayerID, cardID id.ID, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
 	return e.castFreeSpellFromZone(g, playerID, cardID, zone.Exile, agents, log)
+}
+
+// castAnyNumberFromExileForFree lets controllerID cast any number of the given
+// exiled cards without paying their mana costs, one at a time in an order the
+// controller chooses, during the resolution of the ability that exiled them
+// (Etali, Primal Storm). Each cast card is put on the stack under controllerID's
+// control wherever it currently rests, so a card exiled from an opponent's
+// library is still cast by the controller. Only cards still in exile that have a
+// legal cast choice are offered, so lands and uncastable cards are skipped and
+// left exiled. It stops when the controller casts nothing more or no castable
+// card remains; removing the chosen card each iteration guarantees termination.
+func (e *Engine) castAnyNumberFromExileForFree(g *game.Game, controllerID game.PlayerID, cards []id.ID, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
+	remaining := append([]id.ID(nil), cards...)
+	for len(remaining) > 0 {
+		var candidates []id.ID
+		for _, cardID := range remaining {
+			if castableExiledSpell(g, controllerID, cardID) {
+				candidates = append(candidates, cardID)
+			}
+		}
+		if len(candidates) == 0 {
+			return
+		}
+		options := make([]game.ChoiceOption, len(candidates))
+		for i, cardID := range candidates {
+			options[i] = game.ChoiceOption{
+				Index: i,
+				Label: cardChoiceLabel(g, cardID),
+				Card:  cardChoiceInfo(g, cardID),
+			}
+		}
+		selected := e.chooseChoice(g, agents, game.ChoiceRequest{
+			Kind:       game.ChoiceResolution,
+			Player:     controllerID,
+			Prompt:     "Choose a spell to cast without paying its mana cost, or none to stop",
+			Options:    options,
+			MinChoices: 0,
+			MaxChoices: 1,
+		}, log)
+		if len(selected) == 0 || selected[0] < 0 || selected[0] >= len(candidates) {
+			return
+		}
+		chosen := candidates[selected[0]]
+		if i := slices.Index(remaining, chosen); i >= 0 {
+			remaining = slices.Delete(remaining, i, i+1)
+		}
+		e.castFreeTargetedSpell(g, controllerID, chosen, zone.Exile, false, agents, log)
+	}
+}
+
+// castableExiledSpell reports whether cardID still rests in some player's exile
+// and has a legal free-cast choice for controllerID, the filter Etali's "cast
+// any number of spells from among those cards" applies to the exiled pool. Lands
+// and uncastable cards fail isSupportedSpell inside firstLegalSpellCastChoice.
+func castableExiledSpell(g *game.Game, controllerID game.PlayerID, cardID id.ID) bool {
+	if _, ok := playerHoldingCastSource(g, cardID, zone.Exile); !ok {
+		return false
+	}
+	card, ok := g.GetCardInstance(cardID)
+	if !ok {
+		return false
+	}
+	_, _, legal := firstLegalSpellCastChoice(g, controllerID, cardFaceOrDefault(card, game.FaceFront))
+	return legal
 }
 
 // castFreeSpellFromZone casts cardID from fromZone for playerID without paying

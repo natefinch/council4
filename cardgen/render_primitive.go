@@ -525,6 +525,16 @@ func (r Renderer) renderExileLibraryUntilNonlandCast(value game.ExileLibraryUnti
 	}), nil
 }
 
+func (r Renderer) renderExileTopEachLibraryCastFree(ctx *renderCtx, value game.ExileTopEachLibraryCastFree) (string, error) {
+	amount, err := r.renderQuantity(ctx, value.Amount)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.ExileTopEachLibraryCastFree", []string{
+		fmt.Sprintf("Amount: %s,", amount),
+	}), nil
+}
+
 func renderCardReference(reference game.CardReference) (string, error) {
 	switch reference.Kind {
 	case game.CardReferenceEvent:

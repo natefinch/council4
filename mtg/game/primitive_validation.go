@@ -2483,6 +2483,16 @@ func (p ExileLibraryUntilNonlandCast) validatePrimitive(targets []TargetSpec, ch
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 
+func (p ExileTopEachLibraryCastFree) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
+		return err
+	}
+	if !p.Amount.IsDynamic() && p.Amount.Value() < 1 {
+		return errors.New("ExileTopEachLibraryCastFree requires a positive number of cards")
+	}
+	return nil
+}
+
 func (p HideawayExile) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err

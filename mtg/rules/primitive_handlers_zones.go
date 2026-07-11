@@ -2599,6 +2599,42 @@ func handleExileLibraryUntilNonlandCast(r *effectResolver, prim game.ExileLibrar
 	return res
 }
 
+// handleExileTopEachLibraryCastFree exiles the top prim.Amount cards of every
+// player's library into their owners' exile as one simultaneous batch, then lets
+// the resolving controller cast any number of those just-exiled cards without
+// paying their mana costs (Etali, Primal Storm). Each cast happens under the
+// controller's control wherever the card rests, so cards exiled from an
+// opponent's library are still cast by the controller; declined cards stay
+// exiled.
+func handleExileTopEachLibraryCastFree(r *effectResolver, prim game.ExileTopEachLibraryCastFree) effectResolved {
+	res := effectResolved{accepted: true}
+	perLibrary := r.quantity(prim.Amount)
+	if perLibrary <= 0 {
+		return res
+	}
+	simultaneousID := r.game.IDGen.Next()
+	var exiled []id.ID
+	for _, playerID := range playersInAPNAPOrder(r.game, r.playerGroupMembers(game.AllPlayersReference())) {
+		player, ok := playerByID(r.game, playerID)
+		if !ok {
+			continue
+		}
+		for range min(perLibrary, player.Library.Size()) {
+			cardID, topOK := player.Library.Top()
+			if !topOK || !moveCardBetweenZonesInBatch(r.game, playerID, cardID, zone.Library, zone.Exile, false, simultaneousID) {
+				continue
+			}
+			exiled = append(exiled, cardID)
+			res.succeeded = true
+		}
+	}
+	if len(exiled) == 0 {
+		return res
+	}
+	r.engine.castAnyNumberFromExileForFree(r.game, r.obj.Controller, exiled, r.agents, r.log)
+	return res
+}
+
 func handleInvestigate(r *effectResolver, prim game.Investigate) effectResolved {
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
 	if res.amount <= 0 {
