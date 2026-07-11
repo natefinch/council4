@@ -78,6 +78,7 @@ var Cards = []cardset.Entry{
 	{Name: "Thoughtweft Charge", New: ThoughtweftCharge},
 	{Name: "Thousand Moons Crackshot", New: ThousandMoonsCrackshot},
 	{Name: "Thousand Winds", New: ThousandWinds},
+	{Name: "Thousand-Year Elixir", New: ThousandYearElixir},
 	{Name: "Thraben Doomsayer", New: ThrabenDoomsayer},
 	{Name: "Thrakkus the Butcher", New: ThrakkusTheButcher},
 	{Name: "Thran Golem", New: ThranGolem},
@@ -152,5 +153,6 @@ var Cards = []cardset.Entry{
 	{Name: "Two-Headed Giant of Foriys", New: TwoHeadedGiantOfForiys},
 	{Name: "Tymaret Calls the Dead", New: TymaretCallsTheDead},
 	{Name: "Tyranid Harridan", New: TyranidHarridan},
+	{Name: "Tyvar, Jubilant Brawler", New: TyvarJubilantBrawler},
 	{Name: "Tyvar, the Pummeler", New: TyvarThePummeler},
 }

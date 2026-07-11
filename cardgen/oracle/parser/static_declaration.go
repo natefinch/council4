@@ -222,6 +222,14 @@ const (
 	// Protector of the Crown). The redirect target is the source permanent, which
 	// the runtime resolves from the rule effect's source.
 	StaticDeclarationPlayerRuleRedirectDamageToSource StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleRedirectDamageToSource"
+	// StaticDeclarationPlayerRuleActivateAbilitiesAsThoughHaste lets the controller
+	// activate abilities of creatures they control as though those creatures had
+	// haste ("You may activate abilities of creatures you control as though those
+	// creatures had haste.", Thousand-Year Elixir, Shang-Chi, Tyvar). It removes
+	// the summoning-sickness restriction on {T} and {Q} activation costs for the
+	// controller's creatures; it is an activation permission only and does not let
+	// a summoning-sick creature attack.
+	StaticDeclarationPlayerRuleActivateAbilitiesAsThoughHaste StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleActivateAbilitiesAsThoughHaste"
 )
 
 // StaticDeclarationCardFilterKind identifies the closed card filter that a
@@ -2315,6 +2323,7 @@ var staticPlayerRuleParsers = []staticPlayerRuleParser{
 	parseStaticPlayerShroudDeclaration,
 	parseStaticDamageDoesntCauseLifeLossDeclaration,
 	parseStaticRedirectDamageToSourceDeclaration,
+	parseStaticActivateAbilitiesAsThoughHasteDeclaration,
 }
 
 func parseStaticPlayerRuleDeclaration(tokens []shared.Token, conditions []ConditionClause) (StaticDeclarationSyntax, bool) {
@@ -2396,6 +2405,32 @@ func parseStaticSkipDrawStepDeclaration(tokens []shared.Token) (StaticDeclaratio
 			Span: tokens[1].Span,
 		},
 		PlayerRule: StaticDeclarationPlayerRuleSkipDrawStep,
+	}, true
+}
+
+// parseStaticActivateAbilitiesAsThoughHasteDeclaration recognizes the exact
+// controller-scoped activation permission "You may activate abilities of
+// creatures you control as though those creatures had haste." (Thousand-Year
+// Elixir, Shang-Chi, Tyvar). It removes the summoning-sickness restriction on
+// {T} and {Q} activation costs for the controller's creatures.
+func parseStaticActivateAbilitiesAsThoughHasteDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if len(tokens) != 15 || tokens[14].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	if !staticWordsAt(tokens, 0,
+		"you", "may", "activate", "abilities", "of", "creatures", "you", "control",
+		"as", "though", "those", "creatures", "had", "haste") {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:          StaticDeclarationPlayerRule,
+		Span:          shared.SpanOf(tokens),
+		OperationSpan: shared.SpanOf(tokens[1:14]),
+		Subject: StaticDeclarationSubject{
+			Kind: StaticDeclarationSubjectController,
+			Span: tokens[0].Span,
+		},
+		PlayerRule: StaticDeclarationPlayerRuleActivateAbilitiesAsThoughHaste,
 	}, true
 }
 

@@ -38,6 +38,10 @@ func (s *rulesPaymentState) ManaProductionMultiplier(playerID game.PlayerID) int
 	return manaProductionMultiplierFor(s.g, playerID)
 }
 
+func (s *rulesPaymentState) ActivateAbilitiesAsThoughHaste(playerID game.PlayerID) bool {
+	return playerRuleEffectActive(s.g, playerID, game.RuleEffectActivateAbilitiesAsThoughHaste)
+}
+
 func (s *rulesPaymentState) ActivePlayer() game.PlayerID {
 	return s.g.Turn.ActivePlayer
 }

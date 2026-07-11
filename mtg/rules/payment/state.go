@@ -51,6 +51,14 @@ type stateQueries interface {
 	// Reflection; Nyxbloom Ancient). It returns 1 when no such effect applies.
 	ManaProductionMultiplier(playerID game.PlayerID) int
 
+	// ActivateAbilitiesAsThoughHaste reports whether an active rule effect lets
+	// playerID activate abilities of creatures they control as though those
+	// creatures had haste ("You may activate abilities of creatures you control as
+	// though those creatures had haste.", Thousand-Year Elixir). When it does, a
+	// summoning-sick creature the player controls may still pay a {T} or {Q} cost
+	// in one of its own activated abilities (CR 302.6, 702.10c).
+	ActivateAbilitiesAsThoughHaste(playerID game.PlayerID) bool
+
 	// ActivePlayer returns the player whose turn it currently is.
 	ActivePlayer() game.PlayerID
 

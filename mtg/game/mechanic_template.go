@@ -196,6 +196,21 @@ var PlayerShroudStaticBody = StaticAbility{
 	}},
 }
 
+// ActivateAbilitiesAsThoughHasteStaticBody is the complete static ability for
+// "You may activate abilities of creatures you control as though those creatures
+// had haste." (Thousand-Year Elixir, Shang-Chi, Tyvar). While the source
+// applies, the controller may pay a {T} or {Q} cost in one of their creatures'
+// activated abilities even if that creature hasn't been under their control
+// continuously since their most recent turn began (CR 302.6, 702.10c). It is an
+// activation permission only and never lets a summoning-sick creature attack.
+var ActivateAbilitiesAsThoughHasteStaticBody = StaticAbility{
+	Text: "You may activate abilities of creatures you control as though those creatures had haste.",
+	RuleEffects: []RuleEffect{{
+		Kind:           RuleEffectActivateAbilitiesAsThoughHaste,
+		AffectedPlayer: PlayerYou,
+	}},
+}
+
 // PlayLandsFromGraveyardStaticBody is the complete static ability for "You may
 // play lands from your graveyard." The controller may play land cards from their
 // graveyard, subject to the usual one-land-per-turn limit.
