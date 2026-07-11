@@ -717,9 +717,9 @@ func sacrificeChoiceNoun(selection *SelectionSyntax, plural bool) (string, bool)
 	if !ok {
 		return "", false
 	}
-	// The token-suffix forms ("Blood token", "a token") carry the token qualifier
-	// as a trailing word, which sacrificeChoiceBaseNoun has already appended; a
-	// card-type token ("token creature") instead leads with the qualifier.
+	// The token-suffix forms ("Blood token", "a token", "creature token") carry
+	// the token qualifier as a trailing word, which sacrificeChoiceBaseNoun has
+	// already appended. The "nontoken" qualifier alone leads the noun.
 	switch {
 	case selection.NonToken:
 		base = "nontoken " + base
@@ -731,15 +731,51 @@ func sacrificeChoiceNoun(selection *SelectionSyntax, plural bool) (string, bool)
 }
 
 // sacrificeTokenSuffixForm reports whether the selector names a token by a
-// subtype ("Blood token") or by no type at all ("a token"), where Oracle places
-// the "token" word last. A token named by a card type ("token creature") keeps
-// the qualifier leading and is excluded here.
+// subtype ("Blood token"), by no type at all ("a token"), or by a card type
+// ("creature token"), where Oracle places the "token" word last. Every token
+// wording Oracle prints keeps "token" as the trailing word; the leading
+// qualifier is the subtype or card-type noun. A token named through a card-type
+// union, an excluded type, or more than one subtype has no canonical suffix
+// wording and is excluded here.
 func sacrificeTokenSuffixForm(selection *SelectionSyntax) bool {
-	return selection.TokenOnly &&
-		selection.Kind == SelectionUnknown &&
-		len(selection.RequiredTypesAny) == 0 &&
-		len(selection.ExcludedTypes) == 0 &&
-		len(selection.SubtypesAny) <= 1
+	if !selection.TokenOnly ||
+		len(selection.ExcludedTypes) != 0 ||
+		len(selection.RequiredTypesAny) > 1 ||
+		len(selection.SubtypesAny) > 1 {
+		return false
+	}
+	switch selection.Kind {
+	case SelectionUnknown:
+		return len(selection.RequiredTypesAny) == 0
+	case SelectionArtifact, SelectionCreature, SelectionEnchantment,
+		SelectionLand, SelectionPlaneswalker, SelectionPermanent:
+		return len(selection.SubtypesAny) == 0
+	default:
+		return false
+	}
+}
+
+// sacrificeCardTypeWord maps a card-type selection kind to its printed sacrifice
+// noun ("artifact", "creature", "planeswalker"). It fails closed for any kind
+// outside the permanent card types the sacrifice wording models so callers stay
+// unsupported rather than reconstruct a noun the runtime selection cannot match.
+func sacrificeCardTypeWord(kind SelectionKind) (string, bool) {
+	switch kind {
+	case SelectionArtifact:
+		return "artifact", true
+	case SelectionCreature:
+		return "creature", true
+	case SelectionEnchantment:
+		return "enchantment", true
+	case SelectionLand:
+		return "land", true
+	case SelectionPlaneswalker:
+		return "planeswalker", true
+	case SelectionPermanent:
+		return "permanent", true
+	default:
+		return "", false
+	}
 }
 
 // sacrificeChoiceCommaQualifiedNoun reconstructs the combined "non<type>,
@@ -856,13 +892,25 @@ func sacrificeChoiceBaseNoun(selection *SelectionSyntax, plural bool) (string, b
 		}
 		return joinOrList(words), true
 	}
-	// A token named by no type at all ("a token") or by a subtype ("a Blood
-	// token") renders the "token" word last. The bare form matches any token; the
-	// subtype form matches that token subtype through the SubtypesAny filter.
+	// A token named by no type at all ("a token"), by a subtype ("a Blood
+	// token"), or by a card type ("a creature token") renders the "token" word
+	// last. The bare form matches any token; the subtype form matches that token
+	// subtype through the SubtypesAny filter; the card-type form matches that
+	// card type through the RequiredTypes filter.
 	if sacrificeTokenSuffixForm(selection) && len(selection.ExcludedSubtypes) == 0 {
 		noun := "token"
-		if len(selection.SubtypesAny) == 1 {
+		switch {
+		case len(selection.SubtypesAny) == 1:
 			noun = string(selection.SubtypesAny[0]) + " token"
+		case selection.Kind != SelectionUnknown:
+			word, ok := sacrificeCardTypeWord(selection.Kind)
+			if !ok {
+				return "", false
+			}
+			noun = word + " token"
+		default:
+			// A bare token ("a token") names neither a card type nor a subtype;
+			// the "token" word alone is the whole noun.
 		}
 		if plural {
 			noun += "s"
@@ -886,19 +934,8 @@ func sacrificeChoiceBaseNoun(selection *SelectionSyntax, plural bool) (string, b
 		}
 		return noun, true
 	}
-	noun := ""
-	switch selection.Kind {
-	case SelectionArtifact:
-		noun = "artifact"
-	case SelectionCreature:
-		noun = "creature"
-	case SelectionEnchantment:
-		noun = "enchantment"
-	case SelectionLand:
-		noun = "land"
-	case SelectionPermanent:
-		noun = "permanent"
-	default:
+	noun, ok := sacrificeCardTypeWord(selection.Kind)
+	if !ok {
 		return "", false
 	}
 	if plural {

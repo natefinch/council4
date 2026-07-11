@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,425 of 32,501 cards eligible for paper support (53.6%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,428 of 32,501 cards eligible for paper support (53.6%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -510,6 +510,7 @@ Council4 currently supports **17,425 of 32,501 cards eligible for paper support 
 - Angler Turtle
 - Angrath's Ambusher
 - Angrath's Marauders
+- Angrath's Rampage
 - Angrath, Captain of Chaos
 - Angry Rabble
 - Anguished Unmaking
@@ -5682,6 +5683,7 @@ Council4 currently supports **17,425 of 32,501 cards eligible for paper support 
 - Gaea's Touch
 - Gaelicat
 - Gainsay
+- Gaius van Baelsar
 - Galactic Wayfarer
 - Galactus
 - Galadhrim Bow
@@ -13044,6 +13046,7 @@ Council4 currently supports **17,425 of 32,501 cards eligible for paper support 
 - Sheltering Light
 - Sheltering Word
 - Shenanigans
+- Sheoldred's Edict
 - Sheoldred's Headcleaver
 - Sheoldred's Restoration
 - Sheoldred, the Apocalypse

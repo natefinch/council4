@@ -1221,6 +1221,8 @@ func sacrificeChoiceSelection(selector compiler.CompiledSelector) (game.Selectio
 		selection.RequiredTypes = []types.Card{types.Land}
 	case selector.Kind == compiler.SelectorEnchantment:
 		selection.RequiredTypes = []types.Card{types.Enchantment}
+	case selector.Kind == compiler.SelectorPlaneswalker:
+		selection.RequiredTypes = []types.Card{types.Planeswalker}
 	case selector.Kind == compiler.SelectorPermanent:
 		// zero Selection = any permanent
 	case len(subtypes) > 0:
