@@ -763,6 +763,14 @@ func shiftPermanentAbilityUseIndexes(g *game.Game, sourceID id.ID, offset int) {
 		triggered[use] = count
 	}
 	g.TriggeredAbilitiesThisTurn = triggered
+	chosenModes := make(map[game.TriggeredAbilityUse]uint64, len(g.ChosenModesThisTurn))
+	for use, modes := range g.ChosenModesThisTurn {
+		if use.SourceID == sourceID && use.AbilityIndex >= 0 {
+			use.AbilityIndex += offset
+		}
+		chosenModes[use] = modes
+	}
+	g.ChosenModesThisTurn = chosenModes
 }
 
 func counteredSpellResolution(g *game.Game, obj *game.StackObject, card *game.CardInstance) string {

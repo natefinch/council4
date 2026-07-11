@@ -249,6 +249,10 @@ type Game struct {
 	// including the current resolution. It is reset when the turn advances.
 	ResolvedTriggeredAbilitiesThisTurn map[TriggeredAbilityUse]int
 
+	// ChosenModesThisTurn records modal choices that may not repeat during the
+	// current turn, keyed by source object and triggered ability.
+	ChosenModesThisTurn map[TriggeredAbilityUse]uint64
+
 	// IDGen generates unique IDs for game objects.
 	IDGen id.Generator
 
@@ -349,6 +353,7 @@ func NewGameWithRand(configs [NumPlayers]PlayerConfig, rng *rand.Rand) *Game {
 		AbilityActivationsThisTurn:         make(map[ActivatedAbilityUse]int),
 		TriggeredAbilitiesThisTurn:         make(map[TriggeredAbilityUse]int),
 		ResolvedTriggeredAbilitiesThisTurn: make(map[TriggeredAbilityUse]int),
+		ChosenModesThisTurn:                make(map[TriggeredAbilityUse]uint64),
 		EventTurnStarts:                    []int{0},
 		Turn: TurnState{
 			TurnNumber:           1,

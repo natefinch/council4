@@ -304,6 +304,9 @@ type CompiledModalSemantics struct {
 	MaxModes int
 	Kind     CompiledModalChoiceKind
 	Bonus    CompiledModeChoiceBonus
+	// ModesUniquePerTurn requires each mode to be chosen at most once per turn
+	// for each source object and triggered ability.
+	ModesUniquePerTurn bool
 	// Spree marks a Spree modal whose options each carry an additional mana cost
 	// (CR 702.171), recorded on each CompiledMode's SpreeCost.
 	Spree bool

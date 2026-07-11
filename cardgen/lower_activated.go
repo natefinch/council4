@@ -464,6 +464,14 @@ func lowerModalContent(
 			return unsupported("the executable source backend lowers at-random modes only in triggered or Saga-chapter abilities")
 		}
 	}
+	if modal.ModesUniquePerTurn {
+		if ctx.enclosingKind != compiler.AbilityTriggered {
+			return unsupported("per-turn unique modes are supported only on triggered abilities")
+		}
+		if randomModes || minModes != 1 || maxModes != 1 || len(ctx.content.Modes) > 64 {
+			return unsupported("per-turn unique modes must choose one nonrandom mode from at most 64 modes")
+		}
+	}
 	var bonus game.ModeChoiceBonus
 	switch modal.Bonus.Condition {
 	case compiler.ModeChoiceBonusConditionNone:
@@ -555,11 +563,12 @@ func lowerModalContent(
 		return game.AbilityContent{}, combineReasons(modeReasons)
 	}
 	result := game.AbilityContent{
-		Modes:           modes,
-		MinModes:        minModes,
-		MaxModes:        maxModes,
-		ModeChoiceBonus: bonus,
-		RandomModes:     randomModes,
+		Modes:              modes,
+		MinModes:           minModes,
+		MaxModes:           maxModes,
+		ModeChoiceBonus:    bonus,
+		RandomModes:        randomModes,
+		ModesUniquePerTurn: modal.ModesUniquePerTurn,
 	}
 	if modal.Escalate {
 		if len(modal.EscalateCost) == 0 {

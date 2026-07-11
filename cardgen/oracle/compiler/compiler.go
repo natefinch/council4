@@ -109,13 +109,14 @@ func compileAbility(
 		}
 		if len(compiled.Content.Modes) > 0 {
 			compiled.Content.Modes[0].Modal = &CompiledModalSemantics{
-				MinModes:     ability.Modal.MinModes,
-				MaxModes:     ability.Modal.MaxModes,
-				Kind:         compileModalChoiceKind(ability.Modal.ChoiceKind),
-				Bonus:        compileModeChoiceBonus(ability.Modal.ChoiceBonus),
-				Spree:        ability.Modal.Spree,
-				Escalate:     ability.Modal.Escalate,
-				EscalateCost: slices.Clone(ability.Modal.EscalateCost),
+				MinModes:           ability.Modal.MinModes,
+				MaxModes:           ability.Modal.MaxModes,
+				Kind:               compileModalChoiceKind(ability.Modal.ChoiceKind),
+				Bonus:              compileModeChoiceBonus(ability.Modal.ChoiceBonus),
+				ModesUniquePerTurn: ability.Modal.ModesUniquePerTurn,
+				Spree:              ability.Modal.Spree,
+				Escalate:           ability.Modal.Escalate,
+				EscalateCost:       slices.Clone(ability.Modal.EscalateCost),
 			}
 		}
 	}
