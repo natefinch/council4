@@ -42,6 +42,7 @@ var Cards = []cardset.Entry{
 	{Name: "Savage Ventmaw", New: SavageVentmaw},
 	{Name: "Savai Thundermane", New: SavaiThundermane},
 	{Name: "Saved by the Shell", New: SavedByTheShell},
+	{Name: "Saw in Half", New: SawInHalf},
 	{Name: "Sawback Manticore", New: SawbackManticore},
 	{Name: "Scalding Salamander", New: ScaldingSalamander},
 	{Name: "Scale Blessing", New: ScaleBlessing},

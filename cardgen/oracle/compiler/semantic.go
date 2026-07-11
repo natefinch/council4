@@ -614,6 +614,14 @@ const (
 	// as an "if you do" gate solely for the optional-destroy shape and otherwise
 	// fails closed.
 	ConditionPredicateDestroyedThisWay
+	// ConditionPredicateDiesThisWay is satisfied when the prior destroy effect's
+	// target was actually put into a graveyard from the battlefield ("if that
+	// creature dies this way"; Saw in Half). Unlike ConditionPredicateDestroyedThisWay
+	// it back-references the destroy's single target rather than a named type, so
+	// it gates the linked follow-up on that specific creature having died. The
+	// dies-this-way copy sequence lowering treats it as the resolving-success gate
+	// on the preceding destroy and otherwise fails closed.
+	ConditionPredicateDiesThisWay
 	ConditionPredicateCounterPlacementOnControlledCreature
 	// ConditionPredicateCounterPlacementOnSelf is satisfied when one or more
 	// counters would be put on the source permanent itself ("If one or more
@@ -2339,6 +2347,21 @@ type CompiledEffect struct {
 	// creature[ instead]."). The copy source is the lone reference in References,
 	// not a grammatical target.
 	TokenCopyOfReference bool
+	// TokenCopyOfReferenceHalvedPT mirrors the parser flag for the linked
+	// halved-copy create "its controller creates <N> tokens that are copies of
+	// that creature, except their power/toughness is half that creature's ...
+	// Round up each time." (Saw in Half). The dies-this-way copy sequence lowering
+	// consumes it, copying the preceding destroy's target and halving each copy's
+	// power and toughness (rounded up).
+	TokenCopyOfReferenceHalvedPT bool
+	// TokenCopyHalvePTRoundUp mirrors the parser flag recording that the halved
+	// copy's power and toughness round up (the credited "Round up each time."
+	// rider). Without it the halved-copy sequence fails closed.
+	TokenCopyHalvePTRoundUp bool
+	// TokenCopyHalveRoundUpRiderSpan mirrors the parser span covering the
+	// "Round up each time." rider sentence, so lowering credits the rider tokens
+	// as consumed. It is set together with TokenCopyHalvePTRoundUp.
+	TokenCopyHalveRoundUpRiderSpan shared.Span
 	// TokenCopyOfAttached reports that the created token is a copy of the
 	// permanent the source is attached to ("a copy of equipped creature" /
 	// "enchanted creature"). The copy source resolves at runtime to the attached

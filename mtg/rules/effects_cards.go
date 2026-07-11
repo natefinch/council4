@@ -108,6 +108,16 @@ func cardZone(g *game.Game, cardID id.ID) (zone.Type, bool) {
 	return zone.None, false
 }
 
+// halveRoundUp returns half of n rounded up (toward positive infinity), the
+// rounding "Round up each time." applies to a copy's halved power and toughness
+// (Saw in Half). For a negative n it rounds toward zero, matching ceil(n/2).
+func halveRoundUp(n int) int {
+	if n >= 0 {
+		return (n + 1) / 2
+	}
+	return -((-n) / 2)
+}
+
 func buildTokenCopyDef(g *game.Game, obj *game.StackObject, spec game.TokenCopySpec) (*game.CardDef, bool) {
 	var source *game.CardDef
 	switch spec.Source {
@@ -122,6 +132,10 @@ func buildTokenCopyDef(g *game.Game, obj *game.StackObject, spec game.TokenCopyS
 		resolved, ok := resolveObjectReference(g, obj, spec.Object)
 		if !ok {
 			return nil, false
+		}
+		if spec.HalvePowerToughnessRoundUp {
+			spec.SetPower = opt.Val(game.PT{Value: halveRoundUp(resolvedObjectPower(g, &resolved))})
+			spec.SetToughness = opt.Val(game.PT{Value: halveRoundUp(resolvedObjectToughness(g, &resolved))})
 		}
 		switch {
 		case resolved.permanent != nil:

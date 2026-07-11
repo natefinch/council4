@@ -1284,6 +1284,14 @@ type Sentence struct {
 	// scans treat its "this mana" pronoun and tokens as belonging to that
 	// add-mana rather than as an unrecognized sibling.
 	PersistentManaRider bool `json:",omitempty"`
+	// RoundUpEachTimeRider reports that this sentence is a credited "Round up each
+	// time." rider folded onto a preceding halved-copy create ("its controller
+	// creates two tokens that are copies of that creature, except their power is
+	// half ... and their toughness is half ...", Saw in Half). It fixes the
+	// halved power/toughness rounding to up; reference and coverage scans treat
+	// its tokens as belonging to that create rather than as an unrecognized
+	// sibling.
+	RoundUpEachTimeRider bool `json:",omitempty"`
 }
 
 // sentenceIsCreditedRider reports whether the sentence has been folded onto a
@@ -1302,7 +1310,8 @@ func sentenceIsCreditedRider(s *Sentence) bool {
 		s.ExiledCardChoiceRider ||
 		s.RemoveAuraRider ||
 		s.TokenGrantedAbilityRider ||
-		s.PersistentManaRider
+		s.PersistentManaRider ||
+		s.RoundUpEachTimeRider
 }
 
 // StaticRuleSubjectKind identifies the source object constrained by a simple

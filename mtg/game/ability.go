@@ -1286,6 +1286,16 @@ type TokenCopySpec struct {
 	NoManaCost    bool
 	NoPrintedText bool
 
+	// HalvePowerToughnessRoundUp sets each created copy's power and toughness to
+	// half the copied object's last-known actual power and toughness, each
+	// rounded up ("except their power is half that creature's power and their
+	// toughness is half that creature's toughness. Round up each time." — Saw in
+	// Half). It is meaningful only when Source is TokenCopySourceObject; the copy
+	// build reads the referenced object's live or last-known-information power and
+	// toughness (CR 608.2h) and fixes the copy to the halved values, in place of
+	// an explicit SetPower/SetToughness.
+	HalvePowerToughnessRoundUp bool
+
 	// SetNotLegendary drops the Legendary supertype from the copy ("except the
 	// token isn't legendary"), so a copy of a legendary permanent does not force
 	// the legend rule on its original.

@@ -54,6 +54,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 			exactCreateNamedTokenChoiceEffectSyntax(effect) ||
 			exactCreateCopyTokenEffectSyntax(effect) ||
 			exactCreateCopyTokenReferenceEffectSyntax(effect) ||
+			exactCreateCopyTokenHalvedReferenceEffectSyntax(effect) ||
 			exactCreateCopyTokenTriggeringSetEffectSyntax(effect) ||
 			exactCreateCopyTokenAttachedEffectSyntax(effect)
 	case EffectCreateEmblem:
@@ -3605,6 +3606,48 @@ func exactCreateCopyTokenReferenceEffectSyntax(effect *EffectSyntax) bool {
 		applyCopyTokenOverride(effect, *rider.override)
 	}
 	return true
+}
+
+// exactCreateCopyTokenHalvedReferenceEffectSyntax reports whether the effect is
+// the linked halved-copy create "its controller creates <N> tokens that are
+// copies of that creature, except their power is half that creature's power and
+// their toughness is half that creature's toughness." (Saw in Half). The copy
+// source is the "that creature" antecedent, which back-references the preceding
+// destroy's target; each copy's power and toughness are set to half that
+// creature's last-known values. It requires the referenced-object-controller
+// recipient ("its controller"), no target, a known plural count, and the exact
+// halved-power/toughness override wording; every richer or differently rounded
+// shape fails closed. The "Round up each time." rounding is credited separately
+// as a rider (TokenCopyHalvePTRoundUp).
+func exactCreateCopyTokenHalvedReferenceEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Kind != EffectCreate ||
+		effect.Context != EffectContextReferencedObjectController ||
+		effect.Negated ||
+		!createCopyTokenCountKnown(effect) ||
+		len(effect.Targets) != 0 ||
+		len(effect.References) == 0 {
+		return false
+	}
+	// The recognized subject is the "its controller" referenced-object-controller
+	// form; exactEffectClauseText reconstructs the clause from that subject (the
+	// linked condition prefix is excluded), so any other subject wording leaves
+	// the reconstruction unmatched and fails closed.
+	const subject = "its controller"
+	countWord := effectAmountSourceText(effect)
+	clause := normalizeApostrophes(exactEffectClauseText(effect))
+	for i := range effect.References {
+		if !copyTokenReferenceSupported(effect.References[i]) {
+			continue
+		}
+		source := normalizeApostrophes(effect.References[i].Text)
+		expected := subject + " creates " + countWord + " tokens that are copies of " + source +
+			", except their power is half " + source + "'s power and their toughness is half " +
+			source + "'s toughness."
+		if strings.EqualFold(clause, expected) {
+			return true
+		}
+	}
+	return false
 }
 
 // exactCreateCopyTokenTriggeringSetEffectSyntax reports whether the effect is

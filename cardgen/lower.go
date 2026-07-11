@@ -1028,6 +1028,9 @@ func lowerExecutableAbility(
 			if ability.Content.Effects[i].ReturnAsEnchantment {
 				spans = append(spans, ability.Content.Effects[i].ReturnAsEnchantmentRiderSpan)
 			}
+			if ability.Content.Effects[i].TokenCopyHalvePTRoundUp {
+				spans = append(spans, ability.Content.Effects[i].TokenCopyHalveRoundUpRiderSpan)
+			}
 			if ability.Content.Effects[i].CopyMayChooseNewTargets {
 				spans = append(spans, ability.Content.Effects[i].CopyChooseNewTargetsRiderSpan)
 			}
