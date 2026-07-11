@@ -17,6 +17,7 @@ var Cards = []cardset.Entry{
 	{Name: "Kami of Restless Shadows", New: KamiOfRestlessShadows},
 	{Name: "Kami of the Honored Dead", New: KamiOfTheHonoredDead},
 	{Name: "Kapow!", New: Kapow},
+	{Name: "Kappa Cannoneer", New: KappaCannoneer},
 	{Name: "Kardur's Vicious Return", New: KardurSViciousReturn},
 	{Name: "Kargan Dragonlord", New: KarganDragonlord},
 	{Name: "Karoo", New: Karoo},

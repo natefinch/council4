@@ -9,6 +9,7 @@ import "github.com/natefinch/council4/mtg/cards/cardset"
 var Cards = []cardset.Entry{
 	{Name: "Sacred Mesa", New: SacredMesa},
 	{Name: "Sage of the Beyond", New: SageOfTheBeyond},
+	{Name: "Sahagin", New: Sahagin},
 	{Name: "Saheeli's Artistry", New: SaheeliSArtistry},
 	{Name: "Sakashima's Student", New: SakashimaSStudent},
 	{Name: "Sakura-Tribe Springcaller", New: SakuraTribeSpringcaller},
@@ -257,6 +258,7 @@ var Cards = []cardset.Entry{
 	{Name: "Static Snare", New: StaticSnare},
 	{Name: "Station Monitor", New: StationMonitor},
 	{Name: "Staunch Crewmate", New: StaunchCrewmate},
+	{Name: "Stealth Mission", New: StealthMission},
 	{Name: "Steam Augury", New: SteamAugury},
 	{Name: "Steam Catapult", New: SteamCatapult},
 	{Name: "Steam Frigate", New: SteamFrigate},

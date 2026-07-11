@@ -136,6 +136,7 @@ var Cards = []cardset.Entry{
 	{Name: "Ashmouth Hound", New: AshmouthHound},
 	{Name: "Aspect of Lamprey", New: AspectOfLamprey},
 	{Name: "Aspect of Manticore", New: AspectOfManticore},
+	{Name: "Assassin Den", New: AssassinDen},
 	{Name: "Assassin Initiate", New: AssassinInitiate},
 	{Name: "Assert Perfection", New: AssertPerfection},
 	{Name: "Astral Slide", New: AstralSlide},
