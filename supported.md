@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,428 of 32,501 cards eligible for paper support (53.6%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,433 of 32,501 cards eligible for paper support (53.6%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1905,6 +1905,7 @@ Council4 currently supports **17,428 of 32,501 cards eligible for paper support 
 - Breath Weapon
 - Breathstealer
 - Bred for the Hunt
+- Breeches, Eager Pillager
 - Breeding Pit
 - Breeding Pool
 - Breya's Apprentice
@@ -5684,11 +5685,13 @@ Council4 currently supports **17,428 of 32,501 cards eligible for paper support 
 - Gaelicat
 - Gainsay
 - Gaius van Baelsar
+- Gala Greeters
 - Galactic Wayfarer
 - Galactus
 - Galadhrim Bow
 - Galadhrim Guide
 - Galadriel, Gift-Giver
+- Galadriel, Light of Valinor
 - Gale Force
 - Gale Swooper
 - Galecaster Colossus
@@ -15066,6 +15069,7 @@ Council4 currently supports **17,428 of 32,501 cards eligible for paper support 
 - Tethered Skirge
 - Tethmos High Priest
 - Tetsuko Umezawa, Fugitive
+- Teval's Judgment
 - Teval, the Balanced Scale
 - Teyo's Lightshield
 - Teyo, the Shieldmage
@@ -15168,6 +15172,7 @@ Council4 currently supports **17,428 of 32,501 cards eligible for paper support 
 - The Torment of Gollum
 - The Underworld Cookbook
 - The Unspeakable
+- The Vision
 - The Vision and Scarlet Witch
 - The Void
 - The Walls of Ba Sing Se
