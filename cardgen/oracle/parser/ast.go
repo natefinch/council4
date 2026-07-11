@@ -311,6 +311,15 @@ const (
 	// non-payment their creatures can't attack the source's controller for the
 	// rest of that combat. The whole body is fixed, so it carries no extra data.
 	ExactSequencePayHandSizeOrCantAttack
+	// ExactSequenceExtraDrawThenPayLifeOrTop is the triggered draw-step body "you
+	// may draw <N> additional cards. If you do, choose <M> cards in your hand
+	// drawn this turn. For each of those cards, pay <L> life or put the card on
+	// top of your library." (Sylvan Library): the controller may draw N extra
+	// cards, and if they do they choose M of the cards in their hand drawn this
+	// turn and, for each, either pay L life to keep it or put it on top of their
+	// library. DrawCount records N, ChooseCount records M, and PayLife records L
+	// so lowering models the sequence from typed counts rather than Oracle words.
+	ExactSequenceExtraDrawThenPayLifeOrTop
 )
 
 // LookAtTopBattlefieldElse identifies the trailing fallback disposition of an
@@ -348,9 +357,15 @@ type ExactSequenceSyntax struct {
 	// DrawCount and DiscardCount carry the typed counts of
 	// ExactSequenceDrawThenDiscardUnlessType: the cards drawn first, then the
 	// cards discarded unless an exempt-type card (recorded in LookAtTopCardTypes)
-	// is discarded instead.
+	// is discarded instead. DrawCount also carries N (the additional cards drawn)
+	// for ExactSequenceExtraDrawThenPayLifeOrTop.
 	DrawCount    int
 	DiscardCount int
+	// ChooseCount and PayLife carry the typed counts of
+	// ExactSequenceExtraDrawThenPayLifeOrTop: the cards chosen from among those
+	// drawn this turn (M) and the life paid to keep each chosen card (L).
+	ChooseCount int
+	PayLife     int
 }
 
 // SourceAbilityCostReductionSyntax is the typed syntax for a source-local

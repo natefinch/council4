@@ -107,10 +107,17 @@ type CompiledAbility struct {
 	// is discarded instead. Both are zero for every other exact sequence.
 	ExactSequenceDrawCount    uint8
 	ExactSequenceDiscardCount uint8
-	Span                      shared.Span
-	Text                      string
-	ActivationTiming          ActivationTimingKind
-	ActivationTimingSpan      shared.Span
+	// ExactSequenceChooseCount and ExactSequencePayLife carry the typed counts of
+	// ExactSequenceExtraDrawThenPayLifeOrTop: the cards chosen from among those
+	// drawn this turn (M) and the life paid to keep each chosen card (L).
+	// ExactSequenceDrawCount carries the additional cards drawn (N) for that
+	// sequence. All three are zero for every other exact sequence.
+	ExactSequenceChooseCount uint8
+	ExactSequencePayLife     uint8
+	Span                     shared.Span
+	Text                     string
+	ActivationTiming         ActivationTimingKind
+	ActivationTimingSpan     shared.Span
 	// MaxActivationsPerTurn caps activations per turn ("Activate no more than
 	// twice each turn."). Zero means no cap. MaxActivationsPerTurnSpan covers the
 	// recognized restriction sentence for source coverage.

@@ -44,7 +44,13 @@ import (
 // Bolster carries the EffectCounterAdded atom, matching Monstrosity: it puts
 // +1/+1 counters on the controller's least-toughness creature (CR 701.37), a
 // board-boosting counter placement.
-const knownPrimitiveCount = 122
+//
+// ChooseDrawnPayLifeOrTop is value-neutral (no atom), matching
+// PlayerMayPayGenericOrRule: for each chosen card its outcome is either a life
+// payment or returning a just-drawn card to the library, a wash the
+// single-target atom heuristic does not model. The card advantage of the extra
+// draw is already carried by the preceding Draw instruction.
+const knownPrimitiveCount = 123
 
 // TestPrimitiveCountIsReconciled keeps a newly added resolution primitive from
 // silently falling through the translator: adding one trips this guard so its

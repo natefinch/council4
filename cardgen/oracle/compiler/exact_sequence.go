@@ -52,6 +52,16 @@ const (
 	// non-payment, their creatures can't attack the source's controller for the
 	// rest of that combat. The whole body is fixed, so it carries no extra data.
 	ExactSequencePayHandSizeOrCantAttack
+	// ExactSequenceExtraDrawThenPayLifeOrTop is the triggered draw-step "you may
+	// draw N additional cards. If you do, choose M cards in your hand drawn this
+	// turn. For each of those cards, pay L life or put the card on top of your
+	// library." sequence (Sylvan Library): the controller may draw N extra cards
+	// and, if they do, choose M of the cards drawn this turn still in hand and
+	// for each pay L life to keep it or put it on top of their library. The
+	// counts N, M, and L travel on the compiled ability (ExactSequenceDrawCount,
+	// ExactSequenceChooseCount, ExactSequencePayLife) so lowering models the
+	// sequence without reading Oracle words.
+	ExactSequenceExtraDrawThenPayLifeOrTop
 )
 
 func compileExactSequenceKind(kind parser.ExactSequenceKind) ExactSequenceKind {
@@ -70,6 +80,8 @@ func compileExactSequenceKind(kind parser.ExactSequenceKind) ExactSequenceKind {
 		return ExactSequenceDrawThenDiscardUnlessType
 	case parser.ExactSequencePayHandSizeOrCantAttack:
 		return ExactSequencePayHandSizeOrCantAttack
+	case parser.ExactSequenceExtraDrawThenPayLifeOrTop:
+		return ExactSequenceExtraDrawThenPayLifeOrTop
 	default:
 		return ExactSequenceUnknown
 	}

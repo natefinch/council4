@@ -82,6 +82,12 @@ func compileAbility(
 		if n := ability.ExactSequence.DiscardCount; n >= 0 && n <= math.MaxUint8 {
 			compiled.ExactSequenceDiscardCount = uint8(n)
 		}
+		if n := ability.ExactSequence.ChooseCount; n >= 0 && n <= math.MaxUint8 {
+			compiled.ExactSequenceChooseCount = uint8(n)
+		}
+		if n := ability.ExactSequence.PayLife; n >= 0 && n <= math.MaxUint8 {
+			compiled.ExactSequencePayLife = uint8(n)
+		}
 	}
 	compiled.ClassLevelGain = ability.ClassLevelGain
 	compiled.LevelUpRecognized = ability.LevelUpRecognized
