@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,407 of 32,501 cards eligible for paper support (53.6%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,408 of 32,501 cards eligible for paper support (53.6%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -15036,6 +15036,7 @@ Council4 currently supports **17,407 of 32,501 cards eligible for paper support 
 - Terror Ballista
 - Terror of Mount Velus
 - Terror of the Fairgrounds
+- Terror of the Peaks
 - Terrus Wurm
 - Tesak, Judith's Hellhound
 - Teshar, Ancestor's Apostle
