@@ -11,6 +11,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
@@ -5201,15 +5202,17 @@ func lowerGroupLinkedLifeSpell(ctx contentCtx) (game.AbilityContent, bool) {
 }
 
 // lowerDestroyedThisWaySequence handles the mass-destroy payoff pattern
-// "Destroy all <group>. <You gain N life | You lose N life | Draw a card> for
-// each <permanent> destroyed this way." (Fumigate, Multani's Decree, Paraselene,
-// Righteous Fury, Rain of Daggers, Death Begets Life). The first clause is an
-// exact untargeted mass destroy; the payoff clause's amount is the "for each
-// <noun> destroyed this way" dynamic form. It emits a group Destroy that
-// publishes the number of permanents it destroyed under "destroyed-this-way"
-// followed by the payoff instruction whose amount reads that published count
-// (scaled by the per-permanent multiplier), so the controller gains, loses, or
-// draws exactly that many. It fails closed unless every guard holds, so targeted
+// "Destroy all <group>. <You gain N life | You lose N life | Draw a card | Add
+// <color> or <color> ...> for each <permanent> destroyed this way." (Fumigate,
+// Multani's Decree, Paraselene, Righteous Fury, Rain of Daggers, Death Begets
+// Life, Culling Ritual). The first clause is an exact untargeted mass destroy;
+// the payoff clause's amount is the "for each <noun> destroyed this way" dynamic
+// form. It emits a group Destroy that publishes the number of permanents it
+// destroyed under "destroyed-this-way" followed by the payoff instruction whose
+// amount reads that published count (scaled by the per-permanent multiplier), so
+// the controller gains, loses, draws, or adds exactly that many. The add-mana
+// payoff produces that many mana split freely among the color choice (Culling
+// Ritual's "{B} or {G}"). It fails closed unless every guard holds, so targeted
 // mass destroys and richer wordings keep failing the round-trip.
 func lowerDestroyedThisWaySequence(ctx contentCtx) (game.AbilityContent, bool) {
 	if len(ctx.content.Effects) != 2 {
@@ -5255,6 +5258,12 @@ func lowerDestroyedThisWaySequence(ctx contentCtx) (game.AbilityContent, bool) {
 		payoffPrimitive = game.LoseLife{Player: game.ControllerReference(), Amount: amount}
 	case compiler.EffectDraw:
 		payoffPrimitive = game.Draw{Player: game.ControllerReference(), Amount: amount}
+	case compiler.EffectAddMana:
+		colors, ok := destroyedThisWayCombinationColors(payoff.Mana)
+		if !ok {
+			return game.AbilityContent{}, false
+		}
+		payoffPrimitive = game.AddMana{Amount: amount, CombinationColors: colors}
 	default:
 		return game.AbilityContent{}, false
 	}
@@ -5267,6 +5276,23 @@ func lowerDestroyedThisWaySequence(ctx contentCtx) (game.AbilityContent, bool) {
 			{Primitive: payoffPrimitive},
 		},
 	}.Ability(), true
+}
+
+// destroyedThisWayCombinationColors validates the add-mana payoff of a
+// destroyed-this-way sequence and returns the colors its produced mana is split
+// freely among. It accepts only the combination-dynamic shape the parser types
+// for a "<color> or <color> ..." choice paired with a "for each" count (two or
+// more distinct basic colors, no conditional or persist rider), so a fixed,
+// single-color, or otherwise-decorated add-mana payoff keeps failing closed.
+func destroyedThisWayCombinationColors(payoff compiler.CompiledEffectMana) ([]mana.Color, bool) {
+	if !payoff.Combination ||
+		!payoff.CombinationDynamic ||
+		payoff.Instead ||
+		payoff.PersistUntilEndOfTurn ||
+		len(payoff.CombinationColors) < 2 {
+		return nil, false
+	}
+	return slices.Clone(payoff.CombinationColors), true
 }
 
 // lowerDiceTableSequence handles the die-roll outcome-table form "Roll a d<N>.

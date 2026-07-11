@@ -112,6 +112,11 @@ var goldenCards = []goldenCard{
 		Rationale: "static anthem: a continuous +1/+1 buff to controlled creatures",
 		Card:      &ScryfallCard{Name: "Glorious Anthem", Layout: "normal", TypeLine: "Enchantment", OracleText: "Creatures you control get +1/+1."},
 	},
+	{
+		Key:       "culling_ritual",
+		Rationale: "mass destroy with a for-each-destroyed-this-way combination mana payoff",
+		Card:      &ScryfallCard{Name: "Culling Ritual", Layout: "normal", TypeLine: "Sorcery", OracleText: "Destroy each nonland permanent with mana value 2 or less. Add {B} or {G} for each permanent destroyed this way."},
+	},
 }
 
 // TestGoldenSnapshotsAreSupported guards the curated set's invariant: every

@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,512 of 32,501 cards eligible for paper support (53.9%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,513 of 32,501 cards eligible for paper support (53.9%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -3192,6 +3192,7 @@ Council4 currently supports **17,512 of 32,501 cards eligible for paper support 
 - Cubwarden
 - Cudgel Troll
 - Culling Dais
+- Culling Ritual
 - Culling Sun
 - Culling the Weak
 - Cult Guildmage
