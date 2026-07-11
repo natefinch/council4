@@ -50,7 +50,13 @@ import (
 // payment or returning a just-drawn card to the library, a wash the
 // single-target atom heuristic does not model. The card advantage of the extra
 // draw is already carried by the preceding Draw instruction.
-const knownPrimitiveCount = 123
+//
+// ExileTopEachLibraryCastFree is value-neutral (no atom), matching the sibling
+// impulse free-cast primitives ImpulseExile and ExileLibraryUntilNonlandCast:
+// the number and value of spells the controller ends up casting from the exiled
+// pile is indeterminate and player-relative, which the single-target atom
+// heuristic does not model.
+const knownPrimitiveCount = 124
 
 // TestPrimitiveCountIsReconciled keeps a newly added resolution primitive from
 // silently falling through the translator: adding one trips this guard so its

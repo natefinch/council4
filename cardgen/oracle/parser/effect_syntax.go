@@ -1762,6 +1762,13 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		if kind == EffectPut && effectHasTokenWords(selectionClause, "any", "number", "of") {
 			amount.AnyNumber = true
 		}
+		// "cast any number of spells from among those cards" (Etali, Primal
+		// Storm) casts an unbounded selection, mirroring the EffectPut form
+		// above: "any number of" is likewise the only positive count signal,
+		// distinguishing it from the singular "cast a spell from among them".
+		if kind == EffectCast && effectHasTokenWords(selectionClause, "any", "number", "of") {
+			amount.AnyNumber = true
+		}
 		// A created token's name is printed either as a leading "Create <Name>, a
 		// ..." prefix (named legendary tokens) or as a trailing "named <Name>"
 		// tail. Prefer the leading form when present and record its placement so
@@ -1871,7 +1878,8 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			UnderOwnersControl:       underOwnersControl(ownership),
 			CastAsAdventure:          effectContainsWords(normalizedWords(clause), "as", "an", "adventure"),
 			CastWithoutPayingManaCost: kind == EffectCast &&
-				effectContainsWords(normalizedWords(clause), "without", "paying", "its", "mana", "cost"),
+				(effectContainsWords(normalizedWords(clause), "without", "paying", "its", "mana", "cost") ||
+					effectContainsWords(normalizedWords(clause), "without", "paying", "their", "mana", "costs")),
 			Negated:             effectIsNegated(tokens, tokenIndex) && !fallbackOnInability,
 			FallbackOnInability: fallbackOnInability,
 			Optional:            optional,

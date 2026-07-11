@@ -73,6 +73,7 @@ var Cards = []cardset.Entry{
 	{Name: "Equilibrium", New: Equilibrium},
 	{Name: "Esper Battlemage", New: EsperBattlemage},
 	{Name: "Essence Flare", New: EssenceFlare},
+	{Name: "Etali, Primal Storm", New: EtaliPrimalStorm},
 	{Name: "Eternal Isolation", New: EternalIsolation},
 	{Name: "Eternal Taskmaster", New: EternalTaskmaster},
 	{Name: "Ethereal Champion", New: EtherealChampion},

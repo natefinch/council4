@@ -139,6 +139,7 @@ func newPrimitiveRegistry() *primitiveRegistry {
 	registerPrimitiveHandler(reg, handleRevealTopPartition)
 	registerPrimitiveHandler(reg, handleImpulseExile)
 	registerPrimitiveHandler(reg, handleExileLibraryUntilNonlandCast)
+	registerPrimitiveHandler(reg, handleExileTopEachLibraryCastFree)
 	registerPrimitiveHandler(reg, handleInvestigate)
 	registerPrimitiveHandler(reg, handleProliferate)
 	registerPrimitiveHandler(reg, handleExplore)

@@ -244,6 +244,11 @@ func (ExileLibraryUntilNonlandCast) Kind() PrimitiveKind {
 	return PrimitiveExileLibraryUntilNonlandCast
 }
 
+// Kind implements Primitive for ExileTopEachLibraryCastFree.
+func (ExileTopEachLibraryCastFree) Kind() PrimitiveKind {
+	return PrimitiveExileTopEachLibraryCastFree
+}
+
 // Kind implements Primitive for Investigate.
 func (Investigate) Kind() PrimitiveKind { return PrimitiveInvestigate }
 
@@ -447,6 +452,7 @@ func (PileSplit) isPrimitive()                            {}
 func (RevealTopPartition) isPrimitive()                   {}
 func (ImpulseExile) isPrimitive()                         {}
 func (ExileLibraryUntilNonlandCast) isPrimitive()         {}
+func (ExileTopEachLibraryCastFree) isPrimitive()          {}
 func (Investigate) isPrimitive()                          {}
 func (Proliferate) isPrimitive()                          {}
 func (Explore) isPrimitive()                              {}
@@ -699,10 +705,11 @@ func (p ImpulseExile) instructionRefs() primitiveRefs {
 	return refs
 }
 
-func (ExileLibraryUntilNonlandCast) instructionRefs() primitiveRefs { return primitiveRefs{} }
-func (p Investigate) instructionRefs() primitiveRefs                { return quantityRefs(p.Amount) }
-func (p Proliferate) instructionRefs() primitiveRefs                { return quantityRefs(p.Amount) }
-func (Explore) instructionRefs() primitiveRefs                      { return primitiveRefs{} }
+func (ExileLibraryUntilNonlandCast) instructionRefs() primitiveRefs  { return primitiveRefs{} }
+func (p ExileTopEachLibraryCastFree) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
+func (p Investigate) instructionRefs() primitiveRefs                 { return quantityRefs(p.Amount) }
+func (p Proliferate) instructionRefs() primitiveRefs                 { return quantityRefs(p.Amount) }
+func (Explore) instructionRefs() primitiveRefs                       { return primitiveRefs{} }
 func (p Manifest) instructionRefs() primitiveRefs {
 	return primitiveRefs{publishesLinked: p.PublishLinked}
 }

@@ -227,10 +227,18 @@ const (
 	// hand drawn this turn. For each of those cards, pay 4 life or put the card on
 	// top of your library.", Sylvan Library).
 	PrimitiveChooseDrawnPayLifeOrTop
+
+	// PrimitiveExileTopEachLibraryCastFree exiles the top Amount cards of every
+	// player's library into their owners' exile and then lets the resolving
+	// controller cast any number of those just-exiled cards without paying their
+	// mana costs ("exile the top card of each player's library, then you may cast
+	// any number of spells from among those cards without paying their mana
+	// costs.", Etali, Primal Storm). It is game.ExileTopEachLibraryCastFree.
+	PrimitiveExileTopEachLibraryCastFree
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveChooseDrawnPayLifeOrTop) + 1
+const primitiveKindCount = int(PrimitiveExileTopEachLibraryCastFree) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -1762,6 +1770,19 @@ type ImpulseExile struct {
 // same card, neither of which is expressible across separate instructions.
 type ExileLibraryUntilNonlandCast struct {
 	Player PlayerReference
+}
+
+// ExileTopEachLibraryCastFree exiles the top Amount cards of every player's
+// library into their owners' exile as one simultaneous batch, then lets the
+// resolving controller cast any number of those just-exiled cards without paying
+// their mana costs, casting each under the controller's control regardless of
+// which player's library it came from. Cards the controller declines to cast
+// stay exiled. It models the attack-trigger family "exile the top card of each
+// player's library, then you may cast any number of spells from among those
+// cards without paying their mana costs." (Etali, Primal Storm). Amount is the
+// per-library exile count, one for the printed card.
+type ExileTopEachLibraryCastFree struct {
+	Amount Quantity
 }
 
 // HideawayExile implements the Hideaway N enters-the-battlefield action (CR

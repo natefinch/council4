@@ -646,6 +646,12 @@ func (r Renderer) renderPrimitiveTail(ctx *renderCtx, primitive game.Primitive) 
 			return "", err
 		}
 		return r.renderExileLibraryUntilNonlandCast(value)
+	case game.PrimitiveExileTopEachLibraryCastFree:
+		value, err := assertPrimitive[game.ExileTopEachLibraryCastFree](primitive)
+		if err != nil {
+			return "", err
+		}
+		return r.renderExileTopEachLibraryCastFree(ctx, value)
 	case game.PrimitiveHideawayExile:
 		value, err := assertPrimitive[game.HideawayExile](primitive)
 		if err != nil {
