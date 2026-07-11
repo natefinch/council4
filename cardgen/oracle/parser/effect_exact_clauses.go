@@ -2060,6 +2060,48 @@ func exactDirectReferenceEffectSyntax(effect *EffectSyntax, verb string) bool {
 	return ok && strings.EqualFold(exactEffectClauseText(effect), verb+" "+object+".")
 }
 
+// tapUntapReferenceObjectClean reports whether a tap or untap effect's clause is
+// exactly "<verb> <object>." for one of its object references — the source or a
+// singular back-reference ("Untap it.", "Tap that creature.", "Untap this
+// creature."). Unlike exactDirectReferenceEffectSyntax it tolerates an
+// ability-level "you may" optionality (whose residual clause stays clean) and
+// sibling-clause references that do not name the object, because the
+// self/back-reference tap-down family carries those demotions without changing
+// the clause. A trailing unrecognized conjunct ("Untap it and all Samurai you
+// control.") matches no reference, so the clause is not clean; lowering reads the
+// false result to keep such a tap/untap unsupported rather than silently dropping
+// the conjunct.
+func tapUntapReferenceObjectClean(effect *EffectSyntax) bool {
+	var verb string
+	switch effect.Kind {
+	case EffectTap:
+		verb = "Tap"
+	case EffectUntap:
+		verb = "Untap"
+	default:
+		return false
+	}
+	if len(effect.Targets) != 0 || effect.Duration != EffectDurationNone {
+		return false
+	}
+	clause := exactEffectClauseText(effect)
+	for i := range effect.References {
+		switch effect.References[i].Kind {
+		case ReferenceThatObject, ReferenceThisObject, ReferenceSelfName:
+		case ReferencePronoun:
+			if effect.References[i].Pronoun != PronounIt {
+				continue
+			}
+		default:
+			continue
+		}
+		if strings.EqualFold(clause, verb+" "+joinedEffectText(effect.References[i].Tokens)+".") {
+			return true
+		}
+	}
+	return false
+}
+
 // exactBackReferenceEffectSyntax recognizes a removal verb acting on a
 // demonstrative back-reference object — "Exile that creature.", "Destroy it." —
 // where the object was introduced by a preceding clause or the triggering event.

@@ -1836,6 +1836,7 @@ func finalizeParsedEffect(effect *EffectSyntax, sentence Sentence, atoms Atoms) 
 	effect.MoveCountersAnyKind = effect.Kind == EffectMoveCounters &&
 		!effect.MoveCountersDistribute && !effect.MoveCountersAll && !effect.CounterKnown
 	effect.Exact = exactEffectSyntax(effect)
+	effect.TapUntapReferenceObjectClean = tapUntapReferenceObjectClean(effect)
 	// A leading "For each 1 damage prevented this way, <effect>" rider scales the
 	// effect by the amount of damage a companion prevention shield stops this turn
 	// (Brace for Impact, Test of Faith, Temper). No runtime construct tracks

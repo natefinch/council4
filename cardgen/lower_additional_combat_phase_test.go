@@ -158,3 +158,25 @@ func TestLowerAdditionalCombatPhaseRaiyuu(t *testing.T) {
 		t.Fatalf("gate condition = %#v, want FirstCombatPhaseOfTurn", seq[1].Condition.Val)
 	}
 }
+
+// TestLowerUntapItAndSubtypeConjunctionFailsClosed proves that an untap clause
+// whose object binding is a conjunction with an unsupported mass-untap-by-subtype
+// conjunct ("untap it and all Samurai you control") fails closed rather than
+// silently dropping the unsupported conjunct and shipping an under-implemented
+// untap of the attacker alone. Mass untap by subtype is unsupported on its own,
+// and folding it into a conjunction must not swallow it. This is the fail-closed
+// shape behind Godo, Bandit Warlord staying unsupported until mass untap by
+// subtype is implemented.
+func TestLowerUntapItAndSubtypeConjunctionFailsClosed(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFaceExpectingUnsupported(t, &ScryfallCard{
+		Name:       "Test Bandit Warlord",
+		Layout:     "normal",
+		TypeLine:   "Legendary Creature — Human Samurai",
+		ManaCost:   "{3}{R}{R}",
+		OracleText: "Whenever this creature attacks for the first time each turn, untap it and all Samurai you control.",
+	})
+	if len(face.TriggeredAbilities) != 0 {
+		t.Fatalf("triggered abilities = %d, want 0 (the dropped Samurai conjunct must fail the untap closed)", len(face.TriggeredAbilities))
+	}
+}

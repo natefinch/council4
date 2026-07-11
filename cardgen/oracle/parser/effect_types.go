@@ -2743,7 +2743,16 @@ type EffectSyntax struct {
 	SubjectTargets                      []TargetSyntax          `json:",omitempty"`
 	Payment                             EffectPaymentSyntax     `json:",omitzero"`
 	Exact                               bool                    `json:",omitempty"`
-	// KeywordGrantChoice marks an EffectGain keyword grant whose keyword list is a
+	// TapUntapReferenceObjectClean reports that a tap or untap effect's clause is
+	// exactly "<verb> <object>." naming the source or a singular back-reference
+	// ("Untap it.", "Tap that creature.", "Untap this creature."), tolerating an
+	// ability-level "you may" optionality and sibling-clause references that do
+	// not name the object. Lowering reads it to admit the self/back-reference
+	// tap-down family — whose clean clauses the exactness round-trip demotes for
+	// those two reasons — while a tap/untap whose clause carries a trailing
+	// unrecognized conjunct ("Untap it and all Samurai you control.") leaves it
+	// false and stays unsupported rather than silently dropping the conjunct.
+	TapUntapReferenceObjectClean bool `json:",omitempty"`
 	// disjunction ("gains banding, first strike, or trample") rather than a
 	// conjunction. The disjunction means the controller chooses exactly one of the
 	// listed keywords at resolution; lowering reads this to emit a keyword-choice
