@@ -287,6 +287,13 @@ func channelActivationSupported(ability compiler.CompiledAbility, functionZone z
 }
 
 func activationReferencesSupported(content compiler.AbilityContent) bool {
+	if len(content.Effects) == 1 &&
+		content.Effects[0].Kind == compiler.EffectCastAsThoughFlash &&
+		content.Effects[0].Exact {
+		// The exact timing-permission effect intrinsically owns "you", "spells",
+		// and "they"; its lowerer represents the whole sentence as one rule grant.
+		return true
+	}
 	if _, ok := recognizeConditionalDestination(content); ok {
 		// The conditional-destination lowering binds the searched card through a
 		// linked key and consumes every "it"/"that card" pronoun in the routing
