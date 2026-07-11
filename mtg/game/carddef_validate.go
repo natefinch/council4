@@ -478,6 +478,9 @@ func (v *cardDefValidator) validateAbilityContentWithLinked(
 	if !content.AllowDuplicateModes && maxModes > len(content.Modes) {
 		v.add(faceName, appendPath(path, "MaxModes"), CardDefIssueInvalidAbilityBody, "maximum modes exceeds available distinct modes")
 	}
+	if content.ModesUniquePerTurn && (content.RandomModes || minModes != 1 || maxModes != 1 || len(content.Modes) > 64) {
+		v.add(faceName, appendPath(path, "ModesUniquePerTurn"), CardDefIssueInvalidAbilityBody, "per-turn unique modes must choose one nonrandom mode from at most 64 modes")
+	}
 	if bonus := content.ModeChoiceBonus; bonus.Condition != ModeChoiceConditionNone || bonus.AdditionalMaxModes != 0 {
 		if bonus.Condition != ModeChoiceConditionControlsCommander {
 			v.add(faceName, appendPath(path, "ModeChoiceBonus"), CardDefIssueInvalidAbilityBody, "mode choice bonus has unsupported condition")

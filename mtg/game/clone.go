@@ -68,6 +68,7 @@ func (g *Game) Clone() *Game {
 		ExilePlayPermissionUsedThisTurn:    cloneComparableMap(g.ExilePlayPermissionUsedThisTurn),
 		TriggeredAbilitiesThisTurn:         cloneComparableMap(g.TriggeredAbilitiesThisTurn),
 		ResolvedTriggeredAbilitiesThisTurn: cloneComparableMap(g.ResolvedTriggeredAbilitiesThisTurn),
+		ChosenModesThisTurn:                cloneComparableMap(g.ChosenModesThisTurn),
 	}
 
 	clone.IDGen.Restore(g.IDGen.Current())

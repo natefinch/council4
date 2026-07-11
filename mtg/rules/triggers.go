@@ -53,7 +53,8 @@ func (e *Engine) prepareTriggeredAbility(g *game.Game, trigger *pendingTriggered
 	if !ok {
 		return false
 	}
-	chosenModes, ok := e.triggerModes(g, trigger.controller, ability, agents, log)
+	use := game.TriggeredAbilityUse{SourceID: trigger.sourceID, AbilityIndex: trigger.abilityIndex}
+	chosenModes, ok := e.triggerModes(g, trigger.controller, use, ability, agents, log)
 	if !ok {
 		return false
 	}
@@ -84,7 +85,7 @@ func (e *Engine) prepareTriggeredAbility(g *game.Game, trigger *pendingTriggered
 // mode choice; an illegal mode can't be chosen; if no mode is chosen the ability
 // is removed from the stack). It returns ok=false to signal that no legal mode
 // could be chosen so the caller removes the ability from the stack.
-func (e *Engine) triggerModes(g *game.Game, controller game.PlayerID, ability *game.TriggeredAbility, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]int, bool) {
+func (e *Engine) triggerModes(g *game.Game, controller game.PlayerID, use game.TriggeredAbilityUse, ability *game.TriggeredAbility, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]int, bool) {
 	content := ability.Content
 	if !content.IsModal() {
 		return nil, true
@@ -93,6 +94,9 @@ func (e *Engine) triggerModes(g *game.Game, controller game.PlayerID, ability *g
 		return nil, false
 	}
 	if len(content.SharedTargets) != 0 {
+		return nil, false
+	}
+	if content.ModesUniquePerTurn && (content.RandomModes || len(content.Modes) > 64) {
 		return nil, false
 	}
 	minModes, maxModes := modeChoiceRangeFromContent(content)
@@ -112,13 +116,20 @@ func (e *Engine) triggerModes(g *game.Game, controller game.PlayerID, ability *g
 		}
 		return selected, true
 	}
-	options := make([]game.ChoiceOption, len(content.Modes))
+	options := make([]game.ChoiceOption, 0, len(content.Modes))
+	usedModes := g.ChosenModesThisTurn[use]
 	for i := range content.Modes {
-		options[i] = game.ChoiceOption{Index: i, Label: content.Modes[i].Text}
+		if content.ModesUniquePerTurn && usedModes&(uint64(1)<<i) != 0 {
+			continue
+		}
+		options = append(options, game.ChoiceOption{Index: i, Label: content.Modes[i].Text})
+	}
+	if len(options) < minModes {
+		return nil, false
 	}
 	defaultSelection := make([]int, minModes)
 	for i := range defaultSelection {
-		defaultSelection[i] = i
+		defaultSelection[i] = options[i].Index
 	}
 	selected := e.chooseChoice(g, agents, game.ChoiceRequest{
 		Kind:             game.ChoiceModal,
@@ -132,6 +143,18 @@ func (e *Engine) triggerModes(g *game.Game, controller game.PlayerID, ability *g
 	slices.Sort(selected)
 	if !modesValidForContent(content, selected) {
 		return nil, false
+	}
+	if content.ModesUniquePerTurn {
+		for _, mode := range selected {
+			if mode < 0 || mode >= 64 || usedModes&(uint64(1)<<mode) != 0 {
+				return nil, false
+			}
+			usedModes |= uint64(1) << mode
+		}
+		if g.ChosenModesThisTurn == nil {
+			g.ChosenModesThisTurn = make(map[game.TriggeredAbilityUse]uint64)
+		}
+		g.ChosenModesThisTurn[use] = usedModes
 	}
 	return selected, true
 }

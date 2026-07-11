@@ -1610,6 +1610,8 @@ type Modal struct {
 	ChoiceKnown bool                   `json:",omitempty"`
 	ChoiceKind  ModalChoiceKind        `json:",omitempty"`
 	ChoiceBonus ModalChoiceBonusSyntax `json:",omitzero"`
+	// ModesUniquePerTurn marks "choose one that hasn't been chosen this turn".
+	ModesUniquePerTurn bool `json:",omitempty"`
 }
 
 // DiceTable is a recognized die-roll outcome table: a "Roll a d<N>." line

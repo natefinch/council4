@@ -25,6 +25,9 @@ type AbilityContent struct {
 	MaxModes            int
 	ModeChoiceBonus     ModeChoiceBonus
 	AllowDuplicateModes bool
+	// ModesUniquePerTurn requires each mode to be chosen at most once per turn
+	// for each source object and triggered ability.
+	ModesUniquePerTurn bool
 	// RandomModes reports that the single required mode is chosen at random
 	// rather than by the controller ("Choose one at random —", CR 700.2). It is
 	// set only on one/one modal content; mode resolution picks the mode with the

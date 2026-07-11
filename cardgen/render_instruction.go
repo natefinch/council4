@@ -49,6 +49,9 @@ func (r Renderer) renderModalAbilityContent(ctx *renderCtx, content game.Ability
 	if content.RandomModes {
 		fields = append(fields, "RandomModes: true,")
 	}
+	if content.ModesUniquePerTurn {
+		fields = append(fields, "ModesUniquePerTurn: true,")
+	}
 	if content.MinModes != 0 {
 		fields = append(fields, fmt.Sprintf("MinModes: %d,", content.MinModes))
 	}

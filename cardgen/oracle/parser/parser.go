@@ -471,6 +471,7 @@ func emitAtoms(abilities []Ability, cardName string, legendary bool) {
 			}
 			abilities[i].Modal.ChoiceKind = choice.kind
 			abilities[i].Modal.ChoiceBonus = choice.bonus
+			abilities[i].Modal.ModesUniquePerTurn = choice.modesUniquePerTurn
 			abilities[i].Modal.ChoiceKnown = choice.ok
 		}
 		for j := range abilities[i].Modal.Options {
@@ -1345,15 +1346,27 @@ func matchingDelimiter(tokens []shared.Token, start int, open, closeKind shared.
 // false when the header is not one of those recognized shapes. Downstream
 // lowering consumes the typed range instead of re-reading these tokens.
 type modalChoiceRecognition struct {
-	minModes int
-	maxModes int
-	kind     ModalChoiceKind
-	bonus    ModalChoiceBonusSyntax
-	ok       bool
+	minModes           int
+	maxModes           int
+	kind               ModalChoiceKind
+	bonus              ModalChoiceBonusSyntax
+	modesUniquePerTurn bool
+	ok                 bool
 }
 
 func recognizeModalChoice(header Phrase, atoms Atoms) modalChoiceRecognition {
 	tokens := header.Tokens
+	if strings.EqualFold(
+		strings.TrimSpace(header.Text),
+		"Choose one that hasn't been chosen this turn —",
+	) {
+		return modalChoiceRecognition{
+			minModes:           1,
+			maxModes:           1,
+			modesUniquePerTurn: true,
+			ok:                 true,
+		}
+	}
 	if strings.EqualFold(
 		strings.TrimSpace(header.Text),
 		"Choose one. If you control a commander as you cast this spell, you may choose both instead.",
