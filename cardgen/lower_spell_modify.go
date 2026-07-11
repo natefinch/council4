@@ -3596,20 +3596,18 @@ func lowerBecomeCopyContent(ctx contentCtx) (game.AbilityContent, *shared.Diagno
 // ("Target permanent becomes an artifact in addition to its other types until
 // end of turn.", Liquimetal Torque, Liquimetal Coating) into an ApplyContinuous
 // at LayerType that adds the parser-recognized card types to the single target
-// permanent until end of turn. Only the additive until-end-of-turn form reaches
-// here; any other shape (multiple targets, missing duration, riders) fails
-// closed.
+// permanent. A printed until-end-of-turn duration is temporary; an absent
+// duration is permanent.
 func lowerBecomeTypeContent(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
 	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported type-change effect",
-			"the executable source backend supports only a target permanent gaining card types until end of turn",
+			"the executable source backend supports only a target permanent gaining types",
 		)
 	}
-	if !effect.BecomeTypeUntilEndOfTurn ||
-		len(effect.BecomeTypeAddTypes) == 0 ||
+	if len(effect.BecomeTypeAddTypes) == 0 && len(effect.BecomeTypeAddSubtypes) == 0 ||
 		effect.Negated ||
 		effect.Optional ||
 		len(ctx.content.Conditions) != 0 ||
@@ -3625,8 +3623,9 @@ func lowerBecomeTypeContent(ctx contentCtx) (game.AbilityContent, *shared.Diagno
 		return unsupported()
 	}
 	continuousEffects := []game.ContinuousEffect{{
-		Layer:    game.LayerType,
-		AddTypes: append([]types.Card(nil), effect.BecomeTypeAddTypes...),
+		Layer:       game.LayerType,
+		AddTypes:    append([]types.Card(nil), effect.BecomeTypeAddTypes...),
+		AddSubtypes: append([]types.Sub(nil), effect.BecomeTypeAddSubtypes...),
 	}}
 	if len(effect.BecomeTypeAddColors) != 0 {
 		continuousEffects = append(continuousEffects, game.ContinuousEffect{
@@ -3634,13 +3633,17 @@ func lowerBecomeTypeContent(ctx contentCtx) (game.AbilityContent, *shared.Diagno
 			AddColors: append([]color.Color(nil), effect.BecomeTypeAddColors...),
 		})
 	}
+	duration := game.DurationPermanent
+	if effect.BecomeTypeUntilEndOfTurn {
+		duration = game.DurationUntilEndOfTurn
+	}
 	return game.Mode{
 		Targets: []game.TargetSpec{targetSpec},
 		Sequence: []game.Instruction{{
 			Primitive: game.ApplyContinuous{
 				Object:            opt.Val(game.TargetPermanentReference(0)),
 				ContinuousEffects: continuousEffects,
-				Duration:          game.DurationUntilEndOfTurn,
+				Duration:          duration,
 			},
 		}},
 	}.Ability(), nil

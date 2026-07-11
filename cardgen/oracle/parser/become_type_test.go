@@ -47,6 +47,7 @@ func TestParseBecomeTypeAddsColorAndType(t *testing.T) {
 	if !ok {
 		t.Fatal("no become-type effect parsed")
 	}
+
 	if !effect.BecomeTypeUntilEndOfTurn {
 		t.Error("expected until-end-of-turn duration")
 	}
@@ -55,6 +56,23 @@ func TestParseBecomeTypeAddsColorAndType(t *testing.T) {
 	}
 	if !slices.Equal(effect.BecomeTypeAddColors, []Color{ColorBlue}) {
 		t.Errorf("add colors = %v, want [ColorBlue]", effect.BecomeTypeAddColors)
+	}
+}
+
+func TestParseBecomeTypeAddsPermanentSubtype(t *testing.T) {
+	effect, ok := becomeTypeEffect(t, "Tyrite Sanctum",
+		"{2}, {T}: Target legendary creature becomes a God in addition to its other types.")
+	if !ok {
+		t.Fatal("no become-type effect parsed")
+	}
+	if effect.BecomeTypeUntilEndOfTurn {
+		t.Error("permanent subtype change has until-end-of-turn duration")
+	}
+	if !slices.Equal(effect.BecomeTypeAddSubtypes, []types.Sub{types.God}) {
+		t.Errorf("add subtypes = %v, want [God]", effect.BecomeTypeAddSubtypes)
+	}
+	if len(effect.BecomeTypeAddTypes) != 0 {
+		t.Errorf("add types = %v, want none", effect.BecomeTypeAddTypes)
 	}
 }
 
@@ -130,6 +148,7 @@ func TestParseBecomeTypeColorAndTypeFailsClosed(t *testing.T) {
 		"{U/P}: Until end of turn, target creature you control becomes a blue artifact in addition to its other types.",
 		"{U/P}: Until end of turn, target creature you control becomes an artifact in addition to its other colors and types.",
 		"{2}: Until end of turn, target nonartifact creature gets +1/+0 and becomes an artifact in addition to its other types.",
+		"Until your next turn, target creature becomes a God in addition to its other types.",
 	} {
 		if _, ok := becomeTypeEffect(t, "Test", text); ok {
 			t.Errorf("expected no become-type effect for %q", text)
