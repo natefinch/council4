@@ -166,6 +166,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitLifeCharacteristicExchange(document.Abilities, context.CardName)
 	emitUnlicensedHearseExile(document.Abilities, context.CardName)
 	emitChoosePermanentTypeReturn(document.Abilities)
+	emitTauntFromRampartSequence(document.Abilities)
 	emitSelfNameStaticRules(document.Abilities)
 	emitCost(document.Abilities)
 	emitOptional(document.Abilities)
@@ -394,6 +395,15 @@ func emitChoosePermanentTypeReturn(abilities []Ability) {
 		abilities[i].ChoosePermanentTypeReturn =
 			abilities[i].Kind == AbilitySpell &&
 				strings.EqualFold(strings.TrimSpace(abilities[i].Text), text)
+	}
+}
+
+func emitTauntFromRampartSequence(abilities []Ability) {
+	const text = "Goad all creatures your opponents control. Until your next turn, those creatures can't block."
+	for i := range abilities {
+		abilities[i].TauntFromRampartSequence =
+			abilities[i].Kind == AbilitySpell &&
+				strings.HasPrefix(strings.ToLower(strings.TrimSpace(abilities[i].Text)), strings.ToLower(text))
 	}
 }
 

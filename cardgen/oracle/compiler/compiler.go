@@ -52,6 +52,7 @@ func compileAbility(
 		SelesnyaEulogistPopulate:                    ability.SelesnyaEulogistPopulate,
 		UnlicensedHearseExile:                       ability.UnlicensedHearseExile,
 		ChoosePermanentTypeReturn:                   ability.ChoosePermanentTypeReturn,
+		TauntFromRampartSequence:                    ability.TauntFromRampartSequence,
 	}
 	if ability.LifeCharacteristicExchange != nil {
 		compiled.LifeCharacteristicExchange = &CompiledLifeCharacteristicExchange{
