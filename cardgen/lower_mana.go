@@ -338,6 +338,7 @@ func isManaSpendRider(effect *compiler.CompiledEffect) bool {
 	return isCommanderScryManaSpendRider(effect.ManaSpendRider) ||
 		isChosenTypeManaSpendRider(effect.ManaSpendRider) ||
 		isChosenTypeCastOrActivateManaSpendRider(effect.ManaSpendRider) ||
+		isCreatureCastOrActivateManaSpendRider(effect.ManaSpendRider) ||
 		isLegendarySpellManaSpendRider(effect.ManaSpendRider) ||
 		isCreatureSpellRestrictedManaSpendRider(effect.ManaSpendRider) ||
 		isCreatureSpellHasteManaSpendRider(effect.ManaSpendRider) ||
@@ -370,6 +371,18 @@ func isChosenTypeManaSpendRider(rider *compiler.CompiledManaSpendRider) bool {
 // (Secluded Courtyard).
 func isChosenTypeCastOrActivateManaSpendRider(rider *compiler.CompiledManaSpendRider) bool {
 	return rider.Condition == parser.ManaSpendCastOrActivateChosenCreatureType &&
+		rider.Effect == parser.ManaSpendRiderEffectUnknown &&
+		rider.Restricted &&
+		rider.ScryAmount == 0
+}
+
+// isCreatureCastOrActivateManaSpendRider reports whether rider is the restricted
+// "spend this mana only to cast creature spells or activate abilities of
+// creatures" rider (Castle Garenbrig). It restricts the tagged mana to creature
+// spells and creature-source ability activations with no further qualifier or
+// rider effect.
+func isCreatureCastOrActivateManaSpendRider(rider *compiler.CompiledManaSpendRider) bool {
+	return rider.Condition == parser.ManaSpendCastOrActivateCreature &&
 		rider.Effect == parser.ManaSpendRiderEffectUnknown &&
 		rider.Restricted &&
 		rider.ScryAmount == 0
@@ -549,6 +562,43 @@ func lowerManaSpendRiderContent(ctx contentCtx) (game.AbilityContent, *shared.Di
 			rider,
 			mana.W, mana.U, mana.B, mana.R, mana.G,
 		).Content, nil
+	}
+	if isCreatureCastOrActivateManaSpendRider(riderEffect) {
+		rider := game.ManaSpendRider{
+			Condition:   game.ManaSpendCastOrActivateCreature,
+			Restriction: game.ManaSpendRestrictedToCondition,
+		}
+		if manaEffect.Mana.AnyColor && manaEffect.Mana.AnyColorCount < 2 {
+			return game.TapManaChoiceWithSpendRiderAbility(
+				ctx.text,
+				rider,
+				mana.W, mana.U, mana.B, mana.R, mana.G,
+			).Content, nil
+		}
+		if manaEffect.Mana.AnyColor && manaEffect.Mana.AnyColorCount >= 2 {
+			return game.TapManaChoiceCountWithSpendRiderAbility(
+				ctx.text,
+				rider,
+				manaEffect.Mana.AnyColorCount,
+				mana.W, mana.U, mana.B, mana.R, mana.G,
+			).Content, nil
+		}
+		content, ok := typedManaEffectContent(manaEffect.Mana)
+		if !ok {
+			return game.AbilityContent{}, contentDiagnostic(
+				ctx,
+				"unsupported mana effect",
+				"the restricted creature cast-or-activate rider requires an exact modeled add-mana effect",
+			)
+		}
+		if !attachManaSpendRider(&content, rider) {
+			return game.AbilityContent{}, contentDiagnostic(
+				ctx,
+				"unsupported mana effect",
+				"the restricted creature cast-or-activate rider requires an exact add-mana instruction to tag",
+			)
+		}
+		return content, nil
 	}
 	if isLegendarySpellManaSpendRider(riderEffect) {
 		if !manaEffect.Mana.AnyColor {

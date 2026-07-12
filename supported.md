@@ -2263,6 +2263,7 @@ Council4 currently supports **17,538 of 32,501 cards eligible for paper support 
 - Castle Ardenvale
 - Castle Doom
 - Castle Embereth
+- Castle Garenbrig
 - Castle Locthwain
 - Castle Raptors
 - Castle Sengir

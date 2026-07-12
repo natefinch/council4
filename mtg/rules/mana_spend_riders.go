@@ -247,7 +247,10 @@ func manaSpendConditionSatisfied(g *game.Game, rider game.ManaRiderInstance, spe
 		return rider.MatchesChosenCreatureType(spellDef)
 	case game.ManaSpendCastLegendarySpell:
 		return spellDef != nil && spellDef.HasSupertype(types.Legendary)
-	case game.ManaSpendCastCreatureSpell:
+	case game.ManaSpendCastCreatureSpell, game.ManaSpendCastOrActivateCreature:
+		// The cast-or-activate creature restriction (Castle Garenbrig) admits the
+		// same creature spells here; its creature-ability activation is handled on
+		// the ability-payment path.
 		return spellDef != nil && spellDef.HasType(types.Creature)
 	case game.ManaSpendCastInstantOrSorcerySpell:
 		return spellDef != nil &&
@@ -342,6 +345,8 @@ func abilityActivationSatisfiesManaSpendRider(g *game.Game, source *game.Permane
 			permanentHasSubtype(g, source, rider.ChosenSubtype)
 	case game.ManaSpendCastOrActivateArtifact, game.ManaSpendActivateArtifactAbility:
 		return source != nil && permanentHasType(g, source, types.Artifact)
+	case game.ManaSpendCastOrActivateCreature:
+		return source != nil && permanentHasType(g, source, types.Creature)
 	case game.ManaSpendCastArtifactOrActivateAbility:
 		return source != nil
 	default:
