@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,560 of 32,501 cards eligible for paper support (54.0%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,566 of 32,501 cards eligible for paper support (54.0%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2549,6 +2549,7 @@ Council4 currently supports **17,560 of 32,501 cards eligible for paper support 
 - Chromatic Star
 - Chrome Cat
 - Chrome Companion
+- Chrome Dome
 - Chrome Mox
 - Chrome Prowler
 - Chrome Steed
@@ -8079,6 +8080,7 @@ Council4 currently supports **17,560 of 32,501 cards eligible for paper support 
 - Khenra Spellspear // Gitaxian Spellstalker
 - Kheru Bloodsucker
 - Kheru Dreadmaw
+- Kiki-Jiki, Mirror Breaker
 - Kiku's Shadow
 - Kiku, Night's Flower
 - Kill Shot
@@ -10522,6 +10524,7 @@ Council4 currently supports **17,560 of 32,501 cards eligible for paper support 
 - Orochi Leafcaller
 - Orochi Ranger
 - Orochi Sustainer
+- Orthion, Hero of Lavabrink
 - Orthodoxy Enforcer
 - Orzhov Basilica
 - Orzhov Cluestone
@@ -12427,6 +12430,7 @@ Council4 currently supports **17,560 of 32,501 cards eligible for paper support 
 - Saheeli Rai
 - Saheeli's Artistry
 - Saheeli's Silverwing
+- Saheeli, the Sun's Brilliance
 - Sai, Master Thopterist
 - Said // Done
 - Sailor of Means
@@ -15089,6 +15093,7 @@ Council4 currently supports **17,560 of 32,501 cards eligible for paper support 
 - Tempest of Light
 - Tempest Owl
 - Tempest Technique
+- Tempestra, Dame of Games
 - Temple Acolyte
 - Temple Bell
 - Temple Elder
@@ -15234,6 +15239,7 @@ Council4 currently supports **17,560 of 32,501 cards eligible for paper support 
 - The Fair Basilica
 - The Falcon, Airship Restored
 - The Falcon, Sam Wilson
+- The Fire Crystal
 - The Fire Nation Drill
 - The First Eruption
 - The First Iroan Games
