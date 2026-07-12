@@ -94,6 +94,7 @@ func compileTriggerSelection(syntax parser.TriggerSelection) (TriggerSelection, 
 	selection.Modified = syntax.Modified
 	selection.Commander = syntax.Commander
 	selection.Goaded = syntax.Goaded
+	selection.PowerAboveBase = syntax.PowerAboveBase
 	for i := range syntax.AnyOf {
 		alternative, ok := compileTriggerSelection(syntax.AnyOf[i])
 		if !ok {

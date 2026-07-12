@@ -84,6 +84,17 @@ func subjectQualifierTriggerEventClauseTests() []triggerEventClauseTest {
 				}
 			},
 		},
+		{
+			name:   "subject power above base combat damage",
+			source: "Whenever one or more creatures you control each with power greater than its base power deals combat damage to a player, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				selection := clause.DamageSource.Selection
+				if !selection.PowerAboveBase {
+					t.Fatalf("selection = %#v, want PowerAboveBase (Kutzil, Malamet Exemplar)", selection)
+				}
+			},
+		},
 	}
 }
 

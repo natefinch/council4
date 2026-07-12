@@ -70,6 +70,7 @@ var Cards = []cardset.Entry{
 	{Name: "Kumena, Tyrant of Orazca", New: KumenaTyrantOfOrazca},
 	{Name: "Kura, the Boundless Sky", New: KuraTheBoundlessSky},
 	{Name: "Kusari-Gama", New: KusariGama},
+	{Name: "Kutzil, Malamet Exemplar", New: KutzilMalametExemplar},
 	{Name: "Kyoshi Battle Fan", New: KyoshiBattleFan},
 	{Name: "Kyoshi Island Plaza", New: KyoshiIslandPlaza},
 	{Name: "Kyoshi Warrior Exemplars", New: KyoshiWarriorExemplars},

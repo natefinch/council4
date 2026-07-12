@@ -209,6 +209,9 @@ func matchSelection(s *selectionSubject, sel *game.Selection) bool {
 			return false
 		}
 	}
+	if sel.PowerAboveBase && !s.powerAboveBase() {
+		return false
+	}
 	if sel.ManaValueLessThanEventPermanent {
 		manaValue, ok := s.manaValue()
 		if !ok {
@@ -981,6 +984,40 @@ func (s *selectionSubject) sourcePower() (int, bool) {
 		return 0, false
 	}
 	return max(0, values.power), true
+}
+
+// powerAboveBase reports whether the subject permanent's current power exceeds
+// its base power (CR 208.3): the power after characteristic-defining and set
+// effects but before counters and other modifiers. It backs the "with power
+// greater than its base power" subject filter (Kutzil, Malamet Exemplar). Base
+// power is read by stopping the layer computation before the power/toughness
+// modify sublayer (7c), where counters and temporary modifiers apply. A subject
+// whose permanent has left the battlefield (a creature that dealt combat damage
+// and died in the same step) falls back to its last-known snapshot, which
+// records both its current and base power, so the trigger still fires; a card
+// subject has no distinct base power and fails closed.
+func (s *selectionSubject) powerAboveBase() bool {
+	if s.kind == subjectPermanent {
+		return s.permanent != nil && permanentPowerAboveBase(s.g, s.permanent)
+	}
+	if s.kind == subjectEventPermanent && s.event.PermanentID != 0 {
+		if permanent, ok := permanentByObjectID(s.g, s.event.PermanentID); ok {
+			return permanentPowerAboveBase(s.g, permanent)
+		}
+		if snapshot, ok := lastKnownObject(s.g, s.event.PermanentID); ok {
+			return snapshot.Power.Exists && snapshot.BasePower.Exists &&
+				snapshot.Power.Val > snapshot.BasePower.Val
+		}
+	}
+	return false
+}
+
+// permanentPowerAboveBase reports whether a live battlefield permanent's current
+// power exceeds its base power (before the counters/modify sublayer).
+func permanentPowerAboveBase(g *game.Game, permanent *game.Permanent) bool {
+	current := effectivePermanentValues(g, permanent)
+	base := permanentValuesBeforeLayer(g, permanent, game.LayerPowerToughnessModify)
+	return current.powerOK && base.powerOK && current.power > base.power
 }
 
 func (s *selectionSubject) toughness() (int, bool) {

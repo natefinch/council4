@@ -32,6 +32,7 @@ type ObjectSnapshot struct {
 	Types           []types.Card
 	Subtypes        []types.Sub
 	Power           opt.V[int]
+	BasePower       opt.V[int]
 	Toughness       opt.V[int]
 	Keywords        []Keyword
 	Counters        counter.Set

@@ -506,6 +506,9 @@ func (Renderer) renderSelection(ctx *renderCtx, selection game.Selection) (strin
 	if selection.PowerGreaterThanSource {
 		fields = append(fields, "PowerGreaterThanSource: true,")
 	}
+	if selection.PowerAboveBase {
+		fields = append(fields, "PowerAboveBase: true,")
+	}
 	if selection.ManaValueLessThanEventPermanent {
 		fields = append(fields, "ManaValueLessThanEventPermanent: true,")
 	}

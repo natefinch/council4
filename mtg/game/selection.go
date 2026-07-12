@@ -267,6 +267,16 @@ type Selection struct {
 	PowerLessThanSource    bool
 	PowerGreaterThanSource bool
 
+	// PowerAboveBase requires the matched permanent's current power to be
+	// strictly greater than its base power (CR 208.3): the power after
+	// characteristic-defining and set effects but before counters and other
+	// modifiers ("creatures you control ... with power greater than its base
+	// power", Kutzil, Malamet Exemplar). Only a battlefield permanent can carry
+	// the counters, Auras, Equipment, or temporary modifiers that raise power
+	// above base, so a card or last-known snapshot never matches. Placed at the
+	// end so the bool joins no existing cluster's packing.
+	PowerAboveBase bool
+
 	// Name, when non-empty, requires the matched object's name to equal it,
 	// modeling a "card named <Name>" filter (Daru Cavalier, Trustworthy Scout's
 	// library searches). It composes with the other fields but in practice stands
@@ -416,6 +426,7 @@ func (s Selection) Empty() bool {
 		!s.TokenOnly &&
 		!s.PowerLessThanSource &&
 		!s.PowerGreaterThanSource &&
+		!s.PowerAboveBase &&
 		s.Name == "" &&
 		s.ChosenSubtypeFrom == "" &&
 		!s.RequirePermanentCard &&
