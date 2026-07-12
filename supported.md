@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,579 of 32,501 cards eligible for paper support (54.1%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,587 of 32,501 cards eligible for paper support (54.1%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -5315,6 +5315,9 @@ Council4 currently supports **17,579 of 32,501 cards eligible for paper support 
 - Flaming Tyrannosaurus
 - Flanking Troops
 - Flare
+- Flare of Cultivation
+- Flare of Denial
+- Flare of Duplication
 - Flare of Faith
 - Flaring Cinder
 - Flash Counter
@@ -5862,6 +5865,7 @@ Council4 currently supports **17,579 of 32,501 cards eligible for paper support 
 - Geralf's Masterpiece
 - Geralf's Messenger
 - Geralf's Mindcrusher
+- Geralf, Visionary Stitcher
 - Germ
 - Gerrard's Battle Cry
 - Gerrard's Command
@@ -7512,6 +7516,7 @@ Council4 currently supports **17,579 of 32,501 cards eligible for paper support 
 - Infernal Rebirth
 - Infernal Reckoning
 - Infernal Scarring
+- Infernal Tribute
 - Inferno
 - Inferno Elemental
 - Inferno Fist
@@ -8200,6 +8205,7 @@ Council4 currently supports **17,579 of 32,501 cards eligible for paper support 
 - Knight of Sorrows
 - Knight of Stromgald
 - Knight of the Keep
+- Knight of the Last Breath
 - Knight of the New Coalition
 - Knight of the Pilgrim's Road
 - Knight of the Reliquary
@@ -8270,6 +8276,7 @@ Council4 currently supports **17,579 of 32,501 cards eligible for paper support 
 - Kor Soldier
 - Kor Warrior
 - Korozda Gorgon
+- Korozda Guildmage
 - Korozda Monitor
 - Korvold, Fae-Cursed King
 - Koskun Falls
@@ -15341,6 +15348,7 @@ Council4 currently supports **17,579 of 32,501 cards eligible for paper support 
 - Thopter Arrest
 - Thopter Engineer
 - Thopter Fabricator
+- Thopter Foundry
 - Thopter Mechanic
 - Thopter Shop
 - Thopter Spy Network
