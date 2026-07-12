@@ -155,6 +155,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitEvolutionaryLeapRevealUntil(document.Abilities)
 	emitFlameshadowConjuring(document.Abilities)
 	emitStingCombatFirstStrike(document.Abilities)
+	emitYevaGreenCreatureFlash(document.Abilities)
 	emitSelfNameStaticRules(document.Abilities)
 	emitCost(document.Abilities)
 	emitOptional(document.Abilities)
@@ -277,6 +278,14 @@ func emitStingCombatFirstStrike(abilities []Ability) {
 	const text = "Equipped creature has first strike as long as it's blocking or blocked by a Goblin or Orc."
 	for i := range abilities {
 		abilities[i].StingCombatFirstStrike =
+			strings.EqualFold(strings.TrimSpace(abilities[i].Text), text)
+	}
+}
+
+func emitYevaGreenCreatureFlash(abilities []Ability) {
+	const text = "You may cast green creature spells as though they had flash."
+	for i := range abilities {
+		abilities[i].YevaGreenCreatureFlash =
 			strings.EqualFold(strings.TrimSpace(abilities[i].Text), text)
 	}
 }

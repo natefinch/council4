@@ -814,6 +814,18 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 		}
 		fields = append(fields, fmt.Sprintf("SpellTypes: %s,", spellTypes))
 	}
+	if len(effect.SpellColors) > 0 {
+		ctx.need(importColor)
+		literals := make([]string, 0, len(effect.SpellColors))
+		for _, c := range effect.SpellColors {
+			literal, err := colorValueToLiteral(c)
+			if err != nil {
+				return "", err
+			}
+			literals = append(literals, literal)
+		}
+		fields = append(fields, fmt.Sprintf("SpellColors: []color.Color{%s},", strings.Join(literals, ", ")))
+	}
 	if len(effect.ExcludedSpellTypes) > 0 {
 		excludedSpellTypes, err := renderTypesCardSlice(ctx, effect.ExcludedSpellTypes)
 		if err != nil {

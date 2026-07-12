@@ -734,6 +734,9 @@ type RuleEffect struct {
 	AffectedController ControllerRelation
 	PermanentTypes     []types.Card
 	SpellTypes         []types.Card
+	// SpellColors optionally narrows a cast permission to spells carrying any of
+	// these colors.
+	SpellColors []color.Color
 	// ExcludedSpellTypes exempts spells carrying any of these card types from a
 	// RuleEffectCantCastSpells prohibition, expressing the "noncreature spells"
 	// family ("Your opponents can't cast noncreature spells this turn.").
