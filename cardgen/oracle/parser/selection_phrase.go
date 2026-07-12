@@ -47,7 +47,7 @@ type selectionPhraseOptions struct {
 
 // selectionPhrase renders the canonical Oracle noun phrase for a permanent-group
 // SelectionSyntax, owning its type, supertype, subtype-free, color, token,
-// controller, keyword-free, tapped/combat, and numeric qualifiers. It returns
+// controller, keyword-free, modified, tapped/combat, and numeric qualifiers. It returns
 // ok=false (fail closed) for any selection field the permanent-group context
 // cannot represent, so a caller that gates on a true result can trust that the
 // rendered text fully and faithfully describes the typed selection. Counter,
@@ -155,6 +155,9 @@ func selectionPhrasePrefixWords(selection SelectionSyntax) ([]string, bool) {
 	var words []string
 	if selection.Other {
 		words = append(words, "other")
+	}
+	if selection.Modified {
+		words = append(words, "modified")
 	}
 	combatWords, ok := selectionCombatStateWords(selection)
 	if !ok {
