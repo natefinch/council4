@@ -1336,10 +1336,12 @@ type PlayChosenExiledCard struct {
 	WithoutPayingManaCost bool
 }
 
-// Sacrifice sacrifices the referenced permanent. When no object is set, the
-// controller's first permanent is used.
+// Sacrifice sacrifices one referenced permanent or every permanent in a
+// referenced group. When neither is set, the controller's first permanent is
+// used.
 type Sacrifice struct {
 	Object ObjectReference
+	Group  GroupReference
 }
 
 // SacrificePermanents causes the referenced player (or every player in a group)

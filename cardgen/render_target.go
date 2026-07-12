@@ -341,6 +341,8 @@ func (r Renderer) renderGroupReference(ctx *renderCtx, group game.GroupReference
 			return fmt.Sprintf("game.TriggeringAttackersAgainstDefenderGroup(%s, %s)", selection, defender), nil
 		}
 		return fmt.Sprintf("game.TriggeringAttackersGroup(%s)", selection), nil
+	case game.GroupDomainCapturedObjects:
+		return "game.CapturedObjectsGroup()", nil
 	default:
 		return "", fmt.Errorf("render: unsupported group reference domain %d", group.Domain())
 	}
