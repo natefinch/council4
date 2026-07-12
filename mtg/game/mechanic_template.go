@@ -1358,7 +1358,16 @@ func TapLinkedExileColorManaAbility(linkID string) ManaAbility {
 // same source contribute nothing, matching the loop-avoidance ruling for two
 // opposing Exotic Orchards.
 func TapManaLandsProduceAbility(relation PlayerRelation, includeColorless bool) ManaAbility {
+	return TapManaLandsProduceMatchingAbility(relation, includeColorless, Selection{})
+}
+
+// TapManaLandsProduceMatchingAbility applies an additional land selection.
+func TapManaLandsProduceMatchingAbility(relation PlayerRelation, includeColorless bool, selection Selection) ManaAbility {
 	text, prompt := landsProduceTexts(relation, includeColorless)
+	var selectionPtr *Selection
+	if !selection.Empty() {
+		selectionPtr = &selection
+	}
 	return ManaAbility{
 		Text:            text,
 		AdditionalCosts: cost.Tap,
@@ -1371,6 +1380,7 @@ func TapManaLandsProduceAbility(relation PlayerRelation, includeColorless bool) 
 						ColorSource:      ResolutionChoiceColorSourceLandsProduce,
 						PlayerRelation:   relation,
 						IncludeColorless: includeColorless,
+						Selection:        selectionPtr,
 					},
 					PublishChoice: tapManaLandsProduceKey,
 				},
