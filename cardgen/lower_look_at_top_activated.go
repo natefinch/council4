@@ -27,6 +27,30 @@ func lowerActivatedBodyContent(
 	bodyText string,
 	variableCounterRemovalCost bool,
 ) (game.AbilityContent, *shared.Diagnostic) {
+	if exchange := ability.LifeCharacteristicExchange; exchange != nil {
+		var characteristic game.SourcePowerToughness
+		switch exchange.Kind {
+		case compiler.LifeCharacteristicExchangeSourcePower:
+			characteristic = game.SourcePower
+		case compiler.LifeCharacteristicExchangeSourceToughness:
+			characteristic = game.SourceToughness
+		default:
+			panic("lowerActivatedBodyContent: life-characteristic exchange has no characteristic")
+		}
+		player := game.ControllerReference()
+		var targets []game.TargetSpec
+		if exchange.TargetOpponent {
+			player = game.TargetPlayerReference(0)
+			targets = []game.TargetSpec{controllerPlayerTargetSpec(true)}
+		}
+		return game.Mode{
+			Targets: targets,
+			Sequence: []game.Instruction{{Primitive: game.ExchangeLifeTotalWithSourceCharacteristic{
+				Player:         player,
+				Characteristic: characteristic,
+			}}},
+		}.Ability(), nil
+	}
 	if ability.SelesnyaEulogistPopulate {
 		return game.AbilityContent{
 			MinModes: 1,

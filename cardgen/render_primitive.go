@@ -1168,6 +1168,28 @@ func (r Renderer) renderDamagePrimitive(ctx *renderCtx, primitive game.Primitive
 	return structLit("game.Damage", fields), nil
 }
 
+func (r Renderer) renderExchangeLifeTotalWithSourceCharacteristic(
+	value game.ExchangeLifeTotalWithSourceCharacteristic,
+) (string, error) {
+	player, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	var characteristic string
+	switch value.Characteristic {
+	case game.SourcePower:
+		characteristic = "game.SourcePower"
+	case game.SourceToughness:
+		characteristic = "game.SourceToughness"
+	default:
+		return "", fmt.Errorf("render: unsupported source power/toughness %d", value.Characteristic)
+	}
+	return structLit("game.ExchangeLifeTotalWithSourceCharacteristic", []string{
+		fmt.Sprintf("Player: %s,", player),
+		fmt.Sprintf("Characteristic: %s,", characteristic),
+	}), nil
+}
+
 func (r Renderer) renderPlayerAmountPrimitive(ctx *renderCtx, primitive game.Primitive) (string, error) {
 	var typeName string
 	var amount game.Quantity

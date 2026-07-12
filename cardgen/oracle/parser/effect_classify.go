@@ -1881,6 +1881,8 @@ func effectWordKind(token shared.Token) EffectKind {
 		return EffectEnterTapped
 	case "exile", "exiles":
 		return EffectExile
+	case "exchange", "exchanges":
+		return EffectExchange
 	case "fight", "fights":
 		return EffectFight
 	case "gain", "gains":

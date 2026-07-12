@@ -235,10 +235,14 @@ const (
 	// any number of spells from among those cards without paying their mana
 	// costs.", Etali, Primal Storm). It is game.ExileTopEachLibraryCastFree.
 	PrimitiveExileTopEachLibraryCastFree
+
+	// PrimitiveExchangeLifeTotalWithSourceCharacteristic exchanges a player's
+	// life total with the resolving source permanent's power or toughness.
+	PrimitiveExchangeLifeTotalWithSourceCharacteristic
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveExileTopEachLibraryCastFree) + 1
+const primitiveKindCount = int(PrimitiveExchangeLifeTotalWithSourceCharacteristic) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -932,6 +936,24 @@ type LoseLife struct {
 	Amount      Quantity
 	Player      PlayerReference
 	PlayerGroup PlayerGroupReference
+}
+
+// SourcePowerToughness identifies which source characteristic participates in
+// a numerical exchange.
+type SourcePowerToughness int
+
+// Source power/toughness choices.
+const (
+	SourcePowerToughnessNone SourcePowerToughness = iota
+	SourcePower
+	SourceToughness
+)
+
+// ExchangeLifeTotalWithSourceCharacteristic exchanges Player's life total with
+// the resolving source permanent's current power or toughness.
+type ExchangeLifeTotalWithSourceCharacteristic struct {
+	Player         PlayerReference
+	Characteristic SourcePowerToughness
 }
 
 // PlayerLosesGame causes a referenced player to lose the game (CR 104.3a). The

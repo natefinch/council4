@@ -98,6 +98,7 @@ func newPrimitiveRegistry() *primitiveRegistry {
 	registerPrimitiveHandler(reg, handleChoose)
 	registerPrimitiveHandler(reg, handleGainLife)
 	registerPrimitiveHandler(reg, handleLoseLife)
+	registerPrimitiveHandler(reg, handleExchangeLifeTotalWithSourceCharacteristic)
 	registerPrimitiveHandler(reg, handlePlayerLosesGame)
 	registerPrimitiveHandler(reg, handlePlayerWinsGame)
 	registerPrimitiveHandler(reg, handleExile)

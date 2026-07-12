@@ -163,6 +163,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitEnergyTapMana(document.Abilities)
 	emitSunderingGrowthPopulate(document.Abilities)
 	emitSelesnyaEulogistPopulate(document.Abilities)
+	emitLifeCharacteristicExchange(document.Abilities, context.CardName)
 	emitSelfNameStaticRules(document.Abilities)
 	emitCost(document.Abilities)
 	emitOptional(document.Abilities)
@@ -334,6 +335,38 @@ func emitSelesnyaEulogistPopulate(abilities []Ability) {
 	for i := range abilities {
 		abilities[i].SelesnyaEulogistPopulate =
 			strings.HasPrefix(strings.ToLower(strings.TrimSpace(abilities[i].Text)), strings.ToLower(prefix))
+	}
+}
+
+func emitLifeCharacteristicExchange(abilities []Ability, cardName string) {
+	shortName := cardName
+	if before, _, ok := strings.Cut(cardName, ","); ok {
+		shortName = strings.TrimSpace(before)
+	}
+	for i := range abilities {
+		if abilities[i].Kind != AbilityActivated {
+			continue
+		}
+		text := strings.TrimSpace(abilities[i].Text)
+		_, body, ok := strings.Cut(text, ":")
+		if !ok {
+			continue
+		}
+		body = strings.ToLower(strings.TrimSpace(body))
+		var exchange LifeCharacteristicExchangeSyntax
+		switch body {
+		case "exchange your life total with this creature's toughness.":
+			exchange.Kind = LifeCharacteristicExchangeSourceToughness
+		case "exchange target opponent's life total with this creature's toughness.":
+			exchange.Kind = LifeCharacteristicExchangeSourceToughness
+			exchange.TargetOpponent = true
+		case "exchange your life total with " + strings.ToLower(shortName) + "'s power.",
+			"exchange your life total with " + strings.ToLower(cardName) + "'s power.":
+			exchange.Kind = LifeCharacteristicExchangeSourcePower
+		default:
+			continue
+		}
+		abilities[i].LifeCharacteristicExchange = &exchange
 	}
 }
 

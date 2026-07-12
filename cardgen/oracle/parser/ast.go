@@ -67,6 +67,23 @@ type Document struct {
 	Abilities []Ability   `json:",omitempty"`
 }
 
+// LifeCharacteristicExchangeKind identifies the source characteristic exchanged
+// with a player's life total.
+type LifeCharacteristicExchangeKind string
+
+// Life-characteristic exchange kinds recognized by exact Oracle wording.
+const (
+	LifeCharacteristicExchangeUnknown         LifeCharacteristicExchangeKind = ""
+	LifeCharacteristicExchangeSourcePower     LifeCharacteristicExchangeKind = "LifeCharacteristicExchangeSourcePower"
+	LifeCharacteristicExchangeSourceToughness LifeCharacteristicExchangeKind = "LifeCharacteristicExchangeSourceToughness"
+)
+
+// LifeCharacteristicExchangeSyntax is an exact life-total exchange body.
+type LifeCharacteristicExchangeSyntax struct {
+	Kind           LifeCharacteristicExchangeKind `json:",omitempty"`
+	TargetOpponent bool                           `json:",omitempty"`
+}
+
 // Ability is one Oracle-text paragraph, or one modal header and its options.
 type Ability struct {
 	Kind        AbilityKind        `json:",omitempty"`
@@ -118,21 +135,22 @@ type Ability struct {
 	// GoadedOpponentCreaturesCantBlock marks the exact static restriction.
 	GoadedOpponentCreaturesCantBlock bool `json:",omitempty"`
 	// QuestForRenewalUntap marks the exact conditional extra-untap rule.
-	QuestForRenewalUntap        bool `json:",omitempty"`
-	SemblanceAnvilImprint       bool `json:",omitempty"`
-	SemblanceAnvilReduction     bool `json:",omitempty"`
-	CloudKeyChoice              bool `json:",omitempty"`
-	CloudKeyReduction           bool `json:",omitempty"`
-	AugurOfAutumnCoven          bool `json:",omitempty"`
-	EvolutionaryLeapRevealUntil bool `json:",omitempty"`
-	FlameshadowConjuringCopy    bool `json:",omitempty"`
-	StingCombatFirstStrike      bool `json:",omitempty"`
-	YevaGreenCreatureFlash      bool `json:",omitempty"`
-	ProgenitorIconNextFlash     bool `json:",omitempty"`
-	StarCompassMana             bool `json:",omitempty"`
-	EnergyTapMana               bool `json:",omitempty"`
-	SunderingGrowthPopulate     bool `json:",omitempty"`
-	SelesnyaEulogistPopulate    bool `json:",omitempty"`
+	QuestForRenewalUntap        bool                              `json:",omitempty"`
+	SemblanceAnvilImprint       bool                              `json:",omitempty"`
+	SemblanceAnvilReduction     bool                              `json:",omitempty"`
+	CloudKeyChoice              bool                              `json:",omitempty"`
+	CloudKeyReduction           bool                              `json:",omitempty"`
+	AugurOfAutumnCoven          bool                              `json:",omitempty"`
+	EvolutionaryLeapRevealUntil bool                              `json:",omitempty"`
+	FlameshadowConjuringCopy    bool                              `json:",omitempty"`
+	StingCombatFirstStrike      bool                              `json:",omitempty"`
+	YevaGreenCreatureFlash      bool                              `json:",omitempty"`
+	ProgenitorIconNextFlash     bool                              `json:",omitempty"`
+	StarCompassMana             bool                              `json:",omitempty"`
+	EnergyTapMana               bool                              `json:",omitempty"`
+	SunderingGrowthPopulate     bool                              `json:",omitempty"`
+	SelesnyaEulogistPopulate    bool                              `json:",omitempty"`
+	LifeCharacteristicExchange  *LifeCharacteristicExchangeSyntax `json:",omitempty"`
 	// ExactSequence is a parser-owned, exact-vocabulary resolving sequence.
 	ExactSequence *ExactSequenceSyntax `json:",omitempty"`
 	// Optional reports that a triggered ability's resolving body begins with the

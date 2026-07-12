@@ -256,6 +256,12 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 		game.PrimitiveLoseLife, game.PrimitiveReorderLibraryTop,
 		game.PrimitiveExileTopOfLibrary:
 		return r.renderPlayerAmountPrimitive(ctx, primitive)
+	case game.PrimitiveExchangeLifeTotalWithSourceCharacteristic:
+		value, err := assertPrimitive[game.ExchangeLifeTotalWithSourceCharacteristic](primitive)
+		if err != nil {
+			return "", err
+		}
+		return r.renderExchangeLifeTotalWithSourceCharacteristic(value)
 	case game.PrimitivePlayerLosesGame:
 		value, err := assertPrimitive[game.PlayerLosesGame](primitive)
 		if err != nil {

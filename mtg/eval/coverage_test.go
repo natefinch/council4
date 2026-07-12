@@ -56,7 +56,7 @@ import (
 // the number and value of spells the controller ends up casting from the exiled
 // pile is indeterminate and player-relative, which the single-target atom
 // heuristic does not model.
-const knownPrimitiveCount = 124
+const knownPrimitiveCount = 125
 
 // TestPrimitiveCountIsReconciled keeps a newly added resolution primitive from
 // silently falling through the translator: adding one trips this guard so its

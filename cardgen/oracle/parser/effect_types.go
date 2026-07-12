@@ -39,6 +39,7 @@ const (
 	EffectEnterTapped               EffectKind = "EffectEnterTapped"
 	EffectEnterPrepared             EffectKind = "EffectEnterPrepared"
 	EffectExile                     EffectKind = "EffectExile"
+	EffectExchange                  EffectKind = "EffectExchange"
 	EffectFight                     EffectKind = "EffectFight"
 	EffectGain                      EffectKind = "EffectGain"
 	EffectGainControl               EffectKind = "EffectGainControl"

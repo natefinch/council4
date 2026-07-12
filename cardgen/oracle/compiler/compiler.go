@@ -51,6 +51,12 @@ func compileAbility(
 		SunderingGrowthPopulate:                     ability.SunderingGrowthPopulate,
 		SelesnyaEulogistPopulate:                    ability.SelesnyaEulogistPopulate,
 	}
+	if ability.LifeCharacteristicExchange != nil {
+		compiled.LifeCharacteristicExchange = &CompiledLifeCharacteristicExchange{
+			Kind:           compileLifeCharacteristicExchangeKind(ability.LifeCharacteristicExchange.Kind),
+			TargetOpponent: ability.LifeCharacteristicExchange.TargetOpponent,
+		}
+	}
 	if ability.AbilityWord != nil {
 		compiled.AbilityWord = ability.AbilityWord.Label
 	}
