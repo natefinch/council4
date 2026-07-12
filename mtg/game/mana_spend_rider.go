@@ -87,6 +87,12 @@ const (
 	// pay only to cast a planeswalker spell, never an ability cost or other
 	// payment.
 	ManaSpendCastPlaneswalkerSpell
+	// ManaSpendCastOrActivateCreature is "spent only to cast a creature spell or
+	// activate an ability of a creature" (Castle Garenbrig). It is a
+	// restriction-only rider: the tagged mana may pay to cast a creature spell or
+	// to activate an ability of a creature permanent, and nothing else. It is the
+	// unchosen-type counterpart of ManaSpendCastOrActivateChosenCreatureType.
+	ManaSpendCastOrActivateCreature
 )
 
 // ManaSpendRestrictionKind identifies whether a tagged mana unit may be spent

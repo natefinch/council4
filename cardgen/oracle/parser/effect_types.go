@@ -3331,6 +3331,13 @@ const (
 	// spell of the chosen type or activate an ability of a creature source of the
 	// chosen type" (Secluded Courtyard).
 	ManaSpendCastOrActivateChosenCreatureType ManaSpendConditionKind = "ManaSpendCastOrActivateChosenCreatureType"
+	// ManaSpendCastOrActivateCreature is the restricted "spend this mana only to
+	// cast creature spells or activate abilities of creatures" condition (Castle
+	// Garenbrig), including the singular "a creature spell or activate an ability
+	// of a creature" and the "creature source[s]" phrasings. The tagged mana may
+	// pay to cast a creature spell or to activate an ability of a creature
+	// permanent, and nothing else.
+	ManaSpendCastOrActivateCreature ManaSpendConditionKind = "ManaSpendCastOrActivateCreature"
 	// ManaSpendCastCreatureSpell is "spent on a creature spell" (Arena of Glory,
 	// Generator Servant). It is an unrestricted bonus rider that grants the spell
 	// a keyword until end of turn.

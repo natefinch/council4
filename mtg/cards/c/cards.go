@@ -36,6 +36,7 @@ var Cards = []cardset.Entry{
 	{Name: "Casey Jones, Jury-Rig Justiciar", New: CaseyJonesJuryRigJusticiar},
 	{Name: "Castaway's Despair", New: CastawaySDespair},
 	{Name: "Castle Doom", New: CastleDoom},
+	{Name: "Castle Garenbrig", New: CastleGarenbrig},
 	{Name: "Castle Raptors", New: CastleRaptors},
 	{Name: "Cat Collector", New: CatCollector},
 	{Name: "Cathartic Pyre", New: CatharticPyre},

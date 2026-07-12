@@ -807,6 +807,11 @@ func restrictedManaCanPay(s State, rider game.ManaRiderInstance, ctx spendContex
 		// non-spell payment (ability cost; ctx.spell is nil) is not a creature
 		// spell, so the tagged mana cannot pay for it.
 		return ctx.spell != nil && ctx.spell.HasType(types.Creature)
+	case game.ManaSpendCastOrActivateCreature:
+		// Castle Garenbrig: spendable to cast a creature spell or to activate an
+		// ability of a creature permanent.
+		return (ctx.spell != nil && ctx.spell.HasType(types.Creature)) ||
+			abilitySourceIsCreature(s, ctx.abilitySource)
 	case game.ManaSpendCastInstantOrSorcerySpell:
 		// Vodalian Arcanist: spendable only to cast an instant or sorcery spell.
 		// A non-spell payment (ability cost; ctx.spell is nil) is neither, so the
@@ -848,6 +853,13 @@ func abilitySourceIsChosenCreatureType(s State, rider game.ManaRiderInstance, so
 // ability (Power Depot, Soldevi Machinist).
 func abilitySourceIsArtifact(s State, source *game.Permanent) bool {
 	return source != nil && s.PermanentHasType(source, types.Artifact)
+}
+
+// abilitySourceIsCreature reports whether source is a creature permanent, so a
+// creature-restricted rider's tagged mana may pay to activate that source's
+// ability (Castle Garenbrig).
+func abilitySourceIsCreature(s State, source *game.Permanent) bool {
+	return source != nil && s.PermanentHasType(source, types.Creature)
 }
 
 // hasTapCostOf reports whether the cost list has a tap additional cost.
