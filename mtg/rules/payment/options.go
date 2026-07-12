@@ -271,6 +271,14 @@ func alternativeCostConditionSatisfied(s State, playerID game.PlayerID, alternat
 		return s.ActivePlayer() == playerID
 	case cost.AlternativeConditionOpponentLostLifeThisTurn:
 		return s.OpponentLostLifeThisTurn(playerID)
+	case cost.AlternativeConditionOpponentGainedLifeThisTurn:
+		return s.OpponentGainedLifeThisTurn(playerID)
+	case cost.AlternativeConditionCreaturesAttacking:
+		count := s.AttackingCreatureCount()
+		if alternative.ConditionExactly {
+			return count == alternative.ConditionCount
+		}
+		return count >= alternative.ConditionCount
 	default:
 		return false
 	}

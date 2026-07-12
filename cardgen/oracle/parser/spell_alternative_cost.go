@@ -49,6 +49,14 @@ const (
 	// Snuff Out ("If you control a Swamp, you may pay 4 life ...") is the
 	// canonical member.
 	SpellAlternativeCostFree
+	// SpellAlternativeCostMana is the "conditional mana-only" family: "[If
+	// <condition>,] you may pay {MANA} rather than pay this spell's mana cost",
+	// where the replacement payment is a pure mana cost (including {0}) carried
+	// on the SpellAlternativeCost's ManaCost field. The Trap cycle (Mindbreak
+	// Trap, Lethargy Trap, Needlebite Trap, ...) and the unconditional Bringer
+	// cycle are members. It fails closed on conditions this backend cannot
+	// evaluate at cast time.
+	SpellAlternativeCostMana
 )
 
 // SpellAlternativeCostCondition identifies a condition on an alternative spell cost.
@@ -69,15 +77,33 @@ const (
 	// type (Snuff Out's "If you control a Swamp,"). The subtype rides on the
 	// SpellAlternativeCost's ConditionSubtype field.
 	SpellAlternativeCostConditionControlsSubtype
+	// SpellAlternativeCostConditionOpponentGainedLifeThisTurn gates a mana-only
+	// alternative cost behind "If an opponent gained life this turn," (Needlebite
+	// Trap). It is the life-gain mirror of the Spectacle life-loss condition.
+	SpellAlternativeCostConditionOpponentGainedLifeThisTurn
+	// SpellAlternativeCostConditionCreaturesAttacking gates a mana-only
+	// alternative cost behind an attacking-creature count: "If N or more
+	// creatures are attacking," (Lethargy Trap, Arrow Volley Trap) or "If exactly
+	// one creature is attacking," (Pitfall Trap). The threshold rides on
+	// ConditionCount and the exact-comparison flag on ConditionExactly.
+	SpellAlternativeCostConditionCreaturesAttacking
 )
 
 // SpellAlternativeCost is typed syntax for a paragraph that offers an
 // alternative to the spell's printed mana cost.
 type SpellAlternativeCost struct {
-	Span                  shared.Span
-	Kind                  SpellAlternativeCostKind
-	Condition             SpellAlternativeCostCondition
-	ConditionSubtype      types.Sub
+	Span             shared.Span
+	Kind             SpellAlternativeCostKind
+	Condition        SpellAlternativeCostCondition
+	ConditionSubtype types.Sub
+	// ConditionCount is the attacking-creature threshold for a
+	// SpellAlternativeCostConditionCreaturesAttacking condition; it is unused for
+	// every other condition.
+	ConditionCount int
+	// ConditionExactly requires the attacking-creature count to equal
+	// ConditionCount exactly ("If exactly one creature is attacking,") rather
+	// than meet it as a minimum ("If N or more creatures are attacking,").
+	ConditionExactly      bool
 	WithoutPayingManaCost bool
 	ManaCost              cost.Mana
 	ReplaceTargetWithEach bool
@@ -95,6 +121,9 @@ func spellAlternativeCostClause(source string, body []shared.Token) (*SpellAlter
 	}
 	if alternative, returnCost, ok := borderpostAlternativeCostClause(source, body); ok {
 		return alternative, returnCost, true
+	}
+	if alternative, ok := manaOnlyAlternativeCostClause(body); ok {
+		return alternative, nil, true
 	}
 	words := []string{
 		"if", "you", "control", "a", "commander", "you", "may", "cast",
@@ -365,6 +394,104 @@ func freeAlternativeCostClause(source string, body []shared.Token) (*SpellAltern
 		Condition:        condition,
 		ConditionSubtype: conditionSubtype,
 	}, phraseFromTokens(source, payment), true
+}
+
+// manaOnlyAlternativeCostClause recognizes the "conditional mana-only" family:
+// "[If <condition>,] you may pay {MANA} rather than pay this spell's mana cost.",
+// where the replacement payment is a pure mana cost (one or more mana symbols,
+// including {0}). It backs the Trap cycle (Lethargy Trap, Needlebite Trap, ...)
+// and the unconditional Bringer/Mastery cycle. The mana cost rides on the
+// returned SpellAlternativeCost's ManaCost field, exactly like Overload.
+//
+// It fails closed on any leading condition this backend cannot evaluate at cast
+// time, on a trailing "if ..." condition, and on any non-mana payment (which is
+// left to the free/pitch/discard families), so an unmodeled Trap condition or a
+// compound alternative cost is never approximated.
+func manaOnlyAlternativeCostClause(body []shared.Token) (*SpellAlternativeCost, bool) {
+	cursor := 0
+	condition := SpellAlternativeCostConditionUnknown
+	conditionCount := 0
+	conditionExactly := false
+	if equalWord(firstToken(body, cursor), "if") {
+		next, matched, ok := matchManaAlternativeCondition(body, cursor)
+		if !ok {
+			return nil, false
+		}
+		cursor = next
+		condition = matched.Kind
+		conditionCount = matched.Count
+		conditionExactly = matched.Exactly
+	}
+	if !equalWordSequence(body, cursor, "you", "may", "pay") {
+		return nil, false
+	}
+	cursor += 3
+	manaCost, end, ok := parseKeywordManaCost(body, cursor)
+	if !ok || len(manaCost) == 0 {
+		return nil, false
+	}
+	cursor = end
+	if !equalWordSequence(body, cursor, "rather", "than", "pay", "this", "spell's", "mana", "cost") {
+		return nil, false
+	}
+	cursor += 7
+	if cursor != len(body)-1 || body[cursor].Kind != shared.Period {
+		return nil, false
+	}
+	return &SpellAlternativeCost{
+		Span:             shared.SpanOf(body),
+		Kind:             SpellAlternativeCostMana,
+		Condition:        condition,
+		ConditionCount:   conditionCount,
+		ConditionExactly: conditionExactly,
+		ManaCost:         manaCost,
+	}, true
+}
+
+// manaAlternativeCondition is a recognized leading gate for a mana-only
+// alternative cost, bundling the typed condition kind with the attacking-creature
+// threshold (Count) and whether that threshold is an exact match (Exactly).
+type manaAlternativeCondition struct {
+	Kind    SpellAlternativeCostCondition
+	Count   int
+	Exactly bool
+}
+
+// matchManaAlternativeCondition parses a recognized leading "If <condition>,"
+// gate for a mana-only alternative cost, returning the index immediately after
+// the condition's comma. It recognizes only the conditions this backend can
+// evaluate at cast time; every other "If ..." wording fails closed.
+func matchManaAlternativeCondition(body []shared.Token, start int) (next int, condition manaAlternativeCondition, ok bool) {
+	// "If an opponent gained life this turn," (Needlebite Trap).
+	if equalWordSequence(body, start, "if", "an", "opponent", "gained", "life", "this", "turn") &&
+		commaAt(body, start+7) {
+		return start + 8, manaAlternativeCondition{Kind: SpellAlternativeCostConditionOpponentGainedLifeThisTurn}, true
+	}
+	// "If exactly one creature is attacking," (Pitfall Trap).
+	if equalWordSequence(body, start, "if", "exactly", "one", "creature", "is", "attacking") &&
+		commaAt(body, start+6) {
+		return start + 7, manaAlternativeCondition{Kind: SpellAlternativeCostConditionCreaturesAttacking, Count: 1, Exactly: true}, true
+	}
+	// "If <N> or more creatures are attacking," (Lethargy Trap, Arrow Volley Trap).
+	if equalWord(firstToken(body, start), "if") &&
+		firstToken(body, start+1).Kind == shared.Word {
+		if count, ok := CardinalWordValue(body[start+1].Text); ok && count >= 1 &&
+			equalWordSequence(body, start+2, "or", "more", "creatures", "are", "attacking") &&
+			commaAt(body, start+7) {
+			return start + 8, manaAlternativeCondition{Kind: SpellAlternativeCostConditionCreaturesAttacking, Count: count}, true
+		}
+	}
+	return start, manaAlternativeCondition{Kind: SpellAlternativeCostConditionUnknown}, false
+}
+
+// firstToken returns the token at index, or a zero token when index is out of
+// range, so leading-condition probes can inspect the first token without a
+// bounds guard.
+func firstToken(body []shared.Token, index int) shared.Token {
+	if index < 0 || index >= len(body) {
+		return shared.Token{}
+	}
+	return body[index]
 }
 
 // commaAt reports whether the token at index is a comma.

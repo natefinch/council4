@@ -395,6 +395,14 @@ func (r Renderer) renderAlternativeCosts(ctx *renderCtx, alternatives []cost.Alt
 			ctx.need(importTypes)
 		case cost.AlternativeConditionOpponentLostLifeThisTurn:
 			fields = append(fields, "Condition: cost.AlternativeConditionOpponentLostLifeThisTurn,")
+		case cost.AlternativeConditionOpponentGainedLifeThisTurn:
+			fields = append(fields, "Condition: cost.AlternativeConditionOpponentGainedLifeThisTurn,")
+		case cost.AlternativeConditionCreaturesAttacking:
+			fields = append(fields, "Condition: cost.AlternativeConditionCreaturesAttacking,",
+				fmt.Sprintf("ConditionCount: %d,", alternative.ConditionCount))
+			if alternative.ConditionExactly {
+				fields = append(fields, "ConditionExactly: true,")
+			}
 		default:
 			return "", fmt.Errorf("render: unsupported alternative-cost condition %d", alternative.Condition)
 		}

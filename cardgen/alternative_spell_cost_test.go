@@ -784,19 +784,30 @@ func TestLowerFreeAlternativeCostSacrificeConditions(t *testing.T) {
 	}
 }
 
-func TestLowerFreeAlternativeCostManaOnlyFailsClosed(t *testing.T) {
+func TestLowerManaOnlyAlternativeCostIsNotFreeCost(t *testing.T) {
 	t.Parallel()
 	// A mana-only alternative ("pay {1}{B}") is not a free spell: the free
-	// lowering requires exactly one non-mana payment, so this must fail closed
-	// rather than mislowering into an alternative cost.
-	face := lowerSingleFaceExpectingUnsupported(t, &ScryfallCard{
+	// lowering requires exactly one non-mana payment. It is instead recognized by
+	// the dedicated mana-only alternative-cost family, which carries the
+	// replacement mana on the alternative and pays no life or other cost.
+	face := lowerSingleFace(t, &ScryfallCard{
 		Name:       "Mana Only Alternative",
 		Layout:     "normal",
 		TypeLine:   "Instant",
 		ManaCost:   "{3}{B}",
 		OracleText: "You may pay {1}{B} rather than pay this spell's mana cost.\nDestroy target creature.",
 	})
-	if len(face.AlternativeCosts) != 0 {
-		t.Fatalf("mana-only alternative must not lower to a free cost: %#v", face.AlternativeCosts)
+	if len(face.AlternativeCosts) != 1 {
+		t.Fatalf("alternative costs = %#v, want a single mana-only alternative", face.AlternativeCosts)
+	}
+	alternative := face.AlternativeCosts[0]
+	if !alternative.ManaCost.Exists || alternative.ManaCost.Val.String() != "{1}{B}" {
+		t.Fatalf("mana cost = %#v, want {1}{B}", alternative.ManaCost)
+	}
+	if len(alternative.AdditionalCosts) != 0 {
+		t.Fatalf("additional costs = %#v, want none (mana-only alternative pays no other cost)", alternative.AdditionalCosts)
+	}
+	if alternative.Condition != cost.AlternativeConditionNone {
+		t.Fatalf("condition = %#v, want unconditional", alternative.Condition)
 	}
 }

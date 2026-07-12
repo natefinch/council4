@@ -34,6 +34,7 @@ var Cards = []cardset.Entry{
 	{Name: "Leonin Battlemage", New: LeoninBattlemage},
 	{Name: "Leonin Den-Guard", New: LeoninDenGuard},
 	{Name: "Leonin Lightbringer", New: LeoninLightbringer},
+	{Name: "Lethargy Trap", New: LethargyTrap},
 	{Name: "Leyline Dowser", New: LeylineDowser},
 	{Name: "Leyline Invocation", New: LeylineInvocation},
 	{Name: "Leyline of Sanctity", New: LeylineOfSanctity},
