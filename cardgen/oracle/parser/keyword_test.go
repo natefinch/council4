@@ -36,7 +36,7 @@ func TestParseKeywordVocabularyMeaning(t *testing.T) {
 		"Suspend": KeywordSuspend, "Toxic": KeywordToxic, "Trample": KeywordTrample, "Undying": KeywordUndying,
 		"Unleash":   KeywordUnleash,
 		"Vigilance": KeywordVigilance, "Ward": KeywordWard, "Wither": KeywordWither, "Riot": KeywordRiot,
-		"Landcycling": KeywordLandcycling, "Basic landcycling": KeywordBasicLandcycling,
+		"Landcycling": KeywordLandcycling, "Basic landcycling": KeywordBasicLandcycling, "Artifact landcycling": KeywordArtifactLandcycling,
 		"Plainscycling": KeywordPlainscycling, "Islandcycling": KeywordIslandcycling,
 		"Swampcycling": KeywordSwampcycling, "Mountaincycling": KeywordMountaincycling,
 		"Forestcycling": KeywordForestcycling,
@@ -362,6 +362,7 @@ func TestParseLandcyclingKeywords(t *testing.T) {
 		want   KeywordKind
 	}{
 		{"Basic landcycling {1}", KeywordBasicLandcycling},
+		{"Artifact landcycling {2}", KeywordArtifactLandcycling},
 		{"Landcycling {2}", KeywordLandcycling},
 		{"Plainscycling {1}{W}", KeywordPlainscycling},
 		{"Forestcycling {2}", KeywordForestcycling},

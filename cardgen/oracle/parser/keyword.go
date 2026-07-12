@@ -109,19 +109,20 @@ const (
 	// keyword family (CR 702.29). Each is a cycling ability whose
 	// discard-from-hand activation searches the library for a land matching a
 	// fixed land filter rather than drawing a card.
-	KeywordLandcycling      KeywordKind = "KeywordLandcycling"
-	KeywordBasicLandcycling KeywordKind = "KeywordBasicLandcycling"
-	KeywordPlainscycling    KeywordKind = "KeywordPlainscycling"
-	KeywordIslandcycling    KeywordKind = "KeywordIslandcycling"
-	KeywordSwampcycling     KeywordKind = "KeywordSwampcycling"
-	KeywordMountaincycling  KeywordKind = "KeywordMountaincycling"
-	KeywordForestcycling    KeywordKind = "KeywordForestcycling"
-	KeywordDethrone         KeywordKind = "KeywordDethrone"
-	KeywordFlanking         KeywordKind = "KeywordFlanking"
-	KeywordSoulshift        KeywordKind = "KeywordSoulshift"
-	KeywordRampage          KeywordKind = "KeywordRampage"
-	KeywordTraining         KeywordKind = "KeywordTraining"
-	KeywordMyriad           KeywordKind = "KeywordMyriad"
+	KeywordLandcycling         KeywordKind = "KeywordLandcycling"
+	KeywordBasicLandcycling    KeywordKind = "KeywordBasicLandcycling"
+	KeywordArtifactLandcycling KeywordKind = "KeywordArtifactLandcycling"
+	KeywordPlainscycling       KeywordKind = "KeywordPlainscycling"
+	KeywordIslandcycling       KeywordKind = "KeywordIslandcycling"
+	KeywordSwampcycling        KeywordKind = "KeywordSwampcycling"
+	KeywordMountaincycling     KeywordKind = "KeywordMountaincycling"
+	KeywordForestcycling       KeywordKind = "KeywordForestcycling"
+	KeywordDethrone            KeywordKind = "KeywordDethrone"
+	KeywordFlanking            KeywordKind = "KeywordFlanking"
+	KeywordSoulshift           KeywordKind = "KeywordSoulshift"
+	KeywordRampage             KeywordKind = "KeywordRampage"
+	KeywordTraining            KeywordKind = "KeywordTraining"
+	KeywordMyriad              KeywordKind = "KeywordMyriad"
 	// KeywordSaddle is the Saddle N keyword (Mounts, CR 702.166). Its integer
 	// parameter is the total power of other creatures that must be tapped to
 	// make the Mount saddled until end of turn.
@@ -290,6 +291,7 @@ var keywordNames = map[KeywordKind]string{
 	KeywordRiot:                "Riot",
 	KeywordLandcycling:         "Landcycling",
 	KeywordBasicLandcycling:    "Basic landcycling",
+	KeywordArtifactLandcycling: "Artifact landcycling",
 	KeywordPlainscycling:       "Plainscycling",
 	KeywordIslandcycling:       "Islandcycling",
 	KeywordSwampcycling:        "Swampcycling",
@@ -359,6 +361,7 @@ var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordPartnerWith, Words: []string{"partner", "with"}},
 	{Kind: KeywordChooseABackground, Words: []string{"choose", "a", "background"}},
 	{Kind: KeywordBasicLandcycling, Words: []string{"basic", "landcycling"}},
+	{Kind: KeywordArtifactLandcycling, Words: []string{"artifact", "landcycling"}},
 	{Kind: KeywordAffinity, Words: []string{"affinity"}},
 	{Kind: KeywordAnnihilator, Words: []string{"annihilator"}},
 	{Kind: KeywordBanding, Words: []string{"banding"}},

@@ -287,6 +287,7 @@ func TestLowerLandcyclingAbility(t *testing.T) {
 		oracle        string
 		wantCardType  bool
 		wantSupertype bool
+		wantTypes     []types.Card
 		wantSubtype   types.Sub
 	}{
 		{
@@ -295,6 +296,12 @@ func TestLowerLandcyclingAbility(t *testing.T) {
 			oracle:        "Basic landcycling {1} ({1}, Discard this card: Search your library for a basic land card, reveal it, put it into your hand, then shuffle.)",
 			wantCardType:  true,
 			wantSupertype: true,
+		},
+		{
+			name:      "artifact landcycling",
+			typeLine:  "Artifact",
+			oracle:    "Artifact landcycling {2} ({2}, Discard this card: Search your library for an artifact land card, reveal it, put it into your hand, then shuffle.)",
+			wantTypes: []types.Card{types.Artifact, types.Land},
 		},
 		{
 			name:        "plainscycling",
@@ -342,6 +349,9 @@ func TestLowerLandcyclingAbility(t *testing.T) {
 			}
 			if tc.wantSupertype && (len(search.Spec.Filter.Supertypes) == 0 || search.Spec.Filter.Supertypes[0] != types.Basic) {
 				t.Errorf("supertype = %v, want basic", search.Spec.Filter.Supertypes)
+			}
+			if len(tc.wantTypes) != 0 && !slices.Equal(search.Spec.Filter.RequiredTypes, tc.wantTypes) {
+				t.Errorf("card types = %v, want %v", search.Spec.Filter.RequiredTypes, tc.wantTypes)
 			}
 			if tc.wantSubtype != "" && !slices.Contains(search.Spec.Filter.SubtypesAny, tc.wantSubtype) {
 				t.Errorf("subtypes = %v, want %v", search.Spec.Filter.SubtypesAny, tc.wantSubtype)
