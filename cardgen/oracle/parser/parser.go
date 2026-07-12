@@ -168,6 +168,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitChoosePermanentTypeReturn(document.Abilities)
 	emitTauntFromRampartSequence(document.Abilities)
 	emitTemurSabertoothSequence(document.Abilities)
+	emitFightRiggingSequence(document.Abilities)
 	emitSelfNameStaticRules(document.Abilities)
 	emitCost(document.Abilities)
 	emitOptional(document.Abilities)
@@ -413,6 +414,15 @@ func emitTemurSabertoothSequence(abilities []Ability) {
 	for i := range abilities {
 		abilities[i].TemurSabertoothSequence =
 			abilities[i].Kind == AbilityActivated &&
+				strings.EqualFold(strings.TrimSpace(abilities[i].Text), text)
+	}
+}
+
+func emitFightRiggingSequence(abilities []Ability) {
+	const text = "At the beginning of combat on your turn, put a +1/+1 counter on target creature you control. Then if you control a creature with power 7 or greater, you may play the exiled card without paying its mana cost."
+	for i := range abilities {
+		abilities[i].FightRiggingSequence =
+			abilities[i].Kind == AbilityTriggered &&
 				strings.EqualFold(strings.TrimSpace(abilities[i].Text), text)
 	}
 }

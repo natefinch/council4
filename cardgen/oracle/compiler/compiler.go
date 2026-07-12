@@ -54,6 +54,7 @@ func compileAbility(
 		ChoosePermanentTypeReturn:                   ability.ChoosePermanentTypeReturn,
 		TauntFromRampartSequence:                    ability.TauntFromRampartSequence,
 		TemurSabertoothSequence:                     ability.TemurSabertoothSequence,
+		FightRiggingSequence:                        ability.FightRiggingSequence,
 	}
 	if ability.LifeCharacteristicExchange != nil {
 		compiled.LifeCharacteristicExchange = &CompiledLifeCharacteristicExchange{
