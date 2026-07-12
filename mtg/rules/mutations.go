@@ -31,6 +31,7 @@ func pushSpellToStack(g *game.Game, obj *game.StackObject, castEvent game.Event)
 // cast; obj must already be on the stack when this is called.
 func emitSpellCastEvents(g *game.Game, obj *game.StackObject, castEvent game.Event) {
 	consumeNextSpellCantBeCounteredEffects(g, obj)
+	consumeNextSpellAsThoughFlashEffects(g, obj)
 	emitTargetEvents(g, obj)
 	fromZone := castEvent.FromZone
 	castCardID := castEvent.CardID
@@ -40,6 +41,27 @@ func emitSpellCastEvents(g *game.Game, obj *game.StackObject, castEvent game.Eve
 	castEvent.PlayerEventOrdinalThisTurn = nextSpellCastOrdinalThisTurn(g, castEvent.Controller)
 	emitEvent(g, castEvent)
 	emitCardPlayedFromExileEvent(g, castPlayer, castCardID, fromZone)
+}
+
+func consumeNextSpellAsThoughFlashEffects(g *game.Game, obj *game.StackObject) {
+	if len(g.RuleEffects) == 0 {
+		return
+	}
+	spellDef, ok := spellDefForStackObject(g, obj)
+	if !ok {
+		return
+	}
+	kept := g.RuleEffects[:0]
+	for i := range g.RuleEffects {
+		effect := &g.RuleEffects[i]
+		if effect.Kind != game.RuleEffectCastSpellsAsThoughFlash ||
+			!effect.AppliesToNextSpellOnly ||
+			!playerRelationMatches(effect.Controller, obj.Controller, effect.AffectedPlayer) ||
+			!castAsThoughFlashEffectMatchesCard(g, effect, spellDef) {
+			kept = append(kept, *effect)
+		}
+	}
+	g.RuleEffects = kept
 }
 
 // emitCardPlayedFromExileEvent emits EventCardPlayedFromExile when a card was
