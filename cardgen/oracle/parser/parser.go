@@ -167,6 +167,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitUnlicensedHearseExile(document.Abilities, context.CardName)
 	emitChoosePermanentTypeReturn(document.Abilities)
 	emitTauntFromRampartSequence(document.Abilities)
+	emitTemurSabertoothSequence(document.Abilities)
 	emitSelfNameStaticRules(document.Abilities)
 	emitCost(document.Abilities)
 	emitOptional(document.Abilities)
@@ -404,6 +405,15 @@ func emitTauntFromRampartSequence(abilities []Ability) {
 		abilities[i].TauntFromRampartSequence =
 			abilities[i].Kind == AbilitySpell &&
 				strings.HasPrefix(strings.ToLower(strings.TrimSpace(abilities[i].Text)), strings.ToLower(text))
+	}
+}
+
+func emitTemurSabertoothSequence(abilities []Ability) {
+	const text = "{1}{G}: You may return another creature you control to its owner's hand. If you do, this creature gains indestructible until end of turn."
+	for i := range abilities {
+		abilities[i].TemurSabertoothSequence =
+			abilities[i].Kind == AbilityActivated &&
+				strings.EqualFold(strings.TrimSpace(abilities[i].Text), text)
 	}
 }
 

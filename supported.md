@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,588 of 32,501 cards eligible for paper support (54.1%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,589 of 32,501 cards eligible for paper support (54.1%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -15137,6 +15137,7 @@ Council4 currently supports **17,588 of 32,501 cards eligible for paper support 
 - Temur Battlecrier
 - Temur Devotee
 - Temur Monument
+- Temur Sabertooth
 - Temur Tawnyback
 - Temur War Shaman
 - Tender Wildguide
