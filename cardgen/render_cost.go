@@ -519,6 +519,9 @@ func renderAdditional(ctx *renderCtx, additional cost.Additional) (string, error
 	if additional.RequireToken {
 		fields = append(fields, "RequireToken: true,")
 	}
+	if additional.RequireNonToken {
+		fields = append(fields, "RequireNonToken: true,")
+	}
 	if additional.ExcludeSource {
 		fields = append(fields, "ExcludeSource: true,")
 	}

@@ -187,6 +187,9 @@ type CostComponent struct {
 	// "an artifact token" or a bare "a token". The "<subtype> token" form (e.g.
 	// "a Blood token") constrains by subtype alone and does not set this flag.
 	ObjectTokenOnly bool `json:",omitempty"`
+	// ObjectNonToken reports that the cost object is constrained to nontoken
+	// permanents.
+	ObjectNonToken bool `json:",omitempty"`
 
 	// TotalManaValueAtLeast, when positive, constrains a variable-cardinality
 	// card cost to "<cards> with total mana value N or greater": the payer
@@ -757,6 +760,10 @@ func annotateSacrificeCostObject(component *CostComponent, object []shared.Token
 			component.ExcludeSource = true
 			words = words[1:]
 		}
+	}
+	component.ObjectNonToken = atoms.SelectionFlagIn(shared.SpanOf(words), SelectionFlagNonToken)
+	if component.ObjectNonToken && len(words) >= 2 && equalWord(words[0], "nontoken") {
+		words = words[1:]
 	}
 	if len(words) >= 2 && equalWord(words[len(words)-2], "you") && equalWord(words[len(words)-1], "control") {
 		words = words[:len(words)-2]

@@ -169,7 +169,6 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedActivatedCost(t *testing.
 	t.Parallel()
 	for _, oracleText := range []string{
 		"Remove a +1/+1 counter from target creature: Draw a card.",
-		"Sacrifice a nontoken creature: Draw a card.",
 		"Discard a nonblack card: Draw a card.",
 		"Discard a permanent card: Draw a card.",
 		"Exile a card: Draw a card.",

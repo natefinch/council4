@@ -548,6 +548,9 @@ func SelectionForAdditionalCost(additional cost.Additional) (game.Selection, boo
 	if additional.RequireToken {
 		sel.TokenOnly = true
 	}
+	if additional.RequireNonToken {
+		sel.NonToken = true
+	}
 	if additional.MatchHistoric {
 		sel.AnyOf = []game.Selection{
 			{RequiredTypes: []types.Card{types.Artifact}},

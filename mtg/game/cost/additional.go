@@ -166,6 +166,8 @@ type Additional struct {
 	// RequireToken constrains a battlefield cost to token permanents (CR 111),
 	// as required by "sacrifice an artifact token" or a bare "sacrifice a token."
 	RequireToken bool
+	// RequireNonToken constrains a battlefield cost to nontoken permanents.
+	RequireNonToken bool
 
 	// RequireSupertype constrains battlefield costs to permanents with a
 	// particular supertype, such as Snow.
