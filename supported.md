@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,543 of 32,501 cards eligible for paper support (54.0%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,560 of 32,501 cards eligible for paper support (54.0%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -3011,6 +3011,7 @@ Council4 currently supports **17,543 of 32,501 cards eligible for paper support 
 - Courier's Briefcase
 - Courier's Capsule
 - Courser of Kruphix
+- Coursers' Accord
 - Court Archers
 - Court Cleric
 - Court Homunculus
@@ -4146,6 +4147,7 @@ Council4 currently supports **17,543 of 32,501 cards eligible for paper support 
 - Druid of the Anima
 - Druid of the Cowl
 - Druid of the Spade
+- Druid's Deliverance
 - Druids' Repository
 - Drumbellower
 - Drumhunter
@@ -4849,6 +4851,7 @@ Council4 currently supports **17,543 of 32,501 cards eligible for paper support 
 - Eyeblight Massacre
 - Eyeblight's Ending
 - Eyeless Watcher
+- Eyes in the Skies
 - Eyes of the Beholder
 - Eyes of the Watcher
 - Eyes of the Wisent
@@ -6568,6 +6571,7 @@ Council4 currently supports **17,543 of 32,501 cards eligible for paper support 
 - Grove of the Guardian
 - Grove Rumbler
 - Grovetender Druids
+- Growing Ranks
 - Growing Rites of Itlimoc // Itlimoc, Cradle of the Sun
 - Growth Cycle
 - Growth Spasm
@@ -7122,6 +7126,7 @@ Council4 currently supports **17,543 of 32,501 cards eligible for paper support 
 - Horn of Ramos
 - Horn of Valhalla // Ysgard's Call
 - Hornbash Mentor
+- Horncaller's Chant
 - Horned Cheetah
 - Horned Helm
 - Horned Kavu
@@ -8559,6 +8564,7 @@ Council4 currently supports **17,543 of 32,501 cards eligible for paper support 
 - Lieutenant Kirtar
 - Life Burst
 - Life Chisel
+- Life Finds a Way
 - Life from the Loam
 - Life Goes On
 - Life Insurance
@@ -9806,6 +9812,7 @@ Council4 currently supports **17,543 of 32,501 cards eligible for paper support 
 - Muse's Encouragement
 - Museum Nightwatch
 - Mushroom Watchdogs
+- Muster the Departed
 - Mutable Explorer
 - Mutagen
 - Mutagenic Growth
@@ -10013,6 +10020,7 @@ Council4 currently supports **17,543 of 32,501 cards eligible for paper support 
 - Nested Ghoul
 - Nested Shambler
 - Nesting Bot
+- Nesting Dovehawk
 - Nesting Grounds
 - Nesting Wurm
 - Netcaster Spider
@@ -11217,6 +11225,7 @@ Council4 currently supports **17,543 of 32,501 cards eligible for paper support 
 - Project Deathlok Soldier
 - Projektor Inspector
 - Prologue to Phyresis
+- Promise of Aclazotz // Foul Rebirth
 - Promise of Bunrei
 - Promised Kannushi
 - Promising Duskmage
@@ -12213,6 +12222,7 @@ Council4 currently supports **17,543 of 32,501 cards eligible for paper support 
 - Root Snare
 - Root Spider
 - Root-Kin Ally
+- Rootborn Defenses
 - Rootbound Crag
 - Rootbreaker Wurm
 - Rootgrapple
@@ -12664,6 +12674,7 @@ Council4 currently supports **17,543 of 32,501 cards eligible for paper support 
 - Scion of the Swarm
 - Scion of the Wild
 - Scion of Ugin
+- Scion of Vitu-Ghazi
 - Scion Summoner
 - Scolding Administrator
 - Scorch Rider
@@ -13824,6 +13835,7 @@ Council4 currently supports **17,543 of 32,501 cards eligible for paper support 
 - Somnomancer
 - Song of Creation
 - Song of the Dryads
+- Song of the Worldsoul
 - Song-Mad Treachery // Song-Mad Ruins
 - Songbird, Sonic Screamer
 - Sonic Assault
@@ -15834,7 +15846,9 @@ Council4 currently supports **17,543 of 32,501 cards eligible for paper support 
 - Trophy Hunter
 - Trophy Mage
 - Tropical Island
+- Trostani's Judgment
 - Trostani's Summoner
+- Trostani, Selesnya's Voice
 - Trostani, Three Whispers
 - Troubled Healer
 - Troublesome Spirit
@@ -16557,6 +16571,7 @@ Council4 currently supports **17,543 of 32,501 cards eligible for paper support 
 - Vithian Stinger
 - Vito's Inquisitor
 - Vito, Thorn of the Dusk Rose
+- Vitu-Ghazi Guildmage
 - Vitu-Ghazi, the City-Tree
 - Vivi's Persistence
 - Vivid Crag
@@ -16706,6 +16721,7 @@ Council4 currently supports **17,543 of 32,501 cards eligible for paper support 
 - Wakandan Tusker
 - Wake of Destruction
 - Wake of Vultures
+- Wake the Reflections
 - Wake Thrasher
 - Wakedancer
 - Wakening Sun's Avatar
@@ -16920,6 +16936,7 @@ Council4 currently supports **17,543 of 32,501 cards eligible for paper support 
 - Waxen Shapethief
 - Wayfarer's Bauble
 - Wayfaring Giant
+- Wayfaring Temple
 - Waylaying Pirates
 - Wayspeaker Bodyguard
 - Wayward Giant
