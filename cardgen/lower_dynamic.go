@@ -149,7 +149,13 @@ func lowerDynamicAmountKind(amount compiler.CompiledAmount, object game.ObjectRe
 		dynamic.Kind = game.DynamicAmountColorCountInGroup
 		dynamic.Group = game.BattlefieldGroup(selection)
 	case compiler.DynamicAmountSharedCreatureTypeCount:
-		selection, ok := dynamicAmountSelection(amount.Selector())
+		selector := amount.Selector()
+		// This evaluator intentionally bypasses full Selection matching to avoid
+		// P/T recursion and cannot honor a historic AnyOf disjunction.
+		if selector.Historic {
+			return game.DynamicAmount{}, false
+		}
+		selection, ok := dynamicAmountSelection(selector)
 		if !ok {
 			return game.DynamicAmount{}, false
 		}
@@ -330,9 +336,8 @@ func dynamicAmountSelection(selector compiler.CompiledSelector) (game.Selection,
 // Anathemancer), which the engine's battlefield count applies through
 // Selection.ExcludedSupertype. It fails closed on a source-relative power
 // comparison (a count group has no source permanent to compare against, so the
-// predecessor projector rejected that filter rather than dropping it) and on a
-// historic disjunction, which a battlefield count cannot represent through the
-// count lowering and must not silently drop.
+// predecessor projector rejected that filter rather than dropping it). Historic
+// is representable through Selection.AnyOf and remains enabled.
 var dynamicAmountSelectionMask = SelectionMask{}.Ignoring(
 	DimMatchAnyCounter,
 	DimSubtypeChoiceExcluded,
@@ -342,7 +347,6 @@ var dynamicAmountSelectionMask = SelectionMask{}.Ignoring(
 ).Rejecting(
 	DimPowerVsSource,
 	DimRequiredName,
-	DimHistoric,
 )
 
 func dynamicBattlefieldRequiredType(kind compiler.SelectorKind) (types.Card, bool) {
