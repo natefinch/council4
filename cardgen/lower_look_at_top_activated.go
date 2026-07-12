@@ -26,6 +26,13 @@ func lowerActivatedBodyContent(
 	bodyText string,
 	variableCounterRemovalCost bool,
 ) (game.AbilityContent, *shared.Diagnostic) {
+	if ability.StarCompassMana {
+		return game.TapManaLandsProduceMatchingAbility(
+			game.PlayerYou,
+			false,
+			game.Selection{Supertypes: []types.Super{types.Basic}},
+		).Content, nil
+	}
 	if ability.ProgenitorIconNextFlash {
 		return game.Mode{
 			Text: bodyText,

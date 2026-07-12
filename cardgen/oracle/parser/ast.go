@@ -129,6 +129,7 @@ type Ability struct {
 	StingCombatFirstStrike      bool `json:",omitempty"`
 	YevaGreenCreatureFlash      bool `json:",omitempty"`
 	ProgenitorIconNextFlash     bool `json:",omitempty"`
+	StarCompassMana             bool `json:",omitempty"`
 	// ExactSequence is a parser-owned, exact-vocabulary resolving sequence.
 	ExactSequence *ExactSequenceSyntax `json:",omitempty"`
 	// Optional reports that a triggered ability's resolving body begins with the

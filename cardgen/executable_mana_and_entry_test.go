@@ -956,12 +956,11 @@ func TestGenerateExecutableCardSourceTriggerLandProducedMana(t *testing.T) {
 }
 
 // TestGenerateExecutableCardSourceLandsProduceFailsClosed asserts the
-// (basic-land, Gate, sacrificed-land, plural-quantity, non-land, and unscoped
+// (Gate, sacrificed-land, plural-quantity, non-land, and unscoped
 // "a player controls" variants), which must fail closed.
 func TestGenerateExecutableCardSourceLandsProduceFailsClosed(t *testing.T) {
 	t.Parallel()
 	for _, oracleText := range []string{
-		"{T}: Add one mana of any color that a basic land you control could produce.",
 		"{T}: Add one mana of any color that a Gate you control could produce.",
 		"{T}: Add one mana of any type the sacrificed land could produce.",
 		"{T}: Add two mana of any color that a land an opponent controls could produce.",

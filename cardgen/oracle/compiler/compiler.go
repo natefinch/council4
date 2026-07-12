@@ -46,6 +46,7 @@ func compileAbility(
 		StingCombatFirstStrike:                      ability.StingCombatFirstStrike,
 		YevaGreenCreatureFlash:                      ability.YevaGreenCreatureFlash,
 		ProgenitorIconNextFlash:                     ability.ProgenitorIconNextFlash,
+		StarCompassMana:                             ability.StarCompassMana,
 	}
 	if ability.AbilityWord != nil {
 		compiled.AbilityWord = ability.AbilityWord.Label

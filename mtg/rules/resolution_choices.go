@@ -215,6 +215,19 @@ func landsProduceMana(g *game.Game, playerID game.PlayerID, choice *game.Resolut
 			continue
 		}
 		values := effectivePermanentValues(g, permanent)
+		if choice.Selection != nil {
+			subject := selectionSubject{
+				kind:       subjectPermanent,
+				g:          g,
+				permanent:  permanent,
+				values:     values,
+				viewer:     playerID,
+				controller: effectiveController(g, permanent),
+			}
+			if !matchSelection(&subject, choice.Selection) {
+				continue
+			}
+		}
 		_, colors := abilitiesManaProduction(values.abilities, permanent.EntryChoices, commanderIdentityColors(g, effectiveController(g, permanent)))
 		for _, c := range colors {
 			found.add(c)
