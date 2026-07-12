@@ -116,6 +116,14 @@ type StackObject struct {
 	// contribute no entry, so it is nil for a spell paid entirely with such mana.
 	ManaSpentByColorToCast map[color.Color]int
 
+	// ManaSpentToCast is the total amount of mana spent to cast this spell,
+	// recorded as its costs are paid (CR 202.3, CR 601.2h). It backs Mockingbird's
+	// "with mana value less than or equal to the amount of mana spent to cast this
+	// creature", which the synthetic enter-the-battlefield object carries forward
+	// to bound the copiable permanents. It is zero for a spell that spent no mana
+	// (a free cast) and for a permanent that was not cast.
+	ManaSpentToCast int
+
 	// KickerPaid is true if the kicker cost was paid.
 	KickerPaid bool
 

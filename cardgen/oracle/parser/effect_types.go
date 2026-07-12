@@ -8,6 +8,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
 
 // EffectKind identifies a resolving instruction. The parser owns the Oracle
@@ -2700,8 +2701,19 @@ type EffectSyntax struct {
 	// battlefield tapped when it enters as the chosen copy. It is false for every
 	// other enters-as-copy form (Clone, Spark Double, Cursed Mirror).
 	EntersAsCopyTapped bool `json:",omitempty"`
-	UnderYourControl   bool `json:",omitempty"`
-	CastAsAdventure    bool `json:",omitempty"`
+	// EntersAsCopyBasePower and EntersAsCopyBaseToughness report the "except it's
+	// N/N" copiable P/T-override rider on an EntersAsCopy replacement (Quicksilver
+	// Gargantuan's "except it's 7/7"). They are set together and unset for every
+	// other enters-as-copy form.
+	EntersAsCopyBasePower     opt.V[int] `json:",omitzero"`
+	EntersAsCopyBaseToughness opt.V[int] `json:",omitzero"`
+	// EntersAsCopyMaxManaValueFromManaSpent reports the "with mana value less than
+	// or equal to the amount of mana spent to cast this creature" copiable filter
+	// on an EntersAsCopy replacement (Mockingbird). It is false for every other
+	// enters-as-copy form.
+	EntersAsCopyMaxManaValueFromManaSpent bool `json:",omitempty"`
+	UnderYourControl                      bool `json:",omitempty"`
+	CastAsAdventure                       bool `json:",omitempty"`
 	// CastWithoutPayingManaCost reports a cast effect carrying the free-cast
 	// rider "... without paying its mana cost" ("(You may) cast <spell> from
 	// <zone> without paying its mana cost."). It is false for every other cast

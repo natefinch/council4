@@ -2216,6 +2216,15 @@ func lowerEntersAsCopyReplacement(ability compiler.CompiledAbility) (game.Replac
 		effect.EntersAsCopyAddSubtypes,
 		effect.EntersAsCopyAddTypes...,
 	)
+	if effect.EntersAsCopyBasePower.Exists != effect.EntersAsCopyBaseToughness.Exists {
+		return unsupported("the executable source backend does not support a partial enters-as-copy size override")
+	}
+	if effect.EntersAsCopyBasePower.Exists {
+		replacement = game.EntersAsCopyWithBasePowerToughness(replacement, effect.EntersAsCopyBasePower.Val, effect.EntersAsCopyBaseToughness.Val)
+	}
+	if effect.EntersAsCopyMaxManaValueFromManaSpent {
+		replacement = game.EntersAsCopyWithManaSpentBound(replacement)
+	}
 	if effect.EntersAsCopyTapped {
 		replacement = game.EntersTappedAsCopy(replacement)
 	}

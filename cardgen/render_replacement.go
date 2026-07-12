@@ -1432,6 +1432,12 @@ func (r Renderer) renderEntersAsCopyReplacement(ctx *renderCtx, ability *game.Re
 		}
 	}
 	rendered := fmt.Sprintf("game.EntersAsCopyReplacement(%s)", strings.Join(args, ", "))
+	if ability.Replacement.EntersAsCopyBasePower.Exists || ability.Replacement.EntersAsCopyBaseToughness.Exists {
+		rendered = fmt.Sprintf("game.EntersAsCopyWithBasePowerToughness(%s, %d, %d)", rendered, ability.Replacement.EntersAsCopyBasePower.Val, ability.Replacement.EntersAsCopyBaseToughness.Val)
+	}
+	if ability.Replacement.EntersAsCopyMaxManaValueFromManaSpent {
+		rendered = fmt.Sprintf("game.EntersAsCopyWithManaSpentBound(%s)", rendered)
+	}
 	if ability.Replacement.EntersAsCopyTapped {
 		rendered = fmt.Sprintf("game.EntersTappedAsCopy(%s)", rendered)
 	}
