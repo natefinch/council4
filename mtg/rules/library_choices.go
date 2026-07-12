@@ -89,9 +89,13 @@ func millCards(g *game.Game, playerID game.PlayerID, amount int) []id.ID {
 // before a match, every revealed card is still moved. destination must be
 // zone.Graveyard or zone.Hand; a graveyard move honors the commander
 // replacement (CR 903.9a).
-func revealUntilCards(g *game.Game, playerID game.PlayerID, until game.Selection, destination zone.Type) {
+func revealUntilCards(g *game.Game, playerID game.PlayerID, prim game.RevealUntil) {
 	player, ok := playerByID(g, playerID)
 	if !ok {
+		return
+	}
+	if prim.MatchToDestinationRestRandomBottom {
+		revealUntilMatchAndBottomRest(g, playerID, prim)
 		return
 	}
 	for {
@@ -100,13 +104,13 @@ func revealUntilCards(g *game.Game, playerID game.PlayerID, until game.Selection
 			return
 		}
 		player.Library.Remove(cardID)
-		matched := revealedCardMatches(g, playerID, cardID, until)
-		if destination == zone.Graveyard {
+		matched := revealedCardMatches(g, playerID, cardID, prim.Until)
+		if prim.Destination == zone.Graveyard {
 			if _, ok := putLibraryCardIntoGraveyard(g, playerID, cardID, 0); !ok {
 				return
 			}
 		} else {
-			destinationCards, ok := destinationZone(g, playerID, destination)
+			destinationCards, ok := destinationZone(g, playerID, prim.Destination)
 			if !ok {
 				return
 			}
@@ -115,13 +119,46 @@ func revealUntilCards(g *game.Game, playerID game.PlayerID, until game.Selection
 				Player:   playerID,
 				CardID:   cardID,
 				FromZone: zone.Library,
-				ToZone:   destination,
+				ToZone:   prim.Destination,
 				Amount:   1,
 			})
 		}
 		if matched {
 			return
 		}
+	}
+}
+
+func revealUntilMatchAndBottomRest(g *game.Game, playerID game.PlayerID, prim game.RevealUntil) {
+	player, ok := playerByID(g, playerID)
+	if !ok {
+		return
+	}
+	var remainder []id.ID
+	for {
+		cardID, ok := player.Library.Top()
+		if !ok {
+			break
+		}
+		player.Library.Remove(cardID)
+		if revealedCardMatches(g, playerID, cardID, prim.Until) {
+			player.Hand.Add(cardID)
+			emitZoneChangeEvent(g, game.Event{
+				Player:   playerID,
+				CardID:   cardID,
+				FromZone: zone.Library,
+				ToZone:   zone.Hand,
+				Amount:   1,
+			})
+			break
+		}
+		remainder = append(remainder, cardID)
+	}
+	g.RNG.Shuffle(len(remainder), func(i, j int) {
+		remainder[i], remainder[j] = remainder[j], remainder[i]
+	})
+	for _, cardID := range remainder {
+		player.Library.AddToBottom(cardID)
 	}
 }
 

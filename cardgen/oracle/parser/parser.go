@@ -152,6 +152,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitSemblanceAnvil(document.Abilities)
 	emitCloudKey(document.Abilities)
 	emitAugurOfAutumn(document.Abilities)
+	emitEvolutionaryLeapRevealUntil(document.Abilities)
 	emitSelfNameStaticRules(document.Abilities)
 	emitCost(document.Abilities)
 	emitOptional(document.Abilities)
@@ -251,6 +252,14 @@ func emitAugurOfAutumn(abilities []Ability) {
 	for i := range abilities {
 		abilities[i].AugurOfAutumnCoven =
 			strings.EqualFold(strings.TrimSpace(abilities[i].Text), text)
+	}
+}
+
+func emitEvolutionaryLeapRevealUntil(abilities []Ability) {
+	const body = "Reveal cards from the top of your library until you reveal a creature card. Put that card into your hand and the rest on the bottom of your library in a random order."
+	for i := range abilities {
+		abilities[i].EvolutionaryLeapRevealUntil =
+			strings.HasSuffix(strings.TrimSpace(abilities[i].Text), body)
 	}
 }
 

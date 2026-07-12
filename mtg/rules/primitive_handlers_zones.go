@@ -2268,14 +2268,14 @@ func handleRevealUntil(r *effectResolver, prim game.RevealUntil) effectResolved 
 	res := effectResolved{accepted: true}
 	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
 		for _, playerID := range playersInAPNAPOrder(r.game, r.playerGroupMembers(prim.PlayerGroup)) {
-			revealUntilCards(r.game, playerID, prim.Until, prim.Destination)
+			revealUntilCards(r.game, playerID, prim)
 		}
 		res.succeeded = true
 		return res
 	}
 	playerID, ok := r.resolvePlayer(prim.Player)
 	if ok {
-		revealUntilCards(r.game, playerID, prim.Until, prim.Destination)
+		revealUntilCards(r.game, playerID, prim)
 		res.succeeded = true
 	}
 	return res

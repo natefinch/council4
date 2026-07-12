@@ -41,6 +41,7 @@ func compileAbility(
 		CloudKeyChoice:                              ability.CloudKeyChoice,
 		CloudKeyReduction:                           ability.CloudKeyReduction,
 		AugurOfAutumnCoven:                          ability.AugurOfAutumnCoven,
+		EvolutionaryLeapRevealUntil:                 ability.EvolutionaryLeapRevealUntil,
 	}
 	if ability.AbilityWord != nil {
 		compiled.AbilityWord = ability.AbilityWord.Label

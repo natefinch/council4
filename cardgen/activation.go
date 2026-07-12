@@ -178,7 +178,7 @@ func lowerActivationShell(
 		})
 	})
 	normalizeExactActivationSelfReturnReferences(&bodyContent)
-	if !activationReferencesSupported(bodyContent) {
+	if !ability.EvolutionaryLeapRevealUntil && !activationReferencesSupported(bodyContent) {
 		return loweredActivationShell{}, activationDiagnostic(
 			original,
 			"unsupported activation references",

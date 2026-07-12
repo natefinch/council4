@@ -2373,6 +2373,9 @@ func (p RevealUntil) validatePrimitive(targets []TargetSpec, checkTargets bool) 
 	if p.Destination != zone.Graveyard && p.Destination != zone.Hand {
 		return errors.New("RevealUntil requires a Graveyard or Hand Destination")
 	}
+	if p.MatchToDestinationRestRandomBottom && p.Destination != zone.Hand {
+		return errors.New("RevealUntil matching-card partition requires a Hand Destination")
+	}
 	if err := firstProblem(p.Until.Validate()); err != nil {
 		return err
 	}

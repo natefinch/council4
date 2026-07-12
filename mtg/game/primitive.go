@@ -1588,6 +1588,10 @@ type RevealUntil struct {
 	PlayerGroup PlayerGroupReference // opponents or all players; zero if Player is set
 	Until       Selection            // first revealed card matching this stops the reveal
 	Destination zone.Type            // graveyard or hand
+	// MatchToDestinationRestRandomBottom moves only the matching card to
+	// Destination and returns the other revealed cards to the library bottom in
+	// random order.
+	MatchToDestinationRestRandomBottom bool
 }
 
 // PutHandOnLibraryThenDraw has Player put any number of cards from their hand on
