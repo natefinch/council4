@@ -13842,6 +13842,7 @@ Council4 currently supports **17,568 of 32,501 cards eligible for paper support 
 - Song of Creation
 - Song of the Dryads
 - Song of the Worldsoul
+- Song of Totentanz
 - Song-Mad Treachery // Song-Mad Ruins
 - Songbird, Sonic Screamer
 - Sonic Assault
@@ -17060,6 +17061,7 @@ Council4 currently supports **17,568 of 32,501 cards eligible for paper support 
 - White Lotus Reinforcements
 - White Scarab
 - White Shield Crusader
+- White Sun's Twilight
 - White Sun's Zenith
 - White Tiger, Amulet Keeper
 - White Ward
