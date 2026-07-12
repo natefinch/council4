@@ -156,6 +156,7 @@ type Ability struct {
 	TauntFromRampartSequence    bool                              `json:",omitempty"`
 	TemurSabertoothSequence     bool                              `json:",omitempty"`
 	FightRiggingSequence        bool                              `json:",omitempty"`
+	RaisePalisadeSequence       bool                              `json:",omitempty"`
 	// ExactSequence is a parser-owned, exact-vocabulary resolving sequence.
 	ExactSequence *ExactSequenceSyntax `json:",omitempty"`
 	// Optional reports that a triggered ability's resolving body begins with the
