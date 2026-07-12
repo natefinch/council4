@@ -159,6 +159,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitProgenitorIconNextFlash(document.Abilities)
 	emitStarCompassMana(document.Abilities)
 	emitEnergyTapMana(document.Abilities)
+	emitSunderingGrowthPopulate(document.Abilities)
 	emitSelfNameStaticRules(document.Abilities)
 	emitCost(document.Abilities)
 	emitOptional(document.Abilities)
@@ -314,6 +315,14 @@ func emitEnergyTapMana(abilities []Ability) {
 	for i := range abilities {
 		abilities[i].EnergyTapMana =
 			strings.EqualFold(strings.TrimSpace(abilities[i].Text), text)
+	}
+}
+
+func emitSunderingGrowthPopulate(abilities []Ability) {
+	const text = "Destroy target artifact or enchantment, then populate."
+	for i := range abilities {
+		abilities[i].SunderingGrowthPopulate =
+			strings.HasPrefix(strings.ToLower(strings.TrimSpace(abilities[i].Text)), strings.ToLower(text))
 	}
 }
 

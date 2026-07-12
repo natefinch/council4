@@ -732,9 +732,27 @@ func (r Renderer) renderTokenSource(ctx *renderCtx, source game.TokenSource) (st
 		return r.renderTokenCopyForEachSource(ctx, spec)
 	case game.TokenCopySourceChosenFromTriggerBatch:
 		return renderTokenCopyTriggeringSetSource(ctx, spec)
+	case game.TokenCopySourceChosenControlledCreatureToken:
+		return renderTokenCopyPopulateSource(ctx, spec)
 	default:
 		return "", errors.New("render: unsupported CreateToken token source")
 	}
+
+}
+
+func renderTokenCopyPopulateSource(ctx *renderCtx, spec game.TokenCopySpec) (string, error) {
+	fields := []string{
+		"Source: game.TokenCopySourceChosenControlledCreatureToken,",
+	}
+	fields, err := appendTokenCopyModifierFields(ctx, fields, spec)
+	if err != nil {
+		return "", err
+	}
+	rendered, err := renderTokenCopyKeywordField(fields, spec)
+	if err != nil {
+		return "", err
+	}
+	return "game.TokenCopyOf(" + structLit("game.TokenCopySpec", rendered) + ")", nil
 }
 
 func renderTokenCopyTriggeringSetSource(ctx *renderCtx, spec game.TokenCopySpec) (string, error) {
