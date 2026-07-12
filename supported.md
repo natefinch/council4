@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,566 of 32,501 cards eligible for paper support (54.0%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,568 of 32,501 cards eligible for paper support (54.1%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -8350,6 +8350,7 @@ Council4 currently supports **17,566 of 32,501 cards eligible for paper support 
 - Kurgadon
 - Kuro's Taken
 - Kuro, Pitlord
+- Kutzil, Malamet Exemplar
 - Kwende, Pride of Femeref
 - Kykar, Wind's Fury
 - Kykar, Zephyr Awakener
@@ -9773,6 +9774,7 @@ Council4 currently supports **17,566 of 32,501 cards eligible for paper support 
 - Mox Sapphire
 - Mr. Orfeo, the Boulder
 - Ms. Bumbleflower
+- Ms. Marvel, Elastic Ally
 - Mtenda Griffin
 - Mtenda Herder
 - Muck Rats

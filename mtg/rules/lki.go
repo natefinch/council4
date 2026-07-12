@@ -21,6 +21,7 @@ func optionalInt(value int, ok bool) opt.V[int] {
 
 func snapshotPermanent(g *game.Game, permanent *game.Permanent, zoneType zone.Type) game.ObjectSnapshot {
 	values := effectivePermanentValues(g, permanent)
+	basePowerValues := permanentValuesBeforeLayer(g, permanent, game.LayerPowerToughnessModify)
 	snapshot := game.ObjectSnapshot{
 		ObjectID:       permanent.ObjectID,
 		CardID:         permanent.CardInstanceID,
@@ -43,6 +44,7 @@ func snapshotPermanent(g *game.Game, permanent *game.Permanent, zoneType zone.Ty
 		Types:          append([]types.Card(nil), values.types...),
 		Subtypes:       append([]types.Sub(nil), values.subtypes...),
 		Power:          optionalInt(values.power, values.powerOK),
+		BasePower:      optionalInt(basePowerValues.power, basePowerValues.powerOK),
 		Toughness:      optionalInt(values.toughness, values.toughnessOK),
 		Keywords:       effectiveKeywords(values),
 		EntryChoices:   cloneChoiceResults(permanent.EntryChoices),

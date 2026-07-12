@@ -276,6 +276,10 @@ type TriggerSelection struct {
 	// "Whenever a goaded creature attacks", Vengeful Ancestor). It lowers to
 	// Selection.MatchGoaded.
 	Goaded bool
+	// PowerAboveBase requires the matched permanent's current power to exceed its
+	// base power (CR 208.3, "creatures you control ... with power greater than its
+	// base power", Kutzil, Malamet Exemplar). It lowers to Selection.PowerAboveBase.
+	PowerAboveBase bool
 	// AnyOf is a disjunction of alternative selections; the subject matches when
 	// it satisfies at least one alternative ("creature or Vehicle"). The other
 	// fields remain conjunctive requirements shared by every alternative. It

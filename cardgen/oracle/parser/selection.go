@@ -151,6 +151,13 @@ type TriggerSelection struct {
 	// now (CR 701.38). It compiles to Selection.MatchGoaded.
 	Goaded bool `json:",omitempty"`
 
+	// PowerAboveBase records a "with power greater than its base power" subject
+	// qualifier ("one or more creatures you control ... with power greater than
+	// its base power", Kutzil, Malamet Exemplar). The matched permanent's current
+	// power must exceed its base power (CR 208.3). It compiles to
+	// Selection.PowerAboveBase.
+	PowerAboveBase bool `json:",omitempty"`
+
 	// SubtypeFromEntryChoice records a trailing "of the chosen type" qualifier
 	// ("a creature you control of the chosen type"), tying the matched permanent
 	// to the creature subtype the trigger's source permanent chose as it entered.
@@ -302,12 +309,12 @@ func prepareTriggerSelection(
 		if !parseTriggerSelectionQualifier(words[qualifier+1:], false, selection) {
 			return nil, false
 		}
-		words = words[:qualifier]
+		words = cutTriggerDistributiveEach(words[:qualifier])
 	} else if qualifier := slices.Index(words, "without"); qualifier >= 0 {
 		if !parseTriggerSelectionQualifier(words[qualifier+1:], true, selection) {
 			return nil, false
 		}
-		words = words[:qualifier]
+		words = cutTriggerDistributiveEach(words[:qualifier])
 	}
 	if len(words) > 1 {
 		if powerToughness := parseTriggerPowerToughness(words[0], tokens); powerToughness.ok {
@@ -475,6 +482,10 @@ func parseTriggerSelectionQualifier(words []string, excluded bool, selection *Tr
 		selection.MatchAnyCounter = true
 		return true
 	}
+	if triggerPowerAboveBaseQualifier(words) {
+		selection.PowerAboveBase = true
+		return true
+	}
 	var destination *TriggerSelectionNumber
 	switch {
 	case words[0] == "power":
@@ -514,6 +525,27 @@ func triggerCounterAnyQualifier(words []string) bool {
 	return (words[1] == "counter" || words[1] == "counters") &&
 		words[2] == "on" &&
 		(words[3] == "it" || words[3] == "them")
+}
+
+// triggerPowerAboveBaseQualifier recognizes the "power greater than its base
+// power" subject qualifier (Kutzil, Malamet Exemplar): a self-relative power
+// comparison requiring the matched permanent's current power to exceed its base
+// power. Any other shape fails closed so unrelated qualifiers keep their existing
+// handling.
+func triggerPowerAboveBaseQualifier(words []string) bool {
+	return slices.Equal(words, []string{"power", "greater", "than", "its", "base", "power"})
+}
+
+// cutTriggerDistributiveEach drops a distributive "each" that trails the noun
+// words directly before a subject qualifier ("one or more creatures you control
+// each with power greater than its base power", Kutzil). The word restates the
+// per-permanent scope the batched trigger already applies to every matched
+// source and carries no additional selection semantics.
+func cutTriggerDistributiveEach(words []string) []string {
+	if len(words) > 0 && words[len(words)-1] == "each" {
+		return words[:len(words)-1]
+	}
+	return words
 }
 
 func parseTriggerSelectionNumber(words []string) (TriggerSelectionNumber, bool) {
