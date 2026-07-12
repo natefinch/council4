@@ -170,6 +170,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitTemurSabertoothSequence(document.Abilities)
 	emitFightRiggingSequence(document.Abilities)
 	emitRaisePalisadeSequence(document.Abilities)
+	emitBattleOfBywaterSequence(document.Abilities)
 	emitSelfNameStaticRules(document.Abilities)
 	emitCost(document.Abilities)
 	emitOptional(document.Abilities)
@@ -434,6 +435,15 @@ func emitRaisePalisadeSequence(abilities []Ability) {
 		abilities[i].RaisePalisadeSequence =
 			abilities[i].Kind == AbilitySpell &&
 				strings.EqualFold(strings.TrimSpace(abilities[i].Text), text)
+	}
+}
+
+func emitBattleOfBywaterSequence(abilities []Ability) {
+	const text = "Destroy all creatures with power 3 or greater. Then create a Food token for each creature you control."
+	for i := range abilities {
+		abilities[i].BattleOfBywaterSequence =
+			abilities[i].Kind == AbilitySpell &&
+				strings.HasPrefix(strings.ToLower(strings.TrimSpace(abilities[i].Text)), strings.ToLower(text))
 	}
 }
 

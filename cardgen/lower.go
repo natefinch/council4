@@ -872,6 +872,38 @@ func lowerExecutableAbility(
 	ability compiler.CompiledAbility,
 	syntax *parser.Ability,
 ) (abilityLowering, *shared.Diagnostic) {
+	if ability.BattleOfBywaterSequence {
+		creatures := game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+			Controller:    game.ControllerYou,
+		}
+		return abilityLowering{
+			spellAbility: opt.Val(game.Mode{Sequence: []game.Instruction{
+				{Primitive: game.Destroy{Group: game.BattlefieldGroup(game.Selection{
+					RequiredTypes: []types.Card{types.Creature},
+					Power: opt.Val(compare.Int{
+						Op:    compare.GreaterOrEqual,
+						Value: 3,
+					}),
+				})}},
+				{Primitive: game.CreateToken{
+					Amount: game.Dynamic(game.DynamicAmount{
+						Kind:  game.DynamicAmountCountSelector,
+						Group: game.BattlefieldGroup(creatures),
+					}),
+					Source: game.TokenDef(foodTokenDef()),
+				}},
+			}}.Ability()),
+			consumed: semanticConsumption{
+				conditions: len(ability.Content.Conditions),
+				effects:    len(ability.Content.Effects),
+				keywords:   len(ability.Content.Keywords),
+				references: len(ability.Content.References),
+				targets:    len(ability.Content.Targets),
+			},
+			sourceSpans: []shared.Span{ability.Span},
+		}, nil
+	}
 	if ability.RaisePalisadeSequence {
 		return abilityLowering{
 			spellAbility: opt.Val(game.Mode{Sequence: []game.Instruction{
