@@ -46,6 +46,7 @@ func compileCostComponent(component parser.CostComponent) CostComponent {
 		AnyNumber:             component.AnyNumber,
 		ObjectHistoric:        component.ObjectHistoric,
 		ObjectTokenOnly:       component.ObjectTokenOnly,
+		ObjectNonToken:        component.ObjectNonToken,
 		TotalManaValueAtLeast: component.TotalManaValueAtLeast,
 		ChoiceGroup:           component.ChoiceGroup,
 		PayLifeAmountDynamic:  compilePayLifeDynamic(component.PayLifeDynamic),

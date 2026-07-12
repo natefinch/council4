@@ -250,10 +250,8 @@ func lowerReturnToHandCost(component compiler.CostComponent) (cost.Additional, b
 }
 
 func lowerCostPermanentObject(component compiler.CostComponent, additional *cost.Additional, allowSnowLand bool) bool {
-	if component.ObjectNonToken {
-		return false
-	}
 	additional.RequireToken = component.ObjectTokenOnly
+	additional.RequireNonToken = component.ObjectNonToken
 	if component.ObjectExcludedTypeKnown {
 		additional.ExcludePermanentType = component.ObjectExcludedType
 	}
