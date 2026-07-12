@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,566 of 32,501 cards eligible for paper support (54.0%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,568 of 32,501 cards eligible for paper support (54.1%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -13840,6 +13840,7 @@ Council4 currently supports **17,566 of 32,501 cards eligible for paper support 
 - Song of Creation
 - Song of the Dryads
 - Song of the Worldsoul
+- Song of Totentanz
 - Song-Mad Treachery // Song-Mad Ruins
 - Songbird, Sonic Screamer
 - Sonic Assault
@@ -17058,6 +17059,7 @@ Council4 currently supports **17,566 of 32,501 cards eligible for paper support 
 - White Lotus Reinforcements
 - White Scarab
 - White Shield Crusader
+- White Sun's Twilight
 - White Sun's Zenith
 - White Tiger, Amulet Keeper
 - White Ward
