@@ -26,6 +26,20 @@ func lowerActivatedBodyContent(
 	bodyText string,
 	variableCounterRemovalCost bool,
 ) (game.AbilityContent, *shared.Diagnostic) {
+	if ability.ProgenitorIconNextFlash {
+		return game.Mode{
+			Text: bodyText,
+			Sequence: []game.Instruction{{Primitive: game.ApplyRule{
+				RuleEffects: []game.RuleEffect{{
+					Kind:                   game.RuleEffectCastSpellsAsThoughFlash,
+					AffectedPlayer:         game.PlayerYou,
+					AppliesToNextSpellOnly: true,
+					SpellChosenSubtypeFrom: game.EntryTypeChoiceKey,
+				}},
+				Duration: game.DurationThisTurn,
+			}}},
+		}.Ability(), nil
+	}
 	if ability.EvolutionaryLeapRevealUntil {
 		return game.Mode{
 			Text: bodyText,

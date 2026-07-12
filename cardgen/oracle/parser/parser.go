@@ -156,6 +156,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitFlameshadowConjuring(document.Abilities)
 	emitStingCombatFirstStrike(document.Abilities)
 	emitYevaGreenCreatureFlash(document.Abilities)
+	emitProgenitorIconNextFlash(document.Abilities)
 	emitSelfNameStaticRules(document.Abilities)
 	emitCost(document.Abilities)
 	emitOptional(document.Abilities)
@@ -286,6 +287,14 @@ func emitYevaGreenCreatureFlash(abilities []Ability) {
 	const text = "You may cast green creature spells as though they had flash."
 	for i := range abilities {
 		abilities[i].YevaGreenCreatureFlash =
+			strings.EqualFold(strings.TrimSpace(abilities[i].Text), text)
+	}
+}
+
+func emitProgenitorIconNextFlash(abilities []Ability) {
+	const text = "{T}: The next spell of the chosen type you cast this turn can be cast as though it had flash."
+	for i := range abilities {
+		abilities[i].ProgenitorIconNextFlash =
 			strings.EqualFold(strings.TrimSpace(abilities[i].Text), text)
 	}
 }

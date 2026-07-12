@@ -45,6 +45,7 @@ func compileAbility(
 		FlameshadowConjuringCopy:                    ability.FlameshadowConjuringCopy,
 		StingCombatFirstStrike:                      ability.StingCombatFirstStrike,
 		YevaGreenCreatureFlash:                      ability.YevaGreenCreatureFlash,
+		ProgenitorIconNextFlash:                     ability.ProgenitorIconNextFlash,
 	}
 	if ability.AbilityWord != nil {
 		compiled.AbilityWord = ability.AbilityWord.Label

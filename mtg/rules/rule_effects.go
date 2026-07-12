@@ -26,6 +26,19 @@ func createRuleEffectTemplates(g *game.Game, obj *game.StackObject, object opt.V
 		ruleEffect.Controller = obj.Controller
 		ruleEffect.SourceCardID = sourceID
 		ruleEffect.SourceObjectID = sourceObjectID
+		if ruleEffect.SpellChosenSubtypeFrom != "" {
+			source, ok := permanentByObjectID(g, sourceObjectID)
+			if !ok {
+				continue
+			}
+			choice, ok := source.EntryChoices[ruleEffect.SpellChosenSubtypeFrom]
+			if !ok || choice.Kind != game.ResolutionChoiceSubtype ||
+				!types.KnownSubtypeForType(types.Creature, choice.Subtype) {
+				continue
+			}
+			ruleEffect.SpellSubtypes = append(ruleEffect.SpellSubtypes, choice.Subtype)
+			ruleEffect.SpellChosenSubtypeFrom = ""
+		}
 		if ruleEffect.AffectedSource {
 			ruleEffect.AffectedObjectID = sourceObjectID
 		} else if ruleEffect.AffectedObjectID == 0 && object.Exists {
@@ -389,20 +402,33 @@ func playerCanCastAsThoughFlash(g *game.Game, playerID game.PlayerID, card *game
 		if !playerRelationMatches(effect.Controller, playerID, effect.AffectedPlayer) {
 			continue
 		}
-		if len(effect.SpellTypes) != 0 && !cardDefHasAnyType(card, effect.SpellTypes) {
-			continue
-		}
-		if len(effect.SpellColors) != 0 && !slices.ContainsFunc(effect.SpellColors, func(c color.Color) bool {
-			return slices.Contains(card.Colors, c)
-		}) {
-			continue
-		}
-		if len(effect.SpellSubtypes) != 0 && !card.HasAnySubtype(effect.SpellSubtypes...) {
+		if !castAsThoughFlashEffectMatchesCard(g, effect, card) {
 			continue
 		}
 		return true
 	}
 	return false
+}
+
+func castAsThoughFlashEffectMatchesCard(g *game.Game, effect *game.RuleEffect, card *game.CardDef) bool {
+	if effect == nil || card == nil {
+		return false
+	}
+	if len(effect.SpellTypes) != 0 && !cardDefHasAnyType(card, effect.SpellTypes) {
+		return false
+	}
+	if len(effect.SpellColors) != 0 && !slices.ContainsFunc(effect.SpellColors, func(c color.Color) bool {
+		return slices.Contains(card.Colors, c)
+	}) {
+		return false
+	}
+	if len(effect.SpellSubtypes) != 0 && !card.HasAnySubtype(effect.SpellSubtypes...) {
+		return false
+	}
+	if effect.SpellChosenSubtypeFrom != "" && !cardMatchesSourceEntryChosenSubtype(g, effect, card) {
+		return false
+	}
+	return true
 }
 
 // additionalLandPlaysFor returns the number of extra land plays granted to
