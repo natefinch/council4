@@ -163,6 +163,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 			exactPutLinkedExiledRestOnLibraryBottomEffectSyntax(effect) ||
 			exactCounterExiledCardManaValueEffectSyntax(effect) ||
 			exactDistributeCountersEffectSyntax(effect)
+	case EffectPopulate:
+		return exactStandaloneActionEffectSyntax(effect, "Populate")
 	case EffectProliferate:
 		return exactStandaloneActionEffectSyntax(effect, "Proliferate")
 	case EffectDiscover:

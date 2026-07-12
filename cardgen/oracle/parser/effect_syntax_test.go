@@ -1751,6 +1751,7 @@ func TestParseResolvingEffectKinds(t *testing.T) {
 		{"Mill two cards.", EffectMill},
 		{"Target creature gets +2/+2.", EffectModifyPT},
 		{"Put a +1/+1 counter on target creature.", EffectPut},
+		{"Populate.", EffectPopulate},
 		{"Proliferate.", EffectProliferate},
 		{"Regenerate target creature.", EffectRegenerate},
 		{"Return target creature to its owner's hand.", EffectReturn},

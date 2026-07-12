@@ -60,6 +60,7 @@ const (
 	EffectModifyPT                  EffectKind = "EffectModifyPT"
 	EffectGainPlayerCounter         EffectKind = "EffectGainPlayerCounter"
 	EffectPut                       EffectKind = "EffectPut"
+	EffectPopulate                  EffectKind = "EffectPopulate"
 	EffectProliferate               EffectKind = "EffectProliferate"
 	EffectRemoveCounter             EffectKind = "EffectRemoveCounter"
 	EffectRegenerate                EffectKind = "EffectRegenerate"

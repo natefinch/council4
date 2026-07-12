@@ -1971,6 +1971,15 @@ func lowerImmediateSingleEffectSpell(
 		return lowerMonstrosityContent(ctx, syntax)
 	case compiler.EffectConnive:
 		return lowerConniveContent(ctx)
+	case compiler.EffectPopulate:
+		return lowerExactPrimitiveSpell(ctx, syntax, "populate", func(amount game.Quantity) game.Primitive {
+			return game.CreateToken{
+				Amount: amount,
+				Source: game.TokenCopyOf(game.TokenCopySpec{
+					Source: game.TokenCopySourceChosenControlledCreatureToken,
+				}),
+			}
+		})
 	case compiler.EffectProliferate:
 		return lowerExactPrimitiveSpell(ctx, syntax, "proliferate", func(amount game.Quantity) game.Primitive {
 			return game.Proliferate{Amount: amount}

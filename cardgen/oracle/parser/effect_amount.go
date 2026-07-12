@@ -605,7 +605,7 @@ func parseEffectAmount(kind EffectKind, tokens []shared.Token, atoms Atoms) Effe
 			return EffectAmountSyntax{Span: token.Span, Value: 1, Known: true}
 		}
 	}
-	if (kind == EffectInvestigate || kind == EffectProliferate) &&
+	if (kind == EffectInvestigate || kind == EffectPopulate || kind == EffectProliferate) &&
 		len(tokens) == 1 && tokens[0].Kind == shared.Period {
 		return EffectAmountSyntax{Value: 1, Known: true}
 	}
