@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,532 of 32,501 cards eligible for paper support (53.9%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,533 of 32,501 cards eligible for paper support (53.9%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -11207,6 +11207,7 @@ Council4 currently supports **17,532 of 32,501 cards eligible for paper support 
 - Professor's Warning
 - Profit // Loss
 - Profound Journey
+- Progenitor's Icon
 - Progenitus
 - Prognostic Sphinx
 - Project Deathlok Soldier
