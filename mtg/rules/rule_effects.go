@@ -3,6 +3,7 @@ package rules
 import (
 	"slices"
 
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 
@@ -389,6 +390,11 @@ func playerCanCastAsThoughFlash(g *game.Game, playerID game.PlayerID, card *game
 			continue
 		}
 		if len(effect.SpellTypes) != 0 && !cardDefHasAnyType(card, effect.SpellTypes) {
+			continue
+		}
+		if len(effect.SpellColors) != 0 && !slices.ContainsFunc(effect.SpellColors, func(c color.Color) bool {
+			return slices.Contains(card.Colors, c)
+		}) {
 			continue
 		}
 		if len(effect.SpellSubtypes) != 0 && !card.HasAnySubtype(effect.SpellSubtypes...) {

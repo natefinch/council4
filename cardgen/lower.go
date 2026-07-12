@@ -871,6 +871,27 @@ func lowerExecutableAbility(
 	ability compiler.CompiledAbility,
 	syntax *parser.Ability,
 ) (abilityLowering, *shared.Diagnostic) {
+	if ability.YevaGreenCreatureFlash {
+		return abilityLowering{
+			staticAbilities: []loweredStaticAbility{{Body: game.StaticAbility{
+				Text: ability.Text,
+				RuleEffects: []game.RuleEffect{{
+					Kind:           game.RuleEffectCastSpellsAsThoughFlash,
+					AffectedPlayer: game.PlayerYou,
+					SpellTypes:     []types.Card{types.Creature},
+					SpellColors:    []color.Color{color.Green},
+				}},
+			}}},
+			consumed: semanticConsumption{
+				conditions: len(ability.Content.Conditions),
+				effects:    len(ability.Content.Effects),
+				keywords:   len(ability.Content.Keywords),
+				references: len(ability.Content.References),
+				targets:    len(ability.Content.Targets),
+			},
+			sourceSpans: []shared.Span{ability.Span},
+		}, nil
+	}
 	if ability.StingCombatFirstStrike {
 		return abilityLowering{
 			staticAbilities: []loweredStaticAbility{{Body: game.StaticAbility{
