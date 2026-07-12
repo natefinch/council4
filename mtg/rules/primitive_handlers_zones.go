@@ -2081,7 +2081,7 @@ func handleCounterObject(r *effectResolver, prim game.CounterObject) effectResol
 	case game.ObjectReferenceTargetStackObject:
 		return effectResolved{accepted: true, succeeded: counterTargetStackObject(r.game, r.obj, prim.Object.TargetIndex(), prim.ExileInstead, prim.Destination)}
 	case game.ObjectReferenceEventStackObject:
-		stackObjectID, ok := copyStackObjectSourceID(r.obj, prim.Object)
+		stackObjectID, ok := copyStackObjectSourceID(r.game, r.obj, prim.Object)
 		if !ok {
 			return effectResolved{accepted: true}
 		}
@@ -2149,7 +2149,7 @@ func copyStackObjectSource(r *effectResolver, ref game.ObjectReference) (*game.S
 	if ref.Kind() == game.ObjectReferenceResolvingStackObject {
 		return r.obj, true
 	}
-	stackObjectID, ok := copyStackObjectSourceID(r.obj, ref)
+	stackObjectID, ok := copyStackObjectSourceID(r.game, r.obj, ref)
 	if !ok {
 		return nil, false
 	}
@@ -2159,10 +2159,10 @@ func copyStackObjectSource(r *effectResolver, ref game.ObjectReference) (*game.S
 // copyStackObjectSourceID resolves the stack object id a CopyStackObject effect
 // copies for references read from the stack ("Copy target spell." and the
 // triggering spell of a spell-cast trigger).
-func copyStackObjectSourceID(obj *game.StackObject, ref game.ObjectReference) (id.ID, bool) {
+func copyStackObjectSourceID(g *game.Game, obj *game.StackObject, ref game.ObjectReference) (id.ID, bool) {
 	switch ref.Kind() {
 	case game.ObjectReferenceTargetStackObject:
-		return effectStackObjectID(obj, ref.TargetIndex())
+		return effectStackObjectID(g, obj, ref.TargetIndex())
 	case game.ObjectReferenceEventStackObject:
 		if obj.HasTriggerEvent && obj.TriggerEvent.StackObjectID != 0 {
 			return obj.TriggerEvent.StackObjectID, true
@@ -2178,7 +2178,7 @@ func copyStackObjectSourceID(obj *game.StackObject, ref game.ObjectReference) (i
 // referenced object's own target specs, but the resolving controller of the
 // retarget effect (obj.Controller) makes the selection.
 func (e *Engine) retargetStackObject(g *game.Game, obj *game.StackObject, targetIndex int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
-	stackObjectID, ok := effectStackObjectID(obj, targetIndex)
+	stackObjectID, ok := effectStackObjectID(g, obj, targetIndex)
 	if !ok {
 		return false
 	}
@@ -2247,7 +2247,7 @@ func stackObjectTargetSpecs(g *game.Game, obj *game.StackObject) (stackObjectSpe
 		if !spellOK {
 			return stackObjectSpecs{}, false
 		}
-		return stackObjectSpecs{def: spellDef, specs: spellTargetSpecs(spellDef, obj.ChosenModes)}, true
+		return stackObjectSpecs{def: spellDef, specs: spellTargetSpecs(spellDef, obj.ChosenModes, castBranchForObject(obj))}, true
 	case game.StackActivatedAbility:
 		if !defOK {
 			if permanent, permanentOK := permanentByObjectID(g, obj.SourceID); permanentOK {

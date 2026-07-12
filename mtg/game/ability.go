@@ -1721,6 +1721,13 @@ type TargetSpec struct {
 	// target shares one owner. It is meaningful only for card targets and the
 	// default false leaves the targets independently chosen.
 	SameGraveyard bool
+
+	// Gate names the cast branch under which this target spec is active
+	// (CR 601.2c). The default TargetGateAlways keeps the spec required on every
+	// cast; a gift- or kicker-gated spec is announced, required, and counted only
+	// when its branch is chosen, so a promised-only or kicked-only target is
+	// ignored on the branch that does not have it.
+	Gate TargetGate
 }
 
 // TargetChooser identifies who chooses a target slot during announcement.

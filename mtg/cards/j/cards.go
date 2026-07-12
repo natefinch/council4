@@ -19,6 +19,7 @@ var Cards = []cardset.Entry{
 	{Name: "Jared Carthalion, True Heir", New: JaredCarthalionTrueHeir},
 	{Name: "Jhessian Balmgiver", New: JhessianBalmgiver},
 	{Name: "Jidoor, Aristocratic Capital", New: JidoorAristocraticCapital},
+	{Name: "Jilt", New: Jilt},
 	{Name: "Jinxed Idol", New: JinxedIdol},
 	{Name: "Jinxed Ring", New: JinxedRing},
 	{Name: "Jirina, Dauntless General", New: JirinaDauntlessGeneral},

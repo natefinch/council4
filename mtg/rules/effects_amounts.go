@@ -787,7 +787,7 @@ func dynamicObjectManaValue(g *game.Game, obj *game.StackObject, dynamic *game.D
 	}
 	if dynamic.Object.Kind() == game.ObjectReferenceTargetStackObject {
 		targetIndex := dynamic.Object.TargetIndex()
-		targetID, ok := effectStackObjectID(obj, targetIndex)
+		targetID, ok := effectStackObjectID(g, obj, targetIndex)
 		if ok {
 			if _, live := stackObjectByID(g, targetID); !live {
 				return obj.TargetManaValueLKI[targetIndex]

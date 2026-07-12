@@ -10,6 +10,7 @@ var Cards = []cardset.Entry{
 	{Name: "Vadmir, New Blood", New: VadmirNewBlood},
 	{Name: "Valgavoth, Harrower of Souls", New: ValgavothHarrowerOfSouls},
 	{Name: "Valiant Knight", New: ValiantKnight},
+	{Name: "Valley Rally", New: ValleyRally},
 	{Name: "Valorous Charge", New: ValorousCharge},
 	{Name: "Vampire Hexmage", New: VampireHexmage},
 	{Name: "Vampire Scrivener", New: VampireScrivener},

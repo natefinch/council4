@@ -82,6 +82,7 @@ var Cards = []cardset.Entry{
 	{Name: "Blitzwing, Cruel Tormentor", New: BlitzwingCruelTormentor},
 	{Name: "Blood-Chin Rager", New: BloodChinRager},
 	{Name: "Blood Cultist", New: BloodCultist},
+	{Name: "Bloodchief's Thirst", New: BloodchiefSThirst},
 	{Name: "Bloodletter Quill", New: BloodletterQuill},
 	{Name: "Bloodline Necromancer", New: BloodlineNecromancer},
 	{Name: "Bloodthirsty Ogre", New: BloodthirstyOgre},

@@ -86,7 +86,7 @@ func (e *Engine) offerReboundCast(g *game.Game, playerID game.PlayerID, cardID i
 	if !e.chooseMay(g, agents, playerID, "Cast "+spellDef.Name+" from exile with rebound?", log) {
 		return false
 	}
-	targetCounts, ok := spellTargetCounts(g, playerID, spellDef, modes, targets)
+	targetCounts, ok := spellTargetCounts(g, playerID, spellDef, modes, targets, game.CastBranch{})
 	if !ok {
 		panic("validated rebounded spell targets could not be segmented")
 	}

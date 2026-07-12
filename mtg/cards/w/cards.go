@@ -36,6 +36,7 @@ var Cards = []cardset.Entry{
 	{Name: "Waterspout Warden", New: WaterspoutWarden},
 	{Name: "Wayspeaker Bodyguard", New: WayspeakerBodyguard},
 	{Name: "Weakstone's Subjugation", New: WeakstoneSSubjugation},
+	{Name: "Wear Down", New: WearDown},
 	{Name: "Weatherlight", New: Weatherlight},
 	{Name: "Weatherseed Totem", New: WeatherseedTotem},
 	{Name: "Web of Life and Destiny", New: WebOfLifeAndDestiny},

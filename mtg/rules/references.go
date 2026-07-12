@@ -41,6 +41,15 @@ func newReferenceResolver(g *game.Game, obj *game.StackObject) referenceResolver
 	return referenceResolver{g: g, obj: obj}
 }
 
+// targetSlot maps a reference's compile-time target-slot index to the position of
+// that target within the resolving object's compacted Targets slice, skipping the
+// slots that cast-branch-inactive gated specs reserved but chose no target for. It
+// is the identity for every object without gated target specs, so ordinary target
+// dereferencing is unchanged.
+func (r referenceResolver) targetSlot(index int) int {
+	return remapTargetSlot(r.g, r.obj, index)
+}
+
 // newReferenceResolverWithSource builds a resolver whose source permanent is
 // fixed to source rather than derived from obj.SourceID. Passing a nil source
 // fixes the basis to "no source permanent", preserving the legacy behavior of
@@ -122,7 +131,7 @@ func (r *resolvedObjectReference) owner(g *game.Game) (game.PlayerID, bool) {
 func (r referenceResolver) object(ref game.ObjectReference) (resolvedObjectReference, bool) {
 	switch ref.Kind() {
 	case game.ObjectReferenceTargetPermanent:
-		objectID, ok := targetPermanentObjectID(r.obj, ref.TargetIndex())
+		objectID, ok := targetPermanentObjectID(r.g, r.obj, ref.TargetIndex())
 		if !ok {
 			return resolvedObjectReference{}, false
 		}
@@ -131,7 +140,7 @@ func (r referenceResolver) object(ref game.ObjectReference) (resolvedObjectRefer
 		if r.obj == nil {
 			return resolvedObjectReference{}, false
 		}
-		objectID, ok := effectStackObjectID(r.obj, ref.TargetIndex())
+		objectID, ok := effectStackObjectID(r.g, r.obj, ref.TargetIndex())
 		if !ok {
 			controller, known := r.obj.TargetControllerLKI[ref.TargetIndex()]
 			return resolvedObjectReference{
@@ -176,7 +185,7 @@ func (r referenceResolver) object(ref game.ObjectReference) (resolvedObjectRefer
 		}
 		return resolvePermanentOrLastKnown(r.g, permanent.AttachedTo.Val)
 	case game.ObjectReferenceTargetAttachedPermanent:
-		objectID, ok := targetPermanentObjectID(r.obj, ref.TargetIndex())
+		objectID, ok := targetPermanentObjectID(r.g, r.obj, ref.TargetIndex())
 		if !ok {
 			return resolvedObjectReference{}, false
 		}
@@ -235,7 +244,7 @@ func (r referenceResolver) object(ref game.ObjectReference) (resolvedObjectRefer
 	case game.ObjectReferenceTargetObject:
 		return r.targetObject(ref.TargetIndex())
 	case game.ObjectReferenceTargetCard:
-		cardID, ok := targetCardID(r.obj, ref.TargetIndex())
+		cardID, ok := targetCardID(r.g, r.obj, ref.TargetIndex())
 		if !ok {
 			return resolvedObjectReference{}, false
 		}
@@ -260,10 +269,11 @@ func (r referenceResolver) object(ref game.ObjectReference) (resolvedObjectRefer
 // or stack object was chosen for the slot, delegating to the kind-specific
 // resolution so a combined "spell or permanent" target binds either choice.
 func (r referenceResolver) targetObject(index int) (resolvedObjectReference, bool) {
-	if r.obj == nil || index < 0 || index >= len(r.obj.Targets) {
+	slot := r.targetSlot(index)
+	if r.obj == nil || slot < 0 || slot >= len(r.obj.Targets) {
 		return resolvedObjectReference{}, false
 	}
-	switch r.obj.Targets[index].Kind {
+	switch r.obj.Targets[slot].Kind {
 	case game.TargetPermanent:
 		return r.object(game.TargetPermanentReference(index))
 	case game.TargetStackObject:
@@ -426,10 +436,11 @@ func (r referenceResolver) sourcePermanent() (*game.Permanent, bool) {
 }
 
 func (r referenceResolver) targetPlayer(targetIndex int) (game.PlayerID, bool) {
-	if targetIndex < 0 || targetIndex >= len(r.obj.Targets) {
+	slot := r.targetSlot(targetIndex)
+	if slot < 0 || slot >= len(r.obj.Targets) {
 		return 0, false
 	}
-	target := r.obj.Targets[targetIndex]
+	target := r.obj.Targets[slot]
 	if target.Kind != game.TargetPlayer || !isPlayerAlive(r.g, target.PlayerID) {
 		return 0, false
 	}
@@ -442,10 +453,11 @@ func (r referenceResolver) targetPlayer(targetIndex int) (game.PlayerID, bool) {
 // "that player or that permanent's controller" / "that creature's controller"
 // payer and copier of the copy-chain family.
 func (r referenceResolver) affectedTargetController(targetIndex int) (game.PlayerID, bool) {
-	if r.obj == nil || targetIndex < 0 || targetIndex >= len(r.obj.Targets) {
+	slot := r.targetSlot(targetIndex)
+	if r.obj == nil || slot < 0 || slot >= len(r.obj.Targets) {
 		return 0, false
 	}
-	if r.obj.Targets[targetIndex].Kind == game.TargetPlayer {
+	if r.obj.Targets[slot].Kind == game.TargetPlayer {
 		return r.targetPlayer(targetIndex)
 	}
 	resolved, ok := r.targetObject(targetIndex)
@@ -809,7 +821,7 @@ func (r referenceResolver) exclusionObjectID(ref game.GroupReference) id.ID {
 func (r referenceResolver) objectIdentityID(ref game.ObjectReference) (id.ID, bool) {
 	switch ref.Kind() {
 	case game.ObjectReferenceTargetPermanent:
-		return targetPermanentObjectID(r.obj, ref.TargetIndex())
+		return targetPermanentObjectID(r.g, r.obj, ref.TargetIndex())
 	case game.ObjectReferenceSourcePermanent:
 		if r.obj == nil || r.obj.SourceID == 0 {
 			return 0, false
@@ -834,7 +846,7 @@ func (r referenceResolver) objectIdentityID(ref game.ObjectReference) (id.ID, bo
 		}
 		return permanent.AttachedTo.Val, true
 	case game.ObjectReferenceTargetAttachedPermanent:
-		objectID, ok := targetPermanentObjectID(r.obj, ref.TargetIndex())
+		objectID, ok := targetPermanentObjectID(r.g, r.obj, ref.TargetIndex())
 		if !ok {
 			return 0, false
 		}
@@ -892,8 +904,12 @@ func resolveSourcePermanentOrLastKnown(g *game.Game, objectID id.ID) (resolvedOb
 	return resolvedObjectReference{}, false
 }
 
-func targetPermanentObjectID(obj *game.StackObject, targetIndex int) (id.ID, bool) {
-	if obj == nil || targetIndex < 0 || targetIndex >= len(obj.Targets) {
+func targetPermanentObjectID(g *game.Game, obj *game.StackObject, targetIndex int) (id.ID, bool) {
+	if obj == nil {
+		return 0, false
+	}
+	targetIndex = remapTargetSlot(g, obj, targetIndex)
+	if targetIndex < 0 || targetIndex >= len(obj.Targets) {
 		return 0, false
 	}
 	target := obj.Targets[targetIndex]
@@ -906,8 +922,12 @@ func targetPermanentObjectID(obj *game.StackObject, targetIndex int) (id.ID, boo
 // targetCardID returns the chosen card ID for a card target slot, such as a
 // creature card selected in a graveyard. It backs ObjectReferenceTargetCard,
 // which names that card as the blueprint of a copy token.
-func targetCardID(obj *game.StackObject, targetIndex int) (id.ID, bool) {
-	if obj == nil || targetIndex < 0 || targetIndex >= len(obj.Targets) {
+func targetCardID(g *game.Game, obj *game.StackObject, targetIndex int) (id.ID, bool) {
+	if obj == nil {
+		return 0, false
+	}
+	targetIndex = remapTargetSlot(g, obj, targetIndex)
+	if targetIndex < 0 || targetIndex >= len(obj.Targets) {
 		return 0, false
 	}
 	target := obj.Targets[targetIndex]

@@ -48,7 +48,7 @@ func (e *Engine) castMadnessSpellWithChoices(g *game.Game, playerID game.PlayerI
 	if !ok {
 		return false
 	}
-	targetCounts, ok := spellTargetCounts(g, playerID, spellDef, modes, targets)
+	targetCounts, ok := spellTargetCounts(g, playerID, spellDef, modes, targets, game.CastBranch{})
 	if !ok {
 		panic("validated madness spell targets could not be segmented")
 	}
@@ -102,12 +102,12 @@ func firstLegalSpellCastChoice(g *game.Game, playerID game.PlayerID, spellDef *g
 		return nil, nil, false
 	}
 	for _, modes := range modeChoicesForSpellAt(g, playerID, spellDef) {
-		targetResult := targetChoicesForSpell(g, playerID, spellDef, modes)
+		targetResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{})
 		if targetResult.kind == targetInvalidSpec {
 			continue
 		}
 		for _, targets := range targetResult.choices {
-			if modesValidForSpellAt(g, playerID, spellDef, modes) && targetsValidForSpell(g, playerID, spellDef, modes, targets) {
+			if modesValidForSpellAt(g, playerID, spellDef, modes) && targetsValidForSpell(g, playerID, spellDef, modes, targets, game.CastBranch{}) {
 				return append([]int(nil), modes...), append([]game.Target(nil), targets...), true
 			}
 		}

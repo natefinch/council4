@@ -244,7 +244,7 @@ func TestSpellTargetCountsMatchXBindsTargetCountToX(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := spellTargetCountsMatchX(g, game.Player1, card, nil, tc.targets, tc.xValue)
+			got := spellTargetCountsMatchX(g, game.Player1, card, nil, tc.targets, tc.xValue, game.CastBranch{})
 			if got != tc.want {
 				t.Fatalf("spellTargetCountsMatchX(%d targets, X=%d) = %v, want %v",
 					len(tc.targets), tc.xValue, got, tc.want)
@@ -272,7 +272,7 @@ func TestSpellTargetCountsMatchXIgnoresNonXSpecs(t *testing.T) {
 			Sequence: []game.Instruction{{Primitive: game.Destroy{Object: game.TargetPermanentReference(0)}}},
 		}.Ability()),
 	}}
-	if !spellTargetCountsMatchX(g, game.Player1, card, nil, []game.Target{game.PermanentTarget(a.ObjectID)}, 5) {
+	if !spellTargetCountsMatchX(g, game.Player1, card, nil, []game.Target{game.PermanentTarget(a.ObjectID)}, 5, game.CastBranch{}) {
 		t.Fatal("non-CountEqualsX spell should pass the X-binding check regardless of X")
 	}
 }

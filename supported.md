@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,602 of 32,501 cards eligible for paper support (54.2%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,612 of 32,501 cards eligible for paper support (54.2%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1590,6 +1590,7 @@ Council4 currently supports **17,602 of 32,501 cards eligible for paper support 
 - Bloodbraid Challenger
 - Bloodbraid Elf
 - Bloodbriar
+- Bloodchief's Thirst
 - Bloodcrazed Neonate
 - Bloodcrazed Socialite
 - Bloodcurdling Scream
@@ -7637,6 +7638,7 @@ Council4 currently supports **17,602 of 32,501 cards eligible for paper support 
 - Intimidator Initiate
 - Into the Core
 - Into the Fae Court
+- Into the Flood Maw
 - Into the Maw of Hell
 - Into the Roil
 - Into the Time Vortex
@@ -7861,6 +7863,7 @@ Council4 currently supports **17,602 of 32,501 cards eligible for paper support 
 - Jiang Yanggu, Wildcrafter
 - Jibbirik Omnivore
 - Jidoor, Aristocratic Capital // Overture
+- Jilt
 - Jinxed Idol
 - Jinxed Ring
 - Jirina, Dauntless General
@@ -8755,6 +8758,7 @@ Council4 currently supports **17,602 of 32,501 cards eligible for paper support 
 - Lonely Arroyo
 - Lonely Sandbar
 - Lonesome Unicorn // Rider in Need
+- Long River's Pull
 - Long Road Home
 - Long-Finned Skywhale
 - Long-Forgotten Gohei
@@ -9448,6 +9452,7 @@ Council4 currently supports **17,602 of 32,501 cards eligible for paper support 
 - Mind Sculpt
 - Mind Shatter
 - Mind Sludge
+- Mind Spiral
 - Mind Spring
 - Mind Stone
 - Mind Twist
@@ -10756,6 +10761,7 @@ Council4 currently supports **17,602 of 32,501 cards eligible for paper support 
 - Peel from Reality
 - Peema Outrider
 - Peer Through Depths
+- Peerless Recycling
 - Peerless Ropemaster
 - Pegasus
 - Pegasus
@@ -11231,6 +11237,7 @@ Council4 currently supports **17,602 of 32,501 cards eligible for paper support 
 - Prized Unicorn
 - Prizefight
 - Prizefighter Construct
+- Probe
 - Proctor's Gaze
 - Prodigal Pyromancer
 - Prodigal Sorcerer
@@ -12631,6 +12638,7 @@ Council4 currently supports **17,602 of 32,501 cards eligible for paper support 
 - Sawback Manticore
 - Sawblade Scamp
 - Sawtusk Demolisher
+- Sazacap's Brew
 - Sazh's Chocobo
 - Scab-Clan Charger
 - Scab-Clan Mauler
@@ -16282,6 +16290,7 @@ Council4 currently supports **17,602 of 32,501 cards eligible for paper support 
 - Valkyrie Harbinger
 - Valkyrior Skyrider
 - Valley Dasher
+- Valley Rally
 - Valor
 - Valor in Akros
 - Valor of the Worthy
@@ -16992,6 +17001,7 @@ Council4 currently supports **17,602 of 32,501 cards eligible for paper support 
 - Weaponize the Monsters
 - Weapons Trainer
 - Wear // Tear
+- Wear Down
 - Weaselback Redcap
 - Weather Maker
 - Weather the Storm

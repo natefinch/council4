@@ -73,7 +73,8 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		return e.applyPreparedCopyWithChoices(g, playerID, cast, agents, log)
 	}
 
-	if !e.canCastSpellFaceFromZoneWithOptions(g, playerID, cast.CardID, sourceZone, cast.Face, cast.Targets, cast.XValue, cast.ChosenModes, effectiveKickerCount(cast.KickerPaid, cast.KickerCount), cast.Overloaded) {
+	branch := castBranchForCast(cast)
+	if !e.canCastSpellFaceFromZoneWithOptions(g, playerID, cast.CardID, sourceZone, cast.Face, cast.Targets, cast.XValue, cast.ChosenModes, effectiveKickerCount(cast.KickerPaid, cast.KickerCount), cast.Overloaded, cast.GiftPromised) {
 		return false
 	}
 
@@ -87,12 +88,12 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 	if cast.Overloaded {
 		announcementDef = overloadSpellDef(spellDef)
 	}
-	completedTargets, ok := e.completeSpellAnnouncementTargets(g, playerID, announcementDef, cast.ChosenModes, cast.Targets, agents, log)
-	if !ok || !e.canCastSpellFaceFromZoneWithOptions(g, playerID, cast.CardID, sourceZone, cast.Face, completedTargets, cast.XValue, cast.ChosenModes, effectiveKickerCount(cast.KickerPaid, cast.KickerCount), cast.Overloaded) {
+	completedTargets, ok := e.completeSpellAnnouncementTargets(g, playerID, announcementDef, cast.ChosenModes, cast.Targets, agents, log, branch)
+	if !ok || !e.canCastSpellFaceFromZoneWithOptions(g, playerID, cast.CardID, sourceZone, cast.Face, completedTargets, cast.XValue, cast.ChosenModes, effectiveKickerCount(cast.KickerPaid, cast.KickerCount), cast.Overloaded, cast.GiftPromised) {
 		return false
 	}
 	cast.Targets = completedTargets
-	targetCounts, ok := spellTargetCounts(g, playerID, announcementDef, cast.ChosenModes, cast.Targets)
+	targetCounts, ok := spellTargetCounts(g, playerID, announcementDef, cast.ChosenModes, cast.Targets, branch)
 	if !ok {
 		panic("validated spell targets could not be segmented")
 	}
@@ -524,9 +525,9 @@ func canCastPreparedCopy(g *game.Game, playerID game.PlayerID, permanent *game.P
 	if !modesValidForSpellAt(g, playerID, spellDef, chosenModes) ||
 		!isSupportedSpell(spellDef) ||
 		(!spellDef.HasType(types.Instant) && !spellDef.HasType(types.Sorcery)) ||
-		!targetsValidForSpell(g, playerID, spellDef, chosenModes, targets) ||
-		!spellTargetCountsMatchX(g, playerID, spellDef, chosenModes, targets, xValue) ||
-		!spellTargetsSatisfyManaValueX(g, playerID, spellDef, chosenModes, targets, xValue) ||
+		!targetsValidForSpell(g, playerID, spellDef, chosenModes, targets, game.CastBranch{}) ||
+		!spellTargetCountsMatchX(g, playerID, spellDef, chosenModes, targets, xValue, game.CastBranch{}) ||
+		!spellTargetsSatisfyManaValueX(g, playerID, spellDef, chosenModes, targets, xValue, game.CastBranch{}) ||
 		!canCastAtCurrentTiming(g, playerID, spellDef) {
 		return false
 	}
@@ -556,12 +557,12 @@ func (e *Engine) applyPreparedCopyWithChoices(g *game.Game, playerID game.Player
 	if !ok {
 		return false
 	}
-	completedTargets, ok := e.completeSpellAnnouncementTargets(g, playerID, spellDef, cast.ChosenModes, cast.Targets, agents, log)
+	completedTargets, ok := e.completeSpellAnnouncementTargets(g, playerID, spellDef, cast.ChosenModes, cast.Targets, agents, log, game.CastBranch{})
 	if !ok || !canCastPreparedCopy(g, playerID, permanent, completedTargets, cast.XValue, cast.ChosenModes) {
 		return false
 	}
 	cast.Targets = completedTargets
-	targetCounts, ok := spellTargetCounts(g, playerID, spellDef, cast.ChosenModes, cast.Targets)
+	targetCounts, ok := spellTargetCounts(g, playerID, spellDef, cast.ChosenModes, cast.Targets, game.CastBranch{})
 	if !ok {
 		panic("validated prepared spell targets could not be segmented")
 	}
@@ -671,13 +672,21 @@ func (e *Engine) canCastSpellFromZoneWithKicker(g *game.Game, playerID game.Play
 }
 
 func (e *Engine) canCastSpellFaceFromZoneWithKicker(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int, kickerPaid bool) bool {
-	return e.canCastSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, targets, xValue, chosenModes, effectiveKickerCount(kickerPaid, 0), false)
+	return e.canCastSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, targets, xValue, chosenModes, effectiveKickerCount(kickerPaid, 0), false, false)
+}
+
+// canCastGiftSpellFaceFromZone validates a cast whose Gift keyword action
+// promises a gift (CR 702.171). Promising a gift activates the spell's
+// gift-promised target specs, so its targets are validated on the promised
+// branch rather than the default branch.
+func (e *Engine) canCastGiftSpellFaceFromZone(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int) bool {
+	return e.canCastSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, targets, xValue, chosenModes, 0, false, true)
 }
 
 // canCastSpellFaceFromZoneWithMultikick validates a Multikicker cast whose
 // kicker cost is paid kickerCount times (CR 702.32).
 func (e *Engine) canCastSpellFaceFromZoneWithMultikick(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int, kickerCount int) bool {
-	return e.canCastSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, targets, xValue, chosenModes, kickerCount, false)
+	return e.canCastSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, targets, xValue, chosenModes, kickerCount, false, false)
 }
 
 // effectiveKickerCount resolves the number of times the kicker cost is paid from
@@ -698,14 +707,15 @@ func (e *Engine) canCastOverloadedSpellFaceFromZone(g *game.Game, playerID game.
 }
 
 func (e *Engine) canCastOverloadedSpellFaceFromZoneWithOptions(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, xValue int, chosenModes []int, kickerPaid bool) bool {
-	return e.canCastSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, nil, xValue, chosenModes, effectiveKickerCount(kickerPaid, 0), true)
+	return e.canCastSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, nil, xValue, chosenModes, effectiveKickerCount(kickerPaid, 0), true, false)
 }
 
-func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int, kickerCount int, overloaded bool) bool {
+func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int, kickerCount int, overloaded bool, giftPromised bool) bool {
 	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer {
 		return false
 	}
 	kickerPaid := kickerCount > 0
+	branch := game.CastBranch{GiftPromised: giftPromised, Kicked: kickerPaid}
 	if xValue < 0 {
 		return false
 	}
@@ -765,13 +775,13 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 		!additionalCostsUseX(spellDef.AdditionalCosts) {
 		return false
 	}
-	if !modesValidForSpellAt(g, playerID, announcementDef, chosenModes) || !isSupportedSpell(spellDef) || !targetsValidForSpell(g, playerID, announcementDef, chosenModes, targets) {
+	if !modesValidForSpellAt(g, playerID, announcementDef, chosenModes) || !isSupportedSpell(spellDef) || !targetsValidForSpell(g, playerID, announcementDef, chosenModes, targets, branch) {
 		return false
 	}
-	if !spellTargetCountsMatchX(g, playerID, announcementDef, chosenModes, targets, xValue) {
+	if !spellTargetCountsMatchX(g, playerID, announcementDef, chosenModes, targets, xValue, branch) {
 		return false
 	}
-	if !spellTargetsSatisfyManaValueX(g, playerID, announcementDef, chosenModes, targets, xValue) {
+	if !spellTargetsSatisfyManaValueX(g, playerID, announcementDef, chosenModes, targets, xValue, branch) {
 		return false
 	}
 	if !canCastAtCurrentTiming(g, playerID, spellDef) {
@@ -787,6 +797,9 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 		return false
 	}
 	if kickerPaid && !spellHasKicker(spellDef) {
+		return false
+	}
+	if giftPromised && !spellHasGift(spellDef) {
 		return false
 	}
 	if kickerCount > 1 && !spellHasMultikicker(spellDef) {

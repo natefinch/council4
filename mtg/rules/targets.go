@@ -36,8 +36,8 @@ type targetChoiceResult struct {
 	err error
 }
 
-func targetChoicesForSpell(g *game.Game, controller game.PlayerID, card *game.CardDef, chosenModes []int) targetChoiceResult {
-	specs := spellTargetSpecs(card, chosenModes)
+func targetChoicesForSpell(g *game.Game, controller game.PlayerID, card *game.CardDef, chosenModes []int, branch game.CastBranch) targetChoiceResult {
+	specs := spellTargetSpecs(card, chosenModes, branch)
 	return targetChoicesForSpecs(g, controller, card, 0, game.Event{}, specs)
 }
 
@@ -299,8 +299,8 @@ func targetCombinations(candidates []game.Target, count int) [][]game.Target {
 	return result
 }
 
-func (e *Engine) completeSpellAnnouncementTargets(g *game.Game, controller game.PlayerID, card *game.CardDef, chosenModes []int, targets []game.Target, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]game.Target, bool) {
-	return e.completeAnnouncementTargets(g, controller, card, 0, spellTargetSpecs(card, chosenModes), targets, agents, log)
+func (e *Engine) completeSpellAnnouncementTargets(g *game.Game, controller game.PlayerID, card *game.CardDef, chosenModes []int, targets []game.Target, agents [game.NumPlayers]PlayerAgent, log *TurnLog, branch game.CastBranch) ([]game.Target, bool) {
+	return e.completeAnnouncementTargets(g, controller, card, 0, spellTargetSpecs(card, chosenModes, branch), targets, agents, log)
 }
 
 func (e *Engine) completeAbilityAnnouncementTargets(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, body game.Ability, targets []game.Target, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]game.Target, bool) {
