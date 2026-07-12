@@ -140,6 +140,12 @@ func renderDynamicValue(value game.DynamicValue) (string, error) {
 	if value.Offset != 0 {
 		fields += fmt.Sprintf(", Offset: %d", value.Offset)
 	}
+	if value.LinkedKey != "" {
+		fields += fmt.Sprintf(", LinkedKey: game.LinkedKey(%q)", string(value.LinkedKey))
+	}
+	if value.LinkedObjectScoped {
+		fields += ", LinkedObjectScoped: true"
+	}
 	if value.Subtype != "" {
 		fields += fmt.Sprintf(", Subtype: %s", SubtypeToLiteral(string(value.Subtype), []string{"Land"}))
 	}
@@ -197,6 +203,8 @@ func dynamicValueKindLiteral(kind game.DynamicValueKind) string {
 		return "game.DynamicValueControllerColorPermanentCount"
 	case game.DynamicValueControllerCardsDrawnThisTurn:
 		return "game.DynamicValueControllerCardsDrawnThisTurn"
+	case game.DynamicValueSourceLinkedExileCount:
+		return "game.DynamicValueSourceLinkedExileCount"
 	default:
 		return "game.DynamicValueNone"
 	}

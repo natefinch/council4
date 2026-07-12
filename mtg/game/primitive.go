@@ -1277,6 +1277,12 @@ type MoveCard struct {
 	// exile with <name> counters on them". It is unset for every move that places
 	// no counter, and meaningful only for the single-card exile form.
 	Counter opt.V[counter.Kind]
+	// PublishLinked remembers a successfully exiled single card under a
+	// source-scoped linked key.
+	PublishLinked LinkedKey
+	// PublishLinkedObjectScoped keys PublishLinked by the source permanent's
+	// current object identity, so a re-entered source starts with a fresh pool.
+	PublishLinkedObjectScoped bool
 }
 
 // MoveCommander moves Player's commander(s) from the command zone to

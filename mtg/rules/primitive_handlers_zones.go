@@ -1361,6 +1361,17 @@ func handleMoveCard(r *effectResolver, prim game.MoveCard) effectResolved {
 	if res.succeeded && prim.Counter.Exists && r.game.Players[card.Owner].Exile.Contains(cardID) {
 		r.game.AddExileCounter(cardID, prim.Counter.Val, 1)
 	}
+	if res.succeeded && prim.PublishLinked != "" && r.game.Players[card.Owner].Exile.Contains(cardID) {
+		key := linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked))
+		if prim.PublishLinkedObjectScoped {
+			key = linkedObjectByObjectKey(r.game, r.obj, string(prim.PublishLinked))
+		}
+		rememberLinkedObject(
+			r.game,
+			key,
+			game.LinkedObjectRef{CardID: cardID, CardZoneVersion: card.ZoneVersion},
+		)
+	}
 	return res
 }
 

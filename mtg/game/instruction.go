@@ -262,12 +262,20 @@ func validateInstructionSequenceWithLinked(
 		}
 		if refs.publishesLinked != "" {
 			if prev, dup := publishedLinked[refs.publishesLinked]; dup {
-				return fmt.Errorf("instruction[%d]: duplicate linked key %q (first used at index %d)", i, refs.publishesLinked, prev)
+				if !aggregateLinkedPublishers(seq[prev].Primitive, instr.Primitive) {
+					return fmt.Errorf("instruction[%d]: duplicate linked key %q (first used at index %d)", i, refs.publishesLinked, prev)
+				}
 			}
 			publishedLinked[refs.publishesLinked] = i
 		}
 	}
 	return nil
+}
+
+func aggregateLinkedPublishers(first, second Primitive) bool {
+	_, firstMove := first.(MoveCard)
+	_, secondMove := second.(MoveCard)
+	return firstMove && secondMove
 }
 
 func validateLinkedCardCondition(idx int, cond opt.V[CardSelection], published, siblingLinked map[LinkedKey]int) error {

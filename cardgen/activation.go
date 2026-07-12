@@ -182,6 +182,7 @@ func lowerActivationShell(
 		!ability.ProgenitorIconNextFlash &&
 		!ability.SelesnyaEulogistPopulate &&
 		ability.LifeCharacteristicExchange == nil &&
+		!ability.UnlicensedHearseExile &&
 		!activationReferencesSupported(bodyContent) {
 		return loweredActivationShell{}, activationDiagnostic(
 			original,
