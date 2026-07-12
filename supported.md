@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,574 of 32,501 cards eligible for paper support (54.1%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,575 of 32,501 cards eligible for paper support (54.1%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2520,6 +2520,7 @@ Council4 currently supports **17,574 of 32,501 cards eligible for paper support 
 - Chimil, the Inner Sun
 - Chimney Rabble
 - Chisei, Heart of Oceans
+- Chishiro, the Shattered Blade
 - Chitinous Cloak
 - Chitinous Graspling
 - Chittering Dispatcher
