@@ -183,9 +183,13 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 		matches = matches && cond.SourceCounterKindKnown && ctx.source != nil &&
 			ctx.source.Counters.Get(cond.SourceCounterKind) >= cond.SourceCountersAtLeast
 	}
+	if cond.SourceAttachedCombatCounterpartSubtypes != [2]types.Sub{} {
+		matches = matches && sourceAttachedCombatCounterpartMatches(g, ctx.source, cond.SourceAttachedCombatCounterpartSubtypes)
+	}
 	if cond.SourceNotMonstrous {
 		matches = matches && ctx.source != nil && !ctx.source.Monstrous
 	}
+
 	if cond.SourceSaddled {
 		matches = matches && ctx.source != nil && ctx.source.Saddled
 	}
@@ -290,6 +294,34 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 		return !matches
 	}
 	return matches
+}
+
+func sourceAttachedCombatCounterpartMatches(g *game.Game, source *game.Permanent, subtypes [2]types.Sub) bool {
+	if source == nil || !source.AttachedTo.Exists || g.Combat == nil {
+		return false
+	}
+	attachedID := source.AttachedTo.Val
+	for _, block := range g.Combat.Blockers {
+		var counterpartID game.ObjectID
+		switch {
+		case block.Blocker == attachedID:
+			counterpartID = block.Blocking
+		case block.Blocking == attachedID:
+			counterpartID = block.Blocker
+		default:
+			continue
+		}
+		counterpart, ok := permanentByObjectID(g, counterpartID)
+		if !ok {
+			continue
+		}
+		for _, subtype := range subtypes {
+			if subtype != "" && permanentHasSubtype(g, counterpart, subtype) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // anyAliveOpponentIsMonarch reports whether any of the controller's alive

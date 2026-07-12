@@ -43,6 +43,7 @@ func compileAbility(
 		AugurOfAutumnCoven:                          ability.AugurOfAutumnCoven,
 		EvolutionaryLeapRevealUntil:                 ability.EvolutionaryLeapRevealUntil,
 		FlameshadowConjuringCopy:                    ability.FlameshadowConjuringCopy,
+		StingCombatFirstStrike:                      ability.StingCombatFirstStrike,
 	}
 	if ability.AbilityWord != nil {
 		compiled.AbilityWord = ability.AbilityWord.Label
@@ -224,6 +225,7 @@ func compileAbility(
 		!compiled.CloudKeyChoice &&
 		!compiled.CloudKeyReduction &&
 		!compiled.AugurOfAutumnCoven &&
+		!compiled.StingCombatFirstStrike &&
 		compiled.KeywordShare == nil &&
 		len(compiled.Content.Effects) == 0 && len(compiled.Content.Keywords) == 0 &&
 		!legacyEffectsPresent(ability.Sentences) &&

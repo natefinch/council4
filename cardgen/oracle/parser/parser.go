@@ -154,6 +154,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitAugurOfAutumn(document.Abilities)
 	emitEvolutionaryLeapRevealUntil(document.Abilities)
 	emitFlameshadowConjuring(document.Abilities)
+	emitStingCombatFirstStrike(document.Abilities)
 	emitSelfNameStaticRules(document.Abilities)
 	emitCost(document.Abilities)
 	emitOptional(document.Abilities)
@@ -268,6 +269,14 @@ func emitFlameshadowConjuring(abilities []Ability) {
 	const text = "Whenever a nontoken creature you control enters, you may pay {R}. If you do, create a token that's a copy of that creature. That token gains haste. Exile it at the beginning of the next end step."
 	for i := range abilities {
 		abilities[i].FlameshadowConjuringCopy =
+			strings.EqualFold(strings.TrimSpace(abilities[i].Text), text)
+	}
+}
+
+func emitStingCombatFirstStrike(abilities []Ability) {
+	const text = "Equipped creature has first strike as long as it's blocking or blocked by a Goblin or Orc."
+	for i := range abilities {
+		abilities[i].StingCombatFirstStrike =
 			strings.EqualFold(strings.TrimSpace(abilities[i].Text), text)
 	}
 }

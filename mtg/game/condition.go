@@ -85,7 +85,10 @@ type Condition struct {
 	SourceCounterKind      counter.Kind
 	SourceCounterKindKnown bool
 	SourceCountersAtLeast  int
-	SourceNotMonstrous     bool
+	// SourceAttachedCombatCounterpartSubtypes requires the source's attached
+	// permanent to be blocking or blocked by a creature with either subtype.
+	SourceAttachedCombatCounterpartSubtypes [2]types.Sub
+	SourceNotMonstrous                      bool
 	// SourceSaddled requires the condition source Mount to be saddled
 	// (CR 702.166), as in "if this creature is saddled". Negate models the
 	// "isn't saddled" wording.
@@ -333,6 +336,7 @@ func (c *Condition) Empty() bool {
 		c.SourceLevelCountersAtLeast == 0 &&
 		c.SourceLevelCountersLessThan == 0 &&
 		c.SourceCountersAtLeast == 0 &&
+		c.SourceAttachedCombatCounterpartSubtypes == [2]types.Sub{} &&
 		!c.SourceNotMonstrous &&
 		!c.SourceSaddled &&
 		!c.SourceTributeNotPaid &&
