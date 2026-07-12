@@ -64,7 +64,7 @@ func lowerGroupKeywordGrantSpell(
 		ability.Optional {
 		return nil, game.GroupReference{}, false
 	}
-	lowered, diagnostic := lowerExecutableAbility(cardName, false, nil, ability, syntax)
+	lowered, diagnostic := lowerExecutableAbility(cardName, false, nil, -1, ability, syntax)
 	if diagnostic != nil ||
 		!lowered.complete(ability, syntax) ||
 		!lowered.spellAbility.Exists ||

@@ -1025,7 +1025,7 @@ func attachTokenGrantedAbility(def *game.CardDef, granted *parser.StaticGrantedA
 		len(innerComp.Syntax.Abilities) != 1 {
 		return false
 	}
-	lowered, diagnostic := lowerExecutableAbility("", false, nil, innerComp.Abilities[0], &innerComp.Syntax.Abilities[0])
+	lowered, diagnostic := lowerExecutableAbility("", false, nil, -1, innerComp.Abilities[0], &innerComp.Syntax.Abilities[0])
 	if diagnostic != nil {
 		return false
 	}

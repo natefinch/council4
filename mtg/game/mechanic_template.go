@@ -617,6 +617,48 @@ func LandcyclingActivatedAbility(manaCost cost.Mana, spec SearchSpec) ActivatedA
 	}
 }
 
+// TransmuteActivatedAbility builds the complete activated ability for Transmute
+// (CR 702.49): "<cost>, Discard this card: Search your library for a card with
+// the same mana value as this card, reveal it, put it into your hand, then
+// shuffle. Transmute only as a sorcery." The ability functions only while the
+// card is in its owner's hand; its activation cost is the transmute mana cost
+// plus discarding the card, and it is activated only at sorcery speed. The
+// searched-for mana value is sourceManaValue, the discarded card's own printed
+// mana value, so the caller bakes the card's fixed mana value into the exact
+// search filter. The search is qualified, so it may fail to find a card; the
+// source card remains discarded either way.
+func TransmuteActivatedAbility(manaCost cost.Mana, sourceManaValue int) ActivatedAbility {
+	activationCost := append(cost.Mana(nil), manaCost...)
+	keywordCost := append(cost.Mana(nil), manaCost...)
+	return ActivatedAbility{
+		Text:           "Transmute " + manaCost.String(),
+		ManaCost:       opt.Val(activationCost),
+		ZoneOfFunction: zone.Hand,
+		Timing:         SorceryOnly,
+		AdditionalCosts: []cost.Additional{{
+			Kind:   cost.AdditionalDiscard,
+			Text:   "Discard this card",
+			Amount: 1,
+			Source: zone.Hand,
+		}},
+		KeywordAbilities: []KeywordAbility{
+			TransmuteKeyword{Cost: keywordCost},
+		},
+		Content: Mode{Sequence: []Instruction{{
+			Primitive: Search{
+				Player: ControllerReference(),
+				Spec: SearchSpec{
+					SourceZone:  zone.Library,
+					Destination: zone.Hand,
+					Filter:      Selection{ManaValue: opt.Val(compare.Int{Op: compare.Equal, Value: sourceManaValue})},
+					Reveal:      true,
+				},
+				Amount: Fixed(1),
+			},
+		}}}.Ability(),
+	}
+}
+
 // CumulativeUpkeepTriggeredAbility builds the complete upkeep trigger for a
 // fixed mana cost.
 func CumulativeUpkeepTriggeredAbility(manaCost cost.Mana) TriggeredAbility {

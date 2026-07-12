@@ -63,6 +63,14 @@ func (r Renderer) renderActivatedAbility(ctx *renderCtx, ability *game.Activated
 		}
 		return fmt.Sprintf("game.ScavengeActivatedAbility(%s)", renderedCost), nil
 	}
+	if manaCost, sourceManaValue, ok := game.ActivatedBodyTransmuteParams(ability); ok &&
+		reflect.DeepEqual(*ability, game.TransmuteActivatedAbility(manaCost, sourceManaValue)) {
+		renderedCost, err := r.renderManaCost(ctx, manaCost)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.TransmuteActivatedAbility(%s, %d)", renderedCost, sourceManaValue), nil
+	}
 	if manaCost, ok := game.ActivatedBodyUnearthCost(ability); ok &&
 		reflect.DeepEqual(*ability, game.UnearthActivatedAbility(manaCost)) {
 		renderedCost, err := r.renderManaCost(ctx, manaCost)

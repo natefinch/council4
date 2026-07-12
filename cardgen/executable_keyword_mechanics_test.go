@@ -120,6 +120,62 @@ func TestGenerateExecutableCardSourceScavenge(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceTransmute(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Muddle the Mixture",
+		Layout:     "normal",
+		ManaCost:   "{U}{U}",
+		TypeLine:   "Instant",
+		OracleText: "Counter target instant or sorcery spell.\nTransmute {1}{U}{U} ({1}{U}{U}, Discard this card: Search your library for a card with the same mana value as this card, reveal it, put it into your hand, then shuffle. Transmute only as a sorcery.)",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "m")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"ActivatedAbilities: []game.ActivatedAbility",
+		"game.TransmuteActivatedAbility(cost.Mana{cost.O(1), cost.U, cost.U}, 2)",
+		// The reminder text is emitted verbatim in OracleText, not parsed into effects.
+		"Search your library for a card with the same mana value as this card, reveal it, put it into your hand, then shuffle. Transmute only as a sorcery.",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+// TestGenerateExecutableCardSourceTransmuteLandManaValueZero proves a land with
+// Transmute (Tolaria West) bakes a mana value of 0 into the search and preserves
+// its distinct numeric reminder wording verbatim.
+func TestGenerateExecutableCardSourceTransmuteLandManaValueZero(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Tolaria West",
+		Layout:     "normal",
+		TypeLine:   "Land",
+		OracleText: "This land enters tapped.\n{T}: Add {U}.\nTransmute {1}{U}{U} ({1}{U}{U}, Discard this card: Search your library for a card with mana value 0, reveal it, put it into your hand, then shuffle. Transmute only as a sorcery.)",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.TransmuteActivatedAbility(cost.Mana{cost.O(1), cost.U, cost.U}, 0)",
+		"Search your library for a card with mana value 0, reveal it, put it into your hand, then shuffle. Transmute only as a sorcery.",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceDredge(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

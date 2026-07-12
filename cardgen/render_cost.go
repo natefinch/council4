@@ -196,6 +196,13 @@ func (r Renderer) renderKeywordAbility(ctx *renderCtx, keyword game.KeywordAbili
 		}
 		return fmt.Sprintf("game.CyclingKeyword{Cost: %s}", cyclingCost), nil
 	}
+	if transmute, ok := keyword.(game.TransmuteKeyword); ok {
+		transmuteCost, err := r.renderManaCost(ctx, transmute.Cost)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.TransmuteKeyword{Cost: %s}", transmuteCost), nil
+	}
 	if ninjutsu, ok := keyword.(game.NinjutsuKeyword); ok {
 		ninjutsuCost, err := r.renderManaCost(ctx, ninjutsu.Cost)
 		if err != nil {

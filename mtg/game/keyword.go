@@ -4,6 +4,7 @@ import (
 	"slices"
 
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
 )
@@ -60,6 +61,14 @@ type CyclingKeyword struct {
 
 // ScavengeKeyword parameterizes Scavenge for its graveyard-activation mana cost.
 type ScavengeKeyword struct {
+	Cost cost.Mana
+}
+
+// TransmuteKeyword parameterizes Transmute for its hand-activation mana cost
+// (CR 702.49). While this card is in its owner's hand, paying Cost and
+// discarding the card at sorcery speed searches the library for a card whose
+// mana value equals the discarded card's mana value.
+type TransmuteKeyword struct {
 	Cost cost.Mana
 }
 
@@ -264,6 +273,7 @@ func (ProtectionKeyword) isKeywordAbility()       {}
 func (ToxicKeyword) isKeywordAbility()            {}
 func (HideawayKeyword) isKeywordAbility()         {}
 func (ScavengeKeyword) isKeywordAbility()         {}
+func (TransmuteKeyword) isKeywordAbility()        {}
 func (UnearthKeyword) isKeywordAbility()          {}
 func (FabricateKeyword) isKeywordAbility()        {}
 func (RampageKeyword) isKeywordAbility()          {}
@@ -301,6 +311,7 @@ func (ProtectionKeyword) keyword() Keyword { return Protection }
 func (ToxicKeyword) keyword() Keyword      { return Toxic }
 func (HideawayKeyword) keyword() Keyword   { return Hideaway }
 func (ScavengeKeyword) keyword() Keyword   { return Scavenge }
+func (TransmuteKeyword) keyword() Keyword  { return Transmute }
 func (UnearthKeyword) keyword() Keyword    { return Unearth }
 func (FabricateKeyword) keyword() Keyword  { return Fabricate }
 func (RampageKeyword) keyword() Keyword    { return Rampage }
@@ -397,6 +408,10 @@ func (ability ProtectionKeyword) cloneKeywordAbility() KeywordAbility {
 func (ability ToxicKeyword) cloneKeywordAbility() KeywordAbility    { return ability }
 func (ability HideawayKeyword) cloneKeywordAbility() KeywordAbility { return ability }
 func (ability ScavengeKeyword) cloneKeywordAbility() KeywordAbility {
+	ability.Cost = append(cost.Mana(nil), ability.Cost...)
+	return ability
+}
+func (ability TransmuteKeyword) cloneKeywordAbility() KeywordAbility {
 	ability.Cost = append(cost.Mana(nil), ability.Cost...)
 	return ability
 }
@@ -584,6 +599,33 @@ func ActivatedBodyScavengeCost(body *ActivatedAbility) (cost.Mana, bool) {
 		return nil, false
 	}
 	return scavenge.Cost, true
+}
+
+// ActivatedBodyTransmuteParams returns the Transmute activation cost and the
+// searched-for mana value from a Transmute activated body, reporting whether the
+// body carries the Transmute keyword in the exact template shape. Callers
+// confirm the whole body with TransmuteActivatedAbility.
+func ActivatedBodyTransmuteParams(body *ActivatedAbility) (cost.Mana, int, bool) {
+	ka, ok := BodyKeywordAbility(body, Transmute)
+	if !ok {
+		return nil, 0, false
+	}
+	transmute, ok := ka.(TransmuteKeyword)
+	if !ok {
+		return nil, 0, false
+	}
+	if len(body.Content.Modes) != 1 || len(body.Content.Modes[0].Sequence) != 1 {
+		return nil, 0, false
+	}
+	search, ok := body.Content.Modes[0].Sequence[0].Primitive.(Search)
+	if !ok {
+		return nil, 0, false
+	}
+	manaValue := search.Spec.Filter.ManaValue
+	if !manaValue.Exists || manaValue.Val.Op != compare.Equal {
+		return nil, 0, false
+	}
+	return transmute.Cost, manaValue.Val.Value, true
 }
 
 // ActivatedBodyUnearthCost returns the Unearth cost from an activated ability.

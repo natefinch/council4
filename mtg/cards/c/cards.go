@@ -101,6 +101,7 @@ var Cards = []cardset.Entry{
 	{Name: "Cloud Sprite", New: CloudSprite},
 	{Name: "Cloudchaser Kestrel", New: CloudchaserKestrel},
 	{Name: "Clout of the Dominus", New: CloutOfTheDominus},
+	{Name: "Clutch of the Undercity", New: ClutchOfTheUndercity},
 	{Name: "Coal Stoker", New: CoalStoker},
 	{Name: "Coastal Wizard", New: CoastalWizard},
 	{Name: "Coati Scavenger", New: CoatiScavenger},

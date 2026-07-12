@@ -63,7 +63,7 @@ func lowerPactSpellAbilities(cardName string, compilation compiler.Compilation) 
 	if !ok {
 		return game.AbilityContent{}, false
 	}
-	lowered, diagnostic := lowerExecutableAbility(cardName, false, nil, mainAbility, &compilation.Syntax.Abilities[0])
+	lowered, diagnostic := lowerExecutableAbility(cardName, false, nil, -1, mainAbility, &compilation.Syntax.Abilities[0])
 	if diagnostic != nil || !lowered.complete(mainAbility, &compilation.Syntax.Abilities[0]) {
 		return game.AbilityContent{}, false
 	}

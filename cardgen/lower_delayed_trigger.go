@@ -68,7 +68,7 @@ func lowerDelayedTriggerInner(granted *parser.StaticGrantedAbilitySyntax) (game.
 		len(innerComp.Syntax.Abilities) != 1 {
 		return game.TriggeredAbility{}, false
 	}
-	lowered, diagnostic := lowerExecutableAbility("", false, nil, innerComp.Abilities[0], &innerComp.Syntax.Abilities[0])
+	lowered, diagnostic := lowerExecutableAbility("", false, nil, -1, innerComp.Abilities[0], &innerComp.Syntax.Abilities[0])
 	if diagnostic != nil || !lowered.triggeredAbility.Exists {
 		return game.TriggeredAbility{}, false
 	}
@@ -253,7 +253,7 @@ func lowerDelayedDiesInner(granted *parser.StaticGrantedAbilitySyntax) (game.Tri
 		len(innerComp.Syntax.Abilities) != 1 {
 		return game.TriggeredAbility{}, false
 	}
-	lowered, diagnostic := lowerExecutableAbility("", false, nil, innerComp.Abilities[0], &innerComp.Syntax.Abilities[0])
+	lowered, diagnostic := lowerExecutableAbility("", false, nil, -1, innerComp.Abilities[0], &innerComp.Syntax.Abilities[0])
 	if diagnostic != nil || !lowered.triggeredAbility.Exists {
 		return game.TriggeredAbility{}, false
 	}

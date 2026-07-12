@@ -220,6 +220,17 @@ const (
 	// HasKeyword(Mobilize) reports true. Appended at the end of the enum so
 	// existing keyword ordinals are unchanged.
 	Mobilize
+	// Transmute (CR 702.49) is printed on some cards: "Transmute <cost>
+	// (<cost>, Discard this card: Search your library for a card with the same
+	// mana value as this card, reveal it, put it into your hand, then shuffle.
+	// Transmute only as a sorcery.)" It is modeled by TransmuteKeyword, which
+	// carries the transmute mana cost, inside the activated ability built by
+	// TransmuteActivatedAbility. The rules layer reads it on a card in its
+	// owner's hand to offer the sorcery-speed activation: pay the mana cost and
+	// discard the card, then search the library for a card whose mana value
+	// equals the discarded card's mana value. Appended at the end of the enum so
+	// existing keyword ordinals are unchanged.
+	Transmute
 	// KeywordCount is one greater than the largest real keyword value. It sizes
 	// compact keyword sets; it is not itself a keyword.
 	KeywordCount

@@ -69,7 +69,7 @@ func loweredSingleTargetDamageInstruction(
 	base compiler.CompiledAbility,
 	syntax *parser.Ability,
 ) (game.Damage, game.AbilityContent, bool) {
-	lowered, diagnostic := lowerExecutableAbility(cardName, false, nil, base, syntax)
+	lowered, diagnostic := lowerExecutableAbility(cardName, false, nil, -1, base, syntax)
 	if diagnostic != nil || !lowered.complete(base, syntax) {
 		return game.Damage{}, game.AbilityContent{}, false
 	}

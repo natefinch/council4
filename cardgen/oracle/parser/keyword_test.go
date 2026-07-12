@@ -34,6 +34,7 @@ func TestParseKeywordVocabularyMeaning(t *testing.T) {
 		"Protection": KeywordProtection, "Prowess": KeywordProwess, "Read ahead": KeywordReadAhead,
 		"Reach": KeywordReach, "Reconfigure": KeywordReconfigure, "Shroud": KeywordShroud, "Skulk": KeywordSkulk, "Split second": KeywordSplitSecond, "Storm": KeywordStorm,
 		"Suspend": KeywordSuspend, "Toxic": KeywordToxic, "Trample": KeywordTrample, "Undying": KeywordUndying,
+		"Transmute": KeywordTransmute,
 		"Unleash":   KeywordUnleash,
 		"Vigilance": KeywordVigilance, "Ward": KeywordWard, "Wither": KeywordWither, "Riot": KeywordRiot,
 		"Landcycling": KeywordLandcycling, "Basic landcycling": KeywordBasicLandcycling, "Artifact landcycling": KeywordArtifactLandcycling,
@@ -378,6 +379,31 @@ func TestParseLandcyclingKeywords(t *testing.T) {
 		if keywords[0].Parameter.Kind != KeywordParameterManaCost ||
 			len(keywords[0].Parameter.ManaCost()) == 0 {
 			t.Errorf("%q parameter = %+v; want mana cost", test.source, keywords[0].Parameter)
+		}
+	}
+}
+
+func TestParseTransmuteKeywordManaCost(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		want   cost.Mana
+	}{
+		{"Transmute {1}{U}{U}", cost.Mana{cost.O(1), cost.U, cost.U}},
+		{"Transmute {1}{B}{B}", cost.Mana{cost.O(1), cost.B, cost.B}},
+		{"Transmute {1}{U}{B}", cost.Mana{cost.O(1), cost.U, cost.B}},
+	}
+	for _, test := range tests {
+		keywords := keywordsFor(t, test.source)
+		if len(keywords) != 1 {
+			t.Fatalf("%q keywords = %+v; want one", test.source, keywords)
+		}
+		if keywords[0].Kind != KeywordTransmute {
+			t.Errorf("%q kind = %v; want %v", test.source, keywords[0].Kind, KeywordTransmute)
+		}
+		if keywords[0].Parameter.Kind != KeywordParameterManaCost ||
+			!slices.Equal(keywords[0].Parameter.ManaCost(), test.want) {
+			t.Errorf("%q parameter = %+v; want mana cost %+v", test.source, keywords[0].Parameter, test.want)
 		}
 	}
 }

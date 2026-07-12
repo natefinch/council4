@@ -91,6 +91,11 @@ const (
 	KeywordSplitSecond KeywordKind = "KeywordSplitSecond"
 	KeywordStorm       KeywordKind = "KeywordStorm"
 	KeywordSuspend     KeywordKind = "KeywordSuspend"
+	// KeywordTransmute is the Transmute keyword (CR 702.49): an activated
+	// ability that functions only while the card is in its owner's hand,
+	// discarding the card and paying its mana cost to search the library, at
+	// sorcery speed, for a card with the same mana value as this card.
+	KeywordTransmute KeywordKind = "KeywordTransmute"
 	// KeywordHideaway is the Hideaway N land keyword (CR 702.75). Its integer
 	// parameter is the number of cards looked at from the top of the library
 	// when the permanent enters, one of which is exiled face down to be played
@@ -284,6 +289,7 @@ var keywordNames = map[KeywordKind]string{
 	KeywordSplitSecond:         "Split second",
 	KeywordStorm:               "Storm",
 	KeywordSuspend:             "Suspend",
+	KeywordTransmute:           "Transmute",
 	KeywordHideaway:            "Hideaway",
 	KeywordToxic:               "Toxic",
 	KeywordTrample:             "Trample",
@@ -431,6 +437,7 @@ var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordSkulk, Words: []string{"skulk"}},
 	{Kind: KeywordStorm, Words: []string{"storm"}},
 	{Kind: KeywordSuspend, Words: []string{"suspend"}},
+	{Kind: KeywordTransmute, Words: []string{"transmute"}},
 	{Kind: KeywordHideaway, Words: []string{"hideaway"}},
 	{Kind: KeywordToxic, Words: []string{"toxic"}},
 	{Kind: KeywordTrample, Words: []string{"trample"}},
