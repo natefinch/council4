@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,576 of 32,501 cards eligible for paper support (54.1%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,579 of 32,501 cards eligible for paper support (54.1%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1076,6 +1076,7 @@ Council4 currently supports **17,576 of 32,501 cards eligible for paper support 
 - Banehound
 - Baneslayer Angel
 - Banish from Edoras
+- Banish to Another Universe
 - Banisher Priest
 - Banishing Betrayal
 - Banishing Light
@@ -4776,6 +4777,7 @@ Council4 currently supports **17,576 of 32,501 cards eligible for paper support 
 - Exalted Angel
 - Exava, Rakdos Blood Witch
 - Excalibur II
+- Excalibur, Sword of Eden
 - Excavated Wall
 - Excavating Anurid
 - Excavation Elephant
@@ -15754,6 +15756,7 @@ Council4 currently supports **17,576 of 32,501 cards eligible for paper support 
 - Traveling Botanist
 - Traveling Minister
 - Traveling Philosopher
+- Traverse Eternity
 - Traverse the Outlands
 - Treacherous Blessing
 - Treachery
