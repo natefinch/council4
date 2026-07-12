@@ -872,6 +872,42 @@ func lowerExecutableAbility(
 	ability compiler.CompiledAbility,
 	syntax *parser.Ability,
 ) (abilityLowering, *shared.Diagnostic) {
+	if ability.SunderingGrowthPopulate {
+		return abilityLowering{
+			spellAbility: opt.Val(game.AbilityContent{
+				MinModes: 1,
+				MaxModes: 1,
+				Modes: []game.Mode{{
+					Targets: []game.TargetSpec{{
+						MinTargets: 1,
+						MaxTargets: 1,
+						Constraint: "target artifact or enchantment",
+						Allow:      game.TargetAllowPermanent,
+						Selection: opt.Val(game.Selection{
+							RequiredTypesAny: []types.Card{types.Artifact, types.Enchantment},
+						}),
+					}},
+					Sequence: []game.Instruction{
+						{Primitive: game.Destroy{Object: game.TargetPermanentReference(0)}},
+						{Primitive: game.CreateToken{
+							Amount: game.Fixed(1),
+							Source: game.TokenCopyOf(game.TokenCopySpec{
+								Source: game.TokenCopySourceChosenControlledCreatureToken,
+							}),
+						}},
+					},
+				}},
+			}),
+			consumed: semanticConsumption{
+				conditions: len(ability.Content.Conditions),
+				effects:    len(ability.Content.Effects),
+				keywords:   len(ability.Content.Keywords),
+				references: len(ability.Content.References),
+				targets:    len(ability.Content.Targets),
+			},
+			sourceSpans: []shared.Span{ability.Span},
+		}, nil
+	}
 	if ability.EnergyTapMana {
 		const tapped = game.ResultKey("energy-tap-target")
 		return abilityLowering{

@@ -548,10 +548,14 @@ func handleCreateToken(r *effectResolver, prim game.CreateToken) effectResolved 
 	if spec, ok := prim.Source.TokenCopy(); ok && spec.Source == game.TokenCopySourceChosenFromTriggerBatch {
 		return r.createCopyTokenFromTriggerBatch(prim, spec, recipient)
 	}
+	if spec, ok := prim.Source.TokenCopy(); ok && spec.Source == game.TokenCopySourceChosenControlledCreatureToken {
+		return r.populate(prim, spec, recipient)
+	}
 	token, ok := r.typedTokenDefinition(prim.Source)
 	if !ok {
 		return res
 	}
+
 	if prim.Power.Exists && prim.Toughness.Exists {
 		sized := *token
 		sized.Power = opt.Val(game.PT{Value: r.quantity(prim.Power.Val)})
@@ -562,6 +566,7 @@ func handleCreateToken(r *effectResolver, prim game.CreateToken) effectResolved 
 	if !ok {
 		return res
 	}
+
 	if prim.EntryAttacking {
 		declareCreatedTokensAttacking(r.engine, r.game, recipient, created, r.agents, r.log)
 	}
@@ -583,6 +588,34 @@ func handleCreateToken(r *effectResolver, prim game.CreateToken) effectResolved 
 		}
 	}
 	res.succeeded = res.amount > 0
+	return res
+}
+
+func (r *effectResolver) populate(prim game.CreateToken, spec game.TokenCopySpec, recipient game.PlayerID) effectResolved {
+	res := effectResolved{accepted: true}
+	var candidates []*game.Permanent
+	for _, permanent := range r.game.Battlefield {
+		if permanent == nil || permanent.PhasedOut || !permanent.Token ||
+			effectiveController(r.game, permanent) != recipient ||
+			!permanentHasType(r.game, permanent, types.Creature) {
+			continue
+		}
+		candidates = append(candidates, permanent)
+	}
+	chosen, ok := r.chooseOnePermanentAmong(candidates, "Choose a creature token to populate")
+	if !ok {
+		return res
+	}
+	source, ok := permanentCopyDef(r.game, chosen)
+	if !ok {
+		return res
+	}
+	def, ok := applyTokenCopyOverrides(source, spec)
+	if !ok {
+		return res
+	}
+	_, ok = createTokenPermanentsCollectingWithChoices(r.engine, r.game, recipient, def, 1, prim.EntryTapped, r.agents, r.log)
+	res.succeeded = ok
 	return res
 }
 

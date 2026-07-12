@@ -1271,6 +1271,9 @@ const (
 	// ability's triggering event batch filtered by its own trigger pattern; it
 	// reads neither Object nor Group.
 	TokenCopySourceChosenFromTriggerBatch
+	// TokenCopySourceChosenControlledCreatureToken implements populate: the
+	// controller chooses a creature token they control to copy.
+	TokenCopySourceChosenControlledCreatureToken
 )
 
 // TokenCopySpec describes a token that starts as a copy of another object/card,
