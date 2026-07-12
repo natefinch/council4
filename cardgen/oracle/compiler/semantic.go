@@ -64,6 +64,23 @@ type Compilation struct {
 	Abilities []CompiledAbility
 }
 
+// LifeCharacteristicExchangeKind identifies the source characteristic exchanged
+// with a player's life total.
+type LifeCharacteristicExchangeKind uint8
+
+// Compiled life-characteristic exchange kinds.
+const (
+	LifeCharacteristicExchangeNone LifeCharacteristicExchangeKind = iota
+	LifeCharacteristicExchangeSourcePower
+	LifeCharacteristicExchangeSourceToughness
+)
+
+// CompiledLifeCharacteristicExchange is a text-blind exact exchange body.
+type CompiledLifeCharacteristicExchange struct {
+	Kind           LifeCharacteristicExchangeKind
+	TargetOpponent bool
+}
+
 // CompiledAbility is a source-spanned semantic ability. Shell semantics
 // (cost, trigger, timing, chapter numbers) are fields on CompiledAbility;
 // the ability's instruction content (targets, conditions, effects, keywords,
@@ -88,6 +105,7 @@ type CompiledAbility struct {
 	EnergyTapMana                               bool
 	SunderingGrowthPopulate                     bool
 	SelesnyaEulogistPopulate                    bool
+	LifeCharacteristicExchange                  *CompiledLifeCharacteristicExchange
 	// ExactSequence is a parser-recognized exact multi-instruction resolving
 	// body. When set, the normal target/condition/effect content is empty and
 	// lowering emits the fixed instruction template for the kind. It is declared
@@ -2065,6 +2083,10 @@ const (
 	// ApplyRule installing a RuleEffectCantBeSacrificed on the source permanent.
 	// Added last so existing kinds keep their wire values.
 	EffectCantBeSacrificed
+	// EffectExchange is recognized only for parser-owned exact life-total and
+	// source-characteristic exchanges. Added last so existing kinds keep their
+	// wire values.
+	EffectExchange
 )
 
 // DurationKind identifies common continuous-effect durations.

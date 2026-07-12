@@ -117,6 +117,10 @@ func appendPrimitiveAtoms(atoms []EffectAtom, primitive game.Primitive) []Effect
 		return append(atoms, quantityAtom(EffectLifeGained, p.Amount, affectedFromPlayer(p.Player)))
 	case game.LoseLife:
 		return append(atoms, quantityAtom(EffectLifeLost, p.Amount, affectedFromPlayer(p.Player)))
+	case game.ExchangeLifeTotalWithSourceCharacteristic:
+		// The exchange can gain or lose life and raises or lowers a source
+		// characteristic depending on runtime values, so it has no stable atom.
+		return atoms
 	case game.Damage:
 		return append(atoms, quantityAtom(EffectDamageDealt, p.Amount, AffectedTarget))
 	case game.Destroy:

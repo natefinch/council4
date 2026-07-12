@@ -1948,6 +1948,13 @@ func (p LoseLife) validatePrimitive(targets []TargetSpec, checkTargets bool) err
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 
+func (p ExchangeLifeTotalWithSourceCharacteristic) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.Characteristic != SourcePower && p.Characteristic != SourceToughness {
+		return errors.New("life-total exchange requires source power or toughness")
+	}
+	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
 func (p PlayerLosesGame) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if p.Player.Kind() == PlayerReferenceNone {
 		return errors.New("PlayerLosesGame requires a Player reference")

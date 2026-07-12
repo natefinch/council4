@@ -1177,6 +1177,7 @@ func handleLoseLife(r *effectResolver, prim game.LoseLife) effectResolved {
 	if perPlayer <= 0 {
 		return res
 	}
+
 	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
 		res.amount = 0
 		for _, playerID := range r.playerGroupMembers(prim.PlayerGroup) {
@@ -1186,10 +1187,73 @@ func handleLoseLife(r *effectResolver, prim game.LoseLife) effectResolved {
 		}
 		return res
 	}
+
 	playerID, ok := r.resolvePlayer(prim.Player)
 	if ok {
 		res.succeeded = loseLife(r.game, playerID, res.amount) > 0
 	}
+	return res
+}
+
+func handleExchangeLifeTotalWithSourceCharacteristic(
+	r *effectResolver,
+	prim game.ExchangeLifeTotalWithSourceCharacteristic,
+) effectResolved {
+	res := effectResolved{accepted: true}
+	playerID, ok := r.resolvePlayer(prim.Player)
+	if !ok {
+		return res
+	}
+	player, ok := playerByID(r.game, playerID)
+	if !ok || player.Eliminated {
+		return res
+	}
+	source, ok := sourcePermanent(r.game, r.obj)
+	if !ok {
+		return res
+	}
+	values := effectivePermanentValues(r.game, source)
+	var characteristic int
+	var effect game.ContinuousEffect
+	effect.Layer = game.LayerPowerToughnessSet
+	switch prim.Characteristic {
+	case game.SourcePower:
+		if !values.powerOK {
+			return res
+		}
+		characteristic = values.power
+		effect.SetPower = opt.Val(game.PT{Value: player.Life})
+	case game.SourceToughness:
+		if !values.toughnessOK {
+			return res
+		}
+		characteristic = values.toughness
+		effect.SetToughness = opt.Val(game.PT{Value: player.Life})
+	default:
+		return res
+	}
+	if player.Life != characteristic &&
+		playerRuleEffectActive(r.game, playerID, game.RuleEffectLifeTotalCantChange) {
+		return res
+	}
+	if characteristic > player.Life && !canGainLife(r.game, playerID) {
+		return res
+	}
+	if !applyTypedContinuousEffects(
+		r.game,
+		r.obj,
+		source,
+		[]game.ContinuousEffect{effect},
+		game.DurationPermanent,
+	) {
+		return res
+	}
+	if characteristic > player.Life {
+		res.amount = gainLife(r.game, playerID, characteristic-player.Life)
+	} else if characteristic < player.Life {
+		res.amount = loseLife(r.game, playerID, player.Life-characteristic)
+	}
+	res.succeeded = true
 	return res
 }
 

@@ -181,6 +181,7 @@ func lowerActivationShell(
 	if !ability.EvolutionaryLeapRevealUntil &&
 		!ability.ProgenitorIconNextFlash &&
 		!ability.SelesnyaEulogistPopulate &&
+		ability.LifeCharacteristicExchange == nil &&
 		!activationReferencesSupported(bodyContent) {
 		return loweredActivationShell{}, activationDiagnostic(
 			original,

@@ -164,6 +164,11 @@ func (GainLife) Kind() PrimitiveKind { return PrimitiveGainLife }
 // Kind implements Primitive for LoseLife.
 func (LoseLife) Kind() PrimitiveKind { return PrimitiveLoseLife }
 
+// Kind implements Primitive for ExchangeLifeTotalWithSourceCharacteristic.
+func (ExchangeLifeTotalWithSourceCharacteristic) Kind() PrimitiveKind {
+	return PrimitiveExchangeLifeTotalWithSourceCharacteristic
+}
+
 // Kind implements Primitive for PlayerLosesGame.
 func (PlayerLosesGame) Kind() PrimitiveKind { return PrimitivePlayerLosesGame }
 
@@ -490,6 +495,8 @@ func (PutLinkedExiledCardsInLibrary) isPrimitive()        {}
 func (Attach) isPrimitive()                               {}
 func (MassReturnFromGraveyard) isPrimitive()              {}
 
+func (ExchangeLifeTotalWithSourceCharacteristic) isPrimitive() {}
+
 func (GroupSourceDamage) isPrimitive() {}
 
 func (GroupSelfPowerDamage) isPrimitive() {}
@@ -614,6 +621,10 @@ func (PlayerLosesGame) instructionRefs() primitiveRefs        { return primitive
 func (PlayerWinsGame) instructionRefs() primitiveRefs         { return primitiveRefs{} }
 func (p PunisherEachLoseLife) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
 func (p RepeatProcess) instructionRefs() primitiveRefs        { return quantityRefs(p.Times) }
+
+func (ExchangeLifeTotalWithSourceCharacteristic) instructionRefs() primitiveRefs {
+	return primitiveRefs{}
+}
 
 func (p Exile) instructionRefs() primitiveRefs {
 	return primitiveRefs{publishesLinked: p.ExileLinkedKey}

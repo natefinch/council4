@@ -519,6 +519,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectEnterPrepared
 	case parser.EffectExile:
 		return EffectExile
+	case parser.EffectExchange:
+		return EffectExchange
 	case parser.EffectFight:
 		return EffectFight
 	case parser.EffectGain:
