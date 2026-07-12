@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
@@ -1042,6 +1043,18 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 			"SourceCounterKindKnown: true,",
 			fmt.Sprintf("SourceCountersAtLeast: %d,", cond.SourceCountersAtLeast),
 		)
+		hasPredicate = true
+	}
+	if cond.SourceAttachedCombatCounterpartSubtypes != [2]types.Sub{} {
+		ctx.need(importTypes)
+		literals := make([]string, 2)
+		for i, subtype := range cond.SourceAttachedCombatCounterpartSubtypes {
+			literals[i] = SubtypeToLiteral(string(subtype), []string{"Creature"})
+		}
+		fields = append(fields, fmt.Sprintf(
+			"SourceAttachedCombatCounterpartSubtypes: [2]types.Sub{%s},",
+			strings.Join(literals, ", "),
+		))
 		hasPredicate = true
 	}
 	if cond.AnyOpponentPoisonAtLeast > 0 {

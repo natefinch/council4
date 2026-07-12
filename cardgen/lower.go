@@ -871,6 +871,29 @@ func lowerExecutableAbility(
 	ability compiler.CompiledAbility,
 	syntax *parser.Ability,
 ) (abilityLowering, *shared.Diagnostic) {
+	if ability.StingCombatFirstStrike {
+		return abilityLowering{
+			staticAbilities: []loweredStaticAbility{{Body: game.StaticAbility{
+				Text: ability.Text,
+				Condition: opt.Val(game.Condition{
+					SourceAttachedCombatCounterpartSubtypes: [2]types.Sub{types.Goblin, types.Orc},
+				}),
+				ContinuousEffects: []game.ContinuousEffect{{
+					Layer:       game.LayerAbility,
+					AddKeywords: []game.Keyword{game.FirstStrike},
+					Group:       game.AttachedObjectGroup(game.SourcePermanentReference()),
+				}},
+			}}},
+			consumed: semanticConsumption{
+				conditions: len(ability.Content.Conditions),
+				effects:    len(ability.Content.Effects),
+				keywords:   len(ability.Content.Keywords),
+				references: len(ability.Content.References),
+				targets:    len(ability.Content.Targets),
+			},
+			sourceSpans: []shared.Span{ability.Span},
+		}, nil
+	}
 	if ability.FlameshadowConjuringCopy {
 		const paid = game.ResultKey("controller-paid")
 		const copyLink = game.LinkedKey("flameshadow-copy")
