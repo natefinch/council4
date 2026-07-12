@@ -1,6 +1,7 @@
 package cardgen
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -27,17 +28,8 @@ func TestLowerSunderingGrowthPopulate(t *testing.T) {
 	create, ok := mode.Sequence[1].Primitive.(game.CreateToken)
 	spec, copyOK := create.Source.TokenCopy()
 	if !ok || !copyOK || spec.Source != game.TokenCopySourceChosenControlledCreatureToken ||
-		!containsCardType(mode.Targets[0].Selection.Val.RequiredTypesAny, types.Artifact) ||
-		!containsCardType(mode.Targets[0].Selection.Val.RequiredTypesAny, types.Enchantment) {
+		!slices.Contains(mode.Targets[0].Selection.Val.RequiredTypesAny, types.Artifact) ||
+		!slices.Contains(mode.Targets[0].Selection.Val.RequiredTypesAny, types.Enchantment) {
 		t.Fatalf("second instruction = %#v, want populate", mode.Sequence[1])
 	}
-}
-
-func containsCardType(values []types.Card, want types.Card) bool {
-	for _, value := range values {
-		if value == want {
-			return true
-		}
-	}
-	return false
 }
