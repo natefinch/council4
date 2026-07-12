@@ -2037,8 +2037,8 @@ func exactExcludedSupertypeTargetSyntax(text string, selection SelectionSyntax) 
 
 // exactExcludedSubtypeTargetSyntax reconstructs the canonical Oracle phrase for a
 // permanent target restricted by a single excluded subtype ("target non-Spirit
-// creature", "target non-Wall creature", "target non-Aura enchantment") and
-// compares it byte-exactly to the source text. It mirrors
+// creature", "target non-Wall creature", "target non-Aura enchantment", or
+// "target non-Saga token") and compares it byte-exactly to the source text. It mirrors
 // exactExcludedSupertypeTargetSyntax: it accepts exactly one excluded subtype on
 // a redundant permanent noun with an optional controller clause, failing closed
 // for every other qualifier so unsupported wordings keep failing the text-blind
@@ -2051,21 +2051,31 @@ func exactExcludedSubtypeTargetSyntax(text string, selection SelectionSyntax) bo
 		selection.MatchManaValue || selection.MatchPower || selection.MatchToughness ||
 		selection.PowerLessThanSource || selection.PowerGreaterThanSource ||
 		selection.Colorless || selection.Multicolored ||
+		(selection.TokenOnly && selection.NonToken) ||
 		len(selection.Supertypes) != 0 || len(selection.ExcludedSupertypes) != 0 ||
 		len(selection.ExcludedTypes) != 0 ||
 		len(selection.ColorsAny) != 0 || len(selection.ExcludedColors) != 0 ||
 		len(selection.SubtypesAny) != 0 {
 		return false
 	}
-	if !selectionRedundantRequiredNoun(selection) {
-		return false
-	}
 	if len(selection.ExcludedSubtypes) != 1 {
 		return false
 	}
-	noun, ok := permanentSelectionNoun(selection.Kind)
-	if !ok {
-		return false
+	noun := "token"
+	if selection.TokenOnly && selection.Kind == SelectionUnknown {
+		if len(selection.RequiredTypesAny) != 0 {
+			return false
+		}
+	} else {
+		if !selectionRedundantRequiredNoun(selection) {
+			return false
+		}
+		var ok bool
+		noun, ok = permanentSelectionNoun(selection.Kind)
+		if !ok {
+			return false
+		}
+		noun = strings.Join(tokenQualifiedNoun(selection, noun), " ")
 	}
 	expected, ok := targetControllerSuffix("target non-"+string(selection.ExcludedSubtypes[0])+" "+noun, selection.Controller)
 	if !ok {
