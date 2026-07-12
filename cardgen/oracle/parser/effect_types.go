@@ -1746,6 +1746,13 @@ type SelectionSyntax struct {
 	// reconstruction renders it; every other selection context fails closed. Nil
 	// means no count-based dynamic bound.
 	ManaValueDynamicCount *EffectAmountSyntax `json:",omitempty"`
+	// ManaValueSacrificedCostAddend records a "with mana value X or less, where X
+	// is N plus the sacrificed creature's mana value" bound (Eldritch Evolution),
+	// whose upper bound is the mana value of the creature sacrificed to pay the
+	// spell's additional cost plus the fixed addend N. It is set only on a
+	// library-search filter selection, whose reconstruction renders it; every
+	// other selection context fails closed. Nil means no sacrificed-cost bound.
+	ManaValueSacrificedCostAddend *int `json:",omitempty"`
 	// RequiredName carries the verbatim card name of a "named <Name>" selector
 	// qualifier ("a card named Trustworthy Scout"). It is captured from the
 	// source tokens after "named" so the byte-exact search reconstruction can

@@ -1497,6 +1497,16 @@ type SearchSpec struct {
 	// with a fixed Filter.ManaValue bound.
 	MaxManaValueFromX bool
 
+	// MaxManaValueFromSacrificedCost, when present, restricts matches to cards
+	// whose mana value is less than or equal to the mana value of the creature
+	// sacrificed to pay the resolving spell's additional cost, plus the fixed
+	// addend it holds, modeling the "with mana value X or less, where X is N plus
+	// the sacrificed creature's mana value" rider (Eldritch Evolution). The bound
+	// is resolved from the sacrificed creature's last-known mana value as the
+	// search runs, so it is mutually exclusive with a fixed Filter.ManaValue
+	// bound and with MaxManaValueFromX.
+	MaxManaValueFromSacrificedCost opt.V[int]
+
 	Reveal       bool
 	EntersTapped bool
 
@@ -1578,6 +1588,7 @@ type SearchSpec struct {
 func (s SearchSpec) IsUnrestricted() bool {
 	return s.Filter.Empty() &&
 		!s.MaxManaValueFromX &&
+		!s.MaxManaValueFromSacrificedCost.Exists &&
 		!s.SharedSubtype &&
 		!s.DifferentNames &&
 		!s.AlsoGraveyard &&

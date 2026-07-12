@@ -766,6 +766,18 @@ func lowerSearchSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) 
 		ctx.content.Effects = ctx.content.Effects[:n-1]
 		ctx.content.References = referencesOutsideSpan(ctx.content.References, shuffleSpan)
 	}
+	// A trailing "Exile <this card>." tail (Eldritch Evolution) is the resolving
+	// spell exiling itself instead of going to the graveyard. Strip it from the
+	// search-sequence analysis and re-append it as a source-spell exile
+	// instruction after the search resolves, so its self-name reference does not
+	// trip the non-result reference gate below.
+	appendSelfExile := false
+	if n := len(ctx.content.Effects); n >= 2 && isExactSourceSpellExile(&ctx.content.Effects[n-1]) {
+		appendSelfExile = true
+		exileSpan := ctx.content.Effects[n-1].ClauseSpan
+		ctx.content.Effects = ctx.content.Effects[:n-1]
+		ctx.content.References = referencesOutsideSpan(ctx.content.References, exileSpan)
+	}
 	// The search subject is either the controller ("search your library ...") or
 	// a single target player ("target player searches their library ..."). The
 	// target-player form contributes an ability target spec and resolves the
@@ -858,6 +870,9 @@ func lowerSearchSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) 
 	}
 	if appendSelfShuffle {
 		sequence = append(sequence, game.Instruction{Primitive: game.ShuffleSpellIntoLibrary{}})
+	}
+	if appendSelfExile {
+		sequence = append(sequence, game.Instruction{Primitive: game.Exile{SourceSpell: true}})
 	}
 	return game.Mode{Targets: searchTargets, Sequence: sequence}.Ability(), nil
 }
@@ -994,19 +1009,19 @@ func searchGroupSpec(effects []compiler.CompiledEffect) (searchGroup, bool) {
 	}
 	dynamic := quantity.IsDynamic()
 	for i := range shape.length {
-		// The search group resolves as one unit. Every effect in it must carry no
-		// delay, duration, or negation. A single-sentence group shares one span; a
-		// two-sentence group ("Search ... . Put those cards ...") spans the search
-		// sentence and the following put sentence, so the spans differ — the
-		// structural sequence (search, [reveal,] put, [rider,] shuffle) in
-		// exactSearchEffectSequence keeps the group contiguous without the span
-		// equality the single-sentence form relies on.
+		// The search group resolves as one unit, so every effect in it must carry
+		// no delay, duration, or negation. A single-sentence group shares one
+		// span; a two-sentence group ("Search ... . Put that card ...", Eldritch
+		// Evolution, or the "up to X ... . Put those cards ..." ramp searches)
+		// spans the search sentence and the following put sentence, so the spans
+		// differ. The structural sequence (search, [reveal,] put, [rider,]
+		// shuffle) in exactSearchEffectSequence keeps the group contiguous — the
+		// effects are consecutive with nothing between them — without relying on
+		// span equality, so both the fixed and dynamic count forms accept the
+		// two-sentence destination.
 		if effects[i].DelayedTiming != 0 ||
 			effects[i].Duration != compiler.DurationNone ||
 			effects[i].Negated {
-			return searchGroup{}, false
-		}
-		if !dynamic && effects[i].Span != search.Span {
 			return searchGroup{}, false
 		}
 	}
@@ -1327,6 +1342,14 @@ func searchSpecForSelector(selector compiler.CompiledSelector) (game.SearchSpec,
 			return game.SearchSpec{}, false
 		}
 		filter.ManaValueDynamic = opt.Val(bound)
+	}
+	if selector.ManaValueSacrificedCost != nil {
+		// "with mana value X or less, where X is N plus the sacrificed creature's
+		// mana value" (Eldritch Evolution) bounds the searched card's mana value
+		// by the mana value of the creature sacrificed to pay the spell's
+		// additional cost, plus a fixed addend, evaluated as the search resolves.
+		// It lowers to SearchSpec.MaxManaValueFromSacrificedCost.
+		spec.MaxManaValueFromSacrificedCost = opt.Val(*selector.ManaValueSacrificedCost)
 	}
 	if selector.MatchPower {
 		switch selector.Power.Op {

@@ -1866,6 +1866,48 @@ func searchClauseManaValueDynamicCount(tokens []shared.Token, atoms Atoms) (Effe
 	return EffectAmountSyntax{}, 0, false
 }
 
+// searchClauseManaValueSacrificedCost finds a "mana value X or less, where X is
+// N plus the sacrificed creature's mana value" bound within a library-search
+// clause (Eldritch Evolution) and returns the fixed addend N together with the
+// byte offset of the first "mana" token, so the caller can scope the
+// searched-card Selection and the search count away from the "mana value ..."
+// bound (whose "where X is ... the sacrificed creature's mana value" phrase
+// would otherwise fold a second mana-value comparison into the searched card's
+// own filter and fail the selection parse). The addend must be an integer
+// literal so the reconstruction round-trips byte-exact. It fails closed when the
+// clause carries no such bound.
+func searchClauseManaValueSacrificedCost(tokens []shared.Token) (addend int, manaOffset int, ok bool) {
+	for i := range tokens {
+		if !effectWordsAt(tokens, i, "mana", "value", "X", "or", "less") {
+			continue
+		}
+		rest := i + 5
+		if rest < len(tokens) && tokens[rest].Kind == shared.Comma {
+			rest++
+		}
+		if !effectWordsAt(tokens, rest, "where", "X", "is") {
+			continue
+		}
+		addendIndex := rest + 3
+		if addendIndex >= len(tokens) || tokens[addendIndex].Kind != shared.Integer {
+			continue
+		}
+		parsedAddend, err := strconv.Atoi(tokens[addendIndex].Text)
+		if err != nil {
+			continue
+		}
+		if !effectWordsAt(tokens, addendIndex+1, "plus") {
+			continue
+		}
+		subject, subjectOK := parseSacrificedCreatureCharacteristic(tokens, addendIndex+2)
+		if !subjectOK || subject.amount.DynamicKind != EffectDynamicAmountSacrificedManaValue {
+			continue
+		}
+		return parsedAddend, tokens[i].Span.Start.Offset, true
+	}
+	return 0, 0, false
+}
+
 // parseSelectionManaValueDynamicCount recognizes the "less than or equal to the
 // number of <count subject>" upper bound following "mana value" in a library
 // search filter ("card with mana value less than or equal to the number of lands

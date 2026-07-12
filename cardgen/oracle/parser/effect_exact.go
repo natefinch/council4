@@ -1190,6 +1190,10 @@ func analyzeSearchClause(effect *EffectSyntax) searchClauseAnalysis {
 		}
 		riderText = rider
 	}
+	if effect.Selection.ManaValueSacrificedCostAddend != nil {
+		numericRiders++
+		riderText = searchManaValueSacrificedCostRider(*effect.Selection.ManaValueSacrificedCostAddend)
+	}
 	if effect.Selection.MatchPower {
 		numericRiders++
 		rider, ok := searchCharacteristicRider("power", effect.Selection.Power)
@@ -1644,6 +1648,15 @@ func searchManaValueDynamicCountRider(amount EffectAmountSyntax) (string, bool) 
 		return "", false
 	}
 	return " with mana value less than or equal to " + amount.Text, true
+}
+
+// searchManaValueSacrificedCostRider reconstructs the "with mana value X or
+// less, where X is N plus the sacrificed creature's mana value" filter rider
+// from the parsed addend (Eldritch Evolution). The addend is printed as a
+// decimal integer, matching the integer-literal wording the detector requires,
+// so the reconstruction stays byte-exact.
+func searchManaValueSacrificedCostRider(addend int) string {
+	return fmt.Sprintf(" with mana value X or less, where X is %d plus the sacrificed creature's mana value", addend)
 }
 
 // searchCharacteristicRider reconstructs a "with <characteristic> N or less" or

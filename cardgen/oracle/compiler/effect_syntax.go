@@ -234,6 +234,10 @@ func compileTypedSelection(syntax parser.SelectionSyntax) CompiledSelector {
 		amount := compileTypedAmount(*syntax.ManaValueDynamicCount)
 		selector.ManaValueDynamicCount = &amount
 	}
+	if syntax.ManaValueSacrificedCostAddend != nil {
+		addend := *syntax.ManaValueSacrificedCostAddend
+		selector.ManaValueSacrificedCost = &addend
+	}
 	for _, cardType := range syntax.SourceTypes {
 		if value, ok := runtimeCardTypeFromParser(cardType); ok {
 			appendSelectorSourceType(&selector, value)
