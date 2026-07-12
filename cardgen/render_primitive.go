@@ -160,6 +160,14 @@ func (r Renderer) renderCreateDelayedTrigger(ctx *renderCtx, value game.CreateDe
 			ctx.need(importOpt)
 			triggerFields = append(triggerFields, fmt.Sprintf("CapturedObject: opt.Val(%s),", object))
 		}
+		if value.Trigger.CapturedObjectGroup.Exists {
+			group, err := r.renderObjectReference(value.Trigger.CapturedObjectGroup.Val)
+			if err != nil {
+				return "", err
+			}
+			ctx.need(importOpt)
+			triggerFields = append(triggerFields, fmt.Sprintf("CapturedObjectGroup: opt.Val(%s),", group))
+		}
 	}
 	triggerFields = append(triggerFields, fmt.Sprintf("Content: %s,", content))
 	if value.Trigger.Optional {
@@ -1679,6 +1687,12 @@ func (r Renderer) renderObjectOrGroupPrimitive(ctx *renderCtx, primitive game.Pr
 			return "", err
 		}
 		return r.renderObjectOrGroup(ctx, "game.Goad", value.Object, value.Group)
+	case game.PrimitiveSacrifice:
+		value, err := assertPrimitive[game.Sacrifice](primitive)
+		if err != nil {
+			return "", err
+		}
+		return r.renderObjectOrGroup(ctx, "game.Sacrifice", value.Object, value.Group)
 	default:
 		return "", fmt.Errorf("render: unsupported object or group primitive kind %d", primitive.Kind())
 	}
@@ -1827,12 +1841,6 @@ func (r Renderer) renderObjectPrimitive(primitive game.Primitive) (string, error
 			return "", err
 		}
 		typeName, object = "game.ChooseNewTargets", value.Object
-	case game.PrimitiveSacrifice:
-		value, err := assertPrimitive[game.Sacrifice](primitive)
-		if err != nil {
-			return "", err
-		}
-		typeName, object = "game.Sacrifice", value.Object
 	case game.PrimitiveRemoveFromCombat:
 		value, err := assertPrimitive[game.RemoveFromCombat](primitive)
 		if err != nil {

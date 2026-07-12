@@ -1825,6 +1825,19 @@ func (r *effectResolver) chooseExileForPlayBatchCard(pool []id.ID) (id.ID, bool)
 
 func handleSacrifice(r *effectResolver, prim game.Sacrifice) effectResolved {
 	res := effectResolved{accepted: true}
+	if prim.Group.Valid() {
+		targets := r.resolveObjectGroup(prim.Object, prim.Group)
+		var sacrificed []*game.Permanent
+		for _, permanent := range targets.permanents {
+			if effectiveController(r.game, permanent) != r.obj.Controller ||
+				permanentCantBeSacrificed(r.game, permanent) {
+				continue
+			}
+			sacrificed = append(sacrificed, permanent)
+		}
+		res.succeeded = sacrificePermanentsSimultaneously(r.game, sacrificed)
+		return res
+	}
 	permanent, ok := r.resolveObject(prim.Object)
 	if !ok && prim.Object.Kind() == game.ObjectReferenceNone {
 		permanent, ok = firstPermanentControlledBy(r.game, r.obj.Controller)

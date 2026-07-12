@@ -2169,6 +2169,9 @@ func (p PlayChosenExiledCard) validatePrimitive(targets []TargetSpec, checkTarge
 }
 
 func (p Sacrifice) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.Group.Valid() {
+		return validateMassObjectOrGroup(p.Object, p.Group, targets, checkTargets)
+	}
 	if p.Object.Kind() == ObjectReferenceNone {
 		return nil
 	}

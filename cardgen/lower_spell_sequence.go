@@ -3889,13 +3889,22 @@ func lowerDelayedTargetSacrifice(
 	if !ok {
 		return nil, game.AbilityContent{}, false
 	}
-	delayed := game.CreateDelayedTrigger{Trigger: game.DelayedTriggerDef{
+	trigger := game.DelayedTriggerDef{
 		Timing:         game.DelayedAtBeginningOfNextEndStep,
 		CapturedObject: opt.Val(object),
 		Content: game.Mode{Sequence: []game.Instruction{{Primitive: game.Sacrifice{
 			Object: game.CapturedObjectReference(),
 		}}}}.Ability(),
-	}}
+	}
+	if create, ok := publisher.(game.CreateToken); ok &&
+		(create.Amount.IsDynamic() || create.Amount.Value() != 1) {
+		trigger.CapturedObject = opt.V[game.ObjectReference]{}
+		trigger.CapturedObjectGroup = opt.Val(game.LinkedObjectReference(string(key)))
+		trigger.Content = game.Mode{Sequence: []game.Instruction{{Primitive: game.Sacrifice{
+			Group: game.CapturedObjectsGroup(),
+		}}}}.Ability()
+	}
+	delayed := game.CreateDelayedTrigger{Trigger: trigger}
 	return publisher, game.Mode{Sequence: []game.Instruction{{Primitive: delayed}}}.Ability(), true
 }
 
@@ -4312,22 +4321,19 @@ func publishLinkedTargetPermanent(primitive game.Primitive, key game.LinkedKey) 
 		put.PublishLinked = key
 		return put, true
 	}
-	// A copy-token entry whose blueprint is a graveyard card ("Create a token
-	// that's a copy of target creature card in your graveyard", Feldon of the
-	// Third Path) produces one fresh token that a later "It gains <keyword>." or
-	// "Sacrifice it" clause must name. The token is not the targeted card (a
-	// card in a graveyard is not a permanent a target reference can resolve), so
-	// it publishes the created token under key. Only the graveyard-card copy
-	// source takes this path: a battlefield-permanent copy ("copy of target
-	// artifact or creature you control", Molten Duplication) binds "it" directly
-	// to that target permanent, so it is left unlinked and unchanged.
+	// A copy-token entry produces fresh token objects that a later "Sacrifice
+	// it/them" clause must name, rather than the card or permanent used as the
+	// copy blueprint. Publish every created token under key; the delayed trigger
+	// captures one fixed token or the whole created group according to Amount.
 	if primitive.Kind() == game.PrimitiveCreateToken {
 		create, ok := primitive.(game.CreateToken)
 		if !ok || create.PublishLinked != "" {
 			return nil, false
 		}
 		copySpec, ok := create.Source.TokenCopy()
-		if !ok || copySpec.Object.Kind() != game.ObjectReferenceTargetCard {
+		if !ok ||
+			(copySpec.Object.Kind() != game.ObjectReferenceTargetCard &&
+				copySpec.Object.Kind() != game.ObjectReferenceTargetPermanent) {
 			return nil, false
 		}
 		create.PublishLinked = key
