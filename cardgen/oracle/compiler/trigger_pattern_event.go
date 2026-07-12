@@ -288,6 +288,8 @@ func compileSpellCastTurnRelation(relation parser.TriggerCastTurnRelation) (Trig
 		return TriggerCastTurnYours, true
 	case parser.TriggerCastTurnRelationNotYourTurn:
 		return TriggerCastTurnNotYours, true
+	case parser.TriggerCastTurnRelationEventPlayerTurn:
+		return TriggerCastTurnEventPlayer, true
 	default:
 		return TriggerCastTurnAny, false
 	}

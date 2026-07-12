@@ -190,6 +190,7 @@ func lowerTriggerPattern(pattern *compiler.TriggerPattern) (game.TriggerPattern,
 	}
 	if castDuringTurn != game.TriggerTurnAny &&
 		event != game.EventSpellCast &&
+		event != game.EventCardDrawn &&
 		event != game.EventLifeGained &&
 		event != game.EventLifeLost {
 		return game.TriggerPattern{}, false
@@ -486,6 +487,8 @@ func lowerTriggerCastDuringTurn(relation compiler.TriggerCastTurn) (game.Trigger
 		return game.TriggerTurnYours, true
 	case compiler.TriggerCastTurnNotYours:
 		return game.TriggerTurnNotYours, true
+	case compiler.TriggerCastTurnEventPlayer:
+		return game.TriggerTurnEventPlayer, true
 	default:
 		return game.TriggerTurnAny, false
 	}

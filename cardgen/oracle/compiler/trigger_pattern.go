@@ -70,15 +70,15 @@ const (
 	TriggerEventLandPlayed
 )
 
-// TriggerCastTurn restricts a spell-cast pattern by whose turn the spell was
-// cast on, relative to the ability's controller.
+// TriggerCastTurn restricts a player event by the active player.
 type TriggerCastTurn uint8
 
-// Spell-cast turn relations.
+// Player-event turn relations.
 const (
 	TriggerCastTurnAny TriggerCastTurn = iota
 	TriggerCastTurnYours
 	TriggerCastTurnNotYours
+	TriggerCastTurnEventPlayer
 )
 
 // TriggerSourceRelation identifies the event object's relationship to the

@@ -659,16 +659,15 @@ const (
 	TriggerEventActorOpponent TriggerEventActorKind = "TriggerEventActorOpponent"
 )
 
-// TriggerCastTurnRelation restricts a spell-cast trigger to the caster's own
-// turn or to a turn that isn't theirs ("during your turn", "during an
-// opponent's turn").
+// TriggerCastTurnRelation restricts a player event by the active player.
 type TriggerCastTurnRelation string
 
-// Spell-cast turn relations recognized by the syntax parser.
+// Player-event turn relations recognized by the syntax parser.
 const (
-	TriggerCastTurnRelationNone        TriggerCastTurnRelation = ""
-	TriggerCastTurnRelationYourTurn    TriggerCastTurnRelation = "TriggerCastTurnRelationYourTurn"
-	TriggerCastTurnRelationNotYourTurn TriggerCastTurnRelation = "TriggerCastTurnRelationNotYourTurn"
+	TriggerCastTurnRelationNone            TriggerCastTurnRelation = ""
+	TriggerCastTurnRelationYourTurn        TriggerCastTurnRelation = "TriggerCastTurnRelationYourTurn"
+	TriggerCastTurnRelationNotYourTurn     TriggerCastTurnRelation = "TriggerCastTurnRelationNotYourTurn"
+	TriggerCastTurnRelationEventPlayerTurn TriggerCastTurnRelation = "TriggerCastTurnRelationEventPlayerTurn"
 )
 
 // TriggerEventActor is a source-spanned acting player.
@@ -1131,6 +1130,7 @@ const (
 	PlayerEventActionSearchLibrary  PlayerEventActionKind = "PlayerEventActionSearchLibrary"
 	PlayerEventActionCommitCrime    PlayerEventActionKind = "PlayerEventActionCommitCrime"
 	PlayerEventActionBecomeMonarch  PlayerEventActionKind = "PlayerEventActionBecomeMonarch"
+	PlayerEventActionCast           PlayerEventActionKind = "PlayerEventActionCast"
 
 	// PlayerEventActionPlay is the "plays a card" event, recognized only for the
 	// self-referential "plays a card exiled with <this permanent>" object
