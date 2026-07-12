@@ -1440,6 +1440,10 @@ func (r Renderer) renderSearchPrimitive(ctx *renderCtx, value game.Search) (stri
 	if value.Spec.MaxManaValueFromX {
 		specFields = append(specFields, "MaxManaValueFromX: true,")
 	}
+	if value.Spec.MaxManaValueFromSacrificedCost.Exists {
+		ctx.need(importOpt)
+		specFields = append(specFields, fmt.Sprintf("MaxManaValueFromSacrificedCost: opt.Val(%d),", value.Spec.MaxManaValueFromSacrificedCost.Val))
+	}
 	if value.Spec.Name != "" {
 		specFields = append(specFields, fmt.Sprintf("Name: %q,", value.Spec.Name))
 	}

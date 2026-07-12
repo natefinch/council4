@@ -587,6 +587,22 @@ func isExactSourceSpellShuffleIntoLibrary(effect *compiler.CompiledEffect) bool 
 		referencesContainKind(effect.References, compiler.ReferenceThisObject)
 }
 
+// isExactSourceSpellExile reports whether effect is the exact "Exile <this
+// card>." resolution tail naming the resolving spell itself (Eldritch
+// Evolution). The parser validated the precise wording, so this keys off an
+// exact EffectExile clause whose single reference binds to the source spell,
+// mirroring the standalone source-spell exile lowering (lowerSourceSpellExile).
+func isExactSourceSpellExile(effect *compiler.CompiledEffect) bool {
+	if !effect.Exact ||
+		effect.Negated ||
+		effect.Duration != compiler.DurationNone ||
+		effect.Kind != compiler.EffectExile ||
+		len(effect.References) != 1 {
+		return false
+	}
+	return referencesBindTo(effect.References, compiler.ReferenceBindingSource, 0)
+}
+
 // lowerSourceSpellShuffleIntoLibrary lowers the exact "Shuffle <this card> into
 // its owner's library." resolution tail (Green Sun's Zenith, the Beacon cycle)
 // to a single source-spell shuffle-into-library instruction. The shuffled

@@ -1643,9 +1643,29 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 				searchMVDynamicCountManaOffset = manaOffset
 			}
 		}
+		// A library search whose filter bounds the searched card's mana value by
+		// the sacrificed creature's mana value plus a fixed addend ("a creature
+		// card with mana value X or less, where X is 2 plus the sacrificed
+		// creature's mana value", Eldritch Evolution) embeds a "where X is ...
+		// mana value" phrase whose second mana-value comparison would fold into
+		// the searched card's own filter and fail the selection parse. Detect the
+		// bound so the amount and Selection parses can be scoped before it, and
+		// record the addend separately.
+		var searchMVSacrificedAddend *int
+		searchMVSacrificedManaOffset := -1
+		if kind == EffectSearch && searchMVDynamicCount == nil {
+			if addend, manaOffset, ok := searchClauseManaValueSacrificedCost(clause); ok {
+				captured := addend
+				searchMVSacrificedAddend = &captured
+				searchMVSacrificedManaOffset = manaOffset
+			}
+		}
 		amountClause := clause
 		if searchMVDynamicCount != nil {
 			amountClause = tokensBeforeOffset(clause, searchMVDynamicCountManaOffset)
+		}
+		if searchMVSacrificedAddend != nil {
+			amountClause = tokensBeforeOffset(clause, searchMVSacrificedManaOffset)
 		}
 		amount := parseEffectAmount(kind, amountClause, atoms)
 		if forEach, ok := parseCreateForEachAmount(kind, context, tokenPTKnown, tokens[ownershipStart:tokenIndex], amount, atoms); ok {
@@ -1730,6 +1750,16 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			// tokens before the "mana value ..." bound; the bound rides on the
 			// Selection's ManaValueDynamicCount field, set after parseSelection.
 			selectionClause = tokensBeforeOffset(clause, searchMVDynamicCountManaOffset)
+		case kind == EffectSearch && searchMVSacrificedAddend != nil:
+			// "Search your library for a creature card with mana value X or less,
+			// where X is 2 plus the sacrificed creature's mana value" carries a
+			// sacrificed-cost mana-value bound whose "where X is ... the
+			// sacrificed creature's mana value" phrase would otherwise fold a
+			// second mana-value comparison into the searched card's own filter.
+			// Scope the searched-card Selection to the tokens before the "mana
+			// value ..." bound; the addend rides on the Selection's
+			// ManaValueSacrificedCostAddend field, set after parseSelection.
+			selectionClause = tokensBeforeOffset(clause, searchMVSacrificedManaOffset)
 		default:
 		}
 		eachSourceDamageGroup, eachSourceDamageRecipient := eachSourceDamageSyntax(kind, tokens[ownershipStart:tokenIndex], clause, amount, atoms)
@@ -1740,6 +1770,12 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			// the searched-card Selection above; record it on its own field so the
 			// search filter reconstruction and lowering can model it.
 			effectSelection.ManaValueDynamicCount = searchMVDynamicCount
+		}
+		if searchMVSacrificedAddend != nil {
+			// The sacrificed-cost mana-value bound was scoped out of the
+			// searched-card Selection above; record its addend on its own field so
+			// the search filter reconstruction and lowering can model it.
+			effectSelection.ManaValueSacrificedCostAddend = searchMVSacrificedAddend
 		}
 		// A group selection naming a creature conjoined with one other permanent
 		// type ("each artifact creature you control") records both card types in

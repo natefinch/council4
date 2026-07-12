@@ -31,6 +31,7 @@ var Cards = []cardset.Entry{
 	{Name: "Efreet Weaponmaster", New: EfreetWeaponmaster},
 	{Name: "Eiganjo Castle", New: EiganjoCastle},
 	{Name: "Elder Pine of Jukai", New: ElderPineOfJukai},
+	{Name: "Eldritch Evolution", New: EldritchEvolution},
 	{Name: "Elegant Entourage", New: ElegantEntourage},
 	{Name: "Elephant-Mandrill", New: ElephantMandrill},
 	{Name: "Elite Scaleguard", New: EliteScaleguard},

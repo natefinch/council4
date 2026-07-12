@@ -651,6 +651,87 @@ func TestSearchLibraryManaValueFromXBound(t *testing.T) {
 	}
 }
 
+// TestSearchLibraryManaValueFromSacrificedCostBound verifies the
+// SearchSpec.MaxManaValueFromSacrificedCost filter used by Eldritch Evolution
+// ("Search your library for a creature card with mana value X or less, where X
+// is 2 plus the sacrificed creature's mana value. Put that card onto the
+// battlefield ..."). The bound resolves from the last-known mana value of the
+// creature sacrificed to pay the additional cost: sacrificing a mana-value-3
+// creature makes creatures with mana value 5 or less findable, while a
+// mana-value-6 creature is not a legal choice.
+func TestSearchLibraryManaValueFromSacrificedCostBound(t *testing.T) {
+	// setup sacrifices a mana-value-3 creature to pay the additional cost, then
+	// resolves the bounded search (mana value 2 + 3 = 5 or less) with an agent
+	// wanting the named card. It returns the resolved game and the in-bound
+	// (mana value 5) and out-of-bound (mana value 6) library creatures.
+	setup := func(t *testing.T, wanted string) (*game.Game, id.ID, id.ID) {
+		t.Helper()
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		engine := NewEngine(nil)
+		sacrificed := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+			Name:     "Sacrificed Bear",
+			ManaCost: opt.Val(cost.Mana{cost.O(3)}),
+			Types:    []types.Card{types.Creature},
+		}})
+		// The creature left the battlefield to pay the additional cost, so the
+		// search reads its mana value from last-known information.
+		snapshot := snapshotPermanent(g, sacrificed, zone.Battlefield)
+		rememberLastKnown(g, &snapshot)
+		removePermanentFromBattlefield(g, sacrificed.ObjectID)
+
+		inBound := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+			Name:     "Five Bear",
+			ManaCost: opt.Val(cost.Mana{cost.O(5)}),
+			Types:    []types.Card{types.Creature},
+		}})
+		outOfBound := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+			Name:     "Six Bear",
+			ManaCost: opt.Val(cost.Mana{cost.O(6)}),
+			Types:    []types.Card{types.Creature},
+		}})
+		addEffectSpellToStack(g, game.Player1, game.Search{
+			Amount: game.Fixed(1),
+			Player: game.ControllerReference(),
+			Spec: game.SearchSpec{
+				SourceZone:                     zone.Library,
+				Destination:                    zone.Battlefield,
+				MaxManaValueFromSacrificedCost: opt.Val(2),
+				Filter: game.Selection{
+					RequiredTypes: []types.Card{types.Creature},
+				},
+			},
+		}, nil)
+		obj, ok := g.Stack.Peek()
+		if !ok {
+			t.Fatal("expected the search spell on the stack")
+		}
+		obj.SacrificedAsCostIDs = []id.ID{sacrificed.ObjectID}
+		agents := [game.NumPlayers]PlayerAgent{game.Player1: &searchByNameAgent{wanted: wanted}}
+		engine.resolveTopOfStackWithChoices(g, agents, &TurnLog{})
+		return g, inBound, outOfBound
+	}
+
+	t.Run("in-bound creature enters the battlefield", func(t *testing.T) {
+		g, inBound, outOfBound := setup(t, "Five Bear")
+		if permanentForCard(g, inBound) == nil {
+			t.Fatal("a mana-value-5 creature within the sacrificed-cost bound did not enter the battlefield")
+		}
+		if !g.Players[game.Player1].Library.Contains(outOfBound) {
+			t.Fatal("a mana-value-6 creature above the sacrificed-cost bound was incorrectly findable")
+		}
+	})
+
+	t.Run("out-of-bound creature is not a legal choice", func(t *testing.T) {
+		g, _, outOfBound := setup(t, "Six Bear")
+		if permanentForCard(g, outOfBound) != nil {
+			t.Fatal("a mana-value-6 creature above the sacrificed-cost bound was incorrectly put onto the battlefield")
+		}
+		if !g.Players[game.Player1].Library.Contains(outOfBound) {
+			t.Fatal("a mana-value-6 creature should remain in the library because it exceeds the bound")
+		}
+	})
+}
+
 func TestSearchLibraryNilAgentFindsFirstMatch(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

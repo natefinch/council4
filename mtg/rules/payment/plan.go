@@ -103,6 +103,7 @@ func paySpellCosts(s State, req SpellRequest) (SpellPaymentResult, bool) {
 	applyAdditionalCostPlan(s, plan.additional)
 	return SpellPaymentResult{
 		AdditionalCostsPaid: plan.additional.paid,
+		SacrificedIDs:       sacrificedPermanentIDs(plan.additional),
 		PoolSpend:           clonePoolSpend(plan.mana.poolSpend),
 		CastPermission:      plan.option.castPermission,
 	}, true

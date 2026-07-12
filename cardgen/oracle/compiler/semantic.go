@@ -1432,12 +1432,19 @@ type CompiledSelector struct {
 	// runtime Selection.ManaValueDynamic predicate with a DynamicAmountCountSelector
 	// group. Nil means no count-based dynamic bound.
 	ManaValueDynamicCount *CompiledAmount
-	Power                 compare.Int
-	MatchPower            bool
-	Toughness             compare.Int
-	MatchToughness        bool
-	Colorless             bool
-	Multicolored          bool
+	// ManaValueSacrificedCost records a "with mana value X or less, where X is N
+	// plus the sacrificed creature's mana value" bound (Eldritch Evolution),
+	// whose upper bound is the mana value of the creature sacrificed to pay the
+	// spell's additional cost plus the fixed addend it carries. It lowers to
+	// SearchSpec.MaxManaValueFromSacrificedCost, resolved as the search runs. Nil
+	// means no sacrificed-cost bound.
+	ManaValueSacrificedCost *int
+	Power                   compare.Int
+	MatchPower              bool
+	Toughness               compare.Int
+	MatchToughness          bool
+	Colorless               bool
+	Multicolored            bool
 	// Colored records a "one or more colors" qualifier ("permanents ... that are
 	// one or more colors", All Is Dust). It is the complement of Colorless and
 	// lowers to Selection.Colored.

@@ -319,6 +319,7 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 	obj.Dashed = !cast.Overloaded && dashAlternativeChosen(spellDef, prefs.AlternativeIndex)
 	obj.Flashback = paymentResult.CastPermission == payment.SpellCastPermissionFlashback
 	obj.AdditionalCostsPaid = paymentResult.AdditionalCostsPaid
+	obj.SacrificedAsCostIDs = paymentResult.SacrificedIDs
 	obj.ColorsOfManaSpentToCast = distinctManaColorsSpent(paymentResult.PoolSpend)
 	obj.ManaSpentByColorToCast = manaSpentByColor(paymentResult.PoolSpend)
 	obj.ManaSpentToCast = totalManaSpent(paymentResult.PoolSpend)
@@ -407,6 +408,7 @@ func (e *Engine) applyMutateCastWithChoices(g *game.Game, playerID game.PlayerID
 		player.CommanderCastCount++
 	}
 	obj.AdditionalCostsPaid = paymentResult.AdditionalCostsPaid
+	obj.SacrificedAsCostIDs = paymentResult.SacrificedIDs
 	emitSpellCastEvents(g, obj, game.Event{
 		SourceID:        cast.CardID,
 		StackObjectID:   obj.ID,
@@ -592,6 +594,7 @@ func (e *Engine) applyPreparedCopyWithChoices(g *game.Game, playerID game.Player
 		XValue:              cast.XValue,
 		Copy:                true,
 		AdditionalCostsPaid: paymentResult.AdditionalCostsPaid,
+		SacrificedAsCostIDs: paymentResult.SacrificedIDs,
 		SourceZone:          zone.Battlefield,
 	}
 	stormCopies := stormCopyCount(g, spellDef)

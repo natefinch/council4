@@ -1302,6 +1302,7 @@ func (p Search) validatePrimitive(targets []TargetSpec, checkTargets bool) error
 			p.Spec.Name == "" ||
 			p.Spec.RevealOnly ||
 			p.Spec.MaxManaValueFromX ||
+			p.Spec.MaxManaValueFromSacrificedCost.Exists ||
 			p.Spec.SharedSubtype ||
 			p.Spec.DifferentNames ||
 			p.Spec.EntersTapped ||
@@ -1421,6 +1422,7 @@ func (p Search) validateRevealOnlySearch(targets []TargetSpec, checkTargets bool
 	if p.Spec.SplitDestination.Exists ||
 		p.Spec.EntersTapped ||
 		p.Spec.MaxManaValueFromX ||
+		p.Spec.MaxManaValueFromSacrificedCost.Exists ||
 		p.Spec.SharedSubtype ||
 		p.Spec.DifferentNames ||
 		p.Spec.DestinationPosition != SearchPositionUnspecified {

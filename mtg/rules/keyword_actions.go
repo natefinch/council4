@@ -187,6 +187,7 @@ func searchSpecSupported(spec game.SearchSpec) bool {
 		if spec.SplitDestination.Exists ||
 			spec.SharedSubtype ||
 			spec.MaxManaValueFromX ||
+			spec.MaxManaValueFromSacrificedCost.Exists ||
 			spec.Name != "" ||
 			!spec.Filter.Empty() ||
 			primary.Zone == zone.Library {
@@ -230,6 +231,19 @@ func (e *Engine) searchLibrary(g *game.Game, obj *game.StackObject, agents [game
 		// resolved from the resolving stack object as the search runs.
 		spec.Filter.ManaValue = opt.Val(compare.Int{Op: compare.LessOrEqual, Value: obj.XValue})
 		spec.MaxManaValueFromX = false
+	}
+	if spec.MaxManaValueFromSacrificedCost.Exists {
+		// "with mana value X or less, where X is N plus the sacrificed creature's
+		// mana value" bounds the search by the sacrificed creature's mana value
+		// plus a fixed addend. The creature was sacrificed to pay the spell's
+		// additional cost and has left the battlefield, so its mana value is read
+		// from last-known information as the search runs.
+		bound := spec.MaxManaValueFromSacrificedCost.Val
+		if resolved, ok := resolveObjectReference(g, obj, game.SacrificedCostReference()); ok {
+			bound += resolvedObjectManaValue(g, &resolved)
+		}
+		spec.Filter.ManaValue = opt.Val(compare.Int{Op: compare.LessOrEqual, Value: bound})
+		spec.MaxManaValueFromSacrificedCost = opt.V[int]{}
 	}
 	if len(spec.SlotFilters) != 0 {
 		return e.searchLibrarySlots(g, obj, agents, log, playerID, controllerID, player, spec), nil
