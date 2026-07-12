@@ -2120,6 +2120,9 @@ func (r Renderer) renderRevealUntil(ctx *renderCtx, value *game.RevealUntil) (st
 		fields = append(fields, fmt.Sprintf("Until: %s,", renderedSelection))
 	}
 	fields = append(fields, fmt.Sprintf("Destination: %s,", destination))
+	if value.MatchToDestinationRestRandomBottom {
+		fields = append(fields, "MatchToDestinationRestRandomBottom: true,")
+	}
 	return structLit("game.RevealUntil", fields), nil
 }
 

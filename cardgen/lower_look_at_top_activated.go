@@ -5,6 +5,8 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // lowerActivatedBodyContent lowers an activated ability's resolving body. It
@@ -24,6 +26,17 @@ func lowerActivatedBodyContent(
 	bodyText string,
 	variableCounterRemovalCost bool,
 ) (game.AbilityContent, *shared.Diagnostic) {
+	if ability.EvolutionaryLeapRevealUntil {
+		return game.Mode{
+			Text: bodyText,
+			Sequence: []game.Instruction{{Primitive: game.RevealUntil{
+				Player:                             game.ControllerReference(),
+				Until:                              game.Selection{RequiredTypes: []types.Card{types.Creature}},
+				Destination:                        zone.Hand,
+				MatchToDestinationRestRandomBottom: true,
+			}}},
+		}.Ability(), nil
+	}
 	if ability.ExactSequence == compiler.ExactSequenceConditionalLookAtTopBattlefield &&
 		len(ability.ExactSequenceLookAtTopTypes) > 0 {
 		return game.Mode{
