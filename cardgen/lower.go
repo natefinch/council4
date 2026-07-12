@@ -871,6 +871,71 @@ func lowerExecutableAbility(
 	ability compiler.CompiledAbility,
 	syntax *parser.Ability,
 ) (abilityLowering, *shared.Diagnostic) {
+	if ability.FlameshadowConjuringCopy {
+		const paid = game.ResultKey("controller-paid")
+		const copyLink = game.LinkedKey("flameshadow-copy")
+		gate := opt.Val(game.InstructionResultGate{Key: paid, Succeeded: game.TriTrue})
+		return abilityLowering{
+			triggeredAbilities: []game.TriggeredAbility{{
+				Text: ability.Text,
+				Trigger: game.TriggerCondition{
+					Type: game.TriggerWhenever,
+					Pattern: game.TriggerPattern{
+						Event:      game.EventPermanentEnteredBattlefield,
+						Controller: game.TriggerControllerYou,
+						SubjectSelection: game.Selection{
+							RequiredTypes: []types.Card{types.Creature},
+							NonToken:      true,
+						},
+					},
+				},
+				Content: game.Mode{Sequence: []game.Instruction{
+					{
+						Primitive: game.Pay{Payment: game.ResolutionPayment{
+							Prompt:   "Pay {R}?",
+							ManaCost: opt.Val(cost.Mana{cost.R}),
+						}},
+						PublishResult: paid,
+					},
+					{
+						Primitive: game.CreateToken{
+							Amount: game.Fixed(1),
+							Source: game.TokenCopyOf(game.TokenCopySpec{
+								Source:      game.TokenCopySourceObject,
+								Object:      game.EventPermanentReference(),
+								AddKeywords: []game.Keyword{game.Haste},
+							}),
+							PublishLinked: copyLink,
+						},
+						ResultGate: gate,
+					},
+					{
+						Primitive: game.CreateDelayedTrigger{
+							Trigger: game.DelayedTriggerDef{
+								Timing:         game.DelayedAtBeginningOfNextEndStep,
+								CapturedObject: opt.Val(game.LinkedObjectReference(string(copyLink))),
+								Content: game.Mode{Sequence: []game.Instruction{{
+									Primitive: game.Exile{Object: game.CapturedObjectReference()},
+								}}}.Ability(),
+							},
+						},
+						ResultGate: gate,
+					},
+				}}.Ability(),
+			}},
+			consumed: semanticConsumption{
+				trigger:    ability.Trigger != nil,
+				optional:   ability.Optional,
+				modes:      len(ability.Content.Modes),
+				conditions: len(ability.Content.Conditions),
+				effects:    len(ability.Content.Effects),
+				keywords:   len(ability.Content.Keywords),
+				references: len(ability.Content.References),
+				targets:    len(ability.Content.Targets),
+			},
+			sourceSpans: []shared.Span{ability.Span},
+		}, nil
+	}
 	if ability.AugurOfAutumnCoven {
 		return abilityLowering{
 			staticAbilities: []loweredStaticAbility{{Body: game.StaticAbility{
