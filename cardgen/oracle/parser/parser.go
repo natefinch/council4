@@ -169,6 +169,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitTauntFromRampartSequence(document.Abilities)
 	emitTemurSabertoothSequence(document.Abilities)
 	emitFightRiggingSequence(document.Abilities)
+	emitRaisePalisadeSequence(document.Abilities)
 	emitSelfNameStaticRules(document.Abilities)
 	emitCost(document.Abilities)
 	emitOptional(document.Abilities)
@@ -423,6 +424,15 @@ func emitFightRiggingSequence(abilities []Ability) {
 	for i := range abilities {
 		abilities[i].FightRiggingSequence =
 			abilities[i].Kind == AbilityTriggered &&
+				strings.EqualFold(strings.TrimSpace(abilities[i].Text), text)
+	}
+}
+
+func emitRaisePalisadeSequence(abilities []Ability) {
+	const text = "Choose a creature type. Return all creatures that aren't of the chosen type to their owners' hands."
+	for i := range abilities {
+		abilities[i].RaisePalisadeSequence =
+			abilities[i].Kind == AbilitySpell &&
 				strings.EqualFold(strings.TrimSpace(abilities[i].Text), text)
 	}
 }

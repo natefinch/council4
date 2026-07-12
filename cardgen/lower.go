@@ -872,6 +872,32 @@ func lowerExecutableAbility(
 	ability compiler.CompiledAbility,
 	syntax *parser.Ability,
 ) (abilityLowering, *shared.Diagnostic) {
+	if ability.RaisePalisadeSequence {
+		return abilityLowering{
+			spellAbility: opt.Val(game.Mode{Sequence: []game.Instruction{
+				{Primitive: game.Choose{
+					Choice: game.ResolutionChoice{
+						Kind:          game.ResolutionChoiceSubtype,
+						Prompt:        "Choose a creature type",
+						SubtypeOfType: types.Creature,
+					},
+					PublishChoice: game.SpellChosenTypeChoiceKey,
+				}},
+				{Primitive: game.Bounce{Group: game.BattlefieldGroup(game.Selection{
+					RequiredTypes: []types.Card{types.Creature},
+					SubtypeChoice: game.SubtypeChoiceResolutionExcluded,
+				})}},
+			}}.Ability()),
+			consumed: semanticConsumption{
+				conditions: len(ability.Content.Conditions),
+				effects:    len(ability.Content.Effects),
+				keywords:   len(ability.Content.Keywords),
+				references: len(ability.Content.References),
+				targets:    len(ability.Content.Targets),
+			},
+			sourceSpans: []shared.Span{ability.Span},
+		}, nil
+	}
 	if ability.FightRiggingSequence {
 		return abilityLowering{
 			triggeredAbility: opt.Val(game.TriggeredAbility{
