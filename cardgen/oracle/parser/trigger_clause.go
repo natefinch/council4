@@ -747,7 +747,7 @@ func parsePlayerEventCard(
 	}
 	remainder := tokens[3:]
 	turnRelation := TriggerCastTurnRelationNone
-	occurrenceEnd := 3
+	var occurrenceEnd int
 	if next, ok := cutSyntaxWords(remainder, "each", "turn"); ok {
 		remainder = next
 		occurrenceEnd = 5
