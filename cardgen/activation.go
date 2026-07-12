@@ -180,6 +180,7 @@ func lowerActivationShell(
 	normalizeExactActivationSelfReturnReferences(&bodyContent)
 	if !ability.EvolutionaryLeapRevealUntil &&
 		!ability.ProgenitorIconNextFlash &&
+		!ability.SelesnyaEulogistPopulate &&
 		!activationReferencesSupported(bodyContent) {
 		return loweredActivationShell{}, activationDiagnostic(
 			original,
