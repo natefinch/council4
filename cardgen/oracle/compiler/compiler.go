@@ -56,6 +56,7 @@ func compileAbility(
 		TemurSabertoothSequence:                     ability.TemurSabertoothSequence,
 		FightRiggingSequence:                        ability.FightRiggingSequence,
 		RaisePalisadeSequence:                       ability.RaisePalisadeSequence,
+		BattleOfBywaterSequence:                     ability.BattleOfBywaterSequence,
 	}
 	if ability.LifeCharacteristicExchange != nil {
 		compiled.LifeCharacteristicExchange = &CompiledLifeCharacteristicExchange{
