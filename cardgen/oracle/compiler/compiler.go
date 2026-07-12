@@ -53,6 +53,7 @@ func compileAbility(
 		UnlicensedHearseExile:                       ability.UnlicensedHearseExile,
 		ChoosePermanentTypeReturn:                   ability.ChoosePermanentTypeReturn,
 		TauntFromRampartSequence:                    ability.TauntFromRampartSequence,
+		TemurSabertoothSequence:                     ability.TemurSabertoothSequence,
 	}
 	if ability.LifeCharacteristicExchange != nil {
 		compiled.LifeCharacteristicExchange = &CompiledLifeCharacteristicExchange{

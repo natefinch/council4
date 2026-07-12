@@ -183,6 +183,7 @@ func lowerActivationShell(
 		!ability.SelesnyaEulogistPopulate &&
 		ability.LifeCharacteristicExchange == nil &&
 		!ability.UnlicensedHearseExile &&
+		!ability.TemurSabertoothSequence &&
 		!activationReferencesSupported(bodyContent) {
 		return loweredActivationShell{}, activationDiagnostic(
 			original,

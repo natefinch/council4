@@ -27,6 +27,40 @@ func lowerActivatedBodyContent(
 	bodyText string,
 	variableCounterRemovalCost bool,
 ) (game.AbilityContent, *shared.Diagnostic) {
+	if ability.TemurSabertoothSequence {
+		const resultKey = game.ResultKey("temur-sabertooth-returned")
+		return game.Mode{Sequence: []game.Instruction{
+			{
+				Primitive: game.Bounce{
+					Group: game.BattlefieldGroupExcluding(
+						game.Selection{
+							RequiredTypes: []types.Card{types.Creature},
+							Controller:    game.ControllerYou,
+						},
+						game.SourcePermanentReference(),
+					),
+					ControlledChoice: true,
+					Amount:           game.Fixed(1),
+				},
+				Optional:      true,
+				PublishResult: resultKey,
+			},
+			{
+				Primitive: game.ApplyContinuous{
+					Object: opt.Val(game.SourcePermanentReference()),
+					ContinuousEffects: []game.ContinuousEffect{{
+						Layer:       game.LayerAbility,
+						AddKeywords: []game.Keyword{game.Indestructible},
+					}},
+					Duration: game.DurationUntilEndOfTurn,
+				},
+				ResultGate: opt.Val(game.InstructionResultGate{
+					Key:       resultKey,
+					Succeeded: game.TriTrue,
+				}),
+			},
+		}}.Ability(), nil
+	}
 	if ability.UnlicensedHearseExile {
 		content, ok := lowerTargetedGraveyardExile(contentCtx{
 			text:          bodyText,
