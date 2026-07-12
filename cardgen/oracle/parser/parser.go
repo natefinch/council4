@@ -172,6 +172,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitRaisePalisadeSequence(document.Abilities)
 	emitBattleOfBywaterSequence(document.Abilities)
 	emitArtifactMutationSequence(document.Abilities)
+	emitUrzasRuinousBlast(document.Abilities)
 	emitSelfNameStaticRules(document.Abilities)
 	emitCost(document.Abilities)
 	emitOptional(document.Abilities)
@@ -452,6 +453,15 @@ func emitArtifactMutationSequence(abilities []Ability) {
 	const text = "Destroy target artifact. It can't be regenerated. Create X 1/1 green Saproling creature tokens, where X is that artifact's mana value."
 	for i := range abilities {
 		abilities[i].ArtifactMutationSequence =
+			abilities[i].Kind == AbilitySpell &&
+				strings.EqualFold(strings.TrimSpace(abilities[i].Text), text)
+	}
+}
+
+func emitUrzasRuinousBlast(abilities []Ability) {
+	const text = "Exile all nonland permanents that aren't legendary."
+	for i := range abilities {
+		abilities[i].UrzasRuinousBlast =
 			abilities[i].Kind == AbilitySpell &&
 				strings.EqualFold(strings.TrimSpace(abilities[i].Text), text)
 	}

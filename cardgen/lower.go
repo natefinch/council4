@@ -872,6 +872,24 @@ func lowerExecutableAbility(
 	ability compiler.CompiledAbility,
 	syntax *parser.Ability,
 ) (abilityLowering, *shared.Diagnostic) {
+	if ability.UrzasRuinousBlast {
+		return abilityLowering{
+			spellAbility: opt.Val(game.Mode{Sequence: []game.Instruction{{
+				Primitive: game.Exile{Group: game.BattlefieldGroup(game.Selection{
+					ExcludedTypes:     []types.Card{types.Land},
+					ExcludedSupertype: types.Legendary,
+				})},
+			}}}.Ability()),
+			consumed: semanticConsumption{
+				conditions: len(ability.Content.Conditions),
+				effects:    len(ability.Content.Effects),
+				keywords:   len(ability.Content.Keywords),
+				references: len(ability.Content.References),
+				targets:    len(ability.Content.Targets),
+			},
+			sourceSpans: []shared.Span{ability.Span},
+		}, nil
+	}
 	if ability.ArtifactMutationSequence {
 		return abilityLowering{
 			spellAbility: opt.Val(game.Mode{

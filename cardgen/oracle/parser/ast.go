@@ -159,6 +159,7 @@ type Ability struct {
 	RaisePalisadeSequence       bool                              `json:",omitempty"`
 	BattleOfBywaterSequence     bool                              `json:",omitempty"`
 	ArtifactMutationSequence    bool                              `json:",omitempty"`
+	UrzasRuinousBlast           bool                              `json:",omitempty"`
 	// ExactSequence is a parser-owned, exact-vocabulary resolving sequence.
 	ExactSequence *ExactSequenceSyntax `json:",omitempty"`
 	// Optional reports that a triggered ability's resolving body begins with the
