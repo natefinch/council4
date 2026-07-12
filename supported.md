@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,537 of 32,501 cards eligible for paper support (54.0%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,538 of 32,501 cards eligible for paper support (54.0%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -4600,6 +4600,7 @@ Council4 currently supports **17,537 of 32,501 cards eligible for paper support 
 - Energizer
 - Energy Bolt
 - Energy Refractor
+- Energy Tap
 - Enervate
 - Enfeeblement
 - Enforcer Griffin

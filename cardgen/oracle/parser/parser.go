@@ -158,6 +158,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitYevaGreenCreatureFlash(document.Abilities)
 	emitProgenitorIconNextFlash(document.Abilities)
 	emitStarCompassMana(document.Abilities)
+	emitEnergyTapMana(document.Abilities)
 	emitSelfNameStaticRules(document.Abilities)
 	emitCost(document.Abilities)
 	emitOptional(document.Abilities)
@@ -304,6 +305,14 @@ func emitStarCompassMana(abilities []Ability) {
 	const text = "{T}: Add one mana of any color that a basic land you control could produce."
 	for i := range abilities {
 		abilities[i].StarCompassMana =
+			strings.EqualFold(strings.TrimSpace(abilities[i].Text), text)
+	}
+}
+
+func emitEnergyTapMana(abilities []Ability) {
+	const text = "Tap target untapped creature you control. If you do, add an amount of {C} equal to that creature's mana value."
+	for i := range abilities {
+		abilities[i].EnergyTapMana =
 			strings.EqualFold(strings.TrimSpace(abilities[i].Text), text)
 	}
 }

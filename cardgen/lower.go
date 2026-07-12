@@ -13,6 +13,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
@@ -871,6 +872,52 @@ func lowerExecutableAbility(
 	ability compiler.CompiledAbility,
 	syntax *parser.Ability,
 ) (abilityLowering, *shared.Diagnostic) {
+	if ability.EnergyTapMana {
+		const tapped = game.ResultKey("energy-tap-target")
+		return abilityLowering{
+			spellAbility: opt.Val(game.AbilityContent{
+				MinModes: 1,
+				MaxModes: 1,
+				Modes: []game.Mode{{
+					Targets: []game.TargetSpec{{
+						MinTargets: 1,
+						MaxTargets: 1,
+						Constraint: "target untapped creature you control",
+						Allow:      game.TargetAllowPermanent,
+						Selection: opt.Val(game.Selection{
+							Controller:    game.ControllerYou,
+							RequiredTypes: []types.Card{types.Creature},
+							Tapped:        game.TriFalse,
+						}),
+					}},
+					Sequence: []game.Instruction{
+						{
+							Primitive:     game.Tap{Object: game.TargetPermanentReference(0)},
+							PublishResult: tapped,
+						},
+						{
+							Primitive: game.AddMana{
+								Amount: game.Dynamic(game.DynamicAmount{
+									Kind:   game.DynamicAmountObjectManaValue,
+									Object: game.TargetPermanentReference(0),
+								}),
+								ManaColor: mana.C,
+							},
+							ResultGate: opt.Val(game.InstructionResultGate{Key: tapped, Succeeded: game.TriTrue}),
+						},
+					},
+				}},
+			}),
+			consumed: semanticConsumption{
+				conditions: len(ability.Content.Conditions),
+				effects:    len(ability.Content.Effects),
+				keywords:   len(ability.Content.Keywords),
+				references: len(ability.Content.References),
+				targets:    len(ability.Content.Targets),
+			},
+			sourceSpans: []shared.Span{ability.Span},
+		}, nil
+	}
 	if ability.YevaGreenCreatureFlash {
 		return abilityLowering{
 			staticAbilities: []loweredStaticAbility{{Body: game.StaticAbility{
