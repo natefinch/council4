@@ -697,6 +697,16 @@ func (v *cardDefValidator) validateKeywordAbility(faceName, path string, ability
 		if keyword.Count <= 0 {
 			v.add(faceName, appendPath(path, "Count"), CardDefIssueInvalidKeywordAbility, "soulshift count must be positive")
 		}
+	case MobilizeKeyword:
+		switch keyword.Amount.Dynamic {
+		case MobilizeDynamicNone:
+			if keyword.Amount.Fixed <= 0 {
+				v.add(faceName, appendPath(path, "Amount"), CardDefIssueInvalidKeywordAbility, "mobilize fixed amount must be positive")
+			}
+		case MobilizeDynamicCreatureCardsInGraveyard:
+		default:
+			v.add(faceName, appendPath(path, "Amount"), CardDefIssueInvalidKeywordAbility, fmt.Sprintf("unknown mobilize dynamic amount %d", keyword.Amount.Dynamic))
+		}
 	case DredgeKeyword:
 		if keyword.Count <= 0 {
 			v.add(faceName, appendPath(path, "Count"), CardDefIssueInvalidKeywordAbility, "dredge count must be positive")

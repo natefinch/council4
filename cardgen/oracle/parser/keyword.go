@@ -123,6 +123,11 @@ const (
 	KeywordRampage             KeywordKind = "KeywordRampage"
 	KeywordTraining            KeywordKind = "KeywordTraining"
 	KeywordMyriad              KeywordKind = "KeywordMyriad"
+	// KeywordMobilize is the Mobilize N keyword (CR 702.169). Its parameter is
+	// the number of tapped-and-attacking 1/1 red Warrior tokens created whenever
+	// the creature attacks: a fixed integer ("Mobilize 2") or the rules-derived
+	// "Mobilize X, where X is the number of creature cards in your graveyard".
+	KeywordMobilize KeywordKind = "KeywordMobilize"
 	// KeywordSaddle is the Saddle N keyword (Mounts, CR 702.166). Its integer
 	// parameter is the total power of other creatures that must be tapped to
 	// make the Mount saddled until end of turn.
@@ -303,6 +308,7 @@ var keywordNames = map[KeywordKind]string{
 	KeywordRampage:             "Rampage",
 	KeywordTraining:            "Training",
 	KeywordMyriad:              "Myriad",
+	KeywordMobilize:            "Mobilize",
 	KeywordSaddle:              "Saddle",
 	KeywordCrew:                "Crew",
 	KeywordLandwalk:            "Landwalk",
@@ -447,6 +453,7 @@ var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordRampage, Words: []string{"rampage"}},
 	{Kind: KeywordTraining, Words: []string{"training"}},
 	{Kind: KeywordMyriad, Words: []string{"myriad"}},
+	{Kind: KeywordMobilize, Words: []string{"mobilize"}},
 	{Kind: KeywordSaddle, Words: []string{"saddle"}},
 	{Kind: KeywordCrew, Words: []string{"crew"}},
 	{Kind: KeywordNonbasicLandwalk, Words: []string{"nonbasic", "landwalk"}},
@@ -476,6 +483,24 @@ const (
 	KeywordParameterChampion      KeywordParameterKind = "KeywordParameterChampion"
 	KeywordParameterProtection    KeywordParameterKind = "KeywordParameterProtection"
 	KeywordParameterGift          KeywordParameterKind = "KeywordParameterGift"
+	// KeywordParameterMobilizeDynamic is a rules-derived Mobilize count that is
+	// not a printed integer ("Mobilize X, where X is ..."). The typed
+	// MobilizeDynamicKind names which rules-derived count applies; the fixed
+	// "Mobilize N" form uses KeywordParameterInteger instead.
+	KeywordParameterMobilizeDynamic KeywordParameterKind = "KeywordParameterMobilizeDynamic"
+)
+
+// MobilizeDynamicKind identifies a rules-derived Mobilize count (CR 702.169).
+// The parser owns the printed wording and maps it to one of these kinds; the
+// compiler and lowering are text-blind and consume only the kind.
+type MobilizeDynamicKind string
+
+// Typed Mobilize dynamic count kinds.
+const (
+	MobilizeDynamicNone MobilizeDynamicKind = ""
+	// MobilizeDynamicCreatureCardsInGraveyard is "Mobilize X, where X is the
+	// number of creature cards in your graveyard" (Avenger of the Fallen).
+	MobilizeDynamicCreatureCardsInGraveyard MobilizeDynamicKind = "MobilizeDynamicCreatureCardsInGraveyard"
 )
 
 // GiftKind identifies the typed gift promised by a Gift keyword action (CR
@@ -540,11 +565,12 @@ func cloneEnchantPredicate(predicate EnchantPredicate) EnchantPredicate {
 }
 
 type keywordParameterDetails struct {
-	ManaCost      cost.Mana           `json:",omitempty"`
-	Integer       int                 `json:",omitempty"`
-	EnchantTarget EnchantPredicate    `json:",omitzero"`
-	Protection    ProtectionParameter `json:",omitzero"`
-	Gift          GiftKind            `json:",omitempty"`
+	ManaCost        cost.Mana           `json:",omitempty"`
+	Integer         int                 `json:",omitempty"`
+	EnchantTarget   EnchantPredicate    `json:",omitzero"`
+	Protection      ProtectionParameter `json:",omitzero"`
+	Gift            GiftKind            `json:",omitempty"`
+	MobilizeDynamic MobilizeDynamicKind `json:",omitempty"`
 }
 
 // KeywordParameter is source-spanned typed syntax for one keyword parameter.
@@ -623,6 +649,18 @@ func NewGiftKeywordParameter(span shared.Span, kind GiftKind, text string) Keywo
 	}
 }
 
+// NewMobilizeDynamicKeywordParameter constructs a typed rules-derived Mobilize
+// count parameter ("Mobilize X, where X is ..."), naming which dynamic count the
+// keyword uses (CR 702.169).
+func NewMobilizeDynamicKeywordParameter(span shared.Span, kind MobilizeDynamicKind, text string) KeywordParameter {
+	return KeywordParameter{
+		Kind:    KeywordParameterMobilizeDynamic,
+		Span:    span,
+		Text:    text,
+		details: &keywordParameterDetails{MobilizeDynamic: kind},
+	}
+}
+
 // ManaCost returns a copy of the typed mana-cost parameter.
 func (p KeywordParameter) ManaCost() cost.Mana {
 	if p.details == nil {
@@ -661,6 +699,15 @@ func (p KeywordParameter) Gift() GiftKind {
 		return GiftKindNone
 	}
 	return p.details.Gift
+}
+
+// MobilizeDynamic returns the typed rules-derived Mobilize count kind, or
+// MobilizeDynamicNone when the parameter is not a dynamic Mobilize count.
+func (p KeywordParameter) MobilizeDynamic() MobilizeDynamicKind {
+	if p.details == nil {
+		return MobilizeDynamicNone
+	}
+	return p.details.MobilizeDynamic
 }
 
 // Keyword is one source-spanned recognized keyword and its typed parameter.
@@ -1676,6 +1723,19 @@ func scanKeywords(tokens []shared.Token, atoms Atoms) []Keyword {
 				end = manaStart
 			}
 		}
+		if kind == KeywordMobilize {
+			if parameter, dynamicEnd, ok := parseMobilizeDynamicParameter(tokens, end); ok {
+				keywords = append(keywords, Keyword{
+					Kind:      KeywordMobilize,
+					NameSpan:  nameSpan,
+					Span:      shared.SpanOf(tokens[i:dynamicEnd]),
+					Text:      joinTokens(tokens[i:dynamicEnd]),
+					Parameter: parameter,
+				})
+				i = dynamicEnd - 1
+				continue
+			}
+		}
 		parameter, parameterEnd := parseKeywordParameter(kind, tokens, end, atoms)
 		end = parameterEnd
 		if kind == KeywordWard {
@@ -1790,6 +1850,32 @@ func parseGiftKeywordParameter(tokens []shared.Token, start int) (KeywordParamet
 		return giftParam(GiftKindTappedFish, i+2)
 	}
 	return KeywordParameter{}, start, false
+}
+
+// parseMobilizeDynamicParameter recognizes the rules-derived Mobilize count
+// "X, where X is the number of creature cards in your graveyard" (Avenger of the
+// Fallen, CR 702.169), returning a typed dynamic parameter that spans the whole
+// clause so keywordOnlyCovered still reports the keyword as covering its text.
+// It returns ok=false for the fixed "Mobilize N" form (handled by the integer
+// parameter path) and for any other dynamic wording, which then fails closed in
+// lowering rather than being silently misread.
+func parseMobilizeDynamicParameter(tokens []shared.Token, start int) (KeywordParameter, int, bool) {
+	if start >= len(tokens) || !equalWord(tokens[start], "X") {
+		return KeywordParameter{}, start, false
+	}
+	i := start + 1
+	if i >= len(tokens) || tokens[i].Kind != shared.Comma {
+		return KeywordParameter{}, start, false
+	}
+	i++
+	words := []string{"where", "X", "is", "the", "number", "of", "creature", "cards", "in", "your", "graveyard"}
+	if !atomWordsAt(tokens, i, words...) {
+		return KeywordParameter{}, start, false
+	}
+	end := i + len(words)
+	span := shared.SpanOf(tokens[start:end])
+	parameter := NewMobilizeDynamicKeywordParameter(span, MobilizeDynamicCreatureCardsInGraveyard, joinTokens(tokens[start:end]))
+	return parameter, end, true
 }
 
 // ability ("Equip legendary creature {3}", "Equip Knight {2}", "Equip Shaman,

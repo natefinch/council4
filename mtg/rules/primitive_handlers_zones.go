@@ -570,6 +570,9 @@ func handleCreateToken(r *effectResolver, prim game.CreateToken) effectResolved 
 	if prim.EntryAttacking {
 		declareCreatedTokensAttacking(r.engine, r.game, recipient, created, r.agents, r.log)
 	}
+	if prim.AttackSameAsSource {
+		r.declareTokensAttackingSameAsSource(created)
+	}
 	if prim.PublishLinked != "" {
 		key := linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked))
 		// Drop any tokens a prior resolution published under this key before
@@ -680,6 +683,40 @@ func (r *effectResolver) triggerEventDefendingPlayer() (game.PlayerID, bool) {
 		return 0, false
 	}
 	return r.obj.TriggerEvent.Player, true
+}
+
+// declareTokensAttackingSameAsSource puts each created token onto the
+// battlefield attacking the same player or planeswalker the resolving ability's
+// source creature is attacking (CR 702.169b), backing the mobilize keyword. It
+// prefers the source's live attack declaration so a planeswalker or battle
+// target carries over, and falls back to the defending player recorded on the
+// trigger event when the source has already left combat, so token creation still
+// joins the correct player's combat. With no attack to join, the tokens stay on
+// the battlefield without attacking.
+func (r *effectResolver) declareTokensAttackingSameAsSource(tokens []*game.Permanent) {
+	target, ok := r.mobilizeAttackTarget()
+	if !ok {
+		return
+	}
+	controller := r.obj.Controller
+	for _, token := range tokens {
+		declareTokenAttackingTarget(r.game, controller, token, target)
+	}
+}
+
+// mobilizeAttackTarget resolves the target a mobilize creature's tokens attack:
+// the source's live attack declaration target when it is still attacking,
+// otherwise the defending player recorded on the trigger event.
+func (r *effectResolver) mobilizeAttackTarget() (game.AttackTarget, bool) {
+	if r.obj != nil {
+		if declaration, ok := attackDeclarationForAttacker(r.game, r.obj.SourceID); ok {
+			return declaration.Target, true
+		}
+	}
+	if defender, ok := r.triggerEventDefendingPlayer(); ok {
+		return game.AttackTarget{Player: defender}, true
+	}
+	return game.AttackTarget{}, false
 }
 
 // createTokenForGroup creates the token for every player in the primitive's

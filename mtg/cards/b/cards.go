@@ -103,6 +103,7 @@ var Cards = []cardset.Entry{
 	{Name: "Bond of Revival", New: BondOfRevival},
 	{Name: "Bonded Construct", New: BondedConstruct},
 	{Name: "Bonded Horncrest", New: BondedHorncrest},
+	{Name: "Bone-Cairn Butcher", New: BoneCairnButcher},
 	{Name: "Bone Harvest", New: BoneHarvest},
 	{Name: "Boneclub Berserker", New: BoneclubBerserker},
 	{Name: "Bontu's Last Reckoning", New: BontuSLastReckoning},

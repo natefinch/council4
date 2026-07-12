@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,612 of 32,501 cards eligible for paper support (54.2%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,623 of 32,501 cards eligible for paper support (54.2%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -969,6 +969,7 @@ Council4 currently supports **17,612 of 32,501 cards eligible for paper support 
 - Aven Wind Guide
 - Aven Wind Mage
 - Avenger en-Dal
+- Avenger of the Fallen
 - Avenger of Zendikar
 - Avengers Disassembled
 - Avengers Hangar
@@ -1760,6 +1761,7 @@ Council4 currently supports **17,612 of 32,501 cards eligible for paper support 
 - Bone Shards
 - Bone Splinters
 - Bone to Ash
+- Bone-Cairn Butcher
 - Bonebind Orator
 - Bonebreaker Giant
 - Bonecaller Cleric
@@ -3302,6 +3304,7 @@ Council4 currently supports **17,612 of 32,501 cards eligible for paper support 
 - Dalek
 - Dalek Drone
 - Dalek Squadron
+- Dalkovan Packbeasts
 - Damn
 - Damnable Pact
 - Damnation
@@ -3998,6 +4001,7 @@ Council4 currently supports **17,612 of 32,501 cards eligible for paper support 
 - Dragon-Scarred Bear
 - Dragon-Style Twins
 - Dragonback Assault
+- Dragonback Lancer
 - Dragonborn Looter
 - Dragonclaw Strike
 - Dragonfly Suit
@@ -10111,6 +10115,7 @@ Council4 currently supports **17,612 of 32,501 cards eligible for paper support 
 - Night Scythe
 - Night's Whisper
 - Nightbird's Clutches
+- Nightblade Brigade
 - Nightdrinker Moroii
 - Nightfire Giant
 - Nightguard Patrol
@@ -11858,6 +11863,7 @@ Council4 currently supports **17,612 of 32,501 cards eligible for paper support 
 - Regrowth
 - Rehearsed Debater
 - Reign of Chaos
+- Reigning Victor
 - Reinforced Bulwark
 - Reinforced Ronin
 - Reinforcements
@@ -13258,6 +13264,7 @@ Council4 currently supports **17,612 of 32,501 cards eligible for paper support 
 - Shizo, Death's Storehouse
 - Shoal Kraken
 - Shock
+- Shock Brigade
 - Shock Troops
 - Shocking Grasp
 - Shocking Sharpshooter
@@ -14308,6 +14315,7 @@ Council4 currently supports **17,612 of 32,501 cards eligible for paper support 
 - Stab
 - Stab Wound
 - Stabbing Pain
+- Stadium Headliner
 - Stadium Tidalmage
 - Staff of Domination
 - Staff of Nin
@@ -16421,6 +16429,7 @@ Council4 currently supports **17,612 of 32,501 cards eligible for paper support 
 - Venerable Lammasu
 - Venerable Monk
 - Venerated Rotpriest
+- Venerated Stormsinger
 - Vengeance
 - Vengeant Vampire
 - Vengeful Ancestor
@@ -16665,6 +16674,7 @@ Council4 currently supports **17,612 of 32,501 cards eligible for paper support 
 - Voice of the Vermin
 - Voice of the Woods
 - Voice of Truth
+- Voice of Victory
 - Voiceless Spirit
 - Voices from the Void
 - Void Beckoner
@@ -17611,6 +17621,7 @@ Council4 currently supports **17,612 of 32,501 cards eligible for paper support 
 - Zuran Enchanter
 - Zuran Orb
 - Zuran Spellcaster
+- Zurgo's Vanguard
 - Zuri, Warrior of Wakanda
 - Éomer, King of Rohan
 - Éomer, Marshal of Rohan

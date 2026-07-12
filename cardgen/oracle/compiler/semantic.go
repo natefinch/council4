@@ -4078,6 +4078,11 @@ type CompiledKeyword struct {
 	// GiftKindNone when the keyword is not Gift. Lowering maps it to the delivery
 	// content given to the promised opponent (draw a card / create a token).
 	Gift parser.GiftKind
+	// MobilizeDynamic is the typed rules-derived Mobilize count (CR 702.169), or
+	// MobilizeDynamicNone when the keyword is not Mobilize or uses a fixed integer
+	// count (carried by Integer instead). Lowering maps it to the runtime
+	// MobilizeAmount's dynamic kind.
+	MobilizeDynamic parser.MobilizeDynamicKind
 	// EquipRestriction is the typed quality restriction of a restricted Equip
 	// ability, or nil for an unrestricted Equip. It is set only when the parser
 	// recognized every restriction word, so an unsupported restriction fails
