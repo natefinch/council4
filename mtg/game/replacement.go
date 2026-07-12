@@ -575,6 +575,21 @@ type ReplacementEffect struct {
 	// choice is confirmed so a declined copy enters untapped.
 	EntersAsCopyTapped bool
 
+	// EntersAsCopyBasePower and EntersAsCopyBaseToughness apply the "except it's
+	// N/N" copiable rider (Quicksilver Gargantuan's "except it's 7/7") by
+	// overriding the copied values' power and toughness with a fixed size (CR
+	// 706.2). They are set together and only consulted when EntersAsCopy is true.
+	EntersAsCopyBasePower     opt.V[int]
+	EntersAsCopyBaseToughness opt.V[int]
+
+	// EntersAsCopyMaxManaValueFromManaSpent restricts the permanents that may be
+	// copied to those whose mana value is at most the amount of mana spent to
+	// cast this permanent (Mockingbird's "with mana value less than or equal to
+	// the amount of mana spent to cast this creature"). A permanent that did not
+	// enter from a cast spell spent no mana, so the bound is zero. It is only
+	// consulted when EntersAsCopy is true.
+	EntersAsCopyMaxManaValueFromManaSpent bool
+
 	// DrawCardMultiplier replaces a single "draw a card" event by the controller
 	// with drawing this many cards instead (CR 614). It backs the draw-doubling
 	// replacement "If you would draw a card, draw two cards instead." A value of

@@ -17,5 +17,6 @@ var Cards = []cardset.Entry{
 	{Name: "Quick-Draw Dagger", New: QuickDrawDagger},
 	{Name: "Quickling", New: Quickling},
 	{Name: "Quicksilver Behemoth", New: QuicksilverBehemoth},
+	{Name: "Quicksilver Gargantuan", New: QuicksilverGargantuan},
 	{Name: "Qutrub Forayer", New: QutrubForayer},
 }

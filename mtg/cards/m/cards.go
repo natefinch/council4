@@ -118,6 +118,7 @@ var Cards = []cardset.Entry{
 	{Name: "Mobile Garrison", New: MobileGarrison},
 	{Name: "Mobile Homestead", New: MobileHomestead},
 	{Name: "Mobilization", New: Mobilization},
+	{Name: "Mockingbird", New: Mockingbird},
 	{Name: "Mogg Alarm", New: MoggAlarm},
 	{Name: "Mogg Flunkies", New: MoggFlunkies},
 	{Name: "Moira and Teshar", New: MoiraAndTeshar},

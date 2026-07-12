@@ -11,6 +11,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
 
 // Context supplies card facts needed during semantic compilation.
@@ -2673,8 +2674,16 @@ type CompiledEffect struct {
 	// EntersAsCopyTapped mirrors the parser's "enter tapped as a copy" form
 	// (Vesuva), where the permanent enters tapped as its chosen copy.
 	EntersAsCopyTapped bool
-	UnderYourControl   bool
-	CastAsAdventure    bool
+	// EntersAsCopyBasePower and EntersAsCopyBaseToughness mirror the parser's
+	// "except it's N/N" copiable P/T-override rider (Quicksilver Gargantuan).
+	EntersAsCopyBasePower     opt.V[int]
+	EntersAsCopyBaseToughness opt.V[int]
+	// EntersAsCopyMaxManaValueFromManaSpent mirrors the parser's "with mana value
+	// less than or equal to the amount of mana spent to cast this creature"
+	// copiable filter (Mockingbird).
+	EntersAsCopyMaxManaValueFromManaSpent bool
+	UnderYourControl                      bool
+	CastAsAdventure                       bool
 	// CastWithoutPayingManaCost mirrors the parser's free-cast rider flag for a
 	// cast effect ("... without paying its mana cost"). Lowering reads it to
 	// route the cast-for-free primitive; it is false for every other effect.

@@ -30,6 +30,7 @@ type enterBattlefieldContext struct {
 	castFromZone      zone.Type
 	colorsOfManaSpent int
 	manaSpentByColor  map[color.Color]int
+	manaSpentToCast   int
 }
 
 type damageEvent struct {
@@ -981,6 +982,12 @@ func applyEntersAsCopy(ctx enterBattlefieldContext, g *game.Game, permanent *gam
 		if !resolver.permanentMatchesGroupSelection(replacement.EntersAsCopySelection, permanent, candidate) {
 			continue
 		}
+		if replacement.EntersAsCopyMaxManaValueFromManaSpent {
+			def, ok := permanentCardDef(g, candidate)
+			if !ok || def.ManaValue() > ctx.manaSpentToCast {
+				continue
+			}
+		}
 		candidates = append(candidates, candidate)
 	}
 	if len(candidates) == 0 {
@@ -1039,6 +1046,17 @@ func applyEntersAsCopy(ctx enterBattlefieldContext, g *game.Game, permanent *gam
 		}
 		static := body
 		values.Abilities = append(values.Abilities, &static)
+	}
+	// "except it's N/N" (Quicksilver Gargantuan) overrides the copiable power and
+	// toughness with a fixed size, so clear any characteristic-defining power or
+	// toughness carried over from the copied creature (CR 706.2).
+	if replacement.EntersAsCopyBasePower.Exists {
+		values.Power = opt.Val(game.PT{Value: replacement.EntersAsCopyBasePower.Val})
+		values.DynamicPower = opt.V[game.DynamicValue]{}
+	}
+	if replacement.EntersAsCopyBaseToughness.Exists {
+		values.Toughness = opt.Val(game.PT{Value: replacement.EntersAsCopyBaseToughness.Val})
+		values.DynamicToughness = opt.V[game.DynamicValue]{}
 	}
 	duration := game.DurationForAsLongAsSourceOnBattlefield
 	if replacement.EntersAsCopyUntilEndOfTurn {

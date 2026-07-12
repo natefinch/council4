@@ -494,6 +494,29 @@ func EntersTappedAsCopy(ability ReplacementAbility) ReplacementAbility {
 	return ability
 }
 
+// EntersAsCopyWithBasePowerToughness overrides an enters-as-copy replacement's
+// copied power and toughness with a fixed N/N, backing the "except it's N/N"
+// copiable rider (Quicksilver Gargantuan's "except it's 7/7"; CR 706.2). It
+// wraps an EntersAsCopyReplacement value rather than extending that
+// constructor, so only the size-override form carries the fixed base power and
+// toughness.
+func EntersAsCopyWithBasePowerToughness(ability ReplacementAbility, power, toughness int) ReplacementAbility {
+	ability.Replacement.EntersAsCopyBasePower = opt.Val(power)
+	ability.Replacement.EntersAsCopyBaseToughness = opt.Val(toughness)
+	return ability
+}
+
+// EntersAsCopyWithManaSpentBound restricts an enters-as-copy replacement's
+// copiable permanents to those whose mana value is at most the amount of mana
+// spent to cast this permanent, backing Mockingbird's "with mana value less
+// than or equal to the amount of mana spent to cast this creature" filter. It
+// wraps an EntersAsCopyReplacement value rather than extending that
+// constructor, so only the mana-spent form carries the bound.
+func EntersAsCopyWithManaSpentBound(ability ReplacementAbility) ReplacementAbility {
+	ability.Replacement.EntersAsCopyMaxManaValueFromManaSpent = true
+	return ability
+}
+
 // TokenCreationReplacement creates a persistent replacement that multiplies
 // token creation events matching controller.
 func TokenCreationReplacement(text string, multiplier int, filter TriggerControllerFilter) ReplacementAbility {

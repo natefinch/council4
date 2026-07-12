@@ -11,6 +11,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
 
 func emitResolvingSyntax(abilities []Ability) {
@@ -6698,6 +6699,7 @@ func parseEntersAsCopyEffect(sentence Sentence, tokens []shared.Token, atoms Ato
 	var addSubtypes []types.Sub
 	var addKeywords []KeywordKind
 	var conditionalCounters []EntersAsCopyConditionalCounter
+	var basePower, baseToughness opt.V[int]
 	if exceptIndex := entersAsCopyExceptIndex(body, filterStart); exceptIndex >= 0 {
 		riders, ok := parseEntersAsCopyRider(body[exceptIndex+1:len(body)-1], atoms)
 		if !ok {
@@ -6708,6 +6710,8 @@ func parseEntersAsCopyEffect(sentence Sentence, tokens []shared.Token, atoms Ato
 		addSubtypes = riders.addSubtypes
 		addKeywords = riders.addKeywords
 		conditionalCounters = riders.conditionalCounters
+		basePower = riders.basePower
+		baseToughness = riders.baseToughness
 		filterEnd = exceptIndex
 	}
 	filter := body[filterStart:filterEnd]
@@ -6721,6 +6725,16 @@ func parseEntersAsCopyEffect(sentence Sentence, tokens []shared.Token, atoms Ato
 	if trimmed, ok := trimTrailingUntilEndOfTurn(filter); ok {
 		filter = trimmed
 		untilEndOfTurn = true
+	}
+	// "with mana value less than or equal to the amount of mana spent to cast
+	// this creature" (Mockingbird) bounds the copiable permanents by the mana
+	// spent to cast this permanent; strip the trailing phrase so the battlefield
+	// scope check below sees the bare "on the battlefield" filter and record the
+	// bound for lowering.
+	maxManaValueFromManaSpent := false
+	if trimmed, ok := trimTrailingManaSpentBound(filter); ok {
+		filter = trimmed
+		maxManaValueFromManaSpent = true
 	}
 	// Only battlefield permanents can be copied by this runtime, so require an
 	// explicit battlefield or "you control" scope; graveyard/hand sources such
@@ -6747,10 +6761,13 @@ func parseEntersAsCopyEffect(sentence Sentence, tokens []shared.Token, atoms Ato
 		EntersAsCopyAddTypes:     addTypes,
 		EntersAsCopyAddSubtypes:  addSubtypes,
 
-		EntersAsCopyConditionalCounters: conditionalCounters,
-		EntersAsCopyUntilEndOfTurn:      untilEndOfTurn,
-		EntersAsCopyAddKeywords:         addKeywords,
-		EntersAsCopyTapped:              entersTapped,
+		EntersAsCopyConditionalCounters:       conditionalCounters,
+		EntersAsCopyUntilEndOfTurn:            untilEndOfTurn,
+		EntersAsCopyAddKeywords:               addKeywords,
+		EntersAsCopyTapped:                    entersTapped,
+		EntersAsCopyBasePower:                 basePower,
+		EntersAsCopyBaseToughness:             baseToughness,
+		EntersAsCopyMaxManaValueFromManaSpent: maxManaValueFromManaSpent,
 	}
 	return []EffectSyntax{effect}, true
 }
@@ -7451,6 +7468,11 @@ type entersAsCopyRiders struct {
 	addKeywords         []KeywordKind
 	notLegendary        bool
 	conditionalCounters []EntersAsCopyConditionalCounter
+	// basePower and baseToughness carry the "except it's N/N" copiable
+	// P/T-override rider (Quicksilver Gargantuan's "except it's 7/7"). They are
+	// set together and unset when no size override is present.
+	basePower     opt.V[int]
+	baseToughness opt.V[int]
 }
 
 // parseEntersAsCopyRider parses the recognized copiable riders of an
@@ -7470,6 +7492,11 @@ func parseEntersAsCopyRider(rider []shared.Token, atoms Atoms) (entersAsCopyRide
 		words := normalizedWords(clause)
 		if entersAsCopyNotLegendaryClause(words) {
 			riders.notLegendary = true
+			continue
+		}
+		if power, toughness, ok := entersAsCopyBasePowerToughnessClause(clause); ok {
+			riders.basePower = opt.Val(power)
+			riders.baseToughness = opt.Val(toughness)
 			continue
 		}
 		if placement, ok := entersAsCopyConditionalCounterClause(clause); ok {
@@ -7503,6 +7530,32 @@ func entersAsCopyAddKeywordClause(clause []shared.Token, atoms Atoms) (KeywordKi
 		return KeywordUnknown, false
 	}
 	return keywords[0].Kind, true
+}
+
+// entersAsCopyBasePowerToughnessClause matches the "it's N/N" copiable
+// P/T-override rider on an enters-as-copy replacement (Quicksilver Gargantuan's
+// "except it's 7/7") and returns the fixed power and toughness. The size is read
+// at the token level because the slash symbol is dropped from normalized words.
+// It fails closed on any wording other than exactly "it's <integer>/<integer>".
+func entersAsCopyBasePowerToughnessClause(clause []shared.Token) (power, toughness int, ok bool) {
+	rest, cut := cutTokenPrefix(clause, "it's")
+	if !cut {
+		if rest, cut = cutTokenPrefix(clause, "it", "is"); !cut {
+			return 0, 0, false
+		}
+	}
+	if len(rest) != 3 || rest[0].Kind != shared.Integer || rest[1].Kind != shared.Slash || rest[2].Kind != shared.Integer {
+		return 0, 0, false
+	}
+	power, err := strconv.Atoi(rest[0].Text)
+	if err != nil {
+		return 0, 0, false
+	}
+	toughness, err = strconv.Atoi(rest[2].Text)
+	if err != nil {
+		return 0, 0, false
+	}
+	return power, toughness, true
 }
 
 // splitEntersAsCopyRiderClauses splits a copiable-rider token run into individual
@@ -7738,6 +7791,30 @@ func trimTrailingZonePhrase(filter []shared.Token) []shared.Token {
 		return filter[:len(filter)-3]
 	}
 	return filter
+}
+
+// entersAsCopyManaSpentBoundWords is the "with mana value less than or equal to
+// the amount of mana spent to cast this creature" copiable filter phrase
+// (Mockingbird), matched at the word level.
+var entersAsCopyManaSpentBoundWords = []string{
+	"with", "mana", "value", "less", "than", "or", "equal", "to",
+	"the", "amount", "of", "mana", "spent", "to", "cast", "this", "creature",
+}
+
+// trimTrailingManaSpentBound drops the trailing "with mana value less than or
+// equal to the amount of mana spent to cast this creature" phrase (Mockingbird)
+// from a copy-filter token run, reporting whether it was present. The bound is
+// carried separately as an enters-as-copy rider, so the remaining filter selects
+// the copiable permanent type. It fails closed on any other trailing wording.
+func trimTrailingManaSpentBound(filter []shared.Token) ([]shared.Token, bool) {
+	if len(filter) < len(entersAsCopyManaSpentBoundWords) {
+		return filter, false
+	}
+	start := len(filter) - len(entersAsCopyManaSpentBoundWords)
+	if !equalWordSequence(filter, start, entersAsCopyManaSpentBoundWords...) {
+		return filter, false
+	}
+	return filter[:start], true
 }
 
 // parseGroupEntersTappedEffect recognizes a static enters-tapped replacement that

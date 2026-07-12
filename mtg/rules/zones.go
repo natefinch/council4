@@ -66,6 +66,13 @@ type permanentCreationOptions struct {
 	// permanent that did not enter from a cast spell (a token, a copy, a
 	// put-into-play effect).
 	ManaSpentByColorToCast map[color.Color]int
+	// ManaSpentToCast carries the total amount of mana spent to cast the spell
+	// that is resolving into this permanent, so Mockingbird's "with mana value
+	// less than or equal to the amount of mana spent to cast this creature"
+	// enters-as-copy filter reads it as the permanent enters. It is zero for a
+	// permanent that did not enter from a cast spell (a token, a copy, a
+	// put-into-play effect).
+	ManaSpentToCast int
 }
 
 // createCardPermanentFaceWithOptions puts a card onto the battlefield as a new
@@ -125,6 +132,7 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 		castFromZone:      options.CastFromZone,
 		colorsOfManaSpent: options.ColorsOfManaSpentToCast,
 		manaSpentByColor:  options.ManaSpentByColorToCast,
+		manaSpentToCast:   options.ManaSpentToCast,
 	}, g, permanent, fromZone)
 	if options.ForceTapped {
 		permanent.Tapped = true
@@ -212,6 +220,7 @@ func prepareCardPermanentFaceForSimultaneousEntry(
 		castFromZone:      options.CastFromZone,
 		colorsOfManaSpent: options.ColorsOfManaSpentToCast,
 		manaSpentByColor:  options.ManaSpentByColorToCast,
+		manaSpentToCast:   options.ManaSpentToCast,
 	}, g, permanent, fromZone)
 	if options.ForceTapped {
 		permanent.Tapped = true

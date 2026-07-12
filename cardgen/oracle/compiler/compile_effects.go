@@ -400,6 +400,10 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				EntersAsCopyAddKeywords:         slices.Clone(syntax.EntersAsCopyAddKeywords),
 				EntersAsCopyTapped:              syntax.EntersAsCopyTapped,
 
+				EntersAsCopyBasePower:                 syntax.EntersAsCopyBasePower,
+				EntersAsCopyBaseToughness:             syntax.EntersAsCopyBaseToughness,
+				EntersAsCopyMaxManaValueFromManaSpent: syntax.EntersAsCopyMaxManaValueFromManaSpent,
+
 				BecomeCopyUntilEndOfTurn:     syntax.BecomeCopyUntilEndOfTurn,
 				BecomeCopyRetainsThisAbility: syntax.BecomeCopyRetainsThisAbility,
 				BecomeCopyAddKeywords:        slices.Clone(syntax.BecomeCopyAddKeywords),
