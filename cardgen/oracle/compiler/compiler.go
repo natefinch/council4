@@ -57,6 +57,7 @@ func compileAbility(
 		FightRiggingSequence:                        ability.FightRiggingSequence,
 		RaisePalisadeSequence:                       ability.RaisePalisadeSequence,
 		BattleOfBywaterSequence:                     ability.BattleOfBywaterSequence,
+		ArtifactMutationSequence:                    ability.ArtifactMutationSequence,
 	}
 	if ability.LifeCharacteristicExchange != nil {
 		compiled.LifeCharacteristicExchange = &CompiledLifeCharacteristicExchange{

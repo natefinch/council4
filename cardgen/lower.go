@@ -872,6 +872,49 @@ func lowerExecutableAbility(
 	ability compiler.CompiledAbility,
 	syntax *parser.Ability,
 ) (abilityLowering, *shared.Diagnostic) {
+	if ability.ArtifactMutationSequence {
+		return abilityLowering{
+			spellAbility: opt.Val(game.Mode{
+				Targets: []game.TargetSpec{{
+					MinTargets: 1,
+					MaxTargets: 1,
+					Constraint: "target artifact",
+					Allow:      game.TargetAllowPermanent,
+					Selection: opt.Val(game.Selection{
+						RequiredTypes: []types.Card{types.Artifact},
+					}),
+				}},
+				Sequence: []game.Instruction{
+					{Primitive: game.Destroy{
+						Object:              game.TargetPermanentReference(0),
+						PreventRegeneration: true,
+					}},
+					{Primitive: game.CreateToken{
+						Amount: game.Dynamic(game.DynamicAmount{
+							Kind:   game.DynamicAmountObjectManaValue,
+							Object: game.TargetPermanentReference(0),
+						}),
+						Source: game.TokenDef(&game.CardDef{CardFace: game.CardFace{
+							Name:      "Saproling",
+							Colors:    []color.Color{color.Green},
+							Types:     []types.Card{types.Creature},
+							Subtypes:  []types.Sub{types.Saproling},
+							Power:     opt.Val(game.PT{Value: 1}),
+							Toughness: opt.Val(game.PT{Value: 1}),
+						}}),
+					}},
+				},
+			}.Ability()),
+			consumed: semanticConsumption{
+				conditions: len(ability.Content.Conditions),
+				effects:    len(ability.Content.Effects),
+				keywords:   len(ability.Content.Keywords),
+				references: len(ability.Content.References),
+				targets:    len(ability.Content.Targets),
+			},
+			sourceSpans: []shared.Span{ability.Span},
+		}, nil
+	}
 	if ability.BattleOfBywaterSequence {
 		creatures := game.Selection{
 			RequiredTypes: []types.Card{types.Creature},
