@@ -1137,6 +1137,8 @@ func renderTriggerTurnRelation(relation game.TriggerTurnRelation) (string, error
 		return "game.TriggerTurnYours", nil
 	case game.TriggerTurnNotYours:
 		return "game.TriggerTurnNotYours", nil
+	case game.TriggerTurnEventPlayer:
+		return "game.TriggerTurnEventPlayer", nil
 	default:
 		return "", fmt.Errorf("render: unsupported trigger turn relation %d", relation)
 	}

@@ -1134,10 +1134,8 @@ type TriggerPattern struct {
 	// matching AttacksAlongsideSelection. Zero disables the restriction.
 	AttacksAlongsideCount int
 
-	// CastDuringTurn restricts an EventSpellCast trigger by whose turn the spell
-	// was cast on, relative to the ability's controller ("Whenever you cast a
-	// spell during your turn" / "during an opponent's turn"). TriggerTurnAny
-	// imposes no restriction. It is only valid with Event == EventSpellCast.
+	// CastDuringTurn restricts a player event by the active player. It supports
+	// controller-relative timing and the triggering player's own turn.
 	CastDuringTurn TriggerTurnRelation
 
 	// ClassBecameLevel restricts an EventClassLevelGained trigger to the level
@@ -1177,6 +1175,9 @@ const (
 	// TriggerTurnNotYours restricts to a turn that is not the controller's
 	// ("during an opponent's turn").
 	TriggerTurnNotYours
+	// TriggerTurnEventPlayer restricts to the triggering player's own turn
+	// ("a player ... during their turn").
+	TriggerTurnEventPlayer
 )
 
 // TimingRestriction constrains when an activated ability can be used.

@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,541 of 32,501 cards eligible for paper support (54.0%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,542 of 32,501 cards eligible for paper support (54.0%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -15209,6 +15209,7 @@ Council4 currently supports **17,541 of 32,501 cards eligible for paper support 
 - The Cabbage Merchant
 - The Capitoline Triad
 - The Chase Is On
+- The Council of Four
 - The Crystal's Chosen
 - The Curse of Fenric
 - The Dawning Archaic

@@ -212,7 +212,7 @@ func triggerMatchesEventForController(g *game.Game, source *game.Permanent, sour
 	if pattern.SpellTargetPattern.Exists && !spellTargetsPattern(g, sourceController, pattern.SpellTargetAllow, pattern.SpellTargetPattern.Val, event) {
 		return false
 	}
-	if !triggerCastDuringTurnMatches(g, sourceController, pattern.CastDuringTurn) {
+	if !triggerCastDuringTurnMatches(g, sourceController, pattern.CastDuringTurn, event) {
 		return false
 	}
 	return true
@@ -222,7 +222,12 @@ func triggerMatchesEventForController(g *game.Game, source *game.Permanent, sour
 // pattern's CastDuringTurn relation relative to the ability's controller, so
 // "Whenever you cast a spell during your turn / during an opponent's turn"
 // fires only on the appropriate turn (CR 603.2).
-func triggerCastDuringTurnMatches(g *game.Game, sourceController game.PlayerID, relation game.TriggerTurnRelation) bool {
+func triggerCastDuringTurnMatches(
+	g *game.Game,
+	sourceController game.PlayerID,
+	relation game.TriggerTurnRelation,
+	event game.Event,
+) bool {
 	if relation == game.TriggerTurnAny {
 		return true
 	}
@@ -232,6 +237,12 @@ func triggerCastDuringTurnMatches(g *game.Game, sourceController game.PlayerID, 
 		return yourTurn
 	case game.TriggerTurnNotYours:
 		return !yourTurn
+	case game.TriggerTurnEventPlayer:
+		player := event.Player
+		if event.Kind == game.EventSpellCast {
+			player = event.Controller
+		}
+		return g.Turn.ActivePlayer == player
 	default:
 		return true
 	}

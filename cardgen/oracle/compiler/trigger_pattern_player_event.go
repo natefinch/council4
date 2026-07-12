@@ -22,7 +22,13 @@ func compilePlayerEventTriggerPattern(
 	if !ok {
 		return pattern
 	}
-	player, ok := compilePlayerEventPlayer(&clause.Player)
+	var player TriggerPlayerRelation
+	var controller ControllerKind
+	if clause.Action.Kind == parser.PlayerEventActionCast {
+		controller, ok = compilePlayerEventController(&clause.Player)
+	} else {
+		player, ok = compilePlayerEventPlayer(&clause.Player)
+	}
 	if !ok {
 		return pattern
 	}
@@ -42,6 +48,7 @@ func compilePlayerEventTriggerPattern(
 	}
 	pattern.Event = event
 	pattern.Player = player
+	pattern.Controller = controller
 	pattern.OneOrMore = modifiers.oneOrMore
 	pattern.ExcludeSelf = modifiers.excludeSelf
 	if modifiers.self {
@@ -71,6 +78,8 @@ func compilePlayerEventAction(action parser.PlayerEventActionKind, card parser.P
 		return TriggerEventLifeGained, true
 	case parser.PlayerEventActionLoseLife:
 		return TriggerEventLifeLost, true
+	case parser.PlayerEventActionCast:
+		return TriggerEventSpellCast, true
 	case parser.PlayerEventActionSearchLibrary:
 		return TriggerEventLibrarySearched, true
 	case parser.PlayerEventActionCommitCrime:
@@ -88,8 +97,22 @@ func compilePlayerEventAction(action parser.PlayerEventActionKind, card parser.P
 		default:
 			return TriggerEventUnknown, false
 		}
+
 	default:
 		return TriggerEventUnknown, false
+	}
+}
+
+func compilePlayerEventController(player *parser.TriggerPlayerSelector) (ControllerKind, bool) {
+	switch player.Kind {
+	case parser.TriggerPlayerSelectorAny:
+		return ControllerAny, true
+	case parser.TriggerPlayerSelectorYou:
+		return ControllerYou, true
+	case parser.TriggerPlayerSelectorOpponent:
+		return ControllerOpponent, true
+	default:
+		return ControllerAny, false
 	}
 }
 
@@ -230,9 +253,10 @@ func compilePlayerEventOccurrence(
 	case parser.PlayerEventOccurrenceFirstEachTurn:
 		return 1, false, occurrence.Ordinal == 1 && playerEventFirstEachTurnAllowed(action, player)
 	case parser.PlayerEventOccurrenceOrdinalEachTurn:
-		return occurrence.Ordinal, false, action == parser.PlayerEventActionDraw &&
-			occurrence.Ordinal >= 1 &&
-			occurrence.Ordinal <= 5
+		return occurrence.Ordinal, false,
+			(action == parser.PlayerEventActionDraw || action == parser.PlayerEventActionCast) &&
+				occurrence.Ordinal >= 1 &&
+				occurrence.Ordinal <= 5
 	case parser.PlayerEventOccurrenceExceptFirstInDrawStep:
 		return 0, true, action == parser.PlayerEventActionDraw
 	default:
@@ -346,6 +370,7 @@ func playerEventActionHasCard(action parser.PlayerEventActionKind) bool {
 		parser.PlayerEventActionDiscard,
 		parser.PlayerEventActionCycle,
 		parser.PlayerEventActionCycleOrDiscard,
+		parser.PlayerEventActionCast,
 		parser.PlayerEventActionPlay:
 		return true
 	default:

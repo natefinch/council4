@@ -355,6 +355,10 @@ func parsePlayerEventTriggerClause(tokens []shared.Token, introduction TriggerIn
 			modifiers.card.Kind != PlayerEventCardThis) {
 		return nil
 	}
+	if action.Kind == PlayerEventActionCast &&
+		modifiers.turnRelation != TriggerCastTurnRelationEventPlayerTurn {
+		return nil
+	}
 	return &PlayerEventTriggerClause{
 		Span:         shared.SpanOf(tokens),
 		Player:       parsedPlayer.player,
@@ -417,6 +421,12 @@ func parsePlayerEventAction(
 	if verbMatches(tokens[0], "play", "plays") {
 		return PlayerEventAction{
 			Kind: PlayerEventActionPlay,
+			Span: shared.SpanOf(tokens[:1]),
+		}, tokens[1:], true
+	}
+	if verbMatches(tokens[0], "cast", "casts") {
+		return PlayerEventAction{
+			Kind: PlayerEventActionCast,
 			Span: shared.SpanOf(tokens[:1]),
 		}, tokens[1:], true
 	}
@@ -485,6 +495,7 @@ func parsePlayerEventModifiers(
 		}
 		card = parsed.card
 		occurrence = parsed.occurrence
+		turnRelation = parsed.turnRelation
 		rest = parsed.remainder
 	}
 	if next, relation, ok := cutPlayerEventFirstEachTurn(rest, player); ok {
@@ -624,10 +635,11 @@ func subjectPronounMatches(token shared.Token, player TriggerPlayerSelectorKind)
 }
 
 type playerEventCardParse struct {
-	card       PlayerEventCard
-	occurrence PlayerEventOccurrence
-	remainder  []shared.Token
-	ok         bool
+	card         PlayerEventCard
+	occurrence   PlayerEventOccurrence
+	turnRelation TriggerCastTurnRelation
+	remainder    []shared.Token
+	ok           bool
 }
 
 func parsePlayerEventCard(
@@ -714,22 +726,43 @@ func parsePlayerEventCard(
 			ok:         true,
 		}
 	}
-	if action != PlayerEventActionDraw || len(tokens) < 5 {
+	if (action != PlayerEventActionDraw && action != PlayerEventActionCast) || len(tokens) < 3 {
 		return playerEventCardParse{}
 	}
 	possessive := "their"
 	if player == TriggerPlayerSelectorYou {
 		possessive = "your"
 	}
+	noun := "card"
+	if action == PlayerEventActionCast {
+		noun = "spell"
+	}
 	if !equalWord(tokens[0], possessive) ||
-		!equalWord(tokens[2], "card") ||
-		!equalWord(tokens[3], "each") ||
-		!equalWord(tokens[4], "turn") {
+		!equalWord(tokens[2], noun) {
 		return playerEventCardParse{}
 	}
 	ordinal, ok := parsePlayerEventOrdinal(tokens[1])
 	if !ok {
 		return playerEventCardParse{}
+	}
+	remainder := tokens[3:]
+	turnRelation := TriggerCastTurnRelationNone
+	var occurrenceEnd int
+	if next, ok := cutSyntaxWords(remainder, "each", "turn"); ok {
+		remainder = next
+		occurrenceEnd = 5
+	} else {
+		relation := TriggerCastTurnRelationEventPlayerTurn
+		if player == TriggerPlayerSelectorYou {
+			relation = TriggerCastTurnRelationYourTurn
+		}
+		next, parsedRelation, ok := cutPlayerEventTurnRelationForPlayer(remainder, player, relation)
+		if !ok {
+			return playerEventCardParse{}
+		}
+		remainder = next
+		turnRelation = parsedRelation
+		occurrenceEnd = len(tokens) - len(remainder)
 	}
 	return playerEventCardParse{
 		card: PlayerEventCard{
@@ -738,12 +771,29 @@ func parsePlayerEventCard(
 		},
 		occurrence: PlayerEventOccurrence{
 			Kind:    PlayerEventOccurrenceOrdinalEachTurn,
-			Span:    shared.SpanOf(tokens[1:5]),
+			Span:    shared.SpanOf(tokens[1:occurrenceEnd]),
 			Ordinal: ordinal,
 		},
-		remainder: tokens[5:],
-		ok:        true,
+		turnRelation: turnRelation,
+		remainder:    remainder,
+		ok:           true,
 	}
+}
+
+func cutPlayerEventTurnRelationForPlayer(
+	tokens []shared.Token,
+	player TriggerPlayerSelectorKind,
+	relation TriggerCastTurnRelation,
+) ([]shared.Token, TriggerCastTurnRelation, bool) {
+	possessive := "their"
+	if player == TriggerPlayerSelectorYou {
+		possessive = "your"
+	}
+	next, ok := cutSyntaxWords(tokens, "during", possessive, "turn")
+	if !ok {
+		return tokens, TriggerCastTurnRelationNone, false
+	}
+	return next, relation, true
 }
 
 // cutPlayerEventExiledWithSource recognizes the self-referential player-event
@@ -940,6 +990,7 @@ func playerEventActionHasCard(action PlayerEventActionKind) bool {
 		PlayerEventActionDiscard,
 		PlayerEventActionCycle,
 		PlayerEventActionCycleOrDiscard,
+		PlayerEventActionCast,
 		PlayerEventActionPlay:
 		return true
 	default:
