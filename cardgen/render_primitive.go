@@ -339,6 +339,12 @@ func (r Renderer) renderMoveCard(ctx *renderCtx, value game.MoveCard) (string, e
 		ctx.need(importOpt)
 		fields = append(fields, fmt.Sprintf("Counter: opt.Val(%s),", kind))
 	}
+	if value.PublishLinked != "" {
+		fields = append(fields, fmt.Sprintf("PublishLinked: game.LinkedKey(%q),", string(value.PublishLinked)))
+	}
+	if value.PublishLinkedObjectScoped {
+		fields = append(fields, "PublishLinkedObjectScoped: true,")
+	}
 	return structLit("game.MoveCard", fields), nil
 }
 

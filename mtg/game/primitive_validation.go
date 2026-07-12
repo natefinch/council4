@@ -2059,6 +2059,12 @@ func (p MoveCard) validatePrimitive(targets []TargetSpec, checkTargets bool) err
 	if p.DestinationBottom && p.Destination != zone.Library {
 		return errors.New("bottom placement requires library as destination zone")
 	}
+	if p.PublishLinked != "" && (!hasCard || p.Destination != zone.Exile) {
+		return errors.New("linked move-card publication requires a single-card exile")
+	}
+	if p.PublishLinkedObjectScoped && p.PublishLinked == "" {
+		return errors.New("object-scoped move-card publication requires a linked key")
+	}
 	return nil
 }
 

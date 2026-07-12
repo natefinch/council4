@@ -262,6 +262,10 @@ func lowerStaticCharacteristicPowerToughness(
 			Subtype: characteristic.Subtype,
 			Color:   characteristic.Color,
 		})
+		if characteristic.Value == game.DynamicValueSourceLinkedExileCount {
+			lowering.dynamicPower.Val.LinkedKey = exiledWithSourceKey
+			lowering.dynamicPower.Val.LinkedObjectScoped = true
+		}
 	}
 	if characteristic.SetsToughness {
 		lowering.dynamicToughness = opt.Val(game.DynamicValue{
@@ -270,6 +274,10 @@ func lowerStaticCharacteristicPowerToughness(
 			Color:   characteristic.Color,
 			Offset:  characteristic.ToughnessOffset,
 		})
+		if characteristic.Value == game.DynamicValueSourceLinkedExileCount {
+			lowering.dynamicToughness.Val.LinkedKey = exiledWithSourceKey
+			lowering.dynamicToughness.Val.LinkedObjectScoped = true
+		}
 	}
 	return lowering, true, nil
 }

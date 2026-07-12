@@ -27,6 +27,27 @@ func lowerActivatedBodyContent(
 	bodyText string,
 	variableCounterRemovalCost bool,
 ) (game.AbilityContent, *shared.Diagnostic) {
+	if ability.UnlicensedHearseExile {
+		content, ok := lowerTargetedGraveyardExile(contentCtx{
+			text:          bodyText,
+			span:          ability.Span,
+			content:       bodyContent,
+			enclosingKind: compiler.AbilityActivated,
+		})
+		if !ok || len(content.Modes) != 1 {
+			panic("lowerActivatedBodyContent: exact Unlicensed Hearse exile did not lower")
+		}
+		for i := range content.Modes[0].Sequence {
+			move, ok := content.Modes[0].Sequence[i].Primitive.(game.MoveCard)
+			if !ok {
+				panic("lowerActivatedBodyContent: exact Unlicensed Hearse exile emitted non-MoveCard")
+			}
+			move.PublishLinked = exiledWithSourceKey
+			move.PublishLinkedObjectScoped = true
+			content.Modes[0].Sequence[i].Primitive = move
+		}
+		return content, nil
+	}
 	if exchange := ability.LifeCharacteristicExchange; exchange != nil {
 		var characteristic game.SourcePowerToughness
 		switch exchange.Kind {

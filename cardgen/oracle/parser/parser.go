@@ -164,6 +164,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitSunderingGrowthPopulate(document.Abilities)
 	emitSelesnyaEulogistPopulate(document.Abilities)
 	emitLifeCharacteristicExchange(document.Abilities, context.CardName)
+	emitUnlicensedHearseExile(document.Abilities, context.CardName)
 	emitSelfNameStaticRules(document.Abilities)
 	emitCost(document.Abilities)
 	emitOptional(document.Abilities)
@@ -343,6 +344,7 @@ func emitLifeCharacteristicExchange(abilities []Ability, cardName string) {
 	if before, _, ok := strings.Cut(cardName, ","); ok {
 		shortName = strings.TrimSpace(before)
 	}
+
 	for i := range abilities {
 		if abilities[i].Kind != AbilityActivated {
 			continue
@@ -367,6 +369,20 @@ func emitLifeCharacteristicExchange(abilities []Ability, cardName string) {
 			continue
 		}
 		abilities[i].LifeCharacteristicExchange = &exchange
+	}
+}
+
+func emitUnlicensedHearseExile(abilities []Ability, cardName string) {
+	const body = "Exile up to two target cards from a single graveyard."
+	if !strings.EqualFold(cardName, "Unlicensed Hearse") {
+		return
+	}
+	for i := range abilities {
+		text := strings.TrimSpace(abilities[i].Text)
+		_, resolving, ok := strings.Cut(text, ":")
+		abilities[i].UnlicensedHearseExile =
+			ok && abilities[i].Kind == AbilityActivated &&
+				strings.EqualFold(strings.TrimSpace(resolving), body)
 	}
 }
 

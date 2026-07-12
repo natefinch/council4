@@ -50,6 +50,7 @@ func compileAbility(
 		EnergyTapMana:                               ability.EnergyTapMana,
 		SunderingGrowthPopulate:                     ability.SunderingGrowthPopulate,
 		SelesnyaEulogistPopulate:                    ability.SelesnyaEulogistPopulate,
+		UnlicensedHearseExile:                       ability.UnlicensedHearseExile,
 	}
 	if ability.LifeCharacteristicExchange != nil {
 		compiled.LifeCharacteristicExchange = &CompiledLifeCharacteristicExchange{

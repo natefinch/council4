@@ -40,6 +40,9 @@ const (
 	// of cards you've drawn this turn", Duelist of the Mind), counted from the
 	// turn's EventCardDrawn events for that player (CR 608.2c).
 	DynamicValueControllerCardsDrawnThisTurn
+	// DynamicValueSourceLinkedExileCount is the number of cards currently in
+	// exile that were published under the source permanent's LinkedKey.
+	DynamicValueSourceLinkedExileCount
 )
 
 // DynamicValue is data for a characteristic-defining numeric value.
@@ -58,6 +61,12 @@ type DynamicValue struct {
 	// DynamicValueControllerColorPermanentCount ("the number of red permanents
 	// you control"). It is unused by every other kind.
 	Color color.Color
+	// LinkedKey identifies the source-scoped linked-exile pool counted by
+	// DynamicValueSourceLinkedExileCount.
+	LinkedKey LinkedKey
+	// LinkedObjectScoped keys the linked pool by the source's current object
+	// identity rather than its stable card identity.
+	LinkedObjectScoped bool
 }
 
 // CopyableValues records the copiable printed/effective values copied in layer

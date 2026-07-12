@@ -341,18 +341,24 @@ func basePermanentValues(g *game.Game, permanent *game.Permanent) permanentEffec
 	if card.Power.Exists {
 		values.powerPT = ptPtr(card.Power)
 		values.dynamicPower = dynamicValuePtr(card.DynamicPower)
-		values.power, values.powerOK = ptValue(g, values.controller, values.powerPT, values.dynamicPower)
+		values.power, values.powerOK = ptValue(g, permanent, values.controller, values.powerPT, values.dynamicPower)
 	}
 	if card.Toughness.Exists {
 		values.toughnessPT = ptPtr(card.Toughness)
 		values.dynamicToughness = dynamicValuePtr(card.DynamicToughness)
-		values.toughness, values.toughnessOK = ptValue(g, values.controller, values.toughnessPT, values.dynamicToughness)
+		values.toughness, values.toughnessOK = ptValue(g, permanent, values.controller, values.toughnessPT, values.dynamicToughness)
 	}
 	rebuildKeywords(permanent, &values)
 	return values
 }
 
-func ptValue(g *game.Game, controller game.PlayerID, pt *game.PT, dynamic *game.DynamicValue) (int, bool) {
+func ptValue(
+	g *game.Game,
+	permanent *game.Permanent,
+	controller game.PlayerID,
+	pt *game.PT,
+	dynamic *game.DynamicValue,
+) (int, bool) {
 	if pt == nil {
 		return 0, false
 	}
@@ -362,17 +368,27 @@ func ptValue(g *game.Game, controller game.PlayerID, pt *game.PT, dynamic *game.
 	if dynamic == nil {
 		return 0, false
 	}
-	return dynamicValue(g, controller, dynamic), true
+	return dynamicValue(g, permanent, controller, dynamic), true
 }
 
-func dynamicValue(g *game.Game, controller game.PlayerID, dynamic *game.DynamicValue) int {
+func dynamicValue(
+	g *game.Game,
+	permanent *game.Permanent,
+	controller game.PlayerID,
+	dynamic *game.DynamicValue,
+) int {
 	if dynamic == nil {
 		return 0
 	}
-	return dynamicValueBase(g, controller, dynamic) + dynamic.Offset
+	return dynamicValueBase(g, permanent, controller, dynamic) + dynamic.Offset
 }
 
-func dynamicValueBase(g *game.Game, controller game.PlayerID, dynamic *game.DynamicValue) int {
+func dynamicValueBase(
+	g *game.Game,
+	permanent *game.Permanent,
+	controller game.PlayerID,
+	dynamic *game.DynamicValue,
+) int {
 	switch dynamic.Kind {
 	case game.DynamicValueConstant:
 		return dynamic.Value
@@ -438,6 +454,34 @@ func dynamicValueBase(g *game.Game, controller game.PlayerID, dynamic *game.Dyna
 		return count
 	case game.DynamicValueControllerCardsDrawnThisTurn:
 		return cardsDrawnThisTurn(g, controller)
+	case game.DynamicValueSourceLinkedExileCount:
+		if permanent == nil || dynamic.LinkedKey == "" {
+			return 0
+		}
+		sourceID := permanent.CardInstanceID
+		if dynamic.LinkedObjectScoped || sourceID == 0 {
+			sourceID = permanent.ObjectID
+		}
+		count := 0
+		for _, ref := range linkedObjects(g, game.LinkedObjectKey{
+			SourceID: sourceID,
+			LinkID:   string(dynamic.LinkedKey),
+		}) {
+			if ref.CardID == 0 {
+				continue
+			}
+			card, ok := g.GetCardInstance(ref.CardID)
+			if !ok || ref.CardZoneVersion != 0 && card.ZoneVersion != ref.CardZoneVersion {
+				continue
+			}
+			for _, player := range g.Players {
+				if player.Exile.Contains(ref.CardID) {
+					count++
+					break
+				}
+			}
+		}
+		return count
 	default:
 	}
 	return 0
@@ -1230,12 +1274,12 @@ func applyContinuousEffect(g *game.Game, permanent *game.Permanent, values *perm
 	case game.LayerControl:
 		if effect.NewController.Exists {
 			values.controller = effect.NewController.Val
-			recalculateDynamicPT(g, values)
+			recalculateDynamicPT(g, permanent, values)
 		}
 		if effect.NewControllerIsMonarch {
 			if monarch := livingMonarch(g); monarch.Exists {
 				values.controller = monarch.Val
-				recalculateDynamicPT(g, values)
+				recalculateDynamicPT(g, permanent, values)
 			}
 		}
 	case game.LayerText:
@@ -1276,22 +1320,22 @@ func applyContinuousEffect(g *game.Game, permanent *game.Permanent, values *perm
 		if effect.SetPower.Exists {
 			values.powerPT = ptPtr(effect.SetPower)
 			values.dynamicPower = nil
-			values.power, values.powerOK = ptValue(g, values.controller, values.powerPT, nil)
+			values.power, values.powerOK = ptValue(g, permanent, values.controller, values.powerPT, nil)
 		} else if effect.SetPowerDynamic.Exists {
 			set := game.PT{Value: dynamicAmountValueForPermanent(g, permanent, effect.Controller, effect.SetPowerDynamic.Val, effect.Layer)}
 			values.powerPT = &set
 			values.dynamicPower = nil
-			values.power, values.powerOK = ptValue(g, values.controller, values.powerPT, nil)
+			values.power, values.powerOK = ptValue(g, permanent, values.controller, values.powerPT, nil)
 		}
 		if effect.SetToughness.Exists {
 			values.toughnessPT = ptPtr(effect.SetToughness)
 			values.dynamicToughness = nil
-			values.toughness, values.toughnessOK = ptValue(g, values.controller, values.toughnessPT, nil)
+			values.toughness, values.toughnessOK = ptValue(g, permanent, values.controller, values.toughnessPT, nil)
 		} else if effect.SetToughnessDynamic.Exists {
 			set := game.PT{Value: dynamicAmountValueForPermanent(g, permanent, effect.Controller, effect.SetToughnessDynamic.Val, effect.Layer)}
 			values.toughnessPT = &set
 			values.dynamicToughness = nil
-			values.toughness, values.toughnessOK = ptValue(g, values.controller, values.toughnessPT, nil)
+			values.toughness, values.toughnessOK = ptValue(g, permanent, values.controller, values.toughnessPT, nil)
 		}
 	case game.LayerPowerToughnessModify:
 		// Layer 7c: effects that modify (but don't set) power and/or toughness,
@@ -1342,21 +1386,21 @@ func applyCopyValues(g *game.Game, permanent *game.Permanent, values *permanentE
 	values.dynamicPower = dynamicValuePtr(copyValues.DynamicPower)
 	values.toughnessPT = ptPtr(copyValues.Toughness)
 	values.dynamicToughness = dynamicValuePtr(copyValues.DynamicToughness)
-	values.power, values.powerOK = ptValue(g, values.controller, values.powerPT, values.dynamicPower)
-	values.toughness, values.toughnessOK = ptValue(g, values.controller, values.toughnessPT, values.dynamicToughness)
+	values.power, values.powerOK = ptValue(g, permanent, values.controller, values.powerPT, values.dynamicPower)
+	values.toughness, values.toughnessOK = ptValue(g, permanent, values.controller, values.toughnessPT, values.dynamicToughness)
 	rebuildKeywords(permanent, values)
 }
 
-func recalculateDynamicPT(g *game.Game, values *permanentEffectiveValues) {
+func recalculateDynamicPT(g *game.Game, permanent *game.Permanent, values *permanentEffectiveValues) {
 	if values == nil {
 		return
 	}
 	// LayerControl runs before P/T layers, so this cannot erase later P/T effects.
 	if values.powerPT != nil && values.powerPT.IsStar {
-		values.power, values.powerOK = ptValue(g, values.controller, values.powerPT, values.dynamicPower)
+		values.power, values.powerOK = ptValue(g, permanent, values.controller, values.powerPT, values.dynamicPower)
 	}
 	if values.toughnessPT != nil && values.toughnessPT.IsStar {
-		values.toughness, values.toughnessOK = ptValue(g, values.controller, values.toughnessPT, values.dynamicToughness)
+		values.toughness, values.toughnessOK = ptValue(g, permanent, values.controller, values.toughnessPT, values.dynamicToughness)
 	}
 }
 

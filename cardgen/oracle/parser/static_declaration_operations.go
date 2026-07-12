@@ -1433,6 +1433,8 @@ func parseStaticDynamicValueCount(
 		return staticDynamicCount{kind: StaticDeclarationDynamicValueControllerCardsDrawnThisTurn, end: cursor + 5}, true
 	case staticWordsAt(tokens, cursor, "cards", "you", "have", "drawn", "this", "turn"):
 		return staticDynamicCount{kind: StaticDeclarationDynamicValueControllerCardsDrawnThisTurn, end: cursor + 6}, true
+	case staticWordsAt(tokens, cursor, "cards", "exiled", "with", "it"):
+		return staticDynamicCount{kind: StaticDeclarationDynamicValueSourceLinkedExileCount, end: cursor + 4}, true
 	case staticWordsAt(tokens, cursor, "cards", "in", "your", "hand"):
 		return staticDynamicCount{kind: StaticDeclarationDynamicValueControllerHandSize, end: cursor + 4}, true
 	case staticWordsAt(tokens, cursor, "cards", "in", "your", "graveyard"):
