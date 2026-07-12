@@ -26,7 +26,8 @@ import (
 //
 // It fails closed (ok=false) unless the body is exactly one optional,
 // non-negated, fixed-count draw by a supported referenced player with no
-// targets, modes, conditions, or keywords. The referenced player resolves to:
+// targets, modes, or keywords, and at most one resolution condition that lowers
+// through the shared effect-gate path. The referenced player resolves to:
 //
 //   - DefendingPlayerReference for the defending-player context (no object
 //     reference: the defending player is derived from the attack event).
@@ -38,7 +39,7 @@ func lowerOptionalReferencedPlayerDraw(ctx contentCtx) (game.AbilityContent, boo
 	if ctx.optional ||
 		len(ctx.content.Effects) != 1 ||
 		len(ctx.content.Targets) != 0 ||
-		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Conditions) > 1 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 {
 		return game.AbilityContent{}, false
@@ -52,7 +53,23 @@ func lowerOptionalReferencedPlayerDraw(ctx contentCtx) (game.AbilityContent, boo
 		effect.Amount.Value < 1 {
 		return game.AbilityContent{}, false
 	}
-	player, ok := optionalDrawReferencedPlayer(ctx, effect)
+	// A trailing/leading resolution condition ("... may draw a card if its power
+	// is greater than each other creature's power"; Selvala, Heart of the Wilds)
+	// gates the optional draw when the ability resolves. Lower it through the
+	// shared effect-gate path and drop its condition-spanned references before
+	// resolving the drawing player, so the "its power" pronoun inside the gate is
+	// not mistaken for the draw's own referenced player.
+	var gate opt.V[game.EffectCondition]
+	drawCtx := ctx
+	if len(ctx.content.Conditions) == 1 {
+		condition, ok := lowerCondition(ctx.content.Conditions[0], conditionContextEffectGate)
+		if !ok {
+			return game.AbilityContent{}, false
+		}
+		gate = opt.Val(game.EffectCondition{Condition: opt.Val(condition)})
+		drawCtx.content = contentWithoutConditionSpannedReferences(ctx.content)
+	}
+	player, ok := optionalDrawReferencedPlayer(drawCtx, drawCtx.content.Effects[0])
 	if !ok {
 		return game.AbilityContent{}, false
 	}
@@ -63,6 +80,7 @@ func lowerOptionalReferencedPlayerDraw(ctx contentCtx) (game.AbilityContent, boo
 		},
 		Optional:      true,
 		OptionalActor: opt.Val(player),
+		Condition:     gate,
 	}}}.Ability(), true
 }
 

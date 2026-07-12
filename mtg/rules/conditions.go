@@ -258,6 +258,9 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	if cond.ControllerControlsGreatestToughnessCreature {
 		matches = matches && controllerControlsGreatestToughnessCreature(g, ctx)
 	}
+	if cond.EventPermanentPowerGreaterThanEachOtherCreature {
+		matches = matches && eventPermanentPowerGreaterThanEachOtherCreature(g, ctx)
+	}
 	if cond.ControllerIsMonarch {
 		player, ok := playerByID(g, ctx.controller)
 		matches = matches && ok && player.IsMonarch
@@ -643,6 +646,71 @@ func controllerControlsGreatestToughnessCreature(g *game.Game, ctx conditionCont
 		}
 	}
 	return haveGreatest && haveControllerGreatest && controllerGreatest >= greatest
+}
+
+// eventPermanentPowerGreaterThanEachOtherCreature reports whether the permanent
+// named by the triggering zone-change event has power strictly greater than
+// every other creature's power on the battlefield ("if its power is greater
+// than each other creature's power"; Selvala, Heart of the Wilds). The entering
+// creature is read through last-known information: if it has already left the
+// battlefield by the time this gate resolves, its power when it last existed on
+// the battlefield is used (Selvala ruling 2016-08-23), so its controller can
+// still draw. The other creatures are compared at their current on-battlefield
+// power. It fails closed when the event permanent cannot be resolved at all, is
+// not a creature, has no defined power, or merely ties any other creature's
+// power. The triggering permanent comes from the resolving ability's stored
+// event when this gate is evaluated as a resolution condition (ctx.event is
+// unset in that path).
+func eventPermanentPowerGreaterThanEachOtherCreature(g *game.Game, ctx conditionContext) bool {
+	permanentID := id.ID(0)
+	switch {
+	case ctx.event != nil:
+		permanentID = ctx.event.PermanentID
+	case ctx.obj != nil && ctx.obj.HasTriggerEvent:
+		permanentID = ctx.obj.TriggerEvent.PermanentID
+	default:
+		return false
+	}
+	if permanentID == 0 {
+		return false
+	}
+	resolved, ok := resolvePermanentOrLastKnown(g, permanentID)
+	if !ok {
+		return false
+	}
+	if resolved.permanent != nil && resolved.permanent.PhasedOut {
+		return false
+	}
+	subjectTypes, subjectPower, subjectPowerOK := resolvedSubjectCreatureValues(g, &resolved, ctx)
+	if !slices.Contains(subjectTypes, types.Creature) || !subjectPowerOK {
+		return false
+	}
+	for _, permanent := range g.Battlefield {
+		if permanent.PhasedOut || permanent.ObjectID == permanentID {
+			continue
+		}
+		values := permanentValuesForCondition(g, permanent, ctx)
+		if !slices.Contains(values.types, types.Creature) || !values.powerOK {
+			continue
+		}
+		if subjectPower <= values.power {
+			return false
+		}
+	}
+	return true
+}
+
+// resolvedSubjectCreatureValues returns the creature types, power, and whether a
+// power is defined for a resolved object reference. A live permanent reads its
+// current effective values (counters and continuous effects applied); a
+// reference that only resolves to last-known information reads the snapshot taken
+// when the object last existed on the battlefield (CR 608.2h).
+func resolvedSubjectCreatureValues(g *game.Game, resolved *resolvedObjectReference, ctx conditionContext) (subjectTypes []types.Card, power int, powerOK bool) {
+	if resolved.permanent != nil {
+		values := permanentValuesForCondition(g, resolved.permanent, ctx)
+		return values.types, values.power, values.powerOK
+	}
+	return resolved.snapshot.Types, resolved.snapshot.Power.Val, resolved.snapshot.Power.Exists
 }
 
 func permanentValuesForCondition(g *game.Game, permanent *game.Permanent, ctx conditionContext) permanentEffectiveValues {

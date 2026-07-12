@@ -104,6 +104,7 @@ const (
 	ConditionPredicateFirstCombatPhaseOfTurn                           ConditionPredicateKind = "ConditionPredicateFirstCombatPhaseOfTurn"
 	ConditionPredicateControlsGreatestPowerCreature                    ConditionPredicateKind = "ConditionPredicateControlsGreatestPowerCreature"
 	ConditionPredicateControlsGreatestToughnessCreature                ConditionPredicateKind = "ConditionPredicateControlsGreatestToughnessCreature"
+	ConditionPredicateEventSubjectPowerGreatestOnBattlefield           ConditionPredicateKind = "ConditionPredicateEventSubjectPowerGreatestOnBattlefield"
 	ConditionPredicateSubjectSharesCreatureTypeWithSource              ConditionPredicateKind = "ConditionPredicateSubjectSharesCreatureTypeWithSource"
 	ConditionPredicateControllerIsMonarch                              ConditionPredicateKind = "ConditionPredicateControllerIsMonarch"
 	ConditionPredicateControllerWasMonarchAtTurnStart                  ConditionPredicateKind = "ConditionPredicateControllerWasMonarchAtTurnStart"
@@ -1209,6 +1210,9 @@ func recognizeEventSubjectCondition(body []shared.Token, atoms Atoms) (Condition
 	if clause, ok := recognizeEventSubjectPowerState(body); ok {
 		return clause, true
 	}
+	if clause, ok := recognizeEventSubjectGreatestPowerCondition(body); ok {
+		return clause, true
+	}
 	if clause, ok := recognizeEventSubjectNameUniqueCondition(body); ok {
 		return clause, true
 	}
@@ -1349,6 +1353,26 @@ func recognizeEventSubjectPowerState(body []shared.Token) (ConditionClause, bool
 		ObjectBinding: ConditionObjectBindingEventPermanent,
 		Selection:     ConditionSelection{PowerAtLeast: value, MatchPowerAtLeast: true},
 	}, true
+}
+
+// recognizeEventSubjectGreatestPowerCondition handles the triggering object's
+// strict power comparison against the rest of the battlefield, "its power is
+// greater than each other creature's power" ("Whenever another creature enters,
+// its controller may draw a card if its power is greater than each other
+// creature's power."; Selvala, Heart of the Wilds). The possessive "its" binds
+// the event permanent, so the recognized clause holds only when that creature's
+// power is strictly greater than every other creature's power on the
+// battlefield. It fails closed on any other wording.
+func recognizeEventSubjectGreatestPowerCondition(body []shared.Token) (ConditionClause, bool) {
+	if tokenWordsEqual(body,
+		"its", "power", "is", "greater", "than",
+		"each", "other", "creature's", "power") {
+		return ConditionClause{
+			Predicate:     ConditionPredicateEventSubjectPowerGreatestOnBattlefield,
+			ObjectBinding: ConditionObjectBindingEventPermanent,
+		}, true
+	}
+	return ConditionClause{}, false
 }
 
 // recognizeEventSubjectNameUniqueCondition handles the name-uniqueness

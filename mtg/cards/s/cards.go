@@ -85,6 +85,7 @@ var Cards = []cardset.Entry{
 	{Name: "Seismic Shift", New: SeismicShift},
 	{Name: "Seismic Stomp", New: SeismicStomp},
 	{Name: "Selesnya Sagittars", New: SelesnyaSagittars},
+	{Name: "Selvala, Heart of the Wilds", New: SelvalaHeartOfTheWilds},
 	{Name: "Sengir Bats", New: SengirBats},
 	{Name: "Sengir Vampire", New: SengirVampire},
 	{Name: "Serendib Sorcerer", New: SerendibSorcerer},
