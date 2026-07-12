@@ -175,7 +175,7 @@ func lowerBecomeGrantedStaticBody(granted *parser.StaticGrantedAbilitySyntax) (g
 		len(innerComp.Syntax.Abilities) != 1 {
 		return game.StaticAbility{}, false
 	}
-	lowered, diagnostic := lowerExecutableAbility("", false, nil, innerComp.Abilities[0], &innerComp.Syntax.Abilities[0])
+	lowered, diagnostic := lowerExecutableAbility("", false, nil, -1, innerComp.Abilities[0], &innerComp.Syntax.Abilities[0])
 	if diagnostic != nil || len(lowered.staticAbilities) != 1 {
 		return game.StaticAbility{}, false
 	}

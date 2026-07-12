@@ -62,7 +62,7 @@ func lowerEmblemQuotedAbilities(granted *parser.StaticGrantedAbilitySyntax) ([]g
 		len(innerComp.Syntax.Abilities) != 1 {
 		return nil, false
 	}
-	lowered, diagnostic := lowerExecutableAbility("", false, nil, innerComp.Abilities[0], &innerComp.Syntax.Abilities[0])
+	lowered, diagnostic := lowerExecutableAbility("", false, nil, -1, innerComp.Abilities[0], &innerComp.Syntax.Abilities[0])
 	if diagnostic != nil {
 		return nil, false
 	}

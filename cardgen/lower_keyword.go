@@ -111,6 +111,7 @@ func protectionKeywordRuntimeSupported(prot game.ProtectionKeyword) bool {
 // recognized-but-rejected attempt, and ({}, false, nil) when no attempt matches.
 func lowerKeywordDispatch(
 	creatureSubtypes []types.Sub,
+	sourceManaValue int,
 	ability compiler.CompiledAbility,
 	syntax *parser.Ability,
 ) (abilityLowering, bool, *shared.Diagnostic) {
@@ -275,6 +276,12 @@ func lowerKeywordDispatch(
 			return abilityLowering{}, true, diag
 		}
 		return keywordActivatedLowering(&landcyclingAbility, ability, syntax), true, nil
+	}
+	if transmuteAbility, ok, diag := lowerTransmuteAbility(sourceManaValue, ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordActivatedLowering(&transmuteAbility, ability, syntax), true, nil
 	}
 	if ninjutsuAbility, ok, diag := lowerNinjutsuAbility(ability, syntax); ok {
 		if diag != nil {
@@ -1281,6 +1288,44 @@ func lowerLandcyclingAbility(
 		)
 	}
 	return game.LandcyclingActivatedAbility(manaCost, spec), true, nil
+}
+
+// lowerTransmuteAbility lowers a Transmute keyword with a mana cost to its
+// canonical activated ability (CR 702.49): "[cost], Discard this card: Search
+// your library for a card with the same mana value as this card, reveal it, put
+// it into your hand, then shuffle. Transmute only as a sorcery." It mirrors
+// lowerLandcyclingAbility: only an isolated, mana-cost-parameterized Transmute
+// keyword is supported. sourceManaValue is the discarded card's own printed mana
+// value, baked into the exact search filter; a negative value means the mana
+// value could not be determined, so the ability fails closed.
+func lowerTransmuteAbility(
+	sourceManaValue int,
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (game.ActivatedAbility, bool, *shared.Diagnostic) {
+	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordTransmute {
+		return game.ActivatedAbility{}, false, nil
+	}
+	keyword := ability.Content.Keywords[0]
+	manaCost, fixed := fixedKeywordManaCost(keyword)
+	if !fixed ||
+		sourceManaValue < 0 ||
+		(ability.Kind != compiler.AbilityStatic && ability.Kind != compiler.AbilitySpell) ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.References) != 0 ||
+		ability.AbilityWord != "" ||
+		!keywordOnlyCovered(syntax, keyword) {
+		return game.ActivatedAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Transmute ability",
+			"the executable source backend supports only exact Transmute with a mana cost",
+		)
+	}
+	return game.TransmuteActivatedAbility(manaCost, sourceManaValue), true, nil
 }
 
 func lowerNinjutsuAbility(

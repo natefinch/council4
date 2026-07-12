@@ -114,6 +114,7 @@ func lowerCounterThenNextTurnUpkeepDrawAbilities(cardName string, compilation co
 			cardName,
 			false,
 			nil,
+			-1,
 			check,
 			&compilation.Syntax.Abilities[i],
 		)

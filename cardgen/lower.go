@@ -198,6 +198,7 @@ func lowerFaceAbilities(
 	isLeveler := face.Layout == "leveler"
 	classLevel := 1
 	var currentBand *compiler.CompiledLevelBand
+	sourceManaValue := faceSearchManaValue(face.ManaCost)
 	for i, ability := range compilation.Abilities {
 		syntax := &compilation.Syntax.Abilities[i]
 		if isLeveler && ability.LevelUpRecognized {
@@ -231,6 +232,7 @@ func lowerFaceAbilities(
 				face.Name,
 				saga,
 				creatureSubtypes,
+				sourceManaValue,
 				ability,
 				syntax,
 			)
@@ -855,6 +857,7 @@ func lowerExecutableAbility(
 	cardName string,
 	saga bool,
 	creatureSubtypes []types.Sub,
+	sourceManaValue int,
 	ability compiler.CompiledAbility,
 	syntax *parser.Ability,
 ) (abilityLowering, *shared.Diagnostic) {
@@ -1494,13 +1497,13 @@ func lowerExecutableAbility(
 	if ability.Kind == compiler.AbilityStatic && isMaxSpeedAbilityWord(ability.AbilityWord) {
 		stripped := ability
 		stripped.AbilityWord = ""
-		lowered, diagnostic := lowerExecutableAbility(cardName, saga, creatureSubtypes, stripped, syntax)
+		lowered, diagnostic := lowerExecutableAbility(cardName, saga, creatureSubtypes, sourceManaValue, stripped, syntax)
 		if diagnostic != nil {
 			return abilityLowering{}, diagnostic
 		}
 		return gateStaticOnMaxSpeed(lowered, ability)
 	}
-	if lowered, handled, diagnostic := lowerExecutableAbilitySpecialCase(cardName, creatureSubtypes, ability, syntax); handled {
+	if lowered, handled, diagnostic := lowerExecutableAbilitySpecialCase(cardName, creatureSubtypes, sourceManaValue, ability, syntax); handled {
 		return lowered, diagnostic
 	}
 	switch ability.Kind {
@@ -1811,6 +1814,7 @@ func lowerSpellAdditionalCost(
 func lowerExecutableAbilitySpecialCase(
 	cardName string,
 	creatureSubtypes []types.Sub,
+	sourceManaValue int,
 	ability compiler.CompiledAbility,
 	syntax *parser.Ability,
 ) (abilityLowering, bool, *shared.Diagnostic) {
@@ -1851,7 +1855,7 @@ func lowerExecutableAbilitySpecialCase(
 	if lowered, ok, diagnostic := lowerHideawayPlayAbility(cardName, ability, syntax); ok {
 		return lowered, true, diagnostic
 	}
-	if lowered, ok, diagnostic := lowerKeywordDispatch(creatureSubtypes, ability, syntax); ok {
+	if lowered, ok, diagnostic := lowerKeywordDispatch(creatureSubtypes, sourceManaValue, ability, syntax); ok {
 		return lowered, true, diagnostic
 	}
 	return abilityLowering{}, false, nil

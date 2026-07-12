@@ -2,6 +2,7 @@ package cardgen
 
 import (
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -1722,6 +1723,23 @@ func parseManaCostValue(s string) (cost.Mana, error) {
 		out = append(out, symbol)
 	}
 	return out, nil
+}
+
+// faceSearchManaValue computes a card face's printed mana value from its Scryfall
+// mana cost string, for baking into "same mana value as this card" search
+// filters such as Transmute's. It returns the mana value of the parsed cost, or
+// -1 when the cost cannot be parsed or contains a variable ({X}) symbol, so the
+// caller fails closed rather than emitting an unresolved search. An empty cost
+// (e.g., a land) has mana value 0.
+func faceSearchManaValue(manaCost string) int {
+	parsed, err := parseManaCostValue(manaCost)
+	if err != nil {
+		return -1
+	}
+	if slices.Contains(parsed, cost.X) {
+		return -1
+	}
+	return parsed.ManaValue()
 }
 
 func parseManaSymbolValue(sym string) (cost.Symbol, error) {

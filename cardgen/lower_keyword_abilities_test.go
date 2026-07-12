@@ -9,6 +9,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -357,6 +358,130 @@ func TestLowerLandcyclingAbility(t *testing.T) {
 				t.Errorf("subtypes = %v, want %v", search.Spec.Filter.SubtypesAny, tc.wantSubtype)
 			}
 		})
+	}
+}
+
+func TestLowerTransmuteAbility(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name         string
+		typeLine     string
+		manaCost     string
+		oracle       string
+		wantManaCost cost.Mana
+		wantSearchMV int
+	}{
+		{
+			name:         "muddle the mixture",
+			typeLine:     "Instant",
+			manaCost:     "{U}{U}",
+			oracle:       "Counter target instant or sorcery spell.\nTransmute {1}{U}{U} ({1}{U}{U}, Discard this card: Search your library for a card with the same mana value as this card, reveal it, put it into your hand, then shuffle. Transmute only as a sorcery.)",
+			wantManaCost: cost.Mana{cost.O(1), cost.U, cost.U},
+			wantSearchMV: 2,
+		},
+		{
+			name:         "tolaria west land mana value 0",
+			typeLine:     "Land",
+			manaCost:     "",
+			oracle:       "{T}: Add {U}.\nTransmute {1}{U}{U} ({1}{U}{U}, Discard this card: Search your library for a card with mana value 0, reveal it, put it into your hand, then shuffle. Transmute only as a sorcery.)",
+			wantManaCost: cost.Mana{cost.O(1), cost.U, cost.U},
+			wantSearchMV: 0,
+		},
+		{
+			name:         "high mana value card",
+			typeLine:     "Creature — Spirit",
+			manaCost:     "{4}{U}{U}",
+			oracle:       "Transmute {1}{U}{U} ({1}{U}{U}, Discard this card: Search your library for a card with the same mana value as this card, reveal it, put it into your hand, then shuffle. Transmute only as a sorcery.)",
+			wantManaCost: cost.Mana{cost.O(1), cost.U, cost.U},
+			wantSearchMV: 6,
+		},
+		{
+			name:         "distinct transmute cost",
+			typeLine:     "Creature — Horror",
+			manaCost:     "{3}{B}",
+			oracle:       "Transmute {1}{B}{B} ({1}{B}{B}, Discard this card: Search your library for a card with the same mana value as this card, reveal it, put it into your hand, then shuffle. Transmute only as a sorcery.)",
+			wantManaCost: cost.Mana{cost.O(1), cost.B, cost.B},
+			wantSearchMV: 4,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       "Test Card",
+				Layout:     "normal",
+				TypeLine:   tc.typeLine,
+				ManaCost:   tc.manaCost,
+				OracleText: tc.oracle,
+			}
+			if strings.HasPrefix(tc.typeLine, "Creature") {
+				card.Power = new("2")
+				card.Toughness = new("2")
+			}
+			face := lowerSingleFace(t, card)
+			if len(face.ActivatedAbilities) != 1 {
+				t.Fatalf("got %d activated abilities, want 1", len(face.ActivatedAbilities))
+			}
+			ability := face.ActivatedAbilities[0]
+			if ability.ZoneOfFunction != zone.Hand {
+				t.Errorf("zone = %v, want hand", ability.ZoneOfFunction)
+			}
+			if ability.Timing != game.SorceryOnly {
+				t.Errorf("timing = %v, want SorceryOnly", ability.Timing)
+			}
+			if !ability.ManaCost.Exists || !slices.Equal(ability.ManaCost.Val, tc.wantManaCost) {
+				t.Errorf("mana cost = %#v, want %#v", ability.ManaCost, tc.wantManaCost)
+			}
+			if len(ability.AdditionalCosts) != 1 || ability.AdditionalCosts[0].Kind != cost.AdditionalDiscard {
+				t.Fatalf("additional costs = %#v, want one discard", ability.AdditionalCosts)
+			}
+			if len(ability.KeywordAbilities) != 1 {
+				t.Fatalf("got %d keyword abilities, want 1", len(ability.KeywordAbilities))
+			}
+			transmute, ok := ability.KeywordAbilities[0].(game.TransmuteKeyword)
+			if !ok {
+				t.Fatalf("keyword ability = %T, want game.TransmuteKeyword", ability.KeywordAbilities[0])
+			}
+			if !slices.Equal(transmute.Cost, tc.wantManaCost) {
+				t.Errorf("keyword cost = %#v, want %#v", transmute.Cost, tc.wantManaCost)
+			}
+			search, ok := ability.Content.Modes[0].Sequence[0].Primitive.(game.Search)
+			if !ok {
+				t.Fatalf("primitive = %T, want game.Search", ability.Content.Modes[0].Sequence[0].Primitive)
+			}
+			if search.Spec.Destination != zone.Hand || search.Spec.SourceZone != zone.Library || !search.Spec.Reveal {
+				t.Errorf("spec = %#v, want library->hand with reveal", search.Spec)
+			}
+			mv := search.Spec.Filter.ManaValue
+			if !mv.Exists || mv.Val.Op != compare.Equal || mv.Val.Value != tc.wantSearchMV {
+				t.Errorf("filter mana value = %#v, want Equal %d", mv, tc.wantSearchMV)
+			}
+			gotCost, gotMV, ok := game.ActivatedBodyTransmuteParams(&ability)
+			if !ok || !slices.Equal(gotCost, tc.wantManaCost) || gotMV != tc.wantSearchMV {
+				t.Errorf("ActivatedBodyTransmuteParams = (%v, %d, %v), want (%v, %d, true)", gotCost, gotMV, ok, tc.wantManaCost, tc.wantSearchMV)
+			}
+		})
+	}
+}
+
+// TestLowerTransmuteVariableManaValueFailsClosed verifies that a card whose
+// printed mana value cannot be resolved to a fixed number (an {X} in its cost)
+// does not lower a Transmute ability, so no unresolved search is emitted.
+func TestLowerTransmuteVariableManaValueFailsClosed(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFaceExpectingUnsupported(t, &ScryfallCard{
+		Name:       "Test Card",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		ManaCost:   "{X}{U}{U}",
+		OracleText: "Transmute {1}{U}{U} ({1}{U}{U}, Discard this card: Search your library for a card with the same mana value as this card, reveal it, put it into your hand, then shuffle. Transmute only as a sorcery.)",
+	})
+	for _, ability := range face.ActivatedAbilities {
+		if len(ability.KeywordAbilities) == 1 {
+			if _, ok := ability.KeywordAbilities[0].(game.TransmuteKeyword); ok {
+				t.Fatal("transmute ability lowered for variable mana value card, want none")
+			}
+		}
 	}
 }
 

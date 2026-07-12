@@ -124,6 +124,7 @@ var Cards = []cardset.Entry{
 	{Name: "Shiv's Embrace", New: ShivSEmbrace},
 	{Name: "Shivan Fire", New: ShivanFire},
 	{Name: "Shock Brigade", New: ShockBrigade},
+	{Name: "Shred Memory", New: ShredMemory},
 	{Name: "Shrieking Affliction", New: ShriekingAffliction},
 	{Name: "Shrieking Specter", New: ShriekingSpecter},
 	{Name: "Shriekmaw", New: Shriekmaw},

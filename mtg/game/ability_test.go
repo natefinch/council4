@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
@@ -174,6 +175,47 @@ func TestCyclingActivatedAbilityBuildsCompleteMechanic(t *testing.T) {
 	draw, ok := content.Modes[0].Sequence[0].Primitive.(Draw)
 	if !ok || draw.Amount.Value() != 1 || draw.Player != ControllerReference() {
 		t.Fatalf("instruction = %+v, want controller draws one", content.Modes[0].Sequence[0])
+	}
+}
+
+func TestTransmuteActivatedAbilityBuildsCompleteMechanic(t *testing.T) {
+	manaCost := cost.Mana{cost.O(1), cost.U, cost.U}
+	ability := TransmuteActivatedAbility(manaCost, 4)
+	manaCost[0] = cost.O(9)
+
+	if ability.Text != "Transmute {1}{U}{U}" {
+		t.Fatalf("text = %q, want %q", ability.Text, "Transmute {1}{U}{U}")
+	}
+	if ability.ZoneOfFunction != zone.Hand || ability.Timing != SorceryOnly {
+		t.Fatalf("zone/timing = %v/%v, want hand/SorceryOnly", ability.ZoneOfFunction, ability.Timing)
+	}
+	if !ability.ManaCost.Exists || !slices.Equal(ability.ManaCost.Val, []cost.Symbol{cost.O(1), cost.U, cost.U}) {
+		t.Fatalf("mana cost = %+v, want copied transmute cost", ability.ManaCost)
+	}
+	if len(ability.AdditionalCosts) != 1 ||
+		ability.AdditionalCosts[0].Kind != cost.AdditionalDiscard ||
+		ability.AdditionalCosts[0].Source != zone.Hand ||
+		ability.AdditionalCosts[0].Amount != 1 {
+		t.Fatalf("additional costs = %+v, want discard this card from hand", ability.AdditionalCosts)
+	}
+	keywordCost, searchManaValue, ok := ActivatedBodyTransmuteParams(&ability)
+	if !ok || !slices.Equal(keywordCost, []cost.Symbol{cost.O(1), cost.U, cost.U}) || searchManaValue != 4 {
+		t.Fatalf("transmute params = %v, %d, %v; want copied {1}{U}{U} and 4", keywordCost, searchManaValue, ok)
+	}
+	content := BodyContent(&ability)
+	if content.IsModal() || len(content.Modes) != 1 || len(content.Modes[0].Sequence) != 1 {
+		t.Fatalf("content = %+v, want one non-modal instruction", content)
+	}
+	search, ok := content.Modes[0].Sequence[0].Primitive.(Search)
+	if !ok || search.Player != ControllerReference() {
+		t.Fatalf("instruction = %+v, want controller search", content.Modes[0].Sequence[0])
+	}
+	if search.Spec.SourceZone != zone.Library || search.Spec.Destination != zone.Hand || !search.Spec.Reveal {
+		t.Fatalf("search spec = %+v, want library->hand reveal", search.Spec)
+	}
+	mv := search.Spec.Filter.ManaValue
+	if !mv.Exists || mv.Val.Op != compare.Equal || mv.Val.Value != 4 {
+		t.Fatalf("search mana value filter = %+v, want Equal 4", mv)
 	}
 }
 

@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,623 of 32,501 cards eligible for paper support (54.2%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,632 of 32,501 cards eligible for paper support (54.3%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2733,6 +2733,7 @@ Council4 currently supports **17,623 of 32,501 cards eligible for paper support 
 - Clout of the Dominus
 - Clown Robot
 - Clue
+- Clutch of the Undercity
 - Coal Golem
 - Coal Stoker
 - Coalhauler Swine
@@ -3754,6 +3755,8 @@ Council4 currently supports **17,623 of 32,501 cards eligible for paper support 
 - Dimir Cutpurse
 - Dimir Guildgate
 - Dimir Guildmage
+- Dimir House Guard
+- Dimir Infiltrator
 - Dimir Informant
 - Dimir Locket
 - Dimir Signet
@@ -3885,6 +3888,7 @@ Council4 currently supports **17,623 of 32,501 cards eligible for paper support 
 - Diviner Spirit
 - Diving Griffin
 - Divinity of Pride
+- Dizzy Spell
 - Djeru's Renunciation
 - Djinn Monk
 - Djinn of Fool's Fall
@@ -4100,6 +4104,7 @@ Council4 currently supports **17,623 of 32,501 cards eligible for paper support 
 - Drelnoch
 - Drey Keeper
 - Drider
+- Drift of Phantasms
 - Drifter il-Dal
 - Drifting Djinn
 - Drifting Meadow
@@ -4751,6 +4756,7 @@ Council4 currently supports **17,623 of 32,501 cards eligible for paper support 
 - Ethereal Elk
 - Ethereal Guidance
 - Ethereal Investigator
+- Ethereal Usher
 - Ethereal Whiskergill
 - Etherium Abomination
 - Etherium Astrolabe
@@ -9811,6 +9817,7 @@ Council4 currently supports **17,623 of 32,501 cards eligible for paper support 
 - Mudbrawler Raiders
 - Mudbutton Clanger
 - Mudbutton Torchrunner
+- Muddle the Mixture
 - Mudflat Village
 - Mukotai Ambusher
 - Mukotai Soulripper
@@ -13286,6 +13293,7 @@ Council4 currently supports **17,623 of 32,501 cards eligible for paper support 
 - Shower of Sparks
 - Shrapnel Blast
 - Shrapnel Slinger
+- Shred Memory
 - Shredded Sails
 - Shredder's Revenge
 - Shredding Winds
@@ -15634,6 +15642,7 @@ Council4 currently supports **17,623 of 32,501 cards eligible for paper support 
 - Toil // Trouble
 - Toils of Night and Day
 - Tokka & Rahzar, Unsupervised
+- Tolaria West
 - Tolarian Academy
 - Tolarian Emissary
 - Tolarian Geyser

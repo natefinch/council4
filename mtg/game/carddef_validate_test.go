@@ -913,6 +913,11 @@ func TestValidateCardDefChecksKeywordAbilities(t *testing.T) {
 			ability: ToxicKeyword{},
 			code:    CardDefIssueInvalidKeywordAbility,
 		},
+		{
+			name:    "transmute without explicit cost",
+			ability: TransmuteKeyword{},
+			code:    CardDefIssueInvalidKeywordAbility,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

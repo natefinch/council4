@@ -856,6 +856,8 @@ func renderKeyword(kw game.Keyword) (string, error) {
 		return "game.Enchant", nil
 	case game.Cycling:
 		return "game.Cycling", nil
+	case game.Transmute:
+		return "game.Transmute", nil
 	case game.Flashback:
 		return "game.Flashback", nil
 	case game.Kicker:

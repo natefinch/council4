@@ -109,6 +109,7 @@ var Cards = []cardset.Entry{
 	{Name: "Titan of Industry", New: TitanOfIndustry},
 	{Name: "Toil", New: Toil},
 	{Name: "Toils of Night and Day", New: ToilsOfNightAndDay},
+	{Name: "Tolaria West", New: TolariaWest},
 	{Name: "Tolarian Serpent", New: TolarianSerpent},
 	{Name: "Tome of Legends", New: TomeOfLegends},
 	{Name: "Tome Scour", New: TomeScour},

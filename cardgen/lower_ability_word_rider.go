@@ -111,7 +111,7 @@ func loweredPlainSpellAbility(
 	ability compiler.CompiledAbility,
 	syntax *parser.Ability,
 ) (game.AbilityContent, bool) {
-	lowered, diagnostic := lowerExecutableAbility(cardName, false, nil, ability, syntax)
+	lowered, diagnostic := lowerExecutableAbility(cardName, false, nil, -1, ability, syntax)
 	if diagnostic != nil || !lowered.complete(ability, syntax) {
 		return game.AbilityContent{}, false
 	}
