@@ -4,6 +4,8 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/natefinch/council4/cardgen/oracle/lexer"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
@@ -1308,7 +1310,14 @@ func ParseSentences(source string, tokens []shared.Token) []Sentence {
 				depth--
 			}
 		case shared.Quote:
+			closing := quoted
 			quoted = !quoted
+			if closing && depth == 0 && i > start &&
+				tokens[i-1].Kind == shared.Period &&
+				nextTokenStartsSentence(tokens, i+1) {
+				sentences = appendSentence(sentences, source, tokens[start:i+1])
+				start = i + 1
+			}
 		case shared.Period:
 			if depth == 0 && !quoted {
 				sentences = appendSentence(sentences, source, tokens[start:i+1])
@@ -1318,6 +1327,17 @@ func ParseSentences(source string, tokens []shared.Token) []Sentence {
 		}
 	}
 	return appendSentence(sentences, source, tokens[start:])
+}
+
+func nextTokenStartsSentence(tokens []shared.Token, index int) bool {
+	if index >= len(tokens) {
+		return true
+	}
+	if tokens[index].Kind != shared.Word {
+		return false
+	}
+	first, _ := utf8.DecodeRuneInString(tokens[index].Text)
+	return unicode.IsUpper(first)
 }
 
 func appendSentence(sentences []Sentence, source string, tokens []shared.Token) []Sentence {
