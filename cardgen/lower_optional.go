@@ -563,7 +563,7 @@ func instructionBenefitsController(kind compiler.EffectKind, primitive game.Prim
 	case compiler.EffectInvestigate:
 		investigate, ok := primitive.(game.Investigate)
 		return ok && (!investigate.Recipient.Exists || investigate.Recipient.Val == controller)
-	case compiler.EffectCreate:
+	case compiler.EffectCreate, compiler.EffectPopulate:
 		create, ok := primitive.(game.CreateToken)
 		return ok && (!create.Recipient.Exists || create.Recipient.Val == controller)
 	case compiler.EffectAddMana:
@@ -575,9 +575,6 @@ func instructionBenefitsController(kind compiler.EffectKind, primitive game.Prim
 	case compiler.EffectProliferate:
 		_, ok := primitive.(game.Proliferate)
 		return ok
-	case compiler.EffectPopulate:
-		create, ok := primitive.(game.CreateToken)
-		return ok && (!create.Recipient.Exists || create.Recipient.Val == controller)
 	default:
 		return false
 	}
