@@ -171,6 +171,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitFightRiggingSequence(document.Abilities)
 	emitRaisePalisadeSequence(document.Abilities)
 	emitBattleOfBywaterSequence(document.Abilities)
+	emitArtifactMutationSequence(document.Abilities)
 	emitSelfNameStaticRules(document.Abilities)
 	emitCost(document.Abilities)
 	emitOptional(document.Abilities)
@@ -444,6 +445,15 @@ func emitBattleOfBywaterSequence(abilities []Ability) {
 		abilities[i].BattleOfBywaterSequence =
 			abilities[i].Kind == AbilitySpell &&
 				strings.HasPrefix(strings.ToLower(strings.TrimSpace(abilities[i].Text)), strings.ToLower(text))
+	}
+}
+
+func emitArtifactMutationSequence(abilities []Ability) {
+	const text = "Destroy target artifact. It can't be regenerated. Create X 1/1 green Saproling creature tokens, where X is that artifact's mana value."
+	for i := range abilities {
+		abilities[i].ArtifactMutationSequence =
+			abilities[i].Kind == AbilitySpell &&
+				strings.EqualFold(strings.TrimSpace(abilities[i].Text), text)
 	}
 }
 
