@@ -126,6 +126,9 @@ type Selection struct {
 	// the known-subtype guard, so it is matched only against cards in a
 	// non-battlefield zone; other subjects fail it closed.
 	ChosenSubtypeFrom ChoiceKey
+	// ChosenCardTypeFrom requires the subject to have the card type published
+	// under this resolution choice key.
+	ChosenCardTypeFrom ChoiceKey
 
 	// ColorsAny matches when any listed color is present. ExcludedColors must
 	// all be absent. Colorless requires no colors; Multicolored requires at
@@ -429,6 +432,7 @@ func (s Selection) Empty() bool {
 		!s.PowerAboveBase &&
 		s.Name == "" &&
 		s.ChosenSubtypeFrom == "" &&
+		s.ChosenCardTypeFrom == "" &&
 		!s.RequirePermanentCard &&
 		!s.NameUniqueAmongControlled &&
 		!s.SharesCreatureTypeWithSource &&

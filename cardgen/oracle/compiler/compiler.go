@@ -51,6 +51,7 @@ func compileAbility(
 		SunderingGrowthPopulate:                     ability.SunderingGrowthPopulate,
 		SelesnyaEulogistPopulate:                    ability.SelesnyaEulogistPopulate,
 		UnlicensedHearseExile:                       ability.UnlicensedHearseExile,
+		ChoosePermanentTypeReturn:                   ability.ChoosePermanentTypeReturn,
 	}
 	if ability.LifeCharacteristicExchange != nil {
 		compiled.LifeCharacteristicExchange = &CompiledLifeCharacteristicExchange{

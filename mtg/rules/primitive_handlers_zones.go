@@ -1121,7 +1121,13 @@ func handleMassReturnFromGraveyard(r *effectResolver, prim game.MassReturnFromGr
 			if !cardOK {
 				continue
 			}
-			if handCardMatchesSelection(r.game, card, prim.Selection, owner) {
+			if matchSelection(&selectionSubject{
+				kind:              subjectCard,
+				g:                 r.game,
+				card:              card,
+				viewer:            owner,
+				resolutionChoices: r.obj.ResolutionChoices,
+			}, &prim.Selection) {
 				candidates = append(candidates, graveyardCandidate{cardID: cardID, owner: owner})
 			}
 		}

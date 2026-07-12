@@ -114,6 +114,12 @@ func matchSelection(s *selectionSubject, sel *game.Selection) bool {
 			return false
 		}
 	}
+	if sel.ChosenCardTypeFrom != "" {
+		cardType, ok := s.chosenCardTypeFromResolution(sel.ChosenCardTypeFrom)
+		if !ok || !s.hasType(cardType) {
+			return false
+		}
+	}
 	if sel.SubtypeChoice == game.SubtypeChoiceSourceEntry {
 		subtype, ok := s.sourceEntryChoiceSubtype(game.EntryTypeChoiceKey)
 		if !ok || !s.hasAnySubtype([]types.Sub{subtype}) {
@@ -479,11 +485,23 @@ func (s *selectionSubject) chosenSubtypeFromResolution(key game.ChoiceKey) (type
 	if s.resolutionChoices == nil {
 		return "", false
 	}
+
 	choice, ok := s.resolutionChoices[string(key)]
 	if !ok || choice.Kind != game.ResolutionChoiceSubtype || !types.KnownSubtypeForType(types.Creature, choice.Subtype) {
 		return "", false
 	}
 	return choice.Subtype, true
+}
+
+func (s *selectionSubject) chosenCardTypeFromResolution(key game.ChoiceKey) (types.Card, bool) {
+	if s.resolutionChoices == nil {
+		return "", false
+	}
+	choice, ok := s.resolutionChoices[string(key)]
+	if !ok || choice.Kind != game.ResolutionChoiceCardType || choice.CardType == "" {
+		return "", false
+	}
+	return choice.CardType, true
 }
 
 // isPermanentCard reports whether the subject is a permanent card, for the

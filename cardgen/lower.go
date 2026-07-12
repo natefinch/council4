@@ -872,6 +872,41 @@ func lowerExecutableAbility(
 	ability compiler.CompiledAbility,
 	syntax *parser.Ability,
 ) (abilityLowering, *shared.Diagnostic) {
+	if ability.ChoosePermanentTypeReturn {
+		const choiceKey = game.ChoiceKey("chosen-permanent-type")
+		return abilityLowering{
+			spellAbility: opt.Val(game.Mode{Sequence: []game.Instruction{
+				{Primitive: game.Choose{
+					Choice: game.ResolutionChoice{
+						Kind:   game.ResolutionChoiceCardType,
+						Prompt: "Choose a permanent type",
+						CardTypes: []types.Card{
+							types.Artifact,
+							types.Battle,
+							types.Creature,
+							types.Enchantment,
+							types.Land,
+							types.Planeswalker,
+						},
+					},
+					PublishChoice: choiceKey,
+				}},
+				{Primitive: game.MassReturnFromGraveyard{
+					Player:      game.ControllerReference(),
+					Selection:   game.Selection{ChosenCardTypeFrom: choiceKey},
+					Destination: zone.Hand,
+				}},
+			}}.Ability()),
+			consumed: semanticConsumption{
+				conditions: len(ability.Content.Conditions),
+				effects:    len(ability.Content.Effects),
+				keywords:   len(ability.Content.Keywords),
+				references: len(ability.Content.References),
+				targets:    len(ability.Content.Targets),
+			},
+			sourceSpans: []shared.Span{ability.Span},
+		}, nil
+	}
 	if ability.SunderingGrowthPopulate {
 		return abilityLowering{
 			spellAbility: opt.Val(game.AbilityContent{

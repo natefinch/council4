@@ -152,6 +152,7 @@ type Ability struct {
 	SelesnyaEulogistPopulate    bool                              `json:",omitempty"`
 	LifeCharacteristicExchange  *LifeCharacteristicExchangeSyntax `json:",omitempty"`
 	UnlicensedHearseExile       bool                              `json:",omitempty"`
+	ChoosePermanentTypeReturn   bool                              `json:",omitempty"`
 	// ExactSequence is a parser-owned, exact-vocabulary resolving sequence.
 	ExactSequence *ExactSequenceSyntax `json:",omitempty"`
 	// Optional reports that a triggered ability's resolving body begins with the
