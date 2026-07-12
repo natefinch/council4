@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
 
 // lowerActivatedBodyContent lowers an activated ability's resolving body. It
@@ -26,6 +27,38 @@ func lowerActivatedBodyContent(
 	bodyText string,
 	variableCounterRemovalCost bool,
 ) (game.AbilityContent, *shared.Diagnostic) {
+	if ability.SelesnyaEulogistPopulate {
+		return game.AbilityContent{
+			MinModes: 1,
+			MaxModes: 1,
+			Modes: []game.Mode{{
+				Text: bodyText,
+				Targets: []game.TargetSpec{{
+					MinTargets: 1,
+					MaxTargets: 1,
+					Constraint: "target creature card from a graveyard",
+					Allow:      game.TargetAllowCard,
+					TargetZone: zone.Graveyard,
+					Selection: opt.Val(game.Selection{
+						RequiredTypes: []types.Card{types.Creature},
+					}),
+				}},
+				Sequence: []game.Instruction{
+					{Primitive: game.MoveCard{
+						Card:        game.CardReference{Kind: game.CardReferenceTarget},
+						FromZone:    zone.Graveyard,
+						Destination: zone.Exile,
+					}},
+					{Primitive: game.CreateToken{
+						Amount: game.Fixed(1),
+						Source: game.TokenCopyOf(game.TokenCopySpec{
+							Source: game.TokenCopySourceChosenControlledCreatureToken,
+						}),
+					}},
+				},
+			}},
+		}, nil
+	}
 	if ability.StarCompassMana {
 		return game.TapManaLandsProduceMatchingAbility(
 			game.PlayerYou,

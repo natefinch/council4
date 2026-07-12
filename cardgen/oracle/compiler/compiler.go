@@ -49,6 +49,7 @@ func compileAbility(
 		StarCompassMana:                             ability.StarCompassMana,
 		EnergyTapMana:                               ability.EnergyTapMana,
 		SunderingGrowthPopulate:                     ability.SunderingGrowthPopulate,
+		SelesnyaEulogistPopulate:                    ability.SelesnyaEulogistPopulate,
 	}
 	if ability.AbilityWord != nil {
 		compiled.AbilityWord = ability.AbilityWord.Label

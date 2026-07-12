@@ -160,6 +160,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitStarCompassMana(document.Abilities)
 	emitEnergyTapMana(document.Abilities)
 	emitSunderingGrowthPopulate(document.Abilities)
+	emitSelesnyaEulogistPopulate(document.Abilities)
 	emitSelfNameStaticRules(document.Abilities)
 	emitCost(document.Abilities)
 	emitOptional(document.Abilities)
@@ -323,6 +324,14 @@ func emitSunderingGrowthPopulate(abilities []Ability) {
 	for i := range abilities {
 		abilities[i].SunderingGrowthPopulate =
 			strings.HasPrefix(strings.ToLower(strings.TrimSpace(abilities[i].Text)), strings.ToLower(text))
+	}
+}
+
+func emitSelesnyaEulogistPopulate(abilities []Ability) {
+	const prefix = "{2}{G}: Exile target creature card from a graveyard, then populate."
+	for i := range abilities {
+		abilities[i].SelesnyaEulogistPopulate =
+			strings.HasPrefix(strings.ToLower(strings.TrimSpace(abilities[i].Text)), strings.ToLower(prefix))
 	}
 }
 
