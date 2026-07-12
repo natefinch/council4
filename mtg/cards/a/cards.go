@@ -128,6 +128,7 @@ var Cards = []cardset.Entry{
 	{Name: "Armory Veteran", New: ArmoryVeteran},
 	{Name: "Arrest", New: Arrest},
 	{Name: "Arrogant Bloodlord", New: ArrogantBloodlord},
+	{Name: "Arrow Volley Trap", New: ArrowVolleyTrap},
 	{Name: "Artisan of Kozilek", New: ArtisanOfKozilek},
 	{Name: "Arwen's Gift", New: ArwenSGift},
 	{Name: "Ascending Aven", New: AscendingAven},

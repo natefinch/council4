@@ -20,6 +20,7 @@ var Cards = []cardset.Entry{
 	{Name: "Necra Disciple", New: NecraDisciple},
 	{Name: "Necroskitter", New: Necroskitter},
 	{Name: "Necrotic Wound", New: NecroticWound},
+	{Name: "Needlebite Trap", New: NeedlebiteTrap},
 	{Name: "Nemata, Grove Guardian", New: NemataGroveGuardian},
 	{Name: "Nemesis of Reason", New: NemesisOfReason},
 	{Name: "Neonate's Rush", New: NeonateSRush},

@@ -66,6 +66,16 @@ type stateQueries interface {
 	// life so far this turn, backing the Spectacle alternative-cost condition.
 	OpponentLostLifeThisTurn(playerID game.PlayerID) bool
 
+	// OpponentGainedLifeThisTurn reports whether any opponent of playerID has
+	// gained life so far this turn, backing the "If an opponent gained life this
+	// turn," mana-only alternative-cost condition (Needlebite Trap).
+	OpponentGainedLifeThisTurn(playerID game.PlayerID) bool
+
+	// AttackingCreatureCount returns the number of creatures currently declared
+	// as attackers, backing the "If N or more creatures are attacking," mana-only
+	// alternative-cost condition (Lethargy Trap, Arrow Volley Trap, Pitfall Trap).
+	AttackingCreatureCount() int
+
 	// AdditionalDynamicAmountValue resolves a rules-derived additional-cost
 	// amount against live game state.
 	AdditionalDynamicAmountValue(playerID game.PlayerID, kind cost.AdditionalDynamicAmount) int

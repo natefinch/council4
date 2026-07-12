@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,594 of 32,501 cards eligible for paper support (54.1%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,602 of 32,501 cards eligible for paper support (54.2%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -771,6 +771,7 @@ Council4 currently supports **17,594 of 32,501 cards eligible for paper support 
 - Arrogant Vampire
 - Arrogant Wurm
 - Arrow Storm
+- Arrow Volley Trap
 - Arrows of Justice
 - Arterial Flow
 - Artful Dodge
@@ -1956,6 +1957,10 @@ Council4 currently supports **17,594 of 32,501 cards eligible for paper support 
 - Brineborn Cutthroat
 - Brinelin, the Moon Kraken
 - Bring to Trial
+- Bringer of the Black Dawn
+- Bringer of the Blue Dawn
+- Bringer of the Green Dawn
+- Bringer of the White Dawn
 - Brink of Madness
 - Brion Stoutarm
 - Bristling Backwoods
@@ -8548,6 +8553,7 @@ Council4 currently supports **17,594 of 32,501 cards eligible for paper support 
 - Lesser Masticore
 - Lessons from Life
 - Lethal Protection
+- Lethargy Trap
 - Letter of Acceptance
 - Leviathan
 - Levitating Statue
@@ -10002,6 +10008,7 @@ Council4 currently supports **17,594 of 32,501 cards eligible for paper support 
 - Nectar Faerie
 - Need for Speed
 - Needle Storm
+- Needlebite Trap
 - Needlebug
 - Needlepeak Spider
 - Needleshot Gourna
@@ -10991,6 +10998,7 @@ Council4 currently supports **17,594 of 32,501 cards eligible for paper support 
 - Pit Scorpion
 - Pit Spawn
 - Pitchburn Devils
+- Pitfall Trap
 - Pith Driller
 - Pitiless Fists
 - Pitiless Gorgon

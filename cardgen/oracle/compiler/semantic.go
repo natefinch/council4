@@ -261,6 +261,13 @@ const (
 	// behind "If you control a <subtype>," where the subtype rides on the
 	// CompiledAlternativeCost's ConditionSubtype field.
 	AlternativeCostConditionControlsSubtype
+	// AlternativeCostConditionOpponentGainedLifeThisTurn gates a mana-only
+	// alternative cost behind "If an opponent gained life this turn,".
+	AlternativeCostConditionOpponentGainedLifeThisTurn
+	// AlternativeCostConditionCreaturesAttacking gates a mana-only alternative
+	// cost behind an attacking-creature count carried on the
+	// CompiledAlternativeCost's ConditionCount (and ConditionExactly) fields.
+	AlternativeCostConditionCreaturesAttacking
 )
 
 // AlternativeCostKind identifies the semantic rules change attached to an
@@ -295,14 +302,23 @@ const (
 	// its printed mana cost, optionally gated by a condition. Snuff Out ("If you
 	// control a Swamp, you may pay 4 life ...") is the canonical member.
 	AlternativeCostFree
+	// AlternativeCostMana is the "conditional mana-only" family: cast the spell
+	// by paying the replacement mana cost carried on the CompiledAlternativeCost's
+	// ManaCost field (including {0}) rather than its printed mana cost, optionally
+	// gated by a condition. The Trap cycle and the Bringer cycle are members.
+	AlternativeCostMana
 )
 
 // CompiledAlternativeCost is text-independent semantic data for an optional
 // replacement of a spell's printed mana cost.
 type CompiledAlternativeCost struct {
-	Kind                  AlternativeCostKind
-	Condition             AlternativeCostCondition
-	ConditionSubtype      types.Sub
+	Kind             AlternativeCostKind
+	Condition        AlternativeCostCondition
+	ConditionSubtype types.Sub
+	// ConditionCount and ConditionExactly carry the attacking-creature threshold
+	// for an AlternativeCostConditionCreaturesAttacking condition.
+	ConditionCount        int
+	ConditionExactly      bool
 	WithoutPayingManaCost bool
 	ManaCost              cost.Mana
 	ReplaceTargetWithEach bool

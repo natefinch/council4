@@ -383,6 +383,16 @@ func opponentLostLifeThisTurn(g *game.Game, playerID game.PlayerID) bool {
 	})
 }
 
+// opponentGainedLifeThisTurn reports whether any opponent of playerID has gained
+// life so far this turn, backing Needlebite Trap's "If an opponent gained life
+// this turn," mana-only alternative cost. It is the life-gain mirror of
+// opponentLostLifeThisTurn.
+func opponentGainedLifeThisTurn(g *game.Game, playerID game.PlayerID) bool {
+	return eventsThisTurnWindow(g).any(func(event game.Event) bool {
+		return event.Kind == game.EventLifeGained && event.Player != playerID && event.Amount > 0
+	})
+}
+
 // controllerAggregateAmount computes the player-relative dynamic amounts that
 // depend only on the controller's own board and zones (life total, hand and
 // graveyard sizes, basic land type and opponent counts, and devotion). It is

@@ -219,6 +219,13 @@ type Alternative struct {
 	// for Snuff Out's "If you control a Swamp,". It is unused for every other
 	// condition.
 	ConditionSubtype types.Sub
+	// ConditionCount is the attacking-creature threshold required by an
+	// AlternativeConditionCreaturesAttacking condition. ConditionExactly requires
+	// the attacking-creature count to equal ConditionCount exactly ("If exactly
+	// one creature is attacking,") rather than meet it as a minimum ("If N or more
+	// creatures are attacking,"). Both are unused for every other condition.
+	ConditionCount   int
+	ConditionExactly bool
 	// Mechanic identifies the rules mechanic this alternative grants, so the
 	// rules layer decides Flashback/Escape/Evoke behavior from typed data
 	// rather than the display Label. AlternativeMechanicNone leaves the
@@ -282,4 +289,15 @@ const (
 	// player controls a permanent with the alternative's ConditionSubtype,
 	// backing free spells gated by "If you control a Swamp," (Snuff Out).
 	AlternativeConditionControlsPermanentSubtype
+	// AlternativeConditionOpponentGainedLifeThisTurn requires that an opponent of
+	// the casting player has gained life so far this turn, backing the mana-only
+	// alternative cost gated by "If an opponent gained life this turn," (Needlebite
+	// Trap). It is the life-gain mirror of AlternativeConditionOpponentLostLifeThisTurn.
+	AlternativeConditionOpponentGainedLifeThisTurn
+	// AlternativeConditionCreaturesAttacking requires that the number of
+	// creatures currently attacking meets the alternative's ConditionCount,
+	// backing mana-only alternative costs gated by "If N or more creatures are
+	// attacking," (Lethargy Trap, Arrow Volley Trap) or, when ConditionExactly is
+	// set, "If exactly one creature is attacking," (Pitfall Trap).
+	AlternativeConditionCreaturesAttacking
 )
