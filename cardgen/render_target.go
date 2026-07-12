@@ -414,6 +414,9 @@ func (Renderer) renderSelection(ctx *renderCtx, selection game.Selection) (strin
 			fields = append(fields, fmt.Sprintf("ChosenSubtypeFrom: game.ChoiceKey(%q),", selection.ChosenSubtypeFrom))
 		}
 	}
+	if selection.ChosenCardTypeFrom != "" {
+		fields = append(fields, fmt.Sprintf("ChosenCardTypeFrom: game.ChoiceKey(%q),", selection.ChosenCardTypeFrom))
+	}
 	fields, err := appendSubtypeChoiceField(fields, selection.SubtypeChoice)
 	if err != nil {
 		return "", err

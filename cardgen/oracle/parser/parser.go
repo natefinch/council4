@@ -165,6 +165,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitSelesnyaEulogistPopulate(document.Abilities)
 	emitLifeCharacteristicExchange(document.Abilities, context.CardName)
 	emitUnlicensedHearseExile(document.Abilities, context.CardName)
+	emitChoosePermanentTypeReturn(document.Abilities)
 	emitSelfNameStaticRules(document.Abilities)
 	emitCost(document.Abilities)
 	emitOptional(document.Abilities)
@@ -377,12 +378,22 @@ func emitUnlicensedHearseExile(abilities []Ability, cardName string) {
 	if !strings.EqualFold(cardName, "Unlicensed Hearse") {
 		return
 	}
+
 	for i := range abilities {
 		text := strings.TrimSpace(abilities[i].Text)
 		_, resolving, ok := strings.Cut(text, ":")
 		abilities[i].UnlicensedHearseExile =
 			ok && abilities[i].Kind == AbilityActivated &&
 				strings.EqualFold(strings.TrimSpace(resolving), body)
+	}
+}
+
+func emitChoosePermanentTypeReturn(abilities []Ability) {
+	const text = "Choose a permanent type. Return all cards of the chosen type from your graveyard to your hand."
+	for i := range abilities {
+		abilities[i].ChoosePermanentTypeReturn =
+			abilities[i].Kind == AbilitySpell &&
+				strings.EqualFold(strings.TrimSpace(abilities[i].Text), text)
 	}
 }
 
