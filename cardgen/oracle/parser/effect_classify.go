@@ -1908,6 +1908,8 @@ func effectWordKind(token shared.Token) EffectKind {
 		// counters split among the chosen targets; it is a counter placement
 		// whose distribution the DistributeCounters flag and lowerer model.
 		return EffectPut
+	case "populate", "populates":
+		return EffectPopulate
 	case "proliferate", "proliferates":
 		return EffectProliferate
 	case "regenerate", "regenerates":

@@ -653,6 +653,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectPut
 	case parser.EffectPhaseOut:
 		return EffectPhaseOut
+	case parser.EffectPopulate:
+		return EffectPopulate
 	case parser.EffectProliferate:
 		return EffectProliferate
 	case parser.EffectRemoveCounter:

@@ -132,6 +132,18 @@ func TestCompileProliferateEffect(t *testing.T) {
 	}
 }
 
+func TestCompilePopulateEffect(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := compileSource("Populate.", pipelineContext{InstantOrSorcery: true})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	effects := compilation.Abilities[0].Content.Effects
+	if len(effects) != 1 || effects[0].Kind != EffectPopulate || !effects[0].Exact {
+		t.Fatalf("effects = %#v, want exact populate", effects)
+	}
+}
+
 func TestCompileRegenerateEffect(t *testing.T) {
 	t.Parallel()
 	compilation, diagnostics := compileSource(

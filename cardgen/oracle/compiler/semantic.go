@@ -1781,6 +1781,7 @@ const (
 	// though it weren't blocked.").
 	EffectAssignDamageAsUnblocked
 	EffectPut
+	EffectPopulate
 	EffectProliferate
 	EffectRegenerate
 	EffectReorderLibraryTop
