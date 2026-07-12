@@ -513,6 +513,17 @@ func eachControlledColorSelection(ability *game.ManaAbility) (game.Selection, bo
 	return game.Selection{}, false
 }
 
+// renderMobilizeAmount renders a game.MobilizeAmount composite literal for the
+// Mobilize keyword body: the fixed printed count or the typed dynamic count.
+func renderMobilizeAmount(amount game.MobilizeAmount) string {
+	switch amount.Dynamic {
+	case game.MobilizeDynamicCreatureCardsInGraveyard:
+		return "game.MobilizeAmount{Dynamic: game.MobilizeDynamicCreatureCardsInGraveyard}"
+	default:
+		return fmt.Sprintf("game.MobilizeAmount{Fixed: %d}", amount.Fixed)
+	}
+}
+
 func (r Renderer) renderTriggeredAbility(ctx *renderCtx, ability *game.TriggeredAbility) (string, error) {
 	if keyword, ok := game.BodyKeywordAbility(ability, game.CumulativeUpkeep); ok {
 		if cumulative, ok := keyword.(game.CumulativeUpkeepKeyword); ok &&
@@ -546,6 +557,12 @@ func (r Renderer) renderTriggeredAbility(ctx *renderCtx, ability *game.Triggered
 		if rampage, ok := keyword.(game.RampageKeyword); ok &&
 			reflect.DeepEqual(*ability, game.RampageTriggeredAbility(rampage.Count)) {
 			return fmt.Sprintf("game.RampageTriggeredAbility(%d)", rampage.Count), nil
+		}
+	}
+	if keyword, ok := game.BodyKeywordAbility(ability, game.Mobilize); ok {
+		if mobilize, ok := keyword.(game.MobilizeKeyword); ok &&
+			reflect.DeepEqual(*ability, game.MobilizeTriggeredBody(mobilize.Amount)) {
+			return fmt.Sprintf("game.MobilizeTriggeredBody(%s)", renderMobilizeAmount(mobilize.Amount)), nil
 		}
 	}
 	if reflect.DeepEqual(*ability, game.UndyingTriggeredBody) {

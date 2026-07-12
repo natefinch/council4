@@ -1743,6 +1743,9 @@ func (p CreateToken) validatePrimitive(targets []TargetSpec, checkTargets bool) 
 	if !p.Source.Valid() {
 		return errors.New("create token requires a valid source")
 	}
+	if p.AttackSameAsSource && (p.EntryAttacking || p.AttackEachOtherOpponent) {
+		return errors.New("create token AttackSameAsSource is mutually exclusive with EntryAttacking and AttackEachOtherOpponent")
+	}
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err
 	}

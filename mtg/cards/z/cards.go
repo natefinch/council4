@@ -17,4 +17,5 @@ var Cards = []cardset.Entry{
 	{Name: "Zhuge Jin, Wu Strategist", New: ZhugeJinWuStrategist},
 	{Name: "Zulaport Chainmage", New: ZulaportChainmage},
 	{Name: "Zulaport Enforcer", New: ZulaportEnforcer},
+	{Name: "Zurgo's Vanguard", New: ZurgoSVanguard},
 }

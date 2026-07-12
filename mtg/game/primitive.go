@@ -717,6 +717,18 @@ type CreateToken struct {
 	// RecipientGroup are ignored. It is unset for ordinary token creation.
 	AttackEachOtherOpponent bool
 
+	// AttackSameAsSource, when set, puts each created token onto the battlefield
+	// attacking the same player or planeswalker the ability's source creature is
+	// attacking in the current combat (CR 508.4, CR 702.169b). It backs the
+	// mobilize keyword's "create N tapped and attacking 1/1 red Warrior creature
+	// tokens": the tokens join the source's attack rather than being declared
+	// against a freely chosen defender. It reads the source's live attack
+	// declaration, falling back to the defending player recorded on the trigger
+	// event if the source has left combat. Unlike EntryAttacking it never prompts
+	// for a defender. It is unset for ordinary token creation and is mutually
+	// exclusive with EntryAttacking and AttackEachOtherOpponent.
+	AttackSameAsSource bool
+
 	// Power and Toughness, when set, override the source definition's printed
 	// power and toughness with a dynamic amount evaluated once at creation
 	// ("create an X/X ... token, where X is the amount of life you gained this

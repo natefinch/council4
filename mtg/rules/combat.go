@@ -1521,6 +1521,52 @@ func declareTokenAttackingDefender(g *game.Game, controller game.PlayerID, token
 	g.Combat.AttackersDeclared = true
 }
 
+// declareTokenAttackingTarget puts a freshly created token onto the battlefield
+// attacking the same target — a player, planeswalker, or battle — that another
+// attacker is already attacking (CR 508.4, CR 702.169b), used by the mobilize
+// keyword so its tokens join the source creature's attack rather than a freely
+// chosen defender. Like declareTokenAttackingDefender it is a no-op outside
+// combat or when the token's controller is not the active player, and it emits
+// no attacker-declared event, so "whenever a creature attacks" abilities do not
+// trigger for it. A target whose defending player is no longer alive is skipped,
+// leaving the token on the battlefield without attacking.
+func declareTokenAttackingTarget(g *game.Game, controller game.PlayerID, token *game.Permanent, target game.AttackTarget) {
+	if g.Combat == nil || g.Turn.ActivePlayer != controller || token == nil {
+		return
+	}
+	if !isPlayerAlive(g, target.Player) {
+		return
+	}
+	g.Combat.Attackers = append(g.Combat.Attackers, game.AttackDeclaration{
+		Attacker: token.ObjectID,
+		Target:   target,
+	})
+	// CR 508.8: a creature put onto the battlefield attacking counts the same as
+	// a declared attacker for whether the later combat steps are skipped.
+	g.Combat.AttackersDeclared = true
+	if g.Combat.PlayersAttacked == nil {
+		g.Combat.PlayersAttacked = make(map[game.PlayerID]bool)
+	}
+	g.Combat.PlayersAttacked[target.Player] = true
+}
+
+// attackDeclarationForAttacker returns the live attack declaration for the
+// attacker with the given ObjectID, reporting false when that creature is not
+// currently a declared attacker (no combat, or it never attacked or has left
+// combat). It lets the mobilize keyword read the target its source creature is
+// attacking so newly created tokens can join that same attack.
+func attackDeclarationForAttacker(g *game.Game, attacker id.ID) (game.AttackDeclaration, bool) {
+	if g.Combat == nil {
+		return game.AttackDeclaration{}, false
+	}
+	for _, declaration := range g.Combat.Attackers {
+		if declaration.Attacker == attacker {
+			return declaration, true
+		}
+	}
+	return game.AttackDeclaration{}, false
+}
+
 // aliveDefenders filters a defender list down to the players still alive.
 func aliveDefenders(g *game.Game, defenders []game.PlayerID) []game.PlayerID {
 	alive := make([]game.PlayerID, 0, len(defenders))

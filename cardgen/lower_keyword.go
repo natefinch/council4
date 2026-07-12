@@ -186,6 +186,12 @@ func lowerKeywordDispatch(
 		}
 		return keywordTriggeredLowering(&myriadAbility, ability, syntax), true, nil
 	}
+	if mobilizeAbility, ok, diag := lowerMobilizeAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordTriggeredLowering(&mobilizeAbility, ability, syntax), true, nil
+	}
 	if livingWeaponAbility, ok, diag := lowerLivingWeaponAbility(ability, syntax); ok {
 		if diag != nil {
 			return abilityLowering{}, true, diag
@@ -610,6 +616,65 @@ func lowerMyriadAbility(
 		)
 	}
 	return game.MyriadTriggeredBody, true, nil
+}
+
+// lowerMobilizeAbility lowers the Mobilize N keyword (CR 702.169) to its
+// canonical attacks triggered ability, which creates N tapped-and-attacking 1/1
+// red Warrior tokens joining the source's attack and sacrifices exactly those
+// tokens at the next end step. Mobilize is printed with reminder text (stripped
+// before lowering), so the lowering expands the keyword to the reusable typed
+// body with a fixed or rules-derived amount. The fixed "Mobilize N" form uses
+// the integer parameter; the "Mobilize X, where X is the number of creature
+// cards in your graveyard" form uses the typed dynamic parameter. Any other
+// wording, amount, or additional rules text fails closed.
+func lowerMobilizeAbility(
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (game.TriggeredAbility, bool, *shared.Diagnostic) {
+	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordMobilize {
+		return game.TriggeredAbility{}, false, nil
+	}
+	keyword := ability.Content.Keywords[0]
+	amount, amountOK := mobilizeAmount(keyword)
+	if !amountOK ||
+		(ability.Kind != compiler.AbilityStatic && ability.Kind != compiler.AbilitySpell) ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.References) != 0 ||
+		ability.AbilityWord != "" ||
+		!keywordOnlyCovered(syntax, keyword) {
+		return game.TriggeredAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Mobilize ability",
+			"the executable source backend supports only exact \"Mobilize N\" with a fixed positive amount or \"Mobilize X, where X is the number of creature cards in your graveyard\"",
+		)
+	}
+	return game.MobilizeTriggeredBody(amount), true, nil
+}
+
+// mobilizeAmount maps a compiled Mobilize keyword to its runtime typed amount,
+// reporting false when the parameter is neither a fixed positive integer nor a
+// supported dynamic count so the keyword fails closed.
+func mobilizeAmount(keyword compiler.CompiledKeyword) (game.MobilizeAmount, bool) {
+	switch keyword.ParameterKind {
+	case parser.KeywordParameterInteger:
+		if keyword.Integer < 1 {
+			return game.MobilizeAmount{}, false
+		}
+		return game.MobilizeAmount{Fixed: keyword.Integer}, true
+	case parser.KeywordParameterMobilizeDynamic:
+		switch keyword.MobilizeDynamic {
+		case parser.MobilizeDynamicCreatureCardsInGraveyard:
+			return game.MobilizeAmount{Dynamic: game.MobilizeDynamicCreatureCardsInGraveyard}, true
+		default:
+			return game.MobilizeAmount{}, false
+		}
+	default:
+		return game.MobilizeAmount{}, false
+	}
 }
 
 func lowerFlankingAbility(

@@ -66,6 +66,7 @@ var Cards = []cardset.Entry{
 	{Name: "Reduce to Ashes", New: ReduceToAshes},
 	{Name: "Regal Behemoth", New: RegalBehemoth},
 	{Name: "Regal Sliver", New: RegalSliver},
+	{Name: "Reigning Victor", New: ReigningVictor},
 	{Name: "Reinforced Bulwark", New: ReinforcedBulwark},
 	{Name: "Relentless Pursuit", New: RelentlessPursuit},
 	{Name: "Relic Golem", New: RelicGolem},

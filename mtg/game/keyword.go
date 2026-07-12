@@ -214,6 +214,13 @@ type SoulshiftKeyword struct {
 	Count int
 }
 
+// MobilizeKeyword parameterizes Mobilize for its per-attack token count
+// (CR 702.169). Amount is the fixed or rules-derived number of tapped-and-
+// attacking 1/1 red Warrior tokens created whenever the creature attacks.
+type MobilizeKeyword struct {
+	Amount MobilizeAmount
+}
+
 // DredgeKeyword parameterizes Dredge for its mill count (CR 702.52). While this
 // card is in its owner's graveyard, if that player would draw a card they may
 // instead mill Count cards and return this card from the graveyard to their
@@ -261,6 +268,7 @@ func (UnearthKeyword) isKeywordAbility()          {}
 func (FabricateKeyword) isKeywordAbility()        {}
 func (RampageKeyword) isKeywordAbility()          {}
 func (SoulshiftKeyword) isKeywordAbility()        {}
+func (MobilizeKeyword) isKeywordAbility()         {}
 func (DredgeKeyword) isKeywordAbility()           {}
 func (LandwalkKeyword) isKeywordAbility()         {}
 func (SaddleKeyword) isKeywordAbility()           {}
@@ -297,6 +305,7 @@ func (UnearthKeyword) keyword() Keyword    { return Unearth }
 func (FabricateKeyword) keyword() Keyword  { return Fabricate }
 func (RampageKeyword) keyword() Keyword    { return Rampage }
 func (SoulshiftKeyword) keyword() Keyword  { return Soulshift }
+func (MobilizeKeyword) keyword() Keyword   { return Mobilize }
 func (DredgeKeyword) keyword() Keyword     { return Dredge }
 func (LandwalkKeyword) keyword() Keyword   { return Landwalk }
 func (SaddleKeyword) keyword() Keyword     { return Saddle }
@@ -398,6 +407,7 @@ func (ability UnearthKeyword) cloneKeywordAbility() KeywordAbility {
 func (ability FabricateKeyword) cloneKeywordAbility() KeywordAbility { return ability }
 func (ability RampageKeyword) cloneKeywordAbility() KeywordAbility   { return ability }
 func (ability SoulshiftKeyword) cloneKeywordAbility() KeywordAbility { return ability }
+func (ability MobilizeKeyword) cloneKeywordAbility() KeywordAbility  { return ability }
 func (ability DredgeKeyword) cloneKeywordAbility() KeywordAbility    { return ability }
 func (ability LandwalkKeyword) cloneKeywordAbility() KeywordAbility  { return ability }
 func (ability SaddleKeyword) cloneKeywordAbility() KeywordAbility    { return ability }

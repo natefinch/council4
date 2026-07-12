@@ -39,6 +39,7 @@ var Cards = []cardset.Entry{
 	{Name: "Nico Minoru, Runaway", New: NicoMinoruRunaway},
 	{Name: "Night Market Aeronaut", New: NightMarketAeronaut},
 	{Name: "Night Market Guard", New: NightMarketGuard},
+	{Name: "Nightblade Brigade", New: NightbladeBrigade},
 	{Name: "Nightwhorl Hermit", New: NightwhorlHermit},
 	{Name: "Nimana Skitter-Sneak", New: NimanaSkitterSneak},
 	{Name: "Nimblewright Schematic", New: NimblewrightSchematic},

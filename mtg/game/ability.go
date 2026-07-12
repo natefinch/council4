@@ -208,6 +208,18 @@ const (
 	// granted ("Equipped creature has myriad."). Appended at the end of the enum
 	// so existing keyword ordinals are unchanged.
 	Myriad
+	// Mobilize (CR 702.169) is a creature keyword: "Mobilize N (Whenever this
+	// creature attacks, create N tapped and attacking 1/1 red Warrior creature
+	// tokens. Sacrifice them at the beginning of the next end step.)" It is
+	// modeled by MobilizeTriggeredBody, an attack-triggered ability whose content
+	// creates N tapped-and-attacking 1/1 red Warrior tokens under the source's
+	// controller attacking the same player or planeswalker as the source,
+	// publishes them under a linked key, and schedules a next-end-step delayed
+	// trigger that sacrifices exactly that captured set. N is fixed or a
+	// rules-derived count (MobilizeAmount). The keyword is carried so
+	// HasKeyword(Mobilize) reports true. Appended at the end of the enum so
+	// existing keyword ordinals are unchanged.
+	Mobilize
 	// KeywordCount is one greater than the largest real keyword value. It sizes
 	// compact keyword sets; it is not itself a keyword.
 	KeywordCount
