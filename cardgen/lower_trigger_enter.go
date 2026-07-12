@@ -678,6 +678,20 @@ func prepareTriggerBody(
 		len(ability.Content.Conditions) != 0 &&
 		!hasOptionalResolvingEffect(ability.Content.Effects)
 	eventPlayerPaymentCondition := exactEventPlayerPaymentCondition(ability)
+	// A lone optional resolving effect gated by a trailing/leading resolution
+	// condition ("its controller may draw a card if its power is greater than
+	// each other creature's power."; Selvala, Heart of the Wilds) is not an "if
+	// you do" sequence — there is no preceding effect for a gate to reference —
+	// so route it through the same resolution-condition path that handles a
+	// mandatory gated effect. Only the single-effect shape qualifies; multi-effect
+	// optional bodies stay on the optional-sequence path, and an event-player
+	// payment body keeps its dedicated span handling.
+	if !resolutionCondition && !hasInterveningCondition && !ability.Optional &&
+		!eventPlayerPaymentCondition &&
+		len(ability.Content.Conditions) != 0 &&
+		len(ability.Content.Effects) == 1 && ability.Content.Effects[0].Optional {
+		resolutionCondition = true
+	}
 	if !optionalSequence && !resolutionCondition && !keepResidualBodyConditions && !eventPlayerPaymentCondition {
 		if (len(ability.Content.Conditions) != 0 && !hasInterveningCondition) ||
 			(hasInterveningCondition && (len(ability.Content.Conditions) != 1 ||

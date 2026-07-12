@@ -75,6 +75,7 @@ var simplePredicateMap = map[parser.ConditionPredicateKind]ConditionPredicate{
 	parser.ConditionPredicateFirstCombatPhaseOfTurn:                           ConditionPredicateFirstCombatPhaseOfTurn,
 	parser.ConditionPredicateControlsGreatestPowerCreature:                    ConditionPredicateControlsGreatestPowerCreature,
 	parser.ConditionPredicateControlsGreatestToughnessCreature:                ConditionPredicateControlsGreatestToughnessCreature,
+	parser.ConditionPredicateEventSubjectPowerGreatestOnBattlefield:           ConditionPredicateEventSubjectPowerGreatestOnBattlefield,
 	parser.ConditionPredicateSubjectSharesCreatureTypeWithSource:              ConditionPredicateSubjectSharesCreatureTypeWithSource,
 	parser.ConditionPredicateControllerIsMonarch:                              ConditionPredicateControllerIsMonarch,
 	parser.ConditionPredicateControllerWasMonarchAtTurnStart:                  ConditionPredicateControllerWasMonarchAtTurnStart,

@@ -215,6 +215,8 @@ func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringC
 		result.ControllerControlsGreatestPowerCreature = true
 	case compiler.ConditionPredicateControlsGreatestToughnessCreature:
 		result.ControllerControlsGreatestToughnessCreature = true
+	case compiler.ConditionPredicateEventSubjectPowerGreatestOnBattlefield:
+		result.EventPermanentPowerGreaterThanEachOtherCreature = true
 	case compiler.ConditionPredicateControllerIsMonarch:
 		result.ControllerIsMonarch = true
 	case compiler.ConditionPredicateControllerWasMonarchAtTurnStart:
@@ -389,6 +391,7 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 			compiler.ConditionPredicateSourceNotSaddled,
 			compiler.ConditionPredicateControlsGreatestPowerCreature,
 			compiler.ConditionPredicateControlsGreatestToughnessCreature,
+			compiler.ConditionPredicateEventSubjectPowerGreatestOnBattlefield,
 			compiler.ConditionPredicateControllerControlsNamed,
 			// "If this is the second time this ability has resolved this turn,
 			// convert Prowl." gates the trailing effect of a resolving triggered

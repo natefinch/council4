@@ -189,6 +189,15 @@ type Condition struct {
 	// creature or is tied for highest, and is false when no creatures exist.
 	ControllerControlsGreatestToughnessCreature bool
 
+	// EventPermanentPowerGreaterThanEachOtherCreature is satisfied when the
+	// permanent named by the triggering zone-change event has power strictly
+	// greater than every other creature's power on the battlefield ("if its power
+	// is greater than each other creature's power"; Selvala, Heart of the Wilds).
+	// It reads the entering creature's power and compares it against every other
+	// creature; a tie, the absence of the event permanent, or an event permanent
+	// that is not a creature fails closed.
+	EventPermanentPowerGreaterThanEachOtherCreature bool
+
 	// ControllerIsMonarch is satisfied when the context controller is the
 	// monarch (CR 720), as in "At the beginning of your end step, if you're the
 	// monarch, ...". It reads the controller's live IsMonarch designation flag.
@@ -356,6 +365,7 @@ func (c *Condition) Empty() bool {
 		!c.FirstCombatPhaseOfTurn &&
 		!c.ControllerControlsGreatestPowerCreature &&
 		!c.ControllerControlsGreatestToughnessCreature &&
+		!c.EventPermanentPowerGreaterThanEachOtherCreature &&
 		!c.ControllerIsMonarch &&
 		!c.ControllerWasMonarchAtTurnStart &&
 		!c.AnOpponentIsMonarch &&

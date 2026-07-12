@@ -1105,6 +1105,10 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 		fields = append(fields, "ControllerControlsGreatestToughnessCreature: true,")
 		hasPredicate = true
 	}
+	if cond.EventPermanentPowerGreaterThanEachOtherCreature {
+		fields = append(fields, "EventPermanentPowerGreaterThanEachOtherCreature: true,")
+		hasPredicate = true
+	}
 	if cond.ControllerIsMonarch {
 		fields = append(fields, "ControllerIsMonarch: true,")
 		hasPredicate = true

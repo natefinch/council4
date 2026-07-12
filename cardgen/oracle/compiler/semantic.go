@@ -863,6 +863,13 @@ const (
 	// highest-toughness creature or is tied for highest, and is false when no
 	// creatures exist.
 	ConditionPredicateControlsGreatestToughnessCreature
+	// ConditionPredicateEventSubjectPowerGreatestOnBattlefield is satisfied when
+	// the permanent named by the triggering zone-change event has power strictly
+	// greater than every other creature's power on the battlefield ("if its power
+	// is greater than each other creature's power"; Selvala, Heart of the Wilds).
+	// It holds only when the event creature is the sole highest-power creature; a
+	// tie or the absence of the event permanent fails closed.
+	ConditionPredicateEventSubjectPowerGreatestOnBattlefield
 	// ConditionPredicateSubjectSharesCreatureTypeWithSource is satisfied when the
 	// condition's subject card (the just-looked-at top card of the controller's
 	// library) shares at least one creature type with the source permanent ("if
