@@ -3647,8 +3647,8 @@ func damageRecipientUnionNoun(cardTypes []CardType) (string, bool) {
 // exactGroupDamagePermanentRecipientText reconstructs the recipient phrase for a
 // group damage spell whose recipients form a single filtered permanent group. It
 // renders only the controller, combat, tapped, single-color, single-subtype,
-// single-excluded-type, single-excluded-subtype, nontoken/token, keyword, and
-// "other" qualifiers the executable backend can represent exactly, and fails
+// single-excluded-type, single-excluded-subtype, modified, nontoken/token,
+// keyword, and "other" qualifiers the executable backend can represent exactly, and fails
 // closed for every other qualifier.
 func exactGroupDamagePermanentRecipientText(selection SelectionSyntax) (string, bool) {
 	if selection.All || selection.Another || selection.Zone != zone.None ||
@@ -3707,6 +3707,9 @@ func exactGroupDamagePermanentRecipientText(selection SelectionSyntax) (string, 
 	words := []string{"each"}
 	if selection.Other {
 		words = append(words, "other")
+	}
+	if selection.Modified {
+		words = append(words, "modified")
 	}
 	switch {
 	case selection.Attacking:
