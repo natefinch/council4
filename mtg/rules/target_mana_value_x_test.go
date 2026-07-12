@@ -70,7 +70,7 @@ func TestSpellTargetsSatisfyManaValueXBoundsTargetByX(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			targets := []game.Target{game.PermanentTarget(tc.target.ObjectID)}
-			got := spellTargetsSatisfyManaValueX(g, game.Player1, card, nil, targets, tc.xValue)
+			got := spellTargetsSatisfyManaValueX(g, game.Player1, card, nil, targets, tc.xValue, game.CastBranch{})
 			if got != tc.want {
 				t.Fatalf("spellTargetsSatisfyManaValueX(mv target, X=%d) = %v, want %v", tc.xValue, got, tc.want)
 			}
@@ -97,7 +97,7 @@ func TestSpellTargetsSatisfyManaValueXIgnoresNonXSpecs(t *testing.T) {
 			Sequence: []game.Instruction{{Primitive: game.Destroy{Object: game.TargetPermanentReference(0)}}},
 		}.Ability()),
 	}}
-	if !spellTargetsSatisfyManaValueX(g, game.Player1, card, nil, []game.Target{game.PermanentTarget(mv5.ObjectID)}, 0) {
+	if !spellTargetsSatisfyManaValueX(g, game.Player1, card, nil, []game.Target{game.PermanentTarget(mv5.ObjectID)}, 0, game.CastBranch{}) {
 		t.Fatal("non-ManaValueAtMostX spell should pass the X-bound check regardless of X")
 	}
 }
@@ -106,7 +106,7 @@ func TestSpellTargetsSatisfyManaValueXIgnoresNonXSpecs(t *testing.T) {
 // target whose mana value exceeds the resolving spell's X is no longer legal at
 // resolution and is deferred, while a within-bound target stays legal.
 func TestManaValueAtMostXResolutionRechecksBound(t *testing.T) {
-	specs := spellTargetSpecs(manaValueAtMostXSpellDef(), nil)
+	specs := spellTargetSpecs(manaValueAtMostXSpellDef(), nil, game.CastBranch{})
 
 	cases := []struct {
 		name      string

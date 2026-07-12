@@ -106,7 +106,7 @@ func legalPreparedSpellActions(g *game.Game, playerID game.PlayerID) []action.Ac
 		}
 		for _, xValue := range legalXValuesForCostAndAdditional(g, playerID, manaCostPtr(spellDef.ManaCost), spellDef.AdditionalCosts) {
 			for _, modes := range modeChoicesForSpellAt(g, playerID, spellDef) {
-				targetResult := targetChoicesForSpell(g, playerID, spellDef, modes)
+				targetResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{})
 				if targetResult.kind == targetInvalidSpec {
 					continue
 				}
@@ -244,23 +244,41 @@ func (e *Engine) legalCastActions(g *game.Game, playerID game.PlayerID) []action
 				}
 				for _, xValue := range legalXValuesForCostAndAdditional(g, playerID, manaCostPtr(spellDef.ManaCost), spellDef.AdditionalCosts) {
 					for _, modes := range modeChoicesForSpellAt(g, playerID, spellDef) {
-						targetResult := targetChoicesForSpell(g, playerID, spellDef, modes)
-						if targetResult.kind == targetInvalidSpec {
-							continue
+						plainResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{})
+						if plainResult.kind != targetInvalidSpec {
+							for _, targets := range plainResult.choices {
+								if e.canCastSpellFaceFromZoneWithKicker(g, playerID, cardID, sourceZone, face, targets, xValue, modes, false) {
+									actions = append(actions, actionBuild.castSpell(cardID, sourceZone, face, targets, xValue, modes))
+								}
+							}
 						}
-						for _, targets := range targetResult.choices {
-							if e.canCastSpellFaceFromZoneWithKicker(g, playerID, cardID, sourceZone, face, targets, xValue, modes, false) {
-								actions = append(actions, actionBuild.castSpell(cardID, sourceZone, face, targets, xValue, modes))
-								if spellHasGift(spellDef) {
-									for _, opponent := range aliveOpponents(g, playerID) {
-										actions = append(actions, actionBuild.castGiftSpell(cardID, sourceZone, face, targets, xValue, modes, opponent))
+						if spellHasGift(spellDef) {
+							giftResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{GiftPromised: true})
+							if giftResult.kind != targetInvalidSpec {
+								for _, targets := range giftResult.choices {
+									if e.canCastGiftSpellFaceFromZone(g, playerID, cardID, sourceZone, face, targets, xValue, modes) {
+										for _, opponent := range aliveOpponents(g, playerID) {
+											actions = append(actions, actionBuild.castGiftSpell(cardID, sourceZone, face, targets, xValue, modes, opponent))
+										}
 									}
 								}
 							}
-							if spellHasMultikicker(spellDef) {
-								actions = e.appendMultikickedCastActions(g, playerID, actions, actionBuild, cardID, sourceZone, face, targets, xValue, modes)
-							} else if spellHasKicker(spellDef) && e.canCastSpellFaceFromZoneWithKicker(g, playerID, cardID, sourceZone, face, targets, xValue, modes, true) {
-								actions = append(actions, actionBuild.castKickedSpell(cardID, sourceZone, face, targets, xValue, modes))
+						}
+						if spellHasMultikicker(spellDef) {
+							kickedResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{Kicked: true})
+							if kickedResult.kind != targetInvalidSpec {
+								for _, targets := range kickedResult.choices {
+									actions = e.appendMultikickedCastActions(g, playerID, actions, actionBuild, cardID, sourceZone, face, targets, xValue, modes)
+								}
+							}
+						} else if spellHasKicker(spellDef) {
+							kickedResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{Kicked: true})
+							if kickedResult.kind != targetInvalidSpec {
+								for _, targets := range kickedResult.choices {
+									if e.canCastSpellFaceFromZoneWithKicker(g, playerID, cardID, sourceZone, face, targets, xValue, modes, true) {
+										actions = append(actions, actionBuild.castKickedSpell(cardID, sourceZone, face, targets, xValue, modes))
+									}
+								}
 							}
 						}
 					}
@@ -312,23 +330,41 @@ func (e *Engine) legalCommanderCastActions(g *game.Game, playerID game.PlayerID)
 		}
 		for _, xValue := range legalXValuesForCostAndAdditional(g, playerID, manaCostPtr(spellDef.ManaCost), spellDef.AdditionalCosts) {
 			for _, modes := range modeChoicesForSpellAt(g, playerID, spellDef) {
-				targetResult := targetChoicesForSpell(g, playerID, spellDef, modes)
-				if targetResult.kind == targetInvalidSpec {
-					continue
+				plainResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{})
+				if plainResult.kind != targetInvalidSpec {
+					for _, targets := range plainResult.choices {
+						if e.canCastSpellFaceFromZoneWithKicker(g, playerID, card.ID, zone.Command, face, targets, xValue, modes, false) {
+							actions = append(actions, actionBuild.castSpell(card.ID, zone.Command, face, targets, xValue, modes))
+						}
+					}
 				}
-				for _, targets := range targetResult.choices {
-					if e.canCastSpellFaceFromZoneWithKicker(g, playerID, card.ID, zone.Command, face, targets, xValue, modes, false) {
-						actions = append(actions, actionBuild.castSpell(card.ID, zone.Command, face, targets, xValue, modes))
-						if spellHasGift(spellDef) {
-							for _, opponent := range aliveOpponents(g, playerID) {
-								actions = append(actions, actionBuild.castGiftSpell(card.ID, zone.Command, face, targets, xValue, modes, opponent))
+				if spellHasGift(spellDef) {
+					giftResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{GiftPromised: true})
+					if giftResult.kind != targetInvalidSpec {
+						for _, targets := range giftResult.choices {
+							if e.canCastGiftSpellFaceFromZone(g, playerID, card.ID, zone.Command, face, targets, xValue, modes) {
+								for _, opponent := range aliveOpponents(g, playerID) {
+									actions = append(actions, actionBuild.castGiftSpell(card.ID, zone.Command, face, targets, xValue, modes, opponent))
+								}
 							}
 						}
 					}
-					if spellHasMultikicker(spellDef) {
-						actions = e.appendMultikickedCastActions(g, playerID, actions, actionBuild, card.ID, zone.Command, face, targets, xValue, modes)
-					} else if spellHasKicker(spellDef) && e.canCastSpellFaceFromZoneWithKicker(g, playerID, card.ID, zone.Command, face, targets, xValue, modes, true) {
-						actions = append(actions, actionBuild.castKickedSpell(card.ID, zone.Command, face, targets, xValue, modes))
+				}
+				if spellHasMultikicker(spellDef) {
+					kickedResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{Kicked: true})
+					if kickedResult.kind != targetInvalidSpec {
+						for _, targets := range kickedResult.choices {
+							actions = e.appendMultikickedCastActions(g, playerID, actions, actionBuild, card.ID, zone.Command, face, targets, xValue, modes)
+						}
+					}
+				} else if spellHasKicker(spellDef) {
+					kickedResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{Kicked: true})
+					if kickedResult.kind != targetInvalidSpec {
+						for _, targets := range kickedResult.choices {
+							if e.canCastSpellFaceFromZoneWithKicker(g, playerID, card.ID, zone.Command, face, targets, xValue, modes, true) {
+								actions = append(actions, actionBuild.castKickedSpell(card.ID, zone.Command, face, targets, xValue, modes))
+							}
+						}
 					}
 				}
 			}

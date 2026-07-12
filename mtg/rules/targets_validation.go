@@ -5,8 +5,8 @@ import (
 	"github.com/natefinch/council4/mtg/game/id"
 )
 
-func targetsValidForSpell(g *game.Game, controller game.PlayerID, card *game.CardDef, chosenModes []int, targets []game.Target) bool {
-	specs := spellTargetSpecs(card, chosenModes)
+func targetsValidForSpell(g *game.Game, controller game.PlayerID, card *game.CardDef, chosenModes []int, targets []game.Target, branch game.CastBranch) bool {
+	specs := spellTargetSpecs(card, chosenModes, branch)
 	return targetsValidForSpecs(g, controller, card, 0, specs, targets)
 }
 
@@ -74,8 +74,8 @@ func targetCountsForSpecFrom(g *game.Game, controller game.PlayerID, source *gam
 	return false
 }
 
-func spellTargetCounts(g *game.Game, controller game.PlayerID, card *game.CardDef, chosenModes []int, targets []game.Target) ([]int, bool) {
-	return targetCountsForSpecs(g, controller, card, 0, game.Event{}, spellTargetSpecs(card, chosenModes), targets)
+func spellTargetCounts(g *game.Game, controller game.PlayerID, card *game.CardDef, chosenModes []int, targets []game.Target, branch game.CastBranch) ([]int, bool) {
+	return targetCountsForSpecs(g, controller, card, 0, game.Event{}, spellTargetSpecs(card, chosenModes, branch), targets)
 }
 
 // spellTargetCountsMatchX reports whether every CountEqualsX target spec of the
@@ -83,8 +83,8 @@ func spellTargetCounts(g *game.Game, controller game.PlayerID, card *game.CardDe
 // resolving target count to the spell's chosen X ("Exile X target creatures"), so
 // a cast is legal only when the announced target count for that spec equals X.
 // Spells without a CountEqualsX spec are unaffected.
-func spellTargetCountsMatchX(g *game.Game, controller game.PlayerID, card *game.CardDef, chosenModes []int, targets []game.Target, xValue int) bool {
-	specs := spellTargetSpecs(card, chosenModes)
+func spellTargetCountsMatchX(g *game.Game, controller game.PlayerID, card *game.CardDef, chosenModes []int, targets []game.Target, xValue int, branch game.CastBranch) bool {
+	specs := spellTargetSpecs(card, chosenModes, branch)
 	requiresMatch := false
 	for i := range specs {
 		if specs[i].CountEqualsX {
@@ -95,7 +95,7 @@ func spellTargetCountsMatchX(g *game.Game, controller game.PlayerID, card *game.
 	if !requiresMatch {
 		return true
 	}
-	counts, ok := spellTargetCounts(g, controller, card, chosenModes, targets)
+	counts, ok := spellTargetCounts(g, controller, card, chosenModes, targets, branch)
 	if !ok {
 		return false
 	}
@@ -113,8 +113,8 @@ func spellTargetCountsMatchX(g *game.Game, controller game.PlayerID, card *game.
 // is X-blind, so announcement over-generates every creature and this check
 // enforces the X-derived upper bound at cast time (CR 601.2c). Spells without a
 // ManaValueAtMostX spec are unaffected.
-func spellTargetsSatisfyManaValueX(g *game.Game, controller game.PlayerID, card *game.CardDef, chosenModes []int, targets []game.Target, xValue int) bool {
-	specs := spellTargetSpecs(card, chosenModes)
+func spellTargetsSatisfyManaValueX(g *game.Game, controller game.PlayerID, card *game.CardDef, chosenModes []int, targets []game.Target, xValue int, branch game.CastBranch) bool {
+	specs := spellTargetSpecs(card, chosenModes, branch)
 	requiresMatch := false
 	for i := range specs {
 		if specs[i].ManaValueAtMostX {
@@ -125,7 +125,7 @@ func spellTargetsSatisfyManaValueX(g *game.Game, controller game.PlayerID, card 
 	if !requiresMatch {
 		return true
 	}
-	counts, ok := spellTargetCounts(g, controller, card, chosenModes, targets)
+	counts, ok := spellTargetCounts(g, controller, card, chosenModes, targets, branch)
 	if !ok {
 		return false
 	}
@@ -306,7 +306,7 @@ func spellHasAnyLegalTargets(g *game.Game, card *game.CardDef, obj *game.StackOb
 	if obj.Overloaded && card.Overload.Exists {
 		card = overloadSpellDef(card)
 	}
-	return stackObjectHasAnyLegalTargetsForSpecs(g, card, 0, spellTargetSpecs(card, obj.ChosenModes), obj)
+	return stackObjectHasAnyLegalTargetsForSpecs(g, card, 0, spellTargetSpecs(card, obj.ChosenModes, castBranchForObject(obj)), obj)
 }
 
 func bodyHasAnyLegalTargetsFromSourceObject(g *game.Game, source *game.CardDef, sourceObjectID id.ID, body game.Ability, obj *game.StackObject) bool {
@@ -422,7 +422,16 @@ func targetLegalForSpecAtResolution(g *game.Game, controller game.PlayerID, sour
 		!targetProtectedFromSource(g, controller, source, sourceObjectID, target)
 }
 
-func spellTargetSpecs(card *game.CardDef, chosenModes []int) []game.TargetSpec {
+// spellTargetSpecs returns the target specs a spell announces targets against on
+// the given cast branch. Specs gated to a cast branch that is not active
+// (an unpromised gift's promised-only target, an unkicked spell's kicked-only
+// target) are neutralised so they require no target, while their ordinal slot is
+// preserved (CR 601.2c). Ungated spells return their full spec list unchanged.
+func spellTargetSpecs(card *game.CardDef, chosenModes []int, branch game.CastBranch) []game.TargetSpec {
+	return applyCastBranchToSpecs(spellTargetSpecsRaw(card, chosenModes), branch)
+}
+
+func spellTargetSpecsRaw(card *game.CardDef, chosenModes []int) []game.TargetSpec {
 	if isAuraCard(card) {
 		spec, ok := enchantTargetSpecForCard(card)
 		if !ok {

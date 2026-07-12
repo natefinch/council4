@@ -53,12 +53,13 @@ func resolveCardReference(g *game.Game, obj *game.StackObject, ref game.CardRefe
 		if obj == nil || ref.TargetIndex < 0 {
 			return 0, zone.None, false
 		}
+		wantIndex := remapCardTargetSlot(g, obj, ref.TargetIndex)
 		cardTargetIndex := 0
 		for _, target := range obj.Targets {
 			if !targetOccupiesCardReferenceSlot(target) {
 				continue
 			}
-			if cardTargetIndex != ref.TargetIndex {
+			if cardTargetIndex != wantIndex {
 				cardTargetIndex++
 				continue
 			}

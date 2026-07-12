@@ -137,7 +137,7 @@ func (*Engine) castSuspendedCard(g *game.Game, playerID game.PlayerID, cardID id
 	if !ok {
 		return false
 	}
-	targetCounts, ok := spellTargetCounts(g, playerID, spellDef, modes, targets)
+	targetCounts, ok := spellTargetCounts(g, playerID, spellDef, modes, targets, game.CastBranch{})
 	if !ok {
 		panic("validated suspended spell targets could not be segmented")
 	}

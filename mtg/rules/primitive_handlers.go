@@ -1874,7 +1874,7 @@ func handleCreateReplacement(r *effectResolver, prim game.CreateReplacement) eff
 // instance ID identifies the entering permanent. It fails closed when the
 // reference does not denote a card-backed spell still on the stack.
 func triggeringSpellCardID(r *effectResolver, ref game.ObjectReference) (id.ID, bool) {
-	stackObjectID, ok := copyStackObjectSourceID(r.obj, ref)
+	stackObjectID, ok := copyStackObjectSourceID(r.game, r.obj, ref)
 	if !ok {
 		return 0, false
 	}

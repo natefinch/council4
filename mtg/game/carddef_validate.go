@@ -894,6 +894,9 @@ func (v *cardDefValidator) validateTargetSpec(faceName, path string, target *Tar
 	if target.Allow&^knownTargetAllows != 0 {
 		v.add(faceName, appendPath(path, "Allow"), CardDefIssueInvalidTargetSpec, "unknown target allow category")
 	}
+	if !target.Gate.Valid() {
+		v.add(faceName, appendPath(path, "Gate"), CardDefIssueInvalidTargetSpec, "unknown target gate")
+	}
 	v.validateStackObjectTargetPredicate(faceName, path, target)
 	allowsPermanents := target.Allow&TargetAllowPermanent != 0
 	allowsPlayers := target.Allow&TargetAllowPlayer != 0

@@ -56,7 +56,32 @@ func (r Renderer) renderTargetSpec(ctx *renderCtx, spec *game.TargetSpec) (strin
 	if spec.SameGraveyard {
 		fields = append(fields, "SameGraveyard: true,")
 	}
+	if spec.Gate != game.TargetGateAlways {
+		gate, err := renderTargetGate(spec.Gate)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Gate: %s,", gate))
+	}
 	return structLit("game.TargetSpec", fields), nil
+}
+
+// renderTargetGate renders a non-default TargetGate enum value as its qualified
+// game constant. The zero value TargetGateAlways is never rendered, so ungated
+// target specs stay byte-identical to their pre-gate form.
+func renderTargetGate(gate game.TargetGate) (string, error) {
+	switch gate {
+	case game.TargetGateGiftPromised:
+		return "game.TargetGateGiftPromised", nil
+	case game.TargetGateGiftNotPromised:
+		return "game.TargetGateGiftNotPromised", nil
+	case game.TargetGateSpellKicked:
+		return "game.TargetGateSpellKicked", nil
+	case game.TargetGateSpellNotKicked:
+		return "game.TargetGateSpellNotKicked", nil
+	default:
+		return "", fmt.Errorf("unsupported target gate %d", gate)
+	}
 }
 
 // appendSupertypeFields renders the shared Supertypes slice and the scalar

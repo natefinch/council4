@@ -50,7 +50,11 @@ func (c *CardContext) DrawCards(player game.PlayerID, amount int) {
 
 // TargetPlayer returns the stack object's chosen player target at index.
 func (c *CardContext) TargetPlayer(obj *game.StackObject, index int) (game.PlayerID, bool) {
-	if c == nil || obj == nil || index < 0 || index >= len(obj.Targets) {
+	if c == nil || obj == nil {
+		return 0, false
+	}
+	index = remapTargetSlot(c.g, obj, index)
+	if index < 0 || index >= len(obj.Targets) {
 		return 0, false
 	}
 	target := obj.Targets[index]
@@ -62,7 +66,11 @@ func (c *CardContext) TargetPlayer(obj *game.StackObject, index int) (game.Playe
 
 // TargetPermanentID returns the stack object's chosen permanent target at index.
 func (c *CardContext) TargetPermanentID(obj *game.StackObject, index int) (id.ID, bool) {
-	if c == nil || obj == nil || index < 0 || index >= len(obj.Targets) {
+	if c == nil || obj == nil {
+		return 0, false
+	}
+	index = remapTargetSlot(c.g, obj, index)
+	if index < 0 || index >= len(obj.Targets) {
 		return 0, false
 	}
 	target := obj.Targets[index]

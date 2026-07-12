@@ -64,6 +64,7 @@ var Cards = []cardset.Entry{
 	{Name: "Locthwain Paladin", New: LocthwainPaladin},
 	{Name: "Lodestone Golem", New: LodestoneGolem},
 	{Name: "Long-Finned Skywhale", New: LongFinnedSkywhale},
+	{Name: "Long River's Pull", New: LongRiverSPull},
 	{Name: "Long Road Home", New: LongRoadHome},
 	{Name: "Longshot, Rebel Bowman", New: LongshotRebelBowman},
 	{Name: "Lookout's Dispersal", New: LookoutSDispersal},

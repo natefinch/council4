@@ -33,6 +33,10 @@ func resolveFightPermanents(g *game.Game, first, second *game.Permanent) {
 }
 
 func effectPermanentTarget(g *game.Game, obj *game.StackObject, targetIndex int) (*game.Permanent, bool) {
+	if obj == nil {
+		return nil, false
+	}
+	targetIndex = remapTargetSlot(g, obj, targetIndex)
 	if targetIndex < 0 || targetIndex >= len(obj.Targets) {
 		return nil, false
 	}
@@ -56,7 +60,7 @@ func emitFightEvent(g *game.Game, permanent, related *game.Permanent, simultaneo
 }
 
 func counterTargetStackObject(g *game.Game, obj *game.StackObject, targetIndex int, exileInstead bool, destination game.CounteredSpellDestination) bool {
-	stackObjectID, ok := effectStackObjectID(obj, targetIndex)
+	stackObjectID, ok := effectStackObjectID(g, obj, targetIndex)
 	if !ok {
 		return false
 	}
@@ -105,8 +109,12 @@ func stackObjectManaValue(g *game.Game, obj *game.StackObject) (int, bool) {
 	return stackManaValue(cardFaceOrDefault(card, obj.Face), obj.XValue), true
 }
 
-func effectStackObjectID(obj *game.StackObject, targetIndex int) (id.ID, bool) {
-	if obj == nil || targetIndex < 0 || targetIndex >= len(obj.Targets) {
+func effectStackObjectID(g *game.Game, obj *game.StackObject, targetIndex int) (id.ID, bool) {
+	if obj == nil {
+		return 0, false
+	}
+	targetIndex = remapTargetSlot(g, obj, targetIndex)
+	if targetIndex < 0 || targetIndex >= len(obj.Targets) {
 		return 0, false
 	}
 	target := obj.Targets[targetIndex]

@@ -39,11 +39,11 @@ func newToilsOfNightAndDay() *game.CardDef {
 						Allow:      game.TargetAllowPermanent,
 					},
 					game.TargetSpec{
-						MinTargets: 1,
-						MaxTargets: 1,
-						Constraint: "another target permanent",
-						Allow:      game.TargetAllowPermanent,
-						Selection:  opt.Val(game.Selection{ExcludeSource: true}),
+						MinTargets:               1,
+						MaxTargets:               1,
+						Constraint:               "another target permanent",
+						Allow:                    game.TargetAllowPermanent,
+						DistinctFromPriorTargets: true,
 					},
 				},
 				Sequence: []game.Instruction{

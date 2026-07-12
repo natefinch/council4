@@ -72,11 +72,17 @@ func TestLowerDualModifyPTAnotherTarget(t *testing.T) {
 	if len(targets) != 2 {
 		t.Fatalf("targets = %+v, want two single-creature targets", targets)
 	}
-	if targets[0].Selection.Val.ExcludeSource {
+	if targets[0].DistinctFromPriorTargets {
 		t.Fatalf("target[0] = %+v, want no distinctness restriction", targets[0])
 	}
-	if !targets[1].Selection.Val.ExcludeSource {
+	if targets[0].Selection.Exists && targets[0].Selection.Val.ExcludeSource {
+		t.Fatalf("target[0] = %+v, want no self-exclusion", targets[0])
+	}
+	if !targets[1].DistinctFromPriorTargets {
 		t.Fatalf("target[1] = %+v, want distinct (another) restriction", targets[1])
+	}
+	if targets[1].Selection.Exists && targets[1].Selection.Val.ExcludeSource {
+		t.Fatalf("target[1] = %+v, want cross-target distinctness, not self-exclusion", targets[1])
 	}
 	if first.PowerDelta.Value() != 0 || first.ToughnessDelta.Value() != 2 {
 		t.Fatalf("instruction 0 = %+v, want +0/+2", first)

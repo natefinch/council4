@@ -258,7 +258,7 @@ func (e *Engine) castFreeSpellFromSource(g *game.Game, sourcePlayer *game.Player
 	if !ok {
 		return false
 	}
-	targetCounts, ok := spellTargetCounts(g, controllerID, spellDef, modes, targets)
+	targetCounts, ok := spellTargetCounts(g, controllerID, spellDef, modes, targets, game.CastBranch{})
 	if !ok {
 		panic("validated free-cast spell targets could not be segmented")
 	}

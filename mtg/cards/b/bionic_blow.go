@@ -40,11 +40,12 @@ func newBionicBlow() *game.CardDef {
 						Selection:  opt.Val(game.Selection{RequiredTypesAny: []types.Card{types.Creature}, Controller: game.ControllerYou}),
 					},
 					game.TargetSpec{
-						MinTargets: 0,
-						MaxTargets: 1,
-						Constraint: "up to one other target creature",
-						Allow:      game.TargetAllowPermanent,
-						Selection:  opt.Val(game.Selection{RequiredTypesAny: []types.Card{types.Creature}, ExcludeSource: true}),
+						MinTargets:               0,
+						MaxTargets:               1,
+						Constraint:               "up to one other target creature",
+						Allow:                    game.TargetAllowPermanent,
+						Selection:                opt.Val(game.Selection{RequiredTypesAny: []types.Card{types.Creature}}),
+						DistinctFromPriorTargets: true,
 					},
 				},
 				Sequence: []game.Instruction{

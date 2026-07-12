@@ -330,19 +330,6 @@ func lowerFaceAbilities(
 			break
 		}
 	}
-	if len(unsupported) == 0 && giftTargetingDependsOnPromise(result) {
-		for _, ability := range compilation.Abilities {
-			if ability.Kind != compiler.AbilitySpell {
-				continue
-			}
-			unsupported = append(unsupported, *executableDiagnostic(
-				ability,
-				"unsupported gift-conditional targeting",
-				"the executable source backend requires a Gift spell's targets to be the same whether or not the gift is promised; it cannot yet gate alternative or additional target requirements on the gift promise",
-			))
-			break
-		}
-	}
 	for i, ability := range compilation.Abilities {
 		syntax := &compilation.Syntax.Abilities[i]
 		for _, keyword := range ability.Content.Keywords {
