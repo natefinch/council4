@@ -1186,7 +1186,7 @@ func permanentTargetSpecAllowingUnbounded(target compiler.CompiledTarget, allowU
 		// an artifact subtype ("... or Vehicle") is promoted to the card kind by
 		// disjunctSelectionSide; it carries the same subtype-only predicate, so
 		// it lowers through this branch too.
-		if len(target.Selector.SubtypesAny()) == 0 {
+		if len(target.Selector.SubtypesAny()) == 0 && !target.Selector.TokenOnly {
 			return game.TargetSpec{}, false
 		}
 
