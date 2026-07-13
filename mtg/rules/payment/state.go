@@ -155,6 +155,16 @@ type stateAbilityQueries interface {
 	// carries the spell's chosen targets so target-dependent modifiers ("Spells
 	// that target this creature cost {N} more to cast.") can match.
 	CostModifiersForSpell(playerID game.PlayerID, card *game.CardDef, cardID id.ID, sourceZone zone.Type, targets []game.Target) []game.CostModifier
+
+	// SpellHasGrantedKeyword reports whether an active rule effect grants keyword
+	// to the spell playerID is casting from sourceZone, in addition to any
+	// keyword the card carries natively ("Nonartifact spells you cast have
+	// improvise.", Inspiring Statuary; "The next spell you cast this turn has
+	// improvise.", Archway of Innovation). It lets the payment planner honor a
+	// granted cost-affecting keyword (Improvise) while building cost options,
+	// before costs are paid. The one-shot next-spell grant stays active here and
+	// is consumed only when a matching spell is actually cast.
+	SpellHasGrantedKeyword(playerID game.PlayerID, card *game.CardDef, cardID id.ID, sourceZone zone.Type, keyword game.Keyword) bool
 }
 
 //nolint:interfacebloat // Payment plans need one adapter surface for all atomic game-state mutations.

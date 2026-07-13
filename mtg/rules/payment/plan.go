@@ -443,7 +443,7 @@ func buildSpellManaPlanForOption(s State, playerID game.PlayerID, cardID id.ID, 
 		return manaPlan, true
 	}
 	convokeTaps, convokedCost, convokeOK := convokePayment(s, playerID, option.manaCost, xValue, excluded)
-	if option.card.HasKeyword(game.Convoke) && convokeOK {
+	if spellHasCostKeyword(s, playerID, option.card, cardID, sourceZone, game.Convoke) && convokeOK {
 		convokeExcluded := maps.Clone(excluded)
 		for _, permanent := range convokeTaps {
 			convokeExcluded[permanent.ObjectID] = true
@@ -454,7 +454,7 @@ func buildSpellManaPlanForOption(s State, playerID game.PlayerID, cardID id.ID, 
 			return manaPlan, true
 		}
 	}
-	if option.card.HasKeyword(game.Improvise) {
+	if spellHasCostKeyword(s, playerID, option.card, cardID, sourceZone, game.Improvise) {
 		improviseTaps, improvisedCost, improviseOK := improvisePayment(s, playerID, option.manaCost, xValue, excluded)
 		if improviseOK {
 			improviseExcluded := maps.Clone(excluded)
@@ -468,7 +468,7 @@ func buildSpellManaPlanForOption(s State, playerID game.PlayerID, cardID id.ID, 
 			}
 		}
 	}
-	if option.card.HasKeyword(game.Delve) {
+	if spellHasCostKeyword(s, playerID, option.card, cardID, sourceZone, game.Delve) {
 		delveExiles, generic, delveOK := delveCandidates(s, playerID, option.manaCost, xValue, cardID, sourceZone)
 		for exiledCount := 1; delveOK && exiledCount <= min(generic, len(delveExiles)); exiledCount++ {
 			delvedCost := costWithGenericRequirement(option.manaCost, generic-exiledCount)
@@ -480,6 +480,22 @@ func buildSpellManaPlanForOption(s State, playerID game.PlayerID, cardID id.ID, 
 		}
 	}
 	return paymentPlan{}, false
+}
+
+// spellHasCostKeyword reports whether the spell being cast carries keyword,
+// either natively on its card face or via an active RuleEffectGrantSpellKeyword
+// that grants it to spells the caster casts ("Nonartifact spells you cast have
+// improvise.", Inspiring Statuary; "The next spell you cast this turn has
+// improvise.", Archway of Innovation). Native and granted keywords compose
+// idempotently: a card that already has the keyword is unaffected by a grant, so
+// the improvise/convoke/delve payment path is enabled exactly once. It centralizes
+// the keyword check so any granted cost-affecting keyword is honored before costs
+// are paid.
+func spellHasCostKeyword(s State, playerID game.PlayerID, card *game.CardDef, cardID id.ID, sourceZone zone.Type, keyword game.Keyword) bool {
+	if card.HasKeyword(keyword) {
+		return true
+	}
+	return s.SpellHasGrantedKeyword(playerID, card, cardID, sourceZone, keyword)
 }
 
 func buildPaymentPlan(s State, playerID game.PlayerID, manaCost *cost.Mana, xValue int, exclude map[id.ID]bool) (paymentPlan, bool) {

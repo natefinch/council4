@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,648 of 32,501 cards eligible for paper support (54.3%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,654 of 32,501 cards eligible for paper support (54.3%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -683,6 +683,7 @@ Council4 currently supports **17,648 of 32,501 cards eligible for paper support 
 - Archon of Sun's Grace
 - Archway Angel
 - Archway Commons
+- Archway of Innovation
 - Archweaver
 - Archwing Dragon
 - Arco-Flagellant
@@ -5400,6 +5401,7 @@ Council4 currently supports **17,648 of 32,501 cards eligible for paper support 
 - Flitterwing Nuisance
 - Floating Shield
 - Flock Impostor
+- Flockchaser Phantom
 - Flood
 - Flood of Recollection
 - Flood Plain
@@ -7633,6 +7635,7 @@ Council4 currently supports **17,648 of 32,501 cards eligible for paper support 
 - Inspiring Cleric
 - Inspiring Overseer
 - Inspiring Roar
+- Inspiring Statuary
 - Inspiring Unicorn
 - Inspiring Vantage
 - Inspiring Veteran
@@ -7678,6 +7681,7 @@ Council4 currently supports **17,648 of 32,501 cards eligible for paper support 
 - Invasion of Karsus // Refraction Elemental
 - Invasion of Kylem // Valor's Reach Tag Team
 - Invasion of Moag // Bloomwielder Dryads
+- Invasion of Segovia // Caetus, Sea Tyrant of Segovia
 - Invasion of Shandalar // Leyline Surge
 - Invasion of Tolvada // The Broken Sky
 - Invasion of Xerex // Vertex Paladin
@@ -7737,6 +7741,7 @@ Council4 currently supports **17,648 of 32,501 cards eligible for paper support 
 - Ironclad Krovod
 - Ironclad Revolutionary
 - Ironclad Slayer
+- Ironheart, Clever Champion
 - Ironhoof Boar
 - Ironhoof Ox
 - Ironpaw Aspirant
@@ -16872,6 +16877,7 @@ Council4 currently supports **17,648 of 32,501 cards eligible for paper support 
 - Wall Off
 - Wallop
 - Wand of the Elements
+- Wand of the Worldsoul
 - Wanda's Vision
 - Wander in Death
 - Wander Off

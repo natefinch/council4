@@ -284,6 +284,9 @@ func (fakePaymentState) ManaAbilityTimingAllowed(game.PlayerID, *game.Permanent,
 func (fakePaymentState) CostModifiersForSpell(game.PlayerID, *game.CardDef, id.ID, zone.Type, []game.Target) []game.CostModifier {
 	return nil
 }
+func (fakePaymentState) SpellHasGrantedKeyword(game.PlayerID, *game.CardDef, id.ID, zone.Type, game.Keyword) bool {
+	return false
+}
 func (fakePaymentState) SetTapped(*game.Permanent, bool)                                   {}
 func (fakePaymentState) SetTappedForMana(*game.Permanent)                                  {}
 func (fakePaymentState) RecordManaAbilityUse(*game.Permanent, int, game.TimingRestriction) {}

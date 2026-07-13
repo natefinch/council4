@@ -584,6 +584,8 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				PreventDamageSourceColors:                     compilePreventDamageSourceColors(syntax.PreventDamageSourceColors),
 				PreventDamageRedirectToSourceController:       syntax.PreventDamageRedirectToSourceController,
 				SpellsCantBeCounteredNextOnly:                 syntax.SpellsCantBeCounteredNextOnly,
+				GrantSpellKeyword:                             syntax.GrantSpellKeyword,
+				GrantSpellKeywordNextOnly:                     syntax.GrantSpellKeywordNextOnly,
 				DoublePower:                                   syntax.DoublePower,
 				SubjectSourceAttached:                         syntax.SubjectSourceAttached,
 				DoubleToughness:                               syntax.DoubleToughness,

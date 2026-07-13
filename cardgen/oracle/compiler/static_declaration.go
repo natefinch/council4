@@ -33,6 +33,7 @@ const (
 	StaticDeclarationEnterBattlefieldRestriction
 	StaticDeclarationCastAsThoughFlash
 	StaticDeclarationGraveyardCardKeywordGrant
+	StaticDeclarationSpellKeywordGrant
 	StaticDeclarationDrawLimit
 	StaticDeclarationCastLimit
 	StaticDeclarationOpeningHandPlay
@@ -752,6 +753,16 @@ type StaticGraveyardKeywordGrantDeclaration struct {
 	DuringControllerTurn bool
 }
 
+// StaticSpellKeywordGrantDeclaration grants a parameterless cost-affecting
+// keyword to a filtered set of the spells the controller casts ("[<filter>]
+// spells you cast have <keyword>.", Inspiring Statuary, Ironheart, Clever
+// Champion). Keyword is the ability's single recognized keyword; Filter
+// constrains the affected spells by card type (none for the unfiltered form).
+type StaticSpellKeywordGrantDeclaration struct {
+	Keyword CompiledKeyword
+	Filter  parser.StaticDeclarationCardFilterKind
+}
+
 // StaticOpponentActionRestrictionDeclaration is a continuous prohibition that
 // stops the affected players from casting spells and/or activating abilities of
 // permanents whose card type is in ActivateTypes. AffectsAllPlayers selects
@@ -889,6 +900,7 @@ type StaticDeclaration struct {
 	CharacteristicPT            *StaticCharacteristicPowerToughnessDeclaration
 	CastAsThoughFlash           *StaticCastAsThoughFlashDeclaration
 	GraveyardGrant              *StaticGraveyardKeywordGrantDeclaration
+	SpellGrant                  *StaticSpellKeywordGrantDeclaration
 	PerTurnLimit                *StaticPerTurnLimitDeclaration
 	OpeningHandPlay             *StaticOpeningHandPlayDeclaration
 	OpponentEnteringSuppression *StaticOpponentEnteringTriggerSuppressionDeclaration
@@ -1124,6 +1136,10 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Abili
 		return
 	}
 	if declaration, ok := recognizeStaticGraveyardCardKeywordGrantDeclaration(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
+		return
+	}
+	if declaration, ok := recognizeStaticSpellKeywordGrantDeclaration(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
 		return
 	}

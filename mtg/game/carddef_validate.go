@@ -1200,6 +1200,24 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		if effect.GrantedKeyword == KeywordNone {
 			v.add(faceName, appendPath(path, "GrantedKeyword"), CardDefIssueInvalidRuleEffect, "graveyard-card keyword grant must grant a keyword")
 		}
+	case RuleEffectGrantSpellKeyword:
+		if effect.AffectedController == ControllerAny {
+			v.add(faceName, appendPath(path, "AffectedController"), CardDefIssueInvalidRuleEffect, "spell keyword grants must set affected controller")
+		}
+		if effect.AffectedSource || effect.AffectedAttached || effect.AffectedObjectID != 0 {
+			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "spell keyword grants cannot affect a permanent")
+		}
+		v.validateSelection(faceName, appendPath(path, "CardSelection"), effect.CardSelection)
+		if !effect.CardSelection.Empty() && handCardSelectionHasUnsupportedPredicates(effect.CardSelection) {
+			v.add(faceName, appendPath(path, "CardSelection"), CardDefIssueInvalidSelection, "spell keyword grants support only printed card characteristics")
+		}
+		switch effect.GrantedKeyword {
+		case Improvise, Convoke, Delve:
+		case KeywordNone:
+			v.add(faceName, appendPath(path, "GrantedKeyword"), CardDefIssueInvalidRuleEffect, "spell keyword grant must grant a keyword")
+		default:
+			v.add(faceName, appendPath(path, "GrantedKeyword"), CardDefIssueInvalidRuleEffect, "spell keyword grants support only improvise, convoke, or delve")
+		}
 	case RuleEffectNoMaximumHandSize, RuleEffectLifeTotalCantChange, RuleEffectCastSpellsAsThoughFlash, RuleEffectPlayWithTopCardRevealed, RuleEffectLookAtTopCardAnyTime, RuleEffectSkipDrawStep, RuleEffectPlayerHexproof, RuleEffectPlayerShroud, RuleEffectDamageDoesntCauseLifeLoss, RuleEffectRedirectDamageToSource, RuleEffectActivateAbilitiesAsThoughHaste:
 		if effect.AffectedPlayer == PlayerAny {
 			v.add(faceName, appendPath(path, "AffectedPlayer"), CardDefIssueInvalidRuleEffect, "player rule effects must set affected player")
