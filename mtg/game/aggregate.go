@@ -89,6 +89,18 @@ const (
 	// phase/step trigger's intervening-if context (each opponent's or each
 	// player's upkeep) and fails closed elsewhere.
 	AggregateEventPlayerHandSize
+
+	// AggregateAnyOpponentDamageTakenThisTurn is the largest total damage dealt
+	// to a single non-eliminated opponent of the context controller during the
+	// current turn. An "an opponent was dealt N or more damage this turn"
+	// existential gate (Spinerock Knoll) is satisfied exactly when this maximum
+	// is at least N.
+	AggregateAnyOpponentDamageTakenThisTurn
+
+	// AggregateMinPlayerLibrarySize is the smallest library size among all
+	// non-eliminated players. A "a library has N or fewer cards in it" existential
+	// gate (Shelldock Isle) is satisfied exactly when this minimum is at most N.
+	AggregateMinPlayerLibrarySize
 )
 
 // AggregateComparison compares a player- or board-derived quantity against a

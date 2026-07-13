@@ -125,6 +125,16 @@ const (
 	ConditionPredicateTriggeringPlayerHandSizeAtMost                   ConditionPredicateKind = "ConditionPredicateTriggeringPlayerHandSizeAtMost"
 	ConditionPredicateTriggeringPlayerHandSizeAtLeast                  ConditionPredicateKind = "ConditionPredicateTriggeringPlayerHandSizeAtLeast"
 	ConditionPredicateLandEnteredThisTurnOrControlsBasic               ConditionPredicateKind = "ConditionPredicateLandEnteredThisTurnOrControlsBasic"
+	// ConditionPredicateAnyOpponentDealtDamageThisTurnAtLeast matches "an
+	// opponent was dealt N or more damage this turn" (Spinerock Knoll). Threshold
+	// carries N.
+	ConditionPredicateAnyOpponentDealtDamageThisTurnAtLeast ConditionPredicateKind = "ConditionPredicateAnyOpponentDealtDamageThisTurnAtLeast"
+	// ConditionPredicateAnyLibrarySizeAtMost matches "a library has N or fewer
+	// cards in it" (Shelldock Isle). Threshold carries N.
+	ConditionPredicateAnyLibrarySizeAtMost ConditionPredicateKind = "ConditionPredicateAnyLibrarySizeAtMost"
+	// ConditionPredicateAllPlayersHandEmpty matches "each player has no cards in
+	// hand" (Howltooth Hollow).
+	ConditionPredicateAllPlayersHandEmpty ConditionPredicateKind = "ConditionPredicateAllPlayersHandEmpty"
 	// ConditionPredicateSourceAbilityResolutionOrdinalThisTurn matches "this is
 	// the Nth time this ability has resolved this turn" (Prowl, Pursuit
 	// Vehicle). Threshold carries the ordinal N. It gates a consequence on the
@@ -819,6 +829,9 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		recognizeSharesCreatureTypeCondition,
 		recognizeControllerDesignationCondition,
 		recognizeSourceAbilityResolutionOrdinalCondition,
+		recognizeAnyOpponentDamageThisTurnCondition,
+		recognizeAnyLibrarySizeCondition,
+		recognizeAllPlayersHandEmptyCondition,
 	} {
 		if clause, ok := recognize(body, atoms); ok {
 			return clause, true

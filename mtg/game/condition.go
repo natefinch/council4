@@ -48,6 +48,11 @@ type Condition struct {
 	// Aggregates.
 	ControllerHandEmpty bool
 
+	// AllPlayersHandEmpty is satisfied when every non-eliminated player has no
+	// cards in hand ("if each player has no cards in hand", Howltooth Hollow). It
+	// is the all-players counterpart of ControllerHandEmpty.
+	AllPlayersHandEmpty bool
+
 	// ControllerCreatedTokenThisTurn requires the context controller to have
 	// created at least one token during the current turn ("Activate only if you
 	// created a token this turn").
@@ -332,6 +337,7 @@ func (c *Condition) Empty() bool {
 		c.AnyOpponentPoisonAtLeast == 0 &&
 		c.AnyPlayerLifeAtMost == 0 &&
 		!c.ControllerHandEmpty &&
+		!c.AllPlayersHandEmpty &&
 		!c.ControllerCreatedTokenThisTurn &&
 		!c.AnyOpponentControls.Exists &&
 		!c.OpponentsControl.Exists &&

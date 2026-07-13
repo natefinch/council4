@@ -85,6 +85,7 @@ var Cards = []cardset.Entry{
 	{Name: "Hovel Hurler", New: HovelHurler},
 	{Name: "Hoverguard Observer", New: HoverguardObserver},
 	{Name: "Howl of the Night Pack", New: HowlOfTheNightPack},
+	{Name: "Howltooth Hollow", New: HowltoothHollow},
 	{Name: "Hraesvelgr of the First Brood", New: HraesvelgrOfTheFirstBrood},
 	{Name: "Hua Tuo, Honored Physician", New: HuaTuoHonoredPhysician},
 	{Name: "Huatli, Radiant Champion", New: HuatliRadiantChampion},
