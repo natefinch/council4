@@ -348,9 +348,7 @@ func collectFacePublishedLinkedKeys(face *CardFace) map[LinkedKey]int {
 	collect := func(content AbilityContent) {
 		for _, mode := range content.Modes {
 			for i := range mode.Sequence {
-				if key := mode.Sequence[i].Primitive.instructionRefs().publishesLinked; key != "" {
-					keys[key] = i
-				}
+				collectInstructionPublishedLinkedKeys(&mode.Sequence[i], i, keys)
 			}
 		}
 	}
@@ -373,6 +371,22 @@ func collectFacePublishedLinkedKeys(face *CardFace) map[LinkedKey]int {
 		collect(face.ManaAbilities[i].Content)
 	}
 	return keys
+}
+
+// collectInstructionPublishedLinkedKeys records the linked key published by an
+// instruction's primitive, if any, keyed to its sequence position. It skips a
+// body-carrying Tempting-offer instruction's nil top-level primitive and recurses
+// into TemptingOfferBody so a body primitive that publishes a linked key is still
+// recorded.
+func collectInstructionPublishedLinkedKeys(instr *Instruction, position int, keys map[LinkedKey]int) {
+	if instr.Primitive != nil {
+		if key := instr.Primitive.instructionRefs().publishesLinked; key != "" {
+			keys[key] = position
+		}
+	}
+	for i := range instr.TemptingOfferBody {
+		collectInstructionPublishedLinkedKeys(&instr.TemptingOfferBody[i], position, keys)
+	}
 }
 
 func abilityContentHasTargets(content AbilityContent) bool {
@@ -785,6 +799,16 @@ func (v *cardDefValidator) validateInstructionSequence(
 			}
 			if !seq[i].OptionalActorGroup.Exists {
 				v.add(faceName, instructionPath, CardDefIssueInvalidAbilityBody, "TemptingOffer requires OptionalActorGroup")
+			}
+			if len(seq[i].TemptingOfferBody) > 0 {
+				v.validateInstructionSequence(
+					faceName,
+					appendPath(instructionPath, "TemptingOfferBody"),
+					seq[i].TemptingOfferBody,
+					targets,
+					capturedTargets,
+					inheritedLinked,
+				)
 			}
 		}
 		effectCondition := seq[i].Condition

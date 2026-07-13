@@ -228,7 +228,11 @@ func (r *effectResolver) resolveInstruction(instr *game.Instruction) {
 		}
 	}
 	if instr.Primitive == nil {
-		panic("rules: nil instruction primitive")
+		// A Tempting offer with a multi-primitive shared body carries no
+		// top-level primitive; resolveTemptingOffer runs the body instead.
+		if !instr.TemptingOffer || !instr.Optional || !instr.OptionalActorGroup.Exists || len(instr.TemptingOfferBody) == 0 {
+			panic("rules: nil instruction primitive")
+		}
 	}
 	if instr.Optional && instr.OptionalActorGroup.Exists {
 		if instr.TemptingOffer {
@@ -337,8 +341,6 @@ func (r *effectResolver) resolveGroupOffer(instr *game.Instruction) {
 func (r *effectResolver) resolveTemptingOffer(instr *game.Instruction) {
 	controller := stackObjectController(r.obj)
 	members := newReferenceResolver(r.game, r.obj).playerGroup(instr.OptionalActorGroup.Val)
-	kind := instr.Primitive.Kind()
-	handler := globalPrimitiveRegistry().dispatch(kind)
 	prev := r.currentInstruction
 	r.currentInstruction = instr
 	prevMember := r.groupOfferMember
@@ -348,9 +350,8 @@ func (r *effectResolver) resolveTemptingOffer(instr *game.Instruction) {
 	}()
 	// Base: the controller performs the effect for themselves.
 	r.groupOfferMember = opt.Val(controller)
-	base := handler(r, instr.Primitive)
+	anySucceeded := r.runTemptingOfferBody(instr)
 	anyAccepted := false
-	anySucceeded := base.succeeded
 	var accepters game.PlayerSet
 	// Each member of the group is offered the effect for themselves.
 	for _, member := range members {
@@ -360,14 +361,14 @@ func (r *effectResolver) resolveTemptingOffer(instr *game.Instruction) {
 		anyAccepted = true
 		accepters = accepters.With(member)
 		r.groupOfferMember = opt.Val(member)
-		if res := handler(r, instr.Primitive); res.succeeded {
+		if r.runTemptingOfferBody(instr) {
 			anySucceeded = true
 		}
 	}
 	// For each accepting member, the controller performs the effect again.
 	for range accepters.Count() {
 		r.groupOfferMember = opt.Val(controller)
-		if res := handler(r, instr.Primitive); res.succeeded {
+		if r.runTemptingOfferBody(instr) {
 			anySucceeded = true
 		}
 	}
@@ -379,6 +380,33 @@ func (r *effectResolver) resolveTemptingOffer(instr *game.Instruction) {
 			acceptedActors: accepters,
 		})
 	}
+}
+
+// runTemptingOfferBody performs one resolution of a Tempting offer's shared
+// effect body for the currently bound acting player (r.groupOfferMember). It
+// runs the single Primitive when the offer carries one, or every instruction of
+// TemptingOfferBody in order when the shared body is a multi-primitive sequence
+// (Tempt with Bunnies's "draw a card and create a token"). It returns whether
+// any part of the body did something rules-relevant. Each body instruction's
+// primitive is dispatched with r.currentInstruction bound to that instruction so
+// per-instruction primitive state (amounts, linked keys) resolves against it.
+func (r *effectResolver) runTemptingOfferBody(instr *game.Instruction) bool {
+	if len(instr.TemptingOfferBody) == 0 {
+		handler := globalPrimitiveRegistry().dispatch(instr.Primitive.Kind())
+		return handler(r, instr.Primitive).succeeded
+	}
+	outer := r.currentInstruction
+	defer func() { r.currentInstruction = outer }()
+	succeeded := false
+	for i := range instr.TemptingOfferBody {
+		body := &instr.TemptingOfferBody[i]
+		r.currentInstruction = body
+		handler := globalPrimitiveRegistry().dispatch(body.Primitive.Kind())
+		if handler(r, body.Primitive).succeeded {
+			succeeded = true
+		}
+	}
+	return succeeded
 }
 
 func (e *Engine) drawCards(g *game.Game, playerID game.PlayerID, amount int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {

@@ -93,12 +93,7 @@ func TestLowerTemptWithVengeanceTemptingOffer(t *testing.T) {
 func TestTemptCycleSiblingsFailClosed(t *testing.T) {
 	t.Parallel()
 	siblings := []*ScryfallCard{
-		{Name: "Tempt with Discovery", Layout: "normal", ManaCost: "{3}{G}", TypeLine: "Sorcery", Colors: []string{"G"}, ColorIdentity: []string{"G"}, SetType: "commander", Games: []string{"paper", "mtgo"},
-			OracleText: "Tempting offer \u2014 Search your library for a land card and put it onto the battlefield. Each opponent may search their library for a land card and put it onto the battlefield. For each opponent who searches a library this way, search your library for a land card and put it onto the battlefield. Then each player who searched a library this way shuffles."},
-		{Name: "Tempt with Mayhem", Layout: "normal", ManaCost: "{1}{R}{R}", TypeLine: "Instant", Colors: []string{"R"}, ColorIdentity: []string{"R"}, SetType: "commander", Games: []string{"paper", "mtgo"},
-			OracleText: "Tempting offer \u2014 Choose target instant or sorcery spell. Each opponent may copy that spell and may choose new targets for the copy they control. You copy that spell once plus an additional time for each opponent who copied the spell this way. You may choose new targets for the copies you control."},
-		{Name: "Tempt with Bunnies", Layout: "normal", ManaCost: "{2}{W}", TypeLine: "Sorcery", Colors: []string{"W"}, ColorIdentity: []string{"W"}, SetType: "commander", Games: []string{"paper", "mtgo"},
-			OracleText: "Tempting Offer \u2014 Draw a card and create a 1/1 white Rabbit creature token. Then each opponent may draw a card and create a 1/1 white Rabbit creature token. For each opponent who does, you draw a card and you create a 1/1 white Rabbit creature token."},
+		temptWithMayhemCard(),
 	}
 	for _, card := range siblings {
 		t.Run(card.Name, func(t *testing.T) {
@@ -108,5 +103,85 @@ func TestTemptCycleSiblingsFailClosed(t *testing.T) {
 				t.Fatalf("%s produced a spell ability but must fail closed", card.Name)
 			}
 		})
+	}
+}
+
+func temptWithDiscoveryCard() *ScryfallCard {
+	return &ScryfallCard{
+		Name: "Tempt with Discovery", Layout: "normal", ManaCost: "{3}{G}", TypeLine: "Sorcery",
+		Colors: []string{"G"}, ColorIdentity: []string{"G"}, SetType: "commander", Games: []string{"paper", "mtgo"},
+		OracleText: "Tempting offer \u2014 Search your library for a land card and put it onto the battlefield. Each opponent may search their library for a land card and put it onto the battlefield. For each opponent who searches a library this way, search your library for a land card and put it onto the battlefield. Then each player who searched a library this way shuffles.",
+	}
+}
+
+func temptWithMayhemCard() *ScryfallCard {
+	return &ScryfallCard{
+		Name: "Tempt with Mayhem", Layout: "normal", ManaCost: "{1}{R}{R}", TypeLine: "Instant",
+		Colors: []string{"R"}, ColorIdentity: []string{"R"}, SetType: "commander", Games: []string{"paper", "mtgo"},
+		OracleText: "Tempting offer \u2014 Choose target instant or sorcery spell. Each opponent may copy that spell and may choose new targets for the copy they control. You copy that spell once plus an additional time for each opponent who copied the spell this way. You may choose new targets for the copies you control.",
+	}
+}
+
+func temptWithBunniesCard() *ScryfallCard {
+	return &ScryfallCard{
+		Name: "Tempt with Bunnies", Layout: "normal", ManaCost: "{2}{W}", TypeLine: "Sorcery",
+		Colors: []string{"W"}, ColorIdentity: []string{"W"}, SetType: "commander", Games: []string{"paper", "mtgo"},
+		OracleText: "Tempting Offer \u2014 Draw a card and create a 1/1 white Rabbit creature token. Then each opponent may draw a card and create a 1/1 white Rabbit creature token. For each opponent who does, you draw a card and you create a 1/1 white Rabbit creature token.",
+	}
+}
+
+// TestGenerateExecutableCardSourceTemptWithDiscovery proves the search variant of
+// the Tempting Offer idiom lowers end to end: the controller searches once for the
+// base, each opponent independently may search their own library, and the
+// controller repeats its search once per accepting opponent, all through a single
+// TemptingOffer instruction that carries a group-offer-addressed library search.
+func TestGenerateExecutableCardSourceTemptWithDiscovery(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(temptWithDiscoveryCard(), "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, want := range []string{
+		"TemptingOffer:      true,",
+		"OptionalActorGroup: opt.Val(game.OpponentsReference()),",
+		"game.Search{",
+		"game.GroupOfferMemberReference()",
+		"zone.Battlefield",
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("generated source missing %q:\n%s", want, source)
+		}
+	}
+}
+
+// TestGenerateExecutableCardSourceTemptWithBunnies proves the compound-body variant
+// of the Tempting Offer idiom lowers end to end: the acting player draws a card and
+// creates a Rabbit token as one shared multi-primitive body, run once for the base,
+// once per accepting opponent, and once more per accepter for the controller reward.
+// It also proves the ability-word match is case insensitive (Bunnies prints the
+// capital-O "Tempting Offer" spelling).
+func TestGenerateExecutableCardSourceTemptWithBunnies(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(temptWithBunniesCard(), "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, want := range []string{
+		"TemptingOffer:      true,",
+		"OptionalActorGroup: opt.Val(game.OpponentsReference()),",
+		"TemptingOfferBody: []game.Instruction{",
+		"game.Draw{",
+		"game.CreateToken{",
+		"game.GroupOfferMemberReference()",
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("generated source missing %q:\n%s", want, source)
+		}
 	}
 }

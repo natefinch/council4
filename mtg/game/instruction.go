@@ -1,6 +1,7 @@
 package game
 
 import (
+	"errors"
 	"fmt"
 	"maps"
 
@@ -98,6 +99,19 @@ type Instruction struct {
 	// only when Optional is true and OptionalActorGroup is set.
 	TemptingOffer bool
 
+	// TemptingOfferBody, when TemptingOffer is set and non-empty, is the shared
+	// multi-primitive effect body the runtime runs once for the controller base,
+	// once for each accepting member, and once more for each accepter as the
+	// reward, superseding the single Primitive (which is then nil). It generalizes
+	// the single-primitive Tempting offer to a shared body that is itself a
+	// sequence of primitives — Tempt with Bunnies's "draw a card and create a 1/1
+	// white Rabbit creature token", where each acting player draws and creates as
+	// one atomic offer rather than two independent ones. Each body instruction
+	// addresses the acting player through GroupOfferMemberReference() exactly as a
+	// single-primitive body's primitive does; the same generic accepter count
+	// drives the reward repeat. It is meaningful only when TemptingOffer is set.
+	TemptingOfferBody []Instruction
+
 	// PublishResult publishes this instruction's result under the given key so that
 	// downstream instructions can reference it via ResultGate.
 	PublishResult ResultKey
@@ -180,6 +194,14 @@ func validateInstructionSequenceWithLinked(
 	for i := range seq {
 		instr := &seq[i]
 		if instr.Primitive == nil {
+			// A Tempting offer with a multi-primitive shared body carries no
+			// top-level primitive; its body instructions are validated instead.
+			if instr.TemptingOffer && len(instr.TemptingOfferBody) > 0 {
+				if err := validateTemptingOfferBody(instr.TemptingOfferBody, targets, checkTargets); err != nil {
+					return fmt.Errorf("instruction[%d]: %w", i, err)
+				}
+				continue
+			}
 			return fmt.Errorf("instruction[%d]: nil Primitive", i)
 		}
 		if err := instr.Primitive.validatePrimitive(targets, checkTargets); err != nil {
@@ -276,6 +298,26 @@ func aggregateLinkedPublishers(first, second Primitive) bool {
 	_, firstMove := first.(MoveCard)
 	_, secondMove := second.(MoveCard)
 	return firstMove && secondMove
+}
+
+// validateTemptingOfferBody validates the shared multi-primitive body of a
+// Tempting offer. The body is an ordinary primitive sequence — each instruction
+// must carry a primitive and none may itself be a nested group offer or Tempting
+// offer — validated against the ability's shared targets exactly as the top-level
+// sequence is.
+func validateTemptingOfferBody(body []Instruction, targets []TargetSpec, checkTargets bool) error {
+	if len(body) == 0 {
+		return errors.New("TemptingOfferBody: empty body")
+	}
+	for i := range body {
+		if body[i].TemptingOffer || body[i].OptionalActorGroup.Exists {
+			return fmt.Errorf("TemptingOfferBody[%d]: nested group or Tempting offer not allowed", i)
+		}
+	}
+	if err := validateInstructionSequenceWithLinked(body, targets, checkTargets, nil, nil, false, nil); err != nil {
+		return fmt.Errorf("TemptingOfferBody: %w", err)
+	}
+	return nil
 }
 
 func validateLinkedCardCondition(idx int, cond opt.V[CardSelection], published, siblingLinked map[LinkedKey]int) error {
