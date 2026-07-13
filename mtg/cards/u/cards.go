@@ -23,6 +23,7 @@ var Cards = []cardset.Entry{
 	{Name: "Unleash Fury", New: UnleashFury},
 	{Name: "Unshakable Tail", New: UnshakableTail},
 	{Name: "Unsparing Boltcaster", New: UnsparingBoltcaster},
+	{Name: "Unstable Molecule Suit", New: UnstableMoleculeSuit},
 	{Name: "Unstable Mutation", New: UnstableMutation},
 	{Name: "Untamed Kavu", New: UntamedKavu},
 	{Name: "Untimely Malfunction", New: UntimelyMalfunction},

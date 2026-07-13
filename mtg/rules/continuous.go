@@ -903,6 +903,7 @@ func staticAbilitySourceContinuousEffects(g *game.Game, source staticAbilitySour
 			staticEffect.Controller = source.controller
 			staticEffect.Timestamp = source.timestamp
 			rewriteChosenColorProtectionEffect(&staticEffect, source.permanent)
+			rewriteCommanderIdentityProtectionEffect(g, &staticEffect, source.controller)
 			if staticEffect.Layer == game.LayerControl && staticEffect.NewController.Exists {
 				staticEffect.NewController = opt.Val(source.controller)
 			}
@@ -955,6 +956,56 @@ func rewriteChosenColorProtectionEffect(effect *game.ContinuousEffect, source *g
 			cloned = true
 		}
 		effect.AddAbilities[j] = &resolved
+	}
+}
+
+// rewriteCommanderIdentityProtectionEffect resolves a granted "protection from
+// each color that's not in your commander's color identity" ability on a
+// continuous ability-layer effect to protection from the concrete complement of
+// the granting source controller's commander color identity (Commander's Plate).
+// The complement is recomputed every time effective values are gathered, so it
+// tracks control changes and pregame commander state. The granted body is
+// freshly built where a rewrite happens so the shared card-definition template
+// is left untouched. When the controller's commander identity is unavailable the
+// grant is rewritten to protection from no color, so it fails closed; an
+// unresolved marker also matches no source.
+func rewriteCommanderIdentityProtectionEffect(g *game.Game, effect *game.ContinuousEffect, controller game.PlayerID) {
+	if effect.Layer != game.LayerAbility {
+		return
+	}
+	complement, ok := commanderIdentityComplementColors(g, controller)
+	cloned := false
+	for j, ability := range effect.AddAbilities {
+		static, isStatic := ability.(*game.StaticAbility)
+		if !isStatic {
+			continue
+		}
+		prot, isProt := game.StaticBodyProtectionKeyword(static)
+		if !isProt || !prot.CommanderIdentityComplement {
+			continue
+		}
+		resolved := resolvedCommanderIdentityProtection(complement, ok)
+		if !cloned {
+			effect.AddAbilities = append([]game.Ability(nil), effect.AddAbilities...)
+			cloned = true
+		}
+		effect.AddAbilities[j] = &resolved
+	}
+}
+
+// resolvedCommanderIdentityProtection builds the concrete protection static
+// ability the CommanderIdentityComplement marker resolves to. When the identity
+// is unavailable (ok is false) or the complement is empty (a five-color
+// commander), it produces a protection ability that matches no source, so the
+// grant fails closed while still reporting the Protection keyword.
+func resolvedCommanderIdentityProtection(complement []color.Color, ok bool) game.StaticAbility {
+	colors := complement
+	if !ok {
+		colors = nil
+	}
+	return game.StaticAbility{
+		Text:             "Protection from each color that's not in your commander's color identity",
+		KeywordAbilities: []game.KeywordAbility{game.ProtectionKeyword{FromColors: append([]color.Color(nil), colors...)}},
 	}
 }
 

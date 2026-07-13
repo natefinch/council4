@@ -259,6 +259,9 @@ func TestParseProtectionParameterFamilies(t *testing.T) {
 		{source: "Protection from Dragons", check: func(p ProtectionParameter) bool {
 			return slices.Equal(p.FromSubtypes, []types.Sub{types.Dragon})
 		}},
+		{source: "Protection from each color that's not in your commander's color identity", check: func(p ProtectionParameter) bool {
+			return p.CommanderIdentityComplement
+		}},
 	}
 	for _, test := range tests {
 		keywords := keywordsFor(t, test.source)
@@ -276,10 +279,12 @@ func TestParseEquipRestriction(t *testing.T) {
 		source     string
 		supertypes []Supertype
 		subtypes   []types.Sub
+		commander  bool
 	}{
 		{source: "Equip legendary creature {3}", supertypes: []Supertype{SupertypeLegendary}},
 		{source: "Equip Knight {1}", subtypes: []types.Sub{types.Knight}},
 		{source: "Equip Shaman, Warlock, or Wizard {2}", subtypes: []types.Sub{types.Shaman, types.Warlock, types.Wizard}},
+		{source: "Equip commander {3}", commander: true},
 	}
 	for _, test := range tests {
 		keywords := keywordsFor(t, test.source)
@@ -296,13 +301,15 @@ func TestParseEquipRestriction(t *testing.T) {
 		if !slices.Equal(restriction.Subtypes, test.subtypes) {
 			t.Errorf("%q subtypes = %v; want %v", test.source, restriction.Subtypes, test.subtypes)
 		}
+		if restriction.Commander != test.commander {
+			t.Errorf("%q commander = %v; want %v", test.source, restriction.Commander, test.commander)
+		}
 	}
 }
 
 func TestParseEquipRestrictionFailsClosed(t *testing.T) {
 	t.Parallel()
 	for _, source := range []string{
-		"Equip commander {3}",
 		"Equip planeswalker {5}",
 		"Equip {2}",
 	} {

@@ -4140,6 +4140,10 @@ type CompiledKeyword struct {
 type CompiledEquipRestriction struct {
 	Supertypes []types.Super
 	Subtypes   []types.Sub
+	// Commander marks "Equip commander {cost}" (Commander's Plate): the Equipment
+	// may attach only to a commander its controller controls. It is orthogonal to
+	// the supertype/subtype quality restriction and is never combined with them.
+	Commander bool
 }
 
 // ReferenceKind identifies the exact reference wording recognized before

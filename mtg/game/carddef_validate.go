@@ -678,6 +678,9 @@ func (v *cardDefValidator) validateKeywordAbility(faceName, path string, ability
 		if keyword.ChosenColor {
 			predicateCount++
 		}
+		if keyword.CommanderIdentityComplement {
+			predicateCount++
+		}
 		if predicateCount == 0 {
 			v.add(faceName, appendPath(path, "FromColors"), CardDefIssueInvalidKeywordAbility, "protection needs at least one protected predicate")
 		} else if predicateCount > 1 {

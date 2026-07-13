@@ -390,6 +390,20 @@ func ProtectionFromChosenColorStaticAbility() StaticAbility {
 	}
 }
 
+// ProtectionFromNonCommanderIdentityColorsStaticAbility builds the static
+// ability for "protection from each color that's not in your commander's color
+// identity" (Commander's Plate). The rules resolve the CommanderIdentityComplement
+// marker into the concrete complement of the granting ability controller's
+// commander color identity during continuous-effect computation; protection
+// checks never observe the marker, and an unresolved marker matches no source
+// (fails closed).
+func ProtectionFromNonCommanderIdentityColorsStaticAbility() StaticAbility {
+	return StaticAbility{
+		Text:             "Protection from each color that's not in your commander's color identity",
+		KeywordAbilities: []KeywordAbility{ProtectionKeyword{CommanderIdentityComplement: true}},
+	}
+}
+
 // ProtectionFromMulticoloredStaticAbility builds the static ability for
 // protection from multicolored sources.
 func ProtectionFromMulticoloredStaticAbility() StaticAbility {
@@ -988,6 +1002,38 @@ func EquipRestrictedActivatedAbility(manaCost cost.Mana, supertypes []types.Supe
 			MinTargets: 1,
 			MaxTargets: 1,
 			Constraint: equipRestrictionConstraint(supertypes, subtypes),
+			Allow:      TargetAllowPermanent,
+			Selection:  opt.Val(selection),
+		}}}.Ability(),
+	}
+}
+
+// EquipCommanderActivatedAbility builds the complete activated ability for
+// "Equip commander {cost}" (CR 301.5c, Commander's Plate): a sorcery-speed Equip
+// activation that may attach the source Equipment only to a commander you
+// control. It coexists with an ordinary Equip ability on the same Equipment; the
+// rules dispatch the attachment through the shared Equip keyword path, and the
+// MatchCommander target selection restricts the legal targets.
+func EquipCommanderActivatedAbility(manaCost cost.Mana) ActivatedAbility {
+	activationCost := append(cost.Mana(nil), manaCost...)
+	keywordCost := append(cost.Mana(nil), manaCost...)
+	selection := Selection{
+		RequiredTypesAny: []types.Card{types.Creature},
+		Controller:       ControllerYou,
+		MatchCommander:   true,
+	}
+	return ActivatedAbility{
+		Text:           "Equip commander " + manaCost.String(),
+		ManaCost:       opt.Val(activationCost),
+		ZoneOfFunction: zone.Battlefield,
+		Timing:         SorceryOnly,
+		KeywordAbilities: []KeywordAbility{
+			EquipKeyword{Cost: keywordCost},
+		},
+		Content: Mode{Targets: []TargetSpec{{
+			MinTargets: 1,
+			MaxTargets: 1,
+			Constraint: "commander you control",
 			Allow:      TargetAllowPermanent,
 			Selection:  opt.Val(selection),
 		}}}.Ability(),

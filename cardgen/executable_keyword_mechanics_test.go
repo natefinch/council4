@@ -401,7 +401,6 @@ func TestGenerateExecutableCardSourceRestrictedEquip(t *testing.T) {
 func TestGenerateExecutableCardSourceUnsupportedEquipRestriction(t *testing.T) {
 	t.Parallel()
 	for _, oracle := range []string{
-		"Equip commander {3}\nEquip {5}",
 		"Equip planeswalker {5}\nEquip {5}",
 	} {
 		card := &ScryfallCard{
@@ -416,6 +415,32 @@ func TestGenerateExecutableCardSourceUnsupportedEquipRestriction(t *testing.T) {
 		}
 		if len(diagnostics) == 0 {
 			t.Fatalf("expected diagnostics for %q", oracle)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceEquipCommander(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Plate",
+		Layout:     "normal",
+		TypeLine:   "Artifact — Equipment",
+		OracleText: "Equipped creature gets +3/+3 and has protection from each color that's not in your commander's color identity.\nEquip commander {3}\nEquip {5}",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.EquipCommanderActivatedAbility(cost.Mana{cost.O(3)})",
+		"game.EquipActivatedAbility(cost.Mana{cost.O(5)})",
+		"game.ProtectionFromNonCommanderIdentityColorsStaticAbility()",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}
 }

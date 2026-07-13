@@ -123,6 +123,7 @@ var Cards = []cardset.Entry{
 	{Name: "Command Bridge", New: CommandBridge},
 	{Name: "Command Tower", New: CommandTower},
 	{Name: "Commander's Insignia", New: CommanderSInsignia},
+	{Name: "Commander's Plate", New: CommanderSPlate},
 	{Name: "Commune with Beavers", New: CommuneWithBeavers},
 	{Name: "Commune with Dinosaurs", New: CommuneWithDinosaurs},
 	{Name: "Commune with Nature", New: CommuneWithNature},

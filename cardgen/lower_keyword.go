@@ -922,6 +922,8 @@ func staticAbilityFromProtectionKeyword(prot game.ProtectionKeyword, text string
 		return game.ProtectionFromEachColorStaticAbility()
 	case prot.ChosenColor:
 		return game.ProtectionFromChosenColorStaticAbility()
+	case prot.CommanderIdentityComplement:
+		return game.ProtectionFromNonCommanderIdentityColorsStaticAbility()
 	case prot.Multicolored:
 		return game.ProtectionFromMulticoloredStaticAbility()
 	case prot.Monocolored:
@@ -1053,6 +1055,17 @@ func lowerEquipAbility(
 			"unsupported Equip ability",
 			"the executable source backend supports only exact Equip with a mana cost",
 		)
+	}
+	if keyword.EquipRestriction != nil && keyword.EquipRestriction.Commander {
+		if len(keyword.EquipRestriction.Supertypes) != 0 ||
+			len(keyword.EquipRestriction.Subtypes) != 0 {
+			return game.ActivatedAbility{}, true, executableDiagnostic(
+				ability,
+				"unsupported Equip ability",
+				"the executable source backend supports Equip commander only without an additional quality restriction",
+			)
+		}
+		return game.EquipCommanderActivatedAbility(slices.Clone(keyword.ManaCost)), true, nil
 	}
 	if keyword.EquipRestriction != nil {
 		return game.EquipRestrictedActivatedAbility(
