@@ -97,11 +97,22 @@ type Condition struct {
 	// SourceSaddled requires the condition source Mount to be saddled
 	// (CR 702.166), as in "if this creature is saddled". Negate models the
 	// "isn't saddled" wording.
-	SourceSaddled         bool
-	SourceTributeNotPaid  bool
-	ControllerHasMaxSpeed bool
-	TargetEnteredThisTurn opt.V[int]
-	CastFromZone          opt.V[zone.Type]
+	SourceSaddled        bool
+	SourceTributeNotPaid bool
+	// SourceCameUnderControlSinceLastUpkeep gates the Echo triggered ability
+	// (CR 702.29): it holds when the condition source permanent came under the
+	// condition controller's control since the beginning of that player's most
+	// recent upkeep. It is evaluated from the source's EchoResolvedController: the
+	// obligation is pending when that recorded controller is unset or differs from
+	// the current condition controller, so the first upkeep after the permanent
+	// entered or a new controller gained it triggers echo, and later upkeeps of
+	// the same controller do not. The known control-history gaps of that scalar
+	// model (temporary steal-and-return, countered trigger) are documented in
+	// echoObligationPending and tracked in #3014.
+	SourceCameUnderControlSinceLastUpkeep bool
+	ControllerHasMaxSpeed                 bool
+	TargetEnteredThisTurn                 opt.V[int]
+	CastFromZone                          opt.V[zone.Type]
 
 	// CastDuringControllerMainPhase is satisfied when the resolving spell was
 	// cast during its controller's main phase ("Addendum — If you cast this
@@ -355,6 +366,7 @@ func (c *Condition) Empty() bool {
 		!c.SourceNotMonstrous &&
 		!c.SourceSaddled &&
 		!c.SourceTributeNotPaid &&
+		!c.SourceCameUnderControlSinceLastUpkeep &&
 		!c.ControllerHasMaxSpeed &&
 		!c.TargetEnteredThisTurn.Exists &&
 		!c.CastFromZone.Exists &&

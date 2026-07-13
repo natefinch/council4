@@ -57,6 +57,7 @@ var Cards = []cardset.Entry{
 	{Name: "Wildfire", New: Wildfire},
 	{Name: "Will of the Temur", New: WillOfTheTemur},
 	{Name: "Windbrisk Heights", New: WindbriskHeights},
+	{Name: "Winding Wurm", New: WindingWurm},
 	{Name: "Windscouter", New: Windscouter},
 	{Name: "Winged Words", New: WingedWords},
 	{Name: "Wingmate Roc", New: WingmateRoc},

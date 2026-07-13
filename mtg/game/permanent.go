@@ -178,6 +178,20 @@ type Permanent struct {
 	// permanent after it was cast from suspend.
 	SuspendHasteController opt.V[PlayerID]
 
+	// EchoResolvedController records the player for whom this permanent's Echo
+	// obligation (CR 702.29) was most recently resolved. It is unset when the
+	// permanent enters the battlefield, so the first upkeep of whoever controls
+	// it triggers Echo; the echo triggered ability sets it to the resolving
+	// controller so later upkeeps of that same controller do not re-trigger. When
+	// a different player gains control, the stored controller no longer matches
+	// the new controller, so that player's next upkeep triggers Echo again,
+	// modeling "it came under your control since the beginning of your last
+	// upkeep" without a discrete control-change event. This single scalar is an
+	// approximation of full control-since-last-upkeep history; the temporary
+	// steal-and-return and countered-trigger gaps it cannot represent are scoped
+	// in echoObligationPending and tracked in #3014.
+	EchoResolvedController opt.V[PlayerID]
+
 	// EntryChoices stores values chosen as this permanent entered the
 	// battlefield (CR 614.12), such as the color named by "As this permanent
 	// enters, choose a color." Keys are ChoiceKey values published by the

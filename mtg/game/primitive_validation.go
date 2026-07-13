@@ -1852,6 +1852,10 @@ func (p BecomeSaddled) validatePrimitive(targets []TargetSpec, checkTargets bool
 	return validateObjectReference(p.Object, targets, checkTargets)
 }
 
+func (p RecordEchoObligation) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	return validateObjectReference(p.Object, targets, checkTargets)
+}
+
 func (ShuffleSpellIntoLibrary) validatePrimitive(_ []TargetSpec, _ bool) error {
 	return nil
 }

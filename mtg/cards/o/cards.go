@@ -40,6 +40,7 @@ var Cards = []cardset.Entry{
 	{Name: "Orbs of Warding", New: OrbsOfWarding},
 	{Name: "Orc General", New: OrcGeneral},
 	{Name: "Orchard Warden", New: OrchardWarden},
+	{Name: "Orcish Hellraiser", New: OrcishHellraiser},
 	{Name: "Orcish Lumberjack", New: OrcishLumberjack},
 	{Name: "Order", New: Order},
 	{Name: "Order of the Stars", New: OrderOfTheStars},

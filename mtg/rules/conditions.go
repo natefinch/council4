@@ -203,6 +203,9 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	if cond.SourceTributeNotPaid {
 		matches = matches && ctx.source != nil && !ctx.source.TributePaid
 	}
+	if cond.SourceCameUnderControlSinceLastUpkeep {
+		matches = matches && ctx.source != nil && echoObligationPending(g, ctx.source, ctx.controller)
+	}
 	if cond.ControllerHasMaxSpeed {
 		player, ok := playerByID(g, ctx.controller)
 		matches = matches && ok && player.Speed >= 4

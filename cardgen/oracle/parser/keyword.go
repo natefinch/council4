@@ -37,47 +37,55 @@ const (
 	KeywordDisguise         KeywordKind = "KeywordDisguise"
 	KeywordDredge           KeywordKind = "KeywordDredge"
 	KeywordDoubleStrike     KeywordKind = "KeywordDoubleStrike"
-	KeywordEmerge           KeywordKind = "KeywordEmerge"
-	KeywordEnchant          KeywordKind = "KeywordEnchant"
-	KeywordEquip            KeywordKind = "KeywordEquip"
-	KeywordEscape           KeywordKind = "KeywordEscape"
-	KeywordEternalize       KeywordKind = "KeywordEternalize"
-	KeywordEmbalm           KeywordKind = "KeywordEmbalm"
-	KeywordExalted          KeywordKind = "KeywordExalted"
-	KeywordEvolve           KeywordKind = "KeywordEvolve"
-	KeywordFabricate        KeywordKind = "KeywordFabricate"
-	KeywordFear             KeywordKind = "KeywordFear"
-	KeywordFirstStrike      KeywordKind = "KeywordFirstStrike"
-	KeywordFlash            KeywordKind = "KeywordFlash"
-	KeywordFlashback        KeywordKind = "KeywordFlashback"
-	KeywordFlying           KeywordKind = "KeywordFlying"
-	KeywordForetell         KeywordKind = "KeywordForetell"
-	KeywordGift             KeywordKind = "KeywordGift"
-	KeywordHaste            KeywordKind = "KeywordHaste"
-	KeywordHexproof         KeywordKind = "KeywordHexproof"
-	KeywordHorsemanship     KeywordKind = "KeywordHorsemanship"
-	KeywordImprovise        KeywordKind = "KeywordImprovise"
-	KeywordIndestructible   KeywordKind = "KeywordIndestructible"
-	KeywordInfect           KeywordKind = "KeywordInfect"
-	KeywordIntimidate       KeywordKind = "KeywordIntimidate"
-	KeywordJumpStart        KeywordKind = "KeywordJumpStart"
-	KeywordKicker           KeywordKind = "KeywordKicker"
-	KeywordLifelink         KeywordKind = "KeywordLifelink"
-	KeywordLivingWeapon     KeywordKind = "KeywordLivingWeapon"
-	KeywordLivingMetal      KeywordKind = "KeywordLivingMetal"
-	KeywordMadness          KeywordKind = "KeywordMadness"
-	KeywordMenace           KeywordKind = "KeywordMenace"
-	KeywordMorph            KeywordKind = "KeywordMorph"
-	KeywordMultikicker      KeywordKind = "KeywordMultikicker"
-	KeywordMutate           KeywordKind = "KeywordMutate"
-	KeywordNinjutsu         KeywordKind = "KeywordNinjutsu"
-	KeywordOutlast          KeywordKind = "KeywordOutlast"
-	KeywordPersist          KeywordKind = "KeywordPersist"
-	KeywordPlot             KeywordKind = "KeywordPlot"
-	KeywordProtection       KeywordKind = "KeywordProtection"
-	KeywordProwess          KeywordKind = "KeywordProwess"
-	KeywordReadAhead        KeywordKind = "KeywordReadAhead"
-	KeywordReach            KeywordKind = "KeywordReach"
+	// KeywordEcho is the Echo keyword (CR 702.29): "Echo <cost>" is a triggered
+	// ability that, at the beginning of the controller's upkeep, sacrifices this
+	// permanent unless the controller pays its echo cost, but only if it came
+	// under that player's control since the beginning of their last upkeep. The
+	// mana echo cost is carried by Parameter as a fixed mana cost, exactly like
+	// Cumulative upkeep. The non-mana em-dash forms ("Echo—Discard a card.") are
+	// not recognized and fail closed as unsupported.
+	KeywordEcho           KeywordKind = "KeywordEcho"
+	KeywordEmerge         KeywordKind = "KeywordEmerge"
+	KeywordEnchant        KeywordKind = "KeywordEnchant"
+	KeywordEquip          KeywordKind = "KeywordEquip"
+	KeywordEscape         KeywordKind = "KeywordEscape"
+	KeywordEternalize     KeywordKind = "KeywordEternalize"
+	KeywordEmbalm         KeywordKind = "KeywordEmbalm"
+	KeywordExalted        KeywordKind = "KeywordExalted"
+	KeywordEvolve         KeywordKind = "KeywordEvolve"
+	KeywordFabricate      KeywordKind = "KeywordFabricate"
+	KeywordFear           KeywordKind = "KeywordFear"
+	KeywordFirstStrike    KeywordKind = "KeywordFirstStrike"
+	KeywordFlash          KeywordKind = "KeywordFlash"
+	KeywordFlashback      KeywordKind = "KeywordFlashback"
+	KeywordFlying         KeywordKind = "KeywordFlying"
+	KeywordForetell       KeywordKind = "KeywordForetell"
+	KeywordGift           KeywordKind = "KeywordGift"
+	KeywordHaste          KeywordKind = "KeywordHaste"
+	KeywordHexproof       KeywordKind = "KeywordHexproof"
+	KeywordHorsemanship   KeywordKind = "KeywordHorsemanship"
+	KeywordImprovise      KeywordKind = "KeywordImprovise"
+	KeywordIndestructible KeywordKind = "KeywordIndestructible"
+	KeywordInfect         KeywordKind = "KeywordInfect"
+	KeywordIntimidate     KeywordKind = "KeywordIntimidate"
+	KeywordJumpStart      KeywordKind = "KeywordJumpStart"
+	KeywordKicker         KeywordKind = "KeywordKicker"
+	KeywordLifelink       KeywordKind = "KeywordLifelink"
+	KeywordLivingWeapon   KeywordKind = "KeywordLivingWeapon"
+	KeywordLivingMetal    KeywordKind = "KeywordLivingMetal"
+	KeywordMadness        KeywordKind = "KeywordMadness"
+	KeywordMenace         KeywordKind = "KeywordMenace"
+	KeywordMorph          KeywordKind = "KeywordMorph"
+	KeywordMultikicker    KeywordKind = "KeywordMultikicker"
+	KeywordMutate         KeywordKind = "KeywordMutate"
+	KeywordNinjutsu       KeywordKind = "KeywordNinjutsu"
+	KeywordOutlast        KeywordKind = "KeywordOutlast"
+	KeywordPersist        KeywordKind = "KeywordPersist"
+	KeywordPlot           KeywordKind = "KeywordPlot"
+	KeywordProtection     KeywordKind = "KeywordProtection"
+	KeywordProwess        KeywordKind = "KeywordProwess"
+	KeywordReadAhead      KeywordKind = "KeywordReadAhead"
+	KeywordReach          KeywordKind = "KeywordReach"
 	// KeywordRetrace is the Retrace keyword (CR 702.81): "You may cast this card
 	// from your graveyard by discarding a land card in addition to paying its
 	// other costs." It is a non-parameterized graveyard alternative-casting
@@ -237,6 +245,7 @@ var keywordNames = map[KeywordKind]string{
 	KeywordDisguise:            "Disguise",
 	KeywordDredge:              "Dredge",
 	KeywordDoubleStrike:        "Double strike",
+	KeywordEcho:                "Echo",
 	KeywordEmerge:              "Emerge",
 	KeywordEnchant:             "Enchant",
 	KeywordEquip:               "Equip",
@@ -391,6 +400,7 @@ var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordDevoid, Words: []string{"devoid"}},
 	{Kind: KeywordDisguise, Words: []string{"disguise"}},
 	{Kind: KeywordDredge, Words: []string{"dredge"}},
+	{Kind: KeywordEcho, Words: []string{"echo"}},
 	{Kind: KeywordEmerge, Words: []string{"emerge"}},
 	{Kind: KeywordEnchant, Words: []string{"enchant"}},
 	{Kind: KeywordEquip, Words: []string{"equip"}},
@@ -1723,6 +1733,18 @@ func scanKeywords(tokens []shared.Token, atoms Atoms) []Keyword {
 			continue
 		}
 		end := i + width
+		// The Echo keyword (CR 702.29) is recognized only when a fixed mana echo
+		// cost follows ("Echo {3}{W}{W}"). The non-mana em-dash forms
+		// ("Echo—Discard a card.", "Echo—Sacrifice two lands.") carry no mana
+		// parameter, so they are left unrecognized here and fail closed as an
+		// unsupported ability rather than being misread. The word also appears in
+		// flavored ability names ("Echo of the First Murder —"), which likewise
+		// have no mana cost following the word and so are not scanned as a keyword.
+		if kind == KeywordEcho {
+			if _, _, ok := parseKeywordManaCost(tokens, end); !ok {
+				continue
+			}
+		}
 		var equipRestriction *KeywordEquipRestriction
 		if kind == KeywordEquip {
 			if restriction, manaStart, ok := parseEquipRestriction(tokens, end, atoms); ok {

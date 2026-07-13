@@ -231,6 +231,17 @@ const (
 	// equals the discarded card's mana value. Appended at the end of the enum so
 	// existing keyword ordinals are unchanged.
 	Transmute
+	// Echo (CR 702.29) is printed on some permanents: "Echo <cost> (At the
+	// beginning of your upkeep, if this came under your control since the
+	// beginning of your last upkeep, sacrifice it unless you pay its echo
+	// cost.)" It is modeled by EchoKeyword, which carries the fixed mana echo
+	// cost, inside the beginning-of-upkeep triggered ability built by
+	// EchoTriggeredAbility. The intervening "if" fires only the first upkeep
+	// after the permanent came under its controller's control, so
+	// HasKeyword(Echo) reports true and the rules layer runs the pay-or-sacrifice
+	// body. Appended at the end of the enum so existing keyword ordinals are
+	// unchanged.
+	Echo
 	// KeywordCount is one greater than the largest real keyword value. It sizes
 	// compact keyword sets; it is not itself a keyword.
 	KeywordCount

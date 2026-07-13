@@ -239,10 +239,16 @@ const (
 	// PrimitiveExchangeLifeTotalWithSourceCharacteristic exchanges a player's
 	// life total with the resolving source permanent's power or toughness.
 	PrimitiveExchangeLifeTotalWithSourceCharacteristic
+
+	// PrimitiveRecordEchoObligation records the resolving source permanent's
+	// current controller as the player for whom its Echo obligation (CR 702.29)
+	// has been resolved, so later upkeeps of that same controller do not
+	// re-trigger the echo.
+	PrimitiveRecordEchoObligation
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveExchangeLifeTotalWithSourceCharacteristic) + 1
+const primitiveKindCount = int(PrimitiveRecordEchoObligation) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -889,6 +895,16 @@ type Connive struct {
 // cleanup. The effect is idempotent; saddling an already-saddled Mount leaves it
 // unchanged.
 type BecomeSaddled struct {
+	Object ObjectReference
+}
+
+// RecordEchoObligation records the resolving source permanent's current
+// controller as the player for whom its Echo obligation (CR 702.29) has been
+// resolved. The echo triggered ability runs it each time it resolves so a later
+// upkeep of the same controller does not re-trigger the pay-or-sacrifice, while
+// a new controller (whose identity no longer matches the recorded one) still
+// triggers echo at their next upkeep.
+type RecordEchoObligation struct {
 	Object ObjectReference
 }
 

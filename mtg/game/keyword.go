@@ -36,6 +36,14 @@ type CumulativeUpkeepKeyword struct {
 	Cost cost.Mana
 }
 
+// EchoKeyword parameterizes Echo (CR 702.29) for fixed mana echo costs. It is
+// carried inside the beginning-of-upkeep triggered ability built by
+// EchoTriggeredAbility so HasKeyword(Echo) reports true and the rules layer can
+// identify the echo pay-or-sacrifice body.
+type EchoKeyword struct {
+	Cost cost.Mana
+}
+
 // EquipKeyword parameterizes Equip activation costs.
 type EquipKeyword struct {
 	Cost cost.Mana
@@ -253,6 +261,7 @@ type LandwalkKeyword struct {
 func (SimpleKeyword) isKeywordAbility()           {}
 func (WardKeyword) isKeywordAbility()             {}
 func (CumulativeUpkeepKeyword) isKeywordAbility() {}
+func (EchoKeyword) isKeywordAbility()             {}
 func (EquipKeyword) isKeywordAbility()            {}
 func (ReconfigureKeyword) isKeywordAbility()      {}
 func (EnchantKeyword) isKeywordAbility()          {}
@@ -289,6 +298,7 @@ func (WardKeyword) keyword() Keyword           { return Ward }
 func (CumulativeUpkeepKeyword) keyword() Keyword {
 	return CumulativeUpkeep
 }
+func (EchoKeyword) keyword() Keyword  { return Echo }
 func (EquipKeyword) keyword() Keyword { return Equip }
 func (ReconfigureKeyword) keyword() Keyword {
 	return Reconfigure
@@ -329,6 +339,10 @@ func (ability WardKeyword) cloneKeywordAbility() KeywordAbility {
 	return ability
 }
 func (ability CumulativeUpkeepKeyword) cloneKeywordAbility() KeywordAbility {
+	ability.Cost = append(cost.Mana(nil), ability.Cost...)
+	return ability
+}
+func (ability EchoKeyword) cloneKeywordAbility() KeywordAbility {
 	ability.Cost = append(cost.Mana(nil), ability.Cost...)
 	return ability
 }
