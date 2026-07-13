@@ -58,6 +58,12 @@ func (b actionBuilderType) castGiftSpell(cardID id.ID, sourceZone zone.Type, fac
 	return b.mustBuild(action.CastGiftSpellFaceFromZone(cardID, sourceZone, face, targets, xValue, modes, recipient))
 }
 
+// castBargainedSpell builds a CastSpell action whose Bargain additional cost is
+// paid (CR 702.166).
+func (b actionBuilderType) castBargainedSpell(cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, modes []int) action.Action {
+	return b.mustBuild(action.CastBargainedSpellFaceFromZone(cardID, sourceZone, face, targets, xValue, modes))
+}
+
 // castMultikickedSpell builds a CastSpell action whose Multikicker cost is paid
 // kickerCount times.
 func (b actionBuilderType) castMultikickedSpell(cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, modes []int, kickerCount int) action.Action {

@@ -57,7 +57,7 @@ func TestManaAlternativeCostOfferedOnlyWhenConditionSatisfied(t *testing.T) {
 	}}
 
 	satisfied := manaAlternativeState{opponentGainedLife: true}
-	options := spellCostOptionsForZoneAndKicker(satisfied, game.Player1, card, zone.Hand, false, 0, nil)
+	options := spellCostOptionsForZoneAndKicker(satisfied, game.Player1, card, zone.Hand, false, 0, false, nil)
 	if _, ok := spellOptionByLabel(options, "Normal cost"); !ok {
 		t.Fatal("normal-cost option missing when condition satisfied")
 	}
@@ -70,7 +70,7 @@ func TestManaAlternativeCostOfferedOnlyWhenConditionSatisfied(t *testing.T) {
 	}
 
 	unsatisfied := manaAlternativeState{opponentGainedLife: false}
-	options = spellCostOptionsForZoneAndKicker(unsatisfied, game.Player1, card, zone.Hand, false, 0, nil)
+	options = spellCostOptionsForZoneAndKicker(unsatisfied, game.Player1, card, zone.Hand, false, 0, false, nil)
 	if _, ok := spellOptionByLabel(options, "Normal cost"); !ok {
 		t.Fatal("normal-cost option missing when condition not satisfied")
 	}
@@ -97,7 +97,7 @@ func TestZeroManaAlternativeCostIsDistinctOption(t *testing.T) {
 	}}
 
 	enough := manaAlternativeState{attackingCreatures: 3}
-	options := spellCostOptionsForZoneAndKicker(enough, game.Player1, card, zone.Hand, false, 0, nil)
+	options := spellCostOptionsForZoneAndKicker(enough, game.Player1, card, zone.Hand, false, 0, false, nil)
 	zero, ok := spellOptionByLabel(options, "Pay {0}")
 	if !ok {
 		t.Fatal("{0} alternative option missing when three creatures attack")
@@ -110,7 +110,7 @@ func TestZeroManaAlternativeCostIsDistinctOption(t *testing.T) {
 	}
 
 	tooFew := manaAlternativeState{attackingCreatures: 2}
-	options = spellCostOptionsForZoneAndKicker(tooFew, game.Player1, card, zone.Hand, false, 0, nil)
+	options = spellCostOptionsForZoneAndKicker(tooFew, game.Player1, card, zone.Hand, false, 0, false, nil)
 	if _, ok := spellOptionByLabel(options, "Pay {0}"); ok {
 		t.Fatal("{0} alternative option offered with too few attackers")
 	}
@@ -142,7 +142,7 @@ func TestManaAlternativeCostPreservesAdditionalCosts(t *testing.T) {
 	}}
 
 	state := manaAlternativeState{attackingCreatures: 1}
-	options := spellCostOptionsForZoneAndKicker(state, game.Player1, card, zone.Hand, false, 0, nil)
+	options := spellCostOptionsForZoneAndKicker(state, game.Player1, card, zone.Hand, false, 0, false, nil)
 	alternative, ok := spellOptionByLabel(options, "Pay {W}")
 	if !ok {
 		t.Fatal("mana alternative option missing")

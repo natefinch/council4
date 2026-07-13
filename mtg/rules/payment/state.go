@@ -153,8 +153,11 @@ type stateAbilityQueries interface {
 	// being cast by the given player from the given zone. This includes global
 	// game modifiers, commander tax, and static rule-effect modifiers. targets
 	// carries the spell's chosen targets so target-dependent modifiers ("Spells
-	// that target this creature cost {N} more to cast.") can match.
-	CostModifiersForSpell(playerID game.PlayerID, card *game.CardDef, cardID id.ID, sourceZone zone.Type, targets []game.Target) []game.CostModifier
+	// that target this creature cost {N} more to cast.") can match. bargained
+	// reports whether the cast is on the spell's Bargain branch (CR 702.166), so
+	// a "this spell costs {N} less to cast if it's bargained" self reduction can
+	// apply on that branch alone.
+	CostModifiersForSpell(playerID game.PlayerID, card *game.CardDef, cardID id.ID, sourceZone zone.Type, targets []game.Target, bargained bool) []game.CostModifier
 
 	// SpellHasGrantedKeyword reports whether an active rule effect grants keyword
 	// to the spell playerID is casting from sourceZone, in addition to any

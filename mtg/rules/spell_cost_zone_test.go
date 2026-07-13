@@ -30,7 +30,7 @@ func graveyardSpellReductionEffect(g *game.Game, reduction int) game.RuleEffect 
 func spellGenericReductionFromZone(g *game.Game, card *game.CardDef, sourceZone zone.Type) int {
 	state := &rulesPaymentState{g: g}
 	total := 0
-	for _, modifier := range state.CostModifiersForSpell(game.Player1, card, 0, sourceZone, nil) {
+	for _, modifier := range state.CostModifiersForSpell(game.Player1, card, 0, sourceZone, nil, false) {
 		total += modifier.GenericReduction
 	}
 	return total

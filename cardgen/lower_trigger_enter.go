@@ -74,6 +74,7 @@ func lowerEnterTrigger(
 			InterveningIfEventPermanentHadNoCounterKind:                     intervening.hadNoCounterKind,
 			InterveningIfEventPermanentHadCounterKind:                       intervening.hadCounterKind,
 			InterveningIfEventPermanentWasKicked:                            intervening.wasKicked,
+			InterveningIfEventPermanentWasBargained:                         intervening.wasBargained,
 			InterveningIfEventPermanentWasCast:                              intervening.wasCast,
 			InterveningIfEventPermanentWasCastByController:                  intervening.wasCastByController,
 			InterveningIfEventPermanentWasCastFromControllerHand:            intervening.wasCastFromCtrlHand,
@@ -343,6 +344,7 @@ type enterInterveningCondition struct {
 	hadNoCounterKind     opt.V[counter.Kind]
 	hadCounterKind       opt.V[counter.Kind]
 	wasKicked            bool
+	wasBargained         bool
 	wasCast              bool
 	wasCastByController  bool
 	wasCastFromCtrlHand  bool
@@ -416,6 +418,8 @@ func lowerEnterInterveningCondition(trigger *compiler.CompiledTrigger) (enterInt
 	switch condition.Predicate {
 	case compiler.ConditionPredicateEventSubjectWasKicked:
 		return enterInterveningCondition{wasKicked: true}, true
+	case compiler.ConditionPredicateEventSubjectWasBargained:
+		return enterInterveningCondition{wasBargained: true}, true
 	case compiler.ConditionPredicateEventSubjectWasCast:
 		return enterInterveningCondition{wasCast: true}, true
 	case compiler.ConditionPredicateEventSubjectWasCastByController:
@@ -958,6 +962,7 @@ func permanentZoneChangeTriggeredAbility(
 			InterveningIfEventPermanentHadNoCounterKind:                     intervening.hadNoCounterKind,
 			InterveningIfEventPermanentHadCounterKind:                       intervening.hadCounterKind,
 			InterveningIfEventPermanentWasKicked:                            intervening.wasKicked,
+			InterveningIfEventPermanentWasBargained:                         intervening.wasBargained,
 			InterveningIfEventPermanentWasCast:                              intervening.wasCast,
 			InterveningIfEventPermanentWasCastByController:                  intervening.wasCastByController,
 			InterveningIfEventPermanentWasCastFromControllerHand:            intervening.wasCastFromCtrlHand,

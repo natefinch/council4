@@ -171,6 +171,13 @@ func spellHasGift(card *game.CardDef) bool {
 	return ok
 }
 
+// spellHasBargain reports whether a spell has the Bargain keyword (CR 702.166),
+// so the rules layer offers the optional bargained cast that pays the Bargain
+// additional cost and sets the resolving spell's bargained state.
+func spellHasBargain(card *game.CardDef) bool {
+	return card != nil && card.HasKeyword(game.Bargain)
+}
+
 func spellGift(card *game.CardDef) (game.GiftKeyword, bool) {
 	if card == nil {
 		return game.GiftKeyword{}, false

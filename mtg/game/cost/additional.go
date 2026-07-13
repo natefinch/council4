@@ -169,6 +169,15 @@ type Additional struct {
 	// RequireNonToken constrains a battlefield cost to nontoken permanents.
 	RequireNonToken bool
 
+	// MatchArtifactEnchantmentOrToken constrains a battlefield permanent cost to
+	// permanents that are an artifact, an enchantment, or a token of any type, as
+	// required by the Bargain keyword's optional additional cost "sacrifice an
+	// artifact, enchantment, or token" (CR 702.166a). Like MatchHistoric it is a
+	// disjunctive named union expanded to a Selection by the payment planner, so
+	// it stays a single comparable bool rather than a slice. It is independent of
+	// MatchPermanentType and the token flags; an unset value imposes no union.
+	MatchArtifactEnchantmentOrToken bool
+
 	// RequireSupertype constrains battlefield costs to permanents with a
 	// particular supertype, such as Snow.
 	RequireSupertype types.Super

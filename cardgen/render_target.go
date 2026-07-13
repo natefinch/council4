@@ -79,6 +79,10 @@ func renderTargetGate(gate game.TargetGate) (string, error) {
 		return "game.TargetGateSpellKicked", nil
 	case game.TargetGateSpellNotKicked:
 		return "game.TargetGateSpellNotKicked", nil
+	case game.TargetGateSpellBargained:
+		return "game.TargetGateSpellBargained", nil
+	case game.TargetGateSpellNotBargained:
+		return "game.TargetGateSpellNotBargained", nil
 	default:
 		return "", fmt.Errorf("unsupported target gate %d", gate)
 	}

@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,733 of 32,501 cards eligible for paper support (54.6%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,741 of 32,501 cards eligible for paper support (54.6%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -195,6 +195,7 @@ Council4 currently supports **17,733 of 32,501 cards eligible for paper support 
 - Against All Odds
 - Agate Instigator
 - Agate-Blade Assassin
+- Agatha's Champion
 - Ageless Entity
 - Ageless Guardian
 - Agent 13, Sharon Carter
@@ -6758,6 +6759,7 @@ Council4 currently supports **17,733 of 32,501 cards eligible for paper support 
 - Hamato Guardian Stance
 - Hamato Ninpō
 - Hamlet Captain
+- Hamlet Glutton
 - Hamletback Goliath
 - Hammer Dropper
 - Hammer of Bogardan
@@ -7055,6 +7057,7 @@ Council4 currently supports **17,733 of 32,501 cards eligible for paper support 
 - Hieroglyphic Illumination
 - Hieromancer's Cage
 - Hierophant's Chalice
+- High Fae Negotiator
 - High Fae Trickster
 - High Market
 - High Noon
@@ -7387,6 +7390,7 @@ Council4 currently supports **17,733 of 32,501 cards eligible for paper support 
 - Icatian Scout
 - Icatian Town
 - Ice Flan
+- Ice Out
 - Ice Over
 - Ice Storm
 - Ice Tunnel
@@ -7924,6 +7928,7 @@ Council4 currently supports **17,733 of 32,501 cards eligible for paper support 
 - Jirina, Dauntless General
 - Jiwari, the Earth Aflame
 - Joel, Resolute Survivor
+- Johann's Stopgap
 - Join the Dance
 - Join the Dead
 - Join the Ranks
@@ -11820,6 +11825,7 @@ Council4 currently supports **17,733 of 32,501 cards eligible for paper support 
 - Reality Ripple
 - Reality Shift
 - Realm-Cloaked Giant // Cast Off
+- Realm-Scorcher Hellkite
 - Realmbreaker's Grasp
 - Realmwalker
 - Reanimate
@@ -15260,6 +15266,7 @@ Council4 currently supports **17,733 of 32,501 cards eligible for paper support 
 - Temur Sabertooth
 - Temur Tawnyback
 - Temur War Shaman
+- Tenacious Tomeseeker
 - Tender Wildguide
 - Tenderize
 - Tendershoot Dryad
@@ -16004,6 +16011,7 @@ Council4 currently supports **17,733 of 32,501 cards eligible for paper support 
 - Trostani, Selesnya's Voice
 - Trostani, Three Whispers
 - Troubled Healer
+- Troublemaker Ouphe
 - Troublesome Spirit
 - Trove Warden
 - Truck Toss

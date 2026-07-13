@@ -133,6 +133,13 @@ type StackObject struct {
 	// "for each time it was kicked" amounts as the spell resolves.
 	KickerCount int
 
+	// Bargained is true if this spell's Bargain additional cost was paid as it
+	// was cast (CR 702.166b): its controller sacrificed an artifact, enchantment,
+	// or token. It gates the spell's "if this spell was bargained" clauses. Like
+	// KickerPaid it is an as-cast choice, so a copy of a bargained spell was not
+	// itself bargained (CR 707.10) and this stays false for copies.
+	Bargained bool
+
 	// GiftPromised is true if this spell's Gift keyword action promised a gift to
 	// an opponent as it was cast (CR 702.171). It gates the spell's "if the gift
 	// was promised" clauses and drives the gift delivery on resolution. A copy of

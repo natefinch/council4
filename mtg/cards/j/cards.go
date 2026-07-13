@@ -23,6 +23,7 @@ var Cards = []cardset.Entry{
 	{Name: "Jinxed Idol", New: JinxedIdol},
 	{Name: "Jinxed Ring", New: JinxedRing},
 	{Name: "Jirina, Dauntless General", New: JirinaDauntlessGeneral},
+	{Name: "Johann's Stopgap", New: JohannSStopgap},
 	{Name: "Join the Dead", New: JoinTheDead},
 	{Name: "Joraga Warcaller", New: JoragaWarcaller},
 	{Name: "Jovial Evil", New: JovialEvil},

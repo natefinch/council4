@@ -147,7 +147,10 @@ func TestCastBranchGateClassification(t *testing.T) {
 		{"not kicked", opt.Val(game.EffectCondition{Condition: opt.Val(game.Condition{SpellWasKicked: true, Negate: true})}), game.TargetGateSpellNotKicked, true, true},
 		{"promised", opt.Val(game.EffectCondition{Condition: opt.Val(game.Condition{GiftPromised: true})}), game.TargetGateGiftPromised, true, true},
 		{"not promised", opt.Val(game.EffectCondition{Condition: opt.Val(game.Condition{GiftPromised: true, Negate: true})}), game.TargetGateGiftNotPromised, true, true},
+		{"bargained", opt.Val(game.EffectCondition{Condition: opt.Val(game.Condition{SpellWasBargained: true})}), game.TargetGateSpellBargained, true, true},
+		{"not bargained", opt.Val(game.EffectCondition{Condition: opt.Val(game.Condition{SpellWasBargained: true, Negate: true})}), game.TargetGateSpellNotBargained, true, true},
 		{"both mechanics fail closed", opt.Val(game.EffectCondition{Condition: opt.Val(game.Condition{SpellWasKicked: true, GiftPromised: true})}), game.TargetGateAlways, false, false},
+		{"kicker and bargain fail closed", opt.Val(game.EffectCondition{Condition: opt.Val(game.Condition{SpellWasKicked: true, SpellWasBargained: true})}), game.TargetGateAlways, false, false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

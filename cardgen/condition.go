@@ -174,10 +174,14 @@ func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringC
 		result.CastDuringControllerMainPhase = true
 	case compiler.ConditionPredicateSpellWasKicked:
 		result.SpellWasKicked = true
+	case compiler.ConditionPredicateSpellWasBargained:
+		result.SpellWasBargained = true
 	case compiler.ConditionPredicateGiftPromised:
 		result.GiftPromised = true
 	case compiler.ConditionPredicateEventSubjectWasKicked:
 		result.EventPermanentWasKicked = true
+	case compiler.ConditionPredicateEventSubjectWasBargained:
+		result.EventPermanentWasBargained = true
 	case compiler.ConditionPredicateEventSubjectWasCastFromControllerHand:
 		result.EventPermanentWasCastFromControllerHand = true
 	case compiler.ConditionPredicateColoredManaSpentToCastAtLeast:
@@ -328,7 +332,8 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 			compiler.ConditionPredicateAnOpponentIsMonarch,
 			compiler.ConditionPredicateNoMonarch,
 			compiler.ConditionPredicateControllerHasInitiative,
-			compiler.ConditionPredicateControllerHasCityBlessing:
+			compiler.ConditionPredicateControllerHasCityBlessing,
+			compiler.ConditionPredicateSpellWasBargained:
 			return true
 		default:
 			return false
@@ -347,6 +352,7 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 			compiler.ConditionPredicateColoredManaSpentToCastAtLeast,
 			compiler.ConditionPredicateSameColorManaSpentToCastAtLeast,
 			compiler.ConditionPredicateEventSubjectWasKicked,
+			compiler.ConditionPredicateEventSubjectWasBargained,
 			compiler.ConditionPredicateEventSubjectWasCastFromControllerHand,
 			compiler.ConditionPredicateEventHistory:
 			return true
@@ -391,6 +397,7 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 				ctx == conditionContextEffectGate
 		case compiler.ConditionPredicateCastDuringControllerMainPhase,
 			compiler.ConditionPredicateSpellWasKicked,
+			compiler.ConditionPredicateSpellWasBargained,
 			compiler.ConditionPredicateGiftPromised,
 			compiler.ConditionPredicateSpellWasCastFromGraveyard,
 			compiler.ConditionPredicateSpellXAtLeast,
