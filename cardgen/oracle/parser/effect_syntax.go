@@ -1471,6 +1471,12 @@ func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) 
 		func() ([]EffectSyntax, bool) { return parsePlayFromLibraryTopEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parsePlayExiledCardEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) {
+			return parseCopyLinkedExiledCardEffect(sentence, tokens, atoms)
+		},
+		func() ([]EffectSyntax, bool) {
+			return parseCastLinkedExiledCopyEffect(sentence, tokens, atoms)
+		},
+		func() ([]EffectSyntax, bool) {
 			return parseOwnerPlayWhileExiledEffect(sentence, tokens, atoms)
 		},
 		func() ([]EffectSyntax, bool) { return parsePlayThatCardEffect(sentence, tokens, atoms) },

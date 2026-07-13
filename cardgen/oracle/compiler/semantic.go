@@ -2787,6 +2787,18 @@ type CompiledEffect struct {
 	// primitive gated by the ability's activation condition; it is false for
 	// every other effect.
 	PlayHideawayExiledCard bool
+	// CopyLinkedExiledCard mirrors the parser flag marking the imprint
+	// copy-consent effect "You may copy the exiled card." (CR 707.12; Isochron
+	// Scepter, Spellbinder). Lowering reads it, paired with CastLinkedExiledCopy,
+	// to emit the imprint copy/cast instruction sequence; it is false for every
+	// other effect.
+	CopyLinkedExiledCard bool
+	// CastLinkedExiledCopy mirrors the parser flag marking the imprint
+	// cast-the-copy effect "(If you do,) you may cast the copy without paying its
+	// mana cost." (CR 707.12; Isochron Scepter, Spellbinder). Lowering reads it,
+	// paired with CopyLinkedExiledCard, to cast a free copy of the imprinted
+	// exiled card; it is false for every other effect.
+	CastLinkedExiledCopy bool
 	// ImpulseCast mirrors the parser flag marking an impulse-exile play
 	// permission that grants casting the exiled card ("you may cast that card")
 	// rather than playing it. Lowering reads it to grant cast-only permission; it

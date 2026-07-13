@@ -2251,6 +2251,26 @@ func (p PlayChosenExiledCard) validatePrimitive(targets []TargetSpec, checkTarge
 	return nil
 }
 
+func (p CopyCard) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := validatePlayerReference(p.Player, targets, checkTargets); err != nil {
+		return err
+	}
+	if p.LinkID == "" {
+		return errors.New("CopyCard requires a link ID")
+	}
+	return nil
+}
+
+func (p PlayLinkedExiledCard) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := validatePlayerReference(p.Player, targets, checkTargets); err != nil {
+		return err
+	}
+	if p.LinkID == "" {
+		return errors.New("PlayLinkedExiledCard requires a link ID")
+	}
+	return nil
+}
+
 func (p Sacrifice) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if p.Group.Valid() {
 		return validateMassObjectOrGroup(p.Object, p.Group, targets, checkTargets)

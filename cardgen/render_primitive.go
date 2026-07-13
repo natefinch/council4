@@ -449,6 +449,42 @@ func (r Renderer) renderExilePermanentForPlay(value game.ExilePermanentForPlay) 
 	return structLit("game.ExilePermanentForPlay", fields), nil
 }
 
+// renderCopyCard renders a CopyCard primitive: the copying player and the
+// object-scoped imprint link key naming the exiled card to copy (Isochron
+// Scepter, Spellbinder).
+func (r Renderer) renderCopyCard(value game.CopyCard) (string, error) {
+	player, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{
+		fmt.Sprintf("Player: %s,", player),
+		fmt.Sprintf("LinkID: %q,", value.LinkID),
+	}
+	return structLit("game.CopyCard", fields), nil
+}
+
+// renderPlayLinkedExiledCard renders a PlayLinkedExiledCard primitive: the
+// casting player, the object-scoped imprint link key, and the copy and
+// free-cast riders (Isochron Scepter, Spellbinder).
+func (r Renderer) renderPlayLinkedExiledCard(value game.PlayLinkedExiledCard) (string, error) {
+	player, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{
+		fmt.Sprintf("Player: %s,", player),
+		fmt.Sprintf("LinkID: %q,", value.LinkID),
+	}
+	if value.Copy {
+		fields = append(fields, "Copy: true,")
+	}
+	if value.WithoutPayingManaCost {
+		fields = append(fields, "WithoutPayingManaCost: true,")
+	}
+	return structLit("game.PlayLinkedExiledCard", fields), nil
+}
+
 // renderPlayChosenExiledCard renders a PlayChosenExiledCard primitive: the
 // choosing player, the source zone, the owner scope, the optional marker-counter
 // filter, the play window, and the free-cast rider (Dauthi Voidwalker).

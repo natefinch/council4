@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,774 of 32,501 cards eligible for paper support (54.7%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,776 of 32,501 cards eligible for paper support (54.7%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -7820,6 +7820,7 @@ Council4 currently supports **17,774 of 32,501 cards eligible for paper support 
 - Island
 - Island Fish Jasconius
 - Isleback Spawn
+- Isochron Scepter
 - Isolate
 - Isolated Chapel
 - Isolation Zone
@@ -14159,6 +14160,7 @@ Council4 currently supports **17,774 of 32,501 cards eligible for paper support 
 - Spell Snip
 - Spell Snuff
 - Spell Syphon
+- Spellbinder
 - Spellbook
 - Spellbook Seeker // Careful Study
 - Spelleater Wolverine

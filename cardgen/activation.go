@@ -323,6 +323,14 @@ func channelActivationSupported(ability compiler.CompiledAbility, functionZone z
 }
 
 func activationReferencesSupported(content compiler.AbilityContent) bool {
+	if recognizeCopyLinkedExiledCardCast(content) {
+		// The imprint copy/cast lowering ("You may copy the exiled card. If you
+		// do, you may cast the copy without paying its mana cost.") identifies the
+		// copied card through the source's imprint link and consumes the "its" of
+		// "its mana cost" into the free-cast rider, so any residual possessive
+		// reference needs no external antecedent resolution.
+		return true
+	}
 	if len(content.Effects) == 1 &&
 		content.Effects[0].Kind == compiler.EffectCastAsThoughFlash &&
 		content.Effects[0].Exact {

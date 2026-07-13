@@ -656,6 +656,18 @@ func (r Renderer) renderPrimitiveTail(ctx *renderCtx, primitive game.Primitive) 
 			return "", err
 		}
 		return r.renderPlayChosenExiledCard(ctx, value)
+	case game.PrimitiveCopyCard:
+		value, err := assertPrimitive[game.CopyCard](primitive)
+		if err != nil {
+			return "", err
+		}
+		return r.renderCopyCard(value)
+	case game.PrimitivePlayLinkedExiledCard:
+		value, err := assertPrimitive[game.PlayLinkedExiledCard](primitive)
+		if err != nil {
+			return "", err
+		}
+		return r.renderPlayLinkedExiledCard(value)
 	case game.PrimitiveImpulseExile:
 		value, err := assertPrimitive[game.ImpulseExile](primitive)
 		if err != nil {

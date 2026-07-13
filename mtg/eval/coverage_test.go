@@ -65,7 +65,12 @@ import (
 // a persistent player designation whose payoff lives in the abilities that read
 // "if you have the city's blessing", not in the primitive that installs it,
 // matching BecomeMonarch and CantBecomeMonarch.
-const knownPrimitiveCount = 127
+//
+// CopyCard and PlayLinkedExiledCard are value-neutral (no atom): copying a
+// linked exiled card and casting that copy for free (Isochron Scepter,
+// Spellbinder) derive their value from the copied card's own effects, not from
+// the copy/cast primitives themselves, matching CastForFree and CopyStackObject.
+const knownPrimitiveCount = 129
 
 // TestPrimitiveCountIsReconciled keeps a newly added resolution primitive from
 // silently falling through the translator: adding one trips this guard so its
