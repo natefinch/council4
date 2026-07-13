@@ -54,7 +54,6 @@ func compileAbility(
 		ChoosePermanentTypeReturn:                   ability.ChoosePermanentTypeReturn,
 		TauntFromRampartSequence:                    ability.TauntFromRampartSequence,
 		TemurSabertoothSequence:                     ability.TemurSabertoothSequence,
-		FightRiggingSequence:                        ability.FightRiggingSequence,
 		RaisePalisadeSequence:                       ability.RaisePalisadeSequence,
 		BattleOfBywaterSequence:                     ability.BattleOfBywaterSequence,
 		ArtifactMutationSequence:                    ability.ArtifactMutationSequence,

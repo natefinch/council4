@@ -81,16 +81,9 @@ func lowerHideawayPlayAbility(
 			"the executable source backend supports only an exact \"{cost}, {T}: You may play the exiled card without paying its mana cost if <condition>\" ability",
 		)
 	}
-	// The only bound reference this ability may carry is the "exiled card"
-	// antecedent inside the play effect itself. The PlayHideawayCard primitive
-	// resolves that card through the persistent Hideaway link, not through
-	// reference binding, so the reference is internal to the effect. Reject any
-	// reference that escapes the effect span so unexpected antecedents fail
-	// closed.
-	for _, reference := range ability.Content.References {
-		if !spanCovered(reference.Span, []shared.Span{effect.Span}) {
-			return unsupported("the executable source backend cannot lower a Hideaway play reference outside the play effect")
-		}
+	instruction, ok := lowerHideawayPlayInstruction(effect, ability.Content.References)
+	if !ok {
+		return unsupported("the executable source backend requires an exact optional Hideaway play effect with no external references")
 	}
 	gate, ok := lowerCondition(ability.Content.Conditions[0], conditionContextEffectGate)
 	if !ok {
@@ -104,11 +97,7 @@ func lowerHideawayPlayAbility(
 	if !ok || zoneOfFunction != zone.Battlefield {
 		return unsupported("the executable source backend supports only a battlefield Hideaway play ability")
 	}
-	instruction := game.Instruction{
-		Primitive: game.PlayHideawayCard{},
-		Optional:  true,
-		Condition: opt.Val(game.EffectCondition{Condition: opt.Val(gate)}),
-	}
+	instruction.Condition = opt.Val(game.EffectCondition{Condition: opt.Val(gate)})
 	result := game.ActivatedAbility{
 		Text:            ability.Text,
 		AdditionalCosts: additionalCosts,
@@ -138,4 +127,57 @@ func lowerHideawayPlayAbility(
 		},
 		sourceSpans: spans,
 	}, true, nil
+}
+
+// lowerHideawayPlayEffect lowers the resolving Hideaway play clause used by
+// triggered sequences such as Rabble Rousing and Fight Rigging. The ordered
+// sequence applies any leading "Then if" condition to the returned instruction.
+func lowerHideawayPlayEffect(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	if len(ctx.content.Effects) != 1 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported Hideaway play effect",
+			"the executable source backend requires an isolated Hideaway play effect with no conditions, targets, keywords, or modes",
+		)
+	}
+	instruction, ok := lowerHideawayPlayInstruction(ctx.content.Effects[0], ctx.content.References)
+	if !ok {
+		return game.AbilityContent{}, unsupportedHideawayPlayDiagnostic(ctx)
+	}
+	return game.Mode{Sequence: []game.Instruction{instruction}}.Ability(), nil
+}
+
+// lowerHideawayPlayInstruction validates the shared semantic core of activated
+// and resolving Hideaway play effects. The printed "exiled card" and "its"
+// references are internal syntax; the primitive resolves the source-scoped
+// Hideaway link directly.
+func lowerHideawayPlayInstruction(effect compiler.CompiledEffect, references []compiler.CompiledReference) (game.Instruction, bool) {
+	if effect.Kind != compiler.EffectPlay ||
+		!effect.PlayHideawayExiledCard ||
+		!effect.CastWithoutPayingManaCost ||
+		!effect.Exact ||
+		effect.Context != parser.EffectContextController ||
+		effect.Negated ||
+		effect.DelayedTiming != 0 ||
+		effect.Duration != compiler.DurationNone {
+		return game.Instruction{}, false
+	}
+	for _, reference := range references {
+		if !spanCovered(reference.Span, []shared.Span{effect.Span}) {
+			return game.Instruction{}, false
+		}
+	}
+	return game.Instruction{Primitive: game.PlayHideawayCard{}, Optional: effect.Optional}, true
+}
+
+func unsupportedHideawayPlayDiagnostic(ctx contentCtx) *shared.Diagnostic {
+	return contentDiagnostic(
+		ctx,
+		"unsupported Hideaway play effect",
+		"the executable source backend requires an exact optional play of the source's hidden card without paying its mana cost",
+	)
 }

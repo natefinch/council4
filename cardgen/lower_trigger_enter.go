@@ -122,7 +122,7 @@ func lowerLifeDamageTrigger(
 	// mode lowers as an independent already-supported effect and the runtime
 	// presents the modes when the ability resolves.
 	if modalTriggerBody(ability) {
-		content, diagnostic := lowerModalTriggerBody(cardName, ability, syntax, pattern.Event)
+		content, diagnostic := lowerModalTriggerBody(cardName, ability, syntax, pattern)
 		if diagnostic != nil {
 			return game.TriggeredAbility{}, diagnostic
 		}
@@ -875,7 +875,7 @@ func lowerPermanentZoneChangeTrigger(
 	// lowering, exactly like spell-cast triggers; non-modal mode lists and empty
 	// effect lists remain unsupported and fail closed.
 	if modalTriggerBody(ability) {
-		content, diagnostic := lowerModalTriggerBody(cardName, ability, syntax, pattern.Event)
+		content, diagnostic := lowerModalTriggerBody(cardName, ability, syntax, pattern)
 		if diagnostic != nil {
 			return game.TriggeredAbility{}, diagnostic
 		}
@@ -1012,7 +1012,7 @@ func lowerCastTrigger(
 			"the executable source backend does not support this semantic spell-cast trigger condition")
 	}
 	if modalTriggerBody(ability) {
-		content, diagnostic := lowerModalTriggerBody(cardName, ability, syntax, pattern.Event)
+		content, diagnostic := lowerModalTriggerBody(cardName, ability, syntax, pattern)
 		if diagnostic != nil {
 			return game.TriggeredAbility{}, diagnostic
 		}

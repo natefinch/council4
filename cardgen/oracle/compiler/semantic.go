@@ -110,7 +110,6 @@ type CompiledAbility struct {
 	ChoosePermanentTypeReturn                   bool
 	TauntFromRampartSequence                    bool
 	TemurSabertoothSequence                     bool
-	FightRiggingSequence                        bool
 	RaisePalisadeSequence                       bool
 	BattleOfBywaterSequence                     bool
 	ArtifactMutationSequence                    bool

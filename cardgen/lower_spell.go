@@ -48,6 +48,11 @@ type contentCtx struct {
 	// outside a triggered ability. It lets typed event-player references lower
 	// only where the resolving stack object retains an authoritative event.
 	triggerEvent game.EventKind
+	// triggerSubjectSelection is the enclosing trigger's event-subject filter.
+	// Triggering-event quantities use it to count only the members of a coalesced
+	// event batch that caused the trigger, such as the Dinosaurs in "Whenever one
+	// or more Dinosaurs you control attack, create that many Treasure tokens."
+	triggerSubjectSelection game.Selection
 	// triggerOneOrMore reports whether the enclosing trigger coalesces its
 	// simultaneous batch into a single trigger ("Whenever one or more ..."). It
 	// gates the batch reanimation of the triggering cards ("put them onto the
@@ -161,19 +166,20 @@ func lowerSequenceClauseContent(
 	allowEventPronoun bool,
 ) (game.AbilityContent, *shared.Diagnostic) {
 	ctx := contentCtx{
-		text:                  bodySyntax.Text,
-		span:                  bodySyntax.Span,
-		optional:              optional,
-		content:               content,
-		enclosingKind:         parent.enclosingKind,
-		sequenceClause:        true,
-		allowEventPronoun:     allowEventPronoun,
-		triggerCardCountEvent: parent.triggerCardCountEvent,
-		triggerEvent:          parent.triggerEvent,
-		triggerOneOrMore:      parent.triggerOneOrMore,
-		triggerToZone:         parent.triggerToZone,
-		selfTrigger:           parent.selfTrigger,
-		hasTargetedPlayers:    parent.hasTargetedPlayers,
+		text:                    bodySyntax.Text,
+		span:                    bodySyntax.Span,
+		optional:                optional,
+		content:                 content,
+		enclosingKind:           parent.enclosingKind,
+		sequenceClause:          true,
+		allowEventPronoun:       allowEventPronoun,
+		triggerCardCountEvent:   parent.triggerCardCountEvent,
+		triggerEvent:            parent.triggerEvent,
+		triggerSubjectSelection: parent.triggerSubjectSelection,
+		triggerOneOrMore:        parent.triggerOneOrMore,
+		triggerToZone:           parent.triggerToZone,
+		selfTrigger:             parent.selfTrigger,
+		hasTargetedPlayers:      parent.hasTargetedPlayers,
 
 		variableCounterRemovalCost: parent.variableCounterRemovalCost,
 		spellTargetPattern:         parent.spellTargetPattern,
@@ -193,17 +199,18 @@ func lowerTriggerBodyContent(
 	pattern game.TriggerPattern,
 ) (game.AbilityContent, *shared.Diagnostic) {
 	ctx := contentCtx{
-		text:                  bodySyntax.Text,
-		span:                  bodySyntax.Span,
-		optional:              optional,
-		content:               content,
-		enclosingKind:         compiler.AbilityTriggered,
-		triggerCardCountEvent: pattern.Event,
-		triggerEvent:          pattern.Event,
-		triggerOneOrMore:      pattern.OneOrMore,
-		triggerToZone:         triggerPatternToZone(pattern),
-		selfTrigger:           pattern.Source == game.TriggerSourceSelf,
-		spellTargetPattern:    pattern.SpellTargetPattern,
+		text:                    bodySyntax.Text,
+		span:                    bodySyntax.Span,
+		optional:                optional,
+		content:                 content,
+		enclosingKind:           compiler.AbilityTriggered,
+		triggerCardCountEvent:   pattern.Event,
+		triggerEvent:            pattern.Event,
+		triggerSubjectSelection: pattern.SubjectSelection,
+		triggerOneOrMore:        pattern.OneOrMore,
+		triggerToZone:           triggerPatternToZone(pattern),
+		selfTrigger:             pattern.Source == game.TriggerSourceSelf,
+		spellTargetPattern:      pattern.SpellTargetPattern,
 	}
 	return lowerContent(cardName, ctx, bodySyntax)
 }
@@ -2173,6 +2180,12 @@ func lowerImmediateSingleEffectSpellTail(
 		}
 		content, diag := lowerCastForFreeSpell(ctx)
 		return content, diag, true
+	case compiler.EffectPlay:
+		if ctx.content.Effects[0].PlayHideawayExiledCard {
+			content, diag := lowerHideawayPlayEffect(ctx)
+			return content, diag, true
+		}
+		return game.AbilityContent{}, nil, false
 	case compiler.EffectAttach:
 		content, diag := lowerAttachSpell(ctx)
 		return content, diag, true

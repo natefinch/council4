@@ -688,6 +688,22 @@ func lowerEventCounterCountAmount(ctx contentCtx, amount compiler.CompiledAmount
 	}, true
 }
 
+// lowerEventAttackerCountAmount lowers a "that many" amount inside a coalesced
+// attack trigger to the number of attackers in the declaration batch that match
+// the trigger's subject selection. Carrying the selection distinguishes "that
+// many Dinosaurs" from every creature that attacked in the same combat.
+func lowerEventAttackerCountAmount(ctx contentCtx, amount compiler.CompiledAmount) (game.DynamicAmount, bool) {
+	if ctx.triggerEvent != game.EventAttackerDeclared || !ctx.triggerOneOrMore {
+		return game.DynamicAmount{}, false
+	}
+	selection := ctx.triggerSubjectSelection
+	return game.DynamicAmount{
+		Kind:       game.DynamicAmountTriggeringAttackerCount,
+		Multiplier: max(amount.Multiplier, 1),
+		Selection:  &selection,
+	}, true
+}
+
 // triggeringEventQuantityKind reports whether a compiled dynamic amount kind is
 // a "that much"/"that many" anaphor that reads a quantity from the triggering
 // event. The parser pins each such phrase to one historically chosen kind
@@ -737,6 +753,8 @@ func lowerTriggeringEventQuantityAmount(ctx contentCtx, amount compiler.Compiled
 		return game.DynamicAmount{Kind: game.DynamicAmountEventLifeChange, Multiplier: multiplier}, true
 	case game.EventCountersAdded:
 		return game.DynamicAmount{Kind: game.DynamicAmountEventCounterCount, Multiplier: multiplier}, true
+	case game.EventAttackerDeclared:
+		return lowerEventAttackerCountAmount(ctx, amount)
 	default:
 		return game.DynamicAmount{}, false
 	}
