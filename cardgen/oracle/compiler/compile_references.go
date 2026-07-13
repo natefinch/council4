@@ -48,7 +48,8 @@ func compileKeywords(syntaxKeywords []parser.Keyword) []CompiledKeyword {
 // restricted Equip stays unsupported rather than silently dropping a quality.
 func compileEquipRestriction(restriction *parser.KeywordEquipRestriction) *CompiledEquipRestriction {
 	compiled := &CompiledEquipRestriction{
-		Subtypes: append([]types.Sub(nil), restriction.Subtypes...),
+		Subtypes:  append([]types.Sub(nil), restriction.Subtypes...),
+		Commander: restriction.Commander,
 	}
 	for _, supertype := range restriction.Supertypes {
 		mapped, ok := compilerSupertype(supertype)
@@ -108,6 +109,7 @@ func compileProtectionKeyword(parameter parser.ProtectionParameter) (game.Protec
 		parameter.Multicolored,
 		parameter.Monocolored,
 		parameter.ChosenColor,
+		parameter.CommanderIdentityComplement,
 		len(parameter.FromColors) > 0,
 		len(parameter.FromTypes) > 0,
 		len(parameter.FromSubtypes) > 0,
@@ -120,12 +122,13 @@ func compileProtectionKeyword(parameter parser.ProtectionParameter) (game.Protec
 		return game.ProtectionKeyword{}, false
 	}
 	protection := game.ProtectionKeyword{
-		Everything:   parameter.Everything,
-		EachColor:    parameter.EachColor,
-		Multicolored: parameter.Multicolored,
-		Monocolored:  parameter.Monocolored,
-		ChosenColor:  parameter.ChosenColor,
-		FromSubtypes: append([]types.Sub(nil), parameter.FromSubtypes...),
+		Everything:                  parameter.Everything,
+		EachColor:                   parameter.EachColor,
+		Multicolored:                parameter.Multicolored,
+		Monocolored:                 parameter.Monocolored,
+		ChosenColor:                 parameter.ChosenColor,
+		CommanderIdentityComplement: parameter.CommanderIdentityComplement,
+		FromSubtypes:                append([]types.Sub(nil), parameter.FromSubtypes...),
 	}
 	for _, value := range parameter.FromColors {
 		compiled, ok := compilerColor(value)

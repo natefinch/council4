@@ -218,6 +218,15 @@ type ProtectionKeyword struct {
 	// FromColors before the continuous effect is stored, so protection checks
 	// never observe ChosenColor.
 	ChosenColor bool
+	// CommanderIdentityComplement marks a dynamic grant of "protection from each
+	// color that's not in your commander's color identity" (Commander's Plate).
+	// The rules resolve it against the granting ability controller's commander
+	// color identity during continuous-effect (layer) computation, rewriting it
+	// into concrete FromColors, so protection checks never observe the marker.
+	// It fails closed (protects from no color) when that identity or the
+	// player association is unavailable; a legitimately colorless commander
+	// identity resolves to all five colors.
+	CommanderIdentityComplement bool
 }
 
 // HideawayKeyword parameterizes the Hideaway N keyword (CR 702.75). Amount is

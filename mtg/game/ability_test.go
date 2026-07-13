@@ -300,6 +300,52 @@ func TestEquipRestrictedActivatedAbilityBuildsRestriction(t *testing.T) {
 	}
 }
 
+func TestEquipCommanderActivatedAbilityBuildsCommanderRestriction(t *testing.T) {
+	manaCost := cost.Mana{cost.O(3)}
+	ability := EquipCommanderActivatedAbility(manaCost)
+	manaCost[0] = cost.O(9)
+
+	if ability.Text != "Equip commander {3}" {
+		t.Fatalf("text = %q, want %q", ability.Text, "Equip commander {3}")
+	}
+	if ability.ZoneOfFunction != zone.Battlefield || ability.Timing != SorceryOnly {
+		t.Fatalf("zone/timing = %v/%v, want battlefield/sorcery", ability.ZoneOfFunction, ability.Timing)
+	}
+	keywordCost, ok := ActivatedBodyEquipCost(&ability)
+	if !ok || !slices.Equal(keywordCost, []cost.Symbol{cost.O(3)}) {
+		t.Fatalf("equip keyword cost = %v, %v; want copied {3}", keywordCost, ok)
+	}
+	targets := BodyTargets(&ability)
+	if len(targets) != 1 {
+		t.Fatalf("targets = %+v, want one", targets)
+	}
+	selection := targets[0].Selection.Val
+	if !selection.MatchCommander {
+		t.Fatalf("selection = %+v, want MatchCommander", selection)
+	}
+	if selection.Controller != ControllerYou {
+		t.Fatalf("controller = %v, want ControllerYou", selection.Controller)
+	}
+	if targets[0].Constraint != "commander you control" {
+		t.Fatalf("constraint = %q", targets[0].Constraint)
+	}
+}
+
+func TestProtectionFromNonCommanderIdentityColorsStaticAbilityMarker(t *testing.T) {
+	ability := ProtectionFromNonCommanderIdentityColorsStaticAbility()
+	prot, ok := StaticBodyProtectionKeyword(&ability)
+	if !ok {
+		t.Fatalf("static body = %+v, want a protection keyword", ability)
+	}
+	if !prot.CommanderIdentityComplement {
+		t.Fatalf("protection = %+v, want CommanderIdentityComplement", prot)
+	}
+	if prot.Everything || prot.EachColor || prot.ChosenColor ||
+		len(prot.FromColors) != 0 {
+		t.Fatalf("protection = %+v, want only the marker family set", prot)
+	}
+}
+
 func TestCantBeBlockedStaticBodyBuildsCompleteMechanic(t *testing.T) {
 	if CantBeBlockedStaticBody.Text != "This creature can't be blocked." {
 		t.Fatalf("text = %q", CantBeBlockedStaticBody.Text)

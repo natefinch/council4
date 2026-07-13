@@ -566,6 +566,11 @@ type ProtectionParameter struct {
 	FromTypes    []CardType  `json:",omitempty"`
 	FromSubtypes []types.Sub `json:",omitempty"`
 	ChosenColor  bool        `json:",omitempty"`
+	// CommanderIdentityComplement marks "protection from each color that's not in
+	// your commander's color identity" (Commander's Plate). The protected color
+	// set is resolved dynamically by the rules from the granting ability
+	// controller's commander color identity; the parser only records the family.
+	CommanderIdentityComplement bool `json:",omitempty"`
 }
 
 // EnchantPredicate is the typed object restriction following an Enchant keyword.
@@ -776,6 +781,10 @@ type KeywordEquipRestriction struct {
 	Span       shared.Span `json:"-"`
 	Supertypes []Supertype `json:",omitempty"`
 	Subtypes   []types.Sub `json:",omitempty"`
+	// Commander marks "Equip commander {cost}" (Commander's Plate): the Equipment
+	// may attach only to a commander its controller controls. It is orthogonal to
+	// the supertype/subtype quality restriction and is never combined with them.
+	Commander bool `json:",omitempty"`
 }
 
 // KeywordSelectorForm identifies how a selector introduces its keyword.
@@ -1993,9 +2002,15 @@ func parseEquipRestriction(tokens []shared.Token, start int, atoms Atoms) (*Keyw
 			j++
 			continue
 		}
+		if equalWord(token, "commander") {
+			restriction.Commander = true
+			j++
+			continue
+		}
 		return nil, start, false
 	}
-	if len(restriction.Supertypes) == 0 && len(restriction.Subtypes) == 0 {
+	if len(restriction.Supertypes) == 0 && len(restriction.Subtypes) == 0 &&
+		!restriction.Commander {
 		return nil, start, false
 	}
 	if j >= len(tokens) || tokens[j].Kind != shared.Symbol {
@@ -2253,6 +2268,18 @@ func parseProtectionKeywordParameter(
 			), start + 2
 		default:
 		}
+	}
+	if start+9 < len(tokens) &&
+		equalWord(tokens[start+1], "each") && equalWord(tokens[start+2], "color") &&
+		equalWord(tokens[start+3], "that's") && equalWord(tokens[start+4], "not") &&
+		equalWord(tokens[start+5], "in") && equalWord(tokens[start+6], "your") &&
+		equalWord(tokens[start+7], "commander's") && equalWord(tokens[start+8], "color") &&
+		equalWord(tokens[start+9], "identity") {
+		return NewProtectionKeywordParameter(
+			shared.SpanOf(tokens[start:start+10]),
+			"commander identity complement",
+			ProtectionParameter{CommanderIdentityComplement: true},
+		), start + 10
 	}
 	if start+2 < len(tokens) &&
 		(equalWord(tokens[start+1], "each") && equalWord(tokens[start+2], "color") ||

@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,778 of 32,501 cards eligible for paper support (54.7%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,780 of 32,501 cards eligible for paper support (54.7%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2836,6 +2836,7 @@ Council4 currently supports **17,778 of 32,501 cards eligible for paper support 
 - Commander Greven il-Vec
 - Commander's Authority
 - Commander's Insignia
+- Commander's Plate
 - Commander's Sphere
 - Commanding Presence
 - Commercial District
@@ -16337,6 +16338,7 @@ Council4 currently supports **17,778 of 32,501 cards eligible for paper support 
 - Unshakable Tail
 - Unsparing Boltcaster
 - Unspeakable Symbol
+- Unstable Molecule Suit
 - Unstable Mutation
 - Unstable Obelisk
 - Unstoppable Ash
