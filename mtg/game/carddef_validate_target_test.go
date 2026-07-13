@@ -130,11 +130,10 @@ func TestValidateCardDefStackObjectTargetKinds(t *testing.T) {
 				MaxTargets: 1,
 				Allow:      TargetAllowStackObject,
 				Predicate: TargetPredicate{
-					SpellCardTypes:   []types.Card{types.Creature},
-					StackObjectKinds: []StackObjectKind{StackSpell, StackActivatedAbility},
+					SpellCardTypesAny: []types.Card{types.Instant, types.Sorcery},
+					StackObjectKinds:  []StackObjectKind{StackSpell, StackActivatedAbility, StackTriggeredAbility},
 				},
 			},
-			wantIssue: true,
 		},
 		{
 			name: "spell type union",

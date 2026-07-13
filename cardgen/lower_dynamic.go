@@ -1668,6 +1668,18 @@ func counterAbilityTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, 
 	}
 	predicate.SpellSupertypes = append([]types.Super(nil), supertypes...)
 	predicate.SpellColorless = target.Selector.Colorless
+	// A card-type union on the spell arm ("instant spell, sorcery spell, ...")
+	// likewise restricts only the spell choice, so it also requires a spell among
+	// the allowed kinds. The compiler keeps only multi-type unions on a mixed
+	// selection, so a single card type never reaches here; lowering fails closed
+	// if one does rather than dropping the restriction.
+	required := target.Selector.RequiredTypesAny()
+	if len(required) > 0 {
+		if !allowsSpell || len(required) < 2 {
+			return game.TargetSpec{}, false
+		}
+		predicate.SpellCardTypesAny = append([]types.Card(nil), required...)
+	}
 	return game.TargetSpec{
 		MinTargets: 1,
 		MaxTargets: 1,

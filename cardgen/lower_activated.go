@@ -595,6 +595,9 @@ func modalOptionCompletelyRecognized(content compiler.AbilityContent, syntax *pa
 	}
 	for i := range content.Effects {
 		spans = append(spans, content.Effects[i].Span)
+		if content.Effects[i].CopyMayChooseNewTargets {
+			spans = append(spans, content.Effects[i].CopyChooseNewTargetsRiderSpan)
+		}
 	}
 	for _, target := range content.Targets {
 		spans = append(spans, target.Span)

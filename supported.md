@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,730 of 32,501 cards eligible for paper support (54.6%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,733 of 32,501 cards eligible for paper support (54.6%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -7648,6 +7648,7 @@ Council4 currently supports **17,730 of 32,501 cards eligible for paper support 
 - Inside Source
 - Insidious Bookworms
 - Insidious Fungus
+- Insidious Will
 - Insight
 - Insight Engine
 - Insolence
@@ -12064,6 +12065,7 @@ Council4 currently supports **17,730 of 32,501 cards eligible for paper support 
 - Retrofitter Foundry
 - Return from the Wilds
 - Return of the Wildspeaker
+- Return the Favor
 - Return to Battle
 - Return to Dust
 - Return to Nature
@@ -13553,6 +13555,7 @@ Council4 currently supports **17,730 of 32,501 cards eligible for paper support 
 - Siren Song Lyre
 - Sisay's Ring
 - Sister Hospitaller
+- Sister of Silence
 - Sisterhood of Karn
 - Sisters of the Flame
 - Sivitri Scarzam

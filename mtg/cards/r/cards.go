@@ -83,6 +83,7 @@ var Cards = []cardset.Entry{
 	{Name: "Respite", New: Respite},
 	{Name: "Resplendent Griffin", New: ResplendentGriffin},
 	{Name: "Restoration Angel", New: RestorationAngel},
+	{Name: "Return the Favor", New: ReturnTheFavor},
 	{Name: "Return to the Ranks", New: ReturnToTheRanks},
 	{Name: "Returned Phalanx", New: ReturnedPhalanx},
 	{Name: "Reveillark", New: Reveillark},
