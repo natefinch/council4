@@ -43,6 +43,7 @@ var Cards = []cardset.Entry{
 	{Name: "Innkeeper's Talent", New: InnkeeperSTalent},
 	{Name: "Inquisitor Exarch", New: InquisitorExarch},
 	{Name: "Insectoid Exterminator", New: InsectoidExterminator},
+	{Name: "Insidious Will", New: InsidiousWill},
 	{Name: "Insolence", New: Insolence},
 	{Name: "Inspired Inventor", New: InspiredInventor},
 	{Name: "Inspired Sprite", New: InspiredSprite},

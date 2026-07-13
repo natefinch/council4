@@ -151,6 +151,7 @@ var Cards = []cardset.Entry{
 	{Name: "Simian Grunts", New: SimianGrunts},
 	{Name: "Simic Basilisk", New: SimicBasilisk},
 	{Name: "Singing Bell Strike", New: SingingBellStrike},
+	{Name: "Sister of Silence", New: SisterOfSilence},
 	{Name: "Skalla Wolf", New: SkallaWolf},
 	{Name: "Skarrg Guildmage", New: SkarrgGuildmage},
 	{Name: "Skarrgan Hellkite", New: SkarrganHellkite},

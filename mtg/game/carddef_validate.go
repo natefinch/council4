@@ -1019,11 +1019,17 @@ func (v *cardDefValidator) validateStackObjectTargetPredicate(faceName, path str
 		}
 		seen[kind] = true
 	}
+	// SpellCardTypes, SpellCardTypesAny, and ExcludedSpellCardTypes qualify only
+	// matched spells, so like the spell-shape predicates below they may accompany
+	// ability kinds in a mixed target ("target instant spell, sorcery spell,
+	// activated ability, or triggered ability") but require that spells be
+	// allowed. The runtime matcher ignores spell qualifiers for ability stack
+	// objects, restricting only the spell choice (CR 115.4).
 	hasSpellTypePredicate := len(target.Predicate.SpellCardTypes) > 0 ||
 		len(target.Predicate.SpellCardTypesAny) > 0 ||
 		len(target.Predicate.ExcludedSpellCardTypes) > 0
-	if hasSpellTypePredicate && (!allowsSpells || allowsAbilities) {
-		v.add(faceName, appendPath(path, "Predicate"), CardDefIssueInvalidTargetSpec, "spell type predicates require spell-only stack-object targets")
+	if hasSpellTypePredicate && !allowsSpells {
+		v.add(faceName, appendPath(path, "Predicate"), CardDefIssueInvalidTargetSpec, "spell type predicates require a stack-object target that allows spells")
 	}
 	if len(target.Predicate.SpellCardTypes) > 0 && len(target.Predicate.SpellCardTypesAny) > 0 {
 		v.add(faceName, appendPath(path, "Predicate"), CardDefIssueInvalidTargetSpec, "spell type target cannot combine all-of and any-of predicates")
