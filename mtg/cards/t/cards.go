@@ -14,6 +14,7 @@ var Cards = []cardset.Entry{
 	{Name: "Tajuru Stalwart", New: TajuruStalwart},
 	{Name: "Take Heart", New: TakeHeart},
 	{Name: "Talas Researcher", New: TalasResearcher},
+	{Name: "Talon Gates of Madara", New: TalonGatesOfMadara},
 	{Name: "Tangle Asp", New: TangleAsp},
 	{Name: "Tannuk, Memorial Ensign", New: TannukMemorialEnsign},
 	{Name: "Tapestry of the Ages", New: TapestryOfTheAges},

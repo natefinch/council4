@@ -256,3 +256,37 @@ func TestLowerOptionalPutLandFromHandTapped(t *testing.T) {
 		t.Fatal("put-from-hand step is not optional (the \"you may\" wrapper was lost)")
 	}
 }
+
+// TestLowerPutSelfFromHandOntoBattlefield covers the hand self-entry family
+// ("{4}: Put this card from your hand onto the battlefield.", Talon Gates of
+// Madara): the activated ability functions from the hand and its sole resolving
+// primitive is a PutOnBattlefield sourced from the ability's own card, so the
+// engine moves the source card itself at resolution.
+func TestLowerPutSelfFromHandOntoBattlefield(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Gate",
+		Layout:     "normal",
+		TypeLine:   "Land",
+		OracleText: "{4}: Put this card from your hand onto the battlefield.",
+	})
+	if len(face.ActivatedAbilities) != 1 {
+		t.Fatalf("activated abilities = %d, want 1", len(face.ActivatedAbilities))
+	}
+	ability := face.ActivatedAbilities[0]
+	if ability.ZoneOfFunction != zone.Hand {
+		t.Fatalf("zone of function = %v, want hand", ability.ZoneOfFunction)
+	}
+	mode := ability.Content.Modes[0]
+	if len(mode.Sequence) != 1 {
+		t.Fatalf("sequence = %#v, want single put-onto-battlefield", mode.Sequence)
+	}
+	put, ok := mode.Sequence[0].Primitive.(game.PutOnBattlefield)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.PutOnBattlefield", mode.Sequence[0].Primitive)
+	}
+	ref, ok := put.Source.CardRef()
+	if !ok || ref.Kind != game.CardReferenceSource {
+		t.Fatalf("put source = %#v, want the ability's own source card", put.Source)
+	}
+}

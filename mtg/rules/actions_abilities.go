@@ -197,18 +197,51 @@ func (e *Engine) applyHandAbilityWithChoices(g *game.Game, playerID game.PlayerI
 	if !ok {
 		return false
 	}
-	manaCost := effectiveHandAbilityCost(g, playerID, card, &ability)
-	prefs := e.paymentPreferencesForCost(g, playerID, manaCost, nil, activate.XValue, agents, log)
-	if !paymentOrch.payGenericCost(g, payment.GenericRequest{
-		PlayerID: playerID,
-		Cost:     manaCost,
-		XValue:   activate.XValue,
-		Prefs:    prefs,
-	}) {
-		return false
-	}
-	if !discardCardFromHand(g, playerID, card.ID) {
-		panic("hand activation source disappeared after validation")
+	// The self-entry family (Talon Gates of Madara, Urban Retreat) keeps its
+	// source card in the hand until resolution, when the ability's own
+	// PutOnBattlefield moves it. It may carry arbitrary additional costs (a
+	// return-to-hand, a life payment, etc.), so it pays through the general
+	// ability-cost path. The discard-self family (Channel, Transmute) instead
+	// removes its own card from the hand as its additional cost and pays only
+	// mana here.
+	selfEntry := bodyPutsSourceCardOntoBattlefield(&ability)
+	discardSelf := !selfEntry && len(ability.AdditionalCosts) == 1 && abilityHasDiscardThisCardCost(ability.AdditionalCosts)
+	var additionalCostsPaid []string
+	var sacrificedAsCostIDs, exiledAsCostIDs []id.ID
+	if selfEntry {
+		prefs := e.paymentPreferencesForCostFromSource(g, playerID, manaCostPtr(ability.ManaCost), abilityAdditionalCosts(ability.AdditionalCosts), activate.XValue, card.ID, zone.Hand, agents, log)
+		costPaid, ok := paymentOrch.payAbilityCosts(g, payment.AbilityRequest{
+			PlayerID:         playerID,
+			SourceCardID:     card.ID,
+			SourceZone:       zone.Hand,
+			ManaCost:         ability.ManaCost,
+			AdditionalCosts:  abilityAdditionalCosts(ability.AdditionalCosts),
+			AlternativeCosts: append([]cost.Alternative(nil), ability.AlternativeCosts...),
+			XValue:           activate.XValue,
+			Prefs:            prefs,
+		})
+		if !ok {
+			return false
+		}
+		sacrificedAsCostIDs = costPaid.sacrificedIDs
+		exiledAsCostIDs = costPaid.exiledIDs
+	} else {
+		manaCost := effectiveHandAbilityCost(g, playerID, card, &ability)
+		prefs := e.paymentPreferencesForCost(g, playerID, manaCost, nil, activate.XValue, agents, log)
+		if !paymentOrch.payGenericCost(g, payment.GenericRequest{
+			PlayerID: playerID,
+			Cost:     manaCost,
+			XValue:   activate.XValue,
+			Prefs:    prefs,
+		}) {
+			return false
+		}
+		if discardSelf {
+			if !discardCardFromHand(g, playerID, card.ID) {
+				panic("hand activation source disappeared after validation")
+			}
+			additionalCostsPaid = []string{"Discard this card"}
+		}
 	}
 	obj := &game.StackObject{
 		ID:                  g.IDGen.Next(),
@@ -223,7 +256,9 @@ func (e *Engine) applyHandAbilityWithChoices(g *game.Game, playerID game.PlayerI
 		TargetCounts:        targetCounts,
 		ChosenModes:         append([]int(nil), activate.ChosenModes...),
 		XValue:              activate.XValue,
-		AdditionalCostsPaid: []string{"Discard this card"},
+		AdditionalCostsPaid: additionalCostsPaid,
+		SacrificedAsCostIDs: sacrificedAsCostIDs,
+		ExiledAsCostIDs:     exiledAsCostIDs,
 		InlineActivated:     &ability,
 	}
 	pushAbilityToStack(g, obj)

@@ -82,6 +82,25 @@ func TestCompileDiscardSelfActivationFunctionsFromHand(t *testing.T) {
 	}
 }
 
+func TestCompilePutSelfFromHandActivationFunctionsFromHand(t *testing.T) {
+	t.Parallel()
+
+	// The hand self-entry family moves the ability's own source card from the
+	// hand onto the battlefield, so the activation must be recognized as
+	// functioning from the hand even though it carries no discard-self cost.
+	compilation, diagnostics := compileSource(
+		"{4}: Put this card from your hand onto the battlefield.",
+		pipelineContext{},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	ability := compilation.Abilities[0]
+	if ability.ActivationZone != zone.Hand {
+		t.Fatalf("activation zone = %v, want hand", ability.ActivationZone)
+	}
+}
+
 func TestCompileSpellAdditionalPayXLifeCost(t *testing.T) {
 	t.Parallel()
 	compilation, diagnostics := compileSource(

@@ -27,6 +27,7 @@ var Cards = []cardset.Entry{
 	{Name: "Untamed Kavu", New: UntamedKavu},
 	{Name: "Untimely Malfunction", New: UntimelyMalfunction},
 	{Name: "Unwilling Recruit", New: UnwillingRecruit},
+	{Name: "Urban Retreat", New: UrbanRetreat},
 	{Name: "Urborg Mindsucker", New: UrborgMindsucker},
 	{Name: "Urborg Skeleton", New: UrborgSkeleton},
 	{Name: "Ureni of the Unwritten", New: UreniOfTheUnwritten},

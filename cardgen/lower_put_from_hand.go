@@ -30,6 +30,9 @@ func lowerPutEffectSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnosti
 	if content, ok := lowerPutFromHandSpell(ctx); ok {
 		return content, nil
 	}
+	if content, ok := lowerPutSourceFromHandOntoBattlefield(ctx); ok {
+		return content, nil
+	}
 	if content, ok := lowerPutSourceOnLibrary(ctx); ok {
 		return content, nil
 	}
@@ -315,5 +318,100 @@ func lowerPutFromHandSpell(ctx contentCtx) (game.AbilityContent, bool) {
 			effect.EntersAttacking,
 			anyNumber,
 		),
+	}}}.Ability(), true
+}
+
+// lowerPutSourceFromHandOntoBattlefield lowers the self-entry ability "Put this
+// card from your hand onto the battlefield." — an activated ability whose
+// resolution puts its own source card onto the battlefield from the hand (Talon
+// Gates of Madara's "{4}: Put this card from your hand onto the battlefield.",
+// Urban Retreat). It is distinct from lowerPutFromHandSpell, which chooses one
+// or more matching cards from the hand: here the moved card is the ability's own
+// source, identified by a "this card" self-reference rather than a selector
+// count, so the produced instruction moves the source card itself.
+//
+// It produces one game.PutOnBattlefield instruction sourced from the ability's
+// own card reference. Because the source card stays in the hand while the
+// ability is on the stack (its zone is not consumed as a cost), the runtime
+// moves it only at resolution; a countered ability therefore leaves the card in
+// the hand, and a source that has left the hand by resolution fails closed and
+// moves nothing.
+//
+// It is card-name-blind and fails closed (ok=false) on any shape it does not
+// fully model: a non-hand source or non-battlefield destination, any targets, an
+// amount or selector that would denote a chosen card rather than the source, a
+// reference binding to anything but the source, an "under your control" or
+// "attacking" rider, negation, division, an optional wrapper, a delayed timing,
+// or a non-instant duration. A plain "onto the battlefield tapped" entry rider
+// is honored and carried through to the produced instruction.
+func lowerPutSourceFromHandOntoBattlefield(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Targets) != 0 {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	// Invariant: lowerPutSourceFromHandOntoBattlefield is reached only from
+	// lowerPutEffectSpell, which lowerImmediateSingleEffectSpell dispatches solely
+	// from its `case compiler.EffectPut` arm (lower_spell.go), so the kind is
+	// always EffectPut here.
+	if effect.Kind != compiler.EffectPut {
+		panic(fmt.Sprintf("lowerPutSourceFromHandOntoBattlefield: expected EffectPut, got kind %v", effect.Kind))
+	}
+	if effect.Negated ||
+		effect.Divided ||
+		effect.Optional ||
+		effect.DelayedTiming != 0 ||
+		effect.Duration != compiler.DurationNone ||
+		effect.FromZone != zone.Hand ||
+		effect.ToZone != zone.Battlefield ||
+		effect.Destination != parser.EffectDestinationUnspecified ||
+		effect.UnderYourControl ||
+		effect.EntersAttacking {
+		return game.AbilityContent{}, false
+	}
+	// The moved card is the ability's own source, denoted by a "this card"
+	// self-reference, not a selector count. Any amount ("a card", "any number
+	// of", a fixed count, X, a dynamic count) would denote a chosen card and
+	// fails closed.
+	amount := effect.Amount
+	if amount.Known ||
+		amount.RangeKnown ||
+		amount.VariableX ||
+		amount.AnyNumber ||
+		amount.DynamicKind != 0 ||
+		amount.Value != 0 {
+		return game.AbilityContent{}, false
+	}
+	if effect.Selector.Kind != compiler.SelectorCard ||
+		effect.Selector.Zone != zone.Hand ||
+		effect.Selector.All ||
+		effect.Selector.Another ||
+		effect.Selector.Other {
+		return game.AbilityContent{}, false
+	}
+	// Every reference in the clause must denote the source card: the "this card"
+	// self-reference and any of its possessives. A reference binding to anything
+	// else denotes some other object and fails closed rather than moving the
+	// wrong card.
+	if len(ctx.content.References) == 0 {
+		return game.AbilityContent{}, false
+	}
+	sawThis := false
+	for i := range ctx.content.References {
+		reference := ctx.content.References[i]
+		if reference.Binding != compiler.ReferenceBindingSource {
+			return game.AbilityContent{}, false
+		}
+		if reference.Kind == compiler.ReferenceThisObject {
+			sawThis = true
+		}
+	}
+	if !sawThis {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{Sequence: []game.Instruction{{
+		Primitive: game.PutOnBattlefield{
+			Source:      game.CardBattlefieldSource(game.CardReference{Kind: game.CardReferenceSource}),
+			EntryTapped: effect.EntersTapped,
+		},
 	}}}.Ability(), true
 }

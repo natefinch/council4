@@ -483,12 +483,17 @@ func recognizeActivationZone(ability *CompiledAbility) {
 		return
 	}
 	ability.ActivationZone = zone.Battlefield
-	if activationCostUsesSourceFromZone(*ability, zone.Hand) {
+	if activationCostUsesSourceFromZone(*ability, zone.Hand) ||
+		contentMovesSourceFromZone(ability.Content, zone.Hand) {
+		// An activated ability whose cost pays from hand ("Discard this card")
+		// or whose resolving effect moves the source card out of the hand
+		// ("Put this card from your hand onto the battlefield.", Talon Gates of
+		// Madara; Urban Retreat) functions from the hand.
 		ability.ActivationZone = zone.Hand
 		return
 	}
 	if activationCostUsesSourceFromGraveyard(*ability) ||
-		contentMovesSourceFromGraveyard(ability.Content) {
+		contentMovesSourceFromZone(ability.Content, zone.Graveyard) {
 		ability.ActivationZone = zone.Graveyard
 	}
 }
@@ -520,20 +525,20 @@ func activationCostUsesSourceFromZone(ability CompiledAbility, sourceZone zone.T
 	return false
 }
 
-// contentMovesSourceFromGraveyard reports whether the ability's content moves
-// the source card out of the graveyard — either returning it (EffectReturn, as
-// in Feasting Troll King's "Return this card from your graveyard to the
+// contentMovesSourceFromZone reports whether the ability's content moves the
+// source card out of fromZone — either returning it (EffectReturn, as in
+// Feasting Troll King's "Return this card from your graveyard to the
 // battlefield") or putting it elsewhere (EffectPut, as in Champion of Stray
-// Souls' "Put this card from your graveyard on top of your library"). Both make
-// the ability function from the graveyard, so its activation zone is the
-// graveyard rather than the battlefield.
-func contentMovesSourceFromGraveyard(content AbilityContent) bool {
+// Souls' "Put this card from your graveyard on top of your library", or Talon
+// Gates of Madara's "Put this card from your hand onto the battlefield"). Both
+// make the ability function from fromZone rather than the battlefield.
+func contentMovesSourceFromZone(content AbilityContent, fromZone zone.Type) bool {
 	for effectIndex := range content.Effects {
 		effect := &content.Effects[effectIndex]
 		if effect.Kind != EffectReturn && effect.Kind != EffectPut {
 			continue
 		}
-		if effect.FromZone != zone.Graveyard {
+		if effect.FromZone != fromZone {
 			continue
 		}
 		for _, reference := range content.References {
@@ -544,7 +549,7 @@ func contentMovesSourceFromGraveyard(content AbilityContent) bool {
 		}
 	}
 	for _, mode := range content.Modes {
-		if contentMovesSourceFromGraveyard(mode.Content) {
+		if contentMovesSourceFromZone(mode.Content, fromZone) {
 			return true
 		}
 	}

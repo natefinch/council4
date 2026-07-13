@@ -596,9 +596,19 @@ func canActivateHandAbilityWithModes(g *game.Game, playerID game.PlayerID, cardI
 	}
 	if game.BodyFunctionZone(body) != zone.Hand ||
 		game.BodyHasKeyword(body, game.Cycling) ||
-		game.BodyHasKeyword(body, game.Ninjutsu) ||
-		len(body.AdditionalCosts) != 1 ||
-		!abilityHasDiscardThisCardCost(body.AdditionalCosts) {
+		game.BodyHasKeyword(body, game.Ninjutsu) {
+		return false
+	}
+	// A hand activated ability is supported in one of two families: the
+	// discard-self family (Channel, Transmute), whose sole additional cost
+	// discards its own card from the hand, and the self-entry family (Talon Gates
+	// of Madara, Urban Retreat), whose resolving content puts its own source card
+	// onto the battlefield from the hand. The self-entry family may carry
+	// arbitrary additional costs, which are validated through the general
+	// ability-cost planner below. Every other hand-ability shape fails closed.
+	selfEntry := bodyPutsSourceCardOntoBattlefield(body)
+	discardSelf := !selfEntry && len(body.AdditionalCosts) == 1 && abilityHasDiscardThisCardCost(body.AdditionalCosts)
+	if !discardSelf && !selfEntry {
 		return false
 	}
 	if !activatedAbilityTimingAllows(g, playerID, body.Timing) ||
@@ -616,6 +626,17 @@ func canActivateHandAbilityWithModes(g *game.Game, playerID game.PlayerID, cardI
 	if !modesValidForBody(body, chosenModes) ||
 		!targetsValidForBodyFromSourceObjectWithModes(g, playerID, def, 0, body, chosenModes, targets) {
 		return false
+	}
+	if selfEntry {
+		return paymentOrch.buildAbilityCostPlan(g, payment.AbilityRequest{
+			PlayerID:         playerID,
+			SourceCardID:     card.ID,
+			SourceZone:       zone.Hand,
+			ManaCost:         body.ManaCost,
+			AdditionalCosts:  abilityAdditionalCosts(body.AdditionalCosts),
+			AlternativeCosts: append([]cost.Alternative(nil), body.AlternativeCosts...),
+			XValue:           xValue,
+		})
 	}
 	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{
 		PlayerID: playerID,
@@ -862,6 +883,37 @@ func abilityHasDiscardThisCardCost(costs []cost.Additional) bool {
 		return strings.TrimSuffix(strings.ToLower(strings.TrimSpace(addCost.Text)), ".") == "discard this card"
 	}
 	return addCost.Source == zone.Hand
+}
+
+// bodyPutsSourceCardOntoBattlefield reports whether the activated ability's
+// resolving content puts the ability's own source card onto the battlefield
+// ("Put this card from your hand onto the battlefield.", Talon Gates of Madara).
+// It backs the hand self-entry family: such an ability keeps its source in the
+// hand while it is on the stack and moves it only at resolution, so it neither
+// consumes the card as a cost nor strands it when countered.
+//
+// It recognizes the single-mode, single-instruction shape whose sole primitive
+// is a PutOnBattlefield sourced from the ability's own card reference. Any other
+// shape returns false so an unrelated hand ability is never mistaken for the
+// self-entry family.
+func bodyPutsSourceCardOntoBattlefield(body *game.ActivatedAbility) bool {
+	if body == nil {
+		return false
+	}
+	content := body.Content
+	if content.IsModal() || len(content.Modes) != 1 {
+		return false
+	}
+	sequence := content.Modes[0].Sequence
+	if len(sequence) != 1 {
+		return false
+	}
+	put, ok := sequence[0].Primitive.(game.PutOnBattlefield)
+	if !ok {
+		return false
+	}
+	ref, ok := put.Source.CardRef()
+	return ok && ref.Kind == game.CardReferenceSource
 }
 
 func canTapPermanentForAbility(g *game.Game, permanent *game.Permanent) bool {
