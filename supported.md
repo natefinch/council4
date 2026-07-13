@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,741 of 32,501 cards eligible for paper support (54.6%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,745 of 32,501 cards eligible for paper support (54.6%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2375,6 +2375,7 @@ Council4 currently supports **17,741 of 32,501 cards eligible for paper support 
 - Cemetery Gate
 - Cemetery Prowler
 - Cemetery Reaper
+- Cemetery Tampering
 - Cenn's Enlistment
 - Cenn's Heir
 - Cenote Scout
@@ -2788,6 +2789,7 @@ Council4 currently supports **17,741 of 32,501 cards eligible for paper support 
 - Collective Resistance
 - Collective Restraint
 - Collective Unconscious
+- Collector's Cage
 - Collector's Case
 - Collector's Vault
 - Colleen Wing, Street Samurai
@@ -11147,6 +11149,7 @@ Council4 currently supports **17,741 of 32,501 cards eligible for paper support 
 - Plundering Pirate
 - Plundering Predator
 - Plunge into Winter
+- Poetic Ingenuity
 - Point the Way
 - Pointed Discussion
 - Poised Practitioner
@@ -11551,6 +11554,7 @@ Council4 currently supports **17,741 of 32,501 cards eligible for paper support 
 - Rabbit
 - Rabbit Battery
 - Rabbit Response
+- Rabble Rousing
 - Rabid Bite
 - Rabid Bloodsucker
 - Rabid Elephant

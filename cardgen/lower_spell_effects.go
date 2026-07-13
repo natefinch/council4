@@ -1454,6 +1454,9 @@ func lowerTriggeringEventQuantity(
 	if dynamic, ok := lowerEventCounterCountAmount(ctx, amount); ok {
 		return dynamic, true
 	}
+	if dynamic, ok := lowerEventAttackerCountAmount(ctx, amount); ok {
+		return dynamic, true
+	}
 	if dynamic, ok := lowerEventCardCountAmount(ctx, amount); ok {
 		return dynamic, true
 	}

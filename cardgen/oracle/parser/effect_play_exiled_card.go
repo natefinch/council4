@@ -2,19 +2,32 @@ package parser
 
 import "github.com/natefinch/council4/cardgen/oracle/shared"
 
-// parsePlayExiledCardEffect recognizes the Hideaway activated-ability effect
-// "You may play the exiled card without paying its mana cost" (CR 702.75c),
-// optionally followed by an "if <condition>" activation gate that is parsed
-// separately as the ability's condition. It plays the card the source permanent
-// hid away with its Hideaway enters action: a land is put onto the battlefield
-// and any other card is cast for free.
+// parsePlayExiledCardEffect recognizes the Hideaway play effect "You may play
+// the exiled card without paying its mana cost" (CR 702.75c). It accepts either
+// a trailing activation gate or a leading resolving "Then if <condition>,"
+// gate; both conditions are parsed separately and lower onto the instruction.
+// The effect plays the card the source permanent hid away with its Hideaway
+// enters action: a land is put onto the battlefield and any other card is cast
+// for free.
 //
 // The recognizer is intentionally narrow — it matches only the exact
 // "play the exiled card without paying its mana cost" wording — so it never
 // reinterprets other "play"/"cast" effects. Any other wording fails closed and
 // flows through the generic effect parser.
 func parsePlayExiledCardEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
-	words := wordsOnly(tokens)
+	body := tokens
+	if len(body) > 0 && equalWord(body[0], "then") {
+		body = body[1:]
+	}
+	if len(body) > 0 {
+		if intro, _ := conditionIntroAt(body, 0); intro == ConditionIntroIf {
+			end := conditionClauseEnd(body, 0)
+			if end < len(body) && body[end].Kind == shared.Comma {
+				body = body[end+1:]
+			}
+		}
+	}
+	words := wordsOnly(body)
 	rest, ok := cutTokenPrefix(words, "you", "may")
 	if !ok {
 		return nil, false
@@ -36,12 +49,13 @@ func parsePlayExiledCardEffect(sentence Sentence, tokens []shared.Token, atoms A
 		ClauseSpan:                sentence.Span,
 		VerbSpan:                  verbSpan,
 		Text:                      sentence.Text,
-		Tokens:                    append([]shared.Token(nil), tokens...),
+		Tokens:                    append([]shared.Token(nil), body...),
 		Context:                   EffectContextController,
 		Optional:                  true,
 		OptionalSpan:              optionalSpan,
 		PlayHideawayExiledCard:    true,
 		CastWithoutPayingManaCost: true,
+		References:                referencesInSpan(atoms, sentence.Span),
 		Exact:                     true,
 	}}, true
 }

@@ -605,6 +605,10 @@ func lowerSingleOptionalEffect(
 		return game.AbilityContent{}, false
 	}
 	effect := ctx.content.Effects[0]
+	if effect.PlayHideawayExiledCard {
+		content, diagnostic := lowerHideawayPlayEffect(ctx)
+		return content, diagnostic == nil
+	}
 	if !effect.Optional ||
 		effect.Negated ||
 		effect.DelayedTiming != 0 ||

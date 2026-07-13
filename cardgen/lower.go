@@ -1037,66 +1037,6 @@ func lowerExecutableAbility(
 			sourceSpans: []shared.Span{ability.Span},
 		}, nil
 	}
-	if ability.FightRiggingSequence {
-		return abilityLowering{
-			triggeredAbility: opt.Val(game.TriggeredAbility{
-				Trigger: game.TriggerCondition{
-					Type: game.TriggerAt,
-					Pattern: game.TriggerPattern{
-						Event:      game.EventBeginningOfStep,
-						Step:       game.StepBeginningOfCombat,
-						Controller: game.TriggerControllerYou,
-					},
-				},
-				Content: game.Mode{
-					Targets: []game.TargetSpec{{
-						MinTargets: 1,
-						MaxTargets: 1,
-						Constraint: "target creature you control",
-						Allow:      game.TargetAllowPermanent,
-						Selection: opt.Val(game.Selection{
-							RequiredTypesAny: []types.Card{types.Creature},
-							Controller:       game.ControllerYou,
-						}),
-					}},
-					Sequence: []game.Instruction{
-						{Primitive: game.AddCounter{
-							Amount:      game.Fixed(1),
-							Object:      game.TargetPermanentReference(0),
-							CounterKind: counter.PlusOnePlusOne,
-						}},
-						{
-							Primitive: game.PlayHideawayCard{},
-							Optional:  true,
-							Condition: opt.Val(game.EffectCondition{
-								Condition: opt.Val(game.Condition{
-									ControlsMatching: opt.Val(game.SelectionCount{
-										Selection: game.Selection{
-											RequiredTypes: []types.Card{types.Creature},
-											Power: opt.Val(compare.Int{
-												Op:    compare.GreaterOrEqual,
-												Value: 7,
-											}),
-										},
-										MinCount: 1,
-									}),
-								}),
-							}),
-						},
-					},
-				}.Ability(),
-			}),
-			consumed: semanticConsumption{
-				trigger:    true,
-				conditions: len(ability.Content.Conditions),
-				effects:    len(ability.Content.Effects),
-				keywords:   len(ability.Content.Keywords),
-				references: len(ability.Content.References),
-				targets:    len(ability.Content.Targets),
-			},
-			sourceSpans: []shared.Span{ability.Span},
-		}, nil
-	}
 	if ability.TauntFromRampartSequence {
 		selection := game.Selection{
 			RequiredTypes: []types.Card{types.Creature},

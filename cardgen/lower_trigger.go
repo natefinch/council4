@@ -43,15 +43,16 @@ func lowerModalTriggerBody(
 	cardName string,
 	ability compiler.CompiledAbility,
 	syntax *parser.Ability,
-	triggerEvent game.EventKind,
+	pattern game.TriggerPattern,
 ) (game.AbilityContent, *shared.Diagnostic) {
 	ctx := contentCtx{
-		text:                  ability.Text,
-		span:                  ability.Span,
-		content:               ability.Content,
-		enclosingKind:         compiler.AbilityTriggered,
-		triggerCardCountEvent: triggerEvent,
-		triggerEvent:          triggerEvent,
+		text:                    ability.Text,
+		span:                    ability.Span,
+		content:                 ability.Content,
+		enclosingKind:           compiler.AbilityTriggered,
+		triggerCardCountEvent:   pattern.Event,
+		triggerEvent:            pattern.Event,
+		triggerSubjectSelection: pattern.SubjectSelection,
 	}
 	return lowerModalContent(cardName, ctx, syntax)
 }
@@ -372,7 +373,7 @@ func lowerGenericPatternTrigger(
 			"the executable source backend does not support this semantic trigger condition")
 	}
 	if modalTriggerBody(ability) {
-		content, diagnostic := lowerModalTriggerBody(cardName, ability, syntax, pattern.Event)
+		content, diagnostic := lowerModalTriggerBody(cardName, ability, syntax, pattern)
 		if diagnostic != nil {
 			return game.TriggeredAbility{}, diagnostic
 		}

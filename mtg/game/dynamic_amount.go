@@ -295,6 +295,9 @@ const (
 	// shields carry the running Prevented tally. Added last so existing kinds
 	// keep their wire values.
 	DynamicAmountDamagePreventedThisWay
+	// DynamicAmountTriggeringAttackerCount is the number of creatures declared
+	// in the simultaneous attack batch that triggered the resolving ability.
+	DynamicAmountTriggeringAttackerCount
 )
 
 // DynamicAmount describes an effect amount determined as the effect resolves

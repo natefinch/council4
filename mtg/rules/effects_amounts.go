@@ -131,6 +131,10 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj opt.V[*game.StackObject], c
 		if obj.Exists && obj.Val.HasTriggerEvent {
 			amount = triggerEventCardCount(g, obj.Val.TriggerEvent)
 		}
+	case game.DynamicAmountTriggeringAttackerCount:
+		if obj.Exists && obj.Val.HasTriggerEvent && dynamic.Selection != nil {
+			amount = triggeringAttackerCount(g, obj.Val, controller, *dynamic.Selection)
+		}
 	case game.DynamicAmountSpellTargetCount:
 		if obj.Exists && obj.Val.HasTriggerEvent && dynamic.Selection != nil {
 			amount = countSpellTargetsMatching(g, controller, game.TargetAllowPermanent, *dynamic.Selection, obj.Val.TriggerEvent)
@@ -820,6 +824,40 @@ func triggerEventCardCount(g *game.Game, trigger game.Event) int {
 		}
 	}
 	if count == 0 {
+		return 1
+	}
+	return count
+}
+
+// triggeringAttackerCount returns the attackers in the declaration batch that
+// caused obj's trigger and match selection. The trigger event itself is used for
+// an unbatched single attacker and as a defensive fallback when event history no
+// longer contains the batch.
+func triggeringAttackerCount(g *game.Game, obj *game.StackObject, viewer game.PlayerID, selection game.Selection) int {
+	trigger := obj.TriggerEvent
+	if trigger.Kind != game.EventAttackerDeclared {
+		return 0
+	}
+	matches := func(event game.Event) bool {
+		if event.Kind != game.EventAttackerDeclared || event.Controller != trigger.Controller {
+			return false
+		}
+		return selection.Empty() ||
+			triggerSelectionMatches(g, viewer, event, event.PermanentID, &selection, obj.SourceID)
+	}
+	if trigger.SimultaneousID == 0 {
+		if matches(trigger) {
+			return 1
+		}
+		return 0
+	}
+	count := 0
+	for _, event := range g.Events {
+		if event.SimultaneousID == trigger.SimultaneousID && matches(event) {
+			count++
+		}
+	}
+	if count == 0 && matches(trigger) {
 		return 1
 	}
 	return count

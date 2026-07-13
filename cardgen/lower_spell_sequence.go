@@ -348,6 +348,13 @@ func lowerOrderedEffectSequence(
 		if groupCounterQualifierClause(effect) {
 			clauseRefs = counterQualifierFilteredReferences(clauseRefs)
 		}
+		// The Hideaway play primitive resolves "the exiled card" and "its mana
+		// cost" through the source's persistent Hideaway link. Those printed
+		// references are internal to the effect and must not inherit a target from
+		// a prior sequence clause (Fight Rigging's targeted counter placement).
+		if effect.PlayHideawayExiledCard {
+			clauseRefs = nil
+		}
 		// Combined-shape and characteristic lowerers read the resolved effect's
 		// own reference list (ctx.content.Effects[0].References) rather than the
 		// clause-level References, so strip the gate-condition references there
@@ -441,7 +448,9 @@ func lowerOrderedEffectSequence(
 		// the grant fails closed instead of chaining off a publisher it cannot
 		// rely on.
 		publisherGated := i > 0 && sequenceClauseInstructionGated(i-1, effectConditions, insteadGates, otherwiseGates)
-		if delayedContent, handled, failed := lowerDelayedSequenceClause(ctx.content.Effects, i, effectAbility, sequence, publisherGated); handled {
+		if effect.PlayHideawayExiledCard {
+			content, diagnostic = lowerHideawayPlayEffect(effectAbility)
+		} else if delayedContent, handled, failed := lowerDelayedSequenceClause(ctx.content.Effects, i, effectAbility, sequence, publisherGated); handled {
 			if failed {
 				if len(clauseReasons) > 0 {
 					continue
@@ -490,6 +499,9 @@ func lowerOrderedEffectSequence(
 			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — inherited target not remappable")
 		}
 		targets = newTargets
+		if effect.PlayHideawayExiledCard {
+			materializeHideawaySelectionMinimum(effectConditions, i)
+		}
 		if category := applySequenceClauseGates(mode.Sequence, i, effectConditions, insteadGates, otherwiseGates); category != "" {
 			if len(clauseReasons) > 0 {
 				continue
@@ -580,6 +592,27 @@ func lowerOrderedEffectSequence(
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — target contingent on cast branch not modeled")
 	}
 	return game.Mode{Targets: gatedTargets, Sequence: sequence}.Ability(), nil
+}
+
+// materializeHideawaySelectionMinimum preserves the explicit one-permanent
+// threshold emitted by the older Hideaway sequence templates. SelectionCount
+// treats zero as the implicit singular minimum at runtime, but rendering one
+// keeps pre-existing generated cards byte-identical as they move to the shared
+// sequence path.
+func materializeHideawaySelectionMinimum(gates map[int]game.EffectCondition, effectIndex int) {
+	gate, ok := gates[effectIndex]
+	if !ok || !gate.Condition.Exists {
+		return
+	}
+	condition := gate.Condition.Val
+	if !condition.ControlsMatching.Exists || condition.ControlsMatching.Val.MinCount != 0 {
+		return
+	}
+	count := condition.ControlsMatching.Val
+	count.MinCount = 1
+	condition.ControlsMatching = opt.Val(count)
+	gate.Condition = opt.Val(condition)
+	gates[effectIndex] = gate
 }
 
 // sequenceAmountReferencesPlayerSlotPermanent reports whether any resolving

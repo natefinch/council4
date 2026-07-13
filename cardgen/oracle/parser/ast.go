@@ -161,7 +161,6 @@ type Ability struct {
 	ChoosePermanentTypeReturn   bool                              `json:",omitempty"`
 	TauntFromRampartSequence    bool                              `json:",omitempty"`
 	TemurSabertoothSequence     bool                              `json:",omitempty"`
-	FightRiggingSequence        bool                              `json:",omitempty"`
 	RaisePalisadeSequence       bool                              `json:",omitempty"`
 	BattleOfBywaterSequence     bool                              `json:",omitempty"`
 	ArtifactMutationSequence    bool                              `json:",omitempty"`
