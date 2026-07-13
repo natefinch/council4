@@ -155,10 +155,15 @@ type CompiledAbility struct {
 	// sequence. All three are zero for every other exact sequence.
 	ExactSequenceChooseCount uint8
 	ExactSequencePayLife     uint8
-	Span                     shared.Span
-	Text                     string
-	ActivationTiming         ActivationTimingKind
-	ActivationTimingSpan     shared.Span
+	// ExactSequenceMaxManaValue carries the typed mana-value bound of
+	// ExactSequenceBargainSearchCastPayoff: the exiled card may be cast for free
+	// only when its mana value is at most this value. It is zero for every other
+	// exact sequence.
+	ExactSequenceMaxManaValue uint8
+	Span                      shared.Span
+	Text                      string
+	ActivationTiming          ActivationTimingKind
+	ActivationTimingSpan      shared.Span
 	// MaxActivationsPerTurn caps activations per turn ("Activate no more than
 	// twice each turn."). Zero means no cap. MaxActivationsPerTurnSpan covers the
 	// recognized restriction sentence for source coverage.

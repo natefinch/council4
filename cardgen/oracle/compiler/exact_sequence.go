@@ -62,6 +62,17 @@ const (
 	// ExactSequenceChooseCount, ExactSequencePayLife) so lowering models the
 	// sequence without reading Oracle words.
 	ExactSequenceExtraDrawThenPayLifeOrTop
+	// ExactSequenceBargainSearchCastPayoff is the spell "Search your library for a
+	// card, exile it face down, then shuffle. If this spell was bargained, you may
+	// cast the exiled card without paying its mana cost if that spell's mana value
+	// is N or less. Put the exiled card into your hand if it wasn't cast this
+	// way." sequence (Beseech the Mirror): search the library and exile one card
+	// face down, then when the spell was bargained optionally cast the exiled card
+	// for free if its mana value is at most ExactSequenceMaxManaValue, otherwise
+	// put it into hand. The bound N travels on the compiled ability
+	// (ExactSequenceMaxManaValue) so lowering models the sequence without reading
+	// Oracle words.
+	ExactSequenceBargainSearchCastPayoff
 )
 
 func compileExactSequenceKind(kind parser.ExactSequenceKind) ExactSequenceKind {
@@ -82,6 +93,8 @@ func compileExactSequenceKind(kind parser.ExactSequenceKind) ExactSequenceKind {
 		return ExactSequencePayHandSizeOrCantAttack
 	case parser.ExactSequenceExtraDrawThenPayLifeOrTop:
 		return ExactSequenceExtraDrawThenPayLifeOrTop
+	case parser.ExactSequenceBargainSearchCastPayoff:
+		return ExactSequenceBargainSearchCastPayoff
 	default:
 		return ExactSequenceUnknown
 	}

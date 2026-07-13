@@ -349,6 +349,9 @@ func handleSearch(r *effectResolver, prim game.Search) effectResolved {
 	if prim.Spec.RevealOnly {
 		return handleSearchRevealOnly(r, prim)
 	}
+	if prim.Spec.ExileFaceDown {
+		return handleSearchExileFaceDown(r, prim)
+	}
 	if prim.Spec.AlsoGraveyard {
 		playerID, ok := r.resolvePlayer(prim.Player)
 		if !ok {
