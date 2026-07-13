@@ -3190,8 +3190,19 @@ func spellBounceTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, boo
 	var selection game.Selection
 	hasPermanentSide := false
 	if target.Exact {
-		if len(required) != 0 || len(excluded) != 0 {
-			return game.TargetSpec{}, false
+		// An exact spell target carries no permanent fold; a card-type filter
+		// ("target instant or sorcery spell", Narset's Reversal) restricts which
+		// spells on the stack are legal targets, mirroring the counter-target
+		// spec. One required type is a single-type predicate, several are an
+		// any-of predicate, and excluded types (an excluded-type spell target)
+		// are recorded directly.
+		if len(required) == 1 {
+			predicate.SpellCardTypes = append([]types.Card(nil), required...)
+		} else if len(required) > 1 {
+			predicate.SpellCardTypesAny = append([]types.Card(nil), required...)
+		}
+		if len(excluded) > 0 {
+			predicate.ExcludedSpellCardTypes = append([]types.Card(nil), excluded...)
 		}
 	} else {
 		allow |= game.TargetAllowPermanent
