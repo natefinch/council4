@@ -40,6 +40,11 @@ const (
 	// TargetGateSpellNotBargained marks a target required only when the Bargain
 	// cost was not paid, such as a base target a bargained cast replaces.
 	TargetGateSpellNotBargained
+	// TargetGateBestowed marks a target required only when the spell was cast for
+	// its Bestow alternative cost (CR 702.103): a bestowed cast is an Aura spell
+	// that must choose a legal creature target, while an ordinary creature cast
+	// of the same card requires no target.
+	TargetGateBestowed
 )
 
 // CastBranch captures the cast-time choices that decide which gated target specs
@@ -56,6 +61,10 @@ type CastBranch struct {
 	// Bargained reports that the spell's Bargain additional cost was paid as it
 	// was cast (CR 702.166b).
 	Bargained bool
+	// Bestowed reports that the spell was cast for its Bestow alternative cost
+	// (CR 702.103), making it a bestowed Aura spell that requires an enchant
+	// target.
+	Bestowed bool
 }
 
 // ActiveIn reports whether a spec carrying this gate participates in targeting on
@@ -74,6 +83,8 @@ func (gate TargetGate) ActiveIn(branch CastBranch) bool {
 		return branch.Bargained
 	case TargetGateSpellNotBargained:
 		return !branch.Bargained
+	case TargetGateBestowed:
+		return branch.Bestowed
 	default:
 		return true
 	}
@@ -81,5 +92,5 @@ func (gate TargetGate) ActiveIn(branch CastBranch) bool {
 
 // Valid reports whether the gate is a known enum value.
 func (gate TargetGate) Valid() bool {
-	return gate <= TargetGateSpellNotBargained
+	return gate <= TargetGateBestowed
 }

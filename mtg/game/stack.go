@@ -186,6 +186,14 @@ type StackObject struct {
 	// owner's hand at the beginning of the next end step.
 	Dashed bool
 
+	// Bestowed is true if this spell was cast for its Bestow alternative cost
+	// (CR 702.103); the spell is a bestowed Aura spell that requires an enchant
+	// target and, on resolution, attaches to that creature and enters marked
+	// bestowed. If its target is illegal as it resolves it ceases to be bestowed
+	// and enters as an ordinary creature (CR 702.103e). A copy of a bestowed
+	// Aura spell inherits this flag and is also bestowed (CR 702.103c).
+	Bestowed bool
+
 	// Mutate records an alternative-cost creature spell and the permanent it
 	// will merge with.
 	Mutate         bool

@@ -303,8 +303,13 @@ func stackObjectSourceHasTypes(g *game.Game, obj *game.StackObject, required []t
 	if !ok {
 		return false
 	}
+	effectiveTypes := def.Types
+	// CR 702.103b: a bestowed spell is not a creature spell while on the stack.
+	if obj.Kind == game.StackSpell && obj.Bestowed {
+		effectiveTypes = game.BestowSpellTypes(effectiveTypes)
+	}
 	for _, cardType := range required {
-		if !slices.Contains(def.Types, cardType) {
+		if !slices.Contains(effectiveTypes, cardType) {
 			return false
 		}
 	}

@@ -74,7 +74,7 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 	}
 
 	branch := castBranchForCast(cast)
-	if !e.canCastSpellFaceFromZoneWithOptions(g, playerID, cast.CardID, sourceZone, cast.Face, cast.Targets, cast.XValue, cast.ChosenModes, effectiveKickerCount(cast.KickerPaid, cast.KickerCount), cast.Overloaded, cast.GiftPromised, cast.Bargained) {
+	if !e.canCastSpellFaceFromZoneWithOptions(g, playerID, cast.CardID, sourceZone, cast.Face, cast.Targets, cast.XValue, cast.ChosenModes, effectiveKickerCount(cast.KickerPaid, cast.KickerCount), cast.Overloaded, cast.GiftPromised, cast.Bargained, cast.Bestowed) {
 		return false
 	}
 
@@ -89,7 +89,7 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		announcementDef = overloadSpellDef(spellDef)
 	}
 	completedTargets, ok := e.completeSpellAnnouncementTargets(g, playerID, announcementDef, cast.ChosenModes, cast.Targets, agents, log, branch)
-	if !ok || !e.canCastSpellFaceFromZoneWithOptions(g, playerID, cast.CardID, sourceZone, cast.Face, completedTargets, cast.XValue, cast.ChosenModes, effectiveKickerCount(cast.KickerPaid, cast.KickerCount), cast.Overloaded, cast.GiftPromised, cast.Bargained) {
+	if !ok || !e.canCastSpellFaceFromZoneWithOptions(g, playerID, cast.CardID, sourceZone, cast.Face, completedTargets, cast.XValue, cast.ChosenModes, effectiveKickerCount(cast.KickerPaid, cast.KickerCount), cast.Overloaded, cast.GiftPromised, cast.Bargained, cast.Bestowed) {
 		return false
 	}
 	cast.Targets = completedTargets
@@ -225,6 +225,19 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 			agents,
 			log,
 		)
+	case cast.Bestowed:
+		bestowCost := bestowAlternativeCost(spellDef).ManaCost.Val
+		prefs = e.paymentPreferencesForCostFromSource(
+			g,
+			playerID,
+			&bestowCost,
+			spellDef.AdditionalCosts,
+			cast.XValue,
+			card.ID,
+			sourceZone,
+			agents,
+			log,
+		)
 	case plotted:
 		emptyMana := cost.Mana{}
 		prefs = e.paymentPreferencesForCostFromSource(
@@ -296,10 +309,13 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		Targets:         cast.Targets,
 		Prefs:           prefs,
 		SpliceManaCosts: splice.manaCosts,
+		Bestowed:        cast.Bestowed,
 	}
 	switch {
 	case cast.Overloaded:
 		request.Alternative = opt.Val(overloadAlternativeCost(spellDef.Overload.Val.Cost))
+	case cast.Bestowed:
+		request.Alternative = opt.Val(bestowAlternativeCost(spellDef))
 	case payLifeFromTop:
 		request.Alternative = opt.Val(payLifeManaValueAlternativeCost(spellDef, cast.XValue))
 	case plotted:
@@ -334,6 +350,7 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 	obj.Evoked = !cast.Overloaded && evokeAlternativeChosen(spellDef, prefs.AlternativeIndex)
 	obj.Converted = !cast.Overloaded && convertedAlternativeChosen(spellDef, prefs.AlternativeIndex)
 	obj.Dashed = !cast.Overloaded && dashAlternativeChosen(spellDef, prefs.AlternativeIndex)
+	obj.Bestowed = cast.Bestowed
 	obj.Flashback = paymentResult.CastPermission == payment.SpellCastPermissionFlashback
 	obj.AdditionalCostsPaid = paymentResult.AdditionalCostsPaid
 	obj.SacrificedAsCostIDs = paymentResult.SacrificedIDs
@@ -353,9 +370,9 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		Controller:      playerID,
 		CardID:          cast.CardID,
 		Face:            cast.Face,
-		CardTypes:       cardTypes(spellDef),
+		CardTypes:       stackObjectCardTypes(obj, spellDef),
 		CardSupertypes:  cardSupertypes(spellDef),
-		CardSubtypes:    cardSubtypes(spellDef),
+		CardSubtypes:    stackObjectCardSubtypes(obj, spellDef),
 		Colors:          spellColors(spellDef),
 		ManaValue:       opt.Val(stackManaValue(spellDef, cast.XValue)),
 		ManaSpentToCast: opt.Val(totalManaSpent(paymentResult.PoolSpend)),
@@ -432,9 +449,9 @@ func (e *Engine) applyMutateCastWithChoices(g *game.Game, playerID game.PlayerID
 		Controller:      playerID,
 		CardID:          cast.CardID,
 		Face:            game.FaceFront,
-		CardTypes:       cardTypes(spellDef),
+		CardTypes:       stackObjectCardTypes(obj, spellDef),
 		CardSupertypes:  cardSupertypes(spellDef),
-		CardSubtypes:    cardSubtypes(spellDef),
+		CardSubtypes:    stackObjectCardSubtypes(obj, spellDef),
 		Colors:          spellColors(spellDef),
 		ManaValue:       opt.Val(stackManaValue(spellDef, 0)),
 		ManaSpentToCast: opt.Val(totalManaSpent(paymentResult.PoolSpend)),
@@ -626,9 +643,9 @@ func (e *Engine) applyPreparedCopyWithChoices(g *game.Game, playerID game.Player
 		Face:            game.FaceAlternate,
 		PermanentID:     permanent.ObjectID,
 		TokenDef:        permanent.TokenDef,
-		CardTypes:       cardTypes(spellDef),
+		CardTypes:       stackObjectCardTypes(obj, spellDef),
 		CardSupertypes:  cardSupertypes(spellDef),
-		CardSubtypes:    cardSubtypes(spellDef),
+		CardSubtypes:    stackObjectCardSubtypes(obj, spellDef),
 		Colors:          spellColors(spellDef),
 		ManaValue:       opt.Val(stackManaValue(spellDef, cast.XValue)),
 		ManaSpentToCast: opt.Val(totalManaSpent(paymentResult.PoolSpend)),
@@ -688,7 +705,15 @@ func (e *Engine) canCastSpellFromZoneWithKicker(g *game.Game, playerID game.Play
 }
 
 func (e *Engine) canCastSpellFaceFromZoneWithKicker(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int, kickerPaid bool) bool {
-	return e.canCastSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, targets, xValue, chosenModes, effectiveKickerCount(kickerPaid, 0), false, false, false)
+	return e.canCastSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, targets, xValue, chosenModes, effectiveKickerCount(kickerPaid, 0), false, false, false, false)
+}
+
+// canCastBestowSpellFaceFromZone validates a cast whose Bestow keyword is used
+// (CR 702.103): the spell is cast for its Bestow alternative cost as an Aura
+// spell, so its targets are validated on the bestowed branch (which requires the
+// enchant-creature target) rather than the default branch.
+func (e *Engine) canCastBestowSpellFaceFromZone(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int) bool {
+	return e.canCastSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, targets, xValue, chosenModes, 0, false, false, false, true)
 }
 
 // canCastGiftSpellFaceFromZone validates a cast whose Gift keyword action
@@ -696,13 +721,13 @@ func (e *Engine) canCastSpellFaceFromZoneWithKicker(g *game.Game, playerID game.
 // gift-promised target specs, so its targets are validated on the promised
 // branch rather than the default branch.
 func (e *Engine) canCastGiftSpellFaceFromZone(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int) bool {
-	return e.canCastSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, targets, xValue, chosenModes, 0, false, true, false)
+	return e.canCastSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, targets, xValue, chosenModes, 0, false, true, false, false)
 }
 
 // canCastSpellFaceFromZoneWithMultikick validates a Multikicker cast whose
 // kicker cost is paid kickerCount times (CR 702.32).
 func (e *Engine) canCastSpellFaceFromZoneWithMultikick(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int, kickerCount int) bool {
-	return e.canCastSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, targets, xValue, chosenModes, kickerCount, false, false, false)
+	return e.canCastSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, targets, xValue, chosenModes, kickerCount, false, false, false, false)
 }
 
 // canCastBargainedSpellFaceFromZone validates a cast whose Bargain additional
@@ -711,7 +736,7 @@ func (e *Engine) canCastSpellFaceFromZoneWithMultikick(g *game.Game, playerID ga
 // planner requires the caster to be able to sacrifice an artifact, enchantment,
 // or token.
 func (e *Engine) canCastBargainedSpellFaceFromZone(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int) bool {
-	return e.canCastSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, targets, xValue, chosenModes, 0, false, false, true)
+	return e.canCastSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, targets, xValue, chosenModes, 0, false, false, true, false)
 }
 
 // effectiveKickerCount resolves the number of times the kicker cost is paid from
@@ -732,15 +757,15 @@ func (e *Engine) canCastOverloadedSpellFaceFromZone(g *game.Game, playerID game.
 }
 
 func (e *Engine) canCastOverloadedSpellFaceFromZoneWithOptions(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, xValue int, chosenModes []int, kickerPaid bool) bool {
-	return e.canCastSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, nil, xValue, chosenModes, effectiveKickerCount(kickerPaid, 0), true, false, false)
+	return e.canCastSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, nil, xValue, chosenModes, effectiveKickerCount(kickerPaid, 0), true, false, false, false)
 }
 
-func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int, kickerCount int, overloaded bool, giftPromised bool, bargained bool) bool {
+func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int, kickerCount int, overloaded bool, giftPromised bool, bargained bool, bestowed bool) bool {
 	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer {
 		return false
 	}
 	kickerPaid := kickerCount > 0
-	branch := game.CastBranch{GiftPromised: giftPromised, Kicked: kickerPaid, Bargained: bargained}
+	branch := game.CastBranch{GiftPromised: giftPromised, Kicked: kickerPaid, Bargained: bargained, Bestowed: bestowed}
 	if xValue < 0 {
 		return false
 	}
@@ -795,6 +820,9 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 		overloadCost := spellDef.Overload.Val.Cost
 		announcedManaCost = &overloadCost
 	}
+	if bestowed && !spellHasBestow(spellDef) {
+		return false
+	}
 	if xValue != 0 &&
 		!costHasVariableMana(announcedManaCost) &&
 		!additionalCostsUseX(spellDef.AdditionalCosts) {
@@ -845,10 +873,13 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 		ChosenModes:     chosenModes,
 		CastPermissions: castPermissionsForZone(g, playerID, card.ID, sourceZone, face),
 		Targets:         targets,
+		Bestowed:        bestowed,
 	}
 	switch {
 	case overloaded:
 		request.Alternative = opt.Val(overloadAlternativeCost(spellDef.Overload.Val.Cost))
+	case bestowed:
+		request.Alternative = opt.Val(bestowAlternativeCost(spellDef))
 	case sourceZone == zone.Library && castFromZoneRequiresPayLife(g, playerID, card.ID, sourceZone, face):
 		request.Alternative = opt.Val(payLifeManaValueAlternativeCost(spellDef, xValue))
 	case plotted:
@@ -871,6 +902,25 @@ func overloadAlternativeCost(manaCost cost.Mana) cost.Alternative {
 	return cost.Alternative{
 		Label:    "Overload",
 		ManaCost: opt.Val(append(cost.Mana(nil), manaCost...)),
+	}
+}
+
+// spellHasBestow reports whether a spell face carries the Bestow keyword
+// (CR 702.103) so it may be cast for its Bestow alternative cost as an Aura.
+func spellHasBestow(spellDef *game.CardDef) bool {
+	_, ok := game.CardDefBestow(spellDef)
+	return ok
+}
+
+// bestowAlternativeCost is the alternative cost of casting a card with Bestow for
+// its Bestow cost rather than its mana cost (CR 702.103b). It replaces the mana
+// cost with the Bestow keyword's cost; a card reaching this path always has a
+// Bestow keyword, so a missing keyword falls back to an empty (free) cost.
+func bestowAlternativeCost(spellDef *game.CardDef) cost.Alternative {
+	bestow, _ := game.CardDefBestow(spellDef)
+	return cost.Alternative{
+		Label:    "Bestow",
+		ManaCost: opt.Val(append(cost.Mana(nil), bestow.Cost...)),
 	}
 }
 

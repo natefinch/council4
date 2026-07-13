@@ -2236,24 +2236,36 @@ func permanentProtectedFromSource(g *game.Game, permanent *game.Permanent, sourc
 // spell stack object, using the selected face (obj.Face) so that
 // alternate-face spells carry the correct types/colors/subtypes.
 func stackObjectSourceChars(g *game.Game, obj *game.StackObject) (sourceChars, bool) {
-	if obj.SourceTokenDef != nil {
-		return sourceChars{
+	var chars sourceChars
+	switch {
+	case obj.SourceTokenDef != nil:
+		chars = sourceChars{
 			colors:   obj.SourceTokenDef.Colors,
 			types:    obj.SourceTokenDef.Types,
 			subtypes: obj.SourceTokenDef.Subtypes,
-		}, true
-	}
-	if obj.SourceID != 0 {
-		if card, ok := g.GetCardInstance(obj.SourceID); ok {
-			faceDef := cardFaceOrDefault(card, obj.Face)
-			return sourceChars{
-				colors:   faceDef.Colors,
-				types:    faceDef.Types,
-				subtypes: faceDef.Subtypes,
-			}, true
 		}
+	case obj.SourceID != 0:
+		card, ok := g.GetCardInstance(obj.SourceID)
+		if !ok {
+			return sourceChars{}, false
+		}
+		faceDef := cardFaceOrDefault(card, obj.Face)
+		chars = sourceChars{
+			colors:   faceDef.Colors,
+			types:    faceDef.Types,
+			subtypes: faceDef.Subtypes,
+		}
+	default:
+		return sourceChars{}, false
 	}
-	return sourceChars{}, false
+	// CR 702.103b: a spell cast for its bestow cost is an Aura spell and is not a
+	// creature spell while on the stack, so type/subtype-based spell qualifiers and
+	// protection see the transformed characteristics.
+	if obj.Kind == game.StackSpell && obj.Bestowed {
+		chars.types = game.BestowSpellTypes(chars.types)
+		chars.subtypes = game.BestowSpellSubtypes(chars.subtypes)
+	}
+	return chars, true
 }
 
 // selectedFaceForCardInstance finds the face the card instance is currently

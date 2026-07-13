@@ -66,8 +66,12 @@ type CastSpellAction struct {
 	// Bargained records that the spell's Bargain additional cost was paid as it
 	// was cast (CR 702.166b): its controller sacrificed an artifact, enchantment,
 	// or token.
-	Bargained      bool
-	Overloaded     bool
+	Bargained  bool
+	Overloaded bool
+	// Bestowed records that the spell was cast for its Bestow alternative cost
+	// (CR 702.103): it is put on the stack as an Aura spell with an
+	// enchant-creature target rather than as a creature spell.
+	Bestowed       bool
 	Mutate         bool
 	MutateTargetID id.ID
 	// GiftPromised records that the spell's Gift keyword action promised a gift
@@ -259,6 +263,21 @@ func CastOverloadedSpellFaceFromZoneWithOptions(cardID id.ID, sourceZone zone.Ty
 	action.castSpell.Overloaded = true
 	action.castSpell.KickerPaid = kickerPaid
 	return action
+}
+
+// CastBestowSpellFaceFromZone creates an action to cast a specific printed face
+// for its Bestow alternative cost as an Aura spell (CR 702.103): the bestowed
+// Aura spell targets the enchant-creature target in targets.
+func CastBestowSpellFaceFromZone(cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int) Action {
+	action := CastSpellFaceFromZone(cardID, sourceZone, face, targets, xValue, chosenModes)
+	action.castSpell.Bestowed = true
+	return action
+}
+
+// CastBestowSpell creates an action to cast a spell from hand for its Bestow
+// alternative cost, targeting the enchant-creature target in targets.
+func CastBestowSpell(cardID id.ID, targets []game.Target, xValue int, chosenModes []int) Action {
+	return CastBestowSpellFaceFromZone(cardID, zone.Hand, game.FaceFront, targets, xValue, chosenModes)
 }
 
 // CastMutateSpell creates an action to cast a creature for its Mutate cost.
@@ -631,6 +650,7 @@ func castSpellActionEmpty(a CastSpellAction) bool {
 		!a.KickerPaid &&
 		!a.Bargained &&
 		!a.Overloaded &&
+		!a.Bestowed &&
 		!a.Mutate &&
 		a.MutateTargetID == 0 &&
 		!a.GiftPromised &&

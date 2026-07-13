@@ -226,6 +226,15 @@ const (
 	// carried by Parameter exactly like Evoke. It is appended at the end so the
 	// existing keyword block stays aligned.
 	KeywordDash KeywordKind = "KeywordDash"
+
+	// KeywordBestow is the Bestow alternative-cost keyword (CR 702.103):
+	// "Bestow <cost>" lets an enchantment creature card be cast as an Aura
+	// spell that enchants a creature for its bestow cost rather than its mana
+	// cost; while attached it is not a creature, and it becomes a creature
+	// again if it stops being attached. The mana cost is carried by Parameter
+	// exactly like Evoke and Dash. It is appended at the end so the existing
+	// keyword block stays aligned.
+	KeywordBestow KeywordKind = "KeywordBestow"
 )
 
 var keywordNames = map[KeywordKind]string{
@@ -347,6 +356,7 @@ var keywordNames = map[KeywordKind]string{
 	KeywordPartnerWith:         "Partner with",
 	KeywordChooseABackground:   "Choose a Background",
 	KeywordDash:                "Dash",
+	KeywordBestow:              "Bestow",
 }
 
 // String returns the parser-owned canonical keyword name.
@@ -493,6 +503,7 @@ var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordDesertwalk, Words: []string{"desertwalk"}},
 	{Kind: KeywordSpectacle, Words: []string{"spectacle"}},
 	{Kind: KeywordDash, Words: []string{"dash"}},
+	{Kind: KeywordBestow, Words: []string{"bestow"}},
 	{Kind: KeywordStartEngines, Words: []string{"start", "your", "engines"}},
 	{Kind: KeywordFuse, Words: []string{"fuse"}},
 }
@@ -1770,6 +1781,18 @@ func scanKeywords(tokens []shared.Token, atoms Atoms) []Keyword {
 		// flavored ability names ("Echo of the First Murder —"), which likewise
 		// have no mana cost following the word and so are not scanned as a keyword.
 		if kind == KeywordEcho {
+			if _, _, ok := parseKeywordManaCost(tokens, end); !ok {
+				continue
+			}
+		}
+		// The Bestow keyword (CR 702.103) is recognized only when a fixed mana
+		// bestow cost follows ("Bestow {1}{G}"). The non-mana em-dash form
+		// ("Bestow—<cost>", e.g. "Bestow—{R}, Collect evidence 6") carries no
+		// mana parameter, so it is left unrecognized here and fails closed as an
+		// unsupported ability. Variable ({X}) bestow costs do parse as a mana
+		// cost here, but are rejected later during lowering, which supports only
+		// fixed bestow costs.
+		if kind == KeywordBestow {
 			if _, _, ok := parseKeywordManaCost(tokens, end); !ok {
 				continue
 			}

@@ -220,6 +220,7 @@ var Cards = []cardset.Entry{
 	{Name: "Spawnbed Protector", New: SpawnbedProtector},
 	{Name: "Spawnbinder Mage", New: SpawnbinderMage},
 	{Name: "Speaker of the Heavens", New: SpeakerOfTheHeavens},
+	{Name: "Spearpoint Oread", New: SpearpointOread},
 	{Name: "Spectacle Mage", New: SpectacleMage},
 	{Name: "Specter's Wail", New: SpecterSWail},
 	{Name: "Spectra Ward", New: SpectraWard},

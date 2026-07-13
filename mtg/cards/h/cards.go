@@ -62,6 +62,7 @@ var Cards = []cardset.Entry{
 	{Name: "Henge Walker", New: HengeWalker},
 	{Name: "Herald of Serra", New: HeraldOfSerra},
 	{Name: "Herald of the Host", New: HeraldOfTheHost},
+	{Name: "Herald of Torment", New: HeraldOfTorment},
 	{Name: "Herd Migration", New: HerdMigration},
 	{Name: "Heron-Blessed Geist", New: HeronBlessedGeist},
 	{Name: "Hexing Squelcher", New: HexingSquelcher},
@@ -85,6 +86,7 @@ var Cards = []cardset.Entry{
 	{Name: "Hoofprints of the Stag", New: HoofprintsOfTheStag},
 	{Name: "Hook Swords", New: HookSwords},
 	{Name: "Hope Against Hope", New: HopeAgainstHope},
+	{Name: "Hopeful Eidolon", New: HopefulEidolon},
 	{Name: "Hornbash Mentor", New: HornbashMentor},
 	{Name: "Horned Cheetah", New: HornedCheetah},
 	{Name: "Hornswoggle", New: Hornswoggle},
@@ -114,6 +116,7 @@ var Cards = []cardset.Entry{
 	{Name: "Hydromorph Gull", New: HydromorphGull},
 	{Name: "Hymn to Tourach", New: HymnToTourach},
 	{Name: "Hypnotic Cloud", New: HypnoticCloud},
+	{Name: "Hypnotic Siren", New: HypnoticSiren},
 	{Name: "Hypnotic Specter", New: HypnoticSpecter},
 	{Name: "Hypochondria", New: Hypochondria},
 }

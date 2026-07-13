@@ -91,6 +91,48 @@ func cardSubtypes(def *game.CardDef) []types.Sub {
 	return append([]types.Sub(nil), def.Subtypes...)
 }
 
+// stackObjectCardTypes returns the effective card types of a spell on the stack,
+// applying the Bestow cast transform (CR 702.103b) when the spell was cast for
+// its bestow cost: a bestowed spell is an Aura spell and not a creature spell.
+// Callers pass the already-resolved face def to avoid re-resolving it. Abilities
+// and non-bestowed spells keep their printed types.
+func stackObjectCardTypes(obj *game.StackObject, def *game.CardDef) []types.Card {
+	printed := cardTypes(def)
+	if obj != nil && obj.Kind == game.StackSpell && obj.Bestowed {
+		return game.BestowSpellTypes(printed)
+	}
+	return printed
+}
+
+// stackObjectCardSubtypes mirrors stackObjectCardTypes for subtypes, adding the
+// Aura subtype to a bestowed spell (CR 702.103b).
+func stackObjectCardSubtypes(obj *game.StackObject, def *game.CardDef) []types.Sub {
+	printed := cardSubtypes(def)
+	if obj != nil && obj.Kind == game.StackSpell && obj.Bestowed {
+		return game.BestowSpellSubtypes(printed)
+	}
+	return printed
+}
+
+// castSelectionFace returns the CardDef characteristics a spell presents to
+// cost-modifier CardSelection matching during cost determination (CR 601.2f).
+// For a bestowed cast (CR 702.103b) it returns a shallow copy whose front-face
+// types drop Creature and subtypes add Aura, so "creature spells cost less"
+// modifiers no longer match and "Aura spells cost less" modifiers do. Power and
+// every other characteristic — which the rules read as printed — are preserved by
+// the copy, and the original CardDef is never mutated. A non-bestowed cast
+// returns the card unchanged so native/printed paths are unaffected; future cast
+// transformations can compose here.
+func castSelectionFace(card *game.CardDef, bestowed bool) *game.CardDef {
+	if card == nil || !bestowed {
+		return card
+	}
+	transformed := *card
+	transformed.Types = game.BestowSpellTypes(card.Types)
+	transformed.Subtypes = game.BestowSpellSubtypes(card.Subtypes)
+	return &transformed
+}
+
 // spellColors returns the colors of a spell's effective face for use in
 // EventSpellCast, paralleling cardTypes for type-based filters.
 func spellColors(def *game.CardDef) []color.Color {

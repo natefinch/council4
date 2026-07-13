@@ -1,6 +1,8 @@
 package rules
 
 import (
+	"slices"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -449,6 +451,11 @@ func stackSpellCanBeCountered(g *game.Game, obj *game.StackObject) bool {
 }
 
 func spellCantBeCounteredByEffects(obj *game.StackObject, spellDef *game.CardDef, effects []game.RuleEffect) bool {
+	// CR 702.103b: a bestowed spell is an Aura spell and not a creature spell, so
+	// type/subtype-filtered "can't be countered" effects test the transformed
+	// characteristics.
+	effectiveTypes := stackObjectCardTypes(obj, spellDef)
+	effectiveSubtypes := stackObjectCardSubtypes(obj, spellDef)
 	for i := range effects {
 		effect := &effects[i]
 		if effect.Kind != game.RuleEffectCantBeCountered {
@@ -460,13 +467,33 @@ func spellCantBeCounteredByEffects(obj *game.StackObject, spellDef *game.CardDef
 		if !controllerRelationMatches(effect.Controller, obj.Controller, effect.AffectedController) {
 			continue
 		}
-		if !spellTypesMatch(spellDef, effect.SpellTypes) {
+		if !typesContainAll(effectiveTypes, effect.SpellTypes) {
 			continue
 		}
-		if len(effect.SpellSubtypes) != 0 && !spellDef.HasAnySubtype(effect.SpellSubtypes...) {
+		if len(effect.SpellSubtypes) != 0 && !subtypesContainAny(effectiveSubtypes, effect.SpellSubtypes) {
 			continue
 		}
 		return true
+	}
+	return false
+}
+
+// typesContainAll reports whether have includes every card type in required.
+func typesContainAll(have, required []types.Card) bool {
+	for _, cardType := range required {
+		if !slices.Contains(have, cardType) {
+			return false
+		}
+	}
+	return true
+}
+
+// subtypesContainAny reports whether have includes at least one of wanted.
+func subtypesContainAny(have, wanted []types.Sub) bool {
+	for _, subtype := range wanted {
+		if slices.Contains(have, subtype) {
+			return true
+		}
 	}
 	return false
 }
@@ -561,7 +588,16 @@ func (e *Engine) resolvePermanentSpellWithChoices(g *game.Game, obj *game.StackO
 	if obj.Mutate {
 		return e.resolveMutateSpell(g, obj, card, spellDef, agents, log)
 	}
-	if !spellHasAnyLegalTargets(g, spellDef, obj) {
+	if obj.Bestowed {
+		// CR 702.103e / 608.3b: a bestowed Aura spell whose enchant-creature
+		// target is illegal as it begins resolving ceases to be bestowed and
+		// continues resolving as an ordinary creature spell rather than being
+		// countered. A bestowed spell with a legal target keeps resolving as an
+		// Aura and attaches below.
+		if !spellHasAnyLegalTargets(g, spellDef, obj) {
+			obj.Bestowed = false
+		}
+	} else if !spellHasAnyLegalTargets(g, spellDef, obj) {
 		return counteredSpellResolution(g, obj, card)
 	}
 	if obj.Copy {
@@ -589,6 +625,7 @@ func (e *Engine) resolvePermanentSpellWithChoices(g *game.Game, obj *game.StackO
 			Bargained:               obj.Bargained,
 			Evoked:                  obj.Evoked,
 			Dashed:                  obj.Dashed,
+			Bestowed:                obj.Bestowed,
 			EntersTransformed:       obj.Converted,
 			WasCast:                 !obj.Copy,
 			CastController:          obj.Controller,
@@ -614,6 +651,14 @@ func (e *Engine) resolvePermanentSpellWithChoices(g *game.Game, obj *game.StackO
 	if ok && isAttachmentPermanent(g, permanent) && len(obj.Targets) > 0 {
 		target, targetOK := effectPermanentAt(g, obj, 0)
 		if !targetOK || !attachPermanent(g, permanent, target) {
+			if obj.Bestowed {
+				// A bestowed Aura reaches here only with a target that was legal
+				// as resolution began; if attachment still fails the permanent
+				// ceases to be bestowed and stays on the battlefield as a creature
+				// (CR 702.103f) rather than being put into the graveyard.
+				permanent.Bestowed = false
+				return "battlefield"
+			}
 			movePermanentToZone(g, permanent, zone.Graveyard)
 			return "graveyard"
 		}

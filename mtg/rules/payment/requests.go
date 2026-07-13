@@ -43,6 +43,11 @@ type SpellRequest struct {
 	Alternative     opt.V[cost.Alternative]
 	CastPermissions []SpellCastPermission
 	Prefs           *Preferences
+	// Bestowed marks a cast made for the spell's Bestow alternative cost
+	// (CR 702.103b). While bestowed the spell is an Aura spell and not a creature
+	// spell, so cost modifiers that filter by card type or subtype match it on the
+	// transformed characteristics during cost determination (CR 601.2f).
+	Bestowed bool
 	// Targets are the spell's chosen targets, supplied so target-dependent cost
 	// modifiers ("Spells your opponents cast that target this creature cost {N}
 	// more to cast.") can match. It is empty when the spell has no targets or is

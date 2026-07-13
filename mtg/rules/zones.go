@@ -43,7 +43,13 @@ type permanentCreationOptions struct {
 	// Dash alternative cost (CR 702.109), feeding the Dash trigger's intervening
 	// "if its dash cost was paid" condition. It is false for every permanent that
 	// did not enter from a dashed cast.
-	Dashed            bool
+	Dashed bool
+	// Bestowed makes the entering permanent a bestowed Aura (CR 702.103b): it
+	// records that the resolving spell was cast bestowed so the permanent's
+	// Bestow static ability changes it from a creature into an Aura and it stays
+	// attached to the creature it enchants. It is false for every permanent that
+	// did not enter from a bestowed cast.
+	Bestowed          bool
 	WasCast           bool
 	CastController    game.PlayerID
 	HasCastController bool
@@ -114,6 +120,7 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 		Prepared:       faceDef.EntersPrepared,
 	}
 	initializePermanentCounters(permanent, faceDef)
+	permanent.Bestowed = options.Bestowed
 	applyInitialContinuousEffects(g, permanent, continuous)
 	registerPermanentReplacementEffects(g, permanent)
 	initializeReadAhead(e, g, permanent, agents, log)
@@ -212,6 +219,7 @@ func prepareCardPermanentFaceForSimultaneousEntry(
 		Prepared:       faceDef.EntersPrepared,
 	}
 	initializePermanentCounters(permanent, faceDef)
+	permanent.Bestowed = options.Bestowed
 	initializeReadAhead(e, g, permanent, agents, log)
 	applyEnterBattlefieldReplacementEffects(enterBattlefieldContext{
 		engine:            e,

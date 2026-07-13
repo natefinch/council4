@@ -94,6 +94,15 @@ type Condition struct {
 	// permanent to be blocking or blocked by a creature with either subtype.
 	SourceAttachedCombatCounterpartSubtypes [2]types.Sub
 	SourceNotMonstrous                      bool
+	// SourceBestowed requires the condition source permanent to be bestowed
+	// (CR 702.103): its card was cast for its bestow cost and it is currently an
+	// Aura attached to a creature. It gates the bestow self type-change (remove
+	// the creature type, add the Aura subtype) so that a bestow card cast as an
+	// ordinary creature, or a bestowed Aura that has become unattached, is a
+	// creature. It is evaluated against the raw Permanent.Bestowed flag rather
+	// than any computed characteristic, so it cannot depend on the very type
+	// change it gates.
+	SourceBestowed bool
 	// SourceSaddled requires the condition source Mount to be saddled
 	// (CR 702.166), as in "if this creature is saddled". Negate models the
 	// "isn't saddled" wording.
@@ -379,6 +388,7 @@ func (c *Condition) Empty() bool {
 		c.SourceCountersAtLeast == 0 &&
 		c.SourceAttachedCombatCounterpartSubtypes == [2]types.Sub{} &&
 		!c.SourceNotMonstrous &&
+		!c.SourceBestowed &&
 		!c.SourceSaddled &&
 		!c.SourceTributeNotPaid &&
 		!c.SourceCameUnderControlSinceLastUpkeep &&

@@ -70,6 +70,12 @@ func (b actionBuilderType) castMultikickedSpell(cardID id.ID, sourceZone zone.Ty
 	return b.mustBuild(action.CastMultikickedSpellFaceFromZone(cardID, sourceZone, face, targets, xValue, modes, kickerCount))
 }
 
+// castBestowSpell builds a CastSpell action cast for the spell's Bestow
+// alternative cost as an Aura spell (CR 702.103).
+func (b actionBuilderType) castBestowSpell(cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, modes []int) action.Action {
+	return b.mustBuild(action.CastBestowSpellFaceFromZone(cardID, sourceZone, face, targets, xValue, modes))
+}
+
 func (b actionBuilderType) castOverloadedSpell(cardID id.ID, sourceZone zone.Type, face game.FaceIndex, xValue int, modes []int, kickerPaid bool) action.Action {
 	return b.mustBuild(action.CastOverloadedSpellFaceFromZoneWithOptions(cardID, sourceZone, face, xValue, modes, kickerPaid))
 }

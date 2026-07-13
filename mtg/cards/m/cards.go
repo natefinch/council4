@@ -123,6 +123,7 @@ var Cards = []cardset.Entry{
 	{Name: "Mogg Alarm", New: MoggAlarm},
 	{Name: "Mogg Flunkies", New: MoggFlunkies},
 	{Name: "Mogg War Marshal", New: MoggWarMarshal},
+	{Name: "Mogis's Warhound", New: MogisSWarhound},
 	{Name: "Moira and Teshar", New: MoiraAndTeshar},
 	{Name: "Mold Demon", New: MoldDemon},
 	{Name: "Molderhulk", New: Molderhulk},

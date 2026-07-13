@@ -232,6 +232,16 @@ func checkAttachmentStateBasedActions(g *game.Game, batchID func() id.ID) (bool,
 				continue
 			}
 			if !permanent.AttachedTo.Exists {
+				if permanent.Bestowed {
+					// CR 702.103f: a bestowed Aura that is unattached stops being
+					// a bestowed Aura and stays on the battlefield as a creature,
+					// so it is exempt from the 704.5m illegal-Aura graveyard rule.
+					g.EndStaticSourceFrame()
+					permanent.Bestowed = false
+					changed = true
+					g.BeginStaticSourceFrame()
+					continue
+				}
 				if isAuraPermanent(g, permanent) {
 					illegalAuras = append(illegalAuras, permanent.ObjectID)
 				}
@@ -239,6 +249,18 @@ func checkAttachmentStateBasedActions(g *game.Game, batchID func() id.ID) (bool,
 			}
 			target, ok := permanentByObjectID(g, permanent.AttachedTo.Val)
 			if ok && canAttachPermanent(g, permanent, target) {
+				continue
+			}
+			if permanent.Bestowed {
+				// CR 702.103f: a bestowed Aura attached to an illegal object
+				// becomes unattached, stops being a bestowed Aura, and stays on
+				// the battlefield as a creature rather than being put into the
+				// graveyard as an illegal Aura.
+				g.EndStaticSourceFrame()
+				permanent.Bestowed = false
+				detachPermanent(g, permanent)
+				changed = true
+				g.BeginStaticSourceFrame()
 				continue
 			}
 			if isAuraPermanent(g, permanent) {
