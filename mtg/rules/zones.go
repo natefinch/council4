@@ -33,7 +33,12 @@ type permanentCreationOptions struct {
 	ForceTapped bool
 	KickerPaid  bool
 	KickCount   int
-	Evoked      bool
+	// Bargained makes the entering permanent record that its spell was bargained
+	// as it was cast (CR 702.166b), feeding the "if it was bargained" enter
+	// trigger's intervening-if. It is false for every permanent that did not
+	// enter from a bargained cast.
+	Bargained bool
+	Evoked    bool
 	// Dashed makes the entering permanent record that its spell was cast for its
 	// Dash alternative cost (CR 702.109), feeding the Dash trigger's intervening
 	// "if its dash cost was paid" condition. It is false for every permanent that
@@ -151,6 +156,7 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 		CardID:                 card.ID,
 		Face:                   face,
 		KickerPaid:             options.KickerPaid,
+		Bargained:              options.Bargained,
 		EnterEvoked:            options.Evoked,
 		EnterDashed:            options.Dashed,
 		EnterWasCast:           options.WasCast,
@@ -260,6 +266,7 @@ func commitSimultaneousCardPermanentEntries(g *game.Game, entries []preparedCard
 			CardID:                 entry.card.ID,
 			Face:                   permanent.Face,
 			KickerPaid:             entry.options.KickerPaid,
+			Bargained:              entry.options.Bargained,
 			EnterEvoked:            entry.options.Evoked,
 			EnterDashed:            entry.options.Dashed,
 			EnterWasCast:           entry.options.WasCast,

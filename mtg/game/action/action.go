@@ -55,14 +55,18 @@ type PlayLandAction struct {
 
 // CastSpellAction is the payload for casting a spell.
 type CastSpellAction struct {
-	CardID         id.ID
-	SourceZone     zone.Type
-	Face           game.FaceIndex
-	Targets        []game.Target
-	XValue         int
-	ChosenModes    []int
-	KickerPaid     bool
-	KickerCount    int
+	CardID      id.ID
+	SourceZone  zone.Type
+	Face        game.FaceIndex
+	Targets     []game.Target
+	XValue      int
+	ChosenModes []int
+	KickerPaid  bool
+	KickerCount int
+	// Bargained records that the spell's Bargain additional cost was paid as it
+	// was cast (CR 702.166b): its controller sacrificed an artifact, enchantment,
+	// or token.
+	Bargained      bool
 	Overloaded     bool
 	Mutate         bool
 	MutateTargetID id.ID
@@ -225,6 +229,21 @@ func CastMultikickedSpellFaceFromZone(cardID id.ID, sourceZone zone.Type, face g
 	action.castSpell.KickerPaid = kickerCount > 0
 	action.castSpell.KickerCount = kickerCount
 	return action
+}
+
+// CastBargainedSpellFaceFromZone creates an action to cast a specific printed
+// face from a specific source zone with the Bargain additional cost paid
+// (CR 702.166b), so the resolving spell is bargained.
+func CastBargainedSpellFaceFromZone(cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int) Action {
+	action := CastSpellFaceFromZone(cardID, sourceZone, face, targets, xValue, chosenModes)
+	action.castSpell.Bargained = true
+	return action
+}
+
+// CastBargainedSpell creates an action to cast a spell from hand with its
+// Bargain additional cost paid (CR 702.166b).
+func CastBargainedSpell(cardID id.ID, targets []game.Target, xValue int, chosenModes []int) Action {
+	return CastBargainedSpellFaceFromZone(cardID, zone.Hand, game.FaceFront, targets, xValue, chosenModes)
 }
 
 // CastOverloadedSpellFaceFromZone creates an action to cast a specific printed
@@ -505,6 +524,9 @@ func (a Action) Validate() error {
 		if a.castSpell.GiftPromised && (a.castSpell.Overloaded || a.castSpell.Mutate) {
 			return errors.New("gift promise cannot be combined with another alternative cast")
 		}
+		if a.castSpell.Bargained && (a.castSpell.Overloaded || a.castSpell.Mutate) {
+			return errors.New("bargain cannot be combined with another alternative cast")
+		}
 	case ActionActivateAbility:
 		if a.activateAbility.SourceID == 0 {
 			return errors.New("activate ability action missing source ID")
@@ -607,6 +629,7 @@ func castSpellActionEmpty(a CastSpellAction) bool {
 		a.XValue == 0 &&
 		len(a.ChosenModes) == 0 &&
 		!a.KickerPaid &&
+		!a.Bargained &&
 		!a.Overloaded &&
 		!a.Mutate &&
 		a.MutateTargetID == 0 &&

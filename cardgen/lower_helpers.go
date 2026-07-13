@@ -170,6 +170,7 @@ func mixedKeywordDiagnostic(ctx contentCtx) *shared.Diagnostic {
 var keywordStaticBodies = map[parser.KeywordKind]loweredStaticAbility{
 	parser.KeywordAscend:           {Body: game.AscendStaticBody, VarName: "game.AscendStaticBody"},
 	parser.KeywordBanding:          {Body: game.BandingStaticBody, VarName: "game.BandingStaticBody"},
+	parser.KeywordBargain:          {Body: game.BargainStaticBody, VarName: "game.BargainStaticBody"},
 	parser.KeywordDevoid:           {Body: game.DevoidStaticBody, VarName: "game.DevoidStaticBody"},
 	parser.KeywordDeathtouch:       {Body: game.DeathtouchStaticBody, VarName: "game.DeathtouchStaticBody"},
 	parser.KeywordDefender:         {Body: game.DefenderStaticBody, VarName: "game.DefenderStaticBody"},

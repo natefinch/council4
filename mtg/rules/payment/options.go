@@ -24,16 +24,23 @@ type spellCostOption struct {
 	manaCost        *cost.Mana
 	additionalCosts []cost.Additional
 	castPermission  SpellCastPermission
+	bargained       bool
 }
 
 // spellCostOptionsForZoneAndKicker returns the available cost options for
-// casting a spell from the given zone with the kicker flag.
-func spellCostOptionsForZoneAndKicker(s State, playerID game.PlayerID, card *game.CardDef, sourceZone zone.Type, kickerPaid bool, kickerCount int, permissions []SpellCastPermission) []spellCostOption {
+// casting a spell from the given zone with the kicker flag. When bargained is
+// set the spell's fixed Bargain additional cost (CR 702.166a) is added to every
+// option so the cast is legal only when the caster can sacrifice an artifact,
+// enchantment, or token.
+func spellCostOptionsForZoneAndKicker(s State, playerID game.PlayerID, card *game.CardDef, sourceZone zone.Type, kickerPaid bool, kickerCount int, bargained bool, permissions []SpellCastPermission) []spellCostOption {
 	if card == nil {
 		return nil
 	}
 	kicker, kickerOK := spellKicker(card)
 	requiredAdditional := card.AdditionalCosts
+	if bargained {
+		requiredAdditional = append(append([]cost.Additional(nil), requiredAdditional...), BargainSacrificeCost())
+	}
 	alternatives := card.AlternativeCosts
 	hasFlashbackAlternative := slices.ContainsFunc(alternatives, isFlashbackAlternative)
 	if flashbackCost, ok := card.FlashbackCost(); ok && !hasFlashbackAlternative {
@@ -69,6 +76,7 @@ func spellCostOptionsForZoneAndKicker(s State, playerID game.PlayerID, card *gam
 			manaCost:        spellManaCostWithKicker(manaCostPtr(card.ManaCost), kicker, kickerOK, kickerPaid, kickerCount),
 			additionalCosts: append([]cost.Additional(nil), requiredAdditional...),
 			castPermission:  normalPermission,
+			bargained:       bargained,
 		})
 	}
 	for i, alternative := range alternatives {
@@ -105,6 +113,7 @@ func spellCostOptionsForZoneAndKicker(s State, playerID game.PlayerID, card *gam
 			manaCost:        spellManaCostWithKicker(manaCostPtr(alternative.ManaCost), kicker, kickerOK, kickerPaid, kickerCount),
 			additionalCosts: additional,
 			castPermission:  permission,
+			bargained:       bargained,
 		})
 	}
 	return options
@@ -142,7 +151,7 @@ func addSpliceCosts(options []spellCostOption, spliceManaCosts []cost.Mana) {
 
 func spellCostOptionsForRequestWithoutModes(s State, req SpellRequest) []spellCostOption {
 	if !req.Alternative.Exists {
-		return spellCostOptionsForZoneAndKicker(s, req.PlayerID, req.Card, req.SourceZone, req.KickerPaid, req.KickerCount, req.CastPermissions)
+		return spellCostOptionsForZoneAndKicker(s, req.PlayerID, req.Card, req.SourceZone, req.KickerPaid, req.KickerCount, req.Bargained, req.CastPermissions)
 	}
 	if req.Card == nil {
 		return nil
@@ -166,6 +175,9 @@ func spellCostOptionsForRequestWithoutModes(s State, req SpellRequest) []spellCo
 	kicker, kickerOK := spellKicker(req.Card)
 	additional := append([]cost.Additional(nil), req.Card.AdditionalCosts...)
 	additional = append(additional, alternative.AdditionalCosts...)
+	if req.Bargained {
+		additional = append(additional, BargainSacrificeCost())
+	}
 	label := alternative.Label
 	if label == "" {
 		label = "Alternative cost"
@@ -177,6 +189,7 @@ func spellCostOptionsForRequestWithoutModes(s State, req SpellRequest) []spellCo
 		manaCost:        spellManaCostWithKicker(manaCostPtr(alternative.ManaCost), kicker, kickerOK, req.KickerPaid, req.KickerCount),
 		additionalCosts: additional,
 		castPermission:  castPermission,
+		bargained:       req.Bargained,
 	}}
 }
 
@@ -356,6 +369,20 @@ func spellKicker(card *game.CardDef) (game.KickerKeyword, bool) {
 		return game.KickerKeyword{}, false
 	}
 	return card.KickerKeyword()
+}
+
+// BargainSacrificeCost is the fixed optional additional cost the Bargain keyword
+// grants (CR 702.166a): "sacrifice an artifact, enchantment, or token." It is
+// added to a spell's costs only on the bargained cast branch, where paying it is
+// mandatory; the union of eligible sacrifices is expanded by the payment
+// planner's SelectionForAdditionalCost.
+func BargainSacrificeCost() cost.Additional {
+	return cost.Additional{
+		Kind:                            cost.AdditionalSacrifice,
+		Amount:                          1,
+		MatchArtifactEnchantmentOrToken: true,
+		Text:                            "Sacrifice an artifact, enchantment, or token",
+	}
 }
 
 // payableSpellOptionsFromState returns all spell cost options that can currently be paid.

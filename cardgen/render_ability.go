@@ -717,6 +717,9 @@ func (r Renderer) renderTriggerCondition(ctx *renderCtx, trigger *game.TriggerCo
 	if trigger.InterveningIfEventPermanentWasKicked {
 		fields = append(fields, "InterveningIfEventPermanentWasKicked: true,")
 	}
+	if trigger.InterveningIfEventPermanentWasBargained {
+		fields = append(fields, "InterveningIfEventPermanentWasBargained: true,")
+	}
 	if trigger.InterveningIfEventPermanentWasCast {
 		fields = append(fields, "InterveningIfEventPermanentWasCast: true,")
 	}

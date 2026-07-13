@@ -43,6 +43,7 @@ const (
 	ConditionPredicateGraveyardCardTypeCountAtLeast                    ConditionPredicateKind = "ConditionPredicateGraveyardCardTypeCountAtLeast"
 	ConditionPredicateCreaturePowerDiversityAtLeast                    ConditionPredicateKind = "ConditionPredicateCreaturePowerDiversityAtLeast"
 	ConditionPredicateEventSubjectWasKicked                            ConditionPredicateKind = "ConditionPredicateEventSubjectWasKicked"
+	ConditionPredicateEventSubjectWasBargained                         ConditionPredicateKind = "ConditionPredicateEventSubjectWasBargained"
 	ConditionPredicateEventSubjectWasCast                              ConditionPredicateKind = "ConditionPredicateEventSubjectWasCast"
 	ConditionPredicateEventSubjectWasCastByController                  ConditionPredicateKind = "ConditionPredicateEventSubjectWasCastByController"
 	ConditionPredicateEventSubjectWasCastFromControllerHand            ConditionPredicateKind = "ConditionPredicateEventSubjectWasCastFromControllerHand"
@@ -89,6 +90,7 @@ const (
 	ConditionPredicateSourceTributeNotPaid                             ConditionPredicateKind = "ConditionPredicateSourceTributeNotPaid"
 	ConditionPredicateControllerControlsCommander                      ConditionPredicateKind = "ConditionPredicateControllerControlsCommander"
 	ConditionPredicateSpellWasKicked                                   ConditionPredicateKind = "ConditionPredicateSpellWasKicked"
+	ConditionPredicateSpellWasBargained                                ConditionPredicateKind = "ConditionPredicateSpellWasBargained"
 	ConditionPredicateGiftPromised                                     ConditionPredicateKind = "ConditionPredicateGiftPromised"
 	ConditionPredicateSpellWasCastFromGraveyard                        ConditionPredicateKind = "ConditionPredicateSpellWasCastFromGraveyard"
 	ConditionPredicateSourceSaddled                                    ConditionPredicateKind = "ConditionPredicateSourceSaddled"
@@ -1177,6 +1179,12 @@ func recognizeCastTimingCondition(body []shared.Token, _ Atoms) (ConditionClause
 	if tokenWordsEqual(body, "this", "spell", "was", "kicked") {
 		return ConditionClause{Predicate: ConditionPredicateSpellWasKicked}, true
 	}
+	if tokenWordsEqual(body, "this", "spell", "was", "bargained") {
+		return ConditionClause{Predicate: ConditionPredicateSpellWasBargained}, true
+	}
+	if tokenWordsEqual(body, "it's", "bargained") {
+		return ConditionClause{Predicate: ConditionPredicateSpellWasBargained}, true
+	}
 	if tokenWordsEqual(body, "the", "gift", "was", "promised") {
 		return ConditionClause{Predicate: ConditionPredicateGiftPromised}, true
 	}
@@ -1199,7 +1207,13 @@ func recognizeEventSubjectCondition(body []shared.Token, atoms Atoms) (Condition
 	if tokenWordsEqual(body, "it", "was", "kicked") {
 		return ConditionClause{Predicate: ConditionPredicateEventSubjectWasKicked}, true
 	}
+	if tokenWordsEqual(body, "it", "was", "bargained") {
+		return ConditionClause{Predicate: ConditionPredicateEventSubjectWasBargained}, true
+	}
 	if clause, ok := recognizeSourceNamedWasKickedCondition(body, atoms); ok {
+		return clause, true
+	}
+	if clause, ok := recognizeSourceNamedWasBargainedCondition(body, atoms); ok {
 		return clause, true
 	}
 	if tokenWordsEqual(body, "it", "was", "cast") {
@@ -1249,6 +1263,25 @@ func recognizeSourceNamedWasKickedCondition(body []shared.Token, atoms Atoms) (C
 		return ConditionClause{}, false
 	}
 	return ConditionClause{Predicate: ConditionPredicateEventSubjectWasKicked}, true
+}
+
+// recognizeSourceNamedWasBargainedCondition recognizes a bargain gate whose
+// subject names the source permanent by its own card name or by a "this <type>"
+// phrase rather than the bare event pronoun ("if Dunbarrow Revivalist was
+// bargained", "if this creature was bargained"; CR 702.166c). The bare-pronoun
+// "it was bargained" form is recognized by its caller; this recognizer covers
+// the leading subject that names the source. The subject before "was bargained"
+// must be only the card name or a permanent-type noun phrase; any other subject
+// fails closed.
+func recognizeSourceNamedWasBargainedCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
+	rest, ok := cutSourceNamedSubjectTokens(body, atoms)
+	if !ok {
+		return ConditionClause{}, false
+	}
+	if !tokenWordsEqual(rest, "was", "bargained") {
+		return ConditionClause{}, false
+	}
+	return ConditionClause{Predicate: ConditionPredicateEventSubjectWasBargained}, true
 }
 
 // cutSourceNamedSubjectTokens consumes a leading source self-subject that names

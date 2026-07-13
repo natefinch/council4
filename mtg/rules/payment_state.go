@@ -147,7 +147,7 @@ func (*rulesPaymentState) CardFace(card *game.CardInstance, face game.FaceIndex)
 	return cardFaceOrDefault(card, face)
 }
 
-func (s *rulesPaymentState) CostModifiersForSpell(playerID game.PlayerID, card *game.CardDef, cardID id.ID, sourceZone zone.Type, targets []game.Target) []game.CostModifier {
+func (s *rulesPaymentState) CostModifiersForSpell(playerID game.PlayerID, card *game.CardDef, cardID id.ID, sourceZone zone.Type, targets []game.Target, bargained bool) []game.CostModifier {
 	var modifiers []game.CostModifier
 	for _, modifier := range s.g.CostModifiers {
 		if modifier.Kind != game.CostModifierSpell {
@@ -178,7 +178,7 @@ func (s *rulesPaymentState) CostModifiersForSpell(playerID game.PlayerID, card *
 		}
 	}
 	modifiers = append(modifiers, staticCostModifiersForContext(s.g, playerID, card, sourceZone, targets)...)
-	modifiers = append(modifiers, sourceSpellSelfCostModifiers(s.g, playerID, card, targets)...)
+	modifiers = append(modifiers, sourceSpellSelfCostModifiers(s.g, playerID, card, targets, bargained)...)
 	return modifiers
 }
 
@@ -204,7 +204,7 @@ func (s *rulesPaymentState) SpellHasGrantedKeyword(playerID game.PlayerID, card 
 // caster now. Generic mana may fall to zero but colored requirements are never
 // touched, because the resolved reduction flows through the shared generic cost
 // modifier path.
-func sourceSpellSelfCostModifiers(g *game.Game, playerID game.PlayerID, card *game.CardDef, targets []game.Target) []game.CostModifier {
+func sourceSpellSelfCostModifiers(g *game.Game, playerID game.PlayerID, card *game.CardDef, targets []game.Target, bargained bool) []game.CostModifier {
 	if card == nil {
 		return nil
 	}
@@ -233,7 +233,7 @@ func sourceSpellSelfCostModifiers(g *game.Game, playerID game.PlayerID, card *ga
 			case modifier.DynamicReduction != nil:
 				reduction = dynamicAmountValue(g, nil, playerID, *modifier.DynamicReduction)
 			case modifier.ReductionCondition.Exists:
-				if conditionSatisfied(g, conditionContext{controller: playerID}, modifier.ReductionCondition) {
+				if conditionSatisfied(g, conditionContext{controller: playerID, obj: &game.StackObject{Bargained: bargained}}, modifier.ReductionCondition) {
 					reduction = modifier.GenericReduction
 				}
 			case modifier.TargetsTappedCreature:

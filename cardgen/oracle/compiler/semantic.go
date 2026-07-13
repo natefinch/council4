@@ -661,6 +661,7 @@ const (
 	ConditionPredicateControllerGraveyardCardTypeCountAtLeast
 	ConditionPredicateControllerCreaturePowerDiversityAtLeast
 	ConditionPredicateEventSubjectWasKicked
+	ConditionPredicateEventSubjectWasBargained
 	ConditionPredicateEventSubjectWasCast
 	ConditionPredicateEventSubjectWasCastByController
 	ConditionPredicateEventSubjectWasCastFromControllerHand
@@ -822,6 +823,11 @@ const (
 	// kicked ("if this spell was kicked, ... instead"). It gates the kicked
 	// effect variant against the spell's kicker-paid cast context.
 	ConditionPredicateSpellWasKicked
+	// ConditionPredicateSpellWasBargained is satisfied when the resolving spell
+	// was bargained ("if this spell was bargained, ... instead"; CR 702.166c). It
+	// gates the bargained effect variant against the spell's bargained cast
+	// context.
+	ConditionPredicateSpellWasBargained
 	// ConditionPredicateGiftPromised is satisfied when the resolving spell's Gift
 	// keyword action promised a gift to an opponent as it was cast ("if the gift
 	// was promised, ..."; CR 702.171). It gates the promoted effect variant

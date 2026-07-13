@@ -41,6 +41,7 @@ var Cards = []cardset.Entry{
 	{Name: "Aether Shockwave", New: AetherShockwave},
 	{Name: "Aether Swooper", New: AetherSwooper},
 	{Name: "Aetherling", New: Aetherling},
+	{Name: "Agatha's Champion", New: AgathaSChampion},
 	{Name: "Agent of the Iron Throne", New: AgentOfTheIronThrone},
 	{Name: "Ainok Artillerist", New: AinokArtillerist},
 	{Name: "Ainok Guide", New: AinokGuide},

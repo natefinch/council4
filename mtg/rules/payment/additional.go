@@ -558,6 +558,13 @@ func SelectionForAdditionalCost(additional cost.Additional) (game.Selection, boo
 			{SubtypesAny: []types.Sub{types.Saga}},
 		}
 	}
+	if additional.MatchArtifactEnchantmentOrToken {
+		sel.AnyOf = append(sel.AnyOf,
+			game.Selection{RequiredTypes: []types.Card{types.Artifact}},
+			game.Selection{RequiredTypes: []types.Card{types.Enchantment}},
+			game.Selection{TokenOnly: true},
+		)
+	}
 	return sel, true
 }
 

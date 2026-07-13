@@ -28,13 +28,17 @@ const (
 
 // SpellRequest bundles all parameters needed to check or pay spell costs.
 type SpellRequest struct {
-	PlayerID        game.PlayerID
-	CardID          id.ID
-	SourceZone      zone.Type
-	Card            *game.CardDef
-	XValue          int
-	KickerPaid      bool
-	KickerCount     int
+	PlayerID    game.PlayerID
+	CardID      id.ID
+	SourceZone  zone.Type
+	Card        *game.CardDef
+	XValue      int
+	KickerPaid  bool
+	KickerCount int
+	// Bargained requests the bargained cast (CR 702.166b): the spell's Bargain
+	// additional cost — sacrifice one artifact, enchantment, or token — is added
+	// to every cost option so the cast is legal only when the caster can pay it.
+	Bargained       bool
 	ChosenModes     []int
 	Alternative     opt.V[cost.Alternative]
 	CastPermissions []SpellCastPermission

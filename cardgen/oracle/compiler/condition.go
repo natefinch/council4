@@ -40,6 +40,7 @@ func recognizeCondition(
 var simplePredicateMap = map[parser.ConditionPredicateKind]ConditionPredicate{
 	parser.ConditionPredicateControllerHandEmpty:                              ConditionPredicateControllerHandEmpty,
 	parser.ConditionPredicateEventSubjectWasKicked:                            ConditionPredicateEventSubjectWasKicked,
+	parser.ConditionPredicateEventSubjectWasBargained:                         ConditionPredicateEventSubjectWasBargained,
 	parser.ConditionPredicateEventSubjectWasCast:                              ConditionPredicateEventSubjectWasCast,
 	parser.ConditionPredicateEventSubjectWasCastByController:                  ConditionPredicateEventSubjectWasCastByController,
 	parser.ConditionPredicateEventSubjectWasCastFromControllerHand:            ConditionPredicateEventSubjectWasCastFromControllerHand,
@@ -68,6 +69,7 @@ var simplePredicateMap = map[parser.ConditionPredicateKind]ConditionPredicate{
 	parser.ConditionPredicateSourceTributeNotPaid:                             ConditionPredicateSourceTributeNotPaid,
 	parser.ConditionPredicateControllerControlsCommander:                      ConditionPredicateControllerControlsCommander,
 	parser.ConditionPredicateSpellWasKicked:                                   ConditionPredicateSpellWasKicked,
+	parser.ConditionPredicateSpellWasBargained:                                ConditionPredicateSpellWasBargained,
 	parser.ConditionPredicateGiftPromised:                                     ConditionPredicateGiftPromised,
 	parser.ConditionPredicateSpellWasCastFromGraveyard:                        ConditionPredicateSpellWasCastFromGraveyard,
 	parser.ConditionPredicateSourceSaddled:                                    ConditionPredicateSourceSaddled,

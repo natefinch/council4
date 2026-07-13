@@ -586,6 +586,7 @@ func (e *Engine) resolvePermanentSpellWithChoices(g *game.Game, obj *game.StackO
 		permanentCreationOptions{
 			KickerPaid:              obj.KickerPaid,
 			KickCount:               obj.KickerCount,
+			Bargained:               obj.Bargained,
 			Evoked:                  obj.Evoked,
 			Dashed:                  obj.Dashed,
 			EntersTransformed:       obj.Converted,

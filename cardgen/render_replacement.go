@@ -1200,12 +1200,20 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 		fields = append(fields, "SpellWasKicked: true,")
 		hasPredicate = true
 	}
+	if cond.SpellWasBargained {
+		fields = append(fields, "SpellWasBargained: true,")
+		hasPredicate = true
+	}
 	if cond.GiftPromised {
 		fields = append(fields, "GiftPromised: true,")
 		hasPredicate = true
 	}
 	if cond.EventPermanentWasKicked {
 		fields = append(fields, "EventPermanentWasKicked: true,")
+		hasPredicate = true
+	}
+	if cond.EventPermanentWasBargained {
+		fields = append(fields, "EventPermanentWasBargained: true,")
 		hasPredicate = true
 	}
 	if cond.EventPermanentWasCastFromControllerHand {

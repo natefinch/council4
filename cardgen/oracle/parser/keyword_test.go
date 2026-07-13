@@ -44,6 +44,7 @@ func TestParseKeywordVocabularyMeaning(t *testing.T) {
 		"Flanking":      KeywordFlanking,
 		"Dethrone":      KeywordDethrone,
 		"Banding":       KeywordBanding,
+		"Bargain":       KeywordBargain,
 		"Partner with":  KeywordPartnerWith,
 	}
 	for source, want := range tests {

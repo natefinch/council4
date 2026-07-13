@@ -135,6 +135,13 @@ type Condition struct {
 	// stack object's captured kicker-paid state and is false for copies.
 	SpellWasKicked bool
 
+	// SpellWasBargained is satisfied when the resolving spell was bargained ("if
+	// this spell was bargained, ..."; CR 702.166c). It is evaluated against the
+	// resolving stack object's captured bargained state. Like the kicker gate,
+	// bargaining is an as-cast choice, so a copy of a bargained spell was not
+	// itself bargained and this is false for copies.
+	SpellWasBargained bool
+
 	// GiftPromised is satisfied when the resolving spell's Gift keyword action
 	// promised a gift to an opponent as it was cast ("if the gift was promised,
 	// ..."; CR 702.171). It is evaluated against the resolving stack object's
@@ -151,6 +158,14 @@ type Condition struct {
 	// which the entering-permanent event preserves from the spell that became the
 	// permanent, and is false when no such event is in context.
 	EventPermanentWasKicked bool
+
+	// EventPermanentWasBargained is satisfied when the permanent named by the
+	// triggering or entering event was bargained (CR 702.166c, the Bargain
+	// creatures' "if it was bargained" enter triggers). It is evaluated against
+	// the event's captured bargained state, which the entering-permanent event
+	// preserves from the spell that became the permanent, and is false when no
+	// such event is in context.
+	EventPermanentWasBargained bool
 
 	// EventPermanentWasCastFromControllerHand is satisfied when the entering
 	// permanent was cast by the condition controller from that player's hand
@@ -374,8 +389,10 @@ func (c *Condition) Empty() bool {
 		!c.EventHistory.Exists &&
 		!c.ControllerControlsCommander &&
 		!c.SpellWasKicked &&
+		!c.SpellWasBargained &&
 		!c.GiftPromised &&
 		!c.EventPermanentWasKicked &&
+		!c.EventPermanentWasBargained &&
 		!c.EventPermanentWasCastFromControllerHand &&
 		c.ControllerGraveyardCardOfTypeCountAtLeast == 0 &&
 		c.ControllerGraveyardInstantOrSorceryCountAtLeast == 0 &&

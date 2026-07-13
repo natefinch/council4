@@ -253,6 +253,19 @@ const (
 	// copies of the host copy the combined text. Appended at the end of the enum
 	// so existing keyword ordinals are unchanged.
 	Splice
+	// Bargain (CR 702.166, Wilds of Eldraine) is a Kicker variant printed on some
+	// instants, sorceries, and creatures: "Bargain (You may sacrifice an artifact,
+	// enchantment, or token as you cast this spell.)" It is a static ability that
+	// grants the optional additional cost of sacrificing an artifact, enchantment,
+	// or token as the spell is cast; a spell whose controller pays that cost has
+	// been "bargained," enabling the card's linked "if this spell was bargained"
+	// abilities. It carries no parameters (the additional cost and the payoffs are
+	// fixed and linked), so it is modeled as a recognized simple keyword: the
+	// rules layer reads HasKeyword(Bargain) to offer the bargained cast and apply
+	// the fixed sacrifice cost, and the "if bargained" clauses lower to the
+	// SpellWasBargained condition and bargained target gates. Appended at the end
+	// of the enum so existing keyword ordinals are unchanged.
+	Bargain
 	// KeywordCount is one greater than the largest real keyword value. It sizes
 	// compact keyword sets; it is not itself a keyword.
 	KeywordCount
@@ -336,6 +349,11 @@ var (
 
 	// CascadeStaticBody is the reusable StaticAbilityBody for cascade.
 	CascadeStaticBody = simpleKeywordStaticBody("Cascade", Cascade)
+
+	// BargainStaticBody is the reusable StaticAbilityBody for bargain (CR
+	// 702.166): a static ability granting the optional additional cost to
+	// sacrifice an artifact, enchantment, or token as the spell is cast.
+	BargainStaticBody = simpleKeywordStaticBody("Bargain", Bargain)
 
 	// ProwessStaticBody is the reusable StaticAbilityBody for prowess.
 	ProwessStaticBody = simpleKeywordStaticBody("Prowess", Prowess)
@@ -826,6 +844,12 @@ type TriggerCondition struct {
 	// enter triggers. The entering permanent event preserves the spell's kicker
 	// choice for both trigger-time and resolution-time checks.
 	InterveningIfEventPermanentWasKicked bool
+
+	// InterveningIfEventPermanentWasBargained is true for "if it was bargained"
+	// on enter triggers (CR 702.166c, the Bargain creatures). The entering
+	// permanent event preserves whether the spell that became the permanent was
+	// bargained for both trigger-time and resolution-time checks.
+	InterveningIfEventPermanentWasBargained bool
 
 	// InterveningIfEventPermanentWasCast is true for "if it was cast" on enter
 	// triggers.

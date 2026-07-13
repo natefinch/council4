@@ -215,6 +215,12 @@ type Event struct {
 	// kicker cost was paid. It is false for objects that were not kicked.
 	KickerPaid bool
 
+	// Bargained records whether a spell-cast or entering-permanent spell's
+	// Bargain additional cost was paid as it was cast (CR 702.166b). It is false
+	// for objects that were not bargained. It feeds the "if it was bargained"
+	// enter-trigger intervening-if and the entering permanent's captured state.
+	Bargained bool
+
 	// EnterEvoked records whether an entering permanent resulted from a spell
 	// cast for its Evoke alternative cost (CR 702.74). It feeds the evoke
 	// sacrifice trigger's intervening "if its evoke cost was paid" condition.
