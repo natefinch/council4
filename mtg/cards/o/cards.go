@@ -15,6 +15,7 @@ var Cards = []cardset.Entry{
 	{Name: "Ob Nixilis's Cruelty", New: ObNixilisSCruelty},
 	{Name: "Obliterating Bolt", New: ObliteratingBolt},
 	{Name: "Obscura Storefront", New: ObscuraStorefront},
+	{Name: "Observant Alseid", New: ObservantAlseid},
 	{Name: "Obsidian Obelisk", New: ObsidianObelisk},
 	{Name: "Ocular Halo", New: OcularHalo},
 	{Name: "Odric, Lunarch Marshal", New: OdricLunarchMarshal},

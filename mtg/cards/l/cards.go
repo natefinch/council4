@@ -27,6 +27,7 @@ var Cards = []cardset.Entry{
 	{Name: "Lead-Belly Chimera", New: LeadBellyChimera},
 	{Name: "Lead Golem", New: LeadGolem},
 	{Name: "Lead the Stampede", New: LeadTheStampede},
+	{Name: "Leafcrown Dryad", New: LeafcrownDryad},
 	{Name: "Leering Emblem", New: LeeringEmblem},
 	{Name: "Legion Leadership", New: LegionLeadership},
 	{Name: "Legion Loyalty", New: LegionLoyalty},

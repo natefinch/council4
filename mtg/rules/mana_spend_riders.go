@@ -221,7 +221,11 @@ func resolveSpellCastManaSpendRiders(
 		return
 	}
 	qualifies := func(rider game.ManaRiderInstance) bool {
-		return manaSpendConditionSatisfied(g, rider, spellDef)
+		var spellObj *game.StackObject
+		if len(spellObjects) > 0 {
+			spellObj = spellObjects[0]
+		}
+		return manaSpendConditionSatisfied(g, rider, spellObj, spellDef)
 	}
 	processManaSpendRiders(player, before, spent, qualifies, func(rider game.ManaRiderInstance) {
 		if rider.Rider.SpellRuleEffect != game.RuleEffectNone && len(spellObjects) > 0 {
@@ -239,24 +243,28 @@ func resolveSpellCastManaSpendRiders(
 	})
 }
 
-func manaSpendConditionSatisfied(g *game.Game, rider game.ManaRiderInstance, spellDef *game.CardDef) bool {
+func manaSpendConditionSatisfied(g *game.Game, rider game.ManaRiderInstance, spellObj *game.StackObject, spellDef *game.CardDef) bool {
+	// CR 702.103b: a spell cast for its bestow cost is not a creature spell while
+	// on the stack, so creature-spell mana-spend riders never see it as a creature.
+	bestowed := spellObj != nil && spellObj.Kind == game.StackSpell && spellObj.Bestowed
+	isCreatureSpell := spellDef != nil && spellDef.HasType(types.Creature) && !bestowed
 	switch rider.Rider.Condition {
 	case game.ManaSpendCastCommanderCreatureType:
-		return spellSatisfiesCommanderCreatureTypeRider(g, rider.Controller, spellDef)
+		return !bestowed && spellSatisfiesCommanderCreatureTypeRider(g, rider.Controller, spellDef)
 	case game.ManaSpendCastChosenCreatureType, game.ManaSpendCastOrActivateChosenCreatureType:
-		return rider.MatchesChosenCreatureType(spellDef)
+		return !bestowed && rider.MatchesChosenCreatureType(spellDef)
 	case game.ManaSpendCastLegendarySpell:
 		return spellDef != nil && spellDef.HasSupertype(types.Legendary)
 	case game.ManaSpendCastCreatureSpell, game.ManaSpendCastOrActivateCreature:
 		// The cast-or-activate creature restriction (Castle Garenbrig) admits the
 		// same creature spells here; its creature-ability activation is handled on
 		// the ability-payment path.
-		return spellDef != nil && spellDef.HasType(types.Creature)
+		return isCreatureSpell
 	case game.ManaSpendCastInstantOrSorcerySpell:
 		return spellDef != nil &&
 			(spellDef.HasType(types.Instant) || spellDef.HasType(types.Sorcery))
 	case game.ManaSpendCastNoncreatureSpell:
-		return spellDef != nil && !spellDef.HasType(types.Creature)
+		return spellDef != nil && !isCreatureSpell
 	case game.ManaSpendCastMulticoloredSpell:
 		return spellDef != nil && len(spellDef.Colors) >= 2
 	case game.ManaSpendCastPlaneswalkerSpell:

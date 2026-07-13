@@ -349,6 +349,12 @@ func lowerKeywordDispatch(
 		}
 		return dashLowering, true, nil
 	}
+	if bestowLowering, ok, diag := lowerBestowAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return bestowLowering, true, nil
+	}
 	if dredgeAbility, ok, diag := lowerDredgeAbility(ability, syntax); ok {
 		if diag != nil {
 			return abilityLowering{}, true, diag
@@ -1673,6 +1679,62 @@ func lowerDashAbility(
 		consumed:    semanticConsumption{keywords: 1},
 		sourceSpans: keywordSpans(ability, syntax),
 	}, true, nil
+}
+
+// lowerBestowAbility lowers the Bestow keyword (CR 702.103): "Bestow <cost>"
+// lets an enchantment creature card be cast as an Aura spell that enchants a
+// creature for its bestow cost, and lets it stay on the battlefield as a
+// creature when it becomes unattached. It produces a single Bestow static
+// ability carrying the fixed bestow mana cost, the enchant-creature target, and
+// the gated type-change that makes the permanent an Aura only while bestowed.
+// Only the exact keyword with a fixed mana cost and no other rules text on the
+// same paragraph is supported; variable ({X}) and non-mana bestow costs and any
+// extra text fail closed.
+func lowerBestowAbility(
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (abilityLowering, bool, *shared.Diagnostic) {
+	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordBestow {
+		return abilityLowering{}, false, nil
+	}
+	keyword := ability.Content.Keywords[0]
+	manaCost, fixed := fixedKeywordManaCost(keyword)
+	if !fixed ||
+		(ability.Kind != compiler.AbilityStatic && ability.Kind != compiler.AbilitySpell) ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.References) != 0 ||
+		ability.AbilityWord != "" ||
+		!keywordOnlyCovered(syntax, keyword) {
+		return abilityLowering{}, true, executableDiagnostic(
+			ability,
+			"unsupported Bestow ability",
+			"the executable source backend supports only exact Bestow with a fixed mana cost",
+		)
+	}
+	target := bestowEnchantCreatureTarget()
+	return abilityLowering{
+		staticAbilities: []loweredStaticAbility{{Body: game.BestowStaticAbility(manaCost, &target)}},
+		consumed:        semanticConsumption{keywords: 1},
+		sourceSpans:     keywordSpans(ability, syntax),
+	}, true, nil
+}
+
+// bestowEnchantCreatureTarget is the "enchant creature" target every Bestow
+// permanent must satisfy on the stack and while attached (CR 702.103b).
+func bestowEnchantCreatureTarget() game.TargetSpec {
+	return game.TargetSpec{
+		MinTargets: 1,
+		MaxTargets: 1,
+		Constraint: "creature",
+		Allow:      game.TargetAllowPermanent,
+		Selection: opt.Val(game.Selection{
+			RequiredTypesAny: []types.Card{types.Creature},
+		}),
+	}
 }
 
 // lowerSpectacleAbility lowers the Spectacle keyword (CR 702.107): "Spectacle

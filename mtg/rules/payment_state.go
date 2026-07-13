@@ -147,13 +147,18 @@ func (*rulesPaymentState) CardFace(card *game.CardInstance, face game.FaceIndex)
 	return cardFaceOrDefault(card, face)
 }
 
-func (s *rulesPaymentState) CostModifiersForSpell(playerID game.PlayerID, card *game.CardDef, cardID id.ID, sourceZone zone.Type, targets []game.Target, bargained bool) []game.CostModifier {
+func (s *rulesPaymentState) CostModifiersForSpell(playerID game.PlayerID, card *game.CardDef, cardID id.ID, sourceZone zone.Type, targets []game.Target, bargained, bestowed bool) []game.CostModifier {
+	// CR 601.2f / 702.103b: a bestowed spell determines its cost as an Aura spell
+	// that is not a creature spell, so type/subtype-filtered modifiers match on the
+	// transformed characteristics. The original card is never mutated; commander
+	// tax is unaffected by the transform and keeps reading the printed card.
+	matchFace := castSelectionFace(card, bestowed)
 	var modifiers []game.CostModifier
 	for _, modifier := range s.g.CostModifiers {
 		if modifier.Kind != game.CostModifierSpell {
 			continue
 		}
-		if !spellCostModifierMatchesCard(s.g, modifier, card) {
+		if !spellCostModifierMatchesCard(s.g, modifier, matchFace) {
 			continue
 		}
 		if !spellCostModifierMatchesZone(modifier, sourceZone) {
@@ -177,8 +182,8 @@ func (s *rulesPaymentState) CostModifiersForSpell(playerID game.PlayerID, card *
 			}
 		}
 	}
-	modifiers = append(modifiers, staticCostModifiersForContext(s.g, playerID, card, sourceZone, targets)...)
-	modifiers = append(modifiers, sourceSpellSelfCostModifiers(s.g, playerID, card, targets, bargained)...)
+	modifiers = append(modifiers, staticCostModifiersForContext(s.g, playerID, matchFace, sourceZone, targets)...)
+	modifiers = append(modifiers, sourceSpellSelfCostModifiers(s.g, playerID, matchFace, targets, bargained)...)
 	return modifiers
 }
 

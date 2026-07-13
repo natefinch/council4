@@ -62,6 +62,19 @@ type EnchantKeyword struct {
 	Target TargetSpec
 }
 
+// BestowKeyword parameterizes Bestow (CR 702.103). Cost is the fixed bestow mana
+// cost paid instead of the card's mana cost when it is cast bestowed. Target is
+// the enchant-creature target spec the bestowed Aura spell must satisfy while it
+// is on the stack and the attachment legality the bestowed Aura permanent must
+// keep. It is carried inside a static ability by BestowStaticAbility so
+// HasKeyword(Bestow) reports true while the card remains an ordinary enchantment
+// creature (it has neither the Aura subtype nor the Enchant keyword, so it is
+// not an Aura card and casting it normally requires no target).
+type BestowKeyword struct {
+	Cost   cost.Mana
+	Target TargetSpec
+}
+
 // CyclingKeyword parameterizes Cycling activation costs.
 type CyclingKeyword struct {
 	Cost cost.Mana
@@ -273,6 +286,7 @@ func (EchoKeyword) isKeywordAbility()             {}
 func (EquipKeyword) isKeywordAbility()            {}
 func (ReconfigureKeyword) isKeywordAbility()      {}
 func (EnchantKeyword) isKeywordAbility()          {}
+func (BestowKeyword) isKeywordAbility()           {}
 func (CyclingKeyword) isKeywordAbility()          {}
 func (NinjutsuKeyword) isKeywordAbility()         {}
 func (OutlastKeyword) isKeywordAbility()          {}
@@ -313,6 +327,7 @@ func (ReconfigureKeyword) keyword() Keyword {
 	return Reconfigure
 }
 func (EnchantKeyword) keyword() Keyword    { return Enchant }
+func (BestowKeyword) keyword() Keyword     { return Bestow }
 func (CyclingKeyword) keyword() Keyword    { return Cycling }
 func (NinjutsuKeyword) keyword() Keyword   { return Ninjutsu }
 func (OutlastKeyword) keyword() Keyword    { return Outlast }
@@ -367,6 +382,11 @@ func (ability ReconfigureKeyword) cloneKeywordAbility() KeywordAbility {
 }
 
 func (ability EnchantKeyword) cloneKeywordAbility() KeywordAbility {
+	ability.Target = cloneTargetSpecs([]TargetSpec{ability.Target})[0]
+	return ability
+}
+func (ability BestowKeyword) cloneKeywordAbility() KeywordAbility {
+	ability.Cost = append(cost.Mana(nil), ability.Cost...)
 	ability.Target = cloneTargetSpecs([]TargetSpec{ability.Target})[0]
 	return ability
 }
@@ -774,6 +794,33 @@ func StaticBodyEnchantTarget(body *StaticAbility) (TargetSpec, bool) {
 		return TargetSpec{}, false
 	}
 	return enchant.Target, true
+}
+
+// StaticBodyBestow returns the Bestow keyword carried by a static ability body.
+func StaticBodyBestow(body *StaticAbility) (BestowKeyword, bool) {
+	ka, ok := BodyKeywordAbility(body, Bestow)
+	if !ok {
+		return BestowKeyword{}, false
+	}
+	bestow, ok := ka.(BestowKeyword)
+	if !ok {
+		return BestowKeyword{}, false
+	}
+	return bestow, true
+}
+
+// CardDefBestow returns the Bestow keyword carried by a card definition's static
+// abilities, if the card has Bestow.
+func CardDefBestow(card *CardDef) (BestowKeyword, bool) {
+	if card == nil {
+		return BestowKeyword{}, false
+	}
+	for i := range card.StaticAbilities {
+		if bestow, ok := StaticBodyBestow(&card.StaticAbilities[i]); ok {
+			return bestow, true
+		}
+	}
+	return BestowKeyword{}, false
 }
 
 // ActivatedBodySuspendInfo returns suspend info from an ActivatedAbilityBody.

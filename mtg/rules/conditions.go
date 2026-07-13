@@ -200,6 +200,9 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	if cond.SourceSaddled {
 		matches = matches && ctx.source != nil && ctx.source.Saddled
 	}
+	if cond.SourceBestowed {
+		matches = matches && ctx.source != nil && ctx.source.Bestowed
+	}
 	if cond.SourceTributeNotPaid {
 		matches = matches && ctx.source != nil && !ctx.source.TributePaid
 	}

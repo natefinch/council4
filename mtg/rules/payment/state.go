@@ -156,8 +156,10 @@ type stateAbilityQueries interface {
 	// that target this creature cost {N} more to cast.") can match. bargained
 	// reports whether the cast is on the spell's Bargain branch (CR 702.166), so
 	// a "this spell costs {N} less to cast if it's bargained" self reduction can
-	// apply on that branch alone.
-	CostModifiersForSpell(playerID game.PlayerID, card *game.CardDef, cardID id.ID, sourceZone zone.Type, targets []game.Target, bargained bool) []game.CostModifier
+	// apply on that branch alone. bestowed marks a Bestow cast (CR 702.103b) so
+	// type/subtype-filtered modifiers match on the spell's transformed Aura
+	// characteristics rather than its printed ones.
+	CostModifiersForSpell(playerID game.PlayerID, card *game.CardDef, cardID id.ID, sourceZone zone.Type, targets []game.Target, bargained, bestowed bool) []game.CostModifier
 
 	// SpellHasGrantedKeyword reports whether an active rule effect grants keyword
 	// to the spell playerID is casting from sourceZone, in addition to any

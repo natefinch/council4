@@ -291,6 +291,16 @@ func (e *Engine) legalCastActions(g *game.Game, playerID game.PlayerID) []action
 								}
 							}
 						}
+						if spellHasBestow(spellDef) {
+							bestowResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{Bestowed: true})
+							if bestowResult.kind != targetInvalidSpec {
+								for _, targets := range bestowResult.choices {
+									if e.canCastBestowSpellFaceFromZone(g, playerID, cardID, sourceZone, face, targets, xValue, modes) {
+										actions = append(actions, actionBuild.castBestowSpell(cardID, sourceZone, face, targets, xValue, modes))
+									}
+								}
+							}
+						}
 					}
 				}
 				if spellDef.Overload.Exists {

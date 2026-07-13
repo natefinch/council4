@@ -554,6 +554,20 @@ func spellTargetSpecs(card *game.CardDef, chosenModes []int, branch game.CastBra
 }
 
 func spellTargetSpecsRaw(card *game.CardDef, chosenModes []int) []game.TargetSpec {
+	specs := spellBaseTargetSpecsRaw(card, chosenModes)
+	// A card with Bestow (CR 702.103) is an ordinary creature spell on its
+	// default branch and an Aura spell on its bestowed branch. Append its
+	// enchant-creature target gated to the bestowed branch so a normal cast
+	// announces no target while a bestowed cast must choose a creature.
+	if bestow, ok := game.CardDefBestow(card); ok {
+		spec := bestow.Target
+		spec.Gate = game.TargetGateBestowed
+		specs = append(specs, spec)
+	}
+	return specs
+}
+
+func spellBaseTargetSpecsRaw(card *game.CardDef, chosenModes []int) []game.TargetSpec {
 	if isAuraCard(card) {
 		spec, ok := enchantTargetSpecForCard(card)
 		if !ok {

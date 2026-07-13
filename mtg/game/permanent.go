@@ -165,6 +165,14 @@ type Permanent struct {
 	// if this is an Aura, Equipment, or Fortification. Absent if not attached.
 	AttachedTo opt.V[id.ID]
 
+	// Bestowed is true if this permanent entered the battlefield as a bestowed
+	// Aura, i.e. its card was cast for its bestow cost (CR 702.103). While
+	// bestowed it is an Aura enchantment and not a creature (see the bestow type
+	// change in the characteristic layer). It stops being bestowed — and becomes
+	// a creature again on the battlefield — the moment it becomes unattached or
+	// is attached to an illegal object (CR 702.103e–g), which clears this flag.
+	Bestowed bool
+
 	// --- Layer ordering ---
 
 	// --- Combat modifiers ---

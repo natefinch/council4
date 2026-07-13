@@ -36,6 +36,7 @@ func createStormCopies(g *game.Game, original *game.StackObject, spell *game.Car
 			Suspend:             original.Suspend,
 			Mutate:              original.Mutate,
 			MutateTargetID:      original.MutateTargetID,
+			Bestowed:            original.Bestowed,
 			Copy:                true,
 			SourceZone:          original.SourceZone,
 			AdditionalCostsPaid: append([]string(nil), original.AdditionalCostsPaid...),
@@ -60,9 +61,9 @@ func emitSpellCopiedEvent(g *game.Game, copyObj *game.StackObject, spell *game.C
 		ToZone:        zone.Stack,
 	}
 	if spell != nil {
-		event.CardTypes = cardTypes(spell)
+		event.CardTypes = stackObjectCardTypes(copyObj, spell)
 		event.CardSupertypes = cardSupertypes(spell)
-		event.CardSubtypes = cardSubtypes(spell)
+		event.CardSubtypes = stackObjectCardSubtypes(copyObj, spell)
 		event.Colors = spellColors(spell)
 		event.ManaValue = opt.Val(stackManaValue(spell, copyObj.XValue))
 	}

@@ -131,6 +131,19 @@ func enchantTargetSpecForCard(card *game.CardDef) (game.TargetSpec, bool) {
 		}
 		return spec, true
 	}
+	// A card with Bestow (CR 702.103) has no Enchant static ability while it is a
+	// creature, but its Bestow keyword carries the enchant-creature target the
+	// bestowed Aura permanent must keep as its attachment legality.
+	if bestow, ok := game.CardDefBestow(card); ok {
+		spec := bestow.Target
+		if spec.MinTargets == 0 {
+			spec.MinTargets = 1
+		}
+		if spec.MaxTargets == 0 {
+			spec.MaxTargets = 1
+		}
+		return spec, true
+	}
 	return game.TargetSpec{}, false
 }
 

@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,745 of 32,501 cards eligible for paper support (54.6%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,773 of 32,501 cards eligible for paper support (54.7%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1056,6 +1056,7 @@ Council4 currently supports **17,745 of 32,501 cards eligible for paper support 
 - Balefire Liege
 - Baleful Ammit
 - Baleful Beholder
+- Baleful Eidolon
 - Baleful Force
 - Baleful Strix
 - Ball Lightning
@@ -1801,6 +1802,7 @@ Council4 currently supports **17,745 of 32,501 cards eligible for paper support 
 - Boon of Safety
 - Boon of the Wish-Giver
 - Boon Reflection
+- Boon Satyr
 - Boosted Sloop
 - Boots of Speed
 - Borborygmos
@@ -2355,6 +2357,7 @@ Council4 currently supports **17,745 of 32,501 cards eligible for paper support 
 - Cave-In
 - Cavern Crawler
 - Cavern Harpy
+- Cavern Lampad
 - Cavern of Souls
 - Cavern Thoctar
 - Cavern Whisperer
@@ -2363,6 +2366,7 @@ Council4 currently supports **17,745 of 32,501 cards eligible for paper support 
 - Cease // Desist
 - Celebrity Fencer
 - Celestial Ancient
+- Celestial Archon
 - Celestial Armor
 - Celestial Crusader
 - Celestial Enforcer
@@ -2567,6 +2571,7 @@ Council4 currently supports **17,745 of 32,501 cards eligible for paper support 
 - Chorus of Woe
 - Chosen by Heliod
 - Chosen of Markov // Markov's Servant
+- Chromanticore
 - Chromatic Lantern
 - Chromatic Star
 - Chrome Cat
@@ -3224,6 +3229,7 @@ Council4 currently supports **17,745 of 32,501 cards eligible for paper support 
 - Crystal Vein
 - Crystalline Armor
 - Crystalline Crawler
+- Crystalline Nautilus
 - Crystalline Sliver
 - Crystallization
 - Cubwarden
@@ -5421,6 +5427,7 @@ Council4 currently supports **17,745 of 32,501 cards eligible for paper support 
 - Fling
 - Flint Golem
 - Flinthoof Boar
+- Flitterstep Eidolon
 - Flitterwing Nuisance
 - Floating Shield
 - Flock Impostor
@@ -5959,6 +5966,7 @@ Council4 currently supports **17,745 of 32,501 cards eligible for paper support 
 - Ghost-Lit Redeemer
 - Ghost-Lit Stalker
 - Ghost-Lit Warder
+- Ghostblade Eidolon
 - Ghostfire Slice
 - Ghostform
 - Ghostly Changeling
@@ -6170,6 +6178,7 @@ Council4 currently supports **17,745 of 32,501 cards eligible for paper support 
 - Gluttonous Slug
 - Gluttonous Troll
 - Gluttonous Zombie
+- Glyph Elemental
 - Glyph Keeper
 - Glyph Keeper
 - Glóin, Dwarf Emissary
@@ -6177,6 +6186,7 @@ Council4 currently supports **17,745 of 32,501 cards eligible for paper support 
 - Gnarlbark Elm
 - Gnarled Effigy
 - Gnarled Mass
+- Gnarled Scarhide
 - Gnarlid Colony
 - Gnarlid Pack
 - Gnarlroot Pallbearer
@@ -7000,6 +7010,7 @@ Council4 currently supports **17,745 of 32,501 cards eligible for paper support 
 - Herald of the Host
 - Herald of the Pantheon
 - Herald of the Sun
+- Herald of Torment
 - Herald's Horn
 - Heraldic Banner
 - Heralds of Tzeentch
@@ -7176,6 +7187,7 @@ Council4 currently supports **17,745 of 32,501 cards eligible for paper support 
 - Hope Charm
 - Hope Estheim
 - Hope Tender
+- Hopeful Eidolon
 - Hopeful Initiate
 - Hopeful Vigil
 - Hopeless Nightmare
@@ -7376,6 +7388,7 @@ Council4 currently supports **17,745 of 32,501 cards eligible for paper support 
 - Hypervolt Grasp
 - Hypnotic Cloud
 - Hypnotic Grifter
+- Hypnotic Siren
 - Hypnotic Specter
 - Hypnotic Sprite // Mesmeric Glare
 - Hypochondria
@@ -8560,6 +8573,7 @@ Council4 currently supports **17,745 of 32,501 cards eligible for paper support 
 - Leaf Dancer
 - Leaf Gilder
 - Leaf-Crowned Visionary
+- Leafcrown Dryad
 - Leafdrake Roost
 - Leafkin Druid
 - Leap
@@ -9689,6 +9703,7 @@ Council4 currently supports **17,745 of 32,501 cards eligible for paper support 
 - Mogg War Marshal
 - Moggcatcher
 - Mogis's Favor
+- Mogis's Warhound
 - Moira and Teshar
 - Mold Adder
 - Mold Demon
@@ -10230,6 +10245,7 @@ Council4 currently supports **17,745 of 32,501 cards eligible for paper support 
 - Nimble-Blade Khenra
 - Nimblewright Schematic
 - Nimbus Maze
+- Nimbus Naiad
 - Nimbus of the Isles
 - Nimbus Swimmer
 - Nimbus Wings
@@ -10345,6 +10361,7 @@ Council4 currently supports **17,745 of 32,501 cards eligible for paper support 
 - Nykthos, Shrine to Nyx
 - Nylea's Colossus
 - Nylea's Disciple
+- Nylea's Emissary
 - Nylea's Forerunner
 - Nylea's Huntmaster
 - Nylea's Presence
@@ -10357,8 +10374,13 @@ Council4 currently supports **17,745 of 32,501 cards eligible for paper support 
 - Nyxborn Brute
 - Nyxborn Colossus
 - Nyxborn Courser
+- Nyxborn Eidolon
 - Nyxborn Marauder
+- Nyxborn Rollicker
 - Nyxborn Seaguard
+- Nyxborn Shieldmate
+- Nyxborn Triton
+- Nyxborn Wolf
 - Oaken Siren
 - Oakenform
 - Oakgnarl Warrior
@@ -10399,6 +10421,7 @@ Council4 currently supports **17,745 of 32,501 cards eligible for paper support 
 - Obscura Charm
 - Obscura Initiate
 - Obscura Storefront
+- Observant Alseid
 - Obsessive Search
 - Obsessive Skinner
 - Obsessive Stitcher
@@ -11434,6 +11457,7 @@ Council4 currently supports **17,745 of 32,501 cards eligible for paper support 
 - Purging Stormbrood // Absorb Essence
 - Purify
 - Purify the Grave
+- Purphoros's Emissary
 - Purple Dragon Punks
 - Purple Pentapus
 - Purple-Crystal Crab
@@ -14102,6 +14126,7 @@ Council4 currently supports **17,745 of 32,501 cards eligible for paper support 
 - Speaker of the Heavens
 - Spear Spewer
 - Spearbreaker Behemoth
+- Spearpoint Oread
 - Species Gorger
 - Species Specialist
 - Specimen Collector
@@ -15358,6 +15383,7 @@ Council4 currently supports **17,745 of 32,501 cards eligible for paper support 
 - Thantis, the Warweaver
 - Thassa's Bounty
 - Thassa's Devourer
+- Thassa's Emissary
 - Thassa's Ire
 - That's Rough Buddy
 - Thaumatog
@@ -15975,6 +16001,7 @@ Council4 currently supports **17,745 of 32,501 cards eligible for paper support 
 - Triceraton Regenta
 - Tricks of the Trade
 - Trickster Mage
+- Trickster's Elk
 - Triclopean Sight
 - Trigon of Corruption
 - Trigon of Infestation
@@ -15993,6 +16020,7 @@ Council4 currently supports **17,745 of 32,501 cards eligible for paper support 
 - Triton Fortune Hunter
 - Triton Shorestalker
 - Triton Shorethief
+- Triton Wavebreaker
 - Triton Waverider
 - Triumph of Cruelty
 - Triumph of Ferocity

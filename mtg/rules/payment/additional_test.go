@@ -281,7 +281,7 @@ func (fakePaymentState) ActivationConditionSatisfied(game.PlayerID, *game.Perman
 func (fakePaymentState) ManaAbilityTimingAllowed(game.PlayerID, *game.Permanent, int, game.TimingRestriction) bool {
 	return true
 }
-func (fakePaymentState) CostModifiersForSpell(game.PlayerID, *game.CardDef, id.ID, zone.Type, []game.Target, bool) []game.CostModifier {
+func (fakePaymentState) CostModifiersForSpell(game.PlayerID, *game.CardDef, id.ID, zone.Type, []game.Target, bool, bool) []game.CostModifier {
 	return nil
 }
 func (fakePaymentState) SpellHasGrantedKeyword(game.PlayerID, *game.CardDef, id.ID, zone.Type, game.Keyword) bool {

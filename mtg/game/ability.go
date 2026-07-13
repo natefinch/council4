@@ -266,6 +266,19 @@ const (
 	// SpellWasBargained condition and bargained target gates. Appended at the end
 	// of the enum so existing keyword ordinals are unchanged.
 	Bargain
+	// Bestow (CR 702.103) is printed on some enchantment creatures: "Bestow
+	// <cost> (If you cast this card for its bestow cost, it's an Aura spell with
+	// enchant creature. It becomes a creature again if it's not attached.)" It is
+	// modeled by BestowKeyword, which carries the fixed bestow mana cost and the
+	// enchant-creature target spec, inside a static ability so HasKeyword(Bestow)
+	// reports true while the card stays an ordinary enchantment creature (it is
+	// not an Aura card). As the spell is cast for its bestow cost the rules layer
+	// records the bestowed cast, requires the enchant target, and on resolution
+	// puts the permanent onto the battlefield attached to that creature and
+	// marks it bestowed; a bestowed permanent that becomes unattached stops being
+	// bestowed and becomes a creature again. Appended at the end of the enum so
+	// existing keyword ordinals are unchanged.
+	Bestow
 	// KeywordCount is one greater than the largest real keyword value. It sizes
 	// compact keyword sets; it is not itself a keyword.
 	KeywordCount
