@@ -119,6 +119,9 @@ func compileAbility(
 		if n := ability.ExactSequence.PayLife; n >= 0 && n <= math.MaxUint8 {
 			compiled.ExactSequencePayLife = uint8(n)
 		}
+		if n := ability.ExactSequence.MaxManaValue; n >= 0 && n <= math.MaxUint8 {
+			compiled.ExactSequenceMaxManaValue = uint8(n)
+		}
 	}
 	compiled.ClassLevelGain = ability.ClassLevelGain
 	compiled.LevelUpRecognized = ability.LevelUpRecognized

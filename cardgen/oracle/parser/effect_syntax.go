@@ -40,6 +40,9 @@ func emitResolvingSyntax(abilities []Ability) {
 		if recognizeExtraDrawPayLifeOrTopSequence(&abilities[i]) {
 			continue
 		}
+		if recognizeBargainSearchCastPayoffSequence(&abilities[i]) {
+			continue
+		}
 		emitSentenceResolvingSyntax(
 			abilities[i].Sentences,
 			abilities[i].Atoms,

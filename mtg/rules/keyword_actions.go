@@ -174,6 +174,16 @@ func searchSpecSupported(spec game.SearchSpec) bool {
 	if spec.RevealOnly {
 		return spec.Destination == zone.None && spec.Reveal && !spec.SplitDestination.Exists
 	}
+	if spec.ExileFaceDown {
+		return spec.Destination == zone.Exile &&
+			!spec.Reveal &&
+			!spec.RevealOnly &&
+			!spec.AlsoGraveyard &&
+			!spec.SplitDestination.Exists &&
+			!spec.EntersTapped &&
+			len(spec.SlotFilters) == 0 &&
+			spec.DestinationPosition == game.SearchPositionUnspecified
+	}
 	primary := game.SearchDestination{
 		Zone:         spec.Destination,
 		Position:     spec.DestinationPosition,

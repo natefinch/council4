@@ -1290,6 +1290,9 @@ func (p Search) validatePrimitive(targets []TargetSpec, checkTargets bool) error
 	if p.Spec.RevealOnly {
 		return p.validateRevealOnlySearch(targets, checkTargets)
 	}
+	if p.Spec.ExileFaceDown {
+		return p.validateExileFaceDownSearch(targets, checkTargets)
+	}
 	if p.Spec.SourceZone == zone.None || p.Spec.Destination == zone.None {
 		return errors.New("search requires source and destination zones")
 	}
@@ -1448,6 +1451,56 @@ func (p Search) validateRevealOnlySearch(targets []TargetSpec, checkTargets bool
 	}
 	if len(p.Spec.Filter.RequiredTypesAny) == 1 {
 		return errors.New("search card-type union requires at least two card types")
+	}
+	if problems := p.Spec.Filter.Validate(); len(problems) != 0 {
+		return errors.New("search filter: " + problems[0])
+	}
+	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
+// validateExileFaceDownSearch validates the search-and-exile-face-down slice that
+// finds a single card, exiles it face down, shuffles the library, and publishes
+// the exiled card under a linked key for a following instruction to reference. It
+// requires a single searching player, a library source, an Exile destination,
+// exactly one found card, a published link, and none of the reveal, split,
+// tapped-entry, controller, or ordered-position riders.
+func (p Search) validateExileFaceDownSearch(targets []TargetSpec, checkTargets bool) error {
+	if p.Spec.SourceZone != zone.Library {
+		return errors.New("exile-face-down search must source from the library")
+	}
+	if p.Spec.Destination != zone.Exile {
+		return errors.New("exile-face-down search must send the found card to exile")
+	}
+	if p.Amount.IsDynamic() || p.Amount.Value() != 1 {
+		return errors.New("exile-face-down search must find exactly one card")
+	}
+	if p.PublishLinked == "" {
+		return errors.New("exile-face-down search must publish the exiled card under a linked key")
+	}
+	if p.Spec.Reveal ||
+		p.Spec.RevealOnly ||
+		p.Spec.AlsoGraveyard ||
+		p.Spec.SplitDestination.Exists ||
+		p.Spec.EntersTapped ||
+		p.Spec.MaxManaValueFromX ||
+		p.Spec.MaxManaValueFromSacrificedCost.Exists ||
+		p.Spec.SharedSubtype ||
+		p.Spec.DifferentNames ||
+		len(p.Spec.SlotFilters) != 0 ||
+		p.Spec.Name != "" ||
+		p.Spec.DestinationPosition != SearchPositionUnspecified {
+		return errors.New("exile-face-down search does not support reveal, split destination, tapped entry, X bound, name, slot, or library-position riders")
+	}
+	if p.Controller.Exists {
+		return errors.New("exile-face-down search does not support a controller rider")
+	}
+	if p.PlayerGroup.Kind != PlayerGroupReferenceNone {
+		return errors.New("exile-face-down search requires a single searching player")
+	}
+	switch p.Spec.FailToFindPolicy {
+	case SearchFailToFindDefault, SearchMayFailToFind, SearchMustFindIfAvailable:
+	default:
+		return errors.New("exile-face-down search has unsupported fail-to-find policy")
 	}
 	if problems := p.Spec.Filter.Validate(); len(problems) != 0 {
 		return errors.New("search filter: " + problems[0])

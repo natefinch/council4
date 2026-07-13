@@ -1677,6 +1677,18 @@ type SearchSpec struct {
 	// destination, slot filters, RevealOnly, MaxManaValueFromX, shared subtype,
 	// or tapped entry; the search may fail to find a card (CR 701.19e).
 	AlsoGraveyard bool
+
+	// ExileFaceDown, when true, sends the single found card to the searching
+	// player's exile zone face down instead of a face-up destination, then
+	// shuffles the library, publishing the exiled card under PublishLinked so a
+	// following instruction can reference it (cast it, move it to hand). It backs
+	// the search half of "Search your library for a card, exile it face down,
+	// then shuffle" (Beseech the Mirror). The exiled card stays hidden until a
+	// later instruction reveals it. It is meaningful only with SourceZone
+	// Library, Destination Exile, exactly one found card, a single searching
+	// player, a published link, and no reveal, split destination, slot filters,
+	// tapped entry, RevealOnly, AlsoGraveyard, or ordered destination position.
+	ExileFaceDown bool
 }
 
 // IsUnrestricted reports whether every library card matches the search filter.

@@ -366,6 +366,16 @@ const (
 	// library. DrawCount records N, ChooseCount records M, and PayLife records L
 	// so lowering models the sequence from typed counts rather than Oracle words.
 	ExactSequenceExtraDrawThenPayLifeOrTop
+	// ExactSequenceBargainSearchCastPayoff is the spell body "Search your library
+	// for a card, exile it face down, then shuffle. If this spell was bargained,
+	// you may cast the exiled card without paying its mana cost if that spell's
+	// mana value is <N> or less. Put the exiled card into your hand if it wasn't
+	// cast this way." (Beseech the Mirror): search the library and exile one card
+	// face down, then when the spell was bargained optionally cast the exiled card
+	// for free if its mana value is at most MaxManaValue, otherwise put it into
+	// hand. MaxManaValue records the "<N> or less" bound so lowering builds the
+	// mana-value gate from a typed count rather than Oracle wording.
+	ExactSequenceBargainSearchCastPayoff
 )
 
 // LookAtTopBattlefieldElse identifies the trailing fallback disposition of an
@@ -412,6 +422,10 @@ type ExactSequenceSyntax struct {
 	// drawn this turn (M) and the life paid to keep each chosen card (L).
 	ChooseCount int
 	PayLife     int
+	// MaxManaValue carries the "<N> or less" mana-value bound of
+	// ExactSequenceBargainSearchCastPayoff: the exiled card may be cast for free
+	// only when its mana value is at most MaxManaValue.
+	MaxManaValue int
 }
 
 // SourceAbilityCostReductionSyntax is the typed syntax for a source-local

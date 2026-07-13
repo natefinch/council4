@@ -1484,6 +1484,9 @@ func (r Renderer) renderSearchPrimitive(ctx *renderCtx, value game.Search) (stri
 	if value.Spec.RevealOnly {
 		specFields = append(specFields, "RevealOnly: true,")
 	}
+	if value.Spec.ExileFaceDown {
+		specFields = append(specFields, "ExileFaceDown: true,")
+	}
 	if value.Spec.EntersTapped {
 		specFields = append(specFields, "EntersTapped: true,")
 	}
