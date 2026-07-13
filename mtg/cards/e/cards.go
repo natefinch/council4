@@ -93,6 +93,7 @@ var Cards = []cardset.Entry{
 	{Name: "Explorer's Cache", New: ExplorerSCache},
 	{Name: "Explorer's Scope", New: ExplorerSScope},
 	{Name: "Expunge", New: Expunge},
+	{Name: "Extruder", New: Extruder},
 	{Name: "Eyeblight Massacre", New: EyeblightMassacre},
 	{Name: "Eyeblight's Ending", New: EyeblightSEnding},
 	{Name: "Ezrim, Agency Chief", New: EzrimAgencyChief},

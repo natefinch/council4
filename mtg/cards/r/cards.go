@@ -9,6 +9,7 @@ import "github.com/natefinch/council4/mtg/cards/cardset"
 var Cards = []cardset.Entry{
 	{Name: "Ram Through", New: RAMThrough},
 	{Name: "Radiant, Archangel", New: RadiantArchangel},
+	{Name: "Radiant's Dragoons", New: RadiantSDragoons},
 	{Name: "Raffine's Informant", New: RaffineSInformant},
 	{Name: "Raffine's Silencer", New: RaffineSSilencer},
 	{Name: "Raffine, Scheming Seer", New: RaffineSchemingSeer},
@@ -41,6 +42,7 @@ var Cards = []cardset.Entry{
 	{Name: "Rathi Dragon", New: RathiDragon},
 	{Name: "Rattleback Apothecary", New: RattlebackApothecary},
 	{Name: "Raven Clan War-Axe", New: RavenClanWarAxe},
+	{Name: "Raven Familiar", New: RavenFamiliar},
 	{Name: "Ravenous Robots", New: RavenousRobots},
 	{Name: "Ravenous Sailback", New: RavenousSailback},
 	{Name: "Razorfin Abolisher", New: RazorfinAbolisher},
@@ -99,6 +101,7 @@ var Cards = []cardset.Entry{
 	{Name: "Righteous Aura", New: RighteousAura},
 	{Name: "Righteous Valkyrie", New: RighteousValkyrie},
 	{Name: "Rimescale Dragon", New: RimescaleDragon},
+	{Name: "Ring of Gix", New: RingOfGix},
 	{Name: "Ring of Three Wishes", New: RingOfThreeWishes},
 	{Name: "Ringing Strike Mastery", New: RingingStrikeMastery},
 	{Name: "Rise from the Grave", New: RiseFromTheGrave},

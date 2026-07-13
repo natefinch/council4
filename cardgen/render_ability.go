@@ -543,6 +543,16 @@ func (r Renderer) renderTriggeredAbility(ctx *renderCtx, ability *game.Triggered
 			return fmt.Sprintf("game.CumulativeUpkeepTriggeredAbility(%s)", renderedCost), nil
 		}
 	}
+	if keyword, ok := game.BodyKeywordAbility(ability, game.Echo); ok {
+		if echo, ok := keyword.(game.EchoKeyword); ok &&
+			reflect.DeepEqual(*ability, game.EchoTriggeredAbility(echo.Cost)) {
+			renderedCost, err := r.renderManaCost(ctx, echo.Cost)
+			if err != nil {
+				return "", err
+			}
+			return fmt.Sprintf("game.EchoTriggeredAbility(%s)", renderedCost), nil
+		}
+	}
 	if keyword, ok := game.BodyKeywordAbility(ability, game.Fabricate); ok {
 		if fabricate, ok := keyword.(game.FabricateKeyword); ok &&
 			reflect.DeepEqual(*ability, game.FabricateTriggeredAbility(fabricate.Count)) {

@@ -133,6 +133,12 @@ func lowerKeywordDispatch(
 		}
 		return keywordTriggeredLowering(&cumulativeAbility, ability, syntax), true, nil
 	}
+	if echoAbility, ok, diag := lowerEchoAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordTriggeredLowering(&echoAbility, ability, syntax), true, nil
+	}
 	if fabricateAbility, ok, diag := lowerFabricateAbility(ability, syntax); ok {
 		if diag != nil {
 			return abilityLowering{}, true, diag
@@ -384,6 +390,34 @@ func lowerCumulativeUpkeepAbility(
 		)
 	}
 	return game.CumulativeUpkeepTriggeredAbility(manaCost), true, nil
+}
+
+func lowerEchoAbility(
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (game.TriggeredAbility, bool, *shared.Diagnostic) {
+	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordEcho {
+		return game.TriggeredAbility{}, false, nil
+	}
+	keyword := ability.Content.Keywords[0]
+	manaCost, fixed := fixedKeywordManaCost(keyword)
+	if !fixed ||
+		ability.Kind != compiler.AbilityStatic ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.References) != 0 ||
+		ability.AbilityWord != "" ||
+		!keywordOnlyCovered(syntax, keyword) {
+		return game.TriggeredAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Echo ability",
+			"the executable source backend supports only exact Echo with one fixed mana cost",
+		)
+	}
+	return game.EchoTriggeredAbility(manaCost), true, nil
 }
 
 func lowerFabricateAbility(

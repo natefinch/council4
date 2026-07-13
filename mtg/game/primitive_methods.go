@@ -302,6 +302,9 @@ func (Connive) Kind() PrimitiveKind { return PrimitiveConnive }
 // Kind implements Primitive for BecomeSaddled.
 func (BecomeSaddled) Kind() PrimitiveKind { return PrimitiveBecomeSaddled }
 
+// Kind implements Primitive for RecordEchoObligation.
+func (RecordEchoObligation) Kind() PrimitiveKind { return PrimitiveRecordEchoObligation }
+
 // Kind implements Primitive for ShuffleSpellIntoLibrary.
 func (ShuffleSpellIntoLibrary) Kind() PrimitiveKind { return PrimitiveShuffleSpellIntoLibrary }
 
@@ -474,6 +477,7 @@ func (Adapt) isPrimitive()                                {}
 func (Bolster) isPrimitive()                              {}
 func (Connive) isPrimitive()                              {}
 func (BecomeSaddled) isPrimitive()                        {}
+func (RecordEchoObligation) isPrimitive()                 {}
 func (ShuffleSpellIntoLibrary) isPrimitive()              {}
 func (SkipStep) isPrimitive()                             {}
 func (CreateEmblem) isPrimitive()                         {}
@@ -736,6 +740,7 @@ func (p Renown) instructionRefs() primitiveRefs                { return quantity
 func (p Adapt) instructionRefs() primitiveRefs                 { return quantityRefs(p.Amount) }
 func (p Connive) instructionRefs() primitiveRefs               { return quantityRefs(p.Amount) }
 func (BecomeSaddled) instructionRefs() primitiveRefs           { return primitiveRefs{} }
+func (RecordEchoObligation) instructionRefs() primitiveRefs    { return primitiveRefs{} }
 func (ShuffleSpellIntoLibrary) instructionRefs() primitiveRefs { return primitiveRefs{} }
 func (SkipStep) instructionRefs() primitiveRefs                { return primitiveRefs{} }
 func (CreateEmblem) instructionRefs() primitiveRefs            { return primitiveRefs{} }
