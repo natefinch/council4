@@ -634,6 +634,8 @@ func (v *cardDefValidator) validateKeywordAbility(faceName, path string, ability
 		}
 	case MadnessKeyword:
 		v.validateManaKeywordCost(faceName, path, keyword.Cost)
+	case OffspringKeyword:
+		v.validateManaKeywordCost(faceName, path, keyword.Cost)
 	case FlashbackKeyword:
 		v.validateManaKeywordCost(faceName, path, keyword.Cost)
 	case SpliceKeyword:

@@ -91,6 +91,7 @@ var Cards = []cardset.Entry{
 	{Name: "Propagator Drone", New: PropagatorDrone},
 	{Name: "Proper Burial", New: ProperBurial},
 	{Name: "Prosperity Tycoon", New: ProsperityTycoon},
+	{Name: "Prosperous Bandit", New: ProsperousBandit},
 	{Name: "Protection of the Hekma", New: ProtectionOfTheHekma},
 	{Name: "Protector of the Crown", New: ProtectorOfTheCrown},
 	{Name: "Proud Pack-Rhino", New: ProudPackRhino},

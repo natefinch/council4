@@ -38,7 +38,14 @@ type permanentCreationOptions struct {
 	// trigger's intervening-if. It is false for every permanent that did not
 	// enter from a bargained cast.
 	Bargained bool
-	Evoked    bool
+	// OffspringPaid makes the entering permanent record that its spell's
+	// Offspring additional cost was paid as it was cast (CR 702.171b), feeding
+	// the linked "when this creature enters, if its offspring cost was paid" ETB
+	// trigger's intervening-if. It is false for every permanent that did not
+	// enter from an offspring cast, including token copies made by the trigger,
+	// so no further token copies are created recursively.
+	OffspringPaid bool
+	Evoked        bool
 	// Dashed makes the entering permanent record that its spell was cast for its
 	// Dash alternative cost (CR 702.109), feeding the Dash trigger's intervening
 	// "if its dash cost was paid" condition. It is false for every permanent that
@@ -164,6 +171,7 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 		Face:                   face,
 		KickerPaid:             options.KickerPaid,
 		Bargained:              options.Bargained,
+		OffspringPaid:          options.OffspringPaid,
 		EnterEvoked:            options.Evoked,
 		EnterDashed:            options.Dashed,
 		EnterWasCast:           options.WasCast,
@@ -275,6 +283,7 @@ func commitSimultaneousCardPermanentEntries(g *game.Game, entries []preparedCard
 			Face:                   permanent.Face,
 			KickerPaid:             entry.options.KickerPaid,
 			Bargained:              entry.options.Bargained,
+			OffspringPaid:          entry.options.OffspringPaid,
 			EnterEvoked:            entry.options.Evoked,
 			EnterDashed:            entry.options.Dashed,
 			EnterWasCast:           entry.options.WasCast,

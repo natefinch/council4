@@ -124,7 +124,29 @@ func spellCostOptionsForRequest(s State, req SpellRequest) []spellCostOption {
 	addSpreeModeCosts(options, req.Card, req.ChosenModes)
 	addEscalateModeCosts(options, req.Card, req.ChosenModes)
 	addSpliceCosts(options, req.SpliceManaCosts)
+	if req.Offspring {
+		addOffspringCost(options, req.Card)
+	}
 	return options
+}
+
+// addOffspringCost adds the spell's Offspring additional mana cost (CR 702.171a)
+// to every payable cost option when the offspring cast branch is chosen, so the
+// caster pays the base cost plus the offspring cost. A card without the Offspring
+// keyword adds nothing.
+func addOffspringCost(options []spellCostOption, card *game.CardDef) {
+	offspring, ok := spellOffspring(card)
+	if !ok || len(offspring.Cost) == 0 {
+		return
+	}
+	for i := range options {
+		combined := cost.Mana{}
+		if options[i].manaCost != nil {
+			combined = append(combined, (*options[i].manaCost)...)
+		}
+		combined = append(combined, offspring.Cost...)
+		options[i].manaCost = &combined
+	}
 }
 
 // addSpliceCosts adds the mana splice cost of each card spliced onto an Arcane
@@ -369,6 +391,13 @@ func spellKicker(card *game.CardDef) (game.KickerKeyword, bool) {
 		return game.KickerKeyword{}, false
 	}
 	return card.KickerKeyword()
+}
+
+func spellOffspring(card *game.CardDef) (game.OffspringKeyword, bool) {
+	if card == nil {
+		return game.OffspringKeyword{}, false
+	}
+	return card.OffspringKeyword()
 }
 
 // BargainSacrificeCost is the fixed optional additional cost the Bargain keyword

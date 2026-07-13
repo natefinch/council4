@@ -28,6 +28,7 @@ var Cards = []cardset.Entry{
 	{Name: "Warchief Giant", New: WarchiefGiant},
 	{Name: "Ward Sliver", New: WardSliver},
 	{Name: "Warden of the Eye", New: WardenOfTheEye},
+	{Name: "Warren Warleader", New: WarrenWarleader},
 	{Name: "Warrior Angel", New: WarriorAngel},
 	{Name: "Warstorm Surge", New: WarstormSurge},
 	{Name: "Wary Farmer", New: WaryFarmer},

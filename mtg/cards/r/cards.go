@@ -147,6 +147,7 @@ var Cards = []cardset.Entry{
 	{Name: "Runes of the Deus", New: RunesOfTheDeus},
 	{Name: "Rupture Spire", New: RuptureSpire},
 	{Name: "Rush of Battle", New: RushOfBattle},
+	{Name: "Rust-Shield Rampager", New: RustShieldRampager},
 	{Name: "Rustspore Ram", New: RustsporeRAM},
 	{Name: "Ruthless Predation", New: RuthlessPredation},
 	{Name: "Ruthless Sniper", New: RuthlessSniper},

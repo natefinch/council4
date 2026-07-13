@@ -279,6 +279,20 @@ const (
 	// bestowed and becomes a creature again. Appended at the end of the enum so
 	// existing keyword ordinals are unchanged.
 	Bestow
+	// Offspring (CR 702.171, Bloomburrow) is printed on some creatures:
+	// "Offspring <cost> (You may pay an additional <cost> as you cast this spell.
+	// If you do, when this creature enters, create a 1/1 token copy of it.)" It is
+	// modeled by OffspringKeyword, which carries the fixed additional mana cost,
+	// inside a static ability so HasKeyword(Offspring) reports true. As the spell
+	// is cast the rules layer offers paying the offspring cost; a spell whose
+	// controller paid it is recorded as offspring-paid, which the resulting
+	// permanent's enter event preserves and the keyword's canonical enter trigger
+	// reads through its "if it was offspring" intervening-if to create a 1/1 token
+	// copy of the permanent. The paid state is an as-cast choice like Bargain, so
+	// a copy of an offspring-paid spell was not itself offspring (CR 707.10) and a
+	// created token copy does not recursively make another token. Appended at the
+	// end of the enum so existing keyword ordinals are unchanged.
+	Offspring
 	// KeywordCount is one greater than the largest real keyword value. It sizes
 	// compact keyword sets; it is not itself a keyword.
 	KeywordCount
@@ -863,6 +877,13 @@ type TriggerCondition struct {
 	// permanent event preserves whether the spell that became the permanent was
 	// bargained for both trigger-time and resolution-time checks.
 	InterveningIfEventPermanentWasBargained bool
+
+	// InterveningIfEventPermanentWasOffspring is true for the Offspring keyword's
+	// canonical enter trigger (CR 702.171b): "when this creature enters, if the
+	// offspring cost was paid, ...". The entering permanent event preserves
+	// whether the spell that became the permanent was cast with its offspring
+	// cost paid for both trigger-time and resolution-time checks.
+	InterveningIfEventPermanentWasOffspring bool
 
 	// InterveningIfEventPermanentWasCast is true for "if it was cast" on enter
 	// triggers.

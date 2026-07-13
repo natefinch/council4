@@ -64,6 +64,13 @@ func (b actionBuilderType) castBargainedSpell(cardID id.ID, sourceZone zone.Type
 	return b.mustBuild(action.CastBargainedSpellFaceFromZone(cardID, sourceZone, face, targets, xValue, modes))
 }
 
+// castOffspringSpell builds a CastSpell action whose Offspring additional mana
+// cost is paid (CR 702.171), so the resolving permanent creates a 1/1 token copy
+// of itself when it enters.
+func (b actionBuilderType) castOffspringSpell(cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, modes []int) action.Action {
+	return b.mustBuild(action.CastOffspringSpellFaceFromZone(cardID, sourceZone, face, targets, xValue, modes))
+}
+
 // castMultikickedSpell builds a CastSpell action whose Multikicker cost is paid
 // kickerCount times.
 func (b actionBuilderType) castMultikickedSpell(cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, modes []int, kickerCount int) action.Action {

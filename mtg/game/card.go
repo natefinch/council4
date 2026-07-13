@@ -465,6 +465,19 @@ func (f *CardFace) KickerKeyword() (KickerKeyword, bool) {
 	return KickerKeyword{}, false
 }
 
+// OffspringKeyword returns the first Offspring keyword on any static ability of
+// this face (CR 702.171).
+func (f *CardFace) OffspringKeyword() (OffspringKeyword, bool) {
+	for i := range f.StaticAbilities {
+		if ka, ok := BodyKeywordAbility(&f.StaticAbilities[i], Offspring); ok {
+			if offspring, ok := ka.(OffspringKeyword); ok {
+				return offspring, true
+			}
+		}
+	}
+	return OffspringKeyword{}, false
+}
+
 // GiftKeyword returns the first Gift keyword on any static ability of this face.
 func (f *CardFace) GiftKeyword() (GiftKeyword, bool) {
 	for i := range f.StaticAbilities {

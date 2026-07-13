@@ -15,6 +15,7 @@ func castBranchForCast(cast action.CastSpellAction) game.CastBranch {
 		Kicked:       effectiveKickerCount(cast.KickerPaid, cast.KickerCount) > 0,
 		Bargained:    cast.Bargained,
 		Bestowed:     cast.Bestowed,
+		Offspring:    cast.Offspring,
 	}
 }
 
@@ -30,6 +31,7 @@ func castBranchForObject(obj *game.StackObject) game.CastBranch {
 		Kicked:       effectiveKickerCount(obj.KickerPaid, obj.KickerCount) > 0,
 		Bargained:    obj.Bargained,
 		Bestowed:     obj.Bestowed,
+		Offspring:    obj.OffspringPaid,
 	}
 }
 

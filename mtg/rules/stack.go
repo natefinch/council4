@@ -623,6 +623,7 @@ func (e *Engine) resolvePermanentSpellWithChoices(g *game.Game, obj *game.StackO
 			KickerPaid:              obj.KickerPaid,
 			KickCount:               obj.KickerCount,
 			Bargained:               obj.Bargained,
+			OffspringPaid:           obj.OffspringPaid,
 			Evoked:                  obj.Evoked,
 			Dashed:                  obj.Dashed,
 			Bestowed:                obj.Bestowed,

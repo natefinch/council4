@@ -221,6 +221,12 @@ type Event struct {
 	// enter-trigger intervening-if and the entering permanent's captured state.
 	Bargained bool
 
+	// OffspringPaid records whether a spell-cast or entering-permanent spell's
+	// Offspring additional mana cost was paid as it was cast (CR 702.171b). It is
+	// false for objects that were not cast with offspring paid. It feeds the
+	// Offspring enter trigger's "if it was offspring" intervening-if.
+	OffspringPaid bool
+
 	// EnterEvoked records whether an entering permanent resulted from a spell
 	// cast for its Evoke alternative cost (CR 702.74). It feeds the evoke
 	// sacrifice trigger's intervening "if its evoke cost was paid" condition.

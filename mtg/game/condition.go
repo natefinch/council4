@@ -176,6 +176,20 @@ type Condition struct {
 	// such event is in context.
 	EventPermanentWasBargained bool
 
+	// SpellWasOffspring is satisfied when the resolving spell was cast with its
+	// Offspring additional mana cost paid (CR 702.171b). Like the bargain gate it
+	// is an as-cast choice, so a copy of an offspring-paid spell was not itself
+	// offspring and this is false for copies.
+	SpellWasOffspring bool
+
+	// EventPermanentWasOffspring is satisfied when the permanent named by the
+	// triggering or entering event was cast with its Offspring additional mana
+	// cost paid (CR 702.171b, the Offspring creatures' enter trigger). It is
+	// evaluated against the event's captured offspring-paid state, which the
+	// entering-permanent event preserves from the spell that became the
+	// permanent, and is false when no such event is in context.
+	EventPermanentWasOffspring bool
+
 	// EventPermanentWasCastFromControllerHand is satisfied when the entering
 	// permanent was cast by the condition controller from that player's hand
 	// ("enters with a divinity counter on it if you cast it from your hand" —
@@ -400,9 +414,11 @@ func (c *Condition) Empty() bool {
 		!c.ControllerControlsCommander &&
 		!c.SpellWasKicked &&
 		!c.SpellWasBargained &&
+		!c.SpellWasOffspring &&
 		!c.GiftPromised &&
 		!c.EventPermanentWasKicked &&
 		!c.EventPermanentWasBargained &&
+		!c.EventPermanentWasOffspring &&
 		!c.EventPermanentWasCastFromControllerHand &&
 		c.ControllerGraveyardCardOfTypeCountAtLeast == 0 &&
 		c.ControllerGraveyardInstantOrSorceryCountAtLeast == 0 &&

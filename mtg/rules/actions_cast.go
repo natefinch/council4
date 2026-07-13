@@ -74,7 +74,7 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 	}
 
 	branch := castBranchForCast(cast)
-	if !e.canCastSpellFaceFromZoneWithOptions(g, playerID, cast.CardID, sourceZone, cast.Face, cast.Targets, cast.XValue, cast.ChosenModes, effectiveKickerCount(cast.KickerPaid, cast.KickerCount), cast.Overloaded, cast.GiftPromised, cast.Bargained, cast.Bestowed) {
+	if !e.canCastSpellFaceFromZoneWithOptions(g, playerID, cast.CardID, sourceZone, cast.Face, cast.Targets, cast.XValue, cast.ChosenModes, effectiveKickerCount(cast.KickerPaid, cast.KickerCount), cast.Overloaded, cast.GiftPromised, cast.Bargained, cast.Bestowed, cast.Offspring) {
 		return false
 	}
 
@@ -89,7 +89,7 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		announcementDef = overloadSpellDef(spellDef)
 	}
 	completedTargets, ok := e.completeSpellAnnouncementTargets(g, playerID, announcementDef, cast.ChosenModes, cast.Targets, agents, log, branch)
-	if !ok || !e.canCastSpellFaceFromZoneWithOptions(g, playerID, cast.CardID, sourceZone, cast.Face, completedTargets, cast.XValue, cast.ChosenModes, effectiveKickerCount(cast.KickerPaid, cast.KickerCount), cast.Overloaded, cast.GiftPromised, cast.Bargained, cast.Bestowed) {
+	if !ok || !e.canCastSpellFaceFromZoneWithOptions(g, playerID, cast.CardID, sourceZone, cast.Face, completedTargets, cast.XValue, cast.ChosenModes, effectiveKickerCount(cast.KickerPaid, cast.KickerCount), cast.Overloaded, cast.GiftPromised, cast.Bargained, cast.Bestowed, cast.Offspring) {
 		return false
 	}
 	cast.Targets = completedTargets
@@ -179,6 +179,7 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		GiftPromised:                  cast.GiftPromised,
 		GiftRecipient:                 cast.GiftRecipient,
 		Bargained:                     cast.Bargained,
+		OffspringPaid:                 cast.Offspring,
 		Overloaded:                    cast.Overloaded,
 		SourceZone:                    sourceZone,
 		SplicedContent:                splice.contents,
@@ -304,6 +305,7 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		KickerPaid:      cast.KickerPaid,
 		KickerCount:     cast.KickerCount,
 		Bargained:       cast.Bargained,
+		Offspring:       cast.Offspring,
 		ChosenModes:     cast.ChosenModes,
 		CastPermissions: permissions,
 		Targets:         cast.Targets,
@@ -705,7 +707,7 @@ func (e *Engine) canCastSpellFromZoneWithKicker(g *game.Game, playerID game.Play
 }
 
 func (e *Engine) canCastSpellFaceFromZoneWithKicker(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int, kickerPaid bool) bool {
-	return e.canCastSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, targets, xValue, chosenModes, effectiveKickerCount(kickerPaid, 0), false, false, false, false)
+	return e.canCastSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, targets, xValue, chosenModes, effectiveKickerCount(kickerPaid, 0), false, false, false, false, false)
 }
 
 // canCastBestowSpellFaceFromZone validates a cast whose Bestow keyword is used
@@ -713,7 +715,7 @@ func (e *Engine) canCastSpellFaceFromZoneWithKicker(g *game.Game, playerID game.
 // spell, so its targets are validated on the bestowed branch (which requires the
 // enchant-creature target) rather than the default branch.
 func (e *Engine) canCastBestowSpellFaceFromZone(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int) bool {
-	return e.canCastSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, targets, xValue, chosenModes, 0, false, false, false, true)
+	return e.canCastSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, targets, xValue, chosenModes, 0, false, false, false, true, false)
 }
 
 // canCastGiftSpellFaceFromZone validates a cast whose Gift keyword action
@@ -721,13 +723,13 @@ func (e *Engine) canCastBestowSpellFaceFromZone(g *game.Game, playerID game.Play
 // gift-promised target specs, so its targets are validated on the promised
 // branch rather than the default branch.
 func (e *Engine) canCastGiftSpellFaceFromZone(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int) bool {
-	return e.canCastSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, targets, xValue, chosenModes, 0, false, true, false, false)
+	return e.canCastSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, targets, xValue, chosenModes, 0, false, true, false, false, false)
 }
 
 // canCastSpellFaceFromZoneWithMultikick validates a Multikicker cast whose
 // kicker cost is paid kickerCount times (CR 702.32).
 func (e *Engine) canCastSpellFaceFromZoneWithMultikick(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int, kickerCount int) bool {
-	return e.canCastSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, targets, xValue, chosenModes, kickerCount, false, false, false, false)
+	return e.canCastSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, targets, xValue, chosenModes, kickerCount, false, false, false, false, false)
 }
 
 // canCastBargainedSpellFaceFromZone validates a cast whose Bargain additional
@@ -736,7 +738,15 @@ func (e *Engine) canCastSpellFaceFromZoneWithMultikick(g *game.Game, playerID ga
 // planner requires the caster to be able to sacrifice an artifact, enchantment,
 // or token.
 func (e *Engine) canCastBargainedSpellFaceFromZone(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int) bool {
-	return e.canCastSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, targets, xValue, chosenModes, 0, false, false, true, false)
+	return e.canCastSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, targets, xValue, chosenModes, 0, false, false, true, false, false)
+}
+
+// canCastOffspringSpellFaceFromZone validates a cast whose Offspring additional
+// cost is paid (CR 702.171). Paying the offspring cost activates the spell's
+// offspring branch, so its targets are validated on the offspring branch, and
+// the payment planner adds the offspring mana cost to the spell's total cost.
+func (e *Engine) canCastOffspringSpellFaceFromZone(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int) bool {
+	return e.canCastSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, targets, xValue, chosenModes, 0, false, false, false, false, true)
 }
 
 // effectiveKickerCount resolves the number of times the kicker cost is paid from
@@ -757,15 +767,15 @@ func (e *Engine) canCastOverloadedSpellFaceFromZone(g *game.Game, playerID game.
 }
 
 func (e *Engine) canCastOverloadedSpellFaceFromZoneWithOptions(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, xValue int, chosenModes []int, kickerPaid bool) bool {
-	return e.canCastSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, nil, xValue, chosenModes, effectiveKickerCount(kickerPaid, 0), true, false, false, false)
+	return e.canCastSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, nil, xValue, chosenModes, effectiveKickerCount(kickerPaid, 0), true, false, false, false, false)
 }
 
-func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int, kickerCount int, overloaded bool, giftPromised bool, bargained bool, bestowed bool) bool {
+func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int, kickerCount int, overloaded bool, giftPromised bool, bargained bool, bestowed bool, offspring bool) bool {
 	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer {
 		return false
 	}
 	kickerPaid := kickerCount > 0
-	branch := game.CastBranch{GiftPromised: giftPromised, Kicked: kickerPaid, Bargained: bargained, Bestowed: bestowed}
+	branch := game.CastBranch{GiftPromised: giftPromised, Kicked: kickerPaid, Bargained: bargained, Bestowed: bestowed, Offspring: offspring}
 	if xValue < 0 {
 		return false
 	}
@@ -858,6 +868,9 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 	if bargained && !spellHasBargain(spellDef) {
 		return false
 	}
+	if offspring && !spellHasOffspring(spellDef) {
+		return false
+	}
 	if kickerCount > 1 && !spellHasMultikicker(spellDef) {
 		return false
 	}
@@ -870,6 +883,7 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 		KickerPaid:      kickerPaid,
 		KickerCount:     kickerCount,
 		Bargained:       bargained,
+		Offspring:       offspring,
 		ChosenModes:     chosenModes,
 		CastPermissions: castPermissionsForZone(g, playerID, card.ID, sourceZone, face),
 		Targets:         targets,

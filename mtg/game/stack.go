@@ -140,6 +140,13 @@ type StackObject struct {
 	// itself bargained (CR 707.10) and this stays false for copies.
 	Bargained bool
 
+	// OffspringPaid is true if this spell's Offspring additional mana cost was
+	// paid as it was cast (CR 702.171b). Like Bargained it is an as-cast choice,
+	// so a copy of an offspring-paid spell was not itself offspring (CR 707.10)
+	// and this stays false for copies. It is carried forward to the resulting
+	// permanent's enter event to drive the Offspring enter trigger.
+	OffspringPaid bool
+
 	// GiftPromised is true if this spell's Gift keyword action promised a gift to
 	// an opponent as it was cast (CR 702.171). It gates the spell's "if the gift
 	// was promised" clauses and drives the gift delivery on resolution. A copy of

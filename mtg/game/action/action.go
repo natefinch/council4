@@ -68,6 +68,10 @@ type CastSpellAction struct {
 	// or token.
 	Bargained  bool
 	Overloaded bool
+	// Offspring records that the spell's Offspring additional mana cost was paid
+	// as it was cast (CR 702.171b), so the resulting permanent creates a 1/1
+	// token copy of itself when it enters.
+	Offspring bool
 	// Bestowed records that the spell was cast for its Bestow alternative cost
 	// (CR 702.103): it is put on the stack as an Aura spell with an
 	// enchant-creature target rather than as a creature spell.
@@ -248,6 +252,22 @@ func CastBargainedSpellFaceFromZone(cardID id.ID, sourceZone zone.Type, face gam
 // Bargain additional cost paid (CR 702.166b).
 func CastBargainedSpell(cardID id.ID, targets []game.Target, xValue int, chosenModes []int) Action {
 	return CastBargainedSpellFaceFromZone(cardID, zone.Hand, game.FaceFront, targets, xValue, chosenModes)
+}
+
+// CastOffspringSpellFaceFromZone creates an action to cast a specific printed
+// face from a specific source zone with the Offspring additional mana cost paid
+// (CR 702.171b), so the resulting permanent creates a 1/1 token copy of itself
+// when it enters.
+func CastOffspringSpellFaceFromZone(cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int) Action {
+	action := CastSpellFaceFromZone(cardID, sourceZone, face, targets, xValue, chosenModes)
+	action.castSpell.Offspring = true
+	return action
+}
+
+// CastOffspringSpell creates an action to cast a spell from hand with its
+// Offspring additional mana cost paid (CR 702.171b).
+func CastOffspringSpell(cardID id.ID, targets []game.Target, xValue int, chosenModes []int) Action {
+	return CastOffspringSpellFaceFromZone(cardID, zone.Hand, game.FaceFront, targets, xValue, chosenModes)
 }
 
 // CastOverloadedSpellFaceFromZone creates an action to cast a specific printed
@@ -546,6 +566,9 @@ func (a Action) Validate() error {
 		if a.castSpell.Bargained && (a.castSpell.Overloaded || a.castSpell.Mutate) {
 			return errors.New("bargain cannot be combined with another alternative cast")
 		}
+		if a.castSpell.Offspring && (a.castSpell.Overloaded || a.castSpell.Mutate || a.castSpell.Bestowed) {
+			return errors.New("offspring cannot be combined with another alternative cast")
+		}
 	case ActionActivateAbility:
 		if a.activateAbility.SourceID == 0 {
 			return errors.New("activate ability action missing source ID")
@@ -651,6 +674,7 @@ func castSpellActionEmpty(a CastSpellAction) bool {
 		!a.Bargained &&
 		!a.Overloaded &&
 		!a.Bestowed &&
+		!a.Offspring &&
 		!a.Mutate &&
 		a.MutateTargetID == 0 &&
 		!a.GiftPromised &&
