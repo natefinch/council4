@@ -66,10 +66,11 @@ func newTheHauntOfHightower() *game.CardDef {
 					Trigger: game.TriggerCondition{
 						Type: game.TriggerWhenever,
 						Pattern: game.TriggerPattern{
-							Event:       game.EventZoneChanged,
-							Player:      game.TriggerPlayerOpponent,
-							MatchToZone: true,
-							ToZone:      zone.Graveyard,
+							Event:            game.EventZoneChanged,
+							Player:           game.TriggerPlayerOpponent,
+							MatchToZone:      true,
+							ToZone:           zone.Graveyard,
+							SubjectSelection: game.Selection{NonToken: true},
 						},
 					},
 					Content: game.Mode{

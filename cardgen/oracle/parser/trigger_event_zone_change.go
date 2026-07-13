@@ -607,11 +607,13 @@ func parseZoneChangeSubject(
 	if tokenWordsEqual(remaining, "card") || tokenWordsEqual(remaining, "cards") {
 		// A bare "card"/"cards" subject imposes no type restriction, so it
 		// resolves to an any-card selection that the runtime matches without a
-		// type filter.
+		// type filter. A token is not a card (CR 108.1), so a token entering the
+		// zone must not satisfy a "card" subject; the selection carries a
+		// non-token requirement to exclude tokens.
 		result.subject = TriggerEventSubject{
 			Kind:      TriggerEventSubjectSelection,
 			Span:      shared.SpanOf(subjectTokens),
-			Selection: TriggerSelection{SubtypeFromEntryChoice: subtypeFromEntryChoice},
+			Selection: TriggerSelection{NonToken: true, SubtypeFromEntryChoice: subtypeFromEntryChoice},
 		}
 		if result.selfOrAnother && !result.excludeSelf {
 			return zoneSubjectResult{}

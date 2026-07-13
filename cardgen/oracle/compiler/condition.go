@@ -198,6 +198,9 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 	case parser.ConditionPredicateAnyOpponentDealtDamageThisTurnAtLeast:
 		condition.Predicate = ConditionPredicateAnyOpponentDealtDamageThisTurnAtLeast
 		condition.Threshold = clause.Threshold
+	case parser.ConditionPredicateAnyOpponentLostLifeThisTurnAtLeast:
+		condition.Predicate = ConditionPredicateAnyOpponentLostLifeThisTurnAtLeast
+		condition.Threshold = clause.Threshold
 	case parser.ConditionPredicateAnyLibrarySizeAtMost:
 		condition.Predicate = ConditionPredicateAnyLibrarySizeAtMost
 		condition.Threshold = clause.Threshold

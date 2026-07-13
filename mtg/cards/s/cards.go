@@ -349,6 +349,7 @@ var Cards = []cardset.Entry{
 	{Name: "Sword of Forge and Frontier", New: SwordOfForgeAndFrontier},
 	{Name: "Sword of Truth and Justice", New: SwordOfTruthAndJustice},
 	{Name: "Sword of War and Peace", New: SwordOfWarAndPeace},
+	{Name: "Sygg, River Cutthroat", New: SyggRiverCutthroat},
 	{Name: "Sylvan Basilisk", New: SylvanBasilisk},
 	{Name: "Sylvan Library", New: SylvanLibrary},
 	{Name: "Sylvan Messenger", New: SylvanMessenger},

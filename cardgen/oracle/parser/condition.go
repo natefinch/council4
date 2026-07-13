@@ -131,6 +131,11 @@ const (
 	// opponent was dealt N or more damage this turn" (Spinerock Knoll). Threshold
 	// carries N.
 	ConditionPredicateAnyOpponentDealtDamageThisTurnAtLeast ConditionPredicateKind = "ConditionPredicateAnyOpponentDealtDamageThisTurnAtLeast"
+	// ConditionPredicateAnyOpponentLostLifeThisTurnAtLeast matches "an opponent
+	// lost N or more life this turn" (Bloodchief Ascension). It counts every kind
+	// of life loss — damage, life paid, and direct loss — as the life-loss
+	// counterpart of the damage predicate. Threshold carries N.
+	ConditionPredicateAnyOpponentLostLifeThisTurnAtLeast ConditionPredicateKind = "ConditionPredicateAnyOpponentLostLifeThisTurnAtLeast"
 	// ConditionPredicateAnyLibrarySizeAtMost matches "a library has N or fewer
 	// cards in it" (Shelldock Isle). Threshold carries N.
 	ConditionPredicateAnyLibrarySizeAtMost ConditionPredicateKind = "ConditionPredicateAnyLibrarySizeAtMost"
@@ -832,6 +837,7 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		recognizeControllerDesignationCondition,
 		recognizeSourceAbilityResolutionOrdinalCondition,
 		recognizeAnyOpponentDamageThisTurnCondition,
+		recognizeAnyOpponentLostLifeThisTurnCondition,
 		recognizeAnyLibrarySizeCondition,
 		recognizeAllPlayersHandEmptyCondition,
 	} {

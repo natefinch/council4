@@ -405,7 +405,17 @@ func triggeringEventPlayer(event game.Event) (game.PlayerID, bool) {
 		game.EventLibrarySearched,
 		game.EventBecameMonarch,
 		game.EventGotCityBlessing,
-		game.EventCardPlayedFromExile:
+		game.EventCardPlayedFromExile,
+		// Every zone-change emission sets Player to the moved card's owner: the
+		// leaving/entering permanent's Owner, the resolving stack object's card
+		// Owner, or the player whose hand/library/graveyard/exile/command zone the
+		// move runs through (discard, mill, and the generic move helpers all pass
+		// that player as Player). Because a card is always put into its owner's
+		// graveyard, hand, or library (CR 400.7, CR 404.2), Player names the
+		// destination zone's owner for those transitions, so "that player" on
+		// "Whenever a card is put into an opponent's graveyard ..." (Bloodchief
+		// Ascension) resolves to the opponent whose graveyard received the card.
+		game.EventZoneChanged:
 		return event.Player, true
 	case game.EventDamageDealt:
 		return event.Player, event.DamageRecipient == game.DamageRecipientPlayer

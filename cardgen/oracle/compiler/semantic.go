@@ -1092,6 +1092,12 @@ const (
 	// ConditionPredicateAllPlayersHandEmpty is satisfied when every player has no
 	// cards in hand ("if each player has no cards in hand"; Howltooth Hollow).
 	ConditionPredicateAllPlayersHandEmpty
+	// ConditionPredicateAnyOpponentLostLifeThisTurnAtLeast is satisfied when at
+	// least one opponent lost Threshold or more total life during the current
+	// turn ("if an opponent lost 2 or more life this turn"; Bloodchief Ascension).
+	// It counts every kind of life loss (damage, life paid, and direct loss), the
+	// life-loss counterpart of ConditionPredicateAnyOpponentDealtDamageThisTurnAtLeast.
+	ConditionPredicateAnyOpponentLostLifeThisTurnAtLeast
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard
