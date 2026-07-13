@@ -59,5 +59,6 @@ var Cards = []cardset.Entry{
 	{Name: "Ovinize", New: Ovinize},
 	{Name: "Oviya Pashiri, Sage Lifecrafter", New: OviyaPashiriSageLifecrafter},
 	{Name: "Owlbear Shepherd", New: OwlbearShepherd},
+	{Name: "Owlin Shieldmage", New: OwlinShieldmage},
 	{Name: "Ozai's Cruelty", New: OzaiSCruelty},
 }

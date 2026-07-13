@@ -165,6 +165,7 @@ var Cards = []cardset.Entry{
 	{Name: "Aven Surveyor", New: AvenSurveyor},
 	{Name: "Aven Tactician", New: AvenTactician},
 	{Name: "Avenger of the Fallen", New: AvengerOfTheFallen},
+	{Name: "Axebane Ferox", New: AxebaneFerox},
 	{Name: "Axebane Guardian", New: AxebaneGuardian},
 	{Name: "Axelrod Gunnarson", New: AxelrodGunnarson},
 	{Name: "Azure Fleet Admiral", New: AzureFleetAdmiral},

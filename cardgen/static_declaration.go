@@ -757,9 +757,34 @@ func lowerStaticGrantedQuotedAbility(granted *parser.StaticGrantedAbilitySyntax)
 	case lowered.manaAbility.Exists:
 		ability := lowered.manaAbility.Val
 		return &ability, true
+	case grantedQuotedKeywordStaticBody(lowered):
+		body := lowered.staticAbilities[0].Body
+		return &body, true
 	default:
 		return nil, false
 	}
+}
+
+// grantedQuotedKeywordStaticBody reports whether a quoted granted ability lowered
+// to exactly one keyword-bearing static ability body and nothing else, so a grant
+// of a quoted keyword ability ("Other creatures you control have 'Ward—Pay 2
+// life.'", Hexing Squelcher) confers that keyword body the same way an unquoted
+// keyword grant ("Other creatures you control have ward {2}.") does. It carries
+// the parameterized keyword payload (the Ward cost, protection quality, and so
+// on) already assembled by the keyword lowerer.
+func grantedQuotedKeywordStaticBody(lowered abilityLowering) bool {
+	if len(lowered.staticAbilities) != 1 ||
+		lowered.activatedAbility.Exists ||
+		lowered.manaAbility.Exists ||
+		lowered.loyaltyAbility.Exists ||
+		lowered.triggeredAbility.Exists ||
+		len(lowered.triggeredAbilities) != 0 {
+		return false
+	}
+	body := lowered.staticAbilities[0].Body
+	return len(body.KeywordAbilities) > 0 &&
+		len(body.ContinuousEffects) == 0 &&
+		len(body.RuleEffects) == 0
 }
 
 func lowerStaticAddedTypes(continuous *compiler.StaticContinuousDeclaration) ([]types.Card, []types.Sub, bool) {

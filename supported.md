@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,640 of 32,501 cards eligible for paper support (54.3%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,648 of 32,501 cards eligible for paper support (54.3%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -985,6 +985,7 @@ Council4 currently supports **17,640 of 32,501 cards eligible for paper support 
 - Awakening
 - Awakening Zone
 - Axebane Beast
+- Axebane Ferox
 - Axebane Guardian
 - Axebane Stag
 - Axegrinder Giant
@@ -4249,6 +4250,7 @@ Council4 currently supports **17,640 of 32,501 cards eligible for paper support 
 - Dwarven Bloodboiler
 - Dwarven Castle Guard
 - Dwarven Demolition Team
+- Dwarven Forge-Chanter
 - Dwarven Grunt
 - Dwarven Lieutenant
 - Dwarven Mine
@@ -6999,6 +7001,7 @@ Council4 currently supports **17,640 of 32,501 cards eligible for paper support 
 - Heron-Blessed Geist
 - Heronblade Elite
 - Hex
+- Hexing Squelcher
 - Hexplate Golem
 - Hibernation
 - Hickory Woodlot
@@ -10635,6 +10638,7 @@ Council4 currently supports **17,640 of 32,501 cards eligible for paper support 
 - Owlbear
 - Owlbear Shepherd
 - Owlin Historian
+- Owlin Shieldmage
 - Ox
 - Ox
 - Ox
@@ -12906,6 +12910,7 @@ Council4 currently supports **17,640 of 32,501 cards eligible for paper support 
 - Security Detail
 - Sedge Scorpion
 - Sedge Troll
+- Sedgemoor Witch
 - Sedraxis Alchemist
 - Sedraxis Specter
 - Seed Guardian
@@ -14047,6 +14052,7 @@ Council4 currently supports **17,640 of 32,501 cards eligible for paper support 
 - Spectral Rider
 - Spectral Sailor
 - Spectral Shepherd
+- Spectral Snatcher
 - Spectral Steel
 - Spell Pierce
 - Spell Satchel
@@ -17085,6 +17091,7 @@ Council4 currently supports **17,640 of 32,501 cards eligible for paper support 
 - West Wind Avatar
 - Western Paladin
 - Westfold Rider
+- Westgate Regent
 - Westvale Abbey // Ormendahl, Profane Prince
 - Wetland Sambar
 - Whale
@@ -17631,6 +17638,7 @@ Council4 currently supports **17,640 of 32,501 cards eligible for paper support 
 - Zuko's Exile
 - Zuko's Offense
 - Zuko, Avatar Hunter
+- Zul Ashur, Lich Lord
 - Zulaport Chainmage
 - Zulaport Cutthroat
 - Zulaport Enforcer
