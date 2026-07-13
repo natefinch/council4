@@ -8,6 +8,7 @@ const (
 	damageRecipientAnyTarget
 	damageRecipientGroup
 	damageRecipientPlayerGroup
+	damageRecipientAttackedDefender
 )
 
 // DamageRecipient is a typed union identifying who receives damage.
@@ -54,6 +55,17 @@ func PlayerGroupDamageRecipient(group PlayerGroupReference) DamageRecipient {
 	return DamageRecipient{set: true, kind: damageRecipientPlayerGroup, playerGroup: group}
 }
 
+// AttackedDefenderDamageRecipient creates a recipient that resolves to the
+// player, planeswalker, or battle that the resolving ability's triggering
+// attacker is attacking ("the player or planeswalker it's attacking"). Unlike
+// PlayerDamageRecipient(DefendingPlayerReference()), which always addresses the
+// defending player, this recipient routes damage to the attacked planeswalker
+// or battle when the attack was declared against one, reading the trigger
+// event's captured attack target with a live-combat fallback.
+func AttackedDefenderDamageRecipient() DamageRecipient {
+	return DamageRecipient{set: true, kind: damageRecipientAttackedDefender}
+}
+
 // Valid reports whether the recipient identifies a supported target set.
 func (r DamageRecipient) Valid() bool {
 	if !r.set {
@@ -73,6 +85,8 @@ func (r DamageRecipient) Valid() bool {
 		return r.group != nil && r.group.Valid()
 	case damageRecipientPlayerGroup:
 		return len(r.playerGroup.Validate()) == 0
+	case damageRecipientAttackedDefender:
+		return true
 	default:
 		return false
 	}
@@ -108,6 +122,12 @@ func (r DamageRecipient) PlayerGroupReference() (PlayerGroupReference, bool) {
 		return PlayerGroupReference{}, false
 	}
 	return r.playerGroup, true
+}
+
+// IsAttackedDefender reports whether this recipient addresses the player,
+// planeswalker, or battle the triggering attacker is attacking.
+func (r DamageRecipient) IsAttackedDefender() bool {
+	return r.Valid() && r.kind == damageRecipientAttackedDefender
 }
 
 // AnyTargetObjectReference returns the permanent reference when this recipient addresses any target.

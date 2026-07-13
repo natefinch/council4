@@ -52,7 +52,7 @@ func newHellrider() *game.CardDef {
 							{
 								Primitive: game.Damage{
 									Amount:       game.Fixed(1),
-									Recipient:    game.PlayerDamageRecipient(game.DefendingPlayerReference()),
+									Recipient:    game.AttackedDefenderDamageRecipient(),
 									DamageSource: opt.Val(game.SourcePermanentReference()),
 								},
 							},

@@ -70,7 +70,12 @@ import (
 // linked exiled card and casting that copy for free (Isochron Scepter,
 // Spellbinder) derive their value from the copied card's own effects, not from
 // the copy/cast primitives themselves, matching CastForFree and CopyStackObject.
-const knownPrimitiveCount = 129
+//
+// TapChosenGroup is value-neutral (no atom): it optionally taps any number of
+// the controller's own matching permanents to publish that count (Myr
+// Battlesphere), so its payoff lives in the scaled ModifyPT and Damage
+// instructions that read the count, not in the self-tap enabler itself.
+const knownPrimitiveCount = 130
 
 // TestPrimitiveCountIsReconciled keeps a newly added resolution primitive from
 // silently falling through the translator: adding one trips this guard so its

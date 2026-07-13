@@ -29,6 +29,9 @@ func (r Renderer) renderEternalizeFamilyAbility(ctx *renderCtx, builder string, 
 }
 
 func (r Renderer) renderDamageRecipient(ctx *renderCtx, recipient game.DamageRecipient) (string, error) {
+	if recipient.IsAttackedDefender() {
+		return "game.AttackedDefenderDamageRecipient()", nil
+	}
 	if object, ok := recipient.AnyTargetObjectReference(); ok {
 		return fmt.Sprintf("game.AnyTargetDamageRecipient(%d)", object.TargetIndex()), nil
 	}

@@ -39,7 +39,7 @@ func TestLowerAttacksItsAttackingDamage(t *testing.T) {
 	if damage.Amount != game.Fixed(1) {
 		t.Fatalf("damage amount = %#v, want 1", damage.Amount)
 	}
-	if damage.Recipient != game.PlayerDamageRecipient(game.DefendingPlayerReference()) {
+	if damage.Recipient != game.AttackedDefenderDamageRecipient() {
 		t.Fatalf("damage recipient = %#v, want defending player", damage.Recipient)
 	}
 	if !damage.DamageSource.Exists || damage.DamageSource.Val != game.EventPermanentReference() {
@@ -76,7 +76,7 @@ func TestLowerControlledAttacksThatCreatureAttackingDamage(t *testing.T) {
 	if damage.Amount != game.Fixed(1) {
 		t.Fatalf("damage amount = %#v, want 1", damage.Amount)
 	}
-	if damage.Recipient != game.PlayerDamageRecipient(game.DefendingPlayerReference()) {
+	if damage.Recipient != game.AttackedDefenderDamageRecipient() {
 		t.Fatalf("damage recipient = %#v, want defending player", damage.Recipient)
 	}
 	if !damage.DamageSource.Exists || damage.DamageSource.Val != game.SourcePermanentReference() {
@@ -111,7 +111,7 @@ func TestLowerBecomesBlockedAttackingDamage(t *testing.T) {
 	if !ok {
 		t.Fatalf("primitive = %T, want game.Damage", mode.Sequence[0].Primitive)
 	}
-	if damage.Recipient != game.PlayerDamageRecipient(game.DefendingPlayerReference()) {
+	if damage.Recipient != game.AttackedDefenderDamageRecipient() {
 		t.Fatalf("damage recipient = %#v, want defending player", damage.Recipient)
 	}
 }

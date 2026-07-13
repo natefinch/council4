@@ -249,6 +249,7 @@ func emitUnblockedAttackerEvents(g *game.Game) {
 			Controller:     effectiveController(g, attacker),
 			Player:         declaration.Target.Player,
 			PermanentID:    attacker.ObjectID,
+			AttackTarget:   declaration.Target,
 			SimultaneousID: batchID,
 		})
 	}
@@ -737,6 +738,7 @@ func (combatEngine) applyBlockers(g *game.Game, playerID game.PlayerID, declare 
 		g.Combat.BlockerOrder[block.Blocking] = append(g.Combat.BlockerOrder[block.Blocking], block.Blocker)
 		if attackerBecameBlocked {
 			if attacker, ok := permanentByObjectID(g, block.Blocking); ok {
+				attackTarget, _ := attackTargetForAttacker(g, attacker.ObjectID)
 				emitEvent(g, game.Event{
 					Kind:               game.EventAttackerBecameBlocked,
 					SourceID:           attacker.CardInstanceID,
@@ -745,6 +747,7 @@ func (combatEngine) applyBlockers(g *game.Game, playerID game.PlayerID, declare 
 					Player:             attackerDefendingPlayer(g, attacker.ObjectID),
 					PermanentID:        attacker.ObjectID,
 					RelatedPermanentID: block.Blocker,
+					AttackTarget:       attackTarget,
 					SimultaneousID:     g.Combat.BlockDeclarationBatchID,
 				})
 			}
