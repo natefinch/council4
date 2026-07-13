@@ -228,6 +228,7 @@ var Cards = []cardset.Entry{
 	{Name: "Spectral Steel", New: SpectralSteel},
 	{Name: "Spell Satchel", New: SpellSatchel},
 	{Name: "Spell Snuff", New: SpellSnuff},
+	{Name: "Spellbinder", New: Spellbinder},
 	{Name: "Spelleater Wolverine", New: SpelleaterWolverine},
 	{Name: "Sphere of Duty", New: SphereOfDuty},
 	{Name: "Sphere of Grace", New: SphereOfGrace},

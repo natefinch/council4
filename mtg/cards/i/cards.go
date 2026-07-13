@@ -71,6 +71,7 @@ var Cards = []cardset.Entry{
 	{Name: "Irreverent Revelers", New: IrreverentRevelers},
 	{Name: "Island Fish Jasconius", New: IslandFishJasconius},
 	{Name: "Isleback Spawn", New: IslebackSpawn},
+	{Name: "Isochron Scepter", New: IsochronScepter},
 	{Name: "It That Heralds the End", New: ItThatHeraldsTheEnd},
 	{Name: "Ivory Charm", New: IvoryCharm},
 	{Name: "Ivory Cup", New: IvoryCup},

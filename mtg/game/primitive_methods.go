@@ -143,6 +143,12 @@ func (CantBecomeMonarch) Kind() PrimitiveKind { return PrimitiveCantBecomeMonarc
 // Kind implements Primitive for GainCityBlessing.
 func (GainCityBlessing) Kind() PrimitiveKind { return PrimitiveGainCityBlessing }
 
+// Kind implements Primitive for CopyCard.
+func (CopyCard) Kind() PrimitiveKind { return PrimitiveCopyCard }
+
+// Kind implements Primitive for PlayLinkedExiledCard.
+func (PlayLinkedExiledCard) Kind() PrimitiveKind { return PrimitivePlayLinkedExiledCard }
+
 // Kind implements Primitive for SetClassLevel.
 func (SetClassLevel) Kind() PrimitiveKind { return PrimitiveSetClassLevel }
 
@@ -429,6 +435,8 @@ func (StartEngines) isPrimitive()                         {}
 func (BecomeMonarch) isPrimitive()                        {}
 func (CantBecomeMonarch) isPrimitive()                    {}
 func (GainCityBlessing) isPrimitive()                     {}
+func (CopyCard) isPrimitive()                             {}
+func (PlayLinkedExiledCard) isPrimitive()                 {}
 func (PartitionExiledCostCards) isPrimitive()             {}
 func (SetClassLevel) isPrimitive()                        {}
 func (Monstrosity) isPrimitive()                          {}
@@ -580,11 +588,23 @@ func (StartEngines) instructionRefs() primitiveRefs                { return prim
 func (BecomeMonarch) instructionRefs() primitiveRefs               { return primitiveRefs{} }
 func (CantBecomeMonarch) instructionRefs() primitiveRefs           { return primitiveRefs{} }
 func (GainCityBlessing) instructionRefs() primitiveRefs            { return primitiveRefs{} }
-func (PartitionExiledCostCards) instructionRefs() primitiveRefs    { return primitiveRefs{} }
-func (p SetClassLevel) instructionRefs() primitiveRefs             { return quantityRefs(p.Amount) }
-func (p Monstrosity) instructionRefs() primitiveRefs               { return quantityRefs(p.Amount) }
-func (p DiscoverCards) instructionRefs() primitiveRefs             { return quantityRefs(p.Amount) }
-func (Pay) instructionRefs() primitiveRefs                         { return primitiveRefs{} }
+func (p CopyCard) instructionRefs() primitiveRefs {
+	if p.LinkID == "" {
+		return primitiveRefs{}
+	}
+	return primitiveRefs{consumesLinked: []LinkedKey{LinkedKey(p.LinkID)}}
+}
+func (p PlayLinkedExiledCard) instructionRefs() primitiveRefs {
+	if p.LinkID == "" {
+		return primitiveRefs{}
+	}
+	return primitiveRefs{consumesLinked: []LinkedKey{LinkedKey(p.LinkID)}}
+}
+func (PartitionExiledCostCards) instructionRefs() primitiveRefs { return primitiveRefs{} }
+func (p SetClassLevel) instructionRefs() primitiveRefs          { return quantityRefs(p.Amount) }
+func (p Monstrosity) instructionRefs() primitiveRefs            { return quantityRefs(p.Amount) }
+func (p DiscoverCards) instructionRefs() primitiveRefs          { return quantityRefs(p.Amount) }
+func (Pay) instructionRefs() primitiveRefs                      { return primitiveRefs{} }
 
 func (p PayRepeatedly) instructionRefs() primitiveRefs {
 	return primitiveRefs{publishesChoice: ChoiceKey(p.PublishCount)}

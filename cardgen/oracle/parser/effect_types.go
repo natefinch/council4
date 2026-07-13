@@ -2750,6 +2750,22 @@ type EffectSyntax struct {
 	// enters action; any trailing "if <condition>" gate is parsed separately as
 	// the ability's activation condition. It is false for every other effect.
 	PlayHideawayExiledCard bool `json:",omitempty"`
+	// CopyLinkedExiledCard marks the imprint copy-consent effect "You may copy
+	// the exiled card." (CR 707.12; Isochron Scepter, Spellbinder). It is the
+	// enabling half of the "You may copy the exiled card. If you do, you may cast
+	// the copy without paying its mana cost." idiom: the copied card is the one
+	// this source imprinted (exiled with it), and the paired
+	// CastLinkedExiledCopy effect casts the copy. It carries no pronoun reference
+	// because the exiled card is identified by the source's imprint link rather
+	// than a bound object. It is false for every other effect.
+	CopyLinkedExiledCard bool `json:",omitempty"`
+	// CastLinkedExiledCopy marks the imprint cast-the-copy effect "(If you do,)
+	// you may cast the copy without paying its mana cost." (CR 707.12; Isochron
+	// Scepter, Spellbinder), the consequence half of the imprint copy/cast idiom
+	// paired with CopyLinkedExiledCard. The "its" of "its mana cost" is consumed
+	// wholesale into the free-cast rider, so the effect emits no pronoun
+	// reference. It is false for every other effect.
+	CastLinkedExiledCopy bool `json:",omitempty"`
 	// ImpulseCast reports that an impulse-exile play-permission clause grants
 	// permission to *cast* the exiled card ("you may cast that card") rather than
 	// to *play* it ("you may play that card"). It restricts the temporary

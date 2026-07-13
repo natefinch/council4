@@ -252,10 +252,32 @@ const (
 	// have it. The primitive carries no payload; it always acts on the resolving
 	// object's controller.
 	PrimitiveGainCityBlessing
+
+	// PrimitiveCopyCard offers the resolving controller the chance to copy the
+	// card exiled by this source under an object-scoped link (the imprinted card,
+	// CR 707.12). It is the enabling half of the "You may copy the exiled card. If
+	// you do, you may cast the copy without paying its mana cost." imprint idiom
+	// (Isochron Scepter, Spellbinder): it succeeds only when a linked exiled card
+	// still rests in exile, so a following PlayLinkedExiledCard cast is gated on a
+	// copy actually being available. The copy itself is materialized and cast by
+	// that following instruction; a copy never cast ceases to exist (CR 707.12a),
+	// so this consent step performs no observable game action of its own.
+	PrimitiveCopyCard
+
+	// PrimitivePlayLinkedExiledCard casts the card exiled by this source under an
+	// object-scoped link (the imprinted card) without paying its mana cost when
+	// WithoutPayingManaCost is set, choosing the first legal targets and modes with
+	// X treated as 0. When Copy is set it casts a copy of the linked exiled card
+	// (Isochron Scepter, Spellbinder) rather than the card itself: the copy is a
+	// spell that carries the exiled card's copiable values and ceases to exist when
+	// it leaves the stack, leaving the original card in exile (CR 707.12). It is
+	// the consequence half of the imprint copy/cast idiom, gated by a preceding
+	// CopyCard.
+	PrimitivePlayLinkedExiledCard
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveGainCityBlessing) + 1
+const primitiveKindCount = int(PrimitivePlayLinkedExiledCard) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -1403,6 +1425,45 @@ type PlayChosenExiledCard struct {
 	OwnerScope            PlayerRelation
 	Counter               opt.V[counter.Kind]
 	Duration              EffectDuration
+	WithoutPayingManaCost bool
+}
+
+// CopyCard offers Player the chance to copy the card exiled by the resolving
+// source under the object-scoped link named LinkID (the imprinted card). It is
+// the enabling half of the imprint copy/cast idiom ("You may copy the exiled
+// card. If you do, you may cast the copy without paying its mana cost." —
+// Isochron Scepter, Spellbinder): resolution succeeds only when a card linked to
+// this source under LinkID still rests in exile, so the following optional
+// PlayLinkedExiledCard cast is gated (via prior-instruction acceptance) on a
+// copy actually being available. Because a copy that is never cast ceases to
+// exist (CR 707.12a), the consent step itself performs no observable action; the
+// paired PlayLinkedExiledCard materializes and casts the copy.
+type CopyCard struct {
+	Player PlayerReference
+	// LinkID is the object-scoped link key under which the source published its
+	// imprinted card (for example, the imprint link established by the ETB
+	// exile-from-hand choice).
+	LinkID string
+}
+
+// PlayLinkedExiledCard casts the card exiled by the resolving source under the
+// object-scoped link named LinkID (the imprinted card). With Copy set it casts a
+// copy of that card (CR 707.12) rather than the card itself: the linked card
+// stays in exile and a spell carrying its copiable values is put on the stack,
+// ceasing to exist when it leaves the stack. WithoutPayingManaCost casts it for
+// free. The cast chooses the first legal targets and modes with any X treated as
+// 0; when no legal way to cast exists the effect is a legal no-op. It is the
+// consequence half of the imprint copy/cast idiom, paired with a preceding
+// CopyCard whose acceptance gates it.
+type PlayLinkedExiledCard struct {
+	Player PlayerReference
+	// LinkID is the object-scoped link key under which the source published its
+	// imprinted card.
+	LinkID string
+	// Copy casts a copy of the linked exiled card rather than the card itself,
+	// leaving the original in exile.
+	Copy bool
+	// WithoutPayingManaCost casts the copy (or card) without paying its mana cost.
 	WithoutPayingManaCost bool
 }
 
