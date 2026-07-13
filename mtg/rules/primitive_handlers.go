@@ -59,7 +59,7 @@ func (r *effectResolver) recipientController(recipient game.PlayerReference) (ga
 }
 
 func (r *effectResolver) groupPermanents(group game.GroupReference) []*game.Permanent {
-	ids := newReferenceResolver(r.game, r.obj).groupMembers(group)
+	ids := newReferenceResolver(r.game, r.obj).withGroupOfferMember(r.groupOfferMember).groupMembers(group)
 	permanents := make([]*game.Permanent, 0, len(ids))
 	for _, permanentID := range ids {
 		if permanent, ok := permanentByObjectID(r.game, permanentID); ok {
@@ -70,7 +70,7 @@ func (r *effectResolver) groupPermanents(group game.GroupReference) []*game.Perm
 }
 
 func (r *effectResolver) groupPermanentsWithSource(group game.GroupReference, source *game.Permanent) []*game.Permanent {
-	ids := newReferenceResolverWithSource(r.game, r.obj, source).groupMembers(group)
+	ids := newReferenceResolverWithSource(r.game, r.obj, source).withGroupOfferMember(r.groupOfferMember).groupMembers(group)
 	permanents := make([]*game.Permanent, 0, len(ids))
 	for _, permanentID := range ids {
 		if permanent, ok := permanentByObjectID(r.game, permanentID); ok {
@@ -81,7 +81,7 @@ func (r *effectResolver) groupPermanentsWithSource(group game.GroupReference, so
 }
 
 func (r *effectResolver) playerGroupMembers(group game.PlayerGroupReference) []game.PlayerID {
-	return newReferenceResolver(r.game, r.obj).playerGroup(group)
+	return newReferenceResolver(r.game, r.obj).withGroupOfferMember(r.groupOfferMember).playerGroup(group)
 }
 
 func playersInAPNAPOrder(g *game.Game, players []game.PlayerID) []game.PlayerID {

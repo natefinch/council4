@@ -187,6 +187,10 @@ type effectResolved struct {
 	succeeded    bool
 	amount       int
 	excessDamage int
+	// acceptedActors is the set of players who accepted a group offer or Tempting
+	// offer, published so a later consequence can branch on how many (and which)
+	// members accepted. It is empty for a single-decider instruction.
+	acceptedActors game.PlayerSet
 }
 
 // record writes the resolution state into the stack object so that follow-up
@@ -197,7 +201,7 @@ func (res effectResolved) record(obj *game.StackObject, linkID string) {
 		rememberEffectAmount(obj, linkID, res.amount)
 		rememberEffectExcessDamage(obj, linkID, res.excessDamage)
 	}
-	rememberInstructionResolutionResult(obj, linkID, res.accepted, res.succeeded, res.amount)
+	rememberInstructionResolutionResult(obj, linkID, res.accepted, res.succeeded, res.amount, res.acceptedActors)
 }
 
 func recordResultKey(obj *game.StackObject, key game.ResultKey, res effectResolved) {
@@ -277,8 +281,11 @@ func (r *effectResolver) resolveInstruction(instr *game.Instruction) {
 // each accepting player, with GroupOfferMemberReference() bound to that player.
 // It publishes accepted=true when at least one player accepted so a following
 // "If no one does" (gate Accepted TriFalse) or "If a player does" (gate Accepted
-// TriTrue) consequence branches on the group's collective decision. It models
-// the multiplayer "may have" offer (Browbeat, Book Burning, Vexing Devil).
+// TriTrue) consequence branches on the group's collective decision; the
+// published Amount is the number who accepted and AcceptedActors is the exact
+// set, the generic accepted-member publication a per-accepter consequence reads.
+// It models the multiplayer "may have" offer (Browbeat, Book Burning, Vexing
+// Devil).
 func (r *effectResolver) resolveGroupOffer(instr *game.Instruction) {
 	members := newReferenceResolver(r.game, r.obj).playerGroup(instr.OptionalActorGroup.Val)
 	kind := instr.Primitive.Kind()
@@ -292,11 +299,13 @@ func (r *effectResolver) resolveGroupOffer(instr *game.Instruction) {
 	}()
 	anyAccepted := false
 	anySucceeded := false
+	var accepters game.PlayerSet
 	for _, member := range members {
 		if !r.engine.chooseMay(r.game, r.agents, member, "Apply optional effect?", r.log) {
 			continue
 		}
 		anyAccepted = true
+		accepters = accepters.With(member)
 		r.groupOfferMember = opt.Val(member)
 		res := handler(r, instr.Primitive)
 		if res.succeeded {
@@ -304,7 +313,12 @@ func (r *effectResolver) resolveGroupOffer(instr *game.Instruction) {
 		}
 	}
 	if instr.PublishResult != "" {
-		recordResultKey(r.obj, instr.PublishResult, effectResolved{accepted: anyAccepted, succeeded: anySucceeded})
+		recordResultKey(r.obj, instr.PublishResult, effectResolved{
+			accepted:       anyAccepted,
+			succeeded:      anySucceeded,
+			amount:         accepters.Count(),
+			acceptedActors: accepters,
+		})
 	}
 }
 
@@ -317,7 +331,9 @@ func (r *effectResolver) resolveGroupOffer(instr *game.Instruction) {
 // GroupOfferMemberReference(): the runtime binds it to the controller for the
 // base and reward resolutions and to each accepting member for that member's own
 // resolution. PublishResult reports accepted=true when at least one member
-// accepted.
+// accepted; the published Amount is the number who accepted (which the
+// controller repeat matches) and AcceptedActors is the exact set, so a future
+// per-accepter consequence can read which members accepted.
 func (r *effectResolver) resolveTemptingOffer(instr *game.Instruction) {
 	controller := stackObjectController(r.obj)
 	members := newReferenceResolver(r.game, r.obj).playerGroup(instr.OptionalActorGroup.Val)
@@ -335,28 +351,33 @@ func (r *effectResolver) resolveTemptingOffer(instr *game.Instruction) {
 	base := handler(r, instr.Primitive)
 	anyAccepted := false
 	anySucceeded := base.succeeded
-	acceptors := 0
+	var accepters game.PlayerSet
 	// Each member of the group is offered the effect for themselves.
 	for _, member := range members {
 		if !r.engine.chooseMay(r.game, r.agents, member, "Apply optional effect?", r.log) {
 			continue
 		}
 		anyAccepted = true
-		acceptors++
+		accepters = accepters.With(member)
 		r.groupOfferMember = opt.Val(member)
 		if res := handler(r, instr.Primitive); res.succeeded {
 			anySucceeded = true
 		}
 	}
 	// For each accepting member, the controller performs the effect again.
-	for range acceptors {
+	for range accepters.Count() {
 		r.groupOfferMember = opt.Val(controller)
 		if res := handler(r, instr.Primitive); res.succeeded {
 			anySucceeded = true
 		}
 	}
 	if instr.PublishResult != "" {
-		recordResultKey(r.obj, instr.PublishResult, effectResolved{accepted: anyAccepted, succeeded: anySucceeded})
+		recordResultKey(r.obj, instr.PublishResult, effectResolved{
+			accepted:       anyAccepted,
+			succeeded:      anySucceeded,
+			amount:         accepters.Count(),
+			acceptedActors: accepters,
+		})
 	}
 }
 
