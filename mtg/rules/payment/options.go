@@ -114,7 +114,30 @@ func spellCostOptionsForRequest(s State, req SpellRequest) []spellCostOption {
 	options := spellCostOptionsForRequestWithoutModes(s, req)
 	addSpreeModeCosts(options, req.Card, req.ChosenModes)
 	addEscalateModeCosts(options, req.Card, req.ChosenModes)
+	addSpliceCosts(options, req.SpliceManaCosts)
 	return options
+}
+
+// addSpliceCosts adds the mana splice cost of each card spliced onto an Arcane
+// spell (CR 702.47) to every payable cost option, so the controller pays the
+// host spell's cost plus each splice cost as an additional cost. A spell with no
+// splices adds nothing.
+func addSpliceCosts(options []spellCostOption, spliceManaCosts []cost.Mana) {
+	var extra cost.Mana
+	for _, spliceCost := range spliceManaCosts {
+		extra = append(extra, spliceCost...)
+	}
+	if len(extra) == 0 {
+		return
+	}
+	for i := range options {
+		combined := cost.Mana{}
+		if options[i].manaCost != nil {
+			combined = append(combined, (*options[i].manaCost)...)
+		}
+		combined = append(combined, extra...)
+		options[i].manaCost = &combined
+	}
 }
 
 func spellCostOptionsForRequestWithoutModes(s State, req SpellRequest) []spellCostOption {

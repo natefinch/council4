@@ -59,6 +59,7 @@ var Cards = []cardset.Entry{
 	{Name: "Knighted Myr", New: KnightedMyr},
 	{Name: "Knights of the Black Rose", New: KnightsOfTheBlackRose},
 	{Name: "Kodama of the South Tree", New: KodamaOfTheSouthTree},
+	{Name: "Kodama's Might", New: KodamaSMight},
 	{Name: "Kolaghan Aspirant", New: KolaghanAspirant},
 	{Name: "Kolaghan Forerunners", New: KolaghanForerunners},
 	{Name: "Kolaghan Skirmisher", New: KolaghanSkirmisher},

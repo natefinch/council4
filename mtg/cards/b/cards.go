@@ -77,6 +77,7 @@ var Cards = []cardset.Entry{
 	{Name: "Blazing Blade Askari", New: BlazingBladeAskari},
 	{Name: "Blazing Sunsteel", New: BlazingSunsteel},
 	{Name: "Bleed Dry", New: BleedDry},
+	{Name: "Blessed Breath", New: BlessedBreath},
 	{Name: "Blessing", New: Blessing},
 	{Name: "Blitz Leech", New: BlitzLeech},
 	{Name: "Blitz of the Thunder-Raptor", New: BlitzOfTheThunderRaptor},

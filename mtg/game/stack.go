@@ -146,6 +146,25 @@ type StackObject struct {
 	// Overloaded is true if this spell was cast for its overload cost.
 	Overloaded bool
 
+	// SplicedContent holds the spell effects appended to this spell by "Splice
+	// onto Arcane" (CR 702.47), in the order the caster chose to splice them.
+	// Each entry is a spliced card's spell ability content; the host spell's own
+	// effects resolve first, then each spliced content in order. Captured on the
+	// stack object (rather than re-read from a card) so copies of this spell copy
+	// the combined spliced text.
+	SplicedContent []AbilityContent
+
+	// SplicedTargets holds the runtime targets chosen for each SplicedContent
+	// entry, indexed in parallel with SplicedContent. Each inner slice is the
+	// flat target list for that spliced effect, resolved the same way a spell's
+	// own Targets are.
+	SplicedTargets [][]Target
+
+	// SplicedTargetCounts holds the per-TargetSpec target counts for each
+	// SplicedContent entry, indexed in parallel with SplicedContent, mirroring
+	// TargetCounts for the host spell.
+	SplicedTargetCounts [][]int
+
 	// Evoked is true if this spell was cast for its Evoke alternative cost
 	// (CR 702.74); the resulting permanent is sacrificed when it enters.
 	Evoked bool

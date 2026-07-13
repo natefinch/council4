@@ -183,6 +183,31 @@ func TestParseFlashbackManaCost(t *testing.T) {
 	}
 }
 
+func TestParseSpliceOntoArcaneManaCost(t *testing.T) {
+	t.Parallel()
+	keywords := keywordsFor(t, "Splice onto Arcane {1}{R}")
+	if len(keywords) != 1 ||
+		keywords[0].Kind != KeywordSplice ||
+		keywords[0].Kind.String() != "Splice onto Arcane" ||
+		keywords[0].Parameter.Kind != KeywordParameterManaCost ||
+		!slices.Equal(keywords[0].Parameter.ManaCost(), cost.Mana{cost.O(1), cost.R}) {
+		t.Fatalf("splice keywords = %+v", keywords)
+	}
+}
+
+// TestParseSpliceOntoArcaneNonManaUnrecognized confirms the em-dash nonmana form
+// of "Splice onto Arcane" produces no Splice keyword (fail closed): only the
+// printed mana-cost form is supported.
+func TestParseSpliceOntoArcaneNonManaUnrecognized(t *testing.T) {
+	t.Parallel()
+	keywords := keywordsFor(t, "Splice onto Arcane—Exile four cards from your graveyard.")
+	for _, keyword := range keywords {
+		if keyword.Kind == KeywordSplice {
+			t.Fatalf("nonmana splice must not be recognized as a keyword: %+v", keywords)
+		}
+	}
+}
+
 func TestParseCumulativeUpkeepManaCostAndSpans(t *testing.T) {
 	t.Parallel()
 	keywords := keywordsFor(t, "Cumulative upkeep {1}{U}")

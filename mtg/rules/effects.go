@@ -45,6 +45,38 @@ func (e *Engine) resolveSpellEffectsWithChoices(g *game.Game, obj *game.StackObj
 			e.resolveAbilityContentWithChoices(g, obj, kicker.BonusContent, agents, log)
 		}
 	}
+	e.resolveSplicedContent(g, obj, agents, log)
+}
+
+// resolveSplicedContent resolves the spell effects spliced onto this Arcane spell
+// (CR 702.47), in the order they were spliced, after the host spell's own effects.
+// Each spliced content resolves against its own captured targets: obj.Targets and
+// obj.TargetCounts are temporarily swapped for the spliced entry's targets (which
+// are indexed from zero, matching the spliced content's own target references) and
+// restored afterward.
+func (e *Engine) resolveSplicedContent(g *game.Game, obj *game.StackObject, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
+	if len(obj.SplicedContent) == 0 {
+		return
+	}
+	savedTargets := obj.Targets
+	savedCounts := obj.TargetCounts
+	defer func() {
+		obj.Targets = savedTargets
+		obj.TargetCounts = savedCounts
+	}()
+	for i := range obj.SplicedContent {
+		if i < len(obj.SplicedTargets) {
+			obj.Targets = obj.SplicedTargets[i]
+		} else {
+			obj.Targets = nil
+		}
+		if i < len(obj.SplicedTargetCounts) {
+			obj.TargetCounts = obj.SplicedTargetCounts[i]
+		} else {
+			obj.TargetCounts = nil
+		}
+		e.resolveAbilityContentWithChoices(g, obj, obj.SplicedContent[i], agents, log)
+	}
 }
 
 func (e *Engine) resolveAbilityContentWithChoices(g *game.Game, obj *game.StackObject, content game.AbilityContent, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {

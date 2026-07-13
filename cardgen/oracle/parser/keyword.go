@@ -134,6 +134,7 @@ const (
 	KeywordDethrone            KeywordKind = "KeywordDethrone"
 	KeywordFlanking            KeywordKind = "KeywordFlanking"
 	KeywordSoulshift           KeywordKind = "KeywordSoulshift"
+	KeywordSplice              KeywordKind = "KeywordSplice"
 	KeywordRampage             KeywordKind = "KeywordRampage"
 	KeywordTraining            KeywordKind = "KeywordTraining"
 	KeywordMyriad              KeywordKind = "KeywordMyriad"
@@ -322,6 +323,7 @@ var keywordNames = map[KeywordKind]string{
 	KeywordDethrone:            "Dethrone",
 	KeywordFlanking:            "Flanking",
 	KeywordSoulshift:           "Soulshift",
+	KeywordSplice:              "Splice onto Arcane",
 	KeywordRampage:             "Rampage",
 	KeywordTraining:            "Training",
 	KeywordMyriad:              "Myriad",
@@ -470,6 +472,7 @@ var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordDethrone, Words: []string{"dethrone"}},
 	{Kind: KeywordFlanking, Words: []string{"flanking"}},
 	{Kind: KeywordSoulshift, Words: []string{"soulshift"}},
+	{Kind: KeywordSplice, Words: []string{"splice", "onto", "arcane"}},
 	{Kind: KeywordRampage, Words: []string{"rampage"}},
 	{Kind: KeywordTraining, Words: []string{"training"}},
 	{Kind: KeywordMyriad, Words: []string{"myriad"}},
@@ -1733,6 +1736,26 @@ func scanKeywords(tokens []shared.Token, atoms Atoms) []Keyword {
 				Parameter: parameter,
 			})
 			i = giftEnd - 1
+			continue
+		}
+		// "Splice onto Arcane" is supported only in its printed mana-cost form
+		// ("Splice onto Arcane {1}{R}"; CR 702.47). The keyword is recognized
+		// only when a mana cost follows the name; the em-dash nonmana form
+		// ("Splice onto Arcane—Exile ...") and any other variant produce no
+		// keyword and stay unsupported (fail closed).
+		if kind == KeywordSplice {
+			manaCost, spliceEnd, ok := parseKeywordManaCost(tokens, i+width)
+			if !ok {
+				continue
+			}
+			keywords = append(keywords, Keyword{
+				Kind:      KeywordSplice,
+				NameSpan:  nameSpan,
+				Span:      shared.SpanOf(tokens[i:spliceEnd]),
+				Text:      joinTokens(tokens[i:spliceEnd]),
+				Parameter: NewManaKeywordParameter(shared.SpanOf(tokens[i+width:spliceEnd]), manaCost),
+			})
+			i = spliceEnd - 1
 			continue
 		}
 		end := i + width

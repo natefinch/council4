@@ -83,6 +83,7 @@ var Cards = []cardset.Entry{
 	{Name: "Ethereal Whiskergill", New: EtherealWhiskergill},
 	{Name: "Evelyn, the Covetous", New: EvelynTheCovetous},
 	{Name: "Everglades", New: Everglades},
+	{Name: "Evermind", New: Evermind},
 	{Name: "Evie Frye", New: EvieFrye},
 	{Name: "Exalted Angel", New: ExaltedAngel},
 	{Name: "Excalibur II", New: ExcaliburII},

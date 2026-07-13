@@ -307,6 +307,12 @@ func lowerKeywordDispatch(
 		}
 		return keywordStaticLowering(&flashbackAbility, ability, syntax), true, nil
 	}
+	if spliceAbility, ok, diag := lowerSpliceAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordStaticLowering(&spliceAbility, ability, syntax), true, nil
+	}
 	if plotAbility, ok, diag := lowerPlotAbility(ability, syntax); ok {
 		if diag != nil {
 			return abilityLowering{}, true, diag
@@ -1470,6 +1476,42 @@ func lowerFlashbackAbility(
 	return game.StaticAbility{
 		Text:             keyword.Name + " " + keyword.Parameter,
 		KeywordAbilities: []game.KeywordAbility{game.FlashbackKeyword{Cost: manaCost}},
+	}, true, nil
+}
+
+// lowerSpliceAbility lowers the "Splice onto Arcane" keyword (CR 702.47) into a
+// game.SpliceKeyword static ability carrying the splice mana cost. Only the exact
+// keyword with a fixed mana cost and no other rules text on the ability is
+// supported; any other shape fails closed. The rules layer reads
+// game.SpliceKeyword to offer the card while an Arcane spell is being cast.
+func lowerSpliceAbility(
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (game.StaticAbility, bool, *shared.Diagnostic) {
+	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordSplice {
+		return game.StaticAbility{}, false, nil
+	}
+	keyword := ability.Content.Keywords[0]
+	manaCost, fixed := fixedKeywordManaCost(keyword)
+	if !fixed ||
+		(ability.Kind != compiler.AbilityStatic && ability.Kind != compiler.AbilitySpell) ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.References) != 0 ||
+		ability.AbilityWord != "" ||
+		!keywordOnlyCovered(syntax, keyword) {
+		return game.StaticAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Splice onto Arcane ability",
+			"the executable source backend supports only exact Splice onto Arcane with a fixed mana cost",
+		)
+	}
+	return game.StaticAbility{
+		Text:             keyword.Name + " " + keyword.Parameter,
+		KeywordAbilities: []game.KeywordAbility{game.SpliceKeyword{Cost: manaCost}},
 	}, true, nil
 }
 
