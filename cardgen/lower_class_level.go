@@ -87,10 +87,23 @@ func gateLoweredAbilityByClassLevel(
 		lowered.staticAbilities[i].Body.Condition = mergeClassLevelGate(lowered.staticAbilities[i].Body.Condition, level)
 		gated = true
 	}
+	if lowered.replacementAbility.Exists {
+		replacement := lowered.replacementAbility.Val
+		// Only counter-placement replacements can be class-level gated: the
+		// runtime threads the source permanent through the counter-placement
+		// match path, so a SourceClassLevelAtLeast condition resolves there.
+		// Other replacement categories stay unsupported to avoid emitting a
+		// gate the runtime would ignore.
+		if replacement.Replacement.CounterMultiplier <= 1 && replacement.Replacement.CounterAddend == 0 {
+			return executableDiagnostic(ability, "unsupported Class level ability", unsupportedDetail)
+		}
+		replacement.Replacement.Condition = mergeClassLevelGate(replacement.Replacement.Condition, level)
+		lowered.replacementAbility = opt.Val(replacement)
+		gated = true
+	}
 	if lowered.manaAbility.Exists ||
 		lowered.loyaltyAbility.Exists ||
 		lowered.chapterAbility.Exists ||
-		lowered.replacementAbility.Exists ||
 		lowered.spellAbility.Exists {
 		return executableDiagnostic(ability, "unsupported Class level ability", unsupportedDetail)
 	}

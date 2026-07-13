@@ -1483,7 +1483,11 @@ func matchingCounterPlacementReplacementEffects(g *game.Game, event game.Event, 
 			continue
 		}
 		matchEvent := counterPlacementMatchEvent(g, replacement, event, recipient)
-		if applied[replacement.ID] || !replacementEffectMatchesEvent(g, replacement, matchEvent) {
+		// Thread the source permanent so source-relative condition predicates
+		// (such as a Class level gate) resolve against the replacement's own
+		// permanent. Replacements without a condition are unaffected.
+		source, _ := permanentByObjectID(g, replacement.SourceObjectID)
+		if applied[replacement.ID] || !replacementEffectMatchesEventWithSource(g, replacement, matchEvent, source, nil) {
 			continue
 		}
 		matches = append(matches, *replacement)

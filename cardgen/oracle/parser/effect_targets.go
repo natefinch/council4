@@ -4652,10 +4652,7 @@ func parseCounterFilteredCreatureGroupSubject(tokens []shared.Token) (EffectStat
 	if !counterGroupVerbAt(tokens, match.End, head.singular) {
 		return EffectStaticSubjectSyntax{}, false
 	}
-	groupKind := EffectStaticSubjectControlledCreatures
-	if head.excludeSource {
-		groupKind = EffectStaticSubjectOtherControlledCreatures
-	}
+	groupKind := counterGroupSubjectKind(head)
 	subject := EffectStaticSubjectSyntax{
 		Kind: groupKind,
 		Span: shared.SpanOf(tokens[:match.End]),
@@ -4681,7 +4678,9 @@ func parseCounterFilteredCreatureGroupSubject(tokens []shared.Token) (EffectStat
 // callers fall through to the bare grammar.
 func parsePowerFilteredCreatureGroupSubject(tokens []shared.Token, atoms Atoms) (EffectStaticSubjectSyntax, bool) {
 	head, ok := counterGroupNounPhrase(tokens)
-	if !ok {
+	if !ok || head.permanent {
+		// Power is a creature-only characteristic, so the untyped "permanents you
+		// control with power ..." form has no modeled group subject; fail closed.
 		return EffectStaticSubjectSyntax{}, false
 	}
 	idx := head.next
@@ -4713,15 +4712,22 @@ func parsePowerFilteredCreatureGroupSubject(tokens []shared.Token, atoms Atoms) 
 
 // counterGroupHead is the leading noun phrase of a counter-matters anthem
 // subject: the token index just past it, whether the source is excluded
-// ("other"), and whether the phrase is the singular "each creature" form.
+// ("other"), whether the phrase is the singular "each creature" form, and
+// whether the noun is the untyped "permanents" group rather than "creatures".
 type counterGroupHead struct {
 	next          int
 	excludeSource bool
 	singular      bool
+	permanent     bool
 }
 
 // counterGroupNounPhrase recognizes the leading noun phrase of a counter-matters
-// anthem subject. It fails closed for any other noun phrase.
+// anthem subject. It recognizes both the "creatures" groups and the untyped
+// "permanents you control" group (Innkeeper's Talent's "Permanents you control
+// with counters on them have ward {1}."), marking the latter with permanent so
+// counter-filtered callers select every permanent type while the power-filtered
+// caller — power is a creature-only characteristic — rejects it. It fails closed
+// for any other noun phrase.
 func counterGroupNounPhrase(tokens []shared.Token) (counterGroupHead, bool) {
 	switch {
 	case effectWordsAt(tokens, 0, "each", "other", "creature"):
@@ -4732,6 +4738,10 @@ func counterGroupNounPhrase(tokens []shared.Token) (counterGroupHead, bool) {
 		return counterGroupHead{next: 2, excludeSource: true}, true
 	case effectWordsAt(tokens, 0, "creatures"):
 		return counterGroupHead{next: 1}, true
+	case effectWordsAt(tokens, 0, "other", "permanents"):
+		return counterGroupHead{next: 2, excludeSource: true, permanent: true}, true
+	case effectWordsAt(tokens, 0, "permanents"):
+		return counterGroupHead{next: 1, permanent: true}, true
 	default:
 		return counterGroupHead{}, false
 	}
@@ -4749,6 +4759,22 @@ func counterGroupVerbAt(tokens []shared.Token, index int, singular bool) bool {
 		return staticGroupVerbSingular(tokens[index])
 	}
 	return staticGroupVerb(tokens[index])
+}
+
+// counterGroupSubjectKind resolves the controlled-group static subject kind for a
+// counter-filtered anthem head: the untyped "permanents you control" group or the
+// "creatures you control" group, each in its source-excluding "other" variant.
+func counterGroupSubjectKind(head counterGroupHead) EffectStaticSubjectKind {
+	switch {
+	case head.permanent && head.excludeSource:
+		return EffectStaticSubjectOtherControlledPermanents
+	case head.permanent:
+		return EffectStaticSubjectControlledPermanents
+	case head.excludeSource:
+		return EffectStaticSubjectOtherControlledCreatures
+	default:
+		return EffectStaticSubjectControlledCreatures
+	}
 }
 
 // staticKeywordGroupKind resolves the static subject kind for a keyword-filtered
