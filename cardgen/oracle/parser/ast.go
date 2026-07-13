@@ -109,7 +109,13 @@ type Ability struct {
 	// emitWardKeywordCost parses it into the typed WardCost carried on the Ward
 	// keyword so the compiler consumes the cost components there.
 	wardCostPhrase *Phrase
-	Trigger        *TriggerClause `json:",omitempty"`
+	// wardBodyStart is the token index of the ability content that follows a
+	// "Ward—<cost>" clause's trailing period (its reminder text, if any). It lets
+	// parseAbility keep that trailing content as the ability body so the reminder
+	// is recognized instead of dropped, while the "Pay N life." cost tokens stay
+	// out of the body. It is meaningful only when wardCostPhrase is non-nil.
+	wardBodyStart int
+	Trigger       *TriggerClause `json:",omitempty"`
 	// BodySpan is the source span of the ability's resolving body: the tokens
 	// after the activated/loyalty cost colon or the triggered event comma (and
 	// after any ability-word or chapter prefix). It is the zero span when the

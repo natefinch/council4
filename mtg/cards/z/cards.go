@@ -15,6 +15,7 @@ var Cards = []cardset.Entry{
 	{Name: "Zhang He, Wei General", New: ZhangHeWeiGeneral},
 	{Name: "Zhou Yu, Chief Commander", New: ZhouYuChiefCommander},
 	{Name: "Zhuge Jin, Wu Strategist", New: ZhugeJinWuStrategist},
+	{Name: "Zul Ashur, Lich Lord", New: ZulAshurLichLord},
 	{Name: "Zulaport Chainmage", New: ZulaportChainmage},
 	{Name: "Zulaport Enforcer", New: ZulaportEnforcer},
 	{Name: "Zurgo's Vanguard", New: ZurgoSVanguard},

@@ -60,6 +60,7 @@ var Cards = []cardset.Entry{
 	{Name: "Herald of the Host", New: HeraldOfTheHost},
 	{Name: "Herd Migration", New: HerdMigration},
 	{Name: "Heron-Blessed Geist", New: HeronBlessedGeist},
+	{Name: "Hexing Squelcher", New: HexingSquelcher},
 	{Name: "Hickory Woodlot", New: HickoryWoodlot},
 	{Name: "Hidden Footblade", New: HiddenFootblade},
 	{Name: "Hidden Herbalists", New: HiddenHerbalists},

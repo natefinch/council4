@@ -796,8 +796,9 @@ func parseAbility(
 		} else if escape, costPhrase, ok := escapeAlternativeCostClause(source, tokens, dash); ok {
 			ability.AlternativeCost = escape
 			ability.costPhrase = &costPhrase
-		} else if costPhrase, ok := wardKeywordCostClause(source, tokens, dash); ok {
+		} else if costPhrase, wardBodyStart, ok := wardKeywordCostClause(source, tokens, dash); ok {
 			ability.wardCostPhrase = &costPhrase
+			ability.wardBodyStart = wardBodyStart
 		} else {
 			phrase := phraseFromTokens(source, tokens[:dash])
 			ability.AbilityWord = &AbilityWordClause{
@@ -809,6 +810,9 @@ func parseAbility(
 		body = tokens[dash+1:]
 		if ability.wardCostPhrase != nil {
 			body = nil
+			if ability.wardBodyStart >= 0 && ability.wardBodyStart < len(tokens) {
+				body = tokens[ability.wardBodyStart:]
+			}
 		}
 		if len(ability.Chapters) > 0 {
 			if stripped, flavor, ok := stripChapterFlavorName(body); ok {

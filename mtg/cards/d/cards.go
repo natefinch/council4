@@ -129,5 +129,6 @@ var Cards = []cardset.Entry{
 	{Name: "Duskfang Mentor", New: DuskfangMentor},
 	{Name: "Dust Elemental", New: DustElemental},
 	{Name: "Dwarfhold Champion", New: DwarfholdChampion},
+	{Name: "Dwarven Forge-Chanter", New: DwarvenForgeChanter},
 	{Name: "Dwynen, Gilt-Leaf Daen", New: DwynenGiltLeafDaen},
 }
