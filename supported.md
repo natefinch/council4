@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,784 of 32,501 cards eligible for paper support (54.7%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,800 of 32,501 cards eligible for paper support (54.8%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -193,6 +193,7 @@ Council4 currently supports **17,784 of 32,501 cards eligible for paper support 
 - Aftermath Analyst
 - Aftershock
 - Against All Odds
+- Agate Instigator
 - Agate Instigator
 - Agate-Blade Assassin
 - Agatha's Champion
@@ -3016,6 +3017,7 @@ Council4 currently supports **17,784 of 32,501 cards eligible for paper support 
 - Corrupted Roots
 - Corsair Captain
 - Coruscation Mage
+- Coruscation Mage
 - Cosi's Ravager
 - Cosmic Crucible
 - Cosmic Epiphany
@@ -5246,6 +5248,7 @@ Council4 currently supports **17,784 of 32,501 cards eligible for paper support 
 - Final-Sting Faerie
 - Finale of Glory
 - Finch Formation
+- Finch Formation
 - Finest Hour
 - Finishing Blow
 - Firdoch Core
@@ -5454,6 +5457,7 @@ Council4 currently supports **17,784 of 32,501 cards eligible for paper support 
 - Flow of Ideas
 - Flow of Knowledge
 - Flower // Flourish
+- Flowerfoot Swordmaster
 - Flowerfoot Swordmaster
 - Flowering Field
 - Flowering of the White Tree
@@ -7722,6 +7726,7 @@ Council4 currently supports **17,784 of 32,501 cards eligible for paper support 
 - Intrepid Hero
 - Intrepid Provisioner
 - Intrepid Rabbit
+- Intrepid Rabbit
 - Intrepid Tenderfoot
 - Intrepid Trufflesnout // Go Hog Wild
 - Introduction to Annihilation
@@ -7770,6 +7775,7 @@ Council4 currently supports **17,784 of 32,501 cards eligible for paper support 
 - Iridescent Angel
 - Iridescent Blademaster
 - Iridescent Tiger
+- Iridescent Vinelasher
 - Iridescent Vinelasher
 - Irini Sengir
 - Iroas's Blessing
@@ -9143,6 +9149,7 @@ Council4 currently supports **17,784 of 32,501 cards eligible for paper support 
 - Manic Vandal
 - Manifestation Sage
 - Manifold Key
+- Manifold Mouse
 - Manifold Mouse
 - Manor Gate
 - Manor Skeleton
@@ -11383,6 +11390,7 @@ Council4 currently supports **17,784 of 32,501 cards eligible for paper support 
 - Prosperity
 - Prosperity Tycoon
 - Prosperous Bandit
+- Prosperous Bandit
 - Prosperous Innkeeper
 - Prosperous Partnership
 - Prosperous Pirates
@@ -12506,6 +12514,7 @@ Council4 currently supports **17,784 of 32,501 cards eligible for paper support 
 - Rust
 - Rust Harvester
 - Rust Monster
+- Rust-Shield Rampager
 - Rust-Shield Rampager
 - Rusted Sentinel
 - Rusted Slasher
@@ -14350,6 +14359,7 @@ Council4 currently supports **17,784 of 32,501 cards eligible for paper support 
 - Spitting Sliver
 - Spitting Spider
 - Splash Lasher
+- Splash Lasher
 - Splatter Goblin
 - Splatter Technique
 - Splatter Thug
@@ -14500,6 +14510,7 @@ Council4 currently supports **17,784 of 32,501 cards eligible for paper support 
 - Starnheim Memento
 - Starry-Eyed Skyrider
 - Starscape Cleric
+- Starscape Cleric
 - Starscream, Power Hungry // Starscream, Seeker Leader
 - Starstorm
 - Start from Scratch
@@ -14543,6 +14554,7 @@ Council4 currently supports **17,784 of 32,501 cards eligible for paper support 
 - Steam Vents
 - Steamclaw
 - Steampath Charger
+- Steampath Charger
 - Steel Leaf Champion
 - Steel Leaf Paladin
 - Steel Overseer
@@ -14550,6 +14562,7 @@ Council4 currently supports **17,784 of 32,501 cards eligible for paper support 
 - Steel Wall
 - Steel Wrecking Ball
 - Steelbane Hydra
+- Steelburr Champion
 - Steelburr Champion
 - Steelclad Spirit
 - Steelclaw Lance
@@ -15305,6 +15318,7 @@ Council4 currently supports **17,784 of 32,501 cards eligible for paper support 
 - Temur War Shaman
 - Tenacious Tomeseeker
 - Tender Wildguide
+- Tender Wildguide
 - Tenderize
 - Tendershoot Dryad
 - Tendo Ice Bridge
@@ -15681,6 +15695,7 @@ Council4 currently supports **17,784 of 32,501 cards eligible for paper support 
 - Thunderscape Master
 - Thundersong Trumpeter
 - Thundersteel Colossus
+- Thundertrap Trainer
 - Thundertrap Trainer
 - Thunderwolf Cavalry
 - Thwart
@@ -17082,6 +17097,7 @@ Council4 currently supports **17,784 of 32,501 cards eligible for paper support 
 - Warren Elder
 - Warren Instigator
 - Warren Soultrader
+- Warren Warleader
 - Warren Warleader
 - Warren-Scourge Elf
 - Warrior

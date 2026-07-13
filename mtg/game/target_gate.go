@@ -45,6 +45,13 @@ const (
 	// that must choose a legal creature target, while an ordinary creature cast
 	// of the same card requires no target.
 	TargetGateBestowed
+	// TargetGateSpellOffspring marks a target required only when the spell's
+	// Offspring additional mana cost was paid ("if the offspring cost was paid,
+	// ..."; CR 702.171b).
+	TargetGateSpellOffspring
+	// TargetGateSpellNotOffspring marks a target required only when the Offspring
+	// cost was not paid.
+	TargetGateSpellNotOffspring
 )
 
 // CastBranch captures the cast-time choices that decide which gated target specs
@@ -65,6 +72,9 @@ type CastBranch struct {
 	// (CR 702.103), making it a bestowed Aura spell that requires an enchant
 	// target.
 	Bestowed bool
+	// Offspring reports that the spell's Offspring additional mana cost was paid
+	// as it was cast (CR 702.171b).
+	Offspring bool
 }
 
 // ActiveIn reports whether a spec carrying this gate participates in targeting on
@@ -85,6 +95,10 @@ func (gate TargetGate) ActiveIn(branch CastBranch) bool {
 		return !branch.Bargained
 	case TargetGateBestowed:
 		return branch.Bestowed
+	case TargetGateSpellOffspring:
+		return branch.Offspring
+	case TargetGateSpellNotOffspring:
+		return !branch.Offspring
 	default:
 		return true
 	}
@@ -92,5 +106,5 @@ func (gate TargetGate) ActiveIn(branch CastBranch) bool {
 
 // Valid reports whether the gate is a known enum value.
 func (gate TargetGate) Valid() bool {
-	return gate <= TargetGateBestowed
+	return gate <= TargetGateSpellNotOffspring
 }

@@ -133,6 +133,37 @@ func TestActionsEqualDistinguishesOverload(t *testing.T) {
 	}
 }
 
+func TestActionsEqualDistinguishesOffspring(t *testing.T) {
+	cardID := id.ID(42)
+	normal := action.CastSpell(cardID, nil, 0, nil)
+	offspring := action.CastOffspringSpell(cardID, nil, 0, nil)
+	if actionsEqual(normal, offspring) {
+		t.Fatal("actionsEqual() = true for otherwise-identical normal and offspring casts")
+	}
+	if !actionsEqual(offspring, action.CastOffspringSpell(cardID, nil, 0, nil)) {
+		t.Fatal("actionsEqual() = false for two matching offspring casts")
+	}
+}
+
+func TestContainsActionRejectsUnavailableOffspringCast(t *testing.T) {
+	cardID := id.ID(42)
+	// Only the plain cast is legal; the offspring cost was not offered.
+	legal := []action.Action{action.CastSpell(cardID, nil, 0, nil)}
+	synthetic := action.CastOffspringSpell(cardID, nil, 0, nil)
+	if containsAction(legal, synthetic) {
+		t.Fatal("containsAction() = true for an unavailable offspring cast matched against the plain cast")
+	}
+}
+
+func TestActionsEqualDistinguishesBestow(t *testing.T) {
+	cardID := id.ID(42)
+	normal := action.CastSpell(cardID, nil, 0, nil)
+	bestowed := action.CastBestowSpell(cardID, nil, 0, nil)
+	if actionsEqual(normal, bestowed) {
+		t.Fatal("actionsEqual() = true for otherwise-identical normal and bestow casts")
+	}
+}
+
 func TestRunPriorityLoopSkipsPriorityPlayerEliminatedByStateBasedActions(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	g.FailedDraws[game.Player1] = true

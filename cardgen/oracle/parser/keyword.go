@@ -81,6 +81,7 @@ const (
 	KeywordMultikicker    KeywordKind = "KeywordMultikicker"
 	KeywordMutate         KeywordKind = "KeywordMutate"
 	KeywordNinjutsu       KeywordKind = "KeywordNinjutsu"
+	KeywordOffspring      KeywordKind = "KeywordOffspring"
 	KeywordOutlast        KeywordKind = "KeywordOutlast"
 	KeywordPersist        KeywordKind = "KeywordPersist"
 	KeywordPlot           KeywordKind = "KeywordPlot"
@@ -295,6 +296,7 @@ var keywordNames = map[KeywordKind]string{
 	KeywordMultikicker:         "Multikicker",
 	KeywordMutate:              "Mutate",
 	KeywordNinjutsu:            "Ninjutsu",
+	KeywordOffspring:           "Offspring",
 	KeywordOutlast:             "Outlast",
 	KeywordPersist:             "Persist",
 	KeywordPlot:                "Plot",
@@ -451,6 +453,7 @@ var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordMultikicker, Words: []string{"multikicker"}},
 	{Kind: KeywordMutate, Words: []string{"mutate"}},
 	{Kind: KeywordNinjutsu, Words: []string{"ninjutsu"}},
+	{Kind: KeywordOffspring, Words: []string{"offspring"}},
 	{Kind: KeywordOutlast, Words: []string{"outlast"}},
 	{Kind: KeywordPersist, Words: []string{"persist"}},
 	{Kind: KeywordPlot, Words: []string{"plot"}},

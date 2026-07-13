@@ -38,7 +38,12 @@ type SpellRequest struct {
 	// Bargained requests the bargained cast (CR 702.166b): the spell's Bargain
 	// additional cost — sacrifice one artifact, enchantment, or token — is added
 	// to every cost option so the cast is legal only when the caster can pay it.
-	Bargained       bool
+	Bargained bool
+	// Offspring requests the offspring cast (CR 702.171): the spell's Offspring
+	// additional mana cost is added to every cost option so the cast is legal
+	// only when the caster can pay it. When paid, the entering creature creates a
+	// 1/1 token copy of itself via its linked ETB trigger.
+	Offspring       bool
 	ChosenModes     []int
 	Alternative     opt.V[cost.Alternative]
 	CastPermissions []SpellCastPermission

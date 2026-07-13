@@ -251,6 +251,13 @@ func (r Renderer) renderKeywordAbility(ctx *renderCtx, keyword game.KeywordAbili
 		}
 		return fmt.Sprintf("game.MadnessKeyword{Cost: %s}", madnessCost), nil
 	}
+	if offspring, ok := keyword.(game.OffspringKeyword); ok {
+		offspringCost, err := r.renderManaCost(ctx, offspring.Cost)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.OffspringKeyword{Cost: %s}", offspringCost), nil
+	}
 	if flashback, ok := keyword.(game.FlashbackKeyword); ok {
 		flashbackCost, err := r.renderManaCost(ctx, flashback.Cost)
 		if err != nil {

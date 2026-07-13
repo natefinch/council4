@@ -178,6 +178,18 @@ func spellHasBargain(card *game.CardDef) bool {
 	return card != nil && card.HasKeyword(game.Bargain)
 }
 
+// spellHasOffspring reports whether a spell has the Offspring keyword
+// (CR 702.171), so the rules layer offers the optional offspring cast that pays
+// the Offspring additional mana cost and sets the resolving spell's offspring
+// state.
+func spellHasOffspring(card *game.CardDef) bool {
+	if card == nil {
+		return false
+	}
+	_, ok := card.OffspringKeyword()
+	return ok
+}
+
 func spellGift(card *game.CardDef) (game.GiftKeyword, bool) {
 	if card == nil {
 		return game.GiftKeyword{}, false

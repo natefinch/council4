@@ -155,6 +155,7 @@ var Cards = []cardset.Entry{
 	{Name: "Cormela, Glamour Thief", New: CormelaGlamourThief},
 	{Name: "Corpses of the Lost", New: CorpsesOfTheLost},
 	{Name: "Corrupt Official", New: CorruptOfficial},
+	{Name: "Coruscation Mage", New: CoruscationMage},
 	{Name: "Cosmic Crucible", New: CosmicCrucible},
 	{Name: "Cosmic Hunger", New: CosmicHunger},
 	{Name: "Cosmic Larva", New: CosmicLarva},

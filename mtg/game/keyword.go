@@ -145,6 +145,17 @@ type MadnessKeyword struct {
 	Cost cost.Mana
 }
 
+// OffspringKeyword parameterizes the Offspring keyword (CR 702.171, Bloomburrow)
+// for its fixed additional mana cost. Cost is paid in addition to the spell's
+// other costs as it is cast; paying it records the resulting permanent as
+// offspring-paid, and the keyword's canonical enter trigger then creates a 1/1
+// token copy of the permanent. It is carried inside a static ability by
+// OffspringStaticAbility so HasKeyword(Offspring) reports true while the card
+// remains an ordinary creature.
+type OffspringKeyword struct {
+	Cost cost.Mana
+}
+
 // GiftKeyword is the Gift keyword action (CR 702.171, Murders at Karlov Manor).
 // As the spell is cast its controller may promise the gift to an opponent; if
 // promised, that opponent receives the gift before the spell's other effects and
@@ -303,6 +314,7 @@ func (MutateKeyword) isKeywordAbility()           {}
 func (KickerKeyword) isKeywordAbility()           {}
 func (GiftKeyword) isKeywordAbility()             {}
 func (MadnessKeyword) isKeywordAbility()          {}
+func (OffspringKeyword) isKeywordAbility()        {}
 func (FlashbackKeyword) isKeywordAbility()        {}
 func (SpliceKeyword) isKeywordAbility()           {}
 func (PlotKeyword) isKeywordAbility()             {}
@@ -344,6 +356,7 @@ func (MutateKeyword) keyword() Keyword     { return Mutate }
 func (KickerKeyword) keyword() Keyword     { return Kicker }
 func (GiftKeyword) keyword() Keyword       { return Gift }
 func (MadnessKeyword) keyword() Keyword    { return Madness }
+func (OffspringKeyword) keyword() Keyword  { return Offspring }
 func (FlashbackKeyword) keyword() Keyword  { return Flashback }
 func (SpliceKeyword) keyword() Keyword     { return Splice }
 func (PlotKeyword) keyword() Keyword       { return Plot }
@@ -425,6 +438,10 @@ func (ability GiftKeyword) cloneKeywordAbility() KeywordAbility {
 	return ability
 }
 func (ability MadnessKeyword) cloneKeywordAbility() KeywordAbility {
+	ability.Cost = append(cost.Mana(nil), ability.Cost...)
+	return ability
+}
+func (ability OffspringKeyword) cloneKeywordAbility() KeywordAbility {
 	ability.Cost = append(cost.Mana(nil), ability.Cost...)
 	return ability
 }
@@ -816,6 +833,20 @@ func StaticBodyBestow(body *StaticAbility) (BestowKeyword, bool) {
 		return BestowKeyword{}, false
 	}
 	return bestow, true
+}
+
+// StaticBodyOffspring returns the Offspring keyword carried by a static ability
+// body (CR 702.171).
+func StaticBodyOffspring(body *StaticAbility) (OffspringKeyword, bool) {
+	ka, ok := BodyKeywordAbility(body, Offspring)
+	if !ok {
+		return OffspringKeyword{}, false
+	}
+	offspring, ok := ka.(OffspringKeyword)
+	if !ok {
+		return OffspringKeyword{}, false
+	}
+	return offspring, true
 }
 
 // CardDefBestow returns the Bestow keyword carried by a card definition's static

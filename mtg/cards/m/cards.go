@@ -34,6 +34,7 @@ var Cards = []cardset.Entry{
 	{Name: "Mana Seism", New: ManaSeism},
 	{Name: "Manamorphose", New: Manamorphose},
 	{Name: "Manifestation Sage", New: ManifestationSage},
+	{Name: "Manifold Mouse", New: ManifoldMouse},
 	{Name: "Manta Ray", New: MantaRay},
 	{Name: "Manticore", New: Manticore},
 	{Name: "Mantle of Leadership", New: MantleOfLeadership},

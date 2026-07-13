@@ -228,6 +228,9 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	if cond.SpellWasBargained {
 		matches = matches && ctx.obj != nil && !ctx.obj.Copy && ctx.obj.Bargained
 	}
+	if cond.SpellWasOffspring {
+		matches = matches && ctx.obj != nil && !ctx.obj.Copy && ctx.obj.OffspringPaid
+	}
 	if cond.GiftPromised {
 		matches = matches && ctx.obj != nil && ctx.obj.GiftPromised
 	}
@@ -236,6 +239,9 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	}
 	if cond.EventPermanentWasBargained {
 		matches = matches && ctx.event != nil && ctx.event.Bargained
+	}
+	if cond.EventPermanentWasOffspring {
+		matches = matches && ctx.event != nil && ctx.event.OffspringPaid
 	}
 	if cond.EventPermanentWasCastFromControllerHand {
 		matches = matches &&

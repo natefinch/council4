@@ -615,6 +615,9 @@ func (r Renderer) renderTriggeredAbility(ctx *renderCtx, ability *game.Triggered
 	if reflect.DeepEqual(*ability, game.LivingWeaponTriggeredAbility()) {
 		return "game.LivingWeaponTriggeredAbility()", nil
 	}
+	if reflect.DeepEqual(*ability, game.OffspringEnterTriggeredAbility()) {
+		return "game.OffspringEnterTriggeredAbility()", nil
+	}
 	if reflect.DeepEqual(*ability, game.EvokeSacrificeTriggeredAbility()) {
 		return "game.EvokeSacrificeTriggeredAbility()", nil
 	}
@@ -727,6 +730,9 @@ func (r Renderer) renderTriggerCondition(ctx *renderCtx, trigger *game.TriggerCo
 	}
 	if trigger.InterveningIfEventPermanentWasBargained {
 		fields = append(fields, "InterveningIfEventPermanentWasBargained: true,")
+	}
+	if trigger.InterveningIfEventPermanentWasOffspring {
+		fields = append(fields, "InterveningIfEventPermanentWasOffspring: true,")
 	}
 	if trigger.InterveningIfEventPermanentWasCast {
 		fields = append(fields, "InterveningIfEventPermanentWasCast: true,")

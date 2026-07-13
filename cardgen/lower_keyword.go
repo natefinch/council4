@@ -355,6 +355,12 @@ func lowerKeywordDispatch(
 		}
 		return bestowLowering, true, nil
 	}
+	if offspringLowering, ok, diag := lowerOffspringAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return offspringLowering, true, nil
+	}
 	if dredgeAbility, ok, diag := lowerDredgeAbility(ability, syntax); ok {
 		if diag != nil {
 			return abilityLowering{}, true, diag
@@ -1733,6 +1739,47 @@ func lowerBestowAbility(
 		staticAbilities: []loweredStaticAbility{{Body: game.BestowStaticAbility(manaCost, &target)}},
 		consumed:        semanticConsumption{keywords: 1},
 		sourceSpans:     keywordSpans(ability, syntax),
+	}, true, nil
+}
+
+// lowerOffspringAbility lowers the Offspring keyword (CR 702.171, Bloomburrow) to
+// both the static ability that carries the offspring additional mana cost and the
+// canonical linked enters-the-battlefield triggered ability that creates a 1/1
+// token copy of the entering permanent when the offspring cost was paid.
+// Offspring is printed with reminder text (stripped before lowering) and only its
+// fixed mana-cost form is supported; a variable ({X}) or otherwise non-fixed cost,
+// or any additional rules text, fails closed.
+func lowerOffspringAbility(
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (abilityLowering, bool, *shared.Diagnostic) {
+	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordOffspring {
+		return abilityLowering{}, false, nil
+	}
+	keyword := ability.Content.Keywords[0]
+	manaCost, fixed := fixedKeywordManaCost(keyword)
+	if !fixed ||
+		len(manaCost) == 0 ||
+		(ability.Kind != compiler.AbilityStatic && ability.Kind != compiler.AbilitySpell) ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.References) != 0 ||
+		ability.AbilityWord != "" ||
+		!keywordOnlyCovered(syntax, keyword) {
+		return abilityLowering{}, true, executableDiagnostic(
+			ability,
+			"unsupported Offspring ability",
+			"the executable source backend supports only exact Offspring with a fixed mana cost",
+		)
+	}
+	return abilityLowering{
+		staticAbilities:    []loweredStaticAbility{{Body: game.OffspringStaticAbility(manaCost)}},
+		triggeredAbilities: []game.TriggeredAbility{game.OffspringEnterTriggeredAbility()},
+		consumed:           semanticConsumption{keywords: 1},
+		sourceSpans:        keywordSpans(ability, syntax),
 	}, true, nil
 }
 
