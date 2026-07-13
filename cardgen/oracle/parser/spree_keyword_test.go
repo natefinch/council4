@@ -60,3 +60,25 @@ func TestParseSpreeKeywordColoredCost(t *testing.T) {
 		t.Fatalf("second option cost = %+v; want mana value 5", second)
 	}
 }
+
+// TestParseSpreeKeywordCostlessOptionHasNoCostClause proves the Spree parser
+// never fabricates an additional cost: an option printed without a "+ {cost} —"
+// clause leaves SpreeCost nil, so the downstream lowering can detect the
+// malformed option and fail the card closed (CR 702.171 requires every option
+// to carry its own cost).
+func TestParseSpreeKeywordCostlessOptionHasNoCostClause(t *testing.T) {
+	t.Parallel()
+	source := "Spree (Choose one or more additional costs.)\n" +
+		"+ {1} — Destroy target artifact.\n" +
+		"+ Destroy target enchantment."
+	modal := spreeModalFor(t, source)
+	if !modal.Spree || len(modal.Options) != 2 {
+		t.Fatalf("modal = (spree %v, options %d); want spree with 2 options", modal.Spree, len(modal.Options))
+	}
+	if modal.Options[0].SpreeCost == nil {
+		t.Fatal("first option lost its recognized {1} cost clause")
+	}
+	if modal.Options[1].SpreeCost != nil {
+		t.Fatalf("costless option fabricated a cost clause %+v; want nil", modal.Options[1].SpreeCost)
+	}
+}

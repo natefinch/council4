@@ -520,7 +520,7 @@ func (e *Engine) resolveInstantOrSorcerySpell(
 	agents [game.NumPlayers]PlayerAgent,
 	log *TurnLog,
 ) string {
-	if !spellHasAnyLegalTargets(g, spellDef, obj) {
+	if !spellHasAnyLegalTargetsWithSplices(g, spellDef, obj) {
 		return counteredSpellResolution(g, obj, card)
 	}
 	e.resolveSpellEffectsWithChoices(g, obj, card, agents, log)
@@ -586,6 +586,7 @@ func (e *Engine) resolvePermanentSpellWithChoices(g *game.Game, obj *game.StackO
 		permanentCreationOptions{
 			KickerPaid:              obj.KickerPaid,
 			KickCount:               obj.KickerCount,
+			Bargained:               obj.Bargained,
 			Evoked:                  obj.Evoked,
 			Dashed:                  obj.Dashed,
 			EntersTransformed:       obj.Converted,

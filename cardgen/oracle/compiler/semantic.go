@@ -660,6 +660,7 @@ const (
 	ConditionPredicateControllerGraveyardCardTypeCountAtLeast
 	ConditionPredicateControllerCreaturePowerDiversityAtLeast
 	ConditionPredicateEventSubjectWasKicked
+	ConditionPredicateEventSubjectWasBargained
 	ConditionPredicateEventSubjectWasCast
 	ConditionPredicateEventSubjectWasCastByController
 	ConditionPredicateEventSubjectWasCastFromControllerHand
@@ -821,6 +822,11 @@ const (
 	// kicked ("if this spell was kicked, ... instead"). It gates the kicked
 	// effect variant against the spell's kicker-paid cast context.
 	ConditionPredicateSpellWasKicked
+	// ConditionPredicateSpellWasBargained is satisfied when the resolving spell
+	// was bargained ("if this spell was bargained, ... instead"; CR 702.166c). It
+	// gates the bargained effect variant against the spell's bargained cast
+	// context.
+	ConditionPredicateSpellWasBargained
 	// ConditionPredicateGiftPromised is satisfied when the resolving spell's Gift
 	// keyword action promised a gift to an opponent as it was cast ("if the gift
 	// was promised, ..."; CR 702.171). It gates the promoted effect variant
@@ -1866,6 +1872,7 @@ const (
 	EffectWinGame
 	EffectPreventDamage
 	EffectSpellsCantBeCountered
+	EffectGrantSpellKeyword
 	EffectEnterAsCopy
 	EffectPunisherLoseLife
 	EffectMassReanimationExchange
@@ -3181,6 +3188,15 @@ type CompiledEffect struct {
 	// EffectSpellsCantBeCountered clause that limits the buff to the single next
 	// spell the controller casts rather than every spell cast this turn.
 	SpellsCantBeCounteredNextOnly bool
+	// GrantSpellKeyword mirrors the parser field for an EffectGrantSpellKeyword
+	// clause: the cost-affecting keyword the buff confers on the spells the
+	// controller casts ("The next spell you cast this turn has improvise.",
+	// Archway of Innovation). KeywordUnknown for every other effect.
+	GrantSpellKeyword parser.KeywordKind
+	// GrantSpellKeywordNextOnly mirrors the parser flag for an
+	// EffectGrantSpellKeyword clause that limits the grant to the single next
+	// spell the controller casts rather than every spell cast this turn.
+	GrantSpellKeywordNextOnly bool
 	// DoublePower and DoubleToughness mirror the parser flags for an EffectDouble
 	// whose object is "the power[ and toughness] of <group>" (Unnatural Growth).
 	// Lowering reads them together with StaticSubject to emit a power/toughness

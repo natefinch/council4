@@ -1488,6 +1488,7 @@ func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) 
 		func() ([]EffectSyntax, bool) { return parseDirectedMustAttackEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseAttackTaxEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseSpellsCantBeCounteredEffect(sentence, tokens) },
+		func() ([]EffectSyntax, bool) { return parseGrantSpellKeywordEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseChangeTargetRetargetEffect(sentence, tokens, atoms) },
 	} {
 		if effects, ok := recognize(); ok {

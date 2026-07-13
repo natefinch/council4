@@ -149,6 +149,12 @@ const (
 	// (Mistrise Village) and the all-spells form "Spells you cast this turn
 	// can't be countered." (Domri, Anarch of Bolas).
 	EffectSpellsCantBeCountered EffectKind = "EffectSpellsCantBeCountered"
+	// EffectGrantSpellKeyword models the controller-scoped, turn-scoped resolving
+	// buff "The next spell you cast this turn has <keyword>." (Archway of
+	// Innovation) and the all-spells form "Spells you cast this turn have
+	// <keyword>." It grants a cost-affecting keyword to the matching spells the
+	// controller casts for the rest of the turn.
+	EffectGrantSpellKeyword EffectKind = "EffectGrantSpellKeyword"
 	// EffectEnterAsCopy models a self enters-the-battlefield replacement that has
 	// the permanent enter as a copy of another permanent chosen as it enters
 	// ("You may have this creature enter the battlefield as a copy of any creature
@@ -2075,9 +2081,19 @@ type EffectSyntax struct {
 	// clause limits the buff to the single next spell the controller casts ("The
 	// next spell you cast this turn can't be countered.") rather than every spell
 	// cast this turn ("Spells you cast this turn can't be countered.").
-	SpellsCantBeCounteredNextOnly bool              `json:",omitempty"`
-	DelayedTiming                 DelayedTimingKind `json:",omitempty"`
-	Selection                     SelectionSyntax   `json:",omitzero"`
+	SpellsCantBeCounteredNextOnly bool `json:",omitempty"`
+	// GrantSpellKeyword is the cost-affecting keyword an EffectGrantSpellKeyword
+	// clause confers on the spells the controller casts ("The next spell you cast
+	// this turn has improvise.", Archway of Innovation); KeywordUnknown for every
+	// other effect.
+	GrantSpellKeyword KeywordKind `json:",omitempty"`
+	// GrantSpellKeywordNextOnly reports that an EffectGrantSpellKeyword clause
+	// limits the grant to the single next spell the controller casts ("The next
+	// spell you cast this turn has <keyword>.") rather than every spell cast this
+	// turn ("Spells you cast this turn have <keyword>.").
+	GrantSpellKeywordNextOnly bool              `json:",omitempty"`
+	DelayedTiming             DelayedTimingKind `json:",omitempty"`
+	Selection                 SelectionSyntax   `json:",omitzero"`
 	// DamageRecipient is the typed descriptor of a deal-damage clause's primary
 	// recipient when it is not the clause's ordinary single target or single
 	// Selection group: a referenced-player recipient, the dual-recipient group

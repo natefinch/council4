@@ -228,6 +228,9 @@ func cloneStackObject(o *StackObject) *StackObject {
 	clone.TriggerEvent = cloneEvent(o.TriggerEvent)
 	clone.Targets = cloneSlice(o.Targets)
 	clone.TargetCounts = cloneSlice(o.TargetCounts)
+	clone.SplicedContent = cloneSliceFunc(o.SplicedContent, cloneAbilityContent)
+	clone.SplicedTargets = cloneSliceFunc(o.SplicedTargets, cloneSlice[Target])
+	clone.SplicedTargetCounts = cloneSliceFunc(o.SplicedTargetCounts, cloneSlice[int])
 	clone.ChosenModes = cloneSlice(o.ChosenModes)
 	clone.RuleEffects = cloneSliceFunc(o.RuleEffects, func(effect RuleEffect) RuleEffect {
 		fixupRuleEffect(&effect)

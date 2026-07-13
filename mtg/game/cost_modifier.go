@@ -596,6 +596,32 @@ const (
 	// summoning-sick creature attack. AffectedPlayer scopes it to the controller.
 	// Added last so existing kinds keep their wire values.
 	RuleEffectActivateAbilitiesAsThoughHaste
+	// RuleEffectGrantSpellKeyword grants GrantedKeyword (a cost-affecting spell
+	// keyword such as Improvise) to spells the effect's controller-relative
+	// caster casts ("Nonartifact spells you cast have improvise.", Inspiring
+	// Statuary; "Noncreature spells you cast have improvise.", Ironheart, Clever
+	// Champion; "The next spell you cast this turn has improvise.", Archway of
+	// Innovation). AffectedController scopes the caster relative to the source
+	// controller (ControllerYou for "you cast"). CardSelection filters the
+	// granted spells by printed characteristics (nonartifact = ExcludedTypes
+	// [Artifact]); an empty selection grants to every spell that player casts.
+	// AppliesToNextSpellOnly limits the grant to the single next matching spell
+	// its caster casts and is then consumed (the Archway one-shot); when false
+	// the grant is a static that applies to every matching spell for its
+	// duration (Inspiring Statuary). The grant only affects cost payment, which
+	// the payment planner reads before costs are paid; it is never snapshotted
+	// onto the spell. Added last so existing kinds keep their wire values.
+	RuleEffectGrantSpellKeyword
+	// RuleEffectAscend is the permanent ascend static ability (CR 702.131b): "Any
+	// time you control ten or more permanents and you don't have the city's
+	// blessing, you get the city's blessing for the rest of the game." It is a
+	// marker rule effect carrying no payload beyond its Controller (set while its
+	// source permanent is on the battlefield). The runtime continuously checks
+	// each controller of an active ascend rule effect during state-based-action
+	// processing and grants the city's blessing once that player controls ten or
+	// more permanents; the blessing is player-level persistent state that is
+	// never removed. Added last so existing kinds keep their wire values.
+	RuleEffectAscend
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -660,7 +686,9 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectRedirectDamageToSource,
 		RuleEffectCantBeSacrificed,
 		RuleEffectCastLinkedExileForFree,
-		RuleEffectActivateAbilitiesAsThoughHaste:
+		RuleEffectActivateAbilitiesAsThoughHaste,
+		RuleEffectGrantSpellKeyword,
+		RuleEffectAscend:
 		return true
 	default:
 		return false
@@ -764,9 +792,11 @@ type RuleEffect struct {
 
 	CardSelection  Selection
 	GrantedAbility ActivatedAbility
-	// GrantedKeyword is the keyword a RuleEffectGrantGraveyardCardKeyword effect
-	// confers on the affected player's matching graveyard cards. It is unused for
-	// every other kind.
+	// GrantedKeyword is the keyword a keyword-grant rule effect confers:
+	// RuleEffectGrantGraveyardCardKeyword confers it on the affected player's
+	// matching graveyard cards, and RuleEffectGrantSpellKeyword confers it (a
+	// cost-affecting spell keyword such as Improvise) on the affected caster's
+	// matching spells. It is unused for every other kind.
 	GrantedKeyword Keyword
 
 	CastFromZone   zone.Type
@@ -829,12 +859,14 @@ type RuleEffect struct {
 	// (Arrest). It is unused for every other kind.
 	ExemptManaAbilities bool
 
-	// AppliesToNextSpellOnly limits a RuleEffectCantBeCountered effect to the
-	// single next spell its controller casts ("The next spell you cast this turn
-	// can't be countered.", Mistrise Village). When the controller casts a
-	// matching spell, the effect attaches to that spell and is consumed, so later
-	// spells are unaffected. When false the effect applies to every matching
-	// spell for its duration ("Spells you cast this turn can't be countered.").
+	// AppliesToNextSpellOnly limits a RuleEffectCantBeCountered or
+	// RuleEffectGrantSpellKeyword effect to the single next spell its controller
+	// casts ("The next spell you cast this turn can't be countered.", Mistrise
+	// Village; "The next spell you cast this turn has improvise.", Archway of
+	// Innovation). When the controller casts a matching spell, the effect is
+	// consumed, so later spells are unaffected. When false the effect applies to
+	// every matching spell for its duration ("Spells you cast this turn can't be
+	// countered."; "Nonartifact spells you cast have improvise.").
 	AppliesToNextSpellOnly bool
 
 	// TopCardOnly restricts a RuleEffectPlayLandsFromZone permission to the top

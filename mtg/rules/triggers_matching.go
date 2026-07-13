@@ -629,6 +629,9 @@ func triggerInterveningIf(g *game.Game, source *game.Permanent, controller game.
 	if trigger.InterveningIfEventPermanentWasKicked && (event == nil || !event.KickerPaid) {
 		return false
 	}
+	if trigger.InterveningIfEventPermanentWasBargained && (event == nil || !event.Bargained) {
+		return false
+	}
 	if trigger.InterveningIfEventPermanentWasCast && (event == nil || !event.EnterWasCast) {
 		return false
 	}

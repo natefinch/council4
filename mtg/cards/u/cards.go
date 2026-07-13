@@ -8,6 +8,7 @@ import "github.com/natefinch/council4/mtg/cards/cardset"
 // constructor so the registry can build them lazily.
 var Cards = []cardset.Entry{
 	{Name: "Ugin's Insight", New: UginSInsight},
+	{Name: "Uktabi Drake", New: UktabiDrake},
 	{Name: "Ultra Magnus, Tactician", New: UltraMagnusTactician},
 	{Name: "Ultros, Obnoxious Octopus", New: UltrosObnoxiousOctopus},
 	{Name: "Umezawa's Jitte", New: UmezawaSJitte},
@@ -33,6 +34,7 @@ var Cards = []cardset.Entry{
 	{Name: "Urza, Prince of Kroog", New: UrzaPrinceOfKroog},
 	{Name: "Urza's Armor", New: UrzaSArmor},
 	{Name: "Urza's Bauble", New: UrzaSBauble},
+	{Name: "Urza's Blueprints", New: UrzaSBlueprints},
 	{Name: "Urza's Chalice", New: UrzaSChalice},
 	{Name: "Urza's Rage", New: UrzaSRage},
 	{Name: "Utopia Mycon", New: UtopiaMycon},

@@ -39,7 +39,7 @@ func sourceSpellReductionCard(name string, manaCost cost.Mana, selection game.Se
 func sourceSpellGenericReduction(g *game.Game, playerID game.PlayerID, card *game.CardDef) int {
 	state := &rulesPaymentState{g: g}
 	total := 0
-	for _, modifier := range state.CostModifiersForSpell(playerID, card, 0, zone.Hand, nil) {
+	for _, modifier := range state.CostModifiersForSpell(playerID, card, 0, zone.Hand, nil, false) {
 		total += modifier.GenericReduction
 	}
 	return total
@@ -433,7 +433,7 @@ func TestSourceSpellCostReductionTargetsTappedCreature(t *testing.T) {
 	reduction := func() int {
 		total := 0
 		for _, modifier := range state.CostModifiersForSpell(
-			game.Player1, card, 0, zone.Hand, []game.Target{game.PermanentTarget(target.ObjectID)},
+			game.Player1, card, 0, zone.Hand, []game.Target{game.PermanentTarget(target.ObjectID)}, false,
 		) {
 			total += modifier.GenericReduction
 		}

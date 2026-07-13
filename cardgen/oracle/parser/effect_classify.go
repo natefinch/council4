@@ -1589,6 +1589,12 @@ func effectKindAt(tokens []shared.Token, index int) EffectKind {
 		return EffectUnknown
 	case kind == EffectGrantKeyword && playerPossessionVerb(tokens, index):
 		return EffectUnknown
+	case kind == EffectGrantKeyword && grantSpellKeywordVerbAt(tokens, index):
+		// "[The next] spell[s] you cast this turn has/have <keyword>." (Archway of
+		// Innovation): its dedicated recognizer produces a single
+		// EffectGrantSpellKeyword, so the "cast" verb already counts the effect and
+		// the "has"/"have" grant verb must not add a second.
+		return EffectUnknown
 	case kind == EffectGrantKeyword && counterPossessionVerbAt(tokens, index):
 		return EffectUnknown
 	case kind == EffectGrantKeyword && totalPowerPossessionVerbAt(tokens, index):

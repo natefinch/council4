@@ -33,6 +33,13 @@ const (
 	// TargetGateSpellNotKicked marks a target required only when the kicker cost
 	// was not paid, such as the base "instead" target a kicked cast replaces.
 	TargetGateSpellNotKicked
+	// TargetGateSpellBargained marks a target required only when the spell's
+	// Bargain additional cost was paid ("if this spell was bargained, ...";
+	// CR 702.166c).
+	TargetGateSpellBargained
+	// TargetGateSpellNotBargained marks a target required only when the Bargain
+	// cost was not paid, such as a base target a bargained cast replaces.
+	TargetGateSpellNotBargained
 )
 
 // CastBranch captures the cast-time choices that decide which gated target specs
@@ -46,6 +53,9 @@ type CastBranch struct {
 	GiftPromised bool
 	// Kicked reports that the spell's kicker cost was paid at least once.
 	Kicked bool
+	// Bargained reports that the spell's Bargain additional cost was paid as it
+	// was cast (CR 702.166b).
+	Bargained bool
 }
 
 // ActiveIn reports whether a spec carrying this gate participates in targeting on
@@ -60,6 +70,10 @@ func (gate TargetGate) ActiveIn(branch CastBranch) bool {
 		return branch.Kicked
 	case TargetGateSpellNotKicked:
 		return !branch.Kicked
+	case TargetGateSpellBargained:
+		return branch.Bargained
+	case TargetGateSpellNotBargained:
+		return !branch.Bargained
 	default:
 		return true
 	}
@@ -67,5 +81,5 @@ func (gate TargetGate) ActiveIn(branch CastBranch) bool {
 
 // Valid reports whether the gate is a known enum value.
 func (gate TargetGate) Valid() bool {
-	return gate <= TargetGateSpellNotKicked
+	return gate <= TargetGateSpellNotBargained
 }

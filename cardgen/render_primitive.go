@@ -1321,6 +1321,10 @@ func (r Renderer) renderCantBecomeMonarch(value game.CantBecomeMonarch) (string,
 	return structLit("game.CantBecomeMonarch", []string{fmt.Sprintf("Player: %s,", rendered)}), nil
 }
 
+func (Renderer) renderGainCityBlessing(_ game.GainCityBlessing) (string, error) {
+	return "game.GainCityBlessing{}", nil
+}
+
 func (r Renderer) renderRingTempts(value game.RingTempts) (string, error) {
 	rendered, err := r.renderPlayerReference(value.Player)
 	if err != nil {

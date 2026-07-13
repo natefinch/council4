@@ -36,6 +36,14 @@ type CumulativeUpkeepKeyword struct {
 	Cost cost.Mana
 }
 
+// EchoKeyword parameterizes Echo (CR 702.29) for fixed mana echo costs. It is
+// carried inside the beginning-of-upkeep triggered ability built by
+// EchoTriggeredAbility so HasKeyword(Echo) reports true and the rules layer can
+// identify the echo pay-or-sacrifice body.
+type EchoKeyword struct {
+	Cost cost.Mana
+}
+
 // EquipKeyword parameterizes Equip activation costs.
 type EquipKeyword struct {
 	Cost cost.Mana
@@ -141,6 +149,14 @@ type GiftKeyword struct {
 
 // FlashbackKeyword parameterizes Flashback alternative casting costs.
 type FlashbackKeyword struct {
+	Cost cost.Mana
+}
+
+// SpliceKeyword parameterizes the "Splice onto Arcane" keyword (CR 702.47). Cost
+// is the mana splice cost paid as an additional cost of casting the Arcane host
+// spell to add this card's spell effects (and targets) to it. Only the mana-cost
+// form is modeled; the spliced card is revealed and stays in the caster's hand.
+type SpliceKeyword struct {
 	Cost cost.Mana
 }
 
@@ -253,6 +269,7 @@ type LandwalkKeyword struct {
 func (SimpleKeyword) isKeywordAbility()           {}
 func (WardKeyword) isKeywordAbility()             {}
 func (CumulativeUpkeepKeyword) isKeywordAbility() {}
+func (EchoKeyword) isKeywordAbility()             {}
 func (EquipKeyword) isKeywordAbility()            {}
 func (ReconfigureKeyword) isKeywordAbility()      {}
 func (EnchantKeyword) isKeywordAbility()          {}
@@ -264,6 +281,7 @@ func (KickerKeyword) isKeywordAbility()           {}
 func (GiftKeyword) isKeywordAbility()             {}
 func (MadnessKeyword) isKeywordAbility()          {}
 func (FlashbackKeyword) isKeywordAbility()        {}
+func (SpliceKeyword) isKeywordAbility()           {}
 func (PlotKeyword) isKeywordAbility()             {}
 func (ForetellKeyword) isKeywordAbility()         {}
 func (MorphKeyword) isKeywordAbility()            {}
@@ -289,6 +307,7 @@ func (WardKeyword) keyword() Keyword           { return Ward }
 func (CumulativeUpkeepKeyword) keyword() Keyword {
 	return CumulativeUpkeep
 }
+func (EchoKeyword) keyword() Keyword  { return Echo }
 func (EquipKeyword) keyword() Keyword { return Equip }
 func (ReconfigureKeyword) keyword() Keyword {
 	return Reconfigure
@@ -302,6 +321,7 @@ func (KickerKeyword) keyword() Keyword     { return Kicker }
 func (GiftKeyword) keyword() Keyword       { return Gift }
 func (MadnessKeyword) keyword() Keyword    { return Madness }
 func (FlashbackKeyword) keyword() Keyword  { return Flashback }
+func (SpliceKeyword) keyword() Keyword     { return Splice }
 func (PlotKeyword) keyword() Keyword       { return Plot }
 func (ForetellKeyword) keyword() Keyword   { return Foretell }
 func (MorphKeyword) keyword() Keyword      { return Morph }
@@ -329,6 +349,10 @@ func (ability WardKeyword) cloneKeywordAbility() KeywordAbility {
 	return ability
 }
 func (ability CumulativeUpkeepKeyword) cloneKeywordAbility() KeywordAbility {
+	ability.Cost = append(cost.Mana(nil), ability.Cost...)
+	return ability
+}
+func (ability EchoKeyword) cloneKeywordAbility() KeywordAbility {
 	ability.Cost = append(cost.Mana(nil), ability.Cost...)
 	return ability
 }
@@ -376,6 +400,10 @@ func (ability MadnessKeyword) cloneKeywordAbility() KeywordAbility {
 	return ability
 }
 func (ability FlashbackKeyword) cloneKeywordAbility() KeywordAbility {
+	ability.Cost = append(cost.Mana(nil), ability.Cost...)
+	return ability
+}
+func (ability SpliceKeyword) cloneKeywordAbility() KeywordAbility {
 	ability.Cost = append(cost.Mana(nil), ability.Cost...)
 	return ability
 }

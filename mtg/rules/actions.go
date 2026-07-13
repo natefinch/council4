@@ -264,6 +264,16 @@ func (e *Engine) legalCastActions(g *game.Game, playerID game.PlayerID) []action
 								}
 							}
 						}
+						if spellHasBargain(spellDef) {
+							bargainResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{Bargained: true})
+							if bargainResult.kind != targetInvalidSpec {
+								for _, targets := range bargainResult.choices {
+									if e.canCastBargainedSpellFaceFromZone(g, playerID, cardID, sourceZone, face, targets, xValue, modes) {
+										actions = append(actions, actionBuild.castBargainedSpell(cardID, sourceZone, face, targets, xValue, modes))
+									}
+								}
+							}
+						}
 						if spellHasMultikicker(spellDef) {
 							kickedResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{Kicked: true})
 							if kickedResult.kind != targetInvalidSpec {
@@ -346,6 +356,16 @@ func (e *Engine) legalCommanderCastActions(g *game.Game, playerID game.PlayerID)
 								for _, opponent := range aliveOpponents(g, playerID) {
 									actions = append(actions, actionBuild.castGiftSpell(card.ID, zone.Command, face, targets, xValue, modes, opponent))
 								}
+							}
+						}
+					}
+				}
+				if spellHasBargain(spellDef) {
+					bargainResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{Bargained: true})
+					if bargainResult.kind != targetInvalidSpec {
+						for _, targets := range bargainResult.choices {
+							if e.canCastBargainedSpellFaceFromZone(g, playerID, card.ID, zone.Command, face, targets, xValue, modes) {
+								actions = append(actions, actionBuild.castBargainedSpell(card.ID, zone.Command, face, targets, xValue, modes))
 							}
 						}
 					}

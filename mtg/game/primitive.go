@@ -239,10 +239,23 @@ const (
 	// PrimitiveExchangeLifeTotalWithSourceCharacteristic exchanges a player's
 	// life total with the resolving source permanent's power or toughness.
 	PrimitiveExchangeLifeTotalWithSourceCharacteristic
+
+	// PrimitiveRecordEchoObligation records the resolving source permanent's
+	// current controller as the player for whom its Echo obligation (CR 702.29)
+	// has been resolved, so later upkeeps of that same controller do not
+	// re-trigger the echo.
+	PrimitiveRecordEchoObligation
+
+	// PrimitiveGainCityBlessing is the spell form of ascend (CR 702.131a). As the
+	// spell resolves, before its other instructions, its controller gets the
+	// city's blessing if they control ten or more permanents and don't already
+	// have it. The primitive carries no payload; it always acts on the resolving
+	// object's controller.
+	PrimitiveGainCityBlessing
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveExchangeLifeTotalWithSourceCharacteristic) + 1
+const primitiveKindCount = int(PrimitiveGainCityBlessing) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -817,6 +830,13 @@ type CantBecomeMonarch struct {
 	Player PlayerReference
 }
 
+// GainCityBlessing is the spell form of ascend (CR 702.131a): as the spell
+// resolves, before its other instructions, its controller gets the city's
+// blessing if they control ten or more permanents and don't already have it.
+// The city's blessing is player-level persistent state that is never removed.
+// It always acts on the resolving object's controller and carries no payload.
+type GainCityBlessing struct{}
+
 // SetClassLevel sets the class level of a referenced Class permanent.
 type SetClassLevel struct {
 	Object ObjectReference
@@ -889,6 +909,16 @@ type Connive struct {
 // cleanup. The effect is idempotent; saddling an already-saddled Mount leaves it
 // unchanged.
 type BecomeSaddled struct {
+	Object ObjectReference
+}
+
+// RecordEchoObligation records the resolving source permanent's current
+// controller as the player for whom its Echo obligation (CR 702.29) has been
+// resolved. The echo triggered ability runs it each time it resolves so a later
+// upkeep of the same controller does not re-trigger the pay-or-sacrifice, while
+// a new controller (whose identity no longer matches the recorded one) still
+// triggers echo at their next upkeep.
+type RecordEchoObligation struct {
 	Object ObjectReference
 }
 

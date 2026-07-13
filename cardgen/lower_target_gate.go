@@ -6,10 +6,11 @@ import (
 
 // castBranchGate classifies how an instruction's effect condition gates the
 // instruction on the resolving spell's cast branch. gated reports whether the
-// instruction resolves only on one gift or kicker branch; when gated is true,
-// gate names that branch. ok is false when the condition mentions a cast-branch
-// state the assigner cannot cleanly map to a single gate (both gift and kicker,
-// for example), so the caller fails closed rather than approximate.
+// instruction resolves only on one gift, kicker, or bargain branch; when gated
+// is true, gate names that branch. ok is false when the condition mentions more
+// than one cast-branch mechanic (both gift and kicker, for example) that the
+// assigner cannot cleanly map to a single gate, so the caller fails closed
+// rather than approximate.
 func castBranchGate(inst *game.Instruction) (gate game.TargetGate, gated bool, ok bool) {
 	if !inst.Condition.Exists {
 		return game.TargetGateAlways, false, true
@@ -21,8 +22,9 @@ func castBranchGate(inst *game.Instruction) (gate game.TargetGate, gated bool, o
 	cond := condition.Val
 	giftGated := cond.GiftPromised
 	kickerGated := cond.SpellWasKicked
+	bargainGated := cond.SpellWasBargained
 	switch {
-	case giftGated && kickerGated:
+	case moreThanOne(giftGated, kickerGated, bargainGated):
 		return game.TargetGateAlways, false, false
 	case giftGated:
 		if cond.Negate {
@@ -34,9 +36,27 @@ func castBranchGate(inst *game.Instruction) (gate game.TargetGate, gated bool, o
 			return game.TargetGateSpellNotKicked, true, true
 		}
 		return game.TargetGateSpellKicked, true, true
+	case bargainGated:
+		if cond.Negate {
+			return game.TargetGateSpellNotBargained, true, true
+		}
+		return game.TargetGateSpellBargained, true, true
 	default:
 		return game.TargetGateAlways, false, true
 	}
+}
+
+// moreThanOne reports whether more than one of the given cast-branch flags is
+// set, the condition under which a single target instruction names multiple
+// mechanics' states and cannot map to one gate.
+func moreThanOne(flags ...bool) bool {
+	set := 0
+	for _, flag := range flags {
+		if flag {
+			set++
+		}
+	}
+	return set > 1
 }
 
 // cardIndexToTargetSlot maps a card-domain target index (the runtime numbers card
@@ -195,6 +215,8 @@ const (
 	slotGateNotKicked
 	slotGatePromised
 	slotGateNotPromised
+	slotGateBargained
+	slotGateNotBargained
 )
 
 // record folds one referencing instruction's gate into the accumulator. An
@@ -214,6 +236,10 @@ func (s *slotGates) record(gate game.TargetGate, gated bool) {
 		s.mask |= slotGatePromised
 	case game.TargetGateGiftNotPromised:
 		s.mask |= slotGateNotPromised
+	case game.TargetGateSpellBargained:
+		s.mask |= slotGateBargained
+	case game.TargetGateSpellNotBargained:
+		s.mask |= slotGateNotBargained
 	default:
 	}
 }
@@ -230,12 +256,14 @@ func (s *slotGates) record(gate game.TargetGate, gated bool) {
 func (s *slotGates) resolve() (game.TargetGate, bool) {
 	kickerFull := s.mask&slotGateKicked != 0 && s.mask&slotGateNotKicked != 0
 	giftFull := s.mask&slotGatePromised != 0 && s.mask&slotGateNotPromised != 0
-	if s.always || kickerFull || giftFull || s.mask == 0 {
+	bargainFull := s.mask&slotGateBargained != 0 && s.mask&slotGateNotBargained != 0
+	if s.always || kickerFull || giftFull || bargainFull || s.mask == 0 {
 		return game.TargetGateAlways, true
 	}
 	hasKicker := s.mask&(slotGateKicked|slotGateNotKicked) != 0
 	hasGift := s.mask&(slotGatePromised|slotGateNotPromised) != 0
-	if hasKicker && hasGift {
+	hasBargain := s.mask&(slotGateBargained|slotGateNotBargained) != 0
+	if moreThanOne(hasKicker, hasGift, hasBargain) {
 		return game.TargetGateAlways, false
 	}
 	switch s.mask {
@@ -247,6 +275,10 @@ func (s *slotGates) resolve() (game.TargetGate, bool) {
 		return game.TargetGateGiftPromised, true
 	case slotGateNotPromised:
 		return game.TargetGateGiftNotPromised, true
+	case slotGateBargained:
+		return game.TargetGateSpellBargained, true
+	case slotGateNotBargained:
+		return game.TargetGateSpellNotBargained, true
 	default:
 		return game.TargetGateAlways, false
 	}

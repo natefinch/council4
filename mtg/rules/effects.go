@@ -45,6 +45,38 @@ func (e *Engine) resolveSpellEffectsWithChoices(g *game.Game, obj *game.StackObj
 			e.resolveAbilityContentWithChoices(g, obj, kicker.BonusContent, agents, log)
 		}
 	}
+	e.resolveSplicedContent(g, obj, agents, log)
+}
+
+// resolveSplicedContent resolves the spell effects spliced onto this Arcane spell
+// (CR 702.47), in the order they were spliced, after the host spell's own effects.
+// Each spliced content resolves against its own captured targets: obj.Targets and
+// obj.TargetCounts are temporarily swapped for the spliced entry's targets (which
+// are indexed from zero, matching the spliced content's own target references) and
+// restored afterward.
+func (e *Engine) resolveSplicedContent(g *game.Game, obj *game.StackObject, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
+	if len(obj.SplicedContent) == 0 {
+		return
+	}
+	savedTargets := obj.Targets
+	savedCounts := obj.TargetCounts
+	defer func() {
+		obj.Targets = savedTargets
+		obj.TargetCounts = savedCounts
+	}()
+	for i := range obj.SplicedContent {
+		if i < len(obj.SplicedTargets) {
+			obj.Targets = obj.SplicedTargets[i]
+		} else {
+			obj.Targets = nil
+		}
+		if i < len(obj.SplicedTargetCounts) {
+			obj.TargetCounts = obj.SplicedTargetCounts[i]
+		} else {
+			obj.TargetCounts = nil
+		}
+		e.resolveAbilityContentWithChoices(g, obj, obj.SplicedContent[i], agents, log)
+	}
 }
 
 func (e *Engine) resolveAbilityContentWithChoices(g *game.Game, obj *game.StackObject, content game.AbilityContent, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
@@ -139,6 +171,13 @@ func spellHasGift(card *game.CardDef) bool {
 	return ok
 }
 
+// spellHasBargain reports whether a spell has the Bargain keyword (CR 702.166),
+// so the rules layer offers the optional bargained cast that pays the Bargain
+// additional cost and sets the resolving spell's bargained state.
+func spellHasBargain(card *game.CardDef) bool {
+	return card != nil && card.HasKeyword(game.Bargain)
+}
+
 func spellGift(card *game.CardDef) (game.GiftKeyword, bool) {
 	if card == nil {
 		return game.GiftKeyword{}, false
@@ -228,7 +267,11 @@ func (r *effectResolver) resolveInstruction(instr *game.Instruction) {
 		}
 	}
 	if instr.Primitive == nil {
-		panic("rules: nil instruction primitive")
+		// A Tempting offer with a multi-primitive shared body carries no
+		// top-level primitive; resolveTemptingOffer runs the body instead.
+		if !instr.TemptingOffer || !instr.Optional || !instr.OptionalActorGroup.Exists || len(instr.TemptingOfferBody) == 0 {
+			panic("rules: nil instruction primitive")
+		}
 	}
 	if instr.Optional && instr.OptionalActorGroup.Exists {
 		if instr.TemptingOffer {
@@ -337,8 +380,6 @@ func (r *effectResolver) resolveGroupOffer(instr *game.Instruction) {
 func (r *effectResolver) resolveTemptingOffer(instr *game.Instruction) {
 	controller := stackObjectController(r.obj)
 	members := newReferenceResolver(r.game, r.obj).playerGroup(instr.OptionalActorGroup.Val)
-	kind := instr.Primitive.Kind()
-	handler := globalPrimitiveRegistry().dispatch(kind)
 	prev := r.currentInstruction
 	r.currentInstruction = instr
 	prevMember := r.groupOfferMember
@@ -348,9 +389,8 @@ func (r *effectResolver) resolveTemptingOffer(instr *game.Instruction) {
 	}()
 	// Base: the controller performs the effect for themselves.
 	r.groupOfferMember = opt.Val(controller)
-	base := handler(r, instr.Primitive)
+	anySucceeded := r.runTemptingOfferBody(instr)
 	anyAccepted := false
-	anySucceeded := base.succeeded
 	var accepters game.PlayerSet
 	// Each member of the group is offered the effect for themselves.
 	for _, member := range members {
@@ -360,14 +400,14 @@ func (r *effectResolver) resolveTemptingOffer(instr *game.Instruction) {
 		anyAccepted = true
 		accepters = accepters.With(member)
 		r.groupOfferMember = opt.Val(member)
-		if res := handler(r, instr.Primitive); res.succeeded {
+		if r.runTemptingOfferBody(instr) {
 			anySucceeded = true
 		}
 	}
 	// For each accepting member, the controller performs the effect again.
 	for range accepters.Count() {
 		r.groupOfferMember = opt.Val(controller)
-		if res := handler(r, instr.Primitive); res.succeeded {
+		if r.runTemptingOfferBody(instr) {
 			anySucceeded = true
 		}
 	}
@@ -379,6 +419,33 @@ func (r *effectResolver) resolveTemptingOffer(instr *game.Instruction) {
 			acceptedActors: accepters,
 		})
 	}
+}
+
+// runTemptingOfferBody performs one resolution of a Tempting offer's shared
+// effect body for the currently bound acting player (r.groupOfferMember). It
+// runs the single Primitive when the offer carries one, or every instruction of
+// TemptingOfferBody in order when the shared body is a multi-primitive sequence
+// (Tempt with Bunnies's "draw a card and create a token"). It returns whether
+// any part of the body did something rules-relevant. Each body instruction's
+// primitive is dispatched with r.currentInstruction bound to that instruction so
+// per-instruction primitive state (amounts, linked keys) resolves against it.
+func (r *effectResolver) runTemptingOfferBody(instr *game.Instruction) bool {
+	if len(instr.TemptingOfferBody) == 0 {
+		handler := globalPrimitiveRegistry().dispatch(instr.Primitive.Kind())
+		return handler(r, instr.Primitive).succeeded
+	}
+	outer := r.currentInstruction
+	defer func() { r.currentInstruction = outer }()
+	succeeded := false
+	for i := range instr.TemptingOfferBody {
+		body := &instr.TemptingOfferBody[i]
+		r.currentInstruction = body
+		handler := globalPrimitiveRegistry().dispatch(body.Primitive.Kind())
+		if handler(r, body.Primitive).succeeded {
+			succeeded = true
+		}
+	}
+	return succeeded
 }
 
 func (e *Engine) drawCards(g *game.Game, playerID game.PlayerID, amount int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {

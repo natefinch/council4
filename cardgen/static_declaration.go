@@ -78,7 +78,8 @@ func lowerStaticDeclarations(
 				}
 				conditionContext := conditionContextStatic
 				if declaration.Kind == compiler.StaticDeclarationRule &&
-					!isLivePlayerDesignationConditionPredicate(declaration.Condition.Predicate) {
+					(!isLivePlayerDesignationConditionPredicate(declaration.Condition.Predicate) ||
+						declaration.Condition.Kind == compiler.ConditionUnless) {
 					// A static rule's trailing guard clause is a per-event guard
 					// (resolved when an attack, block, or untap step occurs) rather
 					// than an on/off gate. A live player-designation gate ("as long
@@ -86,7 +87,11 @@ func lowerStaticDeclarations(
 					// the runtime re-evaluates the static ability's condition each
 					// time rule effects are gathered, so it turns the rule effect on
 					// and off as the designation changes, exactly like a conditioned
-					// continuous static.
+					// continuous static. The "unless" form of a live designation
+					// ("can't attack or block unless you have the city's blessing.",
+					// Wayward Swordtooth) is still a per-event guard: it negates the
+					// prohibition when the designation holds, and only the guard
+					// context accepts the ConditionUnless kind.
 					conditionContext = conditionContextStaticRuleGuard
 				}
 				condition, ok := lowerCondition(*declaration.Condition, conditionContext)
@@ -137,6 +142,8 @@ func lowerStaticDeclarations(
 				ok = appendStaticCastAsThoughFlashDeclaration(&body, declaration)
 			case compiler.StaticDeclarationGraveyardCardKeywordGrant:
 				ok = appendStaticGraveyardCardKeywordGrantDeclaration(&body, declaration)
+			case compiler.StaticDeclarationSpellKeywordGrant:
+				ok = appendStaticSpellKeywordGrantDeclaration(&body, declaration)
 			case compiler.StaticDeclarationOpeningHandPlay:
 				ok = appendStaticOpeningHandPlayDeclaration(&body, declaration)
 			case compiler.StaticDeclarationOpponentEnteringTriggerSuppression:
@@ -455,6 +462,9 @@ func staticDeclarationPayloadValid(declaration compiler.StaticDeclaration) bool 
 	if declaration.GraveyardGrant != nil {
 		payloads++
 	}
+	if declaration.SpellGrant != nil {
+		payloads++
+	}
 	if declaration.PerTurnLimit != nil {
 		payloads++
 	}
@@ -511,6 +521,8 @@ func staticDeclarationPayloadValid(declaration compiler.StaticDeclaration) bool 
 		return declaration.CastAsThoughFlash != nil
 	case compiler.StaticDeclarationGraveyardCardKeywordGrant:
 		return declaration.GraveyardGrant != nil
+	case compiler.StaticDeclarationSpellKeywordGrant:
+		return declaration.SpellGrant != nil
 	case compiler.StaticDeclarationOpeningHandPlay:
 		return declaration.OpeningHandPlay != nil
 	case compiler.StaticDeclarationOpponentEnteringTriggerSuppression:
@@ -757,9 +769,34 @@ func lowerStaticGrantedQuotedAbility(granted *parser.StaticGrantedAbilitySyntax)
 	case lowered.manaAbility.Exists:
 		ability := lowered.manaAbility.Val
 		return &ability, true
+	case grantedQuotedKeywordStaticBody(lowered):
+		body := lowered.staticAbilities[0].Body
+		return &body, true
 	default:
 		return nil, false
 	}
+}
+
+// grantedQuotedKeywordStaticBody reports whether a quoted granted ability lowered
+// to exactly one keyword-bearing static ability body and nothing else, so a grant
+// of a quoted keyword ability ("Other creatures you control have 'Ward—Pay 2
+// life.'", Hexing Squelcher) confers that keyword body the same way an unquoted
+// keyword grant ("Other creatures you control have ward {2}.") does. It carries
+// the parameterized keyword payload (the Ward cost, protection quality, and so
+// on) already assembled by the keyword lowerer.
+func grantedQuotedKeywordStaticBody(lowered abilityLowering) bool {
+	if len(lowered.staticAbilities) != 1 ||
+		lowered.activatedAbility.Exists ||
+		lowered.manaAbility.Exists ||
+		lowered.loyaltyAbility.Exists ||
+		lowered.triggeredAbility.Exists ||
+		len(lowered.triggeredAbilities) != 0 {
+		return false
+	}
+	body := lowered.staticAbilities[0].Body
+	return len(body.KeywordAbilities) > 0 &&
+		len(body.ContinuousEffects) == 0 &&
+		len(body.RuleEffects) == 0
 }
 
 func lowerStaticAddedTypes(continuous *compiler.StaticContinuousDeclaration) ([]types.Card, []types.Sub, bool) {

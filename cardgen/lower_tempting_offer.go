@@ -2,6 +2,7 @@ package cardgen
 
 import (
 	"reflect"
+	"strings"
 
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
@@ -18,7 +19,19 @@ import (
 // lowerTemptingOfferAbility, which either lowers the idiom or fails closed, so a
 // Tempt card the backend cannot yet model can never fall through to generic
 // lowering and silently drop the each-opponent offer or the reward repeat.
+//
+// The cycle prints the word inconsistently — Tempt with Bunnies capitalizes it
+// as "Tempting Offer" while the rest print "Tempting offer" — so the gate matches
+// it case-insensitively (see isTemptingOfferAbilityWord).
 const temptingOfferAbilityWord = "Tempting offer"
+
+// isTemptingOfferAbilityWord reports whether an ability word is the "Tempting
+// offer" idiom, matched case-insensitively so the "Tempting Offer" capitalization
+// on Tempt with Bunnies is recognized alongside the lowercase printing on the
+// rest of the cycle.
+func isTemptingOfferAbilityWord(word string) bool {
+	return strings.EqualFold(word, temptingOfferAbilityWord)
+}
 
 // lowerTemptingOfferAbility recognizes the "Tempting offer" ability-word idiom
 // shared by the Tempt cycle (Tempt with Vengeance and its siblings):
@@ -46,7 +59,7 @@ func lowerTemptingOfferAbility(
 	ability compiler.CompiledAbility,
 	syntax *parser.Ability,
 ) (abilityLowering, bool, *shared.Diagnostic) {
-	if ability.Kind != compiler.AbilitySpell || ability.AbilityWord != temptingOfferAbilityWord {
+	if ability.Kind != compiler.AbilitySpell || !isTemptingOfferAbilityWord(ability.AbilityWord) {
 		return abilityLowering{}, false, nil
 	}
 	content, diagnostic := lowerTemptingOfferContent(ability, syntax)
@@ -69,26 +82,54 @@ func lowerTemptingOfferAbility(
 }
 
 // lowerTemptingOfferContent verifies the Tempting-offer structure and lowers it,
-// or fails closed with a diagnostic. It requires exactly three effects of the
-// same kind with the you / each-opponent-may / you contexts, no modes,
-// conditions, or keywords, and dispatches the shared effect to a kind-specific
-// lowering. The modeled shared effects are token creation (Tempt with Vengeance),
-// a copy of a single targeted creature (Tempt with Reflections), a +1/+1 counter
-// placement on each creature the acting player controls (Tempt with Glory), and a
-// creature reanimation from the acting player's graveyard (Tempt with
-// Immortality). Every other kind and any richer shape fails closed pending
-// follow-up work under the Tempt-cycle generalization.
+// or fails closed with a diagnostic. It routes each Tempt shape to its
+// recognizer: the search-and-ramp idiom (Tempt with Discovery) whenever the body
+// contains a library search, the classic exact-three-same-kind idiom (Tempt with
+// Vengeance, Glory, Immortality, Reflections) when the body is exactly three
+// effects, and the generic compound-body idiom (Tempt with Bunnies) for a shared
+// multi-effect body. No modes or keywords are allowed. Every other shape fails
+// closed pending follow-up work under the Tempt-cycle generalization.
 func lowerTemptingOfferContent(
 	ability compiler.CompiledAbility,
 	syntax *parser.Ability,
 ) (game.AbilityContent, *shared.Diagnostic) {
 	c := ability.Content
-	if len(c.Effects) != 3 ||
-		len(c.Modes) != 0 ||
-		len(c.Conditions) != 0 ||
-		len(c.Keywords) != 0 {
-		return game.AbilityContent{}, temptingOfferDiagnostic(ability, "expected exactly three same-kind effects")
+	if len(c.Modes) != 0 || len(c.Keywords) != 0 || len(c.Conditions) != 0 {
+		return game.AbilityContent{}, temptingOfferDiagnostic(ability, "modes, conditions, or keywords are unsupported")
 	}
+	if temptingOfferHasSearch(c) {
+		return lowerTemptingOfferSearch(ability, syntax)
+	}
+	if len(c.Effects) == 3 {
+		return lowerTemptingOfferThreeEffect(ability, syntax)
+	}
+	return lowerTemptingOfferCompoundBody(ability, syntax)
+}
+
+// temptingOfferHasSearch reports whether any effect of the shared body is a
+// library search, marking the search-and-ramp idiom (Tempt with Discovery) so it
+// routes to its dedicated recognizer rather than the same-kind or compound paths.
+func temptingOfferHasSearch(content compiler.AbilityContent) bool {
+	for i := range content.Effects {
+		if content.Effects[i].Kind == compiler.EffectSearch {
+			return true
+		}
+	}
+	return false
+}
+
+// lowerTemptingOfferThreeEffect lowers the classic Tempting-offer shape: exactly
+// three effects of the same kind with the you / each-opponent-may / you contexts,
+// dispatched to a kind-specific lowering. The modeled shared effects are token
+// creation (Tempt with Vengeance), a copy of a single targeted creature (Tempt
+// with Reflections), a +1/+1 counter placement on each creature the acting player
+// controls (Tempt with Glory), and a creature reanimation from the acting
+// player's graveyard (Tempt with Immortality). Every other kind fails closed.
+func lowerTemptingOfferThreeEffect(
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (game.AbilityContent, *shared.Diagnostic) {
+	c := ability.Content
 	base, offer, reward := c.Effects[0], c.Effects[1], c.Effects[2]
 	if base.Kind != offer.Kind || base.Kind != reward.Kind {
 		return game.AbilityContent{}, temptingOfferDiagnostic(ability, "the three effects are not the same kind")
@@ -462,6 +503,331 @@ func lowerTemptingOfferToken(
 		return game.CreateToken{}, temptingOfferDiagnostic(ability, "a token creation is not a plain controller-recipient token")
 	}
 	return token, nil
+}
+
+// temptingOfferBodyAbilityContent wraps a multi-instruction shared body as the
+// lone Tempting-offer instruction: it is optional, offered to the opponents as a
+// group, and flagged TemptingOffer, and carries its body in TemptingOfferBody
+// (with a nil Primitive) so the runtime runs the whole body atomically for the
+// base, per-opponent, and reward resolutions through resolveTemptingOffer. Every
+// body instruction addresses the acting player through GroupOfferMemberReference().
+func temptingOfferBodyAbilityContent(body []game.Instruction, targets []game.TargetSpec) game.AbilityContent {
+	return game.Mode{
+		Targets: targets,
+		Sequence: []game.Instruction{{
+			Optional:           true,
+			OptionalActorGroup: opt.Val(game.OpponentsReference()),
+			TemptingOffer:      true,
+			TemptingOfferBody:  body,
+		}},
+	}.Ability()
+}
+
+// lowerTemptingOfferSearch lowers the search-and-ramp Tempting offer (Tempt with
+// Discovery): "Search your library for a land card and put it onto the
+// battlefield. Each opponent may search their library for a land card and put it
+// onto the battlefield. For each opponent who searches a library this way, search
+// your library for a land card and put it onto the battlefield. Then each player
+// who searched a library this way shuffles." Each clause is a search+put pair
+// collapsed to one game.Search primitive addressed through
+// GroupOfferMemberReference(): the runtime searches the controller's library for
+// the base and each reward and the accepting opponent's library for that
+// opponent's own search, entering the found land under the searcher's control.
+//
+// The count that drives the controller's reward repeat is the number of opponents
+// who searched — that is, who accepted the offer — regardless of whether they
+// found a land (CR search rulings: a player who searches but declines to find
+// still searched). The generic resolveTemptingOffer already repeats the body once
+// per accepting member, so this idiom needs no card-specific repeat primitive.
+// Every searcher's library is shuffled by the search primitive itself (each search
+// shuffles the searched library), which is exactly the trailing "then each player
+// who searched a library this way shuffles" — a player who declined never searched
+// and never shuffles. The trailing shuffle clause and the "for each opponent who
+// searches a library this way" quantifier are therefore verified and consumed
+// rather than lowered to their own instructions. Any richer search shape fails
+// closed.
+func lowerTemptingOfferSearch(
+	ability compiler.CompiledAbility,
+	_ *parser.Ability,
+) (game.AbilityContent, *shared.Diagnostic) {
+	c := ability.Content
+	if len(c.Targets) != 0 {
+		return game.AbilityContent{}, temptingOfferDiagnostic(ability, "a search Tempting offer with a target is unsupported")
+	}
+	if !temptingOfferBenignReferences(c.References) {
+		return game.AbilityContent{}, temptingOfferDiagnostic(ability, "a search Tempting offer with a non-pronoun reference is unsupported")
+	}
+	// Base clause: the controller searches and puts (a non-optional "you" pair).
+	base := c.Effects[0]
+	baseSearch, baseNext, ok := temptingOfferSearchPair(c.Effects, 0)
+	if !ok || base.Context != parser.EffectContextController || base.Optional {
+		return game.AbilityContent{}, temptingOfferDiagnostic(ability, "the base clause is not a plain controller library search")
+	}
+	// Offer clause: each opponent may search and put (an optional each-opponent pair).
+	if baseNext >= len(c.Effects) ||
+		c.Effects[baseNext].Context != parser.EffectContextEachOpponent ||
+		!c.Effects[baseNext].Optional {
+		return game.AbilityContent{}, temptingOfferDiagnostic(ability, "the offer clause is not an each-opponent-may library search")
+	}
+	offerSearch, offerNext, ok := temptingOfferSearchPair(c.Effects, baseNext)
+	if !ok {
+		return game.AbilityContent{}, temptingOfferDiagnostic(ability, "the offer clause is not a plain library search")
+	}
+	// "For each opponent who searches a library this way" reparses its "searches a
+	// library this way" quantifier as a bare search (a search not followed by a
+	// put). It carries no rules of its own — the accepter count already drives the
+	// reward repeat — so it is skipped.
+	rewardStart := offerNext
+	if rewardStart < len(c.Effects) &&
+		c.Effects[rewardStart].Kind == compiler.EffectSearch &&
+		(rewardStart+1 >= len(c.Effects) || c.Effects[rewardStart+1].Kind != compiler.EffectPut) {
+		rewardStart++
+	}
+	// Reward clause: the controller searches and puts again (a non-optional pair).
+	if rewardStart >= len(c.Effects) || c.Effects[rewardStart].Optional {
+		return game.AbilityContent{}, temptingOfferDiagnostic(ability, "the reward clause is not a plain controller library search")
+	}
+	rewardSearch, rewardNext, ok := temptingOfferSearchPair(c.Effects, rewardStart)
+	if !ok {
+		return game.AbilityContent{}, temptingOfferDiagnostic(ability, "the reward clause is not a plain library search")
+	}
+	// Trailing "then each player who searched a library this way shuffles". Each
+	// search already shuffles the searched library, so this clause is verified and
+	// consumed rather than lowered.
+	if rewardNext >= len(c.Effects) || c.Effects[rewardNext].Kind != compiler.EffectShuffle {
+		return game.AbilityContent{}, temptingOfferDiagnostic(ability, "a search Tempting offer must end with a shuffle")
+	}
+	if rewardNext+1 != len(c.Effects) {
+		return game.AbilityContent{}, temptingOfferDiagnostic(ability, "a search Tempting offer has unexpected trailing effects")
+	}
+	if !reflect.DeepEqual(baseSearch, offerSearch) || !reflect.DeepEqual(baseSearch, rewardSearch) {
+		return game.AbilityContent{}, temptingOfferDiagnostic(ability, "the three library searches are not identical")
+	}
+	return temptingOfferAbilityContent(baseSearch, nil), nil
+}
+
+// temptingOfferSearchPair collapses the search+put pair at index i of the effect
+// list into a single game.Search primitive addressed through
+// GroupOfferMemberReference(), returning the primitive and the index following the
+// pair. It requires effects[i] to be a plain library search and effects[i+1] a
+// plain put of the found card onto the battlefield or into the hand, with no
+// reveal, split, top-of-library, correlation, or control riders; the search's own
+// context and optionality are ignored (the caller checks them) so the base,
+// offer, and reward pairs collapse to the same primitive. It fails closed on any
+// richer search or put.
+func temptingOfferSearchPair(effects []compiler.CompiledEffect, i int) (game.Search, int, bool) {
+	if i+1 >= len(effects) {
+		return game.Search{}, 0, false
+	}
+	search, put := effects[i], effects[i+1]
+	if search.Kind != compiler.EffectSearch || put.Kind != compiler.EffectPut {
+		return game.Search{}, 0, false
+	}
+	if search.Negated || search.DelayedTiming != 0 || search.Duration != compiler.DurationNone ||
+		put.Negated || put.DelayedTiming != 0 || put.Duration != compiler.DurationNone {
+		return game.Search{}, 0, false
+	}
+	// The parser leaves an UnsupportedDetail on each search because the idiom
+	// defers its shuffle to a single trailing clause ("then each player who
+	// searched a library this way shuffles") rather than printing the byte-exact
+	// "search ... then shuffle" wording the generic search path reconstructs. That
+	// is a wording mismatch, not a semantic gap: the compiled Selector still fully
+	// describes the search, and searchSpecForSelector below fails closed on any
+	// selector it cannot represent, so the detail is intentionally not gated here.
+	if search.SearchSharedSubtype ||
+		search.SearchDifferentNames ||
+		search.SearchDestination == parser.EffectDestinationTop ||
+		search.SearchControl != parser.SearchControlRiderNone {
+		return game.Search{}, 0, false
+	}
+	quantity, ok := searchAmountQuantity(search)
+	if !ok {
+		return game.Search{}, 0, false
+	}
+	spec, ok := searchSpecForSelector(search.Selector)
+	if !ok {
+		return game.Search{}, 0, false
+	}
+	spec.SourceZone = zone.Library
+	if put.SearchSplit.Present ||
+		(put.ToZone != zone.Battlefield && put.ToZone != zone.Hand) {
+		return game.Search{}, 0, false
+	}
+	spec.Destination = put.ToZone
+	spec.EntersTapped = put.EntersTapped
+	if !quantity.IsDynamic() && search.Amount.Known && search.Amount.Value == 1 && spec.IsUnrestricted() {
+		spec.FailToFindPolicy = game.SearchMustFindIfAvailable
+	}
+	return game.Search{
+		Player: game.GroupOfferMemberReference(),
+		Spec:   spec,
+		Amount: quantity,
+	}, i + 2, true
+}
+
+// lowerTemptingOfferCompoundBody lowers a Tempting offer whose shared body is a
+// multi-primitive sequence (Tempt with Bunnies: "Draw a card and create a 1/1
+// white Rabbit creature token."). The body's effects repeat as three identical
+// clauses — the controller base, the each-opponent-may offer, and the
+// per-accepter reward — so the effect list is exactly three clauses of the same
+// length. Each clause lowers to the same instruction sequence, addressed through
+// GroupOfferMemberReference(), and the whole body runs atomically per acting
+// player through TemptingOfferBody. It fails closed unless the three clauses are
+// identical and carry the you / each-opponent-may / you idiom.
+func lowerTemptingOfferCompoundBody(
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (game.AbilityContent, *shared.Diagnostic) {
+	c := ability.Content
+	if len(c.Targets) != 0 || len(c.References) != 0 {
+		return game.AbilityContent{}, temptingOfferDiagnostic(ability, "a compound Tempting offer with targets or references is unsupported")
+	}
+	n := len(c.Effects)
+	if n < 6 || n%3 != 0 {
+		return game.AbilityContent{}, temptingOfferDiagnostic(ability, "a compound Tempting offer requires three equal-length clauses")
+	}
+	k := n / 3
+	baseClause := c.Effects[0:k]
+	offerClause := c.Effects[k : 2*k]
+	rewardClause := c.Effects[2*k : 3*k]
+	if !temptingOfferActingClause(baseClause, parser.EffectContextController) {
+		return game.AbilityContent{}, temptingOfferDiagnostic(ability, "the base clause is not a plain controller sequence")
+	}
+	if !temptingOfferOfferClause(offerClause) {
+		return game.AbilityContent{}, temptingOfferDiagnostic(ability, "the offer clause is not an each-opponent-may sequence")
+	}
+	if !temptingOfferActingClause(rewardClause, parser.EffectContextController) {
+		return game.AbilityContent{}, temptingOfferDiagnostic(ability, "the reward clause is not a plain controller sequence")
+	}
+	parent := contentCtx{
+		text:          syntax.Text,
+		span:          c.Span,
+		content:       c,
+		enclosingKind: compiler.AbilitySpell,
+	}
+	baseBody, diagnostic := lowerTemptingOfferBodyClause(parent, ability, baseClause)
+	if diagnostic != nil {
+		return game.AbilityContent{}, diagnostic
+	}
+	offerBody, diagnostic := lowerTemptingOfferBodyClause(parent, ability, offerClause)
+	if diagnostic != nil {
+		return game.AbilityContent{}, diagnostic
+	}
+	rewardBody, diagnostic := lowerTemptingOfferBodyClause(parent, ability, rewardClause)
+	if diagnostic != nil {
+		return game.AbilityContent{}, diagnostic
+	}
+	if !reflect.DeepEqual(baseBody, offerBody) || !reflect.DeepEqual(baseBody, rewardBody) {
+		return game.AbilityContent{}, temptingOfferDiagnostic(ability, "the three clause bodies are not identical")
+	}
+	return temptingOfferBodyAbilityContent(baseBody, nil), nil
+}
+
+// temptingOfferActingClause reports whether a clause is a single acting player's
+// sequence: the first effect carries the given acting context and is not optional,
+// and every following effect continues the same subject (the given context or a
+// prior-subject continuation) without introducing a new offer.
+func temptingOfferActingClause(clause []compiler.CompiledEffect, acting parser.EffectContextKind) bool {
+	if len(clause) == 0 || clause[0].Context != acting || clause[0].Optional {
+		return false
+	}
+	for i := 1; i < len(clause); i++ {
+		if clause[i].Optional ||
+			(clause[i].Context != acting && clause[i].Context != parser.EffectContextPriorSubject) {
+			return false
+		}
+	}
+	return true
+}
+
+// temptingOfferOfferClause reports whether a clause is the each-opponent-may
+// offer: its first effect is an optional each-opponent effect and every following
+// effect is a non-optional prior-subject continuation of that same opponent.
+func temptingOfferOfferClause(clause []compiler.CompiledEffect) bool {
+	if len(clause) == 0 ||
+		clause[0].Context != parser.EffectContextEachOpponent ||
+		!clause[0].Optional {
+		return false
+	}
+	for i := 1; i < len(clause); i++ {
+		if clause[i].Optional || clause[i].Context != parser.EffectContextPriorSubject {
+			return false
+		}
+	}
+	return true
+}
+
+// lowerTemptingOfferBodyClause lowers a clause's effect sequence to the shared
+// Tempting-offer body: each effect becomes one instruction addressed to the
+// acting player through GroupOfferMemberReference(). The modeled compound effects
+// are a plain card draw and a synthesized-token creation (Tempt with Bunnies);
+// any other effect fails closed.
+func lowerTemptingOfferBodyClause(
+	parent contentCtx,
+	ability compiler.CompiledAbility,
+	clause []compiler.CompiledEffect,
+) ([]game.Instruction, *shared.Diagnostic) {
+	body := make([]game.Instruction, 0, len(clause))
+	for i := range clause {
+		instr, diagnostic := lowerTemptingOfferBodyInstruction(parent, ability, clause[i])
+		if diagnostic != nil {
+			return nil, diagnostic
+		}
+		body = append(body, instr)
+	}
+	return body, nil
+}
+
+// lowerTemptingOfferBodyInstruction lowers a single compound-body effect to an
+// instruction addressed to the acting player. A draw becomes a
+// GroupOfferMemberReference()-addressed Draw; a synthesized-token creation reuses
+// lowerTemptingOfferToken and enters the token under the acting player. Any other
+// effect fails closed.
+func lowerTemptingOfferBodyInstruction(
+	parent contentCtx,
+	ability compiler.CompiledAbility,
+	effect compiler.CompiledEffect,
+) (game.Instruction, *shared.Diagnostic) {
+	switch effect.Kind {
+	case compiler.EffectDraw:
+		draw, ok := temptingOfferDrawPrimitive(effect)
+		if !ok {
+			return game.Instruction{}, temptingOfferDiagnostic(ability, "a draw in a compound Tempting offer is unsupported")
+		}
+		return game.Instruction{Primitive: draw}, nil
+	case compiler.EffectCreate:
+		token, diagnostic := lowerTemptingOfferToken(parent, ability, effect)
+		if diagnostic != nil {
+			return game.Instruction{}, diagnostic
+		}
+		token.Recipient = opt.Val(game.GroupOfferMemberReference())
+		return game.Instruction{Primitive: token}, nil
+	default:
+		return game.Instruction{}, temptingOfferDiagnostic(ability, "an effect in a compound Tempting offer is unsupported")
+	}
+}
+
+// temptingOfferDrawPrimitive builds the Draw for one clause effect of a compound
+// Tempting offer, addressing the acting player through GroupOfferMemberReference().
+// It accepts only a plain fixed-count card draw with no delay, duration,
+// negation, or reference rider; any richer draw fails closed.
+func temptingOfferDrawPrimitive(effect compiler.CompiledEffect) (game.Draw, bool) {
+	if effect.Kind != compiler.EffectDraw ||
+		effect.Negated ||
+		effect.DelayedTiming != 0 ||
+		effect.Duration != compiler.DurationNone ||
+		len(effect.References) != 0 ||
+		!effect.Amount.Known ||
+		effect.Amount.RangeKnown ||
+		effect.Amount.VariableX ||
+		effect.Amount.DynamicKind != 0 ||
+		effect.Amount.Value <= 0 {
+		return game.Draw{}, false
+	}
+	return game.Draw{
+		Player: game.GroupOfferMemberReference(),
+		Amount: game.Fixed(effect.Amount.Value),
+	}, true
 }
 
 // temptingOfferDiagnostic builds the fail-closed diagnostic for a "Tempting

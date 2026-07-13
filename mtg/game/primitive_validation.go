@@ -346,6 +346,9 @@ func (p BecomeMonarch) validateCapturedTargetControllerReferences(targets []Targ
 func (p CantBecomeMonarch) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
 	return validateCapturedTargetControllerReference(p.Player, targets, checkTargets)
 }
+func (GainCityBlessing) validateCapturedTargetControllerReferences([]TargetSpec, bool) error {
+	return nil
+}
 
 func (p SetClassLevel) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
 	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
@@ -1791,6 +1794,13 @@ func (p CantBecomeMonarch) validatePrimitive(targets []TargetSpec, checkTargets 
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 
+// validatePrimitive implements Primitive for GainCityBlessing. It always acts on
+// the resolving object's controller and consults no targets, so it has nothing
+// to validate against the ability's target specs.
+func (GainCityBlessing) validatePrimitive([]TargetSpec, bool) error {
+	return nil
+}
+
 // validatePrimitive implements Primitive for PartitionExiledCostCards. It reads
 // the resolving object's cost-exiled card IDs and consults no targets, so it has
 // nothing to validate against the ability's target specs.
@@ -1849,6 +1859,10 @@ func (p Connive) validatePrimitive(targets []TargetSpec, checkTargets bool) erro
 }
 
 func (p BecomeSaddled) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	return validateObjectReference(p.Object, targets, checkTargets)
+}
+
+func (p RecordEchoObligation) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	return validateObjectReference(p.Object, targets, checkTargets)
 }
 

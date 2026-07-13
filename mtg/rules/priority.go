@@ -296,6 +296,7 @@ func actionsEqual(a, b action.Action) bool {
 			aPayload.Face == bPayload.Face &&
 			aPayload.XValue == bPayload.XValue &&
 			aPayload.KickerPaid == bPayload.KickerPaid &&
+			aPayload.Bargained == bPayload.Bargained &&
 			aPayload.GiftPromised == bPayload.GiftPromised &&
 			aPayload.GiftRecipient == bPayload.GiftRecipient &&
 			aPayload.Overloaded == bPayload.Overloaded &&

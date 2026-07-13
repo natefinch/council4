@@ -221,19 +221,24 @@ func emitCost(abilities []Ability) {
 // trailing period excluded) when the pre-dash phrase is exactly the Ward
 // keyword, so the cost lowers through the same component grammar as an
 // activated-ability cost. Mana-only Ward ("Ward {2}") keeps its space-delimited
-// mana parameter and never reaches this clause.
-func wardKeywordCostClause(source string, tokens []shared.Token, dash int) (Phrase, bool) {
+// mana parameter and never reaches this clause. The second result is the token
+// index of the ability content that follows the cost's trailing period (its
+// reminder text, if any), so the caller can keep that content as the ability
+// body instead of discarding it.
+func wardKeywordCostClause(source string, tokens []shared.Token, dash int) (Phrase, int, bool) {
 	if !slices.Equal(normalizedWords(tokens[:dash]), []string{"ward"}) {
-		return Phrase{}, false
+		return Phrase{}, 0, false
 	}
 	clause := tokens[dash+1:]
+	bodyStart := len(tokens)
 	if period := shared.TopLevelIndex(clause, shared.Period); period >= 0 {
+		bodyStart = dash + 1 + period + 1
 		clause = clause[:period]
 	}
 	if len(clause) == 0 {
-		return Phrase{}, false
+		return Phrase{}, 0, false
 	}
-	return phraseFromTokens(source, clause), true
+	return phraseFromTokens(source, clause), bodyStart, true
 }
 
 // emitWardKeywordCost parses each recognized "Ward—<cost>" cost phrase into a

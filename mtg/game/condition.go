@@ -97,11 +97,22 @@ type Condition struct {
 	// SourceSaddled requires the condition source Mount to be saddled
 	// (CR 702.166), as in "if this creature is saddled". Negate models the
 	// "isn't saddled" wording.
-	SourceSaddled         bool
-	SourceTributeNotPaid  bool
-	ControllerHasMaxSpeed bool
-	TargetEnteredThisTurn opt.V[int]
-	CastFromZone          opt.V[zone.Type]
+	SourceSaddled        bool
+	SourceTributeNotPaid bool
+	// SourceCameUnderControlSinceLastUpkeep gates the Echo triggered ability
+	// (CR 702.29): it holds when the condition source permanent came under the
+	// condition controller's control since the beginning of that player's most
+	// recent upkeep. It is evaluated from the source's EchoResolvedController: the
+	// obligation is pending when that recorded controller is unset or differs from
+	// the current condition controller, so the first upkeep after the permanent
+	// entered or a new controller gained it triggers echo, and later upkeeps of
+	// the same controller do not. The known control-history gaps of that scalar
+	// model (temporary steal-and-return, countered trigger) are documented in
+	// echoObligationPending and tracked in #3014.
+	SourceCameUnderControlSinceLastUpkeep bool
+	ControllerHasMaxSpeed                 bool
+	TargetEnteredThisTurn                 opt.V[int]
+	CastFromZone                          opt.V[zone.Type]
 
 	// CastDuringControllerMainPhase is satisfied when the resolving spell was
 	// cast during its controller's main phase ("Addendum — If you cast this
@@ -124,6 +135,13 @@ type Condition struct {
 	// stack object's captured kicker-paid state and is false for copies.
 	SpellWasKicked bool
 
+	// SpellWasBargained is satisfied when the resolving spell was bargained ("if
+	// this spell was bargained, ..."; CR 702.166c). It is evaluated against the
+	// resolving stack object's captured bargained state. Like the kicker gate,
+	// bargaining is an as-cast choice, so a copy of a bargained spell was not
+	// itself bargained and this is false for copies.
+	SpellWasBargained bool
+
 	// GiftPromised is satisfied when the resolving spell's Gift keyword action
 	// promised a gift to an opponent as it was cast ("if the gift was promised,
 	// ..."; CR 702.171). It is evaluated against the resolving stack object's
@@ -140,6 +158,14 @@ type Condition struct {
 	// which the entering-permanent event preserves from the spell that became the
 	// permanent, and is false when no such event is in context.
 	EventPermanentWasKicked bool
+
+	// EventPermanentWasBargained is satisfied when the permanent named by the
+	// triggering or entering event was bargained (CR 702.166c, the Bargain
+	// creatures' "if it was bargained" enter triggers). It is evaluated against
+	// the event's captured bargained state, which the entering-permanent event
+	// preserves from the spell that became the permanent, and is false when no
+	// such event is in context.
+	EventPermanentWasBargained bool
 
 	// EventPermanentWasCastFromControllerHand is satisfied when the entering
 	// permanent was cast by the condition controller from that player's hand
@@ -355,6 +381,7 @@ func (c *Condition) Empty() bool {
 		!c.SourceNotMonstrous &&
 		!c.SourceSaddled &&
 		!c.SourceTributeNotPaid &&
+		!c.SourceCameUnderControlSinceLastUpkeep &&
 		!c.ControllerHasMaxSpeed &&
 		!c.TargetEnteredThisTurn.Exists &&
 		!c.CastFromZone.Exists &&
@@ -362,8 +389,10 @@ func (c *Condition) Empty() bool {
 		!c.EventHistory.Exists &&
 		!c.ControllerControlsCommander &&
 		!c.SpellWasKicked &&
+		!c.SpellWasBargained &&
 		!c.GiftPromised &&
 		!c.EventPermanentWasKicked &&
+		!c.EventPermanentWasBargained &&
 		!c.EventPermanentWasCastFromControllerHand &&
 		c.ControllerGraveyardCardOfTypeCountAtLeast == 0 &&
 		c.ControllerGraveyardInstantOrSorceryCountAtLeast == 0 &&

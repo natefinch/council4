@@ -74,7 +74,7 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 	}
 
 	branch := castBranchForCast(cast)
-	if !e.canCastSpellFaceFromZoneWithOptions(g, playerID, cast.CardID, sourceZone, cast.Face, cast.Targets, cast.XValue, cast.ChosenModes, effectiveKickerCount(cast.KickerPaid, cast.KickerCount), cast.Overloaded, cast.GiftPromised) {
+	if !e.canCastSpellFaceFromZoneWithOptions(g, playerID, cast.CardID, sourceZone, cast.Face, cast.Targets, cast.XValue, cast.ChosenModes, effectiveKickerCount(cast.KickerPaid, cast.KickerCount), cast.Overloaded, cast.GiftPromised, cast.Bargained) {
 		return false
 	}
 
@@ -89,13 +89,23 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		announcementDef = overloadSpellDef(spellDef)
 	}
 	completedTargets, ok := e.completeSpellAnnouncementTargets(g, playerID, announcementDef, cast.ChosenModes, cast.Targets, agents, log, branch)
-	if !ok || !e.canCastSpellFaceFromZoneWithOptions(g, playerID, cast.CardID, sourceZone, cast.Face, completedTargets, cast.XValue, cast.ChosenModes, effectiveKickerCount(cast.KickerPaid, cast.KickerCount), cast.Overloaded, cast.GiftPromised) {
+	if !ok || !e.canCastSpellFaceFromZoneWithOptions(g, playerID, cast.CardID, sourceZone, cast.Face, completedTargets, cast.XValue, cast.ChosenModes, effectiveKickerCount(cast.KickerPaid, cast.KickerCount), cast.Overloaded, cast.GiftPromised, cast.Bargained) {
 		return false
 	}
 	cast.Targets = completedTargets
 	targetCounts, ok := spellTargetCounts(g, playerID, announcementDef, cast.ChosenModes, cast.Targets, branch)
 	if !ok {
 		panic("validated spell targets could not be segmented")
+	}
+	// Splice onto Arcane (CR 702.47): as an Arcane spell is cast from hand for its
+	// normal cost, the caster may reveal splice cards in hand, pay their mana
+	// splice costs as additional costs, and append their spell effects to this
+	// spell. Overloaded casts and non-Arcane spells are never spliceable. When no
+	// card is spliced these are all nil, leaving the cast unchanged.
+	var splice spliceCastResult
+	if sourceZone == zone.Hand && !cast.Overloaded && spellIsArcane(spellDef) {
+		splicePermissions := castPermissionsForZone(g, playerID, card.ID, sourceZone, cast.Face)
+		splice = e.chooseSpliceOntoArcane(g, playerID, card.ID, spellDef, cast, splicePermissions, agents, log)
 	}
 	// payLifeFromTop reads the card's position in its source zone (the top of
 	// the library), so it must be determined before the card is moved to the
@@ -168,8 +178,12 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		KickerCount:                   cast.KickerCount,
 		GiftPromised:                  cast.GiftPromised,
 		GiftRecipient:                 cast.GiftRecipient,
+		Bargained:                     cast.Bargained,
 		Overloaded:                    cast.Overloaded,
 		SourceZone:                    sourceZone,
+		SplicedContent:                splice.contents,
+		SplicedTargets:                splice.targets,
+		SplicedTargetCounts:           splice.targetCounts,
 		CastDuringControllerMainPhase: playerID == g.Turn.ActivePlayer && g.Turn.IsMainPhase(),
 	}
 	if !removeCastSourceCard(g, castSourcePlayer(g, player, cast.CardID, sourceZone), cast.CardID, sourceZone) {
@@ -276,10 +290,12 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		XValue:          cast.XValue,
 		KickerPaid:      cast.KickerPaid,
 		KickerCount:     cast.KickerCount,
+		Bargained:       cast.Bargained,
 		ChosenModes:     cast.ChosenModes,
 		CastPermissions: permissions,
 		Targets:         cast.Targets,
 		Prefs:           prefs,
+		SpliceManaCosts: splice.manaCosts,
 	}
 	switch {
 	case cast.Overloaded:
@@ -672,7 +688,7 @@ func (e *Engine) canCastSpellFromZoneWithKicker(g *game.Game, playerID game.Play
 }
 
 func (e *Engine) canCastSpellFaceFromZoneWithKicker(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int, kickerPaid bool) bool {
-	return e.canCastSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, targets, xValue, chosenModes, effectiveKickerCount(kickerPaid, 0), false, false)
+	return e.canCastSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, targets, xValue, chosenModes, effectiveKickerCount(kickerPaid, 0), false, false, false)
 }
 
 // canCastGiftSpellFaceFromZone validates a cast whose Gift keyword action
@@ -680,13 +696,22 @@ func (e *Engine) canCastSpellFaceFromZoneWithKicker(g *game.Game, playerID game.
 // gift-promised target specs, so its targets are validated on the promised
 // branch rather than the default branch.
 func (e *Engine) canCastGiftSpellFaceFromZone(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int) bool {
-	return e.canCastSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, targets, xValue, chosenModes, 0, false, true)
+	return e.canCastSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, targets, xValue, chosenModes, 0, false, true, false)
 }
 
 // canCastSpellFaceFromZoneWithMultikick validates a Multikicker cast whose
 // kicker cost is paid kickerCount times (CR 702.32).
 func (e *Engine) canCastSpellFaceFromZoneWithMultikick(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int, kickerCount int) bool {
-	return e.canCastSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, targets, xValue, chosenModes, kickerCount, false, false)
+	return e.canCastSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, targets, xValue, chosenModes, kickerCount, false, false, false)
+}
+
+// canCastBargainedSpellFaceFromZone validates a cast whose Bargain additional
+// cost is paid (CR 702.166b). Bargaining activates the spell's bargained target
+// specs, so its targets are validated on the bargained branch, and the payment
+// planner requires the caster to be able to sacrifice an artifact, enchantment,
+// or token.
+func (e *Engine) canCastBargainedSpellFaceFromZone(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int) bool {
+	return e.canCastSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, targets, xValue, chosenModes, 0, false, false, true)
 }
 
 // effectiveKickerCount resolves the number of times the kicker cost is paid from
@@ -707,15 +732,15 @@ func (e *Engine) canCastOverloadedSpellFaceFromZone(g *game.Game, playerID game.
 }
 
 func (e *Engine) canCastOverloadedSpellFaceFromZoneWithOptions(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, xValue int, chosenModes []int, kickerPaid bool) bool {
-	return e.canCastSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, nil, xValue, chosenModes, effectiveKickerCount(kickerPaid, 0), true, false)
+	return e.canCastSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, nil, xValue, chosenModes, effectiveKickerCount(kickerPaid, 0), true, false, false)
 }
 
-func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int, kickerCount int, overloaded bool, giftPromised bool) bool {
+func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int, kickerCount int, overloaded bool, giftPromised bool, bargained bool) bool {
 	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer {
 		return false
 	}
 	kickerPaid := kickerCount > 0
-	branch := game.CastBranch{GiftPromised: giftPromised, Kicked: kickerPaid}
+	branch := game.CastBranch{GiftPromised: giftPromised, Kicked: kickerPaid, Bargained: bargained}
 	if xValue < 0 {
 		return false
 	}
@@ -802,6 +827,9 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 	if giftPromised && !spellHasGift(spellDef) {
 		return false
 	}
+	if bargained && !spellHasBargain(spellDef) {
+		return false
+	}
 	if kickerCount > 1 && !spellHasMultikicker(spellDef) {
 		return false
 	}
@@ -813,6 +841,7 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 		XValue:          xValue,
 		KickerPaid:      kickerPaid,
 		KickerCount:     kickerCount,
+		Bargained:       bargained,
 		ChosenModes:     chosenModes,
 		CastPermissions: castPermissionsForZone(g, playerID, card.ID, sourceZone, face),
 		Targets:         targets,

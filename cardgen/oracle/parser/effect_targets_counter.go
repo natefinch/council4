@@ -33,7 +33,7 @@ func counterAbilitySelectionSyntax(tokens []shared.Token, span shared.Span, text
 	}
 
 	qualified := hadController || hadSource || qualifier.colorless ||
-		len(qualifier.supertypes) > 0
+		len(qualifier.supertypes) > 0 || len(qualifier.cardTypes) > 0
 	if !qualified {
 		return SelectionSyntax{}, false
 	}
@@ -48,7 +48,13 @@ func counterAbilitySelectionSyntax(tokens []shared.Token, span shared.Span, text
 		return SelectionSyntax{}, false
 	}
 	// Spell qualifiers only make sense when a spell is among the allowed kinds.
-	if (qualifier.colorless || len(qualifier.supertypes) > 0) && !kinds.spell {
+	if (qualifier.colorless || len(qualifier.supertypes) > 0 || len(qualifier.cardTypes) > 0) && !kinds.spell {
+		return SelectionSyntax{}, false
+	}
+	// A card-type union needs at least two types; the compiler keeps only
+	// multi-type unions on a mixed selection, so a lone card type would be
+	// silently dropped downstream. Fail closed rather than widen the target.
+	if len(qualifier.cardTypes) == 1 {
 		return SelectionSyntax{}, false
 	}
 
@@ -61,22 +67,28 @@ func counterAbilitySelectionSyntax(tokens []shared.Token, span shared.Span, text
 	}
 	selection.Supertypes = qualifier.supertypes
 	selection.Colorless = qualifier.colorless
+	selection.RequiredTypesAny = qualifier.cardTypes
 	return selection, true
 }
 
 type counterSpellQualifier struct {
 	supertypes []Supertype
+	cardTypes  []CardType
 	colorless  bool
 }
 
 // parseCounterAbilityKindList parses an "or"-separated list of stack-object
-// kinds, where the spell element may carry supertype or colorless qualifiers.
-// Commas are already dropped by normalizedWords, so elements are separated only
-// by "or" (or by nothing, as in "activated ability triggered ability").
+// kinds, where the spell element may carry supertype, colorless, or card-type
+// qualifiers ("instant spell", "sorcery spell"). Commas are already dropped by
+// normalizedWords, so elements are separated only by "or" (or by nothing, as in
+// "activated ability triggered ability"). Multiple spell elements are accepted
+// only when every one carries a card type, forming a card-type union such as
+// "instant spell, sorcery spell"; a bare "spell" appears at most once.
 func parseCounterAbilityKindList(words []string) (counterAbilityStackKinds, counterSpellQualifier, bool) {
 	var kinds counterAbilityStackKinds
 	var qualifier counterSpellQualifier
 	seenSpell := false
+	allSpellElementsTyped := true
 	i := 0
 	for i < len(words) {
 		switch {
@@ -95,9 +107,18 @@ func parseCounterAbilityKindList(words []string) (counterAbilityStackKinds, coun
 			kinds.triggered = true
 			i += 2
 		default:
-			next, ok := parseCounterSpellElement(words[i:], &qualifier)
-			if !ok || seenSpell {
+			next, typed, ok := parseCounterSpellElement(words[i:], &qualifier)
+			if !ok {
 				return counterAbilityStackKinds{}, counterSpellQualifier{}, false
+			}
+			// A second or later spell element is only a card-type union: it and
+			// every earlier spell element must name a card type, so "spell or
+			// spell" and "spell, instant spell" mixtures fail closed.
+			if seenSpell && (!typed || !allSpellElementsTyped) {
+				return counterAbilityStackKinds{}, counterSpellQualifier{}, false
+			}
+			if !typed {
+				allSpellElementsTyped = false
 			}
 			kinds.spell = true
 			seenSpell = true
@@ -111,13 +132,23 @@ func parseCounterAbilityKindList(words []string) (counterAbilityStackKinds, coun
 }
 
 // parseCounterSpellElement consumes a "[qualifier...] spell" element, recording
-// supertype and colorless qualifiers. It fails closed on any qualifier word that
-// is not a known supertype or the colorless color qualifier.
-func parseCounterSpellElement(words []string, qualifier *counterSpellQualifier) (int, bool) {
+// supertype, colorless, and card-type qualifiers. It reports whether the element
+// carried a card type so the list parser can union multiple typed spell
+// elements. It fails closed on any qualifier word that is not a known supertype,
+// card type, or the colorless color qualifier.
+func parseCounterSpellElement(words []string, qualifier *counterSpellQualifier) (next int, typed bool, ok bool) {
 	i := 0
 	for i < len(words) && words[i] != "spell" {
 		if words[i] == "or" {
-			return 0, false
+			return 0, false, false
+		}
+		if cardType, ok := recognizeCardTypeWord(words[i]); ok {
+			if !slices.Contains(qualifier.cardTypes, cardType) {
+				qualifier.cardTypes = append(qualifier.cardTypes, cardType)
+			}
+			typed = true
+			i++
+			continue
 		}
 		if supertype, ok := recognizeSupertypeWord(words[i]); ok {
 			if !slices.Contains(qualifier.supertypes, supertype) {
@@ -131,12 +162,12 @@ func parseCounterSpellElement(words []string, qualifier *counterSpellQualifier) 
 			i++
 			continue
 		}
-		return 0, false
+		return 0, false, false
 	}
 	if i >= len(words) || words[i] != "spell" {
-		return 0, false
+		return 0, false, false
 	}
-	return i + 1, true
+	return i + 1, typed, true
 }
 
 func counterAbilitySelectionKind(kinds counterAbilityStackKinds) (SelectionKind, bool) {
@@ -198,6 +229,7 @@ func selectionHasCounterAbilityQualifier(selection SelectionSyntax) bool {
 	return selection.Controller != SelectionControllerAny ||
 		len(selection.SourceTypes) > 0 ||
 		len(selection.Supertypes) > 0 ||
+		len(selection.RequiredTypesAny) > 0 ||
 		selection.Colorless
 }
 
@@ -251,6 +283,10 @@ func counterAbilityListEnd(tokens []shared.Token, start int) (int, bool) {
 func counterSpellElementEnd(tokens []shared.Token, start int) (int, bool) {
 	i := start
 	for i < len(tokens) && tokens[i].Kind == shared.Word && !equalWord(tokens[i], "spell") && !equalWord(tokens[i], "or") {
+		if _, ok := recognizeCardTypeWord(tokens[i].Text); ok {
+			i++
+			continue
+		}
 		if _, ok := recognizeSupertypeWord(tokens[i].Text); ok {
 			i++
 			continue

@@ -348,9 +348,7 @@ func collectFacePublishedLinkedKeys(face *CardFace) map[LinkedKey]int {
 	collect := func(content AbilityContent) {
 		for _, mode := range content.Modes {
 			for i := range mode.Sequence {
-				if key := mode.Sequence[i].Primitive.instructionRefs().publishesLinked; key != "" {
-					keys[key] = i
-				}
+				collectInstructionPublishedLinkedKeys(&mode.Sequence[i], i, keys)
 			}
 		}
 	}
@@ -373,6 +371,22 @@ func collectFacePublishedLinkedKeys(face *CardFace) map[LinkedKey]int {
 		collect(face.ManaAbilities[i].Content)
 	}
 	return keys
+}
+
+// collectInstructionPublishedLinkedKeys records the linked key published by an
+// instruction's primitive, if any, keyed to its sequence position. It skips a
+// body-carrying Tempting-offer instruction's nil top-level primitive and recurses
+// into TemptingOfferBody so a body primitive that publishes a linked key is still
+// recorded.
+func collectInstructionPublishedLinkedKeys(instr *Instruction, position int, keys map[LinkedKey]int) {
+	if instr.Primitive != nil {
+		if key := instr.Primitive.instructionRefs().publishesLinked; key != "" {
+			keys[key] = position
+		}
+	}
+	for i := range instr.TemptingOfferBody {
+		collectInstructionPublishedLinkedKeys(&instr.TemptingOfferBody[i], position, keys)
+	}
 }
 
 func abilityContentHasTargets(content AbilityContent) bool {
@@ -582,6 +596,8 @@ func (v *cardDefValidator) validateKeywordAbility(faceName, path string, ability
 		v.validateWardKeywordCost(faceName, path, keyword)
 	case CumulativeUpkeepKeyword:
 		v.validateManaKeywordCost(faceName, path, keyword.Cost)
+	case EchoKeyword:
+		v.validateManaKeywordCost(faceName, path, keyword.Cost)
 	case EquipKeyword:
 		v.validateManaKeywordCost(faceName, path, keyword.Cost)
 	case ReconfigureKeyword:
@@ -616,6 +632,8 @@ func (v *cardDefValidator) validateKeywordAbility(faceName, path string, ability
 	case MadnessKeyword:
 		v.validateManaKeywordCost(faceName, path, keyword.Cost)
 	case FlashbackKeyword:
+		v.validateManaKeywordCost(faceName, path, keyword.Cost)
+	case SpliceKeyword:
 		v.validateManaKeywordCost(faceName, path, keyword.Cost)
 	case PlotKeyword:
 		v.validateManaKeywordCost(faceName, path, keyword.Cost)
@@ -783,6 +801,16 @@ func (v *cardDefValidator) validateInstructionSequence(
 			}
 			if !seq[i].OptionalActorGroup.Exists {
 				v.add(faceName, instructionPath, CardDefIssueInvalidAbilityBody, "TemptingOffer requires OptionalActorGroup")
+			}
+			if len(seq[i].TemptingOfferBody) > 0 {
+				v.validateInstructionSequence(
+					faceName,
+					appendPath(instructionPath, "TemptingOfferBody"),
+					seq[i].TemptingOfferBody,
+					targets,
+					capturedTargets,
+					inheritedLinked,
+				)
 			}
 		}
 		effectCondition := seq[i].Condition
@@ -991,11 +1019,17 @@ func (v *cardDefValidator) validateStackObjectTargetPredicate(faceName, path str
 		}
 		seen[kind] = true
 	}
+	// SpellCardTypes, SpellCardTypesAny, and ExcludedSpellCardTypes qualify only
+	// matched spells, so like the spell-shape predicates below they may accompany
+	// ability kinds in a mixed target ("target instant spell, sorcery spell,
+	// activated ability, or triggered ability") but require that spells be
+	// allowed. The runtime matcher ignores spell qualifiers for ability stack
+	// objects, restricting only the spell choice (CR 115.4).
 	hasSpellTypePredicate := len(target.Predicate.SpellCardTypes) > 0 ||
 		len(target.Predicate.SpellCardTypesAny) > 0 ||
 		len(target.Predicate.ExcludedSpellCardTypes) > 0
-	if hasSpellTypePredicate && (!allowsSpells || allowsAbilities) {
-		v.add(faceName, appendPath(path, "Predicate"), CardDefIssueInvalidTargetSpec, "spell type predicates require spell-only stack-object targets")
+	if hasSpellTypePredicate && !allowsSpells {
+		v.add(faceName, appendPath(path, "Predicate"), CardDefIssueInvalidTargetSpec, "spell type predicates require a stack-object target that allows spells")
 	}
 	if len(target.Predicate.SpellCardTypes) > 0 && len(target.Predicate.SpellCardTypesAny) > 0 {
 		v.add(faceName, appendPath(path, "Predicate"), CardDefIssueInvalidTargetSpec, "spell type target cannot combine all-of and any-of predicates")
@@ -1200,6 +1234,24 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		if effect.GrantedKeyword == KeywordNone {
 			v.add(faceName, appendPath(path, "GrantedKeyword"), CardDefIssueInvalidRuleEffect, "graveyard-card keyword grant must grant a keyword")
 		}
+	case RuleEffectGrantSpellKeyword:
+		if effect.AffectedController == ControllerAny {
+			v.add(faceName, appendPath(path, "AffectedController"), CardDefIssueInvalidRuleEffect, "spell keyword grants must set affected controller")
+		}
+		if effect.AffectedSource || effect.AffectedAttached || effect.AffectedObjectID != 0 {
+			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "spell keyword grants cannot affect a permanent")
+		}
+		v.validateSelection(faceName, appendPath(path, "CardSelection"), effect.CardSelection)
+		if !effect.CardSelection.Empty() && handCardSelectionHasUnsupportedPredicates(effect.CardSelection) {
+			v.add(faceName, appendPath(path, "CardSelection"), CardDefIssueInvalidSelection, "spell keyword grants support only printed card characteristics")
+		}
+		switch effect.GrantedKeyword {
+		case Improvise, Convoke, Delve:
+		case KeywordNone:
+			v.add(faceName, appendPath(path, "GrantedKeyword"), CardDefIssueInvalidRuleEffect, "spell keyword grant must grant a keyword")
+		default:
+			v.add(faceName, appendPath(path, "GrantedKeyword"), CardDefIssueInvalidRuleEffect, "spell keyword grants support only improvise, convoke, or delve")
+		}
 	case RuleEffectNoMaximumHandSize, RuleEffectLifeTotalCantChange, RuleEffectCastSpellsAsThoughFlash, RuleEffectPlayWithTopCardRevealed, RuleEffectLookAtTopCardAnyTime, RuleEffectSkipDrawStep, RuleEffectPlayerHexproof, RuleEffectPlayerShroud, RuleEffectDamageDoesntCauseLifeLoss, RuleEffectRedirectDamageToSource, RuleEffectActivateAbilitiesAsThoughHaste:
 		if effect.AffectedPlayer == PlayerAny {
 			v.add(faceName, appendPath(path, "AffectedPlayer"), CardDefIssueInvalidRuleEffect, "player rule effects must set affected player")
@@ -1341,6 +1393,12 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		payload.Kind = RuleEffectNone
 		if !reflect.DeepEqual(payload, RuleEffect{}) {
 			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "opponent entering-trigger suppression does not accept additional payload")
+		}
+	case RuleEffectAscend:
+		payload := *effect
+		payload.Kind = RuleEffectNone
+		if !reflect.DeepEqual(payload, RuleEffect{}) {
+			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "ascend does not accept additional payload")
 		}
 	case RuleEffectManaProductionMultiplier:
 		payload := *effect

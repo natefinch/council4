@@ -644,6 +644,16 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 		}
 		fields = append(fields, fmt.Sprintf("GrantedKeyword: %s,", keyword))
 	}
+	if effect.Kind == game.RuleEffectGrantSpellKeyword {
+		if effect.GrantedKeyword == game.KeywordNone {
+			return "", errors.New("render: spell keyword grant must grant a keyword")
+		}
+		keyword, err := renderKeyword(effect.GrantedKeyword)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("GrantedKeyword: %s,", keyword))
+	}
 	if effect.Kind == game.RuleEffectCantBeBlockedByCreaturesWith ||
 		effect.Kind == game.RuleEffectCantBeBlockedExceptBy ||
 		effect.Kind == game.RuleEffectCanBlockOnlyCreaturesWith {
@@ -976,6 +986,10 @@ func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
 		return "game.RuleEffectGrantHandCardAbility", nil
 	case game.RuleEffectGrantGraveyardCardKeyword:
 		return "game.RuleEffectGrantGraveyardCardKeyword", nil
+	case game.RuleEffectGrantSpellKeyword:
+		return "game.RuleEffectGrantSpellKeyword", nil
+	case game.RuleEffectAscend:
+		return "game.RuleEffectAscend", nil
 	case game.RuleEffectPlayerProtection:
 		return "game.RuleEffectPlayerProtection", nil
 	case game.RuleEffectAttackTax:

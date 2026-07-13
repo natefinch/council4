@@ -203,6 +203,9 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	if cond.SourceTributeNotPaid {
 		matches = matches && ctx.source != nil && !ctx.source.TributePaid
 	}
+	if cond.SourceCameUnderControlSinceLastUpkeep {
+		matches = matches && ctx.source != nil && echoObligationPending(g, ctx.source, ctx.controller)
+	}
 	if cond.ControllerHasMaxSpeed {
 		player, ok := playerByID(g, ctx.controller)
 		matches = matches && ok && player.Speed >= 4
@@ -219,11 +222,17 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	if cond.SpellWasKicked {
 		matches = matches && ctx.obj != nil && !ctx.obj.Copy && ctx.obj.KickerPaid
 	}
+	if cond.SpellWasBargained {
+		matches = matches && ctx.obj != nil && !ctx.obj.Copy && ctx.obj.Bargained
+	}
 	if cond.GiftPromised {
 		matches = matches && ctx.obj != nil && ctx.obj.GiftPromised
 	}
 	if cond.EventPermanentWasKicked {
 		matches = matches && ctx.event != nil && ctx.event.KickerPaid
+	}
+	if cond.EventPermanentWasBargained {
+		matches = matches && ctx.event != nil && ctx.event.Bargained
 	}
 	if cond.EventPermanentWasCastFromControllerHand {
 		matches = matches &&

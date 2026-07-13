@@ -231,6 +231,41 @@ const (
 	// equals the discarded card's mana value. Appended at the end of the enum so
 	// existing keyword ordinals are unchanged.
 	Transmute
+	// Echo (CR 702.29) is printed on some permanents: "Echo <cost> (At the
+	// beginning of your upkeep, if this came under your control since the
+	// beginning of your last upkeep, sacrifice it unless you pay its echo
+	// cost.)" It is modeled by EchoKeyword, which carries the fixed mana echo
+	// cost, inside the beginning-of-upkeep triggered ability built by
+	// EchoTriggeredAbility. The intervening "if" fires only the first upkeep
+	// after the permanent came under its controller's control, so
+	// HasKeyword(Echo) reports true and the rules layer runs the pay-or-sacrifice
+	// body. Appended at the end of the enum so existing keyword ordinals are
+	// unchanged.
+	Echo
+	// Splice (CR 702.47) is the "Splice onto Arcane" keyword printed on some
+	// Arcane instants: "Splice onto Arcane <cost> (As you cast an Arcane spell,
+	// you may reveal this card from your hand and pay its splice cost. If you do,
+	// add this card's effects to that spell.)" It is modeled by SpliceKeyword,
+	// which carries the splice mana cost. As an Arcane spell is cast, the rules
+	// layer offers each spliceable card in hand, pays its splice cost as an
+	// additional cost, keeps the card in hand (only revealed), and appends its
+	// spell effects and targets to the host spell so they resolve together and
+	// copies of the host copy the combined text. Appended at the end of the enum
+	// so existing keyword ordinals are unchanged.
+	Splice
+	// Bargain (CR 702.166, Wilds of Eldraine) is a Kicker variant printed on some
+	// instants, sorceries, and creatures: "Bargain (You may sacrifice an artifact,
+	// enchantment, or token as you cast this spell.)" It is a static ability that
+	// grants the optional additional cost of sacrificing an artifact, enchantment,
+	// or token as the spell is cast; a spell whose controller pays that cost has
+	// been "bargained," enabling the card's linked "if this spell was bargained"
+	// abilities. It carries no parameters (the additional cost and the payoffs are
+	// fixed and linked), so it is modeled as a recognized simple keyword: the
+	// rules layer reads HasKeyword(Bargain) to offer the bargained cast and apply
+	// the fixed sacrifice cost, and the "if bargained" clauses lower to the
+	// SpellWasBargained condition and bargained target gates. Appended at the end
+	// of the enum so existing keyword ordinals are unchanged.
+	Bargain
 	// KeywordCount is one greater than the largest real keyword value. It sizes
 	// compact keyword sets; it is not itself a keyword.
 	KeywordCount
@@ -240,6 +275,15 @@ const (
 // Use these in CardFace.StaticAbilities slices or initializer-function appends.
 // Treat these values as immutable.
 var (
+	// AscendStaticBody is the reusable StaticAbility for the permanent form of
+	// ascend (CR 702.131b): "Any time you control ten or more permanents and you
+	// don't have the city's blessing, you get the city's blessing for the rest of
+	// the game." It carries a single RuleEffectAscend rule effect with no payload;
+	// while the source is on the battlefield the runtime continuously grants its
+	// controller the city's blessing once that player controls ten or more
+	// permanents. Treat this value as immutable.
+	AscendStaticBody = StaticAbility{Text: "Ascend", RuleEffects: []RuleEffect{{Kind: RuleEffectAscend}}}
+
 	// DevoidStaticBody is the reusable StaticAbilityBody for devoid.
 	DevoidStaticBody = simpleKeywordStaticBody("Devoid", Devoid)
 
@@ -305,6 +349,11 @@ var (
 
 	// CascadeStaticBody is the reusable StaticAbilityBody for cascade.
 	CascadeStaticBody = simpleKeywordStaticBody("Cascade", Cascade)
+
+	// BargainStaticBody is the reusable StaticAbilityBody for bargain (CR
+	// 702.166): a static ability granting the optional additional cost to
+	// sacrifice an artifact, enchantment, or token as the spell is cast.
+	BargainStaticBody = simpleKeywordStaticBody("Bargain", Bargain)
 
 	// ProwessStaticBody is the reusable StaticAbilityBody for prowess.
 	ProwessStaticBody = simpleKeywordStaticBody("Prowess", Prowess)
@@ -795,6 +844,12 @@ type TriggerCondition struct {
 	// enter triggers. The entering permanent event preserves the spell's kicker
 	// choice for both trigger-time and resolution-time checks.
 	InterveningIfEventPermanentWasKicked bool
+
+	// InterveningIfEventPermanentWasBargained is true for "if it was bargained"
+	// on enter triggers (CR 702.166c, the Bargain creatures). The entering
+	// permanent event preserves whether the spell that became the permanent was
+	// bargained for both trigger-time and resolution-time checks.
+	InterveningIfEventPermanentWasBargained bool
 
 	// InterveningIfEventPermanentWasCast is true for "if it was cast" on enter
 	// triggers.

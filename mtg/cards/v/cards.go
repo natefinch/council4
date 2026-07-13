@@ -44,6 +44,7 @@ var Cards = []cardset.Entry{
 	{Name: "Veteran Guardmouse", New: VeteranGuardmouse},
 	{Name: "Veteran Warleader", New: VeteranWarleader},
 	{Name: "Viashino Branchrider", New: ViashinoBranchrider},
+	{Name: "Viashino Outrider", New: ViashinoOutrider},
 	{Name: "Vicious Shadows", New: ViciousShadows},
 	{Name: "Victor Timely, Wily Tycoon", New: VictorTimelyWilyTycoon},
 	{Name: "View from Above", New: ViewFromAbove},
@@ -53,6 +54,7 @@ var Cards = []cardset.Entry{
 	{Name: "Visage of Bolas", New: VisageOfBolas},
 	{Name: "Vision of Love", New: VisionOfLove},
 	{Name: "Visions of Villainy", New: VisionsOfVillainy},
+	{Name: "Vital Surge", New: VitalSurge},
 	{Name: "Vitaspore Thallid", New: VitasporeThallid},
 	{Name: "Vivi's Persistence", New: ViviSPersistence},
 	{Name: "Vivien Reid", New: VivienReid},
@@ -74,6 +76,7 @@ var Cards = []cardset.Entry{
 	{Name: "Vortex Runner", New: VortexRunner},
 	{Name: "Vraska's Finisher", New: VraskaSFinisher},
 	{Name: "Vryn Wingmare", New: VrynWingmare},
+	{Name: "Vug Lizard", New: VugLizard},
 	{Name: "Vulshok War Boar", New: VulshokWarBoar},
 	{Name: "Vulture, Scheming Scavenger", New: VultureSchemingScavenger},
 }

@@ -133,6 +133,13 @@ type StackObject struct {
 	// "for each time it was kicked" amounts as the spell resolves.
 	KickerCount int
 
+	// Bargained is true if this spell's Bargain additional cost was paid as it
+	// was cast (CR 702.166b): its controller sacrificed an artifact, enchantment,
+	// or token. It gates the spell's "if this spell was bargained" clauses. Like
+	// KickerPaid it is an as-cast choice, so a copy of a bargained spell was not
+	// itself bargained (CR 707.10) and this stays false for copies.
+	Bargained bool
+
 	// GiftPromised is true if this spell's Gift keyword action promised a gift to
 	// an opponent as it was cast (CR 702.171). It gates the spell's "if the gift
 	// was promised" clauses and drives the gift delivery on resolution. A copy of
@@ -145,6 +152,25 @@ type StackObject struct {
 
 	// Overloaded is true if this spell was cast for its overload cost.
 	Overloaded bool
+
+	// SplicedContent holds the spell effects appended to this spell by "Splice
+	// onto Arcane" (CR 702.47), in the order the caster chose to splice them.
+	// Each entry is a spliced card's spell ability content; the host spell's own
+	// effects resolve first, then each spliced content in order. Captured on the
+	// stack object (rather than re-read from a card) so copies of this spell copy
+	// the combined spliced text.
+	SplicedContent []AbilityContent
+
+	// SplicedTargets holds the runtime targets chosen for each SplicedContent
+	// entry, indexed in parallel with SplicedContent. Each inner slice is the
+	// flat target list for that spliced effect, resolved the same way a spell's
+	// own Targets are.
+	SplicedTargets [][]Target
+
+	// SplicedTargetCounts holds the per-TargetSpec target counts for each
+	// SplicedContent entry, indexed in parallel with SplicedContent, mirroring
+	// TargetCounts for the host spell.
+	SplicedTargetCounts [][]int
 
 	// Evoked is true if this spell was cast for its Evoke alternative cost
 	// (CR 702.74); the resulting permanent is sacrificed when it enters.

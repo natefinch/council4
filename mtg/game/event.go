@@ -98,12 +98,20 @@ const (
 	// Controller and Player identify the player who played the land and CardID
 	// identifies the land card.
 	EventLandPlayed
+	// EventGotCityBlessing marks a player getting the city's blessing (CR
+	// 702.131 ascend). It is emitted once each time a player who did not already
+	// have the city's blessing gets it, whether from a permanent's ascend static
+	// ability reaching ten permanents or from resolving an ascend spell, so
+	// "whenever you get the city's blessing" triggers could fire. The blessing is
+	// never removed, so this event is emitted at most once per player per game.
+	// Controller and Player identify the player who got the city's blessing.
+	EventGotCityBlessing
 )
 
 // EventKindCount is the number of EventKind values, including EventUnknown. It
 // is appended at the end of the const block so existing wire values are
 // preserved; new kinds must be added immediately before this sentinel.
-const EventKindCount = int(EventLandPlayed) + 1
+const EventKindCount = int(EventGotCityBlessing) + 1
 
 // DamageRecipientKind identifies what received damage. Values are flags so a
 // trigger pattern can match either kind.
@@ -206,6 +214,12 @@ type Event struct {
 	// KickerPaid records whether a spell-cast or entering-permanent spell's
 	// kicker cost was paid. It is false for objects that were not kicked.
 	KickerPaid bool
+
+	// Bargained records whether a spell-cast or entering-permanent spell's
+	// Bargain additional cost was paid as it was cast (CR 702.166b). It is false
+	// for objects that were not bargained. It feeds the "if it was bargained"
+	// enter-trigger intervening-if and the entering permanent's captured state.
+	Bargained bool
 
 	// EnterEvoked records whether an entering permanent resulted from a spell
 	// cast for its Evoke alternative cost (CR 702.74). It feeds the evoke

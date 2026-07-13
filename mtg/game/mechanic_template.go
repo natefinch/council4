@@ -25,6 +25,8 @@ const (
 	cumulativeUpkeepPaymentResult    = ResultKey("cumulative-upkeep-payment")
 )
 
+const echoPaymentResult = ResultKey("echo-payment")
+
 // tapManaLandsProduceKey publishes the color chosen for a "mana of any color
 // that a land ... could produce" ability (Reflecting Pool, Exotic Orchard,
 // Fellwar Stone; see TapManaLandsProduceAbility).
@@ -705,6 +707,54 @@ func CumulativeUpkeepTriggeredAbility(manaCost cost.Mana) TriggeredAbility {
 				Primitive: Sacrifice{Object: SourcePermanentReference()},
 				ResultGate: opt.Val(InstructionResultGate{
 					Key:       cumulativeUpkeepPaymentResult,
+					Succeeded: TriFalse,
+				}),
+			},
+		}}.Ability(),
+	}
+}
+
+// EchoTriggeredAbility builds the complete Echo triggered ability (CR 702.29)
+// for a fixed mana echo cost. It triggers at the beginning of the controller's
+// upkeep, but its intervening "if" fires only when the permanent came under that
+// player's control since the beginning of their most recent upkeep. When it
+// resolves it first records the echo obligation as resolved for the current
+// controller (so later upkeeps of the same controller do not re-trigger), then
+// the controller may pay the echo cost; if they do not, the permanent is
+// sacrificed.
+func EchoTriggeredAbility(manaCost cost.Mana) TriggeredAbility {
+	keywordCost := slices.Clone(manaCost)
+	paymentCost := slices.Clone(manaCost)
+	return TriggeredAbility{
+		Text: "Echo " + manaCost.String(),
+		Trigger: TriggerCondition{
+			Pattern: TriggerPattern{
+				Event:      EventBeginningOfStep,
+				Controller: TriggerControllerYou,
+				Step:       StepUpkeep,
+			},
+			InterveningCondition: opt.Val(Condition{
+				Text:                                  "this came under your control since the beginning of your last upkeep",
+				SourceCameUnderControlSinceLastUpkeep: true,
+			}),
+		},
+		KeywordAbilities: []KeywordAbility{
+			EchoKeyword{Cost: keywordCost},
+		},
+		Content: Mode{Sequence: []Instruction{
+			{
+				Primitive: RecordEchoObligation{Object: SourcePermanentReference()},
+			},
+			{
+				Primitive: Pay{Payment: ResolutionPayment{
+					ManaCost: opt.Val(paymentCost),
+				}},
+				PublishResult: echoPaymentResult,
+			},
+			{
+				Primitive: Sacrifice{Object: SourcePermanentReference()},
+				ResultGate: opt.Val(InstructionResultGate{
+					Key:       echoPaymentResult,
 					Succeeded: TriFalse,
 				}),
 			},

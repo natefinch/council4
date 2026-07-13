@@ -3,6 +3,7 @@ package cardgen
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -120,11 +121,14 @@ func (r Renderer) renderMode(ctx *renderCtx, mode game.Mode) (string, error) {
 }
 
 func (r Renderer) renderInstruction(ctx *renderCtx, instruction *game.Instruction) (string, error) {
-	primitive, err := r.renderPrimitive(ctx, instruction.Primitive)
-	if err != nil {
-		return "", err
+	var fields []string
+	if instruction.Primitive != nil {
+		primitive, err := r.renderPrimitive(ctx, instruction.Primitive)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Primitive: %s,", primitive))
 	}
-	fields := []string{fmt.Sprintf("Primitive: %s,", primitive)}
 	if instruction.Condition.Exists {
 		condition, err := r.renderEffectCondition(ctx, &instruction.Condition.Val)
 		if err != nil {
@@ -170,6 +174,17 @@ func (r Renderer) renderInstruction(ctx *renderCtx, instruction *game.Instructio
 	}
 	if instruction.TemptingOffer {
 		fields = append(fields, "TemptingOffer: true,")
+	}
+	if len(instruction.TemptingOfferBody) > 0 {
+		var bodyLits []string
+		for i := range instruction.TemptingOfferBody {
+			bodyLit, err := r.renderInstruction(ctx, &instruction.TemptingOfferBody[i])
+			if err != nil {
+				return "", err
+			}
+			bodyLits = append(bodyLits, bodyLit+",")
+		}
+		fields = append(fields, fmt.Sprintf("TemptingOfferBody: []game.Instruction{%s},", strings.Join(bodyLits, "\n")))
 	}
 	if instruction.PublishResult != "" {
 		fields = append(fields, fmt.Sprintf("PublishResult: game.ResultKey(%q),", string(instruction.PublishResult)))
@@ -796,6 +811,12 @@ func (r Renderer) renderPrimitiveTail(ctx *renderCtx, primitive game.Primitive) 
 			return "", err
 		}
 		return r.renderCantBecomeMonarch(value)
+	case game.PrimitiveGainCityBlessing:
+		value, err := assertPrimitive[game.GainCityBlessing](primitive)
+		if err != nil {
+			return "", err
+		}
+		return r.renderGainCityBlessing(value)
 	case game.PrimitiveRingTempts:
 		value, err := assertPrimitive[game.RingTempts](primitive)
 		if err != nil {

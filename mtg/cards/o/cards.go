@@ -40,6 +40,7 @@ var Cards = []cardset.Entry{
 	{Name: "Orbs of Warding", New: OrbsOfWarding},
 	{Name: "Orc General", New: OrcGeneral},
 	{Name: "Orchard Warden", New: OrchardWarden},
+	{Name: "Orcish Hellraiser", New: OrcishHellraiser},
 	{Name: "Orcish Lumberjack", New: OrcishLumberjack},
 	{Name: "Order", New: Order},
 	{Name: "Order of the Stars", New: OrderOfTheStars},
@@ -59,5 +60,6 @@ var Cards = []cardset.Entry{
 	{Name: "Ovinize", New: Ovinize},
 	{Name: "Oviya Pashiri, Sage Lifecrafter", New: OviyaPashiriSageLifecrafter},
 	{Name: "Owlbear Shepherd", New: OwlbearShepherd},
+	{Name: "Owlin Shieldmage", New: OwlinShieldmage},
 	{Name: "Ozai's Cruelty", New: OzaiSCruelty},
 }

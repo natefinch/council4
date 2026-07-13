@@ -56,7 +56,16 @@ import (
 // the number and value of spells the controller ends up casting from the exiled
 // pile is indeterminate and player-relative, which the single-target atom
 // heuristic does not model.
-const knownPrimitiveCount = 125
+//
+// RecordEchoObligation is value-neutral (no atom): it only records which player
+// has resolved an Echo permanent's upkeep obligation (CR 702.29) so later
+// upkeeps do not re-trigger; it has no card/life/board effect of its own.
+//
+// GainCityBlessing is value-neutral (no atom): granting the city's blessing sets
+// a persistent player designation whose payoff lives in the abilities that read
+// "if you have the city's blessing", not in the primitive that installs it,
+// matching BecomeMonarch and CantBecomeMonarch.
+const knownPrimitiveCount = 127
 
 // TestPrimitiveCountIsReconciled keeps a newly added resolution primitive from
 // silently falling through the translator: adding one trips this guard so its
