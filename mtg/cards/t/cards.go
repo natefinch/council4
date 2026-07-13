@@ -33,6 +33,8 @@ var Cards = []cardset.Entry{
 	{Name: "Tempered Veteran", New: TemperedVeteran},
 	{Name: "Tempest Technique", New: TempestTechnique},
 	{Name: "Temple Elder", New: TempleElder},
+	{Name: "Tempt with Bunnies", New: TemptWithBunnies},
+	{Name: "Tempt with Discovery", New: TemptWithDiscovery},
 	{Name: "Tempt with Glory", New: TemptWithGlory},
 	{Name: "Tempt with Immortality", New: TemptWithImmortality},
 	{Name: "Tempt with Reflections", New: TemptWithReflections},
