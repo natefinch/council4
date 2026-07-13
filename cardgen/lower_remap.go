@@ -229,6 +229,27 @@ func transformPrimitiveTargetIndices(primitive game.Primitive, transform targetI
 		value.Object, ok = transformObjectReference(value.Object, transform)
 		return value, ok
 	}
+	if value, ok := primitive.(game.CopyStackObject); ok {
+		value.Object, ok = transformObjectReference(value.Object, transform)
+		if !ok {
+			return nil, false
+		}
+		// Chooser, when set, is the player who creates and controls the copy
+		// (the copy-chain family); it may itself index the copied object's
+		// target list, so rebase it in step with Object.
+		if value.Chooser.Exists {
+			chooser, chooserOK := transformPlayerReference(value.Chooser.Val, transform)
+			if !chooserOK {
+				return nil, false
+			}
+			value.Chooser = opt.Val(chooser)
+		}
+		return value, true
+	}
+	if value, ok := primitive.(game.ChooseNewTargets); ok {
+		value.Object, ok = transformObjectReference(value.Object, transform)
+		return value, ok
+	}
 	if value, ok := primitive.(game.Regenerate); ok {
 		value.Object, ok = transformObjectReference(value.Object, transform)
 		return value, ok
