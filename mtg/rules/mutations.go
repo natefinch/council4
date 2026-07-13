@@ -32,6 +32,7 @@ func pushSpellToStack(g *game.Game, obj *game.StackObject, castEvent game.Event)
 func emitSpellCastEvents(g *game.Game, obj *game.StackObject, castEvent game.Event) {
 	consumeNextSpellCantBeCounteredEffects(g, obj)
 	consumeNextSpellAsThoughFlashEffects(g, obj)
+	consumeNextSpellKeywordGrantEffects(g, obj)
 	emitTargetEvents(g, obj)
 	fromZone := castEvent.FromZone
 	castCardID := castEvent.CardID

@@ -182,6 +182,13 @@ func (s *rulesPaymentState) CostModifiersForSpell(playerID game.PlayerID, card *
 	return modifiers
 }
 
+// SpellHasGrantedKeyword reports whether an active RuleEffectGrantSpellKeyword
+// confers keyword on the spell playerID is casting, letting the payment planner
+// honor a granted cost-affecting keyword (Improvise) before costs are paid.
+func (s *rulesPaymentState) SpellHasGrantedKeyword(playerID game.PlayerID, card *game.CardDef, cardID id.ID, sourceZone zone.Type, keyword game.Keyword) bool {
+	return spellGrantedKeyword(s.g, playerID, card, cardID, sourceZone, keyword)
+}
+
 // sourceSpellSelfCostModifiers resolves a spell's own dynamic cost reductions
 // ("This spell costs {N} less to cast for each <object>", "This spell costs {X}
 // less to cast, where X is <dynamic amount>", "This spell costs {N} less to cast

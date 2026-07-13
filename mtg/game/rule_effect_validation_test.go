@@ -69,6 +69,7 @@ func TestRuleEffectKindValid(t *testing.T) {
 		RuleEffectCantBeSacrificed,
 		RuleEffectCastLinkedExileForFree,
 		RuleEffectActivateAbilitiesAsThoughHaste,
+		RuleEffectGrantSpellKeyword,
 	}
 	for _, kind := range valid {
 		if !kind.Valid() {
@@ -79,7 +80,7 @@ func TestRuleEffectKindValid(t *testing.T) {
 	invalid := []RuleEffectKind{
 		RuleEffectNone,
 		-1,
-		RuleEffectActivateAbilitiesAsThoughHaste + 1,
+		RuleEffectGrantSpellKeyword + 1,
 		RuleEffectKind(1 << 20),
 	}
 	for _, kind := range invalid {
@@ -98,7 +99,7 @@ func TestValidateApplyRulePlayFromZone(t *testing.T) {
 	}
 
 	for name, kind := range map[string]RuleEffectKind{
-		"future":       RuleEffectActivateAbilitiesAsThoughHaste + 1,
+		"future":       RuleEffectGrantSpellKeyword + 1,
 		"out of range": RuleEffectKind(1 << 20),
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -122,7 +123,7 @@ func TestValidateCardDefPlayFromZone(t *testing.T) {
 	}
 
 	for name, kind := range map[string]RuleEffectKind{
-		"future":       RuleEffectActivateAbilitiesAsThoughHaste + 1,
+		"future":       RuleEffectGrantSpellKeyword + 1,
 		"out of range": RuleEffectKind(1 << 20),
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -275,6 +276,37 @@ func cardDefWithRuleEffect(effect *RuleEffect) *CardDef {
 		Name:            "Play Permission Tester",
 		StaticAbilities: []StaticAbility{{RuleEffects: []RuleEffect{*effect}}},
 	}}
+}
+
+func TestValidateGrantSpellKeywordRuleEffect(t *testing.T) {
+	t.Parallel()
+
+	valid := []RuleEffect{
+		{Kind: RuleEffectGrantSpellKeyword, AffectedController: ControllerYou, GrantedKeyword: Improvise},
+		{Kind: RuleEffectGrantSpellKeyword, AffectedController: ControllerYou, GrantedKeyword: Convoke, CardSelection: Selection{ExcludedTypes: []types.Card{types.Artifact}}},
+		{Kind: RuleEffectGrantSpellKeyword, AffectedController: ControllerYou, GrantedKeyword: Improvise, AppliesToNextSpellOnly: true},
+	}
+	for _, effect := range valid {
+		if issues := ValidateCardDef(cardDefWithRuleEffect(&effect)); len(issues) != 0 {
+			t.Fatalf("valid spell keyword grant %+v issues = %+v, want none", effect, issues)
+		}
+	}
+
+	invalid := map[string]RuleEffect{
+		"unset controller":     {Kind: RuleEffectGrantSpellKeyword, GrantedKeyword: Improvise},
+		"affects a permanent":  {Kind: RuleEffectGrantSpellKeyword, AffectedController: ControllerYou, GrantedKeyword: Improvise, AffectedSource: true},
+		"no granted keyword":   {Kind: RuleEffectGrantSpellKeyword, AffectedController: ControllerYou},
+		"unsupported keyword":  {Kind: RuleEffectGrantSpellKeyword, AffectedController: ControllerYou, GrantedKeyword: Flying},
+		"nonprinted predicate": {Kind: RuleEffectGrantSpellKeyword, AffectedController: ControllerYou, GrantedKeyword: Improvise, CardSelection: Selection{NonToken: true}},
+	}
+	for name, effect := range invalid {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			if issues := ValidateCardDef(cardDefWithRuleEffect(&effect)); !hasCardDefIssue(issues, CardDefIssueInvalidRuleEffect) && !hasCardDefIssue(issues, CardDefIssueInvalidSelection) {
+				t.Fatalf("issues = %+v, want an invalid rule-effect or selection issue", issues)
+			}
+		})
+	}
 }
 
 func TestValidatePayLifeForCommanderTaxRuleEffect(t *testing.T) {

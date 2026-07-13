@@ -17,6 +17,7 @@ var Cards = []cardset.Entry{
 	{Name: "Wall of Junk", New: WallOfJunk},
 	{Name: "Wall of One Thousand Cuts", New: WallOfOneThousandCuts},
 	{Name: "Wall of Wonder", New: WallOfWonder},
+	{Name: "Wand of the Worldsoul", New: WandOfTheWorldsoul},
 	{Name: "Wanda's Vision", New: WandaSVision},
 	{Name: "Wanderbrine Trapper", New: WanderbrineTrapper},
 	{Name: "Wandering Mind", New: WanderingMind},

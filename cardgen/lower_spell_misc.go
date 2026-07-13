@@ -1129,6 +1129,48 @@ func lowerSpellsCantBeCountered(ctx contentCtx) (game.AbilityContent, *shared.Di
 	}}}.Ability(), nil
 }
 
+// lowerGrantSpellKeyword lowers the controller-scoped, turn-scoped resolving buff
+// "The next spell you cast this turn has <keyword>." (Archway of Innovation) and
+// the all-spells form "Spells you cast this turn have <keyword>." to an ApplyRule
+// that grants the cost-affecting keyword to the controller's matching spells for
+// the rest of the turn. The next-spell-only variant sets AppliesToNextSpellOnly
+// so the grant is consumed by the single next spell the controller casts, which
+// the runtime does only when a matching spell is actually cast. Targets,
+// references, conditions, modes, keywords, a negation, an amount, an unsupported
+// keyword, or a non-controller scope fail closed.
+func lowerGrantSpellKeyword(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	keyword, ok := spellCostGrantRuntimeKeyword(effect.GrantSpellKeyword)
+	if !effect.Exact ||
+		effect.Negated ||
+		effect.Amount.Known ||
+		!ok ||
+		effect.Duration != compiler.DurationThisTurn ||
+		effect.Context != parser.EffectContextController ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.References) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		!grantSpellKeywordContentKeywordsOnly(ctx.content, effect.GrantSpellKeyword) ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported grant-spell-keyword effect",
+			"the executable source backend supports only the exact controller-scoped grant of a cost-affecting keyword to spells this turn",
+		)
+	}
+	return game.Mode{Sequence: []game.Instruction{{
+		Primitive: game.ApplyRule{
+			RuleEffects: []game.RuleEffect{{
+				Kind:                   game.RuleEffectGrantSpellKeyword,
+				AffectedController:     game.ControllerYou,
+				GrantedKeyword:         keyword,
+				AppliesToNextSpellOnly: effect.GrantSpellKeywordNextOnly,
+			}},
+			Duration: game.DurationThisTurn,
+		},
+	}}}.Ability(), nil
+}
+
 // lowerGroupMustAttack lowers the one-shot forced-attack effect "<group> attack
 // this turn if able." (Bident of Thassa: "Creatures your opponents control
 // attack this turn if able.") and its duration-scoped variant "Until your next
@@ -1413,6 +1455,9 @@ func lowerPlayerRuleOrPhaseEffect(ctx contentCtx) (game.AbilityContent, *shared.
 		return content, diagnostic, true
 	case compiler.EffectSpellsCantBeCountered:
 		content, diagnostic := lowerSpellsCantBeCountered(ctx)
+		return content, diagnostic, true
+	case compiler.EffectGrantSpellKeyword:
+		content, diagnostic := lowerGrantSpellKeyword(ctx)
 		return content, diagnostic, true
 	case compiler.EffectMustAttack:
 		if ctx.content.Effects[0].Context == parser.EffectContextTarget {
@@ -2567,4 +2612,19 @@ func referencedThatPlayerRef(target compiler.CompiledTarget) (game.PlayerReferen
 		return game.PlayerReference{}, false
 	}
 	return game.ObjectControllerReference(object), true
+}
+
+// grantSpellKeywordContentKeywordsOnly reports whether every keyword the ability
+// content carries is the parameterless cost-affecting keyword the grant confers.
+// The "has <keyword>" grant phrase surfaces the keyword atom in the ability's
+// recognized keyword content, so it is expected; any other keyword, or a
+// parameterized one, fails closed.
+func grantSpellKeywordContentKeywordsOnly(content compiler.AbilityContent, granted parser.KeywordKind) bool {
+	for i := range content.Keywords {
+		keyword := content.Keywords[i]
+		if keyword.Kind != granted || keyword.ParameterKind != parser.KeywordParameterNone {
+			return false
+		}
+	}
+	return true
 }

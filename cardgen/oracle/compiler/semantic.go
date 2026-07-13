@@ -1867,6 +1867,7 @@ const (
 	EffectWinGame
 	EffectPreventDamage
 	EffectSpellsCantBeCountered
+	EffectGrantSpellKeyword
 	EffectEnterAsCopy
 	EffectPunisherLoseLife
 	EffectMassReanimationExchange
@@ -3182,6 +3183,15 @@ type CompiledEffect struct {
 	// EffectSpellsCantBeCountered clause that limits the buff to the single next
 	// spell the controller casts rather than every spell cast this turn.
 	SpellsCantBeCounteredNextOnly bool
+	// GrantSpellKeyword mirrors the parser field for an EffectGrantSpellKeyword
+	// clause: the cost-affecting keyword the buff confers on the spells the
+	// controller casts ("The next spell you cast this turn has improvise.",
+	// Archway of Innovation). KeywordUnknown for every other effect.
+	GrantSpellKeyword parser.KeywordKind
+	// GrantSpellKeywordNextOnly mirrors the parser flag for an
+	// EffectGrantSpellKeyword clause that limits the grant to the single next
+	// spell the controller casts rather than every spell cast this turn.
+	GrantSpellKeywordNextOnly bool
 	// DoublePower and DoubleToughness mirror the parser flags for an EffectDouble
 	// whose object is "the power[ and toughness] of <group>" (Unnatural Growth).
 	// Lowering reads them together with StaticSubject to emit a power/toughness

@@ -137,6 +137,8 @@ func lowerStaticDeclarations(
 				ok = appendStaticCastAsThoughFlashDeclaration(&body, declaration)
 			case compiler.StaticDeclarationGraveyardCardKeywordGrant:
 				ok = appendStaticGraveyardCardKeywordGrantDeclaration(&body, declaration)
+			case compiler.StaticDeclarationSpellKeywordGrant:
+				ok = appendStaticSpellKeywordGrantDeclaration(&body, declaration)
 			case compiler.StaticDeclarationOpeningHandPlay:
 				ok = appendStaticOpeningHandPlayDeclaration(&body, declaration)
 			case compiler.StaticDeclarationOpponentEnteringTriggerSuppression:
@@ -455,6 +457,9 @@ func staticDeclarationPayloadValid(declaration compiler.StaticDeclaration) bool 
 	if declaration.GraveyardGrant != nil {
 		payloads++
 	}
+	if declaration.SpellGrant != nil {
+		payloads++
+	}
 	if declaration.PerTurnLimit != nil {
 		payloads++
 	}
@@ -511,6 +516,8 @@ func staticDeclarationPayloadValid(declaration compiler.StaticDeclaration) bool 
 		return declaration.CastAsThoughFlash != nil
 	case compiler.StaticDeclarationGraveyardCardKeywordGrant:
 		return declaration.GraveyardGrant != nil
+	case compiler.StaticDeclarationSpellKeywordGrant:
+		return declaration.SpellGrant != nil
 	case compiler.StaticDeclarationOpeningHandPlay:
 		return declaration.OpeningHandPlay != nil
 	case compiler.StaticDeclarationOpponentEnteringTriggerSuppression:

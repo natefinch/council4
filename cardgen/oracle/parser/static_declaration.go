@@ -45,6 +45,7 @@ const (
 	StaticDeclarationContinuousQuotedAbilityGrant         StaticDeclarationKind = "StaticDeclarationContinuousQuotedAbilityGrant"
 	StaticDeclarationAbilityCostSet                       StaticDeclarationKind = "StaticDeclarationAbilityCostSet"
 	StaticDeclarationGraveyardCardKeywordGrant            StaticDeclarationKind = "StaticDeclarationGraveyardCardKeywordGrant"
+	StaticDeclarationSpellKeywordGrant                    StaticDeclarationKind = "StaticDeclarationSpellKeywordGrant"
 	StaticDeclarationDrawLimit                            StaticDeclarationKind = "StaticDeclarationDrawLimit"
 	StaticDeclarationCastLimit                            StaticDeclarationKind = "StaticDeclarationCastLimit"
 	StaticDeclarationOpeningHandPlay                      StaticDeclarationKind = "StaticDeclarationOpeningHandPlay"
@@ -129,6 +130,11 @@ const (
 	// graveyard have <keyword>." keyword-grant declaration affects (Six, Wrenn
 	// and Six Emblem). CardFilter constrains the affected cards by card type.
 	StaticDeclarationSubjectControllerGraveyard StaticDeclarationSubjectKind = "StaticDeclarationSubjectControllerGraveyard"
+	// StaticDeclarationSubjectControllerSpells names the spells the controller
+	// casts, the affected group of "[<filter>] spells you cast have <keyword>."
+	// (Inspiring Statuary, Ironheart, Clever Champion). Its members are matched at
+	// runtime by the lowered rule effect's card selection when a spell is cast.
+	StaticDeclarationSubjectControllerSpells StaticDeclarationSubjectKind = "StaticDeclarationSubjectControllerSpells"
 )
 
 // StaticDeclarationPlayerRuleKind identifies the closed player-scoped rule a
@@ -255,6 +261,14 @@ const (
 	// cards ("instant and sorcery cards in your graveyard", Wrenn and Six
 	// Emblem).
 	StaticDeclarationCardFilterInstantOrSorcery StaticDeclarationCardFilterKind = "StaticDeclarationCardFilterInstantOrSorcery"
+	// StaticDeclarationCardFilterNonartifact selects nonartifact cards
+	// ("Nonartifact spells you cast have improvise.", Inspiring Statuary): cards
+	// whose type line does not include Artifact.
+	StaticDeclarationCardFilterNonartifact StaticDeclarationCardFilterKind = "StaticDeclarationCardFilterNonartifact"
+	// StaticDeclarationCardFilterNoncreature selects noncreature cards
+	// ("Noncreature spells you cast have improvise.", Ironheart, Clever Champion):
+	// cards whose type line does not include Creature.
+	StaticDeclarationCardFilterNoncreature StaticDeclarationCardFilterKind = "StaticDeclarationCardFilterNoncreature"
 )
 
 // StaticDeclarationCostModifierKind identifies the closed cost-modifier shape a
@@ -1299,6 +1313,9 @@ func parseStaticDeclarations(tokens []shared.Token, quoted []Delimited, atoms At
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseStaticGraveyardCardKeywordGrantDeclaration(tokens, atoms); ok {
+		return []StaticDeclarationSyntax{declaration}
+	}
+	if declaration, ok := parseStaticSpellKeywordGrantDeclaration(tokens, atoms); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseStaticPermanentAbilityGrantDeclaration(tokens, quoted, conditions); ok {
