@@ -134,6 +134,7 @@ var Cards = []cardset.Entry{
 	{Name: "Conqueror's Pledge", New: ConquerorSPledge},
 	{Name: "Conservator", New: Conservator},
 	{Name: "Consuming Bonfire", New: ConsumingBonfire},
+	{Name: "Consuming Vortex", New: ConsumingVortex},
 	{Name: "Contagion", New: Contagion},
 	{Name: "Contagion Engine", New: ContagionEngine},
 	{Name: "Containment Protocol", New: ContainmentProtocol},

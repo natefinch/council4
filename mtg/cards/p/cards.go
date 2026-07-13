@@ -99,6 +99,7 @@ var Cards = []cardset.Entry{
 	{Name: "Psionic Snoop", New: PsionicSnoop},
 	{Name: "Psychic Impetus", New: PsychicImpetus},
 	{Name: "Psychic Overload", New: PsychicOverload},
+	{Name: "Psychic Puppetry", New: PsychicPuppetry},
 	{Name: "Psychic Venom", New: PsychicVenom},
 	{Name: "Psychotic Fury", New: PsychoticFury},
 	{Name: "Psychotrope Thallid", New: PsychotropeThallid},

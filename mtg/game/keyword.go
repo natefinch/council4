@@ -152,6 +152,14 @@ type FlashbackKeyword struct {
 	Cost cost.Mana
 }
 
+// SpliceKeyword parameterizes the "Splice onto Arcane" keyword (CR 702.47). Cost
+// is the mana splice cost paid as an additional cost of casting the Arcane host
+// spell to add this card's spell effects (and targets) to it. Only the mana-cost
+// form is modeled; the spliced card is revealed and stays in the caster's hand.
+type SpliceKeyword struct {
+	Cost cost.Mana
+}
+
 // PlotKeyword parameterizes the Plot mana cost (CR 718). Cost is the mana paid to
 // plot the card (exiling it from hand); a plotted card is later cast from exile
 // without paying its mana cost.
@@ -273,6 +281,7 @@ func (KickerKeyword) isKeywordAbility()           {}
 func (GiftKeyword) isKeywordAbility()             {}
 func (MadnessKeyword) isKeywordAbility()          {}
 func (FlashbackKeyword) isKeywordAbility()        {}
+func (SpliceKeyword) isKeywordAbility()           {}
 func (PlotKeyword) isKeywordAbility()             {}
 func (ForetellKeyword) isKeywordAbility()         {}
 func (MorphKeyword) isKeywordAbility()            {}
@@ -312,6 +321,7 @@ func (KickerKeyword) keyword() Keyword     { return Kicker }
 func (GiftKeyword) keyword() Keyword       { return Gift }
 func (MadnessKeyword) keyword() Keyword    { return Madness }
 func (FlashbackKeyword) keyword() Keyword  { return Flashback }
+func (SpliceKeyword) keyword() Keyword     { return Splice }
 func (PlotKeyword) keyword() Keyword       { return Plot }
 func (ForetellKeyword) keyword() Keyword   { return Foretell }
 func (MorphKeyword) keyword() Keyword      { return Morph }
@@ -390,6 +400,10 @@ func (ability MadnessKeyword) cloneKeywordAbility() KeywordAbility {
 	return ability
 }
 func (ability FlashbackKeyword) cloneKeywordAbility() KeywordAbility {
+	ability.Cost = append(cost.Mana(nil), ability.Cost...)
+	return ability
+}
+func (ability SpliceKeyword) cloneKeywordAbility() KeywordAbility {
 	ability.Cost = append(cost.Mana(nil), ability.Cost...)
 	return ability
 }

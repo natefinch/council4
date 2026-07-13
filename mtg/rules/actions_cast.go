@@ -97,6 +97,16 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 	if !ok {
 		panic("validated spell targets could not be segmented")
 	}
+	// Splice onto Arcane (CR 702.47): as an Arcane spell is cast from hand for its
+	// normal cost, the caster may reveal splice cards in hand, pay their mana
+	// splice costs as additional costs, and append their spell effects to this
+	// spell. Overloaded casts and non-Arcane spells are never spliceable. When no
+	// card is spliced these are all nil, leaving the cast unchanged.
+	var splice spliceCastResult
+	if sourceZone == zone.Hand && !cast.Overloaded && spellIsArcane(spellDef) {
+		splicePermissions := castPermissionsForZone(g, playerID, card.ID, sourceZone, cast.Face)
+		splice = e.chooseSpliceOntoArcane(g, playerID, card.ID, spellDef, cast, splicePermissions, agents, log)
+	}
 	// payLifeFromTop reads the card's position in its source zone (the top of
 	// the library), so it must be determined before the card is moved to the
 	// stack below.
@@ -170,6 +180,9 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		GiftRecipient:                 cast.GiftRecipient,
 		Overloaded:                    cast.Overloaded,
 		SourceZone:                    sourceZone,
+		SplicedContent:                splice.contents,
+		SplicedTargets:                splice.targets,
+		SplicedTargetCounts:           splice.targetCounts,
 		CastDuringControllerMainPhase: playerID == g.Turn.ActivePlayer && g.Turn.IsMainPhase(),
 	}
 	if !removeCastSourceCard(g, castSourcePlayer(g, player, cast.CardID, sourceZone), cast.CardID, sourceZone) {
@@ -280,6 +293,7 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		CastPermissions: permissions,
 		Targets:         cast.Targets,
 		Prefs:           prefs,
+		SpliceManaCosts: splice.manaCosts,
 	}
 	switch {
 	case cast.Overloaded:

@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,713 of 32,501 cards eligible for paper support (54.5%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,729 of 32,501 cards eligible for paper support (54.5%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1495,6 +1495,7 @@ Council4 currently supports **17,713 of 32,501 cards eligible for paper support 
 - Bleed Dry
 - Bleeding Edge
 - Bleeding Woods
+- Blessed Breath
 - Blessed Hippogriff // Tyr's Blessing
 - Blessed Light
 - Blessed Orator
@@ -2911,6 +2912,7 @@ Council4 currently supports **17,713 of 32,501 cards eligible for paper support 
 - Consuming Bonfire
 - Consuming Corruption
 - Consuming Fervor
+- Consuming Vortex
 - Consumptive Goo
 - Contact Other Plane
 - Contagion
@@ -3321,6 +3323,7 @@ Council4 currently supports **17,713 of 32,501 cards eligible for paper support 
 - Damnable Pact
 - Damnation
 - Damning Verdict
+- Dampen Thought
 - Dampening Pulse
 - Dance of Shadows
 - Dance of the Tumbleweeds
@@ -3693,6 +3696,7 @@ Council4 currently supports **17,713 of 32,501 cards eligible for paper support 
 - Desperate Farmer // Depraved Harvester
 - Desperate Lunge
 - Desperate Ravings
+- Desperate Ritual
 - Desperate Sentry
 - Despise
 - Despoil
@@ -4793,6 +4797,7 @@ Council4 currently supports **17,713 of 32,501 cards eligible for paper support 
 - Everbark Shaman
 - Everflowing Chalice
 - Everglades
+- Evermind
 - Evernight Shade
 - Evie Frye
 - Evil Presence
@@ -6064,6 +6069,7 @@ Council4 currently supports **17,713 of 32,501 cards eligible for paper support 
 - Glacial Fortress
 - Glacial Grasp
 - Glacial Plating
+- Glacial Ray
 - Glacial Revelation
 - Glacial Stalker
 - Glacial Wall
@@ -6416,6 +6422,7 @@ Council4 currently supports **17,713 of 32,501 cards eligible for paper support 
 - Gorilla Warrior
 - Goring Ceratops
 - Gorion, Wise Mentor
+- Goryo's Vengeance
 - Gossamer Phantasm
 - Gothmog, Morgul Lieutenant
 - Grabby Giant // That's Mine
@@ -7043,6 +7050,7 @@ Council4 currently supports **17,713 of 32,501 cards eligible for paper support 
 - Hidden Stockpile
 - Hidden Volcano
 - Hideous End
+- Hideous Laughter
 - Hideous Visage
 - Hieroglyphic Illumination
 - Hieromancer's Cage
@@ -7680,6 +7688,7 @@ Council4 currently supports **17,713 of 32,501 cards eligible for paper support 
 - Into the Core
 - Into the Fae Court
 - Into the Flood Maw
+- Into the Fray
 - Into the Maw of Hell
 - Into the Roil
 - Into the Time Vortex
@@ -8298,6 +8307,7 @@ Council4 currently supports **17,713 of 32,501 cards eligible for paper support 
 - Kodama of the North Tree
 - Kodama of the South Tree
 - Kodama of the West Tree
+- Kodama's Might
 - Kodama's Reach
 - Koilos Roc
 - Kokusho, the Evening Star
@@ -8655,6 +8665,7 @@ Council4 currently supports **17,713 of 32,501 cards eligible for paper support 
 - Lifespinner
 - Lifespring Druid
 - Lifetap
+- Lifted by Clouds
 - Light of Hope
 - Light of Promise
 - Light of the Legion
@@ -11371,6 +11382,7 @@ Council4 currently supports **17,713 of 32,501 cards eligible for paper support 
 - Psychic Impetus
 - Psychic Membrane
 - Psychic Overload
+- Psychic Puppetry
 - Psychic Strike
 - Psychic Symbiont
 - Psychic Venom
@@ -14019,6 +14031,7 @@ Council4 currently supports **17,713 of 32,501 cards eligible for paper support 
 - Souldrinker
 - Soulherder
 - Soulknife Spy
+- Soulless Revival
 - Soulmender
 - Soulreaper of Mogis
 - Soulscour
@@ -14267,6 +14280,7 @@ Council4 currently supports **17,713 of 32,501 cards eligible for paper support 
 - Spirit Weaver
 - Spirited Companion
 - Spiritual Guardian
+- Spiritual Visit
 - Spit Flame
 - Spite // Malice
 - Spite of Mogis
@@ -16705,6 +16719,7 @@ Council4 currently supports **17,713 of 32,501 cards eligible for paper support 
 - Visions of Brutality
 - Visions of Villainy
 - Vital Splicer
+- Vital Surge
 - Vitality Charm
 - Vitalize
 - Vitalizing Wind
@@ -17097,6 +17112,7 @@ Council4 currently supports **17,713 of 32,501 cards eligible for paper support 
 - Weaponize the Monsters
 - Weapons Trainer
 - Wear // Tear
+- Wear Away
 - Wear Down
 - Weaselback Redcap
 - Weather Maker

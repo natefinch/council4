@@ -242,6 +242,17 @@ const (
 	// body. Appended at the end of the enum so existing keyword ordinals are
 	// unchanged.
 	Echo
+	// Splice (CR 702.47) is the "Splice onto Arcane" keyword printed on some
+	// Arcane instants: "Splice onto Arcane <cost> (As you cast an Arcane spell,
+	// you may reveal this card from your hand and pay its splice cost. If you do,
+	// add this card's effects to that spell.)" It is modeled by SpliceKeyword,
+	// which carries the splice mana cost. As an Arcane spell is cast, the rules
+	// layer offers each spliceable card in hand, pays its splice cost as an
+	// additional cost, keeps the card in hand (only revealed), and appends its
+	// spell effects and targets to the host spell so they resolve together and
+	// copies of the host copy the combined text. Appended at the end of the enum
+	// so existing keyword ordinals are unchanged.
+	Splice
 	// KeywordCount is one greater than the largest real keyword value. It sizes
 	// compact keyword sets; it is not itself a keyword.
 	KeywordCount

@@ -44,6 +44,10 @@ type SpellRequest struct {
 	// more to cast.") can match. It is empty when the spell has no targets or is
 	// being cost-checked before targets are announced.
 	Targets []game.Target
+	// SpliceManaCosts are the mana splice costs of cards spliced onto this Arcane
+	// spell (CR 702.47), each paid as an additional cost of casting it. They are
+	// added to every payable cost option. It is empty for spells with no splices.
+	SpliceManaCosts []cost.Mana
 }
 
 // AbilityRequest bundles all parameters needed to check or pay activated

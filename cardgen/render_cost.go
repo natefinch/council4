@@ -258,6 +258,13 @@ func (r Renderer) renderKeywordAbility(ctx *renderCtx, keyword game.KeywordAbili
 		}
 		return fmt.Sprintf("game.FlashbackKeyword{Cost: %s}", flashbackCost), nil
 	}
+	if splice, ok := keyword.(game.SpliceKeyword); ok {
+		spliceCost, err := r.renderManaCost(ctx, splice.Cost)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.SpliceKeyword{Cost: %s}", spliceCost), nil
+	}
 	if plot, ok := keyword.(game.PlotKeyword); ok {
 		plotCost, err := r.renderManaCost(ctx, plot.Cost)
 		if err != nil {

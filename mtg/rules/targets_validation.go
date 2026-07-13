@@ -309,6 +309,100 @@ func spellHasAnyLegalTargets(g *game.Game, card *game.CardDef, obj *game.StackOb
 	return stackObjectHasAnyLegalTargetsForSpecs(g, card, 0, spellTargetSpecs(card, obj.ChosenModes, castBranchForObject(obj)), obj)
 }
 
+// spellHasAnyLegalTargetsWithSplices rechecks the resolving Arcane spell's own
+// targets together with every spliced card's targets (CR 608.2b, CR 702.47).
+// Spliced instructions become part of the host spell (CR 702.47e), so the whole
+// spell has legal targets iff no component requires targets or at least one
+// host-or-spliced target is still legal. Targets that became illegal are
+// deferred in place — host targets in obj.Targets, each spliced card's targets
+// in its matching obj.SplicedTargets entry — so resolution skips only those
+// illegal instances. If every host and spliced target is illegal the whole spell
+// is countered. Copies resolve through the same path, so a copy of a spliced
+// Arcane spell rechecks its copied spliced targets identically.
+func spellHasAnyLegalTargetsWithSplices(g *game.Game, card *game.CardDef, obj *game.StackObject) bool {
+	hostCard := card
+	if obj.Overloaded && card.Overload.Exists {
+		hostCard = overloadSpellDef(card)
+	}
+	event := stackObjectTriggerEvent(obj)
+	host := rescreenTargetsAtResolution(g, obj.Controller, hostCard, 0, event, obj.XValue,
+		spellTargetSpecs(hostCard, obj.ChosenModes, castBranchForObject(obj)), obj.Targets, obj.TargetCounts)
+	if !host.valid {
+		return false
+	}
+	obj.Targets = host.targets
+	hadTargets := host.hadTargets
+	anyLegal := host.anyLegal
+	for i := range obj.SplicedContent {
+		var splicedTargets []game.Target
+		if i < len(obj.SplicedTargets) {
+			splicedTargets = obj.SplicedTargets[i]
+		}
+		var splicedCounts []int
+		if i < len(obj.SplicedTargetCounts) {
+			splicedCounts = obj.SplicedTargetCounts[i]
+		}
+		spliced := rescreenTargetsAtResolution(g, obj.Controller, hostCard, 0, event, obj.XValue,
+			splicedContentTargetSpecs(obj.SplicedContent[i]), splicedTargets, splicedCounts)
+		if !spliced.valid {
+			// Invalid recorded counts indicate a card-definition bug; fail closed
+			// by treating the spliced text as having only illegal targets so it
+			// neither keeps the spell alive nor applies its effect.
+			if i < len(obj.SplicedTargets) {
+				obj.SplicedTargets[i] = deferAllTargets(splicedTargets)
+			}
+			hadTargets = hadTargets || len(splicedTargets) > 0
+			continue
+		}
+		if i < len(obj.SplicedTargets) {
+			obj.SplicedTargets[i] = spliced.targets
+		}
+		hadTargets = hadTargets || spliced.hadTargets
+		anyLegal = anyLegal || spliced.anyLegal
+	}
+	if !hadTargets {
+		return true
+	}
+	return anyLegal
+}
+
+// splicedContentTargetSpecs returns the target specs an Arcane spell's spliced
+// text announces targets against. Spliced content is a spell ability's content
+// captured verbatim, so its specs are derived exactly as a non-modal spell's are
+// (CR 702.47e). This lets the resolution recheck and copy retarget reuse the
+// same legality rules the splice used when its targets were first chosen.
+func splicedContentTargetSpecs(content game.AbilityContent) []game.TargetSpec {
+	if len(content.Modes) == 0 || content.IsModal() {
+		return append([]game.TargetSpec(nil), content.SharedTargets...)
+	}
+	specs := append([]game.TargetSpec(nil), content.SharedTargets...)
+	return append(specs, content.Modes[0].Targets...)
+}
+
+// deferAllTargets replaces every target with a deferred marker, used to fail a
+// spliced target set closed when its recorded counts are invalid.
+func deferAllTargets(targets []game.Target) []game.Target {
+	if len(targets) == 0 {
+		return targets
+	}
+	deferred := make([]game.Target, len(targets))
+	for i, target := range targets {
+		deferred[i] = game.DeferredTargetFrom(target)
+	}
+	return deferred
+}
+
+// stackObjectTriggerEvent returns the triggering event a resolving triggered
+// ability carries, or a zero event for spells and events without one, so
+// event-relative target predicates recheck against the same event that the
+// original enumeration used.
+func stackObjectTriggerEvent(obj *game.StackObject) game.Event {
+	if obj.HasTriggerEvent {
+		return obj.TriggerEvent
+	}
+	return game.Event{}
+}
+
 func bodyHasAnyLegalTargetsFromSourceObject(g *game.Game, source *game.CardDef, sourceObjectID id.ID, body game.Ability, obj *game.StackObject) bool {
 	if body == nil {
 		return len(obj.Targets) == 0
@@ -327,43 +421,71 @@ func bodyHasAnyLegalTargetsFromSourceObject(g *game.Game, source *game.CardDef, 
 // the caller does not resolve it (CR 608.2b: it is removed from the stack and, if
 // a spell, put into its owner's graveyard).
 func stackObjectHasAnyLegalTargetsForSpecs(g *game.Game, source *game.CardDef, sourceObjectID id.ID, specs []game.TargetSpec, obj *game.StackObject) bool {
-	if len(specs) == 0 {
-		return true
-	}
-	counts, ok := resolutionTargetCounts(specs, obj.TargetCounts, len(obj.Targets))
-	if !ok {
+	recheck := rescreenTargetsAtResolution(g, obj.Controller, source, sourceObjectID, stackObjectTriggerEvent(obj), obj.XValue, specs, obj.Targets, obj.TargetCounts)
+	if !recheck.valid {
 		return false
 	}
-	if len(obj.Targets) == 0 {
+	obj.Targets = recheck.targets
+	if !recheck.hadTargets {
 		return true
 	}
-	targets := append([]game.Target(nil), obj.Targets...)
-	// A resolving triggered ability carries its triggering event on the stack
-	// object; thread it into resolution-time legality so "that player" style
-	// predicates (Garland, Royal Kidnapper) resolve against the opponent who
-	// caused the trigger rather than failing closed. Spells and events without a
-	// trigger event contribute a zero event, matching prior behaviour.
-	var triggerEvent game.Event
-	if obj.HasTriggerEvent {
-		triggerEvent = obj.TriggerEvent
+	return recheck.anyLegal
+}
+
+// resolutionTargetRecheck carries the outcome of rechecking one target set at
+// resolution: the possibly-mutated targets (illegal ones replaced with deferred
+// markers), whether the specs required targets that were present, whether at
+// least one remains legal, and whether the recorded counts were valid.
+type resolutionTargetRecheck struct {
+	targets    []game.Target
+	hadTargets bool
+	anyLegal   bool
+	valid      bool
+}
+
+// rescreenTargetsAtResolution re-evaluates targets against specs at resolution
+// (CR 608.2b), replacing targets that are no longer legal with deferred markers
+// so resolution skips their effect on those instances. It is shared by the host
+// spell/ability recheck and by the per-splice recheck of an Arcane spell's
+// spliced text (CR 702.47), which reuses the identical legality rules.
+func rescreenTargetsAtResolution(
+	g *game.Game,
+	controller game.PlayerID,
+	source *game.CardDef,
+	sourceObjectID id.ID,
+	triggerEvent game.Event,
+	xValue int,
+	specs []game.TargetSpec,
+	targets []game.Target,
+	recordedCounts []int,
+) resolutionTargetRecheck {
+	if len(specs) == 0 {
+		return resolutionTargetRecheck{targets: targets, valid: true}
 	}
+	counts, ok := resolutionTargetCounts(specs, recordedCounts, len(targets))
+	if !ok {
+		return resolutionTargetRecheck{targets: targets}
+	}
+	if len(targets) == 0 {
+		return resolutionTargetRecheck{targets: targets, valid: true}
+	}
+	rechecked := append([]game.Target(nil), targets...)
 	anyLegal := false
 	targetIndex := 0
 	for specIndex := range specs {
 		spec := normalizeTargetSpec(&specs[specIndex])
 		for range counts[specIndex] {
-			target := targets[targetIndex]
-			if targetLegalForSpecAtResolution(g, obj.Controller, source, sourceObjectID, triggerEvent, &spec, target) &&
-				(!spec.ManaValueAtMostX || targetManaValueAtMost(g, target, obj.XValue)) {
+			target := rechecked[targetIndex]
+			if targetLegalForSpecAtResolution(g, controller, source, sourceObjectID, triggerEvent, &spec, target) &&
+				(!spec.ManaValueAtMostX || targetManaValueAtMost(g, target, xValue)) {
 				anyLegal = true
 			} else {
-				targets[targetIndex] = game.DeferredTargetFrom(target)
+				rechecked[targetIndex] = game.DeferredTargetFrom(target)
 			}
 			targetIndex++
 		}
 	}
-	obj.Targets = targets
-	return anyLegal
+	return resolutionTargetRecheck{targets: rechecked, hadTargets: true, anyLegal: anyLegal, valid: true}
 }
 
 func resolutionTargetCounts(specs []game.TargetSpec, recorded []int, targetCount int) ([]int, bool) {

@@ -54,6 +54,7 @@ var Cards = []cardset.Entry{
 	{Name: "Visage of Bolas", New: VisageOfBolas},
 	{Name: "Vision of Love", New: VisionOfLove},
 	{Name: "Visions of Villainy", New: VisionsOfVillainy},
+	{Name: "Vital Surge", New: VitalSurge},
 	{Name: "Vitaspore Thallid", New: VitasporeThallid},
 	{Name: "Vivi's Persistence", New: ViviSPersistence},
 	{Name: "Vivien Reid", New: VivienReid},

@@ -50,6 +50,7 @@ var Cards = []cardset.Entry{
 	{Name: "Intervene", New: Intervene},
 	{Name: "Into the Fae Court", New: IntoTheFaeCourt},
 	{Name: "Into the Flood Maw", New: IntoTheFloodMaw},
+	{Name: "Into the Fray", New: IntoTheFray},
 	{Name: "Into the Wilds", New: IntoTheWilds},
 	{Name: "Invasion of Ixalan", New: InvasionOfIxalan},
 	{Name: "Invasion of Kylem", New: InvasionOfKylem},

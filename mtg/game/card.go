@@ -524,6 +524,20 @@ func (f *CardFace) FlashbackCost() (cost.Mana, bool) {
 	return nil, false
 }
 
+// SpliceCost returns the "Splice onto Arcane" mana cost on this face (CR 702.47),
+// or (nil, false) when the face has no Splice keyword. It is the additional mana
+// cost paid to splice this card's effects onto an Arcane spell being cast.
+func (f *CardFace) SpliceCost() (cost.Mana, bool) {
+	for i := range f.StaticAbilities {
+		if ka, ok := BodyKeywordAbility(&f.StaticAbilities[i], Splice); ok {
+			if splice, ok := ka.(SpliceKeyword); ok {
+				return splice.Cost, true
+			}
+		}
+	}
+	return nil, false
+}
+
 // PlotCost returns the Plot mana cost on this face (CR 718), or (nil, false) when
 // the face has no Plot keyword.
 func (f *CardFace) PlotCost() (cost.Mana, bool) {
