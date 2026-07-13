@@ -565,6 +565,8 @@ func renderEventKind(event game.EventKind) (string, error) {
 		return "game.EventCardPlayedFromExile", nil
 	case game.EventLandPlayed:
 		return "game.EventLandPlayed", nil
+	case game.EventGotCityBlessing:
+		return "game.EventGotCityBlessing", nil
 	default:
 		return "", fmt.Errorf("render: unsupported event kind %d", event)
 	}

@@ -1386,6 +1386,12 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		if !reflect.DeepEqual(payload, RuleEffect{}) {
 			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "opponent entering-trigger suppression does not accept additional payload")
 		}
+	case RuleEffectAscend:
+		payload := *effect
+		payload.Kind = RuleEffectNone
+		if !reflect.DeepEqual(payload, RuleEffect{}) {
+			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "ascend does not accept additional payload")
+		}
 	case RuleEffectManaProductionMultiplier:
 		payload := *effect
 		payload.Kind = RuleEffectNone

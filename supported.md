@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,701 of 32,501 cards eligible for paper support (54.5%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,713 of 32,501 cards eligible for paper support (54.5%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -452,6 +452,7 @@ Council4 currently supports **17,701 of 32,501 cards eligible for paper support 
 - Ancient Tomb
 - Ancient Ziggurat
 - Andradite Leech
+- Andúril, Narsil Reforged
 - Angel
 - Angel
 - Angel
@@ -3464,6 +3465,7 @@ Council4 currently supports **17,701 of 32,501 cards eligible for paper support 
 - Deadapult
 - Deadbridge Goliath
 - Deadbridge Shaman
+- Deadeye Brawler
 - Deadeye Duelist
 - Deadeye Harpooner
 - Deadeye Plunderers
@@ -4221,6 +4223,7 @@ Council4 currently supports **17,701 of 32,501 cards eligible for paper support 
 - Durable Handicraft
 - Duress
 - Durkwood Boars
+- Dusk Charger
 - Dusk Feaster
 - Dusk Imp
 - Dusk Legion Dreadnought
@@ -7447,6 +7450,7 @@ Council4 currently supports **17,701 of 32,501 cards eligible for paper support 
 - Illusory Ambusher
 - Illusory Wrappings
 - Illustrious Historian
+- Illustrious Wanderglyph
 - Illvoi Galeblade
 - Illvoi Light Jammer
 - Illvoi Operative
@@ -12012,6 +12016,7 @@ Council4 currently supports **17,701 of 32,501 cards eligible for paper support 
 - Resourceful Return
 - Respite
 - Resplendent Angel
+- Resplendent Griffin
 - Resplendent Mentor
 - Response // Resurgence
 - Rest in Peace
@@ -12938,6 +12943,7 @@ Council4 currently supports **17,701 of 32,501 cards eligible for paper support 
 - Secret Passage
 - Secret Rendezvous
 - Secrets of the Dead
+- Secrets of the Golden City
 - Secrets of the Key
 - Secure Detention
 - Secure the Scene
@@ -13659,6 +13665,7 @@ Council4 currently supports **17,701 of 32,501 cards eligible for paper support 
 - Skyline Despot
 - Skyline Predator
 - Skymarch Bloodletter
+- Skymarcher Aspirant
 - Skymark Roc
 - Skyraker Giant
 - Skyrider Elf
@@ -13859,6 +13866,7 @@ Council4 currently supports **17,701 of 32,501 cards eligible for paper support 
 - Snowfield Sinkhole
 - Snowhorn Rider
 - Snowmelt Stag
+- Snubhorn Sentry
 - Snuff Out
 - So Shiny
 - Soaring Drake
@@ -14215,6 +14223,7 @@ Council4 currently supports **17,701 of 32,501 cards eligible for paper support 
 - Spire of Industry
 - Spire Owl
 - Spire Patrol
+- Spire Winder
 - Spirebluff Canal
 - Spireside Infiltrator
 - Spirit
@@ -14593,6 +14602,7 @@ Council4 currently supports **17,701 of 32,501 cards eligible for paper support 
 - Storm Fleet Pyromancer
 - Storm Fleet Sprinter
 - Storm Fleet Spy
+- Storm Fleet Swashbuckler
 - Storm Front
 - Storm God's Oracle
 - Storm Herd
@@ -15234,6 +15244,7 @@ Council4 currently supports **17,701 of 32,501 cards eligible for paper support 
 - Temur War Shaman
 - Tender Wildguide
 - Tenderize
+- Tendershoot Dryad
 - Tendo Ice Bridge
 - Tendrils of Agony
 - Tendrils of Corruption
@@ -17077,6 +17088,7 @@ Council4 currently supports **17,701 of 32,501 cards eligible for paper support 
 - Wayward Guide-Beast
 - Wayward Servant
 - Wayward Soul
+- Wayward Swordtooth
 - Weakness
 - Weakstone
 - Weakstone's Subjugation

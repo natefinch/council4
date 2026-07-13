@@ -20,6 +20,7 @@ const (
 	KeywordUnknown          KeywordKind = ""
 	KeywordAffinity         KeywordKind = "KeywordAffinity"
 	KeywordAnnihilator      KeywordKind = "KeywordAnnihilator"
+	KeywordAscend           KeywordKind = "KeywordAscend"
 	KeywordBanding          KeywordKind = "KeywordBanding"
 	KeywordBloodthirst      KeywordKind = "KeywordBloodthirst"
 	KeywordCascade          KeywordKind = "KeywordCascade"
@@ -228,6 +229,7 @@ const (
 var keywordNames = map[KeywordKind]string{
 	KeywordAffinity:            "Affinity",
 	KeywordAnnihilator:         "Annihilator",
+	KeywordAscend:              "Ascend",
 	KeywordBanding:             "Banding",
 	KeywordBloodthirst:         "Bloodthirst",
 	KeywordCascade:             "Cascade",
@@ -385,6 +387,7 @@ var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordArtifactLandcycling, Words: []string{"artifact", "landcycling"}},
 	{Kind: KeywordAffinity, Words: []string{"affinity"}},
 	{Kind: KeywordAnnihilator, Words: []string{"annihilator"}},
+	{Kind: KeywordAscend, Words: []string{"ascend"}},
 	{Kind: KeywordBanding, Words: []string{"banding"}},
 	{Kind: KeywordBloodthirst, Words: []string{"bloodthirst"}},
 	{Kind: KeywordCascade, Words: []string{"cascade"}},

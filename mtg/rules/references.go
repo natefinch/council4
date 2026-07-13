@@ -404,6 +404,7 @@ func triggeringEventPlayer(event game.Event) (game.PlayerID, bool) {
 		game.EventLifeLost,
 		game.EventLibrarySearched,
 		game.EventBecameMonarch,
+		game.EventGotCityBlessing,
 		game.EventCardPlayedFromExile:
 		return event.Player, true
 	case game.EventDamageDealt:

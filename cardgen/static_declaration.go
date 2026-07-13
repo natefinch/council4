@@ -78,7 +78,8 @@ func lowerStaticDeclarations(
 				}
 				conditionContext := conditionContextStatic
 				if declaration.Kind == compiler.StaticDeclarationRule &&
-					!isLivePlayerDesignationConditionPredicate(declaration.Condition.Predicate) {
+					(!isLivePlayerDesignationConditionPredicate(declaration.Condition.Predicate) ||
+						declaration.Condition.Kind == compiler.ConditionUnless) {
 					// A static rule's trailing guard clause is a per-event guard
 					// (resolved when an attack, block, or untap step occurs) rather
 					// than an on/off gate. A live player-designation gate ("as long
@@ -86,7 +87,11 @@ func lowerStaticDeclarations(
 					// the runtime re-evaluates the static ability's condition each
 					// time rule effects are gathered, so it turns the rule effect on
 					// and off as the designation changes, exactly like a conditioned
-					// continuous static.
+					// continuous static. The "unless" form of a live designation
+					// ("can't attack or block unless you have the city's blessing.",
+					// Wayward Swordtooth) is still a per-event guard: it negates the
+					// prohibition when the designation holds, and only the guard
+					// context accepts the ConditionUnless kind.
 					conditionContext = conditionContextStaticRuleGuard
 				}
 				condition, ok := lowerCondition(*declaration.Condition, conditionContext)

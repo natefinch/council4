@@ -251,6 +251,15 @@ const (
 // Use these in CardFace.StaticAbilities slices or initializer-function appends.
 // Treat these values as immutable.
 var (
+	// AscendStaticBody is the reusable StaticAbility for the permanent form of
+	// ascend (CR 702.131b): "Any time you control ten or more permanents and you
+	// don't have the city's blessing, you get the city's blessing for the rest of
+	// the game." It carries a single RuleEffectAscend rule effect with no payload;
+	// while the source is on the battlefield the runtime continuously grants its
+	// controller the city's blessing once that player controls ten or more
+	// permanents. Treat this value as immutable.
+	AscendStaticBody = StaticAbility{Text: "Ascend", RuleEffects: []RuleEffect{{Kind: RuleEffectAscend}}}
+
 	// DevoidStaticBody is the reusable StaticAbilityBody for devoid.
 	DevoidStaticBody = simpleKeywordStaticBody("Devoid", Devoid)
 

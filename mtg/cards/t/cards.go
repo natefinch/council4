@@ -40,6 +40,7 @@ var Cards = []cardset.Entry{
 	{Name: "Tempt with Reflections", New: TemptWithReflections},
 	{Name: "Tempt with Vengeance", New: TemptWithVengeance},
 	{Name: "Temur Battlecrier", New: TemurBattlecrier},
+	{Name: "Tendershoot Dryad", New: TendershootDryad},
 	{Name: "Teneb, the Harvester", New: TenebTheHarvester},
 	{Name: "Tentative Connection", New: TentativeConnection},
 	{Name: "Tenured Inkcaster", New: TenuredInkcaster},

@@ -245,10 +245,17 @@ const (
 	// has been resolved, so later upkeeps of that same controller do not
 	// re-trigger the echo.
 	PrimitiveRecordEchoObligation
+
+	// PrimitiveGainCityBlessing is the spell form of ascend (CR 702.131a). As the
+	// spell resolves, before its other instructions, its controller gets the
+	// city's blessing if they control ten or more permanents and don't already
+	// have it. The primitive carries no payload; it always acts on the resolving
+	// object's controller.
+	PrimitiveGainCityBlessing
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveRecordEchoObligation) + 1
+const primitiveKindCount = int(PrimitiveGainCityBlessing) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -822,6 +829,13 @@ type BecomeMonarch struct {
 type CantBecomeMonarch struct {
 	Player PlayerReference
 }
+
+// GainCityBlessing is the spell form of ascend (CR 702.131a): as the spell
+// resolves, before its other instructions, its controller gets the city's
+// blessing if they control ten or more permanents and don't already have it.
+// The city's blessing is player-level persistent state that is never removed.
+// It always acts on the resolving object's controller and carries no payload.
+type GainCityBlessing struct{}
 
 // SetClassLevel sets the class level of a referenced Class permanent.
 type SetClassLevel struct {

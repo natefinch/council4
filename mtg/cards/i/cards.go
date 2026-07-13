@@ -20,6 +20,7 @@ var Cards = []cardset.Entry{
 	{Name: "Ikra Shidiqi, the Usurper", New: IkraShidiqiTheUsurper},
 	{Name: "Illuminate History", New: IlluminateHistory},
 	{Name: "Illuminator Virtuoso", New: IlluminatorVirtuoso},
+	{Name: "Illustrious Wanderglyph", New: IllustriousWanderglyph},
 	{Name: "Illvoi Light Jammer", New: IllvoiLightJammer},
 	{Name: "Immaculate Magistrate", New: ImmaculateMagistrate},
 	{Name: "Immersturm Skullcairn", New: ImmersturmSkullcairn},
