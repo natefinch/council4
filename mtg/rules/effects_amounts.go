@@ -1210,7 +1210,7 @@ func instructionResultGateSatisfied(obj *game.StackObject, gate game.Instruction
 	return true
 }
 
-func rememberInstructionResolutionResult(obj *game.StackObject, linkID string, accepted, succeeded bool, amount int) {
+func rememberInstructionResolutionResult(obj *game.StackObject, linkID string, accepted, succeeded bool, amount int, acceptedActors game.PlayerSet) {
 	if obj == nil || linkID == "" {
 		return
 	}
@@ -1218,8 +1218,9 @@ func rememberInstructionResolutionResult(obj *game.StackObject, linkID string, a
 		obj.ResolutionResults = make(map[string]game.InstructionResolutionResult)
 	}
 	obj.ResolutionResults[linkID] = game.InstructionResolutionResult{
-		Accepted:  accepted,
-		Succeeded: succeeded,
-		Amount:    amount,
+		Accepted:       accepted,
+		Succeeded:      succeeded,
+		Amount:         amount,
+		AcceptedActors: acceptedActors,
 	}
 }

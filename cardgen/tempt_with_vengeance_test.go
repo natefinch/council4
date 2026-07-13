@@ -93,14 +93,8 @@ func TestLowerTemptWithVengeanceTemptingOffer(t *testing.T) {
 func TestTemptCycleSiblingsFailClosed(t *testing.T) {
 	t.Parallel()
 	siblings := []*ScryfallCard{
-		{Name: "Tempt with Glory", Layout: "normal", ManaCost: "{5}{W}", TypeLine: "Sorcery", Colors: []string{"W"}, ColorIdentity: []string{"W"}, SetType: "commander", Games: []string{"paper"},
-			OracleText: "Tempting offer \u2014 Put a +1/+1 counter on each creature you control. Each opponent may put a +1/+1 counter on each creature they control. For each opponent who does, put a +1/+1 counter on each creature you control."},
 		{Name: "Tempt with Discovery", Layout: "normal", ManaCost: "{3}{G}", TypeLine: "Sorcery", Colors: []string{"G"}, ColorIdentity: []string{"G"}, SetType: "commander", Games: []string{"paper", "mtgo"},
 			OracleText: "Tempting offer \u2014 Search your library for a land card and put it onto the battlefield. Each opponent may search their library for a land card and put it onto the battlefield. For each opponent who searches a library this way, search your library for a land card and put it onto the battlefield. Then each player who searched a library this way shuffles."},
-		{Name: "Tempt with Immortality", Layout: "normal", ManaCost: "{4}{B}", TypeLine: "Sorcery", Colors: []string{"B"}, ColorIdentity: []string{"B"}, SetType: "commander", Games: []string{"paper", "mtgo"},
-			OracleText: "Tempting offer \u2014 Return a creature card from your graveyard to the battlefield. Each opponent may return a creature card from their graveyard to the battlefield. For each opponent who does, return a creature card from your graveyard to the battlefield."},
-		{Name: "Tempt with Reflections", Layout: "normal", ManaCost: "{3}{U}", TypeLine: "Sorcery", Colors: []string{"U"}, ColorIdentity: []string{"U"}, SetType: "commander", Games: []string{"paper", "mtgo"},
-			OracleText: "Tempting offer \u2014 Choose target creature you control. Create a token that's a copy of that creature. Each opponent may create a token that's a copy of that creature. For each opponent who does, create a token that's a copy of that creature."},
 		{Name: "Tempt with Mayhem", Layout: "normal", ManaCost: "{1}{R}{R}", TypeLine: "Instant", Colors: []string{"R"}, ColorIdentity: []string{"R"}, SetType: "commander", Games: []string{"paper", "mtgo"},
 			OracleText: "Tempting offer \u2014 Choose target instant or sorcery spell. Each opponent may copy that spell and may choose new targets for the copy they control. You copy that spell once plus an additional time for each opponent who copied the spell this way. You may choose new targets for the copies you control."},
 		{Name: "Tempt with Bunnies", Layout: "normal", ManaCost: "{2}{W}", TypeLine: "Sorcery", Colors: []string{"W"}, ColorIdentity: []string{"W"}, SetType: "commander", Games: []string{"paper", "mtgo"},

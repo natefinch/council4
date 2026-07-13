@@ -4,6 +4,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
 
 // referenceResolver is the internal module that binds a game and a resolving
@@ -35,6 +36,25 @@ type referenceResolver struct {
 	// set. A nil source with sourceFixed true means "no source permanent".
 	source      *game.Permanent
 	sourceFixed bool
+
+	// groupOfferMember, when set, resolves PlayerReferenceGroupOfferMember to the
+	// player currently being offered an OptionalActorGroup instruction. The
+	// effectResolver copies its live group-offer member into every reference
+	// resolver it builds for group and player resolution, so a group scoped to the
+	// acting player (PlayerControlledGroup(GroupOfferMemberReference(), ...) —
+	// "each creature you control" under the Tempting-offer idiom) binds to the
+	// controller for the base and reward resolutions and to each accepting opponent
+	// for that opponent's own resolution. It is unset outside a group offer.
+	groupOfferMember opt.V[game.PlayerID]
+}
+
+// withGroupOfferMember returns a copy of the resolver that resolves
+// PlayerReferenceGroupOfferMember to member, so group and player references
+// scoped to the acting player of an OptionalActorGroup instruction resolve while
+// that member is being offered the effect.
+func (r referenceResolver) withGroupOfferMember(member opt.V[game.PlayerID]) referenceResolver {
+	r.groupOfferMember = member
+	return r
 }
 
 func newReferenceResolver(g *game.Game, obj *game.StackObject) referenceResolver {
@@ -311,6 +331,10 @@ func (r referenceResolver) player(ref game.PlayerReference) (game.PlayerID, bool
 	case game.PlayerReferenceGiftRecipient:
 		if r.obj.GiftPromised {
 			playerID, ok = r.obj.GiftRecipient, true
+		}
+	case game.PlayerReferenceGroupOfferMember:
+		if r.groupOfferMember.Exists {
+			playerID, ok = r.groupOfferMember.Val, true
 		}
 	default:
 		return 0, false
