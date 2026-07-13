@@ -78,6 +78,7 @@ var Cards = []cardset.Entry{
 	{Name: "Ancient Stirrings", New: AncientStirrings},
 	{Name: "Ancient Stone Idol", New: AncientStoneIdol},
 	{Name: "Andradite Leech", New: AndraditeLeech},
+	{Name: "Andúril, Narsil Reforged", New: AndúrilNarsilReforged},
 	{Name: "Angel of the Dire Hour", New: AngelOfTheDireHour},
 	{Name: "Angelic Captain", New: AngelicCaptain},
 	{Name: "Angelic Chorus", New: AngelicChorus},

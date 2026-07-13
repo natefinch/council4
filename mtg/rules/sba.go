@@ -64,11 +64,12 @@ func (e *Engine) applyStateBasedActionsWithDeaths(g *game.Game) ([]LossLog, []Pe
 		legendaryChanged, legendaryDeaths := checkLegendaryRuleStateBasedActions(g, batchID)
 		countersChanged := checkCounterStateBasedActions(g)
 		tokensChanged := removeTokensFromNonBattlefieldZones(g)
+		blessingChanged := checkAscendCityBlessing(g)
 		losses = append(losses, passLosses...)
 		deaths = append(deaths, passDeaths...)
 		deaths = append(deaths, attachmentDeaths...)
 		deaths = append(deaths, legendaryDeaths...)
-		if !changed && !permanentsChanged && !attachmentsChanged && !legendaryChanged && !countersChanged && !tokensChanged && !durationsChanged {
+		if !changed && !permanentsChanged && !attachmentsChanged && !legendaryChanged && !countersChanged && !tokensChanged && !durationsChanged && !blessingChanged {
 			return losses, deaths
 		}
 	}

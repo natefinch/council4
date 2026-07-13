@@ -811,6 +811,12 @@ func (r Renderer) renderPrimitiveTail(ctx *renderCtx, primitive game.Primitive) 
 			return "", err
 		}
 		return r.renderCantBecomeMonarch(value)
+	case game.PrimitiveGainCityBlessing:
+		value, err := assertPrimitive[game.GainCityBlessing](primitive)
+		if err != nil {
+			return "", err
+		}
+		return r.renderGainCityBlessing(value)
 	case game.PrimitiveRingTempts:
 		value, err := assertPrimitive[game.RingTempts](primitive)
 		if err != nil {

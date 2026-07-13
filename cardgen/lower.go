@@ -359,10 +359,67 @@ func lowerFaceAbilities(
 	}
 	linkExplicitExileReturns(&result)
 	synthesizeExileUntilLeavesReturns(&result)
+	if len(unsupported) == 0 && (slices.Contains(parsedType.Types, "Instant") || slices.Contains(parsedType.Types, "Sorcery")) {
+		convertAscendKeywordToSpell(&result)
+	}
 	if len(unsupported) > 0 {
 		return loweredFaceAbilities{}, append(diagnostics, flattenAdditionalReasons(unsupported)...)
 	}
 	return result, diagnostics
+}
+
+// ascendStaticAbility reports whether a lowered static ability is the permanent
+// ascend body (a single RuleEffectAscend rule effect). It backs the
+// instant/sorcery transform that rewrites the ascend keyword into a resolving
+// spell instruction.
+func ascendStaticAbility(static loweredStaticAbility) bool {
+	for _, effect := range static.Body.RuleEffects {
+		if effect.Kind == game.RuleEffectAscend {
+			return true
+		}
+	}
+	return false
+}
+
+// convertAscendKeywordToSpell rewrites the ascend keyword on an instant or
+// sorcery face into its spell form (CR 702.131a). The keyword lowers to the
+// permanent AscendStaticBody static ability, which is meaningless on the stack;
+// this removes that static ability and prepends a GainCityBlessing instruction
+// to every mode of the face's spell ability so, as the spell resolves, its
+// controller gets the city's blessing before the spell's other instructions run
+// (letting a same-spell "if you have the city's blessing" clause see it). When
+// the face has no other spell instructions, it synthesizes a single-mode spell
+// ability carrying only the ascend instruction.
+func convertAscendKeywordToSpell(result *loweredFaceAbilities) {
+	kept := result.StaticAbilities[:0]
+	found := false
+	for _, static := range result.StaticAbilities {
+		if ascendStaticAbility(static) {
+			found = true
+			continue
+		}
+		kept = append(kept, static)
+	}
+	if !found {
+		return
+	}
+	result.StaticAbilities = kept
+	instruction := game.Instruction{Primitive: game.GainCityBlessing{}}
+	if !result.SpellAbility.Exists {
+		result.SpellAbility = opt.Val(game.AbilityContent{
+			Modes: []game.Mode{{Sequence: []game.Instruction{instruction}}},
+		})
+		return
+	}
+	content := result.SpellAbility.Val
+	if len(content.Modes) == 0 {
+		content.Modes = []game.Mode{{Sequence: []game.Instruction{instruction}}}
+	} else {
+		for i := range content.Modes {
+			content.Modes[i].Sequence = append([]game.Instruction{instruction}, content.Modes[i].Sequence...)
+		}
+	}
+	result.SpellAbility = opt.Val(content)
 }
 
 // flattenAdditionalReasons expands each diagnostic's Additional blockers into

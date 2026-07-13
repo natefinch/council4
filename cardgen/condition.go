@@ -432,17 +432,20 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 			// opponent is the monarch", "if you have the initiative", "if you
 			// have the city's blessing") gate intervening triggers, per-effect
 			// sequence clauses (the monarch/initiative "instead" escalation
-			// cycles, the Court cycle), and continuous static abilities ("as long
+			// cycles, the Court cycle), continuous static abilities ("as long
 			// as you're the monarch, permanents you control have hexproof.",
-			// Dawnglade Regent). The runtime condition evaluator resolves them
-			// from the relevant players' designation flags, including under
-			// negation, and re-evaluates a static ability's condition each time
-			// continuous effects are recomputed
-			// (staticAbilitySourceContinuousEffects), so the granted effect turns
-			// on and off as the designation changes.
+			// Dawnglade Regent), and static rule guards ("can't attack or block
+			// unless you have the city's blessing.", Wayward Swordtooth). The
+			// runtime condition evaluator resolves them from the relevant
+			// players' designation flags, including under negation, and
+			// re-evaluates a static ability's condition each time continuous
+			// effects are recomputed (staticAbilitySourceContinuousEffects), so
+			// the granted effect or the guarded prohibition turns on and off as
+			// the designation changes.
 			return ctx == conditionContextInterveningTrigger ||
 				ctx == conditionContextEffectGate ||
-				ctx == conditionContextStatic
+				ctx == conditionContextStatic ||
+				ctx == conditionContextStaticRuleGuard
 		case compiler.ConditionPredicateEventSubjectNameUnique,
 			compiler.ConditionPredicateSourceTributeNotPaid,
 			compiler.ConditionPredicateEventSpellManaSpentToCastAtLeast,

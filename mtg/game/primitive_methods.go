@@ -140,6 +140,9 @@ func (PartitionExiledCostCards) Kind() PrimitiveKind { return PrimitivePartition
 // Kind implements Primitive for CantBecomeMonarch.
 func (CantBecomeMonarch) Kind() PrimitiveKind { return PrimitiveCantBecomeMonarch }
 
+// Kind implements Primitive for GainCityBlessing.
+func (GainCityBlessing) Kind() PrimitiveKind { return PrimitiveGainCityBlessing }
+
 // Kind implements Primitive for SetClassLevel.
 func (SetClassLevel) Kind() PrimitiveKind { return PrimitiveSetClassLevel }
 
@@ -425,6 +428,7 @@ func (ShufflePermanentIntoLibrary) isPrimitive()          {}
 func (StartEngines) isPrimitive()                         {}
 func (BecomeMonarch) isPrimitive()                        {}
 func (CantBecomeMonarch) isPrimitive()                    {}
+func (GainCityBlessing) isPrimitive()                     {}
 func (PartitionExiledCostCards) isPrimitive()             {}
 func (SetClassLevel) isPrimitive()                        {}
 func (Monstrosity) isPrimitive()                          {}
@@ -575,6 +579,7 @@ func (ShufflePermanentIntoLibrary) instructionRefs() primitiveRefs { return prim
 func (StartEngines) instructionRefs() primitiveRefs                { return primitiveRefs{} }
 func (BecomeMonarch) instructionRefs() primitiveRefs               { return primitiveRefs{} }
 func (CantBecomeMonarch) instructionRefs() primitiveRefs           { return primitiveRefs{} }
+func (GainCityBlessing) instructionRefs() primitiveRefs            { return primitiveRefs{} }
 func (PartitionExiledCostCards) instructionRefs() primitiveRefs    { return primitiveRefs{} }
 func (p SetClassLevel) instructionRefs() primitiveRefs             { return quantityRefs(p.Amount) }
 func (p Monstrosity) instructionRefs() primitiveRefs               { return quantityRefs(p.Amount) }

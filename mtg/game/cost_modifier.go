@@ -612,6 +612,16 @@ const (
 	// the payment planner reads before costs are paid; it is never snapshotted
 	// onto the spell. Added last so existing kinds keep their wire values.
 	RuleEffectGrantSpellKeyword
+	// RuleEffectAscend is the permanent ascend static ability (CR 702.131b): "Any
+	// time you control ten or more permanents and you don't have the city's
+	// blessing, you get the city's blessing for the rest of the game." It is a
+	// marker rule effect carrying no payload beyond its Controller (set while its
+	// source permanent is on the battlefield). The runtime continuously checks
+	// each controller of an active ascend rule effect during state-based-action
+	// processing and grants the city's blessing once that player controls ten or
+	// more permanents; the blessing is player-level persistent state that is
+	// never removed. Added last so existing kinds keep their wire values.
+	RuleEffectAscend
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -677,7 +687,8 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectCantBeSacrificed,
 		RuleEffectCastLinkedExileForFree,
 		RuleEffectActivateAbilitiesAsThoughHaste,
-		RuleEffectGrantSpellKeyword:
+		RuleEffectGrantSpellKeyword,
+		RuleEffectAscend:
 		return true
 	default:
 		return false

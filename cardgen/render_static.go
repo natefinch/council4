@@ -988,6 +988,8 @@ func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
 		return "game.RuleEffectGrantGraveyardCardKeyword", nil
 	case game.RuleEffectGrantSpellKeyword:
 		return "game.RuleEffectGrantSpellKeyword", nil
+	case game.RuleEffectAscend:
+		return "game.RuleEffectAscend", nil
 	case game.RuleEffectPlayerProtection:
 		return "game.RuleEffectPlayerProtection", nil
 	case game.RuleEffectAttackTax:

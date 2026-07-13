@@ -70,6 +70,7 @@ func TestRuleEffectKindValid(t *testing.T) {
 		RuleEffectCastLinkedExileForFree,
 		RuleEffectActivateAbilitiesAsThoughHaste,
 		RuleEffectGrantSpellKeyword,
+		RuleEffectAscend,
 	}
 	for _, kind := range valid {
 		if !kind.Valid() {
@@ -80,7 +81,7 @@ func TestRuleEffectKindValid(t *testing.T) {
 	invalid := []RuleEffectKind{
 		RuleEffectNone,
 		-1,
-		RuleEffectGrantSpellKeyword + 1,
+		RuleEffectAscend + 1,
 		RuleEffectKind(1 << 20),
 	}
 	for _, kind := range invalid {
@@ -99,7 +100,7 @@ func TestValidateApplyRulePlayFromZone(t *testing.T) {
 	}
 
 	for name, kind := range map[string]RuleEffectKind{
-		"future":       RuleEffectGrantSpellKeyword + 1,
+		"future":       RuleEffectAscend + 1,
 		"out of range": RuleEffectKind(1 << 20),
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -123,7 +124,7 @@ func TestValidateCardDefPlayFromZone(t *testing.T) {
 	}
 
 	for name, kind := range map[string]RuleEffectKind{
-		"future":       RuleEffectGrantSpellKeyword + 1,
+		"future":       RuleEffectAscend + 1,
 		"out of range": RuleEffectKind(1 << 20),
 	} {
 		t.Run(name, func(t *testing.T) {
