@@ -1063,6 +1063,18 @@ const (
 	// ability has resolved this turn"; Prowl, Pursuit Vehicle). Added last so
 	// existing kinds keep their wire values.
 	ConditionPredicateSourceAbilityResolutionOrdinalThisTurn
+	// ConditionPredicateAnyOpponentDealtDamageThisTurnAtLeast is satisfied when
+	// at least one opponent was dealt Threshold or more total damage during the
+	// current turn ("if an opponent was dealt 7 or more damage this turn";
+	// Spinerock Knoll).
+	ConditionPredicateAnyOpponentDealtDamageThisTurnAtLeast
+	// ConditionPredicateAnyLibrarySizeAtMost is satisfied when some player's
+	// library holds Threshold or fewer cards ("if a library has twenty or fewer
+	// cards in it"; Shelldock Isle).
+	ConditionPredicateAnyLibrarySizeAtMost
+	// ConditionPredicateAllPlayersHandEmpty is satisfied when every player has no
+	// cards in hand ("if each player has no cards in hand"; Howltooth Hollow).
+	ConditionPredicateAllPlayersHandEmpty
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard

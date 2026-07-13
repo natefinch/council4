@@ -115,6 +115,12 @@ func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringC
 		result.ControlComparison = opt.Val(comparison)
 	case compiler.ConditionPredicateControllerHandEmpty:
 		result.ControllerHandEmpty = true
+	case compiler.ConditionPredicateAllPlayersHandEmpty:
+		result.AllPlayersHandEmpty = true
+	case compiler.ConditionPredicateAnyOpponentDealtDamageThisTurnAtLeast:
+		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateAnyOpponentDamageTakenThisTurn, Op: compare.GreaterOrEqual, Value: condition.Threshold})
+	case compiler.ConditionPredicateAnyLibrarySizeAtMost:
+		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateMinPlayerLibrarySize, Op: compare.LessOrEqual, Value: condition.Threshold})
 	case compiler.ConditionPredicateEventSubjectNameUnique:
 		result.EventPermanentNameUniqueAmongControlledAndGraveyardCreatures = true
 	case compiler.ConditionPredicateControllerCreatedTokenThisTurn:
@@ -371,6 +377,9 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 			compiler.ConditionPredicateControllerCreaturePowerDiversityAtLeast,
 			compiler.ConditionPredicateAnyOpponentPoisonAtLeast,
 			compiler.ConditionPredicateControllerLibrarySizeAtLeast,
+			compiler.ConditionPredicateAnyLibrarySizeAtMost,
+			compiler.ConditionPredicateAnyOpponentDealtDamageThisTurnAtLeast,
+			compiler.ConditionPredicateAllPlayersHandEmpty,
 			compiler.ConditionPredicateControllerLifeExactly,
 			compiler.ConditionPredicateControllerGainedLifeThisTurnAtLeast,
 			compiler.ConditionPredicateObjectMatches,

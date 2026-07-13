@@ -1027,6 +1027,10 @@ func renderAggregateKind(kind game.AggregateKind) (string, error) {
 		return "game.AggregateEventSpellManaSpentToCast", nil
 	case game.AggregateEventPlayerHandSize:
 		return "game.AggregateEventPlayerHandSize", nil
+	case game.AggregateAnyOpponentDamageTakenThisTurn:
+		return "game.AggregateAnyOpponentDamageTakenThisTurn", nil
+	case game.AggregateMinPlayerLibrarySize:
+		return "game.AggregateMinPlayerLibrarySize", nil
 	default:
 		return "", fmt.Errorf("render: unsupported aggregate kind %d", kind)
 	}

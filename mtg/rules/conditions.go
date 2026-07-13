@@ -114,6 +114,10 @@ func aggregateValue(g *game.Game, ctx conditionContext, kind game.AggregateKind)
 			return 0, false
 		}
 		return cardInstanceCount(g, player.Hand.All()), true
+	case game.AggregateAnyOpponentDamageTakenThisTurn:
+		return anyOpponentDamageTakenThisTurn(g, ctx.controller), true
+	case game.AggregateMinPlayerLibrarySize:
+		return minPlayerLibrarySize(g), true
 	default:
 		// AggregateNone carries no resolvable quantity; fail the comparison closed.
 	}
@@ -145,6 +149,9 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	if cond.ControllerHandEmpty {
 		player, ok := playerByID(g, ctx.controller)
 		matches = matches && ok && cardInstanceCount(g, player.Hand.All()) == 0
+	}
+	if cond.AllPlayersHandEmpty {
+		matches = matches && allPlayersHandEmpty(g)
 	}
 	if cond.ControllerGraveyardCardOfTypeCountAtLeast > 0 {
 		matches = matches && controllerGraveyardCardOfTypeCount(g, ctx.controller, cond.ControllerGraveyardCountCardType) >= cond.ControllerGraveyardCardOfTypeCountAtLeast
@@ -1093,6 +1100,60 @@ func anyPlayerLifeAtMost(g *game.Game, maximum int) bool {
 		}
 	}
 	return false
+}
+
+// allPlayersHandEmpty reports whether every non-eliminated player has no cards
+// in hand ("if each player has no cards in hand", Howltooth Hollow).
+func allPlayersHandEmpty(g *game.Game) bool {
+	for playerID := range game.PlayerID(game.NumPlayers) {
+		player, ok := playerByID(g, playerID)
+		if ok && !player.Eliminated && cardInstanceCount(g, player.Hand.All()) > 0 {
+			return false
+		}
+	}
+	return true
+}
+
+// minPlayerLibrarySize returns the smallest library size among all
+// non-eliminated players ("if a library has twenty or fewer cards in it",
+// Shelldock Isle). It returns 0 when no player qualifies so the comparison
+// against a nonnegative ceiling stays well defined.
+func minPlayerLibrarySize(g *game.Game) int {
+	minimum := -1
+	for playerID := range game.PlayerID(game.NumPlayers) {
+		player, ok := playerByID(g, playerID)
+		if !ok || player.Eliminated {
+			continue
+		}
+		size := cardInstanceCount(g, player.Library.All())
+		if minimum < 0 || size < minimum {
+			minimum = size
+		}
+	}
+	if minimum < 0 {
+		return 0
+	}
+	return minimum
+}
+
+// anyOpponentDamageTakenThisTurn returns the largest total damage dealt to a
+// single non-eliminated opponent of controller during the current turn ("if an
+// opponent was dealt 7 or more damage this turn", Spinerock Knoll). Damage dealt
+// to permanents is ignored; only player-recipient damage events count.
+func anyOpponentDamageTakenThisTurn(g *game.Game, controller game.PlayerID) int {
+	window := eventsThisTurnWindow(g)
+	maximum := 0
+	for _, opponent := range aliveOpponents(g, controller) {
+		total := window.sumAmount(func(event game.Event) bool {
+			return event.Kind == game.EventDamageDealt &&
+				event.DamageRecipient == game.DamageRecipientPlayer &&
+				event.Player == opponent
+		})
+		if total > maximum {
+			maximum = total
+		}
+	}
+	return maximum
 }
 
 func anyOpponentPoisonAtLeast(g *game.Game, controller game.PlayerID, minimum int) bool {

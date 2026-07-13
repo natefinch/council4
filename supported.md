@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,632 of 32,501 cards eligible for paper support (54.3%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,637 of 32,501 cards eligible for paper support (54.3%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -7223,6 +7223,7 @@ Council4 currently supports **17,632 of 32,501 cards eligible for paper support 
 - Howling Moon
 - Howling Wolf
 - Howlpack Resurgence
+- Howltooth Hollow
 - Hraesvelgr of the First Brood
 - Hua Tuo, Honored Physician
 - Huang Zhong, Shu General
@@ -7755,6 +7756,7 @@ Council4 currently supports **17,632 of 32,501 cards eligible for paper support 
 - Ishkanah, Grafwidow
 - Island
 - Island Fish Jasconius
+- Isleback Spawn
 - Isolate
 - Isolated Chapel
 - Isolation Zone
@@ -8640,6 +8642,7 @@ Council4 currently supports **17,632 of 32,501 cards eligible for paper support 
 - Lightning Hounds
 - Lightning Javelin
 - Lightning Mare
+- Lightning Phoenix
 - Lightning Prowess
 - Lightning Rager
 - Lightning Rift
@@ -13186,6 +13189,7 @@ Council4 currently supports **17,632 of 32,501 cards eligible for paper support 
 - Shefet Dunes
 - Shefet Monitor
 - Shell Skulkin
+- Shelldock Isle
 - Shelob's Ambush
 - Shelter
 - Sheltered by Ghosts
@@ -14151,6 +14155,7 @@ Council4 currently supports **17,632 of 32,501 cards eligible for paper support 
 - Spined Thopter
 - Spined Wurm
 - Spineless Thug
+- Spinerock Knoll
 - Spineseeker Centipede
 - Spinewoods Armadillo
 - Spinewoods Paladin

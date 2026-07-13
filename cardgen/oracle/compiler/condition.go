@@ -87,6 +87,7 @@ var simplePredicateMap = map[parser.ConditionPredicateKind]ConditionPredicate{
 	parser.ConditionPredicateControllerHasCityBlessing:                        ConditionPredicateControllerHasCityBlessing,
 	parser.ConditionPredicateControllerTurn:                                   ConditionPredicateControllerTurn,
 	parser.ConditionPredicateLandEnteredThisTurnOrControlsBasic:               ConditionPredicateLandEnteredThisTurnOrControlsBasic,
+	parser.ConditionPredicateAllPlayersHandEmpty:                              ConditionPredicateAllPlayersHandEmpty,
 }
 
 // compileConditionClause mechanically maps one typed ConditionClause onto the
@@ -191,6 +192,12 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 		condition.Threshold = clause.Threshold
 	case parser.ConditionPredicateControllerGainedLifeThisTurnAtLeast:
 		condition.Predicate = ConditionPredicateControllerGainedLifeThisTurnAtLeast
+		condition.Threshold = clause.Threshold
+	case parser.ConditionPredicateAnyOpponentDealtDamageThisTurnAtLeast:
+		condition.Predicate = ConditionPredicateAnyOpponentDealtDamageThisTurnAtLeast
+		condition.Threshold = clause.Threshold
+	case parser.ConditionPredicateAnyLibrarySizeAtMost:
+		condition.Predicate = ConditionPredicateAnyLibrarySizeAtMost
 		condition.Threshold = clause.Threshold
 	case parser.ConditionPredicateControls:
 		compileControlsCondition(condition, clause)

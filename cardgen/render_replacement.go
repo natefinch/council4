@@ -1069,6 +1069,10 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 		fields = append(fields, "ControllerHandEmpty: true,")
 		hasPredicate = true
 	}
+	if cond.AllPlayersHandEmpty {
+		fields = append(fields, "AllPlayersHandEmpty: true,")
+		hasPredicate = true
+	}
 	if cond.EventPermanentNameUniqueAmongControlledAndGraveyardCreatures {
 		fields = append(fields, "EventPermanentNameUniqueAmongControlledAndGraveyardCreatures: true,")
 		hasPredicate = true

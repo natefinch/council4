@@ -47,6 +47,7 @@ var Cards = []cardset.Entry{
 	{Name: "Light the Way", New: LightTheWay},
 	{Name: "Lightning Berserker", New: LightningBerserker},
 	{Name: "Lightning Bolt", New: LightningBolt},
+	{Name: "Lightning Phoenix", New: LightningPhoenix},
 	{Name: "Lightning Serpent", New: LightningSerpent},
 	{Name: "Lightwalker", New: Lightwalker},
 	{Name: "Liliana, Death's Majesty", New: LilianaDeathSMajesty},
