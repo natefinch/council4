@@ -1352,6 +1352,26 @@ func TapChosenColorManaAbility(text string) ManaAbility {
 	}
 }
 
+// TapChosenColorCountManaAbility builds the complete tap ability for "{T}: Add
+// <count> mana of the chosen color." (count >= 2, Throne of Eldraine: "Add four
+// mana of the chosen color."). The color is read from the entry-time choice
+// stored on the source permanent under EntryColorChoiceKey, so this ability
+// prompts no choice of its own; every produced unit is that chosen color.
+func TapChosenColorCountManaAbility(text string, count int) ManaAbility {
+	return ManaAbility{
+		Text:            text,
+		AdditionalCosts: cost.Tap,
+		Content: Mode{Sequence: []Instruction{
+			{
+				Primitive: AddMana{
+					Amount:          Fixed(count),
+					EntryChoiceFrom: EntryColorChoiceKey,
+				},
+			},
+		}}.Ability(),
+	}
+}
+
 // TapFixedOrChosenColorManaAbility builds the complete tap ability for the
 // composite "{T}: Add {C} or one mana of the chosen color." (the Gate/Thriving
 // land cycle). On activation the controller chooses between the fixed color and

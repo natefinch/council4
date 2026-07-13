@@ -93,6 +93,13 @@ const (
 	// to activate an ability of a creature permanent, and nothing else. It is the
 	// unchosen-type counterpart of ManaSpendCastOrActivateChosenCreatureType.
 	ManaSpendCastOrActivateCreature
+	// ManaSpendCastMonocoloredSpellOfChosenColor is "spend this mana only to cast
+	// monocolored spells of that color" (Throne of Eldraine). It is a
+	// restriction-only rider: the tagged mana is produced in the source's
+	// entry-time chosen color, and may pay only to cast a monocolored spell whose
+	// single color equals that produced unit's color, never an ability cost or
+	// other payment.
+	ManaSpendCastMonocoloredSpellOfChosenColor
 )
 
 // ManaSpendRestrictionKind identifies whether a tagged mana unit may be spent
@@ -184,4 +191,20 @@ func (r ManaRiderInstance) MatchesChosenCreatureType(spell *CardDef) bool {
 		spell.HasType(types.Creature) &&
 		types.KnownSubtypeForType(types.Creature, r.ChosenSubtype) &&
 		spell.HasSubtype(r.ChosenSubtype)
+}
+
+// MatchesMonocoloredChosenColorSpell reports whether spell is a monocolored
+// spell whose single color matches this rider's tagged mana unit color (Throne
+// of Eldraine: "Spend this mana only to cast monocolored spells of that color").
+// The tagged mana is produced in the source's entry-time chosen color, so the
+// unit color is that chosen color. A card's color is fixed by the color symbols
+// in its mana cost regardless of how it is paid, so a two-color hybrid spell
+// ({G/W}) is multicolored and never qualifies, while a monocolored hybrid
+// ({2/W}) is a single color and can. This is the shared predicate used by both
+// the payment planner and the post-payment resolution path so the two never
+// diverge.
+func (r ManaRiderInstance) MatchesMonocoloredChosenColorSpell(spell *CardDef) bool {
+	return spell != nil &&
+		len(spell.Colors) == 1 &&
+		mana.Color(spell.Colors[0].Abbreviation()) == r.Unit.Color
 }

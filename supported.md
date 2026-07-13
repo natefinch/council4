@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,801 of 32,501 cards eligible for paper support (54.8%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,803 of 32,501 cards eligible for paper support (54.8%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2136,6 +2136,7 @@ Council4 currently supports **17,801 of 32,501 cards eligible for paper support 
 - Cadira, Caller of the Small
 - Caelorna, Coral Tyrant
 - Cage of Hands
+- Caged Sun
 - Caged Zombie
 - Cagemail
 - Calamitous Tide
@@ -15644,6 +15645,7 @@ Council4 currently supports **17,801 of 32,501 cards eligible for paper support 
 - Thriving Turtle
 - Throes of Chaos
 - Throne of Bone
+- Throne of Eldraine
 - Throne of Geth
 - Throne of the God-Pharaoh
 - Throne of the High City

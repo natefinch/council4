@@ -173,6 +173,10 @@ func compileAbility(
 		compiled.MaxActivationsPerTurn = maxPerTurn
 		compiled.MaxActivationsPerTurnSpan = maxSpan
 	}
+	if span, ok := compileSpendChosenColorManaRestriction(ability.ActivationRestrictions); ok {
+		compiled.ManaCostChosenColorRestricted = true
+		compiled.ManaCostChosenColorRestrictedSpan = span
+	}
 	if kind == AbilityTriggered && ability.Optional {
 		compiled.Optional = true
 		compiled.OptionalSpan = ability.OptionalSpan
@@ -405,7 +409,16 @@ func compileActivationTiming(kind AbilityKind, restrictions []parser.ActivationR
 	}
 	compiled := make([]ActivationTimingKind, 0, len(restrictions))
 	for i := range restrictions {
+		if restrictions[i].Kind == parser.ActivationRestrictionSpendChosenColorMana {
+			// The chosen-color mana-spend restriction constrains cost payment,
+			// not activation timing; it is carried on its own channel
+			// (ManaCostChosenColorRestricted) and imposes no timing.
+			continue
+		}
 		compiled = append(compiled, compileActivationRestriction(&restrictions[i]))
+	}
+	if len(compiled) == 0 {
+		return ActivationTimingNone, shared.Span{}
 	}
 	if len(compiled) == 1 {
 		return compiled[0], span
@@ -432,6 +445,19 @@ func compileActivationMaxPerTurn(restrictions []parser.ActivationRestriction) (i
 		}
 	}
 	return 0, shared.Span{}
+}
+
+// compileSpendChosenColorManaRestriction returns the span of a "Spend only mana
+// of the chosen color to activate this ability." restriction (Throne of
+// Eldraine) when present, reporting ok=true. The restriction limits the
+// ability's cost payment to the source's entry-time chosen color.
+func compileSpendChosenColorManaRestriction(restrictions []parser.ActivationRestriction) (shared.Span, bool) {
+	for i := range restrictions {
+		if restrictions[i].Kind == parser.ActivationRestrictionSpendChosenColorMana {
+			return restrictions[i].Span, true
+		}
+	}
+	return shared.Span{}, false
 }
 
 func compileActivationRestriction(restriction *parser.ActivationRestriction) ActivationTimingKind {

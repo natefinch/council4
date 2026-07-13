@@ -167,19 +167,26 @@ type CompiledAbility struct {
 	// MaxActivationsPerTurn caps activations per turn ("Activate no more than
 	// twice each turn."). Zero means no cap. MaxActivationsPerTurnSpan covers the
 	// recognized restriction sentence for source coverage.
-	MaxActivationsPerTurn      int
-	MaxActivationsPerTurnSpan  shared.Span
-	ActivationZone             zone.Type
-	AbilityWord                string
-	Chapters                   []int
-	ChapterSpan                shared.Span
-	OptionalSpan               shared.Span
-	Cost                       *CompiledCost
-	SourceAbilityCostReduction *CompiledSourceAbilityCostReduction
-	AlternativeCost            *CompiledAlternativeCost
-	Trigger                    *CompiledTrigger
-	Content                    AbilityContent
-	Static                     *CompiledStaticSemantics
+	MaxActivationsPerTurn     int
+	MaxActivationsPerTurnSpan shared.Span
+	// ManaCostChosenColorRestricted marks an activated ability whose cost may be
+	// paid only with mana of the source's entry-time chosen color ("Spend only
+	// mana of the chosen color to activate this ability." — Throne of Eldraine).
+	// ManaCostChosenColorRestrictedSpan covers the recognized restriction
+	// sentence for source coverage.
+	ManaCostChosenColorRestricted     bool
+	ManaCostChosenColorRestrictedSpan shared.Span
+	ActivationZone                    zone.Type
+	AbilityWord                       string
+	Chapters                          []int
+	ChapterSpan                       shared.Span
+	OptionalSpan                      shared.Span
+	Cost                              *CompiledCost
+	SourceAbilityCostReduction        *CompiledSourceAbilityCostReduction
+	AlternativeCost                   *CompiledAlternativeCost
+	Trigger                           *CompiledTrigger
+	Content                           AbilityContent
+	Static                            *CompiledStaticSemantics
 	// ClassLevelGain is the target level of a Class enchantment's level-up
 	// activated ability ("{cost}: Level N"), or 0 when this ability is not a
 	// level-up. The compiler copies the parser's typed level so lowering emits
@@ -3392,13 +3399,18 @@ func compileManaSpendRider(syntax *parser.ManaSpendRiderSyntax) *CompiledManaSpe
 
 // CompiledEffectMana describes exact typed add-mana output.
 type CompiledEffectMana struct {
-	Span                  shared.Span
-	Symbols               []string
-	Colors                []mana.Color
-	ColorsKnown           bool
-	Choice                bool
-	AnyColor              bool
-	ChosenColor           bool
+	Span        shared.Span
+	Symbols     []string
+	Colors      []mana.Color
+	ColorsKnown bool
+	Choice      bool
+	AnyColor    bool
+	ChosenColor bool
+	// ChosenColorCount mirrors the parser's counted "<N> mana of the chosen
+	// color" body (N >= 2, Throne of Eldraine). It is zero for the singular
+	// "one mana of the chosen color" body. See
+	// parser.EffectManaSyntax.ChosenColorCount.
+	ChosenColorCount      int
 	ChosenColorFixed      mana.Color
 	ChosenColorFixedKnown bool
 	// ChosenColorDevotion mirrors the parser's "an amount of mana of that color
@@ -3412,6 +3424,11 @@ type CompiledEffectMana struct {
 	// color chosen as the ability resolves; its amount is the battlefield count
 	// carried by the effect's Amount. See parser.EffectManaSyntax.ChosenColorDynamic.
 	ChosenColorDynamic bool
+	// ChosenColorAnaphor mirrors the parser's bare "one mana of that color" body
+	// (Caged Sun). It only resolves to the source's entry-time chosen color
+	// inside a chosen-color tapped-for-mana trigger body; lowering fails closed
+	// for it elsewhere. See parser.EffectManaSyntax.ChosenColorAnaphor.
+	ChosenColorAnaphor bool
 	CommanderIdentity  bool
 	DynamicColorless   bool
 	LegacyBodyExact    bool

@@ -1201,6 +1201,14 @@ type TriggerPattern struct {
 	// event's ProducedManaColors.
 	RequireProducedManaColor mana.Color
 
+	// RequireProducedManaColorFromEntryChoice restricts a RequireTappedForMana
+	// trigger to taps whose produced mana included the source permanent's
+	// entry-time chosen color ("a land's ability causes you to add ... mana of
+	// the chosen color" — Caged Sun). The color is resolved at match time from
+	// the source's EntryColorChoiceKey choice and checked against the triggering
+	// event's ProducedManaColors.
+	RequireProducedManaColorFromEntryChoice bool
+
 	// UnionEvent joins a second event kind to Event under the pattern's shared
 	// subject and player filters, expressing "Whenever you create or sacrifice a
 	// token" (CR 603.2). When set, the trigger fires if the event kind equals

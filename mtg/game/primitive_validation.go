@@ -923,6 +923,7 @@ func validateManaSpendRider(rider ManaSpendRider) error {
 		ManaSpendCastNoncreatureSpell,
 		ManaSpendCastMulticoloredSpell,
 		ManaSpendCastPlaneswalkerSpell,
+		ManaSpendCastMonocoloredSpellOfChosenColor,
 		ManaSpendCastOrActivateCreature:
 		if rider.Restriction != ManaSpendRestrictedToCondition ||
 			rider.ChosenSubtypeFrom != "" ||

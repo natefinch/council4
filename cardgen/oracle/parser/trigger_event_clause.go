@@ -40,6 +40,7 @@ func parseTriggerEventClause(
 		parseCounterTriggerEventClause,
 		parsePermanentStateTriggerEventClause,
 		parseTappedForManaTriggerEventClause,
+		parseLandAbilityAddsManaTriggerEventClause,
 		parseSacrificeTriggerEventClause,
 		parseMutateTriggerEventClause,
 		parseBecameTargetTriggerEventClause,

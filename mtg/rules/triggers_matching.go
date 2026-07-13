@@ -6,10 +6,26 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
+
+// sourceEntryChosenManaColor returns the mana color the source permanent chose
+// as it entered (stored under EntryColorChoiceKey), reporting ok=false when the
+// source is nil or recorded no such color choice. It backs chosen-color trigger
+// filters such as Caged Sun's "mana of the chosen color" produced-mana match.
+func sourceEntryChosenManaColor(source *game.Permanent) (mana.Color, bool) {
+	if source == nil {
+		return "", false
+	}
+	choice, ok := source.EntryChoices[game.EntryColorChoiceKey]
+	if !ok || choice.Kind != game.ResolutionChoiceMana {
+		return "", false
+	}
+	return choice.Color, true
+}
 
 // triggerTargets chooses the targets for a triggered ability as it is put on the
 // stack (CR 603.3d, which uses the casting target rules of CR 601.2c). It returns
@@ -79,6 +95,12 @@ func triggerMatchesEventForController(g *game.Game, source *game.Permanent, sour
 	if pattern.RequireProducedManaColor != "" &&
 		!slices.Contains(event.ProducedManaColors, pattern.RequireProducedManaColor) {
 		return false
+	}
+	if pattern.RequireProducedManaColorFromEntryChoice {
+		chosen, ok := sourceEntryChosenManaColor(source)
+		if !ok || !slices.Contains(event.ProducedManaColors, chosen) {
+			return false
+		}
 	}
 	if pattern.PlaysLinkedExileCard != "" {
 		if source == nil || event.CardID == 0 {

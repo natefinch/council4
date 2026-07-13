@@ -38,6 +38,7 @@ func compileTriggerEventClause(clause *parser.TriggerEventClause) (TriggerPatter
 		FaceDown:                  clause.FaceDown,
 		TappedForMana:             clause.TappedForMana,
 		TappedForManaColor:        clause.TappedForManaColor,
+		TappedForManaChosenColor:  clause.TappedForManaChosenColor,
 	}
 	var ok bool
 	pattern.Controller, ok = compileTriggerController(clause.Controller)

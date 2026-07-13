@@ -150,6 +150,9 @@ func (r Renderer) renderActivatedAbility(ctx *renderCtx, ability *game.Activated
 	if ability.MaxActivationsPerTurn > 0 {
 		fields = append(fields, fmt.Sprintf("MaxActivationsPerTurn: %d,", ability.MaxActivationsPerTurn))
 	}
+	if ability.ManaCostRestrictedToEntryChosenColor {
+		fields = append(fields, "ManaCostRestrictedToEntryChosenColor: true,")
+	}
 	if len(ability.KeywordAbilities) > 0 {
 		elements := make([]string, 0, len(ability.KeywordAbilities))
 		for _, keyword := range ability.KeywordAbilities {
@@ -804,6 +807,7 @@ func (r Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatt
 		(pattern.MatchSpellCopy && pattern.Event != game.EventSpellCast) ||
 		(pattern.SelfWasCast && pattern.Event != game.EventSpellCast) ||
 		(pattern.RequireTappedForMana && pattern.Event != game.EventPermanentTapped) ||
+		(pattern.RequireProducedManaColorFromEntryChoice && pattern.Event != game.EventPermanentTapped) ||
 		(pattern.ExcludeManaAbility && pattern.Event != game.EventAbilityActivated) ||
 		(pattern.Event == game.EventAbilityActivated && !pattern.ExcludeManaAbility) ||
 		(pattern.PlayerEventOrdinalThisTurn > 0 &&
@@ -964,6 +968,9 @@ func renderTriggerPatternFlagFields(ctx *renderCtx, pattern *game.TriggerPattern
 		}
 		ctx.need(importMana)
 		fields = append(fields, fmt.Sprintf("RequireProducedManaColor: %s,", colorLiteral))
+	}
+	if pattern.RequireProducedManaColorFromEntryChoice {
+		fields = append(fields, "RequireProducedManaColorFromEntryChoice: true,")
 	}
 	if pattern.UnionEvent != game.EventUnknown {
 		unionEvent, err := renderEventKind(pattern.UnionEvent)
