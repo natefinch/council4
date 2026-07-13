@@ -159,6 +159,19 @@ type ReplacementAbility struct {
 	UnlessPaid  opt.V[ResolutionPayment]
 }
 
+// ClassLevelGatedReplacement gates a replacement ability so it applies only
+// while the source Class permanent has reached at least the given level (CR
+// 716). The gate is an ordinary source-relative Condition, so it composes with
+// any replacement category and is evaluated from the source permanent at
+// replacement time; the effect disappears when the source leaves the
+// battlefield or has not yet reached the level.
+func ClassLevelGatedReplacement(ability ReplacementAbility, level int) ReplacementAbility {
+	condition := ability.Replacement.Condition.Val
+	condition.SourceClassLevelAtLeast = level
+	ability.Replacement.Condition = opt.Val(condition)
+	return ability
+}
+
 // EntersTappedReplacement creates a replacement ability for "enters tapped".
 func EntersTappedReplacement(text string) ReplacementAbility {
 	replacement := etbReplacement(text)

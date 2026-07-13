@@ -8,9 +8,40 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
 
+// classLevelReplacementGate reports whether the condition is exactly a Class
+// level gate (SourceClassLevelAtLeast with no other predicate). Such gates are
+// rendered generically by wrapping the base replacement in
+// game.ClassLevelGatedReplacement so any replacement category can be gated by a
+// Class level without a category-specific flag.
+func classLevelReplacementGate(condition opt.V[game.Condition]) (int, bool) {
+	if !condition.Exists {
+		return 0, false
+	}
+	cond := condition.Val
+	level := cond.SourceClassLevelAtLeast
+	if level <= 0 {
+		return 0, false
+	}
+	cond.SourceClassLevelAtLeast = 0
+	if !cond.Empty() {
+		return 0, false
+	}
+	return level, true
+}
+
 func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.ReplacementAbility) (string, error) {
+	if level, ok := classLevelReplacementGate(ability.Replacement.Condition); ok {
+		inner := *ability
+		inner.Replacement.Condition = opt.V[game.Condition]{}
+		rendered, err := r.renderReplacementAbility(ctx, &inner)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.ClassLevelGatedReplacement(%s, %d)", rendered, level), nil
+	}
 	if ability.Replacement.EntersAsCopy {
 		return r.renderEntersAsCopyReplacement(ctx, ability)
 	}
