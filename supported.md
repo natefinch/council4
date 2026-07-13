@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,780 of 32,501 cards eligible for paper support (54.7%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,784 of 32,501 cards eligible for paper support (54.7%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1822,6 +1822,7 @@ Council4 currently supports **17,780 of 32,501 cards eligible for paper support 
 - Boris Devilboon
 - Borne Upon a Wind
 - Boromir, Gondor's Hope
+- Boromir, Warden of the Tower
 - Boros Challenger
 - Boros Charm
 - Boros Cluestone
@@ -7857,6 +7858,7 @@ Council4 currently supports **17,780 of 32,501 cards eligible for paper support 
 - Jace's Sentinel
 - Jace's Triumph
 - Jace, Arcane Strategist
+- Jace, Unraveler of Secrets
 - Jackal Familiar
 - Jackdaw
 - Jackdaw Savior
@@ -7941,6 +7943,7 @@ Council4 currently supports **17,780 of 32,501 cards eligible for paper support 
 - Jibbirik Omnivore
 - Jidoor, Aristocratic Capital // Overture
 - Jilt
+- Jin-Gitaxias, Progress Tyrant
 - Jinxed Idol
 - Jinxed Ring
 - Jirina, Dauntless General
@@ -16651,6 +16654,7 @@ Council4 currently supports **17,780 of 32,501 cards eligible for paper support 
 - Veteran's Powerblade
 - Veteran's Reflexes
 - Veteran's Sidearm
+- Vexing Bauble
 - Vexing Devil
 - Vexing Gull
 - Vial of Dragonfire

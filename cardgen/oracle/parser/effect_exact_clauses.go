@@ -1456,7 +1456,8 @@ func exactCounterEffectSyntax(effect *EffectSyntax) bool {
 	}
 	if len(effect.Targets) == 0 &&
 		effect.Context == EffectContextController &&
-		strings.EqualFold(exactEffectClauseText(effect), "Counter that spell or ability.") {
+		(strings.EqualFold(exactEffectClauseText(effect), "Counter that spell.") ||
+			strings.EqualFold(exactEffectClauseText(effect), "Counter that spell or ability.")) {
 		effect.CounterTriggeringStackObject = true
 		return true
 	}

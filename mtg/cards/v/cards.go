@@ -43,6 +43,7 @@ var Cards = []cardset.Entry{
 	{Name: "Vesperlark", New: Vesperlark},
 	{Name: "Veteran Guardmouse", New: VeteranGuardmouse},
 	{Name: "Veteran Warleader", New: VeteranWarleader},
+	{Name: "Vexing Bauble", New: VexingBauble},
 	{Name: "Viashino Branchrider", New: ViashinoBranchrider},
 	{Name: "Viashino Outrider", New: ViashinoOutrider},
 	{Name: "Vicious Shadows", New: ViciousShadows},
