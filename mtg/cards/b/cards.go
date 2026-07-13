@@ -117,6 +117,7 @@ var Cards = []cardset.Entry{
 	{Name: "Borborygmos Enraged", New: BorborygmosEnraged},
 	{Name: "Borderland Behemoth", New: BorderlandBehemoth},
 	{Name: "Boromir, Gondor's Hope", New: BoromirGondorSHope},
+	{Name: "Boromir, Warden of the Tower", New: BoromirWardenOfTheTower},
 	{Name: "Bosk Banneret", New: BoskBanneret},
 	{Name: "Bot Bashing Time", New: BotBashingTime},
 	{Name: "Bottomless Pit", New: BottomlessPit},
