@@ -1081,6 +1081,20 @@ type TriggerPattern struct {
 	// expressing "put into <zone> from anywhere other than the battlefield".
 	ExcludeFromZone bool
 
+	// FromZones matches a zone change whose origin is any one of an exact set of
+	// allowed source zones, expressing an origin union such as "put into exile
+	// from your library and/or your graveyard" (Laelia, the Blade Reforged). When
+	// non-empty, the trigger fires only when event.FromZone is one of these zones;
+	// it composes with a single required destination (MatchToZone/ToZone) and with
+	// one-or-more batch coalescing (OneOrMore). It is the multi-origin analog of
+	// the single MatchFromZone/FromZone filter and must not be combined with
+	// MatchFromZone or ExcludeFromZone. The owner scope of the origin zones ("your"
+	// vs "an opponent's") is expressed through the pattern's Player filter, so this
+	// field only names the zones. It is empty for every single-origin pattern,
+	// leaving their output byte-for-byte unchanged. It is only valid with
+	// Event == EventZoneChanged.
+	FromZones []zone.Type
+
 	MatchFaceDown bool
 	FaceDown      bool
 

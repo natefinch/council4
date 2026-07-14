@@ -821,6 +821,13 @@ type TriggerEventZoneContext struct {
 	ToZone          TriggerEventZone `json:",omitzero"`
 	ExcludeToZone   bool             `json:",omitempty"`
 	ExcludeFromZone bool             `json:",omitempty"`
+	// FromZones lists the exact allowed origin zones of a multi-origin union
+	// ("put into exile from your library and/or your graveyard"). When non-empty,
+	// the zone change matches when its origin is any of these zones, composed with
+	// a single destination (ToZone). It is mutually exclusive with MatchFromZone
+	// and ExcludeFromZone; every single-origin path leaves it empty, preserving
+	// prior output byte-for-byte.
+	FromZones []TriggerEventZone `json:",omitempty"`
 }
 
 // TriggerEventTappedStateKind identifies an ETB tapped-state qualifier.

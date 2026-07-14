@@ -151,6 +151,9 @@ func triggerMatchesEventForController(g *game.Game, source *game.Permanent, sour
 	if pattern.ExcludeFromZone && pattern.FromZone == event.FromZone {
 		return false
 	}
+	if len(pattern.FromZones) > 0 && !slices.Contains(pattern.FromZones, event.FromZone) {
+		return false
+	}
 	if pattern.MatchToZone && pattern.ToZone != event.ToZone {
 		return false
 	}

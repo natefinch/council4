@@ -888,6 +888,21 @@ func TestPermanentZoneChangeTriggerPatternsBindExtendedSlots(t *testing.T) {
 			},
 		},
 		{
+			name:  "cards put into exile from library and or graveyard union",
+			event: "one or more cards are put into exile from your library and/or your graveyard",
+			want: TriggerPattern{
+				Event:       TriggerEventZoneChanged,
+				Player:      TriggerPlayerYou,
+				MatchToZone: true,
+				ToZone:      TriggerZoneExile,
+				FromZones:   []TriggerZone{TriggerZoneLibrary, TriggerZoneGraveyard},
+				OneOrMore:   true,
+				SubjectSelection: TriggerSelection{
+					NonToken: true,
+				},
+			},
+		},
+		{
 			name:     "creature dealt damage by self this turn dies",
 			cardName: "Blood Cultist",
 			event:    "a creature dealt damage by this creature this turn dies",
@@ -929,6 +944,8 @@ func TestPermanentZoneChangeTriggerPatternsRejectMissingRuntimeSlots(t *testing.
 	for _, event := range []string{
 		"a non-Human creature dies",
 		"a creature dies during your turn",
+		"one or more cards are put into exile from your library and/or an opponent's graveyard",
+		"one or more cards are put into exile from your library and/or your library",
 	} {
 		t.Run(event, func(t *testing.T) {
 			t.Parallel()

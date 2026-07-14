@@ -1,6 +1,8 @@
 package cardgen
 
 import (
+	"slices"
+
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/compare"
@@ -257,6 +259,23 @@ func lowerTriggerZones(pattern *compiler.TriggerPattern, result *game.TriggerPat
 		result.ExcludeFromZone = pattern.ExcludeFromZone
 	} else if pattern.FromZone != compiler.TriggerZoneNone {
 		return false
+	}
+	if len(pattern.FromZones) > 0 {
+		if pattern.MatchFromZone || pattern.ExcludeFromZone || len(pattern.FromZones) < 2 {
+			return false
+		}
+		zones := make([]zone.Type, 0, len(pattern.FromZones))
+		for _, from := range pattern.FromZones {
+			lowered, ok := lowerTriggerZone(from)
+			if !ok {
+				return false
+			}
+			if slices.Contains(zones, lowered) {
+				return false
+			}
+			zones = append(zones, lowered)
+		}
+		result.FromZones = zones
 	}
 	if pattern.MatchToZone && pattern.ExcludeToZone {
 		return false

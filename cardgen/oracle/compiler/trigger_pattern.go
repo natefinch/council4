@@ -334,6 +334,13 @@ type TriggerPattern struct {
 
 	ExcludeFromZone bool
 
+	// FromZones names an exact union of allowed origin zones for a multi-origin
+	// zone-changed pattern ("put into exile from your library and/or your
+	// graveyard"). When non-empty, the pattern matches a move whose origin is any
+	// of these zones, composed with a single destination. It is mutually exclusive
+	// with MatchFromZone and ExcludeFromZone; single-origin patterns leave it nil.
+	FromZones []TriggerZone
+
 	MatchFaceDown bool
 	FaceDown      bool
 
