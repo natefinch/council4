@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,854 of 32,501 cards eligible for paper support (54.9%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,855 of 32,501 cards eligible for paper support (54.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -15275,6 +15275,7 @@ Council4 currently supports **17,854 of 32,501 cards eligible for paper support 
 - Teacher's Pest
 - Team Avatar
 - Team Transmitter
+- Tear Asunder
 - Teardrop Kami
 - Tears of Valakut
 - Tectonic Edge

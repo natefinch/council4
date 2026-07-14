@@ -2292,6 +2292,7 @@ func targetSyntaxEnd(tokens []shared.Token, atoms Atoms, start int) int {
 			(equalWord(token, "and") && end+1 < len(tokens) && effectWordKind(tokens[end+1]) != EffectUnknown) ||
 			(end > start && effectWordKind(token) != EffectUnknown) ||
 			(end > start && equalWord(token, "would")) ||
+			(end > start && equalWord(token, "instead")) ||
 			(end > start && equalWord(token, "may") && end+1 < len(tokens) &&
 				effectWordKind(tokens[end+1]) != EffectUnknown) ||
 			(end > start && equalWord(token, "becomes")) ||
