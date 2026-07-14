@@ -767,6 +767,8 @@ func (r Renderer) renderCreateToken(ctx *renderCtx, value game.CreateToken) (str
 			group = "game.OpponentsReference()"
 		case game.PlayerGroupReferenceAllPlayers:
 			group = "game.AllPlayersReference()"
+		case game.PlayerGroupReferenceOpponentsAttackingTriggerPlayer:
+			group = "game.OpponentsAttackingTriggerPlayerReference()"
 		default:
 			return "", fmt.Errorf("render: unsupported player group reference kind %d", value.RecipientGroup.Kind)
 		}

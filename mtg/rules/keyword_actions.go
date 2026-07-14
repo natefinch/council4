@@ -47,6 +47,25 @@ func effectPermanentTarget(g *game.Game, obj *game.StackObject, targetIndex int)
 	return permanentByObjectID(g, target.PermanentID)
 }
 
+// effectPlayerTarget resolves a target slot to a player, reporting ok=false when
+// the slot is out of range, is not a player target, or names a player no longer
+// in the game. It is the player analog of effectPermanentTarget and backs Aura
+// spells that enchant a player (CR 303.4h).
+func effectPlayerTarget(g *game.Game, obj *game.StackObject, targetIndex int) (game.PlayerID, bool) {
+	if obj == nil {
+		return 0, false
+	}
+	targetIndex = remapTargetSlot(g, obj, targetIndex)
+	if targetIndex < 0 || targetIndex >= len(obj.Targets) {
+		return 0, false
+	}
+	target := obj.Targets[targetIndex]
+	if target.Kind != game.TargetPlayer || !isPlayerAlive(g, target.PlayerID) {
+		return 0, false
+	}
+	return target.PlayerID, true
+}
+
 func emitFightEvent(g *game.Game, permanent, related *game.Permanent, simultaneousID id.ID) {
 	emitEvent(g, game.Event{
 		Kind:               game.EventFight,

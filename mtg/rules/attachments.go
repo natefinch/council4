@@ -21,14 +21,46 @@ func attachPermanent(g *game.Game, attachment, target *game.Permanent) bool {
 	return true
 }
 
+// attachAuraToPlayer attaches a player-enchanting Aura to a player (CR 303.4h,
+// CR 701.3). It clears any prior permanent or player attachment first, then
+// records the player pointer. It returns false without mutating anything when
+// the Aura may not legally enchant the player, mirroring attachPermanent.
+func attachAuraToPlayer(g *game.Game, aura *game.Permanent, playerID game.PlayerID) bool {
+	if !auraCanAttachToPlayer(g, aura, playerID) {
+		return false
+	}
+	detachPermanent(g, aura)
+	aura.AttachedToPlayer = opt.Val(playerID)
+	return true
+}
+
+// attachResolvingAura attaches a just-resolved Aura permanent to the target its
+// spell chose, which is a player for an Enchant-player Aura or a permanent
+// otherwise. It returns false when no legal target remains, so the caller
+// applies the unattached-Aura outcome (owner's graveyard, or, for a bestowed
+// Aura, ceasing to be bestowed). Reanimation Auras have their own resolution
+// path and never reach here.
+func attachResolvingAura(g *game.Game, obj *game.StackObject, aura *game.Permanent) bool {
+	if playerID, ok := effectPlayerTarget(g, obj, 0); ok {
+		return attachAuraToPlayer(g, aura, playerID)
+	}
+	target, ok := effectPermanentTarget(g, obj, 0)
+	if !ok {
+		return false
+	}
+	return attachPermanent(g, aura, target)
+}
+
 func detachPermanent(g *game.Game, attachment *game.Permanent) {
-	if !attachment.AttachedTo.Exists {
-		return
+	if attachment.AttachedTo.Exists {
+		if target, ok := permanentByObjectID(g, attachment.AttachedTo.Val); ok {
+			target.Attachments = removePermanentID(target.Attachments, attachment.ObjectID)
+		}
+		attachment.AttachedTo = opt.V[id.ID]{}
 	}
-	if target, ok := permanentByObjectID(g, attachment.AttachedTo.Val); ok {
-		target.Attachments = removePermanentID(target.Attachments, attachment.ObjectID)
-	}
-	attachment.AttachedTo = opt.V[id.ID]{}
+	// An Aura attached to a player has no permanent host tracking a reverse
+	// Attachments entry, so clearing the player pointer fully detaches it.
+	attachment.AttachedToPlayer = opt.V[game.PlayerID]{}
 }
 
 func detachAttachmentsFromPermanent(g *game.Game, target *game.Permanent) {
@@ -71,6 +103,22 @@ func auraCanAttachToPermanent(g *game.Game, aura, target *game.Permanent) bool {
 		return false
 	}
 	return permanentTargetMatchesSpec(g, effectiveController(g, aura), aura.ObjectID, game.Event{}, &spec, target.ObjectID)
+}
+
+// auraCanAttachToPlayer reports whether aura may legally enchant playerID. The
+// Aura's Enchant restriction must permit a player, and the player must satisfy
+// the Aura's player relation (for example "Enchant opponent") and still be in
+// the game (CR 704.5m). Reanimation Auras never enchant players, so their
+// linked-object restriction never applies here.
+func auraCanAttachToPlayer(g *game.Game, aura *game.Permanent, playerID game.PlayerID) bool {
+	spec, ok := enchantTargetSpecForPermanent(g, aura)
+	if !ok {
+		return false
+	}
+	if spec.Allow != game.TargetAllowUnspecified && spec.Allow&game.TargetAllowPlayer == 0 {
+		return false
+	}
+	return playerTargetMatchesSpec(g, effectiveController(g, aura), &spec, playerID)
 }
 
 func isAuraPermanent(g *game.Game, permanent *game.Permanent) bool {

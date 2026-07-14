@@ -36,6 +36,7 @@ func parseTriggerEventClause(
 		parseSpellCastTriggerEventClause,
 		parseAbilityActivatedTriggerEventClause,
 		parseAttackBlockTriggerEventClause,
+		parseEnchantedPlayerAttackedTriggerEventClause,
 		parseDamageTriggerEventClause,
 		parseCounterTriggerEventClause,
 		parsePermanentStateTriggerEventClause,

@@ -826,6 +826,7 @@ func (r Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatt
 		(pattern.DyingObjectCaptured && pattern.Event != game.EventPermanentDied) ||
 		(pattern.AttackWhileSaddled && pattern.Event != game.EventAttackerDeclared) ||
 		(pattern.AttacksDifferentPlayerThanAnother && pattern.Event != game.EventAttackerDeclared) ||
+		(pattern.AttackedPlayerIsSourceEnchantedPlayer && pattern.Event != game.EventAttackerDeclared) ||
 		(pattern.AttacksAlongsideCount != 0 &&
 			(pattern.Event != game.EventAttackerDeclared || pattern.AttacksAlongsideSelection.Empty())) ||
 		(pattern.DyingDamagedBySource && pattern.Event != game.EventPermanentDied) ||
@@ -1039,6 +1040,9 @@ func renderTriggerPatternFlagFields(ctx *renderCtx, pattern *game.TriggerPattern
 	}
 	if pattern.AttacksDifferentPlayerThanAnother {
 		fields = append(fields, "AttacksDifferentPlayerThanAnother: true,")
+	}
+	if pattern.AttackedPlayerIsSourceEnchantedPlayer {
+		fields = append(fields, "AttackedPlayerIsSourceEnchantedPlayer: true,")
 	}
 	if pattern.DyingDamagedBySource {
 		fields = append(fields, "DyingDamagedBySource: true,")

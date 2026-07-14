@@ -656,8 +656,7 @@ func (e *Engine) resolvePermanentSpellWithChoices(g *game.Game, obj *game.StackO
 			// it inline, avoiding the unattached-Aura state-based action.
 			return e.resolveReanimationAura(g, obj, permanent, agents, log)
 		}
-		target, targetOK := effectPermanentAt(g, obj, 0)
-		if !targetOK || !attachPermanent(g, permanent, target) {
+		if !attachResolvingAura(g, obj, permanent) {
 			if obj.Bestowed {
 				// A bestowed Aura reaches here only with a target that was legal
 				// as resolution began; if attachment still fails the permanent

@@ -16,6 +16,16 @@ const (
 	// target still legal as the effect resolves, so a group effect applies to the
 	// whole chosen set at once.
 	PlayerGroupReferenceTargetedPlayers
+	// PlayerGroupReferenceOpponentsAttackingTriggerPlayer denotes every opponent
+	// of the resolving controller who has a creature attacking the player the
+	// resolving triggered ability's attack event was declared against ("Each
+	// opponent attacking that player does the same" — Curse of Opulence). "That
+	// player" is read from the trigger event's attack target, and only creatures
+	// attacking that player directly count, so an attack on that player's
+	// planeswalker or battle does not add its controller (CR 508.1). The runtime
+	// derives the group from the recorded combat attackers, so it is reusable by
+	// any "whenever a player is attacked" ability.
+	PlayerGroupReferenceOpponentsAttackingTriggerPlayer
 )
 
 // PlayerGroupReference is a small sealed pure-data type describing a group of players.
@@ -40,11 +50,20 @@ func TargetedPlayersReference() PlayerGroupReference {
 	return PlayerGroupReference{Kind: PlayerGroupReferenceTargetedPlayers}
 }
 
+// OpponentsAttackingTriggerPlayerReference returns a reference to every opponent
+// of the resolving controller attacking the player the resolving triggered
+// ability's attack event was declared against ("Each opponent attacking that
+// player does the same" — Curse of Opulence).
+func OpponentsAttackingTriggerPlayerReference() PlayerGroupReference {
+	return PlayerGroupReference{Kind: PlayerGroupReferenceOpponentsAttackingTriggerPlayer}
+}
+
 // Validate reports structural problems with a PlayerGroupReference.
 func (r PlayerGroupReference) Validate() []string {
 	switch r.Kind {
 	case PlayerGroupReferenceOpponents, PlayerGroupReferenceAllPlayers,
-		PlayerGroupReferenceTargetedPlayers:
+		PlayerGroupReferenceTargetedPlayers,
+		PlayerGroupReferenceOpponentsAttackingTriggerPlayer:
 		return nil
 	case PlayerGroupReferenceNone:
 		return []string{"player group reference has no kind"}

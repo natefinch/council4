@@ -346,6 +346,9 @@ func triggerCombatPatternMatches(g *game.Game, viewer game.PlayerID, source *gam
 	if pattern.AttackedPlayerHasMostLife && !attackedPlayerHasMostLife(g, event) {
 		return false
 	}
+	if pattern.AttackedPlayerIsSourceEnchantedPlayer && !attackedPlayerIsSourceEnchantedPlayer(source, event) {
+		return false
+	}
 	if pattern.AttacksWithGreaterPowerCreature && !attacksWithGreaterPowerCreature(g, source, event) {
 		return false
 	}
@@ -442,6 +445,22 @@ func stepPlayerSourceAttachedMatches(g *game.Game, viewer game.PlayerID, source 
 		return false
 	}
 	return triggerSelectionMatches(g, viewer, event, source.AttachedTo.Val, selection, source.ObjectID)
+}
+
+// attackedPlayerIsSourceEnchantedPlayer reports whether an attacker-declared
+// event is an attack against the player the source Aura is attached to
+// ("Whenever enchanted player is attacked", Curse of Opulence). Only a direct
+// attack on that player qualifies; an attack on the player's planeswalker or
+// battle is not an attack on the player (CR 508.1), and an Aura not attached to
+// a player never matches.
+func attackedPlayerIsSourceEnchantedPlayer(source *game.Permanent, event game.Event) bool {
+	if event.Kind != game.EventAttackerDeclared || !event.AttackTarget.IsPlayerAttack() {
+		return false
+	}
+	if source == nil || !source.AttachedToPlayer.Exists {
+		return false
+	}
+	return source.AttachedToPlayer.Val == event.AttackTarget.Player
 }
 
 // attackedPlayerHasMostLife reports whether an attacker-declared event targets a

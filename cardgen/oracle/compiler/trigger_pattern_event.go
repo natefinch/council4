@@ -340,6 +340,7 @@ func compileAttackEvent(clause *parser.TriggerEventClause, pattern *TriggerPatte
 	pattern.AttackAlone = clause.AttackAlone
 	pattern.AttackWhileSaddled = clause.AttackWhileSaddled
 	pattern.AttacksDifferentPlayerThanAnother = clause.AttacksDifferentPlayerThanAnother
+	pattern.AttackedPlayerIsSourceEnchantedPlayer = clause.EnchantedPlayerIsAttacked
 	pattern.AttackerCountAtLeast = clause.AttackerCountAtLeast
 	if clause.AttacksAlongsideCount > 0 {
 		alongside, ok := compileTriggerSelection(clause.AttacksAlongsideSelection)

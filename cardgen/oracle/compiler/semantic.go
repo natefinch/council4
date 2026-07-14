@@ -2534,6 +2534,13 @@ type CompiledEffect struct {
 	// TokenCopyGrantRiderSpan covers the folded gain-keyword rider sentence so
 	// lowering credits its tokens toward source coverage.
 	TokenCopyGrantRiderSpan shared.Span
+	// EachOpponentAttackingSameRiderSpan covers the folded "Each opponent
+	// attacking that player does the same." rider on an enchanted-player combat
+	// trigger's controller create-token effect. When set, lowering credits the
+	// rider sentence toward source coverage and emits an additional group token
+	// creation for each opponent attacking the enchanted player. It is the zero
+	// span unless the reflexive rider was folded onto this create effect.
+	EachOpponentAttackingSameRiderSpan shared.Span
 	// TokenCopyOverride and the TokenCopyOverride* fields carry a copy-token
 	// characteristic-overriding "except" exception ("except it's a 1/1 green
 	// Frog", "except it's an artifact in addition to its other types"). The

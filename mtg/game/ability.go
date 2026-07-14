@@ -1247,6 +1247,17 @@ type TriggerPattern struct {
 	// Event == EventAttackerDeclared.
 	AttackedPlayerHasMostLife bool
 
+	// AttackedPlayerIsSourceEnchantedPlayer restricts an EventAttackerDeclared
+	// trigger to attacks against the player the ability's source Aura is attached
+	// to ("Whenever enchanted player is attacked", Curse of Opulence). A player
+	// "is attacked" only by an attack declared against the player themselves, so
+	// attacks against that player's planeswalkers or battles do not qualify
+	// (CR 508.1). The triggering attacker is any creature, so the pattern keeps
+	// the default (any) Source filter; combined with OneOrMore it fires once per
+	// combat regardless of how many creatures attack the enchanted player. It is
+	// only valid with Event == EventAttackerDeclared.
+	AttackedPlayerIsSourceEnchantedPlayer bool
+
 	// AttacksWithGreaterPowerCreature restricts an EventAttackerDeclared trigger
 	// to combats where another creature with power greater than the ability's
 	// source is also attacking ("attacks with another creature with greater

@@ -923,6 +923,21 @@ func enterAttackUnionTriggerEventClauseTests() []triggerEventClauseTest {
 func combatTriggerEventClauseTests() []triggerEventClauseTest {
 	return []triggerEventClauseTest{
 		{
+			name:   "attack enchanted player is attacked",
+			source: "Whenever enchanted player is attacked, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.Kind != TriggerEventKindAttack ||
+					!clause.EnchantedPlayerIsAttacked ||
+					!clause.OneOrMore ||
+					clause.Subject.Kind != TriggerEventSubjectUnknown ||
+					clause.Actor.Kind != TriggerEventActorUnknown ||
+					clause.AttackRecipient.Kind != TriggerEventAttackRecipientAny {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+		{
 			name:   "attack player attacks",
 			source: "Whenever you attack, draw a card.",
 			check: func(t *testing.T, clause *TriggerEventClause) {

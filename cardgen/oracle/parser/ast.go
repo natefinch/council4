@@ -1008,6 +1008,13 @@ type TriggerEventClause struct {
 	// creature attack different players ("this creature and another creature
 	// attack different players", Canal Courier).
 	AttacksDifferentPlayerThanAnother bool `json:",omitempty"`
+	// EnchantedPlayerIsAttacked marks the passive attacker-declared clause
+	// "enchanted player is attacked" (Curse of Opulence and siblings). The source
+	// Aura enchants a player; the trigger fires once per combat in which one or
+	// more creatures are declared attacking that player directly (CR 508.1 — an
+	// attack on that player's planeswalker or battle is not an attack on the
+	// player). It carries no attacker subject or recipient of its own.
+	EnchantedPlayerIsAttacked bool `json:",omitempty"`
 	// AttackerCountAtLeast restricts a controller-scoped attack clause to combats
 	// where the controller attacks with at least this many creatures ("attack
 	// with two or more creatures"). Zero imposes no minimum.
@@ -1427,6 +1434,14 @@ type Sentence struct {
 	// Consultation). Reference and coverage scans treat its tokens as belonging to
 	// that process rather than as an unrecognized sibling.
 	ChooseCardNamePrelude bool `json:",omitempty"`
+	// EachOpponentAttackingSameRider reports that this sentence is the credited
+	// "Each opponent attacking that player does the same." rider folded onto a
+	// preceding controller create-token effect (Curse of Opulence, Curse of
+	// Disturbance). It widens the token creation so each opponent attacking the
+	// enchanted player also creates that token; reference and coverage scans treat
+	// its "that player" back reference and tokens as belonging to that create
+	// rather than as an unrecognized sibling.
+	EachOpponentAttackingSameRider bool `json:",omitempty"`
 }
 
 // sentenceIsCreditedRider reports whether the sentence has been folded onto a
@@ -1448,7 +1463,8 @@ func sentenceIsCreditedRider(s *Sentence) bool {
 		s.PersistentManaRider ||
 		s.RoundUpEachTimeRider ||
 		s.ImpulseExilePermission ||
-		s.ChooseCardNamePrelude
+		s.ChooseCardNamePrelude ||
+		s.EachOpponentAttackingSameRider
 }
 
 // StaticRuleSubjectKind identifies the source object constrained by a simple

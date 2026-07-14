@@ -367,6 +367,12 @@ type TriggerPattern struct {
 	// different players ("this creature and another creature attack different
 	// players", Canal Courier).
 	AttacksDifferentPlayerThanAnother bool
+	// AttackedPlayerIsSourceEnchantedPlayer restricts an attacker-declared
+	// pattern to combats in which a creature is declared attacking the player the
+	// source Aura enchants ("enchanted player is attacked", Curse of Opulence).
+	// It matches only a direct attack on that player, never an attack on that
+	// player's planeswalker or battle (CR 508.1).
+	AttackedPlayerIsSourceEnchantedPlayer bool
 	// AttackerCountAtLeast restricts a controller-scoped attacker-declared
 	// pattern to combats with at least this many attacking creatures. Zero
 	// imposes no minimum.
