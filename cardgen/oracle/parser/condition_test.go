@@ -399,6 +399,34 @@ func TestParseConditionControlsComposition(t *testing.T) {
 	}
 }
 
+// TestParseEventSubjectNonTokenCondition covers the negated intervening-if "if
+// it's not a token" (Life of the Party) and its equivalents. Each must produce
+// the event-permanent object-matches predicate with a NonToken selection (the
+// negation of TokenOnly), so the gate tests that the entering permanent is not a
+// token.
+func TestParseEventSubjectNonTokenCondition(t *testing.T) {
+	t.Parallel()
+	conditions := []string{
+		"it's not a token",
+		"it isn't a token",
+		"it is not a token",
+		"it wasn't a token",
+		"it was not a token",
+	}
+	for _, condition := range conditions {
+		t.Run(condition, func(t *testing.T) {
+			t.Parallel()
+			clause := parseSingleConditionClause(t, condition)
+			if clause.Predicate != ConditionPredicateObjectMatches ||
+				clause.ObjectBinding != ConditionObjectBindingEventPermanent ||
+				!clause.Selection.NonToken ||
+				clause.Selection.TokenOnly {
+				t.Fatalf("clause = %#v", clause)
+			}
+		})
+	}
+}
+
 func TestParseConditionEventSubjectAndSourceState(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

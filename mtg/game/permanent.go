@@ -260,4 +260,9 @@ func (p *Permanent) Timestamp() Timestamp {
 type GoadStatus struct {
 	CreatedTurn int
 	ExpiresFor  PlayerID
+	// RestOfGame marks a permanent goad ("goaded for the rest of the game", Life
+	// of the Party) that persists until the creature leaves the battlefield
+	// instead of expiring on the goading player's next turn. The turn-based
+	// expiry skips statuses with this flag set.
+	RestOfGame bool
 }

@@ -666,9 +666,35 @@ func (r referenceResolver) groupMembers(ref game.GroupReference) []id.ID {
 		return r.triggeringAttackersGroupMembers(ref)
 	case game.GroupDomainCapturedObjects:
 		return r.capturedObjectsGroupMembers()
+	case game.GroupDomainLinkedObjects:
+		return r.linkedObjectsGroupMembers(ref)
 	default:
 		return []id.ID{}
 	}
+}
+
+// linkedObjectsGroupMembers enumerates the permanents a prior instruction in this
+// resolution remembered under the group's linked key via PublishLinked, keeping
+// only those still on the battlefield. It backs the "the tokens" back-reference
+// of "each opponent creates a token that's a copy of it. The tokens are goaded
+// for the rest of the game." (Life of the Party): the goad binds exactly the
+// tokens created now rather than re-querying the board.
+func (r referenceResolver) linkedObjectsGroupMembers(ref game.GroupReference) []id.ID {
+	key, ok := ref.LinkedKey()
+	if !ok {
+		return []id.ID{}
+	}
+	linked := linkedObjects(r.g, linkedObjectSourceKey(r.g, r.obj, string(key)))
+	members := make([]id.ID, 0, len(linked))
+	for _, entry := range linked {
+		if entry.ObjectID == 0 {
+			continue
+		}
+		if _, ok := permanentByObjectID(r.g, entry.ObjectID); ok {
+			members = append(members, entry.ObjectID)
+		}
+	}
+	return members
 }
 
 // capturedObjectsGroupMembers enumerates the permanents a delayed trigger froze

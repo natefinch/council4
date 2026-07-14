@@ -23,8 +23,8 @@ func TestGoadedOpponentCreaturesCantBlock(t *testing.T) {
 	if ruleEffectProhibitsBlock(g, opponent) {
 		t.Fatal("ungoaded opponent creature could not block")
 	}
-	goadPermanent(g, opponent, game.Player1)
-	goadPermanent(g, controller, game.Player2)
+	goadPermanent(g, opponent, game.Player1, false)
+	goadPermanent(g, controller, game.Player2, false)
 	if !ruleEffectProhibitsBlock(g, opponent) {
 		t.Fatal("goaded opponent creature could block")
 	}

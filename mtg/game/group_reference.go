@@ -62,6 +62,16 @@ const (
 	// resolving stack object's CapturedObjectIDs. It draws no anchor and sets no
 	// Selection. Appended last so existing domain ordinals are unchanged.
 	GroupDomainCapturedObjects
+
+	// GroupDomainLinkedObjects draws from every permanent a prior instruction in
+	// the same resolution remembered under the group's linked key via
+	// PublishLinked — the "the tokens" back-reference of "each opponent creates a
+	// token that's a copy of it. The tokens are goaded for the rest of the game."
+	// (Life of the Party). Membership is the still-on-battlefield permanents named
+	// by the source-and-link-scoped linked objects, so it binds exactly the tokens
+	// created now rather than re-querying the board. It draws no anchor and sets no
+	// Selection.
+	GroupDomainLinkedObjects
 )
 
 // GroupReference is pure rules data describing WHERE a mass effect finds a group
@@ -82,6 +92,9 @@ type GroupReference struct {
 	// zero value) imposes no defender restriction, so a plain triggering-attackers
 	// group keeps its prior behavior.
 	attackedDefenderFilter TriggerControllerFilter
+	// linkedKey names the PublishLinked key a GroupDomainLinkedObjects group reads
+	// its members from. It is empty for every other domain.
+	linkedKey LinkedKey
 }
 
 // BattlefieldGroup matches every battlefield permanent satisfying selection.
@@ -172,6 +185,16 @@ func CapturedObjectsGroup() GroupReference {
 	return GroupReference{domain: GroupDomainCapturedObjects}
 }
 
+// LinkedObjectsGroup matches every permanent a prior instruction in the same
+// resolution remembered under key via PublishLinked (the "the tokens"
+// back-reference of "each opponent creates a token that's a copy of it. The
+// tokens are goaded for the rest of the game.", Life of the Party). It draws no
+// anchor and sets no Selection; membership comes from the source-and-link-scoped
+// linked objects.
+func LinkedObjectsGroup(key LinkedKey) GroupReference {
+	return GroupReference{domain: GroupDomainLinkedObjects, linkedKey: key}
+}
+
 // Domain reports the candidate domain the group draws from.
 func (r GroupReference) Domain() GroupReferenceDomain { return r.domain }
 
@@ -182,7 +205,8 @@ func (r GroupReference) Empty() bool {
 		!r.anchor.Exists &&
 		!r.playerAnchor.Exists &&
 		!r.exclude.Exists &&
-		r.attackedDefenderFilter == TriggerControllerAny
+		r.attackedDefenderFilter == TriggerControllerAny &&
+		r.linkedKey == ""
 }
 
 // Selection returns the characteristic predicate that narrows the domain.
@@ -192,6 +216,12 @@ func (r GroupReference) Selection() Selection { return r.selection }
 // triggering-attackers group, or TriggerControllerAny when unrestricted.
 func (r GroupReference) AttackedDefenderFilter() TriggerControllerFilter {
 	return r.attackedDefenderFilter
+}
+
+// LinkedKey returns the PublishLinked key a GroupDomainLinkedObjects group reads
+// its members from, and whether this group draws from linked objects.
+func (r GroupReference) LinkedKey() (LinkedKey, bool) {
+	return r.linkedKey, r.domain == GroupDomainLinkedObjects
 }
 
 // Anchor returns the object the domain is defined relative to, if any.
@@ -269,6 +299,19 @@ func (r GroupReference) Validate() []string {
 		if !r.selection.Empty() {
 			problems = append(problems, "captured-objects group must not set a Selection")
 		}
+	case GroupDomainLinkedObjects:
+		if r.linkedKey == "" {
+			problems = append(problems, "linked-objects group requires a linked key")
+		}
+		if r.anchor.Exists {
+			problems = append(problems, "linked-objects group must not set an anchor object")
+		}
+		if r.exclude.Exists {
+			problems = append(problems, "linked-objects group must not set an exclusion")
+		}
+		if !r.selection.Empty() {
+			problems = append(problems, "linked-objects group must not set a Selection")
+		}
 	case groupDomainNone:
 		problems = append(problems, "group reference has no domain")
 	default:
@@ -288,6 +331,9 @@ func (r GroupReference) Validate() []string {
 	}
 	if r.attackedDefenderFilter != TriggerControllerAny && r.domain != GroupDomainTriggeringAttackers {
 		problems = append(problems, "only a triggering-attackers group may set a defender filter")
+	}
+	if r.linkedKey != "" && r.domain != GroupDomainLinkedObjects {
+		problems = append(problems, "only a linked-objects group may set a linked key")
 	}
 	problems = append(problems, r.selection.Validate()...)
 	return problems

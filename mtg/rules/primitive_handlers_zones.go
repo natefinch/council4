@@ -746,16 +746,30 @@ func (r *effectResolver) createTokenForGroup(prim game.CreateToken, amount int) 
 		token = &sized
 	}
 	members := playersInAPNAPOrder(r.game, r.playerGroupMembers(prim.RecipientGroup))
+	var created []*game.Permanent
 	for _, member := range members {
-		created, ok := createTokenPermanentsCollectingWithChoices(r.engine, r.game, member, token, amount, prim.EntryTapped, r.agents, r.log)
+		tokens, ok := createTokenPermanentsCollectingWithChoices(r.engine, r.game, member, token, amount, prim.EntryTapped, r.agents, r.log)
 		if !ok {
 			continue
 		}
 		if prim.EntryAttacking {
-			declareCreatedTokensAttacking(r.engine, r.game, member, created, r.agents, r.log)
+			declareCreatedTokensAttacking(r.engine, r.game, member, tokens, r.agents, r.log)
 		}
-		res.amount += len(created)
+		created = append(created, tokens...)
+		res.amount += len(tokens)
 		res.succeeded = true
+	}
+	if prim.PublishLinked != "" {
+		key := linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked))
+		// Clear any tokens a prior resolution published under this
+		// source-and-link-scoped key before remembering this resolution's set, so
+		// a paired "the tokens" back-reference binds exactly the tokens created
+		// now (each opponent's copy of Life of the Party) rather than a stale
+		// entry, mirroring the single-recipient and myriad publish sites.
+		clearLinkedObjects(r.game, key)
+		for _, permanent := range created {
+			rememberLinkedObject(r.game, key, game.LinkedObjectRef{ObjectID: permanent.ObjectID, CardID: permanent.CardInstanceID})
+		}
 	}
 	return res
 }

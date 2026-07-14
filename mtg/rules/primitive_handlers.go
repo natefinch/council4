@@ -1457,14 +1457,14 @@ func handleGoad(r *effectResolver, prim game.Goad) effectResolved {
 	if !targets.single {
 		for _, permanent := range targets.permanents {
 			if permanentHasType(r.game, permanent, types.Creature) {
-				goadPermanent(r.game, permanent, r.obj.Controller)
+				goadPermanent(r.game, permanent, r.obj.Controller, prim.RestOfGame)
 				res.succeeded = true
 			}
 		}
 		return res
 	}
 	if targets.resolved && permanentHasType(r.game, targets.permanents[0], types.Creature) {
-		goadPermanent(r.game, targets.permanents[0], r.obj.Controller)
+		goadPermanent(r.game, targets.permanents[0], r.obj.Controller, prim.RestOfGame)
 		res.succeeded = true
 	}
 	return res

@@ -79,6 +79,31 @@ func TestCompileCastTriggerFewerThanSelfCounterInterveningIf(t *testing.T) {
 	}
 }
 
+// TestCompileEnterTriggerNonTokenInterveningIf verifies Life of the Party's
+// negated intervening-if "if it's not a token" compiles onto the event-permanent
+// object-match predicate with the NonToken selection flag set, so the runtime
+// gate rejects token entries.
+func TestCompileEnterTriggerNonTokenInterveningIf(t *testing.T) {
+	t.Parallel()
+	source := "When this creature enters, if it's not a token, draw a card."
+	compilation, diagnostics := compileSource(source, pipelineContext{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	ability := compilation.Abilities[0]
+	if ability.Trigger == nil || ability.Trigger.Condition == nil {
+		t.Fatalf("trigger = %#v", ability.Trigger)
+	}
+	condition := ability.Trigger.Condition
+	if condition.Predicate != ConditionPredicateObjectMatches ||
+		condition.ObjectBinding != ReferenceBindingEventPermanent {
+		t.Fatalf("condition = %#v, want event-permanent object-match", condition)
+	}
+	if !condition.Selection.NonToken || condition.Selection.TokenOnly {
+		t.Fatalf("selection = %#v, want NonToken", condition.Selection)
+	}
+}
+
 func TestCompileNonPhaseTriggerUsesNormalizedSyntaxTokens(t *testing.T) {
 	t.Parallel()
 	source := "Whenever a  creature enters, draw a card."

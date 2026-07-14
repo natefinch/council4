@@ -64,6 +64,7 @@ func emitResolvingSyntax(abilities []Ability) {
 		annotateSacrificeThenCountSentences(abilities[i].Sentences)
 		attachTokenGrantedAbilities(&abilities[i])
 		creditEachOpponentAttackingSameRider(&abilities[i])
+		creditGoadCreatedTokensRider(&abilities[i])
 		attachGainGrantedAbilities(&abilities[i])
 		attachEmblemEffects(&abilities[i])
 		recognizeControllerOptionalPaymentSequence(&abilities[i])

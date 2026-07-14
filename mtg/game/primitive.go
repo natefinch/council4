@@ -2099,6 +2099,13 @@ type Manifest struct {
 type Goad struct {
 	Object ObjectReference
 	Group  GroupReference
+	// RestOfGame goads each affected creature permanently rather than until the
+	// goading player's next turn, backing "goaded for the rest of the game" (Life
+	// of the Party). The goad persists until the creature leaves the battlefield
+	// (CR 701.38, the card's ruling), so it is not cleared by the goading
+	// player's turn-based expiry. It is false for the ordinary turn-limited goad
+	// keyword action.
+	RestOfGame bool
 }
 
 // RemoveCounter removes counters from one referenced permanent or every permanent in a referenced group.
