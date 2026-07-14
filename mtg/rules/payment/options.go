@@ -55,6 +55,11 @@ func spellCostOptionsForZoneAndKicker(s State, playerID game.PlayerID, card *gam
 		alternatives = append(slices.Clone(alternatives), jumpStartAlternativeCost(card))
 		hasFlashbackAlternative = true
 	}
+	if sourceZone == zone.Graveyard {
+		if granted := s.GraveyardCastGrantedAlternatives(playerID, card); len(granted) > 0 {
+			alternatives = append(slices.Clone(alternatives), granted...)
+		}
+	}
 	if len(permissions) == 0 {
 		permissions = []SpellCastPermission{SpellCastPermissionDefault}
 		if sourceZone == zone.Graveyard && hasFlashbackAlternative {

@@ -757,6 +757,21 @@ type StaticGraveyardKeywordGrantDeclaration struct {
 	Keyword              CompiledKeyword
 	Filter               parser.StaticDeclarationCardFilterKind
 	DuringControllerTurn bool
+	// EscapeCost carries the computed escape cost of the escape variant ("Each
+	// nonland card in your graveyard has escape. The escape cost is equal to the
+	// card's mana cost plus exile N other cards from your graveyard.", Underworld
+	// Breach). It is nil for parameterless grants (retrace-style), whose cost the
+	// granted keyword itself defines.
+	EscapeCost *StaticGraveyardEscapeCost
+}
+
+// StaticGraveyardEscapeCost is the computed escape cost a graveyard escape grant
+// confers on each matching card: the escaping card's own mana cost
+// (UseCardManaCost) plus exiling ExileOtherCount other cards from the caster's
+// graveyard, excluding the escaping card itself.
+type StaticGraveyardEscapeCost struct {
+	UseCardManaCost bool
+	ExileOtherCount int
 }
 
 // StaticSpellKeywordGrantDeclaration grants a parameterless cost-affecting
@@ -1138,6 +1153,10 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Abili
 		return
 	}
 	if declaration, ok := recognizeStaticCardAbilityGrantDeclaration(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
+		return
+	}
+	if declaration, ok := recognizeStaticGraveyardEscapeGrantDeclaration(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
 		return
 	}

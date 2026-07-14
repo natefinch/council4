@@ -1543,6 +1543,11 @@ func castPermissionsForZone(g *game.Game, playerID game.PlayerID, cardID id.ID, 
 	if face == game.FaceFront && cardOK && cardHasEscapeAlternative(card) {
 		permissions = append(permissions, payment.SpellCastPermissionEscape)
 	}
+	if face == game.FaceFront && cardOK &&
+		!slices.Contains(permissions, payment.SpellCastPermissionEscape) &&
+		len(grantedGraveyardCastAlternatives(g, playerID, cardFaceOrDefault(card, game.FaceFront))) > 0 {
+		permissions = append(permissions, payment.SpellCastPermissionEscape)
+	}
 	if hasCastFromZoneRuleEffect(g, playerID, cardID, sourceZone, face) {
 		permissions = append(permissions, payment.SpellCastPermissionRuleEffect)
 	}
