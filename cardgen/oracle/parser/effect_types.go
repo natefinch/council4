@@ -992,6 +992,10 @@ const (
 	// in-text referent; the lowerer schedules the payoff to resolve after the
 	// prevention has applied. Added last so existing kinds keep their values.
 	EffectDynamicAmountDamagePreventedThisWay EffectDynamicAmountKind = "EffectDynamicAmountDamagePreventedThisWay"
+	// EffectDynamicAmountTriggeringEventTotalPower is the total power of the
+	// permanents in the simultaneous event batch that matched the enclosing
+	// trigger ("the total power of those creatures").
+	EffectDynamicAmountTriggeringEventTotalPower EffectDynamicAmountKind = "EffectDynamicAmountTriggeringEventTotalPower"
 )
 
 // EffectDynamicAmountForm identifies how a dynamic amount is introduced.
@@ -2149,11 +2153,10 @@ type EffectSyntax struct {
 	// ("where X is <dynamic>"); downstream layers resolve it into TokenPTDynamic.
 	// It is false for fixed-power/toughness tokens.
 	TokenPTVariableX bool `json:",omitempty"`
-	// TokenPTDynamic names the rules-derived amount a variable "X/X" token's
-	// power and toughness each equal, bound from the ability's "where X is
-	// <dynamic>" clause. It is set only when TokenPTVariableX is true and the
-	// binding resolves to a recognized dynamic amount; lowering reads it to size
-	// the token at creation. It stays empty for fixed-power/toughness tokens.
+	// TokenPTDynamic names the rules-derived amount a token's power and toughness
+	// each equal. It may bind a variable "X/X" token through a "where X is
+	// <dynamic>" clause or directly describe its base power and toughness.
+	// Lowering reads it once at creation. It stays empty for fixed-size tokens.
 	TokenPTDynamic EffectDynamicAmountKind `json:",omitempty"`
 	// TokenGrantedAbility is the full quoted ability a created token enters with
 	// ("... creature token with \"When this token dies, you gain 1 life.\""),

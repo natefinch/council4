@@ -2392,9 +2392,9 @@ type CompiledEffect struct {
 	// are both the variable "X" ("an X/X ... token"); lowering reads
 	// TokenPTDynamic to size it at creation. It is false for fixed tokens.
 	TokenPTVariableX bool
-	// TokenPTDynamic names the rules-derived amount a variable-X token's power and
-	// toughness each equal, bound from the ability's "where X is <dynamic>" clause.
-	// It is set only when TokenPTVariableX is true. It is empty for fixed tokens.
+	// TokenPTDynamic names the rules-derived amount a token's power and toughness
+	// each equal, evaluated once when the token is created. It is empty for fixed
+	// tokens.
 	TokenPTDynamic parser.EffectDynamicAmountKind
 	// TokenKeywords lists, in source order, every creature keyword a created token
 	// enters with ("with flying and vigilance" -> [Flying, Vigilance]). Lowering

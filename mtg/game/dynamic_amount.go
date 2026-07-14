@@ -298,6 +298,10 @@ const (
 	// DynamicAmountTriggeringAttackerCount is the number of creatures declared
 	// in the simultaneous attack batch that triggered the resolving ability.
 	DynamicAmountTriggeringAttackerCount
+	// DynamicAmountTriggeringEventTotalPower is the total last-known power of
+	// permanents in the simultaneous event batch that matched the resolving
+	// ability's trigger pattern.
+	DynamicAmountTriggeringEventTotalPower
 )
 
 // DynamicAmount describes an effect amount determined as the effect resolves

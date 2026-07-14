@@ -1698,6 +1698,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		}
 		tokenPower, tokenToughness, tokenPTKnown := parseTokenPowerToughness(kind, clause)
 		tokenPTVariableX := parseTokenPTVariableX(kind, clause)
+		tokenPTDynamic, tokenPTDynamicSpan := parseTokenPTDynamic(kind, clause)
 		// A library search whose filter carries a dynamic controlled-permanent
 		// mana-value bound ("a card with mana value less than or equal to the
 		// number of lands you control", Beseech the Queen) embeds a count subject
@@ -1736,6 +1737,9 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		}
 		if searchMVSacrificedAddend != nil {
 			amountClause = tokensBeforeOffset(clause, searchMVSacrificedManaOffset)
+		}
+		if tokenPTDynamic != EffectDynamicAmountNone {
+			amountClause = tokensBeforeOffset(clause, tokenPTDynamicSpan.Start.Offset)
 		}
 		amount := parseEffectAmount(kind, amountClause, atoms)
 		if forEach, ok := parseCreateForEachAmount(kind, context, tokenPTKnown, tokens[ownershipStart:tokenIndex], amount, atoms); ok {
@@ -1830,6 +1834,11 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			// value ..." bound; the addend rides on the Selection's
 			// ManaValueSacrificedCostAddend field, set after parseSelection.
 			selectionClause = tokensBeforeOffset(clause, searchMVSacrificedManaOffset)
+		case kind == EffectCreate && tokenPTDynamic != EffectDynamicAmountNone:
+			// The dynamic base-P/T rider trails the token's identity. Exclude it
+			// so its "power" and "those creatures" nouns do not contaminate the
+			// token selection.
+			selectionClause = tokensBeforeOffset(clause, tokenPTDynamicSpan.Start.Offset)
 		default:
 		}
 		eachSourceDamageGroup, eachSourceDamageRecipient := eachSourceDamageSyntax(kind, tokens[ownershipStart:tokenIndex], clause, amount, atoms)
@@ -1944,6 +1953,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			TokenToughness:                tokenToughness,
 			TokenPTKnown:                  tokenPTKnown,
 			TokenPTVariableX:              tokenPTVariableX,
+			TokenPTDynamic:                tokenPTDynamic,
 			TokenKeywords:                 tokenKeywords,
 			TokenToxic:                    tokenToxic,
 			TokenName:                     tokenName,

@@ -135,6 +135,10 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj opt.V[*game.StackObject], c
 		if obj.Exists && obj.Val.HasTriggerEvent && dynamic.Selection != nil {
 			amount = triggeringAttackerCount(g, obj.Val, controller, *dynamic.Selection)
 		}
+	case game.DynamicAmountTriggeringEventTotalPower:
+		if obj.Exists && obj.Val.HasTriggerEvent {
+			amount = triggeringEventTotalPower(g, obj.Val)
+		}
 	case game.DynamicAmountSpellTargetCount:
 		if obj.Exists && obj.Val.HasTriggerEvent && dynamic.Selection != nil {
 			amount = countSpellTargetsMatching(g, controller, game.TargetAllowPermanent, *dynamic.Selection, obj.Val.TriggerEvent)
@@ -861,6 +865,49 @@ func triggeringAttackerCount(g *game.Game, obj *game.StackObject, viewer game.Pl
 		return 1
 	}
 	return count
+}
+
+// triggeringEventTotalPower sums the last-known power of every permanent in the
+// triggering simultaneous batch that matched the resolving ability's trigger
+// pattern. An unbatched trigger contributes only its event permanent.
+func triggeringEventTotalPower(g *game.Game, obj *game.StackObject) int {
+	pattern, ok := resolvingTriggerPattern(g, obj)
+	if !ok {
+		return 0
+	}
+	var source *game.Permanent
+	if permanent, live := permanentByObjectID(g, obj.SourceID); live {
+		source = permanent
+	}
+	matches := func(event game.Event) bool {
+		return triggerMatchesEventForController(g, source, obj.Controller, pattern, event)
+	}
+	power := func(event game.Event) int {
+		resolved, ok := resolvePermanentOrLastKnown(g, event.PermanentID)
+		if !ok {
+			return 0
+		}
+		return resolvedObjectPower(g, &resolved)
+	}
+	trigger := obj.TriggerEvent
+	if trigger.SimultaneousID == 0 {
+		if matches(trigger) {
+			return power(trigger)
+		}
+		return 0
+	}
+	total := 0
+	matched := false
+	for _, event := range g.Events {
+		if event.SimultaneousID == trigger.SimultaneousID && matches(event) {
+			total += power(event)
+			matched = true
+		}
+	}
+	if !matched && matches(trigger) {
+		return power(trigger)
+	}
+	return total
 }
 
 func countCardsInZoneMatchingSelection(g *game.Game, obj opt.V[*game.StackObject], controller game.PlayerID, playerRef game.PlayerReference, cardZone zone.Type, selection game.Selection) int {

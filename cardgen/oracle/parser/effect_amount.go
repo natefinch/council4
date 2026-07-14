@@ -129,6 +129,7 @@ func parseTokenPTVariableX(kind EffectKind, tokens []shared.Token) bool {
 	if kind != EffectCreate {
 		return false
 	}
+
 	for i := 0; i+2 < len(tokens); i++ {
 		if tokens[i+1].Kind != shared.Slash ||
 			!equalWord(tokens[i], "X") ||
@@ -138,6 +139,29 @@ func parseTokenPTVariableX(kind EffectKind, tokens []shared.Token) bool {
 		return true
 	}
 	return false
+}
+
+// parseTokenPTDynamic recognizes a direct dynamic token-size rider and returns
+// both its typed amount and the span to exclude from the token's card selection.
+func parseTokenPTDynamic(kind EffectKind, tokens []shared.Token) (EffectDynamicAmountKind, shared.Span) {
+	if kind != EffectCreate {
+		return EffectDynamicAmountNone, shared.Span{}
+	}
+	words := []string{
+		"with", "base", "power", "and", "toughness", "each", "equal", "to",
+		"the", "total", "power", "of", "those", "creatures",
+	}
+	for i := 0; i+len(words) <= len(tokens); i++ {
+		if !effectWordsAt(tokens, i, words...) {
+			continue
+		}
+		end := i + len(words)
+		if end < len(tokens) && tokens[end].Kind != shared.Period {
+			continue
+		}
+		return EffectDynamicAmountTriggeringEventTotalPower, shared.SpanOf(tokens[i:end])
+	}
+	return EffectDynamicAmountNone, shared.Span{}
 }
 
 // parseTokenKeywords returns, in source order, every recognized keyword name in a
