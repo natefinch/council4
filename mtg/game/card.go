@@ -798,6 +798,9 @@ func clonePrimitive(primitive Primitive) Primitive {
 	case ApplyContinuous:
 		value.ChooseFrom = cloneGroupReference(value.ChooseFrom)
 		return value
+	case TapChosenGroup:
+		value.ChooseFrom = cloneGroupReference(value.ChooseFrom)
+		return value
 	default:
 		return primitive
 	}

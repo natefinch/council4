@@ -274,10 +274,17 @@ const (
 	// the consequence half of the imprint copy/cast idiom, gated by a preceding
 	// CopyCard.
 	PrimitivePlayLinkedExiledCard
+
+	// PrimitiveTapChosenGroup lets the resolving controller choose any number of
+	// permanents from a group the enclosing ability restricts to untapped
+	// permanents they control matching a subtype or other selection, and taps
+	// each chosen permanent, publishing the number tapped for later scaled
+	// effects (Myr Battlesphere's "you may tap X untapped Myr you control").
+	PrimitiveTapChosenGroup
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitivePlayLinkedExiledCard) + 1
+const primitiveKindCount = int(PrimitiveTapChosenGroup) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount

@@ -733,6 +733,12 @@ func (r Renderer) renderPrimitiveTail(ctx *renderCtx, primitive game.Primitive) 
 			return "", err
 		}
 		return r.renderApplyContinuousPrimitive(ctx, value)
+	case game.PrimitiveTapChosenGroup:
+		value, err := assertPrimitive[game.TapChosenGroup](primitive)
+		if err != nil {
+			return "", err
+		}
+		return r.renderTapChosenGroupPrimitive(ctx, value)
 	case game.PrimitiveApplyRule:
 		value, err := assertPrimitive[game.ApplyRule](primitive)
 		if err != nil {
@@ -1614,6 +1620,23 @@ func (r Renderer) renderApplyContinuousPrimitive(ctx *renderCtx, value game.Appl
 		fields = append(fields, fmt.Sprintf("Prompt: %q,", value.Prompt))
 	}
 	return structLit("game.ApplyContinuous", fields), nil
+}
+
+// renderTapChosenGroupPrimitive renders a TapChosenGroup instruction: the
+// candidate group its controller chooses from, the published tapped-count key,
+// and an optional prompt. It mirrors renderApplyContinuousPrimitive's ChooseFrom
+// group rendering.
+func (r Renderer) renderTapChosenGroupPrimitive(ctx *renderCtx, value game.TapChosenGroup) (string, error) {
+	group, err := r.renderGroupReference(ctx, value.ChooseFrom)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{fmt.Sprintf("ChooseFrom: %s,", group)}
+	fields = append(fields, fmt.Sprintf("PublishCount: game.ResultKey(%q),", string(value.PublishCount)))
+	if value.Prompt != "" {
+		fields = append(fields, fmt.Sprintf("Prompt: %q,", value.Prompt))
+	}
+	return structLit("game.TapChosenGroup", fields), nil
 }
 
 // renderApplyRulePrimitive renders an ApplyRule instruction, the resolving form

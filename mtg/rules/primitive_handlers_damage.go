@@ -67,6 +67,9 @@ func handleDamage(r *effectResolver, prim game.Damage) effectResolved {
 	if player, ok := prim.Recipient.PlayerReference(); ok {
 		return r.damageReferencedPlayer(res, source, prim.ResultAmountKind, player)
 	}
+	if prim.Recipient.IsAttackedDefender() {
+		return r.damageAttackedDefender(res, source, prim.ResultAmountKind)
+	}
 	if player, ok := prim.Recipient.AnyTargetPlayerReference(); ok {
 		if resolvedPlayer, playerOK := r.resolvePlayer(player); playerOK {
 			dealt := dealPlayerDamage(r.game, source.sourceID, source.sourceObjectID, source.controller, resolvedPlayer, res.amount, false)

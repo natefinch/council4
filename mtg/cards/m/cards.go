@@ -161,6 +161,7 @@ var Cards = []cardset.Entry{
 	{Name: "Mutant's Prey", New: MutantSPrey},
 	{Name: "Mycologist", New: Mycologist},
 	{Name: "Mycosynth Wellspring", New: MycosynthWellspring},
+	{Name: "Myr Battlesphere", New: MyrBattlesphere},
 	{Name: "Mystic Meditation", New: MysticMeditation},
 	{Name: "Mystic Might", New: MysticMight},
 	{Name: "Mystic Restraints", New: MysticRestraints},

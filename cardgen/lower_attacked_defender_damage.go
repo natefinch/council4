@@ -7,16 +7,17 @@ import (
 )
 
 // lowerAttackedDefenderDamageSpell lowers a "deals N damage to the player or
-// planeswalker it's attacking" effect whose recipient is the defending player
-// of the triggering attack, as in "Whenever this creature attacks, it deals 1
-// damage to the player or planeswalker it's attacking." (Scorch Spitter,
-// Cavalcade of Calamity). The recipient resolves to the triggering attack
-// event's defending player through DefendingPlayerReference, so lowering gates
-// the enclosing trigger to an attack event the runtime populates with a
-// defending player. The amount is a fixed value, X, or a resolvable
-// source-power dynamic amount. It emits one Damage instruction with the
-// defending-player recipient and no target spec, failing closed for any shape
-// outside that template (a recipient that is not the attacked defender, a
+// planeswalker it's attacking" effect whose recipient is the defender of the
+// triggering attack, as in "Whenever this creature attacks, it deals 1 damage
+// to the player or planeswalker it's attacking." (Scorch Spitter, Cavalcade of
+// Calamity). The recipient resolves through AttackedDefenderDamageRecipient, so
+// the runtime routes the damage to the attacked planeswalker or battle when the
+// attack was declared against one and to the defending player otherwise;
+// lowering therefore gates the enclosing trigger to an attack event the runtime
+// populates with an attack target. The amount is a fixed value, X, or a
+// resolvable source-power dynamic amount. It emits one Damage instruction with
+// the attacked-defender recipient and no target spec, failing closed for any
+// shape outside that template (a recipient that is not the attacked defender, a
 // non-attack trigger, an unresolvable amount, any target, recipient selector,
 // condition, keyword, or mode).
 func lowerAttackedDefenderDamageSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
@@ -57,7 +58,7 @@ func lowerAttackedDefenderDamageSpell(ctx contentCtx) (game.AbilityContent, *sha
 	}
 	damage := game.Damage{
 		Amount:       amount,
-		Recipient:    game.PlayerDamageRecipient(game.DefendingPlayerReference()),
+		Recipient:    game.AttackedDefenderDamageRecipient(),
 		DamageSource: primaryDamageSource(references[:1]),
 	}
 	return game.Mode{

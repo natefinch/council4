@@ -336,7 +336,9 @@ type Event struct {
 	// (Mirari's Wake), which mirrors one of these types.
 	ProducedManaColors []mana.Color
 
-	// AttackTarget is set for EventAttackerDeclared.
+	// AttackTarget is set for the EventAttackerDeclared, EventAttackerBecameBlocked,
+	// and EventAttackerBecameUnblocked combat events, recording what the attacker
+	// was declared against (player, planeswalker, or battle).
 	AttackTarget AttackTarget
 
 	// BlockedAttackerID is set for EventBlockerDeclared.
