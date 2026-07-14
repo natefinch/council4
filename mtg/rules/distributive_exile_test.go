@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -100,5 +101,50 @@ func TestReturnLinkedExiledCardsToBattlefieldPartial(t *testing.T) {
 	}
 	if got := len(linkedObjects(g, key)); got != 0 {
 		t.Fatalf("linked objects after return = %d, want 0 (link cleared)", got)
+	}
+}
+
+// TestManifestForEachLinkedCloaksPerRemovedController verifies the generic
+// linked payoff used by Unexplained Absence: each removed permanent's last-known
+// controller cloaks one card, including when the removed permanent was a token.
+func TestManifestForEachLinkedCloaksPerRemovedController(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addTokenCreaturePermanent(g, game.Player1, "Citizen")
+	addCombatCreaturePermanent(g, game.Player2)
+	source := addCombatPermanent(g, game.Player1, distributiveExileSagaDef())
+	obj := linkedSourceObject(source)
+	player1Top := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Player 1 Top"}})
+	player2Top := addCardToLibrary(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Player 2 Top"}})
+	const link = game.LinkedKey("exiled-for-cloak")
+
+	engine.resolveInstructionWithChoices(g, obj, &game.Instruction{Primitive: game.ExileForEachPlayer{
+		Chooser:   game.ControllerReference(),
+		Selection: game.Selection{RequiredTypes: []types.Card{types.Creature}, ExcludeSource: true},
+		LinkedKey: link,
+	}}, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+	engine.resolveInstructionWithChoices(g, obj, &game.Instruction{Primitive: game.ManifestForEachLinked{
+		Cloak:     true,
+		LinkedKey: link,
+	}}, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+
+	for _, test := range []struct {
+		cardID     id.ID
+		controller game.PlayerID
+	}{
+		{player1Top, game.Player1},
+		{player2Top, game.Player2},
+	} {
+		permanent := permanentByCardID(g, test.cardID)
+		if permanent == nil ||
+			permanent.Controller != test.controller ||
+			!permanent.FaceDown ||
+			permanent.FaceDownKind != game.FaceDownCloak {
+			t.Fatalf("cloaked permanent for %v = %#v", test.controller, permanent)
+		}
+	}
+	key := linkedObjectSourceKey(g, obj, string(link))
+	if got := len(linkedObjects(g, key)); got != 0 {
+		t.Fatalf("linked objects after cloak = %d, want 0", got)
 	}
 }

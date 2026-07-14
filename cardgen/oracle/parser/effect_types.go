@@ -3145,6 +3145,13 @@ type EffectSyntax struct {
 	// source so a paired return brings the set back; the "that player" and source
 	// references are the distributive and duration anchors, not targets.
 	ExileForEachPlayerUntilSourceLeaves bool `json:",omitempty"`
+	// ExileForEachPlayer marks the exact distributive exile clause "For each
+	// player, exile up to one target <permanent> that player controls."
+	// (Unexplained Absence). Each player's permanents are an independent "up to
+	// one" pool; the "that player" reference is the distributive anchor rather
+	// than a target. A paired CloakForEachExiledThisWay clause consumes the linked
+	// exiled set.
+	ExileForEachPlayer bool `json:",omitempty"`
 	// ReturnLinkedExiledToBattlefieldPartial marks the exact partial Saga payoff
 	// "Return N cards exiled with this Saga to the battlefield under their
 	// owners' control." (Vault 13: Dweller's Journey, chapter III). The returned
@@ -3192,6 +3199,12 @@ type EffectSyntax struct {
 	// permanent exiled this way has its controller draw one card, so the count is
 	// one per exiled permanent rather than a multiplier on the draw.
 	DrawForEachExiledThisWay bool `json:",omitempty"`
+	// CloakForEachExiledThisWay marks the exact per-controller payoff "For each
+	// permanent exiled this way, its controller cloaks the top card of their
+	// library." (Unexplained Absence). It pairs with a preceding
+	// ExileForEachPlayer clause and cloaks once for each linked permanent's
+	// last-known controller.
+	CloakForEachExiledThisWay bool `json:",omitempty"`
 	// ReturnExiledCard marks the explicit O-Ring leaves-the-battlefield clause
 	// "return the exiled card to the battlefield under its owner's control."
 	// (Oblivion Ring, Journey to Nowhere, Fiend Hunter). The returned card is the

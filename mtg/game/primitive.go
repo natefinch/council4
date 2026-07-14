@@ -286,10 +286,14 @@ const (
 	// until a name-based stop predicate fires (Tainted Pact, Demonic
 	// Consultation). It is the generic iterative library processor.
 	PrimitiveIterativeLibraryProcess
+	// PrimitiveManifestForEachLinked manifests or cloaks one card for each object
+	// a prior instruction published under LinkedKey, using each linked object's
+	// last-known controller as the manifesting player.
+	PrimitiveManifestForEachLinked
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveIterativeLibraryProcess) + 1
+const primitiveKindCount = int(PrimitiveManifestForEachLinked) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -1101,17 +1105,13 @@ type ReturnExiledCardsWithCounter struct {
 
 // ExileForEachPlayer walks every player in the game and, for each, has Chooser
 // pick up to one permanent that player controls matching Selection and exiles
-// it, remembering each chosen permanent under LinkedKey (an exile-until-leaves
-// link) keyed by the source permanent. It models the distributive Saga chapter
-// "For each player, exile up to one [other] target <permanent> that player
-// controls until this Saga leaves the battlefield." (Vault 13: Dweller's
-// Journey, Battle at the Helvault). Each player's permanents are an independent
-// candidate pool, so the chapter exiles at most one per player. The chosen
-// permanents accumulate under the same key across chapters, so the paired return
-// — synthesized on the source leaving, or an explicit later chapter — brings
-// back exactly the set this exiled. Selection's ExcludeSource models the "other"
-// qualifier so the Saga never exiles itself. LinkedKey must be set; the exiled
-// permanents are otherwise unrecoverable.
+// it, remembering each chosen permanent under LinkedKey keyed by the source. It
+// models both exile-until-leaves Saga chapters (Vault 13: Dweller's Journey,
+// Battle at the Helvault) and plain distributive removal with a linked payoff
+// (Unexplained Absence). Each player's permanents are an independent candidate
+// pool, so the effect exiles at most one per player. Selection's ExcludeSource
+// models the "other" qualifier. LinkedKey must be set so a paired return or
+// payoff can consume the exiled set.
 type ExileForEachPlayer struct {
 	Chooser   PlayerReference
 	Selection Selection
@@ -1219,6 +1219,15 @@ type ExileForEachOpponent struct {
 // controller draws a card." (King Solomon's Frogs). It consumes and clears the
 // link after resolving. LinkedKey must be set.
 type DrawForEachExiled struct {
+	LinkedKey LinkedKey
+}
+
+// ManifestForEachLinked manifests or cloaks one card for each permanent a prior
+// linked removal recorded under LinkedKey, using that permanent's last-known
+// controller as the acting player. It consumes and clears the linked set.
+type ManifestForEachLinked struct {
+	Dread     bool
+	Cloak     bool
 	LinkedKey LinkedKey
 }
 

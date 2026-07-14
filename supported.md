@@ -16325,6 +16325,7 @@ Council4 currently supports **17,822 of 32,501 cards eligible for paper support 
 - Unesh, Criosphinx Sovereign
 - Unexpected Assistance
 - Unexpected Windfall
+- Unexplained Absence
 - Unexplained Disappearance
 - Unexplained Vision
 - Unfathomable Truths

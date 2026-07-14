@@ -115,6 +115,7 @@ func newPrimitiveRegistry() *primitiveRegistry {
 	registerPrimitiveHandler(reg, handleCreateTokenForEachDestroyed)
 	registerPrimitiveHandler(reg, handleExileForEachOpponent)
 	registerPrimitiveHandler(reg, handleDrawForEachExiled)
+	registerPrimitiveHandler(reg, handleManifestForEachLinked)
 	registerPrimitiveHandler(reg, handleRemoveTargetsForToken)
 	registerPrimitiveHandler(reg, handleCastForFree)
 	registerPrimitiveHandler(reg, handleChooseFromZone)

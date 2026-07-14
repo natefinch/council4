@@ -101,3 +101,31 @@ func exactDrawForEachExiledThisWayEffectSyntax(effect *EffectSyntax) bool {
 	effect.DrawForEachExiledThisWay = true
 	return true
 }
+
+// exactCloakForEachExiledThisWayEffectSyntax recognizes the per-controller
+// payoff "For each permanent exiled this way, its controller cloaks the top card
+// of their library." (Unexplained Absence). The linked exiled set supplies each
+// last-known controller, so the clause cloaks once per exiled permanent rather
+// than applying one cloak to the resolving ability's controller.
+func exactCloakForEachExiledThisWayEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Kind != EffectCloak ||
+		effect.Negated ||
+		effect.Optional ||
+		effect.Context != EffectContextReferencedObjectController ||
+		len(effect.Targets) != 0 {
+		return false
+	}
+	if !strings.HasPrefix(strings.ToLower(strings.TrimSpace(fullEffectClauseText(effect))),
+		"for each permanent exiled this way, ") {
+		return false
+	}
+	subject := referencedControllerSubject(effect)
+	if subject == "" {
+		return false
+	}
+	if !strings.EqualFold(exactEffectClauseText(effect), subject+" cloaks the top card of their library.") {
+		return false
+	}
+	effect.CloakForEachExiledThisWay = true
+	return true
+}
