@@ -52,6 +52,14 @@ func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.Replace
 	if rendered, handled := renderStringReplacement(ability); handled {
 		return rendered, nil
 	}
+	if ability.Replacement.SpellCopyAddend > 0 {
+		return fmt.Sprintf(
+			"game.AdditionalSpellCopyReplacement(%q, %d, %t)",
+			ability.Text,
+			ability.Replacement.SpellCopyAddend,
+			ability.Replacement.SpellCopyAdditionalMayChooseNewTargets,
+		), nil
+	}
 	if ability.Replacement.EntersTappedOthers {
 		return r.renderGroupEntersTappedReplacement(ctx, ability)
 	}

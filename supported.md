@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,856 of 32,501 cards eligible for paper support (54.9%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,857 of 32,501 cards eligible for paper support (54.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -16205,6 +16205,7 @@ Council4 currently supports **17,856 of 32,501 cards eligible for paper support 
 - Twinflame Tyrant
 - Twining Twins // Swift Spiral
 - Twinmaw Stormbrood // Charring Bite
+- Twinning Staff
 - Twins of Maurer Estate
 - Twinscroll Shaman
 - Twinshot Sniper

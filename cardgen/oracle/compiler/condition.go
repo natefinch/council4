@@ -55,6 +55,7 @@ var simplePredicateMap = map[parser.ConditionPredicateKind]ConditionPredicate{
 	parser.ConditionPredicateDefendingPlayerDoesNotPay:                        ConditionPredicateDefendingPlayerDoesNotPay,
 	parser.ConditionPredicateControllerCounterPlacement:                       ConditionPredicateControllerCounterPlacement,
 	parser.ConditionPredicateTokenCreationUnderController:                     ConditionPredicateTokenCreationUnderController,
+	parser.ConditionPredicateSpellCopyUnderController:                         ConditionPredicateSpellCopyUnderController,
 	parser.ConditionPredicateTokenCreationAnyController:                       ConditionPredicateTokenCreationAnyController,
 	parser.ConditionPredicateControllerWouldCreateNamedToken:                  ConditionPredicateControllerWouldCreateNamedToken,
 	parser.ConditionPredicateWouldDrawFromEmptyLibrary:                        ConditionPredicateWouldDrawFromEmptyLibrary,

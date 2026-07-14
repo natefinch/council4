@@ -1729,7 +1729,22 @@ func exactUntapAttachedEffectSyntax(effect *EffectSyntax) bool {
 // leaves the text non-exact and fails closed.
 func exactCopyStackObjectEffectSyntax(effect *EffectSyntax) bool {
 	return exactDirectTargetEffectSyntax(effect, "Copy") ||
-		exactCopyReferencedSpellEffectSyntax(effect)
+		exactCopyReferencedSpellEffectSyntax(effect) ||
+		exactAdditionalSpellCopyReplacement(effect)
+}
+
+func exactAdditionalSpellCopyReplacement(effect *EffectSyntax) bool {
+	return effect.Replacement.Kind == EffectReplacementPlusAdditional &&
+		effect.Replacement.Amount > 0 &&
+		effect.Amount.Known &&
+		effect.Amount.Value == 1 &&
+		len(effect.References) == 1 &&
+		effect.References[0].Kind == ReferencePronoun &&
+		effect.References[0].Pronoun == PronounIt &&
+		strings.EqualFold(
+			exactEffectClauseText(effect),
+			"Copy it that many times plus an additional time.",
+		)
 }
 
 // exactCopyReferencedSpellEffectSyntax recognizes the resolving effect "Copy

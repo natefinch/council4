@@ -2203,6 +2203,17 @@ func handleCopyStackObject(r *effectResolver, prim game.CopyStackObject) effectR
 	if prim.MayChooseNewTargets {
 		r.engine.retargetStackObjectChoice(r.game, chooser, copyObj, r.agents, r.log)
 	}
+	if original.Kind == game.StackSpell {
+		addend, mayChooseNewTargets := additionalSpellCopies(r.game, chooser)
+		for range addend {
+			additional := game.NewStackObjectCopy(original, r.game.IDGen.Next())
+			additional.Controller = chooser
+			r.game.Stack.Push(additional)
+			if mayChooseNewTargets {
+				r.engine.retargetStackObjectChoice(r.game, chooser, additional, r.agents, r.log)
+			}
+		}
+	}
 	return effectResolved{accepted: true, succeeded: true}
 }
 

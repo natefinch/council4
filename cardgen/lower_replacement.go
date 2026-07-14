@@ -82,14 +82,49 @@ func lowerPreventDamageToCountersReplacement(
 	), true, nil
 }
 
+func lowerAdditionalSpellCopyReplacement(ability compiler.CompiledAbility) (game.ReplacementAbility, bool) {
+	if ability.Kind != compiler.AbilityReplacement ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		ability.Optional ||
+		len(ability.Content.Conditions) != 1 ||
+		ability.Content.Conditions[0].Predicate != compiler.ConditionPredicateSpellCopyUnderController ||
+		len(ability.Content.Effects) != 1 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Keywords) != 0 ||
+		len(ability.Content.Modes) != 0 {
+		return game.ReplacementAbility{}, false
+	}
+	effect := ability.Content.Effects[0]
+	if effect.Kind != compiler.EffectCopyStackObject ||
+		!effect.Exact ||
+		effect.Optional ||
+		effect.Negated ||
+		effect.Replacement.Kind != parser.EffectReplacementPlusAdditional ||
+		effect.Replacement.Amount <= 0 ||
+		!effect.CopyMayChooseNewTargets {
+		return game.ReplacementAbility{}, false
+	}
+	return game.AdditionalSpellCopyReplacement(
+		ability.Text,
+		effect.Replacement.Amount,
+		true,
+	), true
+}
+
 func lowerReplacementAbility(ability compiler.CompiledAbility) (abilityLowering, *shared.Diagnostic) {
+	if replacementAbility, ok := lowerAdditionalSpellCopyReplacement(ability); ok {
+		return replacementAbilityLowering(ability, &replacementAbility, nil)
+	}
 	if hasOptionalResolvingEffect(ability.Content.Effects) {
 		if replacementAbility, ok := lowerOptionalEntryPayment(ability); ok {
 			return replacementAbilityLowering(ability, &replacementAbility, nil)
 		}
+
 		if replacementAbility, ok := lowerOptionalEntryZoneReplacement(ability); ok {
 			return replacementAbilityLowering(ability, &replacementAbility, nil)
 		}
+
 		// The self "You may have this creature enter as a copy of <filter>"
 		// replacement (Clone family) carries its optionality on the enters-as-copy
 		// effect itself; the enters-as-copy lowerer already honors that optional
@@ -540,6 +575,9 @@ func replacementSourceSpans(ability compiler.CompiledAbility, replacementAbility
 	// accounted for; the counters-added form keeps its single all-encompassing
 	// effect span unchanged.
 	if replacementAbility != nil && replacementAbility.Replacement.DamagePreventedRemovesPlusOneCounter {
+		spans = append(spans, ability.Span)
+	}
+	if replacementAbility != nil && replacementAbility.Replacement.SpellCopyAddend > 0 {
 		spans = append(spans, ability.Span)
 	}
 	return spans

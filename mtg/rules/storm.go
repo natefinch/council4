@@ -17,6 +17,10 @@ func stormCopyCount(g *game.Game, spell *game.CardDef) int {
 }
 
 func createStormCopies(g *game.Game, original *game.StackObject, spell *game.CardDef, count int) {
+	if count > 0 {
+		addend, _ := additionalSpellCopies(g, original.Controller)
+		count += addend
+	}
 	for range count {
 		copyObj := &game.StackObject{
 			ID:                  g.IDGen.Next(),
