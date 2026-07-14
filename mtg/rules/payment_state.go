@@ -122,6 +122,10 @@ func (s *rulesPaymentState) CardMatchesSelection(card *game.CardDef, sel game.Se
 	return cardDefMatchesCostSelection(s.g, card, sel)
 }
 
+func (s *rulesPaymentState) GraveyardCastGrantedAlternatives(playerID game.PlayerID, card *game.CardDef) []cost.Alternative {
+	return grantedGraveyardCastAlternatives(s.g, playerID, card)
+}
+
 func (s *rulesPaymentState) ActivationConditionSatisfied(playerID game.PlayerID, permanent *game.Permanent, condition opt.V[game.Condition]) bool {
 	return activationConditionSatisfied(s.g, playerID, permanent, condition)
 }

@@ -269,6 +269,12 @@ const (
 	// ("Noncreature spells you cast have improvise.", Ironheart, Clever Champion):
 	// cards whose type line does not include Creature.
 	StaticDeclarationCardFilterNoncreature StaticDeclarationCardFilterKind = "StaticDeclarationCardFilterNoncreature"
+	// StaticDeclarationCardFilterNonland selects nonland cards ("Each nonland
+	// card in your graveyard has escape.", Underworld Breach): every card whose
+	// type line does not include Land, including instants and sorceries. It is
+	// broader than StaticDeclarationCardFilterNonlandPermanent, which excludes
+	// nonpermanent cards.
+	StaticDeclarationCardFilterNonland StaticDeclarationCardFilterKind = "StaticDeclarationCardFilterNonland"
 )
 
 // StaticDeclarationCostModifierKind identifies the closed cost-modifier shape a
@@ -807,6 +813,27 @@ type StaticDeclarationSyntax struct {
 	// quoted text once so downstream layers lower the granted ability from the
 	// typed inner document instead of re-parsing its Oracle wording.
 	GrantedAbility *StaticGrantedAbilitySyntax `json:",omitempty"`
+
+	// GraveyardEscapeCost carries the computed escape cost a graveyard
+	// keyword-grant declaration synthesizes for the cards it makes escapable
+	// ("The escape cost is equal to the card's mana cost plus exile three other
+	// cards from your graveyard.", Underworld Breach). It is set only for the
+	// escape variant of StaticDeclarationGraveyardCardKeywordGrant; every other
+	// grant (retrace-style, whose cost the keyword itself defines) leaves it nil.
+	GraveyardEscapeCost *StaticGraveyardEscapeCostSyntax `json:",omitempty"`
+}
+
+// StaticGraveyardEscapeCostSyntax is the typed computed escape cost a graveyard
+// keyword-grant declaration reads from "The escape cost is equal to the card's
+// mana cost plus exile N other cards from your graveyard." (Underworld Breach).
+// UseCardManaCost records the "equal to the card's mana cost" base; ExileOtherCount
+// is the N of the "exile N other cards from your graveyard" additional cost, which
+// excludes the escaping card itself. The parser recognizes only this exact shape,
+// so any unsupported computed escape cost yields no declaration and the card fails
+// closed rather than lowering an approximate cost.
+type StaticGraveyardEscapeCostSyntax struct {
+	UseCardManaCost bool
+	ExileOtherCount int
 }
 
 // StaticUntapGroupKind identifies the closed group of the controller's
@@ -1310,6 +1337,9 @@ func parseStaticDeclarations(tokens []shared.Token, quoted []Delimited, atoms At
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseStaticCardAbilityGrantDeclaration(tokens, atoms); ok {
+		return []StaticDeclarationSyntax{declaration}
+	}
+	if declaration, ok := parseStaticGraveyardEscapeGrantDeclaration(tokens, atoms); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseStaticGraveyardCardKeywordGrantDeclaration(tokens, atoms); ok {

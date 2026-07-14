@@ -1078,4 +1078,41 @@ type RuleEffect struct {
 	// by SourceObjectID in Game.ExilePlayPermissionUsedThisTurn. It is false for
 	// every permission with no per-turn cap.
 	OncePerTurn bool
+
+	// GraveyardCastCost carries the computed alternative cost a
+	// RuleEffectGrantGraveyardCardKeyword synthesizes for each matching graveyard
+	// card it makes castable, when the granting card specifies that cost in its
+	// text rather than leaving it to the granted keyword's intrinsic rules
+	// (Underworld Breach's "The escape cost is equal to the card's mana cost plus
+	// exile three other cards from your graveyard."). It is unset for grants whose
+	// keyword defines its own cost (Retrace's "discard a land card"), and for every
+	// other kind. The rules layer reads it while synthesizing the graveyard cast
+	// alternative; it is never snapshotted onto the cast spell.
+	GraveyardCastCost GraveyardCastGrantCost
+}
+
+// GraveyardCastGrantCost is the computed alternative cost a
+// RuleEffectGrantGraveyardCardKeyword confers on each matching graveyard card,
+// used when the granting card's text specifies the cost rather than deferring to
+// the granted keyword's intrinsic cost. The base mana cost is the granted card's
+// own mana cost when UseCardManaCost is set; AdditionalCosts are the extra
+// non-mana costs the grant adds (Underworld Breach's "exile three other cards
+// from your graveyard"). A zero value (UseCardManaCost false, no AdditionalCosts)
+// means the grant carries no computed cost and the runtime derives the cost from
+// the granted keyword instead.
+type GraveyardCastGrantCost struct {
+	// UseCardManaCost makes the synthesized alternative's base mana cost the
+	// granted card's own mana cost, so escaping an X spell or a card-specific
+	// mana cost pays that card's printed cost.
+	UseCardManaCost bool
+	// AdditionalCosts are the extra non-mana costs added to the synthesized
+	// alternative (the graveyard-exile cost of Underworld Breach's escape grant).
+	AdditionalCosts []cost.Additional
+}
+
+// IsZero reports whether the grant cost carries no computed alternative cost, so
+// the runtime should derive the cast cost from the granted keyword's intrinsic
+// rules instead.
+func (c GraveyardCastGrantCost) IsZero() bool {
+	return !c.UseCardManaCost && len(c.AdditionalCosts) == 0
 }

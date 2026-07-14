@@ -113,6 +113,14 @@ type stateQueries interface {
 	// additional card cost (discard/exile/reveal) tests the same eligibility
 	// predicate as the choice layer.
 	CardMatchesSelection(card *game.CardDef, sel game.Selection) bool
+
+	// GraveyardCastGrantedAlternatives returns the alternative costs that active
+	// rule effects grant for casting card from playerID's graveyard
+	// (dynamically granted Escape/Retrace-style permissions, e.g. Underworld
+	// Breach, Six). The planner merges them with the card's printed
+	// alternatives so a granted graveyard cast enumerates and pays exactly like
+	// a native one; it returns nil when no grant applies.
+	GraveyardCastGrantedAlternatives(playerID game.PlayerID, card *game.CardDef) []cost.Alternative
 }
 
 type statePermanentQueries interface {
