@@ -131,6 +131,9 @@ func lowerOrderedSequenceSpecialCase(
 	if content, ok := lowerMillThenPutAmongToBattlefield(ctx); ok {
 		return content, nil, true
 	}
+	if content, ok := lowerExileTopThenPutAnyAmongToBattlefield(ctx); ok {
+		return content, nil, true
+	}
 	if content, ok := lowerInsteadOfThoseTokensSequence(ctx); ok {
 		return content, nil, true
 	}

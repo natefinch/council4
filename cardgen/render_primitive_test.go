@@ -128,9 +128,8 @@ func TestRenderNamedCounterPrimitives(t *testing.T) {
 
 func TestRenderExileTopOfLibraryPrimitive(t *testing.T) {
 	t.Parallel()
-	// Without a counter the primitive renders byte-identically to the shared
-	// amount/player-group renderer; the named exile counter appends a Counter
-	// field and requests the counter and opt imports.
+	// Optional linked publication and named exile counters append only their
+	// respective fields; the counter requests the counter and opt imports.
 	plain, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.ExileTopOfLibrary{
 		Amount:      game.Fixed(1),
 		PlayerGroup: game.AllPlayersReference(),
@@ -170,6 +169,18 @@ func TestRenderExileTopOfLibraryPrimitive(t *testing.T) {
 	}
 	if _, ok := ctx.imports[importOpt]; !ok {
 		t.Fatal("exile-top with counter did not request opt import")
+	}
+
+	linked, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.ExileTopOfLibrary{
+		Amount:        game.Fixed(7),
+		Player:        game.ControllerReference(),
+		PublishLinked: "exiled-top-cards",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(linked, `PublishLinked: game.LinkedKey("exiled-top-cards")`) {
+		t.Fatalf("linked exile-top missing publisher:\n%s", linked)
 	}
 }
 

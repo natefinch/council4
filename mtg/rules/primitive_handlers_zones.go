@@ -2432,16 +2432,33 @@ func handleMill(r *effectResolver, prim game.Mill) effectResolved {
 
 func handleExileTopOfLibrary(r *effectResolver, prim game.ExileTopOfLibrary) effectResolved {
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
+	var key game.LinkedObjectKey
+	if prim.PublishLinked != "" {
+		key = linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked))
+		clearLinkedObjects(r.game, key)
+	}
+	publish := func(cardIDs []id.ID) {
+		for _, cardID := range cardIDs {
+			card, ok := r.game.GetCardInstance(cardID)
+			if !ok {
+				continue
+			}
+			rememberLinkedObject(r.game, key, game.LinkedObjectRef{
+				CardID:          cardID,
+				CardZoneVersion: card.ZoneVersion,
+			})
+		}
+	}
 	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
 		for _, playerID := range playersInAPNAPOrder(r.game, r.playerGroupMembers(prim.PlayerGroup)) {
-			exileTopOfLibraryCards(r.game, playerID, res.amount, prim.Counter, r.obj.Controller, prim.FaceDown)
+			publish(exileTopOfLibraryCards(r.game, playerID, res.amount, prim.Counter, r.obj.Controller, prim.FaceDown))
 		}
 		res.succeeded = res.amount > 0
 		return res
 	}
 	playerID, ok := r.resolvePlayer(prim.Player)
 	if ok {
-		exileTopOfLibraryCards(r.game, playerID, res.amount, prim.Counter, r.obj.Controller, prim.FaceDown)
+		publish(exileTopOfLibraryCards(r.game, playerID, res.amount, prim.Counter, r.obj.Controller, prim.FaceDown))
 		res.succeeded = res.amount > 0
 	}
 	return res

@@ -2107,9 +2107,8 @@ func (r Renderer) renderAmountPlayerGroup(
 }
 
 // renderExileTopOfLibrary renders an ExileTopOfLibrary primitive, preserving the
-// optional named exile counter the shared amount/player renderers drop. Without
-// a counter it renders byte-identically to the shared amount/player(-group)
-// renderer (Counter omitted when unset).
+// optional linked publisher and named exile counter the shared amount/player
+// renderers drop. Both fields are omitted when unset.
 func (r Renderer) renderExileTopOfLibrary(ctx *renderCtx, value game.ExileTopOfLibrary) (string, error) {
 	renderedAmount, err := r.renderQuantity(ctx, value.Amount)
 	if err != nil {
@@ -2128,6 +2127,9 @@ func (r Renderer) renderExileTopOfLibrary(ctx *renderCtx, value game.ExileTopOfL
 			return "", err
 		}
 		fields = append(fields, fmt.Sprintf("Player: %s,", player))
+	}
+	if value.PublishLinked != "" {
+		fields = append(fields, fmt.Sprintf("PublishLinked: game.LinkedKey(%q),", string(value.PublishLinked)))
 	}
 	if value.Counter.Exists {
 		kind, err := renderCounterKind(value.Counter.Val)
