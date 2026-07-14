@@ -1219,6 +1219,14 @@ type TriggerPattern struct {
 	// event's ProducedManaColors.
 	RequireProducedManaColorFromEntryChoice bool
 
+	// RequireManaProducedByLand restricts an EventManaProduced trigger to mana
+	// added by a land's ability ("Whenever a land's ability causes you to add
+	// ... mana" — Caged Sun). It is checked against the event's ManaSourceIsLand
+	// flag, which is captured as last-known information so a sacrifice-for-mana
+	// land still matches after it has left the battlefield. It is only meaningful
+	// on an EventManaProduced pattern.
+	RequireManaProducedByLand bool
+
 	// UnionEvent joins a second event kind to Event under the pattern's shared
 	// subject and player filters, expressing "Whenever you create or sacrifice a
 	// token" (CR 603.2). When set, the trigger fires if the event kind equals

@@ -68,6 +68,12 @@ const (
 	// action (CR 305). It is distinct from TriggerEventCardPlayedFromExile, which
 	// fires only for cards a linked-exile source put into exile.
 	TriggerEventLandPlayed
+	// TriggerEventManaProduced is the authoritative "an ability added mana" event
+	// (CR 106.1 / 605): an activated or triggered mana ability actually added
+	// mana by tapping, sacrificing, or paying life. It carries the produced
+	// colors, total amount, whether the source was a land, and whether the
+	// source tapped, replacing tap inference for mana-production triggers.
+	TriggerEventManaProduced
 )
 
 // TriggerCastTurn restricts a player event by the active player.
@@ -424,6 +430,11 @@ type TriggerPattern struct {
 	// ability causes you to add ... mana of the chosen color" — Caged Sun). The
 	// produced color is resolved at match time from the source's entry choice.
 	TappedForManaChosenColor bool
+
+	// ManaProducedByLand narrows a mana-produced pattern to mana added by a land
+	// source (Caged Sun), regardless of whether that land tapped. It pairs with
+	// TriggerEventManaProduced.
+	ManaProducedByLand bool
 
 	// NextOccurrence marks a one-shot "next" phase/step relation ("your next
 	// upkeep") rather than a recurring trigger. Such a pattern is representable

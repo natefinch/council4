@@ -406,6 +406,10 @@ func triggeringEventPlayer(event game.Event) (game.PlayerID, bool) {
 		game.EventBecameMonarch,
 		game.EventGotCityBlessing,
 		game.EventCardPlayedFromExile,
+		// EventManaProduced sets Player to the player who added the mana (the
+		// mana ability's controller), so "that player adds an additional {U}"
+		// (High Tide) names the player who tapped the Island for mana.
+		game.EventManaProduced,
 		// Every zone-change emission sets Player to the moved card's owner: the
 		// leaving/entering permanent's Owner, the resolving stack object's card
 		// Owner, or the player whose hand/library/graveyard/exile/command zone the

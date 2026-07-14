@@ -4,6 +4,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
@@ -247,6 +248,34 @@ func producedManaColorsSince(g *game.Game, playerID game.PlayerID, before map[ma
 	return produced
 }
 
+// producedManaAmountSince returns the total number of mana units the player's
+// pool grew by relative to before, summing the per-type increases. It reports how
+// much mana a just-resolved mana ability added, so EventManaProduced can carry
+// the aggregate amount even when the ability added several mixed units.
+func producedManaAmountSince(g *game.Game, playerID game.PlayerID, before map[mana.Color]int) int {
+	after := manaPoolColorSnapshot(g, playerID)
+	total := 0
+	for c, amount := range after {
+		if delta := amount - before[c]; delta > 0 {
+			total += delta
+		}
+	}
+	return total
+}
+
+// manaAbilityTappedSourceSince reports whether the source permanent was tapped
+// for mana while the events at or after eventsBefore were emitted, so an
+// EventManaProduced event can record whether the production tapped its source.
+func manaAbilityTappedSourceSince(g *game.Game, objectID id.ID, eventsBefore int) bool {
+	for i := eventsBefore; i < len(g.Events); i++ {
+		event := g.Events[i]
+		if event.Kind == game.EventPermanentTapped && event.TappedForMana && event.PermanentID == objectID {
+			return true
+		}
+	}
+	return false
+}
+
 // recordTappedForManaProduced annotates the most recent tapped-for-mana event
 // for permanentID with the mana types its tap produced, so a "one mana of any
 // type that land produced" trigger (Mirari's Wake) can mirror them at
@@ -263,6 +292,63 @@ func recordTappedForManaProduced(g *game.Game, permanentID id.ID, colors []mana.
 			return
 		}
 	}
+}
+
+// manaProducedSource captures the last-known identity of a mana ability's source
+// permanent so an EventManaProduced event carries correct provenance even when
+// the source sacrificed itself to produce the mana (CR 603.10). It is snapshotted
+// before the ability's cost is paid, so a sacrifice-for-mana land still reports
+// that it was a land after it has left the battlefield.
+type manaProducedSource struct {
+	sourceID   id.ID
+	objectID   id.ID
+	controller game.PlayerID
+	isLand     bool
+	tokenName  string
+	tokenDef   *game.CardDef
+}
+
+// captureManaProducedSource snapshots a mana ability's source identity for a
+// later EventManaProduced emission.
+func captureManaProducedSource(g *game.Game, permanent *game.Permanent) manaProducedSource {
+	return manaProducedSource{
+		sourceID:   permanent.CardInstanceID,
+		objectID:   permanent.ObjectID,
+		controller: effectiveController(g, permanent),
+		isLand:     permanentHasType(g, permanent, types.Land),
+		tokenName:  permanentTokenName(permanent),
+		tokenDef:   permanent.TokenDef,
+	}
+}
+
+// emitManaProducedEvent emits the authoritative "an ability added mana" event
+// (EventManaProduced, CR 106.1 / 605) for a mana ability that added colors to
+// recipient's pool, carrying the source's provenance, the produced types and
+// total amount, whether the source was a land, and whether it tapped as part of
+// the production. It is a no-op when the ability added no mana, so an ability
+// that could add mana but did not (an empty color set) fires no trigger. Only
+// activated mana abilities reach this path; additional-mana triggered abilities
+// resolve on the stack, so they never emit it and cannot recursively retrigger
+// themselves.
+func emitManaProducedEvent(g *game.Game, src manaProducedSource, recipient game.PlayerID, colors []mana.Color, amount int, tappedForMana bool) {
+	if amount <= 0 || len(colors) == 0 {
+		return
+	}
+	emitEvent(g, game.Event{
+		Kind:               game.EventManaProduced,
+		SourceID:           src.sourceID,
+		SourceObjectID:     src.objectID,
+		PermanentID:        src.objectID,
+		Controller:         src.controller,
+		Player:             recipient,
+		ProducedManaColors: append([]mana.Color(nil), colors...),
+		Amount:             amount,
+		ManaSourceIsLand:   src.isLand,
+		TappedForMana:      tappedForMana,
+		ManaAbility:        true,
+		TokenName:          src.tokenName,
+		TokenDef:           src.tokenDef,
+	})
 }
 
 func emitTargetEvents(g *game.Game, obj *game.StackObject) {

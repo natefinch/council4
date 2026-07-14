@@ -89,6 +89,9 @@ func triggerMatchesEventForController(g *game.Game, source *game.Permanent, sour
 	if pattern.Event == game.EventZoneChanged && event.PermanentID == 0 && event.CardID == 0 {
 		return false
 	}
+	if pattern.RequireManaProducedByLand && !event.ManaSourceIsLand {
+		return false
+	}
 	if pattern.RequireTappedForMana && !event.TappedForMana {
 		return false
 	}

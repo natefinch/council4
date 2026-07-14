@@ -75,7 +75,7 @@ func newVorinclexVoiceOfHunger() *game.CardDef {
 					Trigger: game.TriggerCondition{
 						Type: game.TriggerWhenever,
 						Pattern: game.TriggerPattern{
-							Event:                game.EventPermanentTapped,
+							Event:                game.EventManaProduced,
 							Controller:           game.TriggerControllerOpponent,
 							RequireTappedForMana: true,
 							SubjectSelection:     game.Selection{RequiredTypes: []types.Card{types.Land}},

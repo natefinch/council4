@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
@@ -97,6 +98,7 @@ func activateManaForPayment(s State, playerID game.PlayerID, activation manaTap)
 		output.timing != activation.timing {
 		return false
 	}
+	sourceIsLand := s.PermanentHasType(permanent, types.Land)
 	if activation.untap {
 		s.SetTapped(permanent, false)
 	} else {
@@ -113,6 +115,7 @@ func activateManaForPayment(s State, playerID game.PlayerID, activation manaTap)
 	} else {
 		player.ManaPool.Add(activation.color, activation.amount)
 	}
+	s.RecordManaProduced(permanent, playerID, sourceIsLand, activation.color, activation.amount, !activation.untap)
 	return true
 }
 

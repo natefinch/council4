@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,816 of 32,501 cards eligible for paper support (54.8%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,818 of 32,501 cards eligible for paper support (54.8%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2031,6 +2031,7 @@ Council4 currently supports **17,816 of 32,501 cards eligible for paper support 
 - Brute Strength
 - Brute Suit
 - Bubble Snare
+- Bubbling Muck
 - Buccaneer's Bravado
 - Bucky Barnes, Eager Ally
 - Bugenhagen, Wise Elder
@@ -7091,6 +7092,7 @@ Council4 currently supports **17,816 of 32,501 cards eligible for paper support 
 - High Priest of Penance
 - High Seas
 - High Stride
+- High Tide
 - High-Flying Ace
 - High-Rise Sawjack
 - High-Society Hunter
