@@ -270,6 +270,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 			effects = append(effects, CompiledEffect{
 				Kind:                           compileEffectKind(syntax.Kind),
 				Context:                        syntax.Context,
+				CombatDamageSourceName:         syntax.CombatDamageSourceName,
 				Connection:                     syntax.Connection,
 				ConnectionSpan:                 syntax.ConnectionSpan,
 				Span:                           syntax.Span,

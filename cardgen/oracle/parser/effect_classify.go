@@ -684,6 +684,14 @@ func effectContextAt(tokens []shared.Token, index int, atoms Atoms) EffectContex
 	for len(subject) > 0 && equalWord(subject[0], "then") {
 		subject = subject[1:]
 	}
+	// "each opponent dealt combat damage this game by a creature named <Name>"
+	// (Gollum, Obsessed Stalker) contains "named", which the guard below would
+	// otherwise reject. Recognize its exact subject shape first so the required
+	// creature name is preserved and the effect is routed to the qualifying
+	// opponents.
+	if _, _, ok := combatDamageByNamedSubjectName(subject); ok {
+		return EffectContextEachOpponentDealtCombatDamageByNamed
+	}
 	// A "random" or "named" word in the subject marks a shape this resolver does
 	// not classify (e.g. "a creature named X"); the subject portion is scanned
 	// rather than the whole sentence so an object-position token name ("... token
@@ -819,6 +827,65 @@ func spanWithinAny(span shared.Span, spans []shared.Span) bool {
 		}
 	}
 	return false
+}
+
+// eachOpponentDealtCombatDamageByNamedPrefix is the exact leading subject wording
+// of the "each opponent dealt combat damage this game by a creature named <Name>"
+// recipient (Gollum, Obsessed Stalker), up to and including "named". The creature
+// name follows and is captured verbatim.
+var eachOpponentDealtCombatDamageByNamedPrefix = []string{
+	"each", "opponent", "dealt", "combat", "damage", "this", "game", "by", "a", "creature", "named",
+}
+
+// combatDamageByNamedSubjectName reports whether subject is exactly "each opponent
+// dealt combat damage this game by a creature named <Name>" and, when it is,
+// returns the verbatim <Name> tail and its source span. The match is exact and
+// fails closed: a subject that only partially matches, or has no name after
+// "named", returns false so an unrecognized wording is never routed to this
+// recipient.
+func combatDamageByNamedSubjectName(subject []shared.Token) (string, shared.Span, bool) {
+	named := -1
+	for i := range subject {
+		if equalWord(subject[i], "named") {
+			named = i
+			break
+		}
+	}
+	if named < 0 {
+		return "", shared.Span{}, false
+	}
+	prefix := normalizedWords(subject[:named+1])
+	if len(prefix) != len(eachOpponentDealtCombatDamageByNamedPrefix) {
+		return "", shared.Span{}, false
+	}
+	for i := range prefix {
+		if prefix[i] != eachOpponentDealtCombatDamageByNamedPrefix[i] {
+			return "", shared.Span{}, false
+		}
+	}
+	nameTokens := subject[named+1:]
+	if len(nameTokens) == 0 {
+		return "", shared.Span{}, false
+	}
+	name := joinedEffectText(nameTokens)
+	if name == "" {
+		return "", shared.Span{}, false
+	}
+	return name, shared.SpanOf(nameTokens), true
+}
+
+// combatDamageByNamedNameAt extracts the verbatim creature name of an "each
+// opponent dealt combat damage this game by a creature named <Name>" effect from
+// the sentence tokens, using the same subject boundary the classifier used
+// (atoms' self-name spans keep an internal comma in the name from truncating the
+// subject). It fails closed for any subject that does not match the exact wording.
+func combatDamageByNamedNameAt(tokens []shared.Token, index int, atoms Atoms) (string, shared.Span, bool) {
+	start := effectSubjectStart(tokens, index, atoms.SelfNameSpans())
+	subject := tokens[start:index]
+	for len(subject) > 0 && equalWord(subject[0], "then") {
+		subject = subject[1:]
+	}
+	return combatDamageByNamedSubjectName(subject)
 }
 
 func parseEffectPayment(tokens []shared.Token, atoms Atoms) EffectPaymentSyntax {

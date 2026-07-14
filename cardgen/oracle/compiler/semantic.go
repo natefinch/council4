@@ -2346,16 +2346,23 @@ type CompiledGroupEntryModification struct {
 // it. Multiple effects may refer to the same sentence when instructions are
 // coordinated.
 type CompiledEffect struct {
-	Kind           EffectKind
-	Context        parser.EffectContextKind
-	Connection     parser.EffectConnectionKind
-	ConnectionSpan shared.Span
-	Span           shared.Span
-	ClauseSpan     shared.Span
-	Text           string
-	VerbSpan       shared.Span
-	Player         parser.EffectPlayerKind
-	CardSource     parser.EffectCardSourceKind
+	Kind    EffectKind
+	Context parser.EffectContextKind
+	// CombatDamageSourceName carries the required creature name when Context is
+	// EffectContextEachOpponentDealtCombatDamageByNamed ("each opponent dealt
+	// combat damage this game by a creature named Gollum, Obsessed Stalker
+	// loses ..."). Lowering routes the life change to the opponents dealt combat
+	// damage this game by a creature with that name. It is empty for every other
+	// context.
+	CombatDamageSourceName string
+	Connection             parser.EffectConnectionKind
+	ConnectionSpan         shared.Span
+	Span                   shared.Span
+	ClauseSpan             shared.Span
+	Text                   string
+	VerbSpan               shared.Span
+	Player                 parser.EffectPlayerKind
+	CardSource             parser.EffectCardSourceKind
 	// FaceDown mirrors EffectSyntax.FaceDown: a top-of-library exile card source
 	// that exiles its cards face down. Lowering threads it onto the
 	// ExileTopOfLibrary primitive; it is false for every face-up exile.

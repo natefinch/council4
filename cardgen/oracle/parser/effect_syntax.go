@@ -1631,6 +1631,21 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			effects[len(effects)-1].Context != EffectContextController {
 			context = EffectContextPriorSubject
 		}
+		var combatDamageSourceName string
+		var combatDamageSourceNameSpan shared.Span
+		if context == EffectContextEachOpponentDealtCombatDamageByNamed {
+			// Preserve the required creature name from the same subject the
+			// classifier matched, using the atoms' self-name spans so an internal
+			// comma in the name ("Gollum, Obsessed Stalker") is not read as a
+			// subject boundary.
+			name, span, ok := combatDamageByNamedNameAt(tokens, tokenIndex, atoms)
+			if !ok {
+				context = EffectContextUnknown
+			} else {
+				combatDamageSourceName = name
+				combatDamageSourceNameSpan = span
+			}
+		}
 		durationTokens := ownership
 		nextConnection := EffectConnectionNone
 		if effectIndex+1 < len(indices) {
@@ -1932,18 +1947,20 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			}
 		}
 		effects = append(effects, EffectSyntax{
-			Kind:           kind,
-			Context:        context,
-			Connection:     connection,
-			ConnectionSpan: connectionSpan,
-			Span:           sentence.Span,
-			VerbSpan:       tokens[tokenIndex].Span,
-			ClauseSpan:     ownershipSpan,
-			Text:           sentence.Text,
-			Tokens:         append([]shared.Token(nil), ownership...),
-			Duration:       duration,
-			DelayedTiming:  delayed,
-			Selection:      effectSelection,
+			Kind:                       kind,
+			Context:                    context,
+			CombatDamageSourceName:     combatDamageSourceName,
+			CombatDamageSourceNameSpan: combatDamageSourceNameSpan,
+			Connection:                 connection,
+			ConnectionSpan:             connectionSpan,
+			Span:                       sentence.Span,
+			VerbSpan:                   tokens[tokenIndex].Span,
+			ClauseSpan:                 ownershipSpan,
+			Text:                       sentence.Text,
+			Tokens:                     append([]shared.Token(nil), ownership...),
+			Duration:                   duration,
+			DelayedTiming:              delayed,
+			Selection:                  effectSelection,
 			DamageRecipient: DamageRecipientSyntax{
 				Groups:          parseDamageRecipientPair(kind, clause, amount, atoms),
 				EachSourceGroup: eachSourceDamageGroup,

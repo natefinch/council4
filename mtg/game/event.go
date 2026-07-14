@@ -342,6 +342,10 @@ type Event struct {
 
 	// CombatDamage is true when EventDamageDealt came from combat damage.
 	CombatDamage bool
+	// DamageSourceName records the effective name of the damage source when the
+	// event occurred, so whole-game history checks remain stable if the source
+	// later changes names or zones.
+	DamageSourceName string
 
 	// TappedForMana is true when EventPermanentTapped recorded a tap that paid a
 	// mana ability's cost ("tapped for mana"), CR 106.11a / 605.
