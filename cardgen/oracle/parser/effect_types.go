@@ -3071,6 +3071,20 @@ type EffectSyntax struct {
 	// ShuffleEachPlayerGraveyardIntoLibrary marks the exact symmetric effect
 	// "Each player shuffles their graveyard into their library."
 	ShuffleEachPlayerGraveyardIntoLibrary bool `json:",omitempty"`
+	// ShuffleControllerHandAndGraveyardIntoLibrary marks the exact multi-zone
+	// effect "Shuffle your hand and graveyard into your library." (Midnight
+	// Clock): a controller-scoped shuffle of both the hand and graveyard into the
+	// library. The two source zones cannot ride the single FromZone field, so the
+	// clause is recognized verbatim and carried by this flag.
+	ShuffleControllerHandAndGraveyardIntoLibrary bool `json:",omitempty"`
+	// ExileSourceSpell marks the exact resolving-spell self-exile "Exile this
+	// spell." / "Exile this card." / "Exile <this spell's name>." Only the
+	// spell-naming demonstratives ("this spell"/"this card") and the card's own
+	// name set it; a permanent noun ("this creature", "this artifact") does not.
+	// Lowering reads this typed flag to route a resolving-spell self-exile to a
+	// SourceSpell exile, keeping the noun classification in the parser rather
+	// than re-inspecting reference text in the lowering layer.
+	ExileSourceSpell bool `json:",omitempty"`
 	// ExileUntilSourceLeaves marks the exact O-Ring exile clause "exile <target>
 	// until <this permanent> leaves the battlefield." (Banisher Priest, Banishing
 	// Light, Journey to Nowhere-style enchantments). The exiled permanent is

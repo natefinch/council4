@@ -1393,9 +1393,13 @@ func (r Renderer) renderShuffleGraveyardIntoLibrary(value game.ShuffleGraveyardI
 	if err != nil {
 		return "", err
 	}
-	return structLit("game.ShuffleGraveyardIntoLibrary", []string{
+	fields := []string{
 		fmt.Sprintf("Player: %s,", player),
-	}), nil
+	}
+	if value.IncludeHand {
+		fields = append(fields, "IncludeHand: true,")
+	}
+	return structLit("game.ShuffleGraveyardIntoLibrary", fields), nil
 }
 
 func (r Renderer) renderMillLinked(ctx *renderCtx, value game.Mill) (string, error) {

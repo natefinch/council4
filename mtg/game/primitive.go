@@ -386,9 +386,15 @@ type ShuffleLibrary struct {
 // graveyard into that player's library and then shuffles it ("shuffle your
 // graveyard into your library", The Mending of Dominaria). The library is
 // shuffled even when the graveyard is empty (CR 701.x shuffle).
+//
+// IncludeHand additionally moves every card in the player's hand into the
+// library before shuffling ("shuffle your hand and graveyard into your
+// library", Midnight Clock). It is false for the graveyard-only shuffle, so the
+// zero value preserves the original single-zone behavior.
 type ShuffleGraveyardIntoLibrary struct {
 	Player      PlayerReference
 	PlayerGroup PlayerGroupReference
+	IncludeHand bool
 }
 
 // LookAtHand lets the source's controller privately look at a referenced

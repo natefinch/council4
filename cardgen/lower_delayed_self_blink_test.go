@@ -125,18 +125,33 @@ func TestLowerDelayedSelfBlinkReturnThisCreature(t *testing.T) {
 	}
 }
 
-// TestLowerDelayedSelfBlinkRejectsStandaloneSelfExile confirms a bare delayed
-// self-exile with no return clause fails closed rather than being promoted to a
-// delayed self-blink.
-func TestLowerDelayedSelfBlinkRejectsStandaloneSelfExile(t *testing.T) {
+// TestLowerDelayedSelfBlinkStandaloneSelfExileIsPlainExile confirms a bare
+// self-exile with no return clause lowers to a plain source-permanent exile
+// rather than being promoted to a delayed self-blink: the self-blink shape
+// requires the paired return clause to schedule the delayed put-onto-battlefield.
+func TestLowerDelayedSelfBlinkStandaloneSelfExileIsPlainExile(t *testing.T) {
 	t.Parallel()
-	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+	face := lowerSingleFace(t, &ScryfallCard{
 		Name:       "Test Standalone Delayed Self Exile",
 		Layout:     "normal",
 		TypeLine:   "Creature",
 		OracleText: "{2}: Exile this creature.",
 	})
-	if len(diagnostics) == 0 {
-		t.Fatal("expected standalone self-exile to fail closed")
+	if len(face.ActivatedAbilities) != 1 {
+		t.Fatalf("activated abilities = %d, want 1", len(face.ActivatedAbilities))
+	}
+	sequence := face.ActivatedAbilities[0].Content.Modes[0].Sequence
+	if len(sequence) != 1 {
+		t.Fatalf("sequence = %#v, want a single plain exile", sequence)
+	}
+	exile, ok := sequence[0].Primitive.(game.Exile)
+	if !ok {
+		t.Fatalf("instruction = %#v, want a plain exile", sequence[0].Primitive)
+	}
+	if exile.ExileLinkedKey != "" {
+		t.Fatalf("exile = %#v, want no linked key (not a blink)", exile)
+	}
+	if exile.SourceSpell || exile.Object != game.SourceCardPermanentReference() {
+		t.Fatalf("exile = %#v, want source-permanent exile", exile)
 	}
 }

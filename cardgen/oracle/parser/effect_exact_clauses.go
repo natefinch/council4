@@ -238,6 +238,37 @@ func exactGraveyardExileEffectSyntax(effect *EffectSyntax) bool {
 // unmodeled "all graveyards" / multi-graveyard forms — by anchoring on the exact
 // one-player-target shape; exactPlayerGraveyardExileEffectSyntax then verifies
 // the reconstruction owns the wording byte-for-byte.
+// exactSourcePermanentExileSyntax recognizes the self-directed permanent exile
+// "Exile this artifact." / "Exile this permanent." / "Exile <CardName>." /
+// "Exile it." where the exiled object is the ability's own source permanent
+// (Midnight Clock's threshold tail). The single reference is the source
+// self-reference — a demonstrative object noun ("this artifact"), the card's own
+// name, or the "it" pronoun — reconstructed exactly with no target. The
+// "this spell" resolving-spell form is caught earlier by
+// exactSourceSpellExileSyntax; any other shape leaves the clause non-exact so
+// lowering fails closed.
+func exactSourcePermanentExileSyntax(effect *EffectSyntax) bool {
+	if effect.Negated ||
+		effect.Duration != EffectDurationNone ||
+		effect.FromZone != zone.None ||
+		effect.ToZone != zone.None ||
+		len(effect.Targets) != 0 ||
+		len(effect.References) != 1 {
+		return false
+	}
+	reference := effect.References[0]
+	switch reference.Kind {
+	case ReferenceThisObject, ReferenceSelfName:
+	case ReferencePronoun:
+		if reference.Pronoun != PronounIt {
+			return false
+		}
+	default:
+		return false
+	}
+	return strings.EqualFold(exactEffectClauseText(effect), "Exile "+reference.Text+".")
+}
+
 func exactSourceSpellExileSyntax(effect *EffectSyntax) bool {
 	if effect.Kind != EffectExile ||
 		effect.Negated ||
@@ -252,10 +283,14 @@ func exactSourceSpellExileSyntax(effect *EffectSyntax) bool {
 	if reference.Kind != ReferenceThisObject && reference.Kind != ReferenceSelfName {
 		return false
 	}
-	if reference.Kind == ReferenceThisObject && reference.Text != "this spell" {
+	if reference.Kind == ReferenceThisObject && reference.Text != "this spell" && reference.Text != "this card" {
 		return false
 	}
-	return effect.Text == "Exile "+reference.Text+"."
+	if effect.Text != "Exile "+reference.Text+"." {
+		return false
+	}
+	effect.ExileSourceSpell = true
+	return true
 }
 
 // exactSourceSpellShuffleIntoLibrarySyntax recognizes the exact resolution tail

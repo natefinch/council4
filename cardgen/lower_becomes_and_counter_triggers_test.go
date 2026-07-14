@@ -246,9 +246,9 @@ func TestLowerCounterAddedMinusOneTrigger(t *testing.T) {
 	}
 }
 
-func TestLowerCounterAddedUnsupportedKindFailsClosed(t *testing.T) {
+func TestLowerCounterAddedGenericKindIsSupported(t *testing.T) {
 	t.Parallel()
-	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+	face := lowerSingleFace(t, &ScryfallCard{
 		Name:       "Charge Watcher",
 		Layout:     "normal",
 		TypeLine:   "Creature — Human",
@@ -256,11 +256,15 @@ func TestLowerCounterAddedUnsupportedKindFailsClosed(t *testing.T) {
 		Power:      new("1"),
 		Toughness:  new("1"),
 	})
-	if len(diagnostics) == 0 {
-		t.Fatal("expected unsupported diagnostic for charge counter trigger")
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
 	}
-	if !strings.Contains(diagnostics[0].Summary, "unsupported") {
-		t.Fatalf("diagnostic summary = %q, want 'unsupported'", diagnostics[0].Summary)
+	pat := face.TriggeredAbilities[0].Trigger.Pattern
+	if !pat.MatchCounterKind || pat.CounterKind != counter.Charge {
+		t.Fatalf("counter kind = (%v, %v), want (true, Charge)", pat.MatchCounterKind, pat.CounterKind)
+	}
+	if !pat.OneOrMore {
+		t.Fatal("OneOrMore = false, want true")
 	}
 }
 

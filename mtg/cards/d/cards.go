@@ -101,6 +101,7 @@ var Cards = []cardset.Entry{
 	{Name: "Domri's Nodorog", New: DomriSNodorog},
 	{Name: "Donate", New: Donate},
 	{Name: "Donatello, Mutant Mechanic", New: DonatelloMutantMechanic},
+	{Name: "Doombot Harbinger", New: DoombotHarbinger},
 	{Name: "Door of Destinies", New: DoorOfDestinies},
 	{Name: "Doorkeeper", New: Doorkeeper},
 	{Name: "Doran, the Siege Tower", New: DoranTheSiegeTower},

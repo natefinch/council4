@@ -190,17 +190,6 @@ const (
 	TriggerStackObjectSpell
 )
 
-// TriggerCounter identifies a counter kind used by a trigger pattern.
-type TriggerCounter uint8
-
-// Trigger counter kinds.
-const (
-	TriggerCounterAny TriggerCounter = iota
-	TriggerCounterPlusOnePlusOne
-	TriggerCounterMinusOneMinusOne
-	TriggerCounterLore
-)
-
 // TriggerTriState is a closed semantic true/false filter.
 type TriggerTriState uint8
 
@@ -350,7 +339,16 @@ type TriggerPattern struct {
 	DamageSourceIsStackObject         bool
 	AttackRecipient                   TriggerAttackRecipient
 	StackObject                       TriggerStackObject
-	Counter                           TriggerCounter
+	// MatchCounter restricts an EventCountersAdded pattern to Counter's kind.
+	// A counter-added trigger always names a specific counter, so it is set
+	// together with Counter.
+	MatchCounter bool
+	Counter      counter.Kind
+	// CounterThreshold, when positive, restricts an EventCountersAdded pattern to
+	// the placement that brings the subject's running total of Counter counters
+	// up to CounterThreshold ("the twelfth hour counter is put on this artifact",
+	// Midnight Clock). Zero means every matching placement fires the trigger.
+	CounterThreshold int
 
 	// AttackAlone restricts an attacker-declared pattern to a creature that
 	// attacks alone (the only attacking creature this combat).

@@ -110,11 +110,12 @@ const (
 	Void       // Void counter (Dauthi Voidwalker, Sphere of Annihilation)
 	Intel      // Intel counter (Flamewar, Streetwise Operative)
 	Collection // Collection counter (Evelyn, the Covetous, Charitable Levy)
+	Hour       // Hour counter (Midnight Clock, Nexus of Fate cycle)
 )
 
 // Valid reports whether k is a recognized counter kind.
 func (k Kind) Valid() bool {
-	return k >= PlusOnePlusOne && k <= Collection
+	return k >= PlusOnePlusOne && k <= Hour
 }
 
 // PlayerOnly reports whether k may be placed only on players.
@@ -296,6 +297,8 @@ func (k Kind) String() string {
 		return "intel"
 	case Collection:
 		return "collection"
+	case Hour:
+		return "hour"
 	default:
 		return "unknown"
 	}

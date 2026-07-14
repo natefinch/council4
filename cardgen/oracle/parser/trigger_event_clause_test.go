@@ -2,6 +2,8 @@ package parser
 
 import (
 	"testing"
+
+	"github.com/natefinch/council4/mtg/game/counter"
 )
 
 func selectionHasSubtype(selection TriggerSelection, name string) bool {
@@ -1292,7 +1294,7 @@ func damageAndCounterTriggerEventClauseTests() []triggerEventClauseTest {
 			source: "Whenever a +1/+1 counter is put on this creature, draw a card.",
 			check: func(t *testing.T, clause *TriggerEventClause) {
 				t.Helper()
-				if clause.Kind != TriggerEventKindCounterAdded || clause.Counter.Kind != TriggerEventCounterPlusOnePlusOne {
+				if clause.Kind != TriggerEventKindCounterAdded || clause.Counter.Kind != counter.PlusOnePlusOne {
 					t.Fatalf("clause = %#v", clause)
 				}
 			},
@@ -1302,7 +1304,7 @@ func damageAndCounterTriggerEventClauseTests() []triggerEventClauseTest {
 			source: "Whenever a -1/-1 counter is put on this permanent, draw a card.",
 			check: func(t *testing.T, clause *TriggerEventClause) {
 				t.Helper()
-				if clause.Counter.Kind != TriggerEventCounterMinusOneMinusOne {
+				if clause.Counter.Kind != counter.MinusOneMinusOne {
 					t.Fatalf("clause = %#v", clause)
 				}
 			},
@@ -1327,7 +1329,7 @@ func damageAndCounterTriggerEventClauseTests() []triggerEventClauseTest {
 					clause.Controller != ControllerYou ||
 					!clause.ExcludeSelf ||
 					!clause.OneOrMore ||
-					clause.Counter.Kind != TriggerEventCounterPlusOnePlusOne {
+					clause.Counter.Kind != counter.PlusOnePlusOne {
 					t.Fatalf("clause = %#v", clause)
 				}
 			},
@@ -1355,7 +1357,7 @@ func damageAndCounterTriggerEventClauseTests() []triggerEventClauseTest {
 					clause.Subject.Kind != TriggerEventSubjectSelf ||
 					clause.CauseController != TriggerEventActorYou ||
 					!clause.OneOrMore ||
-					clause.Counter.Kind != TriggerEventCounterPlusOnePlusOne {
+					clause.Counter.Kind != counter.PlusOnePlusOne {
 					t.Fatalf("clause = %#v", clause)
 				}
 			},
@@ -1370,7 +1372,7 @@ func damageAndCounterTriggerEventClauseTests() []triggerEventClauseTest {
 					clause.Controller != ControllerYou ||
 					clause.CauseController != TriggerEventActorYou ||
 					!clause.OneOrMore ||
-					clause.Counter.Kind != TriggerEventCounterPlusOnePlusOne {
+					clause.Counter.Kind != counter.PlusOnePlusOne {
 					t.Fatalf("clause = %#v", clause)
 				}
 			},
@@ -1384,7 +1386,7 @@ func damageAndCounterTriggerEventClauseTests() []triggerEventClauseTest {
 					clause.Subject.Kind != TriggerEventSubjectSelection ||
 					clause.CauseController != TriggerEventActorYou ||
 					clause.OneOrMore ||
-					clause.Counter.Kind != TriggerEventCounterMinusOneMinusOne {
+					clause.Counter.Kind != counter.MinusOneMinusOne {
 					t.Fatalf("clause = %#v", clause)
 				}
 			},
@@ -1610,7 +1612,7 @@ func TestTriggerEventFailClosed(t *testing.T) {
 		{name: "unrepresentable another ability source", source: "Whenever you activate an ability of another creature that isn't a mana ability, draw a card."},
 		{name: "near miss attack alone", source: "Whenever you attack alone, draw a card."},
 		{name: "near miss ability target", source: "Whenever this creature becomes the target of an ability, draw a card."},
-		{name: "unknown counter type", source: "Whenever a shield counter is put on this creature, draw a card."},
+		{name: "unknown counter type", source: "Whenever a frobnicate counter is put on this creature, draw a card."},
 		{name: "copy without cast", source: "Whenever you copy an instant or sorcery spell, draw a card."},
 		{name: "opponent cast or copy", source: "Whenever an opponent casts or copies an instant or sorcery spell, draw a card."},
 		{name: "ordinal beyond supported word", source: "Whenever you cast your sixth spell each turn, draw a card."},

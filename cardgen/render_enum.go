@@ -375,6 +375,8 @@ func renderCounterKind(kind counter.Kind) (string, error) {
 		return "counter.Intel", nil
 	case counter.Collection:
 		return "counter.Collection", nil
+	case counter.Hour:
+		return "counter.Hour", nil
 	default:
 		return "", fmt.Errorf("render: unsupported counter kind %d", kind)
 	}

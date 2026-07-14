@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,810 of 32,501 cards eligible for paper support (54.8%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,815 of 32,501 cards eligible for paper support (54.8%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -3962,6 +3962,7 @@ Council4 currently supports **17,810 of 32,501 cards eligible for paper support 
 - Doom Whisperer
 - Doom's Servo-Guards
 - Doombot
+- Doombot Harbinger
 - Doomed Dissenter
 - Doomed Necromancer
 - Doomed Traveler
@@ -4779,6 +4780,7 @@ Council4 currently supports **17,810 of 32,501 cards eligible for paper support 
 - Eternal Dragon
 - Eternal Isolation
 - Eternal of Harsh Truths
+- Eternal Scourge
 - Eternal Skylord
 - Eternal Student
 - Eternal Taskmaster
@@ -5439,6 +5441,7 @@ Council4 currently supports **17,810 of 32,501 cards eligible for paper support 
 - Flinthoof Boar
 - Flitterstep Eidolon
 - Flitterwing Nuisance
+- Flitting Guerrilla
 - Floating Shield
 - Flock Impostor
 - Flockchaser Phantom
@@ -9069,6 +9072,7 @@ Council4 currently supports **17,810 of 32,501 cards eligible for paper support 
 - Magnifying Glass
 - Magnigoth Sentry
 - Magus of the Bazaar
+- Magus of the Bridge
 - Magus of the Coffers
 - Magus of the Disk
 - Magus of the Future
@@ -9499,6 +9503,7 @@ Council4 currently supports **17,810 of 32,501 cards eligible for paper support 
 - Midnight Angel Armor
 - Midnight Assassin
 - Midnight Charm
+- Midnight Clock
 - Midnight Covenant
 - Midnight Duelist
 - Midnight Entourage
