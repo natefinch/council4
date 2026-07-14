@@ -1800,7 +1800,7 @@ func (r Renderer) renderObjectOrGroupPrimitive(ctx *renderCtx, primitive game.Pr
 		if err != nil {
 			return "", err
 		}
-		return r.renderObjectOrGroup(ctx, "game.Goad", value.Object, value.Group)
+		return r.renderGoad(ctx, value)
 	case game.PrimitiveSacrifice:
 		value, err := assertPrimitive[game.Sacrifice](primitive)
 		if err != nil {
@@ -2475,6 +2475,7 @@ func (r Renderer) renderObjectOrGroup(ctx *renderCtx, typeName string, object ga
 		if err != nil {
 			return "", err
 		}
+
 		return structLit(typeName, []string{fmt.Sprintf("Group: %s,", rendered)}), nil
 	}
 	rendered, err := r.renderObjectReference(object)
@@ -2482,6 +2483,27 @@ func (r Renderer) renderObjectOrGroup(ctx *renderCtx, typeName string, object ga
 		return "", err
 	}
 	return structLit(typeName, []string{fmt.Sprintf("Object: %s,", rendered)}), nil
+}
+
+func (r Renderer) renderGoad(ctx *renderCtx, value game.Goad) (string, error) {
+	var fields []string
+	if value.Group.Domain() != 0 {
+		rendered, err := r.renderGroupReference(ctx, value.Group)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Group: %s,", rendered))
+	} else {
+		rendered, err := r.renderObjectReference(value.Object)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Object: %s,", rendered))
+	}
+	if value.RestOfGame {
+		fields = append(fields, "RestOfGame: true,")
+	}
+	return structLit("game.Goad", fields), nil
 }
 
 func (r Renderer) renderAddMana(ctx *renderCtx, value *game.AddMana) (string, error) {

@@ -1358,11 +1358,11 @@ func wasGoadedByNow(g *game.Game, permanent *game.Permanent, player game.PlayerI
 	return false
 }
 
-func goadPermanent(g *game.Game, permanent *game.Permanent, player game.PlayerID) {
+func goadPermanent(g *game.Game, permanent *game.Permanent, player game.PlayerID, restOfGame bool) {
 	if permanent.Goaded == nil {
 		permanent.Goaded = make(map[game.PlayerID]game.GoadStatus)
 	}
-	permanent.Goaded[player] = game.GoadStatus{CreatedTurn: g.Turn.TurnNumber, ExpiresFor: player}
+	permanent.Goaded[player] = game.GoadStatus{CreatedTurn: g.Turn.TurnNumber, ExpiresFor: player, RestOfGame: restOfGame}
 }
 
 func expireGoadForActivePlayer(g *game.Game) {
@@ -1371,6 +1371,12 @@ func expireGoadForActivePlayer(g *game.Game) {
 			continue
 		}
 		for player, status := range permanent.Goaded {
+			// A rest-of-game goad (Life of the Party's goaded token copies) never
+			// expires at the goading player's untap; it lasts until the permanent
+			// leaves the battlefield, so skip it here.
+			if status.RestOfGame {
+				continue
+			}
 			if status.ExpiresFor == g.Turn.ActivePlayer && status.CreatedTurn < g.Turn.TurnNumber {
 				delete(permanent.Goaded, player)
 			}

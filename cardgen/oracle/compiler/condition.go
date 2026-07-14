@@ -467,6 +467,7 @@ func compileConditionSelection(syntax parser.ConditionSelection) (ConditionSelec
 	selection.Colorless = syntax.Colorless
 	selection.Multicolored = syntax.Multicolored
 	selection.TokenOnly = syntax.TokenOnly
+	selection.NonToken = syntax.NonToken
 	selection.ExcludeSource = syntax.ExcludeSource
 	selection.Tapped = tapped
 	selection.CombatState = combatState

@@ -3632,8 +3632,54 @@ func createCopyTokenClauseMatches(effect *EffectSyntax, base, source string) (ta
 // reference; only the copy-source reference completes the base clause, and any
 // remaining references must be the modifier's pronoun. It requires no targets, a
 // single token, and the controller recipient.
+// copyTokenReferenceRecipientContext reports whether a create-copy-of-reference
+// effect's recipient context is one the copy-of-reference recognizer accepts: the
+// controller ("Create a token that's a copy of it.") or a player group ("each
+// opponent creates a token that's a copy of it.", Life of the Party). Every other
+// context fails closed.
+func copyTokenReferenceRecipientContext(context EffectContextKind) bool {
+	switch context {
+	case EffectContextController, EffectContextEachOpponent, EffectContextEachPlayer:
+		return true
+	default:
+		return false
+	}
+}
+
+// normalizeCopyTokenGroupSubject rewrites a group-recipient copy clause's printed
+// subject and "creates" conjugation to the canonical controller "Create ..." head
+// so the shared copy-body matcher can compare it against createCopyTokenClause. A
+// controller clause is already canonical and returns unchanged. A group clause
+// that does not open with its expected "<group> creates " prefix fails closed.
+func normalizeCopyTokenGroupSubject(clause string, context EffectContextKind) (string, bool) {
+	switch context {
+	case EffectContextController:
+		return clause, true
+	case EffectContextEachOpponent:
+		if rest, ok := cutFoldPrefix(clause, "each opponent creates "); ok {
+			return "Create " + rest, true
+		}
+	case EffectContextEachPlayer:
+		if rest, ok := cutFoldPrefix(clause, "each player creates "); ok {
+			return "Create " + rest, true
+		}
+	default:
+		return clause, false
+	}
+	return clause, false
+}
+
+// cutFoldPrefix removes a case-insensitive prefix from s, reporting whether it was
+// present.
+func cutFoldPrefix(s, prefix string) (string, bool) {
+	if len(s) >= len(prefix) && strings.EqualFold(s[:len(prefix)], prefix) {
+		return s[len(prefix):], true
+	}
+	return "", false
+}
+
 func exactCreateCopyTokenReferenceEffectSyntax(effect *EffectSyntax) bool {
-	if effect.Context != EffectContextController ||
+	if !copyTokenReferenceRecipientContext(effect.Context) ||
 		effect.Negated ||
 		!createCopyTokenCountKnown(effect) ||
 		len(effect.Targets) != 0 ||
@@ -3646,6 +3692,15 @@ func exactCreateCopyTokenReferenceEffectSyntax(effect *EffectSyntax) bool {
 	}
 	clause := strings.TrimSuffix(base, ".")
 	clause = strings.TrimSuffix(clause, " instead")
+	// A group recipient ("each opponent creates ...", Life of the Party) prints
+	// its subject and the "creates" conjugation; normalize it to the canonical
+	// controller "Create ..." head so the shared clause matcher compares the copy
+	// body identically. A controller clause is already canonical and passes
+	// through unchanged, keeping every controller copy byte-identical.
+	clause, ok = normalizeCopyTokenGroupSubject(clause, effect.Context)
+	if !ok {
+		return false
+	}
 	sourceIndex := -1
 	entersTapped := false
 	for i := range effect.References {

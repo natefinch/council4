@@ -1226,6 +1226,10 @@ type ConditionSelection struct {
 	Colorless     bool
 	Multicolored  bool
 	TokenOnly     bool
+	// NonToken requires the matched permanent to not be a token ("if it's not a
+	// token", Life of the Party). It is the negation of TokenOnly and mutually
+	// exclusive with it.
+	NonToken      bool
 	ExcludeSource bool
 	Tapped        ConditionTriState
 	CombatState   ConditionCombatState
@@ -2548,6 +2552,13 @@ type CompiledEffect struct {
 	// creation for each opponent attacking the enchanted player. It is the zero
 	// span unless the reflexive rider was folded onto this create effect.
 	EachOpponentAttackingSameRiderSpan shared.Span
+	// GoadCreatedTokensRiderSpan covers the folded "The tokens are goaded for the
+	// rest of the game." rider on a create-token effect (Life of the Party). When
+	// set, lowering publishes the created tokens under a link key and emits a
+	// following rest-of-game goad of exactly those tokens, and credits the rider
+	// sentence toward source coverage. It is the zero span unless that rider was
+	// folded onto this create effect.
+	GoadCreatedTokensRiderSpan shared.Span
 	// TokenCopyOverride and the TokenCopyOverride* fields carry a copy-token
 	// characteristic-overriding "except" exception ("except it's a 1/1 green
 	// Frog", "except it's an artifact in addition to its other types"). The

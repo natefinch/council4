@@ -299,6 +299,11 @@ type ConditionSelection struct {
 	Colorless     bool                 `json:",omitempty"`
 	Multicolored  bool                 `json:",omitempty"`
 	TokenOnly     bool                 `json:",omitempty"`
+	// NonToken requires the matched permanent to not be a token, backing the
+	// negated intervening condition "if it's not a token" (Life of the Party).
+	// It is the negation of TokenOnly and mutually exclusive with it; its zero
+	// value imposes no token/non-token restriction.
+	NonToken      bool                 `json:",omitempty"`
 	ExcludeSource bool                 `json:",omitempty"`
 	Tapped        ConditionTappedState `json:",omitempty"`
 	CombatState   ConditionCombatState `json:",omitempty"`
@@ -1619,7 +1624,7 @@ func recognizeEventSubjectMatchCondition(body []shared.Token, atoms Atoms) (Cond
 		if rest, ok = cutTokenPrefix(body, "it", "was", "an"); !ok {
 			if rest, ok = cutTokenPrefix(body, "it's", "a"); !ok {
 				if rest, ok = cutTokenPrefix(body, "it's", "an"); !ok {
-					return ConditionClause{}, false
+					return recognizeEventSubjectNonMatchCondition(body, atoms)
 				}
 			}
 		}
@@ -1628,6 +1633,53 @@ func recognizeEventSubjectMatchCondition(body []shared.Token, atoms Atoms) (Cond
 	if !ok {
 		return ConditionClause{}, false
 	}
+	return ConditionClause{
+		Predicate:     ConditionPredicateObjectMatches,
+		ObjectBinding: ConditionObjectBindingEventPermanent,
+		Selection:     selection,
+	}, true
+}
+
+// recognizeEventSubjectNonMatchCondition handles the negated intervening
+// condition "if it's not a token" and its equivalents ("it isn't a token", "it
+// is not a token", "it wasn't a token", "it was not a token"), backing Life of
+// the Party's "if it's not a token" self-ETB gate. Only the token noun is
+// accepted; a negated token selection lowers to the ConditionSelection.NonToken
+// flag (the negation of TokenOnly), keeping the EventPermanent binding so the
+// gate tests the permanent that just entered.
+func recognizeEventSubjectNonMatchCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
+	negatedPrefixes := [][]string{
+		{"it's", "not", "a"},
+		{"it's", "not", "an"},
+		{"it", "is", "not", "a"},
+		{"it", "is", "not", "an"},
+		{"it", "isn't", "a"},
+		{"it", "isn't", "an"},
+		{"it", "was", "not", "a"},
+		{"it", "was", "not", "an"},
+		{"it", "wasn't", "a"},
+		{"it", "wasn't", "an"},
+	}
+	var rest []shared.Token
+	matched := false
+	for _, prefix := range negatedPrefixes {
+		if trimmed, ok := cutTokenPrefix(body, prefix...); ok {
+			rest = trimmed
+			matched = true
+			break
+		}
+	}
+	if !matched {
+		return ConditionClause{}, false
+	}
+	selection, ok := parseConditionSelection(rest, atoms)
+	if !ok || !selection.TokenOnly {
+		// Only "not a token" is a supported negation; any other negated
+		// selection is left unrecognized rather than silently mismatched.
+		return ConditionClause{}, false
+	}
+	selection.TokenOnly = false
+	selection.NonToken = true
 	return ConditionClause{
 		Predicate:     ConditionPredicateObjectMatches,
 		ObjectBinding: ConditionObjectBindingEventPermanent,

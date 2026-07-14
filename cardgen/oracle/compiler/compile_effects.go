@@ -333,6 +333,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				TokenCopyGrantKeywords:             append([]parser.KeywordKind(nil), syntax.TokenCopyGrantKeywords...),
 				TokenCopyGrantRiderSpan:            syntax.TokenCopyGrantRiderSpan,
 				EachOpponentAttackingSameRiderSpan: syntax.EachOpponentAttackingSameRiderSpan,
+				GoadCreatedTokensRiderSpan:         syntax.GoadCreatedTokensRiderSpan,
 				TokenCopyOverride:                  syntax.TokenCopyOverride,
 				TokenCopyOverridePTKnown:           syntax.TokenCopyOverridePTKnown,
 				TokenCopyOverridePower:             syntax.TokenCopyOverridePower,

@@ -1449,6 +1449,13 @@ type Sentence struct {
 	// its "that player" back reference and tokens as belonging to that create
 	// rather than as an unrecognized sibling.
 	EachOpponentAttackingSameRider bool `json:",omitempty"`
+	// GoadCreatedTokensRider reports that this sentence is the credited "The
+	// tokens are goaded for the rest of the game." rider folded onto a preceding
+	// create-token effect (Life of the Party). It goads exactly the created
+	// tokens for the rest of the game; reference and coverage scans treat its "the
+	// tokens" back reference as belonging to that create rather than as an
+	// unrecognized sibling.
+	GoadCreatedTokensRider bool `json:",omitempty"`
 }
 
 // sentenceIsCreditedRider reports whether the sentence has been folded onto a
@@ -1471,7 +1478,8 @@ func sentenceIsCreditedRider(s *Sentence) bool {
 		s.RoundUpEachTimeRider ||
 		s.ImpulseExilePermission ||
 		s.ChooseCardNamePrelude ||
-		s.EachOpponentAttackingSameRider
+		s.EachOpponentAttackingSameRider ||
+		s.GoadCreatedTokensRider
 }
 
 // StaticRuleSubjectKind identifies the source object constrained by a simple

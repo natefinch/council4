@@ -50,6 +50,14 @@ func lowerCreateTokenSpellLinked(ctx contentCtx, publishLinked game.LinkedKey) (
 		panic(fmt.Sprintf("lowerCreateTokenSpellLinked: reached with %d effects; the EffectCreate dispatch is single-effect", len(ctx.content.Effects)))
 	}
 	effect := ctx.content.Effects[0]
+	if effect.GoadCreatedTokensRiderSpan != (shared.Span{}) {
+		// "each opponent creates a token that's a copy of it. The tokens are
+		// goaded for the rest of the game." (Life of the Party). The folded goad
+		// rider drives a group-recipient copy create followed by a rest-of-game
+		// goad of exactly the created tokens; route it before the plain
+		// copy-of-reference and group-recipient arms, which do not emit the goad.
+		return lowerCreateCopyTokenGroupGoadSequence(ctx, &effect, publishLinked)
+	}
 	if effect.TokenCopyOfTarget {
 		return lowerCreateCopyTokenSpell(ctx)
 	}

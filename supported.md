@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,861 of 32,501 cards eligible for paper support (55.0%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,863 of 32,501 cards eligible for paper support (55.0%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -8716,6 +8716,7 @@ Council4 currently supports **17,861 of 32,501 cards eligible for paper support 
 - Life from the Loam
 - Life Goes On
 - Life Insurance
+- Life of the Party
 - Life of Toshiro Umezawa // Memory of Toshiro
 - Life's Legacy
 - Lifeblood
@@ -16611,6 +16612,7 @@ Council4 currently supports **17,861 of 32,501 cards eligible for paper support 
 - Vault Robber
 - Vault Skirge
 - Vault Skyward
+- Vaultborn Tyrant
 - Vaultbreaker
 - Vaultguard Trooper
 - Vebulid

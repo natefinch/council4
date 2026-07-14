@@ -1,6 +1,7 @@
 package cardgen
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -372,6 +373,12 @@ func (r Renderer) renderGroupReference(ctx *renderCtx, group game.GroupReference
 		return fmt.Sprintf("game.TriggeringAttackersGroup(%s)", selection), nil
 	case game.GroupDomainCapturedObjects:
 		return "game.CapturedObjectsGroup()", nil
+	case game.GroupDomainLinkedObjects:
+		key, ok := group.LinkedKey()
+		if !ok {
+			return "", errors.New("render: linked-object group has no key")
+		}
+		return fmt.Sprintf("game.LinkedObjectsGroup(game.LinkedKey(%q))", string(key)), nil
 	default:
 		return "", fmt.Errorf("render: unsupported group reference domain %d", group.Domain())
 	}

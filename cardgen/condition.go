@@ -627,6 +627,7 @@ func lowerConditionSelection(selection compiler.ConditionSelection) (game.Select
 	result.MatchAnyCounter = selection.AnyCounter
 	result.ExcludeSource = selection.ExcludeSource
 	result.TokenOnly = selection.TokenOnly
+	result.NonToken = selection.NonToken
 	switch selection.Attachment {
 	case compiler.ConditionAttachmentEnchanted:
 		result.MatchEnchanted = true

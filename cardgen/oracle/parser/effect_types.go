@@ -2387,6 +2387,13 @@ type EffectSyntax struct {
 	// controller create-token effect whose enchanted-player-is-attacked trigger
 	// carries the reflexive rider; the zero span means no such rider was folded.
 	EachOpponentAttackingSameRiderSpan shared.Span `json:"-"`
+	// GoadCreatedTokensRiderSpan covers the folded "The tokens are goaded for the
+	// rest of the game." rider sentence (Life of the Party) so lowering emits a
+	// linked publish on the create and a following rest-of-game goad of exactly
+	// those tokens, and coverage credits the rider's tokens to the create. It is
+	// set only on a create-token effect whose recipient is a player group (each
+	// opponent); the zero span means no such rider was folded.
+	GoadCreatedTokensRiderSpan shared.Span `json:"-"`
 	// TokenCopyOverride reports a copy-token characteristic-overriding "except"
 	// exception ("except it's a 1/1 green Frog", "except it's an artifact in
 	// addition to its other types"). When set, the created token copies its
