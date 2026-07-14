@@ -1804,10 +1804,26 @@ func (r Renderer) renderObjectOrGroupPrimitive(ctx *renderCtx, primitive game.Pr
 		if err != nil {
 			return "", err
 		}
-		return r.renderObjectOrGroup(ctx, "game.Sacrifice", value.Object, value.Group)
+		return r.renderSacrifice(ctx, value)
 	default:
 		return "", fmt.Errorf("render: unsupported object or group primitive kind %d", primitive.Kind())
 	}
+}
+
+func (r Renderer) renderSacrifice(ctx *renderCtx, value game.Sacrifice) (string, error) {
+	if !value.ByItsController {
+		return r.renderObjectOrGroup(ctx, "game.Sacrifice", value.Object, value.Group)
+	}
+	// "That object's current controller sacrifices it" applies to the
+	// single-object form only, so render the object reference alongside the flag.
+	rendered, err := r.renderObjectReference(value.Object)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.Sacrifice", []string{
+		fmt.Sprintf("Object: %s,", rendered),
+		"ByItsController: true,",
+	}), nil
 }
 
 func (r Renderer) renderDestroy(ctx *renderCtx, value game.Destroy) (string, error) {

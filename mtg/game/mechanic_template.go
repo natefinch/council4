@@ -313,6 +313,21 @@ func EnchantStaticAbility(target *TargetSpec) StaticAbility {
 	}
 }
 
+// ReanimationEnchantStaticAbility builds the Enchant static ability for a
+// graveyard-reanimation Aura (Animate Dead, Dance of the Dead). Its target
+// enchants a creature card in a graveyard, so the Aura spell targets a card in
+// a graveyard; on resolution the engine returns that card to the battlefield
+// and attaches the Aura to it (see rules.resolveReanimationAura).
+func ReanimationEnchantStaticAbility(target *TargetSpec) StaticAbility {
+	targetCopy := cloneTargetSpec(target)
+	return StaticAbility{
+		Text: "Enchant " + targetCopy.Constraint,
+		KeywordAbilities: []KeywordAbility{
+			EnchantKeyword{Target: targetCopy, Reanimates: true},
+		},
+	}
+}
+
 func cloneTargetSpec(source *TargetSpec) TargetSpec {
 	target := *source
 	target.Predicate = cloneTargetPredicate(target.Predicate)

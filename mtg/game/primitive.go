@@ -1491,6 +1491,14 @@ type PlayLinkedExiledCard struct {
 type Sacrifice struct {
 	Object ObjectReference
 	Group  GroupReference
+	// ByItsController, when set, makes the referenced object's current
+	// controller sacrifice it rather than requiring the ability's controller to
+	// control it ("that creature's controller sacrifices it" — Animate Dead's
+	// leaves-the-battlefield trigger). Without it a plain Sacrifice only affects
+	// an object the ability controller still controls, so a reanimated creature
+	// whose control had changed would incorrectly survive. It applies to the
+	// single-object form only (Group unset).
+	ByItsController bool
 }
 
 // SacrificePermanents causes the referenced player (or every player in a group)

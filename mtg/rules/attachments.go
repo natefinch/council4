@@ -55,6 +55,14 @@ func canAttachPermanent(g *game.Game, attachment, target *game.Permanent) bool {
 }
 
 func auraCanAttachToPermanent(g *game.Game, aura, target *game.Permanent) bool {
+	if aura.ReanimationLinkedObject != 0 {
+		// A resolved graveyard-reanimation Aura (Animate Dead, Dance of the Dead)
+		// has lost "enchant creature card in a graveyard" and gained "enchant
+		// creature put onto the battlefield with this Aura". Its only legal host
+		// is the specific permanent it returned to the battlefield, tracked by
+		// ReanimationLinkedObject; every other object is an illegal attachment.
+		return target.ObjectID == aura.ReanimationLinkedObject
+	}
 	spec, ok := enchantTargetSpecForPermanent(g, aura)
 	if !ok {
 		return false

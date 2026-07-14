@@ -1904,7 +1904,13 @@ func handleSacrifice(r *effectResolver, prim game.Sacrifice) effectResolved {
 	if !ok && prim.Object.Kind() == game.ObjectReferenceNone {
 		permanent, ok = firstPermanentControlledBy(r.game, r.obj.Controller)
 	}
-	if !ok || effectiveController(r.game, permanent) != r.obj.Controller {
+	if !ok {
+		return res
+	}
+	// "That object's current controller sacrifices it" (ByItsController) is
+	// performed by whoever controls the object now; every other sacrifice
+	// requires the ability's controller to still control it.
+	if !prim.ByItsController && effectiveController(r.game, permanent) != r.obj.Controller {
 		return res
 	}
 	if permanentCantBeSacrificed(r.game, permanent) {
