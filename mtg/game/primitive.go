@@ -1748,6 +1748,9 @@ type ExileTopOfLibrary struct {
 	Amount      Quantity
 	Player      PlayerReference      // single player; zero if PlayerGroup is set
 	PlayerGroup PlayerGroupReference // opponents or all players; zero if Player is set
+	// PublishLinked remembers each card that actually reaches exile under this
+	// source-keyed set for a later instruction to select "from among them".
+	PublishLinked LinkedKey
 	// Counter names a named marker counter placed on each card exiled this way
 	// once it reaches exile ("exile the top card of each player's library with a
 	// collection counter on it.", Evelyn, the Covetous). The counter is recorded

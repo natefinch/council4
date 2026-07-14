@@ -181,15 +181,16 @@ func revealedCardMatches(g *game.Game, playerID game.PlayerID, cardID id.ID, unt
 	}, &until)
 }
 
-func exileTopOfLibraryCards(g *game.Game, playerID game.PlayerID, amount int, counterKind opt.V[counter.Kind], exiledBy game.PlayerID, faceDown bool) {
+func exileTopOfLibraryCards(g *game.Game, playerID game.PlayerID, amount int, counterKind opt.V[counter.Kind], exiledBy game.PlayerID, faceDown bool) []id.ID {
 	player, ok := playerByID(g, playerID)
 	if !ok || amount <= 0 {
-		return
+		return nil
 	}
+	exiled := make([]id.ID, 0, amount)
 	for range amount {
 		cardID, ok := player.Library.Top()
 		if !ok {
-			return
+			break
 		}
 		player.Library.Remove(cardID)
 		destination := commanderReplacementDestination(g, cardID, zone.Exile)
@@ -199,9 +200,12 @@ func exileTopOfLibraryCards(g *game.Game, playerID game.PlayerID, amount int, co
 		}
 		destinationCards, ok := destinationZone(g, zoneOwner, destination)
 		if !ok {
-			return
+			break
 		}
 		destinationCards.Add(cardID)
+		if destination == zone.Exile {
+			exiled = append(exiled, cardID)
+		}
 		// Place the named exile counter only when the card actually landed in
 		// exile: a CR 614/903.9 replacement or commander redirect can divert the
 		// move to the command zone, and gating on the intended destination would
@@ -226,6 +230,7 @@ func exileTopOfLibraryCards(g *game.Game, playerID game.PlayerID, amount int, co
 			Amount:   1,
 		})
 	}
+	return exiled
 }
 
 func (e *Engine) scryCards(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID, amount int) {

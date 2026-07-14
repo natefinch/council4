@@ -741,7 +741,9 @@ func (p Mill) instructionRefs() primitiveRefs {
 	return refs
 }
 func (p ExileTopOfLibrary) instructionRefs() primitiveRefs {
-	return quantityRefs(p.Amount)
+	refs := quantityRefs(p.Amount)
+	refs.publishesLinked = p.PublishLinked
+	return refs
 }
 func (PutHandOnLibraryThenDraw) instructionRefs() primitiveRefs { return primitiveRefs{} }
 func (DiscardThenDraw) instructionRefs() primitiveRefs          { return primitiveRefs{} }
