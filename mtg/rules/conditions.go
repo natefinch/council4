@@ -127,6 +127,22 @@ func aggregateValue(g *game.Game, ctx conditionContext, kind game.AggregateKind)
 	return 0, false
 }
 
+// aggregateComparisonThreshold resolves the value an aggregate comparison is
+// compared against. It is the comparison's fixed Value unless ValueAmount
+// supplies a resolution-time dynamic amount (CR 608.2c), in which case the
+// amount is evaluated against the condition's resolving stack object and
+// controller. A dynamic threshold that cannot be evaluated because the context
+// carries no resolving stack object fails the comparison closed.
+func aggregateComparisonThreshold(g *game.Game, ctx conditionContext, agg game.AggregateComparison) (int, bool) {
+	if !agg.ValueAmount.Exists {
+		return agg.Value, true
+	}
+	if ctx.obj == nil {
+		return 0, false
+	}
+	return dynamicAmountValue(g, ctx.obj, ctx.controller, agg.ValueAmount.Val), true
+}
+
 func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game.Condition]) bool {
 	if !condition.Exists || condition.Val.Empty() {
 		return true
@@ -141,7 +157,8 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	}
 	for _, agg := range cond.Aggregates {
 		value, ok := aggregateValue(g, ctx, agg.Aggregate)
-		matches = matches && ok && compare.Int{Op: agg.Op, Value: agg.Value}.Matches(value)
+		threshold, thresholdOK := aggregateComparisonThreshold(g, ctx, agg)
+		matches = matches && ok && thresholdOK && compare.Int{Op: agg.Op, Value: threshold}.Matches(value)
 	}
 	if cond.AnyOpponentPoisonAtLeast > 0 {
 		matches = matches && anyOpponentPoisonAtLeast(g, ctx.controller, cond.AnyOpponentPoisonAtLeast)

@@ -122,6 +122,9 @@ func compileAbility(
 		if n := ability.ExactSequence.MaxManaValue; n >= 0 && n <= math.MaxUint8 {
 			compiled.ExactSequenceMaxManaValue = uint8(n)
 		}
+		if runtimeColor, ok := runtimeColorFromParser(ability.ExactSequence.DevotionColor); ok {
+			compiled.ExactSequenceDevotionColor = runtimeColor
+		}
 	}
 	compiled.ClassLevelGain = ability.ClassLevelGain
 	compiled.LevelUpRecognized = ability.LevelUpRecognized

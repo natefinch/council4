@@ -1836,8 +1836,13 @@ type Dig struct {
 	// zone.Battlefield instead puts each taken card onto the battlefield under
 	// the player's control, modeling "look at the top N cards of your library.
 	// You may put a [filter] card from among them onto the battlefield. Put the
-	// rest <remainder>." (Web of Life and Destiny, Elvish Rejuvenator). No other
-	// destination is supported.
+	// rest <remainder>." (Web of Life and Destiny, Elvish Rejuvenator).
+	// zone.Library returns each taken card to the top of the player's library
+	// without leaving the library zone, modeling "look at the top N cards of your
+	// library. Put up to one of them on top of your library and the rest
+	// <remainder>." (Thassa's Oracle). When more than one card is taken to the
+	// library top, the first chosen card ends up on top. No other destination is
+	// supported.
 	Destination zone.Type
 	// EntersTapped makes each card put onto the battlefield by a battlefield
 	// Destination enter tapped, modeling the "... onto the battlefield tapped"
