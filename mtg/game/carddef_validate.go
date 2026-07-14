@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"maps"
 	"reflect"
+	"slices"
 	"strings"
 
 	"github.com/natefinch/council4/mtg/game/color"
@@ -2117,6 +2118,25 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 	}
 	if pattern.MatchFromZone && pattern.ExcludeFromZone {
 		v.add(faceName, appendPath(path, "FromZone"), CardDefIssueInvalidSelection, "from-zone trigger filter cannot both require and exclude its source")
+	}
+	if len(pattern.FromZones) > 0 {
+		if pattern.Event != EventZoneChanged {
+			v.add(faceName, appendPath(path, "FromZones"), CardDefIssueInvalidSelection, "multi-origin from-zone trigger filter is only supported for zone-changed events")
+		}
+		if pattern.MatchFromZone || pattern.ExcludeFromZone {
+			v.add(faceName, appendPath(path, "FromZones"), CardDefIssueInvalidSelection, "multi-origin from-zone trigger filter cannot be combined with a single from-zone filter")
+		}
+		if len(pattern.FromZones) < 2 {
+			v.add(faceName, appendPath(path, "FromZones"), CardDefIssueInvalidSelection, "multi-origin from-zone trigger filter must name at least two source zones")
+		}
+		for i, z := range pattern.FromZones {
+			if z == zone.None {
+				v.add(faceName, appendPath(path, "FromZones"), CardDefIssueInvalidSelection, "multi-origin from-zone trigger filter must set each source zone")
+			}
+			if slices.Contains(pattern.FromZones[:i], z) {
+				v.add(faceName, appendPath(path, "FromZones"), CardDefIssueInvalidSelection, "multi-origin from-zone trigger filter must not repeat a source zone")
+			}
+		}
 	}
 	if pattern.FaceDown && !pattern.MatchFaceDown {
 		v.add(faceName, appendPath(path, "FaceDown"), CardDefIssueInvalidSelection, "face-down trigger filter must be enabled")

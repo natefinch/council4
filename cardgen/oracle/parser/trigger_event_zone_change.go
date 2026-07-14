@@ -306,6 +306,31 @@ func parsePutIntoZoneChange(tokens, destination []shared.Token, plural bool) zon
 				player: player,
 			}, plural)
 		}
+		// "put into <zone> from <origin> and/or <origin> [...]" constrains the
+		// single destination and an exact union of origin zones, e.g. "into exile
+		// from your library and/or your graveyard" (Laelia, the Blade Reforged).
+		// Every origin must share one owner scope, so the union carries a single
+		// player selector; a mixed-owner or unrecognized origin fails closed.
+		if originZones, player, ok := parseOriginZoneUnion(after); ok {
+			destZone, destPlayer, ok := parseDestinationZone(before)
+			if !ok || destZone.Kind == TriggerEventZoneBattlefield {
+				return zoneChangeResult{}
+			}
+			if !mergeTriggerPlayerSelector(&player, &destPlayer) {
+				return zoneChangeResult{}
+			}
+			span := shared.SpanOf(tokens)
+			return matchedZoneChange(&parsedZoneChange{
+				kind: TriggerEventZoneChange{Kind: TriggerEventZoneChangeMoved, Span: span},
+				zone: TriggerEventZoneContext{
+					Span:        span,
+					FromZones:   originZones,
+					MatchToZone: true,
+					ToZone:      destZone,
+				},
+				player: player,
+			}, plural)
+		}
 	}
 	if prefix, ok := stripTokenSuffix(destination, "from", "the", "battlefield"); ok {
 		destination = prefix
@@ -443,6 +468,74 @@ func parseOriginZone(tokens []shared.Token) (TriggerEventZone, TriggerPlayerSele
 	default:
 		return TriggerEventZone{}, TriggerPlayerSelector{}, false
 	}
+}
+
+// parseOriginZoneUnion parses an exact union of two or more origin zones joined
+// by "and", "or", or "and/or" (lexed as "and", a Slash symbol, "or"), such as
+// "your library and/or your graveyard". Every segment must parse as a single
+// recognized origin zone through parseOriginZone, the segments must name at
+// least two distinct zones, and they must agree on one owner scope (all "your",
+// all "an opponent's", or all unscoped). A mixed-owner union, a repeated zone,
+// or an unrecognized segment fails closed so the wording never silently loses a
+// constraint.
+func parseOriginZoneUnion(tokens []shared.Token) ([]TriggerEventZone, TriggerPlayerSelector, bool) {
+	segments, ok := splitOriginUnionSegments(tokens)
+	if !ok || len(segments) < 2 {
+		return nil, TriggerPlayerSelector{}, false
+	}
+	var zones []TriggerEventZone
+	var player TriggerPlayerSelector
+	for _, segment := range segments {
+		zone, segPlayer, ok := parseOriginZone(segment)
+		if !ok {
+			return nil, TriggerPlayerSelector{}, false
+		}
+		for _, seen := range zones {
+			if seen.Kind == zone.Kind {
+				return nil, TriggerPlayerSelector{}, false
+			}
+		}
+		if !mergeTriggerPlayerSelector(&player, &segPlayer) {
+			return nil, TriggerPlayerSelector{}, false
+		}
+		zones = append(zones, zone)
+	}
+	return zones, player, true
+}
+
+// splitOriginUnionSegments splits an origin-union token run on exact "and",
+// "or", and "and/or" separators. Malformed doubled, leading, or trailing
+// separators fail closed.
+func splitOriginUnionSegments(tokens []shared.Token) ([][]shared.Token, bool) {
+	var segments [][]shared.Token
+	start := 0
+	for i := 0; i < len(tokens); {
+		if !equalWord(tokens[i], "and") && !equalWord(tokens[i], "or") {
+			if tokens[i].Kind == shared.Slash {
+				return nil, false
+			}
+			i++
+			continue
+		}
+		if i == start {
+			return nil, false
+		}
+		segments = append(segments, tokens[start:i])
+		if equalWord(tokens[i], "and") && i+1 < len(tokens) && tokens[i+1].Kind == shared.Slash {
+			if i+2 >= len(tokens) || !equalWord(tokens[i+2], "or") {
+				return nil, false
+			}
+			i += 3
+		} else {
+			i++
+		}
+		start = i
+	}
+	if start >= len(tokens) {
+		return nil, false
+	}
+	segments = append(segments, tokens[start:])
+	return segments, true
 }
 
 func parseDestinationZone(tokens []shared.Token) (TriggerEventZone, TriggerPlayerSelector, bool) {

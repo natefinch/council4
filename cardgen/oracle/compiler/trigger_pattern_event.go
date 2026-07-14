@@ -1,6 +1,8 @@
 package compiler
 
 import (
+	"slices"
+
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 )
 
@@ -199,6 +201,27 @@ func compileZoneChangeZones(clause *parser.TriggerEventClause, pattern *TriggerP
 	}
 	if pattern.MatchFromZone && pattern.ExcludeFromZone {
 		return false
+	}
+	if len(clause.Zone.FromZones) > 0 {
+		// A multi-origin union names an exact set of source zones; it composes
+		// with a single destination and must not co-occur with a single
+		// from-zone filter. It is only meaningful for a general zone change.
+		if pattern.MatchFromZone || pattern.ExcludeFromZone ||
+			len(clause.Zone.FromZones) < 2 {
+			return false
+		}
+		zones := make([]TriggerZone, 0, len(clause.Zone.FromZones))
+		for _, from := range clause.Zone.FromZones {
+			compiled, ok := compileTriggerEventZone(from.Kind)
+			if !ok || compiled == TriggerZoneNone {
+				return false
+			}
+			if slices.Contains(zones, compiled) {
+				return false
+			}
+			zones = append(zones, compiled)
+		}
+		pattern.FromZones = zones
 	}
 	if pattern.Event != TriggerEventZoneChanged {
 		return true

@@ -799,6 +799,8 @@ func (r Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatt
 		(pattern.MatchToZone && pattern.ExcludeToZone) ||
 		(pattern.ExcludeFromZone && !allowExcludeFromZone) ||
 		(pattern.MatchFromZone && pattern.ExcludeFromZone) ||
+		(len(pattern.FromZones) > 0 &&
+			(!allowZoneChangeZones || pattern.MatchFromZone || pattern.ExcludeFromZone || len(pattern.FromZones) < 2)) ||
 		pattern.DamageRecipientCombatState != game.CombatStateAny ||
 		(pattern.SpellTargetsSource && pattern.Event != game.EventSpellCast) ||
 		((pattern.SpellTargetAllow != game.TargetAllowUnspecified || pattern.SpellTargetPattern.Exists) && pattern.Event != game.EventSpellCast) ||
@@ -1168,6 +1170,18 @@ func renderTriggerPatternZoneFields(ctx *renderCtx, pattern *game.TriggerPattern
 		}
 		ctx.need(importZone)
 		fields = append(fields, "ExcludeFromZone: true,", fmt.Sprintf("FromZone: %s,", fromZone))
+	}
+	if len(pattern.FromZones) > 0 {
+		rendered := make([]string, 0, len(pattern.FromZones))
+		for _, from := range pattern.FromZones {
+			lit, err := renderZone(from)
+			if err != nil {
+				return nil, err
+			}
+			rendered = append(rendered, lit)
+		}
+		ctx.need(importZone)
+		fields = append(fields, fmt.Sprintf("FromZones: []zone.Type{%s},", strings.Join(rendered, ", ")))
 	}
 	if pattern.MatchToZone {
 		toZone, err := renderZone(pattern.ToZone)

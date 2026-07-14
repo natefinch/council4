@@ -217,6 +217,37 @@ func zoneChangeTriggerEventClauseTests() []triggerEventClauseTest {
 			},
 		},
 		{
+			name:   "zone multi-origin exile from library and or graveyard",
+			source: "Whenever one or more cards are put into exile from your library and/or your graveyard, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if !clause.OneOrMore ||
+					clause.Player.Kind != TriggerPlayerSelectorYou ||
+					clause.ZoneChange.Kind != TriggerEventZoneChangeMoved ||
+					clause.Zone.MatchFromZone ||
+					clause.Zone.ExcludeFromZone ||
+					!clause.Zone.MatchToZone ||
+					clause.Zone.ToZone.Kind != TriggerEventZoneExile ||
+					!zoneKindsEqual(clause.Zone.FromZones, TriggerEventZoneLibrary, TriggerEventZoneGraveyard) {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+		{
+			name:   "zone multi-origin exile from graveyard or library with or joiner",
+			source: "Whenever one or more cards are put into exile from your graveyard or your library, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if !clause.OneOrMore ||
+					clause.Player.Kind != TriggerPlayerSelectorYou ||
+					!clause.Zone.MatchToZone ||
+					clause.Zone.ToZone.Kind != TriggerEventZoneExile ||
+					!zoneKindsEqual(clause.Zone.FromZones, TriggerEventZoneGraveyard, TriggerEventZoneLibrary) {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+		{
 			name:     "zone named self dies",
 			source:   "Whenever Ravenous Baloth dies, draw a card.",
 			cardName: "Ravenous Baloth",

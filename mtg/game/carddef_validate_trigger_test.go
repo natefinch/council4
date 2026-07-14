@@ -681,3 +681,90 @@ func TestValidateCardDefRejectsContradictoryColorCardinalitySelection(t *testing
 		})
 	}
 }
+
+func TestValidateCardDefAllowsMultiOriginZoneUnion(t *testing.T) {
+	card := &CardDef{CardFace: CardFace{
+		Name:       "Union Watcher",
+		OracleText: "Whenever one or more cards are put into exile from your library and/or your graveyard, you gain 1 life.",
+		TriggeredAbilities: []TriggeredAbility{{
+			Content: Mode{Sequence: []Instruction{{Primitive: GainLife{
+				Amount: Fixed(1),
+				Player: ControllerReference(),
+			}}}}.Ability(),
+			Trigger: TriggerCondition{Pattern: TriggerPattern{
+				Event:       EventZoneChanged,
+				Player:      TriggerPlayerYou,
+				FromZones:   []zone.Type{zone.Library, zone.Graveyard},
+				MatchToZone: true,
+				ToZone:      zone.Exile,
+				OneOrMore:   true,
+			}},
+		}},
+	}}
+
+	if issues := ValidateCardDef(card); hasCardDefIssue(issues, CardDefIssueInvalidSelection) {
+		t.Fatalf("valid multi-origin zone union rejected: %+v", issues)
+	}
+}
+
+func TestValidateCardDefRejectsMalformedMultiOriginZoneUnion(t *testing.T) {
+	tests := []struct {
+		name    string
+		pattern TriggerPattern
+	}{
+		{
+			name: "combined with single from-zone",
+			pattern: TriggerPattern{
+				Event:         EventZoneChanged,
+				MatchFromZone: true,
+				FromZone:      zone.Library,
+				FromZones:     []zone.Type{zone.Library, zone.Graveyard},
+				MatchToZone:   true,
+				ToZone:        zone.Exile,
+			},
+		},
+		{
+			name: "only one origin zone",
+			pattern: TriggerPattern{
+				Event:       EventZoneChanged,
+				FromZones:   []zone.Type{zone.Library},
+				MatchToZone: true,
+				ToZone:      zone.Exile,
+			},
+		},
+		{
+			name: "repeated origin zone",
+			pattern: TriggerPattern{
+				Event:       EventZoneChanged,
+				FromZones:   []zone.Type{zone.Library, zone.Library},
+				MatchToZone: true,
+				ToZone:      zone.Exile,
+			},
+		},
+		{
+			name: "wrong event",
+			pattern: TriggerPattern{
+				Event:     EventPermanentDied,
+				FromZones: []zone.Type{zone.Library, zone.Graveyard},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			card := &CardDef{CardFace: CardFace{
+				Name:       "Malformed Union Watcher",
+				OracleText: "Whenever one or more cards are exiled, you gain 1 life.",
+				TriggeredAbilities: []TriggeredAbility{{
+					Content: Mode{Sequence: []Instruction{{Primitive: GainLife{
+						Amount: Fixed(1),
+						Player: ControllerReference(),
+					}}}}.Ability(),
+					Trigger: TriggerCondition{Pattern: tt.pattern},
+				}},
+			}}
+			if issues := ValidateCardDef(card); !hasCardDefIssue(issues, CardDefIssueInvalidSelection) {
+				t.Fatalf("issues = %+v, want invalid-selection issue", issues)
+			}
+		})
+	}
+}

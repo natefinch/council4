@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,860 of 32,501 cards eligible for paper support (55.0%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,861 of 32,501 cards eligible for paper support (55.0%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -8521,6 +8521,7 @@ Council4 currently supports **17,860 of 32,501 cards eligible for paper support 
 - Lady Spider, Maybelle Reilly
 - Lady Sun
 - Lady Zhurong, Warrior Queen
+- Laelia, the Blade Reforged
 - Lagac Lizard
 - Lagonna-Band Elder
 - Laid to Rest
