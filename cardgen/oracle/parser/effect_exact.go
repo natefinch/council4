@@ -2533,26 +2533,36 @@ func exactGroupTemporaryKeywordEffectSyntax(effect *EffectSyntax, text, pluralVe
 		return false
 	}
 	subjectText := strings.ToLower(joinedEffectText(subject))
+	// The coupled "you and permanents you control gain ..." subject (Dawn's
+	// Truce) drops its leading "you and" from the clause text (effectSubjectStart
+	// treats "and" as a subject boundary), so the group body reconstructs from the
+	// "permanents you control" span exactly as the plain group form does; the
+	// controller coupling rides on the PlayerAndControlledPermanents flag, not on
+	// this reconstruction.
 	// A plural group reads "<pluralVerb>"; the singular "each <permanent>" form
 	// reads "<singularVerb>". Try both so the reconstruction stays byte-exact
-	// with the source.
+	// with the source. An additive "also" adverb ("permanents you control also
+	// gain indestructible ...", Dawn's Truce's gift-gated rider) may sit between
+	// the group and its verb.
 	for _, verb := range []string{" " + pluralVerb + " ", " " + singularVerb + " "} {
-		middle, ok := strings.CutPrefix(text, subjectText+verb)
-		if !ok {
-			continue
-		}
-		if body, ok := strings.CutSuffix(middle, " until end of turn."); ok && body != "" && keywordChangeBodyExact(effect, body) {
-			return true
-		}
-		// A keyword-first mass pump ("Creatures you control gain trample and get
-		// +X/+X until end of turn, …") splits the keyword grant off without its
-		// own duration suffix; the until-end-of-turn duration is spread onto this
-		// effect and the following modify clause carries the suffix. Accept the
-		// bare "<subject> gain <keywords>." form only when the duration was
-		// recognized so a static anthem (no duration) never matches.
-		if effect.Duration == EffectDurationUntilEndOfTurn {
-			if body, ok := strings.CutSuffix(middle, "."); ok && body != "" && keywordChangeBodyExact(effect, body) {
+		for _, adverb := range []string{"", "also "} {
+			middle, ok := strings.CutPrefix(text, subjectText+" "+adverb+strings.TrimPrefix(verb, " "))
+			if !ok {
+				continue
+			}
+			if body, ok := strings.CutSuffix(middle, " until end of turn."); ok && body != "" && keywordChangeBodyExact(effect, body) {
 				return true
+			}
+			// A keyword-first mass pump ("Creatures you control gain trample and get
+			// +X/+X until end of turn, …") splits the keyword grant off without its
+			// own duration suffix; the until-end-of-turn duration is spread onto this
+			// effect and the following modify clause carries the suffix. Accept the
+			// bare "<subject> gain <keywords>." form only when the duration was
+			// recognized so a static anthem (no duration) never matches.
+			if effect.Duration == EffectDurationUntilEndOfTurn {
+				if body, ok := strings.CutSuffix(middle, "."); ok && body != "" && keywordChangeBodyExact(effect, body) {
+					return true
+				}
 			}
 		}
 	}

@@ -24,6 +24,7 @@ var Cards = []cardset.Entry{
 	{Name: "Lava Coil", New: LavaCoil},
 	{Name: "Lavaborn Muse", New: LavabornMuse},
 	{Name: "Lawmage's Binding", New: LawmageSBinding},
+	{Name: "Lazotep Plating", New: LazotepPlating},
 	{Name: "Lead-Belly Chimera", New: LeadBellyChimera},
 	{Name: "Lead Golem", New: LeadGolem},
 	{Name: "Lead the Stampede", New: LeadTheStampede},

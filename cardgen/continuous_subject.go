@@ -176,18 +176,33 @@ func continuousGroupMode(
 	continuousEffects []game.ContinuousEffect,
 	duration game.EffectDuration,
 ) game.AbilityContent {
+	return game.Mode{
+		Sequence: []game.Instruction{continuousGroupInstruction(group, continuousEffects, duration)},
+	}.Ability()
+}
+
+// continuousGroupInstruction builds the single ApplyContinuous instruction a
+// never-resolving static group grant lowers to. The group reference rides on each
+// continuous effect, so the effects are cloned before the group is stamped to
+// leave the caller's slice untouched. It is the instruction continuousGroupMode
+// wraps in a mode; callers that compose the group grant with a sibling
+// instruction (the coupled "you and permanents you control" controller rule
+// grant) reuse it directly.
+func continuousGroupInstruction(
+	group game.GroupReference,
+	continuousEffects []game.ContinuousEffect,
+	duration game.EffectDuration,
+) game.Instruction {
 	grouped := slices.Clone(continuousEffects)
 	for i := range grouped {
 		grouped[i].Group = group
 	}
-	return game.Mode{
-		Sequence: []game.Instruction{{
-			Primitive: game.ApplyContinuous{
-				ContinuousEffects: grouped,
-				Duration:          duration,
-			},
-		}},
-	}.Ability()
+	return game.Instruction{
+		Primitive: game.ApplyContinuous{
+			ContinuousEffects: grouped,
+			Duration:          duration,
+		},
+	}
 }
 
 // temporaryKeywordTargetMode builds the until-end-of-turn ApplyContinuous mode

@@ -1016,6 +1016,10 @@ func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
 		return "game.RuleEffectAscend", nil
 	case game.RuleEffectPlayerProtection:
 		return "game.RuleEffectPlayerProtection", nil
+	case game.RuleEffectPlayerHexproof:
+		return "game.RuleEffectPlayerHexproof", nil
+	case game.RuleEffectPlayerShroud:
+		return "game.RuleEffectPlayerShroud", nil
 	case game.RuleEffectAttackTax:
 		return "game.RuleEffectAttackTax", nil
 	case game.RuleEffectLifeTotalCantChange:

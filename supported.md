@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,808 of 32,501 cards eligible for paper support (54.8%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,810 of 32,501 cards eligible for paper support (54.8%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -3448,6 +3448,7 @@ Council4 currently supports **17,808 of 32,501 cards eligible for paper support 
 - Dawn of Hope
 - Dawn to Dusk
 - Dawn's Light Archer
+- Dawn's Truce
 - Dawnbringer Charioteers
 - Dawnbringer Cleric
 - Dawnfeather Eagle
@@ -8577,6 +8578,7 @@ Council4 currently supports **17,808 of 32,501 cards eligible for paper support 
 - Layla Hassan
 - Lazotep Behemoth
 - Lazotep Chancellor
+- Lazotep Plating
 - Lazotep Reaver
 - Lead Astray
 - Lead Golem

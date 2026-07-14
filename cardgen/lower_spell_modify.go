@@ -2723,11 +2723,63 @@ func lowerGroupTemporaryKeywordSpell(
 	if !ok {
 		return unsupported()
 	}
-	return continuousGroupMode(group, []game.ContinuousEffect{{
+	grantEffects := []game.ContinuousEffect{{
 		Layer:        game.LayerAbility,
 		AddKeywords:  keywords,
 		AddAbilities: abilities,
-	}}, game.DurationUntilEndOfTurn), nil
+	}}
+	if !effect.PlayerAndControlledPermanents {
+		return continuousGroupMode(group, grantEffects, game.DurationUntilEndOfTurn), nil
+	}
+	// The coupled "you and permanents you control gain <keyword>" subject (Dawn's
+	// Truce) grants the keyword to the controller as well as to their permanents.
+	// A player cannot hold an activated/quoted ability or a keyword that has no
+	// player-scoped rule effect (indestructible, flying, …), so require every
+	// granted keyword to map to a player rule effect and fail closed otherwise —
+	// the group half of a shape whose player half is unrepresentable never lowers
+	// on its own.
+	ruleEffects, ok := playerRuleEffectsForGrantedKeywords(keywords, abilities)
+	if !ok {
+		return unsupported()
+	}
+	return game.Mode{Sequence: []game.Instruction{
+		{
+			Primitive: game.ApplyRule{
+				RuleEffects: ruleEffects,
+				Duration:    game.DurationUntilEndOfTurn,
+			},
+		},
+		continuousGroupInstruction(group, grantEffects, game.DurationUntilEndOfTurn),
+	}}.Ability(), nil
+}
+
+// playerRuleEffectsForGrantedKeywords maps each keyword of a "you and permanents
+// you control gain <keyword>" grant onto the player-scoped rule effect that
+// grants it to the controller. Only the two keywords a player can hold —
+// hexproof and shroud — are mapped; every other keyword (and any quoted/activated
+// ability, which a player cannot gain) fails closed so the coupled shape lowers
+// only when the controller half is representable.
+func playerRuleEffectsForGrantedKeywords(keywords []game.Keyword, abilities []game.Ability) ([]game.RuleEffect, bool) {
+	if len(keywords) == 0 || len(abilities) != 0 {
+		return nil, false
+	}
+	effects := make([]game.RuleEffect, 0, len(keywords))
+	for _, keyword := range keywords {
+		var kind game.RuleEffectKind
+		switch keyword {
+		case game.Hexproof:
+			kind = game.RuleEffectPlayerHexproof
+		case game.Shroud:
+			kind = game.RuleEffectPlayerShroud
+		default:
+			return nil, false
+		}
+		effects = append(effects, game.RuleEffect{
+			Kind:           kind,
+			AffectedPlayer: game.PlayerYou,
+		})
+	}
+	return effects, true
 }
 
 // lowerTemporaryKeywordLossSpell lowers a resolving keyword removal until end of

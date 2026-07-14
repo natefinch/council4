@@ -3252,6 +3252,13 @@ type CompiledEffect struct {
 	// through a ModifyPT instruction and every other group member through the
 	// excluding continuous effect.
 	CoordinatedSourceSubject bool
+	// PlayerAndControlledPermanents mirrors the parser flag: a resolving keyword
+	// grant whose subject couples the controller with the permanents they control
+	// ("You and permanents you control gain hexproof until end of turn.", Dawn's
+	// Truce). StaticSubject carries the controlled-permanents group; lowering
+	// grants the keyword to the group through a continuous effect and to the
+	// controller through a player-scoped rule effect.
+	PlayerAndControlledPermanents bool
 	// DoubleSourceCounters mirrors the parser flag for an EffectDouble whose
 	// object is "the number of <kind> counters on <self>" (Mossborn Hydra).
 	// Lowering reads it together with DoubleSourceCounterKind to emit a dynamic

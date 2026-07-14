@@ -26,6 +26,7 @@ var Cards = []cardset.Entry{
 	{Name: "Dauthi Mindripper", New: DauthiMindripper},
 	{Name: "Dauthi Voidwalker", New: DauthiVoidwalker},
 	{Name: "Dawn Charm", New: DawnCharm},
+	{Name: "Dawn's Truce", New: DawnSTruce},
 	{Name: "Dawnbringer Cleric", New: DawnbringerCleric},
 	{Name: "Dawnfluke", New: Dawnfluke},
 	{Name: "Dawnglade Regent", New: DawngladeRegent},
