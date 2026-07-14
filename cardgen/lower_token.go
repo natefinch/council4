@@ -124,7 +124,8 @@ func lowerCreateTokenSpellLinked(ctx contentCtx, publishLinked game.LinkedKey) (
 		}
 		targets = []game.TargetSpec{spec}
 	case controllerRecipient:
-		if amountReferencesObject {
+		switch {
+		case amountReferencesObject:
 			if len(ctx.content.References) != 1 {
 				return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 			}
@@ -134,8 +135,15 @@ func lowerCreateTokenSpellLinked(ctx contentCtx, publishLinked game.LinkedKey) (
 				return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 			}
 			amountObject = object
-		} else if len(ctx.content.References) != 0 {
+		case effect.TokenPTDynamic == parser.EffectDynamicAmountTriggeringEventTotalPower:
+			if len(ctx.content.References) != 1 ||
+				ctx.content.References[0].Kind != compiler.ReferencePronoun ||
+				ctx.content.References[0].Pronoun != compiler.ReferencePronounThose {
+				return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+			}
+		case len(ctx.content.References) != 0:
 			return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+		default:
 		}
 	case referencedRecipient:
 		if len(ctx.content.References) != 1 {
@@ -311,13 +319,14 @@ func lowerMultiTokenCreate(ctx contentCtx, effect *compiler.CompiledEffect, reci
 	return game.Mode{Sequence: sequence}.Ability(), nil
 }
 
-// tokenPTDynamicQuantity maps a variable "X/X" token's bound dynamic-amount kind
-// onto a runtime quantity the create handler evaluates once at creation. It
-// fails closed for kinds with no token-sizing representation.
+// tokenPTDynamicQuantity maps a token's bound dynamic-amount kind onto a runtime
+// quantity the create handler evaluates once at creation.
 func tokenPTDynamicQuantity(kind parser.EffectDynamicAmountKind) (game.Quantity, bool) {
 	switch kind {
 	case parser.EffectDynamicAmountLifeGainedThisTurn:
 		return game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountLifeGainedThisTurn}), true
+	case parser.EffectDynamicAmountTriggeringEventTotalPower:
+		return game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountTriggeringEventTotalPower}), true
 	default:
 		return game.Quantity{}, false
 	}
@@ -332,6 +341,17 @@ func tokenPTDynamicQuantity(kind parser.EffectDynamicAmountKind) (game.Quantity,
 // both the token's power and toughness, so the one returned size is shared by
 // both.
 func createTokenAmountAndSize(ctx contentCtx, effect *compiler.CompiledEffect, amountObject game.ObjectReference) (game.Quantity, opt.V[game.Quantity], bool) {
+	if effect.TokenPTDynamic != parser.EffectDynamicAmountNone {
+		size, ok := tokenPTDynamicQuantity(effect.TokenPTDynamic)
+		if !ok {
+			return game.Quantity{}, opt.V[game.Quantity]{}, false
+		}
+		amount, ok := createTokenAmount(ctx, effect, amountObject)
+		if !ok {
+			return game.Quantity{}, opt.V[game.Quantity]{}, false
+		}
+		return amount, opt.Val(size), true
+	}
 	if !effect.TokenPTVariableX {
 		amount, ok := createTokenAmount(ctx, effect, amountObject)
 		return amount, opt.V[game.Quantity]{}, ok
@@ -357,17 +377,6 @@ func createTokenAmountAndSize(ctx contentCtx, effect *compiler.CompiledEffect, a
 // definition takes its size from the spell's own X. Every other shape, including
 // a variable-count clause with no size binding, fails closed.
 func variableTokenSize(ctx contentCtx, effect *compiler.CompiledEffect, amountObject game.ObjectReference) (size game.Quantity, count game.Quantity, ok bool) {
-	if effect.TokenPTDynamic != parser.EffectDynamicAmountNone {
-		quantity, ok := tokenPTDynamicQuantity(effect.TokenPTDynamic)
-		if !ok {
-			return game.Quantity{}, game.Quantity{}, false
-		}
-		amount, ok := createTokenAmount(ctx, effect, amountObject)
-		if !ok {
-			return game.Quantity{}, game.Quantity{}, false
-		}
-		return quantity, amount, true
-	}
 	if effect.Amount.DynamicForm == compiler.DynamicAmountWhereX &&
 		effect.Amount.DynamicKind != compiler.DynamicAmountNone {
 		quantity, ok := createTokenAmount(ctx, effect, amountObject)
@@ -883,7 +892,8 @@ func tokenCopyAuxiliaryReferencesOK(references []compiler.CompiledReference) boo
 // Oracle name when one is printed ("... token named <Name>"); otherwise it is
 // the joined subtypes, matching paper tokens.
 func synthesizeCreatureTokenDef(effect *compiler.CompiledEffect, extraKeywords []parser.KeywordKind) (*game.CardDef, bool) {
-	if !effect.TokenPTKnown && !effect.TokenPTVariableX {
+	if !effect.TokenPTKnown && !effect.TokenPTVariableX &&
+		effect.TokenPTDynamic == parser.EffectDynamicAmountNone {
 		return nil, false
 	}
 	subtypes := effect.Selector.SubtypesAny()

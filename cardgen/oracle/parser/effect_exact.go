@@ -2994,9 +2994,12 @@ func creatureTokenSpecBody(effect *EffectSyntax) (func(countWord, noun string) s
 	if !ok {
 		return nil, false
 	}
-	ptPart := fmt.Sprintf("%d/%d", effect.TokenPower, effect.TokenToughness)
+	ptPart := fmt.Sprintf("%d/%d ", effect.TokenPower, effect.TokenToughness)
 	if effect.TokenPTVariableX {
-		ptPart = "X/X"
+		ptPart = "X/X "
+	}
+	if effect.TokenPTDynamic != EffectDynamicAmountNone && !effect.TokenPTVariableX {
+		ptPart = ""
 	}
 	subtypeWords := make([]string, 0, len(sel.SubtypesAny))
 	for _, sub := range sel.SubtypesAny {
@@ -3038,7 +3041,7 @@ func creatureTokenSpecBody(effect *EffectSyntax) (func(countWord, noun string) s
 		if attackingLeading {
 			attackClause = ""
 		}
-		return fmt.Sprintf("%s%s %s%s%s %s%s %s %s%s%s%s%s",
+		return fmt.Sprintf("%s%s %s%s%s%s%s %s %s%s%s%s%s",
 			leadingNamePart, countWord, tappedPart, supertypePart, ptPart, colorPart,
 			subtypeJoin, typeWords, noun, keywordPart, grantedPart, namePart,
 			attackClause)
@@ -3202,12 +3205,29 @@ func tokenAttackClause(sel SelectionSyntax, noun string, defender AttackDefender
 
 func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
 	targetRecipient, ok := exactCreateTokenRecipientContext(effect)
-	if !ok || (!effect.TokenPTKnown && !effect.TokenPTVariableX) || effect.Negated {
+	if !ok || (!effect.TokenPTKnown && !effect.TokenPTVariableX &&
+		effect.TokenPTDynamic == EffectDynamicAmountNone) || effect.Negated {
 		return false
 	}
 	specBody, ok := creatureTokenSpecBody(effect)
 	if !ok {
 		return false
+	}
+	if effect.TokenPTDynamic == EffectDynamicAmountTriggeringEventTotalPower &&
+		!effect.TokenPTVariableX {
+		if effect.Context != EffectContextController ||
+			effect.Amount.DynamicForm != EffectDynamicAmountFormNone ||
+			!effect.Amount.Known ||
+			effect.Amount.Value != 1 ||
+			len(effect.TokenKeywords) != 0 ||
+			effect.Selection.Keyword != KeywordUnknown ||
+			effect.TokenGrantedAbility != nil {
+			return false
+		}
+		return createTokenControllerClauseMatches(
+			exactEffectClauseText(effect),
+			specBody("a", "token")+" with base power and toughness each equal to the total power of those creatures.",
+		)
 	}
 	// The referenced-object-controller form ("Its controller creates ...") and
 	// the targeted-player form ("Target opponent creates ...") both name their
