@@ -9,6 +9,9 @@ import (
 )
 
 func emitEvent(g *game.Game, event game.Event) {
+	if event.Kind == game.EventDamageDealt && event.DamageSourceName == "" {
+		event.DamageSourceName = damageEventSourceName(g, &event)
+	}
 	if event.Kind == game.EventSpellCast && event.PlayerEventOrdinalThisTurn == 0 {
 		event.PlayerEventOrdinalThisTurn = nextSpellCastOrdinalThisTurn(g, event.Controller)
 	}

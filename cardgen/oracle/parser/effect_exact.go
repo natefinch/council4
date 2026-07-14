@@ -2133,6 +2133,11 @@ func exactLifeEffectSyntax(effect *EffectSyntax, controllerVerb, subjectVerb str
 		prefixes = []string{"Each player " + subjectVerb}
 	case EffectContextDefendingPlayer:
 		prefixes = []string{"Defending player " + subjectVerb}
+	case EffectContextEachOpponentDealtCombatDamageByNamed:
+		if effect.CombatDamageSourceName != "" {
+			prefixes = []string{"Each opponent dealt combat damage this game by a creature named " +
+				effect.CombatDamageSourceName + " " + subjectVerb}
+		}
 	case EffectContextTarget, EffectContextPriorSubject:
 		if len(effect.Targets) == 1 && effect.Targets[0].Exact {
 			prefixes = []string{titleFirstEffectText(effect.Targets[0].Text) + " " + subjectVerb}

@@ -454,6 +454,8 @@ func (r referenceResolver) playerGroup(ref game.PlayerGroupReference) []game.Pla
 		return players
 	case game.PlayerGroupReferenceOpponentsAttackingTriggerPlayer:
 		return r.opponentsAttackingTriggerPlayer()
+	case game.PlayerGroupReferenceOpponentsDealtCombatDamageThisGameByNamed:
+		return r.opponentsDealtCombatDamageThisGameByNamed(ref.Name)
 	default:
 		return nil
 	}
@@ -498,6 +500,77 @@ func (r referenceResolver) opponentsAttackingTriggerPlayer() []game.PlayerID {
 		members = append(members, opponent)
 	}
 	return members
+}
+
+// opponentsDealtCombatDamageThisGameByNamed resolves the opponents of the
+// resolving controller who have been dealt combat damage this game by a creature
+// named name ("each opponent dealt combat damage this game by a creature named
+// Gollum, Obsessed Stalker loses life equal to the amount of life you gained this
+// turn" — Gollum, Obsessed Stalker). It scans the whole game event log, so a
+// source that has since left the battlefield still counts; the source's name is
+// resolved from its live permanent, then its last-known information, then its card
+// instance, so a departed permanent or token names correctly. Only combat damage
+// dealt to a player qualifies; combat damage dealt to a permanent does not. Each
+// opponent appears at most once no matter how many times they were damaged.
+func (r referenceResolver) opponentsDealtCombatDamageThisGameByNamed(name string) []game.PlayerID {
+	if name == "" {
+		return nil
+	}
+	controller := r.resolvingController()
+	var members []game.PlayerID
+	seen := make([]bool, game.NumPlayers)
+	for i := range r.g.Events {
+		event := &r.g.Events[i]
+		if event.Kind != game.EventDamageDealt || !event.CombatDamage {
+			continue
+		}
+		if event.DamageRecipient != game.DamageRecipientPlayer {
+			continue
+		}
+		opponent := event.Player
+		if opponent == controller || int(opponent) < 0 || int(opponent) >= game.NumPlayers || seen[opponent] {
+			continue
+		}
+		if !isPlayerAlive(r.g, opponent) {
+			continue
+		}
+		if damageEventSourceName(r.g, event) != name {
+			continue
+		}
+		seen[opponent] = true
+		members = append(members, opponent)
+	}
+	return members
+}
+
+// damageEventSourceName resolves the name of the source that dealt a recorded
+// damage event, staying correct for a source that has since changed zones. It
+// prefers the source's live permanent (so a name-changing effect or token name is
+// respected), then its last-known information, then its card instance's printed
+// name.
+func damageEventSourceName(g *game.Game, event *game.Event) string {
+	if event.DamageSourceName != "" {
+		return event.DamageSourceName
+	}
+	if event.SourceObjectID != 0 {
+		if permanent, ok := permanentByObjectID(g, event.SourceObjectID); ok {
+			return permanentEffectiveName(g, permanent)
+		}
+		if snapshot, ok := lastKnownObject(g, event.SourceObjectID); ok {
+			if snapshot.Name != "" {
+				return snapshot.Name
+			}
+			if snapshot.TokenName != "" {
+				return snapshot.TokenName
+			}
+		}
+	}
+	if event.SourceID != 0 {
+		if card, ok := g.GetCardInstance(event.SourceID); ok && card.Def != nil {
+			return card.Def.Name
+		}
+	}
+	return ""
 }
 
 // permanentAt resolves a target slot to a permanent.

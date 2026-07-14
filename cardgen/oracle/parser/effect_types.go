@@ -1325,6 +1325,13 @@ const (
 	// the implicit co-recipient. It mirrors EffectContextControllerAndTarget but
 	// for an event-bound "that player" recipient rather than a chosen target.
 	EffectContextControllerAndReferencedPlayer EffectContextKind = "EffectContextControllerAndReferencedPlayer"
+	// EffectContextEachOpponentDealtCombatDamageByNamed marks an effect whose
+	// subject is "each opponent dealt combat damage this game by a creature named
+	// <Name>" ("... loses life equal to the amount of life you gained this turn"
+	// — Gollum, Obsessed Stalker). The required creature name is preserved in
+	// EffectSyntax.CombatDamageSourceName, and the effect resolves to the
+	// opponents dealt combat damage this game by a creature with that name.
+	EffectContextEachOpponentDealtCombatDamageByNamed EffectContextKind = "EffectContextEachOpponentDealtCombatDamageByNamed"
 )
 
 // DamageRecipientReferenceKind identifies a damage recipient that is the
@@ -1979,17 +1986,29 @@ type EntersAsCopyConditionalCounter struct {
 // EffectSyntax is one typed resolving instruction. Text and Tokens remain
 // lossless metadata; all meaning consumed downstream is carried by typed fields.
 type EffectSyntax struct {
-	Kind           EffectKind           `json:",omitempty"`
-	Context        EffectContextKind    `json:",omitempty"`
-	Connection     EffectConnectionKind `json:",omitempty"`
-	ConnectionSpan shared.Span          `json:"-"`
-	Span           shared.Span          `json:"-"`
-	VerbSpan       shared.Span          `json:"-"`
-	ClauseSpan     shared.Span          `json:"-"`
-	Text           string               `json:",omitempty"`
-	Tokens         []shared.Token       `json:"-"`
-	Player         EffectPlayerKind     `json:",omitempty"`
-	CardSource     EffectCardSourceKind `json:",omitempty"`
+	Kind    EffectKind        `json:",omitempty"`
+	Context EffectContextKind `json:",omitempty"`
+	// CombatDamageSourceName carries the required creature name when Context is
+	// EffectContextEachOpponentDealtCombatDamageByNamed ("each opponent dealt
+	// combat damage this game by a creature named Gollum, Obsessed Stalker
+	// loses ..."). It is preserved verbatim from the subject and drives group
+	// resolution; it is empty for every other context.
+	CombatDamageSourceName string `json:",omitempty"`
+	// CombatDamageSourceNameSpan is the source span of the creature name in an
+	// EffectContextEachOpponentDealtCombatDamageByNamed subject. It is treated as
+	// a self-name occurrence so exact clause reconstruction does not truncate the
+	// subject at an internal comma in the name ("Gollum, Obsessed Stalker"). It is
+	// the zero span for every other context.
+	CombatDamageSourceNameSpan shared.Span          `json:"-"`
+	Connection                 EffectConnectionKind `json:",omitempty"`
+	ConnectionSpan             shared.Span          `json:"-"`
+	Span                       shared.Span          `json:"-"`
+	VerbSpan                   shared.Span          `json:"-"`
+	ClauseSpan                 shared.Span          `json:"-"`
+	Text                       string               `json:",omitempty"`
+	Tokens                     []shared.Token       `json:"-"`
+	Player                     EffectPlayerKind     `json:",omitempty"`
+	CardSource                 EffectCardSourceKind `json:",omitempty"`
 	// FaceDown marks a card-source effect that exiles its cards face down
 	// ("exile that many cards from the top of your library face down.", Flamewar,
 	// Streetwise Operative). It is meaningful only for a top-of-library exile card

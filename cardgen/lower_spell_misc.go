@@ -124,6 +124,22 @@ func lowerFixedLifeSpell(
 					Primitive: groupPrimitiveFactory(amount, game.AllPlayersReference()),
 				}},
 			}.Ability(), nil
+		case parser.EffectContextEachOpponentDealtCombatDamageByNamed:
+			if effect.CombatDamageSourceName == "" {
+				return game.AbilityContent{}, contentDiagnostic(
+					ctx,
+					"unsupported life spell",
+					"the executable source backend requires a creature name for the combat-damage recipient group",
+				)
+			}
+			return game.Mode{
+				Sequence: []game.Instruction{{
+					Primitive: groupPrimitiveFactory(
+						amount,
+						game.OpponentsDealtCombatDamageThisGameByNamedReference(effect.CombatDamageSourceName),
+					),
+				}},
+			}.Ability(), nil
 		default:
 			// Non-"each player/opponent" contexts fall through to the
 			// single-recipient handling below.

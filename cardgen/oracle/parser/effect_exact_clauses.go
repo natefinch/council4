@@ -3019,6 +3019,13 @@ func exactMassComparisonClause(comparison string, qualifiers []string) bool {
 // does not truncate the subject.
 func effectSelfNameSpans(effect *EffectSyntax) []shared.Span {
 	var spans []shared.Span
+	// The creature name in an "each opponent dealt combat damage this game by a
+	// creature named <Name>" subject is a self-name occurrence; include it so
+	// exact clause reconstruction does not truncate the subject at an internal
+	// comma in the name.
+	if effect.CombatDamageSourceNameSpan != (shared.Span{}) {
+		spans = append(spans, effect.CombatDamageSourceNameSpan)
+	}
 	for _, reference := range effect.References {
 		if reference.Kind == ReferenceSelfName {
 			spans = append(spans, reference.Span)
