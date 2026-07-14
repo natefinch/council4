@@ -91,6 +91,20 @@ type Instruction struct {
 	// OptionalActor (which names a single decider).
 	OptionalActorGroup opt.V[PlayerGroupReference]
 
+	// ForEachPlayerGroup runs this instruction's primitive once for every player
+	// in the referenced group, in APNAP order, binding
+	// GroupOfferMemberReference() to each member in turn so a primitive scoped to
+	// the acting player (PlayerControlledGroup(GroupOfferMemberReference(), ...) —
+	// "all nonland permanents they control") resolves against that member rather
+	// than the ability's controller. Unlike OptionalActorGroup it is mandatory:
+	// no member is asked whether to apply the effect. It models the reflexive
+	// "Each opponent attacking that player untaps all nonland permanents they
+	// control." rider (Curse of Bounty), where each attacking opponent untaps the
+	// permanents they themselves control. It is mutually exclusive with Optional,
+	// OptionalActor, OptionalActorGroup, and TemptingOffer, which are the "may"
+	// offers, and requires a non-nil Primitive.
+	ForEachPlayerGroup opt.V[PlayerGroupReference]
+
 	// TemptingOffer turns an Optional + OptionalActorGroup instruction into the
 	// "Tempting offer" ability-word idiom (Tempt with Vengeance and the rest of
 	// the Tempt cycle): the controller performs the primitive once as a base,

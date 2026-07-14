@@ -832,6 +832,20 @@ func (v *cardDefValidator) validateInstructionSequence(
 				)
 			}
 		}
+		if seq[i].ForEachPlayerGroup.Exists {
+			if seq[i].Optional {
+				v.add(faceName, instructionPath, CardDefIssueInvalidAbilityBody, "ForEachPlayerGroup and Optional are mutually exclusive")
+			}
+			if seq[i].OptionalActor.Exists || seq[i].OptionalActorGroup.Exists || seq[i].TemptingOffer {
+				v.add(faceName, instructionPath, CardDefIssueInvalidAbilityBody, "ForEachPlayerGroup is mutually exclusive with the optional-offer fields")
+			}
+			if seq[i].Primitive == nil {
+				v.add(faceName, instructionPath, CardDefIssueInvalidAbilityBody, "ForEachPlayerGroup requires a primitive")
+			}
+			for _, problem := range seq[i].ForEachPlayerGroup.Val.Validate() {
+				v.add(faceName, appendPath(instructionPath, "ForEachPlayerGroup"), CardDefIssueInvalidAbilityBody, problem)
+			}
+		}
 		effectCondition := seq[i].Condition
 		if effectCondition.Exists && effectCondition.Val.Condition.Exists {
 			condition := effectCondition.Val.Condition.Val

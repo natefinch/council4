@@ -2380,12 +2380,16 @@ type EffectSyntax struct {
 	// only when the granted ability came from a trailing rider sentence rather
 	// than an inline "token with \"<ability>\"" clause.
 	TokenGrantedAbilityRiderSpan shared.Span `json:"-"`
-	// EachOpponentAttackingSameRiderSpan covers the folded "Each opponent
-	// attacking that player does the same." rider sentence (Curse of Opulence,
-	// Curse of Disturbance) so lowering credits its tokens toward source coverage
-	// and emits the additional group token creation. It is set only on a
-	// controller create-token effect whose enchanted-player-is-attacked trigger
-	// carries the reflexive rider; the zero span means no such rider was folded.
+	// EachOpponentAttackingSameRiderSpan covers the reflexive attacking-opponent
+	// rider sentence folded onto an enchanted-player combat trigger's lone
+	// controller effect: the anaphoric "Each opponent attacking that player does
+	// the same." (Curse of Opulence, Curse of Disturbance, Curse of Vitality,
+	// Curse of Verbosity) or the explicit "Each opponent attacking that player
+	// untaps all nonland permanents they control." (Curse of Bounty) so lowering
+	// credits its coverage and emits the additional group instruction. It is set
+	// only on the controller create-token, gain-life, draw, or untap effect whose
+	// enchanted-player-is-attacked trigger carries the reflexive rider; the zero
+	// span means no such rider was folded.
 	EachOpponentAttackingSameRiderSpan shared.Span `json:"-"`
 	// GoadCreatedTokensRiderSpan covers the folded "The tokens are goaded for the
 	// rest of the game." rider sentence (Life of the Party) so lowering emits a

@@ -26,13 +26,23 @@ func tokenNamesByController(g *game.Game) map[game.PlayerID][]string {
 // curse's triggered ability against a combat where Player3 attacks the enchanted
 // Player2 with two creatures, Player4 attacks Player2 both directly and through a
 // planeswalker, and the controller Player1 attacks Player3. It resolves the real
-// generated card's ability content — both the controller creation and the folded
-// "Each opponent attacking that player does the same." group creation — so the
+// generated card's ability content — both the controller effect and the folded
+// "Each opponent attacking that player does the same." group effect — so the
 // returned battlefield reflects exactly what the generated card produces.
 func resolveCurseAttackTrigger(t *testing.T, curse *game.CardDef) *game.Game {
 	t.Helper()
+	return resolveCurseAttackTriggerWithSetup(t, curse, nil)
+}
+
+// resolveCurseAttackTriggerWithSetup extends resolveCurseAttackTrigger with a
+// setup hook that runs after the combat is declared but before the curse's
+// ability resolves, so a test can seed the recipients' libraries or add tapped
+// permanents. It resolves the full instruction — not merely its primitive — so an
+// instruction-level ForEachPlayerGroup (Curse of Bounty's per-attacker untap)
+// iterates its members rather than resolving once against the controller.
+func resolveCurseAttackTriggerWithSetup(t *testing.T, curse *game.CardDef, setup func(g *game.Game)) *game.Game {
+	t.Helper()
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
-	engine := NewEngine(nil)
 
 	p3a := addCombatCreaturePermanent(g, game.Player3)
 	p3b := addCombatCreaturePermanent(g, game.Player3)
@@ -47,6 +57,24 @@ func resolveCurseAttackTrigger(t *testing.T, curse *game.CardDef) *game.Game {
 		{Attacker: p1a.ObjectID, Target: game.AttackTarget{Player: game.Player3}},
 	}}
 
+	if setup != nil {
+		setup(g)
+	}
+	resolveCurseAttackedAbility(t, g, curse)
+	return g
+}
+
+// resolveCurseAttackedAbility resolves curse's single enchanted-player-attacked
+// triggered ability against the combat already configured in g, with Player1 as
+// the curse's controller and Player2 as the enchanted, attacked player. It asserts
+// the trigger's once-per-combat enchanted-player pattern and resolves each of the
+// ability's instructions in order, passing the full instruction so an
+// instruction-level ForEachPlayerGroup iterates its members. Edge-case tests build
+// an arbitrary combat and battlefield in g, then call this to exercise the real
+// generated card content against it.
+func resolveCurseAttackedAbility(t *testing.T, g *game.Game, curse *game.CardDef) {
+	t.Helper()
+	engine := NewEngine(nil)
 	obj := &game.StackObject{
 		Controller:      game.Player1,
 		HasTriggerEvent: true,
@@ -66,10 +94,10 @@ func resolveCurseAttackTrigger(t *testing.T, curse *game.CardDef) *game.Game {
 	if len(content.Modes) != 1 {
 		t.Fatalf("%s content modes = %d, want 1", curse.Name, len(content.Modes))
 	}
+	log := &TurnLog{}
 	for i := range content.Modes[0].Sequence {
-		resolveInstruction(engine, g, obj, content.Modes[0].Sequence[i].Primitive, &TurnLog{})
+		engine.resolveInstructionWithChoices(g, obj, &content.Modes[0].Sequence[i], [game.NumPlayers]PlayerAgent{}, log)
 	}
-	return g
 }
 
 // TestGeneratedCurseOfOpulenceCreatesGoldForControllerAndAttackers proves the
