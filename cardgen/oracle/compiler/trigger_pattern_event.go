@@ -448,8 +448,7 @@ func compileDamageEvent(clause *parser.TriggerEventClause, pattern *TriggerPatte
 }
 
 func compileCounterEvent(clause *parser.TriggerEventClause, pattern *TriggerPattern) bool {
-	counterValue, ok := compileTriggerCounter(clause.Counter.Kind)
-	if !ok {
+	if !clause.Counter.Known || !clause.Counter.Kind.Valid() {
 		return false
 	}
 	causeController, ok := compileTriggerActorController(clause.CauseController)
@@ -457,7 +456,9 @@ func compileCounterEvent(clause *parser.TriggerEventClause, pattern *TriggerPatt
 		return false
 	}
 	pattern.Event = TriggerEventCountersAdded
-	pattern.Counter = counterValue
+	pattern.MatchCounter = true
+	pattern.Counter = clause.Counter.Kind
+	pattern.CounterThreshold = clause.Counter.Threshold
 	pattern.CauseController = causeController
 	switch clause.Subject.Kind {
 	case parser.TriggerEventSubjectSelf:
@@ -700,18 +701,5 @@ func compileTriggerStackObject(value parser.TriggerEventStackObjectKind) (Trigge
 		return TriggerStackObjectSpell, true
 	default:
 		return TriggerStackObjectAny, false
-	}
-}
-
-func compileTriggerCounter(value parser.TriggerEventCounterKind) (TriggerCounter, bool) {
-	switch value {
-	case parser.TriggerEventCounterPlusOnePlusOne:
-		return TriggerCounterPlusOnePlusOne, true
-	case parser.TriggerEventCounterMinusOneMinusOne:
-		return TriggerCounterMinusOneMinusOne, true
-	case parser.TriggerEventCounterLore:
-		return TriggerCounterLore, true
-	default:
-		return TriggerCounterAny, false
 	}
 }

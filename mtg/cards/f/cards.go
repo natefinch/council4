@@ -84,6 +84,7 @@ var Cards = []cardset.Entry{
 	{Name: "Flint Golem", New: FlintGolem},
 	{Name: "Flitterstep Eidolon", New: FlitterstepEidolon},
 	{Name: "Flitterwing Nuisance", New: FlitterwingNuisance},
+	{Name: "Flitting Guerrilla", New: FlittingGuerrilla},
 	{Name: "Floating Shield", New: FloatingShield},
 	{Name: "Flockchaser Phantom", New: FlockchaserPhantom},
 	{Name: "Floriferous Vinewall", New: FloriferousVinewall},

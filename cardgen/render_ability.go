@@ -1052,6 +1052,9 @@ func renderTriggerPatternFlagFields(ctx *renderCtx, pattern *game.TriggerPattern
 		}
 		fields = append(fields, kindFields...)
 	}
+	if pattern.CounterThreshold != 0 {
+		fields = append(fields, fmt.Sprintf("CounterThreshold: %d,", pattern.CounterThreshold))
+	}
 	if pattern.RequireCombatDamage {
 		fields = append(fields, "RequireCombatDamage: true,")
 	}

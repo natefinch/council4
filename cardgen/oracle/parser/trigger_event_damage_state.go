@@ -2,6 +2,7 @@ package parser
 
 import (
 	"slices"
+	"strings"
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game/counter"
@@ -351,19 +352,86 @@ func parseCounterTriggerEventClause(
 	atoms Atoms,
 	_ string,
 ) *TriggerEventClause {
-	if intro != TriggerIntroductionWhenever || len(tokens) == 0 {
+	if intro != TriggerIntroductionWhenever && intro != TriggerIntroductionWhen {
+		return nil
+	}
+	if len(tokens) == 0 {
 		return nil
 	}
 	if equalWord(tokens[0], "you") && len(tokens) > 1 && equalWord(tokens[1], "put") {
 		return parseActiveCounterTriggerEventClause(tokens, tokens[2:], atoms)
 	}
-	if index := syntaxWordsIndex(tokens, "counter", "is", "put", "on"); index > 1 && equalWord(tokens[0], "a") {
-		return buildCounterTriggerEventClause(tokens, tokens[index+4:], atoms, false)
+	if index := syntaxWordsIndex(tokens, "counter", "is", "put", "on"); index > 1 {
+		if equalWord(tokens[0], "a") {
+			return buildCounterTriggerEventClause(tokens, tokens[index+4:], atoms, false)
+		}
+		if threshold, ok := counterThresholdOrdinal(tokens, index); ok {
+			clause := buildCounterTriggerEventClause(tokens, tokens[index+4:], atoms, false)
+			if clause != nil {
+				clause.Counter.Threshold = threshold
+			}
+			return clause
+		}
 	}
 	if index := syntaxWordsIndex(tokens, "counters", "are", "put", "on"); index > 3 && syntaxWordsEqual(tokens[:3], "one", "or", "more") {
 		return buildCounterTriggerEventClause(tokens, tokens[index+4:], atoms, true)
 	}
 	return nil
+}
+
+// counterThresholdOrdinal recognizes the ordinal-threshold counter-placement
+// wording "the <ordinal> <kind> counter is put on <subject>" (Midnight Clock's
+// "the twelfth hour counter is put on this artifact"). counterIndex is the index
+// of the "counter" token, so tokens[0] must be "the" and tokens[1] an ordinal
+// word ("twelfth"), with the counter kind spanning the tokens between. It
+// returns the ordinal value (12 for "twelfth") that the placement must reach.
+func counterThresholdOrdinal(tokens []shared.Token, counterIndex int) (int, bool) {
+	if counterIndex < 3 || !equalWord(tokens[0], "the") {
+		return 0, false
+	}
+	value, ok := thresholdOrdinalValue(tokens[1].Text)
+	if !ok || value <= 0 {
+		return 0, false
+	}
+	return value, true
+}
+
+// thresholdOrdinalValue maps the ordinal words that can name a counter-placement
+// threshold ("the twelfth hour counter is put on ...") to their integer value.
+// It covers first through twelfth so any Nth-counter threshold up to Midnight
+// Clock's twelfth is recognized. It is intentionally local to the
+// counter-threshold reader so extending it does not broaden the unrelated
+// ordinal families (cast-your-Nth-spell, draw-your-Nth-card) that read the more
+// conservative OrdinalWordValue.
+func thresholdOrdinalValue(word string) (int, bool) {
+	switch strings.ToLower(word) {
+	case "first":
+		return 1, true
+	case "second":
+		return 2, true
+	case "third":
+		return 3, true
+	case "fourth":
+		return 4, true
+	case "fifth":
+		return 5, true
+	case "sixth":
+		return 6, true
+	case "seventh":
+		return 7, true
+	case "eighth":
+		return 8, true
+	case "ninth":
+		return 9, true
+	case "tenth":
+		return 10, true
+	case "eleventh":
+		return 11, true
+	case "twelfth":
+		return 12, true
+	default:
+		return 0, false
+	}
 }
 
 // parseActiveCounterTriggerEventClause recognizes the active-voice
@@ -407,7 +475,7 @@ func buildCounterTriggerEventClause(
 	if !ok {
 		return nil
 	}
-	eventCounter := TriggerEventCounter{Kind: counterKind, Span: counterSpan}
+	eventCounter := TriggerEventCounter{Kind: counterKind, Known: true, Span: counterSpan}
 	if syntaxWordsEqual(subjectTokens, "this", "creature") || syntaxWordsEqual(subjectTokens, "this", "permanent") {
 		return &TriggerEventClause{
 			Kind:      TriggerEventKindCounterAdded,
@@ -441,21 +509,16 @@ func buildCounterTriggerEventClause(
 	}
 }
 
-func triggerEventCounterIn(tokens []shared.Token, atoms Atoms) (TriggerEventCounterKind, shared.Span, bool) {
+// triggerEventCounterIn resolves the counter kind named within a
+// counter-placement trigger clause. It accepts any recognized counter kind,
+// carrying the raw counter.Kind so counter-added triggers work for every named
+// counter (hour, charge, ...) rather than a fixed whitelist.
+func triggerEventCounterIn(tokens []shared.Token, atoms Atoms) (counter.Kind, shared.Span, bool) {
 	kind, span, ok := atoms.CounterIn(shared.SpanOf(tokens))
-	if !ok {
-		return TriggerEventCounterAny, shared.Span{}, false
+	if !ok || !kind.Valid() {
+		return 0, shared.Span{}, false
 	}
-	switch kind {
-	case counter.PlusOnePlusOne:
-		return TriggerEventCounterPlusOnePlusOne, span, true
-	case counter.MinusOneMinusOne:
-		return TriggerEventCounterMinusOneMinusOne, span, true
-	case counter.Lore:
-		return TriggerEventCounterLore, span, true
-	default:
-		return TriggerEventCounterAny, shared.Span{}, false
-	}
+	return kind, span, true
 }
 
 func parsePermanentStateTriggerEventClause(

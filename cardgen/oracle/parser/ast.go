@@ -4,6 +4,7 @@ package parser
 import (
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
 )
 
@@ -862,21 +863,17 @@ type TriggerEventStackObject struct {
 	Span shared.Span                 `json:"-"`
 }
 
-// TriggerEventCounterKind identifies a supported counter type.
-type TriggerEventCounterKind string
-
-// Counter kinds recognized by trigger-event syntax.
-const (
-	TriggerEventCounterAny              TriggerEventCounterKind = ""
-	TriggerEventCounterPlusOnePlusOne   TriggerEventCounterKind = "TriggerEventCounterPlusOnePlusOne"
-	TriggerEventCounterMinusOneMinusOne TriggerEventCounterKind = "TriggerEventCounterMinusOneMinusOne"
-	TriggerEventCounterLore             TriggerEventCounterKind = "TriggerEventCounterLore"
-)
-
-// TriggerEventCounter is a source-spanned counter kind.
+// TriggerEventCounter is a source-spanned counter kind for a counter-placement
+// trigger. Known reports whether Kind names a specific recognized counter; a
+// counter-added trigger always names one. Threshold, when positive, restricts
+// the trigger to the placement that brings the subject's running total of Kind
+// counters up to Threshold ("the twelfth hour counter is put on this artifact",
+// Midnight Clock); zero means every matching placement fires the trigger.
 type TriggerEventCounter struct {
-	Kind TriggerEventCounterKind `json:",omitempty"`
-	Span shared.Span             `json:"-"`
+	Kind      counter.Kind `json:",omitempty"`
+	Known     bool         `json:",omitempty"`
+	Threshold int          `json:",omitempty"`
+	Span      shared.Span  `json:"-"`
 }
 
 // TriggerEventSpellSelection is composable typed spell-selection syntax.

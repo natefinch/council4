@@ -4,7 +4,6 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/compare"
-	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
@@ -212,19 +211,16 @@ func lowerTriggerPattern(pattern *compiler.TriggerPattern) (game.TriggerPattern,
 	} else if pattern.StackObject != compiler.TriggerStackObjectAny {
 		return game.TriggerPattern{}, false
 	}
-	if pattern.Counter != compiler.TriggerCounterAny {
-		result.MatchCounterKind = true
-		switch pattern.Counter {
-		case compiler.TriggerCounterPlusOnePlusOne:
-			result.CounterKind = counter.PlusOnePlusOne
-		case compiler.TriggerCounterMinusOneMinusOne:
-			result.CounterKind = counter.MinusOneMinusOne
-		case compiler.TriggerCounterLore:
-			result.CounterKind = counter.Lore
-		default:
+	if pattern.MatchCounter {
+		if !pattern.Counter.Valid() {
 			return game.TriggerPattern{}, false
 		}
+		result.MatchCounterKind = true
+		result.CounterKind = pattern.Counter
+	} else if pattern.CounterThreshold != 0 {
+		return game.TriggerPattern{}, false
 	}
+	result.CounterThreshold = pattern.CounterThreshold
 	if !lowerTriggerZones(pattern, &result) {
 		return game.TriggerPattern{}, false
 	}

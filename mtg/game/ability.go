@@ -1183,6 +1183,16 @@ type TriggerPattern struct {
 	MatchCounterKind bool
 	CounterKind      counter.Kind
 
+	// CounterThreshold, when positive, restricts an EventCountersAdded trigger to
+	// the placement that brings the subject's running total of CounterKind
+	// counters up to CounterThreshold ("the twelfth hour counter is put on this
+	// artifact", Midnight Clock). The trigger fires once as the total crosses or
+	// reaches CounterThreshold (previous total below it, new total at or above
+	// it), so re-adding after removal can fire it again but further placements
+	// while already at or above it do not (CR 122, the threshold wording). Zero
+	// imposes no threshold.
+	CounterThreshold int
+
 	// Step filters EventBeginningOfStep triggers such as "At the beginning of
 	// your upkeep" (CR 603.6c).
 	Step Step

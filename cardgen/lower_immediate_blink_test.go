@@ -155,19 +155,28 @@ func TestLowerSelfBlinkTapped(t *testing.T) {
 	}
 }
 
-// TestLowerSelfBlinkRejectsStandaloneSelfExile confirms a bare "Exile this
-// creature" (no return) is not promoted to a self-blink: the parser leaves it
-// inexact and no blink return clause follows, so the body fails closed.
-func TestLowerSelfBlinkRejectsStandaloneSelfExile(t *testing.T) {
+// TestLowerSelfBlinkStandaloneSelfExileIsPlainExile confirms a bare "Exile this
+// creature" (no return) is not promoted to a self-blink: it lowers to a plain
+// source-permanent exile, since the self-blink shape requires a return clause.
+func TestLowerSelfBlinkStandaloneSelfExileIsPlainExile(t *testing.T) {
 	t.Parallel()
-	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+	face := lowerSingleFace(t, &ScryfallCard{
 		Name:       "Test Standalone Self Exile",
 		Layout:     "normal",
 		TypeLine:   "Creature",
 		OracleText: "{2}: Exile this creature.",
 	})
-	if len(diagnostics) == 0 {
-		t.Fatal("expected standalone self-exile to fail closed")
+	if len(face.ActivatedAbilities) != 1 {
+		t.Fatalf("activated abilities = %d, want 1", len(face.ActivatedAbilities))
+	}
+	sequence := face.ActivatedAbilities[0].Content.Modes[0].Sequence
+	if len(sequence) != 1 {
+		t.Fatalf("sequence = %#v, want a single plain exile", sequence)
+	}
+	exile, ok := sequence[0].Primitive.(game.Exile)
+	if !ok || exile.ExileLinkedKey != "" || exile.SourceSpell ||
+		exile.Object != game.SourceCardPermanentReference() {
+		t.Fatalf("instruction = %#v, want plain source-permanent exile", sequence[0].Primitive)
 	}
 }
 

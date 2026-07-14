@@ -127,26 +127,73 @@ func TestLowerSourceSpellExileRequiresSpellShell(t *testing.T) {
 		})
 	}
 
-	tests := map[string]string{
+	// Outside a resolving spell, a self-directed exile names the source
+	// permanent, not the (nonexistent) spell: it lowers to a supported
+	// source-permanent exile rather than a SourceSpell exile. This preserves the
+	// invariant that SourceSpell exile requires a spell shell while confirming
+	// the permanent self-exile Midnight Clock relies on.
+	activatedCases := map[string]string{
 		"activated":          "{T}: Exile Test Relic.",
 		"activated sequence": "{T}: Draw a card. Exile Test Relic.",
-		"triggered":          "When Test Relic enters, exile Test Relic.",
-		"triggered sequence": "When Test Relic enters, draw a card. Exile Test Relic.",
 	}
-	for name, oracleText := range tests {
+	for name, oracleText := range activatedCases {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			face := lowerSingleFaceExpectingUnsupported(t, &ScryfallCard{
+			face := lowerSingleFace(t, &ScryfallCard{
 				Name:       "Test Relic",
 				Layout:     "normal",
 				TypeLine:   "Artifact",
 				OracleText: oracleText,
 			})
-			if len(face.ActivatedAbilities) != 0 ||
-				len(face.TriggeredAbilities) != 0 ||
-				face.SpellAbility.Exists {
-				t.Fatalf("unsupported %s source exile produced an ability: %+v", name, face)
+			if len(face.ActivatedAbilities) != 1 {
+				t.Fatalf("activated abilities = %d, want 1", len(face.ActivatedAbilities))
 			}
+			assertSourcePermanentExile(t, face.ActivatedAbilities[0].Content)
 		})
+	}
+
+	triggeredCases := map[string]string{
+		"triggered":          "When Test Relic enters, exile Test Relic.",
+		"triggered sequence": "When Test Relic enters, draw a card. Exile Test Relic.",
+	}
+	for name, oracleText := range triggeredCases {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Relic",
+				Layout:     "normal",
+				TypeLine:   "Artifact",
+				OracleText: oracleText,
+			})
+			if len(face.TriggeredAbilities) != 1 {
+				t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
+			}
+			assertSourcePermanentExile(t, face.TriggeredAbilities[0].Content)
+		})
+	}
+}
+
+// assertSourcePermanentExile fails unless the content's instruction sequence
+// contains exactly one exile that targets the ability's source permanent (never
+// a SourceSpell exile).
+func assertSourcePermanentExile(t *testing.T, content game.AbilityContent) {
+	t.Helper()
+	if len(content.Modes) != 1 {
+		t.Fatalf("content modes = %d, want 1", len(content.Modes))
+	}
+	var exiles []game.Exile
+	for _, instruction := range content.Modes[0].Sequence {
+		if exile, ok := instruction.Primitive.(game.Exile); ok {
+			exiles = append(exiles, exile)
+		}
+	}
+	if len(exiles) != 1 {
+		t.Fatalf("exile instructions = %d, want 1 (sequence %+v)", len(exiles), content.Modes[0].Sequence)
+	}
+	if exiles[0].SourceSpell {
+		t.Fatalf("self exile on a permanent lowered to a SourceSpell exile: %+v", exiles[0])
+	}
+	if exiles[0].Object != game.SourceCardPermanentReference() {
+		t.Fatalf("exile object = %+v, want source-card permanent reference", exiles[0].Object)
 	}
 }

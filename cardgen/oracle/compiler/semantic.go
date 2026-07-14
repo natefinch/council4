@@ -3057,6 +3057,14 @@ type CompiledEffect struct {
 	// ShuffleEachPlayerGraveyardIntoLibrary mirrors the parser-owned exact
 	// symmetric graveyard shuffle.
 	ShuffleEachPlayerGraveyardIntoLibrary bool
+	// ShuffleControllerHandAndGraveyardIntoLibrary mirrors the parser-owned exact
+	// "Shuffle your hand and graveyard into your library." multi-zone shuffle.
+	ShuffleControllerHandAndGraveyardIntoLibrary bool
+	// ExileSourceSpell carries the parser-recognized resolving-spell self-exile
+	// "Exile this spell." / "Exile this card." / "Exile <name>." through the
+	// text-blind compiler boundary so lowering routes it to a SourceSpell exile
+	// without re-classifying the reference noun.
+	ExileSourceSpell bool
 	// ExileUntilSourceLeaves carries the parser-recognized O-Ring exile clause
 	// "exile <target> until <this permanent> leaves the battlefield." through the
 	// text-blind compiler boundary so lowering links the exile to the source.

@@ -184,6 +184,12 @@ func triggerMatchesEventForController(g *game.Game, source *game.Permanent, sour
 	if pattern.MatchCounterKind && pattern.CounterKind != event.CounterKind {
 		return false
 	}
+	if pattern.CounterThreshold > 0 {
+		if event.PreviousCounterAmount >= pattern.CounterThreshold ||
+			event.PreviousCounterAmount+event.Amount < pattern.CounterThreshold {
+			return false
+		}
+	}
 	if pattern.ClassBecameLevel > 0 && event.Amount != pattern.ClassBecameLevel {
 		return false
 	}

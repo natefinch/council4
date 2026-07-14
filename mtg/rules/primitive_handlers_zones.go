@@ -124,7 +124,7 @@ func handleShuffleGraveyardIntoLibrary(r *effectResolver, prim game.ShuffleGrave
 	res := effectResolved{accepted: true}
 	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
 		for _, playerID := range playersInAPNAPOrder(r.game, r.playerGroupMembers(prim.PlayerGroup)) {
-			shufflePlayerGraveyardIntoLibrary(r, playerID)
+			shufflePlayerGraveyardIntoLibrary(r, playerID, prim.IncludeHand)
 		}
 		res.succeeded = true
 		return res
@@ -133,14 +133,19 @@ func handleShuffleGraveyardIntoLibrary(r *effectResolver, prim game.ShuffleGrave
 	if !ok {
 		return res
 	}
-	res.succeeded = shufflePlayerGraveyardIntoLibrary(r, playerID)
+	res.succeeded = shufflePlayerGraveyardIntoLibrary(r, playerID, prim.IncludeHand)
 	return res
 }
 
-func shufflePlayerGraveyardIntoLibrary(r *effectResolver, playerID game.PlayerID) bool {
+func shufflePlayerGraveyardIntoLibrary(r *effectResolver, playerID game.PlayerID, includeHand bool) bool {
 	player, ok := playerByID(r.game, playerID)
 	if !ok {
 		return false
+	}
+	if includeHand {
+		for _, cardID := range player.Hand.All() {
+			moveCardBetweenZones(r.game, playerID, cardID, zone.Hand, zone.Library)
+		}
 	}
 	for _, cardID := range player.Graveyard.All() {
 		moveCardBetweenZones(r.game, playerID, cardID, zone.Graveyard, zone.Library)

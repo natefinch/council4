@@ -465,6 +465,9 @@ func lowerFixedExileSpell(
 	if content, ok := lowerSourceSpellExile(ctx); ok {
 		return content, nil
 	}
+	if content, ok := lowerSourcePermanentExile(ctx); ok {
+		return content, nil
+	}
 	if content, ok := lowerTargetedGraveyardExile(ctx); ok {
 		return content, nil
 	}
@@ -523,11 +526,59 @@ func lowerSourceSpellExile(ctx contentCtx) (game.AbilityContent, bool) {
 		len(ctx.content.Modes) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.References) != 1 ||
-		!referencesBindTo(ctx.content.References, compiler.ReferenceBindingSource, 0) {
+		!referencesBindTo(ctx.content.References, compiler.ReferenceBindingSource, 0) ||
+		!ctx.content.Effects[0].ExileSourceSpell {
 		return game.AbilityContent{}, false
 	}
 	return game.Mode{Sequence: []game.Instruction{{
 		Primitive: game.Exile{SourceSpell: true},
+	}}}.Ability(), true
+}
+
+// lowerSourcePermanentExile lowers the self-directed permanent exile "Exile this
+// artifact." / "Exile it." / "Exile <source name>." (Midnight Clock's threshold
+// tail) into a single Exile instruction acting on the ability's own source
+// permanent. It applies only outside a resolving spell (a triggered, activated,
+// or other permanent ability); the resolving-spell self-exile "Exile this
+// spell." is handled by lowerSourceSpellExile, and a spell that names a
+// permanent noun stays unsupported. It mirrors the self-reference sacrifice path
+// (lowerSacrificeSpell): a single exact controller effect naming the source by
+// demonstrative ("this artifact"), the "it" pronoun, or the card's own name,
+// with no target, condition, mode, keyword, or negation.
+func lowerSourcePermanentExile(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 1 {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if ctx.enclosingKind == compiler.AbilitySpell ||
+		!effect.Exact ||
+		effect.Negated ||
+		effect.Duration != compiler.DurationNone ||
+		effect.Context != parser.EffectContextController ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.References) != 1 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.Keywords) != 0 {
+		return game.AbilityContent{}, false
+	}
+	reference := ctx.content.References[0]
+	selfReference := reference.Kind == compiler.ReferenceThisObject ||
+		reference.Kind == compiler.ReferenceSelfName ||
+		(reference.Kind == compiler.ReferencePronoun && reference.Pronoun == compiler.ReferencePronounIt)
+	if !selfReference {
+		return game.AbilityContent{}, false
+	}
+	object, ok := lowerObjectReference(reference, referenceLoweringContext{
+		AllowSource:      true,
+		SourceCardObject: true,
+		AllowEvent:       true,
+	})
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{Sequence: []game.Instruction{{
+		Primitive: game.Exile{Object: object},
 	}}}.Ability(), true
 }
 
@@ -748,6 +799,36 @@ func allReferencesTargetPlayerPossessive(references []compiler.CompiledReference
 		}
 	}
 	return true
+}
+
+// lowerControllerHandAndGraveyardShuffleIntoLibrary lowers the multi-zone
+// "Shuffle your hand and graveyard into your library." (Midnight Clock's
+// threshold tail) to a single ShuffleGraveyardIntoLibrary instruction with
+// IncludeHand set, naming the controller. Both "your" possessives co-refer with
+// the controller and are consumed by the exact recognizer, so no residual
+// reference, target, condition, mode, or keyword may remain; any other subject,
+// zone, negation, or optionality fails closed.
+func lowerControllerHandAndGraveyardShuffleIntoLibrary(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 1 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.Keywords) != 0 {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if !effect.Exact ||
+		effect.Negated ||
+		effect.Optional ||
+		effect.Duration != compiler.DurationNone ||
+		effect.Context != parser.EffectContextController ||
+		effect.ToZone != zone.Library ||
+		!effect.ShuffleControllerHandAndGraveyardIntoLibrary {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{Sequence: []game.Instruction{{
+		Primitive: game.ShuffleGraveyardIntoLibrary{Player: game.ControllerReference(), IncludeHand: true},
+	}}}.Ability(), true
 }
 
 // lowerEventPermanentShuffleIntoLibrary lowers the dies / put-into-graveyard

@@ -36,12 +36,18 @@ func TestParseTeferisProtectionTypedEffects(t *testing.T) {
 	}
 }
 
-func TestSourceSpellExileFailsClosedForOtherThisObject(t *testing.T) {
+// TestParseSourcePermanentExileIsExact verifies that "Exile <source permanent>."
+// parses as an exact self-permanent exile shape (consistent with the
+// regenerate/transform self recognizers). The resolving-spell fail-closed
+// behavior — a spell that names a permanent noun rather than "this spell" is
+// unsupported — is enforced at lowering (lowerSourceSpellExile /
+// lowerSourcePermanentExile), not by parser inexactness.
+func TestParseSourcePermanentExileIsExact(t *testing.T) {
 	t.Parallel()
 	document, _ := Parse("Exile this creature.", Context{InstantOrSorcery: true})
 	effects := document.Abilities[0].Sentences[0].Effects
-	if len(effects) != 1 || effects[0].Exact {
-		t.Fatalf("effects = %+v, want inexact unsupported variant", effects)
+	if len(effects) != 1 || effects[0].Kind != EffectExile || !effects[0].Exact {
+		t.Fatalf("effects = %+v, want a single exact EffectExile", effects)
 	}
 }
 

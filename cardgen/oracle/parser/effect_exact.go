@@ -81,6 +81,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 			effect.GroupEntryModification.Kind != GroupEntryModificationNone
 	case EffectExile:
 		return exactSourceSpellExileSyntax(effect) ||
+			exactSourcePermanentExileSyntax(effect) ||
 			exactCounteredSpellExileSyntax(effect) ||
 			exactExileUntilSourceLeavesEffectSyntax(effect) ||
 			exactExileUntilOpponentBecomesMonarchEffectSyntax(effect) ||
@@ -225,6 +226,7 @@ func exactEffectSyntaxTail(effect *EffectSyntax) bool {
 		return exactOptionalControllerShuffleEffectSyntax(effect) ||
 			exactSourceSpellShuffleIntoLibrarySyntax(effect) ||
 			exactControllerGraveyardShuffleIntoLibrarySyntax(effect) ||
+			exactControllerHandAndGraveyardShuffleIntoLibrarySyntax(effect) ||
 			exactTargetPlayerGraveyardShuffleIntoLibrarySyntax(effect) ||
 			exactEachPlayerGraveyardShuffleIntoLibrarySyntax(effect) ||
 			exactSelfShuffleIntoOwnerLibrarySyntax(effect)
@@ -343,6 +345,23 @@ func exactControllerGraveyardShuffleIntoLibrarySyntax(effect *EffectSyntax) bool
 		return false
 	}
 	return strings.EqualFold(exactEffectClauseText(effect), "Shuffle your graveyard into your library.")
+}
+
+// exactControllerHandAndGraveyardShuffleIntoLibrarySyntax recognizes the
+// verbatim "Shuffle your hand and graveyard into your library." (Midnight
+// Clock's threshold tail), a controller-scoped, non-optional shuffle whose two
+// source zones (hand and graveyard) cannot ride the single FromZone field. The
+// clause is matched verbatim and carried by ShuffleControllerHandAndGraveyard-
+// IntoLibrary.
+func exactControllerHandAndGraveyardShuffleIntoLibrarySyntax(effect *EffectSyntax) bool {
+	if effect.Context != EffectContextController ||
+		effect.Optional ||
+		effect.ToZone != zone.Library ||
+		!strings.EqualFold(exactEffectClauseText(effect), "Shuffle your hand and graveyard into your library.") {
+		return false
+	}
+	effect.ShuffleControllerHandAndGraveyardIntoLibrary = true
+	return true
 }
 
 // exactTargetPlayerGraveyardShuffleIntoLibrarySyntax recognizes "Target player

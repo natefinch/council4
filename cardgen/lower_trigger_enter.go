@@ -42,7 +42,7 @@ func lowerEnterTrigger(
 	default:
 	}
 	intervening, supportedCondition := lowerSelfInterveningCondition(eventKind, ability.Trigger)
-	if !supportedSelfTriggerKind(eventKind, ability.Trigger.Pattern.Kind) ||
+	if !supportedSelfTriggerKind(eventKind, ability.Trigger.Pattern.Kind, pattern.CounterThreshold) ||
 		!supportedEvent ||
 		!supportedCondition {
 		return game.TriggeredAbility{}, executableDiagnostic(ability, summary, detail)
@@ -377,7 +377,7 @@ func lowerSelfInterveningCondition(
 	}
 }
 
-func supportedSelfTriggerKind(eventKind game.EventKind, kind compiler.TriggerKind) bool {
+func supportedSelfTriggerKind(eventKind game.EventKind, kind compiler.TriggerKind, counterThreshold int) bool {
 	switch eventKind {
 	case game.EventPermanentEnteredBattlefield,
 		game.EventPermanentDied,
@@ -394,13 +394,24 @@ func supportedSelfTriggerKind(eventKind game.EventKind, kind compiler.TriggerKin
 		game.EventAttackerDeclared,
 		game.EventBlockerDeclared:
 		return kind == compiler.TriggerWhen || kind == compiler.TriggerWhenever
+	case game.EventCountersAdded:
+		// A bare counter-added trigger ("Whenever a counter is put on ...") is
+		// recurring and introduced by "Whenever". An Nth-counter threshold
+		// trigger ("When the twelfth hour counter is put on this artifact",
+		// Midnight Clock) fires once when the running total crosses the
+		// threshold, so it is introduced by "When"; "When" and "Whenever" are
+		// mechanically identical (CR 603.1) but only the threshold form uses
+		// "When".
+		if counterThreshold > 0 {
+			return kind == compiler.TriggerWhen || kind == compiler.TriggerWhenever
+		}
+		return kind == compiler.TriggerWhenever
 	case game.EventPermanentMutated,
 		game.EventAttackerBecameBlocked,
 		game.EventAttackerBecameUnblocked,
 		game.EventDamageDealt,
 		game.EventPermanentTapped,
-		game.EventPermanentUntapped,
-		game.EventCountersAdded:
+		game.EventPermanentUntapped:
 		return kind == compiler.TriggerWhenever
 	default:
 		return kind == compiler.TriggerWhen
