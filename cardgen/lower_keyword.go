@@ -1980,6 +1980,14 @@ func partitionTemporaryKeywords(keywords []compiler.CompiledKeyword) ([]game.Key
 			abilities = append(abilities, &ability)
 			continue
 		}
+		if keyword.Kind == parser.KeywordHexproof && keyword.ParameterKind == parser.KeywordParameterProtection {
+			if !keyword.ProtectionKnown || len(keyword.Protection.FromColors) == 0 {
+				return nil, nil, false
+			}
+			ability := game.HexproofFromColorsStaticAbility(keyword.Protection.FromColors...)
+			abilities = append(abilities, &ability)
+			continue
+		}
 		simple, ok := simpleStaticKeyword(keyword)
 		if !ok {
 			if triggered, tok := reusableTriggeredKeywordBody(keyword); tok {

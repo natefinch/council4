@@ -1258,6 +1258,69 @@ func pastCastCountPhraseAt(tokens []shared.Token, index int) bool {
 	return effectWordsAt(tokens, index+1, "your", "commander", "from", "the", "command", "zone", "this", "game")
 }
 
+// castEventHistoryConditionAt reports whether the "cast" verb at index is the
+// past- or perfect-tense verb of an event-history condition clause ("if you've
+// cast a blue spell this turn", "if an opponent has cast a blue or black spell
+// this turn", "if you cast a spell this turn") rather than a resolving cast
+// effect. Such a clause is owned by the event-history condition parser, so the
+// effect classifier must not also seed an EffectCast that would split the
+// sentence into two effects and defeat the per-effect condition gate. The verb
+// qualifies only when a past/perfect cast actor immediately precedes it and the
+// remainder of the clause carries an event-history window suffix ("this turn" or
+// "last turn"); a genuine imperative "Cast ..." effect has neither.
+func castEventHistoryConditionAt(tokens []shared.Token, index int) bool {
+	hasActor := false
+	switch {
+	case index >= 1 && equalWord(tokens[index-1], "you've"):
+		hasActor = true
+	case index >= 2 && equalWord(tokens[index-1], "have") && equalWord(tokens[index-2], "you"):
+		hasActor = true
+	case index >= 3 && equalWord(tokens[index-1], "has") &&
+		equalWord(tokens[index-2], "opponent") && equalWord(tokens[index-3], "an"):
+		hasActor = true
+	case index >= 1 && equalWord(tokens[index-1], "you"):
+		hasActor = true
+	case index >= 2 && equalWord(tokens[index-1], "opponent") && equalWord(tokens[index-2], "an"):
+		hasActor = true
+	default:
+		hasActor = false
+	}
+	if !hasActor {
+		return false
+	}
+	// An event-history condition clause is introduced by "if" ("Draw a card if an
+	// opponent has cast ... this turn"). Requiring a preceding "if" within the
+	// sentence excludes delayed-trigger clauses that share the "you cast a spell
+	// this turn" shape but are introduced by "Whenever" (e.g. Showdown of the
+	// Skalds), which must remain genuine cast-event triggers.
+	if !castConditionIntroducedByIf(tokens, index) {
+		return false
+	}
+	for i := index + 1; i < len(tokens); i++ {
+		if tokens[i].Kind == shared.Period {
+			return false
+		}
+		if effectWordsAt(tokens, i, "this", "turn") || effectWordsAt(tokens, i, "last", "turn") {
+			return true
+		}
+	}
+	return false
+}
+
+// castConditionIntroducedByIf reports whether an "if" token precedes the cast
+// verb at index within the current sentence (scanning back to the prior period).
+func castConditionIntroducedByIf(tokens []shared.Token, index int) bool {
+	for i := index - 1; i >= 0; i-- {
+		if tokens[i].Kind == shared.Period {
+			return false
+		}
+		if equalWord(tokens[i], "if") {
+			return true
+		}
+	}
+	return false
+}
+
 // castDuringMainPhaseConditionAt reports whether the "cast" verb at index begins
 // the Addendum cast-timing condition "you cast this spell during your main
 // phase". That phrase is a condition predicate, not a cast effect, so the
@@ -1612,6 +1675,8 @@ func effectKindAt(tokens []shared.Token, index int) EffectKind {
 	case kind == EffectCast && index > 0 && (equalWord(tokens[index-1], "was") || equalWord(tokens[index-1], "were")):
 		return EffectUnknown
 	case kind == EffectCast && pastCastCountPhraseAt(tokens, index):
+		return EffectUnknown
+	case kind == EffectCast && castEventHistoryConditionAt(tokens, index):
 		return EffectUnknown
 	case kind == EffectCast && castDuringMainPhaseConditionAt(tokens, index):
 		return EffectUnknown
