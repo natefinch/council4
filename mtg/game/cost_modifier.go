@@ -622,6 +622,11 @@ const (
 	// more permanents; the blessing is player-level persistent state that is
 	// never removed. Added last so existing kinds keep their wire values.
 	RuleEffectAscend
+	// RuleEffectCantBeTargetedByControllerOpponents prevents players other than
+	// Controller from targeting the affected permanent with spells or abilities.
+	// Unlike hexproof, the relation is anchored to this rule effect's source
+	// controller rather than the affected permanent's controller.
+	RuleEffectCantBeTargetedByControllerOpponents
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -688,7 +693,8 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectCastLinkedExileForFree,
 		RuleEffectActivateAbilitiesAsThoughHaste,
 		RuleEffectGrantSpellKeyword,
-		RuleEffectAscend:
+		RuleEffectAscend,
+		RuleEffectCantBeTargetedByControllerOpponents:
 		return true
 	default:
 		return false
@@ -714,6 +720,8 @@ type BlockerRestrictionKind int
 const (
 	BlockerRestrictionNone BlockerRestrictionKind = iota
 	BlockerRestrictionFlying
+	// BlockerRestrictionFlyingOrReach matches blockers with either keyword.
+	BlockerRestrictionFlyingOrReach
 	BlockerRestrictionPowerLessOrEqual
 	BlockerRestrictionPowerGreaterOrEqual
 	// BlockerRestrictionColor stops blockers of the BlockerRestriction's Color

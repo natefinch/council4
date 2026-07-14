@@ -476,6 +476,15 @@ func targetProtectedFromSource(g *game.Game, controller game.PlayerID, source *g
 	if hasKeyword(g, permanent, game.Hexproof) && effectiveController(g, permanent) != controller {
 		return true
 	}
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind == game.RuleEffectCantBeTargetedByControllerOpponents &&
+			ruleEffectMatchesPermanent(g, effect, permanent) &&
+			controllerRelationMatches(effect.Controller, controller, game.ControllerOpponent) {
+			return true
+		}
+	}
 	// Use effective source characteristics when the source is a permanent on
 	// the battlefield (CR 702.16c).
 	if sourceObjectID != 0 {

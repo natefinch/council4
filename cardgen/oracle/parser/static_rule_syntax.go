@@ -191,6 +191,13 @@ func parseStaticOperationQualifier(tokens []shared.Token, operation *StaticRuleO
 	if qualifier, qualifierNext, ok := parseStaticByMoreThanOneQualifier(tokens, opNext, limit); ok {
 		return qualifier, qualifierNext, true
 	}
+	if operation.Kind == StaticRuleOperationTarget && operation.Voice == StaticRuleVoicePassive &&
+		staticRuleWordsAt(tokens, opNext, "of", "spells", "or", "abilities", "your", "opponents", "control") {
+		return StaticRuleQualifier{
+			Kind: StaticRuleQualifierTargetingControllerOpponent,
+			Span: shared.SpanOf(tokens[opNext : opNext+7]),
+		}, opNext + 7, true
+	}
 	if qualifier, qualifierNext, ok := parseStaticAloneQualifier(tokens, opNext); ok {
 		return qualifier, qualifierNext, true
 	}
@@ -393,6 +400,13 @@ func parseProhibitedStaticRuleOperation(tokens []shared.Token, start int) (Stati
 			Voice: StaticRuleVoicePassive,
 			Span:  shared.SpanOf(tokens[start : start+2]),
 		}, start + 2, true
+	}
+	if staticRuleWordsAt(tokens, start, "be", "the", "target") {
+		return StaticRuleOperation{
+			Kind:  StaticRuleOperationTarget,
+			Voice: StaticRuleVoicePassive,
+			Span:  shared.SpanOf(tokens[start : start+3]),
+		}, start + 3, true
 	}
 	return StaticRuleOperation{}, start, false
 }
@@ -714,6 +728,12 @@ func parseStaticBlockerRestrictionQualifier(tokens []shared.Token, start, end in
 		return StaticRuleQualifier{}, 0, false
 	}
 	cursor := start + 3
+	if staticRuleWordsAt(tokens, cursor, "flying", "or", "reach") && cursor+3 <= end {
+		return StaticRuleQualifier{
+			Kind: StaticRuleQualifierBlockerFlyingOrReach,
+			Span: shared.SpanOf(tokens[start : cursor+3]),
+		}, cursor + 3, true
+	}
 	if staticRuleWordsAt(tokens, cursor, "flying") && cursor < end {
 		return StaticRuleQualifier{
 			Kind: StaticRuleQualifierBlockerFlying,
@@ -873,6 +893,7 @@ func validCreatureStaticRuleOperation(rule StaticRuleSyntax) bool {
 			rule.Operation.Kind == StaticRuleOperationBlockedExcept &&
 			rule.Operation.Voice == StaticRuleVoicePassive &&
 			(staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierBlockerFlying) ||
+				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierBlockerFlyingOrReach) ||
 				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierBlockerColor) ||
 				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierBlockerArtifact) ||
 				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierBlockerDefender) ||
@@ -907,6 +928,10 @@ func validCreatureStaticRuleOperation(rule StaticRuleSyntax) bool {
 			rule.Operation.Kind == StaticRuleOperationTransform &&
 			rule.Operation.Voice == StaticRuleVoiceActive &&
 			len(rule.Qualifiers) == 0) ||
+		(rule.Constraint.Kind == StaticRuleConstraintProhibition &&
+			rule.Operation.Kind == StaticRuleOperationTarget &&
+			rule.Operation.Voice == StaticRuleVoicePassive &&
+			staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierTargetingControllerOpponent)) ||
 		(rule.Constraint.Kind == StaticRuleConstraintRequirement &&
 			rule.Operation.Kind == StaticRuleOperationAttack &&
 			rule.Operation.Voice == StaticRuleVoiceActive &&

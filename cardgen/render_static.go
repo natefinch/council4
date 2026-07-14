@@ -978,6 +978,8 @@ func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
 		return "game.RuleEffectCantBeBlockedByCreaturesWith", nil
 	case game.RuleEffectCantBeBlockedExceptBy:
 		return "game.RuleEffectCantBeBlockedExceptBy", nil
+	case game.RuleEffectCantBeTargetedByControllerOpponents:
+		return "game.RuleEffectCantBeTargetedByControllerOpponents", nil
 	case game.RuleEffectAssignCombatDamageUsingToughness:
 		return "game.RuleEffectAssignCombatDamageUsingToughness", nil
 	case game.RuleEffectCanBlockOnlyCreaturesWith:
@@ -1090,6 +1092,8 @@ func renderBlockerRestriction(restriction game.BlockerRestriction) (string, erro
 	switch restriction.Kind {
 	case game.BlockerRestrictionFlying:
 		kind = "game.BlockerRestrictionFlying"
+	case game.BlockerRestrictionFlyingOrReach:
+		kind = "game.BlockerRestrictionFlyingOrReach"
 	case game.BlockerRestrictionPowerLessOrEqual:
 		kind = "game.BlockerRestrictionPowerLessOrEqual"
 	case game.BlockerRestrictionPowerGreaterOrEqual:

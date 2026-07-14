@@ -1049,6 +1049,8 @@ func blockerMatchesRestriction(g *game.Game, blocker *game.Permanent, restrictio
 	switch restriction.Kind {
 	case game.BlockerRestrictionFlying:
 		return hasKeyword(g, blocker, game.Flying)
+	case game.BlockerRestrictionFlyingOrReach:
+		return hasKeyword(g, blocker, game.Flying) || hasKeyword(g, blocker, game.Reach)
 	case game.BlockerRestrictionPowerLessOrEqual:
 		return effectivePower(g, blocker) <= restriction.Power
 	case game.BlockerRestrictionPowerGreaterOrEqual:

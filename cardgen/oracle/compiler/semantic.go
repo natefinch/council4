@@ -2156,6 +2156,11 @@ const (
 	// source-characteristic exchanges. Added last so existing kinds keep their
 	// wire values.
 	EffectExchange
+	// EffectCantBeTargetedByControllerOpponents is the static targeting
+	// restriction "<subject> can't be the target of spells or abilities your
+	// opponents control." The relevant "your" is the static source's controller,
+	// not necessarily the affected permanent's controller.
+	EffectCantBeTargetedByControllerOpponents
 )
 
 // DurationKind identifies common continuous-effect durations.
