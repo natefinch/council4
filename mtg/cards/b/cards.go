@@ -29,6 +29,7 @@ var Cards = []cardset.Entry{
 	{Name: "Barbed Bloodletter", New: BarbedBloodletter},
 	{Name: "Barbed Spike", New: BarbedSpike},
 	{Name: "Baron Sengir", New: BaronSengir},
+	{Name: "Barrage of Boulders", New: BarrageOfBoulders},
 	{Name: "Barrenton Medic", New: BarrentonMedic},
 	{Name: "Barrow-Blade", New: BarrowBlade},
 	{Name: "Basalt Gargoyle", New: BasaltGargoyle},

@@ -226,7 +226,7 @@ func TestContinuousReferenceObject(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			object, ok := continuousReferenceObject(tc.reference, &tc.effect, false)
+			object, ok := continuousReferenceObject(tc.reference, &tc.effect, false, false)
 			if ok != tc.wantOK {
 				t.Fatalf("ok = %v, want %v", ok, tc.wantOK)
 			}
@@ -237,12 +237,49 @@ func TestContinuousReferenceObject(t *testing.T) {
 	}
 }
 
+// TestContinuousReferenceObjectSpellSourceBackReference proves the spell-only
+// fail-closed guard: inside a resolving spell (enclosingSpell=true), a source
+// binding whose effect context is not EffectContextSource is a cross-clause
+// back-reference ("that creature"/"those creatures") the compiler could not tie
+// to its antecedent and fell back to the source; granting a spell's continuous
+// effect to that source would silently miss every intended creature, so it fails
+// closed. A genuine EffectContextSource self-reference still resolves, and the
+// same non-source-context binding resolves for a permanent ability
+// (enclosingSpell=false), whose source is a real battlefield permanent.
+func TestContinuousReferenceObjectSpellSourceBackReference(t *testing.T) {
+	source := compiler.CompiledReference{Binding: compiler.ReferenceBindingSource}
+
+	backReference := &compiler.CompiledEffect{Context: parser.EffectContextReferencedObject}
+	if _, ok := continuousReferenceObject(source, backReference, true, true); ok {
+		t.Fatal("spell source back-reference resolved, want fail closed")
+	}
+
+	selfReference := &compiler.CompiledEffect{Context: parser.EffectContextSource}
+	object, ok := continuousReferenceObject(source, selfReference, true, true)
+	if !ok {
+		t.Fatal("spell source self-reference did not resolve")
+	}
+	if !reflect.DeepEqual(object, game.SourceCardPermanentReference()) {
+		t.Fatalf("self-reference object = %#v, want source card permanent reference", object)
+	}
+
+	object, ok = continuousReferenceObject(source, backReference, true, false)
+	if !ok {
+		t.Fatal("permanent-ability source reference did not resolve")
+	}
+	if !reflect.DeepEqual(object, game.SourceCardPermanentReference()) {
+		t.Fatalf("permanent-ability object = %#v, want source card permanent reference", object)
+	}
+}
+
 // TestContinuousReferenceObjectSourceAsCard confirms sourceAsCard switches a
 // source-binding subject from the stack object's source permanent to the source
-// card's battlefield permanent, the form keyword loss uses.
+// card's battlefield permanent. This exercises the non-spell resolution path
+// (enclosingSpell=false); the spell-only fail-closed guard is covered by
+// TestContinuousReferenceObjectSpellSourceBackReference.
 func TestContinuousReferenceObjectSourceAsCard(t *testing.T) {
 	reference := compiler.CompiledReference{Binding: compiler.ReferenceBindingSource}
-	object, ok := continuousReferenceObject(reference, &compiler.CompiledEffect{}, true)
+	object, ok := continuousReferenceObject(reference, &compiler.CompiledEffect{}, true, false)
 	if !ok {
 		t.Fatal("source-as-card reference did not resolve")
 	}

@@ -94,6 +94,7 @@ var Cards = []cardset.Entry{
 	{Name: "Experimental Synthesizer", New: ExperimentalSynthesizer},
 	{Name: "Explorer's Cache", New: ExplorerSCache},
 	{Name: "Explorer's Scope", New: ExplorerSScope},
+	{Name: "Explosive Growth", New: ExplosiveGrowth},
 	{Name: "Expunge", New: Expunge},
 	{Name: "Extruder", New: Extruder},
 	{Name: "Eyeblight Massacre", New: EyeblightMassacre},
