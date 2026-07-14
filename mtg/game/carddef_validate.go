@@ -1271,7 +1271,7 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		default:
 			v.add(faceName, appendPath(path, "GrantedKeyword"), CardDefIssueInvalidRuleEffect, "spell keyword grants support only improvise, convoke, or delve")
 		}
-	case RuleEffectNoMaximumHandSize, RuleEffectLifeTotalCantChange, RuleEffectCastSpellsAsThoughFlash, RuleEffectPlayWithTopCardRevealed, RuleEffectLookAtTopCardAnyTime, RuleEffectSkipDrawStep, RuleEffectPlayerHexproof, RuleEffectPlayerShroud, RuleEffectDamageDoesntCauseLifeLoss, RuleEffectRedirectDamageToSource, RuleEffectActivateAbilitiesAsThoughHaste:
+	case RuleEffectNoMaximumHandSize, RuleEffectLifeTotalCantChange, RuleEffectCastSpellsAsThoughFlash, RuleEffectPlayWithTopCardRevealed, RuleEffectLookAtTopCardAnyTime, RuleEffectSkipDrawStep, RuleEffectPlayerHexproof, RuleEffectPlayerShroud, RuleEffectDamageDoesntCauseLifeLoss, RuleEffectRedirectDamageToSource, RuleEffectActivateAbilitiesAsThoughHaste, RuleEffectSkipExtraTurns:
 		if effect.AffectedPlayer == PlayerAny {
 			v.add(faceName, appendPath(path, "AffectedPlayer"), CardDefIssueInvalidRuleEffect, "player rule effects must set affected player")
 		}

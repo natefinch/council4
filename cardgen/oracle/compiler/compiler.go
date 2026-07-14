@@ -58,6 +58,8 @@ func compileAbility(
 		BattleOfBywaterSequence:                     ability.BattleOfBywaterSequence,
 		ArtifactMutationSequence:                    ability.ArtifactMutationSequence,
 		UrzasRuinousBlast:                           ability.UrzasRuinousBlast,
+		SkipExtraTurnsScope:                         ability.SkipExtraTurnsScope,
+		OpponentSecondActionTriplet:                 ability.OpponentSecondActionTriplet,
 	}
 	if ability.LifeCharacteristicExchange != nil {
 		compiled.LifeCharacteristicExchange = &CompiledLifeCharacteristicExchange{
@@ -263,6 +265,8 @@ func compileAbility(
 		!compiled.AugurOfAutumnCoven &&
 		!compiled.StingCombatFirstStrike &&
 		!compiled.YevaGreenCreatureFlash &&
+		compiled.SkipExtraTurnsScope == "" &&
+		!compiled.OpponentSecondActionTriplet &&
 		compiled.KeywordShare == nil &&
 		len(compiled.Content.Effects) == 0 && len(compiled.Content.Keywords) == 0 &&
 		!legacyEffectsPresent(ability.Sentences) &&

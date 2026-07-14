@@ -627,6 +627,9 @@ const (
 	// Unlike hexproof, the relation is anchored to this rule effect's source
 	// controller rather than the affected permanent's controller.
 	RuleEffectCantBeTargetedByControllerOpponents
+	// RuleEffectSkipExtraTurns makes the affected players skip extra turns they
+	// would begin.
+	RuleEffectSkipExtraTurns
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -694,7 +697,8 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectActivateAbilitiesAsThoughHaste,
 		RuleEffectGrantSpellKeyword,
 		RuleEffectAscend,
-		RuleEffectCantBeTargetedByControllerOpponents:
+		RuleEffectCantBeTargetedByControllerOpponents,
+		RuleEffectSkipExtraTurns:
 		return true
 	default:
 		return false
