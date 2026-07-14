@@ -83,8 +83,15 @@ type ActivatedAbility struct {
 	// separately; a positive cap is enforced against the per-ability activation
 	// count regardless of timing.
 	MaxActivationsPerTurn int
-	ActivationCondition   opt.V[Condition]
-	Content               AbilityContent
+	// ManaCostRestrictedToEntryChosenColor marks an ability whose cost may be
+	// paid only with mana of the source permanent's entry-time chosen color
+	// ("Spend only mana of the chosen color to activate this ability." — Throne
+	// of Eldraine). It is a faithful record of the printed restriction; like the
+	// engine's other mana-spend restrictions it is not hard-enforced by the
+	// fungible payment planner.
+	ManaCostRestrictedToEntryChosenColor bool
+	ActivationCondition                  opt.V[Condition]
+	Content                              AbilityContent
 	// KeywordAbilities lists keyword abilities carried by this activation, e.g.
 	// EquipKeyword for equip activations. Rules use it for keyword dispatch and
 	// cost routing without inspecting Content.

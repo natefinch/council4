@@ -335,6 +335,14 @@ func parseEffectMana(kind EffectKind, tokens []shared.Token, connected bool) Eff
 	if len(body) == 6 && effectWordsAt(body, 0, "one", "mana", "of", "the", "chosen", "color") {
 		return EffectManaSyntax{Span: shared.SpanOf(body), ChosenColor: true}
 	}
+	if len(body) == 5 && effectWordsAt(body, 0, "one", "mana", "of", "that", "color") {
+		return EffectManaSyntax{Span: shared.SpanOf(body), ChosenColorAnaphor: true}
+	}
+	if len(body) == 6 && effectWordsAt(body, 1, "mana", "of", "the", "chosen", "color") {
+		if count, ok := manaAnyOneColorCount(body[0]); ok {
+			return EffectManaSyntax{Span: shared.SpanOf(body), ChosenColor: true, ChosenColorCount: count}
+		}
+	}
 	if len(body) == 14 &&
 		effectWordsAt(body, 0, "an", "amount", "of", "mana", "of", "that", "color", "equal", "to", "your", "devotion", "to", "that", "color") {
 		return EffectManaSyntax{Span: shared.SpanOf(body), ChosenColorDevotion: true}

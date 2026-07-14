@@ -60,6 +60,9 @@ func parseActivationRestriction(tokens []shared.Token) ([]ActivationRestriction,
 	if len(tokens) > 0 && tokens[len(tokens)-1].Kind == shared.Period {
 		tokens = tokens[:len(tokens)-1]
 	}
+	if restriction, ok := parseSpendChosenColorManaActivationRestriction(tokens, fullSpan); ok {
+		return []ActivationRestriction{restriction}, true
+	}
 	if len(tokens) < 2 || !equalWord(tokens[0], "activate") {
 		return nil, false
 	}

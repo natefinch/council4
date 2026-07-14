@@ -1091,6 +1091,12 @@ type EffectManaSyntax struct {
 	// adds one mana of the color chosen as the source permanent entered (CR
 	// 614.12) rather than a fixed or freely-chosen color.
 	ChosenColor bool `json:",omitempty"`
+	// ChosenColorCount is the fixed amount of chosen-color mana for the counted
+	// body "<N> mana of the chosen color" (N >= 2, Throne of Eldraine: "Add four
+	// mana of the chosen color."). It is set together with ChosenColor; it is
+	// zero for the singular "one mana of the chosen color" body, which produces
+	// one unit.
+	ChosenColorCount int `json:",omitempty"`
 	// ChosenColorFixed is the fixed alternative basic color of the composite body
 	// "{C} or one mana of the chosen color." (the Gate/Thriving land cycle, e.g.
 	// "Add {W} or one mana of the chosen color."). It is set together with
@@ -1112,6 +1118,14 @@ type EffectManaSyntax struct {
 	// dynamic count. It pairs the chosen-color output with a dynamic amount the
 	// fixed-shape ChosenColorDevotion body cannot express.
 	ChosenColorDynamic bool `json:",omitempty"`
+	// ChosenColorAnaphor reports the bare body "one mana of that color", whose
+	// "that color" is an anaphor to a chosen color named earlier in the same
+	// ability rather than the standing "the chosen color" wording. It only
+	// resolves to the source permanent's entry-time chosen color inside a
+	// chosen-color tapped-for-mana trigger body ("a land's ability causes you to
+	// add ... mana of the chosen color, add an additional one mana of that
+	// color." — Caged Sun); lowering fails closed for it in any other context.
+	ChosenColorAnaphor bool `json:",omitempty"`
 	// CommanderIdentity reports the exact body "one mana of any color in your
 	// commander's color identity" (CR 903.4). The choosable colors are the
 	// controller's commander color identity, resolved dynamically at activation.
@@ -3420,6 +3434,13 @@ const (
 	// (Interplanar Beacon). The tagged mana may pay only to cast a planeswalker
 	// spell; it cannot pay ability costs or other payments.
 	ManaSpendCastPlaneswalkerSpell ManaSpendConditionKind = "ManaSpendCastPlaneswalkerSpell"
+	// ManaSpendCastMonocoloredSpellOfChosenColor is the restricted "spend this
+	// mana only to cast monocolored spells of that color" condition (Throne of
+	// Eldraine). The tagged mana is produced in the source's entry-time chosen
+	// color and may pay only to cast a monocolored spell whose single color is
+	// that same color (the produced unit's color); it cannot pay ability costs or
+	// other payments.
+	ManaSpendCastMonocoloredSpellOfChosenColor ManaSpendConditionKind = "ManaSpendCastMonocoloredSpellOfChosenColor"
 )
 
 // ManaSpendRiderEffectKind identifies the exact resolving effect of a mana-spend

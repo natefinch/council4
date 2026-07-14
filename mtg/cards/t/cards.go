@@ -103,6 +103,7 @@ var Cards = []cardset.Entry{
 	{Name: "Thriving Skyclaw", New: ThrivingSkyclaw},
 	{Name: "Thriving Turtle", New: ThrivingTurtle},
 	{Name: "Throne of Bone", New: ThroneOfBone},
+	{Name: "Throne of Eldraine", New: ThroneOfEldraine},
 	{Name: "Throne Warden", New: ThroneWarden},
 	{Name: "Throw from the Saddle", New: ThrowFromTheSaddle},
 	{Name: "Thunderblust", New: Thunderblust},

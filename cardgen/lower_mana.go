@@ -344,7 +344,8 @@ func isManaSpendRider(effect *compiler.CompiledEffect) bool {
 		isCreatureSpellRestrictedManaSpendRider(effect.ManaSpendRider) ||
 		isCreatureSpellHasteManaSpendRider(effect.ManaSpendRider) ||
 		isArtifactManaSpendRider(effect.ManaSpendRider) ||
-		isSpellTypeRestrictedManaSpendRider(effect.ManaSpendRider)
+		isSpellTypeRestrictedManaSpendRider(effect.ManaSpendRider) ||
+		isMonocoloredChosenColorManaSpendRider(effect.ManaSpendRider)
 }
 
 func isCommanderScryManaSpendRider(rider *compiler.CompiledManaSpendRider) bool {
@@ -771,11 +772,52 @@ func lowerManaSpendRiderContent(ctx contentCtx) (game.AbilityContent, *shared.Di
 		}
 		return content, nil
 	}
+	if isMonocoloredChosenColorManaSpendRider(riderEffect) {
+		if !manaEffect.Mana.ChosenColor || manaEffect.Mana.ChosenColorFixedKnown {
+			return game.AbilityContent{}, contentDiagnostic(
+				ctx,
+				"unsupported mana effect",
+				"the monocolored-chosen-color rider requires an exact chosen-color add-mana effect",
+			)
+		}
+		rider := game.ManaSpendRider{
+			Condition:   game.ManaSpendCastMonocoloredSpellOfChosenColor,
+			Restriction: game.ManaSpendRestrictedToCondition,
+		}
+		content, ok := typedManaEffectContent(manaEffect.Mana)
+		if !ok {
+			return game.AbilityContent{}, contentDiagnostic(
+				ctx,
+				"unsupported mana effect",
+				"the monocolored-chosen-color rider requires an exact modeled add-mana effect",
+			)
+		}
+		if !attachManaSpendRider(&content, rider) {
+			return game.AbilityContent{}, contentDiagnostic(
+				ctx,
+				"unsupported mana effect",
+				"the monocolored-chosen-color rider requires an exact add-mana instruction to tag",
+			)
+		}
+		return content, nil
+	}
 	return game.AbilityContent{}, contentDiagnostic(
 		ctx,
 		"unsupported mana effect",
 		"the executable source backend cannot lower this mana-spend rider",
 	)
+}
+
+// isMonocoloredChosenColorManaSpendRider reports whether rider is the
+// restriction-only monocolored-chosen-color spend rider (Throne of Eldraine).
+// The tagged chosen-color mana may pay only to cast a monocolored spell of that
+// color, with no further qualifier or rider effect.
+func isMonocoloredChosenColorManaSpendRider(rider *compiler.CompiledManaSpendRider) bool {
+	return rider != nil &&
+		rider.Condition == parser.ManaSpendCastMonocoloredSpellOfChosenColor &&
+		rider.Effect == parser.ManaSpendRiderEffectUnknown &&
+		rider.Restricted &&
+		rider.ScryAmount == 0
 }
 
 // attachManaSpendRider tags every add-mana instruction in content's single mode
@@ -881,6 +923,9 @@ func lowerAddManaContentInner(ctx contentCtx) (game.AbilityContent, *shared.Diag
 	if content, ok := lowerCombinationDynamicMana(ctx); ok {
 		return content, nil
 	}
+	if content, ok := lowerChosenColorAnaphorTriggerMana(ctx); ok {
+		return content, nil
+	}
 	if content, ok := lowerReferencedControllerAddMana(ctx); ok {
 		return content, nil
 	}
@@ -917,6 +962,39 @@ func lowerAddManaContentInner(ctx contentCtx) (game.AbilityContent, *shared.Diag
 		)
 	}
 	return content, nil
+}
+
+// lowerChosenColorAnaphorTriggerMana lowers the mana-doubler body of a
+// chosen-color tapped-for-mana trigger that adds "an additional one mana of that
+// color" to its controller (Caged Sun). The "that color" anaphor is only sound
+// inside such a trigger, whose pattern already constrains the tap to the
+// source's entry-time chosen color, so the produced mana is routed through the
+// source permanent's entry color choice (EntryColorChoiceKey). It fails closed
+// unless the enclosing trigger carries the chosen-color produced-mana filter.
+func lowerChosenColorAnaphorTriggerMana(ctx contentCtx) (game.AbilityContent, bool) {
+	if !ctx.triggerProducedManaChosenColor ||
+		ctx.optional ||
+		len(ctx.content.Effects) != 1 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.References) != 0 {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if effect.Kind != compiler.EffectAddMana ||
+		!effect.Mana.ChosenColorAnaphor ||
+		effect.Context != parser.EffectContextController ||
+		effect.Negated ||
+		effect.DelayedTiming != 0 ||
+		effect.Duration != compiler.DurationNone {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{Sequence: []game.Instruction{{Primitive: game.AddMana{
+		Amount:          game.Fixed(1),
+		EntryChoiceFrom: game.EntryColorChoiceKey,
+	}}}}.Ability(), true
 }
 
 func lowerTargetOpponentHandMana(ctx contentCtx) (game.AbilityContent, bool) {
@@ -1510,6 +1588,9 @@ func typedManaEffectContent(effect compiler.CompiledEffectMana) (game.AbilityCon
 	if effect.ChosenColor {
 		if effect.ChosenColorFixedKnown {
 			return game.TapFixedOrChosenColorManaAbility("", effect.ChosenColorFixed).Content, true
+		}
+		if effect.ChosenColorCount >= 2 {
+			return game.TapChosenColorCountManaAbility("", effect.ChosenColorCount).Content, true
 		}
 		return game.TapChosenColorManaAbility("").Content, true
 	}

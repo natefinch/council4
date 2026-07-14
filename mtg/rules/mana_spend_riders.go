@@ -267,6 +267,12 @@ func manaSpendConditionSatisfied(g *game.Game, rider game.ManaRiderInstance, spe
 		return spellDef != nil && !isCreatureSpell
 	case game.ManaSpendCastMulticoloredSpell:
 		return spellDef != nil && len(spellDef.Colors) >= 2
+	case game.ManaSpendCastMonocoloredSpellOfChosenColor:
+		// The tagged mana is produced in the source's entry-time chosen color, so
+		// "that color" is the produced unit's own color: admit only a monocolored
+		// spell whose single color matches. Shares the predicate with the payment
+		// planner so planning and firing never diverge.
+		return rider.MatchesMonocoloredChosenColorSpell(spellDef)
 	case game.ManaSpendCastPlaneswalkerSpell:
 		return spellDef != nil && spellDef.HasType(types.Planeswalker)
 	case game.ManaSpendCastArtifactSpell,

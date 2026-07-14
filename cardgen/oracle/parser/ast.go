@@ -473,6 +473,10 @@ const (
 	// possessive player selector is carried in PlayerTurn so the compiler can
 	// fail closed on selectors other than "your".
 	ActivationRestrictionTurnBeforeAttackers ActivationRestrictionKind = "ActivationRestrictionTurnBeforeAttackers"
+	// ActivationRestrictionSpendChosenColorMana limits an activated ability's
+	// cost payment to mana of the source's entry-time chosen color ("Spend only
+	// mana of the chosen color to activate this ability." — Throne of Eldraine).
+	ActivationRestrictionSpendChosenColorMana ActivationRestrictionKind = "ActivationRestrictionSpendChosenColorMana"
 )
 
 // ActivationFrequencyCountKind identifies how many activations are permitted.
@@ -985,6 +989,12 @@ type TriggerEventClause struct {
 	// that added colorless mana. It is empty for the unrestricted "for mana"
 	// wording, which matches a tap that produced any type.
 	TappedForManaColor mana.Color `json:"-"`
+	// TappedForManaChosenColor narrows a TappedForMana clause to taps that
+	// produced mana of the source permanent's entry-time chosen color ("a land's
+	// ability causes you to add one or more mana of the chosen color" — Caged
+	// Sun). The produced color is resolved at match time from the source's
+	// entry choice, so no fixed TappedForManaColor is recorded.
+	TappedForManaChosenColor bool `json:",omitempty"`
 	// UnionKind names a second trigger event family whose constituent event
 	// joins Kind under a shared subject and actor, expressing "Whenever you
 	// create or sacrifice a token" (CR 603.2). The trigger fires when either the

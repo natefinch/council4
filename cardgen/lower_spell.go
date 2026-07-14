@@ -95,6 +95,13 @@ type contentCtx struct {
 	// you control, put that many +1/+1 counters on <self>" (Arcee, Acrobatic
 	// Coupe).
 	spellTargetPattern opt.V[game.Selection]
+	// triggerProducedManaChosenColor reports that the enclosing trigger fires on
+	// a tap that produced the source permanent's entry-time chosen color ("a
+	// land's ability causes you to add ... mana of the chosen color" — Caged
+	// Sun). It lets the resolving body's "one mana of that color" anaphor
+	// (ChosenColorAnaphor) resolve to that same entry-time chosen color; the
+	// anaphor fails closed outside such a trigger.
+	triggerProducedManaChosenColor bool
 }
 
 // contentDiagnostic creates a content-level diagnostic attributed to ctx.span.
@@ -199,18 +206,19 @@ func lowerTriggerBodyContent(
 	pattern game.TriggerPattern,
 ) (game.AbilityContent, *shared.Diagnostic) {
 	ctx := contentCtx{
-		text:                    bodySyntax.Text,
-		span:                    bodySyntax.Span,
-		optional:                optional,
-		content:                 content,
-		enclosingKind:           compiler.AbilityTriggered,
-		triggerCardCountEvent:   pattern.Event,
-		triggerEvent:            pattern.Event,
-		triggerSubjectSelection: pattern.SubjectSelection,
-		triggerOneOrMore:        pattern.OneOrMore,
-		triggerToZone:           triggerPatternToZone(pattern),
-		selfTrigger:             pattern.Source == game.TriggerSourceSelf,
-		spellTargetPattern:      pattern.SpellTargetPattern,
+		text:                           bodySyntax.Text,
+		span:                           bodySyntax.Span,
+		optional:                       optional,
+		content:                        content,
+		enclosingKind:                  compiler.AbilityTriggered,
+		triggerCardCountEvent:          pattern.Event,
+		triggerEvent:                   pattern.Event,
+		triggerSubjectSelection:        pattern.SubjectSelection,
+		triggerOneOrMore:               pattern.OneOrMore,
+		triggerToZone:                  triggerPatternToZone(pattern),
+		selfTrigger:                    pattern.Source == game.TriggerSourceSelf,
+		spellTargetPattern:             pattern.SpellTargetPattern,
+		triggerProducedManaChosenColor: pattern.RequireProducedManaColorFromEntryChoice,
 	}
 	return lowerContent(cardName, ctx, bodySyntax)
 }

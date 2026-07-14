@@ -844,6 +844,13 @@ func restrictedManaCanPay(s State, rider game.ManaRiderInstance, ctx spendContex
 		// or more colors). A non-spell payment (ability cost; ctx.spell is nil)
 		// is not a spell cast, so the tagged mana cannot pay for it.
 		return ctx.spell != nil && len(ctx.spell.Colors) >= 2
+	case game.ManaSpendCastMonocoloredSpellOfChosenColor:
+		// Throne of Eldraine: spendable only to cast a monocolored spell whose
+		// single color matches the tagged mana's chosen color. A non-spell
+		// payment (ability cost; ctx.spell is nil) is not a spell cast, so the
+		// tagged mana cannot pay for it. Shares the predicate with the resolve
+		// path so planning and firing never diverge.
+		return rider.MatchesMonocoloredChosenColorSpell(ctx.spell)
 	case game.ManaSpendCastPlaneswalkerSpell:
 		// Interplanar Beacon: spendable only to cast a planeswalker spell. A
 		// non-spell payment (ability cost; ctx.spell is nil) is not a planeswalker

@@ -421,6 +421,12 @@ type TriggerPattern struct {
 	// unrestricted "for mana" wording.
 	TappedForManaColor mana.Color
 
+	// TappedForManaChosenColor narrows a TappedForMana pattern to taps that
+	// produced mana of the source permanent's entry-time chosen color ("a land's
+	// ability causes you to add ... mana of the chosen color" — Caged Sun). The
+	// produced color is resolved at match time from the source's entry choice.
+	TappedForManaChosenColor bool
+
 	// NextOccurrence marks a one-shot "next" phase/step relation ("your next
 	// upkeep") rather than a recurring trigger. Such a pattern is representable
 	// only as a delayed triggered ability created when a spell resolves
