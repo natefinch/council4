@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 // AbilityKind is the syntactic category of an Oracle-text ability.
@@ -400,6 +401,10 @@ const (
 	// shared-type sacrifice and controller-draw punisher primitives from the kind
 	// alone.
 	ExactSequenceSharedTypeSacrificePunisher
+	// ExactSequenceDrawPutLandSubtypeLife is the triggered body "draw a card,
+	// then you may put a land card from your hand onto the battlefield. If you
+	// put a <subtype> onto the battlefield this way, you gain N life."
+	ExactSequenceDrawPutLandSubtypeLife
 )
 
 // LookAtTopBattlefieldElse identifies the trailing fallback disposition of an
@@ -455,6 +460,8 @@ type ExactSequenceSyntax struct {
 	// measured against that same amount. It is the unknown color for every other
 	// exact sequence.
 	DevotionColor Color
+	PutSubtype    types.Sub
+	LifeAmount    int
 }
 
 // SourceAbilityCostReductionSyntax is the typed syntax for a source-local

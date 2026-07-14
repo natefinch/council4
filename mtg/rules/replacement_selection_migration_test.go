@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // TestCounterRecipientSelectionMatchesTypeUnion proves that routing a counter
@@ -162,5 +163,62 @@ func TestEntersTappedSelectionMatchesTypeUnion(t *testing.T) {
 				t.Fatalf("entered tapped = %t, want %t", permanent.Tapped, tc.wantTapped)
 			}
 		})
+	}
+}
+
+func TestEntersUntappedGroupOverridesTappedLandEntry(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	spelunking := &game.CardDef{CardFace: game.CardFace{
+		Name:  "Spelunking",
+		Types: []types.Card{types.Enchantment},
+		ReplacementAbilities: []game.ReplacementAbility{
+			game.EntersUntappedGroupReplacement(
+				"Lands you control enter untapped.",
+				game.TriggerControllerYou,
+				types.Land,
+			),
+		},
+	}}
+	addReplacementPermanent(t, g, game.Player1, spelunking)
+	tapland := &game.CardDef{CardFace: game.CardFace{
+		Name:                 "Tapland",
+		Types:                []types.Card{types.Land},
+		ReplacementAbilities: []game.ReplacementAbility{game.EntersTappedReplacement("This land enters tapped.")},
+	}}
+	permanent := addReplacementPermanent(t, g, game.Player1, tapland)
+	if permanent.Tapped {
+		t.Fatal("land entered tapped despite Spelunking")
+	}
+	tappedCreature := &game.CardDef{CardFace: game.CardFace{
+		Name:                 "Tapped Creature",
+		Types:                []types.Card{types.Creature},
+		ReplacementAbilities: []game.ReplacementAbility{game.EntersTappedReplacement("This creature enters tapped.")},
+	}}
+	creature := addReplacementPermanent(t, g, game.Player1, tappedCreature)
+	if !creature.Tapped {
+		t.Fatal("nonland permanent entered untapped under land-only replacement")
+	}
+	forcedID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Forced Tapped Land",
+		Types: []types.Card{types.Land},
+	}})
+	forcedCard, ok := g.GetCardInstance(forcedID)
+	if !ok {
+		t.Fatal("forced-tapped land card not found")
+	}
+	prepared, ok := prepareCardPermanentFaceForSimultaneousEntry(
+		NewEngine(nil),
+		g,
+		forcedCard,
+		game.Player1,
+		zone.Hand,
+		game.FaceFront,
+		nil,
+		permanentCreationOptions{ForceTapped: true},
+		[game.NumPlayers]PlayerAgent{},
+		&TurnLog{},
+	)
+	if !ok || prepared.permanent.Tapped {
+		t.Fatalf("forced-tapped land prepared as %#v, want untapped", prepared.permanent)
 	}
 }

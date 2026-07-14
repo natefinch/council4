@@ -165,6 +165,8 @@ type CompiledAbility struct {
 	// and the win comparison is measured against that same amount. It is the zero
 	// color for every other exact sequence.
 	ExactSequenceDevotionColor color.Color
+	ExactSequencePutSubtype    types.Sub
+	ExactSequenceLifeAmount    uint8
 	Span                       shared.Span
 	Text                       string
 	ActivationTiming           ActivationTimingKind
@@ -3415,6 +3417,12 @@ type CompiledEffect struct {
 // entry-modification replacement.
 func (e *CompiledEffect) EntersTappedGroup() bool {
 	return e.GroupEntryModification.Kind == parser.GroupEntryModificationTapped
+}
+
+// EntersUntappedGroup reports the enters-untapped-group form of a static group
+// entry-modification replacement.
+func (e *CompiledEffect) EntersUntappedGroup() bool {
+	return e.GroupEntryModification.Kind == parser.GroupEntryModificationUntapped
 }
 
 // EntersWithCountersGroup reports the enters-with-counters-group form of a static

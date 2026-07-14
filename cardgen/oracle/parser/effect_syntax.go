@@ -43,6 +43,9 @@ func emitResolvingSyntax(abilities []Ability) {
 		if recognizeBargainSearchCastPayoffSequence(&abilities[i]) {
 			continue
 		}
+		if recognizeDrawPutLandSubtypeLifeSequence(&abilities[i]) {
+			continue
+		}
 		if recognizeDevotionLookWinSequence(&abilities[i]) {
 			continue
 		}
@@ -1502,6 +1505,7 @@ func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) 
 		func() ([]EffectSyntax, bool) { return parsePunisherEachLoseLifeEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseLibraryTopReorderEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseGroupEntersTappedEffect(sentence, tokens) },
+		func() ([]EffectSyntax, bool) { return parseGroupEntersUntappedEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseGroupEntersWithCountersEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parsePlayerProtectionEffects(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseGroupProtectionEffects(sentence, tokens, atoms) },
@@ -7997,6 +8001,19 @@ func trimTrailingManaSpentBound(filter []shared.Token) ([]shared.Token, bool) {
 // battlefield] tapped" verb phrase. It matches the whole sentence exactly, so
 // any other wording falls through to the generic effect grammar.
 func parseGroupEntersTappedEffect(sentence Sentence, tokens []shared.Token) ([]EffectSyntax, bool) {
+	return parseGroupEntersModifiedEffect(sentence, tokens, "tapped", GroupEntryModificationTapped)
+}
+
+func parseGroupEntersUntappedEffect(sentence Sentence, tokens []shared.Token) ([]EffectSyntax, bool) {
+	return parseGroupEntersModifiedEffect(sentence, tokens, "untapped", GroupEntryModificationUntapped)
+}
+
+func parseGroupEntersModifiedEffect(
+	sentence Sentence,
+	tokens []shared.Token,
+	state string,
+	kind GroupEntryModificationKind,
+) ([]EffectSyntax, bool) {
 	body := semanticEffectTokens(tokens)
 	if len(body) < 4 || body[len(body)-1].Kind != shared.Period {
 		return nil, false
@@ -8044,7 +8061,7 @@ func parseGroupEntersTappedEffect(sentence Sentence, tokens []shared.Token) ([]E
 	if index+1 < len(words) && equalWord(words[index], "the") && equalWord(words[index+1], "battlefield") {
 		index += 2
 	}
-	if index >= len(words) || !equalWord(words[index], "tapped") {
+	if index >= len(words) || !equalWord(words[index], state) {
 		return nil, false
 	}
 	index++
@@ -8058,9 +8075,9 @@ func parseGroupEntersTappedEffect(sentence Sentence, tokens []shared.Token) ([]E
 		ClauseSpan:   sentence.Span,
 		Text:         sentence.Text,
 		Tokens:       append([]shared.Token(nil), tokens...),
-		EntersTapped: true,
+		EntersTapped: kind == GroupEntryModificationTapped,
 		GroupEntryModification: GroupEntryModificationSyntax{
-			Kind:            GroupEntryModificationTapped,
+			Kind:            kind,
 			ControllerScope: scope,
 			Types:           cardTypes,
 		},

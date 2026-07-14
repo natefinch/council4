@@ -94,6 +94,9 @@ const (
 	// does not lets that opponent lose 2 life and the controller draw a card. The
 	// whole body is fixed, so it carries no extra data.
 	ExactSequenceSharedTypeSacrificePunisher
+	// ExactSequenceDrawPutLandSubtypeLife is the triggered draw, optional
+	// land-from-hand, and subtype-gated life sequence.
+	ExactSequenceDrawPutLandSubtypeLife
 )
 
 func compileExactSequenceKind(kind parser.ExactSequenceKind) ExactSequenceKind {
@@ -120,6 +123,8 @@ func compileExactSequenceKind(kind parser.ExactSequenceKind) ExactSequenceKind {
 		return ExactSequenceDevotionLookWin
 	case parser.ExactSequenceSharedTypeSacrificePunisher:
 		return ExactSequenceSharedTypeSacrificePunisher
+	case parser.ExactSequenceDrawPutLandSubtypeLife:
+		return ExactSequenceDrawPutLandSubtypeLife
 	default:
 		return ExactSequenceUnknown
 	}

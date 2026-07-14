@@ -55,6 +55,9 @@ func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.Replace
 	if ability.Replacement.EntersTappedOthers {
 		return r.renderGroupEntersTappedReplacement(ctx, ability)
 	}
+	if ability.Replacement.EntersUntappedOthers {
+		return r.renderGroupEntersUntappedReplacement(ctx, ability)
+	}
 	if ability.Replacement.EntersWithCountersOthers {
 		return r.renderGroupEntersWithCountersReplacement(ctx, ability)
 	}
@@ -337,6 +340,7 @@ func (Renderer) renderGroupEntersTappedReplacement(ctx *renderCtx, ability *game
 		replacement.Condition.Exists {
 		return "", errors.New("render: unsupported group enters-tapped replacement shape")
 	}
+
 	controller, err := renderGroupEntersTappedController(replacement.ControllerFilter)
 	if err != nil {
 		return "", err
@@ -355,6 +359,35 @@ func (Renderer) renderGroupEntersTappedReplacement(ctx *renderCtx, ability *game
 		typeLiterals = append(typeLiterals, literal)
 	}
 	return fmt.Sprintf("game.EntersTappedGroupReplacement(%q, %s, %s)",
+		ability.Text, controller, strings.Join(typeLiterals, ", ")), nil
+}
+
+func (Renderer) renderGroupEntersUntappedReplacement(ctx *renderCtx, ability *game.ReplacementAbility) (string, error) {
+	replacement := ability.Replacement
+	if !replacement.EntersUntapped ||
+		len(replacement.EntersWithCounters) != 0 ||
+		ability.UnlessPaid.Exists ||
+		replacement.Condition.Exists {
+		return "", errors.New("render: unsupported group enters-untapped replacement shape")
+	}
+	controller, err := renderGroupEntersTappedController(replacement.ControllerFilter)
+	if err != nil {
+		return "", err
+	}
+	if replacement.EntersTappedSelection == nil {
+		return fmt.Sprintf("game.EntersUntappedGroupReplacement(%q, %s)", ability.Text, controller), nil
+	}
+	ctx.need(importTypes)
+	recipientTypes := replacement.EntersTappedSelection.RequiredTypesAny
+	typeLiterals := make([]string, 0, len(recipientTypes))
+	for _, cardType := range recipientTypes {
+		literal, err := cardTypeLiteral(cardType)
+		if err != nil {
+			return "", err
+		}
+		typeLiterals = append(typeLiterals, literal)
+	}
+	return fmt.Sprintf("game.EntersUntappedGroupReplacement(%q, %s, %s)",
 		ability.Text, controller, strings.Join(typeLiterals, ", ")), nil
 }
 

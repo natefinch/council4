@@ -138,6 +138,9 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 	}, g, card, permanent, faceDef, fromZone) {
 		return nil, false
 	}
+	if options.ForceTapped {
+		permanent.Tapped = true
+	}
 	applyEnterBattlefieldReplacementEffects(enterBattlefieldContext{
 		engine:            e,
 		agents:            agents,
@@ -153,9 +156,6 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 		manaSpentByColor:  options.ManaSpentByColorToCast,
 		manaSpentToCast:   options.ManaSpentToCast,
 	}, g, permanent, fromZone)
-	if options.ForceTapped {
-		permanent.Tapped = true
-	}
 	for _, placement := range options.Counters {
 		permanent.Counters.Add(placement.Kind, placement.Amount)
 	}
@@ -229,6 +229,9 @@ func prepareCardPermanentFaceForSimultaneousEntry(
 	initializePermanentCounters(permanent, faceDef)
 	permanent.Bestowed = options.Bestowed
 	initializeReadAhead(e, g, permanent, agents, log)
+	if options.ForceTapped {
+		permanent.Tapped = true
+	}
 	applyEnterBattlefieldReplacementEffects(enterBattlefieldContext{
 		engine:            e,
 		agents:            agents,
@@ -244,9 +247,6 @@ func prepareCardPermanentFaceForSimultaneousEntry(
 		manaSpentByColor:  options.ManaSpentByColorToCast,
 		manaSpentToCast:   options.ManaSpentToCast,
 	}, g, permanent, fromZone)
-	if options.ForceTapped {
-		permanent.Tapped = true
-	}
 	for _, placement := range options.Counters {
 		permanent.Counters.Add(placement.Kind, placement.Amount)
 	}

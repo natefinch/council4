@@ -125,6 +125,10 @@ func compileAbility(
 		if runtimeColor, ok := runtimeColorFromParser(ability.ExactSequence.DevotionColor); ok {
 			compiled.ExactSequenceDevotionColor = runtimeColor
 		}
+		compiled.ExactSequencePutSubtype = ability.ExactSequence.PutSubtype
+		if n := ability.ExactSequence.LifeAmount; n >= 0 && n <= math.MaxUint8 {
+			compiled.ExactSequenceLifeAmount = uint8(n)
+		}
 	}
 	compiled.ClassLevelGain = ability.ClassLevelGain
 	compiled.LevelUpRecognized = ability.LevelUpRecognized
