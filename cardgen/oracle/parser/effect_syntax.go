@@ -997,9 +997,11 @@ func creditTokenCopyGrantRider(sentences []Sentence, atoms Atoms) (foldedLegacy,
 // clause; otherwise the rider stays uncredited and the card fails closed.
 func creditCopyChooseNewTargetsRider(sentences []Sentence, atoms Atoms) (foldedLegacy, foldedEffects int, ok bool) {
 	copyEffect := loneCopyStackObjectEffect(sentences)
-	if copyEffect == nil || !copyEffect.Exact {
+	if copyEffect == nil ||
+		(!copyEffect.Exact && !exactAdditionalSpellCopyReplacement(copyEffect)) {
 		return 0, 0, false
 	}
+	copyEffect.Exact = true
 	for i := range sentences {
 		if len(sentences[i].Effects) != 1 || sentences[i].Effects[0].Kind != EffectChooseNewTargets {
 			continue
@@ -1048,7 +1050,8 @@ func loneCopyStackObjectEffect(sentences []Sentence) *EffectSyntax {
 func isCopyChooseNewTargetsRiderTokens(tokens []shared.Token) bool {
 	clause := strings.TrimSuffix(strings.ToLower(joinedEffectText(tokens)), ".")
 	return clause == "you may choose new targets for the copy" ||
-		clause == "you may choose new targets for the copies"
+		clause == "you may choose new targets for the copies" ||
+		clause == "you may choose new targets for the additional copy"
 }
 
 // loneCopyTokenCreateEffect returns the single create-copy-token effect across

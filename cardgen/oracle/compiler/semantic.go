@@ -725,6 +725,7 @@ const (
 	ConditionPredicateDamageByControlledSource
 	ConditionPredicateDamageWouldBeDealtToPermanent
 	ConditionPredicateTokenCreationUnderController
+	ConditionPredicateSpellCopyUnderController
 	ConditionPredicateSourceWouldDie
 	ConditionPredicateSourceWouldGoToGraveyard
 	ConditionPredicateTargetControllerDoesNotPay

@@ -307,11 +307,16 @@ type ReplacementEffect struct {
 	// TokenMultiplier 1 and no addend; TokenRequiredTypes / TokenRequiredSubtypes
 	// restrict which created tokens it replaces. It is nil for every multiplying
 	// or additive token-creation replacement.
-	TokenReplaceDef   *CardDef
-	CounterMultiplier int
-	CounterAddend     int
-	MatchCounterKind  bool
-	CounterKindFilter counter.Kind
+	TokenReplaceDef *CardDef
+	// SpellCopyAddend adds this many copies when the controller would copy a
+	// spell one or more times. SpellCopyAdditionalMayChooseNewTargets lets the
+	// controller retarget each additional copy.
+	SpellCopyAddend                        int
+	SpellCopyAdditionalMayChooseNewTargets bool
+	CounterMultiplier                      int
+	CounterAddend                          int
+	MatchCounterKind                       bool
+	CounterKindFilter                      counter.Kind
 	// CounterRecipientSelection restricts the counter recipient to a permanent
 	// whose characteristics satisfy this canonical Selection, matched through the
 	// shared matchSelection so the recipient filter reads the same vocabulary as

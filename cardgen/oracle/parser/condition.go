@@ -65,6 +65,7 @@ const (
 	ConditionPredicateDamageByControlledSource                         ConditionPredicateKind = "ConditionPredicateDamageByControlledSource"
 	ConditionPredicateDamageWouldBeDealtToPermanent                    ConditionPredicateKind = "ConditionPredicateDamageWouldBeDealtToPermanent"
 	ConditionPredicateTokenCreationUnderController                     ConditionPredicateKind = "ConditionPredicateTokenCreationUnderController"
+	ConditionPredicateSpellCopyUnderController                         ConditionPredicateKind = "ConditionPredicateSpellCopyUnderController"
 	ConditionPredicateSourceWouldDie                                   ConditionPredicateKind = "ConditionPredicateSourceWouldDie"
 	ConditionPredicateSourceWouldGoToGraveyard                         ConditionPredicateKind = "ConditionPredicateSourceWouldGoToGraveyard"
 	ConditionPredicateObjectMatches                                    ConditionPredicateKind = "ConditionPredicateObjectMatches"
@@ -852,6 +853,7 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		recognizeCounterPlacementCondition,
 		recognizeDamageSourceCondition,
 		recognizePreventDamageToPermanentCondition,
+		recognizeSpellCopyCondition,
 		recognizeTokenCreationCondition,
 		recognizeLifeGainCondition,
 		recognizeLifeLossCondition,
@@ -2835,6 +2837,13 @@ func tokenPrefixIs(tokens []shared.Token, words ...string) bool {
 		}
 	}
 	return true
+}
+
+func recognizeSpellCopyCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
+	if tokenWordsEqual(body, "you", "would", "copy", "a", "spell", "one", "or", "more", "times") {
+		return ConditionClause{Predicate: ConditionPredicateSpellCopyUnderController}, true
+	}
+	return ConditionClause{}, false
 }
 
 func recognizeTokenCreationCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {

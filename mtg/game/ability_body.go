@@ -552,6 +552,20 @@ func EntersAsCopyWithManaSpentBound(ability ReplacementAbility) ReplacementAbili
 	return ability
 }
 
+// AdditionalSpellCopyReplacement creates a persistent replacement that adds
+// copies whenever its controller would copy a spell one or more times.
+func AdditionalSpellCopyReplacement(text string, addend int, mayChooseNewTargets bool) ReplacementAbility {
+	return ReplacementAbility{
+		Text: text,
+		Replacement: ReplacementEffect{
+			Description:                            text,
+			Duration:                               DurationPermanent,
+			SpellCopyAddend:                        addend,
+			SpellCopyAdditionalMayChooseNewTargets: mayChooseNewTargets,
+		},
+	}
+}
+
 // TokenCreationReplacement creates a persistent replacement that multiplies
 // token creation events matching controller.
 func TokenCreationReplacement(text string, multiplier int, filter TriggerControllerFilter) ReplacementAbility {
