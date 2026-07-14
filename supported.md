@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,807 of 32,501 cards eligible for paper support (54.8%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,808 of 32,501 cards eligible for paper support (54.8%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -14520,6 +14520,7 @@ Council4 currently supports **17,807 of 32,501 cards eligible for paper support 
 - Starstorm
 - Start from Scratch
 - Starting Column
+- Starting Town
 - Startle
 - Startled Relic Sloth
 - Starved Rusalka

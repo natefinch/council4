@@ -117,6 +117,7 @@ const (
 	ConditionPredicateControllerHasInitiative                          ConditionPredicateKind = "ConditionPredicateControllerHasInitiative"
 	ConditionPredicateControllerHasCityBlessing                        ConditionPredicateKind = "ConditionPredicateControllerHasCityBlessing"
 	ConditionPredicateControllerTurn                                   ConditionPredicateKind = "ConditionPredicateControllerTurn"
+	ConditionPredicateControllerTurnOfGameAtMost                       ConditionPredicateKind = "ConditionPredicateControllerTurnOfGameAtMost"
 	ConditionPredicateColoredManaSpentToCastAtLeast                    ConditionPredicateKind = "ConditionPredicateColoredManaSpentToCastAtLeast"
 	ConditionPredicateSameColorManaSpentToCastAtLeast                  ConditionPredicateKind = "ConditionPredicateSameColorManaSpentToCastAtLeast"
 	ConditionPredicateGraveyardPermanentCardCountAtLeast               ConditionPredicateKind = "ConditionPredicateGraveyardPermanentCardCountAtLeast"
@@ -565,6 +566,15 @@ func parseConditionClauses(tokens []shared.Token, atoms Atoms) []ConditionClause
 			continue
 		}
 		end := conditionClauseEnd(tokens, i)
+		// A per-player turn-ordinal gate ("unless it's your first, second, or
+		// third turn of the game", Starting Town) lists its ordinals separated by
+		// commas that conditionClauseEnd would otherwise treat as clause
+		// terminators, truncating the clause after the first ordinal. Extend the
+		// clause to the full "turn of the game" phrase so the whole ordinal run is
+		// recognized as one condition.
+		if turnEnd, ok := controllerTurnOfGameClauseEnd(tokens, i+width); ok {
+			end = turnEnd
+		}
 		if clause, ok := parseConditionClause(tokens[i:end], width, intro, atoms); ok {
 			clause.Span = shared.SpanOf(tokens[i:end])
 			// Mark a reflexive "When you do," gate so the compiler and lowering
@@ -769,6 +779,37 @@ func conditionClauseEnd(tokens []shared.Token, start int) int {
 	return len(tokens)
 }
 
+// controllerTurnOfGameClauseEnd reports the clause end for a per-player
+// turn-ordinal gate whose body begins at bodyStart ("it's your first, second, or
+// third turn of the game"). The body lists ordinals separated by commas, which
+// conditionClauseEnd would treat as clause terminators, so this returns the
+// index just past the closing "game" token when the body matches the wording,
+// letting the caller keep the whole ordinal run in one clause. It fails closed
+// (ok false) on any other wording, leaving the ordinary comma-terminated clause
+// end in force.
+func controllerTurnOfGameClauseEnd(tokens []shared.Token, bodyStart int) (end int, ok bool) {
+	if bodyStart >= len(tokens) {
+		return 0, false
+	}
+	body := tokens[bodyStart:]
+	rest, matched := cutTokenPrefix(body, "it's", "your")
+	if !matched {
+		if rest, matched = cutTokenPrefix(body, "it", "is", "your"); !matched {
+			return 0, false
+		}
+	}
+	_, rest, matched = parseTurnOrdinalRun(rest)
+	if !matched {
+		return 0, false
+	}
+	tail := []string{"turn", "of", "the", "game"}
+	if !effectWordsAt(rest, 0, tail...) {
+		return 0, false
+	}
+	consumed := len(body) - len(rest) + len(tail)
+	return bodyStart + consumed, true
+}
+
 func parseConditionClause(
 	tokens []shared.Token,
 	introWidth int,
@@ -828,6 +869,7 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		recognizeCastTimingCondition,
 		recognizeFirstCombatPhaseCondition,
 		recognizeControllerTurnCondition,
+		recognizeControllerTurnOfGameCondition,
 		recognizeAttackersAttackingControllerCondition,
 		recognizeSpellXCondition,
 		recognizeAdamantManaSpentCondition,
@@ -1154,6 +1196,69 @@ func recognizeControllerTurnCondition(body []shared.Token, _ Atoms) (ConditionCl
 		return ConditionClause{Predicate: ConditionPredicateControllerTurn}, true
 	}
 	return ConditionClause{}, false
+}
+
+// recognizeControllerTurnOfGameCondition matches the per-player turn-ordinal
+// gate "it's your first, second, or third turn of the game" (Starting Town) and
+// its shorter runs ("it's your first turn of the game", "it's your first or
+// second turn of the game"). The listed ordinals must form a contiguous run
+// starting at "first" (first; first, second; first, second, or third; ...); the
+// predicate then holds on the controller's own turns up to and including the
+// highest listed ordinal, carried as Threshold. It reads the controller's
+// per-player turn count rather than the global turn number, so a later seat's
+// first turn and an extra turn both count as that player's own turns. It fails
+// closed on any other wording, including a non-contiguous or non-first-anchored
+// ordinal list.
+func recognizeControllerTurnOfGameCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
+	rest, ok := cutTokenPrefix(body, "it's", "your")
+	if !ok {
+		if rest, ok = cutTokenPrefix(body, "it", "is", "your"); !ok {
+			return ConditionClause{}, false
+		}
+	}
+	highest, rest, ok := parseTurnOrdinalRun(rest)
+	if !ok {
+		return ConditionClause{}, false
+	}
+	if !tokenWordsEqual(rest, "turn", "of", "the", "game") {
+		return ConditionClause{}, false
+	}
+	return ConditionClause{
+		Predicate: ConditionPredicateControllerTurnOfGameAtMost,
+		Threshold: highest,
+	}, true
+}
+
+// parseTurnOrdinalRun consumes a leading run of ordinal words ("first",
+// "first, second", "first, second, or third", ...) that must be contiguous and
+// start at "first" (value 1). It returns the highest ordinal value, the
+// remaining tokens after the run, and whether a valid run was consumed. The
+// separating commas and a trailing "or"/"and" before the final ordinal are
+// skipped. A gap, a repeat, an out-of-order value, or a run that does not start
+// at 1 fails closed.
+func parseTurnOrdinalRun(body []shared.Token) (highest int, rest []shared.Token, ok bool) {
+	expected := 1
+	for len(body) > 0 {
+		value, isOrdinal := OrdinalWordValue(body[0].Text)
+		if !isOrdinal || value != expected {
+			break
+		}
+		highest = value
+		expected++
+		body = body[1:]
+		// Skip an optional separator ("," and/or "or"/"and") before the next
+		// ordinal so "first, second, or third" and "first or second" both parse.
+		for len(body) > 0 &&
+			(body[0].Kind == shared.Comma ||
+				equalWord(body[0], "or") ||
+				equalWord(body[0], "and")) {
+			body = body[1:]
+		}
+	}
+	if highest == 0 {
+		return 0, body, false
+	}
+	return highest, body, true
 }
 
 func recognizeAttackersAttackingControllerCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {

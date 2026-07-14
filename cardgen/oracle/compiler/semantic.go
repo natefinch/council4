@@ -989,6 +989,14 @@ const (
 	// Skyblazer). It gates a continuous self-static so the granted keyword or
 	// power/toughness bonus applies only on the controller's own turns.
 	ConditionPredicateControllerTurn
+	// ConditionPredicateControllerTurnOfGameAtMost is satisfied when it is
+	// currently the context controller's turn and that turn is the controller's
+	// Threshold-th or earlier turn of the game ("This land enters tapped unless
+	// it's your first, second, or third turn of the game", Starting Town —
+	// Threshold is 3). It reads the controller's per-player turn tally rather
+	// than the global turn number, so a later seat's first turn and an extra
+	// turn both count as that player's own turns.
+	ConditionPredicateControllerTurnOfGameAtMost
 	// ConditionPredicateColoredManaSpentToCastAtLeast is satisfied when at least
 	// Threshold mana of ManaSpentColor was spent to cast the resolving spell ("if
 	// at least three white mana was spent to cast this spell"; the Adamant

@@ -302,6 +302,16 @@ type Condition struct {
 	// applies only on the controller's own turns.
 	SourceControllerTurn bool
 
+	// ControllerTurnOfGameAtMost is satisfied when it is currently the context
+	// controller's turn and that turn is the controller's Nth or earlier turn of
+	// the game, where N is this field ("This land enters tapped unless it's your
+	// first, second, or third turn of the game", Starting Town — N is 3). It
+	// requires the controller to be the active player and reads the controller's
+	// per-player Player.TurnsTaken tally, which counts each of that player's own
+	// turns (including extra turns) rather than the global turn number, so it is
+	// correct in multiplayer and with extra turns. Zero disables the predicate.
+	ControllerTurnOfGameAtMost int
+
 	// SpellColorManaSpent gates the Adamant ability word "If at least three
 	// <color> mana was spent to cast this spell, ..." (CR 702.132). It is
 	// satisfied when at least SpellColorManaSpent.Count mana of
@@ -435,6 +445,7 @@ func (c *Condition) Empty() bool {
 		!c.ControllerHasInitiative &&
 		!c.ControllerHasCityBlessing &&
 		!c.SourceControllerTurn &&
+		c.ControllerTurnOfGameAtMost == 0 &&
 		c.SpellColorManaSpent.Count == 0 &&
 		c.SpellSameColorManaSpentAtLeast == 0 &&
 		!c.LandEnteredThisTurnOrControlsBasicLand &&
