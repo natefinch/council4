@@ -201,6 +201,9 @@ func lowerTriggeredAbility(
 	if ability.ExactSequence == compiler.ExactSequenceConditionalLookAtTopBattlefield {
 		return lowerConditionalLookAtTopBattlefieldTrigger(ability)
 	}
+	if ability.ExactSequence == compiler.ExactSequenceDevotionLookWin {
+		return lowerDevotionLookWinTrigger(ability)
+	}
 	if pattern.Kind == compiler.TriggerAt {
 		return lowerAtTrigger(cardName, ability, syntax)
 	}

@@ -377,6 +377,17 @@ const (
 	// hand. MaxManaValue records the "<N> or less" bound so lowering builds the
 	// mana-value gate from a typed count rather than Oracle wording.
 	ExactSequenceBargainSearchCastPayoff
+	// ExactSequenceDevotionLookWin is the triggered body "look at the top X cards
+	// of your library, where X is your devotion to <color>. Put up to one of them
+	// on top of your library and the rest on the bottom of your library in a
+	// random order. If X is greater than or equal to the number of cards in your
+	// library, you win the game." (Thassa's Oracle): the controller looks at the
+	// top X cards where X is their devotion to the recorded color, keeps up to one
+	// of them on top of their library and bottoms the rest, then wins the game
+	// when X is at least the number of cards in their library. DevotionColor
+	// records the color so lowering builds the devotion amount and win comparison
+	// from a typed color rather than Oracle wording.
+	ExactSequenceDevotionLookWin
 )
 
 // LookAtTopBattlefieldElse identifies the trailing fallback disposition of an
@@ -427,6 +438,11 @@ type ExactSequenceSyntax struct {
 	// ExactSequenceBargainSearchCastPayoff: the exiled card may be cast for free
 	// only when its mana value is at most MaxManaValue.
 	MaxManaValue int
+	// DevotionColor carries the devotion color of ExactSequenceDevotionLookWin:
+	// X is the controller's devotion to this color, and the win comparison is
+	// measured against that same amount. It is the unknown color for every other
+	// exact sequence.
+	DevotionColor Color
 }
 
 // SourceAbilityCostReductionSyntax is the typed syntax for a source-local

@@ -160,10 +160,15 @@ type CompiledAbility struct {
 	// only when its mana value is at most this value. It is zero for every other
 	// exact sequence.
 	ExactSequenceMaxManaValue uint8
-	Span                      shared.Span
-	Text                      string
-	ActivationTiming          ActivationTimingKind
-	ActivationTimingSpan      shared.Span
+	// ExactSequenceDevotionColor carries the devotion color of
+	// ExactSequenceDevotionLookWin: X is the controller's devotion to this color,
+	// and the win comparison is measured against that same amount. It is the zero
+	// color for every other exact sequence.
+	ExactSequenceDevotionColor color.Color
+	Span                       shared.Span
+	Text                       string
+	ActivationTiming           ActivationTimingKind
+	ActivationTimingSpan       shared.Span
 	// MaxActivationsPerTurn caps activations per turn ("Activate no more than
 	// twice each turn."). Zero means no cap. MaxActivationsPerTurnSpan covers the
 	// recognized restriction sentence for source coverage.

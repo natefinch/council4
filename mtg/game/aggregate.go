@@ -1,6 +1,9 @@
 package game
 
-import "github.com/natefinch/council4/mtg/game/compare"
+import (
+	"github.com/natefinch/council4/mtg/game/compare"
+	"github.com/natefinch/council4/opt"
+)
 
 // AggregateKind identifies a player- or board-derived quantity that a
 // Condition can compare against a threshold. It replaces the family of
@@ -125,4 +128,15 @@ type AggregateComparison struct {
 
 	// Value is the threshold the quantity is compared against.
 	Value int
+
+	// ValueAmount, when present, supplies the comparison threshold as a
+	// resolution-time dynamic amount (CR 608.2c) instead of the fixed Value. It
+	// backs comparisons between two live quantities, such as Thassa's Oracle's
+	// "if X is greater than or equal to the number of cards in your library",
+	// where Aggregate is AggregateControllerLibrarySize, Op is LessOrEqual, and
+	// ValueAmount is the controller's devotion (X). It is evaluated against the
+	// condition's resolving stack object and controller; an amount that cannot be
+	// evaluated (for example, a stackless condition context) fails the comparison
+	// closed. When absent, the fixed Value is used.
+	ValueAmount opt.V[DynamicAmount]
 }
