@@ -1252,6 +1252,7 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		if effect.GrantedKeyword == KeywordNone {
 			v.add(faceName, appendPath(path, "GrantedKeyword"), CardDefIssueInvalidRuleEffect, "graveyard-card keyword grant must grant a keyword")
 		}
+		v.validateGraveyardCastGrantCost(faceName, appendPath(path, "GraveyardCastCost"), effect)
 	case RuleEffectGrantSpellKeyword:
 		if effect.AffectedController == ControllerAny {
 			v.add(faceName, appendPath(path, "AffectedController"), CardDefIssueInvalidRuleEffect, "spell keyword grants must set affected controller")
@@ -1433,6 +1434,49 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 			v.validateSelection(faceName, appendPath(path, "AttackDefenderControlsSelection"), effect.AttackDefenderControlsSelection)
 		}
 	default:
+	}
+}
+
+// validateGraveyardCastGrantCost checks the computed alternative cost a
+// RuleEffectGrantGraveyardCardKeyword synthesizes for the cards it makes
+// castable. Only the Escape grant carries a computed cost, and it must escape
+// for the card's own mana cost plus at least one graveyard-exile additional cost
+// that excludes the escaping card itself (Underworld Breach). Every other
+// granted keyword derives its cost from the keyword's intrinsic rules, so it
+// must carry no computed cost.
+func (v *cardDefValidator) validateGraveyardCastGrantCost(faceName, path string, effect *RuleEffect) {
+	gc := effect.GraveyardCastCost
+	if effect.GrantedKeyword != Escape {
+		if !gc.IsZero() {
+			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "only escape grants may carry a computed graveyard cast cost")
+		}
+		return
+	}
+	if gc.IsZero() {
+		v.add(faceName, path, CardDefIssueInvalidRuleEffect, "escape grant must carry a computed cast cost")
+		return
+	}
+	if !gc.UseCardManaCost {
+		v.add(faceName, appendPath(path, "UseCardManaCost"), CardDefIssueInvalidRuleEffect, "escape grant cost must use the card's own mana cost")
+	}
+	if len(gc.AdditionalCosts) == 0 {
+		v.add(faceName, appendPath(path, "AdditionalCosts"), CardDefIssueInvalidRuleEffect, "escape grant cost requires a graveyard-exile additional cost")
+	}
+	for i := range gc.AdditionalCosts {
+		additional := gc.AdditionalCosts[i]
+		if additional.Kind != cost.AdditionalExile {
+			v.add(faceName, appendPath(path, "AdditionalCosts"), CardDefIssueInvalidRuleEffect, "escape grant cost supports only graveyard-exile additional costs")
+			continue
+		}
+		if additional.Source != zone.Graveyard {
+			v.add(faceName, appendPath(path, "AdditionalCosts"), CardDefIssueInvalidRuleEffect, "escape grant exile cost must draw from the graveyard")
+		}
+		if !additional.ExcludeSource {
+			v.add(faceName, appendPath(path, "AdditionalCosts"), CardDefIssueInvalidRuleEffect, "escape grant exile cost must exclude the escaping card")
+		}
+		if additional.Amount < 1 {
+			v.add(faceName, appendPath(path, "AdditionalCosts"), CardDefIssueInvalidRuleEffect, "escape grant exile cost must exile at least one card")
+		}
 	}
 }
 

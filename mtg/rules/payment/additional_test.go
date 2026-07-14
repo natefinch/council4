@@ -272,6 +272,9 @@ func (fakePaymentState) PermanentMatchesSelection(*game.Permanent, game.Selectio
 	return true
 }
 func (fakePaymentState) CardMatchesSelection(*game.CardDef, game.Selection) bool { return true }
+func (fakePaymentState) GraveyardCastGrantedAlternatives(game.PlayerID, *game.CardDef) []cost.Alternative {
+	return nil
+}
 func (fakePaymentState) PermanentEffectiveAbilities(*game.Permanent) []game.Ability {
 	return nil
 }

@@ -683,6 +683,13 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 			return "", err
 		}
 		fields = append(fields, fmt.Sprintf("GrantedKeyword: %s,", keyword))
+		if !effect.GraveyardCastCost.IsZero() {
+			rendered, err := r.renderGraveyardCastGrantCost(ctx, effect.GraveyardCastCost)
+			if err != nil {
+				return "", err
+			}
+			fields = append(fields, fmt.Sprintf("GraveyardCastCost: %s,", rendered))
+		}
 	}
 	if effect.Kind == game.RuleEffectGrantSpellKeyword {
 		if effect.GrantedKeyword == game.KeywordNone {
