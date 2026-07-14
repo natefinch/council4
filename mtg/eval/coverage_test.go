@@ -32,6 +32,8 @@ import (
 // (DestroyForEachPlayer, ExileForEachPlayer, CreateTokenForEachDestroyed): their
 // per-opponent player-relative choices and linked-set payoffs are not modeled by
 // the single-target atom heuristic.
+// ManifestForEachLinked is likewise value-neutral: the number and controllers of
+// the manifested cards depend on the linked removal's runtime choices.
 //
 // CreateReflexiveTrigger is value-neutral (no atom), matching CreateDelayedTrigger:
 // the value lives in the reflexive ability's own content, which is scored when
@@ -75,7 +77,7 @@ import (
 // the controller's own matching permanents to publish that count (Myr
 // Battlesphere), so its payoff lives in the scaled ModifyPT and Damage
 // instructions that read the count, not in the self-tap enabler itself.
-const knownPrimitiveCount = 130
+const knownPrimitiveCount = 131
 
 // TestPrimitiveCountIsReconciled keeps a newly added resolution primitive from
 // silently falling through the translator: adding one trips this guard so its

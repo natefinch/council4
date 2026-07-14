@@ -1692,6 +1692,16 @@ func (p DrawForEachExiled) validatePrimitive([]TargetSpec, bool) error {
 	return nil
 }
 
+func (p ManifestForEachLinked) validatePrimitive([]TargetSpec, bool) error {
+	if p.LinkedKey == "" {
+		return errors.New("manifest for each linked requires a linked key")
+	}
+	if p.Dread && p.Cloak {
+		return errors.New("manifest for each linked cannot be both dread and cloak")
+	}
+	return nil
+}
+
 func (p RemoveTargetsForToken) validatePrimitive([]TargetSpec, bool) error {
 	if p.LinkedKey == "" {
 		return errors.New("remove targets for token requires a linked key")

@@ -372,6 +372,9 @@ func lowerContentDispatch(
 		if content, ok := lowerExileForEachOpponentDrawChainContent(ctx); ok {
 			return content, nil
 		}
+		if content, ok := lowerExileForEachPlayerManifestChainContent(ctx); ok {
+			return content, nil
+		}
 		if content, ok := lowerRemovalVariableTargetsForEachTokenContent(ctx); ok {
 			return content, nil
 		}

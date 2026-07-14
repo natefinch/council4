@@ -3101,6 +3101,11 @@ type CompiledEffect struct {
 	// battlefield." (Vault 13: Dweller's Journey) through the text-blind compiler
 	// boundary so lowering links each player's chosen permanent to the source.
 	ExileForEachPlayerUntilSourceLeaves bool
+	// ExileForEachPlayer carries the parser-recognized plain distributive exile
+	// clause through the text-blind compiler boundary so lowering exiles up to one
+	// permanent each player controls and links the removed set for a paired
+	// per-controller payoff.
+	ExileForEachPlayer bool
 	// ReturnLinkedExiledToBattlefieldPartial carries the parser-recognized
 	// partial payoff clause "Return <count> cards exiled with <this Saga> to the
 	// battlefield under their owners' control." (Vault 13: Dweller's Journey)
@@ -3153,6 +3158,11 @@ type CompiledEffect struct {
 	// draws one card for each permanent a sibling ExileForEachOpponent exiled,
 	// for that permanent's last-known controller.
 	DrawForEachExiledThisWay bool
+	// CloakForEachExiledThisWay carries the parser-recognized per-controller
+	// payoff through the text-blind compiler boundary so lowering cloaks one card
+	// for each permanent a sibling ExileForEachPlayer exiled, under that
+	// permanent's last-known controller.
+	CloakForEachExiledThisWay bool
 	// to the mana value of the exiled card." (The Aesir Escape Valhalla) through
 	// the text-blind compiler boundary so lowering scales the placement by the
 	// linked exiled card's mana value.

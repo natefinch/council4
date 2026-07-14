@@ -57,6 +57,37 @@ func destroyForEachPlayerReferences(references []Reference) bool {
 	return len(references) == 1 && references[0].Kind == ReferenceThatPlayer
 }
 
+// exactExileForEachPlayerEffectSyntax recognizes the plain distributive exile
+// clause "For each player, exile up to one target <permanent> that player
+// controls." (Unexplained Absence). It mirrors the distributive destroy
+// recognizer but carries no return duration; lowering links the exiled set for a
+// following per-controller payoff.
+func exactExileForEachPlayerEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Kind != EffectExile || effect.Negated || effect.Optional {
+		return false
+	}
+	if effect.Context != EffectContextController {
+		return false
+	}
+	if effect.Duration != EffectDurationNone || effect.FromZone != zone.None || effect.ToZone != zone.None {
+		return false
+	}
+	if len(effect.Targets) != 1 ||
+		effect.Targets[0].Cardinality.Min != 0 ||
+		effect.Targets[0].Cardinality.Max != 1 ||
+		!destroyForEachPlayerReferences(effect.References) {
+		return false
+	}
+	if !strings.HasPrefix(strings.ToLower(strings.TrimSpace(fullEffectClauseText(effect))), "for each player, ") {
+		return false
+	}
+	if !strings.EqualFold(exactEffectClauseText(effect), "Exile "+effect.Targets[0].Text+".") {
+		return false
+	}
+	effect.ExileForEachPlayer = true
+	return true
+}
+
 // exactCreateTokenForEachDestroyedThisWayEffectSyntax recognizes the per-
 // controller payoff clause "For each creature destroyed this way, its controller
 // creates a <token>." (The Curse of Fenric, chapter I). The "destroyed this way"
