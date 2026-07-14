@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,818 of 32,501 cards eligible for paper support (54.8%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,820 of 32,501 cards eligible for paper support (54.8%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -7213,6 +7213,7 @@ Council4 currently supports **17,818 of 32,501 cards eligible for paper support 
 - Horizon Canopy
 - Horizon Chimera
 - Horizon Drake
+- Horizon Explorer
 - Horizon of Progress
 - Horizon Scholar
 - Horizon Seed
@@ -14202,6 +14203,7 @@ Council4 currently supports **17,818 of 32,501 cards eligible for paper support 
 - Spellshock
 - Spellweaver Eternal
 - Spellwild Ouphe
+- Spelunking
 - Sphere Grid
 - Sphere of Duty
 - Sphere of Grace
