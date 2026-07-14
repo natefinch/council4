@@ -381,7 +381,7 @@ func discardToMaximumHandSize(g *game.Game, playerID game.PlayerID) {
 }
 
 func (*Engine) advanceToNextTurn(g *game.Game) {
-	next, ok := popExtraTurn(&g.Turn.ExtraTurns, &g.TurnOrder)
+	next, ok := popExtraTurn(g)
 	if !ok {
 		next = g.TurnOrder.NextActivePlayer(g.Turn.ActivePlayer)
 	}
@@ -408,16 +408,26 @@ func (*Engine) advanceToNextTurn(g *game.Game) {
 	markCurrentTurnEventStart(g)
 }
 
-func popExtraTurn(extraTurns *[]game.PlayerID, turnOrder *game.TurnOrder) (game.PlayerID, bool) {
-	for len(*extraTurns) > 0 {
-		last := len(*extraTurns) - 1
-		next := (*extraTurns)[last]
-		*extraTurns = (*extraTurns)[:last]
-		if !turnOrder.IsEliminated(next) {
+func popExtraTurn(g *game.Game) (game.PlayerID, bool) {
+	for len(g.Turn.ExtraTurns) > 0 {
+		last := len(g.Turn.ExtraTurns) - 1
+		next := g.Turn.ExtraTurns[last]
+		g.Turn.ExtraTurns = g.Turn.ExtraTurns[:last]
+		if !g.TurnOrder.IsEliminated(next) && !playerSkipsExtraTurns(g, next) {
 			return next, true
 		}
 	}
 	return 0, false
+}
+
+func playerSkipsExtraTurns(g *game.Game, player game.PlayerID) bool {
+	for _, effect := range activeRuleEffects(g) {
+		if effect.Kind == game.RuleEffectSkipExtraTurns &&
+			playerRelationMatches(effect.Controller, player, effect.AffectedPlayer) {
+			return true
+		}
+	}
+	return false
 }
 
 // emptyManaPools empties every player's mana pool. Each player's mana pool empties

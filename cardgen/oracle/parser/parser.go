@@ -172,6 +172,8 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitBattleOfBywaterSequence(document.Abilities)
 	emitArtifactMutationSequence(document.Abilities)
 	emitUrzasRuinousBlast(document.Abilities)
+	emitSkipExtraTurnStatics(document.Abilities)
+	emitOpponentSecondActionTriplet(document.Abilities)
 	emitSelfNameStaticRules(document.Abilities)
 	emitCost(document.Abilities)
 	emitOptional(document.Abilities)
@@ -453,6 +455,29 @@ func emitUrzasRuinousBlast(abilities []Ability) {
 	for i := range abilities {
 		abilities[i].UrzasRuinousBlast =
 			abilities[i].Kind == AbilitySpell &&
+				strings.EqualFold(strings.TrimSpace(abilities[i].Text), text)
+	}
+}
+
+func emitSkipExtraTurnStatics(abilities []Ability) {
+	for i := range abilities {
+		text := strings.TrimSpace(abilities[i].Text)
+		if (abilities[i].Kind == AbilityReplacement || abilities[i].Kind == AbilityStatic) &&
+			strings.EqualFold(text, "If an opponent would begin an extra turn, that player skips that turn instead.") {
+			abilities[i].SkipExtraTurnsScope = TriggerPlayerSelectorOpponent
+		}
+		if (abilities[i].Kind == AbilityReplacement || abilities[i].Kind == AbilityStatic) &&
+			strings.EqualFold(text, "If a player would begin an extra turn, that player skips that turn instead.") {
+			abilities[i].SkipExtraTurnsScope = TriggerPlayerSelectorAny
+		}
+	}
+}
+
+func emitOpponentSecondActionTriplet(abilities []Ability) {
+	const text = "Whenever an opponent attacks you with two or more creatures, draws their second card each turn, or casts their second spell each turn, you draw a card."
+	for i := range abilities {
+		abilities[i].OpponentSecondActionTriplet =
+			abilities[i].Kind == AbilityTriggered &&
 				strings.EqualFold(strings.TrimSpace(abilities[i].Text), text)
 	}
 }

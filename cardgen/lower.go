@@ -926,6 +926,76 @@ func lowerExecutableAbility(
 	ability compiler.CompiledAbility,
 	syntax *parser.Ability,
 ) (abilityLowering, *shared.Diagnostic) {
+	if ability.SkipExtraTurnsScope != "" {
+		affected := game.PlayerAny
+		if ability.SkipExtraTurnsScope == parser.TriggerPlayerSelectorOpponent {
+			affected = game.PlayerOpponent
+		}
+		return abilityLowering{
+			staticAbilities: []loweredStaticAbility{{Body: game.StaticAbility{
+				Text: ability.Text,
+				RuleEffects: []game.RuleEffect{{
+					Kind:           game.RuleEffectSkipExtraTurns,
+					AffectedPlayer: affected,
+				}},
+			}}},
+			consumed: semanticConsumption{
+				conditions: len(ability.Content.Conditions),
+				effects:    len(ability.Content.Effects),
+				keywords:   len(ability.Content.Keywords),
+				references: len(ability.Content.References),
+				targets:    len(ability.Content.Targets),
+			},
+			sourceSpans: []shared.Span{ability.Span},
+		}, nil
+	}
+	if ability.OpponentSecondActionTriplet {
+		draw := game.Mode{Sequence: []game.Instruction{{Primitive: game.Draw{
+			Amount: game.Fixed(1),
+			Player: game.ControllerReference(),
+		}}}}.Ability()
+		trigger := func(pattern game.TriggerPattern) game.TriggeredAbility {
+			return game.TriggeredAbility{
+				Text: ability.Text,
+				Trigger: game.TriggerCondition{
+					Type:    game.TriggerWhenever,
+					Pattern: pattern,
+				},
+				Content: draw,
+			}
+		}
+		return abilityLowering{
+			triggeredAbilities: []game.TriggeredAbility{
+				trigger(game.TriggerPattern{
+					Event:                game.EventAttackerDeclared,
+					Controller:           game.TriggerControllerOpponent,
+					Player:               game.TriggerPlayerYou,
+					AttackRecipient:      game.AttackRecipientPlayer,
+					OneOrMore:            true,
+					AttackerCountAtLeast: 2,
+				}),
+				trigger(game.TriggerPattern{
+					Event:                      game.EventCardDrawn,
+					Player:                     game.TriggerPlayerOpponent,
+					PlayerEventOrdinalThisTurn: 2,
+				}),
+				trigger(game.TriggerPattern{
+					Event:                      game.EventSpellCast,
+					Controller:                 game.TriggerControllerOpponent,
+					PlayerEventOrdinalThisTurn: 2,
+				}),
+			},
+			consumed: semanticConsumption{
+				trigger:    true,
+				conditions: len(ability.Content.Conditions),
+				effects:    len(ability.Content.Effects),
+				keywords:   len(ability.Content.Keywords),
+				references: len(ability.Content.References),
+				targets:    len(ability.Content.Targets),
+			},
+			sourceSpans: []shared.Span{ability.Span},
+		}, nil
+	}
 	if ability.UrzasRuinousBlast {
 		return abilityLowering{
 			spellAbility: opt.Val(game.Mode{Sequence: []game.Instruction{{

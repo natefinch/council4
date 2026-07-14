@@ -114,6 +114,8 @@ type CompiledAbility struct {
 	BattleOfBywaterSequence                     bool
 	ArtifactMutationSequence                    bool
 	UrzasRuinousBlast                           bool
+	SkipExtraTurnsScope                         parser.TriggerPlayerSelectorKind
+	OpponentSecondActionTriplet                 bool
 	// ExactSequence is a parser-recognized exact multi-instruction resolving
 	// body. When set, the normal target/condition/effect content is empty and
 	// lowering emits the fixed instruction template for the kind. It is declared

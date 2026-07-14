@@ -1003,6 +1003,8 @@ func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
 		return "game.RuleEffectCantBeBlockedExceptBy", nil
 	case game.RuleEffectCantBeTargetedByControllerOpponents:
 		return "game.RuleEffectCantBeTargetedByControllerOpponents", nil
+	case game.RuleEffectSkipExtraTurns:
+		return "game.RuleEffectSkipExtraTurns", nil
 	case game.RuleEffectAssignCombatDamageUsingToughness:
 		return "game.RuleEffectAssignCombatDamageUsingToughness", nil
 	case game.RuleEffectCanBlockOnlyCreaturesWith:
