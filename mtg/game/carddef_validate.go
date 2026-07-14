@@ -2052,6 +2052,9 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 	if pattern.AttackedPlayerHasMostLife && pattern.Event != EventAttackerDeclared {
 		v.add(faceName, appendPath(path, "AttackedPlayerHasMostLife"), CardDefIssueInvalidSelection, "attacked-player-has-most-life trigger filter is only supported for attacker-declared events")
 	}
+	if pattern.AttackedPlayerIsSourceEnchantedPlayer && pattern.Event != EventAttackerDeclared {
+		v.add(faceName, appendPath(path, "AttackedPlayerIsSourceEnchantedPlayer"), CardDefIssueInvalidSelection, "attacked-enchanted-player trigger filter is only supported for attacker-declared events")
+	}
 	if pattern.DyingDamagedBySource && pattern.Event != EventPermanentDied {
 		v.add(faceName, appendPath(path, "DyingDamagedBySource"), CardDefIssueInvalidSelection, "dealt-damage-by-source trigger filter is only supported for permanent-died events")
 	}

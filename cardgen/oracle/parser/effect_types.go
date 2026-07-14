@@ -2361,6 +2361,13 @@ type EffectSyntax struct {
 	// only when the granted ability came from a trailing rider sentence rather
 	// than an inline "token with \"<ability>\"" clause.
 	TokenGrantedAbilityRiderSpan shared.Span `json:"-"`
+	// EachOpponentAttackingSameRiderSpan covers the folded "Each opponent
+	// attacking that player does the same." rider sentence (Curse of Opulence,
+	// Curse of Disturbance) so lowering credits its tokens toward source coverage
+	// and emits the additional group token creation. It is set only on a
+	// controller create-token effect whose enchanted-player-is-attacked trigger
+	// carries the reflexive rider; the zero span means no such rider was folded.
+	EachOpponentAttackingSameRiderSpan shared.Span `json:"-"`
 	// TokenCopyOverride reports a copy-token characteristic-overriding "except"
 	// exception ("except it's a 1/1 green Frog", "except it's an artifact in
 	// addition to its other types"). When set, the created token copies its

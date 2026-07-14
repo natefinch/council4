@@ -165,6 +165,15 @@ type Permanent struct {
 	// if this is an Aura, Equipment, or Fortification. Absent if not attached.
 	AttachedTo opt.V[id.ID]
 
+	// AttachedToPlayer is the PlayerID this Aura is attached to, when this is an
+	// Aura that enchants a player (a Curse or other "Enchant player" Aura, CR
+	// 303.4h). It is deliberately distinct from AttachedTo — which references a
+	// permanent — so permanent-only effects that dereference AttachedTo never
+	// resolve a player as though it were a permanent. An Aura is attached to a
+	// permanent or a player but never both, so at most one of AttachedTo and
+	// AttachedToPlayer is present. Absent if this is not attached to a player.
+	AttachedToPlayer opt.V[PlayerID]
+
 	// Bestowed is true if this permanent entered the battlefield as a bestowed
 	// Aura, i.e. its card was cast for its bestow cost (CR 702.103). While
 	// bestowed it is an Aura enchantment and not a creature (see the bestow type

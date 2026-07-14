@@ -452,9 +452,52 @@ func (r referenceResolver) playerGroup(ref game.PlayerGroupReference) []game.Pla
 			}
 		}
 		return players
+	case game.PlayerGroupReferenceOpponentsAttackingTriggerPlayer:
+		return r.opponentsAttackingTriggerPlayer()
 	default:
 		return nil
 	}
+}
+
+// opponentsAttackingTriggerPlayer resolves the opponents of the resolving
+// controller who have a creature attacking the player the resolving triggered
+// ability's attack event was declared against ("Each opponent attacking that
+// player does the same" — Curse of Opulence). "That player" is read from the
+// trigger event, so it stays correct even if the source Aura has since left the
+// battlefield. Only creatures attacking that player directly count; an attack on
+// that player's planeswalker or battle is not an attack on the player (CR 508.1).
+// Each opponent appears at most once no matter how many creatures they attack
+// with, and the caller creates tokens in APNAP order.
+func (r referenceResolver) opponentsAttackingTriggerPlayer() []game.PlayerID {
+	if r.obj == nil || !r.obj.HasTriggerEvent || r.g.Combat == nil {
+		return nil
+	}
+	attacked := r.obj.TriggerEvent.AttackTarget
+	if !attacked.IsPlayerAttack() {
+		return nil
+	}
+	controller := r.resolvingController()
+	var members []game.PlayerID
+	seen := make([]bool, game.NumPlayers)
+	for _, declaration := range r.g.Combat.Attackers {
+		if !declaration.Target.IsPlayerAttack() || declaration.Target.Player != attacked.Player {
+			continue
+		}
+		attacker, ok := permanentByObjectID(r.g, declaration.Attacker)
+		if !ok {
+			continue
+		}
+		opponent := effectiveController(r.g, attacker)
+		if opponent == controller || int(opponent) >= game.NumPlayers || seen[opponent] {
+			continue
+		}
+		if !isPlayerAlive(r.g, opponent) {
+			continue
+		}
+		seen[opponent] = true
+		members = append(members, opponent)
+	}
+	return members
 }
 
 // permanentAt resolves a target slot to a permanent.

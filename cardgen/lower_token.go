@@ -65,6 +65,22 @@ func lowerCreateTokenSpellLinked(ctx contentCtx, publishLinked game.LinkedKey) (
 	if effect.TokenCopyOfForEach {
 		return lowerCreateCopyTokenForEachSpell(ctx)
 	}
+	// The reflexive "Each opponent attacking that player does the same." rider
+	// (Curse of Opulence, Curse of Disturbance) widens only a plain controller
+	// create-token into an additional group creation for each opponent attacking
+	// the enchanted player. Any richer shape — a non-controller recipient, a token
+	// choice, a multi-token create, or a linked publish — is outside what the
+	// rider can widen, so fail closed rather than silently dropping the second
+	// creation. The remaining fixed-shape checks are shared with the base create
+	// below; this only rejects the shapes that never reach that shared return.
+	reflexiveRider := effect.EachOpponentAttackingSameRiderSpan != (shared.Span{})
+	if reflexiveRider {
+		if effect.Context != parser.EffectContextController ||
+			effect.TokenChoice || len(effect.AdditionalTokens) > 0 ||
+			publishLinked != "" {
+			return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+		}
+	}
 	controllerRecipient := effect.Context == parser.EffectContextController
 	referencedRecipient := effect.Context == parser.EffectContextReferencedObjectController
 	targetRecipient := effect.Context == parser.EffectContextTarget
@@ -222,7 +238,7 @@ func lowerCreateTokenSpellLinked(ctx contentCtx, publishLinked game.LinkedKey) (
 		// prevents in any later combat. The payoff creates the controller's
 		// tokens with no target, so a targeted or linked form is outside this
 		// shape.
-		if len(targets) != 0 || publishLinked != "" {
+		if len(targets) != 0 || publishLinked != "" || reflexiveRider {
 			return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 		}
 		inner := game.Mode{Sequence: []game.Instruction{{Primitive: createToken}}}.Ability()
@@ -233,9 +249,21 @@ func lowerCreateTokenSpellLinked(ctx contentCtx, publishLinked game.LinkedKey) (
 			},
 		}}}}.Ability(), nil
 	}
+	sequence := []game.Instruction{{Primitive: createToken}}
+	if reflexiveRider {
+		// "Each opponent attacking that player does the same." The controller's
+		// creation stays first; append an identical creation whose recipients are
+		// the distinct opponents of the controller attacking the enchanted player.
+		// The controller is excluded from that group, so the two instructions
+		// never double-create for the same player.
+		groupToken := createToken
+		groupToken.Recipient = opt.V[game.PlayerReference]{}
+		groupToken.RecipientGroup = game.OpponentsAttackingTriggerPlayerReference()
+		sequence = append(sequence, game.Instruction{Primitive: groupToken})
+	}
 	return game.Mode{
 		Targets:  targets,
-		Sequence: []game.Instruction{{Primitive: createToken}},
+		Sequence: sequence,
 	}.Ability(), nil
 }
 

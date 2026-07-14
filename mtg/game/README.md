@@ -291,7 +291,7 @@ The `counter` package provides 30+ counter kinds (+1/+1, -1/-1, loyalty, charge,
 | Commander damage keyed by `CardInstance` ID | Survives zone changes — a commander re-cast from the command zone is the same card instance |
 | `Owner` ≠ `Controller` on all objects | Control-changing effects are fundamental to MTG |
 | Token support via `Permanent.Token` + `TokenDef` | Tokens aren't backed by card instances; they need their own `CardDef` |
-| Attachments stored on permanents | `Permanent.AttachedTo` and `Permanent.Attachments` let rules maintain Aura/Equipment relationships without making `game` depend on attachment legality |
+| Attachments stored on permanents | `Permanent.AttachedTo` and `Permanent.Attachments` let rules maintain Aura/Equipment relationships without making `game` depend on attachment legality. `Permanent.AttachedToPlayer` separately records an Aura attached to a player (a Curse or "Enchant player" Aura) so permanent-only effects never dereference a player as a permanent |
 | Typed game events live in `game` | Card definitions need the event vocabulary, while rules behavior remains in `mtg/rules` |
 | Continuous effect data lives in `game` | Card definitions need selectors/effect primitives; `mtg/rules` derives effective values without mutating permanents |
 | Hand-written implementation IDs live in `game` | Card definitions can name an escape-hatch implementation without importing behavior; `mtg/rules` owns the registry and mutation helpers |

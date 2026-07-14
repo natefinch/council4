@@ -649,6 +649,9 @@ func lowerTriggeredAbilityKind(
 		if ability.Content.Effects[i].TokenGrantedAbilityRiderSpan != (shared.Span{}) {
 			spans = append(spans, ability.Content.Effects[i].TokenGrantedAbilityRiderSpan)
 		}
+		if ability.Content.Effects[i].EachOpponentAttackingSameRiderSpan != (shared.Span{}) {
+			spans = append(spans, ability.Content.Effects[i].EachOpponentAttackingSameRiderSpan)
+		}
 		if ability.Content.Effects[i].KeywordGrantChoiceAtRandom {
 			spans = append(spans, ability.Content.Effects[i].KeywordChoiceAtRandomPreludeSpan)
 		}

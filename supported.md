@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,857 of 32,501 cards eligible for paper support (54.9%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,859 of 32,501 cards eligible for paper support (54.9%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -3283,7 +3283,9 @@ Council4 currently supports **17,857 of 32,501 cards eligible for paper support 
 - Curious Inquiry
 - Curious Pair // Treats to Share
 - Curse of Chains
+- Curse of Disturbance
 - Curse of Marit Lage
+- Curse of Opulence
 - Curse of the Swine
 - Curse of Wizardry
 - Cursebreak

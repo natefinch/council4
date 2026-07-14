@@ -231,6 +231,20 @@ func checkAttachmentStateBasedActions(g *game.Game, batchID func() id.ID) (bool,
 			if permanent.PhasedOut {
 				continue
 			}
+			if permanent.AttachedToPlayer.Exists {
+				// CR 704.5m: an Aura attached to a player stays on the
+				// battlefield only while its Enchant restriction still allows
+				// that player (the player is in the game and, for "Enchant
+				// opponent", still an opponent of the Aura's controller). A
+				// player attachment never applies to Equipment or a bestowed
+				// creature, so an illegal one is always a 704.5m illegal Aura
+				// bound for its owner's graveyard.
+				if auraCanAttachToPlayer(g, permanent, permanent.AttachedToPlayer.Val) {
+					continue
+				}
+				illegalAuras = append(illegalAuras, permanent.ObjectID)
+				continue
+			}
 			if !permanent.AttachedTo.Exists {
 				if permanent.Bestowed {
 					// CR 702.103f: a bestowed Aura that is unattached stops being
