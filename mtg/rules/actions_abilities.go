@@ -50,6 +50,8 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 			return false
 		}
 		prefs := e.paymentPreferencesForCost(g, playerID, manaCostPtr(manaBody.ManaCost), abilityAdditionalCosts(manaBody.AdditionalCosts), 0, agents, log)
+		manaSource := captureManaProducedSource(g, permanent)
+		eventsBeforePayment := len(g.Events)
 		if _, ok := paymentOrch.payAbilityCosts(g, payment.AbilityRequest{
 			PlayerID:        playerID,
 			Source:          permanent,
@@ -75,7 +77,11 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 			seedEntryChoices(obj, permanent)
 			before := manaPoolColorSnapshot(g, playerID)
 			e.resolveAbilityContentWithChoices(g, obj, manaBody.Content, agents, log)
-			recordTappedForManaProduced(g, permanent.ObjectID, producedManaColorsSince(g, playerID, before))
+			produced := producedManaColorsSince(g, playerID, before)
+			recordTappedForManaProduced(g, permanent.ObjectID, produced)
+			emitManaProducedEvent(g, manaSource, playerID, produced,
+				producedManaAmountSince(g, playerID, before),
+				manaAbilityTappedSourceSince(g, permanent.ObjectID, eventsBeforePayment))
 		}
 		emitAbilityActivatedEvent(g, obj, permanent.ObjectID, true)
 		recordActivatedAbilityUse(g, permanent.ObjectID, activate.AbilityIndex, manaBody.Timing)

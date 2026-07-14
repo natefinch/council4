@@ -301,6 +301,17 @@ func (s *rulesPaymentState) SetTappedForMana(p *game.Permanent) {
 	setPermanentTappedForMana(s.g, p)
 }
 
+func (s *rulesPaymentState) RecordManaProduced(source *game.Permanent, recipient game.PlayerID, isLand bool, c mana.Color, amount int, tappedForMana bool) {
+	emitManaProducedEvent(s.g, manaProducedSource{
+		sourceID:   source.CardInstanceID,
+		objectID:   source.ObjectID,
+		controller: recipient,
+		isLand:     isLand,
+		tokenName:  permanentTokenName(source),
+		tokenDef:   source.TokenDef,
+	}, recipient, []mana.Color{c}, amount, tappedForMana)
+}
+
 func (s *rulesPaymentState) RecordManaAbilityUse(p *game.Permanent, abilityIndex int, timing game.TimingRestriction) {
 	recordActivatedAbilityUse(s.g, p.ObjectID, abilityIndex, timing)
 }

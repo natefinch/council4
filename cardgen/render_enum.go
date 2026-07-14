@@ -567,6 +567,8 @@ func renderEventKind(event game.EventKind) (string, error) {
 		return "game.EventCardPlayedFromExile", nil
 	case game.EventLandPlayed:
 		return "game.EventLandPlayed", nil
+	case game.EventManaProduced:
+		return "game.EventManaProduced", nil
 	case game.EventGotCityBlessing:
 		return "game.EventGotCityBlessing", nil
 	default:

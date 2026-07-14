@@ -806,8 +806,9 @@ func (r Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatt
 		(pattern.RequireHistoric && pattern.Event != game.EventSpellCast) ||
 		(pattern.MatchSpellCopy && pattern.Event != game.EventSpellCast) ||
 		(pattern.SelfWasCast && pattern.Event != game.EventSpellCast) ||
-		(pattern.RequireTappedForMana && pattern.Event != game.EventPermanentTapped) ||
-		(pattern.RequireProducedManaColorFromEntryChoice && pattern.Event != game.EventPermanentTapped) ||
+		(pattern.RequireTappedForMana && pattern.Event != game.EventPermanentTapped && pattern.Event != game.EventManaProduced) ||
+		(pattern.RequireProducedManaColorFromEntryChoice && pattern.Event != game.EventPermanentTapped && pattern.Event != game.EventManaProduced) ||
+		(pattern.RequireManaProducedByLand && pattern.Event != game.EventManaProduced) ||
 		(pattern.ExcludeManaAbility && pattern.Event != game.EventAbilityActivated) ||
 		(pattern.Event == game.EventAbilityActivated && !pattern.ExcludeManaAbility) ||
 		(pattern.PlayerEventOrdinalThisTurn > 0 &&
@@ -971,6 +972,9 @@ func renderTriggerPatternFlagFields(ctx *renderCtx, pattern *game.TriggerPattern
 	}
 	if pattern.RequireProducedManaColorFromEntryChoice {
 		fields = append(fields, "RequireProducedManaColorFromEntryChoice: true,")
+	}
+	if pattern.RequireManaProducedByLand {
+		fields = append(fields, "RequireManaProducedByLand: true,")
 	}
 	if pattern.UnionEvent != game.EventUnknown {
 		unionEvent, err := renderEventKind(pattern.UnionEvent)

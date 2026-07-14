@@ -23,6 +23,7 @@ func emitDelayedTriggerEffects(abilities []Ability, cardName string, legendary, 
 		rewriteCapturedAttacksMonarchDelayedTrigger(&abilities[i])
 		rewriteCapturedDiesMonarchDelayedTrigger(&abilities[i])
 		rewriteSpellTriggeredThisTurnDelayedAbility(&abilities[i], instantOrSorcery)
+		rewriteUntilEndOfTurnTriggerSpell(&abilities[i], instantOrSorcery)
 		rewriteGeneralDeathDelayedTrigger(&abilities[i], cardName, legendary)
 	}
 }
@@ -650,6 +651,62 @@ func parseDelayedTriggerAbilityWithContext(text, cardName string, legendary bool
 		document:    document,
 		diagnostics: diagnostics,
 	}, true
+}
+
+// rewriteUntilEndOfTurnTriggerSpell converts an instant or sorcery paragraph
+// that leads with an "Until end of turn," duration in front of a triggered
+// ability ("Until end of turn, whenever a player taps an Island for mana, that
+// player adds an additional {U}.", High Tide) into a single repeating
+// EffectDelayedTrigger spell effect. Without the rewrite the leading duration
+// clause makes the parser read the trigger's tap verb as a resolving tap effect
+// and blocks lowering. The "Until end of turn," prefix is stripped and the
+// remaining "Whenever <trigger>, <body>" is reparsed as the nested triggered
+// ability the spell sets up as it resolves; the this-turn window comes from the
+// delayed-trigger lowering. It fails closed on any ability that is not a single
+// sentence leading with "until end of turn," in front of a clause that reparses
+// to exactly one plain triggered ability.
+func rewriteUntilEndOfTurnTriggerSpell(ability *Ability, instantOrSorcery bool) {
+	if !instantOrSorcery || len(ability.Sentences) != 1 {
+		return
+	}
+	text := strings.TrimSpace(ability.Text)
+	comma := strings.Index(text, ",")
+	if comma <= 0 {
+		return
+	}
+	if !strings.EqualFold(strings.TrimSpace(text[:comma]), "until end of turn") {
+		return
+	}
+	inner := strings.TrimSpace(text[comma+1:])
+	lowerInner := strings.ToLower(inner)
+	if !strings.HasPrefix(lowerInner, "whenever ") && !strings.HasPrefix(lowerInner, "when ") {
+		return
+	}
+	granted, ok := parseDelayedTriggerAbility(inner)
+	if !ok {
+		return
+	}
+	sentence := &ability.Sentences[0]
+	effect := EffectSyntax{
+		Kind:                  EffectDelayedTrigger,
+		Span:                  ability.Span,
+		VerbSpan:              ability.Span,
+		ClauseSpan:            ability.Span,
+		Text:                  ability.Text,
+		DelayedTriggerAbility: &granted,
+		DelayedTriggerOneShot: false,
+	}
+	ability.Kind = AbilitySpell
+	ability.Trigger = nil
+	sentence.Effects = []EffectSyntax{effect}
+	sentence.Targets = nil
+	sentence.LegacyEffects = false
+	ability.SemanticReferences = nil
+	ability.SemanticKeywords = nil
+	ability.ConditionBoundaries = nil
+	ability.EventHistoryConditions = nil
+	ability.ConditionClauses = nil
+	ability.ConditionSegments = nil
 }
 
 // rewriteGeneralDeathDelayedTrigger rewrites every sentence whose leading clause

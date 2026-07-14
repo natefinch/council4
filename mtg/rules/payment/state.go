@@ -182,6 +182,13 @@ type stateMutations interface {
 	// tapped-for-mana provenance on the emitted event.
 	SetTappedForMana(p *game.Permanent)
 
+	// RecordManaProduced emits the authoritative "an ability added mana" event
+	// (EventManaProduced) for a mana ability activated during payment that added
+	// amount mana of color c to recipient's pool. isLand is captured before any
+	// sacrifice so a sacrifice-for-mana land still reports it was a land, and
+	// tappedForMana records whether the source tapped to produce the mana.
+	RecordManaProduced(source *game.Permanent, recipient game.PlayerID, isLand bool, c mana.Color, amount int, tappedForMana bool)
+
 	// RecordManaAbilityUse records a restricted mana ability activation.
 	RecordManaAbilityUse(p *game.Permanent, abilityIndex int, timing game.TimingRestriction)
 

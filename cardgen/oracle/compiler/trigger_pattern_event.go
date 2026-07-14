@@ -39,6 +39,7 @@ func compileTriggerEventClause(clause *parser.TriggerEventClause) (TriggerPatter
 		TappedForMana:             clause.TappedForMana,
 		TappedForManaColor:        clause.TappedForManaColor,
 		TappedForManaChosenColor:  clause.TappedForManaChosenColor,
+		ManaProducedByLand:        clause.ManaProducedByLand,
 	}
 	var ok bool
 	pattern.Controller, ok = compileTriggerController(clause.Controller)
@@ -70,6 +71,8 @@ func compileTriggerEventClause(clause *parser.TriggerEventClause) (TriggerPatter
 		ok = compileCounterEvent(clause, &pattern)
 	case parser.TriggerEventKindBecomesTapped:
 		ok = compilePermanentSubjectEvent(clause, &pattern, TriggerEventPermanentTapped)
+	case parser.TriggerEventKindManaProduced:
+		ok = compileManaProducedEvent(clause, &pattern)
 	case parser.TriggerEventKindBecomesUntapped:
 		ok = compilePermanentSubjectEvent(clause, &pattern, TriggerEventPermanentUntapped)
 	case parser.TriggerEventKindTurnedFaceUp:
@@ -347,6 +350,18 @@ func compileAttackEvent(clause *parser.TriggerEventClause, pattern *TriggerPatte
 		pattern.AttacksAlongsideCount = clause.AttacksAlongsideCount
 	}
 	return true
+}
+
+// compileManaProducedEvent compiles a mana-produced trigger (CR 106.1 / 605).
+// The subject is optional: Caged Sun carries no live subject and relies on the
+// ManaProducedByLand flag (so it survives sacrifice-for-mana), while High Tide
+// supplies an Island subtype selection matched against the tapped source.
+func compileManaProducedEvent(clause *parser.TriggerEventClause, pattern *TriggerPattern) bool {
+	pattern.Event = TriggerEventManaProduced
+	if clause.Subject.Kind == parser.TriggerEventSubjectUnknown {
+		return true
+	}
+	return compileEventSubject(&clause.Subject, pattern, &pattern.SubjectSelection)
 }
 
 func compilePermanentSubjectEvent(
