@@ -992,7 +992,11 @@ func TestLowerTriggeringPlayerHandSizeCondition(t *testing.T) {
 			}
 			cond := face.TriggeredAbilities[0].Trigger.InterveningCondition
 			want := game.AggregateComparison{Aggregate: game.AggregateEventPlayerHandSize, Op: tc.op, Value: tc.value}
-			if !cond.Exists || len(cond.Val.Aggregates) != 1 || cond.Val.Aggregates[0] != want {
+			if !cond.Exists || len(cond.Val.Aggregates) != 1 ||
+				cond.Val.Aggregates[0].Aggregate != want.Aggregate ||
+				cond.Val.Aggregates[0].Op != want.Op ||
+				cond.Val.Aggregates[0].Value != want.Value ||
+				cond.Val.Aggregates[0].ValueAmount.Exists {
 				t.Fatalf("aggregates = %#v, want %#v", cond.Val.Aggregates, want)
 			}
 		})

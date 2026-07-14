@@ -377,6 +377,17 @@ const (
 	// hand. MaxManaValue records the "<N> or less" bound so lowering builds the
 	// mana-value gate from a typed count rather than Oracle wording.
 	ExactSequenceBargainSearchCastPayoff
+	// ExactSequenceDevotionLookWin is the triggered body "look at the top X cards
+	// of your library, where X is your devotion to <color>. Put up to one of them
+	// on top of your library and the rest on the bottom of your library in a
+	// random order. If X is greater than or equal to the number of cards in your
+	// library, you win the game." (Thassa's Oracle): the controller looks at the
+	// top X cards where X is their devotion to the recorded color, keeps up to one
+	// of them on top of their library and bottoms the rest, then wins the game
+	// when X is at least the number of cards in their library. DevotionColor
+	// records the color so lowering builds the devotion amount and win comparison
+	// from a typed color rather than Oracle wording.
+	ExactSequenceDevotionLookWin
 )
 
 // LookAtTopBattlefieldElse identifies the trailing fallback disposition of an
@@ -427,6 +438,11 @@ type ExactSequenceSyntax struct {
 	// ExactSequenceBargainSearchCastPayoff: the exiled card may be cast for free
 	// only when its mana value is at most MaxManaValue.
 	MaxManaValue int
+	// DevotionColor carries the devotion color of ExactSequenceDevotionLookWin:
+	// X is the controller's devotion to this color, and the win comparison is
+	// measured against that same amount. It is the unknown color for every other
+	// exact sequence.
+	DevotionColor Color
 }
 
 // SourceAbilityCostReductionSyntax is the typed syntax for a source-local
@@ -666,6 +682,14 @@ const (
 	// the self-source trigger on a Room enchantment half that fires as that
 	// door becomes unlocked. Its subject is the ability's own source.
 	TriggerEventKindDoorUnlocked TriggerEventKind = "TriggerEventKindDoorUnlocked"
+	// TriggerEventKindManaProduced marks the authoritative "an ability added
+	// mana" trigger (CR 106.1 / 605), which fires whenever an activated or
+	// triggered mana ability actually adds mana — by tapping, sacrificing, or
+	// paying life. It carries the produced colors, total amount, whether the
+	// source was a land (ManaProducedByLand), and whether the source tapped
+	// (TappedForMana). Caged Sun uses it to trigger on any land ability adding
+	// the chosen color; High Tide uses it with a tapped/Island filter.
+	TriggerEventKindManaProduced TriggerEventKind = "TriggerEventKindManaProduced"
 )
 
 // TriggerEventSubjectKind identifies the grammatical subject in a trigger event.
@@ -992,6 +1016,10 @@ type TriggerEventClause struct {
 	// Sun). The produced color is resolved at match time from the source's
 	// entry choice, so no fixed TappedForManaColor is recorded.
 	TappedForManaChosenColor bool `json:",omitempty"`
+	// ManaProducedByLand marks a mana-produced clause that fires only when the
+	// producing source was a land (Caged Sun), independent of whether that land
+	// tapped. It pairs with Kind TriggerEventKindManaProduced.
+	ManaProducedByLand bool `json:",omitempty"`
 	// UnionKind names a second trigger event family whose constituent event
 	// joins Kind under a shared subject and actor, expressing "Whenever you
 	// create or sacrifice a token" (CR 603.2). The trigger fires when either the
@@ -1372,6 +1400,12 @@ type Sentence struct {
 	// reference and tokens as belonging to that impulse rather than as an
 	// unrecognized sibling.
 	ImpulseExilePermission bool `json:",omitempty"`
+	// ChooseCardNamePrelude reports that this sentence is the credited zero-effect
+	// "Choose a card name." prelude folded onto a following iterative library
+	// process whose chosen-name stop consumes the named card (Demonic
+	// Consultation). Reference and coverage scans treat its tokens as belonging to
+	// that process rather than as an unrecognized sibling.
+	ChooseCardNamePrelude bool `json:",omitempty"`
 }
 
 // sentenceIsCreditedRider reports whether the sentence has been folded onto a
@@ -1392,7 +1426,8 @@ func sentenceIsCreditedRider(s *Sentence) bool {
 		s.TokenGrantedAbilityRider ||
 		s.PersistentManaRider ||
 		s.RoundUpEachTimeRider ||
-		s.ImpulseExilePermission
+		s.ImpulseExilePermission ||
+		s.ChooseCardNamePrelude
 }
 
 // StaticRuleSubjectKind identifies the source object constrained by a simple

@@ -665,8 +665,12 @@ func parseTappedForManaTriggerEventClause(
 		if !mergeTriggerController(&controller, actor.controller) {
 			return nil
 		}
+		// The indefinite-actor "a player / an opponent taps <subject> for mana"
+		// form fires off the authoritative mana-produced event (CR 106.1 / 605):
+		// the source actually adds mana by tapping (High Tide, Manabarbs, Scald,
+		// Sanctimony, Mana Flare). The tapped/produced-color filters carry over.
 		return &TriggerEventClause{
-			Kind:               TriggerEventKindBecomesTapped,
+			Kind:               TriggerEventKindManaProduced,
 			Subject:            subject.subject,
 			Controller:         controller,
 			ExcludeSelf:        subject.excludeSelf,

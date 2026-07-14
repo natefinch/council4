@@ -483,7 +483,6 @@ func TestEventHistoryYouCastSpellFailClosed(t *testing.T) {
 	for _, condition := range []string{
 		"you've cast a spell last turn",
 		"you've cast one or more spells this turn",
-		"an opponent cast a spell this turn",
 		"you've cast a creature spell",
 	} {
 		t.Run(condition, func(t *testing.T) {
@@ -498,6 +497,49 @@ func TestEventHistoryYouCastSpellFailClosed(t *testing.T) {
 			}
 			if got := document.Abilities[0].EventHistoryConditions; len(got) != 0 {
 				t.Fatalf("event history conditions = %#v, want none", got)
+			}
+		})
+	}
+}
+
+// TestEventHistoryOpponentCastSpellConditions proves the parser recognizes the
+// opponent-cast event-history condition Veil of Summer's first clause uses
+// ("an opponent has cast a blue or black spell this turn"), producing a
+// current-turn spell-cast event whose actor is the opponent and whose selection
+// carries the named colors.
+func TestEventHistoryOpponentCastSpellConditions(t *testing.T) {
+	t.Parallel()
+	for _, condition := range []string{
+		"an opponent has cast a blue or black spell this turn",
+		"an opponent cast a blue or black spell this turn",
+	} {
+		t.Run(condition, func(t *testing.T) {
+			t.Parallel()
+			source := "Draw a card if " + condition + "."
+			document, diagnostics := Parse(source, Context{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			if len(document.Abilities) != 1 || len(document.Abilities[0].EventHistoryConditions) != 1 {
+				t.Fatalf("event history conditions = %#v", document.Abilities)
+			}
+			condition := &document.Abilities[0].EventHistoryConditions[0]
+			if condition.Window.Kind != EventHistoryWindowCurrentTurn || condition.Negated {
+				t.Fatalf("condition = %#v", condition)
+			}
+			event := condition.TriggerEvent
+			if event == nil || condition.PlayerEvent != nil {
+				t.Fatalf("condition = %#v", condition)
+			}
+			if event.Kind != TriggerEventKindSpellCast {
+				t.Fatalf("event kind = %q, want %q", event.Kind, TriggerEventKindSpellCast)
+			}
+			if event.Actor.Kind != TriggerEventActorOpponent {
+				t.Fatalf("event actor = %q, want %q", event.Actor.Kind, TriggerEventActorOpponent)
+			}
+			colors := event.SpellSelection.ColorsAny
+			if len(colors) != 2 || colors[0] != TriggerColorBlue || colors[1] != TriggerColorBlack {
+				t.Fatalf("event colors = %#v, want [blue black]", colors)
 			}
 		})
 	}

@@ -281,7 +281,11 @@ const (
 	// each chosen permanent, publishing the number tapped for later scaled
 	// effects (Myr Battlesphere's "you may tap X untapped Myr you control").
 	PrimitiveTapChosenGroup
-
+	// PrimitiveIterativeLibraryProcess exiles or reveals cards from the top of a
+	// player's library one at a time, tracking the cards processed this way,
+	// until a name-based stop predicate fires (Tainted Pact, Demonic
+	// Consultation). It is the generic iterative library processor.
+	PrimitiveIterativeLibraryProcess
 	// PrimitiveManifestForEachLinked manifests or cloaks one card for each object
 	// a prior instruction published under LinkedKey, using each linked object's
 	// last-known controller as the manifesting player.
@@ -1846,8 +1850,13 @@ type Dig struct {
 	// zone.Battlefield instead puts each taken card onto the battlefield under
 	// the player's control, modeling "look at the top N cards of your library.
 	// You may put a [filter] card from among them onto the battlefield. Put the
-	// rest <remainder>." (Web of Life and Destiny, Elvish Rejuvenator). No other
-	// destination is supported.
+	// rest <remainder>." (Web of Life and Destiny, Elvish Rejuvenator).
+	// zone.Library returns each taken card to the top of the player's library
+	// without leaving the library zone, modeling "look at the top N cards of your
+	// library. Put up to one of them on top of your library and the rest
+	// <remainder>." (Thassa's Oracle). When more than one card is taken to the
+	// library top, the first chosen card ends up on top. No other destination is
+	// supported.
 	Destination zone.Type
 	// EntersTapped makes each card put onto the battlefield by a battlefield
 	// Destination enter tapped, modeling the "... onto the battlefield tapped"
@@ -1930,6 +1939,62 @@ type ImpulseExile struct {
 // same card, neither of which is expressible across separate instructions.
 type ExileLibraryUntilNonlandCast struct {
 	Player PlayerReference
+}
+
+// IterativeLibraryStop selects the name-based predicate that terminates an
+// IterativeLibraryProcess loop.
+type IterativeLibraryStop uint8
+
+const (
+	// IterativeLibraryStopChosenName stops when a processed card matches a card
+	// name the player chose at the start of the process (Demonic Consultation).
+	// The matching card is put into the recipient's hand; every other card
+	// processed before it stays exiled. Reaching an empty library without a
+	// match leaves the whole library exiled.
+	IterativeLibraryStopChosenName IterativeLibraryStop = iota
+	// IterativeLibraryStopDuplicateName stops when a processed card shares its
+	// name with another card already processed this way (Tainted Pact). The
+	// duplicate stays exiled and the process ends.
+	IterativeLibraryStopDuplicateName
+	iterativeLibraryStopCount
+)
+
+// IterativeLibraryProcess exiles or reveals cards from the top of a player's
+// library one at a time, remembering every card processed during this single
+// resolution, until a name-based stop predicate fires. It is the generic
+// iterative library processor shared by Tainted Pact and Demonic Consultation.
+//
+// The processed-name history is scoped to one execution of this primitive, so
+// independent copies of the same spell never share history and no shuffle
+// occurs. When the library empties before the stop predicate fires the process
+// simply ends with every processed card left exiled.
+//
+//   - ChooseName: before processing, the player names a card. The chosen name
+//     feeds the IterativeLibraryStopChosenName predicate.
+//   - PreExile: cards exiled from the top before the loop begins, without being
+//     revealed or offered to hand (Demonic Consultation's "top six cards").
+//   - Reveal: each processed card is revealed as public information before it is
+//     routed (Demonic Consultation). When false, cards are exiled directly
+//     (Tainted Pact) without a reveal event.
+//   - OptionalTake: after a non-duplicate card is processed, the player may put
+//     it into hand to end the process (Tainted Pact's "you may put that card
+//     into your hand"). When declined the process continues.
+//   - AllowAbsentName: the naming step offers an extra "a card name not in this
+//     library" option that maps to a sentinel the chosen-name predicate never
+//     matches, so the player can deliberately name an absent card and exile the
+//     entire remaining library (Demonic Consultation's defining line). It is
+//     only meaningful with the chosen-name stop, where the actual named card is
+//     irrelevant once matching fails, and it keeps the naming step reachable
+//     even when the library is empty.
+//   - Stop: which name-based predicate terminates the loop.
+type IterativeLibraryProcess struct {
+	Player          PlayerReference
+	Stop            IterativeLibraryStop
+	PreExile        Quantity
+	ChooseName      bool
+	Reveal          bool
+	OptionalTake    bool
+	AllowAbsentName bool
 }
 
 // ExileTopEachLibraryCastFree exiles the top Amount cards of every player's

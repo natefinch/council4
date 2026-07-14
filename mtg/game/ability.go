@@ -293,6 +293,13 @@ const (
 	// created token copy does not recursively make another token. Appended at the
 	// end of the enum so existing keyword ordinals are unchanged.
 	Offspring
+	// HexproofFrom parameterizes "hexproof from [quality]" (CR 702.11e). Unlike
+	// full Hexproof, it is a source-color-qualified targeting restriction carried
+	// by HexproofFromKeyword: the permanent or player can't be the target of
+	// spells or abilities an opponent controls whose source has one of the named
+	// colors. Appended at the end of the enum so existing keyword ordinals are
+	// unchanged.
+	HexproofFrom
 	// KeywordCount is one greater than the largest real keyword value. It sizes
 	// compact keyword sets; it is not itself a keyword.
 	KeywordCount
@@ -1218,6 +1225,14 @@ type TriggerPattern struct {
 	// the source's EntryColorChoiceKey choice and checked against the triggering
 	// event's ProducedManaColors.
 	RequireProducedManaColorFromEntryChoice bool
+
+	// RequireManaProducedByLand restricts an EventManaProduced trigger to mana
+	// added by a land's ability ("Whenever a land's ability causes you to add
+	// ... mana" — Caged Sun). It is checked against the event's ManaSourceIsLand
+	// flag, which is captured as last-known information so a sacrifice-for-mana
+	// land still matches after it has left the battlefield. It is only meaningful
+	// on an EventManaProduced pattern.
+	RequireManaProducedByLand bool
 
 	// UnionEvent joins a second event kind to Event under the pattern's shared
 	// subject and player filters, expressing "Whenever you create or sacrifice a

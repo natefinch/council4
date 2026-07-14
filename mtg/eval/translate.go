@@ -175,6 +175,13 @@ func appendPrimitiveAtoms(atoms []EffectAtom, primitive game.Primitive) []Effect
 		// gain is dynamic card advantage for that player, matching how the other
 		// "unknown number of cards into hand" primitives are valued.
 		return append(atoms, EffectAtom{Kind: EffectCardsDrawn, IsDynamic: true, Affected: affectedFromPlayer(p.Player)})
+	case game.IterativeLibraryProcess:
+		// The controller digs through the top of their library and puts a single
+		// found card into their hand (Tainted Pact's selection, Demonic
+		// Consultation's named tutor), exiling the rest — card advantage of one
+		// card for that player, matching how the other "card into hand" library
+		// primitives are valued.
+		return append(atoms, EffectAtom{Kind: EffectCardsDrawn, Amount: 1, Affected: affectedFromPlayer(p.Player)})
 	default:
 		return atoms
 	}

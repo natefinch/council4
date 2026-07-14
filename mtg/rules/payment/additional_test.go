@@ -287,8 +287,10 @@ func (fakePaymentState) CostModifiersForSpell(game.PlayerID, *game.CardDef, id.I
 func (fakePaymentState) SpellHasGrantedKeyword(game.PlayerID, *game.CardDef, id.ID, zone.Type, game.Keyword) bool {
 	return false
 }
-func (fakePaymentState) SetTapped(*game.Permanent, bool)                                   {}
-func (fakePaymentState) SetTappedForMana(*game.Permanent)                                  {}
+func (fakePaymentState) SetTapped(*game.Permanent, bool)  {}
+func (fakePaymentState) SetTappedForMana(*game.Permanent) {}
+func (fakePaymentState) RecordManaProduced(*game.Permanent, game.PlayerID, bool, mana.Color, int, bool) {
+}
 func (fakePaymentState) RecordManaAbilityUse(*game.Permanent, int, game.TimingRestriction) {}
 func (fakePaymentState) AddCounters(game.PlayerID, *game.Permanent, counter.Kind, int) bool {
 	return true

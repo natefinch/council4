@@ -192,7 +192,12 @@ func TestEventHistoryConditionCreatureDiedCurrentTurn(t *testing.T) {
 	}
 }
 
-func TestEventHistoryConditionFailsClosedWithNilSource(t *testing.T) {
+// TestEventHistoryConditionNilSourceControllerRelative proves a resolving
+// instant (nil source) evaluates a controller-relative event-history condition
+// against the ability's controller. Veil of Summer's "if an opponent has cast
+// ... this turn" relies on this: the condition is satisfied for the controller
+// whose opponent (or self, for TriggerControllerYou) matches the recorded event.
+func TestEventHistoryConditionNilSourceControllerRelative(t *testing.T) {
 	t.Parallel()
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	emitEvent(g, game.Event{Kind: game.EventAttackerDeclared, Controller: game.Player1})
@@ -206,8 +211,34 @@ func TestEventHistoryConditionFailsClosedWithNilSource(t *testing.T) {
 			Window: game.EventHistoryCurrentTurn,
 		}),
 	})
+	if !conditionSatisfied(g, conditionContext{controller: game.Player1, source: nil}, cond) {
+		t.Fatal("controller-relative condition should be satisfied for the controller who attacked")
+	}
+	if conditionSatisfied(g, conditionContext{controller: game.Player2, source: nil}, cond) {
+		t.Fatal("controller-relative condition should not be satisfied for a controller who did not attack")
+	}
+}
+
+// TestEventHistoryConditionFailsClosedWithNilSource proves a source-referencing
+// event-history pattern still fails closed when evaluated without a source
+// permanent: such filters (here ExcludeSelf) can never match without one.
+func TestEventHistoryConditionFailsClosedWithNilSource(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	emitEvent(g, game.Event{Kind: game.EventAttackerDeclared, Controller: game.Player1})
+
+	cond := opt.Val(game.Condition{
+		EventHistory: opt.Val(game.EventHistoryCondition{
+			Pattern: game.TriggerPattern{
+				Event:       game.EventAttackerDeclared,
+				Controller:  game.TriggerControllerYou,
+				ExcludeSelf: true,
+			},
+			Window: game.EventHistoryCurrentTurn,
+		}),
+	})
 	if conditionSatisfied(g, conditionContext{controller: game.Player1, source: nil}, cond) {
-		t.Fatal("condition satisfied with nil source; should fail closed")
+		t.Fatal("source-referencing condition satisfied with nil source; should fail closed")
 	}
 }
 

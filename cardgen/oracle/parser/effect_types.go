@@ -507,6 +507,17 @@ const (
 	DigRemainderLibraryBottomRandom DigRemainderKind = "DigRemainderLibraryBottomRandom"
 )
 
+// IterativeLibraryStopKind names the predicate that terminates an iterative
+// library process. The empty value marks a non-head effect (no stop).
+type IterativeLibraryStopKind string
+
+// Recognized iterative-library stop predicates.
+const (
+	IterativeLibraryStopNone          IterativeLibraryStopKind = ""
+	IterativeLibraryStopChosenName    IterativeLibraryStopKind = "IterativeLibraryStopChosenName"
+	IterativeLibraryStopDuplicateName IterativeLibraryStopKind = "IterativeLibraryStopDuplicateName"
+)
+
 // DigSyntax holds the structured fields of an impulse "Put N <source> into your
 // hand and the <rest|other> <remainder>." clause. The parser sets it only on the
 // EffectPut clause that follows an EffectDig "Look at the top N cards of your
@@ -2933,6 +2944,35 @@ type EffectSyntax struct {
 	// piles.") so the lowerer can credit its tokens toward source coverage. It is
 	// set only on the Put effect of a recognized pile-split sequence.
 	PileSplitMiddleSpan shared.Span `json:"-"`
+	// IterativeLibraryProcess marks every effect of a recognized iterative
+	// library-processing sequence (Tainted Pact's duplicate-name stop, Demonic
+	// Consultation's chosen-name stop). The parser keeps the effect shape and
+	// records the sequence's typed knobs on the head (first) effect so the
+	// text-blind lowering can emit a single IterativeLibraryProcess primitive;
+	// the marker is false for every other effect.
+	IterativeLibraryProcess bool `json:",omitempty"`
+	// IterativeLibraryStop names the terminating predicate of an iterative
+	// library process. It is set only on the head effect; a non-empty value also
+	// identifies which effect is the head.
+	IterativeLibraryStop IterativeLibraryStopKind `json:",omitempty"`
+	// IterativeLibraryChooseName reports that the process begins by naming a card
+	// (Demonic Consultation). IterativeLibraryReveal reports that each processed
+	// card is revealed as public information before it is routed.
+	// IterativeLibraryOptionalTake reports the per-iteration "you may put that
+	// card into your hand" decision (Tainted Pact). All three are set only on the
+	// head effect.
+	IterativeLibraryChooseName   bool `json:",omitempty"`
+	IterativeLibraryReveal       bool `json:",omitempty"`
+	IterativeLibraryOptionalTake bool `json:",omitempty"`
+	// IterativeLibraryPreExile is the fixed count exiled from the top before the
+	// loop begins (Demonic Consultation's "top six cards"; zero for Tainted
+	// Pact). It is set only on the head effect.
+	IterativeLibraryPreExile int `json:",omitempty"`
+	// IterativeLibraryPreludeSpan is the source span of the credited zero-effect
+	// "Choose a card name." naming prelude (Demonic Consultation), recorded on
+	// the head effect so lowering can account for the prelude's tokens as
+	// consumed. It is empty when the process has no naming prelude.
+	IterativeLibraryPreludeSpan shared.Span `json:"-"`
 	// ExiledCardSplitOpponentChooses reports that a recognized "An opponent
 	// chooses one of the exiled cards." antecedent names an opponent as the
 	// chooser of the cost-exiled card this put effect disposes of (Coin of Fate).

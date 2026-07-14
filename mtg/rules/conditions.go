@@ -127,6 +127,22 @@ func aggregateValue(g *game.Game, ctx conditionContext, kind game.AggregateKind)
 	return 0, false
 }
 
+// aggregateComparisonThreshold resolves the value an aggregate comparison is
+// compared against. It is the comparison's fixed Value unless ValueAmount
+// supplies a resolution-time dynamic amount (CR 608.2c), in which case the
+// amount is evaluated against the condition's resolving stack object and
+// controller. A dynamic threshold that cannot be evaluated because the context
+// carries no resolving stack object fails the comparison closed.
+func aggregateComparisonThreshold(g *game.Game, ctx conditionContext, agg game.AggregateComparison) (int, bool) {
+	if !agg.ValueAmount.Exists {
+		return agg.Value, true
+	}
+	if ctx.obj == nil {
+		return 0, false
+	}
+	return dynamicAmountValue(g, ctx.obj, ctx.controller, agg.ValueAmount.Val), true
+}
+
 func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game.Condition]) bool {
 	if !condition.Exists || condition.Val.Empty() {
 		return true
@@ -141,7 +157,8 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	}
 	for _, agg := range cond.Aggregates {
 		value, ok := aggregateValue(g, ctx, agg.Aggregate)
-		matches = matches && ok && compare.Int{Op: agg.Op, Value: agg.Value}.Matches(value)
+		threshold, thresholdOK := aggregateComparisonThreshold(g, ctx, agg)
+		matches = matches && ok && thresholdOK && compare.Int{Op: agg.Op, Value: threshold}.Matches(value)
 	}
 	if cond.AnyOpponentPoisonAtLeast > 0 {
 		matches = matches && anyOpponentPoisonAtLeast(g, ctx.controller, cond.AnyOpponentPoisonAtLeast)
@@ -1339,7 +1356,17 @@ func conditionEventHistorySatisfied(g *game.Game, ctx conditionContext, hist *ga
 	want := max(hist.MinCount, 1)
 	matches := 0
 	for i := range events {
-		if triggerMatchesEvent(g, ctx.source, &hist.Pattern, events[i]) {
+		var matched bool
+		if ctx.source != nil {
+			matched = triggerMatchesEvent(g, ctx.source, &hist.Pattern, events[i])
+		} else {
+			// A resolving instant has no source permanent, so controller-relative
+			// filters (TriggerControllerOpponent for "an opponent has cast ...",
+			// TriggerControllerYou/TriggerPlayerYou for "you've cast ...") resolve
+			// against the ability's controller instead.
+			matched = triggerMatchesEventForController(g, nil, ctx.controller, &hist.Pattern, events[i])
+		}
+		if matched {
 			matches++
 			if matches >= want {
 				return true
@@ -1350,15 +1377,14 @@ func conditionEventHistorySatisfied(g *game.Game, ctx conditionContext, hist *ga
 }
 
 // eventHistoryPatternNeedsSource reports whether a trigger pattern consults the
-// ability's source permanent (its controller, identity, or attachment) to match
-// an event. Such patterns can never match without a source, so a source-agnostic
-// caller (a resolving instant gating on event history) fails them closed instead
-// of dereferencing a nil source.
+// ability's source permanent's identity or attachment to match an event. Such
+// patterns can never match without a source, so a source-agnostic caller (a
+// resolving instant gating on event history) fails them closed instead of
+// dereferencing a nil source. Controller-relative filters (Controller,
+// CauseController, Player) are excluded here: they only need the acting player's
+// identity, which the caller supplies from the ability's controller.
 func eventHistoryPatternNeedsSource(pattern *game.TriggerPattern) bool {
-	return pattern.Controller != game.TriggerControllerAny ||
-		pattern.CauseController != game.TriggerControllerAny ||
-		pattern.Player != game.TriggerPlayerAny ||
-		pattern.Source != game.TriggerSourceAny ||
+	return pattern.Source != game.TriggerSourceAny ||
 		pattern.ExcludeSelf ||
 		pattern.SubjectSelectionOrSelf ||
 		pattern.DamageSourceSelectionOrSelf ||

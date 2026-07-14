@@ -16,13 +16,13 @@ var landAbilityAddsManaSuffixWords = []string{
 }
 
 // parseLandAbilityAddsManaTriggerEventClause recognizes "Whenever a land's
-// ability causes you to add one or more mana of the chosen color" (Caged Sun),
-// reusing the becomes-tapped/tapped-for-mana event family with a chosen-color
-// produced-mana constraint. The engine models mana production through the
-// tapped-for-mana event, so the trigger fires when a matching land taps for the
-// source's entry-time chosen color. The subject's controller is forced to "you"
-// because the produced mana is added to your pool. Any deviation from the exact
-// wording returns nil so the shared dispatcher records no match.
+// ability causes you to add one or more mana of the chosen color" (Caged Sun).
+// The engine models mana production through the authoritative mana-produced
+// event, so the trigger fires whenever a land's ability adds the source's
+// entry-time chosen color — by tapping, sacrificing, or paying life (CR 106.1 /
+// 605). The subject's controller is forced to "you" because the produced mana is
+// added to your pool. Any deviation from the exact wording returns nil so the
+// shared dispatcher records no match.
 func parseLandAbilityAddsManaTriggerEventClause(
 	tokens []shared.Token,
 	intro TriggerIntroductionKind,
@@ -57,12 +57,14 @@ func parseLandAbilityAddsManaTriggerEventClause(
 	if !mergeTriggerController(&controller, ControllerYou) {
 		return nil
 	}
+	// The land subject becomes a ManaProducedByLand flag rather than a live
+	// subject selection so the trigger still fires when the land has left the
+	// battlefield (sacrifice-for-mana): the emitted event snapshots that its
+	// source was a land.
 	return &TriggerEventClause{
-		Kind:                     TriggerEventKindBecomesTapped,
-		Subject:                  subject.subject,
+		Kind:                     TriggerEventKindManaProduced,
 		Controller:               controller,
-		ExcludeSelf:              subject.excludeSelf,
-		TappedForMana:            true,
+		ManaProducedByLand:       true,
 		TappedForManaChosenColor: true,
 	}
 }

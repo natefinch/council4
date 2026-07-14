@@ -291,14 +291,15 @@ type digFilter struct {
 
 // digCards resolves a Dig effect: the player looks at the top look cards of
 // their library, chooses take of them (bounded by the cards actually seen and,
-// when filter.selection is present, by the cards matching it) to take to the
-// filter.destination (their hand by default, or the battlefield), and the
-// remaining cards go to the destination identified by remainder (graveyard or
-// the bottom of the library, in seen order). When filter.takeUpTo is set the
-// controller may take fewer than take cards (down to none); when filter.reveal
-// is set each taken card is revealed as it is taken; when filter.destination is
-// the battlefield each taken card is put onto the battlefield under the player's
-// control, tapped when filter.entersTapped is set.
+// when filter.selection is present, by the cards matching it) to move to the
+// filter.destination, and the remaining cards go to the destination identified
+// by remainder (graveyard or the bottom of the library, in seen order). The
+// taken cards go to the player's hand by default, to the battlefield when
+// filter.destination is the battlefield (tapped when filter.entersTapped is
+// set), or back onto the top of the library when filter.destination is the
+// library ("put up to one of them on top of your library"). When
+// filter.takeUpTo is set the controller may take fewer than take cards (down to
+// none); when filter.reveal is set each taken card is revealed as it is taken.
 func (e *Engine) digCards(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, obj *game.StackObject, playerID game.PlayerID, look, take int, remainder game.DigRemainder, filter digFilter) bool {
 	player, ok := playerByID(g, playerID)
 	if !ok || look <= 0 {
@@ -327,31 +328,46 @@ func (e *Engine) digCards(g *game.Game, agents [game.NumPlayers]PlayerAgent, log
 	}
 	var taken []id.ID
 	if take > 0 {
-		taken = e.chooseDigCards(g, agents, log, playerID, eligible, minTake, take)
+		taken = e.chooseDigCards(g, agents, log, playerID, eligible, minTake, take, filter.destination)
 	}
-	for _, cardID := range taken {
+	// A library-top destination returns the chosen cards to the top of the
+	// library ("Put up to one of them on top of your library"). Place them in
+	// reverse selection order so the first chosen card ends up on top.
+	topOrdered := taken
+	if filter.destination == zone.Library {
+		topOrdered = make([]id.ID, len(taken))
+		for i, cardID := range taken {
+			topOrdered[len(taken)-1-i] = cardID
+		}
+	}
+	for _, cardID := range topOrdered {
 		if !player.Library.Remove(cardID) {
 			continue
 		}
 		if filter.reveal {
 			emitCardRevealEvent(g, obj, playerID, cardID, zone.Library)
 		}
-		if filter.destination == zone.Battlefield {
+		switch filter.destination {
+		case zone.Battlefield:
 			card, cardOK := g.GetCardInstance(cardID)
 			if !cardOK {
 				continue
 			}
 			_, _ = createCardPermanentFaceWithOptions(e, g, card, playerID, zone.Library, game.FaceFront, nil, permanentCreationOptions{ForceTapped: filter.entersTapped}, agents, log)
-			continue
+		case zone.Library:
+			// The card never leaves the library zone; it is only reordered onto
+			// the top, so no cross-zone change event is emitted.
+			player.Library.Add(cardID)
+		default:
+			player.Hand.Add(cardID)
+			emitZoneChangeEvent(g, game.Event{
+				Player:   playerID,
+				CardID:   cardID,
+				FromZone: zone.Library,
+				ToZone:   zone.Hand,
+				Amount:   1,
+			})
 		}
-		player.Hand.Add(cardID)
-		emitZoneChangeEvent(g, game.Event{
-			Player:   playerID,
-			CardID:   cardID,
-			FromZone: zone.Library,
-			ToZone:   zone.Hand,
-			Amount:   1,
-		})
 	}
 	for _, cardID := range seen {
 		if slices.Contains(taken, cardID) {
@@ -377,12 +393,12 @@ func (e *Engine) digCards(g *game.Game, agents [game.NumPlayers]PlayerAgent, log
 }
 
 // chooseDigCards asks the digging player which of the eligible cards (already
-// filtered to those that may be taken) to put into their hand. minTake and
+// filtered to those that may be taken) to move to destination. minTake and
 // maxTake bound the selection: an exact dig passes minTake == maxTake, while a
 // typed "you may reveal up to N" dig passes minTake 0 so the player may decline.
 // Agents that do not answer fall back to the deterministic first-take selection,
 // preserving prior engine behavior.
-func (e *Engine) chooseDigCards(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID, eligible []id.ID, minTake, maxTake int) []id.ID {
+func (e *Engine) chooseDigCards(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID, eligible []id.ID, minTake, maxTake int, destination zone.Type) []id.ID {
 	options := make([]game.ChoiceOption, 0, len(eligible))
 	defaults := make([]int, 0, minTake)
 	for i, cardID := range eligible {
@@ -394,7 +410,7 @@ func (e *Engine) chooseDigCards(g *game.Game, agents [game.NumPlayers]PlayerAgen
 	request := game.ChoiceRequest{
 		Kind:             game.ChoiceDig,
 		Player:           playerID,
-		Prompt:           "Dig: choose cards to put into your hand.",
+		Prompt:           digChoicePrompt(destination),
 		Options:          options,
 		MinChoices:       minTake,
 		MaxChoices:       maxTake,
@@ -408,6 +424,19 @@ func (e *Engine) chooseDigCards(g *game.Game, agents [game.NumPlayers]PlayerAgen
 		}
 	}
 	return taken
+}
+
+// digChoicePrompt names the destination the chosen dig cards move to so the
+// choice prompt matches the printed effect.
+func digChoicePrompt(destination zone.Type) string {
+	switch destination {
+	case zone.Battlefield:
+		return "Dig: choose cards to put onto the battlefield."
+	case zone.Library:
+		return "Dig: choose cards to put on top of your library."
+	default:
+		return "Dig: choose cards to put into your hand."
+	}
 }
 
 func (e *Engine) manifestTopCard(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID, kind game.FaceDownKind) (*game.Permanent, bool) {

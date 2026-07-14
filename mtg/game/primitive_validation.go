@@ -2545,12 +2545,15 @@ func (p Dig) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 		return errors.New("Dig has an unknown remainder destination")
 	}
 	switch p.Destination {
-	case zone.None, zone.Battlefield:
+	case zone.None, zone.Battlefield, zone.Library:
 	default:
-		return errors.New("Dig supports only a hand (zero) or battlefield destination")
+		return errors.New("Dig supports only a hand (zero), battlefield, or library-top destination")
 	}
 	if p.EntersTapped && p.Destination != zone.Battlefield {
 		return errors.New("Dig EntersTapped requires a battlefield destination")
+	}
+	if p.Destination == zone.Library && p.Reveal {
+		return errors.New("Dig with a library-top destination does not reveal the chosen cards")
 	}
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
@@ -2603,6 +2606,28 @@ func (p ImpulseExile) validatePrimitive(targets []TargetSpec, checkTargets bool)
 }
 
 func (p ExileLibraryUntilNonlandCast) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
+func (p IterativeLibraryProcess) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.Stop >= iterativeLibraryStopCount {
+		return errors.New("IterativeLibraryProcess has an unknown stop predicate")
+	}
+	if err := validateQuantity(p.PreExile, targets, checkTargets); err != nil {
+		return err
+	}
+	if !p.PreExile.IsDynamic() && p.PreExile.Value() < 0 {
+		return errors.New("IterativeLibraryProcess requires a non-negative pre-exile count")
+	}
+	if p.Stop == IterativeLibraryStopChosenName && !p.ChooseName {
+		return errors.New("IterativeLibraryProcess chosen-name stop requires ChooseName")
+	}
+	if p.OptionalTake && p.Stop != IterativeLibraryStopDuplicateName {
+		return errors.New("IterativeLibraryProcess OptionalTake requires the duplicate-name stop")
+	}
+	if p.AllowAbsentName && p.Stop != IterativeLibraryStopChosenName {
+		return errors.New("IterativeLibraryProcess AllowAbsentName requires the chosen-name stop")
+	}
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 

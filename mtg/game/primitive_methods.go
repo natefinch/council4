@@ -261,6 +261,11 @@ func (ExileLibraryUntilNonlandCast) Kind() PrimitiveKind {
 	return PrimitiveExileLibraryUntilNonlandCast
 }
 
+// Kind implements Primitive for IterativeLibraryProcess.
+func (IterativeLibraryProcess) Kind() PrimitiveKind {
+	return PrimitiveIterativeLibraryProcess
+}
+
 // Kind implements Primitive for ExileTopEachLibraryCastFree.
 func (ExileTopEachLibraryCastFree) Kind() PrimitiveKind {
 	return PrimitiveExileTopEachLibraryCastFree
@@ -476,6 +481,7 @@ func (PileSplit) isPrimitive()                            {}
 func (RevealTopPartition) isPrimitive()                   {}
 func (ImpulseExile) isPrimitive()                         {}
 func (ExileLibraryUntilNonlandCast) isPrimitive()         {}
+func (IterativeLibraryProcess) isPrimitive()              {}
 func (ExileTopEachLibraryCastFree) isPrimitive()          {}
 func (Investigate) isPrimitive()                          {}
 func (Proliferate) isPrimitive()                          {}
@@ -753,6 +759,7 @@ func (p ImpulseExile) instructionRefs() primitiveRefs {
 }
 
 func (ExileLibraryUntilNonlandCast) instructionRefs() primitiveRefs  { return primitiveRefs{} }
+func (p IterativeLibraryProcess) instructionRefs() primitiveRefs     { return quantityRefs(p.PreExile) }
 func (p ExileTopEachLibraryCastFree) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
 func (p Investigate) instructionRefs() primitiveRefs                 { return quantityRefs(p.Amount) }
 func (p Proliferate) instructionRefs() primitiveRefs                 { return quantityRefs(p.Amount) }

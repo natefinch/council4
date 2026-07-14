@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -461,7 +462,11 @@ func targetProtectedFromSource(g *game.Game, controller game.PlayerID, source *g
 		if playerProtectedFromSource(g, target.PlayerID, 0, sourceObjectID, source) {
 			return true
 		}
-		return playerUntargetableByRuleEffect(g, controller, target.PlayerID)
+		var sourceColors []color.Color
+		if chars, ok := sourceCharsForProtection(g, 0, sourceObjectID, source); ok {
+			sourceColors = chars.colors
+		}
+		return playerUntargetableByRuleEffect(g, controller, target.PlayerID, sourceColors)
 	}
 	if target.Kind != game.TargetPermanent {
 		return false
@@ -473,8 +478,16 @@ func targetProtectedFromSource(g *game.Game, controller game.PlayerID, source *g
 	if hasKeyword(g, permanent, game.Shroud) {
 		return true
 	}
-	if hasKeyword(g, permanent, game.Hexproof) && effectiveController(g, permanent) != controller {
-		return true
+	if effectiveController(g, permanent) != controller {
+		if hasKeyword(g, permanent, game.Hexproof) {
+			return true
+		}
+		if from := permanentHexproofFromColors(g, permanent); len(from) > 0 {
+			if chars, ok := sourceCharsForProtection(g, 0, sourceObjectID, source); ok &&
+				colorsIntersect(chars.colors, from) {
+				return true
+			}
+		}
 	}
 	// Use effective source characteristics when the source is a permanent on
 	// the battlefield (CR 702.16c).
@@ -499,6 +512,34 @@ func targetProtectedFromSource(g *game.Game, controller game.PlayerID, source *g
 	}
 	// Fall back to the supplied face def (LKI, spell during announcement, etc.).
 	return source != nil && permanentProtectedFromSourceDef(g, permanent, source)
+}
+
+// permanentHexproofFromColors returns the union of colors named by every
+// "hexproof from [colors]" ability currently effective on the permanent
+// (CR 702.11e). It reads the effective ability list so grants removed by "loses
+// all abilities" are excluded, mirroring permanentProtectedFromChars.
+func permanentHexproofFromColors(g *game.Game, permanent *game.Permanent) []color.Color {
+	values := effectivePermanentValues(g, permanent)
+	if !values.keywords.has(game.HexproofFrom) {
+		return nil
+	}
+	var colors []color.Color
+	for i := range values.abilities {
+		body, ok := values.abilities[i].(*game.StaticAbility)
+		if !ok {
+			continue
+		}
+		hexproof, ok := game.StaticBodyHexproofFromKeyword(body)
+		if !ok {
+			continue
+		}
+		for _, c := range hexproof.FromColors {
+			if !slices.Contains(colors, c) {
+				colors = append(colors, c)
+			}
+		}
+	}
+	return colors
 }
 
 func permanentConstraintControllerMatches(g *game.Game, controller game.PlayerID, spec *game.TargetSpec, permanent *game.Permanent) bool {

@@ -121,11 +121,13 @@ func eventHistoryCombinationAllowed(condition *EventHistoryCondition) bool {
 				return condition.Window.Kind == EventHistoryWindowPreviousTurn
 			}
 			// A positive "you've cast ... this turn" restriction counts the
-			// controller's own current-turn spell casts. Only the controller-
-			// scoped actor is reduced to a typed event-history clause; the
-			// passive "spells were cast" form remains the negated previous-turn
-			// shape handled above.
-			return condition.TriggerEvent.Actor.Kind == TriggerEventActorYou &&
+			// controller's own current-turn spell casts, and "an opponent has
+			// cast ... this turn" counts any opponent's current-turn casts. Only
+			// these controller- or opponent-scoped actors are reduced to a typed
+			// event-history clause; the passive "spells were cast" form remains
+			// the negated previous-turn shape handled above.
+			return (condition.TriggerEvent.Actor.Kind == TriggerEventActorYou ||
+				condition.TriggerEvent.Actor.Kind == TriggerEventActorOpponent) &&
 				condition.Window.Kind == EventHistoryWindowCurrentTurn
 		default:
 			return false
@@ -296,12 +298,12 @@ func parseEventHistoryDescended(tokens []shared.Token, span shared.Span) *Trigge
 // that reuses the live spell-cast trigger's selection grammar and treats a
 // single matching cast as sufficient. Anything else fails closed.
 func parseEventHistoryYouCastSpell(tokens []shared.Token) (*TriggerEventClause, int, bool) {
-	actorWidth, ok := eventHistoryYouCastPrefix(tokens)
+	actorWidth, actorKind, ok := eventHistoryCastActorPrefix(tokens)
 	if !ok {
 		return nil, 0, false
 	}
 	actor := TriggerEventActor{
-		Kind: TriggerEventActorYou,
+		Kind: actorKind,
 		Span: shared.SpanOf(tokens[:actorWidth]),
 	}
 	body := tokens[actorWidth:]
@@ -325,20 +327,31 @@ func parseEventHistoryYouCastSpell(tokens []shared.Token) (*TriggerEventClause, 
 	}, 0, true
 }
 
-// eventHistoryYouCastPrefix reports the token width of a controller-scoped
-// past-tense cast actor ("you've cast", "you have cast", "you cast") at the
-// start of an event-history clause, or false when none is present.
-func eventHistoryYouCastPrefix(tokens []shared.Token) (int, bool) {
+// eventHistoryCastActorPrefix reports the token width and acting player of a
+// past-tense cast actor at the start of an event-history clause. The
+// controller-scoped forms ("you've cast", "you have cast", "you cast") yield
+// TriggerEventActorYou; the opponent-scoped forms ("an opponent has cast", "an
+// opponent cast") yield TriggerEventActorOpponent. It returns false when no
+// recognized cast actor is present.
+func eventHistoryCastActorPrefix(tokens []shared.Token) (int, TriggerEventActorKind, bool) {
 	if len(tokens) >= 2 && equalWord(tokens[0], "you've") && equalWord(tokens[1], "cast") {
-		return 2, true
+		return 2, TriggerEventActorYou, true
 	}
 	if len(tokens) >= 3 && equalWord(tokens[0], "you") && equalWord(tokens[1], "have") && equalWord(tokens[2], "cast") {
-		return 3, true
+		return 3, TriggerEventActorYou, true
 	}
 	if len(tokens) >= 2 && equalWord(tokens[0], "you") && equalWord(tokens[1], "cast") {
-		return 2, true
+		return 2, TriggerEventActorYou, true
 	}
-	return 0, false
+	if len(tokens) >= 4 && equalWord(tokens[0], "an") && equalWord(tokens[1], "opponent") &&
+		equalWord(tokens[2], "has") && equalWord(tokens[3], "cast") {
+		return 4, TriggerEventActorOpponent, true
+	}
+	if len(tokens) >= 3 && equalWord(tokens[0], "an") && equalWord(tokens[1], "opponent") &&
+		equalWord(tokens[2], "cast") {
+		return 3, TriggerEventActorOpponent, true
+	}
+	return 0, TriggerEventActorUnknown, false
 }
 
 // eventHistoryCastSpellCount recognizes a counted plural spell run ("two or more

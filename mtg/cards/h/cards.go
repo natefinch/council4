@@ -75,6 +75,7 @@ var Cards = []cardset.Entry{
 	{Name: "Hidden Stockpile", New: HiddenStockpile},
 	{Name: "Hideous Laughter", New: HideousLaughter},
 	{Name: "High Fae Negotiator", New: HighFaeNegotiator},
+	{Name: "High Tide", New: HighTide},
 	{Name: "Hightide Hermit", New: HightideHermit},
 	{Name: "Hindering Light", New: HinderingLight},
 	{Name: "Hivespine Wolverine", New: HivespineWolverine},
