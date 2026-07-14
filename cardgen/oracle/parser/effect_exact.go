@@ -2888,7 +2888,7 @@ func grantableKeywordWord(keyword string) bool {
 		"landwalk", "plainswalk", "islandwalk", "swampwalk", "mountainwalk", "forestwalk", "desertwalk", "nonbasic landwalk":
 		return true
 	default:
-		return grantableProtectionPhrase(keyword)
+		return grantableProtectionPhrase(keyword) || grantableHexproofFromPhrase(keyword)
 	}
 }
 

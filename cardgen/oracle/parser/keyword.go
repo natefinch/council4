@@ -1885,6 +1885,8 @@ func parseKeywordParameter(
 	switch kind {
 	case KeywordProtection:
 		return parseProtectionKeywordParameter(tokens, start, atoms)
+	case KeywordHexproof:
+		return parseHexproofKeywordParameter(tokens, start, atoms)
 	case KeywordEnchant:
 		if predicate, end, ok := parseEnchantTargetPredicate(tokens, start, atoms); ok {
 			return NewEnchantTargetKeywordParameter(shared.SpanOf(tokens[start:end]), predicate), end
@@ -2219,6 +2221,37 @@ func keywordManaColor(name string) (mana.Color, bool) {
 	default:
 		return "", false
 	}
+}
+
+// parseHexproofKeywordParameter recognizes the source-color qualifier on
+// "hexproof from <colors>" ("hexproof from black", "hexproof from blue and from
+// black"), reusing the protection color-list grammar. Only the color form is
+// recognized; a bare "hexproof" with no "from" qualifier falls through to a
+// non-parameterized simple keyword. The colors are carried in a protection
+// parameter so the compiler reuses compileProtectionKeyword; lowering reads
+// them back for a HexproofFromKeyword grant.
+func parseHexproofKeywordParameter(
+	tokens []shared.Token,
+	start int,
+	atoms Atoms,
+) (parameter KeywordParameter, end int) {
+	if start+1 >= len(tokens) || !equalWord(tokens[start], "from") {
+		return KeywordParameter{}, start
+	}
+	if colors, end, ok := parseProtectionList(tokens, start, func(token shared.Token) (Color, bool) {
+		return atoms.ColorAt(token.Span)
+	}); ok {
+		names := make([]string, len(colors))
+		for i, c := range colors {
+			names[i] = colorName(c)
+		}
+		return NewProtectionKeywordParameter(
+			shared.SpanOf(tokens[start:end]),
+			strings.Join(names, ","),
+			ProtectionParameter{FromColors: colors},
+		), end
+	}
+	return KeywordParameter{}, start
 }
 
 func parseProtectionKeywordParameter(

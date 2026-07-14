@@ -22,7 +22,8 @@ func splitGrantKeywordItems(text string) []string {
 		part = strings.TrimSpace(part)
 		if strings.HasPrefix(part, "from ") &&
 			len(items) > 0 &&
-			strings.HasPrefix(items[len(items)-1], "protection from") {
+			(strings.HasPrefix(items[len(items)-1], "protection from") ||
+				strings.HasPrefix(items[len(items)-1], "hexproof from")) {
 			items[len(items)-1] += " and " + part
 			continue
 		}
@@ -68,7 +69,39 @@ func grantableProtectionPhrase(phrase string) bool {
 	return runtimeExpressibleProtection(parameter.Protection())
 }
 
-// runtimeExpressibleProtection reports whether protection names a fully known
+// grantableHexproofFromPhrase reports whether phrase is a complete "hexproof
+// from <colors>" grant body the executable backend can express. It mirrors
+// grantableProtectionPhrase but uses the hexproof color-list parameter parser,
+// so the exactness gate accepts exactly the color-qualified hexproof the keyword
+// parser structures and the lowering reduces to a HexproofFromKeyword grant. It
+// returns false for any hexproof phrase the parser cannot fully structure.
+func grantableHexproofFromPhrase(phrase string) bool {
+	if !strings.HasPrefix(strings.ToLower(phrase), "hexproof from ") {
+		return false
+	}
+	tokens, diagnostics := lexAll(phrase)
+	if len(diagnostics) != 0 {
+		return false
+	}
+	atoms := collectAtoms(tokens, nil, nil, "", false)
+	fromIndex := slices.IndexFunc(tokens, func(token shared.Token) bool {
+		return equalWord(token, "from")
+	})
+	if fromIndex < 0 {
+		return false
+	}
+	parameter, end := parseHexproofKeywordParameter(tokens, fromIndex, atoms)
+	if end <= fromIndex {
+		return false
+	}
+	for _, token := range tokens[end:] {
+		if token.Kind != shared.EOF {
+			return false
+		}
+	}
+	return len(parameter.Protection().FromColors) != 0
+}
+
 // protected predicate the lowering reduces to a static protection mechanic. It
 // mirrors the cases staticAbilityFromProtectionKeyword handles, so the parser
 // only marks a protection grant exact when the executable backend can build it.
