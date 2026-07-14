@@ -1400,6 +1400,12 @@ type Sentence struct {
 	// reference and tokens as belonging to that impulse rather than as an
 	// unrecognized sibling.
 	ImpulseExilePermission bool `json:",omitempty"`
+	// ChooseCardNamePrelude reports that this sentence is the credited zero-effect
+	// "Choose a card name." prelude folded onto a following iterative library
+	// process whose chosen-name stop consumes the named card (Demonic
+	// Consultation). Reference and coverage scans treat its tokens as belonging to
+	// that process rather than as an unrecognized sibling.
+	ChooseCardNamePrelude bool `json:",omitempty"`
 }
 
 // sentenceIsCreditedRider reports whether the sentence has been folded onto a
@@ -1420,7 +1426,8 @@ func sentenceIsCreditedRider(s *Sentence) bool {
 		s.TokenGrantedAbilityRider ||
 		s.PersistentManaRider ||
 		s.RoundUpEachTimeRider ||
-		s.ImpulseExilePermission
+		s.ImpulseExilePermission ||
+		s.ChooseCardNamePrelude
 }
 
 // StaticRuleSubjectKind identifies the source object constrained by a simple

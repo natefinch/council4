@@ -2912,6 +2912,21 @@ type CompiledEffect struct {
 	// credit its tokens toward source coverage. It is set only on the Put effect
 	// of a recognized pile-split sequence.
 	PileSplitMiddleSpan shared.Span
+	// IterativeLibraryProcess and the head-effect knobs below carry the parser's
+	// typed markers for the closed iterative library-processing sequences
+	// (Tainted Pact's duplicate-name stop, Demonic Consultation's chosen-name
+	// stop). IterativeLibraryProcess is set on every effect of the recognized
+	// shape; IterativeLibraryStop, IterativeLibraryChooseName,
+	// IterativeLibraryReveal, IterativeLibraryOptionalTake, and
+	// IterativeLibraryPreExile are set only on the head effect. Lowering keys on
+	// them to emit a single IterativeLibraryProcess primitive.
+	IterativeLibraryProcess      bool
+	IterativeLibraryStop         parser.IterativeLibraryStopKind
+	IterativeLibraryChooseName   bool
+	IterativeLibraryReveal       bool
+	IterativeLibraryOptionalTake bool
+	IterativeLibraryPreExile     int
+	IterativeLibraryPreludeSpan  shared.Span
 	// ExiledCardSplitOpponentChooses reports that a recognized "An opponent
 	// chooses one of the exiled cards." antecedent names an opponent as the
 	// chooser of the cost-exiled card this put effect disposes of (Coin of Fate).

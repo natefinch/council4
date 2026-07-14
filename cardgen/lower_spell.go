@@ -570,6 +570,9 @@ func lowerOptionalContent(
 	if content, ok := lowerExileLibraryUntilNonlandCast(ctx); ok {
 		return content, nil
 	}
+	if content, ok := lowerIterativeLibraryDuplicateNameSequence(ctx); ok {
+		return content, nil
+	}
 	if content, ok := lowerExileEachTopCastAnyForFree(ctx); ok {
 		return content, nil
 	}

@@ -468,6 +468,7 @@ func emitSentenceResolvingSyntax(
 	var pileSplitMiddleCandidates []int
 	var exiledCardChoiceCandidates []int
 	var roundUpRiderCandidates []int
+	var chooseCardNameCandidates []int
 	for i := range sentences {
 		if sentences[i].StaticRule != nil ||
 			sourceCostReduction != nil && sentences[i].Span == sourceCostReduction.Span ||
@@ -508,6 +509,8 @@ func emitSentenceResolvingSyntax(
 				exiledCardChoiceCandidates = append(exiledCardChoiceCandidates, i)
 			case isRoundUpEachTimeRiderTokens(tokens):
 				roundUpRiderCandidates = append(roundUpRiderCandidates, i)
+			case isChooseCardNamePreludeTokens(tokens):
+				chooseCardNameCandidates = append(chooseCardNameCandidates, i)
 			case isChooseTargetPreambleTokens(tokens) && len(sentences[i].Targets) > 0:
 				// A bare "Choose [another] target <object>." preamble declares a
 				// target consumed by a following effect's "it" pronoun and emits
@@ -522,6 +525,10 @@ func emitSentenceResolvingSyntax(
 	recognizeRevealUntilThenPutSequence(sentences)
 	recognizeRevealTopPartitionSequence(sentences)
 	recognizeRevealChooseHandDiscardSequence(sentences)
+	recognizeTaintedPactSequence(sentences)
+	if len(chooseCardNameCandidates) > 0 && !recognizeDemonicConsultationSequence(sentences) {
+		unrecognizedSibling = true
+	}
 	if len(pileSplitMiddleCandidates) > 0 && !recognizePileSplitSequence(sentences) {
 		unrecognizedSibling = true
 	}

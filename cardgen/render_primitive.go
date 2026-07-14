@@ -585,6 +585,46 @@ func (r Renderer) renderExileTopEachLibraryCastFree(ctx *renderCtx, value game.E
 	}), nil
 }
 
+func (r Renderer) renderIterativeLibraryProcess(ctx *renderCtx, value game.IterativeLibraryProcess) (string, error) {
+	player, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	var stop string
+	switch value.Stop {
+	case game.IterativeLibraryStopChosenName:
+		stop = "game.IterativeLibraryStopChosenName"
+	case game.IterativeLibraryStopDuplicateName:
+		stop = "game.IterativeLibraryStopDuplicateName"
+	default:
+		return "", fmt.Errorf("render: unsupported iterative library stop %d", value.Stop)
+	}
+	fields := []string{
+		fmt.Sprintf("Player: %s,", player),
+		fmt.Sprintf("Stop: %s,", stop),
+	}
+	if value.PreExile.IsDynamic() || value.PreExile.Value() != 0 {
+		preExile, err := r.renderQuantity(ctx, value.PreExile)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("PreExile: %s,", preExile))
+	}
+	if value.ChooseName {
+		fields = append(fields, "ChooseName: true,")
+	}
+	if value.Reveal {
+		fields = append(fields, "Reveal: true,")
+	}
+	if value.OptionalTake {
+		fields = append(fields, "OptionalTake: true,")
+	}
+	if value.AllowAbsentName {
+		fields = append(fields, "AllowAbsentName: true,")
+	}
+	return structLit("game.IterativeLibraryProcess", fields), nil
+}
+
 func renderCardReference(reference game.CardReference) (string, error) {
 	switch reference.Kind {
 	case game.CardReferenceEvent:

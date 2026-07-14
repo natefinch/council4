@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,819 of 32,501 cards eligible for paper support (54.8%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,821 of 32,501 cards eligible for paper support (54.8%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -3659,6 +3659,7 @@ Council4 currently supports **17,819 of 32,501 cards eligible for paper support 
 - Demon's Horn
 - Demon's Jester
 - Demonic Appetite
+- Demonic Consultation
 - Demonic Dread
 - Demonic Lore
 - Demonic Ruckus
@@ -15128,6 +15129,7 @@ Council4 currently supports **17,819 of 32,501 cards eligible for paper support 
 - Tainted Field
 - Tainted Isle
 - Tainted Observer
+- Tainted Pact
 - Tainted Peak
 - Tainted Strike
 - Tainted Well

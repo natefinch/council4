@@ -75,7 +75,12 @@ import (
 // the controller's own matching permanents to publish that count (Myr
 // Battlesphere), so its payoff lives in the scaled ModifyPT and Damage
 // instructions that read the count, not in the self-tap enabler itself.
-const knownPrimitiveCount = 130
+//
+// IterativeLibraryProcess carries the EffectCardsDrawn atom (amount 1) for its
+// controller: the process digs through the top of the library and nets a single
+// found card into hand (Tainted Pact, Demonic Consultation), matching the other
+// "card into hand" library primitives.
+const knownPrimitiveCount = 131
 
 // TestPrimitiveCountIsReconciled keeps a newly added resolution primitive from
 // silently falling through the translator: adding one trips this guard so its
