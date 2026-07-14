@@ -11,6 +11,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -44,6 +45,9 @@ func lowerEnchantAbility(
 			"unsupported Enchant ability",
 			"the executable source backend supports only exact Enchant with a supported target kind",
 		)
+	}
+	if keyword.EnchantTarget.InGraveyard {
+		return game.ReanimationEnchantStaticAbility(&target), true, nil
 	}
 	return game.EnchantStaticAbility(&target), true, nil
 }
@@ -949,6 +953,24 @@ func enchantTargetSpec(target compiler.CompiledEnchantTarget) (game.TargetSpec, 
 	if !target.Known {
 		return game.TargetSpec{}, false
 	}
+	// A graveyard-card enchant restriction ("Enchant creature card in a
+	// graveyard") makes the Aura spell target a matching card in a graveyard.
+	// The reanimation resolution handler returns that card to the battlefield
+	// and attaches the Aura to it (see rules.resolveReanimationAura).
+	if target.InGraveyard {
+		if len(target.CardTypes) == 0 || len(target.Subtypes) != 0 ||
+			target.Player || target.Opponent || target.Permanent || target.YouControl {
+			return game.TargetSpec{}, false
+		}
+		return game.TargetSpec{
+			MinTargets: 1,
+			MaxTargets: 1,
+			Allow:      game.TargetAllowCard,
+			TargetZone: zone.Graveyard,
+			Constraint: enchantConstraintText(target),
+			Selection:  opt.Val(game.Selection{RequiredTypes: slices.Clone(target.CardTypes)}),
+		}, true
+	}
 	spec := game.TargetSpec{
 		MinTargets: 1,
 		MaxTargets: 1,
@@ -1018,6 +1040,9 @@ func enchantConstraintText(target compiler.CompiledEnchantTarget) string {
 		words = append(words, strings.ToLower(string(subtype)))
 	}
 	text := strings.Join(words, " or ")
+	if target.InGraveyard {
+		text += " card in a graveyard"
+	}
 	if target.YouControl {
 		text += " you control"
 	}

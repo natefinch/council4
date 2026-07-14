@@ -4164,6 +4164,11 @@ type CompiledEnchantTarget struct {
 	// controls ("Enchant creature or planeswalker you control"). It is set only
 	// alongside a card-type/subtype predicate, never with Player or Opponent.
 	YouControl bool
+	// InGraveyard restricts the target to a matching card in a graveyard
+	// ("Enchant creature card in a graveyard"), the graveyard-card Aura enchant
+	// restriction of the reanimation Aura family. It is set only alongside a
+	// card-type predicate.
+	InGraveyard bool
 }
 
 // CompiledKeyword is a recognized keyword ability.

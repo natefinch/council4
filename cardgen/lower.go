@@ -199,8 +199,16 @@ func lowerFaceAbilities(
 	classLevel := 1
 	var currentBand *compiler.CompiledLevelBand
 	sourceManaValue := faceSearchManaValue(face.ManaCost)
+	reanimationAura := isReanimationAuraFace(parsedType, compilation)
 	for i, ability := range compilation.Abilities {
 		syntax := &compilation.Syntax.Abilities[i]
+		if reanimationAura && isReanimationEnterTrigger(ability) {
+			// The whole "when this Aura enters ... return and attach ... when it
+			// leaves, sacrifice" body is handled by the runtime reanimation
+			// resolution handler plus this leaves-battlefield sacrifice trigger.
+			result.TriggeredAbilities = append(result.TriggeredAbilities, reanimationLeavesSacrificeTrigger())
+			continue
+		}
 		if isLeveler && ability.LevelUpRecognized {
 			activated, diagnostic := lowerLevelUpAbility(face.Name, ability)
 			if diagnostic != nil {

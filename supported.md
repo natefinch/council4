@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,821 of 32,501 cards eligible for paper support (54.8%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,822 of 32,501 cards eligible for paper support (54.8%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -523,6 +523,7 @@ Council4 currently supports **17,821 of 32,501 cards eligible for paper support 
 - Anguished Unmaking
 - Animal Boneyard
 - Animal Sanctuary
+- Animate Dead
 - Animate Land
 - Anje's Ravager
 - Ankh of Mishra

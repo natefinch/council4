@@ -593,6 +593,11 @@ type EnchantPredicate struct {
 	// controls ("Enchant creature or planeswalker you control"). It applies only
 	// to the card-type/subtype predicate; it is never set with Player or Opponent.
 	YouControl bool `json:",omitempty"`
+	// InGraveyard restricts the target to a matching card in a graveyard
+	// ("Enchant creature card in a graveyard"). It marks the graveyard-card Aura
+	// enchant restriction of the reanimation Aura family (Animate Dead, Dance of
+	// the Dead) and is set only alongside a card-type predicate.
+	InGraveyard bool `json:",omitempty"`
 }
 
 // Empty reports whether the predicate carries no recognized restriction. A bare
@@ -2095,6 +2100,20 @@ func parseEnchantTargetPredicate(tokens []shared.Token, start int, atoms Atoms) 
 	if predicate.Empty() {
 		return EnchantPredicate{}, start, false
 	}
+	// A trailing "card in a graveyard" narrows a card-type predicate to a
+	// matching card in a graveyard ("Enchant creature card in a graveyard").
+	// This is the graveyard-card Aura enchant restriction of the reanimation
+	// Aura family; it is consumed only after a recognized card-type predicate so
+	// the keyword span covers the whole restriction.
+	if !expectItem && end+3 < len(tokens) &&
+		equalWord(tokens[end], "card") &&
+		equalWord(tokens[end+1], "in") &&
+		equalWord(tokens[end+2], "a") &&
+		equalWord(tokens[end+3], "graveyard") {
+		predicate.InGraveyard = true
+		end += 4
+		return predicate, end, true
+	}
 	// A trailing "you control" controller restriction narrows the permanent
 	// predicate to the enchanting player's own permanents ("Enchant creature or
 	// planeswalker you control"). It is consumed only after a recognized
@@ -2129,6 +2148,9 @@ func enchantTargetName(predicate EnchantPredicate) string {
 		words = append(words, strings.ToLower(string(subtype)))
 	}
 	name := strings.Join(words, " or ")
+	if predicate.InGraveyard {
+		name += " card in a graveyard"
+	}
 	if predicate.YouControl {
 		name += " you control"
 	}

@@ -34,6 +34,14 @@ func (r Renderer) renderStaticAbility(ctx *renderCtx, body *game.StaticAbility, 
 		}
 		return fmt.Sprintf("game.HexproofFromColorsStaticAbility(%s)", renderedColors), nil
 	}
+	if enchant, ok := game.StaticBodyEnchantKeyword(body); ok && enchant.Reanimates &&
+		reflect.DeepEqual(*body, game.ReanimationEnchantStaticAbility(&enchant.Target)) {
+		renderedTarget, err := r.renderTargetSpec(ctx, &enchant.Target)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.ReanimationEnchantStaticAbility(&%s)", renderedTarget), nil
+	}
 	if target, ok := game.StaticBodyEnchantTarget(body); ok &&
 		reflect.DeepEqual(*body, game.EnchantStaticAbility(&target)) {
 		renderedTarget, err := r.renderTargetSpec(ctx, &target)

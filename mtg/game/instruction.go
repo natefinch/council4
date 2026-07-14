@@ -22,6 +22,12 @@ type ChoiceKey string
 // and by CardCondition references to linked objects.
 type LinkedKey string
 
+// ReanimationLinkID is the link key under which a graveyard-reanimation Aura
+// (Animate Dead, Dance of the Dead) remembers the creature it returned to the
+// battlefield. Its leaves-the-battlefield triggered ability references this link
+// to sacrifice that same creature ("that creature's controller sacrifices it").
+const ReanimationLinkID = "reanimation-linked-creature"
+
 // IntRange is an inclusive integer interval [Min, Max].
 type IntRange struct {
 	Min int
