@@ -177,7 +177,8 @@ func lowerReplacementAbility(ability compiler.CompiledAbility) (abilityLowering,
 func lowerGroupEntersTappedReplacement(
 	ability compiler.CompiledAbility,
 ) (game.ReplacementAbility, bool, *shared.Diagnostic) {
-	if len(ability.Content.Effects) != 1 || !ability.Content.Effects[0].EntersTappedGroup() {
+	if len(ability.Content.Effects) != 1 ||
+		(!ability.Content.Effects[0].EntersTappedGroup() && !ability.Content.Effects[0].EntersUntappedGroup()) {
 		return game.ReplacementAbility{}, false, nil
 	}
 	unsupported := func(detail string) (game.ReplacementAbility, bool, *shared.Diagnostic) {
@@ -198,6 +199,9 @@ func lowerGroupEntersTappedReplacement(
 	controller, ok := groupEntersTappedController(effect.GroupEntryModification.ControllerScope)
 	if !ok {
 		return unsupported("the executable source backend does not lower this enters-tapped controller scope")
+	}
+	if effect.EntersUntappedGroup() {
+		return game.EntersUntappedGroupReplacement(ability.Text, controller, effect.GroupEntryModification.Types...), true, nil
 	}
 	return game.EntersTappedGroupReplacement(ability.Text, controller, effect.GroupEntryModification.Types...), true, nil
 }

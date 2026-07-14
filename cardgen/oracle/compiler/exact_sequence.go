@@ -84,6 +84,9 @@ const (
 	// (ExactSequenceDevotionColor) so lowering builds the devotion amount and win
 	// comparison without reading Oracle words.
 	ExactSequenceDevotionLookWin
+	// ExactSequenceDrawPutLandSubtypeLife is the triggered draw, optional
+	// land-from-hand, and subtype-gated life sequence.
+	ExactSequenceDrawPutLandSubtypeLife
 )
 
 func compileExactSequenceKind(kind parser.ExactSequenceKind) ExactSequenceKind {
@@ -108,6 +111,8 @@ func compileExactSequenceKind(kind parser.ExactSequenceKind) ExactSequenceKind {
 		return ExactSequenceBargainSearchCastPayoff
 	case parser.ExactSequenceDevotionLookWin:
 		return ExactSequenceDevotionLookWin
+	case parser.ExactSequenceDrawPutLandSubtypeLife:
+		return ExactSequenceDrawPutLandSubtypeLife
 	default:
 		return ExactSequenceUnknown
 	}

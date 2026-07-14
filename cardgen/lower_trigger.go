@@ -204,6 +204,9 @@ func lowerTriggeredAbility(
 	if ability.ExactSequence == compiler.ExactSequenceDevotionLookWin {
 		return lowerDevotionLookWinTrigger(ability)
 	}
+	if ability.ExactSequence == compiler.ExactSequenceDrawPutLandSubtypeLife {
+		return lowerDrawPutLandSubtypeLifeTrigger(ability)
+	}
 	if pattern.Kind == compiler.TriggerAt {
 		return lowerAtTrigger(cardName, ability, syntax)
 	}

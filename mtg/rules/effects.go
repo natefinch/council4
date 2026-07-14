@@ -638,6 +638,7 @@ func registerPermanentReplacementEffects(g *game.Game, permanent *game.Permanent
 			len(replacement.CreateOneOfEachTokens) == 0 &&
 			replacement.TokenReplaceDef == nil &&
 			!replacement.EntersTappedOthers &&
+			!replacement.EntersUntappedOthers &&
 			!replacement.EntersWithCountersOthers &&
 			replacement.DrawCardMultiplier <= 1 &&
 			replacement.DrawCardDigLook <= 0 &&

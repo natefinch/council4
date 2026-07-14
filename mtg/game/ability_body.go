@@ -204,6 +204,21 @@ func EntersTappedGroupReplacement(text string, controller TriggerControllerFilte
 	return ReplacementAbility{Text: text, Replacement: replacement}
 }
 
+// EntersUntappedGroupReplacement creates a continuous static replacement that
+// makes a group of OTHER permanents enter untapped.
+func EntersUntappedGroupReplacement(text string, controller TriggerControllerFilter, cardTypes ...types.Card) ReplacementAbility {
+	replacement := etbReplacement(text)
+	replacement.EntersUntapped = true
+	replacement.EntersUntappedOthers = true
+	replacement.ControllerFilter = controller
+	if len(cardTypes) > 0 {
+		replacement.EntersTappedSelection = &Selection{
+			RequiredTypesAny: append([]types.Card(nil), cardTypes...),
+		}
+	}
+	return ReplacementAbility{Text: text, Replacement: replacement}
+}
+
 // GraveyardRedirectReplacement creates a continuous static replacement that
 // exiles a card (or permanent) that would be put into a watched graveyard
 // instead (CR 614), as in "If a card would be put into a graveyard from

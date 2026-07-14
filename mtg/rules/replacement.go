@@ -616,10 +616,14 @@ func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *gam
 	if len(matches) > 1 {
 		recordReplacementDecision(g, replacementEventPlayer(event), replacementEffectLabels(matches))
 	}
+	entersUntapped := false
 	for i := range matches {
 		replacement := &matches[i]
 		if replacement.EntersTapped {
 			setPermanentTapped(g, permanent, true)
+		}
+		if replacement.EntersUntapped {
+			entersUntapped = true
 		}
 		for _, placement := range replacement.EntersWithCounters {
 			amount := placement.Amount
@@ -670,6 +674,9 @@ func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *gam
 		}
 		if replacement.EntersAsCopy {
 			applyEntersAsCopy(ctx, g, permanent, replacement)
+		}
+		if entersUntapped {
+			setPermanentTapped(g, permanent, false)
 		}
 	}
 	if hasKeyword(g, permanent, game.Riot) {
@@ -1320,10 +1327,10 @@ func matchingETBReplacementEffects(g *game.Game, permanent *game.Permanent, even
 	var matches []game.ReplacementEffect
 	for i := range g.ReplacementEffects {
 		replacement := &g.ReplacementEffects[i]
-		if !replacement.EntersTapped && len(replacement.EntersWithCounters) == 0 {
+		if !replacement.EntersTapped && !replacement.EntersUntapped && len(replacement.EntersWithCounters) == 0 {
 			continue
 		}
-		if replacement.EntersTappedOthers {
+		if replacement.EntersTappedOthers || replacement.EntersUntappedOthers {
 			if replacement.SourceObjectID != 0 && replacement.SourceObjectID == event.PermanentID {
 				continue
 			}

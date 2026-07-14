@@ -3605,6 +3605,9 @@ const (
 	// permanents named by ControllerScope and optionally restricted by Types
 	// enter tapped.
 	GroupEntryModificationTapped
+	// GroupEntryModificationUntapped is "<permanents> you control enter
+	// untapped." (Spelunking).
+	GroupEntryModificationUntapped
 	// GroupEntryModificationWithCounters is "Each <group> you control enters with
 	// an additional <kind> counter on it." (Tayam, Luminous Enigma): the entering
 	// permanents matched by the effect's Selection enter with the counter named by
@@ -3628,6 +3631,12 @@ type GroupEntryModificationSyntax struct {
 // entry-modification replacement.
 func (e EffectSyntax) EntersTappedGroup() bool {
 	return e.GroupEntryModification.Kind == GroupEntryModificationTapped
+}
+
+// EntersUntappedGroup reports the enters-untapped-group form of a static group
+// entry-modification replacement.
+func (e EffectSyntax) EntersUntappedGroup() bool {
+	return e.GroupEntryModification.Kind == GroupEntryModificationUntapped
 }
 
 // EntersWithCountersGroup reports the enters-with-counters-group form of a static

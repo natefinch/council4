@@ -475,6 +475,11 @@ type ReplacementEffect struct {
 	// battlefield and matched against every entering permanent that satisfies
 	// ControllerFilter and EntersTappedTypes.
 	EntersTappedOthers bool
+	// EntersUntapped clears the entering permanent's tapped state.
+	EntersUntapped bool
+	// EntersUntappedOthers marks a continuous group replacement rather than a
+	// self replacement.
+	EntersUntappedOthers bool
 
 	// EntersTappedSelection restricts an EntersTappedOthers replacement to
 	// entering permanents whose characteristics satisfy this canonical Selection,

@@ -1405,7 +1405,8 @@ func damagePreventionStaticWording(words []string) bool {
 // already handled above; the leading permanent-type plural keeps unrelated
 // "... enter ... tapped" spell text from being misclassified as a replacement.
 func groupEntersTappedWording(words []string) bool {
-	if len(words) < 3 || !slices.Contains(words, "enter") || !slices.Contains(words, "tapped") {
+	if len(words) < 3 || !slices.Contains(words, "enter") ||
+		(!slices.Contains(words, "tapped") && !slices.Contains(words, "untapped")) {
 		return false
 	}
 	switch words[0] {
