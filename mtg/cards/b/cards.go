@@ -125,6 +125,7 @@ var Cards = []cardset.Entry{
 	{Name: "Boundless Realms", New: BoundlessRealms},
 	{Name: "Brackwater Elemental", New: BrackwaterElemental},
 	{Name: "Brago, King Eternal", New: BragoKingEternal},
+	{Name: "Braids, Arisen Nightmare", New: BraidsArisenNightmare},
 	{Name: "Brambleback Brute", New: BramblebackBrute},
 	{Name: "Brandywine Farmer", New: BrandywineFarmer},
 	{Name: "Brass Herald", New: BrassHerald},

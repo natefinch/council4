@@ -69,6 +69,13 @@ type selectionSubject struct {
 	// resolving object is available; other callers leave it nil and a
 	// SubtypeChoiceResolution predicate matches nothing.
 	resolutionChoices map[string]game.ResolutionChoiceResult
+
+	// obj is the resolving stack object, set only for group-membership matching.
+	// A SharesCardTypeFromLinked predicate reads it to resolve the linked object
+	// an earlier instruction published (the sacrificed permanent whose card types
+	// "it" refers to); other callers leave it nil and that predicate matches
+	// nothing.
+	obj *game.StackObject
 }
 
 // matchSelection reports whether the subject satisfies every active predicate in
@@ -119,6 +126,9 @@ func matchSelection(s *selectionSubject, sel *game.Selection) bool {
 		if !ok || !s.hasType(cardType) {
 			return false
 		}
+	}
+	if sel.SharesCardTypeFromLinked != "" && !s.sharesCardTypeWithLinked(sel.SharesCardTypeFromLinked) {
+		return false
 	}
 	if sel.SubtypeChoice == game.SubtypeChoiceSourceEntry {
 		subtype, ok := s.sourceEntryChoiceSubtype(game.EntryTypeChoiceKey)
@@ -444,6 +454,35 @@ func (s *selectionSubject) sharesCreatureTypeWithSource() bool {
 		return false
 	}
 	return s.hasAnySubtype(creatureSubtypes)
+}
+
+// sharesCardTypeWithLinked reports whether the subject shares at least one card
+// type with the object an earlier instruction in the same resolution published
+// under key (the "a permanent ... that shares a card type with it" gate, where
+// "it" is a just-sacrificed permanent). It reads the linked object's card types
+// through last-known information, so it still sees them after the permanent has
+// left the battlefield. It reports false when the resolving object is absent, no
+// linked object is recorded, or the recorded object has no known card types.
+func (s *selectionSubject) sharesCardTypeWithLinked(key game.LinkedKey) bool {
+	if s.obj == nil {
+		return false
+	}
+	linked := linkedObjects(s.g, linkedObjectSourceKey(s.g, s.obj, string(key)))
+	if len(linked) == 0 {
+		return false
+	}
+	var cardTypes []types.Card
+	for _, ref := range linked {
+		snapshot, ok := lastKnownObject(s.g, ref.ObjectID)
+		if !ok {
+			continue
+		}
+		cardTypes = append(cardTypes, snapshot.Types...)
+	}
+	if len(cardTypes) == 0 {
+		return false
+	}
+	return s.hasAnyType(cardTypes)
 }
 
 // sourceEntryChoiceColor resolves the color the predicate's source permanent
