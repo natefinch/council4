@@ -65,6 +65,7 @@ func emitResolvingSyntax(abilities []Ability) {
 		attachTokenGrantedAbilities(&abilities[i])
 		creditEachOpponentAttackingSameRider(&abilities[i])
 		creditGoadCreatedTokensRider(&abilities[i])
+		creditEachOpponentAttackingUntapRider(&abilities[i])
 		attachGainGrantedAbilities(&abilities[i])
 		attachEmblemEffects(&abilities[i])
 		recognizeControllerOptionalPaymentSequence(&abilities[i])

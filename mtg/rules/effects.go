@@ -293,6 +293,10 @@ func (r *effectResolver) resolveInstruction(instr *game.Instruction) {
 		r.resolveGroupOffer(instr)
 		return
 	}
+	if instr.ForEachPlayerGroup.Exists {
+		r.resolveForEachPlayerGroup(instr)
+		return
+	}
 	// Optional: ask the deciding player before executing.
 	accepted := true
 	if instr.Optional {
@@ -328,6 +332,49 @@ func (r *effectResolver) resolveInstruction(instr *game.Instruction) {
 	res := handler(r, instr.Primitive)
 	if instr.PublishResult != "" {
 		recordResultKey(r.obj, instr.PublishResult, res)
+	}
+}
+
+// resolveForEachPlayerGroup resolves a mandatory per-player-group instruction:
+// the primitive runs once for every player in ForEachPlayerGroup, in APNAP
+// order, with GroupOfferMemberReference() bound to that player so a primitive
+// scoped to the acting player (PlayerControlledGroup(GroupOfferMemberReference(),
+// ...) — "all nonland permanents they control") resolves against each member
+// rather than the ability's controller. Unlike resolveGroupOffer no member is
+// asked whether to apply the effect. It models the reflexive "Each opponent
+// attacking that player untaps all nonland permanents they control." rider (Curse
+// of Bounty). The group resolver already deduplicates members and skips the
+// controller, dead, and non-attacking players, so a player with several attackers
+// acts once and an empty group resolves to nothing. PublishResult, when set,
+// reports the effect as accepted with the count and set of members acted on.
+func (r *effectResolver) resolveForEachPlayerGroup(instr *game.Instruction) {
+	members := playersInAPNAPOrder(r.game, newReferenceResolver(r.game, r.obj).playerGroup(instr.ForEachPlayerGroup.Val))
+	kind := instr.Primitive.Kind()
+	handler := globalPrimitiveRegistry().dispatch(kind)
+	prev := r.currentInstruction
+	r.currentInstruction = instr
+	prevMember := r.groupOfferMember
+	defer func() {
+		r.currentInstruction = prev
+		r.groupOfferMember = prevMember
+	}()
+	anySucceeded := false
+	var acted game.PlayerSet
+	for _, member := range members {
+		r.groupOfferMember = opt.Val(member)
+		res := handler(r, instr.Primitive)
+		if res.succeeded {
+			anySucceeded = true
+		}
+		acted = acted.With(member)
+	}
+	if instr.PublishResult != "" {
+		recordResultKey(r.obj, instr.PublishResult, effectResolved{
+			accepted:       true,
+			succeeded:      anySucceeded,
+			amount:         acted.Count(),
+			acceptedActors: acted,
+		})
 	}
 }
 

@@ -172,6 +172,14 @@ func (r Renderer) renderInstruction(ctx *renderCtx, instruction *game.Instructio
 		ctx.need(importOpt)
 		fields = append(fields, fmt.Sprintf("OptionalActorGroup: opt.Val(%s),", group))
 	}
+	if instruction.ForEachPlayerGroup.Exists {
+		group, err := renderPlayerGroupReference(instruction.ForEachPlayerGroup.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("ForEachPlayerGroup: opt.Val(%s),", group))
+	}
 	if instruction.TemptingOffer {
 		fields = append(fields, "TemptingOffer: true,")
 	}

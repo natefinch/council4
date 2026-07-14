@@ -19,6 +19,14 @@ func lowerFixedLifeSpell(
 	groupPrimitiveFactory func(amount game.Quantity, group game.PlayerGroupReference) game.Primitive,
 ) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
+	reflexiveRider := reflexiveAttackingSameRiderPresent(&effect)
+	if reflexiveRider && !reflexiveAttackingSameControllerFixed(ctx, &effect) {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported life spell",
+			"the reflexive attacking-opponent rider widens only a plain controller fixed life gain",
+		)
+	}
 	if (effect.Amount.Known && effect.Amount.Value < 1) ||
 		effect.Negated ||
 		ctx.optional ||
@@ -238,11 +246,22 @@ func lowerFixedLifeSpell(
 			RoundUp: effect.Amount.RoundUp,
 		})
 	}
+	sequence := []game.Instruction{{
+		Primitive: primitiveFactory(amount, playerRef),
+	}}
+	if reflexiveRider {
+		// "Each opponent attacking that player does the same." The controller's
+		// life gain stays first; append an identical gain whose recipients are
+		// the distinct opponents of the controller attacking the enchanted
+		// player. The controller is excluded from that group, so the two
+		// instructions never double-gain for the same player.
+		sequence = append(sequence, game.Instruction{
+			Primitive: groupPrimitiveFactory(amount, reflexiveAttackingGroupReference()),
+		})
+	}
 	return game.Mode{
-		Targets: targets,
-		Sequence: []game.Instruction{{
-			Primitive: primitiveFactory(amount, playerRef),
-		}},
+		Targets:  targets,
+		Sequence: sequence,
 	}.Ability(), nil
 }
 
@@ -2148,6 +2167,9 @@ func lowerBoundedUntapSpell(ctx contentCtx) (game.AbilityContent, bool) {
 }
 
 func lowerUntapSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	if reflexiveAttackingSameRiderPresent(&ctx.content.Effects[0]) {
+		return lowerReflexiveAttackingUntapSpell(ctx)
+	}
 	if content, ok := lowerBoundedUntapSpell(ctx); ok {
 		return content, nil
 	}
@@ -2484,6 +2506,14 @@ func lowerFixedDrawSpell(
 	_ *parser.Ability,
 ) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
+	reflexiveRider := reflexiveAttackingSameRiderPresent(&effect)
+	if reflexiveRider && !reflexiveAttackingSameControllerFixed(ctx, &effect) {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported draw spell",
+			"the reflexive attacking-opponent rider widens only a plain controller fixed card draw",
+		)
+	}
 	if effect.Context == parser.EffectContextControllerAndReferencedPlayer {
 		return lowerControllerAndReferencedPlayerDraw(ctx, effect)
 	}
@@ -2623,16 +2653,28 @@ func lowerFixedDrawSpell(
 			"the executable source backend supports only exact fixed card draw",
 		)
 	}
-	return game.Mode{
-		Targets: targets,
-		Sequence: []game.Instruction{
-			{
-				Primitive: game.Draw{
-					Amount: amount,
-					Player: playerRef,
-				},
-			},
+	sequence := []game.Instruction{{
+		Primitive: game.Draw{
+			Amount: amount,
+			Player: playerRef,
 		},
+	}}
+	if reflexiveRider {
+		// "Each opponent attacking that player does the same." The controller's
+		// draw stays first; append an identical draw whose recipients are the
+		// distinct opponents of the controller attacking the enchanted player.
+		// The controller is excluded from that group, so the two instructions
+		// never double-draw for the same player.
+		sequence = append(sequence, game.Instruction{
+			Primitive: game.Draw{
+				Amount:      amount,
+				PlayerGroup: reflexiveAttackingGroupReference(),
+			},
+		})
+	}
+	return game.Mode{
+		Targets:  targets,
+		Sequence: sequence,
 	}.Ability(), nil
 }
 
