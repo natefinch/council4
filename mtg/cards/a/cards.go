@@ -118,6 +118,7 @@ var Cards = []cardset.Entry{
 	{Name: "Archivist of Gondor", New: ArchivistOfGondor},
 	{Name: "Archon of Coronation", New: ArchonOfCoronation},
 	{Name: "Archon of Cruelty", New: ArchonOfCruelty},
+	{Name: "Archon's Glory", New: ArchonSGlory},
 	{Name: "Archway Commons", New: ArchwayCommons},
 	{Name: "Archway of Innovation", New: ArchwayOfInnovation},
 	{Name: "Ardent Soldier", New: ArdentSoldier},

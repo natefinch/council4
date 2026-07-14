@@ -55,6 +55,7 @@ var Cards = []cardset.Entry{
 	{Name: "Demolisher Spawn", New: DemolisherSpawn},
 	{Name: "Demonic Appetite", New: DemonicAppetite},
 	{Name: "Demonic Consultation", New: DemonicConsultation},
+	{Name: "Demoralize", New: Demoralize},
 	{Name: "Denethor, Stone Seer", New: DenethorStoneSeer},
 	{Name: "Denizen of the Deep", New: DenizenOfTheDeep},
 	{Name: "Deranged Hermit", New: DerangedHermit},

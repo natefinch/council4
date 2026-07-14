@@ -88,7 +88,7 @@ func continuousSubjectMode(
 		return continuousObjectMode(game.SourceAttachedPermanentReference(), continuousEffects, duration), nil
 	}
 	if opts.AllowReferenceObject && len(ctx.content.Targets) == 0 && len(ctx.content.References) == 1 {
-		object, ok := continuousReferenceObject(ctx.content.References[0], effect, opts.SourceAsCard)
+		object, ok := continuousReferenceObject(ctx.content.References[0], effect, opts.SourceAsCard, ctx.enclosingKind == compiler.AbilitySpell)
 		if !ok {
 			return unsupported()
 		}
@@ -105,18 +105,39 @@ func continuousSubjectMode(
 // reference binds, so every binding the runtime's ApplyContinuous can resolve is
 // accepted: the source permanent, the source's attached permanent, a triggering
 // (related) event permanent, a prior instruction's published object, or a
-// back-referenced target. Source resolution honors sourceAsCard. The one binding
-// that needs a consistency gate is a Target back-reference: its occurrence indexes
-// a target slot resolved in another clause, so it is accepted only when the effect
-// context marks it as the effect's referenced object. lowerObjectReference fails
-// closed for any binding it cannot represent.
+// back-referenced target. Source resolution honors sourceAsCard, except that a
+// source binding under sourceAsCard whose effect context is not
+// EffectContextSource is rejected: it is a cross-clause back-reference that fell
+// back to the source rather than a genuine "this <permanent>" self-reference, so
+// it fails closed (see below). The one binding that needs a consistency gate is a
+// Target back-reference: its occurrence indexes a target slot resolved in another
+// clause, so it is accepted only when the effect context marks it as the effect's
+// referenced object. lowerObjectReference fails closed for any binding it cannot
+// represent.
 func continuousReferenceObject(
 	reference compiler.CompiledReference,
 	effect *compiler.CompiledEffect,
 	sourceAsCard bool,
+	enclosingSpell bool,
 ) (game.ObjectReference, bool) {
 	if reference.Binding == compiler.ReferenceBindingTarget &&
 		effect.Context != parser.EffectContextReferencedObject {
+		return game.ObjectReference{}, false
+	}
+	// A source-as-card continuous subject resolves the source binding as the
+	// card's own battlefield permanent ("This creature gains indestructible until
+	// end of turn." on an activated ability). That is correct for a permanent's
+	// own ability, whose source is on the battlefield. A resolving spell (instant
+	// or sorcery) has no such permanent, so a source binding inside a spell
+	// ability is a cross-clause back-reference ("that creature"/"those creatures")
+	// the compiler could not tie to its target or group antecedent and fell back
+	// to the source; granting the continuous effect to the spell would silently
+	// miss every intended creature. Fail closed for that shape (a genuine
+	// EffectContextSource self-reference is kept). Permanent abilities are
+	// unaffected because enclosingSpell is false for them.
+	if sourceAsCard && enclosingSpell &&
+		reference.Binding == compiler.ReferenceBindingSource &&
+		effect.Context != parser.EffectContextSource {
 		return game.ObjectReference{}, false
 	}
 	return lowerObjectReference(reference, referenceLoweringContext{

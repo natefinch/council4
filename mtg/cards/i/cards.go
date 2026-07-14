@@ -32,6 +32,7 @@ var Cards = []cardset.Entry{
 	{Name: "Iname, Life Aspect", New: InameLifeAspect},
 	{Name: "Incisor Glider", New: IncisorGlider},
 	{Name: "Increasing Devotion", New: IncreasingDevotion},
+	{Name: "Increasing Savagery", New: IncreasingSavagery},
 	{Name: "Incubation", New: Incubation},
 	{Name: "Infernal Reckoning", New: InfernalReckoning},
 	{Name: "Inferno Elemental", New: InfernoElemental},
