@@ -46,6 +46,9 @@ func emitResolvingSyntax(abilities []Ability) {
 		if recognizeDevotionLookWinSequence(&abilities[i]) {
 			continue
 		}
+		if recognizeSharedTypeSacrificePunisherSequence(&abilities[i]) {
+			continue
+		}
 		emitSentenceResolvingSyntax(
 			abilities[i].Sentences,
 			abilities[i].Atoms,

@@ -388,6 +388,18 @@ const (
 	// records the color so lowering builds the devotion amount and win comparison
 	// from a typed color rather than Oracle wording.
 	ExactSequenceDevotionLookWin
+	// ExactSequenceSharedTypeSacrificePunisher is the triggered end-step body "you
+	// may sacrifice an artifact, creature, enchantment, land, or planeswalker. If
+	// you do, each opponent may sacrifice a permanent of their choice that shares
+	// a card type with it. For each opponent who doesn't, that player loses 2 life
+	// and you draw a card." (Braids, Arisen Nightmare): the controller may
+	// sacrifice one of the five permanent types, and if they do each opponent may
+	// sacrifice a permanent sharing a card type with it; each opponent who does
+	// not lets that opponent lose 2 life and the controller draw a card. The whole
+	// body is fixed, so it carries no extra data; lowering emits the generic
+	// shared-type sacrifice and controller-draw punisher primitives from the kind
+	// alone.
+	ExactSequenceSharedTypeSacrificePunisher
 )
 
 // LookAtTopBattlefieldElse identifies the trailing fallback disposition of an

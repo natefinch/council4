@@ -1952,7 +1952,17 @@ func handleSacrificePermanents(r *effectResolver, prim game.SacrificePermanents)
 		key := linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked))
 		clearLinkedObjects(r.game, key)
 		for _, permanent := range chosen {
-			rememberLinkedObject(r.game, key, permanentLinkedObjectRef(permanent))
+			ref := permanentLinkedObjectRef(permanent)
+			if prim.PublishObjectBinding {
+				// permanentObjectBindingRef preserves the ObjectID even for a token
+				// (CardInstanceID == 0) so a downstream reader that resolves the
+				// sacrificed permanent by ObjectID through last-known information still
+				// sees it; permanentLinkedObjectRef would drop tokens and leave nothing
+				// to read (e.g. Braids offering opponents a shared-card-type sacrifice
+				// after a Treasure token is sacrificed).
+				ref = permanentObjectBindingRef(permanent)
+			}
+			rememberLinkedObject(r.game, key, ref)
 		}
 	}
 	// Report the number of permanents sacrificed as the resolved amount so a
@@ -2110,20 +2120,27 @@ func (r *effectResolver) applyPunisherForPlayer(prim game.PunisherEachLoseLife, 
 			action = actions[selected[0]]
 		}
 	}
+	tookLoss := false
 	switch action {
 	case punisherSacrifice:
 		chosen := r.engine.chooseSacrificePermanentsForPlayer(r.game, resolver, playerID, 1, prim.SacrificeSelection, r.agents, r.log)
 		if len(chosen) == 0 {
 			loseLife(r.game, playerID, amount)
-			return
+			tookLoss = true
+			break
 		}
 		sacrificePermanentsSimultaneously(r.game, chosen)
 	case punisherDiscard:
 		if !r.discardCardsWithChoices(playerID, discardCount, game.LinkedObjectKey{}) {
 			loseLife(r.game, playerID, amount)
+			tookLoss = true
 		}
 	default:
 		loseLife(r.game, playerID, amount)
+		tookLoss = true
+	}
+	if tookLoss && prim.ControllerDrawEach {
+		r.engine.drawCards(r.game, r.obj.Controller, 1, r.agents, r.log)
 	}
 }
 
