@@ -116,6 +116,8 @@ func aggregateValue(g *game.Game, ctx conditionContext, kind game.AggregateKind)
 		return cardInstanceCount(g, player.Hand.All()), true
 	case game.AggregateAnyOpponentDamageTakenThisTurn:
 		return anyOpponentDamageTakenThisTurn(g, ctx.controller), true
+	case game.AggregateAnyOpponentLifeLostThisTurn:
+		return anyOpponentLifeLostThisTurn(g, ctx.controller), true
 	case game.AggregateMinPlayerLibrarySize:
 		return minPlayerLibrarySize(g), true
 	default:
@@ -1166,6 +1168,27 @@ func anyOpponentDamageTakenThisTurn(g *game.Game, controller game.PlayerID) int 
 			return event.Kind == game.EventDamageDealt &&
 				event.DamageRecipient == game.DamageRecipientPlayer &&
 				event.Player == opponent
+		})
+		if total > maximum {
+			maximum = total
+		}
+	}
+	return maximum
+}
+
+// anyOpponentLifeLostThisTurn returns the largest total life lost by a single
+// non-eliminated opponent of controller during the current turn ("if an opponent
+// lost 2 or more life this turn", Bloodchief Ascension). It counts every kind of
+// life loss — combat and noncombat damage (CR 120.3), life paid as a cost, and
+// direct "loses life" effects — because rules helpers emit all of them as
+// per-player EventLifeLost events. Life gained is ignored; the loss total does
+// not net against subsequent gains.
+func anyOpponentLifeLostThisTurn(g *game.Game, controller game.PlayerID) int {
+	window := eventsThisTurnWindow(g)
+	maximum := 0
+	for _, opponent := range aliveOpponents(g, controller) {
+		total := window.sumAmount(func(event game.Event) bool {
+			return event.Kind == game.EventLifeLost && event.Player == opponent
 		})
 		if total > maximum {
 			maximum = total

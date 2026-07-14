@@ -101,6 +101,16 @@ const (
 	// non-eliminated players. A "a library has N or fewer cards in it" existential
 	// gate (Shelldock Isle) is satisfied exactly when this minimum is at most N.
 	AggregateMinPlayerLibrarySize
+
+	// AggregateAnyOpponentLifeLostThisTurn is the largest total life lost by a
+	// single non-eliminated opponent of the context controller during the current
+	// turn. Unlike AggregateAnyOpponentDamageTakenThisTurn, it counts every kind
+	// of life loss — combat and noncombat damage (CR 120.3), life paid as a cost,
+	// and direct "loses life" effects — because all of these are emitted as
+	// per-player life-loss events. An "an opponent lost N or more life this turn"
+	// existential gate (Bloodchief Ascension) is satisfied exactly when this
+	// maximum is at least N.
+	AggregateAnyOpponentLifeLostThisTurn
 )
 
 // AggregateComparison compares a player- or board-derived quantity against a

@@ -119,6 +119,8 @@ func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringC
 		result.AllPlayersHandEmpty = true
 	case compiler.ConditionPredicateAnyOpponentDealtDamageThisTurnAtLeast:
 		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateAnyOpponentDamageTakenThisTurn, Op: compare.GreaterOrEqual, Value: condition.Threshold})
+	case compiler.ConditionPredicateAnyOpponentLostLifeThisTurnAtLeast:
+		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateAnyOpponentLifeLostThisTurn, Op: compare.GreaterOrEqual, Value: condition.Threshold})
 	case compiler.ConditionPredicateAnyLibrarySizeAtMost:
 		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateMinPlayerLibrarySize, Op: compare.LessOrEqual, Value: condition.Threshold})
 	case compiler.ConditionPredicateEventSubjectNameUnique:
@@ -385,6 +387,7 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 			compiler.ConditionPredicateControllerLibrarySizeAtLeast,
 			compiler.ConditionPredicateAnyLibrarySizeAtMost,
 			compiler.ConditionPredicateAnyOpponentDealtDamageThisTurnAtLeast,
+			compiler.ConditionPredicateAnyOpponentLostLifeThisTurnAtLeast,
 			compiler.ConditionPredicateAllPlayersHandEmpty,
 			compiler.ConditionPredicateControllerLifeExactly,
 			compiler.ConditionPredicateControllerGainedLifeThisTurnAtLeast,

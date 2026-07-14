@@ -1035,6 +1035,8 @@ func renderAggregateKind(kind game.AggregateKind) (string, error) {
 		return "game.AggregateEventPlayerHandSize", nil
 	case game.AggregateAnyOpponentDamageTakenThisTurn:
 		return "game.AggregateAnyOpponentDamageTakenThisTurn", nil
+	case game.AggregateAnyOpponentLifeLostThisTurn:
+		return "game.AggregateAnyOpponentLifeLostThisTurn", nil
 	case game.AggregateMinPlayerLibrarySize:
 		return "game.AggregateMinPlayerLibrarySize", nil
 	default:
