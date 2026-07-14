@@ -1039,7 +1039,7 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 		hasPredicate = true
 	}
 	if len(cond.Aggregates) > 0 {
-		rendered, err := renderAggregateComparisons(ctx, cond.Aggregates)
+		rendered, err := r.renderAggregateComparisons(ctx, cond.Aggregates)
 		if err != nil {
 			return "", err
 		}

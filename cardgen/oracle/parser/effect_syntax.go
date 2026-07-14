@@ -43,6 +43,9 @@ func emitResolvingSyntax(abilities []Ability) {
 		if recognizeBargainSearchCastPayoffSequence(&abilities[i]) {
 			continue
 		}
+		if recognizeDevotionLookWinSequence(&abilities[i]) {
+			continue
+		}
 		emitSentenceResolvingSyntax(
 			abilities[i].Sentences,
 			abilities[i].Atoms,

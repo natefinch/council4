@@ -65,6 +65,7 @@ var Cards = []cardset.Entry{
 	{Name: "Thallid Germinator", New: ThallidGerminator},
 	{Name: "Thallid Shell-Dweller", New: ThallidShellDweller},
 	{Name: "Thassa's Emissary", New: ThassaSEmissary},
+	{Name: "Thassa's Oracle", New: ThassaSOracle},
 	{Name: "That's Rough Buddy", New: ThatSRoughBuddy},
 	{Name: "The Dawning Archaic", New: TheDawningArchaic},
 	{Name: "The Earth Crystal", New: TheEarthCrystal},

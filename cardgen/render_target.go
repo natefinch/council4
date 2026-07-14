@@ -979,7 +979,7 @@ func renderCompareOp(op compare.Op) (string, error) {
 	}
 }
 
-func renderAggregateComparisons(ctx *renderCtx, aggregates []game.AggregateComparison) (string, error) {
+func (r Renderer) renderAggregateComparisons(ctx *renderCtx, aggregates []game.AggregateComparison) (string, error) {
 	ctx.need(importGame)
 	ctx.need(importCompare)
 	parts := make([]string, 0, len(aggregates))
@@ -991,6 +991,19 @@ func renderAggregateComparisons(ctx *renderCtx, aggregates []game.AggregateCompa
 		op, err := renderCompareOp(aggregates[i].Op)
 		if err != nil {
 			return "", err
+		}
+		if aggregates[i].ValueAmount.Exists {
+			amount := aggregates[i].ValueAmount.Val
+			rendered, err := r.renderDynamicAmount(ctx, &amount)
+			if err != nil {
+				return "", err
+			}
+			ctx.need(importOpt)
+			parts = append(parts, fmt.Sprintf(
+				"{Aggregate: %s, Op: %s, Value: %d, ValueAmount: opt.Val(%s)}",
+				kind, op, aggregates[i].Value, rendered,
+			))
+			continue
 		}
 		parts = append(parts, fmt.Sprintf("{Aggregate: %s, Op: %s, Value: %d}", kind, op, aggregates[i].Value))
 	}

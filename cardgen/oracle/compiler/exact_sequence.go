@@ -73,6 +73,17 @@ const (
 	// (ExactSequenceMaxManaValue) so lowering models the sequence without reading
 	// Oracle words.
 	ExactSequenceBargainSearchCastPayoff
+	// ExactSequenceDevotionLookWin is the triggered "look at the top X cards of
+	// your library, where X is your devotion to <color>. Put up to one of them on
+	// top of your library and the rest on the bottom of your library in a random
+	// order. If X is greater than or equal to the number of cards in your library,
+	// you win the game." sequence (Thassa's Oracle): the controller looks at the
+	// top X cards where X is their devotion to ExactSequenceDevotionColor, keeps up
+	// to one on top and bottoms the rest, then wins the game when X is at least the
+	// number of cards in their library. The color travels on the compiled ability
+	// (ExactSequenceDevotionColor) so lowering builds the devotion amount and win
+	// comparison without reading Oracle words.
+	ExactSequenceDevotionLookWin
 )
 
 func compileExactSequenceKind(kind parser.ExactSequenceKind) ExactSequenceKind {
@@ -95,6 +106,8 @@ func compileExactSequenceKind(kind parser.ExactSequenceKind) ExactSequenceKind {
 		return ExactSequenceExtraDrawThenPayLifeOrTop
 	case parser.ExactSequenceBargainSearchCastPayoff:
 		return ExactSequenceBargainSearchCastPayoff
+	case parser.ExactSequenceDevotionLookWin:
+		return ExactSequenceDevotionLookWin
 	default:
 		return ExactSequenceUnknown
 	}
