@@ -156,6 +156,7 @@ var Cards = []cardset.Entry{
 	{Name: "Treva's Ruins", New: TrevaSRuins},
 	{Name: "Tributary Instructor", New: TributaryInstructor},
 	{Name: "Tribute Mage", New: TributeMage},
+	{Name: "Tribute to Urborg", New: TributeToUrborg},
 	{Name: "Trickster's Elk", New: TricksterSElk},
 	{Name: "Triclopean Sight", New: TriclopeanSight},
 	{Name: "Triplicate Titan", New: TriplicateTitan},

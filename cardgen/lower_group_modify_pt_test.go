@@ -295,14 +295,54 @@ func TestLowerGroupModifyPTFailsClosed(t *testing.T) {
 		"Nongreen creatures you control get +1/+0 until end of turn.",
 		// Rider beyond the bare power/toughness change.
 		"All creatures get -1/-1 until end of turn and can't block this turn.",
-		// Conditional group buff.
-		"If you control a Mountain, creatures you control get +1/+0 until end of turn.",
 	}
 	for _, oracleText := range cases {
 		t.Run(oracleText, func(t *testing.T) {
 			t.Parallel()
 			groupModifyPTUnsupported(t, oracleText)
 		})
+	}
+}
+
+// TestLowerConditionalGroupModifyPTSupported verifies that a leading
+// resolving-state gate on a group power/toughness buff is no longer rejected:
+// stripLeadingConditionClause removes the gate so the group subject and fixed
+// delta are recovered exactly as the unconditional clause, while the gate is
+// preserved as the instruction's typed EffectCondition. This mirrors the
+// already-supported "If you control a creature, draw two cards." shape, extended
+// from single-effect draws to group pump/modify clauses.
+func TestLowerConditionalGroupModifyPTSupported(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Conditional Group Modify",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "If you control a Mountain, creatures you control get +1/+0 until end of turn.",
+	})
+	ins := face.SpellAbility.Val.Modes[0].Sequence[0]
+	if !ins.Condition.Exists {
+		t.Fatal("leading gate dropped; it must be preserved as the instruction's EffectCondition")
+	}
+	primitive, ok := ins.Primitive.(game.ApplyContinuous)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.ApplyContinuous", ins.Primitive)
+	}
+	if primitive.Object.Exists || primitive.Duration != game.DurationUntilEndOfTurn {
+		t.Fatalf("primitive = %+v, want unanchored group effect until end of turn", primitive)
+	}
+	if len(primitive.ContinuousEffects) != 1 {
+		t.Fatalf("continuous effects = %d, want 1", len(primitive.ContinuousEffects))
+	}
+	effect := primitive.ContinuousEffects[0]
+	if effect.Layer != game.LayerPowerToughnessModify || effect.PowerDelta != 1 || effect.ToughnessDelta != 0 {
+		t.Fatalf("effect = layer %v delta %d/%d, want LayerPowerToughnessModify +1/+0", effect.Layer, effect.PowerDelta, effect.ToughnessDelta)
+	}
+	selection := effect.Group.Selection()
+	if effect.Group.Domain() != game.GroupDomainBattlefield ||
+		selection.Controller != game.ControllerYou ||
+		len(selection.RequiredTypes) != 1 ||
+		selection.RequiredTypes[0] != types.Creature {
+		t.Fatalf("selection = %+v, want creatures you control", selection)
 	}
 }
 

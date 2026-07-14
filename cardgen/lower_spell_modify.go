@@ -2662,7 +2662,7 @@ func lowerTemporaryKeywordSpell(ctx contentCtx) (game.AbilityContent, *shared.Di
 	if targetSubject || inheritedTargetSubject {
 		return continuousTargetMode(ctx.content.Targets[0], continuousEffects, duration, unsupported)
 	}
-	object, ok := continuousReferenceObject(ctx.content.References[0], &effect, true)
+	object, ok := continuousReferenceObject(ctx.content.References[0], &effect, true, ctx.enclosingKind == compiler.AbilitySpell)
 	if !ok {
 		return unsupported()
 	}
