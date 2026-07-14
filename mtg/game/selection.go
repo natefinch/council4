@@ -130,6 +130,18 @@ type Selection struct {
 	// under this resolution choice key.
 	ChosenCardTypeFrom ChoiceKey
 
+	// SharesCardTypeFromLinked requires the subject to share at least one card
+	// type with the object recorded under this linked key by an earlier
+	// instruction in the same resolution (its last-known information once it has
+	// left the battlefield). It backs "a permanent ... that shares a card type
+	// with it", where "it" is a just-sacrificed permanent whose types are read
+	// from the linked object the sacrifice published (Braids, Arisen Nightmare).
+	// A subject that shares no card type with that object, or whose linked object
+	// is absent, never matches. The linked object is resolved against the
+	// resolving stack object, so it reads the sacrificed permanent's types
+	// through last-known information after it has left the battlefield.
+	SharesCardTypeFromLinked LinkedKey
+
 	// ColorsAny matches when any listed color is present. ExcludedColors must
 	// all be absent. Colorless requires no colors; Multicolored requires at
 	// least two colors. Colored requires one or more colors, i.e. the
@@ -433,6 +445,7 @@ func (s Selection) Empty() bool {
 		s.Name == "" &&
 		s.ChosenSubtypeFrom == "" &&
 		s.ChosenCardTypeFrom == "" &&
+		s.SharesCardTypeFromLinked == "" &&
 		!s.RequirePermanentCard &&
 		!s.NameUniqueAmongControlled &&
 		!s.SharesCreatureTypeWithSource &&

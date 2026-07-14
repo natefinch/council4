@@ -1692,6 +1692,16 @@ func (p DrawForEachExiled) validatePrimitive([]TargetSpec, bool) error {
 	return nil
 }
 
+func (p ManifestForEachLinked) validatePrimitive([]TargetSpec, bool) error {
+	if p.LinkedKey == "" {
+		return errors.New("manifest for each linked requires a linked key")
+	}
+	if p.Dread && p.Cloak {
+		return errors.New("manifest for each linked cannot be both dread and cloak")
+	}
+	return nil
+}
+
 func (p RemoveTargetsForToken) validatePrimitive([]TargetSpec, bool) error {
 	if p.LinkedKey == "" {
 		return errors.New("remove targets for token requires a linked key")
@@ -2596,6 +2606,28 @@ func (p ImpulseExile) validatePrimitive(targets []TargetSpec, checkTargets bool)
 }
 
 func (p ExileLibraryUntilNonlandCast) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
+func (p IterativeLibraryProcess) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.Stop >= iterativeLibraryStopCount {
+		return errors.New("IterativeLibraryProcess has an unknown stop predicate")
+	}
+	if err := validateQuantity(p.PreExile, targets, checkTargets); err != nil {
+		return err
+	}
+	if !p.PreExile.IsDynamic() && p.PreExile.Value() < 0 {
+		return errors.New("IterativeLibraryProcess requires a non-negative pre-exile count")
+	}
+	if p.Stop == IterativeLibraryStopChosenName && !p.ChooseName {
+		return errors.New("IterativeLibraryProcess chosen-name stop requires ChooseName")
+	}
+	if p.OptionalTake && p.Stop != IterativeLibraryStopDuplicateName {
+		return errors.New("IterativeLibraryProcess OptionalTake requires the duplicate-name stop")
+	}
+	if p.AllowAbsentName && p.Stop != IterativeLibraryStopChosenName {
+		return errors.New("IterativeLibraryProcess AllowAbsentName requires the chosen-name stop")
+	}
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 

@@ -231,6 +231,9 @@ const (
 	// sacrificed by any player. It lowers to the can't-be-sacrificed runtime rule
 	// effect.
 	StaticRuleCantBeSacrificed
+	// StaticRuleCantBeTargetedByControllerOpponents prohibits opponents of the
+	// static source's controller from targeting the affected permanent.
+	StaticRuleCantBeTargetedByControllerOpponents
 )
 
 // StaticBlockerRestrictionKind identifies the blocker characteristic bounding a
@@ -241,6 +244,9 @@ type StaticBlockerRestrictionKind uint8
 const (
 	StaticBlockerRestrictionNone StaticBlockerRestrictionKind = iota
 	StaticBlockerRestrictionFlying
+	// StaticBlockerRestrictionFlyingOrReach permits blockers with either flying
+	// or reach.
+	StaticBlockerRestrictionFlyingOrReach
 	StaticBlockerRestrictionPowerOrLess
 	StaticBlockerRestrictionPowerOrGreater
 	// StaticBlockerRestrictionColor bounds the prohibition to blockers of the
@@ -1739,6 +1745,13 @@ func semanticStaticRuleForSyntax(rule parser.StaticRuleSyntax) (StaticRuleKind, 
 		return StaticRuleCantBeBlockedExceptBy, StaticZoneBattlefield, true
 	}
 	if isCreatureRuleSubject(rule.Subject.Kind) &&
+		rule.Constraint.Kind == parser.StaticRuleConstraintProhibition &&
+		rule.Operation.Kind == parser.StaticRuleOperationTarget &&
+		rule.Operation.Voice == parser.StaticRuleVoicePassive &&
+		staticRuleQualifiersAre(rule.Qualifiers, parser.StaticRuleQualifierTargetingControllerOpponent) {
+		return StaticRuleCantBeTargetedByControllerOpponents, StaticZoneBattlefield, true
+	}
+	if isCreatureRuleSubject(rule.Subject.Kind) &&
 		rule.Constraint.Kind == parser.StaticRuleConstraintRequirement &&
 		rule.Operation.Kind == parser.StaticRuleOperationAssignDamageByToughness &&
 		rule.Operation.Voice == parser.StaticRuleVoiceActive &&
@@ -1907,6 +1920,8 @@ func staticBlockerRestrictionForSyntax(rule parser.StaticRuleSyntax) StaticBlock
 	switch qualifier.Kind {
 	case parser.StaticRuleQualifierBlockerFlying:
 		return StaticBlockerRestriction{Kind: StaticBlockerRestrictionFlying}
+	case parser.StaticRuleQualifierBlockerFlyingOrReach:
+		return StaticBlockerRestriction{Kind: StaticBlockerRestrictionFlyingOrReach}
 	case parser.StaticRuleQualifierBlockerPowerOrLess:
 		return StaticBlockerRestriction{Kind: StaticBlockerRestrictionPowerOrLess, Amount: qualifier.Amount}
 	case parser.StaticRuleQualifierBlockerPowerOrGreater:
@@ -1976,6 +1991,8 @@ func staticRuleForEffect(kind EffectKind) StaticRuleKind {
 		return StaticRuleCanBlockOnlyCreaturesWithFlying
 	case EffectCanBlockAdditional:
 		return StaticRuleCanBlockAdditional
+	case EffectCantBeTargetedByControllerOpponents:
+		return StaticRuleCantBeTargetedByControllerOpponents
 	default:
 		return StaticRuleUnknown
 	}
@@ -2032,6 +2049,8 @@ func staticRuleDomain(rule StaticRuleKind) StaticRuleDomain {
 		return StaticRuleDomainGoad
 	case StaticRuleCantBeSacrificed:
 		return StaticRuleDomainSacrifice
+	case StaticRuleCantBeTargetedByControllerOpponents:
+		return StaticRuleDomainTarget
 	default:
 		return StaticRuleDomainUnknown
 	}

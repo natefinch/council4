@@ -49,6 +49,9 @@ func emitResolvingSyntax(abilities []Ability) {
 		if recognizeDevotionLookWinSequence(&abilities[i]) {
 			continue
 		}
+		if recognizeSharedTypeSacrificePunisherSequence(&abilities[i]) {
+			continue
+		}
 		emitSentenceResolvingSyntax(
 			abilities[i].Sentences,
 			abilities[i].Atoms,
@@ -471,6 +474,7 @@ func emitSentenceResolvingSyntax(
 	var pileSplitMiddleCandidates []int
 	var exiledCardChoiceCandidates []int
 	var roundUpRiderCandidates []int
+	var chooseCardNameCandidates []int
 	for i := range sentences {
 		if sentences[i].StaticRule != nil ||
 			sourceCostReduction != nil && sentences[i].Span == sourceCostReduction.Span ||
@@ -511,6 +515,8 @@ func emitSentenceResolvingSyntax(
 				exiledCardChoiceCandidates = append(exiledCardChoiceCandidates, i)
 			case isRoundUpEachTimeRiderTokens(tokens):
 				roundUpRiderCandidates = append(roundUpRiderCandidates, i)
+			case isChooseCardNamePreludeTokens(tokens):
+				chooseCardNameCandidates = append(chooseCardNameCandidates, i)
 			case isChooseTargetPreambleTokens(tokens) && len(sentences[i].Targets) > 0:
 				// A bare "Choose [another] target <object>." preamble declares a
 				// target consumed by a following effect's "it" pronoun and emits
@@ -525,6 +531,10 @@ func emitSentenceResolvingSyntax(
 	recognizeRevealUntilThenPutSequence(sentences)
 	recognizeRevealTopPartitionSequence(sentences)
 	recognizeRevealChooseHandDiscardSequence(sentences)
+	recognizeTaintedPactSequence(sentences)
+	if len(chooseCardNameCandidates) > 0 && !recognizeDemonicConsultationSequence(sentences) {
+		unrecognizedSibling = true
+	}
 	if len(pileSplitMiddleCandidates) > 0 && !recognizePileSplitSequence(sentences) {
 		unrecognizedSibling = true
 	}
@@ -1332,23 +1342,33 @@ func targetOwnsCounterQualifierReference(target TargetSyntax, ref Reference) boo
 		spanCovers(target.Span, ref.Span)
 }
 
-// stripLeadingConditionClause drops a leading "As long as ..." condition clause
-// so the subject grammar sees only the effect's group subject ("creatures you
-// control"). The first effect's ownership tokens begin at the sentence start, so
-// a leading "As long as <condition>, ..." gate (the Ascension cycle's "As long
-// as ~ has seven or more quest counters on it, creatures you control get +X/+X",
+// stripLeadingConditionClause drops a leading "As long as ..." or "If ..."
+// condition clause so the subject grammar sees only the effect's group subject
+// ("creatures you control") and the effect-verb grammar sees only the gated
+// body. The first effect's ownership tokens begin at the sentence start, so a
+// leading "As long as <condition>, ..." gate (the Ascension cycle's "As long as
+// ~ has seven or more quest counters on it, creatures you control get +X/+X",
 // and the Incarnation cycle's graveyard zone-of-function condition) would
-// otherwise prevent the group subject from being recognized at token zero. A
-// leading "If <source> has [a <kind>] counter[s] on it, ..." gate is likewise
-// dropped: it is the counter-conditional mana multiplier rider's condition
-// (Incubation Druid's "If this creature has a +1/+1 counter on it, add three
-// mana of that type instead."), whose "has" verb would otherwise seed a spurious
-// keyword-grant effect from the gate. A leading "If this is the Nth time this
-// ability has resolved this turn, ..." gate (Prowl, Pursuit Vehicle) is dropped
-// for the same reason: its "has resolved this turn" wording would otherwise seed
-// a spurious keyword-grant effect. The condition clause itself is recognized
-// separately, so removing it here only affects subject and effect-verb
-// recognition of the gated body.
+// otherwise prevent the group subject from being recognized at token zero.
+//
+// A leading "If <condition>, ..." gate is dropped only when its body is one of
+// the leadingResolvingGateRecognizers: a resolving-state gate that conditions an
+// otherwise self-contained resolving effect. This is the sentence-level
+// resolving-condition rider shape — Finale of Devastation's "If X is 10 or more,
+// creatures you control get +X/+X and gain haste until end of turn", Incubation
+// Druid's "If this creature has a +1/+1 counter on it, add three mana of that
+// type instead.", Prowl/Pursuit Vehicle's "If this is the Nth time this ability
+// has resolved this turn, ..." — where, without stripping, the condition prefix
+// suppresses the group subject and its own verb ("has", "has resolved this
+// turn") can seed a spurious keyword-grant effect from the gate. The recognizer
+// set is deliberately narrow and excludes replacement-trigger predicates ("If an
+// effect would create ... tokens ..., it creates twice that many instead."),
+// whose leading clause defines the replaced event and must stay on the effect so
+// the replacement recognizer can consume it. The condition clause itself is
+// recognized separately (as a ConditionClause with its own span), so removing it
+// here only affects subject and effect-verb recognition of the gated body; span,
+// exactness, and coverage bookkeeping for the condition flow through the
+// condition-clause path.
 func stripLeadingConditionClause(tokens []shared.Token, atoms Atoms) []shared.Token {
 	if len(tokens) == 0 {
 		return tokens
@@ -1362,15 +1382,33 @@ func stripLeadingConditionClause(tokens []shared.Token, atoms Atoms) []shared.To
 	case ConditionIntroAsLongAs:
 		return tokens[end+1:]
 	case ConditionIntroIf:
-		if _, ok := recognizeSourceCounterStateCondition(tokens[introWidth:end], atoms); ok {
-			return tokens[end+1:]
-		}
-		if _, ok := recognizeSourceAbilityResolutionOrdinalCondition(tokens[introWidth:end], atoms); ok {
-			return tokens[end+1:]
+		body := tokens[introWidth:end]
+		for _, recognize := range leadingResolvingGateRecognizers {
+			if _, ok := recognize(body, atoms); ok {
+				return tokens[end+1:]
+			}
 		}
 	default:
 	}
 	return tokens
+}
+
+// leadingResolvingGateRecognizers is the allowlist of condition recognizers whose
+// clause, when it opens a sentence as "If <condition>, <effect>", is a
+// resolving-state gate that stripLeadingConditionClause removes so the gated
+// effect's subject and verb grammar is recognized without the condition prefix.
+// It is a curated subset of recognizeConditionPredicate: every entry gates an
+// otherwise self-contained resolving effect, so stripping cannot corrupt a
+// replacement effect whose leading "If <event> would ..." clause defines the
+// replaced event.
+var leadingResolvingGateRecognizers = []func([]shared.Token, Atoms) (ConditionClause, bool){
+	recognizeSourceCounterStateCondition,
+	recognizeSourceAbilityResolutionOrdinalCondition,
+	recognizeSpellXCondition,
+	recognizeCastTimingCondition,
+	recognizeControlsCondition,
+	recognizeGraveyardCondition,
+	recognizeAdamantManaSpentCondition,
 }
 
 // stripLeadingDurationClause removes a sentence-leading duration clause

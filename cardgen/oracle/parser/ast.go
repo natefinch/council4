@@ -389,6 +389,18 @@ const (
 	// records the color so lowering builds the devotion amount and win comparison
 	// from a typed color rather than Oracle wording.
 	ExactSequenceDevotionLookWin
+	// ExactSequenceSharedTypeSacrificePunisher is the triggered end-step body "you
+	// may sacrifice an artifact, creature, enchantment, land, or planeswalker. If
+	// you do, each opponent may sacrifice a permanent of their choice that shares
+	// a card type with it. For each opponent who doesn't, that player loses 2 life
+	// and you draw a card." (Braids, Arisen Nightmare): the controller may
+	// sacrifice one of the five permanent types, and if they do each opponent may
+	// sacrifice a permanent sharing a card type with it; each opponent who does
+	// not lets that opponent lose 2 life and the controller draw a card. The whole
+	// body is fixed, so it carries no extra data; lowering emits the generic
+	// shared-type sacrifice and controller-draw punisher primitives from the kind
+	// alone.
+	ExactSequenceSharedTypeSacrificePunisher
 	// ExactSequenceDrawPutLandSubtypeLife is the triggered body "draw a card,
 	// then you may put a land card from your hand onto the battlefield. If you
 	// put a <subtype> onto the battlefield this way, you gain N life."
@@ -1407,6 +1419,12 @@ type Sentence struct {
 	// reference and tokens as belonging to that impulse rather than as an
 	// unrecognized sibling.
 	ImpulseExilePermission bool `json:",omitempty"`
+	// ChooseCardNamePrelude reports that this sentence is the credited zero-effect
+	// "Choose a card name." prelude folded onto a following iterative library
+	// process whose chosen-name stop consumes the named card (Demonic
+	// Consultation). Reference and coverage scans treat its tokens as belonging to
+	// that process rather than as an unrecognized sibling.
+	ChooseCardNamePrelude bool `json:",omitempty"`
 }
 
 // sentenceIsCreditedRider reports whether the sentence has been folded onto a
@@ -1427,7 +1445,8 @@ func sentenceIsCreditedRider(s *Sentence) bool {
 		s.TokenGrantedAbilityRider ||
 		s.PersistentManaRider ||
 		s.RoundUpEachTimeRider ||
-		s.ImpulseExilePermission
+		s.ImpulseExilePermission ||
+		s.ChooseCardNamePrelude
 }
 
 // StaticRuleSubjectKind identifies the source object constrained by a simple
@@ -1566,6 +1585,10 @@ const (
 	// permanents can't be sacrificed by any player. It always pairs with a
 	// prohibition constraint and passive voice and carries no qualifier.
 	StaticRuleOperationSacrifice StaticRuleOperationKind = "StaticRuleOperationSacrifice"
+	// StaticRuleOperationTarget is the passive targeting operation in "<subject>
+	// can't be the target of ...". A qualifier identifies whose spells and
+	// abilities are prohibited.
+	StaticRuleOperationTarget StaticRuleOperationKind = "StaticRuleOperationTarget"
 )
 
 // StaticRuleVoice identifies the grammatical role the subject has in an
@@ -1602,6 +1625,9 @@ const (
 	// StaticRuleQualifierBlockerFlying restricts a "can't be blocked" prohibition
 	// to blockers with flying ("can't be blocked by creatures with flying").
 	StaticRuleQualifierBlockerFlying StaticRuleQualifierKind = "StaticRuleQualifierBlockerFlying"
+	// StaticRuleQualifierBlockerFlyingOrReach permits blockers with either flying
+	// or reach in a "can't be blocked except by" restriction.
+	StaticRuleQualifierBlockerFlyingOrReach StaticRuleQualifierKind = "StaticRuleQualifierBlockerFlyingOrReach"
 	// StaticRuleQualifierBlockerPowerOrLess restricts a "can't be blocked"
 	// prohibition to blockers whose power is at most the qualifier's Amount
 	// ("can't be blocked by creatures with power N or less").
@@ -1628,6 +1654,9 @@ const (
 	// to blockers controlled by the monarch ("... by creatures the monarch
 	// controls", Azure Fleet Admiral).
 	StaticRuleQualifierBlockerControlledByMonarch StaticRuleQualifierKind = "StaticRuleQualifierBlockerControlledByMonarch"
+	// StaticRuleQualifierTargetingControllerOpponent restricts targeting by spells
+	// or abilities controlled by an opponent of the static ability's controller.
+	StaticRuleQualifierTargetingControllerOpponent StaticRuleQualifierKind = "StaticRuleQualifierTargetingControllerOpponent"
 	// StaticRuleQualifierBlockedAttackerFlying restricts a "can block only"
 	// permission to attackers with flying ("This creature can block only
 	// creatures with flying."): the subject blocker may block only attackers that

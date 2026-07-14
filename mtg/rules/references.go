@@ -834,6 +834,7 @@ func (r referenceResolver) permanentMatchesGroupSelection(sel *game.Selection, s
 		values:            values,
 		viewer:            r.resolvingController(),
 		resolutionChoices: r.obj.ResolutionChoices,
+		obj:               r.obj,
 	}
 	if sel.Controller != game.ControllerAny {
 		subject.controller = effectiveController(r.g, permanent)

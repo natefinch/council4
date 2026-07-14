@@ -372,6 +372,9 @@ func lowerContentDispatch(
 		if content, ok := lowerExileForEachOpponentDrawChainContent(ctx); ok {
 			return content, nil
 		}
+		if content, ok := lowerExileForEachPlayerManifestChainContent(ctx); ok {
+			return content, nil
+		}
 		if content, ok := lowerRemovalVariableTargetsForEachTokenContent(ctx); ok {
 			return content, nil
 		}
@@ -568,6 +571,9 @@ func lowerOptionalContent(
 		return content, nil
 	}
 	if content, ok := lowerExileLibraryUntilNonlandCast(ctx); ok {
+		return content, nil
+	}
+	if content, ok := lowerIterativeLibraryDuplicateNameSequence(ctx); ok {
 		return content, nil
 	}
 	if content, ok := lowerExileEachTopCastAnyForFree(ctx); ok {

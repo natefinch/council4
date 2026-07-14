@@ -56,6 +56,7 @@ var Cards = []cardset.Entry{
 	{Name: "Wight", New: Wight},
 	{Name: "Wild Hypothesis", New: WildHypothesis},
 	{Name: "Wild Instincts", New: WildInstincts},
+	{Name: "Wild Onslaught", New: WildOnslaught},
 	{Name: "Wildest Dreams", New: WildestDreams},
 	{Name: "Wildfire", New: Wildfire},
 	{Name: "Will of the Temur", New: WillOfTheTemur},

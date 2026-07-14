@@ -60,6 +60,16 @@ type ReconfigureKeyword struct {
 // EnchantKeyword parameterizes Enchant attachment legality.
 type EnchantKeyword struct {
 	Target TargetSpec
+	// Reanimates marks a graveyard-reanimation Aura (Animate Dead, Dance of the
+	// Dead). Its Target enchants a creature card in a graveyard, so casting the
+	// Aura spell targets a card in a graveyard rather than a battlefield
+	// permanent. When such an Aura spell resolves, the engine returns the
+	// enchanted card to the battlefield under the Aura's controller and attaches
+	// the Aura to it in one step, avoiding the unattached-Aura state-based
+	// action. After that return the Aura's attachment legality becomes "the
+	// permanent it put onto the battlefield" (tracked by
+	// Permanent.ReanimationLinkedObject) rather than the graveyard-card Target.
+	Reanimates bool `json:",omitempty"`
 }
 
 // BestowKeyword parameterizes Bestow (CR 702.103). Cost is the fixed bestow mana
@@ -820,6 +830,33 @@ func StaticBodyEnchantTarget(body *StaticAbility) (TargetSpec, bool) {
 		return TargetSpec{}, false
 	}
 	return enchant.Target, true
+}
+
+// StaticBodyEnchantKeyword returns the full Enchant keyword carried by a static
+// ability body, including whether it is a graveyard-reanimation Aura.
+func StaticBodyEnchantKeyword(body *StaticAbility) (EnchantKeyword, bool) {
+	ka, ok := BodyKeywordAbility(body, Enchant)
+	if !ok {
+		return EnchantKeyword{}, false
+	}
+	enchant, ok := ka.(EnchantKeyword)
+	return enchant, ok
+}
+
+// CardDefReanimationEnchant returns the graveyard-reanimation Enchant keyword of
+// a card, if any. It reports true only for an Aura whose Enchant keyword targets
+// a creature card in a graveyard and returns it to the battlefield on
+// resolution (CardDef marker for Animate Dead, Dance of the Dead).
+func CardDefReanimationEnchant(card *CardDef) (EnchantKeyword, bool) {
+	if card == nil {
+		return EnchantKeyword{}, false
+	}
+	for i := range card.StaticAbilities {
+		if enchant, ok := StaticBodyEnchantKeyword(&card.StaticAbilities[i]); ok && enchant.Reanimates {
+			return enchant, true
+		}
+	}
+	return EnchantKeyword{}, false
 }
 
 // StaticBodyBestow returns the Bestow keyword carried by a static ability body.

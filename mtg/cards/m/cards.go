@@ -97,6 +97,8 @@ var Cards = []cardset.Entry{
 	{Name: "Midnight Angel Armor", New: MidnightAngelArmor},
 	{Name: "Midnight Clock", New: MidnightClock},
 	{Name: "Midnight Mayhem", New: MidnightMayhem},
+	{Name: "Might of Murasa", New: MightOfMurasa},
+	{Name: "Might of Old Krosa", New: MightOfOldKrosa},
 	{Name: "Militant Monk", New: MilitantMonk},
 	{Name: "Military Discipline", New: MilitaryDiscipline},
 	{Name: "Militia Bugler", New: MilitiaBugler},

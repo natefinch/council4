@@ -1340,6 +1340,13 @@ func TestParseStaticRuleDeclarationMeaning(t *testing.T) {
 			voice:     StaticRuleVoicePassive,
 			qualifier: StaticRuleQualifierBlockerFlying,
 		},
+		"cannot be blocked except by flying or reach": {
+			source:    "Enchanted creature can't be blocked except by creatures with flying or reach.",
+			subject:   StaticDeclarationSubjectGroup,
+			operation: StaticRuleOperationBlockedExcept,
+			voice:     StaticRuleVoicePassive,
+			qualifier: StaticRuleQualifierBlockerFlyingOrReach,
+		},
 		"cannot be blocked except by color": {
 			source:    "This creature can't be blocked except by black creatures.",
 			subject:   StaticDeclarationSubjectSourceCreature,
@@ -1394,6 +1401,7 @@ func TestParseStaticRuleDeclarationMeaning(t *testing.T) {
 			voice:     StaticRuleVoicePassive,
 		},
 	}
+
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
@@ -1418,6 +1426,25 @@ func TestParseStaticRuleDeclarationMeaning(t *testing.T) {
 				t.Fatalf("qualifiers = %#v, want color %s", rule.Qualifiers, test.color)
 			}
 		})
+	}
+}
+
+func TestParseStaticTargetRestrictionRule(t *testing.T) {
+	t.Parallel()
+	document, diagnostics := Parse(
+		"Enchanted creature can't be the target of spells or abilities your opponents control.",
+		Context{},
+	)
+	if len(diagnostics) != 0 || len(document.Abilities) != 1 || len(document.Abilities[0].Sentences) != 1 {
+		t.Fatalf("document = %#v, diagnostics = %#v", document, diagnostics)
+	}
+	rule := document.Abilities[0].Sentences[0].StaticRule
+	if rule == nil ||
+		rule.Subject.Kind != StaticRuleSubjectAttachedObject ||
+		rule.Operation.Kind != StaticRuleOperationTarget ||
+		rule.Operation.Voice != StaticRuleVoicePassive ||
+		!staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierTargetingControllerOpponent) {
+		t.Fatalf("rule = %#v", rule)
 	}
 }
 
@@ -2588,7 +2615,6 @@ func TestParseStaticCantBeBlockedExceptByRejectsDeferredForms(t *testing.T) {
 		"This creature can't be blocked except by three or more creatures.",
 		"This creature can't be blocked except by Walls.",
 		"This creature can't be blocked except by artifact creatures and/or white creatures.",
-		"This creature can't be blocked except by creatures with flying or reach.",
 	}
 	for _, source := range sources {
 		t.Run(source, func(t *testing.T) {

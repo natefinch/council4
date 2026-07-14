@@ -2662,7 +2662,7 @@ func lowerTemporaryKeywordSpell(ctx contentCtx) (game.AbilityContent, *shared.Di
 	if targetSubject || inheritedTargetSubject {
 		return continuousTargetMode(ctx.content.Targets[0], continuousEffects, duration, unsupported)
 	}
-	object, ok := continuousReferenceObject(ctx.content.References[0], &effect, true)
+	object, ok := continuousReferenceObject(ctx.content.References[0], &effect, true, ctx.enclosingKind == compiler.AbilitySpell)
 	if !ok {
 		return unsupported()
 	}
@@ -2753,17 +2753,20 @@ func lowerGroupTemporaryKeywordSpell(
 	}}.Ability(), nil
 }
 
-// playerRuleEffectsForGrantedKeywords maps each keyword of a "you and permanents
-// you control gain <keyword>" grant onto the player-scoped rule effect that
-// grants it to the controller. Only the two keywords a player can hold —
-// hexproof and shroud — are mapped; every other keyword (and any quoted/activated
-// ability, which a player cannot gain) fails closed so the coupled shape lowers
-// only when the controller half is representable.
+// playerRuleEffectsForGrantedKeywords maps each keyword and ability of a "you
+// and permanents you control gain <keyword>" grant onto the player-scoped rule
+// effect that grants it to the controller. Only the keywords a player can hold —
+// hexproof and shroud — and the "hexproof from <colors>" ability are mapped;
+// every other keyword or ability (which a player cannot gain) fails closed so
+// the coupled shape lowers only when the controller half is representable. A
+// "hexproof from <colors>" ability maps to RuleEffectPlayerHexproof carrying the
+// source-color filter, so the player and their permanents share the same
+// hexproof-from semantics.
 func playerRuleEffectsForGrantedKeywords(keywords []game.Keyword, abilities []game.Ability) ([]game.RuleEffect, bool) {
-	if len(keywords) == 0 || len(abilities) != 0 {
+	if len(keywords) == 0 && len(abilities) == 0 {
 		return nil, false
 	}
-	effects := make([]game.RuleEffect, 0, len(keywords))
+	effects := make([]game.RuleEffect, 0, len(keywords)+len(abilities))
 	for _, keyword := range keywords {
 		var kind game.RuleEffectKind
 		switch keyword {
@@ -2777,6 +2780,21 @@ func playerRuleEffectsForGrantedKeywords(keywords []game.Keyword, abilities []ga
 		effects = append(effects, game.RuleEffect{
 			Kind:           kind,
 			AffectedPlayer: game.PlayerYou,
+		})
+	}
+	for _, ability := range abilities {
+		body, ok := ability.(*game.StaticAbility)
+		if !ok {
+			return nil, false
+		}
+		hexproof, ok := game.StaticBodyHexproofFromKeyword(body)
+		if !ok || len(hexproof.FromColors) == 0 {
+			return nil, false
+		}
+		effects = append(effects, game.RuleEffect{
+			Kind:           game.RuleEffectPlayerHexproof,
+			AffectedPlayer: game.PlayerYou,
+			Protection:     game.ProtectionKeyword{FromColors: append([]color.Color(nil), hexproof.FromColors...)},
 		})
 	}
 	return effects, true

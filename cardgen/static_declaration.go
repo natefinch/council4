@@ -1088,6 +1088,8 @@ func staticRuleDomain(kind compiler.StaticRuleKind) compiler.StaticRuleDomain {
 		return compiler.StaticRuleDomainGoad
 	case compiler.StaticRuleCantBeSacrificed:
 		return compiler.StaticRuleDomainSacrifice
+	case compiler.StaticRuleCantBeTargetedByControllerOpponents:
+		return compiler.StaticRuleDomainTarget
 	case compiler.StaticRuleAdditionalTriggerForChosenCreatureType:
 		return compiler.StaticRuleDomainTrigger
 	default:
@@ -1751,6 +1753,8 @@ func lowerStaticRuleKind(kind compiler.StaticRuleKind) (game.RuleEffectKind, boo
 		return game.RuleEffectCantBeBlockedByCreaturesWith, true
 	case compiler.StaticRuleCantBeBlockedExceptBy:
 		return game.RuleEffectCantBeBlockedExceptBy, true
+	case compiler.StaticRuleCantBeTargetedByControllerOpponents:
+		return game.RuleEffectCantBeTargetedByControllerOpponents, true
 	case compiler.StaticRuleAssignsCombatDamageByToughness:
 		return game.RuleEffectAssignCombatDamageUsingToughness, true
 	case compiler.StaticRuleCanBlockOnlyCreaturesWithFlying:
@@ -1793,6 +1797,8 @@ func lowerStaticBlockerRestriction(restriction compiler.StaticBlockerRestriction
 	switch restriction.Kind {
 	case compiler.StaticBlockerRestrictionFlying:
 		return game.BlockerRestriction{Kind: game.BlockerRestrictionFlying}, true
+	case compiler.StaticBlockerRestrictionFlyingOrReach:
+		return game.BlockerRestriction{Kind: game.BlockerRestrictionFlyingOrReach}, true
 	case compiler.StaticBlockerRestrictionPowerOrLess:
 		return game.BlockerRestriction{Kind: game.BlockerRestrictionPowerLessOrEqual, Power: restriction.Amount}, true
 	case compiler.StaticBlockerRestrictionPowerOrGreater:

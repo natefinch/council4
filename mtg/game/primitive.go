@@ -281,10 +281,19 @@ const (
 	// each chosen permanent, publishing the number tapped for later scaled
 	// effects (Myr Battlesphere's "you may tap X untapped Myr you control").
 	PrimitiveTapChosenGroup
+	// PrimitiveIterativeLibraryProcess exiles or reveals cards from the top of a
+	// player's library one at a time, tracking the cards processed this way,
+	// until a name-based stop predicate fires (Tainted Pact, Demonic
+	// Consultation). It is the generic iterative library processor.
+	PrimitiveIterativeLibraryProcess
+	// PrimitiveManifestForEachLinked manifests or cloaks one card for each object
+	// a prior instruction published under LinkedKey, using each linked object's
+	// last-known controller as the manifesting player.
+	PrimitiveManifestForEachLinked
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveTapChosenGroup) + 1
+const primitiveKindCount = int(PrimitiveManifestForEachLinked) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -1096,17 +1105,13 @@ type ReturnExiledCardsWithCounter struct {
 
 // ExileForEachPlayer walks every player in the game and, for each, has Chooser
 // pick up to one permanent that player controls matching Selection and exiles
-// it, remembering each chosen permanent under LinkedKey (an exile-until-leaves
-// link) keyed by the source permanent. It models the distributive Saga chapter
-// "For each player, exile up to one [other] target <permanent> that player
-// controls until this Saga leaves the battlefield." (Vault 13: Dweller's
-// Journey, Battle at the Helvault). Each player's permanents are an independent
-// candidate pool, so the chapter exiles at most one per player. The chosen
-// permanents accumulate under the same key across chapters, so the paired return
-// — synthesized on the source leaving, or an explicit later chapter — brings
-// back exactly the set this exiled. Selection's ExcludeSource models the "other"
-// qualifier so the Saga never exiles itself. LinkedKey must be set; the exiled
-// permanents are otherwise unrecoverable.
+// it, remembering each chosen permanent under LinkedKey keyed by the source. It
+// models both exile-until-leaves Saga chapters (Vault 13: Dweller's Journey,
+// Battle at the Helvault) and plain distributive removal with a linked payoff
+// (Unexplained Absence). Each player's permanents are an independent candidate
+// pool, so the effect exiles at most one per player. Selection's ExcludeSource
+// models the "other" qualifier. LinkedKey must be set so a paired return or
+// payoff can consume the exiled set.
 type ExileForEachPlayer struct {
 	Chooser   PlayerReference
 	Selection Selection
@@ -1214,6 +1219,15 @@ type ExileForEachOpponent struct {
 // controller draws a card." (King Solomon's Frogs). It consumes and clears the
 // link after resolving. LinkedKey must be set.
 type DrawForEachExiled struct {
+	LinkedKey LinkedKey
+}
+
+// ManifestForEachLinked manifests or cloaks one card for each permanent a prior
+// linked removal recorded under LinkedKey, using that permanent's last-known
+// controller as the acting player. It consumes and clears the linked set.
+type ManifestForEachLinked struct {
+	Dread     bool
+	Cloak     bool
 	LinkedKey LinkedKey
 }
 
@@ -1486,6 +1500,14 @@ type PlayLinkedExiledCard struct {
 type Sacrifice struct {
 	Object ObjectReference
 	Group  GroupReference
+	// ByItsController, when set, makes the referenced object's current
+	// controller sacrifice it rather than requiring the ability's controller to
+	// control it ("that creature's controller sacrifices it" — Animate Dead's
+	// leaves-the-battlefield trigger). Without it a plain Sacrifice only affects
+	// an object the ability controller still controls, so a reanimated creature
+	// whose control had changed would incorrectly survive. It applies to the
+	// single-object form only (Group unset).
+	ByItsController bool
 }
 
 // SacrificePermanents causes the referenced player (or every player in a group)
@@ -1522,6 +1544,18 @@ type SacrificePermanents struct {
 	// Disciple of Freyalise). Empty when no downstream effect reads the
 	// sacrificed permanent.
 	PublishLinked LinkedKey
+	// PublishObjectBinding, when set, records each PublishLinked object by its
+	// ObjectID even for a token (CardInstanceID == 0), the way
+	// permanentObjectBindingRef binds it, rather than dropping tokens the way the
+	// default permanentLinkedObjectRef does. Set it only when the downstream
+	// reader resolves the sacrificed permanent by ObjectID through last-known
+	// information (Braids, Arisen Nightmare reads the sacrificed permanent's card
+	// types so each opponent's shared-card-type offer works when a token such as a
+	// Treasure is sacrificed). Leave it unset when the downstream reader needs the
+	// card instance itself, e.g. to return the sacrificed card from a zone
+	// (Heart-Shaped Herb returns it from the graveyard by CardID), because a token
+	// has no card instance to return. It is inert without PublishLinked.
+	PublishObjectBinding bool
 }
 
 // SacrificeFallbackKind identifies the per-player rider applied to players who
@@ -1567,6 +1601,15 @@ type PunisherEachLoseLife struct {
 	// of Ambition's monarch escalation), so the ubiquitous one-card form stays
 	// serialized identically.
 	DiscardCount int
+	// ControllerDrawEach, when set, draws one card for the effect's controller
+	// for each affected player who takes the life loss rather than paying the
+	// offered alternative ("For each opponent who doesn't, that player loses 2
+	// life and you draw a card." — Braids, Arisen Nightmare). It couples the
+	// controller's reward to the punisher's per-player outcome, so a player who
+	// pays the alternative yields no draw while a player who takes the loss (by
+	// choice or because they can't pay) yields one. Zero when the punisher grants
+	// the controller no draw.
+	ControllerDrawEach bool
 }
 
 // RepeatProcess resolves Body a number of times equal to Times ("Repeat the
@@ -1925,6 +1968,62 @@ type ImpulseExile struct {
 // same card, neither of which is expressible across separate instructions.
 type ExileLibraryUntilNonlandCast struct {
 	Player PlayerReference
+}
+
+// IterativeLibraryStop selects the name-based predicate that terminates an
+// IterativeLibraryProcess loop.
+type IterativeLibraryStop uint8
+
+const (
+	// IterativeLibraryStopChosenName stops when a processed card matches a card
+	// name the player chose at the start of the process (Demonic Consultation).
+	// The matching card is put into the recipient's hand; every other card
+	// processed before it stays exiled. Reaching an empty library without a
+	// match leaves the whole library exiled.
+	IterativeLibraryStopChosenName IterativeLibraryStop = iota
+	// IterativeLibraryStopDuplicateName stops when a processed card shares its
+	// name with another card already processed this way (Tainted Pact). The
+	// duplicate stays exiled and the process ends.
+	IterativeLibraryStopDuplicateName
+	iterativeLibraryStopCount
+)
+
+// IterativeLibraryProcess exiles or reveals cards from the top of a player's
+// library one at a time, remembering every card processed during this single
+// resolution, until a name-based stop predicate fires. It is the generic
+// iterative library processor shared by Tainted Pact and Demonic Consultation.
+//
+// The processed-name history is scoped to one execution of this primitive, so
+// independent copies of the same spell never share history and no shuffle
+// occurs. When the library empties before the stop predicate fires the process
+// simply ends with every processed card left exiled.
+//
+//   - ChooseName: before processing, the player names a card. The chosen name
+//     feeds the IterativeLibraryStopChosenName predicate.
+//   - PreExile: cards exiled from the top before the loop begins, without being
+//     revealed or offered to hand (Demonic Consultation's "top six cards").
+//   - Reveal: each processed card is revealed as public information before it is
+//     routed (Demonic Consultation). When false, cards are exiled directly
+//     (Tainted Pact) without a reveal event.
+//   - OptionalTake: after a non-duplicate card is processed, the player may put
+//     it into hand to end the process (Tainted Pact's "you may put that card
+//     into your hand"). When declined the process continues.
+//   - AllowAbsentName: the naming step offers an extra "a card name not in this
+//     library" option that maps to a sentinel the chosen-name predicate never
+//     matches, so the player can deliberately name an absent card and exile the
+//     entire remaining library (Demonic Consultation's defining line). It is
+//     only meaningful with the chosen-name stop, where the actual named card is
+//     irrelevant once matching fails, and it keeps the naming step reachable
+//     even when the library is empty.
+//   - Stop: which name-based predicate terminates the loop.
+type IterativeLibraryProcess struct {
+	Player          PlayerReference
+	Stop            IterativeLibraryStop
+	PreExile        Quantity
+	ChooseName      bool
+	Reveal          bool
+	OptionalTake    bool
+	AllowAbsentName bool
 }
 
 // ExileTopEachLibraryCastFree exiles the top Amount cards of every player's

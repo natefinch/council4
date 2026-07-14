@@ -585,6 +585,46 @@ func (r Renderer) renderExileTopEachLibraryCastFree(ctx *renderCtx, value game.E
 	}), nil
 }
 
+func (r Renderer) renderIterativeLibraryProcess(ctx *renderCtx, value game.IterativeLibraryProcess) (string, error) {
+	player, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	var stop string
+	switch value.Stop {
+	case game.IterativeLibraryStopChosenName:
+		stop = "game.IterativeLibraryStopChosenName"
+	case game.IterativeLibraryStopDuplicateName:
+		stop = "game.IterativeLibraryStopDuplicateName"
+	default:
+		return "", fmt.Errorf("render: unsupported iterative library stop %d", value.Stop)
+	}
+	fields := []string{
+		fmt.Sprintf("Player: %s,", player),
+		fmt.Sprintf("Stop: %s,", stop),
+	}
+	if value.PreExile.IsDynamic() || value.PreExile.Value() != 0 {
+		preExile, err := r.renderQuantity(ctx, value.PreExile)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("PreExile: %s,", preExile))
+	}
+	if value.ChooseName {
+		fields = append(fields, "ChooseName: true,")
+	}
+	if value.Reveal {
+		fields = append(fields, "Reveal: true,")
+	}
+	if value.OptionalTake {
+		fields = append(fields, "OptionalTake: true,")
+	}
+	if value.AllowAbsentName {
+		fields = append(fields, "AllowAbsentName: true,")
+	}
+	return structLit("game.IterativeLibraryProcess", fields), nil
+}
+
 func renderCardReference(reference game.CardReference) (string, error) {
 	switch reference.Kind {
 	case game.CardReferenceEvent:
@@ -1764,10 +1804,26 @@ func (r Renderer) renderObjectOrGroupPrimitive(ctx *renderCtx, primitive game.Pr
 		if err != nil {
 			return "", err
 		}
-		return r.renderObjectOrGroup(ctx, "game.Sacrifice", value.Object, value.Group)
+		return r.renderSacrifice(ctx, value)
 	default:
 		return "", fmt.Errorf("render: unsupported object or group primitive kind %d", primitive.Kind())
 	}
+}
+
+func (r Renderer) renderSacrifice(ctx *renderCtx, value game.Sacrifice) (string, error) {
+	if !value.ByItsController {
+		return r.renderObjectOrGroup(ctx, "game.Sacrifice", value.Object, value.Group)
+	}
+	// "That object's current controller sacrifices it" applies to the
+	// single-object form only, so render the object reference alongside the flag.
+	rendered, err := r.renderObjectReference(value.Object)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.Sacrifice", []string{
+		fmt.Sprintf("Object: %s,", rendered),
+		"ByItsController: true,",
+	}), nil
 }
 
 func (r Renderer) renderDestroy(ctx *renderCtx, value game.Destroy) (string, error) {
@@ -2182,6 +2238,9 @@ func (r Renderer) renderSacrificePermanents(ctx *renderCtx, value *game.Sacrific
 	if value.PublishLinked != "" {
 		fields = append(fields, fmt.Sprintf("PublishLinked: game.LinkedKey(%q),", string(value.PublishLinked)))
 	}
+	if value.PublishObjectBinding {
+		fields = append(fields, "PublishObjectBinding: true,")
+	}
 	return structLit("game.SacrificePermanents", fields), nil
 }
 
@@ -2316,6 +2375,9 @@ func (r Renderer) renderPunisherEachLoseLife(ctx *renderCtx, value *game.Punishe
 	}
 	if value.DiscardCount > 0 {
 		fields = append(fields, fmt.Sprintf("DiscardCount: %d,", value.DiscardCount))
+	}
+	if value.ControllerDrawEach {
+		fields = append(fields, "ControllerDrawEach: true,")
 	}
 	return structLit("game.PunisherEachLoseLife", fields), nil
 }

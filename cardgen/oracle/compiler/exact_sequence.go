@@ -84,6 +84,16 @@ const (
 	// (ExactSequenceDevotionColor) so lowering builds the devotion amount and win
 	// comparison without reading Oracle words.
 	ExactSequenceDevotionLookWin
+	// ExactSequenceSharedTypeSacrificePunisher is the triggered end-step "you may
+	// sacrifice an artifact, creature, enchantment, land, or planeswalker. If you
+	// do, each opponent may sacrifice a permanent of their choice that shares a
+	// card type with it. For each opponent who doesn't, that player loses 2 life
+	// and you draw a card." punisher (Braids, Arisen Nightmare): the controller
+	// may sacrifice one of the five permanent types, and if they do each opponent
+	// may sacrifice a permanent sharing a card type with it; each opponent who
+	// does not lets that opponent lose 2 life and the controller draw a card. The
+	// whole body is fixed, so it carries no extra data.
+	ExactSequenceSharedTypeSacrificePunisher
 	// ExactSequenceDrawPutLandSubtypeLife is the triggered draw, optional
 	// land-from-hand, and subtype-gated life sequence.
 	ExactSequenceDrawPutLandSubtypeLife
@@ -111,6 +121,8 @@ func compileExactSequenceKind(kind parser.ExactSequenceKind) ExactSequenceKind {
 		return ExactSequenceBargainSearchCastPayoff
 	case parser.ExactSequenceDevotionLookWin:
 		return ExactSequenceDevotionLookWin
+	case parser.ExactSequenceSharedTypeSacrificePunisher:
+		return ExactSequenceSharedTypeSacrificePunisher
 	case parser.ExactSequenceDrawPutLandSubtypeLife:
 		return ExactSequenceDrawPutLandSubtypeLife
 	default:

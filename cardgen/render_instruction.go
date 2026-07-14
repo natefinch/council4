@@ -442,6 +442,12 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 			return "", err
 		}
 		return r.renderDrawForEachExiled(value)
+	case game.PrimitiveManifestForEachLinked:
+		value, err := assertPrimitive[game.ManifestForEachLinked](primitive)
+		if err != nil {
+			return "", err
+		}
+		return r.renderManifestForEachLinked(value)
 	case game.PrimitiveRemoveTargetsForToken:
 		value, err := assertPrimitive[game.RemoveTargetsForToken](primitive)
 		if err != nil {
@@ -680,6 +686,12 @@ func (r Renderer) renderPrimitiveTail(ctx *renderCtx, primitive game.Primitive) 
 			return "", err
 		}
 		return r.renderExileLibraryUntilNonlandCast(value)
+	case game.PrimitiveIterativeLibraryProcess:
+		value, err := assertPrimitive[game.IterativeLibraryProcess](primitive)
+		if err != nil {
+			return "", err
+		}
+		return r.renderIterativeLibraryProcess(ctx, value)
 	case game.PrimitiveExileTopEachLibraryCastFree:
 		value, err := assertPrimitive[game.ExileTopEachLibraryCastFree](primitive)
 		if err != nil {
@@ -1096,6 +1108,18 @@ func (Renderer) renderDrawForEachExiled(value game.DrawForEachExiled) (string, e
 	return structLit("game.DrawForEachExiled", []string{
 		fmt.Sprintf("LinkedKey: game.LinkedKey(%q),", string(value.LinkedKey)),
 	}), nil
+}
+
+func (Renderer) renderManifestForEachLinked(value game.ManifestForEachLinked) (string, error) {
+	fields := []string{}
+	if value.Dread {
+		fields = append(fields, "Dread: true,")
+	}
+	if value.Cloak {
+		fields = append(fields, "Cloak: true,")
+	}
+	fields = append(fields, fmt.Sprintf("LinkedKey: game.LinkedKey(%q),", string(value.LinkedKey)))
+	return structLit("game.ManifestForEachLinked", fields), nil
 }
 
 func (Renderer) renderRemoveTargetsForToken(value game.RemoveTargetsForToken) (string, error) {

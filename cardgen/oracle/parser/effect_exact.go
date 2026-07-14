@@ -86,6 +86,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 			exactExileUntilSourceLeavesEffectSyntax(effect) ||
 			exactExileUntilOpponentBecomesMonarchEffectSyntax(effect) ||
 			exactExileForEachPlayerUntilLeavesEffectSyntax(effect) ||
+			exactExileForEachPlayerEffectSyntax(effect) ||
 			exactExileForEachOpponentEffectSyntax(effect) ||
 			exactExileTopOfLibrarySyntax(effect) ||
 			exactExileEntireHandEffectSyntax(effect) ||
@@ -144,7 +145,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 	case EffectManifestDread:
 		return strings.EqualFold(exactEffectClauseText(effect), "Manifest dread.")
 	case EffectCloak:
-		return strings.EqualFold(exactEffectClauseText(effect), "Cloak the top card of your library.")
+		return strings.EqualFold(exactEffectClauseText(effect), "Cloak the top card of your library.") ||
+			exactCloakForEachExiledThisWayEffectSyntax(effect)
 	case EffectMill:
 		return exactCardCountEffectSyntax(effect, "Mill", "mills", true)
 	case EffectMoveCounters:
@@ -2888,7 +2890,7 @@ func grantableKeywordWord(keyword string) bool {
 		"landwalk", "plainswalk", "islandwalk", "swampwalk", "mountainwalk", "forestwalk", "desertwalk", "nonbasic landwalk":
 		return true
 	default:
-		return grantableProtectionPhrase(keyword)
+		return grantableProtectionPhrase(keyword) || grantableHexproofFromPhrase(keyword)
 	}
 }
 

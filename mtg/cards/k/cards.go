@@ -39,6 +39,7 @@ var Cards = []cardset.Entry{
 	{Name: "Keldon Champion", New: KeldonChampion},
 	{Name: "Keldon Mantle", New: KeldonMantle},
 	{Name: "Keldon Vandals", New: KeldonVandals},
+	{Name: "Kellan's Lightblades", New: KellanSLightblades},
 	{Name: "Kessig Cagebreakers", New: KessigCagebreakers},
 	{Name: "Kessig Wolf Run", New: KessigWolfRun},
 	{Name: "Khalni Ambush // Khalni Territory", New: KhalniAmbush},

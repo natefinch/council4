@@ -26,6 +26,22 @@ func (r Renderer) renderStaticAbility(ctx *renderCtx, body *game.StaticAbility, 
 			return s, err
 		}
 	}
+	if hexproof, ok := game.StaticBodyHexproofFromKeyword(body); ok && len(hexproof.FromColors) > 0 &&
+		reflect.DeepEqual(*body, game.HexproofFromColorsStaticAbility(hexproof.FromColors...)) {
+		renderedColors, err := renderColorArguments(ctx, hexproof.FromColors)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.HexproofFromColorsStaticAbility(%s)", renderedColors), nil
+	}
+	if enchant, ok := game.StaticBodyEnchantKeyword(body); ok && enchant.Reanimates &&
+		reflect.DeepEqual(*body, game.ReanimationEnchantStaticAbility(&enchant.Target)) {
+		renderedTarget, err := r.renderTargetSpec(ctx, &enchant.Target)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.ReanimationEnchantStaticAbility(&%s)", renderedTarget), nil
+	}
 	if target, ok := game.StaticBodyEnchantTarget(body); ok &&
 		reflect.DeepEqual(*body, game.EnchantStaticAbility(&target)) {
 		renderedTarget, err := r.renderTargetSpec(ctx, &target)
@@ -709,6 +725,13 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 		}
 		fields = append(fields, "Protection: game.ProtectionKeyword{Everything: true},")
 	}
+	if effect.Kind == game.RuleEffectPlayerHexproof && len(effect.Protection.FromColors) > 0 {
+		renderedColors, err := renderColorArguments(ctx, effect.Protection.FromColors)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Protection: game.ProtectionKeyword{FromColors: []color.Color{%s}},", renderedColors))
+	}
 	if effect.Kind == game.RuleEffectAttackTax {
 		if effect.AttackTaxGeneric <= 0 {
 			return "", errors.New("render: attack tax requires a positive generic amount")
@@ -978,6 +1001,8 @@ func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
 		return "game.RuleEffectCantBeBlockedByCreaturesWith", nil
 	case game.RuleEffectCantBeBlockedExceptBy:
 		return "game.RuleEffectCantBeBlockedExceptBy", nil
+	case game.RuleEffectCantBeTargetedByControllerOpponents:
+		return "game.RuleEffectCantBeTargetedByControllerOpponents", nil
 	case game.RuleEffectAssignCombatDamageUsingToughness:
 		return "game.RuleEffectAssignCombatDamageUsingToughness", nil
 	case game.RuleEffectCanBlockOnlyCreaturesWith:
@@ -1090,6 +1115,8 @@ func renderBlockerRestriction(restriction game.BlockerRestriction) (string, erro
 	switch restriction.Kind {
 	case game.BlockerRestrictionFlying:
 		kind = "game.BlockerRestrictionFlying"
+	case game.BlockerRestrictionFlyingOrReach:
+		kind = "game.BlockerRestrictionFlyingOrReach"
 	case game.BlockerRestrictionPowerLessOrEqual:
 		kind = "game.BlockerRestrictionPowerLessOrEqual"
 	case game.BlockerRestrictionPowerGreaterOrEqual:

@@ -99,6 +99,9 @@ func lowerAtTrigger(
 	if ability.ExactSequence == compiler.ExactSequenceExtraDrawThenPayLifeOrTop {
 		return lowerExtraDrawPayLifeOrTopTrigger(ability, &pattern, intervening)
 	}
+	if ability.ExactSequence == compiler.ExactSequenceSharedTypeSacrificePunisher {
+		return lowerSharedTypeSacrificePunisherTrigger(ability, &pattern, intervening)
+	}
 	if triggerContentUnsupported(ability) {
 		return game.TriggeredAbility{}, executableDiagnostic(
 			ability,
