@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,852 of 32,501 cards eligible for paper support (54.9%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,853 of 32,501 cards eligible for paper support (54.9%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -16111,6 +16111,7 @@ Council4 currently supports **17,852 of 32,501 cards eligible for paper support 
 - Trostani's Summoner
 - Trostani, Selesnya's Voice
 - Trostani, Three Whispers
+- Trouble in Pairs
 - Troubled Healer
 - Troublemaker Ouphe
 - Troublesome Spirit
