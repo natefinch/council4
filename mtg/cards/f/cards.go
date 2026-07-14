@@ -75,6 +75,7 @@ var Cards = []cardset.Entry{
 	{Name: "Flamespeaker's Will", New: FlamespeakerSWill},
 	{Name: "Flamewar, Brash Veteran", New: FlamewarBrashVeteran},
 	{Name: "Flaming Fist", New: FlamingFist},
+	{Name: "Flare of Fortitude", New: FlareOfFortitude},
 	{Name: "Flash Thompson, Spider-Fan", New: FlashThompsonSpiderFan},
 	{Name: "Fleet Swallower", New: FleetSwallower},
 	{Name: "Fleeting Spirit", New: FleetingSpirit},

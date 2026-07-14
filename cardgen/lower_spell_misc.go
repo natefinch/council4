@@ -816,9 +816,18 @@ func lowerPlayerRuleEffect(ctx contentCtx, kind game.RuleEffectKind) (game.Abili
 			!ctx.content.Keywords[0].Protection.Monocolored &&
 			!ctx.content.Keywords[0].Protection.EachColor
 	}
+	// The life-total-can't-change rule composes at either the "until your next
+	// turn" scope (Teferi's Protection) or the "until end of turn" scope (Flare
+	// of Fortitude); protection from everything is only ever granted until the
+	// controller's next turn. The effect's recognized duration selects the
+	// runtime scope and gates the unsupported scopes closed.
+	gameDuration, durationValid := game.DurationUntilYourNextTurn, effect.Duration == compiler.DurationUntilYourNextTurn
+	if kind == game.RuleEffectLifeTotalCantChange && effect.Duration == compiler.DurationUntilEndOfTurn {
+		gameDuration, durationValid = game.DurationUntilEndOfTurn, true
+	}
 	if !effect.Exact ||
 		effect.Negated ||
-		effect.Duration != compiler.DurationUntilYourNextTurn ||
+		!durationValid ||
 		len(ctx.content.Targets) != 0 ||
 		len(ctx.content.References) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
@@ -840,7 +849,7 @@ func lowerPlayerRuleEffect(ctx contentCtx, kind game.RuleEffectKind) (game.Abili
 	return game.Mode{Sequence: []game.Instruction{{
 		Primitive: game.ApplyRule{
 			RuleEffects: []game.RuleEffect{ruleEffect},
-			Duration:    game.DurationUntilYourNextTurn,
+			Duration:    gameDuration,
 		},
 	}}}.Ability(), nil
 }

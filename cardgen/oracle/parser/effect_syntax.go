@@ -1463,6 +1463,7 @@ func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) 
 		func() ([]EffectSyntax, bool) { return parseGroupEntersTappedEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseGroupEntersWithCountersEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parsePlayerProtectionEffects(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parseGroupProtectionEffects(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseGroupPhaseOutEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parsePhaseOutEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseMassReanimationExchangeEffect(sentence, tokens, atoms) },
@@ -4307,6 +4308,73 @@ func parsePlayerProtectionEffects(sentence Sentence, tokens []shared.Token, _ At
 	protection.ClauseSpan = shared.Span{Start: tokens[andIndex+1].Span.Start, End: sentence.Span.End}
 	protection.VerbSpan = tokens[gainIndex].Span
 	return []EffectSyntax{life, protection}, true
+}
+
+// parseGroupProtectionEffects recognizes Flare of Fortitude's protective spell
+// sentence "Until end of turn, your life total can't change, and permanents you
+// control gain <keywords>." It composes two independent until-end-of-turn
+// effects: the controller-scoped life-total-can't-change player rule and a
+// keyword grant to the group of permanents the controller controls. The life
+// clause is the fixed player-rule wording; the trailing group keyword grant is
+// re-parsed through the ordinary effect machinery (by prefixing the real
+// leading-duration tokens so the grant carries the until-end-of-turn scope), so
+// any group and keyword list the general grant recognizer supports composes here
+// and an unrecognized grant fails the whole sentence closed.
+func parseGroupProtectionEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	remainder, duration := stripLeadingDurationClause(tokens, atoms)
+	if duration != EffectDurationUntilEndOfTurn || len(remainder) >= len(tokens) {
+		return nil, false
+	}
+	durationTokens := tokens[:len(tokens)-len(remainder)]
+	// Fixed controller life-total-can't-change clause: "your life total can't
+	// change," followed by the "and" connective introducing the group grant.
+	if len(remainder) < 8 ||
+		!equalWordSequence(remainder, 0, "your", "life", "total") ||
+		(!equalWord(remainder[3], "can't") && !equalWord(remainder[3], "cannot")) ||
+		!equalWord(remainder[4], "change") ||
+		remainder[5].Kind != shared.Comma ||
+		!equalWord(remainder[6], "and") {
+		return nil, false
+	}
+	changeToken := remainder[4]
+	andToken := remainder[6]
+	groupTail := remainder[7:]
+	if len(groupTail) == 0 {
+		return nil, false
+	}
+	// Re-parse the trailing group keyword grant as a standalone until-end-of-turn
+	// sentence built from the real leading-duration tokens and the grant tail, so
+	// the grant is recognized (with its until-end-of-turn scope) by the ordinary
+	// effect machinery rather than reconstructed here.
+	groupTokens := make([]shared.Token, 0, len(durationTokens)+len(groupTail))
+	groupTokens = append(groupTokens, durationTokens...)
+	groupTokens = append(groupTokens, groupTail...)
+	groupEffects := parseEffects(Sentence{Span: shared.SpanOf(groupTokens), Tokens: groupTokens}, groupTokens, atoms)
+	if len(groupEffects) != 1 {
+		return nil, false
+	}
+	group := groupEffects[0]
+	if group.Kind != EffectGain || !group.Exact ||
+		group.Duration != EffectDurationUntilEndOfTurn {
+		return nil, false
+	}
+	life := EffectSyntax{
+		Kind:                    EffectLifeTotalCantChange,
+		Span:                    sentence.Span,
+		Text:                    sentence.Text,
+		Tokens:                  append([]shared.Token(nil), tokens...),
+		Duration:                EffectDurationUntilEndOfTurn,
+		Context:                 EffectContextController,
+		Exact:                   true,
+		RequiresOrderedLowering: true,
+		ClauseSpan:              shared.Span{Start: sentence.Span.Start, End: changeToken.Span.End},
+		VerbSpan:                changeToken.Span,
+	}
+	group.Span = sentence.Span
+	group.Connection = EffectConnectionAnd
+	group.ConnectionSpan = andToken.Span
+	group.RequiresOrderedLowering = true
+	return []EffectSyntax{life, group}, true
 }
 
 func parseGroupPhaseOutEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
