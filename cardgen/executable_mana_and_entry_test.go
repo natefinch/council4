@@ -303,6 +303,39 @@ func TestGenerateExecutableCardSourceEntersTappedUnlessTwoBasicLands(t *testing.
 	}
 }
 
+func TestGenerateExecutableCardSourceStartingTown(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:     "Starting Town",
+		Layout:   "normal",
+		TypeLine: "Land — Town",
+		OracleText: "This land enters tapped unless it's your first, second, or third turn of the game.\n" +
+			"{T}: Add {C}.\n" +
+			"{T}, Pay 1 life: Add one mana of any color.",
+	}
+
+	source, diagnostics, err := GenerateExecutableCardSource(card, "s")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	// The enters-tapped replacement gates on the controller's turn of the game,
+	// and both mana abilities (colorless tap and any-color pay-1-life) compile.
+	for _, wanted := range []string{
+		"game.EntersTappedIfReplacement",
+		"Negate:                     true",
+		"ControllerTurnOfGameAtMost: 3",
+		"game.TapManaAbility(mana.C)",
+		"AddMana",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceEntersTappedUnlessGeneralizedLandConditions(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

@@ -221,6 +221,11 @@ func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringC
 		result.FirstCombatPhaseOfTurn = true
 	case compiler.ConditionPredicateControllerTurn:
 		result.SourceControllerTurn = true
+	case compiler.ConditionPredicateControllerTurnOfGameAtMost:
+		if condition.Threshold <= 0 {
+			return game.Condition{}, false
+		}
+		result.ControllerTurnOfGameAtMost = condition.Threshold
 	case compiler.ConditionPredicateSourceAbilityResolutionOrdinalThisTurn:
 		result.SourceAbilityResolutionOrdinalThisTurn = condition.Threshold
 	case compiler.ConditionPredicateControlsGreatestPowerCreature:
@@ -506,6 +511,12 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 		compiler.ConditionPredicateControllerControls,
 		compiler.ConditionPredicateAnyOpponentControls,
 		compiler.ConditionPredicateOpponentsControl,
+		// "This land enters tapped unless it's your first, second, or third turn
+		// of the game." (Starting Town) gates the self enters-tapped replacement
+		// on the controller's own turn count, which the runtime resolves from the
+		// controller and the active-player comparison, so it is a valid
+		// replacement-condition predicate.
+		compiler.ConditionPredicateControllerTurnOfGameAtMost,
 		compiler.ConditionPredicateControlComparison:
 		return true
 	default:

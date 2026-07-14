@@ -1006,6 +1006,7 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 		}
 	}
 	if cond.AnyPlayerLifeAtMost < 0 ||
+		cond.ControllerTurnOfGameAtMost < 0 ||
 		cond.SourceClassLevelAtLeast < 0 ||
 		cond.SourceClassLevelLessThan < 0 ||
 		cond.SourceLevelCountersAtLeast < 0 ||
@@ -1174,6 +1175,10 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 	}
 	if cond.SourceControllerTurn {
 		fields = append(fields, "SourceControllerTurn: true,")
+		hasPredicate = true
+	}
+	if cond.ControllerTurnOfGameAtMost > 0 {
+		fields = append(fields, fmt.Sprintf("ControllerTurnOfGameAtMost: %d,", cond.ControllerTurnOfGameAtMost))
 		hasPredicate = true
 	}
 	if cond.SourceAbilityResolutionOrdinalThisTurn > 0 {

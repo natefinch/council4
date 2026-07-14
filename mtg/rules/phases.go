@@ -12,6 +12,14 @@ func (e *Engine) runTurn(g *game.Game, agents [game.NumPlayers]PlayerAgent) (log
 		TurnNumber:   g.Turn.TurnNumber,
 		ActivePlayer: g.Turn.ActivePlayer,
 	}
+	// Count this turn toward the active player's own turn tally (CR 500.1). It
+	// runs once per whole turn, including the game's first turn and any extra
+	// turn the active player takes, so a per-player turn-ordinal condition
+	// ("your first, second, or third turn of the game", Starting Town) reads the
+	// controller's true turn count rather than the global turn number.
+	if active, ok := playerByID(g, g.Turn.ActivePlayer); ok {
+		active.TurnsTaken++
+	}
 	for seat := range g.Players {
 		log.LifeTotals[seat] = g.Players[seat].Life
 	}

@@ -281,6 +281,7 @@ var Cards = []cardset.Entry{
 	{Name: "Starlit Mantle", New: StarlitMantle},
 	{Name: "Starscape Cleric", New: StarscapeCleric},
 	{Name: "Starscream, Power Hungry", New: StarscreamPowerHungry},
+	{Name: "Starting Town", New: StartingTown},
 	{Name: "Stasis Cocoon", New: StasisCocoon},
 	{Name: "Static Snare", New: StaticSnare},
 	{Name: "Station Monitor", New: StationMonitor},

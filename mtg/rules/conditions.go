@@ -32,6 +32,7 @@ func conditionParametersNegative(cond *game.Condition) bool {
 	}
 	return cond.AnyPlayerLifeAtMost < 0 ||
 		cond.AnyOpponentPoisonAtLeast < 0 ||
+		cond.ControllerTurnOfGameAtMost < 0 ||
 		cond.ControllerGraveyardCardOfTypeCountAtLeast < 0 ||
 		cond.ControllerGraveyardInstantOrSorceryCountAtLeast < 0 ||
 		cond.ControlsMatching.Exists && cond.ControlsMatching.Val.MinCount < 0 ||
@@ -316,6 +317,13 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	}
 	if cond.SourceControllerTurn {
 		matches = matches && g.Turn.ActivePlayer == ctx.controller
+	}
+	if cond.ControllerTurnOfGameAtMost > 0 {
+		player, ok := playerByID(g, ctx.controller)
+		matches = matches && ok &&
+			g.Turn.ActivePlayer == ctx.controller &&
+			player.TurnsTaken >= 1 &&
+			player.TurnsTaken <= cond.ControllerTurnOfGameAtMost
 	}
 	if cond.SourceAbilityResolutionOrdinalThisTurn > 0 {
 		matches = matches && sourceAbilityResolutionOrdinalMatches(g, ctx, cond.SourceAbilityResolutionOrdinalThisTurn)

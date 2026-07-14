@@ -144,6 +144,16 @@ type Player struct {
 	// happens at most once per the player's turn (CR 702.179c).
 	SpeedIncreasedTurn int
 
+	// TurnsTaken counts how many turns this player has begun during the game,
+	// incremented as each of the player's turns starts. It counts the player's
+	// own turns rather than the global turn number, so in a multiplayer game a
+	// later seat's first turn is TurnsTaken 1 even though it is a high global
+	// turn number, and an extra turn a player takes increments their own count.
+	// It backs the "your first, second, or third turn of the game" turn-ordinal
+	// condition (Starting Town). It is zero until the player takes their first
+	// turn.
+	TurnsTaken int
+
 	// PowerBracket and PowerLevel are optional deck metadata carried from setup
 	// for later simulation/reporting. They do not affect rules behavior.
 	PowerBracket string

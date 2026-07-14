@@ -86,6 +86,16 @@ func conditionSegments(tokens []shared.Token, boundaries []ConditionBoundary, tr
 			continue
 		}
 		end := conditionClauseEnd(tokens, i)
+		// Keep a per-player turn-ordinal clause ("unless it's your first, second,
+		// or third turn of the game", Starting Town) whole: its comma-separated
+		// ordinal list would otherwise be truncated at the first comma, and the
+		// segment span must match the recognized ConditionClause span for the
+		// compiler to link them (linkConditionSegments matches by equal span).
+		if _, width := conditionIntroAt(tokens, i); width > 0 {
+			if turnEnd, ok := controllerTurnOfGameClauseEnd(tokens, i+width); ok {
+				end = turnEnd
+			}
+		}
 		if boundary.DurationSkip {
 			i = end - 1
 			continue
