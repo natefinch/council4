@@ -2599,6 +2599,28 @@ func (p ExileLibraryUntilNonlandCast) validatePrimitive(targets []TargetSpec, ch
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 
+func (p IterativeLibraryProcess) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.Stop >= iterativeLibraryStopCount {
+		return errors.New("IterativeLibraryProcess has an unknown stop predicate")
+	}
+	if err := validateQuantity(p.PreExile, targets, checkTargets); err != nil {
+		return err
+	}
+	if !p.PreExile.IsDynamic() && p.PreExile.Value() < 0 {
+		return errors.New("IterativeLibraryProcess requires a non-negative pre-exile count")
+	}
+	if p.Stop == IterativeLibraryStopChosenName && !p.ChooseName {
+		return errors.New("IterativeLibraryProcess chosen-name stop requires ChooseName")
+	}
+	if p.OptionalTake && p.Stop != IterativeLibraryStopDuplicateName {
+		return errors.New("IterativeLibraryProcess OptionalTake requires the duplicate-name stop")
+	}
+	if p.AllowAbsentName && p.Stop != IterativeLibraryStopChosenName {
+		return errors.New("IterativeLibraryProcess AllowAbsentName requires the chosen-name stop")
+	}
+	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
 func (p ExileTopEachLibraryCastFree) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err

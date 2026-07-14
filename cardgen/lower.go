@@ -1607,6 +1607,9 @@ func lowerExecutableAbility(
 			if ability.Content.Effects[i].PileSplitSequence && ability.Content.Effects[i].PileSplitMiddleSpan != (shared.Span{}) {
 				spans = append(spans, ability.Content.Effects[i].PileSplitMiddleSpan)
 			}
+			if ability.Content.Effects[i].IterativeLibraryPreludeSpan != (shared.Span{}) {
+				spans = append(spans, ability.Content.Effects[i].IterativeLibraryPreludeSpan)
+			}
 		}
 		for _, target := range ability.Content.Targets {
 			spans = append(spans, target.Span)

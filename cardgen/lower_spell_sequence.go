@@ -1055,6 +1055,9 @@ func lowerCombinedSequenceShapes(cardName string, ctx contentCtx, syntax *parser
 	if content, ok := lowerRevealTopPartitionSequence(ctx); ok {
 		return content, true
 	}
+	if content, ok := lowerIterativeLibraryChosenNameSequence(ctx); ok {
+		return content, true
+	}
 	if content, ok := lowerRemovalManifestSequence(ctx); ok {
 		return content, true
 	}
