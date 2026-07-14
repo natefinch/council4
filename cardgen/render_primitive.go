@@ -2238,6 +2238,9 @@ func (r Renderer) renderSacrificePermanents(ctx *renderCtx, value *game.Sacrific
 	if value.PublishLinked != "" {
 		fields = append(fields, fmt.Sprintf("PublishLinked: game.LinkedKey(%q),", string(value.PublishLinked)))
 	}
+	if value.PublishObjectBinding {
+		fields = append(fields, "PublishObjectBinding: true,")
+	}
 	return structLit("game.SacrificePermanents", fields), nil
 }
 
@@ -2372,6 +2375,9 @@ func (r Renderer) renderPunisherEachLoseLife(ctx *renderCtx, value *game.Punishe
 	}
 	if value.DiscardCount > 0 {
 		fields = append(fields, fmt.Sprintf("DiscardCount: %d,", value.DiscardCount))
+	}
+	if value.ControllerDrawEach {
+		fields = append(fields, "ControllerDrawEach: true,")
 	}
 	return structLit("game.PunisherEachLoseLife", fields), nil
 }

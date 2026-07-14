@@ -1544,6 +1544,18 @@ type SacrificePermanents struct {
 	// Disciple of Freyalise). Empty when no downstream effect reads the
 	// sacrificed permanent.
 	PublishLinked LinkedKey
+	// PublishObjectBinding, when set, records each PublishLinked object by its
+	// ObjectID even for a token (CardInstanceID == 0), the way
+	// permanentObjectBindingRef binds it, rather than dropping tokens the way the
+	// default permanentLinkedObjectRef does. Set it only when the downstream
+	// reader resolves the sacrificed permanent by ObjectID through last-known
+	// information (Braids, Arisen Nightmare reads the sacrificed permanent's card
+	// types so each opponent's shared-card-type offer works when a token such as a
+	// Treasure is sacrificed). Leave it unset when the downstream reader needs the
+	// card instance itself, e.g. to return the sacrificed card from a zone
+	// (Heart-Shaped Herb returns it from the graveyard by CardID), because a token
+	// has no card instance to return. It is inert without PublishLinked.
+	PublishObjectBinding bool
 }
 
 // SacrificeFallbackKind identifies the per-player rider applied to players who
@@ -1589,6 +1601,15 @@ type PunisherEachLoseLife struct {
 	// of Ambition's monarch escalation), so the ubiquitous one-card form stays
 	// serialized identically.
 	DiscardCount int
+	// ControllerDrawEach, when set, draws one card for the effect's controller
+	// for each affected player who takes the life loss rather than paying the
+	// offered alternative ("For each opponent who doesn't, that player loses 2
+	// life and you draw a card." — Braids, Arisen Nightmare). It couples the
+	// controller's reward to the punisher's per-player outcome, so a player who
+	// pays the alternative yields no draw while a player who takes the loss (by
+	// choice or because they can't pay) yields one. Zero when the punisher grants
+	// the controller no draw.
+	ControllerDrawEach bool
 }
 
 // RepeatProcess resolves Body a number of times equal to Times ("Repeat the

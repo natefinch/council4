@@ -1,6 +1,6 @@
 # Unsupported Cards
 
-Council4 currently supports **16,855 of 32,501 cards eligible for paper support (51.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **16,856 of 32,501 cards eligible for paper support (51.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 These cards are eligible for paper support but cardgen cannot yet generate them. Cards excluded by the corpus policy are not listed.
 
@@ -1520,7 +1520,6 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Braid of Fire** — unsupported ability word: the executable source backend does not yet lower the "Cumulative upkeep" ability word
 - **Braided Net // Braided Quipu** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Craft with artifact {1}{U}; unsupported tap spell: the executable source backend supports only exact tap of one target permanent; unsupported static ability: the executable source backend does not yet lower non-keyword static rules text; unsupported ordered effect sequence: sub-effect — unsupported library placement
 - **Braids's Frightful Return** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ordered effect sequence: structural — per-effect condition unrecognized: If they don't; unsupported Read ahead ability: the reminder sacrifice chapter 3 does not match final chapter 2
-- **Braids, Arisen Nightmare** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ordered effect sequence: structural — unsupported resolving optionality
 - **Braids, Conjurer Adept** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported counter placement: the executable source backend supports exact recognized counter placement on one valid target
 - **Brain Gorgers** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ordered effect sequence: structural — per-effect condition unrecognized: If a player does
 - **Brain in a Jar** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ordered effect sequence: sub-effect — unsupported cast effect; unsupported activation cost: the executable source backend cannot lower every typed activation cost component
