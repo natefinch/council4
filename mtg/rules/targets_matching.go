@@ -458,7 +458,10 @@ func combatStateMatches(g *game.Game, permanent *game.Permanent, filter game.Com
 
 func targetProtectedFromSource(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, target game.Target) bool {
 	if target.Kind == game.TargetPlayer {
-		return playerProtectedFromSource(g, target.PlayerID, 0, sourceObjectID, source)
+		if playerProtectedFromSource(g, target.PlayerID, 0, sourceObjectID, source) {
+			return true
+		}
+		return playerUntargetableByRuleEffect(g, controller, target.PlayerID)
 	}
 	if target.Kind != game.TargetPermanent {
 		return false

@@ -494,6 +494,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				},
 				Replacement:                                   syntax.Replacement,
 				CoordinatedSourceSubject:                      syntax.CoordinatedSourceSubject,
+				PlayerAndControlledPermanents:                 syntax.PlayerAndControlledPermanents,
 				Payment:                                       compileEffectPayment(syntax.Payment),
 				Exact:                                         syntax.Exact,
 				TapUntapReferenceObjectClean:                  syntax.TapUntapReferenceObjectClean,

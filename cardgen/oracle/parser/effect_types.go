@@ -3212,6 +3212,14 @@ type EffectSyntax struct {
 	// double-pumping the source. Only the "<self> and <group> each get <p>/<t>"
 	// coordinated shape sets it.
 	CoordinatedSourceSubject bool `json:",omitempty"`
+	// PlayerAndControlledPermanents marks a resolving keyword grant whose subject
+	// couples the controller with the permanents they control ("You and permanents
+	// you control gain hexproof until end of turn.", Dawn's Truce). The permanent
+	// group rides in StaticSubject as EffectStaticSubjectControlledPermanents; the
+	// leading "you and" is represented by this flag so lowering also grants the
+	// keyword to the controller as a player-scoped rule effect. Only the "you and
+	// permanents you control <group verb>" shape sets it.
+	PlayerAndControlledPermanents bool `json:",omitempty"`
 	// DoubleSourceCounters marks an EffectDouble whose object is "the number of
 	// <kind> counters on <self>" ("double the number of +1/+1 counters on this
 	// creature", Mossborn Hydra). The source permanent gains additional counters
