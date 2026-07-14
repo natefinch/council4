@@ -11,6 +11,7 @@ var Cards = []cardset.Entry{
 	{Name: "Tabaxi Toucaneers", New: TabaxiToucaneers},
 	{Name: "Tablet of Epityr", New: TabletOfEpityr},
 	{Name: "Taigam's Strike", New: TaigamSStrike},
+	{Name: "Tainted Pact", New: TaintedPact},
 	{Name: "Tajuru Stalwart", New: TajuruStalwart},
 	{Name: "Take Heart", New: TakeHeart},
 	{Name: "Talas Researcher", New: TalasResearcher},

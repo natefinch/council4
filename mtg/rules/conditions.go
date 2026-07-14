@@ -1356,7 +1356,17 @@ func conditionEventHistorySatisfied(g *game.Game, ctx conditionContext, hist *ga
 	want := max(hist.MinCount, 1)
 	matches := 0
 	for i := range events {
-		if triggerMatchesEvent(g, ctx.source, &hist.Pattern, events[i]) {
+		var matched bool
+		if ctx.source != nil {
+			matched = triggerMatchesEvent(g, ctx.source, &hist.Pattern, events[i])
+		} else {
+			// A resolving instant has no source permanent, so controller-relative
+			// filters (TriggerControllerOpponent for "an opponent has cast ...",
+			// TriggerControllerYou/TriggerPlayerYou for "you've cast ...") resolve
+			// against the ability's controller instead.
+			matched = triggerMatchesEventForController(g, nil, ctx.controller, &hist.Pattern, events[i])
+		}
+		if matched {
 			matches++
 			if matches >= want {
 				return true
@@ -1367,15 +1377,14 @@ func conditionEventHistorySatisfied(g *game.Game, ctx conditionContext, hist *ga
 }
 
 // eventHistoryPatternNeedsSource reports whether a trigger pattern consults the
-// ability's source permanent (its controller, identity, or attachment) to match
-// an event. Such patterns can never match without a source, so a source-agnostic
-// caller (a resolving instant gating on event history) fails them closed instead
-// of dereferencing a nil source.
+// ability's source permanent's identity or attachment to match an event. Such
+// patterns can never match without a source, so a source-agnostic caller (a
+// resolving instant gating on event history) fails them closed instead of
+// dereferencing a nil source. Controller-relative filters (Controller,
+// CauseController, Player) are excluded here: they only need the acting player's
+// identity, which the caller supplies from the ability's controller.
 func eventHistoryPatternNeedsSource(pattern *game.TriggerPattern) bool {
-	return pattern.Controller != game.TriggerControllerAny ||
-		pattern.CauseController != game.TriggerControllerAny ||
-		pattern.Player != game.TriggerPlayerAny ||
-		pattern.Source != game.TriggerSourceAny ||
+	return pattern.Source != game.TriggerSourceAny ||
 		pattern.ExcludeSelf ||
 		pattern.SubjectSelectionOrSelf ||
 		pattern.DamageSourceSelectionOrSelf ||

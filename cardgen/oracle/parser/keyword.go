@@ -593,6 +593,11 @@ type EnchantPredicate struct {
 	// controls ("Enchant creature or planeswalker you control"). It applies only
 	// to the card-type/subtype predicate; it is never set with Player or Opponent.
 	YouControl bool `json:",omitempty"`
+	// InGraveyard restricts the target to a matching card in a graveyard
+	// ("Enchant creature card in a graveyard"). It marks the graveyard-card Aura
+	// enchant restriction of the reanimation Aura family (Animate Dead, Dance of
+	// the Dead) and is set only alongside a card-type predicate.
+	InGraveyard bool `json:",omitempty"`
 }
 
 // Empty reports whether the predicate carries no recognized restriction. A bare
@@ -1885,6 +1890,8 @@ func parseKeywordParameter(
 	switch kind {
 	case KeywordProtection:
 		return parseProtectionKeywordParameter(tokens, start, atoms)
+	case KeywordHexproof:
+		return parseHexproofKeywordParameter(tokens, start, atoms)
 	case KeywordEnchant:
 		if predicate, end, ok := parseEnchantTargetPredicate(tokens, start, atoms); ok {
 			return NewEnchantTargetKeywordParameter(shared.SpanOf(tokens[start:end]), predicate), end
@@ -2093,6 +2100,20 @@ func parseEnchantTargetPredicate(tokens []shared.Token, start int, atoms Atoms) 
 	if predicate.Empty() {
 		return EnchantPredicate{}, start, false
 	}
+	// A trailing "card in a graveyard" narrows a card-type predicate to a
+	// matching card in a graveyard ("Enchant creature card in a graveyard").
+	// This is the graveyard-card Aura enchant restriction of the reanimation
+	// Aura family; it is consumed only after a recognized card-type predicate so
+	// the keyword span covers the whole restriction.
+	if !expectItem && end+3 < len(tokens) &&
+		equalWord(tokens[end], "card") &&
+		equalWord(tokens[end+1], "in") &&
+		equalWord(tokens[end+2], "a") &&
+		equalWord(tokens[end+3], "graveyard") {
+		predicate.InGraveyard = true
+		end += 4
+		return predicate, end, true
+	}
 	// A trailing "you control" controller restriction narrows the permanent
 	// predicate to the enchanting player's own permanents ("Enchant creature or
 	// planeswalker you control"). It is consumed only after a recognized
@@ -2127,6 +2148,9 @@ func enchantTargetName(predicate EnchantPredicate) string {
 		words = append(words, strings.ToLower(string(subtype)))
 	}
 	name := strings.Join(words, " or ")
+	if predicate.InGraveyard {
+		name += " card in a graveyard"
+	}
 	if predicate.YouControl {
 		name += " you control"
 	}
@@ -2219,6 +2243,37 @@ func keywordManaColor(name string) (mana.Color, bool) {
 	default:
 		return "", false
 	}
+}
+
+// parseHexproofKeywordParameter recognizes the source-color qualifier on
+// "hexproof from <colors>" ("hexproof from black", "hexproof from blue and from
+// black"), reusing the protection color-list grammar. Only the color form is
+// recognized; a bare "hexproof" with no "from" qualifier falls through to a
+// non-parameterized simple keyword. The colors are carried in a protection
+// parameter so the compiler reuses compileProtectionKeyword; lowering reads
+// them back for a HexproofFromKeyword grant.
+func parseHexproofKeywordParameter(
+	tokens []shared.Token,
+	start int,
+	atoms Atoms,
+) (parameter KeywordParameter, end int) {
+	if start+1 >= len(tokens) || !equalWord(tokens[start], "from") {
+		return KeywordParameter{}, start
+	}
+	if colors, end, ok := parseProtectionList(tokens, start, func(token shared.Token) (Color, bool) {
+		return atoms.ColorAt(token.Span)
+	}); ok {
+		names := make([]string, len(colors))
+		for i, c := range colors {
+			names[i] = colorName(c)
+		}
+		return NewProtectionKeywordParameter(
+			shared.SpanOf(tokens[start:end]),
+			strings.Join(names, ","),
+			ProtectionParameter{FromColors: colors},
+		), end
+	}
+	return KeywordParameter{}, start
 }
 
 func parseProtectionKeywordParameter(

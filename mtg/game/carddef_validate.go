@@ -713,6 +713,16 @@ func (v *cardDefValidator) validateKeywordAbility(faceName, path string, ability
 		if keyword.Amount <= 0 {
 			v.add(faceName, appendPath(path, "Amount"), CardDefIssueInvalidKeywordAbility, "toxic amount must be positive")
 		}
+	case HexproofFromKeyword:
+		if len(keyword.FromColors) == 0 {
+			v.add(faceName, appendPath(path, "FromColors"), CardDefIssueInvalidKeywordAbility, "hexproof from needs at least one color")
+		}
+		for _, c := range keyword.FromColors {
+			if !isKnownProtectionColor(c) {
+				v.add(faceName, appendPath(path, "FromColors"), CardDefIssueInvalidKeywordAbility,
+					fmt.Sprintf("unknown hexproof-from color %q", string(c)))
+			}
+		}
 	case FabricateKeyword:
 		if keyword.Count <= 0 {
 			v.add(faceName, appendPath(path, "Count"), CardDefIssueInvalidKeywordAbility, "fabricate count must be positive")

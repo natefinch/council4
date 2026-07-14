@@ -31,11 +31,10 @@ func TestGenerateExecutableCardSourceCagedSun(t *testing.T) {
 		"ColorChoice: game.ColorChoiceSourceEntry",
 		"PowerDelta:     1",
 		"ToughnessDelta: 1",
-		// Chosen-color land-mana trigger.
-		"game.EventPermanentTapped",
-		"RequireTappedForMana:                    true",
+		// Chosen-color land-mana trigger on the authoritative mana-produced event.
+		"game.EventManaProduced",
 		"RequireProducedManaColorFromEntryChoice: true",
-		"RequiredTypes: []types.Card{types.Land}",
+		"RequireManaProducedByLand:               true",
 		// Additional mana of the chosen color routed through the entry choice.
 		"game.AddMana{",
 		`EntryChoiceFrom: game.ChoiceKey("oracle-entry-color")`,

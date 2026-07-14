@@ -173,6 +173,15 @@ type Permanent struct {
 	// is attached to an illegal object (CR 702.103e–g), which clears this flag.
 	Bestowed bool
 
+	// ReanimationLinkedObject is set on a graveyard-reanimation Aura (Animate
+	// Dead, Dance of the Dead) after it resolves: it records the ObjectID of the
+	// creature the Aura returned to the battlefield and attached to. It models
+	// the enchant-restriction transition on resolution — the Aura loses "enchant
+	// creature card in a graveyard" and gains "enchant creature put onto the
+	// battlefield with this Aura" — so the Aura is legally attached only to that
+	// one linked permanent. It is zero before the Aura reanimates anything.
+	ReanimationLinkedObject id.ID
+
 	// --- Layer ordering ---
 
 	// --- Combat modifiers ---

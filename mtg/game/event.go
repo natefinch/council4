@@ -106,12 +106,30 @@ const (
 	// never removed, so this event is emitted at most once per player per game.
 	// Controller and Player identify the player who got the city's blessing.
 	EventGotCityBlessing
+	// EventManaProduced is the authoritative "an ability added mana" event
+	// (CR 106.1, CR 605): it is emitted whenever an activated mana ability
+	// actually adds one or more mana to a player's pool, independent of whether
+	// the source tapped. It covers ordinary tap-for-mana land abilities as well
+	// as non-tap land mana abilities (sacrifice-for-mana, pay-life-for-mana), so
+	// "Whenever a land's ability causes you to add ... mana" (Caged Sun) and
+	// "Whenever a player taps an Island for mana" (High Tide) match the actual
+	// production rather than inferring it from a tap. SourceObjectID/PermanentID
+	// and SourceID identify the producing permanent/card, Controller is that
+	// source's controller and Player is the player who added the mana, Amount is
+	// the total mana added, ProducedManaColors lists the distinct types added
+	// after replacements, ManaSourceIsLand records whether the source was a land
+	// (last-known, so a sacrifice-for-mana land still matches after it is gone),
+	// and TappedForMana records whether the source tapped as part of the
+	// production. Additional-mana triggered abilities (Caged Sun, High Tide)
+	// resolve on the stack rather than as activated mana abilities, so they never
+	// emit this event and cannot recursively retrigger themselves.
+	EventManaProduced
 )
 
 // EventKindCount is the number of EventKind values, including EventUnknown. It
 // is appended at the end of the const block so existing wire values are
 // preserved; new kinds must be added immediately before this sentinel.
-const EventKindCount = int(EventGotCityBlessing) + 1
+const EventKindCount = int(EventManaProduced) + 1
 
 // DamageRecipientKind identifies what received damage. Values are flags so a
 // trigger pattern can match either kind.
@@ -333,8 +351,17 @@ type Event struct {
 	// the tap recorded by EventPermanentTapped added (its color, with colorless
 	// {C} included). It is populated only for tapped-for-mana taps and backs the
 	// "add one mana of any type that land produced" mana-doubler trigger
-	// (Mirari's Wake), which mirrors one of these types.
+	// (Mirari's Wake), which mirrors one of these types. It is also populated on
+	// EventManaProduced with the types that ability added.
 	ProducedManaColors []mana.Color
+
+	// ManaSourceIsLand records, on an EventManaProduced event, whether the
+	// producing permanent was a land when it added the mana. It is captured at
+	// emission time (last-known information) so a land that sacrificed itself to
+	// produce mana still satisfies a "a land's ability causes you to add mana"
+	// filter after it has left the battlefield (CR 603.10). It is false for
+	// non-land mana sources, which such land-restricted triggers must ignore.
+	ManaSourceIsLand bool
 
 	// AttackTarget is set for the EventAttackerDeclared, EventAttackerBecameBlocked,
 	// and EventAttackerBecameUnblocked combat events, recording what the attacker

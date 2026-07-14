@@ -552,6 +552,7 @@ func triggerEventBindsPermanent(event TriggerEvent) bool {
 		TriggerEventAttackerDeclared,
 		TriggerEventBlockerDeclared,
 		TriggerEventPermanentTapped,
+		TriggerEventManaProduced,
 		TriggerEventPermanentUntapped,
 		TriggerEventPermanentTurnedFaceUp,
 		TriggerEventPermanentSacrificed,
@@ -661,6 +662,13 @@ func triggerPatternBindsThatPlayer(pattern *TriggerPattern) bool {
 		return true
 	}
 	if pattern.Event == TriggerEventPermanentTapped {
+		return true
+	}
+	if pattern.Event == TriggerEventManaProduced {
+		// The mana-produced event ("whenever a player taps an Island for mana,
+		// that player adds an additional {U}", High Tide; "whenever an opponent
+		// taps a Mountain for mana, ...", Sanctimony) resolves "that player" to
+		// the player who received the produced mana through EventPlayerReference.
 		return true
 	}
 	if pattern.Event == TriggerEventAttackerDeclared &&

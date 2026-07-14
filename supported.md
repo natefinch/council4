@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,821 of 32,501 cards eligible for paper support (54.8%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,828 of 32,501 cards eligible for paper support (54.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -523,6 +523,7 @@ Council4 currently supports **17,821 of 32,501 cards eligible for paper support 
 - Anguished Unmaking
 - Animal Boneyard
 - Animal Sanctuary
+- Animate Dead
 - Animate Land
 - Anje's Ravager
 - Ankh of Mishra
@@ -2031,6 +2032,7 @@ Council4 currently supports **17,821 of 32,501 cards eligible for paper support 
 - Brute Strength
 - Brute Suit
 - Bubble Snare
+- Bubbling Muck
 - Buccaneer's Bravado
 - Bucky Barnes, Eager Ally
 - Bugenhagen, Wise Elder
@@ -3659,6 +3661,7 @@ Council4 currently supports **17,821 of 32,501 cards eligible for paper support 
 - Demon's Horn
 - Demon's Jester
 - Demonic Appetite
+- Demonic Consultation
 - Demonic Dread
 - Demonic Lore
 - Demonic Ruckus
@@ -7092,6 +7095,7 @@ Council4 currently supports **17,821 of 32,501 cards eligible for paper support 
 - High Priest of Penance
 - High Seas
 - High Stride
+- High Tide
 - High-Flying Ace
 - High-Rise Sawjack
 - High-Society Hunter
@@ -15131,6 +15135,7 @@ Council4 currently supports **17,821 of 32,501 cards eligible for paper support 
 - Tainted Field
 - Tainted Isle
 - Tainted Observer
+- Tainted Pact
 - Tainted Peak
 - Tainted Strike
 - Tainted Well
@@ -16325,6 +16330,7 @@ Council4 currently supports **17,821 of 32,501 cards eligible for paper support 
 - Unesh, Criosphinx Sovereign
 - Unexpected Assistance
 - Unexpected Windfall
+- Unexplained Absence
 - Unexplained Disappearance
 - Unexplained Vision
 - Unfathomable Truths
@@ -16601,6 +16607,7 @@ Council4 currently supports **17,821 of 32,501 cards eligible for paper support 
 - Vega, the Watcher
 - Vehicle
 - Veil of Assimilation
+- Veil of Summer
 - Veilborn Ghoul
 - Veiled Shade
 - Vein Ripper

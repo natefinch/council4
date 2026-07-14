@@ -307,6 +307,15 @@ func transformPrimitiveTargetIndices(primitive game.Primitive, transform targetI
 		value.Player, ok = transformPlayerReference(value.Player, transform)
 		return value, ok
 	}
+	if value, ok := primitive.(game.IterativeLibraryProcess); ok {
+		amount, ok := transformQuantity(value.PreExile, transform)
+		if !ok {
+			return nil, false
+		}
+		value.PreExile = amount
+		value.Player, ok = transformPlayerReference(value.Player, transform)
+		return value, ok
+	}
 	if value, ok := primitive.(game.GainLife); ok {
 		value.Player, ok = transformPlayerReference(value.Player, transform)
 		return value, ok

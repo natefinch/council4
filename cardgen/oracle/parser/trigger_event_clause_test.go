@@ -1470,7 +1470,7 @@ func stateAndOtherTriggerEventClauseTests() []triggerEventClauseTest {
 			source: "Whenever a player taps a land for mana, that player adds an additional {U}.",
 			check: func(t *testing.T, clause *TriggerEventClause) {
 				t.Helper()
-				if clause.Kind != TriggerEventKindBecomesTapped ||
+				if clause.Kind != TriggerEventKindManaProduced ||
 					clause.Subject.Kind != TriggerEventSubjectSelection ||
 					clause.Controller != ControllerAny ||
 					!clause.TappedForMana {
@@ -1483,7 +1483,7 @@ func stateAndOtherTriggerEventClauseTests() []triggerEventClauseTest {
 			source: "Whenever an opponent taps a land for mana, tap all lands that player controls.",
 			check: func(t *testing.T, clause *TriggerEventClause) {
 				t.Helper()
-				if clause.Kind != TriggerEventKindBecomesTapped ||
+				if clause.Kind != TriggerEventKindManaProduced ||
 					clause.Subject.Kind != TriggerEventSubjectSelection ||
 					clause.Controller != ControllerOpponent ||
 					!clause.TappedForMana {

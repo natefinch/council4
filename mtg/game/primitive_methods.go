@@ -65,6 +65,9 @@ func (ExileForEachOpponent) Kind() PrimitiveKind { return PrimitiveExileForEachO
 // Kind implements Primitive for DrawForEachExiled.
 func (DrawForEachExiled) Kind() PrimitiveKind { return PrimitiveDrawForEachExiled }
 
+// Kind implements Primitive for ManifestForEachLinked.
+func (ManifestForEachLinked) Kind() PrimitiveKind { return PrimitiveManifestForEachLinked }
+
 // Kind implements Primitive for RemoveTargetsForToken.
 func (RemoveTargetsForToken) Kind() PrimitiveKind { return PrimitiveRemoveTargetsForToken }
 
@@ -258,6 +261,11 @@ func (ExileLibraryUntilNonlandCast) Kind() PrimitiveKind {
 	return PrimitiveExileLibraryUntilNonlandCast
 }
 
+// Kind implements Primitive for IterativeLibraryProcess.
+func (IterativeLibraryProcess) Kind() PrimitiveKind {
+	return PrimitiveIterativeLibraryProcess
+}
+
 // Kind implements Primitive for ExileTopEachLibraryCastFree.
 func (ExileTopEachLibraryCastFree) Kind() PrimitiveKind {
 	return PrimitiveExileTopEachLibraryCastFree
@@ -410,6 +418,7 @@ func (EachPlayerChooseDestroy) isPrimitive()              {}
 func (CreateTokenForEachDestroyed) isPrimitive()          {}
 func (ExileForEachOpponent) isPrimitive()                 {}
 func (DrawForEachExiled) isPrimitive()                    {}
+func (ManifestForEachLinked) isPrimitive()                {}
 func (RemoveTargetsForToken) isPrimitive()                {}
 func (CastForFree) isPrimitive()                          {}
 func (ChooseFromZone) isPrimitive()                       {}
@@ -472,6 +481,7 @@ func (PileSplit) isPrimitive()                            {}
 func (RevealTopPartition) isPrimitive()                   {}
 func (ImpulseExile) isPrimitive()                         {}
 func (ExileLibraryUntilNonlandCast) isPrimitive()         {}
+func (IterativeLibraryProcess) isPrimitive()              {}
 func (ExileTopEachLibraryCastFree) isPrimitive()          {}
 func (Investigate) isPrimitive()                          {}
 func (Proliferate) isPrimitive()                          {}
@@ -690,6 +700,9 @@ func (p ExileForEachOpponent) instructionRefs() primitiveRefs {
 func (p DrawForEachExiled) instructionRefs() primitiveRefs {
 	return primitiveRefs{consumesLinked: []LinkedKey{p.LinkedKey}}
 }
+func (p ManifestForEachLinked) instructionRefs() primitiveRefs {
+	return primitiveRefs{consumesLinked: []LinkedKey{p.LinkedKey}}
+}
 func (p RemoveTargetsForToken) instructionRefs() primitiveRefs {
 	return primitiveRefs{publishesLinked: p.LinkedKey}
 }
@@ -746,6 +759,7 @@ func (p ImpulseExile) instructionRefs() primitiveRefs {
 }
 
 func (ExileLibraryUntilNonlandCast) instructionRefs() primitiveRefs  { return primitiveRefs{} }
+func (p IterativeLibraryProcess) instructionRefs() primitiveRefs     { return quantityRefs(p.PreExile) }
 func (p ExileTopEachLibraryCastFree) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
 func (p Investigate) instructionRefs() primitiveRefs                 { return quantityRefs(p.Amount) }
 func (p Proliferate) instructionRefs() primitiveRefs                 { return quantityRefs(p.Amount) }

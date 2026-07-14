@@ -149,6 +149,7 @@ func lowerTriggerPattern(pattern *compiler.TriggerPattern) (game.TriggerPattern,
 		RequireTappedForMana:                    pattern.TappedForMana,
 		RequireProducedManaColor:                pattern.TappedForManaColor,
 		RequireProducedManaColorFromEntryChoice: pattern.TappedForManaChosenColor,
+		RequireManaProducedByLand:               pattern.ManaProducedByLand,
 		ClassBecameLevel:                        pattern.ClassBecameLevel,
 		DyingDamagedBySource:                    pattern.DyingDamagedBySource,
 	}
@@ -164,7 +165,10 @@ func lowerTriggerPattern(pattern *compiler.TriggerPattern) (game.TriggerPattern,
 	if pattern.ClassBecameLevel > 0 && event != game.EventClassLevelGained {
 		return game.TriggerPattern{}, false
 	}
-	if pattern.TappedForMana && event != game.EventPermanentTapped {
+	if pattern.TappedForMana && event != game.EventPermanentTapped && event != game.EventManaProduced {
+		return game.TriggerPattern{}, false
+	}
+	if pattern.ManaProducedByLand && event != game.EventManaProduced {
 		return game.TriggerPattern{}, false
 	}
 	if pattern.MatchSpellCopy && event != game.EventSpellCast {
@@ -400,6 +404,8 @@ func lowerTriggerEvent(event compiler.TriggerEvent) (game.EventKind, bool) {
 		return game.EventCardPlayedFromExile, true
 	case compiler.TriggerEventLandPlayed:
 		return game.EventLandPlayed, true
+	case compiler.TriggerEventManaProduced:
+		return game.EventManaProduced, true
 	default:
 		return game.EventUnknown, false
 	}

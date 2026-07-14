@@ -682,6 +682,14 @@ const (
 	// the self-source trigger on a Room enchantment half that fires as that
 	// door becomes unlocked. Its subject is the ability's own source.
 	TriggerEventKindDoorUnlocked TriggerEventKind = "TriggerEventKindDoorUnlocked"
+	// TriggerEventKindManaProduced marks the authoritative "an ability added
+	// mana" trigger (CR 106.1 / 605), which fires whenever an activated or
+	// triggered mana ability actually adds mana — by tapping, sacrificing, or
+	// paying life. It carries the produced colors, total amount, whether the
+	// source was a land (ManaProducedByLand), and whether the source tapped
+	// (TappedForMana). Caged Sun uses it to trigger on any land ability adding
+	// the chosen color; High Tide uses it with a tapped/Island filter.
+	TriggerEventKindManaProduced TriggerEventKind = "TriggerEventKindManaProduced"
 )
 
 // TriggerEventSubjectKind identifies the grammatical subject in a trigger event.
@@ -1008,6 +1016,10 @@ type TriggerEventClause struct {
 	// Sun). The produced color is resolved at match time from the source's
 	// entry choice, so no fixed TappedForManaColor is recorded.
 	TappedForManaChosenColor bool `json:",omitempty"`
+	// ManaProducedByLand marks a mana-produced clause that fires only when the
+	// producing source was a land (Caged Sun), independent of whether that land
+	// tapped. It pairs with Kind TriggerEventKindManaProduced.
+	ManaProducedByLand bool `json:",omitempty"`
 	// UnionKind names a second trigger event family whose constituent event
 	// joins Kind under a shared subject and actor, expressing "Whenever you
 	// create or sacrifice a token" (CR 603.2). The trigger fires when either the
@@ -1388,6 +1400,12 @@ type Sentence struct {
 	// reference and tokens as belonging to that impulse rather than as an
 	// unrecognized sibling.
 	ImpulseExilePermission bool `json:",omitempty"`
+	// ChooseCardNamePrelude reports that this sentence is the credited zero-effect
+	// "Choose a card name." prelude folded onto a following iterative library
+	// process whose chosen-name stop consumes the named card (Demonic
+	// Consultation). Reference and coverage scans treat its tokens as belonging to
+	// that process rather than as an unrecognized sibling.
+	ChooseCardNamePrelude bool `json:",omitempty"`
 }
 
 // sentenceIsCreditedRider reports whether the sentence has been folded onto a
@@ -1408,7 +1426,8 @@ func sentenceIsCreditedRider(s *Sentence) bool {
 		s.TokenGrantedAbilityRider ||
 		s.PersistentManaRider ||
 		s.RoundUpEachTimeRider ||
-		s.ImpulseExilePermission
+		s.ImpulseExilePermission ||
+		s.ChooseCardNamePrelude
 }
 
 // StaticRuleSubjectKind identifies the source object constrained by a simple

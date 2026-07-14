@@ -650,6 +650,12 @@ func (e *Engine) resolvePermanentSpellWithChoices(g *game.Game, obj *game.StackO
 		}}, game.DurationUntilEndOfTurn)
 	}
 	if ok && isAttachmentPermanent(g, permanent) && len(obj.Targets) > 0 {
+		if _, reanimates := game.CardDefReanimationEnchant(spellDef); reanimates {
+			// A graveyard-reanimation Aura targets a creature card in a
+			// graveyard; it returns that card to the battlefield and attaches to
+			// it inline, avoiding the unattached-Aura state-based action.
+			return e.resolveReanimationAura(g, obj, permanent, agents, log)
+		}
 		target, targetOK := effectPermanentAt(g, obj, 0)
 		if !targetOK || !attachPermanent(g, permanent, target) {
 			if obj.Bestowed {

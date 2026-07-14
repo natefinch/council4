@@ -1904,7 +1904,13 @@ func handleSacrifice(r *effectResolver, prim game.Sacrifice) effectResolved {
 	if !ok && prim.Object.Kind() == game.ObjectReferenceNone {
 		permanent, ok = firstPermanentControlledBy(r.game, r.obj.Controller)
 	}
-	if !ok || effectiveController(r.game, permanent) != r.obj.Controller {
+	if !ok {
+		return res
+	}
+	// "That object's current controller sacrifices it" (ByItsController) is
+	// performed by whoever controls the object now; every other sacrifice
+	// requires the ability's controller to still control it.
+	if !prim.ByItsController && effectiveController(r.game, permanent) != r.obj.Controller {
 		return res
 	}
 	if permanentCantBeSacrificed(r.game, permanent) {
@@ -2834,17 +2840,7 @@ func handleManifest(r *effectResolver, prim game.Manifest) effectResolved {
 	if prim.PublishLinked != "" {
 		clearLinkedObjects(r.game, linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked)))
 	}
-	var manifested *game.Permanent
-	var ok bool
-	if prim.Dread {
-		manifested, ok = r.engine.manifestDread(r.game, r.agents, r.log, playerID)
-	} else {
-		kind := game.FaceDownManifest
-		if prim.Cloak {
-			kind = game.FaceDownCloak
-		}
-		manifested, ok = r.engine.manifestTopCard(r.game, r.agents, r.log, playerID, kind)
-	}
+	manifested, ok := manifestForPlayer(r, playerID, prim.Dread, prim.Cloak)
 	res.succeeded = ok
 	if ok && prim.PublishLinked != "" && manifested != nil {
 		rememberLinkedObject(
@@ -2854,6 +2850,17 @@ func handleManifest(r *effectResolver, prim game.Manifest) effectResolved {
 		)
 	}
 	return res
+}
+
+func manifestForPlayer(r *effectResolver, playerID game.PlayerID, dread, cloak bool) (*game.Permanent, bool) {
+	if dread {
+		return r.engine.manifestDread(r.game, r.agents, r.log, playerID)
+	}
+	kind := game.FaceDownManifest
+	if cloak {
+		kind = game.FaceDownCloak
+	}
+	return r.engine.manifestTopCard(r.game, r.agents, r.log, playerID, kind)
 }
 
 func handleTransform(r *effectResolver, prim game.Transform) effectResolved {

@@ -88,6 +88,7 @@ var Cards = []cardset.Entry{
 	{Name: "Angelic Sell-Sword", New: AngelicSellSword},
 	{Name: "Anger", New: Anger},
 	{Name: "Angrath's Rampage", New: AngrathSRampage},
+	{Name: "Animate Dead", New: AnimateDead},
 	{Name: "Animate Land", New: AnimateLand},
 	{Name: "Ankh of Mishra", New: AnkhOfMishra},
 	{Name: "Anointer of Valor", New: AnointerOfValor},

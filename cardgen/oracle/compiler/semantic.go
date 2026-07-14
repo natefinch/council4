@@ -2917,6 +2917,21 @@ type CompiledEffect struct {
 	// credit its tokens toward source coverage. It is set only on the Put effect
 	// of a recognized pile-split sequence.
 	PileSplitMiddleSpan shared.Span
+	// IterativeLibraryProcess and the head-effect knobs below carry the parser's
+	// typed markers for the closed iterative library-processing sequences
+	// (Tainted Pact's duplicate-name stop, Demonic Consultation's chosen-name
+	// stop). IterativeLibraryProcess is set on every effect of the recognized
+	// shape; IterativeLibraryStop, IterativeLibraryChooseName,
+	// IterativeLibraryReveal, IterativeLibraryOptionalTake, and
+	// IterativeLibraryPreExile are set only on the head effect. Lowering keys on
+	// them to emit a single IterativeLibraryProcess primitive.
+	IterativeLibraryProcess      bool
+	IterativeLibraryStop         parser.IterativeLibraryStopKind
+	IterativeLibraryChooseName   bool
+	IterativeLibraryReveal       bool
+	IterativeLibraryOptionalTake bool
+	IterativeLibraryPreExile     int
+	IterativeLibraryPreludeSpan  shared.Span
 	// ExiledCardSplitOpponentChooses reports that a recognized "An opponent
 	// chooses one of the exiled cards." antecedent names an opponent as the
 	// chooser of the cost-exiled card this put effect disposes of (Coin of Fate).
@@ -3111,6 +3126,11 @@ type CompiledEffect struct {
 	// battlefield." (Vault 13: Dweller's Journey) through the text-blind compiler
 	// boundary so lowering links each player's chosen permanent to the source.
 	ExileForEachPlayerUntilSourceLeaves bool
+	// ExileForEachPlayer carries the parser-recognized plain distributive exile
+	// clause through the text-blind compiler boundary so lowering exiles up to one
+	// permanent each player controls and links the removed set for a paired
+	// per-controller payoff.
+	ExileForEachPlayer bool
 	// ReturnLinkedExiledToBattlefieldPartial carries the parser-recognized
 	// partial payoff clause "Return <count> cards exiled with <this Saga> to the
 	// battlefield under their owners' control." (Vault 13: Dweller's Journey)
@@ -3163,6 +3183,11 @@ type CompiledEffect struct {
 	// draws one card for each permanent a sibling ExileForEachOpponent exiled,
 	// for that permanent's last-known controller.
 	DrawForEachExiledThisWay bool
+	// CloakForEachExiledThisWay carries the parser-recognized per-controller
+	// payoff through the text-blind compiler boundary so lowering cloaks one card
+	// for each permanent a sibling ExileForEachPlayer exiled, under that
+	// permanent's last-known controller.
+	CloakForEachExiledThisWay bool
 	// to the mana value of the exiled card." (The Aesir Escape Valhalla) through
 	// the text-blind compiler boundary so lowering scales the placement by the
 	// linked exiled card's mana value.
@@ -4154,6 +4179,11 @@ type CompiledEnchantTarget struct {
 	// controls ("Enchant creature or planeswalker you control"). It is set only
 	// alongside a card-type/subtype predicate, never with Player or Opponent.
 	YouControl bool
+	// InGraveyard restricts the target to a matching card in a graveyard
+	// ("Enchant creature card in a graveyard"), the graveyard-card Aura enchant
+	// restriction of the reanimation Aura family. It is set only alongside a
+	// card-type predicate.
+	InGraveyard bool
 }
 
 // CompiledKeyword is a recognized keyword ability.
