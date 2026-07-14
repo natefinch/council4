@@ -780,6 +780,8 @@ func effectKindForStaticRule(rule StaticRuleKind) EffectKind {
 		return EffectCantBeBlockedByCreaturesWith
 	case StaticRuleCantBeBlockedExceptBy:
 		return EffectCantBeBlockedExceptBy
+	case StaticRuleCantBeTargetedByControllerOpponents:
+		return EffectCantBeTargetedByControllerOpponents
 	case StaticRuleAssignsCombatDamageByToughness:
 		return EffectAssignsCombatDamageByToughness
 	case StaticRuleCantBeBlockedByMoreThanOne:

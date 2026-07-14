@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,844 of 32,501 cards eligible for paper support (54.9%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,849 of 32,501 cards eligible for paper support (54.9%)**. The Scryfall Oracle Cards corpus contains 5,725 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2193,6 +2193,7 @@ Council4 currently supports **17,844 of 32,501 cards eligible for paper support 
 - Canoptek Tomb Sentinel
 - Canopy Baloth
 - Canopy Claws
+- Canopy Cover
 - Canopy Gorger
 - Canopy Spider
 - Canopy Tactician
@@ -10637,6 +10638,7 @@ Council4 currently supports **17,844 of 32,501 cards eligible for paper support 
 - Orc Army
 - Orc General
 - Orc Sureshot
+- Orchard Spirit
 - Orchard Strider
 - Orchard Warden
 - Orcish Artillery
@@ -13364,6 +13366,7 @@ Council4 currently supports **17,844 of 32,501 cards eligible for paper support 
 - Shield Wall
 - Shielded Aether Thief
 - Shielded Passage
+- Shielding Plax
 - Shieldmate's Blessing
 - Shifting Ceratops
 - Shifting Wall
@@ -13529,6 +13532,7 @@ Council4 currently supports **17,844 of 32,501 cards eligible for paper support 
 - Sigiled Starfish
 - Sigiled Sword of Valeron
 - Sign in Blood
+- Signal Pest
 - Signpost Scarecrow
 - Sigurd, Jarl of Ravensthorpe
 - Silence
@@ -14323,6 +14327,7 @@ Council4 currently supports **17,844 of 32,501 cards eligible for paper support 
 - Spire of Industry
 - Spire Owl
 - Spire Patrol
+- Spire Tracer
 - Spire Winder
 - Spirebluff Canal
 - Spireside Infiltrator

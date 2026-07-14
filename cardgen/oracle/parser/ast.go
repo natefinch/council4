@@ -1578,6 +1578,10 @@ const (
 	// permanents can't be sacrificed by any player. It always pairs with a
 	// prohibition constraint and passive voice and carries no qualifier.
 	StaticRuleOperationSacrifice StaticRuleOperationKind = "StaticRuleOperationSacrifice"
+	// StaticRuleOperationTarget is the passive targeting operation in "<subject>
+	// can't be the target of ...". A qualifier identifies whose spells and
+	// abilities are prohibited.
+	StaticRuleOperationTarget StaticRuleOperationKind = "StaticRuleOperationTarget"
 )
 
 // StaticRuleVoice identifies the grammatical role the subject has in an
@@ -1614,6 +1618,9 @@ const (
 	// StaticRuleQualifierBlockerFlying restricts a "can't be blocked" prohibition
 	// to blockers with flying ("can't be blocked by creatures with flying").
 	StaticRuleQualifierBlockerFlying StaticRuleQualifierKind = "StaticRuleQualifierBlockerFlying"
+	// StaticRuleQualifierBlockerFlyingOrReach permits blockers with either flying
+	// or reach in a "can't be blocked except by" restriction.
+	StaticRuleQualifierBlockerFlyingOrReach StaticRuleQualifierKind = "StaticRuleQualifierBlockerFlyingOrReach"
 	// StaticRuleQualifierBlockerPowerOrLess restricts a "can't be blocked"
 	// prohibition to blockers whose power is at most the qualifier's Amount
 	// ("can't be blocked by creatures with power N or less").
@@ -1640,6 +1647,9 @@ const (
 	// to blockers controlled by the monarch ("... by creatures the monarch
 	// controls", Azure Fleet Admiral).
 	StaticRuleQualifierBlockerControlledByMonarch StaticRuleQualifierKind = "StaticRuleQualifierBlockerControlledByMonarch"
+	// StaticRuleQualifierTargetingControllerOpponent restricts targeting by spells
+	// or abilities controlled by an opponent of the static ability's controller.
+	StaticRuleQualifierTargetingControllerOpponent StaticRuleQualifierKind = "StaticRuleQualifierTargetingControllerOpponent"
 	// StaticRuleQualifierBlockedAttackerFlying restricts a "can block only"
 	// permission to attackers with flying ("This creature can block only
 	// creatures with flying."): the subject blocker may block only attackers that
