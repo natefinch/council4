@@ -246,6 +246,7 @@ func cloneStackObject(o *StackObject) *StackObject {
 	clone.ResolutionChoices = cloneComparableMap(o.ResolutionChoices)
 	clone.TargetControllerLKI = cloneComparableMap(o.TargetControllerLKI)
 	clone.TargetManaValueLKI = cloneComparableMap(o.TargetManaValueLKI)
+	clone.TargetNameLKI = cloneComparableMap(o.TargetNameLKI)
 	clone.CapturedTargetControllerLKI = cloneComparableMap(o.CapturedTargetControllerLKI)
 	clone.CapturedTargetManaValueLKI = cloneComparableMap(o.CapturedTargetManaValueLKI)
 	// InlineTrigger/InlineActivated/InlineLoyalty and SourceTokenDef are

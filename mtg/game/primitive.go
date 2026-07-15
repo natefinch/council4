@@ -877,13 +877,15 @@ type PutPermanentOnLibrary struct {
 
 // PutLinkedExiledCardsInLibrary moves every card a sibling clause exiled under
 // LinkedKey from exile to its owner's library, to the bottom when Bottom is set.
+// RandomOrder randomizes each owner's cards before putting them on the bottom.
 // It backs the linked disposal "The owner of each card exiled with <this
 // permanent> puts that card on the bottom of their library." (Trial of a Time
 // Lord), consuming the link the paired exile-until-leaves clause published so
 // the runtime clears it and the synthesized leaves trigger returns nothing.
 type PutLinkedExiledCardsInLibrary struct {
-	LinkedKey LinkedKey
-	Bottom    bool
+	LinkedKey   LinkedKey
+	Bottom      bool
+	RandomOrder bool
 }
 
 // PartitionExiledCostCards disposes of the cards exiled to pay the resolving
@@ -2078,6 +2080,12 @@ const (
 	// name with another card already processed this way (Tainted Pact). The
 	// duplicate stays exiled and the process ends.
 	IterativeLibraryStopDuplicateName
+	// IterativeLibraryStopDifferentNameNonland stops at the first processed card
+	// that is a nonland whose front-face name differs from the DifferentNameFrom
+	// spell's cast-face name (Tibalt's Trickery's "a nonland card with a
+	// different name than that spell"). Lands and same-name nonlands are exiled
+	// and the loop continues.
+	IterativeLibraryStopDifferentNameNonland
 	iterativeLibraryStopCount
 )
 
@@ -2109,14 +2117,23 @@ const (
 //     irrelevant once matching fails, and it keeps the naming step reachable
 //     even when the library is empty.
 //   - Stop: which name-based predicate terminates the loop.
+//   - DifferentNameFrom: the spell whose cast-face name the
+//     different-name-nonland stop compares processed cards against (Tibalt's
+//     Trickery's countered "that spell"). Consulted only by that stop.
+//   - PublishLinked: records cards exiled by the different-name-nonland process
+//     for later instructions. When the stop fires, the found card is first in the
+//     linked group so a CardReferenceLinked consumer can act on it; all other
+//     cards exiled by the process follow.
 type IterativeLibraryProcess struct {
-	Player          PlayerReference
-	Stop            IterativeLibraryStop
-	PreExile        Quantity
-	ChooseName      bool
-	Reveal          bool
-	OptionalTake    bool
-	AllowAbsentName bool
+	Player            PlayerReference
+	Stop              IterativeLibraryStop
+	PreExile          Quantity
+	ChooseName        bool
+	Reveal            bool
+	OptionalTake      bool
+	AllowAbsentName   bool
+	DifferentNameFrom ObjectReference
+	PublishLinked     LinkedKey
 }
 
 // ExileTopEachLibraryCastFree exiles the top Amount cards of every player's

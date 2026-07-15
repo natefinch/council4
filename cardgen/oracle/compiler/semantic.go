@@ -3058,6 +3058,17 @@ type CompiledEffect struct {
 	IterativeLibraryOptionalTake bool
 	IterativeLibraryPreExile     int
 	IterativeLibraryPreludeSpan  shared.Span
+	// TibaltsTrickery and the head-effect knobs below carry the parser's typed
+	// markers for the closed Tibalt's Trickery sequence (counter, random-count
+	// mill, different-name-nonland iterative exile, free cast, random-bottom
+	// remainder). TibaltsTrickery is set on every effect of the recognized shape;
+	// TibaltRandomMillMin, TibaltRandomMillMax, and TibaltPreludeSpan are set only
+	// on the head Counter effect. Lowering keys on them to emit the counter,
+	// random-number choose, dynamic mill, and IterativeLibraryProcess primitives.
+	TibaltsTrickery     bool
+	TibaltRandomMillMin int
+	TibaltRandomMillMax int
+	TibaltPreludeSpan   shared.Span
 	// ExiledCardSplitOpponentChooses reports that a recognized "An opponent
 	// chooses one of the exiled cards." antecedent names an opponent as the
 	// chooser of the cost-exiled card this put effect disposes of (Coin of Fate).

@@ -263,6 +263,9 @@ func lowerContentDispatch(
 	if content, ok := lowerPonderSequence(ctx); ok {
 		return content, nil
 	}
+	if content, ok := lowerTibaltsTrickerySequence(ctx); ok {
+		return content, nil
+	}
 	if content, ok := lowerExilePermanentForPlay(ctx); ok {
 		return content, nil
 	}

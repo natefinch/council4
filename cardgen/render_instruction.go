@@ -1483,13 +1483,14 @@ func (r Renderer) renderPutPermanentOnLibrary(value game.PutPermanentOnLibrary) 
 	return structLit("game.PutPermanentOnLibrary", fields), nil
 }
 
-// renderPutLinkedExiledCardsInLibrary renders the linked disposal primitive,
-// emitting the consumed link key and the bottom flag when set so the literal
-// matches the typed effect.
+// renderPutLinkedExiledCardsInLibrary renders the linked disposal primitive.
 func renderPutLinkedExiledCardsInLibrary(value game.PutLinkedExiledCardsInLibrary) string {
 	fields := []string{fmt.Sprintf("LinkedKey: game.LinkedKey(%q),", string(value.LinkedKey))}
 	if value.Bottom {
 		fields = append(fields, "Bottom: true,")
+	}
+	if value.RandomOrder {
+		fields = append(fields, "RandomOrder: true,")
 	}
 	return structLit("game.PutLinkedExiledCardsInLibrary", fields)
 }

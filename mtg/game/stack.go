@@ -320,6 +320,11 @@ type StackObject struct {
 	// TargetManaValueLKI preserves the mana value of a targeted spell after an
 	// earlier instruction removes it from the stack.
 	TargetManaValueLKI map[int]int
+	// TargetNameLKI preserves the cast-face name of a targeted spell after an
+	// earlier instruction removes it from the stack, so a later name comparison
+	// (Tibalt's Trickery's "a different name than that spell") still knows the
+	// countered spell's name.
+	TargetNameLKI map[int]string
 
 	// CapturedTargetControllerLKI preserves controllers captured from the
 	// enclosing spell or ability that created a delayed trigger.

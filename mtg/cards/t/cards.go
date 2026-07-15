@@ -116,6 +116,7 @@ var Cards = []cardset.Entry{
 	{Name: "Thundertrap Trainer", New: ThundertrapTrainer},
 	{Name: "Thwart", New: Thwart},
 	{Name: "Tiamat's Fanatics", New: TiamatSFanatics},
+	{Name: "Tibalt's Trickery", New: TibaltSTrickery},
 	{Name: "Ticking Gnomes", New: TickingGnomes},
 	{Name: "Tidal Bore", New: TidalBore},
 	{Name: "Tidal Courier", New: TidalCourier},

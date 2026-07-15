@@ -222,6 +222,13 @@ type ResolutionChoice struct {
 	IncludeColorless bool
 	MinNumber        int
 	MaxNumber        int
+
+	// AtRandom makes a ResolutionChoiceNumber choice uniformly at random over the
+	// inclusive MinNumber..MaxNumber range using the engine RNG, with no player
+	// prompt (Tibalt's Trickery's "Choose 1, 2, or 3 at random."). The chosen
+	// value is published like any other number choice so a later instruction can
+	// consume it. It is valid only with ResolutionChoiceNumber.
+	AtRandom bool
 }
 
 // ResolutionChoiceResult stores the selected value from a ResolutionChoice.

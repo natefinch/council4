@@ -604,12 +604,21 @@ func (r Renderer) renderIterativeLibraryProcess(ctx *renderCtx, value game.Itera
 		stop = "game.IterativeLibraryStopChosenName"
 	case game.IterativeLibraryStopDuplicateName:
 		stop = "game.IterativeLibraryStopDuplicateName"
+	case game.IterativeLibraryStopDifferentNameNonland:
+		stop = "game.IterativeLibraryStopDifferentNameNonland"
 	default:
 		return "", fmt.Errorf("render: unsupported iterative library stop %d", value.Stop)
 	}
 	fields := []string{
 		fmt.Sprintf("Player: %s,", player),
 		fmt.Sprintf("Stop: %s,", stop),
+	}
+	if value.DifferentNameFrom.Kind() != game.ObjectReferenceNone {
+		differentNameFrom, err := r.renderObjectReference(value.DifferentNameFrom)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("DifferentNameFrom: %s,", differentNameFrom))
 	}
 	if value.PreExile.IsDynamic() || value.PreExile.Value() != 0 {
 		preExile, err := r.renderQuantity(ctx, value.PreExile)
@@ -629,6 +638,9 @@ func (r Renderer) renderIterativeLibraryProcess(ctx *renderCtx, value game.Itera
 	}
 	if value.AllowAbsentName {
 		fields = append(fields, "AllowAbsentName: true,")
+	}
+	if value.PublishLinked != "" {
+		fields = append(fields, fmt.Sprintf("PublishLinked: game.LinkedKey(%q),", string(value.PublishLinked)))
 	}
 	return structLit("game.IterativeLibraryProcess", fields), nil
 }
@@ -2800,6 +2812,9 @@ func (r Renderer) renderResolutionChoice(ctx *renderCtx, choice game.ResolutionC
 			fmt.Sprintf("MinNumber: %d,", choice.MinNumber),
 			fmt.Sprintf("MaxNumber: %d,", choice.MaxNumber),
 		)
+	}
+	if choice.AtRandom {
+		fields = append(fields, "AtRandom: true,")
 	}
 	if len(choice.Colors) > 0 {
 		ctx.need(importMana)

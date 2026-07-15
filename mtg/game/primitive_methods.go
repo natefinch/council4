@@ -734,7 +734,7 @@ func (p ReturnLinkedExiledCardsToBattlefield) instructionRefs() primitiveRefs {
 	refs.consumesLinked = append(refs.consumesLinked, p.LinkedKey)
 	return refs
 }
-func (CastForFree) instructionRefs() primitiveRefs { return primitiveRefs{} }
+func (p CastForFree) instructionRefs() primitiveRefs { return cardReferenceRefs(p.Card) }
 func (p ChooseFromZone) instructionRefs() primitiveRefs {
 	refs := quantityRefs(p.Quantity)
 	if p.Riders.FromLinked != "" {
@@ -784,8 +784,12 @@ func (p ImpulseExile) instructionRefs() primitiveRefs {
 	return refs
 }
 
-func (ExileLibraryUntilNonlandCast) instructionRefs() primitiveRefs  { return primitiveRefs{} }
-func (p IterativeLibraryProcess) instructionRefs() primitiveRefs     { return quantityRefs(p.PreExile) }
+func (ExileLibraryUntilNonlandCast) instructionRefs() primitiveRefs { return primitiveRefs{} }
+func (p IterativeLibraryProcess) instructionRefs() primitiveRefs {
+	refs := mergePrimitiveRefs(quantityRefs(p.PreExile), objectReferenceRefs(p.DifferentNameFrom))
+	refs.publishesLinked = p.PublishLinked
+	return refs
+}
 func (p ExileTopEachLibraryCastFree) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
 func (p Investigate) instructionRefs() primitiveRefs                 { return quantityRefs(p.Amount) }
 func (p Proliferate) instructionRefs() primitiveRefs                 { return quantityRefs(p.Amount) }
