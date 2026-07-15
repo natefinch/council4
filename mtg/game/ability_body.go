@@ -229,6 +229,71 @@ func EntersUntappedGroupReplacement(text string, controller TriggerControllerFil
 	return ReplacementAbility{Text: text, Replacement: replacement}
 }
 
+// EntersBecomesGroupParams describes the entrant filter and the characteristics
+// gained by an EntersBecomesGroupReplacement. Controller scopes whose entering
+// permanents are affected relative to the source's controller; Historic and
+// SubjectTypes restrict which entrants qualify; and AddTypes, AddSubtypes,
+// AddColors, BasePower, and BaseToughness describe the change applied "in
+// addition to its other types".
+type EntersBecomesGroupParams struct {
+	Controller    TriggerControllerFilter
+	Historic      bool
+	SubjectTypes  []types.Card
+	AddTypes      []types.Card
+	AddSubtypes   []types.Sub
+	AddColors     []color.Color
+	BasePower     opt.V[int]
+	BaseToughness opt.V[int]
+}
+
+// EntersBecomesGroupReplacement creates a continuous static group ETB
+// characteristic replacement that changes the characteristics of a group of
+// permanents as they enter, as in "As a historic permanent you control enters,
+// it becomes a 7/7 Dinosaur creature in addition to its other types." (Displaced
+// Dinosaurs). The controller filter is evaluated relative to the source's
+// controller; the entrant filter is built from the Historic flag (the AnyOf of
+// artifact, legendary, and Saga) and any SubjectTypes restriction. Unlike the
+// enters-tapped group, the affected permanent may be the source itself if it
+// qualifies, so no source exclusion is applied.
+func EntersBecomesGroupReplacement(text string, params EntersBecomesGroupParams) ReplacementAbility {
+	replacement := etbReplacement(text)
+	replacement.EntersBecomesCharacteristic = true
+	replacement.ControllerFilter = params.Controller
+	replacement.EntersBecomesSelection = entersBecomesSelection(params.Historic, params.SubjectTypes)
+	replacement.EntersBecomesAddTypes = append([]types.Card(nil), params.AddTypes...)
+	replacement.EntersBecomesAddSubtypes = append([]types.Sub(nil), params.AddSubtypes...)
+	replacement.EntersBecomesAddColors = append([]color.Color(nil), params.AddColors...)
+	replacement.EntersBecomesBasePower = params.BasePower
+	replacement.EntersBecomesBaseToughness = params.BaseToughness
+	return ReplacementAbility{Text: text, Replacement: replacement}
+}
+
+// entersBecomesSelection builds the entrant filter for an
+// EntersBecomesGroupReplacement. A historic subject matches artifacts,
+// legendaries, or Sagas (CR 702.61b) through an AnyOf; SubjectTypes further
+// requires all listed card types. A subject with neither restriction matches
+// every entering permanent and yields a nil selection.
+func entersBecomesSelection(historic bool, subjectTypes []types.Card) *Selection {
+	var selection Selection
+	empty := true
+	if historic {
+		selection.AnyOf = []Selection{
+			{RequiredTypes: []types.Card{types.Artifact}},
+			{Supertypes: []types.Super{types.Legendary}},
+			{SubtypesAny: []types.Sub{types.Saga}},
+		}
+		empty = false
+	}
+	if len(subjectTypes) > 0 {
+		selection.RequiredTypes = append(selection.RequiredTypes, subjectTypes...)
+		empty = false
+	}
+	if empty {
+		return nil
+	}
+	return &selection
+}
+
 // GraveyardRedirectReplacement creates a continuous static replacement that
 // exiles a card (or permanent) that would be put into a watched graveyard
 // instead (CR 614), as in "If a card would be put into a graveyard from

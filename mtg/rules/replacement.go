@@ -675,6 +675,9 @@ func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *gam
 		if replacement.EntersAsCopy {
 			applyEntersAsCopy(ctx, g, permanent, replacement)
 		}
+		if replacement.EntersBecomesCharacteristic {
+			applyEntersBecomesCharacteristic(g, permanent, replacement)
+		}
 		if entersUntapped {
 			setPermanentTapped(g, permanent, false)
 		}
@@ -1100,6 +1103,51 @@ func applyEntersAsCopy(ctx enterBattlefieldContext, g *game.Game, permanent *gam
 	}
 }
 
+// applyEntersBecomesCharacteristic applies a group ETB characteristic
+// replacement to an entering permanent (Displaced Dinosaurs: "it becomes a 7/7
+// Dinosaur creature in addition to its other types."). The added card types and
+// subtypes, added colors, and fixed base power/toughness are applied through
+// layer-appropriate continuous effects tied to the entering permanent, so the
+// change persists as long as the entrant stays on the battlefield and does not
+// depend on the replacement's source remaining. Because the effects are created
+// before the permanent's enter-the-battlefield event fires, any ETB trigger sees
+// the entrant with its new characteristics.
+func applyEntersBecomesCharacteristic(g *game.Game, permanent *game.Permanent, replacement *game.ReplacementEffect) {
+	controller := effectiveController(g, permanent)
+	timestamp := permanent.Timestamp()
+	addEffect := func(effect game.ContinuousEffect) {
+		effect.ID = g.IDGen.Next()
+		effect.SourceObjectID = permanent.ObjectID
+		effect.SourceCardID = permanent.CardInstanceID
+		effect.Controller = controller
+		effect.Timestamp = timestamp
+		effect.Duration = game.DurationForAsLongAsSourceOnBattlefield
+		effect.CreatedTurn = g.Turn.TurnNumber
+		effect.AffectedObjectID = permanent.ObjectID
+		g.ContinuousEffects = append(g.ContinuousEffects, effect)
+	}
+	if len(replacement.EntersBecomesAddTypes) > 0 || len(replacement.EntersBecomesAddSubtypes) > 0 {
+		addEffect(game.ContinuousEffect{
+			Layer:       game.LayerType,
+			AddTypes:    append([]types.Card(nil), replacement.EntersBecomesAddTypes...),
+			AddSubtypes: append([]types.Sub(nil), replacement.EntersBecomesAddSubtypes...),
+		})
+	}
+	if len(replacement.EntersBecomesAddColors) > 0 {
+		addEffect(game.ContinuousEffect{
+			Layer:     game.LayerColor,
+			AddColors: append([]color.Color(nil), replacement.EntersBecomesAddColors...),
+		})
+	}
+	if replacement.EntersBecomesBasePower.Exists && replacement.EntersBecomesBaseToughness.Exists {
+		addEffect(game.ContinuousEffect{
+			Layer:        game.LayerPowerToughnessSet,
+			SetPower:     opt.Val(game.PT{Value: replacement.EntersBecomesBasePower.Val}),
+			SetToughness: opt.Val(game.PT{Value: replacement.EntersBecomesBaseToughness.Val}),
+		})
+	}
+}
+
 // copyableValuesFromDef snapshots a card definition's copiable characteristics
 // (CR 706.2): name, colors, supertypes, types, subtypes, printed power and
 // toughness, abilities, and oracle text.
@@ -1332,7 +1380,8 @@ func matchingETBReplacementEffects(g *game.Game, permanent *game.Permanent, even
 	var matches []game.ReplacementEffect
 	for i := range g.ReplacementEffects {
 		replacement := &g.ReplacementEffects[i]
-		if !replacement.EntersTapped && !replacement.EntersUntapped && len(replacement.EntersWithCounters) == 0 {
+		if !replacement.EntersTapped && !replacement.EntersUntapped &&
+			len(replacement.EntersWithCounters) == 0 && !replacement.EntersBecomesCharacteristic {
 			continue
 		}
 		if replacement.EntersTappedOthers || replacement.EntersUntappedOthers {
@@ -1348,6 +1397,16 @@ func matchingETBReplacementEffects(g *game.Game, permanent *game.Permanent, even
 				continue
 			}
 			if !entersWithCountersGroupMatches(g, replacement, source) {
+				continue
+			}
+		}
+		if replacement.EntersBecomesCharacteristic {
+			// A group ETB characteristic replacement ("As a historic permanent you
+			// control enters, ...") applies to every qualifying entrant its
+			// controller controls, including the source permanent itself if it
+			// qualifies (CR 614), so unlike the enters-tapped group it does not
+			// exclude its own source.
+			if !entersBecomesGroupSelectionMatches(g, replacement, source) {
 				continue
 			}
 		}
@@ -1371,6 +1430,20 @@ func entersTappedGroupSelectionMatches(g *game.Game, replacement *game.Replaceme
 		return false
 	}
 	return permanentMatchesReplacementSelection(g, permanent, replacement.EntersTappedSelection)
+}
+
+// entersBecomesGroupSelectionMatches reports whether the entering permanent
+// satisfies the entrant filter of a group ETB characteristic replacement
+// (Displaced Dinosaurs' "a historic permanent"), matched through the canonical
+// matchSelection. A nil selection matches every entering permanent.
+func entersBecomesGroupSelectionMatches(g *game.Game, replacement *game.ReplacementEffect, permanent *game.Permanent) bool {
+	if replacement.EntersBecomesSelection == nil {
+		return true
+	}
+	if permanent == nil {
+		return false
+	}
+	return permanentMatchesReplacementSelection(g, permanent, replacement.EntersBecomesSelection)
 }
 
 // entersWithCountersGroupMatches reports whether the entering permanent is a
