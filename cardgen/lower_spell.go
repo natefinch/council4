@@ -2117,6 +2117,9 @@ func lowerImmediateSingleEffectSpell(
 				},
 			)
 		}
+		if content, ok := lowerAnyNumberTargetExileSpells(ctx); ok {
+			return content, nil
+		}
 		return lowerFixedExileSpell(ctx)
 	case compiler.EffectShuffle:
 		if content, ok := lowerSourceSpellShuffleIntoLibrary(ctx); ok {

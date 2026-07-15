@@ -1508,8 +1508,32 @@ func applyCounterTargetSelection(selection *game.Selection, selector compiler.Co
 }
 
 func stackSpellTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
-	if !targetCardinalityIsOne(target) ||
-		target.Selector.Another || target.Selector.Other ||
+	if !targetCardinalityIsOne(target) {
+		return game.TargetSpec{}, false
+	}
+	return stackSpellTargetSpecWithBounds(target, 1, 1)
+}
+
+// stackSpellTargetSpecUnbounded builds the variable-count stack-spell target spec
+// for the unbounded "any number of target spells" wording (Mindbreak Trap),
+// which the parser encodes as Min 0, Max 99. It shares stackSpellTargetSpec's
+// filter and predicate rules through stackSpellTargetSpecWithBounds, differing
+// only in the target cardinality it admits, so single-target counters and the
+// group exile express identical spell selectors.
+func stackSpellTargetSpecUnbounded(target compiler.CompiledTarget) (game.TargetSpec, bool) {
+	if !targetCardinalityIsUnbounded(target) {
+		return game.TargetSpec{}, false
+	}
+	return stackSpellTargetSpecWithBounds(target, target.Cardinality.Min, target.Cardinality.Max)
+}
+
+// stackSpellTargetSpecWithBounds is the shared core that builds a stack-spell
+// target spec with the given target-count bounds. The single-target counter path
+// and the variable-count group-exile path share it so a spell selector lowers
+// identically regardless of how many spells the effect targets; only the caller
+// varies the min/max target counts.
+func stackSpellTargetSpecWithBounds(target compiler.CompiledTarget, minTargets, maxTargets int) (game.TargetSpec, bool) {
+	if target.Selector.Another || target.Selector.Other ||
 		target.Selector.Attacking || target.Selector.Blocking ||
 		target.Selector.Tapped || target.Selector.Untapped ||
 		len(target.Selector.Supertypes()) != 0 ||
@@ -1585,8 +1609,8 @@ func stackSpellTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool
 	}
 	predicate.SpellTargets = restrictions
 	spec := game.TargetSpec{
-		MinTargets: 1,
-		MaxTargets: 1,
+		MinTargets: minTargets,
+		MaxTargets: maxTargets,
 		Allow:      game.TargetAllowStackObject,
 		Predicate:  predicate,
 		Constraint: lowerFirst(target.Text),

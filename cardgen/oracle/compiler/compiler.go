@@ -408,6 +408,8 @@ func compileAlternativeCostCondition(condition parser.SpellAlternativeCostCondit
 		return AlternativeCostConditionCreaturesAttacking
 	case parser.SpellAlternativeCostConditionPermanentsOnBattlefield:
 		return AlternativeCostConditionPermanentsOnBattlefield
+	case parser.SpellAlternativeCostConditionOpponentCastSpellsThisTurn:
+		return AlternativeCostConditionOpponentCastSpellsThisTurn
 	default:
 		return AlternativeCostConditionUnknown
 	}

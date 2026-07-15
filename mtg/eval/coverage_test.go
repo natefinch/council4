@@ -94,7 +94,11 @@ import (
 // CorrelatedFight pairs a created-token group with a counted-permanent group and
 // fights each pair (Ezuri's Predation); it is valued as dynamic targeted damage,
 // mirroring the single Fight's targeted-damage atom.
-const knownPrimitiveCount = 134
+//
+// ExileTargetSpells is value-neutral (no atom): exiling any number of target
+// spells removes them from the stack (Mindbreak Trap), so like the CounterObject
+// stack-removal primitive it has no modeled value atom in this vocabulary.
+const knownPrimitiveCount = 135
 
 // TestPrimitiveCountIsReconciled keeps a newly added resolution primitive from
 // silently falling through the translator: adding one trips this guard so its

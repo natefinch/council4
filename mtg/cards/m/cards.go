@@ -107,6 +107,7 @@ var Cards = []cardset.Entry{
 	{Name: "Mind Knives", New: MindKnives},
 	{Name: "Mind Sculpt", New: MindSculpt},
 	{Name: "Mind Spiral", New: MindSpiral},
+	{Name: "Mindbreak Trap", New: MindbreakTrap},
 	{Name: "Mindcrank", New: Mindcrank},
 	{Name: "Mindeye Drake", New: MindeyeDrake},
 	{Name: "Mindstab Thrull", New: MindstabThrull},

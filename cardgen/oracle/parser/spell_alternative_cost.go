@@ -94,6 +94,12 @@ const (
 	// symmetric leading form. The threshold rides on ConditionCount and the
 	// counted permanent type on ConditionCardType.
 	SpellAlternativeCostConditionPermanentsOnBattlefield
+	// SpellAlternativeCostConditionOpponentCastSpellsThisTurn gates a mana-only
+	// alternative cost behind a per-opponent spells-cast count: "If an opponent
+	// cast N or more spells this turn," (Mindbreak Trap). The threshold rides on
+	// ConditionCount; the condition holds when some one opponent cast at least
+	// that many spells this turn (never the sum across opponents).
+	SpellAlternativeCostConditionOpponentCastSpellsThisTurn
 )
 
 // SpellAlternativeCost is typed syntax for a paragraph that offers an
@@ -515,6 +521,15 @@ func matchManaAlternativeCondition(body []shared.Token, start int) (next int, co
 			equalWordSequence(body, start+2, "or", "more", "creatures", "are", "attacking") &&
 			commaAt(body, start+7) {
 			return start + 8, manaAlternativeCondition{Kind: SpellAlternativeCostConditionCreaturesAttacking, Count: count}, true
+		}
+	}
+	// "If an opponent cast <N> or more spells this turn," (Mindbreak Trap).
+	if equalWordSequence(body, start, "if", "an", "opponent", "cast") &&
+		firstToken(body, start+4).Kind == shared.Word {
+		if count, ok := CardinalWordValue(body[start+4].Text); ok && count >= 1 &&
+			equalWordSequence(body, start+5, "or", "more", "spells", "this", "turn") &&
+			commaAt(body, start+10) {
+			return start + 11, manaAlternativeCondition{Kind: SpellAlternativeCostConditionOpponentCastSpellsThisTurn, Count: count}, true
 		}
 	}
 	// "If there are <N> or more <permanent type>s on the battlefield," — the

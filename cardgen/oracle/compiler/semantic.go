@@ -293,6 +293,11 @@ const (
 	// The threshold rides on the CompiledAlternativeCost's ConditionCount field
 	// and the counted permanent type on its ConditionPermanentType field.
 	AlternativeCostConditionPermanentsOnBattlefield
+	// AlternativeCostConditionOpponentCastSpellsThisTurn gates a mana-only
+	// alternative cost behind a per-opponent spells-cast count (Mindbreak Trap).
+	// The threshold rides on the CompiledAlternativeCost's ConditionCount field;
+	// it holds when some one opponent cast at least that many spells this turn.
+	AlternativeCostConditionOpponentCastSpellsThisTurn
 )
 
 // AlternativeCostKind identifies the semantic rules change attached to an

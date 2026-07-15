@@ -372,6 +372,29 @@ func spellsCastThisTurn(g *game.Game, controller game.PlayerID) int {
 	return eventsThisTurnWindow(g).count(eventKindController(game.EventSpellCast, controller))
 }
 
+// anyOpponentCastSpellsThisTurn reports whether some single non-eliminated
+// opponent of playerID has cast at least count spells so far this turn, backing
+// Mindbreak Trap's "If an opponent cast three or more spells this turn,"
+// mana-only alternative cost. The threshold is checked per opponent — the counts
+// are never summed across opponents — so two opponents who each cast fewer than
+// count spells do not satisfy it. Only cast spells count: EventSpellCast is
+// keyed by the casting player and is emitted once per spell actually cast (CR
+// 601), so spell copies (EventSpellCopied), activated and triggered abilities,
+// and played lands are excluded, while a spell later countered still counts
+// because its cast event was already recorded. count below 1 is always
+// satisfied (a threshold of zero or fewer spells).
+func anyOpponentCastSpellsThisTurn(g *game.Game, playerID game.PlayerID, count int) bool {
+	if count < 1 {
+		return true
+	}
+	for _, opponent := range aliveOpponents(g, playerID) {
+		if spellsCastThisTurn(g, opponent) >= count {
+			return true
+		}
+	}
+	return false
+}
+
 // lifeChangedThisTurn sums the life a player gained or lost so far this turn from
 // the turn's recorded life-change events (CR 608.2c). Pass game.EventLifeGained
 // for "the life you gained this turn" or game.EventLifeLost for "the life you've

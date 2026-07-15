@@ -299,10 +299,17 @@ const (
 	// It backs "Each of those tokens fights a different one of those creatures."
 	// (Ezuri's Predation). Added last so existing kinds keep their wire values.
 	PrimitiveCorrelatedFight
+	// PrimitiveExileTargetSpells exiles the targeted spell or every spell in a
+	// referenced target group from the stack (game.ExileTargetSpells). It backs
+	// "Exile any number of target spells." (Mindbreak Trap). Unlike a counter it
+	// removes the physical cards to exile with normal zone replacements, so it
+	// hits spells that can't be countered; spell copies simply cease to exist.
+	// Added last so existing kinds keep their wire values.
+	PrimitiveExileTargetSpells
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveCorrelatedFight) + 1
+const primitiveKindCount = int(PrimitiveExileTargetSpells) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -1759,6 +1766,22 @@ type CounterObject struct {
 	Object       ObjectReference
 	ExileInstead bool
 	Destination  CounteredSpellDestination
+}
+
+// ExileTargetSpells exiles the spell chosen for a single stack-object target
+// (ObjectReferenceTargetStackObject) or every spell chosen for a variable-count
+// stack-object target group (ObjectReferenceAllTargetStackObjects) from the
+// stack. It backs "Exile any number of target spells." (Mindbreak Trap).
+//
+// This is not a counter (CR 701.6): the spells' physical cards are moved from
+// the stack to exile with the normal zone-change replacements (flashback/
+// exile-on-resolution, commander), so spells that can't be countered are still
+// exiled. A spell copy has no card and simply ceases to exist. All targeted
+// stack objects are resolved before any is removed, so removing one spell can
+// neither reorder the stack nor let a removed spell resolve. Illegal or
+// already-gone targets are skipped, and zero targets resolves as a legal no-op.
+type ExileTargetSpells struct {
+	Object ObjectReference
 }
 
 // ChooseNewTargets re-chooses the targets of a referenced spell or ability on

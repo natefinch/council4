@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,903 of 32,501 cards eligible for paper support (55.1%)**. The Scryfall Oracle Cards corpus contains 5,753 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,904 of 32,501 cards eligible for paper support (55.1%)**. The Scryfall Oracle Cards corpus contains 5,753 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -9620,6 +9620,7 @@ Council4 currently supports **17,903 of 32,501 cards eligible for paper support 
 - Mind Twist
 - Mind Unbound
 - Mind's Eye
+- Mindbreak Trap
 - Mindcrank
 - Mindculling
 - Mindeye Drake

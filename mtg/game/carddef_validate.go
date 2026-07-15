@@ -171,7 +171,8 @@ func (v *cardDefValidator) validateFace(faceName, path string, face *CardFace) {
 			alternative.Condition != cost.AlternativeConditionOpponentLostLifeThisTurn &&
 			alternative.Condition != cost.AlternativeConditionOpponentGainedLifeThisTurn &&
 			alternative.Condition != cost.AlternativeConditionCreaturesAttacking &&
-			alternative.Condition != cost.AlternativeConditionPermanentsOnBattlefield {
+			alternative.Condition != cost.AlternativeConditionPermanentsOnBattlefield &&
+			alternative.Condition != cost.AlternativeConditionOpponentCastSpellsThisTurn {
 			v.add(
 				faceName,
 				appendPath(path, fmt.Sprintf("AlternativeCosts[%d].Condition", i)),
@@ -186,6 +187,15 @@ func (v *cardDefValidator) validateFace(faceName, path string, face *CardFace) {
 				appendPath(path, fmt.Sprintf("AlternativeCosts[%d].ConditionCount", i)),
 				CardDefIssueInvalidAlternativeCost,
 				"creatures-attacking alternative cost has a non-positive count",
+			)
+		}
+		if alternative.Condition == cost.AlternativeConditionOpponentCastSpellsThisTurn &&
+			alternative.ConditionCount < 1 {
+			v.add(
+				faceName,
+				appendPath(path, fmt.Sprintf("AlternativeCosts[%d].ConditionCount", i)),
+				CardDefIssueInvalidAlternativeCost,
+				"opponent-cast-spells alternative cost has a non-positive count",
 			)
 		}
 		if alternative.Condition == cost.AlternativeConditionPermanentsOnBattlefield {

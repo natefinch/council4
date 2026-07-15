@@ -2015,6 +2015,12 @@ func (r Renderer) renderObjectPrimitive(primitive game.Primitive) (string, error
 			return "", err
 		}
 		typeName, object = "game.Transform", value.Object
+	case game.PrimitiveExileTargetSpells:
+		value, err := assertPrimitive[game.ExileTargetSpells](primitive)
+		if err != nil {
+			return "", err
+		}
+		typeName, object = "game.ExileTargetSpells", value.Object
 	default:
 		return "", fmt.Errorf("render: unsupported object primitive kind %d", primitive.Kind())
 	}
