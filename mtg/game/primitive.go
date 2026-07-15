@@ -1284,12 +1284,21 @@ type RemoveTargetsForToken struct {
 // graveyard after it resolves or is countered, modeling the recurring rider "If
 // that spell would be put into your graveyard, exile it instead." (Torrential
 // Gearhulk).
+//
+// PayManaCost has the resolving player pay the card's normal mana and additional
+// costs instead of casting it for free, modeling "you may cast that card"
+// (Conduit of Worlds) rather than "... without paying its mana cost." The cast
+// still ignores timing (it happens during resolution) but obeys cast
+// prohibitions and per-turn cast limits, and declining or being unable to pay
+// casts nothing. It is only meaningful with a set Card reference (the targeted
+// card to cast); Selection-driven choice casts remain free.
 type CastForFree struct {
 	Player            PlayerReference
 	Selection         Selection
 	Zone              zone.Type
 	Card              CardReference
 	ExileOnResolution bool
+	PayManaCost       bool
 }
 
 // MassReturnFromGraveyard returns every card in Player's graveyard matching

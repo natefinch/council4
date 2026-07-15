@@ -1174,13 +1174,14 @@ func lowerNoMaximumHandSize(ctx contentCtx) (game.AbilityContent, *shared.Diagno
 }
 
 // lowerCantCastSpells lowers the one-shot, turn-scoped player cast prohibition
-// "<players> can't cast spells this turn." (Silence) to an ApplyRule that
-// forbids the affected players from casting spells for the rest of the turn. The
-// affected players are the controller's opponents ("your opponents", "each
-// opponent") or every player ("players", CantCastSpellsAllPlayers). It reuses
-// the continuous RuleEffectCantCastSpells rule effect with a this-turn duration.
-// Targets, references, conditions, modes, a negation, an amount, or a
-// non-controller scope fail closed.
+// "<players> can't cast spells this turn." (Silence) and the controller-scoped
+// "you can't cast additional spells this turn." (Conduit of Worlds) to an
+// ApplyRule that forbids the affected players from casting spells for the rest of
+// the turn. The affected players are the controller's opponents ("your
+// opponents", "each opponent"), the controller alone (CantCastSpellsController),
+// or every player ("players", CantCastSpellsAllPlayers). It reuses the continuous
+// RuleEffectCantCastSpells rule effect with a this-turn duration. Targets,
+// references, conditions, modes, a negation, or an amount fail closed.
 func lowerCantCastSpells(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
 	if !effect.Exact ||
@@ -1196,12 +1197,17 @@ func lowerCantCastSpells(ctx contentCtx) (game.AbilityContent, *shared.Diagnosti
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported cant-cast-spells effect",
-			"the executable source backend supports only the exact opponents-or-all-players cast-spells prohibition this turn",
+			"the executable source backend supports only the exact controller, opponents, or all-players cast-spells prohibition this turn",
 		)
 	}
-	affected := game.PlayerOpponent
-	if effect.CantCastSpellsAllPlayers {
+	var affected game.PlayerRelation
+	switch {
+	case effect.CantCastSpellsController:
+		affected = game.PlayerYou
+	case effect.CantCastSpellsAllPlayers:
 		affected = game.PlayerAny
+	default:
+		affected = game.PlayerOpponent
 	}
 	return game.Mode{Sequence: []game.Instruction{{
 		Primitive: game.ApplyRule{

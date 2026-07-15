@@ -585,6 +585,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				CounterExiledCardManaValue:                    syntax.CounterExiledCardManaValue,
 				ReturnSourceAndExiledCardToHand:               syntax.ReturnSourceAndExiledCardToHand,
 				CantCastSpellsAllPlayers:                      syntax.CantCastSpellsAllPlayers,
+				CantCastSpellsController:                      syntax.CantCastSpellsController,
 				CantCastSpellsRequiredTypes:                   compilerCardTypes(syntax.CantCastSpellsRequiredTypes),
 				CantCastSpellsExcludedTypes:                   compilerCardTypes(syntax.CantCastSpellsExcludedTypes),
 				SpellCostModifierCaster:                       syntax.SpellCostModifierCaster,

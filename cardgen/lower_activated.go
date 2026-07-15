@@ -759,8 +759,17 @@ func prepareActivationCondition(ability *compiler.CompiledAbility, syntax *parse
 		return opt.V[game.Condition]{}, true
 	}
 	if slices.ContainsFunc(ability.Content.Conditions, conditionIsBodyResolvingGate) {
+		// When the body carries a resolving optional gate ("if you do"), every
+		// remaining condition must also belong to the resolving body: either
+		// another resolving gate, or a per-effect condition span-contained in an
+		// effect clause ("if you haven't cast a spell this turn, you may cast
+		// that card." on Conduit of Worlds), which the ordered-sequence lowerer
+		// matches and lowers as that effect's gate. Any condition that is neither
+		// is a genuine activation restriction the sequence path cannot consume,
+		// so fail closed rather than silently dropping it.
 		if !slices.ContainsFunc(ability.Content.Conditions, func(condition compiler.CompiledCondition) bool {
-			return !conditionIsBodyResolvingGate(condition)
+			return !conditionIsBodyResolvingGate(condition) &&
+				!conditionCoveredByEffectClause(condition, ability.Content.Effects)
 		}) {
 			return opt.V[game.Condition]{}, true
 		}
@@ -810,6 +819,22 @@ func prepareActivationCondition(ability *compiler.CompiledAbility, syntax *parse
 		return token.Span.Start.Offset >= lastEffectEnd
 	})
 	return opt.Val(condition), true
+}
+
+// conditionCoveredByEffectClause reports whether a condition's span is contained
+// within one of the ability's effect clause spans. Such a condition is a
+// per-effect resolution gate that the ordered-sequence lowerer matches to that
+// effect and lowers through conditionContextEffectGate (e.g. the event-history
+// gate "if you haven't cast a spell this turn, you may cast that card." on
+// Conduit of Worlds), so it belongs in the resolving body rather than being
+// extracted as an activation restriction.
+func conditionCoveredByEffectClause(condition compiler.CompiledCondition, effects []compiler.CompiledEffect) bool {
+	for i := range effects {
+		if spanCovered(condition.Span, []shared.Span{effects[i].Span}) {
+			return true
+		}
+	}
+	return false
 }
 
 // conditionIsBodyResolvingGate reports whether an activated ability's condition

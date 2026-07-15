@@ -5029,14 +5029,31 @@ func parseNoMaximumHandSizeForRestOfGameEffect(sentence Sentence, tokens []share
 	}}, true
 }
 
-// prohibition "<players> can't cast spells this turn." (Silence: "Your opponents
-// can't cast spells this turn."; "Players can't cast spells this turn."). The
-// affected players are the controller's opponents ("your opponents", "each
-// opponent") or every player ("players"). It is modeled as an unconditional
-// turn-scoped restriction reusing the continuous cast-prohibition rule effect.
-// Targeted, referenced, defending-player, and spell-type-filtered wordings fail
-// closed and flow through the generic effect parser.
+// parseCantCastSpellsEffect recognizes the one-shot, turn-scoped player cast
+// prohibition. The affected players are the controller ("you can't cast
+// additional spells this turn.", Conduit of Worlds), the controller's opponents
+// ("your opponents", "each opponent"), or every player ("players"). An optional
+// "additional"/"more" quantifier and an optional card-type filter are accepted.
+// It is modeled as a turn-scoped restriction reusing the continuous
+// cast-prohibition rule effect. A leading "If you do," gate (Conduit's resolving
+// prior-instruction-accepted condition) is stripped exactly so the prohibition
+// body parses on its own; the condition itself is recognized separately.
+// Targeted, referenced, and defending-player wordings fail closed and flow
+// through the generic effect parser.
 func parseCantCastSpellsEffect(sentence Sentence, tokens []shared.Token) ([]EffectSyntax, bool) {
+	// A leading "If you do," gate (Conduit of Worlds) is the resolving
+	// prior-instruction-accepted condition, recognized separately as a sentence
+	// condition; drop exactly that prefix here so the prohibition body ("you
+	// can't cast additional spells this turn.") parses from token zero. Only the
+	// exact "If you do," wording is stripped, so any other conditional
+	// cant-cast-spells wording is left untouched and flows through unchanged.
+	if len(tokens) >= 4 &&
+		equalWord(tokens[0], "if") &&
+		equalWord(tokens[1], "you") &&
+		equalWord(tokens[2], "do") &&
+		tokens[3].Kind == shared.Comma {
+		tokens = tokens[4:]
+	}
 	words := make([]shared.Token, 0, len(tokens))
 	for _, token := range tokens {
 		if token.Kind == shared.Period {
@@ -5046,6 +5063,7 @@ func parseCantCastSpellsEffect(sentence Sentence, tokens []shared.Token) ([]Effe
 	}
 	index := 0
 	allPlayers := false
+	controller := false
 	switch {
 	case len(words) >= 2 && equalWord(words[0], "your") && equalWord(words[1], "opponents"):
 		index = 2
@@ -5053,6 +5071,11 @@ func parseCantCastSpellsEffect(sentence Sentence, tokens []shared.Token) ([]Effe
 		index = 2
 	case len(words) >= 1 && equalWord(words[0], "players"):
 		allPlayers = true
+		index = 1
+	case len(words) >= 1 && equalWord(words[0], "you"):
+		// Self-scoped prohibition "you can't cast additional spells this turn."
+		// (Conduit of Worlds), applied to the resolving controller.
+		controller = true
 		index = 1
 	default:
 		return nil, false
@@ -5066,6 +5089,12 @@ func parseCantCastSpellsEffect(sentence Sentence, tokens []shared.Token) ([]Effe
 	}
 	castSpan := words[index].Span
 	index++
+	// An optional "additional"/"more" quantifier ("you can't cast additional
+	// spells this turn.") does not change the prohibition's scope; it merely
+	// reads naturally after the offered cast, so it is accepted and ignored.
+	if index < len(words) && (equalWord(words[index], "additional") || equalWord(words[index], "more")) {
+		index++
+	}
 	// An optional card-type word between "cast" and "spells" filters the
 	// prohibition: a bare card type ("creature spells") restricts it to that
 	// type, while a "non"-prefixed word ("noncreature spells") exempts that type.
@@ -5101,6 +5130,7 @@ func parseCantCastSpellsEffect(sentence Sentence, tokens []shared.Token) ([]Effe
 		Context:                     EffectContextController,
 		Duration:                    EffectDurationThisTurn,
 		CantCastSpellsAllPlayers:    allPlayers,
+		CantCastSpellsController:    controller,
 		CantCastSpellsRequiredTypes: requiredTypes,
 		CantCastSpellsExcludedTypes: excludedTypes,
 		Exact:                       true,

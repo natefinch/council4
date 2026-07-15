@@ -1384,6 +1384,9 @@ func (r Renderer) renderCastForFree(ctx *renderCtx, value game.CastForFree) (str
 	if value.ExileOnResolution {
 		fields = append(fields, "ExileOnResolution: true,")
 	}
+	if value.PayManaCost {
+		fields = append(fields, "PayManaCost: true,")
+	}
 	return structLit("game.CastForFree", fields), nil
 }
 

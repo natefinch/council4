@@ -2209,6 +2209,9 @@ func lowerImmediateSingleEffectSpellTail(
 		if content, diag, ok := lowerCastFromGraveyardPermission(ctx); ok {
 			return content, diag, true
 		}
+		if content, diag, ok := lowerPaidTargetedGraveyardCast(ctx); ok {
+			return content, diag, true
+		}
 		content, diag := lowerCastForFreeSpell(ctx)
 		return content, diag, true
 	case compiler.EffectPlay:

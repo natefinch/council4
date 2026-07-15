@@ -1773,6 +1773,9 @@ func (p CastForFree) validatePrimitive(targets []TargetSpec, checkTargets bool) 
 		}
 		return validateTargetCardReference(p.Card, targets, checkTargets)
 	}
+	if p.PayManaCost {
+		return errors.New("cast for free paying mana cost requires a referenced card")
+	}
 	return nil
 }
 

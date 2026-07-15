@@ -2037,6 +2037,12 @@ type EffectSyntax struct {
 	// only the controller's opponents ("Your opponents can't cast spells this
 	// turn."). It is meaningful only when Kind is EffectCantCastSpells.
 	CantCastSpellsAllPlayers bool `json:",omitempty"`
+	// CantCastSpellsController reports that an EffectCantCastSpells clause
+	// affects only the controller ("you can't cast additional spells this
+	// turn.", Conduit of Worlds) rather than opponents or all players. It is
+	// meaningful only when Kind is EffectCantCastSpells and is mutually
+	// exclusive with CantCastSpellsAllPlayers.
+	CantCastSpellsController bool `json:",omitempty"`
 	// CantCastSpellsRequiredTypes narrows an EffectCantCastSpells clause to spells
 	// of the named card type ("Target player can't cast creature spells this
 	// turn."); CantCastSpellsExcludedTypes exempts spells of the named card type

@@ -267,6 +267,20 @@ func targetBearingPrimitives() []targetBearingPrimitive {
 				return card.TargetIndex, true
 			},
 		},
+		{
+			name: "CastForFree targeted card",
+			build: func() game.Primitive {
+				return game.CastForFree{Card: game.CardReference{Kind: game.CardReferenceTarget, TargetIndex: 0}, Zone: zone.Graveyard, PayManaCost: true}
+			},
+			domain: targetIndexCard,
+			index: func(p game.Primitive) (int, bool) {
+				cast, ok := p.(game.CastForFree)
+				if !ok || cast.Card.Kind != game.CardReferenceTarget {
+					return 0, false
+				}
+				return cast.Card.TargetIndex, true
+			},
+		},
 	}
 	return cards
 }

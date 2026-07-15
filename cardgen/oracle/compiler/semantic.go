@@ -3260,6 +3260,11 @@ type CompiledEffect struct {
 	// rather than only the controller's opponents. Lowering reads it to pick the
 	// affected-player relation; it is false for the opponents-only form.
 	CantCastSpellsAllPlayers bool
+	// CantCastSpellsController marks an EffectCantCastSpells clause that affects
+	// only the controller ("you can't cast additional spells this turn.", Conduit
+	// of Worlds). Lowering reads it to scope the rule effect to the resolving
+	// player; it is mutually exclusive with CantCastSpellsAllPlayers.
+	CantCastSpellsController bool
 	// CantCastSpellsRequiredTypes and CantCastSpellsExcludedTypes mirror the
 	// parser's optional card-type filter on an EffectCantCastSpells clause:
 	// RequiredTypes restricts the prohibition to spells of those types ("creature

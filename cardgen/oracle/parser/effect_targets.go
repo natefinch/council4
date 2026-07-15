@@ -725,6 +725,63 @@ func exactChosenCardInYourGraveyardTargetSyntax(
 	)
 }
 
+// exactChosenNonlandPermanentCardInYourGraveyardTargetSyntax reconstructs the
+// canonical Oracle phrase for a single chosen nonland permanent card in the
+// controller's graveyard ("target nonland permanent card in your graveyard",
+// Conduit of Worlds) and reports whether it round-trips byte-for-byte against the
+// target tokens. Like exactChosenCardInYourGraveyardTargetSyntax it exists so the
+// leading "Choose" verb of "Choose target nonland permanent card in your
+// graveyard." is attributed to the target's ChoiceSpan for source coverage; the
+// target itself is recognized through the normal graveyard-card target path.
+//
+// It accepts only the mandatory single-target cardinality, a controller-scoped
+// graveyard zone, the bare permanent selection noun, and exactly the single
+// "land" excluded type with no other qualifier, so any plural count, opponent or
+// shared graveyard, different noun, required type, additional or different
+// exclusion, color, supertype, subtype, name, mana-value, historic, or counter
+// qualifier fails closed.
+func exactChosenNonlandPermanentCardInYourGraveyardTargetSyntax(
+	tokens []shared.Token,
+	cardinality TargetCardinalitySyntax,
+	selection SelectionSyntax,
+) bool {
+	if cardinality != (TargetCardinalitySyntax{Min: 1, Max: 1}) ||
+		selection.Kind != SelectionPermanent ||
+		selection.Controller != SelectionControllerYou ||
+		selection.Zone != zone.Graveyard ||
+		selection.Historic ||
+		selection.ConjunctiveTypes ||
+		selection.NonToken ||
+		selection.TokenOnly ||
+		selection.BasicLandType ||
+		selection.InclusiveOneOfEach ||
+		selection.ManaValueX ||
+		selection.RequiredName != "" ||
+		selection.CounterRequired ||
+		selection.CounterAny ||
+		selection.CounterAbsent ||
+		chosenCreatureTargetHasScalarQualifiers(selection) {
+		return false
+	}
+	if len(selection.RequiredTypesAny) != 0 ||
+		len(selection.SourceTypes) != 0 ||
+		len(selection.Supertypes) != 0 ||
+		len(selection.ExcludedSupertypes) != 0 ||
+		len(selection.ColorsAny) != 0 ||
+		len(selection.ExcludedColors) != 0 ||
+		len(selection.SubtypesAny) != 0 ||
+		len(selection.Alternatives) != 0 {
+		return false
+	}
+	if !slices.Equal(selection.ExcludedTypes, []CardType{CardTypeLand}) {
+		return false
+	}
+	return strings.EqualFold(
+		joinedEffectText(tokens),
+		"target nonland permanent card in your graveyard",
+	)
+}
+
 func exactTargetChoiceSpan(
 	tokens []shared.Token,
 	start int,
@@ -736,6 +793,7 @@ func exactTargetChoiceSpan(
 		equalWord(tokens[0], "choose") &&
 		(exactChosenCreatureCardsInYourGraveyardTargetSyntax(targetTokens, cardinality, selection) ||
 			exactChosenCardInYourGraveyardTargetSyntax(targetTokens, cardinality, selection) ||
+			exactChosenNonlandPermanentCardInYourGraveyardTargetSyntax(targetTokens, cardinality, selection) ||
 			exactRuntimeTargetSyntax(targetTokens, cardinality, selection)) {
 		return tokens[0].Span
 	}
