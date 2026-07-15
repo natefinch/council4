@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,890 of 32,501 cards eligible for paper support (55.0%)**. The Scryfall Oracle Cards corpus contains 5,753 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,893 of 32,501 cards eligible for paper support (55.1%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -4793,6 +4793,7 @@ Council4 currently supports **17,890 of 32,501 cards eligible for paper support 
 - Essence Scatter
 - Essence Sliver
 - Essence Warden
+- Estrid's Invocation
 - Etali's Favor
 - Etali, Primal Storm
 - Etched Champion
@@ -7993,6 +7994,7 @@ Council4 currently supports **17,890 of 32,501 cards eligible for paper support 
 - Jiang Yanggu, Wildcrafter
 - Jibbirik Omnivore
 - Jidoor, Aristocratic Capital // Overture
+- Jill, Shiva's Dominant // Shiva, Warden of Ice
 - Jilt
 - Jin-Gitaxias, Progress Tyrant
 - Jinxed Idol
@@ -11013,6 +11015,7 @@ Council4 currently supports **17,890 of 32,501 cards eligible for paper support 
 - Phantasmal Dreadmaw
 - Phantasmal Fiend
 - Phantasmal Forces
+- Phantasmal Image
 - Phantasmal Shieldback
 - Phantatog
 - Phantom Beast

@@ -600,6 +600,13 @@ type ReplacementEffect struct {
 	// consulted when EntersAsCopy is true.
 	EntersAsCopyMaxManaValueFromManaSpent bool
 
+	// EntersAsCopyAddAbilities lists abilities granted to the copy by the "except
+	// it has \"<quoted ability>\"" copiable rider (Estrid's Invocation's granted
+	// upkeep self-blink ability). They are appended to the copy's copiable
+	// abilities as it enters, so they themselves become copiable (CR 706.2). It is
+	// nil for every other replacement and only consulted when EntersAsCopy is true.
+	EntersAsCopyAddAbilities []Ability
+
 	// DrawCardMultiplier replaces a single "draw a card" event by the controller
 	// with drawing this many cards instead (CR 614). It backs the draw-doubling
 	// replacement "If you would draw a card, draw two cards instead." A value of

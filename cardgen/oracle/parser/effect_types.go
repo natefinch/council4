@@ -2809,8 +2809,20 @@ type EffectSyntax struct {
 	// on an EntersAsCopy replacement (Mockingbird). It is false for every other
 	// enters-as-copy form.
 	EntersAsCopyMaxManaValueFromManaSpent bool `json:",omitempty"`
-	UnderYourControl                      bool `json:",omitempty"`
-	CastAsAdventure                       bool `json:",omitempty"`
+	// EntersAsCopyGrantedAbilityRider reports the "except it has \"<quoted
+	// ability>\"" copiable rider on an EntersAsCopy replacement (Estrid's
+	// Invocation), whose quoted ability is bound to EntersAsCopyGrantedAbility by
+	// the attachEntersAsCopyGrantedAbilities post-pass. It is false for every
+	// other enters-as-copy form.
+	EntersAsCopyGrantedAbilityRider bool `json:",omitempty"`
+	// EntersAsCopyGrantedAbility is the full quoted ability an enters-as-copy
+	// replacement's "except it has \"...\"" rider adds to the copy (Estrid's
+	// Invocation's granted upkeep self-blink ability), parsed once through the
+	// same pipeline so downstream layers lower it from the typed inner document.
+	// It is nil unless EntersAsCopyGrantedAbilityRider is set.
+	EntersAsCopyGrantedAbility *StaticGrantedAbilitySyntax `json:"-"`
+	UnderYourControl           bool                        `json:",omitempty"`
+	CastAsAdventure            bool                        `json:",omitempty"`
 	// CastWithoutPayingManaCost reports a cast effect carrying the free-cast
 	// rider "... without paying its mana cost" ("(You may) cast <spell> from
 	// <zone> without paying its mana cost."). It is false for every other cast

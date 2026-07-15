@@ -2247,6 +2247,21 @@ func lowerEntersAsCopyReplacement(ability compiler.CompiledAbility) (game.Replac
 		}
 		addKeywords = append(addKeywords, runtime)
 	}
+	// "except it has \"<quoted ability>\"" (Estrid's Invocation) grants the copy a
+	// printed ability. The parser marks the rider and binds its quoted ability;
+	// fail closed if the marker is set without an ability, or the granted ability
+	// does not lower, so an unsupported granted rider keeps the card unsupported.
+	var addAbilities []game.Ability
+	if effect.EntersAsCopyGrantedAbilityRider {
+		if effect.EntersAsCopyGrantedAbility == nil {
+			return unsupported("the executable source backend does not support this enters-as-copy granted-ability rider")
+		}
+		granted, ok := lowerStaticGrantedQuotedAbility(effect.EntersAsCopyGrantedAbility)
+		if !ok {
+			return unsupported("the executable source backend does not support this enters-as-copy granted-ability rider")
+		}
+		addAbilities = append(addAbilities, granted)
+	}
 	replacement := game.EntersAsCopyReplacement(
 		ability.Text,
 		&selection,
@@ -2269,6 +2284,9 @@ func lowerEntersAsCopyReplacement(ability compiler.CompiledAbility) (game.Replac
 	}
 	if effect.EntersAsCopyTapped {
 		replacement = game.EntersTappedAsCopy(replacement)
+	}
+	if len(addAbilities) > 0 {
+		replacement = game.EntersAsCopyWithAddedAbilities(replacement, addAbilities...)
 	}
 	return replacement, true, nil
 }

@@ -562,6 +562,18 @@ func EntersAsCopyWithManaSpentBound(ability ReplacementAbility) ReplacementAbili
 	return ability
 }
 
+// EntersAsCopyWithAddedAbilities grants the copy the abilities of an
+// enters-as-copy replacement's "except it has \"<quoted ability>\"" copiable
+// rider (Estrid's Invocation's printed upkeep self-blink ability). The abilities
+// are appended to the copy's copiable characteristics as it enters, so they
+// themselves become copiable (CR 706.2). It wraps an EntersAsCopyReplacement
+// value rather than extending that constructor, so only the granted-ability form
+// carries the added abilities.
+func EntersAsCopyWithAddedAbilities(ability ReplacementAbility, added ...Ability) ReplacementAbility {
+	ability.Replacement.EntersAsCopyAddAbilities = append([]Ability(nil), added...)
+	return ability
+}
+
 // AdditionalSpellCopyReplacement creates a persistent replacement that adds
 // copies whenever its controller would copy a spell one or more times.
 func AdditionalSpellCopyReplacement(text string, addend int, mayChooseNewTargets bool) ReplacementAbility {
