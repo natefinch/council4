@@ -291,7 +291,7 @@ func TestParseStaticGroupAnthemSubjectKinds(t *testing.T) {
 		},
 		"owned commander creatures": {
 			source: "Commander creatures you own get +2/+2.",
-			kind:   EffectStaticSubjectControlledCommanderCreatures,
+			kind:   EffectStaticSubjectOwnedCommanderCreatures,
 		},
 		"controlled commanders": {
 			source: "Commanders you control have hexproof.",
@@ -2735,6 +2735,44 @@ func TestParseStaticEnteringTriggerMultiplierFailsClosed(t *testing.T) {
 			for _, declaration := range parseStaticDeclarationSyntax(t, source, Context{}) {
 				if declaration.Kind == StaticDeclarationEnteringTriggerMultiplier {
 					t.Fatalf("declaration = %#v, want fail-closed near miss", declaration)
+				}
+			}
+		})
+	}
+}
+
+func TestParseStaticRoomAbilityTriggerMultiplier(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(
+		t,
+		"Room abilities of dungeons you own trigger an additional time.",
+		Context{},
+	)
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	if declarations[0].Kind != StaticDeclarationRoomAbilityTriggerMultiplier {
+		t.Fatalf("declaration = %#v, want room-ability trigger multiplier", declarations[0])
+	}
+}
+
+func TestParseStaticRoomAbilityTriggerMultiplierFailsClosed(t *testing.T) {
+	t.Parallel()
+	for name, source := range map[string]string{
+		"twice wording":       "Room abilities of dungeons you own trigger twice.",
+		"controlled wording":  "Room abilities of dungeons you control trigger an additional time.",
+		"not-room subject":    "Abilities of dungeons you own trigger an additional time.",
+		"not-dungeon subject": "Room abilities of rooms you own trigger an additional time.",
+		"extra time count":    "Room abilities of dungeons you own trigger two additional times.",
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(source, Context{})
+			for _, ability := range document.Abilities {
+				for _, declaration := range ability.StaticDeclarations {
+					if declaration.Kind == StaticDeclarationRoomAbilityTriggerMultiplier {
+						t.Fatalf("declaration = %#v, want fail-closed near miss", declaration)
+					}
 				}
 			}
 		})

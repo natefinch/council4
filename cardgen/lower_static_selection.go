@@ -52,6 +52,9 @@ func lowerStaticSelection(selection compiler.StaticSelection) (game.Selection, b
 	if selection.Commander {
 		result.MatchCommander = true
 	}
+	if selection.OwnedByController {
+		result.Owner = game.OwnerYou
+	}
 	if selection.OwnerNotController {
 		result.OwnerNotController = true
 	}

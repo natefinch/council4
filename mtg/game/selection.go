@@ -375,6 +375,18 @@ type Selection struct {
 	// resolution, or when the event names no permanent, the bound matches
 	// nothing. Placed at the end so the bool joins no existing cluster's packing.
 	ManaValueLessThanEventPermanent bool
+
+	// Owner constrains the matched permanent by its OWNER relative to the viewing
+	// player, independent of who controls it ("Commander creatures you own",
+	// Dungeon Delver and other Backgrounds). Unlike Controller, which follows
+	// control changes, Owner keys off the permanent's fixed owner, so a commander
+	// owned by the viewing player but controlled by an opponent (a stolen
+	// commander) still matches OwnerYou, while a commander controlled by the
+	// viewing player but owned by an opponent does not. A non-battlefield subject,
+	// which the runtime evaluates without an owner, never matches a non-Any
+	// relation. Placed at the end so the field joins no existing cluster's
+	// packing.
+	Owner OwnerRelation
 }
 
 // ManaValueDynamicBound bounds a card's mana value by a controller-relative
@@ -416,6 +428,7 @@ func (s Selection) Empty() bool {
 		!s.Colored &&
 		s.Controller == ControllerAny &&
 		s.Player == PlayerAny &&
+		s.Owner == OwnerAny &&
 		s.Tapped == TriAny &&
 		s.CombatState == CombatStateAny &&
 		s.Keyword == KeywordNone &&

@@ -206,6 +206,7 @@ func multiplyAdditionalTriggers(g *game.Game, pending []pendingTriggeredAbility)
 		}
 		additional += enteringPermanentAdditionalTriggerCount(g, &trigger)
 		additional += controlledPermanentAdditionalTriggerCount(g, &trigger)
+		additional += roomAbilityAdditionalTriggerCount(g, &trigger)
 		for range additional {
 			multiplied = append(multiplied, trigger)
 		}
@@ -274,6 +275,80 @@ func controlledPermanentAdditionalTriggerCount(g *game.Game, trigger *pendingTri
 		}
 	}
 	return count
+}
+
+// roomAbilityAdditionalTriggerCount counts the additional occurrences a room
+// ability of a dungeon gains from active room-ability trigger doublers ("Room
+// abilities of dungeons you own trigger an additional time.", Hama Pashar, Ruin
+// Seeker; the ability Dungeon Delver grants to a player's commander creatures).
+// The trigger's source must be a Dungeon-typed object; each doubler owned by (or
+// granted to a permanent controlled by) the dungeon's owner adds one occurrence.
+//
+// Unlike the entering- and controlled-permanent doublers, this count is NOT read
+// from activeRuleEffects: that set is built only from PRINTED static abilities,
+// so it would miss the identical ability Dungeon Delver GRANTS to commander
+// creatures. Instead this scans each battlefield permanent's effective abilities
+// (which include both printed and granted static bodies) so the printed form
+// (Hama Pashar) and the granted form (Dungeon Delver) are handled uniformly, and
+// multiple grants stack because each granted body counts separately.
+//
+// Owner/controller semantics (CR 108.4, 720.6): a dungeon is a "shared" object
+// that has an owner but no controller, and its room abilities are controlled by
+// the player who owns the dungeon; that player is the trigger's controller. So
+// "dungeons you own" is matched against the trigger's controlling player, and a
+// doubler on a permanent controlled by a different player does not apply.
+func roomAbilityAdditionalTriggerCount(g *game.Game, trigger *pendingTriggeredAbility) int {
+	if !trigger.ordinaryTrigger || !trigger.hasEvent {
+		return 0
+	}
+	owner, ok := roomAbilityTriggerDungeonOwner(g, trigger)
+	if !ok {
+		return 0
+	}
+	count := 0
+	for _, permanent := range g.Battlefield {
+		if permanent.PhasedOut {
+			continue
+		}
+		if effectiveController(g, permanent) != owner {
+			continue
+		}
+		for _, body := range permanentEffectiveAbilitiesView(g, permanent) {
+			static, ok := body.(*game.StaticAbility)
+			if !ok || len(static.RuleEffects) == 0 || !bodyFunctionsOnBattlefield(body) {
+				continue
+			}
+			if !conditionSatisfied(g, conditionContext{
+				controller: effectiveController(g, permanent),
+				source:     permanent,
+			}, static.Condition) {
+				continue
+			}
+			for i := range static.RuleEffects {
+				if static.RuleEffects[i].Kind == game.RuleEffectAdditionalTriggerForRoomAbility {
+					count++
+				}
+			}
+		}
+	}
+	return count
+}
+
+// roomAbilityTriggerDungeonOwner reports the owner of the dungeon whose room
+// ability triggered, if the trigger's source is a Dungeon-typed object. It reads
+// the live permanent first and falls back to last-known information for a source
+// that has left the battlefield, matching the other trigger-doubler helpers.
+func roomAbilityTriggerDungeonOwner(g *game.Game, trigger *pendingTriggeredAbility) (game.PlayerID, bool) {
+	if permanent, ok := permanentByObjectID(g, trigger.sourceID); ok {
+		if permanentHasType(g, permanent, types.Dungeon) {
+			return permanent.Owner, true
+		}
+		return 0, false
+	}
+	if snapshot, ok := lastKnownObject(g, trigger.sourceID); ok && slices.Contains(snapshot.Types, types.Dungeon) {
+		return snapshot.Owner, true
+	}
+	return 0, false
 }
 
 // controlledTriggerSourceMatches reports whether the triggered ability's source

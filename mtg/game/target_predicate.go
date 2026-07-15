@@ -49,6 +49,26 @@ func (r PlayerRelation) Valid() bool {
 	return r >= PlayerAny && r <= PlayerNotYou
 }
 
+// OwnerRelation constrains a permanent by its OWNER (not its controller)
+// relative to the player the Selection is evaluated for ("you"). It is the
+// owner-relative counterpart of ControllerRelation and exists so wordings that
+// speak of ownership ("Commander creatures you own") match by owner regardless
+// of who currently controls the permanent, which matters for stolen commanders.
+type OwnerRelation int
+
+// Owner relation values compare owners to the "you" player.
+const (
+	OwnerAny OwnerRelation = iota
+	OwnerYou
+	OwnerOpponent
+	OwnerNotYou
+)
+
+// Valid reports whether the relation is a recognized closed-enum value.
+func (r OwnerRelation) Valid() bool {
+	return r >= OwnerAny && r <= OwnerNotYou
+}
+
 // TriState represents an optional boolean predicate.
 type TriState int
 

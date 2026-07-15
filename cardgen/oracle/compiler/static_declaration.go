@@ -234,6 +234,12 @@ const (
 	// StaticRuleCantBeTargetedByControllerOpponents prohibits opponents of the
 	// static source's controller from targeting the affected permanent.
 	StaticRuleCantBeTargetedByControllerOpponents
+	// StaticRuleAdditionalTriggerForRoomAbility is the room-ability trigger
+	// multiplier "Room abilities of dungeons you own trigger an additional time."
+	// (Hama Pashar, Ruin Seeker; the ability Dungeon Delver grants). It lowers to
+	// the additional-trigger-for-room-ability runtime rule effect. Added last so
+	// existing kinds keep their wire values.
+	StaticRuleAdditionalTriggerForRoomAbility
 )
 
 // StaticBlockerRestrictionKind identifies the blocker characteristic bounding a
@@ -416,6 +422,13 @@ type StaticSelection struct {
 	// Garland, Royal Kidnapper). Lowering routes it onto the runtime
 	// Selection.OwnerNotController predicate.
 	OwnerNotController bool
+	// OwnedByController, when true, restricts the group to permanents the viewing
+	// player OWNS regardless of who controls them ("Commander creatures you own",
+	// Dungeon Delver and other Backgrounds). Lowering routes it onto the runtime
+	// Selection.Owner = OwnerYou predicate. It is the owner-relative counterpart of
+	// the control-based domain and matches stolen commanders their owner no longer
+	// controls.
+	OwnedByController bool
 }
 
 // StaticGroupReference describes WHERE a static declaration finds objects and
@@ -1121,6 +1134,10 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Abili
 		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
 		return
 	}
+	if declaration, ok := recognizeStaticRoomAbilityTriggerMultiplier(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
+		return
+	}
 	if declaration, ok := recognizeStaticEnteringTriggerMultiplier(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
 		return
@@ -1247,6 +1264,41 @@ func recognizeStaticChosenCreatureTypeTriggerMultiplier(ability CompiledAbility,
 		Rule: &StaticRuleDeclaration{
 			Domain: StaticRuleDomainTrigger,
 			Kind:   StaticRuleAdditionalTriggerForChosenCreatureType,
+			Zone:   StaticZoneBattlefield,
+		},
+	}, true
+}
+
+// recognizeStaticRoomAbilityTriggerMultiplier maps the parser-owned room-ability
+// trigger multiplier syntax ("Room abilities of dungeons you own trigger an
+// additional time.", Hama Pashar, Ruin Seeker; the quoted ability Dungeon Delver
+// grants to commander creatures their owner controls) onto its closed semantic
+// payload. The whole sentence is consumed by the static declaration, so the
+// residual ability content must be empty.
+func recognizeStaticRoomAbilityTriggerMultiplier(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) (StaticDeclaration, bool) {
+	if !staticSyntaxKindsAre(statics, parser.StaticDeclarationRoomAbilityTriggerMultiplier) ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.Keywords) != 0 ||
+		len(ability.Content.References) != 0 ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Targets) != 0 {
+		return StaticDeclaration{}, false
+	}
+	node := statics[0]
+	return StaticDeclaration{
+		Kind:          StaticDeclarationRule,
+		Span:          ability.Span,
+		OperationSpan: node.OperationSpan,
+		Group: StaticGroupReference{
+			Span:   node.Span,
+			Domain: StaticGroupSource,
+		},
+		Rule: &StaticRuleDeclaration{
+			Domain: StaticRuleDomainTrigger,
+			Kind:   StaticRuleAdditionalTriggerForRoomAbility,
 			Zone:   StaticZoneBattlefield,
 		},
 	}, true
@@ -3958,6 +4010,11 @@ func staticGroupForSubject(subject StaticSubjectKind, span shared.Span, subtype 
 		group.Domain = StaticGroupSourceControllerPermanents
 		group.Selection.RequiredTypes = []types.Card{types.Creature}
 		group.Selection.Commander = true
+	case StaticSubjectOwnedCommanderCreatures:
+		group.Domain = StaticGroupBattlefield
+		group.Selection.RequiredTypes = []types.Card{types.Creature}
+		group.Selection.Commander = true
+		group.Selection.OwnedByController = true
 	case StaticSubjectControlledCommanders:
 		group.Domain = StaticGroupSourceControllerPermanents
 		group.Selection.Commander = true

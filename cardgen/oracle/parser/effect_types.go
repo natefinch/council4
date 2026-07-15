@@ -3942,6 +3942,16 @@ const (
 	// card type and that the permanent is a commander.
 	EffectStaticSubjectControlledCommanderCreatures EffectStaticSubjectKind = "EffectStaticSubjectControlledCommanderCreatures"
 
+	// EffectStaticSubjectOwnedCommanderCreatures names the commander creatures you
+	// OWN ("Commander creatures you own have ...", Folk Hero, Raised by Giants,
+	// Dungeon Delver), the affected group of a Background's granted abilities.
+	// Unlike EffectStaticSubjectControlledCommanderCreatures it keys off ownership
+	// rather than control, so it still names a commander its owner no longer
+	// controls (a stolen commander). Downstream maps it onto a battlefield-wide
+	// Selection that requires the creature card type, that the permanent is a
+	// commander, and that its owner is the viewing player.
+	EffectStaticSubjectOwnedCommanderCreatures EffectStaticSubjectKind = "EffectStaticSubjectOwnedCommanderCreatures"
+
 	// EffectStaticSubjectControlledCommanders names the commander permanents you
 	// control ("Commanders you control have hexproof.", Guardian Augmenter)
 	// regardless of card type. Downstream maps it onto a Selection that requires

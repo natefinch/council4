@@ -2346,6 +2346,15 @@ const (
 	// StaticSubjectOtherControlledTappedCreatures. Added last so existing subjects
 	// keep their wire values.
 	StaticSubjectOtherControlledUntappedCreatures
+	// StaticSubjectOwnedCommanderCreatures names the commander creatures the
+	// viewing player OWNS ("Commander creatures you own have ...", Folk Hero,
+	// Raised by Giants, Dungeon Delver), the affected group of a Background's
+	// granted abilities. Unlike StaticSubjectControlledCommanderCreatures its
+	// group is the battlefield-wide domain and its selection requires the creature
+	// card type, that the permanent is a commander, and owner-you, so it still
+	// names a commander its owner no longer controls (a stolen commander). Added
+	// last so existing subjects keep their wire values.
+	StaticSubjectOwnedCommanderCreatures
 )
 
 // CompiledDamageRecipient bundles the primary-recipient descriptors of a

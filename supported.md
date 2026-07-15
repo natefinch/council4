@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,904 of 32,501 cards eligible for paper support (55.1%)**. The Scryfall Oracle Cards corpus contains 5,753 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,906 of 32,501 cards eligible for paper support (55.1%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -4261,6 +4261,7 @@ Council4 currently supports **17,904 of 32,501 cards eligible for paper support 
 - Dune Mover
 - Dune-Brood Nephilim
 - Dunes of the Dead
+- Dungeon Delver
 - Dungeon Shade
 - Dungeoneer's Pack
 - Dungrove Elder
@@ -6822,6 +6823,7 @@ Council4 currently supports **17,904 of 32,501 cards eligible for paper support 
 - Halo Hunter
 - Halo Scarab
 - Halt Order
+- Hama Pashar, Ruin Seeker
 - Hamato Guardian Stance
 - Hamato Ninpō
 - Hamlet Captain

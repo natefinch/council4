@@ -37,7 +37,7 @@ func newStreetUrchin() *game.CardDef {
 					ContinuousEffects: []game.ContinuousEffect{
 						game.ContinuousEffect{
 							Layer: game.LayerAbility,
-							Group: game.ObjectControlledGroup(game.SourcePermanentReference(), game.Selection{RequiredTypes: []types.Card{types.Creature}, MatchCommander: true}),
+							Group: game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, Owner: game.OwnerYou, MatchCommander: true}),
 							AddAbilities: []game.Ability{
 								new(game.ActivatedAbility{
 									Text:     "{1}, Sacrifice another creature or an artifact: This creature deals 1 damage to any target.",

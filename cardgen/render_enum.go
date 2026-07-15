@@ -417,6 +417,21 @@ func renderPlayerRelation(relation game.PlayerRelation) (string, error) {
 	}
 }
 
+func renderOwnerRelation(relation game.OwnerRelation) (string, error) {
+	switch relation {
+	case game.OwnerAny:
+		return "game.OwnerAny", nil
+	case game.OwnerYou:
+		return "game.OwnerYou", nil
+	case game.OwnerOpponent:
+		return "game.OwnerOpponent", nil
+	case game.OwnerNotYou:
+		return "game.OwnerNotYou", nil
+	default:
+		return "", fmt.Errorf("render: unsupported owner relation %d", relation)
+	}
+}
+
 func renderTriggerType(triggerType game.TriggerType) (string, error) {
 	switch triggerType {
 	case game.TriggerWhen:

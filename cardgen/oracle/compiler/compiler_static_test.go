@@ -971,6 +971,7 @@ func TestCompileStaticGroupAnthemSubjects(t *testing.T) {
 		tokenOnly          bool
 		excludeSource      bool
 		commander          bool
+		ownedByController  bool
 	}{
 		"all creatures": {
 			source:      "All creatures get +1/+1.",
@@ -1055,6 +1056,13 @@ func TestCompileStaticGroupAnthemSubjects(t *testing.T) {
 			requireType: []types.Card{types.Creature},
 			commander:   true,
 		},
+		"owned commander creatures": {
+			source:            "Commander creatures you own get +2/+2.",
+			domain:            StaticGroupBattlefield,
+			requireType:       []types.Card{types.Creature},
+			commander:         true,
+			ownedByController: true,
+		},
 		"controlled untapped creatures": {
 			source:      "Untapped creatures you control get +0/+2.",
 			domain:      StaticGroupSourceControllerPermanents,
@@ -1118,6 +1126,7 @@ func TestCompileStaticGroupAnthemSubjects(t *testing.T) {
 				group.Selection.TapState != test.tapState ||
 				group.Selection.TokenOnly != test.tokenOnly ||
 				group.Selection.Commander != test.commander ||
+				group.Selection.OwnedByController != test.ownedByController ||
 				!slices.Equal(group.Selection.RequiredTypes, test.requireType) ||
 				!slices.Equal(group.Selection.SubtypesAny, test.subtypesAny) ||
 				!slices.Equal(group.Selection.Supertypes, test.supertypes) ||
@@ -1813,6 +1822,27 @@ func TestCompileStaticChosenCreatureTypeTriggerMultiplier(t *testing.T) {
 		declaration.Rule.Domain != StaticRuleDomainTrigger ||
 		declaration.Rule.Kind != StaticRuleAdditionalTriggerForChosenCreatureType {
 		t.Fatalf("declaration = %#v, want chosen-type trigger multiplier", declaration)
+	}
+}
+
+func TestCompileStaticRoomAbilityTriggerMultiplier(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := compileSource(
+		"Room abilities of dungeons you own trigger an additional time.",
+		pipelineContext{},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	declarations := compilation.Abilities[0].Static.Declarations
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	declaration := declarations[0]
+	if declaration.Rule == nil ||
+		declaration.Rule.Domain != StaticRuleDomainTrigger ||
+		declaration.Rule.Kind != StaticRuleAdditionalTriggerForRoomAbility {
+		t.Fatalf("declaration = %#v, want room-ability trigger multiplier", declaration)
 	}
 }
 
