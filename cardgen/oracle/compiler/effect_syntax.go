@@ -124,6 +124,20 @@ func compileTokenCopyForEachGroup(syntax *parser.SelectionSyntax) CompiledSelect
 	return compileTypedSelection(*syntax)
 }
 
+// compileRecipientControlsSelector compiles the optional "who controls
+// <selection>" per-member qualifier of a group recipient ("Each player who
+// controls an artifact or enchantment ...") into a CompiledSelector, or nil when
+// the recipient carries no such qualifier. It reuses compileTypedSelection so the
+// controlled-permanent characteristics compile through the same path as any other
+// noun phrase.
+func compileRecipientControlsSelector(syntax *parser.SelectionSyntax) *CompiledSelector {
+	if syntax == nil {
+		return nil
+	}
+	selector := compileTypedSelection(*syntax)
+	return &selector
+}
+
 func compileTypedSelection(syntax parser.SelectionSyntax) CompiledSelector {
 	selector := CompiledSelector{
 		Kind:                            compileSelectionKind(syntax.Kind),

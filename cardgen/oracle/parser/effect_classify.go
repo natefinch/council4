@@ -769,6 +769,34 @@ func effectContextAt(tokens []shared.Token, index int, atoms Atoms) EffectContex
 	return EffectContextUnknown
 }
 
+// recipientControlsSelectionAt extracts the "who controls <selection>"
+// per-member qualifier from an each-player or each-opponent recipient subject
+// ("Each player who controls an artifact or enchantment creates ..."). It scans
+// the recipient subject (the tokens before the effect verb) for a contiguous
+// "who controls" and parses the remaining subject tokens as the controlled
+// permanent's selection, returning nil when the subject carries no such
+// qualifier. The qualifier is generic to any group recipient, so the caller
+// gates it to the group contexts and threads the selection through lowering.
+func recipientControlsSelectionAt(tokens []shared.Token, index int, atoms Atoms) *SelectionSyntax {
+	start := effectSubjectStart(tokens, index, atoms.SelfNameSpans())
+	subject := tokens[start:index]
+	for len(subject) > 0 && equalWord(subject[0], "then") {
+		subject = subject[1:]
+	}
+	for i := 0; i+1 < len(subject); i++ {
+		if !equalWord(subject[i], "who") || !equalWord(subject[i+1], "controls") {
+			continue
+		}
+		selectionTokens := subject[i+2:]
+		if len(selectionTokens) == 0 {
+			return nil
+		}
+		selection := parseSelection(selectionTokens, atoms)
+		return &selection
+	}
+	return nil
+}
+
 // subjectReferencesObject reports whether the subject tokens contain a
 // referenced-object pronoun ("it"/"its") or a "that <object>" reference,
 // identifying a "<referenced object>'s controller" recipient.

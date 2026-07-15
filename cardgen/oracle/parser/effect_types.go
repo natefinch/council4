@@ -2149,7 +2149,17 @@ type EffectSyntax struct {
 	GrantSpellKeywordNextOnly bool              `json:",omitempty"`
 	DelayedTiming             DelayedTimingKind `json:",omitempty"`
 	Selection                 SelectionSyntax   `json:",omitzero"`
-	// DamageRecipient is the typed descriptor of a deal-damage clause's primary
+	// RecipientControlsSelection carries the "who controls <selection>"
+	// per-member qualifier on an each-player or each-opponent recipient ("Each
+	// player who controls an artifact or enchantment creates a 2/2 green Bear
+	// creature token"). It is nil for an unqualified group recipient. When set,
+	// the group is restricted at resolution to members controlling at least one
+	// permanent matching the selection; it composes with the recipient Context
+	// (EachPlayer, EachOpponent, ...) rather than replacing it, so the same
+	// qualifier is reusable by any per-player group effect. It describes only the
+	// controlled permanent's characteristics; per-member control is checked at
+	// resolution, so the selection's own controller stays unset.
+	RecipientControlsSelection *SelectionSyntax `json:"-"`
 	// recipient when it is not the clause's ordinary single target or single
 	// Selection group: a referenced-player recipient, the dual-recipient group
 	// pair, or the each-source group form. It is the zero value for ordinary

@@ -78,6 +78,20 @@ func lowerCreateTokenGroupRecipient(ctx contentCtx, effect *compiler.CompiledEff
 	if !ok || dynamicSize.Exists {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
+	// "Each player who controls an artifact or enchantment creates ..." carries a
+	// per-member conditional the parser captured onto the create effect. Project
+	// the compiled qualifier to a game.Selection and thread it onto the recipient
+	// group so the runtime keeps only members controlling a matching permanent.
+	// The qualifier describes only the controlled permanent's characteristics
+	// (Controller stays Any); per-member control is checked as the effect
+	// resolves. An unrepresentable qualifier fails closed.
+	if effect.RecipientControlsSelector != nil {
+		selection, ok := SelectionForSelector(*effect.RecipientControlsSelector)
+		if !ok {
+			return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+		}
+		group = group.ControllingMatching(selection)
+	}
 	return game.Mode{
 		Sequence: []game.Instruction{{
 			Primitive: game.CreateToken{

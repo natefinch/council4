@@ -67,16 +67,87 @@ func createTokenControllerForEachClauseMatches(full, spec, iter string) bool {
 // reconstructed from the classified context rather than the raw text, so any
 // qualified group ("Each player who controls the fewest creatures", "Each player
 // other than target player") fails the byte-exact comparison and stays
-// unsupported.
-func eachPlayerRecipientSubject(context EffectContextKind) (string, bool) {
-	switch context {
+// unsupported. The one supported group qualifier is the "who controls
+// <selection>" per-member conditional ("Each player who controls an artifact or
+// enchantment"), whose reconstructed clause recipientControlsQualifierText
+// appends; every other qualifier leaves recipientControlsQualifierText ok=false
+// and fails closed here.
+func eachPlayerRecipientSubject(effect *EffectSyntax) (string, bool) {
+	var subject string
+	switch effect.Context {
 	case EffectContextEachPlayer:
-		return "Each player", true
+		subject = "Each player"
 	case EffectContextEachOpponent:
-		return "Each opponent", true
+		subject = "Each opponent"
 	default:
 		return "", false
 	}
+	qualifier, ok := recipientControlsQualifierText(effect.RecipientControlsSelection)
+	if !ok {
+		return "", false
+	}
+	if qualifier != "" {
+		subject += " " + qualifier
+	}
+	return subject, true
+}
+
+// recipientControlsQualifierText reconstructs the canonical "who controls
+// <selection>" clause of a group recipient's per-member conditional ("Each
+// player who controls an artifact or enchantment creates ..."). It returns an
+// empty string with ok=true when the recipient carries no such qualifier, the
+// reconstructed clause with ok=true when the selection is a bare union of
+// permanent card types controlled by anyone, and ok=false (fail closed) for any
+// selection carrying a further qualifier. The union renders with the singular
+// "or" conjunction and an indefinite article ("an artifact or enchantment"); the
+// canonical noun phrase from selectionPhrase must equal the plain "and"-joined
+// type union, which rejects any hidden color, combat, controller, or numeric
+// qualifier the "or"-swap would otherwise silently drop.
+func recipientControlsQualifierText(selection *SelectionSyntax) (string, bool) {
+	if selection == nil {
+		return "", true
+	}
+	if selection.Controller != SelectionControllerAny {
+		return "", false
+	}
+	nouns, ok := permanentTypeUnionNouns(selection)
+	if !ok {
+		return "", false
+	}
+	canonical, ok := selectionPhrase(*selection, selectionPhraseOptions{Number: numberSingular})
+	if !ok || canonical != joinUnionNounsSep(nouns, "and") {
+		return "", false
+	}
+	return "who controls " + indefiniteArticle(nouns[0]) + " " + joinUnionNounsSep(nouns, "or"), true
+}
+
+// permanentTypeUnionNouns returns the lowercase Oracle nouns for a selection that
+// names one or more permanent card types, mirroring selectionPhraseNoun: a
+// RequiredTypesAny union yields one noun per distinct type, and a single-type
+// selection falls back to its Kind's permanent noun. It fails closed for a
+// duplicate type or any non-permanent type.
+func permanentTypeUnionNouns(selection *SelectionSyntax) ([]string, bool) {
+	if len(selection.RequiredTypesAny) >= 1 {
+		nouns := make([]string, 0, len(selection.RequiredTypesAny))
+		seen := make(map[CardType]bool, len(selection.RequiredTypesAny))
+		for _, cardType := range selection.RequiredTypesAny {
+			if seen[cardType] {
+				return nil, false
+			}
+			seen[cardType] = true
+			noun, ok := permanentCardTypeNoun(cardType)
+			if !ok {
+				return nil, false
+			}
+			nouns = append(nouns, noun)
+		}
+		return nouns, true
+	}
+	noun, ok := permanentSelectionNoun(selection.Kind)
+	if !ok {
+		return nil, false
+	}
+	return []string{noun}, true
 }
 
 // exactCreateTokenEachPlayerEffectSyntax recognizes the player-group recipient
@@ -88,7 +159,7 @@ func eachPlayerRecipientSubject(context EffectContextKind) (string, bool) {
 // mirroring the controller paths. Every richer or qualified group context fails
 // closed.
 func exactCreateTokenEachPlayerEffectSyntax(effect *EffectSyntax) bool {
-	subject, ok := eachPlayerRecipientSubject(effect.Context)
+	subject, ok := eachPlayerRecipientSubject(effect)
 	if !ok {
 		return false
 	}

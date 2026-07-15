@@ -430,6 +430,22 @@ func triggeringEventPlayer(event game.Event) (game.PlayerID, bool) {
 
 // playerGroup resolves a PlayerGroupReference to alive players in stable player order.
 func (r referenceResolver) playerGroup(ref game.PlayerGroupReference) []game.PlayerID {
+	base := r.playerGroupBase(ref)
+	if ref.ControlsMatching == nil {
+		return base
+	}
+	filtered := base[:0]
+	for _, playerID := range base {
+		if r.playerControlsMatchingPermanent(playerID, ref.ControlsMatching) {
+			filtered = append(filtered, playerID)
+		}
+	}
+	return filtered
+}
+
+// playerGroupBase resolves the group's base membership from its Kind, ignoring
+// the optional ControlsMatching per-member conditional (applied by playerGroup).
+func (r referenceResolver) playerGroupBase(ref game.PlayerGroupReference) []game.PlayerID {
 	switch ref.Kind {
 	case game.PlayerGroupReferenceOpponents:
 		return aliveOpponents(r.g, r.resolvingController())
@@ -459,6 +475,26 @@ func (r referenceResolver) playerGroup(ref game.PlayerGroupReference) []game.Pla
 	default:
 		return nil
 	}
+}
+
+// playerControlsMatchingPermanent reports whether playerID controls at least one
+// battlefield permanent satisfying sel, backing the "who controls <selection>"
+// per-member conditional on a player group ("Each player who controls an
+// artifact or enchantment creates a token"). Control is read through
+// effectiveController, so a control change taking effect as the group effect
+// resolves is honored. Unlike playerControlsSelection, it applies no
+// sacrifice-eligibility exclusion: the conditional turns on mere control of a
+// qualifying permanent, not on whether it could be sacrificed.
+func (r referenceResolver) playerControlsMatchingPermanent(playerID game.PlayerID, sel *game.Selection) bool {
+	for _, permanent := range r.g.Battlefield {
+		if effectiveController(r.g, permanent) != playerID {
+			continue
+		}
+		if r.permanentMatchesGroupSelection(sel, nil, permanent) {
+			return true
+		}
+	}
+	return false
 }
 
 // opponentsAttackingTriggerPlayer resolves the opponents of the resolving
