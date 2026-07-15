@@ -99,6 +99,9 @@ func (r Renderer) renderStaticAbility(ctx *renderCtx, body *game.StaticAbility, 
 	if body.CastOnlyAfterAttackedThisStep {
 		fields = append(fields, "CastOnlyAfterAttackedThisStep: true,")
 	}
+	if body.BeginsGameOnBattlefield {
+		fields = append(fields, "BeginsGameOnBattlefield: true,")
+	}
 	if body.ZoneOfFunction != zone.None {
 		ctx.need(importZone)
 		zoneLiteral, err := renderZone(body.ZoneOfFunction)

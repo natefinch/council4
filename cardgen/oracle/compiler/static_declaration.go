@@ -965,9 +965,10 @@ type StaticCreatureAttackTaxDeclaration struct {
 // StaticOpeningHandPlayDeclaration marks the pre-game permission "If this card
 // is in your opening hand, you may begin the game with it on the battlefield."
 // (the Leyline cycle). The permission is a special action taken before the game
-// begins; this engine starts every game from a fixed setup and never models
-// opening hands, so the declaration carries no payload and lowers to an inert
-// static ability.
+// begins (CR 103.6a); it lowers to a static ability marked
+// BeginsGameOnBattlefield that the runtime honors during the pregame
+// opening-hand action window. The declaration itself carries no extra payload
+// because the wording admits no variation.
 type StaticOpeningHandPlayDeclaration struct{}
 
 // StaticOpponentEnteringTriggerSuppressionDeclaration marks the static

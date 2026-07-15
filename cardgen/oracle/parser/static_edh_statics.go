@@ -5,10 +5,10 @@ import "github.com/natefinch/council4/cardgen/oracle/shared"
 // parseStaticOpeningHandPlayDeclaration recognizes the pre-game permission "If
 // this card is in your opening hand, you may begin the game with it on the
 // battlefield." (the Leyline cycle). The permission is a special action taken
-// before the game begins; this engine starts every game from a fixed setup and
-// never models opening hands, so the declaration carries no runtime payload and
-// lowers to an inert static ability. Any deviation from the exact wording leaves
-// the clause unconsumed and fails closed.
+// before the game begins (CR 103.6a): the runtime honors it during the pregame
+// opening-hand action window and puts the card onto the battlefield from its
+// owner's opening hand. Only this exact wording is recognized; any deviation
+// leaves the clause unconsumed and fails closed.
 func parseStaticOpeningHandPlayDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
 	if len(tokens) != 20 ||
 		tokens[8].Kind != shared.Comma ||
