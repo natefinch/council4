@@ -176,6 +176,7 @@ func parseStaticSubjectDeclarations(
 	if len(opTokens) < 3 || opTokens[len(opTokens)-1].Kind != shared.Period {
 		return nil, false
 	}
+	opTokens = staticStripAlsoAdverb(opTokens)
 	subject, verbStart, ok := parseStaticDeclarationSubject(opTokens, atoms)
 	if !ok {
 		subject, verbStart, ok = staticAttachedPronounSubject(opTokens, hasCondition, condition)
@@ -1104,6 +1105,27 @@ func parseStaticOperations(
 		return nil, false
 	}
 	return operations, true
+}
+
+// staticStripAlsoAdverb removes an "also" adverb that sits immediately before a
+// group's power/toughness or keyword verb ("Creatures you control also get +1/+0
+// and have trample ..."). Cards that stack several threshold-gated anthems on one
+// permanent (Jetmir, Nexus of Revels) print "also" on the follow-on clauses to
+// emphasize the bonuses accumulate; each clause is already its own static ability
+// with its own condition, so the adverb carries no additional semantics. The
+// removed token's neighbors keep their original source spans, so span-based text
+// reconstruction stays exact. It returns the tokens unchanged when no such adverb
+// is present.
+func staticStripAlsoAdverb(tokens []shared.Token) []shared.Token {
+	for i := 0; i+1 < len(tokens); i++ {
+		if equalWord(tokens[i], "also") && staticGroupVerb(tokens[i+1]) {
+			stripped := make([]shared.Token, 0, len(tokens)-1)
+			stripped = append(stripped, tokens[:i]...)
+			stripped = append(stripped, tokens[i+1:]...)
+			return stripped
+		}
+	}
+	return tokens
 }
 
 func consumeStaticConnector(tokens []shared.Token, index, end int) (next int, hadAnd, ok bool) {
