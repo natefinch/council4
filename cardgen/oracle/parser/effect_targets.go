@@ -3840,6 +3840,12 @@ func parseEachCreatureOtherThanSelfSubject(tokens []shared.Token, atoms Atoms) (
 }
 
 func parseEffectStaticSubject(tokens []shared.Token, atoms Atoms) EffectStaticSubjectSyntax {
+	// Drop an "also" adverb printed between a group and its power/toughness or
+	// keyword verb ("Creatures you control also get +1/+0 and have trample ..."),
+	// as on the stacked threshold anthems of Jetmir, Nexus of Revels. The adverb
+	// only emphasizes that the follow-on bonus accumulates; each clause is its own
+	// static ability, so it never reaches the group's affected subject.
+	tokens = staticStripAlsoAdverb(tokens)
 	if subject, ok := parseCombatRestrictionGroupSubject(tokens); ok {
 		return subject
 	}
