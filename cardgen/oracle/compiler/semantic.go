@@ -2640,6 +2640,14 @@ type CompiledEffect struct {
 	// runtime's source attached-permanent reference; it is false for every other
 	// fight subject.
 	FightSubjectAttached bool
+	// CorrelatedDistributiveFight reports the distributive one-to-one fight form
+	// "Each of those <A> fights a different one of those <B>." (Ezuri's
+	// Predation), carried from the parser's flag of the same name. The paired
+	// for-each count create clause makes the subject and object anaphoric groups
+	// equinumerous; the sequence lowerer emits a CorrelatedFight that pairs the
+	// published token group with the counted-permanent group by shared position.
+	// It is false for every other fight.
+	CorrelatedDistributiveFight bool
 	// CounterRecipientSingleChoice reports that a non-target counter-placement
 	// effect places its counters on a single permanent the controller chooses
 	// from a battlefield group ("put a vigilance counter on a creature you

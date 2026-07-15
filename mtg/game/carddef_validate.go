@@ -381,7 +381,11 @@ func collectFacePublishedLinkedKeys(face *CardFace) map[LinkedKey]int {
 // recorded.
 func collectInstructionPublishedLinkedKeys(instr *Instruction, position int, keys map[LinkedKey]int) {
 	if instr.Primitive != nil {
-		if key := instr.Primitive.instructionRefs().publishesLinked; key != "" {
+		refs := instr.Primitive.instructionRefs()
+		if key := refs.publishesLinked; key != "" {
+			keys[key] = position
+		}
+		if key := refs.publishesLinkedGroup; key != "" {
 			keys[key] = position
 		}
 	}
@@ -932,7 +936,11 @@ func (v *cardDefValidator) validateInstructionSequence(
 			)
 		}
 		if seq[i].Primitive != nil {
-			if key := seq[i].Primitive.instructionRefs().publishesLinked; key != "" {
+			refs := seq[i].Primitive.instructionRefs()
+			if key := refs.publishesLinked; key != "" {
+				publishedLinked[key] = i
+			}
+			if key := refs.publishesLinkedGroup; key != "" {
 				publishedLinked[key] = i
 			}
 		}

@@ -1160,6 +1160,9 @@ func lowerCombinedSequenceShapes(cardName string, ctx contentCtx, syntax *parser
 	if content, ok := lowerCreateTokenThenAttachSequence(ctx); ok {
 		return content, true
 	}
+	if content, ok := lowerCreateTokenThenCorrelatedFightSequence(ctx); ok {
+		return content, true
+	}
 	if content, ok := lowerManifestDreadThenCountersSequence(ctx); ok {
 		return content, true
 	}
@@ -1466,6 +1469,88 @@ func lowerCreateTokenThenGrantKeywordSequence(ctx contentCtx) (game.AbilityConte
 					AddAbilities: abilities,
 				}},
 				Duration: game.DurationUntilEndOfTurn,
+			}},
+		},
+	}.Ability(), true
+}
+
+// correlatedFightTokenLinkKey and correlatedFightCountGroupKey scope the two
+// linked groups a create-then-correlated-fight sequence threads: the created
+// tokens (Subjects) and the counted permanents whose number set the token amount
+// (Objects). Both are runtime-scoped per source object, so fixed strings are
+// unambiguous across cards.
+const (
+	correlatedFightTokenLinkKey  game.LinkedKey = "correlated-fight-tokens"
+	correlatedFightCountGroupKey game.LinkedKey = "correlated-fight-creatures"
+)
+
+// lowerCreateTokenThenCorrelatedFightSequence lowers the ordered pair "For each
+// creature your opponents control, create a [token]. Each of those tokens fights
+// a different one of those creatures." (Ezuri's Predation). The first clause
+// creates one token per counted permanent; the second fights each created token
+// against a distinct one of the counted permanents. It is realized by publishing
+// the created tokens under a link key, snapshotting the counted permanents under
+// a count-group key, and pairing the two groups by shared position with a
+// CorrelatedFight primitive. It supports only the controller-recipient
+// synthesized for-each-count token create paired with the distributive fight, and
+// only when the create's amount is the count selector whose group the fight
+// pairs against; any other shape (copy/choice token, non-controller recipient,
+// non-count amount, or a plain fight) fails closed.
+func lowerCreateTokenThenCorrelatedFightSequence(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 2 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		ctx.optional {
+		return game.AbilityContent{}, false
+	}
+	createEffect := ctx.content.Effects[0]
+	fightEffect := ctx.content.Effects[1]
+	if createEffect.Kind != compiler.EffectCreate ||
+		fightEffect.Kind != compiler.EffectFight ||
+		!createEffect.Exact ||
+		!fightEffect.CorrelatedDistributiveFight ||
+		createEffect.Negated ||
+		fightEffect.Negated ||
+		createEffect.Optional ||
+		fightEffect.Optional ||
+		createEffect.Context != parser.EffectContextController ||
+		createEffect.TokenCopyOfTarget ||
+		createEffect.TokenCopyOfReference ||
+		createEffect.TokenCopyOfAttached ||
+		createEffect.TokenCopyOfForEach ||
+		createEffect.TokenChoice {
+		return game.AbilityContent{}, false
+	}
+	createContent, diagnostic := lowerCreateTokenSpellLinked(
+		contextForEffect(ctx, &createEffect), correlatedFightTokenLinkKey)
+	if diagnostic != nil ||
+		len(createContent.Modes) != 1 ||
+		len(createContent.Modes[0].Sequence) != 1 ||
+		len(createContent.Modes[0].Targets) != 0 {
+		return game.AbilityContent{}, false
+	}
+	createInstruction := createContent.Modes[0].Sequence[0]
+	create, ok := createInstruction.Primitive.(game.CreateToken)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	// The fight pairs against the exact set of permanents the token amount
+	// counted, so require the amount to be the count selector carrying that
+	// group; otherwise the count-group snapshot has nothing to publish and the
+	// pairing would be empty, so fail closed rather than emit a fightless create.
+	dynamic := create.Amount.DynamicAmount()
+	if !dynamic.Exists || dynamic.Val.Kind != game.DynamicAmountCountSelector {
+		return game.AbilityContent{}, false
+	}
+	create.PublishCountGroup = correlatedFightCountGroupKey
+	createInstruction.Primitive = create
+	return game.Mode{
+		Sequence: []game.Instruction{
+			createInstruction,
+			{Primitive: game.CorrelatedFight{
+				Subjects: correlatedFightTokenLinkKey,
+				Objects:  correlatedFightCountGroupKey,
 			}},
 		},
 	}.Ability(), true

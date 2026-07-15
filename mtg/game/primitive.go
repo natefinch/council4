@@ -294,10 +294,15 @@ const (
 	// recipient creates an Incubator token with Amount +1/+1 counters on it
 	// (game.Incubate). Added last so existing kinds keep their wire values.
 	PrimitiveIncubate
+	// PrimitiveCorrelatedFight pairs the permanents of two object-scoped linked
+	// groups by shared list position and makes each pair fight (game.CorrelatedFight).
+	// It backs "Each of those tokens fights a different one of those creatures."
+	// (Ezuri's Predation). Added last so existing kinds keep their wire values.
+	PrimitiveCorrelatedFight
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveIncubate) + 1
+const primitiveKindCount = int(PrimitiveCorrelatedFight) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -319,6 +324,12 @@ type primitiveRefs struct {
 	consumesLinked  []LinkedKey
 	publishesChoice ChoiceKey
 	publishesLinked LinkedKey
+	// publishesLinkedGroup is a second linked key a primitive records under, used
+	// by a primitive that publishes two independent object-scoped linked groups
+	// in one resolution (CreateToken's created tokens and its counted-permanent
+	// snapshot). It is validated and registered alongside publishesLinked; it is
+	// the empty key for the common single-publish case.
+	publishesLinkedGroup LinkedKey
 }
 
 // Damage deals an amount of damage to a target.
@@ -666,6 +677,25 @@ type Fight struct {
 	RelatedObject ObjectReference
 }
 
+// CorrelatedFight pairs the permanents of two object-scoped linked groups by
+// shared list position and makes each pair fight (CR 701.12). It backs "Each of
+// those tokens fights a different one of those creatures." (Ezuri's Predation):
+// Subjects names the linked group of tokens a prior CreateToken published under
+// PublishLinked, and Objects names the linked group of counted permanents the
+// same CreateToken snapshotted under PublishCountGroup. Both groups preserve the
+// order in which the CreateToken remembered them, so pairing by position gives a
+// stable one-to-one correspondence between each token and the counted creature
+// it was created for. Pairs are formed over the shorter of the two lists, so
+// extra tokens minted by a token-doubling replacement (more subjects than
+// objects) or counted permanents with no surviving token stay unpaired and never
+// fight. Each pair fights only while both permanents are still creatures on the
+// battlefield, so a permanent that left the battlefield between creation and the
+// fight simply skips its pair rather than fighting a stale object.
+type CorrelatedFight struct {
+	Subjects LinkedKey
+	Objects  LinkedKey
+}
+
 // Tap taps one referenced permanent or every permanent in a referenced group
 // ("Tap all creatures your opponents control."). Exactly one of Object or Group
 // is set.
@@ -805,6 +835,16 @@ type CreateToken struct {
 	// Phyrexian Germ creature token, then attach this Equipment to it.", Living
 	// weapon). It is unused when empty.
 	PublishLinked LinkedKey
+
+	// PublishCountGroup, when set, remembers the permanents counted by a
+	// DynamicAmountCountSelector Amount as an object-scoped linked group under
+	// this key, snapshotting exactly the permanents whose count set the token
+	// amount. It lets a later correlated instruction ("Each of those tokens
+	// fights a different one of those creatures.", Ezuri's Predation) pair each
+	// created token with a distinct counted permanent by shared list position. It
+	// is honored only when Amount is a DynamicAmountCountSelector dynamic amount
+	// and is unused when empty.
+	PublishCountGroup LinkedKey
 }
 
 // ShufflePermanentIntoLibrary shuffles the referenced permanent into its owner's library.

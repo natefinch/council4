@@ -1290,6 +1290,16 @@ func (p Fight) validatePrimitive(targets []TargetSpec, checkTargets bool) error 
 	return validateObjectReference(p.RelatedObject, targets, checkTargets)
 }
 
+func (p CorrelatedFight) validatePrimitive([]TargetSpec, bool) error {
+	if p.Subjects == "" || p.Objects == "" {
+		return errors.New("correlated fight requires both subject and object linked keys")
+	}
+	if p.Subjects == p.Objects {
+		return errors.New("correlated fight subject and object linked keys must differ")
+	}
+	return nil
+}
+
 func (p Tap) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	return validateMassObjectOrGroup(p.Object, p.Group, targets, checkTargets)
 }

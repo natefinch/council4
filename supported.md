@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,895 of 32,501 cards eligible for paper support (55.1%)**. The Scryfall Oracle Cards corpus contains 5,753 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,896 of 32,501 cards eligible for paper support (55.1%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -4950,6 +4950,7 @@ Council4 currently supports **17,895 of 32,501 cards eligible for paper support 
 - Ezrim, Agency Chief
 - Ezuri's Archers
 - Ezuri's Brigade
+- Ezuri's Predation
 - Ezuri, Renegade Leader
 - Fable of Wolf and Owl
 - Fabled Passage

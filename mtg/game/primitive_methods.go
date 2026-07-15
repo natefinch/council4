@@ -110,6 +110,9 @@ func (ModifyPT) Kind() PrimitiveKind { return PrimitiveModifyPT }
 // Kind implements Primitive for Fight.
 func (Fight) Kind() PrimitiveKind { return PrimitiveFight }
 
+// Kind implements Primitive for CorrelatedFight.
+func (CorrelatedFight) Kind() PrimitiveKind { return PrimitiveCorrelatedFight }
+
 // Kind implements Primitive for Tap.
 func (Tap) Kind() PrimitiveKind { return PrimitiveTap }
 
@@ -436,6 +439,7 @@ func (ApplyRule) isPrimitive()                            {}
 func (PlayerMayPayGenericOrRule) isPrimitive()            {}
 func (ModifyPT) isPrimitive()                             {}
 func (Fight) isPrimitive()                                {}
+func (CorrelatedFight) isPrimitive()                      {}
 func (Tap) isPrimitive()                                  {}
 func (TapOrUntap) isPrimitive()                           {}
 func (Search) isPrimitive()                               {}
@@ -583,7 +587,17 @@ func (p ModifyPT) instructionRefs() primitiveRefs {
 	refs.publishesLinked = p.PublishLinked
 	return refs
 }
-func (Fight) instructionRefs() primitiveRefs      { return primitiveRefs{} }
+func (Fight) instructionRefs() primitiveRefs { return primitiveRefs{} }
+func (p CorrelatedFight) instructionRefs() primitiveRefs {
+	var refs primitiveRefs
+	if p.Subjects != "" {
+		refs.consumesLinked = append(refs.consumesLinked, p.Subjects)
+	}
+	if p.Objects != "" {
+		refs.consumesLinked = append(refs.consumesLinked, p.Objects)
+	}
+	return refs
+}
 func (Tap) instructionRefs() primitiveRefs        { return primitiveRefs{} }
 func (TapOrUntap) instructionRefs() primitiveRefs { return primitiveRefs{} }
 func (p Search) instructionRefs() primitiveRefs {
@@ -595,6 +609,7 @@ func (p Search) instructionRefs() primitiveRefs {
 func (p CreateToken) instructionRefs() primitiveRefs {
 	refs := quantityRefs(p.Amount)
 	refs.publishesLinked = p.PublishLinked
+	refs.publishesLinkedGroup = p.PublishCountGroup
 	return refs
 }
 func (ShufflePermanentIntoLibrary) instructionRefs() primitiveRefs { return primitiveRefs{} }

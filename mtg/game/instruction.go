@@ -316,6 +316,12 @@ func validateInstructionSequenceWithLinked(
 			}
 			publishedLinked[refs.publishesLinked] = i
 		}
+		if refs.publishesLinkedGroup != "" {
+			if prev, dup := publishedLinked[refs.publishesLinkedGroup]; dup {
+				return fmt.Errorf("instruction[%d]: duplicate linked key %q (first used at index %d)", i, refs.publishesLinkedGroup, prev)
+			}
+			publishedLinked[refs.publishesLinkedGroup] = i
+		}
 	}
 	return nil
 }
