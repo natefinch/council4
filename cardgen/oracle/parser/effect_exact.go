@@ -8,6 +8,7 @@ import (
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game/compare"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
@@ -5781,6 +5782,13 @@ func counterPlacementTextMatches(effect *EffectSyntax, object string) bool {
 		noun = "counter"
 	}
 	text := exactEffectClauseText(effect)
+	// A compound multi-kind placement ("put two +1/+1 counters and a flying
+	// counter on <object>.") lists each (count, kind) placement in source order,
+	// joined with a comma-and series for three or more and a bare "and" for two,
+	// before the "on <object>" recipient.
+	if len(effect.AdditionalCounterPlacements) != 0 {
+		return strings.EqualFold(text, compoundCounterPlacementText(effect, object))
+	}
 	// The "equal to <amount>" form ("Put a number of +1/+1 counters on it equal
 	// to the amount of life you gained this turn …") states the dynamic count as
 	// a trailing "a number of … <amount>" clause rather than a leading numeral,
@@ -5817,6 +5825,34 @@ func counterPlacementTextMatches(effect *EffectSyntax, object string) bool {
 	}
 	return effect.Amount.DynamicForm == EffectDynamicAmountFormWhereX &&
 		strings.EqualFold(text, prefix+", "+effect.Amount.Text+".")
+}
+
+// compoundCounterPlacementText reconstructs the canonical Oracle text of a
+// compound multi-kind counter placement ("Put two +1/+1 counters and a flying
+// counter on <object>.") from its ordered placements. The primary placement's
+// verbatim count word and kind lead the series; each AdditionalCounterPlacements
+// entry follows in source order. Two placements join with a bare "and"; three or
+// more use a comma-and series with an Oxford comma before the final "and".
+func compoundCounterPlacementText(effect *EffectSyntax, object string) string {
+	segment := func(amountText string, amount int, kind counter.Kind) string {
+		noun := "counters"
+		if amount == 1 {
+			noun = "counter"
+		}
+		return fmt.Sprintf("%s %s %s", amountText, kind.String(), noun)
+	}
+	segments := []string{segment(effectAmountSourceText(effect), effect.Amount.Value, effect.CounterKind)}
+	for _, placement := range effect.AdditionalCounterPlacements {
+		segments = append(segments, segment(placement.AmountText, placement.Amount, placement.Kind))
+	}
+	var joined string
+	switch {
+	case len(segments) == 2:
+		joined = segments[0] + " and " + segments[1]
+	default:
+		joined = strings.Join(segments[:len(segments)-1], ", ") + ", and " + segments[len(segments)-1]
+	}
+	return fmt.Sprintf("Put %s on %s.", joined, object)
 }
 
 func effectAmountSourceText(effect *EffectSyntax) string {

@@ -2673,6 +2673,14 @@ type CompiledEffect struct {
 	// kinds and is set only when CounterKindKnown is false. Lowering emits an
 	// AddCounter that prompts the controller for one of these kinds.
 	CounterKindChoices []counter.Kind
+	// AdditionalCounterPlacements lists the extra (count, kind) counter placements
+	// of a compound multi-kind placement ("put two +1/+1 counters and a flying
+	// counter on target attacking creature." — Guide of Souls) beyond the primary
+	// placement captured by CounterKind/CounterKindKnown/Amount. Each entry is a
+	// further counter kind and fixed count placed on the same recipient in source
+	// order; lowering emits one AddCounter instruction per placement. It is empty
+	// for every single-kind placement.
+	AdditionalCounterPlacements []CompiledCounterPlacement
 	// CounterRecipientAttached reports that a counter-placement effect places its
 	// counters on the permanent the source Aura is attached to ("... on enchanted
 	// creature"). Lowering routes it to the runtime's source attached-permanent
@@ -3525,6 +3533,16 @@ type CompiledEffect struct {
 	// source having trample and emits a plain damage branch otherwise. It is
 	// meaningful only when Amount.DynamicKind is DynamicAmountExcessDamageDealtThisWay.
 	RequireSourceTrample bool
+}
+
+// CompiledCounterPlacement is one (count, kind) placement of a compound
+// multi-kind counter-placement effect. Amount is the fixed number of counters and
+// Kind is the counter kind; both are copied verbatim from the parser's
+// CounterPlacementSyntax. Lowering emits one AddCounter per placement onto the
+// shared recipient.
+type CompiledCounterPlacement struct {
+	Kind   counter.Kind
+	Amount int
 }
 
 // EntersTappedGroup reports the enters-tapped-group form of a static group

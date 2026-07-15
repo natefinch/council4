@@ -103,6 +103,31 @@ func TestParseReferencedTypeGrantPermanent(t *testing.T) {
 	}
 }
 
+// TestParseReferencedTypeGrantBecomesVerb asserts that the referenced-object
+// type grant accepts the "becomes" verb (not only "is"/"'s"), the wording Guide
+// of Souls uses after a battlefield-target counter placement ("It becomes an
+// Angel in addition to its other types."). It parses a permanent subtype grant
+// on the referenced object with no until-end-of-turn duration.
+func TestParseReferencedTypeGrantBecomesVerb(t *testing.T) {
+	effect, ok := becomeTypeEffect(t, "Guide of Souls",
+		"Put two +1/+1 counters and a flying counter on target attacking creature. It becomes an Angel in addition to its other types.")
+	if !ok {
+		t.Fatal("no become-type effect parsed")
+	}
+	if effect.BecomeTypeUntilEndOfTurn {
+		t.Error("expected no until-end-of-turn duration")
+	}
+	if effect.Context != EffectContextReferencedObject {
+		t.Errorf("context = %v, want %v", effect.Context, EffectContextReferencedObject)
+	}
+	if !slices.Equal(effect.BecomeTypeAddSubtypes, []types.Sub{types.Angel}) {
+		t.Errorf("add subtypes = %v, want [Angel]", effect.BecomeTypeAddSubtypes)
+	}
+	if len(effect.BecomeTypeAddTypes) != 0 {
+		t.Errorf("add types = %v, want none", effect.BecomeTypeAddTypes)
+	}
+}
+
 // TestParseReferencedTypeGrantSubjects asserts the back-reference subjects and
 // suffixes the permanent reanimation rider accepts ("It's", "It is", "The
 // creature is", and the "creature types" suffix) each parse a subtype grant.

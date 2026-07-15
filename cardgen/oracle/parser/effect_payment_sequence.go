@@ -172,13 +172,18 @@ func recognizeControllerOptionalPaymentSequence(ability *Ability) {
 		return
 	}
 	// Locate the consequence ("if you do, ...") and the payment offer. The
-	// consequence is the last sentence carrying effect tokens; the payment offer
-	// is the sentence immediately before it. Any sentences before the payment are
-	// mandatory effects performed before the optional payment ("mill three cards.
-	// Then you may pay ... If you do, ...") and are left intact for the ordered
-	// sequence lowering; the two-sentence form is the special case where the
-	// payment offer is the first sentence and there are no leading effects.
-	consequenceIndex := lastSemanticSentenceIndex(ability.Sentences)
+	// consequence is the sentence that opens with the resolving "if you do,"/"when
+	// you do," gate; the payment offer is the sentence immediately before it. Any
+	// sentences before the payment are mandatory effects performed before the
+	// optional payment ("mill three cards. Then you may pay ... If you do, ...")
+	// and are left intact for the ordered sequence lowering. Any sentences after
+	// the consequence continue its gated body ("... put two +1/+1 counters ... on
+	// target attacking creature. It becomes an Angel ..." — Guide of Souls) and
+	// likewise stay intact; the reflexive repackaging in lowering carries the
+	// whole gated body, so the payment is folded only onto the first consequence
+	// effect. The two-sentence form is the special case where the payment offer is
+	// the first sentence and there are no leading effects.
+	consequenceIndex := resolvingDoConsequenceIndex(ability.Sentences)
 	if consequenceIndex < 1 {
 		return
 	}
@@ -340,6 +345,26 @@ func recognizeControllerOptionalPaymentSequence(ability *Ability) {
 func lastSemanticSentenceIndex(sentences []Sentence) int {
 	for i := len(sentences) - 1; i >= 0; i-- {
 		if len(semanticEffectTokens(sentences[i].Tokens)) != 0 {
+			return i
+		}
+	}
+	return -1
+}
+
+// resolvingDoConsequenceIndex returns the index of the sentence that opens the
+// resolving consequence of an optional-payment ability — the first sentence
+// (after the payment offer) whose semantic tokens begin with the "if you do,"/
+// "when you do," gate. This is the sentence carrying the effect the payment is
+// folded onto. A single-sentence consequence is the last semantic sentence, so
+// this coincides with lastSemanticSentenceIndex for those abilities; a
+// multi-sentence consequence ("... put counters ... on target attacking
+// creature. It becomes an Angel ..." — Guide of Souls) keeps the trailing
+// sentences as part of the same gated body rather than mistaking the last one
+// for the consequence. Returns -1 when no sentence opens with the gate.
+func resolvingDoConsequenceIndex(sentences []Sentence) int {
+	for i := 1; i < len(sentences); i++ {
+		tokens := semanticEffectTokens(sentences[i].Tokens)
+		if len(tokens) != 0 && resolvingDoConsequenceAt(tokens) {
 			return i
 		}
 	}

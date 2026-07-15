@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,906 of 32,501 cards eligible for paper support (55.1%)**. The Scryfall Oracle Cards corpus contains 5,753 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,915 of 32,501 cards eligible for paper support (55.1%)**. The Scryfall Oracle Cards corpus contains 5,753 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -826,6 +826,7 @@ Council4 currently supports **17,906 of 32,501 cards eligible for paper support 
 - Ashmouth Hound
 - Ashnod's Altar
 - Ashnod's Harvester
+- Ashnod's Transmogrant
 - Ashnod, Flesh Mechanist
 - Aspect of Gorgon
 - Aspect of Hydra
@@ -6749,6 +6750,7 @@ Council4 currently supports **17,906 of 32,501 cards eligible for paper support 
 - Guardians' Pledge
 - Guenhwyvar
 - Guerrilla Gorilla
+- Guide of Souls
 - Guided Strike
 - Guidelight Optimizer
 - Guidelight Synergist
@@ -9669,6 +9671,7 @@ Council4 currently supports **17,906 of 32,501 cards eligible for paper support 
 - Miraculous Recovery
 - Mirage Mesa
 - Mirage Mirror
+- Mirari
 - Mirari's Wake
 - Mire Blight
 - Mire Boa
@@ -10580,6 +10583,7 @@ Council4 currently supports **17,906 of 32,501 cards eligible for paper support 
 - Old One Eye
 - Old-Growth Educator
 - Oliphaunt
+- Olivia Voldaren
 - Olivia's Attendants
 - Olivia's Bloodsworn
 - Olivia's Dragoon
@@ -12277,6 +12281,7 @@ Council4 currently supports **17,906 of 32,501 cards eligible for paper support 
 - Righteous Valkyrie
 - Righteous War
 - Righteousness
+- Riku of Two Reflections
 - Rile
 - Riling Dawnbreaker // Signaling Roar
 - Rime Tender
@@ -15457,6 +15462,7 @@ Council4 currently supports **17,906 of 32,501 cards eligible for paper support 
 - Terror of Mount Velus
 - Terror of the Fairgrounds
 - Terror of the Peaks
+- Terror of Towashi
 - Terrus Wurm
 - Tesak, Judith's Hellhound
 - Teshar, Ancestor's Apostle
@@ -15992,6 +15998,7 @@ Council4 currently supports **17,906 of 32,501 cards eligible for paper support 
 - Tragic Fall
 - Tragic Poet
 - Tragic Slip
+- Trail of Crumbs
 - Trail of Evidence
 - Trail of Mystery
 - Trailblazer
@@ -16401,6 +16408,7 @@ Council4 currently supports **17,906 of 32,501 cards eligible for paper support 
 - Uneasy Alliance
 - Unesh, Criosphinx Sovereign
 - Unexpected Assistance
+- Unexpected Fangs
 - Unexpected Windfall
 - Unexplained Absence
 - Unexplained Disappearance
@@ -16646,6 +16654,7 @@ Council4 currently supports **17,906 of 32,501 cards eligible for paper support 
 - Vat of Rebirth
 - Vault 13: Dweller's Journey
 - Vault 75: Middle School
+- Vault 87: Forced Evolution
 - Vault Guardsman
 - Vault of Champions
 - Vault of the Archangel

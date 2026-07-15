@@ -2495,6 +2495,15 @@ type EffectSyntax struct {
 	// kinds and is set only when CounterKnown is false because no single kind is
 	// fixed. Lowering emits a controller kind choice.
 	CounterKindChoices []counter.Kind `json:",omitempty"`
+	// AdditionalCounterPlacements carries the second and later counter placements
+	// of a compound "put <n1> <kind1> counters and <n2> <kind2> counter(s) on
+	// <recipient>" clause that places several distinct counter kinds on the same
+	// recipient at once ("put two +1/+1 counters and a flying counter on target
+	// attacking creature.", Guide of Souls). The primary placement's kind and
+	// count ride CounterKind/CounterKnown/Amount; each entry here is one further
+	// (kind, count) placement in source order. It is empty for every
+	// single-kind placement, so existing counter cards are unaffected.
+	AdditionalCounterPlacements []CounterPlacementSyntax `json:",omitempty"`
 	// ChooseExiledCardOwnerOpponent scopes an EffectChooseExiledCard choice to
 	// cards owned by an opponent of the resolving controller ("Choose an exiled
 	// card an opponent owns ...", Dauthi Voidwalker). It is set only for the
@@ -3526,6 +3535,16 @@ type EffectSyntax struct {
 	// otherwise. It is meaningful only when Amount.DynamicKind is
 	// EffectDynamicAmountExcessDamageDealtThisWay.
 	RequireSourceTrample bool `json:",omitempty"`
+}
+
+// CounterPlacementSyntax is one (kind, count) counter placement of a compound
+// multi-kind counter-placement clause. Amount is the fixed positive count and
+// AmountText is the verbatim count word ("a", "an", or a cardinal such as
+// "two") so the byte-exact clause reconstruction reprints the printed wording.
+type CounterPlacementSyntax struct {
+	Kind       counter.Kind
+	Amount     int
+	AmountText string
 }
 
 // ManaSpendConditionKind identifies the exact spend condition of a mana-spend

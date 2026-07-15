@@ -60,7 +60,13 @@ func lowerControllerPaidEffect(
 		}
 	}
 	effect := ctx.content.Effects[payIdx]
-	restEffects := ctx.content.Effects[payIdx+1:]
+	// Clone the trailing consequence effects so aligning their spans below does
+	// not mutate the caller's compiled effects (the slice shares its backing
+	// array with ctx.content.Effects). The ability's original effect spans must
+	// survive intact for the coverage completeness check, which for a
+	// multi-sentence consequence ("... on target attacking creature. It becomes an
+	// Angel ..." — Guide of Souls) still needs each trailing sentence's own span.
+	restEffects := append([]compiler.CompiledEffect(nil), ctx.content.Effects[payIdx+1:]...)
 	payment := effect.Payment
 	condition := ctx.content.Conditions[0]
 	hasMana := len(payment.ManaCost) != 0

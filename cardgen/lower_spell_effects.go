@@ -747,14 +747,23 @@ func lowerCounterPlacementSpell(
 		return content, nil
 	}
 	effect := ctx.content.Effects[0]
-	if content, ok := lowerGroupCounterPlacement(ctx); ok {
-		return content, nil
-	}
-	if content, ok := lowerSingleChoiceCounterPlacement(ctx); ok {
-		return content, nil
-	}
-	if content, ok := lowerTargetPlayerControlledCounterPlacement(ctx); ok {
-		return content, nil
+	// A compound multi-kind placement ("put two +1/+1 counters and a flying
+	// counter on target attacking creature." — Guide of Souls) is lowered only by
+	// the single-target path below, which emits one AddCounter per placement onto
+	// the shared target. Skip the attached, group, choice, referenced, and
+	// multi-target paths so none silently consumes the primary placement and drops
+	// the additional ones.
+	compound := len(effect.AdditionalCounterPlacements) != 0
+	if !compound {
+		if content, ok := lowerGroupCounterPlacement(ctx); ok {
+			return content, nil
+		}
+		if content, ok := lowerSingleChoiceCounterPlacement(ctx); ok {
+			return content, nil
+		}
+		if content, ok := lowerTargetPlayerControlledCounterPlacement(ctx); ok {
+			return content, nil
+		}
 	}
 	recipientReferences := ctx.content.References
 	var amountReferences []compiler.CompiledReference
@@ -762,16 +771,18 @@ func lowerCounterPlacementSpell(
 		recipientReferences = referencesOutsideSpan(recipientReferences, effect.Amount.ReferenceSpan)
 		amountReferences = referencesWithinSpan(ctx.content.References, effect.Amount.ReferenceSpan)
 	}
-	if len(recipientReferences) == 1 &&
-		counterPlacementAmountConsumesTargets(ctx.content.Targets, amountReferences) &&
-		counterPlacementReferenceBindingSupported(recipientReferences[0].Binding) {
-		return lowerReferencedCounterPlacement(ctx)
-	}
-	if content, ok := lowerDualReferencedCounterPlacement(ctx); ok {
-		return content, nil
-	}
-	if content, ok := lowerMultiTargetCounterPlacement(ctx); ok {
-		return content, nil
+	if !compound {
+		if len(recipientReferences) == 1 &&
+			counterPlacementAmountConsumesTargets(ctx.content.Targets, amountReferences) &&
+			counterPlacementReferenceBindingSupported(recipientReferences[0].Binding) {
+			return lowerReferencedCounterPlacement(ctx)
+		}
+		if content, ok := lowerDualReferencedCounterPlacement(ctx); ok {
+			return content, nil
+		}
+		if content, ok := lowerMultiTargetCounterPlacement(ctx); ok {
+			return content, nil
+		}
 	}
 	if len(ctx.content.Targets) != 1 ||
 		ctx.content.Targets[0].Cardinality.Min != 1 ||
@@ -838,11 +849,29 @@ func lowerCounterPlacementSpell(
 			CounterKind: kind,
 		}
 	}
+	// A compound multi-kind placement ("put two +1/+1 counters and a flying
+	// counter on target attacking creature." — Guide of Souls) places each extra
+	// (count, kind) on the same target permanent in source order. Each additional
+	// placement is a fixed-count permanent counter, so emit one further AddCounter
+	// per placement; a player-counter recipient or an unsupported/​non-positive
+	// additional placement fails closed.
+	sequence := []game.Instruction{{Primitive: primitive}}
+	for _, placement := range effect.AdditionalCounterPlacements {
+		if kind.PlayerOnly() ||
+			placement.Kind.PlayerOnly() ||
+			!compiler.CounterKindPlacementSupported(placement.Kind) ||
+			placement.Amount <= 0 {
+			return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
+		}
+		sequence = append(sequence, game.Instruction{Primitive: game.AddCounter{
+			Amount:      game.Fixed(placement.Amount),
+			Object:      game.TargetPermanentReference(0),
+			CounterKind: placement.Kind,
+		}})
+	}
 	return game.Mode{
-		Targets: []game.TargetSpec{target},
-		Sequence: []game.Instruction{{
-			Primitive: primitive,
-		}},
+		Targets:  []game.TargetSpec{target},
+		Sequence: sequence,
 	}.Ability(), nil
 }
 
