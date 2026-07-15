@@ -279,6 +279,7 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 			condition.CounterRecipientTypesAny = append(condition.CounterRecipientTypesAny, compileTriggerCardType(value))
 		}
 		condition.CounterRecipientExcludesSource = clause.CounterRecipientExcludesSource
+		condition.CounterRecipientIncludesController = clause.CounterRecipientIncludesController
 	case parser.ConditionPredicateDamageByControlledSource:
 		selection, ok := compileConditionSelection(clause.Selection)
 		if !ok {

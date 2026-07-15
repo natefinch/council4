@@ -858,6 +858,12 @@ func lowerCounterPlacementReplacement(
 				return unsupported("the executable source backend does not support this counter-recipient card-type filter")
 			}
 			recipientTypes := condition.CounterRecipientTypesAny
+			if condition.CounterRecipientIncludesController {
+				if plusOnePlusOne {
+					return unsupported("the executable source backend does not support a controller-player recipient with a specific counter kind")
+				}
+				return game.ControlledPermanentTypesOrControllerCounterPlacementReplacement(ability.Text, multiplier, addend, recipientTypes, game.TriggerControllerYou), true, nil
+			}
 			if plusOnePlusOne {
 				return game.ControlledPermanentTypesCounterKindPlacementReplacement(ability.Text, multiplier, addend, counter.PlusOnePlusOne, recipientTypes, game.TriggerControllerYou), true, nil
 			}

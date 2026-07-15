@@ -337,10 +337,18 @@ type ReplacementEffect struct {
 	// would be put on that one permanent. It is false for every group or broad
 	// counter-placement replacement.
 	CounterRecipientSelf bool
-	DamageMultiplier     int
-	DamageAddend         int
-	DamageSourceColors   []color.Color
-	DamageExcludeSource  bool
+	// CounterRecipientControllerPlayer widens a permanent-recipient
+	// counter-placement replacement's recipient union to include the
+	// replacement's controller as a player ("... on a creature or planeswalker
+	// you control or on yourself", Lae'zel, Vlaakith's Champion). When set, the
+	// replacement also applies to counters put on a player, gated to the
+	// controller by the shared CounterUseRecipientController/ControllerFilter
+	// "you" scope. It is false for permanent-only recipient replacements.
+	CounterRecipientControllerPlayer bool
+	DamageMultiplier                 int
+	DamageAddend                     int
+	DamageSourceColors               []color.Color
+	DamageExcludeSource              bool
 	// DamageSourceTypes restricts a damage replacement to sources that have all
 	// of the listed card types ("a creature you control"). DamageRecipientOpponent
 	// restricts it to damage dealt to an opponent of the replacement's controller

@@ -1412,8 +1412,12 @@ type CompiledCondition struct {
 	// recipient forms that include the source.
 	CounterRecipientExcludesSource bool
 
-	// GraveyardCountCardType carries the single card type counted by a
-	// ConditionPredicateControllerGraveyardCardOfTypeCountAtLeast clause ("if
+	// CounterRecipientIncludesController extends a
+	// ConditionPredicateCounterPlacementOnControlledPermanent clause's recipient
+	// union to include the controller as a player ("... on a creature or
+	// planeswalker you control or on yourself", Lae'zel, Vlaakith's Champion). It
+	// is false for recipient forms that name only permanents.
+	CounterRecipientIncludesController bool
 	// twenty or more creature cards are in your graveyard", Mortal Combat).
 	// Threshold carries the minimum count. It is the empty card type for other
 	// clauses.
