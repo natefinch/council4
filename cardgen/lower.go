@@ -314,7 +314,13 @@ func lowerFaceAbilities(
 	}
 	if len(unsupported) == 0 &&
 		faceHasVariableXGroupEffect(result) &&
-		!faceHasVariableLifeCost(result) {
+		!faceHasVariableLifeCost(result) &&
+		!faceManaCostHasX(face.ManaCost) {
+		// A resolving variable-X group power/toughness effect draws its X from an
+		// X source: either an exact pay-X-life additional cost (the -X/-X linked
+		// board wipes) or an {X} mana cost (the +X/+X "creatures you control get
+		// +X/+X" rider on Finale of Devastation). With neither source the group's
+		// X is unbound, so fail closed.
 		for _, ability := range compilation.Abilities {
 			if ability.Kind != compiler.AbilitySpell {
 				continue
@@ -322,7 +328,7 @@ func lowerFaceAbilities(
 			unsupported = append(unsupported, *executableDiagnostic(
 				ability,
 				"unsupported linked X group effect",
-				"the executable source backend requires an exact pay-X-life additional cost for a resolving group -X/-X effect",
+				"the executable source backend requires an X source (an {X} mana cost or an exact pay-X-life additional cost) for a resolving variable-X group power/toughness effect",
 			))
 			break
 		}

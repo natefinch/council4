@@ -39,6 +39,12 @@ type InstructionResultGate struct {
 	Key       ResultKey
 	Accepted  TriState
 	Succeeded TriState
+	// SearchedLibrary, when not TriAny, additionally requires the published
+	// result's SearchedLibrary flag to match. It implements the "If you search
+	// your library this way, shuffle." gate: a ShuffleLibrary instruction set to
+	// TriTrue runs exactly when the referenced multi-zone search actually
+	// searched the library.
+	SearchedLibrary TriState
 	// AmountRange, when set, additionally requires the published result's amount
 	// to fall within the inclusive interval. It implements a die-roll outcome
 	// table ("Roll a d20. 1—9 | ...; 10—19 | ...; 20 | ...") where each row's

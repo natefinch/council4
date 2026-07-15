@@ -1288,6 +1288,9 @@ func instructionResultGateSatisfied(obj *game.StackObject, gate game.Instruction
 	if gate.Succeeded != game.TriAny && (gate.Succeeded == game.TriTrue) != result.Succeeded {
 		return false
 	}
+	if gate.SearchedLibrary != game.TriAny && (gate.SearchedLibrary == game.TriTrue) != result.SearchedLibrary {
+		return false
+	}
 	if gate.AmountRange.Exists &&
 		(result.Amount < gate.AmountRange.Val.Min || result.Amount > gate.AmountRange.Val.Max) {
 		return false
@@ -1295,7 +1298,7 @@ func instructionResultGateSatisfied(obj *game.StackObject, gate game.Instruction
 	return true
 }
 
-func rememberInstructionResolutionResult(obj *game.StackObject, linkID string, accepted, succeeded bool, amount int, acceptedActors game.PlayerSet) {
+func rememberInstructionResolutionResult(obj *game.StackObject, linkID string, accepted, succeeded bool, amount int, searchedLibrary bool, acceptedActors game.PlayerSet) {
 	if obj == nil || linkID == "" {
 		return
 	}
@@ -1303,9 +1306,10 @@ func rememberInstructionResolutionResult(obj *game.StackObject, linkID string, a
 		obj.ResolutionResults = make(map[string]game.InstructionResolutionResult)
 	}
 	obj.ResolutionResults[linkID] = game.InstructionResolutionResult{
-		Accepted:       accepted,
-		Succeeded:      succeeded,
-		Amount:         amount,
-		AcceptedActors: acceptedActors,
+		Accepted:        accepted,
+		Succeeded:       succeeded,
+		Amount:          amount,
+		SearchedLibrary: searchedLibrary,
+		AcceptedActors:  acceptedActors,
 	}
 }

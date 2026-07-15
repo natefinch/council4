@@ -7,6 +7,16 @@ type InstructionResolutionResult struct {
 	Accepted  bool
 	Succeeded bool
 	Amount    int
+	// SearchedLibrary records whether a multi-zone "search your library and/or
+	// graveyard" instruction actually searched the library (as opposed to
+	// searching only the graveyard). It is the typed "if you search your library
+	// this way" signal a following conditional ShuffleLibrary gates on, so the
+	// library is shuffled exactly when it was searched — including when the
+	// library was searched but no card was found, or the chosen card came from
+	// the graveyard after both zones were searched. It is false for a
+	// graveyard-only search and for every instruction that is not a multi-zone
+	// search.
+	SearchedLibrary bool
 	// AcceptedActors is the set of players who accepted a group offer or Tempting
 	// offer this instruction published (empty for a single-decider instruction).
 	// It is the generic accepted-member publication: Count gives the number who

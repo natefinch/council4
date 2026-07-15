@@ -362,6 +362,14 @@ func handleSearch(r *effectResolver, prim game.Search) effectResolved {
 		if !ok {
 			return res
 		}
+		if prim.Spec.ConditionalShuffle {
+			// "Search your library and/or graveyard ... and put it onto the
+			// battlefield." The searcher chooses the zones; whether the library
+			// was searched is published so a following ShuffleLibrary gated on
+			// that result performs the conditional shuffle.
+			res.succeeded, res.searchedLibrary = r.engine.searchLibraryAndGraveyardChoice(r.game, r.obj, r.agents, r.log, playerID, playerID, prim.Spec)
+			return res
+		}
 		res.succeeded = r.engine.searchLibraryAndGraveyard(r.game, r.obj, r.agents, r.log, playerID, prim.Spec)
 		return res
 	}
