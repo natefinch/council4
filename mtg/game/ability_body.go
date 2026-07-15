@@ -846,6 +846,21 @@ func ControlledPermanentSelectionCounterKindPlacementReplacement(text string, mu
 	return replacement
 }
 
+// ControlledPermanentTypesOrControllerCounterPlacementReplacement creates a
+// persistent replacement that modifies placement of any counter kind on a
+// permanent the controller controls whose card types include at least one of
+// recipientTypesAny, or on the controller as a player ("If you would put one or
+// more counters on a creature or planeswalker you control or on yourself, put
+// that many plus one of each of those kinds of counters on that permanent or
+// player instead.", Lae'zel, Vlaakith's Champion, CR 614). The recipient's
+// "you control"/"yourself" scope is enforced by the shared
+// CounterUseRecipientController and ControllerFilter "you" gate.
+func ControlledPermanentTypesOrControllerCounterPlacementReplacement(text string, multiplier, addend int, recipientTypesAny []types.Card, filter TriggerControllerFilter) ReplacementAbility {
+	replacement := ControlledPermanentTypesCounterPlacementReplacement(text, multiplier, addend, recipientTypesAny, filter)
+	replacement.Replacement.CounterRecipientControllerPlayer = true
+	return replacement
+}
+
 // DamageReplacement creates a persistent replacement that modifies damage from
 // matching sources before it is dealt.
 func DamageReplacement(text string, multiplier, addend int, sourceColors []color.Color, filter TriggerControllerFilter) ReplacementAbility {

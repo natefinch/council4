@@ -463,6 +463,13 @@ type ConditionClause struct {
 	// recipient forms that include the source.
 	CounterRecipientExcludesSource bool `json:",omitempty"`
 
+	// CounterRecipientIncludesController extends a
+	// ConditionPredicateCounterPlacementOnControlledPermanent clause's recipient
+	// union to include the controller as a player ("... on a creature or
+	// planeswalker you control or on yourself", Lae'zel, Vlaakith's Champion). It
+	// is false for recipient forms that name only permanents.
+	CounterRecipientIncludesController bool `json:",omitempty"`
+
 	// GraveyardCountCardType carries the single card type counted by a
 	// ConditionPredicateGraveyardCardOfTypeCountAtLeast clause ("if twenty or
 	// more creature cards are in your graveyard", Mortal Combat). Threshold
@@ -2646,6 +2653,9 @@ func recognizeCounterPlacementCondition(body []shared.Token, atoms Atoms) (Condi
 	if tokenWordsEqual(body, "you", "would", "put", "one", "or", "more", "counters", "on", "a", "permanent", "you", "control") {
 		return ConditionClause{Predicate: ConditionPredicateCounterPlacementOnControlledPermanent}, true
 	}
+	if clause, ok := recognizeControllerTypeUnionCounterPlacement(body, atoms); ok {
+		return clause, true
+	}
 	rest, ok := cutTokenPrefix(body, "one", "or", "more")
 	if !ok {
 		return ConditionClause{}, false
@@ -2784,6 +2794,44 @@ func recognizeControlledRecipientCounterPlacement(rest, body []shared.Token, ato
 		Counter:                        counterKind,
 		CounterRecipientTypesAny:       cardTypes,
 		CounterRecipientExcludesSource: true,
+	}, true
+}
+
+// recognizeControllerTypeUnionCounterPlacement recognizes the active-voice
+// counter-placement replacement whose recipient is a controlled card-type union,
+// optionally widened to the controller as a player ("If you would put one or
+// more counters on a creature or planeswalker you control or on yourself, ...",
+// Lae'zel, Vlaakith's Champion). The passive "one or more <kind> counters would
+// be put on ..." recipients are handled by their own branches. It fails closed
+// when the recipient lacks a recognized card-type union.
+func recognizeControllerTypeUnionCounterPlacement(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
+	rest, ok := cutTokenPrefix(body, "you", "would", "put", "one", "or", "more", "counters", "on")
+	if !ok {
+		return ConditionClause{}, false
+	}
+	includesController := false
+	if trimmed, ok := stripTokenSuffix(rest, "or", "on", "yourself"); ok {
+		includesController = true
+		rest = trimmed
+	} else if trimmed, ok := stripTokenSuffix(rest, "or", "on", "you"); ok {
+		includesController = true
+		rest = trimmed
+	}
+	inner, ok := stripTokenSuffix(rest, "you", "control")
+	if !ok || len(inner) < 2 {
+		return ConditionClause{}, false
+	}
+	if !equalWord(inner[0], "a") && !equalWord(inner[0], "an") {
+		return ConditionClause{}, false
+	}
+	cardTypes, ok := parseGraveyardRedirectSubjectTypes(inner[1:], atoms)
+	if !ok || len(cardTypes) == 0 {
+		return ConditionClause{}, false
+	}
+	return ConditionClause{
+		Predicate:                          ConditionPredicateCounterPlacementOnControlledPermanent,
+		CounterRecipientTypesAny:           cardTypes,
+		CounterRecipientIncludesController: includesController,
 	}, true
 }
 

@@ -1488,11 +1488,25 @@ func matchingCounterPlacementReplacementEffects(g *game.Game, event game.Event, 
 		if replacement.MatchCounterKind && replacement.CounterKindFilter != event.CounterKind {
 			continue
 		}
-		if replacement.CounterRecipientSelection != nil && !counterRecipientMatchesSelection(g, event.PermanentID, recipient, replacement.CounterRecipientSelection, replacement.SourceObjectID) {
-			continue
-		}
-		if replacement.CounterRecipientAnyPermanent && !counterRecipientMatchesSelection(g, event.PermanentID, recipient, &game.Selection{}, replacement.SourceObjectID) {
-			continue
+		// A player recipient (no permanent in the event) never matches a
+		// permanent-characteristic recipient filter. A replacement whose recipient
+		// union includes the controller as a player (Lae'zel) opts in via
+		// CounterRecipientControllerPlayer and relies on the shared
+		// CounterUseRecipientController/ControllerFilter "you" gate below to
+		// restrict the player to the controller; every other selection or
+		// any-permanent replacement stays permanent-only.
+		if recipient == nil && event.PermanentID == 0 {
+			if (replacement.CounterRecipientSelection != nil || replacement.CounterRecipientAnyPermanent) &&
+				!replacement.CounterRecipientControllerPlayer {
+				continue
+			}
+		} else {
+			if replacement.CounterRecipientSelection != nil && !counterRecipientMatchesSelection(g, event.PermanentID, recipient, replacement.CounterRecipientSelection, replacement.SourceObjectID) {
+				continue
+			}
+			if replacement.CounterRecipientAnyPermanent && !counterRecipientMatchesSelection(g, event.PermanentID, recipient, &game.Selection{}, replacement.SourceObjectID) {
+				continue
+			}
 		}
 		matchEvent := counterPlacementMatchEvent(g, replacement, event, recipient)
 		// Thread the source permanent so source-relative condition predicates

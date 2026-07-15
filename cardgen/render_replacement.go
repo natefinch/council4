@@ -627,6 +627,18 @@ func renderCounterPlacementReplacement(ctx *renderCtx, ability *game.Replacement
 			typeLiterals = append(typeLiterals, literal)
 		}
 		typesArg := fmt.Sprintf("[]types.Card{%s}", strings.Join(typeLiterals, ", "))
+		if replacement.CounterRecipientControllerPlayer {
+			if replacement.MatchCounterKind {
+				return "", errors.New("render: controller-player counter-placement recipient does not support a specific counter kind")
+			}
+			return fmt.Sprintf("game.ControlledPermanentTypesOrControllerCounterPlacementReplacement(%q, %d, %d, %s, %s)",
+				ability.Text,
+				replacement.CounterMultiplier,
+				replacement.CounterAddend,
+				typesArg,
+				controller,
+			), nil
+		}
 		if replacement.MatchCounterKind {
 			kind, err := renderCounterKind(replacement.CounterKindFilter)
 			if err != nil {
