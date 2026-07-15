@@ -1098,6 +1098,12 @@ func handleCastForFree(r *effectResolver, prim game.CastForFree) effectResolved 
 		if !ok || fromZone != prim.Zone {
 			return res
 		}
+		if prim.PayManaCost {
+			if r.engine.castPaidTargetedSpell(r.game, playerID, cardID, prim.Zone, r.agents, r.log) {
+				res.succeeded = true
+			}
+			return res
+		}
 		if r.engine.castFreeTargetedSpell(r.game, playerID, cardID, prim.Zone, prim.ExileOnResolution, r.agents, r.log) {
 			res.succeeded = true
 		}

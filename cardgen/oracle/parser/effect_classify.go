@@ -1370,6 +1370,15 @@ func castEventHistoryConditionAt(tokens []shared.Token, index int) bool {
 		hasActor = true
 	case index >= 2 && equalWord(tokens[index-1], "have") && equalWord(tokens[index-2], "you"):
 		hasActor = true
+	// Negated controller-scoped forms ("you haven't cast", "you have not
+	// cast") open the resolution-time "if you haven't cast a spell this turn"
+	// condition (Conduit of Worlds), so the cast verb is part of the condition
+	// clause and must not be classified as an EffectCast.
+	case index >= 2 && equalWord(tokens[index-1], "haven't") && equalWord(tokens[index-2], "you"):
+		hasActor = true
+	case index >= 3 && equalWord(tokens[index-1], "not") &&
+		equalWord(tokens[index-2], "have") && equalWord(tokens[index-3], "you"):
+		hasActor = true
 	case index >= 3 && equalWord(tokens[index-1], "has") &&
 		equalWord(tokens[index-2], "opponent") && equalWord(tokens[index-3], "an"):
 		hasActor = true

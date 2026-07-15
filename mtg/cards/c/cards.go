@@ -137,6 +137,7 @@ var Cards = []cardset.Entry{
 	{Name: "Composer of Spring", New: ComposerOfSpring},
 	{Name: "Compy Swarm", New: CompySwarm},
 	{Name: "Conclave Evangelist", New: ConclaveEvangelist},
+	{Name: "Conduit of Worlds", New: ConduitOfWorlds},
 	{Name: "Confound", New: Confound},
 	{Name: "Conjurer's Mantle", New: ConjurerSMantle},
 	{Name: "Conqueror's Pledge", New: ConquerorSPledge},

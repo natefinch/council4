@@ -396,6 +396,26 @@ func transformZonePrimitiveTargetIndices(primitive game.Primitive, transform tar
 		value.Card = card
 		return value, true
 	}
+	if value, ok := primitive.(game.CastForFree); ok {
+		// A targeted resolving cast ("you may cast that card", Conduit of Worlds)
+		// carries the chosen card in its Card slot in the card numbering domain.
+		// The caster is a controller reference rather than a target, but transform
+		// it defensively (pass-through for non-target player references) so a
+		// future target-player caster cannot silently retain a clause-local index.
+		if value.Player.Kind() != game.PlayerReferenceNone {
+			transformed, ok := transformPlayerReference(value.Player, transform)
+			if !ok {
+				return nil, false
+			}
+			value.Player = transformed
+		}
+		card, ok := transformCardReference(value.Card, transform)
+		if !ok {
+			return nil, false
+		}
+		value.Card = card
+		return value, true
+	}
 	if value, ok := primitive.(game.PutOnBattlefield); ok {
 		// Entry counters and continuous effects may embed their own target
 		// references; transforming those is not modeled, so fail closed rather
