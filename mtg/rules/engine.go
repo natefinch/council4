@@ -75,6 +75,7 @@ func (e *Engine) RunGameWithTurnLimit(g *game.Game, agents [game.NumPlayers]Play
 	result := &GameResult{}
 	e.drawOpeningHands(g)
 	result.OpeningHand = append([]id.ID(nil), g.Players[game.Player1].Hand.All()...)
+	e.performOpeningHandBattlefieldActions(g, agents)
 	markCurrentTurnEventStart(g)
 	result.addLosses(e.applyStateBasedActions(g))
 	if winner, ok := g.Winner(); ok {
@@ -112,6 +113,7 @@ func (e *Engine) RunGoldfish(g *game.Game, agent PlayerAgent, turnLimit int) *Ga
 	result := &GameResult{}
 	e.drawOpeningHands(g)
 	result.OpeningHand = append([]id.ID(nil), g.Players[game.Player1].Hand.All()...)
+	e.performOpeningHandBattlefieldActions(g, agents)
 	markCurrentTurnEventStart(g)
 	result.addLosses(e.applyStateBasedActions(g))
 	for !g.IsGameOver() && len(result.Turns) < turnLimit {

@@ -1608,14 +1608,19 @@ func appendStaticControlledTriggerMultiplierDeclaration(body *game.StaticAbility
 	return true
 }
 
-// appendStaticOpeningHandPlayDeclaration lowers the pre-game permission "If this
+// appendStaticOpeningHandPlayDeclaration lowers the pregame permission "If this
 // card is in your opening hand, you may begin the game with it on the
-// battlefield." (the Leyline cycle) to an inert static ability. The permission
-// is a special action taken before the game begins; this engine never models
-// opening hands, so the declaration contributes no runtime effect and the static
-// body keeps only its printed text.
+// battlefield." (the Leyline cycle) to a static ability carrying the typed
+// BeginsGameOnBattlefield marker. The permission is a special action taken
+// before the game begins (CR 103.6a): the runtime honors it during the pregame
+// opening-hand action window and otherwise the static body is inert, so it never
+// contributes a continuous effect once the game has started.
 func appendStaticOpeningHandPlayDeclaration(body *game.StaticAbility, declaration compiler.StaticDeclaration) bool {
-	return declaration.OpeningHandPlay != nil
+	if declaration.OpeningHandPlay == nil {
+		return false
+	}
+	body.BeginsGameOnBattlefield = true
+	return true
 }
 
 // appendStaticOpponentEnteringTriggerSuppressionDeclaration lowers "Permanents

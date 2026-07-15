@@ -32,7 +32,9 @@ func newLeylineOfSanctity() *game.CardDef {
 			Colors: []color.Color{color.White},
 			Types:  []types.Card{types.Enchantment},
 			StaticAbilities: []game.StaticAbility{
-				game.StaticAbility{},
+				game.StaticAbility{
+					BeginsGameOnBattlefield: true,
+				},
 				game.PlayerHexproofStaticBody,
 			},
 			OracleText: `

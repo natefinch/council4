@@ -152,11 +152,21 @@ type StaticAbility struct {
 	// CastOnlyAfterAttackedThisStep restricts the source spell to the declare
 	// attackers step after its caster was attacked during that step.
 	CastOnlyAfterAttackedThisStep bool
-	Condition                     opt.V[Condition]
-	ZoneOfFunction                zone.Type
-	KeywordAbilities              []KeywordAbility
-	ContinuousEffects             []ContinuousEffect
-	RuleEffects                   []RuleEffect
+	// BeginsGameOnBattlefield marks the pregame static permission "If this card
+	// is in your opening hand, you may begin the game with it on the
+	// battlefield." (CR 103.6a, the Leyline cycle). It is honored only during the
+	// pregame opening-hand action window (CR 103.6), before the first turn and
+	// before any player receives priority; the card's owner may then put it onto
+	// the battlefield from their opening hand. It is deliberately distinct from an
+	// enters-the-battlefield replacement effect (ReplacementAbility): it changes
+	// where the card starts the game, not how it enters during play, and it has no
+	// effect once the game has begun.
+	BeginsGameOnBattlefield bool
+	Condition               opt.V[Condition]
+	ZoneOfFunction          zone.Type
+	KeywordAbilities        []KeywordAbility
+	ContinuousEffects       []ContinuousEffect
+	RuleEffects             []RuleEffect
 }
 
 // ReplacementAbility is a replacement/prevention ability on a printed face.

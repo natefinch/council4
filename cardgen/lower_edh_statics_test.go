@@ -20,6 +20,7 @@ func TestGenerateExecutableCardSourceEDHStatics(t *testing.T) {
 				OracleText: "If this card is in your opening hand, you may begin the game with it on the battlefield.\nYou may cast spells as though they had flash.",
 			},
 			wants: []string{
+				"BeginsGameOnBattlefield: true",
 				"game.RuleEffectCastSpellsAsThoughFlash",
 			},
 		},

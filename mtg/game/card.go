@@ -365,6 +365,20 @@ func (f *CardFace) HasKeyword(kw Keyword) bool {
 	return false
 }
 
+// BeginsGameOnBattlefield reports whether this face has the pregame static
+// permission "If this card is in your opening hand, you may begin the game with
+// it on the battlefield." (CR 103.6a, the Leyline cycle). A card with this
+// permission may be put onto the battlefield from its owner's opening hand
+// during the pregame opening-hand action window, before the first turn.
+func (f *CardFace) BeginsGameOnBattlefield() bool {
+	for i := range f.StaticAbilities {
+		if f.StaticAbilities[i].BeginsGameOnBattlefield {
+			return true
+		}
+	}
+	return false
+}
+
 // AbilityCount returns the number of abilities on this face in the canonical
 // index order (Spell, Activated, Mana, Loyalty, Triggered, Chapter,
 // Replacement, Static).
