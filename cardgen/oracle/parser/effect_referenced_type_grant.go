@@ -8,20 +8,21 @@ import (
 )
 
 // parseReferencedTypeGrantEffect recognizes the permanent continuous
-// type-and-color grant a reanimation rider applies to the creature an earlier
-// clause in the same ability returned to the battlefield ("That creature is a
-// black Zombie in addition to its other colors and types." — Rise from the
-// Grave, Liliana, Death's Majesty; "It's a Phyrexian in addition to its other
-// types." — Portal to Phyrexia). The subject is a back-reference ("that
-// creature", "the creature", "it", "it's") and the linking verb is "is"; the
-// grant adds one or more colors and/or creature subtypes and card types to the
-// permanent without removing its existing characteristics, and lasts as long as
-// it remains on the battlefield (no "until end of turn" duration). It emits an
-// EffectBecomeType whose referenced-object context and absent until-end-of-turn
-// duration distinguish it from the targeted Liquimetal form in
-// parseBecomeTypeEffect; lowering folds it into the preceding reanimation. Any
-// other shape (a "target" or "becomes" subject, an until-end-of-turn duration,
-// no added types, or an unrecognized color/type word) fails closed.
+// type-and-color grant a rider applies to the creature an earlier clause in the
+// same ability acted on ("That creature is a black Zombie in addition to its
+// other colors and types." — Rise from the Grave, Liliana, Death's Majesty;
+// "It's a Phyrexian in addition to its other types." — Portal to Phyrexia; "It
+// becomes an Angel in addition to its other types." — Guide of Souls). The
+// subject is a back-reference ("that creature", "the creature", "it", "it's")
+// and the linking verb is "is" or "becomes"; the grant adds one or more colors
+// and/or creature subtypes and card types to the permanent without removing its
+// existing characteristics, and lasts as long as it remains on the battlefield
+// (no "until end of turn" duration). It emits an EffectBecomeType whose
+// referenced-object context and absent until-end-of-turn duration distinguish it
+// from the targeted Liquimetal form in parseBecomeTypeEffect; lowering folds it
+// into the preceding clause. Any other shape (a "target" subject, an
+// until-end-of-turn duration, no added types, or an unrecognized color/type
+// word) fails closed.
 func parseReferencedTypeGrantEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
 	body := semanticEffectTokens(tokens)
 	if len(body) == 0 || body[len(body)-1].Kind != shared.Period {
@@ -100,18 +101,27 @@ func parseReferencedTypeGrantEffect(sentence Sentence, tokens []shared.Token, at
 }
 
 // stripReferencedTypeGrantSubject consumes the back-reference subject and its
-// linking verb "is" from a referenced-object type-grant rider, returning the
-// words after the verb. It recognizes "that creature is", "the creature is",
-// "it is", and the "it's" contraction; any other subject fails closed.
+// linking verb ("is" or "becomes") from a referenced-object type-grant rider,
+// returning the words after the verb. It recognizes "that creature is/becomes",
+// "the creature is/becomes", "it is/becomes", and the "it's" contraction; any
+// other subject fails closed.
 func stripReferencedTypeGrantSubject(words []string) ([]string, bool) {
 	switch {
 	case len(words) >= 1 && words[0] == "it's":
 		return words[1:], true
-	case len(words) >= 2 && words[0] == "it" && words[1] == "is":
+	case len(words) >= 2 && words[0] == "it" && referencedTypeGrantVerb(words[1]):
 		return words[2:], true
 	case len(words) >= 3 && (words[0] == "that" || words[0] == "the") &&
-		words[1] == "creature" && words[2] == "is":
+		words[1] == "creature" && referencedTypeGrantVerb(words[2]):
 		return words[3:], true
 	}
 	return nil, false
+}
+
+// referencedTypeGrantVerb reports whether a word is the linking verb of a
+// referenced-object type grant: the stative "is" (Rise from the Grave) or the
+// inchoative "becomes" (Guide of Souls). Both grant the added types for the
+// permanent's lifetime on the battlefield.
+func referencedTypeGrantVerb(word string) bool {
+	return word == "is" || word == "becomes"
 }

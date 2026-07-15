@@ -362,6 +362,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				CounterKindKnown:              syntax.CounterKnown,
 				ChooseExiledCardOwnerOpponent: syntax.ChooseExiledCardOwnerOpponent,
 				CounterKindChoices:            append([]counter.Kind(nil), syntax.CounterKindChoices...),
+				AdditionalCounterPlacements:   compileCounterPlacements(syntax.AdditionalCounterPlacements),
 				CounterRecipientAttached:      syntax.CounterRecipientAttached,
 				FightSubjectAttached:          syntax.FightSubjectAttached,
 				CorrelatedDistributiveFight:   syntax.CorrelatedDistributiveFight,
@@ -870,4 +871,22 @@ func compileGroupEntryModification(syntax parser.GroupEntryModificationSyntax) C
 		ControllerScope: syntax.ControllerScope,
 		Types:           slices.Clone(syntax.Types),
 	}
+}
+
+// compileCounterPlacements mirrors the parser's ordered extra counter placements
+// of a compound multi-kind placement into their compiler form, copying each
+// placement's kind and fixed count. It returns nil for a single-kind placement so
+// the common path allocates nothing.
+func compileCounterPlacements(placements []parser.CounterPlacementSyntax) []CompiledCounterPlacement {
+	if len(placements) == 0 {
+		return nil
+	}
+	compiled := make([]CompiledCounterPlacement, 0, len(placements))
+	for _, placement := range placements {
+		compiled = append(compiled, CompiledCounterPlacement{
+			Kind:   placement.Kind,
+			Amount: placement.Amount,
+		})
+	}
+	return compiled
 }

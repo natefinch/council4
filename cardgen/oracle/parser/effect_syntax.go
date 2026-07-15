@@ -1848,8 +1848,16 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		}
 		counterKind, counterKnown := parseCounterPlacementScopedToCount(entersTappedCounterClause(kind, clause), amount, atoms)
 		var counterKindChoices []counter.Kind
+		var additionalCounterPlacements []CounterPlacementSyntax
 		if kind == EffectPut && !counterKnown {
 			counterKindChoices = parseCounterPlacementChoices(clause, atoms)
+			if len(counterKindChoices) == 0 {
+				if placements := parseCompoundCounterPlacement(clause, atoms); len(placements) >= 2 {
+					counterKind = placements[0].Kind
+					counterKnown = true
+					additionalCounterPlacements = placements[1:]
+				}
+			}
 		}
 		// A deal-damage clause whose amount is a trailing "where X is the number
 		// of ..." count phrase ("deals X damage to each creature, where X is the
@@ -2088,6 +2096,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			CounterKind:                   counterKind,
 			CounterKnown:                  counterKnown,
 			CounterKindChoices:            counterKindChoices,
+			AdditionalCounterPlacements:   additionalCounterPlacements,
 			CounterRecipientAttached:      counterRecipientAttached(kind, counterKnown, clause),
 			FightSubjectAttached:          fightSubjectAttached(kind, tokens[ownershipStart:tokenIndex]),
 			CorrelatedDistributiveFight:   correlatedDistributiveFightClause(kind, tokens[ownershipStart:tokenIndex], clause),

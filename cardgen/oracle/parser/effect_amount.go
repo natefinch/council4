@@ -2811,6 +2811,84 @@ func parseCounterPlacement(tokens []shared.Token, atoms Atoms) (counter.Kind, bo
 	return kind, kind.Valid() && kind != counter.Finality
 }
 
+// parseCompoundCounterPlacement recognizes a placed-counter noun phrase that
+// puts two or more distinct counter placements on the same recipient at once
+// ("two +1/+1 counters and a flying counter", Guide of Souls). It splits the
+// phrase on the "and" connector into segments, requires each segment to be a
+// single "<count> <kind> counter(s)" placement with a fixed positive count and a
+// real, permanent-placeable counter kind, and returns the placements in source
+// order. Any other shape (a single placement, an "or" kind choice, a dynamic or
+// missing count, a player-only or invalid kind) returns nil so the single-kind
+// and fail-closed paths stay unchanged.
+func parseCompoundCounterPlacement(tokens []shared.Token, atoms Atoms) []CounterPlacementSyntax {
+	tokens = placedCounterTokens(tokens)
+	segments := splitCounterPlacementSegments(tokens)
+	if len(segments) < 2 {
+		return nil
+	}
+	placements := make([]CounterPlacementSyntax, 0, len(segments))
+	for _, segment := range segments {
+		placement, ok := parseSingleCounterSegment(segment, atoms)
+		if !ok {
+			return nil
+		}
+		placements = append(placements, placement)
+	}
+	return placements
+}
+
+// splitCounterPlacementSegments splits a placed-counter noun phrase on each
+// top-level "and" connector, returning the token runs between connectors. It is
+// used only after placedCounterTokens has removed the recipient, so every "and"
+// separates two counter placements rather than joining recipient nouns.
+func splitCounterPlacementSegments(tokens []shared.Token) [][]shared.Token {
+	var segments [][]shared.Token
+	start := 0
+	for i := range tokens {
+		if equalWord(tokens[i], "and") {
+			segments = append(segments, tokens[start:i])
+			start = i + 1
+		}
+	}
+	segments = append(segments, tokens[start:])
+	return segments
+}
+
+// parseSingleCounterSegment recognizes one "<count> <kind> counter(s)" placement
+// segment of a compound counter placement. The count is a leading article
+// ("a"/"an" = one) or a small cardinal, and the kind is the single counter atom
+// the segment covers. It returns the placement and true only when the segment is
+// exactly one fixed positive placement of a real, permanent-placeable kind.
+func parseSingleCounterSegment(segment []shared.Token, atoms Atoms) (CounterPlacementSyntax, bool) {
+	if len(segment) < 2 {
+		return CounterPlacementSyntax{}, false
+	}
+	kind, ok := parseCounterPlacement(segment, atoms)
+	if !ok || kind.PlayerOnly() {
+		return CounterPlacementSyntax{}, false
+	}
+	amountToken := segment[0]
+	amount, amountText, ok := counterSegmentCount(amountToken, atoms)
+	if !ok || amount < 1 {
+		return CounterPlacementSyntax{}, false
+	}
+	return CounterPlacementSyntax{Kind: kind, Amount: amount, AmountText: amountText}, true
+}
+
+// counterSegmentCount reads the leading count of one counter placement segment:
+// an "a"/"an" article denotes one, and an integer or small-cardinal word denotes
+// its value. It returns the numeric count and the verbatim count word so the
+// byte-exact clause reconstruction reprints the printed wording.
+func counterSegmentCount(token shared.Token, atoms Atoms) (int, string, bool) {
+	if equalWord(token, "a") || equalWord(token, "an") {
+		return 1, token.Text, true
+	}
+	if value, ok := effectNumber(token, atoms); ok {
+		return value, token.Text, true
+	}
+	return 0, "", false
+}
+
 func firstZone(atoms Atoms, span shared.Span, role ZoneRole) zone.Type {
 	result := zone.None
 	for _, atom := range atoms.Zones() {
