@@ -238,6 +238,11 @@ type effectResolved struct {
 	succeeded    bool
 	amount       int
 	excessDamage int
+	// searchedLibrary records whether a multi-zone "search your library and/or
+	// graveyard" instruction actually searched the library, published so a
+	// following ShuffleLibrary gated on the SearchedLibrary result shuffles
+	// exactly when the library was searched. It is false for every other effect.
+	searchedLibrary bool
 	// acceptedActors is the set of players who accepted a group offer or Tempting
 	// offer, published so a later consequence can branch on how many (and which)
 	// members accepted. It is empty for a single-decider instruction.
@@ -252,7 +257,7 @@ func (res effectResolved) record(obj *game.StackObject, linkID string) {
 		rememberEffectAmount(obj, linkID, res.amount)
 		rememberEffectExcessDamage(obj, linkID, res.excessDamage)
 	}
-	rememberInstructionResolutionResult(obj, linkID, res.accepted, res.succeeded, res.amount, res.acceptedActors)
+	rememberInstructionResolutionResult(obj, linkID, res.accepted, res.succeeded, res.amount, res.searchedLibrary, res.acceptedActors)
 }
 
 func recordResultKey(obj *game.StackObject, key game.ResultKey, res effectResolved) {

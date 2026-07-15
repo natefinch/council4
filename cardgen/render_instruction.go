@@ -254,6 +254,13 @@ func renderInstructionResultGate(gate game.InstructionResultGate) (string, error
 		}
 		fields = append(fields, fmt.Sprintf("Succeeded: %s,", succeeded))
 	}
+	if gate.SearchedLibrary != game.TriAny {
+		searchedLibrary, err := renderTriState(gate.SearchedLibrary)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("SearchedLibrary: %s,", searchedLibrary))
+	}
 	if gate.AmountRange.Exists {
 		fields = append(fields, fmt.Sprintf(
 			"AmountRange: opt.Val(game.IntRange{Min: %d, Max: %d}),",
@@ -1530,6 +1537,9 @@ func (r Renderer) renderSearchPrimitive(ctx *renderCtx, value game.Search) (stri
 	}
 	if value.Spec.AlsoGraveyard {
 		specFields = append(specFields, "AlsoGraveyard: true,")
+	}
+	if value.Spec.ConditionalShuffle {
+		specFields = append(specFields, "ConditionalShuffle: true,")
 	}
 	if value.Spec.RevealOnly {
 		specFields = append(specFields, "RevealOnly: true,")

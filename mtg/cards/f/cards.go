@@ -54,6 +54,7 @@ var Cards = []cardset.Entry{
 	{Name: "Filter Out", New: FilterOut},
 	{Name: "Filthy Cur", New: FilthyCur},
 	{Name: "Final-Sting Faerie", New: FinalStingFaerie},
+	{Name: "Finale of Devastation", New: FinaleOfDevastation},
 	{Name: "Finch Formation", New: FinchFormation},
 	{Name: "Fire at Will", New: FireAtWill},
 	{Name: "Fire Bowman", New: FireBowman},

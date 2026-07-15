@@ -1755,7 +1755,29 @@ type SearchSpec struct {
 	// Destination Hand, Reveal true, a single searching player, and no split
 	// destination, slot filters, RevealOnly, MaxManaValueFromX, shared subtype,
 	// or tapped entry; the search may fail to find a card (CR 701.19e).
+	//
+	// When ConditionalShuffle is also true the search instead models the general
+	// "Search your library and/or graveyard for <filter> and put it onto the
+	// battlefield" form (Finale of Devastation): the searching player chooses
+	// which of their library and graveyard to search, the found card enters a
+	// non-Hand destination, the library is not shuffled by the search itself, and
+	// the instruction publishes SearchedLibrary so a following gated
+	// ShuffleLibrary shuffles exactly when the library was searched.
 	AlsoGraveyard bool
+
+	// ConditionalShuffle, when true (only meaningful together with AlsoGraveyard),
+	// switches the multi-zone search to the choose-your-zones, publish-searched
+	// form. The searching player picks a non-empty subset of {library, graveyard}
+	// to search; a hidden library may fail to find (CR 701.19e) while a
+	// graveyard-only search must find a legal card when one exists (a public zone
+	// has no fail-to-find permission). The search never shuffles the library
+	// itself — it records whether the library was searched as the instruction's
+	// SearchedLibrary result so a following ShuffleLibrary gated on that result
+	// performs the "If you search your library this way, shuffle." step. It is
+	// meaningful only with SourceZone Library, a single searching player, a Hand
+	// or Battlefield destination, and no Reveal, split destination, slot filters,
+	// RevealOnly, shared subtype, or Name; it composes with MaxManaValueFromX.
+	ConditionalShuffle bool
 
 	// ExileFaceDown, when true, sends the single found card to the searching
 	// player's exile zone face down instead of a face-up destination, then

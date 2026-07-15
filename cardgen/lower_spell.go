@@ -340,6 +340,9 @@ func lowerContentDispatch(
 		if hetero, ok := lowerHeterogeneousSearch(ctx); ok {
 			return hetero, nil
 		}
+		if multizone, ok := lowerMultiZoneSearchToBattlefieldSequence(ctx); ok {
+			return multizone, nil
+		}
 		if trailing, ok := lowerSearchThenTrailingSequence(cardName, ctx, syntax); ok {
 			return trailing, nil
 		}

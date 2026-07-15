@@ -1305,7 +1305,11 @@ func (p Search) validatePrimitive(targets []TargetSpec, checkTargets bool) error
 		return errors.New("search has unsupported source or destination")
 	}
 	if p.Spec.AlsoGraveyard {
-		if p.Spec.Destination != zone.Hand ||
+		if p.Spec.ConditionalShuffle {
+			if err := p.validateConditionalShuffleSearch(); err != nil {
+				return err
+			}
+		} else if p.Spec.Destination != zone.Hand ||
 			!p.Spec.Reveal ||
 			p.Spec.Name == "" ||
 			p.Spec.RevealOnly ||
@@ -1320,6 +1324,8 @@ func (p Search) validatePrimitive(targets []TargetSpec, checkTargets bool) error
 			p.PlayerGroup.Kind != PlayerGroupReferenceNone {
 			return errors.New("library-and-graveyard search requires a named reveal-to-hand search with no other riders")
 		}
+	} else if p.Spec.ConditionalShuffle {
+		return errors.New("conditional-shuffle search requires AlsoGraveyard")
 	}
 	if p.Spec.Destination == zone.Library &&
 		(p.Amount.IsDynamic() || p.Amount.Value() != 1 || p.Spec.SplitDestination.Exists) {
@@ -1507,6 +1513,37 @@ func (p Search) validateExileFaceDownSearch(targets []TargetSpec, checkTargets b
 		return errors.New("search filter: " + problems[0])
 	}
 	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
+// validateConditionalShuffleSearch checks the choose-your-zones, publish-searched
+// form of the multi-zone "search your library and/or graveyard ... and put it
+// onto the battlefield" search (Finale of Devastation). It requires a Hand or
+// Battlefield destination and rejects the reveal, name, split, tapped-entry,
+// slot, controller, and multi-player riders that form has no wording for; it
+// composes with MaxManaValueFromX and a card-type/characteristic Filter.
+func (p Search) validateConditionalShuffleSearch() error {
+	if p.Spec.Destination != zone.Hand && p.Spec.Destination != zone.Battlefield {
+		return errors.New("conditional-shuffle search must put the found card into the hand or onto the battlefield")
+	}
+	if p.Spec.Reveal ||
+		p.Spec.RevealOnly ||
+		p.Spec.ExileFaceDown ||
+		p.Spec.Name != "" ||
+		p.Spec.MaxManaValueFromSacrificedCost.Exists ||
+		p.Spec.SharedSubtype ||
+		p.Spec.DifferentNames ||
+		p.Spec.EntersTapped ||
+		p.Spec.SplitDestination.Exists ||
+		len(p.Spec.SlotFilters) != 0 ||
+		p.Spec.DestinationPosition != SearchPositionUnspecified ||
+		p.Controller.Exists ||
+		p.PlayerGroup.Kind != PlayerGroupReferenceNone {
+		return errors.New("conditional-shuffle search does not support reveal, name, split, tapped entry, slot, controller, or multi-player riders")
+	}
+	if p.Amount.IsDynamic() || p.Amount.Value() != 1 {
+		return errors.New("conditional-shuffle search must find exactly one card")
+	}
+	return nil
 }
 
 func (p Reveal) validatePrimitive(targets []TargetSpec, checkTargets bool) error {

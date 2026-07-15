@@ -2482,13 +2482,15 @@ func lowerFixedGroupModifyPTSpell(
 }
 
 // groupModifyPTContinuousEffect builds the LayerPowerToughnessModify continuous
-// effect for a group power/toughness change over group. It models three shapes:
-// a fixed delta ("+1/+1"), the linked all-creatures -X/-X form (the variable
-// spell "X" applied to every creature), and a dynamic battlefield-counted
-// amount ("+X/+X … where X is the number of creatures you control",
-// "+X/+X … where X is the greatest power among creatures you control", or a
-// "for each" multiplier). It returns ok=false for any amount the dynamic
-// machinery cannot render, keeping inexpressible forms fail-closed.
+// effect for a group power/toughness change over group. It models these shapes:
+// a fixed delta ("+1/+1"), the linked variable-X form applying the spell's
+// chosen X to every member in one of two proven subject/sign shapes (the
+// all-creatures "-X/-X" board wipe and the controlled-creatures "+X/+X" pump
+// rider), and a dynamic battlefield-counted amount ("+X/+X … where X is the
+// number of creatures you control", "+X/+X … where X is the greatest power among
+// creatures you control", or a "for each" multiplier). The caller supplies group,
+// so the affected set is validated upstream. It returns ok=false for any amount
+// the dynamic machinery cannot render, keeping inexpressible forms fail-closed.
 func groupModifyPTContinuousEffect(
 	effect *compiler.CompiledEffect,
 	group game.GroupReference,
@@ -2502,12 +2504,27 @@ func groupModifyPTContinuousEffect(
 		effect.ToughnessDelta.VariableX
 	switch {
 	case variableX:
-		if effect.StaticSubject != compiler.StaticSubjectAllCreatures ||
-			!effect.PowerDelta.Negative ||
-			!effect.ToughnessDelta.Negative {
+		// "+X/+X" / "-X/-X" applies the spell's chosen X to every group member.
+		// Both deltas must move the same direction; the shared sign selects the
+		// dynamic multiplier. Only the two proven subject/sign shapes lower — the
+		// all-creatures "-X/-X" board wipe (Toxic Deluge) and the
+		// controlled-creatures "+X/+X" pump rider (Finale of Devastation) — so
+		// every other subject or sign stays fail-closed.
+		if effect.PowerDelta.Negative != effect.ToughnessDelta.Negative {
 			return game.ContinuousEffect{}, false
 		}
-		dynamic := game.DynamicAmount{Kind: game.DynamicAmountX, Multiplier: -1}
+		negative := effect.PowerDelta.Negative
+		switch {
+		case negative && effect.StaticSubject == compiler.StaticSubjectAllCreatures:
+		case !negative && effect.StaticSubject == compiler.StaticSubjectControlledCreatures:
+		default:
+			return game.ContinuousEffect{}, false
+		}
+		multiplier := 1
+		if negative {
+			multiplier = -1
+		}
+		dynamic := game.DynamicAmount{Kind: game.DynamicAmountX, Multiplier: multiplier}
 		continuous.PowerDeltaDynamic = opt.Val(dynamic)
 		continuous.ToughnessDeltaDynamic = opt.Val(dynamic)
 	case effect.Amount.DynamicKind != compiler.DynamicAmountNone:
@@ -3016,22 +3033,51 @@ func lowerGroupTemporaryPTKeywordSpell(ctx contentCtx) (game.AbilityContent, boo
 		len(ctx.content.Modes) != 0 {
 		return game.AbilityContent{}, false
 	}
-	// The two clauses appear in either order: "creatures you control get +N/+N
-	// and gain trample …" (modify first) or "creatures you control gain trample
-	// and get +N/+N …" (keyword first). The subject-bearing clause carries the
-	// static group subject; the other inherits it as the prior subject.
+	continuous, ok := groupTemporaryPTKeywordContinuousEffects(ctx.content.Effects, ctx.content.Keywords)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{{
+			Primitive: game.ApplyContinuous{
+				ContinuousEffects: continuous,
+				Duration:          game.DurationUntilEndOfTurn,
+			},
+		}},
+	}.Ability(), true
+}
+
+// groupTemporaryPTKeywordContinuousEffects builds the paired continuous effects
+// for a resolving "creatures you control get +N/+N and gain <keywords> until end
+// of turn" group modification (Overrun and, gated on X, Finale of Devastation):
+// a LayerPowerToughnessModify P/T delta and a LayerAbility keyword grant, both
+// over the same resolving group. The two clauses appear in either order —
+// "… get +N/+N and gain trample …" (modify first) or "… gain trample and get
+// +N/+N …" (keyword first) — so it classifies them, validates their shared
+// exact/non-negated/until-end-of-turn shape, resolves the group from the one
+// subject-bearing clause (the other inherits it), folds the keywords, and builds
+// the P/T delta. It fails closed for any shape it cannot express. The caller owns
+// any attached condition and the enclosing ApplyContinuous duration, so both the
+// unconditional spell and the X-gated rider reuse one builder.
+func groupTemporaryPTKeywordContinuousEffects(
+	effects []compiler.CompiledEffect,
+	keywords []compiler.CompiledKeyword,
+) ([]game.ContinuousEffect, bool) {
+	if len(effects) != 2 {
+		return nil, false
+	}
 	var modifyEffect, keywordEffect compiler.CompiledEffect
 	switch {
-	case ctx.content.Effects[0].Kind == compiler.EffectModifyPT &&
-		ctx.content.Effects[1].Kind == compiler.EffectGain:
-		modifyEffect = ctx.content.Effects[0]
-		keywordEffect = ctx.content.Effects[1]
-	case ctx.content.Effects[0].Kind == compiler.EffectGain &&
-		ctx.content.Effects[1].Kind == compiler.EffectModifyPT:
-		keywordEffect = ctx.content.Effects[0]
-		modifyEffect = ctx.content.Effects[1]
+	case effects[0].Kind == compiler.EffectModifyPT &&
+		effects[1].Kind == compiler.EffectGain:
+		modifyEffect = effects[0]
+		keywordEffect = effects[1]
+	case effects[0].Kind == compiler.EffectGain &&
+		effects[1].Kind == compiler.EffectModifyPT:
+		keywordEffect = effects[0]
+		modifyEffect = effects[1]
 	default:
-		return game.AbilityContent{}, false
+		return nil, false
 	}
 	if !modifyEffect.Exact ||
 		!keywordEffect.Exact ||
@@ -3039,7 +3085,7 @@ func lowerGroupTemporaryPTKeywordSpell(ctx contentCtx) (game.AbilityContent, boo
 		keywordEffect.Negated ||
 		modifyEffect.Duration != compiler.DurationUntilEndOfTurn ||
 		keywordEffect.Duration != compiler.DurationUntilEndOfTurn {
-		return game.AbilityContent{}, false
+		return nil, false
 	}
 	// Exactly one clause names the affected group; the other inherits it.
 	subjectEffect := &modifyEffect
@@ -3049,35 +3095,28 @@ func lowerGroupTemporaryPTKeywordSpell(ctx contentCtx) (game.AbilityContent, boo
 	if subjectEffect.StaticSubject == compiler.StaticSubjectNone ||
 		(modifyEffect.StaticSubject != compiler.StaticSubjectNone &&
 			keywordEffect.StaticSubject != compiler.StaticSubjectNone) {
-		return game.AbilityContent{}, false
+		return nil, false
 	}
-	keywords, ok := mixedStaticKeywords(ctx.content.Keywords)
+	kw, ok := mixedStaticKeywords(keywords)
 	if !ok {
-		return game.AbilityContent{}, false
+		return nil, false
 	}
 	group, ok := resolvingStaticSubjectGroup(subjectEffect)
 	if !ok {
-		return game.AbilityContent{}, false
+		return nil, false
 	}
 	modifyContinuous, ok := groupModifyPTContinuousEffect(&modifyEffect, group)
 	if !ok {
-		return game.AbilityContent{}, false
+		return nil, false
 	}
-	return game.Mode{
-		Sequence: []game.Instruction{{
-			Primitive: game.ApplyContinuous{
-				ContinuousEffects: []game.ContinuousEffect{
-					modifyContinuous,
-					{
-						Layer:       game.LayerAbility,
-						Group:       group,
-						AddKeywords: keywords,
-					},
-				},
-				Duration: game.DurationUntilEndOfTurn,
-			},
-		}},
-	}.Ability(), true
+	return []game.ContinuousEffect{
+		modifyContinuous,
+		{
+			Layer:       game.LayerAbility,
+			Group:       group,
+			AddKeywords: kw,
+		},
+	}, true
 }
 
 // selfSourceBounceReferences reports whether the references denote the source

@@ -203,6 +203,24 @@ func searchSpecSupported(spec game.SearchSpec) bool {
 			len(spec.SlotFilters) == 0 &&
 			spec.DestinationPosition == game.SearchPositionUnspecified
 	}
+	if spec.ConditionalShuffle {
+		// The choose-your-zones, publish-searched multi-zone search (Finale of
+		// Devastation) puts one found card into the hand or onto the battlefield
+		// and leaves the library shuffle to a following gated ShuffleLibrary; it
+		// composes with MaxManaValueFromX but rejects every other rider.
+		return spec.AlsoGraveyard &&
+			(spec.Destination == zone.Hand || spec.Destination == zone.Battlefield) &&
+			!spec.Reveal &&
+			!spec.RevealOnly &&
+			!spec.ExileFaceDown &&
+			!spec.SplitDestination.Exists &&
+			len(spec.SlotFilters) == 0 &&
+			!spec.SharedSubtype &&
+			!spec.DifferentNames &&
+			spec.Name == "" &&
+			!spec.EntersTapped &&
+			spec.DestinationPosition == game.SearchPositionUnspecified
+	}
 	primary := game.SearchDestination{
 		Zone:         spec.Destination,
 		Position:     spec.DestinationPosition,
@@ -334,7 +352,7 @@ func (e *Engine) searchLibrary(g *game.Game, obj *game.StackObject, agents [game
 			emitCardRevealEvent(g, obj, playerID, cardID, zone.Library)
 		}
 		player.Library.Shuffle(e.rng)
-		_, placed := e.placeFoundCard(g, obj, playerID, controllerID, player, cardID, primary)
+		_, placed := e.placeFoundCard(g, obj, playerID, controllerID, player, cardID, primary, zone.Library)
 		return placed, nil
 	}
 	var foundPermanent *game.Permanent
@@ -345,7 +363,7 @@ func (e *Engine) searchLibrary(g *game.Game, obj *game.StackObject, agents [game
 		if spec.Reveal {
 			emitCardRevealEvent(g, obj, playerID, cardID, zone.Library)
 		}
-		permanent, placed := e.placeFoundCard(g, obj, playerID, controllerID, player, cardID, primary)
+		permanent, placed := e.placeFoundCard(g, obj, playerID, controllerID, player, cardID, primary, zone.Library)
 		if !placed {
 			return len(found) > 0, foundPermanent
 		}
@@ -530,7 +548,7 @@ func (e *Engine) searchLibrarySlots(g *game.Game, obj *game.StackObject, agents 
 		if spec.Reveal {
 			emitCardRevealEvent(g, obj, playerID, cardID, zone.Library)
 		}
-		_, _ = e.placeFoundCard(g, obj, playerID, controllerID, player, cardID, dest)
+		_, _ = e.placeFoundCard(g, obj, playerID, controllerID, player, cardID, dest, zone.Library)
 	}
 	player.Library.Shuffle(e.rng)
 	return len(found) > 0
@@ -551,9 +569,12 @@ func searchSlotMatches(g *game.Game, obj *game.StackObject, cardID id.ID, filter
 // already be removed from the library. A found card put onto the battlefield
 // enters under controllerID's control (which equals playerID unless a search
 // names a different controller, e.g. "under target player's control"); other
-// destinations always go to the searching player. It returns the created
-// permanent for a battlefield destination and false if placement fails.
-func (e *Engine) placeFoundCard(g *game.Game, obj *game.StackObject, playerID, controllerID game.PlayerID, player *game.Player, cardID id.ID, dest game.SearchDestination) (*game.Permanent, bool) {
+// destinations always go to the searching player. fromZone is the zone the found
+// card is leaving (the library for a plain library tutor, the graveyard for the
+// graveyard half of a multi-zone search), reported on the emitted zone-change
+// event and as the source zone a battlefield entry comes from. It returns the
+// created permanent for a battlefield destination and false if placement fails.
+func (e *Engine) placeFoundCard(g *game.Game, obj *game.StackObject, playerID, controllerID game.PlayerID, player *game.Player, cardID id.ID, dest game.SearchDestination, fromZone zone.Type) (*game.Permanent, bool) {
 	switch dest.Zone {
 	case zone.Hand:
 		player.Hand.Add(cardID)
@@ -563,7 +584,7 @@ func (e *Engine) placeFoundCard(g *game.Game, obj *game.StackObject, playerID, c
 			Controller:    stackObjectController(obj),
 			Player:        playerID,
 			CardID:        cardID,
-			FromZone:      zone.Library,
+			FromZone:      fromZone,
 			ToZone:        zone.Hand,
 			Amount:        1,
 		})
@@ -576,7 +597,7 @@ func (e *Engine) placeFoundCard(g *game.Game, obj *game.StackObject, playerID, c
 			Controller:    stackObjectController(obj),
 			Player:        playerID,
 			CardID:        cardID,
-			FromZone:      zone.Library,
+			FromZone:      fromZone,
 			ToZone:        zone.Graveyard,
 			Amount:        1,
 		})
@@ -586,7 +607,7 @@ func (e *Engine) placeFoundCard(g *game.Game, obj *game.StackObject, playerID, c
 		if !ok {
 			return nil, false
 		}
-		return createCardPermanentFaceWithOptions(e, g, card, controllerID, zone.Library, game.FaceFront, nil, permanentCreationOptions{ForceTapped: dest.EntersTapped}, [game.NumPlayers]PlayerAgent{}, nil)
+		return createCardPermanentFaceWithOptions(e, g, card, controllerID, fromZone, game.FaceFront, nil, permanentCreationOptions{ForceTapped: dest.EntersTapped}, [game.NumPlayers]PlayerAgent{}, nil)
 	case zone.Library:
 		if dest.Position != game.SearchPositionTop {
 			return nil, false
@@ -623,7 +644,7 @@ func (e *Engine) placeSplitSearch(g *game.Game, obj *game.StackObject, agents [g
 			dest = secondary
 		}
 		if player.Library.Remove(found[0]) {
-			_, _ = e.placeFoundCard(g, obj, playerID, controllerID, player, found[0], dest)
+			_, _ = e.placeFoundCard(g, obj, playerID, controllerID, player, found[0], dest, zone.Library)
 		}
 	default:
 		primaryCard := found[e.chooseSplitSearchPrimaryCard(g, agents, log, playerID, primary, found)]
@@ -633,7 +654,7 @@ func (e *Engine) placeSplitSearch(g *game.Game, obj *game.StackObject, agents [g
 				dest = primary
 			}
 			if player.Library.Remove(cardID) {
-				_, _ = e.placeFoundCard(g, obj, playerID, controllerID, player, cardID, dest)
+				_, _ = e.placeFoundCard(g, obj, playerID, controllerID, player, cardID, dest, zone.Library)
 			}
 		}
 	}
