@@ -1054,6 +1054,11 @@ func applyEntersAsCopy(ctx enterBattlefieldContext, g *game.Game, permanent *gam
 		static := body
 		values.Abilities = append(values.Abilities, &static)
 	}
+	// "except it has \"<quoted ability>\"" (Estrid's Invocation) grants the copy
+	// additional printed abilities. Appending them to the copiable values makes
+	// them part of the copy's copiable characteristics, so they persist on the
+	// copy and are themselves copiable if it is later copied (CR 706.2).
+	values.Abilities = append(values.Abilities, replacement.EntersAsCopyAddAbilities...)
 	// "except it's N/N" (Quicksilver Gargantuan) overrides the copiable power and
 	// toughness with a fixed size, so clear any characteristic-defining power or
 	// toughness carried over from the copied creature (CR 706.2).

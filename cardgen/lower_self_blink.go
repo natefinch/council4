@@ -1,6 +1,8 @@
 package cardgen
 
 import (
+	"fmt"
+
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/mtg/game"
@@ -134,4 +136,100 @@ func lowerDelayedSelfBlinkSequence(ctx contentCtx) (game.AbilityContent, bool) {
 		{Primitive: exile},
 		{Primitive: delayed},
 	}}.Ability(), true
+}
+
+// lowerImmediateSelfBlinkReturn lowers the immediate self-blink return clause of
+// an optional "you may exile this <permanent>. If you do, return it to the
+// battlefield [tapped] under [its owner's|your] control." trigger (Estrid's
+// Invocation's granted upkeep ability). Unlike lowerSelfBlinkSequence, whose
+// ", then return …" connective folds the whole two-effect body at once, the "If
+// you do, …" wording makes the return a separate sentence gated on the optional
+// self-exile, so it arrives as a standalone clause after the exile has already
+// been lowered into sequence. This mirrors lowerImmediateBlinkReturn for the
+// single-target flicker, but the exiled object is the source permanent itself and
+// the return's "it"/"its" co-references the source rather than a prior
+// instruction's target result. It rewrites the preceding self-exile instruction
+// to remember the exiled card under a linked key and returns the
+// put-onto-battlefield content; the optional-flow envelope then gates that put on
+// the exile succeeding. It fails closed for any shape it does not fully model.
+func lowerImmediateSelfBlinkReturn(
+	effects []compiler.CompiledEffect,
+	effectIndex int,
+	ctx contentCtx,
+	sequence []game.Instruction,
+) (game.Exile, game.AbilityContent, bool) {
+	// Invariant: ctx is the contextForEffect-narrowed per-clause effectAbility
+	// built at lowerOrderedEffectSequence and threaded through
+	// lowerDelayedSequenceClause, so content.Effects always holds exactly one
+	// clause effect; any other length is an upstream bug.
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf("lowerImmediateSelfBlinkReturn: expected a single effect, got %d", len(ctx.content.Effects)))
+	}
+	returnEffect := ctx.content.Effects[0]
+	if effectIndex == 0 ||
+		len(sequence) != effectIndex ||
+		effects[effectIndex-1].Kind != compiler.EffectExile ||
+		effects[effectIndex-1].DelayedTiming != 0 ||
+		returnEffect.Kind != compiler.EffectReturn ||
+		// Only an immediate return lowers here; a delayed return keeps its
+		// next-end-step timing and is wrapped in a delayed trigger elsewhere.
+		returnEffect.DelayedTiming != 0 ||
+		returnEffect.Negated ||
+		returnEffect.ToZone != zone.Battlefield ||
+		returnEffect.EntersColorChoice ||
+		returnEffect.EntersTypeChoice ||
+		returnEffect.EntersWithCounters ||
+		len(returnEffect.References) == 0 {
+		return game.Exile{}, game.AbilityContent{}, false
+	}
+	// The return's "it"/"its"/"this <permanent>" co-reference the just-exiled
+	// source permanent; one of them must name it directly ("it" or "this
+	// <permanent>") so the clause carries a return object.
+	hasDirectObject := false
+	for _, ref := range returnEffect.References {
+		if ref.Binding != compiler.ReferenceBindingSource {
+			return game.Exile{}, game.AbilityContent{}, false
+		}
+		switch {
+		case ref.Kind == compiler.ReferenceThisObject:
+			hasDirectObject = true
+		case ref.Kind == compiler.ReferencePronoun && ref.Pronoun == compiler.ReferencePronounIt:
+			hasDirectObject = true
+		case ref.Kind == compiler.ReferencePronoun && ref.Pronoun == compiler.ReferencePronounIts:
+		default:
+			return game.Exile{}, game.AbilityContent{}, false
+		}
+	}
+	if !hasDirectObject {
+		return game.Exile{}, game.AbilityContent{}, false
+	}
+	// "with a <kind> counter on it" rider: only fixed, known, positive counts of a
+	// known kind are modeled; every other counter form fails closed.
+	var entryCounters []game.CounterPlacement
+	if returnEffect.CounterKindKnown {
+		if !returnEffect.Amount.Known || returnEffect.Amount.Value < 1 {
+			return game.Exile{}, game.AbilityContent{}, false
+		}
+		entryCounters = []game.CounterPlacement{{
+			Kind:   returnEffect.CounterKind,
+			Amount: returnEffect.Amount.Value,
+		}}
+	}
+	// References validated — clear before fail-closed check.
+	consumed := ctx
+	consumed.content.References = nil
+	if consumed.content.Unconsumed() {
+		return game.Exile{}, game.AbilityContent{}, false
+	}
+	exile, ok := sequence[effectIndex-1].Primitive.(game.Exile)
+	if !ok ||
+		exile.Group.Valid() ||
+		(exile.Object != game.SourcePermanentReference() && exile.Object != game.SourceCardPermanentReference()) ||
+		exile.ExileLinkedKey != "" {
+		return game.Exile{}, game.AbilityContent{}, false
+	}
+	key := game.LinkedKey(fmt.Sprintf("self-blink-%d", effectIndex))
+	exile.ExileLinkedKey = key
+	put := selfBlinkPutOnBattlefield(key, returnEffect, entryCounters)
+	return exile, game.Mode{Sequence: []game.Instruction{{Primitive: put}}}.Ability(), true
 }

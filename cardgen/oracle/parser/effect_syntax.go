@@ -67,6 +67,7 @@ func emitResolvingSyntax(abilities []Ability) {
 		creditGoadCreatedTokensRider(&abilities[i])
 		creditEachOpponentAttackingUntapRider(&abilities[i])
 		attachGainGrantedAbilities(&abilities[i])
+		attachEntersAsCopyGrantedAbilities(&abilities[i])
 		attachEmblemEffects(&abilities[i])
 		recognizeControllerOptionalPaymentSequence(&abilities[i])
 		recognizeOptionalManaPaymentBenefitSequence(&abilities[i])
@@ -315,7 +316,62 @@ func attachGainGrantedAbilities(ability *Ability) {
 	}
 }
 
-// attachEmblemEffects reclassifies an "You get an emblem with \"...\"" effect,
+// attachEntersAsCopyGrantedAbilities binds the quoted ability of an
+// enters-as-copy "except it has \"<quoted ability>\"" rider (Estrid's
+// Invocation) to the EffectEnterAsCopy effect whose clause contains it, parsing
+// the quoted body through the same pipeline so downstream layers lower it from
+// the typed inner document. Only a single quoted triggered ability attaches,
+// matching the other granted-ability post-passes; anything else, or a quoted
+// body no single enters-as-copy clause contains, is left unattached so the
+// EntersAsCopyGrantedAbilityRider marker fails closed at lowering.
+func attachEntersAsCopyGrantedAbilities(ability *Ability) {
+	if len(ability.Quoted) == 0 {
+		return
+	}
+	for q := range ability.Quoted {
+		quoted := ability.Quoted[q]
+		effect := entersAsCopyEffectContainingSpan(ability, quoted.Span)
+		if effect == nil || !effect.EntersAsCopyGrantedAbilityRider ||
+			effect.EntersAsCopyGrantedAbility != nil {
+			continue
+		}
+		granted, ok := parseStaticGrantedAbility(quoted)
+		if !ok {
+			continue
+		}
+		if len(granted.document.Abilities) != 1 ||
+			granted.document.Abilities[0].Kind != AbilityTriggered {
+			continue
+		}
+		stored := granted
+		effect.EntersAsCopyGrantedAbility = &stored
+		effect.Exact = exactEffectSyntax(effect)
+	}
+}
+
+// entersAsCopyEffectContainingSpan returns the lone EffectEnterAsCopy effect
+// whose clause contains span. It returns nil when no such clause contains span,
+// or when more than one might, so an ambiguous granted-ability binding fails
+// closed.
+func entersAsCopyEffectContainingSpan(ability *Ability, span shared.Span) *EffectSyntax {
+	var match *EffectSyntax
+	for i := range ability.Sentences {
+		for j := range ability.Sentences[i].Effects {
+			effect := &ability.Sentences[i].Effects[j]
+			if effect.Kind != EffectEnterAsCopy ||
+				span.Start.Offset < effect.ClauseSpan.Start.Offset ||
+				span.End.Offset > effect.Span.End.Offset {
+				continue
+			}
+			if match != nil {
+				return nil
+			}
+			match = effect
+		}
+	}
+	return match
+}
+
 // which the sentence pipeline first models as a generic clause, into an
 // EffectCreateEmblem carrying each quoted ability parsed through the same
 // pipeline so downstream layers lower the emblem from the typed inner
@@ -6855,7 +6911,7 @@ func groupEntersTappedPermanentType(word string) (types.Card, bool) {
 // card stays unsupported.
 func parseEntersAsCopyEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
 	body := semanticEffectTokens(tokens)
-	if len(body) < 5 || body[len(body)-1].Kind != shared.Period {
+	if len(body) < 5 {
 		return nil, false
 	}
 	// An "As this <permanent> enters," replacement prefix frames the temporary
@@ -6866,6 +6922,21 @@ func parseEntersAsCopyEffect(sentence Sentence, tokens []shared.Token, atoms Ato
 	if afterPrefix, ok := entersAsCopyAsEntersPrefix(body); ok {
 		body = body[afterPrefix:]
 		viaAsEnters = true
+	}
+	if len(body) < 5 {
+		return nil, false
+	}
+	// A granted-ability rider ("except it has \"<quoted ability>\"") ends the
+	// sentence with a quoted ability whose closing quote — and the sentence period
+	// inside it — semanticEffectTokens strips, so the stripped body has no trailing
+	// period. Recognize that trailing quoted region so the copy still parses; its
+	// quoted ability is bound later by attachEntersAsCopyGrantedAbilities.
+	endsWithQuotedAbility := entersAsCopySentenceEndsWithQuote(sentence.Text)
+	bodyEnd := len(body)
+	if body[len(body)-1].Kind == shared.Period {
+		bodyEnd--
+	} else if !endsWithQuotedAbility {
+		return nil, false
 	}
 	words := normalizedWords(body)
 	// Only a self enters-as-copy is supported: "You may have this <permanent>
@@ -6905,15 +6976,16 @@ func parseEntersAsCopyEffect(sentence Sentence, tokens []shared.Token, atoms Ato
 		return nil, false
 	}
 	filterStart := copyIndex + 2
-	filterEnd := len(body) - 1
+	filterEnd := bodyEnd
 	var notLegendary bool
 	var addTypes []types.Card
 	var addSubtypes []types.Sub
 	var addKeywords []KeywordKind
 	var conditionalCounters []EntersAsCopyConditionalCounter
 	var basePower, baseToughness opt.V[int]
+	var grantedAbilityRider bool
 	if exceptIndex := entersAsCopyExceptIndex(body, filterStart); exceptIndex >= 0 {
-		riders, ok := parseEntersAsCopyRider(body[exceptIndex+1:len(body)-1], atoms)
+		riders, ok := parseEntersAsCopyRider(body[exceptIndex+1:bodyEnd], atoms)
 		if !ok {
 			return nil, false
 		}
@@ -6924,6 +6996,14 @@ func parseEntersAsCopyEffect(sentence Sentence, tokens []shared.Token, atoms Ato
 		conditionalCounters = riders.conditionalCounters
 		basePower = riders.basePower
 		baseToughness = riders.baseToughness
+		grantedAbilityRider = riders.grantedAbility
+		// The "it has \"<quoted ability>\"" rider strips to a bare "it has"; only
+		// accept it as a granted-ability rider when the sentence actually ends with
+		// the quoted ability. A bare "except it has." with no quoted ability is not
+		// a recognized rider, so fail the whole enters-as-copy parse closed.
+		if grantedAbilityRider && !endsWithQuotedAbility {
+			return nil, false
+		}
 		filterEnd = exceptIndex
 	}
 	filter := body[filterStart:filterEnd]
@@ -6980,6 +7060,7 @@ func parseEntersAsCopyEffect(sentence Sentence, tokens []shared.Token, atoms Ato
 		EntersAsCopyBasePower:                 basePower,
 		EntersAsCopyBaseToughness:             baseToughness,
 		EntersAsCopyMaxManaValueFromManaSpent: maxManaValueFromManaSpent,
+		EntersAsCopyGrantedAbilityRider:       grantedAbilityRider,
 	}
 	return []EffectSyntax{effect}, true
 }
@@ -7672,6 +7753,19 @@ func entersAsCopyExceptIndex(body []shared.Token, start int) int {
 	return -1
 }
 
+// entersAsCopySentenceEndsWithQuote reports whether the sentence's text ends
+// with a closing double quote, the shape a granted-ability rider ("except it has
+// \"<quoted ability>\"") takes when the quoted ability closes the sentence.
+// parseDelimited extracts the quoted region out of the token stream before this
+// recognizer runs, so the sentence text — which retains the quotation marks — is
+// the reliable signal that a trailing quoted ability was present. A trailing
+// sentence period after the closing quote is tolerated.
+func entersAsCopySentenceEndsWithQuote(text string) bool {
+	trimmed := strings.TrimRight(strings.TrimSpace(text), ".")
+	trimmed = strings.TrimSpace(trimmed)
+	return strings.HasSuffix(trimmed, "\"") || strings.HasSuffix(trimmed, "\u201d")
+}
+
 // entersAsCopyRiders collects the recognized copiable riders parsed from an
 // enters-as-copy "except <rider>" clause.
 type entersAsCopyRiders struct {
@@ -7685,6 +7779,11 @@ type entersAsCopyRiders struct {
 	// set together and unset when no size override is present.
 	basePower     opt.V[int]
 	baseToughness opt.V[int]
+	// grantedAbility reports the "it has \"<quoted ability>\"" copiable rider
+	// (Estrid's Invocation), whose quoted body semanticEffectTokens strips before
+	// this parser runs; the attachEntersAsCopyGrantedAbilities post-pass binds the
+	// stripped quoted ability afterward.
+	grantedAbility bool
 }
 
 // parseEntersAsCopyRider parses the recognized copiable riders of an
@@ -7719,6 +7818,13 @@ func parseEntersAsCopyRider(rider []shared.Token, atoms Atoms) (entersAsCopyRide
 			riders.addKeywords = append(riders.addKeywords, keyword)
 			continue
 		}
+		// "it has \"<quoted ability>\"" leaves exactly "it has" once
+		// semanticEffectTokens strips the quoted body; mark the granted-ability
+		// rider so the post-pass binds the stripped quoted ability.
+		if entersAsCopyGrantedAbilityClause(words) {
+			riders.grantedAbility = true
+			continue
+		}
 		cardTypes, subtypes, typeOK := entersAsCopyAddTypeClause(words)
 		if !typeOK {
 			return entersAsCopyRiders{}, false
@@ -7727,6 +7833,16 @@ func parseEntersAsCopyRider(rider []shared.Token, atoms Atoms) (entersAsCopyRide
 		riders.addSubtypes = append(riders.addSubtypes, subtypes...)
 	}
 	return riders, true
+}
+
+// entersAsCopyGrantedAbilityClause reports whether a rider clause is exactly
+// "it has", the residue left when semanticEffectTokens strips the quoted body of
+// the "it has \"<quoted ability>\"" copiable rider (Estrid's Invocation). The
+// quoted ability itself is bound later by attachEntersAsCopyGrantedAbilities; a
+// clause with any trailing word (a keyword, "haste") is handled by the keyword
+// rider instead, so only the bare two-word residue matches here.
+func entersAsCopyGrantedAbilityClause(words []string) bool {
+	return len(words) == 2 && words[0] == "it" && words[1] == "has"
 }
 
 // entersAsCopyAddKeywordClause matches the "it has <keyword>" copiable rider on

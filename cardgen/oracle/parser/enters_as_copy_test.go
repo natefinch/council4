@@ -181,3 +181,48 @@ func TestParseEntersAsCopyNotTappedByDefault(t *testing.T) {
 		t.Error("plain enters-as-copy must not set the enters-tapped rider")
 	}
 }
+
+func TestParseEntersAsCopyGrantedAbilityRider(t *testing.T) {
+	effect := entersAsCopyEffect(t, "Estrid's Invocation",
+		"You may have this enchantment enter as a copy of an enchantment you control, "+
+			"except it has \"At the beginning of your upkeep, you may exile this enchantment. "+
+			"If you do, return it to the battlefield under its owner's control.\"")
+	if !effect.EntersAsCopyOptional {
+		t.Error("expected optional copy")
+	}
+	if !effect.EntersAsCopyGrantedAbilityRider {
+		t.Fatal("expected granted-ability rider marker")
+	}
+	if effect.EntersAsCopyGrantedAbility == nil {
+		t.Fatal("granted ability was not bound by the attach pass")
+	}
+	inner, diags := effect.EntersAsCopyGrantedAbility.Inner()
+	if len(diags) != 0 {
+		t.Fatalf("granted ability inner parse diagnostics: %#v", diags)
+	}
+	if len(inner.Abilities) != 1 || inner.Abilities[0].Kind != AbilityTriggered {
+		t.Fatalf("granted ability = %#v, want a single triggered ability", inner.Abilities)
+	}
+	if effect.Selection.Controller != SelectionControllerYou {
+		t.Errorf("controller = %v, want you", effect.Selection.Controller)
+	}
+	if len(effect.Selection.RequiredTypesAny) != 1 || effect.Selection.RequiredTypesAny[0] != CardTypeEnchantment {
+		t.Errorf("required types = %v, want [enchantment]", effect.Selection.RequiredTypesAny)
+	}
+}
+
+func TestParseEntersAsCopyGrantedAbilityRequiresQuotedAbility(t *testing.T) {
+	// A bare "except it has" with no quoted ability must fail closed rather than
+	// recognizing a granted-ability rider with nothing bound.
+	doc, _ := Parse("You may have this enchantment enter as a copy of an enchantment you control, except it has.",
+		Context{CardName: "Not Estrid"})
+	for a := range doc.Abilities {
+		for s := range doc.Abilities[a].Sentences {
+			for _, effect := range doc.Abilities[a].Sentences[s].Effects {
+				if effect.EntersAsCopy {
+					t.Fatalf("bare \"except it has\" must not parse as an enters-as-copy effect: %#v", effect)
+				}
+			}
+		}
+	}
+}

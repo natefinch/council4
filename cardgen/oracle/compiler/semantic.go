@@ -2848,8 +2848,16 @@ type CompiledEffect struct {
 	// less than or equal to the amount of mana spent to cast this creature"
 	// copiable filter (Mockingbird).
 	EntersAsCopyMaxManaValueFromManaSpent bool
-	UnderYourControl                      bool
-	CastAsAdventure                       bool
+	// EntersAsCopyGrantedAbilityRider mirrors the parser's "except it has
+	// \"<quoted ability>\"" copiable rider (Estrid's Invocation). When set,
+	// EntersAsCopyGrantedAbility carries the granted ability's parsed syntax.
+	EntersAsCopyGrantedAbilityRider bool
+	// EntersAsCopyGrantedAbility mirrors the parser's granted quoted ability the
+	// enters-as-copy "except it has \"...\"" rider adds to the copy (Estrid's
+	// Invocation). It is nil unless EntersAsCopyGrantedAbilityRider is set.
+	EntersAsCopyGrantedAbility *parser.StaticGrantedAbilitySyntax
+	UnderYourControl           bool
+	CastAsAdventure            bool
 	// CastWithoutPayingManaCost mirrors the parser's free-cast rider flag for a
 	// cast effect ("... without paying its mana cost"). Lowering reads it to
 	// route the cast-for-free primitive; it is false for every other effect.

@@ -3432,6 +3432,10 @@ func lowerDelayedSequenceClause(
 		sequence[len(sequence)-1].Primitive = exile
 		return returnContent, true, false
 	}
+	if exile, returnContent, ok := lowerImmediateSelfBlinkReturn(effects, effectIndex, ctx, sequence); ok {
+		sequence[len(sequence)-1].Primitive = exile
+		return returnContent, true, false
+	}
 	if lowered, ok := lowerCharacteristicLifeRider(effects, effectIndex, ctx, sequence); ok {
 		if lowered.priorPrimitive != nil {
 			sequence[len(sequence)-1].Primitive = lowered.priorPrimitive

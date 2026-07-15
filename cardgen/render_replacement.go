@@ -1555,6 +1555,17 @@ func (r Renderer) renderEntersAsCopyReplacement(ctx *renderCtx, ability *game.Re
 	if ability.Replacement.EntersAsCopyTapped {
 		rendered = fmt.Sprintf("game.EntersTappedAsCopy(%s)", rendered)
 	}
+	if len(ability.Replacement.EntersAsCopyAddAbilities) > 0 {
+		added := make([]string, 0, len(ability.Replacement.EntersAsCopyAddAbilities))
+		for _, addAbility := range ability.Replacement.EntersAsCopyAddAbilities {
+			abilitySource, err := r.renderEmblemAbility(ctx, addAbility)
+			if err != nil {
+				return "", err
+			}
+			added = append(added, "new("+abilitySource+")")
+		}
+		rendered = fmt.Sprintf("game.EntersAsCopyWithAddedAbilities(%s, %s)", rendered, strings.Join(added, ", "))
+	}
 	return rendered, nil
 }
 

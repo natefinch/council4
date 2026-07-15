@@ -406,6 +406,8 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				EntersAsCopyBasePower:                 syntax.EntersAsCopyBasePower,
 				EntersAsCopyBaseToughness:             syntax.EntersAsCopyBaseToughness,
 				EntersAsCopyMaxManaValueFromManaSpent: syntax.EntersAsCopyMaxManaValueFromManaSpent,
+				EntersAsCopyGrantedAbilityRider:       syntax.EntersAsCopyGrantedAbilityRider,
+				EntersAsCopyGrantedAbility:            syntax.EntersAsCopyGrantedAbility,
 
 				BecomeCopyUntilEndOfTurn:     syntax.BecomeCopyUntilEndOfTurn,
 				BecomeCopyRetainsThisAbility: syntax.BecomeCopyRetainsThisAbility,
