@@ -13,12 +13,15 @@ import (
 // token. The counter clause's singular back-reference ("it" / "that token")
 // names the one token the prior clause created; the lowering realizes it by
 // publishing the token under createdTokenLinkKey and pointing the AddCounter at
-// that linked object, mirroring lowerManifestDreadThenCountersSequence. It is
-// restricted to a single-token creation (so the singular back-reference is
-// unambiguous) and a controller-context placement of a fixed, variable-X, or
-// recognized dynamic count of a placement-supported permanent counter kind,
-// failing closed for plural tokens, player counters, durations, targets,
-// conditions, modes, or any other shape.
+// that linked object, mirroring lowerManifestDreadThenCountersSequence. The
+// plural back-reference ("each of them" / "each of those", Assemble the Entmoot)
+// instead places one counter on every member of the published link group via an
+// AddCounter group, so it also supports a multi-token creation. It is restricted
+// to a controller-context placement of a fixed, variable-X, or recognized
+// dynamic count of a placement-supported permanent counter kind, failing closed
+// for player counters, durations, targets, conditions, modes, a plural recipient
+// without a group, or any other shape. A singular recipient still requires
+// exactly one created token so the back-reference stays unambiguous.
 func lowerCreateTokenThenCountersSequence(ctx contentCtx) (game.AbilityContent, bool) {
 	if len(ctx.content.Effects) != 2 ||
 		len(ctx.content.Targets) != 0 ||
@@ -33,9 +36,12 @@ func lowerCreateTokenThenCountersSequence(ctx contentCtx) (game.AbilityContent, 
 		counterEffect.Kind != compiler.EffectPut {
 		return game.AbilityContent{}, false
 	}
-	// The creation must make exactly one token so the singular back-reference
-	// "it"/"that token" denotes that one token without ambiguity.
-	if !createEffect.Amount.Known || createEffect.Amount.Value != 1 {
+	singular := createdTokenSingularBackReference(counterEffect.References)
+	plural := createdTokenPluralBackReference(counterEffect.References)
+	if !singular && !plural {
+		return game.AbilityContent{}, false
+	}
+	if singular && (!createEffect.Amount.Known || createEffect.Amount.Value != 1) {
 		return game.AbilityContent{}, false
 	}
 	if counterEffect.Negated ||
@@ -46,9 +52,6 @@ func lowerCreateTokenThenCountersSequence(ctx contentCtx) (game.AbilityContent, 
 		!counterEffect.CounterKindKnown ||
 		!compiler.CounterKindPlacementSupported(counterEffect.CounterKind) ||
 		counterEffect.CounterKind.PlayerOnly() {
-		return game.AbilityContent{}, false
-	}
-	if !createdTokenSingularBackReference(counterEffect.References) {
 		return game.AbilityContent{}, false
 	}
 	amount, ok := createdTokenCounterAmount(counterEffect.Amount)
@@ -63,16 +66,34 @@ func lowerCreateTokenThenCountersSequence(ctx contentCtx) (game.AbilityContent, 
 		len(createContent.Modes[0].Targets) != 0 {
 		return game.AbilityContent{}, false
 	}
+	addCounter := game.AddCounter{
+		Amount:      amount,
+		Object:      game.LinkedObjectReference(string(createdTokenLinkKey)),
+		CounterKind: counterEffect.CounterKind,
+	}
+	if plural {
+		// "on each of them" places one counter on every member of the created
+		// group, so drop the single-object reference and point the placement at
+		// the whole published link group instead.
+		addCounter.Object = game.ObjectReference{}
+		addCounter.Group = game.LinkedObjectsGroup(createdTokenLinkKey)
+	}
 	return game.Mode{
 		Sequence: []game.Instruction{
 			createContent.Modes[0].Sequence[0],
-			{Primitive: game.AddCounter{
-				Amount:      amount,
-				Object:      game.LinkedObjectReference(string(createdTokenLinkKey)),
-				CounterKind: counterEffect.CounterKind,
-			}},
+			{Primitive: addCounter},
 		},
 	}.Ability(), true
+}
+
+func createdTokenPluralBackReference(references []compiler.CompiledReference) bool {
+	if len(references) != 1 {
+		return false
+	}
+	reference := references[0]
+	return reference.Kind == compiler.ReferencePronoun &&
+		(reference.Pronoun == compiler.ReferencePronounThem ||
+			reference.Pronoun == compiler.ReferencePronounThose)
 }
 
 // createdTokenSingularBackReference reports whether the counter clause's only

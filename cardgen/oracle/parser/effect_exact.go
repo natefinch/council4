@@ -3295,9 +3295,16 @@ func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
 			// "Create an X/X ... token, where X is <dynamic>": the variable X sizes
 			// the token's printed power and toughness rather than counting tokens, so
 			// the count is the singular article and the trailing "where X is" clause
-			// binds the size. One such token is created.
+			// binds the size. One such token is created. A plural clause ("Create
+			// three ... X/X ... tokens, where X is <dynamic>.") records the explicit
+			// token count on TokenCount; reconstruct that count word and the plural
+			// noun so the byte-exact comparison succeeds.
+			countWord, noun := "an", "token"
+			if effect.TokenCount.Known && effect.TokenCount.Value >= 2 {
+				countWord, noun = tokenCountSourceText(effect), "tokens"
+			}
 			return createTokenControllerClauseMatches(exactEffectClauseText(effect),
-				specBody("an", "token")+", "+effect.Amount.Text+".")
+				specBody(countWord, noun)+", "+effect.Amount.Text+".")
 		}
 		return createTokenControllerClauseMatches(exactEffectClauseText(effect),
 			specBody("X", "tokens")+", "+effect.Amount.Text+".")
@@ -5491,43 +5498,7 @@ func exactCounterPlacementEffectSyntax(effect *EffectSyntax) bool {
 		// rather than by flipping the shared target exactness for every verb.
 		objects = append(objects, effect.Targets[0].Text)
 	case len(effect.Targets) == 0:
-		if effect.CounterRecipientAttached {
-			// The attached recipient is "enchanted creature" (Aura) or
-			// "equipped creature" (Equipment); both lower to the source's
-			// attached-permanent reference, so offer both candidates and let the
-			// byte-exact text match select the one the source printed.
-			objects = append(objects, "enchanted creature", "equipped creature")
-			break
-		}
-		// A trailing dynamic count ("… where X is the number of +1/+1 counters
-		// on this creature") carries its own referent inside the amount span;
-		// that referent names the counted subject, not the placement recipient,
-		// so exclude it before reconstructing the recipient.
-		recipientRefs := referencesOutsideSpan(effect.References, effect.Amount.Span)
-		// A filtered group recipient with a "with a <kind> counter on it/them"
-		// qualifier ("each creature you control with a +1/+1 counter on it")
-		// carries a trailing pronoun referent inside its own selection span that
-		// names the filtered permanent, not the recipient. Exclude it only for
-		// that qualifier so a recipient that genuinely is a referenced object
-		// ("Put a +1/+1 counter on this creature.") keeps its referent.
-		if effect.Selection.CounterRequired || effect.Selection.CounterAny {
-			recipientRefs = referencesOutsideSpan(recipientRefs, effect.Selection.Span)
-		}
-		if object, ok := exactObjectReferenceText(recipientRefs); ok {
-			objects = append(objects, object)
-		} else if object, ok := exactSelfSubjectReferenceText(recipientRefs); ok {
-			objects = append(objects, object)
-		} else if len(recipientRefs) == 0 {
-			// A non-target recipient is either a group ("each creature you
-			// control") or a single chooser ("a creature you control"); try both
-			// reconstructions and accept whichever matches the source text.
-			if object, ok := exactGroupDamagePermanentRecipientText(effect.Selection); ok {
-				objects = append(objects, object)
-			}
-			if object, ok := exactSingularChosenPermanentRecipientText(effect.Selection); ok {
-				objects = append(objects, object)
-			}
-		}
+		objects = append(objects, exactCounterPlacementNonTargetRecipients(effect)...)
 		if len(objects) == 0 {
 			return false
 		}
@@ -5545,9 +5516,63 @@ func exactCounterPlacementEffectSyntax(effect *EffectSyntax) bool {
 	return false
 }
 
-// counterPlacementTargetIsPlayerControls reports whether a counter-placement
-// target is the bare single player or opponent of a "<group> target <player|
-// opponent> controls" group recipient. The targeted player supplies the
+// exactCounterPlacementNonTargetRecipients reconstructs the canonical recipient
+// text candidates for a non-targeted counter placement (the len(Targets)==0
+// case of exactCounterPlacementEffectSyntax). It returns every candidate object
+// text the byte-exact comparison should try; an empty result means no supported
+// recipient shape matched. Splitting it out of the switch keeps the recipient
+// reconstruction's if/else-if chain from exceeding the control-nesting limit.
+func exactCounterPlacementNonTargetRecipients(effect *EffectSyntax) []string {
+	if effect.CounterRecipientAttached {
+		// The attached recipient is "enchanted creature" (Aura) or
+		// "equipped creature" (Equipment); both lower to the source's
+		// attached-permanent reference, so offer both candidates and let the
+		// byte-exact text match select the one the source printed.
+		return []string{"enchanted creature", "equipped creature"}
+	}
+	// A trailing dynamic count ("… where X is the number of +1/+1 counters
+	// on this creature") carries its own referent inside the amount span;
+	// that referent names the counted subject, not the placement recipient,
+	// so exclude it before reconstructing the recipient.
+	recipientRefs := referencesOutsideSpan(effect.References, effect.Amount.Span)
+	// A filtered group recipient with a "with a <kind> counter on it/them"
+	// qualifier ("each creature you control with a +1/+1 counter on it")
+	// carries a trailing pronoun referent inside its own selection span that
+	// names the filtered permanent, not the recipient. Exclude it only for
+	// that qualifier so a recipient that genuinely is a referenced object
+	// ("Put a +1/+1 counter on this creature.") keeps its referent.
+	if effect.Selection.CounterRequired || effect.Selection.CounterAny {
+		recipientRefs = referencesOutsideSpan(recipientRefs, effect.Selection.Span)
+	}
+	if object, ok := exactObjectReferenceText(recipientRefs); ok {
+		return []string{object}
+	}
+	if object, ok := exactSelfSubjectReferenceText(recipientRefs); ok {
+		return []string{object}
+	}
+	if object, ok := exactCreatedGroupReferenceText(recipientRefs); ok {
+		// "Put a reach counter on each of them." (Assemble the Entmoot)
+		// places one counter on each member of a plural back-reference to a
+		// group the prior clause created; the recipient is the single plural
+		// pronoun "them"/"those", reconstructed as "each of <pronoun>".
+		return []string{object}
+	}
+	if len(recipientRefs) != 0 {
+		return nil
+	}
+	// A non-target recipient is either a group ("each creature you control")
+	// or a single chooser ("a creature you control"); try both reconstructions
+	// and accept whichever matches the source text.
+	var objects []string
+	if object, ok := exactGroupDamagePermanentRecipientText(effect.Selection); ok {
+		objects = append(objects, object)
+	}
+	if object, ok := exactSingularChosenPermanentRecipientText(effect.Selection); ok {
+		objects = append(objects, object)
+	}
+	return objects
+}
+
 // recipient group's controller relationship rather than receiving the counter
 // itself, so this target is reconstructed jointly with the recipient group
 // (counterPlacementTargetPlayerControlsObject) rather than through the standard
@@ -5804,6 +5829,20 @@ func effectAmountSourceText(effect *EffectSyntax) string {
 		}
 	}
 	return effect.Amount.Text
+}
+
+// tokenCountSourceText returns the verbatim count word of a variable "X/X"
+// token's explicit TokenCount ("three"), located by span in the effect's tokens
+// so the byte-exact clause reconstruction prints the printed number rather than
+// its decimal form. It falls back to the amount's canonical text when no token
+// span matches.
+func tokenCountSourceText(effect *EffectSyntax) string {
+	for _, token := range effect.Tokens {
+		if token.Span == effect.TokenCount.Span {
+			return token.Text
+		}
+	}
+	return effect.TokenCount.Text
 }
 
 // exactGainPlayerCounterEffectSyntax recognizes the player-counter gain effect

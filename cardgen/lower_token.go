@@ -422,12 +422,14 @@ func createTokenAmountAndSize(ctx contentCtx, effect *compiler.CompiledEffect, a
 // Three shapes are recognized. A clause that binds X to a cost amount ("...
 // where X is the life paid as this entered") carries that binding in
 // TokenPTDynamic, and its count is the ordinary article/number amount. A "create
-// an X/X ... where X is <dynamic>" clause routes the size dynamic onto the
+// [N] X/X ... where X is <dynamic>" clause routes the size dynamic onto the
 // effect's amount during parsing (the trailing "where X is" clause overrides the
-// singular article), so the amount is the size and exactly one token is created.
-// A fixed-count clause ("create two X/X ... tokens") whose X has no separate
-// definition takes its size from the spell's own X. Every other shape, including
-// a variable-count clause with no size binding, fails closed.
+// singular article), so the amount is the size; the singular article creates one
+// token while an explicit plural count ("Create three ... X/X ... tokens, where
+// X is <dynamic>.") is carried on TokenCount and creates that many. A fixed-count
+// clause ("create two X/X ... tokens") whose X has no separate definition takes
+// its size from the spell's own X. Every other shape, including a variable-count
+// clause with no size binding, fails closed.
 func variableTokenSize(ctx contentCtx, effect *compiler.CompiledEffect, amountObject game.ObjectReference) (size game.Quantity, count game.Quantity, ok bool) {
 	if effect.Amount.DynamicForm == compiler.DynamicAmountWhereX &&
 		effect.Amount.DynamicKind != compiler.DynamicAmountNone {
@@ -435,7 +437,14 @@ func variableTokenSize(ctx contentCtx, effect *compiler.CompiledEffect, amountOb
 		if !ok {
 			return game.Quantity{}, game.Quantity{}, false
 		}
-		return quantity, game.Fixed(1), true
+		tokenCount := game.Fixed(1)
+		if effect.TokenCount.Known {
+			if effect.TokenCount.Value < 1 {
+				return game.Quantity{}, game.Quantity{}, false
+			}
+			tokenCount = game.Fixed(effect.TokenCount.Value)
+		}
+		return quantity, tokenCount, true
 	}
 	if effect.Amount.Known {
 		if effect.Amount.Value < 1 {
