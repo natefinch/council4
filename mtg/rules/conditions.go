@@ -119,6 +119,15 @@ func aggregateValue(g *game.Game, ctx conditionContext, kind game.AggregateKind)
 		return anyOpponentDamageTakenThisTurn(g, ctx.controller), true
 	case game.AggregateAnyOpponentLifeLostThisTurn:
 		return anyOpponentLifeLostThisTurn(g, ctx.controller), true
+	case game.AggregateAttackersInBatchAttackedController:
+		event := ctx.event
+		if event == nil && ctx.obj != nil && ctx.obj.HasTriggerEvent {
+			event = &ctx.obj.TriggerEvent
+		}
+		if event == nil {
+			return 0, false
+		}
+		return attackersInBatchAttackedControllerDirectly(g, event, ctx.controller), true
 	case game.AggregateMinPlayerLibrarySize:
 		return minPlayerLibrarySize(g), true
 	default:
@@ -427,6 +436,43 @@ func attackersAttackingPlayerCount(g *game.Game, player game.PlayerID) int {
 	count := 0
 	for _, declaration := range g.Combat.Attackers {
 		if declaration.Target.Player == player && declaration.Target.BattleID == 0 {
+			count++
+		}
+	}
+	return count
+}
+
+// attackersInBatchAttackedControllerDirectly counts the attackers in the
+// triggering attack batch that were declared attacking the given controller as
+// a player directly. The batch is the set of EventAttackerDeclared events
+// sharing the trigger event's SimultaneousID (or the single triggering event
+// when the declaration named only one attacker). Only a direct attack on the
+// controller counts (AttackTarget.IsPlayerAttack with Player equal to the
+// controller); attacks on another player, on any planeswalker, or on a battle
+// are excluded, matching "attacked you" (CR 508.1). Reading the declared batch
+// from the recorded events rather than live combat keeps the count stable when
+// a declared attacker later leaves combat or the ability's source changes
+// controller. It backs the "if none of those creatures attacked you" gate
+// (Firemane Commando) when compared as "at most zero".
+func attackersInBatchAttackedControllerDirectly(g *game.Game, trigger *game.Event, controller game.PlayerID) int {
+	if trigger == nil || trigger.Kind != game.EventAttackerDeclared {
+		return 0
+	}
+	attackedDirectly := func(target game.AttackTarget) bool {
+		return target.IsPlayerAttack() && target.Player == controller
+	}
+	if trigger.SimultaneousID == 0 {
+		if attackedDirectly(trigger.AttackTarget) {
+			return 1
+		}
+		return 0
+	}
+	count := 0
+	for i := range g.Events {
+		event := &g.Events[i]
+		if event.Kind == game.EventAttackerDeclared &&
+			event.SimultaneousID == trigger.SimultaneousID &&
+			attackedDirectly(event.AttackTarget) {
 			count++
 		}
 	}

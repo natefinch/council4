@@ -4,6 +4,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 )
@@ -27,6 +28,40 @@ func TestCompileTriggeredAbility(t *testing.T) {
 	}
 	if len(ability.Content.Effects) != 1 || ability.Content.Effects[0].Kind != EffectDraw {
 		t.Fatalf("effects = %#v", ability.Content.Effects)
+	}
+}
+
+// TestCompileAttackBatchEventPlayerDrawGate verifies Firemane Commando's second
+// trigger "Whenever another player attacks with two or more creatures, they draw
+// a card if none of those creatures attacked you." compiles to an
+// opponent-controller attacker-declared pattern scoped by attacker count, an
+// event-player draw effect, and a trailing effect-gate condition carrying the
+// no-attacker-attacked-controller predicate (not an intervening condition).
+func TestCompileAttackBatchEventPlayerDrawGate(t *testing.T) {
+	t.Parallel()
+	source := "Whenever another player attacks with two or more creatures, they draw a card if none of those creatures attacked you."
+	compilation, diagnostics := compileSource(source, pipelineContext{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	ability := compilation.Abilities[0]
+	if ability.Trigger == nil ||
+		ability.Trigger.Pattern.Event != TriggerEventAttackerDeclared ||
+		ability.Trigger.Pattern.Controller != ControllerOpponent ||
+		ability.Trigger.Pattern.AttackerCountAtLeast != 2 {
+		t.Fatalf("trigger pattern = %#v", ability.Trigger)
+	}
+	if ability.Trigger.Condition != nil {
+		t.Fatalf("gate must not be an intervening condition: %#v", ability.Trigger.Condition)
+	}
+	if len(ability.Content.Effects) != 1 ||
+		ability.Content.Effects[0].Kind != EffectDraw ||
+		ability.Content.Effects[0].Context != parser.EffectContextEventPlayer {
+		t.Fatalf("effects = %#v", ability.Content.Effects)
+	}
+	if len(ability.Content.Conditions) != 1 ||
+		ability.Content.Conditions[0].Predicate != ConditionPredicateNoAttackerAttackedController {
+		t.Fatalf("conditions = %#v", ability.Content.Conditions)
 	}
 }
 

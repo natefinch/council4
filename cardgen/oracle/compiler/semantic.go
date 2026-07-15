@@ -876,6 +876,15 @@ const (
 	// Mangara, the Diplomat). It gates the trigger's intervening-if condition
 	// against live combat state.
 	ConditionPredicateAttackersAttackingControllerAtLeast
+	// ConditionPredicateNoAttackerAttackedController is satisfied when none of
+	// the attackers declared by the triggering "another player attacks with two
+	// or more creatures" event attacked the context controller as a player
+	// directly ("if none of those creatures attacked you"; Firemane Commando).
+	// Attacks on another player, on any planeswalker, or on a battle do not
+	// count, so a mixed batch that never declared a direct attack on the
+	// controller satisfies it. It gates the trigger's intervening-if condition
+	// against the declared attack batch.
+	ConditionPredicateNoAttackerAttackedController
 	// ConditionPredicateControllerLibrarySizeAtLeast is satisfied when the
 	// controller's library holds at least Threshold cards ("if you have 200 or
 	// more cards in your library", Battle of Wits).
