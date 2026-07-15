@@ -2069,6 +2069,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			CounterKindChoices:            counterKindChoices,
 			CounterRecipientAttached:      counterRecipientAttached(kind, counterKnown, clause),
 			FightSubjectAttached:          fightSubjectAttached(kind, tokens[ownershipStart:tokenIndex]),
+			CorrelatedDistributiveFight:   correlatedDistributiveFightClause(kind, tokens[ownershipStart:tokenIndex], clause),
 			MoveCountersAll:               kind == EffectMoveCounters && moveAllCountersClause(clause),
 			MoveCountersAllOfKind:         kind == EffectMoveCounters && counterKnown && moveAllOfKindCountersClause(clause),
 			RemoveCountersAll:             kind == EffectRemoveCounter && removeAllCountersClause(clause),
@@ -8505,6 +8506,26 @@ func fightSubjectAttached(kind EffectKind, subject []shared.Token) bool {
 	}
 	return effectHasTokenWords(subject, "enchanted", "creature") ||
 		effectHasTokenWords(subject, "equipped", "creature")
+}
+
+// correlatedDistributiveFightClause reports the distributive one-to-one fight
+// form "Each of those <A> fights a different one of those <B>." (Ezuri's
+// Predation). The subject anaphor "those <A>" names one group and the object
+// anaphor "a different one of those <B>" names another, with each subject member
+// fighting a distinct object member. It anchors on the leading "each of those"
+// distributive subject and the "a different one of those" object run following
+// the verb, so a plain single-fight clause ("<X> fights <Y>.") and every
+// non-distributive fight leave it false and lower through the existing
+// single-fight paths. The clause is meaningful only when a paired for-each count
+// clause creates one subject per counted permanent; the sequence lowerer verifies
+// that pairing. subject is the run before the fight verb; object is the clause
+// after it.
+func correlatedDistributiveFightClause(kind EffectKind, subject, object []shared.Token) bool {
+	if kind != EffectFight {
+		return false
+	}
+	return effectWordsAt(subject, 0, "each", "of", "those") &&
+		effectWordsAt(object, 0, "a", "different", "one", "of", "those")
 }
 
 // moveAllCountersClause reports the kind-agnostic "move all counters" form,

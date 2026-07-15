@@ -142,6 +142,12 @@ func appendPrimitiveAtoms(atoms []EffectAtom, primitive game.Primitive) []Effect
 		// The value is damaging the opposing creature, so treat it as targeted
 		// damage; the target-value scoring resolves it against the fight's targets.
 		return append(atoms, EffectAtom{Kind: EffectDamageDealt, Affected: AffectedTarget})
+	case game.CorrelatedFight:
+		// A correlated fight pairs a created-token group with a counted-permanent
+		// group and fights each pair (Ezuri's Predation), damaging an
+		// indeterminate number of opposing creatures; value it as dynamic
+		// targeted damage, matching the single Fight's targeted-damage atom.
+		return append(atoms, EffectAtom{Kind: EffectDamageDealt, IsDynamic: true, Affected: AffectedTarget})
 	case game.Monstrosity:
 		// Monstrosity puts +1/+1 counters on the controller's own creature and
 		// makes it monstrous (CR 701.33) — board-boosting counters.

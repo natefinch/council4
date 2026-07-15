@@ -623,6 +623,8 @@ func (r Renderer) renderPrimitiveTail(ctx *renderCtx, primitive game.Primitive) 
 		return r.renderModifyPT(ctx, &value)
 	case game.PrimitiveFight:
 		return r.renderFightPrimitive(primitive)
+	case game.PrimitiveCorrelatedFight:
+		return r.renderCorrelatedFightPrimitive(primitive)
 	case game.PrimitiveChoose:
 		value, err := assertPrimitive[game.Choose](primitive)
 		if err != nil {

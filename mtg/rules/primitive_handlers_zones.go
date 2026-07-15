@@ -567,6 +567,9 @@ func handleCreateToken(r *effectResolver, prim game.CreateToken) effectResolved 
 	if spec, ok := prim.Source.TokenCopy(); ok && spec.Source == game.TokenCopySourceChosenControlledCreatureToken {
 		return r.populate(prim, spec, recipient)
 	}
+	if prim.PublishCountGroup != "" {
+		r.publishCountGroup(prim)
+	}
 	token, ok := r.typedTokenDefinition(prim.Source)
 	if !ok {
 		return res
@@ -608,6 +611,28 @@ func handleCreateToken(r *effectResolver, prim game.CreateToken) effectResolved 
 	}
 	res.succeeded = res.amount > 0
 	return res
+}
+
+// publishCountGroup snapshots the permanents that a DynamicAmountCountSelector
+// amount counted into an object-scoped linked group, so a later CorrelatedFight
+// (or any consumer of the group) can pair against the exact set of permanents
+// whose count produced the tokens. The snapshot is taken before the tokens are
+// created so the freshly created tokens can never be mistaken for members of the
+// counted set. Members are recorded in board order by object ID, and departed or
+// control-changed permanents are re-resolved by ID at consumption time, so the
+// group preserves the one-to-one correspondence that "Each of those tokens
+// fights a different one of those creatures" (Ezuri's Predation) requires.
+func (r *effectResolver) publishCountGroup(prim game.CreateToken) {
+	dynamic := prim.Amount.DynamicAmount()
+	if !dynamic.Exists {
+		return
+	}
+	members := r.groupPermanents(dynamic.Val.Group)
+	key := linkedObjectSourceKey(r.game, r.obj, string(prim.PublishCountGroup))
+	clearLinkedObjects(r.game, key)
+	for _, permanent := range members {
+		rememberLinkedObject(r.game, key, game.LinkedObjectRef{ObjectID: permanent.ObjectID, CardID: permanent.CardInstanceID})
+	}
 }
 
 func (r *effectResolver) populate(prim game.CreateToken, spec game.TokenCopySpec, recipient game.PlayerID) effectResolved {

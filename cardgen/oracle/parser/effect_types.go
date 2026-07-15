@@ -2508,6 +2508,15 @@ type EffectSyntax struct {
 	// source attached-permanent reference. It is set only for the bare attached
 	// fighter; every other fight subject leaves it false so lowering fails closed.
 	FightSubjectAttached bool `json:",omitempty"`
+	// CorrelatedDistributiveFight reports the distributive one-to-one fight form
+	// "Each of those <A> fights a different one of those <B>." (Ezuri's
+	// Predation), where each member of the subject anaphor "those <A>" fights a
+	// distinct member of the object anaphor "those <B>". The paired for-each
+	// count clause creates one subject token per counted permanent, so the two
+	// anaphoric groups are equinumerous and the runtime pairs them by shared
+	// position. It is set only for this exact distributive shape; every other
+	// fight subject leaves it false so lowering keeps the single-fight paths.
+	CorrelatedDistributiveFight bool `json:",omitempty"`
 	// CounterRecipientSingleChoice reports that a non-target counter-placement
 	// effect places its counters on a single permanent the controller chooses
 	// from a battlefield group ("put a vigilance counter on a creature you

@@ -808,6 +808,9 @@ func (r Renderer) renderCreateToken(ctx *renderCtx, value game.CreateToken) (str
 	if value.PublishLinked != "" {
 		fields = append(fields, fmt.Sprintf("PublishLinked: game.LinkedKey(%q),", string(value.PublishLinked)))
 	}
+	if value.PublishCountGroup != "" {
+		fields = append(fields, fmt.Sprintf("PublishCountGroup: game.LinkedKey(%q),", string(value.PublishCountGroup)))
+	}
 	return structLit("game.CreateToken", fields), nil
 }
 
@@ -2057,6 +2060,17 @@ func (r Renderer) renderFightPrimitive(primitive game.Primitive) (string, error)
 	return structLit("game.Fight", []string{
 		fmt.Sprintf("Object: %s,", object),
 		fmt.Sprintf("RelatedObject: %s,", related),
+	}), nil
+}
+
+func (Renderer) renderCorrelatedFightPrimitive(primitive game.Primitive) (string, error) {
+	value, err := assertPrimitive[game.CorrelatedFight](primitive)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.CorrelatedFight", []string{
+		fmt.Sprintf("Subjects: %q,", string(value.Subjects)),
+		fmt.Sprintf("Objects: %q,", string(value.Objects)),
 	}), nil
 }
 func (r Renderer) renderAttachPrimitive(primitive game.Primitive) (string, error) {

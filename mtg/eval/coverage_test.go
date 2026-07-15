@@ -90,7 +90,11 @@ import (
 // Incubator token with +1/+1 counters for a player who is typically the exiled
 // permanent's controller (an opponent), so its board payoff is player-relative
 // and not modeled by the single-target atom heuristic.
-const knownPrimitiveCount = 133
+//
+// CorrelatedFight pairs a created-token group with a counted-permanent group and
+// fights each pair (Ezuri's Predation); it is valued as dynamic targeted damage,
+// mirroring the single Fight's targeted-damage atom.
+const knownPrimitiveCount = 134
 
 // TestPrimitiveCountIsReconciled keeps a newly added resolution primitive from
 // silently falling through the translator: adding one trips this guard so its
