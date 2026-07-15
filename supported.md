@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,989 of 32,501 cards eligible for paper support (55.3%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,990 of 32,501 cards eligible for paper support (55.4%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -3915,6 +3915,7 @@ Council4 currently supports **17,989 of 32,501 cards eligible for paper support 
 - Disperse
 - Dispersing Orb
 - Displace
+- Displaced Dinosaurs
 - Displacer Kitten
 - Disposal Mummy
 - Disrupt
