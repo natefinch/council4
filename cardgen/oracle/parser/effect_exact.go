@@ -549,10 +549,11 @@ func exactSelfSacrificeEffectSyntax(effect *EffectSyntax) bool {
 }
 
 func exactSacrificeChoiceEffectSyntax(effect *EffectSyntax) bool {
-	// Spelled cardinal amounts run from "one" through "ten"; the runtime
-	// SacrificePermanents primitive carries a fixed count, so every amount in
-	// that range reconstructs and lowers uniformly across subjects.
-	if !effect.Amount.Known || effect.Amount.Value < 1 || effect.Amount.Value > 10 {
+	// Spelled cardinal amounts run from "one" through "twenty", the full
+	// CardinalWordValue vocabulary; the runtime SacrificePermanents primitive
+	// carries a fixed count, so every amount in that range reconstructs and
+	// lowers uniformly across subjects.
+	if !effect.Amount.Known || effect.Amount.Value < 1 || effect.Amount.Value > 20 {
 		return false
 	}
 	nouns, ok := sacrificeChoiceNounCandidates(&effect.Selection, effect.Amount.Value > 1)

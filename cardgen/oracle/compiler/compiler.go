@@ -85,14 +85,15 @@ func compileAbility(
 	}
 	if ability.AlternativeCost != nil {
 		compiled.AlternativeCost = &CompiledAlternativeCost{
-			Kind:                  compileAlternativeCostKind(ability.AlternativeCost.Kind),
-			Condition:             compileAlternativeCostCondition(ability.AlternativeCost.Condition),
-			ConditionSubtype:      ability.AlternativeCost.ConditionSubtype,
-			ConditionCount:        ability.AlternativeCost.ConditionCount,
-			ConditionExactly:      ability.AlternativeCost.ConditionExactly,
-			WithoutPayingManaCost: ability.AlternativeCost.WithoutPayingManaCost,
-			ManaCost:              slices.Clone(ability.AlternativeCost.ManaCost),
-			ReplaceTargetWithEach: ability.AlternativeCost.ReplaceTargetWithEach,
+			Kind:                   compileAlternativeCostKind(ability.AlternativeCost.Kind),
+			Condition:              compileAlternativeCostCondition(ability.AlternativeCost.Condition),
+			ConditionSubtype:       ability.AlternativeCost.ConditionSubtype,
+			ConditionCount:         ability.AlternativeCost.ConditionCount,
+			ConditionExactly:       ability.AlternativeCost.ConditionExactly,
+			ConditionPermanentType: compileAlternativeCostConditionCardType(ability.AlternativeCost.ConditionCardType),
+			WithoutPayingManaCost:  ability.AlternativeCost.WithoutPayingManaCost,
+			ManaCost:               slices.Clone(ability.AlternativeCost.ManaCost),
+			ReplaceTargetWithEach:  ability.AlternativeCost.ReplaceTargetWithEach,
 		}
 	}
 	if kind == AbilityTriggered {
@@ -405,6 +406,8 @@ func compileAlternativeCostCondition(condition parser.SpellAlternativeCostCondit
 		return AlternativeCostConditionOpponentGainedLifeThisTurn
 	case parser.SpellAlternativeCostConditionCreaturesAttacking:
 		return AlternativeCostConditionCreaturesAttacking
+	case parser.SpellAlternativeCostConditionPermanentsOnBattlefield:
+		return AlternativeCostConditionPermanentsOnBattlefield
 	default:
 		return AlternativeCostConditionUnknown
 	}

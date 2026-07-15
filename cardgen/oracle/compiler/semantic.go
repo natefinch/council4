@@ -288,6 +288,11 @@ const (
 	// cost behind an attacking-creature count carried on the
 	// CompiledAlternativeCost's ConditionCount (and ConditionExactly) fields.
 	AlternativeCostConditionCreaturesAttacking
+	// AlternativeCostConditionPermanentsOnBattlefield gates a mana-only
+	// alternative cost behind a battlefield permanent count (Blasphemous Edict).
+	// The threshold rides on the CompiledAlternativeCost's ConditionCount field
+	// and the counted permanent type on its ConditionPermanentType field.
+	AlternativeCostConditionPermanentsOnBattlefield
 )
 
 // AlternativeCostKind identifies the semantic rules change attached to an
@@ -336,12 +341,17 @@ type CompiledAlternativeCost struct {
 	Condition        AlternativeCostCondition
 	ConditionSubtype types.Sub
 	// ConditionCount and ConditionExactly carry the attacking-creature threshold
-	// for an AlternativeCostConditionCreaturesAttacking condition.
-	ConditionCount        int
-	ConditionExactly      bool
-	WithoutPayingManaCost bool
-	ManaCost              cost.Mana
-	ReplaceTargetWithEach bool
+	// for an AlternativeCostConditionCreaturesAttacking condition, or the
+	// battlefield permanent threshold for an
+	// AlternativeCostConditionPermanentsOnBattlefield condition.
+	ConditionCount   int
+	ConditionExactly bool
+	// ConditionPermanentType carries the counted permanent type for an
+	// AlternativeCostConditionPermanentsOnBattlefield condition.
+	ConditionPermanentType types.Card
+	WithoutPayingManaCost  bool
+	ManaCost               cost.Mana
+	ReplaceTargetWithEach  bool
 }
 
 // ActivationTimingKind identifies an exact restriction on when an activated

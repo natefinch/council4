@@ -416,11 +416,12 @@ func lowerManaAlternativeCost(cardName string, ability compiler.CompiledAbility)
 	}
 	return abilityLowering{
 		alternativeCosts: []cost.Alternative{{
-			Label:            "Pay " + alternative.ManaCost.String(),
-			ManaCost:         opt.Val(slices.Clone(alternative.ManaCost)),
-			Condition:        lowered.Condition,
-			ConditionCount:   lowered.Count,
-			ConditionExactly: lowered.Exactly,
+			Label:                  "Pay " + alternative.ManaCost.String(),
+			ManaCost:               opt.Val(slices.Clone(alternative.ManaCost)),
+			Condition:              lowered.Condition,
+			ConditionCount:         lowered.Count,
+			ConditionExactly:       lowered.Exactly,
+			ConditionPermanentType: lowered.PermanentType,
 		}},
 		consumed: semanticConsumption{
 			alternativeCost: true,
@@ -431,18 +432,19 @@ func lowerManaAlternativeCost(cardName string, ability compiler.CompiledAbility)
 }
 
 // loweredManaAlternativeCondition is a compiled mana-only alternative-cost
-// condition lowered onto its runtime condition, attacking-creature count, and
-// exact-comparison flag.
+// condition lowered onto its runtime condition, count threshold, exact-comparison
+// flag, and (for a board-state gate) the counted permanent type.
 type loweredManaAlternativeCondition struct {
-	Condition cost.AlternativeCondition
-	Count     int
-	Exactly   bool
+	Condition     cost.AlternativeCondition
+	Count         int
+	Exactly       bool
+	PermanentType types.Card
 }
 
 // lowerManaAlternativeCostCondition maps a compiled mana-only alternative-cost
-// condition onto its runtime condition, attacking-creature count, and
-// exact-comparison flag. It fails closed on any condition the mana-only family
-// does not model.
+// condition onto its runtime condition, count threshold, exact-comparison flag,
+// and counted permanent type. It fails closed on any condition the mana-only
+// family does not model.
 func lowerManaAlternativeCostCondition(alternative *compiler.CompiledAlternativeCost) (loweredManaAlternativeCondition, bool) {
 	switch alternative.Condition {
 	case compiler.AlternativeCostConditionUnknown:
@@ -457,6 +459,15 @@ func lowerManaAlternativeCostCondition(alternative *compiler.CompiledAlternative
 			Condition: cost.AlternativeConditionCreaturesAttacking,
 			Count:     alternative.ConditionCount,
 			Exactly:   alternative.ConditionExactly,
+		}, true
+	case compiler.AlternativeCostConditionPermanentsOnBattlefield:
+		if alternative.ConditionCount < 1 || alternative.ConditionPermanentType == "" {
+			return loweredManaAlternativeCondition{}, false
+		}
+		return loweredManaAlternativeCondition{
+			Condition:     cost.AlternativeConditionPermanentsOnBattlefield,
+			Count:         alternative.ConditionCount,
+			PermanentType: alternative.ConditionPermanentType,
 		}, true
 	default:
 		return loweredManaAlternativeCondition{}, false

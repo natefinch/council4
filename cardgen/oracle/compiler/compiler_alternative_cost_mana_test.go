@@ -2,6 +2,8 @@ package compiler
 
 import (
 	"testing"
+
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 func compileManaAlternative(t *testing.T, source string) *CompiledAlternativeCost {
@@ -62,5 +64,31 @@ func TestCompileCreaturesAttackingManaAlternativeCost(t *testing.T) {
 	}
 	if alternative.ManaCost.String() != "{W}" {
 		t.Fatalf("mana cost = %q, want {W}", alternative.ManaCost.String())
+	}
+}
+
+// TestCompilePermanentsOnBattlefieldManaAlternativeCost proves Blasphemous
+// Edict's board-state gate compiles to the typed permanents-on-battlefield
+// condition, carrying the threshold on ConditionCount and the counted permanent
+// type on ConditionPermanentType.
+func TestCompilePermanentsOnBattlefieldManaAlternativeCost(t *testing.T) {
+	t.Parallel()
+	alternative := compileManaAlternative(t,
+		"You may pay {B} rather than pay this spell's mana cost if there are thirteen or more creatures on the battlefield.\n"+
+			"Each player sacrifices thirteen creatures of their choice.")
+	if alternative.Condition != AlternativeCostConditionPermanentsOnBattlefield {
+		t.Fatalf("condition = %#v, want permanents-on-battlefield", alternative.Condition)
+	}
+	if alternative.ConditionCount != 13 {
+		t.Fatalf("count = %d, want 13", alternative.ConditionCount)
+	}
+	if alternative.ConditionPermanentType != types.Creature {
+		t.Fatalf("permanent type = %#v, want creature", alternative.ConditionPermanentType)
+	}
+	if alternative.ConditionExactly {
+		t.Fatal("board-state gate must never be an exact-count comparison")
+	}
+	if alternative.ManaCost.String() != "{B}" {
+		t.Fatalf("mana cost = %q, want {B}", alternative.ManaCost.String())
 	}
 }

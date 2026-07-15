@@ -429,8 +429,8 @@ func commandZonePhrase(tokens []shared.Token) bool {
 	}
 }
 
-// CardinalWordValue maps an Oracle cardinal number word ("one" … "ten") to its
-// integer value. It owns the full small-cardinal vocabulary; callers apply
+// CardinalWordValue maps an Oracle cardinal number word ("one" … "twenty") to
+// its integer value. It owns the full small-cardinal vocabulary; callers apply
 // their own numeric range policy to the typed value.
 func CardinalWordValue(word string) (int, bool) {
 	switch strings.ToLower(word) {
