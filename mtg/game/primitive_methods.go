@@ -113,6 +113,9 @@ func (Fight) Kind() PrimitiveKind { return PrimitiveFight }
 // Kind implements Primitive for CorrelatedFight.
 func (CorrelatedFight) Kind() PrimitiveKind { return PrimitiveCorrelatedFight }
 
+// Kind implements Primitive for ExileTargetSpells.
+func (ExileTargetSpells) Kind() PrimitiveKind { return PrimitiveExileTargetSpells }
+
 // Kind implements Primitive for Tap.
 func (Tap) Kind() PrimitiveKind { return PrimitiveTap }
 
@@ -440,6 +443,7 @@ func (PlayerMayPayGenericOrRule) isPrimitive()            {}
 func (ModifyPT) isPrimitive()                             {}
 func (Fight) isPrimitive()                                {}
 func (CorrelatedFight) isPrimitive()                      {}
+func (ExileTargetSpells) isPrimitive()                    {}
 func (Tap) isPrimitive()                                  {}
 func (TapOrUntap) isPrimitive()                           {}
 func (Search) isPrimitive()                               {}
@@ -751,9 +755,10 @@ func (p SacrificePermanents) instructionRefs() primitiveRefs {
 func (p Untap) instructionRefs() primitiveRefs {
 	return mergePrimitiveRefs(objectReferenceRefs(p.Object), quantityRefs(p.Amount))
 }
-func (SkipNextUntap) instructionRefs() primitiveRefs    { return primitiveRefs{} }
-func (RemoveFromCombat) instructionRefs() primitiveRefs { return primitiveRefs{} }
-func (CounterObject) instructionRefs() primitiveRefs    { return primitiveRefs{} }
+func (SkipNextUntap) instructionRefs() primitiveRefs     { return primitiveRefs{} }
+func (RemoveFromCombat) instructionRefs() primitiveRefs  { return primitiveRefs{} }
+func (CounterObject) instructionRefs() primitiveRefs     { return primitiveRefs{} }
+func (ExileTargetSpells) instructionRefs() primitiveRefs { return primitiveRefs{} }
 func (p Mill) instructionRefs() primitiveRefs {
 	refs := quantityRefs(p.Amount)
 	refs.publishesLinked = p.PublishLinked

@@ -356,6 +356,8 @@ func alternativeCostConditionSatisfied(s State, playerID game.PlayerID, alternat
 			return count == alternative.ConditionCount
 		}
 		return count >= alternative.ConditionCount
+	case cost.AlternativeConditionOpponentCastSpellsThisTurn:
+		return s.OpponentCastSpellsThisTurn(playerID, alternative.ConditionCount)
 	default:
 		return false
 	}

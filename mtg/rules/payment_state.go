@@ -61,6 +61,10 @@ func (s *rulesPaymentState) AttackingCreatureCount() int {
 	return len(s.g.Combat.Attackers)
 }
 
+func (s *rulesPaymentState) OpponentCastSpellsThisTurn(playerID game.PlayerID, count int) bool {
+	return anyOpponentCastSpellsThisTurn(s.g, playerID, count)
+}
+
 func (s *rulesPaymentState) AdditionalDynamicAmountValue(playerID game.PlayerID, kind cost.AdditionalDynamicAmount) int {
 	switch kind {
 	case cost.AdditionalDynamicCommanderColorIdentityCount:

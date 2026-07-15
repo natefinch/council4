@@ -76,6 +76,14 @@ type stateQueries interface {
 	// alternative-cost condition (Lethargy Trap, Arrow Volley Trap, Pitfall Trap).
 	AttackingCreatureCount() int
 
+	// OpponentCastSpellsThisTurn reports whether some single opponent of playerID
+	// has cast at least count spells so far this turn, backing the "If an opponent
+	// cast three or more spells this turn," mana-only alternative-cost condition
+	// (Mindbreak Trap). The threshold is met per opponent — never by summing casts
+	// across opponents — so it holds only when one opponent's own current-turn
+	// cast count reaches count.
+	OpponentCastSpellsThisTurn(playerID game.PlayerID, count int) bool
+
 	// AdditionalDynamicAmountValue resolves a rules-derived additional-cost
 	// amount against live game state.
 	AdditionalDynamicAmountValue(playerID game.PlayerID, kind cost.AdditionalDynamicAmount) int

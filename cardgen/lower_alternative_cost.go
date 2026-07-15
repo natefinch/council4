@@ -469,6 +469,14 @@ func lowerManaAlternativeCostCondition(alternative *compiler.CompiledAlternative
 			Count:         alternative.ConditionCount,
 			PermanentType: alternative.ConditionPermanentType,
 		}, true
+	case compiler.AlternativeCostConditionOpponentCastSpellsThisTurn:
+		if alternative.ConditionCount < 1 {
+			return loweredManaAlternativeCondition{}, false
+		}
+		return loweredManaAlternativeCondition{
+			Condition: cost.AlternativeConditionOpponentCastSpellsThisTurn,
+			Count:     alternative.ConditionCount,
+		}, true
 	default:
 		return loweredManaAlternativeCondition{}, false
 	}

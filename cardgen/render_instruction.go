@@ -369,7 +369,7 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 	case game.PrimitiveExplore,
 		game.PrimitiveCounterObject,
 		game.PrimitiveChooseNewTargets, game.PrimitiveRemoveFromCombat,
-		game.PrimitiveTransform:
+		game.PrimitiveTransform, game.PrimitiveExileTargetSpells:
 		return r.renderObjectPrimitive(primitive)
 	case game.PrimitiveCopyStackObject:
 		value, err := assertPrimitive[game.CopyStackObject](primitive)

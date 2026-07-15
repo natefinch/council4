@@ -68,6 +68,47 @@ func TestParseOpponentGainedLifeManaAlternativeCost(t *testing.T) {
 	}
 }
 
+func TestParseOpponentCastSpellsManaAlternativeCost(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name  string
+		text  string
+		count int
+	}{
+		{
+			name:  "two or more",
+			text:  "If an opponent cast two or more spells this turn, you may pay {0} rather than pay this spell's mana cost.",
+			count: 2,
+		},
+		{
+			name:  "three or more (Mindbreak Trap)",
+			text:  "If an opponent cast three or more spells this turn, you may pay {0} rather than pay this spell's mana cost.",
+			count: 3,
+		},
+		{
+			name:  "four or more",
+			text:  "If an opponent cast four or more spells this turn, you may pay {1} rather than pay this spell's mana cost.",
+			count: 4,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			alternative := parseManaAlternative(t, tc.text+"\nExile any number of target spells.")
+			if alternative.Condition != SpellAlternativeCostConditionOpponentCastSpellsThisTurn {
+				t.Fatalf("condition = %#v, want opponent-cast-spells-this-turn", alternative.Condition)
+			}
+			if alternative.ConditionCount != tc.count {
+				t.Fatalf("condition count = %d, want %d", alternative.ConditionCount, tc.count)
+			}
+			// The threshold is an at-least gate ("N or more"), never an exact
+			// match, so the option is offered for N and every higher count.
+			if alternative.ConditionExactly {
+				t.Fatal("opponent-cast-spells threshold was flagged exact, want at-least")
+			}
+		})
+	}
+}
+
 func TestParseCreaturesAttackingManaAlternativeCost(t *testing.T) {
 	t.Parallel()
 	for _, tc := range []struct {
@@ -128,8 +169,11 @@ func TestParseManaAlternativeCostFailsClosed(t *testing.T) {
 		text string
 	}{
 		{
+			// The opponent-cast-spells gate is specific to spells an
+			// opponent cast; the same wording about the caster's own spells
+			// must not be approximated onto it.
 			name: "unmodeled leading condition",
-			text: "If an opponent cast two or more spells this turn, you may pay {0} rather than pay this spell's mana cost.",
+			text: "If you cast two or more spells this turn, you may pay {0} rather than pay this spell's mana cost.",
 		},
 		{
 			name: "trailing condition",

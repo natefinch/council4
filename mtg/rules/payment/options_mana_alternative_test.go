@@ -19,6 +19,7 @@ type manaAlternativeState struct {
 
 	opponentGainedLife bool
 	attackingCreatures int
+	opponentCastSpells int
 }
 
 func (s manaAlternativeState) OpponentGainedLifeThisTurn(game.PlayerID) bool {
@@ -27,6 +28,10 @@ func (s manaAlternativeState) OpponentGainedLifeThisTurn(game.PlayerID) bool {
 
 func (s manaAlternativeState) AttackingCreatureCount() int {
 	return s.attackingCreatures
+}
+
+func (s manaAlternativeState) OpponentCastSpellsThisTurn(_ game.PlayerID, count int) bool {
+	return s.opponentCastSpells >= count
 }
 
 func spellOptionByLabel(options []spellCostOption, label string) (spellCostOption, bool) {
@@ -146,6 +151,82 @@ func TestManaAlternativeCostPreservesAdditionalCosts(t *testing.T) {
 	alternative, ok := spellOptionByLabel(options, "Pay {W}")
 	if !ok {
 		t.Fatal("mana alternative option missing")
+	}
+	if len(alternative.additionalCosts) != 1 || alternative.additionalCosts[0].Kind != cost.AdditionalSacrifice {
+		t.Fatalf("alternative additional costs = %#v, want the required sacrifice preserved", alternative.additionalCosts)
+	}
+}
+
+// TestOpponentCastSpellsAlternativeGatedByThreshold proves Mindbreak Trap's
+// per-opponent {0} alternative is offered only when the spells-cast condition
+// holds: with three opponent casts the "Pay {0}" option appears alongside the
+// normal {2}{U}{U} cost, and with two it disappears while the normal cost
+// always remains.
+func TestOpponentCastSpellsAlternativeGatedByThreshold(t *testing.T) {
+	t.Parallel()
+	card := &game.CardDef{CardFace: game.CardFace{
+		Name:     "Mindbreak Test",
+		ManaCost: opt.Val(cost.Mana{cost.O(2), cost.U, cost.U}),
+		Types:    []types.Card{types.Instant},
+		AlternativeCosts: []cost.Alternative{{
+			Label:          "Pay {0}",
+			ManaCost:       opt.Val(cost.Mana{cost.O(0)}),
+			Condition:      cost.AlternativeConditionOpponentCastSpellsThisTurn,
+			ConditionCount: 3,
+		}},
+	}}
+
+	enough := manaAlternativeState{opponentCastSpells: 3}
+	options := spellCostOptionsForZoneAndKicker(enough, game.Player1, card, zone.Hand, false, 0, false, nil)
+	if _, ok := spellOptionByLabel(options, "Normal cost"); !ok {
+		t.Fatal("normal-cost option missing when three opponent spells were cast")
+	}
+	zero, ok := spellOptionByLabel(options, "Pay {0}")
+	if !ok {
+		t.Fatal("{0} alternative missing when an opponent cast three spells")
+	}
+	if zero.manaCost == nil || zero.manaCost.String() != "{0}" {
+		t.Fatalf("alternative mana cost = %#v, want {0}", zero.manaCost)
+	}
+
+	tooFew := manaAlternativeState{opponentCastSpells: 2}
+	options = spellCostOptionsForZoneAndKicker(tooFew, game.Player1, card, zone.Hand, false, 0, false, nil)
+	if _, ok := spellOptionByLabel(options, "Normal cost"); !ok {
+		t.Fatal("normal-cost option missing when the condition is unmet")
+	}
+	if _, ok := spellOptionByLabel(options, "Pay {0}"); ok {
+		t.Fatal("{0} alternative offered when only two opponent spells were cast")
+	}
+}
+
+// TestOpponentCastSpellsAlternativePreservesAdditionalCosts proves the {0}
+// opponent-cast alternative still requires the spell's additional costs (CR
+// 601.2f): the alternative replaces only the mana cost, so a required additional
+// cost carries onto the free-mana option.
+func TestOpponentCastSpellsAlternativePreservesAdditionalCosts(t *testing.T) {
+	t.Parallel()
+	card := &game.CardDef{CardFace: game.CardFace{
+		Name:     "Mindbreak Additional Test",
+		ManaCost: opt.Val(cost.Mana{cost.O(2), cost.U, cost.U}),
+		Types:    []types.Card{types.Instant},
+		AdditionalCosts: []cost.Additional{{
+			Kind:   cost.AdditionalSacrifice,
+			Text:   "sacrifice a creature",
+			Amount: 1,
+		}},
+		AlternativeCosts: []cost.Alternative{{
+			Label:          "Pay {0}",
+			ManaCost:       opt.Val(cost.Mana{cost.O(0)}),
+			Condition:      cost.AlternativeConditionOpponentCastSpellsThisTurn,
+			ConditionCount: 3,
+		}},
+	}}
+
+	state := manaAlternativeState{opponentCastSpells: 3}
+	options := spellCostOptionsForZoneAndKicker(state, game.Player1, card, zone.Hand, false, 0, false, nil)
+	alternative, ok := spellOptionByLabel(options, "Pay {0}")
+	if !ok {
+		t.Fatal("{0} alternative missing when the condition holds")
 	}
 	if len(alternative.additionalCosts) != 1 || alternative.additionalCosts[0].Kind != cost.AdditionalSacrifice {
 		t.Fatalf("alternative additional costs = %#v, want the required sacrifice preserved", alternative.additionalCosts)

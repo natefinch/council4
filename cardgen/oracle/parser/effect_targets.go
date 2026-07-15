@@ -824,6 +824,15 @@ func exactMultiPermanentTargetSyntax(text string, cardinality TargetCardinalityS
 		return false
 	}
 
+	// A spell target ("any number of target spells", "up to two target instant
+	// spells") pluralizes a spell noun the permanent path below cannot
+	// reconstruct. Reconstruct it through the single-target spell rules so a
+	// plural spell target admits exactly the qualifiers the single-target form
+	// supports and no others.
+	if selection.Kind == SelectionSpell {
+		return exactMultiSpellTargetSyntax(text, prefix, plural, selection)
+	}
+
 	if selection.All || selection.Another ||
 		selection.Attacking || selection.Blocking || selection.Tapped || selection.Untapped ||
 		selection.Keyword != KeywordUnknown || selection.Zone != zone.None ||
@@ -912,6 +921,32 @@ func exactMultiPermanentTargetSyntax(text string, cardinality TargetCardinalityS
 		return false
 	}
 	return strings.EqualFold(text, expected)
+}
+
+// exactMultiSpellTargetSyntax reconstructs the canonical Oracle phrase for a
+// variable-count or plural spell target ("any number of target spells", "up to
+// two target instant spells", "two target blue spells") by singularizing the
+// plural head noun and delegating to the single-target spell reconstruction. A
+// plural spell target therefore admits exactly the qualifiers the single-target
+// form supports (bare type nouns, single color, type unions, mana-value riders,
+// and spell-target restrictions) and no others, so any wording the single form
+// rejects stays non-exact and lowering fails closed. The head noun is the first
+// "spells" token: every supported qualifier precedes it and every rider follows
+// it, so singularizing that one token reproduces the exact single-target phrase.
+func exactMultiSpellTargetSyntax(text, prefix string, plural bool, selection SelectionSyntax) bool {
+	if !strings.HasPrefix(strings.ToLower(text), strings.ToLower(prefix)) {
+		return false
+	}
+	remainder := text[len(prefix):]
+	if plural {
+		const pluralNoun = " spells"
+		idx := strings.Index(strings.ToLower(remainder), pluralNoun)
+		if idx < 0 {
+			return false
+		}
+		remainder = remainder[:idx] + " spell" + remainder[idx+len(pluralNoun):]
+	}
+	return exactSinglePermanentTargetSyntax(remainder, selection)
 }
 
 func selectionHasCounterQualifier(selection SelectionSyntax) bool {

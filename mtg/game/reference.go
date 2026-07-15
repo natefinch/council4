@@ -77,6 +77,12 @@ const (
 	// blueprint of a copy token ("Create a token that's a copy of target
 	// creature card in your graveyard", Feldon of the Third Path).
 	ObjectReferenceTargetCard
+	// ObjectReferenceAllTargetStackObjects references every stack object chosen
+	// for a single target spec at once, addressed by the spec's index. It backs
+	// the "exile any number of target spells" group family (Mindbreak Trap),
+	// where one effect must act on all chosen spells together over an unbounded
+	// target count. It is the stack-object twin of ObjectReferenceAllTargetPermanents.
+	ObjectReferenceAllTargetStackObjects
 )
 
 // ObjectReference describes how a rules effect finds an object at resolution.
@@ -201,6 +207,14 @@ func AllTargetPermanentsReference(specIndex int) ObjectReference {
 	return ObjectReference{kind: ObjectReferenceAllTargetPermanents, targetIndex: specIndex}
 }
 
+// AllTargetStackObjectsReference references every stack object chosen for the
+// target spec at specIndex at once. It backs a group effect over an unbounded
+// spell target count ("exile any number of target spells", Mindbreak Trap),
+// where one effect acts on all chosen spells together.
+func AllTargetStackObjectsReference(specIndex int) ObjectReference {
+	return ObjectReference{kind: ObjectReferenceAllTargetStackObjects, targetIndex: specIndex}
+}
+
 // CapturedObjectReference references the permanent captured at schedule time by
 // the enclosing delayed trigger, frozen to a concrete object ID from the
 // creating ability's context (its triggering event, or a linked object an
@@ -305,6 +319,13 @@ func (r ObjectReference) Validate() []string {
 		}
 		if r.targetIndex < 0 {
 			return []string{"all target permanents reference must not use a negative TargetIndex"}
+		}
+	case ObjectReferenceAllTargetStackObjects:
+		if r.linkID != "" {
+			return []string{"all target stack objects reference must not set LinkID"}
+		}
+		if r.targetIndex < 0 {
+			return []string{"all target stack objects reference must not use a negative TargetIndex"}
 		}
 	case ObjectReferenceCapturedObject:
 		if r.targetIndex != 0 || r.linkID != "" {

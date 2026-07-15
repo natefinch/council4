@@ -122,7 +122,7 @@ func validateObjectReferenceTargetBounds(ref ObjectReference, targets []TargetSp
 	switch ref.Kind() {
 	case ObjectReferenceTargetPermanent, ObjectReferenceTargetStackObject, ObjectReferenceTargetAttachedPermanent, ObjectReferenceTargetObject:
 		return validateTargetReference(ref.TargetIndex(), targets, checkTargets)
-	case ObjectReferenceAllTargetPermanents:
+	case ObjectReferenceAllTargetPermanents, ObjectReferenceAllTargetStackObjects:
 		return validateTargetSpecReference(ref.TargetIndex(), targets, checkTargets)
 	default:
 		// Non-target-addressed references have no target bounds to check.
@@ -139,6 +139,23 @@ func validateTargetSpecReference(specIndex int, targets []TargetSpec, checkTarge
 	}
 	if checkTargets && specIndex >= len(targets) {
 		return fmt.Errorf("target spec index %d has no matching target specification", specIndex)
+	}
+	return nil
+}
+
+// validateTargetSpecAllows bounds-checks a whole-spec reference by its spec index
+// and confirms the named spec targets the required kind. It backs the all-target
+// group references (e.g. "exile any number of target spells") that address an
+// entire target spec at once rather than a single flat target slot.
+func validateTargetSpecAllows(specIndex int, allow TargetAllow, targets []TargetSpec, checkTargets bool) error {
+	if err := validateTargetSpecReference(specIndex, targets, checkTargets); err != nil {
+		return err
+	}
+	if !checkTargets {
+		return nil
+	}
+	if targetSpecAllowedKinds(&targets[specIndex]) != allow {
+		return errors.New("target specification allows an incompatible target kind")
 	}
 	return nil
 }
@@ -2474,6 +2491,20 @@ func (p CounterObject) validatePrimitive(targets []TargetSpec, checkTargets bool
 		return nil
 	}
 	return validateTargetAllows(p.Object.TargetIndex(), TargetAllowStackObject, targets, checkTargets)
+}
+
+func (p ExileTargetSpells) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := validateObjectReference(p.Object, targets, checkTargets); err != nil {
+		return err
+	}
+	switch p.Object.Kind() {
+	case ObjectReferenceTargetStackObject:
+		return validateTargetAllows(p.Object.TargetIndex(), TargetAllowStackObject, targets, checkTargets)
+	case ObjectReferenceAllTargetStackObjects:
+		return validateTargetSpecAllows(p.Object.TargetIndex(), TargetAllowStackObject, targets, checkTargets)
+	default:
+		return errors.New("exile target spells requires a target or all-target stack object reference")
+	}
 }
 
 func (p ChooseNewTargets) validatePrimitive(targets []TargetSpec, checkTargets bool) error {

@@ -99,7 +99,7 @@ func TestLowerManaAlternativeCostFailsClosed(t *testing.T) {
 		Layout:   "normal",
 		TypeLine: "Instant — Trap",
 		ManaCost: "{2}{U}",
-		OracleText: "If an opponent cast two or more spells this turn, you may pay {0} rather than pay this spell's mana cost.\n" +
+		OracleText: "If you cast two or more spells this turn, you may pay {0} rather than pay this spell's mana cost.\n" +
 			"Counter target spell.",
 	})
 }

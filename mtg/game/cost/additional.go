@@ -229,9 +229,11 @@ type Alternative struct {
 	// condition.
 	ConditionSubtype types.Sub
 	// ConditionCount is the threshold required by a count-based condition: the
-	// attacking-creature threshold for AlternativeConditionCreaturesAttacking or
-	// the on-battlefield permanent threshold for
-	// AlternativeConditionPermanentsOnBattlefield. ConditionExactly requires the
+	// attacking-creature threshold for AlternativeConditionCreaturesAttacking, the
+	// on-battlefield permanent threshold for
+	// AlternativeConditionPermanentsOnBattlefield, or the per-opponent
+	// spells-cast-this-turn threshold for
+	// AlternativeConditionOpponentCastSpellsThisTurn. ConditionExactly requires the
 	// counted quantity to equal ConditionCount exactly ("If exactly one creature
 	// is attacking,") rather than meet it as a minimum ("If N or more creatures
 	// are attacking,"). Both are unused for every other condition.
@@ -325,4 +327,15 @@ const (
 	// as a minimum. The count reads current effective battlefield characteristics,
 	// so tokens and animated/type-changed permanents are included.
 	AlternativeConditionPermanentsOnBattlefield
+	// AlternativeConditionOpponentCastSpellsThisTurn requires that a single
+	// opponent of the casting player has cast at least ConditionCount spells so
+	// far this turn, backing the mana-only alternative cost gated by "If an
+	// opponent cast three or more spells this turn," (Mindbreak Trap). The
+	// threshold is met per opponent, never by summing casts across opponents: the
+	// condition holds only when some one opponent's own current-turn cast count
+	// reaches ConditionCount. Only cast spells count (CR 601) — spell copies,
+	// activated/triggered abilities, and played lands do not — while a spell that
+	// was later countered still counts because it was cast. It is unused for every
+	// other condition; ConditionCount carries the threshold.
+	AlternativeConditionOpponentCastSpellsThisTurn
 )

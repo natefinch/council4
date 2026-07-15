@@ -106,6 +106,8 @@ func (Renderer) renderObjectReference(reference game.ObjectReference) (string, e
 		return "game.SacrificedCostReference()", nil
 	case game.ObjectReferenceAllTargetPermanents:
 		return fmt.Sprintf("game.AllTargetPermanentsReference(%d)", reference.TargetIndex()), nil
+	case game.ObjectReferenceAllTargetStackObjects:
+		return fmt.Sprintf("game.AllTargetStackObjectsReference(%d)", reference.TargetIndex()), nil
 	default:
 		return "", fmt.Errorf("render: unsupported object reference kind %d", reference.Kind())
 	}
@@ -464,6 +466,9 @@ func (r Renderer) renderAlternativeCosts(ctx *renderCtx, alternatives []cost.Alt
 			if alternative.ConditionExactly {
 				fields = append(fields, "ConditionExactly: true,")
 			}
+		case cost.AlternativeConditionOpponentCastSpellsThisTurn:
+			fields = append(fields, "Condition: cost.AlternativeConditionOpponentCastSpellsThisTurn,",
+				fmt.Sprintf("ConditionCount: %d,", alternative.ConditionCount))
 		default:
 			return "", fmt.Errorf("render: unsupported alternative-cost condition %d", alternative.Condition)
 		}
