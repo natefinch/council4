@@ -452,6 +452,18 @@ func (r Renderer) renderAlternativeCosts(ctx *renderCtx, alternatives []cost.Alt
 			if alternative.ConditionExactly {
 				fields = append(fields, "ConditionExactly: true,")
 			}
+		case cost.AlternativeConditionPermanentsOnBattlefield:
+			cardType, err := cardTypeLiteral(alternative.ConditionPermanentType)
+			if err != nil {
+				return "", err
+			}
+			ctx.need(importTypes)
+			fields = append(fields, "Condition: cost.AlternativeConditionPermanentsOnBattlefield,",
+				fmt.Sprintf("ConditionCount: %d,", alternative.ConditionCount),
+				fmt.Sprintf("ConditionPermanentType: %s,", cardType))
+			if alternative.ConditionExactly {
+				fields = append(fields, "ConditionExactly: true,")
+			}
 		default:
 			return "", fmt.Errorf("render: unsupported alternative-cost condition %d", alternative.Condition)
 		}

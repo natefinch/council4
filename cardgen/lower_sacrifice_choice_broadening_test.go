@@ -151,3 +151,66 @@ func firstSacrifice(t *testing.T, sequence []game.Instruction) game.SacrificePer
 	}
 	return sacrifice
 }
+
+// TestLowerEachPlayerSacrificesThirteen verifies Blasphemous Edict's edict line
+// ("Each player sacrifices thirteen creatures of their choice.") reconstructs
+// exactly and lowers to an all-players SacrificePermanents with a fixed count of
+// thirteen — the exact-sacrifice-choice amount cap was raised to the full
+// spelled-cardinal vocabulary (one … twenty), and the runtime primitive already
+// carried an unbounded fixed amount.
+func TestLowerEachPlayerSacrificesThirteen(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Edict",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Each player sacrifices thirteen creatures of their choice.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability missing")
+	}
+	sacrifice := firstSacrifice(t, face.SpellAbility.Val.Modes[0].Sequence)
+	if sacrifice.Amount != game.Fixed(13) {
+		t.Fatalf("sacrifice amount = %+v, want Fixed(13)", sacrifice.Amount)
+	}
+	if sacrifice.PlayerGroup != game.AllPlayersReference() {
+		t.Fatalf("sacrifice player group = %+v, want all players", sacrifice.PlayerGroup)
+	}
+	if len(sacrifice.Selection.RequiredTypes) != 1 || sacrifice.Selection.RequiredTypes[0] != types.Creature {
+		t.Fatalf("sacrifice required types = %v, want [Creature]", sacrifice.Selection.RequiredTypes)
+	}
+}
+
+// TestLowerSacrificeChoiceUpperVocabularyBound verifies the top of the raised
+// spelled-cardinal range ("twenty") still reconstructs and lowers, so the cap
+// spans the full CardinalWordValue vocabulary rather than stopping short.
+func TestLowerSacrificeChoiceUpperVocabularyBound(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Twenty",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Each player sacrifices twenty creatures of their choice.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability missing")
+	}
+	sacrifice := firstSacrifice(t, face.SpellAbility.Val.Modes[0].Sequence)
+	if sacrifice.Amount != game.Fixed(20) {
+		t.Fatalf("sacrifice amount = %+v, want Fixed(20)", sacrifice.Amount)
+	}
+}
+
+// TestLowerSacrificeChoiceBeyondVocabularyStaysUnsupported guards the fail-closed
+// boundary of the raised cap: a spelled amount outside the CardinalWordValue
+// vocabulary ("thirty") is not a known amount, so the edict must stay
+// unsupported rather than lower with a bogus or unbounded count.
+func TestLowerSacrificeChoiceBeyondVocabularyStaysUnsupported(t *testing.T) {
+	t.Parallel()
+	lowerSingleFaceExpectingUnsupported(t, &ScryfallCard{
+		Name:       "Test Thirty",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Each player sacrifices thirty creatures of their choice.",
+	})
+}

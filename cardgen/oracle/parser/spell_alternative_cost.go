@@ -87,6 +87,13 @@ const (
 	// one creature is attacking," (Pitfall Trap). The threshold rides on
 	// ConditionCount and the exact-comparison flag on ConditionExactly.
 	SpellAlternativeCostConditionCreaturesAttacking
+	// SpellAlternativeCostConditionPermanentsOnBattlefield gates a mana-only
+	// alternative cost behind a battlefield permanent count: "if there are N or
+	// more <permanent type>s on the battlefield" (Blasphemous Edict), in either
+	// the trailing form (after "rather than pay this spell's mana cost") or the
+	// symmetric leading form. The threshold rides on ConditionCount and the
+	// counted permanent type on ConditionCardType.
+	SpellAlternativeCostConditionPermanentsOnBattlefield
 )
 
 // SpellAlternativeCost is typed syntax for a paragraph that offers an
@@ -103,7 +110,12 @@ type SpellAlternativeCost struct {
 	// ConditionExactly requires the attacking-creature count to equal
 	// ConditionCount exactly ("If exactly one creature is attacking,") rather
 	// than meet it as a minimum ("If N or more creatures are attacking,").
-	ConditionExactly      bool
+	ConditionExactly bool
+	// ConditionCardType is the permanent card type counted on the battlefield by
+	// a SpellAlternativeCostConditionPermanentsOnBattlefield condition (e.g.
+	// CardTypeCreature for Blasphemous Edict). It is unused for every other
+	// condition.
+	ConditionCardType     CardType
 	WithoutPayingManaCost bool
 	ManaCost              cost.Mana
 	ReplaceTargetWithEach bool
@@ -404,14 +416,18 @@ func freeAlternativeCostClause(source string, body []shared.Token) (*SpellAltern
 // returned SpellAlternativeCost's ManaCost field, exactly like Overload.
 //
 // It fails closed on any leading condition this backend cannot evaluate at cast
-// time, on a trailing "if ..." condition, and on any non-mana payment (which is
-// left to the free/pitch/discard families), so an unmodeled Trap condition or a
-// compound alternative cost is never approximated.
+// time, on a trailing "if ..." condition other than the recognized "if there
+// are N or more <permanent type>s on the battlefield" board-state gate
+// (Blasphemous Edict), and on any non-mana payment (which is left to the
+// free/pitch/discard families), so an unmodeled Trap condition or a compound
+// alternative cost is never approximated. Only one condition is supported: a
+// leading and a trailing condition together fail closed.
 func manaOnlyAlternativeCostClause(body []shared.Token) (*SpellAlternativeCost, bool) {
 	cursor := 0
 	condition := SpellAlternativeCostConditionUnknown
 	conditionCount := 0
 	conditionExactly := false
+	conditionCardType := CardTypeUnknown
 	if equalWord(firstToken(body, cursor), "if") {
 		next, matched, ok := matchManaAlternativeCondition(body, cursor)
 		if !ok {
@@ -421,6 +437,7 @@ func manaOnlyAlternativeCostClause(body []shared.Token) (*SpellAlternativeCost, 
 		condition = matched.Kind
 		conditionCount = matched.Count
 		conditionExactly = matched.Exactly
+		conditionCardType = matched.CardType
 	}
 	if !equalWordSequence(body, cursor, "you", "may", "pay") {
 		return nil, false
@@ -435,26 +452,45 @@ func manaOnlyAlternativeCostClause(body []shared.Token) (*SpellAlternativeCost, 
 		return nil, false
 	}
 	cursor += 7
+	// Optional trailing "if there are N or more <permanent type>s on the
+	// battlefield" board-state gate (Blasphemous Edict). Only one condition is
+	// supported, so a trailing condition alongside a leading one fails closed.
+	if equalWord(firstToken(body, cursor), "if") {
+		if condition != SpellAlternativeCostConditionUnknown {
+			return nil, false
+		}
+		next, cond, ok := matchPermanentsOnBattlefieldCondition(body, cursor)
+		if !ok {
+			return nil, false
+		}
+		cursor = next
+		condition = SpellAlternativeCostConditionPermanentsOnBattlefield
+		conditionCount = cond.Count
+		conditionCardType = cond.CardType
+	}
 	if cursor != len(body)-1 || body[cursor].Kind != shared.Period {
 		return nil, false
 	}
 	return &SpellAlternativeCost{
-		Span:             shared.SpanOf(body),
-		Kind:             SpellAlternativeCostMana,
-		Condition:        condition,
-		ConditionCount:   conditionCount,
-		ConditionExactly: conditionExactly,
-		ManaCost:         manaCost,
+		Span:              shared.SpanOf(body),
+		Kind:              SpellAlternativeCostMana,
+		Condition:         condition,
+		ConditionCount:    conditionCount,
+		ConditionExactly:  conditionExactly,
+		ConditionCardType: conditionCardType,
+		ManaCost:          manaCost,
 	}, true
 }
 
 // manaAlternativeCondition is a recognized leading gate for a mana-only
-// alternative cost, bundling the typed condition kind with the attacking-creature
-// threshold (Count) and whether that threshold is an exact match (Exactly).
+// alternative cost, bundling the typed condition kind with the count threshold
+// (Count), whether that threshold is an exact match (Exactly), and the counted
+// permanent type (CardType) for a board-state gate.
 type manaAlternativeCondition struct {
-	Kind    SpellAlternativeCostCondition
-	Count   int
-	Exactly bool
+	Kind     SpellAlternativeCostCondition
+	Count    int
+	Exactly  bool
+	CardType CardType
 }
 
 // matchManaAlternativeCondition parses a recognized leading "If <condition>,"
@@ -481,7 +517,85 @@ func matchManaAlternativeCondition(body []shared.Token, start int) (next int, co
 			return start + 8, manaAlternativeCondition{Kind: SpellAlternativeCostConditionCreaturesAttacking, Count: count}, true
 		}
 	}
+	// "If there are <N> or more <permanent type>s on the battlefield," — the
+	// leading form of Blasphemous Edict's board-state gate.
+	if next, cond, ok := matchPermanentsOnBattlefieldCondition(body, start); ok && commaAt(body, next) {
+		return next + 1, manaAlternativeCondition{
+			Kind:     SpellAlternativeCostConditionPermanentsOnBattlefield,
+			Count:    cond.Count,
+			CardType: cond.CardType,
+		}, true
+	}
 	return start, manaAlternativeCondition{Kind: SpellAlternativeCostConditionUnknown}, false
+}
+
+// permanentsOnBattlefieldCondition bundles the parsed threshold and counted
+// permanent card type of a "there are <N> or more <permanent type>s on the
+// battlefield" board-state gate, keeping matchPermanentsOnBattlefieldCondition
+// within a three-result signature shared by its leading and trailing callers.
+type permanentsOnBattlefieldCondition struct {
+	Count    int
+	CardType CardType
+}
+
+// matchPermanentsOnBattlefieldCondition parses "if there are <N> or more
+// <permanent type>s on the battlefield" starting at start, returning the index
+// just past "battlefield" and the parsed threshold and counted permanent card
+// type. It recognizes only plural permanent card-type words (rejecting the
+// non-permanent instant and sorcery types and every singular or unknown
+// spelling) and fails closed on every other wording, so it can gate both the
+// leading and trailing forms of the board-state alternative cost.
+func matchPermanentsOnBattlefieldCondition(body []shared.Token, start int) (next int, cond permanentsOnBattlefieldCondition, ok bool) {
+	if !equalWordSequence(body, start, "if", "there", "are") {
+		return start, permanentsOnBattlefieldCondition{}, false
+	}
+	cursor := start + 3
+	value, valueOK := CardinalWordValue(firstToken(body, cursor).Text)
+	if !valueOK || value < 1 {
+		return start, permanentsOnBattlefieldCondition{}, false
+	}
+	cursor++
+	if !equalWordSequence(body, cursor, "or", "more") {
+		return start, permanentsOnBattlefieldCondition{}, false
+	}
+	cursor += 2
+	typeWord := firstToken(body, cursor)
+	if typeWord.Kind != shared.Word {
+		return start, permanentsOnBattlefieldCondition{}, false
+	}
+	matchedType, typeOK := recognizePermanentCardTypePlural(typeWord.Text)
+	if !typeOK {
+		return start, permanentsOnBattlefieldCondition{}, false
+	}
+	cursor++
+	if !equalWordSequence(body, cursor, "on", "the", "battlefield") {
+		return start, permanentsOnBattlefieldCondition{}, false
+	}
+	return cursor + 3, permanentsOnBattlefieldCondition{Count: value, CardType: matchedType}, true
+}
+
+// recognizePermanentCardTypePlural maps a plural permanent card-type word to its
+// typed CardType. It intentionally recognizes only the permanent card types in
+// their plural form, failing closed for the non-permanent instant and sorcery
+// types, every singular spelling, and every unknown word, so board-state
+// "N or more <type>s on the battlefield" gates never match a nonsense type.
+func recognizePermanentCardTypePlural(word string) (CardType, bool) {
+	switch strings.ToLower(word) {
+	case "artifacts":
+		return CardTypeArtifact, true
+	case "battles":
+		return CardTypeBattle, true
+	case "creatures":
+		return CardTypeCreature, true
+	case "enchantments":
+		return CardTypeEnchantment, true
+	case "lands":
+		return CardTypeLand, true
+	case "planeswalkers":
+		return CardTypePlaneswalker, true
+	default:
+		return CardTypeUnknown, false
+	}
 }
 
 // firstToken returns the token at index, or a zero token when index is out of

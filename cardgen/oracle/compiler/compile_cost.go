@@ -215,6 +215,15 @@ func costCardTypeFromNoun(noun parser.ObjectNoun) (types.Card, bool) {
 	}
 }
 
+// compileAlternativeCostConditionCardType maps the parser card type counted by a
+// board-state alternative-cost condition (Blasphemous Edict) onto its runtime
+// card type, returning the empty type when the parser carried none, as every
+// non-board-state condition does.
+func compileAlternativeCostConditionCardType(cardType parser.CardType) types.Card {
+	runtimeType, _ := compilerCardType(cardType)
+	return runtimeType
+}
+
 func compilerCardType(cardType parser.CardType) (types.Card, bool) {
 	switch cardType {
 	case parser.CardTypeArtifact:

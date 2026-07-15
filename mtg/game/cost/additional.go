@@ -228,13 +228,20 @@ type Alternative struct {
 	// for Snuff Out's "If you control a Swamp,". It is unused for every other
 	// condition.
 	ConditionSubtype types.Sub
-	// ConditionCount is the attacking-creature threshold required by an
-	// AlternativeConditionCreaturesAttacking condition. ConditionExactly requires
-	// the attacking-creature count to equal ConditionCount exactly ("If exactly
-	// one creature is attacking,") rather than meet it as a minimum ("If N or more
-	// creatures are attacking,"). Both are unused for every other condition.
+	// ConditionCount is the threshold required by a count-based condition: the
+	// attacking-creature threshold for AlternativeConditionCreaturesAttacking or
+	// the on-battlefield permanent threshold for
+	// AlternativeConditionPermanentsOnBattlefield. ConditionExactly requires the
+	// counted quantity to equal ConditionCount exactly ("If exactly one creature
+	// is attacking,") rather than meet it as a minimum ("If N or more creatures
+	// are attacking,"). Both are unused for every other condition.
 	ConditionCount   int
 	ConditionExactly bool
+	// ConditionPermanentType is the permanent card type counted on the
+	// battlefield by an AlternativeConditionPermanentsOnBattlefield condition,
+	// e.g. types.Creature for Blasphemous Edict's "if there are thirteen or more
+	// creatures on the battlefield." It is unused for every other condition.
+	ConditionPermanentType types.Card
 	// Mechanic identifies the rules mechanic this alternative grants, so the
 	// rules layer decides Flashback/Escape/Evoke behavior from typed data
 	// rather than the display Label. AlternativeMechanicNone leaves the
@@ -309,4 +316,13 @@ const (
 	// attacking," (Lethargy Trap, Arrow Volley Trap) or, when ConditionExactly is
 	// set, "If exactly one creature is attacking," (Pitfall Trap).
 	AlternativeConditionCreaturesAttacking
+	// AlternativeConditionPermanentsOnBattlefield requires that the number of
+	// permanents of the alternative's ConditionPermanentType currently on the
+	// battlefield across all players meets the alternative's ConditionCount,
+	// backing the mana-only alternative cost gated by "if there are thirteen or
+	// more creatures on the battlefield" (Blasphemous Edict). When ConditionExactly
+	// is set the count must equal ConditionCount exactly; otherwise it must meet it
+	// as a minimum. The count reads current effective battlefield characteristics,
+	// so tokens and animated/type-changed permanents are included.
+	AlternativeConditionPermanentsOnBattlefield
 )

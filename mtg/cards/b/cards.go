@@ -74,6 +74,7 @@ var Cards = []cardset.Entry{
 	{Name: "Blade of Selves", New: BladeOfSelves},
 	{Name: "Bladed Battle-Fan", New: BladedBattleFan},
 	{Name: "Bladed Bracers", New: BladedBracers},
+	{Name: "Blasphemous Edict", New: BlasphemousEdict},
 	{Name: "Blaster, Combat DJ", New: BlasterCombatDJ},
 	{Name: "Blasting Station", New: BlastingStation},
 	{Name: "Blazemire Verge", New: BlazemireVerge},

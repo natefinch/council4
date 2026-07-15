@@ -7,6 +7,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -338,6 +339,19 @@ func alternativeCostConditionSatisfied(s State, playerID game.PlayerID, alternat
 		return s.OpponentGainedLifeThisTurn(playerID)
 	case cost.AlternativeConditionCreaturesAttacking:
 		count := s.AttackingCreatureCount()
+		if alternative.ConditionExactly {
+			return count == alternative.ConditionCount
+		}
+		return count >= alternative.ConditionCount
+	case cost.AlternativeConditionPermanentsOnBattlefield:
+		selection := game.Selection{RequiredTypesAny: []types.Card{alternative.ConditionPermanentType}}
+		count := 0
+		for _, permanent := range s.Battlefield() {
+			if permanent != nil && !permanent.PhasedOut &&
+				s.PermanentMatchesSelection(permanent, selection) {
+				count++
+			}
+		}
 		if alternative.ConditionExactly {
 			return count == alternative.ConditionCount
 		}
