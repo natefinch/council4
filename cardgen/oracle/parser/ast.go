@@ -1443,6 +1443,12 @@ type Sentence struct {
 	// Consultation). Reference and coverage scans treat its tokens as belonging to
 	// that process rather than as an unrecognized sibling.
 	ChooseCardNamePrelude bool `json:",omitempty"`
+	// ChooseNumberAtRandomPrelude reports that this sentence is the credited
+	// zero-effect "Choose 1, 2, or 3 at random." mill-count prelude folded onto
+	// the following Tibalt's Trickery sequence, whose random-number choice the
+	// mill consumes. Reference and coverage scans treat its tokens as belonging to
+	// that sequence rather than as an unrecognized sibling.
+	ChooseNumberAtRandomPrelude bool `json:",omitempty"`
 	// EachOpponentAttackingSameRider reports that this sentence is the credited
 	// "Each opponent attacking that player does the same." rider folded onto a
 	// preceding controller create-token effect (Curse of Opulence, Curse of
@@ -1480,6 +1486,7 @@ func sentenceIsCreditedRider(s *Sentence) bool {
 		s.RoundUpEachTimeRider ||
 		s.ImpulseExilePermission ||
 		s.ChooseCardNamePrelude ||
+		s.ChooseNumberAtRandomPrelude ||
 		s.EachOpponentAttackingSameRider ||
 		s.GoadCreatedTokensRider
 }

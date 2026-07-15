@@ -1924,7 +1924,13 @@ func (p PutPermanentOnLibrary) validatePrimitive(targets []TargetSpec, checkTarg
 	return validateObjectReference(p.Object, targets, checkTargets)
 }
 
-func (PutLinkedExiledCardsInLibrary) validatePrimitive([]TargetSpec, bool) error {
+func (p PutLinkedExiledCardsInLibrary) validatePrimitive([]TargetSpec, bool) error {
+	if p.LinkedKey == "" {
+		return errors.New("put linked exiled cards in library requires a linked key")
+	}
+	if p.RandomOrder && !p.Bottom {
+		return errors.New("put linked exiled cards in library random order requires bottom placement")
+	}
 	return nil
 }
 
@@ -2088,6 +2094,9 @@ func (p Choose) validatePrimitive(targets []TargetSpec, checkTargets bool) error
 	if p.Choice.Kind == ResolutionChoiceNumber &&
 		(p.Choice.MinNumber < 0 || p.Choice.MaxNumber < p.Choice.MinNumber) {
 		return errors.New("number choice requires a nonnegative inclusive range")
+	}
+	if p.Choice.AtRandom && p.Choice.Kind != ResolutionChoiceNumber {
+		return errors.New("random resolution choice requires a number choice")
 	}
 	return nil
 }
@@ -2732,6 +2741,21 @@ func (p IterativeLibraryProcess) validatePrimitive(targets []TargetSpec, checkTa
 	}
 	if p.AllowAbsentName && p.Stop != IterativeLibraryStopChosenName {
 		return errors.New("IterativeLibraryProcess AllowAbsentName requires the chosen-name stop")
+	}
+	if p.Stop == IterativeLibraryStopDifferentNameNonland {
+		if err := validateObjectReference(p.DifferentNameFrom, targets, checkTargets); err != nil {
+			return err
+		}
+		if p.DifferentNameFrom.Kind() != ObjectReferenceTargetStackObject {
+			return errors.New("IterativeLibraryProcess different-name-nonland stop requires a target stack object reference")
+		}
+	} else {
+		if p.DifferentNameFrom.Kind() != ObjectReferenceNone {
+			return errors.New("IterativeLibraryProcess DifferentNameFrom requires the different-name-nonland stop")
+		}
+		if p.PublishLinked != "" {
+			return errors.New("IterativeLibraryProcess PublishLinked requires the different-name-nonland stop")
+		}
 	}
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }

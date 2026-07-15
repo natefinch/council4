@@ -2,6 +2,7 @@ package rules
 
 import (
 	"fmt"
+	"math/rand/v2"
 	"slices"
 
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -18,6 +19,14 @@ func (e *Engine) resolveResolutionChoiceValue(g *game.Game, obj *game.StackObjec
 	if len(values) == 0 {
 		return false
 	}
+	if choice.AtRandom {
+		result, ok := randomResolutionChoiceValue(e.rng, values)
+		if !ok {
+			return false
+		}
+		rememberResolutionChoice(obj, key, result)
+		return true
+	}
 	selected := e.chooseChoice(g, agents, request, log)
 	if len(selected) != 1 {
 		return false
@@ -28,6 +37,22 @@ func (e *Engine) resolveResolutionChoiceValue(g *game.Game, obj *game.StackObjec
 	}
 	rememberResolutionChoice(obj, key, result)
 	return true
+}
+
+// randomResolutionChoiceValue selects one resolution-choice result uniformly at
+// random from the option values using the engine RNG (Tibalt's Trickery's
+// "Choose 1, 2, or 3 at random."). It sorts the option indices first so the pick
+// is deterministic for a given RNG stream regardless of map iteration order.
+func randomResolutionChoiceValue(rng *rand.Rand, values map[int]game.ResolutionChoiceResult) (game.ResolutionChoiceResult, bool) {
+	if rng == nil || len(values) == 0 {
+		return game.ResolutionChoiceResult{}, false
+	}
+	indices := make([]int, 0, len(values))
+	for index := range values {
+		indices = append(indices, index)
+	}
+	slices.Sort(indices)
+	return values[indices[rng.IntN(len(indices))]], true
 }
 
 // chooseEntryColor prompts the given player to make an entry-time color choice

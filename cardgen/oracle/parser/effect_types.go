@@ -3075,6 +3075,26 @@ type EffectSyntax struct {
 	// the head effect so lowering can account for the prelude's tokens as
 	// consumed. It is empty when the process has no naming prelude.
 	IterativeLibraryPreludeSpan shared.Span `json:"-"`
+	// TibaltsTrickery marks every effect of the recognized Tibalt's Trickery
+	// sequence: counter target spell, random-count mill of its controller, exile
+	// from the top of their library until a different-named nonland, optional free
+	// cast of that card, and random-bottom of the remainder. The parser keeps the
+	// effect shape and records the sequence's typed knobs on the head (counter)
+	// effect so the text-blind lowering can emit the counter, random-number
+	// choose, dynamic mill, and different-name-nonland IterativeLibraryProcess
+	// instructions; the marker is false for every other effect.
+	TibaltsTrickery bool `json:",omitempty"`
+	// TibaltRandomMillMin and TibaltRandomMillMax are the inclusive bounds of the
+	// "Choose 1, 2, or 3 at random." mill-count choice, set only on the head
+	// (counter) effect. The prelude's integers must form the consecutive run
+	// [min..max] so the choice is a uniform pick over that whole range.
+	TibaltRandomMillMin int `json:",omitempty"`
+	TibaltRandomMillMax int `json:",omitempty"`
+	// TibaltPreludeSpan is the source span of the credited zero-effect "Choose 1,
+	// 2, or 3 at random." mill-count prelude, recorded on the head effect so
+	// lowering accounts for the prelude's tokens as consumed. It is empty when the
+	// effect is not the head of a Tibalt's Trickery sequence.
+	TibaltPreludeSpan shared.Span `json:"-"`
 	// ExiledCardSplitOpponentChooses reports that a recognized "An opponent
 	// chooses one of the exiled cards." antecedent names an opponent as the
 	// chooser of the cost-exiled card this put effect disposes of (Coin of Fate).

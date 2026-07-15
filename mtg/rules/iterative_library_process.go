@@ -6,15 +6,15 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
 // handleIterativeLibraryProcess runs the generic iterative library processor
-// shared by Tainted Pact (duplicate-name stop) and Demonic Consultation
-// (chosen-name stop). It processes cards from the top of the player's library
-// one at a time, remembering every card seen during this single resolution,
-// until the configured name predicate fires or the library empties.
+// shared by Tainted Pact, Demonic Consultation, and Tibalt's Trickery. It
+// processes cards from the top of the player's library one at a time until the
+// configured name predicate fires or the library empties.
 //
 // The processed-name history lives entirely in local state for one call, so
 // independent copies of the same spell never share history and nothing is
@@ -22,6 +22,9 @@ import (
 // ends with every processed card left exiled.
 func handleIterativeLibraryProcess(r *effectResolver, prim game.IterativeLibraryProcess) effectResolved {
 	res := effectResolved{accepted: true}
+	if prim.PublishLinked != "" {
+		clearLinkedObjects(r.game, linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked)))
+	}
 	playerID, ok := resolvePlayerReference(r.game, r.obj, prim.Player)
 	if !ok {
 		return res
@@ -29,6 +32,10 @@ func handleIterativeLibraryProcess(r *effectResolver, prim game.IterativeLibrary
 	player, ok := playerByID(r.game, playerID)
 	if !ok {
 		return res
+	}
+
+	if prim.Stop == game.IterativeLibraryStopDifferentNameNonland {
+		return r.iterativeDifferentNameNonland(prim, playerID, player, res)
 	}
 
 	// Name a card up front for the chosen-name predicate (Demonic Consultation).
@@ -94,6 +101,105 @@ func handleIterativeLibraryProcess(r *effectResolver, prim game.IterativeLibrary
 		}
 	}
 	return res
+}
+
+// iterativeDifferentNameNonland runs the different-name-nonland stop (Tibalt's
+// Trickery). It exiles cards from the top of the player's library one at a time,
+// applying the commander-zone replacement, until it exiles a nonland card whose
+// front-face name differs from the DifferentNameFrom spell's captured cast-face
+// name; lands and same-name nonlands are exiled and the loop continues. When the
+// library empties first the process simply ends. PublishLinked records the found
+// card first, followed by the other cards exiled by this process, so later
+// instructions can independently cast the found card and dispose of the group.
+func (r *effectResolver) iterativeDifferentNameNonland(prim game.IterativeLibraryProcess, playerID game.PlayerID, player *game.Player, res effectResolved) effectResolved {
+	referenceName, haveName := iterativeStopReferenceName(r.game, r.obj, prim.DifferentNameFrom)
+	var exiledThisWay []id.ID
+	var found id.ID
+	for {
+		cardID, topOK := player.Library.Top()
+		if !topOK {
+			// Empty library: the process ends with every processed card exiled.
+			break
+		}
+		name := searchCardName(r.game, cardID)
+		nonland := libraryCardIsNonland(r.game, cardID)
+		// Exile the card first: only an exiled card is "exiled this way" and part
+		// of the remainder. The commander-zone replacement may divert it instead.
+		dest := moveProcessedCard(r.game, playerID, cardID, zone.Library, zone.Exile)
+		if dest == zone.Exile {
+			exiledThisWay = append(exiledThisWay, cardID)
+		}
+		if nonland && haveName && name != referenceName {
+			// A different-named nonland ends the process. A commander diverted to
+			// the command zone can no longer be cast from exile, so only an
+			// actually-exiled card becomes the free-cast candidate.
+			if dest == zone.Exile {
+				found = cardID
+				res.succeeded = true
+			}
+			break
+		}
+	}
+	if prim.PublishLinked != "" {
+		key := linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked))
+		if found != 0 {
+			publishIterativeCard(r.game, key, found)
+		}
+		for _, cardID := range exiledThisWay {
+			if cardID != found {
+				publishIterativeCard(r.game, key, cardID)
+			}
+		}
+	}
+	return res
+}
+
+func publishIterativeCard(g *game.Game, key game.LinkedObjectKey, cardID id.ID) {
+	card, ok := g.GetCardInstance(cardID)
+	if !ok {
+		return
+	}
+	rememberLinkedObject(g, key, game.LinkedObjectRef{
+		CardID:          cardID,
+		CardZoneVersion: card.ZoneVersion,
+	})
+}
+
+// iterativeStopReferenceName resolves the name a different-name-nonland stop
+// compares against: the cast-face name of the referenced target spell. It
+// prefers the name captured in TargetNameLKI when the spell was countered, and
+// falls back to the live stack object for a target that could not be countered
+// and remains on the stack. It returns ok=false when no name is known, in which
+// case no card can differ and the whole library is exiled.
+func iterativeStopReferenceName(g *game.Game, obj *game.StackObject, ref game.ObjectReference) (string, bool) {
+	if obj == nil || ref.Kind() != game.ObjectReferenceTargetStackObject {
+		return "", false
+	}
+	index := ref.TargetIndex()
+	if name, ok := obj.TargetNameLKI[index]; ok {
+		return name, true
+	}
+	objectID, ok := effectStackObjectID(g, obj, index)
+	if !ok {
+		return "", false
+	}
+	stackObject, ok := stackObjectByID(g, objectID)
+	if !ok {
+		return "", false
+	}
+	return stackSpellName(g, stackObject)
+}
+
+// libraryCardIsNonland reports whether a library card is a nonland by its front
+// face, the characteristics a card presents outside the battlefield and stack
+// (CR 712.4a). A missing card instance is treated as not a stopping card so the
+// process continues, matching the other library-dig handlers.
+func libraryCardIsNonland(g *game.Game, cardID id.ID) bool {
+	card, ok := g.GetCardInstance(cardID)
+	if !ok {
+		return false
+	}
+	return !cardFaceOrDefault(card, game.FaceFront).HasType(types.Land)
 }
 
 // moveProcessedCard moves a card from its current zone (from) into the intended

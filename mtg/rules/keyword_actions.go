@@ -101,7 +101,47 @@ func counterTargetStackObject(g *game.Game, obj *game.StackObject, targetIndex i
 		}
 		obj.TargetManaValueLKI[targetIndex] = manaValue
 	}
+	if name, known := stackSpellName(g, target); known {
+		if obj.TargetNameLKI == nil {
+			obj.TargetNameLKI = make(map[int]string)
+		}
+		obj.TargetNameLKI[targetIndex] = name
+	}
 	return counterStackObject(g, stackObjectID)
+}
+
+// stackSpellName returns the name of a spell's cast face — the face the spell was
+// cast as, so a modal double-faced spell cast as its back face contributes that
+// back face's name. It mirrors stackObjectManaValue's source resolution: a copy
+// or token spell resolves through its token def, while a physical spell resolves
+// through its card instance. It is captured when a spell is countered so a later
+// "different name than that spell" comparison still knows the name.
+func stackSpellName(g *game.Game, obj *game.StackObject) (string, bool) {
+	if obj == nil || obj.Kind != game.StackSpell {
+		return "", false
+	}
+	if obj.FaceDown {
+		// A face-down spell has no name (CR 708.2), so it is known to be nameless
+		// rather than name-unknown: every named card differs from it. Returning the
+		// concealed real face name would both leak hidden information and wrongly
+		// treat a same-named card as matching.
+		return "", true
+	}
+	if obj.SourceTokenDef != nil {
+		face, ok := obj.SourceTokenDef.FaceDef(obj.Face)
+		if !ok {
+			return "", false
+		}
+		return face.Name, true
+	}
+	card, ok := g.GetCardInstance(obj.SourceID)
+	if !ok && obj.SourceCardID != 0 {
+		card, ok = g.GetCardInstance(obj.SourceCardID)
+	}
+	if !ok {
+		return "", false
+	}
+	return cardFaceOrDefault(card, obj.Face).Name, true
 }
 
 func stackObjectManaValue(g *game.Game, obj *game.StackObject) (int, bool) {
