@@ -527,6 +527,14 @@ const (
 	CardReferenceSource
 	CardReferenceEvent
 	CardReferenceTarget
+	// CardReferenceCaptured references the card frozen at schedule time by the
+	// delayed trigger this content belongs to, read from the fired trigger's
+	// CapturedCardID. It backs "Put that card into your hand at the beginning of
+	// your next end step." (Necropotence): the exiled card must be remembered
+	// across the delay because the shared link key that named it may have been
+	// reused by a later activation before the trigger fires. Added last so
+	// existing card reference kinds keep their wire values.
+	CardReferenceCaptured
 )
 
 // CardReference describes how a rules effect finds a card at resolution.
@@ -539,6 +547,13 @@ type CardReference struct {
 
 	// LinkID identifies a linked card recorded by an earlier effect.
 	LinkID string
+}
+
+// CapturedCardReference references the card a delayed trigger froze at schedule
+// time from its DelayedTriggerDef.CapturedCard reference, resolved from the fired
+// trigger's CapturedCardID.
+func CapturedCardReference() CardReference {
+	return CardReference{Kind: CardReferenceCaptured}
 }
 
 // CardSelection gates an effect on a referenced card matching a Selection. It is

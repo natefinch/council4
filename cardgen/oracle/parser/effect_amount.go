@@ -64,6 +64,7 @@ func cutDelayedTiming(tokens []shared.Token) ([]shared.Token, DelayedTimingKind)
 		timing DelayedTimingKind
 	}{
 		{[]string{"at", "the", "beginning", "of", "the", "next", "end", "step"}, DelayedTimingNextEndStep},
+		{[]string{"at", "the", "beginning", "of", "your", "next", "end", "step"}, DelayedTimingYourNextEndStep},
 		{[]string{"at", "the", "beginning", "of", "the", "next", "turn's", "upkeep"}, DelayedTimingNextUpkeep},
 		{[]string{"at", "end", "of", "combat"}, DelayedTimingEndOfCombat},
 	} {

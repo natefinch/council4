@@ -12,13 +12,14 @@ func parseExileTopOfLibrary(effect *EffectSyntax) {
 	if parseExileThatManyTopOfLibrary(effect) {
 		return
 	}
-	amount, ownerContext, ok := exileTopOfLibraryAmount(effect)
+	match, ok := exileTopOfLibraryAmount(effect)
 	if !ok {
 		return
 	}
 	effect.CardSource = EffectCardSourceTopOfPlayerLibrary
-	effect.Context = ownerContext
-	effect.Amount = EffectAmountSyntax{Span: effect.Amount.Span, Value: amount, Known: true}
+	effect.Context = match.ownerContext
+	effect.FaceDown = match.faceDown
+	effect.Amount = EffectAmountSyntax{Span: effect.Amount.Span, Value: match.amount, Known: true}
 }
 
 // parseExileThatManyTopOfLibrary recognizes the dynamic controller-scoped "exile
@@ -64,45 +65,68 @@ type exileTopCandidate struct {
 	ownerContext EffectContextKind
 }
 
-// exileTopOfLibraryAmount reports the normalized card count and resolved
-// library-owner player scope for an exact "Exile the top [N] card(s) of
-// <player>'s library." clause and whether the clause matches that closed shape.
-// It accepts the controller, each-player, each-opponent, each-other-player, and
-// single targeted-player subjects, including the controller-actor "exile the
-// top card of each player's library." spelling, the player scopes the
-// executable backend lowers.
-func exileTopOfLibraryAmount(effect *EffectSyntax) (int, EffectContextKind, bool) {
+// exileTopMatch is the normalized result of matching an exact "Exile the top [N]
+// card(s) of <player>'s library[ face down]." clause: the card count, the
+// resolved library-owner player scope, and whether the cards are exiled face
+// down.
+type exileTopMatch struct {
+	amount       int
+	ownerContext EffectContextKind
+	faceDown     bool
+}
+
+// exileTopOfLibraryAmount reports the normalized card count, resolved
+// library-owner player scope, and whether the cards are exiled face down for an
+// exact "Exile the top [N] card(s) of <player>'s library[ face down]." clause,
+// and whether the clause matches that closed shape. It accepts the controller,
+// each-player, each-opponent, each-other-player, and single targeted-player
+// subjects, including the controller-actor "exile the top card of each player's
+// library." spelling, the player scopes the executable backend lowers. The
+// trailing " face down" rider is recognized only for the controller's own
+// library ("Exile the top card of your library face down.", Necropotence), where
+// the exiled card is hidden until a later effect returns it; every other subject
+// stays face up so a face-down rider on it falls through and fails closed.
+func exileTopOfLibraryAmount(effect *EffectSyntax) (exileTopMatch, bool) {
 	if effect.Kind != EffectExile ||
 		effect.Negated ||
 		effect.Optional ||
 		effect.Additional ||
 		len(effect.Targets) > 1 {
-		return 0, "", false
+		return exileTopMatch{}, false
 	}
 	amount := 1
 	noun := "card"
 	if effect.Amount.Known {
 		if effect.Amount.Value < 1 {
-			return 0, "", false
+			return exileTopMatch{}, false
 		}
 		amount = effect.Amount.Value
 		if amount > 1 {
 			word, ok := cardinalNumberWord(amount)
 			if !ok {
-				return 0, "", false
+				return exileTopMatch{}, false
 			}
 			noun = word + " cards"
 		}
 	}
 	candidates, ok := exileTopOfLibraryCandidates(effect)
 	if !ok {
-		return 0, "", false
+		return exileTopMatch{}, false
 	}
 	clause := exactEffectClauseText(effect)
 	for _, candidate := range candidates {
 		base := candidate.subject + "the top " + noun + " of " + candidate.possessive + " library"
 		if strings.EqualFold(clause, base+".") {
-			return amount, candidate.ownerContext, true
+			return exileTopMatch{amount: amount, ownerContext: candidate.ownerContext}, true
+		}
+		// The trailing "face down" rider (Necropotence's "Exile the top card of
+		// your library face down.") exiles the controller's own top card hidden
+		// so a later effect can return it without revealing it. It is recognized
+		// only for the controller's own library; any other library keeps the
+		// public exile and a face-down rider on it fails closed.
+		if candidate.ownerContext == EffectContextController &&
+			strings.EqualFold(clause, base+" face down.") {
+			return exileTopMatch{amount: amount, ownerContext: candidate.ownerContext, faceDown: true}, true
 		}
 		// A trailing "with a <kind> counter on it/them" rider places one named
 		// marker counter on each exiled card ("exile the top card of each
@@ -114,12 +138,12 @@ func exileTopOfLibraryAmount(effect *EffectSyntax) (int, EffectContextKind, bool
 		if effect.CounterKnown {
 			for _, suffix := range exileTopCounterSuffixes(effect.CounterKind.String()) {
 				if strings.EqualFold(clause, base+suffix) {
-					return amount, candidate.ownerContext, true
+					return exileTopMatch{amount: amount, ownerContext: candidate.ownerContext}, true
 				}
 			}
 		}
 	}
-	return 0, "", false
+	return exileTopMatch{}, false
 }
 
 // exileTopCounterSuffixes reconstructs the recognized "with a <kind> counter on

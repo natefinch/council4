@@ -532,6 +532,13 @@ func validateCardReference(ref CardReference) error {
 		if ref.TargetIndex < 0 {
 			return errors.New("target card reference must not use a negative TargetIndex")
 		}
+	case CardReferenceCaptured:
+		if ref.LinkID != "" {
+			return errors.New("captured card reference must not set LinkID")
+		}
+		if ref.TargetIndex != 0 {
+			return errors.New("captured card reference must not set TargetIndex")
+		}
 	case CardReferenceNone:
 		return errors.New("card reference has no kind")
 	default:
@@ -2822,7 +2829,7 @@ func (p CreateDelayedTrigger) validatePrimitive(targets []TargetSpec, checkTarge
 		}
 	} else {
 		switch p.Trigger.Timing {
-		case DelayedAtBeginningOfNextEndStep, DelayedAtBeginningOfNextUpkeep, DelayedAtBeginningOfNextMainPhase, DelayedAtEndOfCombat:
+		case DelayedAtBeginningOfNextEndStep, DelayedAtBeginningOfNextUpkeep, DelayedAtBeginningOfNextMainPhase, DelayedAtEndOfCombat, DelayedAtBeginningOfYourNextEndStep:
 		default:
 			return errors.New("delayed trigger requires a recognized timing")
 		}
@@ -2862,6 +2869,17 @@ func (p CreateDelayedTrigger) validatePrimitive(targets []TargetSpec, checkTarge
 		}
 	} else if p.Trigger.EventPattern.Exists && p.Trigger.EventPattern.Val.DyingObjectCaptured {
 		return errors.New("delayed trigger DyingObjectCaptured pattern requires a CapturedDyingObject")
+	}
+	if p.Trigger.CapturedCard.Exists {
+		if p.Trigger.EventPattern.Exists {
+			return errors.New("delayed trigger CapturedCard requires a fixed-phase timing")
+		}
+		if p.Trigger.CapturedCard.Val.Kind() != ObjectReferenceLinkedObject {
+			return errors.New("delayed trigger CapturedCard requires a linked-object reference")
+		}
+		if err := validateObjectReference(p.Trigger.CapturedCard.Val, targets, checkTargets); err != nil {
+			return err
+		}
 	}
 	return nil
 }

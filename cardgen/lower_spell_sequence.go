@@ -3404,6 +3404,10 @@ func lowerDelayedSequenceClause(
 		sequence[len(sequence)-1].Primitive = publisher
 		return delayed, true, false
 	}
+	if publisher, delayed, ok := lowerDelayedTopCardReturn(effectIndex, ctx, sequence); ok {
+		sequence[len(sequence)-1].Primitive = publisher
+		return delayed, true, false
+	}
 	if publisher, grant, ok := lowerSequentialReferencedKeywordGrant(effectIndex, ctx, sequence, publisherGated); ok {
 		sequence[len(sequence)-1].Primitive = publisher
 		return grant, true, false
@@ -4058,6 +4062,111 @@ func lowerDelayedTargetExile(
 		}}}}.Ability(),
 	}}
 	return publisher, game.Mode{Sequence: []game.Instruction{{Primitive: delayed}}}.Ability(), true
+}
+
+// isDelayedTopCardReturnEffect reports whether effect is a delayed "Put that card
+// into your hand at the beginning of your next end step." clause whose subject is
+// the card an earlier exile-top-of-library clause in the same ability exiled and
+// published ("Pay 1 life: Exile the top card of your library face down. Put that
+// card into your hand at the beginning of your next end step." — Necropotence).
+// The "your next end step" timing is the controller-keyed
+// DelayedAtBeginningOfYourNextEndStep, and the "that card" back-reference binds to
+// the prior instruction's result (the exiled card), not a target or the
+// triggering event. A face-up exile, a "the next end step"/"next upkeep"/current
+// end-step timing, a counter rider, or a non-hand destination all fall through
+// this predicate (or publishLinkedExiledTopCard below) and fail closed.
+func isDelayedTopCardReturnEffect(effect *compiler.CompiledEffect) bool {
+	return effect.Kind == compiler.EffectPut &&
+		effect.DelayedTiming == game.DelayedAtBeginningOfYourNextEndStep &&
+		!effect.Negated &&
+		!effect.Optional &&
+		effect.Context == parser.EffectContextController &&
+		effect.ToZone == zone.Hand &&
+		!effect.CounterKindKnown &&
+		!effect.EntersTapped &&
+		referencesBindTo(effect.References, compiler.ReferenceBindingPriorInstructionResult, 0)
+}
+
+// lowerDelayedTopCardReturn lowers Necropotence's delayed "Put that card into your
+// hand at the beginning of your next end step." clause, which returns the single
+// card the immediately preceding "Exile the top card of your library face down."
+// clause exiled and published. It rewrites that exile-top instruction to publish
+// the exiled card under a body-scoped linked key, then schedules a controller-keyed
+// end-step delayed trigger that freezes the linked card to a concrete card id at
+// schedule time (CapturedCard) and moves it from exile to its owner's hand
+// (MoveCard). Per-trigger capture, rather than re-resolving the shared
+// source-scoped link key at the end step, lets several same-turn activations each
+// return their own exiled card and lets a later activation reuse the key without
+// disturbing an already-scheduled return. The move no-ops if the card has since
+// left exile (it was cast, stolen, or otherwise moved), and the whole return
+// no-ops if the library was empty so nothing was exiled. It returns ok=false (so
+// the caller lowers the clause normally) for any shape it cannot link, preserving
+// existing behavior for unlinkable predecessors.
+func lowerDelayedTopCardReturn(
+	effectIndex int,
+	ctx contentCtx,
+	sequence []game.Instruction,
+) (game.Primitive, game.AbilityContent, bool) {
+	// Invariant: ctx is the contextForEffect-narrowed per-clause effectAbility
+	// built at lowerOrderedEffectSequence and threaded through
+	// lowerDelayedSequenceClause, so content.Effects always holds exactly one
+	// clause effect; any other length is an upstream bug.
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf("lowerDelayedTopCardReturn: expected a single effect, got %d", len(ctx.content.Effects)))
+	}
+	if effectIndex == 0 ||
+		len(sequence) != effectIndex ||
+		!isDelayedTopCardReturnEffect(&ctx.content.Effects[0]) ||
+		ctx.optional ||
+		!referencesBindTo(ctx.content.References, compiler.ReferenceBindingPriorInstructionResult, 0) {
+		return nil, game.AbilityContent{}, false
+	}
+	key := game.LinkedKey(fmt.Sprintf("delayed-top-card-%d", effectIndex))
+	publisher, ok := publishLinkedExiledTopCard(sequence[effectIndex-1].Primitive, key)
+	if !ok {
+		return nil, game.AbilityContent{}, false
+	}
+	consumed := ctx
+	consumed.content.References = nil
+	if consumed.content.Unconsumed() {
+		return nil, game.AbilityContent{}, false
+	}
+	delayed := game.CreateDelayedTrigger{Trigger: game.DelayedTriggerDef{
+		Timing:       game.DelayedAtBeginningOfYourNextEndStep,
+		CapturedCard: opt.Val(game.LinkedObjectReference(string(key))),
+		Content: game.Mode{Sequence: []game.Instruction{{Primitive: game.MoveCard{
+			Card:        game.CapturedCardReference(),
+			FromZone:    zone.Exile,
+			Destination: zone.Hand,
+		}}}}.Ability(),
+	}}
+	return publisher, game.Mode{Sequence: []game.Instruction{{Primitive: delayed}}}.Ability(), true
+}
+
+// publishLinkedExiledTopCard rewrites an exile-top-of-library instruction to
+// publish the single exiled card under key, so a following delayed clause can
+// capture and later return exactly that card. It reports false for any other
+// primitive, for a face-up exile (Necropotence's hidden-information return
+// requires the card be exiled face down, so a face-up predecessor fails closed),
+// for a multi-card or player-group exile (the "that card" singular return names
+// exactly one card), for a counter-bearing exile, or for one that already
+// publishes, so the delayed return links only a predecessor whose exiled card it
+// can faithfully identify.
+func publishLinkedExiledTopCard(primitive game.Primitive, key game.LinkedKey) (game.Primitive, bool) {
+	if primitive.Kind() != game.PrimitiveExileTopOfLibrary {
+		return nil, false
+	}
+	exile, ok := primitive.(game.ExileTopOfLibrary)
+	if !ok ||
+		!exile.FaceDown ||
+		exile.PublishLinked != "" ||
+		exile.Counter.Exists ||
+		exile.PlayerGroup.Kind != game.PlayerGroupReferenceNone ||
+		exile.Amount != game.Fixed(1) {
+		return nil, false
+	}
+	exile.PublishLinked = key
+	return exile, true
 }
 
 // isSequentialReferencedKeywordGrantEffect reports whether effect is an exact
