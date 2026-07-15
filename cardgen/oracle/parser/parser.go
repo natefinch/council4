@@ -33,6 +33,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	source = expandMeleeKeyword(source)
 	source = expandFusedTrigger(source)
 	source = expandDisjunctiveTrigger(source)
+	source = expandSharedSubjectTriggerUnion(source)
 	source = expandDiesOrExileTrigger(source)
 	source = expandEntersOrLeavesBattlefieldTrigger(source)
 	source = expandEntersOrTurnedFaceUpTrigger(source)
