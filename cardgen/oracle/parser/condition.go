@@ -97,6 +97,7 @@ const (
 	ConditionPredicateSourceSaddled                                    ConditionPredicateKind = "ConditionPredicateSourceSaddled"
 	ConditionPredicateSourceNotSaddled                                 ConditionPredicateKind = "ConditionPredicateSourceNotSaddled"
 	ConditionPredicateAttackersAttackingControllerAtLeast              ConditionPredicateKind = "ConditionPredicateAttackersAttackingControllerAtLeast"
+	ConditionPredicateNoAttackerAttackedController                     ConditionPredicateKind = "ConditionPredicateNoAttackerAttackedController"
 	ConditionPredicateControllerLibrarySizeAtLeast                     ConditionPredicateKind = "ConditionPredicateControllerLibrarySizeAtLeast"
 	ConditionPredicateControllerLifeExactly                            ConditionPredicateKind = "ConditionPredicateControllerLifeExactly"
 	ConditionPredicateControllerGainedLifeThisTurnAtLeast              ConditionPredicateKind = "ConditionPredicateControllerGainedLifeThisTurnAtLeast"
@@ -878,6 +879,7 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		recognizeControllerTurnCondition,
 		recognizeControllerTurnOfGameCondition,
 		recognizeAttackersAttackingControllerCondition,
+		recognizeNoneOfThoseAttackedControllerCondition,
 		recognizeSpellXCondition,
 		recognizeAdamantManaSpentCondition,
 		recognizeEventSpellManaSpentCondition,
@@ -1288,6 +1290,21 @@ func recognizeAttackersAttackingControllerCondition(body []shared.Token, _ Atoms
 		Predicate: ConditionPredicateAttackersAttackingControllerAtLeast,
 		Threshold: count,
 	}, true
+}
+
+// recognizeNoneOfThoseAttackedControllerCondition matches the intervening-if
+// combat gate "none of those creatures attacked you" (Firemane Commando).
+// "Those creatures" back-references the attackers declared by the trigger's
+// "another player attacks with two or more creatures" event; the predicate
+// holds when none of those attackers attacked the ability controller as a
+// player directly. An attack on another player, on any planeswalker, or on a
+// battle does not count, so a mixed batch that never declared a direct attack
+// against the controller satisfies it. It fails closed on any other wording.
+func recognizeNoneOfThoseAttackedControllerCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
+	if tokenWordsEqual(body, "none", "of", "those", "creatures", "attacked", "you") {
+		return ConditionClause{Predicate: ConditionPredicateNoAttackerAttackedController}, true
+	}
+	return ConditionClause{}, false
 }
 
 func recognizeCastTimingCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {

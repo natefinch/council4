@@ -430,6 +430,18 @@ func TestCombatPhaseAndStepTriggerPatternsSaturateRepresentableSlots(t *testing.
 			},
 		},
 		{
+			name:  "another player attacks with two or more creatures",
+			event: "another player attacks with two or more creatures",
+			kind:  TriggerWhenever,
+			want: TriggerPattern{
+				Kind:                 TriggerWhenever,
+				Event:                TriggerEventAttackerDeclared,
+				Controller:           ControllerOpponent,
+				OneOrMore:            true,
+				AttackerCountAtLeast: 2,
+			},
+		},
+		{
 			name:  "block related Selection",
 			event: "this creature blocks a creature with flying",
 			kind:  TriggerWhenever,

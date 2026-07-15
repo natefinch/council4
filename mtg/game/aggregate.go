@@ -114,6 +114,19 @@ const (
 	// existential gate (Bloodchief Ascension) is satisfied exactly when this
 	// maximum is at least N.
 	AggregateAnyOpponentLifeLostThisTurn
+
+	// AggregateAttackersInBatchAttackedController is the number of attackers in
+	// the triggering attack batch (the EventAttackerDeclared events sharing the
+	// trigger event's simultaneous batch) that were declared attacking the
+	// context controller as a player directly. Attacks on another player, on any
+	// planeswalker (including the controller's own), or on a battle are excluded,
+	// so it counts only direct player-attacks on the controller. It reads the
+	// declared batch from the triggering event rather than live combat, so it is
+	// stable across source-controller changes and creatures leaving combat, and
+	// it backs the "if none of those creatures attacked you" gate (Firemane
+	// Commando) when compared as "at most zero". It resolves only in an attacker-
+	// declared trigger's intervening-if context and fails closed elsewhere.
+	AggregateAttackersInBatchAttackedController
 )
 
 // AggregateComparison compares a player- or board-derived quantity against a

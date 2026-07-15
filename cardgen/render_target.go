@@ -1048,6 +1048,8 @@ func renderAggregateKind(kind game.AggregateKind) (string, error) {
 		return "game.AggregateOpponentCount", nil
 	case game.AggregateAttackersAttackingController:
 		return "game.AggregateAttackersAttackingController", nil
+	case game.AggregateAttackersInBatchAttackedController:
+		return "game.AggregateAttackersInBatchAttackedController", nil
 	case game.AggregateControllerGainedLifeThisTurn:
 		return "game.AggregateControllerGainedLifeThisTurn", nil
 	case game.AggregateSpellX:

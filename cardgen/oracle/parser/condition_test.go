@@ -763,6 +763,37 @@ func TestParseConditionAttackersAttackingController(t *testing.T) {
 	}
 }
 
+// TestParseConditionNoAttackerAttackedController covers the Firemane Commando
+// trailing effect gate "they draw a card if none of those creatures attacked
+// you", which maps to its own attack-batch predicate and rides an
+// opponent-attack trigger scoped by attacker count.
+func TestParseConditionNoAttackerAttackedController(t *testing.T) {
+	t.Parallel()
+	document, diagnostics := Parse(
+		"Whenever another player attacks with two or more creatures, they draw a card if none of those creatures attacked you.",
+		Context{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if len(document.Abilities) != 1 {
+		t.Fatalf("abilities = %#v", document.Abilities)
+	}
+	ability := document.Abilities[0]
+	if ability.Trigger == nil || ability.Trigger.TriggerEvent == nil {
+		t.Fatalf("trigger event not typed: %#v", ability.Trigger)
+	}
+	if ability.Trigger.TriggerEvent.Kind != TriggerEventKindAttack ||
+		ability.Trigger.TriggerEvent.Actor.Kind != TriggerEventActorOpponent ||
+		ability.Trigger.TriggerEvent.AttackerCountAtLeast != 2 {
+		t.Fatalf("trigger event = %#v, want opponent attack with count 2", ability.Trigger.TriggerEvent)
+	}
+	clauses := ability.ConditionClauses
+	if len(clauses) != 1 ||
+		clauses[0].Predicate != ConditionPredicateNoAttackerAttackedController {
+		t.Fatalf("clauses = %#v, want no-attacker-attacked-controller predicate", clauses)
+	}
+}
+
 // TestParseConditionGainedLifeThisTurn covers the intervening-if condition
 // "if you gained N or more life this turn" (Angelic Accord, Griffin Aerie),
 // which gates an end-step trigger on the controller's accumulated life gain.

@@ -1051,6 +1051,19 @@ func combatTriggerEventClauseTests() []triggerEventClauseTest {
 			},
 		},
 		{
+			name:   "another player attacks with two or more creatures",
+			source: "Whenever another player attacks with two or more creatures, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.Kind != TriggerEventKindAttack ||
+					clause.Actor.Kind != TriggerEventActorOpponent ||
+					!clause.OneOrMore ||
+					clause.AttackerCountAtLeast != 2 {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+		{
 			name:   "attack one or more creatures",
 			source: "Whenever one or more creatures attack, draw a card.",
 			check: func(t *testing.T, clause *TriggerEventClause) {

@@ -851,6 +851,12 @@ func parsePlayerAttackTriggerEventClause(tokens []shared.Token) *TriggerEventCla
 	case len(tokens) >= 3 && syntaxWordsEqual(tokens[:3], "an", "opponent", "attacks"):
 		actor = TriggerEventActor{Kind: TriggerEventActorOpponent, Span: shared.SpanOf(tokens[:2])}
 		rest = tokens[3:]
+	case len(tokens) >= 3 && syntaxWordsEqual(tokens[:3], "another", "player", "attacks"):
+		// "another player" names any player other than the ability controller,
+		// which in this engine (no teammates) is exactly an opponent, so it maps
+		// to the same opponent-controller attack relation as "an opponent".
+		actor = TriggerEventActor{Kind: TriggerEventActorOpponent, Span: shared.SpanOf(tokens[:2])}
+		rest = tokens[3:]
 	case len(tokens) >= 3 && syntaxWordsEqual(tokens[:3], "a", "player", "attacks"):
 		actor = TriggerEventActor{Kind: TriggerEventActorPlayer, Span: shared.SpanOf(tokens[:2])}
 		rest = tokens[3:]
@@ -869,11 +875,14 @@ func parsePlayerAttackTriggerEventClause(tokens []shared.Token) *TriggerEventCla
 		tokenWordsEqual(rest, "with", "one", "or", "more", "creatures") {
 		return clause
 	}
-	if actor.Kind == TriggerEventActorYou {
-		if count, ok := attackWithCreatureCount(rest); ok {
-			clause.AttackerCountAtLeast = count
-			return clause
-		}
+	// "with <N> or more creatures" scopes the whole attack declaration by its
+	// attacker count for any acting player, not just the controller ("Whenever
+	// you attack with two or more creatures", "Whenever another player attacks
+	// with two or more creatures"). The count is a property of the batch, so it
+	// applies uniformly to the controller-scoped and opponent-scoped forms.
+	if count, ok := attackWithCreatureCount(rest); ok {
+		clause.AttackerCountAtLeast = count
+		return clause
 	}
 	recipient, player, ok := parseAttackRecipient(rest)
 	if !ok || recipient.Kind != TriggerEventAttackRecipientPlayer {

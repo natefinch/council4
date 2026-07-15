@@ -412,6 +412,8 @@ func lowerGenericPatternTrigger(
 	var diagnostic *shared.Diagnostic
 	if groupContent, ok := lowerAttackGroupKeywordGrant(body.Content, pattern, body.Optional); ok {
 		content = groupContent
+	} else if drawContent, ok := lowerAttackBatchEventPlayerDraw(body.Content, pattern, body.Optional); ok {
+		content = drawContent
 	} else if pattern.Event == game.EventCountersAdded || attackDefendingPlayerEvent(pattern.Event) ||
 		pattern.RequireProducedManaColorFromEntryChoice {
 		content, diagnostic = lowerTriggerBodyContent(cardName, body.Content, body.Optional, &bodySyntax, pattern)

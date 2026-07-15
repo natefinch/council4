@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,896 of 32,501 cards eligible for paper support (55.1%)**. The Scryfall Oracle Cards corpus contains 5,753 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,897 of 32,501 cards eligible for paper support (55.1%)**. The Scryfall Oracle Cards corpus contains 5,753 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -5335,6 +5335,7 @@ Council4 currently supports **17,896 of 32,501 cards eligible for paper support 
 - Fireforger's Puzzleknot
 - Firehoof Cavalry
 - Firemane Avenger
+- Firemane Commando
 - Firemantle Mage
 - Firemaw Kavu
 - Firemind's Research

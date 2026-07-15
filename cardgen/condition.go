@@ -149,6 +149,8 @@ func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringC
 		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateControllerCreaturePowerDiversity, Op: compare.GreaterOrEqual, Value: condition.Threshold})
 	case compiler.ConditionPredicateAttackersAttackingControllerAtLeast:
 		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateAttackersAttackingController, Op: compare.GreaterOrEqual, Value: condition.Threshold})
+	case compiler.ConditionPredicateNoAttackerAttackedController:
+		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateAttackersInBatchAttackedController, Op: compare.LessOrEqual, Value: 0})
 	case compiler.ConditionPredicateControllerGainedLifeThisTurnAtLeast:
 		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateControllerGainedLifeThisTurn, Op: compare.GreaterOrEqual, Value: condition.Threshold})
 	case compiler.ConditionPredicateObjectMatches:
@@ -425,7 +427,16 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 			// per-effect sequence gate.
 			compiler.ConditionPredicateSourceAbilityResolutionOrdinalThisTurn:
 			return ctx == conditionContextEffectGate
-		case compiler.ConditionPredicateFirstCombatPhaseOfTurn:
+		case compiler.ConditionPredicateNoAttackerAttackedController,
+			compiler.ConditionPredicateFirstCombatPhaseOfTurn:
+			// "they draw a card if none of those creatures attacked you"
+			// (Firemane Commando) gates the resolving triggered ability's draw
+			// on its own attack batch, read from the resolving stack object's
+			// trigger event, so it is a per-effect sequence gate. It is also
+			// admitted as an intervening trigger gate for the equivalent
+			// "Whenever ..., if none of those creatures attacked you, they draw"
+			// wording. ConditionPredicateFirstCombatPhaseOfTurn shares the same
+			// effect-gate/intervening-trigger placement.
 			return ctx == conditionContextEffectGate ||
 				ctx == conditionContextInterveningTrigger
 		case compiler.ConditionPredicateControllerTurn:
