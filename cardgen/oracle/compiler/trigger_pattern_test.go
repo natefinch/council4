@@ -198,6 +198,17 @@ func TestTypedTriggerEventsBindClosedSlots(t *testing.T) {
 			},
 		},
 		{
+			name:  "any-counter event binds self without kind match",
+			event: "one or more counters are put on this creature",
+			kind:  TriggerWhenever,
+			want: TriggerPattern{
+				Kind:      TriggerWhenever,
+				Event:     TriggerEventCountersAdded,
+				Source:    TriggerSourceSelf,
+				OneOrMore: true,
+			},
+		},
+		{
 			name:  "counter event binds controller-scoped subject",
 			event: "one or more +1/+1 counters are put on another creature you control",
 			kind:  TriggerWhenever,
@@ -1076,10 +1087,11 @@ func TestCompileConstructedTriggerEventsFailClosed(t *testing.T) {
 			clause: parser.TriggerEventClause{Kind: parser.TriggerEventKindSpellCast},
 		},
 		{
-			name: "missing counter kind",
+			name: "invalid counter kind",
 			clause: parser.TriggerEventClause{
 				Kind:    parser.TriggerEventKindCounterAdded,
 				Subject: parser.TriggerEventSubject{Kind: parser.TriggerEventSubjectSelf},
+				Counter: parser.TriggerEventCounter{Known: true, Kind: counter.Kind(9999)},
 			},
 		},
 		{

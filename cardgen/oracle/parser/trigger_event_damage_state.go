@@ -373,10 +373,48 @@ func parseCounterTriggerEventClause(
 			return clause
 		}
 	}
-	if index := syntaxWordsIndex(tokens, "counters", "are", "put", "on"); index > 3 && syntaxWordsEqual(tokens[:3], "one", "or", "more") {
-		return buildCounterTriggerEventClause(tokens, tokens[index+4:], atoms, true)
+	if index := syntaxWordsIndex(tokens, "counters", "are", "put", "on"); index >= 3 && syntaxWordsEqual(tokens[:3], "one", "or", "more") {
+		return parsePassiveCounterTriggerEventClause(tokens, tokens[:index+1], tokens[index+4:], atoms)
 	}
 	return nil
+}
+
+// parsePassiveCounterTriggerEventClause recognizes the passive-voice
+// counter-placement trigger "one or more [<kind>] counters are put on <subject>
+// [for the first time each turn]". The counter kind is optional: bare "one or
+// more counters" names no kind and matches any counter (Kevin/Danny Pink's
+// granted ability, "one or more counters are put on this creature for the first
+// time each turn"). A trailing "for the first time each turn" ordinal qualifier
+// caps the trigger to its first qualifying placement on the subject each turn,
+// folded onto the shared TriggerEventClause.FirstTimeEachTurn field the compiler
+// lifts into a once-per-turn trigger cap. counterPhrase spans the "one or more
+// [<kind>] counters" region so a subject that itself mentions a counter cannot
+// be mistaken for the placed counter's kind.
+func parsePassiveCounterTriggerEventClause(tokens, counterPhrase, subjectTokens []shared.Token, atoms Atoms) *TriggerEventClause {
+	firstTimeEachTurn := false
+	var firstTimeSpan shared.Span
+	if rest, span, ok := cutTrailingFirstTimeEachTurn(subjectTokens); ok {
+		subjectTokens = rest
+		firstTimeEachTurn = true
+		firstTimeSpan = span
+	}
+	eventCounter := TriggerEventCounter{}
+	if kind, span, ok := triggerEventCounterIn(counterPhrase, atoms); ok {
+		eventCounter = TriggerEventCounter{Kind: kind, Known: true, Span: span}
+	} else if !syntaxWordsEqual(counterPhrase, "one", "or", "more", "counters") {
+		// A named counter kind sits between "one or more" and "counters" but did
+		// not resolve to a recognized counter. Only the bare "one or more
+		// counters" phrasing means "any counter"; an unrecognized named kind
+		// fails closed rather than silently matching every counter.
+		return nil
+	}
+	clause := buildCounterTriggerEventClauseWithCounter(subjectTokens, atoms, true, eventCounter)
+	if clause == nil {
+		return nil
+	}
+	clause.FirstTimeEachTurn = firstTimeEachTurn
+	clause.FirstTimeEachTurnSpan = firstTimeSpan
+	return clause
 }
 
 // counterThresholdOrdinal recognizes the ordinal-threshold counter-placement
@@ -476,6 +514,20 @@ func buildCounterTriggerEventClause(
 		return nil
 	}
 	eventCounter := TriggerEventCounter{Kind: counterKind, Known: true, Span: counterSpan}
+	return buildCounterTriggerEventClauseWithCounter(subjectTokens, atoms, oneOrMore, eventCounter)
+}
+
+// buildCounterTriggerEventClauseWithCounter assembles a counter-placement
+// trigger clause from an already-resolved counter (which may be an unknown-kind
+// "any counter") and the trigger's subject tokens. It recognizes the self
+// subject ("this creature"/"this permanent"), a self permanent subject, and a
+// controlled-permanent Selection subject.
+func buildCounterTriggerEventClauseWithCounter(
+	subjectTokens []shared.Token,
+	atoms Atoms,
+	oneOrMore bool,
+	eventCounter TriggerEventCounter,
+) *TriggerEventClause {
 	if syntaxWordsEqual(subjectTokens, "this", "creature") || syntaxWordsEqual(subjectTokens, "this", "permanent") {
 		return &TriggerEventClause{
 			Kind:      TriggerEventKindCounterAdded,
