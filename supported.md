@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,867 of 32,501 cards eligible for paper support (55.0%)**. The Scryfall Oracle Cards corpus contains 5,753 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,883 of 32,501 cards eligible for paper support (55.0%)**. The Scryfall Oracle Cards corpus contains 5,753 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1522,6 +1522,7 @@ Council4 currently supports **17,867 of 32,501 cards eligible for paper support 
 - Blightcaster
 - Blighted Agent
 - Blighted Bat
+- Blighted Burgeoning
 - Blighted Cataract
 - Blighted Fen
 - Blighted Gorge
@@ -2866,6 +2867,7 @@ Council4 currently supports **17,867 of 32,501 cards eligible for paper support 
 - Compassionate Healer
 - Compelling Argument
 - Compelling Deterrence
+- Compleated Huntmaster
 - Complete Disregard
 - Composer of Spring
 - Composite Golem
@@ -2964,6 +2966,7 @@ Council4 currently supports **17,867 of 32,501 cards eligible for paper support 
 - Convalescent Care
 - Conversion Apparatus
 - Conversion Chamber
+- Converter Beast
 - Conviction
 - Convolute
 - Cooped Up
@@ -4783,6 +4786,7 @@ Council4 currently supports **17,867 of 32,501 cards eligible for paper support 
 - Essence Fracture
 - Essence Harvest
 - Essence Infusion
+- Essence of Orthodoxy
 - Essence Pulse
 - Essence Scatter
 - Essence Sliver
@@ -4855,6 +4859,7 @@ Council4 currently supports **17,867 of 32,501 cards eligible for paper support 
 - Excavation Elephant
 - Excavation Explosion
 - Excavation Mole
+- Excise the Imperfect
 - Exclude
 - Exclusion Mage
 - Excommunicate
@@ -4932,6 +4937,7 @@ Council4 currently supports **17,867 of 32,501 cards eligible for paper support 
 - Eyeblight's Ending
 - Eyeless Watcher
 - Eyes in the Skies
+- Eyes of Gitaxias
 - Eyes of the Beholder
 - Eyes of the Watcher
 - Eyes of the Wisent
@@ -6061,6 +6067,7 @@ Council4 currently supports **17,867 of 32,501 cards eligible for paper support 
 - Gideon's Phalanx
 - Gideon's Reproach
 - Gideon's Resolve
+- Gift of Compleation
 - Gift of Granite
 - Gift of Growth
 - Gift of Orzhova
@@ -7457,6 +7464,7 @@ Council4 currently supports **17,867 of 32,501 cards eligible for paper support 
 - Icetill Explorer
 - Icewind Elemental
 - Icewind Stalwart
+- Ichor Drinker
 - Ichor Explosion
 - Ichor Rats
 - Ichor Slick
@@ -7615,6 +7623,7 @@ Council4 currently supports **17,867 of 32,501 cards eligible for paper support 
 - Inexorable Blob
 - Inexorable Tide
 - Infantry Veteran
+- Infected Defector
 - Infected Vermin
 - Infectious Bite
 - Infectious Bloodlust
@@ -7656,6 +7665,7 @@ Council4 currently supports **17,867 of 32,501 cards eligible for paper support 
 - Inheritance
 - Inherited Envelope
 - Initiate's Companion
+- Injector Crocodile
 - Ink Dissolver
 - Inkfathom Divers
 - Inkfathom Infiltrator
@@ -9210,6 +9220,7 @@ Council4 currently supports **17,867 of 32,501 cards eligible for paper support 
 - Marauder's Axe
 - Marauding Blight-Priest
 - Marauding Brinefang
+- Marauding Dreadship
 - Marauding Looter
 - Marauding Mako
 - Marauding Sphinx
@@ -9444,6 +9455,7 @@ Council4 currently supports **17,867 of 32,501 cards eligible for paper support 
 - Merciless Eternal
 - Merciless Eviction
 - Merciless Executioner
+- Merciless Repurposing
 - Merciless Resolve
 - Mercurial Geists
 - Mercurial Kite
@@ -11036,6 +11048,7 @@ Council4 currently supports **17,867 of 32,501 cards eligible for paper support 
 - Phyrexian Altar
 - Phyrexian Archivist
 - Phyrexian Arena
+- Phyrexian Awakening
 - Phyrexian Battleflies
 - Phyrexian Beast
 - Phyrexian Beast
@@ -12963,6 +12976,7 @@ Council4 currently supports **17,867 of 32,501 cards eligible for paper support 
 - Scrubland
 - Scryb Ranger
 - Scryb Sprites
+- Sculpted Perfection
 - Sculpting Steel
 - Sculptor of Winter
 - Sculpture
@@ -15234,6 +15248,7 @@ Council4 currently supports **17,867 of 32,501 cards eligible for paper support 
 - Tangleclaw Werewolf // Fibrous Entangler
 - Tangled Florahedron // Tangled Vale
 - Tangled Islet
+- Tangled Skyline
 - Tanglepool Bridge
 - Tangleroot
 - Tanglespan Lookout
@@ -15784,6 +15799,7 @@ Council4 currently supports **17,867 of 32,501 cards eligible for paper support 
 - Tigereye Cameo
 - Tightening Coils
 - Tigra, Feline Fury
+- Tiller of Flesh
 - Tilling Treefolk
 - Tilonalli's Knight
 - Timber Gorge

@@ -3437,6 +3437,15 @@ func lowerDelayedSequenceClause(
 		}
 		return lowered.content, true, false
 	}
+	if lowered, ok := lowerCharacteristicIncubateRider(effects, effectIndex, ctx, sequence); ok {
+		if lowered.priorPrimitive != nil {
+			sequence[len(sequence)-1].Primitive = lowered.priorPrimitive
+		}
+		if lowered.priorResult != "" {
+			sequence[len(sequence)-1].PublishResult = lowered.priorResult
+		}
+		return lowered.content, true, false
+	}
 	if content, ok := lowerThatMuchLifeBackref(ctx, effectIndex, sequence); ok {
 		return content, true, false
 	}
@@ -3617,6 +3626,99 @@ func priorClauseDestroys(sequence []game.Instruction, effectIndex int, object ga
 		return false
 	}
 	return destroy.Object == object
+}
+
+// priorClauseExiles reports whether the instruction immediately preceding the
+// incubate rider is a single-target Exile of exactly the permanent whose mana
+// value the rider reads. Like priorClauseDestroys, this guarantees the referent
+// has left the battlefield so its last-known mana value is available. It fails
+// closed for group exiles and for an exile of a different object.
+func priorClauseExiles(sequence []game.Instruction, effectIndex int, object game.ObjectReference) bool {
+	exile, ok := sequence[effectIndex-1].Primitive.(game.Exile)
+	if !ok || exile.Group.Valid() {
+		return false
+	}
+	return exile.Object == object
+}
+
+// lowerCharacteristicIncubateRider lowers an "Its controller incubates X, where
+// X is its mana value." clause (Excise the Imperfect) that rides on a preceding
+// single-target exile in an ordered sequence. It mirrors
+// lowerCharacteristicLifeRider: the recipient is the exiled permanent's
+// last-known controller and the amount is that permanent's last-known mana
+// value, both read through the inherited antecedent target and the exile
+// rewritten to publish last-known information. It produces a game.Incubate
+// primitive and fails closed for any other shape.
+func lowerCharacteristicIncubateRider(
+	effects []compiler.CompiledEffect,
+	effectIndex int,
+	ctx contentCtx,
+	sequence []game.Instruction,
+) (characteristicLifeRiderLowering, bool) {
+	// Invariant: ctx is the contextForEffect-narrowed per-clause effectAbility,
+	// so content.Effects always holds exactly one clause effect.
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf("lowerCharacteristicIncubateRider: expected a single effect, got %d", len(ctx.content.Effects)))
+	}
+	if effectIndex == 0 || len(sequence) != effectIndex {
+		return characteristicLifeRiderLowering{}, false
+	}
+	effect := &ctx.content.Effects[0]
+	if effect.Kind != compiler.EffectIncubate ||
+		!effect.Exact ||
+		effect.Negated ||
+		ctx.optional ||
+		effect.Amount.Known ||
+		effect.Amount.Multiplier != 1 ||
+		effect.Amount.DynamicKind != compiler.DynamicAmountSourceManaValue ||
+		(effect.Amount.DynamicForm != compiler.DynamicAmountWhereX &&
+			effect.Amount.DynamicForm != compiler.DynamicAmountEqual) ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return characteristicLifeRiderLowering{}, false
+	}
+	amountRef, subjectRefs, ok := sourcePowerReferences(effect)
+	if !ok {
+		return characteristicLifeRiderLowering{}, false
+	}
+	player, ok := lifeRiderRecipient(ctx, effect, subjectRefs)
+	if !ok {
+		return characteristicLifeRiderLowering{}, false
+	}
+	amountLowering, ok := lifeRiderAmountObject(effects, amountRef, effectIndex, sequence, true)
+	if !ok {
+		return characteristicLifeRiderLowering{}, false
+	}
+	// Mana value reads the exiled permanent's last-known information, which is
+	// only recorded once a prior clause moved it off the battlefield. Accept only
+	// when the exile was rewritten to publish that information (priorPrimitive
+	// set) or the amount bound directly to a target the prior clause exiled or
+	// destroyed.
+	if amountLowering.priorPrimitive == nil &&
+		!priorClauseExiles(sequence, effectIndex, amountLowering.object) &&
+		!priorClauseDestroys(sequence, effectIndex, amountLowering.object) {
+		return characteristicLifeRiderLowering{}, false
+	}
+	dynamic, ok := objectCharacteristicAmount(effect.Amount.DynamicKind, amountLowering.object)
+	if !ok {
+		return characteristicLifeRiderLowering{}, false
+	}
+	instruction := game.Instruction{Primitive: game.Incubate{
+		Amount:    game.Dynamic(dynamic),
+		Recipient: opt.Val(player),
+	}}
+	if amountLowering.priorResult != "" {
+		instruction.ResultGate = opt.Val(game.InstructionResultGate{
+			Key:       amountLowering.priorResult,
+			Succeeded: game.TriTrue,
+		})
+	}
+	return characteristicLifeRiderLowering{
+		content:        game.Mode{Sequence: []game.Instruction{instruction}}.Ability(),
+		priorPrimitive: amountLowering.priorPrimitive,
+		priorResult:    amountLowering.priorResult,
+	}, true
 }
 
 // lifeRiderRecipient resolves the player who gains or loses life for a

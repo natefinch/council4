@@ -304,6 +304,9 @@ func (BecomeCopy) Kind() PrimitiveKind { return PrimitiveBecomeCopy }
 // Kind implements Primitive for Amass.
 func (Amass) Kind() PrimitiveKind { return PrimitiveAmass }
 
+// Kind implements Primitive for Incubate.
+func (Incubate) Kind() PrimitiveKind { return PrimitiveIncubate }
+
 // Kind implements Primitive for Renown.
 func (Renown) Kind() PrimitiveKind { return PrimitiveRenown }
 
@@ -494,6 +497,7 @@ func (PhaseOut) isPrimitive()                             {}
 func (Regenerate) isPrimitive()                           {}
 func (BecomeCopy) isPrimitive()                           {}
 func (Amass) isPrimitive()                                {}
+func (Incubate) isPrimitive()                             {}
 func (Renown) isPrimitive()                               {}
 func (Adapt) isPrimitive()                                {}
 func (Bolster) isPrimitive()                              {}
@@ -777,6 +781,7 @@ func (PhaseOut) instructionRefs() primitiveRefs                { return primitiv
 func (Regenerate) instructionRefs() primitiveRefs              { return primitiveRefs{} }
 func (BecomeCopy) instructionRefs() primitiveRefs              { return primitiveRefs{} }
 func (p Amass) instructionRefs() primitiveRefs                 { return quantityRefs(p.Amount) }
+func (p Incubate) instructionRefs() primitiveRefs              { return quantityRefs(p.Amount) }
 func (p Renown) instructionRefs() primitiveRefs                { return quantityRefs(p.Amount) }
 func (p Adapt) instructionRefs() primitiveRefs                 { return quantityRefs(p.Amount) }
 func (p Connive) instructionRefs() primitiveRefs               { return quantityRefs(p.Amount) }

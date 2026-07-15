@@ -236,6 +236,12 @@ const (
 	// Army they control, first creating a 0/0 black Army creature token of the
 	// named subtype (AmassSubtype) if they control no Army. Amount holds N.
 	EffectAmass EffectKind = "EffectAmass"
+	// EffectIncubate models the incubate keyword action (CR 701.55) written as a
+	// resolving effect with a referenced recipient and dynamic amount ("Its
+	// controller incubates X, where X is its mana value.", Excise the Imperfect).
+	// The recipient creates an Incubator token with X +1/+1 counters on it.
+	// Amount holds X.
+	EffectIncubate EffectKind = "EffectIncubate"
 	// EffectBolster models the bolster keyword action (CR 701.37): "Bolster N".
 	// The controller chooses a creature with the least toughness among creatures
 	// they control (breaking a tie themselves) and puts N +1/+1 counters on it.

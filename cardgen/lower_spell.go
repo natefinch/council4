@@ -1991,6 +1991,8 @@ func lowerImmediateSingleEffectSpell(
 		return lowerRingTemptsSpell(ctx)
 	case compiler.EffectAmass:
 		return lowerAmassContent(ctx, syntax)
+	case compiler.EffectIncubate:
+		return lowerIncubateContent(ctx, syntax)
 	case compiler.EffectBolster:
 		return lowerBolsterContent(ctx, syntax)
 	case compiler.EffectRenown:

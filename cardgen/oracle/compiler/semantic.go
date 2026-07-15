@@ -2175,6 +2175,14 @@ const (
 	// opponents control." The relevant "your" is the static source's controller,
 	// not necessarily the affected permanent's controller.
 	EffectCantBeTargetedByControllerOpponents
+	// EffectIncubate is the incubate keyword action (CR 701.55) written as a
+	// resolving effect where a referenced player incubates a dynamic amount
+	// ("Its controller incubates X, where X is its mana value.", Excise the
+	// Imperfect): the recipient creates an Incubator token with that many +1/+1
+	// counters on it. It lowers to a game.Incubate primitive carrying the
+	// recipient reference and the dynamic amount. Added last so existing kinds
+	// keep their wire values.
+	EffectIncubate
 )
 
 // DurationKind identifies common continuous-effect durations.

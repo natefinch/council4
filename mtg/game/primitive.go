@@ -290,10 +290,14 @@ const (
 	// a prior instruction published under LinkedKey, using each linked object's
 	// last-known controller as the manifesting player.
 	PrimitiveManifestForEachLinked
+	// PrimitiveIncubate performs the incubate keyword action (CR 701.55): the
+	// recipient creates an Incubator token with Amount +1/+1 counters on it
+	// (game.Incubate). Added last so existing kinds keep their wire values.
+	PrimitiveIncubate
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveManifestForEachLinked) + 1
+const primitiveKindCount = int(PrimitiveIncubate) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -904,6 +908,20 @@ type DiscoverCards struct {
 type Amass struct {
 	Amount  Quantity
 	Subtype types.Sub
+}
+
+// Incubate performs the incubate keyword action (CR 701.55): the recipient
+// creates an Incubator token with Amount +1/+1 counters on it. An Incubator
+// token is a colorless artifact with "{2}: Transform this artifact." whose back
+// face is a 0/0 colorless Phyrexian artifact creature (CR 701.55a-c); the
+// +1/+1 counters carry through the transform, so the creature side has power
+// and toughness equal to Amount. Recipient names the creating player when set
+// (an exiled permanent's controller for "its controller incubates X"); it
+// defaults to the resolving object's controller. Incubate 0 still creates the
+// token with no counters (CR 701.55a places no minimum).
+type Incubate struct {
+	Amount    Quantity
+	Recipient opt.V[PlayerReference]
 }
 
 // Renown performs the renown keyword action (CR 702.111): if the referenced
