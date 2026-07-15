@@ -1437,6 +1437,49 @@ func damageAndCounterTriggerEventClauseTests() []triggerEventClauseTest {
 				}
 			},
 		},
+		{
+			name:   "counter any kind self first time each turn",
+			source: "Whenever one or more counters are put on this creature for the first time each turn, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.Kind != TriggerEventKindCounterAdded ||
+					clause.Subject.Kind != TriggerEventSubjectSelf ||
+					!clause.OneOrMore ||
+					!clause.FirstTimeEachTurn ||
+					clause.Counter.Known {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+		{
+			name:   "counter any kind self plain",
+			source: "Whenever one or more counters are put on this creature, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.Kind != TriggerEventKindCounterAdded ||
+					clause.Subject.Kind != TriggerEventSubjectSelf ||
+					!clause.OneOrMore ||
+					clause.FirstTimeEachTurn ||
+					clause.Counter.Known {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+		{
+			name:   "counter named kind self first time each turn",
+			source: "Whenever one or more +1/+1 counters are put on this creature for the first time each turn, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.Kind != TriggerEventKindCounterAdded ||
+					clause.Subject.Kind != TriggerEventSubjectSelf ||
+					!clause.OneOrMore ||
+					!clause.FirstTimeEachTurn ||
+					!clause.Counter.Known ||
+					clause.Counter.Kind != counter.PlusOnePlusOne {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
 	}
 }
 
@@ -1659,6 +1702,7 @@ func TestTriggerEventFailClosed(t *testing.T) {
 		{name: "near miss attack alone", source: "Whenever you attack alone, draw a card."},
 		{name: "near miss ability target", source: "Whenever this creature becomes the target of an ability, draw a card."},
 		{name: "unknown counter type", source: "Whenever a frobnicate counter is put on this creature, draw a card."},
+		{name: "unknown counter type one or more passive", source: "Whenever one or more frobnicate counters are put on this creature, draw a card."},
 		{name: "copy without cast", source: "Whenever you copy an instant or sorcery spell, draw a card."},
 		{name: "opponent cast or copy", source: "Whenever an opponent casts or copies an instant or sorcery spell, draw a card."},
 		{name: "ordinal beyond supported word", source: "Whenever you cast your sixth spell each turn, draw a card."},

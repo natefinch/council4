@@ -917,10 +917,11 @@ type TriggerEventStackObject struct {
 
 // TriggerEventCounter is a source-spanned counter kind for a counter-placement
 // trigger. Known reports whether Kind names a specific recognized counter; a
-// counter-added trigger always names one. Threshold, when positive, restricts
-// the trigger to the placement that brings the subject's running total of Kind
-// counters up to Threshold ("the twelfth hour counter is put on this artifact",
-// Midnight Clock); zero means every matching placement fires the trigger.
+// bare "one or more counters" trigger names no kind (Known false) and matches
+// any counter. Threshold, when positive, restricts the trigger to the placement
+// that brings the subject's running total of Kind counters up to Threshold ("the
+// twelfth hour counter is put on this artifact", Midnight Clock); zero means
+// every matching placement fires the trigger.
 type TriggerEventCounter struct {
 	Kind      counter.Kind `json:",omitempty"`
 	Known     bool         `json:",omitempty"`
@@ -1100,11 +1101,12 @@ type TriggerEventClause struct {
 	// whose ZoneChange.Kind is TriggerEventZoneChangeDied.
 	DealtDamageBySourceThisTurn bool `json:",omitempty"`
 
-	// FirstTimeEachTurn marks a became-target clause restricted to the first such
-	// targeting each turn ("...for the first time each turn", the Valiant ability
-	// word of Bloomburrow and the Glasskite spirits). It caps the ability to one
-	// trigger per turn, modeled downstream as a once-per-turn trigger frequency.
-	// It is set only on TriggerEventKindBecameTarget clauses.
+	// FirstTimeEachTurn marks an event clause restricted to the first such
+	// occurrence on the subject each turn ("...for the first time each turn",
+	// the Valiant ability word of Bloomburrow and the Glasskite spirits, and the
+	// counter-placement grant on Danny Pink). It caps the ability to one trigger
+	// per turn, modeled downstream as a once-per-turn trigger frequency. It is
+	// set on became-target and counter-added clauses.
 	FirstTimeEachTurn bool `json:",omitempty"`
 	// FirstTimeEachTurnSpan is the source span of the recognized "for the first
 	// time each turn" ordinal qualifier. It is zero when FirstTimeEachTurn is

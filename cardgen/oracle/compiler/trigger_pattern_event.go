@@ -487,7 +487,7 @@ func compileDamageEvent(clause *parser.TriggerEventClause, pattern *TriggerPatte
 }
 
 func compileCounterEvent(clause *parser.TriggerEventClause, pattern *TriggerPattern) bool {
-	if !clause.Counter.Known || !clause.Counter.Kind.Valid() {
+	if clause.Counter.Known && !clause.Counter.Kind.Valid() {
 		return false
 	}
 	causeController, ok := compileTriggerActorController(clause.CauseController)
@@ -495,8 +495,10 @@ func compileCounterEvent(clause *parser.TriggerEventClause, pattern *TriggerPatt
 		return false
 	}
 	pattern.Event = TriggerEventCountersAdded
-	pattern.MatchCounter = true
-	pattern.Counter = clause.Counter.Kind
+	if clause.Counter.Known {
+		pattern.MatchCounter = true
+		pattern.Counter = clause.Counter.Kind
+	}
 	pattern.CounterThreshold = clause.Counter.Threshold
 	pattern.CauseController = causeController
 	switch clause.Subject.Kind {
