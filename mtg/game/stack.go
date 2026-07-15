@@ -124,6 +124,15 @@ type StackObject struct {
 	// (a free cast) and for a permanent that was not cast.
 	ManaSpentToCast int
 
+	// ManaFromCreaturesSpentToCast is the portion of ManaSpentToCast that was
+	// produced by creature permanents, recorded as the spell's costs are paid.
+	// It backs Inga and Esika's "if three or more mana from creatures was spent
+	// to cast it" draw trigger. Each spent mana carries "from a creature"
+	// provenance fixed at production time, so it counts creature mana even if the
+	// producing creature later changes type or leaves. It is zero for a free cast
+	// and for a permanent that was not cast.
+	ManaFromCreaturesSpentToCast int
+
 	// KickerPaid is true if the kicker cost was paid.
 	KickerPaid bool
 

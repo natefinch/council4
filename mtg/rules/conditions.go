@@ -106,6 +106,11 @@ func aggregateValue(g *game.Game, ctx conditionContext, kind game.AggregateKind)
 			return 0, false
 		}
 		return ctx.event.ManaSpentToCast.Val, true
+	case game.AggregateEventSpellManaFromCreaturesSpentToCast:
+		if ctx.event == nil || !ctx.event.ManaFromCreaturesSpentToCast.Exists {
+			return 0, false
+		}
+		return ctx.event.ManaFromCreaturesSpentToCast.Val, true
 	case game.AggregateEventPlayerHandSize:
 		if ctx.event == nil {
 			return 0, false

@@ -147,16 +147,13 @@ func handleAddMana(r *effectResolver, prim game.AddMana) effectResolved {
 	if !ok || player.Eliminated {
 		return res
 	}
+	fromCreature := stackObjectSourceIsCreature(r.game, r.obj)
 	addToPool := func(c mana.Color, amount int, snow bool) {
-		switch {
-		case prim.PersistUntilEndOfTurn && snow:
-			player.ManaPool.AddPersistentSnow(c, amount)
-		case prim.PersistUntilEndOfTurn:
-			player.ManaPool.AddPersistent(c, amount)
-		case snow:
-			player.ManaPool.AddSnow(c, amount)
-		default:
-			player.ManaPool.Add(c, amount)
+		unit := mana.Unit{Color: c, Snow: snow, FromCreature: fromCreature}
+		if prim.PersistUntilEndOfTurn {
+			player.ManaPool.AddPersistentUnit(unit, amount)
+		} else {
+			player.ManaPool.AddUnit(unit, amount)
 		}
 	}
 	if multiplier := tappedForManaProductionMultiplier(r.game, r.obj, recipientID); multiplier > 1 {
@@ -202,7 +199,7 @@ func handleAddMana(r *effectResolver, prim game.AddMana) effectResolved {
 	snow := stackObjectSourceIsSnow(r.game, r.obj)
 	addToPool(manaColor, res.amount, snow)
 	if prim.SpendRider.Exists {
-		unit := mana.Unit{Color: manaColor, Snow: snow}
+		unit := mana.Unit{Color: manaColor, Snow: snow, FromCreature: fromCreature}
 		for i := 0; i < res.amount; i++ {
 			player.ManaRiders = append(player.ManaRiders, game.ManaRiderInstance{
 				Unit:           unit,

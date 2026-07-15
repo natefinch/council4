@@ -126,6 +126,7 @@ const (
 	ConditionPredicateGraveyardManaValueCountAtLeast                   ConditionPredicateKind = "ConditionPredicateGraveyardManaValueCountAtLeast"
 	ConditionPredicateAnyOpponentGraveyardCardCountAtLeast             ConditionPredicateKind = "ConditionPredicateAnyOpponentGraveyardCardCountAtLeast"
 	ConditionPredicateEventSpellManaSpentToCastAtLeast                 ConditionPredicateKind = "ConditionPredicateEventSpellManaSpentToCastAtLeast"
+	ConditionPredicateEventSpellCreatureManaSpentToCastAtLeast         ConditionPredicateKind = "ConditionPredicateEventSpellCreatureManaSpentToCastAtLeast"
 	ConditionPredicateEventSpellNoManaSpentToCast                      ConditionPredicateKind = "ConditionPredicateEventSpellNoManaSpentToCast"
 	ConditionPredicateTriggeringPlayerHandSizeAtMost                   ConditionPredicateKind = "ConditionPredicateTriggeringPlayerHandSizeAtMost"
 	ConditionPredicateTriggeringPlayerHandSizeAtLeast                  ConditionPredicateKind = "ConditionPredicateTriggeringPlayerHandSizeAtLeast"
@@ -890,6 +891,7 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		recognizeSpellXCondition,
 		recognizeAdamantManaSpentCondition,
 		recognizeEventSpellManaSpentCondition,
+		recognizeEventSpellCreatureManaSpentCondition,
 		recognizeCreatedTokenMatchCondition,
 		recognizeSharesCreatureTypeCondition,
 		recognizeControllerDesignationCondition,
@@ -981,6 +983,59 @@ func recognizeEventSpellManaSpentCondition(body []shared.Token, _ Atoms) (Condit
 // triggering spell of a spell-cast trigger, spelled "it" or "that spell".
 func eventSpellManaSpentSubject(tokens []shared.Token) bool {
 	return tokenWordsEqual(tokens, "it") || tokenWordsEqual(tokens, "that", "spell")
+}
+
+// recognizeEventSpellCreatureManaSpentCondition matches a spell-cast trigger's
+// intervening-if gate on how much of the mana spent to cast the triggering spell
+// was produced by creatures, referenced as "it" or "that spell": "three or more
+// mana from creatures was spent to cast it" (Inga and Esika) and the equivalent
+// "at least <n> mana from creatures was spent to cast it". It reads the creature
+// mana actually paid (CR 601.2f-h), so a free cast records none. It fails closed
+// on any other wording.
+func recognizeEventSpellCreatureManaSpentCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
+	value, rest, ok := cutManaSpentCountPrefix(body)
+	if !ok {
+		return ConditionClause{}, false
+	}
+	rest, ok = cutTokenPrefix(rest, "mana", "from", "creatures", "was", "spent", "to", "cast")
+	if !ok || !eventSpellManaSpentSubject(rest) {
+		return ConditionClause{}, false
+	}
+	return ConditionClause{
+		Predicate: ConditionPredicateEventSpellCreatureManaSpentToCastAtLeast,
+		Threshold: value,
+	}, true
+}
+
+// cutManaSpentCountPrefix reads a leading "at least <n>" or "<n> or more" /
+// "<n> or greater" count from a mana-spent condition clause, returning the value
+// and the remaining tokens. It fails closed on any other leading wording or a
+// non-positive count.
+func cutManaSpentCountPrefix(body []shared.Token) (int, []shared.Token, bool) {
+	if rest, ok := cutTokenPrefix(body, "at", "least"); ok {
+		if len(rest) < 1 {
+			return 0, nil, false
+		}
+		value, ok := conditionNumberValue(rest[0])
+		if !ok || value <= 0 {
+			return 0, nil, false
+		}
+		return value, rest[1:], true
+	}
+	if len(body) < 1 {
+		return 0, nil, false
+	}
+	value, ok := conditionNumberValue(body[0])
+	if !ok || value <= 0 {
+		return 0, nil, false
+	}
+	if rest, ok := cutTokenPrefix(body[1:], "or", "more"); ok {
+		return value, rest, true
+	}
+	if rest, ok := cutTokenPrefix(body[1:], "or", "greater"); ok {
+		return value, rest, true
+	}
+	return 0, nil, false
 }
 
 // recognizeSpellXCondition matches the resolving-spell value-of-X gate "X is

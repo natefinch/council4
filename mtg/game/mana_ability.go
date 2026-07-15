@@ -153,3 +153,28 @@ func IsTapSacrificeAnyColorManaAbility(body *ManaAbility) bool {
 	}
 	return reflect.DeepEqual(*body, TapSacrificeAnyColorManaAbility(body.Text))
 }
+
+// TapAnyColorCreatureSpellRestrictedManaAbility builds the granted mana ability
+// "{T}: Add one mana of any color. Spend this mana only to cast a creature
+// spell." (granted to each creature you control by Inga and Esika). It is the
+// tap-for-one-mana-of-any-color ability whose produced mana is restricted to
+// paying for creature spells. text is the ability's printed wording, passed
+// through so the rendered granted ability matches.
+func TapAnyColorCreatureSpellRestrictedManaAbility(text string) ManaAbility {
+	rider := ManaSpendRider{
+		Condition:   ManaSpendCastCreatureSpell,
+		Restriction: ManaSpendRestrictedToCondition,
+	}
+	return TapManaChoiceWithSpendRiderAbility(text, rider, anyColorManaChoices...)
+}
+
+// IsTapAnyColorCreatureSpellRestrictedManaAbility reports whether body is the
+// granted "{T}: Add one mana of any color. Spend this mana only to cast a
+// creature spell." ability (Inga and Esika). It is the spend-restricted
+// counterpart of IsTapAnyColorManaAbility.
+func IsTapAnyColorCreatureSpellRestrictedManaAbility(body *ManaAbility) bool {
+	if body == nil {
+		return false
+	}
+	return reflect.DeepEqual(*body, TapAnyColorCreatureSpellRestrictedManaAbility(body.Text))
+}

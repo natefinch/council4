@@ -117,6 +117,22 @@ func (p *Pool) SnowAmount() int {
 	return total
 }
 
+// CreatureAmount returns the amount of mana in the pool that was produced by a
+// creature source, regardless of color. It backs "mana from creatures" counting
+// (Inga and Esika).
+func (p *Pool) CreatureAmount() int {
+	if p.mana == nil {
+		return 0
+	}
+	total := 0
+	for unit, amount := range p.mana {
+		if unit.FromCreature {
+			total += amount
+		}
+	}
+	return total
+}
+
 // Units returns a copy of the pool's mana unit counts.
 func (p *Pool) Units() map[Unit]int {
 	units := make(map[Unit]int)
@@ -232,19 +248,20 @@ func (p *Pool) IsEmpty() bool {
 	return p.Total() == 0
 }
 
+// spendOrder enumerates every mana unit in the deterministic order the pool
+// spends them. Non-creature mana is spent before creature mana, and within each
+// of those non-snow before snow, so simple payments preserve creature and snow
+// provenance when possible and pools that never received creature mana keep
+// their previous spend behavior byte-for-byte.
 func spendOrder() []Unit {
-	return []Unit{
-		{Color: W},
-		{Color: U},
-		{Color: B},
-		{Color: R},
-		{Color: G},
-		{Color: C},
-		{Color: W, Snow: true},
-		{Color: U, Snow: true},
-		{Color: B, Snow: true},
-		{Color: R, Snow: true},
-		{Color: G, Snow: true},
-		{Color: C, Snow: true},
+	colors := []Color{W, U, B, R, G, C}
+	order := make([]Unit, 0, len(colors)*4)
+	for _, fromCreature := range []bool{false, true} {
+		for _, snow := range []bool{false, true} {
+			for _, c := range colors {
+				order = append(order, Unit{Color: c, Snow: snow, FromCreature: fromCreature})
+			}
+		}
 	}
+	return order
 }

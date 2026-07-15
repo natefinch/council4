@@ -55,13 +55,10 @@ func applyPaymentPlan(s State, playerID game.PlayerID, plan paymentPlan) {
 			ToZone:   zone.Exile,
 		})
 	}
-	for _, color := range paymentColors {
-		for _, snow := range []bool{false, true} {
-			unit := mana.Unit{Color: color, Snow: snow}
-			amount := plan.poolSpend[unit]
-			if amount > 0 && !player.ManaPool.SpendMatching(amount, func(candidate mana.Unit) bool { return candidate == unit }) {
-				panic("payment plan became invalid while spending mana")
-			}
+	for _, unit := range paymentUnitOrder() {
+		amount := plan.poolSpend[unit]
+		if amount > 0 && !player.ManaPool.SpendMatching(amount, func(candidate mana.Unit) bool { return candidate == unit }) {
+			panic("payment plan became invalid while spending mana")
 		}
 	}
 	if plan.lifePayment > 0 {
@@ -92,6 +89,7 @@ func activateManaForPayment(s State, playerID game.PlayerID, activation manaTap)
 		output.color != activation.color ||
 		output.amount != activation.amount ||
 		output.snow != activation.snow ||
+		output.fromCreature != activation.fromCreature ||
 		output.untap != activation.untap ||
 		output.sacrifice != activation.sacrifice ||
 		output.abilityIndex != activation.abilityIndex ||
@@ -110,11 +108,7 @@ func activateManaForPayment(s State, playerID game.PlayerID, activation manaTap)
 	if activation.sacrifice && !s.SacrificePermanent(permanent) {
 		return false
 	}
-	if output.snow {
-		player.ManaPool.AddSnow(activation.color, activation.amount)
-	} else {
-		player.ManaPool.Add(activation.color, activation.amount)
-	}
+	player.ManaPool.AddUnit(mana.Unit{Color: activation.color, Snow: output.snow, FromCreature: output.fromCreature}, activation.amount)
 	s.RecordManaProduced(permanent, playerID, sourceIsLand, activation.color, activation.amount, !activation.untap)
 	return true
 }
@@ -137,7 +131,7 @@ func paySpecificMana(plan *paymentPlan, pool map[mana.Unit]int, sources map[mana
 	}
 	if source, ok := takeNonSnowManaSource(sources, color); ok {
 		plan.manaTaps = append(plan.manaTaps, manaTap(source))
-		pool[mana.Unit{Color: source.color, Snow: source.snow}] += source.amount
+		pool[mana.Unit{Color: source.color, Snow: source.snow, FromCreature: source.fromCreature}] += source.amount
 		return paySpecificMana(plan, pool, sources, color)
 	}
 	if spendUnitFromSnapshot(plan, pool, mana.Unit{Color: color, Snow: true}, 1) {
@@ -148,7 +142,7 @@ func paySpecificMana(plan *paymentPlan, pool map[mana.Unit]int, sources map[mana
 		return false
 	}
 	plan.manaTaps = append(plan.manaTaps, manaTap(source))
-	pool[mana.Unit{Color: source.color, Snow: source.snow}] += source.amount
+	pool[mana.Unit{Color: source.color, Snow: source.snow, FromCreature: source.fromCreature}] += source.amount
 	return paySpecificMana(plan, pool, sources, color)
 }
 
@@ -179,7 +173,7 @@ func payGenericMana(plan *paymentPlan, pool map[mana.Unit]int, sources map[mana.
 			return false
 		}
 		plan.manaTaps = append(plan.manaTaps, manaTap(source))
-		pool[mana.Unit{Color: source.color, Snow: source.snow}] += source.amount
+		pool[mana.Unit{Color: source.color, Snow: source.snow, FromCreature: source.fromCreature}] += source.amount
 	}
 	return true
 }
@@ -227,7 +221,7 @@ func paySnowMana(plan *paymentPlan, pool map[mana.Unit]int, sources map[mana.Col
 		return false
 	}
 	plan.manaTaps = append(plan.manaTaps, manaTap(source))
-	pool[mana.Unit{Color: source.color, Snow: source.snow}] += source.amount
+	pool[mana.Unit{Color: source.color, Snow: source.snow, FromCreature: source.fromCreature}] += source.amount
 	return spendAnySnowUnitFromSnapshot(plan, pool)
 }
 
@@ -300,11 +294,30 @@ func spendUnitFromSnapshot(plan *paymentPlan, pool map[mana.Unit]int, unit mana.
 	if amount <= 0 {
 		return true
 	}
-	if pool[unit] < amount {
+	// Creature-mana provenance (FromCreature) is accounting metadata, not a
+	// payment constraint: a unit's color and snowness decide whether it can pay
+	// a given symbol, while FromCreature only records how much of the spend came
+	// from creatures (Inga and Esika). Spend units matching the requested color
+	// and snowness regardless of provenance, preferring non-creature mana so
+	// creature provenance is preserved for counting when either would do, and
+	// record the actual provenance spent in poolSpend.
+	variants := [2]mana.Unit{
+		{Color: unit.Color, Snow: unit.Snow, FromCreature: false},
+		{Color: unit.Color, Snow: unit.Snow, FromCreature: true},
+	}
+	if pool[variants[0]]+pool[variants[1]] < amount {
 		return false
 	}
-	pool[unit] -= amount
-	plan.poolSpend[unit] += amount
+	remaining := amount
+	for _, key := range variants {
+		if remaining == 0 {
+			break
+		}
+		take := min(pool[key], remaining)
+		pool[key] -= take
+		plan.poolSpend[key] += take
+		remaining -= take
+	}
 	return true
 }
 
@@ -331,11 +344,12 @@ func spendAnySnowUnitFromSnapshot(plan *paymentPlan, pool map[mana.Unit]int) boo
 
 func paymentUnitOrder() []mana.Unit {
 	var units []mana.Unit
-	for _, color := range paymentColors {
-		units = append(units, mana.Unit{Color: color})
-	}
-	for _, color := range paymentColors {
-		units = append(units, mana.Unit{Color: color, Snow: true})
+	for _, fromCreature := range []bool{false, true} {
+		for _, snow := range []bool{false, true} {
+			for _, color := range paymentColors {
+				units = append(units, mana.Unit{Color: color, Snow: snow, FromCreature: fromCreature})
+			}
+		}
 	}
 	return units
 }

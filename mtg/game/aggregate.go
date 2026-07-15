@@ -127,6 +127,16 @@ const (
 	// Commando) when compared as "at most zero". It resolves only in an attacker-
 	// declared trigger's intervening-if context and fails closed elsewhere.
 	AggregateAttackersInBatchAttackedController
+
+	// AggregateEventSpellManaFromCreaturesSpentToCast is the amount of the mana
+	// spent to cast a spell-cast trigger's triggering spell that was produced by
+	// creature permanents ("if three or more mana from creatures was spent to
+	// cast it", Inga and Esika). Each mana carries "from a creature" provenance
+	// fixed when it was produced, so it counts creature mana even after that
+	// creature changes type or leaves. It resolves only in a spell-cast trigger's
+	// intervening-if context, where the triggering event records the creature
+	// mana spent; it fails closed elsewhere.
+	AggregateEventSpellManaFromCreaturesSpentToCast
 )
 
 // AggregateComparison compares a player- or board-derived quantity against a

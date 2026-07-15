@@ -359,6 +359,7 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 	obj.ColorsOfManaSpentToCast = distinctManaColorsSpent(paymentResult.PoolSpend)
 	obj.ManaSpentByColorToCast = manaSpentByColor(paymentResult.PoolSpend)
 	obj.ManaSpentToCast = totalManaSpent(paymentResult.PoolSpend)
+	obj.ManaFromCreaturesSpentToCast = creatureManaSpent(paymentResult.PoolSpend)
 
 	// stormCopyCount must be read before the spell-cast event is emitted, since
 	// that event increments the storm count for later spells this turn.
@@ -367,20 +368,21 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 	// already on the stack; emit its zone-change and spell-cast events now so
 	// "when you cast" triggers fire after payment.
 	emitSpellCastEvents(g, obj, game.Event{
-		SourceID:        cast.CardID,
-		StackObjectID:   obj.ID,
-		Controller:      playerID,
-		CardID:          cast.CardID,
-		Face:            cast.Face,
-		CardTypes:       stackObjectCardTypes(obj, spellDef),
-		CardSupertypes:  cardSupertypes(spellDef),
-		CardSubtypes:    stackObjectCardSubtypes(obj, spellDef),
-		Colors:          spellColors(spellDef),
-		ManaValue:       opt.Val(stackManaValue(spellDef, cast.XValue)),
-		ManaSpentToCast: opt.Val(totalManaSpent(paymentResult.PoolSpend)),
-		KickerPaid:      cast.KickerPaid,
-		FromZone:        sourceZone,
-		ToZone:          zone.Stack,
+		SourceID:                     cast.CardID,
+		StackObjectID:                obj.ID,
+		Controller:                   playerID,
+		CardID:                       cast.CardID,
+		Face:                         cast.Face,
+		CardTypes:                    stackObjectCardTypes(obj, spellDef),
+		CardSupertypes:               cardSupertypes(spellDef),
+		CardSubtypes:                 stackObjectCardSubtypes(obj, spellDef),
+		Colors:                       spellColors(spellDef),
+		ManaValue:                    opt.Val(stackManaValue(spellDef, cast.XValue)),
+		ManaSpentToCast:              opt.Val(totalManaSpent(paymentResult.PoolSpend)),
+		ManaFromCreaturesSpentToCast: opt.Val(creatureManaSpent(paymentResult.PoolSpend)),
+		KickerPaid:                   cast.KickerPaid,
+		FromZone:                     sourceZone,
+		ToZone:                       zone.Stack,
 	})
 	createStormCopies(g, obj, spellDef, stormCopies)
 	resolveSpellCastManaSpendRiders(g, playerID, riderSnapshot, paymentResult.PoolSpend, spellDef, obj)
@@ -446,23 +448,25 @@ func (e *Engine) applyMutateCastWithChoices(g *game.Game, playerID game.PlayerID
 	obj.AdditionalCostsPaid = paymentResult.AdditionalCostsPaid
 	obj.SacrificedAsCostIDs = paymentResult.SacrificedIDs
 	emitSpellCastEvents(g, obj, game.Event{
-		SourceID:        cast.CardID,
-		StackObjectID:   obj.ID,
-		Controller:      playerID,
-		CardID:          cast.CardID,
-		Face:            game.FaceFront,
-		CardTypes:       stackObjectCardTypes(obj, spellDef),
-		CardSupertypes:  cardSupertypes(spellDef),
-		CardSubtypes:    stackObjectCardSubtypes(obj, spellDef),
-		Colors:          spellColors(spellDef),
-		ManaValue:       opt.Val(stackManaValue(spellDef, 0)),
-		ManaSpentToCast: opt.Val(totalManaSpent(paymentResult.PoolSpend)),
-		FromZone:        sourceZone,
-		ToZone:          zone.Stack,
+		SourceID:                     cast.CardID,
+		StackObjectID:                obj.ID,
+		Controller:                   playerID,
+		CardID:                       cast.CardID,
+		Face:                         game.FaceFront,
+		CardTypes:                    stackObjectCardTypes(obj, spellDef),
+		CardSupertypes:               cardSupertypes(spellDef),
+		CardSubtypes:                 stackObjectCardSubtypes(obj, spellDef),
+		Colors:                       spellColors(spellDef),
+		ManaValue:                    opt.Val(stackManaValue(spellDef, 0)),
+		ManaSpentToCast:              opt.Val(totalManaSpent(paymentResult.PoolSpend)),
+		ManaFromCreaturesSpentToCast: opt.Val(creatureManaSpent(paymentResult.PoolSpend)),
+		FromZone:                     sourceZone,
+		ToZone:                       zone.Stack,
 	})
 	obj.ColorsOfManaSpentToCast = distinctManaColorsSpent(paymentResult.PoolSpend)
 	obj.ManaSpentByColorToCast = manaSpentByColor(paymentResult.PoolSpend)
 	obj.ManaSpentToCast = totalManaSpent(paymentResult.PoolSpend)
+	obj.ManaFromCreaturesSpentToCast = creatureManaSpent(paymentResult.PoolSpend)
 	resolveSpellCastManaSpendRiders(g, playerID, riderSnapshot, paymentResult.PoolSpend, spellDef, obj)
 	return true
 }
@@ -637,22 +641,23 @@ func (e *Engine) applyPreparedCopyWithChoices(g *game.Game, playerID game.Player
 	g.Stack.Push(obj)
 	emitTargetEvents(g, obj)
 	emitEvent(g, game.Event{
-		Kind:            game.EventSpellCast,
-		SourceID:        sourceID,
-		StackObjectID:   obj.ID,
-		Controller:      playerID,
-		CardID:          permanent.CardInstanceID,
-		Face:            game.FaceAlternate,
-		PermanentID:     permanent.ObjectID,
-		TokenDef:        permanent.TokenDef,
-		CardTypes:       stackObjectCardTypes(obj, spellDef),
-		CardSupertypes:  cardSupertypes(spellDef),
-		CardSubtypes:    stackObjectCardSubtypes(obj, spellDef),
-		Colors:          spellColors(spellDef),
-		ManaValue:       opt.Val(stackManaValue(spellDef, cast.XValue)),
-		ManaSpentToCast: opt.Val(totalManaSpent(paymentResult.PoolSpend)),
-		FromZone:        zone.Battlefield,
-		ToZone:          zone.Stack,
+		Kind:                         game.EventSpellCast,
+		SourceID:                     sourceID,
+		StackObjectID:                obj.ID,
+		Controller:                   playerID,
+		CardID:                       permanent.CardInstanceID,
+		Face:                         game.FaceAlternate,
+		PermanentID:                  permanent.ObjectID,
+		TokenDef:                     permanent.TokenDef,
+		CardTypes:                    stackObjectCardTypes(obj, spellDef),
+		CardSupertypes:               cardSupertypes(spellDef),
+		CardSubtypes:                 stackObjectCardSubtypes(obj, spellDef),
+		Colors:                       spellColors(spellDef),
+		ManaValue:                    opt.Val(stackManaValue(spellDef, cast.XValue)),
+		ManaSpentToCast:              opt.Val(totalManaSpent(paymentResult.PoolSpend)),
+		ManaFromCreaturesSpentToCast: opt.Val(creatureManaSpent(paymentResult.PoolSpend)),
+		FromZone:                     zone.Battlefield,
+		ToZone:                       zone.Stack,
 
 		PlayerEventOrdinalThisTurn: nextSpellCastOrdinalThisTurn(g, playerID),
 	})
@@ -660,6 +665,7 @@ func (e *Engine) applyPreparedCopyWithChoices(g *game.Game, playerID game.Player
 	obj.ColorsOfManaSpentToCast = distinctManaColorsSpent(paymentResult.PoolSpend)
 	obj.ManaSpentByColorToCast = manaSpentByColor(paymentResult.PoolSpend)
 	obj.ManaSpentToCast = totalManaSpent(paymentResult.PoolSpend)
+	obj.ManaFromCreaturesSpentToCast = creatureManaSpent(paymentResult.PoolSpend)
 	resolveSpellCastManaSpendRiders(g, playerID, riderSnapshot, paymentResult.PoolSpend, spellDef, obj)
 	e.resolveCascadeForCast(g, obj, spellDef, agents, log)
 	return true

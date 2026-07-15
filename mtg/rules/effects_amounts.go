@@ -15,6 +15,16 @@ func stackObjectSourceIsSnow(g *game.Game, obj *game.StackObject) bool {
 	return ok && permanentIsSnow(g, permanent)
 }
 
+// stackObjectSourceIsCreature reports whether the mana produced by obj was
+// produced by a creature permanent, so it carries "mana from creatures"
+// provenance (Inga and Esika). Its provenance is fixed here at production time;
+// a mana-producing spell has no battlefield permanent source and is never a
+// creature source.
+func stackObjectSourceIsCreature(g *game.Game, obj *game.StackObject) bool {
+	permanent, ok := permanentByObjectID(g, obj.SourceID)
+	return ok && permanentHasType(g, permanent, types.Creature)
+}
+
 func permanentIsSnow(g *game.Game, permanent *game.Permanent) bool {
 	return permanentHasSupertype(g, permanent, types.Snow)
 }

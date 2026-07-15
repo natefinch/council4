@@ -167,10 +167,13 @@ func (e *Engine) applyCastFaceDownWithChoices(g *game.Game, playerID game.Player
 		Colors:        nil, // Face-down spells are colorless (CR 708.2b).
 		ManaValue:     opt.Val(0),
 		// A face-down permanent is cast for the fixed {3} face-down cast cost
-		// (CR 702.37e); record that spend for mana-spent-to-cast triggers.
-		ManaSpentToCast: opt.Val(faceDownCastCost.ManaValue()),
-		FromZone:        zone.Hand,
-		ToZone:          zone.Stack,
+		// (CR 702.37e); record that spend for mana-spent-to-cast triggers. The
+		// face-down cast path does not track per-unit provenance, so no creature
+		// mana is attributed.
+		ManaSpentToCast:              opt.Val(faceDownCastCost.ManaValue()),
+		ManaFromCreaturesSpentToCast: opt.Val(0),
+		FromZone:                     zone.Hand,
+		ToZone:                       zone.Stack,
 	})
 	return true
 }

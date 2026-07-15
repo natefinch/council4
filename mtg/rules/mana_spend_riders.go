@@ -52,6 +52,22 @@ func manaSpentByColor(poolSpend map[mana.Unit]int) map[color.Color]int {
 	return byColor
 }
 
+// creatureManaSpent sums the portion of a payment's per-unit pool spend that was
+// produced by creature permanents, backing the spell-cast trigger intervening-if
+// predicate "if three or more mana from creatures was spent to cast it" (Inga
+// and Esika). Each mana unit carries "from a creature" provenance fixed when it
+// was produced, so it counts creature mana even after the producing creature
+// changes type or leaves. It returns zero for an empty spend.
+func creatureManaSpent(poolSpend map[mana.Unit]int) int {
+	total := 0
+	for unit, count := range poolSpend {
+		if count > 0 && unit.FromCreature {
+			total += count
+		}
+	}
+	return total
+}
+
 // totalManaSpent sums a payment's per-unit pool spend into the total amount of
 // mana spent, backing the spell-cast trigger intervening-if predicates "if no
 // mana was spent to cast it" (total zero) and "if at least N mana was spent to

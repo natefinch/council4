@@ -156,18 +156,19 @@ func (*Engine) castSuspendedCard(g *game.Game, playerID game.PlayerID, cardID id
 		Suspend:      true,
 	}
 	pushSpellToStack(g, obj, game.Event{
-		SourceID:        cardID,
-		StackObjectID:   obj.ID,
-		Controller:      playerID,
-		CardID:          cardID,
-		CardTypes:       cardTypes(spellDef),
-		CardSupertypes:  cardSupertypes(spellDef),
-		CardSubtypes:    cardSubtypes(spellDef),
-		Colors:          spellColors(spellDef),
-		ManaValue:       opt.Val(stackManaValue(spellDef, 0)),
-		ManaSpentToCast: opt.Val(0),
-		FromZone:        zone.Exile,
-		ToZone:          zone.Stack,
+		SourceID:                     cardID,
+		StackObjectID:                obj.ID,
+		Controller:                   playerID,
+		CardID:                       cardID,
+		CardTypes:                    cardTypes(spellDef),
+		CardSupertypes:               cardSupertypes(spellDef),
+		CardSubtypes:                 cardSubtypes(spellDef),
+		Colors:                       spellColors(spellDef),
+		ManaValue:                    opt.Val(stackManaValue(spellDef, 0)),
+		ManaSpentToCast:              opt.Val(0),
+		ManaFromCreaturesSpentToCast: opt.Val(0),
+		FromZone:                     zone.Exile,
+		ToZone:                       zone.Stack,
 	})
 	return true
 }

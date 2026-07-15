@@ -1077,6 +1077,13 @@ const (
 	// (Boromir, Lavinia, Roiling Vortex), the free-spell punisher gate. It reads
 	// the mana spent recorded on the triggering event.
 	ConditionPredicateEventSpellManaSpentToCastAtMost
+	// ConditionPredicateEventSpellCreatureManaSpentToCastAtLeast is satisfied when
+	// at least Threshold of the mana spent to cast a spell-cast trigger's
+	// triggering spell was produced by creatures ("if three or more mana from
+	// creatures was spent to cast it"; Inga and Esika). It reads the creature mana
+	// spent recorded on the triggering event, so it resolves only in a spell-cast
+	// trigger's intervening-if context.
+	ConditionPredicateEventSpellCreatureManaSpentToCastAtLeast
 	// ConditionPredicateTriggeringPlayerHandSizeAtMost is satisfied when the
 	// triggering player has at most Threshold cards in hand ("if that player has
 	// two or fewer cards in hand"; with Threshold zero, "if that player has no
