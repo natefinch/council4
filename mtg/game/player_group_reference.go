@@ -1,6 +1,8 @@
 package game
 
-import "fmt"
+import (
+	"fmt"
+)
 
 // PlayerGroupReferenceKind identifies the set of players in a player-group reference.
 type PlayerGroupReferenceKind int
@@ -46,6 +48,17 @@ type PlayerGroupReference struct {
 	// PlayerGroupReferenceOpponentsDealtCombatDamageThisGameByNamed. It must be
 	// empty for every other kind.
 	Name string
+	// ControlsMatching, when set, restricts the group to members who control at
+	// least one permanent matching the Selection ("Each player who controls an
+	// artifact or enchantment creates ..."). It is a per-member conditional that
+	// composes with any base Kind: the base kind supplies the candidate players
+	// (all players, opponents, ...) and this predicate keeps only those
+	// controlling a qualifying permanent, evaluated as the effect resolves so a
+	// control change or a player's elimination is honored. It is nil for an
+	// unconditional group. A pointer is used (rather than an inline Selection or
+	// opt.V) so PlayerGroupReference remains comparable with ==, which callers
+	// and embedding value types such as DamageRecipient rely on.
+	ControlsMatching *Selection
 }
 
 // OpponentsReference returns a reference to all opponents of the resolving controller.
@@ -56,6 +69,15 @@ func OpponentsReference() PlayerGroupReference {
 // AllPlayersReference returns a reference to all players.
 func AllPlayersReference() PlayerGroupReference {
 	return PlayerGroupReference{Kind: PlayerGroupReferenceAllPlayers}
+}
+
+// ControllingMatching returns a copy of the reference restricted to members who
+// control at least one permanent matching selection. It composes the per-member
+// "who controls <selection>" conditional onto any base group ("Each player who
+// controls an artifact or enchantment ..."), leaving the base Kind unchanged.
+func (r PlayerGroupReference) ControllingMatching(selection Selection) PlayerGroupReference {
+	r.ControlsMatching = &selection
+	return r
 }
 
 // TargetedPlayersReference returns a reference to every player targeted by the
@@ -85,22 +107,27 @@ func OpponentsDealtCombatDamageThisGameByNamedReference(name string) PlayerGroup
 
 // Validate reports structural problems with a PlayerGroupReference.
 func (r PlayerGroupReference) Validate() []string {
+	var problems []string
 	switch r.Kind {
 	case PlayerGroupReferenceOpponents, PlayerGroupReferenceAllPlayers,
 		PlayerGroupReferenceTargetedPlayers,
 		PlayerGroupReferenceOpponentsAttackingTriggerPlayer:
 		if r.Name != "" {
-			return []string{fmt.Sprintf("player group reference kind %d must not set a name", r.Kind)}
+			problems = append(problems, fmt.Sprintf("player group reference kind %d must not set a name", r.Kind))
 		}
-		return nil
 	case PlayerGroupReferenceOpponentsDealtCombatDamageThisGameByNamed:
 		if r.Name == "" {
-			return []string{"player group reference for opponents dealt combat damage this game by named creature requires a name"}
+			problems = append(problems, "player group reference for opponents dealt combat damage this game by named creature requires a name")
 		}
-		return nil
 	case PlayerGroupReferenceNone:
-		return []string{"player group reference has no kind"}
+		problems = append(problems, "player group reference has no kind")
 	default:
-		return []string{fmt.Sprintf("unknown player group reference kind %d", r.Kind)}
+		problems = append(problems, fmt.Sprintf("unknown player group reference kind %d", r.Kind))
 	}
+	if r.ControlsMatching != nil {
+		for _, problem := range r.ControlsMatching.Validate() {
+			problems = append(problems, "controls-matching selection: "+problem)
+		}
+	}
+	return problems
 }

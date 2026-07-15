@@ -289,6 +289,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				Duration:                       compileEffectDuration(syntax.Duration),
 				DelayedTiming:                  compileDelayedTiming(syntax.DelayedTiming),
 				Selector:                       compileTypedSelection(syntax.Selection),
+				RecipientControlsSelector:      compileRecipientControlsSelector(syntax.RecipientControlsSelection),
 				DamageRecipient: CompiledDamageRecipient{
 					GroupSelectors:  compileDamageRecipientSelectors(syntax.DamageRecipient.Groups),
 					Reference:       syntax.DamageRecipient.Reference,

@@ -1469,6 +1469,76 @@ func TestParseCreateTokenTargetRecipientExactness(t *testing.T) {
 	}
 }
 
+func TestParseCreateTokenControlsMatchingRecipientExactness(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source            string
+		exact             bool
+		wantQualifier     bool
+		qualifierRequired []CardType
+	}{
+		// "Each player who controls an artifact or enchantment creates ..." (Fade
+		// from History) captures the union qualifier and reconstructs byte-exact.
+		{
+			source:            "Each player who controls an artifact or enchantment creates a 2/2 green Bear creature token.",
+			exact:             true,
+			wantQualifier:     true,
+			qualifierRequired: []CardType{CardTypeArtifact, CardTypeEnchantment},
+		},
+		// The each-opponent base group carries the same qualifier.
+		{
+			source:            "Each opponent who controls an artifact creates a 1/1 white Soldier creature token.",
+			exact:             true,
+			wantQualifier:     true,
+			qualifierRequired: nil,
+		},
+		// An unqualified group recipient carries no qualifier.
+		{
+			source:        "Each player creates a 1/1 green Cat creature token.",
+			exact:         true,
+			wantQualifier: false,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(test.source, Context{InstantOrSorcery: true})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one", effects)
+			}
+			effect := effects[0]
+			if effect.Kind != EffectCreate {
+				t.Fatalf("effect kind = %v, want EffectCreate", effect.Kind)
+			}
+			if effect.Exact != test.exact {
+				t.Fatalf("effect Exact = %v, want %v", effect.Exact, test.exact)
+			}
+			if test.wantQualifier {
+				if effect.RecipientControlsSelection == nil {
+					t.Fatal("RecipientControlsSelection = nil, want the captured qualifier")
+				}
+				if len(test.qualifierRequired) != 0 {
+					got := effect.RecipientControlsSelection.RequiredTypesAny
+					if len(got) != len(test.qualifierRequired) {
+						t.Fatalf("qualifier RequiredTypesAny = %v, want %v", got, test.qualifierRequired)
+					}
+					for i := range got {
+						if got[i] != test.qualifierRequired[i] {
+							t.Fatalf("qualifier RequiredTypesAny = %v, want %v", got, test.qualifierRequired)
+						}
+					}
+				}
+			} else if effect.RecipientControlsSelection != nil {
+				t.Fatalf("RecipientControlsSelection = %#v, want nil", effect.RecipientControlsSelection)
+			}
+		})
+	}
+}
+
 func TestParseManaValueTargetExactness(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

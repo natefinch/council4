@@ -2391,6 +2391,15 @@ type CompiledEffect struct {
 	Duration                       DurationKind
 	DelayedTiming                  game.DelayedTriggerTiming
 	Selector                       CompiledSelector
+	// RecipientControlsSelector compiles the "who controls <selection>"
+	// per-member qualifier on an each-player or each-opponent group recipient
+	// ("Each player who controls an artifact or enchantment creates a token"). It
+	// is nil for an unqualified group recipient. Lowering threads it onto the
+	// created token's recipient group as its ControlsMatching filter, so the
+	// runtime keeps only members controlling a matching permanent. It describes
+	// the controlled permanent's characteristics; per-member control is checked
+	// at resolution.
+	RecipientControlsSelector *CompiledSelector
 	// DamageRecipient bundles the primary-recipient descriptors of a deal-damage
 	// effect (dual-recipient groups, each-source group, and referenced-player
 	// reference) into one typed payload. Its zero value denotes a single-target

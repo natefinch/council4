@@ -777,16 +777,9 @@ func (r Renderer) renderCreateToken(ctx *renderCtx, value game.CreateToken) (str
 		fields = append(fields, fmt.Sprintf("Recipient: opt.Val(%s),", recipient))
 	}
 	if value.RecipientGroup.Kind != game.PlayerGroupReferenceNone {
-		var group string
-		switch value.RecipientGroup.Kind {
-		case game.PlayerGroupReferenceOpponents:
-			group = "game.OpponentsReference()"
-		case game.PlayerGroupReferenceAllPlayers:
-			group = "game.AllPlayersReference()"
-		case game.PlayerGroupReferenceOpponentsAttackingTriggerPlayer:
-			group = "game.OpponentsAttackingTriggerPlayerReference()"
-		default:
-			return "", fmt.Errorf("render: unsupported player group reference kind %d", value.RecipientGroup.Kind)
+		group, err := r.renderPlayerGroupReferenceWithContext(ctx, value.RecipientGroup)
+		if err != nil {
+			return "", err
 		}
 		fields = append(fields, fmt.Sprintf("RecipientGroup: %s,", group))
 	}

@@ -167,6 +167,27 @@ func renderPlayerGroupReference(group game.PlayerGroupReference) (string, error)
 	}
 }
 
+// renderPlayerGroupReferenceWithContext renders a PlayerGroupReference including
+// its optional ControlsMatching per-member conditional ("Each player who
+// controls an artifact or enchantment ..."). The base group is rendered by
+// renderPlayerGroupReference; when ControlsMatching is set the rendered
+// selection is appended through the ControllingMatching builder so the generated
+// source reconstructs the filtered group.
+func (r Renderer) renderPlayerGroupReferenceWithContext(ctx *renderCtx, group game.PlayerGroupReference) (string, error) {
+	base, err := renderPlayerGroupReference(group)
+	if err != nil {
+		return "", err
+	}
+	if group.ControlsMatching == nil {
+		return base, nil
+	}
+	selection, err := r.renderSelection(ctx, *group.ControlsMatching)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%s.ControllingMatching(%s)", base, selection), nil
+}
+
 func (r Renderer) renderKeywordAbility(ctx *renderCtx, keyword game.KeywordAbility) (string, error) {
 	if simple, ok := keyword.(game.SimpleKeyword); ok {
 		kw, err := renderKeyword(simple.Kind)

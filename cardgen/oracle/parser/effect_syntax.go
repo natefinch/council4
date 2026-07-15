@@ -1704,6 +1704,10 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 				combatDamageSourceNameSpan = span
 			}
 		}
+		var recipientControlsSelection *SelectionSyntax
+		if context == EffectContextEachPlayer || context == EffectContextEachOpponent {
+			recipientControlsSelection = recipientControlsSelectionAt(tokens, tokenIndex, atoms)
+		}
 		durationTokens := ownership
 		nextConnection := EffectConnectionNone
 		if effectIndex+1 < len(indices) {
@@ -2024,6 +2028,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			Duration:                   duration,
 			DelayedTiming:              delayed,
 			Selection:                  effectSelection,
+			RecipientControlsSelection: recipientControlsSelection,
 			DamageRecipient: DamageRecipientSyntax{
 				Groups:          parseDamageRecipientPair(kind, clause, amount, atoms),
 				EachSourceGroup: eachSourceDamageGroup,
