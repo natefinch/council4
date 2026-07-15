@@ -1945,6 +1945,11 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 				tokenName = first.TokenName
 				tokenNameLeading = false
 				tokenPredefinedName = first.TokenPredefinedName
+				// The whole clause's amount folds the first spec's count; rebind
+				// it to that spec's own count so the effect (which stands in for
+				// the first spec) and its AdditionalTokens all carry the shared
+				// Quantity the lowering emits per spec.
+				amount = first.Amount
 				additionalTokens = specs[1:]
 			}
 		}

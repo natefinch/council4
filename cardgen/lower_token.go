@@ -301,13 +301,17 @@ func singleThatPlayerTargetReference(references []compiler.CompiledReference) bo
 
 // lowerMultiTokenCreate lowers a multi-token create effect ("Create a 1/1 green
 // Snake creature token, a 2/2 green Wolf creature token, and a 3/3 green
-// Elephant creature token.") to one Mode whose sequence creates each token in
-// source order. The effect's own token fields describe the first token; each
-// AdditionalTokens entry describes one of the rest. Every token must be a fixed
-// power/toughness creature token the single-token path already synthesizes, the
-// recipient must be the controller, and the clause must not be a linked or
-// keyword-content create; any other shape fails closed. Each token enters once
-// (the per-token "a"/"an" article), so every instruction creates a single token.
+// Elephant creature token."; "create X 1/1 white Halfling creature tokens and X
+// Food tokens.") to one Mode whose sequence creates each token in source order.
+// The effect's own token fields describe the first token; each AdditionalTokens
+// entry describes one of the rest. Every token must be either a fixed
+// power/toughness creature token the single-token path already synthesizes or a
+// predefined artifact token (Food, Treasure, ...) the runtime already models,
+// the recipient must be the controller, and the clause must not be a linked or
+// keyword-content create; any other shape fails closed. All specs share one
+// count (a single token each, or the spell's variable X), so every emitted
+// CreateToken carries that same Quantity — the runtime creates each token type
+// in its own simultaneous batch and applies token-creation replacements to each.
 func lowerMultiTokenCreate(ctx contentCtx, effect *compiler.CompiledEffect, recipient opt.V[game.PlayerReference], controllerRecipient bool, publishLinked game.LinkedKey, extraKeywords []parser.KeywordKind) (game.AbilityContent, *shared.Diagnostic) {
 	if !controllerRecipient ||
 		publishLinked != "" ||
@@ -328,6 +332,12 @@ func lowerMultiTokenCreate(ctx contentCtx, effect *compiler.CompiledEffect, reci
 			return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 		}
 		def, ok := synthesizeCreatureTokenDef(spec, spec.TokenKeywords)
+		if !ok && len(spec.TokenKeywords) == 0 {
+			// A predefined artifact token (Food, Treasure, ...) carries no printed
+			// power/toughness and no keywords; reuse the same named-artifact
+			// definitions the single-token path emits.
+			def, ok = synthesizeNamedArtifactTokenDef(spec)
+		}
 		if !ok {
 			return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 		}
@@ -342,9 +352,15 @@ func lowerMultiTokenCreate(ctx contentCtx, effect *compiler.CompiledEffect, reci
 			return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 		}
 		seen[tokenDefKey(def)] = def
+		// Every spec carries the shared count (a single token each, or the spell's
+		// variable X); createTokenAmount maps it to one Quantity emitted per spec.
+		amount, ok := createTokenAmount(ctx, spec, game.ObjectReference{})
+		if !ok {
+			return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+		}
 		sequence = append(sequence, game.Instruction{
 			Primitive: game.CreateToken{
-				Amount:         game.Fixed(1),
+				Amount:         amount,
 				Source:         game.TokenDef(def),
 				Recipient:      recipient,
 				EntryTapped:    spec.Selector.Tapped,
