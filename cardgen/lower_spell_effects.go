@@ -2477,6 +2477,25 @@ func lowerBolsterContent(
 	)
 }
 
+// lowerIncubateContent lowers a standalone incubate keyword-action effect
+// ("Incubate N.") to a game.Incubate primitive carrying the fixed count. The
+// recipient defaults to the resolving controller. The referenced-object
+// controller form ("Its controller incubates X, where X is its mana value.") is
+// lowered by lowerCharacteristicIncubateRider inside an ordered sequence.
+func lowerIncubateContent(
+	ctx contentCtx,
+	syntax *parser.Ability,
+) (game.AbilityContent, *shared.Diagnostic) {
+	return lowerExactPrimitiveSpell(
+		ctx,
+		syntax,
+		"incubate",
+		func(amount game.Quantity) game.Primitive {
+			return game.Incubate{Amount: amount}
+		},
+	)
+}
+
 // lowerAmassContent lowers a single amass keyword-action effect ("Amass Orcs N"
 // / "Amass Zombies N" / "Amass N") to a game.Amass primitive carrying the fixed
 // count and the named Army subtype recognized by the parser.

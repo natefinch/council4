@@ -122,6 +122,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return exactStandaloneActionEffectSyntax(effect, "Investigate")
 	case EffectAmass:
 		return exactAmassEffectSyntax(effect)
+	case EffectIncubate:
+		return exactIncubateEffectSyntax(effect)
 	case EffectBolster:
 		return exactStandaloneActionEffectSyntax(effect, "Bolster")
 	case EffectRenown:
@@ -4775,6 +4777,32 @@ func exactDiscoverEffectSyntax(effect *EffectSyntax) bool {
 	}
 	amount := effectAmountSourceText(effect)
 	return strings.EqualFold(exactEffectClauseText(effect), fmt.Sprintf("Discover %s.", amount))
+}
+
+// exactIncubateEffectSyntax reconstructs an incubate keyword-action clause and
+// compares it byte-for-byte. Two forms are recognized: the standalone
+// controller form ("Incubate N.") and the referenced-object-controller form
+// with a fixed or dynamic amount ("Its controller incubates N." / "Its
+// controller incubates X, where X is its mana value.", Excise the Imperfect).
+// The recipient names the creating player as the clause subject; any wording
+// that does not reconstruct exactly fails closed.
+func exactIncubateEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Context == EffectContextController {
+		return exactStandaloneActionEffectSyntax(effect, "Incubate")
+	}
+	if effect.Context != EffectContextReferencedObjectController {
+		return false
+	}
+	subject := referencedControllerSubjectText(effect)
+	if subject == "" {
+		return false
+	}
+	return exactControllerAmountClauseText(
+		exactEffectClauseText(effect),
+		subject+" incubates",
+		effect.Amount,
+		effectAmountSourceText(effect),
+	)
 }
 
 // exactAmassEffectSyntax reconstructs an amass keyword-action clause ("Amass

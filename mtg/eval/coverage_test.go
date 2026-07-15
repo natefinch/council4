@@ -85,7 +85,12 @@ import (
 //
 // ManifestForEachLinked is value-neutral: the number and controllers of the
 // manifested cards depend on the linked removal's runtime choices.
-const knownPrimitiveCount = 132
+//
+// Incubate is value-neutral (no atom), matching Amass: it creates a transforming
+// Incubator token with +1/+1 counters for a player who is typically the exiled
+// permanent's controller (an opponent), so its board payoff is player-relative
+// and not modeled by the single-target atom heuristic.
+const knownPrimitiveCount = 133
 
 // TestPrimitiveCountIsReconciled keeps a newly added resolution primitive from
 // silently falling through the translator: adding one trips this guard so its

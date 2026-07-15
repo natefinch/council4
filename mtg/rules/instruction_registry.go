@@ -180,6 +180,7 @@ func newPrimitiveRegistry() *primitiveRegistry {
 	registerPrimitiveHandler(reg, handleRepeatProcess)
 	registerPrimitiveHandler(reg, handleBecomeCopy)
 	registerPrimitiveHandler(reg, handleAmass)
+	registerPrimitiveHandler(reg, handleIncubate)
 	registerPrimitiveHandler(reg, handleBolster)
 	registerPrimitiveHandler(reg, handleAddExtraPhases)
 	registerPrimitiveHandler(reg, handleRollDie)

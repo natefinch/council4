@@ -581,6 +581,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectAnimateTarget
 	case parser.EffectAmass:
 		return EffectAmass
+	case parser.EffectIncubate:
+		return EffectIncubate
 	case parser.EffectBolster:
 		return EffectBolster
 	case parser.EffectRenown:

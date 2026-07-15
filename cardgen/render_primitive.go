@@ -1589,6 +1589,26 @@ func (r Renderer) renderAmass(ctx *renderCtx, value game.Amass) (string, error) 
 	return structLit("game.Amass", fields), nil
 }
 
+// renderIncubate renders an Incubate primitive, emitting the +1/+1 counter
+// amount and, when present, the recipient player reference (the exiled
+// permanent's controller for "its controller incubates X").
+func (r Renderer) renderIncubate(ctx *renderCtx, value game.Incubate) (string, error) {
+	amount, err := r.renderQuantity(ctx, value.Amount)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{fmt.Sprintf("Amount: %s,", amount)}
+	if value.Recipient.Exists {
+		recipient, err := r.renderPlayerReference(value.Recipient.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("Recipient: opt.Val(%s),", recipient))
+	}
+	return structLit("game.Incubate", fields), nil
+}
+
 // renderBolster renders a Bolster primitive, emitting its fixed +1/+1 counter
 // count and, when present, the linked key under which the chosen creature is
 // published for a later linked effect.

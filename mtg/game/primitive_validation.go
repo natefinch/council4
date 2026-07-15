@@ -366,6 +366,13 @@ func (p Amass) validateCapturedTargetControllerReferences(targets []TargetSpec, 
 	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
 }
 
+func (p Incubate) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	if err := validateCapturedTargetControllerOptionalReference(p.Recipient, targets, checkTargets); err != nil {
+		return err
+	}
+	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+}
+
 func (p Bolster) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
 	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
 }
@@ -1929,6 +1936,16 @@ func (p DiscoverCards) validatePrimitive(targets []TargetSpec, checkTargets bool
 
 func (p Amass) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	return validateQuantity(p.Amount, targets, checkTargets)
+}
+
+func (p Incubate) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
+		return err
+	}
+	if p.Recipient.Exists {
+		return validatePlayerReference(p.Recipient.Val, targets, checkTargets)
+	}
+	return nil
 }
 
 func (p Bolster) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
