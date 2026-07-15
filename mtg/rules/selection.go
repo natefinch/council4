@@ -172,6 +172,9 @@ func matchSelection(s *selectionSubject, sel *game.Selection) bool {
 	if !s.controllerMatches(sel.Controller) {
 		return false
 	}
+	if !s.ownerMatches(sel.Owner) {
+		return false
+	}
 	if sel.Tapped == game.TriTrue && !s.tapped() {
 		return false
 	}
@@ -1171,6 +1174,29 @@ func (s *selectionSubject) controllerMatches(relation game.ControllerRelation) b
 		return s.controller == s.viewer
 	case game.ControllerOpponent, game.ControllerNotYou:
 		return s.controller != s.viewer && isPlayerAlive(s.g, s.controller)
+	default:
+		return true
+	}
+}
+
+// ownerMatches applies the owner-relation portion of a Selection to the subject.
+// Unlike controllerMatches, which compares the subject's resolved controller, it
+// keys off the permanent's fixed owner, so a stolen commander (owned by the
+// viewer, controlled by an opponent) still matches OwnerYou. Only on-battlefield
+// permanents carry an owner here; every other subject fails a non-Any relation.
+func (s *selectionSubject) ownerMatches(relation game.OwnerRelation) bool {
+	if relation == game.OwnerAny {
+		return true
+	}
+	if s.kind != subjectPermanent || s.permanent == nil {
+		return false
+	}
+	owner := s.permanent.Owner
+	switch relation {
+	case game.OwnerYou:
+		return owner == s.viewer
+	case game.OwnerOpponent, game.OwnerNotYou:
+		return owner != s.viewer && isPlayerAlive(s.g, owner)
 	default:
 		return true
 	}

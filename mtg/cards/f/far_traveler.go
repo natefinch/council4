@@ -36,7 +36,7 @@ func newFarTraveler() *game.CardDef {
 					ContinuousEffects: []game.ContinuousEffect{
 						game.ContinuousEffect{
 							Layer: game.LayerAbility,
-							Group: game.ObjectControlledGroup(game.SourcePermanentReference(), game.Selection{RequiredTypes: []types.Card{types.Creature}, MatchCommander: true}),
+							Group: game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, Owner: game.OwnerYou, MatchCommander: true}),
 							AddAbilities: []game.Ability{
 								new(game.TriggeredAbility{
 									Trigger: game.TriggerCondition{

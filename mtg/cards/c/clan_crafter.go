@@ -38,7 +38,7 @@ func newClanCrafter() *game.CardDef {
 					ContinuousEffects: []game.ContinuousEffect{
 						game.ContinuousEffect{
 							Layer: game.LayerAbility,
-							Group: game.ObjectControlledGroup(game.SourcePermanentReference(), game.Selection{RequiredTypes: []types.Card{types.Creature}, MatchCommander: true}),
+							Group: game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, Owner: game.OwnerYou, MatchCommander: true}),
 							AddAbilities: []game.Ability{
 								new(game.ActivatedAbility{
 									Text:     "{2}, Sacrifice an artifact: Put a +1/+1 counter on this creature and draw a card.",

@@ -772,6 +772,9 @@ func lowerStaticGrantedQuotedAbility(granted *parser.StaticGrantedAbilitySyntax)
 	case grantedQuotedKeywordStaticBody(lowered):
 		body := lowered.staticAbilities[0].Body
 		return &body, true
+	case grantedQuotedRoomAbilityRuleStaticBody(lowered):
+		body := lowered.staticAbilities[0].Body
+		return &body, true
 	default:
 		return nil, false
 	}
@@ -797,6 +800,36 @@ func grantedQuotedKeywordStaticBody(lowered abilityLowering) bool {
 	return len(body.KeywordAbilities) > 0 &&
 		len(body.ContinuousEffects) == 0 &&
 		len(body.RuleEffects) == 0
+}
+
+// grantedQuotedRoomAbilityRuleStaticBody reports whether a quoted granted ability
+// lowered to exactly the room-ability trigger multiplier static body ("Room
+// abilities of dungeons you own trigger an additional time.", the ability the
+// Background Dungeon Delver grants to commander creatures their owner controls).
+// Only this rule-effect body is grantable as a quoted ability, so the grant fails
+// closed for any other static rule.
+func grantedQuotedRoomAbilityRuleStaticBody(lowered abilityLowering) bool {
+	if len(lowered.staticAbilities) != 1 ||
+		lowered.activatedAbility.Exists ||
+		lowered.manaAbility.Exists ||
+		lowered.loyaltyAbility.Exists ||
+		lowered.triggeredAbility.Exists ||
+		len(lowered.triggeredAbilities) != 0 {
+		return false
+	}
+	body := lowered.staticAbilities[0].Body
+	if len(body.KeywordAbilities) != 0 ||
+		len(body.ContinuousEffects) != 0 ||
+		len(body.RuleEffects) == 0 ||
+		body.Condition.Exists {
+		return false
+	}
+	for i := range body.RuleEffects {
+		if body.RuleEffects[i].Kind != game.RuleEffectAdditionalTriggerForRoomAbility {
+			return false
+		}
+	}
+	return true
 }
 
 func lowerStaticAddedTypes(continuous *compiler.StaticContinuousDeclaration) ([]types.Card, []types.Sub, bool) {
@@ -920,7 +953,8 @@ func appendStaticRuleDeclaration(body *game.StaticAbility, declaration compiler.
 	var affectedSelection game.Selection
 	switch declaration.Group.Domain {
 	case compiler.StaticGroupSource:
-		affectedSource = declaration.Rule.Kind != compiler.StaticRuleAdditionalTriggerForChosenCreatureType
+		affectedSource = declaration.Rule.Kind != compiler.StaticRuleAdditionalTriggerForChosenCreatureType &&
+			declaration.Rule.Kind != compiler.StaticRuleAdditionalTriggerForRoomAbility
 	case compiler.StaticGroupAttachedObject:
 		affectedAttached = true
 	case compiler.StaticGroupSourceControllerPermanents:
@@ -1090,7 +1124,8 @@ func staticRuleDomain(kind compiler.StaticRuleKind) compiler.StaticRuleDomain {
 		return compiler.StaticRuleDomainSacrifice
 	case compiler.StaticRuleCantBeTargetedByControllerOpponents:
 		return compiler.StaticRuleDomainTarget
-	case compiler.StaticRuleAdditionalTriggerForChosenCreatureType:
+	case compiler.StaticRuleAdditionalTriggerForChosenCreatureType,
+		compiler.StaticRuleAdditionalTriggerForRoomAbility:
 		return compiler.StaticRuleDomainTrigger
 	default:
 		return compiler.StaticRuleDomainUnknown
@@ -1786,6 +1821,8 @@ func lowerStaticRuleKind(kind compiler.StaticRuleKind) (game.RuleEffectKind, boo
 		return game.RuleEffectCantTransform, true
 	case compiler.StaticRuleAdditionalTriggerForChosenCreatureType:
 		return game.RuleEffectAdditionalTriggerForChosenCreatureType, true
+	case compiler.StaticRuleAdditionalTriggerForRoomAbility:
+		return game.RuleEffectAdditionalTriggerForRoomAbility, true
 	case compiler.StaticRuleGoaded:
 		return game.RuleEffectGoaded, true
 	case compiler.StaticRuleCantBeSacrificed:

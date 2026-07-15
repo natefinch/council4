@@ -503,6 +503,13 @@ func (Renderer) renderSelection(ctx *renderCtx, selection game.Selection) (strin
 		fields = append(fields, fmt.Sprintf("Player: %s,", pr))
 	}
 
+	if selection.Owner != game.OwnerAny {
+		or, err := renderOwnerRelation(selection.Owner)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Owner: %s,", or))
+	}
 	if selection.Tapped != game.TriAny {
 		ts, err := renderTriState(selection.Tapped)
 		if err != nil {

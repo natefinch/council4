@@ -36,13 +36,13 @@ func newRaisedByGiants() *game.CardDef {
 					ContinuousEffects: []game.ContinuousEffect{
 						game.ContinuousEffect{
 							Layer:        game.LayerPowerToughnessSet,
-							Group:        game.ObjectControlledGroup(game.SourcePermanentReference(), game.Selection{RequiredTypes: []types.Card{types.Creature}, MatchCommander: true}),
+							Group:        game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, Owner: game.OwnerYou, MatchCommander: true}),
 							SetPower:     opt.Val(game.PT{Value: 10}),
 							SetToughness: opt.Val(game.PT{Value: 10}),
 						},
 						game.ContinuousEffect{
 							Layer:       game.LayerType,
-							Group:       game.ObjectControlledGroup(game.SourcePermanentReference(), game.Selection{RequiredTypes: []types.Card{types.Creature}, MatchCommander: true}),
+							Group:       game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, Owner: game.OwnerYou, MatchCommander: true}),
 							AddSubtypes: []types.Sub{types.Sub("Giant")},
 						},
 					},

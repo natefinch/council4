@@ -53,6 +53,7 @@ const (
 	StaticDeclarationCreatureAttackTax                    StaticDeclarationKind = "StaticDeclarationCreatureAttackTax"
 	StaticDeclarationManaProductionMultiplier             StaticDeclarationKind = "StaticDeclarationManaProductionMultiplier"
 	StaticDeclarationCombatDamagePrevention               StaticDeclarationKind = "StaticDeclarationCombatDamagePrevention"
+	StaticDeclarationRoomAbilityTriggerMultiplier         StaticDeclarationKind = "StaticDeclarationRoomAbilityTriggerMultiplier"
 )
 
 // StaticAttackTaxAmountKind identifies how a per-creature attack-tax declaration
@@ -1309,6 +1310,9 @@ func parseStaticDeclarations(tokens []shared.Token, quoted []Delimited, atoms At
 	if declaration, ok := parseChosenCreatureTypeTriggerMultiplierDeclaration(tokens); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
+	if declaration, ok := parseRoomAbilityTriggerMultiplierDeclaration(tokens); ok {
+		return []StaticDeclarationSyntax{declaration}
+	}
 	if declaration, ok := parseEnteringTriggerMultiplierDeclaration(tokens); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
@@ -1394,6 +1398,29 @@ func parseStaticDeclarations(tokens []shared.Token, quoted []Delimited, atoms At
 		return declarations
 	}
 	return nil
+}
+
+// parseRoomAbilityTriggerMultiplierDeclaration recognizes the room-ability
+// trigger multiplier "Room abilities of dungeons you own trigger an additional
+// time." (Hama Pashar, Ruin Seeker; the quoted ability the Background Dungeon
+// Delver grants to commander creatures their owner controls). Every ability of a
+// dungeon is a room ability, and a dungeon is always controlled by its owner, so
+// the runtime doubles a triggered ability whose source is a Dungeon owned by the
+// effect's controller. Only this exact wording is recognized; any deviation
+// leaves the clause unconsumed and fails closed.
+func parseRoomAbilityTriggerMultiplierDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if len(tokens) != 11 ||
+		tokens[10].Kind != shared.Period ||
+		!staticWordsAt(tokens, 0,
+			"room", "abilities", "of", "dungeons", "you", "own",
+			"trigger", "an", "additional", "time") {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:          StaticDeclarationRoomAbilityTriggerMultiplier,
+		Span:          shared.SpanOf(tokens),
+		OperationSpan: shared.SpanOf(tokens),
+	}, true
 }
 
 func parseChosenCreatureTypeTriggerMultiplierDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {

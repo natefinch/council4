@@ -630,6 +630,16 @@ const (
 	// RuleEffectSkipExtraTurns makes the affected players skip extra turns they
 	// would begin.
 	RuleEffectSkipExtraTurns
+	// RuleEffectAdditionalTriggerForRoomAbility makes a room ability of a dungeon
+	// owned by this effect's controller trigger one additional time ("Room
+	// abilities of dungeons you own trigger an additional time.", Hama Pashar,
+	// Ruin Seeker; granted to commander creatures their owner controls by the
+	// Background Dungeon Delver). A dungeon is always controlled by its owner, so
+	// the doubled trigger is one whose source is a Dungeon whose owner matches
+	// this effect's controller. Multiple such effects (multiple Dungeon Delvers,
+	// or a Delver-granted creature alongside Hama Pashar) each add one trigger and
+	// so stack. Added last so existing kinds keep their wire values.
+	RuleEffectAdditionalTriggerForRoomAbility
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -698,7 +708,8 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectGrantSpellKeyword,
 		RuleEffectAscend,
 		RuleEffectCantBeTargetedByControllerOpponents,
-		RuleEffectSkipExtraTurns:
+		RuleEffectSkipExtraTurns,
+		RuleEffectAdditionalTriggerForRoomAbility:
 		return true
 	default:
 		return false
