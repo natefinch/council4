@@ -1844,6 +1844,9 @@ func lowerReturnSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) 
 	if content, ok := lowerSelfCardGraveyardReturn(ctx); ok {
 		return content, nil
 	}
+	if content, ok := lowerSelfSourceCardReturnToHand(ctx); ok {
+		return content, nil
+	}
 	if content, ok := lowerTargetedGraveyardReturn(ctx); ok {
 		return content, nil
 	}

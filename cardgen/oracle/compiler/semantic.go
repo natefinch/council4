@@ -4400,11 +4400,17 @@ const (
 
 // CompiledReference records a source-spanned reference and its bound referent.
 type CompiledReference struct {
-	Kind             ReferenceKind
-	Pronoun          ReferencePronounKind
-	Span             shared.Span
-	Text             string
-	Binding          ReferenceBinding
+	Kind    ReferenceKind
+	Pronoun ReferencePronounKind
+	Span    shared.Span
+	Text    string
+	Binding ReferenceBinding
+	// CardIdentity mirrors the parser's card-identity self-reference marker: a
+	// "this card" self reference (card identity, tracked into its current zone)
+	// as opposed to "this Aura"/"this creature" (a battlefield object). Lowering
+	// uses it to return a leaves-the-battlefield source from the graveyard by
+	// card identity instead of bouncing a battlefield object.
+	CardIdentity     bool
 	Occurrence       int
 	PriorInstruction int
 	// NodeID is the parser-assigned stable identity of this reference within its
