@@ -17,6 +17,7 @@ type permanentManaOutputResult struct {
 	color        mana.Color
 	amount       int
 	snow         bool
+	fromCreature bool
 	untap        bool
 	sacrifice    bool
 	abilityIndex int
@@ -53,6 +54,7 @@ func permanentManaOutputForActivation(s State, permanent *game.Permanent, activa
 		if output.color == activation.color &&
 			output.amount == activation.amount &&
 			output.snow == activation.snow &&
+			output.fromCreature == activation.fromCreature &&
 			output.untap == activation.untap &&
 			output.sacrifice == activation.sacrifice &&
 			output.abilityIndex == activation.abilityIndex &&
@@ -67,11 +69,13 @@ func permanentManaOutputs(s State, permanent *game.Permanent) []permanentManaOut
 	var outputs []permanentManaOutputResult
 	controller := s.EffectiveController(permanent)
 	multiplier := s.ManaProductionMultiplier(controller)
+	fromCreature := s.PermanentHasType(permanent, types.Creature)
 	if c, ok := basicLandManaColor(s, permanent); ok {
 		outputs = append(outputs, permanentManaOutputResult{
 			color:        c,
 			amount:       multiplyTappedManaAmount(1, false, multiplier),
 			snow:         s.PermanentHasSupertype(permanent, types.Snow),
+			fromCreature: fromCreature,
 			abilityIndex: -1,
 		})
 	}
@@ -82,6 +86,7 @@ func permanentManaOutputs(s State, permanent *game.Permanent) []permanentManaOut
 				color:        color,
 				amount:       multiplyTappedManaAmount(ability.amount, ability.untap, multiplier),
 				snow:         s.PermanentHasSupertype(permanent, types.Snow),
+				fromCreature: fromCreature,
 				untap:        ability.untap,
 				sacrifice:    ability.sacrifice,
 				abilityIndex: ability.index,
@@ -109,6 +114,7 @@ func appendUniquePermanentManaOutput(outputs []permanentManaOutputResult, candid
 		if output.color == candidate.color &&
 			output.amount == candidate.amount &&
 			output.snow == candidate.snow &&
+			output.fromCreature == candidate.fromCreature &&
 			output.untap == candidate.untap &&
 			output.sacrifice == candidate.sacrifice &&
 			output.timing == candidate.timing {
@@ -543,6 +549,7 @@ func availableManaSources(s State, playerID game.PlayerID, exclude map[id.ID]boo
 				color:        output.color,
 				amount:       output.amount,
 				snow:         output.snow,
+				fromCreature: output.fromCreature,
 				untap:        output.untap,
 				sacrifice:    output.sacrifice,
 				abilityIndex: output.abilityIndex,

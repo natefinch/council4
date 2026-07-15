@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,915 of 32,501 cards eligible for paper support (55.1%)**. The Scryfall Oracle Cards corpus contains 5,753 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,916 of 32,501 cards eligible for paper support (55.1%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -7671,6 +7671,7 @@ Council4 currently supports **17,915 of 32,501 cards eligible for paper support 
 - Informed Inkwright
 - Infuriate
 - Infuse
+- Inga and Esika
 - Ingenious Infiltrator
 - Ingenious Prodigy
 - Ingenious Skaab

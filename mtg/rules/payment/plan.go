@@ -45,6 +45,7 @@ type manaTap struct {
 	color        mana.Color
 	amount       int
 	snow         bool
+	fromCreature bool
 	untap        bool
 	sacrifice    bool
 	abilityIndex int
@@ -58,6 +59,7 @@ type manaSource struct {
 	color        mana.Color
 	amount       int
 	snow         bool
+	fromCreature bool
 	untap        bool
 	sacrifice    bool
 	abilityIndex int
@@ -635,13 +637,14 @@ func paymentPlanStillValid(s State, player *game.Player, plan paymentPlan) bool 
 			output.color != tap.color ||
 			output.amount != tap.amount ||
 			output.snow != tap.snow ||
+			output.fromCreature != tap.fromCreature ||
 			output.untap != tap.untap ||
 			output.sacrifice != tap.sacrifice ||
 			output.abilityIndex != tap.abilityIndex ||
 			output.timing != tap.timing {
 			return false
 		}
-		tappedMana[mana.Unit{Color: tap.color, Snow: tap.snow}] += tap.amount
+		tappedMana[mana.Unit{Color: tap.color, Snow: tap.snow, FromCreature: tap.fromCreature}] += tap.amount
 	}
 	for _, permanent := range plan.convokeTaps {
 		if !canConvokeWith(s, player.ID, permanent, nil) {
@@ -658,12 +661,9 @@ func paymentPlanStillValid(s State, player *game.Player, plan paymentPlan) bool 
 			return false
 		}
 	}
-	for _, color := range paymentColors {
-		for _, snow := range []bool{false, true} {
-			unit := mana.Unit{Color: color, Snow: snow}
-			if player.ManaPool.Units()[unit]+tappedMana[unit] < plan.poolSpend[unit] {
-				return false
-			}
+	for _, unit := range paymentUnitOrder() {
+		if player.ManaPool.Units()[unit]+tappedMana[unit] < plan.poolSpend[unit] {
+			return false
 		}
 	}
 	return player.Life >= plan.lifePayment && (plan.lifePayment == 0 || s.CanPayLife(player.ID))

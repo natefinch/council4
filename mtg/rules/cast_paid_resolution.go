@@ -99,23 +99,25 @@ func (e *Engine) castPaidSpellFromSource(g *game.Game, sourcePlayer *game.Player
 	obj.ColorsOfManaSpentToCast = distinctManaColorsSpent(paymentResult.PoolSpend)
 	obj.ManaSpentByColorToCast = manaSpentByColor(paymentResult.PoolSpend)
 	obj.ManaSpentToCast = totalManaSpent(paymentResult.PoolSpend)
+	obj.ManaFromCreaturesSpentToCast = creatureManaSpent(paymentResult.PoolSpend)
 	// stormCopyCount must be read before the spell-cast event is emitted, since
 	// that event increments the storm count for later spells this turn.
 	stormCopies := stormCopyCount(g, spellDef)
 	emitSpellCastEvents(g, obj, game.Event{
-		SourceID:        cardID,
-		StackObjectID:   obj.ID,
-		Controller:      controllerID,
-		CardID:          cardID,
-		Face:            game.FaceFront,
-		CardTypes:       stackObjectCardTypes(obj, spellDef),
-		CardSupertypes:  cardSupertypes(spellDef),
-		CardSubtypes:    stackObjectCardSubtypes(obj, spellDef),
-		Colors:          spellColors(spellDef),
-		ManaValue:       opt.Val(stackManaValue(spellDef, 0)),
-		ManaSpentToCast: opt.Val(totalManaSpent(paymentResult.PoolSpend)),
-		FromZone:        fromZone,
-		ToZone:          zone.Stack,
+		SourceID:                     cardID,
+		StackObjectID:                obj.ID,
+		Controller:                   controllerID,
+		CardID:                       cardID,
+		Face:                         game.FaceFront,
+		CardTypes:                    stackObjectCardTypes(obj, spellDef),
+		CardSupertypes:               cardSupertypes(spellDef),
+		CardSubtypes:                 stackObjectCardSubtypes(obj, spellDef),
+		Colors:                       spellColors(spellDef),
+		ManaValue:                    opt.Val(stackManaValue(spellDef, 0)),
+		ManaSpentToCast:              opt.Val(totalManaSpent(paymentResult.PoolSpend)),
+		ManaFromCreaturesSpentToCast: opt.Val(creatureManaSpent(paymentResult.PoolSpend)),
+		FromZone:                     fromZone,
+		ToZone:                       zone.Stack,
 	})
 	createStormCopies(g, obj, spellDef, stormCopies)
 	resolveSpellCastManaSpendRiders(g, controllerID, riderSnapshot, paymentResult.PoolSpend, spellDef, obj)

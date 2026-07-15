@@ -122,21 +122,22 @@ func (*Engine) castFreeCopyOfCard(g *game.Game, controllerID game.PlayerID, card
 	g.Stack.Push(obj)
 	emitTargetEvents(g, obj)
 	emitEvent(g, game.Event{
-		Kind:                       game.EventSpellCast,
-		SourceID:                   cardID,
-		StackObjectID:              obj.ID,
-		Controller:                 controllerID,
-		CardID:                     card.ID,
-		Face:                       game.FaceFront,
-		CardTypes:                  cardTypes(spellDef),
-		CardSupertypes:             cardSupertypes(spellDef),
-		CardSubtypes:               cardSubtypes(spellDef),
-		Colors:                     spellColors(spellDef),
-		ManaValue:                  opt.Val(stackManaValue(spellDef, 0)),
-		ManaSpentToCast:            opt.Val(0),
-		FromZone:                   zone.Exile,
-		ToZone:                     zone.Stack,
-		PlayerEventOrdinalThisTurn: nextSpellCastOrdinalThisTurn(g, controllerID),
+		Kind:                         game.EventSpellCast,
+		SourceID:                     cardID,
+		StackObjectID:                obj.ID,
+		Controller:                   controllerID,
+		CardID:                       card.ID,
+		Face:                         game.FaceFront,
+		CardTypes:                    cardTypes(spellDef),
+		CardSupertypes:               cardSupertypes(spellDef),
+		CardSubtypes:                 cardSubtypes(spellDef),
+		Colors:                       spellColors(spellDef),
+		ManaValue:                    opt.Val(stackManaValue(spellDef, 0)),
+		ManaSpentToCast:              opt.Val(0),
+		ManaFromCreaturesSpentToCast: opt.Val(0),
+		FromZone:                     zone.Exile,
+		ToZone:                       zone.Stack,
+		PlayerEventOrdinalThisTurn:   nextSpellCastOrdinalThisTurn(g, controllerID),
 	})
 	return true
 }

@@ -297,6 +297,14 @@ type Event struct {
 	// event triggers and as the ability resolves (CR 603.4).
 	ManaSpentToCast opt.V[int]
 
+	// ManaFromCreaturesSpentToCast records the portion of ManaSpentToCast that
+	// was produced by creature permanents, for spell-cast triggers whose
+	// intervening-if reads the creature mana actually paid ("if three or more
+	// mana from creatures was spent to cast it", Inga and Esika). It is set at
+	// every EventSpellCast emission site, including free casts (where it is
+	// zero), so the condition reads the same value as the event triggers.
+	ManaFromCreaturesSpentToCast opt.V[int]
+
 	// PermanentID identifies the permanent that entered, left, was damaged, attacked, or blocked.
 	PermanentID id.ID
 

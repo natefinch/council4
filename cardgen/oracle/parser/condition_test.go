@@ -148,6 +148,9 @@ func TestParseConditionPredicateMeaning(t *testing.T) {
 		{"event spell no mana spent", "no mana was spent to cast it", ConditionPredicateEventSpellNoManaSpentToCast, 0},
 		{"event spell mana spent at least", "at least four mana was spent to cast it", ConditionPredicateEventSpellManaSpentToCastAtLeast, 4},
 		{"event spell mana spent that spell", "at least eight mana was spent to cast that spell", ConditionPredicateEventSpellManaSpentToCastAtLeast, 8},
+		{"event spell creature mana spent or more", "three or more mana from creatures was spent to cast it", ConditionPredicateEventSpellCreatureManaSpentToCastAtLeast, 3},
+		{"event spell creature mana spent or greater", "two or greater mana from creatures was spent to cast that spell", ConditionPredicateEventSpellCreatureManaSpentToCastAtLeast, 2},
+		{"event spell creature mana spent at least", "at least four mana from creatures was spent to cast it", ConditionPredicateEventSpellCreatureManaSpentToCastAtLeast, 4},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
