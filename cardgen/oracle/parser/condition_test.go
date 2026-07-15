@@ -440,6 +440,8 @@ func TestParseConditionEventSubjectAndSourceState(t *testing.T) {
 	}{
 		{"event was creature", "it was a creature", ConditionPredicateObjectMatches, ConditionObjectBindingEventPermanent, nil, ConditionCombatAny, 0},
 		{"event was human subtype", "it was a Human", ConditionPredicateObjectMatches, ConditionObjectBindingEventPermanent, []types.Sub{types.Human}, ConditionCombatAny, 0},
+		{"that creature was subtype", "that creature was a Horror", ConditionPredicateObjectMatches, ConditionObjectBindingEventPermanent, []types.Sub{types.Horror}, ConditionCombatAny, 0},
+		{"that permanent was subtype", "that permanent was an Aura", ConditionPredicateObjectMatches, ConditionObjectBindingEventPermanent, []types.Sub{types.Aura}, ConditionCombatAny, 0},
 		{"event was kicked", "it was kicked", ConditionPredicateEventSubjectWasKicked, ConditionObjectBindingNone, nil, ConditionCombatAny, 0},
 		{"event was bargained", "it was bargained", ConditionPredicateEventSubjectWasBargained, ConditionObjectBindingNone, nil, ConditionCombatAny, 0},
 		{"source named was bargained", "this creature was bargained", ConditionPredicateEventSubjectWasBargained, ConditionObjectBindingNone, nil, ConditionCombatAny, 0},

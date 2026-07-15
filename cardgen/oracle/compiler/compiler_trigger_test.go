@@ -139,6 +139,37 @@ func TestCompileEnterTriggerNonTokenInterveningIf(t *testing.T) {
 	}
 }
 
+// TestCompileAttachedDiesThatSubjectInterveningIf proves the attached-permanent
+// dies trigger "When enchanted creature dies, if that creature was a Horror, ..."
+// compiles its "that creature was a <subtype>" back-reference to an
+// event-permanent object-match intervening condition, the reusable gate Endless
+// Evil needs. The subtype is evaluated against the dead creature's last-known
+// information at runtime.
+func TestCompileAttachedDiesThatSubjectInterveningIf(t *testing.T) {
+	t.Parallel()
+	source := "When enchanted creature dies, if that creature was a Horror, return this card to its owner's hand."
+	compilation, diagnostics := compileSource(source, pipelineContext{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	ability := compilation.Abilities[0]
+	if ability.Trigger == nil || ability.Trigger.Condition == nil {
+		t.Fatalf("trigger = %#v", ability.Trigger)
+	}
+	if ability.Trigger.Pattern.Event != TriggerEventPermanentDied ||
+		ability.Trigger.Pattern.Source != TriggerSourceAttachedPermanent {
+		t.Fatalf("pattern = %#v, want attached-permanent dies", ability.Trigger.Pattern)
+	}
+	condition := ability.Trigger.Condition
+	if condition.Predicate != ConditionPredicateObjectMatches ||
+		condition.ObjectBinding != ReferenceBindingEventPermanent {
+		t.Fatalf("condition = %#v, want event-permanent object-match", condition)
+	}
+	if !slices.Equal(condition.Selection.SubtypesAny, []string{string(types.Horror)}) {
+		t.Fatalf("selection = %#v, want Horror subtype", condition.Selection)
+	}
+}
+
 func TestCompileNonPhaseTriggerUsesNormalizedSyntaxTokens(t *testing.T) {
 	t.Parallel()
 	source := "Whenever a  creature enters, draw a card."

@@ -1634,8 +1634,14 @@ func recognizeEventSubjectHadCounterCondition(body []shared.Token, atoms Atoms) 
 }
 
 // recognizeEventSubjectMatchCondition handles "it was a <selection>" and the
-// "it's a <selection>" contraction, binding the event permanent.
+// "it's a <selection>" contraction, binding the event permanent. It also
+// recognizes the equivalent "that <permanent-type> was a <selection>"
+// back-reference (e.g. "that creature was a Horror") that names the triggering
+// object by its type rather than the bare pronoun.
 func recognizeEventSubjectMatchCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
+	if clause, ok := recognizeThatSubjectMatchCondition(body, atoms); ok {
+		return clause, true
+	}
 	rest, ok := cutTokenPrefix(body, "it", "was", "a")
 	if !ok {
 		if rest, ok = cutTokenPrefix(body, "it", "was", "an"); !ok {
@@ -1657,7 +1663,48 @@ func recognizeEventSubjectMatchCondition(body []shared.Token, atoms Atoms) (Cond
 	}, true
 }
 
-// recognizeEventSubjectNonMatchCondition handles the negated intervening
+// recognizeThatSubjectMatchCondition handles the intervening subtype gate
+// "that <permanent-type> was a <selection>" ("if that creature was a Horror";
+// Endless Evil). Like the bare-pronoun "it was a <selection>" form it binds the
+// triggering event permanent and is evaluated against that object's last-known
+// information, so it holds even after the permanent has left the battlefield.
+// The subject between "that" and "was" must be either the bare noun "permanent"
+// or a permanent-type noun phrase (naming the triggering object by its type);
+// any other subject fails closed so the pronoun recognizer keeps ownership of
+// the "it was a" spellings.
+func recognizeThatSubjectMatchCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
+	rest, ok := cutTokenPrefix(body, "that")
+	if !ok {
+		return ConditionClause{}, false
+	}
+	wasIndex := tokenWordIndex(rest, "was")
+	if wasIndex < 1 {
+		return ConditionClause{}, false
+	}
+	if !tokenWordsEqual(rest[:wasIndex], "permanent") {
+		subjectSelection, ok := parseConditionSelection(rest[:wasIndex], atoms)
+		if !ok || !conditionSelectionEmptyExceptType(subjectSelection) {
+			return ConditionClause{}, false
+		}
+	}
+	after := rest[wasIndex:]
+	matchRest, ok := cutTokenPrefix(after, "was", "a")
+	if !ok {
+		if matchRest, ok = cutTokenPrefix(after, "was", "an"); !ok {
+			return ConditionClause{}, false
+		}
+	}
+	selection, ok := parseConditionSelection(matchRest, atoms)
+	if !ok {
+		return ConditionClause{}, false
+	}
+	return ConditionClause{
+		Predicate:     ConditionPredicateObjectMatches,
+		ObjectBinding: ConditionObjectBindingEventPermanent,
+		Selection:     selection,
+	}, true
+}
+
 // condition "if it's not a token" and its equivalents ("it isn't a token", "it
 // is not a token", "it wasn't a token", "it was not a token"), backing Life of
 // the Party's "if it's not a token" self-ETB gate. Only the token noun is

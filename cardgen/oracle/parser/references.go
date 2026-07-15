@@ -54,6 +54,14 @@ type Reference struct {
 	Span    shared.Span    `json:"-"`
 	Tokens  []shared.Token `json:"-"`
 	Text    string         `json:",omitempty"`
+	// CardIdentity records that a self "this <noun>" reference named the source
+	// as a card ("return this card to its owner's hand") rather than as a
+	// battlefield permanent ("return this Aura to its owner's hand"). The card
+	// wording tracks the object's card identity into whatever zone it now
+	// occupies (normally the graveyard after a leaves-the-battlefield trigger),
+	// so downstream lowering returns it from that zone by card identity instead
+	// of bouncing a battlefield object.
+	CardIdentity bool `json:",omitempty"`
 	// NodeID is a stable typed identifier the parser assigns to every reference
 	// in an ability's (or mode's) single authoritative reference set. Every copy
 	// of the reference distributed into effects, conditions, and the semantic
@@ -228,11 +236,13 @@ func collectReferences(tokens []shared.Token, cardName string, legendary bool) [
 				break
 			}
 			phrase := tokens[i : i+2]
+			noun, _ := recognizeObjectNoun(tokens[i+1])
 			references = append(references, Reference{
-				Kind:   ReferenceThisObject,
-				Span:   shared.SpanOf(phrase),
-				Tokens: phrase,
-				Text:   joinTokens(phrase),
+				Kind:         ReferenceThisObject,
+				Span:         shared.SpanOf(phrase),
+				Tokens:       phrase,
+				Text:         joinTokens(phrase),
+				CardIdentity: noun == ObjectNounCard,
 			})
 			i++
 		case i+3 < len(tokens) && equalWord(tokens[i], "that") &&

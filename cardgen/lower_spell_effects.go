@@ -127,6 +127,85 @@ func selfCardGraveyardReturnReferences(references []compiler.CompiledReference) 
 	return referencesBindTo(references, compiler.ReferenceBindingSource, 0)
 }
 
+// lowerSelfSourceCardReturnToHand lowers "return this card to its owner's hand"
+// (the source named by card identity, with no explicit source zone) to a
+// MoveCard that returns the source card from the graveyard to its owner's hand.
+// It backs the leaves-the-battlefield self-return family, most notably an Aura's
+// "When enchanted creature dies, ... return this card to its owner's hand."
+// (Endless Evil): when the trigger resolves the source Aura is already a card in
+// the graveyard, so the return tracks its card identity into that zone rather
+// than bouncing a battlefield object.
+//
+// The "this card" wording (compiler.CompiledReference.CardIdentity) is the gate
+// that keeps this distinct from "return this Aura/creature to its owner's hand"
+// (Flickering Ward), which names a battlefield object and must stay an
+// object-identity Bounce that no-ops if the permanent has already left. Because
+// the card reference resolves against the source card's current zone and the
+// MoveCard requires the graveyard as its from-zone, the return correctly fails
+// closed if the source is exiled, re-cast, or otherwise elsewhere when the
+// trigger resolves.
+func lowerSelfSourceCardReturnToHand(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 1 {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if effect.Kind != compiler.EffectReturn ||
+		effect.Negated ||
+		effect.DelayedTiming != 0 ||
+		effect.Duration != compiler.DurationNone ||
+		effect.FromZone != zone.None ||
+		effect.ToZone != zone.Hand ||
+		effect.UnderYourControl ||
+		effect.EntersTapped ||
+		effect.EntersTransformed ||
+		effect.CounterKindKnown ||
+		effect.Amount.Known ||
+		!effect.Exact ||
+		effect.Context != parser.EffectContextController {
+		return game.AbilityContent{}, false
+	}
+	if len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		!selfSourceCardIdentityReturnReferences(ctx.content.References) {
+		return game.AbilityContent{}, false
+	}
+	instruction, ok := graveyardReturnInstruction(
+		game.CardReference{Kind: game.CardReferenceSource},
+		graveyardReturnDestination{Zone: zone.Hand},
+	)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{Sequence: []game.Instruction{instruction}}.Ability(), true
+}
+
+// selfSourceCardIdentityReturnReferences reports whether the references of a
+// "return this card to its owner's hand" body name only the source by card
+// identity: the leading reference is the "this card" self reference (card
+// identity, bound to the source), and every reference — including the trailing
+// "its" that qualifies the "its owner's hand" destination — binds to the source.
+// The card-identity gate on the leading reference is what separates this
+// graveyard return from "return this Aura/creature to its owner's hand", whose
+// leading reference names a battlefield object and stays an object-identity
+// bounce.
+func selfSourceCardIdentityReturnReferences(references []compiler.CompiledReference) bool {
+	if len(references) == 0 {
+		return false
+	}
+	if references[0].Kind != compiler.ReferenceThisObject ||
+		!references[0].CardIdentity {
+		return false
+	}
+	for i := range references {
+		if references[i].Binding != compiler.ReferenceBindingSource {
+			return false
+		}
+	}
+	return true
+}
+
 // lowerChosenCardGraveyardReturn lowers the non-target "Return a <filter> card
 // from your graveyard to your hand" recursion wording, where the returned card
 // is chosen from the controller's own graveyard at resolution rather than
