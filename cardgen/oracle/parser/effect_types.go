@@ -1952,6 +1952,13 @@ type TargetSyntax struct {
 	Cardinality TargetCardinalitySyntax `json:",omitzero"`
 	Selection   SelectionSyntax         `json:",omitzero"`
 	Exact       bool                    `json:",omitempty"`
+	// KickerScaledCount marks a target whose chosen count is one plus the number
+	// of times the spell was kicked ("Choose any target, then choose another
+	// target for each time this spell was kicked.", Comet Storm; CR 702.32). The
+	// preamble recognizer folds the trailing "another target for each time this
+	// spell was kicked" slot into this single target and sets the flag; lowering
+	// enforces the 1 + Multikicker-count cardinality at cast time.
+	KickerScaledCount bool `json:",omitempty"`
 	// Order is the target's dense source-order rank, used downstream to bind
 	// references to their closest preceding target without byte offsets.
 	Order shared.SourceOrder `json:"-"`

@@ -552,6 +552,7 @@ func emitSentenceResolvingSyntax(
 		sentences[i].LegacyEffects = count > 0
 		sentences[i].Targets = parseTargets(tokens, atoms)
 		sentences[i].Effects = parseEffects(sentences[i], tokens, atoms)
+		recognizeKickerScaledTargetPreambleSentence(&sentences[i])
 		recognizeEntersWithCountersKeywordRiderSentence(&sentences[i])
 		recognizeTargetOpponentHandManaSentence(&sentences[i])
 		recognizeLookAtTargetPlayerHandSentence(&sentences[i])

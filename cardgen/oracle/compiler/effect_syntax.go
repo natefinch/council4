@@ -80,9 +80,10 @@ func compileTypedTargetList(syntaxes []parser.TargetSyntax) []CompiledTarget {
 				Min: syntax.Cardinality.Min,
 				Max: syntax.Cardinality.Max,
 			},
-			Selector: compileTypedSelection(syntax.Selection),
-			Exact:    syntax.Exact,
-			Order:    syntax.Order,
+			Selector:          compileTypedSelection(syntax.Selection),
+			Exact:             syntax.Exact,
+			Order:             syntax.Order,
+			KickerScaledCount: syntax.KickerScaledCount,
 		})
 	}
 	return targets

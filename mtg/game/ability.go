@@ -1932,6 +1932,15 @@ type TargetSpec struct {
 	// MinTargets/MaxTargets.
 	CountEqualsX bool
 
+	// CountEqualsKickerPlusOne requires the number of targets chosen for this
+	// spec to equal one plus the number of times the spell was kicked ("Choose
+	// any target, then choose another target for each time this spell was
+	// kicked.", Comet Storm; CR 702.32). The spec carries a 1..N range so
+	// announcement enumerates every count, and casting is legal only at the
+	// combination whose size equals 1 + the paid Multikicker count. The default
+	// false leaves the count governed solely by MinTargets/MaxTargets.
+	CountEqualsKickerPlusOne bool
+
 	// ManaValueAtMostX requires every object chosen for this spec to have mana
 	// value less than or equal to the spell's chosen X ("target creature with
 	// mana value X or less", Dominate). The Selection matcher is X-blind, so the

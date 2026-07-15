@@ -107,6 +107,38 @@ func spellTargetCountsMatchX(g *game.Game, controller game.PlayerID, card *game.
 	return true
 }
 
+// spellTargetCountsMatchKicker reports whether every CountEqualsKickerPlusOne
+// target spec of the spell has exactly one plus kickerCount targets chosen for it.
+// Such a spec binds its resolving target count to the spell's paid Multikicker
+// count ("Choose any target, then choose another target for each time this spell
+// was kicked.", Comet Storm; CR 702.32), so a cast is legal only when the
+// announced target count for that spec equals 1 + kickerCount. Spells without a
+// CountEqualsKickerPlusOne spec are unaffected.
+func spellTargetCountsMatchKicker(g *game.Game, controller game.PlayerID, card *game.CardDef, chosenModes []int, targets []game.Target, kickerCount int, branch game.CastBranch) bool {
+	specs := spellTargetSpecs(card, chosenModes, branch)
+	requiresMatch := false
+	for i := range specs {
+		if specs[i].CountEqualsKickerPlusOne {
+			requiresMatch = true
+			break
+		}
+	}
+	if !requiresMatch {
+		return true
+	}
+	want := kickerCount + 1
+	counts, ok := spellTargetCounts(g, controller, card, chosenModes, targets, branch)
+	if !ok {
+		return false
+	}
+	for i := range specs {
+		if specs[i].CountEqualsKickerPlusOne && (i >= len(counts) || counts[i] != want) {
+			return false
+		}
+	}
+	return true
+}
+
 // spellTargetsSatisfyManaValueX reports whether every target chosen for a
 // ManaValueAtMostX spec of the spell has mana value at most the spell's chosen X
 // ("target creature with mana value X or less", Dominate). The Selection matcher

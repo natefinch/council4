@@ -20,14 +20,19 @@ const maxLegalXValue = 20
 const maxLegalMultikickCount = 20
 
 // appendMultikickedCastActions enumerates Multikicker casts that pay the kicker
-// cost one or more times. It stops at the first count the controller cannot
-// afford, because each additional kick costs strictly more mana.
-func (e *Engine) appendMultikickedCastActions(g *game.Game, playerID game.PlayerID, actions []action.Action, actionBuild actionBuilderType, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, modes []int) []action.Action {
+// cost one or more times. Target choices are generated for each concrete count
+// so kicker-scaled target specs offer exactly the legal cardinality.
+func (e *Engine) appendMultikickedCastActions(g *game.Game, playerID game.PlayerID, actions []action.Action, actionBuild actionBuilderType, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, spellDef *game.CardDef, xValue int, modes []int) []action.Action {
 	for count := 1; count <= maxLegalMultikickCount; count++ {
-		if !e.canCastSpellFaceFromZoneWithMultikick(g, playerID, cardID, sourceZone, face, targets, xValue, modes, count) {
+		result := targetChoicesForSpellWithKickerCount(g, playerID, spellDef, modes, game.CastBranch{Kicked: true}, count)
+		if result.kind == targetInvalidSpec || result.kind == targetNoLegalChoices {
 			break
 		}
-		actions = append(actions, actionBuild.castMultikickedSpell(cardID, sourceZone, face, targets, xValue, modes, count))
+		for _, targets := range result.choices {
+			if e.canCastSpellFaceFromZoneWithMultikick(g, playerID, cardID, sourceZone, face, targets, xValue, modes, count) {
+				actions = append(actions, actionBuild.castMultikickedSpell(cardID, sourceZone, face, targets, xValue, modes, count))
+			}
+		}
 	}
 	return actions
 }
@@ -285,12 +290,7 @@ func (e *Engine) legalCastActions(g *game.Game, playerID game.PlayerID) []action
 							}
 						}
 						if spellHasMultikicker(spellDef) {
-							kickedResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{Kicked: true})
-							if kickedResult.kind != targetInvalidSpec {
-								for _, targets := range kickedResult.choices {
-									actions = e.appendMultikickedCastActions(g, playerID, actions, actionBuild, cardID, sourceZone, face, targets, xValue, modes)
-								}
-							}
+							actions = e.appendMultikickedCastActions(g, playerID, actions, actionBuild, cardID, sourceZone, face, spellDef, xValue, modes)
 						} else if spellHasKicker(spellDef) {
 							kickedResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{Kicked: true})
 							if kickedResult.kind != targetInvalidSpec {
@@ -401,12 +401,7 @@ func (e *Engine) legalCommanderCastActions(g *game.Game, playerID game.PlayerID)
 					}
 				}
 				if spellHasMultikicker(spellDef) {
-					kickedResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{Kicked: true})
-					if kickedResult.kind != targetInvalidSpec {
-						for _, targets := range kickedResult.choices {
-							actions = e.appendMultikickedCastActions(g, playerID, actions, actionBuild, card.ID, zone.Command, face, targets, xValue, modes)
-						}
-					}
+					actions = e.appendMultikickedCastActions(g, playerID, actions, actionBuild, card.ID, zone.Command, face, spellDef, xValue, modes)
 				} else if spellHasKicker(spellDef) {
 					kickedResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{Kicked: true})
 					if kickedResult.kind != targetInvalidSpec {

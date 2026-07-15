@@ -404,6 +404,15 @@ type Damage struct {
 	// one to each at resolution (CR 601.2d). It is valid only with an
 	// any-target recipient that addresses a multi-target spec.
 	Divided bool
+
+	// EachTarget reports that the full Amount is dealt independently to every
+	// target chosen for the recipient's target spec ("deals X damage to each of
+	// them", Comet Storm). Unlike Divided, the amount is not split: each
+	// still-legal chosen target is dealt the whole Amount as its own damage
+	// event, and a target that became illegal since announcement is simply
+	// skipped (CR 608.2b). It is valid only with an any-target recipient that
+	// addresses a multi-target spec and is mutually exclusive with Divided.
+	EachTarget bool
 }
 
 // GroupSourceDamage has each permanent in a battlefield group deal an amount of

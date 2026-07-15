@@ -676,18 +676,21 @@ func (p Damage) validatePrimitive(targets []TargetSpec, checkTargets bool) error
 	if !p.Recipient.Valid() {
 		return errors.New("damage requires a valid recipient")
 	}
-	if p.Divided {
+	if p.Divided && p.EachTarget {
+		return errors.New("damage cannot be both divided and dealt to each target")
+	}
+	if p.Divided || p.EachTarget {
 		object, ok := p.Recipient.AnyTargetObjectReference()
 		if !ok {
-			return errors.New("divided damage requires an any-target recipient")
+			return errors.New("divided or each-target damage requires an any-target recipient")
 		}
 		if checkTargets {
 			specIndex := object.TargetIndex()
 			if specIndex < 0 || specIndex >= len(targets) {
-				return errors.New("divided damage references an out-of-range target spec")
+				return errors.New("divided or each-target damage references an out-of-range target spec")
 			}
 			if targets[specIndex].MaxTargets < 1 {
-				return errors.New("divided damage requires a target spec that admits at least one target")
+				return errors.New("divided or each-target damage requires a target spec that admits at least one target")
 			}
 		}
 	}
