@@ -666,11 +666,12 @@ type DelayedTimingKind string
 
 // Delayed timings recognized by resolving-effect grammar.
 const (
-	DelayedTimingNone        DelayedTimingKind = ""
-	DelayedTimingNextEndStep DelayedTimingKind = "DelayedTimingNextEndStep"
-	DelayedTimingNextUpkeep  DelayedTimingKind = "DelayedTimingNextUpkeep"
-	DelayedTimingNextMain    DelayedTimingKind = "DelayedTimingNextMain"
-	DelayedTimingEndOfCombat DelayedTimingKind = "DelayedTimingEndOfCombat"
+	DelayedTimingNone            DelayedTimingKind = ""
+	DelayedTimingNextEndStep     DelayedTimingKind = "DelayedTimingNextEndStep"
+	DelayedTimingYourNextEndStep DelayedTimingKind = "DelayedTimingYourNextEndStep"
+	DelayedTimingNextUpkeep      DelayedTimingKind = "DelayedTimingNextUpkeep"
+	DelayedTimingNextMain        DelayedTimingKind = "DelayedTimingNextMain"
+	DelayedTimingEndOfCombat     DelayedTimingKind = "DelayedTimingEndOfCombat"
 )
 
 // EffectDestinationPosition identifies an ordered position in a destination

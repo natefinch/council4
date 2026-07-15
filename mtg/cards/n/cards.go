@@ -19,6 +19,7 @@ var Cards = []cardset.Entry{
 	{Name: "Nature's Lore", New: NatureSLore},
 	{Name: "Nature's Will", New: NatureSWill},
 	{Name: "Necra Disciple", New: NecraDisciple},
+	{Name: "Necropotence", New: Necropotence},
 	{Name: "Necroskitter", New: Necroskitter},
 	{Name: "Necrotic Wound", New: NecroticWound},
 	{Name: "Needlebite Trap", New: NeedlebiteTrap},

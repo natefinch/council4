@@ -58,6 +58,17 @@ const (
 	DelayedAtBeginningOfNextUpkeep
 	DelayedAtBeginningOfNextMainPhase
 	DelayedAtEndOfCombat
+	// DelayedAtBeginningOfYourNextEndStep fires at the beginning of the delayed
+	// trigger's controller's next end step ("at the beginning of your next end
+	// step", Necropotence). Unlike DelayedAtBeginningOfNextEndStep, which fires
+	// at the very next end step regardless of whose turn it is (Unearth, Dash),
+	// it is keyed to the controller: it is skipped at other players' end steps
+	// and fires only when the controller is the active player. Because a delayed
+	// trigger is always created after the current step's beginning event has
+	// passed, activating during the controller's own end step schedules the
+	// return for their following end step (CR 603.7c). Added last so existing
+	// timings keep their wire values.
+	DelayedAtBeginningOfYourNextEndStep
 )
 
 // DelayedTriggerWindow bounds the lifetime of an event-based delayed trigger.
@@ -160,6 +171,21 @@ type DelayedTriggerDef struct {
 	// GroupDomainCapturedObjects via CapturedObjectsGroup(). It is only valid
 	// with a fixed-phase Timing and a linked-object reference.
 	CapturedObjectGroup opt.V[ObjectReference]
+	// CapturedCard, when present, freezes the card an earlier clause in the same
+	// resolution moved to a non-battlefield zone and published under a linked
+	// key, storing its card ID on the scheduled trigger so the trigger's content
+	// can act on that exact card once the shared link key may have been reused.
+	// It is the card analog of CapturedObject: where CapturedObject freezes a
+	// permanent by object ID (for battlefield disposal), CapturedCard freezes a
+	// card by card ID (for zones such as exile, where a card has no permanent
+	// object ID). It backs delayed exile-until-next-end-step returns ("Exile the
+	// top card of your library face down. Put that card into your hand at the
+	// beginning of your next end step.", Necropotence), where per-activation
+	// capture keeps several same-turn activations from all resolving one shared,
+	// source-scoped link key when the triggers fire. The content references
+	// CardReferenceCaptured. It is only valid with a fixed-phase Timing and a
+	// linked-object reference.
+	CapturedCard opt.V[ObjectReference]
 }
 
 // DelayedTrigger is a runtime delayed triggered ability waiting for its timing
@@ -219,6 +245,14 @@ type DelayedTrigger struct {
 	// content referencing GroupDomainCapturedObjects finds nothing and does
 	// nothing.
 	CapturedObjectIDs []id.ID
+	// CapturedCardID is the concrete card frozen from the creating ability's
+	// CapturedCard reference at schedule time, carried into the fired trigger's
+	// content so it can act on that exact card ("Put that card into your hand at
+	// the beginning of your next end step.") after the shared link key that named
+	// it may have been reused by a later activation. Zero means no card was
+	// captured (for example the library was empty), so content referencing
+	// CardReferenceCaptured finds nothing and does nothing.
+	CapturedCardID id.ID
 }
 
 // ReflexiveTrigger is a runtime reflexive triggered ability (CR 603.11) queued

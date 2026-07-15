@@ -326,6 +326,9 @@ func lowerContentDispatch(
 	if content, ok := lowerEventCardEffect(ctx); ok {
 		return content, nil
 	}
+	if content, ok := lowerDiscardExileFromGraveyard(ctx); ok {
+		return content, nil
+	}
 	if typedManifestDreadSequence(ctx.content) {
 		return manifestDreadAbility(), nil
 	}

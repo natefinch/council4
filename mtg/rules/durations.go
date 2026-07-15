@@ -162,6 +162,7 @@ func scheduleDelayedTrigger(g *game.Game, obj *game.StackObject, def *game.Delay
 		BoundDyingObjectID:          capturedDyingObjectID(g, obj, def),
 		CapturedObjectID:            capturedObjectID(g, obj, def),
 		CapturedObjectIDs:           capturedObjectIDs(g, obj, def),
+		CapturedCardID:              capturedCardID(g, obj, def),
 	})
 	return true
 }
@@ -210,6 +211,34 @@ func capturedObjectIDs(g *game.Game, obj *game.StackObject, def *game.DelayedTri
 		}
 	}
 	return ids
+}
+
+// capturedCardID freezes the card a fixed-phase delayed trigger binds to from the
+// creating ability's CapturedCard reference, resolving the referenced linked
+// object key against the creating ability's context at schedule time and reading
+// its card identity rather than a permanent's object identity. It backs delayed
+// return of a card an earlier clause in the same resolution exiled and published
+// under a linked key ("Exile the top card of your library face down. Put that
+// card into your hand at the beginning of your next end step.", Necropotence),
+// where the exiled card is not a permanent so it is identified by CardID, and the
+// shared link key may be reused by a later activation before the trigger fires,
+// so the card must be captured now. It returns zero when the definition carries
+// no such reference or no card was published (an empty library exiled nothing),
+// in which case the trigger's content finds nothing and does nothing.
+func capturedCardID(g *game.Game, obj *game.StackObject, def *game.DelayedTriggerDef) id.ID {
+	if !def.CapturedCard.Exists {
+		return 0
+	}
+	reference := def.CapturedCard.Val
+	if reference.Kind() != game.ObjectReferenceLinkedObject {
+		return 0
+	}
+	for _, linked := range linkedObjects(g, linkedObjectSourceKey(g, obj, reference.LinkID())) {
+		if linked.CardID != 0 {
+			return linked.CardID
+		}
+	}
+	return 0
 }
 
 // capturedDamageSourceObjectID resolves the permanent a combat-damage delayed
@@ -434,11 +463,7 @@ func drainReadyDelayedTriggers(g *game.Game, events []game.Event) []pendingTrigg
 	var pending []pendingTriggeredAbility
 	for i := range g.DelayedTriggers {
 		trigger := &g.DelayedTriggers[i]
-		if trigger.Timing != timing ||
-			timing == game.DelayedAtBeginningOfNextUpkeep &&
-				trigger.CreatedTurn >= g.Turn.TurnNumber ||
-			timing == game.DelayedAtBeginningOfNextMainPhase &&
-				trigger.Controller != g.Turn.ActivePlayer {
+		if !delayedTriggerReadyAtBoundary(g, trigger, timing) {
 			remaining = append(remaining, *trigger)
 			continue
 		}
@@ -453,10 +478,36 @@ func drainReadyDelayedTriggers(g *game.Game, events []game.Event) []pendingTrigg
 			capturedTargetManaValueLKI:  cloneIntMap(trigger.CapturedTargetManaValueLKI),
 			capturedObjectID:            trigger.CapturedObjectID,
 			capturedObjectIDs:           append([]id.ID(nil), trigger.CapturedObjectIDs...),
+			capturedCardID:              trigger.CapturedCardID,
 		})
 	}
 	g.DelayedTriggers = remaining
 	return pending
+}
+
+// delayedTriggerReadyAtBoundary reports whether a fixed-phase delayed trigger
+// fires at the step boundary whose timing is boundaryTiming. Most timings fire at
+// the matching boundary. "Next upkeep" additionally requires a later turn than
+// the one that created it so a trigger scheduled during its own upkeep waits for
+// the following turn. The controller-keyed timings additionally require the
+// trigger's controller to be the active player, so an intervening opponent's step
+// does not consume them: "your next main phase" fires at a main-phase boundary of
+// the controller's turn, and "your next end step" ("Put that card into your hand
+// at the beginning of your next end step.", Necropotence) fires at an end-step
+// boundary of the controller's turn. Because a delayed trigger is always created
+// after the current step's beginning event has passed, activating during your own
+// end step correctly waits for your following turn's end step.
+func delayedTriggerReadyAtBoundary(g *game.Game, trigger *game.DelayedTrigger, boundaryTiming game.DelayedTriggerTiming) bool {
+	switch trigger.Timing {
+	case game.DelayedAtBeginningOfNextUpkeep:
+		return boundaryTiming == game.DelayedAtBeginningOfNextUpkeep && trigger.CreatedTurn < g.Turn.TurnNumber
+	case game.DelayedAtBeginningOfNextMainPhase:
+		return boundaryTiming == game.DelayedAtBeginningOfNextMainPhase && trigger.Controller == g.Turn.ActivePlayer
+	case game.DelayedAtBeginningOfYourNextEndStep:
+		return boundaryTiming == game.DelayedAtBeginningOfNextEndStep && trigger.Controller == g.Turn.ActivePlayer
+	default:
+		return boundaryTiming == trigger.Timing
+	}
 }
 
 func delayedTriggerTimingForStepBoundary(events []game.Event) game.DelayedTriggerTiming {

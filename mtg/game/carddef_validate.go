@@ -2438,6 +2438,15 @@ func (v *cardDefValidator) validateCardRef(faceName, path string, ref CardRefere
 			v.add(faceName, path, CardDefIssueInvalidReference, "target card reference must not use a negative TargetIndex")
 			return false
 		}
+	case CardReferenceCaptured:
+		if ref.LinkID != "" {
+			v.add(faceName, path, CardDefIssueInvalidReference, "captured card reference must not set LinkID")
+			return false
+		}
+		if ref.TargetIndex != 0 {
+			v.add(faceName, path, CardDefIssueInvalidReference, "captured card reference must not set TargetIndex")
+			return false
+		}
 	case CardReferenceNone:
 		v.add(faceName, path, CardDefIssueInvalidReference, "card reference has no kind")
 		return false

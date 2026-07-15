@@ -733,6 +733,8 @@ func compileDelayedTiming(timing parser.DelayedTimingKind) game.DelayedTriggerTi
 	switch timing {
 	case parser.DelayedTimingNextEndStep:
 		return game.DelayedAtBeginningOfNextEndStep
+	case parser.DelayedTimingYourNextEndStep:
+		return game.DelayedAtBeginningOfYourNextEndStep
 	case parser.DelayedTimingNextUpkeep:
 		return game.DelayedAtBeginningOfNextUpkeep
 	case parser.DelayedTimingNextMain:

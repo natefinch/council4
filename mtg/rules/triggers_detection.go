@@ -33,6 +33,7 @@ type pendingTriggeredAbility struct {
 	capturedTargetManaValueLKI  map[int]int
 	capturedObjectID            id.ID
 	capturedObjectIDs           []id.ID
+	capturedCardID              id.ID
 	additionalTriggers          int
 	triggerMultiplierCaptured   bool
 	// ordinaryTrigger marks a triggered ability eligible for chosen-creature-type
@@ -120,6 +121,7 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 			CapturedTargetManaValueLKI:  cloneIntMap(trigger.capturedTargetManaValueLKI),
 			CapturedObjectID:            trigger.capturedObjectID,
 			CapturedObjectIDs:           append([]id.ID(nil), trigger.capturedObjectIDs...),
+			CapturedCardID:              trigger.capturedCardID,
 		}
 		if source, ok := permanentByObjectID(g, trigger.sourceID); ok {
 			seedEntryChoices(obj, source)

@@ -168,6 +168,14 @@ func (r Renderer) renderCreateDelayedTrigger(ctx *renderCtx, value game.CreateDe
 			ctx.need(importOpt)
 			triggerFields = append(triggerFields, fmt.Sprintf("CapturedObjectGroup: opt.Val(%s),", group))
 		}
+		if value.Trigger.CapturedCard.Exists {
+			card, err := r.renderObjectReference(value.Trigger.CapturedCard.Val)
+			if err != nil {
+				return "", err
+			}
+			ctx.need(importOpt)
+			triggerFields = append(triggerFields, fmt.Sprintf("CapturedCard: opt.Val(%s),", card))
+		}
 	}
 	triggerFields = append(triggerFields, fmt.Sprintf("Content: %s,", content))
 	if value.Trigger.Optional {
@@ -653,6 +661,14 @@ func renderCardReference(reference game.CardReference) (string, error) {
 			return "", errors.New("render: linked card reference has no LinkID")
 		}
 		return fmt.Sprintf("game.CardReference{Kind: game.CardReferenceLinked, LinkID: %q}", reference.LinkID), nil
+	case game.CardReferenceCaptured:
+		if reference.LinkID != "" {
+			return "", errors.New("render: captured card reference has LinkID")
+		}
+		if reference.TargetIndex != 0 {
+			return "", errors.New("render: captured card reference has TargetIndex")
+		}
+		return "game.CardReference{Kind: game.CardReferenceCaptured}", nil
 	default:
 		return "", fmt.Errorf("render: unsupported card reference kind %d", reference.Kind)
 	}
