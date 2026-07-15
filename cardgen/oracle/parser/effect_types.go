@@ -2200,6 +2200,15 @@ type EffectSyntax struct {
 	// <dynamic>" clause or directly describe its base power and toughness.
 	// Lowering reads it once at creation. It stays empty for fixed-size tokens.
 	TokenPTDynamic EffectDynamicAmountKind `json:",omitempty"`
+	// TokenCount carries the explicit number of variable "X/X" tokens created
+	// when that count would otherwise be shadowed by the trailing "where X is
+	// <dynamic>" size clause the parser records on Amount ("Create three ... X/X
+	// ... tokens, where X is <dynamic>."). It is set only for a plural
+	// (count >= 2) variable-X token whose size binds through Amount; the singular
+	// "an X/X ... token, where X is ..." form leaves it zero and defaults to one
+	// token so that path stays byte-identical. Lowering reads it as the token
+	// count and Amount as the shared power/toughness size.
+	TokenCount EffectAmountSyntax `json:",omitzero"`
 	// TokenGrantedAbility is the full quoted ability a created token enters with
 	// ("... creature token with \"When this token dies, you gain 1 life.\""),
 	// parsed once through the same pipeline so downstream layers lower it from

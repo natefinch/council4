@@ -2217,6 +2217,21 @@ func exactObjectReferenceText(references []Reference) (string, bool) {
 	return joinedEffectText(references[0].Tokens), true
 }
 
+// exactCreatedGroupReferenceText returns the "each of <pronoun>" recipient text
+// of a single plural back-reference ("them"/"those") to a group the prior clause
+// created, or ok=false when the recipient is not exactly that plural pronoun.
+// The distributive "each of" wording is reconstructed ahead of the pronoun so a
+// per-member counter placement ("Put a reach counter on each of them.",
+// Assemble the Entmoot) matches byte-for-byte.
+func exactCreatedGroupReferenceText(references []Reference) (string, bool) {
+	if len(references) != 1 ||
+		references[0].Kind != ReferencePronoun ||
+		(references[0].Pronoun != PronounThem && references[0].Pronoun != PronounThose) {
+		return "", false
+	}
+	return "each of " + joinedEffectText(references[0].Tokens), true
+}
+
 // exactSelfSubjectReferenceText returns the rendered text of a single source
 // self-reference, either "this <object>" (ReferenceThisObject) or the card's own
 // name (ReferenceSelfName), used to recognize effects whose subject is the source

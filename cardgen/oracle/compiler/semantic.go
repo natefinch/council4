@@ -2444,6 +2444,13 @@ type CompiledEffect struct {
 	// each equal, evaluated once when the token is created. It is empty for fixed
 	// tokens.
 	TokenPTDynamic parser.EffectDynamicAmountKind
+	// TokenCount is the explicit count of variable "X/X" tokens created when the
+	// count would otherwise be shadowed by the "where X is <dynamic>" size clause
+	// carried on Amount ("Create three ... X/X ... tokens, where X is
+	// <dynamic>."). It is the zero amount for the singular "an X/X ... token"
+	// form, which lowering defaults to one token. Lowering reads it as the token
+	// count and Amount as the shared power/toughness size.
+	TokenCount CompiledAmount
 	// TokenKeywords lists, in source order, every creature keyword a created token
 	// enters with ("with flying and vigilance" -> [Flying, Vigilance]). Lowering
 	// reads it for token-creation replacements whose substitute token carries more

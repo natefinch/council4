@@ -104,16 +104,35 @@ func TestLowerCreateTokenThenDynamicCounters(t *testing.T) {
 	}
 }
 
-// TestLowerCreateTwoTokensThenCountersUnsupported verifies the plural form
-// "Create two ... tokens. ... on each of them." is not lowered by the
-// single-token counter sequence: the singular link cannot model a plural
-// recipient, so the card fails closed rather than placing counters on one token.
-func TestLowerCreateTwoTokensThenCountersUnsupported(t *testing.T) {
+// TestLowerCreateTwoTokensThenCountersOnEach verifies the plural form "Create
+// two ... tokens. Put two +1/+1 counters on each of them." lowers to a token
+// creation that publishes every created token under a link key, followed by a
+// counter placement whose recipient is that linked group, so each created token
+// receives the counters.
+func TestLowerCreateTwoTokensThenCountersOnEach(t *testing.T) {
 	t.Parallel()
-	lowerSingleFaceExpectingUnsupported(t, &ScryfallCard{
+	face := lowerSingleFace(t, &ScryfallCard{
 		Name:       "Twin Fractals",
 		Layout:     "normal",
 		TypeLine:   "Sorcery",
 		OracleText: "Create two 0/0 green and blue Fractal creature tokens. Put two +1/+1 counters on each of them.",
 	})
+	if !face.SpellAbility.Exists {
+		t.Fatalf("no spell ability lowered: %#v", face)
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Sequence) != 2 {
+		t.Fatalf("sequence = %#v, want create then counter placement", mode.Sequence)
+	}
+	create, ok := mode.Sequence[0].Primitive.(game.CreateToken)
+	if !ok || create.Amount.Value() != 2 || create.PublishLinked == "" {
+		t.Fatalf("create = %#v, want a two-token creation publishing a link", mode.Sequence[0].Primitive)
+	}
+	add, ok := mode.Sequence[1].Primitive.(game.AddCounter)
+	key, linked := add.Group.LinkedKey()
+	if !ok || !linked || key != create.PublishLinked ||
+		add.Object.Kind() != game.ObjectReferenceNone ||
+		add.Amount.Value() != 2 {
+		t.Fatalf("add = %#v, want two counters on the linked token group", mode.Sequence[1].Primitive)
+	}
 }

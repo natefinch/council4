@@ -1826,6 +1826,26 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		if forEach, ok := parseCreateForEachAmount(kind, context, tokenPTKnown, tokens[ownershipStart:tokenIndex], amount, atoms); ok {
 			amount = forEach
 		}
+		// A variable "X/X" token whose size binds through a trailing "where X is
+		// <dynamic>" clause records that dynamic on Amount (the size). A plural
+		// clause ("Create three ... X/X ... tokens, where X is <dynamic>.")
+		// additionally names an explicit token count ahead of the size clause that
+		// the size-on-Amount capture would otherwise shadow. Re-parse the count
+		// from the run before the size clause and record it on TokenCount so the
+		// count and the size coexist; the singular "an X/X ... token, where X is
+		// ..." form yields count one and leaves TokenCount zero, so that path
+		// stays byte-identical.
+		var tokenCount EffectAmountSyntax
+		if kind == EffectCreate && tokenPTVariableX &&
+			amount.DynamicForm == EffectDynamicAmountFormWhereX {
+			leadClause := tokensBeforeOffset(clause, amount.Span.Start.Offset)
+			leadCount := parseEffectAmount(kind, leadClause, atoms)
+			if leadCount.Known && leadCount.Value >= 2 &&
+				leadCount.DynamicForm == EffectDynamicAmountFormNone &&
+				!leadCount.VariableX {
+				tokenCount = leadCount
+			}
+		}
 		counterKind, counterKnown := parseCounterPlacementScopedToCount(entersTappedCounterClause(kind, clause), amount, atoms)
 		var counterKindChoices []counter.Kind
 		if kind == EffectPut && !counterKnown {
@@ -2043,6 +2063,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			TokenPTKnown:                  tokenPTKnown,
 			TokenPTVariableX:              tokenPTVariableX,
 			TokenPTDynamic:                tokenPTDynamic,
+			TokenCount:                    tokenCount,
 			TokenKeywords:                 tokenKeywords,
 			TokenToxic:                    tokenToxic,
 			TokenName:                     tokenName,
