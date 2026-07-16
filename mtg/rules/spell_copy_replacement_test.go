@@ -32,6 +32,15 @@ func TestAdditionalSpellCopyReplacementAddsDirectAndStormCopies(t *testing.T) {
 	}
 
 	g.Stack = game.Stack{}
+	resolveInstruction(engine, g, original, game.CopyStackObject{
+		Object: game.ResolvingStackObjectReference(),
+		Count:  2,
+	}, &TurnLog{})
+	if got := g.Stack.Size(); got != 3 {
+		t.Fatalf("two-copy batch stack size = %d, want 3", got)
+	}
+
+	g.Stack = game.Stack{}
 	createStormCopies(g, original, &game.CardDef{}, 2)
 	if got := g.Stack.Size(); got != 3 {
 		t.Fatalf("storm copy stack size = %d, want 3", got)

@@ -1827,7 +1827,14 @@ func exactCopyReferencedSpellEffectSyntax(effect *EffectSyntax) bool {
 	default:
 		return false
 	}
-	return strings.EqualFold(exactEffectClauseText(effect), "Copy "+reference.Text+".")
+	clause := "Copy " + reference.Text
+	if effect.Amount.Known {
+		if effect.Amount.Value < 2 {
+			return false
+		}
+		clause += " " + effectAmountSourceText(effect)
+	}
+	return strings.EqualFold(exactEffectClauseText(effect), clause+".")
 }
 
 // effectClauseReferences returns the effect's references that fall at or after

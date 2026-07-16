@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,992 of 32,501 cards eligible for paper support (55.4%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,994 of 32,501 cards eligible for paper support (55.4%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2117,6 +2117,7 @@ Council4 currently supports **17,992 of 32,501 cards eligible for paper support 
 - Buzz Bots
 - Buzzard-Wasp Colony
 - Bygone Bishop
+- Bygone Marvels
 - Byrke, Long Ear of the Law
 - Byway Courier
 - Cabal Archon
@@ -15968,6 +15969,7 @@ Council4 currently supports **17,992 of 32,501 cards eligible for paper support 
 - Tolsimir Wolfblood
 - Tomakul Honor Guard
 - Tomb Fortress
+- Tomb of Horrors Adventurer
 - Tomb of the Spirit Dragon
 - Tomb Robber
 - Tomb Trawler

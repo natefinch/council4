@@ -2599,6 +2599,9 @@ func (p CopyStackObject) validatePrimitive(targets []TargetSpec, checkTargets bo
 	if err := validateObjectReference(p.Object, targets, checkTargets); err != nil {
 		return err
 	}
+	if p.Count < 0 {
+		return errors.New("copy stack object count must be nonnegative")
+	}
 	if p.Chooser.Exists {
 		if err := validatePlayerReference(p.Chooser.Val, targets, checkTargets); err != nil {
 			return err

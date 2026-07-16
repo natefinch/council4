@@ -1065,12 +1065,16 @@ func creditTokenCopyGrantRider(sentences []Sentence, atoms Atoms) (foldedLegacy,
 // that copy is exact, and the rider sentence is exactly the recognized retarget
 // clause; otherwise the rider stays uncredited and the card fails closed.
 func creditCopyChooseNewTargetsRider(sentences []Sentence, atoms Atoms) (foldedLegacy, foldedEffects int, ok bool) {
-	copyEffect := loneCopyStackObjectEffect(sentences)
-	if copyEffect == nil ||
-		(!copyEffect.Exact && !exactAdditionalSpellCopyReplacement(copyEffect)) {
+	copyEffects := copyStackObjectEffects(sentences)
+	if len(copyEffects) == 0 {
 		return 0, 0, false
 	}
-	copyEffect.Exact = true
+	for _, effect := range copyEffects {
+		if !effect.Exact && !exactAdditionalSpellCopyReplacement(effect) {
+			return 0, 0, false
+		}
+		effect.Exact = true
+	}
 	for i := range sentences {
 		if len(sentences[i].Effects) != 1 || sentences[i].Effects[0].Kind != EffectChooseNewTargets {
 			continue
@@ -1079,8 +1083,10 @@ func creditCopyChooseNewTargetsRider(sentences []Sentence, atoms Atoms) (foldedL
 		if !isCopyChooseNewTargetsRiderTokens(tokens) {
 			continue
 		}
-		copyEffect.CopyMayChooseNewTargets = true
-		copyEffect.CopyChooseNewTargetsRiderSpan = sentences[i].Span
+		for _, effect := range copyEffects {
+			effect.CopyMayChooseNewTargets = true
+			effect.CopyChooseNewTargetsRiderSpan = sentences[i].Span
+		}
 		foldedEffects = len(sentences[i].Effects)
 		if sentences[i].LegacyEffects {
 			foldedLegacy = orderedEffectCount(tokens, atoms)
@@ -1093,20 +1099,17 @@ func creditCopyChooseNewTargetsRider(sentences []Sentence, atoms Atoms) (foldedL
 	return 0, 0, false
 }
 
-// loneCopyStackObjectEffect returns the single copy-stack-object effect across
-// the sentences, or nil when the sentences hold zero or more than one.
-func loneCopyStackObjectEffect(sentences []Sentence) *EffectSyntax {
-	var found *EffectSyntax
+// copyStackObjectEffects returns every copy-stack-object effect across the
+// sentences. A plural retarget rider applies to every conditional copy branch.
+func copyStackObjectEffects(sentences []Sentence) []*EffectSyntax {
+	var found []*EffectSyntax
 	for i := range sentences {
 		for j := range sentences[i].Effects {
 			effect := &sentences[i].Effects[j]
 			if effect.Kind != EffectCopyStackObject {
 				continue
 			}
-			if found != nil {
-				return nil
-			}
-			found = effect
+			found = append(found, effect)
 		}
 	}
 	return found
