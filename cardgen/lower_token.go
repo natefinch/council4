@@ -245,7 +245,10 @@ func lowerCreateTokenSpellLinked(ctx contentCtx, publishLinked game.LinkedKey) (
 		if len(ctx.content.References) != 1 {
 			return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 		}
-		object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{AllowTarget: true})
+		object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
+			AllowTarget: true,
+			AllowEvent:  true,
+		})
 		if !ok {
 			return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 		}

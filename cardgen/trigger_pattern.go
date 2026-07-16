@@ -593,6 +593,10 @@ func lowerTriggerSelection(selection compiler.TriggerSelection) (game.Selection,
 	result.RequiredTypes = selection.RequiredTypes
 	result.RequiredTypesAny = selection.RequiredTypesAny
 	result.Controller = controller
+	result.CombatState, ok = lowerTriggerCombatState(selection.CombatState)
+	if !ok {
+		return game.Selection{}, false
+	}
 	result.MatchModified = selection.Modified
 	result.MatchCommander = selection.Commander
 	result.MatchGoaded = selection.Goaded
@@ -779,6 +783,8 @@ func lowerTriggerCombatState(state compiler.TriggerCombatState) (game.CombatStat
 		return game.CombatStateAttacking, true
 	case compiler.TriggerCombatStateBlocking:
 		return game.CombatStateBlocking, true
+	case compiler.TriggerCombatStateAttackingOrBlocking:
+		return game.CombatStateAttackingOrBlocking, true
 	default:
 		return game.CombatStateAny, false
 	}

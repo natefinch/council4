@@ -120,12 +120,15 @@ func triggerMatchesEventForController(g *game.Game, source *game.Permanent, sour
 		sourceObjectID = source.ObjectID
 	}
 	subjectController := event.Controller
-	if subject, ok := triggerSubjectPermanent(g, pattern.Subject, event); ok {
-		subjectController = effectiveController(g, subject)
+	if pattern.Subject != game.TriggerSubjectDefault || !eventCapturesSubjectController(event.Kind) {
+		if permanent, ok := triggerSubjectPermanent(g, pattern.Subject, event); ok {
+			subjectController = effectiveController(g, permanent)
+		}
 	}
 	if !triggerControllerMatches(sourceController, pattern.Controller, subjectController) {
 		return false
 	}
+
 	if !triggerControllerMatches(sourceController, pattern.CauseController, event.Controller) {
 		return false
 	}
@@ -257,6 +260,19 @@ func triggerMatchesEventForController(g *game.Game, source *game.Permanent, sour
 		return false
 	}
 	return true
+}
+
+func eventCapturesSubjectController(kind game.EventKind) bool {
+	switch kind {
+	case game.EventAttackerDeclared,
+		game.EventBlockerDeclared,
+		game.EventZoneChanged,
+		game.EventPermanentDied,
+		game.EventPermanentSacrificed:
+		return true
+	default:
+		return false
+	}
 }
 
 // triggerCastDuringTurnMatches reports whether the active player satisfies a
@@ -633,6 +649,8 @@ func triggerSelectionMatches(g *game.Game, viewer game.PlayerID, event game.Even
 	if objectID != event.PermanentID {
 		subjectEvent.PermanentID = objectID
 		subjectEvent.CardID = 0
+		subjectEvent.SubjectGoaded = false
+		subjectEvent.SubjectGoadedKnown = false
 		subjectEvent.TokenName = ""
 		subjectEvent.TokenDef = nil
 		if objectID == event.SourceObjectID {

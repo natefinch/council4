@@ -76,9 +76,10 @@ type TriggerSelectionCombatState string
 
 // Combat-state predicates recognized in trigger selections.
 const (
-	TriggerSelectionCombatAny TriggerSelectionCombatState = ""
-	TriggerSelectionAttacking TriggerSelectionCombatState = "TriggerSelectionAttacking"
-	TriggerSelectionBlocking  TriggerSelectionCombatState = "TriggerSelectionBlocking"
+	TriggerSelectionCombatAny           TriggerSelectionCombatState = ""
+	TriggerSelectionAttacking           TriggerSelectionCombatState = "TriggerSelectionAttacking"
+	TriggerSelectionBlocking            TriggerSelectionCombatState = "TriggerSelectionBlocking"
+	TriggerSelectionAttackingOrBlocking TriggerSelectionCombatState = "TriggerSelectionAttackingOrBlocking"
 )
 
 // TriggerSelectionComparison identifies an integer comparison.
@@ -328,6 +329,11 @@ func prepareTriggerSelection(
 
 func consumeTriggerSelectionModifiers(words []string, selection *TriggerSelection) []string {
 	for len(words) > 0 {
+		if len(words) >= 3 && words[0] == "attacking" && words[1] == "or" && words[2] == "blocking" {
+			selection.CombatState = TriggerSelectionAttackingOrBlocking
+			words = words[3:]
+			continue
+		}
 		switch words[0] {
 		case "nontoken":
 			selection.NonToken = true

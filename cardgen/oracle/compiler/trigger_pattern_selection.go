@@ -190,6 +190,8 @@ func compileTriggerSelectionCombatState(value parser.TriggerSelectionCombatState
 		return TriggerCombatStateAttacking, true
 	case parser.TriggerSelectionBlocking:
 		return TriggerCombatStateBlocking, true
+	case parser.TriggerSelectionAttackingOrBlocking:
+		return TriggerCombatStateAttackingOrBlocking, true
 	default:
 		return TriggerCombatStateAny, false
 	}

@@ -564,6 +564,13 @@ func parseStaticDeclarationSubject(tokens []shared.Token, atoms Atoms) (StaticDe
 			Group: group,
 		}, verbStart, true
 	}
+	if group, verbStart, ok := staticOpponentControlledCreaturesRuleSubject(tokens, atoms); ok {
+		return StaticDeclarationSubject{
+			Kind:  StaticDeclarationSubjectGroup,
+			Span:  group.Span,
+			Group: group,
+		}, verbStart, true
+	}
 	if group, verbStart, ok := staticGroupAssignsCombatDamageSubject(tokens); ok {
 		return StaticDeclarationSubject{
 			Kind:  StaticDeclarationSubjectGroup,
@@ -591,6 +598,32 @@ func parseStaticDeclarationSubject(tokens []shared.Token, atoms Atoms) (StaticDe
 		Span:  group.Span,
 		Group: group,
 	}, verbStart, true
+}
+
+// staticOpponentControlledCreaturesRuleSubject recognizes an opponent-controlled
+// creature group before a linking rule verb, including a source-relative power
+// qualifier ("Creatures your opponents control with power less than <source>'s
+// power are goaded."). The unfiltered forced-attack form is handled earlier by
+// staticGroupMustAttackSubject.
+func staticOpponentControlledCreaturesRuleSubject(tokens []shared.Token, atoms Atoms) (EffectStaticSubjectSyntax, int, bool) {
+	if !staticWordsAt(tokens, 0, "creatures", "your", "opponents", "control") {
+		return EffectStaticSubjectSyntax{}, 0, false
+	}
+	subject := EffectStaticSubjectSyntax{Kind: EffectStaticSubjectOpponentControlledCreatures}
+	idx := 4
+	if match, ok := controlledGroupProhibitionPowerToughnessQualifier(tokens, idx, atoms); ok {
+		if !match.powerLessThanSource && !match.powerGreaterThanSource {
+			return EffectStaticSubjectSyntax{}, 0, false
+		}
+		subject.PowerLessThanSource = match.powerLessThanSource
+		subject.PowerGreaterThanSource = match.powerGreaterThanSource
+		idx = match.end
+	}
+	if !staticWordsAt(tokens, idx, "is") && !staticWordsAt(tokens, idx, "are") {
+		return EffectStaticSubjectSyntax{}, 0, false
+	}
+	subject.Span = shared.SpanOf(tokens[:idx])
+	return subject, idx, true
 }
 
 // staticLinkingVerbGroupSubject recognizes a battlefield-group subject that a
@@ -2398,7 +2431,8 @@ func staticRuleSubjectForDeclaration(subject StaticDeclarationSubject, operation
 				return StaticRuleSubject{Kind: StaticRuleSubjectControlledNotOwnedCreatures, Span: subject.Span}, true
 			}
 		case EffectStaticSubjectOpponentControlledCreatures:
-			if operation.Kind == StaticRuleOperationAttack && operation.Voice == StaticRuleVoiceActive {
+			if (operation.Kind == StaticRuleOperationAttack || operation.Kind == StaticRuleOperationGoaded) &&
+				operation.Voice == StaticRuleVoiceActive {
 				return StaticRuleSubject{Kind: StaticRuleSubjectOpponentControlledCreatures, Span: subject.Span}, true
 			}
 		case EffectStaticSubjectAllCreatures:

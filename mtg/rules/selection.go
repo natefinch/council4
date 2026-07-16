@@ -862,6 +862,9 @@ func (s *selectionSubject) equipped() bool {
 // RuleEffectGoaded contribution (CR 701.38). Only battlefield and event
 // permanents can be goaded; other subjects never match.
 func (s *selectionSubject) goaded() bool {
+	if s.kind == subjectEventPermanent && s.event.SubjectGoadedKnown {
+		return s.event.SubjectGoaded
+	}
 	if permanent, ok := s.attachmentSubjectPermanent(); ok {
 		return isGoadedNow(s.g, permanent)
 	}
@@ -1032,11 +1035,10 @@ func (s *selectionSubject) power() (int, bool) {
 	return s.values.power, s.values.powerOK
 }
 
-// sourcePower returns the effective power of the predicate's source permanent,
-// clamped to >= 0 to mirror the target-style power read. It backs the
-// source-relative "with lesser/greater power" filters; a missing source, a
-// source that is not a battlefield permanent, or a source with no power yields
-// no value so the relative comparison fails closed.
+// sourcePower returns the effective power of the predicate's source permanent.
+// It backs the source-relative "with lesser/greater power" filters; a missing
+// source, a source that is not a battlefield permanent, or a source with no
+// power yields no value so the relative comparison fails closed.
 func (s *selectionSubject) sourcePower() (int, bool) {
 	if s.sourceObjectID == 0 {
 		return 0, false
@@ -1049,7 +1051,7 @@ func (s *selectionSubject) sourcePower() (int, bool) {
 	if !values.powerOK {
 		return 0, false
 	}
-	return max(0, values.power), true
+	return values.power, true
 }
 
 // powerAboveBase reports whether the subject permanent's current power exceeds

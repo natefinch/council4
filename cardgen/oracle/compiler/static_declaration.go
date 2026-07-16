@@ -1155,7 +1155,7 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Abili
 		compiled.Static = &CompiledStaticSemantics{Declarations: declarations}
 		return
 	}
-	if declarations, ok := recognizeStaticGroupMustAttackDeclarations(*compiled, statics); ok {
+	if declarations, ok := recognizeStaticBattlefieldGroupRuleDeclarations(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: declarations}
 		return
 	}
@@ -1853,7 +1853,8 @@ func staticRuleGroupDomain(kind parser.StaticRuleSubjectKind) (StaticGroupDomain
 		return StaticGroupAttachedObject, true
 	case parser.StaticRuleSubjectControlledCreatures, parser.StaticRuleSubjectControlledNotOwnedCreatures:
 		return StaticGroupSourceControllerPermanents, true
-	case parser.StaticRuleSubjectBattlefieldCreatures, parser.StaticRuleSubjectBattlefieldPermanents:
+	case parser.StaticRuleSubjectBattlefieldCreatures, parser.StaticRuleSubjectBattlefieldPermanents,
+		parser.StaticRuleSubjectOpponentControlledCreatures:
 		return StaticGroupBattlefield, true
 	default:
 		return StaticGroupUnknown, false
@@ -2936,17 +2937,16 @@ func recognizeStaticBattlefieldAttackRuleDeclarations(ability CompiledAbility, s
 	return []StaticDeclaration{declaration}, true
 }
 
-// recognizeStaticGroupMustAttackDeclarations maps a standalone battlefield- or
-// opponent-scoped forced-attack requirement onto a closed semantic declaration,
+// recognizeStaticBattlefieldGroupRuleDeclarations maps a standalone battlefield-
+// or opponent-scoped rule onto a closed semantic declaration,
 // e.g. "All creatures attack each combat if able." or "Creatures your opponents
-// control attack each combat if able." The affected group derives entirely from
-// the typed parser subject: the all-creatures subject yields an every-creature
-// group and the opponent-controlled subject yields a battlefield group whose
-// affected-permanent Selection scopes the controller to the opponent relation.
+// control attack each combat if able.", and the continuous goad form "Creatures
+// your opponents control with power less than <source>'s power are goaded." The
+// affected group derives entirely from the typed parser subject.
 // The controller-scoped "Creatures you control" form is handled by
 // recognizeStaticControlledGroupRuleDeclarations. Costs, triggers, conditions, or
 // any resolving content fail closed because a continuous group rule carries none.
-func recognizeStaticGroupMustAttackDeclarations(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) ([]StaticDeclaration, bool) {
+func recognizeStaticBattlefieldGroupRuleDeclarations(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) ([]StaticDeclaration, bool) {
 	if !staticSyntaxKindsAre(statics, parser.StaticDeclarationRule) {
 		return nil, false
 	}
@@ -2957,7 +2957,7 @@ func recognizeStaticGroupMustAttackDeclarations(ability CompiledAbility, statics
 		return nil, false
 	}
 	rule, zone, ok := semanticStaticRuleForSyntax(ruleNode.Rule)
-	if !ok || rule != StaticRuleMustAttack {
+	if !ok || (rule != StaticRuleMustAttack && rule != StaticRuleGoaded) {
 		return nil, false
 	}
 	group, ok := staticGroupForParserSubject(ruleNode.Subject)
