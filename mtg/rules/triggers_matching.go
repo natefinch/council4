@@ -619,6 +619,16 @@ func triggerSelectionMatches(g *game.Game, viewer game.PlayerID, event game.Even
 	if objectID == 0 {
 		return false
 	}
+	if event.Kind == game.EventDamageDealt &&
+		objectID == event.SourceObjectID &&
+		selection.Keyword == game.Trample {
+		if !event.DamageSourceHadTrample {
+			return false
+		}
+		snapshotSelection := *selection
+		snapshotSelection.Keyword = game.KeywordNone
+		selection = &snapshotSelection
+	}
 	subjectEvent := event
 	if objectID != event.PermanentID {
 		subjectEvent.PermanentID = objectID

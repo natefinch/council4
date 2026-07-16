@@ -1030,6 +1030,9 @@ func renderTriggerPatternFlagFields(ctx *renderCtx, pattern *game.TriggerPattern
 	if pattern.OneOrMorePerAttackTarget {
 		fields = append(fields, "OneOrMorePerAttackTarget: true,")
 	}
+	if pattern.OneOrMorePerDamagedPlayer {
+		fields = append(fields, "OneOrMorePerDamagedPlayer: true,")
+	}
 	if pattern.AttackAlone {
 		fields = append(fields, "AttackAlone: true,")
 	}

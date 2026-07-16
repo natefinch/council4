@@ -410,9 +410,16 @@ type TriggerPattern struct {
 	// matching AttacksAlongsideSelection. Zero imposes no such restriction.
 	AttacksAlongsideCount int
 
-	ExcludeSelf                bool
-	OneOrMore                  bool
-	OneOrMorePerAttackTarget   bool
+	ExcludeSelf              bool
+	OneOrMore                bool
+	OneOrMorePerAttackTarget bool
+	// OneOrMorePerDamagedPlayer marks a "one or more <sources> deal combat damage
+	// to a player" batch trigger that fires once per distinct damaged player,
+	// coalescing only the simultaneous combat-damage events that share a damaged
+	// player (Quartzwood Crasher). Without it a "one or more" combat-damage batch
+	// would coalesce every simultaneous combat-damage event regardless of which
+	// player took the damage.
+	OneOrMorePerDamagedPlayer  bool
 	RequireKickerPaid          bool
 	RequireHistoric            bool
 	ExcludeManaAbility         bool

@@ -627,6 +627,8 @@ func triggerSelectionKeyword(word string) KeywordKind {
 		return KeywordHaste
 	case "shadow":
 		return KeywordShadow
+	case "trample":
+		return KeywordTrample
 	default:
 		return KeywordUnknown
 	}

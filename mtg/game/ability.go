@@ -1198,6 +1198,13 @@ type TriggerPattern struct {
 	// OneOrMorePerAttackTarget coalesces attack events separately for each
 	// attacked player, planeswalker, or battle.
 	OneOrMorePerAttackTarget bool
+	// OneOrMorePerDamagedPlayer coalesces combat-damage events separately for
+	// each damaged player, so a "one or more <sources> deal combat damage to a
+	// player" batch fires once per distinct player who took damage. Without it a
+	// one-or-more combat-damage batch would coalesce every simultaneous
+	// combat-damage event into a single trigger regardless of damaged player
+	// (Quartzwood Crasher).
+	OneOrMorePerDamagedPlayer bool
 
 	// MatchCounterKind restricts EventCountersAdded triggers to a specific
 	// counter type. When false, any counter kind satisfies the pattern.

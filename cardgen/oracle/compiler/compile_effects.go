@@ -82,7 +82,45 @@ func compileTrigger(ability *parser.Ability, _ Context) CompiledTrigger {
 			InterveningCondition: trigger.Condition,
 		}
 	}
+	markPerDamagedPlayerBatch(ability, &trigger.Pattern)
 	return trigger
+}
+
+// markPerDamagedPlayerBatch sets OneOrMorePerDamagedPlayer on a "one or more
+// <sources> deal combat damage to a player" batch trigger whose effect sizes an
+// amount by the combat damage those creatures dealt to that player (Quartzwood
+// Crasher's "where X is the amount of damage those creatures dealt to that
+// player"). Because that amount is summed per damaged player, the runtime must
+// coalesce the shared combat-damage batch by damaged player and fire once for
+// each, rather than folding damage to different players into one trigger. The
+// gate keys off the reflexive per-player amount, not a card name, so any future
+// card sizing an effect by the damage dealt to the triggering player reuses it;
+// batch triggers without that per-player amount keep their prior coalescing.
+func markPerDamagedPlayerBatch(ability *parser.Ability, pattern *TriggerPattern) {
+	if pattern.Event != TriggerEventDamageDealt ||
+		!pattern.OneOrMore ||
+		pattern.DamageRecipient != TriggerDamageRecipientPlayer ||
+		pattern.DamageRecipientIsSource {
+		return
+	}
+	if !abilityHasTotalCombatDamageAmount(ability) {
+		return
+	}
+	pattern.OneOrMorePerDamagedPlayer = true
+}
+
+// abilityHasTotalCombatDamageAmount reports whether any effect in the ability
+// reads the triggering event's total combat damage to the damaged player.
+func abilityHasTotalCombatDamageAmount(ability *parser.Ability) bool {
+	for i := range ability.Sentences {
+		for j := range ability.Sentences[i].Effects {
+			if ability.Sentences[i].Effects[j].Amount.DynamicKind ==
+				parser.EffectDynamicAmountTriggeringEventTotalCombatDamage {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // compileStateTriggerPattern maps a recognized state-trigger clause onto a

@@ -2115,6 +2115,10 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 	if pattern.OneOrMorePerAttackTarget && (!pattern.OneOrMore || pattern.Event != EventAttackerDeclared) {
 		v.add(faceName, path, CardDefIssueInvalidSelection, "OneOrMorePerAttackTarget requires a one-or-more attacker-declared pattern")
 	}
+	if pattern.OneOrMorePerDamagedPlayer && (!pattern.OneOrMore || pattern.Event != EventDamageDealt ||
+		pattern.DamageRecipient&DamageRecipientPlayer == 0) {
+		v.add(faceName, path, CardDefIssueInvalidSelection, "OneOrMorePerDamagedPlayer requires a one-or-more combat-damage-to-player pattern")
+	}
 	if pattern.AttackedPlayerHasMostLife && pattern.Event != EventAttackerDeclared {
 		v.add(faceName, appendPath(path, "AttackedPlayerHasMostLife"), CardDefIssueInvalidSelection, "attacked-player-has-most-life trigger filter is only supported for attacker-declared events")
 	}

@@ -4283,6 +4283,15 @@ const (
 	// resolve after the prevention has applied and reads the running prevented
 	// total. Added last so existing kinds keep their wire values.
 	DynamicAmountDamagePreventedThisWay
+	// DynamicAmountTriggeringEventTotalCombatDamage is the total combat damage
+	// the enclosing combat-damage trigger's simultaneous batch dealt to the
+	// triggering event's damaged player ("the amount of damage those creatures
+	// dealt to that player" — Quartzwood Crasher). It backs the batched
+	// combat-damage payoff family: lowering resolves the create effect's X/X
+	// token size by summing, over the trigger's coalesced batch, the combat
+	// damage each matched controlled creature dealt to that one player. Added
+	// last so existing kinds keep their wire values.
+	DynamicAmountTriggeringEventTotalCombatDamage
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.

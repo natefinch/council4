@@ -1,6 +1,8 @@
 package rules
 
 import (
+	"slices"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
@@ -11,6 +13,13 @@ import (
 func emitEvent(g *game.Game, event game.Event) {
 	if event.Kind == game.EventDamageDealt && event.DamageSourceName == "" {
 		event.DamageSourceName = damageEventSourceName(g, &event)
+	}
+	if event.Kind == game.EventDamageDealt && event.SourceObjectID != 0 {
+		if source, ok := permanentByObjectID(g, event.SourceObjectID); ok {
+			event.DamageSourceHadTrample = hasKeyword(g, source, game.Trample)
+		} else if snapshot, ok := lastKnownObject(g, event.SourceObjectID); ok {
+			event.DamageSourceHadTrample = slices.Contains(snapshot.Keywords, game.Trample)
+		}
 	}
 	if event.Kind == game.EventSpellCast && event.PlayerEventOrdinalThisTurn == 0 {
 		event.PlayerEventOrdinalThisTurn = nextSpellCastOrdinalThisTurn(g, event.Controller)

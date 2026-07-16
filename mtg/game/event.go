@@ -372,6 +372,10 @@ type Event struct {
 	// event occurred, so whole-game history checks remain stable if the source
 	// later changes names or zones.
 	DamageSourceName string
+	// DamageSourceHadTrample records whether the damage source had trample when
+	// the event occurred, for combat-damage batch triggers that bind that
+	// characteristic at trigger time.
+	DamageSourceHadTrample bool
 
 	// TappedForMana is true when EventPermanentTapped recorded a tap that paid a
 	// mana ability's cost ("tapped for mana"), CR 106.11a / 605.
