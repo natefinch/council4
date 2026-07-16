@@ -1221,6 +1221,23 @@ type TriggerPattern struct {
 	// controls the permanent the ability source is attached to.
 	StepPlayerSourceAttachedSelection Selection
 
+	// StepPlayerIsSourceEnchantedPlayer matches an EventBeginningOfStep whose
+	// active (step) player is the player the ability's source Aura is attached to
+	// ("At the beginning of enchanted player's ... upkeep", Paradox Haze). It is
+	// the player-attached counterpart of StepPlayerSourceAttachedSelection, which
+	// matches a permanent-attached Aura's controller; this one reads the source's
+	// AttachedToPlayer directly and so tracks control changes of the Aura and the
+	// current enchanted player. It is only valid with Event == EventBeginningOfStep.
+	StepPlayerIsSourceEnchantedPlayer bool
+
+	// FirstUpkeepStepEachTurn restricts an upkeep EventBeginningOfStep trigger to
+	// the turn's first upkeep step ("first upkeep each turn", Paradox Haze). It is
+	// evaluated against TurnState.UpkeepStepsThisTurn, matching only while that
+	// count is 1, so an additional upkeep step (which increments the count) does
+	// not re-fire the trigger. It is only valid with Event == EventBeginningOfStep
+	// and Step == StepUpkeep.
+	FirstUpkeepStepEachTurn bool
+
 	// RequireTappedForMana restricts an EventPermanentTapped trigger to taps that
 	// paid a mana ability's cost ("is tapped for mana"), CR 106.11a / 605.
 	RequireTappedForMana bool

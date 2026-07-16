@@ -1601,6 +1601,7 @@ func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) 
 			return parseReturnExiledCardsWithCounterEffect(sentence, tokens, atoms)
 		},
 		func() ([]EffectSyntax, bool) { return parseAdditionalCombatPhaseEffect(sentence, tokens) },
+		func() ([]EffectSyntax, bool) { return parseAdditionalUpkeepStepEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseRollDieEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseRingTemptsEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseNoMaximumHandSizeForRestOfGameEffect(sentence, tokens) },
@@ -4949,6 +4950,55 @@ func matchTrailingAdditionalBeginningPhaseWords(words []shared.Token) (verb shar
 		return shared.Token{}, false
 	}
 	return verb, true
+}
+
+// parseAdditionalUpkeepStepEffect recognizes the extra-upkeep-step insertion
+// effect "that player gets an additional upkeep step after this step." (Paradox
+// Haze), also accepting the "you get an additional upkeep step after this step."
+// controller-scoped wording. It inserts one additional upkeep step into the
+// current turn immediately after the current step; the "after this step"
+// reference to the current step is descriptive, as the simplified runtime model
+// drains the inserted step right after the current upkeep step. Any other wording
+// fails closed and flows through the generic effect parser.
+func parseAdditionalUpkeepStepEffect(sentence Sentence, tokens []shared.Token) ([]EffectSyntax, bool) {
+	words := make([]shared.Token, 0, len(tokens))
+	for _, token := range tokens {
+		if token.Kind == shared.Period || token.Kind == shared.Comma {
+			continue
+		}
+		words = append(words, token)
+	}
+	if len(words) == 0 {
+		return nil, false
+	}
+	verb := words[0]
+	rest, ok := cutTokenPrefix(words, "that", "player", "gets")
+	if ok {
+		verb = words[2]
+	} else {
+		rest, ok = cutTokenPrefix(words, "you", "get")
+		if ok {
+			verb = words[1]
+		}
+	}
+	if !ok {
+		return nil, false
+	}
+	rest, ok = cutTokenPrefix(rest, "an", "additional", "upkeep", "step", "after", "this", "step")
+	if !ok || len(rest) != 0 {
+		return nil, false
+	}
+	return []EffectSyntax{{
+		Kind:                 EffectAdditionalUpkeepStep,
+		Span:                 sentence.Span,
+		ClauseSpan:           sentence.Span,
+		VerbSpan:             verb.Span,
+		Text:                 sentence.Text,
+		Tokens:               append([]shared.Token(nil), tokens...),
+		Context:              EffectContextController,
+		AdditionalUpkeepStep: true,
+		Exact:                true,
+	}}, true
 }
 
 // parseRollDieEffect recognizes "roll a d<N>" (CR 706), the die-roll mechanic

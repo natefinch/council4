@@ -625,6 +625,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectNoMaximumHandSize
 	case parser.EffectAdditionalCombatPhase:
 		return EffectAdditionalCombatPhase
+	case parser.EffectAdditionalUpkeepStep:
+		return EffectAdditionalUpkeepStep
 	case parser.EffectRollDie:
 		return EffectRollDie
 	case parser.EffectExileIfLeaveBattlefield:

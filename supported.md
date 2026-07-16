@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,964 of 32,501 cards eligible for paper support (55.3%)**. The Scryfall Oracle Cards corpus contains 5,753 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,966 of 32,501 cards eligible for paper support (55.3%)**. The Scryfall Oracle Cards corpus contains 5,753 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -3301,6 +3301,7 @@ Council4 currently supports **17,964 of 32,501 cards eligible for paper support 
 - Curse of Disturbance
 - Curse of Marit Lage
 - Curse of Opulence
+- Curse of the Bloody Tome
 - Curse of the Swine
 - Curse of Verbosity
 - Curse of Vitality
@@ -10888,6 +10889,7 @@ Council4 currently supports **17,964 of 32,501 cards eligible for paper support 
 - Paradise Plume
 - Paradox Engine
 - Paradox Gardens
+- Paradox Haze
 - Paradox Surveyor
 - Paragon of Eternal Wilds
 - Paragon of Fierce Defiance

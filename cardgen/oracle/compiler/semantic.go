@@ -1970,6 +1970,7 @@ const (
 	EffectChooseCreatureType
 	EffectNoMaximumHandSize
 	EffectAdditionalCombatPhase
+	EffectAdditionalUpkeepStep
 	EffectLookAtHand
 	// EffectRollDie rolls a single fair die with DieSides faces and publishes
 	// the rolled value as its resolved amount ("roll a d20"). A later effect
@@ -3537,6 +3538,12 @@ type CompiledEffect struct {
 	// effect and never set together with AdditionalCombatPhase or
 	// AdditionalMainPhase.
 	AdditionalBeginningPhase bool
+	// AdditionalUpkeepStep mirrors the parser flag for a "that player gets an
+	// additional upkeep step after this step." effect (Paradox Haze): the effect
+	// inserts one extra upkeep step into the current turn immediately after the
+	// current step. It is false for every other effect and never set together
+	// with AdditionalCombatPhase, AdditionalMainPhase, or AdditionalBeginningPhase.
+	AdditionalUpkeepStep bool
 	// DieSides is the number of faces of the die rolled by an EffectRollDie
 	// effect ("roll a d20" sets DieSides to 20). It is zero for every other
 	// effect kind.

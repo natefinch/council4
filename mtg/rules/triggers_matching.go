@@ -145,6 +145,13 @@ func triggerMatchesEventForController(g *game.Game, source *game.Permanent, sour
 		!stepPlayerSourceAttachedMatches(g, sourceController, source, event, &pattern.StepPlayerSourceAttachedSelection) {
 		return false
 	}
+	if pattern.StepPlayerIsSourceEnchantedPlayer &&
+		!stepPlayerIsSourceEnchantedPlayer(source, event) {
+		return false
+	}
+	if pattern.FirstUpkeepStepEachTurn && g.Turn.UpkeepStepsThisTurn > 1 {
+		return false
+	}
 	if pattern.MatchFromZone && pattern.FromZone != event.FromZone {
 		return false
 	}
@@ -448,6 +455,22 @@ func stepPlayerSourceAttachedMatches(g *game.Game, viewer game.PlayerID, source 
 		return false
 	}
 	return triggerSelectionMatches(g, viewer, event, source.AttachedTo.Val, selection, source.ObjectID)
+}
+
+// stepPlayerIsSourceEnchantedPlayer reports whether a beginning-of-step event's
+// active (step) player is the player the source Aura is attached to ("At the
+// beginning of enchanted player's ... upkeep", Paradox Haze). It reads the
+// source's AttachedToPlayer directly, so it follows control changes of the Aura
+// and tracks the current enchanted player; an Aura not attached to a player, or a
+// non-step event, never matches.
+func stepPlayerIsSourceEnchantedPlayer(source *game.Permanent, event game.Event) bool {
+	if event.Kind != game.EventBeginningOfStep {
+		return false
+	}
+	if source == nil || !source.AttachedToPlayer.Exists {
+		return false
+	}
+	return source.AttachedToPlayer.Val == event.Player
 }
 
 // attackedPlayerIsSourceEnchantedPlayer reports whether an attacker-declared

@@ -1178,6 +1178,11 @@ const (
 	TriggerPlayerSelectorMonarch            TriggerPlayerSelectorKind = "TriggerPlayerSelectorMonarch"
 	TriggerPlayerSelectorSourceController   TriggerPlayerSelectorKind = "TriggerPlayerSelectorSourceController"
 	TriggerPlayerSelectorAttachedController TriggerPlayerSelectorKind = "TriggerPlayerSelectorAttachedController"
+	// TriggerPlayerSelectorEnchantedPlayer is the player an Aura is attached to
+	// ("enchanted player's ... upkeep", Paradox Haze). Unlike
+	// TriggerPlayerSelectorAttachedController, which reads the controller of an
+	// attached permanent, this selector names the enchanted player directly.
+	TriggerPlayerSelectorEnchantedPlayer TriggerPlayerSelectorKind = "TriggerPlayerSelectorEnchantedPlayer"
 )
 
 // TriggerAttachedSubject is the typed subject in an attached-controller selector.
@@ -1229,6 +1234,14 @@ type PhaseStepTriggerClause struct {
 	// step") rather than a recurring phase/step trigger. A spell that resolves
 	// sets up such a clause as a delayed triggered ability (CR 603.7).
 	Next bool `json:",omitempty"`
+	// First marks the "first" ordinal qualifier on the step name ("first upkeep
+	// each turn", Paradox Haze), restricting a recurring step trigger to the
+	// turn's first occurrence of that step. It is only set together with EachTurn.
+	First bool `json:",omitempty"`
+	// EachTurn marks the trailing "each turn" qualifier ("first upkeep each
+	// turn", Paradox Haze), scoping the First ordinal to every turn rather than a
+	// single one.
+	EachTurn bool `json:",omitempty"`
 }
 
 // PlayerEventActionKind identifies an acting player's event.

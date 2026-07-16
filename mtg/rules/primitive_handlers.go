@@ -1820,6 +1820,16 @@ func handleAddExtraPhases(r *effectResolver, prim game.AddExtraPhases) effectRes
 	return effectResolved{accepted: true, succeeded: true}
 }
 
+// handleAddExtraUpkeepStep queues one additional upkeep step into the current
+// turn ("that player gets an additional upkeep step after this step." — Paradox
+// Haze). The beginning phase drains the count after the current upkeep step and
+// before the draw step (CR 505.5b); each resolution adds one more step, so
+// multiple sources stack.
+func handleAddExtraUpkeepStep(r *effectResolver, _ game.AddExtraUpkeepStep) effectResolved {
+	r.game.Turn.ExtraUpkeepSteps++
+	return effectResolved{accepted: true, succeeded: true}
+}
+
 func handleRollDie(r *effectResolver, prim game.RollDie) effectResolved {
 	if prim.Sides < 2 {
 		return effectResolved{accepted: true, succeeded: false}

@@ -96,6 +96,7 @@ const (
 	PrimitiveRevealUntil
 	PrimitiveBecomeSaddled
 	PrimitiveAddExtraPhases
+	PrimitiveAddExtraUpkeepStep
 	PrimitiveLookAtHand
 	PrimitiveRollDie
 	PrimitiveRemoveFromCombat
@@ -2522,6 +2523,17 @@ type AddExtraPhases struct {
 	Main      bool
 	Beginning bool
 }
+
+// AddExtraUpkeepStep inserts one additional upkeep step into the current turn
+// immediately after the current step (CR 505.5b). It models "that player gets an
+// additional upkeep step after this step." (Paradox Haze). Each resolution queues
+// one extra upkeep step by incrementing TurnState.ExtraUpkeepSteps, which the
+// beginning phase drains after the current upkeep step and before the draw step;
+// multiple sources therefore stack, each adding one more upkeep step. The added
+// upkeep step is not the turn's first upkeep, so "first upkeep each turn" triggers
+// (Paradox Haze itself) do not re-fire during it, while every other "at the
+// beginning of upkeep" trigger and turn-based upkeep action recurs.
+type AddExtraUpkeepStep struct{}
 
 // RollDie rolls a single fair die with Sides faces and publishes the rolled
 // value (1..Sides) as the instruction's resolved amount (CR 706). It backs
