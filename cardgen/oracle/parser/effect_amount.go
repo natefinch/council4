@@ -2305,11 +2305,22 @@ func parseDynamicObjectNounCountSubject(tokens []shared.Token, start int, atoms 
 		return dynamicAmountSubject{}, false
 	}
 	end := nounStart + 1
-	for _, suffix := range [][]string{{"you", "control"}, {"your", "opponents", "control"}, {"on", "the", "battlefield"}} {
-		if !effectWordsAt(tokens, end, suffix...) {
+	for _, suffix := range []struct {
+		words      []string
+		controller SelectionController
+	}{
+		{words: []string{"you", "control"}},
+		{words: []string{"your", "opponents", "control"}},
+		{words: []string{"on", "the", "battlefield"}},
+		{
+			words:      []string{"defending", "player", "controls"},
+			controller: SelectionControllerDefendingPlayer,
+		},
+	} {
+		if !effectWordsAt(tokens, end, suffix.words...) {
 			continue
 		}
-		subjectEnd := end + len(suffix)
+		subjectEnd := end + len(suffix.words)
 		selectionEnd := subjectEnd
 		chosenType := false
 		chosenResolutionType := false
@@ -2322,6 +2333,9 @@ func parseDynamicObjectNounCountSubject(tokens []shared.Token, start int, atoms 
 			chosenType, chosenResolutionType = qualified.subtypeFromEntryChoice, qualified.subtypeFromChosenType
 		}
 		selection := parseSelection(tokens[start:selectionEnd], atoms)
+		if suffix.controller != SelectionControllerAny {
+			selection.Controller = suffix.controller
+		}
 		selection.SubtypeFromEntryChoice = chosenType
 		selection.SubtypeFromChosenType = chosenResolutionType
 		return dynamicAmountSubject{
@@ -2532,6 +2546,17 @@ func parseDynamicSelectionCountSubject(tokens []shared.Token, start int, atoms A
 	// noun-phrase tokens alone and record the ThatPlayer controller directly;
 	// scanning "that player controls" through parseSelection would fold its
 	// "player" noun into the count subject's own filter.
+	if effectWordsAt(tokens, end, "defending", "player", "controls") && dynamicAmountBoundary(tokens, end+3) {
+		selection := buildDynamicCountSelection(tokens, start, end, atoms)
+		if selection.Zone != zone.None || !dynamicCountSelectionTypesFaithful(selection) {
+			return dynamicAmountSubject{}, false
+		}
+		selection.Controller = SelectionControllerDefendingPlayer
+		return dynamicAmountSubject{
+			amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountCount, Selection: &selection},
+			end:    end + 3, count: true, plural: plural,
+		}, true
+	}
 	if effectWordsAt(tokens, end, "that", "player", "controls") && dynamicAmountBoundary(tokens, end+3) {
 		selection := buildDynamicCountSelection(tokens, start, end, atoms)
 		if selection.Zone != zone.None || !dynamicCountSelectionTypesFaithful(selection) {

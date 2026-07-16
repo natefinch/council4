@@ -35,6 +35,44 @@ func lowerCreateTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnos
 	return lowerCreateTokenSpellLinked(ctx, "")
 }
 
+// lowerCreateSourceCopyTokenSpell lowers a dynamic source-copy token effect from
+// an attack trigger. The defending-player reference is event-captured, so both
+// the count and attacking destination remain correlated even if the source
+// changes controllers or leaves combat before resolution.
+func lowerCreateSourceCopyTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf("lowerCreateSourceCopyTokenSpell: reached with %d effects; the copy-token dispatch is single-effect", len(ctx.content.Effects)))
+	}
+	effect := ctx.content.Effects[0]
+	if effect.Context != parser.EffectContextController ||
+		!effect.Exact ||
+		effect.Negated ||
+		effect.DelayedTiming != 0 ||
+		effect.Duration != compiler.DurationNone ||
+		!effect.TokenCopyEntersTapped ||
+		!effect.TokenCopyAttacksDefender ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.References) > 1 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+	}
+	amount, ok := createTokenAmount(ctx, &effect, game.SourcePermanentReference())
+	if !ok {
+		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+	}
+	return game.Mode{Sequence: []game.Instruction{{Primitive: game.CreateToken{
+		Amount: amount,
+		Source: game.TokenCopyOf(game.TokenCopySpec{
+			Source: game.TokenCopySourceObject,
+			Object: game.SourcePermanentReference(),
+		}),
+		EntryTapped:            true,
+		EntryAttackingDefender: opt.Val(game.DefendingPlayerReference()),
+	}}}}.Ability(), nil
+}
+
 // lowerCreateTokenSpellLinked lowers a token-creation effect, optionally
 // publishing the created token(s) under publishLinked so a following clause
 // ("That token gains <keyword> until end of turn.") can reference them. A blank
@@ -60,6 +98,9 @@ func lowerCreateTokenSpellLinked(ctx contentCtx, publishLinked game.LinkedKey) (
 	}
 	if effect.TokenCopyOfTarget {
 		return lowerCreateCopyTokenSpell(ctx)
+	}
+	if effect.TokenCopyOfSource {
+		return lowerCreateSourceCopyTokenSpell(ctx)
 	}
 	if effect.TokenCopyOfReference {
 		return lowerCreateCopyTokenReferenceSpell(ctx)

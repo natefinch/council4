@@ -2248,6 +2248,18 @@ func parseStaticRequiredBlockRuleOperation(
 	index, end int,
 	subject StaticDeclarationSubject,
 ) (StaticDeclarationSyntax, int, bool) {
+	if staticWordsAt(tokens, index, "must", "be", "blocked", "by", "exactly", "one", "creature", "if", "able") &&
+		index+9 <= end {
+		qualifiers := []StaticRuleQualifier{
+			{Kind: StaticRuleQualifierExactlyOneCreature, Span: shared.SpanOf(tokens[index+3 : index+7])},
+			{Kind: StaticRuleQualifierIfAble, Span: shared.SpanOf(tokens[index+7 : index+9])},
+		}
+		return staticRuleOperation(tokens, index, index+9, subject,
+			StaticRuleConstraint{Kind: StaticRuleConstraintRequirement, Span: tokens[index].Span},
+			StaticRuleOperation{Kind: StaticRuleOperationBlock, Voice: StaticRuleVoicePassive, Span: shared.SpanOf(tokens[index+1 : index+3])},
+			qualifiers,
+		)
+	}
 	if !staticWordsAt(tokens, index, "must", "be", "blocked", "if", "able") ||
 		index+5 > end {
 		return StaticDeclarationSyntax{}, 0, false

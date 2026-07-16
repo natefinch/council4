@@ -213,7 +213,9 @@ func conditionAttacksEachCombatIfAble(semantic []shared.Token) bool {
 func conditionForcedAttackIfAble(semantic []shared.Token) bool {
 	return conditionAttacksEachCombatIfAble(semantic) ||
 		conditionContainsSequence(semantic, 0, "attack", "this", "turn", "if", "able") ||
-		conditionContainsSequence(semantic, 0, "attacks", "this", "turn", "if", "able")
+		conditionContainsSequence(semantic, 0, "attacks", "this", "turn", "if", "able") ||
+		conditionContainsSequence(semantic, 0, "must", "be", "blocked", "if", "able") ||
+		conditionContainsSequence(semantic, 0, "must", "be", "blocked", "by", "exactly", "one", "creature", "if", "able")
 }
 
 // conditionAsLongAsIsDuration reports whether an "as long as" introducer at index

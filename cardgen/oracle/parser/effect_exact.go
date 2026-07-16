@@ -54,6 +54,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 			exactCreateNamedTokenEffectSyntax(effect) ||
 			exactCreatePredefinedTokenEffectSyntax(effect) ||
 			exactCreateNamedTokenChoiceEffectSyntax(effect) ||
+			exactCreateDynamicSourceCopyAttackingEffectSyntax(effect) ||
 			exactCreateCopyTokenEffectSyntax(effect) ||
 			exactCreateCopyTokenReferenceEffectSyntax(effect) ||
 			exactCreateCopyTokenHalvedReferenceEffectSyntax(effect) ||
@@ -82,7 +83,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return exactLegacyFixedAmountSyntax(effect) ||
 			effect.GroupEntryModification.Kind != GroupEntryModificationNone
 	case EffectExile:
-		return exactEachOpponentGreatestPowerExileEffectSyntax(effect) ||
+		return exactDelayedCreatedTokensExileEffectSyntax(effect) ||
+			exactEachOpponentGreatestPowerExileEffectSyntax(effect) ||
 			exactSourceSpellExileSyntax(effect) ||
 			exactSourcePermanentExileSyntax(effect) ||
 			exactCounteredSpellExileSyntax(effect) ||
@@ -216,6 +218,47 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 	default:
 		return exactEffectSyntaxTail(effect)
 	}
+}
+
+// exactCreateDynamicSourceCopyAttackingEffectSyntax recognizes the reusable
+// attack-trigger body that creates a dynamic number of source-copy tokens
+// attacking the same defending player. The amount and copy source remain typed;
+// the source comparison only proves complete Oracle coverage.
+func exactCreateDynamicSourceCopyAttackingEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Context != EffectContextController ||
+		effect.Negated ||
+		effect.Amount.DynamicKind != EffectDynamicAmountCount ||
+		effect.Amount.DynamicForm != EffectDynamicAmountFormWhereX ||
+		effect.Amount.Selection == nil ||
+		effect.Amount.Selection.Controller != SelectionControllerDefendingPlayer ||
+		effect.Amount.Selection.Kind != SelectionCreature ||
+		len(effect.Targets) != 0 {
+		return false
+	}
+	if !strings.EqualFold(
+		exactEffectClauseText(effect),
+		"Create X tokens that are copies of it and that are tapped and attacking, where X is the number of creatures defending player controls.",
+	) {
+		return false
+	}
+	effect.TokenCopyOfSource = true
+	effect.TokenCopyEntersTapped = true
+	effect.TokenCopyAttacksDefender = true
+	return true
+}
+
+// exactDelayedCreatedTokensExileEffectSyntax recognizes a delayed exile whose
+// subject is the token batch created earlier in the resolving sequence.
+func exactDelayedCreatedTokensExileEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Context != EffectContextController ||
+		effect.Negated ||
+		effect.DelayedTiming != DelayedTimingNextEndStep ||
+		len(effect.Targets) != 0 ||
+		!strings.EqualFold(exactEffectClauseText(effect), "Exile the tokens.") {
+		return false
+	}
+	effect.CreatedTokensReference = true
+	return true
 }
 
 // exactEffectSyntaxTail continues the exact-reconstruction dispatch for the

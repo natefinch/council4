@@ -148,6 +148,9 @@ const (
 	StaticRuleCantAttack
 	StaticRuleMustAttack
 	StaticRuleMustBeBlocked
+	// StaticRuleMustBeBlockedByExactlyOne requires the affected attacker to be
+	// blocked by one creature, and no more than one, if that is legal.
+	StaticRuleMustBeBlockedByExactlyOne
 	StaticRuleCantBeCountered
 	StaticRuleCantAttackOrBlock
 	StaticRuleDoesntUntap
@@ -2030,6 +2033,13 @@ func semanticStaticRuleForSyntax(rule parser.StaticRuleSyntax) (StaticRuleKind, 
 		rule.Constraint.Kind == parser.StaticRuleConstraintRequirement &&
 		rule.Operation.Kind == parser.StaticRuleOperationBlock &&
 		rule.Operation.Voice == parser.StaticRuleVoicePassive &&
+		staticRuleQualifiersAre(rule.Qualifiers, parser.StaticRuleQualifierExactlyOneCreature, parser.StaticRuleQualifierIfAble) {
+		return StaticRuleMustBeBlockedByExactlyOne, StaticZoneBattlefield, true
+	}
+	if isCreatureRuleSubject(rule.Subject.Kind) &&
+		rule.Constraint.Kind == parser.StaticRuleConstraintRequirement &&
+		rule.Operation.Kind == parser.StaticRuleOperationBlock &&
+		rule.Operation.Voice == parser.StaticRuleVoicePassive &&
 		staticRuleQualifiersAre(rule.Qualifiers, parser.StaticRuleQualifierIfAble) {
 		return StaticRuleMustBeBlocked, StaticZoneBattlefield, true
 	}
@@ -2134,6 +2144,8 @@ func staticRuleForEffect(kind EffectKind) StaticRuleKind {
 		return StaticRuleMustAttack
 	case EffectMustBeBlocked:
 		return StaticRuleMustBeBlocked
+	case EffectMustBeBlockedByExactlyOne:
+		return StaticRuleMustBeBlockedByExactlyOne
 	case EffectMustBeBlockedByAllAble:
 		return StaticRuleMustBeBlockedByAllAble
 	case EffectAssignDamageAsUnblocked:
@@ -2205,7 +2217,8 @@ func staticRuleDomain(rule StaticRuleKind) StaticRuleDomain {
 	switch rule {
 	case StaticRuleCantAttack, StaticRuleMustAttack, StaticRuleCantAttackYou, StaticRuleCantAttackYouDirect, StaticRuleCantAttackAlone:
 		return StaticRuleDomainAttack
-	case StaticRuleCantBlock, StaticRuleCantBeBlocked, StaticRuleMustBeBlocked, StaticRuleCantBeBlockedByMoreThanOne,
+	case StaticRuleCantBlock, StaticRuleCantBeBlocked, StaticRuleMustBeBlocked, StaticRuleMustBeBlockedByExactlyOne,
+		StaticRuleCantBeBlockedByMoreThanOne,
 		StaticRuleCantBeBlockedByCreaturesWith, StaticRuleCantBeBlockedExceptBy, StaticRuleCantBlockAndCantBeBlocked,
 		StaticRuleMustBeBlockedByAllAble, StaticRuleAssignDamageAsUnblocked,
 		StaticRuleCanBlockOnlyCreaturesWithFlying, StaticRuleCantBlockAlone,

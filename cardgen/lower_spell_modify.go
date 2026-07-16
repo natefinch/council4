@@ -2559,6 +2559,24 @@ func groupModifyPTContinuousEffect(
 		continuous.PowerDeltaDynamic = opt.Val(dynamic)
 		continuous.ToughnessDeltaDynamic = opt.Val(dynamic)
 	case effect.Amount.DynamicKind != compiler.DynamicAmountNone:
+		defenderVariesByMember := false
+		switch effect.StaticSubject {
+		case compiler.StaticSubjectAttackingCreatures,
+			compiler.StaticSubjectOtherAttackingCreatures,
+			compiler.StaticSubjectControlledAttackingCreatures,
+			compiler.StaticSubjectControlledAttackingCreatureSubtype,
+			compiler.StaticSubjectControlledAttackingCreatureTokens:
+			defenderVariesByMember = true
+		default:
+		}
+		if defenderVariesByMember &&
+			effect.Amount.Selector().Controller == compiler.ControllerDefendingPlayer {
+			// A group of attackers can have different defending players. The
+			// current continuous-effect model evaluates one dynamic amount for
+			// the whole group, so it cannot preserve that per-attacker
+			// correlation.
+			return game.ContinuousEffect{}, false
+		}
 		power, toughness, ok := referencedModifyPTQuantities(effect, game.SourcePermanentReference())
 		if !ok {
 			return game.ContinuousEffect{}, false
