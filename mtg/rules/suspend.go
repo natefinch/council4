@@ -133,6 +133,9 @@ func (*Engine) castSuspendedCard(g *game.Game, playerID game.PlayerID, cardID id
 		return false
 	}
 	spellDef := cardFaceOrDefault(card, game.FaceFront)
+	if !cardCastRestrictionsSatisfied(g, playerID, spellDef) {
+		return false
+	}
 	modes, targets, ok := firstLegalSpellCastChoice(g, playerID, spellDef)
 	if !ok {
 		return false

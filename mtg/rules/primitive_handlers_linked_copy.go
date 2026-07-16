@@ -97,6 +97,9 @@ func (*Engine) castFreeCopyOfCard(g *game.Game, controllerID game.PlayerID, card
 		return false
 	}
 	spellDef := cardFaceOrDefault(card, game.FaceFront)
+	if !cardCastRestrictionsSatisfied(g, controllerID, spellDef) {
+		return false
+	}
 	modes, targets, ok := firstLegalSpellCastChoice(g, controllerID, spellDef)
 	if !ok {
 		return false

@@ -254,6 +254,9 @@ func (e *Engine) castFreeSpellFromSource(g *game.Game, sourcePlayer *game.Player
 		return false
 	}
 	spellDef := cardFaceOrDefault(card, game.FaceFront)
+	if !cardCastRestrictionsSatisfied(g, controllerID, spellDef) {
+		return false
+	}
 	modes, targets, ok := firstLegalSpellCastChoice(g, controllerID, spellDef)
 	if !ok {
 		return false

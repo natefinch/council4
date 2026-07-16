@@ -1512,6 +1512,12 @@ func (r Renderer) renderConditionObjectFields(
 		ctx.need(importOpt)
 		fields = append(fields, fmt.Sprintf("ObjectMatches: opt.Val(%s),", selection))
 	}
+	if cond.ObjectAttackedThisTurn {
+		if !cond.Object.Exists {
+			return nil, false, fmt.Errorf("render: %s ObjectAttackedThisTurn condition has no Object reference", context)
+		}
+		fields = append(fields, "ObjectAttackedThisTurn: true,")
+	}
 	if len(cond.Types) > 0 {
 		cardTypes, err := renderTypesCardSlice(ctx, cond.Types)
 		if err != nil {

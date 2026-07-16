@@ -79,6 +79,9 @@ func (e *Engine) offerReboundCast(g *game.Game, playerID game.PlayerID, cardID i
 		return false
 	}
 	spellDef := cardFaceOrDefault(card, game.FaceFront)
+	if !cardCastRestrictionsSatisfied(g, playerID, spellDef) {
+		return false
+	}
 	modes, targets, ok := firstLegalSpellCastChoice(g, playerID, spellDef)
 	if !ok {
 		return false

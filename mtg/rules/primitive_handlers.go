@@ -854,7 +854,7 @@ func handleApplyContinuous(r *effectResolver, prim game.ApplyContinuous) effectR
 		// handlePutOnBattlefield) that clear before remembering.
 		key := linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked))
 		clearLinkedObjects(r.game, key)
-		rememberLinkedObject(r.game, key, permanentLinkedObjectRef(permanent))
+		rememberLinkedObject(r.game, key, permanentObjectBindingRef(permanent))
 	}
 	return res
 }
@@ -982,7 +982,7 @@ func handleModifyPT(r *effectResolver, prim game.ModifyPT) effectResolved {
 		// capture binds to the permanent this activation acted on.
 		key := linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked))
 		clearLinkedObjects(r.game, key)
-		rememberLinkedObject(r.game, key, permanentLinkedObjectRef(permanent))
+		rememberLinkedObject(r.game, key, permanentObjectBindingRef(permanent))
 	}
 	res.succeeded = true
 	return res

@@ -12,12 +12,12 @@ import (
 // controllerID during the resolution of an ability, paying the card's normal
 // mana and additional costs. It locates whichever player's zone currently holds
 // the card (like castFreeTargetedSpell), so a card targeted in any player's zone
-// is cast under controllerID's control. Unlike a normal cast the timing checks
-// are skipped — the cast happens mid-resolution ignoring priority and
-// sorcery-speed timing — but the spell still obeys cast prohibitions and
-// per-turn cast limits. It returns false (casting nothing) when the card is no
-// longer in a player's fromZone, the cast is prohibited, the spell has no legal
-// cast choice, or its costs are not paid in full.
+// is cast under controllerID's control. Unlike a normal cast, priority and
+// sorcery-speed timing are ignored because the cast happens mid-resolution, but
+// printed cast restrictions, cast prohibitions, and per-turn cast limits still
+// apply. It returns false (casting nothing) when the card is no longer in a
+// player's fromZone, the cast is restricted or prohibited, the spell has no
+// legal cast choice, or its costs are not paid in full.
 func (e *Engine) castPaidTargetedSpell(g *game.Game, controllerID game.PlayerID, cardID id.ID, fromZone zone.Type, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
 	source, ok := playerHoldingCastSource(g, cardID, fromZone)
 	if !ok {
@@ -43,10 +43,11 @@ func (e *Engine) castPaidSpellFromSource(g *game.Game, sourcePlayer *game.Player
 		return false
 	}
 	spellDef := cardFaceOrDefault(card, game.FaceFront)
-	// The cast ignores timing but still obeys cast prohibitions and per-turn cast
-	// limits (CR 601.3e): a "can't cast" restriction or a reached cast limit
-	// forbids it even though priority and sorcery-speed timing are bypassed.
-	if spellCastProhibited(g, controllerID, spellDef) || spellCastLimitReached(g, controllerID, spellDef) {
+	// The cast ignores priority and sorcery-speed timing but still obeys printed
+	// cast restrictions, cast prohibitions, and per-turn cast limits (CR 601.3e).
+	if !cardCastRestrictionsSatisfied(g, controllerID, spellDef) ||
+		spellCastProhibited(g, controllerID, spellDef) ||
+		spellCastLimitReached(g, controllerID, spellDef) {
 		return false
 	}
 	modes, targets, ok := firstLegalSpellCastChoice(g, controllerID, spellDef)

@@ -1580,6 +1580,22 @@ func lowerExecutableAbility(
 			sourceSpans: []shared.Span{ability.Span},
 		}, nil
 	}
+	if ability.CastOnlyBeforeCombatDamageStep {
+		return abilityLowering{
+			staticAbilities: []loweredStaticAbility{{Body: game.StaticAbility{
+				Text:                           ability.Text,
+				CastOnlyBeforeCombatDamageStep: true,
+			}}},
+			consumed: semanticConsumption{
+				conditions: len(ability.Content.Conditions),
+				effects:    len(ability.Content.Effects),
+				keywords:   len(ability.Content.Keywords),
+				references: len(ability.Content.References),
+				targets:    len(ability.Content.Targets),
+			},
+			sourceSpans: []shared.Span{ability.Span},
+		}, nil
+	}
 	if ability.Kind == compiler.AbilityStatic && isMaxSpeedAbilityWord(ability.AbilityWord) {
 		stripped := ability
 		stripped.AbilityWord = ""

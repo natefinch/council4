@@ -242,7 +242,11 @@ func (r referenceResolver) object(ref game.ObjectReference) (resolvedObjectRefer
 		return resolvedObjectReference{}, false
 	case game.ObjectReferenceCapturedObject:
 		if r.obj != nil && r.obj.CapturedObjectID != 0 {
-			return resolvePermanentOrLastKnown(r.g, r.obj.CapturedObjectID)
+			resolved, ok := resolvePermanentOrLastKnown(r.g, r.obj.CapturedObjectID)
+			if !ok || resolved.permanent != nil && resolved.permanent.PhasedOut {
+				return resolvedObjectReference{}, false
+			}
+			return resolved, true
 		}
 		return resolvedObjectReference{}, false
 	case game.ObjectReferenceTargetObject:

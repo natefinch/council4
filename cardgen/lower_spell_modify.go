@@ -1658,14 +1658,16 @@ func exactDamageSourceSyntax(references []compiler.CompiledReference) bool {
 //   - the triggering permanent or a prior clause's target referenced by "it"
 //     (EffectContextReferencedObject), pumping that permanent.
 //
-// Every other shape — riders, keyword grants, conditions, modes, plural or
-// non-creature targets, or a reference set that is not exactly the power referent
-// plus the single subject — returns ok=false so the caller falls through to the
-// fail-closed diagnostic.
+// Every other shape — conditions, modes, plural or non-creature targets, or a
+// reference set that is not exactly the power referent plus the single subject —
+// returns ok=false so the caller falls through to the fail-closed diagnostic. An
+// And-connected clause may be in a typed compound sentence with a separately
+// lowered keyword grant; that clause cannot round-trip standalone but remains
+// bounded by the same semantic checks.
 func lowerSourcePowerModifyPTSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	effect := ctx.content.Effects[0]
 	if effect.Amount.DynamicKind != compiler.DynamicAmountSourcePower ||
-		!effect.Exact ||
+		(!effect.Exact && effect.Connection != parser.EffectConnectionAnd) ||
 		effect.Negated ||
 		effect.Duration != compiler.DurationUntilEndOfTurn ||
 		len(ctx.content.Conditions) != 0 ||

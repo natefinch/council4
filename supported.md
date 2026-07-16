@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **18,049 of 32,501 cards eligible for paper support (55.5%)**. The Scryfall Oracle Cards corpus contains 5,753 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,054 of 32,501 cards eligible for paper support (55.5%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -833,6 +833,7 @@ Council4 currently supports **18,049 of 32,501 cards eligible for paper support 
 - Ashnod's Harvester
 - Ashnod's Transmogrant
 - Ashnod, Flesh Mechanist
+- Ashroot Animist
 - Aspect of Gorgon
 - Aspect of Hydra
 - Aspect of Lamprey
@@ -1360,6 +1361,7 @@ Council4 currently supports **18,049 of 32,501 cards eligible for paper support 
 - Bequeathal
 - Bereavement
 - Beregond of the Guard
+- Berserk
 - Berserk Murlodont
 - Berserkers of Blood Ridge
 - Berserkers' Onslaught
@@ -1597,6 +1599,7 @@ Council4 currently supports **18,049 of 32,501 cards eligible for paper support 
 - Blood Divination
 - Blood Feud
 - Blood Fountain
+- Blood Frenzy
 - Blood Glutton
 - Blood Host
 - Blood Hustler
@@ -5130,6 +5133,7 @@ Council4 currently supports **18,049 of 32,501 cards eligible for paper support 
 - Fascination
 - Fast // Furious
 - Fatal Blow
+- Fatal Frenzy
 - Fatal Fumes
 - Fate Forgotten
 - Fate of the Sun-Cryst
@@ -17844,6 +17848,7 @@ Council4 currently supports **18,049 of 32,501 cards eligible for paper support 
 - Xander's Lounge
 - Xathrid Necromancer
 - Xathrid Slyblade
+- Xenagos, God of Revels
 - Xenagos, the Reveler
 - Xenograft
 - Xerex Strobe-Knight

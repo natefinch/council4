@@ -151,6 +151,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	}
 	emitAtoms(document.Abilities, context.CardName, context.Legendary)
 	emitDeclareAttackersCastRestriction(document.Abilities)
+	emitBeforeCombatDamageCastRestriction(document.Abilities)
 	emitGoadedOpponentCreaturesCantBlock(document.Abilities)
 	emitQuestForRenewalUntap(document.Abilities)
 	emitSemblanceAnvil(document.Abilities)
@@ -239,6 +240,14 @@ func emitDeclareAttackersCastRestriction(abilities []Ability) {
 	const text = "Cast this spell only during the declare attackers step and only if you've been attacked this step."
 	for i := range abilities {
 		abilities[i].CastOnlyDuringDeclareAttackersAfterAttacked =
+			strings.EqualFold(strings.TrimSpace(abilities[i].Text), text)
+	}
+}
+
+func emitBeforeCombatDamageCastRestriction(abilities []Ability) {
+	const text = "Cast this spell only before the combat damage step."
+	for i := range abilities {
+		abilities[i].CastOnlyBeforeCombatDamageStep =
 			strings.EqualFold(strings.TrimSpace(abilities[i].Text), text)
 	}
 }
