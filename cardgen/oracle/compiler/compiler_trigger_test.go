@@ -329,6 +329,19 @@ func TestCompileSemanticTriggerPatterns(t *testing.T) {
 				}
 			},
 		},
+		{
+			name:   "noncreature spell mana value less than source power",
+			source: "Whenever an opponent casts a noncreature spell with mana value less than this creature's power, draw a card.",
+			check: func(t *testing.T, pattern TriggerPattern) {
+				if pattern.Event != TriggerEventSpellCast ||
+					pattern.Controller != ControllerOpponent ||
+					!pattern.CardSelection.ManaValueLessThanSourcePower ||
+					pattern.CardSelection.MatchManaValue ||
+					!slices.Equal(pattern.CardSelection.ExcludedTypes, []types.Card{types.Creature}) {
+					t.Fatalf("pattern = %#v", pattern)
+				}
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

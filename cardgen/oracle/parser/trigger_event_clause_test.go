@@ -709,6 +709,38 @@ func spellAndAbilityTriggerEventClauseTests() []triggerEventClauseTest {
 			},
 		},
 		{
+			name:   "noncreature spell mana value less than source power",
+			source: "Whenever an opponent casts a noncreature spell with mana value less than this creature's power, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if !clause.SpellSelection.ManaValueLessThanSourcePower {
+					t.Fatalf("ManaValueLessThanSourcePower = false, clause = %#v", clause)
+				}
+				if clause.SpellSelection.MatchManaValue ||
+					clause.SpellSelection.ManaValueAtLeast != 0 ||
+					clause.SpellSelection.ManaValueAtMost != 0 {
+					t.Fatalf("unexpected fixed mana-value bound, clause = %#v", clause)
+				}
+				if clause.Actor.Kind != TriggerEventActorOpponent {
+					t.Fatalf("actor = %#v, want opponent", clause.Actor)
+				}
+				if len(clause.SpellSelection.ExcludedTypes) != 1 ||
+					clause.SpellSelection.ExcludedTypes[0] != TriggerCardTypeCreature {
+					t.Fatalf("excluded types = %#v, want creature", clause.SpellSelection.ExcludedTypes)
+				}
+			},
+		},
+		{
+			name:   "spell mana value less than source power",
+			source: "Whenever you cast a spell with mana value less than this creature's power, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if !clause.SpellSelection.ManaValueLessThanSourcePower {
+					t.Fatalf("ManaValueLessThanSourcePower = false, clause = %#v", clause)
+				}
+			},
+		},
+		{
 			name:   "spell ordinal first",
 			source: "Whenever you cast your first spell each turn, draw a card.",
 			check: func(t *testing.T, clause *TriggerEventClause) {
@@ -1725,6 +1757,8 @@ func TestTriggerEventFailClosed(t *testing.T) {
 		{name: "subtype with trailing qualifier", source: "Whenever you cast a Goblin spell you control, draw a card."},
 		{name: "singular spell damage source without article", source: "Whenever instant or sorcery spell you control deals damage to an opponent, draw a card."},
 		{name: "self or non-another selection enters", source: "Whenever this creature or a creature you control enters, draw a card."},
+		{name: "mana value less than other characteristic", source: "Whenever an opponent casts a noncreature spell with mana value less than this creature's toughness, draw a card."},
+		{name: "mana value less than fixed with source power", source: "Whenever an opponent casts a noncreature spell with mana value 3 or less than this creature's power, draw a card."},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()

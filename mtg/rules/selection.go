@@ -241,6 +241,16 @@ func matchSelection(s *selectionSubject, sel *game.Selection) bool {
 			return false
 		}
 	}
+	if sel.ManaValueLessThanSourcePower {
+		manaValue, ok := s.manaValue()
+		if !ok {
+			return false
+		}
+		sourcePower, ok := s.sourcePower()
+		if !ok || manaValue >= sourcePower {
+			return false
+		}
+	}
 	if sel.Toughness.Exists {
 		toughness, ok := s.toughness()
 		if !ok || !sel.Toughness.Val.Matches(toughness) {

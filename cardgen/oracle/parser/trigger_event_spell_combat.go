@@ -234,7 +234,11 @@ func parseTriggerEventSpellSelection(tokens []shared.Token) (TriggerEventSpellSe
 	manaValueAtMost := 0
 	matchManaValue := false
 	matchManaValueAtMost := false
-	if rest, value, ok := cutTriggerSpellManaValueAtLeastSuffix(tokens); ok {
+	manaValueLessThanSourcePower := false
+	if rest, ok := cutTriggerSpellManaValueLessThanSourcePowerSuffix(tokens); ok {
+		tokens = rest
+		manaValueLessThanSourcePower = true
+	} else if rest, value, ok := cutTriggerSpellManaValueAtLeastSuffix(tokens); ok {
 		tokens = rest
 		manaValueAtLeast = value
 		matchManaValue = true
@@ -252,6 +256,7 @@ func parseTriggerEventSpellSelection(tokens []shared.Token) (TriggerEventSpellSe
 		// The base filter must not already carry a mana-value, ordinal, or
 		// from-zone qualifier; those forms compose differently and fail closed.
 		if selection.MatchManaValue ||
+			selection.ManaValueLessThanSourcePower ||
 			selection.Ordinal != 0 ||
 			selection.FromZone.Kind != TriggerEventZoneNone {
 			return TriggerEventSpellSelection{}, false
@@ -262,6 +267,18 @@ func parseTriggerEventSpellSelection(tokens []shared.Token) (TriggerEventSpellSe
 		} else {
 			selection.ManaValueAtLeast = manaValueAtLeast
 		}
+		selection.Span = shared.SpanOf(full)
+	}
+	if manaValueLessThanSourcePower {
+		// The source-power comparison does not compose with a fixed mana-value,
+		// ordinal, or from-zone qualifier; those forms fail closed.
+		if selection.MatchManaValue ||
+			selection.ManaValueLessThanSourcePower ||
+			selection.Ordinal != 0 ||
+			selection.FromZone.Kind != TriggerEventZoneNone {
+			return TriggerEventSpellSelection{}, false
+		}
+		selection.ManaValueLessThanSourcePower = true
 		selection.Span = shared.SpanOf(full)
 	}
 	if fromEntryChoice {
@@ -276,6 +293,7 @@ func parseTriggerEventSpellSelection(tokens []shared.Token) (TriggerEventSpellSe
 		// The cast-provenance restriction does not compose with a mana-value,
 		// ordinal, or from-zone qualifier; those forms fail closed.
 		if selection.MatchManaValue ||
+			selection.ManaValueLessThanSourcePower ||
 			selection.Ordinal != 0 ||
 			selection.FromZone.Kind != TriggerEventZoneNone {
 			return TriggerEventSpellSelection{}, false
@@ -361,6 +379,26 @@ func cutTriggerSpellManaValueAtMostSuffix(tokens []shared.Token) ([]shared.Token
 		return nil, 0, false
 	}
 	return tokens[:n-6], value, true
+}
+
+// cutTriggerSpellManaValueLessThanSourcePowerSuffix strips a trailing "with mana
+// value less than this creature's power" qualifier from a spell-selection token
+// run, reporting the remaining noun-phrase tokens. Unlike the fixed-threshold
+// "with mana value N or greater/less" suffixes, the bound is the ability source
+// permanent's live power evaluated as the trigger event occurs, so it carries no
+// integer literal (Pollywog Prodigy). It composes with the typed, colored,
+// colorless, subtype, and disjunction noun phrases the remaining tokens parse
+// into ("a noncreature spell"). It reports false when the suffix is absent or
+// malformed.
+func cutTriggerSpellManaValueLessThanSourcePowerSuffix(tokens []shared.Token) ([]shared.Token, bool) {
+	n := len(tokens)
+	if n < 8 {
+		return nil, false
+	}
+	if syntaxWordsEqual(tokens[n-8:], "with", "mana", "value", "less", "than", "this", "creature's", "power") {
+		return tokens[:n-8], true
+	}
+	return nil, false
 }
 
 // integerTokenValue reads a base-ten integer literal token into its value,

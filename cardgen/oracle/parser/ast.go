@@ -944,7 +944,15 @@ type TriggerEventSpellSelection struct {
 	ManaValueAtLeast int               `json:",omitempty"`
 	ManaValueAtMost  int               `json:",omitempty"`
 	MatchManaValue   bool              `json:",omitempty"`
-	FromZone         TriggerEventZone  `json:",omitzero"`
+	// ManaValueLessThanSourcePower records the trailing "with mana value less
+	// than this creature's power" restriction ("Whenever an opponent casts a
+	// noncreature spell with mana value less than this creature's power", Pollywog
+	// Prodigy). Unlike ManaValueAtLeast/ManaValueAtMost it carries no fixed
+	// threshold: the bound is the ability source permanent's live power, read as
+	// the trigger event occurs. It lowers to the runtime
+	// Selection.ManaValueLessThanSourcePower predicate.
+	ManaValueLessThanSourcePower bool             `json:",omitempty"`
+	FromZone                     TriggerEventZone `json:",omitzero"`
 	// Ordinal records a per-turn spell-cast position from "your Nth spell each
 	// turn" wording (1 for first, 2 for second, ...). Zero means no ordinal
 	// qualifier. Recognized only with the controller-scoped "you cast" actor.
