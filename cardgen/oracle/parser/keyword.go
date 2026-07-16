@@ -89,6 +89,10 @@ const (
 	KeywordProwess        KeywordKind = "KeywordProwess"
 	KeywordReadAhead      KeywordKind = "KeywordReadAhead"
 	KeywordReach          KeywordKind = "KeywordReach"
+	// KeywordRavenous is the Ravenous keyword (CR 702.156): a permanent spell
+	// cast with X enters with X +1/+1 counters, then draws a card on entry when
+	// the chosen X was 5 or greater.
+	KeywordRavenous KeywordKind = "KeywordRavenous"
 	// KeywordRetrace is the Retrace keyword (CR 702.81): "You may cast this card
 	// from your graveyard by discarding a land card in addition to paying its
 	// other costs." It is a non-parameterized graveyard alternative-casting
@@ -304,6 +308,7 @@ var keywordNames = map[KeywordKind]string{
 	KeywordProwess:             "Prowess",
 	KeywordReadAhead:           "Read ahead",
 	KeywordReach:               "Reach",
+	KeywordRavenous:            "Ravenous",
 	KeywordReconfigure:         "Reconfigure",
 	KeywordMoreThanMeetsTheEye: "More Than Meets the Eye",
 	KeywordRetrace:             "Retrace",
@@ -460,6 +465,7 @@ var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordProtection, Words: []string{"protection"}},
 	{Kind: KeywordProwess, Words: []string{"prowess"}},
 	{Kind: KeywordReach, Words: []string{"reach"}},
+	{Kind: KeywordRavenous, Words: []string{"ravenous"}},
 	{Kind: KeywordReconfigure, Words: []string{"reconfigure"}},
 	{Kind: KeywordRetrace, Words: []string{"retrace"}},
 	{Kind: KeywordShadow, Words: []string{"shadow"}},

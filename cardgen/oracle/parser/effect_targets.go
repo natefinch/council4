@@ -140,6 +140,11 @@ func parseTargets(tokens []shared.Token, atoms Atoms) []TargetSyntax {
 			spellTargetRestrictions = restrictions
 		}
 		selection := parseSelection(selectionTokens, atoms)
+		thatPlayerTypeUnion := len(selection.RequiredTypesAny) >= 2 &&
+			endsWithWords(selectionTokens, "that", "player", "controls")
+		if thatPlayerTypeUnion {
+			selection.Controller = SelectionControllerThatPlayer
+		}
 		if possessivePTTarget && selection.Kind == SelectionUnknown {
 			switch strings.ToLower(joinedEffectText(selectionTokens)) {
 			case "creature":
@@ -154,6 +159,9 @@ func parseTargets(tokens []shared.Token, atoms Atoms) []TargetSyntax {
 			selection.OtherThanSource = true
 		}
 		qualifierTokens := selectionTokens
+		if thatPlayerTypeUnion {
+			qualifierTokens = qualifierTokens[:len(qualifierTokens)-3]
+		}
 		if _, head, ok := splitSelectionNamedTail(selectionTokens); ok {
 			// parseSelection has already captured the "named <Name>" tail as
 			// RequiredName; scan only the head for unsupported qualifiers so a
@@ -1691,6 +1699,8 @@ func typeUnionTargetExpected(union string, spellUnion bool, selection SelectionS
 		expected += " an opponent controls"
 	case SelectionControllerNotYou:
 		expected += " you don't control"
+	case SelectionControllerThatPlayer:
+		expected += " that player controls"
 	default:
 		return "", false
 	}

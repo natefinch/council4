@@ -377,9 +377,18 @@ func lowerFixedDestroySpell(
 	defendingPlayerTarget := len(ctx.content.Targets) == 1 &&
 		ctx.content.Targets[0].Selector.Controller == compiler.ControllerThatPlayer &&
 		attackDefendingPlayerEvent(ctx.triggerEvent)
+	eventPlayerTarget := len(ctx.content.Targets) == 1 &&
+		ctx.content.Targets[0].Selector.Controller == compiler.ControllerThatPlayer &&
+		ctx.triggerEvent != game.EventUnknown &&
+		!defendingPlayerTarget
 	references := ctx.content.References
 	if defendingPlayerTarget && len(references) == 1 &&
 		references[0].Kind == compiler.ReferenceThatPlayer {
+		references = nil
+	}
+	if eventPlayerTarget && len(references) == 1 &&
+		references[0].Kind == compiler.ReferenceThatPlayer &&
+		references[0].Binding == compiler.ReferenceBindingEventPlayer {
 		references = nil
 	}
 	if len(ctx.content.Targets) != 1 ||

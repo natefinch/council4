@@ -628,7 +628,10 @@ func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *gam
 		for _, placement := range replacement.EntersWithCounters {
 			amount := placement.Amount
 			if placement.AmountFromX {
-				amount = ctx.xValue
+				amount = 0
+				if ctx.wasCast {
+					amount = ctx.xValue
+				}
 			}
 			if placement.Dynamic.Exists && placement.Dynamic.Val != nil {
 				// A group enters-with-counters replacement ("Each other creature

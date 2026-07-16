@@ -300,6 +300,12 @@ const (
 	// colors. Appended at the end of the enum so existing keyword ordinals are
 	// unchanged.
 	HexproofFrom
+	// Ravenous (CR 702.156) is an enters-the-battlefield keyword whose
+	// replacement and triggered components are built by the Ravenous templates.
+	// The keyword identity is carried by the draw trigger so HasKeyword works
+	// without card-name logic. Appended at the end of the enum so existing
+	// keyword ordinals are unchanged.
+	Ravenous
 	// KeywordCount is one greater than the largest real keyword value. It sizes
 	// compact keyword sets; it is not itself a keyword.
 	KeywordCount

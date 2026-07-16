@@ -115,16 +115,22 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 	if entryFromZoneProhibited(g, faceDef, fromZone) {
 		return nil, false
 	}
+	castXValue := 0
+	if options.WasCast {
+		castXValue = options.XValue
+	}
 	objectID := g.IDGen.Next()
 	permanent := &game.Permanent{
-		ObjectID:       objectID,
-		CardInstanceID: card.ID,
-		Owner:          card.Owner,
-		Controller:     controller,
-		Face:           face,
-		Transformed:    enteringTransformed,
-		SummoningSick:  entersSummoningSick(faceDef),
-		Prepared:       faceDef.EntersPrepared,
+		ObjectID:        objectID,
+		CardInstanceID:  card.ID,
+		Owner:           card.Owner,
+		Controller:      controller,
+		EnteredFromCast: options.WasCast,
+		CastXValue:      castXValue,
+		Face:            face,
+		Transformed:     enteringTransformed,
+		SummoningSick:   entersSummoningSick(faceDef),
+		Prepared:        faceDef.EntersPrepared,
 	}
 	initializePermanentCounters(permanent, faceDef)
 	permanent.Bestowed = options.Bestowed
@@ -178,6 +184,7 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 		EnterCastController:    options.CastController,
 		EnterHasCastController: options.HasCastController,
 		EnterCastFromZone:      options.CastFromZone,
+		EnterXValue:            castXValue,
 		PermanentID:            objectID,
 		FromZone:               fromZone,
 		ToZone:                 zone.Battlefield,
@@ -217,14 +224,20 @@ func prepareCardPermanentFaceForSimultaneousEntry(
 	if entryFromZoneProhibited(g, faceDef, fromZone) {
 		return preparedCardPermanentEntry{}, false
 	}
+	castXValue := 0
+	if options.WasCast {
+		castXValue = options.XValue
+	}
 	permanent := &game.Permanent{
-		ObjectID:       g.IDGen.Next(),
-		CardInstanceID: card.ID,
-		Owner:          card.Owner,
-		Controller:     controller,
-		Face:           face,
-		SummoningSick:  entersSummoningSick(faceDef),
-		Prepared:       faceDef.EntersPrepared,
+		ObjectID:        g.IDGen.Next(),
+		CardInstanceID:  card.ID,
+		Owner:           card.Owner,
+		Controller:      controller,
+		EnteredFromCast: options.WasCast,
+		CastXValue:      castXValue,
+		Face:            face,
+		SummoningSick:   entersSummoningSick(faceDef),
+		Prepared:        faceDef.EntersPrepared,
 	}
 	initializePermanentCounters(permanent, faceDef)
 	permanent.Bestowed = options.Bestowed
@@ -290,6 +303,7 @@ func commitSimultaneousCardPermanentEntries(g *game.Game, entries []preparedCard
 			EnterCastController:    entry.options.CastController,
 			EnterHasCastController: entry.options.HasCastController,
 			EnterCastFromZone:      entry.options.CastFromZone,
+			EnterXValue:            permanent.CastXValue,
 			PermanentID:            permanent.ObjectID,
 			FromZone:               entry.fromZone,
 			ToZone:                 zone.Battlefield,

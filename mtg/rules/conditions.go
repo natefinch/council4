@@ -101,6 +101,13 @@ func aggregateValue(g *game.Game, ctx conditionContext, kind game.AggregateKind)
 			return 0, false
 		}
 		return ctx.obj.XValue, true
+	case game.AggregateEventPermanentCastX:
+		if ctx.event == nil ||
+			ctx.event.Kind != game.EventPermanentEnteredBattlefield ||
+			!ctx.event.EnterWasCast {
+			return 0, false
+		}
+		return ctx.event.EnterXValue, true
 	case game.AggregateEventSpellManaSpentToCast:
 		if ctx.event == nil || !ctx.event.ManaSpentToCast.Exists {
 			return 0, false

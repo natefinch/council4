@@ -51,6 +51,12 @@ type Permanent struct {
 	// Defaults to Owner but can change via control-changing effects.
 	Controller PlayerID
 
+	// EnteredFromCast and CastXValue preserve the cast state of the spell that
+	// became this permanent. CastXValue is meaningful only when EnteredFromCast
+	// is true and is zero for a cast with X=0.
+	EnteredFromCast bool
+	CastXValue      int
+
 	// --- Status flags ---
 
 	// Tapped is true if the permanent is tapped (turned sideways).

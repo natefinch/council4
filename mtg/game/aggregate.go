@@ -149,6 +149,11 @@ const (
 	// colors travel as typed data on Colors rather than being derived from any
 	// card text.
 	AggregateControllerDevotion
+
+	// AggregateEventPermanentCastX is the chosen value of X preserved on the
+	// triggering event for a permanent that entered from a cast spell. It fails
+	// closed for non-cast entries and other event kinds.
+	AggregateEventPermanentCastX
 )
 
 // AggregateComparison compares a player- or board-derived quantity against a

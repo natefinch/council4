@@ -32,7 +32,7 @@ func TestPermanentEntersWithXCounters(t *testing.T) {
 	}
 	g.Players[game.Player1].Hand.Remove(cardID)
 
-	permanent, ok := createCardPermanentFaceWithOptions(NewEngine(nil), g, card, game.Player1, zone.Hand, game.FaceFront, nil, permanentCreationOptions{XValue: 3}, [game.NumPlayers]PlayerAgent{}, nil)
+	permanent, ok := createCardPermanentFaceWithOptions(NewEngine(nil), g, card, game.Player1, zone.Hand, game.FaceFront, nil, permanentCreationOptions{WasCast: true, XValue: 3}, [game.NumPlayers]PlayerAgent{}, nil)
 	if !ok {
 		t.Fatal("permanent not created")
 	}

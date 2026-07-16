@@ -128,6 +128,7 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 			AbilityIndex:                trigger.abilityIndex,
 			TriggerEvent:                trigger.event,
 			HasTriggerEvent:             trigger.hasEvent,
+			XValue:                      triggeredAbilityXValue(trigger),
 			InlineTrigger:               trigger.inline,
 			SagaChapter:                 trigger.sagaChapter,
 			WardTargetStackObjectID:     trigger.wardTargetID,
@@ -162,6 +163,17 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 		placed = true
 	}
 	return placed
+}
+
+func triggeredAbilityXValue(trigger *pendingTriggeredAbility) int {
+	if trigger == nil ||
+		!trigger.hasEvent ||
+		trigger.event.Kind != game.EventPermanentEnteredBattlefield ||
+		trigger.event.PermanentID != trigger.sourceID ||
+		!trigger.event.EnterWasCast {
+		return 0
+	}
+	return trigger.event.EnterXValue
 }
 
 // suppressOpponentEnteringTriggers drops the pending entering-caused triggered

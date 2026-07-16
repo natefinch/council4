@@ -846,6 +846,50 @@ func FabricateTriggeredAbility(count int) TriggeredAbility {
 	}
 }
 
+// RavenousEntersWithCountersReplacement builds the replacement component of
+// Ravenous (CR 702.156): a permanent spell cast with X enters with X +1/+1
+// counters. Counter-placement replacement effects still modify the resulting
+// placement through the normal counter pipeline.
+func RavenousEntersWithCountersReplacement() ReplacementAbility {
+	return EntersWithCountersReplacement(
+		"Ravenous",
+		CounterPlacement{Kind: counter.PlusOnePlusOne, AmountFromX: true},
+	)
+}
+
+// RavenousDrawTriggeredAbility builds the triggered component of Ravenous
+// (CR 702.156): when the permanent enters, its controller draws a card if the X
+// chosen for the cast spell that became it was 5 or greater.
+func RavenousDrawTriggeredAbility() TriggeredAbility {
+	return TriggeredAbility{
+		Text: "Ravenous",
+		Trigger: TriggerCondition{
+			Type: TriggerWhen,
+			Pattern: TriggerPattern{
+				Event:  EventPermanentEnteredBattlefield,
+				Source: TriggerSourceSelf,
+			},
+			InterveningCondition: opt.Val(Condition{
+				Text: "X is 5 or more",
+				Aggregates: []AggregateComparison{{
+					Aggregate: AggregateEventPermanentCastX,
+					Op:        compare.GreaterOrEqual,
+					Value:     5,
+				}},
+			}),
+		},
+		KeywordAbilities: []KeywordAbility{
+			SimpleKeyword{Kind: Ravenous},
+		},
+		Content: Mode{Sequence: []Instruction{{
+			Primitive: Draw{
+				Amount: Fixed(1),
+				Player: ControllerReference(),
+			},
+		}}}.Ability(),
+	}
+}
+
 // EvokeSacrificeTriggeredAbility builds the canonical Evoke sacrifice trigger
 // (CR 702.74): "When this permanent enters, if its evoke cost was paid,
 // sacrifice it." The intervening-if gates the sacrifice on the spell having been
