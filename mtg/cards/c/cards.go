@@ -21,6 +21,7 @@ var Cards = []cardset.Entry{
 	{Name: "Canonized in Blood", New: CanonizedInBlood},
 	{Name: "Cao Cao, Lord of Wei", New: CaoCaoLordOfWei},
 	{Name: "Capricious Sorcerer", New: CapriciousSorcerer},
+	{Name: "Captain America, Unbowed", New: CaptainAmericaUnbowed},
 	{Name: "Capture Sphere", New: CaptureSphere},
 	{Name: "Caravan Escort", New: CaravanEscort},
 	{Name: "Caregiver", New: Caregiver},

@@ -308,7 +308,9 @@ const (
 	// not bypass other casting restrictions. SpellTypes and SpellSubtypes
 	// optionally narrow the grant to spells of those card types ("sorcery
 	// spells", Hypersonic Dragon) or subtypes ("Aura and Equipment spells",
-	// Sigarda's Aid); empty filters permit every spell.
+	// Sigarda's Aid); ExcludedSpellTypes instead narrows it to spells lacking
+	// those card types ("noncreature spells", Valley Floodcaller); empty filters
+	// permit every spell.
 	RuleEffectCastSpellsAsThoughFlash
 	// RuleEffectPlayLandsFromZone grants the affected player a continuous
 	// permission to play land cards from CastFromZone ("You may play lands from
@@ -837,7 +839,10 @@ type RuleEffect struct {
 	SpellColors []color.Color
 	// ExcludedSpellTypes exempts spells carrying any of these card types from a
 	// RuleEffectCantCastSpells prohibition, expressing the "noncreature spells"
-	// family ("Your opponents can't cast noncreature spells this turn.").
+	// family ("Your opponents can't cast noncreature spells this turn."). It
+	// likewise narrows a RuleEffectCastSpellsAsThoughFlash permission to spells
+	// lacking those card types ("You may cast noncreature spells as though they
+	// had flash.", Valley Floodcaller).
 	ExcludedSpellTypes []types.Card
 	DefendingPlayer    PlayerRelation
 	// DefendingPlayerDirectOnly narrows a DefendingPlayer-scoped

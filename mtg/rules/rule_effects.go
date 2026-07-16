@@ -439,6 +439,9 @@ func castAsThoughFlashEffectMatchesCard(g *game.Game, effect *game.RuleEffect, c
 	if len(effect.SpellTypes) != 0 && !cardDefHasAnyType(card, effect.SpellTypes) {
 		return false
 	}
+	if len(effect.ExcludedSpellTypes) != 0 && cardDefHasAnyType(card, effect.ExcludedSpellTypes) {
+		return false
+	}
 	if len(effect.SpellColors) != 0 && !slices.ContainsFunc(effect.SpellColors, func(c color.Color) bool {
 		return slices.Contains(card.Colors, c)
 	}) {

@@ -3114,6 +3114,22 @@ func effectSelfNameSpans(effect *EffectSyntax) []shared.Span {
 	return spans
 }
 
+// effectClauseSubjectExemptSpans returns the spans whose internal commas and
+// "and" conjunctions must not be read as subject boundaries when a clause is
+// reconstructed for exact recognition. It combines the self-name spans (a
+// printed card name's internal comma, e.g. "Syr Konrad, the Grim") with the
+// recognized static-subject noun phrase, so a multi-subtype group subject
+// ("Birds, Frogs, Otters, and Rats you control") reconstructs as one subject
+// instead of collapsing onto its final conjunct.
+func effectClauseSubjectExemptSpans(effect *EffectSyntax) []shared.Span {
+	spans := effectSelfNameSpans(effect)
+	if effect.StaticSubject.Kind != EffectStaticSubjectNone &&
+		effect.StaticSubject.Span != (shared.Span{}) {
+		spans = append(spans, effect.StaticSubject.Span)
+	}
+	return spans
+}
+
 func exactEffectClauseText(effect *EffectSyntax) string {
 	verb := slices.IndexFunc(effect.Tokens, func(token shared.Token) bool {
 		return token.Span == effect.VerbSpan
@@ -3121,7 +3137,7 @@ func exactEffectClauseText(effect *EffectSyntax) string {
 	if verb < 0 {
 		return ""
 	}
-	start := effectSubjectStart(effect.Tokens, verb, effectSelfNameSpans(effect))
+	start := effectSubjectStart(effect.Tokens, verb, effectClauseSubjectExemptSpans(effect))
 	if effect.Optional && effectWordsAt(effect.Tokens, start, "you", "may") && start+2 == verb {
 		start = verb
 	}

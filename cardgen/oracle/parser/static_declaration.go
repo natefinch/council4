@@ -807,6 +807,13 @@ type StaticDeclarationSyntax struct {
 	// had flash.").
 	FlashSpellType     StaticDeclarationSpellTypeKind `json:",omitempty"`
 	FlashSpellSubtypes []types.Sub                    `json:"-"`
+	// FlashSpellExcludedTypes carries the optional exclusion filter of a
+	// StaticDeclarationCastAsThoughFlash declaration ("You may cast noncreature
+	// spells as though they had flash.", Valley Floodcaller). A spell may be cast
+	// as though it had flash only when it has none of these card types. It is
+	// mutually exclusive with the FlashSpellType single-card-type filter and the
+	// FlashSpellSubtypes subtype filter.
+	FlashSpellExcludedTypes []CardType `json:"-"`
 	// UncounterableSpellSubtypes carries the optional subtype filter of a
 	// StaticDeclarationSpellUncounterable declaration ("Human spells you control
 	// can't be countered."). An empty slice with SpellType affects spells by card
@@ -4256,8 +4263,9 @@ func staticSpellCostLifeIncreaseTail(tokens []shared.Token) (staticSpellCostTail
 // permission "You may cast [<filter>] spells as though they had flash."
 // (Vedalken Orrery, Leyline of Anticipation; Hypersonic Dragon's "sorcery
 // spells"; Sigarda's Aid's "Aura and Equipment spells"). <filter> is an optional
-// card-type filter ("creature", "sorcery", "instant and sorcery") or a subtype
-// list ("Aura and Equipment"); an absent filter grants the permission for every
+// card-type filter ("creature", "sorcery", "instant and sorcery"), a subtype
+// list ("Aura and Equipment"), or a "non"-prefixed exclusion ("noncreature",
+// Valley Floodcaller); an absent filter grants the permission for every
 // spell. Any deviation leaves the clause unconsumed and fails closed.
 func parseStaticCastAsThoughFlashDeclaration(tokens []shared.Token, atoms Atoms) (StaticDeclarationSyntax, bool) {
 	if len(tokens) == 0 || tokens[len(tokens)-1].Kind != shared.Period {
@@ -4269,8 +4277,12 @@ func parseStaticCastAsThoughFlashDeclaration(tokens []shared.Token, atoms Atoms)
 	rest := tokens[3:]
 	spellType := StaticDeclarationSpellTypeAll
 	var subtypes []types.Sub
+	var excludedTypes []CardType
 	if subs, next, ok := staticSpellSubtypeFilter(rest, atoms); ok {
 		subtypes = subs
+		rest = next
+	} else if excluded, next, ok := staticSpellExcludedTypeFilter(rest); ok {
+		excludedTypes = excluded
 		rest = next
 	} else {
 		var ok bool
@@ -4285,11 +4297,12 @@ func parseStaticCastAsThoughFlashDeclaration(tokens []shared.Token, atoms Atoms)
 		return StaticDeclarationSyntax{}, false
 	}
 	return StaticDeclarationSyntax{
-		Kind:               StaticDeclarationCastAsThoughFlash,
-		Span:               shared.SpanOf(tokens),
-		OperationSpan:      shared.SpanOf(rest[0:6]),
-		FlashSpellType:     spellType,
-		FlashSpellSubtypes: subtypes,
+		Kind:                    StaticDeclarationCastAsThoughFlash,
+		Span:                    shared.SpanOf(tokens),
+		OperationSpan:           shared.SpanOf(rest[0:6]),
+		FlashSpellType:          spellType,
+		FlashSpellSubtypes:      subtypes,
+		FlashSpellExcludedTypes: excludedTypes,
 	}, true
 }
 

@@ -64,6 +64,7 @@ var Cards = []cardset.Entry{
 	{Name: "Glade Watcher", New: GladeWatcher},
 	{Name: "Glamermite", New: Glamermite},
 	{Name: "Glaring Fleshraker", New: GlaringFleshraker},
+	{Name: "Gleam of Resistance", New: GleamOfResistance},
 	{Name: "Gleaming Bastion", New: GleamingBastion},
 	{Name: "Glen Elendra Guardian", New: GlenElendraGuardian},
 	{Name: "Glimpse of Nature", New: GlimpseOfNature},

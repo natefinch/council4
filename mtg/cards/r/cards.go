@@ -29,6 +29,8 @@ var Cards = []cardset.Entry{
 	{Name: "Rakish Scoundrel", New: RakishScoundrel},
 	{Name: "Rally at the Hornburg", New: RallyAtTheHornburg},
 	{Name: "Rally for the Throne", New: RallyForTheThrone},
+	{Name: "Rally to Battle", New: RallyToBattle},
+	{Name: "Rallying Roar", New: RallyingRoar},
 	{Name: "Ramosian Rally", New: RamosianRally},
 	{Name: "Rampaging Classmate", New: RampagingClassmate},
 	{Name: "Rampant Growth", New: RampantGrowth},

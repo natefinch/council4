@@ -882,10 +882,13 @@ type StaticUntapStepDeclaration struct {
 // permission to cast spells as though they had flash ("You may cast spells as
 // though they had flash.", Vedalken Orrery). SpellTypes and SpellSubtypes
 // optionally narrow the grant to spells of those card types ("sorcery spells")
-// or subtypes ("Aura and Equipment spells"); empty filters permit every spell.
+// or subtypes ("Aura and Equipment spells"); ExcludedSpellTypes instead narrows
+// it to spells lacking those card types ("noncreature spells", Valley
+// Floodcaller). Empty filters permit every spell.
 type StaticCastAsThoughFlashDeclaration struct {
-	SpellTypes    []types.Card
-	SpellSubtypes []types.Sub
+	SpellTypes         []types.Card
+	SpellSubtypes      []types.Sub
+	ExcludedSpellTypes []types.Card
 }
 
 // StaticCombatDamagePreventionDeclaration prevents all combat damage that would
@@ -5447,6 +5450,13 @@ func recognizeStaticCastAsThoughFlashDeclaration(ability CompiledAbility, static
 	if !ok {
 		return StaticDeclaration{}, false
 	}
+	excludedSpellTypes, ok := staticCardTypesFromParser(node.FlashSpellExcludedTypes)
+	if !ok {
+		return StaticDeclaration{}, false
+	}
+	if len(excludedSpellTypes) != 0 && (len(spellTypes) != 0 || len(node.FlashSpellSubtypes) != 0) {
+		return StaticDeclaration{}, false
+	}
 	return StaticDeclaration{
 		Kind:          StaticDeclarationCastAsThoughFlash,
 		Span:          node.Span,
@@ -5456,8 +5466,9 @@ func recognizeStaticCastAsThoughFlashDeclaration(ability CompiledAbility, static
 			Domain: StaticGroupControllerSpells,
 		},
 		CastAsThoughFlash: &StaticCastAsThoughFlashDeclaration{
-			SpellTypes:    spellTypes,
-			SpellSubtypes: node.FlashSpellSubtypes,
+			SpellTypes:         spellTypes,
+			SpellSubtypes:      node.FlashSpellSubtypes,
+			ExcludedSpellTypes: excludedSpellTypes,
 		},
 	}, true
 }

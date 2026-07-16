@@ -24,6 +24,7 @@ var Cards = []cardset.Entry{
 	{Name: "Wanderlight Spirit", New: WanderlightSpirit},
 	{Name: "Wanted Griffin", New: WantedGriffin},
 	{Name: "War Dance", New: WarDance},
+	{Name: "War Flare", New: WarFlare},
 	{Name: "Warbriar Blessing", New: WarbriarBlessing},
 	{Name: "Warchief Giant", New: WarchiefGiant},
 	{Name: "Ward Sliver", New: WardSliver},
