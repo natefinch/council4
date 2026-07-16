@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **18,034 of 32,501 cards eligible for paper support (55.5%)**. The Scryfall Oracle Cards corpus contains 5,753 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,046 of 32,501 cards eligible for paper support (55.5%)**. The Scryfall Oracle Cards corpus contains 5,753 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1262,6 +1262,7 @@ Council4 currently supports **18,034 of 32,501 cards eligible for paper support 
 - Bear
 - Bear Cub
 - Bear Trap
+- Bear Umbra
 - Bear's Companion
 - Bearer of Glory
 - Bearer of Memory
@@ -1712,6 +1713,7 @@ Council4 currently supports **18,034 of 32,501 cards eligible for paper support 
 - Boar
 - Boar
 - Boar
+- Boar Umbra
 - Boar-q-pine
 - Board the Weatherlight
 - Boarding Party
@@ -3111,6 +3113,7 @@ Council4 currently supports **18,034 of 32,501 cards eligible for paper support 
 - Cower in Fear
 - Cowl Prowler
 - Crab
+- Crab Umbra
 - Crabapple Cohort
 - Crack Open
 - Crack the Earth
@@ -4120,6 +4123,7 @@ Council4 currently supports **18,034 of 32,501 cards eligible for paper support 
 - Drake Hatcher
 - Drake Hatchling
 - Drake Haven
+- Drake Umbra
 - Drake-Skull Cameo
 - Drakewing Krasis
 - Dramatic Entrance
@@ -4432,6 +4436,7 @@ Council4 currently supports **18,034 of 32,501 cards eligible for paper support 
 - Edge Rover
 - Edgewall Pack
 - Edric, Spymaster of Trest
+- Eel Umbra
 - Eel-Hounds
 - Eerie Gravestone
 - Eerie Interlude
@@ -4460,6 +4465,7 @@ Council4 currently supports **18,034 of 32,501 cards eligible for paper support 
 - Eladamri's Call
 - Eladamri's Vineyard
 - Eladamri, Lord of Leaves
+- Eland Umbra
 - Elas il-Kor, Sadistic Pilgrim
 - Elder Auntie
 - Elder Druid
@@ -5196,6 +5202,7 @@ Council4 currently supports **18,034 of 32,501 cards eligible for paper support 
 - Felidar Retreat
 - Felidar Savior
 - Felidar Sovereign
+- Felidar Umbra
 - Fell
 - Fell Beast of Mordor
 - Fell Flagship
@@ -7486,6 +7493,7 @@ Council4 currently supports **18,034 of 32,501 cards eligible for paper support 
 - Hydromorph Gull
 - Hydrosurge
 - Hyena Pack
+- Hyena Umbra
 - Hymn of Rebirth
 - Hymn to Tourach
 - Hyperion Blacksmith
@@ -9238,6 +9246,7 @@ Council4 currently supports **18,034 of 32,501 cards eligible for paper support 
 - Malleable Impostor
 - Mammoth Growth
 - Mammoth Spider
+- Mammoth Umbra
 - Man-o'-War
 - Mana Bloom
 - Mana Chains
@@ -9387,6 +9396,7 @@ Council4 currently supports **18,034 of 32,501 cards eligible for paper support 
 - Mary Jane Watson
 - Mary Read and Anne Bonny
 - Mascot Exhibition
+- Mask
 - Mask of Avacyn
 - Mask of Griselbrand
 - Mask of Immolation
@@ -14068,6 +14078,7 @@ Council4 currently supports **18,034 of 32,501 cards eligible for paper support 
 - Snake Basket
 - Snake of the Golden Grove
 - Snake Pit
+- Snake Umbra
 - Snakeform
 - Snakeskin Veil
 - Snap
@@ -14401,6 +14412,7 @@ Council4 currently supports **18,034 of 32,501 cards eligible for paper support 
 - Spider Food
 - Spider Manifestation
 - Spider Spawning
+- Spider Umbra
 - Spider-Bot
 - Spider-Byte, Web Warden
 - Spider-Girl, Legacy Hero
