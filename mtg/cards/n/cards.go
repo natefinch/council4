@@ -8,7 +8,6 @@ import "github.com/natefinch/council4/mtg/cards/cardset"
 // constructor so the registry can build them lazily.
 var Cards = []cardset.Entry{
 	{Name: "N'Yami-Class Mother Ship", New: NYamiClassMotherShip},
-	{Name: "Nacatl War-Pride", New: NacatlWarPride},
 	{Name: "Nacre Talisman", New: NacreTalisman},
 	{Name: "Nahiri's Binding", New: NahiriSBinding},
 	{Name: "Nakia, Wakandan Operative", New: NakiaWakandanOperative},

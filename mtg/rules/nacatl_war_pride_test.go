@@ -4,17 +4,73 @@ import (
 	"slices"
 	"testing"
 
-	ncards "github.com/natefinch/council4/mtg/cards/n"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
+
+func nacatlWarPrideDef() *game.CardDef {
+	return &game.CardDef{CardFace: game.CardFace{
+		Name:      "Nacatl War-Pride",
+		Types:     []types.Card{types.Creature},
+		Subtypes:  []types.Sub{types.Cat, types.Warrior},
+		Power:     opt.Val(game.PT{Value: 3}),
+		Toughness: opt.Val(game.PT{Value: 3}),
+		StaticAbilities: []game.StaticAbility{
+			game.MustBeBlockedByExactlyOneStaticBody,
+		},
+		TriggeredAbilities: []game.TriggeredAbility{{
+			Trigger: game.TriggerCondition{
+				Type: game.TriggerWhenever,
+				Pattern: game.TriggerPattern{
+					Event:  game.EventAttackerDeclared,
+					Source: game.TriggerSourceSelf,
+				},
+			},
+			Content: game.Mode{Sequence: []game.Instruction{
+				{
+					Primitive: game.CreateToken{
+						Amount: game.Dynamic(game.DynamicAmount{
+							Kind:       game.DynamicAmountCountSelector,
+							Multiplier: 1,
+							Group: game.PlayerControlledGroup(
+								game.DefendingPlayerReference(),
+								game.Selection{RequiredTypes: []types.Card{types.Creature}},
+							),
+						}),
+						Source: game.TokenCopyOf(game.TokenCopySpec{
+							Source: game.TokenCopySourceObject,
+							Object: game.SourcePermanentReference(),
+						}),
+						EntryTapped:            true,
+						EntryAttackingDefender: opt.Val(game.DefendingPlayerReference()),
+						PublishLinked:          game.LinkedKey("delayed-created-token-exile-1"),
+					},
+				},
+				{
+					Primitive: game.CreateDelayedTrigger{
+						Trigger: game.DelayedTriggerDef{
+							Timing: game.DelayedAtBeginningOfNextEndStep,
+							CapturedObjectGroup: opt.Val(
+								game.LinkedObjectReference("delayed-created-token-exile-1"),
+							),
+							Content: game.Mode{Sequence: []game.Instruction{{
+								Primitive: game.Exile{Group: game.CapturedObjectsGroup()},
+							}}}.Ability(),
+						},
+					},
+				},
+			}}.Ability(),
+		}},
+	}}
+}
 
 func TestExactlyOneBlockRequirementRejectsZeroAndMultiple(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
-	attacker := addCombatPermanent(g, game.Player1, ncards.NacatlWarPride())
+	attacker := addCombatPermanent(g, game.Player1, nacatlWarPrideDef())
 	first := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
 	second := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
 	g.Turn.Phase = game.PhaseCombat
@@ -42,8 +98,8 @@ func TestExactlyOneBlockRequirementRejectsZeroAndMultiple(t *testing.T) {
 
 func TestMultipleExactlyOneRequirementsMaximizeSatisfiedAttackers(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
-	firstAttacker := addCombatPermanent(g, game.Player1, ncards.NacatlWarPride())
-	secondAttacker := addCombatPermanent(g, game.Player1, ncards.NacatlWarPride())
+	firstAttacker := addCombatPermanent(g, game.Player1, nacatlWarPrideDef())
+	secondAttacker := addCombatPermanent(g, game.Player1, nacatlWarPrideDef())
 	firstBlocker := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
 	secondBlocker := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
 	g.Turn.Phase = game.PhaseCombat
@@ -84,7 +140,7 @@ func TestMultipleExactlyOneRequirementsMaximizeSatisfiedAttackers(t *testing.T) 
 
 func TestExactlyOneAndMenaceUnsatisfiableFailsOpen(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
-	def := ncards.NacatlWarPride()
+	def := nacatlWarPrideDef()
 	def.StaticAbilities = append(def.StaticAbilities, game.MenaceStaticBody)
 	attacker := addCombatPermanent(g, game.Player1, def)
 	addCombatCreaturePermanentWithPower(g, game.Player2, 2)
@@ -121,7 +177,7 @@ func TestNacatlWarPrideCreatesCopiedTappedAttackersAndCapturesDoubledBatch(t *te
 		t.Run(target.name, func(t *testing.T) {
 			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 			engine := NewEngine(nil)
-			attacker := addCombatPermanent(g, game.Player1, ncards.NacatlWarPride())
+			attacker := addCombatPermanent(g, game.Player1, nacatlWarPrideDef())
 			addCombatCreaturePermanentWithPower(g, game.Player2, 2)
 			addCombatCreaturePermanentWithPower(g, game.Player2, 2)
 			addReplacementPermanent(t, g, game.Player1, tokenDoublingReplacementCardDef())
@@ -134,7 +190,7 @@ func TestNacatlWarPrideCreatesCopiedTappedAttackersAndCapturesDoubledBatch(t *te
 			attacker.Controller = game.Player3
 			obj := nacatlTriggerObject(g, attacker, attackTarget)
 			log := TurnLog{}
-			engine.resolveAbilityContentWithChoices(g, obj, ncards.NacatlWarPride().TriggeredAbilities[0].Content, [game.NumPlayers]PlayerAgent{}, &log)
+			engine.resolveAbilityContentWithChoices(g, obj, nacatlWarPrideDef().TriggeredAbilities[0].Content, [game.NumPlayers]PlayerAgent{}, &log)
 
 			tokens := nacatlTokens(g)
 			if len(tokens) != 4 {
@@ -168,7 +224,7 @@ func TestNacatlWarPrideCreatesCopiedTappedAttackersAndCapturesDoubledBatch(t *te
 func TestNacatlWarPrideDelayedExileKeepsBatchesIndependent(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	attacker := addCombatPermanent(g, game.Player1, ncards.NacatlWarPride())
+	attacker := addCombatPermanent(g, game.Player1, nacatlWarPrideDef())
 	firstDefender := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
 	target := game.AttackTarget{Player: game.Player2}
 	g.Combat = &game.CombatState{Attackers: []game.AttackDeclaration{{
@@ -176,7 +232,7 @@ func TestNacatlWarPrideDelayedExileKeepsBatchesIndependent(t *testing.T) {
 	}}, AttackersDeclared: true}
 	g.Turn.ActivePlayer = game.Player1
 	g.Turn.Phase = game.PhaseCombat
-	content := ncards.NacatlWarPride().TriggeredAbilities[0].Content
+	content := nacatlWarPrideDef().TriggeredAbilities[0].Content
 	engine.resolveAbilityContentWithChoices(g, nacatlTriggerObject(g, attacker, target), content, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
 	firstBatch := append([]id.ID(nil), g.DelayedTriggers[0].CapturedObjectIDs...)
 
@@ -218,7 +274,7 @@ func TestNacatlWarPrideDelayedExileKeepsBatchesIndependent(t *testing.T) {
 func TestNacatlWarPrideCopiesSourceLastKnownInformation(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	attacker := addCombatPermanent(g, game.Player1, ncards.NacatlWarPride())
+	attacker := addCombatPermanent(g, game.Player1, nacatlWarPrideDef())
 	addCombatCreaturePermanentWithPower(g, game.Player2, 2)
 	target := game.AttackTarget{Player: game.Player2}
 	g.Combat = &game.CombatState{Attackers: []game.AttackDeclaration{{
@@ -230,7 +286,7 @@ func TestNacatlWarPrideCopiesSourceLastKnownInformation(t *testing.T) {
 		t.Fatal("could not move source to graveyard")
 	}
 
-	engine.resolveAbilityContentWithChoices(g, obj, ncards.NacatlWarPride().TriggeredAbilities[0].Content, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+	engine.resolveAbilityContentWithChoices(g, obj, nacatlWarPrideDef().TriggeredAbilities[0].Content, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
 
 	tokens := nacatlTokens(g)
 	if len(tokens) != 1 {
@@ -251,14 +307,14 @@ func TestNacatlWarPrideCopiesSourceLastKnownInformation(t *testing.T) {
 func TestNacatlWarPrideZeroDefendersCreatesNothing(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	attacker := addCombatPermanent(g, game.Player1, ncards.NacatlWarPride())
+	attacker := addCombatPermanent(g, game.Player1, nacatlWarPrideDef())
 	target := game.AttackTarget{Player: game.Player2}
 	g.Combat = &game.CombatState{Attackers: []game.AttackDeclaration{{
 		Attacker: attacker.ObjectID, Target: target,
 	}}, AttackersDeclared: true}
 	g.Turn.ActivePlayer = game.Player1
 	g.Turn.Phase = game.PhaseCombat
-	engine.resolveAbilityContentWithChoices(g, nacatlTriggerObject(g, attacker, target), ncards.NacatlWarPride().TriggeredAbilities[0].Content, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+	engine.resolveAbilityContentWithChoices(g, nacatlTriggerObject(g, attacker, target), nacatlWarPrideDef().TriggeredAbilities[0].Content, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
 	if tokens := nacatlTokens(g); len(tokens) != 0 {
 		t.Fatalf("created %d tokens with zero defending creatures", len(tokens))
 	}

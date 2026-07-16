@@ -3700,7 +3700,7 @@ func lowerDelayedSequenceClause(
 	}
 	if publisher, delayed, ok := lowerDelayedCreatedTokensExile(effectIndex, ctx, sequence); ok {
 		sequence[len(sequence)-1].Primitive = publisher
-		return delayed, true, false
+		return delayedSequenceClauseResult{content: delayed, handled: true}
 	}
 	if publisher, delayed, ok := lowerDelayedTargetExile(effectIndex, ctx, sequence); ok {
 		sequence[len(sequence)-1].Primitive = publisher
