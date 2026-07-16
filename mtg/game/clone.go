@@ -31,6 +31,7 @@ func (g *Game) Clone() *Game {
 	clone := &Game{
 		Battlefield:                        cloneSliceFunc(g.Battlefield, clonePermanent),
 		CardInstances:                      clonePtrMap(g.CardInstances, cloneCardInstance),
+		CardNameCatalog:                    cloneSliceMap(g.CardNameCatalog),
 		CommanderIDs:                       cloneComparableMap(g.CommanderIDs),
 		Stack:                              cloneStack(g.Stack),
 		ContinuousEffects:                  cloneSlicePtr(g.ContinuousEffects, fixupContinuousEffect),
@@ -72,7 +73,6 @@ func (g *Game) Clone() *Game {
 		ResolvedTriggeredAbilitiesThisTurn: cloneComparableMap(g.ResolvedTriggeredAbilitiesThisTurn),
 		ChosenModesThisTurn:                cloneComparableMap(g.ChosenModesThisTurn),
 	}
-
 	clone.IDGen.Restore(g.IDGen.Current())
 
 	for i := range g.Players {
@@ -82,6 +82,17 @@ func (g *Game) Clone() *Game {
 	seed := g.IDGen.Current()
 	clone.RNG = rand.New(rand.NewPCG(seed, seed^0x9e3779b97f4a7c15))
 
+	return clone
+}
+
+func cloneSliceMap[K comparable, V any](source map[K][]V) map[K][]V {
+	if source == nil {
+		return nil
+	}
+	clone := make(map[K][]V, len(source))
+	for key, values := range source {
+		clone[key] = slices.Clone(values)
+	}
 	return clone
 }
 

@@ -81,6 +81,13 @@ type CompiledLifeCharacteristicExchange struct {
 	TargetOpponent bool
 }
 
+// CompiledAttachmentChoices is an attachment-time persistent choice
+// replacement whose values are typed by card-type family.
+type CompiledAttachmentChoices struct {
+	CardNameType  types.Card
+	SubtypeOfType types.Card
+}
+
 // CompiledAbility is a source-spanned semantic ability. Shell semantics
 // (cost, trigger, timing, chapter numbers) are fields on CompiledAbility;
 // the ability's instruction content (targets, conditions, effects, keywords,
@@ -106,6 +113,7 @@ type CompiledAbility struct {
 	SunderingGrowthPopulate                     bool
 	SelesnyaEulogistPopulate                    bool
 	LifeCharacteristicExchange                  *CompiledLifeCharacteristicExchange
+	AttachmentChoices                           *CompiledAttachmentChoices
 	UnlicensedHearseExile                       bool
 	ChoosePermanentTypeReturn                   bool
 	TauntFromRampartSequence                    bool

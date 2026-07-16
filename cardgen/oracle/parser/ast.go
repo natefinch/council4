@@ -86,6 +86,14 @@ type LifeCharacteristicExchangeSyntax struct {
 	TargetOpponent bool                           `json:",omitempty"`
 }
 
+// AttachmentChoicesSyntax records choices made as the source becomes attached.
+// The chosen values persist on the source object and can be referenced by its
+// continuous effects.
+type AttachmentChoicesSyntax struct {
+	CardNameType  types.Card `json:",omitempty"`
+	SubtypeOfType types.Card `json:",omitempty"`
+}
+
 // Ability is one Oracle-text paragraph, or one modal header and its options.
 type Ability struct {
 	Kind        AbilityKind        `json:",omitempty"`
@@ -186,6 +194,9 @@ type Ability struct {
 	ConditionClauses []ConditionClause `json:",omitempty"`
 	// StaticDeclarations are the ability's typed static declarations.
 	StaticDeclarations []StaticDeclarationSyntax `json:",omitempty"`
+	// AttachmentChoices is the typed attachment-time persistent-choice
+	// replacement declared by this ability.
+	AttachmentChoices *AttachmentChoicesSyntax `json:",omitempty"`
 	// Companion is the recognized companion keyword ability (CR 702.139), or nil
 	// when this paragraph is not a companion ability. The parser owns the
 	// companion wording (the standard "Companion — <deckbuilding condition>" form

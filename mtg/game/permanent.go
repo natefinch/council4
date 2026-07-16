@@ -218,12 +218,10 @@ type Permanent struct {
 	// in echoObligationPending and tracked in #3014.
 	EchoResolvedController opt.V[PlayerID]
 
-	// EntryChoices stores values chosen as this permanent entered the
-	// battlefield (CR 614.12), such as the color named by "As this permanent
-	// enters, choose a color." Keys are ChoiceKey values published by the
-	// card's entry-choice replacement; later abilities (e.g. "{T}: Add one mana
-	// of the chosen color.") read the stored result. Initialized lazily on first
-	// write, consistent with the other map fields on Permanent.
+	// EntryChoices stores persistent choices made for this permanent. The legacy
+	// name reflects its original entry-choice use; attachment-time choices also
+	// live here so all source-scoped chosen values share one cloned, LKI-preserved
+	// store. Initialized lazily on first write.
 	EntryChoices map[ChoiceKey]ResolutionChoiceResult
 
 	// --- Token support ---

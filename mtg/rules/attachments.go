@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"maps"
 	"slices"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -10,15 +11,77 @@ import (
 )
 
 func attachPermanent(g *game.Game, attachment, target *game.Permanent) bool {
+	return attachPermanentWithChoices(g, attachment, target, nil)
+}
+
+func attachPermanentWithChoices(g *game.Game, attachment, target *game.Permanent, choiceCtx *replacementChoiceContext) bool {
 	if !canAttachPermanent(g, attachment, target) {
 		return false
 	}
+	if attachment.AttachedTo.Exists && attachment.AttachedTo.Val == target.ObjectID {
+		return true
+	}
+	choices, ok := attachmentChoices(g, attachment, choiceCtx)
+	if !ok {
+		return false
+	}
 	detachPermanent(g, attachment)
+	if len(choices) > 0 {
+		if attachment.EntryChoices == nil {
+			attachment.EntryChoices = make(map[game.ChoiceKey]game.ResolutionChoiceResult)
+		}
+		maps.Copy(attachment.EntryChoices, choices)
+	}
 	attachment.AttachedTo = opt.Val(target.ObjectID)
 	if !permanentIDsContain(target.Attachments, attachment.ObjectID) {
 		target.Attachments = append(target.Attachments, attachment.ObjectID)
 	}
 	return true
+}
+
+func attachmentChoices(g *game.Game, attachment *game.Permanent, choiceCtx *replacementChoiceContext) (map[game.ChoiceKey]game.ResolutionChoiceResult, bool) {
+	if attachment == nil || attachment.FaceDown {
+		return nil, true
+	}
+	def, ok := permanentCardDef(g, attachment)
+	if !ok || def == nil {
+		return nil, true
+	}
+	if choiceCtx == nil {
+		if current, present := replacementChoiceContextFor(g); present {
+			choiceCtx = current
+		} else {
+			choiceCtx = &replacementChoiceContext{engine: NewEngine(nil)}
+		}
+	}
+	controller := effectiveController(g, attachment)
+	results := make(map[game.ChoiceKey]game.ResolutionChoiceResult)
+	for i := range def.ReplacementAbilities {
+		replacement := &def.ReplacementAbilities[i].Replacement
+		if replacement.AttachCardNameChoiceType != "" {
+			result, chosen := choiceCtx.engine.choosePersistentValue(g, choiceCtx.agents, controller, &game.ResolutionChoice{
+				Kind:         game.ResolutionChoiceCardName,
+				Prompt:       "Choose a card name.",
+				CardNameType: replacement.AttachCardNameChoiceType,
+			}, choiceCtx.log)
+			if !chosen {
+				return nil, false
+			}
+			results[game.AttachmentCardNameChoiceKey] = result
+		}
+		if replacement.AttachSubtypeChoiceType != "" {
+			result, chosen := choiceCtx.engine.choosePersistentValue(g, choiceCtx.agents, controller, &game.ResolutionChoice{
+				Kind:          game.ResolutionChoiceSubtype,
+				Prompt:        "Choose a subtype.",
+				SubtypeOfType: replacement.AttachSubtypeChoiceType,
+			}, choiceCtx.log)
+			if !chosen {
+				return nil, false
+			}
+			results[game.AttachmentSubtypeChoiceKey] = result
+		}
+	}
+	return results, true
 }
 
 // attachAuraToPlayer attaches a player-enchanting Aura to a player (CR 303.4h,

@@ -525,6 +525,20 @@ func EntryCardTypeChoiceReplacement(text string) ReplacementAbility {
 	return ReplacementAbility{Text: text, Replacement: replacement}
 }
 
+// AttachmentChoicesReplacement creates an attachment-time replacement that
+// chooses a card name of nameType and a subtype of subtypeType as its source
+// becomes attached. The latest choices replace prior choices on the attachment.
+func AttachmentChoicesReplacement(text string, nameType, subtypeType types.Card) ReplacementAbility {
+	return ReplacementAbility{
+		Text: text,
+		Replacement: ReplacementEffect{
+			Description:              text,
+			AttachCardNameChoiceType: nameType,
+			AttachSubtypeChoiceType:  subtypeType,
+		},
+	}
+}
+
 // DevourReplacement creates the as-enters replacement that the Devour keyword
 // abbreviates (CR 702.81): as this creature enters, its controller may sacrifice
 // any number of other creatures they control, and it enters with multiplier

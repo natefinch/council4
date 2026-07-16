@@ -119,6 +119,10 @@ const (
 	// ResolutionChoiceNumber chooses one integer in the inclusive MinNumber to
 	// MaxNumber range.
 	ResolutionChoiceNumber
+	// ResolutionChoiceCardName chooses the name of a card matching
+	// CardNameType. The result stores the public printed name rather than a card
+	// instance, so it persists independently of zones and object identity.
+	ResolutionChoiceCardName
 )
 
 // ResolutionChoiceColorSource identifies dynamic sources for color choice
@@ -188,9 +192,12 @@ type ResolutionChoice struct {
 	UsePlayer       bool
 	PlayerReference *PlayerReference
 
-	ColorSource    ResolutionChoiceColorSource
-	Colors         []mana.Color
-	CardTypes      []types.Card
+	ColorSource ResolutionChoiceColorSource
+	Colors      []mana.Color
+	CardTypes   []types.Card
+	// CardNameType restricts a ResolutionChoiceCardName to names of cards with
+	// this printed card type.
+	CardNameType   types.Card
 	PlayerRelation PlayerRelation
 	Zone           zone.Type
 
@@ -239,6 +246,7 @@ type ResolutionChoiceResult struct {
 	Subtype  types.Sub
 	Player   PlayerID
 	CardID   id.ID
+	CardName string
 	Number   int
 }
 
@@ -466,6 +474,13 @@ type ReplacementEffect struct {
 	// EntryCardTypeChoice chooses among a bounded set of card types as the
 	// permanent enters and stores the result under EntryCardTypeChoiceKey.
 	EntryCardTypeChoice bool
+
+	// AttachCardNameChoiceType and AttachSubtypeChoiceType mark a replacement
+	// that makes persistent choices as its source becomes attached. Each nonempty
+	// type requests one choice and stores it on the attachment under the
+	// corresponding Attachment*ChoiceKey. Reattaching replaces prior values.
+	AttachCardNameChoiceType types.Card
+	AttachSubtypeChoiceType  types.Card
 
 	// EntryDevourMultiplier marks a Devour as-enters replacement (CR 702.81) and
 	// carries its per-sacrificed-creature +1/+1 counter count N. As the permanent
@@ -775,6 +790,14 @@ const EntryCardTypeChoiceKey = ChoiceKey("oracle-entry-card-type")
 // stored on a Permanent's EntryChoices map. Mana abilities that add "one mana of
 // the chosen color" read the result from this key.
 const EntryColorChoiceKey = ChoiceKey("oracle-entry-color")
+
+// AttachmentCardNameChoiceKey stores the most recent card name chosen as an
+// attachment became attached.
+const AttachmentCardNameChoiceKey = ChoiceKey("oracle-attachment-card-name")
+
+// AttachmentSubtypeChoiceKey stores the most recent subtype chosen as an
+// attachment became attached.
+const AttachmentSubtypeChoiceKey = ChoiceKey("oracle-attachment-subtype")
 
 // SpellChosenTypeChoiceKey is the ChoiceKey under which a resolution-time
 // creature-type choice made by a resolving spell or ability is published (a

@@ -10,6 +10,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/lexer"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 // Parse builds a lossless syntax tree for source. It returns a partial tree
@@ -183,6 +184,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitStateTriggerClauses(document.Abilities)
 	emitEventHistoryConditions(document.Abilities)
 	emitConditionClauses(document.Abilities)
+	emitAttachmentChoices(document.Abilities)
 	emitSourceAbilityCostReduction(document.Abilities)
 	emitResolvingSyntax(document.Abilities)
 	emitSourceSpellCostReduction(document.Abilities)
@@ -216,6 +218,20 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	stripConditionalModalHeaderSemantics(document.Abilities)
 	emitDelayedTriggerEffects(document.Abilities, context.CardName, context.Legendary, context.InstantOrSorcery)
 	return document, diagnostics
+}
+
+func emitAttachmentChoices(abilities []Ability) {
+	const oracle = "As this Equipment becomes attached to a creature, choose a creature card name and a creature type."
+	for i := range abilities {
+		if !strings.EqualFold(strings.TrimSpace(abilities[i].Text), oracle) {
+			continue
+		}
+		abilities[i].Kind = AbilityReplacement
+		abilities[i].AttachmentChoices = &AttachmentChoicesSyntax{
+			CardNameType:  types.Creature,
+			SubtypeOfType: types.Creature,
+		}
+	}
 }
 
 func emitDeclareAttackersCastRestriction(abilities []Ability) {

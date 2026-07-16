@@ -771,7 +771,7 @@ func applyEntryColorChoice(ctx enterBattlefieldContext, g *game.Game, permanent 
 		Prompt: entryColorChoicePrompt(exclude),
 		Colors: colors,
 	}
-	result, ok := engine.chooseEntryColor(g, ctx.agents, controller, &choice, ctx.log)
+	result, ok := engine.choosePersistentValue(g, ctx.agents, controller, &choice, ctx.log)
 	if !ok {
 		return
 	}
@@ -796,7 +796,7 @@ func applyEntryTypeChoice(ctx enterBattlefieldContext, g *game.Game, permanent *
 		Prompt:        "Choose a creature type.",
 		SubtypeOfType: types.Creature,
 	}
-	result, ok := engine.chooseEntryColor(g, ctx.agents, controller, &choice, ctx.log)
+	result, ok := engine.choosePersistentValue(g, ctx.agents, controller, &choice, ctx.log)
 	if !ok {
 		return
 	}
@@ -816,7 +816,7 @@ func applyEntryCardTypeChoice(ctx enterBattlefieldContext, g *game.Game, permane
 		Prompt:    "Choose artifact, creature, enchantment, instant, or sorcery.",
 		CardTypes: []types.Card{types.Artifact, types.Creature, types.Enchantment, types.Instant, types.Sorcery},
 	}
-	result, ok := engine.chooseEntryColor(g, ctx.agents, controller, &choice, ctx.log)
+	result, ok := engine.choosePersistentValue(g, ctx.agents, controller, &choice, ctx.log)
 	if !ok {
 		return
 	}

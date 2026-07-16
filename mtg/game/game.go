@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 // DayNightState represents the day/night cycle (CR 728).
@@ -79,6 +80,10 @@ type Game struct {
 	// This is the registry of all card instances in the game (deck cards
 	// and any cards created during play).
 	CardInstances map[id.ID]*CardInstance
+	// CardNameCatalog optionally supplies the legal public card names for typed
+	// card-name choices. Callers with a full format/card database should populate
+	// it; rules also include matching names from CardInstances as a fallback.
+	CardNameCatalog map[types.Card][]string
 
 	// CommanderIDs records the original commander card instances for the game.
 	CommanderIDs map[id.ID]bool

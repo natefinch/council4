@@ -67,6 +67,12 @@ func compileAbility(
 			TargetOpponent: ability.LifeCharacteristicExchange.TargetOpponent,
 		}
 	}
+	if ability.AttachmentChoices != nil {
+		compiled.AttachmentChoices = &CompiledAttachmentChoices{
+			CardNameType:  ability.AttachmentChoices.CardNameType,
+			SubtypeOfType: ability.AttachmentChoices.SubtypeOfType,
+		}
+	}
 	if ability.AbilityWord != nil {
 		compiled.AbilityWord = ability.AbilityWord.Label
 	}
@@ -269,6 +275,7 @@ func compileAbility(
 		compiled.SkipExtraTurnsScope == "" &&
 		!compiled.OpponentSecondActionTriplet &&
 		compiled.KeywordShare == nil &&
+		compiled.AttachmentChoices == nil &&
 		len(compiled.Content.Effects) == 0 && len(compiled.Content.Keywords) == 0 &&
 		!legacyEffectsPresent(ability.Sentences) &&
 		(compiled.Static == nil || len(compiled.Static.Declarations) == 0) {

@@ -1329,6 +1329,33 @@ func (v *cardDefValidator) validateContinuousEffect(faceName, path string, conti
 			v.add(faceName, appendPath(path, "AffectedSource"), CardDefIssueInvalidReference, "entry-choice subtype reference must affect its source or a group")
 		}
 	}
+	if continuous.SetNameFromSourceChoice != "" {
+		if continuous.SetNameFromSourceChoice != AttachmentCardNameChoiceKey {
+			v.add(faceName, appendPath(path, "SetNameFromSourceChoice"), CardDefIssueInvalidReference, "source-choice name reference must use AttachmentCardNameChoiceKey")
+		}
+		if continuous.Layer != LayerText {
+			v.add(faceName, appendPath(path, "Layer"), CardDefIssueInvalidAbilityBody, "source-choice name reference requires the text layer")
+		}
+		if !continuous.AffectedSource && continuous.Group.Empty() {
+			v.add(faceName, appendPath(path, "AffectedSource"), CardDefIssueInvalidReference, "source-choice name reference must affect its source or a group")
+		}
+	}
+	if continuous.SetSubtypeFromSourceChoice != "" {
+		if continuous.SetSubtypeFromSourceChoice != AttachmentSubtypeChoiceKey {
+			v.add(faceName, appendPath(path, "SetSubtypeFromSourceChoice"), CardDefIssueInvalidReference, "source-choice subtype reference must use AttachmentSubtypeChoiceKey")
+		}
+		if continuous.SetSubtypeChoiceType == "" {
+			v.add(faceName, appendPath(path, "SetSubtypeChoiceType"), CardDefIssueInvalidReference, "source-choice subtype reference requires a card-type family")
+		}
+		if continuous.Layer != LayerType {
+			v.add(faceName, appendPath(path, "Layer"), CardDefIssueInvalidAbilityBody, "source-choice subtype reference requires the type layer")
+		}
+		if !continuous.AffectedSource && continuous.Group.Empty() {
+			v.add(faceName, appendPath(path, "AffectedSource"), CardDefIssueInvalidReference, "source-choice subtype reference must affect its source or a group")
+		}
+	} else if continuous.SetSubtypeChoiceType != "" {
+		v.add(faceName, appendPath(path, "SetSubtypeChoiceType"), CardDefIssueInvalidReference, "source-choice subtype family requires a source-choice key")
+	}
 }
 
 func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *RuleEffect) {
@@ -2092,6 +2119,9 @@ func (v *cardDefValidator) validateReplacementEffect(faceName, path string, repl
 	if replacement.Condition.Exists {
 		condition := replacement.Condition.Val
 		v.validateCondition(faceName, appendPath(path, "Condition"), &condition, nil)
+	}
+	if (replacement.AttachCardNameChoiceType == "") != (replacement.AttachSubtypeChoiceType == "") {
+		v.add(faceName, path, CardDefIssueInvalidReference, "attachment choices require both card-name and subtype card types")
 	}
 }
 

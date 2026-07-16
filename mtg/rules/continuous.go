@@ -1390,6 +1390,11 @@ func applyContinuousEffect(g *game.Game, permanent *game.Permanent, values *perm
 		if effect.SetName != "" {
 			values.name = effect.SetName
 		}
+		if choice, ok := sourceEntryChoice(g, effect, effect.SetNameFromSourceChoice); ok &&
+			choice.Kind == game.ResolutionChoiceCardName &&
+			choice.CardName != "" {
+			values.name = choice.CardName
+		}
 		if effect.TextFrom != "" {
 			values.oracleText = strings.ReplaceAll(values.oracleText, effect.TextFrom, effect.TextTo)
 		}
@@ -1533,14 +1538,36 @@ func applyTypeLayer(g *game.Game, values *permanentEffectiveValues, effect *game
 		values.subtypes = appendUniqueSubtypes(values.subtypes, basicLandSubtypes[:]...)
 	}
 	if effect.AddSubtypeFromEntryChoice != "" {
-		if source, ok := permanentByObjectID(g, effect.SourceObjectID); ok {
-			if choice, ok := source.EntryChoices[effect.AddSubtypeFromEntryChoice]; ok &&
-				choice.Kind == game.ResolutionChoiceSubtype &&
-				choice.Subtype != "" {
-				values.subtypes = appendUniqueSubtypes(values.subtypes, choice.Subtype)
-			}
+		if choice, ok := sourceEntryChoice(g, effect, effect.AddSubtypeFromEntryChoice); ok &&
+			choice.Kind == game.ResolutionChoiceSubtype &&
+			choice.Subtype != "" {
+			values.subtypes = appendUniqueSubtypes(values.subtypes, choice.Subtype)
 		}
 	}
+	if choice, ok := sourceEntryChoice(g, effect, effect.SetSubtypeFromSourceChoice); ok &&
+		choice.Kind == game.ResolutionChoiceSubtype &&
+		choice.Subtype != "" {
+		family := types.SubtypesForType(effect.SetSubtypeChoiceType)
+		filtered := values.subtypes[:0]
+		for _, subtype := range values.subtypes {
+			if !slices.Contains(family, subtype) {
+				filtered = append(filtered, subtype)
+			}
+		}
+		values.subtypes = appendUniqueSubtypes(filtered, choice.Subtype)
+	}
+}
+
+func sourceEntryChoice(g *game.Game, effect *game.ContinuousEffect, key game.ChoiceKey) (game.ResolutionChoiceResult, bool) {
+	if g == nil || effect == nil || key == "" {
+		return game.ResolutionChoiceResult{}, false
+	}
+	source, ok := permanentByObjectID(g, effect.SourceObjectID)
+	if !ok || source.EntryChoices == nil {
+		return game.ResolutionChoiceResult{}, false
+	}
+	choice, ok := source.EntryChoices[key]
+	return choice, ok
 }
 
 // basicLandSubtypes enumerates the five basic land subtypes (CR 305.6). It

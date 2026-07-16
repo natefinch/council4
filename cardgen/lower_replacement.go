@@ -114,6 +114,21 @@ func lowerAdditionalSpellCopyReplacement(ability compiler.CompiledAbility) (game
 }
 
 func lowerReplacementAbility(ability compiler.CompiledAbility) (abilityLowering, *shared.Diagnostic) {
+	if ability.AttachmentChoices != nil {
+		if ability.AttachmentChoices.CardNameType == "" || ability.AttachmentChoices.SubtypeOfType == "" {
+			return abilityLowering{}, executableDiagnostic(
+				ability,
+				"unsupported attachment choices",
+				"attachment choices require both a card-name type and a subtype family",
+			)
+		}
+		replacementAbility := game.AttachmentChoicesReplacement(
+			ability.Text,
+			ability.AttachmentChoices.CardNameType,
+			ability.AttachmentChoices.SubtypeOfType,
+		)
+		return replacementAbilityLowering(ability, &replacementAbility, nil)
+	}
 	if replacementAbility, ok := lowerAdditionalSpellCopyReplacement(ability); ok {
 		return replacementAbilityLowering(ability, &replacementAbility, nil)
 	}
@@ -634,6 +649,11 @@ func replacementSourceSpans(ability compiler.CompiledAbility, replacementAbility
 		spans = append(spans, ability.Span)
 	}
 	if replacementAbility != nil && replacementAbility.Replacement.SpellCopyAddend > 0 {
+		spans = append(spans, ability.Span)
+	}
+	if replacementAbility != nil &&
+		(replacementAbility.Replacement.AttachCardNameChoiceType != "" ||
+			replacementAbility.Replacement.AttachSubtypeChoiceType != "") {
 		spans = append(spans, ability.Span)
 	}
 	return spans

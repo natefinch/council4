@@ -22,6 +22,7 @@ const (
 	StaticDeclarationContinuousBasePowerToughness         StaticDeclarationKind = "StaticDeclarationContinuousBasePowerToughness"
 	StaticDeclarationContinuousCharacteristic             StaticDeclarationKind = "StaticDeclarationContinuousCharacteristic"
 	StaticDeclarationContinuousEntryChoiceSubtype         StaticDeclarationKind = "StaticDeclarationContinuousEntryChoiceSubtype"
+	StaticDeclarationContinuousAttachmentChoiceIdentity   StaticDeclarationKind = "StaticDeclarationContinuousAttachmentChoiceIdentity"
 	StaticDeclarationChosenCreatureTypeTriggerMultiplier  StaticDeclarationKind = "StaticDeclarationChosenCreatureTypeTriggerMultiplier"
 	StaticDeclarationKeywordGrant                         StaticDeclarationKind = "StaticDeclarationKeywordGrant"
 	StaticDeclarationKeywordLoss                          StaticDeclarationKind = "StaticDeclarationKeywordLoss"
@@ -476,6 +477,9 @@ type StaticDeclarationSyntax struct {
 	// a "<source>'s power and toughness are each equal to <count>" declaration
 	// sets the source object's power and toughness equal to.
 	DynamicValue StaticDeclarationDynamicValueKind `json:",omitempty"`
+	// ChoiceCardType is the card-type family whose stored attachment choices set
+	// this subject's name and subtype.
+	ChoiceCardType types.Card `json:",omitempty"`
 
 	// DynamicValueSubtype carries the subtype counted by a
 	// StaticDeclarationDynamicValueControllerSubtypeCount declaration ("the
