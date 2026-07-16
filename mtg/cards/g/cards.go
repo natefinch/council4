@@ -53,6 +53,7 @@ var Cards = []cardset.Entry{
 	{Name: "Gift of the Gargantuan", New: GiftOfTheGargantuan},
 	{Name: "Gift of Wrath", New: GiftOfWrath},
 	{Name: "Giggling Skitterspike", New: GigglingSkitterspike},
+	{Name: "Gilt-Leaf Archdruid", New: GiltLeafArchdruid},
 	{Name: "Gilt-Leaf's Embrace", New: GiltLeafSEmbrace},
 	{Name: "Gimli, Counter of Kills", New: GimliCounterOfKills},
 	{Name: "Gimli's Reckless Might", New: GimliSRecklessMight},

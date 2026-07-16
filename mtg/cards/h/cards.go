@@ -57,6 +57,7 @@ var Cards = []cardset.Entry{
 	{Name: "Hellfire Mongrel", New: HellfireMongrel},
 	{Name: "Hellion Crucible", New: HellionCrucible},
 	{Name: "Hellion Eruption", New: HellionEruption},
+	{Name: "Hellkite Tyrant", New: HellkiteTyrant},
 	{Name: "Hellrider", New: Hellrider},
 	{Name: "Helm of Awakening", New: HelmOfAwakening},
 	{Name: "Hematite Talisman", New: HematiteTalisman},

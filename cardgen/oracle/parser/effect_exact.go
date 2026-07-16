@@ -116,7 +116,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 			exactGainGrantedAbilityEffectSyntax(effect)
 	case EffectGainControl:
 		return exactGainControlEffectSyntax(effect) ||
-			exactGiveControlEffectSyntax(effect)
+			exactGiveControlEffectSyntax(effect) ||
+			exactMassEffectSyntax(effect, "Gain control of all ")
 	case EffectBecomeMonarch:
 		return exactBecomeMonarchEffectSyntax(effect)
 	case EffectCantBecomeMonarch:
