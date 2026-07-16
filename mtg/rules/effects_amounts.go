@@ -69,9 +69,8 @@ func dynamicAmountValueBeforeLayerWithGroupMember(g *game.Game, obj opt.V[*game.
 			break
 		}
 		if resolved, ok := resolveObjectReference(g, obj.Val, dynamic.Object); ok && resolved.permanent != nil {
-			permanent := resolved.permanent
-			if def, ok := permanentCardDef(g, permanent); ok {
-				amount = def.ManaValue()
+			if manaValue, ok := effectivePermanentManaValue(g, resolved.permanent); ok {
+				amount = manaValue
 			}
 		}
 	case game.DynamicAmountTargetCounters:
@@ -620,7 +619,7 @@ func controllerDevotion(g *game.Game, controller game.PlayerID, colors []color.C
 		if permanent.PhasedOut || permanent.Controller != controller {
 			continue
 		}
-		def, ok := permanentCardDef(g, permanent)
+		def, ok := permanentCopyDef(g, permanent)
 		if !ok || !def.ManaCost.Exists {
 			continue
 		}
@@ -833,10 +832,7 @@ func permanentCharacteristicValue(g *game.Game, permanent *game.Permanent, which
 	case characteristicToughness:
 		return effectiveToughness(g, permanent)
 	case characteristicManaValue:
-		if def, ok := permanentCardDef(g, permanent); ok {
-			return def.ManaValue(), true
-		}
-		return 0, false
+		return effectivePermanentManaValue(g, permanent)
 	default:
 		return 0, false
 	}
@@ -1193,8 +1189,8 @@ func resolvedObjectToughness(g *game.Game, resolved *resolvedObjectReference) in
 // value 0.
 func resolvedObjectManaValue(g *game.Game, resolved *resolvedObjectReference) int {
 	if resolved.permanent != nil {
-		if def, ok := permanentCardDef(g, resolved.permanent); ok {
-			return def.ManaValue()
+		if manaValue, ok := effectivePermanentManaValue(g, resolved.permanent); ok {
+			return manaValue
 		}
 		return 0
 	}

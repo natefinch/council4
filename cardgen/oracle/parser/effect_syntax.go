@@ -7202,6 +7202,7 @@ func parseEntersAsCopyEffect(sentence Sentence, tokens []shared.Token, atoms Ato
 	var conditionalCounters []EntersAsCopyConditionalCounter
 	var basePower, baseToughness opt.V[int]
 	var grantedAbilityRider bool
+	var retainName, addOtherAbilities bool
 	if exceptIndex := entersAsCopyExceptIndex(body, filterStart); exceptIndex >= 0 {
 		riders, ok := parseEntersAsCopyRider(body[exceptIndex+1:bodyEnd], atoms)
 		if !ok {
@@ -7215,6 +7216,8 @@ func parseEntersAsCopyEffect(sentence Sentence, tokens []shared.Token, atoms Ato
 		basePower = riders.basePower
 		baseToughness = riders.baseToughness
 		grantedAbilityRider = riders.grantedAbility
+		retainName = riders.retainName
+		addOtherAbilities = riders.addOtherAbilities
 		// The "it has \"<quoted ability>\"" rider strips to a bare "it has"; only
 		// accept it as a granted-ability rider when the sentence actually ends with
 		// the quoted ability. A bare "except it has." with no quoted ability is not
@@ -7258,18 +7261,20 @@ func parseEntersAsCopyEffect(sentence Sentence, tokens []shared.Token, atoms Ato
 	}
 	optional := words[0] == "you"
 	effect := EffectSyntax{
-		Kind:                     EffectEnterAsCopy,
-		Context:                  EffectContextController,
-		Span:                     sentence.Span,
-		ClauseSpan:               sentence.Span,
-		Text:                     sentence.Text,
-		Tokens:                   append([]shared.Token(nil), body...),
-		Selection:                parseSelection(filter, atoms),
-		EntersAsCopy:             true,
-		EntersAsCopyOptional:     optional,
-		EntersAsCopyNotLegendary: notLegendary,
-		EntersAsCopyAddTypes:     addTypes,
-		EntersAsCopyAddSubtypes:  addSubtypes,
+		Kind:                          EffectEnterAsCopy,
+		Context:                       EffectContextController,
+		Span:                          sentence.Span,
+		ClauseSpan:                    sentence.Span,
+		Text:                          sentence.Text,
+		Tokens:                        append([]shared.Token(nil), body...),
+		Selection:                     parseSelection(filter, atoms),
+		EntersAsCopy:                  true,
+		EntersAsCopyOptional:          optional,
+		EntersAsCopyNotLegendary:      notLegendary,
+		EntersAsCopyRetainName:        retainName,
+		EntersAsCopyAddOtherAbilities: addOtherAbilities,
+		EntersAsCopyAddTypes:          addTypes,
+		EntersAsCopyAddSubtypes:       addSubtypes,
 
 		EntersAsCopyConditionalCounters:       conditionalCounters,
 		EntersAsCopyUntilEndOfTurn:            untilEndOfTurn,
@@ -8002,6 +8007,11 @@ type entersAsCopyRiders struct {
 	// this parser runs; the attachEntersAsCopyGrantedAbilities post-pass binds the
 	// stripped quoted ability afterward.
 	grantedAbility bool
+	// retainName and addOtherAbilities carry the self-referential "except it has
+	// <self>'s other abilities" exception. Keeping these independent makes the
+	// runtime copy exception composable with other copy riders.
+	retainName        bool
+	addOtherAbilities bool
 }
 
 // parseEntersAsCopyRider parses the recognized copiable riders of an
@@ -8043,6 +8053,11 @@ func parseEntersAsCopyRider(rider []shared.Token, atoms Atoms) (entersAsCopyRide
 			riders.grantedAbility = true
 			continue
 		}
+		if entersAsCopyOtherAbilitiesClause(clause, atoms) {
+			riders.retainName = true
+			riders.addOtherAbilities = true
+			continue
+		}
 		cardTypes, subtypes, typeOK := entersAsCopyAddTypeClause(words)
 		if !typeOK {
 			return entersAsCopyRiders{}, false
@@ -8051,6 +8066,26 @@ func parseEntersAsCopyRider(rider []shared.Token, atoms Atoms) (entersAsCopyRide
 		riders.addSubtypes = append(riders.addSubtypes, subtypes...)
 	}
 	return riders, true
+}
+
+// entersAsCopyOtherAbilitiesClause recognizes the self-referential copiable
+// exception "it has <self>'s other abilities". Self-name recognition comes from
+// parser atoms, so abbreviated legendary names and possessives do not leak into
+// compiler or lowering text checks.
+func entersAsCopyOtherAbilitiesClause(clause []shared.Token, atoms Atoms) bool {
+	if len(clause) < 4 || !equalWord(clause[0], "it") || !equalWord(clause[1], "has") {
+		return false
+	}
+	nameSpan, ok := atoms.SelfNameSpanStartingAt(clause[2].Span)
+	if !ok {
+		return false
+	}
+	nameWidth := tokensCoveredCount(clause[2:], nameSpan)
+	tail := 2 + nameWidth
+	return nameWidth > 0 &&
+		len(clause) == tail+2 &&
+		equalWord(clause[tail], "other") &&
+		equalWord(clause[tail+1], "abilities")
 }
 
 // entersAsCopyGrantedAbilityClause reports whether a rider clause is exactly

@@ -116,7 +116,7 @@ func appendStaticRuleEffects(effects []game.RuleEffect, g *game.Game) []game.Rul
 		if source.PhasedOut {
 			continue
 		}
-		visitPermanentStaticAbilityComponents(g, source, func(component permanentAbilityComponent) {
+		visitPermanentRuleAbilityComponents(g, source, func(component permanentAbilityComponent) {
 			for i := range component.face.StaticAbilities {
 				body := &component.face.StaticAbilities[i]
 				if len(body.RuleEffects) == 0 || !bodyFunctionsOnBattlefield(body) {
@@ -148,6 +148,28 @@ func appendStaticRuleEffects(effects []game.RuleEffect, g *game.Game) []game.Rul
 		})
 	}
 	return effects
+}
+
+// visitPermanentRuleAbilityComponents visits the copiable static abilities of a
+// copied permanent. A layer-1 copy replaces the physical card's abilities, so
+// rule effects must read the copied definition; uncopied and mutate permanents
+// keep the existing per-component source identity path.
+func visitPermanentRuleAbilityComponents(g *game.Game, permanent *game.Permanent, visit func(permanentAbilityComponent)) {
+	if permanentHasCopyLayer(g, permanent) {
+		def, ok := permanentCopyDef(g, permanent)
+		if !ok {
+			return
+		}
+		cardID := id.ID(0)
+		if !permanent.Token {
+			cardID = permanent.CardInstanceID
+		}
+		if len(def.StaticAbilities) > 0 {
+			visit(permanentAbilityComponent{face: &def.CardFace, cardID: cardID})
+		}
+		return
+	}
+	visitPermanentStaticAbilityComponents(g, permanent, visit)
 }
 
 // graveyardStaticRuleEffects gathers the rule effects of static abilities that

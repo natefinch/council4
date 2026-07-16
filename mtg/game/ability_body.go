@@ -653,6 +653,20 @@ func EntersAsCopyWithAddedAbilities(ability ReplacementAbility, added ...Ability
 	return ability
 }
 
+// EntersAsCopyWithRetainedName keeps the entering permanent's own defined name
+// as a copiable exception rather than taking the copied permanent's name.
+func EntersAsCopyWithRetainedName(ability ReplacementAbility) ReplacementAbility {
+	ability.Replacement.EntersAsCopyRetainName = true
+	return ability
+}
+
+// EntersAsCopyWithOtherAbilities adds the entering permanent's other defined
+// abilities to the copied values, excluding enters-as-copy replacements.
+func EntersAsCopyWithOtherAbilities(ability ReplacementAbility) ReplacementAbility {
+	ability.Replacement.EntersAsCopyAddOtherAbilities = true
+	return ability
+}
+
 // AdditionalSpellCopyReplacement creates a persistent replacement that adds
 // copies whenever its controller would copy a spell one or more times.
 func AdditionalSpellCopyReplacement(text string, addend int, mayChooseNewTargets bool) ReplacementAbility {

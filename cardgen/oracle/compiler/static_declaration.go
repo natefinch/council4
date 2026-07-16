@@ -707,6 +707,9 @@ const (
 	StaticPlayerRuleDamageDoesntCauseLifeLoss
 	StaticPlayerRuleRedirectDamageToSource
 	StaticPlayerRuleActivateAbilitiesAsThoughHaste
+	// StaticPlayerRuleLegendRuleDoesNotApply exempts the controller's permanents
+	// from the legend rule.
+	StaticPlayerRuleLegendRuleDoesNotApply
 )
 
 // StaticPlayerRuleDeclaration is one player-scoped static rule applied to the
@@ -4918,6 +4921,10 @@ var staticPlayerRuleSpecs = map[parser.StaticDeclarationPlayerRuleKind]staticPla
 	parser.StaticDeclarationPlayerRuleActivateAbilitiesAsThoughHaste: {
 		kind:           StaticPlayerRuleActivateAbilitiesAsThoughHaste,
 		matchesContent: activateAbilitiesAsThoughHasteStaticPlayerRuleContent,
+	},
+	parser.StaticDeclarationPlayerRuleLegendRuleDoesNotApply: {
+		kind:           StaticPlayerRuleLegendRuleDoesNotApply,
+		matchesContent: emptyStaticPlayerRuleContent,
 	},
 	parser.StaticDeclarationPlayerRuleAttackTax: {
 		kind:           StaticPlayerRuleAttackTax,

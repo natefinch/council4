@@ -2883,7 +2883,12 @@ type CompiledEffect struct {
 	EntersAsCopy             bool
 	EntersAsCopyOptional     bool
 	EntersAsCopyNotLegendary bool
-	EntersAsCopyAddTypes     []types.Card
+	// EntersAsCopyRetainName and EntersAsCopyAddOtherAbilities mirror the
+	// parser-owned self-referential copiable exception. Lowering consumes these
+	// flags without inspecting Oracle wording.
+	EntersAsCopyRetainName        bool
+	EntersAsCopyAddOtherAbilities bool
+	EntersAsCopyAddTypes          []types.Card
 	// EntersAsCopyAddSubtypes mirrors the parser's "except it's a <subtype> in
 	// addition to its other types" copiable subtype riders (Mockingbird's Bird,
 	// Synth Infiltrator's Synth).

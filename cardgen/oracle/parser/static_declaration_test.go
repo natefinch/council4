@@ -45,6 +45,41 @@ func TestParseStaticNoMaximumHandSizeDeclarationMeaning(t *testing.T) {
 	}
 }
 
+func TestParseStaticLegendRuleDoesNotApplyDeclarationMeaning(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(t,
+		`The "legend rule" doesn't apply to permanents you control.`,
+		Context{},
+	)
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	declaration := declarations[0]
+	if declaration.Kind != StaticDeclarationPlayerRule ||
+		declaration.Subject.Kind != StaticDeclarationSubjectController ||
+		declaration.PlayerRule != StaticDeclarationPlayerRuleLegendRuleDoesNotApply {
+		t.Fatalf("declaration = %#v, want controller legend-rule exemption", declaration)
+	}
+}
+
+func TestParseStaticLegendRuleDoesNotApplyRejectsNearMisses(t *testing.T) {
+	t.Parallel()
+	for _, source := range []string{
+		`The "legend rule" doesn't apply to all permanents.`,
+		`The "commander rule" doesn't apply to permanents you control.`,
+		`The "legend rule" doesn't apply to permanents your opponents control.`,
+	} {
+		document, _ := Parse(source, Context{})
+		for _, ability := range document.Abilities {
+			for _, declaration := range ability.StaticDeclarations {
+				if declaration.PlayerRule == StaticDeclarationPlayerRuleLegendRuleDoesNotApply {
+					t.Fatalf("near miss %q unexpectedly parsed as legend-rule exemption", source)
+				}
+			}
+		}
+	}
+}
+
 func TestParseStaticSkipDrawStepDeclarationMeaning(t *testing.T) {
 	t.Parallel()
 	declarations := parseStaticDeclarationSyntax(t, "Skip your draw step.", Context{})

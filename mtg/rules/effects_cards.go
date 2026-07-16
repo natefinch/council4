@@ -270,7 +270,99 @@ func permanentCopyDef(g *game.Game, permanent *game.Permanent) (*game.CardDef, b
 		}
 		appendCardFaceAbilities(&copied.CardFace, &def.CardFace)
 	}
+	applyPermanentCopyLayer(g, permanent, copied)
 	return copied, true
+}
+
+func effectivePermanentManaValue(g *game.Game, permanent *game.Permanent) (int, bool) {
+	def, ok := permanentCopyDef(g, permanent)
+	if !ok {
+		return 0, false
+	}
+	return def.ManaValue(), true
+}
+
+// applyPermanentCopyLayer overlays active layer-1 copy effects onto a copied card
+// definition. This makes subsequent copies and copy tokens snapshot the
+// permanent's current copiable values rather than its underlying physical card.
+func applyPermanentCopyLayer(g *game.Game, permanent *game.Permanent, copied *game.CardDef) {
+	if g == nil || permanent == nil || copied == nil {
+		return
+	}
+	var effects []game.ContinuousEffect
+	for i := range g.ContinuousEffects {
+		effect := &g.ContinuousEffects[i]
+		if effect.Layer != game.LayerCopy ||
+			effect.AffectedObjectID != permanent.ObjectID ||
+			!effect.CopyValues.Exists {
+			continue
+		}
+		effects = append(effects, *effect)
+	}
+	for _, effect := range orderContinuousEffects(effects) {
+		applyCopyValuesToCardDef(copied, &effect.CopyValues.Val)
+	}
+}
+
+func permanentHasCopyLayer(g *game.Game, permanent *game.Permanent) bool {
+	if g == nil || permanent == nil {
+		return false
+	}
+	for i := range g.ContinuousEffects {
+		effect := &g.ContinuousEffects[i]
+		if effect.Layer == game.LayerCopy &&
+			effect.AffectedObjectID == permanent.ObjectID &&
+			effect.CopyValues.Exists {
+			return true
+		}
+	}
+	return false
+}
+
+func applyCopyValuesToCardDef(def *game.CardDef, values *game.CopyableValues) {
+	if def == nil || values == nil {
+		return
+	}
+	def.Name = values.Name
+	def.ManaCost = cloneManaCost(values.ManaCost)
+	def.Colors = append([]color.Color(nil), values.Colors...)
+	def.Supertypes = append([]types.Super(nil), values.Supertypes...)
+	def.Types = append([]types.Card(nil), values.Types...)
+	def.Subtypes = append([]types.Sub(nil), values.Subtypes...)
+	def.Power = values.Power
+	def.Toughness = values.Toughness
+	def.DynamicPower = values.DynamicPower
+	def.DynamicToughness = values.DynamicToughness
+	def.OracleText = values.OracleText
+	def.SpellAbility = opt.V[game.AbilityContent]{}
+	def.ActivatedAbilities = nil
+	def.ManaAbilities = nil
+	def.LoyaltyAbilities = nil
+	def.TriggeredAbilities = nil
+	def.ChapterAbilities = nil
+	def.ReplacementAbilities = nil
+	def.StaticAbilities = nil
+	for _, ability := range values.Abilities {
+		switch body := ability.(type) {
+		case *game.AbilityContent:
+			def.SpellAbility = opt.Val(*body)
+		case *game.ActivatedAbility:
+			def.ActivatedAbilities = append(def.ActivatedAbilities, *body)
+		case *game.ManaAbility:
+			def.ManaAbilities = append(def.ManaAbilities, *body)
+		case *game.LoyaltyAbility:
+			def.LoyaltyAbilities = append(def.LoyaltyAbilities, *body)
+		case *game.TriggeredAbility:
+			def.TriggeredAbilities = append(def.TriggeredAbilities, *body)
+		case *game.ChapterAbility:
+			def.ChapterAbilities = append(def.ChapterAbilities, *body)
+		case *game.ReplacementAbility:
+			def.ReplacementAbilities = append(def.ReplacementAbilities, *body)
+		case *game.StaticAbility:
+			def.StaticAbilities = append(def.StaticAbilities, *body)
+		default:
+		}
+	}
 }
 
 func appendCardFaceAbilities(dst, src *game.CardFace) {

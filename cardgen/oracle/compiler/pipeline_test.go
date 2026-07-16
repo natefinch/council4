@@ -10,6 +10,7 @@ type pipelineContext struct {
 	InstantOrSorcery bool
 	Planeswalker     bool
 	Saga             bool
+	Legendary        bool
 }
 
 type cachedParserCard struct {
@@ -31,6 +32,7 @@ func compileSource(source string, context pipelineContext) (Compilation, []share
 		Planeswalker:     context.Planeswalker,
 		Saga:             context.Saga,
 		CardName:         context.CardName,
+		Legendary:        context.Legendary,
 	})
 	compilation, compilerDiagnostics := Compile(document, Context{})
 	return compilation, append(diagnostics, compilerDiagnostics...)

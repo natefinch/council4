@@ -226,3 +226,36 @@ func TestParseEntersAsCopyGrantedAbilityRequiresQuotedAbility(t *testing.T) {
 		}
 	}
 }
+
+func TestParseEntersAsCopyOtherAbilitiesException(t *testing.T) {
+	doc, diagnostics := Parse(
+		"You may have Sakashima enter as a copy of another creature you control, except it has Sakashima's other abilities.",
+		Context{CardName: "Sakashima of a Thousand Faces", Legendary: true},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	var effect *EffectSyntax
+	for i := range doc.Abilities {
+		for j := range doc.Abilities[i].Sentences {
+			for k := range doc.Abilities[i].Sentences[j].Effects {
+				candidate := &doc.Abilities[i].Sentences[j].Effects[k]
+				if candidate.EntersAsCopy {
+					effect = candidate
+				}
+			}
+		}
+	}
+	if effect == nil {
+		t.Fatal("no enters-as-copy effect parsed")
+	}
+	if !effect.EntersAsCopyOptional || !effect.EntersAsCopyRetainName || !effect.EntersAsCopyAddOtherAbilities {
+		t.Fatalf("copy exception flags = optional:%t retain-name:%t other-abilities:%t",
+			effect.EntersAsCopyOptional, effect.EntersAsCopyRetainName, effect.EntersAsCopyAddOtherAbilities)
+	}
+	if effect.Selection.Controller != SelectionControllerYou ||
+		len(effect.Selection.RequiredTypesAny) != 1 ||
+		effect.Selection.RequiredTypesAny[0] != CardTypeCreature {
+		t.Fatalf("selection = %#v, want another creature you control", effect.Selection)
+	}
+}

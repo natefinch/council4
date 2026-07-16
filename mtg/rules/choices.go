@@ -33,11 +33,12 @@ func permanentChoiceInfo(g *game.Game, permanent *game.Permanent) opt.V[game.Cho
 	if !ok {
 		return opt.V[game.ChoiceCardInfo]{}
 	}
+	manaValue, _ := effectivePermanentManaValue(g, permanent)
 	return opt.Val(game.ChoiceCardInfo{
 		CardID:    permanent.CardInstanceID,
 		Name:      permanentEffectiveName(g, permanent),
 		Types:     append([]types.Card(nil), def.Types...),
-		ManaValue: def.ManaValue(),
+		ManaValue: manaValue,
 		Colors:    append([]color.Color(nil), def.Colors...),
 	})
 }

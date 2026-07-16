@@ -243,6 +243,9 @@ const (
 	// controller's creatures; it is an activation permission only and does not let
 	// a summoning-sick creature attack.
 	StaticDeclarationPlayerRuleActivateAbilitiesAsThoughHaste StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleActivateAbilitiesAsThoughHaste"
+	// StaticDeclarationPlayerRuleLegendRuleDoesNotApply exempts the controller's
+	// permanents from the legend rule.
+	StaticDeclarationPlayerRuleLegendRuleDoesNotApply StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleLegendRuleDoesNotApply"
 )
 
 // StaticDeclarationCardFilterKind identifies the closed card filter that a
@@ -1318,6 +1321,9 @@ func isRemoveAuraRider(sentence []shared.Token) bool {
 }
 
 func parseStaticDeclarations(tokens []shared.Token, quoted []Delimited, atoms Atoms, conditions []ConditionClause) []StaticDeclarationSyntax {
+	if declaration, ok := parseStaticLegendRuleDoesNotApplyDeclaration(tokens, quoted); ok {
+		return []StaticDeclarationSyntax{declaration}
+	}
 	if declaration, ok := parseStaticOpeningHandPlayDeclaration(tokens); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
@@ -2448,6 +2454,32 @@ var staticPlayerRuleParsers = []staticPlayerRuleParser{
 	parseStaticDamageDoesntCauseLifeLossDeclaration,
 	parseStaticRedirectDamageToSourceDeclaration,
 	parseStaticActivateAbilitiesAsThoughHasteDeclaration,
+}
+
+// parseStaticLegendRuleDoesNotApplyDeclaration recognizes the exact
+// controller-scoped legend-rule exemption. The quoted rules term is parsed as a
+// Delimited region, so the parser verifies both it and the surrounding grammar.
+func parseStaticLegendRuleDoesNotApplyDeclaration(tokens []shared.Token, quoted []Delimited) (StaticDeclarationSyntax, bool) {
+	if len(quoted) != 1 {
+		return StaticDeclarationSyntax{}, false
+	}
+	quotedWords := normalizedWords(quoted[0].Tokens)
+	if len(quotedWords) != 2 || quotedWords[0] != "legend" || quotedWords[1] != "rule" ||
+		len(tokens) != 8 ||
+		tokens[7].Kind != shared.Period ||
+		!staticWordsAt(tokens, 0, "the", "doesn't", "apply", "to", "permanents", "you", "control") {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:          StaticDeclarationPlayerRule,
+		Span:          shared.SpanOf(tokens),
+		OperationSpan: shared.SpanOf(tokens[1:7]),
+		Subject: StaticDeclarationSubject{
+			Kind: StaticDeclarationSubjectController,
+			Span: shared.SpanOf(tokens[5:7]),
+		},
+		PlayerRule: StaticDeclarationPlayerRuleLegendRuleDoesNotApply,
+	}, true
 }
 
 func parseStaticPlayerRuleDeclaration(tokens []shared.Token, conditions []ConditionClause) (StaticDeclarationSyntax, bool) {
