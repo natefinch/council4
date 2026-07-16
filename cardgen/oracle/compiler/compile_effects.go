@@ -466,6 +466,8 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				EntersAsCopy:                  syntax.EntersAsCopy,
 				EntersAsCopyOptional:          syntax.EntersAsCopyOptional,
 				EntersAsCopyNotLegendary:      syntax.EntersAsCopyNotLegendary,
+				EntersAsCopyRetainName:        syntax.EntersAsCopyRetainName,
+				EntersAsCopyAddOtherAbilities: syntax.EntersAsCopyAddOtherAbilities,
 				EntersAsCopyAddTypes:          slices.Clone(syntax.EntersAsCopyAddTypes),
 				EntersAsCopyAddSubtypes:       slices.Clone(syntax.EntersAsCopyAddSubtypes),
 

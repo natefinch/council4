@@ -2763,6 +2763,13 @@ type EffectSyntax struct {
 	// EntersAsCopyNotLegendary reports the "except it isn't legendary" copiable
 	// rider on an EntersAsCopy replacement.
 	EntersAsCopyNotLegendary bool `json:",omitempty"`
+	// EntersAsCopyRetainName reports a copiable exception that keeps the entering
+	// permanent's own name rather than the copied permanent's name.
+	EntersAsCopyRetainName bool `json:",omitempty"`
+	// EntersAsCopyAddOtherAbilities reports the "except it has <self>'s other
+	// abilities" copiable exception. The runtime adds the entering permanent's
+	// other printed abilities while excluding the copy replacement itself.
+	EntersAsCopyAddOtherAbilities bool `json:",omitempty"`
 	// EntersAsCopyAddTypes lists the card types added by the "except it's an
 	// <type> in addition to its other types" copiable rider on an EntersAsCopy
 	// replacement (Phyrexian Metamorph). It is empty for every other replacement.

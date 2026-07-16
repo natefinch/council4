@@ -950,11 +950,7 @@ func (s *selectionSubject) manaValue() (int, bool) {
 	if s.kind != subjectPermanent {
 		return 0, false
 	}
-	def, ok := permanentCardDef(s.g, s.permanent)
-	if !ok {
-		return 0, false
-	}
-	return def.ManaValue(), true
+	return effectivePermanentManaValue(s.g, s.permanent)
 }
 
 // name resolves the matched object's card name for a Selection.Name equality

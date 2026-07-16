@@ -1193,6 +1193,12 @@ func appendStaticPlayerRuleDeclaration(body *game.StaticAbility, declaration com
 			AffectedPlayer: game.PlayerYou,
 		})
 		return true
+	case compiler.StaticPlayerRuleLegendRuleDoesNotApply:
+		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+			Kind:           game.RuleEffectLegendRuleDoesNotApply,
+			AffectedPlayer: game.PlayerYou,
+		})
+		return true
 	case compiler.StaticPlayerRuleSkipDrawStep:
 		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
 			Kind:           game.RuleEffectSkipDrawStep,
@@ -2351,6 +2357,12 @@ func canonicalStaticDeclarationVarName(declaration compiler.StaticDeclaration) s
 		declaration.Player != nil &&
 		declaration.Player.Kind == compiler.StaticPlayerRuleNoMaximumHandSize {
 		return "game.NoMaximumHandSizeStaticBody"
+	}
+	if declaration.Kind == compiler.StaticDeclarationPlayerRule &&
+		declaration.Condition == nil &&
+		declaration.Player != nil &&
+		declaration.Player.Kind == compiler.StaticPlayerRuleLegendRuleDoesNotApply {
+		return "game.LegendRuleDoesNotApplyStaticBody"
 	}
 	if declaration.Kind == compiler.StaticDeclarationPlayerRule &&
 		declaration.Condition == nil &&

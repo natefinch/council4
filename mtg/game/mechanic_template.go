@@ -166,6 +166,16 @@ var NoMaximumHandSizeStaticBody = StaticAbility{
 	}},
 }
 
+// LegendRuleDoesNotApplyStaticBody is the complete controller-scoped static
+// exemption from the legend rule.
+var LegendRuleDoesNotApplyStaticBody = StaticAbility{
+	Text: `The "legend rule" doesn't apply to permanents you control.`,
+	RuleEffects: []RuleEffect{{
+		Kind:           RuleEffectLegendRuleDoesNotApply,
+		AffectedPlayer: PlayerYou,
+	}},
+}
+
 // SkipDrawStepStaticBody is the complete static ability for "Skip your draw
 // step." (Necropotence, Yawgmoth's Bargain). While the source applies, the
 // controller's draw step does not happen at all (CR 500.8, CR 504).

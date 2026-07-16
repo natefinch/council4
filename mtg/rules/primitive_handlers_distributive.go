@@ -54,11 +54,7 @@ func permanentChoiceExtremumCandidates(g *game.Game, candidates []*game.Permanen
 		case game.PermanentChoiceGreatestToughness:
 			return effectiveToughness(g, permanent)
 		case game.PermanentChoiceGreatestManaValue:
-			def, ok := permanentCardDef(g, permanent)
-			if !ok {
-				return 0, false
-			}
-			return def.ManaValue(), true
+			return effectivePermanentManaValue(g, permanent)
 		default:
 			return 0, false
 		}

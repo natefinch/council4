@@ -1156,6 +1156,8 @@ func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
 		return "game.RuleEffectCastFromZone", nil
 	case game.RuleEffectNoMaximumHandSize:
 		return "game.RuleEffectNoMaximumHandSize", nil
+	case game.RuleEffectLegendRuleDoesNotApply:
+		return "game.RuleEffectLegendRuleDoesNotApply", nil
 	case game.RuleEffectSkipDrawStep:
 		return "game.RuleEffectSkipDrawStep", nil
 	case game.RuleEffectPayLifeForColoredMana:

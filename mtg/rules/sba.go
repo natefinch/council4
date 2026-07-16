@@ -361,6 +361,10 @@ func legendaryRuleStateBasedActionCandidates(g *game.Game) []id.ID {
 	g.BeginStaticSourceFrame()
 	defer g.EndStaticSourceFrame()
 
+	exempt := make(map[game.PlayerID]bool, game.NumPlayers)
+	for player := range game.PlayerID(game.NumPlayers) {
+		exempt[player] = playerRuleEffectActive(g, player, game.RuleEffectLegendRuleDoesNotApply)
+	}
 	keepers := make(map[legendaryKey]*game.Permanent)
 	counts := make(map[legendaryKey]int)
 	for _, permanent := range g.Battlefield {
@@ -369,6 +373,9 @@ func legendaryRuleStateBasedActionCandidates(g *game.Game) []id.ID {
 		}
 		key, ok := permanentLegendaryKey(g, permanent)
 		if !ok {
+			continue
+		}
+		if exempt[key.controller] {
 			continue
 		}
 		counts[key]++
@@ -383,7 +390,7 @@ func legendaryRuleStateBasedActionCandidates(g *game.Game) []id.ID {
 			continue
 		}
 		key, ok := permanentLegendaryKey(g, permanent)
-		if !ok || counts[key] <= 1 || keepers[key] == permanent {
+		if !ok || exempt[key.controller] || counts[key] <= 1 || keepers[key] == permanent {
 			continue
 		}
 		pending = append(pending, permanent.ObjectID)

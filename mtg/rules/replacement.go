@@ -9,6 +9,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
@@ -1038,8 +1039,8 @@ func applyEntersAsCopy(ctx enterBattlefieldContext, g *game.Game, permanent *gam
 			continue
 		}
 		if replacement.EntersAsCopyMaxManaValueFromManaSpent {
-			def, ok := permanentCardDef(g, candidate)
-			if !ok || def.ManaValue() > ctx.manaSpentToCast {
+			manaValue, ok := effectivePermanentManaValue(g, candidate)
+			if !ok || manaValue > ctx.manaSpentToCast {
 				continue
 			}
 		}
@@ -1079,6 +1080,13 @@ func applyEntersAsCopy(ctx enterBattlefieldContext, g *game.Game, permanent *gam
 		return
 	}
 	values := copyableValuesFromDef(def)
+	sourceDef, sourceOK := permanentCardDef(g, permanent)
+	if replacement.EntersAsCopyRetainName && sourceOK {
+		values.Name = sourceDef.Name
+	}
+	if replacement.EntersAsCopyAddOtherAbilities && sourceOK {
+		values.Abilities = append(values.Abilities, copyableOtherAbilitiesFromDef(sourceDef)...)
+	}
 	if replacement.EntersAsCopyNotLegendary {
 		values.Supertypes = slices.DeleteFunc(values.Supertypes, func(super types.Super) bool {
 			return super == types.Legendary
@@ -1194,11 +1202,12 @@ func applyEntersBecomesCharacteristic(g *game.Game, permanent *game.Permanent, r
 }
 
 // copyableValuesFromDef snapshots a card definition's copiable characteristics
-// (CR 706.2): name, colors, supertypes, types, subtypes, printed power and
-// toughness, abilities, and oracle text.
+// (CR 707.2): name, mana cost, colors, supertypes, types, subtypes, printed
+// power and toughness, abilities, and oracle text.
 func copyableValuesFromDef(def *game.CardDef) game.CopyableValues {
 	values := game.CopyableValues{
 		Name:             def.Name,
+		ManaCost:         cloneManaCost(def.ManaCost),
 		Colors:           append([]color.Color(nil), def.Colors...),
 		Supertypes:       append([]types.Super(nil), def.Supertypes...),
 		Types:            append([]types.Card(nil), def.Types...),
@@ -1214,6 +1223,32 @@ func copyableValuesFromDef(def *game.CardDef) game.CopyableValues {
 		values.Abilities = append(values.Abilities, def.BodyAt(i))
 	}
 	return values
+}
+
+func cloneManaCost(manaCost opt.V[cost.Mana]) opt.V[cost.Mana] {
+	if !manaCost.Exists {
+		return opt.V[cost.Mana]{}
+	}
+	return opt.Val(append(cost.Mana(nil), manaCost.Val...))
+}
+
+// copyableOtherAbilitiesFromDef returns every defined ability except an
+// enters-as-copy replacement. These are the "other abilities" of a
+// self-referential copiable exception, and become part of the resulting copy's
+// copiable values.
+func copyableOtherAbilitiesFromDef(def *game.CardDef) []game.Ability {
+	if def == nil {
+		return nil
+	}
+	abilities := make([]game.Ability, 0, def.AbilityCount())
+	for i := 0; i < def.AbilityCount(); i++ {
+		ability := def.BodyAt(i)
+		if replacement, ok := ability.(*game.ReplacementAbility); ok && replacement.Replacement.EntersAsCopy {
+			continue
+		}
+		abilities = append(abilities, ability)
+	}
+	return abilities
 }
 
 // entryColorChoicePrompt builds the prompt for an entry-time color choice,

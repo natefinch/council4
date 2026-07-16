@@ -611,6 +611,15 @@ type ReplacementEffect struct {
 	// values. It is only meaningful when EntersAsCopy is true.
 	EntersAsCopyNotLegendary bool
 
+	// EntersAsCopyRetainName keeps the entering permanent's own defined name
+	// instead of the copied permanent's name as a copiable exception.
+	EntersAsCopyRetainName bool
+
+	// EntersAsCopyAddOtherAbilities adds the entering permanent's other defined
+	// abilities to the copied values, excluding every enters-as-copy replacement
+	// so the exception does not recursively add itself.
+	EntersAsCopyAddOtherAbilities bool
+
 	// EntersAsCopyAddTypes applies the "except it's an <type> in addition to its
 	// other types" copiable rider (Phyrexian Metamorph) by adding these card
 	// types to the copied values. It is empty for every other replacement and

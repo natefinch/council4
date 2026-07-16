@@ -671,6 +671,10 @@ const (
 	// It is a marker rule effect carrying no payload beyond its Controller. Added
 	// last so existing kinds keep their wire values.
 	RuleEffectExileOpponentSearchFinds
+	// RuleEffectLegendRuleDoesNotApply exempts permanents controlled by the
+	// affected player from the legend rule. Static sources set Controller live
+	// from their current controller, so control changes move the exemption.
+	RuleEffectLegendRuleDoesNotApply
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -743,7 +747,8 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectSkipExtraTurns,
 		RuleEffectAdditionalTriggerForRoomAbility,
 		RuleEffectControlOpponentSearches,
-		RuleEffectExileOpponentSearchFinds:
+		RuleEffectExileOpponentSearchFinds,
+		RuleEffectLegendRuleDoesNotApply:
 		return true
 	default:
 		return false

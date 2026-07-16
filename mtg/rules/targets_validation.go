@@ -188,8 +188,8 @@ func spellTargetsSatisfyManaValueX(g *game.Game, controller game.PlayerID, card 
 // most bound. Only permanent targets carry a mana value, so any other target
 // kind, or a permanent whose card definition is unavailable, fails closed: a
 // ManaValueAtMostX bound never silently admits an object it cannot measure. It
-// reads mana value the same way the Selection matcher does (permanentCardDef →
-// ManaValue), so the X-derived bound and a fixed Selection.ManaValue bound treat
+// reads mana value the same way the Selection matcher does, so the X-derived
+// bound and a fixed Selection.ManaValue bound treat
 // tokens, copies, and face-down permanents identically.
 func targetManaValueAtMost(g *game.Game, target game.Target, bound int) bool {
 	if target.Kind != game.TargetPermanent {
@@ -199,11 +199,11 @@ func targetManaValueAtMost(g *game.Game, target game.Target, bound int) bool {
 	if !ok {
 		return false
 	}
-	def, ok := permanentCardDef(g, permanent)
+	manaValue, ok := effectivePermanentManaValue(g, permanent)
 	if !ok {
 		return false
 	}
-	return def.ManaValue() <= bound
+	return manaValue <= bound
 }
 
 func bodyTargetCounts(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, body game.Ability, targets []game.Target) ([]int, bool) {

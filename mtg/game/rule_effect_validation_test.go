@@ -77,6 +77,7 @@ func TestRuleEffectKindValid(t *testing.T) {
 		RuleEffectAdditionalTriggerForRoomAbility,
 		RuleEffectControlOpponentSearches,
 		RuleEffectExileOpponentSearchFinds,
+		RuleEffectLegendRuleDoesNotApply,
 	}
 	for _, kind := range valid {
 		if !kind.Valid() {
@@ -87,7 +88,7 @@ func TestRuleEffectKindValid(t *testing.T) {
 	invalid := []RuleEffectKind{
 		RuleEffectNone,
 		-1,
-		RuleEffectExileOpponentSearchFinds + 1,
+		RuleEffectLegendRuleDoesNotApply + 1,
 		RuleEffectKind(1 << 20),
 	}
 	for _, kind := range invalid {
@@ -106,7 +107,7 @@ func TestValidateApplyRulePlayFromZone(t *testing.T) {
 	}
 
 	for name, kind := range map[string]RuleEffectKind{
-		"future":       RuleEffectExileOpponentSearchFinds + 1,
+		"future":       RuleEffectLegendRuleDoesNotApply + 1,
 		"out of range": RuleEffectKind(1 << 20),
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -130,7 +131,7 @@ func TestValidateCardDefPlayFromZone(t *testing.T) {
 	}
 
 	for name, kind := range map[string]RuleEffectKind{
-		"future":       RuleEffectExileOpponentSearchFinds + 1,
+		"future":       RuleEffectLegendRuleDoesNotApply + 1,
 		"out of range": RuleEffectKind(1 << 20),
 	} {
 		t.Run(name, func(t *testing.T) {
