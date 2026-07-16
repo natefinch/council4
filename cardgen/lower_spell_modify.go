@@ -3784,6 +3784,13 @@ func lowerBecomeTypeContent(ctx contentCtx) (game.AbilityContent, *shared.Diagno
 		len(ctx.content.Modes) != 0 {
 		return unsupported()
 	}
+	duration := game.DurationPermanent
+	if effect.BecomeTypeUntilEndOfTurn {
+		duration = game.DurationUntilEndOfTurn
+	}
+	if effect.StaticSubject != compiler.StaticSubjectNone {
+		return lowerGroupBecomeTypeContent(ctx, &effect, duration, unsupported)
+	}
 	if len(ctx.content.Targets) != 1 || !targetCardinalityIsOne(ctx.content.Targets[0]) {
 		return unsupported()
 	}
@@ -3791,6 +3798,62 @@ func lowerBecomeTypeContent(ctx contentCtx) (game.AbilityContent, *shared.Diagno
 	if !ok {
 		return unsupported()
 	}
+	return game.Mode{
+		Targets: []game.TargetSpec{targetSpec},
+		Sequence: []game.Instruction{{
+			Primitive: game.ApplyContinuous{
+				Object:            opt.Val(game.TargetPermanentReference(0)),
+				ContinuousEffects: becomeTypeContinuousEffects(&effect),
+				Duration:          duration,
+			},
+		}},
+	}.Ability(), nil
+}
+
+// lowerGroupBecomeTypeContent lowers the resolving group type grant a reanimation
+// spell applies to every creature its controller controls ("Then each creature
+// you control becomes a Phyrexian in addition to its other types.", Breach the
+// Multiverse). The parser recorded the controlled-creature group in the effect's
+// static subject rather than a target, so the grant carries no target; it lowers
+// to an ApplyContinuous whose LayerType (and optional LayerColor) effects name
+// the affected group through GroupReference. The runtime snapshots that group's
+// members when the spell resolves and installs one per-member continuous effect,
+// so later creatures never gain the type and each member keeps it even after
+// leaving the controller's control. Any static subject the resolving group
+// resolver does not recognize, or a clause that also carries a target, fails
+// closed.
+func lowerGroupBecomeTypeContent(
+	ctx contentCtx,
+	effect *compiler.CompiledEffect,
+	duration game.EffectDuration,
+	unsupported func() (game.AbilityContent, *shared.Diagnostic),
+) (game.AbilityContent, *shared.Diagnostic) {
+	if len(ctx.content.Targets) != 0 {
+		return unsupported()
+	}
+	group, ok := resolvingStaticSubjectGroup(effect)
+	if !ok {
+		return unsupported()
+	}
+	continuousEffects := becomeTypeContinuousEffects(effect)
+	for i := range continuousEffects {
+		continuousEffects[i].Group = group
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{{
+			Primitive: game.ApplyContinuous{
+				ContinuousEffects: continuousEffects,
+				Duration:          duration,
+			},
+		}},
+	}.Ability(), nil
+}
+
+// becomeTypeContinuousEffects builds the typed continuous-effect templates a
+// become-type grant applies: a LayerType effect adding the card types and
+// creature subtypes, and, when the grant also adds colors, a LayerColor effect
+// adding those colors. The affected object or group is filled in by the caller.
+func becomeTypeContinuousEffects(effect *compiler.CompiledEffect) []game.ContinuousEffect {
 	continuousEffects := []game.ContinuousEffect{{
 		Layer:       game.LayerType,
 		AddTypes:    append([]types.Card(nil), effect.BecomeTypeAddTypes...),
@@ -3802,20 +3865,7 @@ func lowerBecomeTypeContent(ctx contentCtx) (game.AbilityContent, *shared.Diagno
 			AddColors: append([]color.Color(nil), effect.BecomeTypeAddColors...),
 		})
 	}
-	duration := game.DurationPermanent
-	if effect.BecomeTypeUntilEndOfTurn {
-		duration = game.DurationUntilEndOfTurn
-	}
-	return game.Mode{
-		Targets: []game.TargetSpec{targetSpec},
-		Sequence: []game.Instruction{{
-			Primitive: game.ApplyContinuous{
-				Object:            opt.Val(game.TargetPermanentReference(0)),
-				ContinuousEffects: continuousEffects,
-				Duration:          duration,
-			},
-		}},
-	}.Ability(), nil
+	return continuousEffects
 }
 
 // becomeCopyTarget pairs a become-a-copy target spec with the reference the

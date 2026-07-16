@@ -33,13 +33,52 @@ func parseReferencedTypeGrantEffect(sentence Sentence, tokens []shared.Token, at
 	if !ok {
 		return nil, false
 	}
-	if len(rest) < 2 || (rest[0] != "a" && rest[0] != "an") {
+	grant, ok := parseAdditiveTypeGrantBody(rest)
+	if !ok {
 		return nil, false
+	}
+	effect := EffectSyntax{
+		Kind:                  EffectBecomeType,
+		Context:               EffectContextReferencedObject,
+		Span:                  sentence.Span,
+		ClauseSpan:            sentence.Span,
+		Text:                  sentence.Text,
+		Tokens:                append([]shared.Token(nil), body...),
+		BecomeTypeAddTypes:    grant.Types,
+		BecomeTypeAddColors:   grant.Colors,
+		BecomeTypeAddSubtypes: grant.Subtypes,
+		References:            referencesInSpan(atoms, sentence.Span),
+	}
+	return []EffectSyntax{effect}, true
+}
+
+// additiveTypeGrant holds the colors, card types, and creature subtypes an
+// additive "in addition to its other … types" grant confers without removing
+// the object's existing characteristics.
+type additiveTypeGrant struct {
+	Colors   []Color
+	Types    []types.Card
+	Subtypes []types.Sub
+}
+
+// parseAdditiveTypeGrantBody parses the "a <color…> <type/subtype…> in addition
+// to its other [colors and] [creature] types" body shared by the reanimation
+// type-and-color grant riders, starting at the indefinite article that follows
+// the subject's linking verb. It returns the added colors, card types, and
+// creature subtypes the grant confers without removing existing
+// characteristics. It fails closed when the body is not an additive type grant:
+// a missing indefinite article, an "until end of turn" duration (a temporary
+// Liquimetal-style change lowered through the ordinary target path), an absent
+// additive "in addition to its other … types" tail, an unrecognized type or
+// color word, or no added type at all.
+func parseAdditiveTypeGrantBody(rest []string) (additiveTypeGrant, bool) {
+	if len(rest) < 2 || (rest[0] != "a" && rest[0] != "an") {
+		return additiveTypeGrant{}, false
 	}
 	rest = rest[1:]
 	duration := []string{"until", "end", "of", "turn"}
 	if len(rest) >= len(duration) && slices.Equal(rest[len(rest)-len(duration):], duration) {
-		return nil, false
+		return additiveTypeGrant{}, false
 	}
 	additiveTypes := []string{"in", "addition", "to", "its", "other", "types"}
 	additiveCreatureTypes := []string{"in", "addition", "to", "its", "other", "creature", "types"}
@@ -55,7 +94,7 @@ func parseReferencedTypeGrantEffect(sentence Sentence, tokens []shared.Token, at
 		slices.Equal(rest[len(rest)-len(additiveTypes):], additiveTypes):
 		rest = rest[:len(rest)-len(additiveTypes)]
 	default:
-		return nil, false
+		return additiveTypeGrant{}, false
 	}
 	addColors := make([]Color, 0)
 	for len(rest) > 0 {
@@ -67,7 +106,7 @@ func parseReferencedTypeGrantEffect(sentence Sentence, tokens []shared.Token, at
 		rest = rest[1:]
 	}
 	if len(rest) == 0 {
-		return nil, false
+		return additiveTypeGrant{}, false
 	}
 	addTypes := make([]types.Card, 0, len(rest))
 	addSubtypes := make([]types.Sub, 0, len(rest))
@@ -80,24 +119,12 @@ func parseReferencedTypeGrantEffect(sentence Sentence, tokens []shared.Token, at
 			addSubtypes = append(addSubtypes, sub)
 			continue
 		}
-		return nil, false
+		return additiveTypeGrant{}, false
 	}
 	if len(addTypes) == 0 && len(addSubtypes) == 0 {
-		return nil, false
+		return additiveTypeGrant{}, false
 	}
-	effect := EffectSyntax{
-		Kind:                  EffectBecomeType,
-		Context:               EffectContextReferencedObject,
-		Span:                  sentence.Span,
-		ClauseSpan:            sentence.Span,
-		Text:                  sentence.Text,
-		Tokens:                append([]shared.Token(nil), body...),
-		BecomeTypeAddTypes:    addTypes,
-		BecomeTypeAddColors:   addColors,
-		BecomeTypeAddSubtypes: addSubtypes,
-		References:            referencesInSpan(atoms, sentence.Span),
-	}
-	return []EffectSyntax{effect}, true
+	return additiveTypeGrant{Colors: addColors, Types: addTypes, Subtypes: addSubtypes}, true
 }
 
 // stripReferencedTypeGrantSubject consumes the back-reference subject and its
