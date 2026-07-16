@@ -306,6 +306,11 @@ const (
 	// without card-name logic. Appended at the end of the enum so existing
 	// keyword ordinals are unchanged.
 	Ravenous
+	// UmbraArmor (formerly totem armor, CR 702.89) replaces destruction of the
+	// permanent enchanted by the Aura carrying it by removing that permanent's
+	// marked damage and destroying the Aura. The rules layer applies the
+	// attachment-sensitive replacement.
+	UmbraArmor
 	// KeywordCount is one greater than the largest real keyword value. It sizes
 	// compact keyword sets; it is not itself a keyword.
 	KeywordCount
@@ -356,6 +361,9 @@ var (
 
 	// IndestructibleStaticBody is the reusable StaticAbilityBody for indestructible.
 	IndestructibleStaticBody = simpleKeywordStaticBody("Indestructible", Indestructible)
+
+	// UmbraArmorStaticBody is the reusable StaticAbilityBody for umbra armor.
+	UmbraArmorStaticBody = simpleKeywordStaticBody("Umbra armor", UmbraArmor)
 
 	// LifelinkStaticBody is the reusable StaticAbilityBody for lifelink.
 	LifelinkStaticBody = simpleKeywordStaticBody("Lifelink", Lifelink)
@@ -813,6 +821,8 @@ func KeywordStaticBody(keyword Keyword) (StaticAbility, bool) {
 		return HexproofStaticBody, true
 	case Indestructible:
 		return IndestructibleStaticBody, true
+	case UmbraArmor:
+		return UmbraArmorStaticBody, true
 	case Lifelink:
 		return LifelinkStaticBody, true
 	case Menace:

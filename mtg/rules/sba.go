@@ -172,7 +172,43 @@ func (*Engine) checkPermanentStateBasedActions(g *game.Game, batchID func() id.I
 	}
 
 	simultaneousID := batchID()
+	type plannedDestruction struct {
+		permanent      *game.Permanent
+		indestructible bool
+		replacement    destroyReplacement
+		replaced       bool
+	}
+	destructionPlans := make(map[id.ID]plannedDestruction, len(pending))
+	for _, death := range pending {
+		if permanentDeathBypassesDestroy(death.reason) {
+			continue
+		}
+		permanent, ok := permanentByObjectID(g, death.objectID)
+		if !ok {
+			continue
+		}
+		plan := plannedDestruction{permanent: permanent}
+		if hasKeyword(g, permanent, game.Indestructible) {
+			plan.indestructible = true
+		} else {
+			plan.replacement, plan.replaced = planDestroyPermanentReplacement(g, permanent, false, simultaneousID)
+		}
+		destructionPlans[death.objectID] = plan
+	}
+	destroyBatch := &destroyBatch{game: g, simultaneousID: simultaneousID}
+	for _, death := range pending {
+		if permanentDeathBypassesDestroy(death.reason) {
+			continue
+		}
+		plan, ok := destructionPlans[death.objectID]
+		if !ok || plan.indestructible || !plan.replaced {
+			continue
+		}
+		destroyBatch.changed = applyDestroyReplacement(g, plan.permanent, plan.replacement, destroyBatch) || destroyBatch.changed
+	}
+	destroyBatch.applyQueued()
 	var deaths []PermanentDeathLog
+	permanentsChanged := destroyBatch.changed
 	for _, death := range pending {
 		var permanent *game.Permanent
 		if permanentDeathBypassesDestroy(death.reason) {
@@ -182,20 +218,29 @@ func (*Engine) checkPermanentStateBasedActions(g *game.Game, batchID func() id.I
 			if !ok || !movePermanentToZoneInBatch(g, permanent, zone.Graveyard, simultaneousID) {
 				continue
 			}
+			permanentsChanged = true
 			rememberLastKnown(g, &death.snapshot)
 			if replacedToCommand {
 				continue
 			}
 		} else {
-			var ok bool
-			permanent, ok = destroyPermanentInBatch(g, death.objectID, simultaneousID, false)
-			if !ok {
-				if _, remains := permanentByObjectID(g, death.objectID); !remains {
-					rememberLastKnown(g, &death.snapshot)
-				}
+			plan, ok := destructionPlans[death.objectID]
+			if !ok || plan.indestructible {
 				continue
 			}
+			permanent = plan.permanent
+			if plan.replaced {
+				continue
+			}
+			replacedToCommand := commanderReplacementDestination(g, permanent.CardInstanceID, zone.Graveyard) == zone.Command
+			if !movePermanentToZoneInBatch(g, permanent, zone.Graveyard, simultaneousID) {
+				continue
+			}
+			permanentsChanged = true
 			rememberLastKnown(g, &death.snapshot)
+			if replacedToCommand {
+				continue
+			}
 		}
 		deaths = append(deaths, PermanentDeathLog{
 			Permanent:  permanent.ObjectID,
@@ -206,7 +251,7 @@ func (*Engine) checkPermanentStateBasedActions(g *game.Game, batchID func() id.I
 			Reason:     death.reason,
 		})
 	}
-	return len(deaths) > 0, deaths
+	return permanentsChanged, deaths
 }
 
 // checkAttachmentStateBasedActions handles the attachment state-based actions.

@@ -2136,6 +2136,7 @@ func mixedStaticKeywordImplemented(keyword game.Keyword) bool {
 		game.Haste,
 		game.Hexproof,
 		game.Indestructible,
+		game.UmbraArmor,
 		game.Lifelink,
 		game.Menace,
 		game.Reach,
