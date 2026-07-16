@@ -2634,13 +2634,15 @@ type PreventDamage struct {
 // the Warleader, World at War, Combat Celebrant) and "there is an additional
 // beginning phase after this phase." (Sphinx of the Second Sun, Temple of
 // Atropos, Cyclonus, Cybertronian Fighter). Combat queues an extra combat
-// phase; Main queues an extra main phase after it; Beginning queues an extra
-// beginning phase (untap, upkeep, and draw steps). The runtime appends the
-// queued phases to TurnState.ExtraPhases, which the turn loop drains in order.
+// phase (or CombatCount phases); Main queues an extra main phase after the combat
+// sequence; Beginning queues an extra beginning phase (untap, upkeep, and draw
+// steps). The runtime prepends the newly created sequence to
+// TurnState.ExtraPhases so it runs immediately after the current phase.
 type AddExtraPhases struct {
-	Combat    bool
-	Main      bool
-	Beginning bool
+	Combat      bool
+	CombatCount int
+	Main        bool
+	Beginning   bool
 }
 
 // AddExtraUpkeepStep inserts one additional upkeep step into the current turn

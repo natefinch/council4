@@ -723,9 +723,31 @@ func (r referenceResolver) groupMembers(ref game.GroupReference) []id.ID {
 		return r.capturedObjectsGroupMembers()
 	case game.GroupDomainLinkedObjects:
 		return r.linkedObjectsGroupMembers(ref)
+	case game.GroupDomainAttackedThisTurn:
+		return r.attackedThisTurnGroupMembers(ref)
 	default:
 		return []id.ID{}
 	}
+}
+
+func (r referenceResolver) attackedThisTurnGroupMembers(ref game.GroupReference) []id.ID {
+	sel := ref.Selection()
+	source, _ := r.sourcePermanent()
+	seen := make(map[id.ID]bool)
+	var members []id.ID
+	for _, event := range eventsThisTurnWindow(r.g) {
+		if event.Kind != game.EventAttackerDeclared || event.PermanentID == 0 || seen[event.PermanentID] {
+			continue
+		}
+		seen[event.PermanentID] = true
+		permanent, ok := permanentByObjectID(r.g, event.PermanentID)
+		if !ok || !activeBattlefieldPermanent(permanent) ||
+			!r.permanentMatchesGroupSelection(&sel, source, permanent) {
+			continue
+		}
+		members = append(members, event.PermanentID)
+	}
+	return members
 }
 
 // linkedObjectsGroupMembers enumerates the permanents a prior instruction in this

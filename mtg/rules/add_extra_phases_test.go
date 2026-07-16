@@ -59,6 +59,75 @@ func TestAddExtraPhasesCombatOnlyQueuesSingleCombat(t *testing.T) {
 	}
 }
 
+func TestAddExtraPhasesCountRunsExactlyTwoCombatsWithoutMainPhases(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCombatCreaturePermanent(g, game.Player1, game.Vigilance)
+
+	addEffectSpellToStack(g, game.Player1, game.AddExtraPhases{CombatCount: 2}, nil)
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	log := TurnLog{}
+	engine.runExtraPhases(g, allFirstLegalAgents(), &log)
+
+	if len(log.Phases) != 2 {
+		t.Fatalf("phases = %#v, want exactly two", log.Phases)
+	}
+	for i, phase := range log.Phases {
+		if phase.Phase != game.PhaseCombat {
+			t.Fatalf("phase[%d] = %v, want combat", i, phase.Phase)
+		}
+	}
+	wantSteps := []game.Step{
+		game.StepBeginningOfCombat,
+		game.StepDeclareAttackers,
+		game.StepDeclareBlockers,
+		game.StepCombatDamage,
+		game.StepEndOfCombat,
+		game.StepBeginningOfCombat,
+		game.StepDeclareAttackers,
+		game.StepDeclareBlockers,
+		game.StepCombatDamage,
+		game.StepEndOfCombat,
+	}
+	if len(log.Steps) != len(wantSteps) {
+		t.Fatalf("steps = %#v, want %#v", log.Steps, wantSteps)
+	}
+	for i, want := range wantSteps {
+		if log.Steps[i].Step != want {
+			t.Fatalf("step[%d] = %v, want %v", i, log.Steps[i].Step, want)
+		}
+	}
+}
+
+func TestAddExtraPhasesMultipleResolutionsAndExistingSequence(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	g.Turn.ExtraPhases = []game.Phase{game.PhaseCombat, game.PhasePostcombatMain}
+
+	for range 2 {
+		addEffectSpellToStack(g, game.Player1, game.AddExtraPhases{CombatCount: 2}, nil)
+		engine.resolveTopOfStack(g, &TurnLog{})
+	}
+
+	want := []game.Phase{
+		game.PhaseCombat,
+		game.PhaseCombat,
+		game.PhaseCombat,
+		game.PhaseCombat,
+		game.PhaseCombat,
+		game.PhasePostcombatMain,
+	}
+	if len(g.Turn.ExtraPhases) != len(want) {
+		t.Fatalf("queued phases = %#v, want %#v", g.Turn.ExtraPhases, want)
+	}
+	for i := range want {
+		if g.Turn.ExtraPhases[i] != want[i] {
+			t.Fatalf("queued phase[%d] = %v, want %v", i, g.Turn.ExtraPhases[i], want[i])
+		}
+	}
+}
+
 // TestFirstCombatPhaseOfTurnConditionGate proves the FirstCombatPhaseOfTurn
 // condition (Raiyuu, Storm's Edge) is satisfied during the turn's first combat
 // phase and fails during a later (additional) combat phase, so the gate cannot

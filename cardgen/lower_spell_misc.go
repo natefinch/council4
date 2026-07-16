@@ -1033,6 +1033,7 @@ func lowerAdditionalCombatPhase(ctx contentCtx) (game.AbilityContent, *shared.Di
 	if !effect.Exact ||
 		effect.Negated ||
 		(!effect.AdditionalCombatPhase && !effect.AdditionalBeginningPhase) ||
+		effect.AdditionalCombatPhaseCount < 0 ||
 		effect.Amount.Known ||
 		effect.Duration != compiler.DurationNone ||
 		len(ctx.content.Targets) != 0 ||
@@ -1046,13 +1047,16 @@ func lowerAdditionalCombatPhase(ctx contentCtx) (game.AbilityContent, *shared.Di
 			"the executable source backend supports only the exact additional combat or beginning phase insertion this turn",
 		)
 	}
-	return game.Mode{Sequence: []game.Instruction{{
-		Primitive: game.AddExtraPhases{
-			Combat:    effect.AdditionalCombatPhase,
-			Main:      effect.AdditionalMainPhase,
-			Beginning: effect.AdditionalBeginningPhase,
-		},
-	}}}.Ability(), nil
+	primitive := game.AddExtraPhases{
+		Main:      effect.AdditionalMainPhase,
+		Beginning: effect.AdditionalBeginningPhase,
+	}
+	if effect.AdditionalCombatPhaseCount > 1 {
+		primitive.CombatCount = effect.AdditionalCombatPhaseCount
+	} else {
+		primitive.Combat = effect.AdditionalCombatPhase
+	}
+	return game.Mode{Sequence: []game.Instruction{{Primitive: primitive}}}.Ability(), nil
 }
 
 // lowerAdditionalUpkeepStep lowers the extra-upkeep-step insertion effect "that
@@ -2224,6 +2228,28 @@ func lowerBoundedUntapSpell(ctx contentCtx) (game.AbilityContent, bool) {
 }
 
 func lowerUntapSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	if effect := ctx.content.Effects[0]; effect.UntapAttackedThisTurn {
+		if effect.Kind != compiler.EffectUntap ||
+			!effect.Exact ||
+			effect.Negated ||
+			effect.Optional ||
+			len(ctx.content.Targets) != 0 ||
+			len(ctx.content.Keywords) != 0 ||
+			len(ctx.content.Modes) != 0 {
+			return game.AbilityContent{}, contentDiagnostic(
+				ctx,
+				"unsupported historical untap",
+				"the executable source backend supports only the exact attacked-this-turn creature group",
+			)
+		}
+		return game.Mode{Sequence: []game.Instruction{{
+			Primitive: game.Untap{
+				Group: game.AttackedThisTurnGroup(game.Selection{
+					RequiredTypes: []types.Card{types.Creature},
+				}),
+			},
+		}}}.Ability(), nil
+	}
 	if reflexiveAttackingSameRiderPresent(&ctx.content.Effects[0]) {
 		return lowerReflexiveAttackingUntapSpell(ctx)
 	}

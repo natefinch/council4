@@ -428,6 +428,7 @@ func (*Engine) advanceToNextTurn(g *game.Game) {
 	g.Turn.Step = game.StepUntap
 	g.Turn.LandsPlayedThisTurn = 0
 	g.Turn.LandsAllowedThisTurn = 1
+	g.Turn.ExtraPhases = nil
 	g.Turn.CombatPhasesThisTurn = 0
 	g.Turn.UpkeepStepsThisTurn = 0
 	g.Turn.ExtraUpkeepSteps = 0

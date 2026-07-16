@@ -3033,13 +3033,20 @@ func (p SkipStep) validatePrimitive(targets []TargetSpec, checkTargets bool) err
 }
 
 func (p AddExtraPhases) validatePrimitive([]TargetSpec, bool) error {
-	if !p.Combat && !p.Main && !p.Beginning {
+	if p.CombatCount < 0 {
+		return errors.New("add extra phases combat count must not be negative")
+	}
+	if p.Combat && p.CombatCount != 0 {
+		return errors.New("add extra phases must set only one of combat or combat count")
+	}
+	hasCombat := p.Combat || p.CombatCount > 0
+	if !hasCombat && !p.Main && !p.Beginning {
 		return errors.New("add extra phases requires at least one phase")
 	}
-	if p.Main && !p.Combat {
+	if p.Main && !hasCombat {
 		return errors.New("add extra phases main phase must follow an extra combat phase")
 	}
-	if p.Beginning && (p.Combat || p.Main) {
+	if p.Beginning && (hasCombat || p.Main) {
 		return errors.New("add extra beginning phase does not combine with combat or main phases")
 	}
 	return nil

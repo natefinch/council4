@@ -382,6 +382,8 @@ func (r Renderer) renderGroupReference(ctx *renderCtx, group game.GroupReference
 			return "", errors.New("render: linked-object group has no key")
 		}
 		return fmt.Sprintf("game.LinkedObjectsGroup(game.LinkedKey(%q))", string(key)), nil
+	case game.GroupDomainAttackedThisTurn:
+		return fmt.Sprintf("game.AttackedThisTurnGroup(%s)", selection), nil
 	default:
 		return "", fmt.Errorf("render: unsupported group reference domain %d", group.Domain())
 	}

@@ -935,6 +935,9 @@ func renderAddExtraPhases(value game.AddExtraPhases) string {
 	if value.Combat {
 		fields = append(fields, "Combat: true,")
 	}
+	if value.CombatCount != 0 {
+		fields = append(fields, fmt.Sprintf("CombatCount: %d,", value.CombatCount))
+	}
 	if value.Main {
 		fields = append(fields, "Main: true,")
 	}

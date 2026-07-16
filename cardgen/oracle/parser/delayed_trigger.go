@@ -51,7 +51,9 @@ func rewriteSpellTriggeredThisTurnDelayedAbility(ability *Ability, instantOrSorc
 	if !strings.HasSuffix(triggerLower, "this turn") {
 		return
 	}
-	if !strings.Contains(triggerLower, "cast") && !strings.Contains(triggerLower, "combat damage") {
+	if !strings.Contains(triggerLower, "cast") &&
+		!strings.Contains(triggerLower, "combat damage") &&
+		!strings.HasPrefix(triggerLower, "at the beginning of ") {
 		return
 	}
 	inner, oneShot, ok := delayedTriggerInnerText(ability.Text)
@@ -618,6 +620,7 @@ func delayedTriggerInnerText(text string) (inner string, oneShot bool, ok bool) 
 		default:
 			return "", false, false
 		}
+	case strings.HasPrefix(lowered, "at the beginning of "):
 	default:
 		return "", false, false
 	}
