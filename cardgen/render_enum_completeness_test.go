@@ -25,6 +25,12 @@ var unrenderedEventKinds = map[game.EventKind]bool{
 	game.EventSpellCopied:        true,
 	game.EventPermanentPhasedOut: true,
 	game.EventPermanentPhasedIn:  true,
+	// The dungeon/initiative events are produced and consumed only by the venture
+	// and initiative runtime machinery; no card text lowers to a trigger on them
+	// yet, so they are never embedded as literals in generated card definitions.
+	game.EventVenturedIntoDungeon: true,
+	game.EventCompletedDungeon:    true,
+	game.EventTookInitiative:      true,
 }
 
 // TestRenderEventKindCoverage asserts that every non-unknown game.EventKind is

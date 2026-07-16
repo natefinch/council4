@@ -39,6 +39,10 @@ func (e *Engine) resolveTopOfStackWithChoices(g *game.Game, agents [game.NumPlay
 	eventsBefore := len(g.Events)
 	result := e.resolveStackObjectWithChoices(g, obj, agents, log)
 	releaseStateTriggerLatch(g, obj)
+	// A dungeon room ability completes the dungeon as it leaves the stack (CR
+	// 309.7), after its effect resolves so "whenever you complete a dungeon"
+	// triggers order correctly.
+	completeDungeonForStackObject(g, obj)
 	if obj.Kind == game.StackSpell && spellResolved(result) {
 		emitEvent(g, game.Event{
 			Kind:          game.EventSpellResolved,
@@ -372,6 +376,10 @@ func counterStackObject(g *game.Game, objectID id.ID) bool {
 	if !ok {
 		return false
 	}
+	// A countered dungeon room ability still completes the dungeon as it leaves
+	// the stack (CR 309.7): completion is tied to the ability leaving the stack,
+	// not to its resolution.
+	completeDungeonForStackObject(g, obj)
 	if obj.Kind != game.StackSpell {
 		releaseStateTriggerLatch(g, obj)
 		return true

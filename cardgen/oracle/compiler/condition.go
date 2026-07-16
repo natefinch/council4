@@ -88,6 +88,7 @@ var simplePredicateMap = map[parser.ConditionPredicateKind]ConditionPredicate{
 	parser.ConditionPredicateThatPlayerIsMonarch:                              ConditionPredicateThatPlayerIsMonarch,
 	parser.ConditionPredicateControllerHasInitiative:                          ConditionPredicateControllerHasInitiative,
 	parser.ConditionPredicateControllerHasCityBlessing:                        ConditionPredicateControllerHasCityBlessing,
+	parser.ConditionPredicateControllerCompletedADungeon:                      ConditionPredicateControllerCompletedADungeon,
 	parser.ConditionPredicateControllerTurn:                                   ConditionPredicateControllerTurn,
 	parser.ConditionPredicateLandEnteredThisTurnOrControlsBasic:               ConditionPredicateLandEnteredThisTurnOrControlsBasic,
 	parser.ConditionPredicateAllPlayersHandEmpty:                              ConditionPredicateAllPlayersHandEmpty,

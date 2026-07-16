@@ -124,12 +124,30 @@ const (
 	// resolve on the stack rather than as activated mana abilities, so they never
 	// emit this event and cannot recursively retrigger themselves.
 	EventManaProduced
+	// EventVenturedIntoDungeon marks a player venturing into the dungeon (CR
+	// 309.6): they entered a room, whether the first room of a dungeon they just
+	// entered or a later room they advanced to. Controller and Player identify
+	// the venturing player. It backs "whenever you venture into the dungeon"
+	// triggers and is the triggering event of the entered room's ability.
+	EventVenturedIntoDungeon
+	// EventCompletedDungeon marks a player completing a dungeon (CR 309.7): it is
+	// emitted after the ability of a dungeon's final room resolves, as the
+	// player's DungeonsCompleted count increases. Controller and Player identify
+	// the player who completed the dungeon. It backs "whenever you complete a
+	// dungeon" triggers.
+	EventCompletedDungeon
+	// EventTookInitiative marks a player taking the initiative (CR 720): it is
+	// emitted each time a player takes the initiative, including when a player who
+	// already has the initiative takes it again. Controller and Player identify
+	// the player who took the initiative. It backs "whenever you take the
+	// initiative" triggers and the initiative's venture-into-Undercity follow-up.
+	EventTookInitiative
 )
 
 // EventKindCount is the number of EventKind values, including EventUnknown. It
 // is appended at the end of the const block so existing wire values are
 // preserved; new kinds must be added immediately before this sentinel.
-const EventKindCount = int(EventManaProduced) + 1
+const EventKindCount = int(EventTookInitiative) + 1
 
 // DamageRecipientKind identifies what received damage. Values are flags so a
 // trigger pattern can match either kind.

@@ -346,6 +346,10 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 		player, ok := playerByID(g, ctx.controller)
 		matches = matches && ok && player.HasCityBlessing
 	}
+	if cond.ControllerCompletedADungeon {
+		player, ok := playerByID(g, ctx.controller)
+		matches = matches && ok && player.DungeonsCompleted >= 1
+	}
 	if cond.SourceControllerTurn {
 		matches = matches && g.Turn.ActivePlayer == ctx.controller
 	}

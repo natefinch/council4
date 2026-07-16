@@ -1226,6 +1226,10 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 		fields = append(fields, "ControllerHasCityBlessing: true,")
 		hasPredicate = true
 	}
+	if cond.ControllerCompletedADungeon {
+		fields = append(fields, "ControllerCompletedADungeon: true,")
+		hasPredicate = true
+	}
 	if cond.SourceControllerTurn {
 		fields = append(fields, "SourceControllerTurn: true,")
 		hasPredicate = true

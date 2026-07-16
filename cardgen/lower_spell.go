@@ -1996,6 +1996,12 @@ func lowerImmediateSingleEffectSpell(
 		return lowerBecomeMonarchSpell(ctx)
 	case compiler.EffectCantBecomeMonarch:
 		return lowerCantBecomeMonarchSpell(ctx)
+	case compiler.EffectVentureIntoDungeon:
+		return lowerVentureIntoDungeonSpell(ctx)
+	case compiler.EffectVentureIntoUndercity:
+		return lowerVentureIntoUndercitySpell(ctx)
+	case compiler.EffectTakeInitiative:
+		return lowerTakeInitiativeSpell(ctx)
 	case compiler.EffectRingTempts:
 		return lowerRingTemptsSpell(ctx)
 	case compiler.EffectAmass:

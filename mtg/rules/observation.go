@@ -72,14 +72,22 @@ type CardView struct {
 // are reported only as sizes; their contents and order are hidden for
 // opponents (and the library order is hidden even for the observer).
 type PlayerView struct {
-	ID                  game.PlayerID
-	Life                int
-	PoisonCounters      int
-	HandSize            int
-	LibrarySize         int
-	GraveyardSize       int
-	Eliminated          bool
-	IsMonarch           bool
+	ID                game.PlayerID
+	Life              int
+	PoisonCounters    int
+	HandSize          int
+	LibrarySize       int
+	GraveyardSize     int
+	Eliminated        bool
+	IsMonarch         bool
+	HasInitiative     bool
+	DungeonsCompleted int
+	// InDungeon reports whether the player is currently in a dungeon; DungeonName
+	// and DungeonRoom then name the dungeon and the player's current room. Dungeon
+	// position is public information (CR 309.4).
+	InDungeon           bool
+	DungeonName         string
+	DungeonRoom         string
 	CommanderInstanceID id.ID
 	CommanderCastCount  int
 	CommanderDamage     map[id.ID]int
@@ -268,7 +276,7 @@ func playerView(player *game.Player) PlayerView {
 		commanderDamage = make(map[id.ID]int, len(player.CommanderDamage))
 		maps.Copy(commanderDamage, player.CommanderDamage)
 	}
-	return PlayerView{
+	view := PlayerView{
 		ID:                  player.ID,
 		Life:                player.Life,
 		PoisonCounters:      player.PoisonCounters,
@@ -277,10 +285,22 @@ func playerView(player *game.Player) PlayerView {
 		GraveyardSize:       player.Graveyard.Size(),
 		Eliminated:          player.Eliminated,
 		IsMonarch:           player.IsMonarch,
+		HasInitiative:       player.HasInitiative,
+		DungeonsCompleted:   player.DungeonsCompleted,
 		CommanderInstanceID: player.CommanderInstanceID,
 		CommanderCastCount:  player.CommanderCastCount,
 		CommanderDamage:     commanderDamage,
 	}
+	if player.Dungeon.Exists {
+		if def, ok := game.DungeonByID(player.Dungeon.Val.Dungeon); ok {
+			view.InDungeon = true
+			view.DungeonName = def.Name
+			if room, ok := def.Room(player.Dungeon.Val.Room); ok {
+				view.DungeonRoom = room.Name
+			}
+		}
+	}
+	return view
 }
 
 // cardViews builds CardViews for a zone whose contents are visible to the

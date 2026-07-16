@@ -23,9 +23,48 @@ func handleDraw(r *effectResolver, prim game.Draw) effectResolved {
 	}
 	playerID, ok := r.resolvePlayer(prim.Player)
 	if ok {
+		before := handCardSet(r.game, playerID, prim.PublishLinked)
 		res.succeeded = r.engine.drawCards(r.game, playerID, res.amount, r.agents, r.log)
+		publishDrawnCards(r, playerID, prim.PublishLinked, before)
 	}
 	return res
+}
+
+// handCardSet snapshots the ids of the cards in playerID's hand, or nil when no
+// link key is set, so publishDrawnCards can identify the newly drawn cards.
+func handCardSet(g *game.Game, playerID game.PlayerID, key game.LinkedKey) map[id.ID]bool {
+	if key == "" {
+		return nil
+	}
+	player, ok := playerByID(g, playerID)
+	if !ok {
+		return nil
+	}
+	set := make(map[id.ID]bool, player.Hand.Size())
+	for _, cardID := range player.Hand.All() {
+		set[cardID] = true
+	}
+	return set
+}
+
+// publishDrawnCards records every card now in playerID's hand that was not in the
+// pre-draw snapshot under the source-scoped linked key, so a following
+// CastLinkedCardForFree can cast one of exactly those drawn cards.
+func publishDrawnCards(r *effectResolver, playerID game.PlayerID, key game.LinkedKey, before map[id.ID]bool) {
+	if key == "" {
+		return
+	}
+	player, ok := playerByID(r.game, playerID)
+	if !ok {
+		return
+	}
+	srcKey := linkedObjectSourceKey(r.game, r.obj, string(key))
+	clearLinkedObjects(r.game, srcKey)
+	for _, cardID := range player.Hand.All() {
+		if !before[cardID] {
+			rememberLinkedObject(r.game, srcKey, game.LinkedObjectRef{CardID: cardID})
+		}
+	}
 }
 
 func handleReorderLibraryTop(r *effectResolver, prim game.ReorderLibraryTop) effectResolved {

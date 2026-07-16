@@ -769,12 +769,17 @@ type staticAbilitySource struct {
 	cardID     id.ID
 	controller game.PlayerID
 	timestamp  game.Timestamp
+	// emblem marks a command-zone emblem source. Emblem abilities have no zone of
+	// function: they apply unconditionally while the emblem exists, and their
+	// source-relative "you control" group anchors resolve to the emblem's owner
+	// rather than to a (nonexistent) source permanent.
+	emblem bool
 }
 
 func staticAbilityContinuousEffectsForLayer(g *game.Game, permanent *game.Permanent, values *permanentEffectiveValues, layer game.ContinuousLayer, sources []staticAbilitySource) []game.ContinuousEffect {
 	var effects []game.ContinuousEffect
 	for _, source := range sources {
-		if !staticAbilityCardHasLayer(source.face, source.permanent != nil, layer) {
+		if !sourceStaticAbilityHasLayer(source, layer) {
 			continue
 		}
 		if source.permanent != nil && layer != game.LayerControl {
@@ -837,8 +842,28 @@ func buildStaticAbilitySources(g *game.Game) []staticAbilitySource {
 			return true
 		})
 	}
+	for i := range g.Emblems {
+		emblem := &g.Emblems[i]
+		for _, ability := range emblem.Abilities {
+			static, ok := ability.(*game.StaticAbility)
+			if !ok || len(static.ContinuousEffects) == 0 {
+				continue
+			}
+			sources = append(sources, staticAbilitySource{
+				face:       &game.CardFace{StaticAbilities: []game.StaticAbility{*static}},
+				controller: emblem.Owner,
+				timestamp:  game.Timestamp(emblemTimestampBase + i),
+				emblem:     true,
+			})
+		}
+	}
 	return sources
 }
+
+// emblemTimestampBase offsets emblem continuous-effect timestamps so emblems sort
+// after ordinary permanents in layer ordering (CR 613.7); emblems are created
+// during the game, after most permanents.
+const emblemTimestampBase = 1 << 30
 
 type permanentAbilityComponent struct {
 	face   *game.CardFace
@@ -1058,7 +1083,29 @@ func staticAbilityHasEffectForLayer(body *game.StaticAbility, layer game.Continu
 }
 
 func staticAbilityFunctionsFromSource(body *game.StaticAbility, source staticAbilitySource) bool {
+	if source.emblem {
+		return true
+	}
 	return staticAbilityFunctionsInZone(body, source.permanent != nil)
+}
+
+// sourceStaticAbilityHasLayer reports whether any of the source's static
+// abilities that function from this source contribute a continuous effect in the
+// given layer.
+func sourceStaticAbilityHasLayer(source staticAbilitySource, layer game.ContinuousLayer) bool {
+	if source.face == nil {
+		return false
+	}
+	for i := range source.face.StaticAbilities {
+		body := &source.face.StaticAbilities[i]
+		if !staticAbilityFunctionsFromSource(body, source) {
+			continue
+		}
+		if staticAbilityHasEffectForLayer(body, layer) {
+			return true
+		}
+	}
+	return false
 }
 
 func staticAbilityFunctionsInZone(body *game.StaticAbility, onBattlefield bool) bool {
@@ -1105,12 +1152,18 @@ func continuousEffectApplies(g *game.Game, permanent *game.Permanent, values *pe
 		if !ok {
 			return false
 		}
-		resolvedAnchor, ok := resolver.object(anchor)
-		if !ok {
-			return false
-		}
-		anchorController, ok := resolvedAnchor.controller(g)
-		if !ok {
+		var anchorController game.PlayerID
+		if resolvedAnchor, resolvedOK := resolver.object(anchor); resolvedOK {
+			anchorController, ok = resolvedAnchor.controller(g)
+			if !ok {
+				return false
+			}
+		} else if anchor.Kind() == game.ObjectReferenceSourcePermanent && source == nil {
+			// A command-zone source (an emblem, or a graveyard static ability) has
+			// no source permanent; its source-relative "creatures you control"
+			// anchor resolves to the effect's controller.
+			anchorController = effect.Controller
+		} else {
 			return false
 		}
 		if effectiveController(g, permanent) != anchorController {

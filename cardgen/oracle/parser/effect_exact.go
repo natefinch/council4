@@ -119,6 +119,12 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return exactBecomeMonarchEffectSyntax(effect)
 	case EffectCantBecomeMonarch:
 		return exactCantBecomeMonarchEffectSyntax(effect)
+	case EffectVentureIntoDungeon:
+		return exactVentureIntoDungeonEffectSyntax(effect)
+	case EffectVentureIntoUndercity:
+		return exactVentureIntoUndercityEffectSyntax(effect)
+	case EffectTakeInitiative:
+		return exactTakeInitiativeEffectSyntax(effect)
 	case EffectInvestigate:
 		return exactStandaloneActionEffectSyntax(effect, "Investigate")
 	case EffectAmass:

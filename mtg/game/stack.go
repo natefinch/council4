@@ -4,6 +4,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
 
 // StackObjectKind classifies what kind of object is on the stack.
@@ -351,6 +352,12 @@ type StackObject struct {
 	// that named it may have been reused ("Put that card into your hand at the
 	// beginning of your next end step.", Necropotence).
 	CapturedCardID id.ID
+
+	// DungeonRoom, when set, marks this stack object as a dungeon room-entry
+	// triggered ability so completion is recorded exactly once when a final
+	// room's ability leaves the stack (resolved, countered, or removed), including
+	// under copies and room-ability doublers.
+	DungeonRoom opt.V[DungeonRoomMark]
 }
 
 // Stack represents the game stack — the zone where spells and abilities

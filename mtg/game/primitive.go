@@ -306,10 +306,53 @@ const (
 	// hits spells that can't be countered; spell copies simply cease to exist.
 	// Added last so existing kinds keep their wire values.
 	PrimitiveExileTargetSpells
+	// PrimitiveVentureIntoDungeon performs the "venture into the dungeon" keyword
+	// action (CR 309.6, game.VentureIntoDungeon): the referenced player enters a
+	// dungeon of their choice (one of the three ordinary dungeons) if not already
+	// in one, or advances to the next room of their current dungeon. Added last so
+	// existing kinds keep their wire values.
+	PrimitiveVentureIntoDungeon
+	// PrimitiveVentureIntoUndercity performs the "venture into Undercity" keyword
+	// action (game.VentureIntoUndercity): the referenced player advances their
+	// current dungeon if in one, or enters the Undercity dungeon if not. Undercity
+	// can be entered only through this action.
+	PrimitiveVentureIntoUndercity
+	// PrimitiveTakeInitiative makes the referenced player take the initiative (CR
+	// 720, game.TakeInitiative), even if they already have it, and then venture
+	// into Undercity.
+	PrimitiveTakeInitiative
+	// PrimitiveRevealPutOntoBattlefield reveals the top N cards, puts a chosen
+	// matching card onto the battlefield with counters and a granted keyword, and
+	// shuffles (game.RevealPutOntoBattlefield). It backs Undercity's Throne of the
+	// Dead Three.
+	PrimitiveRevealPutOntoBattlefield
+	// PrimitiveCastLinkedCardForFree lets the resolving controller cast one card
+	// from a linked group (cards drawn/revealed this way) without paying its mana
+	// cost (game.CastLinkedCardForFree). It backs Dungeon of the Mad Mage's Mad
+	// Wizard's Lair.
+	PrimitiveCastLinkedCardForFree
+	// PrimitiveRollDiceCreateTokens rolls dice, sums the results, and creates that
+	// many tokens (game.RollDiceCreateTokens). It backs Baldur's Gate Wilderness's
+	// Reithwin Tollhouse ("Roll 2d4 and create that many Treasure tokens.").
+	PrimitiveRollDiceCreateTokens
+	// PrimitiveRevealToHandDrainManaValue reveals the top N cards, puts them into
+	// the player's hand, and makes each opponent lose life equal to their total
+	// mana value (game.RevealToHandDrainManaValue). It backs Baldur's Gate
+	// Wilderness's Ansur's Sanctum.
+	PrimitiveRevealToHandDrainManaValue
+	// PrimitiveGoadForEachOpponent goads up to one creature each opponent controls,
+	// chosen by the resolving controller (game.GoadForEachOpponent). It backs
+	// Baldur's Gate Wilderness's Grymforge.
+	PrimitiveGoadForEachOpponent
+	// PrimitiveCreateCommanderCopyToken creates a token that is a copy of one of
+	// the resolving controller's commanders, except it is not legendary
+	// (game.CreateCommanderCopyToken). It backs Baldur's Gate Wilderness's Circus
+	// of the Last Days.
+	PrimitiveCreateCommanderCopyToken
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveExileTargetSpells) + 1
+const primitiveKindCount = int(PrimitiveCreateCommanderCopyToken) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -391,6 +434,12 @@ type Draw struct {
 	Amount      Quantity
 	Player      PlayerReference      // single player; zero if PlayerGroup is set
 	PlayerGroup PlayerGroupReference // opponents or all players; zero if Player is set
+	// PublishLinked, when set, records the cards drawn by a single player under
+	// this source-scoped linked key so a later instruction can act on exactly
+	// those cards ("Draw three cards and reveal them. You may cast one of them
+	// without paying its mana cost.", Mad Wizard's Lair). It is meaningful only
+	// for a single-player draw and empty for the common draw.
+	PublishLinked LinkedKey
 }
 
 // ReorderLibraryTop has a player look at up to Amount cards from the top of
@@ -926,6 +975,92 @@ type BecomeMonarch struct {
 type CantBecomeMonarch struct {
 	Player PlayerReference
 }
+
+// VentureIntoDungeon performs the "venture into the dungeon" keyword action (CR
+// 309.6). If the referenced player is not in a dungeon, they choose one of the
+// three ordinary dungeons and enter its first room; if they are already in a
+// dungeon, they advance to the next room (choosing among branches). The entered
+// room's ability then triggers on the stack. It backs "venture into the
+// dungeon".
+type VentureIntoDungeon struct {
+	Player PlayerReference
+}
+
+// VentureIntoUndercity performs the "venture into Undercity" keyword action. If
+// the referenced player is already in a dungeon, they advance that dungeon; if
+// not, they enter the Undercity dungeon (the only way to enter it). It backs
+// "venture into Undercity".
+type VentureIntoUndercity struct {
+	Player PlayerReference
+}
+
+// TakeInitiative makes the referenced player take the initiative (CR 720), even
+// if they already have it, and then venture into Undercity. At most one living
+// player has the initiative at a time, so the runtime clears any prior holder.
+// It backs "you take the initiative" and "target player takes the initiative".
+type TakeInitiative struct {
+	Player PlayerReference
+}
+
+// RevealPutOntoBattlefield reveals the top Look cards of a player's library,
+// lets that player put one card matching Selection from among them onto the
+// battlefield with Counters counters of CounterKind and, when GrantKeyword is
+// set, that keyword until KeywordDuration expires, then shuffles the library
+// when Shuffle is set. It backs Undercity's Throne of the Dead Three ("Reveal
+// the top ten cards of your library. Put a creature card from among them onto
+// the battlefield with three +1/+1 counters on it. It gains hexproof until your
+// next turn. Then shuffle.").
+type RevealPutOntoBattlefield struct {
+	Player          PlayerReference
+	Look            Quantity
+	Selection       Selection
+	Counters        Quantity
+	CounterKind     counter.Kind
+	GrantKeyword    opt.V[Keyword]
+	KeywordDuration EffectDuration
+	Shuffle         bool
+}
+
+// CastLinkedCardForFree lets the resolving controller cast, without paying its
+// mana cost, up to one card from the object-scoped linked group named LinkID
+// (the cards a prior instruction published, such as the cards just drawn). Only
+// cards still in Player's hand are castable. It backs "you may cast one of them
+// without paying its mana cost" (Dungeon of the Mad Mage's Mad Wizard's Lair).
+type CastLinkedCardForFree struct {
+	Player PlayerReference
+	LinkID LinkedKey
+}
+
+// RollDiceCreateTokens rolls Dice dice with Sides sides each, sums the results,
+// and creates that many tokens from Source for the resolving controller. It
+// backs "Roll 2d4 and create that many Treasure tokens." (Baldur's Gate
+// Wilderness's Reithwin Tollhouse).
+type RollDiceCreateTokens struct {
+	Dice   int
+	Sides  int
+	Source TokenSource
+}
+
+// RevealToHandDrainManaValue reveals the top Amount cards of the resolving
+// controller's library, puts them into their hand, and makes each opponent lose
+// life equal to the total mana value of those cards. It backs Baldur's Gate
+// Wilderness's Ansur's Sanctum ("Reveal the top four cards of your library and
+// put them into your hand. Each opponent loses life equal to those cards' total
+// mana value.").
+type RevealToHandDrainManaValue struct {
+	Amount Quantity
+}
+
+// GoadForEachOpponent goads up to one creature each opponent of the resolving
+// controller controls, chosen by the controller. It backs Baldur's Gate
+// Wilderness's Grymforge ("For each opponent, goad up to one target creature
+// that player controls.").
+type GoadForEachOpponent struct{}
+
+// CreateCommanderCopyToken creates a token that is a copy of one of the resolving
+// controller's commanders, except it is not legendary. It backs Baldur's Gate
+// Wilderness's Circus of the Last Days.
+type CreateCommanderCopyToken struct{}
 
 // GainCityBlessing is the spell form of ascend (CR 702.131a): as the spell
 // resolves, before its other instructions, its controller gets the city's

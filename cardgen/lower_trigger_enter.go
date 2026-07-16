@@ -629,6 +629,24 @@ func hasMandatoryIfYouDoCondition(conditions []compiler.CompiledCondition, inter
 	return false
 }
 
+// hasResidualResolutionCondition reports whether the ability carries a body
+// condition distinct from the intervening trigger condition — a resolution-time
+// gate on a later clause of an intervening-if trigger ("At the beginning of your
+// end step, if you have the initiative, draw a card. Draw another card if you've
+// completed a dungeon." — Imoen, Mystic Trickster). The residual condition gates
+// only its own sequence clause at resolution, so it stays in the body for the
+// shared ordered-effect-sequence path to lower as a per-effect gate; that path
+// fails closed if the condition is not a supported effect gate, so passing it
+// through here is safe.
+func hasResidualResolutionCondition(conditions []compiler.CompiledCondition, interveningSpan shared.Span) bool {
+	for ci := range conditions {
+		if conditions[ci].Span != interveningSpan {
+			return true
+		}
+	}
+	return false
+}
+
 // prepareTriggerBody builds the body CompiledAbility and syntax for a
 // supported triggered ability. It handles condition consistency, effect
 // filtering for intervening conditions, body span/text construction, reference
@@ -678,7 +696,19 @@ func prepareTriggerBody(
 	interveningResultSequence := hasInterveningCondition &&
 		len(ability.Content.Effects) > 1 &&
 		hasMandatoryIfYouDoCondition(ability.Content.Conditions, ability.Trigger.Condition.Span)
-	keepResidualBodyConditions := interveningOptionalSequence || interveningResultSequence
+	// A resolution-time effect gate on a later clause of an intervening-if
+	// trigger ("At the beginning of your end step, if you have the initiative,
+	// draw a card. Draw another card if you've completed a dungeon." — Imoen,
+	// Mystic Trickster): the intervening condition gates the trigger and is
+	// removed from the body, while the residual resolution condition stays in the
+	// body for the shared ordered-effect-sequence path to lower as a per-effect
+	// gate on its own clause. The shared lowering fails closed if that residual
+	// condition is not a supported effect gate, so keeping it here is safe.
+	interveningResolutionSequence := hasInterveningCondition &&
+		len(ability.Content.Effects) > 1 &&
+		hasResidualResolutionCondition(ability.Content.Conditions, ability.Trigger.Condition.Span)
+	keepResidualBodyConditions := interveningOptionalSequence || interveningResultSequence ||
+		interveningResolutionSequence
 	// A resolution condition ("Whenever X, EFFECT if CONDITION." or "Whenever
 	// X, if CONDITION, EFFECT.") is a body condition checked only when the
 	// ability resolves, not an intervening "if" re-checked at trigger time. It

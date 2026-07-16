@@ -1423,6 +1423,30 @@ func (r Renderer) renderCantBecomeMonarch(value game.CantBecomeMonarch) (string,
 	return structLit("game.CantBecomeMonarch", []string{fmt.Sprintf("Player: %s,", rendered)}), nil
 }
 
+func (r Renderer) renderVentureIntoDungeon(value game.VentureIntoDungeon) (string, error) {
+	rendered, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.VentureIntoDungeon", []string{fmt.Sprintf("Player: %s,", rendered)}), nil
+}
+
+func (r Renderer) renderVentureIntoUndercity(value game.VentureIntoUndercity) (string, error) {
+	rendered, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.VentureIntoUndercity", []string{fmt.Sprintf("Player: %s,", rendered)}), nil
+}
+
+func (r Renderer) renderTakeInitiative(value game.TakeInitiative) (string, error) {
+	rendered, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.TakeInitiative", []string{fmt.Sprintf("Player: %s,", rendered)}), nil
+}
+
 func (Renderer) renderGainCityBlessing(_ game.GainCityBlessing) (string, error) {
 	return "game.GainCityBlessing{}", nil
 }

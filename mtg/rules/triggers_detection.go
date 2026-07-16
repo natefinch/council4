@@ -8,6 +8,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
 
 // pendingTriggeredAbility is a triggered ability that has triggered (CR 603.2)
@@ -42,6 +43,12 @@ type pendingTriggeredAbility struct {
 	// Saga chapter, madness, state, delayed, and synthetic mana-spend-rider
 	// triggers are never multiplied and leave this false.
 	ordinaryTrigger bool
+
+	// dungeonRoom, when set, marks this as a dungeon room-entry ability so the
+	// resulting stack object is tagged for completion bookkeeping. It is copied
+	// onto every doubled occurrence, so each copy carries the same completion
+	// marker.
+	dungeonRoom opt.V[game.DungeonRoomMark]
 }
 
 func (e *Engine) putTriggeredAbilitiesOnStack(g *game.Game) bool {
@@ -58,6 +65,11 @@ func (e *Engine) putTriggeredAbilitiesOnStack(g *game.Game) bool {
 // object that isn't a card (CR 603.3). It reports whether anything was placed so
 // the caller can re-check state-based actions and triggers (CR 603.3b).
 func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	// Resolve any queued initiative ventures into Undercity before capturing the
+	// event cursor, so the venture events they emit are seen by this same trigger
+	// pass and the room abilities they queue are drained below. This runs outside
+	// the static-source frame because it makes player choices and mutates state.
+	e.drainPendingInitiativeVentures(g, agents, log)
 	start := g.TriggerEventCursor
 	if start < 0 || start > len(g.Events) {
 		start = len(g.Events)
@@ -78,6 +90,7 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 		pending = append(pending, drainReadyDelayedTriggers(g, events)...)
 		pending = append(pending, drainReadyEventDelayedTriggers(g, events)...)
 		pending = append(pending, drainReadyReflexiveTriggers(g)...)
+		pending = append(pending, drainReadyRoomAbilities(g)...)
 	}()
 	if len(pending) == 0 {
 		return false
@@ -97,6 +110,11 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 		trigger := &orderedTriggers[i]
 		if !e.prepareTriggeredAbility(g, trigger, agents, log) {
 			releasePendingStateTriggerLatch(g, trigger)
+			// A final dungeon room ability dropped here (no legal targets, so it
+			// never becomes a stack object) still completes the dungeon: completion
+			// is tied to the ability leaving the stack, and CR 603.3c removes a
+			// no-legal-target triggered ability as it is put on the stack.
+			completeDungeonForRoomMark(g, trigger.dungeonRoom)
 			continue
 		}
 
@@ -122,6 +140,7 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 			CapturedObjectID:            trigger.capturedObjectID,
 			CapturedObjectIDs:           append([]id.ID(nil), trigger.capturedObjectIDs...),
 			CapturedCardID:              trigger.capturedCardID,
+			DungeonRoom:                 trigger.dungeonRoom,
 		}
 		if source, ok := permanentByObjectID(g, trigger.sourceID); ok {
 			seedEntryChoices(obj, source)

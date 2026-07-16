@@ -547,6 +547,12 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectBecomeMonarch
 	case parser.EffectCantBecomeMonarch:
 		return EffectCantBecomeMonarch
+	case parser.EffectVentureIntoDungeon:
+		return EffectVentureIntoDungeon
+	case parser.EffectVentureIntoUndercity:
+		return EffectVentureIntoUndercity
+	case parser.EffectTakeInitiative:
+		return EffectTakeInitiative
 	case parser.EffectRingTempts:
 		return EffectRingTempts
 	case parser.EffectGrantKeyword:

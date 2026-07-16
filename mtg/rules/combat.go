@@ -223,6 +223,7 @@ func markPlayerCombatDamage(g *game.Game, source *game.Permanent, defendingPlaye
 		Damage:          dealt,
 	})
 	stealMonarchByCombatDamage(g, sourceController, defendingPlayer)
+	takeInitiativeByCombatDamage(g, sourceController, defendingPlayer)
 	applyRingBearerCombatDamageToPlayer(g, source)
 }
 

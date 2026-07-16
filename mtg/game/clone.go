@@ -36,6 +36,8 @@ func (g *Game) Clone() *Game {
 		ContinuousEffects:                  cloneSlicePtr(g.ContinuousEffects, fixupContinuousEffect),
 		DelayedTriggers:                    cloneDelayedTriggers(g.DelayedTriggers),
 		PendingReflexiveTriggers:           cloneReflexiveTriggers(g.PendingReflexiveTriggers),
+		PendingRoomAbilities:               cloneSlice(g.PendingRoomAbilities),
+		PendingInitiativeVentures:          cloneSlice(g.PendingInitiativeVentures),
 		PreventionShields:                  cloneSlice(g.PreventionShields),
 		ReplacementDecisions:               cloneSliceFunc(g.ReplacementDecisions, cloneReplacementDecision),
 		ReplacementEffects:                 cloneSlicePtr(g.ReplacementEffects, fixupReplacementEffect),

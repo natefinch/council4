@@ -118,6 +118,7 @@ const (
 	ConditionPredicateThatPlayerIsMonarch                              ConditionPredicateKind = "ConditionPredicateThatPlayerIsMonarch"
 	ConditionPredicateControllerHasInitiative                          ConditionPredicateKind = "ConditionPredicateControllerHasInitiative"
 	ConditionPredicateControllerHasCityBlessing                        ConditionPredicateKind = "ConditionPredicateControllerHasCityBlessing"
+	ConditionPredicateControllerCompletedADungeon                      ConditionPredicateKind = "ConditionPredicateControllerCompletedADungeon"
 	ConditionPredicateControllerTurn                                   ConditionPredicateKind = "ConditionPredicateControllerTurn"
 	ConditionPredicateControllerTurnOfGameAtMost                       ConditionPredicateKind = "ConditionPredicateControllerTurnOfGameAtMost"
 	ConditionPredicateColoredManaSpentToCastAtLeast                    ConditionPredicateKind = "ConditionPredicateColoredManaSpentToCastAtLeast"
@@ -2599,6 +2600,9 @@ func recognizeControllerDesignationCondition(body []shared.Token, _ Atoms) (Cond
 		return ConditionClause{Predicate: ConditionPredicateControllerHasInitiative}, true
 	case tokenWordsEqual(body, "you", "have", "the", "city's", "blessing"):
 		return ConditionClause{Predicate: ConditionPredicateControllerHasCityBlessing}, true
+	case tokenWordsEqual(body, "you've", "completed", "a", "dungeon"),
+		tokenWordsEqual(body, "you", "have", "completed", "a", "dungeon"):
+		return ConditionClause{Predicate: ConditionPredicateControllerCompletedADungeon}, true
 	default:
 		return ConditionClause{}, false
 	}
