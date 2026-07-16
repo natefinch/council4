@@ -605,11 +605,12 @@ func compileDamageSourceSubject(subject *parser.TriggerEventSubject, pattern *Tr
 
 func compileTriggerSpellSelection(syntax parser.TriggerEventSpellSelection) (TriggerSelection, bool) {
 	selection := TriggerSelection{
-		Colorless:        syntax.Colorless,
-		Multicolored:     syntax.Multicolored,
-		ManaValueAtLeast: syntax.ManaValueAtLeast,
-		ManaValueAtMost:  syntax.ManaValueAtMost,
-		MatchManaValue:   syntax.MatchManaValue,
+		Colorless:                    syntax.Colorless,
+		Multicolored:                 syntax.Multicolored,
+		ManaValueAtLeast:             syntax.ManaValueAtLeast,
+		ManaValueAtMost:              syntax.ManaValueAtMost,
+		MatchManaValue:               syntax.MatchManaValue,
+		ManaValueLessThanSourcePower: syntax.ManaValueLessThanSourcePower,
 	}
 	for _, value := range syntax.Types {
 		compiled := compileTriggerCardType(value)

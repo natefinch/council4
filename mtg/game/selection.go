@@ -376,6 +376,18 @@ type Selection struct {
 	// nothing. Placed at the end so the bool joins no existing cluster's packing.
 	ManaValueLessThanEventPermanent bool
 
+	// ManaValueLessThanSourcePower requires the matched card's mana value to be
+	// strictly less than the predicate's source permanent's power ("Whenever an
+	// opponent casts a noncreature spell with mana value less than this creature's
+	// power", Pollywog Prodigy). It is the source-relative, mana-value analogue of
+	// PowerLessThanSource and the source-relative sibling of
+	// ManaValueLessThanEventPermanent: the bound reads the ability source
+	// permanent's live power, evaluated as the trigger event occurs (CR 603.2), so
+	// a spell cast while the source has no source, is not a battlefield permanent,
+	// or has no power never matches. Placed at the end so the bool joins no
+	// existing cluster's packing.
+	ManaValueLessThanSourcePower bool
+
 	// Owner constrains the matched permanent by its OWNER relative to the viewing
 	// player, independent of who controls it ("Commander creatures you own",
 	// Dungeon Delver and other Backgrounds). Unlike Controller, which follows
@@ -466,7 +478,8 @@ func (s Selection) Empty() bool {
 		!s.OwnerNotController &&
 		!s.ControlledByEventPlayer &&
 		!s.ControlledByDefendingPlayer &&
-		!s.ManaValueLessThanEventPermanent
+		!s.ManaValueLessThanEventPermanent &&
+		!s.ManaValueLessThanSourcePower
 }
 
 // Validate reports structural contradictions in the Selection that represent

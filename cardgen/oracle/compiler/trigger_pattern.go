@@ -238,10 +238,18 @@ type TriggerSelection struct {
 	ManaValueAtLeast int
 	ManaValueAtMost  int
 	MatchManaValue   bool
-	ManaValue        compare.Int
-	Power            compare.Int
-	Toughness        compare.Int
-	Controller       ControllerKind
+	// ManaValueLessThanSourcePower requires the matched cast spell's mana value
+	// to be strictly less than the trigger source permanent's live power
+	// ("Whenever an opponent casts a noncreature spell with mana value less than
+	// this creature's power", Pollywog Prodigy). It is the source-relative,
+	// mana-value analogue of the fixed ManaValueAtLeast/ManaValueAtMost bounds:
+	// it carries no fixed threshold and lowers to
+	// Selection.ManaValueLessThanSourcePower.
+	ManaValueLessThanSourcePower bool
+	ManaValue                    compare.Int
+	Power                        compare.Int
+	Toughness                    compare.Int
+	Controller                   ControllerKind
 	// MatchAnyCounter records a kind-agnostic "with a counter on it" subject
 	// qualifier. It lowers to the matching CompiledSelector counter dimension.
 	MatchAnyCounter bool

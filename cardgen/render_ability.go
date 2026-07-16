@@ -1262,6 +1262,7 @@ func validateTriggerPatternCardSelection(pattern *game.TriggerPattern) error {
 		unsupported.Colorless = false
 		unsupported.Multicolored = false
 		unsupported.ManaValue.Exists = false
+		unsupported.ManaValueLessThanSourcePower = false
 		unsupported.ColorChoice = game.ColorChoiceNone
 	}
 	if pattern.Event == game.EventCardDiscarded || pattern.Event == game.EventCardDrawn || pattern.Event == game.EventCycled {
