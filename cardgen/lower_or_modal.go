@@ -124,7 +124,7 @@ func lowerOrBranchModes(
 		return nil, diagnostic
 	}
 	if content.MinModes != 1 || content.MaxModes != 1 ||
-		content.ModeChoiceBonus.AdditionalMaxModes != 0 ||
+		content.ModeChoiceBonus != (game.ModeChoiceBonus{}) ||
 		content.AllowDuplicateModes ||
 		len(content.Modes) == 0 {
 		return nil, contentDiagnostic(ctx, "unsupported alternative effects", "an alternative lowered to an unsupported modal shape")

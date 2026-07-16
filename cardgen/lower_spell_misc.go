@@ -93,8 +93,13 @@ func lowerFixedLifeSpell(
 		dynamic, ok := lowerDynamicAmount(effect.Amount, game.SourcePermanentReference())
 		sourceCounterReferences := effect.Amount.DynamicKind == compiler.DynamicAmountSourceCounterCount &&
 			singleSelfReference(ctx.content.References)
+		referencedPlayerGroup := effect.Amount.Selector().Controller == compiler.ControllerThatPlayer &&
+			(effect.Amount.DynamicKind == compiler.DynamicAmountGreatestPower ||
+				effect.Amount.DynamicKind == compiler.DynamicAmountGreatestToughness ||
+				effect.Amount.DynamicKind == compiler.DynamicAmountGreatestManaValue) &&
+			targetPlayerControlledGroupReferences(ctx.content.References, effect.Amount)
 		if !ok ||
-			len(ctx.content.References) != 0 && !sourceCounterReferences {
+			len(ctx.content.References) != 0 && !sourceCounterReferences && !referencedPlayerGroup {
 			return game.AbilityContent{}, contentDiagnostic(
 				ctx,
 				"unsupported life spell",
@@ -246,6 +251,9 @@ func lowerFixedLifeSpell(
 			RoundUp: effect.Amount.RoundUp,
 		})
 	}
+	if effect.Amount.Selector().Controller == compiler.ControllerThatPlayer {
+		amount = rebindRecipientControlledGroupAmount(amount, playerRef)
+	}
 	sequence := []game.Instruction{{
 		Primitive: primitiveFactory(amount, playerRef),
 	}}
@@ -263,6 +271,15 @@ func lowerFixedLifeSpell(
 		Targets:  targets,
 		Sequence: sequence,
 	}.Ability(), nil
+}
+
+func targetPlayerControlledGroupReferences(references []compiler.CompiledReference, amount compiler.CompiledAmount) bool {
+	return len(references) == 1 &&
+		references[0].Kind == compiler.ReferencePronoun &&
+		references[0].Pronoun == compiler.ReferencePronounThey &&
+		references[0].Binding == compiler.ReferenceBindingTarget &&
+		references[0].Occurrence == 0 &&
+		references[0].Span == amount.ReferenceSpan
 }
 
 // lifeSourcePowerAmount lowers "gain/lose life equal to its power/toughness" by

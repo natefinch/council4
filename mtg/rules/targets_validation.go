@@ -654,11 +654,15 @@ func modeChoicesForSpell(card *game.CardDef) [][]int {
 }
 
 func modeChoicesForSpellAt(g *game.Game, playerID game.PlayerID, card *game.CardDef) [][]int {
+	return modeChoicesForSpellAtBranch(g, playerID, card, game.CastBranch{})
+}
+
+func modeChoicesForSpellAtBranch(g *game.Game, playerID game.PlayerID, card *game.CardDef, branch game.CastBranch) [][]int {
 	ability, _ := firstSpellAbility(card)
 	if ability == nil {
 		return [][]int{nil}
 	}
-	minModes, maxModes := modeChoiceRangeFromContentAt(g, playerID, *ability)
+	minModes, maxModes := modeChoiceRangeFromContentAtBranch(g, playerID, *ability, branch)
 	return modeChoicesForContentRange(*ability, minModes, maxModes)
 }
 
@@ -702,11 +706,15 @@ func modesValidForSpell(card *game.CardDef, chosenModes []int) bool {
 }
 
 func modesValidForSpellAt(g *game.Game, playerID game.PlayerID, card *game.CardDef, chosenModes []int) bool {
+	return modesValidForSpellAtBranch(g, playerID, card, chosenModes, game.CastBranch{})
+}
+
+func modesValidForSpellAtBranch(g *game.Game, playerID game.PlayerID, card *game.CardDef, chosenModes []int, branch game.CastBranch) bool {
 	ability, ok := firstSpellAbility(card)
 	if !ok {
 		return len(chosenModes) == 0
 	}
-	minModes, maxModes := modeChoiceRangeFromContentAt(g, playerID, *ability)
+	minModes, maxModes := modeChoiceRangeFromContentAtBranch(g, playerID, *ability, branch)
 	return modesValidForContentRange(*ability, chosenModes, minModes, maxModes)
 }
 
@@ -724,7 +732,12 @@ func modesValidForContent(content game.AbilityContent, chosenModes []int) bool {
 
 func lockedModesValidForContent(content game.AbilityContent, chosenModes []int) bool {
 	minModes, maxModes := modeChoiceRangeFromContent(content)
-	maxModes += content.ModeChoiceBonus.AdditionalMaxModes
+	bonus := content.ModeChoiceBonus
+	if bonus.ReplaceRange &&
+		modesValidForContentRange(content, chosenModes, bonus.MinModes, bonus.MaxModes) {
+		return true
+	}
+	maxModes += bonus.AdditionalMaxModes
 	return modesValidForContentRange(content, chosenModes, minModes, maxModes)
 }
 
@@ -780,9 +793,24 @@ func modeChoiceRangeFromContent(content game.AbilityContent) (minModes, maxModes
 }
 
 func modeChoiceRangeFromContentAt(g *game.Game, playerID game.PlayerID, content game.AbilityContent) (minModes, maxModes int) {
+	return modeChoiceRangeFromContentAtBranch(g, playerID, content, game.CastBranch{})
+}
+
+func modeChoiceRangeFromContentAtBranch(g *game.Game, playerID game.PlayerID, content game.AbilityContent, branch game.CastBranch) (minModes, maxModes int) {
 	minModes, maxModes = modeChoiceRangeFromContent(content)
 	bonus := content.ModeChoiceBonus
-	if bonus.Condition == game.ModeChoiceConditionControlsCommander && playerControlsCommander(g, playerID) {
+	conditionMet := false
+	switch bonus.Condition {
+	case game.ModeChoiceConditionControlsCommander:
+		conditionMet = playerControlsCommander(g, playerID)
+	case game.ModeChoiceConditionSpellKicked:
+		conditionMet = branch.Kicked
+	default:
+	}
+	if conditionMet && bonus.ReplaceRange {
+		return bonus.MinModes, bonus.MaxModes
+	}
+	if conditionMet {
 		maxModes += bonus.AdditionalMaxModes
 	}
 	return minModes, maxModes
