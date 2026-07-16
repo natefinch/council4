@@ -331,6 +331,13 @@ type Event struct {
 	// PermanentID identifies the permanent that entered, left, was damaged, attacked, or blocked.
 	PermanentID id.ID
 
+	// SubjectGoaded records whether PermanentID was goaded when the event happened.
+	// SubjectGoadedKnown distinguishes an authoritative false snapshot from events
+	// that do not capture goad status. Attack and leave-the-battlefield events
+	// capture it while the permanent and every continuous goad source are present.
+	SubjectGoaded      bool
+	SubjectGoadedKnown bool
+
 	// RelatedPermanentID identifies a secondary permanent for paired events such
 	// as fights, or the other combatant for block declarations.
 	RelatedPermanentID id.ID

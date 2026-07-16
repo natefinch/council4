@@ -650,14 +650,16 @@ func (ce combatEngine) applyAttackers(g *game.Game, playerID game.PlayerID, decl
 		}
 
 		emitEvent(g, game.Event{
-			Kind:           game.EventAttackerDeclared,
-			SourceID:       attacker.CardInstanceID,
-			SourceObjectID: attacker.ObjectID,
-			Controller:     effectiveController(g, attacker),
-			Player:         declaration.Target.Player,
-			PermanentID:    attacker.ObjectID,
-			AttackTarget:   declaration.Target,
-			SimultaneousID: simultaneousID,
+			Kind:               game.EventAttackerDeclared,
+			SourceID:           attacker.CardInstanceID,
+			SourceObjectID:     attacker.ObjectID,
+			Controller:         effectiveController(g, attacker),
+			Player:             declaration.Target.Player,
+			PermanentID:        attacker.ObjectID,
+			SubjectGoaded:      isGoadedNow(g, attacker),
+			SubjectGoadedKnown: true,
+			AttackTarget:       declaration.Target,
+			SimultaneousID:     simultaneousID,
 		})
 	}
 	return true
@@ -780,6 +782,8 @@ func (combatEngine) applyBlockers(g *game.Game, playerID game.PlayerID, declare 
 			SourceObjectID:     blocker.ObjectID,
 			Controller:         effectiveController(g, blocker),
 			PermanentID:        blocker.ObjectID,
+			SubjectGoaded:      isGoadedNow(g, blocker),
+			SubjectGoadedKnown: true,
 			RelatedPermanentID: block.Blocking,
 			BlockedAttackerID:  block.Blocking,
 			SimultaneousID:     g.Combat.BlockDeclarationBatchID,

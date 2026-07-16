@@ -214,6 +214,7 @@ const (
 	TriggerCombatStateAny TriggerCombatState = iota
 	TriggerCombatStateAttacking
 	TriggerCombatStateBlocking
+	TriggerCombatStateAttackingOrBlocking
 )
 
 // TriggerSelection is the closed semantic Selection vocabulary currently used

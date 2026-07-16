@@ -2409,17 +2409,15 @@ func eventExposesSubjectCommander(event EventKind) bool {
 	return eventExposesSubjectCounters(event)
 }
 
-// eventExposesSubjectGoaded reports whether a trigger event's subject is a live
-// battlefield permanent whose goad status the runtime can read to honor a
-// "goaded" subject filter ("Whenever a goaded creature attacks", Vengeful
-// Ancestor). Goad is a property of a permanent on the battlefield (CR 701.38),
-// so events whose subject has already left the battlefield — a death or
-// sacrifice, which expose only a last-known snapshot without live goad status —
-// are excluded and those filters fail closed.
+// eventExposesSubjectGoaded reports whether a trigger event captures the
+// subject's goad status at event time. Attack, block, zone-change, death, and
+// sacrifice events snapshot continuous and turn-limited goad while the subject
+// is still on the battlefield.
 func eventExposesSubjectGoaded(event EventKind) bool {
 	switch event {
-	case EventPermanentDied, EventPermanentSacrificed:
-		return false
+	case EventAttackerDeclared, EventBlockerDeclared, EventZoneChanged,
+		EventPermanentDied, EventPermanentSacrificed:
+		return true
 	default:
 		return eventExposesSubjectCounters(event)
 	}

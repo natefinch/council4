@@ -184,14 +184,16 @@ func sacrificePermanentsSimultaneously(g *game.Game, permanents []*game.Permanen
 			continue
 		}
 		events = append(events, game.Event{
-			Kind:           game.EventPermanentSacrificed,
-			SimultaneousID: simultaneousID,
-			Controller:     effectiveController(g, permanent),
-			Player:         effectiveController(g, permanent),
-			CardID:         permanent.CardInstanceID,
-			PermanentID:    permanent.ObjectID,
-			TokenName:      permanentTokenName(permanent),
-			TokenDef:       permanent.TokenDef,
+			Kind:               game.EventPermanentSacrificed,
+			SimultaneousID:     simultaneousID,
+			Controller:         effectiveController(g, permanent),
+			Player:             effectiveController(g, permanent),
+			CardID:             permanent.CardInstanceID,
+			PermanentID:        permanent.ObjectID,
+			SubjectGoaded:      isGoadedNow(g, permanent),
+			SubjectGoadedKnown: true,
+			TokenName:          permanentTokenName(permanent),
+			TokenDef:           permanent.TokenDef,
 		})
 	}
 	if !movePermanentsToZoneSimultaneously(g, permanents, zone.Graveyard) {

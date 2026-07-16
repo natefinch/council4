@@ -857,7 +857,11 @@ func validStaticRuleSyntax(rule StaticRuleSyntax) bool {
 			validAssignDamageByToughnessRule(rule) ||
 			validGroupMustAttackRule(rule)
 	case StaticRuleSubjectOpponentControlledCreatures:
-		return validGroupMustAttackRule(rule)
+		return validGroupMustAttackRule(rule) ||
+			(rule.Constraint.Kind == StaticRuleConstraintRequirement &&
+				rule.Operation.Kind == StaticRuleOperationGoaded &&
+				rule.Operation.Voice == StaticRuleVoiceActive &&
+				len(rule.Qualifiers) == 0)
 	case StaticRuleSubjectControlledNotOwnedCreatures:
 		return rule.Constraint.Kind == StaticRuleConstraintProhibition &&
 			rule.Operation.Kind == StaticRuleOperationSacrifice &&
