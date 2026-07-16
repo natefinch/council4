@@ -55,11 +55,9 @@ func randomResolutionChoiceValue(rng *rand.Rand, values map[int]game.ResolutionC
 	return values[indices[rng.IntN(len(indices))]], true
 }
 
-// chooseEntryColor prompts the given player to make an entry-time color choice
-// and returns the chosen result. It mirrors resolveResolutionChoiceValue but
-// targets a permanent rather than a stack object, since entry choices are stored
-// on the permanent (CR 614.12) rather than on a resolving stack object.
-func (e *Engine) chooseEntryColor(g *game.Game, agents [game.NumPlayers]PlayerAgent, player game.PlayerID, choice *game.ResolutionChoice, log *TurnLog) (game.ResolutionChoiceResult, bool) {
+// choosePersistentValue prompts the given player for a value that will be stored
+// on a permanent rather than a resolving stack object.
+func (e *Engine) choosePersistentValue(g *game.Game, agents [game.NumPlayers]PlayerAgent, player game.PlayerID, choice *game.ResolutionChoice, log *TurnLog) (game.ResolutionChoiceResult, bool) {
 	options, values := resolutionChoiceOptions(g, nil, player, choice)
 	if len(values) == 0 {
 		return game.ResolutionChoiceResult{}, false
@@ -128,10 +126,15 @@ func resolutionChoiceOptions(g *game.Game, obj *game.StackObject, playerID game.
 		for i, cardType := range cardTypes {
 			add(i, string(cardType), game.ResolutionChoiceResult{Kind: choice.Kind, CardType: cardType})
 		}
+	case game.ResolutionChoiceCardName:
+		for i, name := range resolutionChoiceCardNames(g, choice.CardNameType) {
+			add(i, name, game.ResolutionChoiceResult{Kind: choice.Kind, CardName: name})
+		}
 	case game.ResolutionChoiceSubtype:
 		for i, subtype := range types.SubtypesForType(choice.SubtypeOfType) {
 			add(i, string(subtype), game.ResolutionChoiceResult{Kind: choice.Kind, Subtype: subtype})
 		}
+
 	case game.ResolutionChoicePlayer:
 		index := 0
 		for player := range game.PlayerID(game.NumPlayers) {
@@ -158,6 +161,42 @@ func resolutionChoiceOptions(g *game.Game, obj *game.StackObject, playerID game.
 	default:
 	}
 	return options, values
+}
+
+func resolutionChoiceCardNames(g *game.Game, cardType types.Card) []string {
+	if g == nil || cardType == "" {
+		return nil
+	}
+	seen := make(map[string]bool)
+	var names []string
+	for _, name := range g.CardNameCatalog[cardType] {
+		if name == "" || seen[name] {
+			continue
+		}
+		seen[name] = true
+		names = append(names, name)
+	}
+	addFace := func(face *game.CardDef) {
+		if face == nil || face.Name == "" || !slices.Contains(face.Types, cardType) || seen[face.Name] {
+			return
+		}
+		seen[face.Name] = true
+		names = append(names, face.Name)
+	}
+	for _, card := range g.CardInstances {
+		if card == nil || card.Def == nil {
+			continue
+		}
+		addFace(card.Def)
+		if face, ok := card.Def.FaceDefView(game.FaceBack); ok {
+			addFace(face)
+		}
+		if face, ok := card.Def.FaceDefView(game.FaceAlternate); ok {
+			addFace(face)
+		}
+	}
+	slices.Sort(names)
+	return names
 }
 
 func resolutionChoicePlayerForStack(g *game.Game, obj *game.StackObject, choice *game.ResolutionChoice) (game.PlayerID, bool) {
@@ -454,6 +493,8 @@ func defaultResolutionChoicePrompt(kind game.ResolutionChoiceKind) string {
 		return "Choose a color."
 	case game.ResolutionChoiceCardType:
 		return "Choose a card type."
+	case game.ResolutionChoiceCardName:
+		return "Choose a card name."
 	case game.ResolutionChoiceSubtype:
 		return "Choose a creature type."
 	case game.ResolutionChoicePlayer:

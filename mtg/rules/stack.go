@@ -196,7 +196,11 @@ func (e *Engine) resolveActivatedAbilityWithChoices(g *game.Game, obj *game.Stac
 			return "countered by rules"
 		}
 		target, ok := permanentByObjectID(g, obj.Targets[0].PermanentID)
-		if !ok || !attachPermanent(g, permanent, target) {
+		if !ok || !attachPermanentWithChoices(g, permanent, target, &replacementChoiceContext{
+			engine: e,
+			agents: agents,
+			log:    log,
+		}) {
 			return "countered by rules"
 		}
 		return "resolved"

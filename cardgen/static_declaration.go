@@ -708,6 +708,17 @@ func lowerStaticContinuousDeclaration(declaration compiler.StaticDeclaration) (g
 			return game.ContinuousEffect{}, false
 		}
 		effect.AddSubtypeFromEntryChoice = game.EntryTypeChoiceKey
+	case compiler.StaticContinuousSetNameFromAttachmentChoice:
+		if layer != game.LayerText || declaration.Continuous.ChoiceCardType == "" {
+			return game.ContinuousEffect{}, false
+		}
+		effect.SetNameFromSourceChoice = game.AttachmentCardNameChoiceKey
+	case compiler.StaticContinuousSetSubtypeFromAttachmentChoice:
+		if layer != game.LayerType || declaration.Continuous.ChoiceCardType == "" {
+			return game.ContinuousEffect{}, false
+		}
+		effect.SetSubtypeFromSourceChoice = game.AttachmentSubtypeChoiceKey
+		effect.SetSubtypeChoiceType = declaration.Continuous.ChoiceCardType
 	case compiler.StaticContinuousSetTypes, compiler.StaticContinuousSetSubtypes:
 		if layer != game.LayerType {
 			return game.ContinuousEffect{}, false
@@ -875,6 +886,8 @@ func lowerStaticSetTypes(continuous *compiler.StaticContinuousDeclaration) ([]ty
 
 func lowerStaticContinuousLayer(layer compiler.StaticContinuousLayer) (game.ContinuousLayer, bool) {
 	switch layer {
+	case compiler.StaticLayerText:
+		return game.LayerText, true
 	case compiler.StaticLayerAbility:
 		return game.LayerAbility, true
 	case compiler.StaticLayerPowerToughnessModify:

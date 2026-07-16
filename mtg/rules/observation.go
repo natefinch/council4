@@ -111,6 +111,10 @@ type PermanentView struct {
 	FaceDown       bool
 	PhasedOut      bool
 	Types          []types.Card
+	Subtypes       []types.Sub
+	// EntryChoices is a copy of the public persistent choices stored on the
+	// permanent.
+	EntryChoices map[game.ChoiceKey]game.ResolutionChoiceResult
 	// ProducesMana reports whether this permanent has any mana ability, so an
 	// agent can count its untapped mana sources.
 	ProducesMana bool
@@ -342,6 +346,10 @@ func (o PlayerObservation) permanentView(permanent *game.Permanent) PermanentVie
 		keywords[keyword] = true
 	})
 	producesMana, producesColors := abilitiesManaProduction(values.abilities, permanent.EntryChoices, commanderIdentityColors(o.g, effectiveController(o.g, permanent)))
+	var entryChoices map[game.ChoiceKey]game.ResolutionChoiceResult
+	if !permanent.FaceDown {
+		entryChoices = maps.Clone(permanent.EntryChoices)
+	}
 	return PermanentView{
 		ObjectID:       permanent.ObjectID,
 		CardInstanceID: permanent.CardInstanceID,
@@ -356,6 +364,8 @@ func (o PlayerObservation) permanentView(permanent *game.Permanent) PermanentVie
 		FaceDown:       permanent.FaceDown,
 		PhasedOut:      permanent.PhasedOut,
 		Types:          append([]types.Card(nil), values.types...),
+		Subtypes:       append([]types.Sub(nil), values.subtypes...),
+		EntryChoices:   entryChoices,
 		ProducesMana:   producesMana,
 		ProducesColors: producesColors,
 		keywords:       keywords,

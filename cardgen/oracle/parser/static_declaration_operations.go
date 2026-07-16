@@ -1151,6 +1151,16 @@ func parseStaticOperation(
 	subject StaticDeclarationSubject,
 	atoms Atoms,
 ) (StaticDeclarationSyntax, int, bool) {
+	if subject.Kind == StaticDeclarationSubjectGroup &&
+		subject.Group.Kind == EffectStaticSubjectAttachedObject &&
+		index < end &&
+		equalWord(tokens[index], "it") {
+		operation, next, ok := parseStaticOperation(tokens, index+1, end, subject, atoms)
+		if ok {
+			operation.OperationSpan.Start = tokens[index].Span.Start
+			return operation, next, true
+		}
+	}
 	if operation, next, ok := parseStaticPowerToughnessOperation(tokens, index, end, subject); ok {
 		return operation, next, true
 	}
@@ -1163,9 +1173,13 @@ func parseStaticOperation(
 	if operation, next, ok := parseStaticEntryChoiceSubtypeOperation(tokens, index, end, subject); ok {
 		return operation, next, true
 	}
+	if operation, next, ok := parseStaticAttachmentChoiceIdentityOperation(tokens, index, end, subject); ok {
+		return operation, next, true
+	}
 	if operation, next, ok := parseStaticKeywordGrantOperation(tokens, index, end, atoms); ok {
 		return operation, next, true
 	}
+
 	if operation, next, ok := parseStaticKeywordLossOperation(tokens, index, end, atoms); ok {
 		return operation, next, true
 	}
@@ -1173,6 +1187,25 @@ func parseStaticOperation(
 		return operation, next, true
 	}
 	return StaticDeclarationSyntax{}, 0, false
+}
+
+func parseStaticAttachmentChoiceIdentityOperation(
+	tokens []shared.Token,
+	index, end int,
+	subject StaticDeclarationSubject,
+) (StaticDeclarationSyntax, int, bool) {
+	if subject.Kind != StaticDeclarationSubjectGroup ||
+		subject.Group.Kind != EffectStaticSubjectAttachedObject ||
+		!tokenWordsEqual(tokens[index:end],
+			"its", "name", "and", "creature", "type", "are", "the", "last",
+			"chosen", "name", "and", "creature", "type") {
+		return StaticDeclarationSyntax{}, 0, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:           StaticDeclarationContinuousAttachmentChoiceIdentity,
+		OperationSpan:  shared.SpanOf(tokens[index:end]),
+		ChoiceCardType: types.Creature,
+	}, end, true
 }
 
 func parseStaticEntryChoiceSubtypeOperation(

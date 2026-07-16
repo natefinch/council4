@@ -141,6 +141,21 @@ func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.Replace
 		}
 		return fmt.Sprintf("game.EntryColorChoiceReplacement(%q)", ability.Text), nil
 	}
+	if ability.Replacement.AttachCardNameChoiceType != "" || ability.Replacement.AttachSubtypeChoiceType != "" {
+		if ability.Replacement.AttachCardNameChoiceType == "" || ability.Replacement.AttachSubtypeChoiceType == "" {
+			return "", errors.New("render: attachment choices require both card-name and subtype card types")
+		}
+		nameType, err := cardTypeLiteral(ability.Replacement.AttachCardNameChoiceType)
+		if err != nil {
+			return "", err
+		}
+		subtypeType, err := cardTypeLiteral(ability.Replacement.AttachSubtypeChoiceType)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importTypes)
+		return fmt.Sprintf("game.AttachmentChoicesReplacement(%q, %s, %s)", ability.Text, nameType, subtypeType), nil
+	}
 	if ability.Replacement.EntryTypeChoice {
 		return fmt.Sprintf("game.EntryTypeChoiceReplacement(%q)", ability.Text), nil
 	}

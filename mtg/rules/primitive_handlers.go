@@ -956,7 +956,7 @@ func (r *effectResolver) chooseProtectionColor(controller game.PlayerID) (color.
 		Prompt: "Choose a color.",
 		Colors: []mana.Color{mana.W, mana.U, mana.B, mana.R, mana.G},
 	}
-	result, ok := engine.chooseEntryColor(r.game, r.agents, controller, &choice, r.log)
+	result, ok := engine.choosePersistentValue(r.game, r.agents, controller, &choice, r.log)
 	if !ok {
 		return "", false
 	}
@@ -1799,7 +1799,11 @@ func handleAttach(r *effectResolver, prim game.Attach) effectResolved {
 	if !ok {
 		return res
 	}
-	if attachPermanent(r.game, attachment, target) {
+	if attachPermanentWithChoices(r.game, attachment, target, &replacementChoiceContext{
+		engine: r.engine,
+		agents: r.agents,
+		log:    r.log,
+	}) {
 		res.succeeded = true
 	}
 	return res

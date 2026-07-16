@@ -164,6 +164,9 @@ type ContinuousEffect struct {
 	// unchanged. The legend rule and name-matching predicates read the resulting
 	// effective name.
 	SetName string
+	// SetNameFromSourceChoice replaces the affected object's name with the card
+	// name stored under this key on the effect's source permanent.
+	SetNameFromSourceChoice ChoiceKey
 
 	SetSupertypes    []types.Super
 	AddSupertypes    []types.Super
@@ -191,6 +194,11 @@ type ContinuousEffect struct {
 	// effect's source permanent. A missing source, choice, or subtype result has
 	// no effect.
 	AddSubtypeFromEntryChoice ChoiceKey
+	// SetSubtypeFromSourceChoice replaces subtypes belonging to
+	// SetSubtypeChoiceType with the subtype stored under this key on the effect's
+	// source permanent, preserving subtypes from other card-type families.
+	SetSubtypeFromSourceChoice ChoiceKey
+	SetSubtypeChoiceType       types.Card
 
 	SetColors    []color.Color
 	AddColors    []color.Color

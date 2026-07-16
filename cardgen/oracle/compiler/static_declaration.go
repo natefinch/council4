@@ -73,6 +73,7 @@ const (
 	StaticLayerType
 	StaticLayerColor
 	StaticLayerControl
+	StaticLayerText
 )
 
 // StaticContinuousOperation identifies a characteristic operation.
@@ -101,6 +102,8 @@ const (
 	// follows the crown rather than fixing the controller like
 	// StaticContinuousChangeControl.
 	StaticContinuousChangeControlToMonarch
+	StaticContinuousSetNameFromAttachmentChoice
+	StaticContinuousSetSubtypeFromAttachmentChoice
 )
 
 // StaticRuleKind identifies a non-layer rules declaration.
@@ -471,6 +474,9 @@ type StaticContinuousDeclaration struct {
 	// Set base power/toughness payload (StaticContinuousSetBasePowerToughness).
 	SetPower     int
 	SetToughness int
+	// ChoiceCardType is the card-type family referenced by a stored attachment
+	// choice operation.
+	ChoiceCardType types.Card
 
 	// Color characteristic payload (StaticContinuousAddColors / SetColors).
 	// SetColorless marks a SetColors operation that makes the affected object
@@ -3055,7 +3061,8 @@ func recognizeStaticComposedContinuousDeclarations(ability CompiledAbility, stat
 		case parser.StaticDeclarationKeywordGrant:
 			keywordNodes++
 		case parser.StaticDeclarationContinuousBasePowerToughness,
-			parser.StaticDeclarationContinuousCharacteristic:
+			parser.StaticDeclarationContinuousCharacteristic,
+			parser.StaticDeclarationContinuousAttachmentChoiceIdentity:
 			newNodes++
 		case parser.StaticDeclarationRule:
 		default:
@@ -3148,6 +3155,14 @@ func recognizeStaticComposedContinuousDeclarations(ability CompiledAbility, stat
 				return nil, false
 			}
 			declarations = append(declarations, characteristic...)
+		case parser.StaticDeclarationContinuousAttachmentChoiceIdentity:
+			if node.ChoiceCardType == "" {
+				return nil, false
+			}
+			declarations = append(declarations,
+				staticAttachmentChoiceDeclaration(ability.Span, node, group, condition, StaticLayerText, StaticContinuousSetNameFromAttachmentChoice),
+				staticAttachmentChoiceDeclaration(ability.Span, node, group, condition, StaticLayerType, StaticContinuousSetSubtypeFromAttachmentChoice),
+			)
 		case parser.StaticDeclarationRule:
 			rule, zone, ok := semanticStaticRuleForSyntax(node.Rule)
 			if !ok {
@@ -3166,6 +3181,28 @@ func recognizeStaticComposedContinuousDeclarations(ability CompiledAbility, stat
 		return nil, false
 	}
 	return declarations, true
+}
+
+func staticAttachmentChoiceDeclaration(
+	span shared.Span,
+	node *parser.StaticDeclarationSyntax,
+	group StaticGroupReference,
+	condition *CompiledCondition,
+	layer StaticContinuousLayer,
+	operation StaticContinuousOperation,
+) StaticDeclaration {
+	return StaticDeclaration{
+		Kind:          StaticDeclarationContinuous,
+		Span:          span,
+		OperationSpan: node.OperationSpan,
+		Group:         group,
+		Condition:     condition,
+		Continuous: &StaticContinuousDeclaration{
+			Layer:          layer,
+			Operation:      operation,
+			ChoiceCardType: node.ChoiceCardType,
+		},
+	}
 }
 
 // recognizeStaticQuotedAbilityGrantDeclarations maps a static grant that confers

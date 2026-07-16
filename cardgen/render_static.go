@@ -348,7 +348,8 @@ func validateContinuousEffectLayerFields(effect *game.ContinuousEffect) error {
 			len(effect.AddSupertypes) == 0 && len(effect.SetSupertypes) == 0 &&
 			len(effect.RemoveTypes) == 0 && len(effect.RemoveSubtypes) == 0 &&
 			len(effect.RemoveSupertypes) == 0 &&
-			effect.AddSubtypeFromEntryChoice == "" && !effect.AddEveryCreatureType && !effect.AddEveryBasicLandType {
+			effect.AddSubtypeFromEntryChoice == "" && effect.SetSubtypeFromSourceChoice == "" &&
+			!effect.AddEveryCreatureType && !effect.AddEveryBasicLandType {
 			return errors.New("render: type layer requires set, added, or removed types or subtypes")
 		}
 	case game.LayerText:
@@ -358,7 +359,7 @@ func validateContinuousEffectLayerFields(effect *game.ContinuousEffect) error {
 		if hasKeywords {
 			return keywordOnAbility
 		}
-		if effect.SetName == "" && effect.TextFrom == "" && effect.TextTo == "" {
+		if effect.SetName == "" && effect.SetNameFromSourceChoice == "" && effect.TextFrom == "" && effect.TextTo == "" {
 			return errors.New("render: text layer requires a name or text change")
 		}
 	case game.LayerPowerToughnessSwitch:
@@ -434,6 +435,12 @@ func renderContinuousCharacteristicFields(ctx *renderCtx, effect *game.Continuou
 	var fields []string
 	if effect.SetName != "" {
 		fields = append(fields, fmt.Sprintf("SetName: %q,", effect.SetName))
+	}
+	if effect.SetNameFromSourceChoice != "" {
+		if effect.SetNameFromSourceChoice != game.AttachmentCardNameChoiceKey {
+			return nil, errors.New("render: unsupported source-choice name key")
+		}
+		fields = append(fields, "SetNameFromSourceChoice: game.AttachmentCardNameChoiceKey,")
 	}
 	if effect.SetPower.Exists {
 		ctx.need(importOpt)
@@ -548,6 +555,20 @@ func renderContinuousCharacteristicFields(ctx *renderCtx, effect *game.Continuou
 			return nil, errors.New("render: unsupported entry-choice subtype key")
 		}
 		fields = append(fields, "AddSubtypeFromEntryChoice: game.EntryTypeChoiceKey,")
+	}
+	if effect.SetSubtypeFromSourceChoice != "" {
+		if effect.SetSubtypeFromSourceChoice != game.AttachmentSubtypeChoiceKey || effect.SetSubtypeChoiceType == "" {
+			return nil, errors.New("render: unsupported source-choice subtype reference")
+		}
+		cardType, err := cardTypeLiteral(effect.SetSubtypeChoiceType)
+		if err != nil {
+			return nil, err
+		}
+		ctx.need(importTypes)
+		fields = append(fields,
+			"SetSubtypeFromSourceChoice: game.AttachmentSubtypeChoiceKey,",
+			fmt.Sprintf("SetSubtypeChoiceType: %s,", cardType),
+		)
 	}
 	if effect.AddEveryBasicLandType {
 		fields = append(fields, "AddEveryBasicLandType: true,")
