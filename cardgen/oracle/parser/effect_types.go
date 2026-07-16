@@ -319,6 +319,11 @@ const (
 	// additional beginning phase. AdditionalCombatPhase, AdditionalMainPhase, and
 	// AdditionalBeginningPhase carry which phases are added.
 	EffectAdditionalCombatPhase EffectKind = "EffectAdditionalCombatPhase"
+	// EffectAdditionalUpkeepStep models the extra-upkeep-step insertion effect
+	// "that player gets an additional upkeep step after this step." (Paradox
+	// Haze). It inserts one additional upkeep step into the current turn
+	// immediately after the current step (CR 505.5b); repeated resolutions stack.
+	EffectAdditionalUpkeepStep EffectKind = "EffectAdditionalUpkeepStep"
 	// EffectLookAtHand models the private hand-inspection effect "Look at target
 	// player's hand." (Gitaxian Probe, Peek, Telepathy-adjacent). The source's
 	// controller looks at the targeted player's hand; it conveys hidden
@@ -3507,6 +3512,12 @@ type EffectSyntax struct {
 	// effect and never set together with AdditionalCombatPhase or
 	// AdditionalMainPhase.
 	AdditionalBeginningPhase bool `json:",omitempty"`
+	// AdditionalUpkeepStep reports a "that player gets an additional upkeep step
+	// after this step." effect (Paradox Haze): it inserts one extra upkeep step
+	// into the current turn immediately after the current step (CR 505.5b). It is
+	// false for every other effect and never set together with the additional
+	// phase flags.
+	AdditionalUpkeepStep bool `json:",omitempty"`
 	// DieSides is the number of faces of the die rolled by an EffectRollDie
 	// effect ("roll a d20" sets DieSides to 20). It is zero for every other
 	// effect kind.

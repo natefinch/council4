@@ -109,10 +109,28 @@ func parseRelationPhaseStep(tokens []shared.Token) (PhaseStepTriggerClause, bool
 		remainder = rest
 		next = true
 	}
-	name, ok := parsePhaseStepName(
-		remainder,
-		determiner.quantifier.Kind == PhaseStepQuantifierEachOf,
-	)
+	eachOf := determiner.quantifier.Kind == PhaseStepQuantifierEachOf
+	name, ok := parsePhaseStepName(remainder, eachOf)
+	first := false
+	eachTurn := false
+	if !ok && !next {
+		// Recognize the "first <step> each turn" ordinal wording (Paradox Haze:
+		// "enchanted player's first upkeep each turn"). Both the leading "first"
+		// and the trailing "each turn" must be present; the step name is parsed
+		// from what remains. parsePhaseStepName is tried first above so the
+		// distinct "first main phase" step name still wins.
+		stripped, cutFirst := cutSyntaxWords(remainder, "first")
+		if cutFirst {
+			if rest, cutEach := cutTokenSuffix(stripped, "each", "turn"); cutEach {
+				first = true
+				eachTurn = true
+				name, ok = parsePhaseStepName(rest, eachOf)
+				if ok && name.Kind != PhaseStepNameUpkeep {
+					return PhaseStepTriggerClause{}, false
+				}
+			}
+		}
+	}
 	if !ok {
 		return PhaseStepTriggerClause{}, false
 	}
@@ -121,6 +139,8 @@ func parseRelationPhaseStep(tokens []shared.Token) (PhaseStepTriggerClause, bool
 		Player:     determiner.player,
 		Name:       name,
 		Next:       next,
+		First:      first,
+		EachTurn:   eachTurn,
 	}, true
 }
 
@@ -236,6 +256,7 @@ func parsePhaseStepDeterminer(tokens []shared.Token) (phaseStepDeterminer, bool)
 		parsed.form == triggerPlayerSelectorPossessive &&
 		(parsed.player.Kind == TriggerPlayerSelectorYou ||
 			parsed.player.Kind == TriggerPlayerSelectorSourceController ||
+			parsed.player.Kind == TriggerPlayerSelectorEnchantedPlayer ||
 			parsed.player.Kind == TriggerPlayerSelectorMonarch) {
 		return phaseStepDeterminer{
 			quantifier: PhaseStepQuantifier{Kind: PhaseStepQuantifierSingle, Span: parsed.player.Span},
@@ -317,6 +338,13 @@ func parseTriggerPlayerSelector(tokens []shared.Token) triggerPlayerSelectorPars
 		return triggerPlayerSelectorParse{
 			player:    TriggerPlayerSelector{Kind: TriggerPlayerSelectorAny, Span: tokens[0].Span},
 			remainder: tokens[1:],
+			form:      triggerPlayerSelectorPossessive,
+			ok:        true,
+		}
+	case len(tokens) >= 2 && equalWord(tokens[0], "enchanted") && equalWord(tokens[1], "player's"):
+		return triggerPlayerSelectorParse{
+			player:    TriggerPlayerSelector{Kind: TriggerPlayerSelectorEnchantedPlayer, Span: shared.SpanOf(tokens[:2])},
+			remainder: tokens[2:],
 			form:      triggerPlayerSelectorPossessive,
 			ok:        true,
 		}

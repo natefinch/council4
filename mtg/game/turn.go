@@ -151,6 +151,22 @@ type TurnState struct {
 	// combo loop continues until the queue empties.
 	ExtraPhases []Phase
 
+	// ExtraUpkeepSteps is the count of additional upkeep steps queued into the
+	// current turn by AddExtraUpkeepStep effects ("that player gets an additional
+	// upkeep step after this step." — Paradox Haze). The beginning phase drains
+	// the count after the current upkeep step and before the draw step (CR
+	// 505.5b), running one more upkeep step per queued count; multiple sources
+	// stack. It resets to zero at the start of each turn.
+	ExtraUpkeepSteps int
+
+	// UpkeepStepsThisTurn counts how many upkeep steps have begun this turn,
+	// incremented as each upkeep step starts (the normal upkeep and every extra
+	// one drained from ExtraUpkeepSteps, plus any upkeep in an extra beginning
+	// phase). It backs the "first upkeep each turn" gate (Paradox Haze), which
+	// holds while the count is 1, so an additional upkeep step does not re-fire a
+	// "first upkeep" trigger. It resets to zero at the start of each turn.
+	UpkeepStepsThisTurn int
+
 	// CombatPhasesThisTurn counts how many combat phases have begun this turn,
 	// incremented as each combat phase starts (the normal phase and every extra
 	// one queued via ExtraPhases). It backs the "if it's the first combat phase

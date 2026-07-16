@@ -201,25 +201,24 @@ func (e *Engine) runBeginningPhase(g *game.Game, agents [game.NumPlayers]PlayerA
 	}
 	untapDuringOtherPlayersUntapStep(g)
 
-	g.Turn.Step = game.StepUpkeep
-	log.addStep(game.StepUpkeep)
-	// Beginning-of-step triggers fire at the start of the upkeep and are put on
-	// the stack before the game advances to draw (CR 603.6c, CR 117.3b).
-	emitBeginningOfStepEvent(g, game.StepUpkeep)
-	// The initiative-holder ventures into Undercity at the beginning of their
-	// upkeep (CR 720). Upkeeps occur only on the active player's turn, so this is
-	// the initiative-holder's upkeep exactly when the active player has the
-	// initiative. The venture is queued and resolved by the upcoming trigger pass,
-	// where player choices are available.
-	if holder, ok := playerByID(g, g.Turn.ActivePlayer); ok && holder.HasInitiative {
-		queueInitiativeVenture(g, g.Turn.ActivePlayer)
-	}
-	e.processSuspendUpkeep(g, g.Turn.ActivePlayer)
-	e.processReboundUpkeep(g, g.Turn.ActivePlayer, agents, log)
-	g.Turn.PriorityPlayer = g.Turn.ActivePlayer
-	e.runPriorityLoop(g, agents, log)
+	e.runUpkeepStep(g, agents, log)
 	if g.IsGameOver() {
 		return
+	}
+	// Drain any additional upkeep steps queued during this upkeep (Paradox Haze:
+	// "that player gets an additional upkeep step after this step."). Each extra
+	// upkeep step runs immediately after the current one and before the draw step
+	// (CR 505.5b), and re-runs every "at the beginning of upkeep" trigger and
+	// turn-based upkeep action; because runUpkeepStep increments
+	// UpkeepStepsThisTurn, the "first upkeep each turn" trigger does not re-fire,
+	// so the loop terminates. A drained step may itself queue more (another
+	// source's additional upkeep), which the loop then drains in turn.
+	for g.Turn.ExtraUpkeepSteps > 0 {
+		g.Turn.ExtraUpkeepSteps--
+		e.runUpkeepStep(g, agents, log)
+		if g.IsGameOver() {
+			return
+		}
 	}
 
 	// Consume any scheduled one-shot draw-step skip unconditionally: a queued
@@ -242,6 +241,34 @@ func (e *Engine) runBeginningPhase(g *game.Game, agents [game.NumPlayers]PlayerA
 	}
 	e.applyStateBasedActionsWithLog(g, log)
 	emptyManaPools(g)
+}
+
+// runUpkeepStep runs a single upkeep step of the active player's beginning phase:
+// the turn's normal upkeep and every additional upkeep step drained from
+// TurnState.ExtraUpkeepSteps share this body. It counts the step toward
+// UpkeepStepsThisTurn (backing the "first upkeep each turn" gate), emits the
+// beginning-of-step event so "at the beginning of upkeep" triggers fire each
+// step, performs the upkeep turn-based actions (initiative venture, suspend and
+// rebound processing), and resolves the upkeep priority window.
+func (e *Engine) runUpkeepStep(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
+	g.Turn.UpkeepStepsThisTurn++
+	g.Turn.Step = game.StepUpkeep
+	log.addStep(game.StepUpkeep)
+	// Beginning-of-step triggers fire at the start of the upkeep and are put on
+	// the stack before the game advances to draw (CR 603.6c, CR 117.3b).
+	emitBeginningOfStepEvent(g, game.StepUpkeep)
+	// The initiative-holder ventures into Undercity at the beginning of their
+	// upkeep (CR 720). Upkeeps occur only on the active player's turn, so this is
+	// the initiative-holder's upkeep exactly when the active player has the
+	// initiative. The venture is queued and resolved by the upcoming trigger pass,
+	// where player choices are available.
+	if holder, ok := playerByID(g, g.Turn.ActivePlayer); ok && holder.HasInitiative {
+		queueInitiativeVenture(g, g.Turn.ActivePlayer)
+	}
+	e.processSuspendUpkeep(g, g.Turn.ActivePlayer)
+	e.processReboundUpkeep(g, g.Turn.ActivePlayer, agents, log)
+	g.Turn.PriorityPlayer = g.Turn.ActivePlayer
+	e.runPriorityLoop(g, agents, log)
 }
 
 // untapDuringOtherPlayersUntapStep grants the extra untap that Seedborn
@@ -402,6 +429,8 @@ func (*Engine) advanceToNextTurn(g *game.Game) {
 	g.Turn.LandsPlayedThisTurn = 0
 	g.Turn.LandsAllowedThisTurn = 1
 	g.Turn.CombatPhasesThisTurn = 0
+	g.Turn.UpkeepStepsThisTurn = 0
+	g.Turn.ExtraUpkeepSteps = 0
 	g.Turn.MonarchAtTurnStart = currentMonarch(g)
 	for i := range g.Players {
 		g.Players[i].CantBecomeMonarchThisTurn = false

@@ -194,6 +194,7 @@ func newPrimitiveRegistry() *primitiveRegistry {
 	registerPrimitiveHandler(reg, handleIncubate)
 	registerPrimitiveHandler(reg, handleBolster)
 	registerPrimitiveHandler(reg, handleAddExtraPhases)
+	registerPrimitiveHandler(reg, handleAddExtraUpkeepStep)
 	registerPrimitiveHandler(reg, handleRollDie)
 	registerPrimitiveHandler(reg, handleHideawayExile)
 	registerPrimitiveHandler(reg, handlePlayHideawayCard)

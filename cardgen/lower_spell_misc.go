@@ -1043,6 +1043,39 @@ func lowerAdditionalCombatPhase(ctx contentCtx) (game.AbilityContent, *shared.Di
 	}}}.Ability(), nil
 }
 
+// lowerAdditionalUpkeepStep lowers the extra-upkeep-step insertion effect "that
+// player gets an additional upkeep step after this step." (Paradox Haze), and the
+// controller-scoped "you get an additional upkeep step after this step." form, to
+// an AddExtraUpkeepStep primitive that queues one extra upkeep step onto the
+// current turn. It reads only the typed AdditionalUpkeepStep flag and fails closed
+// for any target, condition, keyword, mode, amount, duration, or negation so only
+// the bare extra-upkeep-step clause lowers. The exact wording pins the effect, so
+// the inherent "that player" reference in the same clause is expected; the "that
+// player" subject is descriptive: the effect resolves during the enchanted
+// player's turn, so the inserted upkeep always belongs to the current (enchanted)
+// player.
+func lowerAdditionalUpkeepStep(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	if !effect.Exact ||
+		effect.Negated ||
+		!effect.AdditionalUpkeepStep ||
+		effect.Amount.Known ||
+		effect.Duration != compiler.DurationNone ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported additional upkeep step effect",
+			"the executable source backend supports only the exact additional upkeep step insertion this turn",
+		)
+	}
+	return game.Mode{Sequence: []game.Instruction{{
+		Primitive: game.AddExtraUpkeepStep{},
+	}}}.Ability(), nil
+}
+
 // lowerCastAsThoughFlash lowers the controller-scoped timing permission "You may
 // cast spells this turn as though they had flash." to an ApplyRule that lets the
 // controller cast spells at instant speed for the rest of the turn. Like
@@ -1574,6 +1607,9 @@ func lowerPlayerRuleOrPhaseEffect(ctx contentCtx) (game.AbilityContent, *shared.
 		return content, diagnostic, true
 	case compiler.EffectAdditionalCombatPhase:
 		content, diagnostic := lowerAdditionalCombatPhase(ctx)
+		return content, diagnostic, true
+	case compiler.EffectAdditionalUpkeepStep:
+		content, diagnostic := lowerAdditionalUpkeepStep(ctx)
 		return content, diagnostic, true
 	case compiler.EffectNoMaximumHandSize:
 		content, diagnostic := lowerNoMaximumHandSize(ctx)

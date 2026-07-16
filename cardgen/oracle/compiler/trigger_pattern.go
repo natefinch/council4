@@ -346,12 +346,21 @@ type TriggerPattern struct {
 
 	Step                              TriggerStep
 	StepPlayerSourceAttachedSelection TriggerSelection
-	CombatQualifier                   TriggerCombatQualifier
-	DamageRecipient                   TriggerDamageRecipient
-	DamageRecipientIsSource           bool
-	DamageSourceIsStackObject         bool
-	AttackRecipient                   TriggerAttackRecipient
-	StackObject                       TriggerStackObject
+	// StepPlayerIsSourceEnchantedPlayer restricts a beginning-of-step pattern to
+	// the step of the player enchanted by the source Aura ("enchanted player's
+	// ... upkeep", Paradox Haze). It routes the step event's player through the
+	// source's AttachedToPlayer.
+	StepPlayerIsSourceEnchantedPlayer bool
+	// FirstUpkeepStepEachTurn restricts an upkeep beginning-of-step pattern to the
+	// first upkeep step of each turn ("first upkeep each turn", Paradox Haze), so
+	// additional upkeep steps inserted the same turn do not retrigger it.
+	FirstUpkeepStepEachTurn   bool
+	CombatQualifier           TriggerCombatQualifier
+	DamageRecipient           TriggerDamageRecipient
+	DamageRecipientIsSource   bool
+	DamageSourceIsStackObject bool
+	AttackRecipient           TriggerAttackRecipient
+	StackObject               TriggerStackObject
 	// MatchCounter restricts an EventCountersAdded pattern to Counter's kind.
 	// A counter-added trigger always names a specific counter, so it is set
 	// together with Counter.

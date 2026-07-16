@@ -2118,6 +2118,12 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 			v.add(faceName, path, CardDefIssueInvalidSelection, "StepPlayerSourceAttachedSelection requires a beginning-of-step pattern")
 		}
 	}
+	if pattern.StepPlayerIsSourceEnchantedPlayer && pattern.Event != EventBeginningOfStep {
+		v.add(faceName, appendPath(path, "StepPlayerIsSourceEnchantedPlayer"), CardDefIssueInvalidSelection, "enchanted-player step trigger filter is only supported for beginning-of-step events")
+	}
+	if pattern.FirstUpkeepStepEachTurn && (pattern.Event != EventBeginningOfStep || pattern.Step != StepUpkeep) {
+		v.add(faceName, appendPath(path, "FirstUpkeepStepEachTurn"), CardDefIssueInvalidSelection, "first-upkeep-each-turn trigger filter is only supported for beginning-of-upkeep events")
+	}
 	if pattern.RequireKickerPaid && pattern.Event != EventSpellCast {
 		v.add(faceName, appendPath(path, "RequireKickerPaid"), CardDefIssueInvalidSelection, "kicker-paid trigger filter is only supported for spell-cast events")
 	}

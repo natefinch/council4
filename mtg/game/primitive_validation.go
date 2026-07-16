@@ -2939,6 +2939,10 @@ func (p AddExtraPhases) validatePrimitive([]TargetSpec, bool) error {
 	return nil
 }
 
+func (AddExtraUpkeepStep) validatePrimitive([]TargetSpec, bool) error {
+	return nil
+}
+
 func (p RollDie) validatePrimitive([]TargetSpec, bool) error {
 	if p.Sides < 2 {
 		return errors.New("roll die requires at least two sides")

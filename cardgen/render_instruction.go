@@ -840,6 +840,11 @@ func (r Renderer) renderPrimitiveTail(ctx *renderCtx, primitive game.Primitive) 
 			return "", err
 		}
 		return renderAddExtraPhases(value), nil
+	case game.PrimitiveAddExtraUpkeepStep:
+		if _, err := assertPrimitive[game.AddExtraUpkeepStep](primitive); err != nil {
+			return "", err
+		}
+		return "game.AddExtraUpkeepStep{}", nil
 	case game.PrimitiveRollDie:
 		value, err := assertPrimitive[game.RollDie](primitive)
 		if err != nil {

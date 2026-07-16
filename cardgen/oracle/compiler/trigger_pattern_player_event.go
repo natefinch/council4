@@ -299,6 +299,17 @@ func compilePhaseStepTriggerPattern(
 		pattern.Controller = controller
 	}
 	pattern.StepPlayerSourceAttachedSelection = attached
+	if clause.Player.Kind == parser.TriggerPlayerSelectorEnchantedPlayer {
+		// The enchanted-player step scope routes the step event's player through
+		// the source Aura's enchanted player, not the source controller.
+		pattern.StepPlayerIsSourceEnchantedPlayer = true
+	}
+	if clause.First || clause.EachTurn {
+		if !clause.First || !clause.EachTurn || step != TriggerStepUpkeep {
+			return TriggerPattern{}
+		}
+		pattern.FirstUpkeepStepEachTurn = true
+	}
 	pattern.NextOccurrence = clause.Next
 	return pattern
 }
@@ -338,9 +349,11 @@ func compilePhaseStepName(name parser.PhaseStepNameKind) (TriggerStep, bool) {
 
 func compilePhaseStepPlayer(player *parser.TriggerPlayerSelector) (ControllerKind, TriggerSelection, bool) {
 	switch player.Kind {
-	case parser.TriggerPlayerSelectorAny, parser.TriggerPlayerSelectorMonarch:
-		// Monarch scope is routed to pattern.Player by the caller; the returned
-		// controller is unused (Any) in that path, matching the Any selector.
+	case parser.TriggerPlayerSelectorAny, parser.TriggerPlayerSelectorMonarch,
+		parser.TriggerPlayerSelectorEnchantedPlayer:
+		// Monarch scope is routed to pattern.Player and enchanted-player scope to
+		// pattern.StepPlayerIsSourceEnchantedPlayer by the caller; the returned
+		// controller is unused (Any) in those paths, matching the Any selector.
 		return ControllerAny, TriggerSelection{}, true
 	case parser.TriggerPlayerSelectorYou, parser.TriggerPlayerSelectorSourceController:
 		return ControllerYou, TriggerSelection{}, true

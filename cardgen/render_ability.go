@@ -829,6 +829,8 @@ func (r Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatt
 		(pattern.AttackWhileSaddled && pattern.Event != game.EventAttackerDeclared) ||
 		(pattern.AttacksDifferentPlayerThanAnother && pattern.Event != game.EventAttackerDeclared) ||
 		(pattern.AttackedPlayerIsSourceEnchantedPlayer && pattern.Event != game.EventAttackerDeclared) ||
+		(pattern.StepPlayerIsSourceEnchantedPlayer && pattern.Event != game.EventBeginningOfStep) ||
+		(pattern.FirstUpkeepStepEachTurn && (pattern.Event != game.EventBeginningOfStep || pattern.Step != game.StepUpkeep)) ||
 		(pattern.AttacksAlongsideCount != 0 &&
 			(pattern.Event != game.EventAttackerDeclared || pattern.AttacksAlongsideSelection.Empty())) ||
 		(pattern.DyingDamagedBySource && pattern.Event != game.EventPermanentDied) ||
@@ -1045,6 +1047,12 @@ func renderTriggerPatternFlagFields(ctx *renderCtx, pattern *game.TriggerPattern
 	}
 	if pattern.AttackedPlayerIsSourceEnchantedPlayer {
 		fields = append(fields, "AttackedPlayerIsSourceEnchantedPlayer: true,")
+	}
+	if pattern.StepPlayerIsSourceEnchantedPlayer {
+		fields = append(fields, "StepPlayerIsSourceEnchantedPlayer: true,")
+	}
+	if pattern.FirstUpkeepStepEachTurn {
+		fields = append(fields, "FirstUpkeepStepEachTurn: true,")
 	}
 	if pattern.DyingDamagedBySource {
 		fields = append(fields, "DyingDamagedBySource: true,")

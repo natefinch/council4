@@ -432,6 +432,9 @@ func (MassReanimationExchange) Kind() PrimitiveKind { return PrimitiveMassReanim
 // Kind implements Primitive for AddExtraPhases.
 func (AddExtraPhases) Kind() PrimitiveKind { return PrimitiveAddExtraPhases }
 
+// Kind implements Primitive for AddExtraUpkeepStep.
+func (AddExtraUpkeepStep) Kind() PrimitiveKind { return PrimitiveAddExtraUpkeepStep }
+
 // Kind implements Primitive for RollDie.
 func (RollDie) Kind() PrimitiveKind { return PrimitiveRollDie }
 
@@ -578,6 +581,8 @@ func (GroupSelfPowerDamage) isPrimitive() {}
 func (MassReanimationExchange) isPrimitive() {}
 
 func (AddExtraPhases) isPrimitive() {}
+
+func (AddExtraUpkeepStep) isPrimitive() {}
 
 func (RollDie) isPrimitive() {}
 
@@ -911,6 +916,9 @@ func (MassReanimationExchange) instructionRefs() primitiveRefs {
 	return primitiveRefs{}
 }
 func (AddExtraPhases) instructionRefs() primitiveRefs {
+	return primitiveRefs{}
+}
+func (AddExtraUpkeepStep) instructionRefs() primitiveRefs {
 	return primitiveRefs{}
 }
 func (RollDie) instructionRefs() primitiveRefs {

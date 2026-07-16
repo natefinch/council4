@@ -104,7 +104,11 @@ import (
 // designations rather than an immediate card-advantage/life swing, so like the
 // monarch-designation primitives they fall through to the default with no
 // modeled value atom.
-const knownPrimitiveCount = 144
+//
+// The extra-phase/step primitives (AddExtraPhases, AddExtraUpkeepStep) are also
+// value-neutral: they insert additional turn structure whose value depends
+// entirely on what the controller does during it, so they have no stable atom.
+const knownPrimitiveCount = 145
 
 // TestPrimitiveCountIsReconciled keeps a newly added resolution primitive from
 // silently falling through the translator: adding one trips this guard so its
