@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,967 of 32,501 cards eligible for paper support (55.3%)**. The Scryfall Oracle Cards corpus contains 5,753 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,971 of 32,501 cards eligible for paper support (55.3%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -3601,6 +3601,7 @@ Council4 currently supports **17,967 of 32,501 cards eligible for paper support 
 - Decoy Ploy
 - Decree of Pain
 - Decree of Savagery
+- Decree of Silence
 - Dedicated Martyr
 - Deduce
 - Deem Worthy
@@ -9071,6 +9072,7 @@ Council4 currently supports **17,967 of 32,501 cards eligible for paper support 
 - Lust for War
 - Lutri, the Spellchaser
 - Lux Cannon
+- Luxa River Shrine
 - Luxurious Libation
 - Luxury Suite
 - Lydia Frye
@@ -11449,6 +11451,7 @@ Council4 currently supports **17,967 of 32,501 cards eligible for paper support 
 - Private Eye
 - Private Research
 - Privileged Position
+- Prize Pig
 - Prized Amalgam
 - Prized Elephant
 - Prized Griffin

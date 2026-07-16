@@ -860,6 +860,7 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		recognizeSourceStateCondition,
 		recognizeAttachedCreatureStateCondition,
 		recognizeSourceNoCounterCondition,
+		recognizeSourceThresholdCounterCondition,
 		recognizeSourceCounterStateCondition,
 		recognizeControllerResourceCondition,
 		recognizeTriggeringPlayerHandSizeCondition,
@@ -2392,6 +2393,46 @@ func recognizeSourceNoCounterCondition(body []shared.Token, atoms Atoms) (Condit
 			CounterCountAtLeast: 1,
 		},
 		Negated: true,
+	}, true
+}
+
+// recognizeSourceThresholdCounterCondition matches the positive source
+// counter-threshold form "there are <n> or more <kind> counters on this <type>"
+// / "there are <n> or more <kind> counters on it" ("Then if there are three or
+// more ribbon counters on this creature, remove those counters and untap it.",
+// Prize Pig). It is the positive counterpart of recognizeSourceNoCounterCondition's
+// "there are no <kind> counters on this <type>" and produces an ObjectMatches
+// clause bound to the source whose Selection carries the counter kind and the
+// recognized count bound, so the condition means "source has >= n counters of
+// kind" (or the strict "fewer than n" upper bound). The runtime evaluates it
+// against the source permanent's live counters, so as a per-effect sequence gate
+// it reads the counts placed earlier in the same resolution.
+func recognizeSourceThresholdCounterCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
+	rest, ok := cutTokenPrefix(body, "there", "are")
+	if !ok {
+		return ConditionClause{}, false
+	}
+	inner, ok := stripSourceSuffix(rest)
+	if !ok {
+		return ConditionClause{}, false
+	}
+	atLeast, lessThan, ok := sourceCounterThreshold(inner)
+	if !ok {
+		return ConditionClause{}, false
+	}
+	kind, _, ok := atoms.CounterIn(shared.SpanOf(inner))
+	if !ok {
+		return ConditionClause{}, false
+	}
+	return ConditionClause{
+		Predicate:     ConditionPredicateObjectMatches,
+		ObjectBinding: ConditionObjectBindingSource,
+		Selection: ConditionSelection{
+			CounterKind:          kind,
+			CounterKindKnown:     true,
+			CounterCountAtLeast:  atLeast,
+			CounterCountLessThan: lessThan,
+		},
 	}, true
 }
 

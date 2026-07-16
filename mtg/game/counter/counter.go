@@ -111,11 +111,12 @@ const (
 	Intel      // Intel counter (Flamewar, Streetwise Operative)
 	Collection // Collection counter (Evelyn, the Covetous, Charitable Levy)
 	Hour       // Hour counter (Midnight Clock, Nexus of Fate cycle)
+	Ribbon     // Ribbon counter (Prize Pig)
 )
 
 // Valid reports whether k is a recognized counter kind.
 func (k Kind) Valid() bool {
-	return k >= PlusOnePlusOne && k <= Hour
+	return k >= PlusOnePlusOne && k <= Ribbon
 }
 
 // PlayerOnly reports whether k may be placed only on players.
@@ -299,6 +300,8 @@ func (k Kind) String() string {
 		return "collection"
 	case Hour:
 		return "hour"
+	case Ribbon:
+		return "ribbon"
 	default:
 		return "unknown"
 	}
