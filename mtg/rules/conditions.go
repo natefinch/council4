@@ -157,6 +157,20 @@ func aggregateComparisonThreshold(g *game.Game, ctx conditionContext, agg game.A
 	return dynamicAmountValue(g, ctx.obj, ctx.controller, agg.ValueAmount.Val), true
 }
 
+// aggregateComparisonValue evaluates the quantity a comparison measures. Most
+// aggregates depend only on their kind and delegate to aggregateValue; the
+// color-parameterized AggregateControllerDevotion additionally consults the
+// comparison's Colors, counting the controller's devotion to those colors (CR
+// 700.5). Devotion is derived from controlled permanents' mana costs, so it is
+// independent of the creature type the Gods' static removes and carries no risk
+// of a circular type dependency.
+func aggregateComparisonValue(g *game.Game, ctx conditionContext, agg game.AggregateComparison) (int, bool) {
+	if agg.Aggregate == game.AggregateControllerDevotion {
+		return controllerDevotion(g, ctx.controller, agg.Colors), true
+	}
+	return aggregateValue(g, ctx, agg.Aggregate)
+}
+
 func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game.Condition]) bool {
 	if !condition.Exists || condition.Val.Empty() {
 		return true
@@ -170,7 +184,7 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 		matches = matches && controllerControlsMatchingSelection(g, ctx, cond.ControlsMatching.Val)
 	}
 	for _, agg := range cond.Aggregates {
-		value, ok := aggregateValue(g, ctx, agg.Aggregate)
+		value, ok := aggregateComparisonValue(g, ctx, agg)
 		threshold, thresholdOK := aggregateComparisonThreshold(g, ctx, agg)
 		matches = matches && ok && thresholdOK && compare.Int{Op: agg.Op, Value: threshold}.Matches(value)
 	}

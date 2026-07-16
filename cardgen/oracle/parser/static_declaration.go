@@ -54,6 +54,7 @@ const (
 	StaticDeclarationManaProductionMultiplier             StaticDeclarationKind = "StaticDeclarationManaProductionMultiplier"
 	StaticDeclarationCombatDamagePrevention               StaticDeclarationKind = "StaticDeclarationCombatDamagePrevention"
 	StaticDeclarationRoomAbilityTriggerMultiplier         StaticDeclarationKind = "StaticDeclarationRoomAbilityTriggerMultiplier"
+	StaticDeclarationDevotionNotCreature                  StaticDeclarationKind = "StaticDeclarationDevotionNotCreature"
 )
 
 // StaticAttackTaxAmountKind identifies how a per-creature attack-tax declaration
@@ -822,6 +823,15 @@ type StaticDeclarationSyntax struct {
 	// escape variant of StaticDeclarationGraveyardCardKeywordGrant; every other
 	// grant (retrace-style, whose cost the keyword itself defines) leaves it nil.
 	GraveyardEscapeCost *StaticGraveyardEscapeCostSyntax `json:",omitempty"`
+
+	// Devotion-gated "isn't a creature" payload (Theros Gods): a
+	// StaticDeclarationDevotionNotCreature declaration reads "As long as your
+	// devotion to <color(s)> is less than N, <source> isn't a creature."
+	// DevotionColors lists the one or two colors whose mana symbols the devotion
+	// counts, in source order; DevotionThreshold is N. They are set only for that
+	// kind and are the zero value for every other declaration.
+	DevotionColors    []Color `json:"-"`
+	DevotionThreshold int     `json:",omitempty"`
 }
 
 // StaticGraveyardEscapeCostSyntax is the typed computed escape cost a graveyard
@@ -1335,6 +1345,9 @@ func parseStaticDeclarations(tokens []shared.Token, quoted []Delimited, atoms At
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseStaticCombatDamagePreventionDeclaration(tokens, atoms); ok {
+		return []StaticDeclarationSyntax{declaration}
+	}
+	if declaration, ok := parseStaticDevotionNotCreatureDeclaration(tokens, atoms); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseStaticUntapDuringOtherUntapStepDeclaration(tokens); ok {

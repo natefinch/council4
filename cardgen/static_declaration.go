@@ -38,6 +38,10 @@ func lowerStaticDeclarations(
 		return lowered, true, diagnostic
 	}
 
+	if lowered, ok, diagnostic := lowerStaticDevotionNotCreature(ability, syntax); ok {
+		return lowered, true, diagnostic
+	}
+
 	if ability.Cost != nil ||
 		ability.Trigger != nil ||
 		len(ability.Content.Modes) != 0 ||
@@ -483,6 +487,9 @@ func staticDeclarationPayloadValid(declaration compiler.StaticDeclaration) bool 
 	if declaration.CombatDamagePrevention != nil {
 		payloads++
 	}
+	if declaration.DevotionNotCreature != nil {
+		payloads++
+	}
 	if payloads != 1 {
 		return false
 	}
@@ -533,6 +540,8 @@ func staticDeclarationPayloadValid(declaration compiler.StaticDeclaration) bool 
 		return declaration.ManaProductionMultiplier != nil
 	case compiler.StaticDeclarationCombatDamagePrevention:
 		return declaration.CombatDamagePrevention != nil
+	case compiler.StaticDeclarationDevotionNotCreature:
+		return declaration.DevotionNotCreature != nil
 	default:
 		return false
 	}

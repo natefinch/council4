@@ -346,8 +346,10 @@ func validateContinuousEffectLayerFields(effect *game.ContinuousEffect) error {
 		if len(effect.AddTypes) == 0 && len(effect.AddSubtypes) == 0 &&
 			len(effect.SetTypes) == 0 && len(effect.SetSubtypes) == 0 &&
 			len(effect.AddSupertypes) == 0 && len(effect.SetSupertypes) == 0 &&
+			len(effect.RemoveTypes) == 0 && len(effect.RemoveSubtypes) == 0 &&
+			len(effect.RemoveSupertypes) == 0 &&
 			effect.AddSubtypeFromEntryChoice == "" && !effect.AddEveryCreatureType && !effect.AddEveryBasicLandType {
-			return errors.New("render: type layer requires set or added types or subtypes")
+			return errors.New("render: type layer requires set, added, or removed types or subtypes")
 		}
 	case game.LayerText:
 		if hasPTDelta {
@@ -511,6 +513,32 @@ func renderContinuousCharacteristicFields(ctx *renderCtx, effect *game.Continuou
 			literals = append(literals, SubtypeToLiteral(string(sub), cardTypeStrings))
 		}
 		fields = append(fields, fmt.Sprintf("AddSubtypes: []types.Sub{%s},", strings.Join(literals, ", ")))
+	}
+	if len(effect.RemoveSupertypes) > 0 {
+		literal, err := renderSupertypeSlice(ctx, effect.RemoveSupertypes)
+		if err != nil {
+			return nil, err
+		}
+		fields = append(fields, fmt.Sprintf("RemoveSupertypes: %s,", literal))
+	}
+	if len(effect.RemoveTypes) > 0 {
+		literal, err := renderTypesCardSlice(ctx, effect.RemoveTypes)
+		if err != nil {
+			return nil, err
+		}
+		fields = append(fields, fmt.Sprintf("RemoveTypes: %s,", literal))
+	}
+	if len(effect.RemoveSubtypes) > 0 {
+		ctx.need(importTypes)
+		cardTypeStrings := make([]string, 0, len(effect.RemoveTypes))
+		for _, t := range effect.RemoveTypes {
+			cardTypeStrings = append(cardTypeStrings, string(t))
+		}
+		literals := make([]string, 0, len(effect.RemoveSubtypes))
+		for _, sub := range effect.RemoveSubtypes {
+			literals = append(literals, SubtypeToLiteral(string(sub), cardTypeStrings))
+		}
+		fields = append(fields, fmt.Sprintf("RemoveSubtypes: []types.Sub{%s},", strings.Join(literals, ", ")))
 	}
 	if effect.AddEveryCreatureType {
 		fields = append(fields, "AddEveryCreatureType: true,")
