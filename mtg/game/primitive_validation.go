@@ -2503,6 +2503,18 @@ func (p Untap) validatePrimitive(targets []TargetSpec, checkTargets bool) error 
 	if err := validateMassObjectOrGroup(p.Object, p.Group, targets, checkTargets); err != nil {
 		return err
 	}
+	if p.ChooseUpTo && p.ChooseOne {
+		return errors.New("untap cannot choose up to and choose exactly one")
+	}
+	if p.ChooseOne {
+		if p.Object.Kind() != ObjectReferenceNone {
+			return errors.New("choose-one untap requires a Group rather than an Object")
+		}
+		if p.Amount.IsDynamic() || p.Amount.Value() != 0 {
+			return errors.New("choose-one untap cannot carry an Amount")
+		}
+		return nil
+	}
 	if !p.ChooseUpTo {
 		if p.Amount.IsDynamic() || p.Amount.Value() != 0 {
 			return errors.New("untap Amount requires ChooseUpTo")

@@ -2528,8 +2528,18 @@ func (r Renderer) renderBounce(ctx *renderCtx, value game.Bounce) (string, error
 }
 
 func (r Renderer) renderUntap(ctx *renderCtx, value game.Untap) (string, error) {
-	if !value.ChooseUpTo {
+	if !value.ChooseUpTo && !value.ChooseOne {
 		return r.renderObjectOrGroup(ctx, "game.Untap", value.Object, value.Group)
+	}
+	if value.ChooseOne {
+		renderedGroup, err := r.renderGroupReference(ctx, value.Group)
+		if err != nil {
+			return "", err
+		}
+		return structLit("game.Untap", []string{
+			"ChooseOne: true,",
+			fmt.Sprintf("Group: %s,", renderedGroup),
+		}), nil
 	}
 	renderedAmount, err := r.renderQuantity(ctx, value.Amount)
 	if err != nil {

@@ -1849,6 +1849,7 @@ type Untap struct {
 	Group  GroupReference
 
 	ChooseUpTo bool
+	ChooseOne  bool
 	Amount     Quantity
 	Chooser    PlayerReference
 }

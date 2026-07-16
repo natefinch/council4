@@ -462,15 +462,15 @@ func exactDynamicColorlessManaEffectSyntax(effect *EffectSyntax) bool {
 // mana-value, or keyword rider — fails closed so unsupported untap wordings keep
 // failing the round-trip.
 func exactBoundedUntapEffectSyntax(effect *EffectSyntax) bool {
-	if effect.Context != EffectContextController ||
-		!effect.Amount.RangeKnown ||
-		effect.Amount.Minimum != 0 ||
-		effect.Amount.Maximum < 2 ||
-		effect.Amount.Maximum > 10 {
+	if effect.Context != EffectContextController {
 		return false
 	}
-	word, ok := cardinalWord(effect.Amount.Maximum)
-	if !ok {
+	upTo := effect.Amount.RangeKnown &&
+		effect.Amount.Minimum == 0 &&
+		effect.Amount.Maximum >= 2 &&
+		effect.Amount.Maximum <= 10
+	exactOne := effect.Amount.Known && effect.Amount.Value == 1
+	if !upTo && !exactOne {
 		return false
 	}
 	selection := effect.Selection
@@ -506,7 +506,18 @@ func exactBoundedUntapEffectSyntax(effect *EffectSyntax) bool {
 	if !ok {
 		return false
 	}
-	phrase, ok := targetControllerSuffix(noun+"s", selection.Controller)
+	numberedNoun := noun
+	if upTo {
+		numberedNoun += "s"
+	}
+	phrase, ok := targetControllerSuffix(numberedNoun, selection.Controller)
+	if !ok {
+		return false
+	}
+	if exactOne {
+		return strings.EqualFold(exactEffectClauseText(effect), "Untap a "+phrase+".")
+	}
+	word, ok := cardinalWord(effect.Amount.Maximum)
 	if !ok {
 		return false
 	}
