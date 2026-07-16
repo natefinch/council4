@@ -66,6 +66,7 @@ var Cards = []cardset.Entry{
 	{Name: "Red Cliffs Armada", New: RedCliffsArmada},
 	{Name: "Red Ward", New: RedWard},
 	{Name: "Redemption Arc", New: RedemptionArc},
+	{Name: "Redirect Lightning", New: RedirectLightning},
 	{Name: "Reduce to Ashes", New: ReduceToAshes},
 	{Name: "Regal Behemoth", New: RegalBehemoth},
 	{Name: "Regal Sliver", New: RegalSliver},

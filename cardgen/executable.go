@@ -235,6 +235,7 @@ func buildCardFace(fields scryfallFaceFields, abilities loweredFaceAbilities) (g
 	face.SpellAbility = abilities.SpellAbility
 	face.Overload = abilities.Overload
 	face.AdditionalCosts = abilities.AdditionalCosts
+	face.AdditionalCostChoices = abilities.AdditionalCostChoices
 	face.AlternativeCosts = abilities.AlternativeCosts
 	return face, nil
 }

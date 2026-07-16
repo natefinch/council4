@@ -86,6 +86,14 @@ type CardFace struct {
 	// AlternativeCosts replace this face's ManaCost when one is selected.
 	AlternativeCosts []cost.Alternative
 
+	// AdditionalCostChoices are printed "pay A or pay B" choices among
+	// alternative additional costs to cast this face as a spell (Redirect
+	// Lightning: "pay 5 life or pay {2}"). The caster pays exactly one option of
+	// each choice in addition to this face's ManaCost and mandatory
+	// AdditionalCosts; a chosen option's mana is additional to, not a
+	// replacement of, the printed cost.
+	AdditionalCostChoices []cost.AdditionalChoice
+
 	// Overload replaces this face's normal spell targets and instructions when
 	// the spell is cast for its overload cost.
 	Overload opt.V[OverloadAbility]
@@ -647,32 +655,33 @@ func (f *CardFace) ToCardDef(parent *CardDef) *CardDef {
 
 func (f *CardFace) clone() CardFace {
 	return CardFace{
-		Name:                 f.Name,
-		ManaCost:             f.ManaCost,
-		AdditionalCosts:      append([]cost.Additional(nil), f.AdditionalCosts...),
-		AlternativeCosts:     cloneAlternativeCosts(f.AlternativeCosts),
-		Colors:               append([]color.Color(nil), f.Colors...),
-		Supertypes:           append([]types.Super(nil), f.Supertypes...),
-		Types:                append([]types.Card(nil), f.Types...),
-		Subtypes:             append([]types.Sub(nil), f.Subtypes...),
-		Power:                f.Power,
-		Toughness:            f.Toughness,
-		DynamicPower:         f.DynamicPower,
-		DynamicToughness:     f.DynamicToughness,
-		Loyalty:              f.Loyalty,
-		Defense:              f.Defense,
-		EntersPrepared:       f.EntersPrepared,
-		SpellAbility:         cloneOptionalAbilityContent(f.SpellAbility),
-		Overload:             cloneOverload(f.Overload),
-		ActivatedAbilities:   append([]ActivatedAbility(nil), f.ActivatedAbilities...),
-		ManaAbilities:        append([]ManaAbility(nil), f.ManaAbilities...),
-		LoyaltyAbilities:     append([]LoyaltyAbility(nil), f.LoyaltyAbilities...),
-		TriggeredAbilities:   cloneTriggeredAbilities(f.TriggeredAbilities),
-		ChapterAbilities:     append([]ChapterAbility(nil), f.ChapterAbilities...),
-		ReplacementAbilities: append([]ReplacementAbility(nil), f.ReplacementAbilities...),
-		StaticAbilities:      append([]StaticAbility(nil), f.StaticAbilities...),
-		ImplementationID:     f.ImplementationID,
-		OracleText:           f.OracleText,
+		Name:                  f.Name,
+		ManaCost:              f.ManaCost,
+		AdditionalCosts:       append([]cost.Additional(nil), f.AdditionalCosts...),
+		AlternativeCosts:      cloneAlternativeCosts(f.AlternativeCosts),
+		AdditionalCostChoices: cloneAdditionalCostChoices(f.AdditionalCostChoices),
+		Colors:                append([]color.Color(nil), f.Colors...),
+		Supertypes:            append([]types.Super(nil), f.Supertypes...),
+		Types:                 append([]types.Card(nil), f.Types...),
+		Subtypes:              append([]types.Sub(nil), f.Subtypes...),
+		Power:                 f.Power,
+		Toughness:             f.Toughness,
+		DynamicPower:          f.DynamicPower,
+		DynamicToughness:      f.DynamicToughness,
+		Loyalty:               f.Loyalty,
+		Defense:               f.Defense,
+		EntersPrepared:        f.EntersPrepared,
+		SpellAbility:          cloneOptionalAbilityContent(f.SpellAbility),
+		Overload:              cloneOverload(f.Overload),
+		ActivatedAbilities:    append([]ActivatedAbility(nil), f.ActivatedAbilities...),
+		ManaAbilities:         append([]ManaAbility(nil), f.ManaAbilities...),
+		LoyaltyAbilities:      append([]LoyaltyAbility(nil), f.LoyaltyAbilities...),
+		TriggeredAbilities:    cloneTriggeredAbilities(f.TriggeredAbilities),
+		ChapterAbilities:      append([]ChapterAbility(nil), f.ChapterAbilities...),
+		ReplacementAbilities:  append([]ReplacementAbility(nil), f.ReplacementAbilities...),
+		StaticAbilities:       append([]StaticAbility(nil), f.StaticAbilities...),
+		ImplementationID:      f.ImplementationID,
+		OracleText:            f.OracleText,
 	}
 }
 
@@ -861,6 +870,25 @@ func cloneDynamicAmount(dynamic *DynamicAmount) DynamicAmount {
 func cloneGroupReference(group GroupReference) GroupReference {
 	group.selection = cloneSelection(group.selection)
 	return group
+}
+
+// cloneAdditionalCostChoices deep-copies the printed additional-cost choices so
+// a cloned face never shares option, mana, or cost slices with its source.
+func cloneAdditionalCostChoices(choices []cost.AdditionalChoice) []cost.AdditionalChoice {
+	if len(choices) == 0 {
+		return nil
+	}
+	cloned := make([]cost.AdditionalChoice, len(choices))
+	for i := range choices {
+		options := make([]cost.AdditionalChoiceOption, len(choices[i].Options))
+		for j := range choices[i].Options {
+			options[j] = choices[i].Options[j]
+			options[j].Mana = append(cost.Mana(nil), choices[i].Options[j].Mana...)
+			options[j].Costs = append([]cost.Additional(nil), choices[i].Options[j].Costs...)
+		}
+		cloned[i] = cost.AdditionalChoice{Options: options}
+	}
+	return cloned
 }
 
 func cloneAlternativeCosts(costs []cost.Alternative) []cost.Alternative {

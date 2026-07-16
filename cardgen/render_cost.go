@@ -492,6 +492,42 @@ func (r Renderer) renderAlternativeCosts(ctx *renderCtx, alternatives []cost.Alt
 	return sliceLit("cost.Alternative", elements), nil
 }
 
+// renderAdditionalCostChoices renders a face's printed additional-cost choices
+// ("As an additional cost to cast this spell, pay 5 life or pay {2}." — Redirect
+// Lightning) as a []cost.AdditionalChoice literal. Each branch renders its label,
+// its additive mana (when any), and its non-mana costs (when any).
+func (r Renderer) renderAdditionalCostChoices(ctx *renderCtx, choices []cost.AdditionalChoice) (string, error) {
+	ctx.need(importCost)
+	elements := make([]string, 0, len(choices))
+	for _, choice := range choices {
+		options := make([]string, 0, len(choice.Options))
+		for _, option := range choice.Options {
+			fields := []string{}
+			if option.Label != "" {
+				fields = append(fields, fmt.Sprintf("Label: %q,", option.Label))
+			}
+			if len(option.Mana) > 0 {
+				rendered, err := r.renderManaCost(ctx, option.Mana)
+				if err != nil {
+					return "", err
+				}
+				fields = append(fields, fmt.Sprintf("Mana: %s,", rendered))
+			}
+			if len(option.Costs) > 0 {
+				rendered, err := r.renderAdditionalCosts(ctx, option.Costs)
+				if err != nil {
+					return "", err
+				}
+				fields = append(fields, fmt.Sprintf("Costs: %s,", rendered))
+			}
+			options = append(options, structLit("cost.AdditionalChoiceOption", fields)+",")
+		}
+		optionsField := sliceField("Options", "cost.AdditionalChoiceOption", options)
+		elements = append(elements, structLit("cost.AdditionalChoice", []string{optionsField})+",")
+	}
+	return sliceLit("cost.AdditionalChoice", elements), nil
+}
+
 func (r Renderer) renderGraveyardCastGrantCost(ctx *renderCtx, castCost game.GraveyardCastGrantCost) (string, error) {
 	var fields []string
 	if castCost.UseCardManaCost {
