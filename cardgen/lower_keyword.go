@@ -2411,6 +2411,7 @@ func rulesFreeAbilityWordLabel(label string) bool {
 		"Converge",
 		"Corrupted",
 		"Coven",
+		"Crown of Madness",
 		"Delirium",
 		"Descend",
 		"Domain",
