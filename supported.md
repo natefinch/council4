@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,995 of 32,501 cards eligible for paper support (55.4%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,004 of 32,501 cards eligible for paper support (55.4%)**. The Scryfall Oracle Cards corpus contains 5,753 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1191,6 +1191,7 @@ Council4 currently supports **17,995 of 32,501 cards eligible for paper support 
 - Bat Whisperer
 - Bathe in Dragonfire
 - Baton of Morale
+- Battalion Foot Soldier
 - Batterbone
 - Battered Golem
 - Batterhorn
@@ -1381,6 +1382,7 @@ Council4 currently supports **17,995 of 32,501 cards eligible for paper support 
 - Big Wheel
 - Bigfin Bouncer
 - Bighorner Rancher
+- Bilbo, Birthday Celebrant
 - Bilbo, Retired Burglar
 - Bile Blight
 - Bile Urchin
@@ -5940,6 +5942,7 @@ Council4 currently supports **17,995 of 32,501 cards eligible for paper support 
 - Gather Courage
 - Gather the White Lotus
 - Gathering Place
+- Gathering Throng
 - Gauntlet of Might
 - Gavi, Nest Warden
 - Gavony Ironwright
@@ -7633,6 +7636,7 @@ Council4 currently supports **17,995 of 32,501 cards eligible for paper support 
 - In Oketra's Name
 - In the Presence of Ages
 - In the Web of War
+- Iname, Death Aspect
 - Iname, Life Aspect
 - Incandescent Aria
 - Incendiary Flow
@@ -8706,6 +8710,7 @@ Council4 currently supports **17,995 of 32,501 cards eligible for paper support 
 - Leering Onlooker
 - Leery Fogbeast
 - Legacy Weapon
+- Legion Conquistador
 - Legion Extruder
 - Legion Guildmage
 - Legion Leadership // Legion Stronghold
@@ -10391,6 +10396,7 @@ Council4 currently supports **17,995 of 32,501 cards eligible for paper support 
 - Nirkana Cutthroat
 - Nirkana Revenant
 - Nishoba Brawler
+- Nissa Revane
 - Nissa's Expedition
 - Nissa's Renewal
 - Nissa, Voice of Zendikar
@@ -12837,12 +12843,14 @@ Council4 currently supports **17,995 of 32,501 cards eligible for paper support 
 - Sarcomite Myr
 - Sarinth Greatwurm
 - Sarinth Steelseeker
+- Sarkhan Unbroken
 - Sarkhan Vol
 - Sarkhan's Catharsis
 - Sarkhan's Dragonfire
 - Sarkhan's Rage
 - Sarkhan's Resolve
 - Sarkhan's Triumph
+- Sarkhan, Dragonsoul
 - Sarpadian Simulacrum
 - Sarulf's Packmate
 - Saruli Caretaker
@@ -15654,6 +15662,7 @@ Council4 currently supports **17,995 of 32,501 cards eligible for paper support 
 - The Weatherseed Treaty
 - The Whizzer, Classic Speedster
 - The Wind Crystal
+- The World Tree
 - Their Name Is Death
 - Thelon's Curse
 - Thelonite Hermit

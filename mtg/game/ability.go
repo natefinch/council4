@@ -1814,6 +1814,21 @@ type SearchSpec struct {
 	// player, a published link, and no reveal, split destination, slot filters,
 	// tapped entry, RevealOnly, AlsoGraveyard, or ordered destination position.
 	ExileFaceDown bool
+
+	// AnyNumber, when true, makes the search find "any number of" matching cards:
+	// the resolving player chooses none up to every card in the searched zone
+	// that matches Filter, modeling "Search your library for any number of God
+	// cards, put them onto the battlefield, then shuffle." (The World Tree). The
+	// count is unbounded rather than a fixed or dynamic Quantity, so the primitive
+	// carries no meaningful Amount; the search-choice machinery instead offers a
+	// minimum of zero and a maximum of every candidate. Because zero is always a
+	// legal choice, an AnyNumber search may always decline to find a card even in
+	// a hidden library, so it never forces a find. It is meaningful only with
+	// SourceZone Library, a single searching player, and a Hand, Battlefield, or
+	// Graveyard destination; it is mutually exclusive with the fixed/dynamic
+	// count riders (split destination, shared subtype, slot filters, top-of-
+	// library placement) that presuppose a bounded count.
+	AnyNumber bool
 }
 
 // IsUnrestricted reports whether every library card matches the search filter.

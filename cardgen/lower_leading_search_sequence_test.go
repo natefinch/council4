@@ -82,11 +82,6 @@ func TestLowerLeadingSequenceThenSearchFailsClosed(t *testing.T) {
 		oracleText string
 	}{
 		{
-			name:       "unsupported multi-card battlefield search",
-			typeLine:   "Sorcery",
-			oracleText: "Draw a card. Search your library for any number of basic land cards, put them onto the battlefield, then shuffle.",
-		},
-		{
 			name:       "leading conditional gate",
 			typeLine:   "Sorcery",
 			oracleText: "If you control a Forest, you gain 3 life. Search your library for a basic land card, put it onto the battlefield tapped, then shuffle.",

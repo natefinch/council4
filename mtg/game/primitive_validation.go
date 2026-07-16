@@ -1404,6 +1404,31 @@ func (p Search) validatePrimitive(targets []TargetSpec, checkTargets bool) error
 			return errors.New("different-names search cannot combine shared-subtype, split, slot, or library-top riders")
 		}
 	}
+	if p.Spec.AnyNumber {
+		// An "any number of" search finds none up to every matching card, so its
+		// destination must accept an unbounded set of found cards (hand,
+		// battlefield, or graveyard) and it cannot combine with any rider that
+		// presupposes a bounded count or a single found card.
+		if p.Spec.Destination != zone.Hand &&
+			p.Spec.Destination != zone.Battlefield &&
+			p.Spec.Destination != zone.Graveyard {
+			return errors.New("any-number search requires a hand, battlefield, or graveyard destination")
+		}
+		if p.Spec.DestinationPosition != SearchPositionUnspecified ||
+			p.Spec.SplitDestination.Exists ||
+			p.Spec.SharedSubtype ||
+			p.Spec.DifferentNames ||
+			len(p.Spec.SlotFilters) != 0 ||
+			p.Spec.AlsoGraveyard ||
+			p.Spec.MaxManaValueFromX ||
+			p.Spec.MaxManaValueFromSacrificedCost.Exists ||
+			p.PlayerGroup.Kind != PlayerGroupReferenceNone {
+			return errors.New("any-number search cannot combine bounded-count, multi-zone, or multi-searcher riders")
+		}
+		if p.Spec.FailToFindPolicy == SearchMustFindIfAvailable {
+			return errors.New("any-number search cannot require finding a card")
+		}
+	}
 	if len(p.Spec.Filter.RequiredTypes) != 0 && len(p.Spec.Filter.RequiredTypesAny) != 0 {
 		return errors.New("search cannot combine one required card type with a card-type union")
 	}

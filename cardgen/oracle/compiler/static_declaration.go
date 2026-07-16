@@ -4665,10 +4665,17 @@ func recognizeStaticPermanentAbilityGrantDeclaration(ability CompiledAbility, st
 		ability.Trigger != nil ||
 		len(ability.Content.Modes) != 0 ||
 		len(ability.Content.Targets) != 0 ||
-		len(ability.Content.Conditions) != 0 ||
 		len(ability.Content.Keywords) != 0 ||
 		len(ability.Content.References) != 0 ||
 		ability.AbilityWord != "" {
+		return StaticDeclaration{}, false
+	}
+	// An optional "as long as <condition>" clause gates the grant (The World
+	// Tree's "As long as you control six or more lands, ..."). A single supported
+	// condition is attached as the declaration's on/off gate; any other condition
+	// shape fails closed.
+	condition, ok := staticDeclarationCondition(ability.Content.Conditions)
+	if !ok {
 		return StaticDeclaration{}, false
 	}
 	if !staticGrantedManaAbilityValid(granted) {
@@ -4682,6 +4689,7 @@ func recognizeStaticPermanentAbilityGrantDeclaration(ability CompiledAbility, st
 		Kind:          StaticDeclarationContinuous,
 		Span:          node.Span,
 		OperationSpan: node.OperationSpan,
+		Condition:     condition,
 		Group: StaticGroupReference{
 			Span:      node.Subject.Span,
 			Domain:    StaticGroupSourceControllerPermanents,

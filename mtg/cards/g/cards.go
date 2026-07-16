@@ -22,6 +22,7 @@ var Cards = []cardset.Entry{
 	{Name: "Gatebreaker Ram", New: GatebreakerRAM},
 	{Name: "Gateway Plaza", New: GatewayPlaza},
 	{Name: "Gathering Place", New: GatheringPlace},
+	{Name: "Gathering Throng", New: GatheringThrong},
 	{Name: "Gavony Ironwright", New: GavonyIronwright},
 	{Name: "Gaze of Adamaro", New: GazeOfAdamaro},
 	{Name: "Gearbane Orangutan", New: GearbaneOrangutan},
