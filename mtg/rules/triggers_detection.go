@@ -301,11 +301,37 @@ func controlledPermanentAdditionalTriggerCount(g *game.Game, trigger *pendingTri
 			effect.Controller != trigger.controller {
 			continue
 		}
+		if effect.TriggerCauseCastOrCopyInstantSorcery &&
+			!triggerCausedByControllerCastOrCopyInstantSorcery(g, &trigger.event, effect.Controller) {
+			continue
+		}
 		if controlledTriggerSourceMatches(g, effect, trigger.sourceID) {
 			count++
 		}
 	}
 	return count
+}
+
+// triggerCausedByControllerCastOrCopyInstantSorcery reports whether the
+// triggering event is the given controller casting or copying an instant or
+// sorcery spell, the magecraft-style cause Veyran, Voice of Duality doubles ("If
+// you casting or copying an instant or sorcery spell causes a triggered ability
+// of a permanent you control to trigger ..."). It mirrors the magecraft trigger
+// pattern: an EventSpellCast widened to EventSpellCopied, controlled by the
+// doubler's controller, whose spell is an instant or sorcery.
+func triggerCausedByControllerCastOrCopyInstantSorcery(g *game.Game, event *game.Event, controller game.PlayerID) bool {
+	if event.Kind != game.EventSpellCast && event.Kind != game.EventSpellCopied {
+		return false
+	}
+	if event.Controller != controller {
+		return false
+	}
+	for _, cardType := range eventSpellCardTypes(g, *event) {
+		if cardType == types.Instant || cardType == types.Sorcery {
+			return true
+		}
+	}
+	return false
 }
 
 // roomAbilityAdditionalTriggerCount counts the additional occurrences a room
@@ -399,10 +425,12 @@ func controlledTriggerSourceMatches(g *game.Game, effect *game.RuleEffect, sourc
 }
 
 // permanentMatchesTriggerSourceFilter reports whether a live permanent satisfies
-// the type, supertype, and subtype filter carried by a controlled-permanent
-// trigger doubler's selection. RequiredTypes and Supertypes are conjunctive;
-// SubtypesAny is disjunctive. AnyOf requires the permanent to satisfy at least
-// one alternative ("a Shaman or another Wizard you control"). ExcludeSource drops
+// the type, supertype, subtype, and effective-power filter carried by a
+// controlled-permanent trigger doubler's selection. RequiredTypes and Supertypes
+// are conjunctive; SubtypesAny is disjunctive; Power bounds the permanent's
+// effective power ("a creature you control with power 2 or less", Delney,
+// Streetwise Lookout). AnyOf requires the permanent to satisfy at least one
+// alternative ("a Shaman or another Wizard you control"). ExcludeSource drops
 // the doubler's own source, modeling the "another ... you control" wording
 // (Twinflame Travelers; the Wizard branch of Harmonic Prodigy); doublerSourceID
 // names that source. An empty selection matches any permanent.
@@ -422,6 +450,12 @@ func permanentMatchesTriggerSourceFilter(g *game.Game, selection *game.Selection
 	}
 	for _, supertype := range selection.Supertypes {
 		if !permanentHasSupertype(g, permanent, supertype) {
+			return false
+		}
+	}
+	if selection.Power.Exists {
+		values := effectivePermanentValues(g, permanent)
+		if !values.powerOK || !selection.Power.Val.Matches(values.power) {
 			return false
 		}
 	}
@@ -458,6 +492,9 @@ func snapshotMatchesTriggerSourceFilter(selection *game.Selection, snapshot *gam
 		if !slices.Contains(snapshot.Supertypes, supertype) {
 			return false
 		}
+	}
+	if selection.Power.Exists && (!snapshot.Power.Exists || !selection.Power.Val.Matches(snapshot.Power.Val)) {
+		return false
 	}
 	if len(selection.SubtypesAny) == 0 {
 		return true

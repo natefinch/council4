@@ -395,13 +395,21 @@ const (
 	// ability triggers an additional time.", Annie Joins Up; "... of an Ally you
 	// control ...", Katara, the Fearless; "... of a Ninja creature you control
 	// ...", Splinter, Radical Rat). AffectedSelection carries the source
-	// permanent's type, supertype, and subtype filter. A plain "a ... you
-	// control" filter includes the source object itself; an "another ... you
-	// control" filter sets ExcludeSource so the doubler does not double its own
-	// triggers (Twinflame Travelers), and AnyOf models an "or"-joined filter
-	// whose branches may differ in self-exclusion ("a Shaman or another Wizard
-	// you control", Harmonic Prodigy). An empty AffectedSelection matches any
-	// controlled permanent.
+	// permanent's type, supertype, subtype, and effective-power filter. A plain
+	// "a ... you control" filter includes the source object itself; an "another
+	// ... you control" filter sets ExcludeSource so the doubler does not double
+	// its own triggers (Twinflame Travelers), and AnyOf models an "or"-joined
+	// filter whose branches may differ in self-exclusion ("a Shaman or another
+	// Wizard you control", Harmonic Prodigy). AffectedSelection.Power bounds the
+	// source permanent's effective power ("a creature you control with power 2 or
+	// less", Delney, Streetwise Lookout, which includes itself because Delney is
+	// power 2 and its filter reads "a", not "another"). When
+	// TriggerCauseCastOrCopyInstantSorcery is set the doubler applies instead to
+	// any controlled permanent whose triggered ability was caused by the
+	// controller casting or copying an instant or sorcery spell ("If you casting
+	// or copying an instant or sorcery spell causes a triggered ability of a
+	// permanent you control to trigger ...", Veyran, Voice of Duality). An empty
+	// AffectedSelection with no causal filter matches any controlled permanent.
 	RuleEffectAdditionalTriggerForControlledPermanent
 	// RuleEffectMustBeBlockedByAllAble is the true-lure requirement: every
 	// creature able to block the affected attacker must do so ("All creatures
@@ -1139,6 +1147,20 @@ type RuleEffect struct {
 	// other kind. The rules layer reads it while synthesizing the graveyard cast
 	// alternative; it is never snapshotted onto the cast spell.
 	GraveyardCastCost GraveyardCastGrantCost
+
+	// TriggerCauseCastOrCopyInstantSorcery, on a
+	// RuleEffectAdditionalTriggerForControlledPermanent, restricts the doubler to
+	// triggered abilities whose triggering event is the effect's controller
+	// casting or copying an instant or sorcery spell ("If you casting or copying
+	// an instant or sorcery spell causes a triggered ability of a permanent you
+	// control to trigger, that ability triggers an additional time.", Veyran,
+	// Voice of Duality). It models magecraft-caused doubling: the source is any
+	// permanent the controller controls (matched through AffectedSelection, empty
+	// for Veyran so it includes Veyran's own magecraft trigger), but the extra
+	// occurrence is added only when the triggering event is a controller
+	// cast-or-copy of an instant or sorcery spell. It is false for every doubler
+	// with no causal filter.
+	TriggerCauseCastOrCopyInstantSorcery bool
 }
 
 // GraveyardCastGrantCost is the computed alternative cost a
